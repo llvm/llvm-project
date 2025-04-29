@@ -83,6 +83,9 @@ public:
                   cir::IntType>(ty))
       return true;
 
+    if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
+      return isSized(vt.getElementType());
+
     assert(!cir::MissingFeatures::unsizedTypes());
     return false;
   }
@@ -185,7 +188,7 @@ public:
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
     assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
-    return create<cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
+    return create<cir::ConstantOp>(loc, getConstPtrAttr(ty, 0));
   }
 
   mlir::Value createNeg(mlir::Value value) {

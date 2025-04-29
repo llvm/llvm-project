@@ -88,6 +88,13 @@ struct Entry {
     FunctionNameWithArgs,
     FunctionNameNoArgs,
     FunctionMangledName,
+    FunctionScope,
+    FunctionBasename,
+    FunctionTemplateArguments,
+    FunctionFormattedArguments,
+    FunctionReturnLeft,
+    FunctionReturnRight,
+    FunctionQualifiers,
     FunctionAddrOffset,
     FunctionAddrOffsetConcrete,
     FunctionLineOffset,
@@ -103,6 +110,7 @@ struct Entry {
     CurrentPCArrow,
     ProgressCount,
     ProgressMessage,
+    Separator,
   };
 
   struct Definition {
