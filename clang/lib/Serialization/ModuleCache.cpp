@@ -38,7 +38,7 @@ public:
         serialization::ModuleFile::getTimestampFilename(ModuleFilename);
     llvm::sys::fs::file_status Status;
     if (llvm::sys::fs::status(ModuleFilename, Status) != std::error_code{})
-      return {};
+      return 0;
     return llvm::sys::toTimeT(Status.getLastModificationTime());
   }
 
