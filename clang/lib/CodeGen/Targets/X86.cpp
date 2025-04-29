@@ -3038,30 +3038,8 @@ static Address EmitX86_64VAArgFromMemory(CodeGenFunction &CGF,
   return Address(Res, LTy, Align);
 }
 
-static RValue EmitMSABIVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                             QualType Ty, AggValueSlot Slot,
-                             ASTContext &context) {
-  // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
-  // not 1, 2, 4, or 8 bytes, must be passed by reference."
-  uint64_t Width = context.getTypeSize(Ty);
-  bool IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
-
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
-                          CGF.getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false, Slot);
-}
-
 RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                 QualType Ty, AggValueSlot Slot) const {
-
-  // Emit MS ABI compliant va_list for X86_64 targets which use Microsoft CXX
-  // ABI and CharPtrBuiltinVaList.
-  if (CGF.getTarget().getCXXABI().isMicrosoft() &&
-      CGF.getTarget().getBuiltinVaListKind() ==
-          clang::TargetInfo::CharPtrBuiltinVaList)
-    return EmitMSABIVAArg(CGF, VAListAddr, Ty, Slot, getContext());
-
   // Assume that va_list type is correct; should be pointer to LLVM type:
   // struct {
   //   i32 gp_offset;
@@ -3508,7 +3486,15 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
 RValue WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
-  return EmitMSABIVAArg(CGF, VAListAddr, Ty, Slot, getContext());
+  // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
+  // not 1, 2, 4, or 8 bytes, must be passed by reference."
+  uint64_t Width = getContext().getTypeSize(Ty);
+  bool IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
+
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
+                          CGF.getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(8),
+                          /*allowHigherAlign*/ false, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo> CodeGen::createX86_32TargetCodeGenInfo(
