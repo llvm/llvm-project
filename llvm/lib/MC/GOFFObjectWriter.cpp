@@ -258,14 +258,14 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             GOFF::ESDNameSpaceId NameSpace, const GOFF::PRAttr &Attr)
+    const GOFF::EDAttr &EDAttr, const GOFF::PRAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
-        SymbolType(GOFF::ESD_ST_PartReference), NameSpace(NameSpace) {
+        SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
-    BehavAttrs.setAlignment(Attr.Alignment);
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setBindingScope(Attr.BindingScope);
+    BehavAttrs.setAlignment(EDAttr.Alignment);
   }
 };
 
@@ -306,8 +306,7 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   if (Section.isPR()) {
     MCSectionGOFF *Parent = Section.getParent();
     GOFFSymbol PR(Section.getName(), Section.getOrdinal(), Parent->getOrdinal(),
-                  Parent->getEDAttributes().NameSpace,
-                  Section.getPRAttributes());
+                  Parent->getEDAttributes(), Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
     if (Section.requiresNonZeroLength()) {
       // We cannot have a zero-length section for data.  If we do,

@@ -558,11 +558,11 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
                    GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
                    GOFF::ESD_ALIGN_Quadword},
       RootSDSection);
-  ADASection = Ctx->getGOFFSection(
-      SectionKind::getData(), "#S",
-      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                   GOFF::ESD_BSC_Section, GOFF::ESD_ALIGN_Quadword, 0},
-      ADAEDSection);
+  ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
+                                   GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
+                                                GOFF::ESD_LT_XPLink,
+                                                GOFF::ESD_BSC_Section, 0},
+                                   ADAEDSection);
 
   TextSection = Ctx->getGOFFSection(
       SectionKind::getText(), GOFF::CLASS_CODE,
@@ -579,11 +579,11 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
                    GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
                    GOFF::ESD_ALIGN_Doubleword},
       RootSDSection);
-  PPA2ListSection = Ctx->getGOFFSection(
-      SectionKind::getData(), ".&ppa2",
-      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_OS,
-                   GOFF::ESD_BSC_Section, GOFF::ESD_ALIGN_Doubleword, 0},
-      PPA2ListEDSection);
+  PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
+                                        GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
+                                                     GOFF::ESD_LT_OS,
+                                                     GOFF::ESD_BSC_Section, 0},
+                                        PPA2ListEDSection);
 
   IDRLSection = Ctx->getGOFFSection(
       SectionKind::getData(), "B_IDRL",

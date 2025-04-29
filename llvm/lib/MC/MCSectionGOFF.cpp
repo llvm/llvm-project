@@ -123,7 +123,7 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     ED->getParent()->printSwitchToSection(MAI, T, OS, Subsection);
     if (!Emitted) {
       emitCATTR(OS, ED->getName(), ED->getEDAttributes().Rmode,
-                PRAttributes.Alignment, ED->EDAttributes.LoadBehavior,
+                ED->EDAttributes.Alignment, ED->EDAttributes.LoadBehavior,
                 PRAttributes.Executable, ED->EDAttributes.IsReadOnly,
                 PRAttributes.SortKey, Name);
       emitXATTR(OS, Name, PRAttributes.Linkage, PRAttributes.Executable,

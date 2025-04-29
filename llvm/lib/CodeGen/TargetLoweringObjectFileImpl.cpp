@@ -2816,13 +2816,13 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
       GOFF::EDAttr{false, GOFF::RMODE, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
                    GOFF::LOADBEHAVIOR, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword},
+                   GOFF::ESD_ALIGN_Fullword},
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
-  return getContext().getGOFFSection(
-      SectionKind::getData(), Name,
-      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::LINKAGE,
-                   GOFF::ESD_BSC_Section, GOFF::ESD_ALIGN_Fullword, 0},
-      WSA);
+  return getContext().getGOFFSection(SectionKind::getData(), Name,
+                                     GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
+                                                  GOFF::LINKAGE,
+                                                  GOFF::ESD_BSC_Section, 0},
+                                     WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
@@ -2853,7 +2853,7 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     return getContext().getGOFFSection(Kind, Symbol->getName(),
                                        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
                                                     GOFF::LINKAGE,
-                                                    PRBindingScope, Align, 0},
+                                                    PRBindingScope, 0},
                                        ED);
   }
   return TextSection;
