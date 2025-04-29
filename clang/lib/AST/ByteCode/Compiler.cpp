@@ -1862,6 +1862,13 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && QT == Inits[0]->getType())
       return this->delegate(Inits[0]);
 
+    const ConstantArrayType *CAT =
+        Ctx.getASTContext().getAsConstantArrayType(QT);
+    uint64_t NumElems = CAT->getZExtSize();
+
+    if (!this->emitCheckArraySize(NumElems, E))
+      return false;
+
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
       if (const auto *EmbedS =
@@ -1890,10 +1897,6 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     // Expand the filler expression.
     // FIXME: This should go away.
     if (ArrayFiller) {
-      const ConstantArrayType *CAT =
-          Ctx.getASTContext().getAsConstantArrayType(QT);
-      uint64_t NumElems = CAT->getZExtSize();
-
       for (; ElementIndex != NumElems; ++ElementIndex) {
         if (!this->visitArrayElemInit(ElementIndex, ArrayFiller))
           return false;

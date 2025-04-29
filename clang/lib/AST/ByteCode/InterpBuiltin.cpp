@@ -1533,6 +1533,9 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  if (!CheckArraySize(S, OpPC, NumElems.getZExtValue()))
+    return false;
+
   bool IsArray = NumElems.ugt(1);
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
