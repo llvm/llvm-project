@@ -333,6 +333,16 @@ unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
   return Names.size();
 }
 
+static void checkDuplicateCPUFeatures(StringRef CPUName, StringRef FeatureKind,
+                                      ConstRecVec Features) {
+  SmallPtrSet<const Record *, 8> FeatureSet;
+  for (const auto *FeatureRec : Features) {
+    if (!FeatureSet.insert(FeatureRec).second)
+      PrintWarning("Processor " + CPUName + " has duplicate " + FeatureKind +
+                   ": " + FeatureRec->getValueAsString("Name"));
+  }
+}
+
 //
 // CPUKeyValues - Emit data of all the subtarget processors.  Used by command
 // line.
@@ -357,8 +367,10 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
   for (const Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
     ConstRecVec FeatureList = Processor->getValueAsListOfDefs("Features");
+    checkDuplicateCPUFeatures(Name, "Features", FeatureList);
     ConstRecVec TuneFeatureList =
         Processor->getValueAsListOfDefs("TuneFeatures");
+    checkDuplicateCPUFeatures(Name, "TuneFeatures", TuneFeatureList);
 
     // Emit as "{ "cpu", "description", 0, { f1 , f2 , ... fn } },".
     OS << " { "
