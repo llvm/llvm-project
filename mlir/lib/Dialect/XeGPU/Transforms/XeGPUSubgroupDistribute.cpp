@@ -760,8 +760,10 @@ LogicalResult LayoutAttrAssignment::assign(Operation *op) {
   if (op->getNumResults() > 1 && llvm::any_of(op->getResultTypes(), [](Type t) {
         return isa<xegpu::TensorDescType>(t);
       })) {
-    LLVM_DEBUG(DBGS() << "More than one result and at least one is a tensor "
-                         "descriptor. This case is not handled.\n");
+    LLVM_DEBUG(
+        DBGS() << op->getName()
+               << " op has more than one result and at least one is a tensor "
+                  "descriptor. This case is not handled.\n");
     return failure();
   }
   // If the result is a tensor descriptor, attach the layout to the tensor
@@ -1449,8 +1451,10 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // Assign xegpu::LayoutAttr to all ops and their users based on the layout
   // propagation analysis result.
   LayoutAttrAssignment layoutAssignment(getOperation(), getPropagatedLayout);
-  if (failed(layoutAssignment.run()))
+  if (failed(layoutAssignment.run())) {
     signalPassFailure();
+    return;
+  }
 
   // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
   // operation.
