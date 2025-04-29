@@ -29,7 +29,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/aix/Host.h"
-#include "lldb/Host/aix/Support.h"
+#include "lldb/Host/posix/Support.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 

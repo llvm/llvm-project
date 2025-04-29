@@ -19,7 +19,8 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallPtrSet.h" 
-#include "lldb/Host/aix/Support.h"
+#include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 
 #include "NativeThreadAIX.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
