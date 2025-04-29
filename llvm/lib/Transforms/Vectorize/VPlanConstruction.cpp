@@ -15,7 +15,6 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
-#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -462,44 +461,10 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
     VPBlockUtils::connectBlocks(R, Succ);
 }
 
-// Add the necessary canonical IV and branch recipes required to control the
-// loop.
-static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                  VPBasicBlock *LatchVPBB, Type *IdxTy,
-                                  DebugLoc DL) {
-  using namespace VPlanPatternMatch;
-  Value *StartIdx = ConstantInt::get(IdxTy, 0);
-  auto *StartV = Plan.getOrAddLiveIn(StartIdx);
-
-  // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
-  auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
-  HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
-
-  // We are about to replace the branch to exit the region. Remove the original
-  // BranchOnCond, if there is any.
-  if (!LatchVPBB->empty() &&
-      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue())))
-    LatchVPBB->getTerminator()->eraseFromParent();
-
-  VPBuilder Builder(LatchVPBB);
-  // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
-  // Initially the induction increment is guaranteed to not wrap, but that may
-  // change later, e.g. when tail-folding, when the flags need to be dropped.
-  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
-      Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
-      "index.next");
-  CanonicalIVPHI->addOperand(CanonicalIVIncrement);
-
-  // Add the BranchOnCount VPInstruction to the latch.
-  Builder.createNaryOp(VPInstruction::BranchOnCount,
-                       {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
-}
-
 void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
                                               PredicatedScalarEvolution &PSE,
                                               bool RequiresScalarEpilogueCheck,
-                                              bool TailFolded, Loop *TheLoop,
-                                              DebugLoc IVDL) {
+                                              bool TailFolded, Loop *TheLoop) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -513,9 +478,6 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
   VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
   LatchVPB->swapSuccessors();
-
-  addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
-                        cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
