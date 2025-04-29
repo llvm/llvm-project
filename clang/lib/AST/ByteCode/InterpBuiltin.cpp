@@ -1413,6 +1413,7 @@ static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// (CarryIn, LHS, RHS, Result)
 static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
@@ -1423,16 +1424,17 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
       !Call->getArg(2)->getType()->isIntegerType())
     return false;
 
-  APSInt CarryIn = peekToAPSInt(
-      S.Stk, *S.getContext().classify(Call->getArg(0)),
-      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(1)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(0)))));
+  PrimType CarryInT = *S.getContext().classify(Call->getArg(0));
+  PrimType LHST = *S.getContext().classify(Call->getArg(1));
+  PrimType RHST = *S.getContext().classify(Call->getArg(2));
+  unsigned PtrSize = align(primSize(PT_Ptr));
+  APSInt CarryIn =
+      peekToAPSInt(S.Stk, CarryInT,
+                   PtrSize + align(primSize(RHST)) + align(primSize(LHST)) +
+                       align(primSize(CarryInT)));
   APSInt LHS = peekToAPSInt(
-      S.Stk, *S.getContext().classify(Call->getArg(1)),
-      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(1)))));
-  APSInt RHS = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+      S.Stk, LHST, PtrSize + align(primSize(RHST)) + align(primSize(LHST)));
+  APSInt RHS = peekToAPSInt(S.Stk, RHST, PtrSize + align(primSize(RHST)));
 
   bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
                BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
@@ -1530,6 +1532,9 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
         << NumElems.getZExtValue();
     return false;
   }
+
+  if (!CheckArraySize(S, OpPC, NumElems.getZExtValue()))
+    return false;
 
   bool IsArray = NumElems.ugt(1);
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
@@ -1849,8 +1854,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 
   // Check for overlapping memory regions.
   if (!Move && Pointer::pointToSameBlock(SrcPtr, DestPtr)) {
-    unsigned SrcIndex = SrcPtr.getIndex() * SrcPtr.elemSize();
-    unsigned DstIndex = DestPtr.getIndex() * DestPtr.elemSize();
+    // Remove base casts.
+    Pointer SrcP = SrcPtr;
+    while (SrcP.isBaseClass())
+      SrcP = SrcP.getBase();
+
+    Pointer DestP = DestPtr;
+    while (DestP.isBaseClass())
+      DestP = DestP.getBase();
+
+    unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
+    unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
     unsigned N = Size.getZExtValue();
 
     if ((SrcIndex <= DstIndex && (SrcIndex + N) > DstIndex) ||
@@ -2184,8 +2198,8 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *Call, uint32_t BuiltinID) {
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
+                      uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
 
