@@ -279,8 +279,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     // element's size; otherwise, Offset and Scalar must be shuffled to the
     // appropriate element size for both.
     uint64_t ScalarSizeInBytes = ScalarSize / 8;
-    if (auto UnalignedBytes = Offset.urem(ScalarSizeInBytes);
-        UnalignedBytes != 0) {
+    if (auto UnalignedBytes = Offset.urem(ScalarSizeInBytes)) {
       if (DL->isBigEndian())
         return false;
       uint64_t OldScalarSizeInBytes = ScalarSizeInBytes;
