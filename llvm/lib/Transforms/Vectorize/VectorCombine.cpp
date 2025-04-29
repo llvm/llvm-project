@@ -337,15 +337,14 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   SmallVector<int> Mask;
   assert(OffsetEltIndex + VectorRange < MinVecNumElts &&
          "Address offset too big");
-  if (!NeedCast) {
+  if (NeedCast) {
+    Mask.assign(MinVecNumElts, PoisonMaskElem);
+    std::iota(Mask.begin(), Mask.begin() + VectorRange, OffsetEltIndex);
+  } else {
     auto *Ty = cast<FixedVectorType>(I.getType());
     unsigned OutputNumElts = Ty->getNumElements();
     Mask.assign(OutputNumElts, PoisonMaskElem);
     Mask[0] = OffsetEltIndex;
-  } else {
-    Mask.assign(MinVecNumElts, PoisonMaskElem);
-    for (unsigned InsertPos = 0; InsertPos < VectorRange; InsertPos++)
-      Mask[InsertPos] = OffsetEltIndex++;
   }
 
   if (OffsetEltIndex)
