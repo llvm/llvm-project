@@ -1364,8 +1364,13 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
 
 bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  unsigned Idx = std::distance(op_begin(), find(operands(), Op));
-  return isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, Idx, nullptr);
+  for (auto [Idx, V] : enumerate(operands())) {
+    if (V != Op)
+      continue;
+    if (!isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, Idx, nullptr))
+      return false;
+  }
+  return true;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
