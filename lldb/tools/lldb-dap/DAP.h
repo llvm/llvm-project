@@ -285,8 +285,6 @@ struct DAP {
   lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
-  llvm::json::Value CreateTopLevelScopes();
-
   void PopulateExceptionBreakpoints();
 
   /// Attempt to determine if an expression is a variable expression or

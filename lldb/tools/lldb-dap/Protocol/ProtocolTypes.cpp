@@ -16,17 +16,18 @@ using namespace llvm;
 
 namespace lldb_dap::protocol {
 
-bool fromJSON(const json::Value &Params, PresentationHint &PH, json::Path P) {
+bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
+              json::Path P) {
   auto rawHint = Params.getAsString();
   if (!rawHint) {
     P.report("expected a string");
     return false;
   }
-  std::optional<PresentationHint> hint =
-      StringSwitch<std::optional<PresentationHint>>(*rawHint)
-          .Case("normal", ePresentationHintNormal)
-          .Case("emphasize", ePresentationHintEmphasize)
-          .Case("deemphasize", ePresentationHintDeemphasize)
+  std::optional<Source::PresentationHint> hint =
+      StringSwitch<std::optional<Source::PresentationHint>>(*rawHint)
+          .Case("normal", Source::ePresentationHintNormal)
+          .Case("emphasize", Source::ePresentationHintEmphasize)
+          .Case("deemphasize", Source::ePresentationHintDeemphasize)
           .Default(std::nullopt);
   if (!hint) {
     P.report("unexpected value");
@@ -42,14 +43,13 @@ bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
          O.map("presentationHint", S.presentationHint) &&
          O.map("sourceReference", S.sourceReference);
 }
-
-llvm::json::Value toJSON(PresentationHint hint) {
+llvm::json::Value toJSON(Source::PresentationHint hint) {
   switch (hint) {
-  case ePresentationHintNormal:
+  case Source::ePresentationHintNormal:
     return "normal";
-  case ePresentationHintEmphasize:
+  case Source::ePresentationHintEmphasize:
     return "emphasize";
-  case ePresentationHintDeemphasize:
+  case Source::ePresentationHintDeemphasize:
     return "deemphasize";
   }
   llvm_unreachable("unhandled presentation hint.");
@@ -431,6 +431,55 @@ json::Value toJSON(const Capabilities &C) {
   // lldb-dap extensions
   if (C.lldbExtVersion && !C.lldbExtVersion->empty())
     result.insert({"$__lldb_version", *C.lldbExtVersion});
+
+  return result;
+}
+
+llvm::json::Value toJSON(const Scope &SC) {
+  llvm::json::Object result{{"name", SC.name},
+                            {"variablesReference", SC.variablesReference},
+                            {"expensive", SC.expensive}};
+
+  if (SC.presentationHint.has_value()) {
+    llvm::StringRef presentationHint;
+    switch (*SC.presentationHint) {
+    case Scope::ePresentationHintArguments:
+      presentationHint = "arguments";
+      break;
+    case Scope::ePresentationHintLocals:
+      presentationHint = "locals";
+      break;
+    case Scope::ePresentationHintRegisters:
+      presentationHint = "registers";
+      break;
+    case Scope::ePresentationHintReturnValue:
+      presentationHint = "returnValue";
+      break;
+    }
+
+    result.insert({"presentationHint", presentationHint});
+  }
+
+  if (SC.namedVariables.has_value())
+    result.insert({"namedVariables", SC.namedVariables});
+
+  if (SC.indexedVariables.has_value())
+    result.insert({"indexedVariables", SC.indexedVariables});
+
+  if (SC.source.has_value())
+    result.insert({"source", SC.source});
+
+  if (SC.line.has_value())
+    result.insert({"line", SC.line});
+
+  if (SC.column.has_value())
+    result.insert({"column", SC.column});
+
+  if (SC.endLine.has_value())
+    result.insert({"endLine", SC.endLine});
+
+  if (SC.endColumn.has_value())
+    result.insert({"endColumn", SC.endColumn});
 
   return result;
 }
