@@ -2396,7 +2396,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_resource_createpoisonhandle: {
+  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     if (SemaRef.checkArgCount(TheCall, 1) ||
         CheckResourceHandle(&SemaRef, TheCall, 0))
       return true;
@@ -2405,7 +2405,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ResourceTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_resource_createhandlefrombinding: {
+  case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
     ASTContext &AST = SemaRef.getASTContext();
     if (SemaRef.checkArgCount(TheCall, 5) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
