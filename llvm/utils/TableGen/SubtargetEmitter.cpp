@@ -333,13 +333,27 @@ unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
   return Names.size();
 }
 
-static void checkDuplicateCPUFeatures(StringRef CPUName, StringRef FeatureKind,
-                                      ConstRecVec Features) {
-  SmallPtrSet<const Record *, 8> FeatureSet;
+static void checkDuplicateCPUFeatures(StringRef CPUName,
+                                      ArrayRef<const Record *> Features,
+                                      ArrayRef<const Record *> TuneFeatures) {
+  // We had made sure each SubtargetFeature Record has a unique name, so we can
+  // simply use pointer sets here.
+  SmallPtrSet<const Record *, 8> FeatureSet, TuneFeatureSet;
   for (const auto *FeatureRec : Features) {
     if (!FeatureSet.insert(FeatureRec).second)
-      PrintWarning("Processor " + CPUName + " has duplicate " + FeatureKind +
-                   ": " + FeatureRec->getValueAsString("Name"));
+      PrintWarning("Processor " + CPUName + " contains duplicate feature '" +
+                   FeatureRec->getValueAsString("Name") + "'");
+  }
+
+  for (const auto *TuneFeatureRec : TuneFeatures) {
+    if (!TuneFeatureSet.insert(TuneFeatureRec).second)
+      PrintWarning("Processor " + CPUName +
+                   " contains duplicate tune feature '" +
+                   TuneFeatureRec->getValueAsString("Name") + "'");
+    if (FeatureSet.count(TuneFeatureRec))
+      PrintWarning("Processor " + CPUName + " has '" +
+                   TuneFeatureRec->getValueAsString("Name") +
+                   "' in both feature and tune feature sets");
   }
 }
 
@@ -367,10 +381,12 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
   for (const Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
     ConstRecVec FeatureList = Processor->getValueAsListOfDefs("Features");
-    checkDuplicateCPUFeatures(Name, "Features", FeatureList);
     ConstRecVec TuneFeatureList =
         Processor->getValueAsListOfDefs("TuneFeatures");
-    checkDuplicateCPUFeatures(Name, "TuneFeatures", TuneFeatureList);
+
+    // Warn the user if there are duplicate processor features or tune
+    // features.
+    checkDuplicateCPUFeatures(Name, FeatureList, TuneFeatureList);
 
     // Emit as "{ "cpu", "description", 0, { f1 , f2 , ... fn } },".
     OS << " { "
