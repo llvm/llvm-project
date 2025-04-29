@@ -1390,7 +1390,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
     mlir::Type ty =
-        convertTypeForMemory(converter, dataLayout, type.getEltType());
+        convertTypeForMemory(converter, dataLayout, type.getElementType());
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
