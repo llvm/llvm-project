@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
-// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_0
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_1
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX89 --check-prefix=GFX8_0
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX89 --check-prefix=GFX8_1
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX9 --check-prefix=GFX89
 
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
@@ -33,10 +33,9 @@ image_load    v[4:7], v[237:240], s[28:35] dmask:0x7 tfe
 // GCN:  image_load v[4:7], v[237:240], s[28:35] dmask:0x7 tfe ; encoding: [0x00,0x07,0x01,0xf0,0xed,0x04,0x07,0x00]
 
 // Verify support of all possible modifiers.
-// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
 image_load    v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 tfe lwe da d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
-// VI:     image_load v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 tfe lwe da d16 ; encoding: [0x00,0xf1,0x03,0xf2,0x01,0x05,0x02,0x80]
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 // NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
 image_load v5, v[1:4], s[8:15] d16
@@ -44,8 +43,9 @@ image_load v5, v[1:4], s[8:15] d16
 // GFX89:  image_load v5, v[1:4], s[8:15] d16 ; encoding: [0x00,0x00,0x00,0xf0,0x01,0x05,0x02,0x80]
 
 image_load v5, v[1:4], s[8:15] r128
-// SICIVI: image_load v5, v[1:4], s[8:15] r128 ; encoding: [0x00,0x80,0x00,0xf0,0x01,0x05,0x02,0x00]
-// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
 image_store   v[193:195], v[237:240], s[28:35] dmask:0x7 unorm
 // GCN: image_store v[193:195], v[237:240], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x20,0xf0,0xed,0xc1,0x07,0x00]
@@ -66,20 +66,19 @@ image_store   v[193:194], v[237:240], s[28:35] tfe
 // GCN: image_store v[193:194], v[237:240], s[28:35] tfe ; encoding: [0x00,0x00,0x21,0xf0,0xed,0xc1,0x07,0x00]
 
 // Verify support of all possible modifiers.
-// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
 image_store   v5, v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 lwe da d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
-// VI:     image_store v5, v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 lwe da d16 ; encoding: [0x00,0xf1,0x22,0xf2,0x01,0x05,0x02,0x80]
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 // NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
 image_store    v5, v[1:4], s[8:15] d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
 // GFX89:  image_store v5, v[1:4], s[8:15] d16 ; encoding: [0x00,0x00,0x20,0xf0,0x01,0x05,0x02,0x80]
 
-// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
 image_store    v5, v[1:4], s[8:15] r128
-// SICIVI: image_store v5, v[1:4], s[8:15] r128 ; encoding: [0x00,0x80,0x20,0xf0,0x01,0x05,0x02,0x00]
-// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // Image Load/Store: d16 unpacked
@@ -324,10 +323,10 @@ image_sample  v193, v[237:240], s[28:35], s[4:7]
 image_sample  v[193:194], v[237:240], s[28:35], s[4:7] tfe
 // GCN: image_sample v[193:194], v[237:240], s[28:35], s[4:7] tfe ; encoding: [0x00,0x00,0x81,0xf0,0xed,0xc1,0x27,0x00]
 
-// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
 image_sample  v193, v[237:240], s[28:35], s[4:7] r128
-// SICIVI: image_sample v193, v[237:240], s[28:35], s[4:7] r128 ; encoding: [0x00,0x80,0x80,0xf0,0xed,0xc1,0x27,0x00]
-// NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
 image_sample  v193, v[237:240], s[28:35], s[4:7] d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
@@ -566,10 +565,9 @@ image_atomic_cmpswap v[4:8], v[192:195], s[28:35] dmask:0xf tfe
 // SICI:  image_atomic_cmpswap v[4:8], v[192:195], s[28:35] dmask:0xf tfe ; encoding: [0x00,0x0f,0x41,0xf0,0xc0,0x04,0x07,0x00]
 // GFX89: image_atomic_cmpswap v[4:8], v[192:195], s[28:35] dmask:0xf tfe ; encoding: [0x00,0x0f,0x45,0xf0,0xc0,0x04,0x07,0x00]
 
-// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
 image_atomic_add v10, v6, s[8:15] dmask:0x1 r128
-// SICI: image_atomic_add v10, v6, s[8:15] dmask:0x1 r128 ; encoding: [0x00,0x81,0x44,0xf0,0x06,0x0a,0x02,0x00]
-// VI:   image_atomic_add v10, v6, s[8:15] dmask:0x1 r128 ; encoding: [0x00,0x81,0x48,0xf0,0x06,0x0a,0x02,0x00]
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 // NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
 //===----------------------------------------------------------------------===//

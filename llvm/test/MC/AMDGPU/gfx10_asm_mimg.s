@@ -39,9 +39,8 @@ image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D slc
 image_load v0, v255, s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_1D d16
 ; GFX10: image_load v0, v255, s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_1D d16 ; encoding: [0x00,0x06,0x00,0xf0,0xff,0x00,0x00,0x80]
 
-// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
-image_load v0, v255, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D r128
-; GFX10: image_load v0, v255, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D r128 ; encoding: [0x00,0x81,0x00,0xf0,0xff,0x00,0x00,0x00]
+image_load v0, v255, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
+; GFX10: image_load v0, v255, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x01,0x00,0xf0,0xff,0x00,0x00,0x00]
 
 image_load v0, v[2:3], s[0:7] dmask:0x1 dim:2D
 ; GFX10: image_load v0, v[2:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D ; encoding: [0x08,0x01,0x00,0xf0,0x02,0x00,0x00,0x00]
