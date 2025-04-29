@@ -924,6 +924,7 @@ supported for the ``amdgcn`` target.
      Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Lane-shared                           10              *TODO*      Shared VGPR      32      0xFFFFFFFF
+     Distributed                           11              *TODO*      DDS              32      0xFFFFFFFF
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
