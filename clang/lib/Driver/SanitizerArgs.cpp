@@ -1031,10 +1031,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     StableABI = Args.hasFlag(options::OPT_fsanitize_stable_abi,
                              options::OPT_fno_sanitize_stable_abi, false);
 
-    AsanUseAfterScope = Args.hasFlag(
-        options::OPT_fsanitize_address_use_after_scope,
-        options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
-
     AsanPoisonCustomArrayCookie = Args.hasFlag(
         options::OPT_fsanitize_address_poison_custom_array_cookie,
         options::OPT_fno_sanitize_address_poison_custom_array_cookie,
@@ -1096,7 +1092,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
 
   } else {
-    AsanUseAfterScope = false;
     // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
     SanitizerMask DetectInvalidPointerPairs =
         SanitizerKind::PointerCompare | SanitizerKind::PointerSubtract;
@@ -1108,6 +1103,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                      SanitizerKind::PointerSubtract)
           << "-fsanitize=address";
     }
+  }
+
+  if (AllAddedKinds & (SanitizerKind::Address | SanitizerKind::KernelAddress)) {
+    AsanUseAfterScope = Args.hasFlag(
+        options::OPT_fsanitize_address_use_after_scope,
+        options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
+  } else {
+    AsanUseAfterScope = false;
   }
 
   if (AllAddedKinds & SanitizerKind::HWAddress) {
