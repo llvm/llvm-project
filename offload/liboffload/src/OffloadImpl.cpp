@@ -142,6 +142,9 @@ void initPlugins() {
 
   // Preemptively initialize all devices in the plugin
   for (auto &Platform : Platforms()) {
+    // Do not use the host plugin - it isn't supported.
+    if (Platform.BackendType == OL_PLATFORM_BACKEND_UNKNOWN)
+      continue;
     auto Err = Platform.Plugin->init();
     [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
