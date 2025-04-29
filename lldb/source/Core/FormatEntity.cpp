@@ -1809,12 +1809,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionReturnRight:
   case Entry::Type::FunctionReturnLeft:
   case Entry::Type::FunctionQualifiers: {
-    Language *language_plugin = nullptr;
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+    if (!sc->function)
+      return false;
 
+    Language *language_plugin =
+        Language::FindPlugin(sc->function->GetLanguage());
     if (!language_plugin)
       return false;
 
