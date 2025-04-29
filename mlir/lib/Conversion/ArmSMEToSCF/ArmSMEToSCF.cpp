@@ -77,11 +77,6 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
   Value upperBound;
   if (mask) {
     auto createMaskOp = mask.getDefiningOp<vector::CreateMaskOp>();
-    if (!createMaskOp)
-      return rewriter.notifyMatchFailure(
-          loc, "unsupported mask op, only 'vector.create_mask' is "
-               "currently supported");
-
     auto maskDim0 = createMaskOp.getOperands()[0];
     auto maskDim1 = createMaskOp.getOperands()[1];
 
@@ -184,6 +179,10 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 
     Value initTile;
     if (mask) {
+      if (!mask.getDefiningOp<vector::CreateMaskOp>())
+        return rewriter.notifyMatchFailure(
+            loc, "unsupported mask op, only 'vector.create_mask' is "
+                 "currently supported");
       auto padOp = tileLoadOp.getPadding();
       assert(padOp && "expected padding when masking!");
 
@@ -373,6 +372,14 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
 
   LogicalResult matchAndRewrite(arm_sme::TileStoreOp tileStoreOp,
                                 PatternRewriter &rewriter) const override {
+    if (Value mask = tileStoreOp.getMask()) {
+      if (!mask.getDefiningOp<vector::CreateMaskOp>())
+        return rewriter.notifyMatchFailure(
+            tileStoreOp.getLoc(),
+            "unsupported mask op, only 'vector.create_mask' is "
+            "currently supported");
+    }
+
     // Create a loop that stores each active ZA tile slice from memory.
     return createLoadStoreForOverTileSlices(
         rewriter, tileStoreOp.getLoc(), tileStoreOp.getVectorType(),

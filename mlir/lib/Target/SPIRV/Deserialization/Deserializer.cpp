@@ -2077,8 +2077,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // block arguments from the original merge block.
     for (unsigned i = 0, e = outsideUses.size(); i != e; ++i)
       outsideUses[i].replaceAllUsesWith(selectionOp.getResult(i));
-    for (unsigned i = 0, e = mergeBlock->getNumArguments(); i != e; ++i)
-      mergeBlock->eraseArgument(i);
+    mergeBlock->eraseArguments(0, mergeBlock->getNumArguments());
   }
 
   // Check that whether some op in the to-be-erased blocks still has uses. Those

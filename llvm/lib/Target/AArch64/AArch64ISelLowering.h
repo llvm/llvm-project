@@ -245,13 +245,6 @@ enum NodeType : unsigned {
   FCMGE,
   FCMGT,
 
-  // Vector zero comparisons
-  FCMEQz,
-  FCMGEz,
-  FCMGTz,
-  FCMLEz,
-  FCMLTz,
-
   // Round wide FP to narrow FP with inexact results to odd.
   FCVTXN,
 
@@ -695,8 +688,8 @@ public:
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   bool shouldRemoveRedundantExtend(SDValue Op) const override;
 
@@ -1037,10 +1030,6 @@ public:
 
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
-
-#ifndef NDEBUG
-  void verifyTargetSDNode(const SDNode *N) const override;
-#endif
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can

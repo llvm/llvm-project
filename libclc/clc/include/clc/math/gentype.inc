@@ -57,6 +57,8 @@
 #define __CLC_CONVERT_UINTN __CLC_XCONCAT(__clc_convert_, __CLC_UINTN)
 #define __CLC_CONVERT_ULONGN __CLC_XCONCAT(__clc_convert_, __CLC_ULONGN)
 
+#define __CLC_CONVERT_BIT_INTN __CLC_XCONCAT(__clc_convert_, __CLC_BIT_INTN)
+
 // See definitions of __CLC_S_GENTYPE/__CLC_U_GENTYPE below, which depend on the
 // specific size of floating-point type. These are the signed and unsigned
 // integers of the same bitwidth and element count as the GENTYPE. They match
@@ -81,11 +83,15 @@
 #define __CLC_BIT_INTN int
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
+#define __CLC_VECSIZE_OR_1 1
 #include __CLC_BODY
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_VECSIZE
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 #undef __CLC_SCALAR
+
+#define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
 #define __CLC_GENTYPE float2
 #define __CLC_BIT_INTN int2
@@ -127,6 +133,7 @@
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
@@ -150,13 +157,17 @@
 
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
+#define __CLC_VECSIZE_OR_1 1
 #define __CLC_GENTYPE double
 #define __CLC_BIT_INTN long
 #include __CLC_BODY
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 #undef __CLC_VECSIZE
 #undef __CLC_SCALAR
+
+#define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
 #define __CLC_GENTYPE double2
 #define __CLC_BIT_INTN long2
@@ -198,6 +209,7 @@
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
@@ -221,13 +233,17 @@
 
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
+#define __CLC_VECSIZE_OR_1 1
 #define __CLC_GENTYPE half
 #define __CLC_BIT_INTN short
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_VECSIZE
 #undef __CLC_SCALAR
+
+#define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
 #define __CLC_GENTYPE half2
 #define __CLC_BIT_INTN short2
@@ -269,6 +285,7 @@
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
@@ -313,6 +330,8 @@
 #undef __CLC_CONVERT_USHORTN
 #undef __CLC_CONVERT_UINTN
 #undef __CLC_CONVERT_ULONGN
+
+#undef __CLC_CONVERT_BIT_INTN
 
 #undef __CLC_ULONGN
 #undef __CLC_UINTN

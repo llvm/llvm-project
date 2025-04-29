@@ -98,9 +98,7 @@ public:
 };
 
 ImmutablePass *createNVPTXAAWrapperPass();
-void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 ImmutablePass *createNVPTXExternalAAWrapperPass();
-void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 
 } // end namespace llvm
 

@@ -20,6 +20,10 @@
 
 namespace cir {
 
+namespace detail {
+struct RecordTypeStorage;
+} // namespace detail
+
 bool isAnyFloatingPointType(mlir::Type t);
 bool isFPOrFPVectorTy(mlir::Type);
 

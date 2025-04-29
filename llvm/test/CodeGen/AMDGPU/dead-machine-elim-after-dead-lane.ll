@@ -6,15 +6,16 @@
 define amdgpu_kernel void @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_2
-; CHECK-NEXT:  ; %bb.1: ; %LeafBlock1
-; CHECK-NEXT:  .LBB0_2: ; %foo.exit
+; CHECK-NEXT:   ; %bb.1:                                ; %LeafBlock1
+; CHECK-NEXT:    s_cmp_eq_u32 s0, 10
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3
+; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  ; %bb.3: ; %sw.bb10
+; CHECK-NEXT: .LBB0_3:
 entry:
   switch i8 poison, label %foo.exit [
     i8 4, label %sw.bb4

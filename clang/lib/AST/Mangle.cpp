@@ -367,9 +367,11 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   }
   OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
   if (const auto *CID = MD->getCategory()) {
-    OS << CID->getClassInterface()->getName();
-    if (includeCategoryNamespace) {
-      OS << '(' << *CID << ')';
+    if (const auto *CI = CID->getClassInterface()) {
+      OS << CI->getName();
+      if (includeCategoryNamespace) {
+        OS << '(' << *CID << ')';
+      }
     }
   } else if (const auto *CD =
                  dyn_cast<ObjCContainerDecl>(MD->getDeclContext())) {
@@ -540,9 +542,9 @@ private:
         GD = GlobalDecl(CtorD, Ctor_Complete);
       else if (const auto *DtorD = dyn_cast<CXXDestructorDecl>(D))
         GD = GlobalDecl(DtorD, Dtor_Complete);
-      else if (D->hasAttr<CUDAGlobalAttr>())
-        GD = GlobalDecl(cast<FunctionDecl>(D));
-      else
+      else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+        GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(D);
+      } else
         GD = GlobalDecl(D);
       MC->mangleName(GD, OS);
       return false;

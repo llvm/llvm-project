@@ -115,24 +115,24 @@ void foo() {
   bool SomeB;
   struct SomeStruct{} SomeStructImpl;
 
-//CHECK: #pragma acc parallel dtype(SomeB)
-#pragma acc parallel dtype(SomeB)
+//CHECK: #pragma acc parallel dtype(default)
+#pragma acc parallel dtype(default)
   while(true);
 
-//CHECK: #pragma acc parallel device_type(SomeStruct)
-#pragma acc parallel device_type(SomeStruct)
+//CHECK: #pragma acc parallel device_type(radeon)
+#pragma acc parallel device_type(radeon)
   while(true);
 
-//CHECK: #pragma acc parallel device_type(int)
-#pragma acc parallel device_type(int)
+//CHECK: #pragma acc parallel device_type(nvidia)
+#pragma acc parallel device_type(nvidia)
   while(true);
 
-//CHECK: #pragma acc parallel dtype(bool)
-#pragma acc parallel dtype(bool)
+//CHECK: #pragma acc parallel dtype(multicore)
+#pragma acc parallel dtype(multicore)
   while(true);
 
-//CHECK: #pragma acc parallel device_type(SomeStructImpl)
-#pragma acc parallel device_type (SomeStructImpl)
+//CHECK: #pragma acc parallel device_type(host)
+#pragma acc parallel device_type (host)
   while(true);
 
 //CHECK: #pragma acc parallel reduction(+: iPtr)
