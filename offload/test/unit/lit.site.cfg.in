@@ -2,7 +2,6 @@
 
 config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
-config.offload_platform = "@OFFLOAD_PLATFORM@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/unit/lit.cfg.py")

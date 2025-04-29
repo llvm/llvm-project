@@ -8,12 +8,10 @@ import subprocess
 import lit.formats
 
 # name: The name of this test suite.
-config.name = "Offload-Unit-{}".format(config.offload_platform)
+config.name = "Offload-Unit"
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = []
-
-config.environment = {"OFFLOAD_UNITTEST_PLATFORM": config.offload_platform}
 
 # test_source_root: The root path where tests are located.
 # test_exec_root: The root path where tests should be run.
