@@ -88,6 +88,9 @@ class CompilerInstance : public ModuleLoader {
   /// The target being compiled for.
   IntrusiveRefCntPtr<TargetInfo> Target;
 
+  /// Options for the auxiliary target.
+  std::unique_ptr<TargetOptions> AuxTargetOpts;
+
   /// Auxiliary Target info.
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
@@ -315,9 +318,6 @@ public:
   }
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     return Invocation->getHeaderSearchOpts();
-  }
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
-    return Invocation->getHeaderSearchOptsPtr();
   }
 
   APINotesOptions &getAPINotesOpts() { return Invocation->getAPINotesOpts(); }
