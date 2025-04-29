@@ -2298,6 +2298,14 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
 }
 
 LogicalResult acc::LoopOp::verify() {
+  if (getUpperbound().size() != getStep().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of steps";
+
+  if (getUpperbound().size() != getLowerbound().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of lowerbounds";
+
   if (!getUpperbound().empty() && getInclusiveUpperbound() &&
       (getUpperbound().size() != getInclusiveUpperbound()->size()))
     return emitError() << "inclusiveUpperbound size is expected to be the same"
@@ -2414,6 +2422,15 @@ LogicalResult acc::LoopOp::verify() {
   // Check non-empty body().
   if (getRegion().empty())
     return emitError("expected non-empty body.");
+
+  // When it is container-like - it is expected to hold a loop-like operation.
+  // TODO: Get the collapse attribute into account.
+  if (isContainerLike()) {
+    // TODO: Ensure there is a single loop-like operation at any one level.
+    auto loopLikeOps = getRegion().getOps<LoopLikeOpInterface>();
+    if (loopLikeOps.empty())
+      return emitError("expected to hold a loop-like operation.");
+  }
 
   return success();
 }
