@@ -1,0 +1,8 @@
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+define void @foo() {
+; CHECK-LABEL: foo:
+; CHECK:       Test
+; CHECK-NEXT:  Downstream
+; CHECK-NEXT:  Target
+  ret void
+}
