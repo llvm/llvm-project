@@ -368,12 +368,12 @@ static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   };
 }
 
-static auto toJSONSorted(llvm::json::OStream &JOS,
-                         std::vector<ExtendedModuleID> V,
-                         std::function<bool(const ExtendedModuleID &)> filter) {
+static auto
+toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleDeps::DepsInfo> V,
+             std::function<bool(const ModuleDeps::DepsInfo &)> filter) {
   llvm::sort(V);
   return [&JOS, V = std::move(V), filter] {
-    for (const ExtendedModuleID &MID : V)
+    for (const ModuleDeps::DepsInfo &MID : V)
       if (filter(MID)) {
         toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName);
       }

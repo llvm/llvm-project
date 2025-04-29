@@ -389,7 +389,7 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
 }
 
 llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
-    ArrayRef<ExtendedModuleID> ClangModuleDeps) const {
+    ArrayRef<ModuleDeps::DepsInfo> ClangModuleDeps) const {
   llvm::DenseSet<const FileEntry *> ModuleMapFiles;
   for (const auto &MID : ClangModuleDeps) {
     ModuleDeps *MD = ModuleDepsByID.lookup(MID.ID);
@@ -404,7 +404,8 @@ llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
 }
 
 void ModuleDepCollector::addModuleMapFiles(
-    CompilerInvocation &CI, ArrayRef<ExtendedModuleID> ClangModuleDeps) const {
+    CompilerInvocation &CI,
+    ArrayRef<ModuleDeps::DepsInfo> ClangModuleDeps) const {
   if (Service.shouldEagerLoadModules())
     return; // Only pcm is needed for eager load.
 
@@ -416,7 +417,8 @@ void ModuleDepCollector::addModuleMapFiles(
 }
 
 void ModuleDepCollector::addModuleFiles(
-    CompilerInvocation &CI, ArrayRef<ExtendedModuleID> ClangModuleDeps) const {
+    CompilerInvocation &CI,
+    ArrayRef<ModuleDeps::DepsInfo> ClangModuleDeps) const {
   for (const auto &MID : ClangModuleDeps) {
     ModuleDeps *MD = ModuleDepsByID.lookup(MID.ID);
     std::string PCMPath =
@@ -432,7 +434,7 @@ void ModuleDepCollector::addModuleFiles(
 
 void ModuleDepCollector::addModuleFiles(
     CowCompilerInvocation &CI,
-    ArrayRef<ExtendedModuleID> ClangModuleDeps) const {
+    ArrayRef<ModuleDeps::DepsInfo> ClangModuleDeps) const {
   for (const auto &MID : ClangModuleDeps) {
     ModuleDeps *MD = ModuleDepsByID.lookup(MID.ID);
     std::string PCMPath =
@@ -472,7 +474,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
         CI.getFrontendOpts().ModuleMapFiles.emplace_back(
             CurrentModuleMap->getNameAsRequested());
 
-    SmallVector<ExtendedModuleID> DirectDeps;
+    SmallVector<ModuleDeps::DepsInfo> DirectDeps;
     for (const auto &KV : ModularDeps)
       if (DirectModularDeps.contains(KV.first))
         DirectDeps.push_back({KV.second->ID, /* Exported = */ false});
