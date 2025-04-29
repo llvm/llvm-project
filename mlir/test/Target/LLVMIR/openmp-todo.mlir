@@ -359,9 +359,10 @@ omp.private {type = firstprivate} @x.privatizer : i32 copy {
   omp.yield(%private: !llvm.ptr)
 }
 llvm.func @target_firstprivate(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.target operation}}
+  %0 = omp.map.info var_ptr(%x : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{not yet implemented: Unhandled clause privatization for deferred target tasks in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
+  omp.target nowait map_entries(%0 -> %blockarg0 : !llvm.ptr) private(@x.privatizer %x -> %arg0 [map_idx=0] : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
