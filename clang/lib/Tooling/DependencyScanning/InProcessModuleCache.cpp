@@ -97,9 +97,7 @@ public:
       return Entry->Timestamp;
     }();
 
-    std::time_t Expected = 0;
-    std::time_t Now = llvm::sys::toTimeT(std::chrono::system_clock::now());
-    Timestamp.compare_exchange_weak(Expected, Now);
+    Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
