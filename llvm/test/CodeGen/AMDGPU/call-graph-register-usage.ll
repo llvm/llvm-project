@@ -7,7 +7,7 @@
 ; Make sure to run a GPU with the SGPR allocation bug.
 
 ; GCN-LABEL: {{^}}use_vcc:
-; GCN: ; TotalNumSgprs: 34
+; GCN: ; TotalNumSgprs: 2
 ; GCN: ; NumVgprs: 0
 define void @use_vcc() #1 {
   call void asm sideeffect "", "~{vcc}" () #0
@@ -43,8 +43,8 @@ define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out)
 }
 
 ; GCN-LABEL: {{^}}use_flat_scratch:
-; CI: ; TotalNumSgprs: 36
-; VI: ; TotalNumSgprs: 38
+; CI: ; TotalNumSgprs: 4
+; VI: ; TotalNumSgprs: 6
 ; GCN: ; NumVgprs: 0
 define void @use_flat_scratch() #1 {
   call void asm sideeffect "", "~{flat_scratch}" () #0

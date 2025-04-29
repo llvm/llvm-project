@@ -24,7 +24,7 @@ define void @I_Quit() {
 ; CHECK-LABEL: P_RemoveMobj:
 ; CHECK: .set P_RemoveMobj.num_vgpr, 0
 ; CHECK: .set P_RemoveMobj.num_agpr, 0
-; CHECK: .set P_RemoveMobj.numbered_sgpr, 32
+; CHECK: .set P_RemoveMobj.numbered_sgpr, 0
 ; CHECK: .set P_RemoveMobj.private_seg_size, 0
 ; CHECK: .set P_RemoveMobj.uses_vcc, 0
 ; CHECK: .set P_RemoveMobj.uses_flat_scratch, 0
@@ -38,7 +38,7 @@ define void @P_RemoveMobj() {
 ; CHECK-LABEL: P_SpawnMobj:
 ; CHECK: .set P_SpawnMobj.num_vgpr, 0
 ; CHECK: .set P_SpawnMobj.num_agpr, 0
-; CHECK: .set P_SpawnMobj.numbered_sgpr, 32
+; CHECK: .set P_SpawnMobj.numbered_sgpr, 0
 ; CHECK: .set P_SpawnMobj.private_seg_size, 0
 ; CHECK: .set P_SpawnMobj.uses_vcc, 0
 ; CHECK: .set P_SpawnMobj.uses_flat_scratch, 0
@@ -52,7 +52,7 @@ define void @P_SpawnMobj() {
 ; CHECK-LABEL: G_PlayerReborn:
 ; CHECK: .set G_PlayerReborn.num_vgpr, 0
 ; CHECK: .set G_PlayerReborn.num_agpr, 0
-; CHECK: .set G_PlayerReborn.numbered_sgpr, 32
+; CHECK: .set G_PlayerReborn.numbered_sgpr, 0
 ; CHECK: .set G_PlayerReborn.private_seg_size, 0
 ; CHECK: .set G_PlayerReborn.uses_vcc, 0
 ; CHECK: .set G_PlayerReborn.uses_flat_scratch, 0
@@ -66,7 +66,7 @@ define void @G_PlayerReborn() {
 ; CHECK-LABEL: P_SetThingPosition:
 ; CHECK: .set P_SetThingPosition.num_vgpr, 0
 ; CHECK: .set P_SetThingPosition.num_agpr, 0
-; CHECK: .set P_SetThingPosition.numbered_sgpr, 32
+; CHECK: .set P_SetThingPosition.numbered_sgpr, 0
 ; CHECK: .set P_SetThingPosition.private_seg_size, 0
 ; CHECK: .set P_SetThingPosition.uses_vcc, 0
 ; CHECK: .set P_SetThingPosition.uses_flat_scratch, 0
@@ -96,7 +96,7 @@ define void @P_SetupPsprites(ptr addrspace(1) %i) {
 ; CHECK-LABEL: HU_Start:
 ; CHECK: .set HU_Start.num_vgpr, 0
 ; CHECK: .set HU_Start.num_agpr, 0
-; CHECK: .set HU_Start.numbered_sgpr, 32
+; CHECK: .set HU_Start.numbered_sgpr, 0
 ; CHECK: .set HU_Start.private_seg_size, 0
 ; CHECK: .set HU_Start.uses_vcc, 0
 ; CHECK: .set HU_Start.uses_flat_scratch, 0
@@ -162,7 +162,7 @@ define void @G_DoReborn() {
 ; CHECK-LABEL: AM_Stop:
 ; CHECK: .set AM_Stop.num_vgpr, 0
 ; CHECK: .set AM_Stop.num_agpr, 0
-; CHECK: .set AM_Stop.numbered_sgpr, 32
+; CHECK: .set AM_Stop.numbered_sgpr, 0
 ; CHECK: .set AM_Stop.private_seg_size, 0
 ; CHECK: .set AM_Stop.uses_vcc, 0
 ; CHECK: .set AM_Stop.uses_flat_scratch, 0
@@ -176,7 +176,7 @@ define void @AM_Stop() {
 ; CHECK-LABEL: D_AdvanceDemo:
 ; CHECK: .set D_AdvanceDemo.num_vgpr, 0
 ; CHECK: .set D_AdvanceDemo.num_agpr, 0
-; CHECK: .set D_AdvanceDemo.numbered_sgpr, 32
+; CHECK: .set D_AdvanceDemo.numbered_sgpr, 0
 ; CHECK: .set D_AdvanceDemo.private_seg_size, 0
 ; CHECK: .set D_AdvanceDemo.uses_vcc, 0
 ; CHECK: .set D_AdvanceDemo.uses_flat_scratch, 0
@@ -190,7 +190,7 @@ define void @D_AdvanceDemo() {
 ; CHECK-LABEL: F_StartFinale:
 ; CHECK: .set F_StartFinale.num_vgpr, 0
 ; CHECK: .set F_StartFinale.num_agpr, 0
-; CHECK: .set F_StartFinale.numbered_sgpr, 32
+; CHECK: .set F_StartFinale.numbered_sgpr, 0
 ; CHECK: .set F_StartFinale.private_seg_size, 0
 ; CHECK: .set F_StartFinale.uses_vcc, 0
 ; CHECK: .set F_StartFinale.uses_flat_scratch, 0
@@ -204,7 +204,7 @@ define void @F_StartFinale() {
 ; CHECK-LABEL: F_Ticker:
 ; CHECK: .set F_Ticker.num_vgpr, 0
 ; CHECK: .set F_Ticker.num_agpr, 0
-; CHECK: .set F_Ticker.numbered_sgpr, 32
+; CHECK: .set F_Ticker.numbered_sgpr, 0
 ; CHECK: .set F_Ticker.private_seg_size, 0
 ; CHECK: .set F_Ticker.uses_vcc, 0
 ; CHECK: .set F_Ticker.uses_flat_scratch, 0
@@ -236,7 +236,7 @@ define i32 @G_CheckDemoStatus() {
 ; CHECK-LABEL: P_TempSaveGameFile:
 ; CHECK: .set P_TempSaveGameFile.num_vgpr, 2
 ; CHECK: .set P_TempSaveGameFile.num_agpr, 0
-; CHECK: .set P_TempSaveGameFile.numbered_sgpr, 32
+; CHECK: .set P_TempSaveGameFile.numbered_sgpr, 0
 ; CHECK: .set P_TempSaveGameFile.private_seg_size, 0
 ; CHECK: .set P_TempSaveGameFile.uses_vcc, 0
 ; CHECK: .set P_TempSaveGameFile.uses_flat_scratch, 0
@@ -250,7 +250,7 @@ define ptr @P_TempSaveGameFile() {
 ; CHECK-LABEL: P_SaveGameFile:
 ; CHECK: .set P_SaveGameFile.num_vgpr, 2
 ; CHECK: .set P_SaveGameFile.num_agpr, 0
-; CHECK: .set P_SaveGameFile.numbered_sgpr, 32
+; CHECK: .set P_SaveGameFile.numbered_sgpr, 0
 ; CHECK: .set P_SaveGameFile.private_seg_size, 0
 ; CHECK: .set P_SaveGameFile.uses_vcc, 0
 ; CHECK: .set P_SaveGameFile.uses_flat_scratch, 0
