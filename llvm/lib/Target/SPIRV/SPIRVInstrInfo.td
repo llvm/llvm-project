@@ -16,14 +16,10 @@ include "SPIRVSymbolicOperands.td"
 // Codegen only metadata instructions
 let isCodeGenOnly=1 in {
   def ASSIGN_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
-  def DECL_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
-  def GET_ID: Pseudo<(outs iID:$dst_id), (ins iID:$src)>;
-  def GET_fID: Pseudo<(outs fID:$dst_id), (ins fID:$src)>;
-  def GET_pID: Pseudo<(outs pID:$dst_id), (ins pID:$src)>;
-  def GET_vID: Pseudo<(outs vID:$dst_id), (ins vID:$src)>;
-  def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins vfID:$src)>;
-  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins vpID:$src)>;
 }
+
+def UNKNOWN_type
+    : UnknownOp<(outs TYPE:$type), (ins i32imm:$opcode, variable_ops), " ">;
 
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
 
@@ -216,41 +212,20 @@ def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
 
 // 3.42.7 Constant-Creation Instructions
 
-def imm_to_i32 : SDNodeXForm<imm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAP().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def fimm_to_i64 : SDNodeXForm<imm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
-def gi_bitcast_fimm_to_i64 : GICustomOperandRenderer<"renderFImm64">,
-  GISDNodeXFormEquiv<fimm_to_i64>;
-
-def gi_bitcast_imm_to_i32 : GICustomOperandRenderer<"renderImm32">,
-  GISDNodeXFormEquiv<imm_to_i32>;
-
-def PseudoConstI: IntImmLeaf<i64, [{ return Imm.getBitWidth() <= 32; }], imm_to_i32>;
-def PseudoConstF: FPImmLeaf<f64, [{  return true; }], fimm_to_i64>;
-def ConstPseudoTrue: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
-def ConstPseudoFalse: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
-def ConstPseudoNull: IntImmLeaf<i64, [{ return Imm.isZero(); }]>;
-
 multiclass IntFPImm<bits<16> opCode, string name> {
   def I: Op<opCode, (outs iID:$dst), (ins TYPE:$type, iID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set iID:$dst, (assigntype PseudoConstI:$src, TYPE:$type))]>;
+                  "$dst = "#name#" $type">;
   def F: Op<opCode, (outs fID:$dst), (ins TYPE:$type, fID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set fID:$dst, (assigntype PseudoConstF:$src, TYPE:$type))]>;
+                  "$dst = "#name#" $type">;
 }
+defm OpConstant: IntFPImm<43, "OpConstant">;
 
+def ConstPseudoTrue: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
+def ConstPseudoFalse: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
 def OpConstantTrue: Op<41, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantTrue $src_ty",
                       [(set iID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
 def OpConstantFalse: Op<42, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantFalse $src_ty",
                       [(set iID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
-
-defm OpConstant: IntFPImm<43, "OpConstant">;
 
 def OpConstantComposite: Op<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpConstantComposite $type">;
@@ -472,11 +447,8 @@ def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
 // 3.42.12 Composite Instructions
 
-//def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
-//                  "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
                   "$res = OpVectorExtractDynamic $type $vec $idx">;
-
 def OpVectorInsertDynamic: Op<78, (outs ID:$res), (ins TYPE:$ty, ID:$vec, ID:$comp, ID:$idx),
                   "$res = OpVectorInsertDynamic $ty $vec $comp $idx">;
 def OpVectorShuffle: Op<79, (outs ID:$res), (ins TYPE:$ty, ID:$v1, ID:$v2, variable_ops),
@@ -764,6 +736,10 @@ def OpGroupFMax: OpGroup<"FMax", 269>;
 def OpGroupUMax: OpGroup<"UMax", 270>;
 def OpGroupSMax: OpGroup<"SMax", 271>;
 
+def OpSubgroupMatrixMultiplyAccumulateINTEL: Op<6237, (outs ID:$res),
+        (ins TYPE:$ty, ID:$KDim, ID:$A, ID:$B, ID:$C, variable_ops),
+                  "$res = OpSubgroupMatrixMultiplyAccumulateINTEL $ty $KDim $A $B $C">;
+
 // TODO: 3.42.22. Device-Side Enqueue Instructions
 def OpEnqueueKernel: Op<292, (outs ID:$res), (ins TYPE:$type, ID:$queue, ID:$flags, ID:$NDR, ID:$nevents, ID:$wevents,
                                               ID:$revent, ID:$invoke, ID:$param, ID:$psize, ID:$palign, variable_ops),
@@ -956,3 +932,7 @@ def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variab
                   "$res = OpAliasScopeDeclINTEL $AliasDomain">;
 def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
                   "$res = OpAliasScopeListDeclINTEL">;
+
+// SPV_INTEL_ternary_bitwise_function
+def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
+                  "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;

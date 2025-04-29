@@ -515,6 +515,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     **GCN GFX12 (RDNA 4)** [AMD-GCN-GFX12-RDNA4]_
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -619,18 +621,18 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 SALU floating point instructions
                                                                                                 are not available on:
 
-                                                                                                - ``gfx1150``
-                                                                                                - ``gfx1151``
-                                                                                                - ``gfx1152``
-                                                                                                - ``gfx1153``
+                                                                                                - ``gfx1100``
+                                                                                                - ``gfx1101``
+                                                                                                - ``gfx1102``
+                                                                                                - ``gfx1103``
 
                                                                                                 SGPRs are not supported for src1
                                                                                                 in dpp instructions for:
 
-                                                                                                - ``gfx1150``
-                                                                                                - ``gfx1151``
-                                                                                                - ``gfx1152``
-                                                                                                - ``gfx1153``
+                                                                                                - ``gfx1100``
+                                                                                                - ``gfx1101``
+                                                                                                - ``gfx1102``
+                                                                                                - ``gfx1103``
 
 
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
@@ -758,6 +760,12 @@ For example:
                                                   enabled will execute correctly but may be less
                                                   performant than code generated for XNACK replay
                                                   disabled.
+
+     dynamic-vgpr    TODO                         Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
+                                                  Waves launched in this mode may allocate or deallocate the VGPRs
+                                                  using dedicated instructions, but may not send the DEALLOC_VGPRS
+                                                  message.
+
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -1733,6 +1741,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-sgpr-hazard-mem-wait-cull-threshold"     Sets the number of active SGPR hazards that must be present before
                                                       inserting a cull sequence at a memory wait.
 
+     "amdgpu-promote-alloca-to-vector-max-regs"       Maximum vector size (in 32b registers) to create when promoting alloca.
+
+     "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
+
      ================================================ ==========================================================
 
 Calling Conventions
@@ -2319,6 +2331,9 @@ if needed.
   The executable machine code for the kernels and functions they call. Generated
   as position independent code. See :ref:`amdgpu-code-conventions` for
   information on conventions used in the isa generation.
+
+``.amdgpu.kernel.runtime.handle``
+  Symbols used for device enqueue.
 
 .. _amdgpu-note-records:
 
@@ -6014,8 +6029,13 @@ Frame Pointer
 
 If the kernel needs a frame pointer for the reasons defined in
 ``SIFrameLowering`` then SGPR33 is used and is always set to ``0`` in the
-kernel prolog. If a frame pointer is not required then all uses of the frame
-pointer are replaced with immediate ``0`` offsets.
+kernel prolog. On GFX12+, when dynamic VGPRs are enabled, the prologue will
+check if the kernel is running on a compute queue, and if so it will reserve
+some scratch space for any dynamic VGPRs that might need to be saved by the
+CWSR trap handler. In this case, the frame pointer will be initialized to
+a suitably aligned offset above this reserved area. If a frame pointer is not
+required then all uses of the frame pointer are replaced with immediate ``0``
+offsets.
 
 .. _amdgpu-amdhsa-kernel-prolog-flat-scratch:
 
@@ -17127,33 +17147,35 @@ within a map that has been added by the same *vendor-name*.
   .. table:: AMDPAL Code Object Hardware Stage Metadata Map
      :name: amdgpu-amdpal-code-object-hardware-stage-metadata-map-table
 
-     ========================== ============== ========= ===============================================================
-     String Key                 Value Type     Required? Description
-     ========================== ============== ========= ===============================================================
-     ".entry_point"             string                   The ELF symbol pointing to this pipeline's stage entry point.
-     ".scratch_memory_size"     integer                  Scratch memory size in bytes.
-     ".lds_size"                integer                  Local Data Share size in bytes.
-     ".perf_data_buffer_size"   integer                  Performance data buffer size in bytes.
-     ".vgpr_count"              integer                  Number of VGPRs used.
-     ".agpr_count"              integer                  Number of AGPRs used.
-     ".sgpr_count"              integer                  Number of SGPRs used.
-     ".vgpr_limit"              integer                  If non-zero, indicates the shader was compiled with a
-                                                         directive to instruct the compiler to limit the VGPR usage to
-                                                         be less than or equal to the specified value (only set if
-                                                         different from HW default).
-     ".sgpr_limit"              integer                  SGPR count upper limit (only set if different from HW
-                                                         default).
-     ".threadgroup_dimensions"  sequence of              Thread-group X/Y/Z dimensions (Compute only).
-                                3 integers
-     ".wavefront_size"          integer                  Wavefront size (only set if different from HW default).
-     ".uses_uavs"               boolean                  The shader reads or writes UAVs.
-     ".uses_rovs"               boolean                  The shader reads or writes ROVs.
-     ".writes_uavs"             boolean                  The shader writes to one or more UAVs.
-     ".writes_depth"            boolean                  The shader writes out a depth value.
-     ".uses_append_consume"     boolean                  The shader uses append and/or consume operations, either
-                                                         memory or GDS.
-     ".uses_prim_id"            boolean                  The shader uses PrimID.
-     ========================== ============== ========= ===============================================================
+     =========================== ============== ========= ===============================================================
+     String Key                  Value Type     Required? Description
+     =========================== ============== ========= ===============================================================
+     ".entry_point"              string                   The ELF symbol pointing to this pipeline's stage entry point.
+     ".scratch_memory_size"      integer                  Scratch memory size in bytes.
+     ".lds_size"                 integer                  Local Data Share size in bytes.
+     ".perf_data_buffer_size"    integer                  Performance data buffer size in bytes.
+     ".vgpr_count"               integer                  Number of VGPRs used.
+     ".agpr_count"               integer                  Number of AGPRs used.
+     ".sgpr_count"               integer                  Number of SGPRs used.
+     ".dynamic_vgpr_saved_count" integer        No        Number of dynamic VGPRs that can be stored in scratch by the
+                                                          CWSR trap handler. Only used on GFX12+.
+     ".vgpr_limit"               integer                  If non-zero, indicates the shader was compiled with a
+                                                          directive to instruct the compiler to limit the VGPR usage to
+                                                          be less than or equal to the specified value (only set if
+                                                          different from HW default).
+     ".sgpr_limit"               integer                  SGPR count upper limit (only set if different from HW
+                                                          default).
+     ".threadgroup_dimensions"   sequence of              Thread-group X/Y/Z dimensions (Compute only).
+                                 3 integers
+     ".wavefront_size"           integer                  Wavefront size (only set if different from HW default).
+     ".uses_uavs"                boolean                  The shader reads or writes UAVs.
+     ".uses_rovs"                boolean                  The shader reads or writes ROVs.
+     ".writes_uavs"              boolean                  The shader writes to one or more UAVs.
+     ".writes_depth"             boolean                  The shader writes out a depth value.
+     ".uses_append_consume"      boolean                  The shader uses append and/or consume operations, either
+                                                          memory or GDS.
+     ".uses_prim_id"             boolean                  The shader uses PrimID.
+     =========================== ============== ========= ===============================================================
 
 ..
 
@@ -17598,7 +17620,7 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
 [AMD-GCN-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
-[AMD-GCN-GFX11-RDNA3]_ and [AMD-GCN-GFX11-RDNA3.5]_.
+[AMD-GCN-GFX11-RDNA3]_, [AMD-GCN-GFX11-RDNA3.5]_ and [AMD-GCN-GFX12-RDNA4]_.
 
 Operands
 ~~~~~~~~
@@ -18201,7 +18223,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               (cumode)
      ``.amdhsa_memory_ordered``                               1                   GFX10-GFX12  Controls MEM_ORDERED in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
+     ``.amdhsa_forward_progress``                             1                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
@@ -18400,6 +18422,7 @@ Additional Documentation
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3.5] `AMD RDNA 3.5 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna35_instruction_set_architecture.pdf>`__
+.. [AMD-GCN-GFX12-RDNA4] `AMD RDNA 4 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna4-instruction-set-architecture.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__

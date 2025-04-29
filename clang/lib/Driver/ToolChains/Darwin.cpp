@@ -706,8 +706,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // to generate executables.
   if (getToolChain().getDriver().IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-    addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
+    getToolChain().addFortranRuntimeLibraryPath(Args, CmdArgs);
+    getToolChain().addFortranRuntimeLibs(Args, CmdArgs);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
@@ -1201,6 +1201,13 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
   }
 }
 
+void DarwinClang::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+
+  Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+}
+
 /// Take a path that speculatively points into Xcode and return the
 /// `XCODE/Contents/Developer` path if it is an Xcode path, or an empty path
 /// otherwise.
@@ -1341,7 +1348,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
 }
 
 std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
-                                 FileType Type) const {
+                                 FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
          "object file");
@@ -1360,7 +1367,7 @@ std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
 }
 
 std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
-                                  FileType Type) const {
+                                  FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
          "object file");
@@ -1481,15 +1488,11 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // If we have a symbol export directive and we're linking in the profile
   // runtime, automatically export symbols necessary to implement some of the
   // runtime's functionality.
-  if (hasExportSymbolDirective(Args)) {
-    if (ForGCOV) {
-      addExportedSymbol(CmdArgs, "___gcov_dump");
-      addExportedSymbol(CmdArgs, "___gcov_reset");
-      addExportedSymbol(CmdArgs, "_writeout_fn_list");
-      addExportedSymbol(CmdArgs, "_reset_fn_list");
-    } else {
-      addExportedSymbol(CmdArgs, "___llvm_write_custom_profile");
-    }
+  if (hasExportSymbolDirective(Args) && ForGCOV) {
+    addExportedSymbol(CmdArgs, "___gcov_dump");
+    addExportedSymbol(CmdArgs, "___gcov_reset");
+    addExportedSymbol(CmdArgs, "_writeout_fn_list");
+    addExportedSymbol(CmdArgs, "_reset_fn_list");
   }
 
   // Align __llvm_prf_{cnts,bits,data} sections to the maximum expected page
@@ -1883,7 +1886,8 @@ struct DarwinPlatform {
     assert(IsValid && "invalid SDK version");
     return DarwinSDKInfo(
         Version,
-        /*MaximumDeploymentTarget=*/VersionTuple(Version.getMajor(), 0, 99));
+        /*MaximumDeploymentTarget=*/VersionTuple(Version.getMajor(), 0, 99),
+        getOSFromPlatform(Platform));
   }
 
 private:
@@ -1911,6 +1915,24 @@ private:
     default:
       llvm_unreachable("Unable to infer Darwin variant");
     }
+  }
+
+  static llvm::Triple::OSType getOSFromPlatform(DarwinPlatformKind Platform) {
+    switch (Platform) {
+    case DarwinPlatformKind::MacOS:
+      return llvm::Triple::MacOSX;
+    case DarwinPlatformKind::IPhoneOS:
+      return llvm::Triple::IOS;
+    case DarwinPlatformKind::TvOS:
+      return llvm::Triple::TvOS;
+    case DarwinPlatformKind::WatchOS:
+      return llvm::Triple::WatchOS;
+    case DarwinPlatformKind::DriverKit:
+      return llvm::Triple::DriverKit;
+    case DarwinPlatformKind::XROS:
+      return llvm::Triple::XROS;
+    }
+    llvm_unreachable("Unknown DarwinPlatformKind enum");
   }
 
   SourceKind Kind;
@@ -2963,20 +2985,8 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   return TargetVersion < alignedAllocMinVersion(OS);
 }
 
-static bool sdkSupportsBuiltinModules(
-    const Darwin::DarwinPlatformKind &TargetPlatform,
-    const Darwin::DarwinEnvironmentKind &TargetEnvironment,
-    const std::optional<DarwinSDKInfo> &SDKInfo) {
-  if (TargetEnvironment == Darwin::NativeEnvironment ||
-      TargetEnvironment == Darwin::Simulator ||
-      TargetEnvironment == Darwin::MacCatalyst) {
-    // Standard xnu/Mach/Darwin based environments
-    // depend on the SDK version.
-  } else {
-    // All other environments support builtin modules from the start.
-    return true;
-  }
-
+static bool
+sdkSupportsBuiltinModules(const std::optional<DarwinSDKInfo> &SDKInfo) {
   if (!SDKInfo)
     // If there is no SDK info, assume this is building against a
     // pre-SDK version of macOS (i.e. before Mac OS X 10.4). Those
@@ -2987,26 +2997,18 @@ static bool sdkSupportsBuiltinModules(
     return false;
 
   VersionTuple SDKVersion = SDKInfo->getVersion();
-  switch (TargetPlatform) {
+  switch (SDKInfo->getOS()) {
   // Existing SDKs added support for builtin modules in the fall
   // 2024 major releases.
-  case Darwin::MacOS:
+  case llvm::Triple::MacOSX:
     return SDKVersion >= VersionTuple(15U);
-  case Darwin::IPhoneOS:
-    switch (TargetEnvironment) {
-    case Darwin::MacCatalyst:
-      // Mac Catalyst uses `-target arm64-apple-ios18.0-macabi` so the platform
-      // is iOS, but it builds with the macOS SDK, so it's the macOS SDK version
-      // that's relevant.
-      return SDKVersion >= VersionTuple(15U);
-    default:
-      return SDKVersion >= VersionTuple(18U);
-    }
-  case Darwin::TvOS:
+  case llvm::Triple::IOS:
     return SDKVersion >= VersionTuple(18U);
-  case Darwin::WatchOS:
+  case llvm::Triple::TvOS:
+    return SDKVersion >= VersionTuple(18U);
+  case llvm::Triple::WatchOS:
     return SDKVersion >= VersionTuple(11U);
-  case Darwin::XROS:
+  case llvm::Triple::XROS:
     return SDKVersion >= VersionTuple(2U);
 
   // New SDKs support builtin modules from the start.
@@ -3060,9 +3062,43 @@ bool Darwin::isSizedDeallocationUnavailable() const {
   return TargetVersion < sizedDeallocMinVersion(OS);
 }
 
+void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args,
+                                  Action::OffloadKind DeviceOffloadKind) const {
+
+  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
+  // On arm64e, enable pointer authentication (for the return address and
+  // indirect calls), as well as usage of the intrinsics.
+  if (getArchName() == "arm64e") {
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                           options::OPT_fno_ptrauth_calls))
+      CC1Args.push_back("-fptrauth-calls");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                           options::OPT_fno_ptrauth_indirect_gotos))
+      CC1Args.push_back("-fptrauth-indirect-gotos");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                           options::OPT_fno_ptrauth_auth_traps))
+      CC1Args.push_back("-fptrauth-auth-traps");
+  }
+}
+
 void Darwin::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {
+
+  MachO::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
@@ -3101,7 +3137,7 @@ void Darwin::addClangTargetOptions(
   // i.e. when the builtin stdint.h is in the Darwin module too, the cycle
   // goes away. Note that -fbuiltin-headers-in-system-modules does nothing
   // to fix the same problem with C++ headers, and is generally fragile.
-  if (!sdkSupportsBuiltinModules(TargetPlatform, TargetEnvironment, SDKInfo))
+  if (!sdkSupportsBuiltinModules(SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
 
   if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,

@@ -126,28 +126,28 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
 }
 
 void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
-  assert(VariantKindToName.empty() && "cannot initialize twice");
+  assert(SpecifierToName.empty() && "cannot initialize twice");
   for (auto Desc : Descs) {
     [[maybe_unused]] auto It =
-        VariantKindToName.try_emplace(Desc.Kind, Desc.Name);
+        SpecifierToName.try_emplace(Desc.Kind, Desc.Name);
     assert(It.second && "duplicate Kind");
     [[maybe_unused]] auto It2 =
-        NameToVariantKind.try_emplace(Desc.Name.lower(), Desc.Kind);
+        NameToSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
     // Workaround for VK_PPC_L/VK_PPC_LO ("l").
     assert(It2.second || Desc.Name == "l");
   }
 }
 
-StringRef MCAsmInfo::getVariantKindName(uint32_t Kind) const {
-  auto It = VariantKindToName.find(Kind);
-  assert(It != VariantKindToName.end() &&
-         "ensure the VariantKind is set in initializeVariantKinds");
+StringRef MCAsmInfo::getSpecifierName(uint32_t S) const {
+  auto It = SpecifierToName.find(S);
+  assert(It != SpecifierToName.end() &&
+         "ensure the specifier is set in initializeVariantKinds");
   return It->second;
 }
 
-uint32_t MCAsmInfo::getVariantKindForName(StringRef Name) const {
-  auto It = NameToVariantKind.find(Name.lower());
-  if (It != NameToVariantKind.end())
+std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
+  auto It = NameToSpecifier.find(Name.lower());
+  if (It != NameToSpecifier.end())
     return It->second;
-  return MCSymbolRefExpr::VK_Invalid;
+  return {};
 }

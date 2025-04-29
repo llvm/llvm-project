@@ -54,6 +54,9 @@ def DLTI_Dialect : Dialect {
     kDataLayoutManglingModeKey = "dlti.mangling_mode";
 
     constexpr const static ::llvm::StringLiteral
+    kDataLayoutDefaultMemorySpaceKey = "dlti.default_memory_space";
+
+    constexpr const static ::llvm::StringLiteral
     kDataLayoutAllocaMemorySpaceKey = "dlti.alloca_memory_space";
     
     constexpr const static ::llvm::StringLiteral

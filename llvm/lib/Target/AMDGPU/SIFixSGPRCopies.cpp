@@ -127,6 +127,7 @@ class SIFixSGPRCopies {
   unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
+  DenseSet<MachineInstr *> PHISources;
 
 public:
   MachineRegisterInfo *MRI;
@@ -692,6 +693,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
                         .addReg(MO.getReg());
                 MO.setReg(NewDst);
                 analyzeVGPRToSGPRCopy(NewCopy);
+                PHISources.insert(NewCopy);
               }
             }
           }
@@ -798,6 +800,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   RegSequences.clear();
   PHINodes.clear();
   S2VCopies.clear();
+  PHISources.clear();
 
   return true;
 }
@@ -923,11 +926,13 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
 }
 
 void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
+  if (PHISources.contains(MI))
+    return;
   Register DstReg = MI->getOperand(0).getReg();
   const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
-                      TRI->getRegSizeInBits(*DstRC));
+                   TRI->getRegSizeInBits(*DstRC));
   SmallVector<MachineInstr *, 8> AnalysisWorklist;
   // Needed because the SSA is not a tree but a graph and may have
   // forks and joins. We should not then go same way twice.
@@ -966,9 +971,10 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       }
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
-      if (TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst))
+      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst)) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
+      }
     }
     for (auto *U : Users) {
       if (TII->isSALU(*U))

@@ -858,18 +858,51 @@ inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
   return V;
 }
 
+// TODO: Remove once UseConstant{Int,FP}ForScalableSplat is enabled by default,
+// and use m_Unless(m_ConstantExpr).
+struct immconstant_ty {
+  template <typename ITy> static bool isImmConstant(ITy *V) {
+    if (auto *CV = dyn_cast<Constant>(V)) {
+      if (!isa<ConstantExpr>(CV) && !CV->containsConstantExpression())
+        return true;
+
+      if (CV->getType()->isVectorTy()) {
+        if (auto *Splat = CV->getSplatValue(/*AllowPoison=*/true)) {
+          if (!isa<ConstantExpr>(Splat) &&
+              !Splat->containsConstantExpression()) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+};
+
+struct match_immconstant_ty : immconstant_ty {
+  template <typename ITy> bool match(ITy *V) { return isImmConstant(V); }
+};
+
 /// Match an arbitrary immediate Constant and ignore it.
-inline match_combine_and<class_match<Constant>,
-                         match_unless<constantexpr_match>>
-m_ImmConstant() {
-  return m_CombineAnd(m_Constant(), m_Unless(m_ConstantExpr()));
-}
+inline match_immconstant_ty m_ImmConstant() { return match_immconstant_ty(); }
+
+struct bind_immconstant_ty : immconstant_ty {
+  Constant *&VR;
+
+  bind_immconstant_ty(Constant *&V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    if (isImmConstant(V)) {
+      VR = cast<Constant>(V);
+      return true;
+    }
+    return false;
+  }
+};
 
 /// Match an immediate Constant, capturing the value if we match.
-inline match_combine_and<bind_ty<Constant>,
-                         match_unless<constantexpr_match>>
-m_ImmConstant(Constant *&C) {
-  return m_CombineAnd(m_Constant(C), m_Unless(m_ConstantExpr()));
+inline bind_immconstant_ty m_ImmConstant(Constant *&C) {
+  return bind_immconstant_ty(C);
 }
 
 /// Match a specified Value*.
@@ -2709,15 +2742,39 @@ inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FCanonicalize(const Opnd0 &Op0) {
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMin(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinNum(const Opnd0 &Op0,
+                                                           const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMax(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinimum(const Opnd0 &Op0,
+                                                            const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::minimum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
+m_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::minimumnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaxNum(const Opnd0 &Op0,
+                                                           const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maxnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaximum(const Opnd0 &Op0,
+                                                            const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::maximum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
+m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>

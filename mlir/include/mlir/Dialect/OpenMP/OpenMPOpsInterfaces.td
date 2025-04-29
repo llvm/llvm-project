@@ -23,19 +23,41 @@ include "mlir/IR/OpBase.td"
 // arguments corresponding to each of these clauses.
 class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     BlockArgOpenMPClause previousClause> {
-  // Default-implemented method to be overriden by the corresponding clause.
+  // Default-implemented method, overriden by the corresponding clause. It
+  // returns the range of operands passed to the operation associated to the
+  // clause.
+  //
+  // For the override to work, the clause tablegen definition must contain a
+  // `Variadic<...> $clause_name_vars` argument.
   //
   // Usage example:
   //
   // ```c++
-  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
-  // unsigned numInReductionArgs = iface.numInReductionBlockArgs();
+  // OperandRange reductionVars = op.getReductionVars();
+  // ```
+  InterfaceMethod varsMethod = InterfaceMethod<
+    "Get operation operands associated to `" # clauseNameSnake # "`.",
+    "::mlir::OperandRange", "get" # clauseNameCamel # "Vars", (ins), [{}], [{
+      return {0, 0};
+    }]
+  >;
+
+  // It returns the number of entry block arguments introduced by the given
+  // clause.
+  //
+  // By default, it will be the number of operands corresponding to that clause,
+  // but it can be overriden by operations where this might not be the case
+  // (e.g. `map` clause in `omp.target_update`).
+  //
+  // Usage example:
+  //
+  // ```c++
+  // unsigned numInReductionArgs = op.numInReductionBlockArgs();
   // ```
   InterfaceMethod numArgsMethod = InterfaceMethod<
     "Get number of block arguments defined by `" # clauseNameSnake # "`.",
-    "unsigned", "num" # clauseNameCamel # "BlockArgs", (ins), [{}], [{
-      return 0;
-    }]
+    "unsigned", "num" # clauseNameCamel # "BlockArgs", (ins), [{}],
+    "return $_op." # varsMethod.name # "().size();"
   >;
 
   // Unified access method for the start index of clause-associated entry block
@@ -52,7 +74,7 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "unsigned", "get" # clauseNameCamel # "BlockArgsStart", (ins),
     !if(!initialized(previousClause), [{
         auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
-      }] # "return iface." # previousClause.startMethod.name # "() + $_op."
+      }] # "return iface." # previousClause.startMethod.name # "() + iface."
         # previousClause.numArgsMethod.name # "();",
         "return 0;"
     )
@@ -72,11 +94,14 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "get" # clauseNameCamel # "BlockArgs", (ins), [{
       auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
       return $_op->getRegion(0).getArguments().slice(
-    }] # "iface." # startMethod.name # "(), $_op." # numArgsMethod.name # "());"
+    }] # "iface." # startMethod.name # "(), iface." # numArgsMethod.name # "());"
   >;
 }
 
-def BlockArgHostEvalClause : BlockArgOpenMPClause<"host_eval", "HostEval", ?>;
+def BlockArgHasDeviceAddrClause : BlockArgOpenMPClause<
+    "has_device_addr", "HasDeviceAddr", ?>;
+def BlockArgHostEvalClause : BlockArgOpenMPClause<
+    "host_eval", "HostEval", BlockArgHasDeviceAddrClause>;
 def BlockArgInReductionClause : BlockArgOpenMPClause<
     "in_reduction", "InReduction", BlockArgHostEvalClause>;
 def BlockArgMapClause : BlockArgOpenMPClause<
@@ -100,24 +125,45 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
 
   let cppNamespace = "::mlir::omp";
 
-  defvar clauses = [ BlockArgHostEvalClause, BlockArgInReductionClause,
-    BlockArgMapClause, BlockArgPrivateClause, BlockArgReductionClause,
-    BlockArgTaskReductionClause, BlockArgUseDeviceAddrClause,
-    BlockArgUseDevicePtrClause ];
+  defvar clauses = [ BlockArgHasDeviceAddrClause, BlockArgHostEvalClause,
+    BlockArgInReductionClause, BlockArgMapClause, BlockArgPrivateClause,
+    BlockArgReductionClause, BlockArgTaskReductionClause,
+    BlockArgUseDeviceAddrClause, BlockArgUseDevicePtrClause ];
 
   let methods = !listconcat(
+    !foreach(clause, clauses, clause.varsMethod),
     !foreach(clause, clauses, clause.numArgsMethod),
     !foreach(clause, clauses, clause.startMethod),
-    !foreach(clause, clauses, clause.blockArgsMethod)
+    !foreach(clause, clauses, clause.blockArgsMethod),
+    [
+      InterfaceMethod<
+        "Get the total number of clause-defined entry block arguments",
+        "unsigned", "numClauseBlockArgs", (ins),
+        "return " # !interleave(
+          !foreach(clause, clauses, "$_op." # clause.numArgsMethod.name # "()"),
+          " + ") # ";"
+      >,
+      InterfaceMethod<
+        "Populate a vector of pairs representing the matching between operands "
+        "and entry block arguments.", "void", "getBlockArgsPairs",
+        (ins "::llvm::SmallVectorImpl<std::pair<::mlir::Value, ::mlir::BlockArgument>> &" : $pairs),
+        [{
+          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+          pairs.reserve(pairs.size() + iface.numClauseBlockArgs());
+        }] # !interleave(!foreach(clause, clauses, [{
+        }] # "if (iface." # clause.numArgsMethod.name # "() > 0) {" # [{
+        }] # "  for (auto [var, arg] : ::llvm::zip_equal(" #
+                "iface." # clause.varsMethod.name # "()," #
+                "iface." # clause.blockArgsMethod.name # "()))" # [{
+            pairs.emplace_back(var, arg);
+        } }]), "\n")
+      >
+    ]
   );
 
   let verify = [{
     auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>($_op);
-  }] # "unsigned expectedArgs = "
-     # !interleave(
-         !foreach(clause, clauses, "iface." # clause.numArgsMethod.name # "()"),
-         " + "
-       ) # ";" # [{
+    unsigned expectedArgs = iface.numClauseBlockArgs();
     if ($_op->getRegion(0).getNumArguments() < expectedArgs)
       return $_op->emitOpError() << "expected at least " << expectedArgs
                                  << " entry block argument(s)";
@@ -170,28 +216,21 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
   ];
 }
 
-def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
-  let description = [{
-    OpenMP operations that support reduction clause have this interface.
-  }];
-
-  let cppNamespace = "::mlir::omp";
-
-  let methods = [
-    InterfaceMethod<
-      "Get reduction vars", "::mlir::SmallVector<::mlir::Value>",
-      "getAllReductionVars", (ins), [{}], [{
-        return $_op.getReductionVars();
-      }]>,
-  ];
-}
-
 def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   let description = [{
     OpenMP operations that wrap a single loop nest. They must only contain a
     single region with a single block in which there's a single operation and a
     terminator. That nested operation must be another loop wrapper or an
     `omp.loop_nest`.
+
+    Operation-specific verifiers should make the following checks in their
+    verifier, additionally to what the interface itself checks:
+      - If `getNestedWrapper() != nullptr`, is the type of the nested wrapper
+      allowed in that context? This check might require looking at the parent as
+      well.
+      - If the operation is a `ComposableOpInterface`, check that it is
+      consistent with the potential existence of a `LoopWrapperInterface` parent
+      and whether `getNestedWrapper() != nullptr`.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -225,7 +264,7 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   ];
 
   let extraClassDeclaration = [{
-    /// Interface verifier imlementation.
+    /// Interface verifier implementation.
     llvm::LogicalResult verifyImpl();
   }];
 

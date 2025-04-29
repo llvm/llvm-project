@@ -47,9 +47,8 @@ JITTargetMachineBuilder::createTargetMachine() {
     return make_error<StringError>("Target has no JIT support",
                                    inconvertibleErrorCode());
 
-  auto *TM =
-      TheTarget->createTargetMachine(TT.getTriple(), CPU, Features.getString(),
-                                     Options, RM, CM, OptLevel, /*JIT*/ true);
+  auto *TM = TheTarget->createTargetMachine(
+      TT, CPU, Features.getString(), Options, RM, CM, OptLevel, /*JIT=*/true);
   if (!TM)
     return make_error<StringError>("Could not allocate target machine",
                                    inconvertibleErrorCode());

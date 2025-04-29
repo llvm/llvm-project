@@ -348,7 +348,7 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
     uses_ << DEREF(sMod->symbol()).name() << ",only:";
     if (rename != s->name()) {
       uses_ << rename << "=>";
-      renamings.emplace(&*s, rename);
+      renamings.emplace(&s->GetUltimate(), rename);
     }
     uses_ << s->name() << '\n';
     useExtraAttrs_ << "private::" << rename << '\n';
@@ -978,11 +978,9 @@ void ModFileWriter::PutObjectEntity(
         << ") " << symbol.name() << '\n';
   }
   if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
-    if (!symbol.owner().crayPointers().empty()) {
-      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
-        if (pointer == symbol) {
-          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
-        }
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (pointer == symbol) {
+        os << "pointer(" << symbol.name() << "," << pointee << ")\n";
       }
     }
   }
@@ -1724,6 +1722,17 @@ void SubprogramSymbolCollector::DoSymbol(
   }
   if (!scope.IsDerivedType()) {
     need_.push_back(symbol);
+  }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (&*pointer == &symbol) {
+        auto iter{symbol.owner().find(pointee)};
+        CHECK(iter != symbol.owner().end());
+        DoSymbol(*iter->second);
+      }
+    }
+  } else if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+    DoSymbol(GetCrayPointer(symbol));
   }
 }
 

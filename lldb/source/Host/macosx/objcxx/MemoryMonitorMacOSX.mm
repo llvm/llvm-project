@@ -32,7 +32,6 @@ class MemoryMonitorMacOSX : public MemoryMonitor {
       }
     });
     dispatch_activate(m_memory_pressure_source);
-    printf("Started\n");
   }
 
   void Stop() override {

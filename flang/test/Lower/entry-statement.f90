@@ -355,11 +355,11 @@ function f1(n1) result(res1)
 ! CHECK:           %[[VAL_13:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_14]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-! CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_10]]#1, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_10]]#0, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_16]] to %[[VAL_15]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_17]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-! CHECK:           %[[VAL_19:.*]] = fir.emboxchar %[[VAL_12]]#1, %[[VAL_11]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_19:.*]] = fir.emboxchar %[[VAL_12]]#0, %[[VAL_11]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_19]] to %[[VAL_18]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
@@ -379,7 +379,7 @@ function f1(n1) result(res1)
 ! CHECK:           fir.call @_QFf1Ps3(
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb6:
-! CHECK:           %[[VAL_32:.*]] = fir.emboxchar %[[VAL_8]]#1, %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_32:.*]] = fir.emboxchar %[[VAL_8]]#0, %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           return %[[VAL_32]] : !fir.boxchar<1>
 ! CHECK:         }
 
@@ -401,11 +401,11 @@ entry f2(n2)
 ! CHECK:           %[[VAL_13:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_14]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-! CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_10]]#1, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_10]]#0, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_16]] to %[[VAL_15]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_17]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-! CHECK:           %[[VAL_19:.*]] = fir.emboxchar %[[VAL_12]]#1, %[[VAL_11]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_19:.*]] = fir.emboxchar %[[VAL_12]]#0, %[[VAL_11]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_19]] to %[[VAL_18]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
@@ -417,7 +417,7 @@ entry f2(n2)
 ! CHECK:           fir.call @_QFf1Ps3(
 ! CHECK:           cf.br ^bb4
 ! CHECK:         ^bb4:
-! CHECK:           %[[VAL_26:.*]] = fir.emboxchar %[[VAL_10]]#1, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_26:.*]] = fir.emboxchar %[[VAL_10]]#0, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           return %[[VAL_26]] : !fir.boxchar<1>
 ! CHECK:         }
   call s2
@@ -440,18 +440,18 @@ entry f3
 ! CHECK:           %[[VAL_12:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_13]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-! CHECK:           %[[VAL_15:.*]] = fir.emboxchar %[[VAL_9]]#1, %[[VAL_8]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_15:.*]] = fir.emboxchar %[[VAL_9]]#0, %[[VAL_8]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_15]] to %[[VAL_14]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_17:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_16]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-! CHECK:           %[[VAL_18:.*]] = fir.emboxchar %[[VAL_11]]#1, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_18:.*]] = fir.emboxchar %[[VAL_11]]#0, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_18]] to %[[VAL_17]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           fir.call @_QFf1Ps3(
 ! CHECK:           cf.br ^bb2
 ! CHECK:         ^bb2:
-! CHECK:           %[[VAL_22:.*]] = fir.emboxchar %[[VAL_11]]#1, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_22:.*]] = fir.emboxchar %[[VAL_11]]#0, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           return %[[VAL_22]] : !fir.boxchar<1>
 ! CHECK:         }
   f3 = "C C C"

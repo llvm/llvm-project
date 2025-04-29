@@ -173,6 +173,18 @@ define <vscale x 2 x float> @copysign_nxv2f32_nxv2f64(<vscale x 2 x float> %a, <
   ret <vscale x 2 x float> %r
 }
 
+define <vscale x 2 x float> @copysign_nxv2f32_nxv2bf16(<vscale x 2 x float> %a, <vscale x 2 x bfloat> %b) {
+; CHECK-LABEL: copysign_nxv2f32_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %tmp0 = fpext <vscale x 2 x bfloat> %b to <vscale x 2 x float>
+  %r = call <vscale x 2 x float> @llvm.copysign.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %tmp0)
+  ret <vscale x 2 x float> %r
+}
+
 ;
 ; llvm.copysign.nxv4f32
 ;
@@ -212,6 +224,18 @@ define <vscale x 4 x float> @copysign_nxv4f32_nxv4f64(<vscale x 4 x float> %a, <
 ; CHECK-NEXT:    ret
   %b.trunc = fptrunc <vscale x 4 x double> %b to <vscale x 4 x float>
   %r = call <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b.trunc)
+  ret <vscale x 4 x float> %r
+}
+
+define <vscale x 4 x float> @copysign_nxv4f32_nxv4bf16(<vscale x 4 x float> %a, <vscale x 4 x bfloat> %b) {
+; CHECK-LABEL: copysign_nxv4f32_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %tmp0 = fpext <vscale x 4 x bfloat> %b to <vscale x 4 x float>
+  %r = call <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %tmp0)
   ret <vscale x 4 x float> %r
 }
 
@@ -255,9 +279,163 @@ define <vscale x 2 x double> @copysign_nxv2f64_nxv2f64(<vscale x 2 x double> %a,
   ret <vscale x 2 x double> %r
 }
 
+define <vscale x 2 x double> @copysign_nxv2f64_nxv2bf16(<vscale x 2 x double> %a, <vscale x 2 x bfloat> %b) {
+; CHECK-LABEL: copysign_nxv2f64_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, #0x7fffffffffffffff
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.s
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %b.ext = fpext <vscale x 2 x bfloat> %b to <vscale x 2 x double>
+  %r = call <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b.ext)
+  ret <vscale x 2 x double> %r
+}
+
+;
+; llvm.copysign.nxv2bf16
+;
+
+define <vscale x 2 x bfloat> @copysign_nxv2bf16_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; CHECK-LABEL: copysign_nxv2bf16_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.copysign.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b)
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 2 x bfloat> @copysign_nxv2bf16_nxv2f32(<vscale x 2 x bfloat> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: copysign_nxv2bf16_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %tmp0 = fptrunc <vscale x 2 x float> %b to <vscale x 2 x bfloat>
+  %r = call <vscale x 2 x bfloat> @llvm.copysign.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %tmp0)
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 2 x bfloat> @copysign_nxv2bf16_nxv2f64(<vscale x 2 x bfloat> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: copysign_nxv2bf16_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    fcvtx z1.s, p0/m, z1.d
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %tmp0 = fptrunc <vscale x 2 x double> %b to <vscale x 2 x bfloat>
+  %r = call <vscale x 2 x bfloat> @llvm.copysign.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %tmp0)
+  ret <vscale x 2 x bfloat> %r
+}
+
+;
+; llvm.copysign.nxv2bf16
+;
+
+define <vscale x 4 x bfloat> @copysign_nxv4bf16_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; CHECK-LABEL: copysign_nxv4bf16_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.copysign.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b)
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @copysign_nxv4bf16_nxv4f32(<vscale x 4 x bfloat> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: copysign_nxv4bf16_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %b.trunc = fptrunc <vscale x 4 x float> %b to <vscale x 4 x bfloat>
+  %r = call <vscale x 4 x bfloat> @llvm.copysign.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b.trunc)
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @copysign_nxv4bf16_nxv4f64(<vscale x 4 x bfloat> %a, <vscale x 4 x double> %b) {
+; CHECK-LABEL: copysign_nxv4bf16_nxv4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z3.h, #32767 // =0x7fff
+; CHECK-NEXT:    fcvtx z2.s, p0/m, z2.d
+; CHECK-NEXT:    fcvtx z1.s, p0/m, z1.d
+; CHECK-NEXT:    bfcvt z2.h, p0/m, z2.s
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z3.d
+; CHECK-NEXT:    ret
+  %b.trunc = fptrunc <vscale x 4 x double> %b to <vscale x 4 x bfloat>
+  %r = call <vscale x 4 x bfloat> @llvm.copysign.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b.trunc)
+  ret <vscale x 4 x bfloat> %r
+}
+
+;
+; llvm.copysign.nxv8bf16
+;
+
+define <vscale x 8 x bfloat> @copysign_nxv8bf16_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: copysign_nxv8bf16_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.copysign.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @copysign_nxv8bf16_nxv8f32(<vscale x 8 x bfloat> %a, <vscale x 8 x float> %b) {
+; CHECK-LABEL: copysign_nxv8bf16_nxv8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z3.h, #32767 // =0x7fff
+; CHECK-NEXT:    bfcvt z2.h, p0/m, z2.s
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z3.d
+; CHECK-NEXT:    ret
+  %b.trunc = fptrunc <vscale x 8 x float> %b to <vscale x 8 x bfloat>
+  %r = call <vscale x 8 x bfloat> @llvm.copysign.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b.trunc)
+  ret <vscale x 8 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @copysign_nxv8bf16_nxv8f64(<vscale x 8 x bfloat> %a, <vscale x 8 x double> %b) {
+; CHECK-LABEL: copysign_nxv8bf16_nxv8f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtx z4.s, p0/m, z4.d
+; CHECK-NEXT:    fcvtx z3.s, p0/m, z3.d
+; CHECK-NEXT:    fcvtx z2.s, p0/m, z2.d
+; CHECK-NEXT:    fcvtx z1.s, p0/m, z1.d
+; CHECK-NEXT:    bfcvt z4.h, p0/m, z4.s
+; CHECK-NEXT:    bfcvt z3.h, p0/m, z3.s
+; CHECK-NEXT:    bfcvt z2.h, p0/m, z2.s
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z4.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z3.h
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %b.trunc = fptrunc <vscale x 8 x double> %b to <vscale x 8 x bfloat>
+  %r = call <vscale x 8 x bfloat> @llvm.copysign.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b.trunc)
+  ret <vscale x 8 x bfloat> %r
+}
+
 declare <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
 declare <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b)
 declare <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b)
 declare <vscale x 2 x float> @llvm.copysign.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b)
 declare <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b)
 declare <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b)
+declare <vscale x 2 x bfloat> @llvm.copysign.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b)
+declare <vscale x 4 x bfloat> @llvm.copysign.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b)
+declare <vscale x 8 x bfloat> @llvm.copysign.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)

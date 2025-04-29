@@ -35,9 +35,9 @@ entry:
 attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 
 ; CHECK-LABEL: {{^}}min_1024_max_1024
-; CHECK: SGPRBlocks: 0
+; CHECK: SGPRBlocks: 2
 ; CHECK: VGPRBlocks: 10
-; CHECK: NumSGPRsForWavesPerEU: 2{{$}}
+; CHECK: NumSGPRsForWavesPerEU: 24{{$}}
 ; CHECK: NumVGPRsForWavesPerEU: 43
 @var = addrspace(1) global float 0.0
 define amdgpu_kernel void @min_1024_max_1024() #3 {

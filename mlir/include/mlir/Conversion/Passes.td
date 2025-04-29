@@ -10,7 +10,7 @@
 #define MLIR_CONVERSION_PASSES
 
 include "mlir/Pass/PassBase.td"
-
+include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 
 //===----------------------------------------------------------------------===//
 // ToLLVM
@@ -1410,10 +1410,32 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
 	   "dialect.">,
-    Option<"vectorTransformsOptions", "vector-transform-options",
-           "vector::VectorTransformsOptions",
-           /*default=*/"vector::VectorTransformsOptions()",
-           "Options to lower some operations like contractions and transposes.">,
+    Option<"vectorContractLowering", "vector-contract-lowering",
+           "vector::VectorContractLowering",
+           /*default=*/"vector::VectorContractLowering::Dot",
+           VectorContractLoweringAttr.summary, [{::llvm::cl::values(
+           clEnumValN(::mlir::vector::VectorContractLowering::Dot, "dot",
+            "Progressively lower to finer grained `vector.contract` and dot-products. (default)"),
+           clEnumValN(::mlir::vector::VectorContractLowering::Matmul, "matmul",
+            "Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics."),
+           clEnumValN(::mlir::vector::VectorContractLowering::OuterProduct, "outerproduct",
+            "Lower to `vector.outerproduct`."),
+           clEnumValN(::mlir::vector::VectorContractLowering::ParallelArith, "parallelarith",
+            "Lower contract with all reduction dimensions unrolled to 1 to a vector elementwise operations.")
+	        )}]>,
+    Option<"vectorTransposeLowering", "vector-transpose-lowering",
+           "vector::VectorTransposeLowering",
+           /*default=*/"vector::VectorTransposeLowering::EltWise",
+           VectorTransposeLoweringAttr.summary, [{::llvm::cl::values(
+           clEnumValN(::mlir::vector::VectorTransposeLowering::EltWise, "eltwise",
+            "Lower transpose into element-wise extract and inserts (default)"),
+           clEnumValN(::mlir::vector::VectorTransposeLowering::Flat, "flat",
+            "Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix intrinsics"),
+           clEnumValN(::mlir::vector::VectorTransposeLowering::Shuffle1D, "shuffle1d",
+            "Lower 2-D transpose to `vector.shuffle` on 1-D vector."),
+           clEnumValN(::mlir::vector::VectorTransposeLowering::Shuffle16x16, "shuffle16x16",
+            "Lower 2-D transpose to `vector.shuffle` on 16x16 vector.")
+          )}]>,
   ];
 }
 

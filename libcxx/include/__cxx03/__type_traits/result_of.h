@@ -10,7 +10,7 @@
 #define _LIBCPP___CXX03___TYPE_TRAITS_RESULT_OF_H
 
 #include <__cxx03/__config>
-#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__type_traits/invoke.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -54,32 +54,24 @@ namespace PR7594 {
 namespace Recursion {
   template<typename T> struct InvokeCopyConstructor {
     static const T &get();
-    typedef decltype(T(get())) type; // expected-error {{no matching conver}}
+    typedef decltype(T(get())) type;
   };
   struct B;
   struct A {
-    // expected-note@-1 {{while substituting deduced template arguments}}
     typedef B type;
     template<typename T,
              typename = typename InvokeCopyConstructor<typename T::type>::type>
-    // expected-note@-1 {{in instantiation of template class}}
-    // expected-note@-2 {{template parameter is declared here}}
     A(const T &);
-    // expected-note@-1 {{in instantiation of default argument}}
   };
-  struct B { // expected-note {{while declaring the implicit copy constructor for 'B'}}
-    // expected-note@-1 {{candidate constructor (the implicit move }}
-    B(); // expected-note {{candidate constructor not viable}}
+  struct B {
+    B();
     A a;
   };
   // Triggering the declaration of B's copy constructor causes overload
-  // resolution to occur for A's copying constructor, which instantiates
-  // InvokeCopyConstructor<B>, which triggers the declaration of B's copy
-  // constructor. Notionally, this happens when we get to the end of the
-  // definition of 'struct B', so there is no declared copy constructor yet.
-  //
-  // This behavior is g++-compatible, but isn't exactly right; the class is
-  // supposed to be incomplete when we implicitly declare its special members.
+  // resolution to occur for A's copying constructor, which picks
+  // the implicit copy constructor of A.
+  // Because that copy constructor is always a perfect match the template
+  // candidate is not instantiated.
   B b = B();
 
 

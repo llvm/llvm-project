@@ -18,10 +18,13 @@
 ;--- profile.yaml
 Contexts:
   - Guid: 12341
+    TotalRootEntryCount: 24
     Counters: [9]
   - Guid: 1000
+    TotalRootEntryCount: 25
     Counters: [5]
   - Guid: 34234
+    TotalRootEntryCount: 2
     Counters: [1]
     Callsites:  -
                   - Guid: 1000

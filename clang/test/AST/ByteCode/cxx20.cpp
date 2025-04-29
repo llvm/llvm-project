@@ -119,6 +119,14 @@ constexpr auto b3 = name1() == name1(); // ref-error {{must be initialized by a 
 constexpr auto b4 = name1() == name2();
 static_assert(!b4);
 
+constexpr auto bar(const char *p) { return p + __builtin_strlen(p); }
+constexpr auto b5 = bar(p1) == p1;
+static_assert(!b5);
+constexpr auto b6 = bar(p1) == ""; // ref-error {{must be initialized by a constant expression}} \
+                                   // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b7 = bar(p1) + 1 == ""; // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}}
+
 namespace UninitializedFields {
   class A {
   public:
@@ -897,7 +905,7 @@ namespace VirtDtor {
 }
 
 namespace TemporaryInNTTP {
-  template<auto n> struct B { /* ... */ }; // both-note {{template parameter is declared here}}
+  template<auto n> struct B { /* ... */ };
   struct J1 {
     J1 *self=this;
   };
@@ -963,4 +971,29 @@ namespace PseudoDtor {
   }
   static_assert(f3() == 0);
 #endif
+}
+
+namespace NastyChar {
+  struct nasty_char {
+    template <typename T> friend auto operator<=>(T, T) = delete;
+    template <typename T> friend void operator+(T &&) = delete;
+    template <typename T> friend void operator-(T &&) = delete;
+    template <typename T> friend void operator&(T &&) = delete;
+
+    char c;
+  };
+
+
+  template <unsigned N> struct ToNastyChar {
+    constexpr ToNastyChar(const char (&r)[N]) {
+      for (unsigned I = 0; I != N; ++I)
+        text[I] = nasty_char{r[I]};
+    }
+    nasty_char text[N];
+  };
+
+  template <unsigned N> ToNastyChar(const char (&)[N]) -> ToNastyChar<N>;
+
+  template <ToNastyChar t> constexpr auto to_nasty_char() { return t; }
+  constexpr auto result = to_nasty_char<"12345">();
 }
