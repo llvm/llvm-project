@@ -15,6 +15,8 @@
 #ifndef LLVM_OBJECTYAML_DXCONTAINERYAML_H
 #define LLVM_OBJECTYAML_DXCONTAINERYAML_H
 
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
@@ -91,6 +93,25 @@ struct RootDescriptorYaml {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
+struct DescriptorRangeYaml {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
+  int32_t OffsetInDescriptorsFromTableStart;
+
+  uint32_t getEncodedFlags() const;
+
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) bool Val = false;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+struct DescriptorTableYaml {
+  uint32_t NumRanges;
+  uint32_t RangesOffset;
+  SmallVector<DescriptorRangeYaml> Ranges;
+};
+
 struct RootParameterYamlDesc {
   uint32_t Type;
   uint32_t Visibility;
@@ -107,12 +128,80 @@ struct RootParameterYamlDesc {
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
       Descriptor = RootDescriptorYaml();
       break;
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+      Table = DescriptorTableYaml();
+      break;
     }
+  }
+
+  ~RootParameterYamlDesc() {
+    switch (Type) {
+
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+      Constants.~RootConstantsYaml();
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      Descriptor.~RootDescriptorYaml();
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+      Table.~DescriptorTableYaml();
+      break;
+    }
+  }
+
+  RootParameterYamlDesc(const RootParameterYamlDesc &Other)
+      : Type(Other.Type), Visibility(Other.Visibility), Offset(Other.Offset) {
+    // Initialize the appropriate union member based on Type
+    switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+      // Placement new to construct the union member
+      new (&Constants) RootConstantsYaml(Other.Constants);
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      new (&Descriptor) RootDescriptorYaml(Other.Descriptor);
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+      new (&Table) DescriptorTableYaml(Other.Table);
+      break;
+    }
+  }
+
+  RootParameterYamlDesc &operator=(const RootParameterYamlDesc &other) {
+    if (this != &other) {
+      // First, destroy the current union member
+      this->~RootParameterYamlDesc();
+
+      // Copy the basic members
+      Type = other.Type;
+      Visibility = other.Visibility;
+      Offset = other.Offset;
+
+      // Initialize the new union member based on the Type from 'other'
+      switch (Type) {
+      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+        new (&Constants) RootConstantsYaml(other.Constants);
+        break;
+      case llvm::to_underlying(dxbc::RootParameterType::CBV):
+      case llvm::to_underlying(dxbc::RootParameterType::SRV):
+      case llvm::to_underlying(dxbc::RootParameterType::UAV):
+        new (&Descriptor) RootDescriptorYaml(other.Descriptor);
+        break;
+      case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+        new (&Table) DescriptorTableYaml(other.Table);
+        break;
+      }
+    }
+    return *this;
   }
 
   union {
     RootConstantsYaml Constants;
     RootDescriptorYaml Descriptor;
+    DescriptorTableYaml Table;
   };
 };
 
@@ -244,6 +333,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterYamlDesc)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -326,6 +416,14 @@ template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
 
 template <> struct MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml> {
   static void mapping(IO &IO, llvm::DXContainerYAML::RootDescriptorYaml &D);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorTableYaml> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::DescriptorTableYaml &D);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::DescriptorRangeYaml &D);
 };
 
 } // namespace yaml

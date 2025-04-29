@@ -10,10 +10,42 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstdint>
 #include <variant>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
+
+class SizeCalculatorVisitor {
+public:
+  SizeCalculatorVisitor(uint32_t Version, size_t &SizeRef)
+      : Size(SizeRef), Version(Version) {}
+
+  void operator()(const dxbc::RootConstants *Value) const {
+    Size += sizeof(dxbc::RootConstants);
+  }
+
+  void operator()(const dxbc::RST0::v0::RootDescriptor *Value) const {
+    Size += sizeof(dxbc::RST0::v0::RootDescriptor);
+  }
+
+  void operator()(const dxbc::RST0::v1::RootDescriptor *Value) const {
+    Size += sizeof(dxbc::RST0::v1::RootDescriptor);
+  }
+
+  void operator()(const DescriptorTable *Value) const {
+    if (Version == 1)
+      Size +=
+          sizeof(dxbc::RST0::v0::DescriptorRange) * Value->Ranges.size() + 8;
+    else
+      Size +=
+          sizeof(dxbc::RST0::v1::DescriptorRange) * Value->Ranges.size() + 8;
+  }
+
+private:
+  size_t &Size;
+  uint32_t Version;
+};
 
 static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
   const uint32_t DummyValue = std::numeric_limits<uint32_t>::max();
@@ -38,12 +70,8 @@ size_t RootSignatureDesc::getSize() const {
     std::optional<ParametersView> P = ParametersContainer.getParameter(&I);
     if (!P)
       continue;
-    std::visit(
-        [&Size](auto &Value) -> void {
-          using T = std::decay_t<decltype(*Value)>;
-          Size += sizeof(T);
-        },
-        *P);
+
+    std::visit(SizeCalculatorVisitor(Version, Size), *P);
   }
 
   return Size;
@@ -106,6 +134,44 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
       support::endian::write(BOS, Descriptor->RegisterSpace,
                              llvm::endianness::little);
       support::endian::write(BOS, Descriptor->Flags, llvm::endianness::little);
+    } else if (std::holds_alternative<const DescriptorTable *>(P.value())) {
+      auto *Table = std::get<const DescriptorTable *>(P.value());
+
+      support::endian::write(BOS, (uint32_t)Table->Ranges.size(),
+                             llvm::endianness::little);
+      rewriteOffsetToCurrentByte(BOS, writePlaceholder(BOS));
+      for (const auto &R : *Table) {
+        if (std::holds_alternative<dxbc::RST0::v0::DescriptorRange>(R)) {
+          auto Range = std::get<dxbc::RST0::v0::DescriptorRange>(R);
+
+          support::endian::write(BOS, Range.RangeType,
+                                 llvm::endianness::little);
+          support::endian::write(BOS, Range.NumDescriptors,
+                                 llvm::endianness::little);
+          support::endian::write(BOS, Range.BaseShaderRegister,
+                                 llvm::endianness::little);
+          support::endian::write(BOS, Range.RegisterSpace,
+                                 llvm::endianness::little);
+          support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                                 llvm::endianness::little);
+        } else {
+          if (std::holds_alternative<dxbc::RST0::v1::DescriptorRange>(R)) {
+            auto Range = std::get<dxbc::RST0::v1::DescriptorRange>(R);
+
+            support::endian::write(BOS, Range.RangeType,
+                                   llvm::endianness::little);
+            support::endian::write(BOS, Range.NumDescriptors,
+                                   llvm::endianness::little);
+            support::endian::write(BOS, Range.BaseShaderRegister,
+                                   llvm::endianness::little);
+            support::endian::write(BOS, Range.RegisterSpace,
+                                   llvm::endianness::little);
+            support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                                   llvm::endianness::little);
+            support::endian::write(BOS, Range.Flags, llvm::endianness::little);
+          }
+        }
+      }
     }
   }
   assert(Storage.size() == getSize());
