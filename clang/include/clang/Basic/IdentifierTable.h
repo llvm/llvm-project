@@ -470,6 +470,7 @@ public:
   /// If this returns false, we know that HandleIdentifier will not affect
   /// the token.
   bool isHandleIdentifierCase() const { return NeedsHandleIdentifier; }
+  void setHandleIdentifierCase(bool Val = true) { NeedsHandleIdentifier = Val; }
 
   /// Return true if the identifier in its current state was loaded
   /// from an AST file.

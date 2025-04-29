@@ -273,6 +273,7 @@ static void MarkIdentifierAsKeywordInCpp(IdentifierTable &Table,
                                          StringRef Name) {
   IdentifierInfo &II = Table.get(Name, tok::identifier);
   II.setIsKeywordInCPlusPlus();
+  II.setHandleIdentifierCase();
 }
 
 /// AddKeyword - This method is used to associate a token ID with specific

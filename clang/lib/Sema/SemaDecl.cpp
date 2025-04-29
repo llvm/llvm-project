@@ -6120,10 +6120,6 @@ void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
     Diag(D->getLocation(), diag::warn_reserved_extern_symbol)
         << D << static_cast<int>(Status);
   }
-  // Diagnose use of C++ keywords in C as being incompatible with C++.
-  if (const IdentifierInfo *II = D->getIdentifier();
-      II && !getLangOpts().CPlusPlus && II->IsKeywordInCPlusPlus())
-    Diag(D->getLocation(), diag::warn_identifier_is_cpp_keyword) << D;
 }
 
 Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {

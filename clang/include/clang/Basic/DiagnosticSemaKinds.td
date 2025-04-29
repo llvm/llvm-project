@@ -496,9 +496,6 @@ def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
   "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
-def warn_identifier_is_cpp_keyword : Warning<
-  "identifier %0 conflicts with a C++ keyword">,
-  InGroup<CppKeywordInC>, DefaultIgnore;
 def warn_decl_hidden_in_cpp : Warning<
   "%select{struct|union|enum}0 defined within a struct or union is not visible "
   "in C++">, InGroup<HiddenCppDecl>, DefaultIgnore;
