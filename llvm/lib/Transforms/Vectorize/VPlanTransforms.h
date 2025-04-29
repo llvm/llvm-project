@@ -68,8 +68,7 @@ struct VPlanTransforms {
   static void prepareForVectorization(VPlan &Plan, Type *InductionTy,
                                       PredicatedScalarEvolution &PSE,
                                       bool RequiresScalarEpilogueCheck,
-                                      bool TailFolded, Loop *TheLoop,
-                                      DebugLoc IVDL);
+                                      bool TailFolded, Loop *TheLoop);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
