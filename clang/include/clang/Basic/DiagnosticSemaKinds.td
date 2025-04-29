@@ -3806,7 +3806,7 @@ def err_alias_not_supported_on_darwin : Error <
   "aliases are not supported on darwin">;
 def warn_attribute_non_character_array : Warning<
   "%0%select{ attribute|}1 only applies to fields or variables of character "
-  "array type; type here is %2">, InGroup<IgnoredAttributes>;
+  "array type; type is %2">, InGroup<IgnoredAttributes>;
 def warn_attribute_wrong_decl_type_str : Warning<
   "%0%select{ attribute|}1 only applies to %2">, InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type_str : Error<

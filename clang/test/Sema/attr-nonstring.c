@@ -33,7 +33,7 @@ unsigned char ucfoo[3] = "foo";  // no-nonstring-warning {{initializer-string fo
 // Show that we properly diagnose incorrect uses of nonstring.
 __attribute__((nonstring)) void func(void);       // expected-warning {{'nonstring' attribute only applies to variables and non-static data members}}
 __attribute__((nonstring("test"))) char eek1[2];  // expected-error {{'nonstring' attribute takes no arguments}}
-__attribute__((nonstring)) int eek2;              // expected-warning {{'nonstring' attribute only applies to fields or variables of character array type; type here is 'int'}}
+__attribute__((nonstring)) int eek2;              // expected-warning {{'nonstring' attribute only applies to fields or variables of character array type; type is 'int'}}
 
 // Note, these diagnostics are separate from the "too many initializers"
 // diagnostic when you overwrite more than just the null terminator.
