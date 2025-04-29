@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CODEGEN_GCEMPTYBASICBLOCKS_H
+#define LLVM_CODEGEN_GCEMPTYBASICBLOCKS_H
+
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
@@ -17,3 +20,5 @@ public:
 };
 
 } // namespace llvm
+
+#endif // LLVM_CODEGEN_GCEMPTYBASICBLOCKS_H
