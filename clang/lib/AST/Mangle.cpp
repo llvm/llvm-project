@@ -367,9 +367,11 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   }
   OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
   if (const auto *CID = MD->getCategory()) {
-    OS << CID->getClassInterface()->getName();
-    if (includeCategoryNamespace) {
-      OS << '(' << *CID << ')';
+    if (const auto *CI = CID->getClassInterface()) {
+      OS << CI->getName();
+      if (includeCategoryNamespace) {
+        OS << '(' << *CID << ')';
+      }
     }
   } else if (const auto *CD =
                  dyn_cast<ObjCContainerDecl>(MD->getDeclContext())) {
