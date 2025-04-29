@@ -39,6 +39,10 @@ class FuncOp;
 /// Collect a set of patterns to rewrite GlobalIdOp op within the GPU dialect.
 void populateGpuGlobalIdPatterns(RewritePatternSet &patterns);
 
+/// Collect a set of patterns to rewrite SubgroupIdOp op within the GPU
+/// dialect.
+void populateGpuSubgroupIdPatterns(RewritePatternSet &patterns);
+
 /// Collect a set of patterns to rewrite shuffle ops within the GPU dialect.
 void populateGpuShufflePatterns(RewritePatternSet &patterns);
 

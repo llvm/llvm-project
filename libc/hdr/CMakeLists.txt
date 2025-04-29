@@ -223,5 +223,14 @@ add_proxy_header_library(
     libc.include.wchar
 )
 
+# offsetof is a macro inside compiler resource header stddef.h
+add_proxy_header_library(
+  offsetof_macros
+  HDRS
+    offsetof_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.offsetof_macro
+)
+
 add_subdirectory(types)
 add_subdirectory(func)
