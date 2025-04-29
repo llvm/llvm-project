@@ -265,12 +265,6 @@ public:
   }
   /// @}
 
-  /// Base class internals.
-  /// @{
-  using CompilerInvocationBase::LangOpts;
-  std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
-  /// @}
-
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///
