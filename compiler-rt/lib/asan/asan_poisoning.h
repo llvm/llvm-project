@@ -55,10 +55,11 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
   // For now, just memset on Windows.
   // On AIX, calling ReserveShadowMemoryRange() is not allowed to remap the
   // memory, so just memset the memory.
-#if SANITIZER_WINDOWS || SANITIZER_AIX
-    REAL(memset)((void*)shadow_beg, value, shadow_end - shadow_beg);
-#else
-  if (value || shadow_end - shadow_beg < common_flags()->clear_shadow_mmap_threshold) {
+#  if SANITIZER_WINDOWS || SANITIZER_AIX
+  REAL(memset)((void*)shadow_beg, value, shadow_end - shadow_beg);
+#  else
+  if (value ||
+      shadow_end - shadow_beg < common_flags()->clear_shadow_mmap_threshold) {
     REAL(memset)((void*)shadow_beg, value, shadow_end - shadow_beg);
   } else {
     uptr page_size = GetPageSizeCached();
@@ -77,7 +78,7 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
       ReserveShadowMemoryRange(page_beg, page_end - 1, nullptr);
     }
   }
-#endif
+#  endif
 #endif // SANITIZER_FUCHSIA
 }
 
