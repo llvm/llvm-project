@@ -239,8 +239,9 @@ def ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector",
     }]>
   ];
 
-  // Printing and parsing available in CIRAttrs.cpp
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    `<` $elts `>`
+  }];
 
   // Enable verifier.
   let genVerifyDecl = 1;

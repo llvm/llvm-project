@@ -340,53 +340,6 @@ LogicalResult cir::ConstVectorAttr::verify(
   return elementTypeCheck;
 }
 
-Attribute cir::ConstVectorAttr::parse(AsmParser &parser, Type type) {
-  FailureOr<Type> resultType;
-  FailureOr<ArrayAttr> resultValue;
-
-  const SMLoc loc = parser.getCurrentLocation();
-
-  // Parse literal '<'
-  if (parser.parseLess()) {
-    return {};
-  }
-
-  // Parse variable 'value'
-  resultValue = FieldParser<ArrayAttr>::parse(parser);
-  if (failed(resultValue)) {
-    parser.emitError(parser.getCurrentLocation(),
-                     "failed to parse ConstVectorAttr parameter 'value' as "
-                     "an attribute");
-    return {};
-  }
-
-  if (parser.parseOptionalColon().failed()) {
-    resultType = type;
-  } else {
-    resultType = ::mlir::FieldParser<Type>::parse(parser);
-    if (failed(resultType)) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "failed to parse ConstVectorAttr parameter 'type' as "
-                       "an MLIR type");
-      return {};
-    }
-  }
-
-  // Parse literal '>'
-  if (parser.parseGreater()) {
-    return {};
-  }
-
-  return parser.getChecked<ConstVectorAttr>(
-      loc, parser.getContext(), resultType.value(), resultValue.value());
-}
-
-void cir::ConstVectorAttr::print(AsmPrinter &printer) const {
-  printer << "<";
-  printer.printStrippedAttrOrType(getElts());
-  printer << ">";
-}
-
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
