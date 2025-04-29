@@ -138,11 +138,6 @@ protected:
     return computeShapeRatio(shape, subShape);
   }
 
-  bool isUnrollable(Attribute attr) const {
-    auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
-    return layout && layout.isSgLayout() && layout.getInstData() != nullptr;
-  }
-
   xegpu::LayoutAttr getLaneLayoutAttr(Attribute attr) const {
     auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
     if (!layout || layout.getLaneLayout() == nullptr)
@@ -165,9 +160,6 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     auto tdescTy = op.getType();
     auto shape = tdescTy.getShape();
     auto layout = tdescTy.getLayout();
-
-    if (!isUnrollable(layout))
-      return failure();
 
     auto maybeTargetShape = getTargetShape(options, op);
     if (!maybeTargetShape)
@@ -242,9 +234,6 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     auto tdescTy = op.getTensorDescType();
     auto layout = tdescTy.getLayout();
 
-    if (!isUnrollable(layout))
-      return failure();
-
     auto maybeTargetShape = getTargetShape(options, op);
     if (!maybeTargetShape)
       return failure();
@@ -289,9 +278,6 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     auto valueTy = op.getValueType();
     auto tdescTy = op.getTensorDescType();
     auto layout = tdescTy.getLayout();
-
-    if (!isUnrollable(layout))
-      return failure();
 
     auto maybeTargetShape = getTargetShape(options, op);
     if (!maybeTargetShape)
@@ -389,11 +375,74 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     auto K = (*maybeTargetShape)[1];
     auto N = (*maybeTargetShape)[2];
 
-    llvm::dbgs() << "\nM: " << M << ", K: " << K << ", N: " << N << "\n";
+    int64_t aBlockSize[2] = {M, K};
+    int64_t bBlockSize[2] = {K, N};
+    int64_t cBlockSize[2] = {M, N};
 
-    return failure();
+    auto pack = [&](TypedValue<VectorType> val,
+                    llvm::ArrayRef<int64_t> blockSize) {
+      VectorType type = val.getType();
+      auto maybeGrids = computeShapeRatio(type.getShape(), blockSize);
+      assert(maybeGrids && "Expecting grids to be computed.");
+      auto grids = *maybeGrids;
+      auto numNewOps = computeProduct(grids);
+      if (numNewOps == 1)
+        return llvm::SmallVector<Value>({val});
+      auto newVecTy = type.cloneWith(blockSize, type.getElementType());
+      llvm::SmallVector<Type> convertedTypes(numNewOps, newVecTy);
+      auto values = addPackOp(val, convertedTypes, blockSize, loc, rewriter);
+      return llvm::to_vector(values);
+    };
 
+    auto a = op.getLhs();
+    auto b = op.getRhs();
+    auto c = op.getAcc();
 
+    auto aShape = a.getType().getShape();
+    auto bShape = b.getType().getShape();
+
+    llvm::SmallVector<Value> aVals, bVals, cVals;
+    aVals = pack(a, aBlockSize);
+    bVals = pack(b, bBlockSize);
+
+    if (c)
+      cVals = pack(c, cBlockSize);
+
+    // Vals are empty due to invalid blocking size, or with size 1 due to
+    // the original shape is the same with the blocking size. The op will
+    // be skipped if every operand got an invalid blocking size or the
+    // original shape is the same with the blocking size.
+    if (aVals.size() <= 1 && bVals.size() <= 1 && cVals.size() <= 1)
+      return failure();
+
+    auto resultTy = op.getResult().getType();
+    auto vecTy = VectorType::get(cBlockSize, resultTy.getElementType());
+
+    auto mIters = aShape[0] / M;
+    auto kIters = aShape[1] / K;
+    auto nIters = bShape[1] / N;
+
+    SmallVector<Value> newOps;
+    for (int64_t i = 0; i < mIters; i++) {
+      for (int64_t j = 0; j < nIters; j++) {
+        Value tmpC;
+        if (c)
+          tmpC = cVals[i * nIters + j]; // init with acc
+        for (int64_t k = 0; k < kIters; k++) {
+          auto aVec = aVals[i * kIters + k];
+          auto bVec = bVals[k * nIters + j];
+          llvm::SmallVector<Value> operands({aVec, bVec});
+          if (tmpC)
+            operands.push_back(tmpC);
+          tmpC = rewriter.create<xegpu::DpasOp>(loc, vecTy, operands,
+                                                op->getAttrs());
+        }
+        newOps.push_back(tmpC);
+      }
+    }
+    auto castOp = addUnpackOp(newOps, resultTy, cBlockSize, loc, rewriter);
+    rewriter.replaceOp(op, castOp);
+    return success();
   }
 };
 
@@ -409,6 +458,6 @@ struct UnrollAtomicRMWOp : public UnrollPattern<xegpu::AtomicRMWOp> {
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns,
     const mlir::vector::UnrollVectorOptions &options) {
-  patterns.add<UnrollCreateNdOp, UnrollLoadNdOp, UnrollStoreNdOp>(
+  patterns.add<UnrollCreateNdOp, UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp>(
       patterns.getContext(), options);
 }
