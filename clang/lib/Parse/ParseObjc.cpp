@@ -1972,7 +1972,7 @@ void Parser::ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
 
     // Check for extraneous top-level semicolon.
     if (Tok.is(tok::semi)) {
-      ConsumeExtraSemi(InstanceVariableList);
+      ConsumeExtraSemi(ExtraSemiKind::InstanceVariableList);
       continue;
     }
 
