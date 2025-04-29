@@ -294,8 +294,6 @@ public:
 
   /// Base class internals.
   /// @{
-  using CompilerInvocationBase::LangOpts;
-  std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
   std::shared_ptr<CASOptions> getCASOptsPtr() { return CASOpts; }
   void setCASOption(std::shared_ptr<CASOptions> CASOpts) {
     this->CASOpts = CASOpts;
