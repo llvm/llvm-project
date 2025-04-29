@@ -337,6 +337,10 @@ public:
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
+  bool isTargetWinOrUEFI64() const {
+    return isTargetWin64() || isTargetUEFI64();
+  }
+
   bool isTargetWin32() const { return !Is64Bit && isOSWindows(); }
 
   bool isPICStyleGOT() const { return PICStyle == PICStyles::Style::GOT; }
@@ -352,6 +356,7 @@ public:
     switch (CC) {
     // On Win64, all these conventions just use the default convention.
     case CallingConv::C:
+      return isTargetWin64() || isTargetUEFI64();
     case CallingConv::Fast:
     case CallingConv::Tail:
     case CallingConv::Swift:
