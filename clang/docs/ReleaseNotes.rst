@@ -415,7 +415,7 @@ Bug Fixes to C++ Support
   in a ``constexpr`` function. (#GH131432)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
 - No longer crashes when instantiating invalid variable template specialization
-  whose type depends on itself. (#GH51347)
+  whose type depends on itself. (#GH51347), (#GH55872)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

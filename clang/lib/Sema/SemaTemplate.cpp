@@ -4348,23 +4348,6 @@ struct PartialSpecMatchResult {
   VarTemplatePartialSpecializationDecl *Partial;
   TemplateArgumentList *Args;
 };
-
-struct TemplateArgEqualityComparator {
-  const ASTContext &Context;
-
-  bool operator()(const TemplateArgument &Canonical,
-                  const TemplateArgument &Unknown) const {
-    llvm::FoldingSetNodeID ID1, ID2;
-    Canonical.Profile(ID1, Context);
-    Context.getCanonicalTemplateArgument(Unknown).Profile(ID2, Context);
-#ifndef NDEBUG
-    llvm::FoldingSetNodeID ID3;
-    Context.getCanonicalTemplateArgument(Canonical).Profile(ID3, Context);
-    assert(ID1 == ID3);
-#endif
-    return ID1 == ID2;
-  }
-};
 } // end anonymous namespace
 
 DeclResult
@@ -4389,16 +4372,20 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     if (ParsingInitForAutoVars.empty())
       return DeclResult();
 
+    auto IsSameTemplateArg = [&](const TemplateArgument &Arg1,
+                                 const TemplateArgument &Arg2) {
+      return Context.isSameTemplateArgument(Arg1, Arg2);
+    };
+
     if (VarDecl *Var = Template->getTemplatedDecl();
         ParsingInitForAutoVars.count(Var) &&
         llvm::equal(
             CTAI.CanonicalConverted,
             Template->getTemplateParameters()->getInjectedTemplateArgs(Context),
-            TemplateArgEqualityComparator{Context})) {
+            IsSameTemplateArg)) {
       Diag(TemplateNameLoc,
            diag::err_auto_variable_cannot_appear_in_own_initializer)
-          << diag::ParsingInitFor::VarTemplate << Var << Var->getType()
-          << SourceRange(TemplateNameLoc, TemplateArgs.getRAngleLoc());
+          << diag::ParsingInitFor::VarTemplate << Var << Var->getType();
       return true;
     }
 
@@ -4408,12 +4395,11 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
       if (ParsingInitForAutoVars.count(Partial) &&
           llvm::equal(CTAI.CanonicalConverted,
                       Partial->getTemplateArgs().asArray(),
-                      TemplateArgEqualityComparator{Context})) {
+                      IsSameTemplateArg)) {
         Diag(TemplateNameLoc,
              diag::err_auto_variable_cannot_appear_in_own_initializer)
             << diag::ParsingInitFor::VarTemplatePartialSpec << Partial
-            << Partial->getType()
-            << SourceRange(TemplateNameLoc, TemplateArgs.getRAngleLoc());
+            << Partial->getType();
         return true;
       }
 
@@ -4431,14 +4417,12 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
         Diag(TemplateNameLoc,
              diag::err_auto_variable_cannot_appear_in_own_initializer)
             << diag::ParsingInitFor::VarTemplateExplicitSpec << Spec
-            << Spec->getType()
-            << SourceRange(TemplateNameLoc, TemplateArgs.getRAngleLoc());
+            << Spec->getType();
       else
         // We are substituting the initializer of this variable template
         // specialization.
         Diag(TemplateNameLoc, diag::err_var_template_spec_type_depends_on_self)
-            << Spec << Spec->getType()
-            << SourceRange(TemplateNameLoc, TemplateArgs.getRAngleLoc());
+            << Spec << Spec->getType();
 
       return true;
     }
