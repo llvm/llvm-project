@@ -1709,3 +1709,36 @@ namespace Invalid {
   static_assert(test() == 0); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
 }
+
+#if __cplusplus >= 202002L
+namespace WithinLifetime {
+  constexpr int a = 10;
+  static_assert(__builtin_is_within_lifetime(&a));
+
+  consteval int IsActive(bool ReadB) {
+    union {
+      int a, b;
+    } A;
+    A.a = 10;
+    if (ReadB)
+      return __builtin_is_within_lifetime(&A.b);
+    return __builtin_is_within_lifetime(&A.a);
+  }
+  static_assert(IsActive(false));
+  static_assert(!IsActive(true));
+
+  static_assert(__builtin_is_within_lifetime((void*)nullptr)); // both-error {{not an integral constant expression}} \
+                                                               // both-note {{'__builtin_is_within_lifetime' cannot be called with a null pointer}}
+
+  constexpr int i = 2;
+  constexpr int arr[2]{};
+  void f() {
+    __builtin_is_within_lifetime(&i + 1); // both-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                          // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
+                                          // both-warning {{expression result unused}}
+    __builtin_is_within_lifetime(arr + 2); // both-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                           // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
+                                           // both-warning {{expression result unused}}
+  }
+}
+#endif
