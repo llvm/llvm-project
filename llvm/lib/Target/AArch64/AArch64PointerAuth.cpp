@@ -152,12 +152,15 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
   } else {
     BuildPACM(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup);
-    emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup, EmitCFI);
+    if (MFnI.branchProtectionPAuthLR())
+      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup, EmitCFI);
     BuildMI(MBB, MBBI, DL,
             TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSP
                                                : AArch64::PACIASP))
         .setMIFlag(MachineInstr::FrameSetup)
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
+    if (!MFnI.branchProtectionPAuthLR())
+      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup, EmitCFI);
   }
 
   if (!EmitCFI && NeedsWinCFI) {
@@ -220,11 +223,15 @@ void AArch64PointerAuth::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     } else {
       BuildPACM(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy, PACSym);
-      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy,
-                 EmitAsyncCFI);
+      if (MFnI->branchProtectionPAuthLR())
+        emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy,
+                   EmitAsyncCFI);
       BuildMI(MBB, MBBI, DL,
               TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
           .setMIFlag(MachineInstr::FrameDestroy);
+      if (!MFnI->branchProtectionPAuthLR())
+        emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy,
+                   EmitAsyncCFI);
     }
 
     if (NeedsWinCFI) {
