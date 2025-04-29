@@ -130,12 +130,10 @@ def update_test(ti: common.TestInfo):
         mc_mode = "dasm"
 
         if ti.args.sort:
-            print("sorting with dasm(.txt) file is not supported!")
-            return -1
-
+            raise Exception("sorting with dasm(.txt) file is not supported!")
     else:
         common.warn("Expected .s and .txt, Skipping file : ", ti.path)
-        continue
+        return
 
     triple_in_ir = None
     for l in ti.input_lines:
