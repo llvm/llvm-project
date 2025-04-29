@@ -319,7 +319,7 @@ bool BinaryContext::forceSymbolRelocations(StringRef SymbolName) const {
       (SymbolName == "__hot_data_start" || SymbolName == "__hot_data_end"))
     return true;
 
-  if (SymbolName == "_end")
+  if (SymbolName == "_end" && !IsLinuxKernel)
     return true;
 
   return false;

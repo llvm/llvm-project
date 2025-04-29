@@ -297,6 +297,9 @@ private:
   // True if address of this function can not be changed
   bool KeepAddress{false};
 
+  // True if code of this function might be changed at run time
+  bool MayChange{false};
+
   /// True if the original function code has all necessary relocations to track
   /// addresses of functions emitted to new locations. Typically set for
   /// functions that we are not going to emit.
@@ -1350,6 +1353,9 @@ public:
   /// Return true if address of this function can not be changed
   bool mustKeepAddress() const { return KeepAddress; }
 
+  /// Return true if code of this function might be changed at run time
+  bool mayChange() const { return MayChange; }
+
   /// Return true if the function contains explicit or implicit indirect branch
   /// to its split fragments, e.g., split jump table, landing pad in split
   /// fragment.
@@ -1778,6 +1784,8 @@ public:
 
   /// Mark the function as using ORC format for stack unwinding.
   void setHasORC(bool V) { HasORC = V; }
+
+  void setMayChange() { MayChange = true; }
 
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");

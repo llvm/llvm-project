@@ -900,6 +900,19 @@ bool Relocation::isRelative(uint64_t Type) {
   }
 }
 
+bool Relocation::isGlobDat(uint64_t Type) {
+  switch (Arch) {
+  default:
+    llvm_unreachable("Unsupported architecture");
+  case Triple::aarch64:
+    return Type == ELF::R_AARCH64_GLOB_DAT;
+  case Triple::riscv64:
+    return Type == ELF::R_RISCV_64;
+  case Triple::x86_64:
+    return Type == ELF::R_X86_64_GLOB_DAT;
+  }
+}
+
 bool Relocation::isIRelative(uint64_t Type) {
   switch (Arch) {
   default:

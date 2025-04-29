@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Passes/PatchEntries.h"
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -218,6 +219,8 @@ class LinuxKernelRewriter final : public MetadataRewriter {
     bool InitValue{false};
     bool Nop{false};
     MCSymbol *JumpInstLabel{nullptr};
+    BinarySection *Sec{nullptr};
+    uint64_t JumpAddress{0};
     BinaryFunction *BF{nullptr};
   };
   std::vector<JumpInfoEntry> JumpInfo;
@@ -239,6 +242,22 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   StaticCallListType StaticCallEntries;
   /// Functions with exception handling code.
   DenseSet<BinaryFunction *> FunctionsWithExceptions;
+
+  struct RetpolineSiteInfo {
+    uint64_t Offset{0};
+    MCSymbol *Dest{nullptr};
+  };
+  std::vector<RetpolineSiteInfo> RetpolineSites;
+
+  ErrorOr<BinarySection &> RetpolineSiteSec = std::errc::bad_address;
+
+  struct ReturnSiteInfo {
+    uint64_t Offset{0};
+    MCSymbol *Dest{nullptr};
+  };
+  std::vector<ReturnSiteInfo> ReturnSites;
+
+  ErrorOr<BinarySection &> ReturnSiteSec = std::errc::bad_address;
 
   /// Section with paravirtual patch sites.
   ErrorOr<BinarySection &> ParavirtualPatchSection = std::errc::bad_address;
@@ -306,6 +325,12 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error readStaticCalls();
   Error rewriteStaticCalls();
 
+  Error readRetpolineSites();
+  Error rewriteRetpolineSites();
+
+  Error readReturnSites();
+  Error rewriteReturnSites();
+
   Error readExceptionTable(StringRef SectionName);
   Error rewriteExceptionTable();
 
@@ -347,8 +372,13 @@ public:
         return true;
 
       uint64_t Address = Function.getAddress();
+      StringRef Name = Function.getOneName();
 
       if (BC.isX86()) {
+        // Ignore CFI symbols
+        if (Name.starts_with("__pfx_") || Name.starts_with("__cfi_"))
+          return true;
+
         BinaryData *BDStart = BC.getBinaryDataByName("irq_entries_start");
         if (BDStart && BDStart->containsAddress(Address))
           return true;
@@ -374,6 +404,12 @@ public:
       return E;
 
     if (Error E = readStaticCalls())
+      return E;
+
+    if (Error E = readRetpolineSites())
+      return E;
+
+    if (Error E = readReturnSites())
       return E;
 
     if (Error E = readExceptionTable("__ex_table"))
@@ -427,6 +463,12 @@ public:
       return E;
 
     if (Error E = rewriteStaticCalls())
+      return E;
+
+    if (Error E = rewriteRetpolineSites())
+      return E;
+
+    if (Error E = rewriteReturnSites())
       return E;
 
     if (Error E = rewriteStaticKeysJumpTable())
@@ -970,7 +1012,8 @@ Error LinuxKernelRewriter::validateORCTables() {
                                "out of bounds while reading ORC IP table: %s",
                                toString(IPCursor.takeError()).c_str());
 
-    assert(IP >= PrevIP && "Unsorted ORC table detected");
+    if (!BC.HasRelocations)
+      assert(IP >= PrevIP && "Unsorted ORC table detected");
     (void)PrevIP;
     PrevIP = IP;
   }
@@ -1102,6 +1145,103 @@ Error LinuxKernelRewriter::rewriteStaticCalls() {
   return Error::success();
 }
 
+Error LinuxKernelRewriter::readRetpolineSites() {
+  RetpolineSiteSec = BC.getUniqueSectionByName(".retpoline_sites");
+  if (!RetpolineSiteSec)
+    return Error::success();
+
+  AddressExtractor AE(
+      RetpolineSiteSec->getContents(), RetpolineSiteSec->getAddress(),
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
+  while (Cursor.tell() < RetpolineSiteSec->getSize()) {
+    RetpolineSites.push_back(RetpolineSiteInfo());
+    RetpolineSiteInfo &RetpolineSite = RetpolineSites.back();
+    RetpolineSite.Offset = Cursor.tell();
+
+    uint64_t DestAddr = AE.getPCRelAddress32(Cursor);
+
+    // Consume the status of the cursor.
+    if (!Cursor)
+      return createStringError(
+          errc::executable_format_error,
+          "out of bounds while reading .retpoline_sites: %s",
+          toString(Cursor.takeError()).c_str());
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(DestAddr);
+    if (!BF || !BC.shouldEmit(*BF) || !BF->hasInstructions())
+      continue;
+
+    MCInst *Inst = BF->getInstructionAtOffset(DestAddr - BF->getAddress());
+    if (!Inst)
+      return createStringError(errc::executable_format_error,
+                               "no instruction at call site address 0x%" PRIx64,
+                               DestAddr);
+    RetpolineSite.Dest =
+        BC.MIB->getOrCreateInstLabel(*Inst, "__retpoline_", BC.Ctx.get());
+  }
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::rewriteRetpolineSites() {
+  if (!RetpolineSiteSec)
+    return Error::success();
+  for (const RetpolineSiteInfo &RetpolineSite : RetpolineSites) {
+    if (RetpolineSite.Dest)
+      RetpolineSiteSec->addRelocation(RetpolineSite.Offset, RetpolineSite.Dest,
+                                      Relocation::getPC32(), /*Addend*/ 0);
+  }
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::readReturnSites() {
+  ReturnSiteSec = BC.getUniqueSectionByName(".return_sites");
+  if (!ReturnSiteSec)
+    return Error::success();
+
+  AddressExtractor AE(ReturnSiteSec->getContents(), ReturnSiteSec->getAddress(),
+                      BC.AsmInfo->isLittleEndian(),
+                      BC.AsmInfo->getCodePointerSize());
+  AddressExtractor::Cursor Cursor(0);
+  while (Cursor.tell() < ReturnSiteSec->getSize()) {
+    ReturnSites.push_back(ReturnSiteInfo());
+    ReturnSiteInfo &ReturnSite = ReturnSites.back();
+    ReturnSite.Offset = Cursor.tell();
+
+    uint64_t DestAddr = AE.getPCRelAddress32(Cursor);
+
+    // Consume the status of the cursor.
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading .return_sites: %s",
+                               toString(Cursor.takeError()).c_str());
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(DestAddr);
+    if (!BF || !BC.shouldEmit(*BF) || !BF->hasInstructions())
+      continue;
+
+    MCInst *Inst = BF->getInstructionAtOffset(DestAddr - BF->getAddress());
+    if (!Inst)
+      return createStringError(errc::executable_format_error,
+                               "no instruction at call site address 0x%" PRIx64,
+                               DestAddr);
+    ReturnSite.Dest =
+        BC.MIB->getOrCreateInstLabel(*Inst, "__return_", BC.Ctx.get());
+  }
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::rewriteReturnSites() {
+  if (!ReturnSiteSec)
+    return Error::success();
+  for (const ReturnSiteInfo &ReturnSite : ReturnSites) {
+    if (ReturnSite.Dest)
+      ReturnSiteSec->addRelocation(ReturnSite.Offset, ReturnSite.Dest,
+                                   Relocation::getPC32(), /*Addend*/ 0);
+  }
+  return Error::success();
+}
+
 /// Instructions that access user-space memory can cause page faults. These
 /// faults will be handled by the kernel and execution will resume at the fixup
 /// code location if the address was invalid. The kernel uses the exception
@@ -1217,20 +1357,18 @@ Error LinuxKernelRewriter::readExceptionTable(StringRef SectionName) {
             << ExceptionsSection->getSize() / ExceptionTableEntrySize
             << " exception table entries\n";
 
+  // Disable output of functions with exceptions before rewrite support is
+  // added.
+  for (BinaryFunction *BF : FunctionsWithExceptions)
+    BF->setIgnored();
+
   return Error::success();
 }
 
 /// Depending on the value of CONFIG_BUILDTIME_TABLE_SORT, the kernel expects
 /// the exception table to be sorted. Hence we have to sort it after code
 /// reordering.
-Error LinuxKernelRewriter::rewriteExceptionTable() {
-  // Disable output of functions with exceptions before rewrite support is
-  // added.
-  for (BinaryFunction *BF : FunctionsWithExceptions)
-    BF->setSimple(false);
-
-  return Error::success();
-}
+Error LinuxKernelRewriter::rewriteExceptionTable() { return Error::success(); }
 
 /// .parainsrtuctions section contains information for patching parvirtual call
 /// instructions during runtime. The entries in the section are in the form:
@@ -1297,6 +1435,10 @@ Error LinuxKernelRewriter::readParaInstructions() {
     }
   }
 
+  // Disable output of functions with paravirtual instructions before the
+  // rewrite support is complete.
+  skipFunctionsWithAnnotation("ParaSite");
+
   BC.outs() << "BOLT-INFO: parsed " << EntryID << " paravirtual patch sites\n";
 
   return Error::success();
@@ -1312,7 +1454,7 @@ void LinuxKernelRewriter::skipFunctionsWithAnnotation(
         return BC.MIB->hasAnnotation(Inst, Annotation);
       });
       if (HasAnnotation) {
-        BF.setSimple(false);
+        BF.setIgnored();
         break;
       }
     }
@@ -1320,10 +1462,6 @@ void LinuxKernelRewriter::skipFunctionsWithAnnotation(
 }
 
 Error LinuxKernelRewriter::rewriteParaInstructions() {
-  // Disable output of functions with paravirtual instructions before the
-  // rewrite support is complete.
-  skipFunctionsWithAnnotation("ParaSite");
-
   return Error::success();
 }
 
@@ -1426,7 +1564,7 @@ Error LinuxKernelRewriter::rewriteBugTable() {
     // Clear bug entries that were not emitted for this function, e.g. as a
     // result of DCE, but setting their instruction address to zero.
     for (const uint32_t ID : FunctionBugList[&BF]) {
-      if (!EmittedIDs.count(ID)) {
+      if (!BC.HasRelocations && !EmittedIDs.count(ID)) {
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
         BugTableSection->addRelocation(EntryOffset, nullptr,
                                        Relocation::getPC32(),
@@ -1658,7 +1796,7 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
     if (const uint64_t Offset = HookAddress - BF->getAddress()) {
       BC.errs() << "BOLT-WARNING: PCI fixup detected in the middle of function "
                 << *BF << " at offset 0x" << Twine::utohexstr(Offset) << '\n';
-      BF->setSimple(false);
+      BF->setIgnored();
     }
   }
 
@@ -1756,6 +1894,7 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     JumpInfo.push_back(JumpInfoEntry());
     JumpInfoEntry &Info = JumpInfo.back();
     Info.Likely = KeyAddress & 1;
+    Info.JumpAddress = JumpAddress;
 
     if (opts::DumpStaticKeys) {
       BC.outs() << "Static key jump entry: " << EntryID
@@ -1778,6 +1917,9 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     assert(BF->getOriginSection() &&
            "the function did not originate from the file");
     Info.BF = BF;
+    Info.Sec = BF->getOriginSection();
+
+    BF->setMayChange();
 
     MCInst *Inst = BF->getInstructionAtOffset(JumpAddress - BF->getAddress());
     if (!Inst)
@@ -2027,6 +2169,31 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
       break;
     default:
       llvm_unreachable("Unsupported architecture");
+    }
+
+    if (BC.HasRelocations) {
+      // To avoid undefined behaviors, fill the jump address with Undef
+
+      size_t PatchSize = PatchEntries::getPatchSize(BC);
+      assert(BF->isPatched());
+      assert(Info.JumpAddress != JumpAddress);
+
+      bool NotOverlap =
+          BF->forEachEntryPoint([&](uint64_t EntryOffset, const MCSymbol *) {
+            uint64_t EntryAddress = EntryOffset + BF->getAddress();
+            return Info.JumpAddress >= EntryAddress + PatchSize ||
+                   Info.JumpAddress + Size <= EntryAddress;
+          });
+
+      if (NotOverlap)
+        Info.Sec->addPatch(Info.JumpAddress - Info.Sec->getAddress(),
+                           BC.MIB->getUndefFillValue());
+      else
+        BC.errs()
+            << "BOLT-WARNING: Skip writing an undefined instruction at static "
+               "key jump address 0x"
+            << Twine::utohexstr(Info.JumpAddress)
+            << " since that address is overlapping an entry point patch\n";
     }
 
     // Check if we need to convert jump instruction into a nop.

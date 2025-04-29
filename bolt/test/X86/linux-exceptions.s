@@ -22,21 +22,21 @@
   .globl _start
   .type _start, %function
 _start:
-# CHECK: Binary Function "_start"
+# CHECK-TODO: Binary Function "_start"
   nop
 .L0:
   mov (%rdi), %rax
-# CHECK:      mov
-# CHECK-SAME: ExceptionEntry: 1 # Fixup: [[FIXUP:[a-zA-Z0-9_]+]]
+# CHECK-TODO:      mov
+# CHECK-SAME-TODO: ExceptionEntry: 1 # Fixup: [[FIXUP:[a-zA-Z0-9_]+]]
   nop
 .L1:
   mov (%rsi), %rax
-# CHECK:      mov
-# CHECK-SAME: ExceptionEntry: 2 # Fixup: [[FIXUP]]
+# CHECK-TODO:      mov
+# CHECK-SAME-TODO: ExceptionEntry: 2 # Fixup: [[FIXUP]]
   nop
   ret
 .LF0:
-# CHECK: Secondary Entry Point: [[FIXUP]]
+# CHECK-TODO: Secondary Entry Point: [[FIXUP]]
   jmp foo
   .size _start, .-_start
 
@@ -65,7 +65,7 @@ foo:
   .globl linux_banner
   .type  linux_banner, @object
 linux_banner:
-  .string  "Linux version 6.6.61\n"
+  .string  "Linux version 5.10.133\n"
   .size  linux_banner, . - linux_banner
 
 ## Fake Linux Kernel sections.

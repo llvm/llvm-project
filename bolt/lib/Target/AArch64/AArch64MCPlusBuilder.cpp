@@ -1958,6 +1958,10 @@ public:
     return StringRef("\0\0\0\0", 4);
   }
 
+  StringRef getUndefFillValue() const override {
+    return StringRef("\xff\xff\x00\x00", 4); // UDF
+  }
+
   void createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
     Inst.clear();
@@ -2225,6 +2229,9 @@ public:
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
     const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+
+    if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19))
+      return std::nullopt;
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();

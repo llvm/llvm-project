@@ -33,6 +33,17 @@ class PatchEntries : public BinaryFunctionPass {
 public:
   explicit PatchEntries() : BinaryFunctionPass(false) {}
 
+  // Calculate the size of the patch.
+  static size_t getPatchSize(const BinaryContext &BC) {
+    static size_t PatchSize = 0;
+    if (!PatchSize) {
+      InstructionListType Seq;
+      BC.MIB->createLongTailCall(Seq, BC.Ctx->createTempSymbol(), BC.Ctx.get());
+      PatchSize = BC.computeCodeSize(Seq.begin(), Seq.end());
+    }
+    return PatchSize;
+  }
+
   const char *getName() const override { return "patch-entries"; }
   Error runOnFunctions(BinaryContext &BC) override;
 };

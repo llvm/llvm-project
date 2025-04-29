@@ -473,6 +473,9 @@ private:
   /// Track next available address for new allocatable sections.
   uint64_t NextAvailableAddress{0};
 
+  uint64_t BOLTReservedStartAddress{0};
+  uint64_t BOLTReservedEndAddress{0};
+
   /// Location and size of dynamic relocations.
   std::optional<uint64_t> DynamicRelocationsAddress;
   uint64_t DynamicRelocationsSize{0};
