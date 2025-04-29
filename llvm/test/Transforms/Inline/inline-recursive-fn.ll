@@ -153,3 +153,41 @@ if.end:                                           ; preds = %entry
   %mul = fmul float %x, %scale
   br label %common.ret18
 }
+
+; Test when the icmp can be simplified but the recurison depth is NOT 1,
+; so the recursive call will not be inlined.
+define float @no_inline_rec_depth_not_1(float %x, float %scale) {
+; CHECK-LABEL: define float @no_inline_rec_depth_not_1(
+; CHECK-SAME: float [[X:%.*]], float [[SCALE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; CHECK:       [[COMMON_RET18:.*]]:
+; CHECK-NEXT:    [[COMMON_RET18_OP:%.*]] = phi float [ [[CALL:%.*]], %[[IF_THEN]] ], [ [[MUL:%.*]], %[[IF_END]] ]
+; CHECK-NEXT:    ret float [[COMMON_RET18_OP]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[CALL]] = tail call float @no_inline_rec_depth_not_1(float [[X]], float [[SCALE]])
+; CHECK-NEXT:    br label %[[COMMON_RET18]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    [[MUL]] = fmul float [[X]], [[SCALE]]
+; CHECK-NEXT:    br label %[[COMMON_RET18]]
+;
+entry:
+  %cmp = fcmp olt float %x, 0.000000e+00
+  br i1 %cmp, label %if.then, label %if.end
+
+common.ret18:                                     ; preds = %if.then, %if.end
+  %common.ret18.op = phi float [ %call, %if.then ], [ %mul, %if.end ]
+  ret float %common.ret18.op
+
+if.then:                                          ; preds = %entry
+  %fneg1 = fneg float %x
+  %fneg = fneg float %fneg1
+  %call = tail call float @no_inline_rec_depth_not_1(float %fneg, float %scale)
+  br label %common.ret18
+
+if.end:                                           ; preds = %entry
+  %mul = fmul float %x, %scale
+  br label %common.ret18
+}
+

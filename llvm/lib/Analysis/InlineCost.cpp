@@ -1741,10 +1741,13 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
         cast<CmpInst>(&Cmp), {CallArg, Cmp.getOperand(1)}, SQ);
     if (auto *ConstVal = dyn_cast_or_null<ConstantInt>(SimplifiedInstruction)) {
       bool IsTrueSuccessor = CallBB == Br->getSuccessor(0);
-      SimplifiedValues[&Cmp] = ConstVal;
-      if (ConstVal->isOne())
-        return !IsTrueSuccessor;
-      return IsTrueSuccessor;
+      // Make sure that the BB of the recursive call is NOT the next successor
+      // of the icmp. In other words, make sure that the recursion depth is 1.
+      if ((ConstVal->isOne() && !IsTrueSuccessor) ||
+          (ConstVal->isZero() && IsTrueSuccessor)) {
+        SimplifiedValues[&Cmp] = ConstVal;
+        return true;
+      }
     }
   }
   return false;
