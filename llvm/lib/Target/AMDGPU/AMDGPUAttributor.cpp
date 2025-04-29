@@ -209,7 +209,7 @@ public:
   getWavesPerEU(const Function &F,
                 std::pair<unsigned, unsigned> FlatWorkGroupSize) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getWavesPerEU(F, FlatWorkGroupSize);
+    return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
   }
 
   std::optional<std::pair<unsigned, unsigned>>
@@ -230,7 +230,8 @@ public:
                          std::pair<unsigned, unsigned> WavesPerEU,
                          std::pair<unsigned, unsigned> FlatWorkGroupSize) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize);
+    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize,
+                                     getLDSSize(F));
   }
 
   unsigned getMaxWavesPerEU(const Function &F) {
@@ -253,6 +254,14 @@ private:
     }
 
     return Status;
+  }
+
+  /// Returns the minimum amount of LDS space used by a workgroup running
+  /// function \p F.
+  static unsigned getLDSSize(const Function &F) {
+    return AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
+                                           {0, UINT32_MAX}, true)
+        .first;
   }
 
   /// Get the constant access bitmap for \p C.
