@@ -280,6 +280,65 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
 }
 
 #if LLPC_BUILD_NPI
+// Get layout of a *convolve* builtin.
+static std::optional<unsigned> getConvolveLayout(unsigned BuiltinID) {
+
+  enum class ConvolveLayout : unsigned {
+    SHAPE_8X4X8,
+    SHAPE_4X4X8, // not used
+    SHAPE_4X4X16,
+    SHAPE_4X2X16,
+  };
+
+  switch (BuiltinID) {
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_bf16_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_bf8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_fp8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_f16_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_bf8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_fp8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_iu4_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32_iu8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu4_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu8_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_i32_iu4_4x2:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_i32_iu8_4x2:
+    return static_cast<unsigned>(ConvolveLayout::SHAPE_4X2X16);
+
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_4x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_4x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_4x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_4x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_4x4:
+    return static_cast<unsigned>(ConvolveLayout::SHAPE_4X4X16);
+
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_8x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_8x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_8x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_8x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_8x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_8x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_8x4:
+  case clang::AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_8x4:
+    return static_cast<unsigned>(ConvolveLayout::SHAPE_8X4X8);
+
+  default:
+    llvm_unreachable("Unknown BuiltinID");
+    return std::nullopt;
+  }
+}
+
 // Get default layout of *cvt_to_tensor* builtin.
 // If the layout is unequivocal and can be derived from intrinsic name return
 // it. Otherwise return nullopt, which means there is no default layout. The
@@ -1505,6 +1564,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       auto SingleItTy = Args[Args.size() - 1]->getType();
       for (int i = IterationCnt; i < 4; ++i)
         Args.push_back(llvm::UndefValue::get(SingleItTy));
+    }
+
+    if (std::optional<unsigned> ConvolveLayout = getConvolveLayout(BuiltinID)) {
+      assert(isUInt<2>(*ConvolveLayout));
+      AuxData.insertBits(*ConvolveLayout, 0, 2);
     }
 
     // AuxData
