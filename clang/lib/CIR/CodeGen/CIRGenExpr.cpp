@@ -322,9 +322,12 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   assert(!cir::MissingFeatures::opTBAA());
 
   Address addr = base.getAddress();
-  if (isa<CXXRecordDecl>(rec)) {
-    cgm.errorNYI(field->getSourceRange(), "emitLValueForField: C++ class");
-    return LValue();
+  if (auto *classDecl = dyn_cast<CXXRecordDecl>(rec)) {
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        classDecl->isDynamicClass()) {
+      cgm.errorNYI(field->getSourceRange(),
+                   "emitLValueForField: strict vtable for dynamic class");
+    }
   }
 
   unsigned recordCVR = base.getVRQualifiers();

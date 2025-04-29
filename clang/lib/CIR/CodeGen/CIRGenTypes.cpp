@@ -237,8 +237,11 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   assert(insertResult && "isSafeToCovert() should have caught this.");
 
   // Force conversion of non-virtual base classes recursively.
-  if (isa<CXXRecordDecl>(rd)) {
-    cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+    if (cxxRecordDecl->getNumBases() > 0) {
+      cgm.errorNYI(rd->getSourceRange(),
+                   "convertRecordDeclType: derived CXXRecordDecl");
+    }
   }
 
   // Layout fields.

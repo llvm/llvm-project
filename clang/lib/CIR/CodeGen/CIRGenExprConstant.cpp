@@ -365,10 +365,15 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
   if (!d.hasLocalStorage()) {
     QualType ty = cgm.getASTContext().getBaseElementType(d.getType());
     if (ty->isRecordType())
-      if (d.getInit() && isa<CXXConstructExpr>(d.getInit())) {
-        cgm.errorNYI(d.getInit()->getBeginLoc(),
-                     "tryEmitPrivateForVarInit CXXConstructExpr");
-        return {};
+      if (const CXXConstructExpr *e =
+              dyn_cast_or_null<CXXConstructExpr>(d.getInit())) {
+        const CXXConstructorDecl *cd = e->getConstructor();
+        // FIXME: we should probably model this more closely to C++ than
+        // just emitting a global with zero init (mimic what we do for trivial
+        // assignments and whatnots). Since this is for globals shouldn't
+        // be a problem for the near future.
+        if (cd->isTrivial() && cd->isDefaultConstructor())
+          return cir::ZeroAttr::get(cgm.convertType(d.getType()));
       }
   }
   inConstantContext = d.hasConstantInitialization();
