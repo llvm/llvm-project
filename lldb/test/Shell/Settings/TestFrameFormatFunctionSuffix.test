@@ -1,4 +1,4 @@
-# XFAIL: target-windows
+# UNSUPPORTED: system-windows
 
 # Test the ${function.suffix} frame-format variable.
 
