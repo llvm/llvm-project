@@ -58,3 +58,102 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
 
   MI.eraseFromParent();
 }
+
+/// This match is part of a combine that
+/// rewrites select(fcmp(dot(I, Ng), 0), N, 0 - N) to faceforward(N, I, Ng)
+///   (vXf32 (g_select
+///             (g_fcmp
+///                (g_intrinsic dot(vXf32 I) (vXf32 Ng)
+///                 0)
+///             (vXf32 N)
+///             (vXf32 g_fsub (0) (vXf32 N))))
+/// ->
+///   (vXf32 (g_intrinsic faceforward
+///             (vXf32 N) (vXf32 I) (vXf32 Ng)))
+///
+bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
+  if (MI.getOpcode() != TargetOpcode::G_SELECT)
+    return false;
+  
+  // Check if the condition is a comparison between a dot product and zero
+  Register CondReg = MI.getOperand(1).getReg();
+  MachineInstr *CondInstr = MRI.getVRegDef(CondReg);
+  if (!CondInstr || CondInstr->getOpcode() != TargetOpcode::G_FCMP)
+    return false;
+
+  if (!CondInstr->getOperand(2).getReg())
+    return false;
+  Register DotReg = CondInstr->getOperand(2).getReg();
+  MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
+  // fmul?
+  if (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC || cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot)
+    return false;
+  // // is using getImm() correct?
+  // if (!CondInstr->getOperand(3).isImm() ||
+  //     CondInstr->getOperand(3).getImm() != 0)
+  //   return false;
+
+  // // Check if the false operand is the negation of the true operand
+  // Register TrueReg = MI.getOperand(2).getReg();
+  // Register FalseReg = MI.getOperand(3).getReg();
+  // MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
+  // // getImm() correct?
+  // if (FalseInstr->getOpcode() != TargetOpcode::G_FSUB ||
+  //     FalseInstr->getOperand(1).getImm() != 0 ||
+  //     FalseInstr->getOperand(2).getReg() != TrueReg)
+  //   return false;
+
+  return true;
+}
+
+void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
+  // Extract the operands for N, I, and Ng from the match criteria.
+  Register CondReg = MI.getOperand(1).getReg();
+  MachineInstr *CondInstr = MRI.getVRegDef(CondReg);
+  Register DotReg = CondInstr->getOperand(1).getReg();
+  MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
+  Register DotOperand1 = DotInstr->getOperand(2).getReg(); // I
+  Register DotOperand2 = DotInstr->getOperand(3).getReg(); // Ng
+  Register TrueReg = MI.getOperand(2).getReg(); // N
+  Register FalseReg = MI.getOperand(3).getReg();
+  MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
+
+  // Remove the original `select` instruction
+  Register ResultReg = MI.getOperand(0).getReg();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::iterator InsertPt = MI.getIterator();
+
+  // Build the `spv_faceforward` intrinsic
+  MachineInstrBuilder NewInstr =
+      BuildMI(MBB, InsertPt, DL, Builder.getTII().get(TargetOpcode::G_INTRINSIC));
+  NewInstr
+      .addDef(ResultReg)                       // Result register
+      .addIntrinsicID(Intrinsic::spv_faceforward) // Intrinsic ID
+      .addUse(TrueReg)                         // Operand N
+      .addUse(DotOperand1)                     // Operand I
+      .addUse(DotOperand2);                    // Operand Ng
+
+  SPIRVGlobalRegistry *GR =
+      MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
+  auto RemoveAllUses = [&](Register Reg) {
+    SmallVector<MachineInstr *, 4> UsesToErase;
+    for (auto &UseMI : MRI.use_instructions(Reg))
+      UsesToErase.push_back(&UseMI);
+
+    // calling eraseFromParent to early invalidates the iterator.
+    for (auto *MIToErase : UsesToErase) {
+      GR->invalidateMachineInstr(MIToErase);
+      MIToErase->eraseFromParent();
+    }
+  };
+  RemoveAllUses(CondReg);   // remove all uses of FCMP Result
+  GR->invalidateMachineInstr(CondInstr);
+  CondInstr->eraseFromParent(); // remove FCMP instruction
+  RemoveAllUses(DotReg);   // remove all uses of spv_fdot Result
+  GR->invalidateMachineInstr(DotInstr);
+  DotInstr->eraseFromParent(); // remove spv_fdot instruction
+  RemoveAllUses(FalseReg);   // remove all uses of FSUB Result
+  GR->invalidateMachineInstr(FalseInstr);
+  FalseInstr->eraseFromParent(); // remove FSUB instruction
+}
