@@ -139,9 +139,9 @@ def warn_decls_in_multiple_modules : Warning<
   InGroup<DiagGroup<"decls-in-multiple-modules">>,
   DefaultIgnore;
 
-def warn_lazy_pcm_mismatch
+def warn_module_file_mapping_mismatch
     : Warning<"loaded module file '%0' conflicts with imported file '%1'">,
-      InGroup<DiagGroup<"lazy-pcm-mismatch">>,
+      InGroup<DiagGroup<"module-file-mapping-mismatch">>,
       DefaultIgnore;
 
 def err_failed_to_find_module_file : Error<

@@ -3318,15 +3318,17 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
           ImportedFile = StoredFile;
-        } else if (!getDiags().isIgnored(diag::warn_lazy_pcm_mismatch,
-                                         CurrentImportLoc)) {
+        } else if (!getDiags().isIgnored(
+                       diag::warn_module_file_mapping_mismatch,
+                       CurrentImportLoc)) {
           auto ImportedFileRef =
               PP.getFileManager().getOptionalFileRef(ImportedFile);
           auto StoredFileRef =
               PP.getFileManager().getOptionalFileRef(StoredFile);
           if ((ImportedFileRef && StoredFileRef) &&
               (*ImportedFileRef != *StoredFileRef)) {
-            Diag(diag::warn_lazy_pcm_mismatch) << ImportedFile << StoredFile;
+            Diag(diag::warn_module_file_mapping_mismatch)
+                << ImportedFile << StoredFile;
             Diag(diag::note_module_file_imported_by)
                 << F.FileName << !F.ModuleName.empty() << F.ModuleName;
             IgnoreImportedByNote = true;

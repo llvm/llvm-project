@@ -31,7 +31,7 @@
 // RUN:     -fmodule-map-file=%t/BuildDir/A/module.modulemap \
 // RUN:     -fmodule-map-file=%t/Sysroot/usr/include/B/module.modulemap \
 // RUN:     -fmodule-file=A=%t/A-2.pcm -fmodule-file=B=%t/B-1.pcm \
-// RUN:     -Wlazy-pcm-mismatch -verify %s  
+// RUN:     -Wmodule-file-mapping-mismatch -verify %s  
 
 
 #include <A/A.h>
