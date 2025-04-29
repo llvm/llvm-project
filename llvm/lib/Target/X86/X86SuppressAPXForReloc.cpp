@@ -146,7 +146,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
 
 static bool handleNDDOrNFInstructions(MachineFunction &MF,
                                       const X86Subtarget &ST) {
-  if (!ST.hasNDD())
+  if (!ST.hasNDD() && !ST.hasNF())
     return false;
 
   const X86InstrInfo *TII = ST.getInstrInfo();

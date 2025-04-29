@@ -254,22 +254,20 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
       if (MI.definesRegister(Super, /*TRI=*/nullptr))
         IsRedundantNDD = false;
     }
-  }
 
-  bool IsWithReloc = false;
-  if (X86EnableAPXForRelocation) {
-    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
-                  X86II::getOperandBias(MI.getDesc());
-    MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
-    if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
-      IsWithReloc = true;
+    // ADDrm/mr instructions with NDD + relocation had been transformed to the
+    // instructions without NDD in X86SuppressAPXForRelocation pass. That is to
+    // keep backward compatibility with linkers without APX support.
+    if (!X86EnableAPXForRelocation)
+      assert(!isAddMemInstrWithRelocation(MI) &&
+             "Unexpected NDD instruction with relocation!");
   }
 
   // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
   // dead.
   unsigned NewOpc = IsRedundantNDD
                         ? X86::getNonNDVariant(Opc)
-                        : ((IsNDLike && ST.hasNF() && !IsWithReloc &&
+                        : ((IsNDLike && ST.hasNF() &&
                             MI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr))
                                ? X86::getNFVariant(Opc)
                                : GetCompressedOpc(Opc));

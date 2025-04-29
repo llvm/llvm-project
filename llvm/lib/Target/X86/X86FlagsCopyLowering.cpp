@@ -20,6 +20,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
@@ -245,17 +246,15 @@ static EFLAGSClobber getClobberType(const MachineInstr &MI) {
   if (!FlagDef)
     return NoClobber;
 
-  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode())) {
-    if (X86EnableAPXForRelocation) {
-      int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
-                    X86II::getOperandBias(MI.getDesc());
-      const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
-      if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
-        return InevitableClobber;
-    }
+  // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+  // optimization for replacing non-NF with NF. This is to keep backward
+  // compatiblity with old version of linkers without APX relocation type
+  // support on Linux OS.
+  bool IsWithReloc =
+      X86EnableAPXForRelocation ? false : isAddMemInstrWithRelocation(MI);
 
+  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()) && !IsWithReloc)
     return EvitableClobber;
-  }
 
   return InevitableClobber;
 }
