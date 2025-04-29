@@ -60,6 +60,7 @@ enum class LangAS : unsigned {
   hlsl_groupshared,
   hlsl_constant,
   hlsl_private,
+  hlsl_device,
 
   // Wasm specific address spaces.
   wasm_funcref,

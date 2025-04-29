@@ -2376,7 +2376,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   // Without doing jump table value profiling we don't have a use for extra
   // (duplicate) branches.
   llvm::sort(TakenBranches);
-  auto NewEnd = std::unique(TakenBranches.begin(), TakenBranches.end());
+  auto NewEnd = llvm::unique(TakenBranches);
   TakenBranches.erase(NewEnd, TakenBranches.end());
 
   for (std::pair<uint32_t, uint32_t> &Branch : TakenBranches) {
