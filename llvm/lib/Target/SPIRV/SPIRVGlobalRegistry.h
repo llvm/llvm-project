@@ -69,7 +69,8 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   const unsigned PointerSize;
 
   // Maps each MachineFunction to its associated OpConstant register for the
-  // // SPV_INTEL_maximum_registers extension with ExecutionModeId MaximumRegistersIdINTEL.
+  // SPV_INTEL_maximum_registers extension with ExecutionModeId
+  // MaximumRegistersIdINTEL.
   DenseMap<const MachineFunction *, Register> MaxRegConstantExtMap;
 
   // Holds the maximum ID we have in the module.

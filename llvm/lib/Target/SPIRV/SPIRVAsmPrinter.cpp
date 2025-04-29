@@ -517,8 +517,8 @@ void SPIRVAsmPrinter::outputExecutionModeFromRegisterAllocMode(
         Inst.setOpcode(SPIRV::OpExecutionModeId);
         Inst.addOperand(MCOperand::createImm(
             SPIRV::ExecutionMode::MaximumRegistersIdINTEL));
-        auto *GR = ST ->getSPIRVGlobalRegistry();
-        Register MaxOpConstantReg = GR ->getMaxRegConstantExtMap(MF);
+        auto *GR = ST->getSPIRVGlobalRegistry();
+        Register MaxOpConstantReg = GR->getMaxRegConstantExtMap(MF);
         MCRegister MaxRegister = MAI->getRegisterAlias(MF, MaxOpConstantReg);
         Inst.addOperand(MCOperand::createReg(MaxRegister));
       }

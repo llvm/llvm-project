@@ -163,8 +163,6 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
             }
           }
           printRemainingVariableOps(MI, NumFixedOps, OS);
-
-
         } break;
         case SPIRV::OpExecutionModeId:
         case SPIRV::OpLoopMerge: {
