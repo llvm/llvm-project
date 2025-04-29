@@ -4798,10 +4798,6 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
     return true;
   }
 
-  const Function *Func = getFunction(E->getDirectCallee());
-  if (!Func)
-    return false;
-
   // For these, we're expected to ultimately return an APValue pointing
   // to the CallExpr. This is needed to get the correct codegen.
   if (BuiltinID == Builtin::BI__builtin___CFStringMakeConstantString ||
@@ -4833,7 +4829,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
     }
   }
 
-  if (!this->emitCallBI(Func, E, BuiltinID, E))
+  if (!this->emitCallBI(E, BuiltinID, E))
     return false;
 
   if (DiscardResult && !ReturnType->isVoidType()) {
