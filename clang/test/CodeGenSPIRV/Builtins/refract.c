@@ -32,4 +32,3 @@ float3 test_refract_float3(float3 I, float3 N, float eta) { return __builtin_spi
 // CHECK-NEXT:    ret <4 x float> [[SPV_REFRACT]]
 //
 float4 test_refract_float4(float4 I, float4 N, float eta) { return __builtin_spirv_refract(I, N, eta); }
-
