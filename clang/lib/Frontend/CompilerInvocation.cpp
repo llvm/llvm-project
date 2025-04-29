@@ -150,7 +150,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
       HSOpts(std::make_shared<HeaderSearchOptions>()),
       PPOpts(std::make_shared<PreprocessorOptions>()),
-      AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
+      AnalyzerOpts(std::make_shared<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
       APINotesOpts(std::make_shared<APINotesOptions>()),
       CASOpts(std::make_shared<CASOptions>()),
@@ -168,7 +168,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
     HSOpts = make_shared_copy(X.getHeaderSearchOpts());
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
-    AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
+    AnalyzerOpts = make_shared_copy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
     APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CASOpts = make_shared_copy(X.getCASOpts());
