@@ -1483,6 +1483,42 @@ TEST_F(SortIncludesTest, BlockCommentedOutIncludes) {
   verifyFormat(Code, sort(Code, "input.cpp", 0));
 }
 
+TEST_F(SortIncludesTest, IgnoreExtension) {
+  verifyFormat("#include <a-util.h>\n"
+               "#include <a.h>\n"
+               "#include <a.inc>",
+               sort("#include <a.inc>\n"
+                    "#include <a-util.h>\n"
+                    "#include <a.h>",
+                    "input.h", 1));
+
+  verifyFormat("#include <ab-beta.h>\n"
+               "#include <ab-data.h>\n"
+               "#include <ab.h>",
+               sort("#include <ab-data.h>\n"
+                    "#include <ab.h>\n"
+                    "#include <ab-beta.h>",
+                    "input.h", 1));
+
+  FmtStyle.SortIncludes.IgnoreExtension = true;
+
+  verifyFormat("#include <a.h>\n"
+               "#include <a.inc>\n"
+               "#include <a-util.h>",
+               sort("#include <a.inc>\n"
+                    "#include <a-util.h>\n"
+                    "#include <a.h>",
+                    "input.h", 1));
+
+  verifyFormat("#include <ab.h>\n"
+               "#include <ab-beta.h>\n"
+               "#include <ab-data.h>",
+               sort("#include <ab-data.h>\n"
+                    "#include <ab.h>\n"
+                    "#include <ab-beta.h>",
+                    "input.h", 1));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

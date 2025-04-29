@@ -6010,6 +6010,16 @@ the configuration (without a prefix: ``Auto``).
        #include "B/A.h"           #include "B/a.h"
        #include "B/a.h"           #include "a/b.h"
 
+  * ``bool IgnoreExtension`` When sorting includes in each block, Only take file extensions into
+    account if two includes compare equal otherwise.
+
+    .. code-block:: c++
+
+       true:                      false:
+       # include "A.h"     vs.    # include "A-util.h"
+       # include "A.inc"          # include "A.h"
+       # include "A-util.h"       # include "A.inc"
+
 
 .. _SortJavaStaticImport:
 

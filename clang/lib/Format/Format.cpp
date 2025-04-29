@@ -1647,7 +1647,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SkipMacroDefinitionBody = false;
-  LLVMStyle.SortIncludes = {/*Enabled=*/true, /*IgnoreCase=*/false};
+  LLVMStyle.SortIncludes = {/*Enabled=*/true, /*IgnoreCase=*/false,
+                            /*IgnoreExtension=*/false};
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
@@ -3230,19 +3231,27 @@ static void sortCppIncludes(const FormatStyle &Style,
   SmallVector<unsigned, 16> Indices =
       llvm::to_vector<16>(llvm::seq<unsigned>(0, Includes.size()));
 
-  if (Style.SortIncludes.Enabled && Style.SortIncludes.IgnoreCase) {
+  if (Style.SortIncludes.Enabled) {
     stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-      const auto LHSFilenameLower = Includes[LHSI].Filename.lower();
-      const auto RHSFilenameLower = Includes[RHSI].Filename.lower();
-      return std::tie(Includes[LHSI].Priority, LHSFilenameLower,
-                      Includes[LHSI].Filename) <
-             std::tie(Includes[RHSI].Priority, RHSFilenameLower,
-                      Includes[RHSI].Filename);
-    });
-  } else {
-    stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-      return std::tie(Includes[LHSI].Priority, Includes[LHSI].Filename) <
-             std::tie(Includes[RHSI].Priority, Includes[RHSI].Filename);
+      SmallString<128> LHSStem, RHSStem;
+      if (Style.SortIncludes.IgnoreExtension) {
+        LHSStem = Includes[LHSI].Filename;
+        RHSStem = Includes[RHSI].Filename;
+        llvm::sys::path::replace_extension(LHSStem, "");
+        llvm::sys::path::replace_extension(RHSStem, "");
+      }
+      std::string LHSStemLower, RHSStemLower;
+      std::string LHSFilenameLower, RHSFilenameLower;
+      if (Style.SortIncludes.IgnoreCase) {
+        LHSStemLower = LHSStem.str().lower();
+        RHSStemLower = RHSStem.str().lower();
+        LHSFilenameLower = Includes[LHSI].Filename.lower();
+        RHSFilenameLower = Includes[RHSI].Filename.lower();
+      }
+      return std::tie(Includes[LHSI].Priority, LHSStemLower, LHSStem,
+                      LHSFilenameLower, Includes[LHSI].Filename) <
+             std::tie(Includes[RHSI].Priority, RHSStemLower, RHSStem,
+                      RHSFilenameLower, Includes[RHSI].Filename);
     });
   }
 
