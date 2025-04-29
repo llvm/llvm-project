@@ -1723,16 +1723,17 @@ static void genTargetClauses(
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Defaultmap, clause::Firstprivate,
-                 clause::InReduction, clause::UsesAllocators>(
-      loc, llvm::omp::Directive::OMPD_target);
+  cp.processTODO<clause::Allocate, clause::Defaultmap, clause::InReduction,
+                 clause::UsesAllocators>(loc,
+                                         llvm::omp::Directive::OMPD_target);
 
   // TODO: Re-enable check after removing downstream early privatization support
   // for `target`.
 
   // `target private(..)` is only supported in delayed privatization mode.
   // if (!enableDelayedPrivatizationStaging)
-  //   cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
+  //   cp.processTODO<clause::Firstprivate, clause::Private>(
+  //       loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
