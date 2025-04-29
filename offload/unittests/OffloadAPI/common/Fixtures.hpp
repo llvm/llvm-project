@@ -42,15 +42,26 @@
   }                                                                            \
   (void)0
 
+inline std::string SanitizeString(const std::string &Str) {
+  auto NewStr = Str;
+  std::replace_if(
+      NewStr.begin(), NewStr.end(), [](char C) { return !std::isalnum(C); },
+      '_');
+  return NewStr;
+}
+
 struct OffloadTest : ::testing::Test {
   ol_device_handle_t Host = TestEnvironment::getHostDevice();
 };
 
-struct OffloadDeviceTest : OffloadTest {
+struct OffloadDeviceTest
+    : OffloadTest,
+      ::testing::WithParamInterface<TestEnvironment::Device> {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
 
-    Device = TestEnvironment::getDevice();
+    auto DeviceParam = GetParam();
+    Device = DeviceParam.Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
   }
@@ -120,3 +131,10 @@ struct OffloadQueueTest : OffloadDeviceTest {
 
   ol_queue_handle_t Queue = nullptr;
 };
+
+#define OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(FIXTURE)                      \
+  INSTANTIATE_TEST_SUITE_P(                                                    \
+      , FIXTURE, ::testing::ValuesIn(TestEnvironment::getDevices()),           \
+      [](const ::testing::TestParamInfo<TestEnvironment::Device> &info) {      \
+        return SanitizeString(info.param.Name);                                \
+      })
