@@ -1401,11 +1401,11 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
       // to types and identifiers, in order to try to recover from errors.
       TentativeParseCCC CCC(Next);
       switch (TryAnnotateName(&CCC)) {
-      case ANK_Error:
+      case AnnotatedNameKind::Error:
         return TPResult::Error;
-      case ANK_TentativeDecl:
+      case AnnotatedNameKind::TentativeDecl:
         return TPResult::False;
-      case ANK_TemplateName:
+      case AnnotatedNameKind::TemplateName:
         // In C++17, this could be a type template for class template argument
         // deduction. Try to form a type annotation for it. If we're in a
         // template template argument, we'll undo this when checking the
@@ -1420,9 +1420,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
         // A bare type template-name which can't be a template template
         // argument is an error, and was probably intended to be a type.
         return GreaterThanIsOperator ? TPResult::True : TPResult::False;
-      case ANK_Unresolved:
+      case AnnotatedNameKind::Unresolved:
         return InvalidAsDeclSpec ? TPResult::Ambiguous : TPResult::False;
-      case ANK_Success:
+      case AnnotatedNameKind::Success:
         break;
       }
       assert(Tok.isNot(tok::identifier) &&
@@ -1694,11 +1694,11 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
           // Try to resolve the name. If it doesn't exist, assume it was
           // intended to name a type and keep disambiguating.
           switch (TryAnnotateName(/*CCC=*/nullptr, AllowImplicitTypename)) {
-          case ANK_Error:
+          case AnnotatedNameKind::Error:
             return TPResult::Error;
-          case ANK_TentativeDecl:
+          case AnnotatedNameKind::TentativeDecl:
             return TPResult::False;
-          case ANK_TemplateName:
+          case AnnotatedNameKind::TemplateName:
             // In C++17, this could be a type template for class template
             // argument deduction.
             if (getLangOpts().CPlusPlus17) {
@@ -1717,9 +1717,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
             return (getLangOpts().CPlusPlus17 || GreaterThanIsOperator)
                        ? TPResult::True
                        : TPResult::False;
-          case ANK_Unresolved:
+          case AnnotatedNameKind::Unresolved:
             return InvalidAsDeclSpec ? TPResult::Ambiguous : TPResult::False;
-          case ANK_Success:
+          case AnnotatedNameKind::Success:
             break;
           }
 
