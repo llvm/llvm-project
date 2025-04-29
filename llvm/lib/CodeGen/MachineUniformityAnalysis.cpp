@@ -197,8 +197,9 @@ PreservedAnalyses
 MachineUniformityPrinterPass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   auto &MUI = MFAM.getResult<MachineUniformityAnalysis>(MF);
-  OS << "MachineUniformityInfo for function: "
-     << MF.getFunction().getNameOrAsOperand() << '\n';
+  OS << "MachineUniformityInfo for function: ";
+  MF.getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
   MUI.print(OS);
   return PreservedAnalyses::all();
 }
