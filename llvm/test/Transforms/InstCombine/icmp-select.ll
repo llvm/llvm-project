@@ -831,3 +831,19 @@ entry:
   %res = icmp eq i8 %sel1, %sel2
   ret i1 %res
 }
+
+@g = external global i8
+
+; Do not introduce constant expressions.
+define i1 @discr_eq_constantexpr(ptr %p) {
+; CHECK-LABEL: @discr_eq_constantexpr(
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[I]], ptrtoint (ptr @g to i64)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SUB]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i = ptrtoint ptr %p to i64
+  %sub = sub i64 %i, ptrtoint (ptr @g to i64)
+  %cmp = icmp eq i64 %sub, -1
+  ret i1 %cmp
+}

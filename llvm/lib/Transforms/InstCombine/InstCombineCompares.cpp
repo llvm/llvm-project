@@ -5818,20 +5818,15 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
 
   switch (Inst->getOpcode()) {
   case Instruction::Add:
-    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
-      Offsets.emplace_back(Instruction::Sub, Inst->getOperand(1));
-    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(0)))
-      Offsets.emplace_back(Instruction::Sub, Inst->getOperand(0));
+    Offsets.emplace_back(Instruction::Sub, Inst->getOperand(1));
+    Offsets.emplace_back(Instruction::Sub, Inst->getOperand(0));
     break;
   case Instruction::Sub:
-    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
-      Offsets.emplace_back(Instruction::Add, Inst->getOperand(1));
+    Offsets.emplace_back(Instruction::Add, Inst->getOperand(1));
     break;
   case Instruction::Xor:
-    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
-      Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
-    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(0)))
-      Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
+    Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
+    Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
     break;
   case Instruction::Select:
     if (AllowRecursion) {
@@ -5892,7 +5887,11 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
     // Avoid infinite loops by checking if RHS is an identity for the BinOp.
     if (!Simplified || Simplified == V)
       return nullptr;
-    return Simplified;
+    // Reject constant expressions as they don't simplify things.
+    if (isa<Constant>(Simplified) && !match(Simplified, m_ImmConstant()))
+      return nullptr;
+    // Check if the transformation introduces poison.
+    return impliesPoison(RHS, V) ? Simplified : nullptr;
   };
 
   auto ApplyOffset = [&](Value *V, unsigned BinOpc,
