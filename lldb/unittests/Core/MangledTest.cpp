@@ -638,9 +638,11 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
   TrackingOutputBuffer OB;
   Root->print(OB);
 
-  // Filter out cases which would never show up in frames. We only care about function names.
-  if (Root->getKind() != llvm::itanium_demangle::Node::Kind::KFunctionEncoding
-      && Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+  // Filter out cases which would never show up in frames. We only care about
+  // function names.
+  if (Root->getKind() !=
+          llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
+      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
     return;
 
   ASSERT_TRUE(OB.NameInfo.hasBasename());
