@@ -76,11 +76,13 @@ int test1() {
 // CHECK-NEXT:           "clang-module-deps": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_MOD_B:.*]]",
-// CHECK-NEXT:               "module-name": "B"
+// CHECK-NEXT:               "module-name": "B",
+// CHECK-NEXT:               "exported": "true"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_MOD_C:.*]]",
-// CHECK-NEXT:               "module-name": "C"
+// CHECK-NEXT:               "module-name": "C",
+// CHECK-NEXT:               "exported": "true"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_MOD_D:.*]]",
@@ -90,25 +92,7 @@ int test1() {
 // CHECK-NEXT:           "clang-modulemap-file":{{.*}},
 // CHECK-NEXT:           "command-line": [
 // CHECK:                 ],
-// CHECK-NEXT:           "context-hash":{{.*}}
-// CHECK-NEXT:           "file-deps": [
-// CHECK:                 ],
-// CHECK-NEXT:           "link-libraries": [],
-// CHECK-NEXT:           "clang-modules-exported": [
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "context-hash": "[[HASH_MOD_B]]",
-// CHECK-NEXT:               "module-name": "B"
-// CHECK-NEXT:             },
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "context-hash": "[[HASH_MOD_C]]",
-// CHECK-NEXT:               "module-name": "C"
-// CHECK-NEXT:             }
-// CHECK-NOT:              {
-// CHECK-NOT:               "context-hash": "[[HASH_MOD_D]]",
-// CHECK-NOT:               "module-name": "D"
-// CHECK-NOT:              }
-// CHECK-NEXT:           ],
-// CHECK-NEXT:            "name": "A"
+// CHECK:                "name": "A"
 // CHECK-NEXT:       }
 // CHECK:            {
 // CHECK:                 "name": "B"
@@ -123,39 +107,24 @@ int test1() {
 // CHECK-NEXT:           "clang-module-deps": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_MOD_B]]",
-// CHECK-NEXT:               "module-name": "B"
+// CHECK-NEXT:               "module-name": "B",
+// CHECK-NEXT:               "exported": "true"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_MOD_C]]",
-// CHECK-NEXT:               "module-name": "C"
+// CHECK-NEXT:               "module-name": "C",
+// CHECK-NEXT:               "exported": "true"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "[[HASH_MOD_D]]",
-// CHECK-NEXT:               "module-name": "D"
+// CHECK-NEXT:               "module-name": "D",
+// CHECK-NEXT:               "exported": "true"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "clang-modulemap-file":{{.*}},
 // CHECK-NEXT:           "command-line": [
 // CHECK:                 ],
-// CHECK-NEXT:           "context-hash":{{.*}}
-// CHECK-NEXT:           "file-deps": [
-// CHECK:                 ],
-// CHECK-NEXT:           "link-libraries": [],
-// CHECK-NEXT:           "clang-modules-exported": [
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "context-hash": "[[HASH_MOD_B]]",
-// CHECK-NEXT:               "module-name": "B"
-// CHECK-NEXT:             },
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "context-hash": "[[HASH_MOD_C]]",
-// CHECK-NEXT:               "module-name": "C"
-// CHECK-NEXT:             }
-// CHECK-NEXT:             {
-// CHECK-NEXT:              "context-hash": "[[HASH_MOD_D]]",
-// CHECK-NEXT:              "module-name": "D"
-// CHECK-NEXT:             }
-// CHECK-NEXT:           ],
-// CHECK-NEXT:            "name": "E"
+// CHECK:                "name": "E"
 // CHECK-NEXT:       }
 // CHECK:   ]
 // CHECK:   }

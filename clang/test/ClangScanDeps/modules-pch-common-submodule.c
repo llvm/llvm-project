@@ -32,7 +32,6 @@
 // CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_sub.h"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "link-libraries": [],
-// CHECK-PCH-NEXT:       "clang-modules-exported": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon"
 // CHECK-PCH-NEXT:     }
 // CHECK-PCH-NEXT:   ],
@@ -81,7 +80,6 @@
 // CHECK-TU-NEXT:         "[[PREFIX]]/mod_tu.h"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "link-libraries": [],
-// CHECK-TU-NEXT:       "clang-modules-exported": [],
 // CHECK-TU-NEXT:       "name": "ModTU"
 // CHECK-TU-NEXT:     }
 // CHECK-TU-NEXT:   ],

@@ -43,7 +43,6 @@ module Mod { header "Mod.h" }
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "Mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]

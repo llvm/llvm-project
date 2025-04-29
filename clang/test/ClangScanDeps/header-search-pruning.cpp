@@ -34,7 +34,6 @@
 // CHECK_A-NEXT:         "file-deps": [
 // CHECK_A:              ],
 // CHECK_A-NEXT:         "link-libraries": [],
-// CHECK_A-NEXT:         "clang-modules-exported": [],
 // CHECK_A-NEXT:         "name": "mod"
 // CHECK_A-NEXT:       }
 // CHECK_A-NEXT:     ]
@@ -58,7 +57,6 @@
 // CHECK_B-NEXT:         "file-deps": [
 // CHECK_B:              ],
 // CHECK_B-NEXT:         "link-libraries": [],
-// CHECK_B-NEXT:         "clang-modules-exported": [],
 // CHECK_B-NEXT:         "name": "mod"
 // CHECK_B-NEXT:       }
 // CHECK_B-NEXT:     ]
@@ -84,7 +82,6 @@
 // CHECK_AB-NEXT:        "file-deps": [
 // CHECK_AB:             ],
 // CHECK_AB-NEXT:        "link-libraries": [],
-// CHECK_AB-NEXT:        "clang-modules-exported": [],
 // CHECK_AB-NEXT:        "name": "mod"
 // CHECK_AB-NEXT:      }
 // CHECK_AB-NEXT:    ]

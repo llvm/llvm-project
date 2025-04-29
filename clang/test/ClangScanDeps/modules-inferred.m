@@ -47,7 +47,6 @@ inferred a = 0;
 // CHECK-NEXT:           "link-name": "Inferred"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "Inferred"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

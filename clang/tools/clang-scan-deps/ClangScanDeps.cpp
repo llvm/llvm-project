@@ -351,10 +351,12 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
 }
 
 static auto toJSONModuleID(llvm::json::OStream &JOS, StringRef ContextHash,
-                           StringRef ModuleName) {
+                           StringRef ModuleName, bool Exported) {
   return JOS.object([&] {
     JOS.attribute("context-hash", StringRef(ContextHash));
     JOS.attribute("module-name", StringRef(ModuleName));
+    if (Exported)
+      JOS.attribute("exported", StringRef("true"));
   });
 }
 
@@ -364,19 +366,16 @@ static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   llvm::sort(V);
   return [&JOS, V = std::move(V)] {
     for (const auto &MID : V)
-      toJSONModuleID(JOS, MID.ContextHash, MID.ModuleName);
+      toJSONModuleID(JOS, MID.ContextHash, MID.ModuleName, false);
   };
 }
 
-static auto
-toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleDeps::DepsInfo> V,
-             std::function<bool(const ModuleDeps::DepsInfo &)> filter) {
+static auto toJSONSorted(llvm::json::OStream &JOS,
+                         std::vector<ModuleDeps::DepsInfo> V) {
   llvm::sort(V);
-  return [&JOS, V = std::move(V), filter] {
+  return [&JOS, V = std::move(V)] {
     for (const ModuleDeps::DepsInfo &MID : V)
-      if (filter(MID)) {
-        toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName);
-      }
+      toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName, MID.Exported);
   };
 }
 
@@ -491,10 +490,8 @@ public:
             if (MD.IsInStableDirectories)
               JOS.attribute("is-in-stable-directories",
                             MD.IsInStableDirectories);
-            JOS.attributeArray(
-                "clang-module-deps",
-                toJSONSorted(JOS, MD.ClangModuleDeps,
-                             [](const auto &EMID) { return true; }));
+            JOS.attributeArray("clang-module-deps",
+                               toJSONSorted(JOS, MD.ClangModuleDeps));
             JOS.attribute("clang-modulemap-file",
                           StringRef(MD.ClangModuleMapFile));
             JOS.attributeArray("command-line",
@@ -505,10 +502,6 @@ public:
             });
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));
-            JOS.attributeArray(
-                "clang-modules-exported",
-                toJSONSorted(JOS, MD.ClangModuleDeps,
-                             [](const auto &EMID) { return EMID.Exported; }));
             JOS.attribute("name", StringRef(MD.ID.ModuleName));
           });
         }

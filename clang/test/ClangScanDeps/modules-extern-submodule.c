@@ -55,7 +55,6 @@ module third {}
 // CHECK-NEXT:         "[[PREFIX]]/second/second/sub.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -79,7 +78,6 @@ module third {}
 // CHECK-NEXT:         "[[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "second"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -95,7 +93,6 @@ module third {}
 // CHECK-NEXT:         "[[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "third"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

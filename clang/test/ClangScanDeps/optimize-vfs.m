@@ -28,7 +28,6 @@
 // CHECK-NEXT:         "[[PREFIX]]/build/A.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "A"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -43,7 +42,6 @@
 // CHECK-NEXT:         "[[PREFIX]]/modules/B/B.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "B"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -64,7 +62,6 @@
 // CHECK-NEXT:         "[[PREFIX]]/modules/B/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
-// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "C"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
