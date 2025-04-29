@@ -14,6 +14,7 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/character.h"
 #include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cstring>
 
@@ -296,10 +297,18 @@ inline RT_API_ATTRS std::size_t Index(const CHAR *x, std::size_t xLen,
   if (wantLen == 1) {
     // Trivial case for single character lookup.
     // We can use simple forward search.
-    CHAR ch = want[0];
-    for (std::size_t at = 0; at < xLen; ++at) {
-      if (x[at] == ch) {
-        return at + 1;
+    CHAR ch{want[0]};
+    if constexpr (std::is_same_v<CHAR, char>) {
+      auto pos{reinterpret_cast<const CHAR *>(
+          Fortran::runtime::memchr(x, ch, xLen))};
+      if (pos) {
+        return pos - x + 1;
+      }
+    } else {
+      for (std::size_t at{0}; at < xLen; ++at) {
+        if (x[at] == ch) {
+          return at + 1;
+        }
       }
     }
     return 0;
