@@ -1066,14 +1066,6 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
       VecTy1->getElementCount().getKnownMinValue() <= Index1)
     return false;
 
-  // Bail for single insertion if it is a load.
-  // TODO: Handle this once getVectorInstrCost can cost for load/stores.
-  auto *I0 = dyn_cast_or_null<Instruction>(V0);
-  auto *I1 = dyn_cast_or_null<Instruction>(V1);
-  if ((IsConst0 && I1 && I1->mayReadFromMemory()) ||
-      (IsConst1 && I0 && I0->mayReadFromMemory()))
-    return false;
-
   uint64_t Index = IsConst0 ? Index1 : Index0;
   Type *ScalarTy = IsConst0 ? V1->getType() : V0->getType();
   Type *VecTy = I.getType();
@@ -1100,11 +1092,15 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   // both sequences.
   InstructionCost InsertCost = TTI.getVectorInstrCost(
       Instruction::InsertElement, VecTy, CostKind, Index);
-  InstructionCost OldCost =
-      (IsConst0 ? 0 : InsertCost) + (IsConst1 ? 0 : InsertCost) + VectorOpCost;
+  InstructionCost InsertCostV0 = TTI.getVectorInstrCost(
+      Instruction::InsertElement, VecTy, CostKind, Index, VecC0, V0);
+  InstructionCost InsertCostV1 = TTI.getVectorInstrCost(
+      Instruction::InsertElement, VecTy, CostKind, Index, VecC1, V1);
+  InstructionCost OldCost = (IsConst0 ? 0 : InsertCostV0) +
+                            (IsConst1 ? 0 : InsertCostV1) + VectorOpCost;
   InstructionCost NewCost = ScalarOpCost + InsertCost +
-                            (IsConst0 ? 0 : !Ins0->hasOneUse() * InsertCost) +
-                            (IsConst1 ? 0 : !Ins1->hasOneUse() * InsertCost);
+                            (IsConst0 ? 0 : !Ins0->hasOneUse() * InsertCostV0) +
+                            (IsConst1 ? 0 : !Ins1->hasOneUse() * InsertCostV1);
 
   // We want to scalarize unless the vector variant actually has lower cost.
   if (OldCost < NewCost || !NewCost.isValid())
