@@ -750,9 +750,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   // to ensure no extra casts would need to be inserted, so every DAG
   // of connected values must have the same minimum bitwidth.
   EquivalenceClasses<Value *> ECs;
-  SmallVector<Value *, 16> Worklist;
-  SmallPtrSet<Value *, 4> Roots;
-  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Instruction *, 16> Worklist;
+  SmallPtrSet<Instruction *, 4> Roots;
+  SmallPtrSet<Instruction *, 16> Visited;
   DenseMap<Value *, uint64_t> DBits;
   SmallPtrSet<Instruction *, 4> InstructionSet;
   MapVector<Instruction *, uint64_t> MinBWs;
@@ -786,16 +786,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
   // Now proceed breadth-first, unioning values together.
   while (!Worklist.empty()) {
-    Value *Val = Worklist.pop_back_val();
-    Value *Leader = ECs.getOrInsertLeaderValue(Val);
+    Instruction *I = Worklist.pop_back_val();
+    Value *Leader = ECs.getOrInsertLeaderValue(I);
 
-    if (!Visited.insert(Val).second)
+    if (!Visited.insert(I).second)
       continue;
-
-    // Non-instructions terminate a chain successfully.
-    if (!isa<Instruction>(Val))
-      continue;
-    Instruction *I = cast<Instruction>(Val);
 
     // If we encounter a type that is larger than 64 bits, we can't represent
     // it so bail out.
@@ -836,9 +831,10 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       // All bits demanded, no point continuing.
       continue;
 
-    for (Value *O : cast<User>(I)->operands()) {
+    for (Value *O : I->operands()) {
       ECs.unionSets(Leader, O);
-      Worklist.push_back(O);
+      if (auto *OI = dyn_cast<Instruction>(O))
+        Worklist.push_back(OI);
     }
   }
 
@@ -879,7 +875,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       if (!MI)
         continue;
       Type *Ty = M->getType();
-      if (Roots.count(M))
+      if (Roots.count(MI))
         Ty = MI->getOperand(0)->getType();
 
       if (MinBW >= Ty->getScalarSizeInBits())
