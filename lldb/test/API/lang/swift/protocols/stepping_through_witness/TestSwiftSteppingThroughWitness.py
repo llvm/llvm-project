@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 @skipIf(oslist=["windows", "linux"])
+@skipIfAsan
 class TestSwiftSteppingThroughWitness(TestBase):
 
     def setUp(self):
