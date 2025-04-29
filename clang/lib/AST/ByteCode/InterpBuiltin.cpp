@@ -1854,8 +1854,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 
   // Check for overlapping memory regions.
   if (!Move && Pointer::pointToSameBlock(SrcPtr, DestPtr)) {
-    unsigned SrcIndex = SrcPtr.getIndex() * SrcPtr.elemSize();
-    unsigned DstIndex = DestPtr.getIndex() * DestPtr.elemSize();
+    // Remove base casts.
+    Pointer SrcP = SrcPtr;
+    while (SrcP.isBaseClass())
+      SrcP = SrcP.getBase();
+
+    Pointer DestP = DestPtr;
+    while (DestP.isBaseClass())
+      DestP = DestP.getBase();
+
+    unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
+    unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
     unsigned N = Size.getZExtValue();
 
     if ((SrcIndex <= DstIndex && (SrcIndex + N) > DstIndex) ||
