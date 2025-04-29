@@ -5199,9 +5199,9 @@ the configuration (without a prefix: ``Auto``).
 
 **OneLineFormatOffRegex** (``String``) :versionbadge:`clang-format 21` :ref:`¶ <OneLineFormatOffRegex>`
   A regular expression that describes markers for turning formatting off for
-  one line. If it matches a line comment that is the first/only token of a
-  line, clang-format skips the next line. Otherwise, clang-format skips the
-  line that contains a matched token.
+  one line. If it matches a comment that is the only token of a line,
+  clang-format skips the comment and the next line. Otherwise, clang-format
+  skips lines containing a matched token.
 
   .. code-block:: c++
 
@@ -5210,11 +5210,11 @@ the configuration (without a prefix: ``Auto``).
      int a;
      int b ;  // NOLINT
      int c;
-     // NOLINTNEXTLINE
+      // NOLINTNEXTLINE
      int d ;
      int e;
      s = "// NOLINT";
-     logger() ;
+      logger() ;
      logger2();
      my_logger();
 
