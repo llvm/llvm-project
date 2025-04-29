@@ -1913,7 +1913,7 @@ defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_aext_16_flat, i32>;
-defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_nonext_16_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
@@ -1946,8 +1946,8 @@ let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predi
   defm : FlatStorePats_t16 <FLAT_STORE_SHORT, store_flat, i16>;
 } // End let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts
 
-defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
-defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
+defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, i64>;
 
 defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
@@ -2057,7 +2057,7 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_aext_16_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_nonext_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i32>;
@@ -2108,8 +2108,8 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX4, store_global, vt>;
 // There is no distinction for atomic load lowering during selection;
 // the memory legalizer will set the cache bits and insert the
 // appropriate waits.
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORD, atomic_load_32_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_64_global, i64>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORD, atomic_load_nonext_32_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_nonext_64_global, i64>;
 
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, truncstorei8_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
