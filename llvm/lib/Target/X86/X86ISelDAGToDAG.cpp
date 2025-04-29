@@ -907,7 +907,8 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     if (!Chain.getNumOperands())
       return false;
     // Since we are not checking for AA here, conservatively abort if the chain
-    // writes to memory. It's not safe to move the callee (a load) across a store.
+    // writes to memory. It's not safe to move the callee (a load) across a
+    // store.
     if (isa<MemSDNode>(Chain.getNode()) &&
         cast<MemSDNode>(Chain.getNode())->writeMem())
       return false;
