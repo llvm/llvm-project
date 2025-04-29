@@ -1760,18 +1760,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
         << TC.getTriple().str();
   }
 
-  // Throw diagnosis if mcmodel=tiny option is passed for targets other than ARM
-  // or AArch64.
-  if (Arg *A = UArgs->getLastArg(options::OPT_mcmodel_EQ)) {
-    StringRef ModelName = A->getValue();
-    if (ModelName == "tiny" &&
-        !(TC.getTriple().getArch() == llvm::Triple::aarch64 ||
-          TC.getTriple().getArch() == llvm::Triple::arm)) {
-      Diag(diag::err_drv_unsupported_option_argument_for_target)
-          << A->getSpelling() << ModelName << TC.getTriple().str();
-    }
-  }
-
   // A common user mistake is specifying a target of aarch64-none-eabi or
   // arm-none-elf whereas the correct names are aarch64-none-elf &
   // arm-none-eabi. Detect these cases and issue a warning.
