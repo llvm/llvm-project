@@ -5,7 +5,7 @@
 ;   for (i = 0; i < n; i++)
 ;    A[i + 1] = A[i] * B[i] * C[i];
 
-; In this case, runtime checks are suggested, and there is a convergent operation.
+; In this case, runtime checks are needed, and there is a convergent operation.
 define void @rtchecks_needed(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: 'rtchecks_needed'
 ; CHECK-NEXT:    for.body:
