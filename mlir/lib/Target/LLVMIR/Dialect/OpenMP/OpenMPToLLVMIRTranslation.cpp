@@ -2824,6 +2824,8 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::AtomicOrdering ao = convertAtomicOrdering(writeOp.getMemoryOrder());
@@ -2832,7 +2834,8 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Type *ty = moduleTranslation.convertType(writeOp.getExpr().getType());
   llvm::OpenMPIRBuilder::AtomicOpValue x = {dest, ty, /*isSigned=*/false,
                                             /*isVolatile=*/false};
-  builder.restoreIP(ompBuilder->createAtomicWrite(ompLoc, x, expr, ao));
+  builder.restoreIP(
+      ompBuilder->createAtomicWrite(ompLoc, x, expr, ao, allocaIP));
   return success();
 }
 

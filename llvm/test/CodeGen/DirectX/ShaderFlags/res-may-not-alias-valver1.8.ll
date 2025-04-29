@@ -11,7 +11,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: Shader Flags Value: 0x200000010
 
 ; CHECK: Note: extra DXIL module flags:
-; CHECK:       Raw and Structured buffers
+; CHECK:       Raw and structured buffers
 ; CHECK:       Any UAV may not alias any other UAV
 ;
 
