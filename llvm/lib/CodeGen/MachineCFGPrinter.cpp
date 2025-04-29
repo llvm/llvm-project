@@ -59,10 +59,8 @@ MachineCFGPrinterPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
   if (!MCFGFuncName.empty() && !MF.getName().contains(MCFGFuncName))
     return PreservedAnalyses::all();
-  std::string Name;
-  raw_string_ostream SS(Name);
-  MF.getFunction().printAsOperand(SS, /*PrintType=*/false);
-  OS << "Writing Machine CFG for function " << Name;
+  OS << "Writing Machine CFG for function "
+     << MF.getFunction().getNameOrAsOperand();
   writeMCFGToDotFile(MF);
   return PreservedAnalyses::all();
 }
