@@ -394,16 +394,16 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
 
   // Configure the GreedyPatternRewriteDriver.
   GreedyRewriteConfig config;
-  config.listener =
-      static_cast<RewriterBase::Listener *>(rewriter.getListener());
+  config.setListener(
+      static_cast<RewriterBase::Listener *>(rewriter.getListener()));
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
-  config.maxIterations = getMaxIterations() == static_cast<uint64_t>(-1)
-                             ? GreedyRewriteConfig::kNoLimit
-                             : getMaxIterations();
-  config.maxNumRewrites = getMaxNumRewrites() == static_cast<uint64_t>(-1)
+  config.setMaxIterations(getMaxIterations() == static_cast<uint64_t>(-1)
                               ? GreedyRewriteConfig::kNoLimit
-                              : getMaxNumRewrites();
+                              : getMaxIterations());
+  config.setMaxNumRewrites(getMaxNumRewrites() == static_cast<uint64_t>(-1)
+                               ? GreedyRewriteConfig::kNoLimit
+                               : getMaxNumRewrites());
 
   // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
   // was requested, apply the greedy pattern rewrite only once. (The greedy
@@ -2073,7 +2073,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
       return DiagnosedSilenceableFailure::success();
     }
 
-    SetVector<Operation *> uniqued(operations.begin(), operations.end());
+    SetVector<Operation *> uniqued(llvm::from_range, operations);
     results.set(llvm::cast<OpResult>(getResult()), uniqued.getArrayRef());
     return DiagnosedSilenceableFailure::success();
   }
@@ -2087,7 +2087,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
       return DiagnosedSilenceableFailure::success();
     }
 
-    SetVector<Attribute> uniqued(attrs.begin(), attrs.end());
+    SetVector<Attribute> uniqued(llvm::from_range, attrs);
     results.setParams(cast<OpResult>(getResult()), uniqued.getArrayRef());
     return DiagnosedSilenceableFailure::success();
   }
@@ -2103,7 +2103,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
 
-  SetVector<Value> uniqued(payloadValues.begin(), payloadValues.end());
+  SetVector<Value> uniqued(llvm::from_range, payloadValues);
   results.setValues(cast<OpResult>(getResult()), uniqued.getArrayRef());
   return DiagnosedSilenceableFailure::success();
 }

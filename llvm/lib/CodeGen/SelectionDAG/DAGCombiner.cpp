@@ -6037,7 +6037,10 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
         LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
-    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
+    SDNodeFlags LogicFlags;
+    LogicFlags.setDisjoint(N->getFlags().hasDisjoint() &&
+                           ISD::isExtOpcode(HandOpcode));
+    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y, LogicFlags);
     if (HandOpcode == ISD::SIGN_EXTEND_INREG)
       return DAG.getNode(HandOpcode, DL, VT, Logic, N0.getOperand(1));
     return DAG.getNode(HandOpcode, DL, VT, Logic);
@@ -6690,7 +6693,7 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
       !TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy, ExtVT))
     return false;
 
-  if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT))
+  if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT, /*ByteOffset=*/0))
     return false;
 
   return true;
@@ -6701,9 +6704,11 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
                                     unsigned ShAmt) {
   if (!LDST)
     return false;
+
   // Only allow byte offsets.
   if (ShAmt % 8)
     return false;
+  const unsigned ByteShAmt = ShAmt / 8;
 
   // Do not generate loads of non-round integer types since these can
   // be expensive (and would be wrong if the type is not byte sized).
@@ -6727,8 +6732,6 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
 
   // Ensure that this isn't going to produce an unsupported memory access.
   if (ShAmt) {
-    assert(ShAmt % 8 == 0 && "ShAmt is byte offset");
-    const unsigned ByteShAmt = ShAmt / 8;
     const Align LDSTAlign = LDST->getAlign();
     const Align NarrowAlign = commonAlignment(LDSTAlign, ByteShAmt);
     if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
@@ -6768,7 +6771,7 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
         Load->getMemoryVT().getSizeInBits() < MemVT.getSizeInBits() + ShAmt)
       return false;
 
-    if (!TLI.shouldReduceLoadWidth(Load, ExtType, MemVT))
+    if (!TLI.shouldReduceLoadWidth(Load, ExtType, MemVT, ByteShAmt))
       return false;
   } else {
     assert(isa<StoreSDNode>(LDST) && "It is not a Load nor a Store SDNode");
@@ -12641,8 +12644,13 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   if (LHSExtOpVT != RHSExtOp.getValueType() || LHSOpcode != RHSOpcode)
     return SDValue();
 
-  // FIXME: Add a check to only perform the DAG combine if there is lowering
-  // provided by the target
+  // Only perform the DAG combine if there is custom lowering provided by the
+  // target
+  auto *Context = DAG.getContext();
+  if (!TLI.isPartialReduceMLALegalOrCustom(
+          TLI.getTypeToTransformTo(*Context, N->getValueType(0)),
+          TLI.getTypeToTransformTo(*Context, LHSExtOpVT)))
+    return SDValue();
 
   bool ExtIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
 
@@ -13833,10 +13841,9 @@ static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
 
   EVT OrigVT = ALoad->getValueType(0);
   assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
-  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomic(
-      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
+  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomicLoad(
+      ExtLoadType, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
       ALoad->getBasePtr(), ALoad->getMemOperand()));
-  NewALoad->setExtensionType(ExtLoadType);
   DAG.ReplaceAllUsesOfValueWith(
       SDValue(ALoad, 0),
       DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));
@@ -18584,7 +18591,45 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   return SDValue();
 }
 
+// Eliminate a floating-point widening of a narrowed value if the fast math
+// flags allow it.
+static SDValue eliminateFPCastPair(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  unsigned NarrowingOp;
+  switch (N->getOpcode()) {
+  case ISD::FP16_TO_FP:
+    NarrowingOp = ISD::FP_TO_FP16;
+    break;
+  case ISD::BF16_TO_FP:
+    NarrowingOp = ISD::FP_TO_BF16;
+    break;
+  case ISD::FP_EXTEND:
+    NarrowingOp = ISD::FP_ROUND;
+    break;
+  default:
+    llvm_unreachable("Expected widening FP cast");
+  }
+
+  if (N0.getOpcode() == NarrowingOp && N0.getOperand(0).getValueType() == VT) {
+    const SDNodeFlags NarrowFlags = N0->getFlags();
+    const SDNodeFlags WidenFlags = N->getFlags();
+    // Narrowing can introduce inf and change the encoding of a nan, so the
+    // widen must have the nnan and ninf flags to indicate that we don't need to
+    // care about that. We are also removing a rounding step, and that requires
+    // both the narrow and widen to allow contraction.
+    if (WidenFlags.hasNoNaNs() && WidenFlags.hasNoInfs() &&
+        NarrowFlags.hasAllowContract() && WidenFlags.hasAllowContract()) {
+      return N0.getOperand(0);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
@@ -18635,6 +18680,9 @@ SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
+
+  if (SDValue CastEliminated = eliminateFPCastPair(N))
+    return CastEliminated;
 
   return SDValue();
 }
@@ -24987,7 +25035,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   if (SDValue V = combineConcatVectorOfScalars(N, DAG))
     return V;
 
-  if (Level < AfterLegalizeVectorOps && TLI.isTypeLegal(VT)) {
+  if (Level <= AfterLegalizeVectorOps && TLI.isTypeLegal(VT)) {
     // Fold CONCAT_VECTORS of CONCAT_VECTORS (or undef) to VECTOR_SHUFFLE.
     if (SDValue V = combineConcatVectorOfConcatVectors(N, DAG))
       return V;
@@ -25236,7 +25284,8 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG,
 /// If we are extracting a subvector from a wide vector load, convert to a
 /// narrow load to eliminate the extraction:
 /// (extract_subvector (load wide vector)) --> (load narrow vector)
-static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
+static SDValue narrowExtractedVectorLoad(SDNode *Extract, const SDLoc &DL,
+                                         SelectionDAG &DAG) {
   // TODO: Add support for big-endian. The offset calculation must be adjusted.
   if (DAG.getDataLayout().isBigEndian())
     return SDValue();
@@ -25266,15 +25315,16 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
 
   // It's fine to use TypeSize here as we know the offset will not be negative.
   TypeSize Offset = VT.getStoreSize() * (Index / NumElts);
+  std::optional<unsigned> ByteOffset;
+  if (Offset.isFixed())
+    ByteOffset = Offset.getFixedValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT))
+  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT, ByteOffset))
     return SDValue();
 
   // The narrow load will be offset from the base address of the old load if
   // we are extracting from something besides index 0 (little-endian).
-  SDLoc DL(Extract);
-
   // TODO: Use "BaseIndexOffset" to make this more effective.
   SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
 
@@ -25458,7 +25508,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     return DAG.getUNDEF(NVT);
 
   if (TLI.isOperationLegalOrCustomOrPromote(ISD::LOAD, NVT))
-    if (SDValue NarrowLoad = narrowExtractedVectorLoad(N, DAG))
+    if (SDValue NarrowLoad = narrowExtractedVectorLoad(N, DL, DAG))
       return NarrowLoad;
 
   // Combine an extract of an extract into a single extract_subvector.
@@ -27398,6 +27448,7 @@ SDValue DAGCombiner::visitFP_TO_FP16(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   auto Op = N->getOpcode();
   assert((Op == ISD::FP16_TO_FP || Op == ISD::BF16_TO_FP) &&
          "opcode should be FP16_TO_FP or BF16_TO_FP.");
@@ -27411,6 +27462,9 @@ SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
       return DAG.getNode(Op, SDLoc(N), N->getValueType(0), N0.getOperand(0));
     }
   }
+
+  if (SDValue CastEliminated = eliminateFPCastPair(N))
+    return CastEliminated;
 
   // Sometimes constants manage to survive very late in the pipeline, e.g.,
   // because they are wrapped inside the <1 x f16> type. Try one last time to

@@ -402,8 +402,14 @@ def warn_anyx86_excessive_regsave : Warning<
   InGroup<DiagGroup<"excessive-regsave">>;
 def warn_arm_interrupt_vfp_clobber : Warning<
   "interrupt service routine with vfp enabled may clobber the "
-  "interruptee's vfp state">,
+  "interruptee's vfp state; "
+  "consider using the `interrupt_save_fp` attribute to prevent this behavior">,
   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
+def warn_arm_interrupt_save_fp_without_vfp_unit : Warning<
+   "`interrupt_save_fp` only applies to targets that have a VFP unit enabled "
+   "for this compilation; this will be treated as a regular `interrupt` "
+   "attribute">,
+   InGroup<DiagGroup<"arm-interrupt-save-fp-no-vfp-unit">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
 def warn_interrupt_signal_attribute_invalid : Warning<
@@ -489,6 +495,10 @@ def warn_unused_private_field: Warning<"private field %0 is not used">,
 def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
   "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
+
+def warn_decl_hidden_in_cpp : Warning<
+  "%select{struct|union|enum}0 defined within a struct or union is not visible "
+  "in C++">, InGroup<HiddenCppDecl>, DefaultIgnore;
 
 def warn_reserved_extern_symbol: Warning<
   "identifier %0 is reserved because %select{"
@@ -4304,7 +4314,10 @@ def warn_impcast_string_literal_to_bool : Warning<
   InGroup<StringConversion>, DefaultIgnore;
 def warn_impcast_different_enum_types : Warning<
   "implicit conversion from enumeration type %0 to different enumeration type "
-  "%1">, InGroup<EnumConversion>;
+  "%1">, InGroup<ImplicitEnumEnumCast>;
+def warn_impcast_int_to_enum : Warning<
+  "implicit conversion from %0 to enumeration type %1 is invalid in C++">,
+  InGroup<ImplicitIntToEnumCast>, DefaultIgnore;
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
     "expression">, InGroup<BoolConversion>;
@@ -8191,6 +8204,16 @@ def err_address_space_qualified_new : Error<
 def err_address_space_qualified_delete : Error<
   "'delete' cannot delete objects of type %0 in address space '%1'">;
 
+def note_default_init_const_member : Note<
+  "member %0 declared 'const' here">;
+def warn_default_init_const : Warning<
+  "default initialization of an object of type %0%select{| with const member}1 "
+  "is incompatible with C++">,
+  InGroup<DefaultConstInit>, DefaultIgnore;
+def warn_default_init_const_unsafe : Warning<
+  "default initialization of an object of type %0%select{| with const member}1 "
+  "leaves the object uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"
   "%select{| without a user-provided default constructor}1">;
@@ -8681,7 +8704,17 @@ def err_typecheck_missing_return_type_incompatible : Error<
   "%diff{return type $ must match previous return type $|"
   "return type must match previous return type}0,1 when %select{block "
   "literal|lambda expression}2 has unspecified explicit return type">;
-
+def warn_compatible_implicit_pointer_conv : Warning<
+  "implicit conversion when %select{"
+  "%diff{assigning to $ from type $|assigning to type from type}0,1|"
+  "%diff{passing $ to parameter of type $|passing type to parameter of type}0,1|"
+  "%diff{returning $ from a function with result type $|returning type from a function with result type}0,1|"
+  "<CLANG BUG IF YOU SEE THIS>|" // converting
+  "%diff{initializing $ with an expression of type $|initializing type with an expression of type}0,1|"
+  "%diff{sending $ to parameter of type $|sending type to parameter of type}0,1|"
+  "<CLANG BUG IF YOU SEE THIS>" // casting
+  "}2 is not permitted in C++">,
+  InGroup<ImplicitVoidPtrCast>, DefaultIgnore;
 def note_incomplete_class_and_qualified_id : Note<
   "conformance of forward class %0 to protocol %1 cannot be confirmed">;
 def warn_incompatible_qualified_id : Warning<
@@ -12737,7 +12770,9 @@ def err_riscv_builtin_invalid_lmul : Error<
 def err_riscv_type_requires_extension : Error<
   "RISC-V type %0 requires the '%1' extension">;
 def err_riscv_attribute_interrupt_requires_extension : Error<
-  "RISC-V interrupt attribute '%0' requires extension '%1'">;
+  "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
+def err_riscv_attribute_interrupt_invalid_combination : Error<
+  "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
