@@ -2,16 +2,20 @@
 // RUN: %clang_cc1 -Wreorder -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -Wreorder -fsyntax-only -verify -std=c++11 %s
 
-class A { 
+class A {
+  // expected-note@-1 {{candidate constructor}}
+#if __cplusplus >= 201103L // C++11 or later
+  // expected-note@-3 {{candidate constructor}}
+#endif
   int m;
 public:
    A() : A::m(17) { } // expected-error {{member initializer 'm' does not name a non-static data member or base class}}
-   A(int);
+   A(int); // expected-note {{candidate constructor}}
 };
 
 class B : public A { 
 public:
-  B() : A(), m(1), n(3.14) { }
+  B() : A(), m(1), n(3.14) { } // expected-error {{no matching constructor for initialization of 'A'}}
 
 private:
   int m;

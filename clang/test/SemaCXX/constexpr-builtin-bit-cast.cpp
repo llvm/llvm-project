@@ -535,9 +535,9 @@ namespace InvalidBaseClass {
   };
 
   class InBetween : public F{};
-  class E : public InBetween {
+  class E : public InBetween { // expected-note 2{{candidate constructor}}
   public:
     constexpr E() :  F{3} {} // expected-error {{not a direct or virtual base}}
   };
-  static_assert(__builtin_bit_cast(char, E()) == 0); // expected-error {{not an integral constant expression}}
+  static_assert(__builtin_bit_cast(char, E()) == 0); // expected-error {{no matching constructor}}
 }
