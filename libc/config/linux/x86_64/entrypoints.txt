@@ -1060,6 +1060,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr
