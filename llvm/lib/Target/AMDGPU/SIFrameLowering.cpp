@@ -2013,6 +2013,105 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
   }
 }
 
+static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
+                                       const GCNSubtarget &ST,
+                                       std::vector<CalleeSavedInfo> &CSI,
+                                       unsigned &MinCSFrameIndex,
+                                       unsigned &MaxCSFrameIndex) {
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  assert(std::is_sorted(CSI.begin(), CSI.end(),
+                        [](const CalleeSavedInfo &A, const CalleeSavedInfo &B) {
+                          return A.getReg() < B.getReg();
+                        }) &&
+         "Callee saved registers not sorted");
+
+  auto CanUseBlockOps = [&](const CalleeSavedInfo &CSI) {
+    return !CSI.isSpilledToReg() &&
+           TRI->getPhysRegBaseClass(CSI.getReg()) == &AMDGPU::VGPR_32RegClass &&
+           !FuncInfo->isWWMReservedRegister(CSI.getReg());
+  };
+
+  auto CSEnd = CSI.end();
+  for (auto CSIt = CSI.begin(); CSIt != CSEnd; ++CSIt) {
+    Register Reg = CSIt->getReg();
+    if (!CanUseBlockOps(*CSIt))
+      continue;
+
+    // Find all the regs that will fit in a 32-bit mask starting at the current
+    // reg and build said mask. It should have 1 for every register that's
+    // included, with the current register as the least significant bit.
+    uint32_t Mask = 1;
+    CSEnd = std::remove_if(
+        CSIt + 1, CSEnd, [&](const CalleeSavedInfo &CSI) -> bool {
+          if (CanUseBlockOps(CSI) && CSI.getReg() < Reg + 32) {
+            Mask |= 1 << (CSI.getReg() - Reg);
+            return true;
+          } else {
+            return false;
+          }
+        });
+
+    const TargetRegisterClass *BlockRegClass = TRI->getRegClassForBlockOp(MF);
+    Register RegBlock =
+        TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, BlockRegClass);
+    if (!RegBlock) {
+      // We couldn't find a super register for the block. This can happen if
+      // the register we started with is too high (e.g. v232 if the maximum is
+      // v255). We therefore try to get the last register block and figure out
+      // the mask from there.
+      Register LastBlockStart =
+          AMDGPU::VGPR0 + alignDown(Reg - AMDGPU::VGPR0, 32);
+      RegBlock =
+          TRI->getMatchingSuperReg(LastBlockStart, AMDGPU::sub0, BlockRegClass);
+      assert(RegBlock && TRI->isSubRegister(RegBlock, Reg) &&
+             "Couldn't find super register");
+      int RegDelta = Reg - LastBlockStart;
+      assert(RegDelta > 0 && llvm::countl_zero(Mask) >= RegDelta &&
+             "Bad shift amount");
+      Mask <<= RegDelta;
+    }
+
+    FuncInfo->setMaskForVGPRBlockOps(RegBlock, Mask);
+
+    // The stack objects can be a bit smaller than the register block if we know
+    // some of the high bits of Mask are 0. This may happen often with calling
+    // conventions where the caller and callee-saved VGPRs are interleaved at
+    // a small boundary (e.g. 8 or 16).
+    int UnusedBits = llvm::countl_zero(Mask);
+    unsigned BlockSize = TRI->getSpillSize(*BlockRegClass) - UnusedBits * 4;
+    int FrameIdx =
+        MFI.CreateStackObject(BlockSize, TRI->getSpillAlign(*BlockRegClass),
+                              /*isSpillSlot=*/true);
+    if ((unsigned)FrameIdx < MinCSFrameIndex)
+      MinCSFrameIndex = FrameIdx;
+    if ((unsigned)FrameIdx > MaxCSFrameIndex)
+      MaxCSFrameIndex = FrameIdx;
+
+    CSIt->setFrameIdx(FrameIdx);
+    CSIt->setReg(RegBlock);
+  }
+  CSI.erase(CSEnd, CSI.end());
+}
+
+bool SIFrameLowering::assignCalleeSavedSpillSlots(
+    MachineFunction &MF, const TargetRegisterInfo *TRI,
+    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
+    unsigned &MaxCSFrameIndex) const {
+  if (CSI.empty())
+    return true; // Early exit if no callee saved registers are modified!
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  bool UseVGPRBlocks = ST.useVGPRBlockOpsForCSR();
+
+  if (UseVGPRBlocks)
+    assignSlotsUsingVGPRBlocks(MF, ST, CSI, MinCSFrameIndex, MaxCSFrameIndex);
+
+  return assignCalleeSavedSpillSlots(MF, TRI, CSI) || UseVGPRBlocks;
+}
+
 bool SIFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
@@ -2079,6 +2178,144 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
       return false;
   }
 
+  return true;
+}
+
+static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
+                          const TargetRegisterInfo *TRI) {
+  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
+    if (MBB.isLiveIn(*R)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SIFrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  MachineFunction *MF = MBB.getParent();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *SITRI = static_cast<const SIRegisterInfo *>(TRI);
+
+  if (!ST.useVGPRBlockOpsForCSR()) {
+    for (const CalleeSavedInfo &CS : CSI) {
+      // Insert the spill to the stack frame.
+      unsigned Reg = CS.getReg();
+
+      if (CS.isSpilledToReg()) {
+        BuildMI(MBB, MI, DebugLoc(), TII->get(TargetOpcode::COPY),
+                CS.getDstReg())
+            .addReg(Reg, getKillRegState(true));
+      } else {
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
+            Reg, Reg == SITRI->getReturnAddressReg(*MF) ? MVT::i64 : MVT::i32);
+        // If this value was already livein, we probably have a direct use of
+        // the incoming register value, so don't kill at the spill point. This
+        // happens since we pass some special inputs (workgroup IDs) in the
+        // callee saved range.
+        const bool IsLiveIn = isLiveIntoMBB(Reg, MBB, TRI);
+        TII->storeRegToStackSlotCFI(MBB, MI, Reg, !IsLiveIn, CS.getFrameIdx(),
+                                    RC, TRI);
+      }
+    }
+    return true;
+  }
+
+  MachineFrameInfo &FrameInfo = MF->getFrameInfo();
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
+
+  const TargetRegisterClass *BlockRegClass =
+      static_cast<const SIRegisterInfo *>(TRI)->getRegClassForBlockOp(*MF);
+  for (const CalleeSavedInfo &CS : CSI) {
+    Register Reg = CS.getReg();
+    if (!BlockRegClass->contains(Reg) ||
+        !FuncInfo->hasMaskForVGPRBlockOps(Reg)) {
+      spillCalleeSavedRegister(MBB, MI, CS, TII, TRI);
+      continue;
+    }
+
+    // Build a scratch block store.
+    uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(Reg);
+    int FrameIndex = CS.getFrameIdx();
+    MachinePointerInfo PtrInfo =
+        MachinePointerInfo::getFixedStack(*MF, FrameIndex);
+    MachineMemOperand *MMO =
+        MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                 FrameInfo.getObjectSize(FrameIndex),
+                                 FrameInfo.getObjectAlign(FrameIndex));
+
+    BuildMI(MBB, MI, MI->getDebugLoc(),
+            TII->get(AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE))
+        .addReg(Reg, getKillRegState(false))
+        .addFrameIndex(FrameIndex)
+        .addReg(MFI->getStackPtrOffsetReg())
+        .addImm(0)
+        .addImm(Mask)
+        .addMemOperand(MMO);
+
+    FuncInfo->setHasSpilledVGPRs();
+
+    // Add the register to the liveins. This is necessary because if any of the
+    // VGPRs in the register block is reserved (e.g. if it's a WWM register),
+    // then the whole block will be marked as reserved and `updateLiveness` will
+    // skip it.
+    MBB.addLiveIn(Reg);
+  }
+  MBB.sortUniqueLiveIns();
+
+  return true;
+}
+
+bool SIFrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  MachineFunction *MF = MBB.getParent();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  if (!ST.useVGPRBlockOpsForCSR())
+    return false;
+
+  SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *SITRI = static_cast<const SIRegisterInfo *>(TRI);
+  const TargetRegisterClass *BlockRegClass = SITRI->getRegClassForBlockOp(*MF);
+  for (const CalleeSavedInfo &CS : reverse(CSI)) {
+    Register Reg = CS.getReg();
+    if (!BlockRegClass->contains(Reg) ||
+        !FuncInfo->hasMaskForVGPRBlockOps(Reg)) {
+      restoreCalleeSavedRegister(MBB, MI, CS, TII, TRI);
+      continue;
+    }
+
+    // Build a scratch block load.
+    uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(Reg);
+    int FrameIndex = CS.getFrameIdx();
+    MachinePointerInfo PtrInfo =
+        MachinePointerInfo::getFixedStack(*MF, FrameIndex);
+    MachineMemOperand *MMO = MF->getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
+        MFI.getObjectAlign(FrameIndex));
+
+    auto MIB = BuildMI(MBB, MI, MI->getDebugLoc(),
+                       TII->get(AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE), Reg)
+                   .addFrameIndex(FrameIndex)
+                   .addReg(FuncInfo->getStackPtrOffsetReg())
+                   .addImm(0)
+                   .addImm(Mask)
+                   .addMemOperand(MMO);
+    SITRI->addImplicitUsesForBlockCSRLoad(MIB, Reg);
+
+    // Add the register to the liveins. This is necessary because if any of the
+    // VGPRs in the register block is reserved (e.g. if it's a WWM register),
+    // then the whole block will be marked as reserved and `updateLiveness` will
+    // skip it.
+    MBB.addLiveIn(Reg);
+  }
+
+  MBB.sortUniqueLiveIns();
   return true;
 }
 
@@ -2186,48 +2423,6 @@ bool SIFrameLowering::requiresStackPointerReference(
   // We still need to initialize the SP if we're doing anything weird that
   // references the SP, like variable sized stack objects.
   return frameTriviallyRequiresSP(MFI);
-}
-
-static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
-                          const TargetRegisterInfo *TRI) {
-  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
-    if (MBB.isLiveIn(*R)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool SIFrameLowering::spillCalleeSavedRegisters(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    const ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
-  MachineFunction &MF = *MBB.getParent();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-
-  for (const CalleeSavedInfo &CS : CSI) {
-    // Insert the spill to the stack frame.
-    unsigned Reg = CS.getReg();
-
-    if (CS.isSpilledToReg()) {
-      BuildMI(MBB, MBBI, DebugLoc(), TII->get(TargetOpcode::COPY),
-              CS.getDstReg())
-          .addReg(Reg, getKillRegState(true));
-    } else {
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
-      // If this value was already livein, we probably have a direct use of the
-      // incoming register value, so don't kill at the spill point. This happens
-      // since we pass some special inputs (workgroup IDs) in the callee saved
-      // range.
-      const bool IsLiveIn = isLiveIntoMBB(Reg, MBB, TRI);
-      TII->storeRegToStackSlotCFI(MBB, MBBI, Reg, !IsLiveIn, CS.getFrameIdx(),
-                                  RC, TRI);
-    }
-  }
-
-  return true;
 }
 
 MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,
@@ -2352,5 +2547,16 @@ MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
 
   auto CFIInst = MCCFIInstruction::createLLVMRegisterPair(
       nullptr, DwarfReg, DwarfSGPR0, SGPRBitSize, DwarfSGPR1, SGPRBitSize);
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
+}
+
+MachineInstr *
+SIFrameLowering::buildCFIForSameValue(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator MBBI,
+                                      const DebugLoc &DL, Register Reg) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
+  int DwarfReg = MCRI.getDwarfRegNum(Reg, /*isEH=*/false);
+  auto CFIInst = MCCFIInstruction::createSameValue(nullptr, DwarfReg);
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
