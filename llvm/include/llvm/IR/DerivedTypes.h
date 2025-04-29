@@ -554,8 +554,9 @@ public:
     return VectorType::get(VTy->getElementType(), EltCnt * 2);
   }
 
-  /// This static method returns a VectorType with the same size-in-bits as
-  /// SizeTy but with an element type that matches the scalar type of EltTy.
+  /// This static method attempts to construct a VectorType with the same
+  /// size-in-bits as SizeTy but with an element type that matches the scalar
+  /// type of EltTy. The VectorType is returned on success, nullptr otherwise.
   static VectorType *getWithSizeAndScalar(VectorType *SizeTy, Type *EltTy) {
     if (SizeTy->getScalarType() == EltTy->getScalarType())
       return SizeTy;
