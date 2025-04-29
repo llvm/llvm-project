@@ -274,8 +274,9 @@ unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
 
   // Begin feature table.
   OS << "// Sorted (by key) array of values for CPU features.\n"
-     << "extern const llvm::" << (IsEmitBasic ? "Basic" : "") << "SubtargetFeatureKV "
-     << (IsEmitBasic ? "Basic" : "") << Target << "FeatureKV[] = {\n";
+     << "extern const llvm::" << (IsEmitBasic ? "Basic" : "")
+     << "SubtargetFeatureKV " << (IsEmitBasic ? "Basic" : "") << Target
+     << "FeatureKV[] = {\n";
 
   for (const Record *Feature : FeatureList) {
     // Next feature
@@ -357,8 +358,9 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
 
   // Begin processor table.
   OS << "// Sorted (by key) array of values for CPU subtype.\n"
-     << "extern const llvm::" << (IsEmitBasic ? "Basic" : "")  <<   "SubtargetSubTypeKV "
-     << (IsEmitBasic ? "Basic" : "") << Target << "SubTypeKV[] = {\n";
+     << "extern const llvm::" << (IsEmitBasic ? "Basic" : "")
+     << "SubtargetSubTypeKV " << (IsEmitBasic ? "Basic" : "") << Target
+     << "SubTypeKV[] = {\n";
 
   for (const Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
