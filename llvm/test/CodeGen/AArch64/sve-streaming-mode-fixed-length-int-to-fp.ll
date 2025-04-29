@@ -562,41 +562,42 @@ define void @ucvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    mov z5.d, z3.d
-; CHECK-NEXT:    uunpklo z4.d, z0.s
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    ext z5.b, z5.b, z3.b, #8
-; CHECK-NEXT:    mov z7.d, z1.d
-; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf z4.d, p0/m, z4.d
-; CHECK-NEXT:    mov z6.d, z2.d
-; CHECK-NEXT:    uunpklo z5.d, z5.s
-; CHECK-NEXT:    ext z7.b, z7.b, z1.b, #8
+; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    uunpklo z5.d, z0.s
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z1.b, #8
 ; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    ucvtf z3.d, p0/m, z3.d
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-NEXT:    ext z6.b, z6.b, z2.b, #8
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uunpklo z7.d, z7.s
+; CHECK-NEXT:    mov z6.d, z2.d
+; CHECK-NEXT:    mov z7.d, z3.d
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uunpklo z4.d, z4.s
 ; CHECK-NEXT:    ucvtf z5.d, p0/m, z5.d
 ; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    ext z6.b, z6.b, z2.b, #8
+; CHECK-NEXT:    ext z7.b, z7.b, z3.b, #8
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ucvtf z4.d, p0/m, z4.d
 ; CHECK-NEXT:    uunpklo z6.d, z6.s
-; CHECK-NEXT:    stp q4, q0, [x1, #64]
+; CHECK-NEXT:    uunpklo z7.d, z7.s
 ; CHECK-NEXT:    ucvtf z2.d, p0/m, z2.d
-; CHECK-NEXT:    stp q3, q5, [x1]
-; CHECK-NEXT:    movprfx z3, z7
-; CHECK-NEXT:    ucvtf z3.d, p0/m, z7.d
-; CHECK-NEXT:    movprfx z0, z6
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z6.d
-; CHECK-NEXT:    stp q1, q3, [x1, #32]
-; CHECK-NEXT:    stp q2, q0, [x1, #96]
+; CHECK-NEXT:    stp q5, q0, [x1, #64]
+; CHECK-NEXT:    ucvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    stp q1, q4, [x1]
+; CHECK-NEXT:    movprfx z1, z6
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z6.d
+; CHECK-NEXT:    movprfx z0, z7
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z7.d
+; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    stp q2, q1, [x1, #96]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ucvtf_v16i16_v16f64:
@@ -2000,41 +2001,42 @@ define void @scvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    sunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEXT:    mov z5.d, z3.d
-; CHECK-NEXT:    sunpklo z4.d, z0.s
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
-; CHECK-NEXT:    ext z5.b, z5.b, z3.b, #8
-; CHECK-NEXT:    mov z7.d, z1.d
-; CHECK-NEXT:    sunpklo z3.d, z3.s
-; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf z4.d, p0/m, z4.d
-; CHECK-NEXT:    mov z6.d, z2.d
-; CHECK-NEXT:    sunpklo z5.d, z5.s
-; CHECK-NEXT:    ext z7.b, z7.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sunpklo z5.d, z0.s
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z1.b, #8
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
-; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
-; CHECK-NEXT:    ext z6.b, z6.b, z2.b, #8
-; CHECK-NEXT:    sunpklo z2.d, z2.s
-; CHECK-NEXT:    sunpklo z7.d, z7.s
+; CHECK-NEXT:    mov z6.d, z2.d
+; CHECK-NEXT:    mov z7.d, z3.d
+; CHECK-NEXT:    sunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z4.d, z4.s
 ; CHECK-NEXT:    scvtf z5.d, p0/m, z5.d
 ; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    ext z6.b, z6.b, z2.b, #8
+; CHECK-NEXT:    ext z7.b, z7.b, z3.b, #8
+; CHECK-NEXT:    sunpklo z2.d, z2.s
+; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    scvtf z4.d, p0/m, z4.d
 ; CHECK-NEXT:    sunpklo z6.d, z6.s
-; CHECK-NEXT:    stp q4, q0, [x1, #64]
+; CHECK-NEXT:    sunpklo z7.d, z7.s
 ; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
-; CHECK-NEXT:    stp q3, q5, [x1]
-; CHECK-NEXT:    movprfx z3, z7
-; CHECK-NEXT:    scvtf z3.d, p0/m, z7.d
-; CHECK-NEXT:    movprfx z0, z6
-; CHECK-NEXT:    scvtf z0.d, p0/m, z6.d
-; CHECK-NEXT:    stp q1, q3, [x1, #32]
-; CHECK-NEXT:    stp q2, q0, [x1, #96]
+; CHECK-NEXT:    stp q5, q0, [x1, #64]
+; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    stp q1, q4, [x1]
+; CHECK-NEXT:    movprfx z1, z6
+; CHECK-NEXT:    scvtf z1.d, p0/m, z6.d
+; CHECK-NEXT:    movprfx z0, z7
+; CHECK-NEXT:    scvtf z0.d, p0/m, z7.d
+; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    stp q2, q1, [x1, #96]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v16i16_v16f64:
@@ -2481,38 +2483,38 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0, #32]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q5, q4, [x0]
+; CHECK-NEXT:    ldp q5, q3, [x0]
 ; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    mov z3.d, z1.d
-; CHECK-NEXT:    mov z6.d, z4.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z7.d, z5.d
 ; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
-; CHECK-NEXT:    ext z3.b, z3.b, z1.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z1.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    ext z6.b, z6.b, z4.b, #8
+; CHECK-NEXT:    ext z6.b, z6.b, z3.b, #8
 ; CHECK-NEXT:    ext z7.b, z7.b, z5.b, #8
-; CHECK-NEXT:    sunpklo z4.d, z4.s
+; CHECK-NEXT:    sunpklo z3.d, z3.s
 ; CHECK-NEXT:    sunpklo z5.d, z5.s
 ; CHECK-NEXT:    sunpklo z2.d, z2.s
-; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    sunpklo z4.d, z4.s
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    sunpklo z6.d, z6.s
 ; CHECK-NEXT:    sunpklo z7.d, z7.s
 ; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
-; CHECK-NEXT:    scvtf z4.d, p0/m, z4.d
-; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
-; CHECK-NEXT:    stp q1, q3, [x1, #64]
-; CHECK-NEXT:    movprfx z1, z7
-; CHECK-NEXT:    scvtf z1.d, p0/m, z7.d
+; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
+; CHECK-NEXT:    scvtf z4.d, p0/m, z4.d
+; CHECK-NEXT:    stp q1, q4, [x1, #64]
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    scvtf z1.d, p0/m, z5.d
 ; CHECK-NEXT:    stp q0, q2, [x1, #96]
 ; CHECK-NEXT:    movprfx z0, z6
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z6.d
-; CHECK-NEXT:    movprfx z2, z5
-; CHECK-NEXT:    scvtf z2.d, p0/m, z5.d
-; CHECK-NEXT:    stp q2, q1, [x1]
-; CHECK-NEXT:    stp q4, q0, [x1, #32]
+; CHECK-NEXT:    movprfx z2, z7
+; CHECK-NEXT:    scvtf z2.d, p0/m, z7.d
+; CHECK-NEXT:    stp q1, q2, [x1]
+; CHECK-NEXT:    stp q3, q0, [x1, #32]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: scvtf_v16i32_v16f64:

@@ -3520,31 +3520,31 @@ define <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixunssfti
 ; CHECK-SD-NEXT:    extr x8, x21, x27, #28
-; CHECK-SD-NEXT:    extr x9, x29, x20, #28
-; CHECK-SD-NEXT:    stur x28, [x19, #75]
-; CHECK-SD-NEXT:    fcmp s8, #0.0
+; CHECK-SD-NEXT:    str x24, [x19]
 ; CHECK-SD-NEXT:    bfi x22, x20, #36, #28
-; CHECK-SD-NEXT:    lsr x11, x29, #28
+; CHECK-SD-NEXT:    stur x28, [x19, #75]
+; CHECK-SD-NEXT:    extr x9, x29, x20, #28
+; CHECK-SD-NEXT:    fcmp s8, #0.0
 ; CHECK-SD-NEXT:    stur x8, [x19, #41]
-; CHECK-SD-NEXT:    str x9, [x19, #16]
-; CHECK-SD-NEXT:    ldr x10, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x11, [sp, #32] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    stp x22, x9, [x19, #8]
+; CHECK-SD-NEXT:    lsr x9, x29, #28
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, xzr, x1, lt
+; CHECK-SD-NEXT:    csel x10, xzr, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s9
-; CHECK-SD-NEXT:    stp x24, x22, [x19]
-; CHECK-SD-NEXT:    stur x10, [x19, #50]
-; CHECK-SD-NEXT:    lsr x10, x21, #28
-; CHECK-SD-NEXT:    strb w11, [x19, #24]
-; CHECK-SD-NEXT:    strb w10, [x19, #49]
-; CHECK-SD-NEXT:    csel x9, x23, x9, gt
+; CHECK-SD-NEXT:    stur x11, [x19, #50]
+; CHECK-SD-NEXT:    lsr x11, x21, #28
+; CHECK-SD-NEXT:    strb w9, [x19, #24]
+; CHECK-SD-NEXT:    strb w11, [x19, #49]
+; CHECK-SD-NEXT:    csel x10, x23, x10, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
 ; CHECK-SD-NEXT:    ldp x12, x11, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    bfi x9, x27, #36, #28
+; CHECK-SD-NEXT:    bfi x10, x27, #36, #28
 ; CHECK-SD-NEXT:    stur x8, [x19, #25]
-; CHECK-SD-NEXT:    stur x9, [x19, #33]
-; CHECK-SD-NEXT:    extr x10, x11, x12, #28
+; CHECK-SD-NEXT:    stur x10, [x19, #33]
+; CHECK-SD-NEXT:    extr x9, x11, x12, #28
 ; CHECK-SD-NEXT:    bfi x26, x12, #36, #28
-; CHECK-SD-NEXT:    stur x10, [x19, #91]
+; CHECK-SD-NEXT:    stur x9, [x19, #91]
 ; CHECK-SD-NEXT:    ldp x10, x9, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    stur x26, [x19, #83]
 ; CHECK-SD-NEXT:    extr x8, x9, x10, #28

@@ -194,12 +194,12 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x i1> %mask
 define void @select_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    fcmeq p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fcmeq p1.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    sel z1.h, p0, z2.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
@@ -429,12 +429,12 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x i1> %m
 define void @select_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z2.s, z3.s
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
 ; CHECK-NEXT:    sel z1.s, p0, z2.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
@@ -553,12 +553,12 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1>
 define void @select_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    fcmeq p1.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fcmeq p1.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    fcmeq p0.d, p0/z, z2.d, z3.d
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    sel z1.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret

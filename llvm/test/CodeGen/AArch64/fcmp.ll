@@ -2040,16 +2040,16 @@ define <16 x i32> @v16f16_i32(<16 x half> %a, <16 x half> %b, <16 x i32> %d, <16
 ; CHECK-SD-NOFP16-NEXT:    fcvt s17, h0
 ; CHECK-SD-NOFP16-NEXT:    csetm w18, mi
 ; CHECK-SD-NOFP16-NEXT:    fcmp s19, s18
-; CHECK-SD-NOFP16-NEXT:    fmov s18, w14
 ; CHECK-SD-NOFP16-NEXT:    fmov s19, w17
+; CHECK-SD-NOFP16-NEXT:    fmov s18, w14
 ; CHECK-SD-NOFP16-NEXT:    csetm w0, mi
 ; CHECK-SD-NOFP16-NEXT:    fcmp s3, s1
 ; CHECK-SD-NOFP16-NEXT:    mov h1, v2.h[2]
 ; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[2]
 ; CHECK-SD-NOFP16-NEXT:    mov h2, v2.h[3]
 ; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[3]
-; CHECK-SD-NOFP16-NEXT:    mov v18.h[1], w12
 ; CHECK-SD-NOFP16-NEXT:    mov v19.h[1], w16
+; CHECK-SD-NOFP16-NEXT:    mov v18.h[1], w12
 ; CHECK-SD-NOFP16-NEXT:    csetm w1, mi
 ; CHECK-SD-NOFP16-NEXT:    fcmp s17, s16
 ; CHECK-SD-NOFP16-NEXT:    fmov s16, w10
@@ -2057,34 +2057,34 @@ define <16 x i32> @v16f16_i32(<16 x half> %a, <16 x half> %b, <16 x i32> %d, <16
 ; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
 ; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    csetm w2, mi
+; CHECK-SD-NOFP16-NEXT:    csetm w10, mi
 ; CHECK-SD-NOFP16-NEXT:    mov v16.h[1], w8
-; CHECK-SD-NOFP16-NEXT:    mov v18.h[2], w13
-; CHECK-SD-NOFP16-NEXT:    fmov s17, w2
 ; CHECK-SD-NOFP16-NEXT:    mov v19.h[2], w18
+; CHECK-SD-NOFP16-NEXT:    fmov s17, w10
+; CHECK-SD-NOFP16-NEXT:    mov v18.h[2], w13
 ; CHECK-SD-NOFP16-NEXT:    fcmp s3, s1
 ; CHECK-SD-NOFP16-NEXT:    mov v17.h[1], w1
 ; CHECK-SD-NOFP16-NEXT:    mov v16.h[2], w9
-; CHECK-SD-NOFP16-NEXT:    mov v18.h[3], w15
 ; CHECK-SD-NOFP16-NEXT:    mov v19.h[3], w0
+; CHECK-SD-NOFP16-NEXT:    mov v18.h[3], w15
 ; CHECK-SD-NOFP16-NEXT:    csetm w8, mi
 ; CHECK-SD-NOFP16-NEXT:    fcmp s0, s2
 ; CHECK-SD-NOFP16-NEXT:    mov v17.h[2], w8
 ; CHECK-SD-NOFP16-NEXT:    mov v16.h[3], w11
 ; CHECK-SD-NOFP16-NEXT:    csetm w8, mi
+; CHECK-SD-NOFP16-NEXT:    sshll v2.4s, v18.4h, #0
 ; CHECK-SD-NOFP16-NEXT:    mov v17.h[3], w8
-; CHECK-SD-NOFP16-NEXT:    sshll v2.4s, v16.4h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll v16.4s, v18.4h, #0
-; CHECK-SD-NOFP16-NEXT:    ldp q0, q18, [sp]
-; CHECK-SD-NOFP16-NEXT:    sshll v1.4s, v17.4h, #0
-; CHECK-SD-NOFP16-NEXT:    sshll v17.4s, v19.4h, #0
-; CHECK-SD-NOFP16-NEXT:    ldp q19, q3, [sp, #32]
-; CHECK-SD-NOFP16-NEXT:    bit v0.16b, v4.16b, v1.16b
-; CHECK-SD-NOFP16-NEXT:    mov v1.16b, v17.16b
-; CHECK-SD-NOFP16-NEXT:    bit v3.16b, v7.16b, v2.16b
-; CHECK-SD-NOFP16-NEXT:    mov v2.16b, v16.16b
-; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v5.16b, v18.16b
+; CHECK-SD-NOFP16-NEXT:    sshll v1.4s, v16.4h, #0
+; CHECK-SD-NOFP16-NEXT:    sshll v16.4s, v19.4h, #0
+; CHECK-SD-NOFP16-NEXT:    ldp q19, q18, [sp, #32]
+; CHECK-SD-NOFP16-NEXT:    sshll v0.4s, v17.4h, #0
+; CHECK-SD-NOFP16-NEXT:    ldp q3, q17, [sp]
 ; CHECK-SD-NOFP16-NEXT:    bsl v2.16b, v6.16b, v19.16b
+; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v4.16b, v3.16b
+; CHECK-SD-NOFP16-NEXT:    mov v3.16b, v1.16b
+; CHECK-SD-NOFP16-NEXT:    mov v1.16b, v16.16b
+; CHECK-SD-NOFP16-NEXT:    bsl v3.16b, v7.16b, v18.16b
+; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v5.16b, v17.16b
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: v16f16_i32:
