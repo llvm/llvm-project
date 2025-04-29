@@ -216,19 +216,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::TargetOp>) {
-      // Privatization clauses are supported, except on some situations, so we
-      // need to check here whether any of these unsupported cases are being
-      // translated.
-      if (std::optional<ArrayAttr> privateSyms = op.getPrivateSyms()) {
-        for (Attribute privatizerNameAttr : *privateSyms) {
-          omp::PrivateClauseOp privatizer = findPrivatizer(
-              op.getOperation(), cast<SymbolRefAttr>(privatizerNameAttr));
-
-          if (privatizer.getDataSharingType() ==
-              omp::DataSharingClauseType::FirstPrivate)
-            result = todo("firstprivate");
-        }
-      }
+      // Privatization is supported only for included target tasks.
+      if (!op.getPrivateVars().empty() && op.getNowait())
+        result = todo("privatization for deferred target tasks");
     } else {
       if (!op.getPrivateVars().empty() || op.getPrivateSyms())
         result = todo("privatization");
@@ -1487,6 +1477,7 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   assert(allocaTerminator->getNumSuccessors() == 1 &&
          "This is an unconditional branch created by splitBB");
 
+  llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   unsigned int allocaAS =
@@ -1513,12 +1504,12 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   return afterAllocas;
 }
 
-static LogicalResult
-copyFirstPrivateVars(llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation,
-                     SmallVectorImpl<mlir::Value> &mlirPrivateVars,
-                     ArrayRef<llvm::Value *> llvmPrivateVars,
-                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls) {
+static LogicalResult copyFirstPrivateVars(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
+    ArrayRef<llvm::Value *> llvmPrivateVars,
+    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
       llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
@@ -1542,7 +1533,8 @@ copyFirstPrivateVars(llvm::IRBuilderBase &builder,
     Region &copyRegion = decl.getCopyRegion();
 
     // map copyRegion rhs arg
-    llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
+    llvm::Value *nonPrivateVar = findAssociatedValue(
+        mlirVar, builder, moduleTranslation, mappedPrivateVars);
     assert(nonPrivateVar);
     moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
@@ -5127,6 +5119,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                                     &mappedPrivateVars),
                     *targetOp)
             .failed())
+      return llvm::make_error<PreviouslyReportedError>();
+
+    if (failed(copyFirstPrivateVars(
+            builder, moduleTranslation, privateVarsInfo.mlirVars,
+            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
+            &mappedPrivateVars)))
       return llvm::make_error<PreviouslyReportedError>();
 
     SmallVector<Region *> privateCleanupRegions;
