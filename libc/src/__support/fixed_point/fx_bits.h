@@ -15,6 +15,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 
@@ -199,6 +200,28 @@ template <typename T, typename XType>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
 bitsfx(T f) {
   return cpp::bit_cast<XType, T>(f);
+}
+
+// divide the two fixed-point types and return an integer result
+template <typename T, typename XType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
+idiv(T x, T y) {
+  using FXBits = FXBits<T>;
+  using FXRep = FXRep<T>;
+  using CompType = typename FXRep::CompType;
+
+  // If the value of the second operand of the / operator is zero, the
+  // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+  LIBC_CRASH_ON_VALUE(y, FXRep::ZERO());
+
+  CompType x_comp = static_cast<CompType>(FXBits(x).get_bits());
+  CompType y_comp = static_cast<CompType>(FXBits(y).get_bits());
+
+  // If an integer result of one of these functions overflows, the behavior is
+  // undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+  CompType result = x_comp / y_comp;
+
+  return static_cast<XType>(result);
 }
 
 } // namespace fixed_point

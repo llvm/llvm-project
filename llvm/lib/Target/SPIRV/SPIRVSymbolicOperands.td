@@ -1690,6 +1690,7 @@ defm InBoundsAccessChain : OpcodeOperand<66>;
 defm InBoundsPtrAccessChain : OpcodeOperand<70>;
 defm PtrCastToGeneric : OpcodeOperand<121>;
 defm GenericCastToPtr : OpcodeOperand<122>;
+defm GenericCastToPtrExplicit : OpcodeOperand<123>;
 defm Bitcast : OpcodeOperand<124>;
 defm ConvertPtrToU : OpcodeOperand<117>;
 defm ConvertUToPtr : OpcodeOperand<120>;

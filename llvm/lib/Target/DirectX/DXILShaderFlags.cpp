@@ -32,6 +32,35 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static bool hasUAVsAtEveryStage(DXILResourceMap &DRM,
+                                const ModuleMetadataInfo &MMDI) {
+  if (DRM.uavs().empty())
+    return false;
+
+  switch (MMDI.ShaderProfile) {
+  default:
+    return false;
+  case Triple::EnvironmentType::Compute:
+  case Triple::EnvironmentType::Pixel:
+    return false;
+  case Triple::EnvironmentType::Vertex:
+  case Triple::EnvironmentType::Geometry:
+  case Triple::EnvironmentType::Hull:
+  case Triple::EnvironmentType::Domain:
+    return true;
+  case Triple::EnvironmentType::Library:
+  case Triple::EnvironmentType::RayGeneration:
+  case Triple::EnvironmentType::Intersection:
+  case Triple::EnvironmentType::AnyHit:
+  case Triple::EnvironmentType::ClosestHit:
+  case Triple::EnvironmentType::Miss:
+  case Triple::EnvironmentType::Callable:
+  case Triple::EnvironmentType::Mesh:
+  case Triple::EnvironmentType::Amplification:
+    return MMDI.ValidatorVersion < VersionTuple(1, 8);
+  }
+}
+
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
   // case Intrinsic::dx_wave_getlanecount:
@@ -132,9 +161,10 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
 
-      // Set ResMayNotAlias if DXIL version >= 1.8 and function uses UAVs
+      // Set ResMayNotAlias if DXIL validator version >= 1.8 and the function
+      // uses UAVs
       if (!CSF.ResMayNotAlias && CanSetResMayNotAlias &&
-          MMDI.DXILVersion >= VersionTuple(1, 8) && RTI.isUAV())
+          MMDI.ValidatorVersion >= VersionTuple(1, 8) && RTI.isUAV())
         CSF.ResMayNotAlias = true;
 
       switch (RTI.getResourceKind()) {
@@ -208,15 +238,15 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         continue;
       }
 
-      // Set ResMayNotAlias to true if DXIL version < 1.8 and there are UAVs
-      // present globally.
-      if (CanSetResMayNotAlias && MMDI.DXILVersion < VersionTuple(1, 8))
+      // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
+      // are UAVs present globally.
+      if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
         SCCSF.ResMayNotAlias = !DRM.uavs().empty();
 
       // Set UseNativeLowPrecision using dx.nativelowprec module metadata
       if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
               M.getModuleFlag("dx.nativelowprec")))
-        if (MMDI.DXILVersion >= VersionTuple(1, 2) &&
+        if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
             NativeLowPrec->getValue() != 0)
           SCCSF.UseNativeLowPrecision = true;
 
@@ -259,12 +289,14 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;
   for (auto &UAV : DRM.uavs())
-    if (MMDI.DXILVersion < VersionTuple(1, 6))
+    if (MMDI.ValidatorVersion < VersionTuple(1, 6))
       NumUAVs++;
-    else // MMDI.DXILVersion >= VersionTuple(1, 6)
+    else // MMDI.ValidatorVersion >= VersionTuple(1, 6)
       NumUAVs += UAV.getBinding().Size;
   if (NumUAVs > 8)
     CombinedSFMask.Max64UAVs = true;
+
+  CombinedSFMask.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -337,7 +369,8 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  DXILResourceMap &DRM = getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+  DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   const ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
