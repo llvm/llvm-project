@@ -381,7 +381,8 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 
     auto loc = op.getLoc();
 
-    // a vector of 3 elements should be returned, representing M, K, N respectively.
+    // a vector of 3 elements should be returned, representing M, K, N
+    // respectively.
     auto maybeTargetShape = getTargetShape(options, op);
     if (!maybeTargetShape || maybeTargetShape->size() != 3)
       return failure();
