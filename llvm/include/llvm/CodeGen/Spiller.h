@@ -23,7 +23,6 @@ class LiveIntervals;
 class LiveStacks;
 class MachineDominatorTree;
 class MachineBlockFrequencyInfo;
-class AllocationOrder;
 
 /// Spiller interface.
 ///
@@ -36,7 +35,7 @@ public:
   virtual ~Spiller() = 0;
 
   /// spill - Spill the LRE.getParent() live interval.
-  virtual void spill(LiveRangeEdit &LRE, AllocationOrder *Order = nullptr) = 0;
+  virtual void spill(LiveRangeEdit &LRE) = 0;
 
   /// Return the registers that were spilled.
   virtual ArrayRef<Register> getSpilledRegs() = 0;
@@ -59,8 +58,7 @@ public:
 /// of deferring though VirtRegMap.
 Spiller *createInlineSpiller(const Spiller::RequiredAnalyses &Analyses,
                              MachineFunction &MF, VirtRegMap &VRM,
-                             VirtRegAuxInfo &VRAI,
-                             LiveRegMatrix *Matrix = nullptr);
+                             VirtRegAuxInfo &VRAI);
 
 } // end namespace llvm
 
