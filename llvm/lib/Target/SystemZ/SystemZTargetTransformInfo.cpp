@@ -495,7 +495,8 @@ static bool isFreeEltLoad(Value *Op) {
 
 InstructionCost SystemZTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
@@ -517,7 +518,7 @@ InstructionCost SystemZTTIImpl::getScalarizationOverhead(
   }
 
   Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                          CostKind, VL);
+                                          CostKind, ForPoisonSrc, VL);
   return Cost;
 }
 
