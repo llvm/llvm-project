@@ -2120,11 +2120,16 @@ def : Pat<(XLenVT (add GPR:$rs1, immop_oneuse<AddiPair>:$rs2)),
           (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                 (AddiPairImmSmall imm:$rs2))>;
 
+def negImm : ComplexPattern<i64, 1, "selectNegImm", [], [], 0>;
+
 let Predicates = [IsRV64] in {
 // Select W instructions if only the lower 32-bits of the result are used.
 def : Pat<(binop_allwusers<add> GPR:$rs1, immop_oneuse<AddiPair>:$rs2),
           (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                  (AddiPairImmSmall imm:$rs2))>;
+
+// Select SUB if the negated constant is cheaper to materialize.
+def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 }
 
 //===----------------------------------------------------------------------===//
