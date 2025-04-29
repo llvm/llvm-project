@@ -57,7 +57,8 @@ struct TestXeGPUUnrollingPatterns
         }
 
         if (auto layout = tdescTy.getLayoutAttr()) {
-          if (auto inst_data = layout.getInstData())
+          auto inst_data = layout.getInstData();
+          if (inst_data && layout.isSgLayout())
             return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
                                         inst_data.asArrayRef().end());
         }
