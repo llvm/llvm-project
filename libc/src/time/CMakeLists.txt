@@ -29,7 +29,6 @@ add_object_library(
     libc.hdr.types.time_t
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -43,7 +42,6 @@ add_entrypoint_object(
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -57,7 +55,6 @@ add_entrypoint_object(
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -139,7 +136,6 @@ add_entrypoint_object(
     libc.include.time
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -153,7 +149,6 @@ add_entrypoint_object(
     libc.include.time
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -167,10 +162,8 @@ add_entrypoint_object(
     .time_constants
     libc.include.time
     libc.src.errno.errno
-    libc.src.stdio.fopen
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.fopen
 )
 
 add_subdirectory(strftime_core) #TODO: Move to top
