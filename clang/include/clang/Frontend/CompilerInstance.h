@@ -839,16 +839,23 @@ public:
   class ThreadSafeCloneConfig {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
     DiagnosticConsumer &DiagConsumer;
+    std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
   public:
-    ThreadSafeCloneConfig(IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                          DiagnosticConsumer &DiagConsumer)
-        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer) {
+    ThreadSafeCloneConfig(
+        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+        DiagnosticConsumer &DiagConsumer,
+        std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector = nullptr)
+        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer),
+          ModuleDepCollector(std::move(ModuleDepCollector)) {
       assert(this->VFS && "Clone config requires non-null VFS");
     }
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVFS() const { return VFS; }
     DiagnosticConsumer &getDiagConsumer() const { return DiagConsumer; }
+    std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const {
+      return ModuleDepCollector;
+    }
   };
 
 private:
