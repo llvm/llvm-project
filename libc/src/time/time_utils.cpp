@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "config/app.h"
 #include "src/time/time_utils.h"
 #include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
 #include "src/__support/common.h"
@@ -124,7 +125,7 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 }
 
 char *get_env_var(const char *input) {
-  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::env_ptr);
+  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
 
   if (input == nullptr || env_ptr == nullptr)
     return nullptr;
