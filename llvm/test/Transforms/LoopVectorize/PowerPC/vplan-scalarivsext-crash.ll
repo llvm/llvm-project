@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -S < %s > /dev/null
+; RUN: opt -passes=loop-vectorize -disable-output -S < %s
 ; REQUIRES: asserts
 
 target datalayout = "E-m:a-p:32:32-Fi32-i64:64-n32"
