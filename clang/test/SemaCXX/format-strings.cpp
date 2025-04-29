@@ -1,14 +1,9 @@
+// #scratch_space
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks -std=c++20 %s
-
-#if __cplusplus >= 202000l
-// expected-note@-6{{format string computed from non-literal expression}}
-// ^^^ there will be a <scratch space> SourceLocation caused by the
-// test_constexpr_string test, that -verify treats as if it showed up at
-// line 1 of this file.
-#endif
+// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks -std=c++23 %s
 
 #include <stdarg.h>
 
@@ -310,5 +305,26 @@ constexpr my_string const_string() {
 void test_constexpr_string() {
   printf(const_string().c_str(), "hello", 123); // no-warning
   printf(const_string().c_str(), 123, 456); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+  // expected-note@#scratch_space {{format string computed from non-literal expression}}
+}
+#endif
+
+#if __cplusplus >= 202300L
+constexpr const char *consteval_str() {
+  if consteval {
+    return "%s";
+  } else {
+    return "%d"; // expected-note 2{{format string is defined here}}
+  }
+}
+
+constexpr const char *consteval_str_global = consteval_str();
+
+void test_consteval_str() {
+  printf(consteval_str(), 789); // no-warning
+  printf(consteval_str(), "hello"); // expected-warning {{format specifies type 'int' but the argument has type 'const char *'}}
+
+  printf(consteval_str_global, 1234); // no-warning
+  printf(consteval_str_global, "hello"); // expected-warning {{format specifies type 'int' but the argument has type 'const char *'}}
 }
 #endif

@@ -1,12 +1,8 @@
+// #scratch_space
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
-
-// expected-note@-5{{format string computed from non-literal expression}}
-// ^^^ there will be a <scratch space> SourceLocation caused by the
-// test_consteval_init_array test, that -verify treats as if it showed up at
-// line 1 of this file.
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -913,4 +909,5 @@ void test_consteval_init_array(void) {
   const char buf[] = {'%', 55 * 2 + 5, '\n', 0};
   printf(buf, "hello"); // no-warning
   printf(buf, 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+  // expected-note@#scratch_space {{format string computed from non-literal expression}}
 }

@@ -407,7 +407,7 @@ related warnings within the method body.
     example.c:6:17: warning: format specifies type 'char *' but the argument has type 'int' [-Wformat]
         6 |     printf(format, 123);
           |            ~~~~~~  ^~~
-    <scratch space>:1:4: note: format string resolved to a constant string
+    <scratch space>:1:4: note: format string computed from non-literal expression
         1 | "hello %s"
           |        ^~
           |        %d
