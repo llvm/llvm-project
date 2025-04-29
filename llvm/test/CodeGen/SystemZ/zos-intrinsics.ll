@@ -31,7 +31,7 @@ declare fp128 @llvm.exp2.f128(fp128)
 
 ; Check the calls in the ADA.
 ; CHECK: stdin#C CSECT
-; CHECK: C_WSA64 CATTR ALIGN(4),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdin#S)
+; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdin#S)
 ; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 
 ; Check that there is no call to sqrt.

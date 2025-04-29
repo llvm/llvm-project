@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/GOFF.h"
+#include <cstdint>
 
 namespace llvm {
 namespace GOFF {
@@ -58,6 +59,7 @@ struct EDAttr {
   GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial;
   GOFF::ESDReserveQwords ReservedQwords = GOFF::ESD_RQ_0;
   GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword;
+  uint8_t FillByteValue = 0;
 };
 
 // Attributes for LD symbols.

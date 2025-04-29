@@ -16,9 +16,11 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
                       GOFF::ESDAlignment Alignment,
                       GOFF::ESDLoadingBehavior LoadBehavior,
                       GOFF::ESDExecutable Executable, bool IsReadOnly,
-                      uint32_t SortKey, StringRef PartName) {
+                      uint32_t SortKey, uint8_t FillByteValue,
+                      StringRef PartName) {
   OS << Name << " CATTR ";
-  OS << "ALIGN(" << static_cast<unsigned>(Alignment) << ")";
+  OS << "ALIGN(" << static_cast<unsigned>(Alignment) << "),"
+     << "FILL(" << static_cast<unsigned>(FillByteValue) << ")";
   switch (LoadBehavior) {
   case GOFF::ESD_LB_Deferred:
     OS << ",DEFLOAD";
@@ -112,7 +114,8 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     if (!Emitted) {
       emitCATTR(OS, Name, EDAttributes.Rmode, EDAttributes.Alignment,
                 EDAttributes.LoadBehavior, GOFF::ESD_EXE_Unspecified,
-                EDAttributes.IsReadOnly, 0, StringRef());
+                EDAttributes.IsReadOnly, 0, EDAttributes.FillByteValue,
+                StringRef());
       Emitted = true;
     } else
       OS << Name << " CATTR\n";
@@ -125,7 +128,7 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
       emitCATTR(OS, ED->getName(), ED->getEDAttributes().Rmode,
                 ED->EDAttributes.Alignment, ED->EDAttributes.LoadBehavior,
                 PRAttributes.Executable, ED->EDAttributes.IsReadOnly,
-                PRAttributes.SortKey, Name);
+                PRAttributes.SortKey, ED->EDAttributes.FillByteValue, Name);
       emitXATTR(OS, Name, PRAttributes.Linkage, PRAttributes.Executable,
                 PRAttributes.BindingScope);
       ED->Emitted = true;
