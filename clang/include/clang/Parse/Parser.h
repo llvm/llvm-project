@@ -51,6 +51,19 @@ namespace clang {
   struct OMPTraitSet;
   class OMPTraitInfo;
 
+enum class AnnotatedNameKind {
+  /// Annotation has failed and emitted an error.
+  Error,
+  /// The identifier is a tentatively-declared name.
+  TentativeDecl,
+  /// The identifier is a template name. FIXME: Add an annotation for that.
+  TemplateName,
+  /// The identifier can't be resolved.
+  Unresolved,
+  /// Annotation was successful.
+  Success
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -940,19 +953,6 @@ public:
   }
 
 private:
-  enum AnnotatedNameKind {
-    /// Annotation has failed and emitted an error.
-    ANK_Error,
-    /// The identifier is a tentatively-declared name.
-    ANK_TentativeDecl,
-    /// The identifier is a template name. FIXME: Add an annotation for that.
-    ANK_TemplateName,
-    /// The identifier can't be resolved.
-    ANK_Unresolved,
-    /// Annotation was successful.
-    ANK_Success
-  };
-
   AnnotatedNameKind
   TryAnnotateName(CorrectionCandidateCallback *CCC = nullptr,
                   ImplicitTypenameContext AllowImplicitTypename =
