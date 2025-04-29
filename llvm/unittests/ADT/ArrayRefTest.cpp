@@ -255,6 +255,26 @@ TEST(ArrayRefTest, ArrayRefFromStdArray) {
   }
 }
 
+TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
+  std::array<int, 5> A1{{42, -5, 0, 1000000, -1000000}};
+  ArrayRef<int> A2 = make_range(A1.begin(), A1.end());
+
+  EXPECT_EQ(A1.size(), A2.size());
+  for (std::size_t i = 0; i < A1.size(); ++i) {
+    EXPECT_EQ(A1[i], A2[i]);
+  }
+}
+
+TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
+  std::array<const int, 5> A1{{42, -5, 0, 1000000, -1000000}};
+  ArrayRef<const int> A2 = make_range(A1.begin(), A1.end());
+
+  EXPECT_EQ(A1.size(), A2.size());
+  for (std::size_t i = 0; i < A1.size(); ++i) {
+    EXPECT_EQ(A1[i], A2[i]);
+  }
+}
+
 static_assert(std::is_trivially_copyable_v<ArrayRef<int>>,
               "trivially copyable");
 
