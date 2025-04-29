@@ -153,7 +153,7 @@ namespace llvm {
     /// to ensure that this is only used for iterator ranges of random access
     /// iterators that can be converted.
     template <typename U,
-              typename = std::enable_if_t<
+              typename = std::enable_if<
                   std::is_base_of<
                       std::random_access_iterator_tag,
                       typename std::iterator_traits<
