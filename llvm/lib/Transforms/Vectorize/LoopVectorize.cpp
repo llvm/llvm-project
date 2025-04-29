@@ -402,6 +402,13 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<unsigned>
+    ChangeVectToCustomVF("change-vectorize-to-custom-VF", cl::init(0),
+                         cl::Hidden, cl::desc("Change vectorize to custom VF"));
+static cl::opt<unsigned>
+    ChangeVectToCustomIC("change-vectorize-to-custom-IC", cl::init(0),
+                         cl::Hidden, cl::desc("Change vectorize to custom IC"));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -6692,7 +6699,18 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   CM.collectValuesToIgnore();
   CM.collectElementTypesForWidening();
 
-  FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
+  // Change User(VF/IC) to ChangeVect(VF/IC) if defined and User(VF/IC) is 0,
+  // used in computeMaxVF
+  auto CV2CVF = UserVF;
+  auto CV2CIC = UserIC;
+  if (ChangeVectToCustomVF > 0 && UserVF.isZero())
+    CV2CVF =
+        ElementCount::get(ChangeVectToCustomVF < 2 ? 2 : ChangeVectToCustomVF,
+                          UserVF.isScalable());
+  if (ChangeVectToCustomIC > 0 && UserIC == 0)
+    CV2CIC = ChangeVectToCustomIC;
+
+  FixedScalableVFPair MaxFactors = CM.computeMaxVF(CV2CVF, CV2CIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
 
@@ -10254,6 +10272,26 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool DisableRuntimeUnroll = false;
   MDNode *OrigLoopID = L->getLoopID();
   {
+    if (ChangeVectToCustomIC != 0 || ChangeVectToCustomVF != 0) {
+      LLVM_DEBUG(dbgs() << "LV: ChangeVectorizedToCustom (CustomVF:"
+                        << ChangeVectToCustomVF
+                        << ", CustomIC:" << ChangeVectToCustomIC
+                        << ", UserVF:" << UserVF << ", UserIC:" << UserIC
+                        << ") on (VF:" << VF.Width << ", IC:" << IC << "): ");
+      auto CVF = ElementCount::get(ChangeVectToCustomVF, VF.Width.isScalable());
+      if (ChangeVectToCustomVF == 0)
+        CVF = VF.Width;
+      std::optional<VectorizationFactor> MaybeVF = LVP.getProfitableVF(CVF);
+      if (MaybeVF) {
+        VF = *MaybeVF;
+        if (ChangeVectToCustomIC > 0)
+          IC = ChangeVectToCustomIC;
+        LLVM_DEBUG(dbgs() << "APPLIED (VF:" << VF.Width << ", IC:" << IC
+                          << ")\n");
+      } else
+        LLVM_DEBUG(dbgs() << "INVALID\n");
+    }
+
     using namespace ore;
     if (!VectorizeLoop) {
       assert(IC > 1 && "interleave count should not be 1 or 0");
