@@ -260,9 +260,8 @@ TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
   ArrayRef<int> A2 = make_range(A1.begin(), A1.end());
 
   EXPECT_EQ(A1.size(), A2.size());
-  for (std::size_t i = 0; i < A1.size(); ++i) {
+  for (std::size_t i = 0; i < A1.size(); ++i)
     EXPECT_EQ(A1[i], A2[i]);
-  }
 }
 
 TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
@@ -270,9 +269,8 @@ TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
   ArrayRef<const int> A2 = make_range(A1.begin(), A1.end());
 
   EXPECT_EQ(A1.size(), A2.size());
-  for (std::size_t i = 0; i < A1.size(); ++i) {
+  for (std::size_t i = 0; i < A1.size(); ++i)
     EXPECT_EQ(A1[i], A2[i]);
-  }
 }
 
 static_assert(std::is_trivially_copyable_v<ArrayRef<int>>,
