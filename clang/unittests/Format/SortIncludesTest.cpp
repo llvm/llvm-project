@@ -1485,6 +1485,26 @@ TEST_F(SortIncludesTest, BlockCommentedOutIncludes) {
   verifyFormat(Code, sort(Code, "input.cpp", 0));
 }
 
+TEST_F(SortIncludesTest, IncludeSortIgnoreExtension) {
+  verifyFormat("#include <a-util.h>\n"
+               "#include <a.h>\n"
+               "#include <a.inc>",
+               sort("#include <a.inc>\n"
+                    "#include <a-util.h>\n"
+                    "#include <a.h>",
+                    "input.h", 1));
+
+  Style.IncludeSortIgnoreExtension = true;
+
+  verifyFormat("#include <a.h>\n"
+               "#include <a.inc>\n"
+               "#include <a-util.h>",
+               sort("#include <a.inc>\n"
+                    "#include <a-util.h>\n"
+                    "#include <a.h>",
+                    "input.h", 1));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
