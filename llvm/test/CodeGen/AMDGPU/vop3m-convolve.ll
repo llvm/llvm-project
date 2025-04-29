@@ -6,13 +6,13 @@ define amdgpu_ps void @test_convolve.f32_iu4_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_iu4 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_iu4 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -24,13 +24,13 @@ define amdgpu_ps void @test_convolve.f16_iu4_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_f16_iu4 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_f16_iu4 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x half> %dst, ptr addrspace(1) %out
@@ -44,13 +44,13 @@ define amdgpu_ps void @test_convolve.f16_iu4_3x3_4x4(ptr addrspace(1) %out, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -66,13 +66,13 @@ define amdgpu_ps void @test_convolve.f16_iu4_3x3_8x4(ptr addrspace(1) %out, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -84,13 +84,13 @@ define amdgpu_ps void @test_convolve.i32_iu4_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_i32_iu4 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_i32_iu4 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.3x3.v4i32.v4i32.v18i32.v3i32(<4 x i32> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x i32> %dst, ptr addrspace(1) %out
@@ -102,13 +102,13 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_3x3_4x2(ptr addrspace(1) %out, <
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32i32_iu4 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.3x3.v4f32.v4i32.v18i32.v3i32(<4 x i32> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -120,13 +120,13 @@ define amdgpu_ps void @test_convolve.f32_iu8_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -138,13 +138,13 @@ define amdgpu_ps void @test_convolve.f16_iu8_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_f16_iu8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_f16_iu8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x half> %dst, ptr addrspace(1) %out
@@ -158,13 +158,13 @@ define amdgpu_ps void @test_convolve.f16_iu8_3x3_4x4(ptr addrspace(1) %out, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -180,13 +180,13 @@ define amdgpu_ps void @test_convolve.f16_iu8_3x3_8x4(ptr addrspace(1) %out, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -198,13 +198,13 @@ define amdgpu_ps void @test_convolve.i32_iu8_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_i32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_i32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.3x3.v4i32.v4i32.v18i32.v3i32(<4 x i32> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x i32> %dst, ptr addrspace(1) %out
@@ -216,13 +216,13 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_3x3_4x2(ptr addrspace(1) %out, <
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32i32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.3x3.v4f32.v4i32.v18i32.v3i32(<4 x i32> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -234,13 +234,13 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -252,13 +252,13 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x half> %dst, ptr addrspace(1) %out
@@ -272,13 +272,13 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_3x3_4x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -294,13 +294,13 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_3x3_8x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -312,13 +312,13 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -330,13 +330,13 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x half> %dst, ptr addrspace(1) %out
@@ -350,13 +350,13 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_3x3_4x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -372,13 +372,13 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_3x3_8x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -390,13 +390,13 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -408,13 +408,13 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x half> %dst, ptr addrspace(1) %out
@@ -428,13 +428,13 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_3x3_4x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -450,13 +450,13 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_3x3_8x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -468,13 +468,13 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -486,13 +486,13 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_3x3_4x2(ptr addrspace(1) %out, 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x half> %dst, ptr addrspace(1) %out
@@ -506,13 +506,13 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_3x3_4x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -528,13 +528,13 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_3x3_8x4(ptr addrspace(1) %out, 
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -546,13 +546,13 @@ define amdgpu_ps void @test_convolve.f32_f16_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_f16 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_f16 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.3x3.v4f32.v4f32.v36f16.v6f16(<4 x float> %acc_in, <36 x half> %weights, <6 x half> %tensor_col_center, <6 x half> %tensor_col_left, <6 x half> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -564,13 +564,13 @@ define amdgpu_ps void @test_convolve.f16_f16_3x3_4x2(ptr addrspace(1) %out, <4 x
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_f16_f16 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_f16_f16 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.3x3.v4f16.v4f16.v36f16.v6f16(<4 x half> %acc_in, <36 x half> %weights, <6 x half> %tensor_col_center, <6 x half> %tensor_col_left, <6 x half> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x half> %dst, ptr addrspace(1) %out
@@ -584,13 +584,13 @@ define amdgpu_ps void @test_convolve.f16_f16_3x3_4x4(ptr addrspace(1) %out, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.3x3.v8f16.v8f16.v18f16.v6f16(<8 x half> %acc_in, <18 x half> %weights, <6 x half> %tensor_col_center, <6 x half> %tensor_col_left, <6 x half> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -606,13 +606,13 @@ define amdgpu_ps void @test_convolve.f16_f16_3x3_8x4(ptr addrspace(1) %out, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.3x3.v8f16.v8f16.v10f16.v8f16(<8 x half> %acc_in, <10 x half> %weights, <8 x half> %tensor_col_center, <8 x half> %tensor_col_left, <8 x half> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x half> %dst, ptr addrspace(1) %out
@@ -624,13 +624,13 @@ define amdgpu_ps void @test_convolve.f32_bf16_3x3_4x2(ptr addrspace(1) %out, <4 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v35, v28
 ; GFX13-NEXT:    v_mov_b32_e32 v34, v27
-; GFX13-NEXT:    v_convolve_f32_bf16 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_f32_bf16 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.3x3.v4f32.v4f32.v36bf16.v6bf16(<4 x float> %acc_in, <36 x bfloat> %weights, <6 x bfloat> %tensor_col_center, <6 x bfloat> %tensor_col_left, <6 x bfloat> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x float> %dst, ptr addrspace(1) %out
@@ -642,13 +642,13 @@ define amdgpu_ps void @test_convolve.bf16_bf16_3x3_4x2(ptr addrspace(1) %out, <4
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v34, v27 :: v_dual_mov_b32 v33, v26
 ; GFX13-NEXT:    v_mov_b32_e32 v32, v25
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:21], v[22:24], v[32:34], v[28:30] aux_data:11 clamp
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.3x3.v4bf16.v4bf16.v36bf16.v6bf16(<4 x bfloat> %acc_in, <36 x bfloat> %weights, <6 x bfloat> %tensor_col_center, <6 x bfloat> %tensor_col_left, <6 x bfloat> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
-              i32 3,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_3x3 ) == (3 << 0 | 1 << 3)
+              i32 11,
               ;   CLAMP
               i1 1)
   store <4 x bfloat> %dst, ptr addrspace(1) %out
@@ -662,13 +662,13 @@ define amdgpu_ps void @test_convolve.bf16_bf16_3x3_4x4(ptr addrspace(1) %out, <8
 ; GFX13-NEXT:    v_dual_mov_b32 v22, v21 :: v_dual_mov_b32 v27, v16
 ; GFX13-NEXT:    v_mov_b32_e32 v28, v17
 ; GFX13-NEXT:    v_mov_b32_e32 v26, v15
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:14], v[26:28], v[18:20], v[22:24] aux_data:10 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.3x3.v8bf16.v8bf16.v18bf16.v6bf16(<8 x bfloat> %acc_in, <18 x bfloat> %weights, <6 x bfloat> %tensor_col_center, <6 x bfloat> %tensor_col_left, <6 x bfloat> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
-              i32 2,
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_3x3 ) == (2 << 0 | 1 << 3)
+              i32 10,
               ;   CLAMP
               i1 1)
   store <8 x bfloat> %dst, ptr addrspace(1) %out
@@ -684,13 +684,13 @@ define amdgpu_ps void @test_convolve.bf16_bf16_3x3_8x4(ptr addrspace(1) %out, <8
 ; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v14 :: v_dual_mov_b32 v14, v13
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:10], v[12:15], v[16:19], v[20:23] aux_data:8 clamp
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.3x3.v8bf16.v8bf16.v10bf16.v8bf16(<8 x bfloat> %acc_in, <10 x bfloat> %weights, <8 x bfloat> %tensor_col_center, <8 x bfloat> %tensor_col_left, <8 x bfloat> %tensor_col_right,
-              ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
-              i32 0,
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_3x3 ) == (0 << 0 | 1 << 3)
+              i32 8,
               ;   CLAMP
               i1 1)
   store <8 x bfloat> %dst, ptr addrspace(1) %out
@@ -701,11 +701,11 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu4_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu4 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -717,11 +717,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -733,11 +733,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -753,11 +753,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_1(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -769,11 +769,11 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu4_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu4 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -785,11 +785,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_1(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu4_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu4 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -801,11 +801,11 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu4 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -817,11 +817,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -833,11 +833,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -853,11 +853,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_2(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -869,11 +869,11 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu4 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -885,11 +885,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_2(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu4 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -901,11 +901,11 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu4_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu4 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -917,11 +917,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:3], v[2:3], v[4:9], v10, v11, v12 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -933,11 +933,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -949,11 +949,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -965,11 +965,11 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu4_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu4 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -981,11 +981,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_3(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu4_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu4 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -997,11 +997,11 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu4 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v8i32.i32(<4 x float> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1013,11 +1013,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v8i32.i32(<4 x half> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1029,11 +1029,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v4i32.i32(<8 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -1045,11 +1045,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu4 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
@@ -1061,11 +1061,11 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu4 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v8i32.i32(<4 x i32> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1077,11 +1077,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_4(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu4 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v8i32.i32(<4 x i32> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1093,11 +1093,11 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu8 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1109,11 +1109,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1125,11 +1125,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -1145,11 +1145,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_1(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -1161,11 +1161,11 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu8 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1177,11 +1177,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_1(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu8 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1193,11 +1193,11 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu8 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1209,11 +1209,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1225,11 +1225,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -1245,11 +1245,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_2(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -1261,11 +1261,11 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu8 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1277,11 +1277,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_2(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu8 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1293,11 +1293,11 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu8 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1309,11 +1309,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:3], v[2:3], v[4:9], v10, v11, v12 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1325,11 +1325,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -1341,11 +1341,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -1357,11 +1357,11 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu8 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1373,11 +1373,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_3(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu8 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1389,11 +1389,11 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_iu8 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v8i32.i32(<4 x float> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1405,11 +1405,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v8i32.i32(<4 x half> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1421,11 +1421,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -1437,11 +1437,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_iu8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
@@ -1453,11 +1453,11 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.i32_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_i32_iu8 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v8i32.i32(<4 x i32> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1469,11 +1469,11 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_4(ptr addrspace(1) 
 ; GFX13-LABEL: test_convolve.f32i32_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32i32_iu8 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v8i32.i32(<4 x i32> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1485,11 +1485,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_fp8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1501,11 +1501,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1517,11 +1517,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -1537,11 +1537,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_1(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -1553,11 +1553,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1569,11 +1569,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1585,11 +1585,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -1605,11 +1605,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_2(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -1621,11 +1621,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_fp8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1637,11 +1637,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:9], v10, v11, v12 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1653,11 +1653,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -1669,11 +1669,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -1685,11 +1685,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v8i32.i32(<4 x float> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1701,11 +1701,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v8i32.i32(<4 x half> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1717,11 +1717,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -1733,11 +1733,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
@@ -1749,11 +1749,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_bf8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1765,11 +1765,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -1781,11 +1781,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -1801,11 +1801,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_1(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -1817,11 +1817,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1833,11 +1833,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -1849,11 +1849,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -1869,11 +1869,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_2(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -1885,11 +1885,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_bf8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1901,11 +1901,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:3], v[2:3], v[4:9], v10, v11, v12 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -1917,11 +1917,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -1933,11 +1933,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -1949,11 +1949,11 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_fp8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v8i32.i32(<4 x float> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1965,11 +1965,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v8i32.i32(<4 x half> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -1981,11 +1981,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -1997,11 +1997,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
@@ -2013,11 +2013,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_fp8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2029,11 +2029,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2045,11 +2045,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -2065,11 +2065,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_1(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -2081,11 +2081,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2097,11 +2097,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2113,11 +2113,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -2133,11 +2133,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_2(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -2149,11 +2149,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_fp8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2165,11 +2165,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:3], v[2:3], v[4:9], v10, v11, v12 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2181,11 +2181,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -2197,11 +2197,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -2213,11 +2213,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v8i32.i32(<4 x float> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -2229,11 +2229,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v8i32.i32(<4 x half> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -2245,11 +2245,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -2261,11 +2261,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
@@ -2277,11 +2277,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_bf8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2293,11 +2293,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2309,11 +2309,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_1(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -2329,11 +2329,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_1(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -2345,11 +2345,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2361,11 +2361,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2377,11 +2377,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_2(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -2397,11 +2397,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_2(ptr addrspace(1)
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -2413,11 +2413,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_bf8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[2:5], v[2:5], v[6:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2429,11 +2429,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:3], v[2:3], v[4:9], v10, v11, v12 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2445,11 +2445,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -2461,11 +2461,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_3(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -2477,11 +2477,11 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f32_bf8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v8i32.i32(<4 x float> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -2493,11 +2493,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v8i32.i32(<4 x half> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -2509,11 +2509,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -2525,11 +2525,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_4(ptr addrspace(1)
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
@@ -2541,11 +2541,11 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_f16_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_f16 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2557,11 +2557,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v4f16.v2f16(<4 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2573,11 +2573,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_1(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v2f16(<8 x half> %acc_in, <2 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -2593,11 +2593,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_1(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> %tensor_2, <4 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -2609,11 +2609,11 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_f16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_f16 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v8f16.v2f16(<4 x float> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2625,11 +2625,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v8f16.v2f16(<4 x half> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2641,11 +2641,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_2(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v2f16(<8 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -2661,11 +2661,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_2(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> %tensor_2, <4 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -2677,11 +2677,11 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_f16_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_f16 v[2:5], v[2:5], v[6:13], v14, v15, v16 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v16f16.v2f16(<4 x float> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2693,11 +2693,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:3], v[2:3], v[4:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v16f16.v2f16(<4 x half> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2709,11 +2709,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v6f16.v2f16(<8 x half> %acc_in, <6 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -2725,11 +2725,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_3(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v4f16(<8 x half> %acc_in, <4 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> %tensor_2, <4 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -2741,11 +2741,11 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f32_f16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_f16 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v16f16.v2f16(<4 x float> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -2757,11 +2757,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v16f16.v2f16(<4 x half> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -2773,11 +2773,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v8f16.v2f16(<8 x half> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -2789,11 +2789,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_4(ptr addrspace(1) %ou
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f16_f16 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v4f16(<8 x half> %acc_in, <4 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> %tensor_2, <4 x half> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
@@ -2805,11 +2805,11 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_1(ptr addrspace(1) %o
 ; GFX13-LABEL: test_convolve.f32_bf16_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf16 v[2:5], v[2:5], v[6:7], v8 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v4bf16.v2bf16(<4 x float> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2821,11 +2821,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_1(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:5], v6 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v4bf16.v2bf16(<4 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
@@ -2837,11 +2837,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_1(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v6, v7 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v2bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
@@ -2857,11 +2857,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_1(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v6, v[8:9] clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> %tensor_2, <4 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
@@ -2873,11 +2873,11 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_2(ptr addrspace(1) %o
 ; GFX13-LABEL: test_convolve.f32_bf16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf16 v[2:5], v[2:5], v[6:9], v10, v11 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v8bf16.v2bf16(<4 x float> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2889,11 +2889,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_2(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:7], v8, v9 aux_data:4099 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v8bf16.v2bf16(<4 x bfloat> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
@@ -2905,11 +2905,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_2(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:7], v8, v9 aux_data:4098 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v2bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
@@ -2925,11 +2925,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_2(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v6, v[8:9], v[10:11] aux_data:4096 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> %tensor_2, <4 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
@@ -2941,11 +2941,11 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_3(ptr addrspace(1) %o
 ; GFX13-LABEL: test_convolve.f32_bf16_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf16 v[2:5], v[2:5], v[6:13], v14, v15, v16 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v16bf16.v2bf16(<4 x float> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2957,11 +2957,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_3(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:11], v12, v13, v14 aux_data:8195 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v16bf16.v2bf16(<4 x bfloat> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
@@ -2973,11 +2973,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_3(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:8], v9, v10, v11 aux_data:8194 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v6bf16.v2bf16(<8 x bfloat> %acc_in, <6 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
@@ -2989,11 +2989,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_3(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13] aux_data:8192 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v4bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> %tensor_2, <4 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
@@ -3005,11 +3005,11 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_4(ptr addrspace(1) %o
 ; GFX13-LABEL: test_convolve.f32_bf16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_f32_bf16 v[2:5], v[2:5], v[6:13], v14, v15, v16, v17 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v16bf16.v2bf16(<4 x float> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -3021,11 +3021,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_4(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:12291 clamp
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v16bf16.v2bf16(<4 x bfloat> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_4) == (3 << 0 | 0 << 3 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
@@ -3037,11 +3037,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_4(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:9], v10, v11, v12, v13 aux_data:12290 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v8bf16.v2bf16(<8 x bfloat> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (2 << 0 | 0 << 3 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
@@ -3053,11 +3053,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_4(ptr addrspace(1) %
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_convolve_bf16_bf16 v[2:5], v[2:5], v[6:7], v[8:9], v[10:11], v[12:13], v[14:15] aux_data:12288 clamp
-; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v4bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> %tensor_2, <4 x bfloat> %tensor_3,
-              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
+              ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_4) == (0 << 0 | 0 << 3 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
