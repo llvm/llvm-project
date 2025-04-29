@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "llvm/Support/JSON.h"
@@ -121,8 +122,8 @@ void RestartRequestHandler::operator()(
   // Stop the current process if necessary. The logic here is similar to
   // CommandObjectProcessLaunchOrAttach::StopProcessIfNecessary, except that
   // we don't ask the user for confirmation.
-  dap.debugger.SetAsync(false);
   if (process.IsValid()) {
+    ScopeSyncMode scope_sync_mode(dap.debugger);
     lldb::StateType state = process.GetState();
     if (state != lldb::eStateConnected) {
       process.Kill();
@@ -131,7 +132,6 @@ void RestartRequestHandler::operator()(
     // for threads of the process we are terminating.
     dap.thread_ids.clear();
   }
-  dap.debugger.SetAsync(true);
 
   // FIXME: Should we run 'preRunCommands'?
   // FIXME: Should we add a 'preRestartCommands'?
