@@ -754,10 +754,20 @@ LogicalResult LayoutAttrAssignment::assign(Operation *op) {
   if (llvm::all_of(op->getResultTypes(),
                    [](Type t) { return t.isIntOrIndexOrFloat(); }))
     return success();
+  // If the op has more than one result and at least one result is a tensor
+  // descriptor, exit. This case is not supported yet.
+  // TODO: Support this case.
+  if (op->getNumResults() > 1 && llvm::any_of(op->getResultTypes(), [](Type t) {
+        return isa<xegpu::TensorDescType>(t);
+      })) {
+    LLVM_DEBUG(DBGS() << "More than one result and at least one is a tensor "
+                         "descriptor. This case is not handled.\n");
+    return failure();
+  }
   // If the result is a tensor descriptor, attach the layout to the tensor
   // descriptor itself.
   if (auto tensorDescTy =
-          dyn_cast<xegpu::TensorDescType>(op->getResult(0).getType())) {
+          dyn_cast<xegpu::TensorDescType>(op->getResultTypes()[0])) {
     xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(op->getResult(0));
     if (!layoutInfo) {
       LLVM_DEBUG(DBGS() << "No layout for result of " << *op << "\n");
