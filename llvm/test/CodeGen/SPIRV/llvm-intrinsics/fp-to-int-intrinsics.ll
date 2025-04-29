@@ -22,8 +22,8 @@
 define spir_kernel void @testfunction_float_to_signed_i8(float %input) {
 entry:
    %ptr = alloca i8
-   %0 = call i8 @llvm.fptosi.sat.i8.f32(float %input)
-   store i8 %0, i8* %ptr
+   %signed_int = call i8 @llvm.fptosi.sat.i8.f32(float %input)
+   store i8 %signed_int, i8* %ptr
    ret void
 
 }
@@ -34,8 +34,8 @@ declare i8 @llvm.fptosi.sat.i8.f32(float)
 define spir_kernel void @testfunction_float_to_signed_i16(float %input) {
 entry:
    %ptr = alloca i16
-   %0 = call i16 @llvm.fptosi.sat.i16.f32(float %input)
-   store i16 %0, i16* %ptr
+   %signed_int = call i16 @llvm.fptosi.sat.i16.f32(float %input)
+   store i16 %signed_int, i16* %ptr
    ret void
 
 }
@@ -45,8 +45,8 @@ declare i16 @llvm.fptosi.sat.i16.f32(float)
 define spir_kernel void @testfunction_float_to_signed_i32(float %input) {
 entry:
    %ptr = alloca i32
-   %0 = call i32 @llvm.fptosi.sat.i32.f32(float %input)
-   store i32 %0, i32* %ptr
+   %signed_int = call i32 @llvm.fptosi.sat.i32.f32(float %input)
+   store i32 %signed_int, i32* %ptr
    ret void
 
 }
@@ -57,8 +57,8 @@ declare i32 @llvm.fptosi.sat.i32.f32(float)
 define spir_kernel void @testfunction_float_to_signed_i64(float %input) {
 entry:
    %ptr = alloca i64
-   %0 = call i64 @llvm.fptosi.sat.i64.f32(float %input)
-   store i64 %0, i64* %ptr
+   %signed_int = call i64 @llvm.fptosi.sat.i64.f32(float %input)
+   store i64 %signed_int, i64* %ptr
    ret void
 }
 declare i64 @llvm.fptosi.sat.i64.f32(float)
@@ -68,8 +68,8 @@ declare i64 @llvm.fptosi.sat.i64.f32(float)
 define spir_kernel void @testfunction_double_to_signed_i8(double %input) {
 entry:
    %ptr = alloca i8
-   %0 = call i8 @llvm.fptosi.sat.i8.f64(double %input)
-   store i8 %0, i8* %ptr
+   %signed_int = call i8 @llvm.fptosi.sat.i8.f64(double %input)
+   store i8 %signed_int, i8* %ptr
    ret void
 }
 declare i8 @llvm.fptosi.sat.i8.f64(double)
@@ -79,8 +79,8 @@ declare i8 @llvm.fptosi.sat.i8.f64(double)
 define spir_kernel void @testfunction_double_to_signed_i16(double %input) {
 entry:
    %ptr = alloca i16
-   %0 = call i16 @llvm.fptosi.sat.i16.f64(double %input)
-   store i16 %0, i16* %ptr
+   %signed_int = call i16 @llvm.fptosi.sat.i16.f64(double %input)
+   store i16 %signed_int, i16* %ptr
    ret void
 }
 declare i16 @llvm.fptosi.sat.i16.f64(double)
@@ -90,8 +90,8 @@ declare i16 @llvm.fptosi.sat.i16.f64(double)
 define spir_kernel void @testfunction_double_to_signed_i32(double %input) {
 entry:
    %ptr = alloca i32
-   %0 = call i32 @llvm.fptosi.sat.i32.f64(double %input)
-   store i32 %0, i32* %ptr
+   %signed_int = call i32 @llvm.fptosi.sat.i32.f64(double %input)
+   store i32 %signed_int, i32* %ptr
    ret void
 }
 declare i32 @llvm.fptosi.sat.i32.f64(double)
@@ -101,28 +101,18 @@ declare i32 @llvm.fptosi.sat.i32.f64(double)
 define spir_kernel void @testfunction_double_to_signed_i64(double %input) {
 entry:
    %ptr = alloca i64
-   %0 = call i64 @llvm.fptosi.sat.i64.f64(double %input)
-   store i64 %0, i64* %ptr
+   %signed_int = call i64 @llvm.fptosi.sat.i64.f64(double %input)
+   store i64 %signed_int, i64* %ptr
    ret void
 }
 declare i64 @llvm.fptosi.sat.i64.f64(double)
  
- 
- 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; unsigned output
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 ; CHECK: %[[#SAT8:]] = OpConvertFToU %{{[0-9]+}} %[[#]]
 define spir_kernel void @testfunction_float_to_unsigned_i8(float %input) {
 entry:
    %ptr = alloca i8
-   %0 = call i8 @llvm.fptoui.sat.i8.f32(float %input)
-   store i8 %0, i8* %ptr
+   %unsigned_int = call i8 @llvm.fptoui.sat.i8.f32(float %input)
+   store i8 %unsigned_int, i8* %ptr
    ret void
 }
 declare i8 @llvm.fptoui.sat.i8.f32(float)
@@ -132,8 +122,8 @@ declare i8 @llvm.fptoui.sat.i8.f32(float)
 define spir_kernel void @testfunction_float_to_unsigned_i16(float %input) {
 entry:
    %ptr = alloca i16
-   %0 = call i16 @llvm.fptoui.sat.i16.f32(float %input)
-   store i16 %0, i16* %ptr
+   %unsigned_int = call i16 @llvm.fptoui.sat.i16.f32(float %input)
+   store i16 %unsigned_int, i16* %ptr
    ret void
 }
 declare i16 @llvm.fptoui.sat.i16.f32(float)
@@ -143,8 +133,8 @@ declare i16 @llvm.fptoui.sat.i16.f32(float)
 define spir_kernel void @testfunction_float_to_unsigned_i32(float %input) {
 entry:
    %ptr = alloca i32
-   %0 = call i32 @llvm.fptoui.sat.i32.f32(float %input)
-   store i32 %0, i32* %ptr
+   %unsigned_int = call i32 @llvm.fptoui.sat.i32.f32(float %input)
+   store i32 %unsigned_int, i32* %ptr
    ret void
 }
 declare i32 @llvm.fptoui.sat.i32.f32(float)
@@ -154,8 +144,8 @@ declare i32 @llvm.fptoui.sat.i32.f32(float)
 define spir_kernel void @testfunction_float_to_unsigned_i64(float %input) {
 entry:
    %ptr = alloca i64
-   %0 = call i64 @llvm.fptoui.sat.i64.f32(float %input)
-   store i64 %0, i64* %ptr
+   %unsigned_int = call i64 @llvm.fptoui.sat.i64.f32(float %input)
+   store i64 %unsigned_int, i64* %ptr
    ret void
 }
 declare i64 @llvm.fptoui.sat.i64.f32(float)
@@ -165,8 +155,8 @@ declare i64 @llvm.fptoui.sat.i64.f32(float)
 define spir_kernel void @testfunction_double_to_unsigned_i8(double %input) {
 entry:
    %ptr = alloca i8
-   %0 = call i8 @llvm.fptoui.sat.i8.f64(double %input)
-   store i8 %0, i8* %ptr
+   %unsigned_int = call i8 @llvm.fptoui.sat.i8.f64(double %input)
+   store i8 %unsigned_int, i8* %ptr
    ret void
 }
 declare i8 @llvm.fptoui.sat.i8.f64(double)
@@ -176,8 +166,8 @@ declare i8 @llvm.fptoui.sat.i8.f64(double)
 define spir_kernel void @testfunction_double_to_unsigned_i16(double %input) {
 entry:
    %ptr = alloca i16
-   %0 = call i16 @llvm.fptoui.sat.i16.f64(double %input)
-   store i16 %0, i16* %ptr
+   %unsigned_int = call i16 @llvm.fptoui.sat.i16.f64(double %input)
+   store i16 %unsigned_int, i16* %ptr
    ret void
 }
 declare i16 @llvm.fptoui.sat.i16.f64(double)
@@ -187,8 +177,8 @@ declare i16 @llvm.fptoui.sat.i16.f64(double)
 define spir_kernel void @testfunction_double_to_unsigned_i32(double %input) {
 entry:
    %ptr = alloca i32
-   %0 = call i32 @llvm.fptoui.sat.i32.f64(double %input)
-   store i32 %0, i32* %ptr
+   %unsigned_int = call i32 @llvm.fptoui.sat.i32.f64(double %input)
+   store i32 %unsigned_int, i32* %ptr
    ret void
 }
 declare i32 @llvm.fptoui.sat.i32.f64(double)
@@ -198,14 +188,8 @@ declare i32 @llvm.fptoui.sat.i32.f64(double)
 define spir_kernel void @testfunction_double_to_unsigned_i64(double %input) {
 entry:
    %ptr = alloca i64
-   %0 = call i64 @llvm.fptoui.sat.i64.f64(double %input)
-   store i64 %0, i64* %ptr
+   %unsigned_int = call i64 @llvm.fptoui.sat.i64.f64(double %input)
+   store i64 %unsigned_int, i64* %ptr
    ret void
 }
 declare i64 @llvm.fptoui.sat.i64.f64(double)
- 
- 
- 
- 
-
-
