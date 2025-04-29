@@ -5213,7 +5213,8 @@ static SDValue PerformLoadCombine(SDNode *N,
 
   SmallDenseMap<SDNode *, unsigned> ExtractElts;
   SmallVector<SDNode *> ProxyRegs(OrigNumResults, nullptr);
-  SmallVector<std::pair<SDNode *, unsigned /*offset*/>> WorkList{{N, 0}};
+  SmallVector<std::pair<SDNode *, unsigned>> WorkList{{N, {}}};
+  bool ProcessingInitialLoad = true;
   while (!WorkList.empty()) {
     auto [V, Offset] = WorkList.pop_back_val();
 
@@ -5223,10 +5224,12 @@ static SDValue PerformLoadCombine(SDNode *N,
       if (U.getValueType() == MVT::Other || U.getValueType() == MVT::Glue)
         continue; // we'll process chain/glue later
 
+      if (ProcessingInitialLoad)
+        Offset = U.getResNo();
+
       SDNode *User = U.getUser();
       if (User->getOpcode() == NVPTXISD::ProxyReg) {
-        Offset = U.getResNo() * 2;
-        SDNode *&ProxyReg = ProxyRegs[Offset / 2];
+        SDNode *&ProxyReg = ProxyRegs[Offset];
 
         // We shouldn't have multiple proxy regs for the same value from the
         // load, but bail out anyway since we don't handle this.
@@ -5238,13 +5241,13 @@ static SDValue PerformLoadCombine(SDNode *N,
                  User->getValueType(0) == MVT::v2f32 &&
                  U.getValueType() == MVT::i64) {
         // match v2f32 = bitcast i64
-        Offset = U.getResNo() * 2;
+        // continue and push the instruction
       } else if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
                  User->getValueType(0) == MVT::f32) {
         // match f32 = extractelt v2f32
         if (auto *CI = dyn_cast<ConstantSDNode>(User->getOperand(1))) {
           unsigned Index = CI->getZExtValue();
-          ExtractElts[User] = Offset + Index;
+          ExtractElts[User] = 2 * Offset + Index;
           continue; // don't search
         }
         return SDValue(); // could not match
@@ -5254,6 +5257,9 @@ static SDValue PerformLoadCombine(SDNode *N,
       // enqueue this to visit its uses
       WorkList.push_back({User, Offset});
     }
+
+    // After we're done with the load, propagate the result offsets.
+    ProcessingInitialLoad = false;
   }
 
   // (2) If the load's value is only used as f32 elements, replace all
