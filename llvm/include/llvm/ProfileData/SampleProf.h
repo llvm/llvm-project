@@ -1299,7 +1299,7 @@ private:
 static inline FunctionId getRepInFormat(StringRef Name) {
   if (Name.empty() || !FunctionSamples::UseMD5)
     return FunctionId(Name);
-  return FunctionId(Function::getGUID(Name));
+  return FunctionId(Function::getGUIDAssumingExternalLinkage(Name));
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
