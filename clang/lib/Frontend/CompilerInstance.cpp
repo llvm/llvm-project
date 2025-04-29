@@ -1425,10 +1425,14 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
          "Expected an output manager to already be set up");
   Instance.setOutputBackend(&getOutputBackend());
 
-  // If we're collecting module dependencies, we need to share a collector
-  // between all of the module CompilerInstances. Other than that, we don't
-  // want to produce any dependency output from the module build.
-  Instance.setModuleDepCollector(getModuleDepCollector());
+  if (ThreadSafeConfig) {
+    Instance.setModuleDepCollector(ThreadSafeConfig->getModuleDepCollector());
+  } else {
+    // If we're collecting module dependencies, we need to share a collector
+    // between all of the module CompilerInstances. Other than that, we don't
+    // want to produce any dependency output from the module build.
+    Instance.setModuleDepCollector(getModuleDepCollector());
+  }
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   return InstancePtr;
