@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.11",
+  "version": "0.2.13",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -14,6 +14,7 @@
   "bugs": {
     "url": "https://github.com/llvm/llvm-project/issues"
   },
+  "icon": "llvm-logo.png",
   "keywords": [
     "C",
     "C++",
@@ -72,9 +73,9 @@
       "title": "lldb-dap",
       "properties": {
         "lldb-dap.executable-path": {
-          "scope": "resource",
+          "scope": "machine-overridable",
           "type": "string",
-          "description": "The path to the lldb-dap binary."
+          "description": "The path to the lldb-dap binary, e.g. /usr/local/bin/lldb-dap"
         },
         "lldb-dap.arguments": {
           "scope": "resource",
@@ -86,7 +87,7 @@
           "description": "The list of additional arguments used to launch the debug adapter executable."
         },
         "lldb-dap.log-path": {
-          "scope": "resource",
+          "scope": "machine-overridable",
           "type": "string",
           "description": "The log path for lldb-dap (if any)"
         },
@@ -189,9 +190,11 @@
               },
               "args": {
                 "type": [
-                  "array",
-                  "string"
+                  "array"
                 ],
+                "items": {
+                  "type": "string"
+                },
                 "description": "Program arguments.",
                 "default": []
               },
@@ -293,36 +296,57 @@
               },
               "initCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Initialization commands executed upon debugger startup.",
                 "default": []
               },
               "preRunCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed just before the program is launched.",
                 "default": []
               },
               "postRunCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed just as soon as the program is successfully launched when it's in a stopped state prior to any automatic continuation.",
                 "default": []
               },
               "launchCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail. Launch the process with \"process launch -s\" to make the process to at the entry point since lldb-dap will auto resume if necessary.",
                 "default": []
               },
               "stopCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed each time the program stops.",
                 "default": []
               },
               "exitCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed when the program exits.",
                 "default": []
               },
               "terminateCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed when the debugging session ends.",
                 "default": []
               },
@@ -332,7 +356,7 @@
                 "default": false
               },
               "timeout": {
-                "type": "string",
+                "type": "number",
                 "description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
               },
               "enableAutoVariableSummaries": {
@@ -449,36 +473,57 @@
               },
               "attachCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
                 "default": []
               },
               "initCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Initialization commands executed upon debugger startup.",
                 "default": []
               },
               "preRunCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed just before the program is attached to.",
                 "default": []
               },
               "postRunCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed just as soon as the program is successfully attached when it's in a stopped state prior to any automatic continuation.",
                 "default": []
               },
               "stopCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed each time the program stops.",
                 "default": []
               },
               "exitCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed when the program exits.",
                 "default": []
               },
               "terminateCommands": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Commands executed when the debugging session ends.",
                 "default": []
               },
@@ -487,7 +532,7 @@
                 "description": "Path to the core file to debug."
               },
               "timeout": {
-                "type": "string",
+                "type": "number",
                 "description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
               },
               "gdb-remote-port": {

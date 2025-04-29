@@ -38,7 +38,7 @@ public:
         TLI(ST->getTargetLowering()) {}
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind) const {
+                                TTI::TargetCostKind CostKind) const override {
     if (Imm.getBitWidth() <= 64 && isInt<32>(Imm.getSExtValue()))
       return TTI::TCC_Free;
 
@@ -50,7 +50,7 @@ public:
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const llvm::Instruction *I = nullptr) const {
+      const llvm::Instruction *I = nullptr) const override {
     if (Opcode == Instruction::Select)
       return SCEVCheapExpansionBudget.getValue();
 
@@ -63,7 +63,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const {
+      const Instruction *CxtI = nullptr) const override {
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     if (ISD == ISD::ADD && CostKind == TTI::TCK_RecipThroughput)
       return SCEVCheapExpansionBudget.getValue() + 1;
@@ -72,18 +72,15 @@ public:
                                          Op2Info);
   }
 
-  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
-                                                    bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions
+  enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override {
     TTI::MemCmpExpansionOptions Options;
     Options.LoadSizes = {8, 4, 2, 1};
     Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
     return Options;
   }
 
-  unsigned getMaxNumArgs() const {
-    return 5;
-  }
-
+  unsigned getMaxNumArgs() const override { return 5; }
 };
 
 } // end namespace llvm
