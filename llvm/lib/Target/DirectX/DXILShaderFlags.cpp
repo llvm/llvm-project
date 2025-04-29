@@ -32,6 +32,35 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static bool hasUAVsAtEveryStage(DXILResourceMap &DRM,
+                                const ModuleMetadataInfo &MMDI) {
+  if (DRM.uavs().empty())
+    return false;
+
+  switch (MMDI.ShaderProfile) {
+  default:
+    return false;
+  case Triple::EnvironmentType::Compute:
+  case Triple::EnvironmentType::Pixel:
+    return false;
+  case Triple::EnvironmentType::Vertex:
+  case Triple::EnvironmentType::Geometry:
+  case Triple::EnvironmentType::Hull:
+  case Triple::EnvironmentType::Domain:
+    return true;
+  case Triple::EnvironmentType::Library:
+  case Triple::EnvironmentType::RayGeneration:
+  case Triple::EnvironmentType::Intersection:
+  case Triple::EnvironmentType::AnyHit:
+  case Triple::EnvironmentType::ClosestHit:
+  case Triple::EnvironmentType::Miss:
+  case Triple::EnvironmentType::Callable:
+  case Triple::EnvironmentType::Mesh:
+  case Triple::EnvironmentType::Amplification:
+    return MMDI.ValidatorVersion < VersionTuple(1, 8);
+  }
+}
+
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
   // case Intrinsic::dx_wave_getlanecount:
@@ -266,6 +295,8 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       NumUAVs += UAV.getBinding().Size;
   if (NumUAVs > 8)
     CombinedSFMask.Max64UAVs = true;
+
+  CombinedSFMask.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
