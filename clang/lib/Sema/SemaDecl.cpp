@@ -6109,44 +6109,6 @@ static bool isFromSystemHeader(SourceManager &SM, const Decl *D) {
          SM.isInSystemMacro(D->getLocation());
 }
 
-constexpr unsigned countCPlusPlusKeywords() {
-  unsigned Ret = 0;
-#define MODULES_KEYWORD(NAME)
-#define KEYWORD(NAME, FLAGS) ++Ret;
-#define CXX_KEYWORD_OPERATOR(NAME, TOK) ++Ret;
-#include "clang/Basic/TokenKinds.def"
-  return Ret;
-}
-
-static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo *II) {
-  if (!II)
-    return false;
-
-  // Build a static map of identifiers for all of the keywords in C++ that are
-  // not keywords in C. This allows us to do pointer comparisons instead of
-  // string comparisons when deciding whether the given identifier is a keyword
-  // or not. Note, this treats all keywords as being enabled, regardless of the
-  // setting of other language options. It intentionally disables the modules
-  // keywords because those are conditional keywords, so may be safe to use.
-  static auto Keywords = [&S] {
-    std::array<uintptr_t, countCPlusPlusKeywords()> Ret;
-    unsigned Idx = 0;
-#define MODULES_KEYWORD(NAME)
-#define KEYWORD(NAME, FLAGS)                                                   \
-  Ret[Idx++] = reinterpret_cast<uint64_t>(                                     \
-      &S.getPreprocessor().getIdentifierTable().get(#NAME));
-#define CXX_KEYWORD_OPERATOR(NAME, TOK)                                        \
-  Ret[Idx++] = reinterpret_cast<uint64_t>(                                     \
-      &S.getPreprocessor().getIdentifierTable().get(#NAME));
-#include "clang/Basic/TokenKinds.def"
-    assert(Idx == Ret.size() && "expected to fill every member!");
-    llvm::sort(Ret);
-    return Ret;
-  }();
-
-  return llvm::binary_search(Keywords, reinterpret_cast<uintptr_t>(II));
-}
-
 void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
   // Avoid warning twice on the same identifier, and don't warn on redeclaration
   // of system decl.
@@ -6159,10 +6121,8 @@ void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
         << D << static_cast<int>(Status);
   }
   // Diagnose use of C++ keywords in C as being incompatible with C++.
-  if (!getLangOpts().CPlusPlus &&
-      !Diags.isIgnored(diag::warn_identifier_is_cpp_keyword,
-                       D->getLocation()) &&
-      isKeywordInCPlusPlus(*this, D->getIdentifier()))
+  if (const IdentifierInfo *II = D->getIdentifier();
+      II && !getLangOpts().CPlusPlus && II->IsKeywordInCPlusPlus())
     Diag(D->getLocation(), diag::warn_identifier_is_cpp_keyword) << D;
 }
 
