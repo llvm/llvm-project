@@ -1170,8 +1170,11 @@ unsigned Function::getVScaleValue() const {
   if (!Attr.isValid())
     return 0;
 
-  unsigned VScale = Attr.getVScaleRangeMax().value_or(0);
-  return VScale == Attr.getVScaleRangeMin() ? VScale : 0;
+  unsigned VScale = Attr.getVScaleRangeMin();
+  if (VScale && VScale == Attr.getVScaleRangeMax())
+    return VScale;
+
+  return 0;
 }
 
 bool llvm::NullPointerIsDefined(const Function *F, unsigned AS) {
