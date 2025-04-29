@@ -380,6 +380,17 @@ class DebugCommunication(object):
             )
         return None
 
+    def wait_for_events(self, events, timeout=None):
+        """Wait for a list of events in `events` in any order.
+        Return the events not hit before the timeout expired"""
+        events = events[:]  # Make a copy to avoid modifying the input
+        while events:
+            event_dict = self.wait_for_event(filter=events, timeout=timeout)
+            if event_dict is None:
+                break
+            events.remove(event_dict["event"])
+        return events
+
     def wait_for_stopped(self, timeout=None):
         stopped_events = []
         stopped_event = self.wait_for_event(
@@ -618,7 +629,11 @@ class DebugCommunication(object):
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+
+        if response["success"]:
+            self.wait_for_events(["process", "initialized"])
+        return response
 
     def request_breakpointLocations(
         self, file_path, line, end_line=None, column=None, end_column=None
@@ -872,9 +887,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
 
         if response["success"]:
-            # Wait for a 'process' and 'initialized' event in any order
-            self.wait_for_event(filter=["process", "initialized"])
-            self.wait_for_event(filter=["process", "initialized"])
+            self.wait_for_events(["process", "initialized"])
         return response
 
     def request_next(self, threadId, granularity="statement"):
