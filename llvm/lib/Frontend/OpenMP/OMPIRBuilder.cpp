@@ -2264,11 +2264,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
   }
 
   // Now we can fix the dummy branch to point to the right place
-  if (!CancellationBranches.empty()) {
-    for (BranchInst *DummyBranch : CancellationBranches) {
-      assert(DummyBranch->getNumSuccessors() == 1);
-      DummyBranch->setSuccessor(0, LoopFini);
-    }
+  for (BranchInst *DummyBranch : CancellationBranches) {
+    assert(DummyBranch->getNumSuccessors() == 1);
+    DummyBranch->setSuccessor(0, LoopFini);
   }
 
   return AfterIP;
