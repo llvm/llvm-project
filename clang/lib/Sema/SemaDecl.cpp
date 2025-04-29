@@ -6500,6 +6500,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (!New)
     return nullptr;
 
+  warnOnCTypeHiddenInCPlusPlus(New);
+
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
   if (New->getDeclName() && AddToScope)
@@ -15213,6 +15215,32 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
   }
 }
 
+void Sema::warnOnCTypeHiddenInCPlusPlus(const NamedDecl *D) {
+  // This only matters in C.
+  if (getLangOpts().CPlusPlus)
+    return;
+
+  // This only matters if the declaration has a type.
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (!VD)
+    return;
+
+  // Get the type, this only matters for tag types.
+  QualType QT = VD->getType();
+  const auto *TD = QT->getAsTagDecl();
+  if (!TD)
+    return;
+
+  // Check if the tag declaration is lexically declared somewhere different
+  // from the lexical declaration of the given object, then it will be hidden
+  // in C++ and we should warn on it.
+  if (!TD->getLexicalParent()->LexicallyEncloses(D->getLexicalDeclContext())) {
+    unsigned Kind = TD->isEnum() ? 2 : TD->isUnion() ? 1 : 0;
+    Diag(D->getLocation(), diag::warn_decl_hidden_in_cpp) << Kind;
+    Diag(TD->getLocation(), diag::note_declared_at);
+  }
+}
+
 static void CheckExplicitObjectParameter(Sema &S, ParmVarDecl *P,
                                          SourceLocation ExplicitThisLoc) {
   if (!ExplicitThisLoc.isValid())
@@ -15333,6 +15361,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   assert(S->getFunctionPrototypeDepth() >= 1);
   New->setScopeInfo(S->getFunctionPrototypeDepth() - 1,
                     S->getNextFunctionPrototypeIndex());
+
+  warnOnCTypeHiddenInCPlusPlus(New);
 
   // Add the parameter declaration into this scope.
   S->AddDecl(New);
@@ -18863,6 +18893,9 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
                                        BitWidth, Mutable, InitStyle);
   if (InvalidDecl)
     NewFD->setInvalidDecl();
+
+  if (!InvalidDecl)
+    warnOnCTypeHiddenInCPlusPlus(NewFD);
 
   if (PrevDecl && !isa<TagDecl>(PrevDecl) &&
       !PrevDecl->isPlaceholderVar(getLangOpts())) {
