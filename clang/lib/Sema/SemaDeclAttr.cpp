@@ -3589,8 +3589,8 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // If this ever proves to be a problem it should be easy to fix.
   QualType Ty = S.Context.getPointerType(cast<VarDecl>(D)->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
-  if (S.CheckAssignmentConstraints(FD->getParamDecl(0)->getLocation(),
-                                   ParamTy, Ty) != Sema::Compatible) {
+  if (!S.IsAssignConvertCompatible(S.CheckAssignmentConstraints(
+          FD->getParamDecl(0)->getLocation(), ParamTy, Ty))) {
     S.Diag(Loc, diag::err_attribute_cleanup_func_arg_incompatible_type)
       << NI.getName() << ParamTy << Ty;
     return;
@@ -3972,8 +3972,7 @@ static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   Expr *FormatStrExpr = AL.getArgAsExpr(2)->IgnoreParenImpCasts();
   if (auto *SL = dyn_cast<StringLiteral>(FormatStrExpr)) {
-    Sema::FormatStringType FST =
-        S.GetFormatStringType(Info.Identifier->getName());
+    FormatStringType FST = S.GetFormatStringType(Info.Identifier->getName());
     if (S.ValidateFormatString(FST, SL))
       if (auto *NewAttr = S.mergeFormatMatchesAttr(D, AL, Info.Identifier,
                                                    Info.FormatStringIdx, SL))

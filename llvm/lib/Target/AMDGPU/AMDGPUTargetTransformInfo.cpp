@@ -957,14 +957,34 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   // atomic operation refers to the same address in each thread, then each
   // thread after the first sees the value written by the previous thread as
   // original value.
-  if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
+  if (isa<AtomicRMWInst, AtomicCmpXchgInst>(V))
     return true;
 
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
+#if LLPC_BUILD_NPI
+    Intrinsic::ID IID = Intrinsic->getIntrinsicID();
+    switch (IID) {
+    case Intrinsic::read_register:
+#else /* LLPC_BUILD_NPI */
     if (Intrinsic->getIntrinsicID() == Intrinsic::read_register)
+#endif /* LLPC_BUILD_NPI */
       return isReadRegisterSourceOfDivergence(Intrinsic);
+#if LLPC_BUILD_NPI
+    case Intrinsic::amdgcn_addrspacecast_nonnull: {
+      unsigned SrcAS =
+          Intrinsic->getOperand(0)->getType()->getPointerAddressSpace();
+      unsigned DstAS = Intrinsic->getType()->getPointerAddressSpace();
+      return SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+             DstAS == AMDGPUAS::FLAT_ADDRESS &&
+             ST->hasGloballyAddressableScratch();
+    }
+    default:
+      return AMDGPU::isIntrinsicSourceOfDivergence(IID);
+    }
+#else /* LLPC_BUILD_NPI */
 
     return AMDGPU::isIntrinsicSourceOfDivergence(Intrinsic->getIntrinsicID());
+#endif /* LLPC_BUILD_NPI */
   }
 
   // Assume all function calls are a source of divergence.
@@ -977,6 +997,17 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   // Assume all function calls are a source of divergence.
   if (isa<InvokeInst>(V))
     return true;
+#if LLPC_BUILD_NPI
+
+  // If the target supports globally addressable scratch, the mapping from
+  // scratch memory to the flat aperture changes therefore an address space cast
+  // is no longer uniform.
+  if (auto *CastI = dyn_cast<AddrSpaceCastInst>(V)) {
+    return CastI->getSrcAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS &&
+           CastI->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
+           ST->hasGloballyAddressableScratch();
+  }
+#endif /* LLPC_BUILD_NPI */
 
   return false;
 }

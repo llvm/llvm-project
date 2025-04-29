@@ -640,9 +640,10 @@ class FLAT_RTS<string opName, bit HasVdst, bit HasData, bit isStore, bit isLoad,
   let has_vdst = HasVdst;
   let mayLoad = isLoad;
   let mayStore = isStore;
+  let IsNeverUniform = true;
 }
 
-class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
+class FLAT_SWC<string opName, bit HasVdst, bit HasAddr, bit IsDivergent> : FLAT_Pseudo<
   opName,
   !if(HasVdst, (outs VGPR_32:$vdst), (outs)),
   !con(!if(HasAddr, !if(HasVdst, (ins VReg_64:$vaddr), (ins VGPR_32:$vaddr)), (ins)), (ins CPol:$cpol)),
@@ -656,6 +657,7 @@ class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
   let has_vdst = HasVdst;
   let mayStore = 1;
   let mayLoad = 1;
+  let IsNeverUniform = IsDivergent;
 }
 
 class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
@@ -1816,13 +1818,13 @@ let SubtargetPredicate = isGFX13Plus in {
   def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0, 1, 1>;
 
   let OtherPredicates = [HasSWC] in {
-  def SWC_REORDER             : FLAT_SWC<"swc_reorder", 1, 1>;
-  def SWC_FLUSH               : FLAT_SWC<"swc_flush", 0, 0>;
-  def SWC_REORDER_SWAP        : FLAT_SWC<"swc_reorder_swap", 1, 1>;
-  def SWC_REORDER_SWAP_RESUME : FLAT_SWC<"swc_reorder_swap_resume", 1, 0>;
-  def SWC_GET_EXCHANGE_STATE  : FLAT_SWC<"swc_get_exchange_state", 1, 0>;
-  def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1>;
-  def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0>;
+  def SWC_REORDER             : FLAT_SWC<"swc_reorder", 1, 1, 1>;
+  def SWC_FLUSH               : FLAT_SWC<"swc_flush", 0, 0, 0>;
+  def SWC_REORDER_SWAP        : FLAT_SWC<"swc_reorder_swap", 1, 1, 1>;
+  def SWC_REORDER_SWAP_RESUME : FLAT_SWC<"swc_reorder_swap_resume", 1, 0, 1>;
+  def SWC_GET_EXCHANGE_STATE  : FLAT_SWC<"swc_get_exchange_state", 1, 0, 0>;
+  def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1, 0>;
+  def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0, 0>;
   }
 
   let WaveSizePredicate = isWave32 in {
@@ -2608,12 +2610,12 @@ multiclass FlatStorePats_t16<FLAT_Pseudo inst, SDPatternOperator node, ValueType
 let OtherPredicates = [HasFlatAddressSpace] in {
 
 #ifdef LLPC_BUILD_NPI
-defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
-defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
-defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
-defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_aext_16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_nonext_16_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
@@ -2627,14 +2629,13 @@ defm : FlatLoadPats <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_SSHORT, atomic_load_sext_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
 #else /* LLPC_BUILD_NPI */
-def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_aext_16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_nonext_16_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
@@ -2685,11 +2686,11 @@ let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predi
 } // End let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts
 
 #ifdef LLPC_BUILD_NPI
-defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
-defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
+defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, i64>;
 #else /* LLPC_BUILD_NPI */
-def : FlatLoadPat <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
+def : FlatLoadPat <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, i64>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
@@ -2869,12 +2870,12 @@ def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 #endif /* LLPC_BUILD_NPI */
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_aext_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_nonext_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i32>;
@@ -2925,8 +2926,8 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX4, store_global, vt>;
 // There is no distinction for atomic load lowering during selection;
 // the memory legalizer will set the cache bits and insert the
 // appropriate waits.
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORD, atomic_load_32_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_64_global, i64>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORD, atomic_load_nonext_32_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_nonext_64_global, i64>;
 
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, truncstorei8_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;

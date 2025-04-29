@@ -416,6 +416,19 @@ def : SourceOfDivergence<int_amdgcn_init_whole_wave>;
 def : SourceOfDivergence<int_amdgcn_permlane16_swap>;
 def : SourceOfDivergence<int_amdgcn_permlane32_swap>;
 def : SourceOfDivergence<int_amdgcn_waterfall_end>;
+#ifdef LLPC_BUILD_NPI
+def : SourceOfDivergence<int_amdgcn_rts_read_result_all_stop>;
+def : SourceOfDivergence<int_amdgcn_rts_read_result_ongoing>;
+def : SourceOfDivergence<int_amdgcn_rts_update_ray>;
+def : SourceOfDivergence<int_amdgcn_rts_ray_save>;
+def : SourceOfDivergence<int_amdgcn_rts_read_vertex>;
+def : SourceOfDivergence<int_amdgcn_rts_read_vertex_coords>;
+def : SourceOfDivergence<int_amdgcn_rts_read_packet_info>;
+def : SourceOfDivergence<int_amdgcn_rts_read_prim_info>;
+def : SourceOfDivergence<int_amdgcn_swc_reorder>;
+def : SourceOfDivergence<int_amdgcn_swc_reorder_swap>;
+def : SourceOfDivergence<int_amdgcn_swc_reorder_swap_resume>;
+#endif /* LLPC_BUILD_NPI */
 
 foreach intr = AMDGPUMFMAIntrinsics908 in
 def : SourceOfDivergence<intr>;
@@ -507,3 +520,6 @@ def : AlwaysUniform<int_amdgcn_s_getpc>;
 def : AlwaysUniform<int_amdgcn_s_getreg>;
 def : AlwaysUniform<int_amdgcn_s_memrealtime>;
 def : AlwaysUniform<int_amdgcn_s_memtime>;
+#ifdef LLPC_BUILD_NPI
+def : AlwaysUniform<int_amdgcn_rts_trace_ray_nonblock>;
+#endif /* LLPC_BUILD_NPI */

@@ -2021,7 +2021,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // are of 32-bit size. SIPreAllocateWWMRegs pass can add tuples into WWM
     // reserved registers.
     const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
-    if (TRI->getRegSizeInBits(*RC) > 32)
+    if (TRI->getRegSizeInBits(*RC) != 32)
       continue;
     SortedWWMVGPRs.push_back(Reg);
   }
@@ -2112,14 +2112,12 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
 
 static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
                                        const GCNSubtarget &ST,
-                                       const TargetRegisterInfo *TRI,
                                        std::vector<CalleeSavedInfo> &CSI,
                                        unsigned &MinCSFrameIndex,
                                        unsigned &MaxCSFrameIndex) {
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-  const SIRegisterInfo *MRI = ST.getRegisterInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   assert(std::is_sorted(CSI.begin(), CSI.end(),
                         [](const CalleeSavedInfo &A, const CalleeSavedInfo &B) {
@@ -2129,7 +2127,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
 
   auto CanUseBlockOps = [&](const CalleeSavedInfo &CSI) {
     return !CSI.isSpilledToReg() &&
-           MRI->isVGPR(MF.getRegInfo(), CSI.getReg()) &&
+           TRI->getPhysRegBaseClass(CSI.getReg()) == &AMDGPU::VGPR_32RegClass &&
            !FuncInfo->isWWMReservedRegister(CSI.getReg());
   };
 
@@ -2139,8 +2137,8 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
     if (!CanUseBlockOps(*CSIt))
       continue;
 
-    // Find all the regs that will fit in a 32-bit block starting at the current
-    // reg and build the mask. It should have 1 for every register that's
+    // Find all the regs that will fit in a 32-bit mask starting at the current
+    // reg and build said mask. It should have 1 for every register that's
     // included, with the current register as the least significant bit.
     uint32_t Mask = 1;
     CSEnd = std::remove_if(
@@ -2153,10 +2151,9 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
           }
         });
 
-    const TargetRegisterClass *BlockRegClass =
-        TII->getRegClassForBlockOp(TRI, MF);
+    const TargetRegisterClass *BlockRegClass = TRI->getRegClassForBlockOp(MF);
     Register RegBlock =
-        MRI->getMatchingSuperReg(Reg, AMDGPU::sub0, BlockRegClass);
+        TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, BlockRegClass);
     if (!RegBlock) {
       // We couldn't find a super register for the block. This can happen if
       // the register we started with is too high (e.g. v232 if the maximum is
@@ -2165,8 +2162,8 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
       Register LastBlockStart =
           AMDGPU::VGPR0 + alignDown(Reg - AMDGPU::VGPR0, 32);
       RegBlock =
-          MRI->getMatchingSuperReg(LastBlockStart, AMDGPU::sub0, BlockRegClass);
-      assert(RegBlock && MRI->isSubRegister(RegBlock, Reg) &&
+          TRI->getMatchingSuperReg(LastBlockStart, AMDGPU::sub0, BlockRegClass);
+      assert(RegBlock && TRI->isSubRegister(RegBlock, Reg) &&
              "Couldn't find super register");
       int RegDelta = Reg - LastBlockStart;
       assert(RegDelta > 0 && llvm::countl_zero(Mask) >= RegDelta &&
@@ -2181,9 +2178,9 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
     // conventions where the caller and callee-saved VGPRs are interleaved at
     // a small boundary (e.g. 8 or 16).
     int UnusedBits = llvm::countl_zero(Mask);
-    unsigned BlockSize = MRI->getSpillSize(*BlockRegClass) - UnusedBits * 4;
+    unsigned BlockSize = TRI->getSpillSize(*BlockRegClass) - UnusedBits * 4;
     int FrameIdx =
-        MFI.CreateStackObject(BlockSize, MRI->getSpillAlign(*BlockRegClass),
+        MFI.CreateStackObject(BlockSize, TRI->getSpillAlign(*BlockRegClass),
                               /*isSpillSlot=*/true);
     if ((unsigned)FrameIdx < MinCSFrameIndex)
       MinCSFrameIndex = FrameIdx;
@@ -2192,7 +2189,6 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
 
     CSIt->setFrameIdx(FrameIdx);
     CSIt->setReg(RegBlock);
-    CSIt->setHandledByTarget();
   }
   CSI.erase(CSEnd, CSI.end());
 }
@@ -2208,10 +2204,9 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
   bool UseVGPRBlocks = ST.useVGPRBlockOpsForCSR();
 
   if (UseVGPRBlocks)
-    assignSlotsUsingVGPRBlocks(MF, ST, TRI, CSI, MinCSFrameIndex,
-                               MaxCSFrameIndex);
+    assignSlotsUsingVGPRBlocks(MF, ST, CSI, MinCSFrameIndex, MaxCSFrameIndex);
 
-  return assignCalleeSavedSpillSlots(MF, TRI, CSI);
+  return assignCalleeSavedSpillSlots(MF, TRI, CSI) || UseVGPRBlocks;
 }
 
 bool SIFrameLowering::assignCalleeSavedSpillSlots(
@@ -2296,10 +2291,15 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
   const SIInstrInfo *TII = ST.getInstrInfo();
   SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
 
+  const TargetRegisterClass *BlockRegClass =
+      static_cast<const SIRegisterInfo *>(TRI)->getRegClassForBlockOp(*MF);
   for (const CalleeSavedInfo &CS : CSI) {
     Register Reg = CS.getReg();
-    if (!CS.isHandledByTarget())
+    if (!BlockRegClass->contains(Reg) ||
+        !FuncInfo->hasMaskForVGPRBlockOps(Reg)) {
+      spillCalleeSavedRegister(MBB, MI, CS, TII, TRI);
       continue;
+    }
 
     // Build a scratch block store.
     uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(Reg);
@@ -2328,8 +2328,9 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
     // skip it.
     MBB.addLiveIn(Reg);
   }
+  MBB.sortUniqueLiveIns();
 
-  return false;
+  return true;
 }
 
 bool SIFrameLowering::restoreCalleeSavedRegisters(
@@ -2344,12 +2345,16 @@ bool SIFrameLowering::restoreCalleeSavedRegisters(
   MachineFrameInfo &MFI = MF->getFrameInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *SITRI = static_cast<const SIRegisterInfo *>(TRI);
+  const TargetRegisterClass *BlockRegClass = SITRI->getRegClassForBlockOp(*MF);
   for (const CalleeSavedInfo &CS : reverse(CSI)) {
-    if (!CS.isHandledByTarget())
+    Register Reg = CS.getReg();
+    if (!BlockRegClass->contains(Reg) ||
+        !FuncInfo->hasMaskForVGPRBlockOps(Reg)) {
+      restoreCalleeSavedRegister(MBB, MI, CS, TII, TRI);
       continue;
+    }
 
     // Build a scratch block load.
-    Register Reg = CS.getReg();
     uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(Reg);
     int FrameIndex = CS.getFrameIdx();
     MachinePointerInfo PtrInfo =
@@ -2371,11 +2376,11 @@ bool SIFrameLowering::restoreCalleeSavedRegisters(
     // VGPRs in the register block is reserved (e.g. if it's a WWM register),
     // then the whole block will be marked as reserved and `updateLiveness` will
     // skip it.
-    if (!MBB.isLiveIn(Reg))
-      MBB.addLiveIn(Reg);
+    MBB.addLiveIn(Reg);
   }
 
-  return false;
+  MBB.sortUniqueLiveIns();
+  return true;
 }
 
 MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(

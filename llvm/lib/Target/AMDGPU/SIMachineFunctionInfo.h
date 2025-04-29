@@ -427,20 +427,12 @@ public:
   SGPRSaveKind getKind() const { return Kind; }
 };
 
-constexpr unsigned FirstVGPRBlock = AMDGPU::
-    VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7_VGPR8_VGPR9_VGPR10_VGPR11_VGPR12_VGPR13_VGPR14_VGPR15_VGPR16_VGPR17_VGPR18_VGPR19_VGPR20_VGPR21_VGPR22_VGPR23_VGPR24_VGPR25_VGPR26_VGPR27_VGPR28_VGPR29_VGPR30_VGPR31;
-constexpr unsigned LastVGPRBlock = AMDGPU::
-#if LLPC_BUILD_NPI
-    VGPR992_VGPR993_VGPR994_VGPR995_VGPR996_VGPR997_VGPR998_VGPR999_VGPR1000_VGPR1001_VGPR1002_VGPR1003_VGPR1004_VGPR1005_VGPR1006_VGPR1007_VGPR1008_VGPR1009_VGPR1010_VGPR1011_VGPR1012_VGPR1013_VGPR1014_VGPR1015_VGPR1016_VGPR1017_VGPR1018_VGPR1019_VGPR1020_VGPR1021_VGPR1022_VGPR1023;
-#else /* LLPC_BUILD_NPI */
-    VGPR224_VGPR225_VGPR226_VGPR227_VGPR228_VGPR229_VGPR230_VGPR231_VGPR232_VGPR233_VGPR234_VGPR235_VGPR236_VGPR237_VGPR238_VGPR239_VGPR240_VGPR241_VGPR242_VGPR243_VGPR244_VGPR245_VGPR246_VGPR247_VGPR248_VGPR249_VGPR250_VGPR251_VGPR252_VGPR253_VGPR254_VGPR255;
-#endif /* LLPC_BUILD_NPI */
-
 struct VGPRBlock2IndexFunctor {
   using argument_type = Register;
   unsigned operator()(Register Reg) const {
-    assert(Reg.isPhysical() && Reg >= FirstVGPRBlock && Reg <= LastVGPRBlock &&
-           "Expecting a VGPR block");
+    assert(AMDGPU::VReg_1024RegClass.contains(Reg) && "Expecting a VGPR block");
+
+    const MCRegister FirstVGPRBlock = AMDGPU::VReg_1024RegClass.getRegister(0);
     return Reg - FirstVGPRBlock;
   }
 };
@@ -662,22 +654,13 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
 
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
   LdsSpill LdsSpillInfo;
 
-#endif /* LLPC_BUILD_NPI */
   // Map each VGPR CSR to the mask needed to save and restore it using block
   // load/store instructions. Only used if the subtarget feature for VGPR block
   // load/store is enabled.
-  // This is only useful during prolog/epilog insertion, so it doesn't need to
-  // be serialized.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
-#if LLPC_BUILD_NPI
-  LdsSpill LdsSpillInfo;
-
-#endif /* LLPC_BUILD_NPI */
 private:
   Register VGPRForAGPRCopy;
 
@@ -705,6 +688,10 @@ public:
 
   uint32_t getMaskForVGPRBlockOps(Register RegisterBlock) const {
     return MaskForVGPRBlockOps[RegisterBlock];
+  }
+
+  bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps.inBounds(RegisterBlock);
   }
 
 public:

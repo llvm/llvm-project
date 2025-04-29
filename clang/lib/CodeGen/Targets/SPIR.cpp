@@ -93,6 +93,11 @@ inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
   case SyncScope::OpenCLDevice:
   case SyncScope::DeviceScope:
     return "device";
+#if LLPC_BUILD_NPI
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    return "cluster";
+#endif /* LLPC_BUILD_NPI */
   case SyncScope::SystemScope:
   case SyncScope::HIPSystem:
   case SyncScope::OpenCLAllSVMDevices:

@@ -492,7 +492,11 @@ public:
     return ElemDesc ? ElemDesc->ElemRecord : nullptr;
   }
   /// Returns the field information.
-  const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
+  const FieldDecl *getField() const {
+    if (const Descriptor *FD = getFieldDesc())
+      return FD->asFieldDecl();
+    return nullptr;
+  }
 
   /// Checks if the storage is extern.
   bool isExtern() const {
@@ -571,6 +575,13 @@ public:
     if (isIntegralPointer())
       return true;
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
+  }
+
+  /// Checks if an object or a subfield is volatile.
+  bool isVolatile() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
   }
 
   /// Returns the declaration ID.
@@ -723,6 +734,9 @@ public:
   static bool hasSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
+
+  static std::optional<std::pair<Pointer, Pointer>>
+  computeSplitPoint(const Pointer &A, const Pointer &B);
 
   /// Whether this points to a block that's been created for a "literal lvalue",
   /// i.e. a non-MaterializeTemporaryExpr Expr.

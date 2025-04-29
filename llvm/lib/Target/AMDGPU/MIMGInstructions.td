@@ -2054,6 +2054,7 @@ multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay, bit 
       mayLoad = 1,
       hasSideEffects = IsTraceRay,
       mayStore = IsTraceRay,
+      IsNeverUniform = !and(HasVdst, !not(IsTraceRay)),
       d16 = 0,
       dmask = 0x0,
       cpol = 0,

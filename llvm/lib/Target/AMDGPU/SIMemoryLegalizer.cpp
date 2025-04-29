@@ -2846,7 +2846,6 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
   if (Scope != CPol::SCOPE_CU)
     return false;
 
-  const Function &Fn = MI->getMF()->getFunction();
   if (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(*MI))
     return setScope(MI, CPol::SCOPE_SE);
 #else /* LLPC_BUILD_NPI */
