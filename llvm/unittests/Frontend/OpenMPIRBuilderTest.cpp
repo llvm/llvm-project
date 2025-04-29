@@ -6380,6 +6380,11 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
 
 TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   M->setTargetTriple(Triple("amdgcn-amd-amdhsa"));
+  std::string oldDLStr = M->getDataLayoutStr();
+  M->setDataLayout("e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:"
+                   "32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:"
+                   "64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+                   "v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9");
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.setConfig(
       OpenMPIRBuilderConfig(true, false, false, false, false, false, false));
@@ -6472,7 +6477,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   OMPBuilder.finalize();
 
   // Check outlined function
-  //XFAIL: EXPECT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
   EXPECT_NE(TargetStore, nullptr);
   Function *OutlinedFn = TargetStore->getFunction();
   EXPECT_NE(F, OutlinedFn);
@@ -6497,19 +6502,24 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   EXPECT_NE(Alloca1, nullptr);
 
   EXPECT_TRUE(isa<AllocaInst>(Alloca1));
-  auto *Store1 = Alloca1->getNextNode();
+  auto *AsCast1 = Alloca1->getNextNode();
+  EXPECT_TRUE(isa<AddrSpaceCastInst>(AsCast1));
+  auto *Store1 = AsCast1->getNextNode();
   EXPECT_TRUE(isa<StoreInst>(Store1));
   auto *Alloca2 = Store1->getNextNode();
   EXPECT_TRUE(isa<AllocaInst>(Alloca2));
-  auto *Store2 = Alloca2->getNextNode();
+  auto *AsCast2 = Alloca2->getNextNode();
+  EXPECT_TRUE(isa<AddrSpaceCastInst>(AsCast2));
+  auto *Store2 = AsCast2->getNextNode();
   EXPECT_TRUE(isa<StoreInst>(Store2));
 
   auto *InitCall = dyn_cast<CallInst>(Store2->getNextNode());
   EXPECT_NE(InitCall, nullptr);
   EXPECT_EQ(InitCall->getCalledFunction()->getName(), "__kmpc_target_init");
   EXPECT_EQ(InitCall->arg_size(), 2U);
-  EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)));
-  auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0));
+  EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)->stripPointerCasts()));
+  auto *KernelEnvGV =
+      cast<GlobalVariable>(InitCall->getArgOperand(0)->stripPointerCasts());
   EXPECT_TRUE(isa<ConstantStruct>(KernelEnvGV->getInitializer()));
   auto *KernelEnvC = cast<ConstantStruct>(KernelEnvGV->getInitializer());
   EXPECT_TRUE(isa<ConstantStruct>(KernelEnvC->getAggregateElement(0U)));
@@ -6565,13 +6575,14 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   EXPECT_TRUE(isa<ConstantArray>(UsedInit));
   auto *UsedInitData = cast<ConstantArray>(UsedInit);
   EXPECT_EQ(1U, UsedInitData->getNumOperands());
-  Constant *ExecMode = UsedInitData->getOperand(0);
+  Constant *ExecMode = UsedInitData->getOperand(0)->stripPointerCasts();
   EXPECT_TRUE(isa<GlobalVariable>(ExecMode));
   Constant *ExecModeValue = cast<GlobalVariable>(ExecMode)->getInitializer();
   EXPECT_NE(ExecModeValue, nullptr);
   EXPECT_TRUE(isa<ConstantInt>(ExecModeValue));
   EXPECT_EQ(OMP_TGT_EXEC_MODE_GENERIC,
             cast<ConstantInt>(ExecModeValue)->getZExtValue());
+  M->setDataLayout(oldDLStr);
 }
 
 TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
@@ -6776,6 +6787,11 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
 
 TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   M->setTargetTriple(Triple("amdgcn-amd-amdhsa"));
+  std::string oldDLStr = M->getDataLayoutStr();
+  M->setDataLayout("e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:"
+                   "32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:"
+                   "64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+                   "v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9");
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.setConfig(
       OpenMPIRBuilderConfig(true, false, false, false, false, false, false));
@@ -6868,7 +6884,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   OMPBuilder.finalize();
 
   // Check outlined function
- // XFAIL:  EXPECT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
   EXPECT_NE(TargetStore, nullptr);
   Function *OutlinedFn = TargetStore->getFunction();
   EXPECT_NE(F, OutlinedFn);
@@ -6894,15 +6910,17 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   // inappropriately with our alloca movement.
   auto *Alloca2 = Alloca1->getNextNode();
   EXPECT_TRUE(isa<AllocaInst>(Alloca2));
-  auto *Store2 = Alloca2->getNextNode();
+  auto *AsCast1 = Alloca2->getNextNode();
+  EXPECT_TRUE(isa<AddrSpaceCastInst>(AsCast1));
+  auto *Store2 = AsCast1->getNextNode();
   EXPECT_TRUE(isa<StoreInst>(Store2));
 
   auto *InitCall = dyn_cast<CallInst>(Store2->getNextNode());
   EXPECT_NE(InitCall, nullptr);
   EXPECT_EQ(InitCall->getCalledFunction()->getName(), "__kmpc_target_init");
   EXPECT_EQ(InitCall->arg_size(), 2U);
-  EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)));
-  auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0));
+  EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)->stripPointerCasts()));
+  auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0)->stripPointerCasts());
   EXPECT_TRUE(isa<ConstantStruct>(KernelEnvGV->getInitializer()));
   auto *KernelEnvC = cast<ConstantStruct>(KernelEnvGV->getInitializer());
   EXPECT_TRUE(isa<ConstantStruct>(KernelEnvC->getAggregateElement(0U)));
@@ -6948,6 +6966,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   auto *ExitBlock = EntryBlockBranch->getSuccessor(1);
   EXPECT_EQ(ExitBlock->getName(), "worker.exit");
   EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHIIt()));
+  M->setDataLayout(oldDLStr);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTask) {
