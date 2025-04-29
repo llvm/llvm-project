@@ -1,4 +1,4 @@
-// Test the fix that BOLT should skip speical handling of any non virtual
+// Test the fix that BOLT should skip special handling of any non-virtual
 // function pointer relocations in relative vtable.
 
 // RUN: llvm-mc -filetype=obj -triple aarch64-unknown-gnu %s -o %t.o
