@@ -4788,6 +4788,120 @@ If no address spaces names are provided, all address spaces are fenced.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
 
+__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_processor_is`` and ``__builtin_amdgcn_is_invocable`` provide
+a functional mechanism for programatically querying:
+
+* the identity of the current target processor;
+* the capability of the current target processor to invoke a particular builtin.
+
+**Syntax**:
+
+.. code-block:: c
+
+  // When used as the predicate for a control structure
+  bool __builtin_amdgcn_processor_is(const char*);
+  bool __builtin_amdgcn_is_invocable(builtin_name);
+  // Otherwise
+  void __builtin_amdgcn_processor_is(const char*);
+  void __builtin_amdgcn_is_invocable(void);
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_amdgcn_processor_is("gfx1201") ||
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var))
+    __builtin_amdgcn_s_sleep_var(x);
+
+  if (!__builtin_amdgcn_processor_is("gfx906"))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_processor_is("gfx1010") ||
+           __builtin_amdgcn_processor_is("gfx1101"))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
+
+  do {
+    *p -= x;
+  } while (__builtin_amdgcn_processor_is("gfx1010"));
+
+  for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
+
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_ttracedata_imm))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  do {
+    *p -= x;
+  } while (
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
+
+  for (; __builtin_amdgcn_is_invocable(__builtin_amdgcn_permlane64); ++*p)
+    break;
+
+**Description**:
+
+When used as the predicate value of the following control structures:
+
+.. code-block:: c++
+
+  if (...)
+  while (...)
+  do { } while (...)
+  for (...)
+
+be it directly, or as arguments to logical operators such as ``!, ||, &&``, the
+builtins return a boolean value that:
+
+* indicates whether the current target matches the argument; the argument MUST
+  be a string literal and a valid AMDGPU target
+* indicates whether the builtin function passed as the argument can be invoked
+  by the current target; the argument MUST be either a generic or AMDGPU
+  specific builtin name
+
+Outside of these contexts, the builtins have a ``void`` returning signature
+which prevents their misuse.
+
+**Example of invalid use**:
+
+.. code-block:: c++
+
+  void kernel(int* p, int x, bool (*pfn)(bool), const char* str) {
+    if (__builtin_amdgcn_processor_is("not_an_amdgcn_gfx_id")) return;
+    else if (__builtin_amdgcn_processor_is(str)) __builtin_trap();
+
+    bool a = __builtin_amdgcn_processor_is("gfx906");
+    const bool b = !__builtin_amdgcn_processor_is("gfx906");
+    const bool c = !__builtin_amdgcn_processor_is("gfx906");
+    bool d = __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
+    bool e = !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
+    const auto f =
+        !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready)
+        || __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
+    const auto g =
+        !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready)
+        || !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
+    __builtin_amdgcn_processor_is("gfx1201")
+      ? __builtin_amdgcn_s_sleep_var(x) : __builtin_amdgcn_s_sleep(42);
+    if (pfn(__builtin_amdgcn_processor_is("gfx1200")))
+      __builtin_amdgcn_s_sleep_var(x);
+
+    if (__builtin_amdgcn_is_invocable("__builtin_amdgcn_s_sleep_var")) return;
+    else if (__builtin_amdgcn_is_invocable(x)) __builtin_trap();
+  }
+
+When invoked while compiling for a concrete target, the builtins are evaluated
+early by Clang, and never produce any CodeGen effects / have no observable
+side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
+which is an abstract target, a series of predicate values are implicitly
+created. These predicates get resolved when finalizing the compilation process
+for a concrete target, and shall reflect the latter's identity and features.
+Thus, it is possible to author high-level code, in e.g. HIP, that is target
+adaptive in a dynamic fashion, contrary to macro based mechanisms.
 
 ARM/AArch64 Language Extensions
 -------------------------------
