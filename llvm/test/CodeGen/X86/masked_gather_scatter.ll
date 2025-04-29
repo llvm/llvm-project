@@ -4994,8 +4994,8 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset(ptr %x, ptr %a
   ret <16 x float> %res
 }
 
-define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
-; X64-KNL-LABEL: test_gather_16f32_mask_index_pair:
+define {<16 x float>, <16 x float>} @test_gather_structpt_16f32_mask_index_pair(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
+; X64-KNL-LABEL: test_gather_structpt_16f32_mask_index_pair:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5021,7 +5021,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
 ; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
 ; X64-KNL-NEXT:    retq
 ;
-; X86-KNL-LABEL: test_gather_16f32_mask_index_pair:
+; X86-KNL-LABEL: test_gather_structpt_16f32_mask_index_pair:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5035,7 +5035,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
 ; X86-KNL-NEXT:    vgatherdps 4(%eax,%zmm2), %zmm1 {%k1}
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_16f32_mask_index_pair:
+; X64-SKX-SMALL-LABEL: test_gather_structpt_16f32_mask_index_pair:
 ; X64-SKX-SMALL:       # %bb.0:
 ; X64-SKX-SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5061,7 +5061,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
 ; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
 ; X64-SKX-SMALL-NEXT:    retq
 ;
-; X64-SKX-LARGE-LABEL: test_gather_16f32_mask_index_pair:
+; X64-SKX-LARGE-LABEL: test_gather_structpt_16f32_mask_index_pair:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5088,7 +5088,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
 ; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
 ; X64-SKX-LARGE-NEXT:    retq
 ;
-; X86-SKX-LABEL: test_gather_16f32_mask_index_pair:
+; X86-SKX-LABEL: test_gather_structpt_16f32_mask_index_pair:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-SKX-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5113,8 +5113,8 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
   ret {<16 x float>, <16 x float>} %pair2
 }
 
-define <8 x float> @test_gather_structpt_8f32_mask_index(ptr %x, ptr %arr, <8 x i1> %mask, <8 x float> %src0) {
-; X64-KNL-LABEL: test_gather_structpt_8f32_mask_index:
+define <8 x float> @test_gather_structpt2_8f32_mask_index(ptr %x, ptr %arr, <8 x i1> %mask, <8 x float> %src0) {
+; X64-KNL-LABEL: test_gather_structpt2_8f32_mask_index:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
@@ -5126,7 +5126,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index(ptr %x, ptr %arr, <8 x 
 ; X64-KNL-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-KNL-NEXT:    retq
 ;
-; X86-KNL-LABEL: test_gather_structpt_8f32_mask_index:
+; X86-KNL-LABEL: test_gather_structpt2_8f32_mask_index:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X86-KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
@@ -5140,7 +5140,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index(ptr %x, ptr %arr, <8 x 
 ; X86-KNL-NEXT:    vmovaps %ymm1, %ymm0
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_structpt_8f32_mask_index:
+; X64-SKX-SMALL-LABEL: test_gather_structpt2_8f32_mask_index:
 ; X64-SKX-SMALL:       # %bb.0:
 ; X64-SKX-SMALL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-SKX-SMALL-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5152,7 +5152,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index(ptr %x, ptr %arr, <8 x 
 ; X64-SKX-SMALL-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-SKX-SMALL-NEXT:    retq
 ;
-; X64-SKX-LARGE-LABEL: test_gather_structpt_8f32_mask_index:
+; X64-SKX-LARGE-LABEL: test_gather_structpt2_8f32_mask_index:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-SKX-LARGE-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5165,7 +5165,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index(ptr %x, ptr %arr, <8 x 
 ; X64-SKX-LARGE-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-SKX-LARGE-NEXT:    retq
 ;
-; X86-SKX-LABEL: test_gather_structpt_8f32_mask_index:
+; X86-SKX-LABEL: test_gather_structpt2_8f32_mask_index:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X86-SKX-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5184,8 +5184,8 @@ define <8 x float> @test_gather_structpt_8f32_mask_index(ptr %x, ptr %arr, <8 x 
   ret <8 x float> %res
 }
 
-define <8 x float> @test_gather_structpt_8f32_mask_index_offset(ptr %x, ptr %arr, <8 x i1> %mask, <8 x float> %src0) {
-; X64-KNL-LABEL: test_gather_structpt_8f32_mask_index_offset:
+define <8 x float> @test_gather_structpt2_8f32_mask_index_offset(ptr %x, ptr %arr, <8 x i1> %mask, <8 x float> %src0) {
+; X64-KNL-LABEL: test_gather_structpt2_8f32_mask_index_offset:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
@@ -5197,7 +5197,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index_offset(ptr %x, ptr %arr
 ; X64-KNL-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-KNL-NEXT:    retq
 ;
-; X86-KNL-LABEL: test_gather_structpt_8f32_mask_index_offset:
+; X86-KNL-LABEL: test_gather_structpt2_8f32_mask_index_offset:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X86-KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
@@ -5211,7 +5211,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index_offset(ptr %x, ptr %arr
 ; X86-KNL-NEXT:    vmovaps %ymm1, %ymm0
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_structpt_8f32_mask_index_offset:
+; X64-SKX-SMALL-LABEL: test_gather_structpt2_8f32_mask_index_offset:
 ; X64-SKX-SMALL:       # %bb.0:
 ; X64-SKX-SMALL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-SKX-SMALL-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5223,7 +5223,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index_offset(ptr %x, ptr %arr
 ; X64-SKX-SMALL-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-SKX-SMALL-NEXT:    retq
 ;
-; X64-SKX-LARGE-LABEL: test_gather_structpt_8f32_mask_index_offset:
+; X64-SKX-LARGE-LABEL: test_gather_structpt2_8f32_mask_index_offset:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-SKX-LARGE-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5236,7 +5236,7 @@ define <8 x float> @test_gather_structpt_8f32_mask_index_offset(ptr %x, ptr %arr
 ; X64-SKX-LARGE-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-SKX-LARGE-NEXT:    retq
 ;
-; X86-SKX-LABEL: test_gather_structpt_8f32_mask_index_offset:
+; X86-SKX-LABEL: test_gather_structpt2_8f32_mask_index_offset:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X86-SKX-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5255,8 +5255,8 @@ define <8 x float> @test_gather_structpt_8f32_mask_index_offset(ptr %x, ptr %arr
   ret <8 x float> %res
 }
 
-define {<8 x float>, <8 x float>} @test_gather_8f32_mask_index_pair(ptr %x, ptr %arr, <8 x i1> %mask, <8 x float> %src0) {
-; X64-KNL-LABEL: test_gather_8f32_mask_index_pair:
+define {<8 x float>, <8 x float>} @test_gather_structpt2_8f32_mask_index_pair(ptr %x, ptr %arr, <8 x i1> %mask, <8 x float> %src0) {
+; X64-KNL-LABEL: test_gather_structpt2_8f32_mask_index_pair:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
@@ -5270,7 +5270,7 @@ define {<8 x float>, <8 x float>} @test_gather_8f32_mask_index_pair(ptr %x, ptr 
 ; X64-KNL-NEXT:    vgatherqps 4(%rdi,%zmm2,8), %ymm1 {%k1}
 ; X64-KNL-NEXT:    retq
 ;
-; X86-KNL-LABEL: test_gather_8f32_mask_index_pair:
+; X86-KNL-LABEL: test_gather_structpt2_8f32_mask_index_pair:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X86-KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
@@ -5288,7 +5288,7 @@ define {<8 x float>, <8 x float>} @test_gather_8f32_mask_index_pair(ptr %x, ptr 
 ; X86-KNL-NEXT:    # kill: def $ymm1 killed $ymm1 killed $zmm1
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_8f32_mask_index_pair:
+; X64-SKX-SMALL-LABEL: test_gather_structpt2_8f32_mask_index_pair:
 ; X64-SKX-SMALL:       # %bb.0:
 ; X64-SKX-SMALL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-SKX-SMALL-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5302,7 +5302,7 @@ define {<8 x float>, <8 x float>} @test_gather_8f32_mask_index_pair(ptr %x, ptr 
 ; X64-SKX-SMALL-NEXT:    vgatherqps 4(%rdi,%zmm2,8), %ymm1 {%k1}
 ; X64-SKX-SMALL-NEXT:    retq
 ;
-; X64-SKX-LARGE-LABEL: test_gather_8f32_mask_index_pair:
+; X64-SKX-LARGE-LABEL: test_gather_structpt2_8f32_mask_index_pair:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-SKX-LARGE-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5317,7 +5317,7 @@ define {<8 x float>, <8 x float>} @test_gather_8f32_mask_index_pair(ptr %x, ptr 
 ; X64-SKX-LARGE-NEXT:    vgatherqps 4(%rdi,%zmm2,8), %ymm1 {%k1}
 ; X64-SKX-LARGE-NEXT:    retq
 ;
-; X86-SKX-LABEL: test_gather_8f32_mask_index_pair:
+; X86-SKX-LABEL: test_gather_structpt2_8f32_mask_index_pair:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X86-SKX-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -5342,8 +5342,8 @@ define {<8 x float>, <8 x float>} @test_gather_8f32_mask_index_pair(ptr %x, ptr 
   ret {<8 x float>, <8 x float>} %pair2
 }
 
-define <16 x float> @test_gather_structpt_16f32_mask_index1(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
-; X64-KNL-LABEL: test_gather_structpt_16f32_mask_index1:
+define <16 x float> @test_gather_structpt2_16f32_mask_index(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
+; X64-KNL-LABEL: test_gather_structpt2_16f32_mask_index:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5360,7 +5360,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index1(ptr %x, ptr %arr, <1
 ; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
 ; X64-KNL-NEXT:    retq
 ;
-; X86-KNL-LABEL: test_gather_structpt_16f32_mask_index1:
+; X86-KNL-LABEL: test_gather_structpt2_16f32_mask_index:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5372,7 +5372,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index1(ptr %x, ptr %arr, <1
 ; X86-KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_structpt_16f32_mask_index1:
+; X64-SKX-SMALL-LABEL: test_gather_structpt2_16f32_mask_index:
 ; X64-SKX-SMALL:       # %bb.0:
 ; X64-SKX-SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5389,7 +5389,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index1(ptr %x, ptr %arr, <1
 ; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
 ; X64-SKX-SMALL-NEXT:    retq
 ;
-; X64-SKX-LARGE-LABEL: test_gather_structpt_16f32_mask_index1:
+; X64-SKX-LARGE-LABEL: test_gather_structpt2_16f32_mask_index:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5407,7 +5407,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index1(ptr %x, ptr %arr, <1
 ; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
 ; X64-SKX-LARGE-NEXT:    retq
 ;
-; X86-SKX-LABEL: test_gather_structpt_16f32_mask_index1:
+; X86-SKX-LABEL: test_gather_structpt2_16f32_mask_index:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-SKX-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5426,8 +5426,8 @@ define <16 x float> @test_gather_structpt_16f32_mask_index1(ptr %x, ptr %arr, <1
   ret <16 x float> %res
 }
 
-define <16 x float> @test_gather_structpt_16f32_mask_index_offset1(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
-; X64-KNL-LABEL: test_gather_structpt_16f32_mask_index_offset1:
+define <16 x float> @test_gather_structpt2_16f32_mask_index_offset(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
+; X64-KNL-LABEL: test_gather_structpt2_16f32_mask_index_offset:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5444,7 +5444,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset1(ptr %x, ptr %
 ; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
 ; X64-KNL-NEXT:    retq
 ;
-; X86-KNL-LABEL: test_gather_structpt_16f32_mask_index_offset1:
+; X86-KNL-LABEL: test_gather_structpt2_16f32_mask_index_offset:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5456,7 +5456,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset1(ptr %x, ptr %
 ; X86-KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_structpt_16f32_mask_index_offset1:
+; X64-SKX-SMALL-LABEL: test_gather_structpt2_16f32_mask_index_offset:
 ; X64-SKX-SMALL:       # %bb.0:
 ; X64-SKX-SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5473,7 +5473,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset1(ptr %x, ptr %
 ; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
 ; X64-SKX-SMALL-NEXT:    retq
 ;
-; X64-SKX-LARGE-LABEL: test_gather_structpt_16f32_mask_index_offset1:
+; X64-SKX-LARGE-LABEL: test_gather_structpt2_16f32_mask_index_offset:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5491,7 +5491,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset1(ptr %x, ptr %
 ; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
 ; X64-SKX-LARGE-NEXT:    retq
 ;
-; X86-SKX-LABEL: test_gather_structpt_16f32_mask_index_offset1:
+; X86-SKX-LABEL: test_gather_structpt2_16f32_mask_index_offset:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-SKX-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5510,8 +5510,8 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset1(ptr %x, ptr %
   ret <16 x float> %res
 }
 
-define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair2(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
-; X64-KNL-LABEL: test_gather_16f32_mask_index_pair2:
+define {<16 x float>, <16 x float>} @test_gather_structpt2_16f32_mask_index_pair(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0) {
+; X64-KNL-LABEL: test_gather_structpt2_16f32_mask_index_pair:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5535,7 +5535,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair2(ptr %x, 
 ; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
 ; X64-KNL-NEXT:    retq
 ;
-; X86-KNL-LABEL: test_gather_16f32_mask_index_pair2:
+; X86-KNL-LABEL: test_gather_structpt2_16f32_mask_index_pair:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5549,7 +5549,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair2(ptr %x, 
 ; X86-KNL-NEXT:    vgatherdps 4(%eax,%zmm2,8), %zmm1 {%k1}
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_16f32_mask_index_pair2:
+; X64-SKX-SMALL-LABEL: test_gather_structpt2_16f32_mask_index_pair:
 ; X64-SKX-SMALL:       # %bb.0:
 ; X64-SKX-SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5573,7 +5573,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair2(ptr %x, 
 ; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
 ; X64-SKX-SMALL-NEXT:    retq
 ;
-; X64-SKX-LARGE-LABEL: test_gather_16f32_mask_index_pair2:
+; X64-SKX-LARGE-LABEL: test_gather_structpt2_16f32_mask_index_pair:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -5598,7 +5598,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair2(ptr %x, 
 ; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
 ; X64-SKX-LARGE-NEXT:    retq
 ;
-; X86-SKX-LABEL: test_gather_16f32_mask_index_pair2:
+; X86-SKX-LABEL: test_gather_structpt2_16f32_mask_index_pair:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X86-SKX-NEXT:    vpslld $31, %zmm0, %zmm0
