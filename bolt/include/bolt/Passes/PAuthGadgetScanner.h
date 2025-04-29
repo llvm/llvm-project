@@ -201,8 +201,7 @@ namespace PAuthGadgetScanner {
 // to distinguish intermediate and final results at the type level.
 //
 // Here is an overview of issue life-cycle:
-// * an analysis (SrcSafetyAnalysis at now, DstSafetyAnalysis will be added
-//   later to support the detection of authentication oracles) computes register
+// * an analysis (SrcSafetyAnalysis or DstSafetyAnalysis) computes register
 //   state for each instruction in the function.
 // * for each instruction, it is checked whether it is a gadget of some kind,
 //   taking the computed state into account. If a gadget is found, its kind
