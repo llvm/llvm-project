@@ -2197,9 +2197,9 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
-    custom<CombinedConstructsLoop>($combined)
     oilist(
-        `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
+        `combined` `(` custom<CombinedConstructsLoop>($combined) `)`
+      | `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
             $gangOperandsArgType, $gangOperandsDeviceType,
             $gangOperandsSegments, $gang)
       | `worker` `` custom<DeviceTypeOperandsWithKeywordOnly>(
