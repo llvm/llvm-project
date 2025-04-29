@@ -293,6 +293,17 @@ inline RT_API_ATTRS std::size_t Index(const CHAR *x, std::size_t xLen,
     }
     return 0;
   }
+  if (wantLen == 1) {
+    // Trivial case for single character lookup.
+    // We can use simple forward search.
+    CHAR ch = want[0];
+    for (std::size_t at = 0; at < xLen; ++at) {
+      if (x[at] == ch) {
+        return at + 1;
+      }
+    }
+    return 0;
+  }
   // Non-trivial forward substring search: use a simplified form of
   // Boyer-Moore substring searching.
   for (std::size_t at{1}; at + wantLen - 1 <= xLen;) {
