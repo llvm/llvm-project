@@ -1,21 +1,13 @@
-set(LLVM_LINK_COMPONENTS
-  Support
-  CAS
-  )
-
 add_clang_unittest(ClangCASTests
   CASOptionsTest.cpp
   IncludeTreeTest.cpp
-  )
-
-clang_target_link_libraries(ClangCASTests
-  PRIVATE
+  CLANG_LIBS
   clangBasic
   clangCAS
   clangDependencyScanning
-  )
-
-target_link_libraries(ClangCASTests
-  PRIVATE
+  LINK_LIBS
   LLVMTestingSupport
-)
+  LLVM_COMPONENTS
+  CAS
+  Support
+  )
