@@ -20244,6 +20244,7 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v44, v2
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v4
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v40, v5
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v43, v6
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v4, v7
@@ -20256,37 +20257,38 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v55, v14
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v6, v15
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v11, v16
-; GCN-NEXT:    v_cvt_f16_f32_e32 v8, v17
+; GCN-NEXT:    v_cvt_f16_f32_e32 v9, v17
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v53, v18
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v7, v19
-; GCN-NEXT:    v_cvt_f16_f32_e32 v9, v20
-; GCN-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; GCN-NEXT:    v_cvt_f16_f32_e32 v20, v21
+; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v20
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GCN-NEXT:    v_cvt_f16_f32_e32 v8, v21
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v51, v22
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v19, v23
 ; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_cvt_f16_f32_e32 v9, v24
-; GCN-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; GCN-NEXT:    v_cvt_f16_f32_e32 v21, v25
+; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v24
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GCN-NEXT:    v_cvt_f16_f32_e32 v20, v25
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v22, v26
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v17, v27
 ; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_cvt_f16_f32_e32 v9, v28
+; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v28
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v29, v29
-; GCN-NEXT:    v_cvt_f16_f32_e32 v23, v30
-; GCN-NEXT:    s_waitcnt vmcnt(2)
+; GCN-NEXT:    v_cvt_f16_f32_e32 v21, v30
+; GCN-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v50
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v18, v49
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v48, v48
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v27, v39
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v30, v38
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v16, v37
-; GCN-NEXT:    v_cvt_f16_f32_e32 v38, v36
+; GCN-NEXT:    v_cvt_f16_f32_e32 v37, v36
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v25, v35
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v28, v34
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v15, v33
-; GCN-NEXT:    v_cvt_f16_f32_e32 v37, v32
-; GCN-NEXT:    v_cvt_f16_f32_e32 v39, v31
+; GCN-NEXT:    v_cvt_f16_f32_e32 v36, v32
+; GCN-NEXT:    v_cvt_f16_f32_e32 v23, v31
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v26, v63
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v14, v62
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v61, v61
@@ -20295,13 +20297,14 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v13, v58
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v57, v57
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v56, v56
-; GCN-NEXT:    v_cvt_f16_f32_e32 v36, v47
+; GCN-NEXT:    v_cvt_f16_f32_e32 v47, v47
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v12, v46
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v45, v45
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], s[4:5]
-; GCN-NEXT:    v_mov_b32_e32 v63, v9
+; GCN-NEXT:    v_mov_b32_e32 v62, v48
+; GCN-NEXT:    v_mov_b32_e32 v63, v1
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB29_2
 ; GCN-NEXT:  ; %bb.1: ; %cmp.true
@@ -20314,44 +20317,44 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v55, v55
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v52, v52
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v53, v53
-; GCN-NEXT:    v_cvt_f32_f16_e32 v50, v8
+; GCN-NEXT:    v_cvt_f32_f16_e32 v50, v9
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v51, v51
-; GCN-NEXT:    v_cvt_f32_f16_e32 v20, v20
+; GCN-NEXT:    v_cvt_f32_f16_e32 v48, v8
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v49, v22
-; GCN-NEXT:    v_cvt_f32_f16_e32 v21, v21
-; GCN-NEXT:    v_cvt_f32_f16_e32 v34, v23
+; GCN-NEXT:    v_cvt_f32_f16_e32 v38, v20
+; GCN-NEXT:    v_cvt_f32_f16_e32 v39, v21
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v29, v29
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v30, v30
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v27, v27
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v28, v28
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v25, v25
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v26, v26
-; GCN-NEXT:    v_cvt_f32_f16_e32 v23, v39
+; GCN-NEXT:    v_cvt_f32_f16_e32 v23, v23
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v24, v24
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v32, v35
-; GCN-NEXT:    v_cvt_f32_f16_e32 v33, v36
+; GCN-NEXT:    v_cvt_f32_f16_e32 v8, v47
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v31, v56
-; GCN-NEXT:    v_cvt_f32_f16_e32 v8, v45
+; GCN-NEXT:    v_cvt_f32_f16_e32 v9, v45
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v12, v12
-; GCN-NEXT:    v_cvt_f32_f16_e32 v22, v57
+; GCN-NEXT:    v_cvt_f32_f16_e32 v20, v57
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v13, v13
-; GCN-NEXT:    v_cvt_f32_f16_e32 v35, v61
+; GCN-NEXT:    v_cvt_f32_f16_e32 v21, v61
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v14, v14
-; GCN-NEXT:    v_cvt_f32_f16_e32 v36, v37
+; GCN-NEXT:    v_cvt_f32_f16_e32 v22, v36
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v15, v15
-; GCN-NEXT:    v_cvt_f32_f16_e32 v37, v38
+; GCN-NEXT:    v_cvt_f32_f16_e32 v33, v37
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v16, v16
-; GCN-NEXT:    v_cvt_f32_f16_e32 v38, v48
+; GCN-NEXT:    v_cvt_f32_f16_e32 v34, v62
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v18, v18
-; GCN-NEXT:    v_cvt_f32_f16_e32 v39, v63
+; GCN-NEXT:    v_cvt_f32_f16_e32 v35, v63
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v17, v17
-; GCN-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cvt_f32_f16_e32 v48, v9
+; GCN-NEXT:    v_cvt_f32_f16_e32 v36, v1
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v19, v19
-; GCN-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; GCN-NEXT:    v_cvt_f32_f16_e32 v37, v1
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v7, v7
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v11, v11
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v6, v6
@@ -20359,6 +20362,8 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GCN-NEXT:    v_add_f32_e32 v44, 0x38000000, v44
@@ -20372,10 +20377,10 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_add_f32_e32 v53, 0x38000000, v53
 ; GCN-NEXT:    v_add_f32_e32 v50, 0x38000000, v50
 ; GCN-NEXT:    v_add_f32_e32 v51, 0x38000000, v51
-; GCN-NEXT:    v_add_f32_e32 v20, 0x38000000, v20
+; GCN-NEXT:    v_add_f32_e32 v48, 0x38000000, v48
 ; GCN-NEXT:    v_add_f32_e32 v49, 0x38000000, v49
-; GCN-NEXT:    v_add_f32_e32 v21, 0x38000000, v21
-; GCN-NEXT:    v_add_f32_e32 v34, 0x38000000, v34
+; GCN-NEXT:    v_add_f32_e32 v38, 0x38000000, v38
+; GCN-NEXT:    v_add_f32_e32 v39, 0x38000000, v39
 ; GCN-NEXT:    v_add_f32_e32 v29, 0x38000000, v29
 ; GCN-NEXT:    v_add_f32_e32 v30, 0x38000000, v30
 ; GCN-NEXT:    v_add_f32_e32 v27, 0x38000000, v27
@@ -20385,25 +20390,25 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_add_f32_e32 v23, 0x38000000, v23
 ; GCN-NEXT:    v_add_f32_e32 v24, 0x38000000, v24
 ; GCN-NEXT:    v_add_f32_e32 v32, 0x38000000, v32
-; GCN-NEXT:    v_add_f32_e32 v33, 0x38000000, v33
-; GCN-NEXT:    v_add_f32_e32 v31, 0x38000000, v31
 ; GCN-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; GCN-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
-; GCN-NEXT:    v_add_f32_e32 v22, 0x38000000, v22
-; GCN-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
-; GCN-NEXT:    v_add_f32_e32 v35, 0x38000000, v35
-; GCN-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
-; GCN-NEXT:    v_add_f32_e32 v36, 0x38000000, v36
-; GCN-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
-; GCN-NEXT:    v_add_f32_e32 v46, 0x38000000, v37
-; GCN-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
-; GCN-NEXT:    v_add_f32_e32 v47, 0x38000000, v38
-; GCN-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
-; GCN-NEXT:    v_add_f32_e32 v39, 0x38000000, v39
-; GCN-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
-; GCN-NEXT:    v_add_f32_e32 v56, 0x38000000, v48
-; GCN-NEXT:    v_add_f32_e32 v19, 0x38000000, v19
+; GCN-NEXT:    v_add_f32_e32 v31, 0x38000000, v31
 ; GCN-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; GCN-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; GCN-NEXT:    v_add_f32_e32 v20, 0x38000000, v20
+; GCN-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
+; GCN-NEXT:    v_add_f32_e32 v21, 0x38000000, v21
+; GCN-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
+; GCN-NEXT:    v_add_f32_e32 v22, 0x38000000, v22
+; GCN-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; GCN-NEXT:    v_add_f32_e32 v33, 0x38000000, v33
+; GCN-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
+; GCN-NEXT:    v_add_f32_e32 v34, 0x38000000, v34
+; GCN-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
+; GCN-NEXT:    v_add_f32_e32 v35, 0x38000000, v35
+; GCN-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
+; GCN-NEXT:    v_add_f32_e32 v46, 0x38000000, v36
+; GCN-NEXT:    v_add_f32_e32 v19, 0x38000000, v19
+; GCN-NEXT:    v_add_f32_e32 v47, 0x38000000, v37
 ; GCN-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; GCN-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; GCN-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
@@ -20424,10 +20429,10 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v53, v53
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v50, v50
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v51, v51
-; GCN-NEXT:    v_cvt_f16_f32_e32 v20, v20
+; GCN-NEXT:    v_cvt_f16_f32_e32 v48, v48
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v49, v49
-; GCN-NEXT:    v_cvt_f16_f32_e32 v21, v21
-; GCN-NEXT:    v_cvt_f16_f32_e32 v34, v34
+; GCN-NEXT:    v_cvt_f16_f32_e32 v38, v38
+; GCN-NEXT:    v_cvt_f16_f32_e32 v39, v39
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v29, v29
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v30, v30
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v27, v27
@@ -20437,25 +20442,25 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v23, v23
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v24, v24
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v32, v32
-; GCN-NEXT:    v_cvt_f16_f32_e32 v33, v33
+; GCN-NEXT:    v_cvt_f16_f32_e32 v8, v8
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v31, v31
-; GCN-NEXT:    v_cvt_f16_f32_e32 v45, v8
-; GCN-NEXT:    v_cvt_f16_f32_e32 v8, v12
-; GCN-NEXT:    v_cvt_f16_f32_e32 v57, v22
+; GCN-NEXT:    v_cvt_f16_f32_e32 v45, v9
+; GCN-NEXT:    v_cvt_f16_f32_e32 v9, v12
+; GCN-NEXT:    v_cvt_f16_f32_e32 v57, v20
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; GCN-NEXT:    v_cvt_f16_f32_e32 v61, v35
+; GCN-NEXT:    v_cvt_f16_f32_e32 v61, v21
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; GCN-NEXT:    v_cvt_f16_f32_e32 v37, v36
+; GCN-NEXT:    v_cvt_f16_f32_e32 v36, v22
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; GCN-NEXT:    v_cvt_f16_f32_e32 v38, v46
+; GCN-NEXT:    v_cvt_f16_f32_e32 v37, v33
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v16, v16
-; GCN-NEXT:    v_cvt_f16_f32_e32 v48, v47
+; GCN-NEXT:    v_cvt_f16_f32_e32 v62, v34
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v18, v18
-; GCN-NEXT:    v_cvt_f16_f32_e32 v63, v39
+; GCN-NEXT:    v_cvt_f16_f32_e32 v63, v35
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; GCN-NEXT:    v_cvt_f16_f32_e32 v56, v56
+; GCN-NEXT:    v_cvt_f16_f32_e32 v12, v46
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v19, v19
-; GCN-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; GCN-NEXT:    v_cvt_f16_f32_e32 v56, v47
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v7, v7
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v6, v6
@@ -20465,210 +20470,214 @@ define <52 x i16> @bitcast_v52f16_to_v52i16(<52 x half> %a, i32 %b) {
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GCN-NEXT:    v_lshlrev_b32_e32 v22, 16, v44
-; GCN-NEXT:    v_lshlrev_b32_e32 v36, 16, v43
-; GCN-NEXT:    v_lshlrev_b32_e32 v42, 16, v42
-; GCN-NEXT:    v_lshlrev_b32_e32 v55, 16, v55
+; GCN-NEXT:    v_lshlrev_b32_e32 v21, 16, v44
+; GCN-NEXT:    v_lshlrev_b32_e32 v22, 16, v43
+; GCN-NEXT:    v_lshlrev_b32_e32 v33, 16, v42
+; GCN-NEXT:    v_lshlrev_b32_e32 v34, 16, v55
 ; GCN-NEXT:    v_lshlrev_b32_e32 v53, 16, v53
 ; GCN-NEXT:    v_lshlrev_b32_e32 v51, 16, v51
 ; GCN-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
-; GCN-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
+; GCN-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
 ; GCN-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; GCN-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
 ; GCN-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; GCN-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GCN-NEXT:    v_lshlrev_b32_e32 v33, 16, v33
-; GCN-NEXT:    v_lshlrev_b32_e32 v12, 16, v45
-; GCN-NEXT:    v_lshlrev_b32_e32 v35, 16, v57
-; GCN-NEXT:    v_lshlrev_b32_e32 v39, 16, v61
-; GCN-NEXT:    v_lshlrev_b32_e32 v43, 16, v37
-; GCN-NEXT:    v_lshlrev_b32_e32 v44, 16, v38
-; GCN-NEXT:    v_lshlrev_b32_e32 v46, 16, v48
-; GCN-NEXT:    v_lshlrev_b32_e32 v47, 16, v63
-; GCN-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GCN-NEXT:    v_lshlrev_b32_e32 v46, 16, v8
+; GCN-NEXT:    v_lshlrev_b32_e32 v8, 16, v45
+; GCN-NEXT:    v_lshlrev_b32_e32 v20, 16, v57
+; GCN-NEXT:    v_lshlrev_b32_e32 v35, 16, v61
+; GCN-NEXT:    v_lshlrev_b32_e32 v55, 16, v36
+; GCN-NEXT:    v_lshlrev_b32_e32 v42, 16, v37
+; GCN-NEXT:    v_lshlrev_b32_e32 v43, 16, v62
+; GCN-NEXT:    v_lshlrev_b32_e32 v44, 16, v63
+; GCN-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GCN-NEXT:    v_lshlrev_b32_e32 v47, 16, v12
+; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    v_or_b32_e32 v12, v9, v8
+; GCN-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_lshlrev_b32_e32 v58, 16, v56
-; GCN-NEXT:    v_or_b32_e32 v12, v8, v12
-; GCN-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; GCN-NEXT:    v_lshlrev_b32_e32 v59, 16, v9
-; GCN-NEXT:    v_or_b32_e32 v13, v13, v35
-; GCN-NEXT:    v_lshlrev_b32_e32 v60, 16, v11
-; GCN-NEXT:    v_or_b32_e32 v14, v14, v39
-; GCN-NEXT:    v_lshlrev_b32_e32 v62, 16, v10
-; GCN-NEXT:    v_or_b32_e32 v15, v15, v43
-; GCN-NEXT:    v_lshlrev_b32_e32 v43, 16, v2
-; GCN-NEXT:    v_or_b32_e32 v16, v16, v44
-; GCN-NEXT:    v_lshlrev_b32_e32 v44, 16, v1
-; GCN-NEXT:    v_or_b32_e32 v41, v41, v22
-; GCN-NEXT:    v_or_b32_e32 v40, v40, v36
-; GCN-NEXT:    v_or_b32_e32 v54, v54, v42
-; GCN-NEXT:    v_or_b32_e32 v52, v52, v55
-; GCN-NEXT:    v_or_b32_e32 v8, v50, v53
-; GCN-NEXT:    v_or_b32_e32 v20, v20, v51
-; GCN-NEXT:    v_or_b32_e32 v21, v21, v49
-; GCN-NEXT:    v_or_b32_e32 v29, v29, v34
+; GCN-NEXT:    v_or_b32_e32 v13, v13, v20
+; GCN-NEXT:    v_lshlrev_b32_e32 v59, 16, v11
+; GCN-NEXT:    v_or_b32_e32 v14, v14, v35
+; GCN-NEXT:    v_lshlrev_b32_e32 v60, 16, v10
+; GCN-NEXT:    v_or_b32_e32 v15, v15, v55
+; GCN-NEXT:    v_lshlrev_b32_e32 v55, 16, v2
+; GCN-NEXT:    v_or_b32_e32 v16, v16, v42
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GCN-NEXT:    v_lshlrev_b32_e32 v42, 16, v1
+; GCN-NEXT:    v_or_b32_e32 v41, v41, v21
+; GCN-NEXT:    v_or_b32_e32 v40, v40, v22
+; GCN-NEXT:    v_or_b32_e32 v54, v54, v33
+; GCN-NEXT:    v_or_b32_e32 v52, v52, v34
+; GCN-NEXT:    v_or_b32_e32 v9, v50, v53
+; GCN-NEXT:    v_or_b32_e32 v8, v48, v51
+; GCN-NEXT:    v_or_b32_e32 v20, v38, v49
+; GCN-NEXT:    v_or_b32_e32 v29, v29, v39
 ; GCN-NEXT:    v_or_b32_e32 v27, v27, v30
 ; GCN-NEXT:    v_or_b32_e32 v25, v25, v28
-; GCN-NEXT:    v_or_b32_e32 v39, v23, v26
+; GCN-NEXT:    v_or_b32_e32 v23, v23, v26
 ; GCN-NEXT:    v_or_b32_e32 v35, v32, v24
 ; GCN-NEXT:    s_waitcnt expcnt(1)
-; GCN-NEXT:    v_or_b32_e32 v56, v31, v33
-; GCN-NEXT:    v_or_b32_e32 v18, v18, v46
-; GCN-NEXT:    v_or_b32_e32 v17, v17, v47
-; GCN-NEXT:    v_or_b32_e32 v19, v19, v58
-; GCN-NEXT:    v_or_b32_e32 v7, v7, v59
-; GCN-NEXT:    v_or_b32_e32 v6, v6, v60
-; GCN-NEXT:    v_or_b32_e32 v5, v5, v62
-; GCN-NEXT:    v_or_b32_e32 v4, v4, v43
-; GCN-NEXT:    v_or_b32_e32 v3, v3, v44
-; GCN-NEXT:    v_alignbit_b32 v44, v3, v22, 16
-; GCN-NEXT:    v_alignbit_b32 v43, v4, v36, 16
-; GCN-NEXT:    v_alignbit_b32 v42, v5, v42, 16
-; GCN-NEXT:    v_alignbit_b32 v55, v6, v55, 16
+; GCN-NEXT:    v_or_b32_e32 v56, v31, v46
+; GCN-NEXT:    v_or_b32_e32 v18, v18, v43
+; GCN-NEXT:    v_or_b32_e32 v17, v17, v44
+; GCN-NEXT:    v_or_b32_e32 v19, v19, v47
+; GCN-NEXT:    v_or_b32_e32 v7, v7, v58
+; GCN-NEXT:    v_or_b32_e32 v6, v6, v59
+; GCN-NEXT:    v_or_b32_e32 v5, v5, v60
+; GCN-NEXT:    v_or_b32_e32 v4, v4, v55
+; GCN-NEXT:    v_or_b32_e32 v3, v3, v42
+; GCN-NEXT:    v_alignbit_b32 v44, v3, v21, 16
+; GCN-NEXT:    v_alignbit_b32 v43, v4, v22, 16
+; GCN-NEXT:    v_alignbit_b32 v42, v5, v33, 16
+; GCN-NEXT:    v_alignbit_b32 v55, v6, v34, 16
 ; GCN-NEXT:    v_alignbit_b32 v53, v7, v53, 16
 ; GCN-NEXT:    v_alignbit_b32 v51, v19, v51, 16
 ; GCN-NEXT:    v_alignbit_b32 v22, v17, v49, 16
-; GCN-NEXT:    v_alignbit_b32 v23, v18, v34, 16
+; GCN-NEXT:    v_alignbit_b32 v21, v18, v39, 16
 ; GCN-NEXT:    v_alignbit_b32 v30, v16, v30, 16
 ; GCN-NEXT:    v_alignbit_b32 v28, v15, v28, 16
 ; GCN-NEXT:    v_alignbit_b32 v26, v14, v26, 16
 ; GCN-NEXT:    v_alignbit_b32 v24, v13, v24, 16
-; GCN-NEXT:    v_alignbit_b32 v36, v12, v33, 16
+; GCN-NEXT:    v_alignbit_b32 v47, v12, v46, 16
 ; GCN-NEXT:  .LBB29_2: ; %end
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GCN-NEXT:    v_and_b32_e32 v49, 0xffff, v41
-; GCN-NEXT:    v_lshlrev_b32_e32 v50, 16, v44
+; GCN-NEXT:    v_and_b32_e32 v38, 0xffff, v41
+; GCN-NEXT:    v_lshlrev_b32_e32 v39, 16, v44
 ; GCN-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    v_add_i32_e32 v31, vcc, 4, v0
-; GCN-NEXT:    v_and_b32_e32 v40, 0xffff, v40
-; GCN-NEXT:    v_lshlrev_b32_e32 v41, 16, v43
+; GCN-NEXT:    v_and_b32_e32 v48, 0xffff, v40
+; GCN-NEXT:    v_lshlrev_b32_e32 v49, 16, v43
 ; GCN-NEXT:    v_add_i32_e32 v33, vcc, 8, v0
 ; GCN-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GCN-NEXT:    v_add_i32_e32 v32, vcc, 12, v0
-; GCN-NEXT:    v_and_b32_e32 v54, 0xffff, v54
-; GCN-NEXT:    v_lshlrev_b32_e32 v42, 16, v42
+; GCN-NEXT:    v_and_b32_e32 v50, 0xffff, v54
+; GCN-NEXT:    v_lshlrev_b32_e32 v54, 16, v42
 ; GCN-NEXT:    v_add_i32_e32 v34, vcc, 16, v0
 ; GCN-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GCN-NEXT:    v_lshlrev_b32_e32 v43, 16, v10
+; GCN-NEXT:    v_lshlrev_b32_e32 v40, 16, v10
 ; GCN-NEXT:    v_add_i32_e32 v10, vcc, 20, v0
 ; GCN-NEXT:    v_and_b32_e32 v52, 0xffff, v52
 ; GCN-NEXT:    v_lshlrev_b32_e32 v55, 16, v55
-; GCN-NEXT:    v_add_i32_e32 v44, vcc, 24, v0
+; GCN-NEXT:    v_add_i32_e32 v41, vcc, 24, v0
 ; GCN-NEXT:    v_and_b32_e32 v6, 0xffff, v6
 ; GCN-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GCN-NEXT:    v_add_i32_e32 v46, vcc, 28, v0
-; GCN-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; GCN-NEXT:    v_add_i32_e32 v42, vcc, 28, v0
+; GCN-NEXT:    v_and_b32_e32 v9, 0xffff, v9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v53, 16, v53
-; GCN-NEXT:    v_or_b32_e32 v49, v49, v50
-; GCN-NEXT:    v_add_i32_e32 v50, vcc, 32, v0
+; GCN-NEXT:    v_or_b32_e32 v38, v38, v39
+; GCN-NEXT:    v_add_i32_e32 v39, vcc, 32, v0
 ; GCN-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; GCN-NEXT:    v_lshlrev_b32_e32 v43, 16, v43
 ; GCN-NEXT:    v_or_b32_e32 v1, v3, v1
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, 36, v0
-; GCN-NEXT:    v_and_b32_e32 v20, 0xffff, v20
+; GCN-NEXT:    v_and_b32_e32 v8, 0xffff, v8
 ; GCN-NEXT:    v_lshlrev_b32_e32 v51, 16, v51
-; GCN-NEXT:    v_or_b32_e32 v40, v40, v41
-; GCN-NEXT:    v_add_i32_e32 v41, vcc, 40, v0
+; GCN-NEXT:    v_or_b32_e32 v48, v48, v49
+; GCN-NEXT:    v_add_i32_e32 v49, vcc, 40, v0
 ; GCN-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GCN-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v47, 16, v47
+; GCN-NEXT:    v_lshlrev_b32_e32 v44, 16, v44
 ; GCN-NEXT:    v_or_b32_e32 v2, v4, v2
 ; GCN-NEXT:    v_add_i32_e32 v4, vcc, 44, v0
-; GCN-NEXT:    v_and_b32_e32 v21, 0xffff, v21
+; GCN-NEXT:    v_and_b32_e32 v20, 0xffff, v20
 ; GCN-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GCN-NEXT:    v_or_b32_e32 v54, v54, v42
-; GCN-NEXT:    v_add_i32_e32 v42, vcc, 48, v0
+; GCN-NEXT:    v_or_b32_e32 v50, v50, v54
+; GCN-NEXT:    v_add_i32_e32 v54, vcc, 48, v0
 ; GCN-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GCN-NEXT:    v_lshlrev_b32_e32 v58, 16, v63
-; GCN-NEXT:    v_or_b32_e32 v5, v5, v43
-; GCN-NEXT:    v_add_i32_e32 v43, vcc, 52, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v46, 16, v63
+; GCN-NEXT:    v_or_b32_e32 v5, v5, v40
+; GCN-NEXT:    v_add_i32_e32 v40, vcc, 52, v0
 ; GCN-NEXT:    v_and_b32_e32 v29, 0xffff, v29
-; GCN-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; GCN-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
 ; GCN-NEXT:    v_or_b32_e32 v52, v52, v55
 ; GCN-NEXT:    v_add_i32_e32 v55, vcc, 56, v0
 ; GCN-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GCN-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
+; GCN-NEXT:    v_lshlrev_b32_e32 v58, 16, v62
 ; GCN-NEXT:    v_or_b32_e32 v6, v6, v11
 ; GCN-NEXT:    v_add_i32_e32 v11, vcc, 60, v0
 ; GCN-NEXT:    v_and_b32_e32 v27, 0xffff, v27
 ; GCN-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
-; GCN-NEXT:    v_or_b32_e32 v8, v8, v53
+; GCN-NEXT:    v_or_b32_e32 v9, v9, v53
 ; GCN-NEXT:    v_add_i32_e32 v53, vcc, 64, v0
 ; GCN-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GCN-NEXT:    v_lshlrev_b32_e32 v38, 16, v38
-; GCN-NEXT:    v_or_b32_e32 v7, v7, v9
-; GCN-NEXT:    v_add_i32_e32 v9, vcc, 0x44, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
+; GCN-NEXT:    v_or_b32_e32 v7, v7, v43
+; GCN-NEXT:    v_add_i32_e32 v43, vcc, 0x44, v0
 ; GCN-NEXT:    v_and_b32_e32 v25, 0xffff, v25
 ; GCN-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GCN-NEXT:    v_or_b32_e32 v20, v20, v51
+; GCN-NEXT:    v_or_b32_e32 v8, v8, v51
 ; GCN-NEXT:    v_add_i32_e32 v51, vcc, 0x48, v0
 ; GCN-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GCN-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
-; GCN-NEXT:    v_or_b32_e32 v19, v19, v47
-; GCN-NEXT:    v_add_i32_e32 v47, vcc, 0x4c, v0
-; GCN-NEXT:    v_and_b32_e32 v39, 0xffff, v39
+; GCN-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GCN-NEXT:    v_or_b32_e32 v19, v19, v44
+; GCN-NEXT:    v_add_i32_e32 v44, vcc, 0x4c, v0
+; GCN-NEXT:    v_and_b32_e32 v23, 0xffff, v23
 ; GCN-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
-; GCN-NEXT:    v_or_b32_e32 v21, v21, v22
+; GCN-NEXT:    v_or_b32_e32 v20, v20, v22
 ; GCN-NEXT:    v_add_i32_e32 v22, vcc, 0x50, v0
 ; GCN-NEXT:    v_and_b32_e32 v14, 0xffff, v14
 ; GCN-NEXT:    v_lshlrev_b32_e32 v59, 16, v61
-; GCN-NEXT:    v_or_b32_e32 v17, v17, v58
-; GCN-NEXT:    v_add_i32_e32 v58, vcc, 0x54, v0
+; GCN-NEXT:    v_or_b32_e32 v17, v17, v46
+; GCN-NEXT:    v_add_i32_e32 v46, vcc, 0x54, v0
 ; GCN-NEXT:    v_and_b32_e32 v35, 0xffff, v35
 ; GCN-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GCN-NEXT:    v_or_b32_e32 v23, v29, v23
+; GCN-NEXT:    v_or_b32_e32 v21, v29, v21
 ; GCN-NEXT:    v_add_i32_e32 v29, vcc, 0x58, v0
 ; GCN-NEXT:    v_and_b32_e32 v13, 0xffff, v13
 ; GCN-NEXT:    v_lshlrev_b32_e32 v57, 16, v57
-; GCN-NEXT:    v_or_b32_e32 v18, v18, v48
-; GCN-NEXT:    v_add_i32_e32 v48, vcc, 0x5c, v0
+; GCN-NEXT:    v_or_b32_e32 v18, v18, v58
+; GCN-NEXT:    v_add_i32_e32 v58, vcc, 0x5c, v0
 ; GCN-NEXT:    v_and_b32_e32 v56, 0xffff, v56
-; GCN-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
+; GCN-NEXT:    v_lshlrev_b32_e32 v47, 16, v47
 ; GCN-NEXT:    v_or_b32_e32 v27, v27, v30
 ; GCN-NEXT:    v_add_i32_e32 v30, vcc, 0x60, v0
 ; GCN-NEXT:    v_and_b32_e32 v12, 0xffff, v12
 ; GCN-NEXT:    v_lshlrev_b32_e32 v45, 16, v45
-; GCN-NEXT:    v_or_b32_e32 v16, v16, v38
-; GCN-NEXT:    v_add_i32_e32 v38, vcc, 0x64, v0
+; GCN-NEXT:    v_or_b32_e32 v16, v16, v37
+; GCN-NEXT:    v_add_i32_e32 v37, vcc, 0x64, v0
 ; GCN-NEXT:    v_or_b32_e32 v25, v25, v28
-; GCN-NEXT:    v_or_b32_e32 v15, v15, v37
-; GCN-NEXT:    v_or_b32_e32 v26, v39, v26
+; GCN-NEXT:    v_or_b32_e32 v15, v15, v36
+; GCN-NEXT:    v_or_b32_e32 v23, v23, v26
 ; GCN-NEXT:    v_or_b32_e32 v14, v14, v59
 ; GCN-NEXT:    v_or_b32_e32 v24, v35, v24
 ; GCN-NEXT:    v_or_b32_e32 v13, v13, v57
-; GCN-NEXT:    v_or_b32_e32 v28, v56, v36
+; GCN-NEXT:    v_or_b32_e32 v26, v56, v47
 ; GCN-NEXT:    v_or_b32_e32 v12, v12, v45
-; GCN-NEXT:    buffer_store_dword v49, v0, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v38, v0, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v1, v31, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v40, v33, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v48, v33, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v2, v32, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v54, v34, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v50, v34, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v5, v10, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v52, v44, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v6, v46, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v8, v50, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v52, v41, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v6, v42, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v9, v39, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v7, v3, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v20, v41, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v8, v49, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v19, v4, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v21, v42, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v17, v43, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v23, v55, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v20, v54, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v17, v40, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v21, v55, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v18, v11, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v27, v53, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v16, v9, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v16, v43, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v25, v51, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v15, v47, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v26, v22, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v14, v58, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v15, v44, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v23, v22, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v14, v46, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v24, v29, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v13, v48, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v28, v30, s[0:3], 0 offen
-; GCN-NEXT:    buffer_store_dword v12, v38, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v13, v58, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v26, v30, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v12, v37, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload

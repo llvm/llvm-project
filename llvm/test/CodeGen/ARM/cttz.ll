@@ -224,24 +224,24 @@ define i64 @test_i64(i64 %a) {
 ; CHECK-6M-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-6M-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-6M-NEXT:    mov r2, r0
-; CHECK-6M-NEXT:    ldr r5, .LCPI3_0
+; CHECK-6M-NEXT:    ldr r4, .LCPI3_0
 ; CHECK-6M-NEXT:    adr r3, .LCPI3_1
 ; CHECK-6M-NEXT:    movs r0, #32
 ; CHECK-6M-NEXT:    cmp r1, #0
-; CHECK-6M-NEXT:    mov r4, r0
+; CHECK-6M-NEXT:    mov r5, r0
 ; CHECK-6M-NEXT:    beq .LBB3_2
 ; CHECK-6M-NEXT:  @ %bb.1:
-; CHECK-6M-NEXT:    rsbs r4, r1, #0
-; CHECK-6M-NEXT:    ands r4, r1
-; CHECK-6M-NEXT:    muls r4, r5, r4
-; CHECK-6M-NEXT:    lsrs r1, r4, #27
-; CHECK-6M-NEXT:    ldrb r4, [r3, r1]
+; CHECK-6M-NEXT:    rsbs r5, r1, #0
+; CHECK-6M-NEXT:    ands r5, r1
+; CHECK-6M-NEXT:    muls r5, r4, r5
+; CHECK-6M-NEXT:    lsrs r1, r5, #27
+; CHECK-6M-NEXT:    ldrb r5, [r3, r1]
 ; CHECK-6M-NEXT:  .LBB3_2:
-; CHECK-6M-NEXT:    adds r4, #32
+; CHECK-6M-NEXT:    adds r5, #32
 ; CHECK-6M-NEXT:    rsbs r1, r2, #0
 ; CHECK-6M-NEXT:    ands r1, r2
-; CHECK-6M-NEXT:    muls r5, r1, r5
-; CHECK-6M-NEXT:    lsrs r1, r5, #27
+; CHECK-6M-NEXT:    muls r4, r1, r4
+; CHECK-6M-NEXT:    lsrs r1, r4, #27
 ; CHECK-6M-NEXT:    cmp r2, #0
 ; CHECK-6M-NEXT:    bne .LBB3_5
 ; CHECK-6M-NEXT:  @ %bb.3:
@@ -253,7 +253,7 @@ define i64 @test_i64(i64 %a) {
 ; CHECK-6M-NEXT:    ldrb r0, [r3, r1]
 ; CHECK-6M-NEXT:    bne .LBB3_4
 ; CHECK-6M-NEXT:  .LBB3_6:
-; CHECK-6M-NEXT:    mov r0, r4
+; CHECK-6M-NEXT:    mov r0, r5
 ; CHECK-6M-NEXT:    movs r1, #0
 ; CHECK-6M-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-6M-NEXT:    .p2align 2
@@ -268,24 +268,24 @@ define i64 @test_i64(i64 %a) {
 ; CHECK-8MBASE-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-8MBASE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-8MBASE-NEXT:    mov r2, r0
-; CHECK-8MBASE-NEXT:    movw r5, #46385
-; CHECK-8MBASE-NEXT:    movt r5, #1916
+; CHECK-8MBASE-NEXT:    movw r4, #46385
+; CHECK-8MBASE-NEXT:    movt r4, #1916
 ; CHECK-8MBASE-NEXT:    adr r3, .LCPI3_0
 ; CHECK-8MBASE-NEXT:    movs r0, #32
-; CHECK-8MBASE-NEXT:    mov r4, r0
+; CHECK-8MBASE-NEXT:    mov r5, r0
 ; CHECK-8MBASE-NEXT:    cbz r1, .LBB3_2
 ; CHECK-8MBASE-NEXT:  @ %bb.1:
-; CHECK-8MBASE-NEXT:    rsbs r4, r1, #0
-; CHECK-8MBASE-NEXT:    ands r4, r1
-; CHECK-8MBASE-NEXT:    muls r4, r5, r4
-; CHECK-8MBASE-NEXT:    lsrs r1, r4, #27
-; CHECK-8MBASE-NEXT:    ldrb r4, [r3, r1]
+; CHECK-8MBASE-NEXT:    rsbs r5, r1, #0
+; CHECK-8MBASE-NEXT:    ands r5, r1
+; CHECK-8MBASE-NEXT:    muls r5, r4, r5
+; CHECK-8MBASE-NEXT:    lsrs r1, r5, #27
+; CHECK-8MBASE-NEXT:    ldrb r5, [r3, r1]
 ; CHECK-8MBASE-NEXT:  .LBB3_2:
-; CHECK-8MBASE-NEXT:    adds r4, #32
+; CHECK-8MBASE-NEXT:    adds r5, #32
 ; CHECK-8MBASE-NEXT:    rsbs r1, r2, #0
 ; CHECK-8MBASE-NEXT:    ands r1, r2
-; CHECK-8MBASE-NEXT:    muls r5, r1, r5
-; CHECK-8MBASE-NEXT:    lsrs r1, r5, #27
+; CHECK-8MBASE-NEXT:    muls r4, r1, r4
+; CHECK-8MBASE-NEXT:    lsrs r1, r4, #27
 ; CHECK-8MBASE-NEXT:    cmp r2, #0
 ; CHECK-8MBASE-NEXT:    bne .LBB3_5
 ; CHECK-8MBASE-NEXT:  @ %bb.3:
@@ -297,7 +297,7 @@ define i64 @test_i64(i64 %a) {
 ; CHECK-8MBASE-NEXT:    ldrb r0, [r3, r1]
 ; CHECK-8MBASE-NEXT:    bne .LBB3_4
 ; CHECK-8MBASE-NEXT:  .LBB3_6:
-; CHECK-8MBASE-NEXT:    mov r0, r4
+; CHECK-8MBASE-NEXT:    mov r0, r5
 ; CHECK-8MBASE-NEXT:    movs r1, #0
 ; CHECK-8MBASE-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-8MBASE-NEXT:    .p2align 2
@@ -491,24 +491,24 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-6M-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-6M-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-6M-NEXT:    mov r2, r0
-; CHECK-6M-NEXT:    ldr r5, .LCPI7_0
+; CHECK-6M-NEXT:    ldr r4, .LCPI7_0
 ; CHECK-6M-NEXT:    adr r3, .LCPI7_1
 ; CHECK-6M-NEXT:    movs r0, #32
 ; CHECK-6M-NEXT:    cmp r1, #0
-; CHECK-6M-NEXT:    mov r4, r0
+; CHECK-6M-NEXT:    mov r5, r0
 ; CHECK-6M-NEXT:    beq .LBB7_2
 ; CHECK-6M-NEXT:  @ %bb.1:
-; CHECK-6M-NEXT:    rsbs r4, r1, #0
-; CHECK-6M-NEXT:    ands r4, r1
-; CHECK-6M-NEXT:    muls r4, r5, r4
-; CHECK-6M-NEXT:    lsrs r1, r4, #27
-; CHECK-6M-NEXT:    ldrb r4, [r3, r1]
+; CHECK-6M-NEXT:    rsbs r5, r1, #0
+; CHECK-6M-NEXT:    ands r5, r1
+; CHECK-6M-NEXT:    muls r5, r4, r5
+; CHECK-6M-NEXT:    lsrs r1, r5, #27
+; CHECK-6M-NEXT:    ldrb r5, [r3, r1]
 ; CHECK-6M-NEXT:  .LBB7_2:
-; CHECK-6M-NEXT:    adds r4, #32
+; CHECK-6M-NEXT:    adds r5, #32
 ; CHECK-6M-NEXT:    rsbs r1, r2, #0
 ; CHECK-6M-NEXT:    ands r1, r2
-; CHECK-6M-NEXT:    muls r5, r1, r5
-; CHECK-6M-NEXT:    lsrs r1, r5, #27
+; CHECK-6M-NEXT:    muls r4, r1, r4
+; CHECK-6M-NEXT:    lsrs r1, r4, #27
 ; CHECK-6M-NEXT:    cmp r2, #0
 ; CHECK-6M-NEXT:    bne .LBB7_5
 ; CHECK-6M-NEXT:  @ %bb.3:
@@ -520,7 +520,7 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-6M-NEXT:    ldrb r0, [r3, r1]
 ; CHECK-6M-NEXT:    bne .LBB7_4
 ; CHECK-6M-NEXT:  .LBB7_6:
-; CHECK-6M-NEXT:    mov r0, r4
+; CHECK-6M-NEXT:    mov r0, r5
 ; CHECK-6M-NEXT:    movs r1, #0
 ; CHECK-6M-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-6M-NEXT:    .p2align 2
@@ -535,24 +535,24 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-8MBASE-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-8MBASE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-8MBASE-NEXT:    mov r2, r0
-; CHECK-8MBASE-NEXT:    movw r5, #46385
-; CHECK-8MBASE-NEXT:    movt r5, #1916
+; CHECK-8MBASE-NEXT:    movw r4, #46385
+; CHECK-8MBASE-NEXT:    movt r4, #1916
 ; CHECK-8MBASE-NEXT:    adr r3, .LCPI7_0
 ; CHECK-8MBASE-NEXT:    movs r0, #32
-; CHECK-8MBASE-NEXT:    mov r4, r0
+; CHECK-8MBASE-NEXT:    mov r5, r0
 ; CHECK-8MBASE-NEXT:    cbz r1, .LBB7_2
 ; CHECK-8MBASE-NEXT:  @ %bb.1:
-; CHECK-8MBASE-NEXT:    rsbs r4, r1, #0
-; CHECK-8MBASE-NEXT:    ands r4, r1
-; CHECK-8MBASE-NEXT:    muls r4, r5, r4
-; CHECK-8MBASE-NEXT:    lsrs r1, r4, #27
-; CHECK-8MBASE-NEXT:    ldrb r4, [r3, r1]
+; CHECK-8MBASE-NEXT:    rsbs r5, r1, #0
+; CHECK-8MBASE-NEXT:    ands r5, r1
+; CHECK-8MBASE-NEXT:    muls r5, r4, r5
+; CHECK-8MBASE-NEXT:    lsrs r1, r5, #27
+; CHECK-8MBASE-NEXT:    ldrb r5, [r3, r1]
 ; CHECK-8MBASE-NEXT:  .LBB7_2:
-; CHECK-8MBASE-NEXT:    adds r4, #32
+; CHECK-8MBASE-NEXT:    adds r5, #32
 ; CHECK-8MBASE-NEXT:    rsbs r1, r2, #0
 ; CHECK-8MBASE-NEXT:    ands r1, r2
-; CHECK-8MBASE-NEXT:    muls r5, r1, r5
-; CHECK-8MBASE-NEXT:    lsrs r1, r5, #27
+; CHECK-8MBASE-NEXT:    muls r4, r1, r4
+; CHECK-8MBASE-NEXT:    lsrs r1, r4, #27
 ; CHECK-8MBASE-NEXT:    cmp r2, #0
 ; CHECK-8MBASE-NEXT:    bne .LBB7_5
 ; CHECK-8MBASE-NEXT:  @ %bb.3:
@@ -564,7 +564,7 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-8MBASE-NEXT:    ldrb r0, [r3, r1]
 ; CHECK-8MBASE-NEXT:    bne .LBB7_4
 ; CHECK-8MBASE-NEXT:  .LBB7_6:
-; CHECK-8MBASE-NEXT:    mov r0, r4
+; CHECK-8MBASE-NEXT:    mov r0, r5
 ; CHECK-8MBASE-NEXT:    movs r1, #0
 ; CHECK-8MBASE-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-8MBASE-NEXT:    .p2align 2
