@@ -92,3 +92,101 @@ entry:
   store i32 42, ptr %arrayidx1, align 4
   ret i32 0
 }
+
+define void @linearized_accesses(i64 %n, i64 %m, i64 %o, ptr %A) {
+; CHECK-LABEL: 'linearized_accesses'
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
+; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - output [* * *|<]!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  br label %for.i
+
+for.i:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %for.i.inc ]
+  br label %for.j
+
+for.j:
+  %j = phi i64 [ 0, %for.i ], [ %j.inc, %for.j.inc ]
+  br label %for.k
+
+for.k:
+  %k = phi i64 [ 0, %for.j ], [ %k.inc, %for.k.inc ]
+  %subscript0 = mul i64 %i, %m
+  %subscript1 = add i64 %j, %subscript0
+  %subscript2 = mul i64 %subscript1, %o
+  %subscript3 = add i64 %subscript2, %k
+  %idx0 = getelementptr inbounds i64, ptr %A, i64 %subscript3  ; (i64*)(A) + i*m*o + j*o + k
+  store i32 1, ptr %idx0
+  %idx1 = getelementptr inbounds i32, ptr %A, i64 %subscript3  ; (i32*)(A) + i*m*o + j*o + k
+  store i32 1, ptr %idx1
+  br label %for.k.inc
+
+for.k.inc:
+  %k.inc = add nsw i64 %k, 1
+  %k.exitcond = icmp eq i64 %k.inc, %o
+  br i1 %k.exitcond, label %for.j.inc, label %for.k
+
+for.j.inc:
+  %j.inc = add nsw i64 %j, 1
+  %j.exitcond = icmp eq i64 %j.inc, %m
+  br i1 %j.exitcond, label %for.i.inc, label %for.j
+
+for.i.inc:
+  %i.inc = add nsw i64 %i, 1
+  %i.exitcond = icmp eq i64 %i.inc, %n
+  br i1 %i.exitcond, label %end, label %for.i
+
+end:
+  ret void
+}
+
+define void @multidim_accesses(ptr %A) {
+; CHECK-LABEL: 'multidim_accesses'
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - consistent output [0 0 0|<]!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  br label %for.i
+
+for.i:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %for.i.inc ]
+  br label %for.j
+
+for.j:
+  %j = phi i64 [ 0, %for.i ], [ %j.inc, %for.j.inc ]
+  br label %for.k
+
+for.k:
+  %k = phi i64 [ 0, %for.j ], [ %k.inc, %for.k.inc ]
+  %idx0 = getelementptr inbounds [256 x [256 x [256 x i64]]], ptr %A, i64 %i, i64 %j, i64 %k
+  store i32 1, ptr %idx0
+  %idx1 = getelementptr inbounds [256 x [256 x [256 x i32]]], ptr %A, i64 %i, i64 %j, i64 %k
+  store i32 1, ptr %idx1
+  br label %for.k.inc
+
+for.k.inc:
+  %k.inc = add nsw i64 %k, 1
+  %k.exitcond = icmp eq i64 %k.inc, 256
+  br i1 %k.exitcond, label %for.j.inc, label %for.k
+
+for.j.inc:
+  %j.inc = add nsw i64 %j, 1
+  %j.exitcond = icmp eq i64 %j.inc, 256
+  br i1 %j.exitcond, label %for.i.inc, label %for.j
+
+for.i.inc:
+  %i.inc = add nsw i64 %i, 1
+  %i.exitcond = icmp eq i64 %i.inc, 256
+  br i1 %i.exitcond, label %end, label %for.i
+
+end:
+  ret void
+}
