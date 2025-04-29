@@ -485,23 +485,27 @@ def DISubprogramFlags : I32BitEnumAttr<
 // IntegerOverflowFlags
 //===----------------------------------------------------------------------===//
 
-def IOFnone : I32BitEnumAttrCaseNone<"none">;
-def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
-def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+def IOFnone : I32BitEnumCaseNone<"none">;
+def IOFnsw  : I32BitEnumCaseBit<"nsw", 0>;
+def IOFnuw  : I32BitEnumCaseBit<"nuw", 1>;
 
-def IntegerOverflowFlags : I32BitEnumAttr<
+def IntegerOverflowFlags : I32BitEnum<
     "IntegerOverflowFlags",
     "LLVM integer overflow flags",
     [IOFnone, IOFnsw, IOFnuw]> {
   let separator = ", ";
   let cppNamespace = "::mlir::LLVM";
-  let genSpecializedAttr = 0;
   let printBitEnumPrimaryGroups = 1;
 }
 
 def LLVM_IntegerOverflowFlagsAttr :
     EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
   let assemblyFormat = "`<` $value `>`";
+}
+
+def LLVM_IntegerOverflowFlagsProp :
+    NamedEnumPropWithAttrForm<IntegerOverflowFlags, "overflow", LLVM_IntegerOverflowFlagsAttr> {
+  let defaultValue = enum.cppType # "::" # "none";
 }
 
 //===----------------------------------------------------------------------===//
@@ -849,6 +853,27 @@ def ModFlagBehaviorAttr : LLVM_EnumAttr<
      ModFlagBehaviorOverride, ModFlagBehaviorAppend,
      ModFlagBehaviorAppendUnique, ModFlagBehaviorMax, ModFlagBehaviorMin]> {
   let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// UWTableKind
+//===----------------------------------------------------------------------===//
+
+def UWTableKindNone
+    : LLVM_EnumAttrCase<"None", "none", "None", 0>;
+def UWTableKindSync
+    : LLVM_EnumAttrCase<"Sync", "sync", "Sync", 1>;
+def UWTableKindAsync
+    : LLVM_EnumAttrCase<"Async", "async", "Async", 2>;
+
+// UWTableKind::Default is unsupported as the llvm enum value is the same as async  
+// which the generated enum converters can't deal with.
+def UWTableKindEnum : LLVM_EnumAttr<
+    "UWTableKind",
+    "::llvm::UWTableKind",
+    "LLVM Unwind Behavior",
+    [UWTableKindNone, UWTableKindSync, UWTableKindAsync]> {
+  let cppNamespace = "::mlir::LLVM::uwtable";
 }
 
 #endif // LLVMIR_ENUMS

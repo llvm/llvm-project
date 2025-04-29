@@ -14,5 +14,8 @@ cm.push {ra,s0-s2}, -16
 # CHECK: :[[@LINE+1]]:18: error: invalid register
 cm.popret {ra,s0-s2}, 16
 # CHECK-DIS: ba72 <unknown>
-# CHECK: :[[@LINE+1]]:18: error: register list must end with '}'
+# CHECK: :[[@LINE+1]]:20: error: invalid register
 cm.pop {x1, x8-x9, x18}, 16
+# CHECK-DIS: ba72 <unknown>
+# CHECK: :[[@LINE+1]]:16: error: invalid register
+cm.pop {ra, s0-s2}, 16

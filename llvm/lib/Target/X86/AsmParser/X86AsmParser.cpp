@@ -1097,8 +1097,6 @@ private:
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
-      if (!getLexer().isAtStartOfStatement())
-        Parser.eatToEndOfStatement();
       return false;
     }
     return Parser.Error(L, Msg, Range);

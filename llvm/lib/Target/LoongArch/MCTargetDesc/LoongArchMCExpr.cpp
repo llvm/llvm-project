@@ -51,7 +51,7 @@ bool LoongArchMCExpr::evaluateAsRelocatableImpl(
 
   Res.setSpecifier(specifier);
   // Custom fixup types are not valid with symbol difference expressions.
-  return Res.getSymB() ? specifier == VK_None : true;
+  return !Res.getSubSym();
 }
 
 void LoongArchMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

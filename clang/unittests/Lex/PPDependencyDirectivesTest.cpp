@@ -35,7 +35,7 @@ protected:
         Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-macos12";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   FileSystemOptions FileMgrOpts;
@@ -103,25 +103,33 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
     SmallVector<dependency_directives_scan::Token> Tokens;
     SmallVector<dependency_directives_scan::Directive> Directives;
   };
-  SmallVector<std::unique_ptr<DepDirectives>> DepDirectivesObjects;
 
-  auto getDependencyDirectives = [&](FileEntryRef File)
-      -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-    DepDirectivesObjects.push_back(std::make_unique<DepDirectives>());
-    StringRef Input = (*FileMgr.getBufferForFile(File))->getBuffer();
-    bool Err = scanSourceForDependencyDirectives(
-        Input, DepDirectivesObjects.back()->Tokens,
-        DepDirectivesObjects.back()->Directives);
-    EXPECT_FALSE(Err);
-    return llvm::ArrayRef(DepDirectivesObjects.back()->Directives);
+  class TestDependencyDirectivesGetter : public DependencyDirectivesGetter {
+    FileManager &FileMgr;
+    SmallVector<std::unique_ptr<DepDirectives>> DepDirectivesObjects;
+
+  public:
+    TestDependencyDirectivesGetter(FileManager &FileMgr) : FileMgr(FileMgr) {}
+
+    std::unique_ptr<DependencyDirectivesGetter>
+    cloneFor(FileManager &FileMgr) override {
+      return std::make_unique<TestDependencyDirectivesGetter>(FileMgr);
+    }
+
+    std::optional<ArrayRef<dependency_directives_scan::Directive>>
+    operator()(FileEntryRef File) override {
+      DepDirectivesObjects.push_back(std::make_unique<DepDirectives>());
+      StringRef Input = (*FileMgr.getBufferForFile(File))->getBuffer();
+      bool Err = scanSourceForDependencyDirectives(
+          Input, DepDirectivesObjects.back()->Tokens,
+          DepDirectivesObjects.back()->Directives);
+      EXPECT_FALSE(Err);
+      return DepDirectivesObjects.back()->Directives;
+    }
   };
+  TestDependencyDirectivesGetter GetDependencyDirectives(FileMgr);
 
-  auto PPOpts = std::make_shared<PreprocessorOptions>();
-  PPOpts->DependencyDirectivesForFile = [&](FileEntryRef File)
-      -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-    return getDependencyDirectives(File);
-  };
-
+  PreprocessorOptions PPOpts;
   HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
@@ -129,6 +137,8 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
+
+  PP.setDependencyDirectivesGetter(GetDependencyDirectives);
 
   SmallVector<StringRef> IncludedFiles;
   PP.addPPCallbacks(std::make_unique<IncludeCollector>(PP, IncludedFiles));

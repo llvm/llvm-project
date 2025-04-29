@@ -298,9 +298,10 @@ define void @foo(i32 %v0) {
 
 TEST_F(SandboxIRTest, ConstantFP) {
   parseIR(C, R"IR(
-define void @foo(float %v0, double %v1) {
+define void @foo(float %v0, double %v1, half %v2) {
   %fadd0 = fadd float %v0, 42.0
   %fadd1 = fadd double %v1, 43.0
+  %fadd2 = fadd half %v2, 44.0
   ret void
 }
 )IR");
@@ -312,12 +313,16 @@ define void @foo(float %v0, double %v1) {
   auto It = BB.begin();
   auto *FAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
   auto *FAdd1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *FAdd2 = cast<sandboxir::BinaryOperator>(&*It++);
   auto *FortyTwo = cast<sandboxir::ConstantFP>(FAdd0->getOperand(1));
   [[maybe_unused]] auto *FortyThree =
       cast<sandboxir::ConstantFP>(FAdd1->getOperand(1));
 
   auto *FloatTy = sandboxir::Type::getFloatTy(Ctx);
   auto *DoubleTy = sandboxir::Type::getDoubleTy(Ctx);
+  auto *HalfTy = sandboxir::Type::getHalfTy(Ctx);
+  EXPECT_EQ(HalfTy, Ctx.getType(llvm::Type::getHalfTy(C)));
+  EXPECT_EQ(FAdd2->getType(), HalfTy);
   auto *LLVMFloatTy = Type::getFloatTy(C);
   auto *LLVMDoubleTy = Type::getDoubleTy(C);
   // Check that creating an identical constant gives us the same object.
@@ -605,6 +610,218 @@ define void @foo(ptr %ptr, {i32, i8} %v1, <2 x i8> %v2) {
   // Check getElementCount().
   EXPECT_EQ(ArrayCAZ->getElementCount(), ElementCount::getFixed(2));
   EXPECT_EQ(NewVectorCAZ->getElementCount(), ElementCount::getFixed(4));
+}
+
+// Tests ConstantDataSequential, ConstantDataArray and ConstantDataVector.
+TEST_F(SandboxIRTest, ConstantDataSequential) {
+  parseIR(C, R"IR(
+define void @foo() {
+  %array = extractvalue [2 x i8] [i8 0, i8 1], 0
+  %vector = extractelement <2 x i8> <i8 0, i8 1>, i32 0
+  %farray = extractvalue [2 x float] [float 0.0, float 1.0], 0
+  %fvector = extractelement <2 x double> <double 0.0, double 1.0>, i32 0
+  %string = extractvalue [6 x i8] [i8 72, i8 69, i8 76, i8 76, i8 79, i8 0], 0
+  %stringNoNull = extractvalue [5 x i8] [i8 72, i8 69, i8 76, i8 76, i8 79], 0
+  %splat = extractelement <4 x i8> <i8 1, i8 1, i8 1, i8 1>, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  auto *I3 = &*It++;
+  auto *I4 = &*It++;
+  auto *I5 = &*It++;
+  auto *I6 = &*It++;
+  auto *Array = cast<sandboxir::ConstantDataArray>(I0->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataSequential>(Array));
+  auto *Vector = cast<sandboxir::ConstantDataVector>(I1->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataVector>(Vector));
+  auto *FArray = cast<sandboxir::ConstantDataArray>(I2->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataSequential>(FArray));
+  auto *FVector = cast<sandboxir::ConstantDataVector>(I3->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataVector>(FVector));
+  auto *String = cast<sandboxir::ConstantDataArray>(I4->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataArray>(String));
+  auto *StringNoNull = cast<sandboxir::ConstantDataArray>(I5->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataArray>(StringNoNull));
+  auto *Splat = cast<sandboxir::ConstantDataVector>(I6->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataVector>(Splat));
+
+  auto *Zero8 = sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 0);
+  auto *One8 = sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 1);
+
+  // Check isElementTypeCompatible().
+  for (llvm::Type *LLVMTy :
+       {llvm::Type::getIntNTy(C, 42), llvm::Type::getInt8Ty(C)})
+    EXPECT_EQ(llvm::ConstantDataSequential::isElementTypeCompatible(LLVMTy),
+              sandboxir::ConstantDataSequential::isElementTypeCompatible(
+                  Ctx.getType(LLVMTy)));
+  // Check getElementAsInteger().
+  EXPECT_EQ(Array->getElementAsInteger(0), 0u);
+  EXPECT_EQ(Array->getElementAsInteger(1), 1u);
+  EXPECT_EQ(Vector->getElementAsInteger(0), 0u);
+  EXPECT_EQ(Vector->getElementAsInteger(1), 1u);
+  // Check getElementAsAPInt().
+  EXPECT_EQ(Array->getElementAsAPInt(0), 0u);
+  EXPECT_EQ(Array->getElementAsAPInt(1), 1u);
+  EXPECT_EQ(Vector->getElementAsAPInt(0), 0u);
+  EXPECT_EQ(Vector->getElementAsAPInt(1), 1u);
+  // Check geteElementAsFloat().
+  EXPECT_EQ(FArray->getElementAsFloat(0), 0.0);
+  EXPECT_EQ(FArray->getElementAsFloat(1), 1.0);
+  // Check getElementAsDouble().
+  EXPECT_EQ(FVector->getElementAsDouble(0), 0.0);
+  EXPECT_EQ(FVector->getElementAsDouble(1), 1.0);
+  // Check getElementAsConstant().
+  EXPECT_EQ(Array->getElementAsConstant(0), Zero8);
+  EXPECT_EQ(Array->getElementAsConstant(1), One8);
+  EXPECT_EQ(Vector->getElementAsConstant(0), Zero8);
+  EXPECT_EQ(Vector->getElementAsConstant(1), One8);
+  // Check getElementType().
+  EXPECT_EQ(Array->getElementType(), sandboxir::Type::getInt8Ty(Ctx));
+  EXPECT_EQ(Vector->getElementType(), sandboxir::Type::getInt8Ty(Ctx));
+  EXPECT_EQ(FArray->getElementType(), sandboxir::Type::getFloatTy(Ctx));
+  EXPECT_EQ(FVector->getElementType(), sandboxir::Type::getDoubleTy(Ctx));
+  // Check getNumElements(),
+  EXPECT_EQ(Array->getNumElements(), 2u);
+  EXPECT_EQ(Vector->getNumElements(), 2u);
+  EXPECT_EQ(FArray->getNumElements(), 2u);
+  EXPECT_EQ(FVector->getNumElements(), 2u);
+  // Check getElementByteSize().
+  EXPECT_EQ(Array->getElementByteSize(), 1u);
+  EXPECT_EQ(Vector->getElementByteSize(), 1u);
+  EXPECT_EQ(FArray->getElementByteSize(), 4u);
+  EXPECT_EQ(FVector->getElementByteSize(), 8u);
+  // Check isString().
+  EXPECT_EQ(Array->isString(), true);
+  EXPECT_EQ(Vector->isString(), false);
+  EXPECT_EQ(FArray->isString(), false);
+  EXPECT_EQ(FVector->isString(), false);
+  EXPECT_EQ(String->isString(), true);
+  // Check isCString().
+  EXPECT_EQ(Array->isCString(), false);
+  EXPECT_EQ(Vector->isCString(), false);
+  EXPECT_EQ(FArray->isCString(), false);
+  EXPECT_EQ(FVector->isCString(), false);
+  EXPECT_EQ(String->isCString(), true);
+  // Check getAsString().
+  char Data[] = {'H', 'E', 'L', 'L', 'O', '\0'};
+  StringRef HelloWithNull(Data, 6);
+  EXPECT_EQ(String->getAsString(), HelloWithNull);
+  // Check getAsCString().
+  EXPECT_EQ(String->getAsCString(), "HELLO");
+  // Check getRawDataValues().
+  EXPECT_EQ(String->getRawDataValues(), HelloWithNull);
+
+  // Check ConstantDataArray member functions
+  // ----------------------------------------
+  // Check get<ElementTy>().
+  EXPECT_EQ(sandboxir::ConstantDataArray::get<char>(Ctx, {0, 1}), Array);
+  // Check get<ArrayTy>().
+  SmallVector<char> Elmts({0, 1});
+  EXPECT_EQ(sandboxir::ConstantDataArray::get<SmallVector<char>>(Ctx, Elmts),
+            Array);
+  // Check getRaw().
+  EXPECT_EQ(sandboxir::ConstantDataArray::getRaw(StringRef("HELLO"), 5,
+                                                 Zero8->getType()),
+            StringNoNull);
+  // Check getFP().
+  SmallVector<uint16_t> Elts16({42, 43});
+  SmallVector<uint32_t> Elts32({42, 43});
+  SmallVector<uint64_t> Elts64({42, 43});
+  auto *F16Ty = sandboxir::Type::getHalfTy(Ctx);
+  auto *F32Ty = sandboxir::Type::getFloatTy(Ctx);
+  auto *F64Ty = sandboxir::Type::getDoubleTy(Ctx);
+
+  auto *CDA16 = sandboxir::ConstantDataArray::getFP(F16Ty, Elts16);
+  EXPECT_EQ(CDA16, cast<sandboxir::ConstantDataArray>(
+                       Ctx.getValue(llvm::ConstantDataArray::getFP(
+                           llvm::Type::getHalfTy(C), Elts16))));
+  auto *CDA32 = sandboxir::ConstantDataArray::getFP(F32Ty, Elts32);
+  EXPECT_EQ(CDA32, cast<sandboxir::ConstantDataArray>(
+                       Ctx.getValue(llvm::ConstantDataArray::getFP(
+                           llvm::Type::getFloatTy(C), Elts32))));
+  auto *CDA64 = sandboxir::ConstantDataArray::getFP(F64Ty, Elts64);
+  EXPECT_EQ(CDA64, cast<sandboxir::ConstantDataArray>(
+                       Ctx.getValue(llvm::ConstantDataArray::getFP(
+                           llvm::Type::getDoubleTy(C), Elts64))));
+  // Check getString().
+  EXPECT_EQ(sandboxir::ConstantDataArray::getString(Ctx, "HELLO"), String);
+
+  EXPECT_EQ(sandboxir::ConstantDataArray::getString(Ctx, "HELLO",
+                                                    /*AddNull=*/false),
+            StringNoNull);
+  EXPECT_EQ(
+      sandboxir::ConstantDataArray::getString(Ctx, "HELLO", /*AddNull=*/false),
+      StringNoNull);
+
+  {
+    // Check ConstantDataArray member functions
+    // ----------------------------------------
+    // Check get().
+    SmallVector<uint8_t> Elts8({0u, 1u});
+    SmallVector<uint16_t> Elts16({0u, 1u});
+    SmallVector<uint32_t> Elts32({0u, 1u});
+    SmallVector<uint64_t> Elts64({0u, 1u});
+    SmallVector<float> EltsF32({0.0, 1.0});
+    SmallVector<double> EltsF64({0.0, 1.0});
+    auto *CDV8 = sandboxir::ConstantDataVector::get(Ctx, Elts8);
+    EXPECT_EQ(CDV8, cast<sandboxir::ConstantDataVector>(
+                        Ctx.getValue(llvm::ConstantDataVector::get(C, Elts8))));
+    auto *CDV16 = sandboxir::ConstantDataVector::get(Ctx, Elts16);
+    EXPECT_EQ(CDV16, cast<sandboxir::ConstantDataVector>(Ctx.getValue(
+                         llvm::ConstantDataVector::get(C, Elts16))));
+    auto *CDV32 = sandboxir::ConstantDataVector::get(Ctx, Elts32);
+    EXPECT_EQ(CDV32, cast<sandboxir::ConstantDataVector>(Ctx.getValue(
+                         llvm::ConstantDataVector::get(C, Elts32))));
+    auto *CDVF32 = sandboxir::ConstantDataVector::get(Ctx, EltsF32);
+    EXPECT_EQ(CDVF32, cast<sandboxir::ConstantDataVector>(Ctx.getValue(
+                          llvm::ConstantDataVector::get(C, EltsF32))));
+    auto *CDVF64 = sandboxir::ConstantDataVector::get(Ctx, EltsF64);
+    EXPECT_EQ(CDVF64, cast<sandboxir::ConstantDataVector>(Ctx.getValue(
+                          llvm::ConstantDataVector::get(C, EltsF64))));
+    // Check getRaw().
+    auto *CDVRaw = sandboxir::ConstantDataVector::getRaw(
+        StringRef("HELLO"), 5, sandboxir::Type::getInt8Ty(Ctx));
+    EXPECT_EQ(CDVRaw,
+              cast<sandboxir::ConstantDataVector>(
+                  Ctx.getValue(llvm::ConstantDataVector::getRaw(
+                      StringRef("HELLO"), 5, llvm::Type::getInt8Ty(C)))));
+    // Check getFP().
+    auto *CDVFP16 = sandboxir::ConstantDataVector::getFP(F16Ty, Elts16);
+    EXPECT_EQ(CDVFP16, cast<sandboxir::ConstantDataVector>(
+                           Ctx.getValue(llvm::ConstantDataVector::getFP(
+                               llvm::Type::getHalfTy(C), Elts16))));
+    auto *CDVFP32 = sandboxir::ConstantDataVector::getFP(F32Ty, Elts32);
+    EXPECT_EQ(CDVFP32, cast<sandboxir::ConstantDataVector>(
+                           Ctx.getValue(llvm::ConstantDataVector::getFP(
+                               llvm::Type::getFloatTy(C), Elts32))));
+    auto *CDVFP64 = sandboxir::ConstantDataVector::getFP(F64Ty, Elts64);
+    EXPECT_EQ(CDVFP64, cast<sandboxir::ConstantDataVector>(
+                           Ctx.getValue(llvm::ConstantDataVector::getFP(
+                               llvm::Type::getDoubleTy(C), Elts64))));
+    // Check getSplat().
+    auto *NewSplat = cast<sandboxir::ConstantDataVector>(
+        sandboxir::ConstantDataVector::getSplat(4, One8));
+    EXPECT_EQ(NewSplat, Splat);
+    // Check isSplat().
+    EXPECT_TRUE(NewSplat->isSplat());
+    EXPECT_FALSE(Vector->isSplat());
+    // Check getSplatValue().
+    EXPECT_EQ(NewSplat->getSplatValue(), One8);
+    // Check getType().
+    EXPECT_TRUE(isa<sandboxir::FixedVectorType>(NewSplat->getType()));
+    EXPECT_EQ(
+        cast<sandboxir::FixedVectorType>(NewSplat->getType())->getNumElements(),
+        4u);
+  }
 }
 
 TEST_F(SandboxIRTest, ConstantPointerNull) {
@@ -4222,8 +4439,9 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getDefaultDest(),
             Ctx.getValue(LLVMSwitch->getDefaultDest()));
   EXPECT_EQ(Switch->getDefaultDest(), Default);
-  // Check defaultDestUndefined().
-  EXPECT_EQ(Switch->defaultDestUndefined(), LLVMSwitch->defaultDestUndefined());
+  // Check defaultDestUnreachable().
+  EXPECT_EQ(Switch->defaultDestUnreachable(),
+            LLVMSwitch->defaultDestUnreachable());
   // Check setDefaultDest().
   auto *OrigDefaultDest = Switch->getDefaultDest();
   auto *NewDefaultDest = Entry;

@@ -2946,8 +2946,7 @@ bool AMDGPUInstructionSelector::isInstrUniform(const MachineInstr &MI) const {
   // Sometimes LDS instructions have constant pointers.
   // If Ptr is null, then that means this mem operand contains a
   // PseudoSourceValue like GOT.
-  if (!Ptr || isa<UndefValue>(Ptr) || isa<Argument>(Ptr) ||
-      isa<Constant>(Ptr) || isa<GlobalValue>(Ptr))
+  if (!Ptr || isa<UndefValue, Argument, Constant, GlobalValue>(Ptr))
     return true;
 
   if (MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
@@ -3369,7 +3368,8 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 }
 
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
-  assert(!AMDGPU::isGFX12Plus(STI));
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
@@ -3505,6 +3505,9 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
 }
 
 bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
+
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 

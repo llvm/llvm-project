@@ -686,7 +686,7 @@ void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
     return SectionMap[ContainingSect]->Address + Asm.getSymbolOffset(*Sym);
   };
 
-  const MCSymbol *const SymA = &Target.getSymA()->getSymbol();
+  const MCSymbol *const SymA = Target.getAddSym();
 
   MCAsmBackend &Backend = Asm.getBackend();
   bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &

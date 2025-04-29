@@ -4908,5 +4908,100 @@ TEST(MemorySanitizer, timer_create) {
   EXPECT_POISONED(timer2);
   timer_delete(timer);
 }
+
+TEST(MemorySanitizer, getservent_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
+  struct servent result_buf;
+  struct servent *result;
+  char buf[1024];
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(result);
+  EXPECT_POISONED(buf);
+  ASSERT_EQ(getservent_r(&result_buf, buf, sizeof(buf), &result), 0);
+  EXPECT_NOT_POISONED(result);
+  ASSERT_NE(result, nullptr);
+  EXPECT_NOT_POISONED(result_buf);
+  EXPECT_NOT_POISONED(buf);
+}
+
+TEST(MemorySanitizer, getservbyname_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
+  struct servent result_buf;
+  struct servent *result;
+  char buf[1024];
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(result);
+  EXPECT_POISONED(buf);
+  ASSERT_EQ(
+      getservbyname_r("ssh", nullptr, &result_buf, buf, sizeof(buf), &result),
+      0);
+  EXPECT_NOT_POISONED(result);
+  // If this fails, check /etc/services if "ssh" exists. I picked this because
+  // it should exist everywhere, if it doesn't, I am sorry. Disable the test
+  // then please.
+  ASSERT_NE(result, nullptr);
+  EXPECT_NOT_POISONED(result_buf);
+  EXPECT_NOT_POISONED(buf);
+}
+
+TEST(MemorySanitizer, getservbyname_r_unknown) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
+  struct servent result_buf;
+  struct servent *result;
+  char buf[1024];
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(result);
+  EXPECT_POISONED(buf);
+  ASSERT_EQ(getservbyname_r("invalidhadfuiasdhi", nullptr, &result_buf, buf,
+                            sizeof(buf), &result),
+            0);
+  EXPECT_NOT_POISONED(result);
+  ASSERT_EQ(result, nullptr);
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(buf);
+}
+
+TEST(MemorySanitizer, getservbyport_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
+  struct servent result_buf;
+  struct servent *result;
+  char buf[1024];
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(result);
+  EXPECT_POISONED(buf);
+  ASSERT_EQ(getservbyport_r(htons(22), nullptr, &result_buf, buf, sizeof(buf),
+                            &result),
+            0);
+  EXPECT_NOT_POISONED(result);
+  // If this fails, check /etc/services if "ssh" exists. I picked this because
+  // it should exist everywhere, if it doesn't, I am sorry. Disable the test
+  // then please.
+  ASSERT_NE(result, nullptr);
+  EXPECT_NOT_POISONED(result_buf);
+  EXPECT_NOT_POISONED(buf);
+}
+
+TEST(MemorySanitizer, getservbyport_r_smallbuf) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
+  struct servent result_buf;
+  struct servent *result;
+  char buf[1];
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(result);
+  EXPECT_POISONED(buf);
+  ASSERT_EQ(getservbyport_r(htons(22), nullptr, &result_buf, buf, sizeof(buf),
+                            &result),
+            ERANGE);
+  EXPECT_NOT_POISONED(result);
+  ASSERT_EQ(result, nullptr);
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(buf);
+}
+
 #endif
 } // namespace

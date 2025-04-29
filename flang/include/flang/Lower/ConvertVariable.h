@@ -194,8 +194,8 @@ fir::ExtendedValue genPackArray(Fortran::lower::AbstractConverter &converter,
 /// to the given symbol, generate fir.unpack_array operation
 /// that reverts the effect of fir.pack_array.
 /// \p def is expected to be hlfir.declare operation.
-void genUnpackArray(fir::FirOpBuilder &builder, mlir::Location loc,
-                    fir::FortranVariableOpInterface def,
+void genUnpackArray(Fortran::lower::AbstractConverter &converter,
+                    mlir::Location loc, fir::FortranVariableOpInterface def,
                     const Fortran::semantics::Symbol &sym);
 
 } // namespace lower

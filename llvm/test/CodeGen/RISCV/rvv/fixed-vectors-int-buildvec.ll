@@ -290,15 +290,11 @@ define void @buildvec_vid_stepn3_addn3_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3)
   ret void
 }
 
-; FIXME: RV32 doesn't catch this pattern due to BUILD_VECTOR legalization.
 define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 ; RV32-LABEL: buildvec_vid_step1_add0_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI25_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI25_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle8.v v10, (a0)
-; RV32-NEXT:    vsext.vf4 v8, v10
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: buildvec_vid_step1_add0_v4i64:
@@ -323,11 +319,9 @@ define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
 ; RV32-LABEL: buildvec_vid_step2_add0_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI26_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI26_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle8.v v10, (a0)
-; RV32-NEXT:    vsext.vf4 v8, v10
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: buildvec_vid_step2_add0_v4i64:

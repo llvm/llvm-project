@@ -37,7 +37,7 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   SmallPtrSet<GlobalObject *, 2> Used;
 
 protected:
-  uint8_t PLTRelativeSpecifier = 0;
+  uint16_t PLTRelativeSpecifier = 0;
 
 public:
   ~TargetLoweringObjectFileELF() override = default;

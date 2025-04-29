@@ -14,8 +14,11 @@ qc.cm.push {ra,s0-s2}, -16
 # CHECK: :[[@LINE+1]]:21: error: invalid register
 qc.cm.popret {ra,s0-s2}, 16
 # CHECK-DIS: ba72 <unknown>
-# CHECK: :[[@LINE+1]]:21: error: register list must end with '}'
+# CHECK: :[[@LINE+1]]:23: error: invalid register
 qc.cm.pop {x1, x8-x9, x18}, 16
 # CHECK-DIS: b972 <unknown>
-# CHECK: :[[@LINE+1]]:24: error: register list must end with '}'
+# CHECK: :[[@LINE+1]]:26: error: invalid register
 qc.cm.pushfp {x1, x8-x9, x18}, -16
+# CHECK-DIS: b972 <unknown>
+# CHECK: :[[@LINE+1]]:22: error: invalid register
+qc.cm.pushfp {ra, s0-s2}, -16

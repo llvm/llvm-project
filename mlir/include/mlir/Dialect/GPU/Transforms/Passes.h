@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/IR/PatternMatch.h"
@@ -37,6 +38,10 @@ class FuncOp;
 
 /// Collect a set of patterns to rewrite GlobalIdOp op within the GPU dialect.
 void populateGpuGlobalIdPatterns(RewritePatternSet &patterns);
+
+/// Collect a set of patterns to rewrite SubgroupIdOp op within the GPU
+/// dialect.
+void populateGpuSubgroupIdPatterns(RewritePatternSet &patterns);
 
 /// Collect a set of patterns to rewrite shuffle ops within the GPU dialect.
 void populateGpuShufflePatterns(RewritePatternSet &patterns);
@@ -67,6 +72,20 @@ void populateGpuLowerSubgroupReduceToShufflePatterns(
 void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
     RewritePatternSet &patterns, unsigned subgroupSize,
     unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
+
+/// Collect a set of patterns to lower `gpu.subgroup_reduce` into `amdgpu.dpp`
+/// ops over scalar types. Assumes that the subgroup has
+/// `subgroupSize` lanes. Applicable only to AMD GPUs.
+void populateGpuLowerSubgroupReduceToDPPPatterns(RewritePatternSet &patterns,
+                                                 unsigned subgroupSize,
+                                                 amdgpu::Chipset chipset,
+                                                 PatternBenefit benefit = 1);
+
+/// Disjoint counterpart of `populateGpuLowerSubgroupReduceToDPPPatterns`
+/// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
+void populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
+    PatternBenefit benefit = 1);
 
 /// Collect all patterns to rewrite ops within the GPU dialect.
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {

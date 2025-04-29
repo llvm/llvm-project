@@ -352,8 +352,6 @@ typedef __char32_t char32_t;
 
 #  define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))
 
-#  define _LIBCPP_DISABLE_EXTENSION_WARNING __extension__
-
 #  if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
 #    ifdef _DLL
@@ -385,10 +383,8 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN
-#    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
-#    define _LIBCPP_TEMPLATE_VIS
 #    define _LIBCPP_TEMPLATE_DATA_VIS
-#    define _LIBCPP_TYPE_VISIBILITY_DEFAULT
+#    define _LIBCPP_NAMESPACE_VISIBILITY
 
 #  else
 
@@ -409,24 +405,12 @@ typedef __char32_t char32_t;
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
 #    endif
 
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-// The inline should be removed once PR32114 is resolved
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS inline _LIBCPP_HIDDEN
-#    else
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
-#    endif
-
-// GCC doesn't support the type_visibility attribute, so we have to keep the visibility attribute on templates
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && !__has_attribute(__type_visibility__)
-#      define _LIBCPP_TEMPLATE_VIS __attribute__((__visibility__("default")))
-#    else
-#      define _LIBCPP_TEMPLATE_VIS
-#    endif
-
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && __has_attribute(__type_visibility__)
-#      define _LIBCPP_TYPE_VISIBILITY_DEFAULT __attribute__((__type_visibility__("default")))
+#      define _LIBCPP_NAMESPACE_VISIBILITY __attribute__((__type_visibility__("default")))
+#    elif !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+#      define _LIBCPP_NAMESPACE_VISIBILITY __attribute__((__visibility__("default")))
 #    else
-#      define _LIBCPP_TYPE_VISIBILITY_DEFAULT
+#      define _LIBCPP_NAMESPACE_VISIBILITY
 #    endif
 
 #  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
@@ -585,7 +569,7 @@ typedef __char32_t char32_t;
 // If it's not clear whether using the unversioned namespace is the correct thing to do, it's not. The versioned
 // namespace (_LIBCPP_BEGIN_NAMESPACE_STD) should almost always be used.
 #  define _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD                                                                      \
-    _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {
+    _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS namespace _LIBCPP_NAMESPACE_VISIBILITY std {
 
 #  define _LIBCPP_END_UNVERSIONED_NAMESPACE_STD } _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 
@@ -753,8 +737,10 @@ typedef __char32_t char32_t;
 
 #  if _LIBCPP_STD_VER >= 26
 #    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
+#    define _LIBCPP_DEPRECATED_IN_CXX26_(m) _LIBCPP_DEPRECATED_(m)
 #  else
 #    define _LIBCPP_DEPRECATED_IN_CXX26
+#    define _LIBCPP_DEPRECATED_IN_CXX26_(m)
 #  endif
 
 #  if _LIBCPP_HAS_CHAR8_T
@@ -1076,9 +1062,8 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #  endif
 
-// TODO(varconst): currently, there are bugs in Clang's intrinsics when handling Objective-C++ `id`, so don't use
-// compiler intrinsics in the Objective-C++ mode.
-#  ifdef __OBJC__
+// TODO(LLVM 22): Remove the workaround
+#  if defined(__OBJC__) && (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER < 2001)
 #    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
 #  endif
 
@@ -1138,9 +1123,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                             \
     __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
 #  define _LIBCPP_PACKED __attribute__((__packed__))
-
-// Use a function like macro to imply that it must be followed by a semicolon
-#  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 
 #  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))

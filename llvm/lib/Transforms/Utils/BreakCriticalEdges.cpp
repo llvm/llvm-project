@@ -207,6 +207,8 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
     }
   }
 
+  unsigned NumSplitIdenticalEdges = 1;
+
   // If there are any other edges from TIBB to DestBB, update those to go
   // through the split block, making those edges non-critical as well (and
   // reducing the number of phi entries in the DestBB if relevant).
@@ -219,6 +221,9 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 
       // We found another edge to DestBB, go to NewBB instead.
       TI->setSuccessor(i, NewBB);
+
+      // Record the number of split identical edges to DestBB.
+      NumSplitIdenticalEdges++;
     }
   }
 
@@ -290,7 +295,11 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 
         // Update LCSSA form in the newly created exit block.
         if (Options.PreserveLCSSA) {
-          createPHIsForSplitLoopExit(TIBB, NewBB, DestBB);
+          // If > 1 identical edges to be split, we need to introduce the same
+          // number of the incoming blocks for the new PHINode.
+          createPHIsForSplitLoopExit(
+              SmallVector<BasicBlock *, 4>(NumSplitIdenticalEdges, TIBB), NewBB,
+              DestBB);
         }
 
         if (!LoopPreds.empty()) {
