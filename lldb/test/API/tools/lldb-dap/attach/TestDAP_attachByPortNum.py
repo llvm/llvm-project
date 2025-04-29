@@ -19,7 +19,7 @@ import sys
 import socket
 
 
-@skipIf
+@skip
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
 
