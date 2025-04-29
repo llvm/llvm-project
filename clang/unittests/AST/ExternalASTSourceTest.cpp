@@ -44,8 +44,7 @@ private:
   IntrusiveRefCntPtr<ExternalASTSource> Source;
 };
 
-bool testExternalASTSource(ExternalASTSource *Source,
-                           StringRef FileContents) {
+bool testExternalASTSource(ExternalASTSource *Source, StringRef FileContents) {
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
@@ -63,7 +62,6 @@ bool testExternalASTSource(ExternalASTSource *Source,
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);
 }
-
 
 // Ensure that a failed name lookup into an external source only occurs once.
 TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {

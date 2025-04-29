@@ -242,8 +242,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                       diag::Severity::Remark, {});
 
   auto Invocation = std::make_shared<CompilerInvocation>();
-  bool Success = CompilerInvocation::CreateFromArgs(*Invocation,
-                                                    Argv, Diags, Argv0);
+  bool Success =
+      CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags, Argv0);
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation),
                                                   std::move(PCHOps));
