@@ -100,11 +100,7 @@ llvm::Expected<size_t>
 LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   size_t index = formatters::ExtractIndexFromString(name.GetCString());
   if (index == UINT32_MAX) {
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontEnd::LibStdcppTupleSyntheticFrontEnd' cannot "
-        "find index of "
-        "child '%s'",
-        name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   }
   return index;
 }

@@ -104,16 +104,11 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start) {
-    return llvm::createStringError(
-        "'LibcxxInitializerListSyntheticFrontEnd' "
-        "cannot find index of child '%s': Invalid start pointer.",
-        name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   }
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {
-    return llvm::createStringError("'LibcxxInitializerListSyntheticFrontEnd' "
-                                   "cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   }
   return idx;
 }

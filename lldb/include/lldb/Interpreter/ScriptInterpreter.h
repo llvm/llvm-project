@@ -371,9 +371,7 @@ public:
   virtual llvm::Expected<int>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
-    return llvm::createStringError(
-        "'PluginInterface::ScriptInterpreter' cannot find index of child '%s'",
-        child_name);
+    return llvm::createStringError("Type has no child named '%s'", child_name);
   }
 
   virtual bool

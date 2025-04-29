@@ -532,10 +532,7 @@ llvm::Expected<size_t> lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
   size_t idx = ExtractIndexFromString(item_name);
   if (idx == UINT32_MAX ||
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
-    return llvm::createStringError("'NSArrayMSyntheticFrontEndBase' cannot "
-                                   "find index of child '%s'. (idx='" PRIu32
-                                   "')",
-                                   name.AsCString(), idx);
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   return idx;
 }
 
@@ -622,10 +619,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx == UINT32_MAX ||
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontEnd::ObjCClassSyntheticChildrenFrontEnd' "
-        "cannot find index of child '%s'. (idx='" PRIu32 "')",
-        name.AsCString(), idx);
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   return idx;
 }
 

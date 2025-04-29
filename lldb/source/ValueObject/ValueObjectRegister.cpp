@@ -146,9 +146,7 @@ ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
     if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
-  return llvm::createStringError(
-      "'ValueObjectRegisterSet' cannot find index of child '%s'",
-      name.str().c_str());
+  return llvm::createStringError("Type has no child named '%s'", name.str().c_str());
 }
 
 #pragma mark -

@@ -153,10 +153,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringError(
-      "'SyntheticChildrenFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd' "
-      "cannot find index of child '%s'",
-      name.AsCString());
+  return llvm::createStringError("Type has no child named '%s'", name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *
@@ -235,10 +232,7 @@ llvm::Expected<size_t>
 VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "item")
     return 0;
-  return llvm::createStringError(
-      "'SyntheticChildrenFrontEnd::VectorIteratorSyntheticFrontEnd' cannot "
-      "find index of child '%s'",
-      name.AsCString());
+  return llvm::createStringError("Type has no child named '%s'", name.AsCString());
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
@@ -423,10 +417,7 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
     return 0;
   if (name == "object" || name == "$$dereference$$")
     return 1;
-  return llvm::createStringError(
-      "'SyntheticChildrenFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd' cannot "
-      "find index of child '%s'",
-      name.AsCString());
+  return llvm::createStringError("Type has no child named '%s'",name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

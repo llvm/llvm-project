@@ -169,10 +169,7 @@ public:
     static ConstString g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontEnd::NSErrorSyntheticFrontEnd' cannot find "
-        "index of child '%s'",
-        name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   }
 
 private:

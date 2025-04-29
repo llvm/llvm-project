@@ -23,10 +23,7 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (m_container_sp)
       return m_container_sp->GetIndexOfChildWithName(name);
-    return llvm::createStringError(
-        "'QueueFrontEnd' "
-        "cannot find index of child '%s': Invalid underlying container.",
-        name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",name.AsCString());
   }
 
   lldb::ChildCacheState Update() override;

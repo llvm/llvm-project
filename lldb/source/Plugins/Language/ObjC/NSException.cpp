@@ -162,10 +162,7 @@ public:
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;
     if (name == g_reserved) return 3;
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontEnd::NSExceptionSyntheticFrontEnd' cannot find "
-        "index of child '%s'",
-        name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   }
 
 private:

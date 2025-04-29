@@ -397,9 +397,7 @@ llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {
-    return llvm::createStringError("'LibcxxStdMapSyntheticFrontEnd' cannot "
-                                   "find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
   }
   return idx;
 }
@@ -498,10 +496,7 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_pair_sp)
-    return llvm::createStringError(
-        "'LibCxxMapIteratorSyntheticFrontEnd' "
-        "cannot find index of child '%s': Invalid underlying pair.",
-        name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
 
   return m_pair_sp->GetIndexOfChildWithName(name);
 }

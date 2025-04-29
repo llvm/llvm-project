@@ -204,12 +204,8 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     size_t index = formatters::ExtractIndexFromString(name.GetCString());
-    if (index == UINT32_MAX) {
-      return llvm::createStringError(
-          "'SyntheticChildrenFrontEnd::VariantFrontEnd' cannot find index of "
-          "child '%s'",
-          name.AsCString());
-    }
+    if (index == UINT32_MAX)
+      return llvm::createStringError("Type has no child named '%s'",name.AsCString());
     return index;
   }
 

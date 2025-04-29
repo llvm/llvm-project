@@ -40,11 +40,8 @@ public:
     if (name == "$$dereference$$")
       return 0;
     size_t idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (idx == UINT32_MAX) {
-      return llvm::createStringError("'GenericOptionalFrontend' cannot find "
-                                     "index of child '%s'",
-                                     name.AsCString());
-    }
+    if (idx == UINT32_MAX)
+      return llvm::createStringError("Type has no child named '%s'", name.AsCString());
     return idx;
   }
 

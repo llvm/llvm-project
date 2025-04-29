@@ -2040,23 +2040,14 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
 llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
-    return llvm::createStringError(
-        "'ScriptInterpreterPythonImpl' cannot find index of child '%s'. "
-        "Invalid implementor (implementor_sp='%p').",
-        child_name, implementor_sp.get());
+    return llvm::createStringError("Type has no child named '%s'", child_name);
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
   if (!generic)
-    return llvm::createStringError(
-        "'ScriptInterpreterPythonImpl' cannot find index of child '%s'. Could "
-        "not get generic from implementor  (generic='%p').",
-        child_name, generic);
+    return llvm::createStringError("Type has no child named '%s'", child_name);
   auto *implementor = static_cast<PyObject *>(generic->GetValue());
   if (!implementor)
-    return llvm::createStringError(
-        "'ScriptInterpreterPythonImpl' cannot find index of child '%s'. Could "
-        "not cast to PyObject (implementor='%p')",
-        child_name, implementor);
+    return llvm::createStringError("Type has no child named '%s'", child_name);
 
   int ret_val = INT32_MAX;
 
@@ -2068,9 +2059,7 @@ llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   }
 
   if (ret_val == INT32_MAX)
-    return llvm::createStringError(
-        "'ScriptInterpreterPythonImpl' cannot find index of child '%s'",
-        child_name);
+    return llvm::createStringError("Type has no child named '%s'", child_name);
   return ret_val;
 }
 
