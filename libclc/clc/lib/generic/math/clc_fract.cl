@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE fract(__CLC_GENTYPE x, global __CLC_GENTYPE *iptr);
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE fract(__CLC_GENTYPE x, local __CLC_GENTYPE *iptr);
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE fract(__CLC_GENTYPE x, private __CLC_GENTYPE *iptr);
+#include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_floor.h>
+#include <clc/math/clc_fmin.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+
+#define __CLC_BODY <clc_fract.inc>
+#include <clc/math/gentype.inc>
