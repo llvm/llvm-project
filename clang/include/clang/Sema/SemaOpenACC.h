@@ -135,6 +135,11 @@ private:
     struct RangeForInfo {
       const CXXForRangeStmt *Uninstantiated = nullptr;
       const CXXForRangeStmt *CurrentVersion = nullptr;
+      // GCC 7.x requires this constructor, else the construction of variant
+      // doesn't work correctly.
+      RangeForInfo() : Uninstantiated{nullptr}, CurrentVersion{nullptr} {}
+      RangeForInfo(const CXXForRangeStmt *Uninst, const CXXForRangeStmt *Cur)
+          : Uninstantiated{Uninst}, CurrentVersion{Cur} {}
     };
 
     struct ForInfo {
