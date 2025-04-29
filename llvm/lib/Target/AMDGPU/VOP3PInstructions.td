@@ -1417,7 +1417,7 @@ let WaveSizePredicate = isWave64 in {
 
 class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         bit _IsIU, bit _IsFP8BF8XF32, bit _Has_ImodOp = 0,
-                        bit _HasMatrxFMT = 0, bit _HasMatrixScale = 0,
+                        bit _HasMatrixFMT = 0, bit _HasMatrixScale = 0,
                         bit _Scale16 = 0, bit _HasMatrixReuse = 0, bit _IsF4 = 0>
     : VOP3P_Profile<VOPProfile<ArgTy>> {
   bit IsIU = _IsIU;
@@ -1425,7 +1425,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit IsXF32 = !and(_IsFP8BF8XF32, !eq(ArgTy[1], v8f32));
 
   int IndexType = _IndexType;
-  bit HasMatrxFMT = _HasMatrxFMT;
+  let HasMatrixFMT = _HasMatrixFMT;
   let HasMatrixScale = _HasMatrixScale;
   bit Scale16 = _Scale16;
   let HasMatrixReuse = _HasMatrixReuse;
@@ -1525,16 +1525,15 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag IndexKey = !cond(!eq(IndexType, 0) : (ins),
                        !eq(IndexType, 8) : (ins IndexKey8bit:$index_key_8bit),
                        !eq(IndexType, 16): (ins IndexKey16bit:$index_key_16bit));
-  dag MatrixFMT = !if(HasMatrxFMT,
-                      !con(!if(HasMatrixScale,
-                               !if(Scale16, (ins VCSrc_b64_Lo256:$scale_src0, VCSrc_b64_Lo256:$scale_src1),
-                                            (ins VCSrc_b32_Lo256:$scale_src0, VCSrc_b32_Lo256:$scale_src1)),
-                               (ins)),
-                           (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt),
-                           !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale,
-                                                    MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt),
-                                               (ins))),
-                      (ins));
+  dag MatrixFMT = !if(HasMatrixFMT, (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt),
+                                   (ins));
+  dag MatrixScaleSrc = !if(HasMatrixScale,
+                           !if(Scale16, (ins VCSrc_b64_Lo256:$scale_src0, VCSrc_b64_Lo256:$scale_src1),
+                                        (ins VCSrc_b32_Lo256:$scale_src0, VCSrc_b32_Lo256:$scale_src1)),
+                           (ins));
+  dag MatrixScale = !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale,
+                                             MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt),
+                                        (ins));
   dag MatrixReuse = !if(HasMatrixReuse, (ins MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse), (ins));
   dag Clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
   dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
@@ -1544,24 +1543,23 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   let InsVOP3P = !con(Src0Mods, (ins Src0RC64:$src0), Src1Mods, (ins Src1RC64:$src1),
                       !cond(IsWMMA   : !con(Src2Mods, (ins Src2RC64:$src2)),
                             IsSWMMAC : !con((ins DstRC:$srcTiedDef), (ins VRegSrc_32:$src2), IndexKey)),
-                      MatrixFMT, MatrixReuse, Clamp, Neg);
+                      MatrixScaleSrc, MatrixFMT, MatrixScale, MatrixReuse, Clamp, Neg);
 
   // asm
 
   string IndexKeyAsm = !cond(!eq(IndexType, 0)  : "",
                              !eq(IndexType, 8)  : "$index_key_8bit",
                              !eq(IndexType, 16) : "$index_key_16bit");
-  string MatrxFMTAsm = !if(HasMatrxFMT, !if(HasMatrixScale, ", $scale_src0, $scale_src1", "")#
-                                        "$matrix_a_fmt$matrix_b_fmt"#
-                                        !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale$matrix_a_scale_fmt$matrix_b_scale_fmt", ""),
-                                        "");
+  string MatrxFMTAsm = !if(HasMatrixFMT, "$matrix_a_fmt$matrix_b_fmt", "");
+  string MatrixScaleSrcAsm = !if(HasMatrixScale, ", $scale_src0, $scale_src1", "");
+  string MatrixScaleAsm = !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale$matrix_a_scale_fmt$matrix_b_scale_fmt", "");
   string MatrixReuseAsm = !if(HasMatrixReuse, "$matrix_a_reuse$matrix_b_reuse", "");
   string ClampAsm = !if(HasClamp, "$clamp", "");
   string NegAsm = !cond(!and(NegLoAny, NegHiAny)             : "$neg_lo$neg_hi",
                         !and(NegLoAny, !not(NegHiAny))       : "$neg_lo",
                         !and(!not(NegLoAny), !not(NegHiAny)) : "");
 
-  let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#MatrxFMTAsm#MatrixReuseAsm#NegAsm#ClampAsm;
+  let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#MatrixScaleSrcAsm#MatrxFMTAsm#MatrixScaleAsm#MatrixReuseAsm#NegAsm#ClampAsm;
 
   // isel patterns
   bit IsAB_BF16_IMod0 = !and(IsAB_BF16, !not(HasIModOp));
@@ -1573,7 +1571,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                          IsAB_F16_IMod0     : (ins (Src0VT (WMMAModsF16Neg Src0VT:$src0, i32:$src0_modifiers))),
                          IsAB_BF16_IMod0    : (ins Src0VT:$src0),
                          IsIU               : (ins (VOP3PModsNeg i32:$src0_modifiers), Src0VT:$src0),
-                         HasMatrxFMT        : (ins timm:$matrix_a_fmt, Src0VT:$src0),
+                         HasMatrixFMT       : (ins timm:$matrix_a_fmt, Src0VT:$src0),
                          NoABMods           : (ins Src0VT:$src0));
   dag Src0OutPat = !cond(IsAB_F32F64_IMod1  : (ins i32:$src0_modifiers, Src0VT:$src0),
                          IsAB_F16BF16_IMod1 : (ins i32:$src0_modifiers, Src0VT:$src0),
@@ -1586,7 +1584,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                          IsAB_F16_IMod0     : (ins (Src1VT (WMMAModsF16Neg Src1VT:$src1, i32:$src1_modifiers))),
                          IsAB_BF16_IMod0    : (ins Src1VT:$src1),
                          IsIU               : (ins (VOP3PModsNeg i32:$src1_modifiers), Src1VT:$src1),
-                         HasMatrxFMT        : (ins timm:$matrix_b_fmt, Src1VT:$src1),
+                         HasMatrixFMT       : (ins timm:$matrix_b_fmt, Src1VT:$src1),
                          NoABMods           : (ins Src1VT:$src1));
   dag Src1OutPat = !cond(IsAB_F32F64_IMod1  : (ins i32:$src1_modifiers, Src1VT:$src1),
                          IsAB_F16BF16_IMod1 : (ins i32:$src1_modifiers, Src1VT:$src1),
@@ -1618,7 +1616,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag IndexOutPat = !cond(!eq(IndexType, 0) : (ins i32:$src2),
                           !eq(IndexType, 8) : (ins i32:$src2, i32:$index_key_8bit),
                           !eq(IndexType, 16): (ins i32:$src2, i32:$index_key_16bit));
-  dag MatrixFMTOutPat = !if(HasMatrxFMT, (ins i32:$matrix_a_fmt, i32:$matrix_b_fmt), (ins));
+  dag MatrixFMTOutPat = !if(HasMatrixFMT, (ins i32:$matrix_a_fmt, i32:$matrix_b_fmt), (ins));
   dag Src2InlineInPat = !con(!if(IsC_IMod1, (ins (VOP3PModsNegAbs i32:$src2_modifiers)), (ins)), (ins (Src2VT (WMMAVISrc Src2VT:$src2))));
   dag Src2InlineOutPat = !con(!if(IsIUXF32, (ins), !if(IsC_IMod1,  (ins i32:$src2_modifiers), (ins (i32 8)))), (ins Src2VT:$src2));
   dag MatrixScaleInPat = !if(HasMatrixScale, (ins timm:$matrix_a_scale, timm:$matrix_a_scale_fmt, ScaleTy:$scale_src0,
@@ -2091,18 +2089,18 @@ class VOP3PeWmma<bits<8> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
     : VOP3Pe_gfx11_gfx12<op, P>{
 
   // opsel
-  let Inst{11} = !cond(WMMAP.HasMatrxFMT        : matrix_a_fmt{0},
+  let Inst{11} = !cond(WMMAP.HasMatrixFMT       : matrix_a_fmt{0},
                        !eq(WMMAP.IndexType, 0)  : 0,
                        !eq(WMMAP.IndexType, 8)  : index_key_8bit{0},
                        !eq(WMMAP.IndexType, 16) : index_key_16bit{0});
-  let Inst{12} = !if(WMMAP.HasMatrxFMT, matrix_a_fmt{1},
+  let Inst{12} = !if(WMMAP.HasMatrixFMT, matrix_a_fmt{1},
                      !if(!eq(WMMAP.IndexType, 8), index_key_8bit{1}, 0));
-  let Inst{13} = !if (WMMAP.HasMatrxFMT, matrix_a_fmt{2},
+  let Inst{13} = !if (WMMAP.HasMatrixFMT, matrix_a_fmt{2},
                       !if(WMMAP.HasMatrixReuse, matrix_a_reuse, 0));
   // opsel_hi
-  let Inst{59} = !if (WMMAP.HasMatrxFMT, matrix_b_fmt{0}, 1);
-  let Inst{60} = !if (WMMAP.HasMatrxFMT, matrix_b_fmt{1}, 1);
-  let Inst{14} = !if (WMMAP.HasMatrxFMT, matrix_b_fmt{2},
+  let Inst{59} = !if (WMMAP.HasMatrixFMT, matrix_b_fmt{0}, 1);
+  let Inst{60} = !if (WMMAP.HasMatrixFMT, matrix_b_fmt{1}, 1);
+  let Inst{14} = !if (WMMAP.HasMatrixFMT, matrix_b_fmt{2},
                       !if(WMMAP.HasMatrixReuse, matrix_b_reuse, 1));
   // neg_lo
   let Inst{61} = !if(WMMAP.NegLo01, src0_modifiers{0}, 0);
@@ -2187,11 +2185,9 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{73} = !if(P.NegHi01, src1_modifiers{1}, 0); // neg_hi src1
   let Inst{74} = !if(P.NegHi2, src2_modifiers{1}, 0); // neg_hi src2
 
-  let Inst{75} = matrix_a_fmt{0}; // op_sel(0)
-  let Inst{76} = matrix_a_fmt{1}; // op_sel(1)
-  let Inst{77} = matrix_a_fmt{2}; // op_sel(2)
+  let Inst{77-75} = !if(P.HasMatrixFMT, matrix_a_fmt{2-0}, 0); // op_sel
 
-  let Inst{78} = matrix_b_fmt{2}; // op_sel_hi(2)
+  let Inst{78,124,123} = !if(P.HasMatrixFMT, matrix_b_fmt{2-0}, 7); // op_sel_hi
   let Inst{79} = !if(P.HasClamp, clamp{0}, 0);
 
   let Inst{87-80} = op;
@@ -2200,8 +2196,6 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{113-105} = !if(P.HasSrc1, src1, 0);
   let Inst{122-114} = !if(P.HasSrc2, src2, 0);
 
-  let Inst{123} = matrix_b_fmt{0}; // op_sel_hi(0)
-  let Inst{124} = matrix_b_fmt{1}; // op_sel_hi(1)
   // neg_lo
   let Inst{125} = !if(P.NegLo01, src0_modifiers{0}, 0);
   let Inst{126} = !if(P.NegLo01, src1_modifiers{0}, 0);
@@ -2309,7 +2303,7 @@ defm V_WMMA_F32_32X16X128_F4_w32      : VOP3P_Real_WMMA_gfx1250 <0x088, F32_32X1
 
 defm V_WMMA_F32_16X16X128_F8F6F4         : VOP3P_Real_WMMA_gfx1250_SrcFormats<0x033, "F32_16X16X128_F8F6F4">;
 defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats<0x033, 0x35, "F32_16X16X128_F8F6F4_SCALE">;
-defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats<0x033, 0x3a, "F32_16X16X128_F8F6F4_SCALE">;
+defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats<0x033, 0x3a, "F32_16X16X128_F8F6F4_SCALE16">;
 
 defm V_SWMMAC_F32_16X16X64_F16_w32      : VOP3P_Real_WMMA_gfx1250 <0x065, F32_F16X64_SWMMAC_w32>;
 defm V_SWMMAC_F32_16X16X64_BF16_w32     : VOP3P_Real_WMMA_gfx1250 <0x066, F32_BF16X64_SWMMAC_w32>;
