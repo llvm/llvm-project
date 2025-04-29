@@ -42,14 +42,46 @@ TOKENS = [
 Token = namedtuple("Token", "kind code")
 
 
-def report_unexpected(s, pos):
-    lines = (s[:pos] + "X").split("\n")
-    lineno, col = (len(lines), len(lines[-1]))
-    print(
-        "unexpected character %r in AnalyzerOptions.def at line %d column %d"
-        % (s[pos], lineno, col),
-        file=sys.stderr,
-    )
+class ErrorHandler:
+    def __init__(self):
+        self.seen_errors = False
+
+        # This script uses some heuristical tweaks to modify the documentation
+        # of some analyzer options. As this code is fragile, we record the use
+        # of these tweaks and report them if they become obsolete:
+        self.unused_tweaks = [
+            "ctu-max-nodes-*",
+            "accepted values",
+            "example file content",
+        ]
+
+    def record_use_of_tweak(self, tweak_name):
+        try:
+            self.unused_tweaks.remove(tweak_name)
+        except ValueError:
+            pass
+
+    def report_error(self, msg):
+        print("Error:", msg, file=sys.stderr)
+        self.seen_errors = True
+
+    def report_unexpected_char(self, s, pos):
+        lines = (s[:pos] + "X").split("\n")
+        lineno, col = (len(lines), len(lines[-1]))
+        self.report_error(
+            "unexpected character %r in AnalyzerOptions.def at line %d column %d"
+            % (s[pos], lineno, col),
+        )
+
+    def report_unused_tweaks(self):
+        if not self.unused_tweaks:
+            return
+        _is = " is" if len(self.unused_tweaks) == 1 else "s are"
+        names = ", ".join(self.unused_tweaks)
+        self.report_error(f"textual tweak{_is} unused in script: {names}")
+
+
+err_handler = ErrorHandler()
 
 
 def tokenize(s):
@@ -63,7 +95,7 @@ def tokenize(s):
                 pos = m.end()
                 break
         else:
-            report_unexpected(s, pos)
+            err_handler.report_unexpected_char(s, pos)
             pos += 1
     return result
 
@@ -149,10 +181,12 @@ def cmdflag_to_rst_title(cmdflag_tok):
 
 
 def desc_to_rst_paragraphs(tok):
-    desc = string_value(tok)
+    base_desc = string_value(tok)
 
     # Escape a star that would act as inline emphasis within RST.
-    desc = desc.replace("ctu-max-nodes-*", r"ctu-max-nodes-\*")
+    desc = base_desc.replace("ctu-max-nodes-*", r"ctu-max-nodes-\*")
+    if desc != base_desc:
+        err_handler.record_use_of_tweak("ctu-max-nodes-*")
 
     # Many descriptions end with "Value: <list of accepted values>", which is
     # OK for a terse command line printout, but should be prettified for web
@@ -162,8 +196,10 @@ def desc_to_rst_paragraphs(tok):
     paragraphs = [desc]
     extra = ""
     if m := re.search(r"(^|\s)Value:", desc):
+        err_handler.record_use_of_tweak("accepted values")
         paragraphs = [desc[: m.start()], "Accepted values:" + desc[m.end() :]]
     elif m := re.search(r"\s*Example file.content:", desc):
+        err_handler.record_use_of_tweak("example file content")
         paragraphs = [desc[: m.start()]]
         extra = "Example file content::\n\n  " + desc[m.end() :] + "\n\n"
 
@@ -209,7 +245,7 @@ def macro_call_to_rst_paragraphs(macro_call):
             + defaults_to_rst_paragraph(defaults)
         )
     except ValueError as ve:
-        print(ve.args[0], file=sys.stderr)
+        err_handler.report_error(ve.args[0])
         return ""
 
 
@@ -227,8 +263,11 @@ def get_option_list(input_file):
 
 p = argparse.ArgumentParser()
 p.add_argument("--options-def", help="path to AnalyzerOptions.def")
-p.add_argument("--template", help="path of template file")
-p.add_argument("--out", help="path of output file")
+p.add_argument("--template", help="template file")
+p.add_argument("--out", help="output file")
+p.add_argument(
+    "--validate", action="store_true", help="exit with failure on parsing error"
+)
 opts = p.parse_args()
 
 with open(opts.template, encoding="utf-8") as f:
@@ -238,5 +277,10 @@ PLACEHOLDER = ".. OPTIONS_LIST_PLACEHOLDER\n"
 
 rst_output = doc_template.replace(PLACEHOLDER, get_option_list(opts.options_def))
 
+err_handler.report_unused_tweaks()
+
 with open(opts.out, "w", newline="", encoding="utf-8") as f:
     f.write(rst_output)
+
+if opts.validate and err_handler.seen_errors:
+    sys.exit(1)
