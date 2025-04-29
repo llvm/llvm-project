@@ -968,7 +968,8 @@ void CheckHelper::CheckObjectEntity(
     if (details.init()) {
       messages_.Say(
           "Cray pointee '%s' may not be initialized"_err_en_US, symbol.name());
-    } else if (symbol.attrs().test(Attr::SAVE)) {
+    }
+    if (symbol.attrs().test(Attr::SAVE)) {
       messages_.Say(
           "Cray pointee '%s' may not have the SAVE attribute"_err_en_US,
           symbol.name());
