@@ -42,22 +42,6 @@ llvm.func @cancel_wsloop(%lb : i32, %ub : i32, %step: i32) {
 
 // -----
 
-llvm.func @cancel_sections() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.sections}}
-  omp.sections {
-    omp.section {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
-      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
-      omp.cancel cancellation_construct_type(sections)
-      omp.terminator
-    }
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @cancel_taskgroup() {
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
   omp.taskgroup {

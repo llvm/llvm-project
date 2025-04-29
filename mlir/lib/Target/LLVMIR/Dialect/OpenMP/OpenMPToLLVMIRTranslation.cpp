@@ -161,7 +161,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkCancelDirective = [&todo](auto op, LogicalResult &result) {
     omp::ClauseCancellationConstructType cancelledDirective =
         op.getCancelDirective();
-    if (cancelledDirective != omp::ClauseCancellationConstructType::Parallel)
+    if (cancelledDirective != omp::ClauseCancellationConstructType::Parallel &&
+        cancelledDirective != omp::ClauseCancellationConstructType::Sections)
       result = todo("cancel directive construct type not yet supported");
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
@@ -1688,10 +1689,11 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   auto finiCB = [&](InsertPointTy codeGenIP) { return llvm::Error::success(); };
 
   allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
+  bool isCancellable = constructIsCancellable(sectionsOp);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createSections(
-          ompLoc, allocaIP, sectionCBs, privCB, finiCB, false,
+          ompLoc, allocaIP, sectionCBs, privCB, finiCB, isCancellable,
           sectionsOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))
