@@ -25,6 +25,11 @@ endif()
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang-rt")
 
+# Python is needed for symbol extracting tool
+set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
+find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+    COMPONENTS Interpreter)
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
   message(FATAL_ERROR "In-source builds are not allowed. \
           Please create a directory and run cmake from there,\
@@ -81,6 +86,13 @@ if (FLANG_STANDALONE_BUILD)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
+  # Build with _XOPEN_SOURCE on AIX to avoid errors caused by _ALL_SOURCE.
+  # We need to enable the large-file API as well.
+  if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
+    add_compile_definitions(_XOPEN_SOURCE=700)
+    add_compile_definitions(_LARGE_FILE_API)
+  endif()
+
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
   if (LLVM_DIR)
@@ -125,6 +137,10 @@ if (FLANG_STANDALONE_BUILD)
     set(USE_NO_MAYBE_UNINITIALIZED 1)
   endif()
 
+  # The path is needed to locate extract_symbols.py
+  if (NOT DEFINED LLVM_MAIN_SRC_DIR)
+    set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
+  endif()
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
@@ -436,6 +452,10 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-semantic-interposition")
   endif()
 
+  # GCC requires this flag in order for precompiled headers to work with ccache
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpch-preprocess")
+  endif()
 endif()
 
 # Clang on Darwin enables non-POSIX extensions by default, which allows the
@@ -444,6 +464,11 @@ endif()
 # Set _POSIX_C_SOURCE to avoid including these extensions.
 if (APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_POSIX_C_SOURCE=200809")
+endif()
+
+# Clang requires this flag in order for precompiled headers to work with ccache
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fno-pch-timestamp")
 endif()
 
 list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)

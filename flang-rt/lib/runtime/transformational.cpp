@@ -21,6 +21,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/type-info.h"
 #include "flang/Common/float128.h"
 
 namespace Fortran::runtime {
@@ -131,7 +132,7 @@ static inline RT_API_ATTRS std::size_t AllocateResult(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, extent[j]);
   }
-  if (int stat{result.Allocate()}) {
+  if (int stat{result.Allocate(kNoAsyncId)}) {
     terminator.Crash(
         "%s: Could not allocate memory for result (stat=%d)", function, stat);
   }
@@ -156,7 +157,7 @@ static inline RT_API_ATTRS std::size_t AllocateBesselResult(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, extent[j]);
   }
-  if (int stat{result.Allocate()}) {
+  if (int stat{result.Allocate(kNoAsyncId)}) {
     terminator.Crash(
         "%s: Could not allocate memory for result (stat=%d)", function, stat);
   }
@@ -321,6 +322,71 @@ static inline RT_API_ATTRS void DoBesselYnX0(Descriptor &result, int32_t n1,
     *result.Element<CppTypeFor<CAT, KIND>>(at) =
         -std::numeric_limits<CppTypeFor<CAT, KIND>>::infinity();
   }
+}
+
+static inline RT_API_ATTRS void CheckConformabilityForShallowCopy(
+    const Descriptor &d1, const Descriptor &d2, Terminator &terminator,
+    const char *funcName, const char *d1Name, const char *d2Name) {
+  if (d1.rank() != d2.rank()) {
+    terminator.Crash(
+        "Incompatible arguments to %s: %s has rank %d, %s has rank %d",
+        funcName, d1Name, d1.rank(), d1Name, d2.rank());
+  }
+
+  // Check that the shapes conform.
+  CheckConformability(d1, d2, terminator, funcName, d1Name, d2Name);
+
+  if (d1.ElementBytes() != d2.ElementBytes()) {
+    terminator.Crash("Incompatible arguments to %s: %s has element byte length "
+                     "%zd, %s has length %zd",
+        funcName, d1Name, d1.ElementBytes(), d2Name, d2.ElementBytes());
+  }
+  if (d1.type() != d2.type()) {
+    terminator.Crash("Incompatible arguments to %s: %s has type code %d, %s "
+                     "has type code %d",
+        funcName, d1Name, d1.type().raw(), d2Name, d2.type().raw());
+  }
+  const DescriptorAddendum *d1Addendum{d1.Addendum()};
+  const typeInfo::DerivedType *d1Derived{
+      d1Addendum ? d1Addendum->derivedType() : nullptr};
+  const DescriptorAddendum *d2Addendum{d2.Addendum()};
+  const typeInfo::DerivedType *d2Derived{
+      d2Addendum ? d2Addendum->derivedType() : nullptr};
+  if (d1Derived != d2Derived) {
+    terminator.Crash(
+        "Incompatible arguments to %s: %s and %s have different derived types",
+        funcName, d1Name, d2Name);
+  }
+  if (d2Derived) {
+    // Compare LEN parameters.
+    std::size_t lenParms{d2Derived->LenParameters()};
+    for (std::size_t j{0}; j < lenParms; ++j) {
+      if (d1Addendum->LenParameterValue(j) !=
+          d2Addendum->LenParameterValue(j)) {
+        terminator.Crash("Incompatible arguments to %s: type length parameter "
+                         "%zd for %s is %zd, for %s is %zd",
+            funcName, j, d1Name,
+            static_cast<std::size_t>(d1Addendum->LenParameterValue(j)), d2Name,
+            static_cast<std::size_t>(d2Addendum->LenParameterValue(j)));
+      }
+    }
+  }
+}
+
+template <bool IS_ALLOCATING>
+static inline RT_API_ATTRS void DoShallowCopy(
+    std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor> &result,
+    const Descriptor &source, Terminator &terminator, const char *funcName) {
+  if constexpr (IS_ALLOCATING) {
+    SubscriptValue extent[maxRank];
+    source.GetShape(extent);
+    AllocateResult(result, source, source.rank(), extent, terminator, funcName);
+  } else {
+    CheckConformabilityForShallowCopy(
+        result, source, terminator, funcName, "RESULT=", "SOURCE=");
+  }
+
+  ShallowCopy(result, source);
 }
 
 extern "C" {
@@ -813,6 +879,19 @@ void RTDEF(Reshape)(Descriptor &result, const Descriptor &source,
       result.IncrementSubscripts(resultSubscript, dimOrder);
     }
   }
+}
+
+// ShallowCopy
+void RTDEF(ShallowCopy)(Descriptor &result, const Descriptor &source,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  DoShallowCopy<true>(result, source, terminator, "ShallowCopy");
+}
+
+void RTDEF(ShallowCopyDirect)(const Descriptor &result,
+    const Descriptor &source, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  DoShallowCopy<false>(result, source, terminator, "ShallowCopyDirect");
 }
 
 // SPREAD

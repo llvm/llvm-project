@@ -42,6 +42,15 @@ static bool isLongCall(const char *str) {
   return true;
 }
 
+// The calling conventions in XtensaCallingConv.td are described in terms of the
+// callee's register window. This function translates registers to the
+// corresponding caller window %o register.
+static unsigned toCallerWindow(unsigned Reg) {
+  if (Reg >= Xtensa::A2 && Reg <= Xtensa::A7)
+    return Reg - Xtensa::A2 + Xtensa::A10;
+  return Reg;
+}
+
 XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
                                            const XtensaSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -66,8 +75,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16},
+                     Subtarget.hasSEXT() ? Legal : Expand);
 
   setOperationAction(ISD::BITCAST, MVT::i32, Expand);
   setOperationAction(ISD::BITCAST, MVT::f32, Expand);
@@ -106,16 +115,34 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setCondCodeAction(ISD::SETUGT, MVT::i32, Expand);
   setCondCodeAction(ISD::SETULE, MVT::i32, Expand);
 
-  setOperationAction(ISD::MUL, MVT::i32, Expand);
-  setOperationAction(ISD::MULHU, MVT::i32, Expand);
-  setOperationAction(ISD::MULHS, MVT::i32, Expand);
+  if (Subtarget.hasMul32())
+    setOperationAction(ISD::MUL, MVT::i32, Legal);
+  else
+    setOperationAction(ISD::MUL, MVT::i32, Expand);
+
+  if (Subtarget.hasMul32High()) {
+    setOperationAction(ISD::MULHU, MVT::i32, Legal);
+    setOperationAction(ISD::MULHS, MVT::i32, Legal);
+  } else {
+    setOperationAction(ISD::MULHU, MVT::i32, Expand);
+    setOperationAction(ISD::MULHS, MVT::i32, Expand);
+  }
+
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
   setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
 
-  setOperationAction(ISD::SDIV, MVT::i32, Expand);
-  setOperationAction(ISD::UDIV, MVT::i32, Expand);
-  setOperationAction(ISD::SREM, MVT::i32, Expand);
-  setOperationAction(ISD::UREM, MVT::i32, Expand);
+  if (Subtarget.hasDiv32()) {
+    setOperationAction(ISD::SDIV, MVT::i32, Legal);
+    setOperationAction(ISD::UDIV, MVT::i32, Legal);
+    setOperationAction(ISD::SREM, MVT::i32, Legal);
+    setOperationAction(ISD::UREM, MVT::i32, Legal);
+  } else {
+    setOperationAction(ISD::SDIV, MVT::i32, Expand);
+    setOperationAction(ISD::UDIV, MVT::i32, Expand);
+    setOperationAction(ISD::SREM, MVT::i32, Expand);
+    setOperationAction(ISD::UREM, MVT::i32, Expand);
+  }
+
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
 
@@ -131,6 +158,9 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ, MVT::i32, Expand);
   setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
+
+  setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, MVT::i32,
+                     Subtarget.hasMINMAX() ? Legal : Expand);
 
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
@@ -339,7 +369,18 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
 
       // Transform the arguments stored on
       // physical registers into virtual ones
-      Register Reg = MF.addLiveIn(VA.getLocReg(), &Xtensa::ARRegClass);
+      Register Reg = 0;
+      MCRegister FrameReg = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+
+      // Argument passed in FrameReg in Windowed ABI we save in A8 (in
+      // emitPrologue), so load argument from A8
+      if (Subtarget.isWindowedABI() && (VA.getLocReg() == FrameReg)) {
+        Reg = MF.addLiveIn(Xtensa::A8, &Xtensa::ARRegClass);
+        XtensaFI->setSaveFrameRegister();
+      } else {
+        Reg = MF.addLiveIn(VA.getLocReg(), &Xtensa::ARRegClass);
+      }
+
       SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
       // If this is an 8 or 16-bit value, it has been passed promoted
@@ -538,6 +579,8 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SDValue Glue;
   for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
     unsigned Reg = RegsToPass[I].first;
+    if (Subtarget.isWindowedABI())
+      Reg = toCallerWindow(Reg);
     Chain = DAG.getCopyToReg(Chain, DL, Reg, RegsToPass[I].second, Glue);
     Glue = Chain.getValue(1);
   }
@@ -587,6 +630,8 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // known live into the call.
   for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
     unsigned Reg = RegsToPass[I].first;
+    if (Subtarget.isWindowedABI())
+      Reg = toCallerWindow(Reg);
     Ops.push_back(DAG.getRegister(Reg, RegsToPass[I].second.getValueType()));
   }
 
@@ -595,7 +640,9 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(Glue);
 
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  Chain = DAG.getNode(XtensaISD::CALL, DL, NodeTys, Ops);
+  Chain = DAG.getNode(Subtarget.isWindowedABI() ? XtensaISD::CALLW8
+                                                : XtensaISD::CALL,
+                      DL, NodeTys, Ops);
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
@@ -606,7 +653,8 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RetLocs;
   CCState RetCCInfo(CallConv, IsVarArg, MF, RetLocs, *DAG.getContext());
-  RetCCInfo.AnalyzeCallResult(Ins, RetCC_Xtensa);
+  RetCCInfo.AnalyzeCallResult(Ins, Subtarget.isWindowedABI() ? RetCCW8_Xtensa
+                                                             : RetCC_Xtensa);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned I = 0, E = RetLocs.size(); I != E; ++I) {
@@ -648,7 +696,9 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SDValue Glue;
   // Quick exit for void returns
   if (RetLocs.empty())
-    return DAG.getNode(XtensaISD::RET, DL, MVT::Other, Chain);
+    return DAG.getNode(Subtarget.isWindowedABI() ? XtensaISD::RETW
+                                                 : XtensaISD::RET,
+                       DL, MVT::Other, Chain);
 
   // Copy the result values into the output registers.
   SmallVector<SDValue, 4> RetOps;
@@ -672,7 +722,9 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  return DAG.getNode(XtensaISD::RET, DL, MVT::Other, RetOps);
+  return DAG.getNode(Subtarget.isWindowedABI() ? XtensaISD::RETW
+                                               : XtensaISD::RET,
+                     DL, MVT::Other, RetOps);
 }
 
 static unsigned getBranchOpcode(ISD::CondCode Cond) {
@@ -864,8 +916,14 @@ SDValue XtensaTargetLowering::LowerSTACKSAVE(SDValue Op,
 
 SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
-                          Op.getOperand(1));
+  SDValue Chain = Op.getOperand(0);
+  SDValue NewSP = Op.getOperand(1);
+
+  if (Subtarget.isWindowedABI()) {
+    return DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, Chain, NewSP);
+  }
+
+  return DAG.getCopyToReg(Chain, SDLoc(Op), Xtensa::SP, NewSP);
 }
 
 SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
@@ -884,7 +942,7 @@ SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
 
-  Register FrameRegister = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+  MCRegister FrameRegister = Subtarget.getRegisterInfo()->getFrameRegister(MF);
   SDValue FrameAddr =
       DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameRegister, VT);
   return FrameAddr;
@@ -903,10 +961,15 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue SizeRoundUp = DAG.getNode(ISD::AND, DL, VT, SizeTmp,
                                     DAG.getSignedConstant(~31, DL, MVT::i32));
 
-  unsigned SPReg = Xtensa::SP;
+  MCRegister SPReg = Xtensa::SP;
   SDValue SP = DAG.getCopyFromReg(Chain, DL, SPReg, VT);
   SDValue NewSP = DAG.getNode(ISD::SUB, DL, VT, SP, SizeRoundUp); // Value
-  Chain = DAG.getCopyToReg(SP.getValue(1), DL, SPReg, NewSP); // Output chain
+  if (Subtarget.isWindowedABI()) {
+    Chain = DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, SP.getValue(1),
+                        NewSP);
+  } else {
+    Chain = DAG.getCopyToReg(SP.getValue(1), DL, SPReg, NewSP); // Output chain
+  }
 
   SDValue NewVal = DAG.getCopyFromReg(Chain, DL, SPReg, MVT::i32);
   Chain = NewVal.getValue(1);
@@ -1230,12 +1293,18 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::BR_JT";
   case XtensaISD::CALL:
     return "XtensaISD::CALL";
+  case XtensaISD::CALLW8:
+    return "XtensaISD::CALLW8";
   case XtensaISD::EXTUI:
     return "XtensaISD::EXTUI";
+  case XtensaISD::MOVSP:
+    return "XtensaISD::MOVSP";
   case XtensaISD::PCREL_WRAPPER:
     return "XtensaISD::PCREL_WRAPPER";
   case XtensaISD::RET:
     return "XtensaISD::RET";
+  case XtensaISD::RETW:
+    return "XtensaISD::RETW";
   case XtensaISD::SELECT_CC:
     return "XtensaISD::SELECT_CC";
   case XtensaISD::SRCL:
@@ -1337,6 +1406,15 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     if (MI.memoperands_empty() || (*MI.memoperands_begin())->isVolatile()) {
       BuildMI(*MBB, MI, DL, TII.get(Xtensa::MEMW));
     }
+    return MBB;
+  }
+  case Xtensa::MOVSP_P: {
+    MachineOperand &NewSP = MI.getOperand(0);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::MOVSP), Xtensa::SP)
+        .addReg(NewSP.getReg());
+    MI.eraseFromParent();
+
     return MBB;
   }
   default:

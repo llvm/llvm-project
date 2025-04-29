@@ -7,7 +7,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=VI,SDAG-VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=CI,SDAG-CI %s
 
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1100,GISEL-GFX1100 %s
+; FIXME-TRUE16. enable gisel
+; XUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1100,GISEL-GFX1100,GISEL-GFX1100-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1100,GISEL-GFX1100,GISEL-GFX1100-FAKE16 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX900,GISEL-GFX900 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX906,GISEL-GFX906 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9GEN,GISEL-GFX9GEN %s
@@ -440,25 +442,17 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; GISEL-CI-LABEL: v_mad_mix_v2f32_shuffle:
 ; GISEL-CI:       ; %bb.0:
 ; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GISEL-CI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GISEL-CI-NEXT:    v_or_b32_e32 v0, v1, v0
-; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v5
-; GISEL-CI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GISEL-CI-NEXT:    v_or_b32_e32 v1, v1, v4
-; GISEL-CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GISEL-CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v4, v1
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v6, v0
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v2
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v5
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v3
 ; GISEL-CI-NEXT:    v_mad_f32 v0, v4, v0, v1
-; GISEL-CI-NEXT:    v_mac_f32_e32 v1, v5, v2
+; GISEL-CI-NEXT:    v_mac_f32_e32 v1, v6, v2
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
-  %src0.shuf = shufflevector <2 x half> %src0, <2 x half> undef, <2 x i32> <i32 1, i32 0>
-  %src1.shuf = shufflevector <2 x half> %src1, <2 x half> undef, <2 x i32> <i32 0, i32 1>
-  %src2.shuf = shufflevector <2 x half> %src2, <2 x half> undef, <2 x i32> <i32 1, i32 1>
+  %src0.shuf = shufflevector <2 x half> %src0, <2 x half> poison, <2 x i32> <i32 1, i32 0>
+  %src1.shuf = shufflevector <2 x half> %src1, <2 x half> poison, <2 x i32> <i32 0, i32 1>
+  %src2.shuf = shufflevector <2 x half> %src2, <2 x half> poison, <2 x i32> <i32 1, i32 1>
   %src0.ext = fpext <2 x half> %src0.shuf to <2 x float>
   %src1.ext = fpext <2 x half> %src1.shuf to <2 x float>
   %src2.ext = fpext <2 x half> %src2.shuf to <2 x float>
@@ -1970,15 +1964,12 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd(half %src0,
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.l
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v2.l
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; SDAG-GFX1100-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v1
+; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SDAG-GFX1100-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v2
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX1100-FAKE16-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd:
@@ -2071,12 +2062,10 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half 
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
-; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v1, v0
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SDAG-GFX1100-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v2
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2359,9 +2348,8 @@ define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.h
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2776,3 +2764,5 @@ declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
 attributes #2 = { nounwind readnone speculatable }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GISEL-GFX1100-FAKE16: {{.*}}

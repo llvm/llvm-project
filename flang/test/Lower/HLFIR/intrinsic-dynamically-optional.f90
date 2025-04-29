@@ -22,7 +22,7 @@ end function
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[MASK_VAR]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK:           %[[RES:.*]] = fir.call @_FortranAIAll4(%[[VAL_6]], %[[VAL_7]], %[[C7]], %[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 ! CHECK:           hlfir.assign %[[RES]] to %[[RET_VAR]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#1 : !fir.ref<i32>
+! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[RET]] : i32
 ! CHECK:         }
 
@@ -39,12 +39,12 @@ end function
 ! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 {bindc_name = "test_optional_as_box2", uniq_name = "_QFtest_optional_as_box2Etest_optional_as_box2"}
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[X_VAR:.*]]:2 = hlfir.declare %[[X_ARG]]
-! CHECK:           %[[MASK_LD:.*]] = fir.load %[[MASK_VAR]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK:           %[[MASK_LD:.*]] = fir.load %[[MASK_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
 ! CHECK:           %[[MASK_ADDR:.*]] = fir.box_addr %[[MASK_LD]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.heap<!fir.array<?x!fir.logical<4>>>
 ! CHECK:           %[[MASK_INT:.*]] = fir.convert %[[MASK_ADDR]] : (!fir.heap<!fir.array<?x!fir.logical<4>>>) -> i64
 ! CHECK:           %[[C0_I64:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[MASK_PRESENT:.*]] = arith.cmpi ne, %[[MASK_INT]], %[[C0_I64]] : i64
-! CHECK:           %[[MASK_LD2:.*]] = fir.load %[[MASK_VAR]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK:           %[[MASK_LD2:.*]] = fir.load %[[MASK_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[MASK_DIMS:.*]]:3 = fir.box_dims %[[MASK_LD2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
 ! CHECK:           %[[MASK_ADDR2:.*]] = fir.box_addr %[[MASK_LD2]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.heap<!fir.array<?x!fir.logical<4>>>
@@ -61,7 +61,7 @@ end function
 ! CHECK:           %[[VAL_22:.*]] = fir.convert %[[MASK_SEL]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK:           %[[RES:.*]] = fir.call @_FortranAIAll4(%[[VAL_19]], %[[VAL_20]], %[[VAL_18]], %[[VAL_21]], %[[VAL_22]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 ! CHECK:           hlfir.assign %[[RES]] to %[[RET_VAR]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#1 : !fir.ref<i32>
+! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[RET]] : i32
 ! CHECK:         }
 
@@ -91,7 +91,7 @@ end function
 ! CHECK:           %[[INS_REAL:.*]] = fir.insert_value %[[UNDEF]], %[[REAL_LD]], [0 : index] : (complex<f32>, f32) -> complex<f32>
 ! CHECK:           %[[INS_IMAG:.*]] = fir.insert_value %[[INS_REAL]], %[[IMAG_LD:.*]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 ! CHECK:           hlfir.assign %[[INS_IMAG]] to %[[RET_VAR]]#0
-! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#1 : !fir.ref<complex<f32>>
+! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#0 : !fir.ref<complex<f32>>
 ! CHECK:           return %[[RET]] : complex<f32>
 ! CHECK:         }
 
@@ -131,16 +131,16 @@ end subroutine
 ! CHECK:           %[[FROM_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[ALLOC_SZ]] {fir.must_be_heap = true, uniq_name = "_QFtest_optional_as_addrEfrom.alloc"}
 ! CHECK:           %[[FROM_SHAPE:.*]] = fir.shape %[[ALLOC_SZ]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[FROM_BOX:.*]] = fir.embox %[[FROM_ALLOC]](%[[FROM_SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:           fir.store %[[FROM_BOX]] to %[[FROM_VAR]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[STAT_BOX:.*]] = fir.load %[[STAT_VAR]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           fir.store %[[FROM_BOX]] to %[[FROM_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[STAT_BOX:.*]] = fir.load %[[STAT_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[STAT_ADDR:.*]] = fir.box_addr %[[STAT_BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:           %[[ABSENT:.*]] = fir.absent !fir.box<none>
 ! CHECK:           %[[TRUE:.*]] = arith.constant true
 ! CHECK:           %[[VAL_25:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.char<{{.*}}>>
 ! CHECK:           %[[VAL_26:.*]] = arith.constant {{.*}} : i32
 ! CHECK:           %[[VAL_27:.*]] = fir.zero_bits !fir.ref<none>
-! CHECK:           %[[VAL_28:.*]] = fir.convert %[[TO_VAR]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:           %[[VAL_29:.*]] = fir.convert %[[FROM_VAR]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_28:.*]] = fir.convert %[[TO_VAR]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_29:.*]] = fir.convert %[[FROM_VAR]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:           %[[RES:.*]] = fir.call @_FortranAMoveAlloc(%[[VAL_28]], %[[VAL_29]], %[[VAL_27]], %[[TRUE]], %[[ABSENT]], %[[VAL_30]], %[[VAL_26]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           %[[STAT_INT:.*]] = fir.convert %[[STAT_ADDR]] : (!fir.heap<i32>) -> i64
@@ -194,7 +194,7 @@ end function
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_11]]#0 : !hlfir.expr<3xcomplex<f32>>, !fir.ref<!fir.array<3xcomplex<f32>>>
 ! CHECK:           hlfir.destroy %[[VAL_13]] : !hlfir.expr<3xcomplex<f32>>
-! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_11]]#1 : !fir.ref<!fir.array<3xcomplex<f32>>>
+! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<!fir.array<3xcomplex<f32>>>
 ! CHECK:           return %[[VAL_24]] : !fir.array<3xcomplex<f32>>
 ! CHECK:         }
 

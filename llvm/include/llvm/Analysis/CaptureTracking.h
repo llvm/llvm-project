@@ -41,8 +41,23 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
                             unsigned MaxUsesToExplore = 0);
+
+  /// Return which components of the pointer may be captured. Only consider
+  /// components that are part of \p Mask. Once \p StopFn on the accumulated
+  /// components returns true, the traversal is aborted early. By default, this
+  /// happens when *any* of the components in \p Mask are captured.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
+  CaptureComponents PointerMayBeCaptured(
+      const Value *V, bool ReturnCaptures, CaptureComponents Mask,
+      function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
+      unsigned MaxUsesToExplore = 0);
 
   /// PointerMayBeCapturedBefore - Return true if this pointer value may be
   /// captured by the enclosing function (which is required to exist). If a
@@ -55,11 +70,28 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
                                   const Instruction *I, const DominatorTree *DT,
                                   bool IncludeI = false,
                                   unsigned MaxUsesToExplore = 0,
                                   const LoopInfo *LI = nullptr);
+
+  /// Return which components of the pointer may be captured on the path to
+  /// \p I. Only consider components that are part of \p Mask. Once \p StopFn
+  /// on the accumulated components returns true, the traversal is aborted
+  /// early. By default, this happens when *any* of the components in \p Mask
+  /// are captured.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
+  CaptureComponents PointerMayBeCapturedBefore(
+      const Value *V, bool ReturnCaptures, const Instruction *I,
+      const DominatorTree *DT, bool IncludeI, CaptureComponents Mask,
+      function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
+      const LoopInfo *LI = nullptr, unsigned MaxUsesToExplore = 0);
 
   // Returns the 'earliest' instruction that captures \p V in \F. An instruction
   // A is considered earlier than instruction B, if A dominates B. If 2 escapes
@@ -69,8 +101,11 @@ namespace llvm {
   // nullptr is returned. Note that the caller of the function has to ensure
   // that the instruction the result value is compared against is not in a
   // cycle.
+  //
+  // Only consider components that are part of \p Mask.
   Instruction *FindEarliestCapture(const Value *V, Function &F,
                                    bool ReturnCaptures, const DominatorTree &DT,
+                                   CaptureComponents Mask,
                                    unsigned MaxUsesToExplore = 0);
 
   /// Capture information for a specific Use.
@@ -133,11 +168,6 @@ namespace llvm {
     /// Return one of Stop, Continue or ContinueIgnoringReturn to control
     /// further traversal.
     virtual Action captured(const Use *U, UseCaptureInfo CI) = 0;
-
-    /// isDereferenceableOrNull - Overload to allow clients with additional
-    /// knowledge about pointer dereferenceability to provide it and thereby
-    /// avoid conservative responses when a pointer is compared to null.
-    virtual bool isDereferenceableOrNull(Value *O, const DataLayout &DL);
   };
 
   /// Determine what kind of capture behaviour \p U may exhibit.
@@ -148,12 +178,7 @@ namespace llvm {
   ///
   /// \p Base is the starting value of the capture analysis, which is
   /// relevant for address_is_null captures.
-  /// The \p IsDereferenceableOrNull callback is used to rule out capturing for
-  /// certain comparisons.
-  UseCaptureInfo
-  DetermineUseCaptureKind(const Use &U, const Value *Base,
-                          llvm::function_ref<bool(Value *, const DataLayout &)>
-                              IsDereferenceableOrNull);
+  UseCaptureInfo DetermineUseCaptureKind(const Use &U, const Value *Base);
 
   /// PointerMayBeCaptured - Visit the value and the values derived from it and
   /// find values which appear to be capturing the pointer value. This feeds
@@ -161,6 +186,9 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   void PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
                             unsigned MaxUsesToExplore = 0);
 

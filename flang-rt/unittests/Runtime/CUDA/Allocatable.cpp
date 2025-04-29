@@ -42,7 +42,7 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocatable) {
   CUDA_REPORT_IF_ERROR(cudaMalloc(&device_desc, a->SizeInBytes()));
 
   RTNAME(AllocatableAllocate)
-  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  (*a, kNoAsyncId, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(CUFDescriptorSync)(device_desc, a.get(), __FILE__, __LINE__);
   cudaDeviceSynchronize();
@@ -56,5 +56,64 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocatable) {
   RTNAME(CUFDescriptorSync)(device_desc, a.get(), __FILE__, __LINE__);
   cudaDeviceSynchronize();
 
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+}
+
+TEST(AllocatableCUFTest, StreamDeviceAllocatable) {
+  using Fortran::common::TypeCategory;
+  RTNAME(CUFRegisterAllocator)();
+  // REAL(4), DEVICE, ALLOCATABLE :: a(:)
+  auto a{createAllocatable(TypeCategory::Real, 4)};
+  a->SetAllocIdx(kDeviceAllocatorPos);
+  EXPECT_EQ((int)kDeviceAllocatorPos, a->GetAllocIdx());
+  EXPECT_FALSE(a->HasAddendum());
+  RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
+
+  auto b{createAllocatable(TypeCategory::Real, 4)};
+  b->SetAllocIdx(kDeviceAllocatorPos);
+  EXPECT_EQ((int)kDeviceAllocatorPos, b->GetAllocIdx());
+  EXPECT_FALSE(b->HasAddendum());
+  RTNAME(AllocatableSetBounds)(*b, 0, 1, 20);
+
+  auto c{createAllocatable(TypeCategory::Real, 4)};
+  c->SetAllocIdx(kDeviceAllocatorPos);
+  EXPECT_EQ((int)kDeviceAllocatorPos, c->GetAllocIdx());
+  EXPECT_FALSE(b->HasAddendum());
+  RTNAME(AllocatableSetBounds)(*c, 0, 1, 100);
+
+  RTNAME(AllocatableAllocate)
+  (*a, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(a->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  RTNAME(AllocatableAllocate)
+  (*b, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(b->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  RTNAME(AllocatableAllocate)
+  (*c, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(c->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  RTNAME(AllocatableDeallocate)
+  (*b, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_FALSE(b->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  RTNAME(AllocatableDeallocate)
+  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_FALSE(a->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  RTNAME(AllocatableDeallocate)
+  (*c, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_FALSE(c->IsAllocated());
+  cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
 }

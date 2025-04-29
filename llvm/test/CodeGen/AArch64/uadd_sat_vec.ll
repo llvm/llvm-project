@@ -198,10 +198,9 @@ define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    umin v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x2]
-; CHECK-SD-NEXT:    strb w8, [x2, #1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str b0, [x2]
+; CHECK-SD-NEXT:    stur b1, [x2, #1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i8:
@@ -255,10 +254,9 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    umin v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [x2]
-; CHECK-SD-NEXT:    strh w8, [x2, #2]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str h0, [x2]
+; CHECK-SD-NEXT:    str h1, [x2, #2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:
@@ -325,7 +323,7 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    ldr b0, [x0]
 ; CHECK-SD-NEXT:    ldr b1, [x1]
 ; CHECK-SD-NEXT:    uqadd v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    st1 { v0.b }[0], [x2]
+; CHECK-SD-NEXT:    str b0, [x2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v1i8:

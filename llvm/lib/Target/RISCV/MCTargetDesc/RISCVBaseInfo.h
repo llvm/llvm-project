@@ -51,7 +51,12 @@ enum {
   InstFormatCLH = 19,
   InstFormatCSB = 20,
   InstFormatCSH = 21,
-  InstFormatOther = 22,
+  InstFormatQC_EAI = 22,
+  InstFormatQC_EI = 23,
+  InstFormatQC_EB = 24,
+  InstFormatQC_EJ = 25,
+  InstFormatQC_ES = 26,
+  InstFormatOther = 31,
 
   InstFormatMask = 31,
   InstFormatShift = 0,
@@ -296,7 +301,10 @@ enum OperandType : unsigned {
   OPERAND_UIMM5,
   OPERAND_UIMM5_NONZERO,
   OPERAND_UIMM5_GT3,
+  OPERAND_UIMM5_PLUS1,
+  OPERAND_UIMM5_GE6_PLUS1,
   OPERAND_UIMM5_LSB0,
+  OPERAND_UIMM5_SLIST,
   OPERAND_UIMM6,
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
@@ -311,7 +319,9 @@ enum OperandType : unsigned {
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
+  OPERAND_UIMM14_LSB00,
   OPERAND_UIMM16,
+  OPERAND_UIMM16_NONZERO,
   OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
   OPERAND_UIMMLOG2XLEN_NONZERO,
@@ -319,15 +329,22 @@ enum OperandType : unsigned {
   OPERAND_UIMM48,
   OPERAND_UIMM64,
   OPERAND_ZERO,
+  OPERAND_THREE,
+  OPERAND_FOUR,
   OPERAND_SIMM5,
+  OPERAND_SIMM5_NONZERO,
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
   OPERAND_SIMM10_LSB0000_NONZERO,
+  OPERAND_SIMM11,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM16,
+  OPERAND_SIMM16_NONZERO,
+  OPERAND_SIMM20_LI,
   OPERAND_SIMM26,
-  OPERAND_SIMM32,
+  OPERAND_BARE_SIMM32,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -335,7 +352,9 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_0_7,
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
-  OPERAND_SPIMM,
+  OPERAND_RLIST,
+  OPERAND_RLIST_S0,
+  OPERAND_STACKADJ,
   // Operand is a 3-bit rounding mode, '111' indicates FRM register.
   // Represents 'frm' argument passing to floating-point operations.
   OPERAND_FRMARG,
@@ -432,7 +451,44 @@ enum RoundingMode {
   RNE = 1,
   RDN = 2,
   ROD = 3,
+  Invalid
 };
+
+inline static StringRef roundingModeToString(RoundingMode RndMode) {
+  switch (RndMode) {
+  default:
+    llvm_unreachable("Unknown vector fixed-point rounding mode");
+  case RISCVVXRndMode::RNU:
+    return "rnu";
+  case RISCVVXRndMode::RNE:
+    return "rne";
+  case RISCVVXRndMode::RDN:
+    return "rdn";
+  case RISCVVXRndMode::ROD:
+    return "rod";
+  }
+}
+
+inline static RoundingMode stringToRoundingMode(StringRef Str) {
+  return StringSwitch<RoundingMode>(Str)
+      .Case("rnu", RISCVVXRndMode::RNU)
+      .Case("rne", RISCVVXRndMode::RNE)
+      .Case("rdn", RISCVVXRndMode::RDN)
+      .Case("rod", RISCVVXRndMode::ROD)
+      .Default(RISCVVXRndMode::Invalid);
+}
+
+inline static bool isValidRoundingMode(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case RISCVVXRndMode::RNU:
+  case RISCVVXRndMode::RNE:
+  case RISCVVXRndMode::RDN:
+  case RISCVVXRndMode::ROD:
+    return true;
+  }
+}
 } // namespace RISCVVXRndMode
 
 //===----------------------------------------------------------------------===//
@@ -555,8 +611,8 @@ enum RLISTENCODE {
   INVALID_RLIST,
 };
 
-inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
-  assert((!IsRV32E || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
+inline unsigned encodeRegList(MCRegister EndReg, bool IsRVE = false) {
+  assert((!IsRVE || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
   switch (EndReg) {
   case RISCV::X1:
     return RLISTENCODE::RA;
@@ -580,8 +636,6 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
     return RLISTENCODE::RA_S0_S8;
   case RISCV::X25:
     return RLISTENCODE::RA_S0_S9;
-  case RISCV::X26:
-    return RLISTENCODE::INVALID_RLIST;
   case RISCV::X27:
     return RLISTENCODE::RA_S0_S11;
   default:
@@ -589,69 +643,28 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   }
 }
 
+inline static unsigned encodeRegListNumRegs(unsigned NumRegs) {
+  assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
+         "Unexpected number of registers");
+  if (NumRegs == 13)
+    return RLISTENCODE::RA_S0_S11;
+
+  return RLISTENCODE::RA + (NumRegs - 1);
+}
+
 inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
-  assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
-         "{ra, s0-s10} is not supported, s11 must be included.");
-  if (!IsRV64) {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 16;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 32;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-    case RLISTENCODE::RA_S0_S9:
-      return 48;
-    case RLISTENCODE::RA_S0_S11:
-      return 64;
-    }
-  } else {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-      return 16;
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 32;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-      return 48;
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 64;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-      return 80;
-    case RLISTENCODE::RA_S0_S9:
-      return 96;
-    case RLISTENCODE::RA_S0_S11:
-      return 112;
-    }
-  }
-  llvm_unreachable("Unexpected RlistVal");
+  assert(RlistVal >= RLISTENCODE::RA && RlistVal <= RLISTENCODE::RA_S0_S11 &&
+         "Invalid Rlist");
+  unsigned NumRegs = (RlistVal - RLISTENCODE::RA) + 1;
+  // s10 and s11 are saved together.
+  if (RlistVal == RLISTENCODE::RA_S0_S11)
+    ++NumRegs;
+
+  unsigned RegSize = IsRV64 ? 8 : 4;
+  return alignTo(NumRegs * RegSize, 16);
 }
 
-inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64) {
-  if (RlistVal == RLISTENCODE::INVALID_RLIST)
-    return false;
-  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
-  StackAdjustment -= StackAdjBase;
-  if (StackAdjustment % 16 != 0)
-    return false;
-  SpimmVal = StackAdjustment / 16;
-  if (SpimmVal > 3)
-    return false;
-  return true;
-}
-
-void printRlist(unsigned SlistEncode, raw_ostream &OS);
+void printRegList(unsigned RlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
 
 namespace RISCVVInversePseudosTable {

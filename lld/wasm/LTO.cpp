@@ -108,9 +108,10 @@ BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *s) {
   if (auto f = dyn_cast<DefinedFunction>(s))
+    // If the signature is null, there were no calls from non-bitcode objects.
     replaceSymbol<UndefinedFunction>(f, f->getName(), std::nullopt,
                                      std::nullopt, 0, f->getFile(),
-                                     f->signature);
+                                     f->signature, f->signature != nullptr);
   else if (isa<DefinedData>(s))
     replaceSymbol<UndefinedData>(s, s->getName(), 0, s->getFile());
   else

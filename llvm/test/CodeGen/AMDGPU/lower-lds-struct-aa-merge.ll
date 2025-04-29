@@ -2,8 +2,8 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
-@a = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
-@b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
+@a = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 4
+@b = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 4
 
 define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(ptr addrspace(1) %arg, i32 %i) {
 ; CHECK-LABEL: define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(
@@ -12,9 +12,9 @@ define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(ptr addrs
 ; CHECK-NEXT:    store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, align 16, !tbaa [[TBAA1:![0-9]+]], !noalias !6
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[VAL_A:%.*]] = load i32, ptr addrspace(3) [[GEP_A]], align 4, !tbaa [[TBAA1]], !noalias !6
-; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_PREEXISTING_AA_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), align 16, !tbaa [[TBAA1]], !noalias !6
+; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_PREEXISTING_AA_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), align 16, !tbaa [[TBAA1]], !noalias !11
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_PREEXISTING_AA_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), i32 0, i32 [[I]]
-; CHECK-NEXT:    [[VAL_B:%.*]] = load i32, ptr addrspace(3) [[GEP_B]], align 4, !tbaa [[TBAA1]], !noalias !6
+; CHECK-NEXT:    [[VAL_B:%.*]] = load i32, ptr addrspace(3) [[GEP_B]], align 4, !tbaa [[TBAA1]], !noalias !11
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[VAL_A]], [[VAL_B]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[ARG]], align 4
 ; CHECK-NEXT:    ret void
@@ -48,4 +48,11 @@ bb:
 ; CHECK:!3 = !{!"int", !4, i64 0}
 ; CHECK:!4 = !{!"omnipotent char", !5, i64 0}
 ; CHECK:!5 = !{!"Simple C++ TBAA"}
-; CHECK:!6 = !{}
+; CHECK:!6 = !{!7, !9}
+; CHECK:!7 = distinct !{!7, !8}
+; CHECK:!8 = distinct !{!8}
+; CHECK:!9 = distinct !{!9, !10}
+; CHECK:!10 = distinct !{!10}
+; CHECK:!11 = !{!12, !13}
+; CHECK:!12 = distinct !{!12, !8}
+; CHECK:!13 = distinct !{!13, !10}

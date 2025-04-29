@@ -172,6 +172,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -261,6 +262,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.nanosleep
     libc.src.time.strftime
     libc.src.time.strftime_l
+    libc.src.time.mktime
 
     # wchar.h entrypoints
     libc.src.wchar.wcslen
@@ -550,6 +552,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
+    libc.src.math.fmaf16
     libc.src.math.fmaxf16
     libc.src.math.fmaximum_mag_numf16
     libc.src.math.fmaximum_magf16

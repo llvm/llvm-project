@@ -514,8 +514,15 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   // Ensure intrinsics have the right parameter attributes.
   // Note, the IntID field will have been set in Value::setName if this function
   // name is a valid intrinsic ID.
-  if (IntID)
-    setAttributes(Intrinsic::getAttributes(getContext(), IntID));
+  if (IntID) {
+    // Don't set the attributes if the intrinsic signature is invalid. This
+    // case will either be auto-upgraded or fail verification.
+    SmallVector<Type *> OverloadTys;
+    if (!Intrinsic::getIntrinsicSignature(IntID, Ty, OverloadTys))
+      return;
+
+    setAttributes(Intrinsic::getAttributes(getContext(), IntID, Ty));
+  }
 }
 
 Function::~Function() {
@@ -904,7 +911,7 @@ void Function::setOnlyWritesMemory() {
   setMemoryEffects(getMemoryEffects() & MemoryEffects::writeOnly());
 }
 
-/// Determine if the call can access memmory only using pointers based
+/// Determine if the call can access memory only using pointers based
 /// on its arguments.
 bool Function::onlyAccessesArgMemory() const {
   return getMemoryEffects().onlyAccessesArgPointees();

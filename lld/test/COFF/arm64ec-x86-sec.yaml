@@ -1,0 +1,43 @@
+# REQUIRES: aarch64, x86
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o %t-loadcfg.obj
+# RUN: lld-link -machine:arm64ec -dll -noentry %t.obj %t-loadcfg.obj -out:%t.dll
+# RUN: llvm-objdump -d %t.dll | FileCheck %s
+
+# CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0000000180001000 <.text>:
+# CHECK-NEXT: 180001000: d503201f     nop
+# CHECK-NEXT: 180001004: d65f03c0     ret
+# CHECK-NEXT:                 ...
+# CHECK-NEXT: 180002000: e9 ff ef ff ff               jmp     0x180001004 <.text+0x4>
+# CHECK-NEXT: 180002005: c3                           retq
+# CHECK-NEXT: 180002006: cc                           int3
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64EC
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     1F2003D5C0035FD6
+    SizeOfRawData:   8
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_GPREL, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     E900000000C3CC
+    SizeOfRawData:   7
+    Relocations:
+      - VirtualAddress:  1
+        SymbolName:      func
+        Type:            IMAGE_REL_ARM64_PAGEBASE_REL21  # interpreted as IMAGE_REL_AMD64_REL32
+symbols:
+  - Name:            func
+    Value:           4
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL

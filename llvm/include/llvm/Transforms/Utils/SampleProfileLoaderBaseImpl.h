@@ -109,11 +109,12 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUID(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
-    return getDesc(Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(F)));
   }
 
   bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,
@@ -646,13 +647,12 @@ void SampleProfileLoaderBaseImpl<BT>::findEquivalenceClasses(FunctionT &F) {
     BasicBlockT *BB1 = &BB;
 
     // Compute BB1's equivalence class once.
-    if (EquivalenceClass.count(BB1)) {
+    // By default, blocks are in their own equivalence class.
+    auto [It, Inserted] = EquivalenceClass.try_emplace(BB1, BB1);
+    if (!Inserted) {
       LLVM_DEBUG(printBlockEquivalence(dbgs(), BB1));
       continue;
     }
-
-    // By default, blocks are in their own equivalence class.
-    EquivalenceClass[BB1] = BB1;
 
     // Traverse all the blocks dominated by BB1. We are looking for
     // every basic block BB2 such that:

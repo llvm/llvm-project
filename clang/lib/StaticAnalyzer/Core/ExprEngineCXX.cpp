@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtCXX.h"
@@ -69,6 +70,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
 
   assert(ThisRD);
   SVal V = Call.getArgSVal(0);
+  const Expr *VExpr = Call.getArgExpr(0);
 
   // If the value being copied is not unknown, load from its location to get
   // an aggregate rvalue.
@@ -76,7 +78,12 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     V = Pred->getState()->getSVal(*L);
   else
     assert(V.isUnknownOrUndef());
-  evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
+
+  ExplodedNodeSet Tmp;
+  evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
+               /*isLoad=*/true);
+  for (ExplodedNode *N : Tmp)
+    evalBind(Dst, CallExpr, N, ThisVal, V, true);
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {
@@ -637,9 +644,10 @@ void ExprEngine::handleConstructor(const Expr *E,
     // FIXME: For now this code essentially bails out. We need to find the
     // correct target region and set it.
     // FIXME: Instead of relying on the ParentMap, we should have the
-    // trigger-statement (InitListExpr in this case) passed down from CFG or
-    // otherwise always available during construction.
-    if (isa_and_nonnull<InitListExpr>(LCtx->getParentMap().getParent(E))) {
+    // trigger-statement (InitListExpr or CXXParenListInitExpr in this case)
+    // passed down from CFG or otherwise always available during construction.
+    if (isa_and_nonnull<InitListExpr, CXXParenListInitExpr>(
+            LCtx->getParentMap().getParent(E))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
       Target = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
       CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
@@ -1010,7 +1018,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       // values are properly placed inside the required region, however if an
       // initializer list is used, this doesn't happen automatically.
       auto *Init = CNE->getInitializer();
-      bool isInitList = isa_and_nonnull<InitListExpr>(Init);
+      bool isInitList =
+          isa_and_nonnull<InitListExpr, CXXParenListInitExpr>(Init);
 
       QualType ObjTy =
           isInitList ? Init->getType() : CNE->getType()->getPointeeType();
@@ -1199,4 +1208,21 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
   // FIXME: Move all post/pre visits to ::Visit().
   getCheckerManager().runCheckersForPostStmt(Dst, Tmp, LE, *this);
+}
+
+void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
+                                     ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  ExplodedNodeSet CheckerPreStmt;
+  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
+
+  ExplodedNodeSet EvalSet;
+  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
+
+  for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
+    for (ExplodedNode *N : CheckerPreStmt) {
+      Visit(Attr->getAssumption(), N, EvalSet);
+    }
+  }
+
+  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }

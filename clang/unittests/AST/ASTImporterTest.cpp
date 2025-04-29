@@ -3589,7 +3589,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportUnnamedFieldsInCorrectOrder) {
     ASSERT_FALSE(FromField->getDeclName());
     auto *ToField = cast_or_null<FieldDecl>(Import(FromField, Lang_CXX11));
     EXPECT_TRUE(ToField);
-    std::optional<unsigned> ToIndex = ASTImporter::getFieldIndex(ToField);
+    UnsignedOrNone ToIndex = ASTImporter::getFieldIndex(ToField);
     EXPECT_TRUE(ToIndex);
     EXPECT_EQ(*ToIndex, FromIndex);
     ++FromIndex;
@@ -5472,7 +5472,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportSubstTemplateTypeParmType) {
       FromTU, classTemplateSpecializationDecl());
 
   auto testType = [&](ASTContext &Ctx, const char *Name,
-                      std::optional<unsigned> PackIndex) {
+                      UnsignedOrNone PackIndex) {
     const auto *Subst = selectFirst<SubstTemplateTypeParmType>(
         "sttp", match(substTemplateTypeParmType(
                           hasReplacementType(hasCanonicalType(asString(Name))))
@@ -5486,10 +5486,10 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportSubstTemplateTypeParmType) {
   };
   auto tests = [&](ASTContext &Ctx) {
     testType(Ctx, "void", std::nullopt);
-    testType(Ctx, "char", 3);
-    testType(Ctx, "float", 2);
-    testType(Ctx, "int", 1);
-    testType(Ctx, "short", 0);
+    testType(Ctx, "char", 3u);
+    testType(Ctx, "float", 2u);
+    testType(Ctx, "int", 1u);
+    testType(Ctx, "short", 0u);
   };
 
   tests(FromTU->getASTContext());
@@ -7974,42 +7974,6 @@ TEST_P(ImportAttributes, ImportAcquiredBefore) {
       L test __attribute__((acquired_before(A1, A2)));
       )",
       FromAttr, ToAttr);
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
-TEST_P(ImportAttributes, ImportAssertExclusiveLock) {
-  AssertExclusiveLockAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>("void test(int A1, int A2) "
-                           "__attribute__((assert_exclusive_lock(A1, A2)));",
-                           FromAttr, ToAttr);
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
-TEST_P(ImportAttributes, ImportAssertSharedLock) {
-  AssertSharedLockAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((assert_shared_lock(A1, A2)));",
-      FromAttr, ToAttr);
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
-TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
-  ExclusiveTrylockFunctionAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
-      "A1, A2)));",
-      FromAttr, ToAttr);
-  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
-TEST_P(ImportAttributes, ImportSharedTrylockFunction) {
-  SharedTrylockFunctionAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
-      "A2)));",
-      FromAttr, ToAttr);
-  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 

@@ -1223,6 +1223,27 @@ static bool isObjCPointer(const ValueDecl *D) {
   return D->getType()->isObjCObjectPointerType();
 }
 
+namespace {
+using DestTypeValue = std::pair<const StoreInfo &, loc::ConcreteInt>;
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DestTypeValue &Val) {
+  if (auto *TyR = Val.first.Dest->getAs<TypedRegion>()) {
+    QualType LocTy = TyR->getLocationType();
+    if (!LocTy.isNull()) {
+      if (auto *PtrTy = LocTy->getAs<PointerType>()) {
+        std::string PStr = PtrTy->getPointeeType().getAsString();
+        if (!PStr.empty())
+          OS << "(" << PStr << ")";
+      }
+    }
+  }
+  SmallString<16> ValStr;
+  Val.second.getValue()->toString(ValStr, 10, true);
+  OS << ValStr;
+  return OS;
+}
+} // namespace
+
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
 static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
   const bool HasPrefix = SI.Dest->canPrintPretty();
@@ -1245,8 +1266,11 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     llvm_unreachable("Unexpected store kind");
   }
 
-  if (isa<loc::ConcreteInt>(SI.Value)) {
-    OS << Action << (isObjCPointer(SI.Dest) ? "nil" : "a null pointer value");
+  if (auto CVal = SI.Value.getAs<loc::ConcreteInt>()) {
+    if (!*CVal->getValue())
+      OS << Action << (isObjCPointer(SI.Dest) ? "nil" : "a null pointer value");
+    else
+      OS << Action << DestTypeValue(SI, *CVal);
 
   } else if (auto CVal = SI.Value.getAs<nonloc::ConcreteInt>()) {
     OS << Action << CVal->getValue();
@@ -1288,8 +1312,12 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
 
   OS << "Passing ";
 
-  if (isa<loc::ConcreteInt>(SI.Value)) {
-    OS << (isObjCPointer(D) ? "nil object reference" : "null pointer value");
+  if (auto CI = SI.Value.getAs<loc::ConcreteInt>()) {
+    if (!*CI->getValue())
+      OS << (isObjCPointer(D) ? "nil object reference" : "null pointer value");
+    else
+      OS << (isObjCPointer(D) ? "object reference of value " : "pointer value ")
+         << DestTypeValue(SI, *CI);
 
   } else if (SI.Value.isUndef()) {
     OS << "uninitialized value";
@@ -1324,11 +1352,24 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &OS,
                                      StoreInfo SI) {
   const bool HasSuffix = SI.Dest->canPrintPretty();
 
-  if (isa<loc::ConcreteInt>(SI.Value)) {
-    OS << (isObjCPointer(SI.Dest) ? "nil object reference stored"
-                                  : (HasSuffix ? "Null pointer value stored"
-                                               : "Storing null pointer value"));
-
+  if (auto CV = SI.Value.getAs<loc::ConcreteInt>()) {
+    APSIntPtr V = CV->getValue();
+    if (!*V)
+      OS << (isObjCPointer(SI.Dest)
+                 ? "nil object reference stored"
+                 : (HasSuffix ? "Null pointer value stored"
+                              : "Storing null pointer value"));
+    else {
+      if (isObjCPointer(SI.Dest)) {
+        OS << "object reference of value " << DestTypeValue(SI, *CV)
+           << " stored";
+      } else {
+        if (HasSuffix)
+          OS << "Pointer value of " << DestTypeValue(SI, *CV) << " stored";
+        else
+          OS << "Storing pointer value of " << DestTypeValue(SI, *CV);
+      }
+    }
   } else if (SI.Value.isUndef()) {
     OS << (HasSuffix ? "Uninitialized value stored"
                      : "Storing uninitialized value");

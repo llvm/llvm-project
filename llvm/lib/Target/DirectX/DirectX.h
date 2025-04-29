@@ -35,6 +35,12 @@ void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 /// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
+/// Initializer for DXIL CBuffer Access Pass
+void initializeDXILCBufferAccessLegacyPass(PassRegistry &);
+
+/// Pass to translate loads in the cbuffer address space to intrinsics
+ModulePass *createDXILCBufferAccessLegacyPass();
+
 /// Initializer for DXIL Data Scalarization Pass
 void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 
@@ -46,6 +52,19 @@ void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 
 /// Pass to flatten arrays into a one dimensional DXIL legal form
 ModulePass *createDXILFlattenArraysLegacyPass();
+
+/// Initializer for DXIL Forward Handle Accesses Pass
+void initializeDXILForwardHandleAccessesLegacyPass(PassRegistry &);
+
+/// Pass to eliminate redundant stores and loads from handle globals.
+FunctionPass *createDXILForwardHandleAccessesLegacyPass();
+
+/// Initializer DXIL legalizationPass
+void initializeDXILLegalizeLegacyPass(PassRegistry &);
+
+/// Pass to Legalize DXIL by remove i8 truncations and i64 insert/extract
+/// elements
+FunctionPass *createDXILLegalizeLegacyPass();
 
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
@@ -64,9 +83,6 @@ void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 
 /// Pass to emit metadata for DXIL.
 ModulePass *createDXILTranslateMetadataLegacyPass();
-
-/// Initializer for DXILTranslateMetadata.
-void initializeDXILResourceMDWrapperPass(PassRegistry &);
 
 /// Pass to pretty print DXIL metadata.
 ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);

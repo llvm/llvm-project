@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
 #include "DAPForward.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
@@ -17,6 +18,7 @@
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -62,20 +64,17 @@ llvm::StringRef GetAsString(const llvm::json::Value &value);
 /// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// \param[in] defaultValue
-///     The default value to return if the key is not present
-///
 /// \return
 ///     A llvm::StringRef that contains the string value for the
-///     specified \a key, or the default value if there is no key that
+///     specified \a key, or \a std::nullopt if there is no key that
 ///     matches or if the value is not a string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue = {});
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue = {});
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key);
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key);
 
-/// Extract the unsigned integer value for the specified key from
-/// the specified object.
+/// Extract the integer value for the specified key from the specified object
+/// and return it as the specified integer type T.
 ///
 /// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
@@ -84,13 +83,23 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
 ///     The key to use when extracting the value
 ///
 /// \return
-///     The unsigned integer value for the specified \a key, or
-///     \a fail_value  if there is no key that matches or if the
-///     value is not an integer.
-uint64_t GetUnsigned(const llvm::json::Object &obj, llvm::StringRef key,
-                     uint64_t fail_value);
-uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
-                     uint64_t fail_value);
+///     The integer value for the specified \a key, or std::nullopt if there is
+///     no key that matches or if the value is not an integer.
+/// @{
+template <typename T>
+std::optional<T> GetInteger(const llvm::json::Object &obj,
+                            llvm::StringRef key) {
+  return obj.getInteger(key);
+}
+
+template <typename T>
+std::optional<T> GetInteger(const llvm::json::Object *obj,
+                            llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetInteger<T>(*obj, key);
+  return std::nullopt;
+}
+/// @}
 
 /// Extract the boolean value for the specified key from the
 /// specified object.
@@ -102,31 +111,15 @@ uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
 ///     The key to use when extracting the value
 ///
 /// \return
-///     The boolean value for the specified \a key, or \a fail_value
+///     The boolean value for the specified \a key, or std::nullopt
 ///     if there is no key that matches or if the value is not a
 ///     boolean value of an integer.
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value);
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value);
-
-/// Extract the signed integer for the specified key from the
-/// specified object.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the value from
-///
-/// \param[in] key
-///     The key to use when extracting the value
-///
-/// \return
-///     The signed integer value for the specified \a key, or
-///     \a fail_value if there is no key that matches or if the
-///     value is not an integer.
-int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
-                  int64_t fail_value);
-int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
-                  int64_t fail_value);
+/// @{
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key);
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key);
+/// @}
 
 /// Check if the specified key exists in the specified object.
 ///
@@ -298,7 +291,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 /// \return
 ///     A "ExceptionBreakpointsFilter" JSON object with that follows
 ///     the formal JSON definition outlined by Microsoft.
-llvm::json::Value
+protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 
 /// Create a "Scope" JSON object as described in the debug adapter definition.
@@ -353,6 +346,21 @@ llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateSource(llvm::StringRef source_path);
 
+/// Return true if the given line entry should be displayed as assembly.
+///
+/// \param[in] line_entry
+///     The LLDB line entry to check.
+///
+/// \param[in] stop_disassembly_display
+///     The value of the "stop-disassembly-display" setting.
+///
+/// \return
+///     True if the line entry should be displayed as assembly, false
+///     otherwise.
+bool ShouldDisplayAssemblySource(
+    const lldb::SBLineEntry &line_entry,
+    lldb::StopDisassemblyType stop_disassembly_display);
+
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned
@@ -371,11 +379,14 @@ llvm::json::Value CreateSource(llvm::StringRef source_path);
 ///     The LLDB format to use when populating out the "StackFrame"
 ///     object.
 ///
+/// \param[in] stop_disassembly_display
+///     The value of the "stop-disassembly-display" setting.
+///
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
-                                   lldb::SBFormat &format);
+llvm::json::Value CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
+                                   lldb::StopDisassemblyType);
 
 /// Create a "StackFrame" label object for a LLDB thread.
 ///
@@ -421,6 +432,8 @@ llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
 ///     A "Thread" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
+
+llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format);
 
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
@@ -569,13 +582,17 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 
 /// Create a runInTerminal reverse request object
 ///
-/// \param[in] launch_request
-///     The original launch_request object whose fields are used to construct
-///     the reverse request object.
+/// \param[in] program
+///     Path to the program to run in the terminal.
 ///
-/// \param[in] debug_adapter_path
-///     Path to the current debug adapter. It will be used to delegate the
-///     launch of the target.
+/// \param[in] args
+///     The arguments for the program.
+///
+/// \param[in] env
+///     The environment variables to set in the terminal.
+///
+/// \param[in] cwd
+///     The working directory for the run in terminal request.
 ///
 /// \param[in] comm_file
 ///     The fifo file used to communicate the with the target launcher.
@@ -588,11 +605,10 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 /// \return
 ///     A "runInTerminal" JSON object that follows the specification outlined by
 ///     Microsoft.
-llvm::json::Object
-CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adapter_path,
-                                  llvm::StringRef comm_file,
-                                  lldb::pid_t debugger_pid);
+llvm::json::Object CreateRunInTerminalReverseRequest(
+    llvm::StringRef program, const std::vector<std::string> &args,
+    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///

@@ -112,6 +112,46 @@ public:
 
   uint64_t entrycount() const { return counters()[0]; }
 };
+
+/// The internal structure of FunctionData. This makes sure that changes to
+/// the fields of FunctionData either get automatically captured on the llvm
+/// side, or force a manual corresponding update.
+///
+/// The macro arguments (see CtxInstrProfiling.h for example):
+///
+/// PTRDECL is a macro taking 2 parameters: a type and the name of the field.
+/// The field is a pointer of that type;
+///
+/// VOLATILE_PTRDECL is the same as above, but for volatile pointers;
+///
+/// MUTEXDECL takes one parameter, the name of a field that is a mutex.
+#define CTXPROF_FUNCTION_DATA(PTRDECL, CONTEXT_PTR, VOLATILE_PTRDECL,          \
+                              MUTEXDECL)                                       \
+  PTRDECL(FunctionData, Next)                                                  \
+  VOLATILE_PTRDECL(void, EntryAddress)                                         \
+  CONTEXT_PTR                                                                  \
+  VOLATILE_PTRDECL(ContextNode, FlatCtx)                                       \
+  MUTEXDECL(Mutex)
+
+/// Abstraction for the parameter passed to `__llvm_ctx_profile_fetch`.
+/// `startContextSection` is called before any context roots are sent for
+/// writing. Then one or more `writeContextual` calls are made; finally,
+/// `endContextSection` is called.
+class ProfileWriter {
+public:
+  virtual void startContextSection() = 0;
+  virtual void writeContextual(const ctx_profile::ContextNode &RootNode,
+                               const ctx_profile::ContextNode *Unhandled,
+                               uint64_t TotalRootEntryCount) = 0;
+  virtual void endContextSection() = 0;
+
+  virtual void startFlatSection() = 0;
+  virtual void writeFlat(ctx_profile::GUID Guid, const uint64_t *Buffer,
+                         size_t BufferSize) = 0;
+  virtual void endFlatSection() = 0;
+
+  virtual ~ProfileWriter() = default;
+};
 } // namespace ctx_profile
 } // namespace llvm
 #endif

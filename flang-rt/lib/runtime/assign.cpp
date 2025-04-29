@@ -99,7 +99,7 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     toDim.SetByteStride(stride);
     stride *= toDim.Extent();
   }
-  int result{ReturnError(terminator, to.Allocate())};
+  int result{ReturnError(terminator, to.Allocate(kNoAsyncId))};
   if (result == StatOk && derived && !derived->noInitializationNeeded()) {
     result = ReturnError(terminator, Initialize(to, *derived, terminator));
   }
@@ -263,7 +263,8 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
   if (MayAlias(to, from)) {
     if (mustDeallocateLHS) {
       deferDeallocation = &deferredDeallocStatDesc.descriptor();
-      std::memcpy(deferDeallocation, &to, to.SizeInBytes());
+      std::memcpy(
+          reinterpret_cast<void *>(deferDeallocation), &to, to.SizeInBytes());
       to.set_base_addr(nullptr);
     } else if (!isSimpleMemmove()) {
       // Handle LHS/RHS aliasing by copying RHS into a temp, then
@@ -271,12 +272,12 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       auto descBytes{from.SizeInBytes()};
       StaticDescriptor<maxRank, true, 16> staticDesc;
       Descriptor &newFrom{staticDesc.descriptor()};
-      std::memcpy(&newFrom, &from, descBytes);
+      std::memcpy(reinterpret_cast<void *>(&newFrom), &from, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
       newFrom.raw().attribute = CFI_attribute_allocatable;
-      auto stat{ReturnError(terminator, newFrom.Allocate())};
+      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncId))};
       if (stat == StatOk) {
         if (HasDynamicComponent(from)) {
           // If 'from' has allocatable/automatic component, we cannot

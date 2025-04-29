@@ -20,6 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr fputil::ExceptValues<float16, 9> COSHF16_EXCEPTS_POS = {{
     // x = 0x1.6ap-5, coshf16(x) = 0x1p+0 (RZ)
     {0x29a8U, 0x3c00U, 1U, 0U, 1U},
@@ -41,7 +42,7 @@ static constexpr fputil::ExceptValues<float16, 9> COSHF16_EXCEPTS_POS = {{
     {0x497cU, 0x7715U, 1U, 0U, 1U},
 }};
 
-static constexpr fputil::ExceptValues<float16, 4> COSHF16_EXCEPTS_NEG = {{
+static constexpr fputil::ExceptValues<float16, 6> COSHF16_EXCEPTS_NEG = {{
     // x = -0x1.6ap-5, coshf16(x) = 0x1p+0 (RZ)
     {0xa9a8U, 0x3c00U, 1U, 0U, 1U},
     // x = -0x1.b6p+0, coshf16(x) = 0x1.6d8p+1 (RZ)
@@ -50,7 +51,12 @@ static constexpr fputil::ExceptValues<float16, 4> COSHF16_EXCEPTS_NEG = {{
     {0xc4a2U, 0x526dU, 1U, 0U, 0U},
     // x = -0x1.5fp+3, coshf16(x) = 0x1.c54p+14 (RZ)
     {0xc97cU, 0x7715U, 1U, 0U, 1U},
+    // x = -0x1.8c4p+0, coshf16(x) = 0x1.3a8p+1 (RZ)
+    {0xbe31U, 0x40eaU, 1U, 0U, 0U},
+    // x = -0x1.994p+0, coshf16(x) = 0x1.498p+1 (RZ)
+    {0xbe65U, 0x4126U, 1U, 0U, 0U},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, coshf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -89,6 +95,7 @@ LLVM_LIBC_FUNCTION(float16, coshf16, (float16 x)) {
     }
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (x_bits.is_pos()) {
     if (auto r = COSHF16_EXCEPTS_POS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
       return r.value();
@@ -96,6 +103,7 @@ LLVM_LIBC_FUNCTION(float16, coshf16, (float16 x)) {
     if (auto r = COSHF16_EXCEPTS_NEG.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
       return r.value();
   }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   return eval_sinh_or_cosh</*IsSinh=*/false>(x);
 }

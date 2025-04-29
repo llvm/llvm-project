@@ -37,11 +37,6 @@ static cl::opt<unsigned>
     ReplaceLimit("hexagon-cext-limit", cl::init(0), cl::Hidden,
                  cl::desc("Maximum number of replacements"));
 
-namespace llvm {
-  void initializeHexagonConstExtendersPass(PassRegistry&);
-  FunctionPass *createHexagonConstExtenders();
-}
-
 static int32_t adjustUp(int32_t V, uint8_t A, uint8_t O) {
   assert(isPowerOf2_32(A));
   int32_t U = (V & -A) + O;
@@ -1470,7 +1465,7 @@ void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
              ExtValue(ED).Offset == EV.Offset;
     };
     if (all_of(P.second, SameValue)) {
-      F->second.insert(P.second.begin(), P.second.end());
+      F->second.insert_range(P.second);
       P.second.clear();
     }
   }

@@ -228,7 +228,7 @@ struct SequenceOp : public SetTheory::Operator {
           Expr->getAsString());
       // Try to reevaluate Rec in case it is a set.
       if (const RecVec *Result = ST.expand(Rec))
-        Elts.insert(Result->begin(), Result->end());
+        Elts.insert_range(*Result);
       else
         Elts.insert(Rec);
 
@@ -283,7 +283,7 @@ void SetTheory::evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   // A def in a list can be a just an element, or it may expand.
   if (const auto *Def = dyn_cast<DefInit>(Expr)) {
     if (const RecVec *Result = expand(Def->getDef()))
-      return Elts.insert(Result->begin(), Result->end());
+      return Elts.insert_range(*Result);
     Elts.insert(Def->getDef());
     return;
   }
@@ -312,7 +312,7 @@ const RecVec *SetTheory::expand(const Record *Set) {
     return &I->second;
 
   // This is the first time we see Set. Find a suitable expander.
-  for (const auto &[SuperClass, Loc] : Set->getSuperClasses()) {
+  for (const Record *SuperClass : Set->getSuperClasses()) {
     // Skip unnamed superclasses.
     if (!isa<StringInit>(SuperClass->getNameInit()))
       continue;

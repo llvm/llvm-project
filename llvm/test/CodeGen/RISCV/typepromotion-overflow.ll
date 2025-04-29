@@ -93,7 +93,7 @@ define i32 @overflow_add_no_consts(i8 zeroext %a, i8 zeroext %b, i8 zeroext %lim
 ; CHECK-LABEL: overflow_add_no_consts:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    bltu a2, a0, .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
@@ -111,7 +111,7 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: overflow_add_const_limit:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    bltu a1, a0, .LBB5_2
 ; CHECK-NEXT:  # %bb.1:
@@ -378,7 +378,7 @@ define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
 ; CHECK-LABEL: underflow_if_sub_signext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a2, a0
-; CHECK-NEXT:    andi a1, a1, 255
+; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    sgtz a2, a2
 ; CHECK-NEXT:    and a0, a2, a0
 ; CHECK-NEXT:    addi a0, a0, 245

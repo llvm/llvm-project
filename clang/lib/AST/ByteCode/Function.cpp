@@ -19,14 +19,13 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
-                   bool HasThisPointer, bool HasRVO)
+                   bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
     : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
       ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
       HasRVO(HasRVO) {
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
-    BuiltinID = F->getBuiltinID();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Ctor;
@@ -35,10 +34,12 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
       Kind = FunctionKind::Dtor;
     } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
       Virtual = MD->isVirtual();
-      if (MD->isLambdaStaticInvoker())
+      if (IsLambdaStaticInvoker)
         Kind = FunctionKind::LambdaStaticInvoker;
       else if (clang::isLambdaCallOperator(F))
         Kind = FunctionKind::LambdaCallOperator;
+      else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
+        Kind = FunctionKind::CopyOrMoveOperator;
     }
   }
 }
@@ -59,20 +60,4 @@ SourceInfo Function::getSource(CodePtr PC) const {
   if (It == SrcMap.end())
     return SrcMap.back().second;
   return It->second;
-}
-
-/// Unevaluated builtins don't get their arguments put on the stack
-/// automatically. They instead operate on the AST of their Call
-/// Expression.
-/// Similar information is available via ASTContext::BuiltinInfo,
-/// but that is not correct for our use cases.
-static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
-  return BuiltinID == Builtin::BI__builtin_classify_type ||
-         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
-         BuiltinID == Builtin::BI__builtin_constant_p ||
-         BuiltinID == Builtin::BI__noop;
-}
-
-bool Function::isUnevaluatedBuiltin() const {
-  return ::isUnevaluatedBuiltin(BuiltinID);
 }

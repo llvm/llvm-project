@@ -49,6 +49,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
@@ -67,7 +68,6 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -90,16 +90,18 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumRemoveDeadBindings,
-            "The # of times RemoveDeadBindings is called");
-STATISTIC(NumMaxBlockCountReached,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "a top level function");
-STATISTIC(NumMaxBlockCountReachedInInlined,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "an inlined function");
-STATISTIC(NumTimesRetriedWithoutInlining,
-            "The # of times we re-evaluated a call without inlining");
+STAT_COUNTER(NumRemoveDeadBindings,
+             "The # of times RemoveDeadBindings is called");
+STAT_COUNTER(
+    NumMaxBlockCountReached,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "a top level function");
+STAT_COUNTER(
+    NumMaxBlockCountReachedInInlined,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "an inlined function");
+STAT_COUNTER(NumTimesRetriedWithoutInlining,
+             "The # of times we re-evaluated a call without inlining");
 
 //===----------------------------------------------------------------------===//
 // Internal program state traits.
@@ -1834,6 +1836,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCExitDataConstructClass:
     case Stmt::OpenACCHostDataConstructClass:
     case Stmt::OpenACCWaitConstructClass:
+    case Stmt::OpenACCCacheConstructClass:
     case Stmt::OpenACCInitConstructClass:
     case Stmt::OpenACCShutdownConstructClass:
     case Stmt::OpenACCSetConstructClass:
@@ -1950,7 +1953,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     // to be explicitly evaluated.
     case Stmt::PredefinedExprClass:
     case Stmt::AddrLabelExprClass:
-    case Stmt::AttributedStmtClass:
     case Stmt::IntegerLiteralClass:
     case Stmt::FixedPointLiteralClass:
     case Stmt::CharacterLiteralClass:
@@ -1977,6 +1979,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet preVisit;
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
       getCheckerManager().runCheckersForPostStmt(Dst, preVisit, S, *this);
+      Bldr.addNodes(Dst);
+      break;
+    }
+
+    case Stmt::AttributedStmtClass: {
+      Bldr.takeNodes(Pred);
+      VisitAttributedStmt(cast<AttributedStmt>(S), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
     }
@@ -3120,16 +3129,10 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
   ProgramStateRef state = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
 
-  if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    // C permits "extern void v", and if you cast the address to a valid type,
-    // you can even do things with it. We simply pretend
-    assert(Ex->isGLValue() || VD->getType()->isVoidType());
-    const LocationContext *LocCtxt = Pred->getLocationContext();
-    const Decl *D = LocCtxt->getDecl();
-    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
+  auto resolveAsLambdaCapturedVar =
+      [&](const ValueDecl *VD) -> std::optional<std::pair<SVal, QualType>> {
+    const auto *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
     const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
-    std::optional<std::pair<SVal, QualType>> VInfo;
-
     if (AMgr.options.ShouldInlineLambdas && DeclRefEx &&
         DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
         MD->getParent()->isLambda()) {
@@ -3142,12 +3145,22 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
       // Sema follows a sequence of complex rules to determine whether the
       // variable should be captured.
       if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
-        Loc CXXThis =
-            svalBuilder.getCXXThis(MD, LocCtxt->getStackFrame());
+        Loc CXXThis = svalBuilder.getCXXThis(MD, LCtx->getStackFrame());
         SVal CXXThisVal = state->getSVal(CXXThis);
-        VInfo = std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
+        return std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
       }
     }
+
+    return std::nullopt;
+  };
+
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    // C permits "extern void v", and if you cast the address to a valid type,
+    // you can even do things with it. We simply pretend
+    assert(Ex->isGLValue() || VD->getType()->isVoidType());
+    const LocationContext *LocCtxt = Pred->getLocationContext();
+    std::optional<std::pair<SVal, QualType>> VInfo =
+        resolveAsLambdaCapturedVar(VD);
 
     if (!VInfo)
       VInfo = std::make_pair(state->getLValue(VD, LocCtxt), VD->getType());
@@ -3186,6 +3199,23 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     return;
   }
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+    // Handle structured bindings captured by lambda.
+    if (std::optional<std::pair<SVal, QualType>> VInfo =
+            resolveAsLambdaCapturedVar(BD)) {
+      auto [V, T] = VInfo.value();
+
+      if (T->isReferenceType()) {
+        if (const MemRegion *R = V.getAsRegion())
+          V = state->getSVal(R);
+        else
+          V = UnknownVal();
+      }
+
+      Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V), nullptr,
+                        ProgramPoint::PostLValueKind);
+      return;
+    }
+
     const auto *DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
 
     SVal Base = state->getLValue(DD, LCtx);

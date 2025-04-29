@@ -134,6 +134,26 @@ public:
   constexpr bool operator!=(MCPhysReg Other) const {
     return Reg != unsigned(Other);
   }
+
+  /// Operators to move from one register to another nearby register by adding
+  /// an offset.
+  Register &operator++() {
+    assert(isValid());
+    ++Reg;
+    return *this;
+  }
+
+  Register operator++(int) {
+    Register R(*this);
+    ++(*this);
+    return R;
+  }
+
+  Register &operator+=(unsigned RHS) {
+    assert(isValid());
+    Reg += RHS;
+    return *this;
+  }
 };
 
 // Provide DenseMapInfo for Register

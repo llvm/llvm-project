@@ -13,6 +13,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticCategories.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -704,7 +705,7 @@ static void forEachSubGroupImpl(const WarningOption *Group, Func func) {
   for (const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
        *SubGroups != -1; ++SubGroups) {
     func(static_cast<size_t>(*SubGroups));
-    forEachSubGroupImpl(&OptionTable[*SubGroups], std::move(func));
+    forEachSubGroupImpl(&OptionTable[*SubGroups], func);
   }
 }
 
@@ -767,6 +768,51 @@ StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
   }
 
   return Best;
+}
+
+unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
+                                           unsigned CompatDiagId) {
+  struct CompatDiag {
+    unsigned StdVer;
+    unsigned DiagId;
+    unsigned PreDiagId;
+  };
+
+  // We encode the standard version such that C++98 < C++11 < C++14 etc. The
+  // actual numbers don't really matter for this, but the definitions of the
+  // compat diags in the Tablegen file use the standard version number (i.e.
+  // 98, 11, 14, etc.), so we base the encoding here on that.
+#define DIAG_COMPAT_IDS_BEGIN()
+#define DIAG_COMPAT_IDS_END()
+#define DIAG_COMPAT_ID(Value, Name, Std, Diag, DiagPre)                        \
+  {Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
+  static constexpr CompatDiag Diags[]{
+#include "clang/Basic/DiagnosticAllCompatIDs.inc"
+  };
+#undef DIAG_COMPAT_ID
+#undef DIAG_COMPAT_IDS_BEGIN
+#undef DIAG_COMPAT_IDS_END
+
+  assert(CompatDiagId < std::size(Diags) && "Invalid compat diag id");
+
+  unsigned StdVer = [&] {
+    if (LangOpts.CPlusPlus26)
+      return 2026;
+    if (LangOpts.CPlusPlus23)
+      return 2023;
+    if (LangOpts.CPlusPlus20)
+      return 2020;
+    if (LangOpts.CPlusPlus17)
+      return 2017;
+    if (LangOpts.CPlusPlus14)
+      return 2014;
+    if (LangOpts.CPlusPlus11)
+      return 2011;
+    return 1998;
+  }();
+
+  const CompatDiag &D = Diags[CompatDiagId];
+  return StdVer >= D.StdVer ? D.DiagId : D.PreDiagId;
 }
 
 /// ProcessDiag - This is the method used to report a diagnostic that is

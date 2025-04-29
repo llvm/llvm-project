@@ -393,7 +393,13 @@ public:
     Visit(T->getPointeeType());
   }
   void VisitMemberPointerType(const MemberPointerType *T) {
-    Visit(T->getClass());
+    // FIXME: Provide a NestedNameSpecifier visitor.
+    NestedNameSpecifier *Qualifier = T->getQualifier();
+    if (NestedNameSpecifier::SpecifierKind K = Qualifier->getKind();
+        K == NestedNameSpecifier::TypeSpec)
+      Visit(Qualifier->getAsType());
+    if (T->isSugared())
+      Visit(T->getMostRecentCXXRecordDecl()->getTypeForDecl());
     Visit(T->getPointeeType());
   }
   void VisitArrayType(const ArrayType *T) { Visit(T->getElementType()); }
@@ -485,7 +491,8 @@ public:
     }
   }
   void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
-    Visit(TL.getClassTInfo()->getTypeLoc());
+    // FIXME: Provide NestedNamespecifierLoc visitor.
+    Visit(TL.getQualifierLoc().getTypeLoc());
   }
   void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
     Visit(TL.getSizeExpr());
@@ -531,8 +538,8 @@ public:
       for (const auto *Parameter : D->parameters())
         Visit(Parameter);
 
-    if (const Expr *TRC = D->getTrailingRequiresClause())
-      Visit(TRC);
+    if (const AssociatedConstraint &TRC = D->getTrailingRequiresClause())
+      Visit(TRC.ConstraintExpr);
 
     if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isDefaulted())
       return;

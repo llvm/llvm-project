@@ -400,7 +400,7 @@ public:
   virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
-
+  virtual void setOCLKernelStubCallingConvention(const FunctionType *&FT) const;
   /// Return the device-side type for the CUDA device builtin surface type.
   virtual llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const {
     // By default, no change from the original one.
@@ -441,7 +441,7 @@ public:
   /// Return an LLVM type that corresponds to a HLSL type
   virtual llvm::Type *
   getHLSLType(CodeGenModule &CGM, const Type *T,
-              const SmallVector<unsigned> *Packoffsets = nullptr) const {
+              const SmallVector<int32_t> *Packoffsets = nullptr) const {
     return nullptr;
   }
 

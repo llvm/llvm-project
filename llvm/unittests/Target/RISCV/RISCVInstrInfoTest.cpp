@@ -43,7 +43,7 @@ protected:
 
   RISCVInstrInfoTest() {
     std::string Error;
-    auto TT(Triple::normalize(GetParam()));
+    Triple TT(GetParam());
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     TargetOptions Options;
 
@@ -135,27 +135,70 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
   EXPECT_EQ(MI4Res->Destination->getReg(), RISCV::F1_D);
   EXPECT_EQ(MI4Res->Source->getReg(), RISCV::F2_D);
 
-  // ADD. TODO: Should return true for add reg, x0 and add x0, reg.
-  MachineInstr *MI5 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
-                          .addReg(RISCV::X2)
-                          .addReg(RISCV::X3)
-                          .getInstr();
-  auto MI5Res = TII->isCopyInstrImpl(*MI5);
-  EXPECT_FALSE(MI5Res.has_value());
+  // ADD/OR/XOR.
+  for (unsigned Opc : {RISCV::ADD, RISCV::OR, RISCV::XOR}) {
+    MachineInstr *MI5 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X2)
+                            .addReg(RISCV::X3)
+                            .getInstr();
+    auto MI5Res = TII->isCopyInstrImpl(*MI5);
+    EXPECT_FALSE(MI5Res.has_value());
 
-  MachineInstr *MI6 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
+    MachineInstr *MI6 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X0)
+                            .addReg(RISCV::X2)
+                            .getInstr();
+    auto MI6Res = TII->isCopyInstrImpl(*MI6);
+    ASSERT_TRUE(MI6Res.has_value());
+    EXPECT_EQ(MI6Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI6Res->Source->getReg(), RISCV::X2);
+
+    MachineInstr *MI7 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X2)
+                            .addReg(RISCV::X0)
+                            .getInstr();
+    auto MI7Res = TII->isCopyInstrImpl(*MI7);
+    ASSERT_TRUE(MI7Res.has_value());
+    EXPECT_EQ(MI7Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI7Res->Source->getReg(), RISCV::X2);
+  }
+
+  // SUB.
+  MachineInstr *MI8 = BuildMI(*MF, DL, TII->get(RISCV::SUB), RISCV::X1)
                           .addReg(RISCV::X0)
                           .addReg(RISCV::X2)
                           .getInstr();
-  auto MI6Res = TII->isCopyInstrImpl(*MI6);
-  EXPECT_FALSE(MI6Res.has_value());
+  auto MI8Res = TII->isCopyInstrImpl(*MI8);
+  EXPECT_FALSE(MI8Res.has_value());
 
-  MachineInstr *MI7 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
+  MachineInstr *MI9 = BuildMI(*MF, DL, TII->get(RISCV::SUB), RISCV::X1)
                           .addReg(RISCV::X2)
                           .addReg(RISCV::X0)
                           .getInstr();
-  auto MI7Res = TII->isCopyInstrImpl(*MI7);
-  EXPECT_FALSE(MI7Res.has_value());
+  auto MI9Res = TII->isCopyInstrImpl(*MI9);
+  ASSERT_TRUE(MI9Res.has_value());
+  EXPECT_EQ(MI9Res->Destination->getReg(), RISCV::X1);
+  EXPECT_EQ(MI9Res->Source->getReg(), RISCV::X2);
+
+  // SH1ADD(_UW), SH2ADD(_UW), SH3ADD(_UW).
+  for (unsigned Opc : {RISCV::SH1ADD, RISCV::SH1ADD_UW, RISCV::SH2ADD,
+                       RISCV::SH2ADD_UW, RISCV::SH3ADD, RISCV::SH3ADD_UW}) {
+    MachineInstr *MI10 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                             .addReg(RISCV::X2)
+                             .addReg(RISCV::X3)
+                             .getInstr();
+    auto MI10Res = TII->isCopyInstrImpl(*MI10);
+    EXPECT_FALSE(MI10Res.has_value());
+
+    MachineInstr *MI11 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                             .addReg(RISCV::X0)
+                             .addReg(RISCV::X2)
+                             .getInstr();
+    auto MI11Res = TII->isCopyInstrImpl(*MI11);
+    ASSERT_TRUE(MI11Res.has_value());
+    EXPECT_EQ(MI11Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI11Res->Source->getReg(), RISCV::X2);
+  }
 }
 
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
@@ -164,7 +207,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   DebugLoc DL;
 
   SmallVector<const MachineOperand *> BaseOps;
-  LocationSize Width = 0;
+  LocationSize Width = LocationSize::precise(0);
   int64_t Offset;
   bool OffsetIsScalable;
 

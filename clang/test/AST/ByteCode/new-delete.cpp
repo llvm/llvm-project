@@ -558,6 +558,11 @@ namespace DeleteThis {
   }
   static_assert(super_secret_double_delete()); // both-error {{not an integral constant expression}} \
                                                // both-note {{in call to 'super_secret_double_delete()'}}
+
+  struct B {
+    constexpr void reset() { delete this; }
+  };
+  static_assert(((new B)->reset(), true));
 }
 
 namespace CastedDelete {
@@ -605,7 +610,8 @@ namespace std {
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
-                                    // both-note {{used to delete a null pointer}}
+                                    // both-note {{used to delete a null pointer}} \
+                                    // both-note {{delete of pointer '&no_deallocate_nonalloc' that does not point to a heap-allocated object}}
     }
   };
   template<typename T, typename ...Args>
@@ -613,6 +619,10 @@ namespace std {
     new (p) T((Args&&)args...);
   }
 }
+
+constexpr int *escape = std::allocator<int>().allocate(3); // both-error {{constant expression}} \
+                                                           // both-note {{pointer to subobject of heap-allocated}} \
+                                                           // both-note {{heap allocation performed here}}
 
 /// Specialization for float, using operator new/delete.
 namespace std {
@@ -961,6 +971,47 @@ namespace PR45350 {
   //   decreasing address
   static_assert(f(6) == 543210);
 }
+
+namespace ZeroSizeSub {
+  consteval unsigned ptr_diff1() {
+    int *b = new int[0];
+    unsigned d = 0;
+    d = b - b;
+    delete[] b;
+
+    return d;
+  }
+  static_assert(ptr_diff1() == 0);
+
+
+  consteval unsigned ptr_diff2() { // both-error {{never produces a constant expression}}
+    int *a = new int[0];
+    int *b = new int[0];
+
+    unsigned d = a - b; // both-note 2{{arithmetic involving unrelated objects}}
+    delete[] b;
+    delete[] a;
+    return d;
+  }
+  static_assert(ptr_diff2() == 0); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+}
+
+namespace WrongFrame {
+  constexpr int foo() {
+    int *p = nullptr;
+    __builtin_operator_delete(p); // both-note {{subexpression not valid in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+
+}
+
+constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // both-error {{constant expression}} \
+                                                                                                             // both-note {{in call}} \
+                                                                                                             // both-note {{declared here}}
 
 #else
 /// Make sure we reject this prior to C++20

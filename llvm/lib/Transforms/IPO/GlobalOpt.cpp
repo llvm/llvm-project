@@ -719,10 +719,14 @@ static bool allUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
     const Value *P = Worklist.pop_back_val();
     for (const auto *U : P->users()) {
       if (auto *LI = dyn_cast<LoadInst>(U)) {
+        if (!LI->isSimple())
+          return false;
         SmallPtrSet<const PHINode *, 8> PHIs;
         if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
           return false;
       } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+        if (!SI->isSimple())
+          return false;
         // Ignore stores to the global.
         if (SI->getPointerOperand() != P)
           return false;
@@ -965,11 +969,12 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // The global is initialized when the store to it occurs. If the stored
       // value is null value, the global bool is set to false, otherwise true.
-      new StoreInst(ConstantInt::getBool(
-                        GV->getContext(),
-                        !isa<ConstantPointerNull>(SI->getValueOperand())),
-                    InitBool, false, Align(1), SI->getOrdering(),
-                    SI->getSyncScopeID(), SI->getIterator());
+      auto *NewSI = new StoreInst(
+          ConstantInt::getBool(GV->getContext(), !isa<ConstantPointerNull>(
+                                                     SI->getValueOperand())),
+          InitBool, false, Align(1), SI->getOrdering(), SI->getSyncScopeID(),
+          SI->getIterator());
+      NewSI->setDebugLoc(SI->getDebugLoc());
       SI->eraseFromParent();
       continue;
     }
@@ -988,6 +993,11 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
                                InitBool->getName() + ".val", false, Align(1),
                                LI->getOrdering(), LI->getSyncScopeID(),
                                LI->getIterator());
+      // FIXME: Should we use the DebugLoc of the load used by the predicate, or
+      // the predicate? The load seems most appropriate, but there's an argument
+      // that the new load does not represent the old load, but is simply a
+      // component of recomputing the predicate.
+      cast<LoadInst>(LV)->setDebugLoc(LI->getDebugLoc());
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -1000,6 +1010,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       case ICmpInst::ICMP_ULE:
       case ICmpInst::ICMP_EQ:
         LV = BinaryOperator::CreateNot(LV, "notinit", ICI->getIterator());
+        cast<BinaryOperator>(LV)->setDebugLoc(ICI->getDebugLoc());
         break;
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_UGT:
@@ -1276,6 +1287,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
               new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
                            false, Align(1), LI->getOrdering(),
                            LI->getSyncScopeID(), LI->getIterator());
+          cast<LoadInst>(StoreVal)->setDebugLoc(LI->getDebugLoc());
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
                  "This is not a form that we understand!");
@@ -2319,10 +2331,10 @@ public:
   LLVMUsed(Module &M) {
     SmallVector<GlobalValue *, 4> Vec;
     UsedV = collectUsedGlobalVariables(M, Vec, false);
-    Used = {Vec.begin(), Vec.end()};
+    Used = {llvm::from_range, Vec};
     Vec.clear();
     CompilerUsedV = collectUsedGlobalVariables(M, Vec, true);
-    CompilerUsed = {Vec.begin(), Vec.end()};
+    CompilerUsed = {llvm::from_range, Vec};
   }
 
   using iterator = SmallPtrSet<GlobalValue *, 4>::iterator;

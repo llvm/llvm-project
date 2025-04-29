@@ -30,6 +30,16 @@ subroutine unroll_and_jam_dir_1
   end do
 end subroutine unroll_and_jam_dir_1
 
+! CHECK-LABEL: nounroll_and_jam_dir
+subroutine nounroll_and_jam_dir
+  integer :: a(10)
+  !dir$ nounroll_and_jam
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE]]
+  do i=1,10
+  a(i)=i
+  end do
+end subroutine nounroll_and_jam_dir
+
 ! CHECK-LABEL: unroll_and_jam_dir_no_factor
 subroutine unroll_and_jam_dir_no_factor
   integer :: a(10)

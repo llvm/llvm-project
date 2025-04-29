@@ -137,7 +137,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(noexcept(std::swap(ma, ma)), "");
   }
 
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     test_unique_ptr();
 #endif
 

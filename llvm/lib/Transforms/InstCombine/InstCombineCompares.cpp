@@ -5034,8 +5034,8 @@ static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
 
   if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
     // icmp (X | Y) eq/ne Y --> (X & ~Y) eq/ne 0 if Y is freely invertible
-    if (Value *NotOp1 =
-            IC.getFreelyInverted(Op1, !Op1->hasNUsesOrMore(3), &IC.Builder))
+    if (Value *NotOp1 = IC.getFreelyInverted(
+            Op1, !isa<Constant>(Op1) && !Op1->hasNUsesOrMore(3), &IC.Builder))
       return new ICmpInst(Pred, IC.Builder.CreateAnd(A, NotOp1),
                           Constant::getNullValue(Op1->getType()));
     // icmp (X | Y) eq/ne Y --> (~X | Y) eq/ne -1 if X  is freely invertible.
@@ -5641,7 +5641,7 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   // execute comparisons. For example, `icmp samesign ult umax(X, -46), -32`
   // cannot be decomposed into `(icmp samesign ult X, -46) or (icmp samesign ult
   // -46, -32)`. `X` is allowed to be non-negative here.
-  Pred = static_cast<CmpInst::Predicate>(Pred);
+  Pred = Pred.dropSameSign();
   auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
   auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
   if (!CmpXZ.has_value() && !CmpYZ.has_value())
@@ -7451,6 +7451,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
+    return Res;
+
   if (Op0->getType()->isIntOrIntVectorTy(1))
     if (Instruction *Res = canonicalizeICmpBool(I, Builder))
       return Res;
@@ -7471,9 +7474,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
-    return Res;
-
-  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
     return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as

@@ -286,12 +286,6 @@ struct __list_node_pointer_traits {
                 "LLVM 19 and LLVM 20. If you don't care about your ABI being broken, define the "
                 "_LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
 #  endif
-
-  static _LIBCPP_HIDE_FROM_ABI __base_pointer __unsafe_link_pointer_cast(__base_pointer __p) { return __p; }
-
-  static _LIBCPP_HIDE_FROM_ABI __base_pointer __unsafe_link_pointer_cast(__node_pointer __p) {
-    return static_cast<__base_pointer>(static_cast<_VoidPtr>(__p));
-  }
 };
 
 template <class _Tp, class _VoidPtr>
@@ -345,14 +339,14 @@ public:
 };
 
 template <class _Tp, class _Alloc = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS list;
+class list;
 template <class _Tp, class _Alloc>
 class __list_imp;
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_TEMPLATE_VIS __list_const_iterator;
+class __list_const_iterator;
 
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_TEMPLATE_VIS __list_iterator {
+class __list_iterator {
   typedef __list_node_pointer_traits<_Tp, _VoidPtr> _NodeTraits;
   typedef typename _NodeTraits::__base_pointer __base_pointer;
 
@@ -410,7 +404,7 @@ public:
 };
 
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_TEMPLATE_VIS __list_const_iterator {
+class __list_const_iterator {
   typedef __list_node_pointer_traits<_Tp, _VoidPtr> _NodeTraits;
   typedef typename _NodeTraits::__base_pointer __base_pointer;
 
@@ -504,7 +498,7 @@ protected:
   _LIBCPP_COMPRESSED_PAIR(size_type, __size_, __node_allocator, __node_alloc_);
 
   _LIBCPP_HIDE_FROM_ABI __base_pointer __end_as_link() const _NOEXCEPT {
-    return __node_pointer_traits::__unsafe_link_pointer_cast(const_cast<__node_base&>(__end_).__self());
+    return const_cast<__node_base&>(__end_).__self();
   }
 
   _LIBCPP_HIDE_FROM_ABI size_type __node_alloc_max_size() const _NOEXCEPT {
@@ -660,7 +654,7 @@ void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 }
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS list : private __list_imp<_Tp, _Alloc> {
+class list : private __list_imp<_Tp, _Alloc> {
   typedef __list_imp<_Tp, _Alloc> __base;
   typedef typename __base::__node_type __node_type;
   typedef typename __base::__node_allocator __node_allocator;

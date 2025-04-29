@@ -1625,6 +1625,5 @@ define noalias ptr @_ZN8CMSPULog9beginImplEja(ptr nocapture writeonly %0) local_
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nofree nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

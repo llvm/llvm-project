@@ -52,6 +52,14 @@ public:
            elementType);
   }
 
+  Address(mlir::Value pointer, clang::CharUnits alignment)
+      : Address(pointer,
+                mlir::cast<cir::PointerType>(pointer.getType()).getPointee(),
+                alignment) {
+    assert((!alignment.isZero() || pointer == nullptr) &&
+           "creating valid address with invalid alignment");
+  }
+
   static Address invalid() { return Address(nullptr); }
   bool isValid() const {
     return pointerAndKnownNonNull.getPointer() != nullptr;
@@ -62,6 +70,14 @@ public:
     return pointerAndKnownNonNull.getPointer();
   }
 
+  mlir::Type getType() const {
+    assert(mlir::cast<cir::PointerType>(
+               pointerAndKnownNonNull.getPointer().getType())
+               .getPointee() == elementType);
+
+    return mlir::cast<cir::PointerType>(getPointer().getType());
+  }
+
   mlir::Type getElementType() const {
     assert(isValid());
     assert(mlir::cast<cir::PointerType>(
@@ -69,6 +85,8 @@ public:
                .getPointee() == elementType);
     return elementType;
   }
+
+  clang::CharUnits getAlignment() const { return alignment; }
 };
 
 } // namespace clang::CIRGen

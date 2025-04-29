@@ -11,7 +11,6 @@
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/memory.h>
-#include <__cxx03/__fwd/memory_resource.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

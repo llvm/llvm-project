@@ -36,7 +36,7 @@ cl::opt<bool>
                          cl::ReallyHidden,
                          cl::desc("disable outlining indirect calls."));
 
-cl::opt<bool>
+static cl::opt<bool>
     MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));
@@ -78,8 +78,7 @@ void IRInstructionData::initializeInstruction() {
   // We capture the incoming BasicBlocks as values as well as the incoming
   // Values in order to check for structural similarity.
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
-    for (BasicBlock *BB : PN->blocks())
-      OperVals.push_back(BB);
+    llvm::append_range(OperVals, PN->blocks());
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
@@ -728,11 +727,10 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
     for (unsigned OtherVal : ValueMappingIt->second) {
       if (OtherVal == InstValB)
         continue;
-      if (!ValueNumberMappingA.contains(OtherVal))
+      auto OtherValIt = ValueNumberMappingA.find(OtherVal);
+      if (OtherValIt == ValueNumberMappingA.end())
         continue;
-      if (!ValueNumberMappingA[OtherVal].contains(InstValA))
-        continue;
-      ValueNumberMappingA[OtherVal].erase(InstValA);
+      OtherValIt->second.erase(InstValA);
     }
     ValueNumberMappingA.erase(ValueMappingIt);
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
@@ -1474,10 +1472,7 @@ INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
                 "ir-similarity-identifier", false, true)
 
 IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
-    : ModulePass(ID) {
-  initializeIRSimilarityIdentifierWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,

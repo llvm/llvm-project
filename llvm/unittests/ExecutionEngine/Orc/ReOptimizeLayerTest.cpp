@@ -55,6 +55,10 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
+    // RISC-V is not supported yet
+    if (Triple.isRISCV())
+      GTEST_SKIP();
+
     auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC) {
       consumeError(EPC.takeError());
@@ -165,7 +169,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
 
   ThreadSafeContext Ctx(std::make_unique<LLVMContext>());
   auto M = std::make_unique<Module>("<main>", *Ctx.getContext());
-  M->setTargetTriple(sys::getProcessTriple());
+  M->setTargetTriple(Triple(sys::getProcessTriple()));
 
   (void)createRetFunction(M.get(), "main", 42);
 

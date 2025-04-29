@@ -81,6 +81,15 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    /// The same as ISD::CopyFromReg except that this node makes it explicit
+    /// that it may lower to an x87 FPU stack pop. Optimizations should be more
+    /// cautious when handling this node than a normal CopyFromReg to avoid
+    /// removing a required FPU stack pop. A key requirement is optimizations
+    /// should not optimize any users of a chain that contains a
+    /// POP_FROM_X87_REG to use a chain from a point earlier than the
+    /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
+    POP_FROM_X87_REG,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,
@@ -1328,8 +1337,8 @@ namespace llvm {
                                    unsigned Depth) const override;
 
     bool isTargetCanonicalConstantNode(SDValue Op) const override {
-      // Peek through bitcasts/extracts/inserts to see if we have a broadcast
-      // vector from memory.
+      // Peek through bitcasts/extracts/inserts to see if we have a vector
+      // load/broadcast from memory.
       while (Op.getOpcode() == ISD::BITCAST ||
              Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
              (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
@@ -1337,6 +1346,9 @@ namespace llvm {
         Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
 
       return Op.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+             Op.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+             (Op.getOpcode() == ISD::LOAD &&
+              getTargetConstantFromLoad(cast<LoadSDNode>(Op))) ||
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
 
@@ -1492,8 +1504,9 @@ namespace llvm {
 
     /// Return true if we believe it is correct and profitable to reduce the
     /// load node to a smaller type.
-    bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                               EVT NewVT) const override;
+    bool
+    shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                          std::optional<unsigned> ByteOffset) const override;
 
     /// Return true if the specified scalar FP type is computed in an SSE
     /// register, not on the X87 floating point stack.
