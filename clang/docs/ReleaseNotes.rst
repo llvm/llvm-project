@@ -420,6 +420,9 @@ Improvements to Clang's diagnostics
   the ``-Wc99-designator`` diagnostic group, as they also are about the
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 
+- ``-Wvolatile`` now warns about volatile-qualified class return types
+  as well as volatile-qualified scalar return types. Fixes #GH133380
+
 Improvements to Clang's time-trace
 ----------------------------------
 

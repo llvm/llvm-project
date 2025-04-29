@@ -356,7 +356,7 @@ namespace LValueToRValue {
   // - a non-volatile glvalue of literal type that refers to a non-volatile
   //   temporary object whose lifetime has not ended, initialized with a
   //   constant expression;
-  constexpr volatile S f() { return S(); }
+  constexpr volatile S f() { return S(); } // cxx20-warning {{volatile-qualified return type 'volatile S' is deprecated}}
   static_assert(f().i, ""); // expected-error {{constant expression}} expected-note {{read of volatile-qualified type}}
   static_assert(((volatile const S&&)(S)0).i, ""); // expected-error {{constant expression}} expected-note {{read of volatile-qualified type}}
 }
