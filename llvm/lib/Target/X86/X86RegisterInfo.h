@@ -155,8 +155,8 @@ public:
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
-  unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
-  unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
+  Register getPtrSizedFrameRegister(const MachineFunction &MF) const;
+  Register getPtrSizedStackRegister(const MachineFunction &MF) const;
   Register getStackRegister() const { return StackPtr; }
   Register getBaseRegister() const { return BasePtr; }
   /// Returns physical register used as frame pointer.
@@ -171,6 +171,9 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  const TargetRegisterClass *
+  constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
 };
 
 } // End llvm namespace

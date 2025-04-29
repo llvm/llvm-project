@@ -224,7 +224,7 @@ enum OpenCLTypeKind : uint8_t {
 ///
 class TargetInfo : public TransferrableTargetInfo,
                    public RefCountedBase<TargetInfo> {
-  std::shared_ptr<TargetOptions> TargetOpts;
+  TargetOptions *TargetOpts;
   llvm::Triple Triple;
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
@@ -235,7 +235,7 @@ protected:
   bool NoAsmVariants;  // True if {|} are normal characters.
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
-  bool HalfArgsAndReturns;
+  bool HalfArgsAndReturns; // OpenCL 6.1.1.1, NEON (IEEE 754-2008 half) type.
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
@@ -253,6 +253,7 @@ protected:
   const char *MCountName;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
+  bool UseMicrosoftManglingForC = false;
   const LangASMap *AddrSpaceMap;
 
   mutable StringRef PlatformName;
@@ -301,15 +302,17 @@ protected:
   // in function attributes in IR.
   llvm::StringSet<> ReadOnlyFeatures;
 
+  // Default atomic options
+  AtomicOptions AtomicOpts;
+
 public:
   /// Construct a target for the given options.
   ///
   /// \param Opts - The options to use to initialize the target. The target may
   /// modify the options to canonicalize the target feature information to match
-  /// what the backend expects.
-  static TargetInfo *
-  CreateTargetInfo(DiagnosticsEngine &Diags,
-                   const std::shared_ptr<TargetOptions> &Opts);
+  /// what the backend expects. These must outlive the returned TargetInfo.
+  static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
+                                      TargetOptions &Opts);
 
   virtual ~TargetInfo();
 
@@ -1060,10 +1063,6 @@ public:
   /// available on this target.
   bool hasRISCVVTypes() const { return HasRISCVVTypes; }
 
-  /// Returns whether or not the AMDGPU unsafe floating point atomics are
-  /// allowed.
-  bool allowAMDGPUUnsafeFPAtomics() const { return AllowAMDGPUUnsafeFPAtomics; }
-
   /// For ARM targets returns a mask defining which coprocessors are configured
   /// as Custom Datapath.
   uint32_t getARMCDECoprocMask() const { return ARMCDECoprocMask; }
@@ -1175,8 +1174,7 @@ public:
     }
     void setRequiresImmediate(llvm::ArrayRef<int> Exacts) {
       Flags |= CI_ImmediateConstant;
-      for (int Exact : Exacts)
-        ImmSet.insert(Exact);
+      ImmSet.insert_range(Exacts);
     }
     void setRequiresImmediate(int Exact) {
       Flags |= CI_ImmediateConstant;
@@ -1343,6 +1341,11 @@ public:
   /// Get the C++ ABI currently in use.
   TargetCXXABI getCXXABI() const {
     return TheCXXABI;
+  }
+
+  /// Should the Microsoft mangling scheme be used for C Calling Convention.
+  bool shouldUseMicrosoftCCforMangling() const {
+    return UseMicrosoftManglingForC;
   }
 
   /// Target the specified CPU.
@@ -1670,7 +1673,7 @@ public:
   // access target-specific GPU grid values that must be consistent between
   // host RTL (plugin), deviceRTL and clang.
   virtual const llvm::omp::GV &getGridValue() const {
-    return llvm::omp::SPIRVGridValues;
+    llvm_unreachable("getGridValue not implemented on this target");
   }
 
   /// Retrieve the name of the platform as it is used in the
@@ -1698,6 +1701,9 @@ public:
     // an explicit calling convention.
     return CC_C;
   }
+
+  /// Get the default atomic options.
+  AtomicOptions getAtomicOpts() const { return AtomicOpts; }
 
   enum CallingConvCheckResult {
     CCCR_OK,

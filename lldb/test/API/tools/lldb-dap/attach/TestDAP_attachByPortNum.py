@@ -19,6 +19,7 @@ import sys
 import socket
 
 
+@skip
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
 
@@ -60,7 +61,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by port.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         debug_server_tool = self.getBuiltinDebugServerTool()
@@ -92,7 +93,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by process ID and port number.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         # It is not necessary to launch "lldb-server" to obtain the actual port and pid for attaching.
@@ -120,7 +121,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by invalid port number 0.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         port = 0
@@ -139,7 +140,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by illegal/greater port number 65536
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         port = 65536

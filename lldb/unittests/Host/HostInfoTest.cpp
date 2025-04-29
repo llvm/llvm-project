@@ -104,3 +104,26 @@ TEST(HostInfoTestInitialization, InitTwice) {
     EXPECT_EQ(Version, HostInfo::GetOSVersion());
   }
 }
+
+#ifdef __APPLE__
+struct HostInfoTester : public HostInfoMacOSX {
+public:
+  using HostInfoMacOSX::FindComponentInPath;
+};
+
+TEST_F(HostInfoTest, FindComponentInPath) {
+  EXPECT_EQ("/path/to/foo",
+            HostInfoTester::FindComponentInPath("/path/to/foo/", "foo"));
+
+  EXPECT_EQ("/path/to/foo",
+            HostInfoTester::FindComponentInPath("/path/to/foo", "foo"));
+
+  EXPECT_EQ("/path/to/foobar",
+            HostInfoTester::FindComponentInPath("/path/to/foobar", "foo"));
+
+  EXPECT_EQ("/path/to/foobar",
+            HostInfoTester::FindComponentInPath("/path/to/foobar", "bar"));
+
+  EXPECT_EQ("", HostInfoTester::FindComponentInPath("/path/to/foo", "bar"));
+}
+#endif

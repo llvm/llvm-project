@@ -36,6 +36,12 @@ public:
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals);
+
+  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+
+  MemoryEffects getMemoryEffects(const Function *F) {
+    return MemoryEffects::unknown();
+  }
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
@@ -99,9 +105,7 @@ public:
 };
 
 ImmutablePass *createNVPTXAAWrapperPass();
-void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 ImmutablePass *createNVPTXExternalAAWrapperPass();
-void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 
 } // end namespace llvm
 

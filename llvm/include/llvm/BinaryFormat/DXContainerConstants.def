@@ -17,7 +17,7 @@ CONTAINER_PART(PSG1)
 // SHADER_FEATURE_FLAG(bit offset for the shader info flag, bit offset for DXIL module flag, name, description.
 
 SHADER_FEATURE_FLAG(0,   2, Doubles, "Double-precision floating point")
-SHADER_FEATURE_FLAG(1,  17, ComputeShadersPlusRawAndStructuredBuffers, "Raw and Structured buffers")
+SHADER_FEATURE_FLAG(1,  17, ComputeShadersPlusRawAndStructuredBuffers, "CS4 raw and structured buffers")
 SHADER_FEATURE_FLAG(2,  16, UAVsAtEveryStage, "UAVs at every shader stage")
 SHADER_FEATURE_FLAG(3,  15, Max64UAVs, "64 UAV slots")
 SHADER_FEATURE_FLAG(4,  -1, MinimumPrecision, "Minimum-precision data types")
@@ -43,12 +43,14 @@ SHADER_FEATURE_FLAG(23, 28, AtomicInt64OnGroupShared, "64-bit Atomics on Group S
 SHADER_FEATURE_FLAG(24, 29, DerivativesInMeshAndAmpShaders, "Derivatives in mesh and amplification shaders")
 SHADER_FEATURE_FLAG(25, 30, ResourceDescriptorHeapIndexing, "Resource descriptor heap indexing")
 SHADER_FEATURE_FLAG(26, 31, SamplerDescriptorHeapIndexing, "Sampler descriptor heap indexing")
-SHADER_FEATURE_FLAG(27, 63, RESERVED, "<RESERVED>")
+SHADER_FEATURE_FLAG(27, 36, RESERVED, "<RESERVED>")
 SHADER_FEATURE_FLAG(28, 32, AtomicInt64OnHeapResource, "64-bit Atomics on Heap Resources")
 SHADER_FEATURE_FLAG(29, 34, AdvancedTextureOps, "Advanced Texture Ops")
 SHADER_FEATURE_FLAG(30, 35, WriteableMSAATextures, "Writeable MSAA Textures")
+SHADER_FEATURE_FLAG(31, 37, SampleCmpWithGradientOrBias, "SampleCmp with gradient or bias")
+SHADER_FEATURE_FLAG(32, 38, ExtendedCommandInfo, "Extended command information")
 
-SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
+SHADER_FEATURE_FLAG(33, 39, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
 
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
@@ -72,17 +74,35 @@ ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed)
 #undef ROOT_ELEMENT_FLAG
 #endif // ROOT_ELEMENT_FLAG
 
+#ifdef ROOT_PARAMETER
+
+ROOT_PARAMETER(1, Constants32Bit)
+#undef ROOT_PARAMETER
+#endif // ROOT_PARAMETER
+
+#ifdef SHADER_VISIBILITY
+
+SHADER_VISIBILITY(0, All)
+SHADER_VISIBILITY(1, Vertex)
+SHADER_VISIBILITY(2, Hull)
+SHADER_VISIBILITY(3, Domain)
+SHADER_VISIBILITY(4, Geometry)
+SHADER_VISIBILITY(5, Pixel)
+SHADER_VISIBILITY(6, Amplification)
+SHADER_VISIBILITY(7, Mesh)
+#undef SHADER_VISIBILITY
+#endif // SHADER_VISIBILITY
 
 #ifdef DXIL_MODULE_FLAG
 
 // Only save DXIL module flags which not map to feature flags here.
-DXIL_MODULE_FLAG( 0,  DisableOptimizations,   "D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION")
-DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED")
-DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL")
-DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "Raw and Structured buffers")
-DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION")
-DXIL_MODULE_FLAG( 8,  AllResourcesBound, "D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND")
-DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16bit types enabled")
+DXIL_MODULE_FLAG( 0,  DisableOptimizations,   "Disable shader optimizations")
+DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "Disable math refactoring")
+DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "Force early depth-stencil test")
+DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "Raw and structured buffers")
+DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "Low-precision data types")
+DXIL_MODULE_FLAG( 8,  AllResourcesBound, "All resources bound for the duration of shader execution")
+DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Use native low precision")
 DXIL_MODULE_FLAG(33,  ResMayNotAlias, "Any UAV may not alias any other UAV")
 
 #undef DXIL_MODULE_FLAG

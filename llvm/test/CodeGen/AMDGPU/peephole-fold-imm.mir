@@ -563,3 +563,68 @@ body:             |
     SI_RETURN_TO_EPILOG %1
 
 ...
+
+---
+name:            fold_v_mov_b32_e32_literal_to_agpr
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_v_mov_b32_e32_literal_to_agpr
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 999, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:agpr_32 = COPY killed [[V_MOV_B32_e32_]]
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[COPY]]
+    %0:vgpr_32 = V_MOV_B32_e32 999, implicit $exec
+    %1:agpr_32 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...
+
+---
+name:            fold_v_mov_b32_e32_inlineimm_to_agpr
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_v_mov_b32_e32_inlineimm_to_agpr
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 64, implicit $exec
+    ; GCN-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 64, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_ACCVGPR_WRITE_B32_e64_]]
+    %0:vgpr_32 = V_MOV_B32_e32 64, implicit $exec
+    %1:agpr_32 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...
+
+---
+name:            fold_av_mov_b32_imm_pseudo_inlineimm_to_vgpr
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_av_mov_b32_imm_pseudo_inlineimm_to_vgpr
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 64, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B32_e32_]]
+    %0:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
+    %1:vgpr_32 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...
+
+---
+name:            fold_av_mov_b32_imm_pseudo_inlineimm_to_agpr
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_av_mov_b32_imm_pseudo_inlineimm_to_agpr
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 64, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_ACCVGPR_WRITE_B32_e64_]]
+    %0:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
+    %1:agpr_32 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...
+
+---
+name:            fold_av_mov_b32_imm_pseudo_inlineimm_to_av
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_av_mov_b32_imm_pseudo_inlineimm_to_av
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_32 = COPY killed [[AV_MOV_]]
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[COPY]]
+    %0:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
+    %1:av_32 = COPY killed %0
+    SI_RETURN_TO_EPILOG implicit %1
+...

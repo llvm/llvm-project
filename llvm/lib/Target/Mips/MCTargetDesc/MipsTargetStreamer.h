@@ -24,6 +24,13 @@ class MipsTargetStreamer : public MCTargetStreamer {
 public:
   MipsTargetStreamer(MCStreamer &S);
 
+  virtual void emitGPRel32Value(const MCExpr *);
+  virtual void emitGPRel64Value(const MCExpr *);
+  virtual void emitDTPRel32Value(const MCExpr *);
+  virtual void emitDTPRel64Value(const MCExpr *);
+  virtual void emitTPRel32Value(const MCExpr *);
+  virtual void emitTPRel64Value(const MCExpr *);
+
   virtual void setPic(bool Value) {}
 
   virtual void emitDirectiveSetMicroMips();
@@ -211,6 +218,14 @@ class MipsTargetAsmStreamer : public MipsTargetStreamer {
 
 public:
   MipsTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
+
+  void emitGPRel32Value(const MCExpr *) override;
+  void emitGPRel64Value(const MCExpr *) override;
+  void emitDTPRel32Value(const MCExpr *) override;
+  void emitDTPRel64Value(const MCExpr *) override;
+  void emitTPRel32Value(const MCExpr *) override;
+  void emitTPRel64Value(const MCExpr *) override;
+
   void emitDirectiveSetMicroMips() override;
   void emitDirectiveSetNoMicroMips() override;
   void emitDirectiveSetMips16() override;
@@ -326,6 +341,13 @@ public:
   void emitLabel(MCSymbol *Symbol) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void finish() override;
+
+  void emitGPRel32Value(const MCExpr *) override;
+  void emitGPRel64Value(const MCExpr *) override;
+  void emitDTPRel32Value(const MCExpr *) override;
+  void emitDTPRel64Value(const MCExpr *) override;
+  void emitTPRel32Value(const MCExpr *) override;
+  void emitTPRel64Value(const MCExpr *) override;
 
   void emitDirectiveSetMicroMips() override;
   void emitDirectiveSetNoMicroMips() override;

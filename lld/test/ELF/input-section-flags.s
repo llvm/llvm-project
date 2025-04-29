@@ -15,7 +15,8 @@
 # RUN: .outsec3 : { INPUT_SECTION_FLAGS(SHF_WRITE) *(.sec.*) } \
 # RUN: .outsec4 : { INPUT_SECTION_FLAGS(SHF_MERGE & !SHF_STRINGS) *(.sec.*) } \
 # RUN: .outsec5 : { INPUT_SECTION_FLAGS(SHF_STRINGS) *(.sec.*) } \
-# RUN: .outsec6 : { INPUT_SECTION_FLAGS(!SHF_TLS & !SHF_EXCLUDE & !SHF_COMPRESSED & !SHF_ARM_PURECODE) *(.sec.*) } \
+# RUN: .outsec6 : { INPUT_SECTION_FLAGS(!SHF_TLS & !SHF_EXCLUDE & !SHF_COMPRESSED & \
+# RUN:                                  !SHF_ARM_PURECODE & !SHF_AARCH64_PURECODE) *(.sec.*) } \
 # RUN: } " > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t.o
 # RUN: llvm-readobj --symbols %t1 | FileCheck %s

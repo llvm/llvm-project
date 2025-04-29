@@ -29,6 +29,7 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Matchers.h"
@@ -46,6 +47,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1087,7 +1089,7 @@ void GenericOp::print(OpAsmPrinter &p) {
   auto genericAttrNames = linalgTraitAttrNames();
 
   llvm::StringSet<> genericAttrNamesSet;
-  genericAttrNamesSet.insert(genericAttrNames.begin(), genericAttrNames.end());
+  genericAttrNamesSet.insert_range(genericAttrNames);
   SmallVector<NamedAttribute, 8> genericAttrs;
   for (auto attr : (*this)->getAttrs()) {
     if (attr.getName() == getIteratorTypesAttrName()) {
@@ -2281,6 +2283,24 @@ LogicalResult IndexOp::verify() {
   return success();
 }
 
+OpFoldResult IndexOp::fold(FoldAdaptor adaptor) {
+  auto linalgOp = dyn_cast_or_null<LinalgOp>((*this)->getParentOp());
+  // Bail out if `linalg.index` does not have a proper parent yet at this
+  // point, e.g., when calling `createOrFold` during IR construction in
+  // `genericOp::build`.
+  if (!linalgOp)
+    return OpFoldResult{};
+
+  // Index of unit dims is always 0.
+  SmallVector<int64_t, 4> loopBounds = linalgOp.getStaticLoopRanges();
+  uint64_t dim = getDim();
+  assert(dim < loopBounds.size() && "Dim is out of bounds");
+  if (loopBounds[dim] == 1)
+    return IntegerAttr::get(IndexType::get(getContext()), 0);
+
+  return OpFoldResult{};
+}
+
 /////// Operations corresponding to library calls defined with Tablegen ////////
 
 #include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.cpp.inc"
@@ -2539,7 +2559,8 @@ static void createNewOperandWithStaticSizes(
     newShape.push_back(affineExprToSize[dimExpr]);
     newOperandNeeded = true;
   }
-  resultType = RankedTensorType::get(newShape, sourceType.getElementType());
+  resultType = RankedTensorType::get(newShape, sourceType.getElementType(),
+                                     sourceType.getEncoding());
   if (newOperandNeeded) {
     changeNeeded = true;
     // Get the new operand value given its size and element type by
@@ -3596,7 +3617,7 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   SmallVector<Value> yields;
 
   TypeFn castVal = TypeFn::cast_signed;
-  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+  const auto *castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
     return attr.getName() == "cast";
   });
   if (castIter != attrs.end()) {
@@ -3658,17 +3679,13 @@ ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       MatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
@@ -3775,10 +3792,7 @@ ParseResult ContractOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ContractOp::print(OpAsmPrinter &p) {
-  p << " indexing_maps = [";
-  llvm::interleaveComma(getIndexingMaps(), p,
-                        [&](Attribute attr) { p.printAttribute(attr); });
-  p << "]";
+  p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
   printNamedStructuredOp(
       p, getOperation(), getInputs(), getOutputs(),
       /*elidedAttrs=*/{"indexing_maps", "operandSegmentSizes"});
@@ -4011,17 +4025,13 @@ ParseResult BatchMatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void BatchMatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       BatchMatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                            elidedAttrs);
@@ -4055,6 +4065,229 @@ void BatchMatmulOp::getEffects(
 }
 
 Speculation::Speculatability BatchMatmulOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+//===----------------------------------------------------------------------===//
+// ElementwiseOp
+//===----------------------------------------------------------------------===//
+//
+namespace {
+struct ArityGroupAndKind {
+  // The enum class {Unary, Binary, Ternary, ..}
+  ElementwiseArityGroup arityGroup;
+
+  // The kind (e.g. `exp` or `add`) belonging to the arity group.
+  union Kind {
+    UnaryFn unaryFn;
+    BinaryFn binaryFn;
+    TernaryFn ternaryFn;
+  } kind;
+};
+
+unsigned getArityGroupAsUInt(ElementwiseArityGroup arityGroup) {
+  return static_cast<unsigned>(arityGroup);
+}
+} // namespace
+
+static ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind) {
+  constexpr int lastUnary = static_cast<int>(ElementwiseCaseLimits::LastUnary);
+  constexpr int lastBinary =
+      static_cast<int>(ElementwiseCaseLimits::LastBinary);
+  constexpr int lastTernary =
+      static_cast<int>(ElementwiseCaseLimits::LastTernary);
+
+  int val = static_cast<int>(kind);
+  ArityGroupAndKind result;
+
+  if (val < lastUnary) {
+    result.arityGroup = ElementwiseArityGroup::Unary;
+    result.kind.unaryFn = static_cast<UnaryFn>(val);
+    return result;
+  }
+  if (val < lastBinary) {
+    result.arityGroup = ElementwiseArityGroup::Binary;
+    result.kind.binaryFn = static_cast<BinaryFn>(val - lastUnary);
+    return result;
+  }
+  if (val >= lastTernary) {
+    llvm_unreachable("unhandled ElementwiseFn");
+  }
+  result.arityGroup = ElementwiseArityGroup::Ternary;
+  result.kind.ternaryFn = static_cast<TernaryFn>(val - lastBinary);
+  return result;
+}
+
+SmallVector<utils::IteratorType> ElementwiseOp::getIteratorTypesArray() {
+  auto rank = getResultRank();
+  return SmallVector<utils::IteratorType>(rank, utils::IteratorType::parallel);
+}
+
+SmallVector<AffineMap>
+ElementwiseOp::getDefaultIndexingMaps(unsigned numMaps, unsigned numDims,
+                                      MLIRContext *context) {
+  auto map = AffineMap::getMultiDimIdentityMap(numDims, context);
+  return SmallVector<AffineMap>(numMaps, map);
+}
+
+ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Expect e.g. `kind = #linalg.elemwise_kind<add>`
+  Attribute attr;
+  mlir::linalg::ElementwiseKind elemwiseKindVal;
+  if (parser.parseKeyword("kind") || parser.parseEqual())
+    return failure();
+
+  if (succeeded(parser.parseAttribute(attr))) {
+    auto elemwiseKindAttr = dyn_cast<ElementwiseKindAttr>(attr);
+    if (!elemwiseKindAttr)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected ElementwiseKind attribute");
+    elemwiseKindVal = elemwiseKindAttr.getValue();
+  } else {
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected operation 'kind' attribute");
+  }
+  result.addAttribute(
+      "kind", ElementwiseKindAttr::get(parser.getContext(), elemwiseKindVal));
+
+  // Parse optional `indexing_maps`
+  SmallVector<Attribute, 3> indexingMapsAttr;
+  Attribute mapAttr;
+  if (succeeded(parser.parseOptionalKeyword("indexing_maps"))) {
+    if (parser.parseEqual())
+      return failure();
+    if (parser.parseLSquare())
+      return failure();
+    do {
+      if (parser.parseAttribute(mapAttr))
+        return failure();
+      if (!isa<AffineMapAttr>(mapAttr))
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected affine map attribute");
+      indexingMapsAttr.push_back(mapAttr);
+      if (parser.parseOptionalComma())
+        break;
+    } while (true);
+    if (parser.parseRSquare())
+      return failure();
+  }
+  // At this stage of parsing the only way to infer number of region
+  // args is through op kind, as input output tensors are not parsed yet.
+  auto arityGroupAndKind = getArityGroupAndKind(elemwiseKindVal);
+  int numRegionArgs =
+      getArityGroupAsUInt(arityGroupAndKind.arityGroup) + 1 /*output*/;
+  if (parseNamedStructuredOp(parser, result, numRegionArgs,
+                             ElementwiseOp::getRegionBuilder())) {
+    return parser.emitError(parser.getCurrentLocation(),
+                            "unable to parse elemwise op");
+  }
+
+  // Initialize indexingMaps, if not supplied explicitly.
+  if (indexingMapsAttr.empty()) {
+    // We need to infer the numDims of the indexing maps from the output
+    // type which is already parsed by now.
+    auto resultType = result.operands[result.operands.size() - 1].getType();
+    auto shapedType = llvm::dyn_cast<ShapedType>(resultType);
+    if (!shapedType)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "return type needs to be shaped type");
+    auto numDims = shapedType.getRank();
+    indexingMapsAttr = llvm::map_to_vector(
+        ElementwiseOp::getDefaultIndexingMaps(numRegionArgs, numDims,
+                                              parser.getContext()),
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+  }
+
+  result.addAttribute("indexing_maps",
+                      parser.getBuilder().getArrayAttr(indexingMapsAttr));
+  return success();
+}
+
+void ElementwiseOp::print(OpAsmPrinter &p) {
+  p << " kind=";
+  p.printAttribute(getKindAttr());
+  SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "kind",
+                                           "indexing_maps"};
+  unsigned arity =
+      getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
+  unsigned numDims = getResultRank();
+
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
+      ElementwiseOp::getDefaultIndexingMaps(arity + 1 /*output*/, numDims,
+                                            getContext()),
+      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
+
+  printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                         elidedAttrs);
+}
+
+LogicalResult ElementwiseOp::verify() {
+  // All necessary checks are done either by
+  // - EnumAttr (e.g. unknown operation kind)
+  // - verifyStructuredOpInterface (incorrect map, sizes).
+  return success();
+}
+
+/// Implements the block region builder for the ElementwiseOp. This is called by
+/// 'fillStructuredOpRegion'.
+void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                                  ArrayRef<NamedAttribute> attrs) {
+  ElementwiseKind elemwiseKind;
+  for (auto attr : attrs) {
+    if (attr.getName() == b.getStringAttr("kind")) {
+      auto kindAttr = dyn_cast<ElementwiseKindAttr>(attr.getValue());
+      assert(kindAttr && "op kind attribute incorrectly set");
+      elemwiseKind = kindAttr.getValue();
+      break;
+    }
+  }
+
+  ArityGroupAndKind groupAndKind = getArityGroupAndKind(elemwiseKind);
+  auto arityGroup = groupAndKind.arityGroup;
+  auto kind = groupAndKind.kind;
+  assert(block.getNumArguments() ==
+             getArityGroupAsUInt(arityGroup) + 1 /*output*/
+         && "Elementwise regionBuilder number of block args mismatch");
+
+  RegionBuilderHelper helper(b, block);
+  SmallVector<Value> yields;
+  Value result;
+
+  if (arityGroup == ElementwiseArityGroup::Unary) {
+    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0));
+
+  } else if (arityGroup == ElementwiseArityGroup::Binary) {
+    result = helper.buildBinaryFn(kind.binaryFn, block.getArgument(0),
+                                  block.getArgument(1));
+
+  } else if (arityGroup == ElementwiseArityGroup::Ternary) {
+    result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
+                                   block.getArgument(1), block.getArgument(2));
+
+  } else
+    assert(false && "found unhandled category in elemwise");
+
+  yields.push_back(result);
+  helper.yieldOutputs(yields);
+}
+
+LogicalResult ElementwiseOp::fold(FoldAdaptor,
+                                  SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+
+void ElementwiseOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability ElementwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
@@ -4162,9 +4395,7 @@ static bool isInvalidPackingPosSpecification(ArrayRef<int64_t> dimsPos,
   size_t dimsPosSize = dimsPos.size();
   if (dimsPosSize > rank)
     return true;
-  DenseSet<int64_t> uniqued;
-  for (int64_t dim : dimsPos)
-    uniqued.insert(dim);
+  DenseSet<int64_t> uniqued(llvm::from_range, dimsPos);
   if (dimsPosSize != uniqued.size())
     return true;
   return llvm::any_of(dimsPos, [rank](int64_t dimPos) {
@@ -4657,8 +4888,7 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(packOp.getDestType().getShape().begin(),
                    packOp.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(packOp.getInnerDimsPos().begin(),
-                   packOp.getInnerDimsPos().end());
+  innerDims.insert_range(packOp.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!packOp.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(packOp.getOuterDimsPerm());
@@ -4970,7 +5200,7 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(op.getDestType().getShape().begin(),
                    op.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(op.getInnerDimsPos().begin(), op.getInnerDimsPos().end());
+  innerDims.insert_range(op.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!op.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(op.getOuterDimsPerm());
@@ -5017,6 +5247,29 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
     rewriter.modifyOpInPlace(unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });
     return success();
+  }
+  /// extract_slice(unpack(x into y)) -> unpack(x into extract_slice(y))
+  if (unPackOp->hasOneUse()) {
+    auto extractSliceUser =
+        dyn_cast<tensor::ExtractSliceOp>(*unPackOp->getUsers().begin());
+    if (extractSliceUser &&
+        areAllConstantIntValue(extractSliceUser.getMixedOffsets(), 0) &&
+        areAllConstantIntValue(extractSliceUser.getMixedStrides(), 1) &&
+        extractSliceUser.getSourceType().getRank() ==
+            extractSliceUser.getResultType().getRank()) {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(unPackOp);
+      auto newDest = rewriter.create<tensor::ExtractSliceOp>(
+          unPackOp->getLoc(), unPackOp.getDest(),
+          extractSliceUser.getMixedOffsets(), extractSliceUser.getMixedSizes(),
+          extractSliceUser.getMixedStrides());
+      rewriter.modifyOpInPlace(unPackOp, [&]() {
+        unPackOp.setDpsInitOperand(0, newDest);
+        unPackOp.getResult().setType(newDest.getType());
+      });
+      rewriter.replaceOp(extractSliceUser, unPackOp);
+      return success();
+    }
   }
 
   // Insert tensor.cast ops if static shape inference is available..

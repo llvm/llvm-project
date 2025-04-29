@@ -14,6 +14,7 @@
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
@@ -24,6 +25,19 @@ static cl::opt<bool>
                  cl::desc("Helps find bugs by verifying the IR whenever we "
                           "emit new instructions (*very* expensive)."));
 #endif // NDEBUG
+
+static constexpr const unsigned long StopAtDisabled =
+    std::numeric_limits<unsigned long>::max();
+static cl::opt<unsigned long>
+    StopAt("sbvec-stop-at", cl::init(StopAtDisabled), cl::Hidden,
+           cl::desc("Vectorize if the invocation count is < than this. 0 "
+                    "disables vectorization."));
+
+static constexpr const unsigned long StopBundleDisabled =
+    std::numeric_limits<unsigned long>::max();
+static cl::opt<unsigned long>
+    StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,
+               cl::desc("Vectorize up to this many bundles."));
 
 namespace sandboxir {
 
@@ -156,7 +170,9 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
     // TODO: Propagate debug info.
   };
 
-  return CreateVectorInstr(Bndl, Operands);
+  auto *NewI = CreateVectorInstr(Bndl, Operands);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "New instr: " << *NewI << "\n");
+  return NewI;
 }
 
 void BottomUpVec::tryEraseDeadInstrs() {
@@ -169,9 +185,11 @@ void BottomUpVec::tryEraseDeadInstrs() {
          [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
   for (const auto &Pair : SortedDeadInstrCandidates) {
     for (Instruction *I : reverse(Pair.second)) {
-      if (I->hasNUses(0))
+      if (I->hasNUses(0)) {
         // Erase the dead instructions bottom-to-top.
+        LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Erase dead: " << *I << "\n");
         I->eraseFromParent();
+      }
     }
   }
   DeadInstrCandidates.clear();
@@ -217,10 +235,9 @@ Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
         // This may also return a Constant if ExtrI is a Constant.
         auto *InsertI = InsertElementInst::create(
             LastInsert, ExtrI, InsertLaneC, WhereIt, Ctx, "VPack");
-        if (!isa<Constant>(InsertI)) {
-          LastInsert = InsertI;
+        LastInsert = InsertI;
+        if (!isa<Constant>(InsertI))
           WhereIt = std::next(cast<Instruction>(LastInsert)->getIterator());
-        }
       }
     } else {
       Constant *InsertLaneC =
@@ -263,7 +280,13 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
 
 Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
                                   ArrayRef<Value *> UserBndl, unsigned Depth) {
-  const auto &LegalityRes = Legality->canVectorize(Bndl);
+  bool StopForDebug =
+      DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
+             VecUtils::dump(Bndl));
+  const auto &LegalityRes = StopForDebug ? Legality->getForcedPackForDebugging()
+                                         : Legality->canVectorize(Bndl);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
   auto ActionPtr =
       std::make_unique<Action>(&LegalityRes, Bndl, UserBndl, Depth);
   SmallVector<Action *> Operands;
@@ -456,10 +479,16 @@ Value *BottomUpVec::emitVectors() {
 
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   Change = false;
+  if (LLVM_UNLIKELY(BottomUpInvocationCnt++ >= StopAt &&
+                    StopAt != StopAtDisabled))
+    return false;
   DeadInstrCandidates.clear();
   Legality->clear();
   Actions.clear();
+  DebugBndlCnt = 0;
   vectorizeRec(Bndl, {}, /*Depth=*/0);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "BottomUpVec: Vectorization Actions:\n";
+             Actions.dump());
   emitVectors();
   tryEraseDeadInstrs();
   return Change;

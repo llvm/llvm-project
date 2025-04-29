@@ -858,8 +858,8 @@ static void getLiveOutRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
 
 void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
@@ -3295,11 +3295,11 @@ HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
                                    LocationSize &AccessSize) const {
   // Return if it is not a base+offset type instruction or a MemOp.
   if (getAddrMode(MI) != HexagonII::BaseImmOffset &&
-      getAddrMode(MI) != HexagonII::BaseLongOffset &&
-      !isMemOp(MI) && !isPostIncrement(MI))
+      getAddrMode(MI) != HexagonII::BaseLongOffset && !isMemOp(MI) &&
+      !isPostIncrement(MI))
     return nullptr;
 
-  AccessSize = getMemAccessSize(MI);
+  AccessSize = LocationSize::precise(getMemAccessSize(MI));
 
   unsigned BasePos = 0, OffsetPos = 0;
   if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))

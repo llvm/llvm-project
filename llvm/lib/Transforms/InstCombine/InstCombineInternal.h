@@ -15,8 +15,8 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -26,6 +26,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
@@ -455,6 +456,13 @@ private:
 
   Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
 
+  /// Simplify \p V given that it is known to be non-null.
+  /// Returns the simplified value if possible, otherwise returns nullptr.
+  /// If \p HasDereferenceable is true, the simplification will not perform
+  /// same object checks.
+  Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
+                                unsigned Depth = 0);
+
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
@@ -653,6 +661,7 @@ public:
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
 
+  Value *foldPtrToIntOfGEP(Type *IntTy, Value *Ptr);
   Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS, CmpPredicate Cond,
                            Instruction &I);
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,

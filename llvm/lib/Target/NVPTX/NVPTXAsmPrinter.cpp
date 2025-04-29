@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -244,14 +245,8 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
 
 MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
   const MCExpr *Expr;
-  Expr = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None,
-                                 OutContext);
+  Expr = MCSymbolRefExpr::create(Symbol, OutContext);
   return MCOperand::createExpr(Expr);
-}
-
-static bool ShouldPassAsArray(Type *Ty) {
-  return Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128) ||
-         Ty->isHalfTy() || Ty->isBFloatTy();
 }
 
 void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
@@ -264,26 +259,21 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
     return;
   O << " (";
 
-  if ((Ty->isFloatingPointTy() || Ty->isIntegerTy()) &&
-      !ShouldPassAsArray(Ty)) {
-    unsigned size = 0;
-    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-      size = ITy->getBitWidth();
-    } else {
-      assert(Ty->isFloatingPointTy() && "Floating point type expected here");
-      size = Ty->getPrimitiveSizeInBits();
-    }
-    size = promoteScalarArgumentSize(size);
-    O << ".param .b" << size << " func_retval0";
-  } else if (isa<PointerType>(Ty)) {
-    O << ".param .b" << TLI->getPointerTy(DL).getSizeInBits()
-      << " func_retval0";
-  } else if (ShouldPassAsArray(Ty)) {
-    unsigned totalsz = DL.getTypeAllocSize(Ty);
-    Align RetAlignment = TLI->getFunctionArgumentAlignment(
+  auto PrintScalarRetVal = [&](unsigned Size) {
+    O << ".param .b" << promoteScalarArgumentSize(Size) << " func_retval0";
+  };
+  if (shouldPassAsArray(Ty)) {
+    const unsigned TotalSize = DL.getTypeAllocSize(Ty);
+    const Align RetAlignment = TLI->getFunctionArgumentAlignment(
         F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
-      << totalsz << "]";
+      << TotalSize << "]";
+  } else if (Ty->isFloatingPointTy()) {
+    PrintScalarRetVal(Ty->getPrimitiveSizeInBits());
+  } else if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
+    PrintScalarRetVal(ITy->getBitWidth());
+  } else if (isa<PointerType>(Ty)) {
+    PrintScalarRetVal(TLI->getPointerTy(DL).getSizeInBits());
   } else
     llvm_unreachable("Unknown return type");
   O << ") ";
@@ -427,24 +417,15 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // If the NVVM IR has some of reqntid* specified, then output
   // the reqntid directive, and set the unspecified ones to 1.
   // If none of Reqntid* is specified, don't output reqntid directive.
-  std::optional<unsigned> Reqntidx = getReqNTIDx(F);
-  std::optional<unsigned> Reqntidy = getReqNTIDy(F);
-  std::optional<unsigned> Reqntidz = getReqNTIDz(F);
+  const auto ReqNTID = getReqNTID(F);
+  if (!ReqNTID.empty())
+    O << formatv(".reqntid {0:$[, ]}\n",
+                 make_range(ReqNTID.begin(), ReqNTID.end()));
 
-  if (Reqntidx || Reqntidy || Reqntidz)
-    O << ".reqntid " << Reqntidx.value_or(1) << ", " << Reqntidy.value_or(1)
-      << ", " << Reqntidz.value_or(1) << "\n";
-
-  // If the NVVM IR has some of maxntid* specified, then output
-  // the maxntid directive, and set the unspecified ones to 1.
-  // If none of maxntid* is specified, don't output maxntid directive.
-  std::optional<unsigned> Maxntidx = getMaxNTIDx(F);
-  std::optional<unsigned> Maxntidy = getMaxNTIDy(F);
-  std::optional<unsigned> Maxntidz = getMaxNTIDz(F);
-
-  if (Maxntidx || Maxntidy || Maxntidz)
-    O << ".maxntid " << Maxntidx.value_or(1) << ", " << Maxntidy.value_or(1)
-      << ", " << Maxntidz.value_or(1) << "\n";
+  const auto MaxNTID = getMaxNTID(F);
+  if (!MaxNTID.empty())
+    O << formatv(".maxntid {0:$[, ]}\n",
+                 make_range(MaxNTID.begin(), MaxNTID.end()));
 
   if (const auto Mincta = getMinCTASm(F))
     O << ".minnctapersm " << *Mincta << "\n";
@@ -458,21 +439,19 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
 
   if (STI->getSmVersion() >= 90) {
-    std::optional<unsigned> ClusterX = getClusterDimx(F);
-    std::optional<unsigned> ClusterY = getClusterDimy(F);
-    std::optional<unsigned> ClusterZ = getClusterDimz(F);
+    const auto ClusterDim = getClusterDim(F);
 
-    if (ClusterX || ClusterY || ClusterZ) {
+    if (!ClusterDim.empty()) {
       O << ".explicitcluster\n";
-      if (ClusterX.value_or(1) != 0) {
-        assert(ClusterY.value_or(1) && ClusterZ.value_or(1) &&
+      if (ClusterDim[0] != 0) {
+        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D != 0; }) &&
                "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
                "should be non-zero as well");
 
-        O << ".reqnctapercluster " << ClusterX.value_or(1) << ", "
-          << ClusterY.value_or(1) << ", " << ClusterZ.value_or(1) << "\n";
+        O << formatv(".reqnctapercluster {0:$[, ]}\n",
+                     make_range(ClusterDim.begin(), ClusterDim.end()));
       } else {
-        assert(!ClusterY.value_or(1) && !ClusterZ.value_or(1) &&
+        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D == 0; }) &&
                "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
                "should be 0 as well");
       }
@@ -986,8 +965,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   O << " .align "
     << GVar->getAlign().value_or(DL.getPrefTypeAlign(ETy)).value();
 
-  if (ETy->isFloatingPointTy() || ETy->isPointerTy() ||
-      (ETy->isIntegerTy() && ETy->getScalarSizeInBits() <= 64)) {
+  if (ETy->isPointerTy() || ((ETy->isIntegerTy() || ETy->isFloatingPointTy()) &&
+                             ETy->getScalarSizeInBits() <= 64)) {
     O << " .";
     // Special case: ABI requires that we use .u8 for predicates
     if (ETy->isIntegerTy(1))
@@ -1027,6 +1006,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     // and vectors are lowered into arrays of bytes.
     switch (ETy->getTypeID()) {
     case Type::IntegerTyID: // Integers larger than 64 bits
+    case Type::FP128TyID:
     case Type::StructTyID:
     case Type::ArrayTyID:
     case Type::FixedVectorTyID: {
@@ -1277,8 +1257,8 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   O << " .align "
     << GVar->getAlign().value_or(DL.getPrefTypeAlign(ETy)).value();
 
-  // Special case for i128
-  if (ETy->isIntegerTy(128)) {
+  // Special case for i128/fp128
+  if (ETy->getScalarSizeInBits() == 128) {
     O << " .b8 ";
     getSymbol(GVar)->print(O, MAI);
     O << "[16]";
@@ -1394,7 +1374,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       continue;
     }
 
-    if (ShouldPassAsArray(Ty)) {
+    if (shouldPassAsArray(Ty)) {
       // Just print .param .align <a> .b8 .param[size];
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
@@ -1693,48 +1673,49 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
 void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
                                               AggBuffer *aggBuffer) {
   const DataLayout &DL = getDataLayout();
-  int Bytes;
+
+  auto ExtendBuffer = [](APInt Val, AggBuffer *Buffer) {
+    for (unsigned I : llvm::seq(Val.getBitWidth() / 8))
+      Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
+  };
 
   // Integers of arbitrary width
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
-    APInt Val = CI->getValue();
-    for (unsigned I = 0, E = DL.getTypeAllocSize(CPV->getType()); I < E; ++I) {
-      uint8_t Byte = Val.getLoBits(8).getZExtValue();
-      aggBuffer->addBytes(&Byte, 1, 1);
-      Val.lshrInPlace(8);
-    }
+    ExtendBuffer(CI->getValue(), aggBuffer);
     return;
+  }
+
+  // f128
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
+    if (CFP->getType()->isFP128Ty()) {
+      ExtendBuffer(CFP->getValueAPF().bitcastToAPInt(), aggBuffer);
+      return;
+    }
   }
 
   // Old constants
   if (isa<ConstantArray>(CPV) || isa<ConstantVector>(CPV)) {
-    if (CPV->getNumOperands())
-      for (unsigned i = 0, e = CPV->getNumOperands(); i != e; ++i)
-        bufferLEByte(cast<Constant>(CPV->getOperand(i)), 0, aggBuffer);
+    for (const auto &Op : CPV->operands())
+      bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
     return;
   }
 
-  if (const ConstantDataSequential *CDS =
-          dyn_cast<ConstantDataSequential>(CPV)) {
-    if (CDS->getNumElements())
-      for (unsigned i = 0; i < CDS->getNumElements(); ++i)
-        bufferLEByte(cast<Constant>(CDS->getElementAsConstant(i)), 0,
-                     aggBuffer);
+  if (const auto *CDS = dyn_cast<ConstantDataSequential>(CPV)) {
+    for (unsigned I : llvm::seq(CDS->getNumElements()))
+      bufferLEByte(cast<Constant>(CDS->getElementAsConstant(I)), 0, aggBuffer);
     return;
   }
 
   if (isa<ConstantStruct>(CPV)) {
     if (CPV->getNumOperands()) {
       StructType *ST = cast<StructType>(CPV->getType());
-      for (unsigned i = 0, e = CPV->getNumOperands(); i != e; ++i) {
-        if (i == (e - 1))
-          Bytes = DL.getStructLayout(ST)->getElementOffset(0) +
-                  DL.getTypeAllocSize(ST) -
-                  DL.getStructLayout(ST)->getElementOffset(i);
-        else
-          Bytes = DL.getStructLayout(ST)->getElementOffset(i + 1) -
-                  DL.getStructLayout(ST)->getElementOffset(i);
-        bufferLEByte(cast<Constant>(CPV->getOperand(i)), Bytes, aggBuffer);
+      for (unsigned I : llvm::seq(CPV->getNumOperands())) {
+        int EndOffset = (I + 1 == CPV->getNumOperands())
+                            ? DL.getStructLayout(ST)->getElementOffset(0) +
+                                  DL.getTypeAllocSize(ST)
+                            : DL.getStructLayout(ST)->getElementOffset(I + 1);
+        int Bytes = EndOffset - DL.getStructLayout(ST)->getElementOffset(I);
+        bufferLEByte(cast<Constant>(CPV->getOperand(I)), Bytes, aggBuffer);
       }
     }
     return;

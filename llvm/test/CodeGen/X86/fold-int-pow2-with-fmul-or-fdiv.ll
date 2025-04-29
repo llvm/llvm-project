@@ -195,7 +195,8 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],mem[4],xmm0[5],mem[5],xmm0[6],mem[6],xmm0[7],mem[7]
+; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
@@ -1687,4 +1688,32 @@ define float @fdiv_pow_shl_cnt32_okay(i32 %cnt) nounwind {
   %conv = uitofp i32 %shl to float
   %mul = fdiv float 0x3a20000000000000, %conv
   ret float %mul
+}
+
+define x86_fp80 @pr128528(i1 %cond) {
+; CHECK-SSE-LABEL: pr128528:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    testb $1, %dil
+; CHECK-SSE-NEXT:    movl $8, %eax
+; CHECK-SSE-NEXT:    movl $1, %ecx
+; CHECK-SSE-NEXT:    cmovnel %eax, %ecx
+; CHECK-SSE-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: pr128528:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    testb $1, %dil
+; CHECK-AVX-NEXT:    movl $8, %eax
+; CHECK-AVX-NEXT:    movl $1, %ecx
+; CHECK-AVX-NEXT:    cmovnel %eax, %ecx
+; CHECK-AVX-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK-AVX-NEXT:    retq
+  %sub9 = select i1 %cond, i32 8, i32 1
+  %conv = uitofp i32 %sub9 to x86_fp80
+  %mul = fmul x86_fp80 %conv, 0xK4007D055555555555800
+  ret x86_fp80 %mul
 }

@@ -241,211 +241,211 @@ vfredmin.vs  v4, v8, v12
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      47    48.00                       vredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      47    47.00                       vredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      49    50.00                       vredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      49    49.00                       vredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      53    54.00                       vredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      53    53.00                       vredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      61    62.00                       vredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      61    61.00                       vredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vredand.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vredand.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vredand.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vredand.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      42    43.00                       vredand.vs	v4, v8, v12
+# CHECK-NEXT:  1      42    42.00                       vredand.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      44    45.00                       vredand.vs	v4, v8, v12
+# CHECK-NEXT:  1      44    44.00                       vredand.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      48    49.00                       vredand.vs	v4, v8, v12
+# CHECK-NEXT:  1      48    48.00                       vredand.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      56    57.00                       vredand.vs	v4, v8, v12
+# CHECK-NEXT:  1      56    56.00                       vredand.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      36    37.00                       vredor.vs	v4, v8, v12
+# CHECK-NEXT:  1      36    36.00                       vredor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      37    38.00                       vredor.vs	v4, v8, v12
+# CHECK-NEXT:  1      37    37.00                       vredor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      39    40.00                       vredor.vs	v4, v8, v12
+# CHECK-NEXT:  1      39    39.00                       vredor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      43    44.00                       vredor.vs	v4, v8, v12
+# CHECK-NEXT:  1      43    43.00                       vredor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      51    52.00                       vredor.vs	v4, v8, v12
+# CHECK-NEXT:  1      51    51.00                       vredor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      32    33.00                       vredxor.vs	v4, v8, v12
+# CHECK-NEXT:  1      32    32.00                       vredxor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      34    35.00                       vredxor.vs	v4, v8, v12
+# CHECK-NEXT:  1      34    34.00                       vredxor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      38    39.00                       vredxor.vs	v4, v8, v12
+# CHECK-NEXT:  1      38    38.00                       vredxor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredxor.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredxor.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredmaxu.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredmaxu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredmaxu.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredmaxu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredmaxu.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredmaxu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      47    48.00                       vredmaxu.vs	v4, v8, v12
+# CHECK-NEXT:  1      47    47.00                       vredmaxu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      49    50.00                       vredmaxu.vs	v4, v8, v12
+# CHECK-NEXT:  1      49    49.00                       vredmaxu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      53    54.00                       vredmaxu.vs	v4, v8, v12
+# CHECK-NEXT:  1      53    53.00                       vredmaxu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      61    62.00                       vredmaxu.vs	v4, v8, v12
+# CHECK-NEXT:  1      61    61.00                       vredmaxu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      42    43.00                       vredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      42    42.00                       vredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      44    45.00                       vredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      44    44.00                       vredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      48    49.00                       vredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      48    48.00                       vredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      56    57.00                       vredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      56    56.00                       vredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      36    37.00                       vredminu.vs	v4, v8, v12
+# CHECK-NEXT:  1      36    36.00                       vredminu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      37    38.00                       vredminu.vs	v4, v8, v12
+# CHECK-NEXT:  1      37    37.00                       vredminu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      39    40.00                       vredminu.vs	v4, v8, v12
+# CHECK-NEXT:  1      39    39.00                       vredminu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      43    44.00                       vredminu.vs	v4, v8, v12
+# CHECK-NEXT:  1      43    43.00                       vredminu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      51    52.00                       vredminu.vs	v4, v8, v12
+# CHECK-NEXT:  1      51    51.00                       vredminu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      32    33.00                       vredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      32    32.00                       vredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      34    35.00                       vredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      34    34.00                       vredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      38    39.00                       vredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      38    38.00                       vredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      47    48.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      47    47.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      49    50.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      49    49.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      53    54.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      53    53.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      61    62.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      61    61.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      42    43.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      42    42.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      44    45.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      44    44.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      48    49.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      48    48.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      56    57.00                       vwredsumu.vs	v4, v8, v12
+# CHECK-NEXT:  1      56    56.00                       vwredsumu.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      36    37.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      36    36.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      37    38.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      37    37.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      39    40.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      39    39.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      43    44.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      43    43.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      51    52.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      51    51.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      61    62.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      61    61.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      61    62.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      61    61.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      61    62.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      61    61.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      61    62.00                       vwredsum.vs	v4, v8, v12
+# CHECK-NEXT:  1      61    61.00                       vwredsum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      48    49.00                       vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      48    48.00                       vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      96    97.00                       vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      96    96.00                       vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      192   193.00                      vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      192   192.00                      vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      384   385.00                      vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      384   384.00                      vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      768   769.00                      vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      768   768.00                      vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1536   1537.00                      vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      1536   1536.00                      vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      48    49.00                       vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      48    48.00                       vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      96    97.00                       vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      96    96.00                       vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      192   193.00                      vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      192   192.00                      vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      384   385.00                      vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      384   384.00                      vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      768   769.00                      vfwredosum.vs	v4, v8, v12
+# CHECK-NEXT:  1      768   768.00                      vfwredosum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      42    43.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      42    42.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      44    45.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      44    44.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      48    49.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      48    48.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      56    57.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      56    56.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      36    37.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      36    36.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      37    38.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      37    37.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      39    40.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      39    39.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      43    44.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      43    43.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      51    52.00                       vfwredusum.vs	v4, v8, v12
+# CHECK-NEXT:  1      51    51.00                       vfwredusum.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vfredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vfredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      41    42.00                       vfredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      41    41.00                       vfredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      42    43.00                       vfredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      42    42.00                       vfredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      44    45.00                       vfredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      44    44.00                       vfredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      48    49.00                       vfredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      48    48.00                       vfredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      56    57.00                       vfredmax.vs	v4, v8, v12
+# CHECK-NEXT:  1      56    56.00                       vfredmax.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      36    37.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      36    36.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      37    38.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      37    37.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      39    40.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      39    39.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      43    44.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      43    43.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      51    52.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      51    51.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      32    33.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      32    32.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      34    35.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      34    34.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      38    39.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      38    38.00                       vfredmin.vs	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      46    47.00                       vfredmin.vs	v4, v8, v12
+# CHECK-NEXT:  1      46    46.00                       vfredmin.vs	v4, v8, v12
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv

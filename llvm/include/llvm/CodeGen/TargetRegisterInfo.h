@@ -467,10 +467,7 @@ public:
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
-    for (MCRegUnit Unit : regunits(Reg))
-      if (Unit == RegUnit)
-        return true;
-    return false;
+    return llvm::is_contained(regunits(Reg), RegUnit);
   }
 
   /// Returns the original SrcReg unless it is the target of a copy-like
@@ -593,7 +590,7 @@ public:
 
   /// Returns true if PhysReg cannot be written to in inline asm statements.
   virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                      unsigned PhysReg) const {
+                                      MCRegister PhysReg) const {
     return false;
   }
 
@@ -958,6 +955,9 @@ public:
   /// Returns a -1 terminated array of pressure set IDs.
   virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
 
+  /// Get the scale factor of spill weight for this register class.
+  virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
+
   /// Get a list of 'hint' registers that the register allocator should try
   /// first when allocating a physical register for the virtual register
   /// VirtReg. These registers are effectively moved to the front of the
@@ -1111,6 +1111,10 @@ public:
   prependOffsetExpression(const DIExpression *Expr, unsigned PrependFlags,
                           const StackOffset &Offset) const;
 
+  virtual int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const {
+    llvm_unreachable("getDwarfRegNumForVirtReg does not exist on this target");
+  }
+
   /// Spill the register so it can be used by the register scavenger.
   /// Return true if the register was spilled, false otherwise.
   /// If this function does not spill the register, the scavenger
@@ -1238,6 +1242,11 @@ public:
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
   }
+
+  /// Some targets delay assigning the frame until late and use a placeholder
+  /// to represent it earlier. This method can be used to identify the frame
+  /// register placeholder.
+  virtual bool isVirtualFrameRegister(MCRegister Reg) const { return false; }
 
   virtual std::optional<uint8_t> getVRegFlagValue(StringRef Name) const {
     return {};

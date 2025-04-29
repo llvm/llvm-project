@@ -126,7 +126,7 @@ end
   and `DO CONCURRENT`.
 * A non-definable actual argument, including the case of a vector
   subscript, may be associated with an `ASYNCHRONOUS` or `VOLATILE`
-  dummy argument, F'2023 15.5.2.5 p31 notwithstanding.
+  dummy argument, F'2023 15.5.2.5 p21 notwithstanding.
   The effects of these attributes are scoped over the lifetime of
   the procedure reference, and they can by added by internal subprograms
   and `BLOCK` constructs within the procedure.
@@ -150,13 +150,15 @@ end
   have this capability. An Arm executable will run on either type of
   processor, so it is effectively unknown at compile time whether or
   not this support will be available at runtime. The standard requires
-  that a call to intrinsic module procedure `IEEE_SUPPORT_HALTING` with
+  that a call to intrinsic module procedure `ieee_support_halting` with
   a constant argument has a compile time constant result in `constant
   expression` and `specification expression` contexts. In compilations
   where this information is not known at compile time, f18 generates code
   to determine the absence or presence of this capability at runtime.
-  A call to `IEEE_SUPPORT_HALTING` in contexts that the standard requires
-  to be constant will generate a compilation error.
+  A call to `ieee_support_halting` in contexts that the standard requires
+  to be constant will generate a compilation error. `ieee_support_standard`
+  depends in part on `ieee_support_halting`, so this also applies to
+  `ieee_support_standard` calls.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -216,7 +218,7 @@ end
   the length parameter of the implicit type, not the first.
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
-* Classic C-style /*comments*/ are skipped, so multi-language header
+* Classic C-style `/*comments*/` are skipped, so multi-language header
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
@@ -814,6 +816,27 @@ print *, [(j,j=1,10)]
   F18 follows other widely-used Fortran compilers. Specifically, f18 assumes
   integer overflow never occurs in address calculations and increment of
   do-variable unless the option `-fwrapv` is enabled.
+
+* Two new ieee_round_type values were added in f18 beyond the four values
+  defined in f03 and f08: ieee_away and ieee_other. Contemporary hardware
+  typically does not have support for these rounding modes;
+  ieee_support_rounding calls for these values return false.
+  ieee_set_rounding_mode calls that attempt to set the rounding mode to one
+  of these values in violation of the restriction in f23 clause 17.11.42 set
+  the mode to ieee_nearest.
+
+* Some compilers allow an `INTENT(OUT)` dummy argument's value to appear
+  via host association in a specification expression.  A non-host-associated
+  use is an error because an `INTENT(OUT)` dummy argument's value is not
+  defined.  The argument put forth to accept this usage in a `BLOCK` construct
+  or inner procedure is that the language in 10.1.11 (specification expressions)
+  allows any host-associated object to appear, but that's unconvincing
+  because it would also allow a host-associated `OPTIONAL` dummy argument to
+  be used in a nested scope, and that doesn't make sense.  This compiler
+  accepts an `INTENT(OUT)` non-`OPTIONAL` host-associated value to appear
+  in a specification expression via host association with a portability
+  warning since such values may have become defined by the time the nested
+  expression's value is required.
 
 ## De Facto Standard Features
 

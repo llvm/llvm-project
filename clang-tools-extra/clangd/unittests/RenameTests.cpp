@@ -1270,6 +1270,39 @@ TEST(RenameTest, Renameable) {
        "conflict", !HeaderFile, "Conflict"},
 
       {R"cpp(
+        struct conflict {};
+        enum v^ar {};
+      )cpp",
+       "conflict", !HeaderFile, "conflict"},
+
+      {R"cpp(
+        struct conflict {};
+        int [[v^ar]];
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        enum conflict {};
+        int [[v^ar]];
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        void func(int conflict) {
+          struct [[t^ag]] {};
+        }
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        void func(void) {
+          struct conflict {};
+          int [[v^ar]];
+        }
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
         void func(int);
         void [[o^therFunc]](double);
       )cpp",
@@ -2190,9 +2223,9 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
   for (const auto &T : Tests) {
     SCOPED_TRACE(T.DraftCode);
     Annotations Draft(T.DraftCode);
-    auto ActualRanges = adjustRenameRanges(Draft.code(), "x",
-                                           Annotations(T.IndexedCode).ranges(),
-                                           LangOpts, std::nullopt);
+    auto ActualRanges = adjustRenameRanges(
+        Draft.code(), RenameSymbolName(ArrayRef<std::string>{"x"}),
+        Annotations(T.IndexedCode).ranges(), LangOpts);
     if (!ActualRanges)
        EXPECT_THAT(Draft.ranges(), testing::IsEmpty());
     else

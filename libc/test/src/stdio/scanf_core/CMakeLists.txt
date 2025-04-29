@@ -18,6 +18,13 @@ add_libc_unittest(
     libc.src.__support.arg_list
 )
 
+if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
+  (NOT LIBC_TARGET_OS_IS_GPU))
+  # Not all platforms have a file implementation. If file is unvailable, and a
+  # full build is requested, then we must skip all file based scanf sections.
+  return()
+endif()
+
 add_libc_unittest(
   reader_test
   SUITE
@@ -25,7 +32,7 @@ add_libc_unittest(
   SRCS
     reader_test.cpp
   DEPENDS
-    libc.src.stdio.scanf_core.reader
+    libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
   COMPILE_OPTIONS
     ${use_system_file}
@@ -38,8 +45,8 @@ add_libc_unittest(
   SRCS
     converter_test.cpp
   DEPENDS
-    libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.converter
+    libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
   COMPILE_OPTIONS
     ${use_system_file}

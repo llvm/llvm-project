@@ -489,12 +489,9 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
         auto applyOp = dyn_cast<emitc::ApplyOp>(op);
         if (applyOp)
           return applyOp.getApplicableOperator() == "*";
-        // Any operation using variables is assumed to have a side effect of
-        // reading memory mutable by emitc::assign ops.
-        return llvm::any_of(op.getOperands(), [](Value operand) {
-          Operation *def = operand.getDefiningOp();
-          return def && isa<emitc::VariableOp>(def);
-        });
+        // Any load operation is assumed to read from memory and thus perform
+        // a side effect.
+        return isa<emitc::LoadOp>(op);
       };
       return llvm::any_of(getRegion().front().without_terminator(), predicate);
     };
@@ -844,6 +841,17 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   let description = [{
     The `emitc.literal` operation produces an SSA value equal to some constant
     specified by an attribute.
+
+    Example:
+
+    ```mlir
+    %p0 = emitc.literal "M_PI" : f32
+    %1 = "emitc.add" (%arg0, %p0) : (f32, f32) -> f32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    float v2 = v1 + M_PI;
+    ```
   }];
 
   let arguments = (ins StrAttr:$value);
@@ -916,7 +924,7 @@ def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
-def EmitC_LoadOp : EmitC_Op<"load", [
+def EmitC_LoadOp : EmitC_Op<"load", [CExpression,
   TypesMatchWith<"result type matches value type of 'operand'",
                   "operand", "result",
                   "::llvm::cast<LValueType>($_self).getValueType()">
@@ -1172,8 +1180,8 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
   let summary = "A global variable";
   let description = [{
     The `emitc.global` operation declares or defines a named global variable.
-    The backing memory for the variable is allocated statically and is
-    described by the type of the variable.
+    The backing memory for the variable is allocated statically and described by
+    the variable's type, which must be an EmitC type.
     Optionally, an `initial_value` can be provided.
     Internal linkage can be specified using the `static_specifier` unit attribute
     and external linkage can be specified using the `extern_specifier` unit attribute.
@@ -1193,6 +1201,8 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
     emitc.global @x : !emitc.array<2xf32> = dense<0.0>
     // Global variable with an initial values.
     emitc.global @x : !emitc.array<3xi32> = dense<[0, 1, 2]>
+    // Global variable with an opaque initial value.
+    emitc.global @x : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
     // External global variable
     emitc.global extern @x : !emitc.array<2xf32>
     // Constant global variable with internal linkage
@@ -1276,6 +1286,18 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     `%dest` became `b` in the C code.
     `{{` in the format string is interpreted as a single `{` and doesn't introduce
     a placeholder.
+
+    Example:
+
+    ```mlir
+    emitc.verbatim "typedef float f32;"
+    emitc.verbatim "#pragma my var={} property" args %arg : f32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    typedef float f32;
+    #pragma my var=v1 property
+    ```
   }];
 
   let extraClassDeclaration = [{

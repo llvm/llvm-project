@@ -304,7 +304,7 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
                            .Case("kernel", llvm::CodeModel::Kernel)
                            .Case("medium", llvm::CodeModel::Medium)
                            .Case("large", llvm::CodeModel::Large)
-                           .Case("default", ~1u)
+                           .Cases("default", "", ~1u)
                            .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
   if (CodeModel == ~1u)
@@ -595,7 +595,7 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
 void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   // Create the TargetMachine for generating code.
   std::string Error;
-  std::string Triple = TheModule->getTargetTriple();
+  const llvm::Triple &Triple = TheModule->getTargetTriple();
   const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     if (MustCreateTM)
@@ -617,7 +617,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
-  TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
+  if (TM)
+    TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
 
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
@@ -1115,6 +1116,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (CodeGenOpts.LinkBitcodePostopt)
     MPM.addPass(LinkInModulesPass(BC));
 
+  if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
+      LangOpts.HIPStdParInterposeAlloc)
+    MPM.addPass(HipStdParAllocationInterpositionPass());
+
   // Add a verifier pass if requested. We don't have to do this if the action
   // requires code generation because there will already be a verifier pass in
   // the code-generation pipeline.
@@ -1177,10 +1182,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     outs() << "\n";
     return;
   }
-
-  if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
-      LangOpts.HIPStdParInterposeAlloc)
-    MPM.addPass(HipStdParAllocationInterpositionPass());
 
   // Now that we have all of the passes ready, run them.
   {

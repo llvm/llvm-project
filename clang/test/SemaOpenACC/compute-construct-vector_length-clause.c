@@ -8,6 +8,31 @@ void Test() {
 #pragma acc kernels vector_length(1)
   while(1);
 
+  // expected-error@+2{{OpenACC 'vector_length' clause cannot appear more than once on a 'kernels' directive}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc kernels vector_length(1) vector_length(2)
+  while(1);
+
+  // expected-error@+2{{OpenACC 'vector_length' clause cannot appear more than once on a 'parallel' directive}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc parallel vector_length(1) vector_length(2)
+  while(1);
+
+  // expected-error@+3{{OpenACC 'vector_length' clause cannot appear more than once in a 'device_type' region on a 'kernels' directive}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc kernels vector_length(1) device_type(*) vector_length(1) vector_length(2)
+  while(1);
+
+  // expected-error@+3{{OpenACC 'vector_length' clause cannot appear more than once in a 'device_type' region on a 'parallel' directive}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc parallel device_type(*) vector_length(1) vector_length(2)
+  while(1);
+
+#pragma acc parallel vector_length(1) device_type(*) vector_length(2)
+  while(1);
+
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'serial' directive}}
 #pragma acc serial vector_length(1)
   while(1);

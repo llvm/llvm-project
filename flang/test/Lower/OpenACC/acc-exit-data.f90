@@ -102,4 +102,9 @@ subroutine acc_exit_data
 !CHECK: acc.exit_data wait_devnum(%[[WAIT6]] : i32) wait(%[[WAIT4]], %[[WAIT5]] : i32, i32) dataOperands(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>)
 !CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) {name = "a", structured = false}
 
+  !$acc exit data delete(a) finalize
+!CHECK: acc.exit_data dataOperands(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) attributes {finalize}
+
+  !$acc exit data delete(a) finalize finalize
+!CHECK: acc.exit_data dataOperands(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) attributes {finalize}
 end subroutine acc_exit_data
