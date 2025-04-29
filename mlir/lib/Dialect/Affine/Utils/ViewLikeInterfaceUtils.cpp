@@ -78,6 +78,26 @@ LogicalResult mlir::affine::mergeOffsetsSizesAndStrides(
       combinedOffsets, combinedSizes, combinedStrides);
 }
 
+static AffineMap bindSymbolsOrDims(
+    MLIRContext *ctx, llvm::ArrayRef<OpFoldResult> operands,
+    function_ref<AffineExpr(llvm::SmallVectorImpl<AffineExpr> &)> makeExpr) {
+  SmallVector<AffineExpr, 4> affineExprs(operands.size());
+  unsigned symbolCount = 0;
+  unsigned dimCount = 0;
+  for (auto [e, value] : llvm::zip_equal(affineExprs, operands)) {
+    auto asValue = llvm::dyn_cast_or_null<Value>(value);
+    if (asValue && !affine::isValidSymbol(asValue) &&
+        affine::isValidDim(asValue)) {
+      e = getAffineDimExpr(dimCount++, ctx);
+    } else {
+      // This is also done if it is not a valid symbol but
+      // we don't care, we need a fallback.
+      e = getAffineSymbolExpr(symbolCount++, ctx);
+    }
+  }
+  return AffineMap::get(dimCount, symbolCount, makeExpr(affineExprs));
+}
+
 void mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
     RewriterBase &rewriter, Location loc,
     ArrayRef<OpFoldResult> mixedSourceOffsets,
@@ -100,11 +120,12 @@ void mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
   resolvedIndices.clear();
   for (auto [offset, index, stride] :
        llvm::zip_equal(mixedSourceOffsets, indices, mixedSourceStrides)) {
-    AffineExpr off, idx, str;
-    bindSymbols(rewriter.getContext(), off, idx, str);
-    OpFoldResult ofr = makeComposedFoldedAffineApply(
-        rewriter, loc, AffineMap::get(0, 3, off + idx * str),
-        {offset, index, stride});
+    auto affineMap =
+        bindSymbolsOrDims(rewriter.getContext(), {offset, index, stride},
+                          [](auto &e) { return e[0] + e[1] * e[2]; });
+
+    OpFoldResult ofr = makeComposedFoldedAffineApply(rewriter, loc, affineMap,
+                                                     {offset, index, stride});
     resolvedIndices.push_back(
         getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
   }
