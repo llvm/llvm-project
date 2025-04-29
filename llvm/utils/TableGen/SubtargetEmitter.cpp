@@ -336,7 +336,7 @@ unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
 static void checkDuplicateCPUFeatures(StringRef CPUName,
                                       ArrayRef<const Record *> Features,
                                       ArrayRef<const Record *> TuneFeatures) {
-  // We had made sure each SubtargetFeature Record has a unique name, so we can
+  // We have made sure each SubtargetFeature Record has a unique name, so we can
   // simply use pointer sets here.
   SmallPtrSet<const Record *, 8> FeatureSet, TuneFeatureSet;
   for (const auto *FeatureRec : Features) {
@@ -350,7 +350,7 @@ static void checkDuplicateCPUFeatures(StringRef CPUName,
       PrintWarning("Processor " + CPUName +
                    " contains duplicate tune feature '" +
                    TuneFeatureRec->getValueAsString("Name") + "'");
-    if (FeatureSet.count(TuneFeatureRec))
+    if (FeatureSet.contains(TuneFeatureRec))
       PrintWarning("Processor " + CPUName + " has '" +
                    TuneFeatureRec->getValueAsString("Name") +
                    "' in both feature and tune feature sets");
