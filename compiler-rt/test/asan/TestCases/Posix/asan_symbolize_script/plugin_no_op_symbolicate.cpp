@@ -1,6 +1,10 @@
 // UNSUPPORTED: ios, android
 // Check plugin command line args get parsed and that plugin functions get called as expected.
 
+// Asan on AIX doesn't print the full path for user libraries or executables, so this test fails to
+// symbolize.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
 // RUN: %clangxx_asan -O0 -g %s -o %t.executable
 // RUN: not %env_asan_opts=symbolize=0 %run %t.executable > %t.log 2>&1
 // RUN: %asan_symbolize --plugins %S/plugin_no_op.py --log-level info -l %t.log --unlikely-option-name-XXX=15 2>&1 | FileCheck %s

@@ -3,6 +3,9 @@
 //
 // Tests __sanitizer_symbolize_pc.
 
+// FIXME: llvm-symbolizer on AIX can't resolve line number for the global
+// XFAIL: target={{.*-aix.*}}
+
 // FIXME: Investigate why it does not print GLOBAL_VAR_ABC.
 // XFAIL: hwasan && target=aarch64{{.*}}
 // LSan tests fail on Darwin

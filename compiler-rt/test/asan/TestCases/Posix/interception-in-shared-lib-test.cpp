@@ -1,5 +1,8 @@
 // Check that memset() call from a shared library gets intercepted.
 
+// FIXME: Instructions don't start at 0x0 in shared libraries on AIX
+// XFAIL: target={{.*-aix.*}}
+
 // RUN: %clangxx_asan -O0 %s -DSHARED_LIB \
 // RUN:     -shared -o %dynamiclib -fPIC %ld_flags_rpath_so
 // RUN: %clangxx_asan -O0 %s -o %t %ld_flags_rpath_exe && \

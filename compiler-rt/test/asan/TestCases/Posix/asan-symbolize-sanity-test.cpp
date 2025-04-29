@@ -11,6 +11,10 @@
 
 // UNSUPPORTED: ios
 
+// Asan on AIX doesn't print the full path for user libraries or executables, so this test fails to
+// symbolize.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
 #if !defined(SHARED_LIB)
 #include <dlfcn.h>
 #include <stdio.h>
