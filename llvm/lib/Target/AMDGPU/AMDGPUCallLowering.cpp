@@ -1453,12 +1453,21 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
 
 bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    CallLoweringInfo &Info) const {
-  if (Function *F = Info.CB->getCalledFunction())
+  if (Function *F = Info.CB->getCalledFunction()) {
     if (F->isIntrinsic()) {
       assert(F->getIntrinsicID() == Intrinsic::amdgcn_cs_chain &&
              "Unexpected intrinsic");
       return lowerChainCall(MIRBuilder, Info);
     }
+
+    // Detect UB caused due to calling convention mismatches early to avoid
+    // debugging if errors occur later.
+    if (F->getCallingConv() != Info.CallConv) {
+      LLVM_DEBUG(dbgs() << "Failed to lower call: calling convention mismatch "
+                           "(undefined behavior)\n");
+      return false;
+    }
+  }
 
   if (Info.IsVarArg) {
     LLVM_DEBUG(dbgs() << "Variadic functions not implemented\n");

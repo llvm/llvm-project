@@ -3696,11 +3696,39 @@ enum ChainCallArgIdx {
 // The wave scratch offset register is used as the global base pointer.
 SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                                     SmallVectorImpl<SDValue> &InVals) const {
-  CallingConv::ID CallConv = CLI.CallConv;
-  bool IsChainCallConv = AMDGPU::isChainCC(CallConv);
-
   SelectionDAG &DAG = CLI.DAG;
+  CallingConv::ID CallConv = CLI.CallConv;
 
+  // Detect UB caused due to calling convention mismatches early to avoid
+  // debugging if errors occur later.
+  if (Function *CalledFn = CLI.CB->getCalledFunction()) {
+    if (CalledFn->getIntrinsicID() == Intrinsic::amdgcn_cs_chain) {
+      // This intrinsic handles calls to functions with specific calling
+      // conventions. These functions might have two valid calling conventions
+      // at a single callsite, requiring special handling.
+      if (Value *FnArg = CLI.CB->getArgOperand(0)) {
+        if (Function *WrappedFn = dyn_cast<Function>(FnArg)) {
+          switch (WrappedFn->getCallingConv()) {
+          case CallingConv::AMDGPU_CS_Chain:
+          case CallingConv::AMDGPU_CS_ChainPreserve:
+            break;
+          default:
+            return lowerUnhandledCall(
+                CLI, InVals,
+                "calling convention mismatch (undefined behavior) ");
+          }
+        }
+      }
+    } else {
+      CallingConv::ID CalledFnCC = CalledFn->getCallingConv();
+      if (CalledFnCC != CallConv) {
+        return lowerUnhandledCall(
+            CLI, InVals, "calling convention mismatch (undefined behavior) ");
+      }
+    }
+  }
+
+  bool IsChainCallConv = AMDGPU::isChainCC(CallConv);
   const SDLoc &DL = CLI.DL;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
