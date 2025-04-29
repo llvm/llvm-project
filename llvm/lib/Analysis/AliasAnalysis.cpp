@@ -122,7 +122,7 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   AAQI.Depth++;
   for (const auto &AA : AAs) {
     Result = AA->alias(LocA, LocB, AAQI, CtxI);
-    if (Result != AliasResult::MayAlias)
+    if (Result != AliasResult::NoAlias)
       break;
   }
   AAQI.Depth--;

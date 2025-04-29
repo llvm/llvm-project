@@ -30,10 +30,10 @@ define amdgpu_kernel void @Kernel_func(i8 %a, i32 %b, i32 %c, i32 %end_bit) {
 ; GCN-NEXT:    v_min_i32_e32 v4, 1, v4
 ; GCN-NEXT:    v_bfe_u32 v3, v3, 0, v4
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 1, v3
+; GCN-NEXT:    ds_write_b32 v1, v0
 ; GCN-NEXT:    v_sub_u32_e32 v4, v2, v3
 ; GCN-NEXT:    ds_read_u16 v3, v4
-; GCN-NEXT:    ds_write_b32 v1, v0
-; GCN-NEXT:    s_waitcnt lgkmcnt(1)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_u16_e32 v3, 1, v3
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, s1, v3
 ; GCN-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
