@@ -105,6 +105,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderPass(PR);
+  initializeX86SuppressAPXForRelocationPassPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -558,6 +559,8 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86CallFrameOptimization());
     addPass(createX86AvoidStoreForwardingBlocks());
   }
+
+  addPass(createX86SuppressAPXForRelocationPass());
 
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());

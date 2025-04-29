@@ -78,6 +78,7 @@ set(sources
   X86SpeculativeLoadHardening.cpp
   X86SpeculativeExecutionSideEffectSuppression.cpp
   X86Subtarget.cpp
+  X86SuppressAPXForReloc.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
