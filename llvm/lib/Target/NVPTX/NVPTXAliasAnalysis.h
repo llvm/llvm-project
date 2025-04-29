@@ -79,7 +79,7 @@ public:
 
 // Wrapper around ExternalAAWrapperPass so that the default
 // constructor gets the callback.
-// Note that NVPTXAA will run before BasicAA to for compile time considerations.
+// Note that NVPTXAA will run before BasicAA for compile time considerations.
 class NVPTXExternalAAWrapper : public ExternalAAWrapperPass {
 public:
   static char ID;

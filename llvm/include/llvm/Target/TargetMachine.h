@@ -396,7 +396,7 @@ public:
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
   virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
-  /// Allow the target to register early alias analyses(AA before basicAA) with
+  /// Allow the target to register early alias analyses (AA before BasicAA) with
   /// the AAManager for use with the new pass manager. Only affects the
   /// "default" AAManager.
   virtual void registerEarlyDefaultAliasAnalyses(AAManager &) {}
