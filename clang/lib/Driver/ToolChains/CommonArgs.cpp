@@ -1309,10 +1309,6 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
 
-  if (IsOffloadingHost &&
-      Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
-    CmdArgs.push_back("-lomptarget.devicertl");
-
   addArchSpecificRPath(TC, Args, CmdArgs);
 
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
@@ -1550,14 +1546,14 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     RequiredSymbols.push_back("__safestack_init");
   }
   if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
-    if (SanArgs.needsCfiRt())
+    if (SanArgs.needsCfiCrossDsoRt())
       StaticRuntimes.push_back("cfi");
-    if (SanArgs.needsCfiDiagRt())
+    if (SanArgs.needsCfiCrossDsoDiagRt())
       StaticRuntimes.push_back("cfi_diag");
   }
   if (SanArgs.linkCXXRuntimes() && !SanArgs.requiresMinimalRuntime() &&
       ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanCXXRt()) ||
-       SanArgs.needsCfiDiagRt())) {
+       SanArgs.needsCfiCrossDsoDiagRt())) {
     StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
   if (SanArgs.needsStatsRt()) {
@@ -2797,6 +2793,11 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   // Check all of the standard library search paths used by the compiler.
   for (const auto &LibPath : HostTC.getFilePaths())
     LibraryPaths.emplace_back(LibPath);
+
+  // Check the target specific library path for the triple as well.
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib", Triple.getTriple());
+  LibraryPaths.emplace_back(P);
 
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ

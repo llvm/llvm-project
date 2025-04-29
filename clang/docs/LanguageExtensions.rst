@@ -1000,6 +1000,7 @@ to ``float``; see below for more information on this emulation.
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
+  * SystemZ (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 

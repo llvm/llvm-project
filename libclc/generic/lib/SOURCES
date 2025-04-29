@@ -44,6 +44,7 @@ integer/abs.cl
 integer/abs_diff.cl
 integer/add_sat.cl
 integer/clz.cl
+integer/ctz.cl
 integer/hadd.cl
 integer/mad24.cl
 integer/mad_hi.cl

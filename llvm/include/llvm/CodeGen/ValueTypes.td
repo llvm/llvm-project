@@ -338,6 +338,8 @@ def amdgpuBufferFatPointer : ValueType<160, 234>;
 // FIXME: Remove this and the getPointerType() override if MVT::i82 is added.
 def amdgpuBufferStridedPointer : ValueType<192, 235>;
 
+def aarch64mfp8 : ValueType<8,  236>;  // 8-bit value in FPR (AArch64)
+
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy
 def MetadataVT : ValueType<0, 505> { // Metadata

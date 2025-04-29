@@ -22,8 +22,11 @@
 
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
+#include <chrono>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -100,7 +103,7 @@ enum PathFormat : unsigned { ePatFormatPath, ePathFormatURI };
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
   /// The ID of the debug adapter.
-  std::string adatperID;
+  std::string adapterID;
 
   /// The ID of the client using this adapter.
   std::optional<std::string> clientID;
@@ -113,7 +116,7 @@ struct InitializeRequestArguments {
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
-  std::optional<PathFormat> pathFormat = ePatFormatPath;
+  PathFormat pathFormat = ePatFormatPath;
 
   /// If true all line numbers are 1-based (default).
   std::optional<bool> linesStartAt1;
@@ -211,7 +214,85 @@ struct Configuration {
 
   /// LLDB commands executed when the debugging session ends.
   std::vector<std::string> terminateCommands;
+
+  /// Path to the executable.
+  ///
+  /// *NOTE:* When launching, either `launchCommands` or `program` must be
+  /// configured. If both are configured then `launchCommands` takes priority.
+  std::optional<std::string> program;
+
+  /// Target triple for the program (arch-vendor-os). If not set, inferred from
+  /// the binary.
+  std::optional<std::string> targetTriple;
+
+  /// Specify name of the platform to use for this target, creating the platform
+  /// if necessary.
+  std::optional<std::string> platformName;
 };
+
+/// lldb-dap specific launch arguments.
+struct LaunchRequestArguments {
+  /// Common lldb-dap configuration values for launching/attaching operations.
+  Configuration configuration;
+
+  /// If true, the launch request should launch the program without enabling
+  /// debugging.
+  bool noDebug = false;
+
+  /// Launch specific operations.
+  /// @{
+
+  /// LLDB commands executed to launch the program.
+  ///
+  /// *NOTE:* Either launchCommands or program must be configured.
+  ///
+  /// If set, takes priority over the 'program' when launching the target.
+  std::vector<std::string> launchCommands;
+
+  /// The program working directory.
+  std::optional<std::string> cwd;
+
+  /// An array of command line argument strings to be passed to the program
+  /// being launched.
+  std::vector<std::string> args;
+
+  /// Environment variables to set when launching the program. The format of
+  /// each environment variable string is "VAR=VALUE" for environment variables
+  /// with values or just "VAR" for environment variables with no values.
+  llvm::StringMap<std::string> env;
+
+  /// If set, then the client stub should detach rather than killing the debugee
+  /// if it loses connection with lldb.
+  bool detachOnError = false;
+
+  /// Disable ASLR (Address Space Layout Randomization) when launching the
+  /// process.
+  bool disableASLR = true;
+
+  /// Do not set up for terminal I/O to go to running process.
+  bool disableSTDIO = false;
+
+  /// Set whether to shell expand arguments to the process when launching.
+  bool shellExpandArguments = false;
+
+  /// Stop at the entry point of the program when launching a process.
+  bool stopOnEntry = false;
+
+  /// Launch the program inside an integrated terminal in the IDE. Useful for
+  /// debugging interactive command line programs.
+  bool runInTerminal = false;
+
+  /// Optional timeout for `runInTerminal` requests.
+  std::chrono::seconds timeout = std::chrono::seconds(30);
+
+  /// @}
+};
+bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
+              llvm::json::Path);
+
+/// Response to `launch` request. This is just an acknowledgement, so no body
+/// field is required.
+using LaunchResponseBody = VoidResponse;
 
 /// Arguments for `source` request.
 struct SourceArguments {
@@ -235,6 +316,66 @@ struct SourceResponseBody {
   std::optional<std::string> mimeType;
 };
 llvm::json::Value toJSON(const SourceResponseBody &);
+
+/// Arguments for `next` request.
+struct NextArguments {
+  /// Specifies the thread for which to resume execution for one step (of the
+  /// given granularity).
+  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, all other suspended threads are not resumed.
+  bool singleThread = false;
+
+  /// Stepping granularity. If no granularity is specified, a granularity of
+  /// `statement` is assumed.
+  SteppingGranularity granularity = eSteppingGranularityStatement;
+};
+bool fromJSON(const llvm::json::Value &, NextArguments &, llvm::json::Path);
+
+/// Response to `next` request. This is just an acknowledgement, so no
+/// body field is required.
+using NextResponse = VoidResponse;
+
+/// Arguments for `stepIn` request.
+struct StepInArguments {
+  /// Specifies the thread for which to resume execution for one step-into (of
+  /// the given granularity).
+  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, all other suspended threads are not resumed.
+  bool singleThread = false;
+
+  /// Id of the target to step into.
+  std::optional<uint64_t> targetId;
+
+  /// Stepping granularity. If no granularity is specified, a granularity of
+  /// `statement` is assumed.
+  SteppingGranularity granularity = eSteppingGranularityStatement;
+};
+bool fromJSON(const llvm::json::Value &, StepInArguments &, llvm::json::Path);
+
+/// Response to `stepIn` request. This is just an acknowledgement, so no
+/// body field is required.
+using StepInResponse = VoidResponse;
+
+/// Arguments for `stepOut` request.
+struct StepOutArguments {
+  /// Specifies the thread for which to resume execution for one step-out (of
+  /// the given granularity).
+  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, all other suspended threads are not resumed.
+  std::optional<bool> singleThread;
+
+  /// Stepping granularity. If no granularity is specified, a granularity of
+  /// `statement` is assumed.
+  SteppingGranularity granularity = eSteppingGranularityStatement;
+};
+bool fromJSON(const llvm::json::Value &, StepOutArguments &, llvm::json::Path);
+
+/// Response to `stepOut` request. This is just an acknowledgement, so no
+/// body field is required.
+using StepOutResponse = VoidResponse;
 
 } // namespace lldb_dap::protocol
 
