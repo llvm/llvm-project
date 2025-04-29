@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION fdim
-#define __CLC_BODY <clc/shared/binary_decl.inc>
+#include <clc/clc_convert.h>
+#include <clc/float/definitions.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fmax.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/relational/clc_select.h>
 
+#define __CLC_BODY <clc_fdim.inc>
 #include <clc/math/gentype.inc>
-
-#undef __CLC_BODY
-#undef __CLC_FUNCTION
