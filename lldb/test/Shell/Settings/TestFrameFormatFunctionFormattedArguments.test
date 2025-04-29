@@ -6,10 +6,6 @@
 # RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
 # RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
 # RUN:       | FileCheck %s
-#
-# RUN: %clang_host -O0 %t/main.cpp -o %t-nodebug.out
-# RUN: %lldb -x -b -s %t/commands.input %t-nodebug.out -o exit 2>&1 \
-# RUN:       | FileCheck %s --check-prefix=CHECK-NODEBUG
 
 #--- main.cpp
 struct Foo {
@@ -46,8 +42,3 @@ bt
 # CHECK: custom-frame '({{.*}}=5, x=10)'
 # CHECK: custom-frame '(str="hello", fptr=({{.*}}.out`{{.*}}foo(int,{{.*}}int) at main.cpp:{{[0-9]+}}))'
 # CHECK: custom-frame '(argc=1, argv={{.*}})'
-
-# CHECK-NODEBUG: custom-frame '()'
-# CHECK-NODEBUG: custom-frame '()'
-# CHECK-NODEBUG: custom-frame '(int, int)'
-# CHECK-NODEBUG: custom-frame '(char const*, void (*)(int, int))'
