@@ -1031,7 +1031,8 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return llvm::createStringError("Type has no child named '%s'", name.str().c_str());
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 // Dumping types

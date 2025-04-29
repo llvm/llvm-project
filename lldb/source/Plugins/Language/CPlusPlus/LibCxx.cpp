@@ -316,7 +316,8 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     return 0;
   if (name == "$$dereference$$")
     return 1;
-  return llvm::createStringError("Type has no child named '%s'",name.AsCString());
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -417,7 +418,8 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(

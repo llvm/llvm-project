@@ -1050,7 +1050,8 @@ public:
   bool MightHaveChildren() override { return false; }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 };
 

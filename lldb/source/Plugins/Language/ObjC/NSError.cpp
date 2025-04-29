@@ -169,7 +169,8 @@ public:
     static ConstString g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
 private:

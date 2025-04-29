@@ -351,11 +351,13 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
     m_name_toindex[name.GetCString()] = *index_or_err;
     return *index_or_err;
   } else if (!found_index && m_synth_filter_up == nullptr) {
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   } else if (found_index)
     return *found_index;
 
-  return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }

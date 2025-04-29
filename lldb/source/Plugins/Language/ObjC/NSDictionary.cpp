@@ -591,7 +591,8 @@ llvm::Expected<size_t> lldb_private::formatters::
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx == UINT32_MAX ||
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   return idx;
 }
 
@@ -725,7 +726,8 @@ llvm::Expected<size_t> lldb_private::formatters::
   const uint32_t idx = ExtractIndexFromString(item_name);
   if (idx == UINT32_MAX ||
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString(), idx);
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString(), idx);
   return idx;
 }
 
@@ -858,7 +860,8 @@ lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx == UINT32_MAX ||
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   return idx;
 }
 
@@ -970,7 +973,8 @@ llvm::Expected<size_t> lldb_private::formatters::
   static const ConstString g_zero("[0]");
   if (name == g_zero)
     return 0;
-  return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::
@@ -1058,7 +1062,8 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx == UINT32_MAX ||
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   return idx;
 }
 
@@ -1216,7 +1221,8 @@ llvm::Expected<size_t> lldb_private::formatters::Foundation1100::
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx == UINT32_MAX ||
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
-    return llvm::createStringError("Type has no child named '%s'", name.AsCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   return idx;
 }
 
