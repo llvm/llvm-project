@@ -17,17 +17,9 @@
 /* On various platforms, fall back to the system's float.h, which might have
  * additional definitions and/or implementation-defined values.
  */
-#if (defined(__APPLE__) || defined(__MINGW32__) || defined(_MSC_VER) ||        \
-     defined(_AIX) || defined(__musl__)) &&                                    \
+#if (defined(__MINGW32__) || defined(_MSC_VER) || defined(_AIX) ||             \
+     defined(__musl__)) &&                                                     \
     __STDC_HOSTED__ && __has_include_next(<float.h>)
-
-/* Prior to Apple's 10.7 SDK, float.h SDK header used to apply an extra level
- * of #include_next<float.h> to keep Metrowerks compilers happy. Avoid this
- * extra indirection.
- */
-#ifdef __APPLE__
-#define _FLOAT_H_
-#endif
 
 #  include_next <float.h>
 
