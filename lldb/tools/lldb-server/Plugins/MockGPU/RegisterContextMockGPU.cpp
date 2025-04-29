@@ -116,12 +116,13 @@ static const RegisterSet g_reg_sets[] = {
 
 /// Define all of the information about all registers. The register info structs
 /// are accessed by the LLDB register numbers, which are defined above.
+#define REG_OFFSET(Reg) offsetof(RegisterContextMockGPU::RegisterContext, Reg)
 static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
     {
         "R0",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        0,             // RegisterInfo::byte_offset
+        REG_OFFSET(R0),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -140,7 +141,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "R1",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        8,             // RegisterInfo::byte_offset
+        REG_OFFSET(R1),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -159,7 +160,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "R2",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        16,            // RegisterInfo::byte_offset
+        REG_OFFSET(R2),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -178,7 +179,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "R3",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        24,            // RegisterInfo::byte_offset
+        REG_OFFSET(R3),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -197,7 +198,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "R4",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        32,            // RegisterInfo::byte_offset
+        REG_OFFSET(R4),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -216,7 +217,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "R5",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        40,            // RegisterInfo::byte_offset
+        REG_OFFSET(R5),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -235,7 +236,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "R6",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        48,            // RegisterInfo::byte_offset
+        REG_OFFSET(R6),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -254,7 +255,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "R7",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        56,            // RegisterInfo::byte_offset
+        REG_OFFSET(R7),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -273,7 +274,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "SP",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        64,            // RegisterInfo::byte_offset
+        REG_OFFSET(SP),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -292,7 +293,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "FP",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        72,            // RegisterInfo::byte_offset
+        REG_OFFSET(FP),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -311,7 +312,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "PC",          // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        80,            // RegisterInfo::byte_offset
+        REG_OFFSET(PC),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -330,7 +331,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "Flags",       // RegisterInfo::name
         nullptr,       // RegisterInfo::alt_name
         8,             // RegisterInfo::byte_size
-        88,            // RegisterInfo::byte_offset
+        REG_OFFSET(Flags),// RegisterInfo::byte_offset
         eEncodingUint, // RegisterInfo::encoding
         eFormatHex,    // RegisterInfo::format
         {
@@ -349,7 +350,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V0",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        96,                    // RegisterInfo::byte_offset
+        REG_OFFSET(V0),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -368,7 +369,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V1",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        104,                   // RegisterInfo::byte_offset
+        REG_OFFSET(V1),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -387,7 +388,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V2",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        112,                   // RegisterInfo::byte_offset
+        REG_OFFSET(V2),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -406,7 +407,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V3",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        120,                   // RegisterInfo::byte_offset
+        REG_OFFSET(V3),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -425,7 +426,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V4",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        128,                   // RegisterInfo::byte_offset
+        REG_OFFSET(V4),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -444,7 +445,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V5",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        136,                   // RegisterInfo::byte_offset
+        REG_OFFSET(V5),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -463,7 +464,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V6",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        144,                   // RegisterInfo::byte_offset
+        REG_OFFSET(V6),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -482,7 +483,7 @@ static const RegisterInfo g_reg_infos[LLDBRegNum::kNumRegs] = {
         "V7",                  // RegisterInfo::name
         nullptr,               // RegisterInfo::alt_name
         8,                     // RegisterInfo::byte_size
-        152,                   // RegisterInfo::byte_offset
+        REG_OFFSET(V7),        // RegisterInfo::byte_offset
         eEncodingVector,       // RegisterInfo::encoding
         eFormatVectorOfUInt32, // RegisterInfo::format
         {
@@ -509,20 +510,20 @@ RegisterContextMockGPU::RegisterContextMockGPU(
 void RegisterContextMockGPU::InitRegisters() {
   for (size_t i = 0; i < kNumRegs; ++i)
     m_regs.data[i] = 0;
-  m_regs_valid.resize(kNumRegs, false);
+  m_reg_value_is_valid.resize(kNumRegs, false);
 }
 
 void RegisterContextMockGPU::InvalidateAllRegisters() {
   // Do what ever book keeping we need to do to indicate that all register
   // values are now invalid.
   for (uint32_t i = 0; i < kNumRegs; ++i)
-    m_regs_valid[i] = false;
+    m_reg_value_is_valid[i] = false;
 }
 
 Status RegisterContextMockGPU::ReadRegs() {
   // Fill all registers with unique values.
   for (uint32_t i = 0; i < kNumRegs; ++i) {
-    m_regs_valid[i] = true;
+    m_reg_value_is_valid[i] = true;
     m_regs.data[i] = i;
   }
   return Status();
@@ -556,7 +557,7 @@ Status RegisterContextMockGPU::ReadRegister(const RegisterInfo *reg_info,
                                             RegisterValue &reg_value) {
   Status error;
   const uint32_t lldb_reg_num = reg_info->kinds[eRegisterKindLLDB];
-  if (!m_regs_valid[lldb_reg_num])
+  if (!m_reg_value_is_valid[lldb_reg_num])
     error = ReadRegs();
   if (error.Fail())
     return error;
@@ -572,7 +573,7 @@ Status RegisterContextMockGPU::WriteRegister(const RegisterInfo *reg_info,
   if (!success)
     return Status::FromErrorString("register write failed");
   m_regs.data[lldb_reg_num] = new_value;
-  m_regs_valid[lldb_reg_num] = true;
+  m_reg_value_is_valid[lldb_reg_num] = true;
   return Status();
 }
 

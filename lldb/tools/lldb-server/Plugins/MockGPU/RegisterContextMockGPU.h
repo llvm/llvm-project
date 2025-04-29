@@ -43,15 +43,8 @@ public:
   std::vector<uint32_t>
   GetExpeditedRegisters(ExpeditedRegs expType) const override;
 
-private:
-  void InitRegisters();
-  void InvalidateAllRegisters();
-  Status ReadRegs();
-
-  // All mock GPU registers are contained in this buffer.
-  union {
-    uint64_t data[20]; // Allow for indexed access to each register value.
-    struct {           // Define a struct for each register value.
+    // A storage stucture for all registers;
+    struct RegisterContext {
       uint64_t R0;
       uint64_t R1;
       uint64_t R2;
@@ -72,9 +65,22 @@ private:
       uint64_t V5;
       uint64_t V6;
       uint64_t V7;
-    } regs;
+    };
+  
+private:
+  void InitRegisters();
+  void InvalidateAllRegisters();
+  Status ReadRegs();
+
+
+  // All mock GPU registers are contained in this buffer.
+  union {
+    /// Allow for indexed access to each register value.
+    uint64_t data[sizeof(RegisterContext)/sizeof(uint64_t)];
+    /// Allow for direct access to the register values by name.
+    RegisterContext regs;
   } m_regs;
-  std::vector<bool> m_regs_valid;
+  std::vector<bool> m_reg_value_is_valid;
 };
 
 } // namespace lldb_server
