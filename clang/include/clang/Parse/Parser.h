@@ -94,7 +94,7 @@ class Parser : public CodeCompletionHandler {
   StackExhaustionHandler StackHandler;
 
   /// ScopeCache - Cache scopes to reduce malloc traffic.
-  enum { ScopeCacheSize = 16 };
+  static constexpr int ScopeCacheSize = 16;
   unsigned NumCachedScopes;
   Scope *ScopeCache[ScopeCacheSize];
 
