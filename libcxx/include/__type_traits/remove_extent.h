@@ -24,8 +24,14 @@ struct _LIBCPP_NO_SPECIALIZATIONS remove_extent {
   using type _LIBCPP_NODEBUG = __remove_extent(_Tp);
 };
 
+#  if defined(_LIBCPP_COMPILER_GCC)
+template <class _Tp>
+using __remove_extent_t = typename remove_extent<_Tp>::type;
+#  else
 template <class _Tp>
 using __remove_extent_t _LIBCPP_NODEBUG = __remove_extent(_Tp);
+#  endif //  defined(_LIBCPP_COMPILER_GCC)
+
 #else
 template <class _Tp>
 struct remove_extent {

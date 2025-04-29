@@ -26,8 +26,18 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if __has_builtin(__decay)
+#  if defined(_LIBCPP_COMPILER_GCC)
+template <class _Tp>
+struct __decay_gcc {
+  using type = __decay(_Tp);
+};
+
+template <class _Tp>
+using __decay_t _LIBCPP_NODEBUG = typename __decay_gcc<_Tp>::type;
+#  else
 template <class _Tp>
 using __decay_t _LIBCPP_NODEBUG = __decay(_Tp);
+#  endif //  defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS decay {
