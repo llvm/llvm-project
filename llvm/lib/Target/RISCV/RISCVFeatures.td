@@ -1634,6 +1634,14 @@ def FeatureVendorXSfsclic
     : RISCVExperimentalExtension<0, 1,
                                  "SiFive CLIC Supervisor-mode CSRs">;
 
+def FeatureVendorXSfvfofp4min
+    : RISCVExtension<0, 1, "SiFive Vector OFP4 Conversion Instruction",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfofp4min
+    : Predicate<"Subtarget->hasVendorXSfvfofp4min()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfvfofp4min),
+                          "'XSfvfofp4min' (SiFive Vector OFP4 Conversion Instruction)">;
+
 // Core-V Extensions
 
 def FeatureVendorXCVelw

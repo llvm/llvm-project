@@ -681,6 +681,10 @@ The current vendor extensions supported are:
 : SpacemiT defines the [Integrated Matrix Extension (IME) specification](https://github.com/spacemit-com/docs-ai/blob/main/en/architecture/ime_extension.md)
   LLVM implements the hardware-adapted subset for SpacemiT A100
 
+`Xsfvfofp4min`
+
+: LLVM implements the [0.1 draft specification](https://www.sifive.com/document-file/ofp4-conversion-instruction-xsfvfofp4min-extension) by SiFive.
+
 ## Experimental C Intrinsics
 
 In some cases an extension is non-experimental but the C intrinsics for that

@@ -210,3 +210,11 @@
 // RUN:   -march=rv64i_zve32x_xsfmmbase -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XSFMMBASE %s
 // CHECK-XSFMMBASE: __riscv_xsfmmbase  6000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32i_xsfvfofp4min0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFOFP4MIN-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64i_xsfvfofp4min0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFOFP4MIN-EXT %s
+// CHECK-XSFVFOFP4MIN-EXT: __riscv_xsfvfofp4min 1000{{$}}
