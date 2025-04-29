@@ -8699,7 +8699,6 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
     StoreInst *XSt = Builder.CreateStore(Expr, X.Var, X.IsVolatile);
     XSt->setAtomic(AO);
   } else if (XElemTy->isStructTy()) {
-
     LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
     const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
     unsigned LoadSize =
