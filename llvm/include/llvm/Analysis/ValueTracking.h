@@ -542,9 +542,8 @@ bool isNotCrossLaneOperation(const Instruction *I);
 /// If \p UseVariableInfo is true, the information from non-constant operands
 /// will be taken into account.
 ///
-/// If \p IgnoreUBImplyingAttrs is true, UB-implying attributes and metadata
-/// will be ignored. The caller is responsible for correctly propagating them
-/// after hoisting.
+/// If \p IgnoreUBImplyingAttrs is true, UB-implying attributes will be ignored.
+/// The caller is responsible for correctly propagating them after hoisting.
 ///
 /// This method can return true for instructions that read memory;
 /// for such instructions, moving them may change the resulting value.
