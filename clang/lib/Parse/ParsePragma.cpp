@@ -2350,11 +2350,11 @@ void PragmaClangSectionHandler::HandlePragma(Preprocessor &PP,
     if (!PP.LexStringLiteral(Tok, SecName, "pragma clang section", false))
       return;
 
-    Actions.ActOnPragmaClangSection(
-        PragmaLocation,
-        (SecName.size() ? Sema::PragmaClangSectionAction::PCSA_Set
-                        : Sema::PragmaClangSectionAction::PCSA_Clear),
-        SecKind, SecName);
+    Actions.ActOnPragmaClangSection(PragmaLocation,
+                                    (SecName.size()
+                                         ? PragmaClangSectionAction::Set
+                                         : PragmaClangSectionAction::Clear),
+                                    SecKind, SecName);
   }
 }
 
