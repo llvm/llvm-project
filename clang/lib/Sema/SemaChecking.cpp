@@ -1986,7 +1986,7 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
     if (TI.getTriple().getOS() != llvm::Triple::OSType::AMDHSA)
-      return SPIRV().CheckSPIRVBuiltinFunctionCall(BuiltinID, TheCall);
+      return SPIRV().CheckSPIRVBuiltinFunctionCall(TI, BuiltinID, TheCall);
     return false;
   case llvm::Triple::systemz:
     return SystemZ().CheckSystemZBuiltinFunctionCall(BuiltinID, TheCall);

@@ -12741,6 +12741,8 @@ def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
 
 // SPIR-V builtins diagnostics
+def err_spirv_invalid_target : Error<
+   "builtin requires %select{spirv|spirv32 or spirv64}0 target">;
 def err_spirv_builtin_generic_cast_invalid_arg : Error<
   "expecting a pointer argument to the generic address space">;
 def err_spirv_enum_not_int : Error<

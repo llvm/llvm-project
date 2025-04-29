@@ -10,6 +10,7 @@
 
 #include "clang/Sema/SemaSPIRV.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Sema.h"
 
 // SPIR-V enumerants. Enums have only the required entries, see SPIR-V specs for
@@ -138,8 +139,21 @@ static bool checkGenericCastToPtr(Sema &SemaRef, CallExpr *Call) {
   return false;
 }
 
-bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
+bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
+                                              unsigned BuiltinID,
                                               CallExpr *TheCall) {
+  if (BuiltinID >= SPIRV::FirstVKBuiltin && BuiltinID <= SPIRV::LastVKBuiltin &&
+      TI.getTriple().getArch() != llvm::Triple::spirv) {
+    SemaRef.Diag(TheCall->getBeginLoc(), diag::err_spirv_invalid_target) << 0;
+    return true;
+  }
+  if (BuiltinID >= SPIRV::FirstCLBuiltin && BuiltinID <= SPIRV::LastTSBuiltin &&
+      TI.getTriple().getArch() != llvm::Triple::spirv32 &&
+      TI.getTriple().getArch() != llvm::Triple::spirv64) {
+    SemaRef.Diag(TheCall->getBeginLoc(), diag::err_spirv_invalid_target) << 1;
+    return true;
+  }
+
   switch (BuiltinID) {
   case SPIRV::BI__builtin_spirv_distance: {
     if (SemaRef.checkArgCount(TheCall, 2))
