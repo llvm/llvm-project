@@ -41,6 +41,7 @@ math/clc_exp2.cl
 math/clc_expm1.cl
 math/clc_exp_helper.cl
 math/clc_fabs.cl
+math/clc_fdim.cl
 math/clc_fma.cl
 math/clc_fmax.cl
 math/clc_fmin.cl
