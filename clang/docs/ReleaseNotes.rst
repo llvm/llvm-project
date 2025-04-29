@@ -470,6 +470,7 @@ Bug Fixes in This Version
 - Fixed a crash when ``#embed`` appears as a part of a failed constant
   evaluation. The crashes were happening during diagnostics emission due to
   unimplemented statement printer. (#GH132641)
+- Fixed visibility calculation for template functions. (#GH103477)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
