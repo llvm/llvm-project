@@ -385,6 +385,54 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
 
+  if (BC.IsLinuxKernel && opts::Instrument && BC.isX86()) {
+    if (opts::Instrument)
+      Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+
+    Manager.registerPass(std::make_unique<NormalizeCFG>(PrintNormalized));
+    // This pass syncs local branches with CFG. If any of the following
+    // passes breaks the sync - they either need to re-run the pass or
+    // fix branches consistency internally.
+    Manager.registerPass(
+        std::make_unique<FixupBranches>(PrintAfterBranchFixup));
+    // Print final dyno stats right while CFG and instruction analysis are
+    // intact.
+    Manager.registerPass(std::make_unique<DynoStatsPrintPass>(
+                             "after all optimizations before SCTC and FOP"),
+                         opts::PrintDynoStats || opts::DynoStatsAll);
+
+    if (BC.isAArch64()) {
+      Manager.registerPass(
+          std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
+
+      // Tighten branches according to offset differences between branch and
+      // targets. No extra instructions after this pass, otherwise we may have
+      // relocations out of range and crash during linking.
+      Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+    }
+
+    // This pass should always run last.*
+    Manager.registerPass(std::make_unique<FinalizeFunctions>(PrintFinalized));
+    // Assign each function an output section.
+    Manager.registerPass(std::make_unique<AssignSections>());
+
+    // Patch original function entries
+    if (BC.HasRelocations)
+      Manager.registerPass(std::make_unique<PatchEntries>());
+
+    // In non-relocation mode, mark functions that do not fit into their
+    // original space as non-simple if we have to (e.g. for correct debug info
+    // update). NOTE: this pass depends on finalized code.
+    if (!BC.HasRelocations)
+      Manager.registerPass(std::make_unique<CheckLargeFunctions>(NeverPrint));
+
+    Manager.registerPass(std::make_unique<LowerAnnotations>(NeverPrint));
+    // Check for dirty state of MCSymbols caused by running calculateEmittedSize
+    // in parallel and restore them
+    Manager.registerPass(std::make_unique<CleanMCState>(NeverPrint));
+    return Manager.runPasses();
+  }
+
   if (opts::Instrument)
     Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
   else if (opts::Hugify)

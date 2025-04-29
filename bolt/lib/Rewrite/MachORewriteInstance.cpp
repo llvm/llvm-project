@@ -555,7 +555,8 @@ void MachORewriteInstance::adjustCommandLineOptions() {
     opts::ForcePatch = true;
   opts::JumpTables = JTS_MOVE;
   opts::InstrumentCalls = false;
-  opts::RuntimeInstrumentationLib = "libbolt_rt_instr_osx.a";
+  if (opts::RuntimeInstrumentationLib.empty())
+    opts::RuntimeInstrumentationLib = "libbolt_rt_instr_osx.a";
 }
 
 void MachORewriteInstance::run() {

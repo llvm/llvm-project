@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -68,7 +69,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       MustPatch = true;
 
     // Check if we can skip patching the function.
-    if (!MustPatch && !Function.hasEHRanges() &&
+    if (!MustPatch && !Function.hasEHRanges() && !opts::Instrument &&
         Function.getSize() < PatchThreshold)
       continue;
 

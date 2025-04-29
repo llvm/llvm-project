@@ -27,7 +27,7 @@ namespace opts {
 cl::opt<std::string> RuntimeInstrumentationLib(
     "runtime-instrumentation-lib",
     cl::desc("specify path of the runtime instrumentation library"),
-    cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
+    cl::init(""), cl::cat(BoltOptCategory));
 
 extern cl::opt<bool> InstrumentationFileAppendPID;
 extern cl::opt<bool> ConservativeInstrumentation;
@@ -42,6 +42,11 @@ extern cl::opt<JumpTableSupportLevel> JumpTables;
 
 void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
     const BinaryContext &BC) const {
+
+  if (opts::RuntimeInstrumentationLib.empty())
+    opts::RuntimeInstrumentationLib =
+        BC.IsLinuxKernel ? "libbolt_rt_instr_linux.a" : "libbolt_rt_instr.a";
+
   if (!BC.HasRelocations) {
     errs() << "BOLT-ERROR: instrumentation runtime libraries require "
               "relocations\n";
@@ -51,6 +56,10 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
     opts::JumpTables = JTS_MOVE;
     outs() << "BOLT-INFO: forcing -jump-tables=move for instrumentation\n";
   }
+
+  if (BC.IsLinuxKernel)
+    return;
+
   if (!BC.StartFunctionAddress) {
     errs() << "BOLT-ERROR: instrumentation runtime libraries require a known "
               "entry point of "
@@ -191,6 +200,9 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
     TablesSection->setAlignment(llvm::Align(BC.RegularPageSize));
     Streamer.switchSection(TablesSection);
     emitString("__bolt_instr_tables", buildTables(BC));
+  } else {
+    emitString("__bolt_instr_tables",
+               "To avoid \"out of range of Page21 fixup\"");
   }
 }
 
@@ -202,6 +214,11 @@ void InstrumentationRuntimeLibrary::link(
 
   if (BC.isMachO())
     return;
+
+  if (BC.IsLinuxKernel) {
+    emitTablesAsELFNote(BC);
+    return;
+  }
 
   std::optional<BOLTLinker::SymbolInfo> FiniSymInfo =
       Linker.lookupSymbolInfo("__bolt_instr_fini");

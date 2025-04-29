@@ -529,7 +529,8 @@ Error RewriteInstance::discoverStorage() {
   auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
   const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
 
-  BC->StartFunctionAddress = Obj.getHeader().e_entry;
+  if (!BC->IsLinuxKernel)
+    BC->StartFunctionAddress = Obj.getHeader().e_entry;
 
   NextAvailableAddress = 0;
   uint64_t NextAvailableOffset = 0;
@@ -569,8 +570,10 @@ Error RewriteInstance::discoverStorage() {
     }
   }
 
-  if (BC->IsLinuxKernel)
+  if (BC->IsLinuxKernel) {
+    BC->StartFunctionAddress.reset();
     BC->outs() << "BOLT-INFO: Linux kernel binary detected\n";
+  }
 
   for (const SectionRef &Section : InputFile->sections()) {
     Expected<StringRef> SectionNameOrErr = Section.getName();
@@ -5211,6 +5214,14 @@ void RewriteInstance::updateELFSymbolTable(
   if (opts::HotData && !NumHotDataSymsUpdated) {
     AddEmittedSymbol("__hot_data_start");
     AddEmittedSymbol("__hot_data_end");
+  }
+
+  if (BC->IsLinuxKernel && opts::Instrument) {
+    AddEmittedSymbol("__bolt_instr_locations");
+    AddEmittedSymbol("__bolt_num_counters");
+    AddEmittedSymbol("__bolt_instr_num_ind_calls");
+    AddEmittedSymbol("__bolt_instr_num_ind_targets");
+    AddEmittedSymbol("__bolt_instr_num_funcs");
   }
 
   // Put local symbols at the beginning.
