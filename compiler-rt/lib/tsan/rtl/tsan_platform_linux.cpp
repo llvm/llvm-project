@@ -292,8 +292,12 @@ static void ReExecIfNeeded(bool ignore_heap) {
     } else {
       Printf(
           "FATAL: ThreadSanitizer: memory layout is incompatible, "
-          "even though ASLR is disabled.\n"
-          "Please file a bug.\n");
+          "even though ASLR is disabled.\n");
+      Printf(
+          "FATAL: This error may occur for programs that use GPU libraries.");
+      Printf(
+          "FATAL: If your program does not use GPU libraries, please file a "
+          "TSan bug.\n");
       DumpProcessMap();
       Die();
     }
