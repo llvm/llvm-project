@@ -21,6 +21,7 @@ static int g_verbose = 0;
 #include <cstdio>
 #include <cstdlib>
 #include <mach/mach.h>
+#include <mutex>
 #include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
