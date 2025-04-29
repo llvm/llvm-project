@@ -2111,24 +2111,30 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
                                      const int64_t &zp,
                                      const std::string &operand) {
   bool isInputZp = (operand == "Input");
-
   bool tensorUnsigned =
-      isInputZp ? op.getInputUnsigned() : op.getOutputUnsigned();
+    isInputZp ? op.getInputUnsigned() : op.getOutputUnsigned();
   StringRef tensorName = isInputZp ? "input" : "output";
-
   Type zpElemType = getElementTypeOrSelf(zpVal);
 
   if (zp != 0) {
-    if (!zpElemType.isInteger(8) &&
-        !(zpElemType.isInteger(16) && tensorUnsigned)) {
-      return op.emitOpError()
-             << "expect " << tensorName << "_zp of 0, got " << zp;
+    bool validType = zpElemType.isInteger(8);
+
+    if (tensorUnsigned && zpElemType.isInteger(8)) {
+      validType = true;
     }
-    if (zpElemType.isInteger(16) && tensorUnsigned &&
-        zp != static_cast<int16_t>(32768)) {
-      return op.emitOpError() << "expect " << tensorName
-                              << "_zp of 0 or 32768 for unsigned int16 "
-                              << tensorName << ", got " << zp;
+
+    if (zpElemType.isInteger(16) && tensorUnsigned) {
+      validType = true;
+      if (zp != 32768) {
+        return op.emitOpError() << "expect " << tensorName
+                << "_zp of 0 or 32768 for unsigned int16 "
+                << tensorName << ", got " << zp;
+      }
+    }
+
+    if (!validType) {
+      return op.emitOpError() 
+              << "expect " << tensorName << "_zp of 0, got " << zp;
     }
   }
 
