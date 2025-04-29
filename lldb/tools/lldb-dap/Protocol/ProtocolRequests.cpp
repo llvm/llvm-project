@@ -261,6 +261,37 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          parseEnv(Params, LRA.env, P) && parseTimeout(Params, LRA.timeout, P);
 }
 
+bool fromJSON(const llvm::json::Value &Params, SetVariableArguments &SVA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("variablesReference", SVA.variablesReference) &&
+         O.map("name", SVA.name) && O.map("value", SVA.value) &&
+         O.mapOptional("format", SVA.format);
+}
+
+llvm::json::Value toJSON(const SetVariableResponseBody &SVR) {
+  json::Object Body{{"value", SVR.value}};
+  if (SVR.type.has_value())
+    Body.insert({"type", SVR.type});
+
+  if (SVR.variablesReference.has_value())
+    Body.insert({"variablesReference", SVR.variablesReference});
+
+  if (SVR.namedVariables.has_value())
+    Body.insert({"namedVariables", SVR.namedVariables});
+
+  if (SVR.indexedVariables.has_value())
+    Body.insert({"indexedVariables", SVR.indexedVariables});
+
+  if (SVR.memoryReference.has_value())
+    Body.insert({"memoryReference", SVR.memoryReference});
+
+  if (SVR.valueLocationReference.has_value())
+    Body.insert({"valueLocationReference", SVR.valueLocationReference});
+
+  return llvm::json::Value(std::move(Body));
+}
+
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("source", SA.source) &&
