@@ -44,5 +44,3 @@
 // ERR-AARCH64_32: error: unsupported argument 'small' to option '-mcmodel=' for target 'aarch64_32-unknown-linux'
 
 // ERR-LOONGARCH64-PLT-EXTREME: error: invalid argument '-mcmodel=extreme' not allowed with '-fplt'
-
-// CHECK: error: unsupported argument 'tiny' to option '-mcmodel=' for target '{{.*}}'
