@@ -181,10 +181,17 @@ static void upcastI8AllocasAndUses(Instruction &I,
     if (!Load)
       continue;
     for (User *LU : Load->users()) {
-      auto *Cast = dyn_cast<CastInst>(LU);
-      if (!Cast)
+      Type *Ty = nullptr;
+      if (auto *Cast = dyn_cast<CastInst>(LU))
+        Ty = Cast->getType();
+      if (CallInst *CI = dyn_cast<CallInst>(LU)) {
+        if (CI->getIntrinsicID() == Intrinsic::memset)
+          Ty = Type::getInt32Ty(CI->getContext());
+      }
+
+      if (!Ty)
         continue;
-      Type *Ty = Cast->getType();
+
       if (!SmallestType ||
           Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
         SmallestType = Ty;
@@ -240,8 +247,9 @@ downcastI64toI32InsertExtractElements(Instruction &I,
   }
 }
 
-void emitMemset(IRBuilder<> &Builder, Value *Dst, Value *Val,
-                ConstantInt *SizeCI) {
+void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
+                         ConstantInt *SizeCI,
+                         DenseMap<Value *, Value *> &ReplacedValues) {
   LLVMContext &Ctx = Builder.getContext();
   [[maybe_unused]] DataLayout DL =
       Builder.GetInsertBlock()->getModule()->getDataLayout();
@@ -266,9 +274,19 @@ void emitMemset(IRBuilder<> &Builder, Value *Dst, Value *Val,
   assert(OrigSize == ElemSize * Size && "Size in bytes must match");
 
   Value *TypedVal = Val;
-  if (Val->getType() != ElemTy)
-    TypedVal = Builder.CreateIntCast(Val, ElemTy,
-                                     false); // Or use CreateBitCast for float
+
+  if (Val->getType() != ElemTy) {
+    // Note for i8 replacements if we know them we should use them.
+    // Further if this is a constant ReplacedValues will return null
+    // so we will stick to TypedVal = Val
+    if (ReplacedValues[Val])
+      TypedVal = ReplacedValues[Val];
+    // This case Val is a ConstantInt so the cast folds away.
+    // However if we don't do the cast the store below ends up being
+    // an i8.
+    else
+      TypedVal = Builder.CreateIntCast(Val, ElemTy, false);
+  }
 
   for (uint64_t I = 0; I < Size; ++I) {
     Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
@@ -279,7 +297,7 @@ void emitMemset(IRBuilder<> &Builder, Value *Dst, Value *Val,
 
 static void removeMemSet(Instruction &I,
                          SmallVectorImpl<Instruction *> &ToRemove,
-                         DenseMap<Value *, Value *>) {
+                         DenseMap<Value *, Value *> &ReplacedValues) {
   if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     Intrinsic::ID ID = CI->getIntrinsicID();
     if (ID == Intrinsic::memset) {
@@ -289,7 +307,7 @@ static void removeMemSet(Instruction &I,
       [[maybe_unused]] ConstantInt *Size =
           dyn_cast<ConstantInt>(CI->getArgOperand(2));
       assert(Size && "Expected Size to be a ConstantInt");
-      emitMemset(Builder, Dst, Val, Size);
+      emitMemsetExpansion(Builder, Dst, Val, Size, ReplacedValues);
       ToRemove.push_back(CI);
     }
   }
@@ -322,11 +340,11 @@ private:
       LegalizationPipeline;
 
   void initializeLegalizationPipeline() {
-    LegalizationPipeline.push_back(removeMemSet);
     LegalizationPipeline.push_back(upcastI8AllocasAndUses);
     LegalizationPipeline.push_back(fixI8UseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
     LegalizationPipeline.push_back(legalizeFreeze);
+    LegalizationPipeline.push_back(removeMemSet);
   }
 };
 
