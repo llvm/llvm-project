@@ -10,8 +10,8 @@
 #include <clc/internal/clc.h>
 #include <clc/math/clc_floor.h>
 #include <clc/math/clc_fmin.h>
-#include <clc/relational/clc_isnan.h>
 #include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
 
 #define __CLC_BODY <clc_fract.inc>
 #include <clc/math/gentype.inc>
