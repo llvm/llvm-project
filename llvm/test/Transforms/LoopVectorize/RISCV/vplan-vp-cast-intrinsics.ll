@@ -8,7 +8,7 @@ define void @vp_sext(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
 ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 ;
-; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
+; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -62,7 +62,7 @@ define void @vp_zext(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
 ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 ;
-; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
+; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -114,7 +114,7 @@ define void @vp_trunc(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
 ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 ;
-; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4,vscale x 8},UF={1}' {
+; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -166,7 +166,7 @@ define void @vp_fpext(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
 ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 ;
-; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
+; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -218,7 +218,7 @@ define void @vp_fptrunc(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
 ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 ;
-; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
+; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count

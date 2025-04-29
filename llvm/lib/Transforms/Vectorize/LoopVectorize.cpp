@@ -4124,14 +4124,6 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
       llvm::bit_floor(WidestRegister.getKnownMinValue() / WidestType),
       ComputeScalableMaxVF);
 
-  // For loops with extend operations e.g. zext, sext etc., limiting the max VF
-  // based on widest type inhibits considering higher VFs even though
-  // vectorizing with higher VF might be profitable. In such cases, we should
-  // limit the max VF based on smallest type and the decision whether a
-  // particular VF is beneficial or not be left to cost model.
-  if (WidestType != SmallestType)
-    MaximizeBandwidth = true;
-
   MaxVectorElementCount = MinVF(MaxVectorElementCount, MaxSafeVF);
   LLVM_DEBUG(dbgs() << "LV: The Widest register safe to use is: "
                     << (MaxVectorElementCount * WidestType) << " bits.\n");
@@ -4179,7 +4171,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   ElementCount MaxVF = MaxVectorElementCount;
   if (MaximizeBandwidth ||
       (MaximizeBandwidth.getNumOccurrences() == 0 &&
-       (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
+       (TTI.shouldMaximizeVectorBandwidth(RegKind, WidestType, SmallestType) ||
         (UseWiderVFIfCallVariantsPresent && Legal->hasVectorCallVariants())))) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),

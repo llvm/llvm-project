@@ -539,8 +539,9 @@ public:
   std::optional<unsigned> getVScaleForTuning() const { return std::nullopt; }
   bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
 
-  bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+                                     const unsigned WidestType,
+                                     const unsigned SmallestType) const {
     return false;
   }
 

@@ -362,10 +362,15 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
+    TargetTransformInfo::RegisterKind K, const unsigned WidestType,
+    const unsigned SmallestType) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
-  return (K == TargetTransformInfo::RGK_FixedWidthVector &&
-          ST->isNeonAvailable());
+  // For loops with extend operations e.g. zext, sext etc., limiting the max VF
+  // based on widest type inhibits considering higher VFs even though
+  // vectorizing with higher VF might be profitable. In such cases, we should
+  // limit the max VF based on smallest type and the decision whether a
+  // particular VF is beneficial or not be left to cost model.
+  return WidestType != SmallestType;
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper

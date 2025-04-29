@@ -35,9 +35,9 @@ define void @example1() nounwind uwtable ssp {
 }
 
 ;CHECK-LABEL: @example10b(
-;CHECK: load <8 x i16>
-;CHECK: sext <8 x i16>
-;CHECK: store <8 x i32>
+;CHECK: load <4 x i16>
+;CHECK: sext <4 x i16>
+;CHECK: store <4 x i32>
 ;CHECK: ret void
 define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) nounwind uwtable ssp {
   br label %1

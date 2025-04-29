@@ -795,8 +795,9 @@ bool TargetTransformInfo::isVScaleKnownToBeAPowerOfTwo() const {
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  return TTIImpl->shouldMaximizeVectorBandwidth(K);
+    TargetTransformInfo::RegisterKind K, const unsigned WidestType,
+    const unsigned SmallestType) const {
+  return TTIImpl->shouldMaximizeVectorBandwidth(K, WidestType, SmallestType);
 }
 
 ElementCount TargetTransformInfo::getMinimumVF(unsigned ElemWidth,

@@ -503,18 +503,18 @@ define void @dont_vectorize_with_minsize() {
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP4]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
-; DEFAULT-NEXT:    [[TMP6:%.*]] = mul nsw <8 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; DEFAULT-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP9]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP10]], align 2
-; DEFAULT-NEXT:    [[TMP7:%.*]] = trunc <8 x i32> [[TMP6]] to <8 x i16>
-; DEFAULT-NEXT:    [[TMP8:%.*]] = add <8 x i16> [[TMP7]], [[WIDE_LOAD2]]
-; DEFAULT-NEXT:    store <8 x i16> [[TMP8]], ptr [[TMP10]], align 2
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 8
+; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP6]] to <4 x i16>
+; DEFAULT-NEXT:    [[TMP11:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
+; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -550,18 +550,18 @@ define void @dont_vectorize_with_minsize() {
 ; OPTSIZE-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
 ; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
+; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
 ; OPTSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
-; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <8 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
 ; OPTSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP7]], align 2
-; OPTSIZE-NEXT:    [[TMP9:%.*]] = trunc <8 x i32> [[TMP5]] to <8 x i16>
-; OPTSIZE-NEXT:    [[TMP8:%.*]] = add <8 x i16> [[TMP9]], [[WIDE_LOAD2]]
-; OPTSIZE-NEXT:    store <8 x i16> [[TMP8]], ptr [[TMP7]], align 2
-; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 8
+; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i16>
+; OPTSIZE-NEXT:    [[TMP9:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
+; OPTSIZE-NEXT:    store <4 x i16> [[TMP9]], ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; OPTSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
@@ -672,18 +672,18 @@ define void @vectorization_forced() {
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP4]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
-; DEFAULT-NEXT:    [[TMP6:%.*]] = mul nsw <8 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; DEFAULT-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP9]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP10]], align 2
-; DEFAULT-NEXT:    [[TMP7:%.*]] = trunc <8 x i32> [[TMP6]] to <8 x i16>
-; DEFAULT-NEXT:    [[TMP8:%.*]] = add <8 x i16> [[TMP7]], [[WIDE_LOAD2]]
-; DEFAULT-NEXT:    store <8 x i16> [[TMP8]], ptr [[TMP10]], align 2
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 8
+; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP6]] to <4 x i16>
+; DEFAULT-NEXT:    [[TMP11:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
+; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -719,18 +719,18 @@ define void @vectorization_forced() {
 ; OPTSIZE-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
 ; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
+; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
 ; OPTSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
-; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <8 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
 ; OPTSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP7]], align 2
-; OPTSIZE-NEXT:    [[TMP9:%.*]] = trunc <8 x i32> [[TMP5]] to <8 x i16>
-; OPTSIZE-NEXT:    [[TMP8:%.*]] = add <8 x i16> [[TMP9]], [[WIDE_LOAD2]]
-; OPTSIZE-NEXT:    store <8 x i16> [[TMP8]], ptr [[TMP7]], align 2
-; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 8
+; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i16>
+; OPTSIZE-NEXT:    [[TMP9:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
+; OPTSIZE-NEXT:    store <4 x i16> [[TMP9]], ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; OPTSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:

@@ -1208,7 +1208,9 @@ public:
   /// If false, the vectorization factor will be chosen based on the
   /// size of the widest element type.
   /// \p K Register Kind for vectorization.
-  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+                                     const unsigned WidestType,
+                                     const unsigned SmallestType) const;
 
   /// \return The minimum vectorization factor for types of given element
   /// bit width, or 0 if there is no minimum VF. The returned value only
@@ -2133,7 +2135,9 @@ public:
   virtual std::optional<unsigned> getVScaleForTuning() const = 0;
   virtual bool isVScaleKnownToBeAPowerOfTwo() const = 0;
   virtual bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const = 0;
+  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+                                const unsigned WidestType,
+                                const unsigned SmallestType) const = 0;
   virtual ElementCount getMinimumVF(unsigned ElemWidth,
                                     bool IsScalable) const = 0;
   virtual unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const = 0;
@@ -2830,9 +2834,11 @@ public:
   bool isVScaleKnownToBeAPowerOfTwo() const override {
     return Impl.isVScaleKnownToBeAPowerOfTwo();
   }
-  bool shouldMaximizeVectorBandwidth(
-      TargetTransformInfo::RegisterKind K) const override {
-    return Impl.shouldMaximizeVectorBandwidth(K);
+  bool
+  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+                                const unsigned WidestType,
+                                const unsigned SmallestType) const override {
+    return Impl.shouldMaximizeVectorBandwidth(K, WidestType, SmallestType);
   }
   ElementCount getMinimumVF(unsigned ElemWidth,
                             bool IsScalable) const override {

@@ -156,7 +156,9 @@ public:
 
   bool isVScaleKnownToBeAPowerOfTwo() const { return true; }
 
-  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+                                     const unsigned WidestType,
+                                     const unsigned SmallestType) const;
 
   /// Try to return an estimate cost factor that can be used as a multiplier
   /// when scalarizing an operation for a vector with ElementCount \p VF.
