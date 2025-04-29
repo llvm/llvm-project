@@ -26,3 +26,16 @@ define i32 @test_cttz_ashr(i32 %x) {
   %sh = ashr i32 %x, %cttz
   ret i32 %sh
 }
+
+define i32 @test_cttz_diff_operand(i32 %x, i32 %y) {
+; CHECK-LABEL: define i32 @test_cttz_diff_operand(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 true)
+; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X]], [[CTTZ]]
+; CHECK-NEXT:    ret i32 [[SH]]
+;
+  %cttz = call i32 @llvm.cttz.i32(i32 %y, i1 true)
+  %sh = lshr i32 %x, %cttz
+  ret i32 %sh
+}
+
