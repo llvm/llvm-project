@@ -25,8 +25,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -139,7 +137,7 @@ public:
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
-  void doInstructionDeletion(Instruction *I);
+  void salvageAndRemoveInstruction(Instruction *I);
 
   DominatorTree &getDominatorTree() const { return *DT; }
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
