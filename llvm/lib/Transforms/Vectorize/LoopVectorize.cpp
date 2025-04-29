@@ -9760,8 +9760,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   // Tail folding is not supported for outer loops, so the induction increment
   // is guaranteed to not wrap.
   bool HasNUW = true;
-  addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW,
-                        DebugLoc());
+  addCanonicalIVRecipes(
+      *Plan, Legal->getWidestInductionType(), HasNUW,
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
 
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           Plan,
