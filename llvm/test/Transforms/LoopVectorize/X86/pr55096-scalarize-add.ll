@@ -14,8 +14,7 @@ define void @test_pr55096(i64 %c, ptr %p) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i16
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[DOTCAST]], 2008
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 6229, [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:

@@ -278,19 +278,8 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
 
 template <typename T>
 static LogicalResult verifyConvOp(T op) {
-  // All TOSA conv ops have an input and weight arguments which must be ranked
-  // tensors.
-  auto inputType = llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
-  if (!inputType) {
-    op.emitOpError("expect a ranked tensor for input, got ") << op.getInput();
-    return failure();
-  }
-
-  auto weightType = llvm::dyn_cast<RankedTensorType>(op.getWeight().getType());
-  if (!weightType) {
-    op.emitOpError("expect a ranked tensor for weight, got ") << op.getWeight();
-    return failure();
-  }
+  const auto inputType = llvm::dyn_cast<TensorType>(op.getInput().getType());
+  const auto weightType = llvm::dyn_cast<TensorType>(op.getWeight().getType());
 
   auto inputEType = inputType.getElementType();
   auto weightEType = weightType.getElementType();
@@ -558,7 +547,8 @@ static LogicalResult verifyConvOpErrorIf(T op) {
     return success();
 
   const int64_t biasChannels = biasType.getDimSize(0);
-  const int64_t outputChannels = outputType.getDimSize(3);
+  const int64_t outputChannels =
+      outputType.getDimSize(outputType.getRank() - 1);
   if (biasChannels == ShapedType::kDynamic ||
       outputChannels == ShapedType::kDynamic)
     // Skip following checks if biasChannels or outputChannels is dynamic dim
@@ -1534,15 +1524,51 @@ LogicalResult tosa::PadOp::verify() {
   if (!inputType || !outputType)
     return success();
 
-  auto paddingRank = cast<tosa::shapeType>(getPadding().getType()).getRank();
+  auto inputRank = inputType.getRank();
+  auto outputRank = outputType.getRank();
+  if (inputRank != outputRank)
+    return emitOpError() << "expect same input and output tensor rank, but got "
+                         << "inputRank: " << inputRank
+                         << ", outputRank: " << outputRank;
 
-  if (inputType.getRank() != outputType.getRank())
-    return emitOpError() << "expect same input and output tensor rank.";
+  DenseIntElementsAttr paddingAttr;
+  if (!matchPattern(getPadding(), m_Constant(&paddingAttr))) {
+    return failure();
+  }
 
-  if (paddingRank != inputType.getRank() * 2)
-    return emitOpError() << "expected padding tensor dim 0 to have size "
-                         << inputType.getRank() * 2
-                         << " (2*rank(shape1)) but got size " << paddingRank;
+  auto paddingValues = paddingAttr.getValues<APInt>();
+  if (paddingValues.size() != static_cast<size_t>(inputRank * 2))
+    return emitOpError() << "padding tensor must have " << inputRank
+                         << " * 2 = " << inputRank * 2 << " elements, but got "
+                         << paddingValues.size();
+
+  auto inputShape = inputType.getShape();
+  auto outputShape = outputType.getShape();
+
+  for (int64_t i = 0; i < inputRank; ++i) {
+    int64_t padStart = paddingValues[i * 2].getSExtValue();
+    int64_t padEnd = paddingValues[i * 2 + 1].getSExtValue();
+
+    if ((padStart < 0 && padStart != -1) || (padEnd < 0 && padEnd != -1)) {
+      return emitOpError()
+             << "invalid padding values at dimension " << i
+             << ": values must be non-negative or -1 for dynamic padding, got ["
+             << padStart << ", " << padEnd << "]";
+    }
+
+    // Skip shape verification for dynamic input/output
+    if (inputShape[i] == ShapedType::kDynamic ||
+        outputShape[i] == ShapedType::kDynamic)
+      continue;
+
+    if (outputShape[i] != inputShape[i] + padStart + padEnd) {
+      return emitOpError() << "mismatch in output shape at dimension " << i
+                           << ": expected " << inputShape[i] << " + "
+                           << padStart << " + " << padEnd << " = "
+                           << (inputShape[i] + padStart + padEnd)
+                           << ", but got " << outputShape[i];
+    }
+  }
 
   return success();
 }
@@ -2262,8 +2288,52 @@ LogicalResult tosa::GatherOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::GatherOp::verify() {
-  return verifySameElementTypes(*this, /* inType = */ getValues().getType(),
-                                /* outType = */ getOutput().getType());
+  if (verifySameElementTypes(*this, /* inType = */ getValues().getType(),
+                             /* outType = */ getOutput().getType())
+          .failed()) {
+    return failure();
+  }
+
+  const ShapeAdaptor valuesShape(getValues().getType());
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  const ShapeAdaptor outputShape(getOutput().getType());
+
+  int64_t N = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+
+  if (valuesShape.hasRank()) {
+    N = valuesShape.getDimSize(0);
+    C = valuesShape.getDimSize(2);
+  }
+  if (indicesShape.hasRank()) {
+    const int64_t indicesN = indicesShape.getDimSize(0);
+    W = indicesShape.getDimSize(1);
+    if (N == ShapedType::kDynamic)
+      N = indicesN;
+    else if (indicesN != ShapedType::kDynamic && N != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << N
+                           << ", got " << indicesN;
+  }
+  if (outputShape.hasRank()) {
+    const int64_t outputN = outputShape.getDimSize(0);
+    const int64_t outputW = outputShape.getDimSize(1);
+    const int64_t outputC = outputShape.getDimSize(2);
+    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        N != outputN)
+      return emitOpError() << "requires output dimension 0 to have size " << N
+                           << ", got " << outputN;
+
+    if (W != ShapedType::kDynamic && outputW != ShapedType::kDynamic &&
+        W != outputW)
+      return emitOpError() << "requires output dimension 1 to have size " << W
+                           << ", got " << outputW;
+    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        C != outputC)
+      return emitOpError() << "requires output dimension 2 to have size " << C
+                           << ", got " << outputC;
+  }
+  return success();
 }
 
 LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
@@ -3018,14 +3088,6 @@ LogicalResult TransposeConv2DOp::verify() {
     return emitOpError("expect all stride values to be >= 1, got [")
            << strides << "]";
 
-  const auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
-
-  const auto outputType =
-      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
-
-  const auto weightType =
-      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
-
   const auto checkPadAgainstKernelDim =
       [this](int64_t pad_value, int64_t kernel_dim_size,
              llvm::StringRef pad_name,
@@ -3039,69 +3101,77 @@ LogicalResult TransposeConv2DOp::verify() {
   };
 
   const llvm::ArrayRef<int64_t> padding = getOutPad();
-
   const int64_t outPadTop = padding[0];
   const int64_t outPadBottom = padding[1];
-
-  const int64_t kernelHeight = weightType.getDimSize(1);
-
-  if (!ShapedType::isDynamic(kernelHeight)) {
-    if (failed(checkPadAgainstKernelDim(outPadTop, kernelHeight, "out_pad_top",
-                                        "KH")))
-      return failure();
-
-    if (failed(checkPadAgainstKernelDim(outPadBottom, kernelHeight,
-                                        "out_pad_bottom", "KH")))
-      return failure();
-  }
-
-  const int64_t kernelWidth = weightType.getDimSize(2);
-
   const int64_t outPadLeft = padding[2];
   const int64_t outPadRight = padding[3];
 
-  if (!ShapedType::isDynamic(kernelWidth)) {
-    if (failed(checkPadAgainstKernelDim(outPadLeft, kernelWidth, "out_pad_left",
-                                        "KW")))
-      return failure();
+  const auto weightType =
+      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
 
-    if (failed(checkPadAgainstKernelDim(outPadRight, kernelWidth,
-                                        "out_pad_right", "KW")))
-      return failure();
+  if (weightType) {
+    const int64_t kernelHeight = weightType.getDimSize(1);
+    if (!ShapedType::isDynamic(kernelHeight)) {
+      if (failed(checkPadAgainstKernelDim(outPadTop, kernelHeight,
+                                          "out_pad_top", "KH")))
+        return failure();
+
+      if (failed(checkPadAgainstKernelDim(outPadBottom, kernelHeight,
+                                          "out_pad_bottom", "KH")))
+        return failure();
+    }
+
+    const int64_t kernelWidth = weightType.getDimSize(2);
+    if (!ShapedType::isDynamic(kernelWidth)) {
+      if (failed(checkPadAgainstKernelDim(outPadLeft, kernelWidth,
+                                          "out_pad_left", "KW")))
+        return failure();
+
+      if (failed(checkPadAgainstKernelDim(outPadRight, kernelWidth,
+                                          "out_pad_right", "KW")))
+        return failure();
+    }
   }
 
   // Rest of the checks depend on the output type being a RankedTensorType
+  const auto outputType =
+      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
   if (!outputType)
     return success();
 
-  const int64_t inputHeight = inputType.getDimSize(1);
-  const int64_t outputHeight = outputType.getDimSize(1);
+  const auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  if (inputType && weightType) {
+    const int64_t inputHeight = inputType.getDimSize(1);
+    const int64_t kernelHeight = weightType.getDimSize(1);
+    const int64_t outputHeight = outputType.getDimSize(1);
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(outputHeight)) {
-    if (outputHeight !=
-        (inputHeight - 1) * strideY + outPadTop + outPadBottom + kernelHeight)
-      return emitOpError(
-                 "dimension mismatch: expected OH == (IH - 1) * stride_y "
-                 "+ out_pad_top + out_pad_bottom + KH, but got ")
-             << outputHeight << " != (" << inputHeight << " - 1) * " << strideY
-             << " + " << outPadTop << " + " << outPadBottom << " + "
-             << kernelHeight;
-  }
+    if (!ShapedType::isDynamic(inputHeight) &&
+        !ShapedType::isDynamic(outputHeight)) {
+      if (outputHeight !=
+          (inputHeight - 1) * strideY + outPadTop + outPadBottom + kernelHeight)
+        return emitOpError(
+                   "dimension mismatch: expected OH == (IH - 1) * stride_y "
+                   "+ out_pad_top + out_pad_bottom + KH, but got ")
+               << outputHeight << " != (" << inputHeight << " - 1) * "
+               << strideY << " + " << outPadTop << " + " << outPadBottom
+               << " + " << kernelHeight;
+    }
 
-  const int64_t inputWidth = inputType.getDimSize(2);
-  const int64_t outputWidth = outputType.getDimSize(2);
+    const int64_t inputWidth = inputType.getDimSize(2);
+    const int64_t kernelWidth = weightType.getDimSize(2);
+    const int64_t outputWidth = outputType.getDimSize(2);
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(outputWidth)) {
-    if (outputWidth !=
-        (inputWidth - 1) * strideX + outPadLeft + outPadRight + kernelWidth)
-      return emitOpError(
-                 "dimension mismatch: expected OW == (IW - 1) * stride_x "
-                 "+ out_pad_left + out_pad_right + KW, but got ")
-             << outputWidth << " != (" << inputWidth << " - 1) * " << strideX
-             << " + " << outPadLeft << " + " << outPadRight << " + "
-             << kernelWidth;
+    if (!ShapedType::isDynamic(inputWidth) &&
+        !ShapedType::isDynamic(outputWidth)) {
+      if (outputWidth !=
+          (inputWidth - 1) * strideX + outPadLeft + outPadRight + kernelWidth)
+        return emitOpError(
+                   "dimension mismatch: expected OW == (IW - 1) * stride_x "
+                   "+ out_pad_left + out_pad_right + KW, but got ")
+               << outputWidth << " != (" << inputWidth << " - 1) * " << strideX
+               << " + " << outPadLeft << " + " << outPadRight << " + "
+               << kernelWidth;
+    }
   }
 
   const auto biasType = llvm::dyn_cast<RankedTensorType>(getBias().getType());
@@ -3206,6 +3276,12 @@ LogicalResult RescaleOp::verify() {
   // otherwise numChannel is dimension in input shape's last axis
   int64_t numChannels = 1;
   if (getPerChannel()) {
+    if (inputType.getRank() < 1) {
+      emitOpError("requires input to be at least rank 1 when per_channel is "
+                  "true, but got rank ")
+          << inputType.getRank();
+      return failure();
+    }
     numChannels = inputType.getDimSize(inputType.getRank() - 1);
   }
 

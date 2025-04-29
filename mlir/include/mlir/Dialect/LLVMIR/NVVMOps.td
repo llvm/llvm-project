@@ -1067,6 +1067,59 @@ def NVVM_CvtFloatToTF32Op : NVVM_Op<"cvt.float.to.tf32"> {
   }];
 }
 
+def CVTFP6E2M3 : I32EnumAttrCase<"E2M3", 0, "e2m3">;
+def CVTFP6E3M2 : I32EnumAttrCase<"E3M2", 1, "e3m2">;
+
+def CVTFP6Type : I32EnumAttr<"CVTFP6Type", "NVVM CVTFP6Type kind",
+  [CVTFP6E2M3, CVTFP6E3M2]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def CVTFP6TypeAttr : EnumAttr<NVVM_Dialect, CVTFP6Type, "cvt_fp6_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_CvtToF6x2Op : NVVM_Op<"cvt.to.f6x2"> {
+  let summary = "Convert a pair of float inputs to f6x2";
+  let description = [{
+    This Op converts each of the given float inputs to the specified fp6 type.
+    The result `dst` is represented either as an i16 type or as a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from `a` is stored in the upper 8 bits of `dst` 
+    with 2 MSB bits padded with zeros and the value converted from `b` is 
+    stored in the lower 8 bits of `dst` with 2 MSB bits padded with zeros.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins 
+    CVTFP6TypeAttr:$type,
+    F32:$a,
+    F32:$b,
+    DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
+  
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP6Type,
+                                              bool hasRelu);
+  }];
+
+  string llvmBuilder = [{
+    auto intId = NVVM::CvtToF6x2Op::getIntrinsicID($type, $relu);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM MMA Ops
 //===----------------------------------------------------------------------===//
@@ -3247,7 +3300,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st"> {
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 
-def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target"> {
+def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target"> {
   let description = [{
     GPU target attribute for controlling compilation of NVIDIA targets. All
     parameters decay into default values if not present.

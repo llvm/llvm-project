@@ -1842,34 +1842,49 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   if (CastOpcode != Cast1->getOpcode())
     return nullptr;
 
-  // If the source types do not match, but the casts are matching extends, we
-  // can still narrow the logic op.
-  if (SrcTy != Cast1->getSrcTy()) {
-    Value *X, *Y;
-    if (match(Cast0, m_OneUse(m_ZExtOrSExt(m_Value(X)))) &&
-        match(Cast1, m_OneUse(m_ZExtOrSExt(m_Value(Y))))) {
-      // Cast the narrower source to the wider source type.
-      unsigned XNumBits = X->getType()->getScalarSizeInBits();
-      unsigned YNumBits = Y->getType()->getScalarSizeInBits();
-      if (XNumBits < YNumBits)
+  // Can't fold it profitably if no one of casts has one use.
+  if (!Cast0->hasOneUse() && !Cast1->hasOneUse())
+    return nullptr;
+
+  Value *X, *Y;
+  if (match(Cast0, m_ZExtOrSExt(m_Value(X))) &&
+      match(Cast1, m_ZExtOrSExt(m_Value(Y)))) {
+    // Cast the narrower source to the wider source type.
+    unsigned XNumBits = X->getType()->getScalarSizeInBits();
+    unsigned YNumBits = Y->getType()->getScalarSizeInBits();
+    if (XNumBits != YNumBits) {
+      // Cast the narrower source to the wider source type only if both of casts
+      // have one use to avoid creating an extra instruction.
+      if (!Cast0->hasOneUse() || !Cast1->hasOneUse())
+        return nullptr;
+
+      // If the source types do not match, but the casts are matching extends,
+      // we can still narrow the logic op.
+      if (XNumBits < YNumBits) {
         X = Builder.CreateCast(CastOpcode, X, Y->getType());
-      else
+      } else if (YNumBits < XNumBits) {
         Y = Builder.CreateCast(CastOpcode, Y, X->getType());
-      // Do the logic op in the intermediate width, then widen more.
-      Value *NarrowLogic = Builder.CreateBinOp(LogicOpc, X, Y);
-      return CastInst::Create(CastOpcode, NarrowLogic, DestTy);
+      }
     }
 
-    // Give up for other cast opcodes.
-    return nullptr;
+    // Do the logic op in the intermediate width, then widen more.
+    Value *NarrowLogic = Builder.CreateBinOp(LogicOpc, X, Y, I.getName());
+    auto *Disjoint = dyn_cast<PossiblyDisjointInst>(&I);
+    auto *NewDisjoint = dyn_cast<PossiblyDisjointInst>(NarrowLogic);
+    if (Disjoint && NewDisjoint)
+      NewDisjoint->setIsDisjoint(Disjoint->isDisjoint());
+    return CastInst::Create(CastOpcode, NarrowLogic, DestTy);
   }
+
+  // If the src type of casts are different, give up for other cast opcodes.
+  if (SrcTy != Cast1->getSrcTy())
+    return nullptr;
 
   Value *Cast0Src = Cast0->getOperand(0);
   Value *Cast1Src = Cast1->getOperand(0);
 
   // fold logic(cast(A), cast(B)) -> cast(logic(A, B))
-  if ((Cast0->hasOneUse() || Cast1->hasOneUse()) &&
-      shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
+  if (shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder.CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                        I.getName());
     return CastInst::Create(CastOpcode, NewOp, DestTy);
