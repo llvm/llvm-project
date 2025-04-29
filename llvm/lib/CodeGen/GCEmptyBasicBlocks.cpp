@@ -38,12 +38,12 @@ GCEmptyBasicBlocksPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-class GCEmptyBasicBlocks : public MachineFunctionPass {
+class GCEmptyBasicBlocksLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  GCEmptyBasicBlocks() : MachineFunctionPass(ID) {
-    initializeGCEmptyBasicBlocksPass(*PassRegistry::getPassRegistry());
+  GCEmptyBasicBlocksLegacy() : MachineFunctionPass(ID) {
+    initializeGCEmptyBasicBlocksLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override {
@@ -102,12 +102,12 @@ bool removeEmptyBlocks(MachineFunction &MF) {
   return NumRemoved != 0;
 }
 
-char GCEmptyBasicBlocks::ID = 0;
-INITIALIZE_PASS(GCEmptyBasicBlocks, "gc-empty-basic-blocks",
+char GCEmptyBasicBlocksLegacy::ID = 0;
+INITIALIZE_PASS(GCEmptyBasicBlocksLegacy, "gc-empty-basic-blocks",
                 "Removes empty basic blocks and redirects their uses to their "
                 "fallthrough blocks.",
                 false, false)
 
-MachineFunctionPass *llvm::createGCEmptyBasicBlocksPass() {
-  return new GCEmptyBasicBlocks();
+MachineFunctionPass *llvm::createGCEmptyBasicBlocksLegacyPass() {
+  return new GCEmptyBasicBlocksLegacy();
 }
