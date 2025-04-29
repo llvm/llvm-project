@@ -2,15 +2,12 @@
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gheterogeneous-dwarf -emit-llvm -disable-llvm-verifier -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DDEAD_CODE -fblocks -debug-info-kind=limited -gheterogeneous-dwarf -emit-llvm -disable-llvm-verifier -o - %s | FileCheck --check-prefix=DEADCODE %s
 
-// FIXME: Duplicate DIFiles are generated, and include absolute paths, breaking the test
-// XFAIL: *
-
 typedef void (^BlockTy)();
 void escapeFunc(BlockTy);
 typedef void (^BlockTy)();
 void noEscapeFunc(__attribute__((noescape)) BlockTy);
 
-// Verify that the desired DIExpr are generated for escaping (i.e, not
+// Verify that the desired DIExpression are generated for escaping (i.e, not
 // 'noescape') blocks.
 // CHECK-LABEL: define dso_local void @test_escape_func(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] !dbg [[DBG5:![0-9]+]] {
@@ -69,7 +66,7 @@ void test_escape_func() {
   escapeFunc(^{ (void)escape_var; });
 }
 
-// Verify that the desired DIExpr are generated for noescape blocks.
+// Verify that the desired DIExpression are generated for noescape blocks.
 // CHECK-LABEL: define dso_local void @test_noescape_func(
 // CHECK-SAME: ) #[[ATTR0]] !dbg [[DBG34:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -117,7 +114,7 @@ void test_noescape_func() {
   noEscapeFunc(^{ (void)noescape_var; });
 }
 
-// Verify that the desired DIExpr are generated for blocks.
+// Verify that the desired DIExpression are generated for blocks.
 // CHECK-LABEL: define dso_local void @test_local_block(
 // CHECK-SAME: ) #[[ATTR0]] !dbg [[DBG45:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -191,7 +188,7 @@ void test_local_block() {
   ^ { block_var = 1; }();
 }
 
-// Verify that the desired DIExpr are generated for __block vars not used
+// Verify that the desired DIExpression are generated for __block vars not used
 // in any block.
 // CHECK-LABEL: define dso_local void @test_unused(
 // CHECK-SAME: ) #[[ATTR0]] !dbg [[DBG56:![0-9]+]] {
@@ -222,66 +219,66 @@ void test_unused() {
 
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
-// CHECK: [[DBG5]] = distinct !DISubprogram(name: "test_escape_func", scope: [[META6:![0-9]+]], file: [[META6]], line: 11, type: [[META7:![0-9]+]], scopeLine: 11, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META9:![0-9]+]])
-// CHECK: [[META6]] = !DIFile(filename: "clang/test/CodeGen/debug-info-block-expr-heterogeneous-dwarf.c", directory: {{.*}})
+// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK: [[DBG5]] = distinct !DISubprogram(name: "test_escape_func", scope: [[META6:![0-9]+]], file: [[META6]], line: 60, type: [[META7:![0-9]+]], scopeLine: 60, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META9:![0-9]+]])
+// CHECK: [[META6]] = !DIFile(filename: "{{.*}}debug-info-block-expr-heterogeneous-dwarf.c", directory: {{.*}})
 // CHECK: [[META7]] = !DISubroutineType(types: [[META8:![0-9]+]])
 // CHECK: [[META8]] = !{null}
 // CHECK: [[META9]] = !{[[META10]]}
-// CHECK: [[META10]] = !DILocalVariable(name: "escape_var", scope: [[DBG5]], file: [[META6]], line: 14, type: [[META11:![0-9]+]])
+// CHECK: [[META10]] = !DILocalVariable(name: "escape_var", scope: [[DBG5]], file: [[META6]], line: 61, type: [[META11:![0-9]+]])
 // CHECK: [[META11]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-// CHECK: [[META12]] = !DILocation(line: 14, column: 15, scope: [[DBG5]])
-// CHECK: [[DBG13]] = !DILocation(line: 19, column: 14, scope: [[DBG5]])
-// CHECK: [[DBG14]] = !DILocation(line: 19, column: 3, scope: [[DBG5]])
-// CHECK: [[DBG15]] = !DILocation(line: 20, column: 1, scope: [[DBG5]])
-// CHECK: [[DBG34]] = distinct !DISubprogram(name: "test_noescape_func", scope: [[META6]], file: [[META6]], line: 23, type: [[META7]], scopeLine: 23, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META35:![0-9]+]])
+// CHECK: [[META12]] = !DILocation(line: 61, column: 15, scope: [[DBG5]])
+// CHECK: [[DBG13]] = !DILocation(line: 66, column: 14, scope: [[DBG5]])
+// CHECK: [[DBG14]] = !DILocation(line: 66, column: 3, scope: [[DBG5]])
+// CHECK: [[DBG15]] = !DILocation(line: 67, column: 1, scope: [[DBG5]])
+// CHECK: [[DBG34]] = distinct !DISubprogram(name: "test_noescape_func", scope: [[META6]], file: [[META6]], line: 112, type: [[META7]], scopeLine: 112, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META35:![0-9]+]])
 // CHECK: [[META35]] = !{[[META36]]}
-// CHECK: [[META36]] = !DILocalVariable(name: "noescape_var", scope: [[DBG34]], file: [[META6]], line: 26, type: [[META11]])
-// CHECK: [[META37]] = !DILocation(line: 26, column: 15, scope: [[DBG34]])
-// CHECK: [[DBG38]] = !DILocation(line: 27, column: 16, scope: [[DBG34]])
-// CHECK: [[DBG39]] = !DILocation(line: 27, column: 3, scope: [[DBG34]])
-// CHECK: [[DBG40]] = !DILocation(line: 28, column: 1, scope: [[DBG34]])
-// CHECK: [[DBG45]] = distinct !DISubprogram(name: "test_local_block", scope: [[META6]], file: [[META6]], line: 31, type: [[META7]], scopeLine: 31, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META46:![0-9]+]])
+// CHECK: [[META36]] = !DILocalVariable(name: "noescape_var", scope: [[DBG34]], file: [[META6]], line: 113, type: [[META11]])
+// CHECK: [[META37]] = !DILocation(line: 113, column: 15, scope: [[DBG34]])
+// CHECK: [[DBG38]] = !DILocation(line: 114, column: 16, scope: [[DBG34]])
+// CHECK: [[DBG39]] = !DILocation(line: 114, column: 3, scope: [[DBG34]])
+// CHECK: [[DBG40]] = !DILocation(line: 115, column: 1, scope: [[DBG34]])
+// CHECK: [[DBG45]] = distinct !DISubprogram(name: "test_local_block", scope: [[META6]], file: [[META6]], line: 184, type: [[META7]], scopeLine: 184, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META46:![0-9]+]])
 // CHECK: [[META46]] = !{[[META47]]}
-// CHECK: [[META47]] = !DILocalVariable(name: "block_var", scope: [[DBG45]], file: [[META6]], line: 34, type: [[META11]])
-// CHECK: [[META48]] = !DILocation(line: 34, column: 15, scope: [[DBG45]])
-// CHECK: [[DBG49]] = !DILocation(line: 39, column: 3, scope: [[DBG45]])
-// CHECK: [[DBG50]] = !DILocation(line: 40, column: 1, scope: [[DBG45]])
-// CHECK: [[DBG56]] = distinct !DISubprogram(name: "test_unused", scope: [[META6]], file: [[META6]], line: 44, type: [[META7]], scopeLine: 44, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META57:![0-9]+]])
+// CHECK: [[META47]] = !DILocalVariable(name: "block_var", scope: [[DBG45]], file: [[META6]], line: 185, type: [[META11]])
+// CHECK: [[META48]] = !DILocation(line: 185, column: 15, scope: [[DBG45]])
+// CHECK: [[DBG49]] = !DILocation(line: 188, column: 3, scope: [[DBG45]])
+// CHECK: [[DBG50]] = !DILocation(line: 189, column: 1, scope: [[DBG45]])
+// CHECK: [[DBG56]] = distinct !DISubprogram(name: "test_unused", scope: [[META6]], file: [[META6]], line: 213, type: [[META7]], scopeLine: 213, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META57:![0-9]+]])
 // CHECK: [[META57]] = !{[[META58]]}
-// CHECK: [[META58]] = !DILocalVariable(name: "unused_var", scope: [[DBG56]], file: [[META6]], line: 47, type: [[META11]])
-// CHECK: [[META59]] = !DILocation(line: 47, column: 15, scope: [[DBG56]])
-// CHECK: [[DBG60]] = !DILocation(line: 49, column: 3, scope: [[DBG56]])
-// CHECK: [[DBG61]] = !DILocation(line: 50, column: 1, scope: [[DBG56]])
+// CHECK: [[META58]] = !DILocalVariable(name: "unused_var", scope: [[DBG56]], file: [[META6]], line: 214, type: [[META11]])
+// CHECK: [[META59]] = !DILocation(line: 214, column: 15, scope: [[DBG56]])
+// CHECK: [[DBG60]] = !DILocation(line: 216, column: 3, scope: [[DBG56]])
+// CHECK: [[DBG61]] = !DILocation(line: 217, column: 1, scope: [[DBG56]])
 //.
 // DEADCODE: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// DEADCODE: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
-// DEADCODE: [[DBG5]] = distinct !DISubprogram(name: "test_escape_func", scope: [[META6:![0-9]+]], file: [[META6]], line: 11, type: [[META7:![0-9]+]], scopeLine: 11, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META9:![0-9]+]])
-// DEADCODE: [[META6]] = !DIFile(filename: "clang/test/CodeGen/debug-info-block-expr-heterogeneous-dwarf.c", directory: {{.*}})
+// DEADCODE: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// DEADCODE: [[DBG5]] = distinct !DISubprogram(name: "test_escape_func", scope: [[META6:![0-9]+]], file: [[META6]], line: 60, type: [[META7:![0-9]+]], scopeLine: 60, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META9:![0-9]+]])
+// DEADCODE: [[META6]] = !DIFile(filename: "{{.*}}debug-info-block-expr-heterogeneous-dwarf.c", directory: {{.*}})
 // DEADCODE: [[META7]] = !DISubroutineType(types: [[META8:![0-9]+]])
 // DEADCODE: [[META8]] = !{null}
 // DEADCODE: [[META9]] = !{[[META10]]}
-// DEADCODE: [[META10]] = !DILocalVariable(name: "escape_var", scope: [[DBG5]], file: [[META6]], line: 14, type: [[META11:![0-9]+]])
+// DEADCODE: [[META10]] = !DILocalVariable(name: "escape_var", scope: [[DBG5]], file: [[META6]], line: 61, type: [[META11:![0-9]+]])
 // DEADCODE: [[META11]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-// DEADCODE: [[META12]] = !DILocation(line: 14, column: 15, scope: [[DBG5]])
-// DEADCODE: [[DBG13]] = !DILocation(line: 20, column: 1, scope: [[DBG5]])
-// DEADCODE: [[DBG14]] = distinct !DISubprogram(name: "test_noescape_func", scope: [[META6]], file: [[META6]], line: 23, type: [[META7]], scopeLine: 23, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META15:![0-9]+]])
+// DEADCODE: [[META12]] = !DILocation(line: 61, column: 15, scope: [[DBG5]])
+// DEADCODE: [[DBG13]] = !DILocation(line: 67, column: 1, scope: [[DBG5]])
+// DEADCODE: [[DBG14]] = distinct !DISubprogram(name: "test_noescape_func", scope: [[META6]], file: [[META6]], line: 112, type: [[META7]], scopeLine: 112, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META15:![0-9]+]])
 // DEADCODE: [[META15]] = !{[[META16]]}
-// DEADCODE: [[META16]] = !DILocalVariable(name: "noescape_var", scope: [[DBG14]], file: [[META6]], line: 26, type: [[META11]])
-// DEADCODE: [[META17]] = !DILocation(line: 26, column: 15, scope: [[DBG14]])
-// DEADCODE: [[DBG18]] = !DILocation(line: 27, column: 16, scope: [[DBG14]])
-// DEADCODE: [[DBG19]] = !DILocation(line: 27, column: 3, scope: [[DBG14]])
-// DEADCODE: [[DBG20]] = !DILocation(line: 28, column: 1, scope: [[DBG14]])
-// DEADCODE: [[DBG28]] = distinct !DISubprogram(name: "test_local_block", scope: [[META6]], file: [[META6]], line: 31, type: [[META7]], scopeLine: 31, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META29:![0-9]+]])
+// DEADCODE: [[META16]] = !DILocalVariable(name: "noescape_var", scope: [[DBG14]], file: [[META6]], line: 113, type: [[META11]])
+// DEADCODE: [[META17]] = !DILocation(line: 113, column: 15, scope: [[DBG14]])
+// DEADCODE: [[DBG18]] = !DILocation(line: 114, column: 16, scope: [[DBG14]])
+// DEADCODE: [[DBG19]] = !DILocation(line: 114, column: 3, scope: [[DBG14]])
+// DEADCODE: [[DBG20]] = !DILocation(line: 115, column: 1, scope: [[DBG14]])
+// DEADCODE: [[DBG28]] = distinct !DISubprogram(name: "test_local_block", scope: [[META6]], file: [[META6]], line: 184, type: [[META7]], scopeLine: 184, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META29:![0-9]+]])
 // DEADCODE: [[META29]] = !{[[META30]]}
-// DEADCODE: [[META30]] = !DILocalVariable(name: "block_var", scope: [[DBG28]], file: [[META6]], line: 34, type: [[META11]])
-// DEADCODE: [[META31]] = !DILocation(line: 34, column: 15, scope: [[DBG28]])
-// DEADCODE: [[DBG32]] = !DILocation(line: 39, column: 3, scope: [[DBG28]])
-// DEADCODE: [[DBG33]] = !DILocation(line: 40, column: 1, scope: [[DBG28]])
-// DEADCODE: [[DBG50]] = distinct !DISubprogram(name: "test_unused", scope: [[META6]], file: [[META6]], line: 44, type: [[META7]], scopeLine: 44, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META51:![0-9]+]])
+// DEADCODE: [[META30]] = !DILocalVariable(name: "block_var", scope: [[DBG28]], file: [[META6]], line: 185, type: [[META11]])
+// DEADCODE: [[META31]] = !DILocation(line: 185, column: 15, scope: [[DBG28]])
+// DEADCODE: [[DBG32]] = !DILocation(line: 188, column: 3, scope: [[DBG28]])
+// DEADCODE: [[DBG33]] = !DILocation(line: 189, column: 1, scope: [[DBG28]])
+// DEADCODE: [[DBG50]] = distinct !DISubprogram(name: "test_unused", scope: [[META6]], file: [[META6]], line: 213, type: [[META7]], scopeLine: 213, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META51:![0-9]+]])
 // DEADCODE: [[META51]] = !{[[META52]]}
-// DEADCODE: [[META52]] = !DILocalVariable(name: "unused_var", scope: [[DBG50]], file: [[META6]], line: 47, type: [[META11]])
-// DEADCODE: [[META53]] = !DILocation(line: 47, column: 15, scope: [[DBG50]])
-// DEADCODE: [[DBG54]] = !DILocation(line: 49, column: 3, scope: [[DBG50]])
-// DEADCODE: [[DBG55]] = !DILocation(line: 50, column: 1, scope: [[DBG50]])
+// DEADCODE: [[META52]] = !DILocalVariable(name: "unused_var", scope: [[DBG50]], file: [[META6]], line: 214, type: [[META11]])
+// DEADCODE: [[META53]] = !DILocation(line: 214, column: 15, scope: [[DBG50]])
+// DEADCODE: [[DBG54]] = !DILocation(line: 216, column: 3, scope: [[DBG50]])
+// DEADCODE: [[DBG55]] = !DILocation(line: 217, column: 1, scope: [[DBG50]])
 //.
