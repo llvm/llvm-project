@@ -46,6 +46,7 @@ math/clc_fmax.cl
 math/clc_fmin.cl
 math/clc_floor.cl
 math/clc_fmod.cl
+math/clc_fract.cl
 math/clc_frexp.cl
 math/clc_hypot.cl
 math/clc_ldexp.cl
