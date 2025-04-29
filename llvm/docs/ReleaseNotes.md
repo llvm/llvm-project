@@ -175,6 +175,7 @@ Changes to the RISC-V Backend
   `Zsfmclic` for the M-mode registers and `Zsfsclic` for the S-mode registers.
 * Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
   interrupt handlers without using inline assembly.
+* Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
