@@ -819,8 +819,8 @@ namespace {
 
 /// Helper function to get  distributed vector type for a source vector type
 /// according to the lane_layout. We simply divide each dimension of tensor
-/// descriptor shape by corresponding lane_layout dimension. If array_length >
-/// 1, that is appended to the front of the disributed shape.
+/// descriptor shape by corresponding lane_layout dimension. If
+/// array_length > 1, that is appended to the front of the ditributed shape.
 /// NOTE: This is the vector type that will be returned by the
 /// gpu.warp_execute_on_lane0 op.
 ///
@@ -830,8 +830,9 @@ namespace {
 /// | 32x16                 | [1, 16]     | 32x1                     |
 /// | 32x16                 | [2, 8]      | 16x2                     |
 /// | 2x32x16               | [1, 16]     | 2x32x1                   |
-FailureOr<VectorType> getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
-                                                      VectorType originalType) {
+static FailureOr<VectorType>
+getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
+                                VectorType originalType) {
   if (!layout)
     return failure();
 
@@ -878,7 +879,7 @@ static xegpu::TensorDescType dropLayouts(xegpu::TensorDescType tensorDesc) {
 ///   distributed type: xegpu.tensor_desc<8x16xf32, #xegpu.layout<...>>
 //    expected type: xegpu.tensor_desc<8x16xf32>
 ///   resolved using,
-///   %0 = xegpu.unrealized_conversion_cast %1 :
+///   %0 = unrealized_conversion_cast %1 :
 ///   xegpu.tensor_desc<8x16xf32, #xegpu.layout<..>> ->
 ///   xegpu.tensor_desc<8x16xf32>
 template <typename T>
@@ -1007,7 +1008,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
 /// still contain the original op that will not be used by the yield op (and
 /// should be cleaned up later). The yield op will bypass the create_nd_tdesc's
 /// arguments. Tensor descriptor shape is not distributed because it is a
-/// uniform value accorss all work items within the subgroup. However, the
+/// uniform value across all work items within the subgroup. However, the
 /// layout information is dropped in the new tensor descriptor type.
 ///
 /// Example:
@@ -1106,7 +1107,7 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
 ///     #lo0>
 ///   }
 ///   %0 = vector.shape_cast %r#0: vector<4x1xf32> to vector<4xf32>
-///   %1 = xegpu.unrealized_conversion_cast %r#1: !xegpu.tensor_desc<4x8xf32,
+///   %1 = unrealized_conversion_cast %r#1: !xegpu.tensor_desc<4x8xf32,
 ///   #lo0>
 ///     -> !xegpu.tensor_desc<4x8xf32>
 ///   xegpu.store_nd %0, %1: vector<4xf32>,
@@ -1208,7 +1209,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
 ///     %dead = xegpu.load_nd %arg0: !xegpu.tensor_desc<4x8xf32, #lo0> ->
 ///     vector<4x8xf32> gpu.yield %dead, %arg0
 ///   }
-///   %0 = xegpu.unrealized_conversion_cast %r#1: !xegpu.tensor_desc<4x8xf32,
+///   %0 = unrealized_conversion_cast %r#1: !xegpu.tensor_desc<4x8xf32,
 ///        #lo0> -> !xegpu.tensor_desc<4x8xf32>
 ///   %1 = xegpu.load_nd %0: !xegpu.tensor_desc<4x8xf32> -> vector<4xf32>
 ///   %2 = vector.shape_cast %r#0: vector<4xf32> to vector<4x1xf32>
@@ -1393,11 +1394,11 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
     Value newDpasOp = rewriter.create<xegpu::DpasOp>(
         newWarpOp->getLoc(), distributedResultTy, newDpasOperands,
         removeTemporaryLayoutAttributes(dpasOp->getAttrs()));
-    Value disributedVal = newWarpOp.getResult(operandIdx);
+    Value distributedVal = newWarpOp.getResult(operandIdx);
     // Resolve the output type.
     newDpasOp = resolveDistributedTy(
         newDpasOp, distResultTypeByWarpOpOrFailure.value(), rewriter);
-    rewriter.replaceAllUsesWith(disributedVal, newDpasOp);
+    rewriter.replaceAllUsesWith(distributedVal, newDpasOp);
     return success();
   }
 };

@@ -66,15 +66,17 @@ FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(VectorType originalType,
                                       xegpu::LayoutAttr layout) {
   int64_t rank = originalType.getRank();
-  /// Distributed vector type is only supported for 1D, 2D and 3D vectors.
+  // Distributed vector type is only supported for 1D, 2D and 3D vectors.
   if (rank < 1 || rank > 3)
     return failure();
   ArrayRef<int64_t> shape = originalType.getShape();
-  /// arrayLength is 1 for 1D and 2D vectors, and equal to the first dimension
-  /// of the 3D vector.
+  // arrayLength is 1 for 1D and 2D vectors, and equal to the first dimension
+  // of the 3D vector.
   int arrayLength = 1;
-  if (rank == 3)
+  if (rank == 3) {
     arrayLength = shape[0];
+    shape = shape.drop_front();
+  }
   auto helperTdescTy = xegpu::TensorDescType::get(
       shape, originalType.getElementType(), arrayLength,
       /*boundary_check=*/true,
