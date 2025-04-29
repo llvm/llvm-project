@@ -167,17 +167,16 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          MachineInstrBuilder CopyMI =
+          [[maybe_unused]] MachineInstrBuilder CopyMIB =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
                       Reg)
                   .addReg(MI.getOperand(1).getReg());
-          (void)CopyMI;
           MI.getOperand(1).setReg(Reg);
           const MCInstrDesc &NewDesc = TII->get(X86::ADD64rm);
           MI.setDesc(NewDesc);
           suppressEGPRRegClass(MF, MI, 0);
           MI.tieOperands(0, 1);
-          LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMI << "\n");
+          LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMIB << "\n");
           LLVM_DEBUG(dbgs() << "  " << MI << "\n");
         }
         break;
@@ -190,11 +189,10 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
                             << MI);
           suppressEGPRRegClass(MF, MI, 0);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          MachineInstrBuilder CopyMIB =
+          [[maybe_unused]] MachineInstrBuilder CopyMIB =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
                       Reg)
                   .addReg(MI.getOperand(6).getReg());
-          (void)CopyMIB;
           MachineInstrBuilder NewMIB =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::ADD64rm),
                       MI.getOperand(0).getReg())
