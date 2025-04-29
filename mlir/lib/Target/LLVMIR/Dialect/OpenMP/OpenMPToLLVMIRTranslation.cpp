@@ -5299,6 +5299,20 @@ static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto targetOp = cast<omp::TargetOp>(opInst);
+  // The current debug location already has the DISubprogram for the outlined
+  // function that will be created for the target op. We save it here so that
+  // we can set it on the outlined function.
+  llvm::DebugLoc OutlinedFnLoc = builder.getCurrentDebugLocation();
+  // During the handling of target op, we will generate instructions in the
+  // parent function like call to oulined function or branch to new BasicBlock.
+  // We set the debug location here to parent function so that those get the
+  // correct debug locations. For outlined functions, the normal MLIR op
+  // conversion will automatically pick the correct location.
+  llvm::BasicBlock *parentBB = builder.GetInsertBlock();
+  if (parentBB && !parentBB->empty())
+    builder.SetCurrentDebugLocation(parentBB->back().getDebugLoc());
+  else
+    builder.SetCurrentDebugLocation(llvm::DebugLoc());
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
@@ -5394,6 +5408,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     llvmOutlinedFn = codeGenIP.getBlock()->getParent();
     assert(llvmParentFn && llvmOutlinedFn &&
            "Both parent and outlined functions must exist at this point");
+
+    if (OutlinedFnLoc && llvmParentFn->getSubprogram())
+      llvmOutlinedFn->setSubprogram(OutlinedFnLoc->getScope()->getSubprogram());
 
     if (auto attr = llvmParentFn->getFnAttribute("target-cpu");
         attr.isStringAttribute())
