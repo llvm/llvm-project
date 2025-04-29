@@ -130,7 +130,7 @@ define half @ld_global_v8f16(ptr addrspace(1) %ptr) {
 define float @ld_global_v2f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: ld_global_v2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -149,7 +149,7 @@ define float @ld_global_v2f32(ptr addrspace(1) %ptr) {
 define float @ld_global_v4f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: ld_global_v4f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<8>;
+; CHECK-NEXT:    .reg .b32 %f<8>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -174,7 +174,7 @@ define float @ld_global_v4f32(ptr addrspace(1) %ptr) {
 define float @ld_global_v8f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: ld_global_v8f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<12>;
+; CHECK-NEXT:    .reg .b32 %f<12>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:

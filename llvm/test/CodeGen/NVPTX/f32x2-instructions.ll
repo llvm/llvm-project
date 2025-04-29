@@ -15,7 +15,7 @@ target triple = "nvptx64-nvidia-cuda"
 define <2 x float> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b32 %f1, 0f40000000;
@@ -28,7 +28,7 @@ define <2 x float> @test_ret_const() #0 {
 define float @test_extract_0(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_extract_0(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -43,7 +43,7 @@ define float @test_extract_0(<2 x float> %a) #0 {
 define float @test_extract_1(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_extract_1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -81,7 +81,7 @@ define <2 x float> @test_fadd(<2 x float> %a, <2 x float> %b) #0 {
 define <2 x float> @test_fadd_imm_0(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fadd_imm_0(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -99,7 +99,7 @@ define <2 x float> @test_fadd_imm_0(<2 x float> %a) #0 {
 define <2 x float> @test_fadd_imm_1(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fadd_imm_1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -133,7 +133,7 @@ define <4 x float> @test_fadd_v4(<4 x float> %a, <4 x float> %b) #0 {
 define <4 x float> @test_fadd_imm_0_v4(<4 x float> %a) #0 {
 ; CHECK-LABEL: test_fadd_imm_0_v4(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -155,7 +155,7 @@ define <4 x float> @test_fadd_imm_0_v4(<4 x float> %a) #0 {
 define <4 x float> @test_fadd_imm_1_v4(<4 x float> %a) #0 {
 ; CHECK-LABEL: test_fadd_imm_1_v4(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -192,7 +192,7 @@ define <2 x float> @test_fsub(<2 x float> %a, <2 x float> %b) #0 {
 define <2 x float> @test_fneg(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fneg(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -240,7 +240,7 @@ define <2 x float> @test_fma(<2 x float> %a, <2 x float> %b, <2 x float> %c) #0 
 define <2 x float> @test_fdiv(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-LABEL: test_fdiv(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<7>;
+; CHECK-NEXT:    .reg .b32 %f<7>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -260,7 +260,7 @@ define <2 x float> @test_frem(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-LABEL: test_frem(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
+; CHECK-NEXT:    .reg .b32 %f<15>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -304,7 +304,7 @@ define <2 x float> @test_fadd_ftz(<2 x float> %a, <2 x float> %b) #2 {
 define <2 x float> @test_fadd_imm_0_ftz(<2 x float> %a) #2 {
 ; CHECK-LABEL: test_fadd_imm_0_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -322,7 +322,7 @@ define <2 x float> @test_fadd_imm_0_ftz(<2 x float> %a) #2 {
 define <2 x float> @test_fadd_imm_1_ftz(<2 x float> %a) #2 {
 ; CHECK-LABEL: test_fadd_imm_1_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -356,7 +356,7 @@ define <4 x float> @test_fadd_v4_ftz(<4 x float> %a, <4 x float> %b) #2 {
 define <4 x float> @test_fadd_imm_0_v4_ftz(<4 x float> %a) #2 {
 ; CHECK-LABEL: test_fadd_imm_0_v4_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -378,7 +378,7 @@ define <4 x float> @test_fadd_imm_0_v4_ftz(<4 x float> %a) #2 {
 define <4 x float> @test_fadd_imm_1_v4_ftz(<4 x float> %a) #2 {
 ; CHECK-LABEL: test_fadd_imm_1_v4_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -415,7 +415,7 @@ define <2 x float> @test_fsub_ftz(<2 x float> %a, <2 x float> %b) #2 {
 define <2 x float> @test_fneg_ftz(<2 x float> %a) #2 {
 ; CHECK-LABEL: test_fneg_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -463,7 +463,7 @@ define <2 x float> @test_fma_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 define <2 x float> @test_fdiv_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-LABEL: test_fdiv_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<7>;
+; CHECK-NEXT:    .reg .b32 %f<7>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -483,7 +483,7 @@ define <2 x float> @test_frem_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-LABEL: test_frem_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
+; CHECK-NEXT:    .reg .b32 %f<15>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -528,7 +528,7 @@ define void @test_ldst_v2f32(ptr %a, ptr %b) #0 {
 define void @test_ldst_v3f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: test_ldst_v3f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -547,7 +547,7 @@ define void @test_ldst_v3f32(ptr %a, ptr %b) #0 {
 define void @test_ldst_v4f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: test_ldst_v4f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -564,7 +564,7 @@ define void @test_ldst_v4f32(ptr %a, ptr %b) #0 {
 define void @test_ldst_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: test_ldst_v8f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -676,7 +676,7 @@ define <2 x float> @test_select(<2 x float> %a, <2 x float> %b, i1 zeroext %c) #
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_select_param_2];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_select_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_select_param_0];
 ; CHECK-NEXT:    selp.b64 %rd3, %rd1, %rd2, %p1;
@@ -690,7 +690,7 @@ define <2 x float> @test_select_cc(<2 x float> %a, <2 x float> %b, <2 x float> %
 ; CHECK-LABEL: test_select_cc(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .f32 %f<11>;
+; CHECK-NEXT:    .reg .b32 %f<11>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -717,9 +717,9 @@ define <2 x double> @test_select_cc_f64_f32(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-LABEL: test_select_cc_f64_f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b64 %fd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.f64 {%fd3, %fd4}, [test_select_cc_f64_f32_param_1];
@@ -743,9 +743,9 @@ define <2 x float> @test_select_cc_f32_f64(<2 x float> %a, <2 x float> %b, <2 x 
 ; CHECK-LABEL: test_select_cc_f32_f64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .f32 %f<7>;
+; CHECK-NEXT:    .reg .b32 %f<7>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.f64 {%fd3, %fd4}, [test_select_cc_f32_f64_param_3];
@@ -770,7 +770,7 @@ define <2 x i1> @test_fcmp_une(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -794,7 +794,7 @@ define <2 x i1> @test_fcmp_ueq(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -818,7 +818,7 @@ define <2 x i1> @test_fcmp_ugt(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -842,7 +842,7 @@ define <2 x i1> @test_fcmp_uge(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -866,7 +866,7 @@ define <2 x i1> @test_fcmp_ult(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -890,7 +890,7 @@ define <2 x i1> @test_fcmp_ule(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -914,7 +914,7 @@ define <2 x i1> @test_fcmp_uno(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -938,7 +938,7 @@ define <2 x i1> @test_fcmp_one(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -962,7 +962,7 @@ define <2 x i1> @test_fcmp_oeq(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -986,7 +986,7 @@ define <2 x i1> @test_fcmp_ogt(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1010,7 +1010,7 @@ define <2 x i1> @test_fcmp_oge(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1034,7 +1034,7 @@ define <2 x i1> @test_fcmp_olt(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1058,7 +1058,7 @@ define <2 x i1> @test_fcmp_ole(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1082,7 +1082,7 @@ define <2 x i1> @test_fcmp_ord(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1105,7 +1105,7 @@ define <2 x i32> @test_fptosi_i32(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fptosi_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1122,7 +1122,7 @@ define <2 x i32> @test_fptosi_i32(<2 x float> %a) #0 {
 define <2 x i64> @test_fptosi_i64(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fptosi_i64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1140,7 +1140,7 @@ define <2 x i32> @test_fptoui_2xi32(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fptoui_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1157,7 +1157,7 @@ define <2 x i32> @test_fptoui_2xi32(<2 x float> %a) #0 {
 define <2 x i64> @test_fptoui_2xi64(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fptoui_2xi64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1175,7 +1175,7 @@ define <2 x float> @test_uitofp_2xi32(<2 x i32> %a) #0 {
 ; CHECK-LABEL: test_uitofp_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_uitofp_2xi32_param_0];
@@ -1190,7 +1190,7 @@ define <2 x float> @test_uitofp_2xi32(<2 x i32> %a) #0 {
 define <2 x float> @test_uitofp_2xi64(<2 x i64> %a) #0 {
 ; CHECK-LABEL: test_uitofp_2xi64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1207,7 +1207,7 @@ define <2 x float> @test_sitofp_2xi32(<2 x i32> %a) #0 {
 ; CHECK-LABEL: test_sitofp_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_sitofp_2xi32_param_0];
@@ -1222,7 +1222,7 @@ define <2 x float> @test_sitofp_2xi32(<2 x i32> %a) #0 {
 define <2 x float> @test_sitofp_2xi64(<2 x i64> %a) #0 {
 ; CHECK-LABEL: test_sitofp_2xi64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1239,7 +1239,7 @@ define <2 x float> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x float> %b) #0 {
 ; CHECK-LABEL: test_uitofp_2xi32_fadd(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1259,8 +1259,8 @@ define <2 x float> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x float> %b) #0 {
 define <2 x float> @test_fptrunc_2xdouble(<2 x double> %a) #0 {
 ; CHECK-LABEL: test_fptrunc_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.f64 {%fd1, %fd2}, [test_fptrunc_2xdouble_param_0];
@@ -1275,9 +1275,9 @@ define <2 x float> @test_fptrunc_2xdouble(<2 x double> %a) #0 {
 define <2 x double> @test_fpext_2xdouble(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fpext_2xdouble(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_fpext_2xdouble_param_0];
@@ -1328,7 +1328,7 @@ define <2 x float> @test_bitcast_double_to_2xfloat(double %a) #0 {
 ; CHECK-LABEL: test_bitcast_double_to_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [test_bitcast_double_to_2xfloat_param_0];
@@ -1343,7 +1343,7 @@ define double @test_bitcast_2xfloat_to_double(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_bitcast_2xfloat_to_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd2, [test_bitcast_2xfloat_to_double_param_0];
