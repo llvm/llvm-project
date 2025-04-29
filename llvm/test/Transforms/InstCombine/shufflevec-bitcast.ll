@@ -240,9 +240,8 @@ define <3 x i4> @shuf_bitcast_wrong_size(<2 x i8> %v, i8 %x) {
 
 define <16 x i8> @shuf_bitcast_chain(<8 x i32> %v) {
 ; CHECK-LABEL: @shuf_bitcast_chain(
-; CHECK-NEXT:    [[S_BC:%.*]] = bitcast <8 x i32> [[V:%.*]] to <2 x i128>
-; CHECK-NEXT:    [[S_EXTRACT:%.*]] = extractelement <2 x i128> [[S_BC]], i64 0
-; CHECK-NEXT:    [[C:%.*]] = bitcast i128 [[S_EXTRACT]] to <16 x i8>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[V:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[C:%.*]] = bitcast <4 x i32> [[S]] to <16 x i8>
 ; CHECK-NEXT:    ret <16 x i8> [[C]]
 ;
   %s = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -257,12 +256,9 @@ define <16 x i8> @shuf_bitcast_chain(<8 x i32> %v) {
 
 define <4 x i32> @shuf_bitcast_chain_2(<8 x i32> %v) {
 ; CHECK-LABEL: @shuf_bitcast_chain_2(
-; CHECK-NEXT:    [[S0_BC:%.*]] = bitcast <8 x i32> [[V:%.*]] to <2 x i128>
-; CHECK-NEXT:    [[S0_EXTRACT:%.*]] = extractelement <2 x i128> [[S0_BC]], i64 0
-; CHECK-NEXT:    [[S1_BC:%.*]] = bitcast <8 x i32> [[V]] to <2 x i128>
-; CHECK-NEXT:    [[S1_EXTRACT:%.*]] = extractelement <2 x i128> [[S1_BC]], i64 1
-; CHECK-NEXT:    [[R1:%.*]] = or i128 [[S0_EXTRACT]], [[S1_EXTRACT]]
-; CHECK-NEXT:    [[R:%.*]] = bitcast i128 [[R1]] to <4 x i32>
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[S0]], [[S1]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %s0 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
