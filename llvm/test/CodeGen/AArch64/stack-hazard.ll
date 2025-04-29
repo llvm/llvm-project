@@ -1497,72 +1497,24 @@ define [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1([2 x <vscale x 4 x i1>
 }
 
 define [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1_caller([2 x <vscale x 4 x i1>] %arg1, [2 x <vscale x 4 x i1>] %arg2) nounwind "aarch64_pstate_sm_compatible" {
-; CHECK0-LABEL: sve_signature_pred_2xv4i1_caller:
-; CHECK0:       // %bb.0:
-; CHECK0-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK0-NEXT:    addvl sp, sp, #-1
-; CHECK0-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK0-NEXT:    mov p5.b, p0.b
-; CHECK0-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK0-NEXT:    mov p4.b, p1.b
-; CHECK0-NEXT:    mov p0.b, p2.b
-; CHECK0-NEXT:    mov p1.b, p3.b
-; CHECK0-NEXT:    mov p2.b, p5.b
-; CHECK0-NEXT:    mov p3.b, p4.b
-; CHECK0-NEXT:    bl sve_signature_pred_2xv4i1
-; CHECK0-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK0-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK0-NEXT:    addvl sp, sp, #1
-; CHECK0-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECK0-NEXT:    ret
-;
-; CHECK64-LABEL: sve_signature_pred_2xv4i1_caller:
-; CHECK64:       // %bb.0:
-; CHECK64-NEXT:    sub sp, sp, #80
-; CHECK64-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK64-NEXT:    addvl sp, sp, #-1
-; CHECK64-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK64-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK64-NEXT:    sub sp, sp, #64
-; CHECK64-NEXT:    mov p4.b, p1.b
-; CHECK64-NEXT:    mov p5.b, p0.b
-; CHECK64-NEXT:    mov p0.b, p2.b
-; CHECK64-NEXT:    mov p1.b, p3.b
-; CHECK64-NEXT:    mov p2.b, p5.b
-; CHECK64-NEXT:    mov p3.b, p4.b
-; CHECK64-NEXT:    bl sve_signature_pred_2xv4i1
-; CHECK64-NEXT:    add sp, sp, #64
-; CHECK64-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK64-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK64-NEXT:    addvl sp, sp, #1
-; CHECK64-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #80
-; CHECK64-NEXT:    ret
-;
-; CHECK1024-LABEL: sve_signature_pred_2xv4i1_caller:
-; CHECK1024:       // %bb.0:
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x30, [sp, #1032] // 8-byte Folded Spill
-; CHECK1024-NEXT:    addvl sp, sp, #-1
-; CHECK1024-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK1024-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    mov p4.b, p1.b
-; CHECK1024-NEXT:    mov p5.b, p0.b
-; CHECK1024-NEXT:    mov p0.b, p2.b
-; CHECK1024-NEXT:    mov p1.b, p3.b
-; CHECK1024-NEXT:    mov p2.b, p5.b
-; CHECK1024-NEXT:    mov p3.b, p4.b
-; CHECK1024-NEXT:    bl sve_signature_pred_2xv4i1
-; CHECK1024-NEXT:    add sp, sp, #1024
-; CHECK1024-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK1024-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK1024-NEXT:    addvl sp, sp, #1
-; CHECK1024-NEXT:    ldr x30, [sp, #1032] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Folded Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK-LABEL: sve_signature_pred_2xv4i1_caller:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p5.b, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p4.b, p1.b
+; CHECK-NEXT:    mov p0.b, p2.b
+; CHECK-NEXT:    mov p1.b, p3.b
+; CHECK-NEXT:    mov p2.b, p5.b
+; CHECK-NEXT:    mov p3.b, p4.b
+; CHECK-NEXT:    bl sve_signature_pred_2xv4i1
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
   %res = call [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1([2 x <vscale x 4 x i1>] %arg2, [2 x <vscale x 4 x i1>] %arg1)
   ret [2 x <vscale x 4 x i1>] %res
 }

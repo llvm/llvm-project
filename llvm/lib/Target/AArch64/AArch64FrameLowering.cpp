@@ -3533,6 +3533,12 @@ static std::optional<int> getLdStFrameID(const MachineInstr &MI,
   return getMMOFrameID(*MI.memoperands_begin(), MFI);
 }
 
+/// Returns true if PPRs are spilled as ZPRs.
+static bool arePPRsSpilledAsZPR(const MachineFunction &MF) {
+  return MF.getSubtarget().getRegisterInfo()->getSpillSize(
+             AArch64::PPRRegClass) == 16;
+}
+
 // Check if a Hazard slot is needed for the current function, and if so create
 // one for it. The index is stored in AArch64FunctionInfo->StackHazardSlotIndex,
 // which can be used to determine if any hazard padding is needed.
@@ -3552,11 +3558,12 @@ void AArch64FrameLowering::determineStackHazardSlot(
 
   // Add a hazard slot if there are any CSR FPR registers, or are any fp-only
   // stack objects.
-  bool HasFPRCSRs = any_of(SavedRegs.set_bits(), [](unsigned Reg) {
+  bool ZPRPPRSpills = arePPRsSpilledAsZPR(MF);
+  bool HasFPRCSRs = any_of(SavedRegs.set_bits(), [ZPRPPRSpills](unsigned Reg) {
     return AArch64::FPR64RegClass.contains(Reg) ||
            AArch64::FPR128RegClass.contains(Reg) ||
            AArch64::ZPRRegClass.contains(Reg) ||
-           AArch64::PPRRegClass.contains(Reg);
+           (ZPRPPRSpills && AArch64::PPRRegClass.contains(Reg));
   });
   bool HasFPRStackObjects = false;
   if (!HasFPRCSRs) {
@@ -5066,6 +5073,8 @@ void AArch64FrameLowering::orderFrameObjects(
   // Identify FPR vs GPR slots for hazards, and stack slots that are tagged at
   // the same time.
   GroupBuilder GB(FrameObjects);
+
+  bool ZPRPPRSPills = arePPRsSpilledAsZPR(MF);
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.isDebugInstr())
@@ -5074,7 +5083,11 @@ void AArch64FrameLowering::orderFrameObjects(
       if (AFI.hasStackHazardSlotIndex()) {
         std::optional<int> FI = getLdStFrameID(MI, MFI);
         if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == TargetStackID::ScalableVector ||
+          // Note: PPR accesses should be treated as GPR accesses for the
+          // purposes of stack hazards as PPR ld/sts are handled on the CPU.
+          if ((MFI.getStackID(*FI) == TargetStackID::ScalableVector &&
+               (ZPRPPRSPills ||
+                !AArch64::PPRRegClass.contains(MI.getOperand(0).getReg()))) ||
               AArch64InstrInfo::isFpOrNEON(MI))
             FrameObjects[*FI].Accesses |= FrameObject::AccessFPR;
           else
