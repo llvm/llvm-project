@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
 #define LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
 
-#include "src/__support/File/file.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
