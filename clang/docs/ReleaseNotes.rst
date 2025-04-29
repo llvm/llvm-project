@@ -150,6 +150,15 @@ C Language Changes
 - Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)
+- Added ``-Wimplicit-int-enum-cast``, grouped under ``-Wc++-compat``, which
+  diagnoses implicit conversion from integer types to an enumeration type in C,
+  which is not compatible with C++. #GH37027
+- Split "implicit conversion from enum type to different enum type" diagnostic
+  from ``-Wenum-conversion`` into its own diagnostic group,
+  ``-Wimplicit-enum-enum-cast``, which is grouped under both
+  ``-Wenum-conversion`` and ``-Wimplicit-int-enum-cast``. This conversion is an
+  int-to-enum conversion because the enumeration on the right-hand side is
+  promoted to ``int`` before the assignment.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^

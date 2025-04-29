@@ -12268,13 +12268,19 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       *ICContext = true;
     }
 
-    return DiagnoseImpCast(*this, E, T, CC, DiagID);
+    DiagnoseImpCast(*this, E, T, CC, DiagID);
   }
+
+  // If we're implicitly converting from an integer into an enumeration, that
+  // is valid in C but invalid in C++.
+  QualType SourceType = E->getEnumCoercedType(Context);
+  const BuiltinType *CoercedSourceBT = SourceType->getAs<BuiltinType>();
+  if (CoercedSourceBT && CoercedSourceBT->isInteger() && isa<EnumType>(Target))
+    return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_int_to_enum);
 
   // Diagnose conversions between different enumeration types.
   // In C, we pretend that the type of an EnumConstantDecl is its enumeration
   // type, to give us better diagnostics.
-  QualType SourceType = E->getEnumCoercedType(Context);
   Source = Context.getCanonicalType(SourceType).getTypePtr();
 
   if (const EnumType *SourceEnum = Source->getAs<EnumType>())
