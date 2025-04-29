@@ -81,6 +81,8 @@ public:
   /// Options to add to the linker for the object file
   std::vector<std::string> DependentLibs;
 
+  bool InstrumentFunctions{false};
+
   // The RemarkKind enum class and OptRemark struct are identical to what Clang
   // has
   // TODO: Share with clang instead of re-implementing here

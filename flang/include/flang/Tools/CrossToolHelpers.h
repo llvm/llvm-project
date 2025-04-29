@@ -102,13 +102,17 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     UnsafeFPMath = mathOpts.getAssociativeMath() &&
         mathOpts.getReciprocalMath() && NoSignedZerosFPMath &&
         ApproxFuncFPMath && mathOpts.getFPContractEnabled();
+    if (opts.InstrumentFunctions) {
+      InstrumentFunctionsEntry = "__cyg_profile_func_enter";
+      InstrumentFunctionsExit = "__cyg_profile_func_exit";
+    }
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
   bool StackArrays = false; ///< convert memory allocations to alloca.
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
-  bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
+  bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
   llvm::FramePointerKind FramePointerKind =
@@ -124,6 +128,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
+  std::string InstrumentFunctionsEntry = "";
+  std::string InstrumentFunctionsExit = "";
 };
 
 struct OffloadModuleOpts {
