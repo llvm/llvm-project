@@ -117,6 +117,8 @@ public:
   /// default on-disk CAS, otherwise this is a noop.
   void ensurePersistentCAS();
 
+  std::string getResolvedCASPath() const;
+
 private:
   /// Initialize Cached CAS and ActionCache.
   llvm::Error initCache() const;

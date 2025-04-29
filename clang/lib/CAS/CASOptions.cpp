@@ -119,3 +119,12 @@ llvm::Error CASOptions::initCache() const {
   std::tie(Cache.CAS, Cache.AC) = std::move(DBs);
   return llvm::Error::success();
 }
+
+std::string CASOptions::getResolvedCASPath() const {
+  if (CASPath != "auto")
+    return CASPath;
+
+  SmallString<256> PathBuf;
+  getDefaultOnDiskCASPath(PathBuf);
+  return std::string(PathBuf);
+}
