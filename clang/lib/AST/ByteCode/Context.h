@@ -111,6 +111,13 @@ public:
 
   unsigned getEvalID() const { return EvalID; }
 
+  /// Unevaluated builtins don't get their arguments put on the stack
+  /// automatically. They instead operate on the AST of their Call
+  /// Expression.
+  /// Similar information is available via ASTContext::BuiltinInfo,
+  /// but that is not correct for our use cases.
+  static bool isUnevaluatedBuiltin(unsigned ID);
+
 private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func);

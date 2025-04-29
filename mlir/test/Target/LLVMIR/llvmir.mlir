@@ -2840,7 +2840,7 @@ module {
 
 llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
   #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
-  #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+  #llvm.cgprofile_entry<from = @from, count = 222>,
   #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
 ]>]
 llvm.func @from(i32)
@@ -2851,7 +2851,7 @@ llvm.func @to()
 // CHECK: ![[#CGPROF]] = !{i32 5, !"CG Profile", ![[#LIST:]]}
 // CHECK: ![[#LIST]] = distinct !{![[#ENTRY_A:]], ![[#ENTRY_B:]], ![[#ENTRY_C:]]}
 // CHECK: ![[#ENTRY_A]] = !{ptr @from, ptr @to, i64 222}
-// CHECK: ![[#ENTRY_B]] = !{ptr @from, ptr @from, i64 222}
+// CHECK: ![[#ENTRY_B]] = !{ptr @from, null, i64 222}
 // CHECK: ![[#ENTRY_C]] = !{ptr @to, ptr @from, i64 222}
 // CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
 

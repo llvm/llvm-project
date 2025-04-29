@@ -1046,17 +1046,16 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = std::count_if(
-          SU->Succs.begin(), SU->Succs.end(),
-          [](const SDep &Succ) { return Succ.getKind() == SDep::Data; });
+      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return false;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize = std::count_if(
-              Succ.getSUnit()->Succs.begin(), Succ.getSUnit()->Succs.end(),
-              [](const SDep &SuccSucc) {
+          auto SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
@@ -1087,17 +1086,16 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      auto SuccSize = std::count_if(
-          SU->Succs.begin(), SU->Succs.end(),
-          [](const SDep &Succ) { return Succ.getKind() == SDep::Data; });
+      auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return true;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          auto SuccSize = std::count_if(
-              Succ.getSUnit()->Succs.begin(), Succ.getSUnit()->Succs.end(),
-              [](const SDep &SuccSucc) {
+          auto SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
@@ -1474,18 +1472,17 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   MFMAChainLength = MFMAPipeCount / MFMAChains;
 
   // The number of bit pack operations that depend on a single V_EXP
-  unsigned PackSuccCount = std::count_if(
-      PackSUs.begin(), PackSUs.end(), [this, &TempExp](SUnit *VPack) {
+  unsigned PackSuccCount =
+      llvm::count_if(PackSUs, [this, &TempExp](SUnit *VPack) {
         return DAG->IsReachable(VPack, *TempExp);
       });
 
   // The number of bit pack operations an MFMA depends on
   unsigned PackPredCount =
-      std::count_if((*TempMFMA)->Preds.begin(), (*TempMFMA)->Preds.end(),
-                    [&isBitPack](SDep &Pred) {
-                      auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
-                      return isBitPack(Opc);
-                    });
+      llvm::count_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
+        auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
+        return isBitPack(Opc);
+      });
 
   auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
@@ -1499,20 +1496,18 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
   MFMAEnablement =
-      std::count_if(PackPred->getSUnit()->Succs.begin(),
-                    PackPred->getSUnit()->Succs.end(), [&TII](SDep &Succ) {
-                      return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-                    });
+      llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
+        return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
+      });
 
   // The number of MFMAs that depend on a single V_EXP
   MFMAEnablement *= PackSuccCount;
 
   // The number of V_EXPs required to resolve all dependencies for an MFMA
   ExpRequirement =
-      std::count_if(ExpPipeCands.begin(), ExpPipeCands.end(),
-                    [this, &PackPred](SUnit *ExpBase) {
-                      return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
-                    });
+      llvm::count_if(ExpPipeCands, [this, &PackPred](SUnit *ExpBase) {
+        return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
+      });
 
   ExpRequirement *= PackPredCount;
   return true;

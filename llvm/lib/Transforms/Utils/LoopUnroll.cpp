@@ -997,7 +997,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                     /*PredecessorWithTwoSuccessors=*/false,
                                     DTUToUse ? nullptr : DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
-        std::replace(Latches.begin(), Latches.end(), Dest, Fold);
+        llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
     }

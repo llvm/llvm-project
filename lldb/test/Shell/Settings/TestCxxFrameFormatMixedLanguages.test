@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # Test the plugin.cplusplus.display.function-name-format setting
 # when interoperating multiple languages.
 

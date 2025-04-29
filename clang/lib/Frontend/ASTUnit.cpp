@@ -615,7 +615,7 @@ public:
 
     this->TargetOpts = std::make_shared<TargetOptions>(TargetOpts);
     Target =
-        TargetInfo::CreateTargetInfo(PP.getDiagnostics(), this->TargetOpts);
+        TargetInfo::CreateTargetInfo(PP.getDiagnostics(), *this->TargetOpts);
 
     updated();
     return false;
@@ -1499,6 +1499,10 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
     Target = &CI.getTarget();
   Reader = CI.getASTReader();
   HadModuleLoaderFatalFailure = CI.hadModuleLoaderFatalFailure();
+  if (Invocation != CI.getInvocationPtr()) {
+    // This happens when Parse creates a copy of \c Invocation to modify.
+    ModifiedInvocation = CI.getInvocationPtr();
+  }
 }
 
 StringRef ASTUnit::getMainFileName() const {

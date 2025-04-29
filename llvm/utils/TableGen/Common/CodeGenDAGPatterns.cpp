@@ -24,6 +24,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -3217,13 +3218,8 @@ bool TreePattern::InferAllTypes(
 
 void TreePattern::print(raw_ostream &OS) const {
   OS << getRecord()->getName();
-  if (!Args.empty()) {
-    OS << "(";
-    ListSeparator LS;
-    for (const std::string &Arg : Args)
-      OS << LS << Arg;
-    OS << ")";
-  }
+  if (!Args.empty())
+    OS << '(' << llvm::interleaved(Args) << ')';
   OS << ": ";
 
   if (Trees.size() > 1)

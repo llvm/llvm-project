@@ -31,6 +31,7 @@
 #include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
@@ -2119,4 +2120,49 @@ Fortran::lower::convertVectorSubscriptedExprToElementalAddr(
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   return HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx)
       .convertVectorSubscriptedExprToElementalAddr(designatorExpr);
+}
+
+hlfir::Entity Fortran::lower::genVectorSubscriptedDesignatorFirstElementAddress(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Get a hlfir.elemental_addr op describing the address of the value
+  // indexed from the original array.
+  // Note: the hlfir.elemental_addr op verifier requires it to be inside
+  // of a hlfir.region_assign op. This operation is never seen by the
+  // verifier because it is immediately inlined.
+  hlfir::ElementalAddrOp addrOp = convertVectorSubscriptedExprToElementalAddr(
+      loc, converter, expr, symMap, stmtCtx);
+  if (!addrOp.getCleanup().empty())
+    TODO(converter.getCurrentLocation(),
+         "Vector subscript requring a cleanup region");
+
+  // hlfir.elemental_addr doesn't have a normal lowering because it
+  // can't return a value. Instead we need to inline it here using
+  // values for the first element. Similar to hlfir::inlineElementalOp.
+
+  mlir::Value one = builder.createIntegerConstant(
+      converter.getCurrentLocation(), builder.getIndexType(), 1);
+  mlir::SmallVector<mlir::Value> oneBasedIndices;
+  oneBasedIndices.resize(addrOp.getIndices().size(), one);
+
+  mlir::IRMapping mapper;
+  mapper.map(addrOp.getIndices(), oneBasedIndices);
+  assert(addrOp.getElementalRegion().hasOneBlock());
+  mlir::Operation *newOp;
+  for (mlir::Operation &op : addrOp.getElementalRegion().back().getOperations())
+    newOp = builder.clone(op, mapper);
+  auto yield = mlir::cast<hlfir::YieldOp>(newOp);
+
+  addrOp->erase();
+
+  if (!yield.getCleanup().empty())
+    TODO(converter.getCurrentLocation(),
+         "Vector subscript requring element cleanup");
+
+  hlfir::Entity result{yield.getEntity()};
+  yield->erase();
+  return result;
 }
