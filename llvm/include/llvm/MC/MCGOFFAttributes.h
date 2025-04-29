@@ -73,7 +73,6 @@ struct LDAttr {
 // Attributes for PR symbols.
 struct PRAttr {
   bool IsRenamable = false;
-  bool IsReadOnly = false; // ???? Not documented.
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
   GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
