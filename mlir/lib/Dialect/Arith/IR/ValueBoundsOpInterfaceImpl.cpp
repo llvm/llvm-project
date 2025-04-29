@@ -75,6 +75,19 @@ struct MulIOpInterface
   }
 };
 
+struct DivSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<DivSIOpInterface, DivSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto divSIOp = cast<DivSIOp>(op);
+    assert(value == divSIOp.getResult() && "invalid value");
+
+    AffineExpr lhs = cstr.getExpr(divSIOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(divSIOp.getRhs());
+    cstr.bound(value) == lhs.floorDiv(rhs);
+  }
+};
+
 struct SelectOpInterface
     : public ValueBoundsOpInterface::ExternalModel<SelectOpInterface,
                                                    SelectOp> {
@@ -157,6 +170,7 @@ void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     arith::ConstantOp::attachInterface<arith::ConstantOpInterface>(*ctx);
     arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
     arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
+    arith::DivSIOp::attachInterface<arith::DivSIOpInterface>(*ctx);
     arith::SelectOp::attachInterface<arith::SelectOpInterface>(*ctx);
   });
 }
