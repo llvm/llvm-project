@@ -150,16 +150,9 @@ namespace llvm {
         : Data(Vec.data()), Length(Vec.size()) {}
 
     /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
-    /// to ensure that this is only used for iterator ranges of random access
-    /// iterators that can be converted.
-    template <typename U,
-              typename = std::enable_if<
-                  std::is_base_of<
-                      std::random_access_iterator_tag,
-                      typename std::iterator_traits<
-                          decltype(std::declval<const iterator_range<U *> &>()
-                                       .begin())>::iterator_category>::value &&
-                  std::is_convertible_v<U *, T const *>>>
+    /// to ensure that this is only used for iterator ranges over plain pointer
+    /// iterators.
+    template <typename U, typename = std::enable_if_t<std::is_same_v<U *, T *>>>
     ArrayRef(const iterator_range<U *> &Range)
         : Data(Range.begin()), Length(llvm::size(Range)) {}
 

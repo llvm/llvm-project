@@ -255,6 +255,20 @@ TEST(ArrayRefTest, ArrayRefFromStdArray) {
   }
 }
 
+struct TestRandomAccessIterator {
+  using iterator_category = std::random_access_iterator_tag;
+};
+
+static_assert(
+    !std::is_constructible<ArrayRef<int>,
+                           iterator_range<TestRandomAccessIterator>>::value,
+    "cannot construct from iterator range with non-pointer iterator");
+static_assert(!std::is_constructible<ArrayRef<int>, iterator_range<int>>::value,
+              "cannot construct from iterator range with non-pointer iterator");
+static_assert(
+    std::is_constructible<ArrayRef<char *>, iterator_range<char **>>::value,
+    "should be able to construct ArrayRef from iterator_range over pointers");
+
 TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
   std::array<int, 5> A1{{42, -5, 0, 1000000, -1000000}};
   ArrayRef<int> A2 = make_range(A1.begin(), A1.end());
