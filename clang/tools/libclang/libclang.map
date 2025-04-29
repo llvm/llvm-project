@@ -578,6 +578,9 @@ LLVM_21 {
     clang_experimental_DepGraphModule_isInStableDirs; 
     clang_getFullyQualifiedName;
     clang_experimental_DependencyScannerService_getInvalidNegStatCachedPaths;
+    clang_experimental_DependencyScannerReproducerOptions_create;
+    clang_experimental_DependencyScannerReproducerOptions_dispose;
+    clang_experimental_DependencyScanner_generateReproducer;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

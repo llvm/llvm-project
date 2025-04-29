@@ -640,3 +640,161 @@ std::string OutputLookup::lookupModuleOutput(const ModuleDeps &MD,
     PCMPath.first->second = ::lookupModuleOutput(MD, MOK, MLOContext, MLO);
   return PCMPath.first->second;
 }
+
+namespace {
+struct DependencyScannerReproducerOptions {
+  std::vector<std::string> BuildArgs;
+  std::optional<std::string> ModuleName;
+  std::optional<std::string> WorkingDirectory;
+
+  DependencyScannerReproducerOptions(int argc, const char *const *argv,
+                                     const char *ModuleName,
+                                     const char *WorkingDirectory) {
+    if (argv)
+      BuildArgs.assign(argv, argv + argc);
+    if (ModuleName)
+      this->ModuleName = ModuleName;
+    if (WorkingDirectory)
+      this->WorkingDirectory = WorkingDirectory;
+  }
+};
+
+// Helper class to capture a returnable error code and to return a formatted
+// message in a provided CXString pointer.
+class MessageEmitter {
+  const CXErrorCode ErrorCode;
+  CXString *OutputString;
+  std::string Buffer;
+  llvm::raw_string_ostream Stream;
+
+public:
+  MessageEmitter(CXErrorCode Code, CXString *Output)
+      : ErrorCode(Code), OutputString(Output), Stream(Buffer) {}
+  ~MessageEmitter() {
+    if (OutputString)
+      *OutputString = clang::cxstring::createDup(Buffer.c_str());
+  }
+
+  operator CXErrorCode() const { return ErrorCode; }
+
+  template <typename T> MessageEmitter &operator<<(const T &t) {
+    Stream << t;
+    return *this;
+  }
+};
+} // end anonymous namespace
+
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyScannerReproducerOptions,
+                                   CXDependencyScannerReproducerOptions)
+
+CXDependencyScannerReproducerOptions
+clang_experimental_DependencyScannerReproducerOptions_create(
+    int argc, const char *const *argv, const char *ModuleName,
+    const char *WorkingDirectory) {
+  return wrap(new DependencyScannerReproducerOptions{argc, argv, ModuleName,
+                                                     WorkingDirectory});
+}
+
+void clang_experimental_DependencyScannerReproducerOptions_dispose(
+    CXDependencyScannerReproducerOptions Options) {
+  delete unwrap(Options);
+}
+
+enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
+    CXDependencyScannerReproducerOptions CXOptions, CXString *MessageOut) {
+  auto Report = [MessageOut](CXErrorCode ErrorCode) -> MessageEmitter {
+    return MessageEmitter(ErrorCode, MessageOut);
+  };
+  auto ReportFailure = [&Report]() -> MessageEmitter {
+    return Report(CXError_Failure);
+  };
+
+  DependencyScannerReproducerOptions &Opts = *unwrap(CXOptions);
+  if (Opts.BuildArgs.size() < 2)
+    return Report(CXError_InvalidArguments) << "missing compilation command";
+  if (!Opts.WorkingDirectory)
+    return Report(CXError_InvalidArguments) << "missing working directory";
+
+  CASOptions CASOpts;
+  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
+  DependencyScanningService DepsService(
+      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Full,
+      CASOpts, /*CAS=*/nullptr, /*ActionCache=*/nullptr, FS);
+  DependencyScanningTool DepsTool(DepsService);
+
+  llvm::SmallString<128> ReproScriptPath;
+  int ScriptFD;
+  if (auto EC = llvm::sys::fs::createTemporaryFile("reproducer", "sh", ScriptFD,
+                                                   ReproScriptPath)) {
+    return ReportFailure() << "failed to create a reproducer script file";
+  }
+  SmallString<128> FileCachePath = ReproScriptPath;
+  llvm::sys::path::replace_extension(FileCachePath, ".cache");
+
+  std::string FileCacheName = llvm::sys::path::filename(FileCachePath).str();
+  auto LookupOutput = [&FileCacheName](const ModuleDeps &MD,
+                                       ModuleOutputKind MOK) -> std::string {
+    if (MOK != ModuleOutputKind::ModuleFile)
+      return "";
+    return FileCacheName + "/explicitly-built-modules/" +
+           MD.ID.ModuleName + "-" + MD.ID.ContextHash + ".pcm";
+  };
+
+  llvm::DenseSet<ModuleID> AlreadySeen;
+  auto TUDepsOrErr = DepsTool.getTranslationUnitDependencies(
+      Opts.BuildArgs, *Opts.WorkingDirectory, AlreadySeen,
+      std::move(LookupOutput));
+  if (!TUDepsOrErr)
+    return ReportFailure() << "failed to generate a reproducer\n"
+                           << toString(TUDepsOrErr.takeError());
+
+  TranslationUnitDeps TU = *TUDepsOrErr;
+  llvm::raw_fd_ostream ScriptOS(ScriptFD, /*shouldClose=*/true);
+  ScriptOS << "# Original command:\n#";
+  for (StringRef Arg : Opts.BuildArgs)
+    ScriptOS << ' ' << Arg;
+  ScriptOS << "\n\n";
+
+  ScriptOS << "# Dependencies:\n";
+  std::string ReproExecutable = Opts.BuildArgs.front();
+  auto PrintArguments = [&ReproExecutable,
+                         &FileCacheName](llvm::raw_fd_ostream &OS,
+                                         ArrayRef<std::string> Arguments) {
+    OS << ReproExecutable;
+    for (int I = 0, E = Arguments.size(); I < E; ++I)
+      OS << ' ' << Arguments[I];
+    OS << " -ivfsoverlay \"" << FileCacheName << "/vfs/vfs.yaml\"";
+    OS << '\n';
+  };
+  for (ModuleDeps &Dep : TU.ModuleGraph)
+    PrintArguments(ScriptOS, Dep.getBuildArguments());
+  ScriptOS << "\n# Translation unit:\n";
+  for (const Command &BuildCommand : TU.Commands)
+    PrintArguments(ScriptOS, BuildCommand.Arguments);
+
+  SmallString<128> VFSCachePath = FileCachePath;
+  llvm::sys::path::append(VFSCachePath, "vfs");
+  std::string VFSCachePathStr = VFSCachePath.str().str();
+  llvm::FileCollector FileCollector(VFSCachePathStr,
+                                    /*OverlayRoot=*/VFSCachePathStr);
+  for (const auto &FileDep : TU.FileDeps) {
+    FileCollector.addFile(FileDep);
+  }
+  for (ModuleDeps &ModuleDep : TU.ModuleGraph) {
+    ModuleDep.forEachFileDep([&FileCollector](StringRef FileDep) {
+      FileCollector.addFile(FileDep);
+    });
+  }
+  if (FileCollector.copyFiles(/*StopOnError=*/true))
+    return ReportFailure()
+           << "failed to copy the files used for the compilation";
+  SmallString<128> VFSOverlayPath = VFSCachePath;
+  llvm::sys::path::append(VFSOverlayPath, "vfs.yaml");
+  if (FileCollector.writeMapping(VFSOverlayPath))
+    return ReportFailure() << "failed to write a VFS overlay mapping";
+
+  return Report(CXError_Success)
+         << "Created a reproducer. Sources and associated run script(s) are "
+            "located at:\n  "
+         << FileCachePath << "\n  " << ReproScriptPath;
+}

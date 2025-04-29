@@ -591,6 +591,56 @@ CXCStringArray
         CXDependencyScannerService);
 
 /**
+ * Options used to generate a reproducer.
+ */
+typedef struct CXOpaqueDependencyScannerReproducerOptions
+    *CXDependencyScannerReproducerOptions;
+
+/**
+ * Creates a set of settings for
+ * \c clang_experimental_DependencyScanner_generateReproducer action.
+ * Must be disposed with
+ * \c clang_experimental_DependencyScannerReproducerOptions_dispose.
+ *
+ * \param argc the number of compiler invocation arguments (including argv[0]).
+ * \param argv the compiler driver invocation arguments (including argv[0]).
+ * \param ModuleName If non-NULL, reproduce building the named module and all
+ *                   the intermediate modules. Otherwise, reproduce building
+ *                   the whole translation unit.
+ * \param WorkingDirectory the directory in which the invocation runs.
+ */
+CINDEX_LINKAGE CXDependencyScannerReproducerOptions
+clang_experimental_DependencyScannerReproducerOptions_create(
+    int argc, const char *const *argv, const char *ModuleName,
+    const char *WorkingDirectory);
+
+CINDEX_LINKAGE void
+    clang_experimental_DependencyScannerReproducerOptions_dispose(
+        CXDependencyScannerReproducerOptions);
+
+/**
+ * Generates a reproducer to compile a requested file with required modules.
+ *
+ * Here the reproducer means the required input data with the commands to
+ * compile intermediate modules and a requested file. Required intermediate
+ * modules and the order of their compilation are determined by the function
+ * and don't need to be provided.
+ *
+ * \param CXOptions object created via
+ *     \c clang_experimental_DependencyScannerReproducerOptions_create.
+ * \param [out] MessageOut A pointer to store the human-readable message
+ *                         describing the result of the operation. If non-NULL,
+ *                         owned and should be disposed by the caller.
+ *
+ * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
+ * indicating the kind of error. \p MessageOut is guaranteed to be populated
+ * for a success case but is allowed to be empty when encountered an error.
+ */
+CINDEX_LINKAGE enum CXErrorCode
+clang_experimental_DependencyScanner_generateReproducer(
+    CXDependencyScannerReproducerOptions CXOptions, CXString *MessageOut);
+
+/**
  * @}
  */
 
