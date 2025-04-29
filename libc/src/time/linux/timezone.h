@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "hdr/types/FILE.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
@@ -48,7 +50,7 @@ typedef struct {
   int8_t global_isdst;
 } tzset;
 
-tzset *get_tzset(File *file);
+tzset *get_tzset(::FILE *file);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
