@@ -970,8 +970,8 @@ struct DSEState {
   DenseMap<const Value *, bool> InvisibleToCallerAfterRet;
   // Keep track of blocks with throwing instructions not modeled in MemorySSA.
   SmallPtrSet<BasicBlock *, 16> ThrowingBlocks;
-  // Reverse post-order numbers for each basic block. Used to figure out if memory
-  // accesses are executed before another access.
+  // Reverse post-order numbers for each basic block. Used to figure out if
+  // memory accesses are executed before another access.
   DenseMap<BasicBlock *, unsigned> RPONumbers;
 
   /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
