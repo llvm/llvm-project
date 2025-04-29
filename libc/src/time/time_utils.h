@@ -52,7 +52,8 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out);
 // "total_seconds" is the number of seconds since January 1st, 1970.
 extern int calculate_dst(struct tm *tm);
 extern void set_dst(struct tm *tm);
-extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local);
+extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm,
+                                   bool local);
 extern timezone::tzset *get_localtime(struct tm *tm);
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 extern unsigned char is_dst(struct tm *tm);
