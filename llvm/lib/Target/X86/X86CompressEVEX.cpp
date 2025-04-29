@@ -58,6 +58,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE COMP_EVEX_NAME
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 namespace {
 // Including the generated EVEX compression tables.
 #define GET_X86_COMPRESS_EVEX_TABLE
@@ -254,11 +256,20 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     }
   }
 
+  bool IsWithReloc = false;
+  if (X86EnableAPXForRelocation) {
+    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                  X86II::getOperandBias(MI.getDesc());
+    MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+    if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
+      IsWithReloc = true;
+  }
+
   // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
   // dead.
   unsigned NewOpc = IsRedundantNDD
                         ? X86::getNonNDVariant(Opc)
-                        : ((IsNDLike && ST.hasNF() &&
+                        : ((IsNDLike && ST.hasNF() && !IsWithReloc &&
                             MI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr))
                                ? X86::getNFVariant(Opc)
                                : GetCompressedOpc(Opc));

@@ -17,6 +17,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
+#include "X86InstrInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 
@@ -25,6 +26,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -33,7 +35,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-suppress-apx-for-relocation"
 
-static cl::opt<bool> X86EnableAPXForRelocation(
+cl::opt<bool> X86EnableAPXForRelocation(
     "x86-enable-apx-for-relocation",
     cl::desc("Enable APX features (EGPR, NDD and NF) for instructions with "
              "relocations on x86-64 ELF"),
@@ -68,14 +70,14 @@ FunctionPass *llvm::createX86SuppressAPXForRelocationPass() {
 static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
                                  unsigned int OpNum) {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  auto Reg = MI.getOperand(OpNum).getReg();
+  Register Reg = MI.getOperand(OpNum).getReg();
   if (!Reg.isVirtual()) {
     assert(!X86II::isApxExtendedReg(Reg) && "APX EGPR is used unexpectedly.");
     return;
   }
 
-  auto *RC = MRI->getRegClass(Reg);
-  auto *NewRC = X86II::constrainRegClassToNonRex2(RC);
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  const TargetRegisterClass *NewRC = X86II::constrainRegClassToNonRex2(RC);
   MRI->setRegClass(Reg, NewRC);
 }
 
@@ -88,12 +90,12 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
                                           ArrayRef<unsigned> OpNoArray) {
     int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                   X86II::getOperandBias(MI.getDesc());
-    auto &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+    const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
     if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
         MO.getTargetFlags() == X86II::MO_GOTPCREL) {
       LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                         << MI);
-      for (auto OpNo : OpNoArray)
+      for (unsigned OpNo : OpNoArray)
         suppressEGPRRegClass(MF, MI, OpNo);
       LLVM_DEBUG(dbgs() << "to:\n  " << MI << "\n");
     }
@@ -147,7 +149,7 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
   if (!ST.hasNDD())
     return false;
 
-  auto TII = ST.getInstrInfo();
+  const X86InstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
@@ -160,14 +162,16 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
       case X86::ADD64rm_ND: {
         int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                       X86II::getOperandBias(MI.getDesc());
-        auto &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+        const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
-                                 TII->get(TargetOpcode::COPY), Reg)
-                             .addReg(MI.getOperand(1).getReg());
+          MachineInstrBuilder CopyMI =
+              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+                      Reg)
+                  .addReg(MI.getOperand(1).getReg());
+          (void)CopyMI;
           MI.getOperand(1).setReg(Reg);
           const MCInstrDesc &NewDesc = TII->get(X86::ADD64rm);
           MI.setDesc(NewDesc);
@@ -180,16 +184,18 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
       }
       case X86::ADD64mr_ND: {
         int MemRefBegin = X86II::getMemoryOperandNo(MI.getDesc().TSFlags);
-        auto &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
+        const MachineOperand &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
           suppressEGPRRegClass(MF, MI, 0);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
-                                 TII->get(TargetOpcode::COPY), Reg)
-                             .addReg(MI.getOperand(6).getReg());
-          auto &NewMI =
+          MachineInstrBuilder CopyMIB =
+              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+                      Reg)
+                  .addReg(MI.getOperand(6).getReg());
+          (void)CopyMIB;
+          MachineInstrBuilder NewMIB =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::ADD64rm),
                       MI.getOperand(0).getReg())
                   .addReg(Reg)
@@ -198,9 +204,17 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
                   .addReg(MI.getOperand(3).getReg())
                   .add(MI.getOperand(4))
                   .addReg(MI.getOperand(5).getReg());
+          MachineOperand *FlagDef =
+              MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+          if (FlagDef && FlagDef->isDead()) {
+            MachineOperand *NewFlagDef =
+                NewMIB->findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+            if (NewFlagDef)
+              NewFlagDef->setIsDead();
+          }
           MI.eraseFromParent();
-          LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMI << "\n");
-          LLVM_DEBUG(dbgs() << "  " << *NewMI << "\n");
+          LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMIB << "\n");
+          LLVM_DEBUG(dbgs() << "  " << *NewMIB << "\n");
         }
         break;
       }

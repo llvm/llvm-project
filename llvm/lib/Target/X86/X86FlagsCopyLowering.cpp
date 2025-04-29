@@ -66,6 +66,8 @@ STATISTIC(NumTestsInserted, "Number of test instructions inserted");
 STATISTIC(NumAddsInserted, "Number of adds instructions inserted");
 STATISTIC(NumNFsConvertedTo, "Number of NF instructions converted to");
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 namespace {
 
 // Convenient array type for storing registers associated with each condition.
@@ -242,8 +244,18 @@ static EFLAGSClobber getClobberType(const MachineInstr &MI) {
       MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
   if (!FlagDef)
     return NoClobber;
-  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()))
+
+  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode())) {
+    if (X86EnableAPXForRelocation) {
+      int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                    X86II::getOperandBias(MI.getDesc());
+      const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+      if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
+        return InevitableClobber;
+    }
+
     return EvitableClobber;
+  }
 
   return InevitableClobber;
 }

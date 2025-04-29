@@ -1,5 +1,5 @@
-# RUN: llc -mattr=+egpr,+ndd -x mir < %s -x86-enable-apx-for-relocation=true -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,APXREL
-# RUN: llc -mattr=+egpr,+ndd -x mir < %s -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,NOAPXREL
+# RUN: llc -mattr=+egpr,+ndd -x mir < %s -x86-enable-apx-for-relocation=true -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs -o - | FileCheck %s --check-prefixes=CHECK,APXREL
+# RUN: llc -mattr=+egpr,+ndd -x mir < %s -run-pass x86-suppress-apx-for-relocation -verify-machineinstrs -o - | FileCheck %s --check-prefixes=CHECK,NOAPXREL
 
 
 --- |
@@ -292,5 +292,5 @@ body: |
 # CHECK: name: add64mr_nd
 # APXREL: %1:gr64 = ADD64mr_ND $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, %0, implicit-def dead $eflags :: (load (s64) from got)
 # NOAPXREL: %3:gr64_norex2 = COPY %0
-# NOAPXREL: %1:gr64_norex2 = ADD64rm %3, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags
+# NOAPXREL: %1:gr64_norex2 = ADD64rm %3, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def dead $eflags
 ...
