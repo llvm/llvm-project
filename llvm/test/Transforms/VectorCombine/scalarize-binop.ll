@@ -4,10 +4,10 @@
 define <4 x i32> @add_v4i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: define <4 x i32> @add_v4i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_HEAD:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[RES_SCALAR:%.*]] = add i32 [[X]], 42
+; CHECK-NEXT:    [[X_HEAD:%.*]] = insertelement <4 x i32> poison, i32 [[RES_SCALAR]], i64 0
 ; CHECK-NEXT:    [[X_SPLAT:%.*]] = shufflevector <4 x i32> [[X_HEAD]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = add <4 x i32> [[X_SPLAT]], splat (i32 42)
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; CHECK-NEXT:    ret <4 x i32> [[X_SPLAT]]
 ;
   %x.head = insertelement <4 x i32> poison, i32 %x, i32 0
   %x.splat = shufflevector <4 x i32> %x.head, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -18,10 +18,10 @@ define <4 x i32> @add_v4i32(i32 %x, i32 %y) {
 define <vscale x 4 x i32> @add_nxv4i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @add_nxv4i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[Y_HEAD1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[RES_SCALAR:%.*]] = add i32 [[X]], 42
+; CHECK-NEXT:    [[Y_HEAD1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[RES_SCALAR]], i64 0
 ; CHECK-NEXT:    [[Y_SPLAT1:%.*]] = shufflevector <vscale x 4 x i32> [[Y_HEAD1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = add <vscale x 4 x i32> [[Y_SPLAT1]], splat (i32 42)
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[Y_SPLAT1]]
 ;
   %x.head = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
   %x.splat = shufflevector <vscale x 4 x i32> %x.head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -33,11 +33,11 @@ define <vscale x 4 x i32> @add_nxv4i32(i32 %x, i32 %y) {
 define <4 x i32> @add_mul_v4i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define <4 x i32> @add_mul_v4i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[Z_HEAD1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[RES0_SCALAR:%.*]] = add i32 [[X]], 42
+; CHECK-NEXT:    [[RES1_SCALAR:%.*]] = mul i32 [[RES0_SCALAR]], 42
+; CHECK-NEXT:    [[Z_HEAD1:%.*]] = insertelement <4 x i32> poison, i32 [[RES1_SCALAR]], i64 0
 ; CHECK-NEXT:    [[Z_SPLAT1:%.*]] = shufflevector <4 x i32> [[Z_HEAD1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES0:%.*]] = add <4 x i32> [[Z_SPLAT1]], splat (i32 42)
-; CHECK-NEXT:    [[RES1:%.*]] = mul <4 x i32> [[RES0]], splat (i32 42)
-; CHECK-NEXT:    ret <4 x i32> [[RES1]]
+; CHECK-NEXT:    ret <4 x i32> [[Z_SPLAT1]]
 ;
   %x.head = insertelement <4 x i32> poison, i32 %x, i32 0
   %x.splat = shufflevector <4 x i32> %x.head, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -68,9 +68,9 @@ define <4 x i32> @other_users_v4i32(i32 %x, i32 %y, ptr %p, ptr %q) {
 define <4 x i1> @icmp_v4i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: define <4 x i1> @icmp_v4i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_HEAD:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[X_SPLAT:%.*]] = shufflevector <4 x i32> [[X_HEAD]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <4 x i32> [[X_SPLAT]], splat (i32 42)
+; CHECK-NEXT:    [[RES_SCALAR:%.*]] = icmp eq i32 [[X]], 42
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[RES_SCALAR]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i1> [[DOTSPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[RES]]
 ;
   %x.head = insertelement <4 x i32> poison, i32 %x, i32 0
@@ -82,9 +82,9 @@ define <4 x i1> @icmp_v4i32(i32 %x, i32 %y) {
 define <vscale x 4 x i1> @icmp_nxv4i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: define <vscale x 4 x i1> @icmp_nxv4i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_HEAD:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[X_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[X_HEAD]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <vscale x 4 x i32> [[X_SPLAT]], splat (i32 42)
+; CHECK-NEXT:    [[RES_SCALAR:%.*]] = icmp eq i32 [[X]], 42
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[RES_SCALAR]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <vscale x 4 x i1> [[DOTSPLATINSERT]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[RES]]
 ;
   %x.head = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0

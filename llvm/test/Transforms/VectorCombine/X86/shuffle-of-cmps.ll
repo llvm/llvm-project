@@ -271,12 +271,24 @@ define <4 x i32> @shuf_icmp_ugt_v4i32_use(<4 x i32> %x, <4 x i32> %y, <4 x i32> 
 ; PR121110 - don't merge equivalent (but not matching) predicates
 
 define <2 x i1> @PR121110() {
-; CHECK-LABEL: define <2 x i1> @PR121110(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[UGT:%.*]] = icmp samesign ugt <2 x i32> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[UGT]], <2 x i1> [[SGT]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; SSE-LABEL: define <2 x i1> @PR121110(
+; SSE-SAME: ) #[[ATTR0]] {
+; SSE-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[SGT]], <2 x i32> <i32 0, i32 3>
+; SSE-NEXT:    ret <2 x i1> [[RES]]
+;
+; AVX2-LABEL: define <2 x i1> @PR121110(
+; AVX2-SAME: ) #[[ATTR0]] {
+; AVX2-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; AVX2-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[SGT]], <2 x i32> <i32 0, i32 3>
+; AVX2-NEXT:    ret <2 x i1> [[RES]]
+;
+; AVX512-LABEL: define <2 x i1> @PR121110(
+; AVX512-SAME: ) #[[ATTR0]] {
+; AVX512-NEXT:    [[UGT:%.*]] = icmp samesign ugt <2 x i32> zeroinitializer, zeroinitializer
+; AVX512-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[UGT]], <2 x i1> [[SGT]], <2 x i32> <i32 0, i32 3>
+; AVX512-NEXT:    ret <2 x i1> [[RES]]
 ;
   %ugt = icmp samesign ugt <2 x i32> < i32 0, i32 0 >, < i32 0, i32 0 >
   %sgt = icmp sgt <2 x i32> < i32 0, i32 0 >, < i32 6, i32 4294967292 >
@@ -285,12 +297,24 @@ define <2 x i1> @PR121110() {
 }
 
 define <2 x i1> @PR121110_commute() {
-; CHECK-LABEL: define <2 x i1> @PR121110_commute(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
-; CHECK-NEXT:    [[UGT:%.*]] = icmp samesign ugt <2 x i32> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[SGT]], <2 x i1> [[UGT]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; SSE-LABEL: define <2 x i1> @PR121110_commute(
+; SSE-SAME: ) #[[ATTR0]] {
+; SSE-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[SGT]], <2 x i1> zeroinitializer, <2 x i32> <i32 0, i32 3>
+; SSE-NEXT:    ret <2 x i1> [[RES]]
+;
+; AVX2-LABEL: define <2 x i1> @PR121110_commute(
+; AVX2-SAME: ) #[[ATTR0]] {
+; AVX2-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; AVX2-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[SGT]], <2 x i1> zeroinitializer, <2 x i32> <i32 0, i32 3>
+; AVX2-NEXT:    ret <2 x i1> [[RES]]
+;
+; AVX512-LABEL: define <2 x i1> @PR121110_commute(
+; AVX512-SAME: ) #[[ATTR0]] {
+; AVX512-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; AVX512-NEXT:    [[UGT:%.*]] = icmp samesign ugt <2 x i32> zeroinitializer, zeroinitializer
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[SGT]], <2 x i1> [[UGT]], <2 x i32> <i32 0, i32 3>
+; AVX512-NEXT:    ret <2 x i1> [[RES]]
 ;
   %sgt = icmp sgt <2 x i32> < i32 0, i32 0 >, < i32 6, i32 4294967292 >
   %ugt = icmp samesign ugt <2 x i32> < i32 0, i32 0 >, < i32 0, i32 0 >

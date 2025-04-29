@@ -1035,50 +1035,61 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
       if (match(U, m_Select(m_Specific(&I), m_Value(), m_Value())))
         return false;
 
-  // Match against one or both scalar values being inserted into constant
-  // vectors:
-  // vec_op VecC0, (inselt VecC1, V1, Index)
-  // vec_op (inselt VecC0, V0, Index), VecC1
-  // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index)
-  // TODO: Deal with mismatched index constants and variable indexes?
   Constant *VecC0 = nullptr, *VecC1 = nullptr;
   Value *V0 = nullptr, *V1 = nullptr;
-  uint64_t Index0 = 0, Index1 = 0;
-  if (!match(Ins0, m_InsertElt(m_Constant(VecC0), m_Value(V0),
-                               m_ConstantInt(Index0))) &&
-      !match(Ins0, m_Constant(VecC0)))
-    return false;
-  if (!match(Ins1, m_InsertElt(m_Constant(VecC1), m_Value(V1),
-                               m_ConstantInt(Index1))) &&
-      !match(Ins1, m_Constant(VecC1)))
-    return false;
+  std::optional<uint64_t> Index;
 
-  bool IsConst0 = !V0;
-  bool IsConst1 = !V1;
-  if (IsConst0 && IsConst1)
-    return false;
-  if (!IsConst0 && !IsConst1 && Index0 != Index1)
-    return false;
+  // Try and match against two splatted operands first.
+  // vec_op (splat V0), (splat V1)
+  V0 = getSplatValue(Ins0);
+  V1 = getSplatValue(Ins1);
+  if (!V0 || !V1) {
+    // Match against one or both scalar values being inserted into constant
+    // vectors:
+    // vec_op VecC0, (inselt VecC1, V1, Index)
+    // vec_op (inselt VecC0, V0, Index), VecC1
+    // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index)
+    // TODO: Deal with mismatched index constants and variable indexes?
+    V0 = nullptr, V1 = nullptr;
+    uint64_t Index0 = 0, Index1 = 0;
+    if (!match(Ins0, m_InsertElt(m_Constant(VecC0), m_Value(V0),
+                                 m_ConstantInt(Index0))) &&
+        !match(Ins0, m_Constant(VecC0)))
+      return false;
+    if (!match(Ins1, m_InsertElt(m_Constant(VecC1), m_Value(V1),
+                                 m_ConstantInt(Index1))) &&
+        !match(Ins1, m_Constant(VecC1)))
+      return false;
 
-  auto *VecTy0 = cast<VectorType>(Ins0->getType());
-  auto *VecTy1 = cast<VectorType>(Ins1->getType());
-  if (VecTy0->getElementCount().getKnownMinValue() <= Index0 ||
-      VecTy1->getElementCount().getKnownMinValue() <= Index1)
-    return false;
+    bool IsConst0 = !V0;
+    bool IsConst1 = !V1;
+    if (IsConst0 && IsConst1)
+      return false;
+    if (!IsConst0 && !IsConst1 && Index0 != Index1)
+      return false;
 
-  // Bail for single insertion if it is a load.
-  // TODO: Handle this once getVectorInstrCost can cost for load/stores.
-  auto *I0 = dyn_cast_or_null<Instruction>(V0);
-  auto *I1 = dyn_cast_or_null<Instruction>(V1);
-  if ((IsConst0 && I1 && I1->mayReadFromMemory()) ||
-      (IsConst1 && I0 && I0->mayReadFromMemory()))
-    return false;
+    auto *VecTy0 = cast<VectorType>(Ins0->getType());
+    auto *VecTy1 = cast<VectorType>(Ins1->getType());
+    if (VecTy0->getElementCount().getKnownMinValue() <= Index0 ||
+        VecTy1->getElementCount().getKnownMinValue() <= Index1)
+      return false;
 
-  uint64_t Index = IsConst0 ? Index1 : Index0;
-  Type *ScalarTy = IsConst0 ? V1->getType() : V0->getType();
-  Type *VecTy = I.getType();
+    // Bail for single insertion if it is a load.
+    // TODO: Handle this once getVectorInstrCost can cost for load/stores.
+    auto *I0 = dyn_cast_or_null<Instruction>(V0);
+    auto *I1 = dyn_cast_or_null<Instruction>(V1);
+    if ((IsConst0 && I1 && I1->mayReadFromMemory()) ||
+        (IsConst1 && I0 && I0->mayReadFromMemory()))
+      return false;
+
+    Index = IsConst0 ? Index1 : Index0;
+  }
+
+  auto *VecTy = cast<VectorType>(I.getType());
+  Type *ScalarTy = VecTy->getElementType();
   assert(VecTy->isVectorTy() &&
-         (IsConst0 || IsConst1 || V0->getType() == V1->getType()) &&
+         (isa<Constant>(Ins0) || isa<Constant>(Ins1) ||
+          V0->getType() == V1->getType()) &&
          (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
           ScalarTy->isPointerTy()) &&
          "Unexpected types for insert element into binop or cmp");
@@ -1099,12 +1110,14 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
   InstructionCost InsertCost = TTI.getVectorInstrCost(
-      Instruction::InsertElement, VecTy, CostKind, Index);
-  InstructionCost OldCost =
-      (IsConst0 ? 0 : InsertCost) + (IsConst1 ? 0 : InsertCost) + VectorOpCost;
-  InstructionCost NewCost = ScalarOpCost + InsertCost +
-                            (IsConst0 ? 0 : !Ins0->hasOneUse() * InsertCost) +
-                            (IsConst1 ? 0 : !Ins1->hasOneUse() * InsertCost);
+      Instruction::InsertElement, VecTy, CostKind, Index.value_or(0));
+  InstructionCost OldCost = (isa<Constant>(Ins0) ? 0 : InsertCost) +
+                            (isa<Constant>(Ins1) ? 0 : InsertCost) +
+                            VectorOpCost;
+  InstructionCost NewCost =
+      ScalarOpCost + InsertCost +
+      (isa<Constant>(Ins0) ? 0 : !Ins0->hasOneUse() * InsertCost) +
+      (isa<Constant>(Ins1) ? 0 : !Ins1->hasOneUse() * InsertCost);
 
   // We want to scalarize unless the vector variant actually has lower cost.
   if (OldCost < NewCost || !NewCost.isValid())
@@ -1112,16 +1125,18 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
 
   // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
   // inselt NewVecC, (scalar_op V0, V1), Index
+  //
+  // vec_op (splat V0), (splat V1) --> splat (scalar_op V0, V1)
   if (IsCmp)
     ++NumScalarCmp;
   else
     ++NumScalarBO;
 
   // For constant cases, extract the scalar element, this should constant fold.
-  if (IsConst0)
-    V0 = ConstantExpr::getExtractElement(VecC0, Builder.getInt64(Index));
-  if (IsConst1)
-    V1 = ConstantExpr::getExtractElement(VecC1, Builder.getInt64(Index));
+  if (Index && isa<Constant>(Ins0))
+    V0 = ConstantExpr::getExtractElement(VecC0, Builder.getInt64(*Index));
+  if (Index && isa<Constant>(Ins1))
+    V1 = ConstantExpr::getExtractElement(VecC1, Builder.getInt64(*Index));
 
   Value *Scalar =
       IsCmp ? Builder.CreateCmp(Pred, V0, V1)
@@ -1134,12 +1149,16 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
     ScalarInst->copyIRFlags(&I);
 
-  // Fold the vector constants in the original vectors into a new base vector.
-  Value *NewVecC =
-      IsCmp ? Builder.CreateCmp(Pred, VecC0, VecC1)
-            : Builder.CreateBinOp((Instruction::BinaryOps)Opcode, VecC0, VecC1);
-  Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
-  replaceValue(I, *Insert);
+  Value *Result;
+  if (Index) {
+    // Fold the vector constants in the original vectors into a new base vector.
+    Value *NewVecC = IsCmp ? Builder.CreateCmp(Pred, VecC0, VecC1)
+                           : Builder.CreateBinOp((Instruction::BinaryOps)Opcode,
+                                                 VecC0, VecC1);
+    Result = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
+  } else
+    Result = Builder.CreateVectorSplat(VecTy->getElementCount(), Scalar);
+  replaceValue(I, *Result);
   return true;
 }
 
