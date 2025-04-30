@@ -299,7 +299,7 @@ struct SetVariableArguments {
   /// The reference of the variable container. The `variablesReference` must
   /// have been obtained in the current suspended state. See 'Lifetime of Object
   ///  References' in the Overview section for details.
-  uint64_t variablesReference;
+  uint64_t variablesReference = UINT64_MAX;
 
   /// The name of the variable in the container.
   std::string name;
@@ -337,13 +337,13 @@ struct SetVariableResponseBody {
   /// The client can use this information to present the variables in a paged
   /// UI and fetch them in chunks.
   /// The value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<uint64_t> namedVariables;
+  std::optional<uint32_t> namedVariables;
 
   /// The number of indexed child variables.
   /// The client can use this information to present the variables in a paged
   /// UI and fetch them in chunks.
   /// The value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<uint64_t> indexedVariables;
+  std::optional<uint32_t> indexedVariables;
 
   /// A memory reference to a location appropriate for this result.
   /// For pointer type eval results, this is generally a reference to the

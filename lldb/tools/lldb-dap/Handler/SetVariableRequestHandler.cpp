@@ -11,6 +11,8 @@
 #include "JSONUtils.h"
 #include "RequestHandler.h"
 
+using namespace lldb_dap::protocol;
+
 namespace lldb_dap {
 
 /// Set the variable with the given name in the variable container to a new
@@ -20,10 +22,16 @@ namespace lldb_dap {
 /// If a debug adapter implements both `setVariable` and `setExpression`,
 /// a client will only use `setExpression` if the variable has an evaluateName
 /// property.
-llvm::Expected<protocol::SetVariableResponseBody>
-SetVariableRequestHandler::Run(
-    const protocol::SetVariableArguments &args) const {
+llvm::Expected<SetVariableResponseBody>
+SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   const auto args_name = llvm::StringRef(args.name);
+
+  if (args.variablesReference == UINT64_MAX) {
+    return llvm::make_error<DAPError>(
+        llvm::formatv("invalid reference {}", args.variablesReference).str(),
+        llvm::inconvertibleErrorCode(),
+        /*show_user=*/false);
+  }
 
   constexpr llvm::StringRef return_value_name = "(Return Value)";
   if (args_name == return_value_name)
@@ -44,7 +52,7 @@ SetVariableRequestHandler::Run(
   VariableDescription desc(variable,
                            dap.configuration.enableAutoVariableSummaries);
 
-  auto body = protocol::SetVariableResponseBody{};
+  SetVariableResponseBody body;
   body.value = desc.display_value;
   body.type = desc.display_type_name;
 
@@ -65,7 +73,7 @@ SetVariableRequestHandler::Run(
     body.variablesReference = 0;
   }
 
-  if (lldb::addr_t addr = variable.GetLoadAddress();
+  if (const lldb::addr_t addr = variable.GetLoadAddress();
       addr != LLDB_INVALID_ADDRESS)
     body.memoryReference = EncodeMemoryReference(addr);
 
