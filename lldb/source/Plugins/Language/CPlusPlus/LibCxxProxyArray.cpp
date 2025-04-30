@@ -41,7 +41,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   /// A non-owning pointer to the array's __vp_.
@@ -173,11 +173,18 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::Update() {
   return ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_base)
-    return std::numeric_limits<size_t>::max();
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

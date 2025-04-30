@@ -403,7 +403,8 @@ ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   return root;
 }
 
-size_t ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
+llvm::Expected<size_t>
+ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
   bool omit_empty_base_classes = true;
   return GetCompilerType().GetIndexOfChildWithName(name,
                                                    omit_empty_base_classes);
