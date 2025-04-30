@@ -4523,22 +4523,19 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-
   SDValue Acc = N->getOperand(0);
   assert(getTypeAction(Acc.getValueType()) != TargetLowering::TypeSplitVector &&
          "Accumulator should already be a legal type, and shouldn't need "
          "further splitting");
 
-  SDValue Input1 = N->getOperand(1);
   SDLoc DL(N);
-
   SDValue Input1Lo, Input1Hi, Input2Lo, Input2Hi;
-  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(Input1, DL);
+  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(N->getOperand(1), DL);
   std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(N->getOperand(2), DL);
   unsigned Opcode = N->getOpcode();
   EVT ResultVT = Acc.getValueType();
 
-  auto Lo = DAG.getNode(Opcode, DL, ResultVT, Acc, Input1Lo, Input2Lo);
+  SDValue Lo = DAG.getNode(Opcode, DL, ResultVT, Acc, Input1Lo, Input2Lo);
   return DAG.getNode(Opcode, DL, ResultVT, Lo, Input1Hi, Input2Hi);
 }
 
