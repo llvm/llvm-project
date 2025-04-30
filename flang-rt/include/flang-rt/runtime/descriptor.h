@@ -30,7 +30,7 @@
 #include <cstring>
 
 /// Value used for asyncObject when no specific stream is specified.
-static constexpr void *kNoAsyncObject = nullptr;
+static constexpr std::int64_t *kNoAsyncObject = nullptr;
 
 namespace Fortran::runtime {
 
