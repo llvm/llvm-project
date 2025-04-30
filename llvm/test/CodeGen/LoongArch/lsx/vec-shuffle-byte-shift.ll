@@ -230,7 +230,7 @@ define <2 x i64> @shuffle_2i64_vbsll_v_8(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: shuffle_2i64_vbsll_v_8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 2
+; CHECK-NEXT:    vpackev.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> zeroinitializer, <2 x i32> <i32 2, i32 0>
   ret <2 x i64> %shuffle
