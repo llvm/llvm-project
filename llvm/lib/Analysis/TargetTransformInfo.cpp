@@ -995,10 +995,9 @@ InstructionCost TargetTransformInfo::getShuffleCost(
 
 TargetTransformInfo::PartialReductionExtendKind
 TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
-  auto *Cast = dyn_cast<CastInst>(I);
-  if (!Cast)
-    return PR_None;
-  return getPartialReductionExtendKind(Cast->getOpcode());
+  if (auto *Cast = dyn_cast<CastInst>(I))
+    return getPartialReductionExtendKind(Cast->getOpcode());
+  return PR_None;
 }
 
 TargetTransformInfo::PartialReductionExtendKind
@@ -1010,7 +1009,7 @@ TargetTransformInfo::getPartialReductionExtendKind(
   case Instruction::CastOps::SExt:
     return PR_SignExtend;
   default:
-    return PR_None;
+    llvm_unreachable("Unexpected cast opcode");
   }
 }
 
