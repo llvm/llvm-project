@@ -1,0 +1,15 @@
+// Disabling until the lldb-rpc-gen tool itself lands.
+# XFAIL: *
+// Generate a dummy SB API file using lldb-rpc-gen.
+# RUN: mkdir -p %t/server
+# RUN: mkdir -p %t/lib
+# RUN: %lldb-rpc-gen --output-dir=%t %S/Inputs/SBRPC-FrameworkFix.h
+
+# RUN: %python %p/../../../../../scripts/framework-header-include-fix.py %t/lib/SBRPC-FrameworkFix.h %t/lib/SBRPC-FrameworkFix.h
+
+// Check the output
+# RUN: cat %t/lib/SBRPC-FrameworkFix.h | FileCheck %s
+
+# CHECK: #include <LLDBRPC/RPCPublic.h>
+# CHECK: #include <LLDBRPC/SBDefines.h>
+# CHECK: #include <LLDBRPC/LLDBRPC.h>

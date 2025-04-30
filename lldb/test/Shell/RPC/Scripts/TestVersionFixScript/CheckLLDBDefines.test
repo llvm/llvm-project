@@ -1,0 +1,18 @@
+// Copy lldb-rpc-defines.h from source.
+# RUN: mkdir -p %t/input
+# RUN: mkdir -p %t/output
+# RUN: cp %p/../../../../../include/lldb/lldb-defines.h %t/input
+
+// Run the convert script on it, then run the framework include fix on it. The framework version fix script
+// expects that all lldb references have been renamed to lldb-rpc in order for it to modify the includes
+// to go into the framework.
+# RUN: %python %p/../../../../../scripts/convert-lldb-header-to-rpc-header.py %t/input/lldb-defines.h %t/output/lldb-rpc-defines.h
+# RUN: %python %p/../../../../../scripts/framework-header-version-fix.py %t/output/lldb-rpc-defines.h %t/output/lldb-rpc-defines.h 17 0 0
+
+// Check the output
+# RUN: cat %t/output/lldb-rpc-defines.h | FileCheck %s
+
+// The LLDB version defines must be uncommented and filled in with the values passed into the script.
+# CHECK: {{^}}#define LLDB_RPC_VERSION 17
+# CHECK: {{^}}#define LLDB_RPC_REVISION 0
+# CHECK: {{^}}#define LLDB_RPC_VERSION_STRING "17.0.0"
