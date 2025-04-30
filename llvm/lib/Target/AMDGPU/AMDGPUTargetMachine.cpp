@@ -1976,6 +1976,8 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
+  addPass(AMDGPUTargetVerifierPass());
+
   if (RemoveIncompatibleFunctions && TM.getTargetTriple().isAMDGCN())
     addPass(AMDGPURemoveIncompatibleFunctionsPass(TM));
 

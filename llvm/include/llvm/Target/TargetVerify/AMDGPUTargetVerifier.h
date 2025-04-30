@@ -32,6 +32,7 @@ class Function;
 
 class AMDGPUTargetVerifierPass : public TargetVerifierPass {
 public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) override;
 };
 
 class AMDGPUTargetVerify : public TargetVerify {
