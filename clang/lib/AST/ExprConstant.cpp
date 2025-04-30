@@ -5971,8 +5971,9 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
 
   // Can we evaluate this function call?
   if (Definition && Body &&
-      (Definition->isConstexpr() || (Info.CurrentCall->CanEvalMSConstexpr &&
-                                        Definition->hasAttr<MSConstexprAttr>())))
+      (Definition->isConstexprOrImplicitlyCanBe(Info.Ctx.getLangOpts()) ||
+       (Info.CurrentCall->CanEvalMSConstexpr &&
+        Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
@@ -5990,12 +5991,25 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
     // FIXME: If DiagDecl is an implicitly-declared special member function
     // or an inheriting constructor, we should be much more explicit about why
     // it's not constexpr.
-    if (CD && CD->isInheritingConstructor())
+    if (CD && CD->isInheritingConstructor()) {
       Info.FFDiag(CallLoc, diag::note_constexpr_invalid_inhctor, 1)
         << CD->getInheritedConstructor().getConstructor()->getParent();
-    else
+
+    } else if (Definition && !DiagDecl->isInlined() &&
+               Info.Ctx.getLangOpts().ImplicitConstexpr) {
+      Info.FFDiag(CallLoc,
+                  diag::note_constexpr_implicit_constexpr_must_be_inlined)
+          << DiagDecl;
+
+    } else {
+      // Using implicit constexpr check here, so we see a missing body as main
+      // problem and not missing constexpr with -fimplicit-constexpr.
       Info.FFDiag(CallLoc, diag::note_constexpr_invalid_function, 1)
-        << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
+          << DiagDecl->isConstexprOrImplicitlyCanBe(Info.Ctx.getLangOpts(),
+                                                    false)
+          << (bool)CD << DiagDecl;
+    }
+
     Info.Note(DiagDecl->getLocation(), diag::note_declared_at);
   } else {
     Info.FFDiag(CallLoc, diag::note_invalid_subexpr_in_const_expr);

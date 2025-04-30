@@ -1991,6 +1991,12 @@ defm constant_cfstrings : BoolFOption<"constant-cfstrings",
           "Disable creation of CodeFoundation-type constant strings">,
   PosFlag<SetFalse>>;
 def fconstant_string_class_EQ : Joined<["-"], "fconstant-string-class=">, Group<f_Group>;
+def fimplicit_constexpr
+    : Joined<["-"], "fimplicit-constexpr">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"All function declarations will be implicitly constexpr.">,
+      MarshallingInfoFlag<LangOpts<"ImplicitConstexpr">>;
 def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum depth of recursive constexpr function calls">,

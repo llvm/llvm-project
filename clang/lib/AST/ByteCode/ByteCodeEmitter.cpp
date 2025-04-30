@@ -70,9 +70,10 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   Func->setDefined(true);
 
   // Lambda static invokers are a special case that we emit custom code for.
-  bool IsEligibleForCompilation = Func->isLambdaStaticInvoker() ||
-                                  FuncDecl->isConstexpr() ||
-                                  FuncDecl->hasAttr<MSConstexprAttr>();
+  bool IsEligibleForCompilation =
+      Func->isLambdaStaticInvoker() ||
+      FuncDecl->isConstexprOrImplicitlyCanBe(Ctx.getLangOpts()) ||
+      FuncDecl->hasAttr<MSConstexprAttr>();
 
   // Compile the function body.
   if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {

@@ -32,6 +32,8 @@ def note_constexpr_lshift_discards : Note<"signed left shift discards bits">;
 def note_constexpr_invalid_function : Note<
   "%select{non-constexpr|undefined}0 %select{function|constructor}1 %2 cannot "
   "be used in a constant expression">;
+def note_constexpr_implicit_constexpr_must_be_inlined
+    : Note<"non-inline function %0 is not implicitly constexpr">;
 def note_constexpr_invalid_inhctor : Note<
   "constructor inherited from base class %0 cannot be used in a "
   "constant expression; derived class cannot be implicitly initialized">;

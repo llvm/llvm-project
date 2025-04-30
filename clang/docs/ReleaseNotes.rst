@@ -261,6 +261,8 @@ New Compiler Flags
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
 
+- New option ``-fimplicit-constexpr`` which implicitly makes all inlined and defined functions ``constexpr``.
+
 Deprecated Compiler Flags
 -------------------------
 

@@ -3249,6 +3249,27 @@ bool FunctionDecl::isDefined(const FunctionDecl *&Definition,
   return false;
 }
 
+bool FunctionDecl::isConstexprOrImplicitlyCanBe(const LangOptions &LangOpts,
+                                                bool MustBeInlined) const {
+  if (isConstexpr())
+    return true;
+
+  if (!LangOpts.ImplicitConstexpr)
+    return false;
+
+  // Constexpr function in C++11 couldn't contain anything other then return
+  // expression. It wouldn't make sense to allow it (GCC doesn't do it neither).
+  if (!LangOpts.CPlusPlus14)
+    return false;
+
+  // Free functions must be inlined, but sometimes we want to skip this check.
+  // And in order to keep logic on one place, the check is here.
+  if (MustBeInlined)
+    return isInlined();
+
+  return true;
+}
+
 Stmt *FunctionDecl::getBody(const FunctionDecl *&Definition) const {
   if (!hasBody(Definition))
     return nullptr;
