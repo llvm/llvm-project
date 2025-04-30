@@ -25,8 +25,10 @@ class Lowerer : public coro::LowererBase {
   IRBuilder<> Builder;
   PointerType *const AnyResumeFnPtrTy;
   Constant *NoopCoro = nullptr;
+  SmallVector<CoroFrameInst *, 8> CoroFrames;
 
   void lowerResumeOrDestroy(CallBase &CB, CoroSubFnInst::ResumeKind);
+  void lowerCoroFrames(Function &F, Value *CoroBegin);
   void lowerCoroPromise(CoroPromiseInst *Intrin);
   void lowerCoroDone(IntrinsicInst *II);
   void lowerCoroNoop(IntrinsicInst *II);
@@ -48,6 +50,18 @@ void Lowerer::lowerResumeOrDestroy(CallBase &CB,
   Value *ResumeAddr = makeSubFnCall(CB.getArgOperand(0), Index, &CB);
   CB.setCalledOperand(ResumeAddr);
   CB.setCallingConv(CallingConv::Fast);
+}
+
+void Lowerer::lowerCoroFrames(Function &F, Value *CoroBegin) {
+  // Lower with poison if we cannot func coro.begin
+  if (CoroBegin == nullptr)
+    CoroBegin = PoisonValue::get(PointerType::get(F.getContext(), 0));
+
+  for (CoroFrameInst *CF : CoroFrames) {
+    CF->replaceAllUsesWith(CoroBegin);
+    CF->eraseFromParent();
+  }
+  CoroFrames.clear();
 }
 
 // Coroutine promise field is always at the fixed offset from the beginning of
@@ -165,6 +179,7 @@ static void setCannotDuplicate(CoroIdInst *CoroId) {
 
 void Lowerer::lowerEarlyIntrinsics(Function &F) {
   CoroIdInst *CoroId = nullptr;
+  CoroBeginInst *CoroBegin = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
   for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
@@ -175,6 +190,26 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     switch (CB->getIntrinsicID()) {
       default:
         continue;
+      case Intrinsic::coro_begin:
+      case Intrinsic::coro_begin_custom_abi: {
+        auto CBI = cast<CoroBeginInst>(&I);
+
+        // Ignore coro id's that aren't pre-split.
+        auto Id = dyn_cast<CoroIdInst>(CBI->getId());
+        if (Id && !Id->getInfo().isPreSplit())
+          break;
+
+        if (CoroBegin)
+          report_fatal_error(
+              "coroutine should have exactly one defining @llvm.coro.begin");
+        CBI->addRetAttr(Attribute::NonNull);
+        CBI->addRetAttr(Attribute::NoAlias);
+        CoroBegin = CBI;
+        break;
+      }
+      case Intrinsic::coro_frame:
+        CoroFrames.push_back(cast<CoroFrameInst>(&I));
+        break;
       case Intrinsic::coro_free:
         CoroFrees.push_back(cast<CoroFreeInst>(&I));
         break;
@@ -226,6 +261,8 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         break;
     }
   }
+  // The coro.frame intrinsic is always lowered to the result of coro.begin.
+  lowerCoroFrames(F, CoroBegin);
 
   // Make sure that all CoroFree reference the coro.id intrinsic.
   // Token type is not exposed through coroutine C/C++ builtins to plain C, so
@@ -246,10 +283,10 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
       M, {"llvm.coro.id", "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
-          "llvm.coro.id.async", "llvm.coro.destroy", "llvm.coro.done",
-          "llvm.coro.end", "llvm.coro.end.async", "llvm.coro.noop",
-          "llvm.coro.free", "llvm.coro.promise", "llvm.coro.resume",
-          "llvm.coro.suspend"});
+          "llvm.coro.id.async", "llvm.coro.begin", "llvm.coro.destroy",
+          "llvm.coro.done", "llvm.coro.end", "llvm.coro.end.async",
+          "llvm.coro.noop", "llvm.coro.frame", "llvm.coro.free",
+          "llvm.coro.promise", "llvm.coro.resume", "llvm.coro.suspend"});
 }
 
 PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
