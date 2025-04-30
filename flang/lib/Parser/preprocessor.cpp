@@ -685,7 +685,6 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
             "#else: excess tokens at end of directive"_port_en_US);
       }
     }
-
     if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#else: not nested within #if, #ifdef, or #ifndef"_err_en_US);
