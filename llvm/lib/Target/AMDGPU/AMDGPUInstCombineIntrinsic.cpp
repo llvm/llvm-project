@@ -1265,8 +1265,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     }
 
-    if (Instruction *Res = hoistLaneIntrinsicThroughOperand(IC, II))
-      return Res;
+    if (IID != Intrinsic::amdgcn_ds_bpermute) {
+      if (Instruction *Res = hoistLaneIntrinsicThroughOperand(IC, II))
+        return Res;
+    }
 
     return std::nullopt;
   }
