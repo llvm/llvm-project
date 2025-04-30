@@ -739,7 +739,7 @@ public:
     });
   }
 
-  bool lowerIsFPClass(Function &F) {
+  [[nodiscard]] bool lowerIsFPClass(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *RetTy = IRB.getInt1Ty();
 
@@ -769,8 +769,8 @@ public:
         llvm_unreachable("Unsupported FPClassTest for DXILOpLowering");
       }
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode, Args, CI->getName(), RetTy);
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode, Args, CI->getName(), RetTy);
       if (Error E = OpCall.takeError())
         return E;
 
