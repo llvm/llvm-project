@@ -31,85 +31,6 @@ using namespace mlir;
 
 namespace {
 
-static const char *const packAttrName = "__xetile_blocking_pack__";
-static const char *const unpackAttrName = "__xetile_blocking_unpack__";
-static const char *const blockAttrName = "__xetile_blocking_inner_block__";
-
-// emulate the the unpack behavior using insert_strided_slice for VectorType
-// values and unrealized_conversion_cast for TileType values.
-static Value addUnpackOp(ValueRange srcs, Type destTy,
-                         llvm::ArrayRef<int64_t> innerBlock, Location loc,
-                         PatternRewriter &rewriter) {
-  if (auto vecTy = dyn_cast<VectorType>(destTy)) {
-    assert(vecTy.getRank() == 2 && innerBlock.size() == 2 &&
-           "Expecting innerBlock size to match the rank of destTy.");
-    auto shape = vecTy.getShape();
-    auto zeroAttr = rewriter.getZeroAttr(vecTy.getElementType());
-
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, vecTy, DenseElementsAttr::get(vecTy, zeroAttr));
-    int64_t idx = 0;
-    for (int64_t i = 0; i < shape[0]; i += innerBlock[0]) {
-      for (int64_t j = 0; j < shape[1]; j += innerBlock[1]) {
-        result = rewriter.create<vector::InsertStridedSliceOp>(
-            loc, srcs[idx++], result, llvm::ArrayRef<int64_t>({i, j}),
-            llvm::ArrayRef<int64_t>({1, 1}));
-      }
-    }
-    return result;
-
-  } else if (isa<xegpu::TensorDescType>(destTy)) {
-    auto attr = NamedAttribute(rewriter.getStringAttr(unpackAttrName),
-                               rewriter.getUnitAttr());
-    auto innerBlkAttr =
-        NamedAttribute(rewriter.getStringAttr(blockAttrName),
-                       rewriter.getDenseI64ArrayAttr(innerBlock));
-    auto castOp = rewriter.create<UnrealizedConversionCastOp>(
-        loc, destTy, srcs,
-        llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
-    return castOp.getResult(0);
-  }
-
-  llvm_unreachable("Unexpected destTy.");
-  return Value();
-}
-
-// emulate the the pack behavior using extract_strided_slice for VectorType
-// values and unrealized_conversion_cast for TensorDescType values.
-static llvm::SmallVector<Value> addPackOp(Value src, TypeRange destTypes,
-                                          llvm::ArrayRef<int64_t> innerBlock,
-                                          Location loc,
-                                          PatternRewriter &rewriter) {
-  if (auto vecTy = dyn_cast<VectorType>(src.getType())) {
-    assert(vecTy.getRank() == 2 && innerBlock.size() == 2 &&
-           "Expecting innerBlock size to match the rank of src.");
-    auto shape = vecTy.getShape();
-    llvm::SmallVector<Value> results;
-    for (int64_t i = 0; i < shape[0]; i += innerBlock[0]) {
-      for (int64_t j = 0; j < shape[1]; j += innerBlock[1]) {
-        auto slice = rewriter.create<vector::ExtractStridedSliceOp>(
-            loc, src, llvm::ArrayRef<int64_t>({i, j}), innerBlock,
-            llvm::ArrayRef<int64_t>({1, 1}));
-        results.push_back(slice);
-      }
-    }
-    return results;
-  } else if (isa<xegpu::TensorDescType>(src.getType())) {
-    auto attr = NamedAttribute(rewriter.getStringAttr(packAttrName),
-                               rewriter.getUnitAttr());
-    auto innerBlkAttr =
-        NamedAttribute(rewriter.getStringAttr(blockAttrName),
-                       rewriter.getDenseI64ArrayAttr(innerBlock));
-    auto castOp = rewriter.create<UnrealizedConversionCastOp>(
-        loc, destTypes, src,
-        llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
-    return castOp.getResults();
-  }
-
-  llvm_unreachable("Unexpected src type.");
-  return llvm::SmallVector<Value>();
-}
-
 template <typename SourceOp>
 struct UnrollPattern : public OpRewritePattern<SourceOp> {
   UnrollPattern(MLIRContext *context,
@@ -118,9 +39,7 @@ struct UnrollPattern : public OpRewritePattern<SourceOp> {
       : OpRewritePattern<SourceOp>(context, benefit), options(options) {}
 
 protected:
-  std::optional<SmallVector<int64_t>>
-  getTargetShape(const vector::UnrollVectorOptions &options,
-                 Operation *op) const {
+  std::optional<SmallVector<int64_t>> getTargetShape(Operation *op) const {
     LDBG("");
     LDBG("Get unroll shape for: " << *op);
     assert(options.nativeShape &&
@@ -160,6 +79,7 @@ protected:
       return std::nullopt;
 
     Type newTy;
+    // TensorDescType needs to drop the inst_data field in the layout attribute
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
       auto ctx = tdescTy.getContext();
       auto encoding = tdescTy.getEncoding();
@@ -169,8 +89,87 @@ protected:
     } else {
       newTy = type.clone(blockSize, elemTy);
     }
+
     return llvm::SmallVector<Type>(computeProduct(*maybeGrids), newTy);
   }
+
+  // emulate the the unpack behavior using insert_strided_slice for VectorType
+  // values and unrealized_conversion_cast for TileType values.
+  Value unpack(ValueRange srcs, Type destTy, llvm::ArrayRef<int64_t> innerBlock,
+               Location loc, PatternRewriter &rewriter) const {
+    if (auto vecTy = dyn_cast<VectorType>(destTy)) {
+      assert(vecTy.getRank() == 2 && innerBlock.size() == 2 &&
+             "Expecting innerBlock size to match the rank of destTy.");
+      auto shape = vecTy.getShape();
+      auto zeroAttr = rewriter.getZeroAttr(vecTy.getElementType());
+
+      Value result = rewriter.create<arith::ConstantOp>(
+          loc, vecTy, DenseElementsAttr::get(vecTy, zeroAttr));
+      int64_t idx = 0;
+      for (int64_t i = 0; i < shape[0]; i += innerBlock[0]) {
+        for (int64_t j = 0; j < shape[1]; j += innerBlock[1]) {
+          result = rewriter.create<vector::InsertStridedSliceOp>(
+              loc, srcs[idx++], result, llvm::ArrayRef<int64_t>({i, j}),
+              llvm::ArrayRef<int64_t>({1, 1}));
+        }
+      }
+      return result;
+
+    } else if (isa<xegpu::TensorDescType>(destTy)) {
+      auto attr = NamedAttribute(rewriter.getStringAttr(unpackAttrName),
+                                 rewriter.getUnitAttr());
+      auto innerBlkAttr =
+          NamedAttribute(rewriter.getStringAttr(blockAttrName),
+                         rewriter.getDenseI64ArrayAttr(innerBlock));
+      auto castOp = rewriter.create<UnrealizedConversionCastOp>(
+          loc, destTy, srcs,
+          llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
+      return castOp.getResult(0);
+    }
+
+    llvm_unreachable("Unexpected destTy.");
+    return Value();
+  }
+
+  // emulate the the pack behavior using extract_strided_slice for VectorType
+  // values and unrealized_conversion_cast for TensorDescType values.
+  llvm::SmallVector<Value> pack(Value src, TypeRange destTypes,
+                                llvm::ArrayRef<int64_t> innerBlock,
+                                Location loc, PatternRewriter &rewriter) const {
+    if (auto vecTy = dyn_cast<VectorType>(src.getType())) {
+      assert(vecTy.getRank() == 2 && innerBlock.size() == 2 &&
+             "Expecting innerBlock size to match the rank of src.");
+      auto shape = vecTy.getShape();
+      llvm::SmallVector<Value> results;
+      for (int64_t i = 0; i < shape[0]; i += innerBlock[0]) {
+        for (int64_t j = 0; j < shape[1]; j += innerBlock[1]) {
+          auto slice = rewriter.create<vector::ExtractStridedSliceOp>(
+              loc, src, llvm::ArrayRef<int64_t>({i, j}), innerBlock,
+              llvm::ArrayRef<int64_t>({1, 1}));
+          results.push_back(slice);
+        }
+      }
+      return results;
+    } else if (isa<xegpu::TensorDescType>(src.getType())) {
+      auto attr = NamedAttribute(rewriter.getStringAttr(packAttrName),
+                                 rewriter.getUnitAttr());
+      auto innerBlkAttr =
+          NamedAttribute(rewriter.getStringAttr(blockAttrName),
+                         rewriter.getDenseI64ArrayAttr(innerBlock));
+      auto castOp = rewriter.create<UnrealizedConversionCastOp>(
+          loc, destTypes, src,
+          llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
+      return castOp.getResults();
+    }
+
+    llvm_unreachable("Unexpected src type.");
+    return llvm::SmallVector<Value>();
+  }
+
+private:
+  const char *const packAttrName = "__xetile_blocking_pack__";
+  const char *const unpackAttrName = "__xetile_blocking_unpack__";
+  const char *const blockAttrName = "__xetile_blocking_inner_block__";
 
   vector::UnrollVectorOptions options;
 };
@@ -185,7 +184,7 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     auto shape = tdescTy.getShape();
     auto layout = tdescTy.getLayout();
 
-    auto maybeTargetShape = getTargetShape(options, op);
+    auto maybeTargetShape = getTargetShape(op);
     if (!maybeTargetShape)
       return failure();
     auto targetShape = *maybeTargetShape;
@@ -195,8 +194,8 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
       return failure();
     auto grids = *maybeGrids;
 
-    // TODO: enable scattered version later
-    if (tdescTy.isScattered())
+    // TODO: enable 1D block tensor desc
+    if (tdescTy.getRank() != 2)
       return failure();
 
     auto encoding = tdescTy.getEncoding();
@@ -236,7 +235,7 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
         newOps.push_back(newOp);
       }
     }
-    auto castOp = addUnpackOp(newOps, tdescTy, targetShape, loc, rewriter);
+    auto castOp = unpack(newOps, tdescTy, targetShape, loc, rewriter);
     rewriter.replaceOp(op, castOp);
 
     return success();
@@ -260,7 +259,11 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     auto valueTy = op.getType();
     auto tdescTy = op.getTensorDescType();
 
-    auto maybeTargetShape = getTargetShape(options, op);
+    // TODO: enable 1D block tensor desc
+    if (tdescTy.getRank() != 2)
+      return failure();
+
+    auto maybeTargetShape = getTargetShape(op);
     if (!maybeTargetShape)
       return failure();
     auto targetShape = *maybeTargetShape;
@@ -274,8 +277,8 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     auto newValueTy = valueTy.cloneWith(targetShape, elemTy);
 
     auto convertedTdescTypes = convertType(tdescTy, targetShape);
-    auto convertedTdescs = addPackOp(op.getTensorDesc(), *convertedTdescTypes,
-                                     targetShape, loc, rewriter);
+    auto convertedTdescs = pack(op.getTensorDesc(), *convertedTdescTypes,
+                                targetShape, loc, rewriter);
 
     llvm::SmallVector<Value> newOps;
     for (auto t : convertedTdescs) {
@@ -284,7 +287,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
       newOps.push_back(newOp);
     }
 
-    auto castOp = addUnpackOp(newOps, op.getType(), targetShape, loc, rewriter);
+    auto castOp = unpack(newOps, op.getType(), targetShape, loc, rewriter);
 
     rewriter.replaceOp(op, castOp);
     return success();
@@ -299,7 +302,11 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     auto valueTy = op.getValueType();
     auto tdescTy = op.getTensorDescType();
 
-    auto maybeTargetShape = getTargetShape(options, op);
+    // TODO: enable 1D block tensor desc
+    if (tdescTy.getRank() != 2)
+      return failure();
+
+    auto maybeTargetShape = getTargetShape(op);
     if (!maybeTargetShape)
       return failure();
     auto targetShape = *maybeTargetShape;
@@ -312,10 +319,10 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     auto convertedValTypes = convertType(valueTy, targetShape);
     auto convertedTdescTypes = convertType(tdescTy, targetShape);
 
-    auto convertedValues = addPackOp(op.getValue(), *convertedValTypes,
-                                     targetShape, loc, rewriter);
-    auto convertedTdescs = addPackOp(op.getTensorDesc(), *convertedTdescTypes,
-                                     targetShape, loc, rewriter);
+    auto convertedValues =
+        pack(op.getValue(), *convertedValTypes, targetShape, loc, rewriter);
+    auto convertedTdescs = pack(op.getTensorDesc(), *convertedTdescTypes,
+                                targetShape, loc, rewriter);
 
     for (auto [v, t] : llvm::zip(convertedValues, convertedTdescs)) {
       rewriter.create<xegpu::StoreNdOp>(loc, v, t, op.getL1HintAttr(),
@@ -383,7 +390,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 
     // a vector of 3 elements should be returned, representing M, K, N
     // respectively.
-    auto maybeTargetShape = getTargetShape(options, op);
+    auto maybeTargetShape = getTargetShape(op);
     if (!maybeTargetShape || maybeTargetShape->size() != 3)
       return failure();
     auto M = (*maybeTargetShape)[0];
@@ -394,8 +401,8 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     int64_t bBlockSize[2] = {K, N};
     int64_t cBlockSize[2] = {M, N};
 
-    auto pack = [&](TypedValue<VectorType> val,
-                    llvm::ArrayRef<int64_t> blockSize) {
+    auto packWrapper = [&](TypedValue<VectorType> val,
+                           llvm::ArrayRef<int64_t> blockSize) {
       VectorType type = val.getType();
       auto maybeGrids = computeShapeRatio(type.getShape(), blockSize);
       assert(maybeGrids && "Expecting grids to be computed.");
@@ -405,7 +412,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
         return llvm::SmallVector<Value>({val});
       auto newVecTy = type.cloneWith(blockSize, type.getElementType());
       llvm::SmallVector<Type> convertedTypes(numNewOps, newVecTy);
-      auto values = addPackOp(val, convertedTypes, blockSize, loc, rewriter);
+      auto values = pack(val, convertedTypes, blockSize, loc, rewriter);
       return llvm::to_vector(values);
     };
 
@@ -417,11 +424,11 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     auto bShape = b.getType().getShape();
 
     llvm::SmallVector<Value> aVals, bVals, cVals;
-    aVals = pack(a, aBlockSize);
-    bVals = pack(b, bBlockSize);
+    aVals = packWrapper(a, aBlockSize);
+    bVals = packWrapper(b, bBlockSize);
 
     if (c)
-      cVals = pack(c, cBlockSize);
+      cVals = packWrapper(c, cBlockSize);
 
     // Vals are empty due to invalid blocking size, or with size 1 due to
     // the original shape is the same with the blocking size. The op will
@@ -455,7 +462,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
         newOps.push_back(tmpC);
       }
     }
-    auto castOp = addUnpackOp(newOps, resultTy, cBlockSize, loc, rewriter);
+    auto castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
     rewriter.replaceOp(op, castOp);
     return success();
   }
