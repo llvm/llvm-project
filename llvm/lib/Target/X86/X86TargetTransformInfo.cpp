@@ -4916,7 +4916,8 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
 InstructionCost X86TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
@@ -4935,7 +4936,24 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
   assert(NumLegalVectors >= 0 && "Negative cost!");
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
-  // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.
+  // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.  SLPVectorizer has
+  // a special heuristic regarding poison input which is passed here in
+  // ForPoisonSrc.
+  if (Insert && !ForPoisonSrc) {
+    // This is nearly identical to BaseT::getScalarizationOverhead(), except
+    // it is passing nullptr to getVectorInstrCost() for Op0 (instead of
+    // Constant::getNullValue()), which makes the X86TTIImpl
+    // getVectorInstrCost() return 0 instead of 1.
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, I,
+                                 Constant::getNullValue(Ty),
+                                 VL.empty() ? nullptr : VL[I]);
+    }
+    return Cost;
+  }
+
   if (Insert) {
     if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
         (MScalarTy.isInteger() && ST->hasSSE41()) ||
