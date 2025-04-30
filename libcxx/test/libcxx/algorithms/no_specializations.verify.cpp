@@ -15,7 +15,7 @@
 
 #include <execution>
 
-#if !__has_warning("-Winvalid-specializations")
+#if !__has_warning("-Winvalid-specialization")
 // expected-no-diagnostics
 #else
 struct S {};

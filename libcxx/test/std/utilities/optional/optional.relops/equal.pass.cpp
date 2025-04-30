@@ -16,6 +16,12 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_comparisons.h"
+
+// Test SFINAE.
+
+static_assert(HasOperatorEqual<std::optional<int>, std::optional<int>>);
+static_assert(HasOperatorEqual<std::optional<EqualityComparable>, std::optional<EqualityComparable>>);
 
 using std::optional;
 

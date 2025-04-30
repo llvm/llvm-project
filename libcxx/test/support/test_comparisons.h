@@ -268,6 +268,108 @@ struct PartialOrder {
   }
 };
 
-#endif
+#endif // TEST_STD_VER >= 20
+
+#if TEST_STD_VER >= 26
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorEqual = requires(T1 t1, T2 t2) { t1 == t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorNotEqual = requires(T1 t1, T2 t2) { t1 != t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorLessThen = requires(T1 t1, T2 t2) { t1 < t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorGreaterThen = requires(T1 t1, T2 t2) { t1 > t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorLessThenEqual = requires(T1 t1, T2 t2) { t1 <= t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorGreaterThenEqual = requires(T1 t1, T2 t2) { t1 >= t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorSpaceship = requires(T1 t1, T2 t2) { t1 <=> t2; };
+
+template <typename T1, typename T2 = T1>
+concept CanCompareWithSpaceship = HasOperatorSpaceship<T1, T2> && requires(T1 t1, T2 t2) {
+  { t1 <=> t2 } -> std::same_as<std::strong_ordering>;
+};
+
+template <typename T1, typename T2 = T1>
+concept CanCompare =
+    HasOperatorEqual<T1, T2> && HasOperatorNotEqual<T1, T2> && HasOperatorLessThen<T1, T2> &&
+    HasOperatorGreaterThen<T1, T2> && HasOperatorLessThenEqual<T1, T2> && HasOperatorGreaterThenEqual<T1, T2>;
+
+struct NonComparable {};
+
+static_assert(!std::equality_comparable<NonComparable>);
+static_assert(!CanCompare<NonComparable>);
+
+class EqualityComparable {
+public:
+  constexpr EqualityComparable(int value) : value_{value} {};
+
+  friend constexpr bool operator==(const EqualityComparable&, const EqualityComparable&) noexcept = default;
+
+private:
+  int value_;
+};
+static_assert(std::equality_comparable<EqualityComparable>);
+
+// class NotEqualityComparable {
+// public:
+//   constexpr NotEqualityComparable(int value) : value_{value} {};
+
+//   friend constexpr bool operator!=(const NotEqualityComparable&, const NotEqualityComparable&) noexcept = default;
+
+// private:
+//   int value_;
+// };
+// static_assert(!std::equality_comparable<NotEqualityComparable>);
+
+// class LessThanComparable {
+// public:
+//   constexpr LessThanComparable(int value) : value_{value} {};
+
+//   friend constexpr bool operator<(const LessThanComparable&, const LessThanComparable&) noexcept = default;
+
+// private:
+//   int value_;
+// };
+
+// class GreaterThanComparable {
+// public:
+//   constexpr GreaterThanComparable(int value) : value_{value} {};
+
+//   friend constexpr bool operator>(const GreaterThanComparable&, const GreaterThanComparable&) noexcept = default;
+
+// private:
+//   int value_;
+// };
+
+// class LessThanEqualComparable {
+// public:
+//   constexpr LessThanEqualComparable(int value) : value_{value} {};
+
+//   friend constexpr bool operator<=(const LessThanEqualComparable&, const LessThanEqualComparable&) noexcept = default;
+
+// private:
+//   int value_;
+// };
+// class GreaterThanEqualComparable {
+// public:
+//   constexpr GreaterThanEqualComparable(int value) : value_{value} {};
+
+//   friend constexpr bool
+//   operator>=(const GreaterThanEqualComparable&, const GreaterThanEqualComparable&) noexcept = default;
+
+// private:
+//   int value_;
+// };
+
+#endif // TEST_STD_VER >= 26
 
 #endif // TEST_COMPARISONS_H
