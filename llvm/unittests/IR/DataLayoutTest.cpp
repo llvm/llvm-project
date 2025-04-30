@@ -402,6 +402,10 @@ TEST(DataLayout, ParsePointerSpec) {
         DataLayout::parse(Str),
         FailedWithMessage("index size cannot be larger than the pointer size"));
 
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p:64:64:64:48:32"),
+      FailedWithMessage("index size cannot be larger than the address size"));
+
   // address size
   for (StringRef Str : {"p:64:32:32:64:", "p0:64:32:32:64:"})
     EXPECT_THAT_EXPECTED(

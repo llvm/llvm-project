@@ -119,7 +119,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
-// expected-error@below {{expected layout attribute for '!llvm.ptr' to be a dense integer elements attribute with 3 or 4 elements}}
+// expected-error@below {{expected layout attribute for '!llvm.ptr' to be a dense integer elements attribute with 3 to 5 elements}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr, dense<[64.0, 64.0, 64.0]> : vector<3xf32>>
 >} {

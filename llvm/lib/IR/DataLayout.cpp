@@ -465,6 +465,10 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "address size cannot be larger than the pointer size");
 
+  if (IndexBitWidth > AddressBitWidth)
+    return createStringError(
+        "index size cannot be larger than the address size");
+
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
                  AddressBitWidth, false);
   return Error::success();
