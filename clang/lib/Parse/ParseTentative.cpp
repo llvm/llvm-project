@@ -710,7 +710,8 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 /// apply if either '[' begins a message-send.
 ///
 /// If Disambiguate is true, we try harder to determine whether a '[[' starts
-/// an attribute-specifier, and return CAK_InvalidAttributeSpecifier if not.
+/// an attribute-specifier, and return
+/// CXX11AttributeKind::InvalidAttributeSpecifier if not.
 ///
 /// If OuterMightBeMessageSend is true, we assume the outer '[' is either an
 /// Obj-C message send or the start of an attribute. Otherwise, we assume it
@@ -737,26 +738,26 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 ///
 ///     attribute-argument-clause:
 ///         '(' balanced-token-seq ')'
-Parser::CXX11AttributeKind
+CXX11AttributeKind
 Parser::isCXX11AttributeSpecifier(bool Disambiguate,
                                   bool OuterMightBeMessageSend) {
   // alignas is an attribute specifier in C++ but not in C23.
   if (Tok.is(tok::kw_alignas) && !getLangOpts().C23)
-    return CAK_AttributeSpecifier;
+    return CXX11AttributeKind::AttributeSpecifier;
 
   if (Tok.isRegularKeywordAttribute())
-    return CAK_AttributeSpecifier;
+    return CXX11AttributeKind::AttributeSpecifier;
 
   if (Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square))
-    return CAK_NotAttributeSpecifier;
+    return CXX11AttributeKind::NotAttributeSpecifier;
 
   // No tentative parsing if we don't need to look for ']]' or a lambda.
   if (!Disambiguate && !getLangOpts().ObjC)
-    return CAK_AttributeSpecifier;
+    return CXX11AttributeKind::AttributeSpecifier;
 
   // '[[using ns: ...]]' is an attribute.
   if (GetLookAheadToken(2).is(tok::kw_using))
-    return CAK_AttributeSpecifier;
+    return CXX11AttributeKind::AttributeSpecifier;
 
   RevertingTentativeParsingAction PA(*this);
 
@@ -769,7 +770,8 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
     bool IsAttribute = SkipUntil(tok::r_square);
     IsAttribute &= Tok.is(tok::r_square);
 
-    return IsAttribute ? CAK_AttributeSpecifier : CAK_InvalidAttributeSpecifier;
+    return IsAttribute ? CXX11AttributeKind::AttributeSpecifier
+                       : CXX11AttributeKind::InvalidAttributeSpecifier;
   }
 
   // In Obj-C++11, we need to distinguish four situations:
@@ -792,28 +794,28 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
       // We hit a hard error after deciding this was not an attribute.
       // FIXME: Don't parse and annotate expressions when disambiguating
       // against an attribute.
-      return CAK_NotAttributeSpecifier;
+      return CXX11AttributeKind::NotAttributeSpecifier;
     }
 
     switch (Tentative) {
     case LambdaIntroducerTentativeParse::MessageSend:
       // Case 3: The inner construct is definitely a message send, so the
       // outer construct is definitely not an attribute.
-      return CAK_NotAttributeSpecifier;
+      return CXX11AttributeKind::NotAttributeSpecifier;
 
     case LambdaIntroducerTentativeParse::Success:
     case LambdaIntroducerTentativeParse::Incomplete:
       // This is a lambda-introducer or attribute-specifier.
       if (Tok.is(tok::r_square))
         // Case 1: C++11 attribute.
-        return CAK_AttributeSpecifier;
+        return CXX11AttributeKind::AttributeSpecifier;
 
       if (OuterMightBeMessageSend)
         // Case 4: Lambda in message send.
-        return CAK_NotAttributeSpecifier;
+        return CXX11AttributeKind::NotAttributeSpecifier;
 
       // Case 2: Lambda in array size / index.
-      return CAK_InvalidAttributeSpecifier;
+      return CXX11AttributeKind::InvalidAttributeSpecifier;
 
     case LambdaIntroducerTentativeParse::Invalid:
       // No idea what this is; we couldn't parse it as a lambda-introducer.
@@ -830,7 +832,7 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
   while (Tok.isNot(tok::r_square)) {
     if (Tok.is(tok::comma)) {
       // Case 1: Stray commas can only occur in attributes.
-      return CAK_AttributeSpecifier;
+      return CXX11AttributeKind::AttributeSpecifier;
     }
 
     // Parse the attribute-token, if present.
@@ -878,10 +880,10 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
 
   if (IsAttribute)
     // Case 1: C++11 statement attribute.
-    return CAK_AttributeSpecifier;
+    return CXX11AttributeKind::AttributeSpecifier;
 
   // Case 3: Message send.
-  return CAK_NotAttributeSpecifier;
+  return CXX11AttributeKind::NotAttributeSpecifier;
 }
 
 bool Parser::TrySkipAttributes() {
@@ -2092,8 +2094,9 @@ Parser::TPResult Parser::TryParseParameterDeclarationClause(
     }
 
     // An attribute-specifier-seq here is a sign of a function declarator.
-    if (isCXX11AttributeSpecifier(/*Disambiguate*/false,
-                                  /*OuterMightBeMessageSend*/true))
+    if (isCXX11AttributeSpecifier(/*Disambiguate*/ false,
+                                  /*OuterMightBeMessageSend*/ true) !=
+        CXX11AttributeKind::NotAttributeSpecifier)
       return TPResult::True;
 
     ParsedAttributes attrs(AttrFactory);
