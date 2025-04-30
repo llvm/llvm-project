@@ -259,14 +259,13 @@ struct TestRandomAccessIterator {
   using iterator_category = std::random_access_iterator_tag;
 };
 
-static_assert(
-    !std::is_constructible<ArrayRef<int>,
-                           iterator_range<TestRandomAccessIterator>>::value,
-    "cannot construct from iterator range with non-pointer iterator");
-static_assert(!std::is_constructible<ArrayRef<int>, iterator_range<int>>::value,
+static_assert(!std::is_constructible_v<
+                  ArrayRef<int>, iterator_range<TestRandomAccessIterator>>,
+              "cannot construct from iterator range with non-pointer iterator");
+static_assert(!std::is_constructible_v<ArrayRef<int>, iterator_range<int>>,
               "cannot construct from iterator range with non-pointer iterator");
 static_assert(
-    std::is_constructible<ArrayRef<char *>, iterator_range<char **>>::value,
+    std::is_constructible_v<ArrayRef<char *>, iterator_range<char **>>,
     "should be able to construct ArrayRef from iterator_range over pointers");
 
 TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
@@ -276,6 +275,11 @@ TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
   EXPECT_EQ(A1.size(), A2.size());
   for (std::size_t i = 0; i < A1.size(); ++i)
     EXPECT_EQ(A1[i], A2[i]);
+
+  ArrayRef<const int> A3 = make_range(A1.begin(), A1.end());
+  EXPECT_EQ(A1.size(), A3.size());
+  for (std::size_t i = 0; i < A1.size(); ++i)
+    EXPECT_EQ(A1[i], A3[i]);
 }
 
 TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {

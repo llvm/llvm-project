@@ -152,7 +152,8 @@ namespace llvm {
     /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
     /// to ensure that this is only used for iterator ranges over plain pointer
     /// iterators.
-    template <typename U, typename = std::enable_if_t<std::is_same_v<U *, T *>>>
+    template <typename U,
+              typename = std::enable_if_t<std::is_convertible_v<U *, T *>>>
     ArrayRef(const iterator_range<U *> &Range)
         : Data(Range.begin()), Length(llvm::size(Range)) {}
 
