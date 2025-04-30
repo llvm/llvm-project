@@ -1,5 +1,4 @@
-// RUN: %libomptarget-compile-generic -fprofile-generate \
-// RUN:     -fprofile-update=atomic
+// RUN: %libomptarget-compile-generic -fprofile-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.llvm.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -9,8 +8,7 @@
 // RUN:     %target_triple.%basename_t.llvm.profraw \
 // RUN:     | %fcheck-generic --check-prefix="LLVM-DEVICE"
 
-// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
-// RUN:     -fprofile-update=atomic
+// RUN: %libomptarget-compile-generic -fprofile-instr-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.clang.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -20,8 +18,7 @@
 // RUN:     %target_triple.%basename_t.clang.profraw | \
 // RUN:     %fcheck-generic --check-prefix="CLANG-DEV"
 
-// RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate \
-// RUN:     -fprofile-update=atomic
+// RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.nogpu.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -30,7 +27,7 @@
 // RUN: not test -e %target_triple.%basename_t.nogpu.profraw
 
 // RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate \
-// RUN:     -Xarch_device -fprofile-instr-generate -fprofile-update=atomic
+// RUN:     -Xarch_device -fprofile-instr-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.hidf.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -41,7 +38,7 @@
 // RUN:     | %fcheck-generic --check-prefix="CLANG-DEV"
 
 // RUN: %libomptarget-compile-generic -Xarch_device -fprofile-generate \
-// RUN:     -Xarch_host -fprofile-instr-generate -fprofile-update=atomic
+// RUN:     -Xarch_host -fprofile-instr-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.hfdi.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
