@@ -177,27 +177,6 @@ public:
   bool isSourceOfDivergence(const Value *V) const override;
   bool isAlwaysUniform(const Value *V) const override;
 
-  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
-    // Address space casts must cast between different address spaces.
-    if (FromAS == ToAS)
-      return false;
-
-    if (FromAS == AMDGPUAS::FLAT_ADDRESS)
-      return AMDGPU::isExtendedGlobalAddrSpace(ToAS) ||
-             ToAS == AMDGPUAS::LOCAL_ADDRESS ||
-             ToAS == AMDGPUAS::PRIVATE_ADDRESS;
-
-    if (AMDGPU::isExtendedGlobalAddrSpace(FromAS))
-      return AMDGPU::isFlatGlobalAddrSpace(ToAS) ||
-             ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
-
-    if (FromAS == AMDGPUAS::LOCAL_ADDRESS ||
-        FromAS == AMDGPUAS::PRIVATE_ADDRESS)
-      return ToAS == AMDGPUAS::FLAT_ADDRESS;
-
-    return false;
-  }
-
   bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const override {
     return AMDGPU::addrspacesMayAlias(AS0, AS1);
   }

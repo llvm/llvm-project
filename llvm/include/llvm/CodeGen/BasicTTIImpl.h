@@ -387,10 +387,6 @@ public:
 
   bool isAlwaysUniform(const Value *V) const override { return false; }
 
-  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
-    return false;
-  }
-
   bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const override {
     return true;
   }

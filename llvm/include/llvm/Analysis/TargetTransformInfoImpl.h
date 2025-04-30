@@ -136,7 +136,7 @@ public:
   virtual bool isAlwaysUniform(const Value *V) const { return false; }
 
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
-    return false;
+    return addrspacesMayAlias(FromAS, ToAS);
   }
 
   virtual bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
