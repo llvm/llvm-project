@@ -8156,7 +8156,8 @@ void Parser::ParseParameterDeclarationClause(
           DefArgToks.reset(new CachedTokens);
 
           SourceLocation ArgStartLoc = NextToken().getLocation();
-          ConsumeAndStoreInitializer(*DefArgToks, CIK_DefaultArgument);
+          ConsumeAndStoreInitializer(*DefArgToks,
+                                     CachedInitKind::DefaultArgument);
           Actions.ActOnParamUnparsedDefaultArgument(Param, EqualLoc,
                                                     ArgStartLoc);
         } else {
