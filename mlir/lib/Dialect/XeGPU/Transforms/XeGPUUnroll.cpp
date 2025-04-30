@@ -95,19 +95,19 @@ protected:
 
   // emulate the the unpack behavior using insert_strided_slice for VectorType
   // values and unrealized_conversion_cast for TileType values.
-  Value unpack(ValueRange srcs, Type destTy, llvm::ArrayRef<int64_t> innerBlock,
+  Value unpack(ValueRange srcs, Type destTy, llvm::ArrayRef<int64_t> blockSize,
                Location loc, PatternRewriter &rewriter) const {
     if (auto vecTy = dyn_cast<VectorType>(destTy)) {
-      assert(vecTy.getRank() == 2 && innerBlock.size() == 2 &&
-             "Expecting innerBlock size to match the rank of destTy.");
+      assert(vecTy.getRank() == 2 && blockSize.size() == 2 &&
+             "Expecting blockSize size to match the rank of destTy.");
       auto shape = vecTy.getShape();
       auto zeroAttr = rewriter.getZeroAttr(vecTy.getElementType());
 
       Value result = rewriter.create<arith::ConstantOp>(
           loc, vecTy, DenseElementsAttr::get(vecTy, zeroAttr));
       int64_t idx = 0;
-      for (int64_t i = 0; i < shape[0]; i += innerBlock[0]) {
-        for (int64_t j = 0; j < shape[1]; j += innerBlock[1]) {
+      for (int64_t i = 0; i < shape[0]; i += blockSize[0]) {
+        for (int64_t j = 0; j < shape[1]; j += blockSize[1]) {
           result = rewriter.create<vector::InsertStridedSliceOp>(
               loc, srcs[idx++], result, llvm::ArrayRef<int64_t>({i, j}),
               llvm::ArrayRef<int64_t>({1, 1}));
@@ -120,7 +120,7 @@ protected:
                                  rewriter.getUnitAttr());
       auto innerBlkAttr =
           NamedAttribute(rewriter.getStringAttr(blockAttrName),
-                         rewriter.getDenseI64ArrayAttr(innerBlock));
+                         rewriter.getDenseI64ArrayAttr(blockSize));
       auto castOp = rewriter.create<UnrealizedConversionCastOp>(
           loc, destTy, srcs,
           llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
@@ -134,17 +134,17 @@ protected:
   // emulate the the pack behavior using extract_strided_slice for VectorType
   // values and unrealized_conversion_cast for TensorDescType values.
   llvm::SmallVector<Value> pack(Value src, TypeRange destTypes,
-                                llvm::ArrayRef<int64_t> innerBlock,
-                                Location loc, PatternRewriter &rewriter) const {
+                                llvm::ArrayRef<int64_t> blockSize, Location loc,
+                                PatternRewriter &rewriter) const {
     if (auto vecTy = dyn_cast<VectorType>(src.getType())) {
-      assert(vecTy.getRank() == 2 && innerBlock.size() == 2 &&
-             "Expecting innerBlock size to match the rank of src.");
+      assert(vecTy.getRank() == 2 && blockSize.size() == 2 &&
+             "Expecting blockSize size to match the rank of src.");
       auto shape = vecTy.getShape();
       llvm::SmallVector<Value> results;
-      for (int64_t i = 0; i < shape[0]; i += innerBlock[0]) {
-        for (int64_t j = 0; j < shape[1]; j += innerBlock[1]) {
+      for (int64_t i = 0; i < shape[0]; i += blockSize[0]) {
+        for (int64_t j = 0; j < shape[1]; j += blockSize[1]) {
           auto slice = rewriter.create<vector::ExtractStridedSliceOp>(
-              loc, src, llvm::ArrayRef<int64_t>({i, j}), innerBlock,
+              loc, src, llvm::ArrayRef<int64_t>({i, j}), blockSize,
               llvm::ArrayRef<int64_t>({1, 1}));
           results.push_back(slice);
         }
@@ -155,7 +155,7 @@ protected:
                                  rewriter.getUnitAttr());
       auto innerBlkAttr =
           NamedAttribute(rewriter.getStringAttr(blockAttrName),
-                         rewriter.getDenseI64ArrayAttr(innerBlock));
+                         rewriter.getDenseI64ArrayAttr(blockSize));
       auto castOp = rewriter.create<UnrealizedConversionCastOp>(
           loc, destTypes, src,
           llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
