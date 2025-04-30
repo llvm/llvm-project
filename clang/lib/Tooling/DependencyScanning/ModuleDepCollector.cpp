@@ -601,9 +601,9 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   // example, case-insensitive paths to modulemap files. Usually such a case
   // would indicate a missed optimization to canonicalize, but it may be
   // difficult to canonicalize all cases when there is a VFS.
-  for (const auto &EMID : MD.ClangModuleDeps) {
-    HashBuilder.add(EMID.ID.ModuleName);
-    HashBuilder.add(EMID.ID.ContextHash);
+  for (const auto &Info : MD.ClangModuleDeps) {
+    HashBuilder.add(Info.ID.ModuleName);
+    HashBuilder.add(Info.ID.ContextHash);
   }
 
   HashBuilder.add(EagerLoadModules);
