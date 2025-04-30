@@ -49,7 +49,7 @@ public:
   // By default, dump all pairs.
   void Dump(Stream *s, int pair_index = -1);
 
-  llvm::json::Value ToJSON();
+  llvm::json::Value ToJSON() const;
 
   bool IsEmpty() const {
     std::lock_guard<std::mutex> lock(m_pairs_mutex);

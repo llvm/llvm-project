@@ -835,7 +835,6 @@ set(files
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
-  __type_traits/is_nothrow_convertible.h
   __type_traits/is_nothrow_destructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h

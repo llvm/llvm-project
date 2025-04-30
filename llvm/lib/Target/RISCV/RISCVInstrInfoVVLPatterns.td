@@ -497,6 +497,16 @@ let HasOneUse = 1 in {
                                          node:$E),
                                     (riscv_add_vl node:$A, node:$B, node:$C,
                                                   node:$D, node:$E)>;
+  def riscv_or_vl_is_add_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                               node:$E),
+                                          (riscv_or_vl node:$A, node:$B, node:$C,
+                                                       node:$D, node:$E), [{
+    if (N->getFlags().hasDisjoint())
+      return true;
+    KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
+    KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
+    return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+  }]>;
   def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                          node:$E),
                                     (riscv_sub_vl node:$A, node:$B, node:$C,
@@ -2015,6 +2025,41 @@ foreach vtiToWti = AllWidenableIntVectors in {
                (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
+
+// DAGCombiner::hoistLogicOpWithSameOpcodeHands may hoist disjoint ors
+// to (ext (or disjoint (a, b)))
+multiclass VPatWidenOrDisjointVL_VV_VX<SDNode extop, string instruction_name> {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
+      def : Pat<(wti.Vector
+                  (extop
+                    (vti.Vector
+                      (riscv_or_vl_is_add_oneuse
+                        vti.RegClass:$rs2, vti.RegClass:$rs1,
+                        undef, srcvalue, srcvalue)),
+                    VMV0:$vm, VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_MASK")
+                 (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                 vti.RegClass:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
+       def : Pat<(wti.Vector
+                   (extop
+                     (vti.Vector
+                       (riscv_or_vl_is_add_oneuse
+                         vti.RegClass:$rs2, (SplatPat (XLenVT GPR:$rs1)),
+                         undef, srcvalue, srcvalue)),
+                     VMV0:$vm, VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX#"_MASK")
+                 (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                 GPR:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
+    }
+  }
+}
+
+defm : VPatWidenOrDisjointVL_VV_VX<riscv_sext_vl, "PseudoVWADD">;
+defm : VPatWidenOrDisjointVL_VV_VX<riscv_zext_vl, "PseudoVWADDU">;
 
 // 11.3. Vector Integer Extension
 defm : VPatExtendVL_V<riscv_zext_vl, "PseudoVZEXT", "VF2",

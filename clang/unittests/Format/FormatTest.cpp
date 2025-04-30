@@ -6492,6 +6492,18 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "#if 1\n"
                "#endif",
                Style);
+
+  verifyFormat("#ifndef ABCDE\n"
+               "  #define ABCDE 0\n"
+               "#endif\n"
+               "\n"
+               "#define FGHIJK",
+               "#ifndef ABCDE\n"
+               "#define ABCDE 0\n"
+               "#endif\n"
+               "\n"
+               "#define FGHIJK",
+               Style);
 }
 
 TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
@@ -12645,9 +12657,6 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa __attribute__((unused))\n"
                "aaaaaaaaaaaaaaaaaaaaaaa(int i);");
   verifyFormat("__attribute__((nodebug)) ::qualified_type f();");
-  verifyFormat(
-      "RenderWidgetHostViewCocoa *\n"
-      "    __attribute__((objc_precise_lifetime)) keepSelfAlive = self;");
   FormatStyle AfterType = getLLVMStyle();
   AfterType.BreakAfterReturnType = FormatStyle::RTBS_All;
   verifyFormat("__attribute__((nodebug)) void\n"

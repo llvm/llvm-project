@@ -449,6 +449,35 @@ private:
     return true;
   }
 
+  // Recursively perform a bottom-up search to determine the maximum nesting
+  // depth, starting from a specific operation and continuing up to the function
+  // or module scope. Tosa nesting_depth starts at 0 and increments by one each
+  // time a new nested `region` is encountered.
+  static void getMaxNestedDepth(Operation *op, int32_t &depth) {
+    if (isa<mlir::func::FuncOp>(op) || isa<ModuleOp>(op))
+      return;
+
+    op = op->getParentOp();
+    if (!op)
+      return;
+
+    depth++;
+    getMaxNestedDepth(op, depth);
+    return;
+  }
+
+  bool levelCheckMaxNesting(Operation *op) {
+    int32_t maxNestedDepth = 0;
+    getMaxNestedDepth(op, maxNestedDepth);
+
+    if (maxNestedDepth >= tosaLevel.MAX_NESTING) {
+      op->emitOpError() << "failed level check: " << maxNestedDepth
+                        << " >= MAX_NESTING";
+      return false;
+    }
+    return true;
+  }
+
   bool levelCheckListSize(Operation *op) {
     if (auto concat = dyn_cast<tosa::ConcatOp>(op)) {
       return levelCheckListSize(op, concat.getInput1().size(), "input1");
@@ -750,6 +779,12 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return failure();
   }
 
+  if (isa<tosa::IfOp>(op) || isa<tosa::WhileOp>(op)) {
+    if (!levelCheckMaxNesting(op)) {
+      return failure();
+    }
+  }
+
   return success();
 }
 
@@ -767,7 +802,7 @@ inline bool CompatibleTypes(const mlir::Type &type,
 
 bool TosaValidation::CheckVariable(Operation *op) {
   if (isa<mlir::tosa::VariableOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
 
     if (variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has already been declared";
@@ -786,8 +821,7 @@ bool TosaValidation::CheckVariable(Operation *op) {
 bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
-
+    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
     if (!variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has not been declared";
       return false;
@@ -1034,8 +1068,110 @@ bool checkErrorIfTable(Operation *op) {
   return true;
 }
 
+bool checkErrorIfRescale(Operation *op) {
+  auto rescale = dyn_cast<tosa::RescaleOp>(op);
+  if (!rescale)
+    return true;
+
+  auto inputType = llvm::dyn_cast<ShapedType>(rescale.getInput().getType());
+  auto outputType = llvm::dyn_cast<ShapedType>(rescale.getOutput().getType());
+  if (!inputType || !outputType || !inputType.getElementType().isInteger() ||
+      !outputType.getElementType().isInteger())
+    return true;
+
+  auto inElemType = inputType.getElementType();
+  auto outElemType = outputType.getElementType();
+  auto inWidth = inElemType.getIntOrFloatBitWidth();
+  auto outWidth = outElemType.getIntOrFloatBitWidth();
+
+  bool inputUnsigned = rescale.getInputUnsigned();
+  bool outputUnsigned = rescale.getOutputUnsigned();
+
+  bool scale32 = rescale.getScale32();
+  auto roundingMode = rescale.getRoundingMode();
+
+  // ERROR_IF(scale32 && is_same<in_t,i48_t>())
+  if (scale32 && inWidth == 48) {
+    op->emitOpError() << "scale32 is not allowed with 48-bit input.";
+    return false;
+  }
+
+  // ERROR_IF(!scale32 && (rounding_mode == DOUBLE_ROUND))
+  if (!scale32 && roundingMode == "DOUBLE_ROUND") {
+    op->emitOpError() << "DOUBLE_ROUND is only allowed with scale32=true.";
+    return false;
+  }
+
+  // ERROR_IF(input_unsigned && output_unsigned)
+  if (inputUnsigned && outputUnsigned) {
+    op->emitOpError() << "input and output cannot be both unsigned.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<out_t,i32_t>() && input_unsigned)
+  if (outWidth == 32 && inputUnsigned) {
+    op->emitOpError() << "i32 output type is not allowed with unsigned input.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t,i32_t>() && output_unsigned)
+  if (inWidth == 32 && outputUnsigned) {
+    op->emitOpError() << "i32 input type is not allowed with unsigned output.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t,i48_t>() && output_unsigned)
+  if (inWidth == 48 && outputUnsigned) {
+    op->emitOpError() << "i48 input type is not allowed with unsigned output.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t, i48_t> && input_unsigned)
+  if (inWidth == 48 && inputUnsigned) {
+    op->emitOpError() << "i48 input type cannot be unsigned.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t, i32_t> && input_unsigned)
+  if (inWidth == 32 && inputUnsigned) {
+    op->emitOpError() << "i32 input type cannot be unsigned.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<out_t, i32_t> && output_unsigned)
+  if (outWidth == 32 && outputUnsigned) {
+    op->emitOpError() << "i32 output type cannot be unsigned.";
+    return false;
+  }
+
+  return true;
+}
+
+bool checkErrorIfPad(Operation *op) {
+  auto pad = dyn_cast<tosa::PadOp>(op);
+  if (!pad)
+    return true;
+
+  DenseIntElementsAttr paddingAttr;
+  if (!matchPattern(pad.getPadding(), m_Constant(&paddingAttr)))
+    // Pad verifier will catch this
+    return true;
+
+  for (const APInt &val : paddingAttr.getValues<APInt>()) {
+    if (val.getSExtValue() < 0) {
+      op->emitOpError() << "padding value must all be non-negative, got "
+                        << val.getSExtValue();
+      return false;
+    }
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
-  if (!checkErrorIfResize(op) || !checkErrorIfMul(op) || !checkErrorIfTable(op))
+  if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
+      !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
+      !checkErrorIfPad(op))
     return failure();
   return success();
 }

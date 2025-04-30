@@ -330,7 +330,7 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     }
   }
   if (!HS.lookupModule(module.path.front().GetStringRef())) {
-    error_stream.Printf("error: Header search couldn't locate module %s\n",
+    error_stream.Printf("error: Header search couldn't locate module '%s'\n",
                         module.path.front().AsCString());
     return false;
   }
@@ -742,7 +742,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 
   instance->setTarget(clang::TargetInfo::CreateTargetInfo(
-      *diagnostics_engine, instance->getInvocation().TargetOpts));
+      *diagnostics_engine, instance->getInvocation().getTargetOpts()));
 
   if (!instance->hasTarget())
     return nullptr;

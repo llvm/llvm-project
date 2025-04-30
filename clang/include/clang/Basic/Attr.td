@@ -999,6 +999,22 @@ def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
   let Documentation = [ARMInterruptDocs];
 }
 
+def ARMInterruptSaveFP : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [GNU<"interrupt_save_fp">];
+  let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
+                           ["IRQ", "FIQ", "SWI", "ABORT", "UNDEF", ""],
+                           ["IRQ", "FIQ", "SWI", "ABORT", "UNDEF", "Generic"],
+                           1>];
+  let HasCustomParsing = 0;
+  let Documentation = [ARMInterruptSaveFPDocs];
+}
+
+def ARMSaveFP : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
+}
+
 def AVRInterrupt : InheritableAttr, TargetSpecificAttr<TargetAVR> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
@@ -2236,10 +2252,23 @@ def NoMicroMips : InheritableAttr, TargetSpecificAttr<TargetMips32> {
 def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
-  let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
-                           ["supervisor", "machine", "qci-nest", "qci-nonest"],
-                           ["supervisor", "machine", "qcinest", "qcinonest"],
-                           1>];
+  let Args = [VariadicEnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
+                                   [
+                                     "supervisor",
+                                     "machine",
+                                     "qci-nest",
+                                     "qci-nonest",
+                                     "SiFive-CLIC-preemptible",
+                                     "SiFive-CLIC-stack-swap",
+                                   ],
+                                   [
+                                     "supervisor",
+                                     "machine",
+                                     "qcinest",
+                                     "qcinonest",
+                                     "SiFiveCLICPreemptible",
+                                     "SiFiveCLICStackSwap",
+                                   ]>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];
 }
@@ -4723,20 +4752,25 @@ def HLSLResourceBinding: InheritableAttr {
 
   private:
       RegisterType RegType;
-      unsigned SlotNumber;
+      std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
 
   public:
-      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
+      void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
         RegType = RT;
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
+      bool isImplicit() const {
+        return !SlotNumber.has_value();
+      }
       RegisterType getRegisterType() const {
+        assert(!isImplicit() && "binding does not have register slot");
         return RegType;
       }
       unsigned getSlotNumber() const {
-        return SlotNumber;
+        assert(!isImplicit() && "binding does not have register slot");
+        return SlotNumber.value();
       }
       unsigned getSpaceNumber() const {
         return SpaceNumber;
@@ -4994,4 +5028,10 @@ def OpenACCRoutineDecl :InheritableAttr {
     llvm::SmallVector<const OpenACCClause *> Clauses;
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
   }];
+}
+
+def NonString : InheritableAttr {
+  let Spellings = [GCC<"nonstring">];
+  let Subjects = SubjectList<[Var, Field]>;
+  let Documentation = [NonStringDocs];
 }

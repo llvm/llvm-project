@@ -12,6 +12,7 @@
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -33,6 +34,14 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
+    if (auto recordType = dyn_cast<cir::RecordType>(type)) {
+      StringAttr nameAttr = recordType.getName();
+      if (!nameAttr)
+        os << "rec_anon_" << recordType.getKindAsStr();
+      else
+        os << "rec_" << nameAttr.getValue();
+      return AliasResult::OverridableAlias;
+    }
     if (auto intType = dyn_cast<cir::IntType>(type)) {
       // We only provide alias for standard integer types (i.e. integer types
       // whose width is a power of 2 and at least 8).
@@ -158,7 +167,8 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
 
 LogicalResult cir::BreakOp::verify() {
   assert(!cir::MissingFeatures::switchOp());
-  if (!getOperation()->getParentOfType<LoopOpInterface>())
+  if (!getOperation()->getParentOfType<LoopOpInterface>() &&
+      !getOperation()->getParentOfType<SwitchOp>())
     return emitOpError("must be within a loop");
   return success();
 }
@@ -212,7 +222,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (isa<cir::RecordType, cir::ArrayType>(opType))
+    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType>(opType))
       return success();
     return op->emitOpError("zero expects struct or array type");
   }
@@ -795,6 +805,125 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// CaseOp
+//===----------------------------------------------------------------------===//
+
+void cir::CaseOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+  regions.push_back(RegionSuccessor(&getCaseRegion()));
+}
+
+void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
+                        ArrayAttr value, CaseOpKind kind,
+                        OpBuilder::InsertPoint &insertPoint) {
+  OpBuilder::InsertionGuard guardSwitch(builder);
+  result.addAttribute("value", value);
+  result.getOrAddProperties<Properties>().kind =
+      cir::CaseOpKindAttr::get(builder.getContext(), kind);
+  Region *caseRegion = result.addRegion();
+  builder.createBlock(caseRegion);
+
+  insertPoint = builder.saveInsertionPoint();
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseSwitchOp(OpAsmParser &parser, mlir::Region &regions,
+                                 mlir::OpAsmParser::UnresolvedOperand &cond,
+                                 mlir::Type &condType) {
+  cir::IntType intCondType;
+
+  if (parser.parseLParen())
+    return mlir::failure();
+
+  if (parser.parseOperand(cond))
+    return mlir::failure();
+  if (parser.parseColon())
+    return mlir::failure();
+  if (parser.parseCustomTypeWithFallback(intCondType))
+    return mlir::failure();
+  condType = intCondType;
+
+  if (parser.parseRParen())
+    return mlir::failure();
+  if (parser.parseRegion(regions, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+
+  return mlir::success();
+}
+
+static void printSwitchOp(OpAsmPrinter &p, cir::SwitchOp op,
+                          mlir::Region &bodyRegion, mlir::Value condition,
+                          mlir::Type condType) {
+  p << "(";
+  p << condition;
+  p << " : ";
+  p.printStrippedAttrOrType(condType);
+  p << ")";
+
+  p << ' ';
+  p.printRegion(bodyRegion, /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+}
+
+void cir::SwitchOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &region) {
+  if (!point.isParent()) {
+    region.push_back(RegionSuccessor());
+    return;
+  }
+
+  region.push_back(RegionSuccessor(&getBody()));
+}
+
+void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
+                          Value cond, BuilderOpStateCallbackRef switchBuilder) {
+  assert(switchBuilder && "the builder callback for regions must be present");
+  OpBuilder::InsertionGuard guardSwitch(builder);
+  Region *switchRegion = result.addRegion();
+  builder.createBlock(switchRegion);
+  result.addOperands({cond});
+  switchBuilder(builder, result.location, result);
+}
+
+void cir::SwitchOp::collectCases(llvm::SmallVectorImpl<CaseOp> &cases) {
+  walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+    // Don't walk in nested switch op.
+    if (isa<cir::SwitchOp>(op) && op != *this)
+      return WalkResult::skip();
+
+    if (auto caseOp = dyn_cast<cir::CaseOp>(op))
+      cases.push_back(caseOp);
+
+    return WalkResult::advance();
+  });
+}
+
+bool cir::SwitchOp::isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases) {
+  collectCases(cases);
+
+  if (getBody().empty())
+    return false;
+
+  if (!isa<YieldOp>(getBody().front().back()))
+    return false;
+
+  if (!llvm::all_of(getBody().front(),
+                    [](Operation &op) { return isa<CaseOp, YieldOp>(op); }))
+    return false;
+
+  return llvm::all_of(cases, [this](CaseOp op) {
+    return op->getParentOfType<SwitchOp>() == *this;
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -1024,6 +1153,9 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
 
+//===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
 LogicalResult cir::BinOp::verify() {
   bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
   bool saturated = getSaturated();
@@ -1052,6 +1184,67 @@ LogicalResult cir::BinOp::verify() {
   assert(!cir::MissingFeatures::complexType());
   // TODO(cir): verify for complex binops
 
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TernaryOp
+//===----------------------------------------------------------------------===//
+
+/// Given the region at `point`, or the parent operation if `point` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void cir::TernaryOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `true` and the `false` region branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(this->getODSResults(0)));
+    return;
+  }
+
+  // When branching from the parent operation, both the true and false
+  // regions are considered possible successors
+  regions.push_back(RegionSuccessor(&getTrueRegion()));
+  regions.push_back(RegionSuccessor(&getFalseRegion()));
+}
+
+void cir::TernaryOp::build(
+    OpBuilder &builder, OperationState &result, Value cond,
+    function_ref<void(OpBuilder &, Location)> trueBuilder,
+    function_ref<void(OpBuilder &, Location)> falseBuilder) {
+  result.addOperands(cond);
+  OpBuilder::InsertionGuard guard(builder);
+  Region *trueRegion = result.addRegion();
+  Block *block = builder.createBlock(trueRegion);
+  trueBuilder(builder, result.location);
+  Region *falseRegion = result.addRegion();
+  builder.createBlock(falseRegion);
+  falseBuilder(builder, result.location);
+
+  auto yield = dyn_cast<YieldOp>(block->getTerminator());
+  assert((yield && yield.getNumOperands() <= 1) &&
+         "expected zero or one result type");
+  if (yield.getNumOperands() == 1)
+    result.addTypes(TypeRange{yield.getOperandTypes().front()});
+}
+
+//===----------------------------------------------------------------------===//
+// ShiftOp
+//===----------------------------------------------------------------------===//
+LogicalResult cir::ShiftOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Type resType = getResult().getType();
+  assert(!cir::MissingFeatures::vectorType());
+  bool isOp0Vec = false;
+  bool isOp1Vec = false;
+  if (isOp0Vec != isOp1Vec)
+    return emitOpError() << "input types cannot be one vector and one scalar";
+  if (isOp1Vec && op->getOperand(1).getType() != resType) {
+    return emitOpError() << "shift amount must have the type of the result "
+                         << "if it is vector shift";
+  }
   return mlir::success();
 }
 
@@ -1094,6 +1287,24 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         return previous.getInput();
 
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// GetMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetMemberOp::verify() {
+  const auto recordTy = dyn_cast<RecordType>(getAddrTy().getPointee());
+  if (!recordTy)
+    return emitError() << "expected pointer to a record type";
+
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+
+  if (recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
+    return emitError() << "member type mismatch";
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

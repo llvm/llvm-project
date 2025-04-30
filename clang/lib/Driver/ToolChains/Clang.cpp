@@ -5977,7 +5977,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // We turn strict aliasing off by default if we're Windows MSVC since MSVC
   // doesn't do any TBAA.
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
-                    options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
+                    options::OPT_fno_strict_aliasing,
+                    !IsWindowsMSVC && !IsUEFI))
     CmdArgs.push_back("-relaxed-aliasing");
   if (Args.hasFlag(options::OPT_fno_pointer_tbaa, options::OPT_fpointer_tbaa,
                    false))
@@ -7232,7 +7233,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fuse-cxa-atexit is default.
   if (!Args.hasFlag(
           options::OPT_fuse_cxa_atexit, options::OPT_fno_use_cxa_atexit,
-          !RawTriple.isOSAIX() && !RawTriple.isOSWindows() &&
+          !RawTriple.isOSAIX() &&
+              (!RawTriple.isOSWindows() ||
+               RawTriple.isWindowsCygwinEnvironment()) &&
               ((RawTriple.getVendor() != llvm::Triple::MipsTechnologies) ||
                RawTriple.hasEnvironment())) ||
       KernelOrKext)
@@ -7681,13 +7684,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fretain_comments_from_system_headers))
     CmdArgs.push_back("-fretain-comments-from-system-headers");
 
-  if (Arg *A = Args.getLastArg(options::OPT_fextend_variable_liveness_EQ)) {
-    A->render(Args, CmdArgs);
-  } else if (Arg *A = Args.getLastArg(options::OPT_O_Group);
-             A && A->containsValue("g")) {
-    // Set -fextend-variable-liveness=all by default at -Og.
-    CmdArgs.push_back("-fextend-variable-liveness=all");
-  }
+  Args.AddLastArg(CmdArgs, options::OPT_fextend_variable_liveness_EQ);
 
   // Forward -fcomment-block-commands to -cc1.
   Args.AddAllArgs(CmdArgs, options::OPT_fcomment_block_commands);

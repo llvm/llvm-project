@@ -3072,6 +3072,8 @@ bool LLParser::parseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
     Value *V;
     if (parseType(ArgTy, ArgLoc))
       return true;
+    if (!FunctionType::isValidArgumentType(ArgTy))
+      return error(ArgLoc, "invalid type for function argument");
 
     AttrBuilder ArgAttrs(M->getContext());
 
@@ -3381,7 +3383,7 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
         CurValID = ArgID + 1;
       }
 
-      if (!ArgTy->isFirstClassType())
+      if (!FunctionType::isValidArgumentType(ArgTy))
         return error(TypeLoc, "invalid type for function argument");
 
       ArgList.emplace_back(TypeLoc, ArgTy,
@@ -9049,7 +9051,7 @@ bool LLParser::parseTypeIdEntry(unsigned ID) {
     for (auto TIDRef : FwdRefTIDs->second) {
       assert(!*TIDRef.first &&
              "Forward referenced type id GUID expected to be 0");
-      *TIDRef.first = GlobalValue::getGUID(Name);
+      *TIDRef.first = GlobalValue::getGUIDAssumingExternalLinkage(Name);
     }
     ForwardRefTypeIds.erase(FwdRefTIDs);
   }
@@ -9154,7 +9156,7 @@ bool LLParser::parseTypeIdCompatibleVtableEntry(unsigned ID) {
     for (auto TIDRef : FwdRefTIDs->second) {
       assert(!*TIDRef.first &&
              "Forward referenced type id GUID expected to be 0");
-      *TIDRef.first = GlobalValue::getGUID(Name);
+      *TIDRef.first = GlobalValue::getGUIDAssumingExternalLinkage(Name);
     }
     ForwardRefTypeIds.erase(FwdRefTIDs);
   }
@@ -9470,7 +9472,7 @@ bool LLParser::addGlobalValueToIndex(
       assert(
           (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&
           "Need a source_filename to compute GUID for local");
-      GUID = GlobalValue::getGUID(
+      GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Name, Linkage, SourceFileName));
       VI = Index->getOrInsertValueInfo(GUID, Index->saveString(Name));
     }

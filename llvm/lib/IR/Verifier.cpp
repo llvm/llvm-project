@@ -2859,6 +2859,9 @@ void Verifier::visitFunction(const Function &F) {
   Check(!Attrs.hasAttrSomewhere(Attribute::ElementType),
         "Attribute 'elementtype' can only be applied to a callsite.", &F);
 
+  Check(!Attrs.hasFnAttr("aarch64_zt0_undef"),
+        "Attribute 'aarch64_zt0_undef' can only be applied to a callsite.");
+
   if (Attrs.hasFnAttr(Attribute::Naked))
     for (const Argument &Arg : F.args())
       Check(Arg.use_empty(), "cannot use argument of naked function", &Arg);
@@ -2931,8 +2934,6 @@ void Verifier::visitFunction(const Function &F) {
           FT->getParamType(i));
     Check(Arg.getType()->isFirstClassType(),
           "Function arguments must have first-class types!", &Arg);
-    Check(!Arg.getType()->isLabelTy(),
-          "Function argument cannot be of label type!", &Arg, &F);
     if (!IsIntrinsic) {
       Check(!Arg.getType()->isMetadataTy(),
             "Function takes metadata but isn't an intrinsic", &Arg, &F);
@@ -4392,6 +4393,11 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
     verifySwiftErrorValue(&AI);
   }
 
+  if (TT.isAMDGPU()) {
+    Check(AI.getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS,
+          "alloca on amdgpu must be in addrspace(5)", &AI);
+  }
+
   visitInstruction(AI);
 }
 
@@ -4966,8 +4972,12 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
 
 void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
   assert(I.hasMetadata(LLVMContext::MD_DIAssignID));
+  // DIAssignID metadata must be attached to either an alloca or some form of
+  // store/memory-writing instruction.
+  // FIXME: We allow all intrinsic insts here to avoid trying to enumerate all
+  // possible store intrinsics.
   bool ExpectedInstTy =
-      isa<AllocaInst>(I) || isa<StoreInst>(I) || isa<MemIntrinsic>(I);
+      isa<AllocaInst>(I) || isa<StoreInst>(I) || isa<IntrinsicInst>(I);
   CheckDI(ExpectedInstTy, "!DIAssignID attached to unexpected instruction kind",
           I, MD);
   // Iterate over the MetadataAsValue uses of the DIAssignID - these should

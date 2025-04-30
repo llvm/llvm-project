@@ -385,6 +385,62 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
   return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
 }
 
+/// Attempt to approximate the cost of a shuffle which will require splitting
+/// during legalization.  Note that processShuffleMasks is not an exact proxy
+/// for the algorithm used in LegalizeVectorTypes, but hopefully it's a
+/// reasonably close upperbound.
+static InstructionCost costShuffleViaSplitting(const RISCVTTIImpl &TTI,
+                                               MVT LegalVT, VectorType *Tp,
+                                               ArrayRef<int> Mask,
+                                               TTI::TargetCostKind CostKind) {
+  assert(LegalVT.isFixedLengthVector() && !Mask.empty() &&
+         "Expected fixed vector type and non-empty mask");
+  unsigned LegalNumElts = LegalVT.getVectorNumElements();
+  // Number of destination vectors after legalization:
+  unsigned NumOfDests = divideCeil(Mask.size(), LegalNumElts);
+  // We are going to permute multiple sources and the result will be in
+  // multiple destinations. Providing an accurate cost only for splits where
+  // the element type remains the same.
+  if (NumOfDests <= 1 ||
+      LegalVT.getVectorElementType().getSizeInBits() !=
+          Tp->getElementType()->getPrimitiveSizeInBits() ||
+      LegalNumElts >= Tp->getElementCount().getFixedValue())
+    return InstructionCost::getInvalid();
+
+  unsigned VecTySize = TTI.getDataLayout().getTypeStoreSize(Tp);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  // Number of source vectors after legalization:
+  unsigned NumOfSrcs = divideCeil(VecTySize, LegalVTSize);
+
+  auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(), LegalNumElts);
+
+  unsigned NormalizedVF = LegalNumElts * std::max(NumOfSrcs, NumOfDests);
+  unsigned NumOfSrcRegs = NormalizedVF / LegalNumElts;
+  unsigned NumOfDestRegs = NormalizedVF / LegalNumElts;
+  SmallVector<int> NormalizedMask(NormalizedVF, PoisonMaskElem);
+  assert(NormalizedVF >= Mask.size() &&
+         "Normalized mask expected to be not shorter than original mask.");
+  copy(Mask, NormalizedMask.begin());
+  InstructionCost Cost = 0;
+  SmallDenseSet<std::pair<ArrayRef<int>, unsigned>> ReusedSingleSrcShuffles;
+  processShuffleMasks(
+      NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
+      [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
+        if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
+          return;
+        if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
+                 .second)
+          return;
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                   RegMask, CostKind, 0, nullptr);
+      },
+      [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
+                                   CostKind, 0, nullptr);
+      });
+  return Cost;
+}
+
 /// Try to perform better estimation of the permutation.
 /// 1. Split the source/destination vectors into real registers.
 /// 2. Do the mask analysis to identify which real registers are
@@ -427,7 +483,7 @@ costShuffleViaVRegSplitting(const RISCVTTIImpl &TTI, MVT LegalVT,
   auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(),
                                           LegalVT.getVectorNumElements());
 
-  unsigned E = *NumOfDests.getValue();
+  unsigned E = NumOfDests.getValue();
   unsigned NormalizedVF =
       LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
   unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();
@@ -647,48 +703,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return true;
       }
     };
-    // We are going to permute multiple sources and the result will be in
-    // multiple destinations. Providing an accurate cost only for splits where
-    // the element type remains the same.
-    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
-        shouldSplit(Kind) &&
-        LT.second.getVectorElementType().getSizeInBits() ==
-        Tp->getElementType()->getPrimitiveSizeInBits() &&
-        LT.second.getVectorNumElements() <
-        cast<FixedVectorType>(Tp)->getNumElements() &&
-        divideCeil(Mask.size(),
-                   cast<FixedVectorType>(Tp)->getNumElements()) ==
-        static_cast<unsigned>(*LT.first.getValue())) {
-      unsigned NumRegs = *LT.first.getValue();
-      unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
-      unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
-      auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
 
-      InstructionCost Cost = 0;
-      for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
-           I < NumSrcRegs; ++I) {
-        bool IsSingleVector = true;
-        SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-        transform(
-                  Mask.slice(I * SubVF,
-                             I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
-                  SubMask.begin(), [&](int I) -> int {
-                    if (I == PoisonMaskElem)
-                      return PoisonMaskElem;
-                    bool SingleSubVector = I / VF == 0;
-                    IsSingleVector &= SingleSubVector;
-                    return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
-                  });
-        if (all_of(enumerate(SubMask), [](auto &&P) {
-          return P.value() == PoisonMaskElem ||
-            static_cast<unsigned>(P.value()) == P.index();
-        }))
-          continue;
-        Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
-                               : TTI::SK_PermuteTwoSrc,
-                               SubVecTy, SubMask, CostKind, 0, nullptr);
-      }
-      return Cost;
+    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
+        shouldSplit(Kind)) {
+      InstructionCost SplitCost =
+          costShuffleViaSplitting(*this, LT.second, FVTp, Mask, CostKind);
+      if (SplitCost.isValid())
+        return SplitCost;
     }
   }
 
@@ -839,7 +860,8 @@ static unsigned isM1OrSmaller(MVT VT) {
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
@@ -2847,8 +2869,11 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
       continue;
 
-    // We are looking for a splat that can be sunk.
-    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
+    // We are looking for a splat/vp.splat that can be sunk.
+    bool IsVPSplat = match(Op, m_Intrinsic<Intrinsic::experimental_vp_splat>(
+                                   m_Value(), m_Value(), m_Value()));
+    if (!IsVPSplat &&
+        !match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
                              m_Undef(), m_ZeroMask())))
       continue;
 
@@ -2864,12 +2889,17 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
         return false;
     }
 
-    Use *InsertEltUse = &Op->getOperandUse(0);
     // Sink any fpexts since they might be used in a widening fp pattern.
-    auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
-    if (isa<FPExtInst>(InsertElt->getOperand(1)))
-      Ops.push_back(&InsertElt->getOperandUse(1));
-    Ops.push_back(InsertEltUse);
+    if (IsVPSplat) {
+      if (isa<FPExtInst>(Op->getOperand(0)))
+        Ops.push_back(&Op->getOperandUse(0));
+    } else {
+      Use *InsertEltUse = &Op->getOperandUse(0);
+      auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
+      if (isa<FPExtInst>(InsertElt->getOperand(1)))
+        Ops.push_back(&InsertElt->getOperandUse(1));
+      Ops.push_back(InsertEltUse);
+    }
     Ops.push_back(&OpIdx.value());
   }
   return true;

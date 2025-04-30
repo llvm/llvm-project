@@ -44,9 +44,7 @@ using namespace llvm::PatternMatch;
 namespace {
 struct SVEIntrinsicOpts : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
-  SVEIntrinsicOpts() : ModulePass(ID) {
-    initializeSVEIntrinsicOptsPass(*PassRegistry::getPassRegistry());
-  }
+  SVEIntrinsicOpts() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

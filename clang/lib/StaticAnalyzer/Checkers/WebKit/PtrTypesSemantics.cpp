@@ -46,8 +46,18 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, StringRef NameToMatch) {
     return std::nullopt;
 
   const CXXRecordDecl *R = T->getAsCXXRecordDecl();
-  if (!R)
-    return std::nullopt;
+  if (!R) {
+    auto CT = Base->getType().getCanonicalType();
+    if (auto *TST = dyn_cast<TemplateSpecializationType>(CT)) {
+      auto TmplName = TST->getTemplateName();
+      if (!TmplName.isNull()) {
+        if (auto *TD = TmplName.getAsTemplateDecl())
+          R = dyn_cast_or_null<CXXRecordDecl>(TD->getTemplatedDecl());
+      }
+    }
+    if (!R)
+      return std::nullopt;
+  }
   if (!R->hasDefinition())
     return std::nullopt;
 
@@ -433,6 +443,13 @@ bool isRetainPtr(const CXXRecordDecl *R) {
   assert(R);
   if (auto *TmplR = R->getTemplateInstantiationPattern())
     return isRetainPtr(safeGetName(TmplR));
+  return false;
+}
+
+bool isSmartPtr(const CXXRecordDecl *R) {
+  assert(R);
+  if (auto *TmplR = R->getTemplateInstantiationPattern())
+    return isSmartPtrClass(safeGetName(TmplR));
   return false;
 }
 

@@ -788,8 +788,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         Instruction &I = *It;
         It++;
 
-        if (I.isTerminator())
+        if (I.isTerminator()) {
+          // Absorb any debug value that terminator may have
+          if (OI.EntryBB->getTerminator())
+            OI.EntryBB->getTerminator()->adoptDbgRecords(
+                &ArtificialEntry, I.getIterator(), false);
           continue;
+        }
 
         I.moveBeforePreserving(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
       }
@@ -1314,8 +1319,7 @@ static void targetParallelCallback(
       /* if expression */ Cond,
       /* number of threads */ NumThreads ? NumThreads : Builder.getInt32(-1),
       /* Proc bind */ Builder.getInt32(-1),
-      /* outlined function */
-      Builder.CreateBitCast(&OutlinedFn, OMPIRBuilder->ParallelTaskPtr),
+      /* outlined function */ &OutlinedFn,
       /* wrapper function */ NullPtrValue,
       /* arguments of the outlined funciton*/ Args,
       /* number of arguments */ Builder.getInt64(NumCapturedVars)};
@@ -1389,9 +1393,8 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
   Builder.SetInsertPoint(CI);
 
   // Build call __kmpc_fork_call[_if](Ident, n, microtask, var1, .., varn);
-  Value *ForkCallArgs[] = {
-      Ident, Builder.getInt32(NumCapturedVars),
-      Builder.CreateBitCast(&OutlinedFn, OMPIRBuilder->ParallelTaskPtr)};
+  Value *ForkCallArgs[] = {Ident, Builder.getInt32(NumCapturedVars),
+                           &OutlinedFn};
 
   SmallVector<Value *, 16> RealArgs;
   RealArgs.append(std::begin(ForkCallArgs), std::end(ForkCallArgs));
@@ -1408,8 +1411,6 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
     Value *NullPtrValue = Constant::getNullValue(PtrTy);
     RealArgs.push_back(NullPtrValue);
   }
-  if (IfCondition && RealArgs.back()->getType() != PtrTy)
-    RealArgs.back() = Builder.CreateBitCast(RealArgs.back(), PtrTy);
 
   Builder.CreateCall(RTLFn, RealArgs);
 
@@ -2176,6 +2177,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
+  // FiniCBWrapper needs to create a branch to the loop finalization block, but
+  // this has not been created yet at some times when this callback runs.
+  SmallVector<BranchInst *> CancellationBranches;
   auto FiniCBWrapper = [&](InsertPointTy IP) {
     if (IP.getBlock()->end() != IP.getPoint())
       return FiniCB(IP);
@@ -2183,16 +2187,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     // will fail because that function requires the Finalization Basic Block to
     // have a terminator, which is already removed by EmitOMPRegionBody.
     // IP is currently at cancelation block.
-    // We need to backtrack to the condition block to fetch
-    // the exit block and create a branch from cancelation
-    // to exit block.
-    IRBuilder<>::InsertPointGuard IPG(Builder);
-    Builder.restoreIP(IP);
-    auto *CaseBB = IP.getBlock()->getSinglePredecessor();
-    auto *CondBB = CaseBB->getSinglePredecessor()->getSinglePredecessor();
-    auto *ExitBB = CondBB->getTerminator()->getSuccessor(1);
-    Instruction *I = Builder.CreateBr(ExitBB);
-    IP = InsertPointTy(I->getParent(), I->getIterator());
+    BranchInst *DummyBranch = Builder.CreateBr(IP.getBlock());
+    IP = InsertPointTy(DummyBranch->getParent(), DummyBranch->getIterator());
+    CancellationBranches.push_back(DummyBranch);
     return FiniCB(IP);
   };
 
@@ -2255,6 +2252,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     return WsloopIP.takeError();
   InsertPointTy AfterIP = *WsloopIP;
 
+  BasicBlock *LoopFini = AfterIP.getBlock()->getSinglePredecessor();
+  assert(LoopFini && "Bad structure of static workshare loop finalization");
+
   // Apply the finalization callback in LoopAfterBB
   auto FiniInfo = FinalizationStack.pop_back_val();
   assert(FiniInfo.DK == OMPD_sections &&
@@ -2266,6 +2266,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     if (Error Err = CB(Builder.saveIP()))
       return Err;
     AfterIP = {FiniBB, FiniBB->begin()};
+  }
+
+  // Now we can fix the dummy branch to point to the right place
+  for (BranchInst *DummyBranch : CancellationBranches) {
+    assert(DummyBranch->getNumSuccessors() == 1);
+    DummyBranch->setSuccessor(0, LoopFini);
   }
 
   return AfterIP;
@@ -4494,10 +4500,11 @@ getKmpcForStaticLoopForType(Type *Ty, OpenMPIRBuilder *OMPBuilder,
 
 // Inserts a call to proper OpenMP Device RTL function which handles
 // loop worksharing.
-static void createTargetLoopWorkshareCall(
-    OpenMPIRBuilder *OMPBuilder, WorksharingLoopType LoopType,
-    BasicBlock *InsertBlock, Value *Ident, Value *LoopBodyArg,
-    Type *ParallelTaskPtr, Value *TripCount, Function &LoopBodyFn) {
+static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
+                                          WorksharingLoopType LoopType,
+                                          BasicBlock *InsertBlock, Value *Ident,
+                                          Value *LoopBodyArg, Value *TripCount,
+                                          Function &LoopBodyFn) {
   Type *TripCountTy = TripCount->getType();
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
@@ -4505,7 +4512,7 @@ static void createTargetLoopWorkshareCall(
       getKmpcForStaticLoopForType(TripCountTy, OMPBuilder, LoopType);
   SmallVector<Value *, 8> RealArgs;
   RealArgs.push_back(Ident);
-  RealArgs.push_back(Builder.CreateBitCast(&LoopBodyFn, ParallelTaskPtr));
+  RealArgs.push_back(&LoopBodyFn);
   RealArgs.push_back(LoopBodyArg);
   RealArgs.push_back(TripCount);
   if (LoopType == WorksharingLoopType::DistributeStaticLoop) {
@@ -4529,12 +4536,10 @@ static void createTargetLoopWorkshareCall(
   Builder.CreateCall(RTLFn, RealArgs);
 }
 
-static void
-workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
-                            CanonicalLoopInfo *CLI, Value *Ident,
-                            Function &OutlinedFn, Type *ParallelTaskPtr,
-                            const SmallVector<Instruction *, 4> &ToBeDeleted,
-                            WorksharingLoopType LoopType) {
+static void workshareLoopTargetCallback(
+    OpenMPIRBuilder *OMPIRBuilder, CanonicalLoopInfo *CLI, Value *Ident,
+    Function &OutlinedFn, const SmallVector<Instruction *, 4> &ToBeDeleted,
+    WorksharingLoopType LoopType) {
   IRBuilder<> &Builder = OMPIRBuilder->Builder;
   BasicBlock *Preheader = CLI->getPreheader();
   Value *TripCount = CLI->getTripCount();
@@ -4581,8 +4586,7 @@ workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
   OutlinedFnCallInstruction->eraseFromParent();
 
   createTargetLoopWorkshareCall(OMPIRBuilder, LoopType, Preheader, Ident,
-                                LoopBodyArg, ParallelTaskPtr, TripCount,
-                                OutlinedFn);
+                                LoopBodyArg, TripCount, OutlinedFn);
 
   for (auto &ToBeDeletedItem : ToBeDeleted)
     ToBeDeletedItem->eraseFromParent();
@@ -4676,8 +4680,8 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   //
   OI.PostOutlineCB = [=, ToBeDeletedVec =
                              std::move(ToBeDeleted)](Function &OutlinedFn) {
-    workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ParallelTaskPtr,
-                                ToBeDeletedVec, LoopType);
+    workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ToBeDeletedVec,
+                                LoopType);
   };
   addOutlineInfo(std::move(OI));
   return CLI->getAfterIP();
@@ -8126,7 +8130,7 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   // Convert the size in bytes into the number of array elements.
   TypeSize ElementSize = M.getDataLayout().getTypeStoreSize(ElemTy);
   Size = Builder.CreateExactUDiv(Size, Builder.getInt64(ElementSize));
-  Value *PtrBegin = Builder.CreateBitCast(BeginIn, Builder.getPtrTy());
+  Value *PtrBegin = BeginIn;
   Value *PtrEnd = Builder.CreateGEP(ElemTy, PtrBegin, Size);
 
   // Emit array initiation if this is an array section and \p MapType indicates
@@ -8170,10 +8174,8 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
 
   // Fill up the runtime mapper handle for all components.
   for (unsigned I = 0; I < Info->BasePointers.size(); ++I) {
-    Value *CurBaseArg =
-        Builder.CreateBitCast(Info->BasePointers[I], Builder.getPtrTy());
-    Value *CurBeginArg =
-        Builder.CreateBitCast(Info->Pointers[I], Builder.getPtrTy());
+    Value *CurBaseArg = Info->BasePointers[I];
+    Value *CurBeginArg = Info->Pointers[I];
     Value *CurSizeArg = Info->Sizes[I];
     Value *CurNameArg = Info->Names.size()
                             ? Info->Names[I]
@@ -8692,7 +8694,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
                                    AtomicOpValue &X, Value *Expr,
-                                   AtomicOrdering AO) {
+                                   AtomicOrdering AO, InsertPointTy AllocaIP) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -8700,12 +8702,22 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
          "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
+          XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
          "OMP atomic write expected a scalar type");
 
   if (XElemTy->isIntegerTy()) {
     StoreInst *XSt = Builder.CreateStore(Expr, X.Var, X.IsVolatile);
     XSt->setAtomic(AO);
+  } else if (XElemTy->isStructTy()) {
+    LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
+    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize =
+        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    OpenMPIRBuilder::AtomicInfo atomicInfo(
+        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
+        OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X.Var);
+    atomicInfo.EmitAtomicStoreLibcall(AO, Expr);
+    OldVal->eraseFromParent();
   } else {
     // We need to bitcast and perform atomic op as integers
     IntegerType *IntCastTy =

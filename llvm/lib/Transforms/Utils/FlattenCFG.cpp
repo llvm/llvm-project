@@ -144,7 +144,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   int Idx = -1;
 
   // Check predecessors of \param BB.
-  SmallPtrSet<BasicBlock *, 16> Preds(pred_begin(BB), pred_end(BB));
+  SmallPtrSet<BasicBlock *, 16> Preds(llvm::from_range, predecessors(BB));
   for (BasicBlock *Pred : Preds) {
     BranchInst *PBI = dyn_cast<BranchInst>(Pred->getTerminator());
 

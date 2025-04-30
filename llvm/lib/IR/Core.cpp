@@ -1643,6 +1643,12 @@ const char *LLVMGetAsString(LLVMValueRef C, size_t *Length) {
   return Str.data();
 }
 
+const char *LLVMGetRawDataValues(LLVMValueRef C, size_t *SizeInBytes) {
+  StringRef Str = unwrap<ConstantDataSequential>(C)->getRawDataValues();
+  *SizeInBytes = Str.size();
+  return Str.data();
+}
+
 LLVMValueRef LLVMConstArray(LLVMTypeRef ElementTy,
                             LLVMValueRef *ConstantVals, unsigned Length) {
   ArrayRef<Constant*> V(unwrap<Constant>(ConstantVals, Length), Length);
@@ -1653,6 +1659,13 @@ LLVMValueRef LLVMConstArray2(LLVMTypeRef ElementTy, LLVMValueRef *ConstantVals,
                              uint64_t Length) {
   ArrayRef<Constant *> V(unwrap<Constant>(ConstantVals, Length), Length);
   return wrap(ConstantArray::get(ArrayType::get(unwrap(ElementTy), Length), V));
+}
+
+LLVMValueRef LLVMConstDataArray(LLVMTypeRef ElementTy, const char *Data,
+                                size_t SizeInBytes) {
+  Type *Ty = unwrap(ElementTy);
+  size_t Len = SizeInBytes / (Ty->getPrimitiveSizeInBits() / 8);
+  return wrap(ConstantDataArray::getRaw(StringRef(Data, SizeInBytes), Len, Ty));
 }
 
 LLVMValueRef LLVMConstStructInContext(LLVMContextRef C,

@@ -1322,7 +1322,7 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ModuleFlagAttr
+// ModuleFlagAttr & related
 //===----------------------------------------------------------------------===//
 
 def ModuleFlagAttr
@@ -1332,18 +1332,50 @@ def ModuleFlagAttr
     Represents a single entry of llvm.module.flags metadata
     (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
     flag described by `ModFlagBehaviorAttr`, the second is a string ID
-    and third is the value of the flag (currently only integer constants
-    are supported).
+    and third is the value of the flag. Supported keys and values include:
+      - Arbitrary `key`s holding integer constants or strings.
+      - Domain specific keys (e.g "CG Profile"), holding lists of supported
+        module flag values (e.g. `llvm.cgprofile_entry`).
 
     Example:
     ```mlir
-      #llvm.mlir.module_flag<error, "wchar_size", 4>
+      llvm.module_flags [
+          #llvm.mlir.module_flag<error, "wchar_size", 4>,
+          #llvm.mlir.module_flag<error, "probe-stack", "inline-asm">,
+          #llvm.mlir.module_flag<append, "CG Profile", [
+            #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+            #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+            #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
+          ]
+      >]
     ```
   }];
   let parameters = (ins "ModFlagBehavior":$behavior,
                         "StringAttr":$key,
-                        "uint32_t":$value);
+                        "Attribute":$value);
   let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
+  let genVerifyDecl = 1;
+}
+
+def ModuleFlagCGProfileEntryAttr
+    : LLVM_Attr<"ModuleFlagCGProfileEntry", "cgprofile_entry"> {
+  let summary = "CG profile module flag entry";
+  let description = [{
+    Describes a single entry for a CG profile module flag. Example:
+    ```mlir
+      llvm.module_flags [
+        #llvm.mlir.module_flag<append, "CG Profile",
+          [#llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+           ...
+          ]>]
+    ```
+  }];
+  let parameters = (
+    ins OptionalParameter<"FlatSymbolRefAttr">:$from,
+        OptionalParameter<"FlatSymbolRefAttr">:$to,
+        "uint64_t":$count);
+
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//

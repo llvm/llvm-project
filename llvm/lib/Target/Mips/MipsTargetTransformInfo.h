@@ -32,10 +32,10 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  bool hasDivRemOp(Type *DataType, bool IsSigned) const;
+  bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                     const TargetTransformInfo::LSRCost &C2) const;
+                     const TargetTransformInfo::LSRCost &C2) const override;
 };
 
 } // end namespace llvm

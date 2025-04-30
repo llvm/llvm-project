@@ -94,10 +94,12 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
            B == LangAS::cuda_shared)) ||
-         // `this` overloading depending on address space is not ready,
-         // so this is a hack to allow generating addrspacecasts.
-         // IR legalization will be required when this address space is used.
+         // In HLSL, the this pointer for member functions points to the default
+         // address space. This causes a problem if the structure is in
+         // a different address space. We want to allow casting from these
+         // address spaces to default to work around this problem.
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
+         (A == LangAS::Default && B == LangAS::hlsl_device) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
@@ -2344,16 +2346,15 @@ bool Type::isArithmeticType() const {
 }
 
 bool Type::hasBooleanRepresentation() const {
-  if (isBooleanType())
-    return true;
-
-  if (const EnumType *ET = getAs<EnumType>())
-    return ET->getDecl()->getIntegerType()->isBooleanType();
-
-  if (const AtomicType *AT = getAs<AtomicType>())
-    return AT->getValueType()->hasBooleanRepresentation();
-
-  return false;
+  if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
+    return VT->getElementType()->isBooleanType();
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
+    return ET->getDecl()->isComplete() &&
+           ET->getDecl()->getIntegerType()->isBooleanType();
+  }
+  if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
+    return IT->getNumBits() == 1;
+  return isBooleanType();
 }
 
 Type::ScalarTypeKind Type::getScalarTypeKind() const {
@@ -2816,6 +2817,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType->isIncompleteType())
     return false;
 
+  if (CanonicalType.hasAddressDiscriminatedPointerAuth())
+    return false;
+
   // As an extension, Clang treats vector types as Scalar types.
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
@@ -2828,7 +2832,7 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
         return ClassDecl->isTriviallyCopyable();
       }
     }
-    return true;
+    return !RT->getDecl()->isNonTrivialToPrimitiveCopy();
   }
   // No other types can match.
   return false;
@@ -2966,6 +2970,8 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
   case Qualifiers::OCL_Weak:
     return PCK_ARCWeak;
   default:
+    if (hasAddressDiscriminatedPointerAuth())
+      return PCK_PtrAuth;
     return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
   }
 }
@@ -4787,8 +4793,12 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    LinkageInfo LV =
-        getDeclLinkageAndVisibility(MPT->getMostRecentCXXRecordDecl());
+    LinkageInfo LV;
+    if (auto *D = MPT->getMostRecentCXXRecordDecl()) {
+      LV.merge(getDeclLinkageAndVisibility(D));
+    } else if (auto *Ty = MPT->getQualifier()->getAsType()) {
+      LV.merge(computeTypeLinkageInfo(Ty));
+    }
     LV.merge(computeTypeLinkageInfo(MPT->getPointeeType()));
     return LV;
   }

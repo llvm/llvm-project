@@ -106,10 +106,9 @@ void emitMisexpectDiagnostic(Instruction *I, LLVMContext &Ctx,
       "Potential performance regression from use of the llvm.expect intrinsic: "
       "Annotation was correct on {0} of profiled executions.",
       PerString);
-  Twine Msg(PerString);
   Instruction *Cond = getInstCondition(I);
   if (isMisExpectDiagEnabled(Ctx))
-    Ctx.diagnose(DiagnosticInfoMisExpect(Cond, Msg));
+    Ctx.diagnose(DiagnosticInfoMisExpect(Cond, Twine(PerString)));
   OptimizationRemarkEmitter ORE(I->getParent()->getParent());
   ORE.emit(OptimizationRemark(DEBUG_TYPE, "misexpect", Cond) << RemStr.str());
 }
