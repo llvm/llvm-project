@@ -50,13 +50,10 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out);
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
-extern int calculate_dst(struct tm *tm);
-extern void set_dst(struct tm *tm);
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm,
                                    bool local);
 extern timezone::tzset *get_localtime(struct tm *tm);
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
-extern unsigned char is_dst(struct tm *tm);
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
 extern char *get_env_var(const char *var_name);
