@@ -1146,8 +1146,8 @@ is conservatively correct for OpenCL.
                              (except private, or generic that accesses private)
                              provided the other operation's sync scope is:
 
-                             - ``system`` or ``agent`` and executed by a thread
-                               on the same cluster.
+                             - ``system``, ``agent`` or ``cluster`` and
+                               executed by a thread on the same cluster.
                              - ``workgroup`` and executed by a thread in the
                                same work-group.
                              - ``wavefront`` and executed by a thread in the
