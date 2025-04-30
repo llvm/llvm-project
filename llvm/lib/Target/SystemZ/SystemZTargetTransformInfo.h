@@ -90,7 +90,8 @@ public:
   bool LSRWithInstrQueries() const override { return true; }
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override;
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override;
   bool supportsEfficientVectorElementLoadStore() const override { return true; }
   bool enableInterleavedAccessVectorization() const override { return true; }
 
