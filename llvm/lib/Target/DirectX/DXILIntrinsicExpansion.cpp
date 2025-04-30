@@ -295,10 +295,10 @@ static Value *expandIsFPClass(CallInst *Orig) {
   unsigned FNumElem = 0; // 0 => F is not a vector
 
   unsigned BitWidth; // Bit width of F or the ElemTy of F
-  Type *BitCastTy; // An IntNTy of the same bitwidth as F or ElemTy of F
+  Type *BitCastTy;   // An IntNTy of the same bitwidth as F or ElemTy of F
 
   if (auto *FVecTy = dyn_cast<FixedVectorType>(FTy)) {
-    Type* ElemTy = FVecTy->getElementType();
+    Type *ElemTy = FVecTy->getElementType();
     FNumElem = FVecTy->getNumElements();
     BitWidth = ElemTy->getPrimitiveSizeInBits();
     BitCastTy = FixedVectorType::get(Builder.getIntNTy(BitWidth), FNumElem);
