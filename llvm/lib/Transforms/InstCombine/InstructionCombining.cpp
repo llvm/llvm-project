@@ -2286,13 +2286,9 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
       Value *NewLHS = ConstOp1 ? V1 : NewC;
       Value *NewRHS = ConstOp1 ? NewC : V1;
-      Value *XY = Builder.CreateBinOp(Opcode, NewLHS, NewRHS);
-      if (auto *BO = dyn_cast<BinaryOperator>(XY))
-        BO->copyIRFlags(&Inst);
-
       VectorType *VTy = cast<VectorType>(Inst.getType());
-      SmallVector<int> NewM(VTy->getElementCount().getKnownMinValue(), 0);
-      return new ShuffleVectorInst(XY, NewM);
+      SmallVector<int> Mask(VTy->getElementCount().getKnownMinValue(), 0);
+      return createBinOpShuffle(NewLHS, NewRHS, Mask);
     }
   }
 
