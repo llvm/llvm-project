@@ -14967,11 +14967,8 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   if (Start->getType()->isPointerTy() != OpStart->getType()->isPointerTy())
     return false;
 
-  if (Start->getType()->isPointerTy()) {
-    if (Start->getType()->getPointerAddressSpace() !=
-        OpStart->getType()->getPointerAddressSpace())
-      return false;
-  }
+  if (Start->getType()->isPointerTy() && Start->getType() != OpStart->getType())
+    return false;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
