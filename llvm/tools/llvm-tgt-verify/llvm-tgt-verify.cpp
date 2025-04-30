@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
 
-  SI.registerCallbacks(PIC, &MAM, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
 
   Triple TT(M->getTargetTriple());
   if (!NoLint)

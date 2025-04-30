@@ -40,7 +40,6 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
-//#include "llvm/Target/TargetVerifier.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -56,8 +55,6 @@ static cl::opt<bool> VerifyAnalysisInvalidation("verify-analysis-invalidation",
                                                 cl::init(false)
 #endif
 );
-
-static cl::opt<bool> VerifyTargetEach("verify-tgt-each");
 
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
@@ -1452,10 +1449,9 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 }
 
 void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
-                                              ModuleAnalysisManager *MAM,
-					      FunctionAnalysisManager *FAM) {
+                                              ModuleAnalysisManager *MAM) {
   PIC.registerAfterPassCallback(
-      [this, MAM, FAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+      [this, MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
         if (isIgnored(P) || P == "VerifierPass")
           return;
         const auto *F = unwrapIR<Function>(IR);
@@ -1472,15 +1468,6 @@ void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
             report_fatal_error(formatv("Broken function found after pass "
                                        "\"{0}\", compilation aborted!",
                                        P));
-
-          if (VerifyTargetEach && FAM) {
-            //TargetVerify TV(const_cast<Module*>(F->getParent()));
-            //TV.run(*const_cast<Function*>(F), *FAM);
-	    /*if (!TV.IsValid)
-              report_fatal_error(formatv("Broken function found after pass "
-                                         "\"{0}\", compilation aborted!",
-                                         P));*/
-          }
         } else {
           const auto *M = unwrapIR<Module>(IR);
           if (!M) {
@@ -2520,7 +2507,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 }
 
 void StandardInstrumentations::registerCallbacks(
-    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM, FunctionAnalysisManager *FAM) {
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
   PrintIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
@@ -2529,7 +2516,7 @@ void StandardInstrumentations::registerCallbacks(
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
-    Verify.registerCallbacks(PIC, MAM, FAM);
+    Verify.registerCallbacks(PIC, MAM);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);

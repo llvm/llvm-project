@@ -117,8 +117,6 @@ int llvm::compileModuleWithNewPM(
                               VK == VerifierKind::EachPass);
   registerCodeGenCallback(PIC, *Target);
 
-  ModulePassManager MPM;
-  FunctionPassManager FPM;
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -133,10 +131,13 @@ int llvm::compileModuleWithNewPM(
   if (VerifyTarget)
     PB.registerVerifierPasses(MPM, FPM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-  SI.registerCallbacks(PIC, &MAM, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
+  ModulePassManager MPM;
+  FunctionPassManager FPM;
 
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction

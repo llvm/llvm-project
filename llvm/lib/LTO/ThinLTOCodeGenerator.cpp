@@ -241,7 +241,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(TheModule.getContext(), DebugPassManager);
-  SI.registerCallbacks(PIC, &MAM, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
   PipelineTuningOptions PTO;
   PTO.LoopVectorization = true;
   PTO.SLPVectorization = true;
