@@ -1533,7 +1533,8 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace))
     ExprArg = ParseBraceInitializer();
   else
-    ExprArg = ParseConstantExpressionInExprEvalContext(MaybeTypeCast);
+    ExprArg =
+        ParseConstantExpressionInExprEvalContext(TypeCastState::MaybeTypeCast);
   if (ExprArg.isInvalid() || !ExprArg.get()) {
     return ParsedTemplateArgument();
   }

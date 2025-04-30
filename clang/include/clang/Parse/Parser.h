@@ -101,6 +101,9 @@ enum class ObjCTypeQual {
   NumQuals
 };
 
+/// TypeCastState - State whether an expression is or may be a type cast.
+enum class TypeCastState { NotTypeCast = 0, MaybeTypeCast, IsTypeCast };
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -1854,16 +1857,10 @@ public:
   //===--------------------------------------------------------------------===//
   // C99 6.5: Expressions.
 
-  /// TypeCastState - State whether an expression is or may be a type cast.
-  enum TypeCastState {
-    NotTypeCast = 0,
-    MaybeTypeCast,
-    IsTypeCast
-  };
-
-  ExprResult ParseExpression(TypeCastState isTypeCast = NotTypeCast);
+  ExprResult
+  ParseExpression(TypeCastState isTypeCast = TypeCastState::NotTypeCast);
   ExprResult ParseConstantExpressionInExprEvalContext(
-      TypeCastState isTypeCast = NotTypeCast);
+      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
   ExprResult ParseConstantExpression();
   ExprResult ParseArrayBoundExpression();
   ExprResult ParseCaseExpression(SourceLocation CaseLoc);
@@ -1872,7 +1869,8 @@ public:
   ParseConstraintLogicalAndExpression(bool IsTrailingRequiresClause);
   ExprResult ParseConstraintLogicalOrExpression(bool IsTrailingRequiresClause);
   // Expr that doesn't include commas.
-  ExprResult ParseAssignmentExpression(TypeCastState isTypeCast = NotTypeCast);
+  ExprResult ParseAssignmentExpression(
+      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
   ExprResult ParseConditionalExpression();
 
   ExprResult ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
@@ -1908,11 +1906,11 @@ private:
                                  TypeCastState isTypeCast,
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr);
-  ExprResult ParseCastExpression(CastParseKind ParseKind,
-                                 bool isAddressOfOperand = false,
-                                 TypeCastState isTypeCast = NotTypeCast,
-                                 bool isVectorLiteral = false,
-                                 bool *NotPrimaryExpression = nullptr);
+  ExprResult
+  ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand = false,
+                      TypeCastState isTypeCast = TypeCastState::NotTypeCast,
+                      bool isVectorLiteral = false,
+                      bool *NotPrimaryExpression = nullptr);
 
   /// Returns true if the next token cannot start an expression.
   bool isNotExpressionStart();
