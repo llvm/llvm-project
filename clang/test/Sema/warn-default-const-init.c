@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=c,unsafe -Wdefault-const-init %s
-// RUN: %clang_cc1 -fsyntax-only -verify=c,unsafe -Wc++-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify=c,unsafe -Wc++-compat -Wno-tentative-definition-compat %s
 // RUN: %clang_cc1 -fsyntax-only -verify=unsafe %s
 // RUN: %clang_cc1 -fsyntax-only -verify=c -Wdefault-const-init -Wno-default-const-init-unsafe %s
 // RUN: %clang_cc1 -fsyntax-only -verify=good -Wno-default-const-init-unsafe %s

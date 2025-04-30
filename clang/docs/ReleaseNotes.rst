@@ -171,6 +171,15 @@ C Language Changes
   ``-Wenum-conversion`` and ``-Wimplicit-int-enum-cast``. This conversion is an
   int-to-enum conversion because the enumeration on the right-hand side is
   promoted to ``int`` before the assignment.
+- Added ``-Wtentative-definition-compat``, grouped under ``-Wc++-compat``,
+  which diagnoses tentative definitions in C with multiple declarations as
+  being incompatible with C++. e.g.,
+
+  .. code-block:: c
+
+    // File scope
+    int i;
+    int i; // Vaild C, invalid C++, now diagnosed
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
