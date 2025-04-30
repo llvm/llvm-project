@@ -581,15 +581,12 @@ enum TargetIndex {
 };
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= AMDGPUAS::MAX_AMDGPU_ADDRESS,
-                "Addr space out of range");
 
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return true;
 
-  // This array is indexed by address space value enum elements 0 ... to 11
   // clang-format off
-  static const bool ASAliasRules[12][12] = {
+  static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
     /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr LaneShared Distributed*/
     /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true,  true,  true},
     /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true,  false, false},
@@ -605,6 +602,7 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
     /* Distributed */         {true,  false, false, true,  false, false, false, false, false, false, false, true},
   };
   // clang-format on
+  static_assert(std::size(ASAliasRules) == AMDGPUAS::MAX_AMDGPU_ADDRESS + 1);
 
   return ASAliasRules[AS1][AS2];
 }

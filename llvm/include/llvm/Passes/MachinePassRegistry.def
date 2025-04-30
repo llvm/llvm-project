@@ -114,6 +114,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
 MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
                           MachinePostDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-uniformity", MachineUniformityAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MACHINE_FUNCTION_ANALYSIS("regalloc-evict", RegAllocEvictionAdvisorAnalysis())
 MACHINE_FUNCTION_ANALYSIS("regalloc-priority", RegAllocPriorityAdvisorAnalysis())
@@ -178,6 +179,8 @@ MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
 MACHINE_FUNCTION_PASS("print<machine-loops>", MachineLoopPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<machine-uniformity>",
+                      MachineUniformityPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<virtregmap>", VirtRegMapPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("prolog-epilog", PrologEpilogInserterPass())
@@ -303,11 +306,9 @@ DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
-DUMMY_MACHINE_FUNCTION_PASS("machine-uniformity", MachineUniformityInfoWrapperPass)
 DUMMY_MACHINE_FUNCTION_PASS("machineinstr-printer", MachineFunctionPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
 DUMMY_MACHINE_FUNCTION_PASS("postra-machine-sink", PostRAMachineSinkingPass)
-DUMMY_MACHINE_FUNCTION_PASS("print-machine-uniformity", MachineUniformityInfoPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)

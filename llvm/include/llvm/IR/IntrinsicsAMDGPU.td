@@ -4894,6 +4894,28 @@ class AMDGPUWmmaScaleIntrinsicModsC<LLVMType scale_ty> :
      IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
+class AMDGPUWmmaScaleF4IntrinsicModsC<LLVMType scale_ty> :
+  Intrinsic<
+    [llvm_anyfloat_ty], // %D
+    [
+      llvm_anyint_ty,   // %A
+      llvm_anyint_ty,   // %B
+      llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
+      LLVMMatchType<0>, // %C
+      llvm_i32_ty,      // matrix_a_scale
+      llvm_i32_ty,      // matrix_a_scale_fmt
+      scale_ty,         // matrix a scale exponential
+      llvm_i32_ty,      // matrix_b_scale
+      llvm_i32_ty,      // matrix_b_scale_fmt
+      scale_ty,         // matrix b scale exponential
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<7>>,
+     ImmArg<ArgIndex<8>>, ImmArg<ArgIndex<10>>, ImmArg<ArgIndex<11>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
 def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f64_16x16x8_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
@@ -4923,7 +4945,9 @@ def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyin
 def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
 def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
 def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
-def int_amdgcn_wmma_f32_32x16x128_f4      : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i32_ty>;
+def int_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i64_ty>;
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
