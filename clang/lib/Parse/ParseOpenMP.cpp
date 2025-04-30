@@ -3552,7 +3552,8 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
     return ExprError();
 
   SourceLocation ELoc = Tok.getLocation();
-  ExprResult LHS(ParseCastExpression(AnyCastExpr, IsAddressOfOperand,
+  ExprResult LHS(ParseCastExpression(CastParseKind::AnyCastExpr,
+                                     IsAddressOfOperand,
                                      TypeCastState::NotTypeCast));
   ExprResult Val(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
   Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc, /*DiscardedValue*/ false);
@@ -3704,7 +3705,7 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
 
       while (Tok.isNot(tok::r_paren)) {
         SourceLocation Loc = Tok.getLocation();
-        ExprResult LHS = ParseCastExpression(AnyCastExpr);
+        ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
         ExprResult PTExpr = Actions.CorrectDelayedTyposInExpr(
             ParseRHSOfBinaryExpression(LHS, prec::Conditional));
         PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
@@ -4188,8 +4189,8 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
                           Kind == OMPC_grainsize || Kind == OMPC_num_tasks;
   if (NeedAnExpression) {
     SourceLocation ELoc = Tok.getLocation();
-    ExprResult LHS(
-        ParseCastExpression(AnyCastExpr, false, TypeCastState::NotTypeCast));
+    ExprResult LHS(ParseCastExpression(CastParseKind::AnyCastExpr, false,
+                                       TypeCastState::NotTypeCast));
     Val = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
     Val =
         Actions.ActOnFinishFullExpr(Val.get(), ELoc, /*DiscardedValue*/ false);
@@ -4480,7 +4481,7 @@ ExprResult Parser::ParseOpenMPIteratorsExpr() {
     ColonProtectionRAIIObject ColonRAII(*this);
     // Parse <begin>
     SourceLocation Loc = Tok.getLocation();
-    ExprResult LHS = ParseCastExpression(AnyCastExpr);
+    ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
     ExprResult Begin = Actions.CorrectDelayedTyposInExpr(
         ParseRHSOfBinaryExpression(LHS, prec::Conditional));
     Begin = Actions.ActOnFinishFullExpr(Begin.get(), Loc,
@@ -4492,7 +4493,7 @@ ExprResult Parser::ParseOpenMPIteratorsExpr() {
 
     // Parse <end>
     Loc = Tok.getLocation();
-    LHS = ParseCastExpression(AnyCastExpr);
+    LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
     ExprResult End = Actions.CorrectDelayedTyposInExpr(
         ParseRHSOfBinaryExpression(LHS, prec::Conditional));
     End = Actions.ActOnFinishFullExpr(End.get(), Loc,
@@ -4506,7 +4507,7 @@ ExprResult Parser::ParseOpenMPIteratorsExpr() {
       SecColonLoc = ConsumeToken();
       // Parse <step>
       Loc = Tok.getLocation();
-      LHS = ParseCastExpression(AnyCastExpr);
+      LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
       Step = Actions.CorrectDelayedTyposInExpr(
           ParseRHSOfBinaryExpression(LHS, prec::Conditional));
       Step = Actions.ActOnFinishFullExpr(Step.get(), Loc,
