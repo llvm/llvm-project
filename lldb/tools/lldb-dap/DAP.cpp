@@ -675,12 +675,11 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
-  auto target = this->debugger.CreateTarget(
-      configuration.program.value_or("").data(),
-      configuration.targetTriple.value_or("").data(),
-      configuration.platformName.value_or("").data(),
-      true, // Add dependent modules.
-      error);
+  auto target = this->debugger.CreateTarget(configuration.program.data(),
+                                            configuration.targetTriple.data(),
+                                            configuration.platformName.data(),
+                                            true, // Add dependent modules.
+                                            error);
 
   return target;
 }
@@ -1192,7 +1191,7 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
 }
 
 void DAP::ConfigureSourceMaps() {
-  if (configuration.sourceMap.empty() && !configuration.sourcePath)
+  if (configuration.sourceMap.empty() && configuration.sourcePath.empty())
     return;
 
   std::string sourceMapCommand;
@@ -1203,8 +1202,8 @@ void DAP::ConfigureSourceMaps() {
     for (const auto &kv : configuration.sourceMap) {
       strm << "\"" << kv.first << "\" \"" << kv.second << "\" ";
     }
-  } else if (configuration.sourcePath) {
-    strm << "\".\" \"" << *configuration.sourcePath << "\"";
+  } else if (!configuration.sourcePath.empty()) {
+    strm << "\".\" \"" << configuration.sourcePath << "\"";
   }
 
   RunLLDBCommands("Setting source map:", {sourceMapCommand});
@@ -1213,12 +1212,13 @@ void DAP::ConfigureSourceMaps() {
 void DAP::SetConfiguration(const protocol::Configuration &config,
                            bool is_attach) {
   configuration = config;
+  stop_at_entry = config.stopOnEntry;
   this->is_attach = is_attach;
 
-  if (configuration.customFrameFormat)
-    SetFrameFormat(*configuration.customFrameFormat);
-  if (configuration.customThreadFormat)
-    SetThreadFormat(*configuration.customThreadFormat);
+  if (!configuration.customFrameFormat.empty())
+    SetFrameFormat(configuration.customFrameFormat);
+  if (!configuration.customThreadFormat.empty())
+    SetThreadFormat(configuration.customThreadFormat);
 }
 
 void DAP::SetFrameFormat(llvm::StringRef format) {

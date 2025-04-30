@@ -417,10 +417,7 @@
                 "description": "Path to the program to attach to."
               },
               "pid": {
-                "type": [
-                  "number",
-                  "string"
-                ],
+                "type": "number",
                 "description": "System process ID to attach to."
               },
               "waitFor": {
@@ -536,15 +533,13 @@
                 "description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
               },
               "gdb-remote-port": {
-                "type": [
-                  "number",
-                  "string"
-                ],
+                "type": "number",
                 "description": "TCP/IP port to attach to a remote system. Specifying both pid and port is an error."
               },
               "gdb-remote-hostname": {
                 "type": "string",
-                "description": "The hostname to connect to a remote system. The default hostname being used localhost."
+                "description": "The hostname to connect to a remote system. The default hostname being used localhost.",
+                "default": "localhost"
               },
               "enableAutoVariableSummaries": {
                 "type": "boolean",
