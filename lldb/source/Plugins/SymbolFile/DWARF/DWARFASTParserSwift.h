@@ -47,7 +47,7 @@ public:
   lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die,
-                         const lldb_private::AddressRange &func_range) override;
+                         lldb_private::AddressRanges ranges) override;
 
   bool
   CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type *type,

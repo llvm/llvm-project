@@ -254,10 +254,8 @@ DWARFASTParserSwift::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
     lldb_private::CompileUnit &comp_unit, const DWARFDIE &die,
-    const lldb_private::AddressRange &func_range) {
-  assert(func_range.GetBaseAddress().IsValid());
-
-  DWARFRangeList func_ranges;
+    lldb_private::AddressRanges ranges) {
+  DWARFRangeList unused_ranges;
   const char *name = NULL;
   const char *mangled = NULL;
   std::optional<int> decl_file = 0;
@@ -271,9 +269,9 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
   if (die.Tag() != DW_TAG_subprogram)
     return NULL;
 
-  if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
-                               decl_column, call_file, call_line, call_column,
-                               &frame_base)) {
+  if (die.GetDIENamesAndRanges(name, mangled, unused_ranges, decl_file,
+                               decl_line, decl_column, call_file, call_line,
+                               call_column, &frame_base)) {
     // Union of all ranges in the function DIE (if the function is
     // discontiguous)
 
@@ -309,10 +307,28 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
 
     const user_id_t func_user_id = die.GetID();
     bool is_generic_trampoline = die.IsGenericTrampoline();
+
+    // The base address of the scope for any of the debugging information
+    // entries listed above is given by either the DW_AT_low_pc attribute or the
+    // first address in the first range entry in the list of ranges given by the
+    // DW_AT_ranges attribute.
+    //   -- DWARFv5, Section 2.17 Code Addresses, Ranges and Base Addresses
+    //
+    // If no DW_AT_entry_pc attribute is present, then the entry address is
+    // assumed to be the same as the base address of the containing scope.
+    //   -- DWARFv5, Section 2.18 Entry Address
+    //
+    // We currently don't support Debug Info Entries with
+    // DW_AT_low_pc/DW_AT_entry_pc and DW_AT_ranges attributes (the latter
+    // attributes are ignored even though they should be used for the address of
+    // the function), but compilers also don't emit that kind of information. If
+    // this becomes a problem we need to plumb these attributes separately.
+    Address func_addr = ranges[0].GetBaseAddress();
+
     func_sp.reset(new Function(&comp_unit, func_user_id, func_user_id,
-                               func_name, nullptr,
-                               func_range, // first address range
-                               can_throw, is_generic_trampoline));
+                               func_name, nullptr, std::move(func_addr),
+                               std::move(ranges), can_throw,
+                               is_generic_trampoline));
 
     if (func_sp.get() != NULL) {
       if (frame_base.IsValid())
