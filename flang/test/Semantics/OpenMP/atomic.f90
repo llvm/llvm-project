@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp -J /work2/kparzysz/git/llvm.org/b/x86/runtimes/runtimes-bins/openmp/runtime/src
 use omp_lib
 ! Check OpenMP 2.13.6 atomic Construct

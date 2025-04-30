@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang %openmp_flags -fopenmp-version=60
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60
 
 subroutine f00
   integer :: x, y
