@@ -110,10 +110,6 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   return seconds;
 }
 
-#ifdef LIBC_TARGET_OS_IS_LINUX
-extern char **environ;
-#endif
-
 static int64_t computeRemainingYears(int64_t daysPerYears,
                                      int64_t quotientYears,
                                      int64_t *remainingDays) {
@@ -269,11 +265,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   tm->tm_sec =
       static_cast<int>(remainingSeconds % time_constants::SECONDS_PER_MIN);
   // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
-  // tm->tm_isdst = 0;
-
-  if (tm->tm_isdst > 0) {
-    tm->tm_hour += 1;
-  }
+  tm->tm_isdst = 0;
 
   return 0;
 }
