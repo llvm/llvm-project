@@ -572,7 +572,7 @@ func.func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
 func.func @shape_cast_general_reshape(%arg0 : vector<2x3xf32>) -> (vector<3x1x2xf32>) {
   // CHECK: vector.shape_cast %{{.*}} : vector<2x3xf32> to vector<3x1x2xf32>
   %0 = vector.shape_cast %arg0 : vector<2x3xf32> to vector<3x1x2xf32>
-  return %0
+  return %0 : vector<3x1x2xf32>
 }
 
 // CHECK-LABEL: @shape_cast_0d
