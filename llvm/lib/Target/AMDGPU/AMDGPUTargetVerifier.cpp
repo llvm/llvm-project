@@ -25,7 +25,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-//#include "llvm/InitializePasses.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
@@ -45,15 +44,6 @@ using namespace llvm;
   } while (false)
 
 namespace llvm {
-
-static bool IsValidInt(const Type *Ty) {
-  return Ty->isIntegerTy(1) ||
-         Ty->isIntegerTy(8) ||
-         Ty->isIntegerTy(16) ||
-         Ty->isIntegerTy(32) ||
-         Ty->isIntegerTy(64) ||
-         Ty->isIntegerTy(128);
-}
 
 static bool isShader(CallingConv::ID CC) {
   switch(CC) {
@@ -80,14 +70,6 @@ bool AMDGPUTargetVerify::run(Function &F) {
   for (auto &BB : F) {
 
     for (auto &I : BB) {
-
-      // Ensure integral types are valid: i8, i16, i32, i64, i128
-      if (I.getType()->isIntegerTy())
-        Check(IsValidInt(I.getType()), "Int type is invalid.", &I);
-      for (unsigned i = 0; i < I.getNumOperands(); ++i)
-        if (I.getOperand(i)->getType()->isIntegerTy())
-          Check(IsValidInt(I.getOperand(i)->getType()),
-                "Int type is invalid.", I.getOperand(i));
 
       if (auto *CI = dyn_cast<CallInst>(&I))
       {
