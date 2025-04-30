@@ -1,5 +1,5 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan1.3-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan1.3-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; Make sure SPIRV operation function calls for smoothstep are lowered correctly.
 
