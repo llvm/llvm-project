@@ -538,7 +538,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   auto lex_or_err = dil::DILLexer::Create(var_expr);
   if (!lex_or_err) {
     error = Status::FromError(lex_or_err.takeError());
-    return ValueObjectSP();
+    return ValueObjectConstResult::Create(nullptr, std::move(error));
   }
 
   // Parse the expression.
@@ -547,7 +547,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
       !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
-    return ValueObjectSP();
+    return ValueObjectConstResult::Create(nullptr, std::move(error));
   }
 
   // Evaluate the parsed expression.
@@ -558,7 +558,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
   if (!valobj_or_error) {
     error = Status::FromError(valobj_or_error.takeError());
-    return ValueObjectSP();
+    return ValueObjectConstResult::Create(nullptr, std::move(error));
   }
 
   return *valobj_or_error;
