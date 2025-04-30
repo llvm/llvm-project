@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -26,6 +27,7 @@ using namespace llvm;
 namespace {
 class CallingConvEmitter {
   const RecordKeeper &Records;
+  const CodeGenTarget Target;
   unsigned Counter = 0u;
   std::string CurrentAction;
   bool SwiftAction = false;
@@ -35,7 +37,10 @@ class CallingConvEmitter {
   std::map<std::string, std::set<std::string>> DelegateToMap;
 
 public:
-  explicit CallingConvEmitter(const RecordKeeper &R) : Records(R) {}
+  explicit CallingConvEmitter(const RecordKeeper &R) : Records(R), Target(R) {
+    for (const CodeGenRegister &Reg : Target.getRegBank().getRegisters())
+      RegistersByDefName.try_emplace(Reg.getName(), &Reg);
+  }
 
   void run(raw_ostream &O);
 
@@ -43,6 +48,9 @@ private:
   void emitCallingConv(const Record *CC, raw_ostream &O);
   void emitAction(const Record *Action, indent Indent, raw_ostream &O);
   void emitArgRegisterLists(raw_ostream &O);
+
+  StringMap<const CodeGenRegister *> RegistersByDefName;
+  std::string getQualifiedRegisterName(const Init *I);
 };
 } // End anonymous namespace
 
@@ -125,6 +133,20 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
   O << "}\n";
 }
 
+// Return the name of the specified Init (DefInit or StringInit), with a
+// namespace qualifier if the corresponding record contains one.
+std::string CallingConvEmitter::getQualifiedRegisterName(const Init *I) {
+  if (const auto *DI = dyn_cast<DefInit>(I))
+    return getQualifiedName(DI->getDef());
+
+  const auto *SI = cast<StringInit>(I);
+  if (const CodeGenRegister *CGR = RegistersByDefName.lookup(SI->getValue()))
+    return getQualifiedName(CGR->TheDef);
+
+  PrintFatalError("register not defined: " + SI->getAsString());
+  return "";
+}
+
 void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
                                     raw_ostream &O) {
 
@@ -133,7 +155,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << Indent << "  ";
     ListSeparator LS;
     for (const Init *V : RL->getValues())
-      O << LS << getQualifiedName(cast<DefInit>(V)->getDef());
+      O << LS << getQualifiedRegisterName(V);
     O << "\n" << Indent << "};\n";
   };
 
@@ -142,7 +164,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     SmallVector<std::string> Parms;
     if (RegLists[0]->size() == 1) {
       for (const ListInit *LI : RegLists)
-        Parms.push_back(getQualifiedName(LI->getElementAsRecord(0)));
+        Parms.push_back(getQualifiedRegisterName(LI->getElement(0)));
     } else {
       for (const std::string &S : RLNames)
         Parms.push_back(S + utostr(++Counter));
@@ -207,10 +229,11 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
         << Indent + 2 << "return false;\n";
       DelegateToMap[CurrentAction].insert(CC->getName().str());
     } else if (Action->isSubClassOf("CCAssignToReg") ||
+               Action->isSubClassOf("CCAssignToRegTuple") ||
                Action->isSubClassOf("CCAssignToRegAndStack")) {
       const ListInit *RegList = Action->getValueAsListInit("RegList");
       for (unsigned I = 0, E = RegList->size(); I != E; ++I) {
-        std::string Name = getQualifiedName(RegList->getElementAsRecord(I));
+        std::string Name = getQualifiedRegisterName(RegList->getElement(I));
         if (SwiftAction)
           AssignedSwiftRegsMap[CurrentAction].insert(std::move(Name));
         else
