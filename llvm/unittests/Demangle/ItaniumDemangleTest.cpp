@@ -143,6 +143,7 @@ TEST_P(DemangleTestFixture, Demangle_Valid) {
   auto demangled = std::string_view(OB);
 
   EXPECT_EQ(demangled, std::string_view(expected));
+  std::free(OB.getBuffer());
 }
 
 INSTANTIATE_TEST_SUITE_P(DemangleValidTests, DemangleTestFixture,
@@ -288,6 +289,7 @@ TEST_P(DemangleFPLiteralTestFixture, Demangle_FPLiteral) {
   auto demangled = std::string_view(OB);
 
   EXPECT_TRUE(llvm::find(expected, demangled) != std::end(expected));
+  std::free(OB.getBuffer());
 }
 
 INSTANTIATE_TEST_SUITE_P(DemangleFPLiteralTests, DemangleFPLiteralTestFixture,
