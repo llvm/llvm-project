@@ -5337,7 +5337,7 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     ExprResult StringResult = ParseUnevaluatedStringLiteralExpression();
     if (StringResult.isInvalid())
       return std::nullopt;
-    
+
     if (auto Lit = dyn_cast<StringLiteral>(StringResult.get()))
       return Lit;
 
@@ -5353,7 +5353,7 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
       T.consumeClose();
     return;
   }
-  
+
   // Construct our identifier
   StringRef Signature = StrLiteral.value()->getString();
   auto Hash = llvm::hash_value(Signature);
@@ -5379,8 +5379,7 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     // Allocate the root elements onto ASTContext
     unsigned N = Elements.size();
     auto RootElements = MutableArrayRef<llvm::hlsl::rootsig::RootElement>(
-        ::new (Actions.getASTContext()) llvm::hlsl::rootsig::RootElement[N],
-        N);
+        ::new (Actions.getASTContext()) llvm::hlsl::rootsig::RootElement[N], N);
     for (unsigned I = 0; I < N; ++I)
       RootElements[I] = Elements[I];
 
@@ -5396,7 +5395,7 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   IdentifierLoc *ILoc = ::new (Actions.getASTContext())
       IdentifierLoc(RootSignatureLoc, DeclIdent);
 
-  ArgsVector Args = { ILoc };
+  ArgsVector Args = {ILoc};
 
   if (!T.consumeClose())
     Attrs.addNew(RootSignatureIdent,
