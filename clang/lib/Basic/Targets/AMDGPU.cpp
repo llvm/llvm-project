@@ -64,6 +64,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     // will break loudly.
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
@@ -91,6 +92,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_device
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_input
 };
 } // namespace targets
 } // namespace clang

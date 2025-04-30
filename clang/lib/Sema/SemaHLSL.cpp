@@ -1069,6 +1069,12 @@ void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
+  IntegerLiteral *IL = cast<IntegerLiteral>(AL.getArgAsExpr(0));
+  D->addAttr(::new (getASTContext()) HLSLVkExtBuiltinInputAttr(
+      getASTContext(), AL, IL->getValue().getZExtValue()));
+}
+
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
   const auto *VT = T->getAs<VectorType>();
 
@@ -3190,6 +3196,14 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     return;
 
   QualType Type = Decl->getType();
+
+  if (Decl->hasAttr<HLSLVkExtBuiltinInputAttr>()) {
+    LangAS ImplAS = LangAS::hlsl_input;
+    Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+    Decl->setType(Type);
+    return;
+  }
+
   if (Type->isSamplerT() || Type->isVoidType())
     return;
 
