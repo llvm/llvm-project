@@ -1,6 +1,13 @@
 RUN: rm -rf %t
 RUN: mkdir %t
 
+# Ingest a blob which just fits inside the CAS data pool to make sure the validate passes.
+RUN: truncate -s 7 %t/file
+RUN: cat %t/file | \
+RUN:   llvm-cas --cas %t/cas  --make-blob \
+RUN:   --data -
+RUN: llvm-cas --cas %t/cas --validate --check-hash
+
 RUN: llvm-cas --cas %t/cas --ingest %S/Inputs > %t/cas.id
 RUN: llvm-cas --cas %t/cas --validate
 RUN: llvm-cas --cas %t/cas --validate --check-hash

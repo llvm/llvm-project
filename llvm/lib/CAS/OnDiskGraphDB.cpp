@@ -966,7 +966,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       llvm_unreachable("already handled");
     case TrieRecord::StorageKind::DataPool: {
       auto DataRecord = DataRecordHandle::get(DataPool.beginData(D.Offset));
-      if (DataRecord.getTotalSize() + D.Offset.get() >= DataPool.size())
+      if (DataRecord.getTotalSize() + D.Offset.get() > DataPool.size())
         return dataError("data record span passed the end of the data pool");
       for (auto InternRef : DataRecord.getRefs()) {
         auto Index = getIndexProxyFromRef(InternRef);
