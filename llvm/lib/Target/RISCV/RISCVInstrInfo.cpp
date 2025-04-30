@@ -2344,6 +2344,21 @@ static unsigned getSHXADDShiftAmount(unsigned Opc) {
   }
 }
 
+// Returns the shift amount from a SHXADD.UW instruction. Returns 0 if the
+// instruction is not a SHXADD.UW.
+static unsigned getSHXADDUWShiftAmount(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 0;
+  case RISCV::SH1ADD_UW:
+    return 1;
+  case RISCV::SH2ADD_UW:
+    return 2;
+  case RISCV::SH3ADD_UW:
+    return 3;
+  }
+}
+
 // Look for opportunities to combine (sh3add Z, (add X, (slli Y, 5))) into
 // (sh3add (sh2add Y, Z), X).
 static bool getSHXADDPatterns(const MachineInstr &Root,
@@ -3848,6 +3863,209 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   }
 
   return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+}
+
+bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case RISCV::OR:
+  case RISCV::XOR:
+      // Normalize:
+      // [x]or rd, zero, rs => [x]or rd, rs, zero
+      if (MI.getOperand(1).getReg() == RISCV::X0) {
+        MachineOperand MO1 = MI.getOperand(1);
+        MI.removeOperand(1);
+        MI.addOperand(MO1);
+      }
+      // [x]or rd, rs, zero => addi rd, rs, 0
+      if (MI.getOperand(2).getReg() == RISCV::X0) {
+        MI.getOperand(2).ChangeToImmediate(0);
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      // xor rd, rs, rs => li rd, rs, 0
+      if (MI.getOpcode() == RISCV::XOR && MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
+        MI.getOperand(2).ChangeToImmediate(0);
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      break;
+  case RISCV::ADDW:
+      // Normalize:
+      // addw rd, zero, rs => addw rd, rs, zero
+      if (MI.getOperand(1).getReg() == RISCV::X0) {
+        MachineOperand MO1 = MI.getOperand(1);
+        MI.removeOperand(1);
+        MI.addOperand(MO1);
+      }
+      // addw rd, rs, zero => addiw rd, rs, 0
+      if (MI.getOperand(2).getReg() == RISCV::X0) {
+        MI.getOperand(2).ChangeToImmediate(0);
+        MI.setDesc(get(RISCV::ADDIW));
+        return true;
+      }
+      break;
+  case RISCV::SUB:
+  case RISCV::PACK:
+  case RISCV::PACKW:
+      // sub rd, rs, zero => addi rd, rs, 0
+      // pack[w] rd, rs, zero => addi rd, rs, zero
+      if (MI.getOperand(2).getReg() == RISCV::X0) {
+        MI.getOperand(2).ChangeToImmediate(0);
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      break;
+  case RISCV::SUBW:
+      // subw rd, rs, zero => addiw rd, rs, 0
+      if (MI.getOperand(2).getReg() == RISCV::X0) {
+        MI.getOperand(2).ChangeToImmediate(0);
+        MI.setDesc(get(RISCV::ADDIW));
+        return true;
+      }
+      break;
+  case RISCV::SH1ADD:
+  case RISCV::SH1ADD_UW:
+  case RISCV::SH2ADD:
+  case RISCV::SH2ADD_UW:
+  case RISCV::SH3ADD:
+  case RISCV::SH3ADD_UW:
+      // shNadd[.uw] rd, zero, rs => addi rd, rs, 0
+      if (MI.getOperand(1).getReg() == RISCV::X0) {
+        MI.removeOperand(1);
+        MI.addOperand(MachineOperand::CreateImm(0));
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      // shNadd[.uw] rd, rs, zero => slli[.uw] rd, rs, N
+      if (MI.getOperand(2).getReg() == RISCV::X0) {
+        MI.removeOperand(2);
+        unsigned Opc = MI.getOpcode();
+        if (Opc == RISCV::SH1ADD_UW || Opc == RISCV::SH2ADD_UW || Opc == RISCV::SH3ADD_UW) {
+          MI.addOperand(MachineOperand::CreateImm(getSHXADDUWShiftAmount(Opc)));
+          MI.setDesc(get(RISCV::SLLI_UW));
+          return true;
+        }
+        MI.addOperand(MachineOperand::CreateImm(getSHXADDShiftAmount(Opc)));
+        MI.setDesc(get(RISCV::SLLI));
+        return true;
+      }
+      break;
+  case RISCV::ANDI:
+      // andi rd, zero, C => li rd, 0
+      if (MI.getOperand(1).getReg() == RISCV::X0) {
+        MI.getOperand(2).setImm(0);
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      break;
+  case RISCV::AND:
+  case RISCV::MUL:
+  case RISCV::MULH:
+  case RISCV::MULHSU:
+  case RISCV::MULHU:
+  case RISCV::MULW:
+      // and rd, rs, zero => li rd, 0
+      // and rd, zero, rs => li rd, 0
+      // mul* rd, rs, zero => li rd, 0
+      // mul* rd, zero, rs => li rd, 0
+      if (MI.getOperand(1).getReg() == RISCV::X0) {
+        MI.removeOperand(2);
+        MI.addOperand(MachineOperand::CreateImm(0));
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      if (MI.getOperand(2).getReg() == RISCV::X0) {
+        MI.removeOperand(1);
+        MI.addOperand(MachineOperand::CreateImm(0));
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      break;
+  case RISCV::SLLI:
+  case RISCV::SRLI:
+  case RISCV::SRAI:
+  case RISCV::SLLIW:
+  case RISCV::SRLIW:
+  case RISCV::SRAIW:
+  case RISCV::SLLI_UW:
+      // shiftimm rd, zero, N => li rd, 0
+      if (MI.getOperand(1).getReg() == RISCV::X0) {
+        MI.getOperand(2).setImm(0);
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      break;
+  case RISCV::ORI:
+  case RISCV::XORI:
+      // [x]ori rd, zero, N => li rd, N
+      if (MI.getOperand(1).getReg() == RISCV::X0) {
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      break;
+  case RISCV::SLTIU:
+      // seqz rd, zero => li rd, 1
+      if (MI.getOperand(1).getReg() == RISCV::X0 && MI.getOperand(2).getImm() == 1) {
+        MI.setDesc(get(RISCV::ADDI));
+        return true;
+      }
+      break;
+  case RISCV::SLTU:
+  case RISCV::ADD_UW:
+    // snez rd, zero => li rd, 0
+    // zext.w rd, zero => li rd, 0
+    if (MI.getOperand(1).getReg() == RISCV::X0 && MI.getOperand(2).getReg() == RISCV::X0) {
+      MI.getOperand(2).ChangeToImmediate(0);
+      MI.setDesc(get(RISCV::ADDI));
+      return true;
+    }
+    // add.uw rd, zero, rs => add.uw rd, rs, zero (canonical zext.w)
+    if (MI.getOpcode() == RISCV::ADD_UW && MI.getOperand(1).getReg() == RISCV::X0) {
+      MachineOperand MO1 = MI.getOperand(1);
+      MI.removeOperand(1);
+      MI.addOperand(MO1);
+    }
+    break;
+  case RISCV::SEXT_H:
+  case RISCV::SEXT_B:
+  case RISCV::ZEXT_H_RV32:
+  case RISCV::ZEXT_H_RV64:
+    // sext.[hb] rd, zero => li rd, 0
+    // zext.h rd, zero => li rd, 0
+    if (MI.getOperand(1).getReg() == RISCV::X0) {
+      MI.addOperand(MachineOperand::CreateImm(0));
+      MI.setDesc(get(RISCV::ADDI));
+      return true;
+    }
+    break;
+  case RISCV::SLL:
+  case RISCV::SRL:
+  case RISCV::SRA:
+  case RISCV::SLLW:
+  case RISCV::SRLW:
+  case RISCV::SRAW:
+    // shift rd, zero, rs => li rd, 0
+    if (MI.getOperand(1).getReg() == RISCV::X0) {
+      MI.getOperand(2).ChangeToImmediate(0);
+      MI.setDesc(get(RISCV::ADDI));
+      return true;
+    }
+    break;
+  case RISCV::MIN:
+  case RISCV::MINU:
+  case RISCV::MAX:
+  case RISCV::MAXU:
+    // min|max rd, rs, rs => addi rd, rs, 0
+    if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
+      MI.getOperand(2).ChangeToImmediate(0);
+      MI.setDesc(get(RISCV::ADDI));
+      return true;
+    }
+      break;
+  }
+  return false;
 }
 
 #undef CASE_RVV_OPCODE_UNMASK_LMUL

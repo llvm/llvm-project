@@ -867,6 +867,12 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
          make_range(Copy->getIterator(), std::next(MI.getIterator())))
       KMI.clearRegisterKills(CopySrcReg, TRI);
 
+    // Attempt to canonicalize/optimize the instruction now its arguments have
+    // been mutated.
+    if (TII->optimizeInstruction(MI)) {
+      LLVM_DEBUG(dbgs() << "MCP: After optimizeInstruction: " << MI << "\n");
+    }
+
     ++NumCopyForwards;
     Changed = true;
   }
