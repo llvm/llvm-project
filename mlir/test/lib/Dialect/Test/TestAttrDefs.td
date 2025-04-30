@@ -369,6 +369,16 @@ def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
   }];
 }
 
+// Test `struct` with nested `custom` assembly format.
+def TestCustomStructAttr : Test_Attr<"TestCustomStruct"> {
+  let mnemonic = "custom_struct";
+  let parameters = (ins "mlir::StringAttr":$type_str, "int64_t":$value,
+                        OptionalParameter<"mlir::ArrayAttr">:$opt_value);
+  let assemblyFormat = [{
+    `<` struct($type_str, custom<CustomStructAttr>($value), custom<CustomOptStructFieldAttr>($opt_value)) `>`
+  }];
+}
+
 def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
   let mnemonic = "nested_polynomial";
   let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
