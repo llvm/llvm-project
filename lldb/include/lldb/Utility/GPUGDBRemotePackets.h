@@ -132,7 +132,10 @@ bool fromJSON(const llvm::json::Value &value, GPUSectionInfo &data,
 llvm::json::Value toJSON(const GPUSectionInfo &data);
 
 struct GPUDynamicLoaderLibraryInfo {
+  /// The path to the shared library object file on disk.
   std::string pathname;
+  /// The UUID of the shared library if it is known.
+  std::optional<std::string> uuid_str;
   /// Set to true if this shared library is being loaded, false if the library
   /// is being unloaded.
   bool load;

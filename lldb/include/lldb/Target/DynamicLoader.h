@@ -90,6 +90,17 @@ public:
   /// loader often knows what the program entry point is. So the process and
   /// the dynamic loader can work together to detect this.
   virtual bool ProcessDidExec() { return false; }
+
+  /// A function that allows dynamic loader to handle eStopReasonDynammicLoader
+  /// stop reasons. This is intended for dynamic loaders that aren't able to
+  /// set a breakpoint in the process, but rely on being notified by a driver or
+  /// debug services that shared libraries are available.
+  ///
+  /// \returns The value of GetStopWhenImagesChange()
+  virtual bool HandleStopReasonDynammicLoader() { 
+    return GetStopWhenImagesChange();
+  }
+
   /// Get whether the process should stop when images change.
   ///
   /// When images (executables and shared libraries) get loaded or unloaded,

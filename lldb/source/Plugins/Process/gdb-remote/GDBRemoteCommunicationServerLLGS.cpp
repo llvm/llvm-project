@@ -4339,7 +4339,7 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
   if (bool(plugin_features & Extension::savecore))
     ret.push_back("qSaveCore+");
   if (bool(plugin_features & Extension::json_dynamic_loader))
-    ret.push_back("qJsonDynamicLoader+");
+    ret.push_back("jGPUPluginGetDynamicLoaderLibraryInfo+");
 
   // check for client features
   m_extensions_supported = {};

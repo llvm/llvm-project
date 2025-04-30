@@ -81,6 +81,7 @@
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
+#include "Plugins/DynamicLoader/GDBRemoteGPU/DynamicLoaderGDBRemoteGPU.h"
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "ThreadGDBRemote.h"
@@ -2092,17 +2093,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
         } else if (reason == "dyld") {
-          Log *log(GetLog(GDBRLog::Process));
-          LLDB_LOG(log, "got dyld stop reason");
-          GPUDynamicLoaderArgs args;
-          args.full = true;
-          std::optional<GPUDynamicLoaderResponse> infos = 
-              m_gdb_comm.GetGPUDynamicLoaderLibraryInfos(args);
-          if (infos) {
-            for (const GPUDynamicLoaderLibraryInfo &info : (*infos).library_infos) {
-              LLDB_LOG(log, "library: %s", info.pathname.c_str());
-            }
-          }
+          // Let the dynamic loader handle the dynamic loader stop reason.
+          if (m_dyld_up)
+            m_dyld_up->HandleStopReasonDynammicLoader();
           // TODO: create dyld stop reason
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
           handled = true;
@@ -4146,8 +4139,12 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    llvm::StringRef dyld_plugin_name;
+    if (m_gdb_comm.SupportsGPUDynamicLoader())
+      dyld_plugin_name = DynamicLoaderGDBRemoteGPU::GetPluginNameStatic();
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, dyld_plugin_name));
+  }
   return m_dyld_up.get();
 }
 
