@@ -1457,7 +1457,7 @@ void Sema::ActOnEndOfTranslationUnit() {
       if (VD->getStorageDuration() == SD_Static ||
           VD->getStorageDuration() == SD_Thread)
         DiagID = diag::warn_default_init_const;
-      Diag(VD->getLocation(), DiagID) << Type << /*not a field*/ 0;
+      Diag(VD->getLocation(), DiagID) << Type;
     }
 
     // Notify the consumer that we've completed a tentative definition.
