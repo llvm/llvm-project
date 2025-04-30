@@ -25,4 +25,5 @@ AEABI_RTABI dst_t __aeabi_f2h(float a) { return __truncsfhf2(a); }
 COMPILER_RT_ALIAS(__truncsfhf2, __gnu_f2h_ieee)
 COMPILER_RT_ALIAS(__truncsfhf2, __aeabi_f2h)
 #endif
+COMPILER_RT_ABI dst_t __gnu_f2h_ieee(float a) { return __truncsfhf2(a); }
 #endif

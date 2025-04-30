@@ -24,4 +24,5 @@ AEABI_RTABI float __aeabi_h2f(src_t a) { return __extendhfsf2(a); }
 COMPILER_RT_ALIAS(__extendhfsf2, __gnu_h2f_ieee)
 COMPILER_RT_ALIAS(__extendhfsf2, __aeabi_h2f)
 #endif
+COMPILER_RT_ABI float __gnu_h2f_ieee(src_t a) { return __extendhfsf2(a); }
 #endif
