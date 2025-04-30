@@ -581,20 +581,38 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "Polymorphic scalar may not be associated with a %s array"_err_en_US,
               dummyName);
         }
+        bool isOkBecauseContiguous{
+            context.IsEnabled(
+                common::LanguageFeature::ContiguousOkForSeqAssociation) &&
+            actualLastSymbol &&
+            evaluate::IsContiguous(*actualLastSymbol, foldingContext)};
         if (actualIsArrayElement && actualLastSymbol &&
-            !evaluate::IsContiguous(*actualLastSymbol, foldingContext) &&
             !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
           if (IsPointer(*actualLastSymbol)) {
-            basicError = true;
-            messages.Say(
-                "Element of pointer array may not be associated with a %s array"_err_en_US,
-                dummyName);
+            if (isOkBecauseContiguous) {
+              context.Warn(
+                  common::LanguageFeature::ContiguousOkForSeqAssociation,
+                  messages.at(),
+                  "Element of contiguous pointer array is accepted for storage sequence association"_port_en_US);
+            } else {
+              basicError = true;
+              messages.Say(
+                  "Element of pointer array may not be associated with a %s array"_err_en_US,
+                  dummyName);
+            }
           } else if (IsAssumedShape(*actualLastSymbol) &&
               !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
-            basicError = true;
-            messages.Say(
-                "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
-                dummyName);
+            if (isOkBecauseContiguous) {
+              context.Warn(
+                  common::LanguageFeature::ContiguousOkForSeqAssociation,
+                  messages.at(),
+                  "Element of contiguous assumed-shape array is accepted for storage sequence association"_port_en_US);
+            } else {
+              basicError = true;
+              messages.Say(
+                  "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
+                  dummyName);
+            }
           }
         }
       }
