@@ -1475,11 +1475,12 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
           subgroupOp, "warp result is not a xegpu::UpdateNdOffset op");
     auto updateOp = operand->get().getDefiningOp<xegpu::UpdateNdOffsetOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    auto newTensorDescTy = dropLayouts(updateOp.getTensorDescType());
+    xegpu::TensorDescType newTensorDescTy =
+        dropLayouts(updateOp.getTensorDescType());
 
     SmallVector<Value, 3> newYieldValues;
     SmallVector<Type, 3> newYieldTypes;
-    for (auto operand : updateOp->getOperands()) {
+    for (Value operand : updateOp->getOperands()) {
       newYieldValues.push_back(operand);
       if (isa<xegpu::TensorDescType>(operand.getType())) {
         newYieldTypes.push_back(newTensorDescTy);
@@ -1492,7 +1493,7 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
         rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newUpdateOperands;
-    for (auto i : newRetIndices) {
+    for (size_t i : newRetIndices) {
       if (isa<xegpu::TensorDescType>(newWarpOp.getResult(i).getType())) {
         newUpdateOperands.push_back(resolveDistributedTy(
             newWarpOp.getResult(i), newTensorDescTy, rewriter));
@@ -1519,7 +1520,7 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     auto prefetchOp = dyn_cast_or_null<xegpu::PrefetchNdOp>(lastNode);
     if (!prefetchOp)
       return failure();
-    auto layout = prefetchOp.getTensorDescType().getLayoutAttr();
+    xegpu::LayoutAttr layout = prefetchOp.getTensorDescType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           prefetchOp, "the source tensor descriptor lacks layout attribute");
@@ -1530,7 +1531,8 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
 
-    auto newTensorDescTy = dropLayouts(prefetchOp.getTensorDescType());
+    xegpu::TensorDescType newTensorDescTy =
+        dropLayouts(prefetchOp.getTensorDescType());
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newPrefetchOperands = {resolveDistributedTy(
         newWarpOp.getResult(newRetIndices[0]), newTensorDescTy, rewriter)};
@@ -1570,12 +1572,12 @@ struct GpuIndexOpDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override {
-    auto operand = getWarpResult(subgroupOp, llvm::IsaPred<IndexOp>);
+    OpOperand *operand = getWarpResult(subgroupOp, llvm::IsaPred<IndexOp>);
     if (!operand)
       return rewriter.notifyMatchFailure(subgroupOp,
                                          "warp result is not a gpu index op");
-    auto indexOp = operand->template get().template getDefiningOp<IndexOp>();
-    unsigned operandIdx = operand->template getOperandNumber();
+    auto indexOp = operand->get().getDefiningOp<IndexOp>();
+    unsigned operandIdx = operand->getOperandNumber();
     SmallVector<Value, 3> newYieldValues;
     SmallVector<Type, 3> newYieldTypes;
     for (auto operand : indexOp->template getOperands()) {
@@ -1587,7 +1589,7 @@ struct GpuIndexOpDistribution final : public gpu::WarpDistributionPattern {
         rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newIndexOperands;
-    for (auto i : newRetIndices) {
+    for (size_t i : newRetIndices) {
       newIndexOperands.push_back(newWarpOp.getResult(i));
     }
     auto newIndexOp = rewriter.create<IndexOp>(
