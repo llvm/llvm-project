@@ -3421,14 +3421,29 @@ cc_library(
         ":Analysis",
         ":FunctionInterfaces",
         ":GPUDialect",
+        ":GPUUtils",
         ":IR",
+        ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
+        ":XeGPUUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "XeGPUUtils",
+    srcs = glob(["lib/Dialect/XeGPU/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/XeGPU/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":XeGPUDialect",
     ],
 )
 
