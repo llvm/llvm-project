@@ -1071,6 +1071,17 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   return addr;
 }
 
+RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
+  // Emit the expression as an lvalue.
+  LValue lv = emitLValue(e);
+  assert(lv.isSimple());
+  mlir::Value value = lv.getPointer();
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  return RValue::get(value);
+}
+
 Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
                                             LValueBaseInfo *pointeeBaseInfo) {
   if (refLVal.isVolatile())

@@ -592,6 +592,9 @@ public:
   Address emitPointerWithAlignment(const clang::Expr *expr,
                                    LValueBaseInfo *baseInfo);
 
+  /// Emits a reference binding to the passed in expression.
+  RValue emitReferenceBindingToExpr(const Expr *e);
+
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
   /// Emit a conversion from the specified type to the specified destination

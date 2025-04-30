@@ -119,3 +119,25 @@ void ref_arg(int &x) {
 // CHECK:   %[[X_REF:.*]] = cir.load %[[X_REF_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK:   cir.store %[[THREE]], %[[X_REF]] : !s32i, !cir.ptr<!s32i>
 // CHECK:   cir.return
+
+short gs;
+short &return_ref() {
+  return gs;
+}
+
+// CHECK: cir.func @_Z10return_refv() -> !cir.ptr<!s16i>
+// CHECK:   %[[RETVAL_ADDR:.*]] = cir.alloca !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>, ["__retval"] {alignment = 8 : i64}
+// CHECK:   %[[GS_ADDR:.*]] = cir.get_global @gs : !cir.ptr<!s16i>
+// CHECK:   cir.store %[[GS_ADDR]], %[[RETVAL_ADDR]] : !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>
+// CHECK:   %[[RETVAL:.*]] = cir.load %[[RETVAL_ADDR]] : !cir.ptr<!cir.ptr<!s16i>>, !cir.ptr<!s16i>
+// CHECK:   cir.return %[[RETVAL]] : !cir.ptr<!s16i>
+
+void ref_local(short x) {
+  short &y = x;
+}
+
+// CHECK: cir.func @_Z9ref_locals(%[[ARG:.*]]: !s16i {{.*}})
+// CHECK:   %[[X_ADDR:.*]] = cir.alloca !s16i, !cir.ptr<!s16i>, ["x", init] {alignment = 2 : i64}
+// CHECK:   %[[Y_REF_ADDR:.*]] = cir.alloca !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>, ["y", init, const] {alignment = 8 : i64}
+// CHECK:   cir.store %[[ARG]], %[[X_ADDR]] : !s16i, !cir.ptr<!s16i>
+// CHECK:   cir.store %[[X_ADDR]], %[[Y_REF_ADDR]] : !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>
