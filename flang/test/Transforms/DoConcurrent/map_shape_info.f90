@@ -1,4 +1,3 @@
-
 ! Tests mapping of a basic `do concurrent` loop to
 ! `!$omp target teams distribute parallel do`.
 
