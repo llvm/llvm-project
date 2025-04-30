@@ -544,7 +544,7 @@ def CvtPackedEvenIndexedF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.f16_to_f32"
 
     Example:
     ```mlir
-    %dst = x86vector.avx.cvt.packed.even.indexed.f16_to_f32 %a : !llvm.ptr -> vector<8xf32>
+    %dst = x86vector.avx.cvt.packed.even.indexed.f16_to_f32 %a : memref<16xbf16> -> vector<8xf32>
     ```
   }];
   let arguments = (ins AnyMemRef:$a);
@@ -581,7 +581,7 @@ def CvtPackedOddIndexedF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.f16_to_f32", 
 
     Example:
     ```mlir
-    %dst = x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 %a : !llvm.ptr -> vector<8xf32>
+    %dst = x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 %a : memref<16xbf16> -> vector<8xf32>
     ```
   }];
   let arguments = (ins AnyMemRef:$a);
@@ -624,7 +624,7 @@ def BcstF16ToPackedF32Op : AVX_Op<"bcst.f16_to_f32.packed", [MemoryEffects<[MemR
 
     Example:
     ```mlir
-    %dst = x86vector.avx.bcst.f16_to_f32.packed %a : !llvm.ptr -> vector<8xf32>
+    %dst = x86vector.avx.bcst.f16_to_f32.packed %a : memref<1xbf16> -> vector<8xf32>
     ```
   }];
   let arguments = (ins AnyMemRef:$a);
