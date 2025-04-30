@@ -1712,7 +1712,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     }
   } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
              Tok.is(tok::l_paren)) {
-    ParenParseOption ExprType = SimpleExpr;
+    ParenParseOption ExprType = ParenParseOption::SimpleExpr;
     SourceLocation RParenLoc;
     ParsedType CastTy;
 
