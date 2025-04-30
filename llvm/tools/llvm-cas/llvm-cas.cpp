@@ -776,7 +776,7 @@ int validateIfNeeded(StringRef Path, StringRef PluginPath,
   case ValidationResult::Valid:
     outs() << "validated successfully\n";
     break;
-  case ValidationResult::RecoveredValid:
+  case ValidationResult::Recovered:
     outs() << "recovered from invalid data\n";
     break;
   case ValidationResult::Skipped:

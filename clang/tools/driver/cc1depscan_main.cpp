@@ -835,8 +835,10 @@ void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
     if (CASOpts.CASPath.empty() || !CASOpts.PluginPath.empty())
       return;
     SmallString<64> LLVMCasStorage;
+    SmallString<64> CASPath;
+    CASOpts.getResolvedCASPath(CASPath);
     ExitOnErr(llvm::cas::validateOnDiskUnifiedCASDatabasesIfNeeded(
-        CASOpts.getResolvedCASPath(), /*CheckHash=*/true,
+        CASPath, /*CheckHash=*/true,
         /*AllowRecovery=*/true,
         /*Force=*/false, findLLVMCasBinary(Argv0, LLVMCasStorage)));
   });

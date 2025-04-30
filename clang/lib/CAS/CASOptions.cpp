@@ -108,6 +108,7 @@ llvm::Error CASOptions::initCache() const {
   }
 
   SmallString<256> PathBuf;
+  getResolvedCASPath(PathBuf);
   if (CASPath == "auto") {
     getDefaultOnDiskCASPath(PathBuf);
     CASPath = PathBuf;
@@ -120,11 +121,10 @@ llvm::Error CASOptions::initCache() const {
   return llvm::Error::success();
 }
 
-std::string CASOptions::getResolvedCASPath() const {
-  if (CASPath != "auto")
-    return CASPath;
-
-  SmallString<256> PathBuf;
-  getDefaultOnDiskCASPath(PathBuf);
-  return std::string(PathBuf);
+void CASOptions::getResolvedCASPath(SmallVectorImpl<char> &Result) const {
+  if (CASPath == "auto") {
+    getDefaultOnDiskCASPath(Result);
+  } else {
+    Result.assign(CASPath.begin(), CASPath.end());
+  }
 }

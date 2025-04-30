@@ -469,7 +469,7 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
       return createFileError(PathBuf, OS.error());
   }
 
-  return NeedsRecovery ? ValidationResult::RecoveredValid
+  return NeedsRecovery ? ValidationResult::Recovered
                        : ValidationResult::Valid;
 }
 

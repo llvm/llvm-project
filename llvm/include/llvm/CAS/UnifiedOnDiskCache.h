@@ -102,7 +102,7 @@ public:
   /// using the given \c llvm-cas executable which protects against crashes
   /// during validation. Otherwise validation is performed in-process.
   ///
-  /// \returns \c Valid if the data is already valid, \c RecoveredValid if data
+  /// \returns \c Valid if the data is already valid, \c Recovered if data
   /// was invalid but has been cleared, \c Skipped if validation is not needed,
   /// or an \c Error if validation cannot be performed or if the data is left
   /// in an invalid state because \p AllowRecovery is false.
