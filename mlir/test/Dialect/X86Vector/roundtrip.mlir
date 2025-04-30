@@ -154,6 +154,66 @@ func.func @avxbf16_bcst_bf16_to_f32_256(
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL: func @avxf16_cvt_packed_even_indexed_f16_to_f32_128
+func.func @avxf16_cvt_packed_even_indexed_f16_to_f32_128(
+  %a: memref<8xf16>) -> vector<4xf32>
+{
+  // CHECK: x86vector.avx.cvt.packed.even.indexed.f16_to_f32 {{.*}} :
+  // CHECK-SAME: memref<8xf16> -> vector<4xf32>
+  %0 = x86vector.avx.cvt.packed.even.indexed.f16_to_f32 %a : memref<8xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @avxf16_cvt_packed_even_indexed_f16_to_f32_256
+func.func @avxf16_cvt_packed_even_indexed_f16_to_f32_256(
+  %a: memref<16xf16>) -> vector<8xf32>
+{
+  // CHECK: x86vector.avx.cvt.packed.even.indexed.f16_to_f32 {{.*}} :
+  // CHECK-SAME: memref<16xf16> -> vector<8xf32>
+  %0 = x86vector.avx.cvt.packed.even.indexed.f16_to_f32 %a : memref<16xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @avxf16_cvt_packed_odd_indexed_f16_to_f32_128
+func.func @avxf16_cvt_packed_odd_indexed_f16_to_f32_128(
+  %a: memref<8xf16>) -> vector<4xf32>
+{
+  // CHECK: x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 {{.*}} :
+  // CHECK-SAME: memref<8xf16> -> vector<4xf32>
+  %0 = x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 %a : memref<8xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @avxf16_cvt_packed_odd_indexed_f16_to_f32_256
+func.func @avxf16_cvt_packed_odd_indexed_f16_to_f32_256(
+  %a: memref<16xf16>) -> vector<8xf32>
+{
+  // CHECK: x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 {{.*}} :
+  // CHECK-SAME: memref<16xf16> -> vector<8xf32>
+  %0 = x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 %a : memref<16xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @avxf16_bcst_f16_to_f32_128
+func.func @avxf16_bcst_f16_to_f32_128(
+  %a: memref<1xf16>) -> vector<4xf32>
+{
+  // CHECK: x86vector.avx.bcst.f16_to_f32.packed {{.*}} :
+  // CHECK-SAME: memref<1xf16> -> vector<4xf32>
+  %0 = x86vector.avx.bcst.f16_to_f32.packed %a : memref<1xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @avxf16_bcst_f16_to_f32_256
+func.func @avxf16_bcst_f16_to_f32_256(
+  %a: memref<1xf16>) -> vector<8xf32>
+{
+  // CHECK: x86vector.avx.bcst.f16_to_f32.packed {{.*}} :
+  // CHECK-SAME: memref<1xf16> -> vector<8xf32>
+  %0 = x86vector.avx.bcst.f16_to_f32.packed %a : memref<1xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
 // CHECK-LABEL: func @avx_rsqrt
 func.func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
 {

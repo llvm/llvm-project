@@ -163,6 +163,60 @@ func.func @LLVM_x86_avxbf16_vbcstnebf162ps256(
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL: define <4 x float> @LLVM_x86_avxf16_vcvtneeph2ps128
+func.func @LLVM_x86_avxf16_vcvtneeph2ps128(
+  %a: memref<8xf16>) -> vector<4xf32>
+{
+  // CHECK: call <4 x float> @llvm.x86.vcvtneeph2ps128(
+  %0 = x86vector.avx.cvt.packed.even.indexed.f16_to_f32 %a : memref<8xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avxf16_vcvtneeph2ps256
+func.func @LLVM_x86_avxf16_vcvtneeph2ps256(
+  %a: memref<16xf16>) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.vcvtneeph2ps256(
+  %0 = x86vector.avx.cvt.packed.even.indexed.f16_to_f32 %a : memref<16xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <4 x float> @LLVM_x86_avxf16_vcvtneoph2ps128
+func.func @LLVM_x86_avxf16_vcvtneoph2ps128(
+  %a: memref<8xf16>) -> vector<4xf32>
+{
+  // CHECK: call <4 x float> @llvm.x86.vcvtneoph2ps128(
+  %0 = x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 %a : memref<8xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avxf16_vcvtneoph2ps256
+func.func @LLVM_x86_avxf16_vcvtneoph2ps256(
+  %a: memref<16xf16>) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.vcvtneoph2ps256(
+  %0 = x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 %a : memref<16xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <4 x float> @LLVM_x86_avxf16_vbcstnesh2ps128
+func.func @LLVM_x86_avxf16_vbcstnesh2ps128(
+  %a: memref<1xf16>) -> vector<4xf32>
+{
+  // CHECK: call <4 x float> @llvm.x86.vbcstnesh2ps128(
+  %0 = x86vector.avx.bcst.f16_to_f32.packed %a : memref<1xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avxf16_vbcstnesh2ps256
+func.func @LLVM_x86_avxf16_vbcstnesh2ps256(
+  %a: memref<1xf16>) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.vbcstnesh2ps256(
+  %0 = x86vector.avx.bcst.f16_to_f32.packed %a : memref<1xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
 // CHECK-LABEL: define <8 x float> @LLVM_x86_avx_rsqrt_ps_256
 func.func @LLVM_x86_avx_rsqrt_ps_256(%a: vector <8xf32>) -> vector<8xf32>
 {
