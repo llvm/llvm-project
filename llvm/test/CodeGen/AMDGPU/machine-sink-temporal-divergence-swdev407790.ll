@@ -3,8 +3,6 @@
 
 ; ModuleID = 'kernel_round1_passing.bc'
 source_filename = "/tmp/comgr-295d04/input/CompileSource"
-target triple = "amdgcn-amd-amdhsa"
-
 @kernel_round1.first_words_data = external hidden unnamed_addr addrspace(3) global [896 x i8], align 1
 @kernel_round1.collisionsData = external hidden unnamed_addr addrspace(3) global [3840 x i32], align 4
 @kernel_round1.collisionsNum = external hidden addrspace(3) global i32, align 4
