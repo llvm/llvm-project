@@ -105,10 +105,15 @@ struct CUFAddConstructor
         if (!attr)
           continue;
 
+        if (attr.getValue() == cuf::DataAttribute::Managed &&
+            !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
+          TODO(loc, "registration of non-allocatable managed variables");
+
         mlir::func::FuncOp func;
         switch (attr.getValue()) {
         case cuf::DataAttribute::Device:
-        case cuf::DataAttribute::Constant: {
+        case cuf::DataAttribute::Constant:
+        case cuf::DataAttribute::Managed: {
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
               loc, builder);
           auto fTy = func.getFunctionType();
@@ -141,8 +146,6 @@ struct CUFAddConstructor
               builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
           builder.create<fir::CallOp>(loc, func, args);
         } break;
-        case cuf::DataAttribute::Managed:
-          TODO(loc, "registration of managed variables");
         default:
           break;
         }

@@ -81,7 +81,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
 
     There are no restrictions on the body except for:
     - The `dealloc` regions has a single argument.
-    - The `init & `copy` regions have 2 arguments.
+    - The `init` & `copy` regions have 2 arguments.
     - All three regions are terminated by `omp.yield` ops.
     The above restrictions and other obvious restrictions (e.g. verifying the
     type of yielded values) are verified by the custom op verifier. The actual
@@ -90,15 +90,15 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     Instances of this op would then be used by ops that model directives that
     accept data-sharing attribute clauses.
 
-    The $sym_name attribute provides a symbol by which the privatizer op can be
+    The `sym_name` attribute provides a symbol by which the privatizer op can be
     referenced by other dialect ops.
 
-    The $type attribute is the type of the value being privatized. This type
+    The `type` attribute is the type of the value being privatized. This type
     will be implicitly allocated in MLIR->LLVMIR conversion and passed as the
     second argument to the init region. Therefore the type of arguments to
-    the regions should be a type which represents a pointer to $type.
+    the regions should be a type which represents a pointer to `type`.
 
-    The $data_sharing_type attribute specifies whether privatizer corresponds
+    The `data_sharing_type` attribute specifies whether privatizer corresponds
     to a `private` or a `firstprivate` clause.
   }];
 
@@ -161,9 +161,10 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     /// needsMap returns true if the value being privatized should additionally
     /// be mapped to the target region using a MapInfoOp. This is most common
     /// when an allocatable is privatized. In such cases, the descriptor is used
-    /// in privatization and needs to be mapped on to the device.
+    /// in privatization and needs to be mapped on to the device. The use of
+    /// firstprivate also creates the need to map the host variable to the device.
     bool needsMap() {
-      return initReadsFromMold();
+      return readsFromMold();
     }
 
     /// Get the type for arguments to nested regions. This should
@@ -396,6 +397,7 @@ def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
   ];
   let assemblyFormat = "$region attr-dict";
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1312,7 +1314,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     ///
     /// \param capturedOp result of a still valid (no modifications made to any
     /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
-    static llvm::omp::OMPTgtExecModeFlags
+    static ::mlir::omp::TargetRegionFlags
     getKernelExecFlags(Operation *capturedOp);
   }] # clausesExtraClassDeclaration;
 

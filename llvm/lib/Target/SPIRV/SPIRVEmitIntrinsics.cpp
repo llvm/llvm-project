@@ -47,13 +47,10 @@
 
 using namespace llvm;
 
-namespace llvm {
-namespace SPIRV {
+namespace llvm::SPIRV {
 #define GET_BuiltinGroup_DECL
 #include "SPIRVGenTables.inc"
-} // namespace SPIRV
-void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
-} // namespace llvm
+} // namespace llvm::SPIRV
 
 namespace {
 
@@ -200,12 +197,8 @@ class SPIRVEmitIntrinsics
 
 public:
   static char ID;
-  SPIRVEmitIntrinsics() : ModulePass(ID) {
-    initializeSPIRVEmitIntrinsicsPass(*PassRegistry::getPassRegistry());
-  }
-  SPIRVEmitIntrinsics(SPIRVTargetMachine *_TM) : ModulePass(ID), TM(_TM) {
-    initializeSPIRVEmitIntrinsicsPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVEmitIntrinsics(SPIRVTargetMachine *TM = nullptr)
+      : ModulePass(ID), TM(TM) {}
   Instruction *visitInstruction(Instruction &I) { return &I; }
   Instruction *visitSwitchInst(SwitchInst &I);
   Instruction *visitGetElementPtrInst(GetElementPtrInst &I);
@@ -670,14 +663,27 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
 
     auto *II = dyn_cast<IntrinsicInst>(I);
     if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
-      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
-      assert(ImageType->getTargetExtName() == "spirv.Image");
-      (void)ImageType;
-      if (II->hasOneUse()) {
-        auto *U = *II->users().begin();
-        Ty = cast<Instruction>(U)->getAccessType();
-        assert(Ty && "Unable to get type for resource pointer.");
+      auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
+      if (HandleType->getTargetExtName() == "spirv.Image") {
+        if (II->hasOneUse()) {
+          auto *U = *II->users().begin();
+          Ty = cast<Instruction>(U)->getAccessType();
+          assert(Ty && "Unable to get type for resource pointer.");
+        }
+      } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
+        // This call is supposed to index into an array
+        Ty = HandleType->getTypeParameter(0);
+        assert(Ty->isArrayTy() &&
+               "spv_resource_getpointer indexes into an array, so the type of "
+               "the buffer should be an array.");
+        Ty = Ty->getArrayElementType();
+      } else {
+        llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
+    } else if (II && II->getIntrinsicID() ==
+                         Intrinsic::spv_generic_cast_to_ptr_explicit) {
+      Ty = deduceElementTypeHelper(CI->getArgOperand(0), Visited,
+                                   UnknownElemTypeI8);
     } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
@@ -1827,7 +1833,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if (!Init && GV.getNumUses() == 0)
+  if (!Init && GV.use_empty())
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -2397,9 +2403,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
-  SmallVector<Instruction *> Worklist;
-  for (auto &I : instructions(Func))
-    Worklist.push_back(&I);
+  SmallVector<Instruction *> Worklist(
+      llvm::make_pointer_range(instructions(Func)));
 
   applyDemangledPtrArgTypes(B);
 

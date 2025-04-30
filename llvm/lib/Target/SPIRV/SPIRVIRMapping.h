@@ -65,6 +65,7 @@ enum SpecialTypeKind {
   STK_Type,
   STK_Value,
   STK_MachineInstr,
+  STK_VkBuffer,
   STK_Last = -1
 };
 
@@ -140,6 +141,13 @@ inline IRHandle irhandle_pointee(const Type *ElementType,
 inline IRHandle irhandle_ptr(const void *Ptr, unsigned Arg,
                              enum SpecialTypeKind STK) {
   return std::make_tuple(Ptr, Arg, STK);
+}
+
+inline IRHandle irhandle_vkbuffer(const Type *ElementType,
+                                  StorageClass::StorageClass SC,
+                                  bool IsWriteable) {
+  return std::make_tuple(ElementType, (SC << 1) | IsWriteable,
+                         SpecialTypeKind::STK_VkBuffer);
 }
 
 inline IRHandle handle(const Type *Ty) {

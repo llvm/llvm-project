@@ -229,6 +229,10 @@ public:
   /// attribute.
   LogicalResult convertCommandlineMetadata();
 
+  /// Converts !llvm.dependent-libraries metadata to llvm.dependent_libraries
+  /// LLVM ModuleOp attribute.
+  LogicalResult convertDependentLibrariesMetadata();
+
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
   /// metadata nodes to the converted attributes.

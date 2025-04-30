@@ -26,7 +26,7 @@
 ; CHECK-NEXT: .param .b32 test_i1_param_0
 ; CHECK:      ld.param.u8 [[A8:%rs[0-9]+]], [test_i1_param_0];
 ; CHECK:      and.b16 [[A:%rs[0-9]+]], [[A8]], 1;
-; CHECK:      setp.eq.b16 %p1, [[A]], 1
+; CHECK:      setp.ne.b16 %p1, [[A]], 0
 ; CHECK:      cvt.u32.u16 [[B:%r[0-9]+]], [[A8]]
 ; CHECK:      and.b32 [[C:%r[0-9]+]], [[B]], 1;
 ; CHECK:      .param .b32 param0;

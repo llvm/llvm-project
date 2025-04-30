@@ -92,16 +92,10 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   }
 
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
-  if (getPreprocessorOpts().DependencyDirectivesForFile &&
-      FID != PredefinesFileID) {
-    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID)) {
-      if (std::optional<ArrayRef<dependency_directives_scan::Directive>>
-              DepDirectives =
-                  getPreprocessorOpts().DependencyDirectivesForFile(*File)) {
-        TheLexer->DepDirectives = *DepDirectives;
-      }
-    }
-  }
+  if (GetDependencyDirectives && FID != PredefinesFileID)
+    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID))
+      if (auto MaybeDepDirectives = (*GetDependencyDirectives)(*File))
+        TheLexer->DepDirectives = *MaybeDepDirectives;
 
   EnterSourceFileWithLexer(TheLexer, CurDir);
   return false;
@@ -409,13 +403,13 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   // Complain about reaching a true EOF within arc_cf_code_audited.
   // We don't want to complain about reaching the end of a macro
   // instantiation or a _Pragma.
-  if (PragmaARCCFCodeAuditedInfo.second.isValid() && !isEndOfMacro &&
+  if (PragmaARCCFCodeAuditedInfo.getLoc().isValid() && !isEndOfMacro &&
       !(CurLexer && CurLexer->Is_PragmaLexer)) {
-    Diag(PragmaARCCFCodeAuditedInfo.second,
+    Diag(PragmaARCCFCodeAuditedInfo.getLoc(),
          diag::err_pp_eof_in_arc_cf_code_audited);
 
     // Recover by leaving immediately.
-    PragmaARCCFCodeAuditedInfo = {nullptr, SourceLocation()};
+    PragmaARCCFCodeAuditedInfo = IdentifierLoc();
   }
 
   // Complain about reaching a true EOF within assume_nonnull.
@@ -561,7 +555,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   if (creatingPCHWithThroughHeader() && !LeavingPCHThroughHeader) {
     // Reached the end of the compilation without finding the through header.
     Diag(CurLexer->getFileLoc(), diag::err_pp_through_header_not_seen)
-        << PPOpts->PCHThroughHeader << 0;
+        << PPOpts.PCHThroughHeader << 0;
   }
 
   if (!isIncrementalProcessingEnabled())

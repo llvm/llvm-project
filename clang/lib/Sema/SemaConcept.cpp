@@ -289,7 +289,7 @@ static ExprResult EvaluateAtomicConstraint(
   return SubstitutedExpression;
 }
 
-std::optional<unsigned> static EvaluateFoldExpandedConstraintSize(
+static UnsignedOrNone EvaluateFoldExpandedConstraintSize(
     Sema &S, const CXXFoldExpr *FE, const NamedDecl *Template,
     SourceLocation TemplateNameLoc, const MultiLevelTemplateArgumentList &MLTAL,
     ConstraintSatisfaction &Satisfaction) {
@@ -304,15 +304,14 @@ std::optional<unsigned> static EvaluateFoldExpandedConstraintSize(
   assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
   bool Expand = true;
   bool RetainExpansion = false;
-  std::optional<unsigned> OrigNumExpansions = FE->getNumExpansions(),
-                          NumExpansions = OrigNumExpansions;
+  UnsignedOrNone NumExpansions = FE->getNumExpansions();
   if (S.CheckParameterPacksForExpansion(
           FE->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded, MLTAL,
           Expand, RetainExpansion, NumExpansions) ||
       !Expand || RetainExpansion)
     return std::nullopt;
 
-  if (NumExpansions && S.getLangOpts().BracketDepth < NumExpansions) {
+  if (NumExpansions && S.getLangOpts().BracketDepth < *NumExpansions) {
     S.Diag(FE->getEllipsisLoc(),
            clang::diag::err_fold_expression_limit_exceeded)
         << *NumExpansions << S.getLangOpts().BracketDepth
@@ -413,12 +412,12 @@ static ExprResult calculateConstraintSatisfaction(
     if (Conjunction != Satisfaction.IsSatisfied)
       return Out;
   }
-  std::optional<unsigned> NumExpansions = EvaluateFoldExpandedConstraintSize(
+  UnsignedOrNone NumExpansions = EvaluateFoldExpandedConstraintSize(
       S, FE, Template, TemplateNameLoc, MLTAL, Satisfaction);
   if (!NumExpansions)
     return ExprError();
   for (unsigned I = 0; I < *NumExpansions; I++) {
-    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(S, I);
+    Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
     ExprResult Res = calculateConstraintSatisfaction(
         S, FE->getPattern(), Template, TemplateNameLoc, MLTAL, Satisfaction);
     if (Res.isInvalid())
@@ -589,8 +588,7 @@ static bool CheckConstraintSatisfaction(
     return true;
 
   for (const AssociatedConstraint &AC : AssociatedConstraints) {
-    Sema::ArgumentPackSubstitutionIndexRAII _(S,
-                                              AC.ArgumentPackSubstitutionIndex);
+    Sema::ArgPackSubstIndexRAII _(S, AC.ArgPackSubstIndex);
     ExprResult Res = calculateConstraintSatisfaction(
         S, Template, TemplateIDRange.getBegin(), TemplateArgsLists,
         AC.ConstraintExpr, Satisfaction);
@@ -641,8 +639,7 @@ bool Sema::CheckConstraintSatisfaction(
   // here.
   llvm::SmallVector<TemplateArgument, 4> FlattenedArgs;
   for (auto List : TemplateArgsLists)
-    FlattenedArgs.insert(FlattenedArgs.end(), List.Args.begin(),
-                         List.Args.end());
+    llvm::append_range(FlattenedArgs, List.Args);
 
   llvm::FoldingSetNodeID ID;
   ConstraintSatisfaction::Profile(ID, Context, Template, FlattenedArgs);
@@ -695,75 +692,6 @@ bool Sema::CheckConstraintSatisfaction(
              *this, ConstraintExpr, ConstraintExpr->getNamedConcept(),
              ConstraintExpr->getConceptNameLoc(), MLTAL, Satisfaction)
       .isInvalid();
-}
-
-bool Sema::addInstantiatedCapturesToScope(
-    FunctionDecl *Function, const FunctionDecl *PatternDecl,
-    LocalInstantiationScope &Scope,
-    const MultiLevelTemplateArgumentList &TemplateArgs) {
-  const auto *LambdaClass = cast<CXXMethodDecl>(Function)->getParent();
-  const auto *LambdaPattern = cast<CXXMethodDecl>(PatternDecl)->getParent();
-
-  unsigned Instantiated = 0;
-
-  // FIXME: This is a workaround for not having deferred lambda body
-  // instantiation.
-  // When transforming a lambda's body, if we encounter another call to a
-  // nested lambda that contains a constraint expression, we add all of the
-  // outer lambda's instantiated captures to the current instantiation scope to
-  // facilitate constraint evaluation. However, these captures don't appear in
-  // the CXXRecordDecl until after the lambda expression is rebuilt, so we
-  // pull them out from the corresponding LSI.
-  LambdaScopeInfo *InstantiatingScope = nullptr;
-  if (LambdaPattern->capture_size() && !LambdaClass->capture_size()) {
-    for (FunctionScopeInfo *Scope : llvm::reverse(FunctionScopes)) {
-      auto *LSI = dyn_cast<LambdaScopeInfo>(Scope);
-      if (!LSI ||
-          LSI->CallOperator->getTemplateInstantiationPattern() != PatternDecl)
-        continue;
-      InstantiatingScope = LSI;
-      break;
-    }
-    assert(InstantiatingScope);
-  }
-
-  auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
-                              unsigned Index) {
-    ValueDecl *CapturedVar =
-        InstantiatingScope ? InstantiatingScope->Captures[Index].getVariable()
-                           : LambdaClass->getCapture(Index)->getCapturedVar();
-    assert(CapturedVar->isInitCapture());
-    Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
-  };
-
-  for (const LambdaCapture &CapturePattern : LambdaPattern->captures()) {
-    if (!CapturePattern.capturesVariable()) {
-      Instantiated++;
-      continue;
-    }
-    ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
-
-    if (!CapturedPattern->isInitCapture()) {
-      Instantiated++;
-      continue;
-    }
-
-    if (!CapturedPattern->isParameterPack()) {
-      AddSingleCapture(CapturedPattern, Instantiated++);
-    } else {
-      Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
-      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-      SemaRef.collectUnexpandedParameterPacks(
-          dyn_cast<VarDecl>(CapturedPattern)->getInit(), Unexpanded);
-      auto NumArgumentsInExpansion =
-          getNumArgumentsInExpansionFromUnexpanded(Unexpanded, TemplateArgs);
-      if (!NumArgumentsInExpansion)
-        continue;
-      for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg)
-        AddSingleCapture(CapturedPattern, Instantiated++);
-    }
-  }
-  return false;
 }
 
 bool Sema::SetupConstraintScope(
@@ -917,10 +845,8 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
       ForOverloadResolution);
 
   return CheckConstraintSatisfaction(
-      FD,
-      AssociatedConstraint(FD->getTrailingRequiresClause(),
-                           ArgumentPackSubstitutionIndex),
-      *MLTAL, SourceRange(UsageLoc.isValid() ? UsageLoc : FD->getLocation()),
+      FD, FD->getTrailingRequiresClause(), *MLTAL,
+      SourceRange(UsageLoc.isValid() ? UsageLoc : FD->getLocation()),
       Satisfaction);
 }
 
@@ -1477,7 +1403,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
   }
 
   if (N.isFoldExpanded()) {
-    Sema::ArgumentPackSubstitutionIndexRAII _(S, -1);
+    Sema::ArgPackSubstIndexRAII _(S, std::nullopt);
     return substituteParameterMappings(
         S, N.getFoldExpandedConstraint()->Constraint, Concept, MLTAL,
         ArgsAsWritten);
@@ -2002,11 +1928,11 @@ auto SubsumptionChecker::find(AtomicConstraint *Ori) -> Literal {
   }
   auto It = Elems.find(ID);
   if (It == Elems.end()) {
-    It =
-        Elems
-            .insert({ID, MappedAtomicConstraint{Ori, Literal{getNewLiteralId(),
-                                                             Literal::Atomic}}})
-            .first;
+    It = Elems
+             .insert({ID,
+                      MappedAtomicConstraint{
+                          Ori, {getNewLiteralId(), Literal::Atomic}}})
+             .first;
     ReverseMap[It->second.ID.Value] = Ori;
   }
   return It->getSecond().ID;
@@ -2085,8 +2011,8 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     for (const auto &RTransform : Right) {
       Clause Combined;
       Combined.reserve(LTransform.size() + RTransform.size());
-      llvm::copy(LTransform, std::back_inserter(Combined));
-      llvm::copy(RTransform, std::back_inserter(Combined));
+      llvm::append_range(Combined, LTransform);
+      llvm::append_range(Combined, RTransform);
       Add(std::move(Combined));
     }
   }

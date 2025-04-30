@@ -124,12 +124,10 @@ attributes(device) subroutine testMatch()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestmatch()
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i32p
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i64p
-! CHECK: fir.convert %{{.*}} : (f32) -> i32
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i32p
-! CHECK: fir.convert %{{.*}} : (f64) -> i64
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i64p
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
 
 attributes(device) subroutine testMatchAny()
   integer :: a, mask, v32
@@ -143,12 +141,10 @@ attributes(device) subroutine testMatchAny()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestmatchany()
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i32p
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i64p
-! CHECK: fir.convert %{{.*}} : (f32) -> i32
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i32p
-! CHECK: fir.convert %{{.*}} : (f64) -> i64
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i64p
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i32 -> i32
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i64 -> i32
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i32 -> i32  
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i64 -> i32
 
 attributes(device) subroutine testAtomic(aa, n)
   integer :: aa(*)
@@ -297,14 +293,17 @@ end
 ! CHECK: fir.call @__ldcv_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
 
 attributes(device) subroutine testVote()
-  integer :: a, ipred, mask, v32
-  a = all_sync(mask, v32)
-  
+  integer :: a, ipred, mask
+  logical(4) :: pred
+  a = all_sync(mask, pred)
+  a = any_sync(mask, pred)
+  a = ballot_sync(mask, pred)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestvote()
-! CHECK: fir.call @llvm.nvvm.vote.all.sync
-
+! CHECK: %{{.*}} = nvvm.vote.sync all %{{.*}}, %{{.*}} -> i1
+! CHECK: %{{.*}} = nvvm.vote.sync any %{{.*}}, %{{.*}} -> i1
+! CHECK: %{{.*}} = nvvm.vote.sync ballot %{{.*}}, %{{.*}} -> i32
 
 ! CHECK-DAG: func.func private @__ldca_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
 ! CHECK-DAG: func.func private @__ldcg_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)

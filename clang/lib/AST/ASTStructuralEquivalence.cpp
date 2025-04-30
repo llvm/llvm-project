@@ -580,7 +580,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const DependentTemplateStorage &S1,
                                      const DependentTemplateStorage &S2) {
-  if (!IsStructurallyEquivalent(Context, S1.getQualifier(), S2.getQualifier()))
+  if (NestedNameSpecifier *NNS1 = S1.getQualifier(), *NNS2 = S2.getQualifier();
+      !NNS1 != !NNS2 ||
+      (NNS1 && !IsStructurallyEquivalent(Context, NNS1, NNS2)))
     return false;
 
   IdentifierOrOverloadedOperator IO1 = S1.getName(), IO2 = S2.getName();
@@ -1656,9 +1658,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!D1->getDeclName() && !D2->getDeclName()) {
     // If both anonymous structs/unions are in a record context, make sure
     // they occur in the same location in the context records.
-    if (std::optional<unsigned> Index1 =
+    if (UnsignedOrNone Index1 =
             StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(D1)) {
-      if (std::optional<unsigned> Index2 =
+      if (UnsignedOrNone Index2 =
               StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(
                   D2)) {
         if (*Index1 != *Index2)
@@ -2345,7 +2347,7 @@ DiagnosticBuilder StructuralEquivalenceContext::Diag2(SourceLocation Loc,
   return ToCtx.getDiagnostics().Report(Loc, DiagID);
 }
 
-std::optional<unsigned>
+UnsignedOrNone
 StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
   ASTContext &Context = Anon->getASTContext();
   QualType AnonTy = Context.getRecordType(Anon);

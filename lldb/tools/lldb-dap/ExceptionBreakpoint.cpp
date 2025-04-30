@@ -9,11 +9,16 @@
 #include "ExceptionBreakpoint.h"
 #include "BreakpointBase.h"
 #include "DAP.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
+#include <mutex>
 
 namespace lldb_dap {
 
 void ExceptionBreakpoint::SetBreakpoint() {
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
   if (m_bp.IsValid())
     return;
   bool catch_value = m_filter.find("_catch") != std::string::npos;

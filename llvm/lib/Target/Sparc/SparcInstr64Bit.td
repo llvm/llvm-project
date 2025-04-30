@@ -157,9 +157,11 @@ def : Pat<(and i64:$lhs, (not i64:$rhs)), (ANDNrr $lhs, $rhs)>;
 def : Pat<(or  i64:$lhs, (not i64:$rhs)), (ORNrr  $lhs, $rhs)>;
 def : Pat<(not (xor i64:$lhs, i64:$rhs)), (XNORrr $lhs, $rhs)>;
 
+def : Pat<(addc i64:$lhs, i64:$rhs), (ADDCCrr $lhs, $rhs)>, Requires<[HasVIS3]>;
 def : Pat<(add i64:$lhs, i64:$rhs), (ADDrr $lhs, $rhs)>;
 def : Pat<(sub i64:$lhs, i64:$rhs), (SUBrr $lhs, $rhs)>;
 
+def : Pat<(addc i64:$lhs, (i64 simm13:$rhs)), (ADDCCri $lhs, imm:$rhs)>, Requires<[HasVIS3]>;
 def : Pat<(add i64:$lhs, (i64 simm13:$rhs)), (ADDri $lhs, imm:$rhs)>;
 def : Pat<(sub i64:$lhs, (i64 simm13:$rhs)), (SUBri $lhs, imm:$rhs)>;
 
@@ -470,9 +472,9 @@ let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
 
 let Predicates = [Is64Bit] in {
 
-// atomic_load_64 addr -> load addr
-def : Pat<(i64 (atomic_load_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
-def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
+// atomic_load_nonext_64 addr -> load addr
+def : Pat<(i64 (atomic_load_nonext_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
+def : Pat<(i64 (atomic_load_nonext_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 
 // atomic_store_64 val, addr -> store val, addr
 def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;

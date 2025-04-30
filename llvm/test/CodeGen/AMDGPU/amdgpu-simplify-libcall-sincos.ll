@@ -745,13 +745,12 @@ entry:
 
 define void @sincos_f32_value_is_same_constantfp(ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_value_is_same_constantfp
-; CHECK-SAME: (ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: (ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float 4.200000e+01, ptr addrspace(5) [[__SINCOS_]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float 4.200000e+01)
+; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call contract float @_Z3cosf(float 4.200000e+01)
+; CHECK-NEXT:    store float [[CALL1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
