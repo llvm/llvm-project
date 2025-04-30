@@ -1327,11 +1327,14 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_umulh:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_umulh_u);
   case Intrinsic::aarch64_sve_asr:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_asr_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_asr_u)
+        .setMatchingIROpcode(Instruction::AShr);
   case Intrinsic::aarch64_sve_lsl:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsl_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsl_u)
+        .setMatchingIROpcode(Instruction::Shl);
   case Intrinsic::aarch64_sve_lsr:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsr_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsr_u)
+        .setMatchingIROpcode(Instruction::LShr);
   case Intrinsic::aarch64_sve_and:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_and_u)
         .setMatchingIROpcode(Instruction::And);
@@ -1354,6 +1357,9 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_and_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::And);
+  case Intrinsic::aarch64_sve_asr_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::AShr);
   case Intrinsic::aarch64_sve_eor_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::Xor);
@@ -1369,6 +1375,12 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fsub_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::FSub);
+  case Intrinsic::aarch64_sve_lsl_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::Shl);
+  case Intrinsic::aarch64_sve_lsr_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::LShr);
   case Intrinsic::aarch64_sve_mul_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::Mul);
@@ -1571,7 +1583,11 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
   else
     SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
 
-  if (!SimpleII)
+  // An SVE intrinsic's result is always defined. However, this is not the case
+  // for its equivalent IR instruction (e.g. when shifting by an amount more
+  // than the data's bitwidth). Simplifications to an undefined result must be
+  // ignored to preserve the intrinsic's expected behaviour.
+  if (!SimpleII || isa<UndefValue>(SimpleII))
     return std::nullopt;
 
   if (IInfo.inactiveLanesAreNotDefined())
