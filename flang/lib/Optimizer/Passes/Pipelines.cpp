@@ -353,6 +353,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        ""}));
 
+  if (config.EnableOpenMP) {
+    pm.addNestedPass<mlir::func::FuncOp>(
+        flangomp::createLowerNontemporalPass());
+  }
+
   fir::addFIRToLLVMPass(pm, config);
 }
 
