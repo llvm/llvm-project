@@ -1441,7 +1441,7 @@ printed_instrs_nocfg:
         .globl  bad_unreachable_call
         .type   bad_unreachable_call,@function
 bad_unreachable_call:
-// CHECK-LABEL: GS-PAUTH: Warning: no predecessor basic blocks detected (possibly incomplete CFG) in function bad_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-LABEL: GS-PAUTH: Warning: the function has unreachable basic blocks (possibly incomplete CFG) in function bad_unreachable_call, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x0
 // CHECK-NOT:   instructions that write to the affected registers after any authentication are:
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function bad_unreachable_call, basic block {{[^,]+}}, at address
@@ -1465,7 +1465,7 @@ bad_unreachable_call:
         .type   good_unreachable_call,@function
 good_unreachable_call:
 // CHECK-NOT: non-protected call{{.*}}good_unreachable_call
-// CHECK-LABEL: GS-PAUTH: Warning: no predecessor basic blocks detected (possibly incomplete CFG) in function good_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-LABEL: GS-PAUTH: Warning: the function has unreachable basic blocks (possibly incomplete CFG) in function good_unreachable_call, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
 // CHECK-NOT: instructions that write to the affected registers after any authentication are:
 // CHECK-NOT: non-protected call{{.*}}good_unreachable_call
@@ -1484,6 +1484,33 @@ good_unreachable_call:
         autiasp
         ret
         .size good_unreachable_call, .-good_unreachable_call
+
+        .globl  unreachable_loop_of_bbs
+        .type   unreachable_loop_of_bbs,@function
+unreachable_loop_of_bbs:
+// CHECK-NOT: unreachable basic blocks{{.*}}unreachable_loop_of_bbs
+// CHECK-NOT: non-protected call{{.*}}unreachable_loop_of_bbs
+// CHECK-LABEL: GS-PAUTH: Warning: the function has unreachable basic blocks (possibly incomplete CFG) in function unreachable_loop_of_bbs, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x0
+// CHECK-NOT: unreachable basic blocks{{.*}}unreachable_loop_of_bbs
+// CHECK-NOT: non-protected call{{.*}}unreachable_loop_of_bbs
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        b       .Lreachable_epilogue_bb
+
+.Lfirst_unreachable_bb:
+        blr     x0      // <-- this call is not analyzed
+        b       .Lsecond_unreachable_bb
+.Lsecond_unreachable_bb:
+        blr     x1      // <-- this call is not analyzed
+        b       .Lfirst_unreachable_bb
+
+.Lreachable_epilogue_bb:
+        ldp     x29, x30, [sp], #16
+        autiasp
+        ret
+        .size unreachable_loop_of_bbs, .-unreachable_loop_of_bbs
 
         .globl  main
         .type   main,@function

@@ -1382,21 +1382,42 @@ void FunctionAnalysisContext::findUnsafeUses(
     BF.dump();
   });
 
+  bool UnreachableBBReported = false;
   if (BF.hasCFG()) {
-    // Warn on basic blocks being unreachable according to BOLT, as this
-    // likely means CFG is imprecise.
+    // Warn on basic blocks being unreachable according to BOLT (at most once
+    // per BinaryFunction), as this likely means the CFG reconstructed by BOLT
+    // is imprecise. A basic block can be
+    // * reachable from an entry basic block - a hopefully correct non-empty
+    //   state is propagated to that basic block sooner or later. All basic
+    //   blocks are expected to belong to this category under normal conditions.
+    // * reachable from a "directly unreachable" BB (a basic block that has no
+    //   direct predecessors and this is not because it is an entry BB) - *some*
+    //   non-empty state is propagated to this basic block sooner or later, as
+    //   the initial state of directly unreachable basic blocks is
+    //   pessimistically initialized to "all registers are unsafe"
+    //   - a warning can be printed for the "directly unreachable" basic block
+    // * neither reachable from an entry nor from a "directly unreachable" BB
+    //   (such as if this BB is in an isolated loop of basic blocks) - the final
+    //   state is computed to be empty for this basic block
+    //   - a warning can be printed for this basic block
     for (BinaryBasicBlock &BB : BF) {
-      if (!BB.pred_empty() || BB.isEntryPoint())
+      MCInst *FirstInst = BB.getFirstNonPseudoInstr();
+      // Skip empty basic block early for simplicity.
+      if (!FirstInst)
         continue;
-      // Arbitrarily attach the report to the first instruction of BB.
-      MCInst *InstToReport = BB.getFirstNonPseudoInstr();
-      if (!InstToReport)
-        continue; // BB has no real instructions
 
+      bool IsDirectlyUnreachable = BB.pred_empty() && !BB.isEntryPoint();
+      bool HasNoStateComputed = Analysis->getStateBefore(*FirstInst).empty();
+      if (!IsDirectlyUnreachable && !HasNoStateComputed)
+        continue;
+
+      // Arbitrarily attach the report to the first instruction of BB.
       Reports.push_back(
-          make_generic_report(MCInstReference::get(InstToReport, BF),
-                              "Warning: no predecessor basic blocks detected "
-                              "(possibly incomplete CFG)"));
+          make_generic_report(MCInstReference::get(FirstInst, BF),
+                              "Warning: the function has unreachable basic "
+                              "blocks (possibly incomplete CFG)"));
+      UnreachableBBReported = true;
+      break; // One warning per function.
     }
   }
 
@@ -1405,7 +1426,13 @@ void FunctionAnalysisContext::findUnsafeUses(
       return;
 
     const SrcState &S = Analysis->getStateBefore(Inst);
-    assert(!S.empty() && "Instruction has no associated state");
+    if (S.empty()) {
+      LLVM_DEBUG(
+          { traceInst(BC, "Instruction has no state, skipping", Inst); });
+      assert(UnreachableBBReported && "Should be reported at least once");
+      (void)UnreachableBBReported;
+      return;
+    }
 
     if (auto Report = shouldReportReturnGadget(BC, Inst, S))
       Reports.push_back(*Report);

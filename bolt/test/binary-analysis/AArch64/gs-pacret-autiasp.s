@@ -215,7 +215,7 @@ f_callclobbered_calleesaved:
         .globl  f_unreachable_instruction
         .type   f_unreachable_instruction,@function
 f_unreachable_instruction:
-// CHECK-LABEL: GS-PAUTH: Warning: no predecessor basic blocks detected (possibly incomplete CFG) in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
+// CHECK-LABEL: GS-PAUTH: Warning: the function has unreachable basic blocks (possibly incomplete CFG) in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
 // CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       add     x0, x1, x2
 // CHECK-NOT:   instructions that write to the affected registers after any authentication are:
 // CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
