@@ -209,8 +209,6 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
-static cl::opt<bool> VerifyTarget("verify-tgt", cl::desc("Verify the target"));
-
 namespace {
 
 std::vector<std::string> &getRunPassNames() {

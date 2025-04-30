@@ -576,13 +576,6 @@ void PassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
     C(LAM);
 }
 
-void PassBuilder::registerVerifierPasses(ModulePassManager &MPM, FunctionPassManager &FPM) {
-  for (auto &C : VerifierCallbacks)
-    C(MPM);
-  for (auto &C : FnVerifierCallbacks)
-    C(FPM);
-}
-
 static std::optional<std::pair<bool, bool>>
 parseFunctionPipelineName(StringRef Name) {
   std::pair<bool, bool> Params;

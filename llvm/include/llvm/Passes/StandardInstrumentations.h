@@ -624,7 +624,7 @@ public:
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM);
+                                  ModuleAnalysisManager *MAM);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
