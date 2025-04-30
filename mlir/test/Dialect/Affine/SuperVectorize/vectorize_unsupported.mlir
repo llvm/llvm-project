@@ -33,7 +33,7 @@ func.func @iv_mapped_to_multiple_indices_unsupported(%arg0: index) -> memref<2x2
 // CHECK: #[[$ATTR_1:.+]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 
 // CHECK-LABEL:   func.func @iv_mapped_to_multiple_indices_unsupported(
-// CHECK-SAME:      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index) -> memref<2x2xf32> {
+// CHECK-SAME:      %[[VAL_0:.*]]: index) -> memref<2x2xf32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
 // CHECK:           affine.for %[[VAL_4:.*]] = 0 to 4 {
 // CHECK:             %[[VAL_5:.*]] = affine.apply #[[$ATTR_0]](%[[VAL_4]]){{\[}}%[[VAL_1]]]

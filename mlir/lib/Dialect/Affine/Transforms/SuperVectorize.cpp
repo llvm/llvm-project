@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1192,19 +1193,20 @@ static bool isIVMappedToMultipleIndices(
   for (auto &kvp : loopToVectorDim) {
     AffineForOp forOp = cast<AffineForOp>(kvp.first);
     // Find which indices are invariant w.r.t. this loop IV.
-    auto invariants =
+    llvm::DenseSet<Value> invariants =
         affine::getInvariantAccesses(forOp.getInductionVar(), indices);
     // Count how many vary (i.e. are not invariant).
     unsigned nonInvariant = 0;
-    for (Value idx : indices)
-      if (!invariants.count(idx))
-        ++nonInvariant;
-    // Bail if more than one index varies for this single loop IV.
-    if (nonInvariant > 1) {
-      LLVM_DEBUG(dbgs() << "[early‑vect] Bail out: IV "
-                        << forOp.getInductionVar() << " drives " << nonInvariant
-                        << " indices\n");
-      return true;
+    for (Value idx : indices) {
+      if (invariants.count(idx))
+        continue;
+
+      if (++nonInvariant > 1) {
+        LLVM_DEBUG(dbgs() << "[early‑vect] Bail out: IV "
+                          << forOp.getInductionVar() << " drives "
+                          << nonInvariant << " indices\n");
+        return true;
+      }
     }
   }
   return false;
