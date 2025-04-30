@@ -262,8 +262,8 @@ struct Location {
            std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  int StartLineNumber = 0; // Line number of this Location.
-  int EndLineNumber = 0;
+  int StartLineNumber = 0;      // Line number of this Location.
+  int EndLineNumber = 0;        // End line number of this Location.
   SmallString<32> Filename;     // File for this Location.
   bool IsFileInRootDir = false; // Indicates if file is inside root directory
 };
