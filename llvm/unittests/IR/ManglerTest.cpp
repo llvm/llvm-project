@@ -134,6 +134,42 @@ TEST(ManglerTest, WindowsX64) {
             "?vectorcall");
 }
 
+TEST(ManglerTest, UEFIX64) {
+  LLVMContext Ctx;
+  DataLayout DL("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
+                "i64:64-i128:128-f80:128-n8:16:32:64-S128"); // uefi X86_64
+  Module Mod("test", Ctx);
+  Mod.setDataLayout(DL);
+  Mangler Mang;
+  EXPECT_EQ(mangleStr("foo", Mang, DL), "foo");
+  EXPECT_EQ(mangleStr("\01foo", Mang, DL), "foo");
+  EXPECT_EQ(mangleStr("?foo", Mang, DL), "?foo");
+  EXPECT_EQ(mangleFunc("foo", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::C, Mod, Mang),
+            "foo");
+  EXPECT_EQ(mangleFunc("?foo", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::C, Mod, Mang),
+            "?foo");
+  EXPECT_EQ(mangleFunc("foo", llvm::GlobalValue::PrivateLinkage,
+                       llvm::CallingConv::C, Mod, Mang),
+            ".Lfoo");
+  // Test calling conv mangling.
+  EXPECT_EQ(mangleFunc("stdcall", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::X86_StdCall, Mod, Mang),
+            "stdcall");
+  EXPECT_EQ(mangleFunc("fastcall", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::X86_FastCall, Mod, Mang),
+            "fastcall");
+  EXPECT_EQ(mangleFunc("vectorcall", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::X86_VectorCall, Mod, Mang),
+            "vectorcall@@24");
+
+  // Adding a '?' prefix blocks calling convention mangling.
+  EXPECT_EQ(mangleFunc("?vectorcall", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::X86_VectorCall, Mod, Mang),
+            "?vectorcall");
+}
+
 TEST(ManglerTest, XCOFF) {
   LLVMContext Ctx;
   DataLayout DL("m:a"); // XCOFF/AIX
