@@ -2300,22 +2300,21 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
     if (!isa<spirv::BranchConditionalOp>(terminator))
       continue;
 
-    // Do not split blocks that only contain a conditional branch, i.e., block
-    // size is <= 1.
-    if (block->begin() != block->end() &&
-        std::next(block->begin()) != block->end()) {
+    // Check if the current header block is a merge block of another construct.
+    bool splitHeaderMergeBlock = false;
+    for (const auto &[_, mergeInfo] : blockMergeInfo) {
+      if (mergeInfo.mergeBlock == block)
+        splitHeaderMergeBlock = true;
+    }
+
+    // Do not split a block that only contains a conditional branch, unless it
+    // is also a merge block of another construct - in that case we want to
+    // split the block. We do not want two constructs to share header / merge
+    // block.
+    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
       builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
-
-      // If the split block was a merge block of another region we need to
-      // update the map.
-      for (auto it = blockMergeInfo.begin(); it != blockMergeInfo.end(); ++it) {
-        auto &[ignore, mergeInfo] = *it;
-        if (mergeInfo.mergeBlock == block) {
-          mergeInfo.mergeBlock = newBlock;
-        }
-      }
 
       // After splitting we need to update the map to use the new block as a
       // header.
