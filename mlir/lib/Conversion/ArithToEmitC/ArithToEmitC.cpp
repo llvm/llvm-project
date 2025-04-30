@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -39,8 +40,17 @@ public:
     Type newTy = this->getTypeConverter()->convertType(arithConst.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(arithConst, "type conversion failed");
+
+    std::optional<Attribute> opAttrib =
+        this->getTypeConverter()->convertTypeAttribute(
+            adaptor.getValue().getType(), adaptor.getValue());
+    if (!opAttrib) {
+      return rewriter.notifyMatchFailure(arithConst,
+                                         "attribute conversion failed");
+    }
+
     rewriter.replaceOpWithNewOp<emitc::ConstantOp>(arithConst, newTy,
-                                                   adaptor.getValue());
+                                                   opAttrib.value());
     return success();
   }
 };
@@ -79,7 +89,7 @@ public:
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    if (!isa<FloatType>(adaptor.getRhs().getType())) {
+    if (!emitc::isFloatOrOpaqueType(adaptor.getRhs().getType())) {
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "cmpf currently only supported on "
                                          "floats, not tensors/vectors thereof");
@@ -309,7 +319,7 @@ public:
           "negf currently only supports scalar types, not vectors or tensors");
     }
 
-    if (!emitc::isSupportedFloatType(adaptedOpType)) {
+    if (!emitc::isFloatOrOpaqueType(adaptedOpType)) {
       return rewriter.notifyMatchFailure(
           op.getLoc(), "floating-point type is not supported by EmitC");
     }
@@ -673,7 +683,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     Type operandType = adaptor.getIn().getType();
-    if (!emitc::isSupportedFloatType(operandType))
+    if (!emitc::isFloatOrOpaqueType(operandType))
       return rewriter.notifyMatchFailure(castOp,
                                          "unsupported cast source type");
 
@@ -734,7 +744,7 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(castOp, "type conversion failed");
 
-    if (!emitc::isSupportedFloatType(dstType))
+    if (!emitc::isFloatOrOpaqueType(dstType))
       return rewriter.notifyMatchFailure(castOp,
                                          "unsupported cast destination type");
 

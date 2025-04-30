@@ -54,7 +54,7 @@ void ConvertArithToEmitC::populateOpaqueTypeConversions(
           if (floatAttr.getType().isF80()) {
             return emitc::OpaqueAttr::get(type.getContext(), "f80");
           }
-          return {};
+          return attrToConvert;
         }
         if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attrToConvert)) {
           if (intAttr.getType().isInteger() &&
@@ -62,7 +62,7 @@ void ConvertArithToEmitC::populateOpaqueTypeConversions(
             return emitc::OpaqueAttr::get(type.getContext(), "i80");
           }
         }
-        return {};
+        return attrToConvert;
       });
 }
 
