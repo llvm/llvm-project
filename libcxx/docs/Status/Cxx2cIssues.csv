@@ -98,7 +98,7 @@
 "`LWG4126 <https://wg21.link/LWG4126>`__","Some feature-test macros for fully freestanding features are not yet marked freestanding","2024-11 (Wrocław)","","",""
 "`LWG4134 <https://wg21.link/LWG4134>`__","Issue with Philox algorithm specification","2024-11 (Wrocław)","","",""
 "`LWG4135 <https://wg21.link/LWG4135>`__","The helper lambda of ``std::erase`` for list should specify return type as ``bool``","2024-11 (Wrocław)","|Complete|","21",""
-"`LWG4140 <https://wg21.link/LWG4140>`__","Useless default constructors for bit reference types","2024-11 (Wrocław)","","",""
+"`LWG4140 <https://wg21.link/LWG4140>`__","Useless default constructors for bit reference types","2024-11 (Wrocław)","|Nothing To Do|","",""
 "`LWG4141 <https://wg21.link/LWG4141>`__","Improve prohibitions on ""additional storage""","2024-11 (Wrocław)","","",""
 "`LWG4142 <https://wg21.link/LWG4142>`__","``format_parse_context::check_dynamic_spec`` should require at least one type","2024-11 (Wrocław)","","",""
 "`LWG4144 <https://wg21.link/LWG4144>`__","Disallow ``unique_ptr<T&, D>``","2024-11 (Wrocław)","","",""

@@ -217,6 +217,9 @@ enum NodeType {
   /// UNDEF - An undefined node.
   UNDEF,
 
+  /// POISON - A poison node.
+  POISON,
+
   /// FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
   /// is evaluated to UNDEF), or returns VAL otherwise. Note that each
   /// read of UNDEF can yield different value, but FREEZE(UNDEF) cannot.

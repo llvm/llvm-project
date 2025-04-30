@@ -698,48 +698,12 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__cxx03/__iterator/reverse_iterator.h>
 #include <__cxx03/__iterator/wrap_iter.h>
 
-#if _LIBCPP_STD_VER >= 14
-#  include <__cxx03/__iterator/reverse_access.h>
-#endif
-
-#if _LIBCPP_STD_VER >= 17
-#  include <__cxx03/__iterator/data.h>
-#  include <__cxx03/__iterator/empty.h>
-#  include <__cxx03/__iterator/size.h>
-#endif
-
-#if _LIBCPP_STD_VER >= 20
-#  include <__cxx03/__iterator/common_iterator.h>
-#  include <__cxx03/__iterator/concepts.h>
-#  include <__cxx03/__iterator/counted_iterator.h>
-#  include <__cxx03/__iterator/default_sentinel.h>
-#  include <__cxx03/__iterator/incrementable_traits.h>
-#  include <__cxx03/__iterator/indirectly_comparable.h>
-#  include <__cxx03/__iterator/iter_move.h>
-#  include <__cxx03/__iterator/iter_swap.h>
-#  include <__cxx03/__iterator/mergeable.h>
-#  include <__cxx03/__iterator/move_sentinel.h>
-#  include <__cxx03/__iterator/permutable.h>
-#  include <__cxx03/__iterator/projected.h>
-#  include <__cxx03/__iterator/readable_traits.h>
-#  include <__cxx03/__iterator/sortable.h>
-#  include <__cxx03/__iterator/unreachable_sentinel.h>
-#endif
-
 #include <__cxx03/version>
 
 // standard-mandated includes
 
-// [iterator.synopsis]
-#include <__cxx03/compare>
-#include <__cxx03/concepts>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#endif
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <__cxx03/variant>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20

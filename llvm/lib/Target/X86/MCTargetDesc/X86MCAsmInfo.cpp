@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCAsmInfo.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -35,34 +36,34 @@ MarkedJTDataRegions("mark-data-regions", cl::init(true),
   cl::Hidden);
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_X86_ABS8, "ABS8"},
-    {MCSymbolRefExpr::VK_DTPOFF, "DTPOFF"},
-    {MCSymbolRefExpr::VK_DTPREL, "DTPREL"},
-    {MCSymbolRefExpr::VK_GOT, "GOT"},
-    {MCSymbolRefExpr::VK_GOTENT, "GOTENT"},
-    {MCSymbolRefExpr::VK_GOTNTPOFF, "GOTNTPOFF"},
-    {MCSymbolRefExpr::VK_GOTOFF, "GOTOFF"},
-    {MCSymbolRefExpr::VK_GOTPCREL, "GOTPCREL"},
-    {MCSymbolRefExpr::VK_GOTPCREL_NORELAX, "GOTPCREL_NORELAX"},
-    {MCSymbolRefExpr::VK_GOTREL, "GOTREL"},
-    {MCSymbolRefExpr::VK_GOTTPOFF, "GOTTPOFF"},
-    {MCSymbolRefExpr::VK_INDNTPOFF, "INDNTPOFF"},
+    {X86MCExpr::VK_ABS8, "ABS8"},
+    {X86MCExpr::VK_DTPOFF, "DTPOFF"},
+    {X86MCExpr::VK_DTPREL, "DTPREL"},
+    {X86MCExpr::VK_GOT, "GOT"},
+    {X86MCExpr::VK_GOTENT, "GOTENT"},
+    {X86MCExpr::VK_GOTNTPOFF, "GOTNTPOFF"},
+    {X86MCExpr::VK_GOTOFF, "GOTOFF"},
+    {X86MCExpr::VK_GOTPCREL, "GOTPCREL"},
+    {X86MCExpr::VK_GOTPCREL_NORELAX, "GOTPCREL_NORELAX"},
+    {X86MCExpr::VK_GOTREL, "GOTREL"},
+    {X86MCExpr::VK_GOTTPOFF, "GOTTPOFF"},
+    {X86MCExpr::VK_INDNTPOFF, "INDNTPOFF"},
     {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
-    {MCSymbolRefExpr::VK_NTPOFF, "NTPOFF"},
-    {MCSymbolRefExpr::VK_PCREL, "PCREL"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_X86_PLTOFF, "PLTOFF"},
+    {X86MCExpr::VK_NTPOFF, "NTPOFF"},
+    {X86MCExpr::VK_PCREL, "PCREL"},
+    {X86MCExpr::VK_PLT, "PLT"},
+    {X86MCExpr::VK_PLTOFF, "PLTOFF"},
     {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
-    {MCSymbolRefExpr::VK_SIZE, "SIZE"},
-    {MCSymbolRefExpr::VK_TLSCALL, "tlscall"},
-    {MCSymbolRefExpr::VK_TLSDESC, "tlsdesc"},
-    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
-    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
-    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
-    {MCSymbolRefExpr::VK_TLVP, "TLVP"},
-    {MCSymbolRefExpr::VK_TLVPPAGE, "TLVPPAGE"},
-    {MCSymbolRefExpr::VK_TLVPPAGEOFF, "TLVPPAGEOFF"},
-    {MCSymbolRefExpr::VK_TPOFF, "TPOFF"},
+    {X86MCExpr::VK_SIZE, "SIZE"},
+    {X86MCExpr::VK_TLSCALL, "tlscall"},
+    {X86MCExpr::VK_TLSDESC, "tlsdesc"},
+    {X86MCExpr::VK_TLSGD, "TLSGD"},
+    {X86MCExpr::VK_TLSLD, "TLSLD"},
+    {X86MCExpr::VK_TLSLDM, "TLSLDM"},
+    {X86MCExpr::VK_TLVP, "TLVP"},
+    {X86MCExpr::VK_TLVPPAGE, "TLVPPAGE"},
+    {X86MCExpr::VK_TLVPPAGEOFF, "TLVPPAGEOFF"},
+    {X86MCExpr::VK_TPOFF, "TPOFF"},
 };
 
 void X86MCAsmInfoDarwin::anchor() { }
@@ -139,7 +140,7 @@ X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                    MCStreamer &Streamer) const {
   MCContext &Context = Streamer.getContext();
   const MCExpr *Res =
-    MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, Context);
+      MCSymbolRefExpr::create(Sym, X86MCExpr::VK_GOTPCREL, Context);
   const MCExpr *Four = MCConstantExpr::create(4, Context);
   return MCBinaryExpr::createAdd(Res, Four, Context);
 }

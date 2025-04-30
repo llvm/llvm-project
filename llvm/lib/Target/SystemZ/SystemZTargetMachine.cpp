@@ -48,6 +48,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
+  initializeSystemZCopyPhysRegsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -331,7 +332,7 @@ TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 TargetTransformInfo
 SystemZTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(SystemZTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<SystemZTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *SystemZTargetMachine::createMachineFunctionInfo(

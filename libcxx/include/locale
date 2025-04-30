@@ -201,6 +201,8 @@ template <class charT> class messages_byname;
 #    include <__algorithm/reverse.h>
 #    include <__algorithm/unwrap_iter.h>
 #    include <__assert>
+#    include <__charconv/to_chars_integral.h>
+#    include <__charconv/traits.h>
 #    include <__iterator/access.h>
 #    include <__iterator/back_insert_iterator.h>
 #    include <__iterator/istreambuf_iterator.h>
@@ -210,6 +212,7 @@ template <class charT> class messages_byname;
 #    include <__memory/addressof.h>
 #    include <__memory/unique_ptr.h>
 #    include <__new/exceptions.h>
+#    include <__system_error/errc.h>
 #    include <__type_traits/make_unsigned.h>
 #    include <cerrno>
 #    include <cstdio>
@@ -566,8 +569,106 @@ extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<char>;
 extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<wchar_t>;
 #    endif
 
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
+  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
+}
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
+  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
+}
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
+  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err) {
+  if (__a != __a_end) {
+    __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
+    errno                                                     = 0;
+    char* __p2;
+    _Tp __ld                                                     = std::__do_strtod<_Tp>(__a, &__p2);
+    __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
+    if (__current_errno == 0)
+      errno = __save_errno;
+    if (__p2 != __a_end) {
+      __err = ios_base::failbit;
+      return 0;
+    } else if (__current_errno == ERANGE)
+      __err = ios_base::failbit;
+    return __ld;
+  }
+  __err = ios_base::failbit;
+  return 0;
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__num_get_signed_integral(const char* __a, const char* __a_end, ios_base::iostate& __err, int __base) {
+  if (__a != __a_end) {
+    __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
+    errno                                                     = 0;
+    char* __p2;
+    long long __ll = __locale::__strtoll(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
+    __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
+    if (__current_errno == 0)
+      errno = __save_errno;
+    if (__p2 != __a_end) {
+      __err = ios_base::failbit;
+      return 0;
+    } else if (__current_errno == ERANGE || __ll < numeric_limits<_Tp>::min() || numeric_limits<_Tp>::max() < __ll) {
+      __err = ios_base::failbit;
+      if (__ll > 0)
+        return numeric_limits<_Tp>::max();
+      else
+        return numeric_limits<_Tp>::min();
+    }
+    return static_cast<_Tp>(__ll);
+  }
+  __err = ios_base::failbit;
+  return 0;
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__num_get_unsigned_integral(const char* __a, const char* __a_end, ios_base::iostate& __err, int __base) {
+  if (__a != __a_end) {
+    const bool __negate = *__a == '-';
+    if (__negate && ++__a == __a_end) {
+      __err = ios_base::failbit;
+      return 0;
+    }
+    __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
+    errno                                                     = 0;
+    char* __p2;
+    unsigned long long __ll = __locale::__strtoull(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
+    __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
+    if (__current_errno == 0)
+      errno = __save_errno;
+    if (__p2 != __a_end) {
+      __err = ios_base::failbit;
+      return 0;
+    } else if (__current_errno == ERANGE || numeric_limits<_Tp>::max() < __ll) {
+      __err = ios_base::failbit;
+      return numeric_limits<_Tp>::max();
+    }
+    _Tp __res = static_cast<_Tp>(__ll);
+    if (__negate)
+      __res = -__res;
+    return __res;
+  }
+  __err = ios_base::failbit;
+  return 0;
+}
+
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS num_get : public locale::facet, private __num_get<_CharT> {
+class num_get : public locale::facet, private __num_get<_CharT> {
 public:
   typedef _CharT char_type;
   typedef _InputIterator iter_type;
@@ -635,16 +736,175 @@ protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~num_get() override {}
 
   template <class _Fp>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS iter_type
-  __do_get_floating_point(iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Fp& __v) const;
+  _LIBCPP_HIDE_FROM_ABI iter_type
+  __do_get_floating_point(iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Fp& __v) const {
+    // Stage 1, nothing to do
+    // Stage 2
+    char_type __atoms[__num_get_base::__fp_chr_cnt];
+    char_type __decimal_point;
+    char_type __thousands_sep;
+    string __grouping = this->__stage2_float_prep(__iob, __atoms, __decimal_point, __thousands_sep);
+    string __buf;
+    __buf.resize(__buf.capacity());
+    char* __a     = &__buf[0];
+    char* __a_end = __a;
+    unsigned __g[__num_get_base::__num_get_buf_sz];
+    unsigned* __g_end        = __g;
+    unsigned __dc            = 0;
+    bool __in_units          = true;
+    char __exp               = 'E';
+    bool __is_leading_parsed = false;
+    for (; __b != __e; ++__b) {
+      if (__a_end == __a + __buf.size()) {
+        size_t __tmp = __buf.size();
+        __buf.resize(2 * __buf.size());
+        __buf.resize(__buf.capacity());
+        __a     = &__buf[0];
+        __a_end = __a + __tmp;
+      }
+      if (this->__stage2_float_loop(
+              *__b,
+              __in_units,
+              __exp,
+              __a,
+              __a_end,
+              __decimal_point,
+              __thousands_sep,
+              __grouping,
+              __g,
+              __g_end,
+              __dc,
+              __atoms))
+        break;
+
+      // the leading character excluding the sign must be a decimal digit
+      if (!__is_leading_parsed) {
+        if (__a_end - __a >= 1 && __a[0] != '-' && __a[0] != '+') {
+          if (('0' <= __a[0] && __a[0] <= '9') || __a[0] == '.')
+            __is_leading_parsed = true;
+          else
+            break;
+        } else if (__a_end - __a >= 2 && (__a[0] == '-' || __a[0] == '+')) {
+          if (('0' <= __a[1] && __a[1] <= '9') || __a[1] == '.')
+            __is_leading_parsed = true;
+          else
+            break;
+        }
+      }
+    }
+    if (__grouping.size() != 0 && __in_units && __g_end - __g < __num_get_base::__num_get_buf_sz)
+      *__g_end++ = __dc;
+    // Stage 3
+    __v = std::__num_get_float<_Fp>(__a, __a_end, __err);
+    // Digit grouping checked
+    __check_grouping(__grouping, __g, __g_end, __err);
+    // EOF checked
+    if (__b == __e)
+      __err |= ios_base::eofbit;
+    return __b;
+  }
 
   template <class _Signed>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS iter_type
-  __do_get_signed(iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Signed& __v) const;
+  _LIBCPP_HIDE_FROM_ABI iter_type
+  __do_get_signed(iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Signed& __v) const {
+    // Stage 1
+    int __base = this->__get_base(__iob);
+    // Stage 2
+    char_type __thousands_sep;
+    const int __atoms_size = __num_get_base::__int_chr_cnt;
+    char_type __atoms1[__atoms_size];
+    const char_type* __atoms = this->__do_widen(__iob, __atoms1);
+    string __grouping        = this->__stage2_int_prep(__iob, __thousands_sep);
+    string __buf;
+    __buf.resize(__buf.capacity());
+    char* __a     = &__buf[0];
+    char* __a_end = __a;
+    unsigned __g[__num_get_base::__num_get_buf_sz];
+    unsigned* __g_end = __g;
+    unsigned __dc     = 0;
+    for (; __b != __e; ++__b) {
+      if (__a_end == __a + __buf.size()) {
+        size_t __tmp = __buf.size();
+        __buf.resize(2 * __buf.size());
+        __buf.resize(__buf.capacity());
+        __a     = &__buf[0];
+        __a_end = __a + __tmp;
+      }
+      if (this->__stage2_int_loop(
+              *__b,
+              __base,
+              __a,
+              __a_end,
+              __dc,
+              __thousands_sep,
+              __grouping,
+              __g,
+              __g_end,
+              const_cast<char_type*>(__atoms)))
+        break;
+    }
+    if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
+      *__g_end++ = __dc;
+    // Stage 3
+    __v = std::__num_get_signed_integral<_Signed>(__a, __a_end, __err, __base);
+    // Digit grouping checked
+    __check_grouping(__grouping, __g, __g_end, __err);
+    // EOF checked
+    if (__b == __e)
+      __err |= ios_base::eofbit;
+    return __b;
+  }
 
   template <class _Unsigned>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS iter_type
-  __do_get_unsigned(iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Unsigned& __v) const;
+  _LIBCPP_HIDE_FROM_ABI iter_type
+  __do_get_unsigned(iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Unsigned& __v) const {
+    // Stage 1
+    int __base = this->__get_base(__iob);
+    // Stage 2
+    char_type __thousands_sep;
+    const int __atoms_size = __num_get_base::__int_chr_cnt;
+    char_type __atoms1[__atoms_size];
+    const char_type* __atoms = this->__do_widen(__iob, __atoms1);
+    string __grouping        = this->__stage2_int_prep(__iob, __thousands_sep);
+    string __buf;
+    __buf.resize(__buf.capacity());
+    char* __a     = &__buf[0];
+    char* __a_end = __a;
+    unsigned __g[__num_get_base::__num_get_buf_sz];
+    unsigned* __g_end = __g;
+    unsigned __dc     = 0;
+    for (; __b != __e; ++__b) {
+      if (__a_end == __a + __buf.size()) {
+        size_t __tmp = __buf.size();
+        __buf.resize(2 * __buf.size());
+        __buf.resize(__buf.capacity());
+        __a     = &__buf[0];
+        __a_end = __a + __tmp;
+      }
+      if (this->__stage2_int_loop(
+              *__b,
+              __base,
+              __a,
+              __a_end,
+              __dc,
+              __thousands_sep,
+              __grouping,
+              __g,
+              __g_end,
+              const_cast<char_type*>(__atoms)))
+        break;
+    }
+    if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
+      *__g_end++ = __dc;
+    // Stage 3
+    __v = std::__num_get_unsigned_integral<_Unsigned>(__a, __a_end, __err, __base);
+    // Digit grouping checked
+    __check_grouping(__grouping, __g, __g_end, __err);
+    // EOF checked
+    if (__b == __e)
+      __err |= ios_base::eofbit;
+    return __b;
+  }
 
   virtual iter_type do_get(iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, bool& __v) const;
 
@@ -696,104 +956,6 @@ protected:
 template <class _CharT, class _InputIterator>
 locale::id num_get<_CharT, _InputIterator>::id;
 
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__num_get_signed_integral(const char* __a, const char* __a_end, ios_base::iostate& __err, int __base) {
-  if (__a != __a_end) {
-    __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
-    errno                                                     = 0;
-    char* __p2;
-    long long __ll = __locale::__strtoll(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
-    __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
-    if (__current_errno == 0)
-      errno = __save_errno;
-    if (__p2 != __a_end) {
-      __err = ios_base::failbit;
-      return 0;
-    } else if (__current_errno == ERANGE || __ll < numeric_limits<_Tp>::min() || numeric_limits<_Tp>::max() < __ll) {
-      __err = ios_base::failbit;
-      if (__ll > 0)
-        return numeric_limits<_Tp>::max();
-      else
-        return numeric_limits<_Tp>::min();
-    }
-    return static_cast<_Tp>(__ll);
-  }
-  __err = ios_base::failbit;
-  return 0;
-}
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__num_get_unsigned_integral(const char* __a, const char* __a_end, ios_base::iostate& __err, int __base) {
-  if (__a != __a_end) {
-    const bool __negate = *__a == '-';
-    if (__negate && ++__a == __a_end) {
-      __err = ios_base::failbit;
-      return 0;
-    }
-    __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
-    errno                                                     = 0;
-    char* __p2;
-    unsigned long long __ll = __locale::__strtoull(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
-    __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
-    if (__current_errno == 0)
-      errno = __save_errno;
-    if (__p2 != __a_end) {
-      __err = ios_base::failbit;
-      return 0;
-    } else if (__current_errno == ERANGE || numeric_limits<_Tp>::max() < __ll) {
-      __err = ios_base::failbit;
-      return numeric_limits<_Tp>::max();
-    }
-    _Tp __res = static_cast<_Tp>(__ll);
-    if (__negate)
-      __res = -__res;
-    return __res;
-  }
-  __err = ios_base::failbit;
-  return 0;
-}
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err) {
-  if (__a != __a_end) {
-    __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
-    errno                                                     = 0;
-    char* __p2;
-    _Tp __ld                                                     = std::__do_strtod<_Tp>(__a, &__p2);
-    __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
-    if (__current_errno == 0)
-      errno = __save_errno;
-    if (__p2 != __a_end) {
-      __err = ios_base::failbit;
-      return 0;
-    } else if (__current_errno == ERANGE)
-      __err = ios_base::failbit;
-    return __ld;
-  }
-  __err = ios_base::failbit;
-  return 0;
-}
-
 template <class _CharT, class _InputIterator>
 _InputIterator num_get<_CharT, _InputIterator>::do_get(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, bool& __v) const {
@@ -820,186 +982,6 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
   const string_type __names[2] = {__np.truename(), __np.falsename()};
   const string_type* __i       = std::__scan_keyword(__b, __e, __names, __names + 2, __ct, __err);
   __v                          = __i == __names;
-  return __b;
-}
-
-// signed
-
-template <class _CharT, class _InputIterator>
-template <class _Signed>
-_InputIterator num_get<_CharT, _InputIterator>::__do_get_signed(
-    iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Signed& __v) const {
-  // Stage 1
-  int __base = this->__get_base(__iob);
-  // Stage 2
-  char_type __thousands_sep;
-  const int __atoms_size = __num_get_base::__int_chr_cnt;
-  char_type __atoms1[__atoms_size];
-  const char_type* __atoms = this->__do_widen(__iob, __atoms1);
-  string __grouping        = this->__stage2_int_prep(__iob, __thousands_sep);
-  string __buf;
-  __buf.resize(__buf.capacity());
-  char* __a     = &__buf[0];
-  char* __a_end = __a;
-  unsigned __g[__num_get_base::__num_get_buf_sz];
-  unsigned* __g_end = __g;
-  unsigned __dc     = 0;
-  for (; __b != __e; ++__b) {
-    if (__a_end == __a + __buf.size()) {
-      size_t __tmp = __buf.size();
-      __buf.resize(2 * __buf.size());
-      __buf.resize(__buf.capacity());
-      __a     = &__buf[0];
-      __a_end = __a + __tmp;
-    }
-    if (this->__stage2_int_loop(
-            *__b,
-            __base,
-            __a,
-            __a_end,
-            __dc,
-            __thousands_sep,
-            __grouping,
-            __g,
-            __g_end,
-            const_cast<char_type*>(__atoms)))
-      break;
-  }
-  if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
-    *__g_end++ = __dc;
-  // Stage 3
-  __v = std::__num_get_signed_integral<_Signed>(__a, __a_end, __err, __base);
-  // Digit grouping checked
-  __check_grouping(__grouping, __g, __g_end, __err);
-  // EOF checked
-  if (__b == __e)
-    __err |= ios_base::eofbit;
-  return __b;
-}
-
-// unsigned
-
-template <class _CharT, class _InputIterator>
-template <class _Unsigned>
-_InputIterator num_get<_CharT, _InputIterator>::__do_get_unsigned(
-    iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Unsigned& __v) const {
-  // Stage 1
-  int __base = this->__get_base(__iob);
-  // Stage 2
-  char_type __thousands_sep;
-  const int __atoms_size = __num_get_base::__int_chr_cnt;
-  char_type __atoms1[__atoms_size];
-  const char_type* __atoms = this->__do_widen(__iob, __atoms1);
-  string __grouping        = this->__stage2_int_prep(__iob, __thousands_sep);
-  string __buf;
-  __buf.resize(__buf.capacity());
-  char* __a     = &__buf[0];
-  char* __a_end = __a;
-  unsigned __g[__num_get_base::__num_get_buf_sz];
-  unsigned* __g_end = __g;
-  unsigned __dc     = 0;
-  for (; __b != __e; ++__b) {
-    if (__a_end == __a + __buf.size()) {
-      size_t __tmp = __buf.size();
-      __buf.resize(2 * __buf.size());
-      __buf.resize(__buf.capacity());
-      __a     = &__buf[0];
-      __a_end = __a + __tmp;
-    }
-    if (this->__stage2_int_loop(
-            *__b,
-            __base,
-            __a,
-            __a_end,
-            __dc,
-            __thousands_sep,
-            __grouping,
-            __g,
-            __g_end,
-            const_cast<char_type*>(__atoms)))
-      break;
-  }
-  if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
-    *__g_end++ = __dc;
-  // Stage 3
-  __v = std::__num_get_unsigned_integral<_Unsigned>(__a, __a_end, __err, __base);
-  // Digit grouping checked
-  __check_grouping(__grouping, __g, __g_end, __err);
-  // EOF checked
-  if (__b == __e)
-    __err |= ios_base::eofbit;
-  return __b;
-}
-
-// floating point
-
-template <class _CharT, class _InputIterator>
-template <class _Fp>
-_InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
-    iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Fp& __v) const {
-  // Stage 1, nothing to do
-  // Stage 2
-  char_type __atoms[__num_get_base::__fp_chr_cnt];
-  char_type __decimal_point;
-  char_type __thousands_sep;
-  string __grouping = this->__stage2_float_prep(__iob, __atoms, __decimal_point, __thousands_sep);
-  string __buf;
-  __buf.resize(__buf.capacity());
-  char* __a     = &__buf[0];
-  char* __a_end = __a;
-  unsigned __g[__num_get_base::__num_get_buf_sz];
-  unsigned* __g_end        = __g;
-  unsigned __dc            = 0;
-  bool __in_units          = true;
-  char __exp               = 'E';
-  bool __is_leading_parsed = false;
-  for (; __b != __e; ++__b) {
-    if (__a_end == __a + __buf.size()) {
-      size_t __tmp = __buf.size();
-      __buf.resize(2 * __buf.size());
-      __buf.resize(__buf.capacity());
-      __a     = &__buf[0];
-      __a_end = __a + __tmp;
-    }
-    if (this->__stage2_float_loop(
-            *__b,
-            __in_units,
-            __exp,
-            __a,
-            __a_end,
-            __decimal_point,
-            __thousands_sep,
-            __grouping,
-            __g,
-            __g_end,
-            __dc,
-            __atoms))
-      break;
-
-    // the leading character excluding the sign must be a decimal digit
-    if (!__is_leading_parsed) {
-      if (__a_end - __a >= 1 && __a[0] != '-' && __a[0] != '+') {
-        if (('0' <= __a[0] && __a[0] <= '9') || __a[0] == '.')
-          __is_leading_parsed = true;
-        else
-          break;
-      } else if (__a_end - __a >= 2 && (__a[0] == '-' || __a[0] == '+')) {
-        if (('0' <= __a[1] && __a[1] <= '9') || __a[1] == '.')
-          __is_leading_parsed = true;
-        else
-          break;
-      }
-    }
-  }
-  if (__grouping.size() != 0 && __in_units && __g_end - __g < __num_get_base::__num_get_buf_sz)
-    *__g_end++ = __dc;
-  // Stage 3
-  __v = std::__num_get_float<_Fp>(__a, __a_end, __err);
-  // Digit grouping checked
-  __check_grouping(__grouping, __g, __g_end, __err);
-  // EOF checked
-  if (__b == __e)
-    __err |= ios_base::eofbit;
   return __b;
 }
 
@@ -1166,7 +1148,7 @@ extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_put<wchar_t>;
 #    endif
 
 template <class _CharT, class _OutputIterator = ostreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS num_put : public locale::facet, private __num_put<_CharT> {
+class num_put : public locale::facet, private __num_put<_CharT> {
 public:
   typedef _CharT char_type;
   typedef _OutputIterator iter_type;
@@ -1221,7 +1203,7 @@ protected:
 
   template <class _Integral>
   _LIBCPP_HIDE_FROM_ABI inline _OutputIterator
-  __do_put_integral(iter_type __s, ios_base& __iob, char_type __fl, _Integral __v, char const* __len) const;
+  __do_put_integral(iter_type __s, ios_base& __iob, char_type __fl, _Integral __v) const;
 
   template <class _Float>
   _LIBCPP_HIDE_FROM_ABI inline _OutputIterator
@@ -1247,30 +1229,68 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
 template <class _CharT, class _OutputIterator>
 template <class _Integral>
 _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::__do_put_integral(
-    iter_type __s, ios_base& __iob, char_type __fl, _Integral __v, char const* __len) const {
+    iter_type __s, ios_base& __iob, char_type __fl, _Integral __v) const {
   // Stage 1 - Get number in narrow char
-  char __fmt[8] = {'%', 0};
-  this->__format_int(__fmt + 1, __len, is_signed<_Integral>::value, __iob.flags());
+
   // Worst case is octal, with showbase enabled. Note that octal is always
   // printed as an unsigned value.
   using _Unsigned = typename make_unsigned<_Integral>::type;
-  _LIBCPP_CONSTEXPR const unsigned __nbuf =
+  _LIBCPP_CONSTEXPR const unsigned __buffer_size =
       (numeric_limits<_Unsigned>::digits / 3)          // 1 char per 3 bits
       + ((numeric_limits<_Unsigned>::digits % 3) != 0) // round up
       + 2;                                             // base prefix + terminating null character
-  char __nar[__nbuf];
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  int __nc = __locale::__snprintf(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
-  _LIBCPP_DIAGNOSTIC_POP
-  char* __ne = __nar + __nc;
-  char* __np = this->__identify_padding(__nar, __ne, __iob);
+
+  char __char_buffer[__buffer_size];
+  char* __buffer_ptr = __char_buffer;
+
+  auto __flags = __iob.flags();
+
+  auto __basefield = (__flags & ios_base::basefield);
+
+  // Extract base
+  int __base = 10;
+  if (__basefield == ios_base::oct)
+    __base = 8;
+  else if (__basefield == ios_base::hex)
+    __base = 16;
+
+  // Print '-' and make the argument unsigned
+  auto __uval = std::__to_unsigned_like(__v);
+  if (__basefield != ios_base::oct && __basefield != ios_base::hex && __v < 0) {
+    *__buffer_ptr++ = '-';
+    __uval          = std::__complement(__uval);
+  }
+
+  // Maybe add '+' prefix
+  if (std::is_signed<_Integral>::value && (__flags & ios_base::showpos) && __basefield != ios_base::oct &&
+      __basefield != ios_base::hex && __v >= 0)
+    *__buffer_ptr++ = '+';
+
+  // Add base prefix
+  if (__v != 0 && __flags & ios_base::showbase) {
+    if (__basefield == ios_base::oct) {
+      *__buffer_ptr++ = '0';
+    } else if (__basefield == ios_base::hex) {
+      *__buffer_ptr++ = '0';
+      *__buffer_ptr++ = (__flags & ios_base::uppercase ? 'X' : 'x');
+    }
+  }
+
+  auto __res = std::__to_chars_integral(__buffer_ptr, __char_buffer + __buffer_size, __uval, __base);
+  _LIBCPP_ASSERT_INTERNAL(__res.__ec == std::errc(), "to_chars: invalid maximum buffer size computed?");
+
+  // Make letters uppercase
+  if (__flags & ios_base::hex && __flags & ios_base::uppercase) {
+    for (; __buffer_ptr != __res.__ptr; ++__buffer_ptr)
+      *__buffer_ptr = std::__hex_to_upper(*__buffer_ptr);
+  }
+
+  char* __np = this->__identify_padding(__char_buffer, __res.__ptr, __iob);
   // Stage 2 - Widen __nar while adding thousands separators
-  char_type __o[2 * (__nbuf - 1) - 1];
+  char_type __o[2 * (__buffer_size - 1) - 1];
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_int(__nar, __np, __ne, __o, __op, __oe, __iob.getloc());
+  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
@@ -1279,25 +1299,25 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "l");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, long long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "ll");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, unsigned long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "l");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, unsigned long long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "ll");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
@@ -1365,26 +1385,11 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, const void* __v) const {
-  // Stage 1 - Get pointer in narrow char
-  const unsigned __nbuf = 20;
-  char __nar[__nbuf];
-  int __nc   = __locale::__snprintf(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, "%p", __v);
-  char* __ne = __nar + __nc;
-  char* __np = this->__identify_padding(__nar, __ne, __iob);
-  // Stage 2 - Widen __nar
-  char_type __o[2 * (__nbuf - 1) - 1];
-  char_type* __op; // pad here
-  char_type* __oe; // end of output
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
-  __ct.widen(__nar, __ne, __o);
-  __oe = __o + (__ne - __nar);
-  if (__np == __ne)
-    __op = __oe;
-  else
-    __op = __o + (__np - __nar);
-  // [__o, __oe) contains wide number
-  // Stage 3 & 4
-  return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
+  auto __flags = __iob.flags();
+  __iob.flags((__flags & ~ios_base::basefield & ~ios_base::uppercase) | ios_base::hex | ios_base::showbase);
+  auto __res = __do_put_integral(__s, __iob, __fl, reinterpret_cast<uintptr_t>(__v));
+  __iob.flags(__flags);
+  return __res;
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
@@ -1425,7 +1430,7 @@ public:
 };
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS __time_get_c_storage {
+class __time_get_c_storage {
 protected:
   typedef basic_string<_CharT> string_type;
 
@@ -1473,7 +1478,7 @@ _LIBCPP_EXPORTED_FROM_ABI const wstring& __time_get_c_storage<wchar_t>::__X() co
 #    endif
 
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS time_get : public locale::facet, public time_base, private __time_get_c_storage<_CharT> {
+class time_get : public locale::facet, public time_base, private __time_get_c_storage<_CharT> {
 public:
   typedef _CharT char_type;
   typedef _InputIterator iter_type;
@@ -1938,7 +1943,7 @@ protected:
 };
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS __time_get_storage : public __time_get {
+class __time_get_storage : public __time_get {
 protected:
   typedef basic_string<_CharT> string_type;
 
@@ -1990,9 +1995,7 @@ _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(wchar_t)
 #    undef _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION
 
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS time_get_byname
-    : public time_get<_CharT, _InputIterator>,
-      private __time_get_storage<_CharT> {
+class time_get_byname : public time_get<_CharT, _InputIterator>, private __time_get_storage<_CharT> {
 public:
   typedef time_base::dateorder dateorder;
   typedef _InputIterator iter_type;
@@ -2039,7 +2042,7 @@ protected:
 };
 
 template <class _CharT, class _OutputIterator = ostreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS time_put : public locale::facet, private __time_put {
+class time_put : public locale::facet, private __time_put {
 public:
   typedef _CharT char_type;
   typedef _OutputIterator iter_type;
@@ -2114,7 +2117,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put<wchar_t>;
 #    endif
 
 template <class _CharT, class _OutputIterator = ostreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS time_put_byname : public time_put<_CharT, _OutputIterator> {
+class time_put_byname : public time_put<_CharT, _OutputIterator> {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit time_put_byname(const char* __nm, size_t __refs = 0)
       : time_put<_CharT, _OutputIterator>(__nm, __refs) {}
@@ -2146,7 +2149,7 @@ public:
 // moneypunct
 
 template <class _CharT, bool _International = false>
-class _LIBCPP_TEMPLATE_VIS moneypunct : public locale::facet, public money_base {
+class moneypunct : public locale::facet, public money_base {
 public:
   typedef _CharT char_type;
   typedef basic_string<char_type> string_type;
@@ -2202,7 +2205,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<wchar_t, true>
 // moneypunct_byname
 
 template <class _CharT, bool _International = false>
-class _LIBCPP_TEMPLATE_VIS moneypunct_byname : public moneypunct<_CharT, _International> {
+class moneypunct_byname : public moneypunct<_CharT, _International> {
 public:
   typedef money_base::pattern pattern;
   typedef _CharT char_type;
@@ -2325,7 +2328,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_get<wchar_t>;
 #    endif
 
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS money_get : public locale::facet, private __money_get<_CharT> {
+class money_get : public locale::facet, private __money_get<_CharT> {
 public:
   typedef _CharT char_type;
   typedef _InputIterator iter_type;
@@ -2442,7 +2445,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
           return false;
         }
       }
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case money_base::none:
       if (__p != 3) {
         while (__b != __e && __ct.is(ctype_base::space, *__b))
@@ -2817,7 +2820,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_put<wchar_t>;
 #    endif
 
 template <class _CharT, class _OutputIterator = ostreambuf_iterator<_CharT> >
-class _LIBCPP_TEMPLATE_VIS money_put : public locale::facet, private __money_put<_CharT> {
+class money_put : public locale::facet, private __money_put<_CharT> {
 public:
   typedef _CharT char_type;
   typedef _OutputIterator iter_type;
@@ -2972,7 +2975,7 @@ public:
 };
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS messages : public locale::facet, public messages_base {
+class messages : public locale::facet, public messages_base {
 public:
   typedef _CharT char_type;
   typedef basic_string<_CharT> string_type;
@@ -3048,7 +3051,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages<wchar_t>;
 #    endif
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS messages_byname : public messages<_CharT> {
+class messages_byname : public messages<_CharT> {
 public:
   typedef messages_base::catalog catalog;
   typedef basic_string<_CharT> string_type;
@@ -3072,7 +3075,7 @@ template <class _Codecvt,
           class _Elem      = wchar_t,
           class _WideAlloc = allocator<_Elem>,
           class _ByteAlloc = allocator<char> >
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
 public:
   typedef basic_string<char, char_traits<char>, _ByteAlloc> byte_string;
   typedef basic_string<_Elem, char_traits<_Elem>, _WideAlloc> wide_string;
@@ -3114,7 +3117,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __first, const char* __last);
 
-  _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(_Elem __wchar) { return to_bytes(&__wchar, &__wchar + 1); }
+  _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(_Elem __wchar) { return to_bytes(std::addressof(__wchar), std::addressof(__wchar) + 1); }
   _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(const _Elem* __wptr) {
     return to_bytes(__wptr, __wptr + char_traits<_Elem>::length(__wptr));
   }
@@ -3176,7 +3179,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::from_bytes(const char*
     codecvt_base::result __r = codecvt_base::ok;
     state_type __st          = __cvtstate_;
     if (__frm != __frm_end) {
-      _Elem* __to     = &__ws[0];
+      _Elem* __to     = std::addressof(__ws[0]);
       _Elem* __to_end = __to + __ws.size();
       const char* __frm_nxt;
       do {
@@ -3186,19 +3189,19 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::from_bytes(const char*
         if (__frm_nxt == __frm) {
           __r = codecvt_base::error;
         } else if (__r == codecvt_base::noconv) {
-          __ws.resize(__to - &__ws[0]);
+          __ws.resize(__to - std::addressof(__ws[0]));
           // This only gets executed if _Elem is char
           __ws.append((const _Elem*)__frm, (const _Elem*)__frm_end);
           __frm = __frm_nxt;
           __r   = codecvt_base::ok;
         } else if (__r == codecvt_base::ok) {
-          __ws.resize(__to_nxt - &__ws[0]);
+          __ws.resize(__to_nxt - std::addressof(__ws[0]));
           __frm = __frm_nxt;
         } else if (__r == codecvt_base::partial) {
-          ptrdiff_t __s = __to_nxt - &__ws[0];
+          ptrdiff_t __s = __to_nxt - std::addressof(__ws[0]);
           __ws.resize(2 * __s);
-          __to     = &__ws[0] + __s;
-          __to_end = &__ws[0] + __ws.size();
+          __to     = std::addressof(__ws[0]) + __s;
+          __to_end = std::addressof(__ws[0]) + __ws.size();
           __frm    = __frm_nxt;
         }
       } while (__r == codecvt_base::partial && __frm_nxt < __frm_end);
@@ -3224,7 +3227,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
     codecvt_base::result __r = codecvt_base::ok;
     state_type __st          = __cvtstate_;
     if (__frm != __frm_end) {
-      char* __to     = &__bs[0];
+      char* __to     = std::addressof(__bs[0]);
       char* __to_end = __to + __bs.size();
       const _Elem* __frm_nxt;
       do {
@@ -3234,19 +3237,19 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
         if (__frm_nxt == __frm) {
           __r = codecvt_base::error;
         } else if (__r == codecvt_base::noconv) {
-          __bs.resize(__to - &__bs[0]);
+          __bs.resize(__to - std::addressof(__bs[0]));
           // This only gets executed if _Elem is char
           __bs.append((const char*)__frm, (const char*)__frm_end);
           __frm = __frm_nxt;
           __r   = codecvt_base::ok;
         } else if (__r == codecvt_base::ok) {
-          __bs.resize(__to_nxt - &__bs[0]);
+          __bs.resize(__to_nxt - std::addressof(__bs[0]));
           __frm = __frm_nxt;
         } else if (__r == codecvt_base::partial) {
-          ptrdiff_t __s = __to_nxt - &__bs[0];
+          ptrdiff_t __s = __to_nxt - std::addressof(__bs[0]);
           __bs.resize(2 * __s);
-          __to     = &__bs[0] + __s;
-          __to_end = &__bs[0] + __bs.size();
+          __to     = std::addressof(__bs[0]) + __s;
+          __to_end = std::addressof(__bs[0]) + __bs.size();
           __frm    = __frm_nxt;
         }
       } while (__r == codecvt_base::partial && __frm_nxt < __frm_end);
@@ -3254,21 +3257,21 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
     if (__r == codecvt_base::ok) {
       size_t __s = __bs.size();
       __bs.resize(__bs.capacity());
-      char* __to     = &__bs[0] + __s;
+      char* __to     = std::addressof(__bs[0]) + __s;
       char* __to_end = __to + __bs.size();
       do {
         char* __to_nxt;
         __r = __cvtptr_->unshift(__st, __to, __to_end, __to_nxt);
         if (__r == codecvt_base::noconv) {
-          __bs.resize(__to - &__bs[0]);
+          __bs.resize(__to - std::addressof(__bs[0]));
           __r = codecvt_base::ok;
         } else if (__r == codecvt_base::ok) {
-          __bs.resize(__to_nxt - &__bs[0]);
+          __bs.resize(__to_nxt - std::addressof(__bs[0]));
         } else if (__r == codecvt_base::partial) {
-          ptrdiff_t __sp = __to_nxt - &__bs[0];
+          ptrdiff_t __sp = __to_nxt - std::addressof(__bs[0]);
           __bs.resize(2 * __sp);
-          __to     = &__bs[0] + __sp;
-          __to_end = &__bs[0] + __bs.size();
+          __to     = std::addressof(__bs[0]) + __sp;
+          __to_end = std::addressof(__bs[0]) + __bs.size();
         }
       } while (__r == codecvt_base::partial);
       if (__r == codecvt_base::ok)
@@ -3283,7 +3286,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
 }
 
 template <class _Codecvt, class _Elem = wchar_t, class _Tr = char_traits<_Elem> >
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wbuffer_convert : public basic_streambuf<_Elem, _Tr> {
+class _LIBCPP_DEPRECATED_IN_CXX17 wbuffer_convert : public basic_streambuf<_Elem, _Tr> {
 public:
   // types:
   typedef _Elem char_type;
@@ -3387,7 +3390,7 @@ typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecv
   bool __initial = __read_mode();
   char_type __1buf;
   if (this->gptr() == 0)
-    this->setg(&__1buf, &__1buf + 1, &__1buf + 1);
+    this->setg(std::addressof(__1buf), std::addressof(__1buf) + 1, std::addressof(__1buf) + 1);
   const size_t __unget_sz = __initial ? 0 : std::min<size_t>((this->egptr() - this->eback()) / 2, 4);
   int_type __c            = traits_type::eof();
   if (this->gptr() == this->egptr()) {
@@ -3429,7 +3432,7 @@ typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecv
     }
   } else
     __c = *this->gptr();
-  if (this->eback() == &__1buf)
+  if (this->eback() == std::addressof(__1buf))
     this->setg(0, 0, 0);
   return __c;
 }
@@ -3465,7 +3468,7 @@ typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecv
   char_type* __epb_save = this->epptr();
   if (!traits_type::eq_int_type(__c, traits_type::eof())) {
     if (this->pptr() == 0)
-      this->setp(&__1buf, &__1buf + 1);
+      this->setp(std::addressof(__1buf), std::addressof(__1buf) + 1);
     *this->pptr() = traits_type::to_char_type(__c);
     this->pbump(1);
   }
@@ -3689,6 +3692,7 @@ _LIBCPP_POP_MACROS
 #    include <cstdarg>
 #    include <iterator>
 #    include <mutex>
+#    include <optional>
 #    include <stdexcept>
 #    include <type_traits>
 #    include <typeinfo>

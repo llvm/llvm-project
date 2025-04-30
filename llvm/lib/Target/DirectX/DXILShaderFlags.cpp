@@ -32,6 +32,35 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static bool hasUAVsAtEveryStage(DXILResourceMap &DRM,
+                                const ModuleMetadataInfo &MMDI) {
+  if (DRM.uavs().empty())
+    return false;
+
+  switch (MMDI.ShaderProfile) {
+  default:
+    return false;
+  case Triple::EnvironmentType::Compute:
+  case Triple::EnvironmentType::Pixel:
+    return false;
+  case Triple::EnvironmentType::Vertex:
+  case Triple::EnvironmentType::Geometry:
+  case Triple::EnvironmentType::Hull:
+  case Triple::EnvironmentType::Domain:
+    return true;
+  case Triple::EnvironmentType::Library:
+  case Triple::EnvironmentType::RayGeneration:
+  case Triple::EnvironmentType::Intersection:
+  case Triple::EnvironmentType::AnyHit:
+  case Triple::EnvironmentType::ClosestHit:
+  case Triple::EnvironmentType::Miss:
+  case Triple::EnvironmentType::Callable:
+  case Triple::EnvironmentType::Mesh:
+  case Triple::EnvironmentType::Amplification:
+    return MMDI.ValidatorVersion < VersionTuple(1, 8);
+  }
+}
+
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
   // case Intrinsic::dx_wave_getlanecount:
@@ -74,7 +103,8 @@ static bool checkWaveOps(Intrinsic::ID IID) {
 /// \param I Instruction to check.
 void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
                                             const Instruction &I,
-                                            DXILResourceTypeMap &DRTM) {
+                                            DXILResourceTypeMap &DRTM,
+                                            const ModuleMetadataInfo &MMDI) {
   if (!CSF.Doubles)
     CSF.Doubles = I.getType()->isDoubleTy();
 
@@ -99,12 +129,45 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
+  if (!CSF.LowPrecisionPresent)
+    CSF.LowPrecisionPresent =
+        I.getType()->isIntegerTy(16) || I.getType()->isHalfTy();
+
+  if (!CSF.LowPrecisionPresent) {
+    for (const Value *Op : I.operands()) {
+      if (Op->getType()->isIntegerTy(16) || Op->getType()->isHalfTy()) {
+        CSF.LowPrecisionPresent = true;
+        break;
+      }
+    }
+  }
+
+  if (!CSF.Int64Ops)
+    CSF.Int64Ops = I.getType()->isIntegerTy(64);
+
+  if (!CSF.Int64Ops) {
+    for (const Value *Op : I.operands()) {
+      if (Op->getType()->isIntegerTy(64)) {
+        CSF.Int64Ops = true;
+        break;
+      }
+    }
+  }
+
   if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
     switch (II->getIntrinsicID()) {
     default:
       break;
-    case Intrinsic::dx_resource_handlefrombinding:
-      switch (DRTM[cast<TargetExtType>(II->getType())].getResourceKind()) {
+    case Intrinsic::dx_resource_handlefrombinding: {
+      dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
+
+      // Set ResMayNotAlias if DXIL validator version >= 1.8 and the function
+      // uses UAVs
+      if (!CSF.ResMayNotAlias && CanSetResMayNotAlias &&
+          MMDI.ValidatorVersion >= VersionTuple(1, 8) && RTI.isUAV())
+        CSF.ResMayNotAlias = true;
+
+      switch (RTI.getResourceKind()) {
       case dxil::ResourceKind::StructuredBuffer:
       case dxil::ResourceKind::RawBuffer:
         CSF.EnableRawAndStructuredBuffers = true;
@@ -113,6 +176,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         break;
       }
       break;
+    }
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
@@ -138,7 +202,18 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
 
 /// Construct ModuleShaderFlags for module Module M
 void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
+                                   DXILResourceMap &DRM,
                                    const ModuleMetadataInfo &MMDI) {
+
+  CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
+
+  // Check if -res-may-alias was provided on the command line.
+  // The command line option will set the dx.resmayalias module flag to 1.
+  if (auto *RMA = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("dx.resmayalias")))
+    if (RMA->getValue() != 0)
+      CanSetResMayNotAlias = false;
+
   CallGraph CG(M);
 
   // Compute Shader Flags Mask for all functions using post-order visit of SCC
@@ -163,10 +238,22 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         continue;
       }
 
+      // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
+      // are UAVs present globally.
+      if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
+        SCCSF.ResMayNotAlias = !DRM.uavs().empty();
+
+      // Set UseNativeLowPrecision using dx.nativelowprec module metadata
+      if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
+              M.getModuleFlag("dx.nativelowprec")))
+        if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
+            NativeLowPrec->getValue() != 0)
+          SCCSF.UseNativeLowPrecision = true;
+
       ComputedShaderFlags CSF;
       for (const auto &BB : *F)
         for (const auto &I : BB)
-          updateFunctionFlags(CSF, I, DRTM);
+          updateFunctionFlags(CSF, I, DRTM, MMDI);
       // Update combined shader flags mask for all functions in this SCC
       SCCSF.merge(CSF);
 
@@ -198,6 +285,18 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
             *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
   }
+
+  // Set the Max64UAVs flag if the number of UAVs is > 8
+  uint32_t NumUAVs = 0;
+  for (auto &UAV : DRM.uavs())
+    if (MMDI.ValidatorVersion < VersionTuple(1, 6))
+      NumUAVs++;
+    else // MMDI.ValidatorVersion >= VersionTuple(1, 6)
+      NumUAVs += UAV.getBinding().Size;
+  if (NumUAVs > 8)
+    CombinedSFMask.Max64UAVs = true;
+
+  CombinedSFMask.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -236,10 +335,11 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
                                            ModuleAnalysisManager &AM) {
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
+  DXILResourceMap &DRM = AM.getResult<DXILResourceAnalysis>(M);
   const ModuleMetadataInfo MMDI = AM.getResult<DXILMetadataAnalysis>(M);
 
   ModuleShaderFlags MSFI;
-  MSFI.initialize(M, DRTM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI);
 
   return MSFI;
 }
@@ -269,16 +369,19 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   const ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  MSFI.initialize(M, DRTM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI);
   return false;
 }
 
 void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
+  AU.addRequiredTransitive<DXILResourceWrapperPass>();
   AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
