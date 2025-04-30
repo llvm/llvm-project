@@ -840,7 +840,7 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 // CHECK:               %[[VAL_34:.*]] = fir.absent !fir.box<none>
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_38:.*]] = fir.load %[[VAL_22]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>
 // CHECK:               %[[VAL_39:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.box<none>
@@ -928,7 +928,7 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 // CHECK:               %[[VAL_34:.*]] = fir.absent !fir.box<none>
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_38:.*]] = fir.load %[[VAL_22]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>
 // CHECK:               %[[VAL_39:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.box<none>
@@ -1015,7 +1015,7 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 // CHECK:               %[[VAL_34:.*]] = fir.absent !fir.box<none>
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_38:.*]] = fir.load %[[VAL_22]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 // CHECK:               %[[VAL_39:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
@@ -1103,7 +1103,7 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:               %[[VAL_34:.*]] = fir.absent !fir.box<none>
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:               %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %{{.*}}, %[[VAL_6]], %[[VAL_34]], %[[VAL_36]], %[[VAL_2]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_38:.*]] = fir.load %[[VAL_22]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 // CHECK:               %[[VAL_39:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>

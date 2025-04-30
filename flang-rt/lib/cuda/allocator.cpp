@@ -136,7 +136,7 @@ void RTDEF(CUFRegisterAllocator)() {
 }
 
 void *CUFAllocPinned(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t asyncId) {
+    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&p, sizeInBytes));
   return p;
@@ -144,18 +144,18 @@ void *CUFAllocPinned(
 
 void CUFFreePinned(void *p) { CUDA_REPORT_IF_ERROR(cudaFreeHost(p)); }
 
-void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t asyncId) {
+void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
   void *p;
   if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
     CUDA_REPORT_IF_ERROR(
         cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
   } else {
-    if (asyncId == kNoAsyncId) {
+    if (asyncObject == kNoAsyncObject) {
       CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
     } else {
       CUDA_REPORT_IF_ERROR(
-          cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)asyncId));
-      insertAllocation(p, sizeInBytes, asyncId);
+          cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)*asyncObject));
+      insertAllocation(p, sizeInBytes, (cudaStream_t)*asyncObject);
     }
   }
   return p;
@@ -174,7 +174,7 @@ void CUFFreeDevice(void *p) {
 }
 
 void *CUFAllocManaged(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t asyncId) {
+    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(
       cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
@@ -184,9 +184,9 @@ void *CUFAllocManaged(
 void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
 void *CUFAllocUnified(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t asyncId) {
+    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
   // Call alloc managed for the time being.
-  return CUFAllocManaged(sizeInBytes, asyncId);
+  return CUFAllocManaged(sizeInBytes, asyncObject);
 }
 
 void CUFFreeUnified(void *p) {
