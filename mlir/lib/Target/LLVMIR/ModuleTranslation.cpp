@@ -1533,6 +1533,12 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto fpContract = func.getFpContract())
     llvmFunc->addFnAttr("fp-contract", *fpContract);
 
+  if (auto instrumentFunctionEntry = func.getInstrumentFunctionEntry())
+    llvmFunc->addFnAttr("instrument-function-entry", *instrumentFunctionEntry);
+
+  if (auto instrumentFunctionExit = func.getInstrumentFunctionExit())
+    llvmFunc->addFnAttr("instrument-function-exit", *instrumentFunctionExit);
+
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {
