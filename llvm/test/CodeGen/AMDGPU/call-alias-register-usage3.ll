@@ -32,5 +32,3 @@ attributes #0 = { noinline norecurse nounwind optnone }
 attributes #1 = { noinline norecurse nounwind readnone willreturn "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,1" }
 attributes #2 = { nounwind readnone willreturn }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

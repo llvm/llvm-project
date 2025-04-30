@@ -110,7 +110,7 @@ void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 bool CompilerInstance::createTarget() {
   // Create the target instance.
   setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
-                                         getInvocation().TargetOpts));
+                                         getInvocation().getTargetOpts()));
   if (!hasTarget())
     return false;
 
@@ -119,14 +119,14 @@ bool CompilerInstance::createTarget() {
   if (!getAuxTarget() &&
       (getLangOpts().CUDA || getLangOpts().isTargetDevice()) &&
       !getFrontendOpts().AuxTriple.empty()) {
-    auto TO = std::make_shared<TargetOptions>();
+    auto &TO = AuxTargetOpts = std::make_unique<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
     if (getFrontendOpts().AuxTargetCPU)
       TO->CPU = *getFrontendOpts().AuxTargetCPU;
     if (getFrontendOpts().AuxTargetFeatures)
       TO->FeaturesAsWritten = *getFrontendOpts().AuxTargetFeatures;
     TO->HostTriple = getTarget().getTriple().str();
-    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
+    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), *TO));
   }
 
   if (!getTarget().hasStrictFP() && !getLangOpts().ExpStrictFP) {
@@ -536,6 +536,9 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                            /*ShowAllHeaders=*/true, /*OutputPath=*/"",
                            /*ShowDepth=*/true, /*MSStyle=*/true);
   }
+
+  if (GetDependencyDirectives)
+    PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 }
 
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
@@ -1152,7 +1155,8 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
-    StringRef OriginalModuleMapFile, StringRef ModuleFileName) {
+    StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+    std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
 
@@ -1212,35 +1216,55 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
-  Instance.createDiagnostics(
-      getVirtualFileSystem(),
-      new ForwardingDiagnosticConsumer(getDiagnosticClient()),
-      /*ShouldOwnClient=*/true);
-
-  if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
-    Instance.getDiagnostics().setSuppressSystemWarnings(false);
-
-  if (FrontendOpts.ModulesShareFileManager) {
+  if (ThreadSafeConfig) {
+    Instance.createFileManager(ThreadSafeConfig->getVFS());
+  } else if (FrontendOpts.ModulesShareFileManager) {
     Instance.setFileManager(&getFileManager());
   } else {
     Instance.createFileManager(&getVirtualFileSystem());
   }
+
+  if (ThreadSafeConfig) {
+    Instance.createDiagnostics(Instance.getVirtualFileSystem(),
+                               &ThreadSafeConfig->getDiagConsumer(),
+                               /*ShouldOwnClient=*/false);
+  } else {
+    Instance.createDiagnostics(
+        Instance.getVirtualFileSystem(),
+        new ForwardingDiagnosticConsumer(getDiagnosticClient()),
+        /*ShouldOwnClient=*/true);
+  }
+  if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
+    Instance.getDiagnostics().setSuppressSystemWarnings(false);
+
   Instance.createSourceManager(Instance.getFileManager());
   SourceManager &SourceMgr = Instance.getSourceManager();
 
-  // Note that this module is part of the module build stack, so that we
-  // can detect cycles in the module graph.
-  SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
-  SourceMgr.pushModuleBuildStack(ModuleName,
-                                 FullSourceLoc(ImportLoc, getSourceManager()));
+  if (ThreadSafeConfig) {
+    // Detecting cycles in the module graph is responsibility of the client.
+  } else {
+    // Note that this module is part of the module build stack, so that we
+    // can detect cycles in the module graph.
+    SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
+    SourceMgr.pushModuleBuildStack(
+        ModuleName, FullSourceLoc(ImportLoc, getSourceManager()));
+  }
 
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
 
-  // If we're collecting module dependencies, we need to share a collector
-  // between all of the module CompilerInstances. Other than that, we don't
-  // want to produce any dependency output from the module build.
-  Instance.setModuleDepCollector(getModuleDepCollector());
+  if (GetDependencyDirectives)
+    Instance.GetDependencyDirectives =
+        GetDependencyDirectives->cloneFor(Instance.getFileManager());
+
+  if (ThreadSafeConfig) {
+    Instance.setModuleDepCollector(ThreadSafeConfig->getModuleDepCollector());
+  } else {
+    // If we're collecting module dependencies, we need to share a collector
+    // between all of the module CompilerInstances. Other than that, we don't
+    // want to produce any dependency output from the module build.
+    Instance.setModuleDepCollector(getModuleDepCollector());
+  }
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   return InstancePtr;
@@ -1318,7 +1342,8 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
 }
 
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
-    SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName) {
+    SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+    std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   StringRef ModuleName = Module->getTopLevelModuleName();
 
   InputKind IK(getLanguageFromOptions(getLangOpts()), InputKind::ModuleMap);
@@ -1363,7 +1388,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
     return cloneForModuleCompileImpl(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
-        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
+        std::move(ThreadSafeConfig));
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1380,7 +1406,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
   auto Instance = cloneForModuleCompileImpl(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
-      ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+      ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
+      std::move(ThreadSafeConfig));
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);

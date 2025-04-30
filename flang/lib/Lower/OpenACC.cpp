@@ -52,6 +52,12 @@ static llvm::cl::opt<bool> generateDefaultBounds(
     llvm::cl::desc("Whether to generate default bounds for arrays."),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> strideIncludeLowerExtent(
+    "openacc-stride-include-lower-extent",
+    llvm::cl::desc(
+        "Whether to include the lower dimensions extents in the stride."),
+    llvm::cl::init(true));
+
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -369,6 +375,310 @@ getSymbolFromAccObject(const Fortran::parser::AccObject &accObject) {
   llvm::report_fatal_error("Could not find symbol");
 }
 
+/// Used to generate atomic.read operation which is created in existing
+/// location set by builder.
+static inline void
+genAtomicCaptureStatement(Fortran::lower::AbstractConverter &converter,
+                          mlir::Value fromAddress, mlir::Value toAddress,
+                          mlir::Type elementType, mlir::Location loc) {
+  // Generate `atomic.read` operation for atomic assigment statements
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  firOpBuilder.create<mlir::acc::AtomicReadOp>(
+      loc, fromAddress, toAddress, mlir::TypeAttr::get(elementType));
+}
+
+/// Used to generate atomic.write operation which is created in existing
+/// location set by builder.
+static inline void
+genAtomicWriteStatement(Fortran::lower::AbstractConverter &converter,
+                        mlir::Value lhsAddr, mlir::Value rhsExpr,
+                        mlir::Location loc,
+                        mlir::Value *evaluatedExprValue = nullptr) {
+  // Generate `atomic.write` operation for atomic assignment statements
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
+  // Create a conversion outside the capture block.
+  auto insertionPoint = firOpBuilder.saveInsertionPoint();
+  firOpBuilder.setInsertionPointAfter(rhsExpr.getDefiningOp());
+  rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
+  firOpBuilder.restoreInsertionPoint(insertionPoint);
+
+  firOpBuilder.create<mlir::acc::AtomicWriteOp>(loc, lhsAddr, rhsExpr);
+}
+
+/// Used to generate atomic.update operation which is created in existing
+/// location set by builder.
+static inline void genAtomicUpdateStatement(
+    Fortran::lower::AbstractConverter &converter, mlir::Value lhsAddr,
+    mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
+    const Fortran::parser::Expr &assignmentStmtExpr, mlir::Location loc,
+    mlir::Operation *atomicCaptureOp = nullptr) {
+  // Generate `atomic.update` operation for atomic assignment statements
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+
+  //  Create the omp.atomic.update or acc.atomic.update operation
+  //
+  //  func.func @_QPsb() {
+  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
+  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
+  //    %2 = fir.load %1 : !fir.ref<i32>
+  //    omp.atomic.update   %0 : !fir.ref<i32> {
+  //    ^bb0(%arg0: i32):
+  //      %3 = arith.addi %arg0, %2 : i32
+  //      omp.yield(%3 : i32)
+  //    }
+  //    return
+  //  }
+
+  auto getArgExpression =
+      [](std::list<Fortran::parser::ActualArgSpec>::const_iterator it) {
+        const auto &arg{std::get<Fortran::parser::ActualArg>((*it).t)};
+        const auto *parserExpr{
+            std::get_if<Fortran::common::Indirection<Fortran::parser::Expr>>(
+                &arg.u)};
+        return parserExpr;
+      };
+
+  // Lower any non atomic sub-expression before the atomic operation, and
+  // map its lowered value to the semantic representation.
+  Fortran::lower::ExprToValueMap exprValueOverrides;
+  // Max and min intrinsics can have a list of Args. Hence we need a list
+  // of nonAtomicSubExprs to hoist. Currently, only the load is hoisted.
+  llvm::SmallVector<const Fortran::lower::SomeExpr *> nonAtomicSubExprs;
+  Fortran::common::visit(
+      Fortran::common::visitors{
+          [&](const Fortran::common::Indirection<
+              Fortran::parser::FunctionReference> &funcRef) -> void {
+            const auto &args{
+                std::get<std::list<Fortran::parser::ActualArgSpec>>(
+                    funcRef.value().v.t)};
+            std::list<Fortran::parser::ActualArgSpec>::const_iterator beginIt =
+                args.begin();
+            std::list<Fortran::parser::ActualArgSpec>::const_iterator endIt =
+                args.end();
+            const auto *exprFirst{getArgExpression(beginIt)};
+            if (exprFirst && exprFirst->value().source ==
+                                 assignmentStmtVariable.GetSource()) {
+              // Add everything except the first
+              beginIt++;
+            } else {
+              // Add everything except the last
+              endIt--;
+            }
+            std::list<Fortran::parser::ActualArgSpec>::const_iterator it;
+            for (it = beginIt; it != endIt; it++) {
+              const Fortran::common::Indirection<Fortran::parser::Expr> *expr =
+                  getArgExpression(it);
+              if (expr)
+                nonAtomicSubExprs.push_back(Fortran::semantics::GetExpr(*expr));
+            }
+          },
+          [&](const auto &op) -> void {
+            using T = std::decay_t<decltype(op)>;
+            if constexpr (std::is_base_of<
+                              Fortran::parser::Expr::IntrinsicBinary,
+                              T>::value) {
+              const auto &exprLeft{std::get<0>(op.t)};
+              const auto &exprRight{std::get<1>(op.t)};
+              if (exprLeft.value().source == assignmentStmtVariable.GetSource())
+                nonAtomicSubExprs.push_back(
+                    Fortran::semantics::GetExpr(exprRight));
+              else
+                nonAtomicSubExprs.push_back(
+                    Fortran::semantics::GetExpr(exprLeft));
+            }
+          },
+      },
+      assignmentStmtExpr.u);
+  Fortran::lower::StatementContext nonAtomicStmtCtx;
+  if (!nonAtomicSubExprs.empty()) {
+    // Generate non atomic part before all the atomic operations.
+    auto insertionPoint = firOpBuilder.saveInsertionPoint();
+    if (atomicCaptureOp)
+      firOpBuilder.setInsertionPoint(atomicCaptureOp);
+    mlir::Value nonAtomicVal;
+    for (auto *nonAtomicSubExpr : nonAtomicSubExprs) {
+      nonAtomicVal = fir::getBase(converter.genExprValue(
+          currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
+      exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
+    }
+    if (atomicCaptureOp)
+      firOpBuilder.restoreInsertionPoint(insertionPoint);
+  }
+
+  mlir::Operation *atomicUpdateOp = nullptr;
+  atomicUpdateOp =
+      firOpBuilder.create<mlir::acc::AtomicUpdateOp>(currentLocation, lhsAddr);
+
+  llvm::SmallVector<mlir::Type> varTys = {varType};
+  llvm::SmallVector<mlir::Location> locs = {currentLocation};
+  firOpBuilder.createBlock(&atomicUpdateOp->getRegion(0), {}, varTys, locs);
+  mlir::Value val =
+      fir::getBase(atomicUpdateOp->getRegion(0).front().getArgument(0));
+
+  exprValueOverrides.try_emplace(
+      Fortran::semantics::GetExpr(assignmentStmtVariable), val);
+  {
+    // statement context inside the atomic block.
+    converter.overrideExprValues(&exprValueOverrides);
+    Fortran::lower::StatementContext atomicStmtCtx;
+    mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
+        *Fortran::semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
+    mlir::Value convertResult =
+        firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+    firOpBuilder.create<mlir::acc::YieldOp>(currentLocation, convertResult);
+    converter.resetExprOverrides();
+  }
+  firOpBuilder.setInsertionPointAfter(atomicUpdateOp);
+}
+
+/// Processes an atomic construct with write clause.
+void genAtomicWrite(Fortran::lower::AbstractConverter &converter,
+                    const Fortran::parser::AccAtomicWrite &atomicWrite,
+                    mlir::Location loc) {
+  const Fortran::parser::AssignmentStmt &stmt =
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicWrite.t)
+          .statement;
+  const Fortran::evaluate::Assignment &assign = *stmt.typedAssignment->v;
+  Fortran::lower::StatementContext stmtCtx;
+  // Get the value and address of atomic write operands.
+  mlir::Value rhsExpr =
+      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx));
+  mlir::Value lhsAddr =
+      fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx));
+  genAtomicWriteStatement(converter, lhsAddr, rhsExpr, loc);
+}
+
+/// Processes an atomic construct with read clause.
+void genAtomicRead(Fortran::lower::AbstractConverter &converter,
+                   const Fortran::parser::AccAtomicRead &atomicRead,
+                   mlir::Location loc) {
+  const auto &assignmentStmtExpr = std::get<Fortran::parser::Expr>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicRead.t)
+          .statement.t);
+  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicRead.t)
+          .statement.t);
+
+  Fortran::lower::StatementContext stmtCtx;
+  const Fortran::semantics::SomeExpr &fromExpr =
+      *Fortran::semantics::GetExpr(assignmentStmtExpr);
+  mlir::Type elementType = converter.genType(fromExpr);
+  mlir::Value fromAddress =
+      fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
+  mlir::Value toAddress = fir::getBase(converter.genExprAddr(
+      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  genAtomicCaptureStatement(converter, fromAddress, toAddress, elementType,
+                            loc);
+}
+
+/// Processes an atomic construct with update clause.
+void genAtomicUpdate(Fortran::lower::AbstractConverter &converter,
+                     const Fortran::parser::AccAtomicUpdate &atomicUpdate,
+                     mlir::Location loc) {
+  const auto &assignmentStmtExpr = std::get<Fortran::parser::Expr>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicUpdate.t)
+          .statement.t);
+  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicUpdate.t)
+          .statement.t);
+
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value lhsAddr = fir::getBase(converter.genExprAddr(
+      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
+  genAtomicUpdateStatement(converter, lhsAddr, varType, assignmentStmtVariable,
+                           assignmentStmtExpr, loc);
+}
+
+/// Processes an atomic construct with capture clause.
+void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
+                      const Fortran::parser::AccAtomicCapture &atomicCapture,
+                      mlir::Location loc) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  const Fortran::parser::AssignmentStmt &stmt1 =
+      std::get<Fortran::parser::AccAtomicCapture::Stmt1>(atomicCapture.t)
+          .v.statement;
+  const Fortran::evaluate::Assignment &assign1 = *stmt1.typedAssignment->v;
+  const auto &stmt1Var{std::get<Fortran::parser::Variable>(stmt1.t)};
+  const auto &stmt1Expr{std::get<Fortran::parser::Expr>(stmt1.t)};
+  const Fortran::parser::AssignmentStmt &stmt2 =
+      std::get<Fortran::parser::AccAtomicCapture::Stmt2>(atomicCapture.t)
+          .v.statement;
+  const Fortran::evaluate::Assignment &assign2 = *stmt2.typedAssignment->v;
+  const auto &stmt2Var{std::get<Fortran::parser::Variable>(stmt2.t)};
+  const auto &stmt2Expr{std::get<Fortran::parser::Expr>(stmt2.t)};
+
+  // Pre-evaluate expressions to be used in the various operations inside
+  // `atomic.capture` since it is not desirable to have anything other than
+  // a `atomic.read`, `atomic.write`, or `atomic.update` operation
+  // inside `atomic.capture`
+  Fortran::lower::StatementContext stmtCtx;
+  // LHS evaluations are common to all combinations of `atomic.capture`
+  mlir::Value stmt1LHSArg =
+      fir::getBase(converter.genExprAddr(assign1.lhs, stmtCtx));
+  mlir::Value stmt2LHSArg =
+      fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
+
+  // Type information used in generation of `atomic.update` operation
+  mlir::Type stmt1VarType =
+      fir::getBase(converter.genExprValue(assign1.lhs, stmtCtx)).getType();
+  mlir::Type stmt2VarType =
+      fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
+
+  mlir::Operation *atomicCaptureOp = nullptr;
+  atomicCaptureOp = firOpBuilder.create<mlir::acc::AtomicCaptureOp>(loc);
+
+  firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
+  mlir::Block &block = atomicCaptureOp->getRegion(0).back();
+  firOpBuilder.setInsertionPointToStart(&block);
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
+      // Atomic capture construct is of the form [capture-stmt, update-stmt]
+      const Fortran::semantics::SomeExpr &fromExpr =
+          *Fortran::semantics::GetExpr(stmt1Expr);
+      mlir::Type elementType = converter.genType(fromExpr);
+      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
+                                elementType, loc);
+      genAtomicUpdateStatement(converter, stmt2LHSArg, stmt2VarType, stmt2Var,
+                               stmt2Expr, loc, atomicCaptureOp);
+    } else {
+      // Atomic capture construct is of the form [capture-stmt, write-stmt]
+      firOpBuilder.setInsertionPoint(atomicCaptureOp);
+      mlir::Value stmt2RHSArg =
+          fir::getBase(converter.genExprValue(assign2.rhs, stmtCtx));
+      firOpBuilder.setInsertionPointToStart(&block);
+      const Fortran::semantics::SomeExpr &fromExpr =
+          *Fortran::semantics::GetExpr(stmt1Expr);
+      mlir::Type elementType = converter.genType(fromExpr);
+      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
+                                elementType, loc);
+      genAtomicWriteStatement(converter, stmt2LHSArg, stmt2RHSArg, loc);
+    }
+  } else {
+    // Atomic capture construct is of the form [update-stmt, capture-stmt]
+    const Fortran::semantics::SomeExpr &fromExpr =
+        *Fortran::semantics::GetExpr(stmt2Expr);
+    mlir::Type elementType = converter.genType(fromExpr);
+    genAtomicUpdateStatement(converter, stmt1LHSArg, stmt1VarType, stmt1Var,
+                             stmt1Expr, loc, atomicCaptureOp);
+    genAtomicCaptureStatement(converter, stmt1LHSArg, stmt2LHSArg, elementType,
+                              loc);
+  }
+  firOpBuilder.setInsertionPointToEnd(&block);
+  firOpBuilder.create<mlir::acc::TerminatorOp>(loc);
+  firOpBuilder.setInsertionPointToStart(&block);
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -396,7 +706,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     // If the input value is optional and is not a descriptor, we use the
@@ -437,7 +748,8 @@ static void genDeclareDataOperandOperations(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
     EntryOp op = createDataEntryOp<EntryOp>(
         builder, operandLocation, info.addr, asFortran, bounds, structured,
@@ -519,9 +831,9 @@ fir::ShapeOp genShapeOp(mlir::OpBuilder &builder, fir::SequenceType seqTy,
 
 template <typename RecipeOp>
 static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
-                                     mlir::Type ty, mlir::Location loc) {
+                                     mlir::Type argTy, mlir::Location loc) {
   mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
-  ty = fir::unwrapRefType(ty);
+  mlir::Type unwrappedTy = fir::unwrapRefType(argTy);
 
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = builder.create<fir::AllocaOp>(loc, ty);
@@ -531,9 +843,10 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
         fir::FortranVariableFlagsAttr{});
   };
 
-  if (fir::isa_trivial(ty)) {
-    retVal = getDeclareOpForType(ty).getBase();
-  } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
+  if (fir::isa_trivial(unwrappedTy)) {
+    retVal = getDeclareOpForType(unwrappedTy).getBase();
+  } else if (auto seqTy =
+                 mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value shape;
       llvm::SmallVector<mlir::Value> extents;
@@ -554,15 +867,33 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
           /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
       retVal = declareOp.getBase();
     }
-  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
+  } else if (auto boxTy =
+                 mlir::dyn_cast_or_null<fir::BaseBoxType>(unwrappedTy)) {
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     if (fir::isa_trivial(innerTy)) {
-      retVal = getDeclareOpForType(ty).getBase();
+      retVal = getDeclareOpForType(unwrappedTy).getBase();
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
       hlfir::Entity source = hlfir::Entity{retVal};
       auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
-      retVal = temp;
+      if (fir::isa_ref_type(argTy)) {
+        // When the temp is created - it is not a reference - thus we can
+        // end up with a type inconsistency. Therefore ensure storage is created
+        // for it.
+        retVal = getDeclareOpForType(unwrappedTy).getBase();
+        mlir::Value storeDst = retVal;
+        if (fir::unwrapRefType(retVal.getType()) != temp.getType()) {
+          // `createTempFromMold` makes the unfortunate choice to lose the
+          // `fir.heap` and `fir.ptr` types when wrapping with a box. Namely,
+          // when wrapping a `fir.heap<fir.array>`, it will create instead a
+          // `fir.box<fir.array>`. Cast here to deal with this inconsistency.
+          storeDst = firBuilder.createConvert(
+              loc, firBuilder.getRefType(temp.getType()), retVal);
+        }
+        builder.create<fir::StoreOp>(loc, temp, storeDst);
+      } else {
+        retVal = temp;
+      }
     } else {
       TODO(loc, "Unsupported boxed type in OpenACC privatization");
     }
@@ -914,7 +1245,8 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     RecipeOp recipe;
@@ -1545,7 +1877,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     mlir::Type reductionTy = fir::unwrapRefType(info.addr.getType());
@@ -3744,6 +4077,66 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                            const Fortran::parser::AccObjectList &accObjectList,
                            mlir::acc::DataClause clause) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  auto genCtors = [&](const mlir::Location operandLocation,
+                      const Fortran::semantics::Symbol &symbol) {
+    std::string globalName = converter.mangleName(symbol);
+    fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
+    std::stringstream declareGlobalCtorName;
+    declareGlobalCtorName << globalName << "_acc_ctor";
+    std::stringstream declareGlobalDtorName;
+    declareGlobalDtorName << globalName << "_acc_dtor";
+    std::stringstream asFortran;
+    asFortran << symbol.name().ToString();
+
+    if (builder.getModule().lookupSymbol<mlir::acc::GlobalConstructorOp>(
+            declareGlobalCtorName.str()))
+      return;
+
+    if (!globalOp) {
+      if (Fortran::semantics::FindEquivalenceSet(symbol)) {
+        for (Fortran::semantics::EquivalenceObject eqObj :
+             *Fortran::semantics::FindEquivalenceSet(symbol)) {
+          std::string eqName = converter.mangleName(eqObj.symbol);
+          globalOp = builder.getNamedGlobal(eqName);
+          if (globalOp)
+            break;
+        }
+
+        if (!globalOp)
+          llvm::report_fatal_error("could not retrieve global symbol");
+      } else {
+        llvm::report_fatal_error("could not retrieve global symbol");
+      }
+    }
+
+    addDeclareAttr(builder, globalOp.getOperation(), clause);
+    auto crtPos = builder.saveInsertionPoint();
+    modBuilder.setInsertionPointAfter(globalOp);
+    if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType()))) {
+      createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, mlir::acc::CopyinOp,
+                            mlir::acc::DeclareEnterOp, ExitOp>(
+          modBuilder, builder, operandLocation, globalOp, clause,
+          declareGlobalCtorName.str(), /*implicit=*/true, asFortran);
+      createDeclareAllocFunc<EntryOp>(modBuilder, builder, operandLocation,
+                                      globalOp, clause);
+      if constexpr (!std::is_same_v<EntryOp, ExitOp>)
+        createDeclareDeallocFunc<ExitOp>(modBuilder, builder, operandLocation,
+                                         globalOp, clause);
+    } else {
+      createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
+                            mlir::acc::DeclareEnterOp, ExitOp>(
+          modBuilder, builder, operandLocation, globalOp, clause,
+          declareGlobalCtorName.str(), /*implicit=*/false, asFortran);
+    }
+    if constexpr (!std::is_same_v<EntryOp, ExitOp>) {
+      createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
+                            mlir::acc::GetDevicePtrOp, mlir::acc::DeclareExitOp,
+                            ExitOp>(
+          modBuilder, builder, operandLocation, globalOp, clause,
+          declareGlobalDtorName.str(), /*implicit=*/false, asFortran);
+    }
+    builder.restoreInsertionPoint(crtPos);
+  };
   for (const auto &accObject : accObjectList.v) {
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::common::visit(
@@ -3752,76 +4145,19 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
               if (const auto *name =
                       Fortran::semantics::getDesignatorNameIfDataRef(
                           designator)) {
-                std::string globalName = converter.mangleName(*name->symbol);
-                fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
-                std::stringstream declareGlobalCtorName;
-                declareGlobalCtorName << globalName << "_acc_ctor";
-                std::stringstream declareGlobalDtorName;
-                declareGlobalDtorName << globalName << "_acc_dtor";
-                std::stringstream asFortran;
-                asFortran << name->symbol->name().ToString();
-
-                if (builder.getModule()
-                        .lookupSymbol<mlir::acc::GlobalConstructorOp>(
-                            declareGlobalCtorName.str()))
-                  return;
-
-                if (!globalOp) {
-                  if (Fortran::semantics::FindEquivalenceSet(*name->symbol)) {
-                    for (Fortran::semantics::EquivalenceObject eqObj :
-                         *Fortran::semantics::FindEquivalenceSet(
-                             *name->symbol)) {
-                      std::string eqName = converter.mangleName(eqObj.symbol);
-                      globalOp = builder.getNamedGlobal(eqName);
-                      if (globalOp)
-                        break;
-                    }
-
-                    if (!globalOp)
-                      llvm::report_fatal_error(
-                          "could not retrieve global symbol");
-                  } else {
-                    llvm::report_fatal_error(
-                        "could not retrieve global symbol");
-                  }
-                }
-
-                addDeclareAttr(builder, globalOp.getOperation(), clause);
-                auto crtPos = builder.saveInsertionPoint();
-                modBuilder.setInsertionPointAfter(globalOp);
-                if (mlir::isa<fir::BaseBoxType>(
-                        fir::unwrapRefType(globalOp.getType()))) {
-                  createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
-                                        mlir::acc::CopyinOp,
-                                        mlir::acc::DeclareEnterOp, ExitOp>(
-                      modBuilder, builder, operandLocation, globalOp, clause,
-                      declareGlobalCtorName.str(), /*implicit=*/true,
-                      asFortran);
-                  createDeclareAllocFunc<EntryOp>(
-                      modBuilder, builder, operandLocation, globalOp, clause);
-                  if constexpr (!std::is_same_v<EntryOp, ExitOp>)
-                    createDeclareDeallocFunc<ExitOp>(
-                        modBuilder, builder, operandLocation, globalOp, clause);
-                } else {
-                  createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
-                                        mlir::acc::DeclareEnterOp, ExitOp>(
-                      modBuilder, builder, operandLocation, globalOp, clause,
-                      declareGlobalCtorName.str(), /*implicit=*/false,
-                      asFortran);
-                }
-                if constexpr (!std::is_same_v<EntryOp, ExitOp>) {
-                  createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
-                                        mlir::acc::GetDevicePtrOp,
-                                        mlir::acc::DeclareExitOp, ExitOp>(
-                      modBuilder, builder, operandLocation, globalOp, clause,
-                      declareGlobalDtorName.str(), /*implicit=*/false,
-                      asFortran);
-                }
-                builder.restoreInsertionPoint(crtPos);
+                genCtors(operandLocation, *name->symbol);
               }
             },
             [&](const Fortran::parser::Name &name) {
-              TODO(operandLocation, "OpenACC Global Ctor from parser::Name");
+              if (const auto *symbol = name.symbol) {
+                if (symbol
+                        ->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+                  genCtors(operandLocation, *symbol);
+                } else {
+                  TODO(operandLocation,
+                       "OpenACC Global Ctor from parser::Name");
+                }
+              }
             }},
         accObject.u);
   }
@@ -4342,24 +4678,16 @@ genACC(Fortran::lower::AbstractConverter &converter,
   Fortran::common::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::AccAtomicRead &atomicRead) {
-            Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
-                                                void>(converter, atomicRead,
-                                                      loc);
+            genAtomicRead(converter, atomicRead, loc);
           },
           [&](const Fortran::parser::AccAtomicWrite &atomicWrite) {
-            Fortran::lower::genOmpAccAtomicWrite<
-                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite,
-                                                       loc);
+            genAtomicWrite(converter, atomicWrite, loc);
           },
           [&](const Fortran::parser::AccAtomicUpdate &atomicUpdate) {
-            Fortran::lower::genOmpAccAtomicUpdate<
-                Fortran::parser::AccAtomicUpdate, void>(converter, atomicUpdate,
-                                                        loc);
+            genAtomicUpdate(converter, atomicUpdate, loc);
           },
           [&](const Fortran::parser::AccAtomicCapture &atomicCapture) {
-            Fortran::lower::genOmpAccAtomicCapture<
-                Fortran::parser::AccAtomicCapture, void>(converter,
-                                                         atomicCapture, loc);
+            genAtomicCapture(converter, atomicCapture, loc);
           },
       },
       atomicConstruct.u);

@@ -32,8 +32,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -76,6 +78,12 @@ static cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
             "significantly reducing Table Duplications")),
     cl::init(SUPPRESSION_DISABLE), cl::cat(DisassemblerEmitterCat));
 
+static cl::opt<bool> LargeTable(
+    "large-decoder-table",
+    cl::desc("Use large decoder table format. This uses 24 bits for offset\n"
+             "in the table instead of the default 16 bits."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -84,6 +92,8 @@ STATISTIC(NumEncodingsSupported, "Number of encodings supported");
 STATISTIC(NumEncodingsOmitted, "Number of encodings omitted");
 
 namespace {
+
+unsigned getNumToSkipInBytes() { return LargeTable ? 3 : 2; }
 
 struct EncodingField {
   unsigned Base, Width, Offset;
@@ -117,23 +127,57 @@ typedef std::vector<FixupList> FixupScopeList;
 typedef SmallSetVector<CachedHashString, 16> PredicateSet;
 typedef SmallSetVector<CachedHashString, 16> DecoderSet;
 
-struct DecoderTable : public std::vector<uint8_t> {
+class DecoderTable {
+public:
+  DecoderTable() { Data.reserve(16384); }
+
+  void clear() { Data.clear(); }
+  void push_back(uint8_t Item) { Data.push_back(Item); }
+  size_t size() const { return Data.size(); }
+  const uint8_t *data() const { return Data.data(); }
+
+  using const_iterator = std::vector<uint8_t>::const_iterator;
+  const_iterator begin() const { return Data.begin(); }
+  const_iterator end() const { return Data.end(); }
+
   // Insert a ULEB128 encoded value into the table.
   void insertULEB128(uint64_t Value) {
     // Encode and emit the value to filter against.
     uint8_t Buffer[16];
     unsigned Len = encodeULEB128(Value, Buffer);
-    insert(end(), Buffer, Buffer + Len);
+    Data.insert(Data.end(), Buffer, Buffer + Len);
   }
 
   // Insert space for `NumToSkip` and return the position
   // in the table for patching.
   size_t insertNumToSkip() {
-    size_t Size = size();
-    insert(end(), 3, 0);
+    size_t Size = Data.size();
+    Data.insert(Data.end(), getNumToSkipInBytes(), 0);
     return Size;
   }
+
+  void patchNumToSkip(size_t FixupIdx, uint32_t DestIdx) {
+    // Calculate the distance from the byte following the fixup entry byte
+    // to the destination. The Target is calculated from after the
+    // `getNumToSkipInBytes()`-byte NumToSkip entry itself, so subtract
+    // `getNumToSkipInBytes()` from the displacement here to account for that.
+    assert(DestIdx >= FixupIdx + getNumToSkipInBytes() &&
+           "Expecting a forward jump in the decoding table");
+    uint32_t Delta = DestIdx - FixupIdx - getNumToSkipInBytes();
+    if (!isUIntN(8 * getNumToSkipInBytes(), Delta))
+      PrintFatalError(
+          "disassembler decoding table too large, try --large-decoder-table");
+
+    Data[FixupIdx] = static_cast<uint8_t>(Delta);
+    Data[FixupIdx + 1] = static_cast<uint8_t>(Delta >> 8);
+    if (getNumToSkipInBytes() == 3)
+      Data[FixupIdx + 2] = static_cast<uint8_t>(Delta >> 16);
+  }
+
+private:
+  std::vector<uint8_t> Data;
 };
+
 struct DecoderTableInfo {
   DecoderTable Table;
   FixupScopeList FixupStack;
@@ -690,19 +734,8 @@ static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
                                uint32_t DestIdx) {
   // Any NumToSkip fixups in the current scope can resolve to the
   // current location.
-  for (uint32_t FixupIdx : reverse(Fixups)) {
-    // Calculate the distance from the byte following the fixup entry byte
-    // to the destination. The Target is calculated from after the 24-bit
-    // NumToSkip entry itself, so subtract three from the displacement here
-    // to account for that.
-    uint32_t Delta = DestIdx - FixupIdx - 3;
-    // Our NumToSkip entries are 24-bits. Make sure our table isn't too
-    // big.
-    assert(isUInt<24>(Delta));
-    Table[FixupIdx] = (uint8_t)Delta;
-    Table[FixupIdx + 1] = (uint8_t)(Delta >> 8);
-    Table[FixupIdx + 2] = (uint8_t)(Delta >> 16);
-  }
+  for (uint32_t FixupIdx : Fixups)
+    Table.patchNumToSkip(FixupIdx, DestIdx);
 }
 
 // Emit table entries to decode instructions given a segment or segments
@@ -759,15 +792,9 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
     Delegate->emitTableEntries(TableInfo);
 
     // Now that we've emitted the body of the handler, update the NumToSkip
-    // of the filter itself to be able to skip forward when false. Subtract
-    // three as to account for the width of the NumToSkip field itself.
-    if (PrevFilter) {
-      uint32_t NumToSkip = Table.size() - PrevFilter - 3;
-      assert(isUInt<24>(NumToSkip) && "disassembler decoding table too large!");
-      Table[PrevFilter] = (uint8_t)NumToSkip;
-      Table[PrevFilter + 1] = (uint8_t)(NumToSkip >> 8);
-      Table[PrevFilter + 2] = (uint8_t)(NumToSkip >> 16);
-    }
+    // of the filter itself to be able to skip forward when false.
+    if (PrevFilter)
+      Table.patchNumToSkip(PrevFilter, Table.size());
   }
 
   // If there is no fallthrough, then the final filter should get fixed
@@ -814,7 +841,8 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     OS << (unsigned)*I++ << ", ";
   };
 
-  // Emit 24-bit numtoskip value to OS, returning the NumToSkip value.
+  // Emit `getNumToSkipInBytes()`-byte numtoskip value to OS, returning the
+  // NumToSkip value.
   auto emitNumToSkip = [](DecoderTable::const_iterator &I,
                           formatted_raw_ostream &OS) {
     uint8_t Byte = *I++;
@@ -823,9 +851,11 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     Byte = *I++;
     OS << (unsigned)Byte << ", ";
     NumToSkip |= Byte << 8;
-    Byte = *I++;
-    OS << (unsigned)(Byte) << ", ";
-    NumToSkip |= Byte << 16;
+    if (getNumToSkipInBytes() == 3) {
+      Byte = *I++;
+      OS << (unsigned)(Byte) << ", ";
+      NumToSkip |= Byte << 16;
+    }
     return NumToSkip;
   };
 
@@ -866,7 +896,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
 
-      // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -881,7 +910,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       // ULEB128 encoded field value.
       emitULEB128(I, OS);
 
-      // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -890,7 +918,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       OS << Indent << "MCD::OPC_CheckPredicate, ";
       emitULEB128(I, OS);
 
-      // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -920,7 +947,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
       // Fallthrough for OPC_TryDecode.
 
-      // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
 
       OS << "// Opcode: " << NumberedEncodings[EncodingID]
@@ -1156,7 +1182,7 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
   }
 
   bool OpHasCompleteDecoder;
-  if (Decoder != "") {
+  if (!Decoder.empty()) {
     OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -1392,9 +1418,8 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
     TableInfo.Table.push_back(NumBits);
     TableInfo.Table.insertULEB128(Ilnd.FieldVal);
 
-    // The fixup is always 24-bits, so go ahead and allocate the space
-    // in the table so all our relative position calculations work OK even
-    // before we fully resolve the real value here.
+    // Allocate space in the table for fixup so all our relative position
+    // calculations work OK even before we fully resolve the real value here.
 
     // Push location for NumToSkip backpatching.
     TableInfo.FixupStack.back().push_back(TableInfo.Table.insertNumToSkip());
@@ -1921,7 +1946,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   // If the instruction has specified a custom decoding hook, use that instead
   // of trying to auto-generate the decoder.
   StringRef InstDecoder = EncodingDef.getValueAsString("DecoderMethod");
-  if (InstDecoder != "") {
+  if (!InstDecoder.empty()) {
     bool HasCompleteInstDecoder =
         EncodingDef.getValueAsBit("hasCompleteDecoder");
     InsnOperands.push_back(
@@ -2120,16 +2145,14 @@ static void emitInsertBits(formatted_raw_ostream &OS) {
 // Helper function for inserting bits extracted from an encoded instruction into
 // a field.
 template <typename InsnType>
-static std::enable_if_t<std::is_integral<InsnType>::value>
-insertBits(InsnType &field, InsnType bits, unsigned startBit, unsigned numBits) {
-  assert(startBit + numBits <= sizeof field * 8);
-  field |= (InsnType)bits << startBit;
-}
-
-template <typename InsnType>
-static std::enable_if_t<!std::is_integral<InsnType>::value>
-insertBits(InsnType &field, uint64_t bits, unsigned startBit, unsigned numBits) {
-  field.insertBits(bits, startBit, numBits);
+static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
+                       unsigned numBits) {
+  if constexpr (std::is_integral<InsnType>::value) {
+    assert(startBit + numBits <= sizeof field * 8);
+    field |= (InsnType)bits << startBit;
+  } else {
+    field.insertBits(bits, startBit, numBits);
+  }
 }
 )";
 }
@@ -2139,6 +2162,15 @@ insertBits(InsnType &field, uint64_t bits, unsigned startBit, unsigned numBits) 
 static void emitDecodeInstruction(formatted_raw_ostream &OS,
                                   bool IsVarLenInst) {
   OS << R"(
+static unsigned decodeNumToSkip(const uint8_t *&Ptr) {
+  unsigned NumToSkip = *Ptr++;
+  NumToSkip |= (*Ptr++) << 8;
+)";
+  if (getNumToSkipInBytes() == 3)
+    OS << "  NumToSkip |= (*Ptr++) << 16;\n";
+  OS << R"(  return NumToSkip;
+}
+
 template <typename InsnType>
 static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                                       InsnType insn, uint64_t Address,
@@ -2176,10 +2208,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       // Decode the field value.
       uint64_t Val = decodeULEB128AndIncUnsafe(Ptr);
       bool Failed = Val != CurFieldValue;
-      // NumToSkip is a plain 24-bit integer.
-      unsigned NumToSkip = *Ptr++;
-      NumToSkip |= (*Ptr++) << 8;
-      NumToSkip |= (*Ptr++) << 16;
+      unsigned NumToSkip = decodeNumToSkip(Ptr);
 
       // Perform the filter operation.
       if (Failed)
@@ -2203,10 +2232,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       uint64_t ExpectedValue = decodeULEB128(++Ptr, &PtrLen);
       Ptr += PtrLen;
       bool Failed = ExpectedValue != FieldValue;
-      // NumToSkip is a plain 24-bit integer.
-      unsigned NumToSkip = *Ptr++;
-      NumToSkip |= (*Ptr++) << 8;
-      NumToSkip |= (*Ptr++) << 16;
+      unsigned NumToSkip = decodeNumToSkip(Ptr);
 
       // If the actual and expected values don't match, skip.
       if (Failed)
@@ -2221,10 +2247,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     case MCD::OPC_CheckPredicate: {
       // Decode the Predicate Index value.
       unsigned PIdx = decodeULEB128AndIncUnsafe(Ptr);
-      // NumToSkip is a plain 24-bit integer.
-      unsigned NumToSkip = *Ptr++;
-      NumToSkip |= (*Ptr++) << 8;
-      NumToSkip |= (*Ptr++) << 16;
+      unsigned NumToSkip = decodeNumToSkip(Ptr);
       // Check the predicate.
       bool Failed = !checkDecoderPredicate(PIdx, Bits);
       if (Failed)
@@ -2259,10 +2282,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       // Decode the Opcode value.
       unsigned Opc = decodeULEB128AndIncUnsafe(Ptr);
       unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
-      // NumToSkip is a plain 24-bit integer.
-      unsigned NumToSkip = *Ptr++;
-      NumToSkip |= (*Ptr++) << 8;
-      NumToSkip |= (*Ptr++) << 16;
+      unsigned NumToSkip = decodeNumToSkip(Ptr);
 
       // Perform the decode operation.
       MCInst TmpMI;
@@ -2510,7 +2530,6 @@ namespace {
     // decoders to give more opportunities for uniqueing.
     TableInfo.Table.clear();
     TableInfo.FixupStack.clear();
-    TableInfo.Table.reserve(16384);
     TableInfo.FixupStack.emplace_back();
     FC.emitTableEntries(TableInfo);
     // Any NumToSkip fixups in the top level scope can resolve to the
