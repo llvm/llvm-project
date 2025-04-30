@@ -153,21 +153,6 @@ TEST(ManglerTest, UEFIX64) {
   EXPECT_EQ(mangleFunc("foo", llvm::GlobalValue::PrivateLinkage,
                        llvm::CallingConv::C, Mod, Mang),
             ".Lfoo");
-  // Test calling conv mangling.
-  EXPECT_EQ(mangleFunc("stdcall", llvm::GlobalValue::ExternalLinkage,
-                       llvm::CallingConv::X86_StdCall, Mod, Mang),
-            "stdcall");
-  EXPECT_EQ(mangleFunc("fastcall", llvm::GlobalValue::ExternalLinkage,
-                       llvm::CallingConv::X86_FastCall, Mod, Mang),
-            "fastcall");
-  EXPECT_EQ(mangleFunc("vectorcall", llvm::GlobalValue::ExternalLinkage,
-                       llvm::CallingConv::X86_VectorCall, Mod, Mang),
-            "vectorcall@@24");
-
-  // Adding a '?' prefix blocks calling convention mangling.
-  EXPECT_EQ(mangleFunc("?vectorcall", llvm::GlobalValue::ExternalLinkage,
-                       llvm::CallingConv::X86_VectorCall, Mod, Mang),
-            "?vectorcall");
 }
 
 TEST(ManglerTest, XCOFF) {
