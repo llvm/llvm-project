@@ -278,6 +278,9 @@ public:
   /// addressed later.
   RValue getUndefRValue(clang::QualType ty);
 
+  const CaseStmt *foldCaseStmt(const clang::CaseStmt &s, mlir::Type condType,
+                               mlir::ArrayAttr &value, cir::CaseOpKind &kind);
+
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -531,6 +534,11 @@ public:
   void emitDecl(const clang::Decl &d);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+
+
+  mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
+                                      mlir::Type condType,
+                                      bool buildingTopLevelCase);
 
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of

@@ -253,6 +253,7 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
   case Stmt::NullStmtClass:
     break;
   case Stmt::CaseStmtClass:
+  case Stmt::DefaultStmtClass:
     // If we reached here, we must not handling a switch case in the top level.
     return emitSwitchCase(cast<SwitchCase>(*s),
                           /*buildingTopLevelCase=*/false);
@@ -428,6 +429,53 @@ mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {
   return mlir::success();
 }
 
+
+const CaseStmt *CIRGenFunction::foldCaseStmt(const clang::CaseStmt &s,
+                                             mlir::Type condType,
+                                             mlir::ArrayAttr &value,
+                                             cir::CaseOpKind &kind) {
+  const CaseStmt *caseStmt = &s;
+  const CaseStmt *lastCase = &s;
+  SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
+
+  // Fold cascading cases whenever possible to simplify codegen a bit.
+  while (caseStmt) {
+    lastCase = caseStmt;
+
+    auto intVal = caseStmt->getLHS()->EvaluateKnownConstInt(getContext());
+
+    if (auto *rhs = caseStmt->getRHS()) {
+      auto endVal = rhs->EvaluateKnownConstInt(getContext());
+      SmallVector<mlir::Attribute, 4> rangeCaseAttr = {
+          cir::IntAttr::get(condType, intVal),
+          cir::IntAttr::get(condType, endVal)};
+      value = builder.getArrayAttr(rangeCaseAttr);
+      kind = cir::CaseOpKind::Range;
+
+      // We may not be able to fold rangaes. Due to we can't present range case
+      // with other trivial cases now.
+      return caseStmt;
+    }
+
+    caseEltValueListAttr.push_back(cir::IntAttr::get(condType, intVal));
+
+    caseStmt = dyn_cast_or_null<CaseStmt>(caseStmt->getSubStmt());
+
+    // Break early if we found ranges. We can't fold ranges due to the same
+    // reason above.
+    if (caseStmt && caseStmt->getRHS())
+      break;
+  }
+
+  if (!caseEltValueListAttr.empty()) {
+    value = builder.getArrayAttr(caseEltValueListAttr);
+    kind = caseEltValueListAttr.size() > 1 ? cir::CaseOpKind::Anyof
+                                           : cir::CaseOpKind::Equal;
+  }
+
+  return lastCase;
+}
+
 template <typename T>
 mlir::LogicalResult
 CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
@@ -500,8 +548,8 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   if (subStmtKind == SubStmtKind::Case) {
     result = emitCaseStmt(*cast<CaseStmt>(sub), condType, buildingTopLevelCase);
   } else if (subStmtKind == SubStmtKind::Default) {
-    getCIRGenModule().errorNYI(sub->getSourceRange(), "Default case");
-    return mlir::failure();
+    result = emitDefaultStmt(*cast<DefaultStmt>(sub), condType,
+                             buildingTopLevelCase);
   } else if (buildingTopLevelCase) {
     // If we're building a top level case, try to restore the insert point to
     // the case we're building, then we can attach more random stmts to the
@@ -515,17 +563,20 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
 mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
                                                  mlir::Type condType,
                                                  bool buildingTopLevelCase) {
-  llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
-  SmallVector<mlir::Attribute, 1> caseEltValueListAttr;
-  caseEltValueListAttr.push_back(cir::IntAttr::get(condType, intVal));
-  mlir::ArrayAttr value = builder.getArrayAttr(caseEltValueListAttr);
-  if (s.getRHS()) {
-    getCIRGenModule().errorNYI(s.getSourceRange(), "SwitchOp range kind");
-    return mlir::failure();
-  }
+  cir::CaseOpKind kind;
+  mlir::ArrayAttr value;
   assert(!cir::MissingFeatures::foldCaseStmt());
-  return emitCaseDefaultCascade(&s, condType, value, cir::CaseOpKind::Equal,
+  const CaseStmt *caseStmt = foldCaseStmt(s, condType, value, kind);
+  return emitCaseDefaultCascade(caseStmt, condType, value, kind,
                                 buildingTopLevelCase);
+}
+
+
+  mlir::LogicalResult CIRGenFunction::emitDefaultStmt(const clang::DefaultStmt &s,
+                                      mlir::Type condType,
+                                      bool buildingTopLevelCase) {
+  return emitCaseDefaultCascade(&s, condType, builder.getArrayAttr({}),
+                                cir::CaseOpKind::Default, buildingTopLevelCase);
 }
 
 mlir::LogicalResult CIRGenFunction::emitSwitchCase(const SwitchCase &s,
@@ -537,10 +588,9 @@ mlir::LogicalResult CIRGenFunction::emitSwitchCase(const SwitchCase &s,
     return emitCaseStmt(cast<CaseStmt>(s), condTypeStack.back(),
                         buildingTopLevelCase);
 
-  if (s.getStmtClass() == Stmt::DefaultStmtClass) {
-    getCIRGenModule().errorNYI(s.getSourceRange(), "Default case");
-    return mlir::failure();
-  }
+  if (s.getStmtClass() == Stmt::DefaultStmtClass)
+    return emitDefaultStmt(cast<DefaultStmt>(s), condTypeStack.back(),
+                           buildingTopLevelCase);
 
   llvm_unreachable("expect case or default stmt");
 }
