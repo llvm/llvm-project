@@ -512,16 +512,24 @@ void Parser::Initialize() {
   // Initialization for Objective-C context sensitive keywords recognition.
   // Referenced in Parser::ParseObjCTypeQualifierList.
   if (getLangOpts().ObjC) {
-    ObjCTypeQuals[objc_in] = &PP.getIdentifierTable().get("in");
-    ObjCTypeQuals[objc_out] = &PP.getIdentifierTable().get("out");
-    ObjCTypeQuals[objc_inout] = &PP.getIdentifierTable().get("inout");
-    ObjCTypeQuals[objc_oneway] = &PP.getIdentifierTable().get("oneway");
-    ObjCTypeQuals[objc_bycopy] = &PP.getIdentifierTable().get("bycopy");
-    ObjCTypeQuals[objc_byref] = &PP.getIdentifierTable().get("byref");
-    ObjCTypeQuals[objc_nonnull] = &PP.getIdentifierTable().get("nonnull");
-    ObjCTypeQuals[objc_nullable] = &PP.getIdentifierTable().get("nullable");
-    ObjCTypeQuals[objc_null_unspecified]
-      = &PP.getIdentifierTable().get("null_unspecified");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::in)] =
+        &PP.getIdentifierTable().get("in");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::out)] =
+        &PP.getIdentifierTable().get("out");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::inout)] =
+        &PP.getIdentifierTable().get("inout");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::oneway)] =
+        &PP.getIdentifierTable().get("oneway");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::bycopy)] =
+        &PP.getIdentifierTable().get("bycopy");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::byref)] =
+        &PP.getIdentifierTable().get("byref");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::nonnull)] =
+        &PP.getIdentifierTable().get("nonnull");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::nullable)] =
+        &PP.getIdentifierTable().get("nullable");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::null_unspecified)] =
+        &PP.getIdentifierTable().get("null_unspecified");
   }
 
   Ident_instancetype = nullptr;
@@ -1363,7 +1371,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // In delayed template parsing mode, for function template we consume the
   // tokens and store them for late parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing && Tok.isNot(tok::equal) &&
-      TemplateInfo.Kind == ParsedTemplateInfo::Template &&
+      TemplateInfo.Kind == ParsedTemplateKind::Template &&
       Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
@@ -1704,7 +1712,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     }
   } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
              Tok.is(tok::l_paren)) {
-    ParenParseOption ExprType = SimpleExpr;
+    ParenParseOption ExprType = ParenParseOption::SimpleExpr;
     SourceLocation RParenLoc;
     ParsedType CastTy;
 
@@ -2427,15 +2435,17 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
                                                Result.IsIfExists, Result.SS,
                                                Result.Name)) {
   case Sema::IER_Exists:
-    Result.Behavior = Result.IsIfExists ? IEB_Parse : IEB_Skip;
+    Result.Behavior =
+        Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
   case Sema::IER_DoesNotExist:
-    Result.Behavior = !Result.IsIfExists ? IEB_Parse : IEB_Skip;
+    Result.Behavior =
+        !Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
   case Sema::IER_Dependent:
-    Result.Behavior = IEB_Dependent;
+    Result.Behavior = IfExistsBehavior::Dependent;
     break;
 
   case Sema::IER_Error:
@@ -2457,14 +2467,14 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse declarations below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Cannot have a dependent external declaration");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }
