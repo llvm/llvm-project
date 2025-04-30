@@ -17,6 +17,7 @@
 ////
 ////===----------------------------------------------------------------------===//
 
+#include "AMDGPU.h"
 #include "llvm/Target/TargetVerify/AMDGPUTargetVerifier.h"
 
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -24,7 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
+//#include "llvm/InitializePasses.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
@@ -133,7 +134,6 @@ PreservedAnalyses AMDGPUTargetVerifierPass::run(Function &F, FunctionAnalysisMan
   return PreservedAnalyses::all();
 }
 
-/*
 struct AMDGPUTargetVerifierLegacyPass : public FunctionPass {
   static char ID;
 
@@ -183,6 +183,6 @@ struct AMDGPUTargetVerifierLegacyPass : public FunctionPass {
 char AMDGPUTargetVerifierLegacyPass::ID = 0;
 FunctionPass *createAMDGPUTargetVerifierLegacyPass(bool FatalErrors) {
   return new AMDGPUTargetVerifierLegacyPass(FatalErrors);
-}*/
+}
 } // namespace llvm
-//INITIALIZE_PASS(AMDGPUTargetVerifierLegacyPass, "amdgpu-tgtverifier", "AMDGPU Target Verifier", false, false)
+INITIALIZE_PASS(AMDGPUTargetVerifierLegacyPass, "amdgpu-tgtverifier", "AMDGPU Target Verifier", false, false)
