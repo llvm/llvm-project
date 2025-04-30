@@ -19,7 +19,6 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
-
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
