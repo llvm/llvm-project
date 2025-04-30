@@ -840,12 +840,10 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     // Objective-C is special in that something like @class is two tokens,
     // where 'class' is an identifier. We don't want to diagnose @class as
     // using an identifier reserved in C++, but we do still want to diagnose
-    // something like 'int class;'. So if in Objective-C mode and the
-    // identifier is an Objective-C keyword, do some extra work to see if the
-    // preceding token is @.
+    // something like 'int class;'. In Objective-C, @ basically introduces an
+    // entirely new grammar, so no identier should be flagged as reserved.
     bool Diagnose = true;
-    if (getLangOpts().ObjC &&
-        II.getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword) {
+    if (getLangOpts().ObjC) {
       std::optional<Token> PrevTok =
           Lexer::findPreviousToken(Identifier.getLocation(), getSourceManager(),
                                    getLangOpts(), /*IncludeComments=*/false);
