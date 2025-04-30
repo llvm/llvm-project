@@ -5546,9 +5546,9 @@ bool Sema::BuiltinOSLogFormat(CallExpr *TheCall) {
     llvm::SmallBitVector CheckedVarArgs(NumArgs, false);
     ArrayRef<const Expr *> Args(TheCall->getArgs(), TheCall->getNumArgs());
     bool Success = CheckFormatArguments(
-        Args, FAPK_Variadic, nullptr, FormatIdx, FirstDataArg, FST_OSLog,
-        VariadicFunction, TheCall->getBeginLoc(), SourceRange(),
-        CheckedVarArgs);
+        Args, FAPK_Variadic, nullptr, FormatIdx, FirstDataArg,
+        FormatStringType::OSLog, VariadicFunction, TheCall->getBeginLoc(),
+        SourceRange(), CheckedVarArgs);
     if (!Success)
       return true;
   }
@@ -5989,7 +5989,7 @@ static void CheckFormatString(
     Sema &S, const FormatStringLiteral *FExpr,
     const StringLiteral *ReferenceFormatString, const Expr *OrigFormatExpr,
     ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
-    unsigned format_idx, unsigned firstDataArg, Sema::FormatStringType Type,
+    unsigned format_idx, unsigned firstDataArg, FormatStringType Type,
     bool inFunctionCall, Sema::VariadicCallType CallType,
     llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
     bool IgnoreStringsWithoutSpecifiers);
@@ -6004,7 +6004,7 @@ static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
 static StringLiteralCheckType checkFormatStringExpr(
     Sema &S, const StringLiteral *ReferenceFormatString, const Expr *E,
     ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
-    unsigned format_idx, unsigned firstDataArg, Sema::FormatStringType Type,
+    unsigned format_idx, unsigned firstDataArg, FormatStringType Type,
     Sema::VariadicCallType CallType, bool InFunctionCall,
     llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
     llvm::APSInt Offset, bool IgnoreStringsWithoutSpecifiers = false) {
@@ -6412,49 +6412,49 @@ static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
   return nullptr;
 }
 
-StringRef Sema::GetFormatStringTypeName(Sema::FormatStringType FST) {
+StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
   switch (FST) {
-  case FST_Scanf:
+  case FormatStringType::Scanf:
     return "scanf";
-  case FST_Printf:
+  case FormatStringType::Printf:
     return "printf";
-  case FST_NSString:
+  case FormatStringType::NSString:
     return "NSString";
-  case FST_Strftime:
+  case FormatStringType::Strftime:
     return "strftime";
-  case FST_Strfmon:
+  case FormatStringType::Strfmon:
     return "strfmon";
-  case FST_Kprintf:
+  case FormatStringType::Kprintf:
     return "kprintf";
-  case FST_FreeBSDKPrintf:
+  case FormatStringType::FreeBSDKPrintf:
     return "freebsd_kprintf";
-  case FST_OSLog:
+  case FormatStringType::OSLog:
     return "os_log";
   default:
     return "<unknown>";
   }
 }
 
-Sema::FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
+FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
   return llvm::StringSwitch<FormatStringType>(Flavor)
-      .Case("scanf", FST_Scanf)
-      .Cases("printf", "printf0", "syslog", FST_Printf)
-      .Cases("NSString", "CFString", FST_NSString)
-      .Case("strftime", FST_Strftime)
-      .Case("strfmon", FST_Strfmon)
-      .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err", FST_Kprintf)
-      .Case("freebsd_kprintf", FST_FreeBSDKPrintf)
-      .Case("os_trace", FST_OSLog)
-      .Case("os_log", FST_OSLog)
-      .Default(FST_Unknown);
+      .Case("scanf", FormatStringType::Scanf)
+      .Cases("printf", "printf0", "syslog", FormatStringType::Printf)
+      .Cases("NSString", "CFString", FormatStringType::NSString)
+      .Case("strftime", FormatStringType::Strftime)
+      .Case("strfmon", FormatStringType::Strfmon)
+      .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err",
+             FormatStringType::Kprintf)
+      .Case("freebsd_kprintf", FormatStringType::FreeBSDKPrintf)
+      .Case("os_trace", FormatStringType::OSLog)
+      .Case("os_log", FormatStringType::OSLog)
+      .Default(FormatStringType::Unknown);
 }
 
-Sema::FormatStringType Sema::GetFormatStringType(const FormatAttr *Format) {
+FormatStringType Sema::GetFormatStringType(const FormatAttr *Format) {
   return GetFormatStringType(Format->getType()->getName());
 }
 
-Sema::FormatStringType
-Sema::GetFormatStringType(const FormatMatchesAttr *Format) {
+FormatStringType Sema::GetFormatStringType(const FormatMatchesAttr *Format) {
   return GetFormatStringType(Format->getType()->getName());
 }
 
@@ -6537,7 +6537,7 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
 
   // Strftime is particular as it always uses a single 'time' argument,
   // so it is safe to pass a non-literal string.
-  if (Type == FST_Strftime)
+  if (Type == FormatStringType::Strftime)
     return false;
 
   // Do not emit diag when the string param is a macro expansion and the
@@ -6545,7 +6545,8 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   // diag when using the NSLocalizedString and CFCopyLocalizedString macros
   // which are usually used in place of NS and CF string literals.
   SourceLocation FormatLoc = Args[format_idx]->getBeginLoc();
-  if (Type == FST_NSString && SourceMgr.isInSystemMacro(FormatLoc))
+  if (Type == FormatStringType::NSString &&
+      SourceMgr.isInSystemMacro(FormatLoc))
     return false;
 
   // If there are no arguments specified, warn with -Wformat-security, otherwise
@@ -6556,14 +6557,14 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
     switch (Type) {
     default:
       break;
-    case FST_Kprintf:
-    case FST_FreeBSDKPrintf:
-    case FST_Printf:
-    case FST_Syslog:
+    case FormatStringType::Kprintf:
+    case FormatStringType::FreeBSDKPrintf:
+    case FormatStringType::Printf:
+    case FormatStringType::Syslog:
       Diag(FormatLoc, diag::note_format_security_fixit)
         << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
       break;
-    case FST_NSString:
+    case FormatStringType::NSString:
       Diag(FormatLoc, diag::note_format_security_fixit)
         << FixItHint::CreateInsertion(FormatLoc, "@\"%@\", ");
       break;
@@ -6582,7 +6583,7 @@ protected:
   Sema &S;
   const FormatStringLiteral *FExpr;
   const Expr *OrigFormatExpr;
-  const Sema::FormatStringType FSType;
+  const FormatStringType FSType;
   const unsigned FirstDataArg;
   const unsigned NumDataArgs;
   const char *Beg; // Start of format string.
@@ -6599,10 +6600,9 @@ protected:
 
 public:
   CheckFormatHandler(Sema &s, const FormatStringLiteral *fexpr,
-                     const Expr *origFormatExpr,
-                     const Sema::FormatStringType type, unsigned firstDataArg,
-                     unsigned numDataArgs, const char *beg,
-                     Sema::FormatArgumentPassingKind APK,
+                     const Expr *origFormatExpr, const FormatStringType type,
+                     unsigned firstDataArg, unsigned numDataArgs,
+                     const char *beg, Sema::FormatArgumentPassingKind APK,
                      ArrayRef<const Expr *> Args, unsigned formatIdx,
                      bool inFunctionCall, Sema::VariadicCallType callType,
                      llvm::SmallBitVector &CheckedVarArgs,
@@ -7048,10 +7048,9 @@ namespace {
 class CheckPrintfHandler : public CheckFormatHandler {
 public:
   CheckPrintfHandler(Sema &s, const FormatStringLiteral *fexpr,
-                     const Expr *origFormatExpr,
-                     const Sema::FormatStringType type, unsigned firstDataArg,
-                     unsigned numDataArgs, bool isObjC, const char *beg,
-                     Sema::FormatArgumentPassingKind APK,
+                     const Expr *origFormatExpr, const FormatStringType type,
+                     unsigned firstDataArg, unsigned numDataArgs, bool isObjC,
+                     const char *beg, Sema::FormatArgumentPassingKind APK,
                      ArrayRef<const Expr *> Args, unsigned formatIdx,
                      bool inFunctionCall, Sema::VariadicCallType CallType,
                      llvm::SmallBitVector &CheckedVarArgs,
@@ -7061,12 +7060,13 @@ public:
                            inFunctionCall, CallType, CheckedVarArgs,
                            UncoveredArg) {}
 
-  bool isObjCContext() const { return FSType == Sema::FST_NSString; }
+  bool isObjCContext() const { return FSType == FormatStringType::NSString; }
 
   /// Returns true if '%@' specifiers are allowed in the format string.
   bool allowsObjCArg() const {
-    return FSType == Sema::FST_NSString || FSType == Sema::FST_OSLog ||
-           FSType == Sema::FST_OSTrace;
+    return FSType == FormatStringType::NSString ||
+           FSType == FormatStringType::OSLog ||
+           FSType == FormatStringType::OSTrace;
   }
 
   bool HandleInvalidPrintfConversionSpecifier(
@@ -7181,14 +7181,16 @@ class DecomposePrintfHandler : public CheckPrintfHandler {
   llvm::SmallVectorImpl<EquatableFormatArgument> &Specs;
   bool HadError;
 
-  DecomposePrintfHandler(
-      Sema &s, const FormatStringLiteral *fexpr, const Expr *origFormatExpr,
-      const Sema::FormatStringType type, unsigned firstDataArg,
-      unsigned numDataArgs, bool isObjC, const char *beg,
-      Sema::FormatArgumentPassingKind APK, ArrayRef<const Expr *> Args,
-      unsigned formatIdx, bool inFunctionCall, Sema::VariadicCallType CallType,
-      llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
-      llvm::SmallVectorImpl<EquatableFormatArgument> &Specs)
+  DecomposePrintfHandler(Sema &s, const FormatStringLiteral *fexpr,
+                         const Expr *origFormatExpr,
+                         const FormatStringType type, unsigned firstDataArg,
+                         unsigned numDataArgs, bool isObjC, const char *beg,
+                         Sema::FormatArgumentPassingKind APK,
+                         ArrayRef<const Expr *> Args, unsigned formatIdx,
+                         bool inFunctionCall, Sema::VariadicCallType CallType,
+                         llvm::SmallBitVector &CheckedVarArgs,
+                         UncoveredArgHandler &UncoveredArg,
+                         llvm::SmallVectorImpl<EquatableFormatArgument> &Specs)
       : CheckPrintfHandler(s, fexpr, origFormatExpr, type, firstDataArg,
                            numDataArgs, isObjC, beg, APK, Args, formatIdx,
                            inFunctionCall, CallType, CheckedVarArgs,
@@ -7198,7 +7200,7 @@ class DecomposePrintfHandler : public CheckPrintfHandler {
 public:
   static bool
   GetSpecifiers(Sema &S, const FormatStringLiteral *FSL, const Expr *FmtExpr,
-                Sema::FormatStringType type, bool IsObjC, bool InFunctionCall,
+                FormatStringType type, bool IsObjC, bool InFunctionCall,
                 llvm::SmallVectorImpl<EquatableFormatArgument> &Args);
 
   virtual bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
@@ -7450,7 +7452,7 @@ bool EquatableFormatArgument::VerifyCompatible(
 
 bool DecomposePrintfHandler::GetSpecifiers(
     Sema &S, const FormatStringLiteral *FSL, const Expr *FmtExpr,
-    Sema::FormatStringType Type, bool IsObjC, bool InFunctionCall,
+    FormatStringType Type, bool IsObjC, bool InFunctionCall,
     llvm::SmallVectorImpl<EquatableFormatArgument> &Args) {
   StringRef Data = FSL->getString();
   const char *Str = Data.data();
@@ -7464,7 +7466,7 @@ bool DecomposePrintfHandler::GetSpecifiers(
 
   if (!analyze_format_string::ParsePrintfString(
           H, Str, Str + Data.size(), S.getLangOpts(), S.Context.getTargetInfo(),
-          Type == Sema::FST_FreeBSDKPrintf))
+          Type == FormatStringType::FreeBSDKPrintf))
     H.DoneProcessing();
   if (H.HadError)
     return false;
@@ -7733,13 +7735,15 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
   }
 
   // %P can only be used with os_log.
-  if (FSType != Sema::FST_OSLog && CS.getKind() == ConversionSpecifier::PArg) {
+  if (FSType != FormatStringType::OSLog &&
+      CS.getKind() == ConversionSpecifier::PArg) {
     return HandleInvalidPrintfConversionSpecifier(FS, startSpecifier,
                                                   specifierLen);
   }
 
   // %n is not allowed with os_log.
-  if (FSType == Sema::FST_OSLog && CS.getKind() == ConversionSpecifier::nArg) {
+  if (FSType == FormatStringType::OSLog &&
+      CS.getKind() == ConversionSpecifier::nArg) {
     EmitFormatDiagnostic(S.PDiag(diag::warn_os_log_format_narg),
                          getLocationOfByte(CS.getStart()),
                          /*IsStringLocation*/ false,
@@ -7749,7 +7753,7 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
   }
 
   // Only scalars are allowed for os_trace.
-  if (FSType == Sema::FST_OSTrace &&
+  if (FSType == FormatStringType::OSTrace &&
       (CS.getKind() == ConversionSpecifier::PArg ||
        CS.getKind() == ConversionSpecifier::sArg ||
        CS.getKind() == ConversionSpecifier::ObjCObjArg)) {
@@ -7758,7 +7762,7 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
   }
 
   // Check for use of public/private annotation outside of os_log().
-  if (FSType != Sema::FST_OSLog) {
+  if (FSType != FormatStringType::OSLog) {
     if (FS.isPublic().isSet()) {
       EmitFormatDiagnostic(S.PDiag(diag::warn_format_invalid_annotation)
                                << "public",
@@ -8387,7 +8391,7 @@ namespace {
 class CheckScanfHandler : public CheckFormatHandler {
 public:
   CheckScanfHandler(Sema &s, const FormatStringLiteral *fexpr,
-                    const Expr *origFormatExpr, Sema::FormatStringType type,
+                    const Expr *origFormatExpr, FormatStringType type,
                     unsigned firstDataArg, unsigned numDataArgs,
                     const char *beg, Sema::FormatArgumentPassingKind APK,
                     ArrayRef<const Expr *> Args, unsigned formatIdx,
@@ -8619,7 +8623,7 @@ static void CheckFormatString(
     Sema &S, const FormatStringLiteral *FExpr,
     const StringLiteral *ReferenceFormatString, const Expr *OrigFormatExpr,
     ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
-    unsigned format_idx, unsigned firstDataArg, Sema::FormatStringType Type,
+    unsigned format_idx, unsigned firstDataArg, FormatStringType Type,
     bool inFunctionCall, Sema::VariadicCallType CallType,
     llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
     bool IgnoreStringsWithoutSpecifiers) {
@@ -8668,11 +8672,13 @@ static void CheckFormatString(
     return;
   }
 
-  if (Type == Sema::FST_Printf || Type == Sema::FST_NSString ||
-      Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf ||
-      Type == Sema::FST_OSLog || Type == Sema::FST_OSTrace ||
-      Type == Sema::FST_Syslog) {
-    bool IsObjC = Type == Sema::FST_NSString || Type == Sema::FST_OSTrace;
+  if (Type == FormatStringType::Printf || Type == FormatStringType::NSString ||
+      Type == FormatStringType::Kprintf ||
+      Type == FormatStringType::FreeBSDKPrintf ||
+      Type == FormatStringType::OSLog || Type == FormatStringType::OSTrace ||
+      Type == FormatStringType::Syslog) {
+    bool IsObjC =
+        Type == FormatStringType::NSString || Type == FormatStringType::OSTrace;
     if (ReferenceFormatString == nullptr) {
       CheckPrintfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
                            numDataArgs, IsObjC, Str, APK, Args, format_idx,
@@ -8681,14 +8687,15 @@ static void CheckFormatString(
 
       if (!analyze_format_string::ParsePrintfString(
               H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
-              Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf))
+              Type == FormatStringType::Kprintf ||
+                  Type == FormatStringType::FreeBSDKPrintf))
         H.DoneProcessing();
     } else {
       S.CheckFormatStringsCompatible(
           Type, ReferenceFormatString, FExpr->getFormatString(),
           inFunctionCall ? nullptr : Args[format_idx]);
     }
-  } else if (Type == Sema::FST_Scanf) {
+  } else if (Type == FormatStringType::Scanf) {
     CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
                         numDataArgs, Str, APK, Args, format_idx, inFunctionCall,
                         CallType, CheckedVarArgs, UncoveredArg);
@@ -8702,13 +8709,15 @@ static void CheckFormatString(
 bool Sema::CheckFormatStringsCompatible(
     FormatStringType Type, const StringLiteral *AuthoritativeFormatString,
     const StringLiteral *TestedFormatString, const Expr *FunctionCallArg) {
-  if (Type != Sema::FST_Printf && Type != Sema::FST_NSString &&
-      Type != Sema::FST_Kprintf && Type != Sema::FST_FreeBSDKPrintf &&
-      Type != Sema::FST_OSLog && Type != Sema::FST_OSTrace &&
-      Type != Sema::FST_Syslog)
+  if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
+      Type != FormatStringType::Kprintf &&
+      Type != FormatStringType::FreeBSDKPrintf &&
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
+      Type != FormatStringType::Syslog)
     return true;
 
-  bool IsObjC = Type == Sema::FST_NSString || Type == Sema::FST_OSTrace;
+  bool IsObjC =
+      Type == FormatStringType::NSString || Type == FormatStringType::OSTrace;
   llvm::SmallVector<EquatableFormatArgument, 9> RefArgs, FmtArgs;
   FormatStringLiteral RefLit = AuthoritativeFormatString;
   FormatStringLiteral TestLit = TestedFormatString;
@@ -8735,15 +8744,17 @@ bool Sema::CheckFormatStringsCompatible(
 
 bool Sema::ValidateFormatString(FormatStringType Type,
                                 const StringLiteral *Str) {
-  if (Type != Sema::FST_Printf && Type != Sema::FST_NSString &&
-      Type != Sema::FST_Kprintf && Type != Sema::FST_FreeBSDKPrintf &&
-      Type != Sema::FST_OSLog && Type != Sema::FST_OSTrace &&
-      Type != Sema::FST_Syslog)
+  if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
+      Type != FormatStringType::Kprintf &&
+      Type != FormatStringType::FreeBSDKPrintf &&
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
+      Type != FormatStringType::Syslog)
     return true;
 
   FormatStringLiteral RefLit = Str;
   llvm::SmallVector<EquatableFormatArgument, 9> Args;
-  bool IsObjC = Type == Sema::FST_NSString || Type == Sema::FST_OSTrace;
+  bool IsObjC =
+      Type == FormatStringType::NSString || Type == FormatStringType::OSTrace;
   if (!DecomposePrintfHandler::GetSpecifiers(*this, &RefLit, Str, Type, IsObjC,
                                              true, Args))
     return false;
@@ -9443,6 +9454,9 @@ struct SearchNonTrivialToCopyField
   void visitARCWeak(QualType FT, SourceLocation SL) {
     S.DiagRuntimeBehavior(SL, E, S.PDiag(diag::note_nontrivial_field) << 0);
   }
+  void visitPtrAuth(QualType FT, SourceLocation SL) {
+    S.DiagRuntimeBehavior(SL, E, S.PDiag(diag::note_nontrivial_field) << 0);
+  }
   void visitStruct(QualType FT, SourceLocation SL) {
     for (const FieldDecl *FD : FT->castAs<RecordType>()->getDecl()->fields())
       visit(FD->getType(), FD->getLocation());
@@ -9721,9 +9735,9 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
       // completed later. GCC does not diagnose such code, but we may want to
       // consider diagnosing it in the future, perhaps under a different, but
       // related, diagnostic group.
-      bool MayBeTriviallyCopyableCXXRecord =
-          RT->isIncompleteType() ||
-          RT->desugar().isTriviallyCopyableType(Context);
+      bool NonTriviallyCopyableCXXRecord =
+          getLangOpts().CPlusPlus && !RT->isIncompleteType() &&
+          !RT->desugar().isTriviallyCopyableType(Context);
 
       if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
           RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize()) {
@@ -9732,7 +9746,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                                 << ArgIdx << FnName << PointeeTy << 0);
         SearchNonTrivialToInitializeField::diag(PointeeTy, Dest, *this);
       } else if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
-                 !MayBeTriviallyCopyableCXXRecord && ArgIdx == 0) {
+                 NonTriviallyCopyableCXXRecord && ArgIdx == 0) {
         // FIXME: Limiting this warning to dest argument until we decide
         // whether it's valid for source argument too.
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
@@ -9745,7 +9759,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                                 << ArgIdx << FnName << PointeeTy << 1);
         SearchNonTrivialToCopyField::diag(PointeeTy, Dest, *this);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
-                 !MayBeTriviallyCopyableCXXRecord && ArgIdx == 0) {
+                 NonTriviallyCopyableCXXRecord && ArgIdx == 0) {
         // FIXME: Limiting this warning to dest argument until we decide
         // whether it's valid for source argument too.
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
@@ -12254,13 +12268,19 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       *ICContext = true;
     }
 
-    return DiagnoseImpCast(*this, E, T, CC, DiagID);
+    DiagnoseImpCast(*this, E, T, CC, DiagID);
   }
+
+  // If we're implicitly converting from an integer into an enumeration, that
+  // is valid in C but invalid in C++.
+  QualType SourceType = E->getEnumCoercedType(Context);
+  const BuiltinType *CoercedSourceBT = SourceType->getAs<BuiltinType>();
+  if (CoercedSourceBT && CoercedSourceBT->isInteger() && isa<EnumType>(Target))
+    return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_int_to_enum);
 
   // Diagnose conversions between different enumeration types.
   // In C, we pretend that the type of an EnumConstantDecl is its enumeration
   // type, to give us better diagnostics.
-  QualType SourceType = E->getEnumCoercedType(Context);
   Source = Context.getCanonicalType(SourceType).getTypePtr();
 
   if (const EnumType *SourceEnum = Source->getAs<EnumType>())

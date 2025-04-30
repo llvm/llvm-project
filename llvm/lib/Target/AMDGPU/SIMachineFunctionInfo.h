@@ -388,12 +388,12 @@ public:
   SGPRSaveKind getKind() const { return Kind; }
 };
 
-const MCRegister FirstVGPRBlock = AMDGPU::VReg_1024RegClass.getRegister(0);
-
 struct VGPRBlock2IndexFunctor {
   using argument_type = Register;
   unsigned operator()(Register Reg) const {
     assert(AMDGPU::VReg_1024RegClass.contains(Reg) && "Expecting a VGPR block");
+
+    const MCRegister FirstVGPRBlock = AMDGPU::VReg_1024RegClass.getRegister(0);
     return Reg - FirstVGPRBlock;
   }
 };

@@ -1,10 +1,8 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
+; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 
 ; This test makes sure that the shader flag '64 UAV slots' is set when there are
 ; more than 8 UAVs in the module.
-
-; Note: there is no feature flag here (only a module flag), so we don't have an
-; object test.
 
 target triple = "dxil-pc-shadermodel6.7-library"
 
@@ -57,4 +55,13 @@ define void @test() "hlsl.export" {
 }
 
 !llvm.module.flags = !{!0}
+!dx.valver = !{!1}
 !0 = !{i32 1, !"dx.resmayalias", i32 1}
+!1 = !{i32 1, i32 8}
+
+; DXC: - Name:            SFI0
+; DXC-NEXT:     Size:            8
+; DXC-NEXT:     Flags:
+; DXC:       Max64UAVs:         true
+; DXC:       NextUnusedBit:   false
+; DXC: ...
