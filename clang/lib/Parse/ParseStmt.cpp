@@ -2825,7 +2825,7 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   // This is not the same behavior as Visual C++, which don't treat this as a
   // compound statement, but for Clang's type checking we can't have anything
   // inside these braces escaping to the surrounding code.
-  if (Result.Behavior == IEB_Dependent) {
+  if (Result.Behavior == IfExistsBehavior::Dependent) {
     if (!Tok.is(tok::l_brace)) {
       Diag(Tok, diag::err_expected) << tok::l_brace;
       return;
@@ -2852,14 +2852,14 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the statements below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Dependent case handled above");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }
