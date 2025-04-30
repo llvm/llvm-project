@@ -1,0 +1,31 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4
+// in_port_t should have exactly 16 bits
+type in_port_t
+// in_addr_t should have exactly 32 bits
+type in_addr_t
+
+type uint32_t
+type uint16_t
+
+macro INET_ADDRSTRLEN
+macro INET6_ADDRSTRLEN
+
+// The following can be declared as functions, defined as macros or both:
+function uint32_t htonl (uint32_t)
+function uint16_t htons (uint16_t)
+function uint32_t ntohl (uint32_t)
+function uint16_t htons (uint16_t)
+
+function in_addr_t inet_addr (const char*)
+function in_addr_t inet_lnaof (struct in_addr)
+function {struct in_addr} inet_makeaddr (in_addr_t, in_addr_t)
+function in_addr_t inet_netof (struct in_addr)
+function in_addr_t inet_network (const char *)
+function {char*} inet_ntoa (struct in_addr)
+function {const char*} inet_ntop (int, const void*, char*, socklen_t)
+function int inet_pton (int, const char*, void*)
+
+allow-header netinet/in.h
+allow-header inttypes.h
+
+#endif

@@ -1,0 +1,178 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Chhattisgarhi language locale for India.
+% Contributed by Pravin Satpute <psatpute@redhat.com> and
+% Ravishankar Shrivastava <raviratlami@gmail.com>.
+
+LC_IDENTIFICATION
+title      "Chhattisgarhi language locale for India"
+source     "Red Hat, Pune"
+address    "Marisfot III, Marigold Premises, East-Wing, Kalyaninagar, Pune, India-411014"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Chhattisgarhi"
+territory  "India"
+revision   "1.0"
+date       "2008-12-03"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "hi_IN"
+END LC_CTYPE
+
+LC_COLLATE
+copy "hi_IN"
+END LC_COLLATE
+
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+
+LC_NUMERIC
+copy "hi_IN"
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+% Abbreviated weekday names (%a)
+abday       "<U0907><U0924>";/
+            "<U0938><U094B><U092E>";/
+            "<U092E><U0902><U0917>";/
+            "<U092C><U0941><U0927>";/
+            "<U092C><U093F><U0930>";/
+            "<U0938><U0941><U0915>";/
+            "<U0938><U0928><U093F>"
+%
+% Full weekday names (%A)
+day         "<U0907><U0924><U0935><U093E><U0930>";/
+            "<U0938><U094B><U092E><U0935><U093E><U0930>";/
+            "<U092E><U0902><U0917><U0932><U0935><U093E><U0930>";/
+            "<U092C><U0941><U0927><U0935><U093E><U0930>";/
+            "<U092C><U093F><U0930><U0938><U092A><U0924>";/
+            "<U0938><U0941><U0915><U0930><U0935><U093E><U0930>";/
+            "<U0938><U0928><U093F><U0935><U093E><U0930>"
+%
+% Abbreviated month names (%b)
+abmon       "<U091C><U0928>";/
+            "<U092B><U0930>";/
+            "<U092E><U093E><U0930><U094D><U091A>";/
+            "<U0905><U092A>";/
+            "<U092E><U0908>";"<U091C><U0942><U0928>";/
+            "<U091C><U0941><U0932><U093E>";/
+            "<U0905><U0917>";/
+            "<U0938><U093F><U0924>";/
+            "<U0905><U0915><U091F><U0942>";/
+            "<U0928><U0935>";/
+            "<U0926><U093F><U0938>"
+%
+% Full month names (%B)
+mon         "<U091C><U0928><U0935><U0930><U0940>";/
+            "<U092B><U0930><U0935><U0930><U0940>";/
+            "<U092E><U093E><U0930><U094D><U091A>";/
+            "<U0905><U092A><U0930><U0947><U0932>";/
+            "<U092E><U0908>";"<U091C><U0942><U0928>";/
+            "<U091C><U0941><U0932><U093E><U0908>";/
+            "<U0905><U0917><U0938><U094D><U0924>";/
+            "<U0938><U093F><U0924><U092E><U092C><U0930>";/
+            "<U0905><U0915><U091F><U0942><U092C><U0930>";/
+            "<U0928><U0935><U092E><U092C><U0930>";/
+            "<U0926><U093F><U0938><U092E><U092C><U0930>"
+%
+% Equivalent of AM PM
+am_pm       "<U092C><U093F><U0939><U093F><U0928><U093F><U092F><U093E><U0901>";/
+            "<U092E><U0902><U091D><U0928><U093F><U092F><U093E><U0901>"
+%
+% Appropriate date and time representation
+d_t_fmt     "%A %d %b %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%A %d %b %Y %I:%M:%S %p %Z"
+%
+% Appropriate date representation
+d_fmt       "%-d//%-m//%y"
+%
+% Appropriate time representation
+t_fmt       "%I:%M:%S %p %Z"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%I:%M:%S %p %Z"
+week 7;19971130;1
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0939>]"
+noexpr  "^[-0nN<U0928>]"
+yesstr  "<U0939><U0935>"
+nostr   "<U0928><U0907>"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "hi_IN"
+END LC_PAPER
+
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    ""
+name_mr     "<U0938><U093F><U0930><U0940><U092E><U093E><U0928>"
+name_mrs    "<U0938><U093F><U0930><U0940><U092E><U0924><U0940>"
+name_miss   "<U0915><U0941><U0902><U0935><U093E><U0930><U0940>"
+name_ms     "<U0915><U0941><U0902>"
+
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U092D><U093E><U0930><U0924>"
+country_ab2 "IN"
+country_ab3 "IND"
+country_num 356
+country_car "IND"
+% छत्तीसगढ़ी
+lang_name    "<U091B><U0924><U094D><U0924><U0940><U0938><U0917><U0922><U093C><U0940>"
+lang_term    "hne"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+copy "hi_IN"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "hi_IN"
+END LC_MEASUREMENT

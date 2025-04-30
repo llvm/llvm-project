@@ -1,0 +1,5 @@
+GLIBC_2.17 __libpthread_version_placeholder F
+GLIBC_2.18 __libpthread_version_placeholder F
+GLIBC_2.28 __libpthread_version_placeholder F
+GLIBC_2.30 __libpthread_version_placeholder F
+GLIBC_2.31 __libpthread_version_placeholder F

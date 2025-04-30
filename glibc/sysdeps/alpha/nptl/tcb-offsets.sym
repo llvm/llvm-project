@@ -1,0 +1,13 @@
+#include <sysdep.h>
+#include <tls.h>
+
+--
+
+-- Abuse tls.h macros to derive offsets relative to the thread register.
+-- # define __builtin_thread_pointer()  ((void *) 0)
+-- # define thread_offsetof(mem)     ((void *) &THREAD_SELF->mem - (void *) 0)
+-- Ho hum, this doesn't work in gcc4, so Know Things about THREAD_SELF
+#define thread_offsetof(mem)	(long)(offsetof(struct pthread, mem) - sizeof(struct pthread))
+
+MULTIPLE_THREADS_OFFSET		thread_offsetof (header.multiple_threads)
+TID_OFFSET			thread_offsetof (tid)

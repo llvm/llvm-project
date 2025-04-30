@@ -1,0 +1,4 @@
+# Configuration to create /run/nscd directory
+# Used as part of systemd's tmpfiles
+
+d /run/nscd 0755 root root

@@ -1,0 +1,15 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+arch_prctl	EXTRA	arch_prctl	i:ii	__arch_prctl	arch_prctl
+modify_ldt	EXTRA	modify_ldt	i:ipi	__modify_ldt	modify_ldt
+syscall_clock_gettime	EXTRA	clock_gettime	Ei:ip		__syscall_clock_gettime
+
+
+# proper socket implementations:
+bind		-	bind		i:ipi	__bind		bind
+getpeername	-	getpeername	i:ipp	__getpeername	getpeername
+getsockname	-	getsockname	i:ipp	__getsockname	getsockname
+listen		-	listen		i:ii	__listen	listen
+shutdown	-	shutdown	i:ii	__shutdown	shutdown
+socket		-	socket		i:iii	__socket	socket
+socketpair	-	socketpair	i:iiif	__socketpair	socketpair

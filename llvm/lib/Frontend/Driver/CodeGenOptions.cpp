@@ -30,6 +30,10 @@ TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV,
                                              TargetTriple);
     break;
+  case VectorLibrary::PGMATH:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::PGMATH,
+                                             TargetTriple);
+    break;
   case VectorLibrary::SVML:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML,
                                              TargetTriple);

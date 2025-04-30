@@ -1,0 +1,25 @@
+አማርኛ       Amharic
+česky      Czech
+Dansk      Danish
+English    English
+Suomi      Finnish
+Français   French
+Deutsch    German
+Ελληνικά   Greek
+עברית      Hebrew
+Italiano   Italian
+Norsk      Norwegian
+Русский    Russian
+Español    Spanish
+Svenska    Swedish
+ภาษาไทย    Thai
+Türkçe     Turkish
+Tiếng Việt Vietnamese
+日本語     Japanese
+中文       Chinese
+한글       Korean
+
+// The last line of this file is missing the end-of-line terminator
+// on purpose, in order to test that the conversion empties the bit buffer
+// and shifts back to the initial state at the end of the conversion.
+A≢Α

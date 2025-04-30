@@ -1,0 +1,207 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Locale for German locale in Germany
+% Contributed by Ulrich Drepper <drepper@redhat.com>, 2000
+
+LC_IDENTIFICATION
+title      "German locale for Germany"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "German"
+territory  "Germany"
+revision   "1.0"
+date       "2000-06-24"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+
+include "translit_combining";""
+
+% German umlauts.
+% LATIN CAPITAL LETTER A WITH DIAERESIS.
+<U00C4> "A<U0308>";"AE"
+% LATIN CAPITAL LETTER O WITH DIAERESIS.
+<U00D6> "O<U0308>";"OE"
+% LATIN CAPITAL LETTER U WITH DIAERESIS.
+<U00DC> "U<U0308>";"UE"
+% LATIN SMALL LETTER A WITH DIAERESIS.
+<U00E4> "a<U0308>";"ae"
+% LATIN SMALL LETTER O WITH DIAERESIS.
+<U00F6> "o<U0308>";"oe"
+% LATIN SMALL LETTER U WITH DIAERESIS.
+<U00FC> "u<U0308>";"ue"
+
+% Danish.
+% LATIN CAPITAL LETTER A WITH RING ABOVE.
+<U00C5> "A<U030A>";"AA"
+% LATIN SMALL LETTER A WITH RING ABOVE.
+<U00E5> "a<U030A>";"aa"
+
+% The following strange first-level transliteration derive from the use
+% U201E and U201C as "correct" quoting characters.  These two characters
+% do not really belong together.  The result is that somebody who uses
+% U201C and U201D will get the incorrect U00AB / U00BB sequences.
+% LEFT DOUBLE QUOTATION MARK
+<U201C> <U00AB>;<U0022>
+% RIGHT DOUBLE QUOTATION MARK
+<U201D> <U00BB>;<U0022>
+% DOUBLE LOW-9 QUOTATION MARK
+<U201E> <U00BB>;"<U002C><U002C>"
+% DOUBLE HIGH-REVERSED-9 QUOTATION MARK
+<U201F> <U00AB>;<U0022>
+
+translit_end
+
+END LC_CTYPE
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol     "EUR "
+currency_symbol     "<U20AC>"
+mon_decimal_point   ","
+mon_thousands_sep   "."
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       0
+p_sep_by_space      1
+n_cs_precedes       0
+n_sep_by_space      1
+p_sign_posn         1
+n_sign_posn         1
+%
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point   ","
+thousands_sep   "."
+grouping        3;3
+END LC_NUMERIC
+
+LC_TIME
+abday	"So";"Mo";/
+	"Di";"Mi";/
+	"Do";"Fr";/
+	"Sa"
+day	"Sonntag";/
+	"Montag";/
+	"Dienstag";/
+	"Mittwoch";/
+	"Donnerstag";/
+	"Freitag";/
+	"Samstag"
+abmon	"Jan";"Feb";/
+	"M<U00E4>r";"Apr";/
+	"Mai";"Jun";/
+	"Jul";"Aug";/
+	"Sep";"Okt";/
+	"Nov";"Dez"
+mon	"Januar";/
+	"Februar";/
+	"M<U00E4>rz";/
+	"April";/
+	"Mai";/
+	"Juni";/
+	"Juli";/
+	"August";/
+	"September";/
+	"Oktober";/
+	"November";/
+	"Dezember"
+am_pm   "";""
+% Appropriate date and time representation (%c)
+d_t_fmt "%a %d %b %Y %T %Z"
+%
+% Appropriate date representation (%x)
+d_fmt   "%d.%m.%Y"
+%
+% Appropriate time representation (%X)
+t_fmt   "%T"
+t_fmt_ampm ""
+date_fmt	"%a %-d. %b %H:%M:%S %Z %Y"
+
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1jJyY]"
+noexpr  "^[-0nN]"
+yesstr  "ja"
+nostr   "nein"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "Fr<U00E4>ulein"
+name_mr     "Herr"
+name_mrs    "Frau"
+name_ms     "Frau"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name  "Deutschland"
+country_post  "D"
+country_ab2   "DE"
+country_ab3   "DEU"
+country_num   276
+country_car   "D"
+country_isbn  3
+lang_name     "Deutsch"
+lang_ab       "de"
+lang_term     "deu"
+lang_lib      "ger"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "%A %l"
+int_select     "00"
+int_prefix     "49"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

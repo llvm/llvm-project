@@ -1,0 +1,195 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined XPG42
+constant PTHREAD_CANCEL_ASYNCHRONOUS
+constant PTHREAD_CANCEL_ENABLE
+constant PTHREAD_CANCEL_DEFERRED
+constant PTHREAD_CANCEL_DISABLE
+constant PTHREAD_CANCELED
+macro PTHREAD_COND_INITIALIZER
+constant PTHREAD_CREATE_DETACHED
+constant PTHREAD_CREATE_JOINABLE
+constant PTHREAD_EXPLICIT_SCHED
+constant PTHREAD_INHERIT_SCHED
+constant PTHREAD_ONCE_INIT
+optional-constant PTHREAD_PRIO_INHERIT
+optional-constant PTHREAD_PRIO_NONE
+optional-constant PTHREAD_PRIO_PROTECT
+constant PTHREAD_PROCESS_SHARED
+constant PTHREAD_PROCESS_PRIVATE
+constant PTHREAD_SCOPE_PROCESS
+constant PTHREAD_SCOPE_SYSTEM
+macro PTHREAD_MUTEX_INITIALIZER
+# ifndef POSIX
+constant PTHREAD_MUTEX_DEFAULT
+constant PTHREAD_MUTEX_ERRORCHECK
+constant PTHREAD_MUTEX_NORMAL
+constant PTHREAD_MUTEX_RECURSIVE
+macro PTHREAD_RWLOCK_INITIALIZER
+# endif
+# if defined XOPEN2K8 || defined POSIX2008
+constant PTHREAD_MUTEX_ROBUST
+constant PTHREAD_MUTEX_STALLED
+# endif
+
+# ifndef POSIX
+type pthread_attr_t
+#  ifndef UNIX98
+type pthread_barrier_t
+type pthread_barrierattr_t
+#  endif
+type pthread_cond_t
+type pthread_condattr_t
+type pthread_key_t
+type pthread_mutex_t
+type pthread_mutexattr_t
+type pthread_once_t
+type pthread_rwlock_t
+type pthread_rwlockattr_t
+#  ifndef UNIX98
+type pthread_spinlock_t
+#  endif
+type pthread_t
+# endif
+
+function int pthread_atfork (void (*) (void), void (*) (void), void (*) (void))
+function int pthread_attr_destroy (pthread_attr_t*)
+function int pthread_attr_getdetachstate (const pthread_attr_t*, int*)
+# ifndef POSIX
+function int pthread_attr_getguardsize (const pthread_attr_t*, size_t*)
+# endif
+function int pthread_attr_getinheritsched (const pthread_attr_t*, int*)
+function int pthread_attr_getschedparam (const pthread_attr_t*, struct sched_param*)
+function int pthread_attr_getschedpolicy (const pthread_attr_t*, int*)
+function int pthread_attr_getscope (const pthread_attr_t*, int*)
+function int pthread_attr_getstackaddr (const pthread_attr_t*, void**)
+function int pthread_attr_getstacksize (const pthread_attr_t*, size_t*)
+function int pthread_attr_init (pthread_attr_t*)
+function int pthread_attr_setdetachstate (pthread_attr_t*, int)
+# ifndef POSIX
+function int pthread_attr_setguardsize (pthread_attr_t*, size_t)
+# endif
+function int pthread_attr_setinheritsched (pthread_attr_t*, int)
+function int pthread_attr_setschedparam (pthread_attr_t*, const struct sched_param*)
+function int pthread_attr_setschedpolicy (pthread_attr_t*, int)
+function int pthread_attr_setscope (pthread_attr_t*, int)
+function int pthread_attr_setstackaddr (pthread_attr_t*, void*)
+function int pthread_attr_setstacksize (pthread_attr_t*, size_t)
+# if !defined POSIX && !defined UNIX98
+function int pthread_barrier_destroy (pthread_barrier_t*)
+function int pthread_barrier_init (pthread_barrier_t*, const pthread_barrierattr_t*, unsigned int)
+function int pthread_barrier_wait (pthread_barrier_t*)
+function int pthread_barrierattr_destroy (pthread_barrierattr_t*)
+function int pthread_barrierattr_getpshared (const pthread_barrierattr_t*, int*)
+function int pthread_barrierattr_init (pthread_barrierattr_t*)
+function int pthread_barrierattr_setpshared (pthread_barrierattr_t*, int)
+# endif
+function int pthread_cancel (pthread_t)
+// function int pthread_cleanup_push (void (*) (void*), void*)
+macro pthread_cleanup_push
+// function int pthread_cleanup_pop (int)
+macro pthread_cleanup_pop
+function int pthread_cond_broadcast (pthread_cond_t*)
+function int pthread_cond_destroy (pthread_cond_t*)
+function int pthread_cond_init (pthread_cond_t*, const pthread_condattr_t*)
+function int pthread_cond_signal (pthread_cond_t*)
+function int pthread_cond_timedwait (pthread_cond_t*, pthread_mutex_t*, const struct timespec*)
+function int pthread_cond_wait (pthread_cond_t*, pthread_mutex_t*)
+function int pthread_condattr_destroy (pthread_condattr_t*)
+#if !defined POSIX && !defined UNIX98 && !defined XOPEN2K
+optional-function int pthread_condattr_getclock (const pthread_condattr_t*, clockid_t*)
+#endif
+function int pthread_condattr_getpshared (const pthread_condattr_t*, int*)
+function int pthread_condattr_init (pthread_condattr_t*)
+#if !defined POSIX && !defined UNIX98 && !defined XOPEN2K
+optional-function int pthread_condattr_setclock (pthread_condattr_t*, clockid_t)
+#endif
+function int pthread_condattr_setpshared (pthread_condattr_t*, int)
+function int pthread_create (pthread_t*, const pthread_attr_t*, void *(*) (void*), void*)
+function int pthread_detach (pthread_t)
+function int pthread_equal (pthread_t, pthread_t)
+function void pthread_exit (void*)
+# if !defined POSIX && !defined POSIX2008
+function int pthread_getconcurrency (void)
+# endif
+# if !defined POSIX && !defined UNIX98
+function int pthread_getcpuclockid (pthread_t, clockid_t*)
+# endif
+function int pthread_getschedparam (pthread_t, int*, struct sched_param*)
+function {void*} pthread_getspecific (pthread_key_t)
+function int pthread_join (pthread_t, void**)
+function int pthread_key_create (pthread_key_t*, void (*)(void*))
+function int pthread_key_delete (pthread_key_t)
+function int pthread_mutex_destroy (pthread_mutex_t*)
+optional-function int pthread_mutex_getprioceiling (const pthread_mutex_t*, int*)
+function int pthread_mutex_init (pthread_mutex_t*, const pthread_mutexattr_t*)
+function int pthread_mutex_lock (pthread_mutex_t*)
+optional-function int pthread_mutex_setprioceiling (pthread_mutex_t*, int, int*)
+# if !defined POSIX && !defined UNIX98
+function int pthread_mutex_timedlock (pthread_mutex_t*, const struct timespec*)
+# endif
+function int pthread_mutex_trylock (pthread_mutex_t*)
+function int pthread_mutex_unlock (pthread_mutex_t*)
+function int pthread_mutexattr_destroy (pthread_mutexattr_t*)
+optional-function int pthread_mutexattr_getprioceiling (const pthread_mutexattr_t*, int*)
+optional-function int pthread_mutexattr_getprotocol (const pthread_mutexattr_t*, int*)
+function int pthread_mutexattr_getpshared (const pthread_mutexattr_t*, int*)
+# if !defined POSIX
+function int pthread_mutexattr_gettype (const pthread_mutexattr_t*, int*)
+# endif
+function int pthread_mutexattr_init (pthread_mutexattr_t*)
+optional-function int pthread_mutexattr_setprioceiling (pthread_mutexattr_t*, int)
+optional-function int pthread_mutexattr_setprotocol (pthread_mutexattr_t*, int)
+function int pthread_mutexattr_setpshared (pthread_mutexattr_t*, int)
+# if !defined POSIX
+function int pthread_mutexattr_settype (pthread_mutexattr_t*, int)
+# endif
+function int pthread_once (pthread_once_t*, void (*) (void))
+# if !defined POSIX
+function int pthread_rwlock_init (pthread_rwlock_t*, const pthread_rwlockattr_t*)
+function int pthread_rwlock_rdlock (pthread_rwlock_t*)
+# endif
+# if !defined POSIX && !defined UNIX98
+function int pthread_rwlock_timedrdlock (pthread_rwlock_t*, const struct timespec*)
+function int pthread_rwlock_timedwrlock (pthread_rwlock_t*, const struct timespec*)
+# endif
+# if !defined POSIX
+function int pthread_rwlock_tryrdlock (pthread_rwlock_t*)
+function int pthread_rwlock_trywrlock (pthread_rwlock_t*)
+function int pthread_rwlock_unlock (pthread_rwlock_t*)
+function int pthread_rwlock_wrlock (pthread_rwlock_t*)
+function int pthread_rwlockattr_destroy (pthread_rwlockattr_t*)
+function int pthread_rwlockattr_getpshared (const pthread_rwlockattr_t*, int*)
+function int pthread_rwlockattr_init (pthread_rwlockattr_t*)
+function int pthread_rwlockattr_setpshared (pthread_rwlockattr_t*, int)
+# endif
+function pthread_t pthread_self (void)
+function int pthread_setcancelstate (int, int*)
+function int pthread_setcanceltype (int, int*)
+# if !defined POSIX && !defined POSIX2008
+function int pthread_setconcurrency (int)
+# endif
+function int pthread_setschedparam (pthread_t, int, const struct sched_param*)
+function int pthread_setspecific (pthread_key_t, const void*)
+# if !defined POSIX && !defined UNIX98 && !defined XOPEN2K && !defined XOPEN2K8 && !defined POSIX2008
+function int pthread_sigmask (int, const sigset_t*, sigset_t*)
+# endif
+# if !defined POSIX && !defined UNIX98
+function int pthread_spin_destroy (pthread_spinlock_t*)
+function int pthread_spin_init (pthread_spinlock_t*, int)
+function int pthread_spin_lock (pthread_spinlock_t*)
+function int pthread_spin_trylock (pthread_spinlock_t*)
+function int pthread_spin_unlock (pthread_spinlock_t*)
+# endif
+function void pthread_testcancel (void)
+# if defined XOPEN2K8 || defined POSIX2008
+function int pthread_mutex_consistent (pthread_mutex_t *)
+function int pthread_mutexattr_getrobust (const pthread_mutexattr_t*, int*)
+function int pthread_mutexattr_setrobust (pthread_mutexattr_t*, int)
+# endif
+
+allow-header sched.h
+allow-header time.h
+
+allow PTHREAD_*
+allow pthread_*
+allow *_t
+#endif

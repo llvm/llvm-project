@@ -1,0 +1,19 @@
+/// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+/// See https://llvm.org/LICENSE.txt for license information.
+/// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+///
+/// @mainpage flang
+///
+/// @section main_intro Introduction
+/// Welcome to the flang project.
+///
+/// This documentation describes the @b internal software that makes 
+/// up flang, not the @b external use of flang. There are no instructions
+/// here on how to use flang, only the APIs that make up the software. For 
+/// usage instructions, please see the programmer's guide or reference 
+/// manual.
+///
+/// @section main_caveat Caveat 
+/// This documentation is generated directly from the source code with doxygen. 
+/// Since flang is constantly under active development, what you're about to
+/// read is out of date!

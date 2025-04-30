@@ -1,0 +1,237 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 8 "Transformer"
+.sh 2 "Overview"
+.lp
+The transformer module performs a number of manipulations on the AST
+and on the Symbol Table.  The object of these manipulations is to
+place the internal data structures in a canonical form that is easy
+to process by later phases.
+.lp
+The following transformations are performed on the AST:
+.BL
+Canonicalize alignment and distribution directives and create symbols
+for descriptors.
+.BL
+Transform array assignments and WHERE statements into FORALL statements.
+.BL
+Canonicalize FORALL statements 
+.BL
+Rewrite arguments of subroutines, array-valued intrinsics and functions,
+and various intrinsics.
+.BL
+Perform transformations on sequential variables and common blocks.
+.lp
+The Symbol Table and AST are modified by this module. Statements are
+inserted and deleted, and new symbols created.
+.sh 2 "Data Structures"
+.sh 3 "Global Data Structures"
+.US "Symbol Table"
+New symbols are created for the following data items:
+.BL
+Alignment descriptors and their pointers.
+.lp
+Each aligned array is assigned
+an alignment descriptor, which is a one-dimensional integer array, with
+a bound of 1. The
+alignment descriptor is created as a based variable, and a pointer for
+the alignment descriptor is created.  The various variables are accessed
+as follows: given a symbol pointer
+.cw sptr
+for an aligned array A, the alignment descriptor (array) for A is accessed
+via
+.cw DESCRG(sptr) ,
+and the pointer to the alignment descriptor (as for any based variable)
+is accessed via
+.cw MIDNUMG(DESCRG(sptr)) .
+.BL
+Section descriptors and their pointers.
+.lp
+A section descriptor is created for each aligned array; the descriptor will
+describe the entire array. The descriptor is pointed to by
+.cw DESCRG(sptr) .
+.BL
+Processor descriptors and their pointers.
+.lp
+Each
+.cw ST_PROCESSOR
+symbol has a descriptor, created in the same way as alignment descriptors,
+and referenced via
+.cw DESCRG .
+.BL
+Template descriptors and their pointers.
+.cw ST_TEMPLATE
+symbols receive descriptors in the same way as
+.cw ST_PROCESSOR
+symbols.
+.BL
+Internal
+.cw ST_PROCESSOR
+and
+.cw ST_TEMPLATE
+symbols.
+.lp
+For arrays directly distributed onto processor arrangements,
+templates are created. For distributed arrays and templates with no
+explicit processor arrangement, processor arrangements are created.
+These use internal compiler-created names but are otherwise the same
+as user-defined templates and processors.
+.US "AST"
+.lp
+The AST is modified by insertion and deletion of statements. The modification
+is described in more detail in the section on processing.
+.sh 3 "Local Data Structures"
+.lp
+There are no significant local data structures in the transform module.
+.sh 2 Processing
+.sh 3 Overview
+.lp
+The main processing function is
+.cw "transform()" .
+It performs canonical alignment transformations, rewrites foralls containing
+transformational intrinsics, rewrites block WHERE statements,
+rewrites subroutine and intrinsic calls, converts array assignments
+and WHERE statements into foralls, and
+foralls into canonical form.  Also, descriptor symbols are created.
+.lp
+The processing for the transform module is performed
+in two files:
+.cw "transfrm.c" and
+.cw "func.c" .
+.sh 3 "Transformational Intrinsics"
+.lp
+.cw "rewrite_forall_intrinsic"
+removes transformational intrinsics from forall statements.
+For example,
+.(b
+.CS
+forall (i=1:n, j=1:n)
+    a(i,j) = a(i,j) + sum(b(i,:)*c(:,j))
+.CE
+.)b
+is transformed into:
+.(b
+.CS
+do i = 1,n
+   do j = 1,n
+      temp(i,j) = sum(b(i,:) * c(:,j)
+   enddo
+enddo
+forall (i=1:n, j=1:n)
+   a(i,j) = a(i,j) + temp(i,j)
+.CE
+.)b
+.sh 3 "Block Wheres"
+.cw "rewrite_block_where"
+converts block WHERE constructs into single-statement
+WHEREs.  For example,
+.(b
+.CS
+WHERE (a .gt. 0)
+    a = 12
+    b = a / 13
+ENDWHERE
+.CE
+.)b
+is transformed into:
+.(b
+.CS
+temp = a .gt. 0
+WHERE (temp) a = 12
+WHERE (temp) b = a / 13
+.CE
+.)b
+Note that the temporary is always created; this could be avoided in many
+cases some analysis; for example, if no variable referenced in the mask
+expression is assigned to in the block, then no temporary is required.
+.sh 3 "Subroutine Arguments"
+.cw "rewrite_calls()"
+is the most complex part of the transform module. The file
+.cw func.c
+contains this function. It is responsible for
+three tasks:
+.np
+Rewrite array expression arguments to functions to use temporaries. For
+example,
+.(b L
+.CS
+call sub(a(1:n:2) + b(1:m:3))
+.CE
+.)b
+becomes
+.(b L
+.CS
+allocate temp(1:n:2)
+temp = a(1:n:2) + b(1:m:3)
+.CE
+.)b
+.np
+Rewrite expressions using array-valued functions, and the calls to those
+functions. This involves creating a temporary to hold the return value
+of the function. This is done currently only for intrinsic functions.
+.np
+Rewrite intrinsics. This is the most important part of
+.cw rewrite_calls.
+.lp
+Intrinsic rewriting is performed on transformational intrinsics, as well
+as a number of Fortran intrinsics. Transformational intrinsics are
+turned into calls to runtime support functions. 
+Here is an example:
+.lp
+Consider the statement:
+.CS
+a = SUM(b * c, dim=2, mask=a .ne. 0) + d
+.CE
+First, a temporary is created to hold the expression
+.cw b*c .
+This is done as part of the array expression argument processing. A temporary
+is also created for the mask expression. Then, the function
+.cw rewrite_func_ast
+is called. It determines that the appropriate runtime call is
+.cw ftn_sum .
+A call to this function is generated. Since the result of the intrinsic
+is used in an expression, a temporary to hold the return value is also
+generated.
+.lp
+The generated code looks like:
+.CS
+allocate temp1
+temp1 = b*c
+allocate temp2
+temp2 = a .ne. 0
+allocate temp3
+call ftn_sum(temp3, temp1, dim, temp2)
+a = temp3
+deallocate temp3
+deallocate temp2
+deallocate temp1
+.CE
+.)b
+.sh 3 "Rewrite Into Foralls"
+The function
+.cw rewrite_into_forall()
+converts array assignments and WHERE statements into forall statements.
+This is relatively straightforward; special care must be taken for
+array-valued subscripts. Also, an attempt is made to generate the forall
+so that later DO-loops will be in column major order.
+.sh 3 "Rewrite Foralls"
+.cw rewrite_forall
+creates temporaries for forall statements that would have a dependence
+if directly scalarized (this functionality will be moved to a later
+phase). It also handles vector foralls, such as:
+.(b
+.CS
+forall (i=1:n) a(i,:) = b(i,:)
+.CE
+.)b
+These are converted into foralls with multiple indices:
+.(b
+.CS
+forall (i=1:n,j=1:m) a(i,j) = b(i,j)
+.CE
+.)b
+This should probably be part of an earlier phase.

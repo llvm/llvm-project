@@ -1,0 +1,113 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+
+.IL X87CON sym
+x87 80-bit extended precision floating-point constant.
+.AT cons null x87 cse
+
+.IL X87LD arlnk nme stc
+Load integer or floating-point data into the X87 FPU from memory.
+'stc' is a MSZ_... memory size/type code.
+.AT load null x87
+.CG asm_special
+
+.IL X87ST x87lnk arlnk nme stc
+Store, possibly with conversion, data from the X87 FPU to memory.
+'stc' is a MSZ_... memory size/type code.
+.AT store null trm
+.CG asm_special terminal
+
+.IL X87ABS x87lnk
+x87 80-bit extended precision absolute value.
+.AT arth null x87 cse
+.CG "fabs"
+
+.IL X87CHS x87lnk
+x87 80-bit extended precision negation.
+.AT arth null x87 cse
+.CG "fchs"
+
+.IL X87RNDINT x87lnk
+x87 80-bit extended precision round to integer with current rounding mode.
+.AT arth null x87 cse
+.CG "frndint"
+
+.IL X87ADD x87lnk x87lnk
+x87 80-bit extended precision floating-point addition.
+.AT arth comm x87 cse
+.CG "fadd" asm_special
+
+.IL X87SUB x87lnk x87lnk
+x87 80-bit extended precision floating-point subtraction.
+.AT arth null x87 cse
+.CG "fsub" asm_special
+
+.IL X87MUL x87lnk x87lnk
+x87 80-bit extended precision multiply.
+.AT arth comm x87 cse
+.CG "fmul" asm_special
+
+.IL X87DIV x87lnk x87lnk
+x87 80-bit extended precision divide.
+.AT arth null x87 cse
+.CG "fdiv" asm_special
+
+.IL X87CMP x87lnk x87lnk stc
+x87 80-bit extended precision comparison.
+.AT arth null ir cse
+.CG "fucomi" asm_special ccmod
+
+.IL X87CMOV irlnk x87lnk x87lnk
+Select op2 if X87CMP test in op1 is satisfied, else op3.
+.AT other null x87 cse
+.CG "fcmov" asm_special
+
+.IL X87ARG x87lnk lnk
+Defines an x87 80-bit extended precision value to be passed as an
+argument to a function call via memory.
+\'x87lnk' points to the value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "fstpt"
+
+.IL X87RETURN x87lnk stc
+Define a x87 80-bit extended precision real function result.
+Appears twice for complex-valued function results, in which case the
+imaginary part is returned first so that the real part is returned on
+top of the stack.
+.AT define null trm
+.CG terminal asm_nop
+
+.IL X87RESULT lnk stc
+Acquire the x87 80-bit extended precision result of a function call.
+Appears twice for complex-valued function calls, in which case the first
+acquires the real part and the second acquires the imaginary part.
+.AT define null x87 dom
+.CG terminal asm_nop
+
+.IL X87FREE x87lnk
+.AT other null trm
+.CG terminal notAILI
+
+.IL X87CSE x87lnk
+.AT arth null x87
+.CG notCG
+
+.IL X87XCH x87lnk
+Exchanges the top of the x87 floating-point register stack with another entry.
+.AT define null x87
+.CG CGonly "fxch"
+
+.IL X87POP
+Pops an entry from the x87 floating-point register stack.
+.AT define null x87
+.CG CGonly "fstp" asm_special
+
+.IL X87DUP
+Duplicates an entry on the x87 floating-point register stack.
+.AT define null x87
+.CG CGonly "fld" asm_special

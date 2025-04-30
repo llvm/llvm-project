@@ -1,0 +1,160 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Revision 1.1 created by Alastair McKinstry <mckinstry@computer.org>, 2000-06-12
+% Revision 1.2 created by Michael Bauer <fios@akerbeltz.org>, 2013-04-25
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title        "Scots Gaelic language locale for Great Britain"
+source       "Akerbeltz"
+address      "1//2, 47 Wilton Street, Glasgow G20 6RT, UK"
+contact      "Michael Bauer"
+email        "fios@akerbeltz.org"
+tel          ""
+language     "Scottish Gaelic"
+territory    "United Kingdom"
+revision     "1.2"
+date         "2013-04-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+% Am Faoilleach, An Gearran, Am Màrt, An Giblean, An Cèitean, An t-Ògmhios, An t-Iuchar, An Lùnastal, An t-Sultain, An Dàmhair, An t-Samhain, An Dùbhlachd
+alt_mon       "Am Faoilleach";/
+     "An Gearran";/
+     "Am M<U00E0>rt";/
+     "An Giblean";/
+     "An C<U00E8>itean";/
+     "An t-<U00D2>gmhios";/
+     "An t-Iuchar";/
+     "An L<U00F9>nastal";/
+     "An t-Sultain";/
+     "An D<U00E0>mhair";/
+     "An t-Samhain";/
+     "An D<U00F9>bhlachd"
+% dhen Fhaoilleach, dhen Ghearran, dhen Mhàrt, dhen Ghiblean, dhen Chèitean,
+% dhen Ògmhios, dhen Iuchar, dhen Lùnastal, dhen t-Sultain, dhen Dàmhair,
+% dhen t-Samhain, dhen Dùbhlachd
+mon  "dhen Fhaoilleach";/
+     "dhen Ghearran";/
+     "dhen Mh<U00E0>rt";/
+     "dhen Ghiblean";/
+     "dhen Ch<U00E8>itean";/
+     "dhen <U00D2>gmhios";/
+     "dhen Iuchar";/
+     "dhen L<U00F9>nastal";/
+     "dhen t-Sultain";/
+     "dhen D<U00E0>mhair";/
+     "dhen t-Samhain";/
+     "dhen D<U00F9>bhlachd"
+% Faoi, Gearr, Màrt, Gibl, Cèit, Ògmh, Iuch, Lùna, Sult, Dàmh, Samh, Dùbh
+abmon         "Faoi";/
+       "Gearr";/
+       "M<U00E0>rt";/
+       "Gibl";/
+       "C<U00E8>it";/
+       "<U00D2>gmh";/
+       "Iuch";/
+       "L<U00F9>na";/
+       "Sult";/
+       "D<U00E0>mh";/
+       "Samh";/
+       "D<U00F9>bh"
+% DiDòmhnaich, DiLuain, DiMàirt, DiCiadain, DiarDaoin, DihAoine, DiSathairne
+day           "DiD<U00F2>mhnaich";/
+     "DiLuain";/
+     "DiM<U00E0>irt";/
+     "DiCiadain";/
+     "DiarDaoin";/
+     "DihAoine";/
+     "DiSathairne"
+abday         "DiD";"DiL";"DiM";"DiC";"Dia";"Dih";"DiS"
+d_t_fmt       "%a %d %b %Y %T"
+date_fmt      "%a %d %b %Y %T %Z"
+d_fmt         "%d//%m//%y"
+t_fmt         "%r"
+am_pm         "m";"f"
+t_fmt_ampm    ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "en_GB"
+END LC_NUMERIC
+
+LC_MONETARY
+copy "en_GB"
+END LC_MONETARY
+
+LC_PAPER
+copy "en_GB"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "en_GB"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1tTyY]"
+noexpr  "^[-0cCnN]"
+yesstr  "tha"
+nostr   "chan eil"
+END LC_MESSAGES
+
+LC_NAME
+copy "en_GB"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%S%N%c%N"
+country_name "An R<U00EC>oghachd Aonaichte"
+country_ab2  "GB"
+country_ab3  "GBR"
+country_num  826
+country_car  "GB"
+country_isbn 0
+% Gàidhlig
+lang_name    "G<U00E0>idhlig"
+lang_ab      "gd"
+lang_term    "gla"
+lang_lib     "gla"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "en_GB"
+END LC_TELEPHONE

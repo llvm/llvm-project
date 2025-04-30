@@ -1,0 +1,4 @@
+# Include this earlier so it can be used earlier in Makefiles,
+# and sysdep/ makefiles.
+float128-alias-fcts = yes
+float64x-alias-fcts = yes

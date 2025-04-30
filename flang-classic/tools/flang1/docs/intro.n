@@ -1,0 +1,64 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 1 Introduction
+.lp
+The Fortran compiler consists of several phases and a number of utility modules.
+These are outlined here and described in detail in later chapters.
+.sh 2 Phases
+.sh 3 "Front End"
+.lp
+The Fotran Front End parses the source program and creates a symbol table and
+an Abstract Syntax Tree (AST) that represents the source program.  The
+front end is described in Chapters 3 (scanner), 4 (parser), and 5 (semantic
+analyzer).  The grammar used by the parser is presented in Chapter 22.
+.sh 3 "Transformer"
+.lp
+The Transformer performs a number of manipulations on the AST.  The object
+of these manipulations is to transform the AST and
+symbol table into a canonical form that
+is more easily manipulated by later phases.  Fortran-90 array assignments
+and WHERE statements
+are transformed to FORALL constructs, and subroutine arguments are 
+rewritten.
+Also, Fortran directives are processed into a canonical
+form.
+The Transformer is described in Chapter 8.
+.sh 3 "Output Converter"
+.lp
+The output converter converts foralls into DO loops, handles allocate
+and deallocate statements, and optimizes array descriptor handling.
+The output converter is described
+in Chapter 11.
+.sh 3 "Output"
+.lp
+The ASTs are lowered to the compiler's ILM intermediate format. This phase
+is described in Chapter 12. 
+.sh 2 "Utilities"
+.sh 3 "Cross Reference"
+Utilities are provided to generate a cross-reference table in the listing.
+These are described in Chapter 13.
+.sh 3 "Data Initialization File"
+Data initializations are written to a data initialization file.  This
+file and associated utilities are described in Chapter 14.
+.sh 3 "Symbol Table"
+.lp
+The Symbol Table contains information about all the symbols
+in the Fortran program.  The Symbol Table is described in Chapters 27 and 28.
+.sh 3 "Error Messages"
+.lp
+A module is provided to output error messages in a consistent fashion.  This
+module is described in Chapters 15 and 23.
+.sh 3 "ASTs"
+.lp
+The ASTs are the internal representation of the Fortran program and are described
+in Chapter 30.
+.sh 3 "Target Machine"
+Target machine characteristics are available through the
+machine characteristics utility, descibed in Chapter 24.
+.sh 2 "Other Information"
+Various compiler maintenance information is available in Chapters 16, 17,
+and 18.

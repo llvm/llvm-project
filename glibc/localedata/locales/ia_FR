@@ -1,0 +1,139 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Interlingua locale for France
+% Language: ia
+% Territory: FR
+% Revision: 1.0
+% Date: 2013-03-01
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title "Interlingua locale for France"
+source "Fedora Project"
+address ""
+contact "Nik Kalach"
+email "nikka@fedoraproject.org"
+tel ""
+fax ""
+language "Interlingua"
+territory "France"
+revision "1.0"
+date "2013-03-01"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "fr_FR"
+END LC_CTYPE
+
+LC_COLLATE
+copy "fr_FR"
+END LC_COLLATE
+
+LC_TIME
+abday   "dom";"lun";/
+        "mar";"mer";/
+        "jov";"ven";/
+        "sab"
+day     "dominica";/
+        "lunedi";/
+        "martedi";/
+        "mercuridi";/
+        "jovedi";/
+        "venerdi";/
+        "sabbato"
+abmon   "jan";"feb";/
+        "mar";"apr";/
+        "mai";"jun";/
+        "jul";"aug";/
+        "sep";"oct";/
+        "nov";"dec"
+mon     "januario";/
+        "februario";/
+        "martio";/
+        "april";/
+        "maio";/
+        "junio";/
+        "julio";/
+        "augusto";/
+        "septembre";/
+        "octobre";/
+        "novembre";/
+        "decembre"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "AM";"PM"
+t_fmt_ampm ""
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "fr_FR"
+END LC_NUMERIC
+
+LC_MONETARY
+copy "fr_FR"
+END LC_MONETARY
+
+LC_MESSAGES
+yesexpr "^[+1sSyY]"
+noexpr  "^[-0nN]"
+yesstr  "Si"
+nostr   "No"
+END LC_MESSAGES
+
+LC_MEASUREMENT
+copy "fr_FR"
+END LC_MEASUREMENT
+
+LC_PAPER
+copy "fr_FR"
+END LC_PAPER
+
+LC_NAME
+copy "fr_FR"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s%t%h%t%e%t%r%N%z%t%T%N%c%N"
+% https://ia.wikipedia.org/wiki/Francia
+country_name "Francia"
+country_post "F"
+country_ab2 "FR"
+country_ab3 "FRA"
+country_num 250
+country_isbn "979-10"
+country_car "F"
+lang_name "interlingua"
+lang_ab      "ia"
+lang_term    "ina"
+lang_lib     "ina"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "fr_FR"
+END LC_TELEPHONE

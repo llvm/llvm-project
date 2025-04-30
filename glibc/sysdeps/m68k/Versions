@@ -1,0 +1,13 @@
+libc {
+  GLIBC_2.0 {
+    # Functions from libgcc.
+    __divdi3; __moddi3; __udivdi3; __umoddi3;
+  }
+}
+libm {
+  GLIBC_2.1 {
+    # A generic bug got this omitted from other configurations' version
+    # sets, but we always had it.
+    exp2l;
+  }
+}

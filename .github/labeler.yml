@@ -1,0 +1,33 @@
+ci:
+- "**/*.groovy"
+- "*Jenkinsfile*"
+
+linting:
+- .clang-format
+- .clang-tidy
+
+python:
+- "**/*.py"
+- "*.py"
+
+misc:
+- .github/**/*
+- .gitignore
+- .README.md
+
+glibc:
+- glibc
+
+mpi:
+- ucx
+- nextsilicon/3rd-party/01_build-openmpi.sh
+
+math:
+- nextcrt/next32-clang/*
+- nextcrt/next32-clang/**/*
+- nextcrt/libm/*
+- nextcrt/libm/**/*
+
+openmp:
+- openmp/**/*
+

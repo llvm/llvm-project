@@ -1,0 +1,1959 @@
+@node Message Translation, Searching and Sorting, Locales, Top
+@c %MENU% How to make the program speak the user's language
+@chapter Message Translation
+
+The program's interface with the user should be designed to ease the user's
+task.  One way to ease the user's task is to use messages in whatever
+language the user prefers.
+
+Printing messages in different languages can be implemented in different
+ways.  One could add all the different languages in the source code and
+choose among the variants every time a message has to be printed.  This is
+certainly not a good solution since extending the set of languages is
+cumbersome (the code must be changed) and the code itself can become
+really big with dozens of message sets.
+
+A better solution is to keep the message sets for each language
+in separate files which are loaded at runtime depending on the language
+selection of the user.
+
+@Theglibc{} provides two different sets of functions to support
+message translation.  The problem is that neither of the interfaces is
+officially defined by the POSIX standard.  The @code{catgets} family of
+functions is defined in the X/Open standard but this is derived from
+industry decisions and therefore not necessarily based on reasonable
+decisions.
+
+As mentioned above, the message catalog handling provides easy
+extendability by using external data files which contain the message
+translations.  I.e., these files contain for each of the messages used
+in the program a translation for the appropriate language.  So the tasks
+of the message handling functions are
+
+@itemize @bullet
+@item
+locate the external data file with the appropriate translations
+@item
+load the data and make it possible to address the messages
+@item
+map a given key to the translated message
+@end itemize
+
+The two approaches mainly differ in the implementation of this last
+step.  Decisions made in the last step influence the rest of the design.
+
+@menu
+* Message catalogs a la X/Open::  The @code{catgets} family of functions.
+* The Uniforum approach::         The @code{gettext} family of functions.
+@end menu
+
+
+@node Message catalogs a la X/Open
+@section X/Open Message Catalog Handling
+
+The @code{catgets} functions are based on the simple scheme:
+
+@quotation
+Associate every message to translate in the source code with a unique
+identifier.  To retrieve a message from a catalog file solely the
+identifier is used.
+@end quotation
+
+This means for the author of the program that s/he will have to make
+sure the meaning of the identifier in the program code and in the
+message catalogs is always the same.
+
+Before a message can be translated the catalog file must be located.
+The user of the program must be able to guide the responsible function
+to find whatever catalog the user wants.  This is separated from what
+the programmer had in mind.
+
+All the types, constants and functions for the @code{catgets} functions
+are defined/declared in the @file{nl_types.h} header file.
+
+@menu
+* The catgets Functions::      The @code{catgets} function family.
+* The message catalog files::  Format of the message catalog files.
+* The gencat program::         How to generate message catalogs files which
+                                can be used by the functions.
+* Common Usage::               How to use the @code{catgets} interface.
+@end menu
+
+
+@node The catgets Functions
+@subsection The @code{catgets} function family
+
+@deftypefun nl_catd catopen (const char *@var{cat_name}, int @var{flag})
+@standards{X/Open, nl_types.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c catopen @mtsenv @ascuheap @acsmem
+@c  strchr ok
+@c  setlocale(,NULL) ok
+@c  getenv @mtsenv
+@c  strlen ok
+@c  alloca ok
+@c  stpcpy ok
+@c  malloc @ascuheap @acsmem
+@c  __open_catalog @ascuheap @acsmem
+@c   strchr ok
+@c   open_not_cancel_2 @acsfd
+@c   strlen ok
+@c   ENOUGH ok
+@c    alloca ok
+@c    memcpy ok
+@c   fxstat64 ok
+@c   __set_errno ok
+@c   mmap @acsmem
+@c   malloc dup @ascuheap @acsmem
+@c   read_not_cancel ok
+@c   free dup @ascuheap @acsmem
+@c   munmap ok
+@c   close_not_cancel_no_status ok
+@c  free @ascuheap @acsmem
+The @code{catopen} function tries to locate the message data file named
+@var{cat_name} and loads it when found.  The return value is of an
+opaque type and can be used in calls to the other functions to refer to
+this loaded catalog.
+
+The return value is @code{(nl_catd) -1} in case the function failed and
+no catalog was loaded.  The global variable @code{errno} contains a code
+for the error causing the failure.  But even if the function call
+succeeded this does not mean that all messages can be translated.
+
+Locating the catalog file must happen in a way which lets the user of
+the program influence the decision.  It is up to the user to decide
+about the language to use and sometimes it is useful to use alternate
+catalog files.  All this can be specified by the user by setting some
+environment variables.
+
+The first problem is to find out where all the message catalogs are
+stored.  Every program could have its own place to keep all the
+different files but usually the catalog files are grouped by languages
+and the catalogs for all programs are kept in the same place.
+
+@cindex NLSPATH environment variable
+To tell the @code{catopen} function where the catalog for the program
+can be found the user can set the environment variable @code{NLSPATH} to
+a value which describes her/his choice.  Since this value must be usable
+for different languages and locales it cannot be a simple string.
+Instead it is a format string (similar to @code{printf}'s).  An example
+is
+
+@smallexample
+/usr/share/locale/%L/%N:/usr/share/locale/%L/LC_MESSAGES/%N
+@end smallexample
+
+First one can see that more than one directory can be specified (with
+the usual syntax of separating them by colons).  The next things to
+observe are the format string, @code{%L} and @code{%N} in this case.
+The @code{catopen} function knows about several of them and the
+replacement for all of them is of course different.
+
+@table @code
+@item %N
+This format element is substituted with the name of the catalog file.
+This is the value of the @var{cat_name} argument given to
+@code{catgets}.
+
+@item %L
+This format element is substituted with the name of the currently
+selected locale for translating messages.  How this is determined is
+explained below.
+
+@item %l
+(This is the lowercase ell.) This format element is substituted with the
+language element of the locale name.  The string describing the selected
+locale is expected to have the form
+@code{@var{lang}[_@var{terr}[.@var{codeset}]]} and this format uses the
+first part @var{lang}.
+
+@item %t
+This format element is substituted by the territory part @var{terr} of
+the name of the currently selected locale.  See the explanation of the
+format above.
+
+@item %c
+This format element is substituted by the codeset part @var{codeset} of
+the name of the currently selected locale.  See the explanation of the
+format above.
+
+@item %%
+Since @code{%} is used as a meta character there must be a way to
+express the @code{%} character in the result itself.  Using @code{%%}
+does this just like it works for @code{printf}.
+@end table
+
+
+Using @code{NLSPATH} allows arbitrary directories to be searched for
+message catalogs while still allowing different languages to be used.
+If the @code{NLSPATH} environment variable is not set, the default value
+is
+
+@smallexample
+@var{prefix}/share/locale/%L/%N:@var{prefix}/share/locale/%L/LC_MESSAGES/%N
+@end smallexample
+
+@noindent
+where @var{prefix} is given to @code{configure} while installing @theglibc{}
+(this value is in many cases @code{/usr} or the empty string).
+
+The remaining problem is to decide which must be used.  The value
+decides about the substitution of the format elements mentioned above.
+First of all the user can specify a path in the message catalog name
+(i.e., the name contains a slash character).  In this situation the
+@code{NLSPATH} environment variable is not used.  The catalog must exist
+as specified in the program, perhaps relative to the current working
+directory.  This situation in not desirable and catalogs names never
+should be written this way.  Beside this, this behavior is not portable
+to all other platforms providing the @code{catgets} interface.
+
+@cindex LC_ALL environment variable
+@cindex LC_MESSAGES environment variable
+@cindex LANG environment variable
+Otherwise the values of environment variables from the standard
+environment are examined (@pxref{Standard Environment}).  Which
+variables are examined is decided by the @var{flag} parameter of
+@code{catopen}.  If the value is @code{NL_CAT_LOCALE} (which is defined
+in @file{nl_types.h}) then the @code{catopen} function uses the name of
+the locale currently selected for the @code{LC_MESSAGES} category.
+
+If @var{flag} is zero the @code{LANG} environment variable is examined.
+This is a left-over from the early days when the concept of locales
+had not even reached the level of POSIX locales.
+
+The environment variable and the locale name should have a value of the
+form @code{@var{lang}[_@var{terr}[.@var{codeset}]]} as explained above.
+If no environment variable is set the @code{"C"} locale is used which
+prevents any translation.
+
+The return value of the function is in any case a valid string.  Either
+it is a translation from a message catalog or it is the same as the
+@var{string} parameter.  So a piece of code to decide whether a
+translation actually happened must look like this:
+
+@smallexample
+@{
+  char *trans = catgets (desc, set, msg, input_string);
+  if (trans == input_string)
+    @{
+      /* Something went wrong.  */
+    @}
+@}
+@end smallexample
+
+@noindent
+When an error occurs the global variable @code{errno} is set to
+
+@table @var
+@item EBADF
+The catalog does not exist.
+@item ENOMSG
+The set/message tuple does not name an existing element in the
+message catalog.
+@end table
+
+While it sometimes can be useful to test for errors programs normally
+will avoid any test.  If the translation is not available it is no big
+problem if the original, untranslated message is printed.  Either the
+user understands this as well or s/he will look for the reason why the
+messages are not translated.
+@end deftypefun
+
+Please note that the currently selected locale does not depend on a call
+to the @code{setlocale} function.  It is not necessary that the locale
+data files for this locale exist and calling @code{setlocale} succeeds.
+The @code{catopen} function directly reads the values of the environment
+variables.
+
+
+@deftypefun {char *} catgets (nl_catd @var{catalog_desc}, int @var{set}, int @var{message}, const char *@var{string})
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The function @code{catgets} has to be used to access the message catalog
+previously opened using the @code{catopen} function.  The
+@var{catalog_desc} parameter must be a value previously returned by
+@code{catopen}.
+
+The next two parameters, @var{set} and @var{message}, reflect the
+internal organization of the message catalog files.  This will be
+explained in detail below.  For now it is interesting to know that a
+catalog can consist of several sets and the messages in each thread are
+individually numbered using numbers.  Neither the set number nor the
+message number must be consecutive.  They can be arbitrarily chosen.
+But each message (unless equal to another one) must have its own unique
+pair of set and message numbers.
+
+Since it is not guaranteed that the message catalog for the language
+selected by the user exists the last parameter @var{string} helps to
+handle this case gracefully.  If no matching string can be found
+@var{string} is returned.  This means for the programmer that
+
+@itemize @bullet
+@item
+the @var{string} parameters should contain reasonable text (this also
+helps to understand the program seems otherwise there would be no hint
+on the string which is expected to be returned.
+@item
+all @var{string} arguments should be written in the same language.
+@end itemize
+@end deftypefun
+
+It is somewhat uncomfortable to write a program using the @code{catgets}
+functions if no supporting functionality is available.  Since each
+set/message number tuple must be unique the programmer must keep lists
+of the messages at the same time the code is written.  And the work
+between several people working on the same project must be coordinated.
+We will see how some of these problems can be relaxed a bit (@pxref{Common
+Usage}).
+
+@deftypefun int catclose (nl_catd @var{catalog_desc})
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c catclose @ascuheap @acucorrupt @acsmem
+@c  __set_errno ok
+@c  munmap ok
+@c  free @ascuheap @acsmem
+The @code{catclose} function can be used to free the resources
+associated with a message catalog which previously was opened by a call
+to @code{catopen}.  If the resources can be successfully freed the
+function returns @code{0}.  Otherwise it returns @code{@minus{}1} and the
+global variable @code{errno} is set.  Errors can occur if the catalog
+descriptor @var{catalog_desc} is not valid in which case @code{errno} is
+set to @code{EBADF}.
+@end deftypefun
+
+
+@node The message catalog files
+@subsection  Format of the message catalog files
+
+The only reasonable way to translate all the messages of a function and
+store the result in a message catalog file which can be read by the
+@code{catopen} function is to write all the message text to the
+translator and let her/him translate them all.  I.e., we must have a
+file with entries which associate the set/message tuple with a specific
+translation.  This file format is specified in the X/Open standard and
+is as follows:
+
+@itemize @bullet
+@item
+Lines containing only whitespace characters or empty lines are ignored.
+
+@item
+Lines which contain as the first non-whitespace character a @code{$}
+followed by a whitespace character are comment and are also ignored.
+
+@item
+If a line contains as the first non-whitespace characters the sequence
+@code{$set} followed by a whitespace character an additional argument
+is required to follow.  This argument can either be:
+
+@itemize @minus
+@item
+a number.  In this case the value of this number determines the set
+to which the following messages are added.
+
+@item
+an identifier consisting of alphanumeric characters plus the underscore
+character.  In this case the set get automatically a number assigned.
+This value is one added to the largest set number which so far appeared.
+
+How to use the symbolic names is explained in section @ref{Common Usage}.
+
+It is an error if a symbol name appears more than once.  All following
+messages are placed in a set with this number.
+@end itemize
+
+@item
+If a line contains as the first non-whitespace characters the sequence
+@code{$delset} followed by a whitespace character an additional argument
+is required to follow.  This argument can either be:
+
+@itemize @minus
+@item
+a number.  In this case the value of this number determines the set
+which will be deleted.
+
+@item
+an identifier consisting of alphanumeric characters plus the underscore
+character.  This symbolic identifier must match a name for a set which
+previously was defined.  It is an error if the name is unknown.
+@end itemize
+
+In both cases all messages in the specified set will be removed.  They
+will not appear in the output.  But if this set is later again selected
+with a @code{$set} command again messages could be added and these
+messages will appear in the output.
+
+@item
+If a line contains after leading whitespaces the sequence
+@code{$quote}, the quoting character used for this input file is
+changed to the first non-whitespace character following
+@code{$quote}.  If no non-whitespace character is present before the
+line ends quoting is disabled.
+
+By default no quoting character is used.  In this mode strings are
+terminated with the first unescaped line break.  If there is a
+@code{$quote} sequence present newline need not be escaped.  Instead a
+string is terminated with the first unescaped appearance of the quote
+character.
+
+A common usage of this feature would be to set the quote character to
+@code{"}.  Then any appearance of the @code{"} in the strings must
+be escaped using the backslash (i.e., @code{\"} must be written).
+
+@item
+Any other line must start with a number or an alphanumeric identifier
+(with the underscore character included).  The following characters
+(starting after the first whitespace character) will form the string
+which gets associated with the currently selected set and the message
+number represented by the number and identifier respectively.
+
+If the start of the line is a number the message number is obvious.  It
+is an error if the same message number already appeared for this set.
+
+If the leading token was an identifier the message number gets
+automatically assigned.  The value is the current maximum message
+number for this set plus one.  It is an error if the identifier was
+already used for a message in this set.  It is OK to reuse the
+identifier for a message in another thread.  How to use the symbolic
+identifiers will be explained below (@pxref{Common Usage}).  There is
+one limitation with the identifier: it must not be @code{Set}.  The
+reason will be explained below.
+
+The text of the messages can contain escape characters.  The usual bunch
+of characters known from the @w{ISO C} language are recognized
+(@code{\n}, @code{\t}, @code{\v}, @code{\b}, @code{\r}, @code{\f},
+@code{\\}, and @code{\@var{nnn}}, where @var{nnn} is the octal coding of
+a character code).
+@end itemize
+
+@strong{Important:} The handling of identifiers instead of numbers for
+the set and messages is a GNU extension.  Systems strictly following the
+X/Open specification do not have this feature.  An example for a message
+catalog file is this:
+
+@smallexample
+$ This is a leading comment.
+$quote "
+
+$set SetOne
+1 Message with ID 1.
+two "   Message with ID \"two\", which gets the value 2 assigned"
+
+$set SetTwo
+$ Since the last set got the number 1 assigned this set has number 2.
+4000 "The numbers can be arbitrary, they need not start at one."
+@end smallexample
+
+This small example shows various aspects:
+@itemize @bullet
+@item
+Lines 1 and 9 are comments since they start with @code{$} followed by
+a whitespace.
+@item
+The quoting character is set to @code{"}.  Otherwise the quotes in the
+message definition would have to be omitted and in this case the
+message with the identifier @code{two} would lose its leading whitespace.
+@item
+Mixing numbered messages with messages having symbolic names is no
+problem and the numbering happens automatically.
+@end itemize
+
+
+While this file format is pretty easy it is not the best possible for
+use in a running program.  The @code{catopen} function would have to
+parse the file and handle syntactic errors gracefully.  This is not so
+easy and the whole process is pretty slow.  Therefore the @code{catgets}
+functions expect the data in another more compact and ready-to-use file
+format.  There is a special program @code{gencat} which is explained in
+detail in the next section.
+
+Files in this other format are not human readable.  To be easy to use by
+programs it is a binary file.  But the format is byte order independent
+so translation files can be shared by systems of arbitrary architecture
+(as long as they use @theglibc{}).
+
+Details about the binary file format are not important to know since
+these files are always created by the @code{gencat} program.  The
+sources of @theglibc{} also provide the sources for the
+@code{gencat} program and so the interested reader can look through
+these source files to learn about the file format.
+
+
+@node The gencat program
+@subsection Generate Message Catalogs files
+
+@cindex gencat
+The @code{gencat} program is specified in the X/Open standard and the
+GNU implementation follows this specification and so processes
+all correctly formed input files.  Additionally some extension are
+implemented which help to work in a more reasonable way with the
+@code{catgets} functions.
+
+The @code{gencat} program can be invoked in two ways:
+
+@example
+`gencat [@var{Option} @dots{}] [@var{Output-File} [@var{Input-File} @dots{}]]`
+@end example
+
+This is the interface defined in the X/Open standard.  If no
+@var{Input-File} parameter is given, input will be read from standard
+input.  Multiple input files will be read as if they were concatenated.
+If @var{Output-File} is also missing, the output will be written to
+standard output.  To provide the interface one is used to from other
+programs a second interface is provided.
+
+@smallexample
+`gencat [@var{Option} @dots{}] -o @var{Output-File} [@var{Input-File} @dots{}]`
+@end smallexample
+
+The option @samp{-o} is used to specify the output file and all file
+arguments are used as input files.
+
+Beside this one can use @file{-} or @file{/dev/stdin} for
+@var{Input-File} to denote the standard input.  Corresponding one can
+use @file{-} and @file{/dev/stdout} for @var{Output-File} to denote
+standard output.  Using @file{-} as a file name is allowed in X/Open
+while using the device names is a GNU extension.
+
+The @code{gencat} program works by concatenating all input files and
+then @strong{merging} the resulting collection of message sets with a
+possibly existing output file.  This is done by removing all messages
+with set/message number tuples matching any of the generated messages
+from the output file and then adding all the new messages.  To
+regenerate a catalog file while ignoring the old contents therefore
+requires removing the output file if it exists.  If the output is
+written to standard output no merging takes place.
+
+@noindent
+The following table shows the options understood by the @code{gencat}
+program.  The X/Open standard does not specify any options for the
+program so all of these are GNU extensions.
+
+@table @samp
+@item -V
+@itemx --version
+Print the version information and exit.
+@item -h
+@itemx --help
+Print a usage message listing all available options, then exit successfully.
+@item --new
+Do not merge the new messages from the input files with the old content
+of the output file.  The old content of the output file is discarded.
+@item -H
+@itemx --header=name
+This option is used to emit the symbolic names given to sets and
+messages in the input files for use in the program.  Details about how
+to use this are given in the next section.  The @var{name} parameter to
+this option specifies the name of the output file.  It will contain a
+number of C preprocessor @code{#define}s to associate a name with a
+number.
+
+Please note that the generated file only contains the symbols from the
+input files.  If the output is merged with the previous content of the
+output file the possibly existing symbols from the file(s) which
+generated the old output files are not in the generated header file.
+@end table
+
+
+@node Common Usage
+@subsection How to use the @code{catgets} interface
+
+The @code{catgets} functions can be used in two different ways.  By
+following slavishly the X/Open specs and not relying on the extension
+and by using the GNU extensions.  We will take a look at the former
+method first to understand the benefits of extensions.
+
+@subsubsection Not using symbolic names
+
+Since the X/Open format of the message catalog files does not allow
+symbol names we have to work with numbers all the time.  When we start
+writing a program we have to replace all appearances of translatable
+strings with something like
+
+@smallexample
+catgets (catdesc, set, msg, "string")
+@end smallexample
+
+@noindent
+@var{catgets} is retrieved from a call to @code{catopen} which is
+normally done once at the program start.  The @code{"string"} is the
+string we want to translate.  The problems start with the set and
+message numbers.
+
+In a bigger program several programmers usually work at the same time on
+the program and so coordinating the number allocation is crucial.
+Though no two different strings must be indexed by the same tuple of
+numbers it is highly desirable to reuse the numbers for equal strings
+with equal translations (please note that there might be strings which
+are equal in one language but have different translations due to
+difference contexts).
+
+The allocation process can be relaxed a bit by different set numbers for
+different parts of the program.  So the number of developers who have to
+coordinate the allocation can be reduced.  But still lists must be keep
+track of the allocation and errors can easily happen.  These errors
+cannot be discovered by the compiler or the @code{catgets} functions.
+Only the user of the program might see wrong messages printed.  In the
+worst cases the messages are so irritating that they cannot be
+recognized as wrong.  Think about the translations for @code{"true"} and
+@code{"false"} being exchanged.  This could result in a disaster.
+
+
+@subsubsection Using symbolic names
+
+The problems mentioned in the last section derive from the fact that:
+
+@enumerate
+@item
+the numbers are allocated once and due to the possibly frequent use of
+them it is difficult to change a number later.
+@item
+the numbers do not allow guessing anything about the string and
+therefore collisions can easily happen.
+@end enumerate
+
+By constantly using symbolic names and by providing a method which maps
+the string content to a symbolic name (however this will happen) one can
+prevent both problems above.  The cost of this is that the programmer
+has to write a complete message catalog file while s/he is writing the
+program itself.
+
+This is necessary since the symbolic names must be mapped to numbers
+before the program sources can be compiled.  In the last section it was
+described how to generate a header containing the mapping of the names.
+E.g., for the example message file given in the last section we could
+call the @code{gencat} program as follows (assume @file{ex.msg} contains
+the sources).
+
+@smallexample
+gencat -H ex.h -o ex.cat ex.msg
+@end smallexample
+
+@noindent
+This generates a header file with the following content:
+
+@smallexample
+#define SetTwoSet 0x2   /* ex.msg:8 */
+
+#define SetOneSet 0x1   /* ex.msg:4 */
+#define SetOnetwo 0x2   /* ex.msg:6 */
+@end smallexample
+
+As can be seen the various symbols given in the source file are mangled
+to generate unique identifiers and these identifiers get numbers
+assigned.  Reading the source file and knowing about the rules will
+allow to predict the content of the header file (it is deterministic)
+but this is not necessary.  The @code{gencat} program can take care for
+everything.  All the programmer has to do is to put the generated header
+file in the dependency list of the source files of her/his project and
+add a rule to regenerate the header if any of the input files change.
+
+One word about the symbol mangling.  Every symbol consists of two parts:
+the name of the message set plus the name of the message or the special
+string @code{Set}.  So @code{SetOnetwo} means this macro can be used to
+access the translation with identifier @code{two} in the message set
+@code{SetOne}.
+
+The other names denote the names of the message sets.  The special
+string @code{Set} is used in the place of the message identifier.
+
+If in the code the second string of the set @code{SetOne} is used the C
+code should look like this:
+
+@smallexample
+catgets (catdesc, SetOneSet, SetOnetwo,
+         "   Message with ID \"two\", which gets the value 2 assigned")
+@end smallexample
+
+Writing the function this way will allow to change the message number
+and even the set number without requiring any change in the C source
+code.  (The text of the string is normally not the same; this is only
+for this example.)
+
+
+@subsubsection How does to this allow to develop
+
+To illustrate the usual way to work with the symbolic version numbers
+here is a little example.  Assume we want to write the very complex and
+famous greeting program.  We start by writing the code as usual:
+
+@smallexample
+#include <stdio.h>
+int
+main (void)
+@{
+  printf ("Hello, world!\n");
+  return 0;
+@}
+@end smallexample
+
+Now we want to internationalize the message and therefore replace the
+message with whatever the user wants.
+
+@smallexample
+#include <nl_types.h>
+#include <stdio.h>
+#include "msgnrs.h"
+int
+main (void)
+@{
+  nl_catd catdesc = catopen ("hello.cat", NL_CAT_LOCALE);
+  printf (catgets (catdesc, SetMainSet, SetMainHello,
+                   "Hello, world!\n"));
+  catclose (catdesc);
+  return 0;
+@}
+@end smallexample
+
+We see how the catalog object is opened and the returned descriptor used
+in the other function calls.  It is not really necessary to check for
+failure of any of the functions since even in these situations the
+functions will behave reasonable.  They simply will be return a
+translation.
+
+What remains unspecified here are the constants @code{SetMainSet} and
+@code{SetMainHello}.  These are the symbolic names describing the
+message.  To get the actual definitions which match the information in
+the catalog file we have to create the message catalog source file and
+process it using the @code{gencat} program.
+
+@smallexample
+$ Messages for the famous greeting program.
+$quote "
+
+$set Main
+Hello "Hallo, Welt!\n"
+@end smallexample
+
+Now we can start building the program (assume the message catalog source
+file is named @file{hello.msg} and the program source file @file{hello.c}):
+
+@smallexample
+% gencat -H msgnrs.h -o hello.cat hello.msg
+% cat msgnrs.h
+#define MainSet 0x1     /* hello.msg:4 */
+#define MainHello 0x1   /* hello.msg:5 */
+% gcc -o hello hello.c -I.
+% cp hello.cat /usr/share/locale/de/LC_MESSAGES
+% echo $LC_ALL
+de
+% ./hello
+Hallo, Welt!
+%
+@end smallexample
+
+The call of the @code{gencat} program creates the missing header file
+@file{msgnrs.h} as well as the message catalog binary.  The former is
+used in the compilation of @file{hello.c} while the later is placed in a
+directory in which the @code{catopen} function will try to locate it.
+Please check the @code{LC_ALL} environment variable and the default path
+for @code{catopen} presented in the description above.
+
+
+@node The Uniforum approach
+@section The Uniforum approach to Message Translation
+
+Sun Microsystems tried to standardize a different approach to message
+translation in the Uniforum group.  There never was a real standard
+defined but still the interface was used in Sun's operating systems.
+Since this approach fits better in the development process of free
+software it is also used throughout the GNU project and the GNU
+@file{gettext} package provides support for this outside @theglibc{}.
+
+The code of the @file{libintl} from GNU @file{gettext} is the same as
+the code in @theglibc{}.  So the documentation in the GNU
+@file{gettext} manual is also valid for the functionality here.  The
+following text will describe the library functions in detail.  But the
+numerous helper programs are not described in this manual.  Instead
+people should read the GNU @file{gettext} manual
+(@pxref{Top,,GNU gettext utilities,gettext,Native Language Support Library and Tools}).
+We will only give a short overview.
+
+Though the @code{catgets} functions are available by default on more
+systems the @code{gettext} interface is at least as portable as the
+former.  The GNU @file{gettext} package can be used wherever the
+functions are not available.
+
+
+@menu
+* Message catalogs with gettext::  The @code{gettext} family of functions.
+* Helper programs for gettext::    Programs to handle message catalogs
+                                    for @code{gettext}.
+@end menu
+
+
+@node Message catalogs with gettext
+@subsection The @code{gettext} family of functions
+
+The paradigms underlying the @code{gettext} approach to message
+translations is different from that of the @code{catgets} functions the
+basic functionally is equivalent.  There are functions of the following
+categories:
+
+@menu
+* Translation with gettext::       What has to be done to translate a message.
+* Locating gettext catalog::       How to determine which catalog to be used.
+* Advanced gettext functions::     Additional functions for more complicated
+                                    situations.
+* Charset conversion in gettext::  How to specify the output character set
+                                    @code{gettext} uses.
+* GUI program problems::           How to use @code{gettext} in GUI programs.
+* Using gettextized software::     The possibilities of the user to influence
+                                    the way @code{gettext} works.
+@end menu
+
+@node Translation with gettext
+@subsubsection What has to be done to translate a message?
+
+The @code{gettext} functions have a very simple interface.  The most
+basic function just takes the string which shall be translated as the
+argument and it returns the translation.  This is fundamentally
+different from the @code{catgets} approach where an extra key is
+necessary and the original string is only used for the error case.
+
+If the string which has to be translated is the only argument this of
+course means the string itself is the key.  I.e., the translation will
+be selected based on the original string.  The message catalogs must
+therefore contain the original strings plus one translation for any such
+string.  The task of the @code{gettext} function is to compare the
+argument string with the available strings in the catalog and return the
+appropriate translation.  Of course this process is optimized so that
+this process is not more expensive than an access using an atomic key
+like in @code{catgets}.
+
+The @code{gettext} approach has some advantages but also some
+disadvantages.  Please see the GNU @file{gettext} manual for a detailed
+discussion of the pros and cons.
+
+All the definitions and declarations for @code{gettext} can be found in
+the @file{libintl.h} header file.  On systems where these functions are
+not part of the C library they can be found in a separate library named
+@file{libintl.a} (or accordingly different for shared libraries).
+
+@deftypefun {char *} gettext (const char *@var{msgid})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Wrapper for dcgettext.
+The @code{gettext} function searches the currently selected message
+catalogs for a string which is equal to @var{msgid}.  If there is such a
+string available it is returned.  Otherwise the argument string
+@var{msgid} is returned.
+
+Please note that although the return value is @code{char *} the
+returned string must not be changed.  This broken type results from the
+history of the function and does not reflect the way the function should
+be used.
+
+Please note that above we wrote ``message catalogs'' (plural).  This is
+a specialty of the GNU implementation of these functions and we will
+say more about this when we talk about the ways message catalogs are
+selected (@pxref{Locating gettext catalog}).
+
+The @code{gettext} function does not modify the value of the global
+@code{errno} variable.  This is necessary to make it possible to write
+something like
+
+@smallexample
+  printf (gettext ("Operation failed: %m\n"));
+@end smallexample
+
+Here the @code{errno} value is used in the @code{printf} function while
+processing the @code{%m} format element and if the @code{gettext}
+function would change this value (it is called before @code{printf} is
+called) we would get a wrong message.
+
+So there is no easy way to detect a missing message catalog besides
+comparing the argument string with the result.  But it is normally the
+task of the user to react on missing catalogs.  The program cannot guess
+when a message catalog is really necessary since for a user who speaks
+the language the program was developed in, the message does not need any translation.
+@end deftypefun
+
+The remaining two functions to access the message catalog add some
+functionality to select a message catalog which is not the default one.
+This is important if parts of the program are developed independently.
+Every part can have its own message catalog and all of them can be used
+at the same time.  The C library itself is an example: internally it
+uses the @code{gettext} functions but since it must not depend on a
+currently selected default message catalog it must specify all ambiguous
+information.
+
+@deftypefun {char *} dgettext (const char *@var{domainname}, const char *@var{msgid})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Wrapper for dcgettext.
+The @code{dgettext} function acts just like the @code{gettext}
+function.  It only takes an additional first argument @var{domainname}
+which guides the selection of the message catalogs which are searched
+for the translation.  If the @var{domainname} parameter is the null
+pointer the @code{dgettext} function is exactly equivalent to
+@code{gettext} since the default value for the domain name is used.
+
+As for @code{gettext} the return value type is @code{char *} which is an
+anachronism.  The returned string must never be modified.
+@end deftypefun
+
+@deftypefun {char *} dcgettext (const char *@var{domainname}, const char *@var{msgid}, int @var{category})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c dcgettext @mtsenv @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsfd @acsmem
+@c  dcigettext @mtsenv @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsfd @acsmem
+@c   libc_rwlock_rdlock @asulock @aculock
+@c   current_locale_name ok [protected from @mtslocale]
+@c   tfind ok
+@c   libc_rwlock_unlock ok
+@c   plural_lookup ok
+@c    plural_eval ok
+@c    rawmemchr ok
+@c   DETERMINE_SECURE ok, nothing
+@c   strcmp ok
+@c   strlen ok
+@c   getcwd @ascuheap @acsmem @acsfd
+@c   strchr ok
+@c   stpcpy ok
+@c   category_to_name ok
+@c   guess_category_value @mtsenv
+@c    getenv @mtsenv
+@c    current_locale_name dup ok [protected from @mtslocale by dcigettext]
+@c    strcmp ok
+@c   ENABLE_SECURE ok
+@c   _nl_find_domain @mtsenv @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsfd @acsmem
+@c    libc_rwlock_rdlock dup @asulock @aculock
+@c    _nl_make_l10nflist dup @ascuheap @acsmem
+@c    libc_rwlock_unlock dup ok
+@c    _nl_load_domain @mtsenv @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsfd @acsmem
+@c     libc_lock_lock_recursive @aculock
+@c     libc_lock_unlock_recursive @aculock
+@c     open->open_not_cancel_2 @acsfd
+@c     fstat ok
+@c     mmap dup @acsmem
+@c     close->close_not_cancel_no_status @acsfd
+@c     malloc dup @ascuheap @acsmem
+@c     read->read_not_cancel ok
+@c     munmap dup @acsmem
+@c     W dup ok
+@c     strlen dup ok
+@c     get_sysdep_segment_value ok
+@c     memcpy dup ok
+@c     hash_string dup ok
+@c     free dup @ascuheap @acsmem
+@c     libc_rwlock_init ok
+@c     _nl_find_msg dup @mtsenv @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsfd @acsmem
+@c     libc_rwlock_fini ok
+@c     EXTRACT_PLURAL_EXPRESSION @ascuheap @acsmem
+@c      strstr dup ok
+@c      isspace ok
+@c      strtoul ok
+@c      PLURAL_PARSE @ascuheap @acsmem
+@c       malloc dup @ascuheap @acsmem
+@c       free dup @ascuheap @acsmem
+@c      INIT_GERMANIC_PLURAL ok, nothing
+@c        the pre-C99 variant is @acucorrupt [protected from @mtuinit by dcigettext]
+@c    _nl_expand_alias dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c    _nl_explode_name dup @ascuheap @acsmem
+@c    libc_rwlock_wrlock dup @asulock @aculock
+@c    free dup @asulock @aculock @acsfd @acsmem
+@c   _nl_find_msg @mtsenv @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsfd @acsmem
+@c    _nl_load_domain dup @mtsenv @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsfd @acsmem
+@c    strlen ok
+@c    hash_string ok
+@c    W ok
+@c     SWAP ok
+@c      bswap_32 ok
+@c    strcmp ok
+@c    get_output_charset @mtsenv @ascuheap @acsmem
+@c     getenv dup @mtsenv
+@c     strlen dup ok
+@c     malloc dup @ascuheap @acsmem
+@c     memcpy dup ok
+@c    libc_rwlock_rdlock dup @asulock @aculock
+@c    libc_rwlock_unlock dup ok
+@c    libc_rwlock_wrlock dup @asulock @aculock
+@c    realloc @ascuheap @acsmem
+@c    strdup @ascuheap @acsmem
+@c    strstr ok
+@c    strcspn ok
+@c    mempcpy dup ok
+@c    norm_add_slashes dup ok
+@c    gconv_open @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     [protected from @mtslocale by dcigettext locale lock]
+@c    free dup @ascuheap @acsmem
+@c    libc_lock_lock @asulock @aculock
+@c    calloc @ascuheap @acsmem
+@c    gconv dup @acucorrupt [protected from @mtsrace and @asucorrupt by lock]
+@c    libc_lock_unlock ok
+@c   malloc @ascuheap @acsmem
+@c   mempcpy ok
+@c   memcpy ok
+@c   strcpy ok
+@c   libc_rwlock_wrlock @asulock @aculock
+@c   tsearch @ascuheap @acucorrupt @acsmem [protected from @mtsrace and @asucorrupt]
+@c    transcmp ok
+@c     strmp dup ok
+@c   free @ascuheap @acsmem
+The @code{dcgettext} adds another argument to those which
+@code{dgettext} takes.  This argument @var{category} specifies the last
+piece of information needed to localize the message catalog.  I.e., the
+domain name and the locale category exactly specify which message
+catalog has to be used (relative to a given directory, see below).
+
+The @code{dgettext} function can be expressed in terms of
+@code{dcgettext} by using
+
+@smallexample
+dcgettext (domain, string, LC_MESSAGES)
+@end smallexample
+
+@noindent
+instead of
+
+@smallexample
+dgettext (domain, string)
+@end smallexample
+
+This also shows which values are expected for the third parameter.  One
+has to use the available selectors for the categories available in
+@file{locale.h}.  Normally the available values are @code{LC_CTYPE},
+@code{LC_COLLATE}, @code{LC_MESSAGES}, @code{LC_MONETARY},
+@code{LC_NUMERIC}, and @code{LC_TIME}.  Please note that @code{LC_ALL}
+must not be used and even though the names might suggest this, there is
+no relation to the environment variable of this name.
+
+The @code{dcgettext} function is only implemented for compatibility with
+other systems which have @code{gettext} functions.  There is not really
+any situation where it is necessary (or useful) to use a different value
+than @code{LC_MESSAGES} for the @var{category} parameter.  We are
+dealing with messages here and any other choice can only be irritating.
+
+As for @code{gettext} the return value type is @code{char *} which is an
+anachronism.  The returned string must never be modified.
+@end deftypefun
+
+When using the three functions above in a program it is a frequent case
+that the @var{msgid} argument is a constant string.  So it is worthwhile to
+optimize this case.  Thinking shortly about this one will realize that
+as long as no new message catalog is loaded the translation of a message
+will not change.  This optimization is actually implemented by the
+@code{gettext}, @code{dgettext} and @code{dcgettext} functions.
+
+
+@node Locating gettext catalog
+@subsubsection How to determine which catalog to be used
+
+The functions to retrieve the translations for a given message have a
+remarkable simple interface.  But to provide the user of the program
+still the opportunity to select exactly the translation s/he wants and
+also to provide the programmer the possibility to influence the way to
+locate the search for catalogs files there is a quite complicated
+underlying mechanism which controls all this.  The code is complicated
+the use is easy.
+
+Basically we have two different tasks to perform which can also be
+performed by the @code{catgets} functions:
+
+@enumerate
+@item
+Locate the set of message catalogs.  There are a number of files for
+different languages which all belong to the package.  Usually they
+are all stored in the filesystem below a certain directory.
+
+There can be arbitrarily many packages installed and they can follow
+different guidelines for the placement of their files.
+
+@item
+Relative to the location specified by the package the actual translation
+files must be searched, based on the wishes of the user.  I.e., for each
+language the user selects the program should be able to locate the
+appropriate file.
+@end enumerate
+
+This is the functionality required by the specifications for
+@code{gettext} and this is also what the @code{catgets} functions are
+able to do.  But there are some problems unresolved:
+
+@itemize @bullet
+@item
+The language to be used can be specified in several different ways.
+There is no generally accepted standard for this and the user always
+expects the program to understand what s/he means.  E.g., to select the
+German translation one could write @code{de}, @code{german}, or
+@code{deutsch} and the program should always react the same.
+
+@item
+Sometimes the specification of the user is too detailed.  If s/he, e.g.,
+specifies @code{de_DE.ISO-8859-1} which means German, spoken in Germany,
+coded using the @w{ISO 8859-1} character set there is the possibility
+that a message catalog matching this exactly is not available.  But
+there could be a catalog matching @code{de} and if the character set
+used on the machine is always @w{ISO 8859-1} there is no reason why this
+later message catalog should not be used.  (We call this @dfn{message
+inheritance}.)
+
+@item
+If a catalog for a wanted language is not available it is not always the
+second best choice to fall back on the language of the developer and
+simply not translate any message.  Instead a user might be better able
+to read the messages in another language and so the user of the program
+should be able to define a precedence order of languages.
+@end itemize
+
+We can divide the configuration actions in two parts: the one is
+performed by the programmer, the other by the user.  We will start with
+the functions the programmer can use since the user configuration will
+be based on this.
+
+As the functions described in the last sections already mention separate
+sets of messages can be selected by a @dfn{domain name}.  This is a
+simple string which should be unique for each program part that uses a
+separate domain.  It is possible to use in one program arbitrarily many
+domains at the same time.  E.g., @theglibc{} itself uses a domain
+named @code{libc} while the program using the C Library could use a
+domain named @code{foo}.  The important point is that at any time
+exactly one domain is active.  This is controlled with the following
+function.
+
+@deftypefun {char *} textdomain (const char *@var{domainname})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+@c textdomain @asulock @ascuheap @aculock @acsmem
+@c  libc_rwlock_wrlock @asulock @aculock
+@c  strcmp ok
+@c  strdup @ascuheap @acsmem
+@c  free @ascuheap @acsmem
+@c  libc_rwlock_unlock ok
+The @code{textdomain} function sets the default domain, which is used in
+all future @code{gettext} calls, to @var{domainname}.  Please note that
+@code{dgettext} and @code{dcgettext} calls are not influenced if the
+@var{domainname} parameter of these functions is not the null pointer.
+
+Before the first call to @code{textdomain} the default domain is
+@code{messages}.  This is the name specified in the specification of
+the @code{gettext} API.  This name is as good as any other name.  No
+program should ever really use a domain with this name since this can
+only lead to problems.
+
+The function returns the value which is from now on taken as the default
+domain.  If the system went out of memory the returned value is
+@code{NULL} and the global variable @code{errno} is set to @code{ENOMEM}.
+Despite the return value type being @code{char *} the return string must
+not be changed.  It is allocated internally by the @code{textdomain}
+function.
+
+If the @var{domainname} parameter is the null pointer no new default
+domain is set.  Instead the currently selected default domain is
+returned.
+
+If the @var{domainname} parameter is the empty string the default domain
+is reset to its initial value, the domain with the name @code{messages}.
+This possibility is questionable to use since the domain @code{messages}
+really never should be used.
+@end deftypefun
+
+@deftypefun {char *} bindtextdomain (const char *@var{domainname}, const char *@var{dirname})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c bindtextdomain @ascuheap @acsmem
+@c  set_binding_values @ascuheap @acsmem
+@c   libc_rwlock_wrlock dup @asulock @aculock
+@c   strcmp dup ok
+@c   strdup dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c   malloc dup @ascuheap @acsmem
+The @code{bindtextdomain} function can be used to specify the directory
+which contains the message catalogs for domain @var{domainname} for the
+different languages.  To be correct, this is the directory where the
+hierarchy of directories is expected.  Details are explained below.
+
+For the programmer it is important to note that the translations which
+come with the program have to be placed in a directory hierarchy starting
+at, say, @file{/foo/bar}.  Then the program should make a
+@code{bindtextdomain} call to bind the domain for the current program to
+this directory.  So it is made sure the catalogs are found.  A correctly
+running program does not depend on the user setting an environment
+variable.
+
+The @code{bindtextdomain} function can be used several times and if the
+@var{domainname} argument is different the previously bound domains
+will not be overwritten.
+
+If the program which wish to use @code{bindtextdomain} at some point of
+time use the @code{chdir} function to change the current working
+directory it is important that the @var{dirname} strings ought to be an
+absolute pathname.  Otherwise the addressed directory might vary with
+the time.
+
+If the @var{dirname} parameter is the null pointer @code{bindtextdomain}
+returns the currently selected directory for the domain with the name
+@var{domainname}.
+
+The @code{bindtextdomain} function returns a pointer to a string
+containing the name of the selected directory name.  The string is
+allocated internally in the function and must not be changed by the
+user.  If the system went out of core during the execution of
+@code{bindtextdomain} the return value is @code{NULL} and the global
+variable @code{errno} is set accordingly.
+@end deftypefun
+
+
+@node Advanced gettext functions
+@subsubsection Additional functions for more complicated situations
+
+The functions of the @code{gettext} family described so far (and all the
+@code{catgets} functions as well) have one problem in the real world
+which has been neglected completely in all existing approaches.  What
+is meant here is the handling of plural forms.
+
+Looking through Unix source code before the time anybody thought about
+internationalization (and, sadly, even afterwards) one can often find
+code similar to the following:
+
+@smallexample
+   printf ("%d file%s deleted", n, n == 1 ? "" : "s");
+@end smallexample
+
+@noindent
+After the first complaints from people internationalizing the code people
+either completely avoided formulations like this or used strings like
+@code{"file(s)"}.  Both look unnatural and should be avoided.  First
+tries to solve the problem correctly looked like this:
+
+@smallexample
+   if (n == 1)
+     printf ("%d file deleted", n);
+   else
+     printf ("%d files deleted", n);
+@end smallexample
+
+But this does not solve the problem.  It helps languages where the
+plural form of a noun is not simply constructed by adding an `s' but
+that is all.  Once again people fell into the trap of believing the
+rules their language uses are universal.  But the handling of plural
+forms differs widely between the language families.  There are two
+things we can differ between (and even inside language families);
+
+@itemize @bullet
+@item
+The form how plural forms are build differs.  This is a problem with
+language which have many irregularities.  German, for instance, is a
+drastic case.  Though English and German are part of the same language
+family (Germanic), the almost regular forming of plural noun forms
+(appending an `s') is hardly found in German.
+
+@item
+The number of plural forms differ.  This is somewhat surprising for
+those who only have experiences with Romanic and Germanic languages
+since here the number is the same (there are two).
+
+But other language families have only one form or many forms.  More
+information on this in an extra section.
+@end itemize
+
+The consequence of this is that application writers should not try to
+solve the problem in their code.  This would be localization since it is
+only usable for certain, hardcoded language environments.  Instead the
+extended @code{gettext} interface should be used.
+
+These extra functions are taking instead of the one key string two
+strings and a numerical argument.  The idea behind this is that using
+the numerical argument and the first string as a key, the implementation
+can select using rules specified by the translator the right plural
+form.  The two string arguments then will be used to provide a return
+value in case no message catalog is found (similar to the normal
+@code{gettext} behavior).  In this case the rules for Germanic language
+are used and it is assumed that the first string argument is the singular
+form, the second the plural form.
+
+This has the consequence that programs without language catalogs can
+display the correct strings only if the program itself is written using
+a Germanic language.  This is a limitation but since @theglibc{}
+(as well as the GNU @code{gettext} package) is written as part of the
+GNU package and the coding standards for the GNU project require programs
+to be written in English, this solution nevertheless fulfills its
+purpose.
+
+@deftypefun {char *} ngettext (const char *@var{msgid1}, const char *@var{msgid2}, unsigned long int @var{n})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Wrapper for dcngettext.
+The @code{ngettext} function is similar to the @code{gettext} function
+as it finds the message catalogs in the same way.  But it takes two
+extra arguments.  The @var{msgid1} parameter must contain the singular
+form of the string to be converted.  It is also used as the key for the
+search in the catalog.  The @var{msgid2} parameter is the plural form.
+The parameter @var{n} is used to determine the plural form.  If no
+message catalog is found @var{msgid1} is returned if @code{n == 1},
+otherwise @code{msgid2}.
+
+An example for the use of this function is:
+
+@smallexample
+  printf (ngettext ("%d file removed", "%d files removed", n), n);
+@end smallexample
+
+Please note that the numeric value @var{n} has to be passed to the
+@code{printf} function as well.  It is not sufficient to pass it only to
+@code{ngettext}.
+@end deftypefun
+
+@deftypefun {char *} dngettext (const char *@var{domain}, const char *@var{msgid1}, const char *@var{msgid2}, unsigned long int @var{n})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Wrapper for dcngettext.
+The @code{dngettext} is similar to the @code{dgettext} function in the
+way the message catalog is selected.  The difference is that it takes
+two extra parameters to provide the correct plural form.  These two
+parameters are handled in the same way @code{ngettext} handles them.
+@end deftypefun
+
+@deftypefun {char *} dcngettext (const char *@var{domain}, const char *@var{msgid1}, const char *@var{msgid2}, unsigned long int @var{n}, int @var{category})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Wrapper for dcigettext.
+The @code{dcngettext} is similar to the @code{dcgettext} function in the
+way the message catalog is selected.  The difference is that it takes
+two extra parameters to provide the correct plural form.  These two
+parameters are handled in the same way @code{ngettext} handles them.
+@end deftypefun
+
+@subsubheading The problem of plural forms
+
+A description of the problem can be found at the beginning of the last
+section.  Now there is the question how to solve it.  Without the input
+of linguists (which was not available) it was not possible to determine
+whether there are only a few different forms in which plural forms are
+formed or whether the number can increase with every new supported
+language.
+
+Therefore the solution implemented is to allow the translator to specify
+the rules of how to select the plural form.  Since the formula varies
+with every language this is the only viable solution except for
+hardcoding the information in the code (which still would require the
+possibility of extensions to not prevent the use of new languages).  The
+details are explained in the GNU @code{gettext} manual.  Here only a
+bit of information is provided.
+
+The information about the plural form selection has to be stored in the
+header entry (the one with the empty @code{msgid} string).  It looks
+like this:
+
+@smallexample
+Plural-Forms: nplurals=2; plural=n == 1 ? 0 : 1;
+@end smallexample
+
+The @code{nplurals} value must be a decimal number which specifies how
+many different plural forms exist for this language.  The string
+following @code{plural} is an expression using the C language
+syntax.  Exceptions are that no negative numbers are allowed, numbers
+must be decimal, and the only variable allowed is @code{n}.  This
+expression will be evaluated whenever one of the functions
+@code{ngettext}, @code{dngettext}, or @code{dcngettext} is called.  The
+numeric value passed to these functions is then substituted for all uses
+of the variable @code{n} in the expression.  The resulting value then
+must be greater or equal to zero and smaller than the value given as the
+value of @code{nplurals}.
+
+@noindent
+The following rules are known at this point.  The language with families
+are listed.  But this does not necessarily mean the information can be
+generalized for the whole family (as can be easily seen in the table
+below).@footnote{Additions are welcome.  Send appropriate information to
+@email{bug-glibc-manual@@gnu.org}.}
+
+@table @asis
+@item Only one form:
+Some languages only require one single form.  There is no distinction
+between the singular and plural form.  An appropriate header entry
+would look like this:
+
+@smallexample
+Plural-Forms: nplurals=1; plural=0;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Finno-Ugric family
+Hungarian
+@item Asian family
+Japanese, Korean
+@item Turkic/Altaic family
+Turkish
+@end table
+
+@item Two forms, singular used for one only
+This is the form used in most existing programs since it is what English
+uses.  A header entry would look like this:
+
+@smallexample
+Plural-Forms: nplurals=2; plural=n != 1;
+@end smallexample
+
+(Note: this uses the feature of C expressions that boolean expressions
+have to value zero or one.)
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Germanic family
+Danish, Dutch, English, German, Norwegian, Swedish
+@item Finno-Ugric family
+Estonian, Finnish
+@item Latin/Greek family
+Greek
+@item Semitic family
+Hebrew
+@item Romance family
+Italian, Portuguese, Spanish
+@item Artificial
+Esperanto
+@end table
+
+@item Two forms, singular used for zero and one
+Exceptional case in the language family.  The header entry would be:
+
+@smallexample
+Plural-Forms: nplurals=2; plural=n>1;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Romanic family
+French, Brazilian Portuguese
+@end table
+
+@item Three forms, special case for zero
+The header entry would be:
+
+@smallexample
+Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n != 0 ? 1 : 2;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Baltic family
+Latvian
+@end table
+
+@item Three forms, special cases for one and two
+The header entry would be:
+
+@smallexample
+Plural-Forms: nplurals=3; plural=n==1 ? 0 : n==2 ? 1 : 2;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Celtic
+Gaeilge (Irish)
+@end table
+
+@item Three forms, special case for numbers ending in 1[2-9]
+The header entry would look like this:
+
+@smallexample
+Plural-Forms: nplurals=3; \
+    plural=n%10==1 && n%100!=11 ? 0 : \
+           n%10>=2 && (n%100<10 || n%100>=20) ? 1 : 2;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Baltic family
+Lithuanian
+@end table
+
+@item Three forms, special cases for numbers ending in 1 and 2, 3, 4, except those ending in 1[1-4]
+The header entry would look like this:
+
+@smallexample
+Plural-Forms: nplurals=3; \
+    plural=n%100/10==1 ? 2 : n%10==1 ? 0 : (n+9)%10>3 ? 2 : 1;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Slavic family
+Croatian, Czech, Russian, Ukrainian
+@end table
+
+@item Three forms, special cases for 1 and 2, 3, 4
+The header entry would look like this:
+
+@smallexample
+Plural-Forms: nplurals=3; \
+    plural=(n==1) ? 1 : (n>=2 && n<=4) ? 2 : 0;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Slavic family
+Slovak
+@end table
+
+@item Three forms, special case for one and some numbers ending in 2, 3, or 4
+The header entry would look like this:
+
+@smallexample
+Plural-Forms: nplurals=3; \
+    plural=n==1 ? 0 : \
+           n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Slavic family
+Polish
+@end table
+
+@item Four forms, special case for one and all numbers ending in 02, 03, or 04
+The header entry would look like this:
+
+@smallexample
+Plural-Forms: nplurals=4; \
+    plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;
+@end smallexample
+
+@noindent
+Languages with this property include:
+
+@table @asis
+@item Slavic family
+Slovenian
+@end table
+@end table
+
+
+@node Charset conversion in gettext
+@subsubsection How to specify the output character set @code{gettext} uses
+
+@code{gettext} not only looks up a translation in a message catalog, it
+also converts the translation on the fly to the desired output character
+set.  This is useful if the user is working in a different character set
+than the translator who created the message catalog, because it avoids
+distributing variants of message catalogs which differ only in the
+character set.
+
+The output character set is, by default, the value of @code{nl_langinfo
+(CODESET)}, which depends on the @code{LC_CTYPE} part of the current
+locale.  But programs which store strings in a locale independent way
+(e.g. UTF-8) can request that @code{gettext} and related functions
+return the translations in that encoding, by use of the
+@code{bind_textdomain_codeset} function.
+
+Note that the @var{msgid} argument to @code{gettext} is not subject to
+character set conversion.  Also, when @code{gettext} does not find a
+translation for @var{msgid}, it returns @var{msgid} unchanged --
+independently of the current output character set.  It is therefore
+recommended that all @var{msgid}s be US-ASCII strings.
+
+@deftypefun {char *} bind_textdomain_codeset (const char *@var{domainname}, const char *@var{codeset})
+@standards{GNU, libintl.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c bind_textdomain_codeset @ascuheap @acsmem
+@c  set_binding_values dup @ascuheap @acsmem
+The @code{bind_textdomain_codeset} function can be used to specify the
+output character set for message catalogs for domain @var{domainname}.
+The @var{codeset} argument must be a valid codeset name which can be used
+for the @code{iconv_open} function, or a null pointer.
+
+If the @var{codeset} parameter is the null pointer,
+@code{bind_textdomain_codeset} returns the currently selected codeset
+for the domain with the name @var{domainname}.  It returns @code{NULL} if
+no codeset has yet been selected.
+
+The @code{bind_textdomain_codeset} function can be used several times.
+If used multiple times with the same @var{domainname} argument, the
+later call overrides the settings made by the earlier one.
+
+The @code{bind_textdomain_codeset} function returns a pointer to a
+string containing the name of the selected codeset.  The string is
+allocated internally in the function and must not be changed by the
+user.  If the system went out of core during the execution of
+@code{bind_textdomain_codeset}, the return value is @code{NULL} and the
+global variable @code{errno} is set accordingly.
+@end deftypefun
+
+
+@node GUI program problems
+@subsubsection How to use @code{gettext} in GUI programs
+
+One place where the @code{gettext} functions, if used normally, have big
+problems is within programs with graphical user interfaces (GUIs).  The
+problem is that many of the strings which have to be translated are very
+short.  They have to appear in pull-down menus which restricts the
+length.  But strings which are not containing entire sentences or at
+least large fragments of a sentence may appear in more than one
+situation in the program but might have different translations.  This is
+especially true for the one-word strings which are frequently used in
+GUI programs.
+
+As a consequence many people say that the @code{gettext} approach is
+wrong and instead @code{catgets} should be used which indeed does not
+have this problem.  But there is a very simple and powerful method to
+handle these kind of problems with the @code{gettext} functions.
+
+@noindent
+As an example consider the following fictional situation.  A GUI program
+has a menu bar with the following entries:
+
+@smallexample
++------------+------------+--------------------------------------+
+| File       | Printer    |                                      |
++------------+------------+--------------------------------------+
+| Open     | | Select   |
+| New      | | Open     |
++----------+ | Connect  |
+             +----------+
+@end smallexample
+
+To have the strings @code{File}, @code{Printer}, @code{Open},
+@code{New}, @code{Select}, and @code{Connect} translated there has to be
+at some point in the code a call to a function of the @code{gettext}
+family.  But in two places the string passed into the function would be
+@code{Open}.  The translations might not be the same and therefore we
+are in the dilemma described above.
+
+One solution to this problem is to artificially extend the strings
+to make them unambiguous.  But what would the program do if no
+translation is available?  The extended string is not what should be
+printed.  So we should use a slightly modified version of the functions.
+
+To extend the strings a uniform method should be used.  E.g., in the
+example above, the strings could be chosen as
+
+@smallexample
+Menu|File
+Menu|Printer
+Menu|File|Open
+Menu|File|New
+Menu|Printer|Select
+Menu|Printer|Open
+Menu|Printer|Connect
+@end smallexample
+
+Now all the strings are different and if now instead of @code{gettext}
+the following little wrapper function is used, everything works just
+fine:
+
+@cindex sgettext
+@smallexample
+  char *
+  sgettext (const char *msgid)
+  @{
+    char *msgval = gettext (msgid);
+    if (msgval == msgid)
+      msgval = strrchr (msgid, '|') + 1;
+    return msgval;
+  @}
+@end smallexample
+
+What this little function does is to recognize the case when no
+translation is available.  This can be done very efficiently by a
+pointer comparison since the return value is the input value.  If there
+is no translation we know that the input string is in the format we used
+for the Menu entries and therefore contains a @code{|} character.  We
+simply search for the last occurrence of this character and return a
+pointer to the character following it.  That's it!
+
+If one now consistently uses the extended string form and replaces
+the @code{gettext} calls with calls to @code{sgettext} (this is normally
+limited to very few places in the GUI implementation) then it is
+possible to produce a program which can be internationalized.
+
+With advanced compilers (such as GNU C) one can write the
+@code{sgettext} functions as an inline function or as a macro like this:
+
+@cindex sgettext
+@smallexample
+#define sgettext(msgid) \
+  (@{ const char *__msgid = (msgid);            \
+     char *__msgstr = gettext (__msgid);       \
+     if (__msgval == __msgid)                  \
+       __msgval = strrchr (__msgid, '|') + 1;  \
+     __msgval; @})
+@end smallexample
+
+The other @code{gettext} functions (@code{dgettext}, @code{dcgettext}
+and the @code{ngettext} equivalents) can and should have corresponding
+functions as well which look almost identical, except for the parameters
+and the call to the underlying function.
+
+Now there is of course the question why such functions do not exist in
+@theglibc{}?  There are two parts of the answer to this question.
+
+@itemize @bullet
+@item
+They are easy to write and therefore can be provided by the project they
+are used in.  This is not an answer by itself and must be seen together
+with the second part which is:
+
+@item
+There is no way the C library can contain a version which can work
+everywhere.  The problem is the selection of the character to separate
+the prefix from the actual string in the extended string.  The
+examples above used @code{|} which is a quite good choice because it
+resembles a notation frequently used in this context and it also is a
+character not often used in message strings.
+
+But what if the character is used in message strings.  Or if the chose
+character is not available in the character set on the machine one
+compiles (e.g., @code{|} is not required to exist for @w{ISO C}; this is
+why the @file{iso646.h} file exists in @w{ISO C} programming environments).
+@end itemize
+
+There is only one more comment to make left.  The wrapper function above
+requires that the translations strings are not extended themselves.
+This is only logical.  There is no need to disambiguate the strings
+(since they are never used as keys for a search) and one also saves
+quite some memory and disk space by doing this.
+
+
+@node Using gettextized software
+@subsubsection User influence on @code{gettext}
+
+The last sections described what the programmer can do to
+internationalize the messages of the program.  But it is finally up to
+the user to select the message s/he wants to see.  S/He must understand
+them.
+
+The POSIX locale model uses the environment variables @code{LC_COLLATE},
+@code{LC_CTYPE}, @code{LC_MESSAGES}, @code{LC_MONETARY}, @code{LC_NUMERIC},
+and @code{LC_TIME} to select the locale which is to be used.  This way
+the user can influence lots of functions.  As we mentioned above, the
+@code{gettext} functions also take advantage of this.
+
+To understand how this happens it is necessary to take a look at the
+various components of the filename which gets computed to locate a
+message catalog.  It is composed as follows:
+
+@smallexample
+@var{dir_name}/@var{locale}/LC_@var{category}/@var{domain_name}.mo
+@end smallexample
+
+The default value for @var{dir_name} is system specific.  It is computed
+from the value given as the prefix while configuring the C library.
+This value normally is @file{/usr} or @file{/}.  For the former the
+complete @var{dir_name} is:
+
+@smallexample
+/usr/share/locale
+@end smallexample
+
+We can use @file{/usr/share} since the @file{.mo} files containing the
+message catalogs are system independent, so all systems can use the same
+files.  If the program executed the @code{bindtextdomain} function for
+the message domain that is currently handled, the @code{dir_name}
+component is exactly the value which was given to the function as
+the second parameter.  I.e., @code{bindtextdomain} allows overwriting
+the only system dependent and fixed value to make it possible to
+address files anywhere in the filesystem.
+
+The @var{category} is the name of the locale category which was selected
+in the program code.  For @code{gettext} and @code{dgettext} this is
+always @code{LC_MESSAGES}, for @code{dcgettext} this is selected by the
+value of the third parameter.  As said above it should be avoided to
+ever use a category other than @code{LC_MESSAGES}.
+
+The @var{locale} component is computed based on the category used.  Just
+like for the @code{setlocale} function here comes the user selection
+into the play.  Some environment variables are examined in a fixed order
+and the first environment variable set determines the return value of
+the lookup process.  In detail, for the category @code{LC_xxx} the
+following variables in this order are examined:
+
+@table @code
+@item LANGUAGE
+@item LC_ALL
+@item LC_xxx
+@item LANG
+@end table
+
+This looks very familiar.  With the exception of the @code{LANGUAGE}
+environment variable this is exactly the lookup order the
+@code{setlocale} function uses.  But why introduce the @code{LANGUAGE}
+variable?
+
+The reason is that the syntax of the values these variables can have is
+different to what is expected by the @code{setlocale} function.  If we
+would set @code{LC_ALL} to a value following the extended syntax that
+would mean the @code{setlocale} function will never be able to use the
+value of this variable as well.  An additional variable removes this
+problem plus we can select the language independently of the locale
+setting which sometimes is useful.
+
+While for the @code{LC_xxx} variables the value should consist of
+exactly one specification of a locale the @code{LANGUAGE} variable's
+value can consist of a colon separated list of locale names.  The
+attentive reader will realize that this is the way we manage to
+implement one of our additional demands above: we want to be able to
+specify an ordered list of languages.
+
+Back to the constructed filename we have only one component missing.
+The @var{domain_name} part is the name which was either registered using
+the @code{textdomain} function or which was given to @code{dgettext} or
+@code{dcgettext} as the first parameter.  Now it becomes obvious that a
+good choice for the domain name in the program code is a string which is
+closely related to the program/package name.  E.g., for @theglibc{}
+the domain name is @code{libc}.
+
+@noindent
+A limited piece of example code should show how the program is supposed
+to work:
+
+@smallexample
+@{
+  setlocale (LC_ALL, "");
+  textdomain ("test-package");
+  bindtextdomain ("test-package", "/usr/local/share/locale");
+  puts (gettext ("Hello, world!"));
+@}
+@end smallexample
+
+At the program start the default domain is @code{messages}, and the
+default locale is "C".  The @code{setlocale} call sets the locale
+according to the user's environment variables; remember that correct
+functioning of @code{gettext} relies on the correct setting of the
+@code{LC_MESSAGES} locale (for looking up the message catalog) and
+of the @code{LC_CTYPE} locale (for the character set conversion).
+The @code{textdomain} call changes the default domain to
+@code{test-package}.  The @code{bindtextdomain} call specifies that
+the message catalogs for the domain @code{test-package} can be found
+below the directory @file{/usr/local/share/locale}.
+
+If the user sets in her/his environment the variable @code{LANGUAGE}
+to @code{de} the @code{gettext} function will try to use the
+translations from the file
+
+@smallexample
+/usr/local/share/locale/de/LC_MESSAGES/test-package.mo
+@end smallexample
+
+From the above descriptions it should be clear which component of this
+filename is determined by which source.
+
+In the above example we assumed the @code{LANGUAGE} environment
+variable to be @code{de}.  This might be an appropriate selection but what
+happens if the user wants to use @code{LC_ALL} because of the wider
+usability and here the required value is @code{de_DE.ISO-8859-1}?  We
+already mentioned above that a situation like this is not infrequent.
+E.g., a person might prefer reading a dialect and if this is not
+available fall back on the standard language.
+
+The @code{gettext} functions know about situations like this and can
+handle them gracefully.  The functions recognize the format of the value
+of the environment variable.  It can split the value is different pieces
+and by leaving out the only or the other part it can construct new
+values.  This happens of course in a predictable way.  To understand
+this one must know the format of the environment variable value.  There
+is one more or less standardized form, originally from the X/Open
+specification:
+
+@code{language[_territory[.codeset]][@@modifier]}
+
+Less specific locale names will be stripped in the order of the
+following list:
+
+@enumerate
+@item
+@code{codeset}
+@item
+@code{normalized codeset}
+@item
+@code{territory}
+@item
+@code{modifier}
+@end enumerate
+
+The @code{language} field will never be dropped for obvious reasons.
+
+The only new thing is the @code{normalized codeset} entry.  This is
+another goodie which is introduced to help reduce the chaos which
+derives from the inability of people to standardize the names of
+character sets.  Instead of @w{ISO-8859-1} one can often see @w{8859-1},
+@w{88591}, @w{iso8859-1}, or @w{iso_8859-1}.  The @code{normalized
+codeset} value is generated from the user-provided character set name by
+applying the following rules:
+
+@enumerate
+@item
+Remove all characters besides numbers and letters.
+@item
+Fold letters to lowercase.
+@item
+If the same only contains digits prepend the string @code{"iso"}.
+@end enumerate
+
+@noindent
+So all of the above names will be normalized to @code{iso88591}.  This
+allows the program user much more freedom in choosing the locale name.
+
+Even this extended functionality still does not help to solve the
+problem that completely different names can be used to denote the same
+locale (e.g., @code{de} and @code{german}).  To be of help in this
+situation the locale implementation and also the @code{gettext}
+functions know about aliases.
+
+The file @file{/usr/share/locale/locale.alias} (replace @file{/usr} with
+whatever prefix you used for configuring the C library) contains a
+mapping of alternative names to more regular names.  The system manager
+is free to add new entries to fill her/his own needs.  The selected
+locale from the environment is compared with the entries in the first
+column of this file ignoring the case.  If they match, the value of the
+second column is used instead for the further handling.
+
+In the description of the format of the environment variables we already
+mentioned the character set as a factor in the selection of the message
+catalog.  In fact, only catalogs which contain text written using the
+character set of the system/program can be used (directly; there will
+come a solution for this some day).  This means for the user that s/he
+will always have to take care of this.  If in the collection of the
+message catalogs there are files for the same language but coded using
+different character sets the user has to be careful.
+
+
+@node Helper programs for gettext
+@subsection Programs to handle message catalogs for @code{gettext}
+
+@Theglibc{} does not contain the source code for the programs to
+handle message catalogs for the @code{gettext} functions.  As part of
+the GNU project the GNU gettext package contains everything the
+developer needs.  The functionality provided by the tools in this
+package by far exceeds the abilities of the @code{gencat} program
+described above for the @code{catgets} functions.
+
+There is a program @code{msgfmt} which is the equivalent program to the
+@code{gencat} program.  It generates from the human-readable and
+-editable form of the message catalog a binary file which can be used by
+the @code{gettext} functions.  But there are several more programs
+available.
+
+The @code{xgettext} program can be used to automatically extract the
+translatable messages from a source file.  I.e., the programmer need not
+take care of the translations and the list of messages which have to be
+translated.  S/He will simply wrap the translatable string in calls to
+@code{gettext} et.al and the rest will be done by @code{xgettext}.  This
+program has a lot of options which help to customize the output or
+help to understand the input better.
+
+Other programs help to manage the development cycle when new messages appear
+in the source files or when a new translation of the messages appears.
+Here it should only be noted that using all the tools in GNU gettext it
+is possible to @emph{completely} automate the handling of message
+catalogs.  Besides marking the translatable strings in the source code and
+generating the translations the developers do not have anything to do
+themselves.

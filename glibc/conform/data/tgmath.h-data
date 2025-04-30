@@ -1,0 +1,66 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+#include "math.h-data"
+#include "complex.h-data"
+
+macro acos
+macro asin
+macro atan
+macro acosh
+macro asinh
+macro atanh
+macro cos
+macro sin
+macro tan
+macro cosh
+macro sinh
+macro tanh
+macro exp
+macro pow
+macro sqrt
+macro fabs
+
+macro atan2
+macro cbrt
+macro ceil
+macro copysign
+macro erf
+macro erfc
+macro exp2
+macro expm1
+macro fdim
+macro floor
+macro fma
+macro fmax
+macro fmin
+macro fmod
+macro frexp
+macro hypot
+macro ilogb
+macro ldexp
+macro lgamma
+macro llrint
+macro llround
+macro log10
+macro log1p
+macro log2
+macro logb
+macro lrint
+macro lround
+macro nearbyint
+macro nextafter
+macro nexttoward
+macro remainder
+macro remquo
+macro rint
+macro round
+macro scalbn
+macro scalbln
+macro tgamma
+macro trunc
+
+macro carg
+macro cimag
+macro conj
+macro cproj
+macro creal
+#endif

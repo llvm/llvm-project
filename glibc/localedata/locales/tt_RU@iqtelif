@@ -1,0 +1,178 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tatar Language Locale using IQTElif alphabet; for Tatarstan, Russian Federation
+% Source:	Reshat Sabiq
+% Contact:	Reshat Sabiq
+% Email:	<tatar.iqtelif.i18n@gmail.com>
+% Language:	tt@iqtelif
+% Territory:	RU
+% Revision:	0.1
+% Date:		2006-10-12
+% Application:	general
+% Users:	general
+
+LC_IDENTIFICATION
+title		"Tatar language locale using IQTElif alphabet; for Tatarstan, Russian Federation"
+source		""
+address		""
+contact		"Reshat Sabiq"
+email		"tatar.iqtelif.i18n@gmail.com"
+tel		""
+fax		""
+language	"Tatar"
+territory	"Russia"
+revision	"0.1"
+date		"2006-10-12"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+END LC_IDENTIFICATION
+
+% TODO: further test LC_COLLATE
+
+LC_COLLATE
+% IQTElif:
+% <a>, <b>, <c>, <c,>, <d>, <e>, <f>, <g>, <g(>, <h>,
+% <i> (dotless i), <i.> (i with dot), <i'>, <j>, <k>, <l>, <m>, <n>, <n?>, <o>,
+% <o:>, <p>, <q>, <r>, <s>, <s,>, <t>, <u>, <u:>, <v>, <w>, <x>, <y>, <z>
+
+% The crh_UA locale already does all of the above correctly in LC_COLLATE
+% just copy it:
+copy "crh_UA"
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "tr_TR"
+END LC_CTYPE
+
+LC_MESSAGES
+% TODO: No is "yuq"; is it OK that it corresponds with English "yes"?
+yesexpr "^[+1Ee]"
+noexpr  "^[-0YyNn]"
+yesstr  "ey<U00ED>"
+nostr   "yuq"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "RUB "
+currency_symbol           "<U20BD>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+day     "Yek<U015F>emb<U00ED>";/
+        "D<U00FC><U015F>emb<U00ED>";/
+        "Si<U015F>emb<U00ED>";/
+        "<U00C7>er<U015F>emb<U00ED>";/
+        "Penc<U00ED><U015F>emb<U00ED>";/
+        "Com<U011F>a";/
+        "<U015E>imbe"
+abday   "Yek";/
+        "D<U00FC><U015F>";/
+        "Si<U015F>";/
+        "<U00C7>er";/
+        "Pen";/
+        "Com";/
+        "<U015E>im"
+% RFERL-based month t12n:
+mon     "<U011E><U0131>nwar";/
+        "Fiwral'";/
+        "Mart";/
+        "April";/
+        "May";/
+        "Y<U00FC>n";/
+        "Y<U00FC>l";/
+        "Awgust";/
+        "Sinteb<U00ED>r";/
+        "<U00DC>kteb<U00ED>r";/
+        "Noyeb<U00ED>r";/
+        "Dikeb<U00ED>r"
+abmon   "<U011E><U0131>n";/
+        "Fiw";/
+        "Mar";/
+        "Apr";/
+        "May";/
+        "Y<U00FC>n";/
+        "Y<U00FC>l";/
+        "Awg";/
+        "Sin";/
+        "<U00DC>kt";/
+        "Noy";/
+        "Dik"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "<U00D6>A";"<U00D6>S"
+t_fmt_ampm "%I:%M:%S %p"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "tt_RU"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "tt_RU"
+END LC_MEASUREMENT
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name  "Ur<U0131>s Pat<U015F>ahl<U0131>q"
+country_ab2 "RU"
+country_ab3 "RUS"
+country_num 643
+country_car    "RUS"
+lang_name    "tatar tele"
+lang_ab      "tt"
+lang_term    "tat"
+lang_lib    "tat"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "7"
+int_select     "0~10"
+END LC_TELEPHONE
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME

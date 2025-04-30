@@ -1,0 +1,5 @@
+#include <setjmpP.h>
+#undef __saved_mask
+
+--
+SHADOW_STACK_POINTER_OFFSET offsetof(struct __jmp_buf_tag, __saved_mask.__saved.__shadow_stack_pointer)

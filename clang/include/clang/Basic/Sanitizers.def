@@ -110,6 +110,8 @@ SANITIZER("signed-integer-overflow", SignedIntegerOverflow)
 SANITIZER("unreachable", Unreachable)
 SANITIZER("vla-bound", VLABound)
 SANITIZER("vptr", Vptr)
+// fortran contiguous pointer checks
+SANITIZER("discontiguous", Discontiguous)
 
 // IntegerSanitizer
 SANITIZER("unsigned-integer-overflow", UnsignedIntegerOverflow)

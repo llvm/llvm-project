@@ -1,0 +1,7 @@
+#define __PTHREAD_MUTEX_KIND_OFFSET     16
+
+#ifdef  __ILP32__
+# define __PTHREAD_RWLOCK_FLAGS_OFFSET  40
+#else
+# define __PTHREAD_RWLOCK_FLAGS_OFFSET  48
+#endif

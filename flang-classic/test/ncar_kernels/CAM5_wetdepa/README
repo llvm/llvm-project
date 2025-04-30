@@ -1,0 +1,20 @@
+WETDEPA_V2 driver
+-----------------
+
+The Wetdepa_v2 driver represents a piece of code that consumes a relatively 
+large amount of time in the CAM5 model.  In particular in its original form 
+it consumed 2.5% of CAM5-SE @ ne=16 on 384 cores.  This code was identified
+using Extrae, Paraver, and BSC clustering and folding tools as consuming 
+a large amount of time and executing rather poorly.  In particular the original 
+version did not vectorize due to unnecessary if loops.  Two versions of the 
+subroutine are provide:
+
+	wetdep_orig.F90:	original verison
+	wetdep.F90:		modified version
+
+A makefile is provided which will build a modified version of the driver 
+'wetdepa_driver', and the original version of the driver 'wetdepa_orig_driver'.  
+
+Questions:
+John Dennis
+dennis@ucar.edu

@@ -1,0 +1,15 @@
+#include <stddef.h>
+#include <sysdep.h>
+#include <link.h>
+#include <dl-tlsdesc.h>
+
+DL_SIZEOF_RG		sizeof(struct La_aarch64_regs)
+DL_SIZEOF_RV		sizeof(struct La_aarch64_retval)
+
+DL_OFFSET_RG_X0		offsetof(struct La_aarch64_regs, lr_xreg)
+DL_OFFSET_RG_D0		offsetof(struct La_aarch64_regs, lr_dreg)
+DL_OFFSET_RG_SP		offsetof(struct La_aarch64_regs, lr_sp)
+DL_OFFSET_RG_LR		offsetof(struct La_aarch64_regs, lr_lr)
+
+DL_OFFSET_RV_X0		offsetof(struct La_aarch64_retval, lrv_xreg)
+DL_OFFSET_RV_D0		offsetof(struct La_aarch64_retval, lrv_dreg)

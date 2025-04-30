@@ -1,0 +1,31 @@
+case "$machine" in
+mips*)
+	abiflag=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null | sed -n 's/^#define _MIPS_SIM \(.*\)/\1/p'`
+	mips16flag=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null | sed -n 's/^#define __mips16 \(.*\)/\1/p'`
+
+	base_machine=mips
+	if test "$abiflag" = "_ABIO32" ; then
+		if test "$mips16flag" = "1" ; then
+			machine=mips/mips32/mips16
+		else
+			machine=mips/mips32
+		fi
+	elif test "$abiflag" = "_ABIN32" ; then
+		machine=mips/mips64/n32
+	elif test "$abiflag" = "_ABI64" ; then
+		machine=mips/mips64/n64
+	else
+		as_fn_error $? "Unable to determine ABI." "$LINENO" 5
+	fi
+	# $config_machine is not really needed here but the slash after
+	# $machine is needed by the case statement in
+	# sysdeps/unix/sysv/linux/mips/configure.ac.
+	machine=$machine/$config_machine
+
+	if test "$abiflag" != "_ABIO32" -a "$mips16flag" = "1"; then
+		as_fn_error $? "MIPS16 is only supported with the o32 ABI." "$LINENO" 5
+	fi
+
+	with_fp_cond="defined __mips_hard_float"
+	;;
+esac

@@ -1,0 +1,62 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+#if !defined POSIX
+# if !defined XPG4 && !defined XPG42
+type blkcnt_t
+type blksize_t
+# endif
+type clock_t
+# if !defined XPG4 && !defined XPG42
+type clockid_t
+# endif
+#endif
+type dev_t
+# if !defined POSIX
+type fsblkcnt_t
+type fsfilcnt_t
+# endif
+type gid_t
+#if !defined POSIX
+type id_t
+#endif
+type ino_t
+# if !defined POSIX && !defined POSIX2008
+type key_t
+# endif
+type mode_t
+type nlink_t
+type off_t
+type pid_t
+#if !defined XPG4 && !defined XPG42
+type pthread_attr_t
+#if !defined POSIX && !defined UNIX98
+type pthread_barrier_t
+type pthread_barrierattr_t
+#endif
+type pthread_cond_t
+type pthread_condattr_t
+type pthread_key_t
+type pthread_mutex_t
+type pthread_mutexattr_t
+type pthread_once_t
+#if !defined POSIX
+type pthread_rwlock_t
+type pthread_rwlockattr_t
+#endif
+#if !defined POSIX && !defined UNIX98
+type pthread_spinlock_t
+#endif
+type pthread_t
+#endif
+type size_t
+type ssize_t
+# if !defined POSIX && !defined POSIX2008
+type suseconds_t
+# endif
+# ifndef POSIX
+type time_t
+type timer_t
+# endif
+type uid_t
+
+allow *_t
+#endif

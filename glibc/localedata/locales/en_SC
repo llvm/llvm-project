@@ -1,0 +1,119 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Locale for English locale in the Seychelles
+% Contributed by Akhilesh Kumar <akhilesh.k@samsung.com>
+
+LC_IDENTIFICATION
+title      "English locale for the Seychelles"
+source     "Samsung Electronics Co., Ltd."
+address    ""
+contact    ""
+email      "akhilesh.k@samsung.com"
+tel        ""
+fax        ""
+language   "English"
+territory  "Seychelles"
+revision   "1.0"
+date       "2017-07-24"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "en_GB"
+END LC_CTYPE
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol     "SCR "
+currency_symbol     "SR"
+mon_decimal_point   "."
+mon_thousands_sep   ","
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       1
+int_p_sep_by_space  1
+p_sep_by_space      0
+n_cs_precedes       1
+int_n_sep_by_space  1
+n_sep_by_space      0
+p_sign_posn         1
+n_sign_posn         1
+%
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_GB"
+END LC_NUMERIC
+
+LC_TIME
+copy "en_GB"
+END LC_TIME
+
+LC_MESSAGES
+copy "en_GB"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_GB"
+END LC_PAPER
+
+LC_TELEPHONE
+% https://www.howtocallabroad.com/seychelles/
+tel_int_fmt "+%c %l"
+% 00 Africa: all countries except Kenya, Nigeria, Tanzania and Uganda
+int_select     "00"
+int_prefix     "248"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "en_GB"
+END LC_MEASUREMENT
+LC_NAME
+copy "en_GB"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt   "%f%N%h%s%N%T"
+country_name "Seychelles"
+country_ab2  "SC"
+country_ab3  "SYC"
+country_num  690
+% https://en.wikipedia.org/wiki/List_of_international_vehicle_registration_codes
+country_car  "SY"
+country_isbn "978-99931"
+% English
+lang_name    "English"
+lang_ab      "en"
+lang_term    "eng"
+lang_lib     "eng"
+END LC_ADDRESS

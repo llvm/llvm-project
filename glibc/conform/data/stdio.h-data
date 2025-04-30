@@ -1,0 +1,194 @@
+macro-int-constant BUFSIZ >= 256
+macro-int-constant FILENAME_MAX
+macro-int-constant FOPEN_MAX >= 8
+
+macro-int-constant _IOFBF
+macro-int-constant _IOLBF
+macro-int-constant _IONBF
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+constant L_ctermid
+# if !defined XOPEN2K && !defined XOPEN2K8 && !defined POSIX2008
+#  ifdef POSIX
+optional-constant L_cuserid
+#  else
+constant L_cuserid
+#  endif
+# endif
+#endif
+macro-int-constant L_tmpnam
+
+macro-int-constant SEEK_CUR
+macro-int-constant SEEK_END
+macro-int-constant SEEK_SET
+
+macro-int-constant TMP_MAX >= 10000
+
+macro-int-constant EOF < 0
+
+macro-constant NULL == 0
+
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+constant P_tmpdir
+#endif
+
+macro stdin {FILE *}
+macro stdout {FILE *}
+macro stderr {FILE *}
+
+type FILE
+type fpos_t
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+type va_list
+#else
+#define va_list __gnuc_va_list
+#endif
+type size_t
+#if defined XOPEN2K8 || defined POSIX2008
+type off_t
+type ssize_t
+#endif
+
+function void clearerr (FILE*)
+#if !defined ISO && !defined ISO99 && !defined ISO11
+function {char*} ctermid (char*)
+# if defined XPG4 || defined XPG42 || defined UNIX98
+function {char*} cuserid (char*)
+# endif
+#endif
+#if defined XOPEN2K8 || defined POSIX2008
+function int dprintf (int, const char*, ...)
+#endif
+function int fclose (FILE*)
+#if !defined ISO && !defined ISO99 && !defined ISO11
+function {FILE*} fdopen (int, const char*)
+#endif
+function int feof (FILE*)
+function int ferror (FILE*)
+function int fflush (FILE*)
+function int fgetc (FILE*)
+function int fgetpos (FILE*, fpos_t*)
+function {char*} fgets (char*, int, FILE*)
+#if !defined ISO && !defined ISO99 && !defined ISO11
+function int fileno (FILE*)
+#endif
+#if defined POSIX || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function void flockfile (FILE*)
+#endif
+#if defined XOPEN2K8 || defined POSIX2008
+function {FILE*} fmemopen (void*, size_t, const char*)
+#endif
+function {FILE*} fopen (const char*, const char*)
+function int fprintf (FILE*, const char*, ...)
+function int fputc (int, FILE*)
+function int fputs (const char*, FILE*)
+function size_t fread (void*, size_t, size_t, FILE*)
+function {FILE*} freopen (const char*, const char*, FILE*)
+function int fscanf (FILE*, const char*, ...)
+function int fseek (FILE*, long int, int)
+#if defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int fseeko (FILE*, off_t, int)
+#endif
+function int fsetpos (FILE*, const fpos_t*)
+function {long int} ftell (FILE*)
+#if defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function off_t ftello (FILE*)
+#endif
+#if defined POSIX || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int ftrylockfile (FILE*)
+function void funlockfile (FILE*)
+#endif
+function size_t fwrite (const void*, size_t, size_t, FILE*)
+function int getc (FILE*)
+function int getchar (void)
+#if defined POSIX || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int getc_unlocked (FILE*)
+function int getchar_unlocked (void)
+#endif
+#if defined XOPEN2K8 || defined POSIX2008
+function ssize_t getdelim (char**, size_t*, int, FILE*)
+function ssize_t getline (char**, size_t*, FILE*)
+#endif
+#if defined XPG4 || defined XPG42 || defined UNIX98
+function int getopt (int, char *const[], const char *)
+#endif
+#if !defined ISO11
+function {char*} gets (char*)
+#endif
+#if defined XPG4 || defined XPG42 || defined UNIX98
+function int getw (FILE*)
+#endif
+#if defined XOPEN2K8 || defined POSIX2008
+function {FILE*} open_memstream (char**, size_t*)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11
+function int pclose (FILE*)
+#endif
+function void perror (const char*)
+#if !defined ISO && !defined ISO99 && !defined ISO11
+function {FILE*} popen (const char*, const char*)
+#endif
+function int printf (const char*, ...)
+function int putc (int, FILE*)
+function int putchar (int)
+#if defined POSIX || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int putc_unlocked (int, FILE*)
+function int putchar_unlocked (int)
+#endif
+function int puts (const char*)
+#if defined XPG4 || defined XPG42 || defined UNIX98
+function int putw (int, FILE*)
+#endif
+function int remove (const char*)
+function int rename (const char*, const char*)
+#if defined XOPEN2K8 || defined POSIX2008
+function int renameat (int, const char*, int, const char*)
+#endif
+function void rewind (FILE*)
+function int scanf (const char*, ...)
+function void setbuf (FILE*, char*)
+function int setvbuf (FILE*, char*, int, size_t)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42
+function int snprintf (char*, size_t, const char*, ...)
+#endif
+function int sprintf (char *, const char *, ...)
+function int sscanf (const char*, const char*, ...)
+#if defined XPG4 || defined XPG42 || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8
+function {char*} tempnam (const char*, const char*)
+#endif
+function {FILE*} tmpfile (void)
+function {char*} tmpnam (char*)
+function int ungetc (int, FILE*)
+#if defined XOPEN2K8 || defined POSIX2008
+function int vdprintf (int, const char*, va_list)
+#endif
+function int vfprintf (FILE*, const char*, va_list)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function int vfscanf (FILE*, const char*, va_list)
+#endif
+function int vprintf (const char*, va_list)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function int vscanf (const char*, va_list)
+#endif
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42
+function int vsnprintf (char*, size_t, const char*, va_list)
+#endif
+function int vsprintf (char*, const char*, va_list)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function int vsscanf (const char*, const char*, va_list)
+#endif
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+#if !defined POSIX && !defined XOPEN2K && !defined XOPEN2K8 && !defined POSIX2008
+variable {char*} optarg
+variable int opterr
+variable int optind
+variable int optopt
+#endif
+
+#if !defined POSIX
+allow-header stddef.h
+#endif
+
+allow *_t
+#endif

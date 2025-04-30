@@ -155,6 +155,7 @@ namespace llvm {
           XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+          EnableMovssCombine(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -380,6 +381,9 @@ namespace llvm {
     /// When set to true, const objects with relocatable address values are put
     /// into the RO data section.
     unsigned XCOFFReadOnlyPointers : 1;
+
+    // When set to true, enable combining into movss and movsd on X86.
+    unsigned EnableMovssCombine : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

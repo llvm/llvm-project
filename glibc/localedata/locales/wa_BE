@@ -1,0 +1,181 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title "Walloon Language Locale for Belgium"
+source "Djan SACRE"
+contact "Pablo Saratxaga"
+email "pablo@mandrakesoft.com"
+address ""
+tel ""
+fax ""
+language "Walloon"
+territory "Belgium"
+revision "0.9"
+date "2003-08-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_NAME
+END LC_IDENTIFICATION
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Beldjike"
+country_post "B"
+country_ab2 "BE"
+country_ab3 "BEL"
+country_num 056
+country_isbn "2"
+country_car  "B"
+lang_name "walon"
+lang_ab      "wa"
+lang_term    "wln"
+lang_lib     "wln"
+END LC_ADDRESS
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+
+% A-bole -> A-circonflecse -> AU
+<U00C5> "A<U030A>";"A";"AU"
+<U00E5> "a<U030A>";"a";"au"
+
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "fr_BE"
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1oOyYaAwW]"
+noexpr  "^[-0nN]"
+yesstr  "Oyi"
+nostr   "Neni"
+END LC_MESSAGES
+
+% COMINTAIRE: doet esse li minme ki po fr_BE.
+LC_MONETARY
+copy "fr_BE"
+END LC_MONETARY
+
+% COMINTAIRE: doet esse li minme ki po fr_BE.
+LC_NUMERIC
+copy "fr_BE"
+END LC_NUMERIC
+
+% COMINTAIRE: doet esse li minme ki po fr_BE.
+LC_PAPER
+copy "fr_BE"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "fr_BE"
+END LC_MEASUREMENT
+
+% COMINTAIRE: doet esse li minme ki po fr_BE.
+LC_TELEPHONE
+copy "fr_BE"
+END LC_TELEPHONE
+
+% COMINTAIRE: a çu ki dji sai, i gn a nou rascourti _oficir_
+% po les moes et les djoûs.
+% Donk, dji fwai come ça _mi_ shonne lodjike.
+%
+% Po les rascoutis, on a metou "djn" po djun, et "djl" po djulete.
+
+LC_TIME
+abday   "dim";"lon";/
+        "m<U00E5>r";"mie";/
+        "dju";"v<U00E9>n";/
+        "sem"
+day     "dimegne";/
+        "londi";/
+        "m<U00E5>rdi";/
+        "mierkidi";/
+        "djudi";/
+        "v<U00E9>nrdi";/
+        "semdi"
+abmon   "dja";"fev";/
+        "m<U00E5>s";"avr";/
+        "may";"djn";/
+        "djl";"awo";/
+        "set";"oct";/
+        "n<U00F4>v";"dec"
+alt_mon "djanv<U00EE>";/
+        "fevr<U00EE>";/
+        "m<U00E5>ss";/
+        "avri";/
+        "may";/
+        "djun";/
+        "djulete";/
+        "awousse";/
+        "setimbe";/
+        "oct<U00F4>be";/
+        "n<U00F4>vimbe";/
+        "decimbe"
+% Pol cogne des dates (li longue cogne), c' est on pô målåjhey, ca i fåt
+% stitchî on "di" ou on "d'" pa dvant li no do moes. Donk:
+% "Li prumî" ou "Li 1 di djanvî 1999"
+% di fevrî
+% di måss
+% d' avri
+% di may
+% di djun
+% di djulete
+% d' awousse
+% di setimbe
+% d' octôbe
+% di nôvimbe
+% di decimbe
+mon     "di djanv<U00EE>";/
+        "di fevr<U00EE>";/
+        "di m<U00E5>ss";/
+        "d<U2019><U00A0>avri";/
+        "di may";/
+        "di djun";/
+        "di djulete";/
+        "d<U2019><U00A0>awousse";/
+        "di setimbe";/
+        "d<U2019><U00A0>oct<U00F4>be";/
+        "di n<U00F4>vimbe";/
+        "di decimbe"
+
+d_t_fmt  "Li %A %d %B %Y %T"
+date_fmt "Li %A %d %B %Y %T %Z"
+% Chal, ça va
+d_fmt   "%d//%m//%Y"
+t_fmt   "%H:%M:%S"
+am_pm   "AM";"PM"
+t_fmt_ampm "%I:%M:%S %p"
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_NAME
+name_fmt "%d%t%g%t%m%t%f"
+name_gen ""
+name_mr "M."
+name_mrs "Mme"
+name_miss "Mle"
+name_ms "Mme"
+END LC_NAME

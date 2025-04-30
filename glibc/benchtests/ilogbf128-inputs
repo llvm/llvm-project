@@ -1,0 +1,11 @@
+## args: _Float128
+## ret: int
+## includes: math.h
+
+## name: subnormal
+6.47517511943802511092443895822764655e-4966f128
+0x1.fffffffffffffff8p-16383f128
+
+## name: normal
+1.0
+-0x8.2faf442f390a9211f5af128673fp+0L

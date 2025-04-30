@@ -1,0 +1,35 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+constant SHM_RDONLY
+symbol SHMLBA
+constant SHM_RND
+
+type shmatt_t
+
+type {struct shmid_ds}
+
+element {struct shmid_ds} {struct ipc_perm} shm_perm
+element {struct shmid_ds} size_t shm_segsz
+// Bug 23085: shm_lpid/shm_cpid have type unsigned short instead of pid_t
+xfail[i386-gnu]-element {struct shmid_ds} pid_t shm_lpid
+xfail[i386-gnu]-element {struct shmid_ds} pid_t shm_cpid
+element {struct shmid_ds} shmatt_t shm_nattch
+element {struct shmid_ds} time_t shm_atime
+element {struct shmid_ds} time_t shm_dtime
+element {struct shmid_ds} time_t shm_ctime
+
+type pid_t
+type time_t
+type key_t
+type size_t
+
+function {void*} shmat (int, const void*, int)
+function int shmctl (int, int, struct shmid_ds*)
+function int shmdt (const void*)
+function int shmget (key_t, size_t, int)
+
+allow-header sys/ipc.h
+
+allow shm*
+allow SHM*
+allow *_t
+#endif

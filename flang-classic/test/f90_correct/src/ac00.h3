@@ -1,0 +1,6 @@
+	function if(i)
+        character c*1
+c  statement which will cause informative message:
+        data c /'ab'/
+	if = i + 1
+	end

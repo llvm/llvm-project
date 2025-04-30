@@ -1,0 +1,312 @@
+# For use with several test collation definitions, I have produced an
+# 8859.1 charmap, using the standard names in 10646 and related standards.
+# The exceptions are that the "LATIN CAPITAL LETTER A" has been shorted
+# to "A", the "LATIN SMALL LETTER A" has been shorted to "a", and the
+# names are, wherever possible, shortened to approx 20 characters. I
+# would like comments on this charmap...
+#
+# -Greger Leijonhufvud-
+# INTERACTIVE Systems, UK
+# greger@{iuk,ism}.isc.com
+
+<mb_cur_max> 1
+CHARMAP
+# Control characters in set C0 are named after their acronyms
+# in ISO 646. In addition, the names used in the POSIX standard
+# are also shown.
+<NUL>                   \d000   NULL
+<SOH>                   \d001   START OF HEADING
+<STX>                   \d002   START OF TEXT
+<ETX>                   \d003   END OF TEXT
+<EOT>                   \d004   END OF TRANSMISSON
+<ENQ>                   \d005   ENQUIRY
+<ACK>                   \d006   ACKNOWLEDGE
+<BEL>                   \d007   BELL
+<BS>                    \d008   BACKSPACE
+<HT>                    \d009   HORIZONTAL TABULLATION
+<LF>                    \d010   LINE FEED
+<VT>                    \d011   VERTICAL TABULATION
+<FF>                    \d012   FORM FEED
+<CR>                    \d013   CARRIAGE RETURN
+<SO>                    \d014   SHIFT OUT
+<SI>                    \d015   SHIFT IN
+<DLE>                   \d016   DATALINK ESCAPE
+<DC1>                   \d017   DEVICE CONTROL ONE
+<DC2>                   \d018   DEVICE CONTROL TWO
+<DC3>                   \d019   DEVICE CONTROL THREE
+<DC4>                   \d020   DEVICE CONTROL FOUR
+<NAK>                   \d021   NEGATIVE ACKNOWLEDGE
+<SYN>                   \d022   SYNCRONOUS IDLE
+<ETB>                   \d023   END OF TRANSMISSION BLOCK
+<CAN>                   \d024   CANCEL
+<EM>                    \d025   END OF MEDIUM
+<SUB>                   \d026   SUBSTITUTE
+<ESC>                   \d027   ESCAPE
+<IS4>                   \d028   FILE SEPARATOR
+<IS3>                   \d029   GROUP SEPARATOR
+<IS2>                   \d030   RECORD SEPARATOR
+<IS1>                   \d031   UNIT SEPARATOR
+<SP>                    \d032   SPACE
+<alert>                 \d007   BELL
+<backspace>             \d008   BACKSPACE
+<tab>                   \d009   CHARACTER TABULATION
+<newline>               \d010   LINE FEED
+<vertical-tab>          \d011   LINE TABULATION
+<form-feed>             \d012   FORM FEED
+<carriage-return>       \d013   CARRIAGE RETURN
+#
+# Character symbolic names in most cases are the same as the names
+# in DIS 10646. Exceptions are names that would exceed 20 characters,
+# in which case either the closing "mark" is dropped, or the name
+# slightly changed to fit within (approx) 20 characters.
+# Commonly used UNIX names are given as synonyms.
+#
+<space>                 \d032   SPACE
+<exclamation-mark>      \d033   EXCLAMATION MARK
+<quotation-mark>        \d034   QUOTATION MARK
+<number-sign>           \d035   NUMBER SIGN
+<dollar-sign>           \d036   DOLLAR SIGN
+<percent>               \d037   PERCENT SIGN
+<percent-sign>          \d037   PERCENT SIGN            DIS 10646
+<ampersand>             \d038   AMPERSAND
+<apostrophe>            \d039   APOSTROPHE
+<left-parenthesis>      \d040   LEFT PARENTHESIS
+<right-parenthesis>     \d041   RIGHT PARANTHESIS
+<asterisk>              \d042   ASTERISK
+<plus-sign>             \d043   PLUS SIGN
+<comma>                 \d044   COMMA
+<hyphen>                \d045   HYPHEN-MINUS
+<hyphen-minus>          \d045   HYPHEN-MINUS            DIS 10646
+<period>                \d046   FULL STOP
+<full-stop>             \d046   FULL STOP               DIS 10646
+<slash>                 \d047   SOLIDUS
+<solidus>               \d047   SOLIDUS                 DIS 10646
+<zero>                  \d048   DIGIT ZERO
+<one>                   \d049   DIGIT ONE
+<two>                   \d050   DIGIT TWO
+<three>                 \d051   DIGIT THREE
+<four>                  \d052   DIGIT FOUR
+<five>                  \d053   DIGIT FIVE
+<six>                   \d054   DIGIT SIX
+<seven>                 \d055   DIGIT SEVEN
+<eight>                 \d056   DIGIT EIGHT
+<nine>                  \d057   DIGIT NINE
+<colon>                 \d058   COLON
+<semicolon>             \d059   SEMICOLON
+<less-than>             \d060   LESS-THAN SIGN
+<less-than-sign>        \d060   LESS-THAN SIGN          DIS 10646
+<equals-sign>           \d061   EQUALS SIGN
+<greater-than>          \d062   GREATER-THAN SIGN
+<greater-than-sign>     \d062   GREATER-THAN SIGN       DIS 10646
+<question-mark>         \d063   QUESTION MARK
+<commercial-at>         \d064   COMMERCIAL AT
+<A>                     \d065   LATIN CAPITAL LETTER A
+<B>                     \d066   LATIN CAPITAL LETTER B
+<C>                     \d067   LATIN CAPITAL LETTER C
+<D>                     \d068   LATIN CAPITAL LETTER D
+<E>                     \d069   LATIN CAPITAL LETTER E
+<F>                     \d070   LATIN CAPITAL LETTER F
+<G>                     \d071   LATIN CAPITAL LETTER G
+<H>                     \d072   LATIN CAPITAL LETTER H
+<I>                     \d073   LATIN CAPITAL LETTER I
+<J>                     \d074   LATIN CAPITAL LETTER J
+<K>                     \d075   LATIN CAPITAL LETTER K
+<L>                     \d076   LATIN CAPITAL LETTER L
+<M>                     \d077   LATIN CAPITAL LETTER M
+<N>                     \d078   LATIN CAPITAL LETTER N
+<O>                     \d079   LATIN CAPITAL LETTER O
+<P>                     \d080   LATIN CAPITAL LETTER P
+<Q>                     \d081   LATIN CAPITAL LETTER Q
+<R>                     \d082   LATIN CAPITAL LETTER R
+<S>                     \d083   LATIN CAPITAL LETTER S
+<T>                     \d084   LATIN CAPITAL LETTER T
+<U>                     \d085   LATIN CAPITAL LETTER U
+<V>                     \d086   LATIN CAPITAL LETTER V
+<W>                     \d087   LATIN CAPITAL LETTER W
+<X>                     \d088   LATIN CAPITAL LETTER X
+<Y>                     \d089   LATIN CAPITAL LETTER Y
+<Z>                     \d090   LATIN CAPITAL LETTER Z
+<left-square-bracket>   \d091   LEFT SQUARE BRACKET
+<left-bracket>          \d091   LEFT SQUARE BRACKET
+<backslash>             \d092   REVERSE SOLIDUS
+<reverse-solidus>       \d092   REVERSE SOLIDUS         DIS 10646
+<right-square-bracket>  \d093   RIGHT SQUARE BRACKET
+<right-bracket>         \d093   RIGHT SQUARE BRACKET
+<circumflex>            \d094   CIRCUMFLEX
+<circumflex-accent>     \d094   CIRCUMFLEX      DIS 10646
+<underscore>            \d095   LOW LINE
+<low-line>              \d095   LOW LINE        DIS 10646
+<grave-accent>          \d096   GRAVE
+<a>                     \d97    LATIN SMALL LETTER A
+<b>                     \d98    LATIN SMALL LETTER B
+<c>                     \d99    LATIN SMALL LETTER C
+<d>                     \d100   LATIN SMALL LETTER D
+<e>                     \d101   LATIN SMALL LETTER E
+<f>                     \d102   LATIN SMALL LETTER F
+<g>                     \d103   LATIN SMALL LETTER G
+<h>                     \d104   LATIN SMALL LETTER H
+<i>                     \d105   LATIN SMALL LETTER I
+<j>                     \d106   LATIN SMALL LETTER J
+<k>                     \d107   LATIN SMALL LETTER K
+<l>                     \d108   LATIN SMALL LETTER L
+<m>                     \d109   LATIN SMALL LETTER M
+<n>                     \d110   LATIN SMALL LETTER N
+<o>                     \d111   LATIN SMALL LETTER O
+<p>                     \d112   LATIN SMALL LETTER P
+<q>                     \d113   LATIN SMALL LETTER Q
+<r>                     \d114   LATIN SMALL LETTER R
+<s>                     \d115   LATIN SMALL LETTER S
+<t>                     \d116   LATIN SMALL LETTER T
+<u>                     \d117   LATIN SMALL LETTER U
+<v>                     \d118   LATIN SMALL LETTER V
+<w>                     \d119   LATIN SMALL LETTER W
+<x>                     \d120   LATIN SMALL LETTER X
+<y>                     \d121   LATIN SMALL LETTER Y
+<z>                     \d122   LATIN SMALL LETTER Z
+<left-brace>            \d123   LEFT CURLY BRACKET
+<left-curly-bracket>    \d123   LEFT CURLY BRACKET      DIS 10646
+<vertical-line>         \d124   VERTICAL LINE
+<right-brace>           \d125   RIGHT CURLY BRACKET
+<right-curly-bracket>   \d125   RIGHT CURLY BRACKET     DIS 10646
+<tilde>                 \d126   TILDE
+<delete>                \d127   DELETE (DEL)
+<DEL>                   \d127   DELETE
+#
+# Control characters 128-131 and 152-154 from DIS 10646, other
+# control characters from ISO 6429.
+#
+<PAD>                   \d128   PADDING CHARACTER
+<HOP>                   \d129   HIGH OCTET PRESET
+<BHP>                   \d130   BREAK PREMITTED HERE
+<NBH>                   \d131   NO BREAK HERE
+<IND>                   \d132   INDEX
+<NEL>                   \d133   NEXT LINE
+<SSA>                   \d134   START OF SELECTED AREA
+<ESA>                   \d135   END OF SELECTED AREA
+<HTS>                   \d136   CHARACTER TABULATION SET
+<HTJ>                   \d137   CHARACTER TABULATION WITH JUSTIFICATION
+<VTS>                   \d138   LINE TABULATION SET
+<PLD>                   \d139   PARTIAL LINE FORWARD
+<PLU>                   \d140   PARTIAL LINE BACKWARD
+<RI>                    \d141   REVERSE LINE FEED
+<SS2>                   \d142   SINGLE-SHIFT TWO
+<SS3>                   \d143   SINGLE-SHIFT THREE
+<DCS>                   \d144   DEVICE CONTROL STRING
+<PU1>                   \d145   PRIVATE USE ONE
+<PU2>                   \d146   PRIVATE USE TWO
+<STS>                   \d147   SET TRANSMIT STATE
+<CCH>                   \d148   CANCEL CHARACTER
+<MW>                    \d149   MESSAGE WAITING
+<SPA>                   \d150   START OF GUARDED AREA
+<EPA>                   \d151   END OF GUARDED AREA
+<SOS>                   \d152   START OF STRING
+<SGCI>                  \d153   SINGLE GRAPHIC CHARACTER INTRODUCER
+<SCI>                   \d154   SINGLE CHARACTER INTRODUCER
+<CSI>                   \d155   CONTROL SEQUENCE INTRODUCER
+<ST>                    \d156   STRING TERMINATOR
+<OSC>                   \d157   OPERATING SYSTEM COMMAND
+<PM>                    \d158   PRIVACY MESSAGE
+<APC>                   \d159   APPLICATION PROGRAM CONTROL
+#
+# Character symbolic names are based on 8859-1 names, except where name
+# would have exceeded 20 characters. Also, all accented letters
+# defined using basic character symbolic name, followed by the
+# accent.
+#
+<no-break-space>        \d160   NO-BREAK SPACE
+<inverted-exclamation>  \d161   INVERTED EXCLAMATION MARK
+<cent-sign>             \d162   CENT SIGN
+<pound-sign>            \d163   POUND SIGN
+<currency-sign>         \d164   CURRENCY SIGN
+<yen-sign>              \d165   YEN SIGN
+<broken-bar>            \d166   BROKEN BAR
+<paragraph-sign>        \d167   PARAGRAPH SIGN
+<diaeresis>             \d168   DIAERESIS
+<copyright-sign>        \d169   COPYRIGHT SIGN
+<feminine-ordinal-a>    \d170   FEMININE ORDINAL INDICATOR
+<left-angle-quotation>  \d171   LEFT POINTING DOUBLE ANGLE QUOTATION MARK
+<not-sign>              \d172   NOT SIGN
+<soft-hyphen>           \d173   SOFT HYPHEN
+<registered-mark>       \d174   REGISTERED TRADE MARK SIGN
+<macron>                \d175   MACRON
+<degree-sign>           \d176   DEGREE SIGN
+<plus-minus>            \d177   PLUS-MINUS SIGN
+<superscript-2>         \d178   SUPERSCRIPT TWO
+<superscript-3>         \d179   SUPERSCRIPT THREE
+<acute-accent>          \d180   ACUTE
+<micro-sign>            \d181   MICRO SIGN
+<pilcrow-sign>          \d182   PILCROW SIGN
+<middle-dot>            \d183   MIDDLE DOT
+<cedilla>               \d184   CEDILLA
+<superscript-1>         \d185   SUPERSCRIPT ONE
+<masculine-ordinal-o>   \d186   MASCULINE ORDINAL INDICATOR
+<right-angle-quotation> \d187   RIGHT POINTING DOUBLE ANGLE QUOTATION MARK
+<one-quarter>           \d188   VULGAR FRACTION ONE QUARTER
+<one-half>              \d189   VULGAR FRACTION ONE HALF
+<three-quarters>        \d190   VULGAR FRACTION THREE QUARTERS
+<inverted-question>     \d191   INVERTED QUESTION MARK
+<A-grave>               \d192   LATIN CAPITAL LETTER A WITH GRAVE
+<A-acute>               \d193   LATIN CAPITAL LETTER A WITH ACUTE
+<A-circumflex>          \d194   LATIN CAPITAL LETTER A WITH CIRCUMFLEX
+<A-tilde>               \d195   LATIN CAPITAL LETTER A WITH TILDE
+<A-diaeresis>           \d196   LATIN CAPITAL LETTER A WITH DIAERESIS
+<A-ring>                \d197   LATIN CAPITAL LETTER A WITH RING ABOVE
+<AE>                    \d198   LATIN CAPITAL LIGATURE A WITH E
+<C-cedilla>             \d199   LATIN CAPITAL LETTER C WITH CEDILLA
+<E-grave>               \d200   LATIN CAPITAL LETTER E WITH GRAVE
+<E-acute>               \d201   LATIN CAPITAL LETTER E WITH ACUTE
+<E-circumflex>          \d202   LATIN CAPITAL LETTER E WITH CIRCUMFLEX
+<E-diaeresis>           \d203   LATIN CAPITAL LETTER E WITH DIAERESIS
+<I-grave>               \d204   LATIN CAPITAL LETTER I WITH GRAVE
+<I-acute>               \d205   LATIN CAPITAL LETTER I WITH ACUTE
+<I-circumflex>          \d206   LATIN CAPITAL LETTER I WITH CIRCUMFLEX
+<I-diaeresis>           \d207   LATIN CAPITAL LETTER I WITH DIAERESIS
+<Eth>                   \d208   LATIN CAPITAL LETTER ETH (Icelandic)
+<N-tilde>               \d209   LATIN CAPITAL LETTER N WITH TILDE
+<O-grave>               \d210   LATIN CAPITAL LETTER O WITH GRAVE
+<O-acute>               \d211   LATIN CAPITAL LETTER O WITH ACUTE
+<O-circumflex>          \d212   LATIN CAPITAL LETTER O WITH CIRCUMFLEX
+<O-tilde>               \d213   LATIN CAPITAL LETTER O WITH TILDE
+<O-diaeresis>           \d214   LATIN CAPITAL LETTER O WITH DIAERESIS
+<multiplication-sign>   \d215   MULTIPLICATION SIGN
+<O-slash>               \d216   LATIN CAPITAL LETTER O WITH OBLIQUE STROKE
+<U-grave>               \d217   LATIN CAPITAL LETTER U WITH GRAVE
+<U-acute>               \d218   LATIN CAPITAL LETTER U WITH ACUTE
+<U-circumflex>          \d219   LATIN CAPITAL LETTER U WITH CIRCUMFLEX
+<U-diaeresis>           \d220   LATIN CAPITAL LETTER U WITH DIAERESIS
+<Y-acute>               \d221   LATIN CAPITAL LETTER Y WITH ACUTE
+<Thorn>                 \d222   LATIN CAPITAL LETTER THORN (Icelandic)
+<sharp-s>               \d223   LATIN SMALL LETTER SHARP S (German)
+<a-grave>               \d224   LATIN SMALL LETTER A WITH GRAVE
+<a-acute>               \d225   LATIN SMALL LETTER A WITH ACUTE
+<a-circumflex>          \d226   LATIN SMALL LETTER A WITH CIRCUMFLEX
+<a-tilde>               \d227   LATIN SMALL LETTER A WITH TILDE
+<a-diaeresis>           \d228   LATIN SMALL LETTER A WITH DIAERESIS
+<a-ring>                \d229   LATIN SMALL LETTER A WITH RING ABOVE
+<ae>                    \d230   LATIN SMALL LIGATURE A WITH E
+<c-cedilla>             \d231   LATIN SMALL LETTER C WITH CEDILLA
+<e-grave>               \d232   LATIN SMALL LETTER E WITH GRAVE
+<e-acute>               \d233   LATIN SMALL LETTER E WITH ACUTE
+<e-circumflex>          \d234   LATIN SMALL LETTER E WITH CIRCUMFLEX
+<e-diaeresis>           \d235   LATIN SMALL LETTER E WITH DIAERESIS
+<i-grave>               \d236   LATIN SMALL LETTER I WITH GRAVE
+<i-acute>               \d237   LATIN SMALL LETTER I WITH ACUTE
+<i-circumflex>          \d238   LATIN SMALL LETTER I WITH CIRCUMFLEX
+<i-diaeresis>           \d239   LATIN SMALL LETTER I WITH DIAERESIS
+<eth>                   \d240   LATIN SMALL LETTER ETH (Icelandic)
+<n-tilde>               \d241   LATIN SMALL LETTER N WITH TILDE
+<o-grave>               \d242   LATIN SMALL LETTER O WITH GRAVE
+<o-acute>               \d243   LATIN SMALL LETTER O WITH ACUTE
+<o-circumflex>          \d244   LATIN SMALL LETTER O WITH CIRCUMFLEX
+<o-tilde>               \d245   LATIN SMALL LETTER O WITH TILDE
+<o-diaeresis>           \d246   LATIN SMALL LETTER O WITH DIAERESIS
+<division-sign>         \d247   DIVISION SIGN
+<o-slash>               \d248   LATIN SMALL LETTER O WITH OBLIQUE STROKE
+<u-grave>               \d249   LATIN SMALL LETTER U WITH GRAVE
+<u-acute>               \d250   LATIN SMALL LETTER U WITH ACUTE
+<u-circumflex>          \d251   LATIN SMALL LETTER U WITH CIRCUMFLEX
+<u-diaeresis>           \d252   LATIN SMALL LETTER U WITH DIAERESIS
+<y-acute>               \d253   LATIN SMALL LETTER Y WITH ACUTE
+<thorn>                 \d254   LATIN SMALL LETTER THORN (Icelandic)
+<y-diaeresis>           \d255   LATIN SMALL LETTER Y WITH DIAERESIS
+END CHARMAP

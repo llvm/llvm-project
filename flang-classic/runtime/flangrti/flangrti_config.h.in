@@ -1,0 +1,1 @@
+#cmakedefine HAVE_GREGSET_T

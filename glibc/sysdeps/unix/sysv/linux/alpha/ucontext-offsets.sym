@@ -1,0 +1,18 @@
+#include <stddef.h>
+#include <sys/ucontext.h>
+
+--
+UC_LINK		offsetof (ucontext_t, uc_link)
+UC_OSF_SIGMASK	offsetof (ucontext_t, __uc_osf_sigmask)
+UC_STACK	offsetof (ucontext_t, uc_stack)
+UC_SIGCTX	offsetof (ucontext_t, uc_mcontext)
+UC_SIGMASK	offsetof (ucontext_t, uc_sigmask)
+SC_REGS		offsetof (mcontext_t, sc_regs)
+SC_FPREGS	offsetof (mcontext_t, sc_fpregs)
+SC_PC		offsetof (mcontext_t, sc_pc)
+SC_PS		offsetof (mcontext_t, sc_ps)
+SC_FPCRS	offsetof (mcontext_t, sc_fpcr)
+SC_MASK		offsetof (mcontext_t, sc_mask)
+SC_FPCR		offsetof (mcontext_t, sc_fpcr)
+SS_SP		offsetof (stack_t, ss_sp)
+SS_SIZE		offsetof (stack_t, ss_size)

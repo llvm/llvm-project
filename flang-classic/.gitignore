@@ -1,0 +1,5 @@
+build*/
+*.pyc
+
+VERSION
+.vscode

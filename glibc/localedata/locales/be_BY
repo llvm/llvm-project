@@ -1,0 +1,231 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Belarusian Language Locale for Belarus
+% Contact: Alexander Mikhailian
+% Email: mikhailian@altern.org
+% Language: be
+% Territory: BY
+% Revision: 0.4
+% Date: 2002-04-06
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Belarusian locale for Belarus"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Belarusian"
+territory  "Belarus"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% CLDR collation rules for Belarusian:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/be.xml)
+%
+% 	<collations>
+% 		<collation type="standard">
+% 			<cr><![CDATA[
+% [reorder Cyrl]
+% # The root collation already sorts й/Й as a base letter.
+% &Е<ё<<<Ё
+% &у<ў<<<Ў
+% 			]]></cr>
+% 		</collation>
+% 	</collations>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/be.xml)
+%
+% <exemplarCharacters type="index" draft="contributed">[А Б В Г Д Е Ж З І Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Ы Э Ю Я]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+
+copy "iso14651_t1"
+
+collating-symbol <cyrillic-io>
+collating-symbol <cyrillic-short-u>
+
+reorder-after <S0435> % CYRILLIC SMALL LETTER IE
+<cyrillic-io>
+reorder-after <S0443> % CYRILLIC SMALL LETTER U
+<cyrillic-short-u>
+
+<U0451> <cyrillic-io>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % CYRILLIC SMALL LETTER IO
+<U0401> <cyrillic-io>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % CYRILLIC CAPITAL LETTER IO
+<U045E> <cyrillic-short-u>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % CYRILLIC SMALL LETTER SHORT U
+<U040E> <cyrillic-short-u>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % CYRILLIC CAPITAL LETTER SHORT U
+
+reorder-end
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0422><U0442>]"
+noexpr  "^[-0nN<U041D><U043D>]"
+yesstr  "<U0442><U0430><U043A>"
+nostr   "<U043D><U0435>"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "BYR "
+currency_symbol           "<U0440><U0443><U0431>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+day     "<U041D><U044F><U0434><U0437><U0435><U043B><U044F>";/
+        "<U041F><U0430><U043D><U044F><U0434><U0437><U0435><U043B><U0430><U043A>";/
+        "<U0410><U045E><U0442><U043E><U0440><U0430><U043A>";/
+        "<U0421><U0435><U0440><U0430><U0434><U0430>";/
+        "<U0427><U0430><U0446><U0432><U0435><U0440>";/
+        "<U041F><U044F><U0442><U043D><U0456><U0446><U0430>";/
+        "<U0421><U0443><U0431><U043E><U0442><U0430>"
+abday   "<U041D><U044F><U0434>";/
+        "<U041F><U0430><U043D>";/
+        "<U0410><U045E><U0442>";/
+        "<U0421><U0440><U0434>";/
+        "<U0427><U0446><U0432>";/
+        "<U041F><U044F><U0442>";/
+        "<U0421><U0443><U0431>"
+alt_mon "<U0441><U0442><U0443><U0434><U0437><U0435><U043D><U044C>";/
+        "<U043B><U044E><U0442><U044B>";/
+        "<U0441><U0430><U043A><U0430><U0432><U0456><U043A>";/
+        "<U043A><U0440><U0430><U0441><U0430><U0432><U0456><U043A>";/
+        "<U043C><U0430><U0439>";/
+        "<U0447><U044D><U0440><U0432><U0435><U043D><U044C>";/
+        "<U043B><U0456><U043F><U0435><U043D><U044C>";/
+        "<U0436><U043D><U0456><U0432><U0435><U043D><U044C>";/
+        "<U0432><U0435><U0440><U0430><U0441><U0435><U043D><U044C>";/
+        "<U043A><U0430><U0441><U0442><U0440><U044B><U0447><U043D><U0456><U043A>";/
+        "<U043B><U0456><U0441><U0442><U0430><U043F><U0430><U0434>";/
+        "<U0441><U043D><U0435><U0436><U0430><U043D><U044C>"
+mon     "<U0441><U0442><U0443><U0434><U0437><U0435><U043D><U044F>";/
+        "<U043B><U044E><U0442><U0430><U0433><U0430>";/
+        "<U0441><U0430><U043A><U0430><U0432><U0456><U043A><U0430>";/
+        "<U043A><U0440><U0430><U0441><U0430><U0432><U0456><U043A><U0430>";/
+        "<U043C><U0430><U044F>";/
+        "<U0447><U044D><U0440><U0432><U0435><U043D><U044F>";/
+        "<U043B><U0456><U043F><U0435><U043D><U044F>";/
+        "<U0436><U043D><U0456><U045E><U043D><U044F>";/
+        "<U0432><U0435><U0440><U0430><U0441><U043D><U044F>";/
+        "<U043A><U0430><U0441><U0442><U0440><U044B><U0447><U043D><U0456><U043A><U0430>";/
+        "<U043B><U0456><U0441><U0442><U0430><U043F><U0430><U0434><U0430>";/
+        "<U0441><U043D><U0435><U0436><U043D><U044F>"
+ab_alt_mon "<U0441><U0442><U0443>";/
+        "<U043B><U044E><U0442>";/
+        "<U0441><U0430><U043A>";/
+        "<U043A><U0440><U0430>";/
+        "<U043C><U0430><U0439>";/
+        "<U0447><U044D><U0440>";/
+        "<U043B><U0456><U043F>";/
+        "<U0436><U043D><U0456>";/
+        "<U0432><U0435><U0440>";/
+        "<U043A><U0430><U0441>";/
+        "<U043B><U0456><U0441>";/
+        "<U0441><U043D><U0435>"
+abmon   "<U0441><U0442><U0443>";/
+        "<U043B><U044E><U0442>";/
+        "<U0441><U0430><U043A>";/
+        "<U043A><U0440><U0430>";/
+        "<U043C><U0430><U044F>";/
+        "<U0447><U044D><U0440>";/
+        "<U043B><U0456><U043F>";/
+        "<U0436><U043D><U0456>";/
+        "<U0432><U0435><U0440>";/
+        "<U043A><U0430><U0441>";/
+        "<U043B><U0456><U0441>";/
+        "<U0441><U043D><U0435>"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "375"
+int_select     "8~10"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U0411><U0435><U043B><U0430><U0440><U0443><U0441><U044C>"
+country_ab2 "BY"
+country_ab3 "BLR"
+country_num 112
+country_car    "BY"
+% беларуская мова
+lang_name    "<U0431><U0435><U043B><U0430><U0440><U0443><U0441><U043A><U0430><U044F>"
+lang_ab      "be"
+lang_term    "bel"
+lang_lib    "bel"
+END LC_ADDRESS

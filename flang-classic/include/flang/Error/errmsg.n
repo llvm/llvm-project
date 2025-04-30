@@ -1,0 +1,713 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+.NS 23 "Error Messages" "Appendix II - "
+.af EN 001    \" define format for EN
+.de MS
+.br
+.nr EN \\$2
+.in 0
+.sp .25i
+.ne 6
+.nf
+.in +7n
+.ti -7n
+.ft CB
+.if ? ?\\$3? \\$1\\n(EN\\ \\ \\fI<reserved message number>\\f(CB
+.if !? ?\\$3? \\$1\\n(EN\\ \\ \\fI\\$3\\f(CB
+.sp 4p
+.fi
+.ft R
+.ad b
+..
+.bl
+.nf
+Error message severities:
+
+.ft CW
+     I - informative.  
+     W - warning.
+     S - severe error.
+     F - fatal error.
+     V - variable.
+.ft R
+
+.MS V 0 "Internal compiler error. $ $"
+This  message indicates an error in the compiler, rather than
+a user error - although it may be possible for a user error to
+cause an internal error.  The severity may vary; if it is informative or
+warning, correct object code was probably generated - but it is not
+real safe to rely on this.
+Regardless of the severity or cause, internal errors should be reported
+to the compiler maintenance group.
+.MS F 1 "Source input file name not specified"
+On the command line, source file name should be specified either before all
+the switches, or after them.
+.MS F 2 "Unable to open source input file: $"
+Source file name misspelled, file not in current working directory,
+or file is read protected.
+.MS F 3 "Unable to open listing file"
+Probably, user does not have write permission for the current working
+directory.
+.MS F 4 "Unable to open object file"
+Probably, user does not have write permission for the current working
+directory.
+.MS F 5 "Unable to open temporary file"
+Compiler uses directory "/usr/tmp" or "/tmp" in which to create
+temporary files.  If neither of these directories is available on
+the node on which the compiler is being used, this error will occur.
+.MS S 6 "Input file empty"
+Source input file does not contain any Fortran statements other
+than comments or compiler directives.
+.MS F 7 "Subprogram too large to compile at this optimization level $"
+Internal compiler data structure overflow, working storage
+exhausted, or some other non-recoverable
+problem related to the size of the subprogram.
+If this error occurs at opt 2, reducing the opt level to 1 may
+work around the problem.
+Moving the subprogram being compiled to its own source file may
+eliminate the problem.
+If this error occurs while compiling a subprogram of fewer than
+2000 statements it should be reported to the compiler maintenance
+group as a possible compiler problem.
+.MS F 8 "Error limit exceeded"
+The compiler gives up after 50 severe errors.
+.MS F 9 "Unable to open assembly file"
+Probably, user does not have write permission for the current working
+directory.
+.MS F 10 "File write error occurred $"
+Probably, file system is full.
+.MS S 11 "Unrecognized command line switch: $"
+Refer to PDS reference document for list of allowed compiler switches.
+.MS S 12 "Value required for command line switch: $"
+Certain switches require an immediately following value,
+such as "-opt 2".
+.MS S 13 "Unrecognized value specified for command line switch: $"
+.MS S 14 "Ambiguous command line switch: $"
+Too short an abbreviation was used for one of the switches.
+.MS W 15 "Hexadecimal or octal constant truncated to fit data type"
+.MS I 16 "Identifier, $, truncated to 63 chars"
+An identifier may be at most 63 characters in length;
+characters after the 63rd are ignored.
+.MS S 17 "Unable to open include file: $"
+File is missing, read protected, or maximum include depth (10) exceeded.
+Remember that the file name should be enclosed in quotes.
+.MS S 18 "Illegal label field"
+The label field (first five characters) of the indicated line contains
+a non-numeric character.
+.MS S 19 "Illegally placed continuation line"
+A continuation line does not follow an initial line, or more than
+99 continuation lines were specified.
+.MS S 20 "Unrecognized compiler directive"
+Refer to PDS reference manual for list of allowed compiler directives.
+.MS S 21 "Label field of continuation line is not blank"
+The first five characters of a continuation line must be blank.
+.MS S 22 "Unexpected end of file - missing END statement"
+.MS S 23 "Syntax error - unbalanced parentheses"
+.MS W 24 "CHARACTER or Hollerith constant truncated to fit data type"
+A character or hollerith constant was converted to a data type that was not
+large enough to contain all of the characters in the constant.  This type
+conversion occurs when the constant is used in an arithmetic expression or is
+assigned to a non-character variable.  The character or hollerith constant is
+truncated on the right, that is, if 4 characters are needed then the first 4
+are used and the remaining characters are discarded.
+.MS W 25 "Illegal character ($) - ignored"
+The current line contains a character, possibly non-printing,
+which is not a legal Fortran character (characters inside of character
+or Hollerith constants cannot cause this error).
+As a general rule, all non-printing characters are treated as white space
+characters (blanks and tabs); no error message is generated when this occurs.
+If for some reason, a non-printing character is not treated as a white
+space character,
+its hex representation is printed in the form dd where each d is a hex digit.
+.MS S 26 "Unmatched quote"
+.MS S 27 "Illegal integer constant: $"
+Integer constant is too large for 32 bit word.
+.MS S 28 "Illegal real or double precision constant: $"
+.MS S 29 "Illegal hexadecimal constant: $"
+A hexadecimal constant consists of digits 0..9 and letters A..F or a..f.  
+Any other character in a hexadecimal constant is illegal.
+.MS S 30 "Illegal octal constant: $"
+An octal constant consists of digits 0..7.  Any other digit or
+character  in an octal constant is illegal.
+.MS S 31 "Illegal data type length specifier for $"
+The data type length specifier (e.g. 4 in INTEGER*4) is not a 
+constant expression that is a member of the set of allowed 
+values for this particular data type.
+.MS W 32 "Data type length specifier not allowed for $"
+The data type length specifier (e.g. 4 in INTEGER*4) is not allowed
+in the given syntax (e.g. DIMENSION A(10)*4).
+.MS S 33 "Illegal use of constant $"
+A constant was used in an illegal context, such as on the left side of
+an assignment statement or as the target of a data initialization
+statement.
+.MS S 34 "Syntax error at or near $"
+.MS I 35 "Predefined intrinsic $ loses intrinsic property"
+An intrinsic name was used in a manner inconsistent with the language
+definition for that intrinsic.  The compiler, based on the context, will
+treat the name as a variable or an external function.
+.MS S 36 "Illegal implicit character range"
+First character must alphabetically precede second.
+.MS S 37 "Contradictory data type specified for $"
+The indicated identifier appears in more than one type specification
+statement and different data types are specified for it.
+.MS S 38 "Symbol, $, has not been explicitly declared"
+The indicated identifier must be declared in a type statement;
+this is required when the IMPLICIT NONE statement occurs in the
+subprogram.
+.MS W 39 "Symbol, $, appears illegally in a SAVE statement"
+An identifier appearing in a SAVE statement must be a local
+variable or array.
+.MS S 40 "Illegal common variable $"
+Indicated identifier is a dummy variable, is already in
+a common block, or has previously been defined to be
+something other than a variable or array.
+.MS W 41 "Illegal use of dummy argument $"
+This error can occur in several situations.  It can occur if dummy 
+arguments were specified on a PROGRAM statement.  It can also occur
+if a dummy argument name occurs in a DATA, COMMON, SAVE, or EQUIVALENCE
+statement.
+A program statement must have an empty argument list.
+.MS S 42 "$ is a duplicate dummy argument"
+.MS S 43 "Illegal attempt to redefine $ $"
+An attempt was made to define a symbol in a manner inconsistent with
+an earlier definition of the same symbol.  This can happen for a number 
+of reasons.  The message attempts to indicate the situation that occurred.
+.US "\*(tfintrinsic\*(rf"
+An attempt was made to redefine an intrinsic function.  
+A symbol that represents an intrinsic function may be redefined if that
+symbol has not been previously verified to be an intrinsic function.  For
+example, the intrinsic \*(tfsin\*(rf can be defined to be an integer array.
+If a symbol is verified to be an intrinsic function via the
+\*(cfINTRINSIC\*(rf statement or via an intrinsic function reference then
+it must be referred to as an intrinsic function for the remainder of the
+program unit.
+.US "\*(tfsymbol\*(rf"
+An attempt was made to redefine a symbol that was
+previously defined.  An example of this is to declare a symbol to be
+a \*(rfPARAMETER\*(rf which was previously declared to be a subprogram
+argument.
+.MS S 44 "Multiple declaration for symbol $"
+A redundant declaration of a symbol has occurred.
+For example, an attempt was made to declare a symbol
+as an \*(cfENTRY\*(rf when that symbol
+was previously declared as an \*(cfENTRY\*(rf.
+.MS S 45 "Data type of entry point $ disagrees with function $"
+The current function has entry points with data types inconsistent with the
+data type of the current function.  For example, the function returns type
+character and an entry point returns type complex.
+.MS S 46 "Data type length specifier in wrong position"
+The CHARACTER data type specifier has a different position for the length
+specifier from the other data types.  Suppose, we want to declare arrays 
+ARRAYA and ARRAYB to have 8 elements each having an element length of 
+4 bytes.  The difference is that ARRAYA is character and ARRAYB is integer.  
+The declarations would be CHARACTER ARRAYA(8)*4 and INTEGER ARRAYB*4(8).
+.MS S 47 "More than seven dimensions specified for array"
+.MS S 48 "Illegal use of '*' in declaration of array $"
+An asterisk may be used only as the upper bound of the last dimension.
+.MS S 49 "Illegal use of '*' in non-subroutine subprogram"
+The alternate return specifier '*' is legal only in the subroutine
+statement.  Programs, functions, and block data are not allowed to 
+have alternate return specifiers.
+.MS S 50 "Adjustable or assumed size array, $, is not a dummy argument"
+.MS S 51 "Unrecognized built-in % function"
+The allowable built-in functions are %VAL, %REF, %LOC, and %FILL.  One
+was encountered that did not match one of these allowed forms.
+.MS S 52 "Illegal argument to %VAL or %LOC"
+.MS S 53 "%REF or %VAL not legal in this context"
+The built-in functions %REF and %VAL can only be used as actual
+parameters in procedure calls.
+.MS W 54 "Implicit character $ used in a previous implicit statement"
+An implicit character has been given an implied data type more than once.
+The implied data type for the implicit character is changed anyway.
+.MS W 55 "Multiple implicit none statements"
+The IMPLICIT NONE statement can occur only once in a subprogram.
+.MS W 56 "Implicit type declaration"
+The -dclchk switch and an implicit declaration following an IMPLICIT
+NONE statement will produce a warning message for IMPLICIT statements. 
+.MS S 57 "Illegal equivalence of dummy variable, $"
+Dummy arguments may not appear in EQUIVALENCE statements.
+.MS S 58 "Equivalenced variables $ and $ not in same common block"
+A common block variable must not be equivalenced with a variable
+in another common block.
+.MS S 59 "Conflicting equivalence between $ and $"
+The indicated equivalence implies a storage layout inconsistent
+with other equivalences.
+.MS S 60 "Illegal equivalence of structure variable, $"
+STRUCTURE and UNION variables may not appear in EQUIVALENCE statements.
+.MS S 61 "Equivalence of $ and $ extends common block backwards"
+.MS W 62 "Equivalence forces $ to be unaligned"
+EQUIVALENCE statements have defined an address for the variable
+which has an alignment not optimal for variables of its data type.
+This can occur when INTEGER and CHARACTER data are equivalenced,
+for instance.
+.MS I 63 "Gap in common block $ before $"
+.MS S 64 "Illegal use of $ in DATA statement implied DO loop"
+The indicated variable is referenced where it is
+not an active implied DO index variable.
+.MS S 65 "Repeat factor less than or equal to zero"
+.MS S 66 "Too few data constants in initialization statement"
+.MS S 67 "Too many data constants in initialization statement"
+.MS S 68 "Numeric initializer for CHARACTER $ out of range 0 through 255"
+A CHARACTER*1 variable or character array element
+can be initialized to an integer, octal, or hexadecimal constant if that
+constant is in the range 0 through 255.
+.MS S 69 "Illegal implied DO expression"
+The only operations allowed within an implied DO expression are
+integer +, -, *, and /.
+.MS S 70 "Incorrect sequence of statements $"
+The statement order is incorrect.  For instance, an IMPLICIT NONE statement
+must precede a specification statement which in turn must precede an
+executable statement.
+.MS S 71 "Executable statements not allowed in block data"
+.MS S 72 "Assignment operation illegal to $ $"
+The destination of an assignment operation must be a variable, array
+reference, or vector reference.  The assignment operation may be by 
+way of an assignment statement, a data statement, or the index variable 
+of an implied DO-loop.  The compiler has determined that the identifier 
+used as the destination, is not a storage location.  The error message
+attempts to indicate the type of entity used.
+.US "\*(tfentry point\*(rf"
+An assignment to an entry point that was not
+a function procedure was attempted.
+.US "\*(tfexternal procedure\*(rf"
+An assignment to an external procedure
+or a Fortran intrinsic name was attempted.
+if the identifier is the name of an entry point
+that is not a function, an external procedure...
+.MS S 73 "Intrinsic or predeclared, $, cannot be passed as an argument"
+.MS S 74 "Illegal number or type of arguments to $"
+The indicated symbol is an intrinsic or generic function, or
+a predeclared subroutine or function,
+requiring a certain number of arguments of a fixed data type.
+.MS S 75 "Subscript, substring, or argument illegal in this context for $"
+This can happen if you try to doubly index an array such as ra(2)(3).
+This also applies to substring and function references.
+.MS S 76 "Subscripts specified for non-array variable $"
+.MS S 77 "Subscripts omitted from array $"
+.MS S 78 "Wrong number of subscripts specified for $"
+.MS S 79 "Keyword form of intrinsic argument illegal in this context for $"
+.MS S 80 "Subscript for array $ is out of bounds"
+.MS S 81 "Matrix/vector $ illegal as subprogram argument"
+A matrix/vector reference cannot be used as a subprogram argument.
+.MS S 82 "Illegal substring expression for variable $"
+Substring expressions must be of type integer and if constant
+must be greater than zero.
+.MS S 83 "Vector expression used where scalar expression required"
+A vector expression was used in an illegal context.  For example, 
+iscalar = iarray, where a scalar is assigned the value of an array.
+Also, character and record references are not vectorizable.
+.MS S 84 "Illegal use of symbol $ $"
+This message is used for many different errors.
+.MS S 85 "Incorrect number of arguments to statement function $"
+.MS S 86 "Dummy argument to statement function must be a variable"
+.MS S 87 "Non-constant expression where constant expression required"
+.MS S 88 "Recursive subroutine or function call of $"
+A function may not call itself.
+.MS S 89 "Illegal use of symbol, $, with character length = *"
+Symbols of type CHARACTER*(*) must be dummy variables and must
+not be used as statement function dummy parameters and statement
+function names.  Also, a dummy variable of type CHARACTER*(*) cannot
+be used as a function.
+.MS S 90 "Hollerith constant more than 4 characters"
+In certain contexts, Hollerith constants may not be more
+than 4 characters long.
+.MS S 91 "Constant expression of wrong data type"
+.MS S 92 "Illegal use of variable length character expression"
+A character expression used as an actual argument, or in certain
+contexts within I/O statements, must not consist of a concatenation
+involving a passed length character variable.
+.MS W 93 "Type conversion of expression performed"
+An expression of some data type appears in a context which requires
+an expression of some other data type.
+The compiler generates code to convert the expression into the required type.
+.MS S 94 "Variable $ is of wrong data type $"
+The indicated variable is used in a context which requires a variable
+of some other data type.
+.MS S 95 "Expression has wrong data type"
+An expression of some data type appears in a context which requires
+an expression of some other data type.
+.MS S 96 "Illegal complex comparison"
+The relations .LT., .GT., .GE., and .LE. are not
+allowed for complex values.
+.MS S 97 "Statement label $ has been defined more than once"
+More than one statement with the indicated
+statement number occurs in the subprogram.
+.MS S 98 "Divide by zero"
+.MS S 99 "Illegal use of an aggregate RECORD"
+Aggregate record references may only appear in aggregate assignment
+statements, unformatted I/O statements, and as parameters to subprograms.
+They may not appear, for example, in expressions.  Also, records with
+differing structure types may not be assigned to one another.
+.MS S 100 "Expression cannot be promoted to a vector"
+An expression was used that required a scalar quantity to be promoted
+to a vector illegally.  For example, the assignment of a character constant
+string to a character array.  Records, too, cannot be promoted to vectors.
+.MS S 101 "Vector operation not allowed on $"
+Record and character typed entities may only be referenced as scalar quantities.
+.MS S 102 "Arithmetic IF expression has wrong data type"
+The parenthetical expression of an arithmetic if statement must be an
+integer, real, or doubleprecision scalar expression.
+.MS S 103 "Type conversion of subscript expression for $"
+The data type of a subscript expression must be integer.  If it is not, it is
+converted.
+.MS S 104 "Illegal control structure $"
+This message is issued for a number of errors involving
+IF-THEN statements and DO loops.
+If the line number specified is the last line (END statement) of
+the subprogram, the error is probably an unterminated DO loop or
+IF-THEN statement.
+.MS S 105 "Unmatched ELSEIF, ELSE or ENDIF statement"
+An ELSEIF, ELSE, or ENDIF statement cannot be matched with a
+preceding IF-THEN statement.
+.MS S 106 "DO index variable must be a scalar variable"
+The DO index variable cannot be an array name, a subscripted variable,
+a PARAMETER name, a function name, a structure name, etc.
+.MS S 107 "Illegal assigned goto variable $"
+.MS S 108 "Illegal variable, $, in NAMELIST group $"
+A NAMELIST group can only consist of arrays and scalars which are not
+dummy arguments and pointer-based variables.
+.MS I 109 "Overflow in hexadecimal constant $, constant truncated at left"
+A hexadecimal constant requiring more than
+64-bits produces an overflow.  The hexadecimal constant is truncated at 
+left (e.g. '1234567890abcdef1'x will be '234567890abcdef1'x).
+.MS I 110 "Overflow in octal constant $, constant truncated at left"
+An octal constant requiring more than
+64-bits produces an overflow.  The octal constant is truncated at 
+left (e.g. '2777777777777777777777'o will be '777777777777777777777'o).
+.MS I 111 "Underflow of real or double precision constant"
+.MS I 112 "Overflow of real or double precision constant"
+.MS S 113 "Label $ is referenced but never defined"
+.MS S 114 " "
+.MS W 115 "Assignment to DO variable $ in loop"
+.MS S 116 "Illegal use of pointer-based variable $ $"
+.MS S 117 "Statement not allowed within STRUCTURE definition"
+.MS S 118 "Statement not allowed in DO, IF, or WHERE block"
+.MS I 119 "Redundant specification for $"
+Data type of indicated symbol specified more than once.
+.MS I 120 "Label $ is defined but never referenced"
+.MS I 121 "Operation requires logical or integer data types"
+An operation in an expression was attempted on data having a data type
+incompatible with the operation.  For example, a logical expression can
+consist of only logical elements of type integer or logical.  Real data
+would be invalid.
+.MS I 122 "Character string truncated"
+Character string or Hollerith constant appearing in a DATA statement 
+or PARAMETER statement has been truncated to fit the declared size of 
+the corresponding identifier.
+.MS W 123 "Hollerith length specification too big, reduced"
+The length specifier field of a hollerith constant specified more characters
+than were present in the character field of the hollerith constant.  The
+length specifier was reduced to agree with the number of characters
+present.
+.MS S 124 "Relational expression mixes character with numeric data"
+A relational expression is used to compare two arithmetic expressions or
+two character expressions.  A character expression cannot be compared to an
+arithmetic expression.
+.MS I 125 "Dummy procedure $ not declared EXTERNAL"
+A dummy argument which is not declared in an EXTERNAL statement is used
+as the subprogram name in a CALL statement, or is called as a function,
+and is therefore assumed to be a dummy procedure.
+This message can result from a failure to declare a dummy array.
+.MS I 126 "Name $ is not an intrinsic function"
+.MS I 127 "Optimization level for $ changed to opt 1 $"
+.MS W 128 "Integer constant truncated to fit data type: $ "
+An integer constant will be truncated when assigned to data types smaller
+than 32-bits, such as a BYTE.
+.MS I 129 "Floating point overflow. Check constants and constant expressions"
+.MS I 130 "Floating point underflow. Check constants and constant expressions"
+.MS I 131 "Integer overflow. Check floating point expressions cast to integer"
+.MS I 132 "Floating pt. invalid oprnd. Check constants and constant expressions"
+.MS I 133 "Divide by 0.0. Check constants and constant expressions"
+.MS W 134 " "
+.MS W 135 "Missing STRUCTURE name field"
+A STRUCTURE name field is required on the outermost structure.
+.MS W 136 "Field-namelist not allowed"
+The field-namelist field of the STRUCTURE statement is disallowed on the
+outermost structure.
+.MS W 137 "Field-namelist is required in nested structures"
+.MS W 138 "Multiply defined STRUCTURE member name $"
+A member name was used more than once within a structure.
+.MS W 139 "Structure $ in RECORD statement not defined"
+A RECORD statement contains a reference to a STRUCTURE that has not yet been
+defined.
+.MS S 140 "Variable $ is not a RECORD"
+.MS S 141 "RECORD required on left of ."
+.MS S 142 "$ is not a member of this RECORD"
+.MS W 143 " "
+.MS W 144 "NEED ERROR MESSAGE $ $"
+This is used as a temporary message for compiler development.
+.MS W 145 "%FILL only valid within STRUCTURE block"
+The %FILL special name was used outside of a STRUCTURE multiline statement.
+It is only valid when used within a STRUCTURE multiline statement even
+though it is ignored.
+.MS S 146 "Expression must be character type"
+.\".MS S 146 "Arithmetic expression where character value required"
+.MS S 147 "Character expression not allowed in this context"
+.\".MS S 147 "Character expression where arithmetic value required"
+.MS S 148 "Non-record where aggregate record reference required"
+An aggregate reference to a record was expected during statement compilation
+but another data type was found instead.
+.MS S 149 "Record where arithmetic value required"
+An aggregate record reference was encountered when an arithmetic 
+expression was expected.
+.MS S 150 "Structure, Record, or member $ not allowed in this context"
+A structure, record, or member reference was found in a context which is
+not supported.  For example, the use of structures, records, or members 
+within a data statement is disallowed.
+.MS S 151 "Empty STRUCTURE, UNION, or MAP"
+STRUCTURE - ENDSTRUCTURE, UNION - ENDUNION MAP - ENDMAP
+declaration contains no members.
+.MS S 152 "All dimension specifiers must be ':'"
+.MS S 153 " "
+.MS S 154 " "
+.MS S 155 "$ $"
+Generic error message which should be self-explanatory.
+.MS S 156 " "
+.MS S 157 " "
+.MS S 158 "Alternate return not specified in SUBROUTINE or ENTRY"
+An alternate return can only be used if alternate return
+specifiers appeared in the SUBROUTINE or ENTRY statements.
+.MS S 159 "Alternate return illegal in FUNCTION subprogram"
+An alternate return cannot be used in a FUNCTION.
+.MS S 160 "ENDSTRUCTURE, ENDUNION, or ENDMAP does not match top"
+.MS S 161 " "
+.MS W 162 "Not equal test of loop control variable $ replaced with < or > test."
+.MS S 163 "Cannot data initialize member $ of ALLOCATABLE COMMON $"
+.MS S 164 "Overlapping data initializations of $"
+An attempt was made to data initialize a variable or
+array element already initialized.
+.MS S 165 "$ appeared more than once as a subprogram"
+A subprogram name appeared more than once in the source file.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS S 166 "$ cannot be a common block and a subprogram"
+A name appeared as a common block name and a subprogram name.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS I 167 "Inconsistent size of common block $"
+A common block occurs in more than one subprogram of a source file
+and its size is not identical. The maximum size is chosen.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS S 168 "Incompatible size of common block $"
+A common block occurs in more than one subprogram of a source file
+and is initialized in one subprogram.
+Its initialized size was found to be less than
+its size in the other subprogram(s).
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS W 169 "Multiple data initializations of common block $"
+A common block is initialized in more than one subprogram of a source file.
+Only the first set of initializations apply.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS W 170 "F77 extension: $"
+Use of a nonstandard feature. A description of the feature is provided.
+.MS W 171 "F77 extension: nonstandard statement type $"
+.MS W 172 "F77 extension: numeric initialization of CHARACTER $"
+A CHARACTER*1 variable or array element was initialized with a numeric value.
+.MS W 173 "F77 extension: nonstandard use of data type length specifier"
+.MS W 174 "F77 extension: type declaration contains data initialization"
+.MS W 175 "F77 extension: IMPLICIT range contains nonalpha characters"
+.MS W 176 "F77 extension: nonstandard operator $"
+.MS W 177 "F77 extension: nonstandard use of keyword argument $"
+.MS W 178 "F77 extension: matrix/vector reference $"
+.MS W 179 "F77 extension: use of structure field reference $"
+.MS W 180 "F77 extension: nonstandard form of constant"
+.MS W 181 "F77 extension: & alternate return"
+.MS W 182 "F77 extension: mixed non-character and character elements in COMMON $"
+.MS W 183 "F77 extension: mixed non-character and character EQUIVALENCE ($,$)"
+.MS W 184 "Mixed type elements (numeric and/or character types) in COMMON $"
+.MS W 185 "Mixed numeric and/or character type EQUIVALENCE ($,$)"
+.MS W 190 "Possible use of $ before definition in $"
+The optimizer has detected the possibility that a variable is used
+before it has been assigned a value.
+The names of the variable and the function in which
+the use occurred are listed.
+The line number, if specified, is the line number of the basic block
+containing the use of the variable.
+.MS W 191 "Unable to open VPU intrinsic lib: $"
+Unable to open intrinsic definition file using pathname passed to compiler
+via -idf switch.  Sparc/VPU compilers only.
+.MS W 192 "VPU intrinsic lib - bad format (line $) file not read"
+IDF file illegal, out of date format.  Line # of IDF file given.
+Sparc/VPU compilers only.
+.MS S 197 "Invalid qualifier or qualifier value (/$) in OPTIONS statement"
+An illegal qualifier was found or a value was specified for a qualifier
+which does not expect a value.
+In either case, the qualifier for which the error occurred is indicated
+in the error message.
+.MS S 198 "$ $ in ALLOCATE/DEALLOCATE"
+.MS W 199 "Unaligned memory reference $ $"
+A memory reference occurred whose address does not meet its
+data alignment requirement.
+.MS S 200 "Missing UNIT/FILE specifier"
+.MS S 201 "Illegal I/O specifier - $"
+.MS S 202 "Repeated I/O specifier - $"
+.MS S 203 "FORMAT statement has no label"
+.MS S 204 "Syntax error - unbalanced angle brackets"
+.MS S 205 "Illegal specification of scale factor"
+The integer following + or - has been omitted, or P does not follow
+the integer value.
+.MS S 206 "Repeat count is zero"
+.MS S 207 "Integer constant expected in edit descriptor"
+.MS S 208 "Period expected in edit descriptor"
+.MS S 209 "Illegal edit descriptor"
+.MS S 210 "Exponent width not used in the Ew.dEe or Gw.dEe edit descriptors"
+.MS S 211 "Internal I/O $"
+.MS S 212 "Illegal NAMELIST I/O"
+Namelist I/O cannot be performed with internal, unformatted, formatted,
+and list-directed I/O. Also, I/O lists must not be present.
+.MS S 213 "$ is not a NAMELIST group name"
+.MS S 214 "Input item is not a variable reference"
+.MS S 215 "Assumed sized array name cannot be used as an I/O item or specifier"
+An assumed sized array was used as an item to be read or written or as
+an I/O specifier (i.e., FMT = array-name).  In these contexts the size
+of the array must be known.
+.MS S 216 "STRUCTURE/UNION cannot be used as an I/O item"
+.MS S 217 "ENCODE/DECODE buffer must be a variable, array, or array element"
+.MS S 218 "Statement labeled $ is not a FORMAT"
+.MS S 221 "#elif after #else"
+A preprocessor #elif directive was found after a #else directive; only
+#endif is allowed in this context.
+.MS S 222 "#else after #else"
+A preprocessor #else directive was found after a #else directive; only
+#endif is allowed in this context.
+.MS S 223 "#if-directives too deeply nested"
+Preprocessor #if directive nesting exceeded the maximum allowed (currently
+10).
+.MS S 224 "Actual parameters too long for $"
+The total length of the
+parameters in a macro call to the indicated macro exceeded the maximum
+allowed (currently 2048).
+.MS W 225 "Argument mismatch for $"
+The number of arguments supplied in the call to the indicated macro did
+not agree with the number of parameters in the macro's definition.
+.MS F 226 "Can't find include file $"
+The indicated include file could not be opened.
+.MS S 227 "Definition too long for $"
+The length of the macro definition of the indicated macro exceeded the
+maximum allowed (currently 2048).
+.MS S 228 "EOF in comment"
+The end of a file was encountered while processing a comment.
+.MS S 229 "EOF in macro call to $"
+The end of a file was encountered while processing a call to the indicated
+macro.
+.MS S 230 "EOF in string"
+The end of a file was encountered while processing a quoted string.
+.MS S 231 "Formal parameters too long for $"
+The total length of the
+parameters in the definition
+of the indicated macro exceeded the maximum
+allowed (currently 2048).
+.MS S 232 "Identifier too long"
+The length of an identifier
+exceeded the maximum allowed (currently
+2048).
+.MS S 233 " "
+.MS W 234 "Illegal directive name"
+The sequence of characters following a # sign was not an identifier.
+.MS W 235 "Illegal macro name"
+A macro name was not an identifier.
+.MS S 236 "Illegal number $"
+The indicated number contained a syntax error.
+.MS F 237 "Line too long"
+The input source line length exceeded the maximum allowed (currently 2048).
+.MS W 238 "Missing #endif"
+End of file was encountered before a required #endif directive was found.
+.MS W 239 "Missing argument list for $"
+A call of the indicated macro had no argument list.
+.MS S 240 "Number too long"
+The length of a number exceeded the maximum allowed (currently 2048).
+.MS W 241 "Redefinition of symbol $"
+The indicated macro name was redefined.
+.MS I 242 "Redundant definition for symbol $"
+A definition for the indicated macro name was found that was the same as
+a previous definition.
+.MS F 243 "String too long"
+The length of a quoted string exceeded the maximum allowed (currently 2048).
+.MS S 244 "Syntax error in #define, formal $ not identifier"
+A formal parameter that was not an identifier was used in a macro definition.
+.MS W 245 "Syntax error in #define, missing blank after name or arglist"
+There was no space or tab between a macro name or argument list
+and the macro's definition.
+.MS S 246 "Syntax error in #if"
+A syntax error was found while parsing the expression following a
+#if or #elif directive.
+.MS S 247 "Syntax error in #include"
+The #include directive was not correctly formed.
+.MS W 248 "Syntax error in #line"
+A #line directive was not correctly formed.
+.MS W 249 "Syntax error in #module"
+A #module directive was not correctly formed.
+.MS W 250 "Syntax error in #undef"
+A #undef directive was not correctly formed.
+.MS W 251 "Token after #ifdef must be identifier"
+The #ifdef directive was not followed by an identifier.
+.MS W 252 "Token after #ifndef must be identifier"
+The #ifndef directive was not followed by an identifier.
+.MS S 253 "Too many actual parameters to $"
+The number of actual arguments to the indicated macro exceeded the maximum
+allowed (currently 31).
+.MS S 254 "Too many formal parameters to $"
+The number of formal arguments to the indicated macro exceeded the maximum
+allowed (currently 31).
+.MS F 255 "Too much pushback"
+The preprocessor ran out of space while processing a macro expansion.
+The macro may be recursive.
+.MS W 256 "Undefined directive $"
+The identifier following a # was not a directive name.
+.MS S 257 "EOF in #include directive"
+End of file was encountered while processing a #include directive.
+.MS S 258 "Unmatched #elif"
+A #elif directive was encountered with no preceding #if or #elif
+directive.
+.MS S 259 "Unmatched #else"
+A #else directive was encountered with no preceding #if or #elif
+directive.
+.MS S 260 "Unmatched #endif"
+A #endif directive was encountered with no preceding #if, #ifdef, or
+#ifndef directive.
+.MS S 261 "Include files nested too deeply"
+The nesting depth of #include directives exceeded the maximum
+(currently 20).
+.MS S 262 "Unterminated macro definition for $"
+A newline was encountered in the formal parameter list for the indicated
+macro.
+.MS S 263 "Unterminated string or character constant"
+A newline with no preceding backslash was found in a quoted string.
+.MS I 264 "Possible nested comment"
+The characters /* were found within a comment.
+.MS W 268 "Cannot inline subprogram; common block mismatch"
+.MS W 269 "Cannot inline subprogram; argument type mismatch"
+This message may be Severe if have gone too far to undo inlining process.
+.MS F 270  "Missing -exlib option"
+.MS W 271 "Can't inline $ - wrong number of arguments"
+.MS I 272 "Argument of inlined function not used"
+.MS S 273 "Inline library not specified on command line (-inlib switch)"
+.MS F 274 "Unable to access file $/TOC"
+.MS S 275 "Unable to open file $ while extracting or inlining"
+.MS F 276 "Assignment to constant actual parameter in inlined subprogram"
+.MS I 277 "Inlining of function $ may result in recursion"
+.MS W 278 "Can't inline $ - too large"
+.MS W 279 "Cannot inline function $ - data type mismatch"
+.MS W 280 "Syntax error in directive $"
+messages 280-300 rsvd for directive handling
+.MS W 281 "Directive ignored - $ $"
+.MS S 282 "ISHFT: shift is greater than the bit size of the value argument"
+In integer shift, ISHFT(I, SHIFT), absolute value of SHIFT cannot be bigger than bit size of I.
+.MS W 370 "License for accelerator feature was not found; accelerator code generation is disabled"
+The accelerator feature in the PGI compilers is separately licensed;
+that license was not found.
+Please update your licenses to use this feature.
+Starting from 1100, Reserved for OpenMP GPU
+.MS S 1198 "OpenMP GPU - The feature is not implemented yet for the target device"
+.MS W 1199 "OpenMP GPU - \"$\" is ignored for the target device"
+.MS S 1200 "OpenMP GPU - \"$\" is used, it is not implemented yet"
+.MS S 1201 "OpenMP GPU - [$] is used with [$], this usage is not implemented yet."
+.MS S 1202 "OpenMP GPU - [$] is used independently than [$], this usage is not implemented yet."
+.MS S 1204 "OpenMP GPU - Internal compiler error. Reason: [$] at [$]"

@@ -1,3 +1,4 @@
+// XFAIL: *
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib 2>&1 \

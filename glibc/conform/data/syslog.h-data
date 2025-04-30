@@ -1,0 +1,44 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008 && !defined XPG4
+constant LOG_PID
+constant LOG_CONS
+constant LOG_NDELAY
+constant LOG_ODELAY
+constant LOG_NOWAIT
+
+constant LOG_KERN
+constant LOG_USER
+constant LOG_MAIL
+constant LOG_NEWS
+constant LOG_UUCP
+constant LOG_DAEMON
+constant LOG_AUTH
+constant LOG_CRON
+constant LOG_LPR
+constant LOG_LOCAL0
+constant LOG_LOCAL1
+constant LOG_LOCAL2
+constant LOG_LOCAL3
+constant LOG_LOCAL4
+constant LOG_LOCAL5
+constant LOG_LOCAL6
+constant LOG_LOCAL7
+
+macro LOG_MASK
+
+constant LOG_EMERG
+constant LOG_ALERT
+constant LOG_CRIT
+constant LOG_ERR
+constant LOG_WARNING
+constant LOG_NOTICE
+constant LOG_INFO
+constant LOG_DEBUG
+
+function void closelog (void)
+function void openlog (const char*, int, int)
+function int setlogmask (int)
+function void syslog (int, const char*, ...)
+
+allow LOG_*
+allow *_t
+#endif

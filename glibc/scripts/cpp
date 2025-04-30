@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# This script is used solely by rpcgen when run by sunrpc/Makefile,
+# which passes CPP in the environment to tell us what to run.
+
+exec ${CPP} "$@"

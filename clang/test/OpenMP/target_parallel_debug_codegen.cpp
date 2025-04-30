@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -DCK1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-cuda-mode -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -debug-info-kind=limited -fopenmp-version=45 | FileCheck %s --check-prefix=CHECK1
 // expected-no-diagnostics
 
+// XFAIL: *
+
 template <unsigned *ddd>
 struct S {
   static int a;

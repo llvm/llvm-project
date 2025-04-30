@@ -1,0 +1,165 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Assamese locale for India.
+
+%%%%%%%%%%%%%
+LC_IDENTIFICATION
+title       "Assamese language locale for India"
+source      "Amitakhya Phukan, Red Hat"
+address     ""
+contact     ""
+email       "bug-glibc@gnu.org"
+tel         ""
+fax         ""
+language    "Assamese"
+territory   "India"
+revision    "1.0"
+date        "2006-05-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+%%%%%%%%%%%%%
+LC_CTYPE
+copy "bn_BD"
+END LC_CTYPE
+
+%%%%%%%%%%%%%
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+%%%%%%%%%%%%%
+LC_NUMERIC
+copy "en_IN"
+END LC_NUMERIC
+
+%%%%%%%%%%%%%
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+%%%%%%%%%%%%%
+LC_TIME
+abday   "<U09A6><U09C7><U0993>";/
+        "<U09B8><U09CB><U09AE>";/
+        "<U09AE><U0999><U09CD><U0997><U09B2>";/
+        "<U09AC><U09C1><U09A7>";/
+        "<U09AC><U09C3><U09B9><U09B7><U09CD><U09AA><U09A4><U09BF>";/
+        "<U09B6><U09C1><U0995><U09CD><U09F0>";/
+        "<U09B6><U09A8><U09BF>"
+day     "<U09A6><U09C7><U0993><U09AC><U09BE><U09F0>";/
+        "<U09B8><U09CB><U09AE><U09AC><U09BE><U09F0>";/
+        "<U09AE><U0999><U09CD><U0997><U09B2><U09AC><U09BE><U09F0>";/
+        "<U09AC><U09C1><U09A7><U09AC><U09BE><U09F0>";/
+        "<U09AC><U09C3><U09B9><U09B7><U09CD><U09AA><U09A4><U09BF><U09AC><U09BE><U09F0>";/
+        "<U09B6><U09C1><U0995><U09CD><U09F0><U09AC><U09BE><U09F0>";/
+        "<U09B6><U09A8><U09BF><U09AC><U09BE><U09F0>"
+abmon   "<U099C><U09BE><U09A8><U09C1>";/
+        "<U09AB><U09C7><U09AC><U09CD><U09F0><U09C1>";/
+        "<U09AE><U09BE><U09F0><U09CD><U099A>";/
+        "<U098F><U09AA><U09CD><U09F0><U09BF><U09B2>";/
+        "<U09AE><U09C7>";/
+        "<U099C><U09C1><U09A8>";/
+        "<U099C><U09C1><U09B2><U09BE><U0987>";/
+        "<U0986><U0997>";/
+        "<U09B8><U09C7><U09AA><U09CD><U099F>";/
+        "<U0985><U0995><U09CD><U099F><U09CB>";/
+        "<U09A8><U09AD><U09C7>";/
+        "<U09A1><U09BF><U09B8><U09C7>"
+mon     "<U099C><U09BE><U09A8><U09C1><U09F1><U09BE><U09F0><U09C0>";/
+        "<U09AB><U09C7><U09AC><U09CD><U09F0><U09C1><U09F1><U09BE><U09F0><U09C0>";/
+        "<U09AE><U09BE><U09F0><U09CD><U099A>";/
+        "<U098F><U09AA><U09CD><U09F0><U09BF><U09B2>";/
+        "<U09AE><U09C7>";/
+        "<U099C><U09C1><U09A8>";/
+        "<U099C><U09C1><U09B2><U09BE><U0987>";/
+        "<U0986><U0997><U09B7><U09CD><U099F>";/
+        "<U099B><U09C7><U09AA><U09CD><U09A4><U09C7><U09AE><U09CD><U09AC><U09F0>";/
+        "<U0985><U0995><U09CD><U099F><U09CB><U09AC><U09F0>";/
+        "<U09A8><U09F1><U09C7><U09AE><U09CD><U09AC><U09F0>";/
+        "<U09A1><U09BF><U099A><U09C7><U09AE><U09CD><U09AC><U09F0>"
+d_fmt    "%e-%m-%Y"
+t_fmt    "%I.%M.%S %p"
+d_t_fmt  "%e %B, %Y %I.%M.%S %p"
+date_fmt "%e %B, %Y %I.%M.%S %p %Z"
+am_pm    "<U09AA><U09C2><U09F0><U09CD><U09AC><U09CD><U09AC><U09BE><U09B9><U09CD><U09A8>";"<U0985><U09AA><U09F0><U09BE><U09B9><U09CD><U09A8>"
+t_fmt_ampm  "%I.%M.%S %p"
+week 7;19971130;1
+END LC_TIME
+
+%%%%%%%%%%%%%
+LC_MESSAGES
+yesexpr "^[+1yY<U09B9>]"
+noexpr  "^[-0nN<U09A8>]"
+yesstr  "<U09B9><U09DF>"
+nostr   "<U09A8><U09B9><U09DF>"
+END LC_MESSAGES
+
+%%%%%%%%%%%%%
+LC_PAPER
+copy "hi_IN"
+END LC_PAPER
+
+%%%%%%%%%%%%%
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    ""
+name_mr     "<U09B6><U09CD><U09F0><U09C0>"
+name_mrs    "<U09B6><U09CD><U09F0><U09C0><U09AE><U09A4><U09C0>"
+name_miss   "<U0995><U09C1><U09AE><U09BE><U09F0><U09C0>"
+name_ms     "<U0995><U09C1><U09AE><U09BE><U09F0><U09C0>"
+END LC_NAME
+
+%%%%%%%%%%%%%
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U09AD><U09BE><U09F0><U09A4>"
+country_car  "IND"
+country_num 356
+% অসমীয়া
+lang_name    "<U0985><U09B8><U09AE><U09C0><U09AF><U09BC><U09BE>"
+lang_ab      "as"
+lang_term    "asm"
+lang_lib    "asm"
+END LC_ADDRESS
+
+%%%%%%%%%%%%%
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix  "91"
+int_select  "00"
+END LC_TELEPHONE
+
+%%%%%%%%%%%%%
+LC_MEASUREMENT
+copy "hi_IN"
+END LC_MEASUREMENT

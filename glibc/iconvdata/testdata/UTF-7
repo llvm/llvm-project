@@ -1,0 +1,25 @@
++EqASGxItEps       Amharic
++AQ0-esky      Czech
+Dansk      Danish
+English    English
+Suomi      Finnish
+Fran+AOc-ais   French
+Deutsch    German
++A5UDuwO7A7cDvQO5A7oDrA   Greek
++BeIF0QXoBdkF6g      Hebrew
+Italiano   Italian
+Norsk      Norwegian
++BCAEQwRBBEEEOgQ4BDk    Russian
+Espa+APE-ol    Spanish
+Svenska    Swedish
++DiAOMg4pDjIORA4XDiI    Thai
+T+APw-rk+AOc-e     Turkish
+Ti+Hr8-ng Vi+Hsc-t Vietnamese
++ZeVnLIqe     Japanese
++Ti1lhw       Chinese
++1VyuAA       Korean
+
+// The last line of this file is missing the end-of-line terminator
+// on purpose, in order to test that the conversion empties the bit buffer
+// and shifts back to the initial state at the end of the conversion.
+A+ImIDkQ-

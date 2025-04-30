@@ -48,7 +48,11 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_groupshared
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+    20,  // wasm_funcref
+    273, // next32_tls
+    274, // next32_global
+    275, // next32_constant
+    3,   // next32_local
 };
 
 // X86 target abstract base class; x86-32 and x86-64 are very close, so

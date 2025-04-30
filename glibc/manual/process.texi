@@ -1,0 +1,888 @@
+@node Processes, Inter-Process Communication, Program Basics, Top
+@c %MENU% How to create processes and run other programs
+@chapter Processes
+
+@cindex process
+@dfn{Processes} are the primitive units for allocation of system
+resources.  Each process has its own address space and (usually) one
+thread of control.  A process executes a program; you can have multiple
+processes executing the same program, but each process has its own copy
+of the program within its own address space and executes it
+independently of the other copies.
+
+@cindex child process
+@cindex parent process
+Processes are organized hierarchically.  Each process has a @dfn{parent
+process} which explicitly arranged to create it.  The processes created
+by a given parent are called its @dfn{child processes}.  A child
+inherits many of its attributes from the parent process.
+
+This chapter describes how a program can create, terminate, and control
+child processes.  Actually, there are three distinct operations
+involved: creating a new child process, causing the new process to
+execute a program, and coordinating the completion of the child process
+with the original program.
+
+The @code{system} function provides a simple, portable mechanism for
+running another program; it does all three steps automatically.  If you
+need more control over the details of how this is done, you can use the
+primitive functions to do each step individually instead.
+
+@menu
+* Running a Command::           The easy way to run another program.
+* Process Creation Concepts::   An overview of the hard way to do it.
+* Process Identification::      How to get the process ID of a process.
+* Creating a Process::          How to fork a child process.
+* Executing a File::            How to make a process execute another program.
+* Process Completion::          How to tell when a child process has completed.
+* Process Completion Status::   How to interpret the status value
+                                 returned from a child process.
+* BSD Wait Functions::  	More functions, for backward compatibility.
+* Process Creation Example::    A complete example program.
+@end menu
+
+
+@node Running a Command
+@section Running a Command
+@cindex running a command
+
+The easy way to run another program is to use the @code{system}
+function.  This function does all the work of running a subprogram, but
+it doesn't give you much control over the details: you have to wait
+until the subprogram terminates before you can do anything else.
+
+@deftypefun int system (const char *@var{command})
+@standards{ISO, stdlib.h}
+@pindex sh
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{}}}
+@c system @ascuplugin @ascuheap @asulock @aculock @acsmem
+@c  do_system @ascuplugin @ascuheap @asulock @aculock @acsmem
+@c   sigemptyset dup ok
+@c   libc_lock_lock @asulock @aculock
+@c   ADD_REF ok
+@c   sigaction dup ok
+@c   SUB_REF ok
+@c   libc_lock_unlock @aculock
+@c   sigaddset dup ok
+@c   sigprocmask dup ok
+@c   CLEANUP_HANDLER @ascuplugin @ascuheap @acsmem
+@c    libc_cleanup_region_start @ascuplugin @ascuheap @acsmem
+@c     pthread_cleanup_push_defer @ascuplugin @ascuheap @acsmem
+@c      __pthread_testcancel @ascuplugin @ascuheap @acsmem
+@c       CANCEL_ENABLED_AND_CANCELED ok
+@c       do_cancel @ascuplugin @ascuheap @acsmem
+@c    cancel_handler ok
+@c     kill syscall ok
+@c     waitpid dup ok
+@c     libc_lock_lock ok
+@c     sigaction dup ok
+@c     libc_lock_unlock ok
+@c   FORK ok
+@c    clone syscall ok
+@c   waitpid dup ok
+@c   CLEANUP_RESET ok
+@c    libc_cleanup_region_end ok
+@c     pthread_cleanup_pop_restore ok
+@c  SINGLE_THREAD_P ok
+@c  LIBC_CANCEL_ASYNC @ascuplugin @ascuheap @acsmem
+@c   libc_enable_asynccancel @ascuplugin @ascuheap @acsmem
+@c    do_cancel dup @ascuplugin @ascuheap @acsmem
+@c  LIBC_CANCEL_RESET ok
+@c   libc_disable_asynccancel ok
+@c    lll_futex_wait dup ok
+This function executes @var{command} as a shell command.  In @theglibc{},
+it always uses the default shell @code{sh} to run the command.
+In particular, it searches the directories in @code{PATH} to find
+programs to execute.  The return value is @code{-1} if it wasn't
+possible to create the shell process, and otherwise is the status of the
+shell process.  @xref{Process Completion}, for details on how this
+status code can be interpreted.
+
+If the @var{command} argument is a null pointer, a return value of zero
+indicates that no command processor is available.
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{system} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this calls to @code{system} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+@pindex stdlib.h
+The @code{system} function is declared in the header file
+@file{stdlib.h}.
+@end deftypefun
+
+@strong{Portability Note:} Some C implementations may not have any
+notion of a command processor that can execute other programs.  You can
+determine whether a command processor exists by executing
+@w{@code{system (NULL)}}; if the return value is nonzero, a command
+processor is available.
+
+The @code{popen} and @code{pclose} functions (@pxref{Pipe to a
+Subprocess}) are closely related to the @code{system} function.  They
+allow the parent process to communicate with the standard input and
+output channels of the command being executed.
+
+@node Process Creation Concepts
+@section Process Creation Concepts
+
+This section gives an overview of processes and of the steps involved in
+creating a process and making it run another program.
+
+@cindex creating a process
+@cindex forking a process
+@cindex child process
+@cindex parent process
+@cindex subprocess
+A new processes is created when one of the functions
+@code{posix_spawn}, @code{fork}, @code{_Fork} or @code{vfork} is called.
+(The @code{system} and @code{popen} also create new processes internally.)
+Due to the name of the @code{fork} function, the act of creating a new
+process is sometimes called @dfn{forking} a process.  Each new process
+(the @dfn{child process} or @dfn{subprocess}) is allocated a process
+ID, distinct from the process ID of the parent process.  @xref{Process
+Identification}.
+
+After forking a child process, both the parent and child processes
+continue to execute normally.  If you want your program to wait for a
+child process to finish executing before continuing, you must do this
+explicitly after the fork operation, by calling @code{wait} or
+@code{waitpid} (@pxref{Process Completion}).  These functions give you
+limited information about why the child terminated---for example, its
+exit status code.
+
+A newly forked child process continues to execute the same program as
+its parent process, at the point where the @code{fork} or @code{_Fork}
+call returns.  You can use the return value from @code{fork} or
+@code{_Fork} to tell whether the program is running in the parent process
+or the child.
+
+@cindex process image
+Having several processes run the same program is only occasionally
+useful.  But the child can execute another program using one of the
+@code{exec} functions; see @ref{Executing a File}.  The program that the
+process is executing is called its @dfn{process image}.  Starting
+execution of a new program causes the process to forget all about its
+previous process image; when the new program exits, the process exits
+too, instead of returning to the previous process image.
+
+@node Process Identification
+@section Process Identification
+
+@cindex process ID
+Each process is named by a @dfn{process ID} number, a value of type
+@code{pid_t}.  A process ID is allocated to each process when it is
+created.  Process IDs are reused over time.  The lifetime of a process
+ends when the parent process of the corresponding process waits on the
+process ID after the process has terminated.  @xref{Process
+Completion}.  (The parent process can arrange for such waiting to
+happen implicitly.)  A process ID uniquely identifies a process only
+during the lifetime of the process.  As a rule of thumb, this means
+that the process must still be running.
+
+Process IDs can also denote process groups and sessions.
+@xref{Job Control}.
+
+@cindex thread ID
+@cindex task ID
+@cindex thread group
+On Linux, threads created by @code{pthread_create} also receive a
+@dfn{thread ID}.  The thread ID of the initial (main) thread is the
+same as the process ID of the entire process.  Thread IDs for
+subsequently created threads are distinct.  They are allocated from
+the same numbering space as process IDs.  Process IDs and thread IDs
+are sometimes also referred to collectively as @dfn{task IDs}.  In
+contrast to processes, threads are never waited for explicitly, so a
+thread ID becomes eligible for reuse as soon as a thread exits or is
+canceled.  This is true even for joinable threads, not just detached
+threads.  Threads are assigned to a @dfn{thread group}.  In
+@theglibc{} implementation running on Linux, the process ID is the
+thread group ID of all threads in the process.
+
+You can get the process ID of a process by calling @code{getpid}.  The
+function @code{getppid} returns the process ID of the parent of the
+current process (this is also known as the @dfn{parent process ID}).
+Your program should include the header files @file{unistd.h} and
+@file{sys/types.h} to use these functions.
+@pindex sys/types.h
+@pindex unistd.h
+
+@deftp {Data Type} pid_t
+@standards{POSIX.1, sys/types.h}
+The @code{pid_t} data type is a signed integer type which is capable
+of representing a process ID.  In @theglibc{}, this is an @code{int}.
+@end deftp
+
+@deftypefun pid_t getpid (void)
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{getpid} function returns the process ID of the current process.
+@end deftypefun
+
+@deftypefun pid_t getppid (void)
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{getppid} function returns the process ID of the parent of the
+current process.
+@end deftypefun
+
+@deftypefun pid_t gettid (void)
+@standards{Linux, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{gettid} function returns the thread ID of the current
+thread.  The returned value is obtained from the Linux kernel and is
+not subject to caching.  See the discussion of thread IDs above,
+especially regarding reuse of the IDs of threads which have exited.
+
+This function is specific to Linux.
+@end deftypefun
+
+@node Creating a Process
+@section Creating a Process
+
+The @code{fork} function is the primitive for creating a process.
+It is declared in the header file @file{unistd.h}.
+@pindex unistd.h
+
+@deftypefun pid_t fork (void)
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuplugin{}}@acunsafe{@aculock{}}}
+@c The posix/fork.c implementation iterates over the fork_handlers
+@c using a lock.  It then takes the IO_list lock, resets the thread-local
+@c pid, and runs fork.  The parent releases the lock, and runs parent
+@c handlers, and unlocks the internal lock.  The child bumps the fork
+@c generation, sets the thread-local pid, resets cpu clocks, initializes
+@c the robust mutex list, the stream locks, the IO_list lock, the dynamic
+@c loader lock, runs the child handlers, reseting ref counters to 1, and
+@c initializes the fork lock.  These are all safe, unless atfork
+@c handlers themselves are unsafe.
+The @code{fork} function creates a new process.
+
+If the operation is successful, there are then both parent and child
+processes and both see @code{fork} return, but with different values: it
+returns a value of @code{0} in the child process and returns the child's
+process ID in the parent process.
+
+If process creation failed, @code{fork} returns a value of @code{-1} in
+the parent process.  The following @code{errno} error conditions are
+defined for @code{fork}:
+
+@table @code
+@item EAGAIN
+There aren't enough system resources to create another process, or the
+user already has too many processes running.  This means exceeding the
+@code{RLIMIT_NPROC} resource limit, which can usually be increased;
+@pxref{Limits on Resources}.
+
+@item ENOMEM
+The process requires more space than the system can supply.
+@end table
+@end deftypefun
+
+The specific attributes of the child process that differ from the
+parent process are:
+
+@itemize @bullet
+@item
+The child process has its own unique process ID.
+
+@item
+The parent process ID of the child process is the process ID of its
+parent process.
+
+@item
+The child process gets its own copies of the parent process's open file
+descriptors.  Subsequently changing attributes of the file descriptors
+in the parent process won't affect the file descriptors in the child,
+and vice versa.  @xref{Control Operations}.  However, the file position
+associated with each descriptor is shared by both processes;
+@pxref{File Position}.
+
+@item
+The elapsed processor times for the child process are set to zero;
+see @ref{Processor Time}.
+
+@item
+The child doesn't inherit file locks set by the parent process.
+@c !!! flock locks shared
+@xref{Control Operations}.
+
+@item
+The child doesn't inherit alarms set by the parent process.
+@xref{Setting an Alarm}.
+
+@item
+The set of pending signals (@pxref{Delivery of Signal}) for the child
+process is cleared.  (The child process inherits its mask of blocked
+signals and signal actions from the parent process.)
+@end itemize
+
+@deftypefun pid_t _Fork (void)
+@standards{GNU, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{_Fork} function is similar to @code{fork}, but it does not invoke
+any callbacks registered with @code{pthread_atfork}, nor does it reset
+any internal state or locks (such as the @code{malloc} locks).  In the
+new subprocess, only async-signal-safe functions may be called, such as
+@code{dup2} or @code{execve}.
+
+The @code{_Fork} function is an async-signal-safe replacement of @code{fork}.
+It is a GNU extension.
+
+@end deftypefun
+
+@deftypefun pid_t vfork (void)
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuplugin{}}@acunsafe{@aculock{}}}
+@c The vfork implementation proper is a safe syscall, but it may fall
+@c back to fork if the vfork syscall is not available.
+The @code{vfork} function is similar to @code{fork} but on some systems
+it is more efficient; however, there are restrictions you must follow to
+use it safely.
+
+While @code{fork} makes a complete copy of the calling process's address
+space and allows both the parent and child to execute independently,
+@code{vfork} does not make this copy.  Instead, the child process
+created with @code{vfork} shares its parent's address space until it
+calls @code{_exit} or one of the @code{exec} functions.  In the
+meantime, the parent process suspends execution.
+
+You must be very careful not to allow the child process created with
+@code{vfork} to modify any global data or even local variables shared
+with the parent.  Furthermore, the child process cannot return from (or
+do a long jump out of) the function that called @code{vfork}!  This
+would leave the parent process's control information very confused.  If
+in doubt, use @code{fork} instead.
+
+Some operating systems don't really implement @code{vfork}.  @Theglibc{}
+permits you to use @code{vfork} on all systems, but actually
+executes @code{fork} if @code{vfork} isn't available.  If you follow
+the proper precautions for using @code{vfork}, your program will still
+work even if the system uses @code{fork} instead.
+@end deftypefun
+
+@node Executing a File
+@section Executing a File
+@cindex executing a file
+@cindex @code{exec} functions
+
+This section describes the @code{exec} family of functions, for executing
+a file as a process image.  You can use these functions to make a child
+process execute a new program after it has been forked.
+
+To see the effects of @code{exec} from the point of view of the called
+program, see @ref{Program Basics}.
+
+@pindex unistd.h
+The functions in this family differ in how you specify the arguments,
+but otherwise they all do the same thing.  They are declared in the
+header file @file{unistd.h}.
+
+@deftypefun int execv (const char *@var{filename}, char *const @var{argv}@t{[]})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{execv} function executes the file named by @var{filename} as a
+new process image.
+
+The @var{argv} argument is an array of null-terminated strings that is
+used to provide a value for the @code{argv} argument to the @code{main}
+function of the program to be executed.  The last element of this array
+must be a null pointer.  By convention, the first element of this array
+is the file name of the program sans directory names.  @xref{Program
+Arguments}, for full details on how programs can access these arguments.
+
+The environment for the new process image is taken from the
+@code{environ} variable of the current process image; see
+@ref{Environment Variables}, for information about environments.
+@end deftypefun
+
+@deftypefun int execl (const char *@var{filename}, const char *@var{arg0}, @dots{})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+This is similar to @code{execv}, but the @var{argv} strings are
+specified individually instead of as an array.  A null pointer must be
+passed as the last such argument.
+@end deftypefun
+
+@deftypefun int execve (const char *@var{filename}, char *const @var{argv}@t{[]}, char *const @var{env}@t{[]})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This is similar to @code{execv}, but permits you to specify the environment
+for the new program explicitly as the @var{env} argument.  This should
+be an array of strings in the same format as for the @code{environ}
+variable; see @ref{Environment Access}.
+@end deftypefun
+
+@deftypefun int fexecve (int @var{fd},  char *const @var{argv}@t{[]}, char *const @var{env}@t{[]})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This is similar to @code{execve}, but instead of identifying the program
+executable by its pathname, the file descriptor @var{fd} is used.  The
+descriptor must have been opened with the @code{O_RDONLY} flag or (on
+Linux) the @code{O_PATH} flag.
+
+On Linux, @code{fexecve} can fail with an error of @code{ENOSYS} if
+@file{/proc} has not been mounted and the kernel lacks support for the
+underlying @code{execveat} system call.
+@end deftypefun
+
+@deftypefun int execle (const char *@var{filename}, const char *@var{arg0}, @dots{}, char *const @var{env}@t{[]})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+This is similar to @code{execl}, but permits you to specify the
+environment for the new program explicitly.  The environment argument is
+passed following the null pointer that marks the last @var{argv}
+argument, and should be an array of strings in the same format as for
+the @code{environ} variable.
+@end deftypefun
+
+@deftypefun int execvp (const char *@var{filename}, char *const @var{argv}@t{[]})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+The @code{execvp} function is similar to @code{execv}, except that it
+searches the directories listed in the @code{PATH} environment variable
+(@pxref{Standard Environment}) to find the full file name of a
+file from @var{filename} if @var{filename} does not contain a slash.
+
+This function is useful for executing system utility programs, because
+it looks for them in the places that the user has chosen.  Shells use it
+to run the commands that users type.
+@end deftypefun
+
+@deftypefun int execlp (const char *@var{filename}, const char *@var{arg0}, @dots{})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+This function is like @code{execl}, except that it performs the same
+file name searching as the @code{execvp} function.
+@end deftypefun
+
+The size of the argument list and environment list taken together must
+not be greater than @code{ARG_MAX} bytes.  @xref{General Limits}.  On
+@gnuhurdsystems{}, the size (which compares against @code{ARG_MAX})
+includes, for each string, the number of characters in the string, plus
+the size of a @code{char *}, plus one, rounded up to a multiple of the
+size of a @code{char *}.  Other systems may have somewhat different
+rules for counting.
+
+These functions normally don't return, since execution of a new program
+causes the currently executing program to go away completely.  A value
+of @code{-1} is returned in the event of a failure.  In addition to the
+usual file name errors (@pxref{File Name Errors}), the following
+@code{errno} error conditions are defined for these functions:
+
+@table @code
+@item E2BIG
+The combined size of the new program's argument list and environment
+list is larger than @code{ARG_MAX} bytes.  @gnuhurdsystems{} have no
+specific limit on the argument list size, so this error code cannot
+result, but you may get @code{ENOMEM} instead if the arguments are too
+big for available memory.
+
+@item ENOEXEC
+The specified file can't be executed because it isn't in the right format.
+
+@item ENOMEM
+Executing the specified file requires more storage than is available.
+@end table
+
+If execution of the new file succeeds, it updates the access time field
+of the file as if the file had been read.  @xref{File Times}, for more
+details about access times of files.
+
+The point at which the file is closed again is not specified, but
+is at some point before the process exits or before another process
+image is executed.
+
+Executing a new process image completely changes the contents of memory,
+copying only the argument and environment strings to new locations.  But
+many other attributes of the process are unchanged:
+
+@itemize @bullet
+@item
+The process ID and the parent process ID.  @xref{Process Creation Concepts}.
+
+@item
+Session and process group membership.  @xref{Concepts of Job Control}.
+
+@item
+Real user ID and group ID, and supplementary group IDs.  @xref{Process
+Persona}.
+
+@item
+Pending alarms.  @xref{Setting an Alarm}.
+
+@item
+Current working directory and root directory.  @xref{Working
+Directory}.  On @gnuhurdsystems{}, the root directory is not copied when
+executing a setuid program; instead the system default root directory
+is used for the new program.
+
+@item
+File mode creation mask.  @xref{Setting Permissions}.
+
+@item
+Process signal mask; see @ref{Process Signal Mask}.
+
+@item
+Pending signals; see @ref{Blocking Signals}.
+
+@item
+Elapsed processor time associated with the process; see @ref{Processor Time}.
+@end itemize
+
+If the set-user-ID and set-group-ID mode bits of the process image file
+are set, this affects the effective user ID and effective group ID
+(respectively) of the process.  These concepts are discussed in detail
+in @ref{Process Persona}.
+
+Signals that are set to be ignored in the existing process image are
+also set to be ignored in the new process image.  All other signals are
+set to the default action in the new process image.  For more
+information about signals, see @ref{Signal Handling}.
+
+File descriptors open in the existing process image remain open in the
+new process image, unless they have the @code{FD_CLOEXEC}
+(close-on-exec) flag set.  The files that remain open inherit all
+attributes of the open file descriptors from the existing process image,
+including file locks.  File descriptors are discussed in @ref{Low-Level I/O}.
+
+Streams, by contrast, cannot survive through @code{exec} functions,
+because they are located in the memory of the process itself.  The new
+process image has no streams except those it creates afresh.  Each of
+the streams in the pre-@code{exec} process image has a descriptor inside
+it, and these descriptors do survive through @code{exec} (provided that
+they do not have @code{FD_CLOEXEC} set).  The new process image can
+reconnect these to new streams using @code{fdopen} (@pxref{Descriptors
+and Streams}).
+
+@node Process Completion
+@section Process Completion
+@cindex process completion
+@cindex waiting for completion of child process
+@cindex testing exit status of child process
+
+The functions described in this section are used to wait for a child
+process to terminate or stop, and determine its status.  These functions
+are declared in the header file @file{sys/wait.h}.
+@pindex sys/wait.h
+
+@deftypefun pid_t waitpid (pid_t @var{pid}, int *@var{status-ptr}, int @var{options})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{waitpid} function is used to request status information from a
+child process whose process ID is @var{pid}.  Normally, the calling
+process is suspended until the child process makes status information
+available by terminating.
+
+Other values for the @var{pid} argument have special interpretations.  A
+value of @code{-1} or @code{WAIT_ANY} requests status information for
+any child process; a value of @code{0} or @code{WAIT_MYPGRP} requests
+information for any child process in the same process group as the
+calling process; and any other negative value @minus{} @var{pgid}
+requests information for any child process whose process group ID is
+@var{pgid}.
+
+If status information for a child process is available immediately, this
+function returns immediately without waiting.  If more than one eligible
+child process has status information available, one of them is chosen
+randomly, and its status is returned immediately.  To get the status
+from the other eligible child processes, you need to call @code{waitpid}
+again.
+
+The @var{options} argument is a bit mask.  Its value should be the
+bitwise OR (that is, the @samp{|} operator) of zero or more of the
+@code{WNOHANG} and @code{WUNTRACED} flags.  You can use the
+@code{WNOHANG} flag to indicate that the parent process shouldn't wait;
+and the @code{WUNTRACED} flag to request status information from stopped
+processes as well as processes that have terminated.
+
+The status information from the child process is stored in the object
+that @var{status-ptr} points to, unless @var{status-ptr} is a null pointer.
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{waitpid} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this calls to @code{waitpid} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The return value is normally the process ID of the child process whose
+status is reported.  If there are child processes but none of them is
+waiting to be noticed, @code{waitpid} will block until one is.  However,
+if the @code{WNOHANG} option was specified, @code{waitpid} will return
+zero instead of blocking.
+
+If a specific PID to wait for was given to @code{waitpid}, it will
+ignore all other children (if any).  Therefore if there are children
+waiting to be noticed but the child whose PID was specified is not one
+of them, @code{waitpid} will block or return zero as described above.
+
+A value of @code{-1} is returned in case of error.  The following
+@code{errno} error conditions are defined for this function:
+
+@table @code
+@item EINTR
+The function was interrupted by delivery of a signal to the calling
+process.  @xref{Interrupted Primitives}.
+
+@item ECHILD
+There are no child processes to wait for, or the specified @var{pid}
+is not a child of the calling process.
+
+@item EINVAL
+An invalid value was provided for the @var{options} argument.
+@end table
+@end deftypefun
+
+These symbolic constants are defined as values for the @var{pid} argument
+to the @code{waitpid} function.
+
+@comment Extra blank lines make it look better.
+@vtable @code
+@item WAIT_ANY
+
+This constant macro (whose value is @code{-1}) specifies that
+@code{waitpid} should return status information about any child process.
+
+
+@item WAIT_MYPGRP
+This constant (with value @code{0}) specifies that @code{waitpid} should
+return status information about any child process in the same process
+group as the calling process.
+@end vtable
+
+These symbolic constants are defined as flags for the @var{options}
+argument to the @code{waitpid} function.  You can bitwise-OR the flags
+together to obtain a value to use as the argument.
+
+@vtable @code
+@item WNOHANG
+
+This flag specifies that @code{waitpid} should return immediately
+instead of waiting, if there is no child process ready to be noticed.
+
+@item WUNTRACED
+
+This flag specifies that @code{waitpid} should report the status of any
+child processes that have been stopped as well as those that have
+terminated.
+@end vtable
+
+@deftypefun pid_t wait (int *@var{status-ptr})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This is a simplified version of @code{waitpid}, and is used to wait
+until any one child process terminates.  The call:
+
+@smallexample
+wait (&status)
+@end smallexample
+
+@noindent
+is exactly equivalent to:
+
+@smallexample
+waitpid (-1, &status, 0)
+@end smallexample
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{wait} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this calls to @code{wait} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+@end deftypefun
+
+@deftypefun pid_t wait4 (pid_t @var{pid}, int *@var{status-ptr}, int @var{options}, struct rusage *@var{usage})
+@standards{BSD, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+If @var{usage} is a null pointer, @code{wait4} is equivalent to
+@code{waitpid (@var{pid}, @var{status-ptr}, @var{options})}.
+
+If @var{usage} is not null, @code{wait4} stores usage figures for the
+child process in @code{*@var{rusage}} (but only if the child has
+terminated, not if it has stopped).  @xref{Resource Usage}.
+
+This function is a BSD extension.
+@end deftypefun
+
+Here's an example of how to use @code{waitpid} to get the status from
+all child processes that have terminated, without ever waiting.  This
+function is designed to be a handler for @code{SIGCHLD}, the signal that
+indicates that at least one child process has terminated.
+
+@smallexample
+@group
+void
+sigchld_handler (int signum)
+@{
+  int pid, status, serrno;
+  serrno = errno;
+  while (1)
+    @{
+      pid = waitpid (WAIT_ANY, &status, WNOHANG);
+      if (pid < 0)
+        @{
+          perror ("waitpid");
+          break;
+        @}
+      if (pid == 0)
+        break;
+      notice_termination (pid, status);
+    @}
+  errno = serrno;
+@}
+@end group
+@end smallexample
+
+@node Process Completion Status
+@section Process Completion Status
+
+If the exit status value (@pxref{Program Termination}) of the child
+process is zero, then the status value reported by @code{waitpid} or
+@code{wait} is also zero.  You can test for other kinds of information
+encoded in the returned status value using the following macros.
+These macros are defined in the header file @file{sys/wait.h}.
+@pindex sys/wait.h
+
+@deftypefn Macro int WIFEXITED (int @var{status})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This macro returns a nonzero value if the child process terminated
+normally with @code{exit} or @code{_exit}.
+@end deftypefn
+
+@deftypefn Macro int WEXITSTATUS (int @var{status})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+If @code{WIFEXITED} is true of @var{status}, this macro returns the
+low-order 8 bits of the exit status value from the child process.
+@xref{Exit Status}.
+@end deftypefn
+
+@deftypefn Macro int WIFSIGNALED (int @var{status})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This macro returns a nonzero value if the child process terminated
+because it received a signal that was not handled.
+@xref{Signal Handling}.
+@end deftypefn
+
+@deftypefn Macro int WTERMSIG (int @var{status})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+If @code{WIFSIGNALED} is true of @var{status}, this macro returns the
+signal number of the signal that terminated the child process.
+@end deftypefn
+
+@deftypefn Macro int WCOREDUMP (int @var{status})
+@standards{BSD, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This macro returns a nonzero value if the child process terminated
+and produced a core dump.
+@end deftypefn
+
+@deftypefn Macro int WIFSTOPPED (int @var{status})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This macro returns a nonzero value if the child process is stopped.
+@end deftypefn
+
+@deftypefn Macro int WSTOPSIG (int @var{status})
+@standards{POSIX.1, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+If @code{WIFSTOPPED} is true of @var{status}, this macro returns the
+signal number of the signal that caused the child process to stop.
+@end deftypefn
+
+
+@node BSD Wait Functions
+@section BSD Process Wait Function
+
+@Theglibc{} also provides the @code{wait3} function for compatibility
+with BSD.  This function is declared in @file{sys/wait.h}.  It is the
+predecessor to @code{wait4}, which is more flexible.  @code{wait3} is
+now obsolete.
+@pindex sys/wait.h
+
+@deftypefun pid_t wait3 (int *@var{status-ptr}, int @var{options}, struct rusage *@var{usage})
+@standards{BSD, sys/wait.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+If @var{usage} is a null pointer, @code{wait3} is equivalent to
+@code{waitpid (-1, @var{status-ptr}, @var{options})}.
+
+If @var{usage} is not null, @code{wait3} stores usage figures for the
+child process in @code{*@var{rusage}} (but only if the child has
+terminated, not if it has stopped).  @xref{Resource Usage}.
+@end deftypefun
+
+@node Process Creation Example
+@section Process Creation Example
+
+Here is an example program showing how you might write a function
+similar to the built-in @code{system}.  It executes its @var{command}
+argument using the equivalent of @samp{sh -c @var{command}}.
+
+@smallexample
+#include <stddef.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+/* @r{Execute the command using this shell program.}  */
+#define SHELL "/bin/sh"
+
+@group
+int
+my_system (const char *command)
+@{
+  int status;
+  pid_t pid;
+@end group
+
+  pid = fork ();
+  if (pid == 0)
+    @{
+      /* @r{This is the child process.  Execute the shell command.} */
+      execl (SHELL, SHELL, "-c", command, NULL);
+      _exit (EXIT_FAILURE);
+    @}
+  else if (pid < 0)
+    /* @r{The fork failed.  Report failure.}  */
+    status = -1;
+  else
+    /* @r{This is the parent process.  Wait for the child to complete.}  */
+    if (waitpid (pid, &status, 0) != pid)
+      status = -1;
+  return status;
+@}
+@end smallexample
+
+@comment Yes, this example has been tested.
+
+There are a couple of things you should pay attention to in this
+example.
+
+Remember that the first @code{argv} argument supplied to the program
+represents the name of the program being executed.  That is why, in the
+call to @code{execl}, @code{SHELL} is supplied once to name the program
+to execute and a second time to supply a value for @code{argv[0]}.
+
+The @code{execl} call in the child process doesn't return if it is
+successful.  If it fails, you must do something to make the child
+process terminate.  Just returning a bad status code with @code{return}
+would leave two processes running the original program.  Instead, the
+right behavior is for the child process to report failure to its parent
+process.
+
+Call @code{_exit} to accomplish this.  The reason for using @code{_exit}
+instead of @code{exit} is to avoid flushing fully buffered streams such
+as @code{stdout}.  The buffers of these streams probably contain data
+that was copied from the parent process by the @code{fork}, data that
+will be output eventually by the parent process.  Calling @code{exit} in
+the child would output the data twice.  @xref{Termination Internals}.

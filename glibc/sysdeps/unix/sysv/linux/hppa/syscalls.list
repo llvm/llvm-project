@@ -1,0 +1,14 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+# proper socket implementations:
+bind		-	bind		i:ipi	__bind		bind
+getpeername	-	getpeername	i:ipp	__getpeername	getpeername
+getsockname	-	getsockname	i:ipp	__getsockname	getsockname
+listen		-	listen		i:ii	__listen	listen
+shutdown	-	shutdown	i:ii	__shutdown	shutdown
+socket		-	socket		i:iii	__socket	socket
+socketpair	-	socketpair	i:iiif	__socketpair	socketpair
+
+prlimit64	EXTRA	prlimit64	i:iipp	__prlimit64	prlimit64@@GLIBC_2.17
+fanotify_mark	EXTRA	fanotify_mark	i:iiiiis	__fanotify_mark	fanotify_mark@@GLIBC_2.19
+personality	EXTRA	personality	Ei:i	__personality	personality

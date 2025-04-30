@@ -3,10 +3,14 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+m -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IM %s
+; RUN: llc -mtriple=riscv32 -mattr=+m -mattr=+cheap-int-div -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32IM-CHEAP %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IM %s
+; RUN: llc -mtriple=riscv64 -mattr=+m -mattr=+cheap-int-div -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64IM-CHEAP %s
 
 define i32 @urem(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: urem:
@@ -17,6 +21,11 @@ define i32 @urem(i32 %a, i32 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    remu a0, a0, a1
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: urem:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    remu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: urem:
 ; RV64I:       # %bb.0:
@@ -35,6 +44,11 @@ define i32 @urem(i32 %a, i32 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    remuw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    remuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i32 %a, %b
   ret i32 %1
 }
@@ -51,6 +65,12 @@ define i32 @urem_constant_lhs(i32 %a) nounwind {
 ; RV32IM-NEXT:    li a1, 10
 ; RV32IM-NEXT:    remu a0, a1, a0
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: urem_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, 10
+; RV32IM-CHEAP-NEXT:    remu a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: urem_constant_lhs:
 ; RV64I:       # %bb.0:
@@ -69,6 +89,12 @@ define i32 @urem_constant_lhs(i32 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    remuw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i32 10, %a
   ret i32 %1
 }
@@ -82,6 +108,11 @@ define i32 @srem(i32 %a, i32 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    rem a0, a0, a1
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: srem:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    rem a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: srem:
 ; RV64I:       # %bb.0:
@@ -98,6 +129,11 @@ define i32 @srem(i32 %a, i32 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    remw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i32 %a, %b
   ret i32 %1
 }
@@ -121,6 +157,12 @@ define i32 @srem_pow2(i32 %a) nounwind {
 ; RV32IM-NEXT:    sub a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem_pow2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, 8
+; RV32IM-CHEAP-NEXT:    rem a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
@@ -138,6 +180,12 @@ define i32 @srem_pow2(i32 %a) nounwind {
 ; RV64IM-NEXT:    andi a1, a1, -8
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem_pow2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 8
+; RV64IM-CHEAP-NEXT:    remw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i32 %a, 8
   ret i32 %1
 }
@@ -163,6 +211,12 @@ define i32 @srem_pow2_2(i32 %a) nounwind {
 ; RV32IM-NEXT:    sub a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem_pow2_2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    lui a1, 16
+; RV32IM-CHEAP-NEXT:    rem a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem_pow2_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
@@ -182,6 +236,12 @@ define i32 @srem_pow2_2(i32 %a) nounwind {
 ; RV64IM-NEXT:    and a1, a1, a2
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem_pow2_2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    lui a1, 16
+; RV64IM-CHEAP-NEXT:    remw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i32 %a, 65536
   ret i32 %1
 }
@@ -199,6 +259,12 @@ define i32 @srem_constant_lhs(i32 %a) nounwind {
 ; RV32IM-NEXT:    rem a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, -10
+; RV32IM-CHEAP-NEXT:    rem a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -215,6 +281,12 @@ define i32 @srem_constant_lhs(i32 %a) nounwind {
 ; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    remw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, -10
+; RV64IM-CHEAP-NEXT:    remw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i32 -10, %a
   ret i32 %1
 }
@@ -238,6 +310,15 @@ define i64 @urem64(i64 %a, i64 %b) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: urem64:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    call __umoddi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: urem64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    tail __umoddi3
@@ -246,6 +327,11 @@ define i64 @urem64(i64 %a, i64 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    remu a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem64:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    remu a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i64 %a, %b
   ret i64 %1
 }
@@ -277,6 +363,19 @@ define i64 @urem64_constant_lhs(i64 %a) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: urem64_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    mv a3, a1
+; RV32IM-CHEAP-NEXT:    mv a2, a0
+; RV32IM-CHEAP-NEXT:    li a0, 10
+; RV32IM-CHEAP-NEXT:    li a1, 0
+; RV32IM-CHEAP-NEXT:    call __umoddi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: urem64_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a1, a0
@@ -288,6 +387,12 @@ define i64 @urem64_constant_lhs(i64 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    remu a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem64_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    remu a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i64 10, %a
   ret i64 %1
 }
@@ -311,6 +416,15 @@ define i64 @srem64(i64 %a, i64 %b) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem64:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    call __moddi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    tail __moddi3
@@ -319,6 +433,11 @@ define i64 @srem64(i64 %a, i64 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    rem a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem64:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    rem a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i64 %a, %b
   ret i64 %1
 }
@@ -350,6 +469,19 @@ define i64 @srem64_constant_lhs(i64 %a) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem64_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    mv a3, a1
+; RV32IM-CHEAP-NEXT:    mv a2, a0
+; RV32IM-CHEAP-NEXT:    li a0, -10
+; RV32IM-CHEAP-NEXT:    li a1, -1
+; RV32IM-CHEAP-NEXT:    call __moddi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem64_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a1, a0
@@ -361,6 +493,12 @@ define i64 @srem64_constant_lhs(i64 %a) nounwind {
 ; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    rem a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem64_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, -10
+; RV64IM-CHEAP-NEXT:    rem a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i64 -10, %a
   ret i64 %1
 }
@@ -384,6 +522,13 @@ define i8 @urem8(i8 %a, i8 %b) nounwind {
 ; RV32IM-NEXT:    remu a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: urem8:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    andi a1, a1, 255
+; RV32IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV32IM-CHEAP-NEXT:    remu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: urem8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -401,6 +546,13 @@ define i8 @urem8(i8 %a, i8 %b) nounwind {
 ; RV64IM-NEXT:    andi a0, a0, 255
 ; RV64IM-NEXT:    remuw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem8:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    andi a1, a1, 255
+; RV64IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV64IM-CHEAP-NEXT:    remuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i8 %a, %b
   ret i8 %1
 }
@@ -424,6 +576,13 @@ define i8 @urem8_constant_lhs(i8 %a) nounwind {
 ; RV32IM-NEXT:    remu a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: urem8_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV32IM-CHEAP-NEXT:    li a1, 10
+; RV32IM-CHEAP-NEXT:    remu a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: urem8_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -441,6 +600,13 @@ define i8 @urem8_constant_lhs(i8 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem8_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    remuw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i8 10, %a
   ret i8 %1
 }
@@ -469,6 +635,15 @@ define i8 @srem8(i8 %a, i8 %b) nounwind {
 ; RV32IM-NEXT:    rem a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem8:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a1, a1, 24
+; RV32IM-CHEAP-NEXT:    srai a1, a1, 24
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 24
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 24
+; RV32IM-CHEAP-NEXT:    rem a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -490,6 +665,15 @@ define i8 @srem8(i8 %a, i8 %b) nounwind {
 ; RV64IM-NEXT:    srai a0, a0, 56
 ; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem8:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a1, a1, 56
+; RV64IM-CHEAP-NEXT:    srai a1, a1, 56
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 56
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 56
+; RV64IM-CHEAP-NEXT:    remw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i8 %a, %b
   ret i8 %1
 }
@@ -515,6 +699,14 @@ define i8 @srem8_constant_lhs(i8 %a) nounwind {
 ; RV32IM-NEXT:    rem a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem8_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 24
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 24
+; RV32IM-CHEAP-NEXT:    li a1, -10
+; RV32IM-CHEAP-NEXT:    rem a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem8_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -534,6 +726,14 @@ define i8 @srem8_constant_lhs(i8 %a) nounwind {
 ; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    remw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem8_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 56
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 56
+; RV64IM-CHEAP-NEXT:    li a1, -10
+; RV64IM-CHEAP-NEXT:    remw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i8 -10, %a
   ret i8 %1
 }
@@ -562,6 +762,15 @@ define i16 @urem16(i16 %a, i16 %b) nounwind {
 ; RV32IM-NEXT:    remu a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: urem16:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    lui a2, 16
+; RV32IM-CHEAP-NEXT:    addi a2, a2, -1
+; RV32IM-CHEAP-NEXT:    and a1, a1, a2
+; RV32IM-CHEAP-NEXT:    and a0, a0, a2
+; RV32IM-CHEAP-NEXT:    remu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: urem16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -583,6 +792,15 @@ define i16 @urem16(i16 %a, i16 %b) nounwind {
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    remuw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem16:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    lui a2, 16
+; RV64IM-CHEAP-NEXT:    addi a2, a2, -1
+; RV64IM-CHEAP-NEXT:    and a1, a1, a2
+; RV64IM-CHEAP-NEXT:    and a0, a0, a2
+; RV64IM-CHEAP-NEXT:    remuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i16 %a, %b
   ret i16 %1
 }
@@ -608,6 +826,14 @@ define i16 @urem16_constant_lhs(i16 %a) nounwind {
 ; RV32IM-NEXT:    remu a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: urem16_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    li a1, 10
+; RV32IM-CHEAP-NEXT:    remu a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: urem16_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -627,6 +853,14 @@ define i16 @urem16_constant_lhs(i16 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: urem16_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    remuw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = urem i16 10, %a
   ret i16 %1
 }
@@ -654,6 +888,15 @@ define i16 @srem16(i16 %a, i16 %b) nounwind {
 ; RV32IM-NEXT:    rem a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem16:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a1, a1, 16
+; RV32IM-CHEAP-NEXT:    srai a1, a1, 16
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 16
+; RV32IM-CHEAP-NEXT:    rem a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -675,6 +918,15 @@ define i16 @srem16(i16 %a, i16 %b) nounwind {
 ; RV64IM-NEXT:    srai a0, a0, 48
 ; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem16:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a1, a1, 48
+; RV64IM-CHEAP-NEXT:    srai a1, a1, 48
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 48
+; RV64IM-CHEAP-NEXT:    remw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i16 %a, %b
   ret i16 %1
 }
@@ -700,6 +952,14 @@ define i16 @srem16_constant_lhs(i16 %a) nounwind {
 ; RV32IM-NEXT:    rem a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: srem16_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 16
+; RV32IM-CHEAP-NEXT:    li a1, -10
+; RV32IM-CHEAP-NEXT:    rem a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: srem16_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -719,6 +979,14 @@ define i16 @srem16_constant_lhs(i16 %a) nounwind {
 ; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    remw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: srem16_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 48
+; RV64IM-CHEAP-NEXT:    li a1, -10
+; RV64IM-CHEAP-NEXT:    remw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = srem i16 -10, %a
   ret i16 %1
 }

@@ -1,0 +1,172 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Kabyle language locale for Algeria
+% Contributed by Yacine Bouklif <yacine2953-tansa1@yahoo.fr>
+% and Belkacem Mohammed <belkacem77@gmail.com>
+
+LC_IDENTIFICATION
+title      "Kabyle language locale for Algeria"
+source     ""
+contact    ""
+email      "belkacem77@gmail.com"
+language   "Kabyle"
+territory  "Algeria"
+revision   "1.0"
+date       "2016-07-06"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "ber_DZ"
+END LC_COLLATE
+
+LC_TIME
+mon "Yennayer";/
+    "Fu<U1E5B>ar";/
+    "Me<U0263>res";/
+    "Yebrir";/
+    "Mayyu";/
+    "Yunyu";/
+    "Yulyu";/
+    "<U0263>uct";/
+    "Ctembe<U1E5B>";/
+    "Tube<U1E5B>";/
+    "Wambe<U1E5B>";/
+    "Dujembe<U1E5B>"
+abmon "Yen";/
+      "Fur";/
+      "Me<U0263>";/
+      "Yeb";/
+      "May";/
+      "Yun";/
+      "Yul";/
+      "<U0263>uc";/
+      "Cte";/
+      "Tub";/
+      "Wam";/
+      "Duj"
+day "Acer";/
+    "Arim";/
+    "Aram";/
+    "Ahad";/
+    "Amhad";/
+    "Sem";/
+    "Sed"
+abday "Ace";/
+      "Ari";/
+      "Ara";/
+      "Aha";/
+      "Amh";/
+      "Sem";/
+      "Sed"
+%
+% Appropriate date and time representation
+d_t_fmt       "%a %d %b %Y %T"
+%
+% Appropriate date and time representation for date(1)
+date_fmt      "%a %d %b %Y %T %Z"
+% Appropriate date representation
+d_fmt         "%d//%m//%Y"
+% Appropriate time representation
+t_fmt         "%T"
+% Appropriate 12 h time representation
+t_fmt_ampm    "%I:%M:%S %p"
+%
+% Strings for AM/PM
+%
+am_pm "FT";"MD"
+week 7;19971130;1
+first_weekday 7
+first_workday 1
+END LC_TIME
+
+LC_NUMERIC
+decimal_point ","
+thousands_sep ""
+grouping      3
+END LC_NUMERIC
+
+LC_MONETARY
+currency_symbol    "DA"
+int_curr_symbol    "DZD "
+mon_decimal_point  ","
+mon_thousands_sep  ""
+mon_grouping       3
+positive_sign      ""
+negative_sign      "-"
+frac_digits        2
+int_frac_digits    2
+p_cs_precedes      0
+p_sep_by_space     1
+n_cs_precedes      0
+n_sep_by_space     1
+p_sign_posn        1
+n_sign_posn        1
+END LC_MONETARY
+
+LC_PAPER
+copy "ber_DZ"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "ber_DZ"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1yYiI]"
+noexpr  "^[-0nNuUaA]"
+yesstr "Ih"
+nostr  "Uhu"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt  "%d%t%g%t%m%t%f"
+name_miss "Tamsiwt"
+name_mr   "Mas"
+name_mrs  "Massa"
+name_ms   "Massa"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Lezzayer"
+country_ab2  "DZ"
+country_ab3  "DZA"
+country_num  012
+country_car  "DZ"
+lang_name    "Taqbaylit"
+lang_term    "kab"
+lang_lib     "kab"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "ar_DZ"
+END LC_TELEPHONE

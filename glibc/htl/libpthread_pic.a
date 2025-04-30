@@ -1,0 +1,2 @@
+GROUP(-lpthread_syms)
+GROUP(-lpthread2_pic)

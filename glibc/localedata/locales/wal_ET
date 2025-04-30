@@ -1,0 +1,225 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Walaita language locale for Ethiopia.
+%
+% Prepared and contributed to glibc by Daniel Yacob <locales@geez.org>.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f UTF-8 -i wal_ET wal_ET
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Walaita language locale for Ethiopia."
+source     "Ge'ez Frontier Foundation"
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Wolaytta"
+territory  "Ethiopia"
+revision   "0.10"
+date       "2004-04-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopic Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "am_ET"
+END LC_COLLATE
+
+LC_CTYPE
+copy "ti_ET"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopia Specific and Shared Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "ti_ET"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "ti_ET"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ti_ET"
+END LC_NUMERIC
+
+LC_PAPER
+copy "ti_ET"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ti_ET"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Walaita Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_ADDRESS category.
+%
+postal_fmt    "%z%c%T%s%b%e%r"
+country_name  "<U12A2><U1275><U12EE><U1335><U12EB>"
+country_post  "ETH"
+country_ab2   "ET"
+country_ab3   "ETH"
+country_num   231   % 210 found in at least one ISO 3166 doc
+country_car    "ETH"
+% country_isbn  unknown, Need ISO 2108
+lang_name     "<U12C8><U120B><U12ED><U1273><U1271>"
+lang_term     "wal"
+lang_lib      "wal"
+END LC_ADDRESS
+
+
+LC_MESSAGES
+copy "ti_ET"
+END LC_MESSAGES
+
+
+LC_NAME
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_NAME category.
+%
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    ""
+name_mr     "<U121A><U1232><U12EB>"
+name_mrs    "<U12AC><U1273><U12CB>"
+name_miss   "<U12AC><U1273><U12E9>"
+name_ms     "<U12AC><U1273><U12E9>"
+%
+END LC_NAME
+
+
+LC_TIME
+%
+% Abbreviated weekday names (%a)
+%
+abday   "<U12C8><U130B> ";/
+	"<U1233><U12ED><U1296>";/
+	"<U121B><U1246><U1233>";/
+	"<U12A0><U1229><U12CB>";/
+	"<U1203><U1219><U1233>";/
+	"<U12A0><U122D><U1263>";/
+	"<U1244><U122B> "
+%
+% Full weekday names (%A)
+%
+% mon  also <U1230><U129E>
+% tues also <U121B><U1230><U12A8><U129E>
+% wed  also <U122E><U12CB>
+% thru also <U1210><U1219><U1233>
+%
+day     "<U12C8><U130B>";/
+	"<U1233><U12ED><U1296>";/
+	"<U121B><U1246><U1233><U129B>";/
+	"<U12A0><U1229><U12CB>";/
+	"<U1203><U1219><U1233>";/
+	"<U12A0><U122D><U1263>";/
+	"<U1244><U122B>"
+%
+% Abbreviated month names (%b)
+%
+abmon    "<U1303><U1295><U12E9>";/
+	 "<U134C><U1265><U1229>";/
+	 "<U121B><U122D><U127D>";/
+	 "<U12A4><U1355><U1228>";/
+	 "<U121C><U12ED> ";/
+	 "<U1301><U1295> ";/
+	 "<U1301><U120B><U12ED>";/
+	 "<U12A6><U1308><U1235>";/
+	 "<U1234><U1355><U1274>";/
+	 "<U12A6><U12AD><U1270>";/
+	 "<U1296><U126C><U121D>";/
+	 "<U12F2><U1234><U121D>"
+%
+% Full month names (%B)
+%
+mon      "<U1303><U1295><U12E9><U12C8><U122A>";/
+	 "<U134C><U1265><U1229><U12C8><U122A>";/
+	 "<U121B><U122D><U127D>";/
+	 "<U12A4><U1355><U1228><U120D>";/
+	 "<U121C><U12ED>";/
+	 "<U1301><U1295>";/
+	 "<U1301><U120B><U12ED>";/
+	 "<U12A6><U1308><U1235><U1275>";/
+	 "<U1234><U1355><U1274><U121D><U1260><U122D>";/
+	 "<U12A6><U12AD><U1270><U12CD><U1260><U122D>";/
+	 "<U1296><U126C><U121D><U1260><U122D>";/
+	 "<U12F2><U1234><U121D><U1260><U122D>"
+%
+% Equivalent of AM PM
+%
+% also <U130B><U120B><U1233>
+% also <U12A1><U1218><U122D><U1232>
+%
+am_pm    "<U121B><U1208><U12F6>";"<U1243><U121B>"
+%
+% Appropriate date representation (%x)
+%
+d_fmt   "%d//%m//%Y"
+%
+% Appropriate time representation (%X)
+%
+t_fmt "%l:%M:%S %p"
+%
+% Appropriate AM/PM time representation (%r)
+%
+t_fmt_ampm "%l:%M:%S %p"
+%
+% Appropriate date and time representation (%c)
+%	"%A፣ %B %e ጋላሳ  %Y %r %Z
+%
+d_t_fmt    "%A<U1363> %B %e <U130B><U120B><U1233> %Y %r %Z"
+%
+% Appropriate date representation (date(1))
+%	"%A፣ %B %e ጋላሳ %r %Z %Y ግ/ላ
+%
+date_fmt    "%A<U1363> %B %e <U130B><U120B><U1233> %r %Z %Y <U130D>//<U120B>"
+week 7;19971130;1
+END LC_TIME

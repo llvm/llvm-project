@@ -1,0 +1,21 @@
+# File name	Caller	Syscall name	Args	Strong name	Weak names
+
+#
+# Calls for compatibility with existing MIPS OS implementations and
+# compilers.
+#
+cachectl	-	cachectl	i:pii	__cachectl	cachectl
+cacheflush	-	cacheflush	i:pii	_flush_cache	cacheflush
+sysmips		-	sysmips		i:iiii	__sysmips	sysmips
+
+#
+# Socket functions; Linux/MIPS doesn't use the socketcall(2) wrapper;
+# it's provided for compatibility, though.
+#
+bind		-	bind		i:ipi	__bind		bind
+getpeername	-	getpeername	i:ipp	__getpeername	getpeername
+getsockname	-	getsockname	i:ipp	__getsockname	getsockname
+listen		-	listen		i:ii	__listen	listen
+shutdown	-	shutdown	i:ii	__shutdown	shutdown
+socket		-	socket		i:iii	__socket	socket
+socketpair	-	socketpair	i:iiif	__socketpair	socketpair

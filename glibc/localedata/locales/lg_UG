@@ -1,0 +1,313 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Luganda language locale for Uganda
+% Source: Akademe ya Luganda
+% Address: c/o P.O. Box 5190 Kampala,
+%          Uganda
+% Contact: Kizito Birabwa
+% Email: kompyuta@kizito.uklinux.net
+% Tel: +41 - (0)1772 724325
+% Fax:
+% Language: lg
+% Territory: UG
+% Revision: 1.0
+% Date: 2001-11-04
+% Users: general
+
+LC_IDENTIFICATION
+title      "Luganda locale for Uganda"
+source     "Akademe ya Luganda"
+address    "c//o P.O. Box 5190 Kampala, Uganda"
+contact    "Kizito Birabwa"
+email      "kompyuta@kizito.uklinux.net"
+tel        ""
+fax        ""
+language   "Ganda"
+territory  "Uganda"
+revision   "1.0"
+date       "2001-11-04"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+% Use the characters described in the charmap file "i18n.tgz"
+%
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651 i.e.
+% use the rules there when making ordered lists of words.
+%
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "UGX "
+currency_symbol         "USh"
+% Local currency symbol "/-"
+%
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+% For money there are three numbers to the between each
+% pair of thousands separators, e.g. "123,456,786"
+%
+positive_sign           ""
+% No sign in front of positive money values.
+%
+negative_sign           "-"
+% "-" in front of negative money values.
+%
+int_frac_digits         2
+% Allow 2 decimal places for international
+% representation of fractional money values.
+%
+frac_digits             2
+% Allow 2 decimal places for local
+% representation of fractional money values.
+%
+p_cs_precedes           0
+% The "0" means that the "/-" comes after positive monetary
+% values.
+%
+p_sep_by_space          0
+% The "0" means that there is no space between the numbers and
+% the "/-" sign for positive monetary values.
+%
+n_cs_precedes           0
+% The "0" means that the "/-" comes after negative monetary
+% values.
+%
+n_sep_by_space          0
+% The "0" means that there is no space between the numbers and
+% the "/-" sign for negative monetary values.
+%
+p_sign_posn             1
+% The "1" means that, if a "+" sign is present in a monetary
+% value,it comes before the % "USh", "/-", and the numbers.
+%
+n_sign_posn             1
+% The "1" means that, if a "-" sign is present in a monetary
+% value,it comes before the % "USh", "/-", and the numbers.
+%
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+% For normal numbers, the decomal point is a "."
+%
+thousands_sep           ","
+% For normal numbers, the thousands separator is a ","
+%
+grouping                3;3
+% For normal numbers, there are three numbers between each
+% pair of thousands separators, e.g. 123,456,789
+%
+END LC_NUMERIC
+
+LC_TIME
+abday       "Sab";"Bal";/
+            "Lw2";"Lw3";/
+            "Lw4";"Lw5";/
+            "Lw6"
+% The abbreviations for the week days - Sab, Bal, Lw2, Lw3, Lw4,
+%                                      Lw5, Lw6
+%
+day         "Sabiiti";/
+            "Balaza";/
+            "Lwakubiri";/
+            "Lwakusatu";/
+            "Lwakuna";/
+            "Lwakutaano";/
+            "Lwamukaaga"
+% The full names of the week days - Sabiiti, Balaza, Lwakubiri, Lwakusatu, Lwakuna
+%                                   Lwakutaano, Lwamukaaga.
+%
+abmon       "Jan";"Feb";/
+            "Mar";"Apu";/
+            "Maa";"Juu";/
+            "Jul";"Agu";/
+            "Seb";"Oki";/
+            "Nov";"Des"
+% The abbreviations for the months - Jan, Feb, Mar, Apu, Maa,
+%                                    Juu, Jul, Agu, Seb, Oki,
+%                                    Nov, Des
+%
+mon         "Janwaliyo";/
+            "Febwaliyo";/
+            "Marisi";/
+            "Apuli";/
+            "Maayi";/
+            "Juuni";/
+            "Julaayi";/
+            "Agusito";/
+            "Sebuttemba";/
+            "Okitobba";/
+            "Novemba";/
+            "Desemba"
+% The full names of the months - Janwaliyo, Febwaliyo, Marisi, Apuli, Maayi,
+%                                    Juuni, Julaayi, Agusito, Sebuttemba,
+%                                    Okitobba, Novemba, Desemba
+%
+d_t_fmt     "%a %d %b %Y %T"
+% Abbreviated date and time representation to be referenced by the "%c" field descriptor -
+% "%a" (weekday name),
+% "%d" (day of month as a decimal number),
+% "%b" (month name),
+% "%Y" (year with century as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+%
+date_fmt    "%a %d %b %Y %T %Z"
+% Abbreviated date and time representation to be used by date(1)
+%
+d_fmt   "%d//%m//%y"
+% Date representation to be referenced by the "%x" field % descriptor -
+% "%d/%m/%y", day/month/year as decimal numbers (01/01/00 to 31/12/99).
+%
+t_fmt       "%T"
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+%
+am_pm       "";""
+% Define representation of ante meridiem and post meridiem strings -
+% The ""s mean 'default to "AM" and "PM".
+%
+t_fmt_ampm  ""
+% Define time representation in 12-hour format with "am_pm", to be referenced by the "%r"
+% field descriptor -
+% The "" means that this format is not supported.
+%
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0nN]"
+yesstr  "Ye"
+nostr   "Nedda"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+% Representation of telephone number for international use -
+% "+%c %a %l", which is
+% "+country code",
+% "area code without the prefix (often 0)",
+% "local number".
+tel_int_fmt    "+%c %a %l"
+
+% Representation of telephone number for domestic use -
+% "%a %l", which is
+% "area code, local number".
+tel_dom_fmt    "%a %l"
+
+% Digits used in Uganda to dial international - "000".
+int_select   "000"
+
+% International prefix for Uganda - "256"
+int_prefix     "256"
+
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+% Format for addressing a person.
+% "%d%t%g%t%m%t%f"
+% "Salutation",
+% "Empty string, or <Space>",
+% "First given name",
+% "Empty string, or <Space>",
+% "Middle names",
+% "Empty string, or <Space>",
+% "Clan names"
+%
+name_miss   "Mla"
+% Salutation for unmarried females - "Mla"
+%
+name_mr     "Mw"
+% Salutation for males - "Mw"
+%
+name_mrs    "Mla"
+% Salutation for married females - "Mla"
+%
+name_ms     "Mla"
+% Salutation valid for all females - "Mla"
+END LC_NAME
+
+LC_ADDRESS
+country_name "Yuganda"
+% Country name in Luganda - "Yuganda"
+%
+country_post "UG"
+% Abbreviated country postal name - "UG"
+%
+country_ab2 "UG"
+% ISO 3166 two letter country abbreviation - "UG"
+%
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% Representation of postal addresses (minus the addressee's name) in Uganda.
+% "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N", which gives -
+% "firm name",
+% "end of line",
+% "C/O address",
+% "end of line",
+% "department name",
+% "Building name",
+% "end of line",
+% "street or block name",
+% "space",
+% "house number or designation",
+% "space",
+% "floor number",
+% "space",
+% "room number, door designation",
+% "end of line",
+% "postal code",
+% "space",
+% "town, city",
+% "end of line",
+% "country designation for the <country_post> keyword",
+% "end of line
+%
+country_ab3 "UGA"
+country_num 800
+country_car    "EAU"
+lang_name    "Luganda"
+lang_ab      "lg"
+lang_term    "lug"
+lang_lib    "lug"
+END LC_ADDRESS

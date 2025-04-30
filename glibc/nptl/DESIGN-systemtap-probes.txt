@@ -1,0 +1,76 @@
+Systemtap is a dynamic tracing/instrumenting tool available on Linux. Probes
+that are not fired at run time have close to zero overhead.
+
+The following probes are available for NPTL:
+
+Thread creation & Join Probes
+=============================
+pthread_create - probe for pthread_create
+               arg1 = pointer (pthread_t*) to thread
+               arg2 = pointer (pthread_attr_t*) to attr
+               arg3 = pointer (void *) to start_routine
+               arg4 = arguments to start_routine
+pthread_start - probe for actual thread creation
+              arg1 = struct pthread (members include thread ID, process ID)
+              arg2 = address of start_routine
+              arg3 = pointer to the list of arguments
+pthread_join - probe for pthread_join
+             arg1 = thread ID
+pthread_join_ret - probe for pthread_join return
+                 arg1 = thread ID
+                 arg2 = return value
+
+Lock-related Probes
+===================
+mutex_init    - probe for pthread_mutex_init
+              arg1 = address of mutex lock
+mutex_acquired - probe for succ. return of pthread_mutex_lock
+               arg1 = address of mutex lock
+mutex_timedlock_acquired - probe for succ. return of pthread_mutex_timedlock
+                         arg1 = address of mutex lock
+mutex_entry   - probe for entry to the pthread_mutex_lock function
+              arg1 = address of mutex lock
+mutex_timedlock_entry - probe for entry to the pthread_mutex_timedlock function
+                      arg1 = address of mutex lock, arg2 = address of timespec
+mutex_clocklock_entry - probe for entry to the pthread_mutex_clocklock function
+                      arg1 = address of mutex lock, arg2 = clockid,
+		      arg3 = address of timespec
+mutex_release - probe for pthread_mutex_unlock after the successful release of a
+                mutex lock
+              arg1 = address of mutex lock
+mutex_destroy - probe for pthread_mutex_destroy
+              arg1 = address of mutex lock
+
+wrlock_entry - probe for entry to the pthread_rwlock_wrlock function
+             arg1 = address of rw lock
+rdlock_entry - probe for entry to the pthread_rwlock_rdlock function
+             arg1 = address of rw lock
+
+rwlock_destroy - probe for pthread_rwlock_destroy
+               arg1 = address of rw lock
+wrlock_acquire_write - probe for pthread_rwlock_wrlock (after getting the lock)
+                     arg1 = address of rw lock
+rdlock_acquire_read - probe for pthread_rwlock_rdlock after successfully getting
+                      the lock
+                    arg1 = address of rw lock
+rwlock_unlock - probe for pthread_rwlock_unlock
+              arg1 = address of rw lock
+
+Condition variable Probes
+=========================
+cond_init - probe for pthread_cond_init
+          arg1 = condition
+          arg2 = attr
+cond_destroy - probe for pthread_cond_destroy
+             arg1 = cond
+cond_wait - probe for pthread_cond_wait
+          arg1 = condition
+          arg2 = mutex lock
+cond_timedwait - probe for pthread_cond_timedwait
+               arg1 = condition
+               arg2 = mutex lock
+               arg3 = timespec
+cond_signal - probe for pthread_cond_signal
+            arg1 = condition
+cond_broadcast - probe for pthread_cond_broadcast
+               arg1 = condition

@@ -136,6 +136,21 @@
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imafdc/lp64d/crtend.o"
 
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
+// RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   -march=rv64imafdc_zicsr_zifencei -mabi=lp64d \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV64G-BAREMETAL-MULTI-ILP64D %s
+
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/bin{{/|\\\\}}ld"
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "-m" "elf64lriscv"
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib/rv64imafdc_zicsr_zifencei/lp64d{{/|\\\\}}crt0.o"
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imafdc_zicsr_zifencei/lp64d{{/|\\\\}}crtbegin.o"
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib"
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV64G-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imafdc_zicsr_zifencei/lp64d{{/|\\\\}}crtend.o"
+
 // Check that --rtlib can be used to override the used runtime library
 // RUN: %clang -### %s \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \

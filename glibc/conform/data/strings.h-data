@@ -1,0 +1,25 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4
+# if !defined XOPEN2K8 && !defined POSIX2008
+function int bcmp (const void*, const void*, size_t)
+function void bcopy (const void*, void*, size_t)
+function void bzero (void*, size_t)
+function {char*} index (const char*, int)
+function {char*} rindex (const char*, int)
+# endif
+# if !defined POSIX2008
+function int ffs (int)
+# endif
+function int strcasecmp (const char*, const char*)
+function int strncasecmp (const char*, const char*, size_t)
+# if defined XOPEN2K8 || defined POSIX2008
+function int strcasecmp_l (const char*, const char*, locale_t)
+function int strncasecmp_l (const char*, const char*, size_t, locale_t)
+# endif
+
+type size_t
+# if defined XOPEN2K8 || defined POSIX2008
+type locale_t
+# endif
+
+allow *_t
+#endif

@@ -30,7 +30,7 @@ if(${OPENMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/wasm32).")
+    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/wasm32/next32).")
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
@@ -93,7 +93,7 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x wasm32)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x wasm32 next32)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -186,6 +186,7 @@ set(VE FALSE)
 set(S390X FALSE)
 set(WASM FALSE)
 set(PPC FALSE)
+set(NEXT32 FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
@@ -222,6 +223,8 @@ elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
     set(WASM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "next32") # NextSilicon architecture
+    set(NEXT32 TRUE)
 endif()
 
 # Set some flags based on build_type
@@ -304,6 +307,14 @@ set(LIBOMP_USE_DEBUGGER FALSE CACHE BOOL
 # Should we link to C++ library?
 set(LIBOMP_USE_STDCPPLIB FALSE CACHE BOOL
   "Should we link to C++ library?")
+
+# Should we compile the NextSilicon optimized version?
+set(LIBOMP_NEXTSILICON FALSE CACHE BOOL
+  "Compile the NextSilicon optimized version")
+
+# Should compile with the atomics workaround (marking OpenMP runtime memory as non-migratable) ?
+set(LIBOMP_NEXTSILICON_ATOMICS_BYPASS FALSE CACHE BOOL
+  "Compile the NextSilicon atomic  workaround code")
 
 # Intel(R) Transactional Synchronization Extensions (Intel(R) TSX) based locks have
 # __asm code which can be troublesome for some compilers.  This feature is also x86 specific.
@@ -421,6 +432,9 @@ endif()
 
 set(LIBOMP_LIB_FILE ${LIBOMP_LIB_NAME}${LIBOMP_LIBRARY_SUFFIX})
 
+set(LIBOMP_NEXTSILICON FALSE CACHE BOOL "Build with NextSilicon changes")
+set(LIBOMP_NEXTSILICON_DEVICE_BUILD FALSE CACHE BOOL "Build for the NextSilicon device")
+
 # Optional backwards compatibility aliases.
 set(LIBOMP_INSTALL_ALIASES TRUE CACHE BOOL
   "Install libgomp and libiomp5 library aliases for backwards compatibility")
@@ -455,6 +469,11 @@ if(${OPENMP_STANDALONE_BUILD})
   libomp_say("Use quad precision   -- ${LIBOMP_USE_QUAD_PRECISION}")
   libomp_say("Use Hwloc library    -- ${LIBOMP_USE_HWLOC}")
   libomp_say("Use OMPX-taskgraph   -- ${LIBOMP_OMPX_TASKGRAPH}")
+
+  libomp_say("NextSilicon          -- ${LIBOMP_NEXTSILICON}")
+  libomp_say("NS Device Build      -- ${LIBOMP_NEXTSILICON_DEVICE_BUILD}")
+  libomp_say("NS Atomics Bypass    -- ${LIBOMP_NEXTSILICON_ATOMICS_BYPASS}")
+
 endif()
 
 add_subdirectory(src)

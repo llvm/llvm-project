@@ -1,0 +1,370 @@
+/*
+ * Mach Operating System
+ * Copyright (c) 1991,1990,1989,1988,1987 Carnegie Mellon University
+ * All Rights Reserved.
+ *
+ * Permission to use, copy, modify and distribute this software and its
+ * documentation is hereby granted, provided that both the copyright
+ * notice and this permission notice appear in all copies of the
+ * software, derivative works or modified versions, and any portions
+ * thereof, and that both notices appear in supporting documentation.
+ *
+ * CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS
+ * CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND FOR
+ * ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ *
+ * Carnegie Mellon requests users of this software to return to
+ *
+ *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+ *  School of Computer Science
+ *  Carnegie Mellon University
+ *  Pittsburgh PA 15213-3890
+ *
+ * any improvements or extensions that they make and grant Carnegie the
+ * rights to redistribute these changes.
+ */
+/*
+ * HISTORY
+ *
+ * Revision 2.2  92/01/16  00:10:29  rpd
+ * 	Moved from user collection to mk collection.
+ *
+ * Revision 2.3  91/08/29  15:51:39  rpd
+ * 	Fixed err_codes_netname.
+ * 	[91/08/22            rpd]
+ *
+ * Revision 2.2  91/03/27  16:05:51  mrt
+ * 	First checkin
+ *
+ * Revision 2.3  90/10/29  17:27:20  dpj
+ * 	Merged-up to U25
+ * 	[90/09/02  20:00:25  dpj]
+ *
+ */
+/*
+ *	File:	err_server.sub
+ *	Author:	Douglas Orr, Carnegie Mellon University
+ *	Date:	Mar, 1988
+ *
+ *	Definitions of Servers error strings
+ */
+
+static char * err_codes_netname[] = {			/* 0 */
+		"(server/netname) name is not yours",
+		"(server/netname) name not checked in",
+		"(server/netname) no such host",
+		"(server/netname) host not found",
+};
+static char * err_codes_env_mgr[] = {			/* 1 */
+		NO_SUCH_ERROR,
+		"(server/env_mgr) variable not found",
+		"(server/env_mgr) wrong type of variable",
+		"(server/env_mgr) unknown port",
+		"(server/env_mgr) read only environment",
+		"(server/env_mgr) no more connections available",
+		"(server/env_mgr) port table full",
+		"(server/env_mgr) attempting to enter a null port ",
+};
+static char * err_codes_execd[] = {			/* 2 */
+		NO_SUCH_ERROR,
+		"(server/execd) could not find file to run",
+		"(server/execd) userid or password incorrect",
+		"(server/execd) fork failed",
+};
+static char * err_codes_netmemory[] = {			/* 3 */
+		"(server/netmemory) successful",
+		"(server/netmemory) invalid argument",
+		"(server/netmemory) resource shortage",
+};
+static char * err_codes_ufs[] = {			/* 4 */
+		NO_SUCH_ERROR,
+/* XXX		"(server/ufs) invalid port", */
+};
+
+static char * err_codes_task_master[] = {		/* 5 */
+		"(server/task_master) GENERIC ERROR",
+		"(server/task_master) invalid tm_task port",
+		"(server/task_master) invalid task id",
+		"(server/task_master) invalid kernel port",
+		"(server/task_master) invalid job group",
+		"(server/task_master) invalid action",
+};
+
+static char * err_codes_ns[] = {			/* 6 */
+		"(server/ns) GENERIC ERROR",
+		"(server/ns) invalid handle",
+		"(server/ns) name not found",
+		"(server/ns) name already exists",
+		"(server/ns) name too long",
+		"(server/ns) path too long",
+		"(server/ns) invalid name",
+		"(server/ns) not a directory",
+		"(server/ns) is a directory",
+		"(server/ns) directory not empty",
+		"(server/ns) infinite retry loop in resolver",
+		"(server/ns) infinite forwarding loop in resolver",
+		"(server/ns) invalid prefix",
+		"(server/ns) prefix table overflow",
+		"(server/ns) bad format for directory",
+		"(server/ns) unknown entry type",
+		"(server/ns) invalid generation",
+		"(server/ns) entry not reserved",
+};
+
+static char 	* err_codes_io[] = {			/* 7 */
+		"(server/io) GENERIC ERROR",
+		"(server/io) invalid offset",
+		"(server/io) invalid size",
+		"(server/io) invalid mode",
+		"(server/io) invalid strategy",
+		"(server/io) operation rejected under current I/O strategy",
+};
+
+static char * err_codes_auth[] = {			/* 8 */
+		"(server/auth) GENERIC ERROR",
+		"(server/auth) bad private port",
+		"(server/auth) bad name",
+		"(server/auth) not primary",
+		"(server/auth) bad pauthsword",
+		"(server/auth) bad group",
+		"(server/auth) duplicate id",
+		"(server/auth) duplicate name",
+		"(server/auth) not secondary",
+};
+
+static char * err_codes_us[] = {			/* 9 */
+		"(server/us) GENERIC ERROR",
+		"(server/us) unknown error",
+		"(server/us) object not found",
+		"(server/us) object exists",
+		"(server/us) object busy",
+		"(server/us) object not started",
+		"(server/us) object dead",
+		"(server/us) invalid args",
+		"(server/us) invalid access",
+		"(server/us) invalid format",
+		"(server/us) invalid buffer size",
+		"(server/us) access denied",
+		"(server/us) resource exhausted",
+		"(server/us) quota exceeded",
+		"(server/us) limit exceeded",
+		"(server/us) not implemented",
+		"(server/us) not supported",
+		"(server/us) hardware error",
+		"(server/us) retry required",
+		"(server/us) not authenticated",
+		"(server/us) exclusive access",
+		"(server/us) timeout",
+		"(server/us) bad reference count",
+		"(server/us) internal error",
+};
+
+static char * err_codes_sunrpc[] = {			/* 10 */
+		"(server/sunrpc) GENERIC ERROR",
+		"(server/sunrpc) cannot encode arguments",
+		"(server/sunrpc) cannot decode results",
+		"(server/sunrpc) failure in sending call",
+		"(server/sunrpc) failure in receiving result",
+		"(server/sunrpc) call timed out",
+		"(server/sunrpc) rpc versions not compatible",
+		"(server/sunrpc) authentication error",
+		"(server/sunrpc) program not available",
+		"(server/sunrpc) program version mismatched",
+		"(server/sunrpc) procedure unavailable",
+		"(server/sunrpc) decode arguments error",
+		"(server/sunrpc) generic other problem",
+		"(server/sunrpc) unknown host name",
+		"(server/sunrpc) portmapper failed",
+		"(server/sunrpc) remote program not registered",
+		"(server/sunrpc) unspecified error",
+		"(server/sunrpc) unknown protocol",
+};
+
+static char	* err_codes_machobj[] = {		/* 11 */
+		"(server/object system) GENERIC ERROR",
+		"(server/object system) object not found",
+		"(server/object system) no such operation",
+		"(server/object system) undefined ipc method arguments",
+		"(server/object system) too many arguments to method",
+		"(server/object system) bad ipc message format",
+};
+
+static char 	* err_codes_loader[] = {		/* 12 */
+		"(server/loader) GENERIC ERROR",
+		"(server/loader) object file not relocated",
+		"(server/loader) unknown file type",
+		"(server/loader) symbol not found",
+		"(server/loader) symbol multiply defined",
+		"(server/loader) memory region overlap",
+};
+
+
+static char	* err_codes_exception[] = {		/* 13 */
+	"(server/exception) GENERIC ERROR",
+	"(server/exception) invalid access",
+	"(server/exception) invalid instruction",
+	"(server/exception) arithmetic exception",
+	"(server/exception) emulation exception",
+	"(server/exception) software exception",
+	"(server/exception) breakpoint exception",
+};
+
+static char	* err_codes_ux_signal[] = {		/* 14 */
+	"(server/unix-signal) GENERIC ERROR",
+	"(server/unix-signal) hangup",
+	"(server/unix-signal) interrupt",
+	"(server/unix-signal) quit",
+	"(server/unix-signal) undefined",
+	"(server/unix-signal) undefined",
+	"(server/unix-signal) undefined",
+	"(server/unix-signal) undefined",
+	"(server/unix-signal) kill",
+	"(server/unix-signal) undefined",
+	"(server/unix-signal) undefined",
+	"(server/unix-signal) system error",
+	"(server/unix-signal) pipe signal",
+	"(server/unix-signal) alarm",
+	"(server/unix-signal) terminate",
+	"(server/unix-signal) urgent i/o",
+	"(server/unix-signal) stop",
+	"(server/unix-signal) terminal stop",
+	"(server/unix-signal) continue",
+	"(server/unix-signal) child death",
+	"(server/unix-signal) tty input",
+	"(server/unix-signal) tty output",
+	"(server/unix-signal) i/o signal",
+	"(server/unix-signal) cpu time limit exceeded",
+	"(server/unix-signal) file size exceeded",
+	"(server/unix-signal) virtual alarm",
+	"(server/unix-signal) profile signal",
+	"(server/unix-signal) window size change",
+	"(server/unix-signal) user-defined signal 1",
+	"(server/unix-signal) user-defined signal 2",
+};
+
+static char	* err_codes_xkernel[] = {		/* 15 */
+	"(server/xkernel) GENERIC ERROR",
+	"(server/xkernel) map full",
+	"(server/xkernel) inconsistent bind",
+	"(server/xkernel) cannot resolve",
+	"(server/xkernel) cannot unbind",
+	"(server/xkernel) invalid type",
+	"(server/xkernel) invalid opcode",
+	"(server/xkernel) buffer too small",
+	"(server/xkernel) invalid ev code",
+	"(server/xkernel) event not registered",
+	"(server/xkernel) invalid open",
+	"(server/xkernel) already open",
+	"(server/xkernel) bad addr",
+};
+
+
+/*	err_server subsystems      	*/
+static struct error_subsystem err_server_sub[] = {
+	/* server/0; */
+	{
+		"(server/netname)",
+		errlib_count(err_codes_netname),
+		err_codes_netname,
+	},
+	/* server/1; */
+	{
+		"(server/env_mgr)",
+		errlib_count(err_codes_env_mgr),
+		err_codes_env_mgr,
+	},
+	/* server/2; */
+	{
+		"(server/execd)",
+		errlib_count(err_codes_execd),
+		err_codes_execd,
+	},
+	/* server/3; */
+	{
+		"(server/netmemory)",
+		errlib_count(err_codes_netmemory),
+		err_codes_netmemory,
+	},
+	/* server/4; */
+	{
+		"(server/ufs)",
+		errlib_count(err_codes_ufs),
+		err_codes_ufs,
+	},
+	/* server/5; */
+	{
+		"(server/task_master)",
+		errlib_count(err_codes_task_master),
+		err_codes_task_master,
+	},
+	/* server/6; */
+	{
+		"(server/ns)",
+		errlib_count(err_codes_ns),
+		err_codes_ns,
+	},
+
+	/* server/7; i/o subsystem */
+	{
+		"(server/io)",
+		errlib_count(err_codes_io),
+		err_codes_io,
+	},
+
+	/* server/8; authentication server */
+	{
+		"(server/auth)",
+		errlib_count(err_codes_auth),
+		err_codes_auth,
+	},
+
+	/* server/9; generic US system */
+	{
+		"(server/us)",
+		errlib_count(err_codes_us),
+		err_codes_us,
+	},
+
+	/* server/10; SUN RPC package */
+	{
+		"(server/sunrpc)",
+		errlib_count(err_codes_sunrpc),
+		err_codes_sunrpc,
+	},
+
+	/* server/11; MachObject system */
+	{
+		"(server/object system)",
+		errlib_count(err_codes_machobj),
+		err_codes_machobj,
+	},
+
+	/* server/12; loader */
+	{
+		"(server/loader)",
+		errlib_count(err_codes_loader),
+		err_codes_loader,
+	},
+
+	/* server/13; mach exception */
+	{
+		"(server/exception)",
+		errlib_count(err_codes_exception),
+		err_codes_exception,
+	},
+
+	/* server/14; unix signal */
+	{
+		"(server/unix-signal)",
+		errlib_count(err_codes_ux_signal),
+		err_codes_ux_signal,
+	},
+
+	/* server/15; xkernel */
+	{
+		"(server/xkernel)",
+		errlib_count(err_codes_xkernel),
+		err_codes_xkernel,
+	},
+
+};

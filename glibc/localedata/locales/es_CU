@@ -1,0 +1,126 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Spanish Language Locale for Cuba
+% Address: San Antonio de los Ba<U00F8>os Highway, Kilometer 1 1/2,
+%          University of Informatic Sciences
+% Contact: Rosniel Arian Montanet
+% Email: ramontanet@estudiantes.uci.cu
+% Tel: +45 - 837-2531
+% Fax: +45 - 0000000
+% Language: es
+% Territory: CU
+% Revision: 0.1
+% Date: 2011-10-19
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Spanish locale for Cuba"
+source     ""
+address    "San Antonio de los Ba<U00F8>os Highway, Kilometer 1 1//2, University of Informatic Sciences "
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Spanish"
+territory  "Cuba"
+revision   "0.1"
+date       "2011-10-19"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "es_ES"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+copy "es_ES"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol      "CUP "
+currency_symbol      "$"
+mon_decimal_point    ","
+mon_thousands_sep    "."
+mon_grouping         3;3
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits      2
+frac_digits          2
+p_cs_precedes        0
+p_sep_by_space       1
+n_cs_precedes        0
+n_sep_by_space       1
+p_sign_posn          1
+n_sign_posn          1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point        ","
+thousands_sep        "."
+grouping             0;0
+END LC_NUMERIC
+
+LC_TIME
+copy "es_BO"
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt   "+%c %a %l"
+int_select    "119"
+int_prefix    "53"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Cuba"
+country_ab2   "CU"
+country_ab3   "CUB"
+country_num   192
+country_car   "C"
+% español
+lang_name     "espa<U00F1>ol"
+lang_ab      "es"
+lang_term    "spa"
+lang_lib    "spa"
+END LC_ADDRESS

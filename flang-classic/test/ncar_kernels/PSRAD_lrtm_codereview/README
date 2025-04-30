@@ -1,0 +1,21 @@
+* kernel and supporting files
+	- lrtm subroutine is located at line #61  of mo_lrtm_driver.f90 file
+	- program statement or subroutine call is on line #320 in mo_psrad_interface.f90
+	- call_hierarchy.png is a diagram showing function call hierarchy in PSrad
+	- The other files are subset of PSrad source files that contain information to execute lrtm
+
+* compilation and execution
+	- Place all files in a directory
+ 	- Adjust FC and FFLAGS macros in Makefile to use a specific compiler. Default compiler is ifort
+	- run "make"
+
+* verification
+ 	- "make" command will run kernel and print verification output on screen
+ 	- Verification is considered as pass if it shows "PASSED" or "Normalized RMS of difference" is around machine-precision (apprx. 10e-15)
+ 	- Verification check is performed using three data files- lrtm.1, lrtm.10 and lrtm.50. The data files are generated from running PSrad using Intel 15.0 compiler with "-O3 -xHost" compiler flags
+
+* performance measurement
+	- The kernel prints elapsed time (in seconds)  as the time taken to execute the kernel
+	- The elapsed time is printed three times for each kernel executed using the three data files 
+
+

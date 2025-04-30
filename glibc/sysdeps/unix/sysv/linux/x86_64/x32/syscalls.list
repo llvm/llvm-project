@@ -1,0 +1,4 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+personality	EXTRA	personality	Ei:i	__personality	personality
+posix_fadvise64	-	fadvise64	Vi:iiii	posix_fadvise	posix_fadvise64

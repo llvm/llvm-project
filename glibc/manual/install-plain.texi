@@ -1,0 +1,5 @@
+@c This is for making the `INSTALL' file for the distribution.
+@c Makeinfo ignores it when processing the file from the include.
+@setfilename INSTALL
+@set plain
+@include install.texi

@@ -38,6 +38,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <optional>
 using namespace llvm;
@@ -97,6 +98,11 @@ static cl::opt<bool> EnableMISchedLoadClustering(
     "riscv-misched-load-clustering", cl::Hidden,
     cl::desc("Enable load clustering in the machine scheduler"),
     cl::init(false));
+
+static cl::opt<bool>
+    EnableGEPOpt("riscv-enable-gep-opt", cl::Hidden,
+                 cl::desc("Enable optimizations on complex GEPs"),
+                 cl::init(false));
 
 static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
     "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
@@ -426,6 +432,19 @@ void RISCVPassConfig::addIRPasses() {
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
+  }
+
+  if (TM->getOptLevel() == CodeGenOptLevel::Aggressive && EnableGEPOpt) {
+    // Call SeparateConstOffsetFromGEP pass to extract constants within indices
+    // and lower a GEP with multiple indices to either arithmetic operations or
+    // multiple GEPs with single index.
+    addPass(createSeparateConstOffsetFromGEPPass(false));
+    // Call EarlyCSE pass to find and remove subexpressions in the lowered
+    // result.
+    addPass(createEarlyCSEPass());
+    // Do loop invariant code motion in case part of the lowered result is
+    // invariant.
+    addPass(createLICMPass());
   }
 
   TargetPassConfig::addIRPasses();

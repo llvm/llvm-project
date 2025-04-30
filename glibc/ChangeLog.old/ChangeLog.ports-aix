@@ -1,0 +1,21 @@
+This file describes changes to the AIX port while it was in the ports/
+add-on directory.  That port has since been removed entirely.
+The ports/ directory is no longer used, so reintroduction of AIX code
+would be described in the top-level ChangeLog file, not here.
+
+
+
+2011-11-29  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/aix: Remove.
+
+2007-07-10  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/aix/bits/fcntl.h: Comment fix.
+
+2005-12-27  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/unix/sysv/aix/bits/setjmp.h (_JMPBUF_UNWINDS): Take third
+	argument DEMANGLE, and pass SP value through it.
+
+	* sysdeps/unix/sysv/aix/powerpc/memset.c: Don't use sysdeps/generic.

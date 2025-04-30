@@ -445,7 +445,12 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
 class GlobalValueSummary {
 public:
   /// Sububclass discriminator (for dyn_cast<> et al.)
-  enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
+  enum SummaryKind : unsigned {
+    AliasKind,
+    IfuncKind,
+    FunctionKind,
+    GlobalVarKind
+  };
 
   enum ImportKind : unsigned {
     // The global value definition corresponding to the summary should be
@@ -543,8 +548,9 @@ private:
 protected:
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
       : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
-    assert((K != AliasKind || Refs.empty()) &&
-           "Expect no references for AliasSummary");
+
+    assert(((K != AliasKind && K != IfuncKind) || (Refs.empty())) &&
+           "Expect no references for Alias and Ifunc summary");
   }
 
 public:
@@ -619,8 +625,10 @@ public:
   /// Return the list of values referenced by this global value definition.
   ArrayRef<ValueInfo> refs() const { return RefEdgeList; }
 
-  /// If this is an alias summary, returns the summary of the aliased object (a
-  /// global variable or function), otherwise returns itself.
+  /// If this is an alias summary, returns the summary of the
+  /// aliased object (a global variable or function).
+  /// If this is an ifunc summary, returns the resolver function.
+  /// , otherwise returns itself.
   GlobalValueSummary *getBaseObject();
   const GlobalValueSummary *getBaseObject() const;
 
@@ -680,15 +688,69 @@ public:
   }
 };
 
+class IfuncSummary : public GlobalValueSummary {
+  ValueInfo ResolverValueInfo;
+  /// This is the resolver in the same module as ifunc (could get from VI,
+  /// trades memory for time).
+  /// Note that this pointer may be null (and the value info empty).
+  GlobalValueSummary *ResolverSummary;
+
+public:
+  IfuncSummary(GVFlags Flags)
+      : GlobalValueSummary(IfuncKind, Flags, ArrayRef<ValueInfo>{}),
+        ResolverSummary(nullptr) {}
+
+  static bool classof(const GlobalValueSummary *GVS) {
+    auto kind = GVS->getSummaryKind();
+    return kind == AliasKind || kind == IfuncKind;
+  }
+
+  void setResolver(ValueInfo &ValueInfo, GlobalValueSummary *Summary) {
+    ResolverValueInfo = ValueInfo;
+    ResolverSummary = Summary;
+  }
+
+  bool hasResolver() const {
+    assert(!!ResolverSummary == (ResolverValueInfo &&
+                                 !ResolverValueInfo.getSummaryList().empty()) &&
+           "Expect to have both value summary and summary list or neither");
+    return !!ResolverSummary;
+  }
+
+  const GlobalValueSummary &getResolver() const {
+    assert(ResolverSummary && "Unexpected missing resolver summary");
+    return *ResolverSummary;
+  }
+
+  GlobalValueSummary &getResolver() {
+    return const_cast<GlobalValueSummary &>(
+        static_cast<const IfuncSummary *>(this)->getResolver());
+  }
+
+  ValueInfo getResolverVI() const {
+    assert(ResolverValueInfo && "Unexpected missing resolver value info");
+    return ResolverValueInfo;
+  }
+
+  GlobalValue::GUID getResolverGUID() const {
+    assert(ResolverValueInfo && "Unexpected missing resolver value info");
+    return ResolverValueInfo.getGUID();
+  }
+};
+
 const inline GlobalValueSummary *GlobalValueSummary::getBaseObject() const {
   if (auto *AS = dyn_cast<AliasSummary>(this))
     return &AS->getAliasee();
+  if (auto *IS = dyn_cast<IfuncSummary>(this))
+    return &IS->getResolver();
   return this;
 }
 
 inline GlobalValueSummary *GlobalValueSummary::getBaseObject() {
   if (auto *AS = dyn_cast<AliasSummary>(this))
     return &AS->getAliasee();
+  if (auto *IS = dyn_cast<IfuncSummary>(this))
+    return &IS->getResolver();
   return this;
 }
 

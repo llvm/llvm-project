@@ -1,0 +1,949 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Thailand (Thai) locale
+%
+% Name:       th_TH
+% Author:     Theppitak Karoonboonyanan
+% Contact:    Software and Language Engineering Laboratory (SLL)
+%             National Electronics and Computer Technology Center (NECTEC)
+%             National Science and Technology Development Agency (NSTDA)
+%             Ministry of Science Technology and Environment
+%               22nd Floor, Gypsum Metropilitan Tower
+%               Sri Ayuthaya Rd, Ratchathewee, Bangkok 10400
+%               THAILAND.
+% E-mail:    thep@links.nectec.or.th
+% Language:  Thai
+% Territory: Thailand
+% Revision:  0.5.3
+% Date:      1999-05-28
+
+LC_IDENTIFICATION
+title      "Thai locale for Thailand"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Thai"
+territory  "Thailand"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+
+collating-element <ko-kai-e> from "<U0E40><U0E01>"
+collating-element <ko-kai-ae> from "<U0E41><U0E01>"
+collating-element <ko-kai-o> from "<U0E42><U0E01>"
+collating-element <ko-kai-ai-maimuan> from "<U0E43><U0E01>"
+collating-element <ko-kai-ai-maimalai> from "<U0E44><U0E01>"
+
+collating-element <kho-khai-e> from "<U0E40><U0E02>"
+collating-element <kho-khai-ae> from "<U0E41><U0E02>"
+collating-element <kho-khai-o> from "<U0E42><U0E02>"
+collating-element <kho-khai-ai-maimuan> from "<U0E43><U0E02>"
+collating-element <kho-khai-ai-maimalai> from "<U0E44><U0E02>"
+
+collating-element <kho-khuat-e> from "<U0E40><U0E03>"
+collating-element <kho-khuat-ae> from "<U0E41><U0E03>"
+collating-element <kho-khuat-o> from "<U0E42><U0E03>"
+collating-element <kho-khuat-ai-maimuan> from "<U0E43><U0E03>"
+collating-element <kho-khuat-ai-maimalai> from "<U0E44><U0E03>"
+
+collating-element <kho-khwai-e> from "<U0E40><U0E04>"
+collating-element <kho-khwai-ae> from "<U0E41><U0E04>"
+collating-element <kho-khwai-o> from "<U0E42><U0E04>"
+collating-element <kho-khwai-ai-maimuan> from "<U0E43><U0E04>"
+collating-element <kho-khwai-ai-maimalai> from "<U0E44><U0E04>"
+
+collating-element <kho-khon-e> from "<U0E40><U0E05>"
+collating-element <kho-khon-ae> from "<U0E41><U0E05>"
+collating-element <kho-khon-o> from "<U0E42><U0E05>"
+collating-element <kho-khon-ai-maimuan> from "<U0E43><U0E05>"
+collating-element <kho-khon-ai-maimalai> from "<U0E44><U0E05>"
+
+collating-element <kho-rakhang-e> from "<U0E40><U0E06>"
+collating-element <kho-rakhang-ae> from "<U0E41><U0E06>"
+collating-element <kho-rakhang-o> from "<U0E42><U0E06>"
+collating-element <kho-rakhang-ai-maimuan> from "<U0E43><U0E06>"
+collating-element <kho-rakhang-ai-maimalai> from "<U0E44><U0E06>"
+
+collating-element <ngo-ngu-e> from "<U0E40><U0E07>"
+collating-element <ngo-ngu-ae> from "<U0E41><U0E07>"
+collating-element <ngo-ngu-o> from "<U0E42><U0E07>"
+collating-element <ngo-ngu-ai-maimuan> from "<U0E43><U0E07>"
+collating-element <ngo-ngu-ai-maimalai> from "<U0E44><U0E07>"
+
+collating-element <cho-chan-e> from "<U0E40><U0E08>"
+collating-element <cho-chan-ae> from "<U0E41><U0E08>"
+collating-element <cho-chan-o> from "<U0E42><U0E08>"
+collating-element <cho-chan-ai-maimuan> from "<U0E43><U0E08>"
+collating-element <cho-chan-ai-maimalai> from "<U0E44><U0E08>"
+
+collating-element <cho-ching-e> from "<U0E40><U0E09>"
+collating-element <cho-ching-ae> from "<U0E41><U0E09>"
+collating-element <cho-ching-o> from "<U0E42><U0E09>"
+collating-element <cho-ching-ai-maimuan> from "<U0E43><U0E09>"
+collating-element <cho-ching-ai-maimalai> from "<U0E44><U0E09>"
+
+collating-element <cho-chang-e> from "<U0E40><U0E0A>"
+collating-element <cho-chang-ae> from "<U0E41><U0E0A>"
+collating-element <cho-chang-o> from "<U0E42><U0E0A>"
+collating-element <cho-chang-ai-maimuan> from "<U0E43><U0E0A>"
+collating-element <cho-chang-ai-maimalai> from "<U0E44><U0E0A>"
+
+collating-element <so-so-e> from "<U0E40><U0E0B>"
+collating-element <so-so-ae> from "<U0E41><U0E0B>"
+collating-element <so-so-o> from "<U0E42><U0E0B>"
+collating-element <so-so-ai-maimuan> from "<U0E43><U0E0B>"
+collating-element <so-so-ai-maimalai> from "<U0E44><U0E0B>"
+
+collating-element <cho-choe-e> from "<U0E40><U0E0C>"
+collating-element <cho-choe-ae> from "<U0E41><U0E0C>"
+collating-element <cho-choe-o> from "<U0E42><U0E0C>"
+collating-element <cho-choe-ai-maimuan> from "<U0E43><U0E0C>"
+collating-element <cho-choe-ai-maimalai> from "<U0E44><U0E0C>"
+
+collating-element <yo-ying-e> from "<U0E40><U0E0D>"
+collating-element <yo-ying-ae> from "<U0E41><U0E0D>"
+collating-element <yo-ying-o> from "<U0E42><U0E0D>"
+collating-element <yo-ying-ai-maimuan> from "<U0E43><U0E0D>"
+collating-element <yo-ying-ai-maimalai> from "<U0E44><U0E0D>"
+
+collating-element <do-chada-e> from "<U0E40><U0E0E>"
+collating-element <do-chada-ae> from "<U0E41><U0E0E>"
+collating-element <do-chada-o> from "<U0E42><U0E0E>"
+collating-element <do-chada-ai-maimuan> from "<U0E43><U0E0E>"
+collating-element <do-chada-ai-maimalai> from "<U0E44><U0E0E>"
+
+collating-element <to-patak-e> from "<U0E40><U0E0F>"
+collating-element <to-patak-ae> from "<U0E41><U0E0F>"
+collating-element <to-patak-o> from "<U0E42><U0E0F>"
+collating-element <to-patak-ai-maimuan> from "<U0E43><U0E0F>"
+collating-element <to-patak-ai-maimalai> from "<U0E44><U0E0F>"
+
+collating-element <tho-than-e> from "<U0E40><U0E10>"
+collating-element <tho-than-ae> from "<U0E41><U0E10>"
+collating-element <tho-than-o> from "<U0E42><U0E10>"
+collating-element <tho-than-ai-maimuan> from "<U0E43><U0E10>"
+collating-element <tho-than-ai-maimalai> from "<U0E44><U0E10>"
+
+collating-element <tho-nangmontho-e> from "<U0E40><U0E11>"
+collating-element <tho-nangmontho-ae> from "<U0E41><U0E11>"
+collating-element <tho-nangmontho-o> from "<U0E42><U0E11>"
+collating-element <tho-nangmontho-ai-maimuan> from "<U0E43><U0E11>"
+collating-element <tho-nangmontho-ai-maimalai> from "<U0E44><U0E11>"
+
+collating-element <tho-phuthao-e> from "<U0E40><U0E12>"
+collating-element <tho-phuthao-ae> from "<U0E41><U0E12>"
+collating-element <tho-phuthao-o> from "<U0E42><U0E12>"
+collating-element <tho-phuthao-ai-maimuan> from "<U0E43><U0E12>"
+collating-element <tho-phuthao-ai-maimalai> from "<U0E44><U0E12>"
+
+collating-element <no-nen-e> from "<U0E40><U0E13>"
+collating-element <no-nen-ae> from "<U0E41><U0E13>"
+collating-element <no-nen-o> from "<U0E42><U0E13>"
+collating-element <no-nen-ai-maimuan> from "<U0E43><U0E13>"
+collating-element <no-nen-ai-maimalai> from "<U0E44><U0E13>"
+
+collating-element <do-dek-e> from "<U0E40><U0E14>"
+collating-element <do-dek-ae> from "<U0E41><U0E14>"
+collating-element <do-dek-o> from "<U0E42><U0E14>"
+collating-element <do-dek-ai-maimuan> from "<U0E43><U0E14>"
+collating-element <do-dek-ai-maimalai> from "<U0E44><U0E14>"
+
+collating-element <to-tao-e> from "<U0E40><U0E15>"
+collating-element <to-tao-ae> from "<U0E41><U0E15>"
+collating-element <to-tao-o> from "<U0E42><U0E15>"
+collating-element <to-tao-ai-maimuan> from "<U0E43><U0E15>"
+collating-element <to-tao-ai-maimalai> from "<U0E44><U0E15>"
+
+collating-element <tho-thung-e> from "<U0E40><U0E16>"
+collating-element <tho-thung-ae> from "<U0E41><U0E16>"
+collating-element <tho-thung-o> from "<U0E42><U0E16>"
+collating-element <tho-thung-ai-maimuan> from "<U0E43><U0E16>"
+collating-element <tho-thung-ai-maimalai> from "<U0E44><U0E16>"
+
+collating-element <tho-thahan-e> from "<U0E40><U0E17>"
+collating-element <tho-thahan-ae> from "<U0E41><U0E17>"
+collating-element <tho-thahan-o> from "<U0E42><U0E17>"
+collating-element <tho-thahan-ai-maimuan> from "<U0E43><U0E17>"
+collating-element <tho-thahan-ai-maimalai> from "<U0E44><U0E17>"
+
+collating-element <tho-thong-e> from "<U0E40><U0E18>"
+collating-element <tho-thong-ae> from "<U0E41><U0E18>"
+collating-element <tho-thong-o> from "<U0E42><U0E18>"
+collating-element <tho-thong-ai-maimuan> from "<U0E43><U0E18>"
+collating-element <tho-thong-ai-maimalai> from "<U0E44><U0E18>"
+
+collating-element <no-nu-e> from "<U0E40><U0E19>"
+collating-element <no-nu-ae> from "<U0E41><U0E19>"
+collating-element <no-nu-o> from "<U0E42><U0E19>"
+collating-element <no-nu-ai-maimuan> from "<U0E43><U0E19>"
+collating-element <no-nu-ai-maimalai> from "<U0E44><U0E19>"
+
+collating-element <bo-baimai-e> from "<U0E40><U0E1A>"
+collating-element <bo-baimai-ae> from "<U0E41><U0E1A>"
+collating-element <bo-baimai-o> from "<U0E42><U0E1A>"
+collating-element <bo-baimai-ai-maimuan> from "<U0E43><U0E1A>"
+collating-element <bo-baimai-ai-maimalai> from "<U0E44><U0E1A>"
+
+collating-element <po-pla-e> from "<U0E40><U0E1B>"
+collating-element <po-pla-ae> from "<U0E41><U0E1B>"
+collating-element <po-pla-o> from "<U0E42><U0E1B>"
+collating-element <po-pla-ai-maimuan> from "<U0E43><U0E1B>"
+collating-element <po-pla-ai-maimalai> from "<U0E44><U0E1B>"
+
+collating-element <pho-phung-e> from "<U0E40><U0E1C>"
+collating-element <pho-phung-ae> from "<U0E41><U0E1C>"
+collating-element <pho-phung-o> from "<U0E42><U0E1C>"
+collating-element <pho-phung-ai-maimuan> from "<U0E43><U0E1C>"
+collating-element <pho-phung-ai-maimalai> from "<U0E44><U0E1C>"
+
+collating-element <fo-fa-e> from "<U0E40><U0E1D>"
+collating-element <fo-fa-ae> from "<U0E41><U0E1D>"
+collating-element <fo-fa-o> from "<U0E42><U0E1D>"
+collating-element <fo-fa-ai-maimuan> from "<U0E43><U0E1D>"
+collating-element <fo-fa-ai-maimalai> from "<U0E44><U0E1D>"
+
+collating-element <pho-phan-e> from "<U0E40><U0E1E>"
+collating-element <pho-phan-ae> from "<U0E41><U0E1E>"
+collating-element <pho-phan-o> from "<U0E42><U0E1E>"
+collating-element <pho-phan-ai-maimuan> from "<U0E43><U0E1E>"
+collating-element <pho-phan-ai-maimalai> from "<U0E44><U0E1E>"
+
+collating-element <fo-fan-e> from "<U0E40><U0E1F>"
+collating-element <fo-fan-ae> from "<U0E41><U0E1F>"
+collating-element <fo-fan-o> from "<U0E42><U0E1F>"
+collating-element <fo-fan-ai-maimuan> from "<U0E43><U0E1F>"
+collating-element <fo-fan-ai-maimalai> from "<U0E44><U0E1F>"
+
+collating-element <pho-samphao-e> from "<U0E40><U0E20>"
+collating-element <pho-samphao-ae> from "<U0E41><U0E20>"
+collating-element <pho-samphao-o> from "<U0E42><U0E20>"
+collating-element <pho-samphao-ai-maimuan> from "<U0E43><U0E20>"
+collating-element <pho-samphao-ai-maimalai> from "<U0E44><U0E20>"
+
+collating-element <mo-ma-e> from "<U0E40><U0E21>"
+collating-element <mo-ma-ae> from "<U0E41><U0E21>"
+collating-element <mo-ma-o> from "<U0E42><U0E21>"
+collating-element <mo-ma-ai-maimuan> from "<U0E43><U0E21>"
+collating-element <mo-ma-ai-maimalai> from "<U0E44><U0E21>"
+
+collating-element <yo-yak-e> from "<U0E40><U0E22>"
+collating-element <yo-yak-ae> from "<U0E41><U0E22>"
+collating-element <yo-yak-o> from "<U0E42><U0E22>"
+collating-element <yo-yak-ai-maimuan> from "<U0E43><U0E22>"
+collating-element <yo-yak-ai-maimalai> from "<U0E44><U0E22>"
+
+collating-element <ro-rua-e> from "<U0E40><U0E23>"
+collating-element <ro-rua-ae> from "<U0E41><U0E23>"
+collating-element <ro-rua-o> from "<U0E42><U0E23>"
+collating-element <ro-rua-ai-maimuan> from "<U0E43><U0E23>"
+collating-element <ro-rua-ai-maimalai> from "<U0E44><U0E23>"
+
+collating-element <lo-ling-e> from "<U0E40><U0E25>"
+collating-element <lo-ling-ae> from "<U0E41><U0E25>"
+collating-element <lo-ling-o> from "<U0E42><U0E25>"
+collating-element <lo-ling-ai-maimuan> from "<U0E43><U0E25>"
+collating-element <lo-ling-ai-maimalai> from "<U0E44><U0E25>"
+
+collating-element <wo-waen-e> from "<U0E40><U0E27>"
+collating-element <wo-waen-ae> from "<U0E41><U0E27>"
+collating-element <wo-waen-o> from "<U0E42><U0E27>"
+collating-element <wo-waen-ai-maimuan> from "<U0E43><U0E27>"
+collating-element <wo-waen-ai-maimalai> from "<U0E44><U0E27>"
+
+collating-element <so-sala-e> from "<U0E40><U0E28>"
+collating-element <so-sala-ae> from "<U0E41><U0E28>"
+collating-element <so-sala-o> from "<U0E42><U0E28>"
+collating-element <so-sala-ai-maimuan> from "<U0E43><U0E28>"
+collating-element <so-sala-ai-maimalai> from "<U0E44><U0E28>"
+
+collating-element <so-rusi-e> from "<U0E40><U0E29>"
+collating-element <so-rusi-ae> from "<U0E41><U0E29>"
+collating-element <so-rusi-o> from "<U0E42><U0E29>"
+collating-element <so-rusi-ai-maimuan> from "<U0E43><U0E29>"
+collating-element <so-rusi-ai-maimalai> from "<U0E44><U0E29>"
+
+collating-element <so-sua-e> from "<U0E40><U0E2A>"
+collating-element <so-sua-ae> from "<U0E41><U0E2A>"
+collating-element <so-sua-o> from "<U0E42><U0E2A>"
+collating-element <so-sua-ai-maimuan> from "<U0E43><U0E2A>"
+collating-element <so-sua-ai-maimalai> from "<U0E44><U0E2A>"
+
+collating-element <ho-hip-e> from "<U0E40><U0E2B>"
+collating-element <ho-hip-ae> from "<U0E41><U0E2B>"
+collating-element <ho-hip-o> from "<U0E42><U0E2B>"
+collating-element <ho-hip-ai-maimuan> from "<U0E43><U0E2B>"
+collating-element <ho-hip-ai-maimalai> from "<U0E44><U0E2B>"
+
+collating-element <lo-chula-e> from "<U0E40><U0E2C>"
+collating-element <lo-chula-ae> from "<U0E41><U0E2C>"
+collating-element <lo-chula-o> from "<U0E42><U0E2C>"
+collating-element <lo-chula-ai-maimuan> from "<U0E43><U0E2C>"
+collating-element <lo-chula-ai-maimalai> from "<U0E44><U0E2C>"
+
+collating-element <o-ang-e> from "<U0E40><U0E2D>"
+collating-element <o-ang-ae> from "<U0E41><U0E2D>"
+collating-element <o-ang-o> from "<U0E42><U0E2D>"
+collating-element <o-ang-ai-maimuan> from "<U0E43><U0E2D>"
+collating-element <o-ang-ai-maimalai> from "<U0E44><U0E2D>"
+
+collating-element <ho-nokhuk-e> from "<U0E40><U0E2E>"
+collating-element <ho-nokhuk-ae> from "<U0E41><U0E2E>"
+collating-element <ho-nokhuk-o> from "<U0E42><U0E2E>"
+collating-element <ho-nokhuk-ai-maimuan> from "<U0E43><U0E2E>"
+collating-element <ho-nokhuk-ai-maimalai> from "<U0E44><U0E2E>"
+
+collating-symbol  <BLANK>
+collating-symbol  <THAII>
+collating-symbol  <CAP>
+collating-symbol  <MIN>
+collating-symbol  <EXTRA>
+
+order_start   forward;forward;forward;forward
+
+% definitions of extra collating symbols
+<BLANK>
+<THAII>
+<CAP>
+<MIN>
+<EXTRA>
+
+UNDEFINED      IGNORE;IGNORE;IGNORE;IGNORE
+
+% punctuation marks, ordered after ISO/IEC 14651
+<U0020>        IGNORE;IGNORE;<U0020>;IGNORE          % SPACE
+<U005F>   IGNORE;IGNORE;<U005F>;IGNORE     % LOW LINE
+<U002D>       IGNORE;IGNORE;<U002D>;IGNORE         % HYPHEN-MINUS
+<U002C>        IGNORE;IGNORE;<U002C>;IGNORE          % COMMA
+<U003B>    IGNORE;IGNORE;<U003B>;IGNORE      % SEMICOLON
+<U003A>        IGNORE;IGNORE;<U003A>;IGNORE          % COLON
+<U0021> IGNORE;IGNORE;<U0021>;IGNORE  % EXCLAMATION MARK
+<U003F>    IGNORE;IGNORE;<U003F>;IGNORE     % QUESTION MARK
+<U002F>        IGNORE;IGNORE;<U002F>;IGNORE          % SOLIDUS
+<U002E>       IGNORE;IGNORE;<U002E>;IGNORE         % FULL STOP
+<U0E2F>        IGNORE;IGNORE;<U0E2F>;IGNORE          % THAI CHARACTER PAIYANNOI
+<U0E46>        IGNORE;IGNORE;<U0E46>;IGNORE          % THAI CHARACTER MAIYAMOK
+<U0060> IGNORE;IGNORE;<U0060>;IGNORE   % GRAVE ACCENT
+<U005E>   IGNORE;IGNORE;<U005E>;IGNORE     % CIRCUMFLEX
+<U007E>        IGNORE;IGNORE;<U007E>;IGNORE          % TILDE
+<U0027>        IGNORE;IGNORE;<U0027>;IGNORE    % APOSTROPHE
+<U0022>    IGNORE;IGNORE;<U0022>;IGNORE    % QUOTATION MARK
+<U0028>  IGNORE;IGNORE;<U0028>;IGNORE  % LEFT PAREN.
+<U005B> IGNORE;IGNORE;<U005B>;IGNORE  % LT BRACKET
+<U007B>        IGNORE;IGNORE;<U007B>;IGNORE    % LEFT CURLY BRACKET
+<U007D>       IGNORE;IGNORE;<U007D>;IGNORE   % RIGHT CURLY BRACKET
+<U005D> IGNORE;IGNORE;<U005D>;IGNORE % RT BRACKET
+<U0029> IGNORE;IGNORE;<U0029>;IGNORE % RIGHT PAREN.
+<U0040>     IGNORE;IGNORE;<U0040>;IGNORE     % COMMERCIAL AT
+<U0E3F>             IGNORE;IGNORE;<U0E3F>;IGNORE  % THAI CHARACTER SYMBOL BAHT
+<U0024>       IGNORE;IGNORE;<U0024>;IGNORE   % DOLLAR SIGN
+<U0E4F>             IGNORE;IGNORE;<U0E4F>;IGNORE  % THAI CHARACTER FONGMAN
+<U0E5A>             IGNORE;IGNORE;<U0E5A>;IGNORE  % THAI CHARACTER ANGKHANKHU
+<U0E5B>             IGNORE;IGNORE;<U0E5B>;IGNORE  % THAI CHARACTER KHOMUT
+<U002A>          IGNORE;IGNORE;<U002A>;IGNORE      % ASTERISK
+<U005C>         IGNORE;IGNORE;<U005C>;IGNORE     % BACK SOLIDUS
+<U0026>         IGNORE;IGNORE;<U0026>;IGNORE     % AMPERSAND
+<U0023>       IGNORE;IGNORE;<U0023>;IGNORE   % NUMBER SIGN
+<U0025>      IGNORE;IGNORE;<U0025>;IGNORE  % PERCENT
+<U002B>         IGNORE;IGNORE;<U002B>;IGNORE     % PLUS
+<U003C>    IGNORE;IGNORE;<U003C>;IGNORE     % LESS THAN
+<U003D>       IGNORE;IGNORE;<U003D>;IGNORE   % EQUAL
+<U003E> IGNORE;IGNORE;<U003E>;IGNORE  % GREATER THAN
+<U007C>     IGNORE;IGNORE;<U007C>;IGNORE % VERTICAL LINE
+
+% Thai tone marks and diacritics
+<U0E4E>        IGNORE;<U0E4E>;<BLANK>;<BLANK>  % THAI CHARACTER YAMAKKAN
+<U0E3A>        IGNORE;<U0E3A>;<BLANK>;<BLANK>  % THAI CHARACTER PINTHU
+<U0E4C>        IGNORE;<U0E4C>;<BLANK>;<BLANK>  % THAI CHARACTER THANTHAKHAT
+<U0E47>        IGNORE;<U0E47>;<BLANK>;<BLANK>  % THAI CHARACTER MAITAIKHU
+<U0E48>        IGNORE;<U0E48>;<BLANK>;<BLANK>  % THAI CHARACTER MAI EK
+<U0E49>        IGNORE;<U0E49>;<BLANK>;<BLANK>  % THAI CHARACTER MAI THO
+<U0E4A>        IGNORE;<U0E4A>;<BLANK>;<BLANK>  % THAI CHARACTER MAI TRI
+<U0E4B>        IGNORE;<U0E4B>;<BLANK>;<BLANK>  % THAI CHARACTER MAI CHATTAWA
+
+% Arabic and Thai decimal digits
+<U0030>  <U0030>;<BLANK>;<BLANK>;<BLANK>   % DIGIT ZERO
+<U0E50> <U0030>;<THAII>;<BLANK>;<BLANK>   % THAI DIGIT ZERO
+<U0031>   <U0031>;<BLANK>;<BLANK>;<BLANK>    % DIGIT ONE
+<U0E51> <U0031>;<THAII>;<BLANK>;<BLANK>    % THAI DIGIT ONE
+<U0032>   <U0032>;<BLANK>;<BLANK>;<BLANK>    % DIGIT TWO
+<U0E52> <U0032>;<THAII>;<BLANK>;<BLANK>    % THAI DIGIT TWO
+<U0033> <U0033>;<BLANK>;<BLANK>;<BLANK>  % DIGIT THREE
+<U0E53> <U0033>;<THAII>;<BLANK>;<BLANK>  % THAI DIGIT THREE
+<U0034>  <U0034>;<BLANK>;<BLANK>;<BLANK>   % DIGIT FOUR
+<U0E54> <U0034>;<THAII>;<BLANK>;<BLANK>   % THAI DIGIT FOUR
+<U0035>  <U0035>;<BLANK>;<BLANK>;<BLANK>   % DIGIT FIVE
+<U0E55> <U0035>;<THAII>;<BLANK>;<BLANK>   % THAI DIGIT FIVE
+<U0036>   <U0036>;<BLANK>;<BLANK>;<BLANK>    % DIGIT SIX
+<U0E56> <U0036>;<THAII>;<BLANK>;<BLANK>    % THAI DIGIT SIX
+<U0037> <U0037>;<BLANK>;<BLANK>;<BLANK>  % DIGIT SEVEN
+<U0E57> <U0037>;<THAII>;<BLANK>;<BLANK>  % THAI DIGIT SEVEN
+<U0038> <U0038>;<BLANK>;<BLANK>;<BLANK>  % DIGIT EIGHT
+<U0E58> <U0038>;<THAII>;<BLANK>;<BLANK>  % THAI DIGIT EIGHT
+<U0039>  <U0039>;<BLANK>;<BLANK>;<BLANK>   % DIGIT NINE
+<U0E59> <U0039>;<THAII>;<BLANK>;<BLANK>   % THAI DIGIT NINE
+
+% Latin alphabet
+<U0041> <U0041>;<BLANK>;<BLANK>;<CAP>  % A
+<U0061> <U0041>;<BLANK>;<BLANK>;<MIN>  % a
+<U0042> <U0042>;<BLANK>;<BLANK>;<CAP>  % B
+<U0062> <U0042>;<BLANK>;<BLANK>;<MIN>  % b
+<U0043> <U0043>;<BLANK>;<BLANK>;<CAP>  % C
+<U0063> <U0043>;<BLANK>;<BLANK>;<MIN>  % c
+<U0044> <U0044>;<BLANK>;<BLANK>;<CAP>  % D
+<U0064> <U0044>;<BLANK>;<BLANK>;<MIN>  % d
+<U0045> <U0045>;<BLANK>;<BLANK>;<CAP>  % E
+<U0065> <U0045>;<BLANK>;<BLANK>;<MIN>  % e
+<U0046> <U0046>;<BLANK>;<BLANK>;<CAP>  % F
+<U0066> <U0046>;<BLANK>;<BLANK>;<MIN>  % f
+<U0047> <U0047>;<BLANK>;<BLANK>;<CAP>  % G
+<U0067> <U0047>;<BLANK>;<BLANK>;<MIN>  % g
+<U0048> <U0048>;<BLANK>;<BLANK>;<CAP>  % H
+<U0068> <U0048>;<BLANK>;<BLANK>;<MIN>  % h
+<U0049> <U0049>;<BLANK>;<BLANK>;<CAP>  % I
+<U0069> <U0049>;<BLANK>;<BLANK>;<MIN>  % i
+<U004A> <U004A>;<BLANK>;<BLANK>;<CAP>  % J
+<U006A> <U004A>;<BLANK>;<BLANK>;<MIN>  % j
+<U004B> <U004B>;<BLANK>;<BLANK>;<CAP>  % K
+<U006B> <U004B>;<BLANK>;<BLANK>;<MIN>  % k
+<U004C> <U004C>;<BLANK>;<BLANK>;<CAP>  % L
+<U006C> <U004C>;<BLANK>;<BLANK>;<MIN>  % l
+<U004D> <U004D>;<BLANK>;<BLANK>;<CAP>  % M
+<U006D> <U004D>;<BLANK>;<BLANK>;<MIN>  % m
+<U004E> <U004E>;<BLANK>;<BLANK>;<CAP>  % N
+<U006E> <U004E>;<BLANK>;<BLANK>;<MIN>  % n
+<U004F> <U004F>;<BLANK>;<BLANK>;<CAP>  % O
+<U006F> <U004F>;<BLANK>;<BLANK>;<MIN>  % o
+<U0050> <U0050>;<BLANK>;<BLANK>;<CAP>  % P
+<U0070> <U0050>;<BLANK>;<BLANK>;<MIN>  % p
+<U0051> <U0051>;<BLANK>;<BLANK>;<CAP>  % Q
+<U0071> <U0051>;<BLANK>;<BLANK>;<MIN>  % q
+<U0052> <U0052>;<BLANK>;<BLANK>;<CAP>  % R
+<U0072> <U0052>;<BLANK>;<BLANK>;<MIN>  % r
+<U0053> <U0053>;<BLANK>;<BLANK>;<CAP>  % S
+<U0073> <U0053>;<BLANK>;<BLANK>;<MIN>  % s
+<U0054> <U0054>;<BLANK>;<BLANK>;<CAP>  % T
+<U0074> <U0054>;<BLANK>;<BLANK>;<MIN>  % t
+<U0055> <U0055>;<BLANK>;<BLANK>;<CAP>  % U
+<U0075> <U0055>;<BLANK>;<BLANK>;<MIN>  % u
+<U0056> <U0056>;<BLANK>;<BLANK>;<CAP>  % V
+<U0076> <U0056>;<BLANK>;<BLANK>;<MIN>  % v
+<U0057> <U0057>;<BLANK>;<BLANK>;<CAP>  % W
+<U0077> <U0057>;<BLANK>;<BLANK>;<MIN>  % w
+<U0058> <U0058>;<BLANK>;<BLANK>;<CAP>  % X
+<U0078> <U0058>;<BLANK>;<BLANK>;<MIN>  % x
+<U0059> <U0059>;<BLANK>;<BLANK>;<CAP>  % Y
+<U0079> <U0059>;<BLANK>;<BLANK>;<MIN>  % y
+<U005A> <U005A>;<BLANK>;<BLANK>;<CAP>  % Z
+<U007A> <U005A>;<BLANK>;<BLANK>;<MIN>  % z
+
+%
+% Thai consonants, with leading vowels rearrangement
+%
+<U0E01>        <U0E01>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER KO KAI
+<ko-kai-e>           "<U0E01><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<ko-kai-ae>          "<U0E01><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<ko-kai-o>           "<U0E01><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<ko-kai-ai-maimuan>  "<U0E01><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<ko-kai-ai-maimalai> "<U0E01><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E02>        <U0E02>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER KHO KHAI
+<kho-khai-e>           "<U0E02><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<kho-khai-ae>          "<U0E02><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<kho-khai-o>           "<U0E02><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<kho-khai-ai-maimuan>  "<U0E02><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<kho-khai-ai-maimalai> "<U0E02><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E03>        <U0E03>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER KHO KHUAT
+<kho-khuat-e>           "<U0E03><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<kho-khuat-ae>          "<U0E03><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<kho-khuat-o>           "<U0E03><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<kho-khuat-ai-maimuan>  "<U0E03><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<kho-khuat-ai-maimalai> "<U0E03><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E04>        <U0E04>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER KHO KHWAI
+<kho-khwai-e>           "<U0E04><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<kho-khwai-ae>          "<U0E04><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<kho-khwai-o>           "<U0E04><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<kho-khwai-ai-maimuan>  "<U0E04><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<kho-khwai-ai-maimalai> "<U0E04><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E05>        <U0E05>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER KHO KHON
+<kho-khon-e>           "<U0E05><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<kho-khon-ae>          "<U0E05><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<kho-khon-o>           "<U0E05><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<kho-khon-ai-maimuan>  "<U0E05><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<kho-khon-ai-maimalai> "<U0E05><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E06>        <U0E06>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER KHO RAKHANG
+<kho-rakhang-e>           "<U0E06><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<kho-rakhang-ae>          "<U0E06><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<kho-rakhang-o>           "<U0E06><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<kho-rakhang-ai-maimuan>  "<U0E06><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<kho-rakhang-ai-maimalai> "<U0E06><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E07>        <U0E07>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER NGO NGU
+<ngo-ngu-e>           "<U0E07><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<ngo-ngu-ae>          "<U0E07><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<ngo-ngu-o>           "<U0E07><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<ngo-ngu-ai-maimuan>  "<U0E07><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<ngo-ngu-ai-maimalai> "<U0E07><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E08>        <U0E08>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER CHO CHAN
+<cho-chan-e>           "<U0E08><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<cho-chan-ae>          "<U0E08><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<cho-chan-o>           "<U0E08><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<cho-chan-ai-maimuan>  "<U0E08><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<cho-chan-ai-maimalai> "<U0E08><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E09>        <U0E09>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER CHO CHING
+<cho-ching-e>           "<U0E09><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<cho-ching-ae>          "<U0E09><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<cho-ching-o>           "<U0E09><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<cho-ching-ai-maimuan>  "<U0E09><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<cho-ching-ai-maimalai> "<U0E09><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E0A>        <U0E0A>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER CHO CHANG
+<cho-chang-e>           "<U0E0A><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<cho-chang-ae>          "<U0E0A><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<cho-chang-o>           "<U0E0A><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<cho-chang-ai-maimuan>  "<U0E0A><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<cho-chang-ai-maimalai> "<U0E0A><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E0B>        <U0E0B>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER SO SO
+<so-so-e>           "<U0E0B><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<so-so-ae>          "<U0E0B><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<so-so-o>           "<U0E0B><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<so-so-ai-maimuan>  "<U0E0B><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<so-so-ai-maimalai> "<U0E0B><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E0C>        <U0E0C>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER CHO CHOE
+<cho-choe-e>           "<U0E0C><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<cho-choe-ae>          "<U0E0C><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<cho-choe-o>           "<U0E0C><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<cho-choe-ai-maimuan>  "<U0E0C><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<cho-choe-ai-maimalai> "<U0E0C><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E0D>        <U0E0D>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER YO YING
+<yo-ying-e>           "<U0E0D><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<yo-ying-ae>          "<U0E0D><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<yo-ying-o>           "<U0E0D><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<yo-ying-ai-maimuan>  "<U0E0D><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<yo-ying-ai-maimalai> "<U0E0D><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E0E>        <U0E0E>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER DO CHADA
+<do-chada-e>           "<U0E0E><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<do-chada-ae>          "<U0E0E><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<do-chada-o>           "<U0E0E><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<do-chada-ai-maimuan>  "<U0E0E><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<do-chada-ai-maimalai> "<U0E0E><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E0F>        <U0E0F>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER TO PATAK
+<to-patak-e>           "<U0E0F><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<to-patak-ae>          "<U0E0F><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<to-patak-o>           "<U0E0F><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<to-patak-ai-maimuan>  "<U0E0F><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<to-patak-ai-maimalai> "<U0E0F><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E10>        <U0E10>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER THO THAN
+<tho-than-e>           "<U0E10><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<tho-than-ae>          "<U0E10><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<tho-than-o>           "<U0E10><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<tho-than-ai-maimuan>  "<U0E10><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<tho-than-ai-maimalai> "<U0E10><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E11>        <U0E11>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER THO NANGMONTHO
+<tho-nangmontho-e>           "<U0E11><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<tho-nangmontho-ae>          "<U0E11><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<tho-nangmontho-o>           "<U0E11><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<tho-nangmontho-ai-maimuan>  "<U0E11><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<tho-nangmontho-ai-maimalai> "<U0E11><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E12>        <U0E12>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER THO PHUTHAO
+<tho-phuthao-e>           "<U0E12><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<tho-phuthao-ae>          "<U0E12><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<tho-phuthao-o>           "<U0E12><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<tho-phuthao-ai-maimuan>  "<U0E12><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<tho-phuthao-ai-maimalai> "<U0E12><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E13>        <U0E13>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER NO NEN
+<no-nen-e>           "<U0E13><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<no-nen-ae>          "<U0E13><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<no-nen-o>           "<U0E13><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<no-nen-ai-maimuan>  "<U0E13><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<no-nen-ai-maimalai> "<U0E13><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E14>        <U0E14>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER DO DEK
+<do-dek-e>           "<U0E14><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<do-dek-ae>          "<U0E14><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<do-dek-o>           "<U0E14><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<do-dek-ai-maimuan>  "<U0E14><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<do-dek-ai-maimalai> "<U0E14><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E15>        <U0E15>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER TO TAO
+<to-tao-e>           "<U0E15><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<to-tao-ae>          "<U0E15><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<to-tao-o>           "<U0E15><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<to-tao-ai-maimuan>  "<U0E15><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<to-tao-ai-maimalai> "<U0E15><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E16>        <U0E16>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER THO THUNG
+<tho-thung-e>           "<U0E16><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<tho-thung-ae>          "<U0E16><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<tho-thung-o>           "<U0E16><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<tho-thung-ai-maimuan>  "<U0E16><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<tho-thung-ai-maimalai> "<U0E16><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E17>        <U0E17>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER THO THAHAN
+<tho-thahan-e>           "<U0E17><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<tho-thahan-ae>          "<U0E17><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<tho-thahan-o>           "<U0E17><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<tho-thahan-ai-maimuan>  "<U0E17><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<tho-thahan-ai-maimalai> "<U0E17><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E18>        <U0E18>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER THO THONG
+<tho-thong-e>           "<U0E18><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<tho-thong-ae>          "<U0E18><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<tho-thong-o>           "<U0E18><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<tho-thong-ai-maimuan>  "<U0E18><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<tho-thong-ai-maimalai> "<U0E18><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E19>        <U0E19>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER NO NU
+<no-nu-e>           "<U0E19><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<no-nu-ae>          "<U0E19><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<no-nu-o>           "<U0E19><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<no-nu-ai-maimuan>  "<U0E19><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<no-nu-ai-maimalai> "<U0E19><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E1A>        <U0E1A>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER BO BAIMAI
+<bo-baimai-e>           "<U0E1A><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<bo-baimai-ae>          "<U0E1A><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<bo-baimai-o>           "<U0E1A><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<bo-baimai-ai-maimuan>  "<U0E1A><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<bo-baimai-ai-maimalai> "<U0E1A><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E1B>        <U0E1B>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER PO PLA
+<po-pla-e>           "<U0E1B><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<po-pla-ae>          "<U0E1B><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<po-pla-o>           "<U0E1B><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<po-pla-ai-maimuan>  "<U0E1B><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<po-pla-ai-maimalai> "<U0E1B><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E1C>        <U0E1C>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER PHO PHUNG
+<pho-phung-e>           "<U0E1C><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<pho-phung-ae>          "<U0E1C><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<pho-phung-o>           "<U0E1C><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<pho-phung-ai-maimuan>  "<U0E1C><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<pho-phung-ai-maimalai> "<U0E1C><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E1D>        <U0E1D>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER FO FA
+<fo-fa-e>           "<U0E1D><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<fo-fa-ae>          "<U0E1D><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<fo-fa-o>           "<U0E1D><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<fo-fa-ai-maimuan>  "<U0E1D><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<fo-fa-ai-maimalai> "<U0E1D><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E1E>        <U0E1E>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER PHO PHAN
+<pho-phan-e>           "<U0E1E><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<pho-phan-ae>          "<U0E1E><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<pho-phan-o>           "<U0E1E><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<pho-phan-ai-maimuan>  "<U0E1E><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<pho-phan-ai-maimalai> "<U0E1E><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E1F>        <U0E1F>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER FO FAN
+<fo-fan-e>           "<U0E1F><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<fo-fan-ae>          "<U0E1F><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<fo-fan-o>           "<U0E1F><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<fo-fan-ai-maimuan>  "<U0E1F><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<fo-fan-ai-maimalai> "<U0E1F><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E20>        <U0E20>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER PHO SAMPHAO
+<pho-samphao-e>           "<U0E20><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<pho-samphao-ae>          "<U0E20><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<pho-samphao-o>           "<U0E20><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<pho-samphao-ai-maimuan>  "<U0E20><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<pho-samphao-ai-maimalai> "<U0E20><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E21>        <U0E21>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER MO MA
+<mo-ma-e>           "<U0E21><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<mo-ma-ae>          "<U0E21><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<mo-ma-o>           "<U0E21><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<mo-ma-ai-maimuan>  "<U0E21><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<mo-ma-ai-maimalai> "<U0E21><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E22>        <U0E22>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER YO YAK
+<yo-yak-e>           "<U0E22><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<yo-yak-ae>          "<U0E22><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<yo-yak-o>           "<U0E22><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<yo-yak-ai-maimuan>  "<U0E22><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<yo-yak-ai-maimalai> "<U0E22><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E23>        <U0E23>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER RO RUA
+<ro-rua-e>           "<U0E23><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<ro-rua-ae>          "<U0E23><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<ro-rua-o>           "<U0E23><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<ro-rua-ai-maimuan>  "<U0E23><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<ro-rua-ai-maimalai> "<U0E23><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E24>        <U0E24>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER RU
+
+<U0E25>        <U0E25>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER LO LING
+<lo-ling-e>           "<U0E25><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<lo-ling-ae>          "<U0E25><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<lo-ling-o>           "<U0E25><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<lo-ling-ai-maimuan>  "<U0E25><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<lo-ling-ai-maimalai> "<U0E25><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E26>        <U0E26>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER LU
+
+<U0E27>        <U0E27>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER WO WAEN
+<wo-waen-e>           "<U0E27><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<wo-waen-ae>          "<U0E27><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<wo-waen-o>           "<U0E27><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<wo-waen-ai-maimuan>  "<U0E27><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<wo-waen-ai-maimalai> "<U0E27><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E28>        <U0E28>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER SO SALA
+<so-sala-e>           "<U0E28><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<so-sala-ae>          "<U0E28><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<so-sala-o>           "<U0E28><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<so-sala-ai-maimuan>  "<U0E28><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<so-sala-ai-maimalai> "<U0E28><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E29>        <U0E29>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER SO RUSI
+<so-rusi-e>           "<U0E29><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<so-rusi-ae>          "<U0E29><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<so-rusi-o>           "<U0E29><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<so-rusi-ai-maimuan>  "<U0E29><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<so-rusi-ai-maimalai> "<U0E29><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E2A>        <U0E2A>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER SO SUA
+<so-sua-e>           "<U0E2A><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<so-sua-ae>          "<U0E2A><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<so-sua-o>           "<U0E2A><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<so-sua-ai-maimuan>  "<U0E2A><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<so-sua-ai-maimalai> "<U0E2A><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E2B>        <U0E2B>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER HO HIP
+<ho-hip-e>           "<U0E2B><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<ho-hip-ae>          "<U0E2B><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<ho-hip-o>           "<U0E2B><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<ho-hip-ai-maimuan>  "<U0E2B><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<ho-hip-ai-maimalai> "<U0E2B><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E2C>        <U0E2C>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER LO CHULA
+<lo-chula-e>           "<U0E2C><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<lo-chula-ae>          "<U0E2C><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<lo-chula-o>           "<U0E2C><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<lo-chula-ai-maimuan>  "<U0E2C><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<lo-chula-ai-maimalai> "<U0E2C><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E2D>        <U0E2D>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER O ANG
+<o-ang-e>           "<U0E2D><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<o-ang-ae>          "<U0E2D><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<o-ang-o>           "<U0E2D><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<o-ang-ai-maimuan>  "<U0E2D><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<o-ang-ai-maimalai> "<U0E2D><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E2E>        <U0E2E>;<BLANK>;<BLANK>;<BLANK> % THAI CHARACTER HO NOKHUK
+<ho-nokhuk-e>           "<U0E2E><U0E40>";<BLANK>;<BLANK>;<BLANK>
+<ho-nokhuk-ae>          "<U0E2E><U0E41>";<BLANK>;<BLANK>;<BLANK>
+<ho-nokhuk-o>           "<U0E2E><U0E42>";<BLANK>;<BLANK>;<BLANK>
+<ho-nokhuk-ai-maimuan>  "<U0E2E><U0E43>";<BLANK>;<BLANK>;<BLANK>
+<ho-nokhuk-ai-maimalai> "<U0E2E><U0E44>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E4D> <U0E4D>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER NIKHAHIT
+
+% order of Thai vowels
+<U0E30> <U0E30>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA A
+<U0E31> <U0E31>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER MAI HAN-AKAT
+<U0E32> <U0E32>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA AA
+<U0E45> <U0E32>;<BLANK>;<BLANK>;<EXTRA>  % THAI CHARACTER LAKKHANGYAO
+<U0E33> <U0E33>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA AM
+<U0E34> <U0E34>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA I
+<U0E35> <U0E35>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA II
+<U0E36> <U0E36>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA UE
+<U0E37> <U0E37>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA UEE
+<U0E38> <U0E38>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA U
+<U0E39> <U0E39>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA UU
+<U0E40> <U0E40>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA E
+<U0E41> <U0E41>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA AE
+<U0E42> <U0E42>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA O
+<U0E43> <U0E43>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA AI MAIMUAN
+<U0E44> <U0E44>;<BLANK>;<BLANK>;<BLANK>  % THAI CHARACTER SARA AI MAIMALAI
+
+order_end
+
+END LC_COLLATE
+
+LC_MONETARY
+
+int_curr_symbol         "THB "
+currency_symbol         "<U0E3F>"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          2
+n_cs_precedes           1
+n_sep_by_space          2
+p_sign_posn             4
+n_sign_posn             4
+
+END LC_MONETARY
+
+LC_NUMERIC
+
+decimal_point           "."
+thousands_sep           ","
+grouping                3
+
+END LC_NUMERIC
+
+LC_TIME
+
+abday   "<U0E2D><U0E32>.";"<U0E08>.";"<U0E2D>.";/
+        "<U0E1E>.";"<U0E1E><U0E24>.";"<U0E28>.";/
+        "<U0E2A>."
+day     "<U0E2D><U0E32><U0E17><U0E34><U0E15><U0E22><U0E4C>";/
+        "<U0E08><U0E31><U0E19><U0E17><U0E23><U0E4C>";/
+        "<U0E2D><U0E31><U0E07><U0E04><U0E32><U0E23>";/
+        "<U0E1E><U0E38><U0E18>";/
+        "<U0E1E><U0E24><U0E2B><U0E31><U0E2A><U0E1A><U0E14><U0E35>";/
+        "<U0E28><U0E38><U0E01><U0E23><U0E4C>";/
+        "<U0E40><U0E2A><U0E32><U0E23><U0E4C>"
+abmon   "<U0E21>.<U0E04>.";/
+        "<U0E01>.<U0E1E>.";/
+        "<U0E21><U0E35>.<U0E04>.";/
+        "<U0E40><U0E21>.<U0E22>.";/
+        "<U0E1E>.<U0E04>.";/
+        "<U0E21><U0E34>.<U0E22>.";/
+        "<U0E01>.<U0E04>.";/
+        "<U0E2A>.<U0E04>.";/
+        "<U0E01>.<U0E22>.";/
+        "<U0E15>.<U0E04>.";/
+        "<U0E1E>.<U0E22>.";/
+        "<U0E18>.<U0E04>."
+mon     "<U0E21><U0E01><U0E23><U0E32><U0E04><U0E21>";/
+        "<U0E01><U0E38><U0E21><U0E20><U0E32><U0E1E><U0E31><U0E19><U0E18><U0E4C>";/
+        "<U0E21><U0E35><U0E19><U0E32><U0E04><U0E21>";/
+        "<U0E40><U0E21><U0E29><U0E32><U0E22><U0E19>";/
+        "<U0E1E><U0E24><U0E29><U0E20><U0E32><U0E04><U0E21>";/
+        "<U0E21><U0E34><U0E16><U0E38><U0E19><U0E32><U0E22><U0E19>";/
+        "<U0E01><U0E23><U0E01><U0E0E><U0E32><U0E04><U0E21>";/
+        "<U0E2A><U0E34><U0E07><U0E2B><U0E32><U0E04><U0E21>";/
+        "<U0E01><U0E31><U0E19><U0E22><U0E32><U0E22><U0E19>";/
+        "<U0E15><U0E38><U0E25><U0E32><U0E04><U0E21>";/
+        "<U0E1E><U0E24><U0E28><U0E08><U0E34><U0E01><U0E32><U0E22><U0E19>";/
+        "<U0E18><U0E31><U0E19><U0E27><U0E32><U0E04><U0E21>"
+% Appropriate date & time representation
+d_t_fmt "%a %e %b %Ey, %H:%M:%S"
+% Appropriate date representation
+d_fmt   "%d//%m//%Ey"
+% Appropriate time representation
+t_fmt   "%H:%M:%S"
+% AM/PM signs
+am_pm   "AM";"PM"
+% Appropriate 12-hour clock representation
+t_fmt_ampm  "%I:%M:%S %p"
+% Era : Buddhist Era
+era     "+:1:-543//01//01:+*:<U0E1E>.<U0E28>.:%EC %Ey"
+era_d_fmt       "%e %b %Ey"
+era_t_fmt       "%H.%M.%S <U0E19>."
+era_d_t_fmt     "<U0E27><U0E31><U0E19>%A<U0E17><U0E35><U0E48> %e %B %EC %Ey, %H.%M.%S <U0E19>."
+% Appropriate date representation (date(1))
+date_fmt       "%a %e %b %Ey %H:%M:%S %Z"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+
+% yesexpr : begins with "y", "Y", or CHO CHANG
+% noexpr : begins with "n", "N", or MO MA
+% yesstr = "Chai2" = MAIMUAN + CHO CHANG + MAI EK
+% nostr = "Mai2Chai2" = MAIMALAI + MO MA + MAI EK + MAIMUAN + CHO CHANG + MAI EK
+
+yesexpr "^[+1yY<U0E0A>]"
+noexpr  "^[-0nN<U0E21>]"
+yesstr  "<U0E43><U0E0A><U0E48>"
+nostr   "<U0E44><U0E21><U0E48><U0E43><U0E0A><U0E48>"
+
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "0-%a%l"
+int_select     "001"
+int_prefix     "66"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    "<U0E04><U0E38><U0E13>"
+name_miss   "<U0E19><U0E32><U0E07><U0E2A><U0E32><U0E27>"
+name_mr     "<U0E19><U0E32><U0E22>"
+name_mrs    "<U0E19><U0E32><U0E07>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%r%t%e%t%b%N%h%t%s%N%T%N%S%N%z%c%N"
+country_name  "<U0E44><U0E17><U0E22>"
+%FIXME
+%country_post  ""
+country_ab2   "TH"
+country_ab3   "THA"
+%country_num   "764"
+country_car    "T"
+%FIXME
+%country_isbn  ""
+lang_name     "<U0E44><U0E17><U0E22>"
+lang_ab       "th"
+lang_term     "tha"
+lang_lib      "tha"
+country_num 764
+END LC_ADDRESS

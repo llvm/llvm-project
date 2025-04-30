@@ -211,8 +211,14 @@ function(add_openmp_testsuite target comment)
 
   if (${OPENMP_STANDALONE_BUILD})
     set(LIT_ARGS ${OPENMP_LIT_ARGS} ${ARG_ARGS})
+    # enable fortran tests
+    if (LIBOMP_ENABLE_FORTRAN_TESTS)
+      set(__COMMAND_PREFIX_VAR "LIBOMP_ENABLE_FORTRAN_TESTS=1")
+    else()
+      set(__COMMAND_PREFIX_VAR "")
+    endif()
     add_custom_target(${target}
-      COMMAND ${Python3_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
+      COMMAND ${__COMMAND_PREFIX_VAR} ${Python3_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
       COMMENT ${comment}
       DEPENDS ${ARG_DEPENDS}
       USES_TERMINAL

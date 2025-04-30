@@ -1,0 +1,1052 @@
+This file describes changes to the machine while it was in the ports
+add-on directory.  This port is no longer part of an add-on and so
+future changes to it should be listed in the top-level ChangeLog file,
+not here.
+
+
+
+2014-02-12  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha: Move directory to ../sysdeps/alpha.
+	* sysdeps/unix/alpha: Move directory to ../sysdeps/unix/alpha.
+	* sysdeps/unix/sysv/linux/alpha: Move directory to
+	../sysdeps/unix/sysv/linux/alpha.
+
+2014-02-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/alpha/msgctl.c: Move to
+	sysdeps/unix/sysv/linux/arm/msgctl.c and #include that file.
+	* sysdeps/unix/sysv/linux/alpha/semctl.c: Move to
+	sysdeps/unix/sysv/linux/arm/semctl.c and #include that file.
+	* sysdeps/unix/sysv/linux/alpha/shmctl.c: Move to
+	sysdeps/unix/sysv/linux/arm/shmctl.c and #include that file.
+
+2014-01-24  Richard Henderson <rth@redhat.com>
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Update.
+
+	* sysdeps/alpha/tls-macros.h (TLS_GD): Add dependency on $gp.
+	(TLS_LD, TLS_IE): Likewise.
+
+2013-12-07  Richard Henderson <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/mman.h: Use <bits/mman-linux.h>,
+	dropping common values and overriding different values.
+
+2013-11-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/fpu/fegetround.c (fegetround): Use
+	libm_hidden_def.
+
+2013-11-26  Ondřej Bílka  <neleai@seznam.cz>
+	* sysdeps/unix/sysv/linux/alpha/bits/ipc.h: Use __glibc_reserved instead __unused.
+	* sysdeps/unix/sysv/linux/alpha/bits/msq.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/bits/sem.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/bits/shm.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/bits/stat.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/kernel_stat.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/xstatconv.c: Likewise.
+
+2013-11-16  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/rt_sigaction.S: Include a nop
+	before each signal thunk.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/alpha/configure.in: Moved to ...
+	* sysdeps/alpha/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/alpha/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/alpha/configure.ac: ... here.
+	* sysdeps/alpha/configure: Regenerated.
+	* sysdeps/unix/sysv/linux/alpha/configure: Likewise.
+
+2013-10-12   Yuri Chornoivan <yurchor@ukr.net>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/pt-vfork.S: Fix typos.
+	* sysdeps/unix/sysv/linux/alpha/nptl/vfork.S: Likewise.
+
+2013-10-01  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/alpha/sysdep.h (PTR_MANGLE): Improve conditions under
+	which it is defined.
+
+2013-09-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/alpha/alphaev67/ffs.S (__ffs): Define as hidden.
+	* sysdeps/alpha/ffs.S (__ffs): Likewise.
+
+2013-09-11  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h (__O_TMPFILE):
+	Define.
+
+2013-08-30   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/alpha/alphaev67/stpncpy.S: Fix then/than typos.
+
+2013-08-30   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/netdb.h: Fix typos.
+
+2013-07-02  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Update.
+
+2013-06-28  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	* sysdeps/alpha/dl-procinfo.h (_dl_procinfo): Add TYPE parameter
+	to macro prototype for AT_HWCAP2 support.
+
+2013-06-24  Richard Henderson  <rth@redhat.com>
+
+	[BZ #15666]
+	* sysdeps/alpha/Versions (GLIBC_2.18): Add __sqrt_finite,
+	__sqrtf_finite, and __sqrtl_finite.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libm.abilist: Likewise.
+	* sysdeps/alpha/alphaev6/fpu/e_sqrt.S: Add __sqrt_finite.
+	* sysdeps/alpha/alphaev6/fpu/e_sqrtf.S: Add __sqrtf_finite.
+	* sysdeps/alpha/fpu/e_sqrt.c: Add __sqrt_finite compatibility.
+	* sysdeps/alpha/fpu/e_sqrtf.c: New file.
+	* sysdeps/alpha/soft-fp/e_sqrtl.c: Add __sqrtl_finite.
+
+2013-06-23  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Update.
+
+2013-06-15  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/libpthread.abilist: Update.
+
+2013-06-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/bits/atomic.h: Remove trailing whitespace.
+	* sysdeps/alpha/div_libc.h: Likewise.
+	* sysdeps/alpha/divq.S: Likewise.
+	* sysdeps/alpha/divqu.S: Likewise.
+	* sysdeps/alpha/fpu/cfloat-compat.h: Likewise.
+	* sysdeps/alpha/fpu/s_roundf.c: Likewise.
+	* sysdeps/alpha/fpu/s_trunc.c: Likewise.
+	* sysdeps/alpha/fpu/s_truncf.c: Likewise.
+	* sysdeps/alpha/ldiv.S: Likewise.
+	* sysdeps/alpha/memchr.c: Likewise.
+	* sysdeps/alpha/remq.S: Likewise.
+	* sysdeps/alpha/remqu.S: Likewise.
+	* sysdeps/alpha/stxncpy.S: Likewise.
+	* sysdeps/unix/alpha/sysdep.S: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/kernel_stat.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/nptl/lowlevellock.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/register-dump.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/syscall.S: Likewise.
+
+2013-05-22  Edjunior Barbosa Machado  <emachado@linux.vnet.ibm.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/siginfo.h (siginfo_t): Add
+	si_trapno and si_addr_lsb to _sifields.sigfault.
+	(si_trapno, si_addr_lsb): Define new macros.
+	(BUS_MCEERR_AR, BUS_MCEERR_AO): Define new values.
+
+2013-05-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Update test names.
+
+2013-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Update names of sincos tests.
+
+2013-05-16  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	[BZ #15442]
+	* sysdeps/alpha/soft-fp/sfp-machine.h (_FP_QNANNEGATEDP): New
+	macro.
+
+2013-03-06  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/mman.h (MAP_HUGE_MASK)
+	(MAP_HUGE_SHIFT): Define.
+	* sysdeps/unix/sysv/linux/alpha/bits/msq.h (MSG_COPY): Define.
+
+2013-02-19  Richard Henderson  <rth@redhat.com>
+
+	[BZ #14920]
+	* sysdeps/unix/sysv/linux/alpha/nptl/lowlevellock.h
+	(FUTEX_WAIT_REQUEUE_PI): Define.
+	(FUTEX_CMP_REQUEUE_PI): Likewise.
+	(lll_futex_wait_requeue_pi): Likewise.
+	(lll_futex_timed_wait_requeue_pi): Likewise.
+	(lll_futex_cmp_requeue_pi): Likewise.
+
+2013-02-20  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/alpha/sysdep.h: Include <errno.h>.
+
+2013-02-18  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/libc.abilist: Add
+	__cxa_thread_atexit_impl.
+
+2013-02-14  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/alpha/memchr.c: Do not include <bp-sym.h>.
+	(memchr): Do not use BP_SYM in weak_alias.
+
+2013-02-13  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/alpha/sigaction.c
+	(__syscall_rt_sigaction): Do not use __unbounded in prototype.
+
+2013-02-08  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/alpha/fdatasync.c: Don't include
+	<bp-checks.h>.
+	* sysdeps/unix/sysv/linux/alpha/gethostname.c: Likewise.
+	(__gethostname): Don't use CHECK_N.
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/alpha/msgctl.c: Do not include
+	<bp-checks.h>.
+	(__new_msgctl): Do not use CHECK_1.
+	* sysdeps/unix/sysv/linux/alpha/shmctl.c: Do not include
+	<bp-checks.h>.
+	(__new_shmctl): Do not use CHECK_1.
+
+2013-01-31  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/alpha/semctl.c: Don't include
+	<bp-checks.h> and <bp-semctl.h>.
+	(__new_semctl): Don't use CHECK_SEMCTL.
+
+2013-01-08  Andreas Jaeger  <aj@suse.de>
+
+	[BZ #14985]
+	* sysdeps/unix/sysv/linux/alpha/bits/epoll.h (EPOLL_NONBLOCK): Remove.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/Makefile: Fix copyright notice formatting.
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2013-01-02  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/lowlevellock.h
+	(lll_futex_timed_wait_bitset): New.
+
+2013-01-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/termios.h: Reformat copyright
+	notice.
+
+2012-12-07  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha/Makefile [$(subdir) = math]
+	(CFLAGS-s_isnan.c): New variable.
+
+	* sysdeps/alpha/fpu/math_private.h (__isnanl): Remove definition.
+
+2012-11-30  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Update.
+
+	* sysdeps/alpha/sotruss-lib.c: New file.
+
+2012-11-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/fpu/fclrexcpt.c (feclearexcept): Add
+	libm_hidden_ver.
+
+	[BZ #3439]
+	* sysdeps/alpha/fpu/bits/fenv.h (FE_DENORMAL): Define macro to
+	integer constant usable in #if and use that to give value to enum
+	constant.
+	(FE_INEXACT): Likewise.
+	(FE_UNDERFLOW): Likewise.
+	(FE_OVERFLOW): Likewise.
+	(FE_DIVBYZERO): Likewise.
+	(FE_INVALID): Likewise.
+	(FE_ALL_EXCEPT): Likewise.
+	(FE_TOWARDZERO): Likewise.
+	(FE_DOWNWARD): Likewise.
+	(FE_TONEAREST): Likewise.
+	(FE_UPWARD): Likewise.
+
+2012-11-01  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h: Remove all
+	definitions and declarations that are provided by
+	<bits/fcntl-linux.h> and include <bits/fcntl-linux.h>.
+
+2012-10-30  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14047]
+	* sysdeps/alpha/tininess.h: New file.
+
+2012-10-19  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/libc.abilist
+	(GLIBC_2.17): Add clock_* symbols.
+
+2012-10-09  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/alpha/configure: Regenerated.
+
+2012-10-02  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/lowlevellock.h: Fix clone
+	flag name in comment to CLONE_CHILD_CLEARTID.
+
+2012-10-01  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/typesizes.h
+	(__SWBLK_T_TYPE): Macro removed.
+
+2012-09-28  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/alpha/sysdep.h (PSEUDO_END): Merge versions and
+	move $syscall_error label...
+	(SYSCALL_ERROR_HANDLER): ... here.
+	(SYSCALL_ERROR_FALLTHRU): New.
+	(PSEUDO_PROF): Split out of ...
+	(PSEUDO_PROLOGUE): ... here.
+	* sysdeps/unix/sysv/linux/alpha/syscall.S (__syscall): Use
+	SYSCALL_ERROR_LABEL and PSEUDO_END.
+	* sysdeps/unix/sysv/linux/alpha/clone.S (__clone): Likewise.
+	Use USEPV_PROF and cfi markup.
+	(thread_start): Use cfi markup and cfi_undefined on ra.
+	* sysdeps/unix/sysv/linux/alpha/nptl/sysdep-cancel.h
+	(PSEUDO_PROF): Remove.
+	(PSEUDO): Use SYSCALL_ERROR_FALLTHRU.
+
+2012-09-13  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/setfpucw.c (__setfpucw): Rewrite
+	with the assumption of being used at program startup only.
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/localplt.data: Add optional
+	entries for _OtsConvertFloatTX, _OtsCvtQUX, _OtsCvtXQ, _OtsGtrX,
+	_OtsLeqX, _OtsNintXQ.
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Regenerate.
+
+	* sysdeps/alpha/fpu/get-rounding-mode.h: New file.
+
+2012-08-30  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha/fpu/s_isnan.c: Define all aliases in terms of
+	the original __isnan symbol.
+
+2012-08-27  Mike Frysinger  <vapier@gentoo.org>
+
+	[BZ #5400]
+	* sysdeps/unix/sysv/linux/alpha/Makefile (CFLAGS-fdatasync.c): Define.
+	* sysdeps/unix/sysv/linux/alpha/fdatasync.c: New file
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h
+	(__ASSUME_FDATASYNC): Define.
+
+2012-08-16  Carlos O'Donell  <carlos_odonell@mentor.com>
+
+	* sysdeps/alpha/ldsodefs.h (ARCH_PLTENTER_MEMBERS)
+	<alpha_gnu_pltenter>: struct La_alpha_regs is not const.
+
+2012-08-13  Richard Henderson  <rth@twiddle.net>
+
+	* configure.in: Don't test toolchain support for TLS or GPREL.
+	* configure: Rebuild.
+
+	* sysdeps/alpha/fpu/s_nearbyint.c (nearbyintl): Do compat
+	with GLIBC_2_1.
+
+2012-08-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h
+	(__ASSUME_TGKILL): Remove.
+
+2012-08-08  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h
+	(__ASSUME_IEEE_RAISE_EXCEPTION): Remove.
+	* sysdeps/unix/sysv/linux/alpha/fraiseexcpt.S: New file.
+	* sysdeps/unix/sysv/linux/alpha/fraiseexcpt.c: Remove.
+
+	* sysdeps/unix/sysv/linux/alpha/ieee_get_fp_control.S: Use dwarf2
+	cfi markup for unwind.  Adjust stack early so that the normal
+	syscall error path can be used.
+	* sysdeps/unix/sysv/linux/alpha/ieee_set_fp_control.S: Likewise.
+
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h
+	(__ASSUME_STAT64_SYSCALL): Remove.
+	* sysdeps/unix/sysv/linux/alpha/fxstat.c: Remove test
+	for __ASSUME_STAT64_SYSCALL.
+	* sysdeps/unsx/sysv/linux/alpha/fxstatat.c: Likewise.
+	* sysdeps/unsx/sysv/linux/alpha/lxstat.c: Likewise.
+	* sysdeps/unsx/sysv/linux/alpha/xstat.c: Likewise.
+	* sysdeps/unsx/sysv/linux/alpha/xstatconv.c: Likewise.
+	* sysdeps/unsx/sysv/linux/alpha/xstatconv.h: Likewise.
+
+2012-08-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h
+	(__ASSUME_TGKILL): Define unconditionally.
+	(__ASSUME_STAT64_SYSCALL): Likewise.
+	(__ASSUME_IEEE_RAISE_EXCEPTION): Likewise.
+
+2012-08-02  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/dirent.h
+	(_DIRENT_MATCHES_DIRENT64): New macro.
+
+2012-08-02  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/typesizes.h
+	(__OFF_T_MATCHES_OFF64_T): New macro.
+
+2012-08-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/alpha/configure.in
+	(arch_minimum_kernel): Remove.
+	* sysdeps/unix/sysv/linux/alpha/configure: Regenerated.
+
+2012-07-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/tst-audit.h (int_retval): Define.
+
+2012-07-26  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/siginfo.h (siginfo_t): Add
+	_sigsys.
+	(si_call_addr, si_syscall, si_arch): Define new macro.
+
+2012-07-25  Florian Weimer  <fweimer@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/libc.abilist: Add
+	secure_getenv.
+
+2012-07-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* data/localplt-alpha-linux-gnu.data: Move to ...
+	* sysdeps/unix/sysv/linux/alpha/nptl/localplt.data: ... here.
+
+2012-07-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/c++-types.data: Move from
+	../scripts/data/c++-types-alpha-linux-gnu.data.
+
+2012-06-15  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/soft-fp/sfp-machine.h (FP_TRAPPING_EXCEPTIONS): New.
+
+	* sysdeps/alpha/fpu/s_rint.c (__rint): Handle inexact regardless
+	of -mieee-with-inexact.
+	* sysdeps/alpha/fpu/s_rintf.c (__rintf): Likewise.
+
+	[BZ #13848]
+	* sysdeps/alpha/fpu/s_nearbyint.c (__nearbyint): Fix corner cases
+	similar to BZ#5350.
+	* sysdeps/alpha/fpu/s_nearbyintf.c (__nearbyintf): Likewise.
+
+	* sysdeps/alpha/fpu/s_copysign.c (__copysign): Use builtin.
+	* sysdeps/alpha/fpu/s_copysignf.c (__copysignf): Use builtin.
+
+	* sysdeps/unix/sysv/linux/alpha/bits/resource.h (RLIMIT_RTTIME): New.
+	(prlimit, prlimit64): New declarations.
+	* sysdeps/unix/sysv/linux/alpha/bits/shm.h (SHM_EXEC): New.
+	* sysdeps/unix/sysv/linux/alpha/bits/stat.h: Use only __USE_ATFILE
+	to protect UTIME_NOW and UTIME_OMIT.
+
+	* sysdeps/alpha/fpu/cfloat-compat.h: Remove __GNUC_PREREQ check.
+	* sysdeps/alpha/fpu/s_fabs.c (__fabs): Likewise.
+	* sysdeps/alpha/fpu/s_fabsf.c (__fabsf): Likewise.
+	* sysdeps/unix/sysv/linux/alpha/sysconf.c (implver): Remove.
+	(amask): Remove.
+	(__sysconf): Use builtins directly.
+
+	* sysdeps/alpha/bits/mathdef.h (float_t): Define as float
+	regardless of __GNUC__.
+
+2012-06-06  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/strncmp.S: Bound count to LONG_MAX at startup.
+	Re-organize checks vs s2 end-of-count.
+
+	[BZ #13718]
+	* sysdeps/alpha/stxncmp.S: Bound count to LONG_MAX at startup.
+	* sysdeps/alpha/alphaev6/stxncmp.S: Likewise.
+
+	* sysdeps/alpha/fpu/e_sqrt.c: Include <math_private.h> before
+	redefining __ieee758_sqrt.
+
+	* sysdeps/alpha/alphaev6/stxcpy.S: Use cfi markup instead of
+	dual ecoff procedure descriptors.
+	* sysdeps/alpha/alphaev6/stxncpy.S: Likewise.
+	* sysdeps/alpha/bzero.S: Likewise.
+	* sysdeps/alpha/memset.S: Likewise.
+	* sysdeps/alpha/stxcpy.S: Likewise.
+	* sysdeps/alpha/stxncpy.S: Likewise.
+	* sysdeps/unix/alpha/sysdep.h (USEPV_PROF): New.
+
+	* sysdeps/alpha/_mcount.S: Move .prologue after stack alloc.
+
+2012-06-05  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/rt_sigaction.S: Use .cfi_signal_frame
+	instead of a hack using extra nops.
+
+	* sysdeps/unxi/alpha/getppid.S: New file.
+	* sysdeps/unxi/alpha/getegid.S: New file.
+	* sysdeps/unxi/alpha/geteuid.S: New file.
+
+2012-06-01  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/Makefile (CFLAGS-test-misc.c): Set -mieee-with-inexact.
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Regenerate.
+
+2012-05-30  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/Makefile (CFLAGS-s_fma.c): Set -mieee-with-inexact.
+	(CFLAGS-s_fmaf.c): Likewise.
+	* sysdeps/alpha/fpu/libm-test-ulps: Regenerate.
+
+	* sysdeps/unix/sysv/linux/alpha/brk.S: Fix error path for PIC.
+
+	* sysdeps/alpha/fpu/libm-test-ulps: Regenerate.
+
+	* sysdeps/unix/sysv/linux/alpha/syscalls.list: Remove
+	__connect_internal alias.
+
+	* sysdeps/unix/sysv/linux/alpha/ioperm.c (process_cpuinfo): Use
+	fgets_unlocked.
+
+	* sysdeps/alpha/Implies: Include ieee754/dbl-64/wordsize-64.
+
+	* sysdeps/alpha/alphaev6/fpu/e_sqrt.S: Use dynamic rounding.
+	* sysdeps/alpha/alphaev6/fpu/e_sqrtf.S: Likewise.
+	* sysdeps/alpha/fpu/math_private.h (__ieee754_sqrt): New.
+	(__ieee754_sqrtf): New.
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/pthread_once.c: Replace
+	_internal alias by hidden_def.
+
+	* sysdeps/unix/sysv/linux/alpha/adjtime.c: Remove __ASSUME_TIMEVAL64.
+	* sysdeps/unix/sysv/linux/alpha/getitimer.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/getrusage.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/gettimeofday.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/select.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/setitimer.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/settimeofday.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/utimes.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/wait4.S: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/syscalls.list (getitimer): New.
+	(getrusage, gettimeofday, select, setitimer): New.
+	(settimeofday, utimes, wait4): New.
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h: Remove
+	__ASSUME_TIMEVAL64.
+	* sysdeps/unix/sysv/linux/alpha/nptl/ld.abilist: Update.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libc.abilist: Update.
+
+2012-05-24  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/ld.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libBrokenLocale.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libanl.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libc.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libcrypt.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libdl.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libm.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libnsl.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libpthread.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libresolv.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/librt.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libthread_db.abilist: New file.
+	* sysdeps/unix/sysv/linux/alpha/nptl/libutil.abilist: New file.
+
+	* sysdeps/alpha/ldiv.S (imaxdiv): Re-add alias.
+
+	* sysdeps/unix/sysv/linux/alpha/msgctl.c: Remove __ASSUME_32BITUIDS.
+	* sysdeps/unix/sysv/linux/alpha/semctl.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/shmctl.c: Likewise.
+
+	* sysdeps/unix/sysv/linux/alpha/bits/mman.h (MADV_HUGEPAGE): New.
+	(MADV_NOHUGEPAGE, MADV_DONTDUMP, MADV_DODUMP): New.
+
+2012-05-20  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/add_n.S: Rename from add_n.s.
+	* sysdeps/alpha/addmul_1.S: Rename from addmul_1.s.
+	* sysdeps/alpha/alphaev5/add_n.S: Rename from add_n.s.
+	* sysdeps/alpha/alphaev5/lshift.S: Rename from lshift.s.
+	* sysdeps/alpha/alphaev5/rshift.S: Rename from rshift.s.
+	* sysdeps/alpha/alphaev5/sub_n.S: Rename from sub_n.s.
+	* sysdeps/alpha/alphaev6/addmul_1.S: Rename from addmul_1.s.
+	* sysdeps/alpha/lshift.S: Rename from lshift.s.
+	* sysdeps/alpha/mul_1.S: Rename from mul_1.s.
+	* sysdeps/alpha/rshift.S: Rename from rshift.s.
+	* sysdeps/alpha/sub_n.S: Rename from sub_n.s.
+	* sysdeps/alpha/submul_1.S: Rename from submul_1.s.
+
+2012-05-18  Richard Henderson  <rth@twiddle.net>
+
+	* data/localplt-alpha-linux-gnu.data: New file.
+
+	* sysdeps/unix/sysv/linux/alpha/bits/typesizes.h (__FSWORD_T_TYPE,
+	__SYSCALL_SLONG_TYPE, __SYSCALL_ULONG_TYPE): New.
+
+2012-04-26  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h: Correct kernel
+	version needed to define __ASSUME_ACCEPT4.
+
+	* sysdeps/unix/sysv/linux/alpha/ioperm.c (process_cpuinfo): Use "c"
+	and "e" in fopen.
+
+	* sysdeps/unix/sysv/linux/alpha/bits/mman.h (MAP_STACK): Define.
+	(MAP_HUGETLB): Likewise.
+
+	* sysdeps/alpha/bits/mathdef.h: Remove __STDC__ conditionals.
+	* sysdeps/unix/alpha/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/sysdep.h: Likewise.
+
+	* sysdeps/alpha/fpu/bits/fenv.h: Use const instead of __const.
+	* sysdeps/unix/sysv/linux/alpha/oldglob.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/sys/acct.h: Likewise.
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h (O_PATH): Define.
+
+2012-03-27  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/elf/configure.in: Move to ...
+	* sysdeps/alpha/configure.in: ... here.  Update comment.
+	* sysdeps/alpha/configure: Regenerate.
+	* sysdeps/alpha/elf/crti.S: Move to ...
+	* sysdeps/alpha/crti.S: ... here.
+	* sysdeps/alpha/elf/crtn.S: Move to ...
+	* sysdeps/alpha/crtn.S: ... here.
+	* sysdeps/alpha/elf/start.S: Move to ...
+	* sysdeps/alpha/start.S: ... here.
+
+2012-03-21  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/hp-timing.h: Include <_itoa.h> instead
+	of <stdio-common/_itoa.h>.
+
+2012-03-19  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/fpu/math_private.h: New file.
+
+2012-03-11  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/socket.h: Remove file.
+	* sysdeps/unix/sysv/linux/alpha/bits/socket_type.h: New file.
+
+2012-03-09  Paul Eggert  <eggert@cs.ucla.edu>
+
+	[BZ #13673]
+	Replace FSF snail mail address with URLs, as per GNU coding standards.
+
+2012-03-04  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/ioperm.c (inline_sethae): Mark
+	as always_inline.
+
+2012-03-04  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/socket.h (recvmmsg): Only
+	declare if __USE_GNU.
+	(sendmmsg): Add declaration.
+
+2012-03-04  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/siginfo.h: Don't name the
+	siginfo_t struct.  Add forward declaration of pthread_attr_t;
+	use it in sigevent.
+	* sysdeps/unix/sysv/linux/alpha/nptl/bits/pthreadtypes.h
+	(pthread_attr_t): Add union tag to pthread_attr_t; only define
+	typedef if not already defined.
+
+2012-02-21  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/epoll.h: New file.
+	* sysdeps/unix/sysv/linux/alpha/bits/timerfd.h: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/sys/epoll.h: Remove.
+	* sysdeps/unix/sysv/linux/alpha/sys/timerfd.h: Likewise.
+
+2012-02-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/errno.h (ERFKILL, EHWPOISON):
+	Define if not defined.
+	* sysdeps/unix/sysv/linux/alpha/Versions: Add new errlist compat
+	entry for 2.16.
+
+2012-02-20  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/alpha/sysconf.c: Fix cache sysconf switch.
+
+2012-02-16  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/fpu/fenv_libc.h (__ieee_set_fp_control,
+	__ieee_get_fp_control): Mark as hidden proto.
+
+2012-02-15  Mike Hommey  <mh+reportbug@glandium.org>
+
+	[BZ #11677]
+	* sysdeps/unix/sysv/linux/alpha/syscall.S: Support 6th argument.
+
+2012-02-15  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/signalfd.h: New file.
+	* sysdeps/unix/sysv/linux/alpha/sys/signalfd.h: Remove.
+
+	* sysdeps/unix/alpha/sysdep.h (syscall_promote): New.
+	(inline_syscall0, inline_syscall1, inline_syscall2,
+	inline_syscall3, inline_syscall4, inline_syscall5,
+	inline_syscall6): Use it.
+	* sysdeps/unix/sysv/linux/alpha/setregid.c: Remove.
+	* sysdeps/unix/sysv/linux/alpha/setreuid.c: Remove.
+	* sysdeps/unix/sysv/linux/alpha/setresgid.c: Remove.
+	* sysdeps/unix/sysv/linux/alpha/setresuid.c: Remove.
+
+	* sysdeps/unix/alpha/sysdep.h: Don't include <tls.h>
+	[PIC] (SYSCALL_ERROR_HANDLER): Emit nothing.
+	[PIC] (SYSCALL_ERROR_LABEL): Add !samegp markup.
+
+	* sysdeps/alpha/dl-machine.h: Don't check USE___THREAD.
+
+	* sysdeps/unix/alpha/sysdeps.S: Don't check __ELF__, USE___THREAD,
+	or _LIBC_REENTRANT.
+
+2012-02-15  Richard Henderson  <rth@twiddle.net>
+
+	[BZ #13361]
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h (struct file_handle): New.
+	(fallocate, name_to_handle_at, open_by_handle_at): Declare.
+
+2012-02-14  Joseph Myers  <joseph@codesourcery.com>
+	    Tom de Vries  <tom@codesourcery.com>
+
+	* sysdeps/alpha/preconfigure: Make setting of libc_commonpagesize and
+	libc_relro_required conditional on alpha machine.  Move setting of
+	libc_cv_gcc_unwind_find_fde ...
+	* sysdeps/unix/sysv/linux/alpha/configure.in: ... here.
+
+2012-02-13  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/eventfd.h: New file.
+	* sysdeps/unix/sysv/linux/alpha/sys/eventfd.h: Remove.
+
+2012-02-09  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/preconfigure (libc_cv_gcc_unwind_find_fde): New.
+	(libc_commonpagesize, libc_relro_required): New.
+
+2012-02-08  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/alpha/ldsodefs.h: New file.
+	* sysdeps/alpha/tst-audit.h: New file.
+	* sysdeps/alpha/tls-macros.h: New file.
+
+	* sysdeps/unix/sysv/linux/alpha/getitimer.S: Don't check HAVE_ELF.
+	* sysdeps/unix/sysv/linux/alpha/getrusage.S: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/gettimeofday.S: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/select.S: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/setitimer.S: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/settimeofday.S: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/utimes.S: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/wait4.S: Likewise.
+
+	* sysdeps/alpha/elf/crti.S, sysdeps/alpha/elf/crtn.S: New files...
+	* sysdeps/alpha/elf/initfini.c: ... split from here.  Remove file.
+	* sysdeps/alpha/nptl/elf/pt-initfini.c: Remove file.
+
+	* sysdeps/unix/alpha/sysdep.h (INTERNAL_SYSCALL_DECL): Mark unused.
+
+	* sysdeps/unix/sysv/linux/alpha/bits/stat.h (_STAT_VER_LINUX): New.
+
+	* sysdeps/alpha/dl-tls.h (TLS_DTV_UNALLOCATED): New.
+
+	* sysdeps/unix/sysv/linux/alpha/configure.in: New file.
+	* sysdeps/unix/sysv/linux/alpha/configure: Build.
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h: Protect from
+	multiple includes.  Disable statfs64 entirely.
+
+	* sysdeps/alpha/nptl/tls.h: Don't test HAVE_TLS_SUPPORT.
+	* sysdeps/unix/alpha/sysdep.h: Don't test HAVE___THREAD.
+	* sysdeps/alpha/elf/configure.in (libc_cv_alpha_tls): Error out if
+	the test fails.  Don't set HAVE_TLS_SUPPORT.
+	* sysdeps/alpha/elf/configure: Rebuild.
+
+2012-01-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/alpha/backtrace.c: Use x86_64 version of backtrace.c.
+	* sysdeps/unix/sysv/linux/alpha/wordexp.c: Use sparc64 version of
+	wordexp.c.
+
+2011-10-05  Andreas Schwab  <schwab@redhat.com>
+
+	* sysdeps/alpha/dl-machine.h (elf_machine_rela)
+	(elf_machine_lazy_rel): Add parameter skip_ifunc.
+
+2011-03-28  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/alpha/____longjmp_chk.S(____longjmp_chk):
+	Fix wrong register in stack pointer comparison.
+
+2011-03-01  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/alpha/fpu/feupdateenv.c (feupdateenv): Add libm_hidden_def.
+	* sysdeps/alpha/fpu/ftestexcept.c (fetestexcept): Likewise.
+
+2011-02-28  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/statfs.h (struct statfs,
+	struct statfs64): Add f_flags field.
+
+2011-02-28  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/alpha/stackinfo.h: Define DEFAULT_STACK_PERMS with PF_X.
+
+2011-02-28  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h (F_SETPIPE_SZ,
+	F_GETPIPE_SZ): Define.
+
+2010-09-26  Michael Cree  <mcree@orcon.net.nz>
+
+	* sysdeps/alpha/memchr.c: Include <bp-sym.h>
+	(__memchr): Add casts for integer arithmetic on pointers.
+
+2010-09-23  Richard Henderson  <rth@redhat.com>
+
+	[BZ #12019]
+	* sysdeps/alpha/alphaev6/memchr.S: Remove.
+	* sysdeps/alpha/memchr.S: Remove.
+	* sysdeps/alpha/memchr.c: New.
+
+2010-09-23  Richard Henderson  <rth@redhat.com>
+
+	[BZ #1864]
+	* sysdeps/unix/sysv/linux/alpha/fstatfs64.c: New.
+	* sysdeps/unix/sysv/linux/alpha/fstatvfs.c: New.
+	* sysdeps/unix/sysv/linux/alpha/fstatvfs64.c: New.
+	* sysdeps/unix/sysv/linux/alpha/internal_statvfs64.c: New.
+	* sysdeps/unix/sysv/linux/alpha/statfs64.c: New.
+	* sysdeps/unix/sysv/linux/alpha/statvfs.c: New.
+	* sysdeps/unix/sysv/linux/alpha/statvfs64.c: New.
+	* sysdeps/unix/sysv/linux/alpha/syscalls.list (fstatfs, statfs):
+	Define without 64-bit aliases.
+
+2010-05-03  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/alpha/memchr.S: Use prefetch load.
+	* sysdeps/alpha/alphaev6/memchr.S: Likewise.
+
+2010-05-03  Aurelien Jarno  <aurelien@aurel32.net>
+
+	[BZ #6827]
+	* sysdeps/alpha/dl-machine.h: Add dl-procinfo support.
+	* sysdeps/alpha/dl-procinfo.c: New.
+	* sysdeps/alpha/dl-procinfo.h: New.
+
+2010-05-03  Aurelien Jarno  <aurelien@aurel32.net>
+
+	[BZ #5350]
+	* sysdeps/alpha/fpu/s_ceil.c: Fix corner cases.
+	* sysdeps/alpha/fpu/s_ceilf.c: Likewise.
+	* sysdeps/alpha/fpu/s_floor.c: Likewise.
+	* sysdeps/alpha/fpu/s_floorf.c: Likewise.
+	* sysdeps/alpha/fpu/s_rint.c: Likewise.
+	* sysdeps/alpha/fpu/s_rintf.c: Likewise.
+
+2010-05-03  GOTO Masanori  <gotom@debian.or.jp>
+
+	[BZ #1026]
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h: Define
+	__ASSUME_STAT64_SYSCALL.
+	* sysdeps/unix/sysv/linux/alpha/fxstat.c: Check
+	__ASSUME_STAT64_SYSCALL.
+	* sysdeps/unix/sysv/linux/alpha/fxstatat.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/lxstat.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/xstat.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/xstatconv.c: Don't define
+	__libc_missing_axp_stat64 when it's not	needed.
+	* sysdeps/unix/sysv/linux/alpha/xstatconv.h: Likewise.
+
+2010-03-30  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/socket.h (MSG_WAITFORONE): New.
+
+2010-03-30  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/kernel-features.h: New.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/____longjmp_chk.S: New.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/Versions: Update errlist-compat
+	for GLIBC_2.12.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha/fpu/fegetenv.c: Add hidden alias.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/dl-auxv.h (__libc_alpha_cache_shape):
+	Define extern here; move definition...
+	* sysdeps/unix/sysv/linux/alpha/dl-sysdep.c: ... here.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/sys/user.h: Don't include asm/page.h.
+	(PAGE_SHIFT, PAGE_SIZE, PAGE_MASK): Define.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h (F_SETOWN_EX,
+	F_GETOWN_EX, F_OWNER_TID, F_OWNER_PID, F_OWNER_PGRP,
+	F_OWNER_GID, struct f_owner_ex): Define.
+	(F_SETOWN, F_GETOWN): Define with XPG7.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/alpha/sysdep.h (PTR_MANGLE): Define for !PIC too.
+	(PTR_DEMANGLE): Likewise.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/unix/alpha/sysdep.h (INTERNAL_SYSCALL_ERROR_P,
+	INTERNAL_SYSCALL_ERRNO): "Use" the "other" variable in each macro.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdep/unix/sysv/linux/alpha/creat.c: New.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdep/alpha/elf/configure.in (libc_cv_alpha_hidden_gprel)
+	Adjust the test for gcc 4.5.
+	* sysdep/alpha/elf/configure: Rebuild.
+
+2010-03-26  Richard Henderson  <rth@redhat.com>
+
+	* sysdeps/alpha/bits/atomic.h (__arch_exchange_8_int,
+	__arch_exchange_16_int, __arch_exchange_32_int,
+	__arch_exchange_64_int, __arch_exchange_and_add_32_int,
+	__arch_exchange_and_add_64_int): Use __typeof to get the
+	return type correct without warning.
+
+2010-03-23  Matt Turner  <mattst88@gmail.com>
+	    Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/socket.h: New file.
+
+2010-01-12  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/stat.h: Fix double-inclusion
+	problem.
+
+2010-01-12  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/sigaction.h: Define
+	SA_RESTART, SA_NODEFER and SA_RESETHAND if __USE_XOPEN2K8.
+
+2010-01-12  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h: Define O_DIRECTORY,
+	O_NOFOLLOW, O_CLOEXEC, F_DUPFD_CLOEXEC, F_SETOWN, and F_GETOWN for
+	XPG7.
+	* sysdeps/unix/sysv/linux/alpha/bits/stat.h: Enable using from
+	fcntl.h.
+
+2010-01-12  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h: Redefine O_SYNC and
+	O_DSYNC to match 2.6.33+ kernels.
+
+2009-12-02  Mike Frysinger <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/alpha/nptl/timer_settime.c: Fix typo in
+	include timer_gettime.c -> timer_settime.c.
+
+2009-11-23  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/stat.h: Use struct timespec
+	for timestamps also if __USE_XOPEN2K8.
+
+2009-11-23  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/alpha/bits/fcntl.h: Change misleading
+	names of parameters of sync_file_range.
+
+2009-11-23  Matt Turner  <mattst88@gmail.com>
+
+	[BZ #10972]
+	* sysdeps/unix/sysv/linux/alpha/bits/mman.h: Add new MADV_*
+	constants from recent kernels.
+
+2009-11-10  Matt Turner  <mattst88@gmail.com>
+
+	[BZ #10609]
+	* sysdeps/unix/sysv/linux/alpha/fxstatat.c (__fxstatat): Fix handling
+	of empty parameters for file names.
+
+2009-07-13  Aurelien Jarno  <aurelien@aurel32.net>
+
+	[BZ #10158]
+	* sysdeps/unix/sysv/linux/alpha/getsysstats.c (GET_NPROCS_PARSER):
+	Change parameters and use next_line.
+
+	[BZ #10160]
+	* sysdeps/unix/sysv/linux/alpha/nptl/lowlevellock.h: Define
+	FUTEX_WAIT_BITSET, FUTEX_WAKE_BITSET, FUTEX_CLOCK_REALTIME and
+	FUTEX_BITSET_MATCH_ANY.
+
+	[BZ #10161]
+	* sysdeps/unix/sysv/linux/alpha/getdents64.c: Adjust include path.
+	* sysdeps/unix/sysv/linux/alpha/nptl/fork.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/nptl/sem_post.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/nptl/timer_create.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/nptl/timer_delete.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/nptl/timer_getoverr.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/nptl/timer_gettime.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/nptl/timer_settime.c: Likewise.
+	* sysdeps/unix/sysv/linux/alpha/sysconf.c: Likewise.
+
+	[BZ #6507]
+	* sysdeps/unix/sysv/linux/alpha/sys/procfs.h (ELF_NGREG,
+	ELF_NFPREG, elf_greg_t, elf_gregset_t, elf_fpreg_t,
+	elf_fpregset_t): Define. Don't include asm/elf.h.
+
+2008-11-26  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/unix/sysv/linux/alpha/wordexp.c: Contents moved to main
+	repository's ia64 file; #include that.
+	* sysdeps/unix/sysv/linux/alpha/ipc_priv.h: Contents moved to main
+	repository's powerpc file; #include that.
+
+2008-11-25  Roland McGrath  <roland@redhat.com>
+
+	* ChangeLog.alpha: New file (this one).
+	* sysdeps/alpha, sysdeps/unix/bsd/osf/alpha,
+	sysdeps/unix/bsd/Attic/osf1/alpha, sysdeps/unix/sysv/linux/alpha,
+	sysdeps/unix/sysv/linux/alpha/alpha, sysdeps/unix/alpha,
+	sysdeps/mach/alpha, sysdeps/mach/hurd/alpha:
+	Subdirectories moved here from main repository.
+	* sysdeps/alpha/nptl, sysdeps/unix/sysv/linux/alpha/nptl:
+	Subdirectories moved here from main repository's nptl/ subdirectory.
+	* sysdeps/alpha/preconfigure: New file.
+	* sysdeps/alpha/shlib-versions: New file.
+
+Local Variables:
+mode: change-log
+left-margin: 8
+fill-column: 74
+End:

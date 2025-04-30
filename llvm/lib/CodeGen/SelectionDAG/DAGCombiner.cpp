@@ -28489,7 +28489,7 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
       // token factors, so we queue them up.  Adding the operands to the queue
       // (stack) in reverse order maintains the original order and increases the
       // likelihood that getNode will find a matching token factor (CSE.)
-      if (Chain.getNumOperands() > 16) {
+      if (Chain.getNumOperands() > TLI.getGatherAllAliasesMaxTFOperands()) {
         Aliases.push_back(Chain);
         continue;
       }

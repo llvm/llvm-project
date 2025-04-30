@@ -1,0 +1,117 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Ge'ez language locale for Ethiopia with Abegede collation.
+%
+% Prepared and contributed to glibc by Daniel Yacob <locales@geez.org>.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f UTF-8 -i gez_ET-Abegede gez_ET-Abegede
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Ge'ez language locale for Ethiopia With Abegede Collation"
+source     "Ge'ez Frontier Foundation"
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Geez"
+territory  "Ethiopia"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopic Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "gez_ER@abegede"
+END LC_COLLATE
+
+
+LC_CTYPE
+copy "gez_ET"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopia Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "gez_ET"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "gez_ET"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "gez_ET"
+END LC_NUMERIC
+
+LC_PAPER
+copy "gez_ET"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "gez_ET"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ge'ez/ET Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+copy "gez_ET"
+END LC_ADDRESS
+
+LC_MESSAGES
+copy "gez_ET"
+END LC_MESSAGES
+
+LC_NAME
+copy "gez_ET"
+END LC_NAME
+
+LC_TIME
+copy "gez_ET"
+END LC_TIME

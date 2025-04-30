@@ -1,0 +1,177 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+#include "stdint.h-data"
+
+type imaxdiv_t
+element imaxdiv_t intmax_t rem
+element imaxdiv_t intmax_t quot
+
+function intmax_t imaxabs (intmax_t)
+function imaxdiv_t imaxdiv (intmax_t, intmax_t)
+function intmax_t strtoimax (const char*, char**, int)
+function uintmax_t strtoumax (const char*, char**, int)
+function intmax_t wcstoimax (const __gwchar_t*, __gwchar_t**, int)
+function uintmax_t wcstoumax (const __gwchar_t*, __gwchar_t**, int)
+
+macro PRId8
+macro PRIi8
+macro PRIo8
+macro PRIu8
+macro PRIx8
+macro PRIX8
+macro SCNd8
+macro SCNi8
+macro SCNo8
+macro SCNu8
+macro SCNx8
+macro PRIdLEAST8
+macro PRIiLEAST8
+macro PRIoLEAST8
+macro PRIuLEAST8
+macro PRIxLEAST8
+macro PRIXLEAST8
+macro SCNdLEAST8
+macro SCNiLEAST8
+macro SCNoLEAST8
+macro SCNuLEAST8
+macro SCNxLEAST8
+macro PRIdFAST8
+macro PRIiFAST8
+macro PRIoFAST8
+macro PRIuFAST8
+macro PRIxFAST8
+macro PRIXFAST8
+macro SCNdFAST8
+macro SCNiFAST8
+macro SCNoFAST8
+macro SCNuFAST8
+macro SCNxFAST8
+
+macro PRId16
+macro PRIi16
+macro PRIo16
+macro PRIu16
+macro PRIx16
+macro PRIX16
+macro SCNd16
+macro SCNi16
+macro SCNo16
+macro SCNu16
+macro SCNx16
+macro PRIdLEAST16
+macro PRIiLEAST16
+macro PRIoLEAST16
+macro PRIuLEAST16
+macro PRIxLEAST16
+macro PRIXLEAST16
+macro SCNdLEAST16
+macro SCNiLEAST16
+macro SCNoLEAST16
+macro SCNuLEAST16
+macro SCNxLEAST16
+macro PRIdFAST16
+macro PRIiFAST16
+macro PRIoFAST16
+macro PRIuFAST16
+macro PRIxFAST16
+macro PRIXFAST16
+macro SCNdFAST16
+macro SCNiFAST16
+macro SCNoFAST16
+macro SCNuFAST16
+macro SCNxFAST16
+
+macro PRId32
+macro PRIi32
+macro PRIo32
+macro PRIu32
+macro PRIx32
+macro PRIX32
+macro SCNd32
+macro SCNi32
+macro SCNo32
+macro SCNu32
+macro SCNx32
+macro PRIdLEAST32
+macro PRIiLEAST32
+macro PRIoLEAST32
+macro PRIuLEAST32
+macro PRIxLEAST32
+macro PRIXLEAST32
+macro SCNdLEAST32
+macro SCNiLEAST32
+macro SCNoLEAST32
+macro SCNuLEAST32
+macro SCNxLEAST32
+macro PRIdFAST32
+macro PRIiFAST32
+macro PRIoFAST32
+macro PRIuFAST32
+macro PRIxFAST32
+macro PRIXFAST32
+macro SCNdFAST32
+macro SCNiFAST32
+macro SCNoFAST32
+macro SCNuFAST32
+macro SCNxFAST32
+
+macro PRId64
+macro PRIi64
+macro PRIo64
+macro PRIu64
+macro PRIx64
+macro PRIX64
+macro SCNd64
+macro SCNi64
+macro SCNo64
+macro SCNu64
+macro SCNx64
+macro PRIdLEAST64
+macro PRIiLEAST64
+macro PRIoLEAST64
+macro PRIuLEAST64
+macro PRIxLEAST64
+macro PRIXLEAST64
+macro SCNdLEAST64
+macro SCNiLEAST64
+macro SCNoLEAST64
+macro SCNuLEAST64
+macro SCNxLEAST64
+macro PRIdFAST64
+macro PRIiFAST64
+macro PRIoFAST64
+macro PRIuFAST64
+macro PRIxFAST64
+macro PRIXFAST64
+macro SCNdFAST64
+macro SCNiFAST64
+macro SCNoFAST64
+macro SCNuFAST64
+macro SCNxFAST64
+
+macro PRIdMAX
+macro PRIiMAX
+macro PRIoMAX
+macro PRIuMAX
+macro PRIxMAX
+macro PRIXMAX
+macro SCNdMAX
+macro SCNiMAX
+macro SCNoMAX
+macro SCNuMAX
+macro SCNxMAX
+
+macro PRIdPTR
+macro PRIiPTR
+macro PRIoPTR
+macro PRIuPTR
+macro PRIxPTR
+macro PRIXPTR
+macro SCNdPTR
+macro SCNiPTR
+macro SCNoPTR
+macro SCNuPTR
+macro SCNxPTR
+
+allow PRI[Xa-z]*
+allow SCN[Xa-z]*
+#endif

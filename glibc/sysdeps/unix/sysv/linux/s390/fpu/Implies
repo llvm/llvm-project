@@ -1,0 +1,2 @@
+# Override ldbl-opt with s390 specific routines.
+s390/fpu

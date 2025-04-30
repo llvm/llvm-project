@@ -1,0 +1,50 @@
+  ----------------------------------------------------------
+  Notes on how to update libm based on Intel's libm releases
+  ----------------------------------------------------------
+
+This source code in this directory is currently based on Intel libm
+v2.1 as available from:
+
+  http://www.intel.com/software/products/opensource/libraries/num.htm
+
+To ease importing, fix some bugs, and simplify integration into libc,
+it is also necessary to apply the patch at:
+
+  ftp://ftp.hpl.hp.com/pub/linux-ia64/intel-libm-041228.diff.gz
+
+The expectation is that Intel will integrate most if not all of these
+changes into future releases of libm, so this patching step can
+hopefully be omitted in the future.
+
+Once the patched libm sources are extracted in a directory $LIBM, they
+can be imported into the libc source tree at $LIBC with the following
+step:
+
+	$ cd $LIBC/src/sysdep/ia64/fpu
+	$ ./import_intel_libm $LIBM
+
+This should produce a number of "Importing..." messages, without
+showing any errors.
+
+At this point, you should be able to build glibc in the usual fashion.
+We assume you do this in directory $OBJ.  Once the build has
+completed, run "make check" to verify that all (math) checks succeed.
+If these checks succeed, you should also run the following commands to
+verify that the new libm doesn't pollute the name-space and has proper
+size-info for the data objects:
+
+	$ cd $LIBC/src/sysdep/ia64/fpu
+	$ import_check $OBJ/math/
+
+There should be no (unexpected) errors reported by this script.
+
+As an optional step, you may also want to confirm that the new libm
+exports the exact same global symbols as the old one.
+
+If you want to see the changes introduced by the "import_intel_libm"
+script, you can run the commands:
+
+	$ cd $LIBC/src/sysdep/ia64/fpu
+	$ import_diffs
+
+That's it.

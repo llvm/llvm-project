@@ -482,6 +482,27 @@ enum OpenMPLocationFlags : unsigned {
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OMP_IDENT_WORK_DISTRIBUTE)
 };
 
+namespace {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+/// Values for bit flags for marking which requires clauses have been used.
+enum OpenMPOffloadingRequiresDirFlags : int64_t {
+  /// flag undefined.
+  OMP_REQ_UNDEFINED = 0x000,
+  /// no requires clause present.
+  OMP_REQ_NONE = 0x001,
+  /// reverse_offload clause.
+  OMP_REQ_REVERSE_OFFLOAD = 0x002,
+  /// unified_address clause.
+  OMP_REQ_UNIFIED_ADDRESS = 0x004,
+  /// unified_shared_memory clause.
+  OMP_REQ_UNIFIED_SHARED_MEMORY = 0x008,
+  /// dynamic_allocators clause.
+  OMP_REQ_DYNAMIC_ALLOCATORS = 0x010,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OMP_REQ_DYNAMIC_ALLOCATORS)
+};
+
+} // anonymous namespace
+
 /// Describes ident structure that describes a source location.
 /// All descriptions are taken from
 /// https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h
@@ -1265,9 +1286,11 @@ llvm::Function *CGOpenMPRuntime::emitParallelOutlinedFunction(
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
     const RegionCodeGenTy &CodeGen) {
   const CapturedStmt *CS = D.getCapturedStmt(OMPD_parallel);
-  return emitParallelOrTeamsOutlinedFunction(
+  llvm::Function *F = emitParallelOrTeamsOutlinedFunction(
       CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(CGF),
       CodeGen);
+
+  return F;
 }
 
 llvm::Function *CGOpenMPRuntime::emitTeamsOutlinedFunction(
@@ -5032,6 +5055,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       CGF.CurFn->getName(), Loc, CGF.ConvertTypeForMem(ReductionArrayTy),
       Privates, LHSExprs, RHSExprs, ReductionOps);
 
+#if CLANG_OPENMP_NEXTSILICON
+  ReductionFn->addFnAttr("ns-mark", "peripheral");
+#endif
   // 3. Create static kmp_critical_name lock = { 0 };
   std::string Name = getName({"reduction"});
   llvm::Value *Lock = getCriticalRegionLock(Name);

@@ -81,6 +81,8 @@ private:
                                 llvm::opt::ArgStringList &CmdArgs) const;
   void AddVETargetArgs(const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs) const;
+  void AddNext32TargetArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const;
 
   enum RewriteKind { RK_None, RK_Fragile, RK_NonFragile };
 

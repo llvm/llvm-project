@@ -1,0 +1,29 @@
+!libc_pre_versions
+libc {
+  GLIBC_2.2 {
+    ioperm; iopl;
+    inb; inw; inl;
+    _inb; _inw; _inl;
+    outb; outw; _outl;
+    _outb; _outw; _outl;
+    pciconfig_read; pciconfig_write;
+
+    # linuxthreads
+    __clone2;
+  }
+  GLIBC_2.2.2 {
+    # w*
+    wordexp;
+  }
+  GLIBC_2.3.3 {
+    # Changed PTHREAD_STACK_MIN.
+    pthread_attr_setstack;
+    pthread_attr_setstacksize;
+  }
+  GLIBC_2.2.6 {
+    getunwind;
+  }
+  GLIBC_2.24 {
+    recvmsg; sendmsg;
+  }
+}

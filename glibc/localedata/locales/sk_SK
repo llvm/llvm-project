@@ -1,0 +1,217 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Slovak Language Locale for Slovak
+% Source:
+% Address: Narcisov<a'> 56, SK-821 01 Bratislava, Slovak Republic
+% Contact: Stanislav Meduna
+% Email:   stano@eunet.sk
+% Tel:
+% Fax:
+% Language: sk
+% Territory: SK
+% Revision: 1.2
+% Date: 1998-05-26
+% Application: general
+% Users: general
+
+% 1997-05-14: Odvodené z cs_CZ locale Vladimíra Michla.
+%             Collate algoritmy prevzaté bezo zmien (norma bola rovnaká),
+%             vysvetlenie pozri cs_CZ
+
+% spracovanie:
+%%    localedef -i <tento-soubor> -f ISO-8859-2 sk_SK
+
+%% Do súboru /usr/share/locale/locale.alias je vhodné dopísať nasledovné aliasy:
+%% sk	  sk_SK.ISO-8859-2
+%% slovak sk_SK.ISO-8859-2
+
+% Definícia typov znakov
+
+LC_IDENTIFICATION
+title      "Slovak locale for Slovak"
+source     ""
+address    "Narcisov<U00E1> 56, SK-821 01 Bratislava, Slovak Republic"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Slovak"
+territory  "Slovakia"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+% Triedenie
+
+LC_COLLATE
+copy "cs_CZ"
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1aA<U00E1><U00C1>yY]"
+noexpr  "^[-0nN]"
+yesstr  "<U00E1>no"
+nostr   "nie"
+END LC_MESSAGES
+
+%% LC_MONETARY -- peniaze
+%% -------------------------------------------------
+
+LC_MONETARY
+
+int_curr_symbol		"EUR "
+currency_symbol		"<U20AC>"
+mon_decimal_point	","
+mon_thousands_sep	"<U202F>"
+mon_grouping      	3;3
+positive_sign		""
+negative_sign		"-"
+int_frac_digits		2
+frac_digits		2
+p_cs_precedes		0
+p_sep_by_space		1
+n_cs_precedes		0
+n_sep_by_space		1
+p_sign_posn		1
+n_sign_posn		1
+
+END LC_MONETARY
+
+%% Čísla
+%% --------------
+
+LC_NUMERIC
+
+decimal_point		","
+thousands_sep		"<U202F>"
+grouping		3;3
+
+END LC_NUMERIC
+
+%% Čas
+
+LC_TIME
+
+
+abday		"Ne";/
+		"Po";/
+		"Ut";/
+		"St";/
+		"<U0160>t";/
+		"Pi";/
+		"So"
+
+day		"Nede<U013E>a";/
+		"Pondelok";/
+		"Utorok";/
+		"Streda";/
+		"<U0160>tvrtok";/
+		"Piatok";/
+		"Sobota"
+
+mon		"janu<U00E1>r";/
+		"febru<U00E1>r";/
+		"marec";/
+		"apr<U00ED>l";/
+		"m<U00E1>j";/
+		"j<U00FA>n";/
+		"j<U00FA>l";/
+		"august";/
+		"september";/
+		"okt<U00F3>ber";/
+		"november";/
+		"december"
+
+% Hm - máme zaužívané skratky pre mesiace ?
+
+abmon		"jan";/
+		"feb";/
+		"mar";/
+		"apr";/
+		"m<U00E1>j";/
+		"j<U00FA>n";/
+		"j<U00FA>l";/
+		"aug";/
+		"sep";/
+		"okt";/
+		"nov";/
+		"dec"
+
+d_t_fmt		"%a<U00A0>%e.<U00A0>%B<U00A0>%Y,<U00A0>%H:%M:%S"
+date_fmt		"%a<U00A0>%e.<U00A0>%B<U00A0>%Y,<U00A0>%H:%M:%S<U00A0>%Z"
+
+d_fmt 		"%d.%m.%Y"
+
+t_fmt		"%H:%M:%S"
+
+t_fmt_ampm	""
+
+am_pm   	"";""
+
+week		7;19971130;4
+first_weekday	2
+
+END LC_TIME
+
+%% END OF LOCALIZATION FILE for sk_SK.ISO-8859-2
+%% Koniec lokalizačného súboru pre slovenské prostredie
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "421"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Slovensko"
+country_ab2 "SK"
+country_ab3 "SVK"
+country_num 703
+country_car    "SK"
+lang_name   "sloven<U010D>ina"
+lang_ab      "sk"
+lang_term    "slk"
+lang_lib    "slo"
+END LC_ADDRESS

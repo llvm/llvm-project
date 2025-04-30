@@ -1,0 +1,23 @@
+libc {
+  GLIBC_2.6 {
+    # Changed PTHREAD_STACK_MIN.
+    pthread_attr_setstack;
+    pthread_attr_setstacksize;
+  }
+  GLIBC_PRIVATE {
+    __vdso_get_tbfreq;
+    __vdso_clock_gettime;
+    __vdso_clock_getres;
+    __vdso_getcpu;
+    __vdso_time;
+  }
+}
+libm {
+  GLIBC_2.19 {
+  }
+}
+libpthread {
+  GLIBC_2.6 {
+    __libpthread_version_placeholder;
+  }
+}

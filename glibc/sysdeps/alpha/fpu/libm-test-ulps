@@ -1,0 +1,1419 @@
+# Begin of automatic generation
+
+# Maximal error of functions:
+Function: "acos":
+float: 1
+ldouble: 1
+
+Function: "acos_downward":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "acos_towardzero":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "acos_upward":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "acosh":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "acosh_downward":
+double: 2
+float: 2
+ldouble: 3
+
+Function: "acosh_towardzero":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "acosh_upward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "asin":
+float: 1
+ldouble: 1
+
+Function: "asin_downward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "asin_towardzero":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "asin_upward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "asinh":
+double: 2
+float: 2
+ldouble: 3
+
+Function: "asinh_downward":
+double: 3
+float: 3
+ldouble: 4
+
+Function: "asinh_towardzero":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "asinh_upward":
+double: 3
+float: 3
+ldouble: 4
+
+Function: "atan":
+float: 1
+ldouble: 1
+
+Function: "atan2":
+float: 1
+ldouble: 1
+
+Function: "atan2_downward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: "atan2_towardzero":
+double: 1
+float: 2
+ldouble: 3
+
+Function: "atan2_upward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: "atan_downward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: "atan_towardzero":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "atan_upward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: "atanh":
+double: 2
+float: 2
+ldouble: 3
+
+Function: "atanh_downward":
+double: 3
+float: 3
+ldouble: 4
+
+Function: "atanh_towardzero":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "atanh_upward":
+double: 3
+float: 3
+ldouble: 4
+
+Function: "cabs":
+double: 1
+ldouble: 1
+
+Function: "cabs_downward":
+double: 1
+ldouble: 1
+
+Function: "cabs_towardzero":
+double: 1
+ldouble: 1
+
+Function: "cabs_upward":
+double: 1
+ldouble: 1
+
+Function: Real part of "cacos":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "cacos":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Real part of "cacos_downward":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "cacos_downward":
+double: 5
+float: 3
+ldouble: 6
+
+Function: Real part of "cacos_towardzero":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "cacos_towardzero":
+double: 5
+float: 3
+ldouble: 5
+
+Function: Real part of "cacos_upward":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "cacos_upward":
+double: 5
+float: 7
+ldouble: 7
+
+Function: Real part of "cacosh":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "cacosh":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "cacosh_downward":
+double: 5
+float: 3
+ldouble: 5
+
+Function: Imaginary part of "cacosh_downward":
+double: 3
+float: 3
+ldouble: 4
+
+Function: Real part of "cacosh_towardzero":
+double: 5
+float: 3
+ldouble: 5
+
+Function: Imaginary part of "cacosh_towardzero":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Real part of "cacosh_upward":
+double: 4
+float: 4
+ldouble: 6
+
+Function: Imaginary part of "cacosh_upward":
+double: 3
+float: 2
+ldouble: 4
+
+Function: "carg":
+float: 1
+ldouble: 2
+
+Function: "carg_downward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: "carg_towardzero":
+double: 1
+float: 2
+ldouble: 3
+
+Function: "carg_upward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "casin":
+double: 1
+float: 1
+ldouble: 2
+
+Function: Imaginary part of "casin":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Real part of "casin_downward":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "casin_downward":
+double: 5
+float: 3
+ldouble: 6
+
+Function: Real part of "casin_towardzero":
+double: 3
+float: 1
+ldouble: 3
+
+Function: Imaginary part of "casin_towardzero":
+double: 5
+float: 3
+ldouble: 5
+
+Function: Real part of "casin_upward":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "casin_upward":
+double: 5
+float: 7
+ldouble: 7
+
+Function: Real part of "casinh":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "casinh":
+double: 1
+float: 1
+ldouble: 2
+
+Function: Real part of "casinh_downward":
+double: 5
+float: 3
+ldouble: 6
+
+Function: Imaginary part of "casinh_downward":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Real part of "casinh_towardzero":
+double: 5
+float: 3
+ldouble: 5
+
+Function: Imaginary part of "casinh_towardzero":
+double: 3
+float: 1
+ldouble: 3
+
+Function: Real part of "casinh_upward":
+double: 5
+float: 7
+ldouble: 7
+
+Function: Imaginary part of "casinh_upward":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Real part of "catan":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Imaginary part of "catan":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Real part of "catan_downward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "catan_downward":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Real part of "catan_towardzero":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "catan_towardzero":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Real part of "catan_upward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: Imaginary part of "catan_upward":
+double: 3
+float: 3
+ldouble: 3
+
+Function: Real part of "catanh":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Imaginary part of "catanh":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Real part of "catanh_downward":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "catanh_downward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "catanh_towardzero":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "catanh_towardzero":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "catanh_upward":
+double: 4
+float: 4
+ldouble: 4
+
+Function: Imaginary part of "catanh_upward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "cbrt":
+double: 4
+float: 1
+ldouble: 1
+
+Function: "cbrt_downward":
+double: 4
+float: 1
+ldouble: 1
+
+Function: "cbrt_towardzero":
+double: 3
+float: 1
+ldouble: 1
+
+Function: "cbrt_upward":
+double: 5
+float: 1
+ldouble: 1
+
+Function: Real part of "ccos":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Imaginary part of "ccos":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Real part of "ccos_downward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: Imaginary part of "ccos_downward":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "ccos_towardzero":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "ccos_towardzero":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "ccos_upward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "ccos_upward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Real part of "ccosh":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Imaginary part of "ccosh":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Real part of "ccosh_downward":
+double: 2
+float: 3
+ldouble: 2
+
+Function: Imaginary part of "ccosh_downward":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "ccosh_towardzero":
+double: 2
+float: 3
+ldouble: 2
+
+Function: Imaginary part of "ccosh_towardzero":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "ccosh_upward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "ccosh_upward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Real part of "cexp":
+double: 2
+float: 1
+ldouble: 1
+
+Function: Imaginary part of "cexp":
+double: 1
+float: 2
+ldouble: 1
+
+Function: Real part of "cexp_downward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "cexp_downward":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "cexp_towardzero":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "cexp_towardzero":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "cexp_upward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "cexp_upward":
+double: 3
+float: 2
+ldouble: 3
+
+Function: Real part of "clog":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Imaginary part of "clog":
+float: 1
+ldouble: 1
+
+Function: Real part of "clog10":
+double: 3
+float: 4
+ldouble: 2
+
+Function: Imaginary part of "clog10":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Real part of "clog10_downward":
+double: 5
+float: 5
+ldouble: 3
+
+Function: Imaginary part of "clog10_downward":
+double: 2
+float: 4
+ldouble: 3
+
+Function: Real part of "clog10_towardzero":
+double: 5
+float: 5
+ldouble: 4
+
+Function: Imaginary part of "clog10_towardzero":
+double: 2
+float: 4
+ldouble: 3
+
+Function: Real part of "clog10_upward":
+double: 6
+float: 5
+ldouble: 4
+
+Function: Imaginary part of "clog10_upward":
+double: 2
+float: 4
+ldouble: 3
+
+Function: Real part of "clog_downward":
+double: 4
+float: 3
+ldouble: 3
+
+Function: Imaginary part of "clog_downward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "clog_towardzero":
+double: 4
+float: 4
+ldouble: 3
+
+Function: Imaginary part of "clog_towardzero":
+double: 1
+float: 3
+ldouble: 2
+
+Function: Real part of "clog_upward":
+double: 4
+float: 3
+ldouble: 4
+
+Function: Imaginary part of "clog_upward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: "cos":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "cos_downward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: "cos_towardzero":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "cos_upward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: "cosh":
+double: 2
+float: 2
+ldouble: 1
+
+Function: "cosh_downward":
+double: 3
+float: 1
+ldouble: 2
+
+Function: "cosh_towardzero":
+double: 3
+float: 1
+ldouble: 2
+
+Function: "cosh_upward":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Real part of "cpow":
+double: 2
+float: 5
+ldouble: 4
+
+Function: Imaginary part of "cpow":
+float: 2
+ldouble: 1
+
+Function: Real part of "cpow_downward":
+double: 5
+float: 8
+ldouble: 6
+
+Function: Imaginary part of "cpow_downward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "cpow_towardzero":
+double: 5
+float: 8
+ldouble: 6
+
+Function: Imaginary part of "cpow_towardzero":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "cpow_upward":
+double: 4
+float: 1
+ldouble: 3
+
+Function: Imaginary part of "cpow_upward":
+double: 1
+float: 2
+ldouble: 2
+
+Function: Real part of "csin":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Imaginary part of "csin":
+ldouble: 1
+
+Function: Real part of "csin_downward":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Imaginary part of "csin_downward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: Real part of "csin_towardzero":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Imaginary part of "csin_towardzero":
+double: 1
+float: 1
+ldouble: 2
+
+Function: Real part of "csin_upward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "csin_upward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: Real part of "csinh":
+float: 1
+ldouble: 1
+
+Function: Imaginary part of "csinh":
+double: 1
+float: 1
+ldouble: 1
+
+Function: Real part of "csinh_downward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "csinh_downward":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "csinh_towardzero":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "csinh_towardzero":
+double: 3
+float: 3
+ldouble: 2
+
+Function: Real part of "csinh_upward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "csinh_upward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Real part of "csqrt":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Imaginary part of "csqrt":
+double: 2
+float: 2
+ldouble: 2
+
+Function: Real part of "csqrt_downward":
+double: 5
+float: 4
+ldouble: 4
+
+Function: Imaginary part of "csqrt_downward":
+double: 4
+float: 3
+ldouble: 3
+
+Function: Real part of "csqrt_towardzero":
+double: 4
+float: 3
+ldouble: 3
+
+Function: Imaginary part of "csqrt_towardzero":
+double: 4
+float: 3
+ldouble: 3
+
+Function: Real part of "csqrt_upward":
+double: 5
+float: 4
+ldouble: 4
+
+Function: Imaginary part of "csqrt_upward":
+double: 3
+float: 3
+ldouble: 3
+
+Function: Real part of "ctan":
+double: 1
+float: 1
+ldouble: 3
+
+Function: Imaginary part of "ctan":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Real part of "ctan_downward":
+double: 6
+float: 5
+ldouble: 4
+
+Function: Imaginary part of "ctan_downward":
+double: 2
+float: 2
+ldouble: 5
+
+Function: Real part of "ctan_towardzero":
+double: 5
+float: 3
+ldouble: 4
+
+Function: Imaginary part of "ctan_towardzero":
+double: 2
+float: 2
+ldouble: 5
+
+Function: Real part of "ctan_upward":
+double: 2
+float: 4
+ldouble: 5
+
+Function: Imaginary part of "ctan_upward":
+double: 2
+float: 3
+ldouble: 5
+
+Function: Real part of "ctanh":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Imaginary part of "ctanh":
+double: 2
+float: 2
+ldouble: 3
+
+Function: Real part of "ctanh_downward":
+double: 4
+float: 2
+ldouble: 5
+
+Function: Imaginary part of "ctanh_downward":
+double: 6
+float: 5
+ldouble: 4
+
+Function: Real part of "ctanh_towardzero":
+double: 2
+float: 2
+ldouble: 5
+
+Function: Imaginary part of "ctanh_towardzero":
+double: 5
+float: 3
+ldouble: 3
+
+Function: Real part of "ctanh_upward":
+double: 2
+float: 3
+ldouble: 5
+
+Function: Imaginary part of "ctanh_upward":
+double: 2
+float: 3
+ldouble: 5
+
+Function: "erf":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "erf_downward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "erf_towardzero":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "erf_upward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "erfc":
+double: 5
+float: 3
+ldouble: 2
+
+Function: "erfc_downward":
+double: 5
+float: 6
+ldouble: 5
+
+Function: "erfc_towardzero":
+double: 3
+float: 4
+ldouble: 4
+
+Function: "erfc_upward":
+double: 5
+float: 6
+ldouble: 5
+
+Function: "exp":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "exp10":
+double: 2
+float: 1
+ldouble: 2
+
+Function: "exp10_downward":
+double: 3
+float: 1
+ldouble: 3
+
+Function: "exp10_towardzero":
+double: 3
+float: 1
+ldouble: 3
+
+Function: "exp10_upward":
+double: 2
+float: 1
+ldouble: 3
+
+Function: "exp2":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "exp2_downward":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "exp2_towardzero":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "exp2_upward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "exp_downward":
+double: 1
+float: 1
+
+Function: "exp_towardzero":
+double: 1
+float: 1
+
+Function: "exp_upward":
+double: 1
+float: 1
+
+Function: "expm1":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "expm1_downward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "expm1_towardzero":
+double: 1
+float: 2
+ldouble: 4
+
+Function: "expm1_upward":
+double: 1
+float: 1
+ldouble: 3
+
+Function: "gamma":
+double: 4
+float: 7
+ldouble: 5
+
+Function: "gamma_downward":
+double: 5
+float: 7
+ldouble: 8
+
+Function: "gamma_towardzero":
+double: 5
+float: 6
+ldouble: 5
+
+Function: "gamma_upward":
+double: 5
+float: 6
+ldouble: 8
+
+Function: "hypot":
+double: 1
+ldouble: 1
+
+Function: "hypot_downward":
+double: 1
+ldouble: 1
+
+Function: "hypot_towardzero":
+double: 1
+ldouble: 1
+
+Function: "hypot_upward":
+double: 1
+ldouble: 1
+
+Function: "j0":
+double: 2
+float: 8
+ldouble: 2
+
+Function: "j0_downward":
+double: 2
+float: 4
+ldouble: 4
+
+Function: "j0_towardzero":
+double: 4
+float: 5
+ldouble: 4
+
+Function: "j0_upward":
+double: 4
+float: 5
+ldouble: 5
+
+Function: "j1":
+double: 2
+float: 9
+ldouble: 4
+
+Function: "j1_downward":
+double: 3
+float: 5
+ldouble: 4
+
+Function: "j1_towardzero":
+double: 3
+float: 2
+ldouble: 4
+
+Function: "j1_upward":
+double: 3
+float: 5
+ldouble: 3
+
+Function: "jn":
+double: 4
+float: 4
+ldouble: 7
+
+Function: "jn_downward":
+double: 5
+float: 5
+ldouble: 8
+
+Function: "jn_towardzero":
+double: 5
+float: 5
+ldouble: 8
+
+Function: "jn_upward":
+double: 5
+float: 5
+ldouble: 7
+
+Function: "lgamma":
+double: 4
+float: 7
+ldouble: 5
+
+Function: "lgamma_downward":
+double: 5
+float: 7
+ldouble: 8
+
+Function: "lgamma_towardzero":
+double: 5
+float: 6
+ldouble: 5
+
+Function: "lgamma_upward":
+double: 5
+float: 6
+ldouble: 8
+
+Function: "log":
+float: 1
+ldouble: 1
+
+Function: "log10":
+double: 2
+float: 2
+ldouble: 1
+
+Function: "log10_downward":
+double: 2
+float: 3
+ldouble: 1
+
+Function: "log10_towardzero":
+double: 2
+float: 2
+ldouble: 1
+
+Function: "log10_upward":
+double: 2
+float: 2
+ldouble: 1
+
+Function: "log1p":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "log1p_downward":
+double: 2
+float: 2
+ldouble: 3
+
+Function: "log1p_towardzero":
+double: 2
+float: 2
+ldouble: 3
+
+Function: "log1p_upward":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "log2":
+double: 2
+float: 1
+ldouble: 2
+
+Function: "log2_downward":
+double: 3
+float: 3
+ldouble: 3
+
+Function: "log2_towardzero":
+double: 2
+float: 2
+ldouble: 1
+
+Function: "log2_upward":
+double: 3
+float: 3
+ldouble: 1
+
+Function: "log_downward":
+float: 2
+ldouble: 1
+
+Function: "log_towardzero":
+float: 2
+ldouble: 2
+
+Function: "log_upward":
+double: 1
+float: 2
+ldouble: 1
+
+Function: "pow":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "pow_downward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "pow_towardzero":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "pow_upward":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "sin":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "sin_downward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: "sin_towardzero":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "sin_upward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: "sincos":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "sincos_downward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: "sincos_towardzero":
+double: 1
+float: 1
+ldouble: 2
+
+Function: "sincos_upward":
+double: 1
+float: 2
+ldouble: 3
+
+Function: "sinh":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "sinh_downward":
+double: 3
+float: 3
+ldouble: 3
+
+Function: "sinh_towardzero":
+double: 3
+float: 2
+ldouble: 3
+
+Function: "sinh_upward":
+double: 3
+float: 3
+ldouble: 4
+
+Function: "tan":
+float: 1
+ldouble: 1
+
+Function: "tan_downward":
+double: 1
+float: 2
+ldouble: 1
+
+Function: "tan_towardzero":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "tan_upward":
+double: 1
+float: 1
+ldouble: 1
+
+Function: "tanh":
+double: 2
+float: 2
+ldouble: 2
+
+Function: "tanh_downward":
+double: 3
+float: 3
+ldouble: 4
+
+Function: "tanh_towardzero":
+double: 2
+float: 2
+ldouble: 3
+
+Function: "tanh_upward":
+double: 3
+float: 3
+ldouble: 3
+
+Function: "tgamma":
+double: 9
+float: 8
+ldouble: 4
+
+Function: "tgamma_downward":
+double: 8
+float: 7
+ldouble: 5
+
+Function: "tgamma_towardzero":
+double: 9
+float: 7
+ldouble: 5
+
+Function: "tgamma_upward":
+double: 9
+float: 8
+ldouble: 4
+
+Function: "y0":
+double: 3
+float: 8
+ldouble: 3
+
+Function: "y0_downward":
+double: 3
+float: 6
+ldouble: 4
+
+Function: "y0_towardzero":
+double: 3
+float: 3
+ldouble: 3
+
+Function: "y0_upward":
+double: 3
+float: 6
+ldouble: 3
+
+Function: "y1":
+double: 3
+float: 2
+ldouble: 2
+
+Function: "y1_downward":
+double: 3
+float: 2
+ldouble: 4
+
+Function: "y1_towardzero":
+double: 3
+float: 2
+ldouble: 2
+
+Function: "y1_upward":
+double: 7
+float: 2
+ldouble: 5
+
+Function: "yn":
+double: 3
+float: 3
+ldouble: 5
+
+Function: "yn_downward":
+double: 3
+float: 4
+ldouble: 5
+
+Function: "yn_towardzero":
+double: 3
+float: 3
+ldouble: 5
+
+Function: "yn_upward":
+double: 4
+float: 5
+ldouble: 5
+
+# end of automatic generation

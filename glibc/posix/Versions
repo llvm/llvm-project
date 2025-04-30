@@ -1,0 +1,164 @@
+libc {
+  GLIBC_2.0 {
+    # functions with special/multiple interfaces
+    __bsd_getpgrp; __getpgid; __setpgid;
+
+    # functions with required interface outside normal name space
+    _exit;
+
+    # functions used in other libraries
+    __sched_get_priority_max; __sched_get_priority_min;
+    __sched_getparam; __sched_getscheduler; __sched_setscheduler;
+    __sched_yield; __fork; __getpid; __wait;
+
+    # functions used by libstdc++ 2.7.2
+    __waitpid;
+
+    # global variables
+    __environ; _environ;
+
+    # variables in normal name space
+    environ; optarg; opterr; optind; optopt;
+    re_max_failures; re_syntax_options;
+
+    # a*
+    alarm;
+
+    # c*
+    confstr;
+
+    # e*
+    execl; execle; execlp; execv; execve; execvp; fexecve;
+
+    # f*
+    fnmatch; fork; fpathconf; freeaddrinfo;
+
+    # g*
+    getaddrinfo; getdtablesize; getegid; geteuid; getgid; getopt; getopt_long;
+    getopt_long_only; getpgid; getpgrp; getpid; getppid; getsid; getuid; glob;
+    glob_pattern_p; globfree; group_member;
+
+    # n*
+    nanosleep;
+
+    # p*
+    pathconf; pause; pselect;
+
+    # r*
+    re_comp; re_compile_fastmap; re_compile_pattern; re_exec; re_match;
+    re_match_2; re_search; re_search_2; re_set_registers; re_set_syntax;
+    regcomp; regerror; regexec; regfree;
+
+    # s*
+    sched_get_priority_max; sched_get_priority_min; sched_getparam;
+    sched_getscheduler; sched_rr_get_interval; sched_setparam;
+    sched_setscheduler; sched_yield; setegid; seteuid; setgid;
+    setpgid; setpgrp; setsid; setuid; sleep; sysconf;
+
+    # t*
+    times;
+
+    # u*
+    uname;
+
+    # v*
+    vfork;
+
+    # w*
+    wait; wait3; wait4; waitpid;
+  }
+  GLIBC_2.1 {
+    # functions used in other libraries
+    __pread64; __pwrite64;
+
+    # g*
+    gai_strerror; getnameinfo; glob64; globfree64;
+
+    # p*
+    pread; pread64; pwrite; pwrite64;
+
+    # w*
+    waitid; wordexp; wordfree;
+  }
+  GLIBC_2.1 {
+    # Compat symbols for the obsolete, unimplemented XSI streams extension.
+    fattach; fdetach; getmsg; getpmsg; isastream; putmsg; putpmsg;
+  }
+  GLIBC_2.1.2 {
+    # functions used in other libraries
+    __vfork;
+  }
+  GLIBC_2.2 {
+    # p*
+    posix_spawn_file_actions_init; posix_spawn_file_actions_destroy;
+    posix_spawn_file_actions_addclose; posix_spawn_file_actions_addopen;
+    posix_spawn_file_actions_adddup2;
+    posix_spawnattr_init; posix_spawnattr_destroy;
+    posix_spawnattr_getsigdefault; posix_spawnattr_setsigdefault;
+    posix_spawnattr_getflags; posix_spawnattr_setflags;
+    posix_spawnattr_getpgroup; posix_spawnattr_setpgroup;
+    posix_spawnattr_setsigmask; posix_spawnattr_getsigmask;
+    posix_spawn; posix_spawnp; posix_spawnattr_getschedpolicy;
+    posix_spawnattr_setschedpolicy; posix_spawnattr_getschedparam;
+    posix_spawnattr_setschedparam;
+
+    # Used in macros.
+    __sysconf;
+  }
+  GLIBC_2.2.3 {
+    # Extended Interface.
+    fnmatch;
+  }
+  GLIBC_2.2.6 {
+    # For syscall wrapper
+    __nanosleep;
+  }
+  GLIBC_2.3.2 {
+    # Note that these symbols appear in sysdeps/unix/sysv/linux/Versions
+    # under GLIBC_2.0; the first instance in the script is taken as the
+    # default, so linux configurations put them in GLIBC_2.0 while other
+    # configuration put them in GLIBC_2.3.2.
+    getresgid; getresuid; setresgid; setresuid;
+  }
+  GLIBC_2.3.3 {
+    sched_getaffinity; sched_setaffinity;
+  }
+  GLIBC_2.3.4 {
+    regexec;
+  }
+  GLIBC_2.6 {
+    __sched_cpucount;
+  }
+  GLIBC_2.7 {
+    __sched_cpualloc; __sched_cpufree;
+  }
+  GLIBC_2.10 {
+    __posix_getopt;
+  }
+  GLIBC_2.11 {
+    execvpe;
+  }
+  GLIBC_2.15 {
+    posix_spawn;
+    posix_spawnp;
+  }
+  GLIBC_2.27 {
+    glob; glob64;
+  }
+  GLIBC_2.29 {
+    posix_spawn_file_actions_addchdir_np;
+    posix_spawn_file_actions_addfchdir_np;
+  }
+  GLIBC_2.30 {
+  }
+  GLIBC_2.34 {
+    _Fork;
+    execveat;
+    posix_spawn_file_actions_addclosefrom_np;
+  }
+  GLIBC_PRIVATE {
+    __libc_fork; __libc_pread; __libc_pwrite;
+    __nanosleep_nocancel; __pause_nocancel;
+    __shm_get_name;
+  }
+}

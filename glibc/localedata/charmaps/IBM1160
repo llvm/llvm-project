@@ -1,0 +1,263 @@
+<code_set_name> IBM1160
+<comment_char> %
+<escape_char> /
+
+% alias CP1160
+CHARMAP
+<U0000>     /x00         <control>
+<U0001>     /x01         <control>
+<U0002>     /x02         <control>
+<U0003>     /x03         <control>
+<U009C>     /x04         <control>
+<U0009>     /x05         <control>
+<U0086>     /x06         <control>
+<U007F>     /x07         <control>
+<U0097>     /x08         <control>
+<U008D>     /x09         <control>
+<U008E>     /x0a         <control>
+<U000B>     /x0b         <control>
+<U000C>     /x0c         <control>
+<U000D>     /x0d         <control>
+<U000E>     /x0e         <control>
+<U000F>     /x0f         <control>
+<U0010>     /x10         <control>
+<U0011>     /x11         <control>
+<U0012>     /x12         <control>
+<U0013>     /x13         <control>
+<U009D>     /x14         <control>
+<U0085>     /x15         <control>
+<U0008>     /x16         <control>
+<U0087>     /x17         <control>
+<U0018>     /x18         <control>
+<U0019>     /x19         <control>
+<U0092>     /x1a         <control>
+<U008F>     /x1b         <control>
+<U001C>     /x1c         <control>
+<U001D>     /x1d         <control>
+<U001E>     /x1e         <control>
+<U001F>     /x1f         <control>
+<U0080>     /x20         <control>
+<U0081>     /x21         <control>
+<U0082>     /x22         <control>
+<U0083>     /x23         <control>
+<U0084>     /x24         <control>
+<U000A>     /x25         <control>
+<U0017>     /x26         <control>
+<U001B>     /x27         <control>
+<U0088>     /x28         <control>
+<U0089>     /x29         <control>
+<U008A>     /x2a         <control>
+<U008B>     /x2b         <control>
+<U008C>     /x2c         <control>
+<U0005>     /x2d         <control>
+<U0006>     /x2e         <control>
+<U0007>     /x2f         <control>
+<U0090>     /x30         <control>
+<U0091>     /x31         <control>
+<U0016>     /x32         <control>
+<U0093>     /x33         <control>
+<U0094>     /x34         <control>
+<U0095>     /x35         <control>
+<U0096>     /x36         <control>
+<U0004>     /x37         <control>
+<U0098>     /x38         <control>
+<U0099>     /x39         <control>
+<U009A>     /x3a         <control>
+<U009B>     /x3b         <control>
+<U0014>     /x3c         <control>
+<U0015>     /x3d         <control>
+<U009E>     /x3e         <control>
+<U001A>     /x3f         <control>
+<U0020>     /x40         SPACE
+<U00A0>     /x41         NO-BREAK SPACE
+<U0E01>     /x42         THAI CHARACTER KO KAI
+<U0E02>     /x43         THAI CHARACTER KHO KHAI
+<U0E03>     /x44         THAI CHARACTER KHO KHUAT
+<U0E04>     /x45         THAI CHARACTER KHO KHWAI
+<U0E05>     /x46         THAI CHARACTER KHO KHON
+<U0E06>     /x47         THAI CHARACTER KHO RAKHANG
+<U0E07>     /x48         THAI CHARACTER NGO NGU
+<U005B>     /x49         LEFT SQUARE BRACKET
+<U00A2>     /x4a         CENT SIGN
+<U002E>     /x4b         FULL STOP
+<U003C>     /x4c         LESS-THAN SIGN
+<U0028>     /x4d         LEFT PARENTHESIS
+<U002B>     /x4e         PLUS SIGN
+<U007C>     /x4f         VERTICAL LINE
+<U0026>     /x50         AMPERSAND
+%IRREVERSIBLE%<U0E48>     /x51         THAI CHARACTER MAI EK
+<U0E08>     /x52         THAI CHARACTER CHO CHAN
+<U0E09>     /x53         THAI CHARACTER CHO CHING
+<U0E0A>     /x54         THAI CHARACTER CHO CHANG
+<U0E0B>     /x55         THAI CHARACTER SO SO
+<U0E0C>     /x56         THAI CHARACTER CHO CHOE
+<U0E0D>     /x57         THAI CHARACTER YO YING
+<U0E0E>     /x58         THAI CHARACTER DO CHADA
+<U005D>     /x59         RIGHT SQUARE BRACKET
+<U0021>     /x5a         EXCLAMATION MARK
+<U0024>     /x5b         DOLLAR SIGN
+<U002A>     /x5c         ASTERISK
+<U0029>     /x5d         RIGHT PARENTHESIS
+<U003B>     /x5e         SEMICOLON
+<U00AC>     /x5f         NOT SIGN
+<U002D>     /x60         HYPHEN-MINUS
+<U002F>     /x61         SOLIDUS
+<U0E0F>     /x62         THAI CHARACTER TO PATAK
+<U0E10>     /x63         THAI CHARACTER THO THAN
+<U0E11>     /x64         THAI CHARACTER THO NANGMONTHO
+<U0E12>     /x65         THAI CHARACTER THO PHUTHAO
+<U0E13>     /x66         THAI CHARACTER NO NEN
+<U0E14>     /x67         THAI CHARACTER DO DEK
+<U0E15>     /x68         THAI CHARACTER TO TAO
+<U005E>     /x69         CIRCUMFLEX ACCENT
+<U00A6>     /x6a         BROKEN BAR
+<U002C>     /x6b         COMMA
+<U0025>     /x6c         PERCENT SIGN
+<U005F>     /x6d         LOW LINE
+<U003E>     /x6e         GREATER-THAN SIGN
+<U003F>     /x6f         QUESTION MARK
+<U0E3F>     /x70         THAI CURRENCY SYMBOL BAHT
+<U0E4E>     /x71         THAI CHARACTER YAMAKKAN
+<U0E16>     /x72         THAI CHARACTER THO THUNG
+<U0E17>     /x73         THAI CHARACTER THO THAHAN
+<U0E18>     /x74         THAI CHARACTER THO THONG
+<U0E19>     /x75         THAI CHARACTER NO NU
+<U0E1A>     /x76         THAI CHARACTER BO BAIMAI
+<U0E1B>     /x77         THAI CHARACTER PO PLA
+<U0E1C>     /x78         THAI CHARACTER PHO PHUNG
+<U0060>     /x79         GRAVE ACCENT
+<U003A>     /x7a         COLON
+<U0023>     /x7b         NUMBER SIGN
+<U0040>     /x7c         COMMERCIAL AT
+<U0027>     /x7d         APOSTROPHE
+<U003D>     /x7e         EQUALS SIGN
+<U0022>     /x7f         QUOTATION MARK
+<U0E4F>     /x80         THAI CHARACTER FONGMAN
+<U0061>     /x81         LATIN SMALL LETTER A
+<U0062>     /x82         LATIN SMALL LETTER B
+<U0063>     /x83         LATIN SMALL LETTER C
+<U0064>     /x84         LATIN SMALL LETTER D
+<U0065>     /x85         LATIN SMALL LETTER E
+<U0066>     /x86         LATIN SMALL LETTER F
+<U0067>     /x87         LATIN SMALL LETTER G
+<U0068>     /x88         LATIN SMALL LETTER H
+<U0069>     /x89         LATIN SMALL LETTER I
+<U0E1D>     /x8a         THAI CHARACTER FO FA
+<U0E1E>     /x8b         THAI CHARACTER PHO PHAN
+<U0E1F>     /x8c         THAI CHARACTER FO FAN
+<U0E20>     /x8d         THAI CHARACTER PHO SAMPHAO
+<U0E21>     /x8e         THAI CHARACTER MO MA
+<U0E22>     /x8f         THAI CHARACTER YO YAK
+<U0E5A>     /x90         THAI CHARACTER ANGKHANKHU
+<U006A>     /x91         LATIN SMALL LETTER J
+<U006B>     /x92         LATIN SMALL LETTER K
+<U006C>     /x93         LATIN SMALL LETTER L
+<U006D>     /x94         LATIN SMALL LETTER M
+<U006E>     /x95         LATIN SMALL LETTER N
+<U006F>     /x96         LATIN SMALL LETTER O
+<U0070>     /x97         LATIN SMALL LETTER P
+<U0071>     /x98         LATIN SMALL LETTER Q
+<U0072>     /x99         LATIN SMALL LETTER R
+<U0E23>     /x9a         THAI CHARACTER RO RUA
+<U0E24>     /x9b         THAI CHARACTER RU
+<U0E25>     /x9c         THAI CHARACTER LO LING
+<U0E26>     /x9d         THAI CHARACTER LU
+<U0E27>     /x9e         THAI CHARACTER WO WAEN
+<U0E28>     /x9f         THAI CHARACTER SO SALA
+<U0E5B>     /xa0         THAI CHARACTER KHOMUT
+<U007E>     /xa1         TILDE
+<U0073>     /xa2         LATIN SMALL LETTER S
+<U0074>     /xa3         LATIN SMALL LETTER T
+<U0075>     /xa4         LATIN SMALL LETTER U
+<U0076>     /xa5         LATIN SMALL LETTER V
+<U0077>     /xa6         LATIN SMALL LETTER W
+<U0078>     /xa7         LATIN SMALL LETTER X
+<U0079>     /xa8         LATIN SMALL LETTER Y
+<U007A>     /xa9         LATIN SMALL LETTER Z
+<U0E29>     /xaa         THAI CHARACTER SO RUSI
+<U0E2A>     /xab         THAI CHARACTER SO SUA
+<U0E2B>     /xac         THAI CHARACTER HO HIP
+<U0E2C>     /xad         THAI CHARACTER LO CHULA
+<U0E2D>     /xae         THAI CHARACTER O ANG
+<U0E2E>     /xaf         THAI CHARACTER HO NOKHUK
+<U0E50>     /xb0         THAI DIGIT ZERO
+<U0E51>     /xb1         THAI DIGIT ONE
+<U0E52>     /xb2         THAI DIGIT TWO
+<U0E53>     /xb3         THAI DIGIT THREE
+<U0E54>     /xb4         THAI DIGIT FOUR
+<U0E55>     /xb5         THAI DIGIT FIVE
+<U0E56>     /xb6         THAI DIGIT SIX
+<U0E57>     /xb7         THAI DIGIT SEVEN
+<U0E58>     /xb8         THAI DIGIT EIGHT
+<U0E59>     /xb9         THAI DIGIT NINE
+<U0E2F>     /xba         THAI CHARACTER PAIYANNOI
+<U0E30>     /xbb         THAI CHARACTER SARA A
+<U0E31>     /xbc         THAI CHARACTER MAI HAN-AKAT
+<U0E32>     /xbd         THAI CHARACTER SARA AA
+<U0E33>     /xbe         THAI CHARACTER SARA AM
+<U0E34>     /xbf         THAI CHARACTER SARA I
+<U007B>     /xc0         LEFT CURLY BRACKET
+<U0041>     /xc1         LATIN CAPITAL LETTER A
+<U0042>     /xc2         LATIN CAPITAL LETTER B
+<U0043>     /xc3         LATIN CAPITAL LETTER C
+<U0044>     /xc4         LATIN CAPITAL LETTER D
+<U0045>     /xc5         LATIN CAPITAL LETTER E
+<U0046>     /xc6         LATIN CAPITAL LETTER F
+<U0047>     /xc7         LATIN CAPITAL LETTER G
+<U0048>     /xc8         LATIN CAPITAL LETTER H
+<U0049>     /xc9         LATIN CAPITAL LETTER I
+%IRREVERSIBLE%<U0E49>     /xca         THAI CHARACTER MAI THO
+<U0E35>     /xcb         THAI CHARACTER SARA II
+<U0E36>     /xcc         THAI CHARACTER SARA UE
+<U0E37>     /xcd         THAI CHARACTER SARA UEE
+<U0E38>     /xce         THAI CHARACTER SARA U
+<U0E39>     /xcf         THAI CHARACTER SARA UU
+<U007D>     /xd0         RIGHT CURLY BRACKET
+<U004A>     /xd1         LATIN CAPITAL LETTER J
+<U004B>     /xd2         LATIN CAPITAL LETTER K
+<U004C>     /xd3         LATIN CAPITAL LETTER L
+<U004D>     /xd4         LATIN CAPITAL LETTER M
+<U004E>     /xd5         LATIN CAPITAL LETTER N
+<U004F>     /xd6         LATIN CAPITAL LETTER O
+<U0050>     /xd7         LATIN CAPITAL LETTER P
+<U0051>     /xd8         LATIN CAPITAL LETTER Q
+<U0052>     /xd9         LATIN CAPITAL LETTER R
+<U0E3A>     /xda         THAI CHARACTER PHINTHU
+<U0E40>     /xdb         THAI CHARACTER SARA E
+<U0E41>     /xdc         THAI CHARACTER SARA AE
+<U0E42>     /xdd         THAI CHARACTER SARA O
+<U0E43>     /xde         THAI CHARACTER SARA AI MAIMUAN
+<U0E44>     /xdf         THAI CHARACTER SARA AI MAIMALAI
+<U005C>     /xe0         REVERSE SOLIDUS
+%IRREVERSIBLE%<U0E4A>     /xe1         THAI CHARACTER MAI TRI
+<U0053>     /xe2         LATIN CAPITAL LETTER S
+<U0054>     /xe3         LATIN CAPITAL LETTER T
+<U0055>     /xe4         LATIN CAPITAL LETTER U
+<U0056>     /xe5         LATIN CAPITAL LETTER V
+<U0057>     /xe6         LATIN CAPITAL LETTER W
+<U0058>     /xe7         LATIN CAPITAL LETTER X
+<U0059>     /xe8         LATIN CAPITAL LETTER Y
+<U005A>     /xe9         LATIN CAPITAL LETTER Z
+<U0E45>     /xea         THAI CHARACTER LAKKHANGYAO
+<U0E46>     /xeb         THAI CHARACTER MAIYAMOK
+<U0E47>     /xec         THAI CHARACTER MAITAIKHU
+<U0E48>     /xed         THAI CHARACTER MAI EK
+<U0E49>     /xee         THAI CHARACTER MAI THO
+<U0E4A>     /xef         THAI CHARACTER MAI TRI
+<U0030>     /xf0         DIGIT ZERO
+<U0031>     /xf1         DIGIT ONE
+<U0032>     /xf2         DIGIT TWO
+<U0033>     /xf3         DIGIT THREE
+<U0034>     /xf4         DIGIT FOUR
+<U0035>     /xf5         DIGIT FIVE
+<U0036>     /xf6         DIGIT SIX
+<U0037>     /xf7         DIGIT SEVEN
+<U0038>     /xf8         DIGIT EIGHT
+<U0039>     /xf9         DIGIT NINE
+<U0E4B>     /xfa         THAI CHARACTER MAI CHATTAWA
+<U0E4C>     /xfb         THAI CHARACTER THANTHAKHAT
+<U0E4D>     /xfc         THAI CHARACTER NIKHAHIT
+%IRREVERSIBLE%<U0E4B>     /xfd         THAI CHARACTER MAI CHATTAWA
+<U20AC>     /xfe         EURO SIGN
+<U009F>     /xff         <control>
+END CHARMAP

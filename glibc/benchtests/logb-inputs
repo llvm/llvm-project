@@ -1,0 +1,11 @@
+## args: double
+## ret: double
+## includes: math.h
+
+## name: subnormal
+0x0.0000000000001p-1022
+0x0.fffffffffffffp-1022
+
+## name: normal
+1.0
+1024.0

@@ -1,0 +1,174 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Nynorsk language locale for Norway.
+% Contributed by Kentaroh Noji <knoji@jp.ibm.com> and
+% Tetsuji Orita <orita@jp.ibm.com>.
+
+LC_IDENTIFICATION
+title      "Nynorsk language locale for Norway"
+source     "IBM Globalization Center of Competency, Yamato Software Laboratory"
+address    "1623-14, Shimotsuruma, Yamato-shi, Kanagawa-ken, 242-8502, Japan"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Norwegian Nynorsk"
+territory  "Norway"
+revision   "1.0"
+date       "2000-08-31"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "nb_NO"
+END LC_CTYPE
+
+LC_COLLATE
+copy "nb_NO"
+END LC_COLLATE
+
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+int_curr_symbol       "NOK "
+currency_symbol       "kr"
+mon_decimal_point     ","
+mon_thousands_sep     "<U202F>"
+mon_grouping          3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       2
+frac_digits           2
+p_cs_precedes         1
+p_sep_by_space        1
+n_cs_precedes         1
+n_sep_by_space        0
+p_sign_posn           1
+n_sign_posn           3
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+copy "nb_NO"
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+% Abbreviated weekday names (%a)
+abday       "su.";"m<U00E5>.";/
+            "ty.";"on.";/
+            "to.";"fr.";/
+            "la."
+%
+% Full weekday names (%A)
+day         "sundag ";/
+            "m<U00E5>ndag ";/
+            "tysdag ";/
+            "onsdag ";/
+            "torsdag ";/
+            "fredag ";/
+            "laurdag "
+%
+% Abbreviated month names (%b)
+abmon       "jan.";"feb.";/
+            "mars";"april";/
+            "mai";"juni";/
+            "juli";"aug.";/
+            "sep.";"okt.";/
+            "nov.";"des."
+%
+% Full month names (%B)
+mon         "januar";/
+            "februar";/
+            "mars";/
+            "april";/
+            "mai";/
+            "juni";/
+            "juli";/
+            "august";/
+            "september";/
+            "oktober";/
+            "november";/
+            "desember"
+
+% usual date representation
+d_t_fmt "%a %d. %b %Y kl. %H.%M %z"
+d_fmt  "%d. %b %Y"
+t_fmt        "kl. %H.%M %z"
+am_pm       "";""
+t_fmt_ampm  ""
+date_fmt       "%a %d. %b %H:%M:%S %z %Y"
+
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1JjYy]"
+noexpr  "^[-0Nn]"
+yesstr  "ja"
+nostr   "nei"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "nb_NO"
+END LC_PAPER
+
+
+LC_NAME
+copy "nb_NO"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Noreg"
+country_ab2 "NO"
+country_ab3 "NOR"
+country_num 578
+country_car "N"
+lang_name    "nynorsk"
+lang_ab      "nn"
+lang_term    "nno"
+lang_lib    "nno"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+copy "nb_NO"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "nb_NO"
+END LC_MEASUREMENT

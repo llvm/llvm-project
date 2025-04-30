@@ -1,0 +1,526 @@
+
+# ac_fn_c_check_header_preproc LINENO HEADER VAR
+# ----------------------------------------------
+# Tests whether HEADER is present, setting the cache variable VAR accordingly.
+ac_fn_c_check_header_preproc ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <$2>
+_ACEOF
+if ac_fn_c_try_cpp "$LINENO"; then :
+  eval "$3=yes"
+else
+  eval "$3=no"
+fi
+rm -f conftest.err conftest.i conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_c_check_header_preproc
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+
+if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}mig", so it can be a program name with args.
+set dummy ${ac_tool_prefix}mig; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_MIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$MIG"; then
+  ac_cv_prog_MIG="$MIG" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_MIG="${ac_tool_prefix}mig"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+MIG=$ac_cv_prog_MIG
+if test -n "$MIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MIG" >&5
+$as_echo "$MIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_MIG"; then
+  ac_ct_MIG=$MIG
+  # Extract the first word of "mig", so it can be a program name with args.
+set dummy mig; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ac_ct_MIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_MIG"; then
+  ac_cv_prog_ac_ct_MIG="$ac_ct_MIG" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_MIG="mig"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_MIG=$ac_cv_prog_ac_ct_MIG
+if test -n "$ac_ct_MIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_MIG" >&5
+$as_echo "$ac_ct_MIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_ct_MIG" = x; then
+    MIG="MISSING"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    MIG=$ac_ct_MIG
+  fi
+else
+  MIG="$ac_cv_prog_MIG"
+fi
+
+if test "x$MIG" = xMISSING; then
+  as_fn_error $? "cannot find required build tool mig" "$LINENO" 5
+fi
+config_vars="$config_vars
+MIG = $MIG"
+
+if test -n "$sysheaders"; then
+  OLD_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$CPPFLAGS $SYSINCLUDES"
+fi
+
+### Sanity checks for Mach header installation
+
+
+ac_fn_c_check_header_preproc "$LINENO" "mach/mach_types.h" "ac_cv_header_mach_mach_types_h"
+if test "x$ac_cv_header_mach_mach_types_h" = xyes; then :
+
+else
+  as_fn_error $? "cannot find Mach headers" "$LINENO" 5
+fi
+
+
+ac_fn_c_check_header_preproc "$LINENO" "mach/mach_types.defs" "ac_cv_header_mach_mach_types_defs"
+if test "x$ac_cv_header_mach_mach_types_defs" = xyes; then :
+
+else
+  as_fn_error $? "cannot find Mach .defs files" "$LINENO" 5
+fi
+
+
+
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for task_t in mach/mach_types.h" >&5
+$as_echo_n "checking for task_t in mach/mach_types.h... " >&6; }
+if ${libc_cv_mach_task_t+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <mach/mach_types.h>
+int
+main ()
+{
+extern task_t foo;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_mach_task_t=task_t
+else
+  libc_cv_mach_task_t=task_port_t
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mach_task_t" >&5
+$as_echo "$libc_cv_mach_task_t" >&6; }
+if test $libc_cv_mach_task_t != task_t; then
+  DEFINES="$DEFINES -Dtask_t=task_port_t"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for thread_t in mach/mach_types.h" >&5
+$as_echo_n "checking for thread_t in mach/mach_types.h... " >&6; }
+if ${libc_cv_mach_thread_t+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <mach/mach_types.h>
+int
+main ()
+{
+extern thread_t foo;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_mach_thread_t=thread_t
+else
+  libc_cv_mach_thread_t=thread_port_t
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mach_thread_t" >&5
+$as_echo "$libc_cv_mach_thread_t" >&6; }
+if test $libc_cv_mach_thread_t != thread_t; then
+  DEFINES="$DEFINES -Dthread_t=thread_port_t"
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for creation_time in task_basic_info" >&5
+$as_echo_n "checking for creation_time in task_basic_info... " >&6; }
+if ${libc_cv_mach_task_creation_time+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <mach/task_info.h>
+int
+main ()
+{
+
+extern struct task_basic_info *i;
+long s = i->creation_time.seconds;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_mach_task_creation_time=yes
+else
+  libc_cv_mach_task_creation_time=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mach_task_creation_time" >&5
+$as_echo "$libc_cv_mach_task_creation_time" >&6; }
+if test $libc_cv_mach_task_creation_time = no; then
+  as_fn_error $? "you need Mach headers supporting task_info.creation_time" "$LINENO" 5
+fi
+
+mach_interface_list=
+for ifc in mach mach4 gnumach \
+	   clock clock_priv host_priv host_security ledger lock_set \
+	   processor processor_set task task_notify thread_act vm_map \
+	   memory_object memory_object_default default_pager \
+	   i386/mach_i386 \
+	   ; do
+  as_ac_Header=`$as_echo "ac_cv_header_mach/${ifc}.defs" | $as_tr_sh`
+ac_fn_c_check_header_preproc "$LINENO" "mach/${ifc}.defs" "$as_ac_Header"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+    mach_interface_list="$mach_interface_list $ifc"
+fi
+
+
+done
+if test "x$mach_interface_list" = x; then
+  as_fn_error $? "what manner of Mach is this?" "$LINENO" 5
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for grep that handles long lines and -e" >&5
+$as_echo_n "checking for grep that handles long lines and -e... " >&6; }
+if ${ac_cv_path_GREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -z "$GREP"; then
+  ac_path_GREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in grep ggrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_GREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_GREP" || continue
+# Check for GNU ac_path_GREP and select it if it is found.
+  # Check for GNU $ac_path_GREP
+case `"$ac_path_GREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_GREP="$ac_path_GREP" ac_path_GREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'GREP' >> "conftest.nl"
+    "$ac_path_GREP" -e 'GREP$' -e '-(cannot match)-' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_GREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_GREP="$ac_path_GREP"
+      ac_path_GREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_GREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_GREP"; then
+    as_fn_error $? "no acceptable grep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_GREP=$GREP
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_GREP" >&5
+$as_echo "$ac_cv_path_GREP" >&6; }
+ GREP="$ac_cv_path_GREP"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for egrep" >&5
+$as_echo_n "checking for egrep... " >&6; }
+if ${ac_cv_path_EGREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if echo a | $GREP -E '(a|b)' >/dev/null 2>&1
+   then ac_cv_path_EGREP="$GREP -E"
+   else
+     if test -z "$EGREP"; then
+  ac_path_EGREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in egrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_EGREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_EGREP" || continue
+# Check for GNU ac_path_EGREP and select it if it is found.
+  # Check for GNU $ac_path_EGREP
+case `"$ac_path_EGREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_EGREP="$ac_path_EGREP" ac_path_EGREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'EGREP' >> "conftest.nl"
+    "$ac_path_EGREP" 'EGREP$' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_EGREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_EGREP="$ac_path_EGREP"
+      ac_path_EGREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_EGREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_EGREP"; then
+    as_fn_error $? "no acceptable egrep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_EGREP=$EGREP
+fi
+
+   fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_EGREP" >&5
+$as_echo "$ac_cv_path_EGREP" >&6; }
+ EGREP="$ac_cv_path_EGREP"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for host_page_size in mach_host.defs" >&5
+$as_echo_n "checking for host_page_size in mach_host.defs... " >&6; }
+if ${libc_cv_mach_host_page_size+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <mach/mach_host.defs>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "host_page_size" >/dev/null 2>&1; then :
+  libc_cv_mach_host_page_size=yes
+else
+  libc_cv_mach_host_page_size=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mach_host_page_size" >&5
+$as_echo "$libc_cv_mach_host_page_size" >&6; }
+if test $libc_cv_mach_host_page_size = yes; then
+  $as_echo "#define HAVE_HOST_PAGE_SIZE 1" >>confdefs.h
+
+fi
+
+ac_fn_c_check_header_preproc "$LINENO" "mach/machine/ndr_def.h" "ac_cv_header_mach_machine_ndr_def_h"
+if test "x$ac_cv_header_mach_machine_ndr_def_h" = xyes; then :
+    DEFINES="$DEFINES -DNDR_DEF_HEADER='<mach/machine/ndr_def.h>'"
+else
+  ac_fn_c_check_header_preproc "$LINENO" "machine/ndr_def.h" "ac_cv_header_machine_ndr_def_h"
+if test "x$ac_cv_header_machine_ndr_def_h" = xyes; then :
+    DEFINES="$DEFINES -DNDR_DEF_HEADER='<machine/ndr_def.h>'"
+fi
+
+
+fi
+
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for i386_io_perm_modify in mach_i386.defs" >&5
+$as_echo_n "checking for i386_io_perm_modify in mach_i386.defs... " >&6; }
+if ${libc_cv_mach_i386_ioports+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <mach/i386/mach_i386.defs>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "i386_io_perm_modify" >/dev/null 2>&1; then :
+  libc_cv_mach_i386_ioports=yes
+else
+  libc_cv_mach_i386_ioports=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mach_i386_ioports" >&5
+$as_echo "$libc_cv_mach_i386_ioports" >&6; }
+if test $libc_cv_mach_i386_ioports = yes; then
+  $as_echo "#define HAVE_I386_IO_PERM_MODIFY 1" >>confdefs.h
+
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for i386_set_gdt in mach_i386.defs" >&5
+$as_echo_n "checking for i386_set_gdt in mach_i386.defs... " >&6; }
+if ${libc_cv_mach_i386_gdt+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <mach/i386/mach_i386.defs>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "i386_set_gdt" >/dev/null 2>&1; then :
+  libc_cv_mach_i386_gdt=yes
+else
+  libc_cv_mach_i386_gdt=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mach_i386_gdt" >&5
+$as_echo "$libc_cv_mach_i386_gdt" >&6; }
+if test $libc_cv_mach_i386_gdt = yes; then
+  $as_echo "#define HAVE_I386_SET_GDT 1" >>confdefs.h
+
+fi
+
+
+
+# See if mig groks `retcode'.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $MIG supports the retcode keyword" >&5
+$as_echo_n "checking whether $MIG supports the retcode keyword... " >&6; }
+if ${hurd_cv_mig_retcode+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.defs <<\EOF
+#include <mach/std_types.defs>
+#include <mach/mach_types.defs>
+subsystem foobar 1000;
+type reply_port_t = polymorphic | MACH_MSG_TYPE_PORT_SEND_ONCE
+	ctype: mach_port_t;
+simpleroutine foobar_reply (
+	reply_port: reply_port_t;
+	err: kern_return_t, RetCode);
+EOF
+if { ac_try='CC="${CC}" ${MIG-false} -n conftest.defs 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  hurd_cv_mig_retcode=yes
+else
+  hurd_cv_mig_retcode=no
+fi
+rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $hurd_cv_mig_retcode" >&5
+$as_echo "$hurd_cv_mig_retcode" >&6; }
+if test $hurd_cv_mig_retcode = yes; then
+  $as_echo "#define HAVE_MIG_RETCODE 1" >>confdefs.h
+
+fi
+
+if test -n "$sysheaders"; then
+  CPPFLAGS=$OLD_CPPFLAGS
+fi

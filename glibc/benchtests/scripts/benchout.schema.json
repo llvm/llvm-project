@@ -1,0 +1,51 @@
+{
+  "title": "benchmark",
+  "type": "object",
+  "properties": {
+    "timing_type": {
+      "type": "string"
+    },
+    "functions": {
+      "title": "Associative array of functions",
+      "type": "object",
+      "patternProperties": {
+        "^[_a-zA-Z][_a-zA-Z0-9]+$": {
+          "title": "Function names",
+          "type": "object",
+          "patternProperties": {
+            "^[_a-zA-Z0-9,=.-]*$": {
+              "title": "Function variants",
+              "type": "object",
+              "properties": {
+                "duration": {"type": "number"},
+                "iterations": {"type": "number"},
+                "throughput": {"type": "number"},
+                "max": {"type": "number"},
+                "min": {"type": "number"},
+                "mean": {"type": "number"},
+                "latency": {"type": "number"},
+                "min-throughput": {"type": "number"},
+                "max-throughput": {"type": "number"},
+                "reciprocal-throughput": {"type": "number"},
+                "min-outlier": {"type": "number"},
+                "max-outlier": {"type": "number"},
+                "wall-sec": {"type": "number"},
+                "stdev": {"type": "number"},
+                "timings": {
+                  "type": "array",
+                  "items": {"type": "number"}
+                }
+              },
+              "required": ["duration", "iterations"],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "minProperties": 1
+    }
+  },
+  "required": ["timing_type", "functions"],
+  "additionalProperties": false
+}

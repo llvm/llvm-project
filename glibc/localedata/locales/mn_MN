@@ -1,0 +1,262 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Mongolian language (cyrillic) locale for Mongolia
+% Sanlig Badral <badral@chinggis.com>
+% Revision: 1.0 (2005-5-21)
+
+LC_IDENTIFICATION
+title      "Mongolian locale for Mongolia"
+source     "Sanlig Badral"
+address    ""
+contact    ""
+email      "badral@chinggis.com"
+tel        ""
+fax        ""
+language   "Mongolian"
+territory  "Mongolia"
+revision   "1.0"
+date       "2005-05-21"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% CLDR collation rules for Mongolian:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/mn.xml)
+%
+% <!-- The root collation order is valid for this language. Just move the native scripts first. -->
+% <collations>
+% 	<collation type="standard"><cr><![CDATA[
+%  Cyrl Mong]
+% 	]]></cr></collation>
+% </collations>
+%
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+% cyrillic -> latin for mongolian
+% CYRILLIC CAPITAL LETTERS IN ALPHABETICAL ORDER.
+<U0410> "A"
+<U0411> "B"
+<U0412> "V"
+<U0413> "G"
+<U0414> "D"
+<U0415> "Ye"
+<U0401> "Yo"
+<U0416> "J"
+<U0417> "Z"
+<U0418> "I"
+<U0419> "I"
+<U041A> "K"
+<U041B> "L"
+<U041C> "M"
+<U041D> "N"
+<U041E> "O"
+<U04E8> "Oe"
+<U041F> "P"
+<U0420> "R"
+<U0421> "S"
+<U0422> "T"
+<U0423> "U"
+<U04AE> "Ue"
+<U0424> "F"
+<U0425> "H"
+<U0426> "C"
+<U0427> "Ch"
+<U0428> "Sh"
+<U0429> "Sh"
+<U042A> "<U0022>" % "
+<U042B> "Y"
+<U042C> "'"
+<U042D> "E"
+<U042E> "Yu"
+<U042F> "Ya"
+% CYRILLIC SMALL LETTERS IN ALPHABETICAL ORDER.
+<U0430> "a"
+<U0431> "b"
+<U0432> "v"
+<U0433> "g"
+<U0434> "d"
+<U0435> "ye"
+<U0451> "yo"
+<U0436> "j"
+<U0437> "z"
+<U0438> "i"
+<U0439> "i"
+<U043A> "k"
+<U043B> "l"
+<U043C> "m"
+<U043D> "n"
+<U043E> "o"
+<U04E9> "oe"
+<U043F> "p"
+<U0440> "r"
+<U0441> "s"
+<U0442> "t"
+<U0443> "u"
+<U04AF> "ue"
+<U0444> "f"
+<U0445> "h"
+<U0446> "C"
+<U0447> "ch"
+<U0448> "sh"
+<U0449> "sh"
+<U044A> "<U0022>" % "
+<U044B> "y"
+<U044C> "'"
+<U044D> "e"
+<U044E> "yu"
+<U044F> "ya"
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol     "MNT "
+currency_symbol     "<U20AE>"
+mon_decimal_point   "."
+mon_thousands_sep   "<U202F>"
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       0
+p_sep_by_space      1
+n_cs_precedes       0
+n_sep_by_space      1
+p_sign_posn         1
+n_sign_posn         1
+
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point   ","
+thousands_sep   "."
+grouping        3;3
+END LC_NUMERIC
+
+LC_TIME
+% Abbreviated weekday names (%a)
+abday "<U041D><U044F>";"<U0414><U0430>";/
+      "<U041C><U044F>";"<U041B><U0445>";/
+      "<U041F><U04AF>";"<U0411><U0430>";/
+      "<U0411><U044F>"
+% Full weekday names (%A)
+day   "<U041D><U044F><U043C>";/
+      "<U0414><U0430><U0432><U0430><U0430>";/
+      "<U041C><U044F><U0433><U043C><U0430><U0440>";/
+      "<U041B><U0445><U0430><U0433><U0432><U0430>";/
+      "<U041F><U04AF><U0440><U044D><U0432>";/
+      "<U0411><U0430><U0430><U0441><U0430><U043D>";/
+      "<U0411><U044F><U043C><U0431><U0430>"
+% Abbreviated month names (%b)
+abmon       "1-<U0440> <U0441><U0430><U0440>";/
+            "2-<U0440> <U0441><U0430><U0440>";/
+            "3-<U0440> <U0441><U0430><U0440>";/
+            "4-<U0440> <U0441><U0430><U0440>";/
+            "5-<U0440> <U0441><U0430><U0440>";/
+            "6-<U0440> <U0441><U0430><U0440>";/
+            "7-<U0440> <U0441><U0430><U0440>";/
+            "8-<U0440> <U0441><U0430><U0440>";/
+            "9-<U0440> <U0441><U0430><U0440>";/
+            "10-<U0440> <U0441><U0430><U0440>";/
+            "11-<U0440> <U0441><U0430><U0440>";/
+            "12-<U0440> <U0441><U0430><U0440>"
+% Full month names (%B)
+mon         "<U041D><U044D><U0433><U0434><U04AF><U0433><U044D><U044D><U0440> <U0441><U0430><U0440>";/
+            "<U0425><U043E><U0451><U0440><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>";/
+            "<U0413><U0443><U0440><U0430><U0432><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>";/
+            "<U0414><U04E9><U0440><U04E9><U0432><U0434><U04AF><U0433><U044D><U044D><U0440> <U0441><U0430><U0440>";/
+            "<U0422><U0430><U0432><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>";/
+            "<U0417><U0443><U0440><U0433><U0430><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>";/
+            "<U0414><U043E><U043B><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>";/
+            "<U041D><U0430><U0439><U043C><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>";/
+            "<U0415><U0441><U0434><U04AF><U0433><U044D><U044D><U0440> <U0441><U0430><U0440>";/
+            "<U0410><U0440><U0430><U0432><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>";/
+            "<U0410><U0440><U0432><U0430><U043D> <U043D><U044D><U0433><U0434><U04AF><U0433><U044D><U044D><U0440> <U0441><U0430><U0440>";/
+            "<U0410><U0440><U0432><U0430><U043D> <U0445><U043E><U0451><U0440><U0434><U0443><U0433><U0430><U0430><U0440> <U0441><U0430><U0440>"
+% Appropriate date and time representation
+d_t_fmt "%Y %b %d, %a %T"
+
+% Appropriate date representation
+d_fmt   "%Y.%m.%d"
+% Appropriate time representation
+t_fmt   "%T"
+% Appropriate 12 h time representation (%r)
+am_pm   "";""
+t_fmt_ampm ""
+% Full date and time representation
+% "%Z %Y ony %B %e, %a %H:%M:%S"
+date_fmt  "%Z %Y <U043E><U043D><U044B> %B %e, %a %H:%M:%S"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1<U0442><U0422>yY]"
+noexpr  "^[-0<U04AF><U04AE>nN]"
+yesstr  "<U0442><U0438><U0439><U043C>"
+nostr   "<U04AF><U0433><U04AF><U0439>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "<U0425><U0430><U0442><U0430><U0433><U0442><U0430><U0439>"
+name_mr     "<U041D><U043E><U0451><U043D>"
+name_mrs    "<U0425><U0430><U0442><U0430><U0433><U0442><U0430><U0439>"
+name_ms     "<U0425><U0430><U0442><U0430><U0433><U0442><U0430><U0439>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U041C><U043E><U043D><U0433><U043E><U043B>"
+country_post  "MN"
+country_ab2   "MN"
+country_ab3   "MNG"
+country_num   496
+country_car   "MGL"
+country_isbn  99929
+% Монгол хэл
+lang_name    "<U043C><U043E><U043D><U0433><U043E><U043B>"
+lang_ab       "mn"
+lang_term     "mon"
+lang_lib      "mon"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "(+%c %a) %l"
+tel_dom_fmt    "(0%a) %l"
+int_select     "001"
+int_prefix     "976"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

@@ -1,0 +1,200 @@
+macro-int-constant CHAR_BIT >= 8
+macro-int-constant SCHAR_MIN {promoted:signed char} <= -127
+macro-int-constant SCHAR_MAX {promoted:signed char} >= 127
+macro-int-constant UCHAR_MAX {promoted:unsigned char} >= 255
+#ifdef __CHAR_UNSIGNED__
+macro-int-constant CHAR_MIN {promoted:char} == 0
+macro-int-constant CHAR_MAX {promoted:char} == UCHAR_MAX
+#else
+macro-int-constant CHAR_MIN {promoted:char} == SCHAR_MIN
+macro-int-constant CHAR_MAX {promoted:char} == SCHAR_MAX
+#endif
+macro-int-constant MB_LEN_MAX >= 1
+macro-int-constant SHRT_MIN {promoted:short int} <= -32767
+macro-int-constant SHRT_MAX {promoted:short int} >= 32767
+macro-int-constant USHRT_MAX {promoted:unsigned short int} >= 65535
+// The ranges for int and unsigned int are from POSIX.
+macro-int-constant INT_MAX {int} >= 2147483647
+macro-int-constant INT_MIN {int} <= -2147483647
+macro-int-constant UINT_MAX {unsigned int} >= 4294967295U
+macro-int-constant LONG_MAX {long int} >= 2147483647L
+macro-int-constant LONG_MIN {long int} <= -2147483647L
+macro-int-constant ULONG_MAX {unsigned long int} >= 4294967295UL
+#if defined ISO99 || defined ISO11 || defined XOPEN2K8 || defined POSIX2008
+macro-int-constant LLONG_MIN {long long int} <= -9223372036854775807ll
+macro-int-constant LLONG_MAX {long long int} >= 9223372036854775807ll
+macro-int-constant ULLONG_MAX {unsigned long long int} >= 18446744073709551615ull
+#endif
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+// if these values exist, we should check the minimal value
+allow AIO_LISTIO_MAX
+allow AIO_MAX
+allow AIO_PRIO_DELTA_MAX
+allow ARG_MAX
+#if !defined POSIX && !defined XPG4
+allow ATEXIT_MAX
+#endif
+allow CHILD_MAX
+allow DELAYTIMER_MAX
+#if !defined POSIX && !defined POSIX2008 && !defined XPG4
+allow IOV_MAX
+#endif
+allow LOGIN_NAME_MAX
+allow MQ_OPEN_MAX
+allow MQ_PRIO_MAX
+allow OPEN_MAX
+allow PAGESIZE
+#if !defined POSIX && !defined POSIX2008
+allow PAGE_SIZE
+#endif
+allow PTHREAD_DESTRUCTOR_ITERATIONS
+allow PTHREAD_KEYS_MAX
+allow PTHREAD_STACK_MIN
+allow PTHREAD_THREADS_MAX
+allow RTSIG_MAX
+allow SEM_NSEMS_MAX
+allow SEM_VALUE_MAX
+allow SIGQUEUE_MAX
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+allow SS_REPL_MAX
+#endif
+allow STREAM_MAX
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+allow SYMLOOP_MAX
+#endif
+allow TIMER_MAX
+allow TTY_NAME_MAX
+allow TZNAME_MAX
+
+#if !defined POSIX && !defined XPG4 && !defined XPG42
+allow FILESIZEBITS
+#endif
+allow LINK_MAX
+allow MAX_CANON
+allow MAX_INPUT
+allow NAME_MAX
+allow PATH_MAX
+allow PIPE_BUF
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+allow POSIX_ALLOC_SIZE_MIN
+allow POSIX_REC_INCR_XFER_SIZE
+allow POSIX_REC_MAX_XFER_SIZE
+allow POSIX_REC_XFER_ALIGN
+allow SYMLINK_MAX
+#endif
+
+macro-constant BC_BASE_MAX >= _POSIX2_BC_BASE_MAX
+macro-constant BC_DIM_MAX >= _POSIX2_BC_DIM_MAX
+macro-constant BC_SCALE_MAX >= _POSIX2_BC_SCALE_MAX
+macro-constant BC_STRING_MAX >= _POSIX2_BC_STRING_MAX
+#if !defined POSIX && !defined XPG4 && !defined XPG42
+macro CHARCLASS_NAME_MAX
+#endif
+macro-constant COLL_WEIGHTS_MAX >= _POSIX2_COLL_WEIGHTS_MAX
+macro-constant EXPR_NEST_MAX >= _POSIX2_EXPR_NEST_MAX
+macro-constant LINE_MAX >= _POSIX2_LINE_MAX
+constant NGROUPS_MAX >= 8
+macro-constant RE_DUP_MAX >= _POSIX2_RE_DUP_MAX
+
+constant _POSIX_CLOCKRES_MIN == 20000000
+
+constant _POSIX_AIO_LISTIO_MAX == 2
+constant _POSIX_AIO_MAX == 1
+constant _POSIX_ARG_MAX == 4096
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+constant _POSIX_CHILD_MAX == 25
+#else
+constant _POSIX_CHILD_MAX == 6
+#endif
+constant _POSIX_DELAYTIMER_MAX == 32
+constant _POSIX_LINK_MAX == 8
+constant _POSIX_LOGIN_NAME_MAX == 9
+constant _POSIX_MAX_CANON == 255
+constant _POSIX_MAX_INPUT == 255
+constant _POSIX_MQ_OPEN_MAX == 8
+constant _POSIX_MQ_PRIO_MAX == 32
+constant _POSIX_NAME_MAX == 14
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+constant _POSIX_NGROUPS_MAX == 8
+#else
+constant _POSIX_NGROUPS_MAX == 0
+#endif
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+constant _POSIX_OPEN_MAX == 20
+#else
+constant _POSIX_OPEN_MAX == 16
+#endif
+// Value was 255, corrected to 256 following an interpretation request.
+constant _POSIX_PATH_MAX == 256
+constant _POSIX_PIPE_BUF == 512
+constant _POSIX_RTSIG_MAX == 8
+constant _POSIX_SEM_NSEMS_MAX == 256
+constant _POSIX_SEM_VALUE_MAX == 32767
+constant _POSIX_SIGQUEUE_MAX == 32
+constant _POSIX_SSIZE_MAX == 32767
+constant _POSIX_STREAM_MAX == 8
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+optional-constant _POSIX_SS_REPL_MAX == 4
+optional-constant _POSIX_SYMLINK_MAX == 255
+optional-constant _POSIX_SYMLOOP_MAX == 8
+#endif
+constant _POSIX_THREAD_DESTRUCTOR_ITERATIONS == 4
+constant _POSIX_THREAD_KEYS_MAX == 128
+constant _POSIX_THREAD_THREADS_MAX == 64
+constant _POSIX_TIMER_MAX == 32
+constant _POSIX_TTY_NAME_MAX == 9
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+constant _POSIX_TZNAME_MAX == 6
+#else
+constant _POSIX_TZNAME_MAX == 3
+#endif
+macro-constant _POSIX2_BC_BASE_MAX == 99
+macro-constant _POSIX2_BC_DIM_MAX == 2048
+macro-constant _POSIX2_BC_SCALE_MAX == 99
+macro-constant _POSIX2_BC_STRING_MAX == 1000
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+constant _POSIX2_CHARCLASS_NAME_MAX == 14
+#endif
+macro-constant _POSIX2_COLL_WEIGHTS_MAX == 2
+macro-constant _POSIX2_EXPR_NEST_MAX == 32
+macro-constant _POSIX2_LINE_MAX == 2048
+macro-constant _POSIX2_RE_DUP_MAX == 255
+#if !defined POSIX && !defined POSIX2008 && !defined XPG4
+optional-constant _XOPEN_IOV_MAX == 16
+#endif
+
+#if !defined POSIX && !defined POSIX2008
+constant WORD_BIT >= 16
+constant LONG_BIT >= 32
+#endif
+constant SSIZE_MAX
+
+#if !defined POSIX
+optional-constant CHARCLASS_NAME_MAX >= 14
+#endif
+#if !defined POSIX
+optional-constant NL_ARGMAX >= 9
+# if !defined POSIX2008
+optional-constant NL_LANGMAX >= 14
+# endif
+optional-constant NL_MSGMAX >= 32767
+# if !defined XOPEN2K8 && !defined POSIX2008
+optional-constant NL_NMAX
+# endif
+optional-constant NL_SETMAX >= 255
+optional-constant NL_TEXTMAX
+# if !defined POSIX2008
+optional-constant NZERO >= 20
+# endif
+#endif
+#if defined XPG4 || defined XPG42 || defined UNIX98
+optional-constant TMP_MAX >= 10000
+#endif
+
+allow *_MAX
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+allow *_MIN
+#endif
+allow *_t
+#endif

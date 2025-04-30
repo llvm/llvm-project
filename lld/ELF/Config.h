@@ -261,7 +261,18 @@ struct Config {
   bool ltoCSProfileGenerate;
   bool ltoPGOWarnMismatch;
   bool ltoDebugPassManager;
+  bool ltoNextSiliconImportRecursion;
+  bool ltoNextSiliconWarnUnsupportedOMP;
+  bool ltoNextSiliconRelocateVariadic;
+  bool ltoNextSiliconIRFixup;
+  bool ltoNextSiliconIRBuiltins;
+  bool ltoNextSiliconAtomicFixup;
+  bool ltoNextSiliconSplitCallSites;
+  bool ltoEmbedSymbolTrackers;
   bool ltoEmitAsm;
+  bool ltoNextInstrumentation;
+  bool ltoNextSiliconDoCounterPromotion;
+  bool ltoPseudoProbeForProfiling;
   bool ltoUniqueBasicBlockSectionNames;
   bool ltoValidateAllVtablesHaveTypeInfos;
   bool ltoWholeProgramVisibility;
@@ -294,6 +305,7 @@ struct Config {
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;
   bool shared;
+  bool setBinfmtMagicNumber;
   bool symbolic;
   bool isStatic = false;
   bool sysvHash = false;
@@ -354,7 +366,9 @@ struct Config {
   BuildIdKind buildId = BuildIdKind::None;
   SeparateSegmentKind zSeparate;
   ELFKind ekind = ELFNoneKind;
+  ELFKind ehostKind = ELFNoneKind;
   uint16_t emachine = llvm::ELF::EM_NONE;
+  uint16_t ehostMachine = llvm::ELF::EM_NONE;
   std::optional<uint64_t> imageBase;
   uint64_t commonPageSize;
   uint64_t maxPageSize;

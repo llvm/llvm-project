@@ -1,0 +1,81 @@
+<code_set_name> INIS-8
+<comment_char> %
+<escape_char> /
+% version: 1.0
+%  source: ECMA registry
+
+% alias ISO-IR-50
+CHARMAP
+<U0000>     /x00         NULL (NUL)
+<U0001>     /x01         START OF HEADING (SOH)
+<U0002>     /x02         START OF TEXT (STX)
+<U0003>     /x03         END OF TEXT (ETX)
+<U0004>     /x04         END OF TRANSMISSION (EOT)
+<U0005>     /x05         ENQUIRY (ENQ)
+<U0006>     /x06         ACKNOWLEDGE (ACK)
+<U0007>     /x07         BELL (BEL)
+<U0008>     /x08         BACKSPACE (BS)
+<U0009>     /x09         CHARACTER TABULATION (HT)
+<U000A>     /x0a         LINE FEED (LF)
+<U000B>     /x0b         LINE TABULATION (VT)
+<U000C>     /x0c         FORM FEED (FF)
+<U000D>     /x0d         CARRIAGE RETURN (CR)
+<U000E>     /x0e         SHIFT OUT (SO)
+<U000F>     /x0f         SHIFT IN (SI)
+<U0010>     /x10         DATALINK ESCAPE (DLE)
+<U0011>     /x11         DEVICE CONTROL ONE (DC1)
+<U0012>     /x12         DEVICE CONTROL TWO (DC2)
+<U0013>     /x13         DEVICE CONTROL THREE (DC3)
+<U0014>     /x14         DEVICE CONTROL FOUR (DC4)
+<U0015>     /x15         NEGATIVE ACKNOWLEDGE (NAK)
+<U0016>     /x16         SYNCHRONOUS IDLE (SYN)
+<U0017>     /x17         END OF TRANSMISSION BLOCK (ETB)
+<U0018>     /x18         CANCEL (CAN)
+<U0019>     /x19         END OF MEDIUM (EM)
+<U001A>     /x1a         SUBSTITUTE (SUB)
+<U001B>     /x1b         ESCAPE (ESC)
+<U001C>     /x1c         FILE SEPARATOR (IS4)
+<U001D>     /x1d         GROUP SEPARATOR (IS3)
+<U001E>     /x1e         RECORD SEPARATOR (IS2)
+<U001F>     /x1f         UNIT SEPARATOR (IS1)
+<U0020>     /x20         SPACE
+<U03B1>     /x3a         GREEK SMALL LETTER ALPHA
+<U03B2>     /x3b         GREEK SMALL LETTER BETA
+<U03B3>     /x3c         GREEK SMALL LETTER GAMMA
+<U03B4>     /x3d         GREEK SMALL LETTER DELTA
+<U039E>     /x3e         GREEK CAPITAL LETTER XI
+<U2192>     /x5e         RIGHTWARDS ARROW
+<U222B>     /x5f         INTEGRAL
+<U2070>     /x60         SUPERSCRIPT ZERO
+<U00B9>     /x61         SUPERSCRIPT ONE
+<U00B2>     /x62         SUPERSCRIPT TWO
+<U00B3>     /x63         SUPERSCRIPT THREE
+<U2074>     /x64         SUPERSCRIPT FOUR
+<U2075>     /x65         SUPERSCRIPT FIVE
+<U2076>     /x66         SUPERSCRIPT SIX
+<U2077>     /x67         SUPERSCRIPT SEVEN
+<U2078>     /x68         SUPERSCRIPT EIGHT
+<U2079>     /x69         SUPERSCRIPT NINE
+<U207A>     /x6a         SUPERSCRIPT PLUS SIGN
+<U207B>     /x6b         SUPERSCRIPT MINUS
+<U30EB>     /x6c         KATAKANA LETTER RU
+<U0394>     /x6d         GREEK CAPITAL LETTER DELTA
+<U039B>     /x6e         GREEK CAPITAL LETTER LAMDA
+<U03A9>     /x6f         GREEK CAPITAL LETTER OMEGA
+<U2080>     /x70         SUBSCRIPT ZERO
+<U2081>     /x71         SUBSCRIPT ONE
+<U2082>     /x72         SUBSCRIPT TWO
+<U2083>     /x73         SUBSCRIPT THREE
+<U2084>     /x74         SUBSCRIPT FOUR
+<U2085>     /x75         SUBSCRIPT FIVE
+<U2086>     /x76         SUBSCRIPT SIX
+<U2087>     /x77         SUBSCRIPT SEVEN
+<U2088>     /x78         SUBSCRIPT EIGHT
+<U2089>     /x79         SUBSCRIPT NINE
+<U03A3>     /x7a         GREEK CAPITAL LETTER SIGMA
+<U03BC>     /x7b         GREEK SMALL LETTER MU
+<U03BD>     /x7c         GREEK SMALL LETTER NU
+<U03C9>     /x7d         GREEK SMALL LETTER OMEGA
+<U03C0>     /x7e         GREEK SMALL LETTER PI
+<U007F>     /x7f         DELETE (DEL)
+END CHARMAP

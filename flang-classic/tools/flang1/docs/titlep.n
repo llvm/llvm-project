@@ -1,0 +1,53 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.ce 1000
+.sp 5
+
+
+.sz 12
+NVIDIA CORPORATION
+.sp
+Fortran Front End MAINTENANCE DOCUMENT
+.sp 2
+\*(td
+.sp 5
+.sz 11
+ Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ See https://llvm.org/LICENSE.txt for license information.
+ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.sp 3
+.ce 0
+.(q
+.sz 11
+ Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ See https://llvm.org/LICENSE.txt for license information.
+ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.)q
+.sp
+.ce 30
+.sz 11
+Printed in USA
+.sp 4
+.sz 12
+.b
+COMPANY CONFIDENTIAL
+.sz 11
+.r
+.sp 2
+.ce 0
+.(q
+.sz 11
+This document contains proprietary information
+and is supplied for identification, maintenance,
+evaluation, engineering, or inspection purposes only
+and shall not be duplicated or disclosed without
+written permission of NVIDIA CORPORATION.
+By accepting this document, the recipient agrees to
+make every reasonable effort to prevent
+unauthorized use of this information.
+.)q
+.sz 11

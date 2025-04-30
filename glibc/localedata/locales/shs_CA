@@ -1,0 +1,162 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Shuswap language locale for Canada
+% sorting according to CAN/CSA-Z243.4.1-1992
+% Source: Neskie Manuel
+% Address: 745 Ska-Hiish Dr
+%          Chase BC V0E 1M3
+% Contact: Neskie Manuel
+% Email: neskiem@gmail.com
+% Tel: +1 - 2506792821
+% Fax: +1 - 2506792821
+% Language: shs
+% Territory: CA
+% Revision: 0.1
+% Date: 2008-01-11
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Shuswap locale for Canada"
+source     "Neskie Manuel"
+address    "745 Ska-Hiish Dr, Chase BC V0E 1M3"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Shuswap"
+territory  "Canada"
+revision   "1.0"
+date       "2008-01-15"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+
+reorder-after <RES-1>
+<CAP>
+
+%  Present in iso14651_t1, but these definitions seem to have been
+%  removed from latest iso14651 tables.
+reorder-after <U0041>
+<U00C6> "<U003C><U0061><U003E><U003C><U0065><U003E>";"<U003C><U004C><U0049><U0047><U003E><U003C><U004C><U0049><U0047><U003E>";"<U003C><U0043><U0041><U0050><U003E><U003C><U0043><U0041><U0050><U003E>";IGNORE
+
+reorder-after <U0061>
+<U00E6> "<U003C><U0061><U003E><U003C><U0065><U003E>";"<U003C><U004C><U0049><U0047><U003E><U003C><U004C><U0049><U0047><U003E>";"<U003C><U004D><U0049><U004E><U003E><U003C><U004D><U0049><U004E><U003E>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_CA"
+END LC_CTYPE
+
+LC_MONETARY
+copy "en_CA"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_CA"
+END LC_NUMERIC
+
+LC_TIME
+abday      "Sxe";/
+           "Spe";/
+           "Sel";/
+           "Ske";/
+           "Sme";/
+           "Sts";/
+           "Stq"
+day        "Sxetspesq<U0313>t";/
+           "Spetkesq<U0313>t";/
+           "Selesq<U0313>t";/
+           "Skellesq<U0313>t";/
+           "Smesesq<U0313>t";/
+           "Stselkstesq<U0313>t";/
+           "Stqmekstesq<U0313>t"
+abmon      "Kwe";/
+           "Tsi";/
+           "Sqe";/
+           "<U00C9>wt";/
+           "Ell";/
+           "Tsp";/
+           "Tqw";/
+           "Ct<U0313><U00E9>";/
+           "Qel";/
+           "W<U00E9>l";/
+           "U7l";/
+           "Tet"
+mon        "Pellkwet<U0313>min";/
+       "Pelctsipwen<U0313>ten";/
+       "Pellsq<U00E9>pts";/
+       "Pesll<U00E9>wten";/
+       "Pell7ell7<U00E9>7llqten";/
+       "Pelltsp<U00E9>ntsk";/
+       "Pelltqwelq<U0313>w<U00E9>l<U0313>t";/
+       "Pellct<U0313><U00E9>xel<U0313>cten";/
+       "Pesqelql<U00E9>lten";/
+       "Pesllw<U00E9>lsten";/
+       "Pellc7ell7<U00E9>7llcwten<U0313>";/
+       "Pelltet<U00E9>tq<U0313>em"
+d_t_fmt    "%a %d %b %Y %r"
+date_fmt   "%a %d %b %Y %r %Z"
+d_fmt      "%d//%m//%y"
+t_fmt      "%r"
+am_pm      "AM";"PM"
+t_fmt_ampm "%I:%M:%S %p"
+%  FIXME: found in CLDR
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+copy "en_CA"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_CA"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "en_CA"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "en_CA"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "en_CA"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_ab2 "CA"
+country_ab3 "CAN"
+country_num 124
+country_car    "CDN"
+lang_name "Secwepemcts<U00ED>n"
+lang_term "shs"
+lang_lib "shs"
+END LC_ADDRESS

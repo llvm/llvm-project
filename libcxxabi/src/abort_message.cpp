@@ -28,9 +28,13 @@
 
 void abort_message(const char* format, ...)
 {
-    // Write message to stderr. We do this before formatting into a
-    // variable-size buffer so that we still get some information if
-    // formatting into the variable-sized buffer fails.
+#if defined(LIBCXXABI_BAREMETAL)
+  (void)format;
+#endif
+
+  // Write message to stderr. We do this before formatting into a
+  // variable-size buffer so that we still get some information if
+  // formatting into the variable-sized buffer fails.
 #if !defined(NDEBUG) || !defined(LIBCXXABI_BAREMETAL)
     {
         fprintf(stderr, "libc++abi: ");

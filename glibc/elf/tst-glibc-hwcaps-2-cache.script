@@ -1,0 +1,8 @@
+# test-container does not support scripts in sysdeps directories, so
+# collect everything in one file.
+
+mkdirp 0770 $L/glibc-hwcaps/x86-64-v2
+mkdirp 0770 $L/glibc-hwcaps/x86-64-v3
+cp $B/elf/libx86-64-isa-level-1.so $L/libx86-64-isa-level.so
+cp $B/elf/libx86-64-isa-level-3.so $L/glibc-hwcaps/x86-64-v2/libx86-64-isa-level.so
+cp $B/elf/libx86-64-isa-level-4.so $L/glibc-hwcaps/x86-64-v3/libx86-64-isa-level.so

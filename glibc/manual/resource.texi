@@ -1,0 +1,1637 @@
+@node Resource Usage And Limitation, Non-Local Exits, Date and Time, Top
+@c %MENU% Functions for examining resource usage and getting and setting limits
+@chapter Resource Usage And Limitation
+This chapter describes functions for examining how much of various kinds of
+resources (CPU time, memory, etc.) a process has used and getting and setting
+limits on future usage.
+
+@menu
+* Resource Usage::		Measuring various resources used.
+* Limits on Resources::		Specifying limits on resource usage.
+* Priority::			Reading or setting process run priority.
+* Memory Resources::            Querying memory available resources.
+* Processor Resources::         Learn about the processors available.
+@end menu
+
+
+@node Resource Usage
+@section Resource Usage
+
+@pindex sys/resource.h
+The function @code{getrusage} and the data type @code{struct rusage}
+are used to examine the resource usage of a process.  They are declared
+in @file{sys/resource.h}.
+
+@deftypefun int getrusage (int @var{processes}, struct rusage *@var{rusage})
+@standards{BSD, sys/resource.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c On HURD, this calls task_info 3 times.  On UNIX, it's a syscall.
+This function reports resource usage totals for processes specified by
+@var{processes}, storing the information in @code{*@var{rusage}}.
+
+In most systems, @var{processes} has only two valid values:
+
+@vtable @code
+@item RUSAGE_SELF
+@standards{BSD, sys/resource.h}
+Just the current process.
+
+@item RUSAGE_CHILDREN
+@standards{BSD, sys/resource.h}
+All child processes (direct and indirect) that have already terminated.
+@end vtable
+
+The return value of @code{getrusage} is zero for success, and @code{-1}
+for failure.
+
+@table @code
+@item EINVAL
+The argument @var{processes} is not valid.
+@end table
+@end deftypefun
+
+One way of getting resource usage for a particular child process is with
+the function @code{wait4}, which returns totals for a child when it
+terminates.  @xref{BSD Wait Functions}.
+
+@deftp {Data Type} {struct rusage}
+@standards{BSD, sys/resource.h}
+This data type stores various resource usage statistics.  It has the
+following members, and possibly others:
+
+@table @code
+@item struct timeval ru_utime
+Time spent executing user instructions.
+
+@item struct timeval ru_stime
+Time spent in operating system code on behalf of @var{processes}.
+
+@item long int ru_maxrss
+The maximum resident set size used, in kilobytes.  That is, the maximum
+number of kilobytes of physical memory that @var{processes} used
+simultaneously.
+
+@item long int ru_ixrss
+An integral value expressed in kilobytes times ticks of execution, which
+indicates the amount of memory used by text that was shared with other
+processes.
+
+@item long int ru_idrss
+An integral value expressed the same way, which is the amount of
+unshared memory used for data.
+
+@item long int ru_isrss
+An integral value expressed the same way, which is the amount of
+unshared memory used for stack space.
+
+@item long int ru_minflt
+The number of page faults which were serviced without requiring any I/O.
+
+@item long int ru_majflt
+The number of page faults which were serviced by doing I/O.
+
+@item long int ru_nswap
+The number of times @var{processes} was swapped entirely out of main memory.
+
+@item long int ru_inblock
+The number of times the file system had to read from the disk on behalf
+of @var{processes}.
+
+@item long int ru_oublock
+The number of times the file system had to write to the disk on behalf
+of @var{processes}.
+
+@item long int ru_msgsnd
+Number of IPC messages sent.
+
+@item long int ru_msgrcv
+Number of IPC messages received.
+
+@item long int ru_nsignals
+Number of signals received.
+
+@item long int ru_nvcsw
+The number of times @var{processes} voluntarily invoked a context switch
+(usually to wait for some service).
+
+@item long int ru_nivcsw
+The number of times an involuntary context switch took place (because
+a time slice expired, or another process of higher priority was
+scheduled).
+@end table
+@end deftp
+
+@node Limits on Resources
+@section Limiting Resource Usage
+@cindex resource limits
+@cindex limits on resource usage
+@cindex usage limits
+
+You can specify limits for the resource usage of a process.  When the
+process tries to exceed a limit, it may get a signal, or the system call
+by which it tried to do so may fail, depending on the resource.  Each
+process initially inherits its limit values from its parent, but it can
+subsequently change them.
+
+There are two per-process limits associated with a resource:
+@cindex limit
+
+@table @dfn
+@item current limit
+The current limit is the value the system will not allow usage to
+exceed.  It is also called the ``soft limit'' because the process being
+limited can generally raise the current limit at will.
+@cindex current limit
+@cindex soft limit
+
+@item maximum limit
+The maximum limit is the maximum value to which a process is allowed to
+set its current limit.  It is also called the ``hard limit'' because
+there is no way for a process to get around it.  A process may lower
+its own maximum limit, but only the superuser may increase a maximum
+limit.
+@cindex maximum limit
+@cindex hard limit
+@end table
+
+@pindex sys/resource.h
+The symbols for use with @code{getrlimit}, @code{setrlimit},
+@code{getrlimit64}, and @code{setrlimit64} are defined in
+@file{sys/resource.h}.
+
+@deftypefun int getrlimit (int @var{resource}, struct rlimit *@var{rlp})
+@standards{BSD, sys/resource.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on most systems.
+Read the current and maximum limits for the resource @var{resource}
+and store them in @code{*@var{rlp}}.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+only possible @code{errno} error condition is @code{EFAULT}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} on a
+32-bit system this function is in fact @code{getrlimit64}.  Thus, the
+LFS interface transparently replaces the old interface.
+@end deftypefun
+
+@deftypefun int getrlimit64 (int @var{resource}, struct rlimit64 *@var{rlp})
+@standards{Unix98, sys/resource.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on most systems, wrapper to getrlimit otherwise.
+This function is similar to @code{getrlimit} but its second parameter is
+a pointer to a variable of type @code{struct rlimit64}, which allows it
+to read values which wouldn't fit in the member of a @code{struct
+rlimit}.
+
+If the sources are compiled with @code{_FILE_OFFSET_BITS == 64} on a
+32-bit machine, this function is available under the name
+@code{getrlimit} and so transparently replaces the old interface.
+@end deftypefun
+
+@deftypefun int setrlimit (int @var{resource}, const struct rlimit *@var{rlp})
+@standards{BSD, sys/resource.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on most systems; lock-taking critical section on HURD.
+Store the current and maximum limits for the resource @var{resource}
+in @code{*@var{rlp}}.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error condition is possible:
+
+@table @code
+@item EPERM
+@itemize @bullet
+@item
+The process tried to raise a current limit beyond the maximum limit.
+
+@item
+The process tried to raise a maximum limit, but is not superuser.
+@end itemize
+@end table
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} on a
+32-bit system this function is in fact @code{setrlimit64}.  Thus, the
+LFS interface transparently replaces the old interface.
+@end deftypefun
+
+@deftypefun int setrlimit64 (int @var{resource}, const struct rlimit64 *@var{rlp})
+@standards{Unix98, sys/resource.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Wrapper for setrlimit or direct syscall.
+This function is similar to @code{setrlimit} but its second parameter is
+a pointer to a variable of type @code{struct rlimit64} which allows it
+to set values which wouldn't fit in the member of a @code{struct
+rlimit}.
+
+If the sources are compiled with @code{_FILE_OFFSET_BITS == 64} on a
+32-bit machine this function is available under the name
+@code{setrlimit} and so transparently replaces the old interface.
+@end deftypefun
+
+@deftp {Data Type} {struct rlimit}
+@standards{BSD, sys/resource.h}
+This structure is used with @code{getrlimit} to receive limit values,
+and with @code{setrlimit} to specify limit values for a particular process
+and resource.  It has two fields:
+
+@table @code
+@item rlim_t rlim_cur
+The current limit
+
+@item rlim_t rlim_max
+The maximum limit.
+@end table
+
+For @code{getrlimit}, the structure is an output; it receives the current
+values.  For @code{setrlimit}, it specifies the new values.
+@end deftp
+
+For the LFS functions a similar type is defined in @file{sys/resource.h}.
+
+@deftp {Data Type} {struct rlimit64}
+@standards{Unix98, sys/resource.h}
+This structure is analogous to the @code{rlimit} structure above, but
+its components have wider ranges.  It has two fields:
+
+@table @code
+@item rlim64_t rlim_cur
+This is analogous to @code{rlimit.rlim_cur}, but with a different type.
+
+@item rlim64_t rlim_max
+This is analogous to @code{rlimit.rlim_max}, but with a different type.
+@end table
+
+@end deftp
+
+Here is a list of resources for which you can specify a limit.  Memory
+and file sizes are measured in bytes.
+
+@vtable @code
+@item RLIMIT_CPU
+@standards{BSD, sys/resource.h}
+The maximum amount of CPU time the process can use.  If it runs for
+longer than this, it gets a signal: @code{SIGXCPU}.  The value is
+measured in seconds.  @xref{Operation Error Signals}.
+
+@item RLIMIT_FSIZE
+@standards{BSD, sys/resource.h}
+The maximum size of file the process can create.  Trying to write a
+larger file causes a signal: @code{SIGXFSZ}.  @xref{Operation Error
+Signals}.
+
+@item RLIMIT_DATA
+@standards{BSD, sys/resource.h}
+The maximum size of data memory for the process.  If the process tries
+to allocate data memory beyond this amount, the allocation function
+fails.
+
+@item RLIMIT_STACK
+@standards{BSD, sys/resource.h}
+The maximum stack size for the process.  If the process tries to extend
+its stack past this size, it gets a @code{SIGSEGV} signal.
+@xref{Program Error Signals}.
+
+@item RLIMIT_CORE
+@standards{BSD, sys/resource.h}
+The maximum size core file that this process can create.  If the process
+terminates and would dump a core file larger than this, then no core
+file is created.  So setting this limit to zero prevents core files from
+ever being created.
+
+@item RLIMIT_RSS
+@standards{BSD, sys/resource.h}
+The maximum amount of physical memory that this process should get.
+This parameter is a guide for the system's scheduler and memory
+allocator; the system may give the process more memory when there is a
+surplus.
+
+@item RLIMIT_MEMLOCK
+@standards{BSD, sys/resource.h}
+The maximum amount of memory that can be locked into physical memory (so
+it will never be paged out).
+
+@item RLIMIT_NPROC
+@standards{BSD, sys/resource.h}
+The maximum number of processes that can be created with the same user ID.
+If you have reached the limit for your user ID, @code{fork} will fail
+with @code{EAGAIN}.  @xref{Creating a Process}.
+
+@item RLIMIT_NOFILE
+@itemx RLIMIT_OFILE
+@standardsx{RLIMIT_NOFILE, BSD, sys/resource.h}
+The maximum number of files that the process can open.  If it tries to
+open more files than this, its open attempt fails with @code{errno}
+@code{EMFILE}.  @xref{Error Codes}.  Not all systems support this limit;
+GNU does, and 4.4 BSD does.
+
+@item RLIMIT_AS
+@standards{Unix98, sys/resource.h}
+The maximum size of total memory that this process should get.  If the
+process tries to allocate more memory beyond this amount with, for
+example, @code{brk}, @code{malloc}, @code{mmap} or @code{sbrk}, the
+allocation function fails.
+
+@item RLIM_NLIMITS
+@standards{BSD, sys/resource.h}
+The number of different resource limits.  Any valid @var{resource}
+operand must be less than @code{RLIM_NLIMITS}.
+@end vtable
+
+@deftypevr Constant rlim_t RLIM_INFINITY
+@standards{BSD, sys/resource.h}
+This constant stands for a value of ``infinity'' when supplied as
+the limit value in @code{setrlimit}.
+@end deftypevr
+
+
+The following are historical functions to do some of what the functions
+above do.  The functions above are better choices.
+
+@code{ulimit} and the command symbols are declared in @file{ulimit.h}.
+@pindex ulimit.h
+
+@deftypefun {long int} ulimit (int @var{cmd}, @dots{})
+@standards{BSD, ulimit.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Wrapper for getrlimit, setrlimit or
+@c sysconf(_SC_OPEN_MAX)->getdtablesize->getrlimit.
+
+@code{ulimit} gets the current limit or sets the current and maximum
+limit for a particular resource for the calling process according to the
+command @var{cmd}.
+
+If you are getting a limit, the command argument is the only argument.
+If you are setting a limit, there is a second argument:
+@code{long int} @var{limit} which is the value to which you are setting
+the limit.
+
+The @var{cmd} values and the operations they specify are:
+@vtable @code
+
+@item GETFSIZE
+Get the current limit on the size of a file, in units of 512 bytes.
+
+@item SETFSIZE
+Set the current and maximum limit on the size of a file to @var{limit} *
+512 bytes.
+
+@end vtable
+
+There are also some other @var{cmd} values that may do things on some
+systems, but they are not supported.
+
+Only the superuser may increase a maximum limit.
+
+When you successfully get a limit, the return value of @code{ulimit} is
+that limit, which is never negative.  When you successfully set a limit,
+the return value is zero.  When the function fails, the return value is
+@code{-1} and @code{errno} is set according to the reason:
+
+@table @code
+@item EPERM
+A process tried to increase a maximum limit, but is not superuser.
+@end table
+
+
+@end deftypefun
+
+@code{vlimit} and its resource symbols are declared in @file{sys/vlimit.h}.
+@pindex sys/vlimit.h
+
+@deftypefun int vlimit (int @var{resource}, int @var{limit})
+@standards{BSD, sys/vlimit.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:setrlimit}}@asunsafe{}@acsafe{}}
+@c It calls getrlimit and modifies the rlim_cur field before calling
+@c setrlimit.  There's a window for a concurrent call to setrlimit that
+@c modifies e.g. rlim_max, which will be lost if running as super-user.
+
+@code{vlimit} sets the current limit for a resource for a process.
+
+@var{resource} identifies the resource:
+
+@vtable @code
+@item LIM_CPU
+Maximum CPU time.  Same as @code{RLIMIT_CPU} for @code{setrlimit}.
+@item LIM_FSIZE
+Maximum file size.  Same as @code{RLIMIT_FSIZE} for @code{setrlimit}.
+@item LIM_DATA
+Maximum data memory.  Same as @code{RLIMIT_DATA} for @code{setrlimit}.
+@item LIM_STACK
+Maximum stack size.  Same as @code{RLIMIT_STACK} for @code{setrlimit}.
+@item LIM_CORE
+Maximum core file size.  Same as @code{RLIMIT_COR} for @code{setrlimit}.
+@item LIM_MAXRSS
+Maximum physical memory.  Same as @code{RLIMIT_RSS} for @code{setrlimit}.
+@end vtable
+
+The return value is zero for success, and @code{-1} with @code{errno} set
+accordingly for failure:
+
+@table @code
+@item EPERM
+The process tried to set its current limit beyond its maximum limit.
+@end table
+
+@end deftypefun
+
+@node Priority
+@section Process CPU Priority And Scheduling
+@cindex process priority
+@cindex cpu priority
+@cindex priority of a process
+
+When multiple processes simultaneously require CPU time, the system's
+scheduling policy and process CPU priorities determine which processes
+get it.  This section describes how that determination is made and
+@glibcadj{} functions to control it.
+
+It is common to refer to CPU scheduling simply as scheduling and a
+process' CPU priority simply as the process' priority, with the CPU
+resource being implied.  Bear in mind, though, that CPU time is not the
+only resource a process uses or that processes contend for.  In some
+cases, it is not even particularly important.  Giving a process a high
+``priority'' may have very little effect on how fast a process runs with
+respect to other processes.  The priorities discussed in this section
+apply only to CPU time.
+
+CPU scheduling is a complex issue and different systems do it in wildly
+different ways.  New ideas continually develop and find their way into
+the intricacies of the various systems' scheduling algorithms.  This
+section discusses the general concepts, some specifics of systems
+that commonly use @theglibc{}, and some standards.
+
+For simplicity, we talk about CPU contention as if there is only one CPU
+in the system.  But all the same principles apply when a processor has
+multiple CPUs, and knowing that the number of processes that can run at
+any one time is equal to the number of CPUs, you can easily extrapolate
+the information.
+
+The functions described in this section are all defined by the POSIX.1
+and POSIX.1b standards (the @code{sched@dots{}} functions are POSIX.1b).
+However, POSIX does not define any semantics for the values that these
+functions get and set.  In this chapter, the semantics are based on the
+Linux kernel's implementation of the POSIX standard.  As you will see,
+the Linux implementation is quite the inverse of what the authors of the
+POSIX syntax had in mind.
+
+@menu
+* Absolute Priority::               The first tier of priority.  Posix
+* Realtime Scheduling::             Scheduling among the process nobility
+* Basic Scheduling Functions::      Get/set scheduling policy, priority
+* Traditional Scheduling::          Scheduling among the vulgar masses
+* CPU Affinity::                    Limiting execution to certain CPUs
+@end menu
+
+
+
+@node Absolute Priority
+@subsection Absolute Priority
+@cindex absolute priority
+@cindex priority, absolute
+
+Every process has an absolute priority, and it is represented by a number.
+The higher the number, the higher the absolute priority.
+
+@cindex realtime CPU scheduling
+On systems of the past, and most systems today, all processes have
+absolute priority 0 and this section is irrelevant.  In that case,
+@xref{Traditional Scheduling}.  Absolute priorities were invented to
+accommodate realtime systems, in which it is vital that certain processes
+be able to respond to external events happening in real time, which
+means they cannot wait around while some other process that @emph{wants
+to}, but doesn't @emph{need to} run occupies the CPU.
+
+@cindex ready to run
+@cindex preemptive scheduling
+When two processes are in contention to use the CPU at any instant, the
+one with the higher absolute priority always gets it.  This is true even if the
+process with the lower priority is already using the CPU (i.e., the
+scheduling is preemptive).  Of course, we're only talking about
+processes that are running or ``ready to run,'' which means they are
+ready to execute instructions right now.  When a process blocks to wait
+for something like I/O, its absolute priority is irrelevant.
+
+@cindex runnable process
+@strong{NB:}  The term ``runnable'' is a synonym for ``ready to run.''
+
+When two processes are running or ready to run and both have the same
+absolute priority, it's more interesting.  In that case, who gets the
+CPU is determined by the scheduling policy.  If the processes have
+absolute priority 0, the traditional scheduling policy described in
+@ref{Traditional Scheduling} applies.  Otherwise, the policies described
+in @ref{Realtime Scheduling} apply.
+
+You normally give an absolute priority above 0 only to a process that
+can be trusted not to hog the CPU.  Such processes are designed to block
+(or terminate) after relatively short CPU runs.
+
+A process begins life with the same absolute priority as its parent
+process.  Functions described in @ref{Basic Scheduling Functions} can
+change it.
+
+Only a privileged process can change a process' absolute priority to
+something other than @code{0}.  Only a privileged process or the
+target process' owner can change its absolute priority at all.
+
+POSIX requires absolute priority values used with the realtime
+scheduling policies to be consecutive with a range of at least 32.  On
+Linux, they are 1 through 99.  The functions
+@code{sched_get_priority_max} and @code{sched_set_priority_min} portably
+tell you what the range is on a particular system.
+
+
+@subsubsection Using Absolute Priority
+
+One thing you must keep in mind when designing real time applications is
+that having higher absolute priority than any other process doesn't
+guarantee the process can run continuously.  Two things that can wreck a
+good CPU run are interrupts and page faults.
+
+Interrupt handlers live in that limbo between processes.  The CPU is
+executing instructions, but they aren't part of any process.  An
+interrupt will stop even the highest priority process.  So you must
+allow for slight delays and make sure that no device in the system has
+an interrupt handler that could cause too long a delay between
+instructions for your process.
+
+Similarly, a page fault causes what looks like a straightforward
+sequence of instructions to take a long time.  The fact that other
+processes get to run while the page faults in is of no consequence,
+because as soon as the I/O is complete, the higher priority process will
+kick them out and run again, but the wait for the I/O itself could be a
+problem.  To neutralize this threat, use @code{mlock} or
+@code{mlockall}.
+
+There are a few ramifications of the absoluteness of this priority on a
+single-CPU system that you need to keep in mind when you choose to set a
+priority and also when you're working on a program that runs with high
+absolute priority.  Consider a process that has higher absolute priority
+than any other process in the system and due to a bug in its program, it
+gets into an infinite loop.  It will never cede the CPU.  You can't run
+a command to kill it because your command would need to get the CPU in
+order to run.  The errant program is in complete control.  It controls
+the vertical, it controls the horizontal.
+
+There are two ways to avoid this: 1) keep a shell running somewhere with
+a higher absolute priority or 2) keep a controlling terminal attached to
+the high priority process group.  All the priority in the world won't
+stop an interrupt handler from running and delivering a signal to the
+process if you hit Control-C.
+
+Some systems use absolute priority as a means of allocating a fixed
+percentage of CPU time to a process.  To do this, a super high priority
+privileged process constantly monitors the process' CPU usage and raises
+its absolute priority when the process isn't getting its entitled share
+and lowers it when the process is exceeding it.
+
+@strong{NB:}  The absolute priority is sometimes called the ``static
+priority.''  We don't use that term in this manual because it misses the
+most important feature of the absolute priority:  its absoluteness.
+
+
+@node Realtime Scheduling
+@subsection Realtime Scheduling
+@cindex realtime scheduling
+
+Whenever two processes with the same absolute priority are ready to run,
+the kernel has a decision to make, because only one can run at a time.
+If the processes have absolute priority 0, the kernel makes this decision
+as described in @ref{Traditional Scheduling}.  Otherwise, the decision
+is as described in this section.
+
+If two processes are ready to run but have different absolute priorities,
+the decision is much simpler, and is described in @ref{Absolute
+Priority}.
+
+Each process has a scheduling policy.  For processes with absolute
+priority other than zero, there are two available:
+
+@enumerate
+@item
+First Come First Served
+@item
+Round Robin
+@end enumerate
+
+The most sensible case is where all the processes with a certain
+absolute priority have the same scheduling policy.  We'll discuss that
+first.
+
+In Round Robin, processes share the CPU, each one running for a small
+quantum of time (``time slice'') and then yielding to another in a
+circular fashion.  Of course, only processes that are ready to run and
+have the same absolute priority are in this circle.
+
+In First Come First Served, the process that has been waiting the
+longest to run gets the CPU, and it keeps it until it voluntarily
+relinquishes the CPU, runs out of things to do (blocks), or gets
+preempted by a higher priority process.
+
+First Come First Served, along with maximal absolute priority and
+careful control of interrupts and page faults, is the one to use when a
+process absolutely, positively has to run at full CPU speed or not at
+all.
+
+Judicious use of @code{sched_yield} function invocations by processes
+with First Come First Served scheduling policy forms a good compromise
+between Round Robin and First Come First Served.
+
+To understand how scheduling works when processes of different scheduling
+policies occupy the same absolute priority, you have to know the nitty
+gritty details of how processes enter and exit the ready to run list.
+
+In both cases, the ready to run list is organized as a true queue, where
+a process gets pushed onto the tail when it becomes ready to run and is
+popped off the head when the scheduler decides to run it.  Note that
+ready to run and running are two mutually exclusive states.  When the
+scheduler runs a process, that process is no longer ready to run and no
+longer in the ready to run list.  When the process stops running, it
+may go back to being ready to run again.
+
+The only difference between a process that is assigned the Round Robin
+scheduling policy and a process that is assigned First Come First Serve
+is that in the former case, the process is automatically booted off the
+CPU after a certain amount of time.  When that happens, the process goes
+back to being ready to run, which means it enters the queue at the tail.
+The time quantum we're talking about is small.  Really small.  This is
+not your father's timesharing.  For example, with the Linux kernel, the
+round robin time slice is a thousand times shorter than its typical
+time slice for traditional scheduling.
+
+A process begins life with the same scheduling policy as its parent process.
+Functions described in @ref{Basic Scheduling Functions} can change it.
+
+Only a privileged process can set the scheduling policy of a process
+that has absolute priority higher than 0.
+
+@node Basic Scheduling Functions
+@subsection Basic Scheduling Functions
+
+This section describes functions in @theglibc{} for setting the
+absolute priority and scheduling policy of a process.
+
+@strong{Portability Note:}  On systems that have the functions in this
+section, the macro _POSIX_PRIORITY_SCHEDULING is defined in
+@file{<unistd.h>}.
+
+For the case that the scheduling policy is traditional scheduling, more
+functions to fine tune the scheduling are in @ref{Traditional Scheduling}.
+
+Don't try to make too much out of the naming and structure of these
+functions.  They don't match the concepts described in this manual
+because the functions are as defined by POSIX.1b, but the implementation
+on systems that use @theglibc{} is the inverse of what the POSIX
+structure contemplates.  The POSIX scheme assumes that the primary
+scheduling parameter is the scheduling policy and that the priority
+value, if any, is a parameter of the scheduling policy.  In the
+implementation, though, the priority value is king and the scheduling
+policy, if anything, only fine tunes the effect of that priority.
+
+The symbols in this section are declared by including file @file{sched.h}.
+
+@strong{Portability Note:} In POSIX, the @code{pid_t} arguments of the
+functions below refer to process IDs.  On Linux, they are actually
+thread IDs, and control how specific threads are scheduled with
+regards to the entire system.  The resulting behavior does not conform
+to POSIX.  This is why the following description refers to tasks and
+tasks IDs, and not processes and process IDs.
+@c https://sourceware.org/bugzilla/show_bug.cgi?id=14829
+
+@deftp {Data Type} {struct sched_param}
+@standards{POSIX, sched.h}
+This structure describes an absolute priority.
+@table @code
+@item int sched_priority
+absolute priority value
+@end table
+@end deftp
+
+@deftypefun int sched_setscheduler (pid_t @var{pid}, int @var{policy}, const struct sched_param *@var{param})
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, Linux only.
+
+This function sets both the absolute priority and the scheduling policy
+for a task.
+
+It assigns the absolute priority value given by @var{param} and the
+scheduling policy @var{policy} to the task with ID @var{pid},
+or the calling task if @var{pid} is zero.  If @var{policy} is
+negative, @code{sched_setscheduler} keeps the existing scheduling policy.
+
+The following macros represent the valid values for @var{policy}:
+
+@vtable @code
+@item SCHED_OTHER
+Traditional Scheduling
+@item SCHED_FIFO
+First In First Out
+@item SCHED_RR
+Round Robin
+@end vtable
+
+@c The Linux kernel code (in sched.c) actually reschedules the process,
+@c but it puts it at the head of the run queue, so I'm not sure just what
+@c the effect is, but it must be subtle.
+
+On success, the return value is @code{0}.  Otherwise, it is @code{-1}
+and @code{ERRNO} is set accordingly.  The @code{errno} values specific
+to this function are:
+
+@table @code
+@item EPERM
+@itemize @bullet
+@item
+The calling task does not have @code{CAP_SYS_NICE} permission and
+@var{policy} is not @code{SCHED_OTHER} (or it's negative and the
+existing policy is not @code{SCHED_OTHER}.
+
+@item
+The calling task does not have @code{CAP_SYS_NICE} permission and its
+owner is not the target task's owner.  I.e., the effective uid of the
+calling task is neither the effective nor the real uid of task
+@var{pid}.
+@c We need a cross reference to the capabilities section, when written.
+@end itemize
+
+@item ESRCH
+There is no task with pid @var{pid} and @var{pid} is not zero.
+
+@item EINVAL
+@itemize @bullet
+@item
+@var{policy} does not identify an existing scheduling policy.
+
+@item
+The absolute priority value identified by *@var{param} is outside the
+valid range for the scheduling policy @var{policy} (or the existing
+scheduling policy if @var{policy} is negative) or @var{param} is
+null.  @code{sched_get_priority_max} and @code{sched_get_priority_min}
+tell you what the valid range is.
+
+@item
+@var{pid} is negative.
+@end itemize
+@end table
+
+@end deftypefun
+
+
+@deftypefun int sched_getscheduler (pid_t @var{pid})
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, Linux only.
+
+This function returns the scheduling policy assigned to the task with
+ID @var{pid}, or the calling task if @var{pid} is zero.
+
+The return value is the scheduling policy.  See
+@code{sched_setscheduler} for the possible values.
+
+If the function fails, the return value is instead @code{-1} and
+@code{errno} is set accordingly.
+
+The @code{errno} values specific to this function are:
+
+@table @code
+
+@item ESRCH
+There is no task with pid @var{pid} and it is not zero.
+
+@item EINVAL
+@var{pid} is negative.
+
+@end table
+
+Note that this function is not an exact mate to @code{sched_setscheduler}
+because while that function sets the scheduling policy and the absolute
+priority, this function gets only the scheduling policy.  To get the
+absolute priority, use @code{sched_getparam}.
+
+@end deftypefun
+
+
+@deftypefun int sched_setparam (pid_t @var{pid}, const struct sched_param *@var{param})
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, Linux only.
+
+This function sets a task's absolute priority.
+
+It is functionally identical to @code{sched_setscheduler} with
+@var{policy} = @code{-1}.
+
+@c in fact, that's how it's implemented in Linux.
+
+@end deftypefun
+
+@deftypefun int sched_getparam (pid_t @var{pid}, struct sched_param *@var{param})
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, Linux only.
+
+This function returns a task's absolute priority.
+
+@var{pid} is the task ID of the task whose absolute priority you want
+to know.
+
+@var{param} is a pointer to a structure in which the function stores the
+absolute priority of the task.
+
+On success, the return value is @code{0}.  Otherwise, it is @code{-1}
+and @code{errno} is set accordingly.  The @code{errno} values specific
+to this function are:
+
+@table @code
+
+@item ESRCH
+There is no task with ID @var{pid} and it is not zero.
+
+@item EINVAL
+@var{pid} is negative.
+
+@end table
+
+@end deftypefun
+
+
+@deftypefun int sched_get_priority_min (int @var{policy})
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, Linux only.
+
+This function returns the lowest absolute priority value that is
+allowable for a task with scheduling policy @var{policy}.
+
+On Linux, it is 0 for SCHED_OTHER and 1 for everything else.
+
+On success, the return value is @code{0}.  Otherwise, it is @code{-1}
+and @code{ERRNO} is set accordingly.  The @code{errno} values specific
+to this function are:
+
+@table @code
+@item EINVAL
+@var{policy} does not identify an existing scheduling policy.
+@end table
+
+@end deftypefun
+
+@deftypefun int sched_get_priority_max (int @var{policy})
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, Linux only.
+
+This function returns the highest absolute priority value that is
+allowable for a task that with scheduling policy @var{policy}.
+
+On Linux, it is 0 for SCHED_OTHER and 99 for everything else.
+
+On success, the return value is @code{0}.  Otherwise, it is @code{-1}
+and @code{ERRNO} is set accordingly.  The @code{errno} values specific
+to this function are:
+
+@table @code
+@item EINVAL
+@var{policy} does not identify an existing scheduling policy.
+@end table
+
+@end deftypefun
+
+@deftypefun int sched_rr_get_interval (pid_t @var{pid}, struct timespec *@var{interval})
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, Linux only.
+
+This function returns the length of the quantum (time slice) used with
+the Round Robin scheduling policy, if it is used, for the task with
+task ID @var{pid}.
+
+It returns the length of time as @var{interval}.
+@c We need a cross-reference to where timespec is explained.  But that
+@c section doesn't exist yet, and the time chapter needs to be slightly
+@c reorganized so there is a place to put it (which will be right next
+@c to timeval, which is presently misplaced).  2000.05.07.
+
+With a Linux kernel, the round robin time slice is always 150
+microseconds, and @var{pid} need not even be a real pid.
+
+The return value is @code{0} on success and in the pathological case
+that it fails, the return value is @code{-1} and @code{errno} is set
+accordingly.  There is nothing specific that can go wrong with this
+function, so there are no specific @code{errno} values.
+
+@end deftypefun
+
+@deftypefun int sched_yield (void)
+@standards{POSIX, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on Linux; alias to swtch on HURD.
+
+This function voluntarily gives up the task's claim on the CPU.
+
+Technically, @code{sched_yield} causes the calling task to be made
+immediately ready to run (as opposed to running, which is what it was
+before).  This means that if it has absolute priority higher than 0, it
+gets pushed onto the tail of the queue of tasks that share its
+absolute priority and are ready to run, and it will run again when its
+turn next arrives.  If its absolute priority is 0, it is more
+complicated, but still has the effect of yielding the CPU to other
+tasks.
+
+If there are no other tasks that share the calling task's absolute
+priority, this function doesn't have any effect.
+
+To the extent that the containing program is oblivious to what other
+processes in the system are doing and how fast it executes, this
+function appears as a no-op.
+
+The return value is @code{0} on success and in the pathological case
+that it fails, the return value is @code{-1} and @code{errno} is set
+accordingly.  There is nothing specific that can go wrong with this
+function, so there are no specific @code{errno} values.
+
+@end deftypefun
+
+@node Traditional Scheduling
+@subsection Traditional Scheduling
+@cindex scheduling, traditional
+
+This section is about the scheduling among processes whose absolute
+priority is 0.  When the system hands out the scraps of CPU time that
+are left over after the processes with higher absolute priority have
+taken all they want, the scheduling described herein determines who
+among the great unwashed processes gets them.
+
+@menu
+* Traditional Scheduling Intro::
+* Traditional Scheduling Functions::
+@end menu
+
+@node Traditional Scheduling Intro
+@subsubsection Introduction To Traditional Scheduling
+
+Long before there was absolute priority (See @ref{Absolute Priority}),
+Unix systems were scheduling the CPU using this system.  When POSIX came
+in like the Romans and imposed absolute priorities to accommodate the
+needs of realtime processing, it left the indigenous Absolute Priority
+Zero processes to govern themselves by their own familiar scheduling
+policy.
+
+Indeed, absolute priorities higher than zero are not available on many
+systems today and are not typically used when they are, being intended
+mainly for computers that do realtime processing.  So this section
+describes the only scheduling many programmers need to be concerned
+about.
+
+But just to be clear about the scope of this scheduling: Any time a
+process with an absolute priority of 0 and a process with an absolute
+priority higher than 0 are ready to run at the same time, the one with
+absolute priority 0 does not run.  If it's already running when the
+higher priority ready-to-run process comes into existence, it stops
+immediately.
+
+In addition to its absolute priority of zero, every process has another
+priority, which we will refer to as "dynamic priority" because it changes
+over time.  The dynamic priority is meaningless for processes with
+an absolute priority higher than zero.
+
+The dynamic priority sometimes determines who gets the next turn on the
+CPU.  Sometimes it determines how long turns last.  Sometimes it
+determines whether a process can kick another off the CPU.
+
+In Linux, the value is a combination of these things, but mostly it
+just determines the length of the time slice.  The higher a process'
+dynamic priority, the longer a shot it gets on the CPU when it gets one.
+If it doesn't use up its time slice before giving up the CPU to do
+something like wait for I/O, it is favored for getting the CPU back when
+it's ready for it, to finish out its time slice.  Other than that,
+selection of processes for new time slices is basically round robin.
+But the scheduler does throw a bone to the low priority processes: A
+process' dynamic priority rises every time it is snubbed in the
+scheduling process.  In Linux, even the fat kid gets to play.
+
+The fluctuation of a process' dynamic priority is regulated by another
+value: The ``nice'' value.  The nice value is an integer, usually in the
+range -20 to 20, and represents an upper limit on a process' dynamic
+priority.  The higher the nice number, the lower that limit.
+
+On a typical Linux system, for example, a process with a nice value of
+20 can get only 10 milliseconds on the CPU at a time, whereas a process
+with a nice value of -20 can achieve a high enough priority to get 400
+milliseconds.
+
+The idea of the nice value is deferential courtesy.  In the beginning,
+in the Unix garden of Eden, all processes shared equally in the bounty
+of the computer system.  But not all processes really need the same
+share of CPU time, so the nice value gave a courteous process the
+ability to refuse its equal share of CPU time that others might prosper.
+Hence, the higher a process' nice value, the nicer the process is.
+(Then a snake came along and offered some process a negative nice value
+and the system became the crass resource allocation system we know
+today.)
+
+Dynamic priorities tend upward and downward with an objective of
+smoothing out allocation of CPU time and giving quick response time to
+infrequent requests.  But they never exceed their nice limits, so on a
+heavily loaded CPU, the nice value effectively determines how fast a
+process runs.
+
+In keeping with the socialistic heritage of Unix process priority, a
+process begins life with the same nice value as its parent process and
+can raise it at will.  A process can also raise the nice value of any
+other process owned by the same user (or effective user).  But only a
+privileged process can lower its nice value.  A privileged process can
+also raise or lower another process' nice value.
+
+@glibcadj{} functions for getting and setting nice values are described in
+@xref{Traditional Scheduling Functions}.
+
+@node Traditional Scheduling Functions
+@subsubsection Functions For Traditional Scheduling
+
+@pindex sys/resource.h
+This section describes how you can read and set the nice value of a
+process.  All these symbols are declared in @file{sys/resource.h}.
+
+The function and macro names are defined by POSIX, and refer to
+"priority," but the functions actually have to do with nice values, as
+the terms are used both in the manual and POSIX.
+
+The range of valid nice values depends on the kernel, but typically it
+runs from @code{-20} to @code{20}.  A lower nice value corresponds to
+higher priority for the process.  These constants describe the range of
+priority values:
+
+@vtable @code
+@item PRIO_MIN
+@standards{BSD, sys/resource.h}
+The lowest valid nice value.
+
+@item PRIO_MAX
+@standards{BSD, sys/resource.h}
+The highest valid nice value.
+@end vtable
+
+@deftypefun int getpriority (int @var{class}, int @var{id})
+@standards{BSD, sys/resource.h}
+@standards{POSIX, sys/resource.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on UNIX.  On HURD, calls _hurd_priority_which_map.
+Return the nice value of a set of processes; @var{class} and @var{id}
+specify which ones (see below).  If the processes specified do not all
+have the same nice value, this returns the lowest value that any of them
+has.
+
+On success, the return value is @code{0}.  Otherwise, it is @code{-1}
+and @code{errno} is set accordingly.  The @code{errno} values specific
+to this function are:
+
+@table @code
+@item ESRCH
+The combination of @var{class} and @var{id} does not match any existing
+process.
+
+@item EINVAL
+The value of @var{class} is not valid.
+@end table
+
+If the return value is @code{-1}, it could indicate failure, or it could
+be the nice value.  The only way to make certain is to set @code{errno =
+0} before calling @code{getpriority}, then use @code{errno != 0}
+afterward as the criterion for failure.
+@end deftypefun
+
+@deftypefun int setpriority (int @var{class}, int @var{id}, int @var{niceval})
+@standards{BSD, sys/resource.h}
+@standards{POSIX, sys/resource.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on UNIX.  On HURD, calls _hurd_priority_which_map.
+Set the nice value of a set of processes to @var{niceval}; @var{class}
+and @var{id} specify which ones (see below).
+
+The return value is @code{0} on success, and @code{-1} on
+failure.  The following @code{errno} error condition are possible for
+this function:
+
+@table @code
+@item ESRCH
+The combination of @var{class} and @var{id} does not match any existing
+process.
+
+@item EINVAL
+The value of @var{class} is not valid.
+
+@item EPERM
+The call would set the nice value of a process which is owned by a different
+user than the calling process (i.e., the target process' real or effective
+uid does not match the calling process' effective uid) and the calling
+process does not have @code{CAP_SYS_NICE} permission.
+
+@item EACCES
+The call would lower the process' nice value and the process does not have
+@code{CAP_SYS_NICE} permission.
+@end table
+
+@end deftypefun
+
+The arguments @var{class} and @var{id} together specify a set of
+processes in which you are interested.  These are the possible values of
+@var{class}:
+
+@vtable @code
+@item PRIO_PROCESS
+@standards{BSD, sys/resource.h}
+One particular process.  The argument @var{id} is a process ID (pid).
+
+@item PRIO_PGRP
+@standards{BSD, sys/resource.h}
+All the processes in a particular process group.  The argument @var{id} is
+a process group ID (pgid).
+
+@item PRIO_USER
+@standards{BSD, sys/resource.h}
+All the processes owned by a particular user (i.e., whose real uid
+indicates the user).  The argument @var{id} is a user ID (uid).
+@end vtable
+
+If the argument @var{id} is 0, it stands for the calling process, its
+process group, or its owner (real uid), according to @var{class}.
+
+@deftypefun int nice (int @var{increment})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:setpriority}}@asunsafe{}@acsafe{}}
+@c Calls getpriority before and after setpriority, using the result of
+@c the first call to compute the argument for setpriority.  This creates
+@c a window for a concurrent setpriority (or nice) call to be lost or
+@c exhibit surprising behavior.
+Increment the nice value of the calling process by @var{increment}.
+The return value is the new nice value on success, and @code{-1} on
+failure.  In the case of failure, @code{errno} will be set to the
+same values as for @code{setpriority}.
+
+
+Here is an equivalent definition of @code{nice}:
+
+@smallexample
+int
+nice (int increment)
+@{
+  int result, old = getpriority (PRIO_PROCESS, 0);
+  result = setpriority (PRIO_PROCESS, 0, old + increment);
+  if (result != -1)
+      return old + increment;
+  else
+      return -1;
+@}
+@end smallexample
+@end deftypefun
+
+
+@node CPU Affinity
+@subsection Limiting execution to certain CPUs
+
+On a multi-processor system the operating system usually distributes
+the different processes which are runnable on all available CPUs in a
+way which allows the system to work most efficiently.  Which processes
+and threads run can be to some extend be control with the scheduling
+functionality described in the last sections.  But which CPU finally
+executes which process or thread is not covered.
+
+There are a number of reasons why a program might want to have control
+over this aspect of the system as well:
+
+@itemize @bullet
+@item
+One thread or process is responsible for absolutely critical work
+which under no circumstances must be interrupted or hindered from
+making progress by other processes or threads using CPU resources.  In
+this case the special process would be confined to a CPU which no
+other process or thread is allowed to use.
+
+@item
+The access to certain resources (RAM, I/O ports) has different costs
+from different CPUs.  This is the case in NUMA (Non-Uniform Memory
+Architecture) machines.  Preferably memory should be accessed locally
+but this requirement is usually not visible to the scheduler.
+Therefore forcing a process or thread to the CPUs which have local
+access to the most-used memory helps to significantly boost the
+performance.
+
+@item
+In controlled runtimes resource allocation and book-keeping work (for
+instance garbage collection) is performance local to processors.  This
+can help to reduce locking costs if the resources do not have to be
+protected from concurrent accesses from different processors.
+@end itemize
+
+The POSIX standard up to this date is of not much help to solve this
+problem.  The Linux kernel provides a set of interfaces to allow
+specifying @emph{affinity sets} for a process.  The scheduler will
+schedule the thread or process on CPUs specified by the affinity
+masks.  The interfaces which @theglibc{} define follow to some
+extent the Linux kernel interface.
+
+@deftp {Data Type} cpu_set_t
+@standards{GNU, sched.h}
+This data set is a bitset where each bit represents a CPU.  How the
+system's CPUs are mapped to bits in the bitset is system dependent.
+The data type has a fixed size; in the unlikely case that the number
+of bits are not sufficient to describe the CPUs of the system a
+different interface has to be used.
+
+This type is a GNU extension and is defined in @file{sched.h}.
+@end deftp
+
+To manipulate the bitset, to set and reset bits, a number of macros are
+defined.  Some of the macros take a CPU number as a parameter.  Here
+it is important to never exceed the size of the bitset.  The following
+macro specifies the number of bits in the @code{cpu_set_t} bitset.
+
+@deftypevr Macro int CPU_SETSIZE
+@standards{GNU, sched.h}
+The value of this macro is the maximum number of CPUs which can be
+handled with a @code{cpu_set_t} object.
+@end deftypevr
+
+The type @code{cpu_set_t} should be considered opaque; all
+manipulation should happen via the next four macros.
+
+@deftypefn Macro void CPU_ZERO (cpu_set_t *@var{set})
+@standards{GNU, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c CPU_ZERO ok
+@c  __CPU_ZERO_S ok
+@c   memset dup ok
+This macro initializes the CPU set @var{set} to be the empty set.
+
+This macro is a GNU extension and is defined in @file{sched.h}.
+@end deftypefn
+
+@deftypefn Macro void CPU_SET (int @var{cpu}, cpu_set_t *@var{set})
+@standards{GNU, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c CPU_SET ok
+@c  __CPU_SET_S ok
+@c   __CPUELT ok
+@c   __CPUMASK ok
+This macro adds @var{cpu} to the CPU set @var{set}.
+
+The @var{cpu} parameter must not have side effects since it is
+evaluated more than once.
+
+This macro is a GNU extension and is defined in @file{sched.h}.
+@end deftypefn
+
+@deftypefn Macro void CPU_CLR (int @var{cpu}, cpu_set_t *@var{set})
+@standards{GNU, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c CPU_CLR ok
+@c  __CPU_CLR_S ok
+@c   __CPUELT dup ok
+@c   __CPUMASK dup ok
+This macro removes @var{cpu} from the CPU set @var{set}.
+
+The @var{cpu} parameter must not have side effects since it is
+evaluated more than once.
+
+This macro is a GNU extension and is defined in @file{sched.h}.
+@end deftypefn
+
+@deftypefn Macro int CPU_ISSET (int @var{cpu}, const cpu_set_t *@var{set})
+@standards{GNU, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c CPU_ISSET ok
+@c  __CPU_ISSET_S ok
+@c   __CPUELT dup ok
+@c   __CPUMASK dup ok
+This macro returns a nonzero value (true) if @var{cpu} is a member
+of the CPU set @var{set}, and zero (false) otherwise.
+
+The @var{cpu} parameter must not have side effects since it is
+evaluated more than once.
+
+This macro is a GNU extension and is defined in @file{sched.h}.
+@end deftypefn
+
+
+CPU bitsets can be constructed from scratch or the currently installed
+affinity mask can be retrieved from the system.
+
+@deftypefun int sched_getaffinity (pid_t @var{pid}, size_t @var{cpusetsize}, cpu_set_t *@var{cpuset})
+@standards{GNU, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Wrapped syscall to zero out past the kernel cpu set size; Linux
+@c only.
+
+This function stores the CPU affinity mask for the process or thread
+with the ID @var{pid} in the @var{cpusetsize} bytes long bitmap
+pointed to by @var{cpuset}.  If successful, the function always
+initializes all bits in the @code{cpu_set_t} object and returns zero.
+
+If @var{pid} does not correspond to a process or thread on the system
+the or the function fails for some other reason, it returns @code{-1}
+and @code{errno} is set to represent the error condition.
+
+@table @code
+@item ESRCH
+No process or thread with the given ID found.
+
+@item EFAULT
+The pointer @var{cpuset} does not point to a valid object.
+@end table
+
+This function is a GNU extension and is declared in @file{sched.h}.
+@end deftypefun
+
+Note that it is not portably possible to use this information to
+retrieve the information for different POSIX threads.  A separate
+interface must be provided for that.
+
+@deftypefun int sched_setaffinity (pid_t @var{pid}, size_t @var{cpusetsize}, const cpu_set_t *@var{cpuset})
+@standards{GNU, sched.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Wrapped syscall to detect attempts to set bits past the kernel cpu
+@c set size; Linux only.
+
+This function installs the @var{cpusetsize} bytes long affinity mask
+pointed to by @var{cpuset} for the process or thread with the ID @var{pid}.
+If successful the function returns zero and the scheduler will in the future
+take the affinity information into account.
+
+If the function fails it will return @code{-1} and @code{errno} is set
+to the error code:
+
+@table @code
+@item ESRCH
+No process or thread with the given ID found.
+
+@item EFAULT
+The pointer @var{cpuset} does not point to a valid object.
+
+@item EINVAL
+The bitset is not valid.  This might mean that the affinity set might
+not leave a processor for the process or thread to run on.
+@end table
+
+This function is a GNU extension and is declared in @file{sched.h}.
+@end deftypefun
+
+@deftypefun int getcpu (unsigned int *cpu, unsigned int *node)
+@standards{Linux, <sched.h>}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{getcpu} function identifies the processor and node on which
+the calling thread or process is currently running and writes them into
+the integers pointed to by the @var{cpu} and @var{node} arguments.  The
+processor is a unique nonnegative integer identifying a CPU.  The node
+is a unique nonnegative integer identifying a NUMA node.  When either
+@var{cpu} or @var{node} is @code{NULL}, nothing is written to the
+respective pointer.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error condition is defined for this function:
+
+@table @code
+@item ENOSYS
+The operating system does not support this function.
+@end table
+
+This function is Linux-specific and is declared in @file{sched.h}.
+@end deftypefun
+
+@node Memory Resources
+@section Querying memory available resources
+
+The amount of memory available in the system and the way it is organized
+determines oftentimes the way programs can and have to work.  For
+functions like @code{mmap} it is necessary to know about the size of
+individual memory pages and knowing how much memory is available enables
+a program to select appropriate sizes for, say, caches.  Before we get
+into these details a few words about memory subsystems in traditional
+Unix systems will be given.
+
+@menu
+* Memory Subsystem::           Overview about traditional Unix memory handling.
+* Query Memory Parameters::    How to get information about the memory
+                                subsystem?
+@end menu
+
+@node Memory Subsystem
+@subsection Overview about traditional Unix memory handling
+
+@cindex address space
+@cindex physical memory
+@cindex physical address
+Unix systems normally provide processes virtual address spaces.  This
+means that the addresses of the memory regions do not have to correspond
+directly to the addresses of the actual physical memory which stores the
+data.  An extra level of indirection is introduced which translates
+virtual addresses into physical addresses.  This is normally done by the
+hardware of the processor.
+
+@cindex shared memory
+Using a virtual address space has several advantages.  The most important
+is process isolation.  The different processes running on the system
+cannot interfere directly with each other.  No process can write into
+the address space of another process (except when shared memory is used
+but then it is wanted and controlled).
+
+Another advantage of virtual memory is that the address space the
+processes see can actually be larger than the physical memory available.
+The physical memory can be extended by storage on an external media
+where the content of currently unused memory regions is stored.  The
+address translation can then intercept accesses to these memory regions
+and make memory content available again by loading the data back into
+memory.  This concept makes it necessary that programs which have to use
+lots of memory know the difference between available virtual address
+space and available physical memory.  If the working set of virtual
+memory of all the processes is larger than the available physical memory
+the system will slow down dramatically due to constant swapping of
+memory content from the memory to the storage media and back.  This is
+called ``thrashing''.
+@cindex thrashing
+
+@cindex memory page
+@cindex page, memory
+A final aspect of virtual memory which is important and follows from
+what is said in the last paragraph is the granularity of the virtual
+address space handling.  When we said that the virtual address handling
+stores memory content externally it cannot do this on a byte-by-byte
+basis.  The administrative overhead does not allow this (leaving alone
+the processor hardware).  Instead several thousand bytes are handled
+together and form a @dfn{page}.  The size of each page is always a power
+of two bytes.  The smallest page size in use today is 4096, with 8192,
+16384, and 65536 being other popular sizes.
+
+@node Query Memory Parameters
+@subsection How to get information about the memory subsystem?
+
+The page size of the virtual memory the process sees is essential to
+know in several situations.  Some programming interfaces (e.g.,
+@code{mmap}, @pxref{Memory-mapped I/O}) require the user to provide
+information adjusted to the page size.  In the case of @code{mmap} it is
+necessary to provide a length argument which is a multiple of the page
+size.  Another place where the knowledge about the page size is useful
+is in memory allocation.  If one allocates pieces of memory in larger
+chunks which are then subdivided by the application code it is useful to
+adjust the size of the larger blocks to the page size.  If the total
+memory requirement for the block is close (but not larger) to a multiple
+of the page size the kernel's memory handling can work more effectively
+since it only has to allocate memory pages which are fully used.  (To do
+this optimization it is necessary to know a bit about the memory
+allocator which will require a bit of memory itself for each block and
+this overhead must not push the total size over the page size multiple.)
+
+The page size traditionally was a compile time constant.  But recent
+development of processors changed this.  Processors now support
+different page sizes and they can possibly even vary among different
+processes on the same system.  Therefore the system should be queried at
+runtime about the current page size and no assumptions (except about it
+being a power of two) should be made.
+
+@vindex _SC_PAGESIZE
+The correct interface to query about the page size is @code{sysconf}
+(@pxref{Sysconf Definition}) with the parameter @code{_SC_PAGESIZE}.
+There is a much older interface available, too.
+
+@deftypefun int getpagesize (void)
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Obtained from the aux vec at program startup time.  GNU/Linux/m68k is
+@c the exception, with the possibility of a syscall.
+The @code{getpagesize} function returns the page size of the process.
+This value is fixed for the runtime of the process but can vary in
+different runs of the application.
+
+The function is declared in @file{unistd.h}.
+@end deftypefun
+
+Widely available on @w{System V} derived systems is a method to get
+information about the physical memory the system has.  The call
+
+@vindex _SC_PHYS_PAGES
+@cindex sysconf
+@smallexample
+  sysconf (_SC_PHYS_PAGES)
+@end smallexample
+
+@noindent
+returns the total number of pages of physical memory the system has.
+This does not mean all this memory is available.  This information can
+be found using
+
+@vindex _SC_AVPHYS_PAGES
+@cindex sysconf
+@smallexample
+  sysconf (_SC_AVPHYS_PAGES)
+@end smallexample
+
+These two values help to optimize applications.  The value returned for
+@code{_SC_AVPHYS_PAGES} is the amount of memory the application can use
+without hindering any other process (given that no other process
+increases its memory usage).  The value returned for
+@code{_SC_PHYS_PAGES} is more or less a hard limit for the working set.
+If all applications together constantly use more than that amount of
+memory the system is in trouble.
+
+@Theglibc{} provides in addition to these already described way to
+get this information two functions.  They are declared in the file
+@file{sys/sysinfo.h}.  Programmers should prefer to use the
+@code{sysconf} method described above.
+
+@deftypefun {long int} get_phys_pages (void)
+@standards{GNU, sys/sysinfo.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c This fopens a /proc file and scans it for the requested information.
+The @code{get_phys_pages} function returns the total number of pages of
+physical memory the system has.  To get the amount of memory this number has to
+be multiplied by the page size.
+
+This function is a GNU extension.
+@end deftypefun
+
+@deftypefun {long int} get_avphys_pages (void)
+@standards{GNU, sys/sysinfo.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+The @code{get_avphys_pages} function returns the number of available pages of
+physical memory the system has.  To get the amount of memory this number has to
+be multiplied by the page size.
+
+This function is a GNU extension.
+@end deftypefun
+
+@node Processor Resources
+@section Learn about the processors available
+
+The use of threads or processes with shared memory allows an application
+to take advantage of all the processing power a system can provide.  If
+the task can be parallelized the optimal way to write an application is
+to have at any time as many processes running as there are processors.
+To determine the number of processors available to the system one can
+run
+
+@vindex _SC_NPROCESSORS_CONF
+@cindex sysconf
+@smallexample
+  sysconf (_SC_NPROCESSORS_CONF)
+@end smallexample
+
+@noindent
+which returns the number of processors the operating system configured.
+But it might be possible for the operating system to disable individual
+processors and so the call
+
+@vindex _SC_NPROCESSORS_ONLN
+@cindex sysconf
+@smallexample
+  sysconf (_SC_NPROCESSORS_ONLN)
+@end smallexample
+
+@noindent
+returns the number of processors which are currently online (i.e.,
+available).
+
+For these two pieces of information @theglibc{} also provides
+functions to get the information directly.  The functions are declared
+in @file{sys/sysinfo.h}.
+
+@deftypefun int get_nprocs_conf (void)
+@standards{GNU, sys/sysinfo.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c This function reads from from /sys using dir streams (single user, so
+@c no @mtasurace issue), and on some arches, from /proc using streams.
+The @code{get_nprocs_conf} function returns the number of processors the
+operating system configured.
+
+This function is a GNU extension.
+@end deftypefun
+
+@deftypefun int get_nprocs (void)
+@standards{GNU, sys/sysinfo.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+@c This function reads from /proc using file descriptor I/O.
+The @code{get_nprocs} function returns the number of available processors.
+
+This function is a GNU extension.
+@end deftypefun
+
+@cindex load average
+Before starting more threads it should be checked whether the processors
+are not already overused.  Unix systems calculate something called the
+@dfn{load average}.  This is a number indicating how many processes were
+running.  This number is an average over different periods of time
+(normally 1, 5, and 15 minutes).
+
+@deftypefun int getloadavg (double @var{loadavg}[], int @var{nelem})
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+@c Calls host_info on HURD; on Linux, opens /proc/loadavg, reads from
+@c it, closes it, without cancellation point, and calls strtod_l with
+@c the C locale to convert the strings to doubles.
+This function gets the 1, 5 and 15 minute load averages of the
+system.  The values are placed in @var{loadavg}.  @code{getloadavg} will
+place at most @var{nelem} elements into the array but never more than
+three elements.  The return value is the number of elements written to
+@var{loadavg}, or -1 on error.
+
+This function is declared in @file{stdlib.h}.
+@end deftypefun

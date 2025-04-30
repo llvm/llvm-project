@@ -1,0 +1,127 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title "Sater Frisian and North Frisian Locale for Germany"
+source "information from Kenneth Christiansen"
+address ""
+contact "Kenneth Christiansen, Pablo Saratxaga"
+email "kenneth@gnu.org, pablo@mandriva.com"
+tel ""
+% Fax
+language "Western Frisian"
+territory "Germany"
+revision "0.1"
+date "2003-11-30"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+END LC_IDENTIFICATION
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_post  "D"
+country_ab2   "DE"
+country_ab3   "DEU"
+country_car   "D"
+country_num 276
+country_isbn "3"
+country_name "D<U00FA>tsl<U00E2>n"
+lang_name    "Frysk"
+lang_ab      "fy"
+lang_term    "fry"
+lang_lib    "fry"
+END LC_ADDRESS
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_DK"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1jJyY]"
+noexpr  "^[-0nN]"
+yesstr  "ja"
+nostr   "nee"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "de_DE"
+END LC_MONETARY
+
+LC_PAPER
+copy "de_DE"
+END LC_PAPER
+
+LC_NAME
+copy "de_DE"
+END LC_NAME
+
+LC_TELEPHONE
+copy "de_DE"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "de_DE"
+END LC_MEASUREMENT
+
+LC_NUMERIC
+copy "de_DE"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Sdg";"Mdg";"Dsg";"Mwk";"Ddg";"Fdg";"Swd"
+day     "Sinndag";/
+        "Mondag";/
+        "Dingsdag";/
+        "Meddw<U00E4>akj";/
+        "Donnadag";/
+        "Friedag";/
+        "Sinnowend"
+abmon   "Jan";"Feb";/
+        "Moz";"Apr";/
+        "Mai";"Jun";/
+        "Jul";"Aug";/
+        "Sep";"Okt";/
+        "Now";"Dez"
+mon     "Jaunuwoa";/
+        "Februwoa";/
+        "Moaz";/
+        "Aprell";/
+        "Mai";/
+        "Juni";/
+        "Juli";/
+        "August";/
+        "Septamba";/
+        "Oktoba";/
+        "Nowamba";/
+        "Dezamba"
+d_t_fmt  "%a %d. %b %Y %T"
+date_fmt "%a %d. %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week	7;19971130;4
+first_weekday	2
+END LC_TIME

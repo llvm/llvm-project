@@ -1,0 +1,11 @@
+libm=6			GLIBC_2.2
+
+libc=6			GLIBC_2.2
+
+ld=ld.so.1		GLIBC_2.2
+
+libBrokenLocale=1	GLIBC_2.2
+
+libpthread=0		GLIBC_2.2
+
+libc_malloc_debug=0	GLIBC_2.2

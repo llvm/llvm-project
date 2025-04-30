@@ -1,0 +1,1108 @@
+@node System Management, System Configuration, Users and Groups, Top
+@c %MENU% Controlling the system and getting information about it
+@chapter System Management
+
+This chapter describes facilities for controlling the system that
+underlies a process (including the operating system and hardware) and
+for getting information about it.  Anyone can generally use the
+informational facilities, but usually only a properly privileged process
+can make changes.
+
+
+@menu
+* Host Identification::         Determining the name of the machine.
+* Platform Type::               Determining operating system and basic
+                                  machine type
+* Filesystem Handling::         Controlling/querying mounts
+@end menu
+
+To get information on parameters of the system that are built into the
+system, such as the maximum length of a filename, @ref{System
+Configuration}.
+
+@node Host Identification
+@section Host Identification
+
+This section explains how to identify the particular system on which your
+program is running.  First, let's review the various ways computer systems
+are named, which is a little complicated because of the history of the
+development of the Internet.
+
+Every Unix system (also known as a host) has a host name, whether it's
+connected to a network or not.  In its simplest form, as used before
+computer networks were an issue, it's just a word like @samp{chicken}.
+@cindex host name
+
+But any system attached to the Internet or any network like it conforms
+to a more rigorous naming convention as part of the Domain Name System
+(DNS).  In the DNS, every host name is composed of two parts:
+@cindex DNS
+@cindex Domain Name System
+
+@enumerate
+@item
+hostname
+@cindex hostname
+@item
+domain name
+@cindex domain name
+@end enumerate
+
+You will note that ``hostname'' looks a lot like ``host name'', but is
+not the same thing, and that people often incorrectly refer to entire
+host names as ``domain names.''
+
+In the DNS, the full host name is properly called the FQDN (Fully Qualified
+Domain Name) and consists of the hostname, then a period, then the
+domain name.  The domain name itself usually has multiple components
+separated by periods.  So for example, a system's hostname may be
+@samp{chicken} and its domain name might be @samp{ai.mit.edu}, so
+its FQDN (which is its host name) is @samp{chicken.ai.mit.edu}.
+@cindex FQDN
+
+Adding to the confusion, though, is that the DNS is not the only name space
+in which a computer needs to be known.  Another name space is the
+NIS (aka YP) name space.  For NIS purposes, there is another domain
+name, which is called the NIS domain name or the YP domain name.  It
+need not have anything to do with the DNS domain name.
+@cindex YP
+@cindex NIS
+@cindex NIS domain name
+@cindex YP domain name
+
+Confusing things even more is the fact that in the DNS, it is possible for
+multiple FQDNs to refer to the same system.  However, there is always
+exactly one of them that is the true host name, and it is called the
+canonical FQDN.
+
+In some contexts, the host name is called a ``node name.''
+
+For more information on DNS host naming, see @ref{Host Names}.
+
+@pindex hostname
+@pindex hostid
+@pindex unistd.h
+Prototypes for these functions appear in @file{unistd.h}.
+
+The programs @code{hostname}, @code{hostid}, and @code{domainname} work
+by calling these functions.
+
+@deftypefun int gethostname (char *@var{name}, size_t @var{size})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on unix; implemented in terms of uname on posix and of
+@c hurd_get_host_config on hurd.
+This function returns the host name of the system on which it is called,
+in the array @var{name}.  The @var{size} argument specifies the size of
+this array, in bytes.  Note that this is @emph{not} the DNS hostname.
+If the system participates in the DNS, this is the FQDN (see above).
+
+The return value is @code{0} on success and @code{-1} on failure.  In
+@theglibc{}, @code{gethostname} fails if @var{size} is not large
+enough; then you can try again with a larger array.  The following
+@code{errno} error condition is defined for this function:
+
+@table @code
+@item ENAMETOOLONG
+The @var{size} argument is less than the size of the host name plus one.
+@end table
+
+@pindex sys/param.h
+On some systems, there is a symbol for the maximum possible host name
+length: @code{MAXHOSTNAMELEN}.  It is defined in @file{sys/param.h}.
+But you can't count on this to exist, so it is cleaner to handle
+failure and try again.
+
+@code{gethostname} stores the beginning of the host name in @var{name}
+even if the host name won't entirely fit.  For some purposes, a
+truncated host name is good enough.  If it is, you can ignore the
+error code.
+@end deftypefun
+
+@deftypefun int sethostname (const char *@var{name}, size_t @var{length})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on unix; implemented in terms of hurd_set_host_config
+@c on hurd.
+The @code{sethostname} function sets the host name of the system that
+calls it to @var{name}, a string with length @var{length}.  Only
+privileged processes are permitted to do this.
+
+Usually @code{sethostname} gets called just once, at system boot time.
+Often, the program that calls it sets it to the value it finds in the
+file @code{/etc/hostname}.
+@cindex /etc/hostname
+
+Be sure to set the host name to the full host name, not just the DNS
+hostname (see above).
+
+The return value is @code{0} on success and @code{-1} on failure.
+The following @code{errno} error condition is defined for this function:
+
+@table @code
+@item EPERM
+This process cannot set the host name because it is not privileged.
+@end table
+@end deftypefun
+
+@deftypefun int getdomainnname (char *@var{name}, size_t @var{length})
+@standards{???, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Syscalls uname, then strlen and memcpy.
+@cindex NIS domain name
+@cindex YP domain name
+
+@code{getdomainname} returns the NIS (aka YP) domain name of the system
+on which it is called.  Note that this is not the more popular DNS
+domain name.  Get that with @code{gethostname}.
+
+The specifics of this function are analogous to @code{gethostname}, above.
+
+@end deftypefun
+
+@deftypefun int setdomainname (const char *@var{name}, size_t @var{length})
+@standards{???, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall.
+@cindex NIS domain name
+@cindex YP domain name
+
+@code{setdomainname} sets the NIS (aka YP) domain name of the system
+on which it is called.  Note that this is not the more popular DNS
+domain name.  Set that with @code{sethostname}.
+
+The specifics of this function are analogous to @code{sethostname}, above.
+
+@end deftypefun
+
+@deftypefun {long int} gethostid (void)
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{@mtshostid{} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acucorrupt{} @acsmem{} @acsfd{}}}
+@c On HURD, calls _hurd_get_host_config and strtol.  On Linux, open
+@c HOSTIDFILE, reads an int32_t and closes; if that fails, it calls
+@c gethostname and gethostbyname_r to use the h_addr.
+This function returns the ``host ID'' of the machine the program is
+running on.  By convention, this is usually the primary Internet IP address
+of that machine, converted to a @w{@code{long int}}.  However, on some
+systems it is a meaningless but unique number which is hard-coded for
+each machine.
+
+This is not widely used.  It arose in BSD 4.2, but was dropped in BSD 4.4.
+It is not required by POSIX.
+
+The proper way to query the IP address is to use @code{gethostbyname}
+on the results of @code{gethostname}.  For more information on IP addresses,
+@xref{Host Addresses}.
+@end deftypefun
+
+@deftypefun int sethostid (long int @var{id})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtunsafe{@mtasuconst{:@mtshostid{}}}@asunsafe{}@acunsafe{@acucorrupt{} @acsfd{}}}
+The @code{sethostid} function sets the ``host ID'' of the host machine
+to @var{id}.  Only privileged processes are permitted to do this.  Usually
+it happens just once, at system boot time.
+
+The proper way to establish the primary IP address of a system
+is to configure the IP address resolver to associate that IP address with
+the system's host name as returned by @code{gethostname}.  For example,
+put a record for the system in @file{/etc/hosts}.
+
+See @code{gethostid} above for more information on host ids.
+
+The return value is @code{0} on success and @code{-1} on failure.
+The following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EPERM
+This process cannot set the host name because it is not privileged.
+
+@item ENOSYS
+The operating system does not support setting the host ID.  On some
+systems, the host ID is a meaningless but unique number hard-coded for
+each machine.
+@end table
+@end deftypefun
+
+@node Platform Type
+@section Platform Type Identification
+
+You can use the @code{uname} function to find out some information about
+the type of computer your program is running on.  This function and the
+associated data type are declared in the header file
+@file{sys/utsname.h}.
+@pindex sys/utsname.h
+
+As a bonus, @code{uname} also gives some information identifying the
+particular system your program is running on.  This is the same information
+which you can get with functions targeted to this purpose described in
+@ref{Host Identification}.
+
+
+@deftp {Data Type} {struct utsname}
+@standards{POSIX.1, sys/utsname.h}
+The @code{utsname} structure is used to hold information returned
+by the @code{uname} function.  It has the following members:
+
+@table @code
+@item char sysname[]
+This is the name of the operating system in use.
+
+@item char release[]
+This is the current release level of the operating system implementation.
+
+@item char version[]
+This is the current version level within the release of the operating
+system.
+
+@item char machine[]
+This is a description of the type of hardware that is in use.
+
+Some systems provide a mechanism to interrogate the kernel directly for
+this information.  On systems without such a mechanism, @theglibc{}
+fills in this field based on the configuration name that was
+specified when building and installing the library.
+
+GNU uses a three-part name to describe a system configuration; the three
+parts are @var{cpu}, @var{manufacturer} and @var{system-type}, and they
+are separated with dashes.  Any possible combination of three names is
+potentially meaningful, but most such combinations are meaningless in
+practice and even the meaningful ones are not necessarily supported by
+any particular GNU program.
+
+Since the value in @code{machine} is supposed to describe just the
+hardware, it consists of the first two parts of the configuration name:
+@samp{@var{cpu}-@var{manufacturer}}.  For example, it might be one of these:
+
+@quotation
+@code{"sparc-sun"},
+@code{"i386-@var{anything}"},
+@code{"m68k-hp"},
+@code{"m68k-sony"},
+@code{"m68k-sun"},
+@code{"mips-dec"}
+@end quotation
+
+@item char nodename[]
+This is the host name of this particular computer.  In @theglibc{},
+the value is the same as that returned by @code{gethostname};
+see @ref{Host Identification}.
+
+@code{gethostname} is implemented with a call to @code{uname}.
+
+@item char domainname[]
+This is the NIS or YP domain name.  It is the same value returned by
+@code{getdomainname}; see @ref{Host Identification}.  This element
+is a relatively recent invention and use of it is not as portable as
+use of the rest of the structure.
+
+@c getdomainname() is implemented with a call to uname().
+
+@end table
+@end deftp
+
+@deftypefun int uname (struct utsname *@var{info})
+@standards{POSIX.1, sys/utsname.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall on unix; the posix fallback is to call gethostname and
+@c then fills in the other fields with constants; on HURD, it calls
+@c proc_uname and then gethostname.
+The @code{uname} function fills in the structure pointed to by
+@var{info} with information about the operating system and host machine.
+A non-negative return value indicates that the data was successfully stored.
+
+@code{-1} as the return value indicates an error.  The only error possible is
+@code{EFAULT}, which we normally don't mention as it is always a
+possibility.
+@end deftypefun
+
+
+@node Filesystem Handling
+@section Controlling and Querying Mounts
+
+All files are in filesystems, and before you can access any file, its
+filesystem must be mounted.  Because of Unix's concept of
+@emph{Everything is a file}, mounting of filesystems is central to doing
+almost anything.  This section explains how to find out what filesystems
+are currently mounted and what filesystems are available for mounting,
+and how to change what is mounted.
+
+The classic filesystem is the contents of a disk drive.  The concept is
+considerably more abstract, though, and lots of things other than disk
+drives can be mounted.
+
+Some block devices don't correspond to traditional devices like disk
+drives.  For example, a loop device is a block device whose driver uses
+a regular file in another filesystem as its medium.  So if that regular
+file contains appropriate data for a filesystem, you can by mounting the
+loop device essentially mount a regular file.
+
+Some filesystems aren't based on a device of any kind.  The ``proc''
+filesystem, for example, contains files whose data is made up by the
+filesystem driver on the fly whenever you ask for it.  And when you
+write to it, the data you write causes changes in the system.  No data
+gets stored.
+
+@c It would be good to mention NFS mounts here.
+
+@menu
+* Mount Information::           What is or could be mounted?
+* Mount-Unmount-Remount::       Controlling what is mounted and how
+@end menu
+
+@node Mount Information, Mount-Unmount-Remount, , Filesystem Handling
+@subsection Mount Information
+
+For some programs it is desirable and necessary to access information
+about whether a certain filesystem is mounted and, if it is, where, or
+simply to get lists of all the available filesystems.  @Theglibc{}
+provides some functions to retrieve this information portably.
+
+Traditionally Unix systems have a file named @file{/etc/fstab} which
+describes all possibly mounted filesystems.  The @code{mount} program
+uses this file to mount at startup time of the system all the
+necessary filesystems.  The information about all the filesystems
+actually mounted is normally kept in a file named either
+@file{/var/run/mtab} or @file{/etc/mtab}.  Both files share the same
+syntax and it is crucial that this syntax is followed all the time.
+Therefore it is best to never directly write to the files.  The functions
+described in this section can do this and they also provide the
+functionality to convert the external textual representation to the
+internal representation.
+
+Note that the @file{fstab} and @file{mtab} files are maintained on a
+system by @emph{convention}.  It is possible for the files not to exist
+or not to be consistent with what is really mounted or available to
+mount, if the system's administration policy allows it.  But programs
+that mount and unmount filesystems typically maintain and use these
+files as described herein.
+
+@vindex _PATH_FSTAB
+@vindex _PATH_MNTTAB
+@vindex _PATH_MOUNTED
+@vindex FSTAB
+@vindex MNTTAB
+@vindex MOUNTED
+The filenames given above should never be used directly.  The portable
+way to handle these files is to use the macros @code{_PATH_FSTAB},
+defined in @file{fstab.h}, or @code{_PATH_MNTTAB}, defined in
+@file{mntent.h} and @file{paths.h}, for @file{fstab}; and the macro
+@code{_PATH_MOUNTED}, also defined in @file{mntent.h} and
+@file{paths.h}, for @file{mtab}.  There are also two alternate macro
+names @code{FSTAB}, @code{MNTTAB}, and @code{MOUNTED} defined but
+these names are deprecated and kept only for backward compatibility.
+The names @code{_PATH_MNTTAB} and @code{_PATH_MOUNTED} should always be used.
+
+@menu
+* fstab::                       The @file{fstab} file
+* mtab::                        The @file{mtab} file
+* Other Mount Information::     Other (non-libc) sources of mount information
+@end menu
+
+@node fstab
+@subsubsection The @file{fstab} file
+
+The internal representation for entries of the file is @w{@code{struct
+fstab}}, defined in @file{fstab.h}.
+
+@deftp {Data Type} {struct fstab}
+@standards{BSD, fstab.h}
+This structure is used with the @code{getfsent}, @code{getfsspec}, and
+@code{getfsfile} functions.
+
+@table @code
+@item char *fs_spec
+This element describes the device from which the filesystem is mounted.
+Normally this is the name of a special device, such as a hard disk
+partition, but it could also be a more or less generic string.  For
+@dfn{NFS} it would be a hostname and directory name combination.
+
+Even though the element is not declared @code{const} it shouldn't be
+modified.  The missing @code{const} has historic reasons, since this
+function predates @w{ISO C}.  The same is true for the other string
+elements of this structure.
+
+@item char *fs_file
+This describes the mount point on the local system.  I.e., accessing any
+file in this filesystem has implicitly or explicitly this string as a
+prefix.
+
+@item char *fs_vfstype
+This is the type of the filesystem.  Depending on what the underlying
+kernel understands it can be any string.
+
+@item char *fs_mntops
+This is a string containing options passed to the kernel with the
+@code{mount} call.  Again, this can be almost anything.  There can be
+more than one option, separated from the others by a comma.  Each option
+consists of a name and an optional value part, introduced by an @code{=}
+character.
+
+If the value of this element must be processed it should ideally be done
+using the @code{getsubopt} function; see @ref{Suboptions}.
+
+@item const char *fs_type
+This name is poorly chosen.  This element points to a string (possibly
+in the @code{fs_mntops} string) which describes the modes with which the
+filesystem is mounted.  @file{fstab} defines five macros to describe the
+possible values:
+
+@vtable @code
+@item FSTAB_RW
+The filesystem gets mounted with read and write enabled.
+@item FSTAB_RQ
+The filesystem gets mounted with read and write enabled.  Write access
+is restricted by quotas.
+@item FSTAB_RO
+The filesystem gets mounted read-only.
+@item FSTAB_SW
+This is not a real filesystem, it is a swap device.
+@item FSTAB_XX
+This entry from the @file{fstab} file is totally ignored.
+@end vtable
+
+Testing for equality with these values must happen using @code{strcmp}
+since these are all strings.  Comparing the pointer will probably always
+fail.
+
+@item int fs_freq
+This element describes the dump frequency in days.
+
+@item int fs_passno
+This element describes the pass number on parallel dumps.  It is closely
+related to the @code{dump} utility used on Unix systems.
+@end table
+@end deftp
+
+
+To read the entire content of the of the @file{fstab} file @theglibc{}
+contains a set of three functions which are designed in the usual way.
+
+@deftypefun int setfsent (void)
+@standards{BSD, fstab.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:fsent}}@asunsafe{@ascuheap{} @asucorrupt{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c setfsent @mtasurace:fsent @ascuheap @asucorrupt @asulock @acucorrupt @aculock @acsmem @acsfd
+@c  fstab_init(1) @mtasurace:fsent @ascuheap @asucorrupt @asulock @acucorrupt @aculock @acsmem @acsfd
+@c   malloc dup @ascuheap @acsmem
+@c   rewind dup @asucorrupt @acucorrupt [no @aculock]
+@c   setmntent dup @ascuheap @asulock @acsmem @acsfd @aculock
+This function makes sure that the internal read pointer for the
+@file{fstab} file is at the beginning of the file.  This is done by
+either opening the file or resetting the read pointer.
+
+Since the file handle is internal to the libc this function is not
+thread-safe.
+
+This function returns a non-zero value if the operation was successful
+and the @code{getfs*} functions can be used to read the entries of the
+file.
+@end deftypefun
+
+@deftypefun void endfsent (void)
+@standards{BSD, fstab.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:fsent}}@asunsafe{@ascuheap{} @asucorrupt{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c endfsent @mtasurace:fsent @ascuheap @asucorrupt @asulock @acucorrupt @aculock @acsmem @acsfd
+@c  endmntent dup @ascuheap @asulock @aculock @acsmem @acsfd
+This function makes sure that all resources acquired by a prior call to
+@code{setfsent} (explicitly or implicitly by calling @code{getfsent}) are
+freed.
+@end deftypefun
+
+@deftypefun {struct fstab *} getfsent (void)
+@standards{BSD, fstab.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:fsent} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c getfsent @mtasurace:fsent @mtslocale @asucorrupt @ascuheap @asulock @acucorrupt @aculock @acsmem
+@c  fstab_init(0) dup @mtasurace:fsent @ascuheap @asucorrupt @asulock @acucorrupt @aculock @acsmem @acsfd
+@c  fstab_fetch @mtasurace:fsent @mtslocale @asucorrupt @ascuheap @acucorrupt @aculock @acsmem
+@c   getmntent_r dup @mtslocale @asucorrupt @ascuheap @acucorrupt @aculock @acsmem
+@c  fstab_convert @mtasurace:fsent
+@c   hasmntopt dup ok
+This function returns the next entry of the @file{fstab} file.  If this
+is the first call to any of the functions handling @file{fstab} since
+program start or the last call of @code{endfsent}, the file will be
+opened.
+
+The function returns a pointer to a variable of type @code{struct
+fstab}.  This variable is shared by all threads and therefore this
+function is not thread-safe.  If an error occurred @code{getfsent}
+returns a @code{NULL} pointer.
+@end deftypefun
+
+@deftypefun {struct fstab *} getfsspec (const char *@var{name})
+@standards{BSD, fstab.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:fsent} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c getffsspec @mtasurace:fsent @mtslocale @asucorrupt @ascuheap @asulock @acucorrupt @aculock @acsmem
+@c  fstab_init(1) dup @mtasurace:fsent @ascuheap @asucorrupt @asulock @acucorrupt @aculock @acsmem @acsfd
+@c  fstab_fetch dup @mtasurace:fsent @mtslocale @asucorrupt @ascuheap @acucorrupt @aculock @acsmem
+@c  strcmp dup ok
+@c  fstab_convert dup @mtasurace:fsent
+This function returns the next entry of the @file{fstab} file which has
+a string equal to @var{name} pointed to by the @code{fs_spec} element.
+Since there is normally exactly one entry for each special device it
+makes no sense to call this function more than once for the same
+argument.  If this is the first call to any of the functions handling
+@file{fstab} since program start or the last call of @code{endfsent},
+the file will be opened.
+
+The function returns a pointer to a variable of type @code{struct
+fstab}.  This variable is shared by all threads and therefore this
+function is not thread-safe.  If an error occurred @code{getfsent}
+returns a @code{NULL} pointer.
+@end deftypefun
+
+@deftypefun {struct fstab *} getfsfile (const char *@var{name})
+@standards{BSD, fstab.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:fsent} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c getffsfile @mtasurace:fsent @mtslocale @asucorrupt @ascuheap @asulock @acucorrupt @aculock @acsmem
+@c  fstab_init(1) dup @mtasurace:fsent @ascuheap @asucorrupt @asulock @acucorrupt @aculock @acsmem @acsfd
+@c  fstab_fetch dup @mtasurace:fsent @mtslocale @asucorrupt @ascuheap @acucorrupt @aculock @acsmem
+@c  strcmp dup ok
+@c  fstab_convert dup @mtasurace:fsent
+This function returns the next entry of the @file{fstab} file which has
+a string equal to @var{name} pointed to by the @code{fs_file} element.
+Since there is normally exactly one entry for each mount point it
+makes no sense to call this function more than once for the same
+argument.  If this is the first call to any of the functions handling
+@file{fstab} since program start or the last call of @code{endfsent},
+the file will be opened.
+
+The function returns a pointer to a variable of type @code{struct
+fstab}.  This variable is shared by all threads and therefore this
+function is not thread-safe.  If an error occurred @code{getfsent}
+returns a @code{NULL} pointer.
+@end deftypefun
+
+
+@node mtab
+@subsubsection The @file{mtab} file
+The following functions and data structure access the @file{mtab} file.
+
+@deftp {Data Type} {struct mntent}
+@standards{BSD, mntent.h}
+This structure is used with the @code{getmntent}, @code{getmntent_r},
+@code{addmntent}, and @code{hasmntopt} functions.
+
+@table @code
+@item char *mnt_fsname
+This element contains a pointer to a string describing the name of the
+special device from which the filesystem is mounted.  It corresponds to
+the @code{fs_spec} element in @code{struct fstab}.
+
+@item char *mnt_dir
+This element points to a string describing the mount point of the
+filesystem.  It corresponds to the @code{fs_file} element in
+@code{struct fstab}.
+
+@item char *mnt_type
+@code{mnt_type} describes the filesystem type and is therefore
+equivalent to @code{fs_vfstype} in @code{struct fstab}.  @file{mntent.h}
+defines a few symbolic names for some of the values this string can have.
+But since the kernel can support arbitrary filesystems it does not
+make much sense to give them symbolic names.  If one knows the symbol
+name one also knows the filesystem name.  Nevertheless here follows the
+list of the symbols provided in @file{mntent.h}.
+
+@vtable @code
+@item MNTTYPE_IGNORE
+This symbol expands to @code{"ignore"}.  The value is sometimes used in
+@file{fstab} files to make sure entries are not used without removing them.
+@item MNTTYPE_NFS
+Expands to @code{"nfs"}.  Using this macro sometimes could make sense
+since it names the default NFS implementation, in case both version 2
+and 3 are supported.
+@item MNTTYPE_SWAP
+This symbol expands to @code{"swap"}.  It names the special @file{fstab}
+entry which names one of the possibly multiple swap partitions.
+@end vtable
+
+@item char *mnt_opts
+The element contains a string describing the options used while mounting
+the filesystem.  As for the equivalent element @code{fs_mntops} of
+@code{struct fstab} it is best to use the function @code{getsubopt}
+(@pxref{Suboptions}) to access the parts of this string.
+
+The @file{mntent.h} file defines a number of macros with string values
+which correspond to some of the options understood by the kernel.  There
+might be many more options which are possible so it doesn't make much sense
+to rely on these macros but to be consistent here is the list:
+
+@vtable @code
+@item MNTOPT_DEFAULTS
+Expands to @code{"defaults"}.  This option should be used alone since it
+indicates all values for the customizable values are chosen to be the
+default.
+@item MNTOPT_RO
+Expands to @code{"ro"}.  See the @code{FSTAB_RO} value, it means the
+filesystem is mounted read-only.
+@item MNTOPT_RW
+Expands to @code{"rw"}.  See the @code{FSTAB_RW} value, it means the
+filesystem is mounted with read and write permissions.
+@item MNTOPT_SUID
+Expands to @code{"suid"}.  This means that the SUID bit (@pxref{How
+Change Persona}) is respected when a program from the filesystem is
+started.
+@item MNTOPT_NOSUID
+Expands to @code{"nosuid"}.  This is the opposite of @code{MNTOPT_SUID},
+the SUID bit for all files from the filesystem is ignored.
+@item MNTOPT_NOAUTO
+Expands to @code{"noauto"}.  At startup time the @code{mount} program
+will ignore this entry if it is started with the @code{-a} option to
+mount all filesystems mentioned in the @file{fstab} file.
+@end vtable
+
+As for the @code{FSTAB_*} entries introduced above it is important to
+use @code{strcmp} to check for equality.
+
+@item mnt_freq
+This elements corresponds to @code{fs_freq} and also specifies the
+frequency in days in which dumps are made.
+
+@item mnt_passno
+This element is equivalent to @code{fs_passno} with the same meaning
+which is uninteresting for all programs beside @code{dump}.
+@end table
+@end deftp
+
+For accessing the @file{mtab} file there is again a set of three
+functions to access all entries in a row.  Unlike the functions to
+handle @file{fstab} these functions do not access a fixed file and there
+is even a thread safe variant of the get function.  Besides this @theglibc{}
+contains functions to alter the file and test for specific options.
+
+@deftypefun {FILE *} setmntent (const char *@var{file}, const char *@var{mode})
+@standards{BSD, mntent.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@acsmem{} @acsfd{} @aculock{}}}
+@c setmntent @ascuheap @asulock @acsmem @acsfd @aculock
+@c  strlen dup ok
+@c  mempcpy dup ok
+@c  memcpy dup ok
+@c  fopen dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c  fsetlocking dup ok [no @mtasurace:stream @asulock: exclusive stream]
+The @code{setmntent} function prepares the file named @var{FILE} which
+must be in the format of a @file{fstab} and @file{mtab} file for the
+upcoming processing through the other functions of the family.  The
+@var{mode} parameter can be chosen in the way the @var{opentype}
+parameter for @code{fopen} (@pxref{Opening Streams}) can be chosen.  If
+the file is opened for writing the file is also allowed to be empty.
+
+If the file was successfully opened @code{setmntent} returns a file
+handle for future use.  Otherwise the return value is @code{NULL}
+and @code{errno} is set accordingly.
+@end deftypefun
+
+@deftypefun int endmntent (FILE *@var{stream})
+@standards{BSD, mntent.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c endmntent @ascuheap @asulock @aculock @acsmem @acsfd
+@c  fclose dup @ascuheap @asulock @aculock @acsmem @acsfd
+This function takes for the @var{stream} parameter a file handle which
+previously was returned from the @code{setmntent} call.
+@code{endmntent} closes the stream and frees all resources.
+
+The return value is @math{1} unless an error occurred in which case it
+is @math{0}.
+@end deftypefun
+
+@deftypefun {struct mntent *} getmntent (FILE *@var{stream})
+@standards{BSD, mntent.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:mntentbuf} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asuinit{}}@acunsafe{@acuinit{} @acucorrupt{} @aculock{} @acsmem{}}}
+@c getmntent @mtasurace:mntentbuf @mtslocale @asucorrupt @ascuheap @asuinit @acuinit @acucorrupt @aculock @acsmem
+@c  libc_once @ascuheap @asuinit @acuinit @acsmem
+@c   allocate @ascuheap @acsmem
+@c    malloc dup @ascuheap @acsmem
+@c  getmntent_r dup @mtslocale @asucorrupt @ascuheap @acucorrupt @aculock @acsmem
+The @code{getmntent} function takes as the parameter a file handle
+previously returned by a successful call to @code{setmntent}.  It returns
+a pointer to a static variable of type @code{struct mntent} which is
+filled with the information from the next entry from the file currently
+read.
+
+The file format used prescribes the use of spaces or tab characters to
+separate the fields.  This makes it harder to use names containing one
+of these characters (e.g., mount points using spaces).  Therefore
+these characters are encoded in the files and the @code{getmntent}
+function takes care of the decoding while reading the entries back in.
+@code{'\040'} is used to encode a space character, @code{'\011'} to
+encode a tab character, @code{'\012'} to encode a newline character,
+and @code{'\\'} to encode a backslash.
+
+If there was an error or the end of the file is reached the return value
+is @code{NULL}.
+
+This function is not thread-safe since all calls to this function return
+a pointer to the same static variable.  @code{getmntent_r} should be
+used in situations where multiple threads access the file.
+@end deftypefun
+
+@deftypefun {struct mntent *} getmntent_r (FILE *@var{stream}, struct mntent *@var{result}, char *@var{buffer}, int @var{bufsize})
+@standards{BSD, mntent.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c getmntent_r @mtslocale @asucorrupt @ascuheap @acucorrupt @aculock @acsmem
+@c  flockfile dup @aculock
+@c  fgets_unlocked dup @asucorrupt @acucorrupt [locked, so no @mtsrace:stream]
+@c  funlockfile dup @aculock
+@c  strchr dup ok
+@c  strspn dup ok
+@c  strsep dup ok
+@c  decode_name ok
+@c  sscanf dup @mtslocale @ascuheap @acsmem
+The @code{getmntent_r} function is the reentrant variant of
+@code{getmntent}.  It also returns the next entry from the file and
+returns a pointer.  The actual variable the values are stored in is not
+static, though.  Instead the function stores the values in the variable
+pointed to by the @var{result} parameter.  Additional information (e.g.,
+the strings pointed to by the elements of the result) are kept in the
+buffer of size @var{bufsize} pointed to by @var{buffer}.
+
+Escaped characters (space, tab, backslash) are converted back in the
+same way as it happens for @code{getmentent}.
+
+The function returns a @code{NULL} pointer in error cases.  Errors could be:
+@itemize @bullet
+@item
+error while reading the file,
+@item
+end of file reached,
+@item
+@var{bufsize} is too small for reading a complete new entry.
+@end itemize
+@end deftypefun
+
+@deftypefun int addmntent (FILE *@var{stream}, const struct mntent *@var{mnt})
+@standards{BSD, mntent.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:stream} @mtslocale{}}@asunsafe{@asucorrupt{}}@acunsafe{@acucorrupt{}}}
+@c addmntent @mtasurace:stream @mtslocale @asucorrupt @acucorrupt
+@c  fseek dup @asucorrupt @acucorrupt [no @aculock]
+@c  encode_name ok
+@c  fprintf dup @mtslocale @asucorrupt @acucorrupt [no @ascuheap @acsmem, no @aculock]
+@c  fflush dup @asucorrupt @acucorrupt [no @aculock]
+The @code{addmntent} function allows adding a new entry to the file
+previously opened with @code{setmntent}.  The new entries are always
+appended.  I.e., even if the position of the file descriptor is not at
+the end of the file this function does not overwrite an existing entry
+following the current position.
+
+The implication of this is that to remove an entry from a file one has
+to create a new file while leaving out the entry to be removed and after
+closing the file remove the old one and rename the new file to the
+chosen name.
+
+This function takes care of spaces and tab characters in the names to be
+written to the file.  It converts them and the backslash character into
+the format described in the @code{getmntent} description above.
+
+This function returns @math{0} in case the operation was successful.
+Otherwise the return value is @math{1} and @code{errno} is set
+appropriately.
+@end deftypefun
+
+@deftypefun {char *} hasmntopt (const struct mntent *@var{mnt}, const char *@var{opt})
+@standards{BSD, mntent.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c hasmntopt ok
+@c  strlen dup ok
+@c  strstr dup ok
+@c  strchr dup ok
+This function can be used to check whether the string pointed to by the
+@code{mnt_opts} element of the variable pointed to by @var{mnt} contains
+the option @var{opt}.  If this is true a pointer to the beginning of the
+option in the @code{mnt_opts} element is returned.  If no such option
+exists the function returns @code{NULL}.
+
+This function is useful to test whether a specific option is present but
+when all options have to be processed one is better off with using the
+@code{getsubopt} function to iterate over all options in the string.
+@end deftypefun
+
+@node Other Mount Information
+@subsubsection Other (Non-libc) Sources of Mount Information
+
+On a system with a Linux kernel and the @code{proc} filesystem, you can
+get information on currently mounted filesystems from the file
+@file{mounts} in the @code{proc} filesystem.  Its format is similar to
+that of the @file{mtab} file, but represents what is truly mounted
+without relying on facilities outside the kernel to keep @file{mtab} up
+to date.
+
+
+@node Mount-Unmount-Remount, , Mount Information, Filesystem Handling
+@subsection Mount, Unmount, Remount
+
+This section describes the functions for mounting, unmounting, and
+remounting filesystems.
+
+Only the superuser can mount, unmount, or remount a filesystem.
+
+These functions do not access the @file{fstab} and @file{mtab} files.  You
+should maintain and use these separately.  @xref{Mount Information}.
+
+The symbols in this section are declared in @file{sys/mount.h}.
+
+@deftypefun {int} mount (const char *@var{special_file}, const char *@var{dir}, const char *@var{fstype}, unsigned long int @var{options}, const void *@var{data})
+@standards{SVID, sys/mount.h}
+@standards{BSD, sys/mount.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall.
+
+@code{mount} mounts or remounts a filesystem.  The two operations are
+quite different and are merged rather unnaturally into this one function.
+The @code{MS_REMOUNT} option, explained below, determines whether
+@code{mount} mounts or remounts.
+
+For a mount, the filesystem on the block device represented by the
+device special file named @var{special_file} gets mounted over the mount
+point @var{dir}.  This means that the directory @var{dir} (along with any
+files in it) is no longer visible; in its place (and still with the name
+@var{dir}) is the root directory of the filesystem on the device.
+
+As an exception, if the filesystem type (see below) is one which is not
+based on a device (e.g. ``proc''), @code{mount} instantiates a
+filesystem and mounts it over @var{dir} and ignores @var{special_file}.
+
+For a remount, @var{dir} specifies the mount point where the filesystem
+to be remounted is (and remains) mounted and @var{special_file} is
+ignored.  Remounting a filesystem means changing the options that control
+operations on the filesystem while it is mounted.  It does not mean
+unmounting and mounting again.
+
+For a mount, you must identify the type of the filesystem with
+@var{fstype}.  This type tells the kernel how to access the filesystem
+and can be thought of as the name of a filesystem driver.  The
+acceptable values are system dependent.  On a system with a Linux kernel
+and the @code{proc} filesystem, the list of possible values is in the
+file @file{filesystems} in the @code{proc} filesystem (e.g. type
+@kbd{cat /proc/filesystems} to see the list).  With a Linux kernel, the
+types of filesystems that @code{mount} can mount, and their type names,
+depends on what filesystem drivers are configured into the kernel or
+loaded as loadable kernel modules.  An example of a common value for
+@var{fstype} is @code{ext2}.
+
+For a remount, @code{mount} ignores @var{fstype}.
+
+@c This is traditionally called "rwflag" for historical reasons.
+@c No point in confusing people today, though.
+@var{options} specifies a variety of options that apply until the
+filesystem is unmounted or remounted.  The precise meaning of an option
+depends on the filesystem and with some filesystems, an option may have
+no effect at all.  Furthermore, for some filesystems, some of these
+options (but never @code{MS_RDONLY}) can be overridden for individual
+file accesses via @code{ioctl}.
+
+@var{options} is a bit string with bit fields defined using the
+following mask and masked value macros:
+
+@vtable @code
+@item MS_MGC_MASK
+This multibit field contains a magic number.  If it does not have the value
+@code{MS_MGC_VAL}, @code{mount} assumes all the following bits are zero and
+the @var{data} argument is a null string, regardless of their actual values.
+
+@item MS_REMOUNT
+This bit on means to remount the filesystem.  Off means to mount it.
+@c There is a mask MS_RMT_MASK in mount.h that says only two of the options
+@c can be reset by remount.  But the Linux kernel has its own version of
+@c MS_RMT_MASK that says they all can be reset.  As far as I can tell,
+@c libc just passes the arguments straight through to the kernel.
+
+@item MS_RDONLY
+This bit on specifies that no writing to the filesystem shall be allowed
+while it is mounted.  This cannot be overridden by @code{ioctl}.  This
+option is available on nearly all filesystems.
+
+@item MS_NOSUID
+This bit on specifies that Setuid and Setgid permissions on files in the
+filesystem shall be ignored while it is mounted.
+
+@item MS_NOEXEC
+This bit on specifies that no files in the filesystem shall be executed
+while the filesystem is mounted.
+
+@item MS_NODEV
+This bit on specifies that no device special files in the filesystem
+shall be accessible while the filesystem is mounted.
+
+@item MS_SYNCHRONOUS
+This bit on specifies that all writes to the filesystem while it is
+mounted shall be synchronous; i.e., data shall be synced before each
+write completes rather than held in the buffer cache.
+
+@item MS_MANDLOCK
+This bit on specifies that mandatory locks on files shall be permitted while
+the filesystem is mounted.
+
+@item MS_NOATIME
+This bit on specifies that access times of files shall not be updated when
+the files are accessed while the filesystem is mounted.
+
+@item MS_NODIRATIME
+This bit on specifies that access times of directories shall not be updated
+when the directories are accessed while the filesystem in mounted.
+
+@c there is also S_QUOTA Linux fs.h (mount.h still uses its former name
+@c S_WRITE), but I can't see what it does.  Turns on quotas, I guess.
+
+@end vtable
+
+Any bits not covered by the above masks should be set off; otherwise,
+results are undefined.
+
+The meaning of @var{data} depends on the filesystem type and is controlled
+entirely by the filesystem driver in the kernel.
+
+Example:
+
+@smallexample
+@group
+#include <sys/mount.h>
+
+mount("/dev/hdb", "/cdrom", "iso9660", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, "");
+
+mount("/dev/hda2", "/mnt", "", MS_MGC_VAL | MS_REMOUNT, "");
+
+@end group
+@end smallexample
+
+Appropriate arguments for @code{mount} are conventionally recorded in
+the @file{fstab} table.  @xref{Mount Information}.
+
+The return value is zero if the mount or remount is successful.  Otherwise,
+it is @code{-1} and @code{errno} is set appropriately.  The values of
+@code{errno} are filesystem dependent, but here is a general list:
+
+@table @code
+@item EPERM
+The process is not superuser.
+@item ENODEV
+The file system type @var{fstype} is not known to the kernel.
+@item ENOTBLK
+The file @var{dev} is not a block device special file.
+@item EBUSY
+
+@itemize @bullet
+
+@item
+The device is already mounted.
+
+@item
+The mount point is busy.  (E.g. it is some process' working directory or
+has a filesystem mounted on it already).
+
+@item
+The request is to remount read-only, but there are files open for writing.
+@end itemize
+
+@item EINVAL
+@itemize @bullet
+
+@item
+A remount was attempted, but there is no filesystem mounted over the
+specified mount point.
+
+@item
+The supposed filesystem has an invalid superblock.
+
+@end itemize
+
+@item EACCES
+@itemize @bullet
+
+@item
+The filesystem is inherently read-only (possibly due to a switch on the
+device) and the process attempted to mount it read/write (by setting the
+@code{MS_RDONLY} bit off).
+
+@item
+@var{special_file} or @var{dir} is not accessible due to file permissions.
+
+@item
+@var{special_file} is not accessible because it is in a filesystem that is
+mounted with the @code{MS_NODEV} option.
+
+@end itemize
+
+@item EM_FILE
+The table of dummy devices is full.  @code{mount} needs to create a
+dummy device (aka ``unnamed'' device) if the filesystem being mounted is
+not one that uses a device.
+
+@end table
+
+@end deftypefun
+
+
+@deftypefun {int} umount2 (const char *@var{file}, int @var{flags})
+@standards{GNU, sys/mount.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall.
+
+@code{umount2} unmounts a filesystem.
+
+You can identify the filesystem to unmount either by the device special
+file that contains the filesystem or by the mount point.  The effect is
+the same.  Specify either as the string @var{file}.
+
+@var{flags} contains the one-bit field identified by the following
+mask macro:
+
+@vtable @code
+
+@item MNT_FORCE
+This bit on means to force the unmounting even if the filesystem is
+busy, by making it unbusy first.  If the bit is off and the filesystem is
+busy, @code{umount2} fails with @code{errno} = @code{EBUSY}.  Depending
+on the filesystem, this may override all, some, or no busy conditions.
+
+@end vtable
+
+All other bits in @var{flags} should be set to zero; otherwise, the result
+is undefined.
+
+Example:
+
+@smallexample
+@group
+#include <sys/mount.h>
+
+umount2("/mnt", MNT_FORCE);
+
+umount2("/dev/hdd1", 0);
+
+@end group
+@end smallexample
+
+After the filesystem is unmounted, the directory that was the mount point
+is visible, as are any files in it.
+
+As part of unmounting, @code{umount2} syncs the filesystem.
+
+If the unmounting is successful, the return value is zero.  Otherwise, it
+is @code{-1} and @code{errno} is set accordingly:
+
+@table @code
+@item EPERM
+The process is not superuser.
+@item EBUSY
+The filesystem cannot be unmounted because it is busy.  E.g. it contains
+a directory that is some process's working directory or a file that some
+process has open.  With some filesystems in some cases, you can avoid
+this failure with the @code{MNT_FORCE} option.
+
+@item EINVAL
+@var{file} validly refers to a file, but that file is neither a mount
+point nor a device special file of a currently mounted filesystem.
+
+@end table
+
+This function is not available on all systems.
+@end deftypefun
+
+@deftypefun {int} umount (const char *@var{file})
+@standards{SVID, sys/mount.h}
+@standards{GNU, sys/mount.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall or wrapper for umount2.
+
+@code{umount} does the same thing as @code{umount2} with @var{flags} set
+to zeroes.  It is more widely available than @code{umount2} but since it
+lacks the possibility to forcefully unmount a filesystem is deprecated
+when @code{umount2} is also available.
+@end deftypefun

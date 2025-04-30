@@ -6795,6 +6795,7 @@ public:
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero);
+  bool CheckLoopHintExprStr(Expr *E, SourceLocation Loc);
 
   ExprResult ActOnNumericConstant(const Token &Tok, Scope *UDLScope = nullptr);
   ExprResult ActOnCharacterConstant(const Token &Tok,
@@ -8305,6 +8306,29 @@ public:
 
   /// CheckCXXBooleanCondition - Returns true if conversion to bool is invalid.
   ExprResult CheckCXXBooleanCondition(Expr *CondExpr, bool IsConstexpr = false);
+
+  /// NextSilicon mark pragma information
+  struct PragmaNSMark {
+    llvm::StringRef Mark;
+    SourceLocation Location;
+  };
+
+  PragmaNSMark NSMark;
+
+  /// ActOnPragmaNSMark - Called on well formed \#pragma ns mark
+  void ActOnPragmaNSMark(SourceLocation PragmaLoc, StringRef Mark);
+
+  /// NextSilicon location pragma information
+  struct PragmaNSLocation {
+    llvm::StringRef NSLocation;
+    unsigned int Recursion;
+    SourceLocation PragmaLoc;
+  };
+
+  PragmaNSLocation NSLocation;
+
+  /// ActOnPragmaNSLocation - Called on well formed \#pragma ns location
+  void ActOnPragmaNSLocation(SourceLocation PragmaLoc, StringRef Location);
 
   /// Helper function to determine whether this is the (deprecated) C++
   /// conversion from a string literal to a pointer to non-const char or

@@ -1,0 +1,137 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Locale for Ligurian locale in Italy
+% Contributed by Alessio Gastaldi <alessio.gastaldi@libero.it>, 2010
+
+LC_IDENTIFICATION
+title      "Ligurian locale for Italy"
+source     "Gastaldi"
+address    ""
+contact    ""
+email      "alessio.gastaldi@libero.it"
+tel        ""
+fax        ""
+language   "Ligurian"
+territory  "Italy"
+revision   "1.0"
+date       "2010-10-22"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+%
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1sSyY]"
+noexpr  "^[-0nN]"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "it_IT"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "it_IT"
+END LC_NUMERIC
+
+LC_TIME
+abday   "dom";"l<U00FB>n";/
+	"mar";"mer";/
+	"z<U00EA>u";"ven";/
+	"sab"
+day     "domenega";/
+	"l<U00FB>ned<U00EC>";/
+	"marted<U00EC>";/
+	"mercUrd<U00EC>";/
+	"z<U00EA>ggia";/
+	"venard<U00EC>";/
+	"sabbo"
+abmon   "zen";"fev";/
+	"mar";"arv";/
+	"maz";"z<U00FB>g";/
+	"l<U00FB>g";"ago";/
+	"set";"<U00F6>tt";/
+	"nov";"dix"
+mon     "zen<U00E2>";/
+	"fevr<U00E2>";/
+	"marzo";/
+	"avr<U00EE>";/
+	"mazzo";/
+	"z<U00FB>gno";/
+	"l<U00FB>ggio";/
+	"agosto";/
+	"settembre";/
+	"ottobre";/
+	"novembre";/
+	"dixembre"
+d_t_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d//%m//%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt       "%a %e %b %Y, %H.%M.%S, %Z"
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "it_IT"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "39"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "it_IT"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% https://lij.wikipedia.org/wiki/Italia
+country_name "Italia"
+country_ab2 "IT"
+country_ab3 "ITA"
+country_num 380
+country_isbn "978-88,979-12"
+country_car  "I"
+% Lìgure
+lang_name    "L<U00EC>gure"
+lang_term    "lij"
+lang_lib    "lij"
+END LC_ADDRESS

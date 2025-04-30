@@ -1,0 +1,8 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+AccessModifierOffset: -4
+ColumnLimit: 100
+AllowShortFunctionsOnASingleLine: Inline
+BreakBeforeBraces: Linux
+CommentPragmas: NOLINT(NEXTLINE)?\([^\)]+\)
+

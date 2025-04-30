@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+
+msgid "test"
+msgstr "«© Æß»"
+
+msgid "onemore"
+msgstr "½*½=¼"

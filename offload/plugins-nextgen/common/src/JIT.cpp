@@ -318,7 +318,7 @@ JITEngine::process(const __tgt_device_image &Image,
     return Device.doJITPostProcessing(std::move(MB));
   };
 
-  if (isImageBitcode(Image))
+  if (isImageBitcode(Image) && !Device.shouldUseBitcodeImage())
     return compile(Image, ComputeUnitKind, PostProcessing);
 
   return &Image;

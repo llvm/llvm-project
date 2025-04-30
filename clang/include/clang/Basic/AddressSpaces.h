@@ -62,6 +62,12 @@ enum class LangAS : unsigned {
   // Wasm specific address spaces.
   wasm_funcref,
 
+  // Next32 specific address spaces.
+  next32_tls,
+  next32_global,
+  next32_constant,
+  next32_local,
+
   // This denotes the count of language-specific address spaces and also
   // the offset added to the target-specific address spaces, which are usually
   // specified by address space attributes __attribute__(address_space(n))).
@@ -91,6 +97,11 @@ inline LangAS getLangASFromTargetAS(unsigned TargetAS) {
 inline bool isPtrSizeAddressSpace(LangAS AS) {
   return (AS == LangAS::ptr32_sptr || AS == LangAS::ptr32_uptr ||
           AS == LangAS::ptr64);
+}
+
+inline bool isNext32AddrSpaceSpecific(LangAS AS) {
+  return (AS == LangAS::next32_tls || AS == LangAS::next32_global ||
+          AS == LangAS::next32_constant || AS == LangAS::next32_local);
 }
 
 } // namespace clang

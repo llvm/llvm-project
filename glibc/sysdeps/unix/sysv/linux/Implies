@@ -1,0 +1,9 @@
+# All Linux builds use NPTL.
+nptl
+
+# The gnu subdirectory exists for things common to both Linux-based and
+# Hurd-based GNU systems.
+gnu
+
+# Linux has network support in the kernel.
+unix/inet

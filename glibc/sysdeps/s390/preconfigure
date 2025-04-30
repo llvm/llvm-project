@@ -1,0 +1,6 @@
+# preconfigure fragment for s390.
+
+case "$machine" in
+s390)           base_machine=s390 machine=s390/s390-32 ;;
+s390x)          base_machine=s390 machine=s390/s390-64 ;;
+esac

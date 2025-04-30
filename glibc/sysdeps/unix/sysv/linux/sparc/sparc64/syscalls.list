@@ -1,0 +1,7 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+getpeername	-	getpeername	3	__getpeername	getpeername
+getsockname	-	getsockname	3	__getsockname	getsockname
+getsockopt	-	getsockopt	5	__getsockopt	getsockopt
+shutdown	-	shutdown	2	__shutdown	shutdown
+socketpair	-	socketpair	4	__socketpair	socketpair

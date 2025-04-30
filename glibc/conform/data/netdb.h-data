@@ -1,0 +1,118 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4
+optional-type in_port_t
+optional-type in_addr_t
+
+type {struct hostent}
+
+element {struct hostent} {char*} h_name
+element {struct hostent} {char**} h_aliases
+element {struct hostent} int h_addrtype
+element {struct hostent} int h_length
+element {struct hostent} {char**} h_addr_list
+
+type {struct netent}
+
+element {struct netent} {char*} n_name
+element {struct netent} {char**} n_aliases
+element {struct netent} int n_addrtype
+// Bug 21260: n_net has wrong type.
+xfail[alpha-linux]-element {struct netent} uint32_t n_net
+
+type uint32_t
+
+type {struct protoent}
+
+element {struct protoent} {char*} p_name
+element {struct protoent} {char**} p_aliases
+element {struct protoent} int p_proto
+
+type {struct servent}
+
+element {struct servent} {char*} s_name
+element {struct servent} {char**} s_aliases
+element {struct servent} int s_port
+element {struct servent} {char*} s_proto
+
+macro IPPORT_RESERVED
+
+#if !defined XOPEN2K8 && !defined POSIX2008
+// variable int h_errno
+allow h_errno
+
+macro HOST_NOT_FOUND
+macro NO_DATA
+macro NO_RECOVERY
+macro TRY_AGAIN
+#endif
+
+#if !defined XPG42 && !defined UNIX98
+type {struct addrinfo}
+element {struct addrinfo} int ai_flags
+element {struct addrinfo} int ai_family
+element {struct addrinfo} int ai_socktype
+element {struct addrinfo} int ai_protocol
+element {struct addrinfo} socklen_t ai_addrlen
+element {struct addrinfo} {struct sockaddr*} ai_addr
+element {struct addrinfo} {char*} ai_canonname
+element {struct addrinfo} {struct addrinfo*} ai_next
+
+macro AI_PASSIVE
+macro AI_CANONNAME
+macro AI_NUMERICHOST
+macro AI_V4MAPPED
+macro AI_ALL
+macro AI_ADDRCONFIG
+macro AI_NUMERICSERV
+
+macro NI_NOFQDN
+macro NI_NUMERICHOST
+macro NI_NAMEREQD
+macro NI_NUMERICSERV
+macro NI_DGRAM
+
+macro EAI_AGAIN
+macro EAI_BADFLAGS
+macro EAI_FAIL
+macro EAI_FAMILY
+macro EAI_MEMORY
+macro EAI_NONAME
+macro EAI_SERVICE
+macro EAI_SOCKTYPE
+macro EAI_SYSTEM
+macro EAI_OVERFLOW
+#endif
+
+function void endhostent (void)
+function void endnetent (void)
+function void endprotoent (void)
+function void endservent (void)
+#if !defined XPG42 && !defined UNIX98
+function void freeaddrinfo (struct addrinfo*)
+function {const char*} gai_strerror (int)
+function int getaddrinfo (const char*, const char*, const struct addrinfo*, struct addrinfo**)
+#endif
+function {struct hostent*} gethostbyaddr (const void*, socklen_t, int)
+function {struct hostent*} gethostbyname (const char*)
+function {struct hostent*} gethostent (void)
+#if !defined XPG42 && !defined UNIX98
+function int getnameinfo (const struct sockaddr*, socklen_t, char*, socklen_t, char*, socklen_t, int)
+#endif
+function {struct netent*} getnetbyaddr (uint32_t, int)
+function {struct netent*} getnetbyname (const char*)
+function {struct netent*} getnetent (void)
+function {struct protoent*} getprotobyname (const char *)
+function {struct protoent*} getprotobynumber (int)
+function {struct protoent*} getprotoent (void)
+function {struct servent*} getservbyname (const char*, const char*)
+function {struct servent*} getservbyport (int, const char*)
+function {struct servent*} getservent (void)
+function void sethostent (int)
+function void setnetent (int)
+function void setprotoent (int)
+function void setservent (int)
+
+type socklen_t
+
+allow-header netinet/in.h
+allow-header inttypes.h
+#endif

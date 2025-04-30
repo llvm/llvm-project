@@ -1,0 +1,138 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% German Language Locale for Italy
+% Source: not available
+% Address: I-39100 Bolzano/Bozen, Italy
+% Contact: Matthias Dieter Wallno:fer
+% Email: matthias.wallnoefer@lugbz.org
+% Language: de
+% Territory: IT
+% Option: euro
+% Revision: 1.0
+% Date: 2016-03-12
+% Users: general
+
+LC_IDENTIFICATION
+title      "German language locale for Italy"
+source     ""
+address    "I-39100 Bolzano//Bozen"
+contact    "Matthias Dieter Wallno:fer"
+email      "libc-locales@sourceware.org"
+tel        ""
+fax        ""
+language   "German"
+territory  "Italy"
+revision   "1.0"
+date       "2000-06-28"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "de_DE"
+END LC_CTYPE
+
+LC_COLLATE
+copy "de_DE"
+END LC_COLLATE
+
+LC_MESSAGES
+copy "de_DE"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "it_IT"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "de_DE"
+END LC_NUMERIC
+
+LC_TIME
+abday	"So";"Mo";/
+	"Di";"Mi";/
+	"Do";"Fr";/
+	"Sa"
+day     "Sonntag";/
+	"Montag";/
+	"Dienstag";/
+	"Mittwoch";/
+	"Donnerstag";/
+	"Freitag";/
+	"Samstag"
+abmon   "J<U00E4>n";"Feb";/
+	"M<U00E4>r";"Apr";/
+	"Mai";"Jun";/
+	"Jul";"Aug";/
+	"Sep";"Okt";/
+	"Nov";"Dez"
+mon     "J<U00E4>nner";/
+	"Februar";/
+	"M<U00E4>rz";/
+	"April";/
+	"Mai";/
+	"Juni";/
+	"Juli";/
+	"August";/
+	"September";/
+	"Oktober";/
+	"November";/
+	"Dezember"
+d_t_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt "%a %-d. %b %H:%M:%S %Z %Y"
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "it_IT"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "it_IT"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "it_IT"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "de_DE"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Italien"
+country_ab2 "IT"
+country_ab3 "ITA"
+country_num 380
+country_car "I"
+country_isbn "978-88,979-12"
+lang_name   "Deutsch"
+lang_ab     "de"
+lang_term   "deu"
+lang_lib    "ger"
+END LC_ADDRESS

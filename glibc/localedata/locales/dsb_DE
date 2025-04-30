@@ -1,0 +1,252 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Lower Sorbian Language Locale for Germany
+
+% Source: information from Michael Wolf <milupo at sorbzilla de>
+
+LC_IDENTIFICATION
+title      "Lower Sorbian locale for Germany"
+source     "Information from Michael Wolf"
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Lower Sorbian"
+territory  "Germany"
+revision   "0.1"
+date       ""
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% CLDR collation rules for Lower Sorbian:
+% (see:https://unicode.org/cldr/trac/browser/trunk/common/collation/dsb.xml)
+%
+% &C<č<<<Č<ć<<<Ć
+% &E<ě<<<Ě
+% &H<ch<<<cH<<<Ch<<<CH
+% &[before 1] L<ł<<<Ł
+% &N<ń<<<Ń
+% &O<ó<<<Ó
+% &R<ŕ<<<Ŕ
+% &S<š<<<Š<ś<<<Ś
+% &Z<ž<<<Ž<ź<<<Ź
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/dsb.xml)
+%
+% <exemplarCharacters type="index">[A B C Č Ć D E F G H {Ch} I J K Ł L M N O P Q R S Š Ś T U V W X Y Z Ž Ź]</exemplarCharacters>
+% <exemplarCharacters>[a b c č ć d e ě f g h {ch} i j k ł l m n ń o ó p q r ŕ s š ś t u v w x y z ž ź]</exemplarCharacters>
+
+% The characters ě, ń, ó, ŕ are usually used as lower case characters only,
+% only in fully capitalized words they exist as upper case characters
+% In contrast to Upper Sorbian, the character ř does not exist in Lower Sorbian
+
+collating-element <c-h> from "<U0063><U0068>"
+collating-element <c-H> from "<U0063><U0048>"
+collating-element <C-h> from "<U0043><U0068>"
+collating-element <C-H> from "<U0043><U0048>"
+
+collating-symbol <c-caron>
+collating-symbol <c-acute>
+collating-symbol <d-z-acute-digraph>
+collating-symbol <e-caron>
+collating-symbol <c-h-digraph>
+collating-symbol <l-stroke>
+collating-symbol <n-acute>
+collating-symbol <o-acute>
+collating-symbol <r-acute>
+collating-symbol <s-caron>
+collating-symbol <s-acute>
+collating-symbol <z-caron>
+collating-symbol <z-acute>
+
+reorder-after <AFTER-C>
+<c-caron>
+<c-acute>
+reorder-after <AFTER-D>
+<d-z-acute-digraph>
+reorder-after <AFTER-E>
+<e-caron>
+ reorder-after <AFTER-H>
+<c-h-digraph>
+reorder-after <AFTER-K>
+<l-stroke>
+reorder-after <AFTER-N>
+<n-acute>
+reorder-after <AFTER-O>
+<o-acute>
+reorder-after <AFTER-R>
+<r-acute>
+reorder-after <AFTER-S>
+<s-caron>
+<s-acute>
+reorder-after <AFTER-Z>
+<z-caron>
+<z-acute>
+
+<U010D> <c-caron>;<BASE>;<MIN>;IGNORE % č
+<U010C> <c-caron>;<BASE>;<CAP>;IGNORE % Č
+<U0107> <c-acute>;<BASE>;<MIN>;IGNORE % ć
+<U0106> <c-acute>;<BASE>;<CAP>;IGNORE % Ć
+<d-z'> <d-z-acute-digraph>;<BASE>;"<MIN><MIN>";IGNORE % dź
+<d-Z'> <d-z-acute-digraph>;<BASE>;"<MIN><CAP>";IGNORE % dŹ
+<D-z'> <d-z-acute-digraph>;<BASE>;"<CAP><MIN>";IGNORE % Dź
+<D-Z'> <d-z-acute-digraph>;<BASE>;"<CAP><CAP>";IGNORE % DŹ
+<U011B> <e-caron>;<BASE>;<MIN>;IGNORE % ě
+<U011A> <e-caron>;<BASE>;<CAP>;IGNORE % Ě
+<c-h> <c-h-digraph>;<BASE>;"<MIN><MIN>";IGNORE % ch
+<c-H> <c-h-digraph>;<BASE>;"<MIN><CAP>";IGNORE % cH
+<C-h> <c-h-digraph>;<BASE>;"<CAP><MIN>";IGNORE % Ch
+<C-H> <c-h-digraph>;<BASE>;"<CAP><CAP>";IGNORE % CH
+<U0142> <l-stroke>;<BASE>;<MIN>;IGNORE % ł
+<U0141> <l-stroke>;<BASE>;<CAP>;IGNORE % Ł
+<U0144> <n-acute>;<BASE>;<MIN>;IGNORE % ń
+<U0143> <n-acute>;<BASE>;<CAP>;IGNORE % Ń
+<U00F3> <o-acute>;<BASE>;<MIN>;IGNORE % ó
+<U00D3> <o-acute>;<BASE>;<CAP>;IGNORE % Ó
+<U0155> <r-acute>;<BASE>;<MIN>;IGNORE % ŕ
+<U0154> <r-acute>;<BASE>;<CAP>;IGNORE % Ŕ
+<U0161> <s-caron>;<BASE>;<MIN>;IGNORE % š
+<U0160> <s-caron>;<BASE>;<CAP>;IGNORE % Š
+<U015B> <s-acute>;<BASE>;<MIN>;IGNORE % ś
+<U015A> <s-acute>;<BASE>;<CAP>;IGNORE % Ś
+<U017E> <z-caron>;<BASE>;<MIN>;IGNORE % ž
+<U017D> <z-caron>;<BASE>;<CAP>;IGNORE % Ž
+<U017A> <z-acute>;<BASE>;<MIN>;IGNORE % ź
+<U0179> <z-acute>;<BASE>;<CAP>;IGNORE % Ź
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1jJhHyY]"
+noexpr  "^[-0nN]"
+yesstr  "jo"
+nostr   "n<U011B>"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "de_DE"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "de_DE"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Nj";"P<U00F3>";/
+        "Wa";"Sr";/
+        "St";"P<U011B>";/
+        "So"
+day     "Nje<U017A>ela";/
+        "P<U00F3>nje<U017A>ele";/
+        "Wa<U0142>tora";/
+        "Srjoda";/
+        "Stw<U00F3>rtk";/
+        "P<U011B>tk";/
+        "Sobota"
+abmon   "Jan";"Feb";/
+        "M<U011B>r";"Apr";/
+        "Maj";"Jun";/
+        "Jul";"Awg";/
+        "Sep";"Okt";/
+        "Now";"Dec"
+alt_mon "Januar";/
+        "Februar";/
+        "M<U011B>rc";/
+        "Apryl";/
+        "Maj";/
+        "Junij";/
+        "Julij";/
+        "Awgust";/
+        "September";/
+        "Oktober";/
+        "Nowember";/
+        "December"
+mon     "januara";/
+        "februara";/
+        "m<U011B>rca";/
+        "apryla";/
+        "maja";/
+        "junija";/
+        "julija";/
+        "awgusta";/
+        "septembra";/
+        "oktobra";/
+        "nowembra";/
+        "decembra"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "de_DE"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "de_DE"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "kn<U011B><U017E>na"
+name_mr     "kn<U011B>z"
+name_mrs    "kn<U011B>ni"
+name_ms     "kn<U011B>ni"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Nimska"
+country_post "D"
+country_ab2  "DE"
+country_ab3  "DEU"
+country_num  276
+country_car  "D"
+country_isbn 3
+lang_name    "dolnoserb<U0161><U0107>ina"
+lang_ab      ""
+lang_term    "dsb"
+lang_lib     "dsb"
+END LC_ADDRESS

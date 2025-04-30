@@ -1,0 +1,122 @@
+Standard debugger interface
+===========================
+
+The run-time linker exposes a rendezvous structure to allow debuggers
+to interface with it.  This structure, r_debug, is defined in link.h.
+If the executable's dynamic section has a DT_DEBUG element, the
+run-time linker sets that element's value to the address where this
+structure can be found.
+
+The r_debug structure contains (amongst others) the following fields:
+
+  struct link_map *r_map:
+    A linked list of loaded objects.
+
+  enum { RT_CONSISTENT, RT_ADD, RT_DELETE } r_state:
+    The current state of the r_map list.  RT_CONSISTENT means that r_map
+    is not currently being modified and may safely be inspected.  RT_ADD
+    means that an object is being added to r_map, and that the list is
+    not guaranteed to be consistent.  Likewise RT_DELETE means that an
+    object is being removed from the list.
+
+  ElfW(Addr) r_brk:
+    The address of a function internal to the run-time linker which is
+    called whenever r_state is changed.  The debugger should set a
+    breakpoint at this address if it wants to notice mapping changes.
+
+This protocol is widely supported, but somewhat limited in that it
+has no provision to provide access to multiple namespaces, and that
+the notifications (via r_brk) only refer to changes to r_map--the
+debugger is notified that a new object has been added, for instance,
+but there is no way for the debugger to discover whether any of the
+objects in the link-map have been relocated or not.
+
+
+Probe-based debugger interface
+==============================
+
+Systemtap is a dynamic tracing/instrumenting tool available on Linux.
+Probes that are not fired at run time have close to zero overhead.
+glibc contains a number of probes that debuggers can set breakpoints
+on in order to notice certain events.
+
+All rtld probes have the following arguments:
+
+  arg1: Lmid_t lmid:
+    The link-map ID of the link-map list that the object was loaded
+    into.  This will be LM_ID_BASE for the application's main link-map
+    list, or some other value for different namespaces.
+
+  arg2: struct r_debug *r_debug:
+    A pointer to the r_debug structure containing the link-map list
+    that the object was loaded into.  This will be the value stored in
+    DT_DEBUG for the application's main link-map list, or some other
+    value for different namespaces.
+
+map_complete and reloc_complete may have the following additional
+argument:
+
+  arg3: struct link_map *new:
+    A pointer which, if not NULL, points to the entry in the specified
+    r_debug structure's link-map list corresponding to the first new
+    object to have been mapped or relocated, with new->l_next pointing
+    to the link-map of the next new object to have been mapped or
+    relocated, and so on.  Note that because `new' is an entry in a
+    larger list, new->l_prev (if not NULL) will point to what was the
+    last link-map in the link-map list prior to the new objects being
+    mapped or relocated.
+
+The following probes are available:
+
+  init_start:
+    This is called once, when the linker is about to fill in the main
+    r_debug structure at application startup.  init_start always has
+    lmid set to LM_ID_BASE and r_debug set to the value stored in
+    DT_DEBUG.  r_debug is not guaranteed to be consistent until
+    init_complete is fired.
+
+  init_complete:
+    This is called once, when the linker has filled in the main
+    r_debug structure at application startup. init_complete always
+    has lmid set to LM_ID_BASE and r_debug set to the value stored
+    in DT_DEBUG.  The r_debug structure is consistent and may be
+    inspected, and all objects in the link-map are guaranteed to
+    have been relocated.
+
+  map_start:
+    The linker is about to map new objects into the specified
+    namespace.  The namespace's r_debug structure is not guaranteed
+    to be consistent until a corresponding map_complete is fired.
+
+  map_complete:
+    The linker has finished mapping new objects into the specified
+    namespace.  The namespace's r_debug structure is consistent and
+    may be inspected, although objects in the namespace's link-map
+    are not guaranteed to have been relocated.
+
+  map_failed:
+    The linker failed while attempting to map new objects into
+    the specified namespace.  The namespace's r_debug structure
+    is consistent and may be inspected.
+
+  reloc_start:
+    The linker is about to relocate all unrelocated objects in the
+    specified namespace.  The namespace's r_debug structure is not
+    guaranteed to be consistent until a corresponding reloc_complete
+    is fired.
+
+  reloc_complete:
+    The linker has relocated all objects in the specified namespace.
+    The namespace's r_debug structure is consistent and may be
+    inspected, and all objects in the namespace's link-map are
+    guaranteed to have been relocated.
+
+  unmap_start:
+    The linker is about to remove objects from the specified
+    namespace.  The namespace's r_debug structure is not guaranteed to
+    be consistent until a corresponding unmap_complete is fired.
+
+  unmap_complete:
+    The linker has finished removing objects into the specified
+    namespace.  The namespace's r_debug structure is consistent and
+    may be inspected.

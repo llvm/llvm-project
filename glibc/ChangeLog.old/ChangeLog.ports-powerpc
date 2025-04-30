@@ -1,0 +1,413 @@
+This file describes changes to the soft-float powerpc port while it
+was in the ports add-on directory.  This port is no longer part of an
+add-on and so future changes to it should be listed in the top-level
+ChangeLog file, not here.
+
+
+
+2013-10-04  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/powerpc32/Makefile: Remove file.
+	* sysdeps/powerpc/nofpu: Move directory to
+	../sysdeps/powerpc/nofpu.
+	* sysdeps/powerpc/soft-fp: Move directory to
+	../sysdeps/powerpc/soft-fp.
+	* sysdeps/powerpc/powerpc32/405: Move directory to
+	../sysdeps/powerpc/powerpc32/405.
+	* sysdeps/powerpc/powerpc32/440: Move directory to
+	../sysdeps/powerpc/powerpc32/440.
+	* sysdeps/powerpc/powerpc32/464: Move directory to
+	../sysdeps/powerpc/powerpc32/464.
+	* sysdeps/powerpc/powerpc32/476: Move directory to
+	../sysdeps/powerpc/powerpc32/476.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu: Move directory
+	to ../sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/405: Move directory to
+	../sysdeps/unix/sysv/linux/powerpc/powerpc32/405.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/440: Move directory to
+	../sysdeps/unix/sysv/linux/powerpc/powerpc32/440.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/464: Move directory to
+	../sysdeps/unix/sysv/linux/powerpc/powerpc32/464.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/476: Move directory to
+	../sysdeps/unix/sysv/linux/powerpc/powerpc32/476.
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/context-e500.h:
+	New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/getcontext.S:
+	Include <context-e500.h>.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/setcontext.S:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/swapcontext.S:
+	Likewise.
+
+2013-08-30   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/powerpc/powerpc32/405/memcpy.S: Fix typos.
+
+2013-08-17  Alexandre Oliva <aoliva@redhat.com>
+
+	PR 15483
+	* sysdeps/powerpc/nofpu/sim-full.c: Add FIXME note about
+	the need for thread-specific variables preserved across signal
+	handlers.
+	* sysdeps/powerpc/nofpu/soft-supp.h: Likewise.
+	* sysdeps/powerpc/soft-fp/sfp-machine.h: Likewise.
+
+2013-07-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Regenerated.
+
+2013-06-15  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libpthread.abilist:
+	Update.
+
+2013-06-11  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	* sysdeps/powerpc/dl-procinfo.c: Remove as this is now redundant with
+	glibc/sysdeps/powerpc/dl-procinfo.c.
+	* sysdeps/powerpc/dl-procinfo.h: Remove as this is now redundant with
+	glibc/sysdeps/powerpc/dl-procinfo.h
+
+2013-06-11  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	 * sysdeps/powerpc/dl-procinfo.h: Fix whitespace by correcting
+	 spaces with tabs where appropriate.
+
+2013-06-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/fenv_const.c: Remove trailing whitespace.
+	* sysdeps/powerpc/nofpu/fenv_libc.h: Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/getcontext.S:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/setcontext.S:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/swapcontext.S:
+	Likewise.
+
+2013-05-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Update test names.
+
+2013-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Update names of sincos
+	tests.
+
+2013-05-16  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	[BZ #15442]
+	* sysdeps/powerpc/soft-fp/sfp-machine.h (_FP_QNANNEGATEDP): New
+	macro.
+
+2013-02-28  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/powerpc/powerpc32/405/memcmp.S: Don't include <bp-sym.h>
+	and <bp-asm.h>.
+	(memcmp): Don't use BP_SYM.
+	* sysdeps/powerpc/powerpc32/405/memcpy.S: Don't include <bp-sym.h>
+	and <bp-asm.h>.
+	(memcpy): Don't use BP_SYM.
+	* sysdeps/powerpc/powerpc32/405/memset.S: Don't include <bp-sym.h>
+	and <bp-asm.h>.
+	(memset): Don't use BP_SYM.
+	* sysdeps/powerpc/powerpc32/405/strcmp.S: Don't include <bp-sym.h>
+	and <bp-asm.h>.
+	(strcmp): Don't use BP_SYM.
+	* sysdeps/powerpc/powerpc32/405/strcpy.S: Don't include <bp-sym.h>
+	and <bp-asm.h>.
+	(strcpy): Don't use BP_SYM.
+	* sysdeps/powerpc/powerpc32/405/strlen.S: Don't include <bp-sym.h>
+	and <bp-asm.h>.
+	(strlen): Don't use BP_SYM.
+	* sysdeps/powerpc/powerpc32/405/strncmp.S: Don't include
+	<bp-sym.h> and <bp-asm.h>.
+	(strncmp): Don't use BP_SYM.
+	* sysdeps/powerpc/powerpc32/476/memset.S: Don't include <bp-sym.h>
+	and <bp-asm.h>.
+	(memset): Don't use BP_SYM.
+
+2013-02-18  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist:
+	Add __cxa_thread_atexit_impl.
+	* sysdeps/unix/sysv/linux/tile/tilegx/tilegx32/nptl/libc.abilist:
+	Likewise.
+
+2013-02-14  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/powerpc/nofpu/fegetenv.c: Do not include <bp-sym.h>.
+	(fegetenv): Do not use BP_SYM in versioned symbols.
+	* sysdeps/powerpc/nofpu/fesetenv.c: Do not include <bp-sym.h>.
+	(fesetenv): Do not use BP_SYM in versioned symbols.
+	* sysdeps/powerpc/nofpu/feupdateenv.c: Do not include <bp-sym.h>.
+	(feupdateenv): Do not use BP_SYM in versioned symbols.
+	* sysdeps/powerpc/nofpu/fgetexcptflg.c: Do not include <bp-sym.h>.
+	(fegetexceptflag): Do not use BP_SYM in versioned symbols.
+	* sysdeps/powerpc/nofpu/fraiseexcpt.c: Do not include <bp-sym.h>.
+	(feraiseexcept): Do not use BP_SYM in versioned symbols.
+	* sysdeps/powerpc/nofpu/fsetexcptflg.c: Do not include <bp-sym.h>.
+	(fesetexceptflag): Do not use BP_SYM in versioned symbols.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2012-12-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/fgetexcptflg.c (__fegetexceptflag):
+	Specify return type as int.
+
+2012-11-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Remove fma ulps.
+
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Update.
+
+2012-11-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/fclrexcpt.c (feclearexcept): Add
+	libm_hidden_ver.
+
+2012-10-31  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist:
+	Fix sort order.
+
+2012-10-30  Jason Gunthorpe  <jgunthorpe@obsidianresearch.com>
+	    Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	[BZ #14595]
+	* sysdeps/powerpc/powerpc32/476/memset.S: New file copied from
+	405/memset.S to preserve 128-byte cacheline size.
+	* sysdeps/powerpc/powerpc32/405/memset.S (memset): Fix cacheline size
+	to 32-bytes for 405, 440, and 464 processors.
+
+2012-10-19  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist
+	(GLIBC_2.17): Add clock_* symbols.
+
+2012-09-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist:
+	Add __ppc_get_timebase_freq.
+
+2012-09-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/get-rounding-mode.h: New file.
+
+2012-07-25  Florian Weimer  <fweimer@redhat.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist:
+	Add secure_getenv.
+	* sysdeps/unix/sysv/linux/tile/tilegx/tilegx32/nptl/libc.abilist:
+	Likewise.
+
+2012-07-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* data/localplt-powerpcsoft-linux-gnu.data: Move to ...
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/localplt.data:
+	... here.
+
+2012-07-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* data/c++-types-powerpcsoft-linux-gnu.data: Move to ...
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/c++-types.data:
+	... here.
+
+2012-07-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/dl-procinfo.c (_dl_powerpc_platforms): Add
+	"ppca2".
+	* sysdeps/powerpc/dl-procinfo.h (_DL_PLATFORMS_COUNT): Increase to
+	13.
+	(PPC_PLATFORM_PPCA2): Define.
+	(PPC_PLATFORM_PPC405): Increase value.
+	(PPC_PLATFORM_PPC440): Likewise.
+	(PPC_PLATFORM_PPC464): Likewise.
+	(PPC_PLATFORM_PPC476): Likewise.
+	(_dl_string_platform): Handle ppca2.
+
+2012-06-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* data/localplt-powerpcsoft-linux-gnu.data: Allow abort and
+	soft-fp symbols to be absent.
+
+2012-06-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist:
+	Update.
+
+2012-05-31  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Regenerated.
+
+2012-05-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/soft-fp/sfp-machine.h (FP_EX_DENORM): Remove.
+	(FP_TRAPPING_EXCEPTIONS): Define.
+
+2012-05-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libm.abilist
+	(__fe_nomask_env): Remove.
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist:
+	Update.
+
+2012-05-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/ld.abilist:
+	New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libBrokenLocale.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libanl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libc.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libcrypt.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libdl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libm.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libnsl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libpthread.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libresolv.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/librt.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libthread_db.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/nptl/libutil.abilist:
+	Likewise.
+
+2012-03-09  Paul Eggert  <eggert@cs.ucla.edu>
+
+	[BZ #13673]
+	Replace FSF snail mail address with URLs, as per GNU coding standards.
+
+2012-02-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Resort with
+	gen-libm-test.pl -n in C locale.
+
+2010-09-03  Luis Machado  <luisgpm@br.ibm.com>
+
+	* sysdeps/powerpc/dl-procinfo.c: New file.
+	* sysdeps/powerpc/dl-procinfo.h: New file.
+	* sysdeps/powerpc/powerpc32/405/memcmp.S: New file.
+	* sysdeps/powerpc/powerpc32/405/memcpy.S: New file.
+	* sysdeps/powerpc/powerpc32/405/memset.S: New file.
+	* sysdeps/powerpc/powerpc32/405/strcmp.S: New file.
+	* sysdeps/powerpc/powerpc32/405/strcpy.S: New file.
+	* sysdeps/powerpc/powerpc32/405/strlen.S: New file.
+	* sysdeps/powerpc/powerpc32/405/strncmp.S: New file.
+	* sysdeps/powerpc/powerpc32/440/Implies: New file.
+	* sysdeps/powerpc/powerpc32/464/Implies: New file.
+	* sysdeps/powerpc/powerpc32/476/Implies: New file.
+	* sysdeps/powerpc/powerpc32/Makefile: New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/405/Implies: New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/440/Implies: New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/464/Implies: New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/476/Implies: New file.
+
+2010-10-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/feupdateenv.c (feupdateenv): Add
+	libm_hidden_ver.
+	* sysdeps/powerpc/nofpu/ftestexcept.c (fetestexcept): Add
+	libm_hidden_def.
+
+2010-02-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/fegetenv.c: Add hidden alias.
+
+2008-08-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/shlib-versions: New.
+	* c++-types-powerpcsoft-linux-gnu.data: New.
+	* localplt-powerpcsoft-linux-gnu.data: New.
+	* sysdeps/powerpc/nofpu/feholdexcpt.c (feholdexcept): Use
+	__fegetenv.
+
+2007-08-29  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/fsetexcptflg.c (__fesetexceptflag): Do not
+	clobber other exceptions.
+	* sysdeps/powerpc/nofpu/feupdateenv.c (__feupdateenv): Raise new
+	exceptions.
+	* sysdeps/powerpc/nofpu/fraiseexcpt.c (__feraiseexcept): Handle
+	multiple new exceptions if some are disabled.
+	* sysdeps/powerpc/nofpu/sim-full.c (__simulate_exceptions): Likewise.
+
+2007-07-13  Steven Munroe  <sjmunroe@us.ibm.com>
+
+	* sysdeps/powerpc/nofpu/Makefile: Remove fe_nomask from libm-support.
+
+2007-05-23  Steven Munroe  <sjmunroe@us.ibm.com>
+
+	* sysdeps/powerpc/nofpu/feholdexcpt.c (feholdexcept): Disable
+	exceptions.  Use the updated env in fesetenv().
+	Add libm_hidden_def.
+
+2007-01-23  Steven Munroe  <sjmunroe@us.ibm.com>
+
+	[BZ #2749]
+	* sysdeps/powerpc/nofpu/fenv_libc.h: New file.
+
+2007-01-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/powerpc/nofpu/fesetenv.c (__sim_exceptions,
+	__sim_disabled_exceptions, __sim_round_mode): Remove declarations.
+
+2006-10-05  Steven Munroe  <sjmunroe@us.ibm.com>
+
+	[BZ #2749]
+	* sysdeps/powerpc/nofpu/Makefile
+	[subdirs-soft-fp] (sysdep_routines): Remove gcc-quad-routines.
+	[subdirs-math] (CPPFLAGS): Add -I../soft-fp.
+	[subdirs-math] (CFLAGS-e_powl.c): Add -fno-builtin-fabsl.
+	[subdirs-math] (CFLAGS-s_ccoshl.c): Likewise.
+	[subdirs-math] (CFLAGS-s_csinhl.c): Likewise.
+	[subdirs-math] (CFLAGS-s_clogl.c): Likewise.
+	[subdirs-math] (CFLAGS-s_clog10l.c): Likewise.
+	[subdirs-math] (CFLAGS-s_csinl.c): Likewise.
+	[subdirs-math] (CFLAGS-s_csqrtl.c): Likewise.
+	* sysdeps/powerpc/nofpu/Versions (GLIBC_2.3.2): Remove __fixtfdi,
+	__fixtfsi, and __trunctfsf2.
+	(GLIBC_2.4): Remove  __floatunditf, __floatunsitf, and __unordtf2.
+	Add __nedf2, __nesf2, __gtdf2, __gtsf2, __ltdf2, __ltsf2.
+	* sysdeps/powerpc/nofpu/libm-test-ulps: Update for soft-fp.
+	* sysdeps/powerpc/soft-fp/sfp-machine.h: New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/Implies: New file.
+
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/getcontext.S:
+	New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/setcontext.S:
+	New file.
+	* sysdeps/unix/sysv/linux/powerpc/powerpc32/nofpu/swapcontext.S:
+	New file.
+
+2006-01-27  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/powerpc/nofpu/Subdirs: New file.
+
+	* sysdeps/powerpc/nofpu/Makefile [$(subdir) = soft-fp]
+	(sysdep_routines): Add $(gcc-quad-routines) here.
+
+2006-01-06  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/powerpc/nofpu/Versions (libc: GLIBC_2.4): New set.
+	Add __floatundidf, __floatundisf, __floatunditf, __floatunsidf,
+	__floatunsisf, __floatunsitf, __unorddf2, __unordsf2, __unordtf2.
+
+2005-10-11  Steven Munroe  <sjmunroe@us.ibm.com>
+
+	* sysdeps/powerpc/nofpu/fesetround.c: Add libm_hidden_def.

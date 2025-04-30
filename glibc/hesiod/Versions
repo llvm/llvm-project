@@ -1,0 +1,14 @@
+libnss_hesiod {
+  GLIBC_PRIVATE {
+    _nss_hesiod_setpwent; _nss_hesiod_endpwent;
+    _nss_hesiod_getpwnam_r; _nss_hesiod_getpwuid_r;
+    _nss_hesiod_setgrent; _nss_hesiod_endgrent;
+    _nss_hesiod_getgrnam_r; _nss_hesiod_getgrgid_r;
+    _nss_hesiod_setservent; _nss_hesiod_endservent;
+    _nss_hesiod_getservbyname_r;
+    _nss_hesiod_initgroups_dyn;
+    _nss_hesiod_getservbyport_r;
+    _nss_hesiod_setprotoent; _nss_hesiod_endprotoent;
+    _nss_hesiod_getprotobyname_r; _nss_hesiod_getprotobynumber_r;
+  }
+}

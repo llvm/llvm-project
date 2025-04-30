@@ -183,7 +183,7 @@ typedef unsigned long long kmp_uint64;
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_NEXT32
 #define KMP_SIZE_T_SPEC KMP_UINT64_SPEC
 #else
 #error "Can't determine size_t printf format specifier."
@@ -218,7 +218,8 @@ typedef kmp_uint32 kmp_uint;
 #define KMP_INT_MIN ((kmp_int32)0x80000000)
 
 // stdarg handling
-#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_WASM) &&  \
+#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_WASM ||   \
+     KMP_ARCH_NEXT32) &&                                                       \
     (KMP_OS_FREEBSD || KMP_OS_LINUX || KMP_OS_WASI)
 typedef va_list *kmp_va_list;
 #define kmp_va_deref(ap) (*(ap))

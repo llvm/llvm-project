@@ -1,0 +1,1483 @@
+@node Locales, Message Translation, Character Set Handling, Top
+@c %MENU% The country and language can affect the behavior of library functions
+@chapter Locales and Internationalization
+
+Different countries and cultures have varying conventions for how to
+communicate.  These conventions range from very simple ones, such as the
+format for representing dates and times, to very complex ones, such as
+the language spoken.
+
+@cindex internationalization
+@cindex locales
+@dfn{Internationalization} of software means programming it to be able
+to adapt to the user's favorite conventions.  In @w{ISO C},
+internationalization works by means of @dfn{locales}.  Each locale
+specifies a collection of conventions, one convention for each purpose.
+The user chooses a set of conventions by specifying a locale (via
+environment variables).
+
+All programs inherit the chosen locale as part of their environment.
+Provided the programs are written to obey the choice of locale, they
+will follow the conventions preferred by the user.
+
+@menu
+* Effects of Locale::           Actions affected by the choice of
+                                 locale.
+* Choosing Locale::             How the user specifies a locale.
+* Locale Categories::           Different purposes for which you can
+                                 select a locale.
+* Setting the Locale::          How a program specifies the locale
+                                 with library functions.
+* Standard Locales::            Locale names available on all systems.
+* Locale Names::                Format of system-specific locale names.
+* Locale Information::          How to access the information for the locale.
+* Formatting Numbers::          A dedicated function to format numbers.
+* Yes-or-No Questions::         Check a Response against the locale.
+@end menu
+
+@node Effects of Locale, Choosing Locale,  , Locales
+@section What Effects a Locale Has
+
+Each locale specifies conventions for several purposes, including the
+following:
+
+@itemize @bullet
+@item
+What multibyte character sequences are valid, and how they are
+interpreted (@pxref{Character Set Handling}).
+
+@item
+Classification of which characters in the local character set are
+considered alphabetic, and upper- and lower-case conversion conventions
+(@pxref{Character Handling}).
+
+@item
+The collating sequence for the local language and character set
+(@pxref{Collation Functions}).
+
+@item
+Formatting of numbers and currency amounts (@pxref{General Numeric}).
+
+@item
+Formatting of dates and times (@pxref{Formatting Calendar Time}).
+
+@item
+What language to use for output, including error messages
+(@pxref{Message Translation}).
+
+@item
+What language to use for user answers to yes-or-no questions
+(@pxref{Yes-or-No Questions}).
+
+@item
+What language to use for more complex user input.
+(The C library doesn't yet help you implement this.)
+@end itemize
+
+Some aspects of adapting to the specified locale are handled
+automatically by the library subroutines.  For example, all your program
+needs to do in order to use the collating sequence of the chosen locale
+is to use @code{strcoll} or @code{strxfrm} to compare strings.
+
+Other aspects of locales are beyond the comprehension of the library.
+For example, the library can't automatically translate your program's
+output messages into other languages.  The only way you can support
+output in the user's favorite language is to program this more or less
+by hand.  The C library provides functions to handle translations for
+multiple languages easily.
+
+This chapter discusses the mechanism by which you can modify the current
+locale.  The effects of the current locale on specific library functions
+are discussed in more detail in the descriptions of those functions.
+
+@node Choosing Locale, Locale Categories, Effects of Locale, Locales
+@section Choosing a Locale
+
+The simplest way for the user to choose a locale is to set the
+environment variable @code{LANG}.  This specifies a single locale to use
+for all purposes.  For example, a user could specify a hypothetical
+locale named @samp{espana-castellano} to use the standard conventions of
+most of Spain.
+
+The set of locales supported depends on the operating system you are
+using, and so do their names, except that the standard locale called
+@samp{C} or @samp{POSIX} always exist.  @xref{Locale Names}.
+
+In order to force the system to always use the default locale, the
+user can set the @code{LC_ALL} environment variable to @samp{C}.
+
+@cindex combining locales
+A user also has the option of specifying different locales for
+different purposes---in effect, choosing a mixture of multiple
+locales.  @xref{Locale Categories}.
+
+For example, the user might specify the locale @samp{espana-castellano}
+for most purposes, but specify the locale @samp{usa-english} for
+currency formatting.  This might make sense if the user is a
+Spanish-speaking American, working in Spanish, but representing monetary
+amounts in US dollars.
+
+Note that both locales @samp{espana-castellano} and @samp{usa-english},
+like all locales, would include conventions for all of the purposes to
+which locales apply.  However, the user can choose to use each locale
+for a particular subset of those purposes.
+
+@node Locale Categories, Setting the Locale, Choosing Locale, Locales
+@section Locale Categories
+@cindex categories for locales
+@cindex locale categories
+
+The purposes that locales serve are grouped into @dfn{categories}, so
+that a user or a program can choose the locale for each category
+independently.  Here is a table of categories; each name is both an
+environment variable that a user can set, and a macro name that you can
+use as the first argument to @code{setlocale}.
+
+The contents of the environment variable (or the string in the second
+argument to @code{setlocale}) has to be a valid locale name.
+@xref{Locale Names}.
+
+@vtable @code
+@item LC_COLLATE
+@standards{ISO, locale.h}
+This category applies to collation of strings (functions @code{strcoll}
+and @code{strxfrm}); see @ref{Collation Functions}.
+
+@item LC_CTYPE
+@standards{ISO, locale.h}
+This category applies to classification and conversion of characters,
+and to multibyte and wide characters;
+see @ref{Character Handling}, and @ref{Character Set Handling}.
+
+@item LC_MONETARY
+@standards{ISO, locale.h}
+This category applies to formatting monetary values; see @ref{General Numeric}.
+
+@item LC_NUMERIC
+@standards{ISO, locale.h}
+This category applies to formatting numeric values that are not
+monetary; see @ref{General Numeric}.
+
+@item LC_TIME
+@standards{ISO, locale.h}
+This category applies to formatting date and time values; see
+@ref{Formatting Calendar Time}.
+
+@item LC_MESSAGES
+@standards{XOPEN, locale.h}
+This category applies to selecting the language used in the user
+interface for message translation (@pxref{The Uniforum approach};
+@pxref{Message catalogs a la X/Open})  and contains regular expressions
+for affirmative and negative responses.
+
+@item LC_ALL
+@standards{ISO, locale.h}
+This is not a category; it is only a macro that you can use
+with @code{setlocale} to set a single locale for all purposes.  Setting
+this environment variable overwrites all selections by the other
+@code{LC_*} variables or @code{LANG}.
+
+@item LANG
+@standards{ISO, locale.h}
+If this environment variable is defined, its value specifies the locale
+to use for all purposes except as overridden by the variables above.
+@end vtable
+
+@vindex LANGUAGE
+When developing the message translation functions it was felt that the
+functionality provided by the variables above is not sufficient.  For
+example, it should be possible to specify more than one locale name.
+Take a Swedish user who better speaks German than English, and a program
+whose messages are output in English by default.  It should be possible
+to specify that the first choice of language is Swedish, the second
+German, and if this also fails to use English.  This is
+possible with the variable @code{LANGUAGE}.  For further description of
+this GNU extension see @ref{Using gettextized software}.
+
+@node Setting the Locale, Standard Locales, Locale Categories, Locales
+@section How Programs Set the Locale
+
+A C program inherits its locale environment variables when it starts up.
+This happens automatically.  However, these variables do not
+automatically control the locale used by the library functions, because
+@w{ISO C} says that all programs start by default in the standard @samp{C}
+locale.  To use the locales specified by the environment, you must call
+@code{setlocale}.  Call it as follows:
+
+@smallexample
+setlocale (LC_ALL, "");
+@end smallexample
+
+@noindent
+to select a locale based on the user choice of the appropriate
+environment variables.
+
+@cindex changing the locale
+@cindex locale, changing
+You can also use @code{setlocale} to specify a particular locale, for
+general use or for a specific category.
+
+@pindex locale.h
+The symbols in this section are defined in the header file @file{locale.h}.
+
+@deftypefun {char *} setlocale (int @var{category}, const char *@var{locale})
+@standards{ISO, locale.h}
+@safety{@prelim{}@mtunsafe{@mtasuconst{:@mtslocale{}} @mtsenv{}}@asunsafe{@asuinit{} @asulock{} @ascuheap{} @asucorrupt{}}@acunsafe{@acuinit{} @acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c Uses of the global locale object are unguarded in functions that
+@c ought to be MT-Safe, so we're ruling out the use of this function
+@c once threads are started.  It takes a write lock itself, but it may
+@c return a pointer loaded from the global locale object after releasing
+@c the lock, or before taking it.
+@c setlocale @mtasuconst:@mtslocale @mtsenv @asuinit @ascuheap @asulock @asucorrupt @acucorrupt @acsmem @acsfd @aculock
+@c  libc_rwlock_wrlock @asulock @aculock
+@c  libc_rwlock_unlock @aculock
+@c  getenv LOCPATH @mtsenv
+@c  malloc @ascuheap @acsmem
+@c  free @ascuheap @acsmem
+@c  new_composite_name ok
+@c  setdata ok
+@c  setname ok
+@c  _nl_find_locale @mtsenv @asuinit @ascuheap @asulock @asucorrupt @acucorrupt @acsmem @acsfd @aculock
+@c   getenv LC_ALL and LANG @mtsenv
+@c   _nl_load_locale_from_archive @ascuheap @acucorrupt @acsmem @acsfd
+@c    sysconf _SC_PAGE_SIZE ok
+@c    _nl_normalize_codeset @ascuheap @acsmem
+@c     isalnum_l ok (C locale)
+@c     isdigit_l ok (C locale)
+@c     malloc @ascuheap @acsmem
+@c     tolower_l ok (C locale)
+@c    open_not_cancel_2 @acsfd
+@c    fxstat64 ok
+@c    close_not_cancel_no_status ok
+@c    __mmap64 @acsmem
+@c    calculate_head_size ok
+@c    __munmap ok
+@c    compute_hashval ok
+@c    qsort dup @acucorrupt
+@c     rangecmp ok
+@c    malloc @ascuheap @acsmem
+@c    strdup @ascuheap @acsmem
+@c    _nl_intern_locale_data @ascuheap @acsmem
+@c     malloc @ascuheap @acsmem
+@c     free @ascuheap @acsmem
+@c   _nl_expand_alias @ascuheap @asulock @acsmem @acsfd @aculock
+@c    libc_lock_lock @asulock @aculock
+@c    bsearch ok
+@c     alias_compare ok
+@c      strcasecmp ok
+@c    read_alias_file @ascuheap @asulock @acsmem @acsfd @aculock
+@c     fopen @ascuheap @asulock @acsmem @acsfd @aculock
+@c     fsetlocking ok
+@c     feof_unlocked ok
+@c     fgets_unlocked ok
+@c     isspace ok (locale mutex is locked)
+@c     extend_alias_table @ascuheap @acsmem
+@c      realloc @ascuheap @acsmem
+@c     realloc @ascuheap @acsmem
+@c     fclose @ascuheap @asulock @acsmem @acsfd @aculock
+@c     qsort @ascuheap @acsmem
+@c      alias_compare dup
+@c    libc_lock_unlock @aculock
+@c   _nl_explode_name @ascuheap @acsmem
+@c    _nl_find_language ok
+@c    _nl_normalize_codeset dup @ascuheap @acsmem
+@c   _nl_make_l10nflist @ascuheap @acsmem
+@c    malloc @ascuheap @acsmem
+@c    free @ascuheap @acsmem
+@c    __argz_stringify ok
+@c    __argz_count ok
+@c    __argz_next ok
+@c   _nl_load_locale @ascuheap @acsmem @acsfd
+@c    open_not_cancel_2 @acsfd
+@c    __fxstat64 ok
+@c    close_not_cancel_no_status ok
+@c    mmap @acsmem
+@c    malloc @ascuheap @acsmem
+@c    read_not_cancel ok
+@c    free @ascuheap @acsmem
+@c    _nl_intern_locale_data dup @ascuheap @acsmem
+@c    munmap ok
+@c   __gconv_compare_alias @asuinit @ascuheap @asucorrupt @asulock @acsmem@acucorrupt @acsfd @aculock
+@c    __gconv_read_conf @asuinit @ascuheap @asucorrupt @asulock @acsmem@acucorrupt @acsfd @aculock
+@c     (libc_once-initializes gconv_cache and gconv_path_envvar; they're
+@c      never modified afterwards)
+@c     __gconv_load_cache @ascuheap @acsmem @acsfd
+@c      getenv GCONV_PATH @mtsenv
+@c      open_not_cancel @acsfd
+@c      __fxstat64 ok
+@c      close_not_cancel_no_status ok
+@c      mmap @acsmem
+@c      malloc @ascuheap @acsmem
+@c      __read ok
+@c      free @ascuheap @acsmem
+@c      munmap ok
+@c     __gconv_get_path @asulock @ascuheap @aculock @acsmem @acsfd
+@c      getcwd @ascuheap @acsmem @acsfd
+@c      libc_lock_lock @asulock @aculock
+@c      malloc @ascuheap @acsmem
+@c      strtok_r ok
+@c      libc_lock_unlock @aculock
+@c     read_conf_file @ascuheap @asucorrupt @asulock @acsmem @acucorrupt @acsfd @aculock
+@c      fopen @ascuheap @asulock @acsmem @acsfd @aculock
+@c      fsetlocking ok
+@c      feof_unlocked ok
+@c      getdelim @ascuheap @asucorrupt @acsmem @acucorrupt
+@c      isspace_l ok (C locale)
+@c      add_alias
+@c       isspace_l ok (C locale)
+@c       toupper_l ok (C locale)
+@c       add_alias2 dup @ascuheap @acucorrupt @acsmem
+@c      add_module @ascuheap @acsmem
+@c       isspace_l ok (C locale)
+@c       toupper_l ok (C locale)
+@c       strtol ok (@mtslocale but we hold the locale lock)
+@c       tfind __gconv_alias_db ok
+@c        __gconv_alias_compare dup ok
+@c       calloc @ascuheap @acsmem
+@c       insert_module dup @ascuheap
+@c     __tfind ok (because the tree is read only by then)
+@c      __gconv_alias_compare dup ok
+@c     insert_module @ascuheap
+@c      free @ascuheap
+@c     add_alias2 @ascuheap @acucorrupt @acsmem
+@c      detect_conflict ok, reads __gconv_modules_db
+@c      malloc @ascuheap @acsmem
+@c      tsearch __gconv_alias_db @ascuheap @acucorrupt @acsmem [exclusive tree, no @mtsrace]
+@c       __gconv_alias_compare ok
+@c      free @ascuheap
+@c    __gconv_compare_alias_cache ok
+@c     find_module_idx ok
+@c    do_lookup_alias ok
+@c     __tfind ok (because the tree is read only by then)
+@c      __gconv_alias_compare ok
+@c   strndup @ascuheap @acsmem
+@c   strcasecmp_l ok (C locale)
+The function @code{setlocale} sets the current locale for category
+@var{category} to @var{locale}.
+
+If @var{category} is @code{LC_ALL}, this specifies the locale for all
+purposes.  The other possible values of @var{category} specify a
+single purpose (@pxref{Locale Categories}).
+
+You can also use this function to find out the current locale by passing
+a null pointer as the @var{locale} argument.  In this case,
+@code{setlocale} returns a string that is the name of the locale
+currently selected for category @var{category}.
+
+The string returned by @code{setlocale} can be overwritten by subsequent
+calls, so you should make a copy of the string (@pxref{Copying Strings
+and Arrays}) if you want to save it past any further calls to
+@code{setlocale}.  (The standard library is guaranteed never to call
+@code{setlocale} itself.)
+
+You should not modify the string returned by @code{setlocale}.  It might
+be the same string that was passed as an argument in a previous call to
+@code{setlocale}.  One requirement is that the @var{category} must be
+the same in the call the string was returned and the one when the string
+is passed in as @var{locale} parameter.
+
+When you read the current locale for category @code{LC_ALL}, the value
+encodes the entire combination of selected locales for all categories.
+If you specify the same ``locale name'' with @code{LC_ALL} in a
+subsequent call to @code{setlocale}, it restores the same combination
+of locale selections.
+
+To be sure you can use the returned string encoding the currently selected
+locale at a later time, you must make a copy of the string.  It is not
+guaranteed that the returned pointer remains valid over time.
+
+When the @var{locale} argument is not a null pointer, the string returned
+by @code{setlocale} reflects the newly-modified locale.
+
+If you specify an empty string for @var{locale}, this means to read the
+appropriate environment variable and use its value to select the locale
+for @var{category}.
+
+If a nonempty string is given for @var{locale}, then the locale of that
+name is used if possible.
+
+The effective locale name (either the second argument to
+@code{setlocale}, or if the argument is an empty string, the name
+obtained from the process environment) must be a valid locale name.
+@xref{Locale Names}.
+
+If you specify an invalid locale name, @code{setlocale} returns a null
+pointer and leaves the current locale unchanged.
+@end deftypefun
+
+Here is an example showing how you might use @code{setlocale} to
+temporarily switch to a new locale.
+
+@smallexample
+#include <stddef.h>
+#include <locale.h>
+#include <stdlib.h>
+#include <string.h>
+
+void
+with_other_locale (char *new_locale,
+                   void (*subroutine) (int),
+                   int argument)
+@{
+  char *old_locale, *saved_locale;
+
+  /* @r{Get the name of the current locale.}  */
+  old_locale = setlocale (LC_ALL, NULL);
+
+  /* @r{Copy the name so it won't be clobbered by @code{setlocale}.} */
+  saved_locale = strdup (old_locale);
+  if (saved_locale == NULL)
+    fatal ("Out of memory");
+
+  /* @r{Now change the locale and do some stuff with it.} */
+  setlocale (LC_ALL, new_locale);
+  (*subroutine) (argument);
+
+  /* @r{Restore the original locale.} */
+  setlocale (LC_ALL, saved_locale);
+  free (saved_locale);
+@}
+@end smallexample
+
+@strong{Portability Note:} Some @w{ISO C} systems may define additional
+locale categories, and future versions of the library will do so.  For
+portability, assume that any symbol beginning with @samp{LC_} might be
+defined in @file{locale.h}.
+
+@node Standard Locales, Locale Names, Setting the Locale, Locales
+@section Standard Locales
+
+The only locale names you can count on finding on all operating systems
+are these three standard ones:
+
+@table @code
+@item "C"
+This is the standard C locale.  The attributes and behavior it provides
+are specified in the @w{ISO C} standard.  When your program starts up, it
+initially uses this locale by default.
+
+@item "POSIX"
+This is the standard POSIX locale.  Currently, it is an alias for the
+standard C locale.
+
+@item ""
+The empty name says to select a locale based on environment variables.
+@xref{Locale Categories}.
+@end table
+
+Defining and installing named locales is normally a responsibility of
+the system administrator at your site (or the person who installed
+@theglibc{}).  It is also possible for the user to create private
+locales.  All this will be discussed later when describing the tool to
+do so.
+@comment (@pxref{Building Locale Files}).
+
+If your program needs to use something other than the @samp{C} locale,
+it will be more portable if you use whatever locale the user specifies
+with the environment, rather than trying to specify some non-standard
+locale explicitly by name.  Remember, different machines might have
+different sets of locales installed.
+
+@node Locale Names, Locale Information, Standard Locales, Locales
+@section Locale Names
+
+The following command prints a list of locales supported by the
+system:
+
+@pindex locale
+@smallexample
+  locale -a
+@end smallexample
+
+@strong{Portability Note:} With the notable exception of the standard
+locale names @samp{C} and @samp{POSIX}, locale names are
+system-specific.
+
+Most locale names follow XPG syntax and consist of up to four parts:
+
+@smallexample
+@var{language}[_@var{territory}[.@var{codeset}]][@@@var{modifier}]
+@end smallexample
+
+Beside the first part, all of them are allowed to be missing.  If the
+full specified locale is not found, less specific ones are looked for.
+The various parts will be stripped off, in the following order:
+
+@enumerate
+@item
+codeset
+@item
+normalized codeset
+@item
+territory
+@item
+modifier
+@end enumerate
+
+For example, the locale name @samp{de_AT.iso885915@@euro} denotes a
+German-language locale for use in Austria, using the ISO-8859-15
+(Latin-9) character set, and with the Euro as the currency symbol.
+
+In addition to locale names which follow XPG syntax, systems may
+provide aliases such as @samp{german}.  Both categories of names must
+not contain the slash character @samp{/}.
+
+If the locale name starts with a slash @samp{/}, it is treated as a
+path relative to the configured locale directories; see @code{LOCPATH}
+below.  The specified path must not contain a component @samp{..}, or
+the name is invalid, and @code{setlocale} will fail.
+
+@strong{Portability Note:} POSIX suggests that if a locale name starts
+with a slash @samp{/}, it is resolved as an absolute path.  However,
+@theglibc{} treats it as a relative path under the directories listed
+in @code{LOCPATH} (or the default locale directory if @code{LOCPATH}
+is unset).
+
+Locale names which are longer than an implementation-defined limit are
+invalid and cause @code{setlocale} to fail.
+
+As a special case, locale names used with @code{LC_ALL} can combine
+several locales, reflecting different locale settings for different
+categories.  For example, you might want to use a U.S. locale with ISO
+A4 paper format, so you set @code{LANG} to @samp{en_US.UTF-8}, and
+@code{LC_PAPER} to @samp{de_DE.UTF-8}.  In this case, the
+@code{LC_ALL}-style combined locale name is
+
+@smallexample
+LC_CTYPE=en_US.UTF-8;LC_TIME=en_US.UTF-8;LC_PAPER=de_DE.UTF-8;@dots{}
+@end smallexample
+
+followed by other category settings not shown here.
+
+@vindex LOCPATH
+The path used for finding locale data can be set using the
+@code{LOCPATH} environment variable.  This variable lists the
+directories in which to search for locale definitions, separated by a
+colon @samp{:}.
+
+The default path for finding locale data is system specific.  A typical
+value for the @code{LOCPATH} default is:
+
+@smallexample
+/usr/share/locale
+@end smallexample
+
+The value of @code{LOCPATH} is ignored by privileged programs for
+security reasons, and only the default directory is used.
+
+@node Locale Information, Formatting Numbers, Locale Names, Locales
+@section Accessing Locale Information
+
+There are several ways to access locale information.  The simplest
+way is to let the C library itself do the work.  Several of the
+functions in this library implicitly access the locale data, and use
+what information is provided by the currently selected locale.  This is
+how the locale model is meant to work normally.
+
+As an example take the @code{strftime} function, which is meant to nicely
+format date and time information (@pxref{Formatting Calendar Time}).
+Part of the standard information contained in the @code{LC_TIME}
+category is the names of the months.  Instead of requiring the
+programmer to take care of providing the translations the
+@code{strftime} function does this all by itself.  @code{%A}
+in the format string is replaced by the appropriate weekday
+name of the locale currently selected by @code{LC_TIME}.  This is an
+easy example, and wherever possible functions do things automatically
+in this way.
+
+But there are quite often situations when there is simply no function
+to perform the task, or it is simply not possible to do the work
+automatically.  For these cases it is necessary to access the
+information in the locale directly.  To do this the C library provides
+two functions: @code{localeconv} and @code{nl_langinfo}.  The former is
+part of @w{ISO C} and therefore portable, but has a brain-damaged
+interface.  The second is part of the Unix interface and is portable in
+as far as the system follows the Unix standards.
+
+@menu
+* The Lame Way to Locale Data::   ISO C's @code{localeconv}.
+* The Elegant and Fast Way::      X/Open's @code{nl_langinfo}.
+@end menu
+
+@node The Lame Way to Locale Data, The Elegant and Fast Way, ,Locale Information
+@subsection @code{localeconv}: It is portable but @dots{}
+
+Together with the @code{setlocale} function the @w{ISO C} people
+invented the @code{localeconv} function.  It is a masterpiece of poor
+design.  It is expensive to use, not extensible, and not generally
+usable as it provides access to only @code{LC_MONETARY} and
+@code{LC_NUMERIC} related information.  Nevertheless, if it is
+applicable to a given situation it should be used since it is very
+portable.  The function @code{strfmon} formats monetary amounts
+according to the selected locale using this information.
+@pindex locale.h
+@cindex monetary value formatting
+@cindex numeric value formatting
+
+@deftypefun {struct lconv *} localeconv (void)
+@standards{ISO, locale.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:localeconv} @mtslocale{}}@asunsafe{}@acsafe{}}
+@c This function reads from multiple components of the locale object,
+@c without synchronization, while writing to the static buffer it uses
+@c as the return value.
+The @code{localeconv} function returns a pointer to a structure whose
+components contain information about how numeric and monetary values
+should be formatted in the current locale.
+
+You should not modify the structure or its contents.  The structure might
+be overwritten by subsequent calls to @code{localeconv}, or by calls to
+@code{setlocale}, but no other function in the library overwrites this
+value.
+@end deftypefun
+
+@deftp {Data Type} {struct lconv}
+@standards{ISO, locale.h}
+@code{localeconv}'s return value is of this data type.  Its elements are
+described in the following subsections.
+@end deftp
+
+If a member of the structure @code{struct lconv} has type @code{char},
+and the value is @code{CHAR_MAX}, it means that the current locale has
+no value for that parameter.
+
+@menu
+* General Numeric::             Parameters for formatting numbers and
+                                 currency amounts.
+* Currency Symbol::             How to print the symbol that identifies an
+                                 amount of money (e.g. @samp{$}).
+* Sign of Money Amount::        How to print the (positive or negative) sign
+                                 for a monetary amount, if one exists.
+@end menu
+
+@node General Numeric, Currency Symbol, , The Lame Way to Locale Data
+@subsubsection Generic Numeric Formatting Parameters
+
+These are the standard members of @code{struct lconv}; there may be
+others.
+
+@table @code
+@item char *decimal_point
+@itemx char *mon_decimal_point
+These are the decimal-point separators used in formatting non-monetary
+and monetary quantities, respectively.  In the @samp{C} locale, the
+value of @code{decimal_point} is @code{"."}, and the value of
+@code{mon_decimal_point} is @code{""}.
+@cindex decimal-point separator
+
+@item char *thousands_sep
+@itemx char *mon_thousands_sep
+These are the separators used to delimit groups of digits to the left of
+the decimal point in formatting non-monetary and monetary quantities,
+respectively.  In the @samp{C} locale, both members have a value of
+@code{""} (the empty string).
+
+@item char *grouping
+@itemx char *mon_grouping
+These are strings that specify how to group the digits to the left of
+the decimal point.  @code{grouping} applies to non-monetary quantities
+and @code{mon_grouping} applies to monetary quantities.  Use either
+@code{thousands_sep} or @code{mon_thousands_sep} to separate the digit
+groups.
+@cindex grouping of digits
+
+Each member of these strings is to be interpreted as an integer value of
+type @code{char}.  Successive numbers (from left to right) give the
+sizes of successive groups (from right to left, starting at the decimal
+point.)  The last member is either @code{0}, in which case the previous
+member is used over and over again for all the remaining groups, or
+@code{CHAR_MAX}, in which case there is no more grouping---or, put
+another way, any remaining digits form one large group without
+separators.
+
+For example, if @code{grouping} is @code{"\04\03\02"}, the correct
+grouping for the number @code{123456787654321} is @samp{12}, @samp{34},
+@samp{56}, @samp{78}, @samp{765}, @samp{4321}.  This uses a group of 4
+digits at the end, preceded by a group of 3 digits, preceded by groups
+of 2 digits (as many as needed).  With a separator of @samp{,}, the
+number would be printed as @samp{12,34,56,78,765,4321}.
+
+A value of @code{"\03"} indicates repeated groups of three digits, as
+normally used in the U.S.
+
+In the standard @samp{C} locale, both @code{grouping} and
+@code{mon_grouping} have a value of @code{""}.  This value specifies no
+grouping at all.
+
+@item char int_frac_digits
+@itemx char frac_digits
+These are small integers indicating how many fractional digits (to the
+right of the decimal point) should be displayed in a monetary value in
+international and local formats, respectively.  (Most often, both
+members have the same value.)
+
+In the standard @samp{C} locale, both of these members have the value
+@code{CHAR_MAX}, meaning ``unspecified''.  The ISO standard doesn't say
+what to do when you find this value; we recommend printing no
+fractional digits.  (This locale also specifies the empty string for
+@code{mon_decimal_point}, so printing any fractional digits would be
+confusing!)
+@end table
+
+@node Currency Symbol, Sign of Money Amount, General Numeric, The Lame Way to Locale Data
+@subsubsection Printing the Currency Symbol
+@cindex currency symbols
+
+These members of the @code{struct lconv} structure specify how to print
+the symbol to identify a monetary value---the international analog of
+@samp{$} for US dollars.
+
+Each country has two standard currency symbols.  The @dfn{local currency
+symbol} is used commonly within the country, while the
+@dfn{international currency symbol} is used internationally to refer to
+that country's currency when it is necessary to indicate the country
+unambiguously.
+
+For example, many countries use the dollar as their monetary unit, and
+when dealing with international currencies it's important to specify
+that one is dealing with (say) Canadian dollars instead of U.S. dollars
+or Australian dollars.  But when the context is known to be Canada,
+there is no need to make this explicit---dollar amounts are implicitly
+assumed to be in Canadian dollars.
+
+@table @code
+@item char *currency_symbol
+The local currency symbol for the selected locale.
+
+In the standard @samp{C} locale, this member has a value of @code{""}
+(the empty string), meaning ``unspecified''.  The ISO standard doesn't
+say what to do when you find this value; we recommend you simply print
+the empty string as you would print any other string pointed to by this
+variable.
+
+@item char *int_curr_symbol
+The international currency symbol for the selected locale.
+
+The value of @code{int_curr_symbol} should normally consist of a
+three-letter abbreviation determined by the international standard
+@cite{ISO 4217 Codes for the Representation of Currency and Funds},
+followed by a one-character separator (often a space).
+
+In the standard @samp{C} locale, this member has a value of @code{""}
+(the empty string), meaning ``unspecified''.  We recommend you simply print
+the empty string as you would print any other string pointed to by this
+variable.
+
+@item char p_cs_precedes
+@itemx char n_cs_precedes
+@itemx char int_p_cs_precedes
+@itemx char int_n_cs_precedes
+These members are @code{1} if the @code{currency_symbol} or
+@code{int_curr_symbol} strings should precede the value of a monetary
+amount, or @code{0} if the strings should follow the value.  The
+@code{p_cs_precedes} and @code{int_p_cs_precedes} members apply to
+positive amounts (or zero), and the @code{n_cs_precedes} and
+@code{int_n_cs_precedes} members apply to negative amounts.
+
+In the standard @samp{C} locale, all of these members have a value of
+@code{CHAR_MAX}, meaning ``unspecified''.  The ISO standard doesn't say
+what to do when you find this value.  We recommend printing the
+currency symbol before the amount, which is right for most countries.
+In other words, treat all nonzero values alike in these members.
+
+The members with the @code{int_} prefix apply to the
+@code{int_curr_symbol} while the other two apply to
+@code{currency_symbol}.
+
+@item char p_sep_by_space
+@itemx char n_sep_by_space
+@itemx char int_p_sep_by_space
+@itemx char int_n_sep_by_space
+These members are @code{1} if a space should appear between the
+@code{currency_symbol} or @code{int_curr_symbol} strings and the
+amount, or @code{0} if no space should appear.  The
+@code{p_sep_by_space} and @code{int_p_sep_by_space} members apply to
+positive amounts (or zero), and the @code{n_sep_by_space} and
+@code{int_n_sep_by_space} members apply to negative amounts.
+
+In the standard @samp{C} locale, all of these members have a value of
+@code{CHAR_MAX}, meaning ``unspecified''.  The ISO standard doesn't say
+what you should do when you find this value; we suggest you treat it as
+1 (print a space).  In other words, treat all nonzero values alike in
+these members.
+
+The members with the @code{int_} prefix apply to the
+@code{int_curr_symbol} while the other two apply to
+@code{currency_symbol}.  There is one specialty with the
+@code{int_curr_symbol}, though.  Since all legal values contain a space
+at the end of the string one either prints this space (if the currency
+symbol must appear in front and must be separated) or one has to avoid
+printing this character at all (especially when at the end of the
+string).
+@end table
+
+@node Sign of Money Amount, , Currency Symbol, The Lame Way to Locale Data
+@subsubsection Printing the Sign of a Monetary Amount
+
+These members of the @code{struct lconv} structure specify how to print
+the sign (if any) of a monetary value.
+
+@table @code
+@item char *positive_sign
+@itemx char *negative_sign
+These are strings used to indicate positive (or zero) and negative
+monetary quantities, respectively.
+
+In the standard @samp{C} locale, both of these members have a value of
+@code{""} (the empty string), meaning ``unspecified''.
+
+The ISO standard doesn't say what to do when you find this value; we
+recommend printing @code{positive_sign} as you find it, even if it is
+empty.  For a negative value, print @code{negative_sign} as you find it
+unless both it and @code{positive_sign} are empty, in which case print
+@samp{-} instead.  (Failing to indicate the sign at all seems rather
+unreasonable.)
+
+@item char p_sign_posn
+@itemx char n_sign_posn
+@itemx char int_p_sign_posn
+@itemx char int_n_sign_posn
+These members are small integers that indicate how to
+position the sign for nonnegative and negative monetary quantities,
+respectively.  (The string used for the sign is what was specified with
+@code{positive_sign} or @code{negative_sign}.)  The possible values are
+as follows:
+
+@table @code
+@item 0
+The currency symbol and quantity should be surrounded by parentheses.
+
+@item 1
+Print the sign string before the quantity and currency symbol.
+
+@item 2
+Print the sign string after the quantity and currency symbol.
+
+@item 3
+Print the sign string right before the currency symbol.
+
+@item 4
+Print the sign string right after the currency symbol.
+
+@item CHAR_MAX
+``Unspecified''.  Both members have this value in the standard
+@samp{C} locale.
+@end table
+
+The ISO standard doesn't say what you should do when the value is
+@code{CHAR_MAX}.  We recommend you print the sign after the currency
+symbol.
+
+The members with the @code{int_} prefix apply to the
+@code{int_curr_symbol} while the other two apply to
+@code{currency_symbol}.
+@end table
+
+@node The Elegant and Fast Way, , The Lame Way to Locale Data, Locale Information
+@subsection Pinpoint Access to Locale Data
+
+When writing the X/Open Portability Guide the authors realized that the
+@code{localeconv} function is not enough to provide reasonable access to
+locale information.  The information which was meant to be available
+in the locale (as later specified in the POSIX.1 standard) requires more
+ways to access it.  Therefore the @code{nl_langinfo} function
+was introduced.
+
+@deftypefun {char *} nl_langinfo (nl_item @var{item})
+@standards{XOPEN, langinfo.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c It calls _nl_langinfo_l with the current locale, which returns a
+@c pointer into constant strings defined in locale data structures.
+The @code{nl_langinfo} function can be used to access individual
+elements of the locale categories.  Unlike the @code{localeconv}
+function, which returns all the information, @code{nl_langinfo}
+lets the caller select what information it requires.  This is very
+fast and it is not a problem to call this function multiple times.
+
+A second advantage is that in addition to the numeric and monetary
+formatting information, information from the
+@code{LC_TIME} and @code{LC_MESSAGES} categories is available.
+
+@pindex langinfo.h
+The type @code{nl_item} is defined in @file{nl_types.h}.  The argument
+@var{item} is a numeric value defined in the header @file{langinfo.h}.
+The X/Open standard defines the following values:
+
+@vtable @code
+@item CODESET
+@code{nl_langinfo} returns a string with the name of the coded character
+set used in the selected locale.
+
+@item ABDAY_1
+@itemx ABDAY_2
+@itemx ABDAY_3
+@itemx ABDAY_4
+@itemx ABDAY_5
+@itemx ABDAY_6
+@itemx ABDAY_7
+@code{nl_langinfo} returns the abbreviated weekday name.  @code{ABDAY_1}
+corresponds to Sunday.
+@item DAY_1
+@itemx DAY_2
+@itemx DAY_3
+@itemx DAY_4
+@itemx DAY_5
+@itemx DAY_6
+@itemx DAY_7
+Similar to @code{ABDAY_1}, etc.,@: but here the return value is the
+unabbreviated weekday name.
+@item ABMON_1
+@itemx ABMON_2
+@itemx ABMON_3
+@itemx ABMON_4
+@itemx ABMON_5
+@itemx ABMON_6
+@itemx ABMON_7
+@itemx ABMON_8
+@itemx ABMON_9
+@itemx ABMON_10
+@itemx ABMON_11
+@itemx ABMON_12
+The return value is the abbreviated name of the month, in the
+grammatical form used when the month forms part of a complete date.
+@code{ABMON_1} corresponds to January.
+@item MON_1
+@itemx MON_2
+@itemx MON_3
+@itemx MON_4
+@itemx MON_5
+@itemx MON_6
+@itemx MON_7
+@itemx MON_8
+@itemx MON_9
+@itemx MON_10
+@itemx MON_11
+@itemx MON_12
+Similar to @code{ABMON_1}, etc.,@: but here the month names are not
+abbreviated.  Here the first value @code{MON_1} also corresponds to
+January.
+@item ALTMON_1
+@itemx ALTMON_2
+@itemx ALTMON_3
+@itemx ALTMON_4
+@itemx ALTMON_5
+@itemx ALTMON_6
+@itemx ALTMON_7
+@itemx ALTMON_8
+@itemx ALTMON_9
+@itemx ALTMON_10
+@itemx ALTMON_11
+@itemx ALTMON_12
+Similar to @code{MON_1}, etc.,@: but here the month names are in the
+grammatical form used when the month is named by itself.  The
+@code{strftime} functions use these month names for the conversion
+specifier @code{%OB} (@pxref{Formatting Calendar Time}).
+
+Note that not all languages need two different forms of the month names,
+so the strings returned for @code{MON_@dots{}} and @code{ALTMON_@dots{}}
+may or may not be the same, depending on the locale.
+
+@strong{NB:} @code{ABALTMON_@dots{}} constants corresponding to the
+@code{%Ob} conversion specifier are not currently provided, but are
+expected to be in a future release.  In the meantime, it is possible
+to use @code{_NL_ABALTMON_@dots{}}.
+@item AM_STR
+@itemx PM_STR
+The return values are strings which can be used in the representation of time
+as an hour from 1 to 12 plus an am/pm specifier.
+
+Note that in locales which do not use this time representation
+these strings might be empty, in which case the am/pm format
+cannot be used at all.
+@item D_T_FMT
+The return value can be used as a format string for @code{strftime} to
+represent time and date in a locale-specific way.
+@item D_FMT
+The return value can be used as a format string for @code{strftime} to
+represent a date in a locale-specific way.
+@item T_FMT
+The return value can be used as a format string for @code{strftime} to
+represent time in a locale-specific way.
+@item T_FMT_AMPM
+The return value can be used as a format string for @code{strftime} to
+represent time in the am/pm format.
+
+Note that if the am/pm format does not make any sense for the
+selected locale, the return value might be the same as the one for
+@code{T_FMT}.
+@item ERA
+The return value represents the era used in the current locale.
+
+Most locales do not define this value.  An example of a locale which
+does define this value is the Japanese one.  In Japan, the traditional
+representation of dates includes the name of the era corresponding to
+the then-emperor's reign.
+
+Normally it should not be necessary to use this value directly.
+Specifying the @code{E} modifier in their format strings causes the
+@code{strftime} functions to use this information.  The format of the
+returned string is not specified, and therefore you should not assume
+knowledge of it on different systems.
+@item ERA_YEAR
+The return value gives the year in the relevant era of the locale.
+As for @code{ERA} it should not be necessary to use this value directly.
+@item ERA_D_T_FMT
+This return value can be used as a format string for @code{strftime} to
+represent dates and times in a locale-specific era-based way.
+@item ERA_D_FMT
+This return value can be used as a format string for @code{strftime} to
+represent a date in a locale-specific era-based way.
+@item ERA_T_FMT
+This return value can be used as a format string for @code{strftime} to
+represent time in a locale-specific era-based way.
+@item ALT_DIGITS
+The return value is a representation of up to @math{100} values used to
+represent the values @math{0} to @math{99}.  As for @code{ERA} this
+value is not intended to be used directly, but instead indirectly
+through the @code{strftime} function.  When the modifier @code{O} is
+used in a format which would otherwise use numerals to represent hours,
+minutes, seconds, weekdays, months, or weeks, the appropriate value for
+the locale is used instead.
+@item INT_CURR_SYMBOL
+The same as the value returned by @code{localeconv} in the
+@code{int_curr_symbol} element of the @code{struct lconv}.
+@item CURRENCY_SYMBOL
+@itemx CRNCYSTR
+The same as the value returned by @code{localeconv} in the
+@code{currency_symbol} element of the @code{struct lconv}.
+
+@code{CRNCYSTR} is a deprecated alias still required by Unix98.
+@item MON_DECIMAL_POINT
+The same as the value returned by @code{localeconv} in the
+@code{mon_decimal_point} element of the @code{struct lconv}.
+@item MON_THOUSANDS_SEP
+The same as the value returned by @code{localeconv} in the
+@code{mon_thousands_sep} element of the @code{struct lconv}.
+@item MON_GROUPING
+The same as the value returned by @code{localeconv} in the
+@code{mon_grouping} element of the @code{struct lconv}.
+@item POSITIVE_SIGN
+The same as the value returned by @code{localeconv} in the
+@code{positive_sign} element of the @code{struct lconv}.
+@item NEGATIVE_SIGN
+The same as the value returned by @code{localeconv} in the
+@code{negative_sign} element of the @code{struct lconv}.
+@item INT_FRAC_DIGITS
+The same as the value returned by @code{localeconv} in the
+@code{int_frac_digits} element of the @code{struct lconv}.
+@item FRAC_DIGITS
+The same as the value returned by @code{localeconv} in the
+@code{frac_digits} element of the @code{struct lconv}.
+@item P_CS_PRECEDES
+The same as the value returned by @code{localeconv} in the
+@code{p_cs_precedes} element of the @code{struct lconv}.
+@item P_SEP_BY_SPACE
+The same as the value returned by @code{localeconv} in the
+@code{p_sep_by_space} element of the @code{struct lconv}.
+@item N_CS_PRECEDES
+The same as the value returned by @code{localeconv} in the
+@code{n_cs_precedes} element of the @code{struct lconv}.
+@item N_SEP_BY_SPACE
+The same as the value returned by @code{localeconv} in the
+@code{n_sep_by_space} element of the @code{struct lconv}.
+@item P_SIGN_POSN
+The same as the value returned by @code{localeconv} in the
+@code{p_sign_posn} element of the @code{struct lconv}.
+@item N_SIGN_POSN
+The same as the value returned by @code{localeconv} in the
+@code{n_sign_posn} element of the @code{struct lconv}.
+
+@item INT_P_CS_PRECEDES
+The same as the value returned by @code{localeconv} in the
+@code{int_p_cs_precedes} element of the @code{struct lconv}.
+@item INT_P_SEP_BY_SPACE
+The same as the value returned by @code{localeconv} in the
+@code{int_p_sep_by_space} element of the @code{struct lconv}.
+@item INT_N_CS_PRECEDES
+The same as the value returned by @code{localeconv} in the
+@code{int_n_cs_precedes} element of the @code{struct lconv}.
+@item INT_N_SEP_BY_SPACE
+The same as the value returned by @code{localeconv} in the
+@code{int_n_sep_by_space} element of the @code{struct lconv}.
+@item INT_P_SIGN_POSN
+The same as the value returned by @code{localeconv} in the
+@code{int_p_sign_posn} element of the @code{struct lconv}.
+@item INT_N_SIGN_POSN
+The same as the value returned by @code{localeconv} in the
+@code{int_n_sign_posn} element of the @code{struct lconv}.
+
+@item DECIMAL_POINT
+@itemx RADIXCHAR
+The same as the value returned by @code{localeconv} in the
+@code{decimal_point} element of the @code{struct lconv}.
+
+The name @code{RADIXCHAR} is a deprecated alias still used in Unix98.
+@item THOUSANDS_SEP
+@itemx THOUSEP
+The same as the value returned by @code{localeconv} in the
+@code{thousands_sep} element of the @code{struct lconv}.
+
+The name @code{THOUSEP} is a deprecated alias still used in Unix98.
+@item GROUPING
+The same as the value returned by @code{localeconv} in the
+@code{grouping} element of the @code{struct lconv}.
+@item YESEXPR
+The return value is a regular expression which can be used with the
+@code{regex} function to recognize a positive response to a yes/no
+question.  @Theglibc{} provides the @code{rpmatch} function for
+easier handling in applications.
+@item NOEXPR
+The return value is a regular expression which can be used with the
+@code{regex} function to recognize a negative response to a yes/no
+question.
+@item YESSTR
+The return value is a locale-specific translation of the positive response
+to a yes/no question.
+
+Using this value is deprecated since it is a very special case of
+message translation, and is better handled by the message
+translation functions (@pxref{Message Translation}).
+
+The use of this symbol is deprecated.  Instead message translation
+should be used.
+@item NOSTR
+The return value is a locale-specific translation of the negative response
+to a yes/no question.  What is said for @code{YESSTR} is also true here.
+
+The use of this symbol is deprecated.  Instead message translation
+should be used.
+@end vtable
+
+The file @file{langinfo.h} defines a lot more symbols but none of them
+are official.  Using them is not portable, and the format of the
+return values might change.  Therefore we recommended you not use
+them.
+
+Note that the return value for any valid argument can be used
+in all situations (with the possible exception of the am/pm time formatting
+codes).  If the user has not selected any locale for the
+appropriate category, @code{nl_langinfo} returns the information from the
+@code{"C"} locale.  It is therefore possible to use this function as
+shown in the example below.
+
+If the argument @var{item} is not valid, a pointer to an empty string is
+returned.
+@end deftypefun
+
+An example of @code{nl_langinfo} usage is a function which has to
+print a given date and time in a locale-specific way.  At first one
+might think that, since @code{strftime} internally uses the locale
+information, writing something like the following is enough:
+
+@smallexample
+size_t
+i18n_time_n_data (char *s, size_t len, const struct tm *tp)
+@{
+  return strftime (s, len, "%X %D", tp);
+@}
+@end smallexample
+
+The format contains no weekday or month names and therefore is
+internationally usable.  Wrong!  The output produced is something like
+@code{"hh:mm:ss MM/DD/YY"}.  This format is only recognizable in the
+USA.  Other countries use different formats.  Therefore the function
+should be rewritten like this:
+
+@smallexample
+size_t
+i18n_time_n_data (char *s, size_t len, const struct tm *tp)
+@{
+  return strftime (s, len, nl_langinfo (D_T_FMT), tp);
+@}
+@end smallexample
+
+Now it uses the date and time format of the locale
+selected when the program runs.  If the user selects the locale
+correctly there should never be a misunderstanding over the time and
+date format.
+
+@node Formatting Numbers, Yes-or-No Questions, Locale Information, Locales
+@section A dedicated function to format numbers
+
+We have seen that the structure returned by @code{localeconv} as well as
+the values given to @code{nl_langinfo} allow you to retrieve the various
+pieces of locale-specific information to format numbers and monetary
+amounts.  We have also seen that the underlying rules are quite complex.
+
+Therefore the X/Open standards introduce a function which uses such
+locale information, making it easier for the user to format
+numbers according to these rules.
+
+@deftypefun ssize_t strfmon (char *@var{s}, size_t @var{maxsize}, const char *@var{format}, @dots{})
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c It (and strfmon_l) both call __vstrfmon_l_internal, which, besides
+@c accessing the locale object passed to it, accesses the active
+@c locale through isdigit (but to_digit assumes ASCII digits only).
+@c It may call __printf_fp (@mtslocale @ascuheap @acsmem) and
+@c guess_grouping (safe).
+The @code{strfmon} function is similar to the @code{strftime} function
+in that it takes a buffer, its size, a format string,
+and values to write into the buffer as text in a form specified
+by the format string.  Like @code{strftime}, the function
+also returns the number of bytes written into the buffer.
+
+There are two differences: @code{strfmon} can take more than one
+argument, and, of course, the format specification is different.  Like
+@code{strftime}, the format string consists of normal text, which is
+output as is, and format specifiers, which are indicated by a @samp{%}.
+Immediately after the @samp{%}, you can optionally specify various flags
+and formatting information before the main formatting character, in a
+similar way to @code{printf}:
+
+@itemize @bullet
+@item
+Immediately following the @samp{%} there can be one or more of the
+following flags:
+@table @asis
+@item @samp{=@var{f}}
+The single byte character @var{f} is used for this field as the numeric
+fill character.  By default this character is a space character.
+Filling with this character is only performed if a left precision
+is specified.  It is not just to fill to the given field width.
+@item @samp{^}
+The number is printed without grouping the digits according to the rules
+of the current locale.  By default grouping is enabled.
+@item @samp{+}, @samp{(}
+At most one of these flags can be used.  They select which format to
+represent the sign of a currency amount.  By default, and if
+@samp{+} is given, the locale equivalent of @math{+}/@math{-} is used.  If
+@samp{(} is given, negative amounts are enclosed in parentheses.  The
+exact format is determined by the values of the @code{LC_MONETARY}
+category of the locale selected at program runtime.
+@item @samp{!}
+The output will not contain the currency symbol.
+@item @samp{-}
+The output will be formatted left-justified instead of right-justified if
+it does not fill the entire field width.
+@end table
+@end itemize
+
+The next part of the specification is an optional field width.  If no
+width is specified @math{0} is taken.  During output, the function first
+determines how much space is required.  If it requires at least as many
+characters as given by the field width, it is output using as much space
+as necessary.  Otherwise, it is extended to use the full width by
+filling with the space character.  The presence or absence of the
+@samp{-} flag determines the side at which such padding occurs.  If
+present, the spaces are added at the right making the output
+left-justified, and vice versa.
+
+So far the format looks familiar, being similar to the @code{printf} and
+@code{strftime} formats.  However, the next two optional fields
+introduce something new.  The first one is a @samp{#} character followed
+by a decimal digit string.  The value of the digit string specifies the
+number of @emph{digit} positions to the left of the decimal point (or
+equivalent).  This does @emph{not} include the grouping character when
+the @samp{^} flag is not given.  If the space needed to print the number
+does not fill the whole width, the field is padded at the left side with
+the fill character, which can be selected using the @samp{=} flag and by
+default is a space.  For example, if the field width is selected as 6
+and the number is @math{123}, the fill character is @samp{*} the result
+will be @samp{***123}.
+
+The second optional field starts with a @samp{.} (period) and consists
+of another decimal digit string.  Its value describes the number of
+characters printed after the decimal point.  The default is selected
+from the current locale (@code{frac_digits}, @code{int_frac_digits}, see
+@pxref{General Numeric}).  If the exact representation needs more digits
+than given by the field width, the displayed value is rounded.  If the
+number of fractional digits is selected to be zero, no decimal point is
+printed.
+
+As a GNU extension, the @code{strfmon} implementation in @theglibc{}
+allows an optional @samp{L} next as a format modifier.  If this modifier
+is given, the argument is expected to be a @code{long double} instead of
+a @code{double} value.
+
+Finally, the last component is a format specifier.  There are three
+specifiers defined:
+
+@table @asis
+@item @samp{i}
+Use the locale's rules for formatting an international currency value.
+@item @samp{n}
+Use the locale's rules for formatting a national currency value.
+@item @samp{%}
+Place a @samp{%} in the output.  There must be no flag, width
+specifier or modifier given, only @samp{%%} is allowed.
+@end table
+
+As for @code{printf}, the function reads the format string
+from left to right and uses the values passed to the function following
+the format string.  The values are expected to be either of type
+@code{double} or @code{long double}, depending on the presence of the
+modifier @samp{L}.  The result is stored in the buffer pointed to by
+@var{s}.  At most @var{maxsize} characters are stored.
+
+The return value of the function is the number of characters stored in
+@var{s}, including the terminating @code{NULL} byte.  If the number of
+characters stored would exceed @var{maxsize}, the function returns
+@math{-1} and the content of the buffer @var{s} is unspecified.  In this
+case @code{errno} is set to @code{E2BIG}.
+@end deftypefun
+
+A few examples should make clear how the function works.  It is
+assumed that all the following pieces of code are executed in a program
+which uses the USA locale (@code{en_US}).  The simplest
+form of the format is this:
+
+@smallexample
+strfmon (buf, 100, "@@%n@@%n@@%n@@", 123.45, -567.89, 12345.678);
+@end smallexample
+
+@noindent
+The output produced is
+@smallexample
+"@@$123.45@@-$567.89@@$12,345.68@@"
+@end smallexample
+
+We can notice several things here.  First, the widths of the output
+numbers are different.  We have not specified a width in the format
+string, and so this is no wonder.  Second, the third number is printed
+using thousands separators.  The thousands separator for the
+@code{en_US} locale is a comma.  The number is also rounded.
+@math{.678} is rounded to @math{.68} since the format does not specify a
+precision and the default value in the locale is @math{2}.  Finally,
+note that the national currency symbol is printed since @samp{%n} was
+used, not @samp{i}.  The next example shows how we can align the output.
+
+@smallexample
+strfmon (buf, 100, "@@%=*11n@@%=*11n@@%=*11n@@", 123.45, -567.89, 12345.678);
+@end smallexample
+
+@noindent
+The output this time is:
+
+@smallexample
+"@@    $123.45@@   -$567.89@@ $12,345.68@@"
+@end smallexample
+
+Two things stand out.  Firstly, all fields have the same width (eleven
+characters) since this is the width given in the format and since no
+number required more characters to be printed.  The second important
+point is that the fill character is not used.  This is correct since the
+white space was not used to achieve a precision given by a @samp{#}
+modifier, but instead to fill to the given width.  The difference
+becomes obvious if we now add a width specification.
+
+@smallexample
+strfmon (buf, 100, "@@%=*11#5n@@%=*11#5n@@%=*11#5n@@",
+         123.45, -567.89, 12345.678);
+@end smallexample
+
+@noindent
+The output is
+
+@smallexample
+"@@ $***123.45@@-$***567.89@@ $12,456.68@@"
+@end smallexample
+
+Here we can see that all the currency symbols are now aligned, and that
+the space between the currency sign and the number is filled with the
+selected fill character.  Note that although the width is selected to be
+@math{5} and @math{123.45} has three digits left of the decimal point,
+the space is filled with three asterisks.  This is correct since, as
+explained above, the width does not include the positions used to store
+thousands separators.  One last example should explain the remaining
+functionality.
+
+@smallexample
+strfmon (buf, 100, "@@%=0(16#5.3i@@%=0(16#5.3i@@%=0(16#5.3i@@",
+         123.45, -567.89, 12345.678);
+@end smallexample
+
+@noindent
+This rather complex format string produces the following output:
+
+@smallexample
+"@@ USD 000123,450 @@(USD 000567.890)@@ USD 12,345.678 @@"
+@end smallexample
+
+The most noticeable change is the alternative way of representing
+negative numbers.  In financial circles this is often done using
+parentheses, and this is what the @samp{(} flag selected.  The fill
+character is now @samp{0}.  Note that this @samp{0} character is not
+regarded as a numeric zero, and therefore the first and second numbers
+are not printed using a thousands separator.  Since we used the format
+specifier @samp{i} instead of @samp{n}, the international form of the
+currency symbol is used.  This is a four letter string, in this case
+@code{"USD "}.  The last point is that since the precision right of the
+decimal point is selected to be three, the first and second numbers are
+printed with an extra zero at the end and the third number is printed
+without rounding.
+
+@node Yes-or-No Questions,  , Formatting Numbers , Locales
+@section Yes-or-No Questions
+
+Some non GUI programs ask a yes-or-no question.  If the messages
+(especially the questions) are translated into foreign languages, be
+sure that you localize the answers too.  It would be very bad habit to
+ask a question in one language and request the answer in another, often
+English.
+
+@Theglibc{} contains @code{rpmatch} to give applications easy
+access to the corresponding locale definitions.
+
+@deftypefun int rpmatch (const char *@var{response})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c Calls nl_langinfo with YESEXPR and NOEXPR, triggering @mtslocale but
+@c it's regcomp and regexec that bring in all of the safety issues.
+@c regfree is also called, but it doesn't introduce any further issues.
+The function @code{rpmatch} checks the string in @var{response} for whether
+or not it is a correct yes-or-no answer and if yes, which one.  The
+check uses the @code{YESEXPR} and @code{NOEXPR} data in the
+@code{LC_MESSAGES} category of the currently selected locale.  The
+return value is as follows:
+
+@table @code
+@item 1
+The user entered an affirmative answer.
+
+@item 0
+The user entered a negative answer.
+
+@item -1
+The answer matched neither the @code{YESEXPR} nor the @code{NOEXPR}
+regular expression.
+@end table
+
+This function is not standardized but available beside in @theglibc{} at
+least also in the IBM AIX library.
+@end deftypefun
+
+@noindent
+This function would normally be used like this:
+
+@smallexample
+  @dots{}
+  /* @r{Use a safe default.}  */
+  _Bool doit = false;
+
+  fputs (gettext ("Do you really want to do this? "), stdout);
+  fflush (stdout);
+  /* @r{Prepare the @code{getline} call.}  */
+  line = NULL;
+  len = 0;
+  while (getline (&line, &len, stdin) >= 0)
+    @{
+      /* @r{Check the response.}  */
+      int res = rpmatch (line);
+      if (res >= 0)
+        @{
+          /* @r{We got a definitive answer.}  */
+          if (res > 0)
+            doit = true;
+          break;
+        @}
+    @}
+  /* @r{Free what @code{getline} allocated.}  */
+  free (line);
+@end smallexample
+
+Note that the loop continues until a read error is detected or until a
+definitive (positive or negative) answer is read.

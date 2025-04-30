@@ -207,6 +207,7 @@ set(x86_files
   mmintrin.h
   movdirintrin.h
   mwaitxintrin.h
+  next32_scratchpad.h
   nmmintrin.h
   pconfigintrin.h
   pkuintrin.h

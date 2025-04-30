@@ -1,0 +1,7 @@
+%ifdef HAVE_ELFV2_ABI
+DEFAULT			GLIBC_2.17
+ld=ld64.so.2
+%else
+DEFAULT			GLIBC_2.3
+ld=ld64.so.1
+%endif

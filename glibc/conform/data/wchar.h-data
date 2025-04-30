@@ -1,0 +1,169 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42
+type wchar_t
+type wint_t
+# if !defined ISO99 && !defined ISO11 && !defined POSIX2008
+type wctype_t
+# endif
+type mbstate_t
+# if !defined ISO99 && !defined ISO11
+type FILE
+# else
+#  define FILE __FILE
+# endif
+type size_t
+# if defined XOPEN2K8 || defined POSIX2008
+type locale_t
+# endif
+tag {struct tm}
+
+function wint_t btowc (int)
+function int fwprintf (FILE*, const wchar_t*, ...)
+function int fwscanf (FILE*, const wchar_t*, ...)
+# if !defined ISO99 && !defined ISO11 && !defined POSIX2008
+function int iswalnum (wint_t)
+function int iswalpha (wint_t)
+function int iswcntrl (wint_t)
+function int iswdigit (wint_t)
+function int iswgraph (wint_t)
+function int iswlower (wint_t)
+function int iswprint (wint_t)
+function int iswpunct (wint_t)
+function int iswspace (wint_t)
+function int iswupper (wint_t)
+function int iswxdigit (wint_t)
+function int iswctype (wint_t, wctype_t)
+# endif
+function wint_t fgetwc (FILE*)
+function {wchar_t*} fgetws (wchar_t*, int, FILE*)
+function wint_t fputwc (wchar_t, FILE*)
+function int fputws (const wchar_t*, FILE*)
+function int fwide (FILE*, int)
+function wint_t getwc (FILE*)
+function wint_t getwchar (void)
+function int mbsinit (const mbstate_t*)
+function size_t mbrlen (const char*, size_t, mbstate_t*)
+function size_t mbrtowc (wchar_t*, const char*, size_t, mbstate_t*)
+# if defined XOPEN2K8 || defined POSIX2008
+function size_t mbsnrtowcs (wchar_t*, const char**, size_t, size_t, mbstate_t*)
+# endif
+function size_t mbsrtowcs (wchar_t*, const char**, size_t, mbstate_t*)
+# if defined XOPEN2K8 || defined POSIX2008
+function {FILE*} open_wmemstream (wchar_t**, size_t*)
+# endif
+function wint_t putwc (wchar_t, FILE*)
+function wint_t putwchar (wchar_t)
+function int swprintf (wchar_t*, size_t, const wchar_t*, ...)
+function int swscanf (const wchar_t*, const wchar_t*, ...)
+# if !defined ISO99 && !defined ISO11 && !defined POSIX2008
+function wint_t towlower (wint_t)
+function wint_t towupper (wint_t)
+# endif
+function wint_t ungetwc (wint_t, FILE*)
+function int vfwprintf (FILE*, const wchar_t*, __gnuc_va_list)
+# ifndef UNIX98
+function int vfwscanf (FILE*, const wchar_t*, __gnuc_va_list)
+# endif
+function int vwprintf (const wchar_t*, __gnuc_va_list)
+# ifndef UNIX98
+function int vwscanf (const wchar_t*, __gnuc_va_list)
+# endif
+function int vswprintf (wchar_t*, size_t, const wchar_t*, __gnuc_va_list)
+# ifndef UNIX98
+function int vswscanf (const wchar_t*, const wchar_t*, __gnuc_va_list)
+# endif
+# if defined XOPEN2K8 || defined POSIX2008
+function {wchar_t*} wcpcpy (wchar_t*, const wchar_t*)
+function {wchar_t*} wcpncpy (wchar_t*, const wchar_t*, size_t)
+# endif
+function size_t wcrtomb (char*, wchar_t, mbstate_t*)
+# if defined XOPEN2K8 || defined POSIX2008
+function int wcscasecmp (const wchar_t*, const wchar_t*)
+function int wcscasecmp_l (const wchar_t*, const wchar_t*, locale_t)
+# endif
+function {wchar_t*} wcscat (wchar_t*, const wchar_t*)
+function {wchar_t*} wcschr (const wchar_t*, wchar_t)
+function int wcscmp (const wchar_t*, const wchar_t*)
+function int wcscoll (const wchar_t*, const wchar_t*)
+# if defined XOPEN2K8 || defined POSIX2008
+function int wcscoll_l (const wchar_t*, const wchar_t*, locale_t)
+# endif
+function {wchar_t*} wcscpy (wchar_t*, const wchar_t*)
+function size_t wcscspn (const wchar_t*, const wchar_t*)
+# if defined XOPEN2K8 || defined POSIX2008
+function {wchar_t*} wcsdup (const wchar_t*)
+# endif
+function size_t wcsftime (wchar_t*, size_t, const wchar_t*, const struct tm*)
+function size_t wcslen (const wchar_t*)
+# if defined XOPEN2K8 || defined POSIX2008
+function int wcsncasecmp (const wchar_t*, const wchar_t*, size_t)
+function int wcsncasecmp_l (const wchar_t*, const wchar_t*, size_t, locale_t)
+# endif
+function {wchar_t*} wcsncat (wchar_t*, const wchar_t*, size_t)
+function int wcsncmp (const wchar_t*, const wchar_t*, size_t)
+function {wchar_t*} wcsncpy (wchar_t*, const wchar_t*, size_t)
+# if defined XOPEN2K8 || defined POSIX2008
+function size_t wcsnlen (const wchar_t*, size_t)
+function size_t wcsnrtombs (char*, const wchar_t**, size_t, size_t, mbstate_t*)
+# endif
+function {wchar_t*} wcspbrk (const wchar_t*, const wchar_t*)
+function {wchar_t*} wcsrchr (const wchar_t*, wchar_t)
+function size_t wcsrtombs (char*, const wchar_t**, size_t, mbstate_t*)
+function size_t wcsspn (const wchar_t*, const wchar_t*)
+function {wchar_t*} wcsstr (const wchar_t*, const wchar_t*)
+function double wcstod (const wchar_t*, wchar_t**)
+# ifndef UNIX98
+function float wcstof (const wchar_t*, wchar_t**)
+function {long double} wcstold (const wchar_t*, wchar_t**)
+# endif
+function {wchar_t*} wcstok (wchar_t*, const wchar_t*, wchar_t**)
+function {long int} wcstol (const wchar_t*, wchar_t**, int)
+# ifndef UNIX98
+function {long long int} wcstoll (const wchar_t*, wchar_t**, int)
+# endif
+function {unsigned long int} wcstoul (const wchar_t*, wchar_t**, int)
+# ifndef UNIX98
+function {unsigned long long int} wcstoull (const wchar_t*, wchar_t**, int)
+# endif
+# if defined UNIX98 || defined XOPEN2K
+function {wchar_t*} wcswcs (const wchar_t*, const wchar_t*)
+# endif
+# if !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function int wcswidth (const wchar_t*, size_t)
+# endif
+function size_t wcsxfrm (wchar_t*, const wchar_t*, size_t)
+# if defined XOPEN2K8 || defined POSIX2008
+function size_t wcsxfrm_l (wchar_t*, const wchar_t*, size_t, locale_t)
+# endif
+function int wctob (wint_t)
+# if !defined ISO99 && !defined ISO11 && !defined POSIX2008
+function wctype_t wctype (const char*)
+function int wcwidth (wchar_t)
+# endif
+function {wchar_t*} wmemchr (const wchar_t*, wchar_t, size_t)
+function int wmemcmp (const wchar_t*, const wchar_t*, size_t)
+function {wchar_t*} wmemcpy (wchar_t*, const wchar_t*, size_t)
+function {wchar_t*} wmemmove (wchar_t*, const wchar_t*, size_t)
+function {wchar_t*} wmemset (wchar_t*, wchar_t, size_t)
+function int wprintf (const wchar_t*, ...)
+function int wscanf (const wchar_t*, ...)
+
+macro-int-constant WCHAR_MIN {promoted:wchar_t}
+macro-int-constant WCHAR_MAX {promoted:wchar_t} >= 127
+macro-constant WEOF {wint_t}
+macro-constant NULL == 0
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow-header ctype.h
+allow-header stdio.h
+allow-header stdarg.h
+allow-header stdlib.h
+allow-header string.h
+allow-header stddef.h
+allow-header time.h
+#endif
+
+allow wcs[abcdefghijklmnopqrstuvwxyz]*
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif
+#endif

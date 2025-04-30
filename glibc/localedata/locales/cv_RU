@@ -1,0 +1,241 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Chuvash Language Locale for Russia
+% Language: cv
+% Territory: RU
+% Revision: 1.0
+% Date: 2009-10-13
+% Application: general
+% Users: general
+%
+% Based on the ru_RO
+% Modifed by:
+%    Adi Roiban <adi@roiban.ro>
+%    Ali Savatar
+%
+
+LC_IDENTIFICATION
+title      "Chuvash locale for Russia"
+source     "RAP"
+address    "Sankt Jorgens Alle 8, DK-1615 Kobenhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Chuvash"
+territory  "Russia"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% There is no collation information for Chuvash in CLDR.
+%
+% According to https://en.wikipedia.org/wiki/Chuvash_language
+% the writing system is Cyrillic.
+%
+% But our Chuvash locale here seems to use the Latin Alphabet ...
+%
+% I just adapt the collation rules which I found here to the
+% updated iso14651_t1_common file.
+copy "iso14651_t1"
+
+% The Chuvash alphabet has the following letters, ordered as below:
+% a ă c e ĕ h i j k l m n p r š s ş t u ü v y
+
+collating-symbol <a-breve>
+collating-symbol <e-breve>
+collating-symbol <s-caron>
+collating-symbol <s-cedilla>
+collating-symbol <u-diaerisis>
+
+reorder-after <AFTER-A>
+<a-breve>
+reorder-after <AFTER-E>
+<e-breve>
+reorder-after <AFTER-R>
+<s-caron>
+reorder-after <AFTER-S>
+<s-cedilla>
+reorder-after <AFTER-U>
+<u-diaerisis>
+
+<U0103>     <a-breve>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ă
+<U0102>     <a-breve>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ă
+<U0115>     <e-breve>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ĕ
+<U0114>     <e-breve>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ĕ
+<U0161>     <s-caron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % š
+<U0160>     <s-caron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Š
+<U015F>   <s-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ş
+<U015E>   <s-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ş
+<U0219>   <s-cedilla>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE % ș
+<U0218>   <s-cedilla>;"<BASE><VRNT1>";"<CAP><MIN>";IGNORE % Ș
+<U00FC> <u-diaerisis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ü
+<U00DC> <u-diaerisis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ü
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0nN]"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "RUB "
+
+% "t." - short for tenke(, Chuvash name for rouble
+currency_symbol "<U20BD>"
+
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ru_RU"
+END LC_NUMERIC
+
+LC_TIME
+
+% Days of week:
+% vyrsarnikun (Sunday) - short vr
+% tuntikun (Monday) tn
+% ytlarikun (Tuesday) yt
+% junkun (Wednesday) jn
+% ke(s,nernikun (Thursday) ks,
+% ernekun (Friday) er
+% s<a(matkun (Saturday) s<m
+
+day 	"vyrsarnikun";/
+	"tuntikun";/
+	"ytlarikun";/
+	"junkun";/
+	"k<U0115><U015F>nernikun";/
+	"ernekun";/
+	"<U0161><U0103>matkun"
+
+abday   "vr";/
+	"tn";/
+	"yt";/
+	"jn";/
+	"k<U015F>";/
+	"er";/
+	"<U0161>m"
+
+% Month names:
+% ka(rlac (January) - short KA(R
+% nara(s (February) NAR
+% pus< (March) PUS<
+% aka (April) AKA
+% s,u (May) S,U
+% s,e(rtme (June) S,E(R
+% uta( (July) UTA(
+% s,urla (August) S,UR
+% ava(n (September) AVA(
+% jupa (October) JUP
+% cu:k (November) CU:K
+% ras<tav (December) RAS<
+
+mon     "k<U0103>rlac";/
+	"nar<U0103>s";/
+	"pu<U0161>";/
+	"aka";/
+	"<U015F>u";/
+	"<U015F><U0115>rtme";/
+	"ut<U0103>";/
+	"<U015F>urla";/
+	"av<U0103>n";/
+	"jupa";/
+	"c<U00FC>k";/
+	"ra<U0161>tav"
+abmon   "K<U0102>R";/
+	"NAR";/
+	"PU<U0160>";/
+	"AKA";/
+	"<U015E>U";/
+	"<U015E><U0114>R";/
+	"UT<U0102>";/
+	"<U015E>UR";/
+	"AV<U0102>";/
+	"JUP";/
+	"C<U00DC>K";/
+	"RA<U0160>"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "ru_RU"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ru_RU"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "ru_RU"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "ru_RU"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_ab2 "RU"
+country_ab3 "RUS"
+country_num 643
+country_car    "RUS"
+% Чӑвашла
+lang_name    "<U0427><U04D1><U0432><U0430><U0448><U043B><U0430>"
+lang_ab      "cv"
+lang_term    "chv"
+lang_lib     "chv"
+END LC_ADDRESS

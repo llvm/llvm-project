@@ -60,6 +60,55 @@ struct Config {
   bool VerifyEach = false;
   bool DisableVerify = false;
 
+  /// Add the NextSiliconImportRecursion pass to the end of the LTO
+  /// optimization pipeline (legacy and new).
+  bool NextSiliconImportRecursion = false;
+
+  /// Add the NextSiliconWarnUnsupportedOMP pass to the end of the LTO
+  /// optimization pipeline.
+  bool NextSiliconWarnUnsupportedOMP = false;
+
+  /// Add the NextSiliconRelocateVariadic pass to the of the LTO
+  /// optimization pipeline.
+  bool NextSiliconRelocateVariadic = false;
+
+  /// Add the NextSiliconIRFixup pass to the end of the LTO optimization
+  /// pipeline (legacy and new). Does not apply if a custom optimization
+  /// pipeline is passed to the new pass manager, in which case the pass
+  /// could be specified within the pipeline string.
+  bool NextSiliconIRFixup = false;
+
+  /// Add the NextSiliconIRBuiltins pass to the of the LTO
+  /// optimization pipeline.
+  bool NextSiliconIRBuiltins = false;
+
+  /// Add the NextSiliconAtomicFixup pass to the end of the LTO optimization
+  /// pipeline (legacy and new).
+  bool NextSiliconAtomicFixup = false;
+
+  /// Add the NextSiliconSplitCallSites pass to the end of the LTO optimization
+  /// pipeline.
+  bool NextSiliconSplitCallSites = false;
+
+  /// Add the NextSiliconAddOMPPrefix pass to the end of the LTO optimization
+  /// pipeline.
+  bool NextSiliconAddOMPPrefix = false;
+
+  /// Add the EmbedSymbolTrackers pass to the end of the LTO optimization
+  /// pipeline (legacy and new). Does not apply if a custom optimization
+  /// pipeline is passed to the new pass manager, in which case the pass
+  /// could be specified within the pipeline string.
+  bool EmbedSymbolTrackers = false;
+
+  /// Add The PGOInstrumentation and InstrProfiling Passes post-IR-embedding,
+  /// pre-codegen.
+  bool NextInstrumentation = false;
+
+  /// Enable promotion of loop counters. Disabling this option can have a small
+  /// impact on host performance, but provides more telemetry in programs with
+  /// large loops.
+  bool NextDoPGOCounterPromotion = false;
+
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.
   bool Freestanding = false;

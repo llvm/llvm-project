@@ -401,6 +401,7 @@ enum Kind {
   kw_vTableFuncs,
   kw_virtFunc,
   kw_aliasee,
+  kw_resolver,
   kw_refs,
   kw_typeIdInfo,
   kw_typeTests,

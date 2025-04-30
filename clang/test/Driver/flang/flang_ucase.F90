@@ -1,5 +1,7 @@
 ! Check that flang -fc1 is invoked when in --driver-mode=flang.
 
+! UNSUPPORTED: classic_flang
+
 ! This is a copy of flang.f90 because the driver has logic in it which
 ! differentiates between F90 and f90 files. Flang will not treat these files
 ! differently.

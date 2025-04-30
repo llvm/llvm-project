@@ -1,0 +1,133 @@
+@node Debugging Support
+@c @node Debugging Support, Threads, Cryptographic Functions, Top
+@c %MENU% Functions to help debugging applications
+@chapter Debugging support
+
+Applications are usually debugged using dedicated debugger programs.
+But sometimes this is not possible and, in any case, it is useful to
+provide the developer with as much information as possible at the time
+the problems are experienced.  For this reason a few functions are
+provided which a program can use to help the developer more easily
+locate the problem.
+
+
+@menu
+* Backtraces::                Obtaining and printing a back trace of the
+                               current stack.
+@end menu
+
+
+@node Backtraces, , , Debugging Support
+@section Backtraces
+
+@cindex backtrace
+@cindex backtrace_symbols
+@cindex backtrace_fd
+A @dfn{backtrace} is a list of the function calls that are currently
+active in a thread.  The usual way to inspect a backtrace of a program
+is to use an external debugger such as gdb.  However, sometimes it is
+useful to obtain a backtrace programmatically from within a program,
+e.g., for the purposes of logging or diagnostics.
+
+The header file @file{execinfo.h} declares three functions that obtain
+and manipulate backtraces of the current thread.
+@pindex execinfo.h
+
+@deftypefun int backtrace (void **@var{buffer}, int @var{size})
+@standards{GNU, execinfo.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asuinit{} @ascuheap{} @ascudlopen{} @ascuplugin{} @asulock{}}@acunsafe{@acuinit{} @acsmem{} @aculock{} @acsfd{}}}
+@c The generic implementation just does pointer chasing within the local
+@c stack, without any guarantees that this will handle signal frames
+@c correctly, so it's AS-Unsafe to begin with.  However, most (all?)
+@c arches defer to libgcc_s's _Unwind_* implementation, dlopening
+@c libgcc_s.so to that end except in a static version of libc.
+@c libgcc_s's implementation may in turn defer to libunwind.  We can't
+@c assume those implementations are AS- or AC-safe, but even if we
+@c could, our own initialization path isn't, and libgcc's implementation
+@c calls malloc and performs internal locking, so...
+The @code{backtrace} function obtains a backtrace for the current
+thread, as a list of pointers, and places the information into
+@var{buffer}.  The argument @var{size} should be the number of
+@w{@code{void *}} elements that will fit into @var{buffer}.  The return
+value is the actual number of entries of @var{buffer} that are obtained,
+and is at most @var{size}.
+
+The pointers placed in @var{buffer} are actually return addresses
+obtained by inspecting the stack, one return address per stack frame.
+
+Note that certain compiler optimizations may interfere with obtaining a
+valid backtrace.  Function inlining causes the inlined function to not
+have a stack frame; tail call optimization replaces one stack frame with
+another; frame pointer elimination will stop @code{backtrace} from
+interpreting the stack contents correctly.
+@end deftypefun
+
+@deftypefun {char **} backtrace_symbols (void *const *@var{buffer}, int @var{size})
+@standards{GNU, execinfo.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{} @aculock{}}}
+@c Collects info returned by _dl_addr in an auto array, allocates memory
+@c for the whole return buffer with malloc then sprintfs into it storing
+@c pointers to the strings into the array entries in the buffer.
+@c _dl_addr takes the recursive dl_load_lock then calls
+@c _dl_find_dso_for_object and determine_info.
+@c _dl_find_dso_for_object calls _dl-addr_inside_object.
+@c All of them are safe as long as the lock is held.
+@c @asucorrupt?  It doesn't look like the dynamic loader's data
+@c structures could be in an inconsistent state that would cause
+@c malfunction here.
+The @code{backtrace_symbols} function translates the information
+obtained from the @code{backtrace} function into an array of strings.
+The argument @var{buffer} should be a pointer to an array of addresses
+obtained via the @code{backtrace} function, and @var{size} is the number
+of entries in that array (the return value of @code{backtrace}).
+
+The return value is a pointer to an array of strings, which has
+@var{size} entries just like the array @var{buffer}.  Each string
+contains a printable representation of the corresponding element of
+@var{buffer}.  It includes the function name (if this can be
+determined), an offset into the function, and the actual return address
+(in hexadecimal).
+
+Currently, the function name and offset can only be obtained on systems that
+use the ELF binary format for programs and libraries.  On other systems,
+only the hexadecimal return address will be present.  Also, you may need
+to pass additional flags to the linker to make the function names
+available to the program.  (For example, on systems using GNU ld, you
+must pass @code{-rdynamic}.)
+
+The return value of @code{backtrace_symbols} is a pointer obtained via
+the @code{malloc} function, and it is the responsibility of the caller
+to @code{free} that pointer.  Note that only the return value need be
+freed, not the individual strings.
+
+The return value is @code{NULL} if sufficient memory for the strings
+cannot be obtained.
+@end deftypefun
+
+@deftypefun void backtrace_symbols_fd (void *const *@var{buffer}, int @var{size}, int @var{fd})
+@standards{GNU, execinfo.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acunsafe{@aculock{}}}
+@c Single loop of _dl_addr over addresses, collecting info into an iovec
+@c written out with a writev call per iteration.  Addresses and offsets
+@c are converted to hex in auto buffers, so the only potential issue
+@c here is leaking the dl lock in case of cancellation.
+The @code{backtrace_symbols_fd} function performs the same translation
+as the function @code{backtrace_symbols} function.  Instead of returning
+the strings to the caller, it writes the strings to the file descriptor
+@var{fd}, one per line.  It does not use the @code{malloc} function, and
+can therefore be used in situations where that function might fail.
+@end deftypefun
+
+The following program illustrates the use of these functions.  Note that
+the array to contain the return addresses returned by @code{backtrace}
+is allocated on the stack.  Therefore code like this can be used in
+situations where the memory handling via @code{malloc} does not work
+anymore (in which case the @code{backtrace_symbols} has to be replaced
+by a @code{backtrace_symbols_fd} call as well).  The number of return
+addresses is normally not very large.  Even complicated programs rather
+seldom have a nesting level of more than, say, 50 and with 200 possible
+entries probably all programs should be covered.
+
+@smallexample
+@include execinfo.c.texi
+@end smallexample

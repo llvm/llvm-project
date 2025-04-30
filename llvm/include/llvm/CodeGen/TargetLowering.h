@@ -1834,6 +1834,10 @@ public:
     return GatherAllAliasesMaxDepth;
   }
 
+  unsigned getGatherAllAliasesMaxTFOperands() const {
+    return GatherAllAliasesMaxTFOperands;
+  }
+
   /// Returns the size of the platform's va_list object.
   virtual unsigned getVaListSizeInBits(const DataLayout &DL) const {
     return getPointerTy(DL).getSizeInBits();
@@ -2868,6 +2872,11 @@ public:
     return nullptr;
   }
 
+  /// Return true if it is profitable to convert Or used in address calculation
+  /// to Add. For some targets, this exposes opportunities to use complex
+  /// addressing modes.
+  virtual bool shouldConvertOrToAdd() const { return false; }
+
   /// Given a set in interconnected phis of type 'From' that are loaded/stored
   /// or bitcast to type 'To', return true if the set should be converted to
   /// 'To'.
@@ -3670,6 +3679,10 @@ protected:
   ///      is[Z|FP]ExtFree of the related types is not true.
   virtual bool isExtFreeImpl(const Instruction *I) const { return false; }
 
+  /// TokenFactors with more than this many operands will be "opaque" to
+  /// GatherAllAliases. (It will simply consider the entire TF as an alias)
+  unsigned GatherAllAliasesMaxTFOperands;
+
   /// Depth that GatherAllAliases should continue looking for chain
   /// dependencies when trying to find a more preferable chain. As an
   /// approximation, this should be more than the number of consecutive stores
@@ -3776,6 +3789,14 @@ public:
   explicit TargetLowering(const TargetMachine &TM);
 
   bool isPositionIndependent() const;
+
+  // Lets target control whether the instruction will be expanded in the custom
+  // lowering or passed back to the legalizer for expanding.
+  virtual bool forceExpandNode(SDNode *N) const { return false; }
+
+  // Lets target control whether the lowering of instructions should be
+  // done if the legalization action isn't custom.
+  virtual bool forceCustomLowering(SDNode *N) const { return false; }
 
   virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
                                           FunctionLoweringInfo *FLI,

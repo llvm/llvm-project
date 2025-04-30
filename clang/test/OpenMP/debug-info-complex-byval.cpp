@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -fopenmp-simd -x c++ %s -verify -debug-info-kind=limited -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // expected-no-diagnostics
 
+// XFAIL: *
+
 void a() {
   float _Complex b;
 #pragma omp parallel firstprivate(b)

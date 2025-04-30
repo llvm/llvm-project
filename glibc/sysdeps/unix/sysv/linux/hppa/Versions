@@ -1,0 +1,29 @@
+!libc_pre_versions
+libc {
+  GLIBC_2.1 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.2 {
+    # New rlimit interface
+    getrlimit; setrlimit; getrlimit64; setrlimit64;
+  }
+  GLIBC_2.3 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.4 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.11 {
+    fallocate64;
+  }
+  GLIBC_2.12 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.17 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+    prlimit64;
+  }
+  GLIBC_2.19 {
+    fanotify_mark;
+  }
+}

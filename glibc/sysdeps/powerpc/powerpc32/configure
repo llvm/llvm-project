@@ -1,0 +1,29 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/powerpc/powerpc32.
+
+# See whether GCC uses -msecure-plt.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for -msecure-plt by default" >&5
+$as_echo_n "checking for -msecure-plt by default... " >&6; }
+if ${libc_cv_ppc_secure_plt+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  echo 'int foo (void) { extern int bar; return bar; }' > conftest.c
+libc_cv_ppc_secure_plt=no
+if { ac_try='${CC-cc} -S $CFLAGS conftest.c -fpic -o conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  if grep '_GLOBAL_OFFSET_TABLE_-.*@ha' conftest.s > /dev/null 2>&1; then
+    libc_cv_ppc_secure_plt=yes
+  fi
+fi
+rm -rf conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_ppc_secure_plt" >&5
+$as_echo "$libc_cv_ppc_secure_plt" >&6; }
+if test $libc_cv_ppc_secure_plt = yes; then
+  $as_echo "#define HAVE_PPC_SECURE_PLT 1" >>confdefs.h
+
+fi

@@ -1,0 +1,31 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+type {struct ipc_perm}
+
+// Bug 23082: uid/gid/cuid/cgid/mode have type unsigned short instead of uid_t and mode_t.
+xfail[i386-gnu]-element {struct ipc_perm} uid_t uid
+xfail[i386-gnu]-element {struct ipc_perm} gid_t gid
+xfail[i386-gnu]-element {struct ipc_perm} uid_t cuid
+xfail[i386-gnu]-element {struct ipc_perm} gid_t cgid
+xfail[i386-gnu]-element {struct ipc_perm} mode_t mode
+
+type uid_t
+type gid_t
+type mode_t
+type key_t
+
+constant IPC_CREAT
+constant IPC_EXCL
+constant IPC_NOWAIT
+
+constant IPC_PRIVATE
+
+constant IPC_RMID
+constant IPC_SET
+constant IPC_STAT
+
+function key_t ftok (const char*, int)
+
+allow ipc_*
+allow IPC_*
+allow *_t
+#endif

@@ -1,0 +1,71 @@
+libc {
+  GLIBC_2.0 {
+    # e*
+    endutent;
+
+    # g*
+    getlogin; getlogin_r; getutent; getutent_r; getutid; getutid_r; getutline;
+    getutline_r;
+
+    # p*
+    pututline;
+
+    # s*
+    setlogin;
+    setutent;
+
+    # u*
+    updwtmp; utmpname;
+
+    # Symbols formerly in libutil.
+    forkpty;
+    login;
+    login_tty;
+    logout;
+    logwtmp;
+    openpty;
+  }
+  GLIBC_2.1 {
+    # e*
+    endutxent;
+
+    # g*
+    getpt; getutxent; getutxid; getutxline; grantpt;
+
+    # p*
+    ptsname; ptsname_r; pututxline;
+
+    # s*
+    setutxent;
+
+    # u*
+    unlockpt; updwtmpx; utmpxname;
+  }
+  GLIBC_2.1.1 {
+    # g*
+    getutmpx; getutmp;
+  }
+  GLIBC_2.2.1 {
+    # p*
+    posix_openpt;
+  }
+  GLIBC_2.4 {
+    __getlogin_r_chk;
+    __ptsname_r_chk;
+  }
+  GLIBC_2.34 {
+    # Symbols formerly in libutil.
+    forkpty;
+    login;
+    login_tty;
+    logout;
+    logwtmp;
+    openpty;
+  }
+}
+
+libutil {
+  GLIBC_2.0 {
+    __libutil_version_placeholder;
+  }
+}

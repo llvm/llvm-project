@@ -1,0 +1,3 @@
+# Include this earlier so it can be used earlier in Makefiles,
+# and sysdep/ makefiles.
+ibm128-fcts = yes

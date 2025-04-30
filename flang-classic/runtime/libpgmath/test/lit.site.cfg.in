@@ -1,0 +1,25 @@
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+
+@AUTO_GEN_COMMENT@
+
+# Needs to be changes to support cross-compilation
+config.host_triple = "@LIBPGMATH_HOST_TRIPLE@"
+config.target_triple = "@LIBPGMATH_HOST_TRIPLE@"
+
+config.test_compiler = "@LIBPGMATH_TEST_COMPILER@"
+config.libpgmath_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
+config.libpgmath_runtime_dir = "@LIBPGMATH_RUNTIME_PATH@"
+config.libpgmath_runtime = "@LIBPGMATH_RTL@"
+config.has_libpgmath_runtime = "@LIBPGMATH_HAVE_LIBPGMATH_RUNTIME@"
+config.architecture = "@LIBPGMATH_SYSTEM_PROCESSOR@"
+config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.has_libm = "@LIBPGMATH_HAVE_LIBM@"
+config.libpgmath_getarchlib_dir = "@LIBPGMATH_BINARY_DIR@/test"
+config.libpgmath_getarchlib = "@LIBPGMATH_GETARCH_LIB_FULL@"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@LIBPGMATH_BASE_DIR@/test/lit.cfg")

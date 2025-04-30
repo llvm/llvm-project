@@ -1,0 +1,24 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.MS S 350 "Invalid constraint $ in extended ASM operand $"
+.MS W 351 "Unsupported clobber register '$' ignored in extended ASM"
+.MS W 352 "Constraint/expression type mismatch in extended ASM operand $"
+.MS S 353 "Unsupported constraint '$' in extended ASM operand $"
+.MS S 354 "Can't find a register in class '$' for extended ASM operand $"
+.MS W 355 "Operand constraints for extended ASM differ in number of alternatives"   
+.MS S 356 "Unsupported modifier $ in extended ASM string"
+.MS S 357 "Invalid asm: Operand number missing after $"
+.MS W 358 "Output constraint $ for operand $ is not at the beginning"
+.MS S 359 "Missing or incorrectly positioned $ in constraint for operand $"
+.MS S 360 "Duplicate asm operand name '$'"
+.MS W 361 "Use of a matching constraint with read/write ('+') operand $ is ambiguous"
+.MS W 362 "Ignoring matching constraint for non-register operand $"
+.MS S 363 "Invalid register name `$'"
+.MS W 364 "Call-clobbered register `$' used for global register variable"
+.MS S 365 "Address of register variable `$' requested in operand $"
+.MS W 366 "Profiling inhibited for templated functions"
+.MS F 367 "Extended precision long doubles are not supported as extended ASM operands"

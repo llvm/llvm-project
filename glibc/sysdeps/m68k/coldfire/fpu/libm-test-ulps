@@ -1,0 +1,160 @@
+# Begin of automatic generation
+
+# Maximal error of functions:
+Function: "atan2":
+float: 1
+
+Function: "atanh":
+float: 1
+
+Function: Imaginary part of "cacosh":
+float: 1
+
+Function: Real part of "casin":
+double: 1
+float: 1
+
+Function: Real part of "casinh":
+double: 5
+float: 1
+
+Function: Imaginary part of "casinh":
+double: 3
+float: 6
+
+Function: Imaginary part of "catan":
+double: 1
+float: 1
+
+Function: Real part of "catanh":
+double: 4
+
+Function: "cbrt":
+double: 1
+
+Function: Real part of "ccos":
+double: 1
+float: 1
+
+Function: Imaginary part of "ccos":
+float: 1
+
+Function: Real part of "ccosh":
+double: 1
+float: 1
+
+Function: Imaginary part of "ccosh":
+float: 1
+
+Function: Real part of "cexp":
+float: 1
+
+Function: Imaginary part of "cexp":
+float: 1
+
+Function: Real part of "clog":
+float: 1
+
+Function: Real part of "clog10":
+float: 1
+
+Function: Imaginary part of "clog10":
+double: 1
+float: 1
+
+Function: "cos":
+double: 2
+float: 1
+
+Function: Real part of "cpow":
+double: 2
+float: 4
+
+Function: Imaginary part of "cpow":
+double: 2
+float: 2
+
+Function: Real part of "csinh":
+float: 1
+
+Function: Imaginary part of "csinh":
+double: 1
+float: 1
+
+Function: Real part of "csqrt":
+float: 1
+
+Function: Imaginary part of "ctan":
+double: 1
+
+Function: Real part of "ctanh":
+double: 1
+float: 2
+
+Function: Imaginary part of "ctanh":
+float: 1
+
+Function: "erf":
+double: 1
+
+Function: "erfc":
+double: 1
+
+Function: "exp10":
+double: 6
+float: 2
+
+Function: "expm1":
+double: 1
+float: 1
+
+Function: "hypot":
+float: 1
+
+Function: "j0":
+double: 2
+float: 2
+
+Function: "j1":
+double: 1
+float: 2
+
+Function: "jn":
+double: 4
+float: 4
+
+Function: "lgamma":
+double: 1
+float: 2
+
+Function: "log10":
+double: 1
+float: 2
+
+Function: "log1p":
+float: 1
+
+Function: "sincos":
+double: 1
+float: 1
+
+Function: "tan":
+double: 1
+
+Function: "tgamma":
+double: 1
+float: 1
+
+Function: "y0":
+double: 2
+float: 1
+
+Function: "y1":
+double: 3
+float: 2
+
+Function: "yn":
+double: 3
+float: 2
+
+# end of automatic generation

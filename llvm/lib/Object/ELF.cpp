@@ -183,6 +183,12 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
     break;
   default:
     break;
+  case ELF::EM_NEXT32:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/Next32.def"
+    default:
+      break;
+    }
   }
   return "Unknown";
 }

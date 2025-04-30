@@ -1,0 +1,807 @@
+@node Character Handling, String and Array Utilities, Memory, Top
+@c %MENU% Character testing and conversion functions
+@chapter Character Handling
+
+Programs that work with characters and strings often need to classify a
+character---is it alphabetic, is it a digit, is it whitespace, and so
+on---and perform case conversion operations on characters.  The
+functions in the header file @file{ctype.h} are provided for this
+purpose.
+@pindex ctype.h
+
+Since the choice of locale and character set can alter the
+classifications of particular character codes, all of these functions
+are affected by the current locale.  (More precisely, they are affected
+by the locale currently selected for character classification---the
+@code{LC_CTYPE} category; see @ref{Locale Categories}.)
+
+The @w{ISO C} standard specifies two different sets of functions.  The
+one set works on @code{char} type characters, the other one on
+@code{wchar_t} wide characters (@pxref{Extended Char Intro}).
+
+@menu
+* Classification of Characters::       Testing whether characters are
+			                letters, digits, punctuation, etc.
+
+* Case Conversion::                    Case mapping, and the like.
+* Classification of Wide Characters::  Character class determination for
+                                        wide characters.
+* Using Wide Char Classes::            Notes on using the wide character
+                                        classes.
+* Wide Character Case Conversion::     Mapping of wide characters.
+@end menu
+
+@node Classification of Characters, Case Conversion,  , Character Handling
+@section Classification of Characters
+@cindex character testing
+@cindex classification of characters
+@cindex predicates on characters
+@cindex character predicates
+
+This section explains the library functions for classifying characters.
+For example, @code{isalpha} is the function to test for an alphabetic
+character.  It takes one argument, the character to test, and returns a
+nonzero integer if the character is alphabetic, and zero otherwise.  You
+would use it like this:
+
+@smallexample
+if (isalpha (c))
+  printf ("The character `%c' is alphabetic.\n", c);
+@end smallexample
+
+Each of the functions in this section tests for membership in a
+particular class of characters; each has a name starting with @samp{is}.
+Each of them takes one argument, which is a character to test, and
+returns an @code{int} which is treated as a boolean value.  The
+character argument is passed as an @code{int}, and it may be the
+constant value @code{EOF} instead of a real character.
+
+The attributes of any given character can vary between locales.
+@xref{Locales}, for more information on locales.@refill
+
+These functions are declared in the header file @file{ctype.h}.
+@pindex ctype.h
+
+@cindex lower-case character
+@deftypefun int islower (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c The is* macros call __ctype_b_loc to get the ctype array from the
+@c current locale, and then index it by c.  __ctype_b_loc reads from
+@c thread-local memory the (indirect) pointer to the ctype array, which
+@c may involve one word access to the global locale object, if that's
+@c the active locale for the thread, and the array, being part of the
+@c locale data, is undeletable, so there's no thread-safety issue.  We
+@c might want to mark these with @mtslocale to flag to callers that
+@c changing locales might affect them, even if not these simpler
+@c functions.
+Returns true if @var{c} is a lower-case letter.  The letter need not be
+from the Latin alphabet, any alphabet representable is valid.
+@end deftypefun
+
+@cindex upper-case character
+@deftypefun int isupper (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is an upper-case letter.  The letter need not be
+from the Latin alphabet, any alphabet representable is valid.
+@end deftypefun
+
+@cindex alphabetic character
+@deftypefun int isalpha (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is an alphabetic character (a letter).  If
+@code{islower} or @code{isupper} is true of a character, then
+@code{isalpha} is also true.
+
+In some locales, there may be additional characters for which
+@code{isalpha} is true---letters which are neither upper case nor lower
+case.  But in the standard @code{"C"} locale, there are no such
+additional characters.
+@end deftypefun
+
+@cindex digit character
+@cindex decimal digit character
+@deftypefun int isdigit (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a decimal digit (@samp{0} through @samp{9}).
+@end deftypefun
+
+@cindex alphanumeric character
+@deftypefun int isalnum (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is an alphanumeric character (a letter or
+number); in other words, if either @code{isalpha} or @code{isdigit} is
+true of a character, then @code{isalnum} is also true.
+@end deftypefun
+
+@cindex hexadecimal digit character
+@deftypefun int isxdigit (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a hexadecimal digit.
+Hexadecimal digits include the normal decimal digits @samp{0} through
+@samp{9} and the letters @samp{A} through @samp{F} and
+@samp{a} through @samp{f}.
+@end deftypefun
+
+@cindex punctuation character
+@deftypefun int ispunct (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a punctuation character.
+This means any printing character that is not alphanumeric or a space
+character.
+@end deftypefun
+
+@cindex whitespace character
+@deftypefun int isspace (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a @dfn{whitespace} character.  In the standard
+@code{"C"} locale, @code{isspace} returns true for only the standard
+whitespace characters:
+
+@table @code
+@item ' '
+space
+
+@item '\f'
+formfeed
+
+@item '\n'
+newline
+
+@item '\r'
+carriage return
+
+@item '\t'
+horizontal tab
+
+@item '\v'
+vertical tab
+@end table
+@end deftypefun
+
+@cindex blank character
+@deftypefun int isblank (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a blank character; that is, a space or a tab.
+This function was originally a GNU extension, but was added in @w{ISO C99}.
+@end deftypefun
+
+@cindex graphic character
+@deftypefun int isgraph (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a graphic character; that is, a character
+that has a glyph associated with it.  The whitespace characters are not
+considered graphic.
+@end deftypefun
+
+@cindex printing character
+@deftypefun int isprint (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a printing character.  Printing characters
+include all the graphic characters, plus the space (@samp{ }) character.
+@end deftypefun
+
+@cindex control character
+@deftypefun int iscntrl (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a control character (that is, a character that
+is not a printing character).
+@end deftypefun
+
+@cindex ASCII character
+@deftypefun int isascii (int @var{c})
+@standards{SVID, ctype.h}
+@standards{BSD, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Returns true if @var{c} is a 7-bit @code{unsigned char} value that fits
+into the US/UK ASCII character set.  This function is a BSD extension
+and is also an SVID extension.
+@end deftypefun
+
+@node Case Conversion, Classification of Wide Characters, Classification of Characters, Character Handling
+@section Case Conversion
+@cindex character case conversion
+@cindex case conversion of characters
+@cindex converting case of characters
+
+This section explains the library functions for performing conversions
+such as case mappings on characters.  For example, @code{toupper}
+converts any character to upper case if possible.  If the character
+can't be converted, @code{toupper} returns it unchanged.
+
+These functions take one argument of type @code{int}, which is the
+character to convert, and return the converted character as an
+@code{int}.  If the conversion is not applicable to the argument given,
+the argument is returned unchanged.
+
+@strong{Compatibility Note:} In pre-@w{ISO C} dialects, instead of
+returning the argument unchanged, these functions may fail when the
+argument is not suitable for the conversion.  Thus for portability, you
+may need to write @code{islower(c) ? toupper(c) : c} rather than just
+@code{toupper(c)}.
+
+These functions are declared in the header file @file{ctype.h}.
+@pindex ctype.h
+
+@deftypefun int tolower (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c The to* macros/functions call different functions that use different
+@c arrays than those of__ctype_b_loc, but the access patterns and
+@c thus safety guarantees are the same.
+If @var{c} is an upper-case letter, @code{tolower} returns the corresponding
+lower-case letter.  If @var{c} is not an upper-case letter,
+@var{c} is returned unchanged.
+@end deftypefun
+
+@deftypefun int toupper (int @var{c})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+If @var{c} is a lower-case letter, @code{toupper} returns the corresponding
+upper-case letter.  Otherwise @var{c} is returned unchanged.
+@end deftypefun
+
+@deftypefun int toascii (int @var{c})
+@standards{SVID, ctype.h}
+@standards{BSD, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function converts @var{c} to a 7-bit @code{unsigned char} value
+that fits into the US/UK ASCII character set, by clearing the high-order
+bits.  This function is a BSD extension and is also an SVID extension.
+@end deftypefun
+
+@deftypefun int _tolower (int @var{c})
+@standards{SVID, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This is identical to @code{tolower}, and is provided for compatibility
+with the SVID.  @xref{SVID}.@refill
+@end deftypefun
+
+@deftypefun int _toupper (int @var{c})
+@standards{SVID, ctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This is identical to @code{toupper}, and is provided for compatibility
+with the SVID.
+@end deftypefun
+
+
+@node Classification of Wide Characters, Using Wide Char Classes, Case Conversion, Character Handling
+@section Character class determination for wide characters
+
+@w{Amendment 1} to @w{ISO C90} defines functions to classify wide
+characters.  Although the original @w{ISO C90} standard already defined
+the type @code{wchar_t}, no functions operating on them were defined.
+
+The general design of the classification functions for wide characters
+is more general.  It allows extensions to the set of available
+classifications, beyond those which are always available.  The POSIX
+standard specifies how extensions can be made, and this is already
+implemented in the @glibcadj{} implementation of the @code{localedef}
+program.
+
+The character class functions are normally implemented with bitsets,
+with a bitset per character.  For a given character, the appropriate
+bitset is read from a table and a test is performed as to whether a
+certain bit is set.  Which bit is tested for is determined by the
+class.
+
+For the wide character classification functions this is made visible.
+There is a type classification type defined, a function to retrieve this
+value for a given class, and a function to test whether a given
+character is in this class, using the classification value.  On top of
+this the normal character classification functions as used for
+@code{char} objects can be defined.
+
+@deftp {Data type} wctype_t
+@standards{ISO, wctype.h}
+The @code{wctype_t} can hold a value which represents a character class.
+The only defined way to generate such a value is by using the
+@code{wctype} function.
+
+@pindex wctype.h
+This type is defined in @file{wctype.h}.
+@end deftp
+
+@deftypefun wctype_t wctype (const char *@var{property})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c Although the source code of wctype contains multiple references to
+@c the locale, that could each reference different locale_data objects
+@c should the global locale object change while active, the compiler can
+@c and does combine them all into a single dereference that resolves
+@c once to the LCTYPE locale object used throughout the function, so it
+@c is safe in (optimized) practice, if not in theory, even when the
+@c locale changes.  Ideally we'd explicitly save the resolved
+@c locale_data object to make it visibly safe instead of safe only under
+@c compiler optimizations, but given the decision that setlocale is
+@c MT-Unsafe, all this would afford us would be the ability to not mark
+@c this function with @mtslocale.
+@code{wctype} returns a value representing a class of wide
+characters which is identified by the string @var{property}.  Besides
+some standard properties each locale can define its own ones.  In case
+no property with the given name is known for the current locale
+selected for the @code{LC_CTYPE} category, the function returns zero.
+
+@noindent
+The properties known in every locale are:
+
+@multitable @columnfractions .25 .25 .25 .25
+@item
+@code{"alnum"} @tab @code{"alpha"} @tab @code{"cntrl"} @tab @code{"digit"}
+@item
+@code{"graph"} @tab @code{"lower"} @tab @code{"print"} @tab @code{"punct"}
+@item
+@code{"space"} @tab @code{"upper"} @tab @code{"xdigit"}
+@end multitable
+
+@pindex wctype.h
+This function is declared in @file{wctype.h}.
+@end deftypefun
+
+To test the membership of a character to one of the non-standard classes
+the @w{ISO C} standard defines a completely new function.
+
+@deftypefun int iswctype (wint_t @var{wc}, wctype_t @var{desc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c The compressed lookup table returned by wctype is read-only.
+This function returns a nonzero value if @var{wc} is in the character
+class specified by @var{desc}.  @var{desc} must previously be returned
+by a successful call to @code{wctype}.
+
+@pindex wctype.h
+This function is declared in @file{wctype.h}.
+@end deftypefun
+
+To make it easier to use the commonly-used classification functions,
+they are defined in the C library.  There is no need to use
+@code{wctype} if the property string is one of the known character
+classes.  In some situations it is desirable to construct the property
+strings, and then it is important that @code{wctype} can also handle the
+standard classes.
+
+@cindex alphanumeric character
+@deftypefun int iswalnum (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c The implicit wctype call in the isw* functions is actually an
+@c optimized version because the category has a known offset, but the
+@c wctype is equally safe when optimized, unsafe with changing locales
+@c if not optimized (thus @mtslocale).  Since it's not a macro, we
+@c always optimize, and the locale can't change in any MT-Safe way, it's
+@c fine.  The test whether wc is ASCII to use the non-wide is*
+@c macro/function doesn't bring any other safety issues: the test does
+@c not depend on the locale, and each path after the decision resolves
+@c the locale object only once.
+This function returns a nonzero value if @var{wc} is an alphanumeric
+character (a letter or number); in other words, if either @code{iswalpha}
+or @code{iswdigit} is true of a character, then @code{iswalnum} is also
+true.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("alnum"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex alphabetic character
+@deftypefun int iswalpha (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is an alphabetic character (a letter).  If
+@code{iswlower} or @code{iswupper} is true of a character, then
+@code{iswalpha} is also true.
+
+In some locales, there may be additional characters for which
+@code{iswalpha} is true---letters which are neither upper case nor lower
+case.  But in the standard @code{"C"} locale, there are no such
+additional characters.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("alpha"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex control character
+@deftypefun int iswcntrl (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a control character (that is, a character that
+is not a printing character).
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("cntrl"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex digit character
+@deftypefun int iswdigit (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a digit (e.g., @samp{0} through @samp{9}).
+Please note that this function does not only return a nonzero value for
+@emph{decimal} digits, but for all kinds of digits.  A consequence is
+that code like the following will @strong{not} work unconditionally for
+wide characters:
+
+@smallexample
+n = 0;
+while (iswdigit (*wc))
+  @{
+    n *= 10;
+    n += *wc++ - L'0';
+  @}
+@end smallexample
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("digit"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex graphic character
+@deftypefun int iswgraph (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a graphic character; that is, a character
+that has a glyph associated with it.  The whitespace characters are not
+considered graphic.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("graph"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex lower-case character
+@deftypefun int iswlower (wint_t @var{wc})
+@standards{ISO, ctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a lower-case letter.  The letter need not be
+from the Latin alphabet, any alphabet representable is valid.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("lower"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex printing character
+@deftypefun int iswprint (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a printing character.  Printing characters
+include all the graphic characters, plus the space (@samp{ }) character.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("print"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex punctuation character
+@deftypefun int iswpunct (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a punctuation character.
+This means any printing character that is not alphanumeric or a space
+character.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("punct"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex whitespace character
+@deftypefun int iswspace (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a @dfn{whitespace} character.  In the standard
+@code{"C"} locale, @code{iswspace} returns true for only the standard
+whitespace characters:
+
+@table @code
+@item L' '
+space
+
+@item L'\f'
+formfeed
+
+@item L'\n'
+newline
+
+@item L'\r'
+carriage return
+
+@item L'\t'
+horizontal tab
+
+@item L'\v'
+vertical tab
+@end table
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("space"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex upper-case character
+@deftypefun int iswupper (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is an upper-case letter.  The letter need not be
+from the Latin alphabet, any alphabet representable is valid.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("upper"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@cindex hexadecimal digit character
+@deftypefun int iswxdigit (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a hexadecimal digit.
+Hexadecimal digits include the normal decimal digits @samp{0} through
+@samp{9} and the letters @samp{A} through @samp{F} and
+@samp{a} through @samp{f}.
+
+@noindent
+This function can be implemented using
+
+@smallexample
+iswctype (wc, wctype ("xdigit"))
+@end smallexample
+
+@pindex wctype.h
+It is declared in @file{wctype.h}.
+@end deftypefun
+
+@Theglibc{} also provides a function which is not defined in the
+@w{ISO C} standard but which is available as a version for single byte
+characters as well.
+
+@cindex blank character
+@deftypefun int iswblank (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+Returns true if @var{wc} is a blank character; that is, a space or a tab.
+This function was originally a GNU extension, but was added in @w{ISO C99}.
+It is declared in @file{wchar.h}.
+@end deftypefun
+
+@node Using Wide Char Classes, Wide Character Case Conversion, Classification of Wide Characters, Character Handling
+@section Notes on using the wide character classes
+
+The first note is probably not astonishing but still occasionally a
+cause of problems.  The @code{isw@var{XXX}} functions can be implemented
+using macros and in fact, @theglibc{} does this.  They are still
+available as real functions but when the @file{wctype.h} header is
+included the macros will be used.  This is the same as the
+@code{char} type versions of these functions.
+
+The second note covers something new.  It can be best illustrated by a
+(real-world) example.  The first piece of code is an excerpt from the
+original code.  It is truncated a bit but the intention should be clear.
+
+@smallexample
+int
+is_in_class (int c, const char *class)
+@{
+  if (strcmp (class, "alnum") == 0)
+    return isalnum (c);
+  if (strcmp (class, "alpha") == 0)
+    return isalpha (c);
+  if (strcmp (class, "cntrl") == 0)
+    return iscntrl (c);
+  @dots{}
+  return 0;
+@}
+@end smallexample
+
+Now, with the @code{wctype} and @code{iswctype} you can avoid the
+@code{if} cascades, but rewriting the code as follows is wrong:
+
+@smallexample
+int
+is_in_class (int c, const char *class)
+@{
+  wctype_t desc = wctype (class);
+  return desc ? iswctype ((wint_t) c, desc) : 0;
+@}
+@end smallexample
+
+The problem is that it is not guaranteed that the wide character
+representation of a single-byte character can be found using casting.
+In fact, usually this fails miserably.  The correct solution to this
+problem is to write the code as follows:
+
+@smallexample
+int
+is_in_class (int c, const char *class)
+@{
+  wctype_t desc = wctype (class);
+  return desc ? iswctype (btowc (c), desc) : 0;
+@}
+@end smallexample
+
+@xref{Converting a Character}, for more information on @code{btowc}.
+Note that this change probably does not improve the performance
+of the program a lot since the @code{wctype} function still has to make
+the string comparisons.  It gets really interesting if the
+@code{is_in_class} function is called more than once for the
+same class name.  In this case the variable @var{desc} could be computed
+once and reused for all the calls.  Therefore the above form of the
+function is probably not the final one.
+
+
+@node Wide Character Case Conversion, , Using Wide Char Classes, Character Handling
+@section Mapping of wide characters.
+
+The classification functions are also generalized by the @w{ISO C}
+standard.  Instead of just allowing the two standard mappings, a
+locale can contain others.  Again, the @code{localedef} program
+already supports generating such locale data files.
+
+@deftp {Data Type} wctrans_t
+@standards{ISO, wctype.h}
+This data type is defined as a scalar type which can hold a value
+representing the locale-dependent character mapping.  There is no way to
+construct such a value apart from using the return value of the
+@code{wctrans} function.
+
+@pindex wctype.h
+@noindent
+This type is defined in @file{wctype.h}.
+@end deftp
+
+@deftypefun wctrans_t wctrans (const char *@var{property})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c Similar implementation, same caveats as wctype.
+The @code{wctrans} function has to be used to find out whether a named
+mapping is defined in the current locale selected for the
+@code{LC_CTYPE} category.  If the returned value is non-zero, you can use
+it afterwards in calls to @code{towctrans}.  If the return value is
+zero no such mapping is known in the current locale.
+
+Beside locale-specific mappings there are two mappings which are
+guaranteed to be available in every locale:
+
+@multitable @columnfractions .5 .5
+@item
+@code{"tolower"} @tab @code{"toupper"}
+@end multitable
+
+@pindex wctype.h
+@noindent
+These functions are declared in @file{wctype.h}.
+@end deftypefun
+
+@deftypefun wint_t towctrans (wint_t @var{wc}, wctrans_t @var{desc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Same caveats as iswctype.
+@code{towctrans} maps the input character @var{wc}
+according to the rules of the mapping for which @var{desc} is a
+descriptor, and returns the value it finds.  @var{desc} must be
+obtained by a successful call to @code{wctrans}.
+
+@pindex wctype.h
+@noindent
+This function is declared in @file{wctype.h}.
+@end deftypefun
+
+For the generally available mappings, the @w{ISO C} standard defines
+convenient shortcuts so that it is not necessary to call @code{wctrans}
+for them.
+
+@deftypefun wint_t towlower (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c Same caveats as iswalnum, just using a wctrans rather than a wctype
+@c table.
+If @var{wc} is an upper-case letter, @code{towlower} returns the corresponding
+lower-case letter.  If @var{wc} is not an upper-case letter,
+@var{wc} is returned unchanged.
+
+@noindent
+@code{towlower} can be implemented using
+
+@smallexample
+towctrans (wc, wctrans ("tolower"))
+@end smallexample
+
+@pindex wctype.h
+@noindent
+This function is declared in @file{wctype.h}.
+@end deftypefun
+
+@deftypefun wint_t towupper (wint_t @var{wc})
+@standards{ISO, wctype.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+If @var{wc} is a lower-case letter, @code{towupper} returns the corresponding
+upper-case letter.  Otherwise @var{wc} is returned unchanged.
+
+@noindent
+@code{towupper} can be implemented using
+
+@smallexample
+towctrans (wc, wctrans ("toupper"))
+@end smallexample
+
+@pindex wctype.h
+@noindent
+This function is declared in @file{wctype.h}.
+@end deftypefun
+
+The same warnings given in the last section for the use of the wide
+character classification functions apply here.  It is not possible to
+simply cast a @code{char} type value to a @code{wint_t} and use it as an
+argument to @code{towctrans} calls.

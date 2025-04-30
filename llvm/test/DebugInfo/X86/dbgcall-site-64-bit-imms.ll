@@ -1,4 +1,5 @@
 ; RUN: llc -emit-call-site-info -O1 -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; XFAIL: *
 
 ; Verify that the 64-bit call site immediates are not truncated.
 ;

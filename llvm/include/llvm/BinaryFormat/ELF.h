@@ -321,6 +321,7 @@ enum {
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
   EM_LOONGARCH = 258,     // LoongArch
+  EM_NEXT32 = 0xDA7A,     // Next32
 };
 
 // Object file classes.
@@ -700,6 +701,20 @@ enum {
 // ELF Relocation type for Sparc.
 enum {
 #include "ELFRelocs/Sparc.def"
+};
+
+// Next32 Specific e_flags.
+enum : unsigned {
+  // Mask for binfmt magic number.
+  EF_NEXT32_BINFMT = 0xff000000,
+
+  // Binfmt magic number.
+  EF_NEXT32_BINFMT_MAGIC_NUMBER = 0x6e000000,
+};
+
+// ELF Relocation type for Next32.
+enum {
+#include "ELFRelocs/Next32.def"
 };
 
 // AMDGPU specific e_flags.

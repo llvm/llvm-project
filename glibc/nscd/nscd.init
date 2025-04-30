@@ -1,0 +1,116 @@
+#!/bin/bash
+#
+# nscd:		Starts the Name Switch Cache Daemon
+#
+# chkconfig: - 30 74
+# description:  This is a daemon which handles passwd and group lookups \
+#		for running programs and cache the results for the next \
+#		query.  You should start this daemon if you use \
+#		slow naming services like NIS, NIS+, LDAP, or hesiod.
+# processname: /usr/sbin/nscd
+# config: /etc/nscd.conf
+#
+### BEGIN INIT INFO
+# Provides: nscd
+# Required-Start: $syslog
+# Default-Stop: 0 1 6
+# Short-Description: Starts the Name Switch Cache Daemon
+# Description:  This is a daemon which handles passwd and group lookups \
+#		for running programs and cache the results for the next \
+#		query.  You should start this daemon if you use \
+#		slow naming services like NIS, NIS+, LDAP, or hesiod.
+### END INIT INFO
+
+# Sanity checks.
+[ -f /etc/nscd.conf ] || exit 0
+[ -x /usr/sbin/nscd ] || exit 0
+
+# Source function library.
+. /etc/init.d/functions
+
+# nscd does not run on any kernel lower than 2.2.0 because of threading
+# problems, so we require that in first place.
+case $(uname -r) in
+    2.[2-9].*)
+	# this is okay
+	;;
+    [3-9]*)
+	# these are of course also okay
+	;;
+    *)
+	#this is not
+	exit 1
+	;;
+esac
+
+RETVAL=0
+prog=nscd
+
+start () {
+    [ -d /var/run/nscd ] || mkdir /var/run/nscd
+    [ -d /var/db/nscd ] || mkdir /var/db/nscd
+    echo -n $"Starting $prog: "
+    daemon /usr/sbin/nscd
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/nscd
+    return $RETVAL
+}
+
+stop () {
+    echo -n $"Stopping $prog: "
+    /usr/sbin/nscd -K
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ]; then
+       	rm -f /var/lock/subsys/nscd
+	# nscd won't be able to remove these if it is running as
+	# a non-privileged user
+	rm -f /var/run/nscd/nscd.pid
+	rm -f /var/run/nscd/socket
+       	success $"$prog shutdown"
+    else
+       	failure $"$prog shutdown"
+    fi
+    echo
+    return $RETVAL
+}
+
+restart() {
+    stop
+    start
+}
+
+# See how we were called.
+case "$1" in
+    start)
+	start
+	RETVAL=$?
+	;;
+    stop)
+	stop
+	RETVAL=$?
+	;;
+    status)
+	status nscd
+	RETVAL=$?
+	;;
+    restart)
+	restart
+	RETVAL=$?
+	;;
+    try-restart | condrestart)
+	[ -e /var/lock/subsys/nscd ] && restart
+	RETVAL=$?
+	;;
+    force-reload | reload)
+    	echo -n $"Reloading $prog: "
+	killproc /usr/sbin/nscd -HUP
+	RETVAL=$?
+	echo
+	;;
+    *)
+	echo $"Usage: $0 {start|stop|status|restart|reload|condrestart}"
+	RETVAL=1
+	;;
+esac
+exit $RETVAL

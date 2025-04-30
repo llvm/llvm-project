@@ -1,0 +1,73 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local preconfigure fragment for sysdeps/powerpc
+
+case "$machine" in
+powerpc64le)
+  base_machine=powerpc machine=powerpc/powerpc64/le
+  ;;
+powerpc64*)
+  base_machine=powerpc machine=powerpc/powerpc64/be
+  ;;
+powerpc*)
+  base_machine=powerpc machine=powerpc/powerpc32
+  with_fp_cond="!defined __NO_FPRS__"
+  case "$host_os" in
+    *gnuspe*)
+      # SPE support was dropped in glibc 2.30.
+      as_fn_error $? "Host system type $host is no longer supported." "$LINENO" 5
+    ;;
+  esac
+  ;;
+esac
+
+# Lets ask the compiler which Power processor we've got, in case the user did
+# not choose a --with-cpu value.  Scan a trivial generated assembly program
+# and scrape the first
+#   .machine <machine>
+# or
+#   .ascii "-mcpu=<machine>"
+# directive which shows up, and try using it.
+case "${machine}:${submachine}" in
+*powerpc*:)
+  archcpu=`echo "int foo () { return 0; }" \
+	   | $CC $CFLAGS $CPPFLAGS -S -frecord-gcc-switches -xc -o - - \
+	   | grep -E "mcpu=|.machine" -m 1 \
+	   | sed -e "s/.*machine //" -e "s/.*mcpu=\(.*\)\"/\1/"`
+  # Note if you add patterns here you must ensure that an appropriate
+  # directory exists in sysdeps/powerpc.  Likewise, if we find a
+  # cpu, don't let the generic configure append extra compiler options.
+  case "$archcpu" in
+  405fp|440fp|464fp|476fp)
+    submachine=${archcpu%fp}
+    if ${libc_cv_cc_submachine+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  libc_cv_cc_submachine=""
+fi
+
+    ;;
+  405|440|464|476)
+    submachine=${archcpu}
+    if ${libc_cv_cc_submachine+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  libc_cv_cc_submachine=""
+fi
+
+    ;;
+
+  a2|970|power[4-9]|power5x|power6+|power10)
+    submachine=${archcpu}
+    if ${libc_cv_cc_submachine+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  libc_cv_cc_submachine=""
+fi
+
+    ;;
+  *)
+    # We couldn't figure it out, assume none
+    ;;
+  esac
+  ;;
+esac

@@ -1,0 +1,264 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% South Azerbaijani Language Locale for Iran
+% Contributed by Mousa Moradi <mousamk@gmail.com>
+
+% FIXME: Azerbaijani O in the arabic script which should have a circle above WAW,
+% was not found in the unicode table, so we're using the simple WAW and the Sukun
+% after that. This should be changed if they add the unified character to table.
+
+% NOTE: Azerbaijani dotless 'i' in the arabic script exists in the Unicode table by
+% code U063D, but according to arthography rules, it should not be used in usual
+% texts and can be used just in kids' learning books and whenever there is ambiguity,
+% so here in the words that have it like 'Xanim' it's not been used.
+
+LC_IDENTIFICATION
+title "South Azerbaijani language locale for Iran"
+source ""
+address ""
+contact "Mousa Moradi"
+email "mousamk@gmail.com"
+tel "(+98) 914 492 1058"
+fax ""
+language "South Azerbaijani"
+territory "Iran"
+revision "0.2"
+date "2014-05-01"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+
+END LC_IDENTIFICATION
+
+%
+% TODO: check LC_COLLATE
+
+LC_COLLATE
+% FIXME: For now we're going with persian collation, but the few Azerbaijani specific
+% characters need to be considered too.
+copy "fa_IR"
+
+% Azerbaijani letters can be ordered like this:
+% ALEF WITH MADDA ABOVE, ALEF, ALEF WITH HAMZA ABOVE, ALEF WITH HAMZA BELOW,
+% BEH, PEH, TEH, THEH, JIM, CHEH, HHEH, KHEH, DAL, ZAL, REH, ZEH, JEH, SIN,
+% SHIN, SAD, ZAD, TAH, ZAH, AYN, GHAYN, FEH, QAF, KAF, GAF, LAM, MIM, NUN, WAW,
+% WAW WITH SOKUN ABOVE (O in latic script - It's not in unicode table yet),
+% WAW WITH HAMZA ABOVE (O with two dots above in latin script), WAW WITH LITTLE
+% WAW ABOVE (U in latic script), WAW WITH LITTLE V ABOVE (U with two dots
+% above in latin script), HEH, YEH WITH HAMZA ABOVE (E in latin script), YEH
+% WITH LITTLE INVERTED V ABOVE (Dotless i in latic script), YEH
+
+% collating-symbol <az_ar_oe>     % O with two dots above in latic script
+% collating-symbol <az_ar_u>      % U in latic script
+% collating-symbol <az_ar_ue>     % U with two dots above in latic script
+% collating-symbol <az_ar_e>      % E in latic script
+% collating-symbol <az_ar_ih>     % dotless I in latic script
+
+% collating-element <az_ar_o> from "<U0648><U0652>"     % O in latic script
+% ...
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "fa_IR"
+END LC_CTYPE
+
+LC_MESSAGES
+% This is "^[+1yY<HEH><BEH>]"
+yesexpr "^[+1yY<U0647><U0628>]"
+% This is "^[-0nN<YEH><KHEH>]"
+noexpr  "^[-0nN<U06CC><U062E>]"
+% This is "Hen":
+yesstr  "<U0647><U0646>"
+% This is "Yox":
+nostr   "<U06CC><U0648><U0652><U062E>"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "fa_IR"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "fa_IR"
+END LC_NUMERIC
+
+LC_TIME
+% copied from "fa_IR"
+% Alternative digits are used for Persian numerals in date and time. This is
+% a hack, until a new prefix is defined for alternative digits.
+alt_digits      "<U06F0><U06F0>";"<U06F0><U06F1>";/
+                "<U06F0><U06F2>";"<U06F0><U06F3>";/
+                "<U06F0><U06F4>";"<U06F0><U06F5>";/
+                "<U06F0><U06F6>";"<U06F0><U06F7>";/
+                "<U06F0><U06F8>";"<U06F0><U06F9>";/
+                "<U06F1><U06F0>";"<U06F1><U06F1>";/
+                "<U06F1><U06F2>";"<U06F1><U06F3>";/
+                "<U06F1><U06F4>";"<U06F1><U06F5>";/
+                "<U06F1><U06F6>";"<U06F1><U06F7>";/
+                "<U06F1><U06F8>";"<U06F1><U06F9>";/
+                "<U06F2><U06F0>";"<U06F2><U06F1>";/
+                "<U06F2><U06F2>";"<U06F2><U06F3>";/
+                "<U06F2><U06F4>";"<U06F2><U06F5>";/
+                "<U06F2><U06F6>";"<U06F2><U06F7>";/
+                "<U06F2><U06F8>";"<U06F2><U06F9>";/
+                "<U06F3><U06F0>";"<U06F3><U06F1>";/
+                "<U06F3><U06F2>";"<U06F3><U06F3>";/
+                "<U06F3><U06F4>";"<U06F3><U06F5>";/
+                "<U06F3><U06F6>";"<U06F3><U06F7>";/
+                "<U06F3><U06F8>";"<U06F3><U06F9>";/
+                "<U06F4><U06F0>";"<U06F4><U06F1>";/
+                "<U06F4><U06F2>";"<U06F4><U06F3>";/
+                "<U06F4><U06F4>";"<U06F4><U06F5>";/
+                "<U06F4><U06F6>";"<U06F4><U06F7>";/
+                "<U06F4><U06F8>";"<U06F4><U06F9>";/
+                "<U06F5><U06F0>";"<U06F5><U06F1>";/
+                "<U06F5><U06F2>";"<U06F5><U06F3>";/
+                "<U06F5><U06F4>";"<U06F5><U06F5>";/
+                "<U06F5><U06F6>";"<U06F5><U06F7>";/
+                "<U06F5><U06F8>";"<U06F5><U06F9>";/
+                "<U06F6><U06F0>";"<U06F6><U06F1>";/
+                "<U06F6><U06F2>";"<U06F6><U06F3>";/
+                "<U06F6><U06F4>";"<U06F6><U06F5>";/
+                "<U06F6><U06F6>";"<U06F6><U06F7>";/
+                "<U06F6><U06F8>";"<U06F6><U06F9>";/
+                "<U06F7><U06F0>";"<U06F7><U06F1>";/
+                "<U06F7><U06F2>";"<U06F7><U06F3>";/
+                "<U06F7><U06F4>";"<U06F7><U06F5>";/
+                "<U06F7><U06F6>";"<U06F7><U06F7>";/
+                "<U06F7><U06F8>";"<U06F7><U06F9>";/
+                "<U06F8><U06F0>";"<U06F8><U06F1>";/
+                "<U06F8><U06F2>";"<U06F8><U06F3>";/
+                "<U06F8><U06F4>";"<U06F8><U06F5>";/
+                "<U06F8><U06F6>";"<U06F8><U06F7>";/
+                "<U06F8><U06F8>";"<U06F8><U06F9>";/
+                "<U06F9><U06F0>";"<U06F9><U06F1>";/
+                "<U06F9><U06F2>";"<U06F9><U06F3>";/
+                "<U06F9><U06F4>";"<U06F9><U06F5>";/
+                "<U06F9><U06F6>";"<U06F9><U06F7>";/
+                "<U06F9><U06F8>";"<U06F9><U06F9>"
+
+% South Azerbaijani like Persian doesn't have abbreviations for weekdays and month
+% names, so "abday" is the same as "day" and "abmon" is the same as "mon".
+day     "<U06CC><U06A9><U0634><U0646><U0628><U0647>";/
+        "<U062F><U0648><U0634><U0646><U0628><U0647>";/
+        "<U0633><U0647><U200C><U0634><U0646><U0628><U0647>";/
+        "<U0686><U0627><U0631><U0634><U0646><U0628><U0647>";/
+        "<U062C><U06C6><U0645><U0639><U0647> <U0622><U062E><U0634><U0627><U0645><U06CC>";/
+        "<U062C><U06C6><U0645><U0639><U0647>";/
+        "<U0634><U0646><U0628><U0647>"
+abday   "<U06CC><U06A9><U0634><U0646><U0628><U0647>";/
+        "<U062F><U0648><U0634><U0646><U0628><U0647>";/
+        "<U0633><U0647><U200C><U0634><U0646><U0628><U0647>";/
+        "<U0686><U0627><U0631><U0634><U0646><U0628><U0647>";/
+        "<U062C><U06C6><U0645><U0639><U0647> <U0622><U062E><U0634><U0627><U0645><U06CC>";/
+        "<U062C><U06C6><U0645><U0639><U0647>";/
+        "<U0634><U0646><U0628><U0647>"
+mon     "<U0698><U0627><U0646><U0648><U06CC><U0647>";/
+        "<U0641><U0648><U0631><U06CC><U0647>";/
+        "<U0645><U0627><U0631><U0633>";/
+        "<U0622><U0648><U0631><U06CC><U0644>";/
+        "<U0645><U0626><U06CC>";/
+        "<U0698><U0648><U0626><U0646>";/
+        "<U062C><U0648><U0644><U0627><U06CC>";/
+        "<U0622><U0642><U06C7><U0633><U062A>";/
+        "<U0633><U067E><U062A><U0627><U0645><U0628><U0631>";/
+        "<U0627><U0648><U0652><U06A9><U062A><U0648><U0652><U0628><U0631>";/
+        "<U0646><U0648><U0652><U0648><U0627><U0645><U0628><U0631>";/
+        "<U062F><U0633><U0627><U0645><U0628><U0631>"
+abmon   "<U0698><U0627><U0646><U0648><U06CC><U0647>";/
+        "<U0641><U0648><U0631><U06CC><U0647>";/
+        "<U0645><U0627><U0631><U0633>";/
+        "<U0622><U0648><U0631><U06CC><U0644>";/
+        "<U0645><U0626><U06CC>";/
+        "<U0698><U0648><U0626><U0646>";/
+        "<U062C><U0648><U0644><U0627><U06CC>";/
+        "<U0622><U0642><U06C7><U0633><U062A>";/
+        "<U0633><U067E><U062A><U0627><U0645><U0628><U0631>";/
+        "<U0627><U0648><U0652><U06A9><U062A><U0648><U0652><U0628><U0631>";/
+        "<U0646><U0648><U0652><U0648><U0627><U0645><U0628><U0631>";/
+        "<U062F><U0633><U0627><U0645><U0628><U0631>"
+%
+% Copied from "fa_IR":
+% Appropriate date representation (%x)
+d_fmt   "%Oy//%Om//%Od"
+%
+% Cofied from "fa_IR":
+% Appropriate time representation (%X)
+t_fmt   "%OH:%OM:%OS"
+%
+% Copied from "fa_IR":
+% Appropriate date and time representation (%c)
+%       "<RLE>%A %Oe %B %Oy<ARABIC COMMA> %OH:%OM:%OS<PDF>"
+d_t_fmt "<U202B>%A %Oe %B %Oy<U060C> %OH:%OM:%OS<U202C>"
+am_pm     "";""
+t_fmt_ampm ""
+%
+% Copied from "fa_IR" and changed a little:
+% Appropriate date representation (date(1))
+% "<RLE>%A %Oe %B %Oy<ARABIC COMMA> <SEEN><ALEF><AIN><ALEF><TEH> %OH:%OM:%OS (%Z)<PDF>"
+date_fmt "<U202B>%A %Oe %B %Oy<U060C> <U0633><U0627><U0639><U0627><U062A> /
+%OH:%OM:%OS (%Z)<U202C>"
+first_weekday 7
+first_workday 7
+cal_direction 3
+END LC_TIME
+
+LC_PAPER
+copy "fa_IR"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "fa_IR"
+END LC_MEASUREMENT
+
+LC_ADDRESS
+% NOTE: Copied from "fa_IR", it should be checked and reconsidered if necessary:
+postal_fmt "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+
+country_name "<U0627><U06CC><U0631><U0627><U0646>"
+country_ab2 "IR"
+country_ab3 "IRN"
+country_num 364
+country_car "IR"
+country_isbn "964"
+
+% Turkce
+lang_name "<U062A><U06C6><U0631><U06A9><U062C><U0647>"
+lang_ab "az"
+% iso-639-3
+lang_term "azb"
+% iso-639-2
+lang_lib "aze"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "fa_IR"
+END LC_TELEPHONE
+
+LC_NAME
+name_gen ""
+% Xanim:
+name_miss "<U062E><U0627><U0646><U06CC><U0645>"
+name_ms "<U062E><U0627><U0646><U06CC><U0645>"
+name_mrs "<U062E><U0627><U0646><U06CC><U0645>"
+% Agha
+name_mr "<U0622><U063A><U0627>"
+name_fmt "%d%t%s%t%g%t%m%t%f"
+END LC_NAME

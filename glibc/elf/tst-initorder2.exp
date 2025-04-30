@@ -1,0 +1,9 @@
+init: d
+init: c
+init: b
+init: a
+main
+fini: a
+fini: b
+fini: c
+fini: d

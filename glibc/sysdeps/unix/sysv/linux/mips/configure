@@ -1,0 +1,518 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/unix/sysv/linux/mips.
+
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+    #if (_MIPS_SIM != _ABIO32)
+    #error Not O32 ABI
+    #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_abi=o32
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+      #if (_MIPS_SIM != _ABIN32)
+      #error Not N32 ABI
+      #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_abi=n32
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+        #if (_MIPS_SIM != _ABI64)
+        #error Not 64 ABI
+        #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_abi=n64
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+if test -z "$libc_mips_abi"; then
+  as_fn_error $? "could not determine what ABI the compiler is using" "$LINENO" 5
+fi
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+    #if !defined(__mips_soft_float)
+    #error Not soft ABI
+    #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_float=soft
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+      #if !defined(__mips_hard_float)
+      #error Not hard ABI
+      #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_float=hard
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+if test -z "$libc_mips_float"; then
+  as_fn_error $? "could not determine if compiler is using hard or soft floating point ABI" "$LINENO" 5
+fi
+
+libc_mips_o32_fp=
+libc_cv_mips_fp64=
+libc_cv_mips_modd_spreg=
+
+if test x"$libc_mips_abi" = xo32 -a x"$libc_mips_float" = xhard; then
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+      #if !defined(__mips_fpr)
+      #error Missing FPR sizes
+      #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+        #if (__mips_fpr != 32)
+        #error Not FP32
+        #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_o32_fp=32
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+          #if (__mips_fpr != 0) || !defined(_MIPS_SPFPSET) || (_MIPS_SPFPSET != 16)
+          #error Not FPXX (without odd single-precision registers)
+          #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_o32_fp=xx
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+            #if (__mips_fpr != 0)
+            #error Not FPXX (with odd single precision registers)
+            #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_o32_fp=xxo
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+              #if (__mips_fpr != 64) || !defined(_MIPS_SPFPSET) || (_MIPS_SPFPSET != 16)
+              #error Not FP64A
+              #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_o32_fp=64a
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+                #if (__mips_fpr != 64)
+                #error Not FP64
+                #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_o32_fp=64
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+  if { ac_try='${CC-cc} -mfp64 -xc /dev/null -S -o /dev/null'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then :
+  libc_cv_mips_fp64=yes
+else
+  libc_cv_mips_fp64=no
+fi
+  if { ac_try='${CC-cc} -Werror -modd-spreg -xc /dev/null -S -o /dev/null'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then :
+  libc_cv_mips_modd_spreg=yes
+else
+  libc_cv_mips_modd_spreg=no
+fi
+fi
+config_vars="$config_vars
+o32-fpabi = ${libc_mips_o32_fp}"
+config_vars="$config_vars
+has-mpf64 = ${libc_cv_mips_fp64}"
+config_vars="$config_vars
+has-modd-spreg = ${libc_cv_mips_modd_spreg}"
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+    #include <linux/prctl.h>
+    #if !defined(PR_GET_FP_MODE) || !defined(PR_SET_FP_MODE)
+    #error New prctl support for setting FP modes not found
+    #endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_mips_mode_switch=yes
+else
+  libc_mips_mode_switch=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+config_vars="$config_vars
+mips-mode-switch = ${libc_mips_mode_switch}"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for grep that handles long lines and -e" >&5
+$as_echo_n "checking for grep that handles long lines and -e... " >&6; }
+if ${ac_cv_path_GREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -z "$GREP"; then
+  ac_path_GREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in grep ggrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_GREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_GREP" || continue
+# Check for GNU ac_path_GREP and select it if it is found.
+  # Check for GNU $ac_path_GREP
+case `"$ac_path_GREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_GREP="$ac_path_GREP" ac_path_GREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'GREP' >> "conftest.nl"
+    "$ac_path_GREP" -e 'GREP$' -e '-(cannot match)-' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_GREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_GREP="$ac_path_GREP"
+      ac_path_GREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_GREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_GREP"; then
+    as_fn_error $? "no acceptable grep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_GREP=$GREP
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_GREP" >&5
+$as_echo "$ac_cv_path_GREP" >&6; }
+ GREP="$ac_cv_path_GREP"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for egrep" >&5
+$as_echo_n "checking for egrep... " >&6; }
+if ${ac_cv_path_EGREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if echo a | $GREP -E '(a|b)' >/dev/null 2>&1
+   then ac_cv_path_EGREP="$GREP -E"
+   else
+     if test -z "$EGREP"; then
+  ac_path_EGREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in egrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_EGREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_EGREP" || continue
+# Check for GNU ac_path_EGREP and select it if it is found.
+  # Check for GNU $ac_path_EGREP
+case `"$ac_path_EGREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_EGREP="$ac_path_EGREP" ac_path_EGREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'EGREP' >> "conftest.nl"
+    "$ac_path_EGREP" 'EGREP$' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_EGREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_EGREP="$ac_path_EGREP"
+      ac_path_EGREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_EGREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_EGREP"; then
+    as_fn_error $? "no acceptable egrep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_EGREP=$EGREP
+fi
+
+   fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_EGREP" >&5
+$as_echo "$ac_cv_path_EGREP" >&6; }
+ EGREP="$ac_cv_path_EGREP"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the compiler is using the 2008 NaN encoding" >&5
+$as_echo_n "checking whether the compiler is using the 2008 NaN encoding... " >&6; }
+if ${libc_cv_mips_nan2008+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+dnl
+#ifdef __mips_nan2008
+yes
+#endif
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "yes" >/dev/null 2>&1; then :
+  libc_cv_mips_nan2008=yes
+else
+  libc_cv_mips_nan2008=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mips_nan2008" >&5
+$as_echo "$libc_cv_mips_nan2008" >&6; }
+
+libc_mips_nan=
+if test x"$libc_cv_mips_nan2008" = xyes; then
+  libc_mips_nan=_2008
+fi
+
+config_vars="$config_vars
+default-abi = ${libc_mips_abi}_${libc_mips_float}${libc_mips_nan}"
+
+case $machine in
+mips/mips64/n64/*)
+  test -n "$libc_cv_slibdir" ||
+case "$prefix" in
+/usr | /usr/)
+  libc_cv_slibdir='/lib64'
+  libc_cv_rtlddir='/lib64'
+  if test "$libdir" = '${exec_prefix}/lib'; then
+    libdir='${exec_prefix}/lib64';
+    # Locale data can be shared between 32-bit and 64-bit libraries.
+    libc_cv_complocaledir='${exec_prefix}/lib/locale'
+  fi
+  ;;
+esac
+  ;;
+mips/mips64/n32/*)
+  test -n "$libc_cv_slibdir" ||
+case "$prefix" in
+/usr | /usr/)
+  libc_cv_slibdir='/lib32'
+  libc_cv_rtlddir='/lib32'
+  if test "$libdir" = '${exec_prefix}/lib'; then
+    libdir='${exec_prefix}/lib32';
+    # Locale data can be shared between 32-bit and 64-bit libraries.
+    libc_cv_complocaledir='${exec_prefix}/lib/locale'
+  fi
+  ;;
+esac
+  ;;
+esac
+
+libc_cv_gcc_unwind_find_fde=yes
+
+if test -z "$arch_minimum_kernel"; then
+  if test x$libc_cv_mips_nan2008 = xyes; then
+    arch_minimum_kernel=4.5.0
+  fi
+fi
+
+# Check if we are supposed to run on kernels older than 4.8.0. If so,
+# force executable stack to avoid potential runtime problems with fpu
+# emulation.
+# NOTE: The check below assumes that in absence of user-provided minimum_kernel
+# we will default to arch_minimum_kernel which is currently less than 4.8.0 for
+# all known configurations. If this changes, the check must be updated.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the compiler must use executable stack" >&5
+$as_echo_n "checking whether the compiler must use executable stack... " >&6; }
+if ${libc_cv_mips_force_execstack+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  libc_cv_mips_force_execstack=no
+  if test $libc_mips_float = hard; then
+    if test -n "$minimum_kernel"; then
+
+       min_version=$((`echo "$minimum_kernel.0.0.0" | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \* 65536 + \2 \* 256 + \3/'`))
+
+       if test $min_version -lt 264192; then
+         libc_cv_mips_force_execstack=yes
+       fi
+    else
+      libc_cv_mips_force_execstack=yes
+    fi
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mips_force_execstack" >&5
+$as_echo "$libc_cv_mips_force_execstack" >&6; }
+
+libc_mips_has_gnustack=$libc_cv_as_noexecstack
+
+if test $libc_cv_mips_force_execstack = yes; then
+  libc_mips_has_gnustack=no
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: forcing executable stack for pre-4.8.0 Linux kernels" >&5
+$as_echo "$as_me: WARNING: forcing executable stack for pre-4.8.0 Linux kernels" >&2;}
+fi
+
+config_vars="$config_vars
+mips-force-execstack = ${libc_cv_mips_force_execstack}"
+config_vars="$config_vars
+mips-has-gnustack = ${libc_mips_has_gnustack}"

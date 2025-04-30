@@ -1,0 +1,159 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Karbi Language Locale for India.
+% Contributed  by Jor Teron <jor.teron@gmail.com>.
+
+LC_IDENTIFICATION
+title      "Karbi language locale for India"
+source     "Jor Teron"
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Karbi"
+territory  "India"
+revision   "1.1"
+date       "2013-08-08"
+
+category  "i18n:2012";LC_IDENTIFICATION
+category  "i18n:2012";LC_CTYPE
+category  "i18n:2012";LC_COLLATE
+category  "i18n:2012";LC_TIME
+category  "i18n:2012";LC_NUMERIC
+category  "i18n:2012";LC_MONETARY
+category  "i18n:2012";LC_MESSAGES
+category  "i18n:2012";LC_PAPER
+category  "i18n:2012";LC_NAME
+category  "i18n:2012";LC_ADDRESS
+category  "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_GB"
+END LC_CTYPE
+
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3;2
+END LC_NUMERIC
+
+LC_MESSAGES
+yesexpr     "^[+1yY]"
+noexpr      "^[-0nN]"
+
+% There are no exact or fixed words for 'Yes' and 'No'.
+% The closest words are 'Chok', 'Chokche' and 'Kalang', 'Kali' respectively.
+% They both are also translate as 'True', 'False' respectively.
+% 'Kali' is also interpreted as 'Not'.
+% 'Chok' is also interpreted as 'Correct' and 'Ok'.
+% 'Chokche' is interpreted as 'Incorrect' and 'Not Ok'.
+% While 'Ahok' is the word for 'True', there is no word for
+% 'False' and is compensated with 'Ahok Kali', which translate to 'Not True'.
+% In these situation 'yes' and 'no' will be the correct string.
+
+yesstr      "yes"
+nostr       "no"
+END LC_MESSAGES
+
+LC_TIME
+abday "Bhom";"Ur";"Dur";"Tkel";"Tkem";"Bhta";"Bhti"
+day   "Bhomkuru";"Urmi";"Durmi";"Thelang";"Theman";"Bhomta";"Bhomti"
+abmon "Ark";"Thang";"The";"Jang";"Aru";"Vos";/
+      "Jak";"Pai";"Chi";"Phe";"Phai";"Mati"
+mon   "Arkoi";"Thangthang";"There";"Jangmi";"Aru";"Vosik";/
+      "Jakhong";"Paipai";"Chiti";"Phere";"Phaikuni";"Matijong"
+
+% Equivalent of AM PM
+am_pm       "AM";"PM"
+
+% Appropriate date and time representation
+d_t_fmt     "%A %d %B %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%A %d %B %Y %I:%M:%S %p %Z"
+
+% Appropriate date representation
+d_fmt        "%-d//%-m//%y"
+
+% Appropriate time representation
+t_fmt       "%I:%M:%S %p %Z"
+
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%I:%M:%S %p %Z"
+
+week 7;19971130;1
+first_weekday 1
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "hi_IN"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+% Format for addressing a person.
+% "Salutation",
+% "Empty string, or <Space>",
+% "First given name",
+% "Empty string, or <Space>",
+% "Middle names",
+% "Empty string, or <Space>",
+% "Clan names"
+name_fmt    "%d%t%g%t%m%t%f"
+
+% General salutation for any sex - ""
+name_gen    ""
+
+% Salutation for unmarried females - "Sami"
+name_miss   "Sami"
+
+% FIXME: Salutation for unmarried males - "Thare"
+% name_mr   "Thare"
+
+% FIXME: Salutation for married males - "Sangho"
+% name_mr    "Sangho"
+
+% Salutation for married females - "Sangpi"
+name_mrs    "Sangpi"
+
+% Salutation valid for all females - "" (no term)
+name_ms     ""
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "Bhorot"
+country_ab2  "IN"
+country_ab3  "IND"
+country_num  356
+country_car  "IND"
+lang_name    "Karbi"
+lang_term    "mjw"
+lang_lib     "mjw"
+END LC_ADDRESS

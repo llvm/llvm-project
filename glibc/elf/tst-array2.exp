@@ -1,0 +1,19 @@
+preinit array 0
+preinit array 1
+preinit array 2
+DSO init
+DSO init array 0
+DSO init array 1
+DSO init array 2
+init
+init array 0
+init array 1
+init array 2
+fini array 2
+fini array 1
+fini array 0
+fini
+DSO fini array 2
+DSO fini array 1
+DSO fini array 0
+DSO fini

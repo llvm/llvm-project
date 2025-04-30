@@ -1,0 +1,34 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+type DIR
+
+type {struct dirent}
+
+# if !defined POSIX && !defined POSIX2008
+element {struct dirent} ino_t d_ino
+# endif
+element {struct dirent} char d_name []
+
+# if !defined POSIX && !defined POSIX2008
+type ino_t
+#endif
+
+function int closedir (DIR*)
+function {DIR*} opendir (const char*)
+function {struct dirent*} readdir (DIR*)
+function int readdir_r (DIR*, struct dirent*, struct dirent**)
+function void rewinddir (DIR*)
+# if !defined POSIX && !defined POSIX2008
+function void seekdir (DIR*, long int)
+function {long int} telldir (DIR*)
+# endif
+
+allow d_*
+allow *_t
+
+# if defined XOPEN2K8 || defined POSIX2008
+function int alphasort (const struct dirent**, const struct dirent**)
+function int dirfd (DIR*)
+function int scandir (const char*, struct dirent***, int(*)(const struct dirent*), int(*)(const struct dirent**,const struct dirent **))
+function {DIR*} fdopendir (int)
+# endif
+#endif

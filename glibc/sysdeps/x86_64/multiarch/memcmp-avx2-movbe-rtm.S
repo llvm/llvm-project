@@ -1,0 +1,12 @@
+#ifndef MEMCMP
+# define MEMCMP __memcmp_avx2_movbe_rtm
+#endif
+
+#define ZERO_UPPER_VEC_REGISTERS_RETURN \
+  ZERO_UPPER_VEC_REGISTERS_RETURN_XTEST
+
+#define VZEROUPPER_RETURN jmp	 L(return_vzeroupper)
+
+#define SECTION(p) p##.avx.rtm
+
+#include "memcmp-avx2-movbe.S"

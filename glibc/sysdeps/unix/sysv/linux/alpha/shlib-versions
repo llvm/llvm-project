@@ -1,0 +1,14 @@
+libm=6.1
+libc=6.1
+
+ld=ld-linux.so.2
+
+libdl=2.1
+
+libutil=1.1
+
+libresolv=2.1
+
+libnsl=1.1
+libcrypt=1.1
+libBrokenLocale=1.1

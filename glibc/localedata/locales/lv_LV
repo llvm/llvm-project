@@ -1,0 +1,232 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Latvian language locale for Latvia
+% Source: Latvian Standard LVS 24-93
+% Address: LU MII, Rainis boul. 29
+%    LV-1459 Riga, Latvia
+% Contact: Imants Metra
+% Email: metra@mii.lu.lv
+% Tel: +371 - 2 - 210116
+% Fax: +371 - 2 - 225343
+% Language: lv
+% Territory: LV
+% Revision: 4.0
+% Date: 1995-08-28
+% Application: general
+% Users: general
+
+% <CAPITAL> before <SMALL> letters
+
+LC_IDENTIFICATION
+title      "Latvian locale for Latvia"
+source     "Latvian Standard LVS 24-93"
+address    "LU MII, Rainis boul. 29, LV-1459 Riga, Latvia"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Latvian"
+territory  "Latvia"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+
+copy "iso14651_t1"
+
+% CLDR collation rules for Latvian:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/lv.xml)
+%
+% &[before 1]D<č<<<Č
+% &[before 1]H<ģ<<<Ģ
+% &I<<y<<<Y
+% &[before 1]L<ķ<<<Ķ
+% &[before 1]M<ļ<<<Ļ
+% &[before 1]O<ņ<<<Ņ
+% &[before 1]S<ŗ<<<Ŗ
+% &[before 1]T<š<<<Š
+% &[before 1]Ʒ<ž<<<Ž
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <c-caron>
+collating-symbol <g-cedilla>
+collating-symbol <k-cedilla>
+collating-symbol <l-cedilla>
+collating-symbol <n-cedilla>
+collating-symbol <r-cedilla>
+collating-symbol <s-caron>
+collating-symbol <z-caron>
+
+reorder-after <BEFORE-D>
+<c-caron>
+reorder-after <BEFORE-H>
+<g-cedilla>
+reorder-after <BEFORE-L>
+<k-cedilla>
+reorder-after <BEFORE-M>
+<l-cedilla>
+reorder-after <BEFORE-O>
+<n-cedilla>
+reorder-after <BEFORE-S>
+<r-cedilla>
+reorder-after <BEFORE-T>
+<s-caron>
+reorder-after <BEFORE-EZH>
+<z-caron>
+
+<U010D> <c-caron>;<BASE>;<MIN>;IGNORE % č
+<U010C> <c-caron>;<BASE>;<CAP>;IGNORE % Č
+<U0123> <g-cedilla>;<BASE>;<MIN>;IGNORE % ģ
+<U0122> <g-cedilla>;<BASE>;<CAP>;IGNORE % Ģ
+<U0079> <S0069>;<LOWLINE>;<MIN>;IGNORE % y
+<U0059> <S0069>;<LOWLINE>;<CAP>;IGNORE % Y
+<U0137> <k-cedilla>;<BASE>;<MIN>;IGNORE % ķ
+<U0136> <k-cedilla>;<BASE>;<CAP>;IGNORE % Ķ
+<U013C> <l-cedilla>;<BASE>;<MIN>;IGNORE % ļ
+<U013B> <l-cedilla>;<BASE>;<CAP>;IGNORE % Ļ
+<U0146> <n-cedilla>;<BASE>;<MIN>;IGNORE % ņ
+<U0145> <n-cedilla>;<BASE>;<CAP>;IGNORE % Ņ
+<U0157> <r-cedilla>;<BASE>;<MIN>;IGNORE % ŗ
+<U0156> <r-cedilla>;<BASE>;<CAP>;IGNORE % Ŗ
+<U0161> <s-caron>;<BASE>;<MIN>;IGNORE % š
+<U0160> <s-caron>;<BASE>;<CAP>;IGNORE % Š
+<U017E> <z-caron>;<BASE>;<MIN>;IGNORE % ž
+<U017D> <z-caron>;<BASE>;<CAP>;IGNORE % Ž
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol   "EUR "
+currency_symbol   "<U20AC>"
+mon_decimal_point ","
+mon_thousands_sep "<U202F>"
+mon_grouping      3;3
+positive_sign     ""
+negative_sign     "-"
+int_frac_digits   2
+frac_digits       2
+p_cs_precedes     1
+p_sep_by_space    1
+n_cs_precedes     1
+n_sep_by_space    1
+p_sign_posn       3
+n_sign_posn       3
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point     ","
+thousands_sep     "<U202F>"
+grouping          3;3
+END LC_NUMERIC
+
+LC_TIME
+abday    "Sv";"P<U00A0>";/
+         "O<U00A0>";"T<U00A0>";/
+         "C<U00A0>";"Pk";/
+         "S<U00A0>"
+day      "sv<U0113>tdiena";/
+         "pirmdiena";/
+         "otrdiena";/
+         "tre<U0161>diena";/
+         "ceturtdiena";/
+         "piektdiena";/
+         "sestdiena"
+abmon    "jan";"feb";/
+         "mar";"apr";/
+         "mai";"j<U016B>n";/
+         "j<U016B>l";"aug";/
+         "sep";"okt";/
+         "nov";"dec"
+mon      "janv<U0101>ris";/
+         "febru<U0101>ris";/
+         "marts";/
+         "apr<U012B>lis";/
+         "maijs";/
+         "j<U016B>nijs";/
+         "j<U016B>lijs";/
+         "augusts";/
+         "septembris";/
+         "oktobris";/
+         "novembris";/
+         "decembris"
+d_t_fmt  "%A, %Y. gada %e. %B, %H:%M:%S"
+date_fmt "%A, %Y. gada %e. %B, %H:%M:%S %Z"
+d_fmt    "%Y.%m.%d."
+t_fmt    "%T"
+am_pm    "";""
+t_fmt_ampm  ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1JjYy]"
+noexpr  "^[-0Nn]"
+yesstr  "j<U0101>"
+nostr   "n<U0113>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "371"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Latvija"
+country_ab2 "LV"
+country_ab3 "LVA"
+country_num 428
+country_car "LV"
+% latviešu valoda
+lang_name    "latvie<U0161>u"
+lang_ab      "lv"
+lang_term    "lav"
+lang_lib    "lav"
+END LC_ADDRESS

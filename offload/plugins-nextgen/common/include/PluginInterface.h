@@ -689,7 +689,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error memoryVAUnMap(void *VAddr, size_t Size);
 
   /// Allocate data on the device or involving the device.
-  Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind);
+  virtual Expected<void *> dataAlloc(int64_t Size, void *HostPtr,
+                                     TargetAllocTy Kind);
 
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
@@ -817,6 +818,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const {
     return std::move(MB);
   }
+
+  /// Check whether the target expects a bitcode image throughout the
+  /// execution. Useful for targets which have a separate JIT mechanism.
+  virtual Expected<bool> shouldUseBitcodeImage() const { return false; }
 
   /// The minimum number of threads we use for a low-trip count combined loop.
   /// Instead of using more threads we increase the outer (block/team)

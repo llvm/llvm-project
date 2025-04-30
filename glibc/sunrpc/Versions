@@ -1,0 +1,131 @@
+libc {
+  GLIBC_2.0 {
+    # global variables.
+    _null_auth;
+
+    # functions used in other libraries
+    _rpc_dtablesize; _seterr_reply;
+
+    # variables in normal name space
+    rpc_createerr; svc_fdset; svcauthdes_stats;
+
+    # a*
+    authnone_create; authunix_create; authunix_create_default;
+
+    # b*
+    bindresvport;
+
+    # c*
+    callrpc;
+    clnt_broadcast; clnt_create; clnt_pcreateerror; clnt_perrno;
+    clnt_perror; clnt_spcreateerror; clnt_sperrno; clnt_sperror;
+    clntraw_create; clnttcp_create; clntudp_bufcreate; clntudp_create;
+
+    # e*
+    endrpcent;
+
+    # g*
+    get_myaddress; getpublickey; getsecretkey;
+    getrpcbyname; getrpcbyname_r; getrpcbynumber; getrpcbynumber_r;
+    getrpcent; getrpcent_r; getrpcport;
+
+    # p*
+    pmap_getmaps; pmap_getport; pmap_rmtcall; pmap_set; pmap_unset;
+
+    # r*
+    registerrpc;
+
+    # s*
+    setrpcent;
+    svc_exit; svc_getreq; svc_getreqset; svc_register; svc_run;
+    svc_sendreply; svc_unregister; svcerr_auth; svcerr_decode;
+    svcerr_noproc; svcerr_noprog; svcerr_progvers; svcerr_systemerr;
+    svcerr_weakauth; svcfd_create; svcraw_create; svctcp_create;
+    svcudp_bufcreate; svcudp_create; svcudp_enablecache;
+
+    # x*
+    xdr_accepted_reply; xdr_array; xdr_authunix_parms; xdr_bool; xdr_bytes;
+    xdr_callhdr; xdr_callmsg; xdr_char; xdr_cryptkeyarg; xdr_cryptkeyarg2;
+    xdr_cryptkeyres; xdr_des_block; xdr_double; xdr_enum; xdr_float;
+    xdr_free; xdr_int; xdr_key_netstarg; xdr_key_netstres; xdr_keybuf;
+    xdr_keystatus; xdr_long; xdr_netobj; xdr_opaque; xdr_opaque_auth;
+    xdr_pmap; xdr_pmaplist; xdr_pointer; xdr_reference; xdr_rejected_reply;
+    xdr_replymsg; xdr_rmtcall_args; xdr_rmtcallres; xdr_short; xdr_string;
+    xdr_u_char; xdr_u_int; xdr_u_long; xdr_u_short; xdr_union; xdr_vector;
+    xdr_void; xdr_wrapstring; xdrmem_create; xdrrec_create;
+    xdrrec_endofrecord; xdrrec_eof; xdrrec_skiprecord; xdrstdio_create;
+    xencrypt; xprt_register; xprt_unregister;
+  }
+  GLIBC_2.1 {
+    # Special Pointer to avoid keyserv deadlock
+    __key_decryptsession_pk_LOCAL; __key_encryptsession_pk_LOCAL;
+    __key_gendes_LOCAL;
+
+    # _*
+    _authenticate;
+
+    # a*
+    authdes_create; authdes_getucred; authdes_pk_create;
+
+    # c*
+    cbc_crypt; clntunix_create;
+
+    # d*
+    des_setparity;
+
+    # e*
+    ecb_crypt;
+
+    # g*
+    getnetname;
+
+    # h*
+    host2netname;
+
+    # k*
+    key_decryptsession; key_decryptsession_pk; key_encryptsession;
+    key_encryptsession_pk; key_gendes; key_get_conv; key_secretkey_is_set;
+    key_setnet; key_setsecret;
+
+    # n*
+    netname2host; netname2user;
+
+    # p*
+    passwd2des;
+
+    # r*
+    rtime;
+
+    # s*
+    svcunix_create; svcunixfd_create;
+
+    # u*
+    user2netname;
+
+    # x*
+    xdecrypt; xdr_authdes_cred; xdr_authdes_verf;
+    xdr_getcredres; xdr_int16_t; xdr_int32_t; xdr_int8_t;
+    xdr_netnamestr; xdr_sizeof;
+    xdr_uint16_t; xdr_uint32_t; xdr_uint8_t; xdr_unixcred;
+  }
+  GLIBC_2.1.1 {
+    xdr_hyper; xdr_u_hyper; xdr_longlong_t; xdr_u_longlong_t;
+    xdr_int64_t; xdr_uint64_t;
+  }
+  GLIBC_2.1.2 {
+    getrpcbyname_r; getrpcbynumber_r; getrpcent_r;
+  }
+  GLIBC_2.2 {
+    svc_getreq_common; svc_getreq_poll; svc_max_pollfd; svc_pollfd;
+  }
+  GLIBC_2.2.3 {
+    __rpc_thread_svc_fdset; __rpc_thread_createerr;
+    __rpc_thread_svc_pollfd; __rpc_thread_svc_max_pollfd;
+  }
+  GLIBC_2.3.4 {
+    xdr_quad_t; xdr_u_quad_t;
+  }
+  GLIBC_PRIVATE {
+    __libc_clntudp_bufcreate; __libc_rpc_getport;
+  }
+}

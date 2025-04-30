@@ -1,0 +1,12 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+type {struct utsname}
+
+element {struct utsname} char sysname []
+element {struct utsname} char nodename []
+element {struct utsname} char release []
+element {struct utsname} char version []
+element {struct utsname} char machine []
+
+function int uname (struct utsname *)
+allow *_t
+#endif

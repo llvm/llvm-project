@@ -1,0 +1,15 @@
+#ifdef HAVE_S390_MIN_Z196_ZARCH_ASM_SUPPORT
+# define USE_RINT_BUILTIN 1
+# define USE_RINTF_BUILTIN 1
+# define USE_RINTL_BUILTIN 1
+# if __GNUC_PREREQ (8, 0)
+#  define USE_RINTF128_BUILTIN 1
+# else
+#  define USE_RINTF128_BUILTIN 0
+# endif
+#else
+# define USE_RINT_BUILTIN 0
+# define USE_RINTF_BUILTIN 0
+# define USE_RINTL_BUILTIN 0
+# define USE_RINTF128_BUILTIN 0
+#endif

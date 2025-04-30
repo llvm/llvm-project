@@ -73,15 +73,17 @@ jobs:
         os: ${{ fromJSON(inputs.os_list) }}
     steps:
       - name: Setup Windows
-        if: startsWith(matrix.os, 'windows')
+        if: startsWith(matrix.os, 'windows') || startsWith(matrix.os, 'self')
         uses: llvm/actions/setup-windows@main
         with:
-          arch: amd64
-      # On Windows, starting with win19/20220814.1, cmake choose the 32-bit
-      # python3.10.6 libraries instead of the 64-bit libraries when building
-      # lldb.  Using this setup-python action to make 3.10 the default
-      # python fixes this.
+          arch: ${{ matrix.arch }}
+      # By default CMake chooses the most recent 32-bit libraries instead of
+      # the 64-bit libraries when building and testing LLVM or Clang.
+      # 32 bit version causes a memory error during the testing.
+      # On 'windows-latest' GitHub image (VS2022) 3.11 (32bit) version is installed.
+      # Using this setup-python action to make 3.11 (64bit) the default
       - name: Setup Python
+        if: ${{ matrix.os != 'self-hosted' }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python_version }}
@@ -91,10 +93,18 @@ jobs:
       # actions/checkout deletes any existing files in the new git directory,
       # so this needs to either run before ccache-action or it has to use
       # clean: false.
+      - name: Setup psutil
+        # psutil is not available on Windows on ARM.
+        if: startsWith(matrix.os, 'windows')
+        run: pip install psutil
+      - name: Check tools
+        run: python --version
       - uses: actions/checkout@v4
         with:
           fetch-depth: 250
       - name: Setup ccache
+        # ccache is not available for Windows on ARM.
+        if: ${{ matrix.os != 'self-hosted' }}
         uses: hendrikmuhs/ccache-action@v1
         with:
           # A full build of llvm, clang, lld, and lldb takes about 250MB
@@ -108,7 +118,16 @@ jobs:
           max-size: 2G
           key: ${{ matrix.os }}
           variant: sccache
-      - name: Build and Test
+        # Some LLVM tests are failing on Windows On ARM,
+        # so this step is skipped on WoA until they are fixed.
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          $pcount = $($(Get-WmiObject -class Win32_ComputerSystem).numberoflogicalprocessors)
+          python .\scripts\build_llvm_project.py -d build -t ${{ matrix.target }} --cmake-param=-DLLVM_ENABLE_ASSERTIONS=ON -j $pcount
+          cd build
+          ninja check-all
+        shell: powershell
+        if: ${{ matrix.os == 'macOS-11'}}
         env:
           # Workaround for https://github.com/actions/virtual-environments/issues/5900.
           # This should be a no-op for non-mac OSes

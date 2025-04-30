@@ -1,0 +1,6 @@
+case "$machine" in
+aarch64*)
+	base_machine=aarch64
+	machine=aarch64
+	;;
+esac

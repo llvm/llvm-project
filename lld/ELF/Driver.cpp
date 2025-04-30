@@ -203,6 +203,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
           .Case("elf64loongarch", {ELF64LEKind, EM_LOONGARCH})
           .Case("elf64_s390", {ELF64BEKind, EM_S390})
           .Case("hexagonelf", {ELF32LEKind, EM_HEXAGON})
+          .Case("next32", {ELF64LEKind, EM_NEXT32})
           .Default({ELFNoneKind, EM_NONE});
 
   if (ret.first == ELFNoneKind)
@@ -1321,6 +1322,23 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoPGOWarnMismatch = args.hasFlag(OPT_lto_pgo_warn_mismatch,
                                             OPT_no_lto_pgo_warn_mismatch, true);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->ltoNextInstrumentation = args.hasArg(OPT_lto_next_instrumentation);
+  config->ltoNextSiliconImportRecursion =
+      args.hasArg(OPT_lto_next_silicon_import_recursion);
+  config->ltoNextSiliconWarnUnsupportedOMP =
+      args.hasArg(OPT_lto_next_silicon_warn_unsupported_omp);
+  config->ltoNextSiliconRelocateVariadic =
+      args.hasArg(OPT_lto_next_silicon_relocate_variadic);
+  config->ltoNextSiliconIRFixup = args.hasArg(OPT_lto_next_silicon_ir_fixup);
+  config->ltoNextSiliconIRBuiltins =
+      args.hasArg(OPT_lto_next_silicon_ir_builtins);
+  config->ltoNextSiliconDoCounterPromotion =
+      args.hasArg(OPT_lto_next_silicon_do_counter_promotion);
+  config->ltoNextSiliconAtomicFixup =
+      args.hasArg(OPT_lto_next_silicon_atomic_fixup);
+  config->ltoNextSiliconSplitCallSites =
+      args.hasArg(OPT_lto_next_silicon_split_call_sites);
+  config->ltoEmbedSymbolTrackers = args.hasArg(OPT_lto_embed_symbol_trackers);
   config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =
@@ -1414,6 +1432,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->searchPaths = args::getStrings(args, OPT_library_path);
   config->sectionStartMap = getSectionStartMap(args);
   config->shared = args.hasArg(OPT_shared);
+  config->setBinfmtMagicNumber = args.hasArg(OPT_set_binfmt_magic_number);
   config->singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   config->soName = args.getLastArgValue(OPT_soname);
   config->sortSection = getSortSection(args);
@@ -1697,6 +1716,12 @@ static void readConfigs(opt::InputArgList &args) {
     config->mipsN32Abi =
         (s.starts_with("elf32btsmipn32") || s.starts_with("elf32ltsmipn32"));
     config->emulation = s;
+  }
+
+  if (auto *arg = args.getLastArg(OPT_host)) {
+    StringRef s = arg->getValue();
+    uint8_t temp;
+    std::tie(config->ehostKind, config->ehostMachine, temp) = parseEmulation(s);
   }
 
   // Parse --hash-style={sysv,gnu,both}.

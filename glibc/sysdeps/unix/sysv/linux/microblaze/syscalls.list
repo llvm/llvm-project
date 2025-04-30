@@ -1,0 +1,7 @@
+# File name	Caller	Syscall name	Args	Strong name	Weak names
+
+cacheflush	EXTRA	cacheflush	i:iiii	__cacheflush	cacheflush
+
+prlimit64	EXTRA	prlimit64	i:iipp	prlimit64
+fanotify_mark	EXTRA	fanotify_mark	i:iiiiis	fanotify_mark
+personality	EXTRA	personality	Ei:i	__personality	personality

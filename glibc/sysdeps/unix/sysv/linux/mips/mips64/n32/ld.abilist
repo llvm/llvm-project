@@ -1,0 +1,5 @@
+GLIBC_2.0 _r_debug D 0x14
+GLIBC_2.2 __libc_stack_end D 0x4
+GLIBC_2.2 _dl_mcount F
+GLIBC_2.3 __tls_get_addr F
+GLIBC_2.4 __stack_chk_guard D 0x4

@@ -1,0 +1,7 @@
+#!/bin/sh
+do_diffs() {
+    while read func_pattern src_file dst_file; do
+	diff -up $src_file $dst_file
+    done
+}
+do_diffs < import_file_list

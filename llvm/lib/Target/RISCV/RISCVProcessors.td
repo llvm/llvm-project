@@ -419,3 +419,20 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZvkt,
                                         FeatureStdExtZvl256b]),
                                        [TuneDLenFactor2]>;
+def NEXTSILICON_GEN1_ECORE
+    : RISCVProcessorModel<"nextsilicon-gen1-ecore", NoSchedModel,
+                          [
+                            Feature64Bit, FeatureStdExtI, FeatureStdExtM,
+                            FeatureStdExtA, FeatureStdExtF, FeatureStdExtD,
+                            FeatureStdExtC
+                          ],
+                          [TuneNSGen1ECore]>;
+
+def NEXTSILICON_GEN2_ECORE
+    : RISCVProcessorModel<"nextsilicon-gen2-ecore", NoSchedModel,
+                          [
+                            Feature64Bit, FeatureStdExtI, FeatureStdExtM, 
+                            FeatureStdExtA, FeatureStdExtF, FeatureStdExtD,
+                            FeatureStdExtC
+                          ],
+                          [TuneNSGen2ECore]>;

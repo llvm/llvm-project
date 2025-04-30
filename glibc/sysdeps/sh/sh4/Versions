@@ -1,0 +1,5 @@
+ld {
+  GLIBC_PRIVATE {
+    __fpscr_values;
+  }
+}

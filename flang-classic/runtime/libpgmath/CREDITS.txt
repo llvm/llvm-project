@@ -1,0 +1,21 @@
+This file is a partial list of people who have contributed to the LLVM/openmp
+project.  If you have contributed a patch or made some other contribution to
+LLVM/openmp, please submit a patch to this file to add yourself, and it will be
+done!
+
+The list is sorted by surname and formatted to allow easy grepping and
+beautification by scripts.  The fields are: name (N), email (E), web-address
+(W), PGP key ID and fingerprint (P), description (D), and snail-mail address
+(S).
+
+N: Craig Toepfer
+W: http://www.pgroup.com/
+D: Created the PGI Math Library
+
+N: Dave Parks
+W: http://www.pgroup.com/
+D: Created the PGI Math Library
+
+N: Simone Atzeni
+W: http://www.pgroup.com/
+D: Refactoring for open-sourcing (CMake support)

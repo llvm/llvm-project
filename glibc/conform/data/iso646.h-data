@@ -1,0 +1,17 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42
+macro and
+macro and_eq
+macro bitand
+macro bitor
+macro compl
+macro not
+macro not_eq
+macro or
+macro or_eq
+macro xor
+macro xor_eq
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif
+#endif

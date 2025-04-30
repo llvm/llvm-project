@@ -1,0 +1,1939 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 28 "Intrinsics & Generics" "Appendix VII - "
+.de IN
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\$1\t\\$2\t\\$3\t\\$4\t\\$5\t\\$6\t\\$7
+.ft R
+.nr NN +1
+.br
+.fi
+.ad
+.in 6
+.if '\\$5'tc' Type conversion intrinsic.
+..
+.de GN    \"    Generic definition macro
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\$1\t\\$2\t\\$3\t\\$4\t\\$5\t\\$6\t\\$7\t\\$8
+.ft R
+.nr NN +1
+.br
+.fi
+.ad
+.in 6
+..
+.de PD
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\n(ND\t\\$1\t\\$2\t\\$3
+.ft R
+.nr NN +1
+.nr ND +1
+.br
+.fi
+.ad
+.in 6
+..
+.de AT
+\ \ \ \ \\$1\  \\$2\ \\$3\ \\$4\ \\$5\ \\$6\ \\$7\ \\$8\ \\$9
+.br
+..
+.de H1
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\n(ND\t\\$1\t\\$2\t\\$3
+.ft R
+.nr NN +1
+.nr ND +1
+.br
+.fi
+.ad
+.in 6
+..
+.de H2
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\n(ND\t\\$1\t\\$2\t\\$3
+.ft R
+.nr NN +1
+.nr ND +1
+.br
+.fi
+.ad
+.in 6
+..
+.de H3
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\n(ND\t\\$1\t\\$2\t\\$3
+.ft R
+.nr NN +1
+.nr ND +1
+.br
+.fi
+.ad
+.in 6
+..
+.de H4
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\n(ND\t\\$1\t\\$2\t\\$3
+.ft R
+.nr NN +1
+.nr ND +1
+.br
+.fi
+.ad
+.in 6
+..
+.nr NN 1
+.nr ND 1
+
+.sh 2 "Intrinsic Functions"
+.lp
+In the following table, the \fIpname\fP column is used
+to indicate what intrinsics can be passed as actual
+arguments, the names of the functions when passed as arguments, and
+what names to use when the intrinsics are referenced.
+This information is communicated to the compiler via
+the \f(CWPNMPTR\fP field of the intrinsic's symbol table entry.
+If the value of this field is zero, the intrinsic cannot be passed
+as an argument; 
+a non-zero value is an index into the compiler's symbol names
+area locating a name (string) which is one of:
+.np
+\f(CW"-<name>"\fP: The intrinsic cannot be passed as an argument;
+\f(CW<name>\fP is used when the intrinsic is referenced.
+.np
+\f(CW"<name>"\fP: The intrinsic can be passed as an argument.
+\f(CW<name>\fP is used when passing the intrinsic as an argument; in
+other contexts, the name of the intrinsic is used.
+.np
+\f(CW"*"\fP: The intrinsic can be passed as an argument;
+use the name of the intrinsic for all contexts.
+.np
+\f(CW"*<name>"\fP: The intrinsic can be passed as an argument;
+\f(CW<name>\fP is used for the intrinsic in all contexts.
+.lp
+An empty column entry translates to a \f(CWPNMPTR\fP value of zero.
+.lp
+The attributes for the intrinsics, generics, and predeclareds include
+a specification of the keyword forms of the arguments.
+The keyword string is specified as a blank-separated list of names
+in positional order.
+The names of
+optional arguments are prefixed with \f(CW'*'\fP.
+Variable arguments are of the form \f(CW#<pos>#<base>#<kwd>\fP, where,
+.ip \f(CW<pos>\fP
+the digit indicating the positional index, relative to zero, where the
+variable arguments begin in the argument list.
+.ip \f(CW<base>\fP
+the digit indicating the value to be subtracted from the digit string
+suffix of the keyword specifier.
+.ip \f(CW<kwd>\fP
+name of the keyword which varies (i.e., the prefix).
+.lp
+If the word 'native' appears, this is an intrinsic that is recognized
+only in 'native-mode' compilers, like pgf90.
+.sz 8
+.ta 0.5i +1.25i +0.5i +0.5i +0.5i +1.0i +1.0i +0.75i +0.75i
+
+.sp
+.ul
+sptr	name	pcnt	atyp	dtype	ILM	pname	arrayf native?
+.IN ..SQRT 1 R R none * V
+.AT elemental x
+.IN .SQRT 1 R R none * V
+.AT elemental x
+.IN .DSQRT 1 D D none * V
+.AT elemental x
+.IN DSQRT 1 D D none * V
+.AT elemental x
+.IN QSQRT 1 Q Q none * V
+.AT elemental x
+.IN .CSQRT 1 C C none * V
+.AT elemental x
+.IN CSQRT 1 C C none * V
+.AT elemental x
+.IN .CDSQRT 1 CD CD none * V
+.AT elemental x
+.IN CDSQRT 1 CD CD none * V
+.AT elemental x
+.IN .CQSQRT 1 CQ CQ none * V
+.AT elemental x
+
+.IN .ALOG 1 R R none * V
+.AT elemental x
+.IN ALOG 1 R R none * V
+.AT elemental x
+.IN .DLOG 1 D D none * V
+.AT elemental x
+.IN DLOG 1 D D none * V
+.AT elemental x
+.IN QLOG 1 Q Q none * V
+.AT elemental x
+.IN .CLOG 1 C C none * V
+.AT elemental x
+.IN CLOG 1 C C none * V
+.AT elemental x
+.IN .CDLOG 1 CD CD none * V
+.AT elemental x
+.IN CDLOG 1 CD CD none * V
+.AT elemental x
+.IN .CQLOG 1 CQ CQ none * V
+.AT elemental x
+
+.IN .ALOG10 1 R R none * V
+.AT elemental x
+.IN ALOG10 1 R R none * V
+.AT elemental x
+.IN .DLOG10 1 D D none * V
+.AT elemental x
+.IN DLOG10 1 D D none * V
+.AT elemental x
+.IN QLOG10 1 Q Q none * V
+.AT elemental x
+
+.IN ..EXP 1 R R none * V
+.AT elemental x
+.IN .EXP 1 R R none * V
+.AT elemental x
+.IN .DEXP 1 D D none * V
+.AT elemental x
+.IN DEXP 1 D D none * V
+.AT elemental x
+.IN QEXP 1 Q Q none * V
+.AT elemental x
+.IN .CEXP 1 C C none * V
+.AT elemental x
+.IN CEXP 1 C C none * V
+.AT elemental x
+.IN .CDEXP 1 CD CD none * V
+.AT elemental x
+.IN CDEXP 1 CD CD none * V
+.AT elemental x
+.IN .CQEXP 1 CQ CQ none * V
+.AT elemental x
+
+.IN ..SIN 1 R R none * V
+.AT elemental x
+.IN .SIN 1 R R none * V
+.AT elemental x
+.IN .DSIN 1 D D none * V
+.AT elemental x
+.IN DSIN 1 D D none * V
+.AT elemental x
+.IN QSIN 1 Q Q none * V
+.AT elemental x
+.IN .CSIN 1 C C none * V
+.AT elemental x
+.IN CSIN 1 C C none * V
+.AT elemental x
+.IN .CDSIN 1 CD CD none * V
+.AT elemental x
+.IN CDSIN 1 CD CD none * V
+.AT elemental x
+.IN .CQSIN 1 CQ CQ none * V
+.AT elemental x
+.IN CQSIN 1 CQ CQ none * V
+.AT elemental x
+
+.IN ..SIND 1 R R none * V
+.AT elemental x
+.IN .SIND 1 R R none * V
+.AT elemental x
+.IN .DSIND 1 D D none * V
+.AT elemental x
+.IN DSIND 1 D D none * V
+.AT elemental x
+.IN QSIND 1 Q Q none * V
+.AT elemental x
+
+.IN ..COS 1 R R none * V
+.AT elemental x
+.IN .COS 1 R R none * V
+.AT elemental x
+.IN .DCOS 1 D D none * V
+.AT elemental x
+.IN DCOS 1 D D none * V
+.AT elemental x
+.IN QCOS 1 Q Q none * V
+.AT elemental x
+.IN .CCOS 1 C C none * V
+.AT elemental x
+.IN CCOS 1 C C none * V
+.AT elemental x
+.IN .CDCOS 1 CD CD none * V
+.AT elemental x
+.IN CDCOS 1 CD CD none * V
+.AT elemental x
+.IN .CQCOS 1 CQ CQ none * V
+.AT elemental x
+
+.IN ..COSD 1 R R none * V
+.AT elemental x
+.IN .COSD 1 R R none * V
+.AT elemental x
+.IN .DCOSD 1 D D none * V
+.AT elemental x
+.IN DCOSD 1 D D none * V
+.AT elemental x
+.IN QCOSD 1 Q Q none * V
+.AT elemental x
+
+.IN ..TAN 1 R R none * V
+.AT elemental x
+.IN .TAN 1 R R none * V
+.AT elemental x
+.IN .DTAN 1 D D none * V
+.AT elemental x
+.IN DTAN 1 D D none * V
+.AT elemental x
+.IN QTAN 1 Q Q none * V
+.AT elemental x
+
+.IN ..TAND 1 R R none * V
+.AT elemental x
+.IN .TAND 1 R R none * V
+.AT elemental x
+.IN .DTAND 1 D D none * V
+.AT elemental x
+.IN DTAND 1 D D none * V
+.AT elemental x
+.IN QTAND 1 Q Q none * V
+.AT elemental x
+
+.IN ..ASIN 1 R R none * V
+.AT elemental x
+.IN .ASIN 1 R R none * V
+.AT elemental x
+.IN .DASIN 1 D D none * V
+.AT elemental x
+.IN DASIN 1 D D none * V
+.AT elemental x
+.IN QASIN 1 Q Q none * V
+.AT elemental x
+
+.IN ..ASIND 1 R R none * V
+.AT elemental x
+.IN .ASIND 1 R R none * V
+.AT elemental x
+.IN .DASIND 1 D D none * V
+.AT elemental x
+.IN DASIND 1 D D none * V
+.AT elemental x
+.IN QASIND 1 Q Q none * V
+.AT elemental x
+
+.IN ..ACOS 1 R R none * V
+.AT elemental x
+.IN .ACOS 1 R R none * V
+.AT elemental x
+.IN .DACOS 1 D D none * V
+.AT elemental x
+.IN DACOS 1 D D none * V
+.AT elemental x
+.IN QACOS 1 Q Q none * V
+.AT elemental x
+
+.IN ..ACOSD 1 R R none * V
+.AT elemental x
+.IN .ACOSD 1 R R none * V
+.AT elemental x
+.IN .DACOSD 1 D D none * V
+.AT elemental x
+.IN DACOSD 1 D D none * V
+.AT elemental x
+.IN QACOSD 1 Q Q none * V
+.AT elemental x
+
+.IN ..ATAN 1 R R none * V
+.AT elemental x
+.IN .ATAN 1 R R none * V
+.AT elemental x
+.IN .DATAN 1 D D none * V
+.AT elemental x
+.IN DATAN 1 D D none * V
+.AT elemental x
+.IN QATAN 1 Q Q none * V
+.AT elemental x
+
+.IN ..ATAND 1 R R none * V
+.AT elemental x
+.IN .ATAND 1 R R none * V
+.AT elemental x
+.IN .DATAND 1 D D none * V
+.AT elemental x
+.IN DATAND 1 D D none * V
+.AT elemental x
+.IN QATAND 1 Q Q none * V
+.AT elemental x
+
+.IN ..ATAN2 2 R R none * V
+.AT elemental y x
+.IN .ATAN2 2 R R none * V
+.AT elemental y x
+.IN .DATAN2 2 D D none * V
+.AT elemental y x
+.IN DATAN2 2 D D none * V
+.AT elemental y x
+.IN QATAN2 2 Q Q none * V
+.AT elemental y x
+
+.IN ..ATAN2D 2 R R none * V
+.AT elemental y x
+.IN .ATAN2D 2 R R none * V
+.AT elemental y x
+.IN .DATAN2D 2 D D none * V
+.AT elemental y x
+.IN DATAN2D 2 D D none * V
+.AT elemental y x
+.IN QATAN2D 2 Q Q none * V
+.AT elemental y x
+
+.IN ..SINH 1 R R none * V
+.AT elemental x
+.IN .SINH 1 R R none * V
+.AT elemental x
+.IN .DSINH 1 D D none * V
+.AT elemental x
+.IN DSINH 1 D D none * V
+.AT elemental x
+.IN QSINH 1 Q Q none * V
+.AT elemental x
+
+.IN ..COSH 1 R R none * V
+.AT elemental x
+.IN .COSH 1 R R none * V
+.AT elemental x
+.IN .DCOSH 1 D D none * V
+.AT elemental x
+.IN DCOSH 1 D D none * V
+.AT elemental x
+.IN QCOSH 1 Q Q none * V
+.AT elemental x
+
+.IN ..TANH 1 R R none * V
+.AT elemental x
+.IN .TANH 1 R R none * V
+.AT elemental x
+.IN .DTANH 1 D D none * V
+.AT elemental x
+.IN DTANH 1 D D none * V
+.AT elemental x
+.IN QTANH 1 Q Q none * V
+.AT elemental x
+
+.IN IIABS 1 SI SI IABS * V
+.AT elemental a
+.IN JIABS 1 I I IABS * V
+.AT elemental a
+.IN KIABS 1 I8 I8 I8ABS * V native
+.AT elemental a
+.IN .IABS 1 I I IABS * V
+.AT elemental a
+.IN IABS 1 I I IABS * V
+.AT elemental a
+.IN ..ABS 1 R R ABS * V
+.AT elemental a
+.IN .ABS 1 R R ABS * V
+.AT elemental a
+.IN .DABS 1 D D DABS * V
+.AT elemental a
+.IN DABS 1 D D DABS * V
+.AT elemental a
+.IN QABS 1 Q Q QABS * V
+.AT elemental a
+.IN .CABS 1 C R none * V
+.AT elemental a
+.IN CABS 1 C R none * V
+.AT elemental a
+.IN .CDABS 1 CD D none * V
+.AT elemental a
+.IN CDABS 1 CD D none * V
+.AT elemental a
+.IN .CQABS 1 CQ Q none * V
+.AT elemental a
+.IN CQABS 1 CQ Q none * V
+.AT elemental a
+
+
+.IN ..AIMAG 1 C R IMAG * V
+.AT elemental z
+.IN .AIMAG 1 C R IMAG * V
+.AT elemental z
+.IN .DIMAG 1 CD D DIMAG * V
+.AT elemental z
+.IN DIMAG 1 CD D DIMAG * V
+.AT elemental z
+.IN .QIMAG 1 CQ Q QIMAG * V
+.AT elemental z
+.IN QIMAG 1 CQ Q QIMAG * V
+.AT elemental z
+
+.IN ..CONJG 1 C C CONJG * V
+.AT elemental z
+.IN .CONJG 1 C C CONJG * V
+.AT elemental z
+.IN .DCONJG 1 CD CD DCONJG * V
+.AT elemental z
+.IN DCONJG 1 CD CD DCONJG * V
+.AT elemental z
+.IN .QCONJG 1 CQ CQ QCONJG * V
+.AT elemental z
+.IN QCONJG 1 CQ CQ QCONJG * V
+.AT elemental z
+
+.IN DPROD 2 R D DPROD * V
+.AT elemental x y
+
+.IN IMAX0 12 SI SI IMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN .MAX0 12 I I IMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN MAX0 12 I I IMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN .AMAX1 12 R R RMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN AMAX1 12 R R RMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN .DMAX1 12 D D DMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN DMAX1 12 D D DMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN .KMAX 12 I8 I8 I8MAX * V
+.AT elemental a1 a2 #2#3#a
+.IN KMAX0 12 I8 I8 I8MAX - V native
+.AT elemental a1 a2 #2#3#a
+.IN QMAX 12 Q Q QMAX * V
+.AT elemental a1 a2 #2#3#a
+
+.IN JMAX0 12 I I IMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN AIMAX0 13 SI R IMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN AMAX0 13 I R IMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN MAX1 13 R I RMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN IMAX1 13 R SI RMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN JMAX1 13 R I RMAX - V
+.AT elemental a1 a2 #2#3#a
+.IN KMAX1 13 R I8 RMAX - V native
+.AT elemental a1 a2 #2#3#a
+.IN AJMAX0 13 I R IMAX - V
+.AT elemental a1 a2 #2#3#a
+
+.IN IMIN0 12 SI SI IMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN .MIN0 12 I I IMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN MIN0 12 I I IMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN .AMIN1 12 R R RMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN AMIN1 12 R R RMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN .DMIN1 12 D D DMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN DMIN1 12 D D DMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN .KMIN 12 I8 I8 I8MIN * V
+.AT elemental a1 a2 #2#3#a
+.IN KMIN0 12 I8 I8 I8MIN - V native
+.AT elemental a1 a2 #2#3#a
+.IN QMIN 12 Q Q QMIN * V
+.AT elemental a1 a2 #2#3#a
+
+.IN JMIN0 12 I I IMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN AMIN0 13 I R IMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN AIMIN0 13 SI R IMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN MIN1 13 R I RMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN IMIN1 13 R SI RMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN JMIN1 13 R I RMIN - V
+.AT elemental a1 a2 #2#3#a
+.IN KMIN1 13 R I8 RMIN - V native
+.AT elemental a1 a2 #2#3#a
+.IN AJMIN0 13 I R IMIN - V
+.AT elemental a1 a2 #2#3#a
+
+
+.IN IIDIM 2 SI SI IDIM * V
+.AT elemental x y
+.IN JIDIM 2 I I IDIM * V
+.AT elemental x y
+.IN .IDIM 2 I I IDIM * V
+.AT elemental x y
+.IN IDIM 2 I I IDIM * V
+.AT elemental x y
+.IN KIDIM 2 I8 I8 I8DIM * V native
+.AT elemental x y
+.IN ..DIM 2 R R DIM * V
+.AT elemental x y
+.IN .DIM 2 R R DIM * V
+.AT elemental x y
+.IN .DDIM 2 D D DDIM * V
+.AT elemental x y
+.IN DDIM 2 D D DDIM * V
+.AT elemental x y
+.IN QDIM 2 Q Q QDIM * V
+.AT elemental x y
+
+.IN IMOD 2 SI SI MOD * V
+.AT elemental a p
+.IN JMOD 2 I I MOD * V
+.AT elemental a p
+.IN ..MOD 2 I I MOD * V
+.AT elemental a p
+.IN .MOD 2 I I MOD * V
+.AT elemental a p
+.IN KMOD 2 I8 I8 I8MOD * V native
+.AT elemental a p
+.IN .AMOD 2 R R none * V
+.AT elemental a p
+.IN AMOD 2 R R none * V
+.AT elemental a p
+.IN .DMOD 2 D D none * V
+.AT elemental a p
+.IN DMOD 2 D D none * V
+.AT elemental a p
+.IN QMOD 2 Q Q none * V
+.AT elemental a p
+
+.IN .IMODULO 2 SI SI none -pgf90_imodulo V
+.AT elemental a p
+.IN ..MODULO 2 I I none -pgf90_modulo V
+.AT elemental a p
+.IN .MODULO 2 I I none -pgf90_modulo V
+.AT elemental a p
+.IN .KMODULO 2 I8 I8 none -pgf90_i8modulo V
+.AT elemental a p
+.IN ..AMODULO 2 R R none -pgf90_amodulo V
+.AT elemental a p
+.IN .AMODULO 2 R R none -pgf90_amodulo V
+.AT elemental a p
+.IN ..DMODULO 2 D D none -pgf90_dmodulo V
+.AT elemental a p
+.IN .DMODULO 2 D D none -pgf90_dmodulo V
+.AT elemental a p
+.IN .QMODULO 2 Q Q none -pgf90_qmodulo V
+.AT elemental a p
+
+.IN IISIGN 2 SI SI none * V
+.AT elemental a b
+.IN JISIGN 2 I I none * V
+.AT elemental a b
+.IN .ISIGN 2 I I none * V
+.AT elemental a b
+.IN ISIGN 2 I I none * V
+.AT elemental a b
+.IN KISIGN 2 I8 I8 none * V native
+.AT elemental a b
+.IN ..SIGN 2 R R none * V
+.AT elemental a b
+.IN .SIGN 2 R R none * V
+.AT elemental a b
+.IN .DSIGN 2 D D none * V
+.AT elemental a b
+.IN DSIGN 2 D D none * V
+.AT elemental a b
+.IN QSIGN 2 Q Q none * V
+.AT elemental a b
+
+.IN IIAND 2 SI SI AND - V
+.AT elemental i j
+.IN .JIAND 2 I I AND - V
+.AT elemental i j
+.IN JIAND 2 I I AND - V
+.AT elemental i j
+.IN .KIAND 2 I8 I8 AND8 - V
+.AT elemental i j
+
+.IN IIOR 2 SI SI OR - V
+.AT elemental i j
+.IN .JIOR 2 I I OR - V
+.AT elemental i j
+.IN JIOR 2 I I OR - V
+.AT elemental i j
+.IN .KIOR 2 I8 I8 OR8 - V
+.AT elemental i j
+
+.IN IIEOR 2 SI SI XOR - V
+.AT elemental i j
+.IN .JIEOR 2 I I XOR - V
+.AT elemental i j
+.IN JIEOR 2 I I XOR - V
+.AT elemental i j
+.IN .KIEOR 2 I8 I8 XOR8 - V
+.AT elemental i j
+
+.IN INOT 1 SI SI NOT - V
+.AT elemental i
+.IN .JNOT 1 I I NOT - V
+.AT elemental i
+.IN JNOT 1 I I NOT - V
+.AT elemental i
+.IN .KNOT 2 I8 I8 NOT8 - V
+.AT elemental i
+
+.IN IISHFT 2 SI SI IISHFT * V
+.AT elemental i shift
+.IN .JISHFT 2 I I JISHFT * V
+.AT elemental i shift
+.IN JISHFT 2 I I JISHFT * V
+.AT elemental i shift
+.IN KISHFT 2 I8 I8 KISHFT * V native
+.AT elemental i shift
+
+
+.IN IIBITS 3 SI SI none * V
+.AT elemental i pos len
+.IN .JIBITS 3 I I none * V
+.AT elemental i pos len
+.IN JIBITS 3 I I none * V
+.AT elemental i pos len
+.IN KIBITS 3 I8 I8 none * V native
+.AT elemental i pos len
+
+.IN IIBSET 2 SI SI IIBSET * V
+.AT elemental i pos
+.IN .JIBSET 2 I I JIBSET * V
+.AT elemental i pos
+.IN JIBSET 2 I I JIBSET * V
+.AT elemental i pos
+.IN KIBSET 2 I8 I8 KIBSET * V native
+.AT elemental i pos
+
+.IN BITEST 2 SI L none * V
+.AT elemental i pos
+.IN .BJTEST 2 I L none * V
+.AT elemental i pos
+.IN BJTEST 2 I L none * V
+.AT elemental i pos
+.IN BKTEST 2 I8 L none * V native
+.AT elemental i pos
+
+.IN IIBCLR 2 SI SI none * V
+.AT elemental i pos
+.IN .JIBCLR 2 I I none * V
+.AT elemental i pos
+.IN JIBCLR 2 I I none * V
+.AT elemental i pos
+.IN KIBCLR 2 I8 I8 none * V native
+.AT elemental i pos
+
+.IN IISHFTC 3 SI SI none * V
+.AT elemental i shift *size
+.IN .JISHFTC 3 I I none * V
+.AT elemental i shift *size
+.IN JISHFTC 3 I I none * V
+.AT elemental i shift *size
+.IN KISHFTC 3 I8 I8 none * V native
+.AT elemental i shift *size
+
+.IN .ILSHIFT 2 SI SI none -
+.AT elemental i shift
+.IN .JLSHIFT 2 I I none -
+.AT elemental i shift
+.IN .KLSHIFT 2 I8 I8 none -
+.AT elemental i shift
+
+.IN .IRSHIFT 2 SI SI none -
+.AT elemental i shift
+.IN .JRSHIFT 2 I I none -
+.AT elemental i shift
+.IN .KRSHIFT 2 I8 I8 none -
+.AT elemental i shift
+
+.IN .2SCH 1 SI H CHAR -
+.AT elemental i
+.IN .CHAR 1 I H CHAR -
+.AT elemental i
+.IN .2KCH 1 I8 H CHAR -
+.AT elemental i
+
+.IN ICHAR 2 H I ICHAR - ICHAR
+.AT elemental c *kind
+.IN LGE 2 H L GE - V
+.AT elemental string_a string_b
+.IN LGT 2 H L GT - V
+.AT elemental string_a string_b
+.IN LLE 2 H L LE - V
+.AT elemental string_a string_b
+.IN LLT 2 H L LT - V
+.AT elemental string_a string_b
+
+.IN NCHAR 1 I K NCHAR - V
+Convert integer to Kanji string of length 1.
+.AT elemental i
+.IN NLEN 1 K I NLEN pghpf_nlen
+Compute length of Kanji string.
+.AT elemental string
+.IN NINDEX 2 K I NINDEX pghpf_nindex
+.AT elemental string substring *back
+
+.IN LOC 1 A I LOC -
+.AT elemental a
+
+.IN IDINT 1 D I tc
+.AT elemental a
+.IN JIDINT 1 D I tc
+.AT elemental a
+
+.IN .2I 1 N I tc
+Converts any numeric data type to integer.
+.AT elemental a
+
+.IN IFIX 1 R I tc
+Same as the INT intrinsic.
+.AT elemental a
+
+.IN JIFIX 1 R I tc
+.AT elemental a
+.IN .JINT 1 R I tc
+.AT elemental a
+.IN IIFIX 1 R SI tc
+.AT elemental a
+.IN .IINT 1 R SI tc
+.AT elemental a
+.IN .2SI 1 N SI tc
+Converts any numeric data type to short integer.
+.AT elemental a
+.IN INT1 1 N BI tc - - native
+Converts any numeric data type to integer*1.
+.AT elemental a
+.IN INT2 1 N SI tc - - native
+Converts any numeric data type to short integer.
+.AT elemental a
+.IN INT4 1 N I tc - - native
+Converts any numeric data type to integer.
+.AT elemental a
+.IN INT8 1 N I8 tc - - native
+Converts any numeric data type to integer*8.
+.AT elemental a
+.IN IIDINT 1 D SI tc
+.AT elemental a
+.IN FLOATI 1 SI R tc
+Converts integer*2 to real.
+.AT elemental a
+.IN FLOATJ 1 I R tc
+.AT elemental a
+Converts integer to real.
+.IN FLOAT 1 I R tc
+Same as REAL intrinsic.
+.AT elemental a
+.IN SNGL 1 D R tc
+.AT elemental a
+.IN .2R 1 N R tc
+Converts any numeric data type to real.
+.AT elemental a
+.IN DFLOTI 1 SI D tc
+.AT elemental a
+Converts integer*2 to double.
+.IN DFLOAT 1 I D tc
+.AT elemental a
+Extension to Fortran-77.
+.IN DFLOTJ 1 I D tc
+.AT elemental a
+.IN DREAL 1 CD D tc
+.AT elemental a
+.IN QREAL 1 CQ Q tc
+.AT elemental a
+Converts complex*16 to double.
+.IN .2D 1 N D tc
+Convert any numeric data type to double precision.
+.AT elemental a
+.IN .2C 11 N C tc
+Convert any numeric data type to complex.
+.AT elemental a
+.IN .2CD 11 N CD tc
+Convert any numeric data type to double complex.
+.AT elemental a
+.IN .2CQ 11 N CQ tc
+Convert any numeric data type to quad complex.
+.AT elemental a
+.IN DINT 1 D D none * V
+.AT elemental a
+.IN QINT 1 Q Q none * V
+.AT elemental a
+.IN DNINT 1 D D none * V
+.AT elemental a
+
+.IN QNINT 1 Q Q none * V
+.AT elemental a
+
+.IN QANINT 1 Q Q none * V
+.AT elemental a
+
+.IN ..ININT 1 R SI NINT * V
+.AT elemental a
+.IN .ININT 1 R SI IDNINT * V
+.AT elemental a
+
+.IN IIDNNT 1 D SI IDNINT * V
+.AT elemental a
+
+.IN IDNINT 1 D I IDNINT * V
+.AT elemental a
+
+.IN ..JNINT 1 R I NINT * V
+.AT elemental a
+.IN .JNINT 1 R I IDNINT * V
+.AT elemental a
+.IN JIDNNT 1 D I IDNINT * V
+.AT elemental a
+
+.IN KNINT 1 R I8 none * V native
+.AT elemental a
+.IN KIDNNT 1 D I8 none * V native
+.AT elemental a
+.sp 2
+
+.bp
+.sh 2 "Generic Names"
+.sz 8
+.ta 0.5i +0.75i +0.625i +0.625i +0.625i +0.625i +0.625i +0.625i +0.625i +0.625i
+.sp
+
+.ul
+sptr	name	siname	iname	rname	dname	cname	cdname	i8name	qname	cqname
+.GN IAND IIAND JIAND - - - - .KIAND - -
+.AT elemental i j
+.GN IOR IIOR JIOR - - - - .KIOR - -
+.AT elemental i j
+.GN IEOR IIEOR JIEOR - - - - .KIEOR - -
+.AT elemental i j
+.GN XOR IIEOR JIEOR - - - - .KIEOR - -
+.AT elemental i j
+.GN NOT INOT JNOT - - - - .KNOT - -
+.AT elemental i
+.GN ISHFT IISHFT JISHFT - - - - KISHFT - -
+.AT elemental i shift
+.GN IINT .2SI .2SI .IINT IIDINT .2SI .2SI .2SI .2SI .2SI
+.AT elemental a
+.GN JINT .2I .2I .JINT JIDINT .2I .2I .2I .2I .2I
+.AT elemental a
+.GN DBLE DFLOTI DFLOAT .2D .2D .2D DREAL .2D .2D .2D
+.AT elemental a
+.GN DCMPLX .2CD .2CD .2CD .2CD .2CD .2CD .2CD .2CD .2CD
+.AT elemental x *y
+.GN QCMPLX .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ .2CQ
+.AT elemental x *y
+.GN IMAG - - - - .AIMAG DIMAG - - QIMAG
+.AT elemental z
+.GN AIMAG - - - - .AIMAG DIMAG - - QIMAG
+.AT elemental z
+.GN CONJG - - - - .CONJG DCONJG - - QCONJG
+.AT elemental z
+.GN ININT - - .ININT IIDNNT - - - - -
+.AT elemental a
+.GN JNINT - - .JNINT JIDNNT - - - - -
+.AT elemental a
+.GN ABS IIABS IABS .ABS DABS CABS CDABS KIABS QABS CQABS
+.AT elemental a
+.GN MOD IMOD .MOD AMOD DMOD - - KMOD QMOD -
+.AT elemental a p
+.GN SIGN IISIGN ISIGN .SIGN DSIGN - - KISIGN QSIGN -
+.AT elemental a b
+.GN DIM IIDIM IDIM .DIM DDIM - - KIDIM QDIM -
+.AT elemental x y
+.GN MAX IMAX0 MAX0 AMAX1 DMAX1 - - .KMAX QMAX -
+.AT elemental a1 a2 #2#3#a
+.GN MIN IMIN0 MIN0 AMIN1 DMIN1 - - .KMIN QMIN -
+.AT elemental a1 a2 #2#3#a
+.GN SQRT - - .SQRT DSQRT CSQRT CDSQRT - QSQRT .CQSQRT
+.AT elemental x
+.GN EXP - - .EXP DEXP CEXP CDEXP - QEXP .CQEXP
+.AT elemental x
+.GN LOG - - ALOG DLOG CLOG CDLOG - QLOG .CQLOG
+.AT elemental x
+.GN LOG10 - - ALOG10 DLOG10 - - - QLOG10 -
+.AT elemental x
+.GN SIN - - .SIN DSIN CSIN CDSIN - QSIN CQSIN
+.AT elemental x
+.GN SIND - - .SIND DSIND - - - QSIND
+.AT elemental x
+.GN COS - - .COS DCOS CCOS CDCOS - QCOS .CQCOS
+.AT elemental x
+.GN COSD - - .COSD DCOSD - - - QCOSD -
+.AT elemental x
+.GN TAN - - .TAN DTAN - - - QTAN -
+.AT elemental x
+.GN TAND - - .TAND DTAND - - - QTAND -
+.AT elemental x
+.GN ASIN - - .ASIN DASIN - - - QASIN -
+.AT elemental x
+.GN ASIND - - .ASIND DASIND - - - QASIND -
+.AT elemental x
+.GN ACOS - - .ACOS DACOS - - - QACOS -
+.AT elemental x
+.GN ACOSD - - .ACOSD DACOSD - - - QACOSD -
+.AT elemental x
+.GN ATAN - - .ATAN DATAN - - - QATAN -
+.AT elemental x
+.GN ATAND - - .ATAND DATAND - - - QATAND -
+.AT elemental x
+.GN ATAN2 - - .ATAN2 DATAN2 - - - QATAN2 -
+.AT elemental y x
+.GN ATAN2D - - .ATAN2D DATAN2D - - - QATAN2D -
+.AT elemental y x
+.GN SINH - - .SINH DSINH - - - QSINH -
+.AT elemental x
+.GN COSH - - .COSH DCOSH - - - QCOSH -
+.AT elemental x
+.GN TANH - - .TANH DTANH - - - QTANH -
+.AT elemental x
+.GN IBITS IIBITS JIBITS - - - - KIBITS - -
+.AT elemental i pos len
+.GN IBSET IIBSET JIBSET - - - - KIBSET - -
+.AT elemental i pos
+.GN BTEST BITEST BJTEST - - - - BKTEST - -
+.AT elemental i pos
+.GN IBCLR IIBCLR JIBCLR - - - - KIBCLR - -
+.AT elemental i pos
+.GN ISHFTC IISHFTC JISHFTC - - - - KISHFTC - -
+.AT elemental i shift *size
+.GN LSHIFT .ILSHIFT .JLSHIFT - - - - .KLSHIFT - -
+.AT elemental i shift
+.GN RSHIFT .IRSHIFT .JRSHIFT - - - - .KRSHIFT - -
+.AT elemental i shift
+.GN MODULO .IMODULO .MODULO .AMODULO .DMODULO - - .KMODULO .QMODULO -
+.AT elemental a p
+.bp
+.sh 2 "Predeclared\ Names"
+.lp
+If the word 'native' appears, this is an intrinsic that is recognized
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .PD name pname dtype native
+.\" pname is the name used when passed as an argument
+.ul
+sptr	pd	name	pname	dtype	native
+.\" -----------------------
+.\" Predeclared Subroutines
+.\" -----------------------
+.PD DATE - -
+.AT subroutine --
+.nf
+.cw "    CALL DATE( buf )"
+
+.fi
+Returns the current date in \*(cfbuf\*(rf, which is
+a 9-byte variable, array, array element, or character substring.
+The date is returned as a 9-byte ASCII character string in
+the form \*(cfdd-mmm-yy\*(rf.
+.PD EXIT - -
+The CALL EXIT statement; optional argument is type integer.
+.AT subroutine --
+.PD IDATE - -
+.AT subroutine --
+.nf
+.cw "    CALL IDATE( i, j, k )"
+
+.fi
+Returns three integer values representing the current month,
+day, and year in \*(cfi\*(rf, \*(cfj\*(rf, and \*(cfk\*(rf,
+respectively.
+All arguments must be integer*2 variables or array elements or
+integer*4 variables or array elements.
+.PD TIME - -
+.AT subroutine --
+.nf
+.cw "    CALL TIME( buf )"
+
+.fi
+Returns the current system time in \*(cfbuf\*(rf, which is an
+8-byte variable, array, array element, or character
+substring.
+The time is returned as an 8-byte ASCII character string of
+the form \*(cfhh:mm:ss\*(rf.
+.PD MVBITS - -
+.AT elemental from frompos len to topos
+.nf
+.cw "    CALL MVBITS(a1, a2, a3, a4, a5)"
+
+.fi
+Transfers \*(cfa3\*(rf bits beginning at bit \*(cfa2\*(rf of
+\*(cfa1\*(rf to \*(cfa4\*(rf beginning at bit \*(cfa5\*(rf.
+All arguments are either integer*2 or integer*4;
+\*(cfa4\*(rf must be a variable or array element.
+Translates to a call to either \*(cfftn_imvbits\*(rf or
+\*(cfftn_jmvbits\*(rf.
+.\" ---------------------
+.\" Predeclared Functions
+.\" ---------------------
+.PD REAL - -
+.AT elemental a *kind
+.PD CMPLX - -
+.AT elemental x *y *kind
+.PD INT - -
+.AT elemental a *kind
+.PD AINT * R
+.AT elemental a *kind
+.PD ANINT * R
+.AT elemental a *kind
+.PD NINT * I
+.AT elemental a *kind
+.PD CHAR - -
+.AT elemental i *kind
+.PD ZEXT - -
+.AT elemental --
+The ZEXT intrinsic; result is integer*4, arg is any logical or integer.
+.PD IZEXT - -
+.AT elemental --
+The IZEXT intrinsic; result is integer*2, arg is a logical*1, logical*2,
+or integer*2.
+.PD JZEXT - -
+.AT elemental --
+The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
+.PD CEILING - -
+.AT elemental a *kind
+.PD FLOOR - -
+.AT elemental a *kind
+.PD ALL - -
+.AT transformational mask *dim
+.PD AND - -
+.AT elemental --
+.PD ANY - -
+.AT transformational mask *dim
+.PD COMPL - -
+.AT elemental --
+.PD COUNT - -
+.AT transformational mask *dim
+.PD DOT_PRODUCT - -
+.AT transformational vector_a vector_b
+.PD EQV - -
+.AT elemental --
+.PD MATMUL - -
+.AT transformational matrix_a matrix_b
+.PD MATMUL_TRANSPOSE - -
+.AT transformational matrix_a matrix_b
+.PD MAXLOC - -
+.AT transformational array *dim *mask *kind *back
+.PD MAXVAL - -
+.AT transformational array *dim *mask 
+.PD MINLOC - -
+.AT transformational array *dim *mask *kind *back
+.PD MINVAL - -
+.AT transformational array *dim *mask 
+.PD MERGE - -
+.AT elemental tsource fsource mask
+.PD NEQV - -
+.AT elemental --
+.PD OR - -
+.AT elemental --
+.PD PACK - -
+.AT transformational array mask *vector
+.PD PRODUCT - -
+.AT transformational array *dim *mask 
+.PD RAN - -
+.AT elemental --
+The \*(cfRAN\*(rf function is a general random number generator
+which requires a single argument which is either an integer*4 variable
+or array element.
+.PD SECNDS - -
+The \*(cfSECNDS\*(rf function returns the system time in seconds
+as a single-precision (double-precision) value minus the value
+of its single-precision (double-precision) argument.
+.AT subroutine --
+.PD SHIFT - -
+.AT elemental --
+.PD SUM - -
+.AT transformational array *dim *mask 
+.PD SPREAD - -
+.AT transformational source dim ncopies
+.PD TRANSPOSE - -
+.AT transformational matrix
+.PD UNPACK - -
+.AT transformational vector mask field
+.PD NUMBER_OF_PROCESSORS - -
+.AT inquiry *dim
+.PD LBOUND - -
+.AT inquiry array *dim *kind
+.PD UBOUND - -
+.AT inquiry array *dim *kind
+.PD CSHIFT - -
+.AT transformational array shift *dim
+.PD EOSHIFT - -
+.AT transformational array shift *boundary *dim
+.PD RESHAPE - -
+.AT transformational source shape *pad *order
+.PD SHAPE - -
+.AT transformational source *kind
+.PD SIZE - -
+.AT inquiry array *dim *kind
+.PD ALLOCATED - -
+.AT inquiry array
+.PD DATE_AND_TIME - -
+.AT subroutine *date *time *zone *values
+.PD CPU_TIME - -
+.AT subroutine time
+.PD RANDOM_NUMBER - -
+.AT subroutine harvest
+.PD RANDOM_SEED - -
+.AT subroutine *size *put *get
+.PD SYSTEM_CLOCK - -
+.AT subroutine *count *count_rate *count_max
+.PD PRESENT - -
+.AT inquiry a
+.PD KIND - -
+.AT inquiry x
+.PD SELECTED_INT_KIND - -
+.AT transformational r
+.PD SELECTED_REAL_KIND - -
+.AT transformational *p *r *radix
+.PD .DLBOUND - -
+CM Fortran's version of LBOUND.
+.AT inquiry array *dim
+.PD .DUBOUND - -
+CM Fortran UBOUND intrinsic.
+.AT inquiry array *dim
+.PD .DSHAPE - -
+CM Fortran SHAPE intrinsic.
+.AT transformational source
+.PD .DSIZE - -
+CM Fortran SIZE intrinsic.
+.AT inquiry array *dim
+.PD ACHAR - -
+.AT elemental i *kind
+.PD ADJUSTL - -
+.AT elemental string
+.PD ADJUSTR - -
+.AT elemental string
+.PD BIT_SIZE - -
+.AT inquiry i
+.PD DIGITS - -
+.AT inquiry x
+.PD EPSILON - -
+.AT inquiry x
+.PD EXPONENT - -
+.AT elemental x
+.PD FRACTION - -
+.AT elemental x
+.PD HUGE - -
+.AT inquiry x
+.PD IACHAR - -
+.AT elemental c *kind
+.PD INDEX pghpf_index I
+.AT elemental string substring *back *kind
+.PD KINDEX pghpf_kindex I8 native
+.AT elemental string substring *back *kind
+.PD LOGICAL - -
+.AT elemental l *kind
+.PD MAXEXPONENT - -
+.AT inquiry x
+.PD MINEXPONENT - -
+.AT inquiry x
+.PD NEAREST - -
+.AT elemental x s
+.PD PRECISION - -
+.AT inquiry x
+.PD RADIX - -
+.AT inquiry x
+.PD RANGE - -
+.AT inquiry x
+.PD REPEAT - -
+.AT transformational string ncopies
+.PD RRSPACING - -
+.AT elemental x
+.PD SCALE - -
+.AT elemental x i
+.PD SET_EXPONENT - -
+.AT elemental x i
+.PD SPACING - -
+.AT elemental x
+.PD TINY - -
+.AT inquiry x
+.PD TRANSFER - -
+.AT transformational source mold *size
+.PD TRIM - -
+.AT transformational string
+.PD VERIFY - -
+.AT elemental string set *back *kind
+.PD SCAN - -
+.AT elemental string set *back *kind
+.PD LEN pghpf_len I
+.AT inquiry string *kind
+.PD KLEN pghpf_klen I8 native
+.AT inquiry string
+.PD LEN_TRIM - -
+.AT elemental string *kind
+.PD DOTPRODUCT - -
+CM Fortran dotproduct intrinsic.
+.AT transformational vector_a vector_b
+.PD ILEN - -
+.AT elemental i
+.PD NULL - -
+.AT transformational *mold
+.PD INT_PTR_KIND - -
+.AT inquiry
+.PD PROCESSORS_SHAPE - -
+.AT inquiry
+.PD ISNAN - -
+.AT elemental x
+.PD .LASTVAL - -
+Internal intrinisic to extract the mask-controlled last value of an array.
+.nf
+.cw "    CALL .LASTVAL(scalar-result, array, mask)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_SUM - -
+Internal intrinsic to perform global sum across all procesors.
+.nf
+.cw "    CALL .REDUCE_SUM(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_PRODUCT - -
+Internal intrinsic to perform global product across all procesors.
+.nf
+.cw "    CALL .REDUCE_PRODUCT(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_ANY - -
+Internal intrinsic to perform global logical OR across all procesors.
+.nf
+.cw "    CALL .REDUCE_ANY(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_ALL - -
+Internal intrinsic to perform global logical AND across all procesors.
+.nf
+.cw "    CALL .REDUCE_ALL(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_PARITY - -
+Internal intrinsic to perform global logical XOR across all procesors.
+.nf
+.cw "    CALL .REDUCE_PARITY(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_IANY - -
+Internal intrinsic to perform global bitwise OR across all procesors.
+.nf
+.cw "    CALL .REDUCE_IANY(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_IALL - -
+Internal intrinsic to perform global bitwise AND across all procesors.
+.nf
+.cw "    CALL .REDUCE_IALL(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_IPARITY - -
+Internal intrinsic to perform global bitwise XOR across all procesors.
+.nf
+.cw "    CALL .REDUCE_IPARITY(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_MINVAL - -
+Internal intrinsic to perform global minimum across all procesors.
+.nf
+.cw "    CALL .REDUCE_MINVAL(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_MAXVAL - -
+Internal intrinsic to perform global maximum across all procesors.
+.nf
+.cw "    CALL .REDUCE_MAXVAL(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_FIRSTMAX - -
+Internal intrinsic to perform global maximum across all procesors
+and return the subscript(s) of the first maximum element.
+.nf
+.cw "    CALL .REDUCE_FIRSTMAX(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_LASTMAX - -
+Internal intrinsic to perform global maximum across all procesors
+and return the subscript(s) of the last maximum element.
+.nf
+.cw "    CALL .REDUCE_LASTMAX(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_FIRSTMIN - -
+Internal intrinsic to perform global minimum across all procesors
+and return the subscript(s) of the first minimum element.
+.nf
+.cw "    CALL .REDUCE_FIRSTMIN(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD .REDUCE_LASTMIN - -
+Internal intrinsic to perform global minimum across all procesors
+and return the subscript(s) of the last minimum element.
+.nf
+.cw "    CALL .REDUCE_LASTMIN(dim-mask, homearray, nreductions, array...)"
+
+.fi
+.AT subroutine --
+.PD ASSOCIATED - -
+.AT inquiry pointer *target
+.PD .PTR2_ASSIGN - -
+Internal subroutine to perform a pointer assignment statement.
+.nf
+ pv => ar
+ pv => ar(lower:upper:stride,...)
+
+.cw "CALL .PTR2_ASSIGN(pv, rhs)"
+ 
+ is translated to:
+
+ call pghpf_ptr2_assign(pv$p, pv$o, pv, pv$dp, pv$do, pv$d, pv$sdsc,
+                        ar, ar$d, sectflag)
+ 
+ optional: pv$p, pv$o, pv, pv$dp, pv$do, pv$d
+ 
+ pv$p, pv$o, pv:     pv's cray pointer, offset, and base.
+ pv$dp, pv$do, pv$d: pv's (old) descriptor cray pointer, offset, and base
+ pv$sdsc:            pv's (new) static descriptor
+ ar:                 ar's base address (ar or ar(ar$o))
+ ar$d:               ar's (old) descriptor
+ sectflag:           integer, 0 if whole array, 1 if section
+.fi
+.AT subroutine --
+.PD .NULLIFY - -
+Internal subroutine to perform the nullify statement.
+.nf
+ nullify(pv)
+
+.cw "CALL .NULLIFY(pv)"
+
+is translated to
+
+ call pghpf_ptr2_nullify(pv$p, pv$o, pv, pv$sdsc)
+
+ optional: pv$p, pv$o, pv
+.fi
+.AT subroutine --
+.PD .PTR_COPYIN - -
+Internal subroutine to perform a copy in of a pointer argument.
+.AT subroutine --
+.PD .PTR_COPYOUT - -
+Internal subroutine to perform a copy out of a pointer argument.
+.AT subroutine --
+.PD .COPYIN - -
+Internal subroutine to perform a copy in of an ordinary argument.
+.AT subroutine --
+.PD .COPYOUT - -
+Internal subroutine to perform a copy out of an ordinary argument.
+.AT subroutine --
+.PD SELECTED_CHAR_KIND - -
+.AT transformational name
+.PD EXTENDS_TYPE_OF - -
+.AT inquiry a mold
+.PD NEW_LINE - -
+.AT inquiry a
+.PD SAME_TYPE_AS - -
+.AT inquiry a b
+.PD MOVE_ALLOC - -
+.AT subroutine from to
+.PD GETARG - -
+.AT subroutine pos *value
+.PD COMMAND_ARGUMENT_COUNT - -
+.AT inquiry
+.PD GET_COMMAND - -
+.AT subroutine *command *length *status
+.PD GET_COMMAND_ARGUMENT - -
+.AT subroutine number *value *length *status
+.PD GET_ENVIRONMENT_VARIABLE - -
+.AT subroutine name *value *length *status *trim_name
+.PD IS_IOSTAT_END - -
+.AT elemental i
+.PD IS_IOSTAT_EOR - -
+.AT elemental i
+.PD SIZEOF - -
+.AT inquiry x
+.bp
+.\"#NO_RST
+.sh 2 "HPF\ Library\ Procedures"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .H1 name pname dtype
+.\" pname is the name used when passed as an argument
+.H1 ALL_PREFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 ALL_SCATTER - -
+.AT transformational mask base indx1 #3#2#indx
+.H1 ALL_SUFFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 ANY_PREFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 ANY_SCATTER - -
+.AT transformational mask base indx1 #3#2#indx
+.H1 ANY_SUFFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 COPY_PREFIX - -
+.AT transformational array *dim *segment
+.H1 COPY_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 COPY_SUFFIX - -
+.AT transformational array *dim *segment
+.H1 COUNT_PREFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 COUNT_SCATTER - -
+.AT transformational mask base indx1 #3#2#indx
+.H1 COUNT_SUFFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 GRADE_DOWN - -
+.AT transformational array *dim
+.H1 GRADE_UP - -
+.AT transformational array *dim
+.H1 HPF_ALIGNMENT - -
+.AT subroutine alignee *lb *ub *stride *axis_map *identity_map *dynamic *ncopies
+.H1 HPF_DISTRIBUTION - -
+.AT subroutine distributee *axis_type *axis_info *processors_rank *processors_shape *plb *pub *pstride *low_shadow *high_shadow
+.H1 HPF_TEMPLATE - -
+.AT subroutine alignee *template_rank *lb *ub *axis_type *axis_info *number_aligned *dynamic
+.H1 IALL - -
+.AT transformational array *dim *mask
+.H1 IALL_PREFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 IALL_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 IALL_SUFFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 IANY - -
+.AT transformational array *dim *mask
+.H1 IANY_PREFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 IANY_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 IANY_SUFFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 IPARITY - -
+.AT transformational array *dim *mask
+.H1 IPARITY_PREFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 IPARITY_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 IPARITY_SUFFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 LEADZ - -
+.AT elemental i
+.H1 TRAILZ - -
+.AT elemental i
+.H1 MAXVAL_PREFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 MAXVAL_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 MAXVAL_SUFFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 MINVAL_PREFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 MINVAL_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 MINVAL_SUFFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 PARITY - -
+.AT transformational mask *dim
+.H1 PARITY_PREFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 PARITY_SCATTER - -
+.AT transformational mask base indx1 #3#2#indx
+.H1 PARITY_SUFFIX - -
+.AT transformational mask *dim *segment *exclusive
+.H1 POPCNT - -
+.AT elemental i
+.H1 POPPAR - -
+.AT elemental i
+.H1 PRODUCT_PREFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 PRODUCT_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 PRODUCT_SUFFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 SUM_PREFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 SUM_SCATTER - -
+.AT transformational array base indx1 #3#2#indx *mask
+.H1 SUM_SUFFIX - -
+.AT transformational array *dim *mask *segment *exclusive
+.H1 SORT_DOWN - -
+.AT transformational array *dim
+.H1 SORT_UP - -
+.AT transformational array *dim
+.bp
+.sh 2 "HPF\ Local\ Library\ Procedures"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .H2 name pname dtype
+.\" pname is the name used when passed as an argument
+.H2 GLOBAL_ALIGNMENT - -
+.AT subroutine alignee *lb *ub *stride *axis_map *identity_map *dynamic *ncopies
+.H2 GLOBAL_DISTRIBUTION - -
+.AT subroutine distributee *axis_type *axis_info *processors_rank *processors_shape *plb *pub *pstride *low_shadow *high_shadow
+.H2 GLOBAL_TEMPLATE - -
+.AT subroutine alignee *template_rank *lb *ub *axis_type *axis_info *number_aligned *dynamic
+.H2 GLOBAL_LBOUND - -
+.AT inquiry array *dim
+.H2 GLOBAL_SHAPE - -
+.AT inquiry source
+.H2 GLOBAL_SIZE - -
+.AT inquiry array *dim
+.H2 GLOBAL_UBOUND - -
+.AT inquiry array *dim
+.H2 ABSTRACT_TO_PHYSICAL - -
+.AT subroutine array index proc
+.H2 PHYSICAL_TO_ABSTRACT - -
+.AT subroutine array proc index
+.H2 LOCAL_TO_GLOBAL - -
+.AT subroutine array l_index g_index
+.H2 GLOBAL_TO_LOCAL - -
+.AT subroutine array g_index *l_index *local *ncopies *procs
+.H2 MY_PROCESSOR - -
+.AT inquiry
+.H2 LOCAL_BLKCNT - -
+.AT inquiry array *dim *proc
+.H2 LOCAL_LINDEX - -
+.AT inquiry array dim *proc
+.H2 LOCAL_UINDEX - -
+.AT inquiry array dim *proc
+.bp
+.sh 2 "HPF_CRAFT\ Procedures"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .H3 name pname dtype
+.\" pname is the name used when passed as an argument
+.H3 IN_PARALLEL - -
+.AT inquiry
+.H3 IN_INDEPENDENT - -
+.AT inquiry
+.H3 MY_PE - -
+.AT inquiry
+.H3 N$PES - -
+.AT inquiry
+.H3 SET_BARRIER - -
+.AT subroutine
+.H3 WAIT_BARRIER - -
+.AT subroutine
+.H3 TEST_BARRIER - -
+.AT inquiry
+.H3 BARRIER - -
+.AT subroutine
+.H3 SET_LOCK - -
+.AT subroutine lock
+.H3 CLEAR_LOCK - -
+.AT subroutine lock
+.H3 TEST_LOCK - -
+.AT inquiry lock
+.H3 SET_EVENT - -
+.AT subroutine *event
+.H3 CLEAR_EVENT - -
+.AT subroutine *event
+.H3 WAIT_EVENT - -
+.AT subroutine *event
+.H3 TEST_EVENT - -
+.AT inquiry *event
+.H3 PREMAX - -
+.AT transformational array *dim *mask
+.H3 PREMIN - -
+.AT transformational array *dim *mask
+.H3 PREPROD - -
+.AT transformational array *dim *mask
+.H3 PRESUM - -
+.AT transformational array *dim *mask
+.H3 SCANMAX - -
+.AT transformational array stop *dim *mask
+.H3 SCANMIN - -
+.AT transformational array stop *dim *mask
+.H3 SCANPROD - -
+.AT transformational array stop *dim *mask
+.H3 SCANSUM - -
+.AT transformational array stop *dim *mask
+.H3 BLKCT - -
+.AT inquiry array dim *pe
+.H3 HIIDX - -
+.AT inquiry array dim *pe *block
+.H3 LOWIDX - -
+.AT inquiry array dim *pe *block
+.H3 PES - -
+.AT inquiry array dim
+.H3 HOME - -
+.AT inquiry var
+.bp
+.sh 2 "CRAY\ Procedures"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .H4 name pname dtype
+.\" pname is the name used when passed as an argument
+.H4 RANF - -
+.AT elemental -
+.H4 RANGET - -
+.AT elemental *i
+.H4 RANSET - -
+.AT elemental *i
+.H4 UNIT - -
+.AT inquiry
+.H4 LENGTH - -
+.AT inquiry
+.H4 INT_MULT_UPPER - -
+.AT elemental i j
+.H4 COT * -
+.AT elemental x
+.H4 DCOT * -
+.AT elemental x
+.H4 SHIFTL - -
+.AT elemental i j
+.H4 SHIFTR - -
+.AT elemental i j
+.H4 DSHIFTL - -
+.AT elemental i j k
+.H4 DSHIFTR - -
+.AT elemental i j k
+.H4 MASK - -
+.AT elemental i
+.bp
+.\"#END_NO_RST
+.sh 2 "ISO_C_BINDING\ Intrinsics"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+
+.sp
+.ul
+sptr    name    pcnt    atyp    dtype   ILM     pname   arrayf native?
+.IN C_LOC 1 A A LOC * V
+.AT inquiry x 
+.IN C_FUNLOC 1 A A LOC * V
+.AT inquiry x 
+.IN C_ASSOCIATED 2 A L C_ASSOC * -
+.AT inquiry c_ptr_1 *c_ptr_2
+.IN C_F_POINTER 3 I I none * V
+.AT  subroutine cptr fptr *shape
+.IN C_F_PROCPOINTER 2  I I none * -
+.AT subroutine cptr fptr 
+.sh 2 "IEEE_ARITHMEITC\ Procedures"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .H7 name pname dtype
+.\" pname is the name used when passed as an argument
+.H5 IEEE_SUPPORT_DATATYPE - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_DENORMAL - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_DIVIDE - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_INF - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_IO - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_NAN - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_ROUNDING - -
+.AT inquiry round_value *x
+.H5 IEEE_SUPPORT_SQRT - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_STANDARD - -
+.AT inquiry *x
+.H5 IEEE_SUPPORT_UNDERFLOW_CONTROL - -
+.AT inquiry *x
+.H5 IEEE_CLASS - -
+.AT elemental x
+.H5 IEEE_COPY_SIGN - -
+.AT elemental x y
+.H5 IEEE_IS_FINITE - -
+.AT elemental x
+.H5 IEEE_IS_NAN - -
+.AT elemental x
+.H5 IEEE_IS_NORMAL - -
+.AT elemental x
+.H5 IEEE_IS_NEGATIVE - -
+.AT elemental x
+.H5 IEEE_LOGB - -
+.AT elemental x
+.H5 IEEE_NEXT_AFTER - -
+.AT elemental x y
+.H5 IEEE_REM - -
+.AT elemental x y
+.H5 IEEE_RINT - -
+.AT elemental x
+.H5 IEEE_SCALB - -
+.AT elemental x i
+.H5 IEEE_UNORDERED - -
+.AT elemental x y
+.H5 IEEE_VALUE - -
+.AT elemental x class
+.H5 IEEE_SELECTED_REAL_KIND - -
+.AT transformational *p *r *radix
+.H5 IEEE_GET_ROUNDING_MODE - -
+.AT subroutine round value
+.H5 IEEE_GET_UNDERFLOW_MODE - -
+.AT subroutine gradual
+.H5 IEEE_SET_ROUNDING_MODE - -
+.AT subroutine round value
+.H5 IEEE_SET_UNDERFLOW_MODE - -
+.AT subroutine gradual
+.bp
+.sh 2 "IEEE_EXCEPTIONS\ Procedures"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .H6 name pname dtype
+.\" pname is the name used when passed as an argument
+.H6 IEEE_SUPPORT_FLAG - -
+.AT inquiry flag *x
+.H6 IEEE_SUPPORT_HALTING - -
+.AT inquiry flag
+.H6 IEEE_GET_FLAG - -
+.AT elemental flag flag_value
+.H6 IEEE_GET_HALTING_MODE - -
+.AT elemental flag halting
+.H6 IEEE_GET_STATUS - -
+.AT subroutine status_value
+.H6 IEEE_SET_FLAG - -
+.AT subroutine flag flag_value
+.H6 IEEE_SET_HALTING_MODE - -
+.AT subroutine flag halting
+.H6 IEEE_SET_STATUS - -
+.AT subroutine status_value
+.bp
+.sh 2 "Miscellaneous/f2008 \ Procedures"
+.sz 8
+.ta 0.5i +0.5i +1.25i +1.00i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .H7 name pname dtype
+.\" pname is the name used when passed as an argument
+.H7 LEADZ - -
+.AT elemental i
+.H7 POPCNT - -
+.AT elemental i
+.H7 POPPAR - -
+.AT elemental i
+.H7 TRAILZ - -
+.AT elemental i
+.H7 .BGE - -
+.AT elemental i j
+.H7 .BGT - -
+.AT elemental i j
+.H7 .BLE - -
+.AT elemental i j
+.H7 .BLT - -
+.AT elemental i j
+.H7 .MASKL - -
+.AT elemental i *kind
+.H7 .MASKR - -
+.AT elemental i *kind
+.H7 .SHIFTA - -
+.AT elemental i shift
+.H7 .SHIFTL - -
+.AT elemental i shift
+.H7 .SHIFTR - -
+.AT elemental i shift
+.H7 .DSHIFTL - -
+.AT elemental i j shift
+.H7 .DSHIFTR - -
+.AT elemental i j shift
+.H7 .MERGE_BITS - -
+.AT elemental i j mask
+.H7 .IALL - -
+.AT transformational array *dim *mask
+.H7 .IANY - -
+.AT transformational array *dim *mask
+.H7 .IPARITY - -
+.AT transformational array *dim *mask
+.H7 STORAGE_SIZE - -
+.AT inquiry a *kind
+.H7 ACOSH - -
+.AT elemental x
+.H7 ASINH - -
+.AT elemental x
+.H7 ATANH - -
+.AT elemental x
+.H7 BESSEL_J0 - -
+.AT elemental x
+.H7 BESSEL_J1 - -
+.AT elemental x
+.H7 BESSEL_Y0 - -
+.AT elemental x
+.H7 BESSEL_Y1 - -
+.AT elemental x
+.H7 BESSEL_JN - -
+.AT elemental n1 *n2 x
+.H7 BESSEL_YN - -
+.AT elemental n1 n2 x
+.H7 ERF - -
+.AT elemental x
+.H7 QERF - -
+.AT elemental x
+.H7 ERFC - -
+.AT elemental x
+.H7 QERFC - -
+.AT elemental x
+.H7 ERFC_SCALED - -
+.AT elemental x
+.H7 QERFC_SCALED - -
+.AT elemental x
+.H7 GAMMA - -
+.AT elemental x
+.H7 HYPOT - -
+.AT elemental x y
+.H7 LOG_GAMMA - -
+.AT elemental x
+.H7 NORM2 - -
+.AT transformational x *dim
+.H7 .PARITY - -
+.AT transformational mask *dim
+.H7 EXECUTE_COMMAND_LINE - -
+.AT subroutine command *wait *exitstat *cmdstat *cmdmsg
+.H7 FINDLOC - -
+.AT transformational array value *dim *mask *kind *back
+.H7 IS_CONTIGUOUS - -
+.AT inquiry array
+.H9 COMPILER_OPTIONS - -
+.AT inquiry
+.H9 COMPILER_VERSION - -
+.AT inquiry
+.H8 C_SIZEOF - -
+.AT inquiry x
+

@@ -1,0 +1,136 @@
+<code_set_name> GREEK7-OLD
+<comment_char> %
+<escape_char> /
+% version: 1.0
+%  source: ECMA registry
+
+% alias ISO-IR-18
+CHARMAP
+<U0000>     /x00         NULL (NUL)
+<U0001>     /x01         START OF HEADING (SOH)
+<U0002>     /x02         START OF TEXT (STX)
+<U0003>     /x03         END OF TEXT (ETX)
+<U0004>     /x04         END OF TRANSMISSION (EOT)
+<U0005>     /x05         ENQUIRY (ENQ)
+<U0006>     /x06         ACKNOWLEDGE (ACK)
+<U0007>     /x07         BELL (BEL)
+<U0008>     /x08         BACKSPACE (BS)
+<U0009>     /x09         CHARACTER TABULATION (HT)
+<U000A>     /x0a         LINE FEED (LF)
+<U000B>     /x0b         LINE TABULATION (VT)
+<U000C>     /x0c         FORM FEED (FF)
+<U000D>     /x0d         CARRIAGE RETURN (CR)
+<U000E>     /x0e         SHIFT OUT (SO)
+<U000F>     /x0f         SHIFT IN (SI)
+<U0010>     /x10         DATALINK ESCAPE (DLE)
+<U0011>     /x11         DEVICE CONTROL ONE (DC1)
+<U0012>     /x12         DEVICE CONTROL TWO (DC2)
+<U0013>     /x13         DEVICE CONTROL THREE (DC3)
+<U0014>     /x14         DEVICE CONTROL FOUR (DC4)
+<U0015>     /x15         NEGATIVE ACKNOWLEDGE (NAK)
+<U0016>     /x16         SYNCHRONOUS IDLE (SYN)
+<U0017>     /x17         END OF TRANSMISSION BLOCK (ETB)
+<U0018>     /x18         CANCEL (CAN)
+<U0019>     /x19         END OF MEDIUM (EM)
+<U001A>     /x1a         SUBSTITUTE (SUB)
+<U001B>     /x1b         ESCAPE (ESC)
+<U001C>     /x1c         FILE SEPARATOR (IS4)
+<U001D>     /x1d         GROUP SEPARATOR (IS3)
+<U001E>     /x1e         RECORD SEPARATOR (IS2)
+<U001F>     /x1f         UNIT SEPARATOR (IS1)
+<U0020>     /x20         SPACE
+<U0021>     /x21         EXCLAMATION MARK
+<U0022>     /x22         QUOTATION MARK
+<U00A3>     /x23         POUND SIGN
+<U0024>     /x24         DOLLAR SIGN
+<U0025>     /x25         PERCENT SIGN
+<U0026>     /x26         AMPERSAND
+<U0027>     /x27         APOSTROPHE
+<U0028>     /x28         LEFT PARENTHESIS
+<U0029>     /x29         RIGHT PARENTHESIS
+<U002A>     /x2a         ASTERISK
+<U002B>     /x2b         PLUS SIGN
+<U002C>     /x2c         COMMA
+<U002D>     /x2d         HYPHEN-MINUS
+<U002E>     /x2e         FULL STOP
+<U002F>     /x2f         SOLIDUS
+<U0030>     /x30         DIGIT ZERO
+<U0031>     /x31         DIGIT ONE
+<U0032>     /x32         DIGIT TWO
+<U0033>     /x33         DIGIT THREE
+<U0034>     /x34         DIGIT FOUR
+<U0035>     /x35         DIGIT FIVE
+<U0036>     /x36         DIGIT SIX
+<U0037>     /x37         DIGIT SEVEN
+<U0038>     /x38         DIGIT EIGHT
+<U0039>     /x39         DIGIT NINE
+<U003A>     /x3a         COLON
+<U003B>     /x3b         SEMICOLON
+<U003C>     /x3c         LESS-THAN SIGN
+<U003D>     /x3d         EQUALS SIGN
+<U003E>     /x3e         GREATER-THAN SIGN
+<U003F>     /x3f         QUESTION MARK
+<U00B4>     /x40         ACUTE ACCENT
+<U03B1>     /x41         GREEK SMALL LETTER ALPHA
+<U03B2>     /x42         GREEK SMALL LETTER BETA
+<U03C8>     /x43         GREEK SMALL LETTER PSI
+<U03B4>     /x44         GREEK SMALL LETTER DELTA
+<U03B5>     /x45         GREEK SMALL LETTER EPSILON
+<U03C6>     /x46         GREEK SMALL LETTER PHI
+<U03B3>     /x47         GREEK SMALL LETTER GAMMA
+<U03B7>     /x48         GREEK SMALL LETTER ETA
+<U03B9>     /x49         GREEK SMALL LETTER IOTA
+<U03BE>     /x4a         GREEK SMALL LETTER XI
+<U03BA>     /x4b         GREEK SMALL LETTER KAPPA
+<U03BB>     /x4c         GREEK SMALL LETTER LAMDA
+<U03BC>     /x4d         GREEK SMALL LETTER MU
+<U03BD>     /x4e         GREEK SMALL LETTER NU
+<U03BF>     /x4f         GREEK SMALL LETTER OMICRON
+<U03C0>     /x50         GREEK SMALL LETTER PI
+<U037A>     /x51         GREEK YPOGEGRAMMENI
+<U03C1>     /x52         GREEK SMALL LETTER RHO
+<U03C3>     /x53         GREEK SMALL LETTER SIGMA
+<U03C4>     /x54         GREEK SMALL LETTER TAU
+<U03B8>     /x55         GREEK SMALL LETTER THETA
+<U03C9>     /x56         GREEK SMALL LETTER OMEGA
+<U03C2>     /x57         GREEK SMALL LETTER FINAL SIGMA
+<U03C7>     /x58         GREEK SMALL LETTER CHI
+<U03C5>     /x59         GREEK SMALL LETTER UPSILON
+<U03B6>     /x5a         GREEK SMALL LETTER ZETA
+<U1FCF>     /x5b         GREEK PSILI AND PERISPOMENI
+<U1FBF>     /x5c         GREEK PSILI
+<U1FCE>     /x5d         GREEK PSILI AND OXIA
+<U007E>     /x5e         TILDE
+<U005F>     /x5f         LOW LINE
+<U0060>     /x60         GRAVE ACCENT
+<U0391>     /x61         GREEK CAPITAL LETTER ALPHA
+<U0392>     /x62         GREEK CAPITAL LETTER BETA
+<U03A8>     /x63         GREEK CAPITAL LETTER PSI
+<U0394>     /x64         GREEK CAPITAL LETTER DELTA
+<U0395>     /x65         GREEK CAPITAL LETTER EPSILON
+<U03A6>     /x66         GREEK CAPITAL LETTER PHI
+<U0393>     /x67         GREEK CAPITAL LETTER GAMMA
+<U0397>     /x68         GREEK CAPITAL LETTER ETA
+<U0399>     /x69         GREEK CAPITAL LETTER IOTA
+<U039E>     /x6a         GREEK CAPITAL LETTER XI
+<U039A>     /x6b         GREEK CAPITAL LETTER KAPPA
+<U039B>     /x6c         GREEK CAPITAL LETTER LAMDA
+<U039C>     /x6d         GREEK CAPITAL LETTER MU
+<U039D>     /x6e         GREEK CAPITAL LETTER NU
+<U039F>     /x6f         GREEK CAPITAL LETTER OMICRON
+<U03A0>     /x70         GREEK CAPITAL LETTER PI
+<U03A1>     /x72         GREEK CAPITAL LETTER RHO
+<U03A3>     /x73         GREEK CAPITAL LETTER SIGMA
+<U03A4>     /x74         GREEK CAPITAL LETTER TAU
+<U0398>     /x75         GREEK CAPITAL LETTER THETA
+<U03A9>     /x76         GREEK CAPITAL LETTER OMEGA
+<U00B7>     /x77         MIDDLE DOT
+<U03A7>     /x78         GREEK CAPITAL LETTER CHI
+<U03A5>     /x79         GREEK CAPITAL LETTER UPSILON
+<U0396>     /x7a         GREEK CAPITAL LETTER ZETA
+<U1FDF>     /x7b         GREEK DASIA AND PERISPOMENI
+<U1FFE>     /x7c         GREEK DASIA
+<U1FDE>     /x7d         GREEK DASIA AND OXIA
+<U00A8>     /x7e         DIAERESIS
+<U007F>     /x7f         DELETE (DEL)
+END CHARMAP

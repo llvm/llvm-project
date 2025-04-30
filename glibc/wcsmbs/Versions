@@ -1,0 +1,52 @@
+%include <float128-abi.h>
+libc {
+  GLIBC_2.0 {
+    # functions used in inline functions or macros
+     __mbrlen; __mbrtowc;
+    __wcstod_internal; __wcstof_internal; __wcstold_internal;
+    __wcstol_internal; __wcstoll_internal;
+    __wcstoul_internal; __wcstoull_internal;
+
+    # b*
+    btowc;
+
+    # w*
+    wcpcpy; wcpncpy; wcrtomb; wcscat; wcschr; wcscmp; wcscoll;
+    wcscpy; wcscspn; wcsdup; wcslen; wcsncat; wcsncmp;
+    wcsncpy; wcsnrtombs; wcspbrk; wcsrchr; wcsrtombs; wcsspn; wcsstr;
+    wcstod; wcstof; wcstok; wcstol; wcstold; wcstoq; wcstoul;
+    wcstouq; wcswidth; wcsxfrm; wctob;
+
+    wmemchr; wmemcmp; wmemcpy; wmemmove; wmemset;
+  }
+  GLIBC_2.1 {
+    # w*
+    wcscasecmp; wcsncasecmp; wcsnlen; wcstoll;
+    wcstoimax; wcstoumax; wcstoull; wcswcs; wmemrtombs; wmemrtowcs;
+  }
+  GLIBC_2.2 {
+    # w*
+    wcschrnul; wmempcpy;
+  }
+  GLIBC_2.7 {
+    __isoc99_fwscanf; __isoc99_swscanf; __isoc99_vfwscanf; __isoc99_vswscanf;
+    __isoc99_vwscanf; __isoc99_wscanf;
+  }
+  GLIBC_2.16 {
+    c16rtomb; c32rtomb; mbrtoc16; mbrtoc32;
+  }
+%ifdef FLOAT128_VERSION
+  FLOAT128_VERSION {
+    wcstof128;
+    wcstof128_l;
+  }
+%endif
+  GLIBC_2.27 {
+    # _Float64x functions, only present for some configurations.
+    wcstof64x;
+    wcstof64x_l;
+    # _Float32, _Float64 and _Float32x functions, for all configurations.
+    wcstof32; wcstof64; wcstof32x;
+    wcstof32_l; wcstof64_l; wcstof32x_l;
+  }
+}

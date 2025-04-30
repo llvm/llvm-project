@@ -1,0 +1,28 @@
+#include <sysdep.h>
+#include <tls.h>
+#include <kernel-features.h>
+
+--
+
+-- Abuse tls.h macros to derive offsets relative to the thread register.
+# undef __thread_register
+# define __thread_register	((void *) 0)
+# define thread_offsetof(mem)	((ptrdiff_t) THREAD_SELF + offsetof (struct pthread, mem))
+
+
+#if TLS_MULTIPLE_THREADS_IN_TCB
+MULTIPLE_THREADS_OFFSET		thread_offsetof (header.multiple_threads)
+#endif
+TID				thread_offsetof (tid)
+POINTER_GUARD			(offsetof (tcbhead_t, pointer_guard) - TLS_TCB_OFFSET - sizeof (tcbhead_t))
+TAR_SAVE			(offsetof (tcbhead_t, tar_save) - TLS_TCB_OFFSET - sizeof (tcbhead_t))
+DSO_SLOT1			(offsetof (tcbhead_t, dso_slot1) - TLS_TCB_OFFSET - sizeof (tcbhead_t))
+DSO_SLOT2			(offsetof (tcbhead_t, dso_slot2) - TLS_TCB_OFFSET - sizeof (tcbhead_t))
+#ifdef __powerpc64__
+TCB_AT_PLATFORM			(offsetof (tcbhead_t, at_platform) - TLS_TCB_OFFSET - sizeof(tcbhead_t))
+#endif
+#ifndef __powerpc64__
+TCB_AT_PLATFORM			(offsetof (tcbhead_t, at_platform) - TLS_TCB_OFFSET - sizeof(tcbhead_t))
+PADDING				(offsetof (tcbhead_t, padding) - TLS_TCB_OFFSET - sizeof(tcbhead_t))
+#endif
+TCB_HWCAP			(offsetof (tcbhead_t, hwcap) - TLS_TCB_OFFSET - sizeof (tcbhead_t))

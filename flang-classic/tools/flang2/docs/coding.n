@@ -1,0 +1,440 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 16 "Coding Practices"
+.sh 2 "Source File Database Structure"
+.ip tools
+Source files (.c and .h) for the Fortran front end (fe90) and
+Fortran middle/LLVM bridge (f90) compilers.
+.ip utils
+(The directories tools/fe90 and tools/f90 have a utils
+directory)
+Utility programs used to create static data bases for the compiler,
+and their inputs.
+Consists of the following subdirectories:
+.nf
+
+prstab - parse table generator (grammar definition).
+symtab - initial symbol table generator.
+errmsg - error message text utility.
+ilmtp -  ILM utility.
+upper - Additional ILM utility used by Fortran.
+ilitp -  ILI utility.
+machar - Machine characteristics utility.
+utils  - Small utility routine library used by the other utility programs (except for prstab).
+.fi
+.ip docs
+Doxygen and Sphinx documentation for the compiler internals.
+.nr ii 0.5i
+.sp
+.sh 2 "Compiler Build Procedures"
+To build new version of the compiler:
+.np
+Move into src directory any source files which have been changed.
+.np
+Run utility programs if input files have been changed.
+After a utility is run, its copy command file should be
+run to actually move the results into the src directory.
+.np
+Change compiler version number in file version.h.
+.np
+Attach to bin directory and type "make" to compile
+and link the source files.
+.np
+Once the new version has been tested, the Install command
+in the bin directory should be used to copy the compiler into
+the public directory.
+.sp
+.sh 2 "Coding Conventions"
+This section describes coding conventions followed within the compiler.
+.np
+The compiler is written in a common, portable subset of ANSI C89.
+Some K&R code exists, but will eventually be removed.
+.np
+Variables used within a single source file, but in more than one
+function are declared
+.ul
+static,
+at the beginning of the source file.
+.np
+Variables used in more than one file (external variables)
+are
+.ul
+declared
+in a single header (.h) file which is included into every
+source file which uses the variable.
+They are
+.ul
+defined
+in a .c file which contains only data definitions (no function
+definitions).
+In other words, external variables are never declared within
+the functions which use them, and are never defined in a
+file which contains function definitions.
+.np
+Source files which contain external data definitions have names
+which end with "df.c", for example fenddf.c and symtabdf.c.
+Similarly, include (.h) files which contain external data definitions
+have names ending with "df.h".
+.np
+Logically related external variables are generally grouped
+into structures (which are given 3 character names).
+This is to reduce the chances of having different
+variables with the same name, and to minimize the
+number of external names which must be resolved by the linker.
+.np
+Functions which return no value are declared to have type void.
+Functions used only within the file in which they are defined
+are defined as static.
+.np
+Variable names are lower case.
+Macro and typedef names are (almost always) entirely upper case.
+Enumeration constant names begin with a capital letter, then are
+lower case.
+.np
+Related macros are generally given names which begin with
+the same first 3 or 4 characters: two or three upper case letters, then "_".
+For example, ST_LABEL, ST_VAR, ST_ARRAY, etc.
+.np
+The first non-comment line of each .c file is
+.nf
+
+    #include "gbldefs.h"
+
+.fi
+This file includes "scutil.h" and contains any other host
+dependent and compiler version dependent macro definitions.
+.np
+#include statements occur only at the beginning of files
+and are never nested (except for the include of scutil.h
+by gbldefs.h).
+.np
+All dynamic storage allocation and freeing is done through
+the macros NEW, NEED, and FREE defined in gbldefs.h.
+.np
+When a source file is shared by 2 or more of the compilers,
+the main copy resides in the scc directory and soft links
+are defined from the corresponding locations within the
+other compilers' directories.
+If possible, the header of the shared file should indicate
+that it is shared.
+.np
+In gbldefs.h for each compiler, a macro is defined for the respective
+compiler (i.e., PGC, PGFTN).
+These should be used with "#ifdef/#ifndef" directories to
+insert language dependent code into shared files.
+.sp
+.sh 2 "Debug Facilities"
+.sh 3 Macros
+The macros DEBUG and assert are defined in gbldefs.h.
+.lp
+DEBUG is used to switch in or out source code which is
+needed for compiler debugging and maintenance, but
+not for released, production versions
+of the compiler.
+.lp
+The macro assert encapsulates a test of a condition, and
+a call to interr if the condition is not true.
+For production compilers, assert may be redefined to eliminate
+these tests.
+The 4 arguments to  assert consist of a condition which
+is expected to be true, followed by the 3 arguments
+for interr.
+For example:
+.nf
+
+   assert(sptr > 0, "semant: bad sptr", sptr, 3);
+
+.fi
+.sh 3 "Debug Switches"
+Debug switches are specified via the -q command line
+switch.
+This switch may appear multiple times on the command line;
+each occurrence must by followed by two positive integers.
+The first value is the number of a debug flag and the
+second is a value for that flag (values of all flags are
+0 by default).
+Within the compiler, the value of flag i is referenced
+by 'flg.dbg[i]'.
+.lp
+Table 18-1 lists the debug flags and indicates
+what action is performed for the different possible values
+of each flag.
+.bp
+.TS H
+tab (%);
+c s s
+c s s
+cfI cfI lfI
+c  r lw(4.0i).
+Table 18-1 Debug Flags
+
+flg%value%description
+=
+.TH
+0%1% Use stderr for debug file (instead of ".qdbg").
+%2% Write error messages to debugfile also.
+%4% Write listing file to debugfile also.
+%8%T{
+Report timing of compiler phases in listing file if list requested.
+Otherwise, the report is written to the debug file.
+T}
+%16% Don't unlink object file.
+%32% Do not pad listing file with extra lines.
+%64% Suppress error limit (50) restriction
+%0x80% used in cgutil.c
+%0x100% Force full entry/exit for functions.
+%0x200% Fortran Front End: Dump storage statistics (dump_stg_stat(char *)).
+%0x1000%T{
+Quick entry and exit for all functions where appropriate.
+T}
+%0x8000%T{
+(0x8000), send minfo messages to stderr as they're produced.
+T}
+%0x10000% debug output for reading module files (interf.c and module.c)
+%0x20000% debug output for memory allocation
+_
+1%1% Dump tokens returned by Scanner.
+%2% reserved
+%0x100% Dump function's dirset (C pragma, Fortran directives)
+%0x200% Dump loop dirsets
+%0x400% Trace C pragma (Fortran directives) processing
+%0x800% Trace ili pragma (directive) processing
+_
+2%% Parser debug.
+%1% Trace reductions performed.
+%2% reserved
+%4% compile even with errors (Fortran)
+%8% reserved
+%32% more parser debug output
+_
+3%% Semantic Analyzer debug.
+%4% reserved
+%8% Trace equivalence processing (Fortran Front End).
+%16% Dump statement function descriptors (Fortran Front End).
+%32% Dump statement function descriptors (Fortran Front End).
+%64% Array constructor dump and module import debug output (Fortran Front End).
+%0x80% Trace format list processing (Fortran Front End).
+%0x100% Trace generic & operator overloading (Fortran Front End).
+%0x400% Trace modification of the dpdsc area for derived type support (Fortran Front End).
+_
+4%1% Dump ILM's written by Semantic Analyzer.
+%2% Write source lines to debug file as seen.
+%4% Trace addilm
+%8% Dump ILM's saved by save_ilms()
+%16% extract.c
+%0x100% Dump ASTs after semant
+%0x200% Include hash table for ASTs
+%0x400% Dump source from internal file
+%0x800% Dump ASTs prior to print_stmts()
+%0x1000% Dump ASTs immediately after exporting a module
+%0x2000% Dump ASTs immediately after importing a module.
+%0x4000%T{
+Dump ASTs immediately after importing an inline file
+T}
+_
+5%% Symbol Table debug.
+%1% Dump Symbol Table immediately after Semant.
+%2% Dump STDs immediately after Semant.
+%4% Dump Symbol Table after Assembler.
+%8% Include predefined portion of symtab in dump.
+%16% Dump the data type area (C,Fortran).
+%32% reserved
+%0x200% Trace push/pop/save/restore scope calls
+%0x400% Trace pop_sym()
+%0x800% Dump symtab after importing anything
+%0x1000%T{
+(0x1000) Dump Symbol Table and data types immediately after exporting a module.
+T}
+%0x2000%T{
+(0x2000) Dump Symbol Table and data types immediately after importing a module.
+T}
+%0x4000%T{
+(0x4000) Dump Symbol Table and data types immediately after importing an
+inline file.
+T}
+%0x8000%T{
+(0x8000) Dump Symbol Table immediately after trans_process_align() and
+transform().
+T}
+_
+6%1%T{
+Dump the Data Initialization File as records are written to it.
+T}
+%2% Trace data initialization processing (Fortran).
+%4% reserved
+%8% reserved
+%16% (Fortran) Trace deferred dinit write
+%32% (Fortran) Trace deferred dinit read
+%64% reserved
+%0x80% reserved
+_
+7%1% Trace storage allocation calls (mlalloc, free, etc.).
+%2% Fill buffers allocated with NEW, NEED with junk.
+%4% For sun, call malloc_debug/verify.
+_
+.TE
+.bp
+.TS H
+tab (%);
+c s s
+c s s
+cfI cfI lfI
+c  r lw(4.0i).
+Table 18-1 Debug Flags (continued)
+
+flg%value%description
+=
+.TH
+10%% ILI dumps.
+%1%T{
+Dump ILI hash tables (valid only if 2 or 4 also selected).
+T}
+%2% Dump blocks and ILI after Expander.
+%8% Hash table for names area.
+%16% Names area after Expander.
+%0x80%T{
+Dump the ILI for each ILT in tree form (valid only if 2 or 4 is selected).
+T}
+%0x100% Trace of addnme
+%0x200%Dump ili in C-like form
+%0x400%Statistics on ILI garbage collection
+%0x800%Disable garbage collection on ILI
+_
+.TE
+.bp
+.TS H
+tab (%);
+c s s
+c s s
+cfI cfI lfI
+c  r lw(4.0i).
+Table 18-1 Debug Flags (continued)
+
+flg%value%description
+=
+.TH
+_
+43%% Fortran Front End communication optimizations.
+%1% Dump flowgraph after communication calls generated.
+%4% Dump loops after communication calls generated.
+%8% Trace kernels rescope information.
+%64% Dump statements before & after hoisting.
+%0x80% Dump statements after array collapsing.
+%0x100% List loops where array collapsing occurs.
+
+_
+47%%Native F90 Lowering debug
+%1%symbol table/data type dump after lowering initialization
+%2%enable lowering trace output
+%4%std/sym/dtype dump after lowering
+%8%use relative ilm refs and symbol names in output suitable for 'diff'
+%16%use long-form output
+%0x100% trace upper
+%0x200% upper: dump datatypes, symbols after importing
+
+_
+50%% Fortran transformation flags.
+%1% dump common blocks when splitting commons
+%2% print statements after transform pass
+_
+51%% Additional Fortran transformation flags
+
+_
+.TE
+.sp
+.ne 25
+.sp
+.sh 2 "Utility Programs"
+Utility programs are used to build static data bases or tables
+used by the compilers.
+The output of a utility program is one or more
+include files containing data definitions and initializations (df.h
+files),
+and one or more include files containing data declarations and
+macro definitions.
+These files are copied into the src directory after the
+utility has been successfully executed.
+.lp
+The input to a utility program is a text file which is created
+and modified by hand.
+Except for the utility PRSTAB, the input files are in nroff
+format and are also used to generate one of the
+appendices of this document.
+.lp
+The utility programs are:
+.nf
+
+    PRSTAB - parse table generator.
+    SYMTAB - symbol table generator.
+    ERRMSG - error message text.
+    ILMTP  - ILM template utility.
+    ILITP  - ILI template utility.
+    MACHAR - Machine characteristics utility.
+    MICROP - Micro-operation utility.
+
+.fi
+There are some dependencies between utilities which
+require that one utility be run when a change is made
+to the input file of a different utility.
+These dependencies are:
+.np
+For PGFTN, SYMTAB must be run whenever a change
+is made to the ilm definition file which changes ILM numbers;
+for all compilers, SYMTAB must be run whenever
+the symbol table structure or macros are changed.
+.np
+The ILI Definition file (ilitp.n) is used as an input to
+ILMTP (in addition to ILITP).
+Any change to it which deletes or adds ILI, or
+changes the number of any ILI, requires that ILMTP be run
+in addition to ILITP.
+.np
+MICROP produces an output file (microp.d) which is used as
+input to ILITP.
+Therefore, any change to the Micro-op definition file which
+results in a change to
+microp.d requires that ILITP be run after MICROP.
+.sp
+.sh 2 "Maintenance Document"
+The compiler maintenance document (this document) is found in the doc
+subdirectory.
+It is written in nroff format using the 'me' macro package.
+The names of the nroff files all end with ".n".
+.lp
+There is one .n file for each chapter of the document.
+A single chapter can be run off using the command file
+\'md' (or 'mdt' if a table of contents is desired).
+A consistent format for the document is defined in the
+file 'macros.n' which is automatically included by md or mdt.
+These two command files take from one to five arguments:
+the names of nroff files.
+The result is written to file 'tmp', which can be printed.
+.lp
+To run off more than 5 files together,
+build a file which includes all the desired chapters
+using the ".so" nroff command.
+Refer to file 'all.n' which is used to run off the entire document.
+.lp
+Appendices are generated from .n files copied from the various
+utility program directories.
+This is done by running the file 'get_apdx.cmd' which copies
+the most recent files for all the utilities.
+.lp
+The ILM and ILI indices are generated by running the
+file 'mkindex.cmd', which takes a single argument,
+"ilm" or "ili".
+.lp
+To summarize, executing the following four commands will
+produce a full copy of the most recent maintenance document with
+table of contents:
+.nf
+
+    get_apdx.cmd
+    mkindex.cmd ilm
+    mkindex.cmd ili
+    di.sh all.n
+.fi

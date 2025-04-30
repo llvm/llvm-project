@@ -1,0 +1,2 @@
+# We do not want test locales to remain installed for future tests so
+# we request that the testroot be cleaned after the test is complete.

@@ -1,0 +1,5 @@
+# preconfigure fragment for i386.
+
+case "$machine" in
+i[4567]86)	base_machine=i386 machine=i386/$machine ;;
+esac

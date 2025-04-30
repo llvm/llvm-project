@@ -1,0 +1,297 @@
+#!/bin/sh
+# Test for nftw(3).
+# Copyright (C) 1997-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+set -e
+
+# The common objpfx, used to find libraries and the dynamic loader.
+objpfx=$1
+
+# We expect one parameter which is the test program.  This must understand
+# a number options:
+#   --phys		use the FTW_PHYS flag
+#   --chdir		use the FTW_CHDIR and print the current directory
+#			in the callback
+#   --depth		use the FTW_DEPTH flag
+#   --early-exit 	print file@2 item only and return non-zero from the
+#			callback when it is seen
+testprogram=$2
+
+# We cannot test this as root.
+if test `id | sed "s/uid=\([0-9]*\).*/\1/"` = 0; then
+  exit 0
+fi
+
+# Since we use `sort' we must make sure to use the same locale everywhere.
+LC_ALL=C
+export LC_ALL
+
+# First create our scenario:
+tmp=${objpfx}io
+tmpdir=$(mktemp -d $tmp/ftwtest.d.XXXXXX)
+ftwtest=$(basename $tmpdir)
+
+trap 'chmod -fR a+x $tmpdir; rm -fr $tmpdir $testout' 0 1 2 3 15
+
+mkdir $tmpdir/foo
+mkdir $tmpdir/bar
+echo > $tmpdir/baz
+mkdir $tmpdir/foo/lvl1
+echo > $tmpdir/foo/lvl1/file@1
+mkdir $tmpdir/foo/lvl1/lvl2
+echo > $tmpdir/foo/lvl1/lvl2/file@2
+mkdir $tmpdir/foo/lvl1/lvl2/lvl3
+echo > $tmpdir/foo/lvl1/lvl2/lvl3/file@3
+ln -s $tmpdir $tmpdir/foo/lvl1/lvl2/lvl3/link@3
+ln -s $tmpdir/foo/lvl1/lvl2 $tmpdir/foo/lvl1/lvl2/link@2
+ln -s $tmpdir/foo/lvl1/lvl2/lvl3/lvl4 $tmpdir/foo/lvl1/link@1
+echo > $tmpdir/bar/xo
+chmod a-x,a+r $tmpdir/bar
+
+testout=$(mktemp $tmp/ftwtest-tmp-XXXXXX.out)
+
+$testprogram $tmpdir |
+    sort > $testout
+
+cat <<EOF | cmp $testout - || exit 1
+base = "$tmp/", file = "$ftwtest", flag = FTW_D, level = 0
+base = "$tmp/$ftwtest/", file = "bar", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/", file = "baz", flag = FTW_F, level = 1
+base = "$tmp/$ftwtest/", file = "foo", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/bar/", file = "xo", flag = FTW_NS, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/lvl1/", file = "file@1", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "link@1", flag = FTW_SLN, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "lvl2", flag = FTW_D, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "lvl3", flag = FTW_D, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/lvl3/", file = "file@3", flag = FTW_F, level = 5
+EOF
+rm $testout
+
+$testprogram --depth $tmpdir |
+    sort > $testout
+
+cat <<EOF | cmp $testout - || exit 1
+base = "$tmp/", file = "$ftwtest", flag = FTW_DP, level = 0
+base = "$tmp/$ftwtest/", file = "bar", flag = FTW_DP, level = 1
+base = "$tmp/$ftwtest/", file = "baz", flag = FTW_F, level = 1
+base = "$tmp/$ftwtest/", file = "foo", flag = FTW_DP, level = 1
+base = "$tmp/$ftwtest/bar/", file = "xo", flag = FTW_NS, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1", flag = FTW_DP, level = 2
+base = "$tmp/$ftwtest/foo/lvl1/", file = "file@1", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "link@1", flag = FTW_SLN, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "lvl2", flag = FTW_DP, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "lvl3", flag = FTW_DP, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/lvl3/", file = "file@3", flag = FTW_F, level = 5
+EOF
+rm $testout
+
+$testprogram --phys $tmpdir |
+    sort > $testout
+
+cat <<EOF | cmp $testout - || exit 1
+base = "$tmp/", file = "$ftwtest", flag = FTW_D, level = 0
+base = "$tmp/$ftwtest/", file = "bar", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/", file = "baz", flag = FTW_F, level = 1
+base = "$tmp/$ftwtest/", file = "foo", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/bar/", file = "xo", flag = FTW_NS, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/lvl1/", file = "file@1", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "link@1", flag = FTW_SL, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "lvl2", flag = FTW_D, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "link@2", flag = FTW_SL, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "lvl3", flag = FTW_D, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/lvl3/", file = "file@3", flag = FTW_F, level = 5
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/lvl3/", file = "link@3", flag = FTW_SL, level = 5
+EOF
+rm $testout
+
+# For the next test everything must be readable.
+chmod -fR a+x $tmpdir
+
+$testprogram --chdir $tmpdir |
+    sort > $testout
+
+# perhaps $tmp involves some symlinks...
+tmpreal=`cd $tmp; pwd -P 2>/dev/null`
+
+cat <<EOF | cmp $testout - || exit 1
+base = "$tmp/", file = "$ftwtest", flag = FTW_D, cwd = $tmpreal, level = 0
+base = "$tmp/$ftwtest/", file = "bar", flag = FTW_D, cwd = $tmpreal/$ftwtest, level = 1
+base = "$tmp/$ftwtest/", file = "baz", flag = FTW_F, cwd = $tmpreal/$ftwtest, level = 1
+base = "$tmp/$ftwtest/", file = "foo", flag = FTW_D, cwd = $tmpreal/$ftwtest, level = 1
+base = "$tmp/$ftwtest/bar/", file = "xo", flag = FTW_F, cwd = $tmpreal/$ftwtest/bar, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo, level = 2
+base = "$tmp/$ftwtest/foo/lvl1/", file = "file@1", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "link@1", flag = FTW_SLN, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "lvl2", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "lvl3", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/lvl3/", file = "file@3", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2/lvl3, level = 5
+EOF
+rm $testout
+
+curwd=`pwd -P 2>/dev/null`
+cd "$tmp"
+$testprogram --chdir $ftwtest |
+    sort > $testout
+cd "$curwd"
+
+cat <<EOF | diff -u $testout - || exit 1
+base = "", file = "$ftwtest", flag = FTW_D, cwd = $tmpreal, level = 0
+base = "$ftwtest/", file = "bar", flag = FTW_D, cwd = $tmpreal/$ftwtest, level = 1
+base = "$ftwtest/", file = "baz", flag = FTW_F, cwd = $tmpreal/$ftwtest, level = 1
+base = "$ftwtest/", file = "foo", flag = FTW_D, cwd = $tmpreal/$ftwtest, level = 1
+base = "$ftwtest/bar/", file = "xo", flag = FTW_F, cwd = $tmpreal/$ftwtest/bar, level = 2
+base = "$ftwtest/foo/", file = "lvl1", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo, level = 2
+base = "$ftwtest/foo/lvl1/", file = "file@1", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$ftwtest/foo/lvl1/", file = "link@1", flag = FTW_SLN, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$ftwtest/foo/lvl1/", file = "lvl2", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$ftwtest/foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2, level = 4
+base = "$ftwtest/foo/lvl1/lvl2/", file = "lvl3", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2, level = 4
+base = "$ftwtest/foo/lvl1/lvl2/lvl3/", file = "file@3", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2/lvl3, level = 5
+EOF
+rm $testout
+
+curwd=`pwd -P`
+cd "$tmp"
+$testprogram --chdir $ftwtest/. |
+    sort > $testout
+cd "$curwd"
+
+cat <<EOF | diff -u $testout - || exit 1
+base = "$ftwtest/", file = ".", flag = FTW_D, cwd = $tmpreal/$ftwtest, level = 0
+base = "$ftwtest/./", file = "bar", flag = FTW_D, cwd = $tmpreal/$ftwtest, level = 1
+base = "$ftwtest/./", file = "baz", flag = FTW_F, cwd = $tmpreal/$ftwtest, level = 1
+base = "$ftwtest/./", file = "foo", flag = FTW_D, cwd = $tmpreal/$ftwtest, level = 1
+base = "$ftwtest/./bar/", file = "xo", flag = FTW_F, cwd = $tmpreal/$ftwtest/bar, level = 2
+base = "$ftwtest/./foo/", file = "lvl1", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo, level = 2
+base = "$ftwtest/./foo/lvl1/", file = "file@1", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$ftwtest/./foo/lvl1/", file = "link@1", flag = FTW_SLN, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$ftwtest/./foo/lvl1/", file = "lvl2", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 3
+base = "$ftwtest/./foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2, level = 4
+base = "$ftwtest/./foo/lvl1/lvl2/", file = "lvl3", flag = FTW_D, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2, level = 4
+base = "$ftwtest/./foo/lvl1/lvl2/lvl3/", file = "file@3", flag = FTW_F, cwd = $tmpreal/$ftwtest/foo/lvl1/lvl2/lvl3, level = 5
+EOF
+rm $testout
+
+curwd=`pwd -P 2>/dev/null`
+cd "$tmp"
+$testprogram --chdir $ftwtest/foo/lvl1/link@1 |
+    sort > $testout
+cd "$curwd"
+
+cat <<EOF | diff -u $testout - || exit 1
+base = "$ftwtest/foo/lvl1/", file = "link@1", flag = FTW_SLN, cwd = $tmpreal/$ftwtest/foo/lvl1, level = 0
+EOF
+rm $testout
+
+$testprogram --early-exit $tmpdir |
+    sort > $testout
+
+cat <<EOF | cmp $testout - || exit 1
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, level = 4
+succeeded
+EOF
+rm $testout
+
+mkdir $tmpdir/foo/lvl1b
+echo > $tmpdir/foo/lvl1b/file@1b
+echo > $tmpdir/foo/lvl1b/file2@1b
+echo > $tmpdir/foo/lvl1b/file3@1b
+
+$testprogram --skip-subtree=lvl1 $tmpdir |
+    sort > $testout
+
+cat <<EOF | diff -u $testout - || exit 1
+base = "$tmp/", file = "$ftwtest", flag = FTW_D, level = 0
+base = "$tmp/$ftwtest/", file = "bar", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/", file = "baz", flag = FTW_F, level = 1
+base = "$tmp/$ftwtest/", file = "foo", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/bar/", file = "xo", flag = FTW_F, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1b", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file2@1b", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file3@1b", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file@1b", flag = FTW_F, level = 3
+EOF
+rm $testout
+
+$testprogram --skip-siblings=lvl1 $tmpdir |
+    sort > $testout
+
+# The filesystem is not required to put lvl1 before lvl1b.
+# If lvl1b comes after lvl1, it shouldn't be printed, while if it
+# comes before, it should.
+catcmd=cat
+[ -n "`ls -U $tmpdir/foo/ | sed -n '/lvl1$/,${/lvl1b$/p;}'`" ] \
+  && catcmd="grep -v lvl1b"
+
+$catcmd <<EOF | diff -u $testout - || exit 1
+base = "$tmp/", file = "$ftwtest", flag = FTW_D, level = 0
+base = "$tmp/$ftwtest/", file = "bar", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/", file = "baz", flag = FTW_F, level = 1
+base = "$tmp/$ftwtest/", file = "foo", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/bar/", file = "xo", flag = FTW_F, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1b", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file2@1b", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file3@1b", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file@1b", flag = FTW_F, level = 3
+EOF
+rm $testout
+
+$testprogram --skip-siblings=file@1b $tmpdir |
+    sort > $testout
+
+# The filesystem is not required to put file2@1b and file3@1b after file@1b.
+# If file[23]@1b come after file@1b, it shouldn't be printed, while if they
+# come before, they should.
+regexp=`echo $(ls -U $tmp/$ftwtest/foo/lvl1b \
+	       | sed -n '/file@1b$/,${/file[23]@1b$/p;}') | sed 's, ,|,'`
+catcmd=cat
+[ -n "$regexp" ] && catcmd="egrep -v $regexp"
+
+$catcmd <<EOF | diff -u $testout - || exit 1
+base = "$tmp/", file = "$ftwtest", flag = FTW_D, level = 0
+base = "$tmp/$ftwtest/", file = "bar", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/", file = "baz", flag = FTW_F, level = 1
+base = "$tmp/$ftwtest/", file = "foo", flag = FTW_D, level = 1
+base = "$tmp/$ftwtest/bar/", file = "xo", flag = FTW_F, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/", file = "lvl1b", flag = FTW_D, level = 2
+base = "$tmp/$ftwtest/foo/lvl1/", file = "file@1", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "link@1", flag = FTW_SLN, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/", file = "lvl2", flag = FTW_D, level = 3
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "file@2", flag = FTW_F, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/", file = "lvl3", flag = FTW_D, level = 4
+base = "$tmp/$ftwtest/foo/lvl1/lvl2/lvl3/", file = "file@3", flag = FTW_F, level = 5
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file2@1b", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file3@1b", flag = FTW_F, level = 3
+base = "$tmp/$ftwtest/foo/lvl1b/", file = "file@1b", flag = FTW_F, level = 3
+EOF
+rm $testout
+
+rm -fr $tmpdir
+
+trap '' 0
+
+exit 0

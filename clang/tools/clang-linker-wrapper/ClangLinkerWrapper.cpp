@@ -663,6 +663,34 @@ std::vector<std::string> getTargetFeatures(ArrayRef<OffloadFile> InputFiles) {
   return UnifiedFeatures;
 }
 
+// NextSilicon
+// Add NextSilicon LTO passes to the device LTO pipeline.
+void addNextSiliconLTOPasses(const ArgList &Args, lto::Config &Conf) {
+  if (Args.hasArg(OPT_lto_next_silicon_warn_unsupported_omp))
+    Conf.NextSiliconWarnUnsupportedOMP = true;
+
+  if (Args.hasArg(OPT_lto_next_silicon_relocate_variadic))
+    Conf.NextSiliconRelocateVariadic = true;
+
+  if (Args.hasArg(OPT_lto_next_silicon_ir_fixup))
+    Conf.NextSiliconIRFixup = true;
+
+  if (Args.hasArg(OPT_lto_next_silicon_ir_builtins))
+    Conf.NextSiliconIRBuiltins = true;
+
+  if (Args.hasArg(OPT_lto_next_silicon_import_recursion))
+    Conf.NextSiliconImportRecursion = true;
+
+  if (Args.hasArg(OPT_lto_next_silicon_atomic_fixup))
+    Conf.NextSiliconAtomicFixup = true;
+
+  if (Args.hasArg(OPT_lto_next_silicon_split_call_sites))
+    Conf.NextSiliconSplitCallSites = true;
+
+  if (Args.hasArg(OPT_lto_embed_symbol_trackers))
+    Conf.EmbedSymbolTrackers = true;
+}
+
 template <typename ModuleHook = function_ref<bool(size_t, const Module &)>>
 std::unique_ptr<lto::LTO> createLTO(
     const ArgList &Args, const std::vector<std::string> &Features,
@@ -711,6 +739,8 @@ std::unique_ptr<lto::LTO> createLTO(
 
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
+
+  addNextSiliconLTOPasses(Args, Conf);
 
   if (SaveTemps) {
     std::string TempName = (sys::path::filename(ExecutableName) + "." +

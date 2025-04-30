@@ -14,6 +14,21 @@
 #ifndef KMP_WRAPPER_MALLOC_H
 #define KMP_WRAPPER_MALLOC_H
 
+#if LIBOMP_NEXTSILICON
+#if LIBOMP_NEXTSILICON_ATOMICS_BYPASS
+#include "nextsilicon/kmp_ns.h"
+#define __KMP_LIBC_MALLOC __kmp_ns_malloc
+#define __KMP_LIBC_CALLOC __kmp_ns_calloc
+#define __KMP_LIBC_REALLOC __kmp_ns_realloc
+#define __KMP_LIBC_FREE __kmp_ns_free
+#else
+#define __KMP_LIBC_MALLOC malloc
+#define __KMP_LIBC_CALLOC calloc
+#define __KMP_LIBC_REALLOC realloc
+#define __KMP_LIBC_FREE free
+#endif // LIBOMP_NEXTSILICON_ATOMICS_BYPASS
+#endif // LIBOMP_NEXTSILICON
+
 /* This header serves for 3 purposes:
    1. Declaring standard memory allocation routines in OS-independent way.
    2. Passing source location info through memory allocation wrappers.
@@ -177,8 +192,8 @@
 
 // Linux* OS, OS X*, or non-debug Windows* OS.
 
-#define _malloc_src_loc(size, file, line) malloc((size))
-#define _free_src_loc(ptr, file, line) free((ptr))
+#define _malloc_src_loc(size, file, line) __KMP_LIBC_MALLOC((size))
+#define _free_src_loc(ptr, file, line) __KMP_LIBC_FREE((ptr))
 
 #endif
 
@@ -186,8 +201,8 @@
 
 // In release build malloc_src_loc() and free_src_loc() do not have extra
 // parameters.
-#define _malloc_src_loc(size) malloc((size))
-#define _free_src_loc(ptr) free((ptr))
+#define _malloc_src_loc(size) __KMP_LIBC_MALLOC((size))
+#define _free_src_loc(ptr) __KMP_LIBC_FREE((ptr))
 
 #endif // KMP_DEBUG
 

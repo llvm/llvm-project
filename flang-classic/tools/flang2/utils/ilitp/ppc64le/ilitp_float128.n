@@ -1,0 +1,43 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+
+.IL FLOAT128CON sym
+.AT cons null float128 cse
+.IL FLOAT128LD arlnk nme stc
+.AT load null float128
+.IL FLOAT128ST float128lnk arlnk nme stc
+.AT store null trm
+.IL FLOAT128ABS float128lnk
+.AT arth null float128 cse
+.IL FLOAT128CHS float128lnk
+.AT arth null float128 cse
+.IL FLOAT128RNDINT float128lnk
+.AT arth null float128 cse
+.IL FLOAT128FROM dplnk
+.AT arth null float128 cse
+.IL FLOAT128TO float128lnk
+.AT arth null dp cse
+.IL FLOAT128ADD float128lnk float128lnk
+.AT arth comm float128 cse
+.IL FLOAT128SUB float128lnk float128lnk
+.AT arth null float128 cse
+.IL FLOAT128MUL float128lnk float128lnk
+.AT arth comm float128 cse
+.IL FLOAT128DIV float128lnk float128lnk
+.AT arth null float128 cse
+.IL FLOAT128CMP float128lnk float128lnk stc
+.AT arth null ir cse
+.IL FLOAT128ARG float128lnk lnk
+.AT define null lnk
+.IL FLOAT128RETURN float128lnk
+.AT define null trm
+.IL FLOAT128RESULT lnk
+.AT define null float128 dom
+.IL FLOAT128FREE float128lnk
+.AT other null trm
+.IL FLOAT128CSE float128lnk
+.AT arth null float128

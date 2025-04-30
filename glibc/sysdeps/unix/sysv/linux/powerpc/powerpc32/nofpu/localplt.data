@@ -1,0 +1,42 @@
+libc.so: _Unwind_Find_FDE
+libc.so: __adddf3 ?
+libc.so: __addsf3 ?
+libc.so: __divdf3 ?
+libc.so: __divsf3 ?
+libc.so: __eqdf2 ?
+libc.so: __eqsf2 ?
+libc.so: __extendsfdf2 ?
+libc.so: __fixdfsi ?
+libc.so: __fixsfsi ?
+libc.so: __fixunsdfsi ?
+libc.so: __floatsidf ?
+libc.so: __floatsisf ?
+libc.so: __floatunsidf ?
+libc.so: __floatunsisf ?
+libc.so: __gedf2 ?
+libc.so: __gtdf2 ?
+libc.so: __gtsf2 ?
+libc.so: __ledf2 ?
+libc.so: __ltdf2 ?
+libc.so: __muldf3 ?
+libc.so: __mulsf3 ?
+libc.so: __nedf2 ?
+libc.so: __subdf3 ?
+libc.so: __subsf3 ?
+libc.so: __truncdfsf2 ?
+libc.so: __unorddf2 ?
+libc.so: __unordsf2 ?
+libc.so: abort ?
+libc.so: calloc
+libc.so: free
+libc.so: malloc
+libc.so: memset ?
+libc.so: realloc
+libm.so: copysignl ?
+libm.so: fabsl
+libm.so: matherr
+# The TLS-enabled version of these functions is interposed from libc.so.
+ld.so: _dl_signal_error
+ld.so: _dl_catch_error
+ld.so: _dl_signal_exception
+ld.so: _dl_catch_exception

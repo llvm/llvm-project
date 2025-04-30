@@ -1,0 +1,15 @@
+#ifdef HAVE_S390_MIN_Z196_ZARCH_ASM_SUPPORT
+# define USE_CEIL_BUILTIN 1
+# define USE_CEILF_BUILTIN 1
+# define USE_CEILL_BUILTIN 1
+# if __GNUC_PREREQ (8, 0)
+#  define USE_CEILF128_BUILTIN 1
+# else
+#  define USE_CEILF128_BUILTIN 0
+# endif
+#else
+# define USE_CEIL_BUILTIN 0
+# define USE_CEILF_BUILTIN 0
+# define USE_CEILL_BUILTIN 0
+# define USE_CEILF128_BUILTIN 0
+#endif

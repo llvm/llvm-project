@@ -1,0 +1,304 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% English language locale for South Africa
+% Source: Zuza Software Foundation (Translate.org.za)
+% Email: dwayne@translate.org.za
+% Tel: +27 12 3430389
+% Fax: +27 12 3430389
+% Language: en
+% Territory: ZA
+% Revision: 1.3
+% Date: 2007-04-19
+% Users: general
+%
+% Changelog
+% 1.3 (2007-04-19):
+%     2007-04-19 Dwayne Bailey <dwayne@translate.org.za>
+%       - Change int_select from 09 to 00
+% 1.2.1 (2005-10-13):
+%     2005-10-12 Dwayne Bailey <dwayne@translate.org.za>
+%       - Update contact information
+% 1.2 (2004-10-27):
+%     2004-10-27 Dwayne Bailey <dwayne@translate.org.za>
+%       - Remove .* from LC_MESSAGES yes/noexpr
+%       - Change contact details and add Translate.org.za
+%         to project name
+%     2004-03-30 Dwayne Bailey <dwayne@translate.org.za>
+%       - Added country_post
+%       - Added abbreviation to LC_IDENTIFICATION
+%     2003-05-17 Dwayne Bailey <dwayne@translate.org.za>
+%       - Add lang_ab, lang_term
+%       - Add various comments for reference documents
+%       - Add country_isbn, country_car, country_ab2,
+%         country_ab3, country_num
+%       - Add name_* for all salutations
+% 1.1 (2003-03-14):
+%   - Updated maintainer to Zuza Software Foundation
+%   - Changed %x for LC_TIME to use dd/mm/ccyy
+%   - Added ^ to LC_MESSAGES regex "^[yY].*"
+%   - Confirmed LC_PAPER and LC_MEASUREMENT settings
+%   - Added country and language names to LC_ADDRESS
+%   - Added missing info for LC_TELEPHONE
+
+LC_IDENTIFICATION
+title      "English locale for South Africa"
+source     "Zuza Software Foundation (Translate.org.za)"
+address    "Box 28364, Sunnyside, 0132, South Africa"
+contact    "Dwayne Bailey"
+email      "dwayne@translate.org.za"
+tel        ""
+fax        ""
+language   "English"
+territory  "South Africa"
+% audience     ""
+% application  ""
+abbreviation "Translate.org.za"
+revision   "1.3"
+date       "2007-04-19"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "en_GB"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+% ISO 4217 Currency and fund codes
+% http://www.bsi-global.com/Technical+Information/Publications/_Publications/tig90.xalter
+int_curr_symbol         "ZAR "
+currency_symbol         "R"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          0
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+% abday - The abbreviations for the week days:
+abday       "Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"
+
+% day - The full names of the week days
+day         "Sunday";/
+            "Monday";/
+            "Tuesday";/
+            "Wednesday";/
+            "Thursday";/
+            "Friday";/
+            "Saturday"
+
+% abmon - The abbreviations for the months
+abmon       "Jan";"Feb";/
+            "Mar";"Apr";/
+            "May";"Jun";/
+            "Jul";"Aug";/
+            "Sep";"Oct";/
+            "Nov";"Dec"
+
+% mon - The full names of the months
+mon         "January";/
+            "February";/
+            "March";/
+            "April";/
+            "May";/
+            "June";/
+            "July";/
+            "August";/
+            "September";/
+            "October";/
+            "November";/
+            "December"
+
+% Abbreviated date and time representation to be referenced by the "%c" field descriptor -
+%
+% "%a" (short weekday name),
+% "%d" (day of month as a decimal number),
+% "%b" (short month name),
+% "%Y" (year with century as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+d_t_fmt     "%a %d %b %Y %T"
+
+% Abbreviated date and time representation to be used by date(1)
+date_fmt    "%a %d %b %Y %T %Z"
+
+% Date representation to be referenced by the "%x" field descriptor -
+% "%d/%m/%Y", day/month/year as decimal numbers (01/01/2000).
+d_fmt       "%d//%m//%Y"
+
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+t_fmt       "%T"
+
+% Define representation of ante meridiem and post meridiem strings -
+% The "" mean default to "AM" and "PM".
+am_pm       "";""
+
+% Define time representation in 12-hour format with "am_pm", to be referenced by the "%r"
+% The "" means that this format is not supported.
+t_fmt_ampm  ""
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+copy "en_US"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+% Representation of telephone number for international use -
+% "+%c %a %l", which is
+% "+%c - country code",
+% "%a - area code without the prefix (often 0)",
+% "%l local number".
+tel_int_fmt    "+%c %a %l"
+
+% Representation of telephone number for domestic use -
+% "(%A) %l", which is
+% %A - area code with national prefix
+% %l - local number".
+tel_dom_fmt    "(%A) %l"
+
+% Prefix for making international calls
+int_select     "00"
+
+% International dialing code
+int_prefix     "27"
+
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+% Format for addressing a person.
+% "%d%t%g%t%m%t%f"
+%
+% "Salutation",
+% "Empty string, or <Space>",
+% "First given name",
+% "Empty string, or <Space>",
+% "Middle names",
+% "Empty string, or <Space>",
+% "Clan names"
+name_fmt    "%d%t%g%t%m%t%f"
+
+% General salutation for any sex
+% (no term)
+name_gen    ""
+
+% Salutation for unmarried females
+name_miss   "Miss"
+
+% Salutation for males
+name_mr     "Mr"
+
+% Salutation for married females
+name_mrs    "Mrs"
+
+% Salutation valid for all females
+name_ms     "Ms"
+END LC_NAME
+
+LC_ADDRESS
+% Representation of postal addresses (minus the addressee's name) in South
+% Africa. (Ignored for now)
+% "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N", which gives -
+%
+% "firm name",
+% "end of line",
+% "C/O address",
+% "end of line",
+% "department name",
+% "Building name",
+% "end of line",
+% "street or block name",
+% "space",
+% "house number or designation",
+% "space",
+% "floor number",
+% "space",
+% "room number, door designation",
+% "end of line",
+% "postal code",
+% "space",
+% "town, city",
+% "end of line",
+% "country designation for the <country_post> keyword",
+% "end of line
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+
+% Country name in English
+country_name  "South Africa"
+
+% Language name in English
+lang_name     "English"
+
+% CEPT MAILCODES are suggested
+% Alternatively use the code found on your countries postal item tracking number
+country_post   "ZA"
+
+% UN Geneve 1949:68 Distinguishing signs of vehicles in international traffic
+% http://www.unece.org/trans/conventn/disting-signs-5-2001.pdf
+country_car   "ZA"
+
+% ISO 2108
+% http://www.isbn-international.org/html/prefix/prefa.htm
+country_isbn  0
+
+% ISO 639 language abbreviations:
+% 639-1 2 letter, 639-2 3 letter terminology
+% http://www.loc.gov/standards/iso639-2/englagn.html
+lang_ab      "en"
+lang_term    "eng"
+lang_lib    "eng"
+
+% ISO 3166 country number and 2 and 3 letter abreviations
+% http://www.unicode.org/onlinedat/countries.html
+country_ab2   "ZA"
+country_ab3   "ZAF"
+country_num   710
+
+END LC_ADDRESS

@@ -1,0 +1,177 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Breton Language Locale for France
+% Source: thanks to Denise.Peden@enst-bretagne.fr (Denise Derrien-Peden)
+% Address:
+% Contact: Pablo Saratxaga
+% Email: srtxg@chanae.alphanet.ch
+% Tel:
+% Fax:
+% Language: br
+% Territory: FR
+% Revision: 0.5
+% Date: 2001-01-28
+% Users: general
+
+LC_IDENTIFICATION
+title "Breton language locale for France"
+source "Denise.Peden@enst-bretagne.fr (Denise Derrien-Peden)"
+address ""
+contact "Thierry Vignaud"
+email "thierry.vignaud@gmail.com"
+tel ""
+fax ""
+language "Breton"
+territory "France"
+revision "0.54"
+date "2001-01-28"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+END LC_IDENTIFICATION
+
+
+LC_COLLATE
+%% a b c ch c'h d e f g h i j k l m n o p q r s t u v w x y z
+%
+% No collation information is available for this language in CLDR.
+%
+% We use the following at the moment:
+%
+% &c<ch<<<cH<<<Ch<<<CH<c'h<<<c'H<<<C'h<<<C'H
+%
+
+copy "iso14651_t1"
+
+collating-symbol  <c-h-br>
+collating-element <c-h> from "ch"
+collating-element <c-H> from "cH"
+collating-element <C-h> from "Ch"
+collating-element <C-H> from "CH"
+collating-symbol  <c-'-h-br>
+collating-element <c'h> from "c'h"
+collating-element <c'H> from "c'H"
+collating-element <C'h> from "C'h"
+collating-element <C'H> from "C'H"
+
+reorder-after <AFTER-C>
+<c-h-br>
+<c-'-h-br>
+
+<c-h>	<c-h-br>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<c-H>	<c-h-br>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<C-h>	<c-h-br>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<C-H>	<c-h-br>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<c'h>	<c-'-h-br>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<c'H>	<c-'-h-br>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<C'h>	<c-'-h-br>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<C'H>	<c-'-h-br>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_DK"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1oOyY]"
+noexpr  "^[-0kKnN]"
+yesstr  "ya"
+nostr   "ket"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "fr_FR"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "fr_FR"
+END LC_NUMERIC
+
+LC_TIME
+abday   "sul";"lun";"meu";"mer";"yao";"gwe";"sad"
+day     "sul";/
+        "lun";/
+        "meurzh";/
+        "merc<U02BC>her";/
+        "yaou";/
+        "gwener";/
+        "sadorn"
+abmon   "Gen ";"C<U02BC>hw";/
+        "Meu ";"Ebr ";/
+        "Mae ";"Mezh";/
+        "Gou ";"Eos ";/
+        "Gwe ";"Her ";/
+        "Du  ";"Ker "
+mon     "Genver";/
+        "C<U02BC>hwevrer";/
+        "Meurzh";/
+        "Ebrel";/
+        "Mae";/
+        "Mezheven";/
+        "Gouere";/
+        "Eost";/
+        "Gwengolo";/
+        "Here";/
+        "Du";/
+        "Kerzu"
+d_t_fmt  "D<U02BC>ar %A %d a viz %B %Y %T"
+date_fmt "D<U02BC>ar %A %d a viz %B %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   " ";" "
+t_fmt_ampm "%Ie%M:%S %p"
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "fr_FR"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "fr_FR"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "fr_FR"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Fra<U00F1>s"
+country_ab2 "FR"
+country_ab3 "FRA"
+country_num 250
+country_isbn "979-10"
+country_car    "F"
+lang_name    "brezhoneg"
+lang_ab      "br"
+lang_term    "bre"
+lang_lib    "bre"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "fr_FR"
+END LC_TELEPHONE

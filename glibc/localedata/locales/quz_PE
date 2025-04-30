@@ -1,0 +1,155 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Cusco Quechua language locale for Peru
+%
+% Prepared and contributed to glibc by Chris Leonard <cjl@sugarlabs.org>
+% and Amos Batto
+%
+% This locale data has been developed in collaboration between:
+% Sugar Labs,  http://www.sugarlabs.org/
+% Instituto de Lenguas y Literaturas Andinas-Amazonicas
+% http://www.illa-a.org/wp/illa/
+%
+% build with: localedef -f UTF-8 -i quz_PE quz_PE
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title        "Cusco Quechua locale for Peru"
+source       "Sugar Labs // OLPC"
+address      ""
+contact      "sugarlabs.org"
+email        "libc-alpha@sourceware.org"
+tel          ""
+fax          ""
+language     "Cusco Quechua"
+territory    "Peru"
+revision     "1.0"
+date         "2013-08-24"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+% LC_TIME: Use Quechua transliteration of Spanish day and month names
+
+LC_TIME
+mon           "iniru";/
+     "phiwriru";/
+     "marsu";/
+     "awril";/
+     "mayu";/
+     "huniyu";/
+     "huliyu";/
+     "agustu";/
+     "siptiyimri";/
+     "uktuwri";/
+     "nuwiyimri";/
+     "tisiyimri"
+abmon         "ini";/
+       "phi";/
+       "mar";/
+       "awr";/
+       "may";/
+       "hun";/
+       "hul";/
+       "agu";/
+       "sip";/
+       "ukt";/
+       "nuw";/
+       "tis"
+day           "tuminku";/
+     "lunis";/
+     "martis";/
+     "miyirkulis";/
+     "juywis";/
+     "wiyirnis";/
+     "sawatu"
+abday         "tum";/
+       "lun";/
+       "mar";/
+       "miy";/
+       "juy";/
+       "wiy";/
+       "saw"
+d_t_fmt       "%a %d %b %Y %T"
+date_fmt      "%a %d %b %Y %T %Z"
+d_fmt         "%d//%m//%y"
+t_fmt         "%I:%M:%S %p"
+am_pm         "AM";"PM"
+t_fmt_ampm    "%I:%M:%S %p"
+week 7;19971130;1
+END LC_TIME
+
+LC_NUMERIC
+copy "es_PE"
+END LC_NUMERIC
+
+LC_MONETARY
+copy "es_PE"
+END LC_MONETARY
+
+LC_PAPER
+copy "es_PE"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "es_PE"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1aAsSyY]"
+noexpr  "^[-0mMnN]"
+yesstr  "Ar<U00ED>"
+nostr   "Manan"
+END LC_MESSAGES
+
+LC_NAME
+copy "es_PE"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_ab2   "PE"
+country_ab3   "PER"
+country_num   604
+country_car   "PE"
+lang_name    "Qusqu runasimi"
+lang_term    "quz"
+lang_lib    "quz"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "es_PE"
+END LC_TELEPHONE

@@ -1,0 +1,153 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title      "Yau/Nungon locale for Papua New Guinea"
+source     "Information from native speakers"
+address    ""
+contact    "Hannah Sarvasy"
+email      "nungon.localization@gmail.com"
+tel        ""
+fax        ""
+language   "Yau"
+territory  "Papua New Guinea"
+revision   "1.0"
+date       "2016-12-07"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "PGK "
+currency_symbol         "K"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          0
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+abday       "s<U00F6>n";"m<U00F6>n";/
+            "sin";"mit";/
+            "soi";"nen";/
+            "sab"
+day         "s<U00F6>nda";/
+            "m<U00F6>nda";/
+            "sinda";/
+            "mitiw<U00F6>";/
+            "sogipbono";/
+            "nenggo";/
+            "s<U00F6>ndanggie"
+abmon       "jen";"feb";/
+            "mas";"epr";/
+            "mei";"jun";/
+            "jul";"<U00F6>gu";/
+            "sep";"<U00F6>kt";/
+            "n<U00F6>w";"dis"
+mon         "jenuari";/
+            "febuari";/
+            "mas";/
+            "epril";/
+            "mei";/
+            "jun";/
+            "julai";/
+            "<U00F6>gus";/
+            "septemba";/
+            "<U00F6>ktoba";/
+            "n<U00F6>wemba";/
+            "diksemba"
+d_t_fmt     "%a %d %b %Y %T"
+date_fmt    "%a %d %b %Y %T %Z"
+d_fmt       "%d//%m//%y"
+t_fmt       "%T"
+am_pm       "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U00F6><U00D6>]"
+noexpr "^[-0nNmM]"
+yesstr "<U00F6><U00F6>"
+nostr "muuno"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Papua New Guinea"
+country_post ""
+country_ab2  "PG"
+country_ab3  "PNG"
+% ISO 3166-1 numeric code for PNG
+country_num 598
+% See: https://en.wikipedia.org/wiki/Yau_language, the endonym seems to be Uruwa
+lang_name    "Uruwa"
+country_car  "PNG"
+lang_ab      ""
+lang_term    "yuw"
+lang_lib     "yuw"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "675"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

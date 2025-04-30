@@ -1,0 +1,68 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42
+type wint_t
+type wctrans_t
+type wctype_t
+# if defined XOPEN2K8 || defined POSIX2008
+type locale_t
+# endif
+
+function int iswalnum (wint_t)
+function int iswalpha (wint_t)
+# ifndef UNIX98
+function int iswblank (wint_t)
+# endif
+function int iswcntrl (wint_t)
+function int iswdigit (wint_t)
+function int iswgraph (wint_t)
+function int iswlower (wint_t)
+function int iswprint (wint_t)
+function int iswpunct (wint_t)
+function int iswspace (wint_t)
+function int iswupper (wint_t)
+function int iswxdigit (wint_t)
+function int iswctype (wint_t, wctype_t)
+function wint_t towctrans (wint_t, wctrans_t)
+function wint_t towlower (wint_t)
+function wint_t towupper (wint_t)
+function wctrans_t wctrans (const char*)
+function wctype_t wctype (const char*)
+# if defined XOPEN2K8 || defined POSIX2008
+function int iswalnum_l (wint_t, locale_t)
+function int iswalpha_l (wint_t, locale_t)
+function int iswblank_l (wint_t, locale_t)
+function int iswcntrl_l (wint_t, locale_t)
+function int iswdigit_l (wint_t, locale_t)
+function int iswgraph_l (wint_t, locale_t)
+function int iswlower_l (wint_t, locale_t)
+function int iswprint_l (wint_t, locale_t)
+function int iswpunct_l (wint_t, locale_t)
+function int iswspace_l (wint_t, locale_t)
+function int iswupper_l (wint_t, locale_t)
+function int iswxdigit_l (wint_t, locale_t)
+function int iswctype_l (wint_t, wctype_t, locale_t)
+function wint_t towctrans_l (wint_t, wctrans_t, locale_t)
+function wint_t towlower_l (wint_t, locale_t)
+function wint_t towupper_l (wint_t, locale_t)
+function wctrans_t wctrans_l (const char*, locale_t)
+function wctype_t wctype_l (const char*, locale_t)
+# endif
+
+macro-constant WEOF {wint_t}
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow-header ctype.h
+allow-header stdio.h
+allow-header stdarg.h
+allow-header stdlib.h
+allow-header string.h
+allow-header stddef.h
+allow-header time.h
+allow-header wchar.h
+#endif
+
+allow is[abcdefghijklmnopqrstuvwxyz]*
+allow to[abcdefghijklmnopqrstuvwxyz]*
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif
+#endif

@@ -142,6 +142,19 @@ static lto::Config createConfig() {
   c.TimeTraceEnabled = config->timeTraceEnabled;
   c.TimeTraceGranularity = config->timeTraceGranularity;
 
+  c.NextSiliconImportRecursion = config->ltoNextSiliconImportRecursion;
+  c.NextSiliconWarnUnsupportedOMP = config->ltoNextSiliconWarnUnsupportedOMP;
+  c.NextSiliconRelocateVariadic = config->ltoNextSiliconRelocateVariadic;
+  c.NextSiliconIRFixup = config->ltoNextSiliconIRFixup;
+  c.NextSiliconIRBuiltins = config->ltoNextSiliconIRBuiltins;
+  c.NextDoPGOCounterPromotion = config->ltoNextSiliconDoCounterPromotion;
+  c.NextSiliconAtomicFixup = config->ltoNextSiliconAtomicFixup;
+  c.NextSiliconSplitCallSites = config->ltoNextSiliconSplitCallSites;
+  c.EmbedSymbolTrackers = config->ltoEmbedSymbolTrackers;
+  c.NextInstrumentation = config->ltoNextInstrumentation;
+  if (c.EmbedSymbolTrackers)
+    c.ShouldDiscardValueNames = false;
+
   c.CSIRProfile = std::string(config->ltoCSProfileFile);
   c.RunCSIRInstr = config->ltoCSProfileGenerate;
   c.PGOWarnMismatch = config->ltoPGOWarnMismatch;

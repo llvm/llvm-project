@@ -1,0 +1,14 @@
+libc {
+  GLIBC_2.0 {
+    # Exception handling support functions from libgcc
+    __register_frame; __register_frame_table; __deregister_frame;
+    __frame_state_for; __register_frame_info_table;
+  }
+  GLIBC_2.2.6 {
+    ioperm;
+  }
+  GLIBC_2.3.3 {
+    posix_fadvise64;
+    posix_fallocate64;
+  }
+}

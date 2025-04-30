@@ -1,0 +1,372 @@
+This file describes changes to the AM33 port while it was in the ports/
+add-on directory.  That port has since been removed entirely.
+The ports/ directory is no longer used, so reintroduction of AIX code
+would be described in the top-level ChangeLog file, not here.
+
+
+
+2014-02-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/am33: Remove.
+	* sysdeps/unix/am33: Likewise.
+	* sysdeps/unix/sysv/linux/am33: Likewise.
+
+2013-11-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/am33/fpu/fegetround.c (fegetround): Use libm_hidden_def.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/am33/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/am33/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/am33/configure: Regenerated.
+
+2013-08-29   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/unix/sysv/linux/am33/bits/fcntl.h: Fix typos.
+
+2013-08-21   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/am33/fpu/fraiseexcpt.c: Fix typos.
+
+2013-06-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/am33/elf/start.S: Remove trailing whitespace.
+	* sysdeps/am33/fpu/fgetexcptflg.c: Likewise.
+
+2013-05-01  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	* sysdeps/am33/atomicity.h: Add missing #include <stdint.h> due to
+	uint64_t or uint32_t usage.
+
+2013-03-11  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/am33/bits/mman.h: Remove all defines
+	provided by bits/mman-linux.h and include <bits/mman-linux.h>.
+
+2013-02-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/am33/elf/start.S: Don't include "bp-sym.h".
+	(_start): Don't use BP_SYM.
+	* sysdeps/unix/sysv/linux/am33/clone.S: Don't include <bp-sym.h>.
+	(__clone): Don't use BP_SYM.
+
+2013-02-14  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/am33/dl-machine.h [!PROF && !__BOUNDED_POINTERS__]:
+	Remove __BOUNDED_POINTERS__ from condition.
+
+2013-02-13  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/am33/dl-machine.h (fixup): Do not use __unbounded.
+	* sysdeps/unix/sysv/linux/am33/brk.c (__brk): Do not use
+	__ptrvalue.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2013-01-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/am33/bits/fcntl.h: Reformat copyright
+	notice.
+	* sysdeps/unix/sysv/linux/am33/sysdep.S: Likewise.
+
+2012-11-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/am33/fpu/fclrexcpt.c (feclearexcept): Add
+	libm_hidden_ver.
+
+	[BZ #3439]
+	* sysdeps/am33/fpu/bits/fenv.h (FE_INEXACT): Define macro to
+	integer constant usable in #if and use that to give value to enum
+	constant.
+	(FE_UNDERFLOW): Likewise.
+	(FE_OVERFLOW): Likewise.
+	(FE_DIVBYZERO): Likewise.
+	(FE_INVALID): Likewise.
+	(FE_TONEAREST): Likewise.
+
+2012-10-30  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14047]
+	* sysdeps/am33/tininess.h: New file.
+
+2012-10-09  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/am33/configure: Regenerated.
+
+2012-08-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/am33/configure.in (arch_minimum_kernel):
+	Change to 2.6.25.
+	* sysdeps/unix/sysv/linux/am33/configure: Regenerated.
+
+2012-08-01  Roland McGrath  <roland@hack.frob.com>
+
+	[BZ #14138]
+	* sysdeps/unix/sysv/linux/am33/getrlimit.c: File removed.
+
+2012-03-09  Paul Eggert  <eggert@cs.ucla.edu>
+
+	[BZ #13673]
+	Replace FSF snail mail address with URLs, as per GNU coding standards.
+
+2011-10-05  Andreas Schwab  <schwab@redhat.com>
+
+	* sysdeps/am33/dl-machine.h (elf_machine_rela)
+	(elf_machine_lazy_rel): Add parameter skip_ifunc.
+
+2007-10-22  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/am33/bits/fcntl.h (F_DUPFD_CLOEXEC): Define.
+
+2007-07-10  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/am33/bits/fcntl.h: Comment fix.
+
+2006-01-12  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/am33/jmpbuf-unwind.h: Include <jmpbuf-offsets.h>.
+
+2006-01-10  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/am33/bits/setjmp.h (__JMP_BUF_SP): Macro moved ...
+	* sysdeps/am33/jmpbuf-offsets.h: ... here, new file.
+
+	* sysdeps/am33/bits/setjmp.h (_JMPBUF_UNWINDS, __JMP_BUF_SP):
+	Move macros ...
+	* sysdeps/am33/jmpbuf-unwind.h: ... here, new file.
+
+2005-12-27  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/am33/bits/setjmp.h (_JMPBUF_UNWINDS): Take third argument
+	DEMANGLE, and pass SP value through it.
+
+2004-10-25  Alexandre Oliva  <aoliva@redhat.com>
+
+	* ChangeLog.am33: Added emacs local variables for mode setting and
+	default changelog name.
+
+	* sysdeps/unix/sysv/linux/linuxthreads/sysdep-cancel.h: Moved...
+	* sysdeps/unix/sysv/linux/am33/linuxthreads/sysdep-cancel.h:
+	... here, where it should have been added in the first place.
+
+2004-10-22  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/bits/mman.h (PROT_GROWSDOWN): New.
+	(PROT_GROWSUP): New.
+
+2004-08-16  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/shlib-versions: Moved from top level.
+
+2004-08-09  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/preconfigure: Renamed from configure.
+	* Makefile: Removed.
+
+2004-07-20  Alexandre Oliva  <aoliva@redhat.com>
+
+	Moved from separate linuxthreads tree into am33/linuxthreads
+	subdirs:
+	2004-07-01  Alexandre Oliva  <aoliva@redhat.com>
+	* sysdeps/unix/sysv/linux/am33/linuxthreads/sysdep-cancel.h
+	(PSEUDO): Save value returned by CENABLE and pass it to CDISABLE.
+	* sysdeps/am33/linuxthreads/pt-machine.h (testandset): Take
+	volatile argument.  Improve asm statement.
+	2001-10-31  Alexandre Oliva  <aoliva@redhat.com>
+	* sysdeps/am33/linuxthreads/pspinlock.c: New file.
+	* sysdeps/am33/linuxthreads/pt-machine.h: New file.
+
+2004-07-19  Alexandre Oliva  <aoliva@redhat.com>
+
+	* configure: New.
+	* mach.sh: Removed.
+	* sysdeps/am33/Makefile: Likewise.
+
+2004-06-28  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/Makefile: New file.
+	* sysdeps/unix/sysv/linux/am33/configure.in: New file.
+	* sysdeps/unix/sysv/linux/am33/configure: New file.
+	* mach.sh: New file.
+
+2004-06-19  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/fpu/bits/fenv.h: New file.
+	* sysdeps/am33/fpu/fpu_control.h: New file.
+	* sysdeps/am33/fpu/fenv_libc.h: New file.
+	* sysdeps/am33/fpu/fclrexcpt.c: New file.
+	* sysdeps/am33/fpu/fedisblxcpt.c: New file.
+	* sysdeps/am33/fpu/feenablxcpt.c: New file.
+	* sysdeps/am33/fpu/fegetenv.c: New file.
+	* sysdeps/am33/fpu/fegetexcept.c: New file.
+	* sysdeps/am33/fpu/fegetround.c: New file.
+	* sysdeps/am33/fpu/feholdexcpt.c: New file.
+	* sysdeps/am33/fpu/fesetenv.c: New file.
+	* sysdeps/am33/fpu/fesetround.c: New file.
+	* sysdeps/am33/fpu/feupdateenv.c: New file.
+	* sysdeps/am33/fpu/fgetexcptflg.c: New file.
+	* sysdeps/am33/fpu/fraiseexcpt.c: New file.
+	* sysdeps/am33/fpu/fsetexcptflg.c: New file.
+	* sysdeps/am33/fpu/ftestexcept.c: New file.
+
+	* sysdeps/unix/am33/sysdep.h: Use relative pathnames.
+	* sysdeps/unix/sysv/linux/am33/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/am33/sysdep.S: Likewise.
+	* configure, Makefile: Do nothing.
+
+2004-06-09  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/bsd-setjmp.S: Move into...
+	* sysdeps/am33/setjmp.S: ... this file.
+	* sysdeps/am33/bsd-_setjmp.S: Likewise.
+	* sysdeps/am33/dl-machine.h (_dl_start_user): Do not do double
+	indirection to obtain _dl_loaded.
+	(elf_machine_rela_relative): Do not add addend.
+
+2004-06-08  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/sysdep.h (JUMPTARGET): Undef before redefining.
+	* sysdeps/unix/sysv/linux/am33/sysdep.h (PSEUDO_NOERROR,
+	PSEUDO_END_NOERROR, ret_NOERROR, PSEUDO_ERRVAL, PSEUDO_END_ERRVAL,
+	ret_ERRVAL, INTERNAL_SYSCALL, INTERNAL_SYSCALL_DECL,
+	INTERNAL_SYSCALL_ERROR_P, INTERNAL_SYSCALL_ERRNO): New.
+	(INLINE_SYSCALL): Rewrite in terms of INTERNAL_SYSCALL macros.
+	(DO_CALL): Reorder arguments.
+	* sysdeps/am33/dl-machine.h (elf_machine_rela): Update prototype.
+
+2003-05-16  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/Makefile: New file.
+	* sysdeps/unix/sysv/linux/am33/sysdep.h (INLINE_SYSCALL1): Drop
+	comma before args when calling inline_syscall0.
+	* sysdeps/unix/sysv/linux/am33/chown.c: New file.
+	* sysdeps/unix/sysv/linux/am33/fchown.c: New file.
+	* sysdeps/unix/sysv/linux/am33/fxstat.c: New file.
+	* sysdeps/unix/sysv/linux/am33/getegid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/geteuid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/getgid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/getrlimit.c: New file.
+	* sysdeps/unix/sysv/linux/am33/getuid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/lchown.c: New file.
+	* sysdeps/unix/sysv/linux/am33/lockf64.c: New file.
+	* sysdeps/unix/sysv/linux/am33/lxstat.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setegid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/seteuid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setfsgid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setfsuid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setgid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setregid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setresgid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setresuid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setreuid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setrlimit.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setuid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/xstat.c: New file.
+	* sysdeps/unix/sysv/linux/am33/syscalls.list: Removed, reverting
+	2003-03-26's patch.
+	* sysdeps/unix/sysv/linux/am33/getresgid.c: New file.
+	* sysdeps/unix/sysv/linux/am33/getresuid.c: New file.
+
+2003-05-09  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/getgroups.c: New file.
+	* sysdeps/unix/sysv/linux/am33/setgroups.c: New file.
+
+2003-05-07  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/getmsg.c: New file.
+	* sysdeps/unix/sysv/linux/am33/putmsg.c: New file.
+
+2003-03-26  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/syscalls.list: Added getresuid and
+	getresgid.
+
+2003-01-17  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/fcntl.c: New file.
+
+2002-02-08  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/sys/ucontext.h (fpregset_t): Make it a structure.
+
+2002-01-07  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/sys/ucontext.h (NFREG): Increment by 1, to make
+	room for FPCR.
+
+2001-12-13  Alexandre Oliva  <aoliva@redhat.com>
+
+	* shlib-versions: Set GLIBC_2.2.5 as the earliest symbol set.
+
+2001-12-07  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/am33/__longjmp.S: Tabify.
+	* sysdeps/am33/setjmp.S: Likewise.
+	* sysdeps/am33/dl-debug.h: Remove.
+	* sysdeps/am33/dl-machine.h: Delete commented-out uses of
+	macros defined in dl-debug.
+	(elf_machine_rela): Optimize if HAVE_Z_COMBRELOC.  Fix
+	prediction of R_MN10300_NONE.  Don't test for impossible
+	condition.
+	* sysdeps/am33/sysdep.h (ASM_TYPE_DIRECTIVE,
+	ASM_SIZE_DIRECTIVE): Define to nothing if ! HAVE_ELF.
+
+2001-11-09  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/clone.S: Avoid branch overflow in
+	static link.
+
+2001-11-08  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/clone.S: Load arguments correctly
+	for syscall.
+
+2001-11-07  Alexandre Oliva  <aoliva@redhat.com>
+
+	* sysdeps/unix/sysv/linux/am33/clone.S: Fix argument-passing
+	to thread_start.
+
+2001-10-31  Alexandre Oliva  <aoliva@redhat.com>
+
+	* shlib-versions: Added am33_2.0 support.
+	* sysdeps/am33/Implies: New file.
+	* sysdeps/am33/__longjmp.S: New file.
+	* sysdeps/am33/atomicity.h: New file.
+	* sysdeps/am33/bsd-_setjmp.S: New file.
+	* sysdeps/am33/bsd-setjmp.S: New file.
+	* sysdeps/am33/dl-debug.h: New file.
+	* sysdeps/am33/dl-machine.h: New file.
+	* sysdeps/am33/memusage.h: New file.
+	* sysdeps/am33/setjmp.S: New file.
+	* sysdeps/am33/stackinfo.h: New file.
+	* sysdeps/am33/sysdep.h: New file.
+	* sysdeps/am33/bits/endian.h: New file.
+	* sysdeps/am33/bits/setjmp.h: New file.
+	* sysdeps/am33/elf/start.S: New file.
+	* sysdeps/am33/sys/ucontext.h: New file.
+	* sysdeps/unix/am33/sysdep.S: New file.
+	* sysdeps/unix/am33/sysdep.h: New file.
+	* sysdeps/unix/sysv/linux/am33/brk.c: New file.
+	* sysdeps/unix/sysv/linux/am33/clone.S: New file.
+	* sysdeps/unix/sysv/linux/am33/profil-counter.h: New file.
+	* sysdeps/unix/sysv/linux/am33/socket.S: New file.
+	* sysdeps/unix/sysv/linux/am33/syscall.S: New file.
+	* sysdeps/unix/sysv/linux/am33/sysdep.S: New file.
+	* sysdeps/unix/sysv/linux/am33/sysdep.h: New file.
+	* sysdeps/unix/sysv/linux/am33/bits/fcntl.h: New file.
+	* sysdeps/unix/sysv/linux/am33/bits/mman.h: New file.
+
+Local Variables:
+mode: change-log
+left-margin: 8
+fill-column: 74
+version-control: never
+change-log-default-name: "ChangeLog.am33"
+End:

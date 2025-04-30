@@ -326,7 +326,17 @@ namespace clang {
     };
   }
 
-  /// MIPS builtins
+  /// \brief Next32 builtins
+  namespace Next32 {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsNext32.def"
+    LastTSBuiltin
+  };
+  } // namespace Next32
+
+  /// \brief MIPS builtins
   namespace Mips {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,

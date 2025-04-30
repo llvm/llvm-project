@@ -1,0 +1,2266 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Bhutanese(Bhutan) locale
+%
+% Name:      dz_BT
+% Author:    Pema Geyleg
+% Maintainer: Christopher Fynn, Rinzin Peldron
+% Contact:   IT Dept., Dzongkha Development Commission
+% E-mail:    ddc@dzongkha.gov.bt
+% Date:      2012-12-23
+% Language:  Dzongkha(dz)
+% Territory: Bhutan(BT)
+% Revision:  0.3
+% Date:      2004-09-03
+%
+
+LC_IDENTIFICATION
+title      "Dzongkha language locale for Bhutan"
+source     "Sherubtse College"
+address    "Kanglung, Bhutan"
+contact    ""
+email      "bug-glibc@gnu.org"
+tel        ""
+fax        ""
+language   "Dzongkha"
+territory  "Bhutan"
+revision   "0.3"
+date       "2004-09-03"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+%%%%%%%%%%%%%%%%
+% TODO: check LC_MONETARY, LC_NUMERIC, LC_MESSAGES, LC_TIME
+% 	check time and date formats
+%%%%%%%%%%%%%%%%
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% Using the rules.txt attached to:
+% http://unicode.org/cldr/trac/ticket/9895
+% See also: https://sourceware.org/bugzilla/show_bug.cgi?id=21547
+% Bug 21547 - Tibetan script collation broken (Dzongkha and Tibetan)
+%
+% # Rules for Sanskrit ordering
+% # From Bod rgya tshig mdzod chen mo pages 9 - 11, 347, 1153, 1615, 1619, 1711, 1827, 2055, 2061, 2840, 2920, 3136 and 3137
+% # Example: ཀར་ལུགས།  < ཀརྐ་ཊ།
+% &ཀར<ཀརྐ<ཀརྟ<ཀརྞ<ཀརྨ<ཀརྴ<ཀརྵ
+% &ཀལ<ཀལྐ<ཀལྤ
+% &ཀས<ཀསྨ
+% &གཉ<གཉྫ
+% &ཐར<ཐརྐ
+% &པུས<པུསྟི
+% &ཕལ<ཕལྒ
+% &བིལ<བིལྦ
+% &མཉ<མཉྫ
+% &མར<མརྒ
+% &ཝར<ཝརྟ
+% &ཤས<ཤསྟ
+% &སར<སརྒ
+% &ཨར<ཨརྒ<ཨརྱ=ཨཪྱ
+% &ཨས<ཨསྨ
+% # Marks (seconadry different, with low equal primary weight after Lao)
+% &[before 1]ཀ<།<<༎<<༏<<༐<<༑<<༔<<༴<་=༌
+% &ཀ<<ྈྐ<ཫ<དཀ<བཀ<རྐ<ལྐ<སྐ<བརྐ<བསྐ
+% &ཁ<<ྈྑ<མཁ<འཁ
+% &ག<དགག<དགང<དགད<དགན<དགབ<དགཝ<དགའ<དགར<དགལ<དགས<དགི<དགུ<དགེ<དགོ<དགྭ<དགྱ<དགྲ<བགག<བགང<བགད<བགབ<བགམ<<<བགཾ<བགཝ<བགའ
+% 		<བགར<བགལ<བགི<བགུ<བགེ<བགོ<བགྭ<བགྱ<བགྲ<བགླ<མགག<མགང<མགད<མགབ<མགའ<མགར<མགལ<མགི<མགུ<མགེ<མགོ<མགྭ<མགྱ<མགྲ<འགག<འགང<འགད<འགན<འགབ<འགམ<<<འགཾ
+% 		<འགའ<འགར<འགལ<འགས<འགི<འགུ<འགེ<འགོ<འགྭ<འགྱ<འགྲ<རྒ<ལྒ<སྒ<བརྒ<བསྒ
+% &ང<<<ྂ<<<ྃ<དངག<དངང<དངད<དངན<དངབ<དངའ<དངར<དངལ<དངི<དངུ<དངེ<དངོ<མངག<མངང<མངད<མངན<མངབ<མངའ<མངར<མངལ<མངི<མངུ<མངེ<མངོ<རྔ<ལྔ<སྔ<བརྔ<བསྔ
+% &ཅ<གཅ<བཅ<ལྕ<བལྕ
+% &ཆ<མཆ<འཆ
+% &ཇ<མཇ<འཇ<རྗ<ལྗ<བརྗ
+% &ཉ<<ྋྙ<གཉ<མཉ<རྙ=ཪྙ<སྙ<བརྙ=བཪྙ<བསྙ
+% &ཏ<ཊ<ཏྭ<ཏྲ<གཏ<བཏ<རྟ<ལྟ<སྟ<བརྟ<བལྟ<བསྟ
+% &ཐ<ཋ<མཐ<འཐ
+% &ད<ཌ<གདག<གདང<གདད<གདན<གདབ<གདམ<<<གདཾ<གདའ<གདར<གདལ<གདས<གདི<གདུ<གདེ<གདོ<གདྭ<བདག<བདང<བདད<བདབ<བདམ<<<བདཾ<བདའ
+% 		<བདར<བདལ<བདས<བདི<བདུ<བདེ<བདོ<བདྭ<མདག<མདང<མདད<མདན<མདབ<མདའ<མདར<མདལ<མདས<མདི<མདུ<མདེ<མདོ<མདྭ<འདག<འདང<འདད<འདན<འདབ<འདམ<<<འདཾ
+% 		<འདཝ<འདའ<འདར<འདལ<འདས<འདི<འདུ<འདེ<འདོ<འདྭ<འདྲ<རྡ<ལྡ<སྡ<བརྡ<བལྡ<བསྡ
+% &ན<ཎ<གནག<གནང<གནད<གནན<གནབ<གནམ<<<གནཾ<གནཝ<གནའ<གནར<གནལ<གནས<གནི<གནུ<གནེ<གནོ<གནྭ<མནག<མནང<མནད<མནན<མནབ<མནམ<<<མནཾ<མནའ
+% 		<མནར<མནལ<མནས<མནི<མནུ<མནེ<མནོ<མནྭ<རྣ<སྣ<བརྣ<བསྣ
+% &པ<<ྉྤ<དཔག<དཔང<དཔད<དཔབ<དཔའ<དཔར<དཔལ<དཔས<དཔི<དཔུ<དཔེ<དཔོ<དཔྱ<དཔྲ<ལྤ<སྤ
+% &ཕ<<ྉྥ<འཕ
+% &བ<དབག<དབང<དབད<དབན<དབབ<དབའ<དབར<དབལ<དབས<དབི<དབུ<དབེ<དབོ<དབྱ<དབྲ<འབག<འབང<འབད<འབན<འབབ<འབམ
+% 	<<<འབཾ<འབའ<འབར<འབལ<འབས<འབི<འབུ<འབེ<འབོ<འབྱ<འབྲ<རྦ<ལྦ<སྦ
+% &མ<<<ཾ<དམག<དམང<དམད<དམན<དམབ<དམཝ<དམའ<དམར<དམལ<དམས<དམི<དམུ<དམེ<དམོ<དམྭ<དམྱ<རྨ<སྨ
+% &ཙ<གཙ<བཙ<རྩ<སྩ<བརྩ<བསྩ
+% &ཚ<མཚ<འཚ
+% &ཛ<མཛ<འཛ<རྫ<བརྫ
+% # &ཝ
+% &ཞ<གཞ<བཞ
+% &ཟ<གཟ<བཟ
+% # &འ
+% &ཡ<གཡ
+% &ར<<<ཪ<ཬ<བརླ=བཪླ
+% # &ལ
+% &ཤ<ཥ<གཤ<བཤ
+% &ས<གསག<གསང<གསད<གསན<གསབ<གསའ<གསར<གསལ<གསས<གསི<གསུ<གསེ<གསོ<གསྭ<བསག<བསང<བསད<བསབ<བསམ<<<བསཾ<བསའ<བསར
+% 		<བསལ<བསས<བསི<བསུ<བསེ<བསོ<བསྭ<བསྲ<བསླ
+% &ཧ<ལྷ
+% &ཨ
+% # Explicit vowels
+% <ཱ<ི<ཱི<ྀ<ཱྀ<ུ<ཱུ<ེ<ཻ=ེེ<ོ<ཽ=ོོ
+% # Post-radicals
+% 	<ྐ<ྑ<ྒ<ྔ<ྕ<ྖ<ྗ<ྙ<ྟ<ྚ<ྠ<ྛ<ྡ<ྜ<ྣ<ྞ<ྤ<ྥ<ྦ<ྨ<ྩ<ྪ<ྫ<ྭ<<<ྺ<ྮ<ྯ<ྰ<ྱ<<<ྻ<ྲ<<<ྼ<ླ<ྴ
+% 	<ྵ<ྶ<ྷ<ྸ
+% # Combining marks and signs (secondary weight)
+% &༹<<྄<<ཿ<<྅<<ྈ<<ྉ<<ྊ<<ྋ<<ྌ<<ྍ<<ྎ<<ྏ
+% # Treatༀ,  ཷand ,ཹ as decomposed
+% &ཨོཾ=ༀ
+% &ྲཱྀ=ཷ
+% &ླཱྀ=ཹ
+%
+
+copy "iso14651_t1"
+
+% &ཀར<ཀརྐ<ཀརྟ<ཀརྞ<ཀརྨ<ཀརྴ<ཀརྵ
+collating-element <e0f40-0f62>      from "<U0F40><U0F62>"
+collating-symbol <s0f40-0f62>
+collating-element <e0f40-0f62-0f90> from "<U0F40><U0F62><U0F90>"
+collating-symbol <s0f40-0f62-0f90>
+collating-element <e0f40-0f62-0f9f> from "<U0F40><U0F62><U0F9F>"
+collating-symbol <s0f40-0f62-0f9f>
+collating-element <e0f40-0f62-0f9e> from "<U0F40><U0F62><U0F9E>"
+collating-symbol <s0f40-0f62-0f9e>
+collating-element <e0f40-0f62-0fa8> from "<U0F40><U0F62><U0FA8>"
+collating-symbol <s0f40-0f62-0fa8>
+collating-element <e0f40-0f62-0fb4> from "<U0F40><U0F62><U0FB4>"
+collating-symbol <s0f40-0f62-0fb4>
+collating-element <e0f40-0f62-0fb5> from "<U0F40><U0F62><U0FB5>"
+collating-symbol <s0f40-0f62-0fb5>
+% &ཀལ<ཀལྐ<ཀལྤ
+collating-element <e0f40-0f63>      from "<U0F40><U0F63>"
+collating-symbol <s0f40-0f63>
+collating-element <e0f40-0f63-0f90> from "<U0F40><U0F63><U0F90>"
+collating-symbol <s0f40-0f63-0f90>
+collating-element <e0f40-0f63-0fa4> from "<U0F40><U0F63><U0FA4>"
+collating-symbol <s0f40-0f63-0fa4>
+% &ཀས<ཀསྨ
+collating-element <e0f40-0f66>      from "<U0F40><U0F66>"
+collating-symbol <s0f40-0f66>
+collating-element <e0f40-0f66-0fa8> from "<U0F40><U0F66><U0FA8>"
+collating-symbol <s0f40-0f66-0fa8>
+% &གཉ<གཉྫ
+collating-element <e0f42-0f49>      from "<U0F42><U0F49>"
+collating-symbol <s0f42-0f49>
+collating-element <e0f42-0f49-0fab> from "<U0F42><U0F49><U0FAB>"
+collating-symbol <s0f42-0f49-0fab>
+% &ཐར<ཐརྐ
+collating-element <e0f50-0f62>      from "<U0F50><U0F62>"
+collating-symbol <s0f50-0f62>
+collating-element <e0f50-0f62-0f90> from "<U0F50><U0F62><U0F90>"
+collating-symbol <s0f50-0f62-0f90>
+% &པུས<པུསྟི
+collating-element <e0f54-0f74-0f66>           from "<U0F54><U0F74><U0F66>"
+collating-symbol <s0f54-0f74-0f66>
+collating-element <e0f54-0f74-0f66-0f9f-0f72> from "<U0F54><U0F74><U0F66><U0F9F><U0F72>"
+collating-symbol <s0f54-0f74-0f66-0f9f-0f72>
+% &ཕལ<ཕལྒ
+collating-element <e0f55-0f63>      from "<U0F55><U0F63>"
+collating-symbol <s0f55-0f63>
+collating-element <e0f55-0f63-0f92> from "<U0F55><U0F63><U0F92>"
+collating-symbol <s0f55-0f63-0f92>
+% &བིལ<བིལྦ
+collating-element <e0f56-0f72-0f63>      from "<U0F56><U0F72><U0F63>"
+collating-symbol <s0f56-0f72-0f63>
+collating-element <e0f56-0f72-0f63-0fa6> from "<U0F56><U0F72><U0F63><U0FA6>"
+collating-symbol <s0f56-0f72-0f63-0fa6>
+% &མཉ<མཉྫ
+collating-element <e0f58-0f49>      from "<U0F58><U0F49>"
+collating-symbol <s0f58-0f49>
+collating-element <e0f58-0f49-0fab> from "<U0F58><U0F49><U0FAB>"
+collating-symbol <s0f58-0f49-0fab>
+% &མར<མརྒ
+collating-element <e0f58-0f62>      from "<U0F58><U0F62>"
+collating-symbol <s0f58-0f62>
+collating-element <e0f58-0f62-0f92> from "<U0F58><U0F62><U0F92>"
+collating-symbol <s0f58-0f62-0f92>
+% &ཝར<ཝརྟ
+collating-element <e0f5d-0f62>      from "<U0F5D><U0F62>"
+collating-symbol <s0f5d-0f62>
+collating-element <e0f5d-0f62-0f9f> from "<U0F5D><U0F62><U0F9F>"
+collating-symbol <s0f5d-0f62-0f9f>
+% &ཤས<ཤསྟ
+collating-element <e0f64-0f66>      from "<U0F64><U0F66>"
+collating-symbol <s0f64-0f66>
+collating-element <e0f64-0f66-0f9f> from "<U0F64><U0F66><U0F9F>"
+collating-symbol <s0f64-0f66-0f9f>
+% &སར<སརྒ
+collating-element <e0f66-0f62>      from "<U0F66><U0F62>"
+collating-symbol <s0f66-0f62>
+collating-element <e0f66-0f62-0f92> from "<U0F66><U0F62><U0F92>"
+collating-symbol <s0f66-0f62-0f92>
+% &ཨར<ཨརྒ<ཨརྱ=ཨཪྱ
+collating-element <e0f68-0f62>      from "<U0F68><U0F62>"
+collating-symbol <s0f68-0f62>
+collating-element <e0f68-0f62-0f92> from "<U0F68><U0F62><U0F92>"
+collating-symbol <s0f68-0f62-0f92>
+collating-element <e0f68-0f62-0fb1> from "<U0F68><U0F62><U0FB1>"
+collating-symbol <s0f68-0f62-0fb1>
+collating-element <e0f68-0f6a-0fb1> from "<U0F68><U0F6A><U0FB1>"
+collating-symbol <s0f68-0f6a-0fb1>
+% &ཨས<ཨསྨ
+collating-element <e0f68-0f66>      from "<U0F68><U0F66>"
+collating-symbol <s0f68-0f66>
+collating-element <e0f68-0f66-0fa8> from "<U0F68><U0F66><U0FA8>"
+collating-symbol <s0f68-0f66-0fa8>
+% # Marks (secondary different, with low equal primary weight after Lao)
+% &[before 1]ཀ<།<<༎<<༏<<༐<<༑<<༔<<༴<་=༌
+% &ཀ<<ྈྐ<ཫ<དཀ<བཀ<རྐ<ལྐ<སྐ<བརྐ<བསྐ
+collating-element <e0f88-0f90>      from "<U0F88><U0F90>" % ྈྐ
+collating-symbol <s0f88-0f90>
+collating-element <e0f51-0f40>      from "<U0F51><U0F40>"
+collating-symbol  <s0f51-0f40>
+collating-element <e0f56-0f40>      from "<U0F56><U0F40>"
+collating-symbol  <s0f56-0f40>
+collating-element <e0f62-0f90>      from "<U0F62><U0F90>" % རྐ
+collating-symbol  <s0f62-0f90>
+collating-element <e0f63-0f90>      from "<U0F63><U0F90>"
+collating-symbol  <s0f63-0f90>
+collating-element <e0f66-0f90>      from "<U0F66><U0F90>"
+collating-symbol  <s0f66-0f90>
+collating-element <e0f56-0f62-0f90> from "<U0F56><U0F62><U0F90>"
+collating-symbol  <s0f56-0f62-0f90>
+collating-element <e0f56-0f66-0f90> from "<U0F56><U0F66><U0F90>"
+collating-symbol  <s0f56-0f66-0f90>
+% &ཁ<<ྈྑ<མཁ<འཁ
+collating-element <e0f88-0f91>      from "<U0F88><U0F91>"
+collating-symbol <s0f88-0f91>
+collating-element <e0f58-0f41>      from "<U0F58><U0F41>"
+collating-symbol <s0f58-0f41>
+collating-element <e0f60-0f41>      from "<U0F60><U0F41>"
+collating-symbol <s0f60-0f41>
+% &ག<དགག<དགང<དགད<དགན<དགབ<དགཝ<དགའ<དགར<དགལ<དགས<དགི<དགུ<དགེ<དགོ<དགྭ<དགྱ<དགྲ<བགག<བགང<བགད<བགབ<བགམ<<<བགཾ<བགཝ<བགའ
+% 		<བགར<བགལ<བགི<བགུ<བགེ<བགོ<བགྭ<བགྱ<བགྲ<བགླ<མགག<མགང<མགད<མགབ<མགའ<མགར<མགལ<མགི<མགུ<མགེ<མགོ<མགྭ<མགྱ<མགྲ<འགག<འགང<འགད<འགན<འགབ<འགམ<<<འགཾ
+% 		<འགའ<འགར<འགལ<འགས<འགི<འགུ<འགེ<འགོ<འགྭ<འགྱ<འགྲ<རྒ<ལྒ<སྒ<བརྒ<བསྒ
+collating-element <e0f51-0f42-0f42> from "<U0F51><U0F42><U0F42>"
+collating-symbol  <s0f51-0f42-0f42>
+collating-element <e0f51-0f42-0f44> from "<U0F51><U0F42><U0F44>"
+collating-symbol  <s0f51-0f42-0f44>
+collating-element <e0f51-0f42-0f51> from "<U0F51><U0F42><U0F51>"
+collating-symbol  <s0f51-0f42-0f51>
+collating-element <e0f51-0f42-0f53> from "<U0F51><U0F42><U0F53>"
+collating-symbol  <s0f51-0f42-0f53>
+collating-element <e0f51-0f42-0f56> from "<U0F51><U0F42><U0F56>"
+collating-symbol  <s0f51-0f42-0f56>
+collating-element <e0f51-0f42-0f5d> from "<U0F51><U0F42><U0F5D>"
+collating-symbol  <s0f51-0f42-0f5d>
+collating-element <e0f51-0f42-0f60> from "<U0F51><U0F42><U0F60>"
+collating-symbol  <s0f51-0f42-0f60>
+collating-element <e0f51-0f42-0f62> from "<U0F51><U0F42><U0F62>"
+collating-symbol  <s0f51-0f42-0f62>
+collating-element <e0f51-0f42-0f63> from "<U0F51><U0F42><U0F63>"
+collating-symbol  <s0f51-0f42-0f63>
+collating-element <e0f51-0f42-0f66> from "<U0F51><U0F42><U0F66>"
+collating-symbol  <s0f51-0f42-0f66>
+collating-element <e0f51-0f42-0f72> from "<U0F51><U0F42><U0F72>"
+collating-symbol  <s0f51-0f42-0f72>
+collating-element <e0f51-0f42-0f74> from "<U0F51><U0F42><U0F74>"
+collating-symbol  <s0f51-0f42-0f74>
+collating-element <e0f51-0f42-0f7a> from "<U0F51><U0F42><U0F7A>"
+collating-symbol  <s0f51-0f42-0f7a>
+collating-element <e0f51-0f42-0f7c> from "<U0F51><U0F42><U0F7C>"
+collating-symbol  <s0f51-0f42-0f7c>
+collating-element <e0f51-0f42-0fad> from "<U0F51><U0F42><U0FAD>"
+collating-symbol  <s0f51-0f42-0fad>
+collating-element <e0f51-0f42-0fb1> from "<U0F51><U0F42><U0FB1>"
+collating-symbol  <s0f51-0f42-0fb1>
+collating-element <e0f51-0f42-0fb2> from "<U0F51><U0F42><U0FB2>"
+collating-symbol  <s0f51-0f42-0fb2>
+collating-element <e0f56-0f42-0f42> from "<U0F56><U0F42><U0F42>"
+collating-symbol  <s0f56-0f42-0f42>
+collating-element <e0f56-0f42-0f44> from "<U0F56><U0F42><U0F44>"
+collating-symbol  <s0f56-0f42-0f44>
+collating-element <e0f56-0f42-0f51> from "<U0F56><U0F42><U0F51>"
+collating-symbol  <s0f56-0f42-0f51>
+collating-element <e0f56-0f42-0f56> from "<U0F56><U0F42><U0F56>"
+collating-symbol  <s0f56-0f42-0f56>
+collating-element <e0f56-0f42-0f58> from "<U0F56><U0F42><U0F58>"
+collating-symbol  <s0f56-0f42-0f58>
+collating-element <e0f56-0f42-0f7e> from "<U0F56><U0F42><U0F7E>"
+collating-element <e0f56-0f42-0f5d> from "<U0F56><U0F42><U0F5D>"
+collating-symbol  <s0f56-0f42-0f5d>
+collating-element <e0f56-0f42-0f60> from "<U0F56><U0F42><U0F60>"
+collating-symbol  <s0f56-0f42-0f60>
+collating-element <e0f56-0f42-0f62> from "<U0F56><U0F42><U0F62>"
+collating-symbol  <s0f56-0f42-0f62>
+collating-element <e0f56-0f42-0f63> from "<U0F56><U0F42><U0F63>"
+collating-symbol  <s0f56-0f42-0f63>
+collating-element <e0f56-0f42-0f72> from "<U0F56><U0F42><U0F72>"
+collating-symbol  <s0f56-0f42-0f72>
+collating-element <e0f56-0f42-0f74> from "<U0F56><U0F42><U0F74>"
+collating-symbol  <s0f56-0f42-0f74>
+collating-element <e0f56-0f42-0f7a> from "<U0F56><U0F42><U0F7A>"
+collating-symbol  <s0f56-0f42-0f7a>
+collating-element <e0f56-0f42-0f7c> from "<U0F56><U0F42><U0F7C>"
+collating-symbol  <s0f56-0f42-0f7c>
+collating-element <e0f56-0f42-0fad> from "<U0F56><U0F42><U0FAD>"
+collating-symbol  <s0f56-0f42-0fad>
+collating-element <e0f56-0f42-0fb1> from "<U0F56><U0F42><U0FB1>"
+collating-symbol  <s0f56-0f42-0fb1>
+collating-element <e0f56-0f42-0fb2> from "<U0F56><U0F42><U0FB2>"
+collating-symbol  <s0f56-0f42-0fb2>
+collating-element <e0f56-0f42-0fb3> from "<U0F56><U0F42><U0FB3>"
+collating-symbol  <s0f56-0f42-0fb3>
+collating-element <e0f58-0f42-0f42> from "<U0F58><U0F42><U0F42>"
+collating-symbol  <s0f58-0f42-0f42>
+collating-element <e0f58-0f42-0f44> from "<U0F58><U0F42><U0F44>"
+collating-symbol  <s0f58-0f42-0f44>
+collating-element <e0f58-0f42-0f51> from "<U0F58><U0F42><U0F51>"
+collating-symbol  <s0f58-0f42-0f51>
+collating-element <e0f58-0f42-0f56> from "<U0F58><U0F42><U0F56>"
+collating-symbol  <s0f58-0f42-0f56>
+collating-element <e0f58-0f42-0f60> from "<U0F58><U0F42><U0F60>"
+collating-symbol  <s0f58-0f42-0f60>
+collating-element <e0f58-0f42-0f62> from "<U0F58><U0F42><U0F62>"
+collating-symbol  <s0f58-0f42-0f62>
+collating-element <e0f58-0f42-0f63> from "<U0F58><U0F42><U0F63>"
+collating-symbol  <s0f58-0f42-0f63>
+collating-element <e0f58-0f42-0f72> from "<U0F58><U0F42><U0F72>"
+collating-symbol  <s0f58-0f42-0f72>
+collating-element <e0f58-0f42-0f74> from "<U0F58><U0F42><U0F74>"
+collating-symbol  <s0f58-0f42-0f74>
+collating-element <e0f58-0f42-0f7a> from "<U0F58><U0F42><U0F7A>"
+collating-symbol  <s0f58-0f42-0f7a>
+collating-element <e0f58-0f42-0f7c> from "<U0F58><U0F42><U0F7C>"
+collating-symbol  <s0f58-0f42-0f7c>
+collating-element <e0f58-0f42-0fad> from "<U0F58><U0F42><U0FAD>"
+collating-symbol  <s0f58-0f42-0fad>
+collating-element <e0f58-0f42-0fb1> from "<U0F58><U0F42><U0FB1>"
+collating-symbol  <s0f58-0f42-0fb1>
+collating-element <e0f58-0f42-0fb2> from "<U0F58><U0F42><U0FB2>"
+collating-symbol  <s0f58-0f42-0fb2>
+collating-element <e0f60-0f42-0f42> from "<U0F60><U0F42><U0F42>"
+collating-symbol  <s0f60-0f42-0f42>
+collating-element <e0f60-0f42-0f44> from "<U0F60><U0F42><U0F44>"
+collating-symbol  <s0f60-0f42-0f44>
+collating-element <e0f60-0f42-0f51> from "<U0F60><U0F42><U0F51>"
+collating-symbol  <s0f60-0f42-0f51>
+collating-element <e0f60-0f42-0f53> from "<U0F60><U0F42><U0F53>"
+collating-symbol  <s0f60-0f42-0f53>
+collating-element <e0f60-0f42-0f56> from "<U0F60><U0F42><U0F56>"
+collating-symbol  <s0f60-0f42-0f56>
+collating-element <e0f60-0f42-0f58> from "<U0F60><U0F42><U0F58>"
+collating-symbol  <s0f60-0f42-0f58>
+collating-element <e0f60-0f42-0f7e> from "<U0F60><U0F42><U0F7E>"
+collating-element <e0f60-0f42-0f60> from "<U0F60><U0F42><U0F60>"
+collating-symbol  <s0f60-0f42-0f60>
+collating-element <e0f60-0f42-0f62> from "<U0F60><U0F42><U0F62>"
+collating-symbol  <s0f60-0f42-0f62>
+collating-element <e0f60-0f42-0f63> from "<U0F60><U0F42><U0F63>"
+collating-symbol  <s0f60-0f42-0f63>
+collating-element <e0f60-0f42-0f66> from "<U0F60><U0F42><U0F66>"
+collating-symbol  <s0f60-0f42-0f66>
+collating-element <e0f60-0f42-0f72> from "<U0F60><U0F42><U0F72>"
+collating-symbol  <s0f60-0f42-0f72>
+collating-element <e0f60-0f42-0f74> from "<U0F60><U0F42><U0F74>"
+collating-symbol  <s0f60-0f42-0f74>
+collating-element <e0f60-0f42-0f7a> from "<U0F60><U0F42><U0F7A>"
+collating-symbol  <s0f60-0f42-0f7a>
+collating-element <e0f60-0f42-0f7c> from "<U0F60><U0F42><U0F7C>"
+collating-symbol  <s0f60-0f42-0f7c>
+collating-element <e0f60-0f42-0fad> from "<U0F60><U0F42><U0FAD>"
+collating-symbol  <s0f60-0f42-0fad>
+collating-element <e0f60-0f42-0fb1> from "<U0F60><U0F42><U0FB1>"
+collating-symbol  <s0f60-0f42-0fb1>
+collating-element <e0f60-0f42-0fb2> from "<U0F60><U0F42><U0FB2>"
+collating-symbol  <s0f60-0f42-0fb2>
+collating-element <e0f62-0f92>      from "<U0F62><U0F92>"
+collating-symbol  <s0f62-0f92>
+collating-element <e0f63-0f92>      from "<U0F63><U0F92>"
+collating-symbol  <s0f63-0f92>
+collating-element <e0f66-0f92>      from "<U0F66><U0F92>"
+collating-symbol  <s0f66-0f92>
+collating-element <e0f56-0f62-0f92> from "<U0F56><U0F62><U0F92>"
+collating-symbol  <s0f56-0f62-0f92>
+collating-element <e0f56-0f66-0f92> from "<U0F56><U0F66><U0F92>"
+collating-symbol  <s0f56-0f66-0f92>
+% &ང<<<ྂ<<<ྃ<དངག<དངང<དངད<དངན<དངབ<དངའ<དངར<དངལ<དངི<དངུ<དངེ<དངོ<མངག<མངང<མངད<མངན<མངབ<མངའ<མངར<མངལ<མངི<མངུ<མངེ<མངོ<རྔ<ལྔ<སྔ<བརྔ<བསྔ
+collating-element <e0f51-0f44-0f42> from "<U0F51><U0F44><U0F42>"
+collating-symbol  <s0f51-0f44-0f42>
+collating-element <e0f51-0f44-0f44> from "<U0F51><U0F44><U0F44>"
+collating-symbol  <s0f51-0f44-0f44>
+collating-element <e0f51-0f44-0f51> from "<U0F51><U0F44><U0F51>"
+collating-symbol  <s0f51-0f44-0f51>
+collating-element <e0f51-0f44-0f53> from "<U0F51><U0F44><U0F53>"
+collating-symbol  <s0f51-0f44-0f53>
+collating-element <e0f51-0f44-0f56> from "<U0F51><U0F44><U0F56>"
+collating-symbol  <s0f51-0f44-0f56>
+collating-element <e0f51-0f44-0f60> from "<U0F51><U0F44><U0F60>"
+collating-symbol  <s0f51-0f44-0f60>
+collating-element <e0f51-0f44-0f62> from "<U0F51><U0F44><U0F62>"
+collating-symbol  <s0f51-0f44-0f62>
+collating-element <e0f51-0f44-0f63> from "<U0F51><U0F44><U0F63>"
+collating-symbol  <s0f51-0f44-0f63>
+collating-element <e0f51-0f44-0f72> from "<U0F51><U0F44><U0F72>"
+collating-symbol  <s0f51-0f44-0f72>
+collating-element <e0f51-0f44-0f74> from "<U0F51><U0F44><U0F74>"
+collating-symbol  <s0f51-0f44-0f74>
+collating-element <e0f51-0f44-0f7a> from "<U0F51><U0F44><U0F7A>"
+collating-symbol  <s0f51-0f44-0f7a>
+collating-element <e0f51-0f44-0f7c> from "<U0F51><U0F44><U0F7C>"
+collating-symbol  <s0f51-0f44-0f7c>
+collating-element <e0f58-0f44-0f42> from "<U0F58><U0F44><U0F42>"
+collating-symbol  <s0f58-0f44-0f42>
+collating-element <e0f58-0f44-0f44> from "<U0F58><U0F44><U0F44>"
+collating-symbol  <s0f58-0f44-0f44>
+collating-element <e0f58-0f44-0f51> from "<U0F58><U0F44><U0F51>"
+collating-symbol  <s0f58-0f44-0f51>
+collating-element <e0f58-0f44-0f53> from "<U0F58><U0F44><U0F53>"
+collating-symbol  <s0f58-0f44-0f53>
+collating-element <e0f58-0f44-0f56> from "<U0F58><U0F44><U0F56>"
+collating-symbol  <s0f58-0f44-0f56>
+collating-element <e0f58-0f44-0f60> from "<U0F58><U0F44><U0F60>"
+collating-symbol  <s0f58-0f44-0f60>
+collating-element <e0f58-0f44-0f62> from "<U0F58><U0F44><U0F62>"
+collating-symbol  <s0f58-0f44-0f62>
+collating-element <e0f58-0f44-0f63> from "<U0F58><U0F44><U0F63>"
+collating-symbol  <s0f58-0f44-0f63>
+collating-element <e0f58-0f44-0f72> from "<U0F58><U0F44><U0F72>"
+collating-symbol  <s0f58-0f44-0f72>
+collating-element <e0f58-0f44-0f74> from "<U0F58><U0F44><U0F74>"
+collating-symbol  <s0f58-0f44-0f74>
+collating-element <e0f58-0f44-0f7a> from "<U0F58><U0F44><U0F7A>"
+collating-symbol  <s0f58-0f44-0f7a>
+collating-element <e0f58-0f44-0f7c> from "<U0F58><U0F44><U0F7C>"
+collating-symbol  <s0f58-0f44-0f7c>
+collating-element <e0f62-0f94>      from "<U0F62><U0F94>"
+collating-symbol  <s0f62-0f94>
+collating-element <e0f63-0f94>      from "<U0F63><U0F94>"
+collating-symbol  <s0f63-0f94>
+collating-element <e0f66-0f94>      from "<U0F66><U0F94>"
+collating-symbol  <s0f66-0f94>
+collating-element <e0f56-0f62-0f94> from "<U0F56><U0F62><U0F94>"
+collating-symbol  <s0f56-0f62-0f94>
+collating-element <e0f56-0f66-0f94> from "<U0F56><U0F66><U0F94>"
+collating-symbol  <s0f56-0f66-0f94>
+% &ཅ<གཅ<བཅ<ལྕ<བལྕ
+collating-element <e0f42-0f45>      from "<U0F42><U0F45>"
+collating-symbol  <s0f42-0f45>
+collating-element <e0f56-0f45>      from "<U0F56><U0F45>"
+collating-symbol  <s0f56-0f45>
+collating-element <e0f63-0f95>      from "<U0F63><U0F95>"
+collating-symbol  <s0f63-0f95>
+collating-element <e0f56-0f63-0f95> from "<U0F56><U0F63><U0F95>"
+collating-symbol  <s0f56-0f63-0f95>
+% &ཆ<མཆ<འཆ
+collating-element <e0f58-0f46>      from "<U0F58><U0F46>"
+collating-symbol <s0f58-0f46>
+collating-element <e0f60-0f46>      from "<U0F60><U0F46>"
+collating-symbol <s0f60-0f46>
+% &ཇ<མཇ<འཇ<རྗ<ལྗ<བརྗ
+collating-element <e0f58-0f47>      from "<U0F58><U0F47>"
+collating-symbol <s0f58-0f47>
+collating-element <e0f60-0f47>      from "<U0F60><U0F47>"
+collating-symbol <s0f60-0f47>
+collating-element <e0f62-0f97>      from "<U0F62><U0F97>"
+collating-symbol <s0f62-0f97>
+collating-element <e0f63-0f97>      from "<U0F63><U0F97>"
+collating-symbol <s0f63-0f97>
+collating-element <e0f56-0f62-0f97> from "<U0F56><U0F62><U0F97>"
+collating-symbol <s0f56-0f62-0f97>
+% &ཉ<<ྋྙ<གཉ<མཉ<རྙ=ཪྙ<སྙ<བརྙ=བཪྙ<བསྙ
+collating-element <e0f8b-0f99>      from "<U0F8B><U0F99>"
+collating-symbol <s0f8b-0f99>
+% already defined above:
+% collating-element <e0f42-0f49>      from "<U0F42><U0F49>"
+% collating-symbol <s0f42-0f49>
+% already defined above:
+% collating-element <e0f58-0f49>      from "<U0F58><U0F49>"
+% collating-symbol <s0f58-0f49>
+collating-element <e0f62-0f99>      from "<U0F62><U0F99>"
+collating-symbol <s0f62-0f99>
+collating-element <e0f6a-0f99>      from "<U0F6A><U0F99>"
+collating-symbol <s0f6a-0f99>
+collating-element <e0f66-0f99>      from "<U0F66><U0F99>"
+collating-symbol <s0f66-0f99>
+collating-element <e0f56-0f62-0f99> from "<U0F56><U0F62><U0F99>"
+collating-symbol <s0f56-0f62-0f99>
+collating-element <e0f56-0f6a-0f99> from "<U0F56><U0F6A><U0F99>"
+collating-symbol <s0f56-0f6a-0f99>
+collating-element <e0f56-0f66-0f99> from "<U0F56><U0F66><U0F99>"
+collating-symbol <s0f56-0f66-0f99>
+% &ཏ<ཊ<ཏྭ<ཏྲ<གཏ<བཏ<རྟ<ལྟ<སྟ<བརྟ<བལྟ<བསྟ
+collating-element <e0f4f-0fad>      from "<U0F4F><U0FAD>"
+collating-symbol <s0f4f-0fad>
+collating-element <e0f4f-0fb2>      from "<U0F4F><U0FB2>"
+collating-symbol <s0f4f-0fb2>
+collating-element <e0f42-0f4f>      from "<U0F42><U0F4F>"
+collating-symbol <s0f42-0f4f>
+collating-element <e0f56-0f4f>      from "<U0F56><U0F4F>"
+collating-symbol <s0f56-0f4f>
+collating-element <e0f62-0f9f>      from "<U0F62><U0F9F>"
+collating-symbol <s0f62-0f9f>
+collating-element <e0f63-0f9f>      from "<U0F63><U0F9F>"
+collating-symbol <s0f63-0f9f>
+collating-element <e0f66-0f9f>      from "<U0F66><U0F9F>"
+collating-symbol <s0f66-0f9f>
+collating-element <e0f56-0f62-0f9f> from "<U0F56><U0F62><U0F9F>"
+collating-symbol <s0f56-0f62-0f9f>
+collating-element <e0f56-0f63-0f9f> from "<U0F56><U0F63><U0F9F>"
+collating-symbol <s0f56-0f63-0f9f>
+collating-element <e0f56-0f66-0f9f> from "<U0F56><U0F66><U0F9F>"
+collating-symbol <s0f56-0f66-0f9f>
+% &ཐ<ཋ<མཐ<འཐ
+collating-element <e0f58-0f50>      from "<U0F58><U0F50>"
+collating-symbol <s0f58-0f50>
+collating-element <e0f60-0f50>      from "<U0F60><U0F50>"
+collating-symbol <s0f60-0f50>
+% &ད<ཌ<གདག<གདང<གདད<གདན<གདབ<གདམ<<<གདཾ<གདའ<གདར<གདལ<གདས<གདི<གདུ<གདེ<གདོ<གདྭ<བདག<བདང<བདད<བདབ<བདམ<<<བདཾ<བདའ
+% 		<བདར<བདལ<བདས<བདི<བདུ<བདེ<བདོ<བདྭ<མདག<མདང<མདད<མདན<མདབ<མདའ<མདར<མདལ<མདས<མདི<མདུ<མདེ<མདོ<མདྭ<འདག<འདང<འདད<འདན<འདབ<འདམ<<<འདཾ
+% 		<འདཝ<འདའ<འདར<འདལ<འདས<འདི<འདུ<འདེ<འདོ<འདྭ<འདྲ<རྡ<ལྡ<སྡ<བརྡ<བལྡ<བསྡ
+collating-element <e0f42-0f51-0f42> from "<U0F42><U0F51><U0F42>"
+collating-symbol <s0f42-0f51-0f42>
+collating-element <e0f42-0f51-0f44> from "<U0F42><U0F51><U0F44>"
+collating-symbol <s0f42-0f51-0f44>
+collating-element <e0f42-0f51-0f51> from "<U0F42><U0F51><U0F51>"
+collating-symbol <s0f42-0f51-0f51>
+collating-element <e0f42-0f51-0f53> from "<U0F42><U0F51><U0F53>"
+collating-symbol <s0f42-0f51-0f53>
+collating-element <e0f42-0f51-0f56> from "<U0F42><U0F51><U0F56>"
+collating-symbol <s0f42-0f51-0f56>
+collating-element <e0f42-0f51-0f58> from "<U0F42><U0F51><U0F58>"
+collating-symbol <s0f42-0f51-0f58>
+collating-element <e0f42-0f51-0f7e> from "<U0F42><U0F51><U0F7E>"
+collating-symbol <s0f42-0f51-0f7e>
+collating-element <e0f42-0f51-0f60> from "<U0F42><U0F51><U0F60>"
+collating-symbol <s0f42-0f51-0f60>
+collating-element <e0f42-0f51-0f62> from "<U0F42><U0F51><U0F62>"
+collating-symbol <s0f42-0f51-0f62>
+collating-element <e0f42-0f51-0f63> from "<U0F42><U0F51><U0F63>"
+collating-symbol <s0f42-0f51-0f63>
+collating-element <e0f42-0f51-0f66> from "<U0F42><U0F51><U0F66>"
+collating-symbol <s0f42-0f51-0f66>
+collating-element <e0f42-0f51-0f72> from "<U0F42><U0F51><U0F72>"
+collating-symbol <s0f42-0f51-0f72>
+collating-element <e0f42-0f51-0f74> from "<U0F42><U0F51><U0F74>"
+collating-symbol <s0f42-0f51-0f74>
+collating-element <e0f42-0f51-0f7a> from "<U0F42><U0F51><U0F7A>"
+collating-symbol <s0f42-0f51-0f7a>
+collating-element <e0f42-0f51-0f7c> from "<U0F42><U0F51><U0F7C>"
+collating-symbol <s0f42-0f51-0f7c>
+collating-element <e0f42-0f51-0fad> from "<U0F42><U0F51><U0FAD>"
+collating-symbol <s0f42-0f51-0fad>
+collating-element <e0f56-0f51-0f42> from "<U0F56><U0F51><U0F42>"
+collating-symbol <s0f56-0f51-0f42>
+collating-element <e0f56-0f51-0f44> from "<U0F56><U0F51><U0F44>"
+collating-symbol <s0f56-0f51-0f44>
+collating-element <e0f56-0f51-0f51> from "<U0F56><U0F51><U0F51>"
+collating-symbol <s0f56-0f51-0f51>
+collating-element <e0f56-0f51-0f56> from "<U0F56><U0F51><U0F56>"
+collating-symbol <s0f56-0f51-0f56>
+collating-element <e0f56-0f51-0f58> from "<U0F56><U0F51><U0F58>"
+collating-symbol <s0f56-0f51-0f58>
+collating-element <e0f56-0f51-0f7e> from "<U0F56><U0F51><U0F7E>"
+collating-symbol <s0f56-0f51-0f7e>
+collating-element <e0f56-0f51-0f60> from "<U0F56><U0F51><U0F60>"
+collating-symbol <s0f56-0f51-0f60>
+collating-element <e0f56-0f51-0f62> from "<U0F56><U0F51><U0F62>"
+collating-symbol <s0f56-0f51-0f62>
+collating-element <e0f56-0f51-0f63> from "<U0F56><U0F51><U0F63>"
+collating-symbol <s0f56-0f51-0f63>
+collating-element <e0f56-0f51-0f66> from "<U0F56><U0F51><U0F66>"
+collating-symbol <s0f56-0f51-0f66>
+collating-element <e0f56-0f51-0f72> from "<U0F56><U0F51><U0F72>"
+collating-symbol <s0f56-0f51-0f72>
+collating-element <e0f56-0f51-0f74> from "<U0F56><U0F51><U0F74>"
+collating-symbol <s0f56-0f51-0f74>
+collating-element <e0f56-0f51-0f7a> from "<U0F56><U0F51><U0F7A>"
+collating-symbol <s0f56-0f51-0f7a>
+collating-element <e0f56-0f51-0f7c> from "<U0F56><U0F51><U0F7C>"
+collating-symbol <s0f56-0f51-0f7c>
+collating-element <e0f56-0f51-0fad> from "<U0F56><U0F51><U0FAD>"
+collating-symbol <s0f56-0f51-0fad>
+collating-element <e0f58-0f51-0f42> from "<U0F58><U0F51><U0F42>"
+collating-symbol <s0f58-0f51-0f42>
+collating-element <e0f58-0f51-0f44> from "<U0F58><U0F51><U0F44>"
+collating-symbol <s0f58-0f51-0f44>
+collating-element <e0f58-0f51-0f51> from "<U0F58><U0F51><U0F51>"
+collating-symbol <s0f58-0f51-0f51>
+collating-element <e0f58-0f51-0f53> from "<U0F58><U0F51><U0F53>"
+collating-symbol <s0f58-0f51-0f53>
+collating-element <e0f58-0f51-0f56> from "<U0F58><U0F51><U0F56>"
+collating-symbol <s0f58-0f51-0f56>
+collating-element <e0f58-0f51-0f60> from "<U0F58><U0F51><U0F60>"
+collating-symbol <s0f58-0f51-0f60>
+collating-element <e0f58-0f51-0f62> from "<U0F58><U0F51><U0F62>"
+collating-symbol <s0f58-0f51-0f62>
+collating-element <e0f58-0f51-0f63> from "<U0F58><U0F51><U0F63>"
+collating-symbol <s0f58-0f51-0f63>
+collating-element <e0f58-0f51-0f66> from "<U0F58><U0F51><U0F66>"
+collating-symbol <s0f58-0f51-0f66>
+collating-element <e0f58-0f51-0f72> from "<U0F58><U0F51><U0F72>"
+collating-symbol <s0f58-0f51-0f72>
+collating-element <e0f58-0f51-0f74> from "<U0F58><U0F51><U0F74>"
+collating-symbol <s0f58-0f51-0f74>
+collating-element <e0f58-0f51-0f7a> from "<U0F58><U0F51><U0F7A>"
+collating-symbol <s0f58-0f51-0f7a>
+collating-element <e0f58-0f51-0f7c> from "<U0F58><U0F51><U0F7C>"
+collating-symbol <s0f58-0f51-0f7c>
+collating-element <e0f58-0f51-0fad> from "<U0F58><U0F51><U0FAD>"
+collating-symbol <s0f58-0f51-0fad>
+collating-element <e0f60-0f51-0f42> from "<U0F60><U0F51><U0F42>"
+collating-symbol <s0f60-0f51-0f42>
+collating-element <e0f60-0f51-0f44> from "<U0F60><U0F51><U0F44>"
+collating-symbol <s0f60-0f51-0f44>
+collating-element <e0f60-0f51-0f51> from "<U0F60><U0F51><U0F51>"
+collating-symbol <s0f60-0f51-0f51>
+collating-element <e0f60-0f51-0f53> from "<U0F60><U0F51><U0F53>"
+collating-symbol <s0f60-0f51-0f53>
+collating-element <e0f60-0f51-0f56> from "<U0F60><U0F51><U0F56>"
+collating-symbol <s0f60-0f51-0f56>
+collating-element <e0f60-0f51-0f58> from "<U0F60><U0F51><U0F58>"
+collating-symbol <s0f60-0f51-0f58>
+collating-element <e0f60-0f51-0f7e> from "<U0F60><U0F51><U0F7E>"
+collating-symbol <s0f60-0f51-0f7e>
+collating-element <e0f60-0f51-0f5d> from "<U0F60><U0F51><U0F5D>"
+collating-symbol <s0f60-0f51-0f5d>
+collating-element <e0f60-0f51-0f60> from "<U0F60><U0F51><U0F60>"
+collating-symbol <s0f60-0f51-0f60>
+collating-element <e0f60-0f51-0f62> from "<U0F60><U0F51><U0F62>"
+collating-symbol <s0f60-0f51-0f62>
+collating-element <e0f60-0f51-0f63> from "<U0F60><U0F51><U0F63>"
+collating-symbol <s0f60-0f51-0f63>
+collating-element <e0f60-0f51-0f66> from "<U0F60><U0F51><U0F66>"
+collating-symbol <s0f60-0f51-0f66>
+collating-element <e0f60-0f51-0f72> from "<U0F60><U0F51><U0F72>"
+collating-symbol <s0f60-0f51-0f72>
+collating-element <e0f60-0f51-0f74> from "<U0F60><U0F51><U0F74>"
+collating-symbol <s0f60-0f51-0f74>
+collating-element <e0f60-0f51-0f7a> from "<U0F60><U0F51><U0F7A>"
+collating-symbol <s0f60-0f51-0f7a>
+collating-element <e0f60-0f51-0f7c> from "<U0F60><U0F51><U0F7C>"
+collating-symbol <s0f60-0f51-0f7c>
+collating-element <e0f60-0f51-0fad> from "<U0F60><U0F51><U0FAD>"
+collating-symbol <s0f60-0f51-0fad>
+collating-element <e0f60-0f51-0fb2> from "<U0F60><U0F51><U0FB2>"
+collating-symbol <s0f60-0f51-0fb2>
+collating-element <e0f62-0fa1>      from "<U0F62><U0FA1>"
+collating-symbol <s0f62-0fa1>
+collating-element <e0f63-0fa1>      from "<U0F63><U0FA1>"
+collating-symbol <s0f63-0fa1>
+collating-element <e0f66-0fa1>      from "<U0F66><U0FA1>"
+collating-symbol <s0f66-0fa1>
+collating-element <e0f56-0f62-0fa1> from "<U0F56><U0F62><U0FA1>"
+collating-symbol <s0f56-0f62-0fa1>
+collating-element <e0f56-0f63-0fa1> from "<U0F56><U0F63><U0FA1>"
+collating-symbol <s0f56-0f63-0fa1>
+collating-element <e0f56-0f66-0fa1> from "<U0F56><U0F66><U0FA1>"
+collating-symbol <s0f56-0f66-0fa1>
+% &ན<ཎ<གནག<གནང<གནད<གནན<གནབ<གནམ<<<གནཾ<གནཝ<གནའ<གནར<གནལ<གནས<གནི<གནུ<གནེ<གནོ<གནྭ<མནག<མནང<མནད<མནན<མནབ<མནམ<<<མནཾ<མནའ
+% 		<མནར<མནལ<མནས<མནི<མནུ<མནེ<མནོ<མནྭ<རྣ<སྣ<བརྣ<བསྣ
+collating-element <e0f42-0f53-0f42> from "<U0F42><U0F53><U0F42>"
+collating-symbol <s0f42-0f53-0f42>
+collating-element <e0f42-0f53-0f44> from "<U0F42><U0F53><U0F44>"
+collating-symbol <s0f42-0f53-0f44>
+collating-element <e0f42-0f53-0f51> from "<U0F42><U0F53><U0F51>"
+collating-symbol <s0f42-0f53-0f51>
+collating-element <e0f42-0f53-0f53> from "<U0F42><U0F53><U0F53>"
+collating-symbol <s0f42-0f53-0f53>
+collating-element <e0f42-0f53-0f56> from "<U0F42><U0F53><U0F56>"
+collating-symbol <s0f42-0f53-0f56>
+collating-element <e0f42-0f53-0f58> from "<U0F42><U0F53><U0F58>"
+collating-symbol <s0f42-0f53-0f58>
+collating-element <e0f42-0f53-0f7e> from "<U0F42><U0F53><U0F7E>"
+collating-symbol <s0f42-0f53-0f7e>
+collating-element <e0f42-0f53-0f5d> from "<U0F42><U0F53><U0F5D>"
+collating-symbol <s0f42-0f53-0f5d>
+collating-element <e0f42-0f53-0f60> from "<U0F42><U0F53><U0F60>"
+collating-symbol <s0f42-0f53-0f60>
+collating-element <e0f42-0f53-0f62> from "<U0F42><U0F53><U0F62>"
+collating-symbol <s0f42-0f53-0f62>
+collating-element <e0f42-0f53-0f63> from "<U0F42><U0F53><U0F63>"
+collating-symbol <s0f42-0f53-0f63>
+collating-element <e0f42-0f53-0f66> from "<U0F42><U0F53><U0F66>"
+collating-symbol <s0f42-0f53-0f66>
+collating-element <e0f42-0f53-0f72> from "<U0F42><U0F53><U0F72>"
+collating-symbol <s0f42-0f53-0f72>
+collating-element <e0f42-0f53-0f74> from "<U0F42><U0F53><U0F74>"
+collating-symbol <s0f42-0f53-0f74>
+collating-element <e0f42-0f53-0f7a> from "<U0F42><U0F53><U0F7A>"
+collating-symbol <s0f42-0f53-0f7a>
+collating-element <e0f42-0f53-0f7c> from "<U0F42><U0F53><U0F7C>"
+collating-symbol <s0f42-0f53-0f7c>
+collating-element <e0f42-0f53-0fad> from "<U0F42><U0F53><U0FAD>"
+collating-symbol <s0f42-0f53-0fad>
+collating-element <e0f58-0f53-0f42> from "<U0F58><U0F53><U0F42>"
+collating-symbol <s0f58-0f53-0f42>
+collating-element <e0f58-0f53-0f44> from "<U0F58><U0F53><U0F44>"
+collating-symbol <s0f58-0f53-0f44>
+collating-element <e0f58-0f53-0f51> from "<U0F58><U0F53><U0F51>"
+collating-symbol <s0f58-0f53-0f51>
+collating-element <e0f58-0f53-0f53> from "<U0F58><U0F53><U0F53>"
+collating-symbol <s0f58-0f53-0f53>
+collating-element <e0f58-0f53-0f56> from "<U0F58><U0F53><U0F56>"
+collating-symbol <s0f58-0f53-0f56>
+collating-element <e0f58-0f53-0f58> from "<U0F58><U0F53><U0F58>"
+collating-symbol <s0f58-0f53-0f58>
+collating-element <e0f58-0f53-0f7e> from "<U0F58><U0F53><U0F7E>"
+collating-symbol <s0f58-0f53-0f7e>
+collating-element <e0f58-0f53-0f60> from "<U0F58><U0F53><U0F60>"
+collating-symbol <s0f58-0f53-0f60>
+collating-element <e0f58-0f53-0f62> from "<U0F58><U0F53><U0F62>"
+collating-symbol <s0f58-0f53-0f62>
+collating-element <e0f58-0f53-0f63> from "<U0F58><U0F53><U0F63>"
+collating-symbol <s0f58-0f53-0f63>
+collating-element <e0f58-0f53-0f66> from "<U0F58><U0F53><U0F66>"
+collating-symbol <s0f58-0f53-0f66>
+collating-element <e0f58-0f53-0f72> from "<U0F58><U0F53><U0F72>"
+collating-symbol <s0f58-0f53-0f72>
+collating-element <e0f58-0f53-0f74> from "<U0F58><U0F53><U0F74>"
+collating-symbol <s0f58-0f53-0f74>
+collating-element <e0f58-0f53-0f7a> from "<U0F58><U0F53><U0F7A>"
+collating-symbol <s0f58-0f53-0f7a>
+collating-element <e0f58-0f53-0f7c> from "<U0F58><U0F53><U0F7C>"
+collating-symbol <s0f58-0f53-0f7c>
+collating-element <e0f58-0f53-0fad> from "<U0F58><U0F53><U0FAD>"
+collating-symbol <s0f58-0f53-0fad>
+collating-element <e0f62-0fa3>      from "<U0F62><U0FA3>"
+collating-symbol <s0f62-0fa3>
+collating-element <e0f66-0fa3>      from "<U0F66><U0FA3>"
+collating-symbol <s0f66-0fa3>
+collating-element <e0f56-0f62-0fa3> from "<U0F56><U0F62><U0FA3>"
+collating-symbol <s0f56-0f62-0fa3>
+collating-element <e0f56-0f66-0fa3> from "<U0F56><U0F66><U0FA3>"
+collating-symbol <s0f56-0f66-0fa3>
+% &པ<<ྉྤ<དཔག<དཔང<དཔད<དཔབ<དཔའ<དཔར<དཔལ<དཔས<དཔི<དཔུ<དཔེ<དཔོ<དཔྱ<དཔྲ<ལྤ<སྤ
+collating-element <e0f51-0f54-0f42> from "<U0F51><U0F54><U0F42>"
+collating-symbol <s0f51-0f54-0f42>
+collating-element <e0f51-0f54-0f44> from "<U0F51><U0F54><U0F44>"
+collating-symbol <s0f51-0f54-0f44>
+collating-element <e0f51-0f54-0f51> from "<U0F51><U0F54><U0F51>"
+collating-symbol <s0f51-0f54-0f51>
+collating-element <e0f51-0f54-0f56> from "<U0F51><U0F54><U0F56>"
+collating-symbol <s0f51-0f54-0f56>
+collating-element <e0f51-0f54-0f60> from "<U0F51><U0F54><U0F60>"
+collating-symbol <s0f51-0f54-0f60>
+collating-element <e0f51-0f54-0f62> from "<U0F51><U0F54><U0F62>"
+collating-symbol <s0f51-0f54-0f62>
+collating-element <e0f51-0f54-0f63> from "<U0F51><U0F54><U0F63>"
+collating-symbol <s0f51-0f54-0f63>
+collating-element <e0f51-0f54-0f66> from "<U0F51><U0F54><U0F66>"
+collating-symbol <s0f51-0f54-0f66>
+collating-element <e0f51-0f54-0f72> from "<U0F51><U0F54><U0F72>"
+collating-symbol <s0f51-0f54-0f72>
+collating-element <e0f51-0f54-0f74> from "<U0F51><U0F54><U0F74>"
+collating-symbol <s0f51-0f54-0f74>
+collating-element <e0f51-0f54-0f7a> from "<U0F51><U0F54><U0F7A>"
+collating-symbol <s0f51-0f54-0f7a>
+collating-element <e0f51-0f54-0f7c> from "<U0F51><U0F54><U0F7C>"
+collating-symbol <s0f51-0f54-0f7c>
+collating-element <e0f51-0f54-0fb1> from "<U0F51><U0F54><U0FB1>"
+collating-symbol <s0f51-0f54-0fb1>
+collating-element <e0f51-0f54-0fb2> from "<U0F51><U0F54><U0FB2>"
+collating-symbol <s0f51-0f54-0fb2>
+collating-element <e0f63-0fa4>      from "<U0F63><U0FA4>"
+collating-symbol <s0f63-0fa4>
+collating-element <e0f66-0fa4>      from "<U0F66><U0FA4>"
+collating-symbol <s0f66-0fa4>
+% &ཕ<<ྉྥ<འཕ
+collating-element <e0f89-0fa5>      from  "<U0F89><U0FA5>"
+collating-symbol <s0f89-0fa5>
+collating-element <e0f60-0f55>      from  "<U0F60><U0F55>"
+collating-symbol <s0f60-0f55>
+% &བ<དབག<དབང<དབད<དབན<དབབ<དབའ<དབར<དབལ<དབས<དབི<དབུ<དབེ<དབོ<དབྱ<དབྲ<འབག<འབང<འབད<འབན<འབབ<འབམ
+% 	<<<འབཾ<འབའ<འབར<འབལ<འབས<འབི<འབུ<འབེ<འབོ<འབྱ<འབྲ<རྦ<ལྦ<སྦ
+collating-element <e0f51-0f56-0f42> from "<U0F51><U0F56><U0F42>"
+collating-symbol <s0f51-0f56-0f42>
+collating-element <e0f51-0f56-0f44> from "<U0F51><U0F56><U0F44>"
+collating-symbol <s0f51-0f56-0f44>
+collating-element <e0f51-0f56-0f51> from "<U0F51><U0F56><U0F51>"
+collating-symbol <s0f51-0f56-0f51>
+collating-element <e0f51-0f56-0f53> from "<U0F51><U0F56><U0F53>"
+collating-symbol <s0f51-0f56-0f53>
+collating-element <e0f51-0f56-0f56> from "<U0F51><U0F56><U0F56>"
+collating-symbol <s0f51-0f56-0f56>
+collating-element <e0f51-0f56-0f60> from "<U0F51><U0F56><U0F60>"
+collating-symbol <s0f51-0f56-0f60>
+collating-element <e0f51-0f56-0f62> from "<U0F51><U0F56><U0F62>"
+collating-symbol <s0f51-0f56-0f62>
+collating-element <e0f51-0f56-0f63> from "<U0F51><U0F56><U0F63>"
+collating-symbol <s0f51-0f56-0f63>
+collating-element <e0f51-0f56-0f66> from "<U0F51><U0F56><U0F66>"
+collating-symbol <s0f51-0f56-0f66>
+collating-element <e0f51-0f56-0f72> from "<U0F51><U0F56><U0F72>"
+collating-symbol <s0f51-0f56-0f72>
+collating-element <e0f51-0f56-0f74> from "<U0F51><U0F56><U0F74>"
+collating-symbol <s0f51-0f56-0f74>
+collating-element <e0f51-0f56-0f7a> from "<U0F51><U0F56><U0F7A>"
+collating-symbol <s0f51-0f56-0f7a>
+collating-element <e0f51-0f56-0f7c> from "<U0F51><U0F56><U0F7C>"
+collating-symbol <s0f51-0f56-0f7c>
+collating-element <e0f51-0f56-0fb1> from "<U0F51><U0F56><U0FB1>"
+collating-symbol <s0f51-0f56-0fb1>
+collating-element <e0f51-0f56-0fb2> from "<U0F51><U0F56><U0FB2>"
+collating-symbol <s0f51-0f56-0fb2>
+collating-element <e0f60-0f56-0f42> from "<U0F60><U0F56><U0F42>"
+collating-symbol <s0f60-0f56-0f42>
+collating-element <e0f60-0f56-0f44> from "<U0F60><U0F56><U0F44>"
+collating-symbol <s0f60-0f56-0f44>
+collating-element <e0f60-0f56-0f51> from "<U0F60><U0F56><U0F51>"
+collating-symbol <s0f60-0f56-0f51>
+collating-element <e0f60-0f56-0f53> from "<U0F60><U0F56><U0F53>"
+collating-symbol <s0f60-0f56-0f53>
+collating-element <e0f60-0f56-0f56> from "<U0F60><U0F56><U0F56>"
+collating-symbol <s0f60-0f56-0f56>
+collating-element <e0f60-0f56-0f58> from "<U0F60><U0F56><U0F58>"
+collating-symbol <s0f60-0f56-0f58>
+collating-element <e0f60-0f56-0f7e> from "<U0F60><U0F56><U0F7E>"
+collating-symbol <s0f60-0f56-0f7e>
+collating-element <e0f60-0f56-0f60> from "<U0F60><U0F56><U0F60>"
+collating-symbol <s0f60-0f56-0f60>
+collating-element <e0f60-0f56-0f62> from "<U0F60><U0F56><U0F62>"
+collating-symbol <s0f60-0f56-0f62>
+collating-element <e0f60-0f56-0f63> from "<U0F60><U0F56><U0F63>"
+collating-symbol <s0f60-0f56-0f63>
+collating-element <e0f60-0f56-0f66> from "<U0F60><U0F56><U0F66>"
+collating-symbol <s0f60-0f56-0f66>
+collating-element <e0f60-0f56-0f72> from "<U0F60><U0F56><U0F72>"
+collating-symbol <s0f60-0f56-0f72>
+collating-element <e0f60-0f56-0f74> from "<U0F60><U0F56><U0F74>"
+collating-symbol <s0f60-0f56-0f74>
+collating-element <e0f60-0f56-0f7a> from "<U0F60><U0F56><U0F7A>"
+collating-symbol <s0f60-0f56-0f7a>
+collating-element <e0f60-0f56-0f7c> from "<U0F60><U0F56><U0F7C>"
+collating-symbol <s0f60-0f56-0f7c>
+collating-element <e0f60-0f56-0fb1> from "<U0F60><U0F56><U0FB1>"
+collating-symbol <s0f60-0f56-0fb1>
+collating-element <e0f60-0f56-0fb2> from "<U0F60><U0F56><U0FB2>"
+collating-symbol <s0f60-0f56-0fb2>
+collating-element <e0f62-0fa6>      from "<U0F62><U0FA6>"
+collating-symbol <s0f62-0fa6>
+collating-element <e0f63-0fa6>      from "<U0F63><U0FA6>"
+collating-symbol <s0f63-0fa6>
+collating-element <e0f66-0fa6>      from "<U0F66><U0FA6>"
+collating-symbol <s0f66-0fa6>
+% &མ<<<ཾ<དམག<དམང<དམད<དམན<དམབ<དམཝ<དམའ<དམར<དམལ<དམས<དམི<དམུ<དམེ<དམོ<དམྭ<དམྱ<རྨ<སྨ
+collating-element <e0f51-0f58-0f42> from "<U0F51><U0F58><U0F42>"
+collating-symbol <s0f51-0f58-0f42>
+collating-element <e0f51-0f58-0f44> from "<U0F51><U0F58><U0F44>"
+collating-symbol <s0f51-0f58-0f44>
+collating-element <e0f51-0f58-0f51> from "<U0F51><U0F58><U0F51>"
+collating-symbol <s0f51-0f58-0f51>
+collating-element <e0f51-0f58-0f53> from "<U0F51><U0F58><U0F53>"
+collating-symbol <s0f51-0f58-0f53>
+collating-element <e0f51-0f58-0f56> from "<U0F51><U0F58><U0F56>"
+collating-symbol <s0f51-0f58-0f56>
+collating-element <e0f51-0f58-0f5d> from "<U0F51><U0F58><U0F5D>"
+collating-symbol <s0f51-0f58-0f5d>
+collating-element <e0f51-0f58-0f60> from "<U0F51><U0F58><U0F60>"
+collating-symbol <s0f51-0f58-0f60>
+collating-element <e0f51-0f58-0f62> from "<U0F51><U0F58><U0F62>"
+collating-symbol <s0f51-0f58-0f62>
+collating-element <e0f51-0f58-0f63> from "<U0F51><U0F58><U0F63>"
+collating-symbol <s0f51-0f58-0f63>
+collating-element <e0f51-0f58-0f66> from "<U0F51><U0F58><U0F66>"
+collating-symbol <s0f51-0f58-0f66>
+collating-element <e0f51-0f58-0f72> from "<U0F51><U0F58><U0F72>"
+collating-symbol <s0f51-0f58-0f72>
+collating-element <e0f51-0f58-0f74> from "<U0F51><U0F58><U0F74>"
+collating-symbol <s0f51-0f58-0f74>
+collating-element <e0f51-0f58-0f7a> from "<U0F51><U0F58><U0F7A>"
+collating-symbol <s0f51-0f58-0f7a>
+collating-element <e0f51-0f58-0f7c> from "<U0F51><U0F58><U0F7C>"
+collating-symbol <s0f51-0f58-0f7c>
+collating-element <e0f51-0f58-0fad> from "<U0F51><U0F58><U0FAD>"
+collating-symbol <s0f51-0f58-0fad>
+collating-element <e0f51-0f58-0fb1> from "<U0F51><U0F58><U0FB1>"
+collating-symbol <s0f51-0f58-0fb1>
+collating-element <e0f62-0fa8>      from "<U0F62><U0FA8>"
+collating-symbol <s0f62-0fa8>
+collating-element <e0f66-0fa8>      from "<U0F66><U0FA8>"
+collating-symbol <s0f66-0fa8>
+% &ཙ<གཙ<བཙ<རྩ<སྩ<བརྩ<བསྩ
+collating-element <e0f42-0f59>      from "<U0F42><U0F59>"
+collating-symbol <s0f42-0f59>
+collating-element <e0f56-0f59>      from "<U0F56><U0F59>"
+collating-symbol <s0f56-0f59>
+collating-element <e0f62-0fa9>      from "<U0F62><U0FA9>"
+collating-symbol <s0f62-0fa9>
+collating-element <e0f66-0fa9>      from "<U0F66><U0FA9>"
+collating-symbol <s0f66-0fa9>
+collating-element <e0f56-0f62-0fa9> from "<U0F56><U0F62><U0FA9>"
+collating-symbol <s0f56-0f62-0fa9>
+collating-element <e0f56-0f66-0fa9> from "<U0F56><U0F66><U0FA9>"
+collating-symbol <s0f56-0f66-0fa9>
+% &ཚ<མཚ<འཚ
+collating-element <e0f58-0f5a>      from "<U0F58><U0F5A>"
+collating-symbol <s0f58-0f5a>
+collating-element <e0f60-0f5a>      from "<U0F60><U0F5A>"
+collating-symbol <s0f60-0f5a>
+% &ཛ<མཛ<འཛ<རྫ<བརྫ
+collating-element <e0f58-0f5b>      from "<U0F58><U0F5B>"
+collating-symbol <s0f58-0f5b>
+collating-element <e0f60-0f5b>      from "<U0F60><U0F5B>"
+collating-symbol <s0f60-0f5b>
+collating-element <e0f62-0fab>      from "<U0F62><U0FAB>"
+collating-symbol <s0f62-0fab>
+collating-element <e0f56-0f62-0fab> from "<U0F56><U0F62><U0FAB>"
+collating-symbol <s0f56-0f62-0fab>
+% # &ཝ
+% &ཞ<གཞ<བཞ
+collating-element <e0f42-0f5e>      from "<U0F42><U0F5E>"
+collating-symbol <s0f42-0f5e>
+collating-element <e0f56-0f5e>      from "<U0F56><U0F5E>"
+collating-symbol <s0f56-0f5e>
+% &ཟ<གཟ<བཟ
+collating-element <e0f42-0f5f>      from "<U0F42><U0F5F>"
+collating-symbol <s0f42-0f5f>
+collating-element <e0f56-0f5f>      from "<U0F56><U0F5F>"
+collating-symbol <s0f56-0f5f>
+% # &འ
+% &ཡ<གཡ
+collating-element <e0f42-0f61>      from "<U0F42><U0F61>"
+collating-symbol <s0f42-0f61>
+% &ར<<<ཪ<ཬ<བརླ=བཪླ
+collating-element <e0f56-0f62-0fb3> from "<U0F56><U0F62><U0FB3>"
+collating-symbol <s0f56-0f62-0fb3>
+collating-element <e0f56-0f6a-0fb3> from "<U0F56><U0F6A><U0FB3>"
+collating-symbol <s0f56-0f6a-0fb3>
+% # &ལ
+% &ཤ<ཥ<གཤ<བཤ
+collating-element <e0f42-0f64>      from "<U0F42><U0F64>"
+collating-symbol <s0f42-0f64>
+collating-element <e0f56-0f64>      from "<U0F56><U0F64>"
+collating-symbol <s0f56-0f64>
+% &ས<གསག<གསང<གསད<གསན<གསབ<གསའ<གསར<གསལ<གསས<གསི<གསུ<གསེ<གསོ<གསྭ<བསག<བསང<བསད<བསབ<བསམ<<<བསཾ<བསའ<བསར
+% 		<བསལ<བསས<བསི<བསུ<བསེ<བསོ<བསྭ<བསྲ<བསླ
+collating-element <e0f42-0f66-0f42> from "<U0F42><U0F66><U0F42>"
+collating-symbol <s0f42-0f66-0f42>
+collating-element <e0f42-0f66-0f44> from "<U0F42><U0F66><U0F44>"
+collating-symbol <s0f42-0f66-0f44>
+collating-element <e0f42-0f66-0f51> from "<U0F42><U0F66><U0F51>"
+collating-symbol <s0f42-0f66-0f51>
+collating-element <e0f42-0f66-0f53> from "<U0F42><U0F66><U0F53>"
+collating-symbol <s0f42-0f66-0f53>
+collating-element <e0f42-0f66-0f56> from "<U0F42><U0F66><U0F56>"
+collating-symbol <s0f42-0f66-0f56>
+collating-element <e0f42-0f66-0f60> from "<U0F42><U0F66><U0F60>"
+collating-symbol <s0f42-0f66-0f60>
+collating-element <e0f42-0f66-0f62> from "<U0F42><U0F66><U0F62>"
+collating-symbol <s0f42-0f66-0f62>
+collating-element <e0f42-0f66-0f63> from "<U0F42><U0F66><U0F63>"
+collating-symbol <s0f42-0f66-0f63>
+collating-element <e0f42-0f66-0f66> from "<U0F42><U0F66><U0F66>"
+collating-symbol <s0f42-0f66-0f66>
+collating-element <e0f42-0f66-0f72> from "<U0F42><U0F66><U0F72>"
+collating-symbol <s0f42-0f66-0f72>
+collating-element <e0f42-0f66-0f74> from "<U0F42><U0F66><U0F74>"
+collating-symbol <s0f42-0f66-0f74>
+collating-element <e0f42-0f66-0f7a> from "<U0F42><U0F66><U0F7A>"
+collating-symbol <s0f42-0f66-0f7a>
+collating-element <e0f42-0f66-0f7c> from "<U0F42><U0F66><U0F7C>"
+collating-symbol <s0f42-0f66-0f7c>
+collating-element <e0f42-0f66-0fad> from "<U0F42><U0F66><U0FAD>"
+collating-symbol <s0f42-0f66-0fad>
+collating-element <e0f56-0f66-0f42> from "<U0F56><U0F66><U0F42>"
+collating-symbol <s0f56-0f66-0f42>
+collating-element <e0f56-0f66-0f44> from "<U0F56><U0F66><U0F44>"
+collating-symbol <s0f56-0f66-0f44>
+collating-element <e0f56-0f66-0f51> from "<U0F56><U0F66><U0F51>"
+collating-symbol <s0f56-0f66-0f51>
+collating-element <e0f56-0f66-0f56> from "<U0F56><U0F66><U0F56>"
+collating-symbol <s0f56-0f66-0f56>
+collating-element <e0f56-0f66-0f58> from "<U0F56><U0F66><U0F58>"
+collating-symbol <s0f56-0f66-0f58>
+collating-element <e0f56-0f66-0f7e> from "<U0F56><U0F66><U0F7E>"
+collating-symbol <s0f56-0f66-0f7e>
+collating-element <e0f56-0f66-0f60> from "<U0F56><U0F66><U0F60>"
+collating-symbol <s0f56-0f66-0f60>
+collating-element <e0f56-0f66-0f62> from "<U0F56><U0F66><U0F62>"
+collating-symbol <s0f56-0f66-0f62>
+collating-element <e0f56-0f66-0f63> from "<U0F56><U0F66><U0F63>"
+collating-symbol <s0f56-0f66-0f63>
+collating-element <e0f56-0f66-0f66> from "<U0F56><U0F66><U0F66>"
+collating-symbol <s0f56-0f66-0f66>
+collating-element <e0f56-0f66-0f72> from "<U0F56><U0F66><U0F72>"
+collating-symbol <s0f56-0f66-0f72>
+collating-element <e0f56-0f66-0f74> from "<U0F56><U0F66><U0F74>"
+collating-symbol <s0f56-0f66-0f74>
+collating-element <e0f56-0f66-0f7a> from "<U0F56><U0F66><U0F7A>"
+collating-symbol <s0f56-0f66-0f7a>
+collating-element <e0f56-0f66-0f7c> from "<U0F56><U0F66><U0F7C>"
+collating-symbol <s0f56-0f66-0f7c>
+collating-element <e0f56-0f66-0fad> from "<U0F56><U0F66><U0FAD>"
+collating-symbol <s0f56-0f66-0fad>
+collating-element <e0f56-0f66-0fb2> from "<U0F56><U0F66><U0FB2>"
+collating-symbol <s0f56-0f66-0fb2>
+collating-element <e0f56-0f66-0fb3> from "<U0F56><U0F66><U0FB3>"
+collating-symbol <s0f56-0f66-0fb3>
+% &ཧ<ལྷ
+collating-element <e0f63-0fb7>      from "<U0F63><U0FB7>"
+collating-symbol <s0f63-0fb7>
+% &ཨ
+% # Explicit vowels
+% <ཱ<ི<ཱི<ྀ<ཱྀ<ུ<ཱུ<ེ<ཻ=ེེ<ོ<ཽ=ོོ
+% # Post-radicals
+% 	<ྐ<ྑ<ྒ<ྔ<ྕ<ྖ<ྗ<ྙ<ྟ<ྚ<ྠ<ྛ<ྡ<ྜ<ྣ<ྞ<ྤ<ྥ<ྦ<ྨ<ྩ<ྪ<ྫ<ྭ<<<ྺ<ྮ<ྯ<ྰ<ྱ<<<ྻ<ྲ<<<ྼ<ླ<ྴ
+% 	<ྵ<ྶ<ྷ<ྸ
+%collating-element <e0f71-0f72> from "<U0F71><U0F72>"
+% collating-element <U0F71_0F72> from "<U0F71><U0F72>" already exists
+collating-symbol <s0f71-0f72>
+% collating-element <e0f71-0f80> from "<U0F71><U0F80>"
+% collating-element <U0F71_0F80> from "<U0F71><U0F80>" already exists
+collating-symbol <s0f71-0f80>
+% collating-element <e0f71-0f74> from "<U0F71><U0F74>"
+% collating-element <U0F71_0F74> from "<U0F71><U0F74>" already exists
+collating-symbol <s0f71-0f74>
+collating-element <e0f7a-0f7a> from "<U0F7A><U0F7A>"
+collating-symbol <s0f7a-0f7a>
+collating-element <e0f7c-0f7c> from "<U0F7C><U0F7C>"
+collating-symbol <s0f7c-0f7c>
+% # Combining marks and signs (secondary weight)
+% &༹<<྄<<ཿ<<྅<<ྈ<<ྉ<<ྊ<<ྋ<<ྌ<<ྍ<<ྎ<<ྏ
+% # Treatༀ,  ཷand ,ཹ as decomposed
+% &ཨོཾ=ༀ
+% &ྲཱྀ=ཷ
+% &ླཱྀ=ཹ
+collating-element <e0f68-0f7c-0f7e> from "<U0F68><U0F7C><U0F7E>"
+collating-symbol <s0f68-0f7c-0f7e>
+% collating-element <e0fb2-0f71-0f80> from "<U0FB2><U0F71><U0F80>"
+% collating-element <U0FB2_0F71_0F80> from "<U0FB2><U0F71><U0F80>" already exists
+collating-symbol <s0fb2-0f71-0f80>
+% collating-element <e0fb3-0f71-0f80> from "<U0FB3><U0F71><U0F80>"
+% collating-element <U0FB3_0F71_0F80> from "<U0FB3><U0F71><U0F80>" already exists
+collating-symbol <s0fb3-0f71-0f80>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Finished defining collating-elements and collating-symbols
+%
+% One dummy reorder-after statement here to avoid a syntax error
+% because the first rule reordering stuff starts without a reorder-after:
+collating-symbol <dummy>
+reorder-after <AFTER-A>
+<dummy>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% &ཀར<ཀརྐ<ཀརྟ<ཀརྞ<ཀརྨ<ཀརྴ<ཀརྵ
+<e0f40-0f62>      "<S0F40><S0F62><VRNT1><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f40-0f62-0f90> "<S0F40><S0F62><VRNT1><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f40-0f62-0f9f> "<S0F40><S0F62><VRNT1><VRNT3>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f40-0f62-0f9e> "<S0F40><S0F62><VRNT1><VRNT4>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f40-0f62-0fa8> "<S0F40><S0F62><VRNT1><VRNT5>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f40-0f62-0fb4> "<S0F40><S0F62><VRNT2><VRNT1>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f40-0f62-0fb5> "<S0F40><S0F62><VRNT2><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &ཀལ<ཀལྐ<ཀལྤ
+<e0f40-0f63>      "<S0F40><S0F63><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f40-0f63-0f90> "<S0F40><S0F63><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f40-0f63-0fa4> "<S0F40><S0F63><VRNT3>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &ཀས<ཀསྨ
+<e0f40-0f66>      "<S0F40><S0F66><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f40-0f66-0fa8> "<S0F40><S0F66><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &གཉ<གཉྫ
+<e0f42-0f49>      "<S0F42><S0F49><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f42-0f49-0fab> "<S0F42><S0F49><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &ཐར<ཐརྐ
+<e0f50-0f62>      "<S0F50><S0F62><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f50-0f62-0f90> "<S0F50><S0F62><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &པུས<པུསྟི
+<e0f54-0f74-0f66>           "<S0F54><S0F74><S0F66>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f54-0f74-0f66-0f9f-0f72> "<S0F54><SFFFF><SFFFF>";"<BASE><BASE><BASE><BASE><BASE>";"<MIN><MIN><MIN><MIN><MIN>";IGNORE
+% &ཕལ<ཕལྒ
+<e0f55-0f63>      "<S0F55><S0F63><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f55-0f63-0f92> "<S0F55><S0F63><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &བིལ<བིལྦ
+<e0f56-0f72-0f63>      "<S0F56><S0F72><S0F63>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f72-0f63-0fa6> "<S0F56><SFFFF><SFFFF>";"<BASE><BASE><BASE><BASE>";"<MIN><MIN><MIN><MIN>";IGNORE
+% &མཉ<མཉྫ
+<e0f58-0f49>      "<S0F58><S0F49><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f58-0f49-0fab> "<S0F58><S0F49><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &མར<མརྒ
+<e0f58-0f62>      "<S0F58><S0F62><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f58-0f62-0f92> "<S0F58><S0F62><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &ཝར<ཝརྟ
+<e0f5d-0f62>      "<S0F5D><S0F62><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f5d-0f62-0f9f> "<S0F5D><S0F62><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &ཤས<ཤསྟ
+<e0f64-0f66>      "<S0F64><S0F66><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f64-0f66-0f9f> "<S0F64><S0F66><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &སར<སརྒ
+<e0f66-0f62>      "<S0F66><S0F62><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0f62-0f92> "<S0F66><S0F62><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% &ཨར<ཨརྒ<ཨརྱ=ཨཪྱ
+<e0f68-0f62>      "<S0F68><S0F62><VRNT1>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f68-0f62-0f92> "<S0F68><S0F62><VRNT2>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f68-0f62-0fb1> "<S0F68><S0F62><VRNT3>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";<VRNT1>
+<e0f68-0f6a-0fb1> "<S0F68><S0F62><VRNT3>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";<VRNT2>
+% &ཨས<ཨསྨ
+<e0f68-0f66>      "<S0F68><S0F66>";"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f68-0f66-0fa8> "<S0F68><S0F66><S0FA8>";"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+% # Marks (secondary different, with low equal primary weight after Lao)
+% (actually after TAI VIET in iso14651_t1_common)
+% &[before 1]ཀ<།<<༎<<༏<<༐<<༑<<༔<<༴<་=༌
+reorder-after <SAADC> % TAI VIET SYMBOL NUENG which is just before ཀ TIBETAN LETTER KA
+<S0F0D> % ། TIBETAN MARK SHAD
+<U0F0D> <S0F0D>;"<VRNT1><VRNT1>";IGNORE;<U0F0D> % ། TIBETAN MARK SHAD
+<U0F0E> <S0F0D>;"<VRNT1><VRNT2>";IGNORE;<U0F0E> % ༎ TIBETAN MARK NYIS SHAD
+<U0F0F> <S0F0D>;"<VRNT1><VRNT3>";IGNORE;<U0F0F> % ༏ TIBETAN MARK TSHEG SHAD
+<U0F10> <S0F0D>;"<VRNT1><VRNT4>";IGNORE;<U0F10> % ༐ TIBETAN MARK NYIS TSHEG SHAD
+<U0F11> <S0F0D>;"<VRNT1><VRNT5>";IGNORE;<U0F11> % ༑ TIBETAN MARK RIN CHEN SPUNGS SHAD
+<U0F14> <S0F0D>;"<VRNT2><VRNT1>";IGNORE;<U0F14> % ༔ TIBETAN MARK GTER TSHEG
+<U0F34> <S0F0D>;"<VRNT2><VRNT2>";IGNORE;<U0F34> % ༴ TIBETAN MARK BSDUS RTAGS
+<U0F0B> <S0F0D>;"<VRNT2><VRNT3>";IGNORE;<U0F0B> % ་ TIBETAN MARK INTERSYLLABIC TSHEG
+<U0F0C> <S0F0D>;"<VRNT2><VRNT3>";IGNORE;<U0F0C> % ༌ TIBETAN MARK DELIMITER TSHEG BSTAR
+% &ཀ<<ྈྐ<ཫ<དཀ<བཀ<རྐ<ལྐ<སྐ<བརྐ<བསྐ
+<U0F40>      <S0F40>;<BASE>;<MIN>;<U0F40> % ཀ TIBETAN LETTER KA
+<e0f88-0f90> <S0F40>;<VRNT1>;<MIN>;IGNORE % ྈྐ
+
+reorder-after <S0F40> % ཀ TIBETAN LETTER KA
+<S0F6B> % ཫ TIBETAN LETTER KKA
+<s0f51-0f40> % དཀ
+<s0f56-0f40> % བཀ
+<s0f62-0f90> % རྐ
+<s0f63-0f90>
+<s0f66-0f90>
+<s0f56-0f62-0f90>
+<s0f56-0f66-0f90>
+
+<e0f51-0f40>      <s0f51-0f40>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f40>      <s0f56-0f40>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f62-0f90>      <s0f62-0f90>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0f90>      <s0f63-0f90>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0f90>      <s0f66-0f90>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0f90> <s0f56-0f62-0f90>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f90> <s0f56-0f66-0f90>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ཁ<<ྈྑ<མཁ<འཁ
+<U0F41>      "<S0F41>";<BASE>;<MIN>;<U0F41> % TIBETAN LETTER KHA
+<e0f88-0f91> "<S0F41>";<VRNT1>;<MIN>;IGNORE % ྈྑ
+
+reorder-after <S0F41> % TIBETAN LETTER KHA
+<s0f58-0f41>
+<s0f60-0f41>
+
+<e0f58-0f41> <s0f58-0f41>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % མཁ
+<e0f60-0f41> <s0f60-0f41>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % འཁ
+
+% &ག<དགག<དགང<དགད<དགན<དགབ<དགཝ<དགའ<དགར<དགལ<དགས<དགི<དགུ<དགེ<དགོ<དགྭ<དགྱ<དགྲ<བགག<བགང<བགད<བགབ<བགམ<<<བགཾ<བགཝ<བགའ
+% 		<བགར<བགལ<བགི<བགུ<བགེ<བགོ<བགྭ<བགྱ<བགྲ<བགླ<མགག<མགང<མགད<མགབ<མགའ<མགར<མགལ<མགི<མགུ<མགེ<མགོ<མགྭ<མགྱ<མགྲ<འགག<འགང<འགད<འགན<འགབ<འགམ<<<འགཾ
+% 		<འགའ<འགར<འགལ<འགས<འགི<འགུ<འགེ<འགོ<འགྭ<འགྱ<འགྲ<རྒ<ལྒ<སྒ<བརྒ<བསྒ
+reorder-after <S0F42> % ག TIBETAN LETTER GA
+<s0f51-0f42-0f42>
+<s0f51-0f42-0f44>
+<s0f51-0f42-0f51>
+<s0f51-0f42-0f53>
+<s0f51-0f42-0f56>
+<s0f51-0f42-0f5d>
+<s0f51-0f42-0f60>
+<s0f51-0f42-0f62>
+<s0f51-0f42-0f63>
+<s0f51-0f42-0f66>
+<s0f51-0f42-0f72>
+<s0f51-0f42-0f74>
+<s0f51-0f42-0f7a>
+<s0f51-0f42-0f7c>
+<s0f51-0f42-0fad>
+<s0f51-0f42-0fb1>
+<s0f51-0f42-0fb2>
+<s0f56-0f42-0f42>
+<s0f56-0f42-0f44>
+<s0f56-0f42-0f51>
+<s0f56-0f42-0f56>
+<s0f56-0f42-0f58>
+<s0f56-0f42-0f5d>
+<s0f56-0f42-0f60>
+<s0f56-0f42-0f62>
+<s0f56-0f42-0f63>
+<s0f56-0f42-0f72>
+<s0f56-0f42-0f74>
+<s0f56-0f42-0f7a>
+<s0f56-0f42-0f7c>
+<s0f56-0f42-0fad>
+<s0f56-0f42-0fb1>
+<s0f56-0f42-0fb2>
+<s0f56-0f42-0fb3>
+<s0f58-0f42-0f42>
+<s0f58-0f42-0f44>
+<s0f58-0f42-0f51>
+<s0f58-0f42-0f56>
+<s0f58-0f42-0f60>
+<s0f58-0f42-0f62>
+<s0f58-0f42-0f63>
+<s0f58-0f42-0f72>
+<s0f58-0f42-0f74>
+<s0f58-0f42-0f7a>
+<s0f58-0f42-0f7c>
+<s0f58-0f42-0fad>
+<s0f58-0f42-0fb1>
+<s0f58-0f42-0fb2>
+<s0f60-0f42-0f42>
+<s0f60-0f42-0f44>
+<s0f60-0f42-0f51>
+<s0f60-0f42-0f53>
+<s0f60-0f42-0f56>
+<s0f60-0f42-0f58>
+<s0f60-0f42-0f60>
+<s0f60-0f42-0f62>
+<s0f60-0f42-0f63>
+<s0f60-0f42-0f66>
+<s0f60-0f42-0f72>
+<s0f60-0f42-0f74>
+<s0f60-0f42-0f7a>
+<s0f60-0f42-0f7c>
+<s0f60-0f42-0fad>
+<s0f60-0f42-0fb1>
+<s0f60-0f42-0fb2>
+<s0f62-0f92>
+<s0f63-0f92>
+<s0f66-0f92>
+<s0f56-0f62-0f92>
+<s0f56-0f66-0f92>
+
+<e0f51-0f42-0f42> <s0f51-0f42-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f44> <s0f51-0f42-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f51> <s0f51-0f42-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f53> <s0f51-0f42-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f56> <s0f51-0f42-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f5d> <s0f51-0f42-0f5d>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f60> <s0f51-0f42-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f62> <s0f51-0f42-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f63> <s0f51-0f42-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f66> <s0f51-0f42-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f72> <s0f51-0f42-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f74> <s0f51-0f42-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f7a> <s0f51-0f42-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0f7c> <s0f51-0f42-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0fad> <s0f51-0f42-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0fb1> <s0f51-0f42-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f42-0fb2> <s0f51-0f42-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f42> <s0f56-0f42-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f44> <s0f56-0f42-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f51> <s0f56-0f42-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f56> <s0f56-0f42-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f58> <s0f56-0f42-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f7e> <s0f56-0f42-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f56-0f42-0f5d> <s0f56-0f42-0f5d>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f60> <s0f56-0f42-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f62> <s0f56-0f42-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f63> <s0f56-0f42-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f72> <s0f56-0f42-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f74> <s0f56-0f42-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f7a> <s0f56-0f42-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0f7c> <s0f56-0f42-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0fad> <s0f56-0f42-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0fb1> <s0f56-0f42-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0fb2> <s0f56-0f42-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f42-0fb3> <s0f56-0f42-0fb3>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f42> <s0f58-0f42-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f44> <s0f58-0f42-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f51> <s0f58-0f42-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f56> <s0f58-0f42-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f60> <s0f58-0f42-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f62> <s0f58-0f42-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f63> <s0f58-0f42-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f72> <s0f58-0f42-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f74> <s0f58-0f42-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f7a> <s0f58-0f42-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0f7c> <s0f58-0f42-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0fad> <s0f58-0f42-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0fb1> <s0f58-0f42-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f42-0fb2> <s0f58-0f42-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f42> <s0f60-0f42-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f44> <s0f60-0f42-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f51> <s0f60-0f42-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f53> <s0f60-0f42-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f56> <s0f60-0f42-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f58> <s0f60-0f42-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f7e> <s0f60-0f42-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f60-0f42-0f60> <s0f60-0f42-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f62> <s0f60-0f42-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f63> <s0f60-0f42-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f66> <s0f60-0f42-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f72> <s0f60-0f42-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f74> <s0f60-0f42-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f7a> <s0f60-0f42-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0f7c> <s0f60-0f42-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0fad> <s0f60-0f42-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0fb1> <s0f60-0f42-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f42-0fb2> <s0f60-0f42-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f62-0f92>      <s0f62-0f92>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0f92>      <s0f63-0f92>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0f92>      <s0f66-0f92>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0f92> <s0f56-0f62-0f92>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f92> <s0f56-0f66-0f92>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ང<<<ྂ<<<ྃ<དངག<དངང<དངད<དངན<དངབ<དངའ<དངར<དངལ<དངི<དངུ<དངེ<དངོ<མངག<མངང<མངད<མངན<མངབ<མངའ<མངར<མངལ<མངི<མངུ<མངེ<མངོ<རྔ<ལྔ<སྔ<བརྔ<བསྔ
+<U0F44> <S0F44>;<BASE>;<MIN>;<U0F44> % ང TIBETAN LETTER NGA
+<U0F82> <S0F44>;<BASE>;"<MIN><VRNT1>";<U0F82> % TIBETAN SIGN NYI ZLA NAA DA
+<U0F83> <S0F44>;<BASE>;"<MIN><VRNT2>";<U0F83> % TIBETAN SIGN SNA LDAN
+
+reorder-after <S0F44> % ང TIBETAN LETTER NGA
+<s0f51-0f44-0f42>
+<s0f51-0f44-0f44>
+<s0f51-0f44-0f51>
+<s0f51-0f44-0f53>
+<s0f51-0f44-0f56>
+<s0f51-0f44-0f60>
+<s0f51-0f44-0f62>
+<s0f51-0f44-0f63>
+<s0f51-0f44-0f72>
+<s0f51-0f44-0f74>
+<s0f51-0f44-0f7a>
+<s0f51-0f44-0f7c>
+<s0f58-0f44-0f42>
+<s0f58-0f44-0f44>
+<s0f58-0f44-0f51>
+<s0f58-0f44-0f53>
+<s0f58-0f44-0f56>
+<s0f58-0f44-0f60>
+<s0f58-0f44-0f62>
+<s0f58-0f44-0f63>
+<s0f58-0f44-0f72>
+<s0f58-0f44-0f74>
+<s0f58-0f44-0f7a>
+<s0f58-0f44-0f7c>
+<s0f62-0f94>
+<s0f63-0f94>
+<s0f66-0f94>
+<s0f56-0f62-0f94>
+<s0f56-0f66-0f94>
+
+<e0f51-0f44-0f42> <s0f51-0f44-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f44> <s0f51-0f44-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f51> <s0f51-0f44-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f53> <s0f51-0f44-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f56> <s0f51-0f44-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f60> <s0f51-0f44-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f62> <s0f51-0f44-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f63> <s0f51-0f44-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f72> <s0f51-0f44-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f74> <s0f51-0f44-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f7a> <s0f51-0f44-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f44-0f7c> <s0f51-0f44-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f42> <s0f58-0f44-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f44> <s0f58-0f44-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f51> <s0f58-0f44-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f53> <s0f58-0f44-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f56> <s0f58-0f44-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f60> <s0f58-0f44-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f62> <s0f58-0f44-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f63> <s0f58-0f44-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f72> <s0f58-0f44-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f74> <s0f58-0f44-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f7a> <s0f58-0f44-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f44-0f7c> <s0f58-0f44-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f62-0f94>      <s0f62-0f94>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0f94>      <s0f63-0f94>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0f94>      <s0f66-0f94>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0f94> <s0f56-0f62-0f94>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f94> <s0f56-0f66-0f94>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ཅ<གཅ<བཅ<ལྕ<བལྕ
+reorder-after <S0F45> % ཅ TIBETAN LETTER CA
+<s0f42-0f45>
+<s0f56-0f45>
+<s0f63-0f95>
+<s0f56-0f63-0f95>
+
+<e0f42-0f45>      <s0f42-0f45>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f45>      <s0f56-0f45>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0f95>      <s0f63-0f95>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f63-0f95> <s0f56-0f63-0f95>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ཆ<མཆ<འཆ
+reorder-after <S0F46> % TIBETAN LETTER CHA
+<s0f58-0f46>
+<s0f60-0f46>
+
+<e0f58-0f46>      <s0f58-0f46>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f60-0f46>      <s0f60-0f46>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ཇ<མཇ<འཇ<རྗ<ལྗ<བརྗ
+reorder-after <S0F47> % TIBETAN LETTER JA
+<s0f58-0f47>
+<s0f60-0f47>
+<s0f62-0f97>
+<s0f63-0f97>
+<s0f56-0f62-0f97>
+
+<e0f58-0f47>      <s0f58-0f47>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f60-0f47>      <s0f60-0f47>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f62-0f97>      <s0f62-0f97>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0f97>      <s0f63-0f97>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0f97> <s0f56-0f62-0f97>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ཉ<<ྋྙ<གཉ<མཉ<རྙ=ཪྙ<སྙ<བརྙ=བཪྙ<བསྙ
+<U0F49>      <S0F49>;<BASE>;<MIN>;<U0F49> % TIBETAN LETTER NYA
+<e0f8b-0f99> <S0F49>;<VRNT1>;<MIN>;IGNORE
+
+reorder-after  <S0F49> % TIBETAN LETTER NYA
+<s0f42-0f49>
+<s0f58-0f49>
+<s0f62-0f99>
+<s0f66-0f99>
+<s0f56-0f62-0f99>
+<s0f56-0f66-0f99>
+
+<e0f42-0f49>      <s0f42-0f49>;"<BASE><BASE>";"<MIN><MIN>";"<U0F42><U0F49>"
+<e0f58-0f49>      <s0f58-0f49>;"<BASE><BASE>";"<MIN><MIN>";"<U0F58><U0F49>"
+<e0f62-0f99>      <s0f62-0f99>;"<BASE><BASE>";"<MIN><MIN>";"<U0F62><U0F99>"
+<e0f6a-0f99>      <s0f62-0f99>;"<BASE><BASE>";"<MIN><MIN>";"<U0F6A><U0F99>"
+<e0f66-0f99>      <s0f66-0f99>;"<BASE><BASE>";"<MIN><MIN>";"<U0F66><U0F99>"
+<e0f56-0f62-0f99> <s0f56-0f62-0f99>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";"<U0F56><U0F62><U0F99>"
+<e0f56-0f6a-0f99> <s0f56-0f62-0f99>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";"<U0F56><U0F6A><U0F99>"
+<e0f56-0f66-0f99> <s0f56-0f66-0f99>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";"<U0F56><U0F66><U0F99>"
+
+% &ཏ<ཊ<ཏྭ<ཏྲ<གཏ<བཏ<རྟ<ལྟ<སྟ<བརྟ<བལྟ<བསྟ
+reorder-after <S0F4F> % TIBETAN LETTER TA
+<S0F4A>
+<s0f4f-0fad>
+<s0f4f-0fb2>
+<s0f42-0f4f>
+<s0f56-0f4f>
+<s0f62-0f9f>
+<s0f63-0f9f>
+<s0f66-0f9f>
+<s0f56-0f62-0f9f>
+<s0f56-0f63-0f9f>
+<s0f56-0f66-0f9f>
+
+<e0f4f-0fad>      <s0f4f-0fad>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f4f-0fb2>      <s0f4f-0fb2>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f42-0f4f>      <s0f42-0f4f>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f4f>      <s0f56-0f4f>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f62-0f9f>      <s0f62-0f9f>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0f9f>      <s0f63-0f9f>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0f9f>      <s0f66-0f9f>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0f9f> <s0f56-0f62-0f9f>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f63-0f9f> <s0f56-0f63-0f9f>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f9f> <s0f56-0f66-0f9f>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ཐ<ཋ<མཐ<འཐ
+reorder-after <S0F50> % TIBETAN LETTER THA
+<S0F4B>
+<s0f58-0f50>
+<s0f60-0f50>
+
+<e0f58-0f50> <s0f58-0f50>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f60-0f50> <s0f60-0f50>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ད<ཌ<གདག<གདང<གདད<གདན<གདབ<གདམ<<<གདཾ<གདའ<གདར<གདལ<གདས<གདི<གདུ<གདེ<གདོ<གདྭ<བདག<བདང<བདད<བདབ<བདམ<<<བདཾ<བདའ
+% 		<བདར<བདལ<བདས<བདི<བདུ<བདེ<བདོ<བདྭ<མདག<མདང<མདད<མདན<མདབ<མདའ<མདར<མདལ<མདས<མདི<མདུ<མདེ<མདོ<མདྭ<འདག<འདང<འདད<འདན<འདབ<འདམ<<<འདཾ
+% 		<འདཝ<འདའ<འདར<འདལ<འདས<འདི<འདུ<འདེ<འདོ<འདྭ<འདྲ<རྡ<ལྡ<སྡ<བརྡ<བལྡ<བསྡ
+reorder-after <S0F51> % TIBETAN LETTER DA
+<S0F4C>
+<s0f42-0f51-0f42>
+<s0f42-0f51-0f44>
+<s0f42-0f51-0f51>
+<s0f42-0f51-0f53>
+<s0f42-0f51-0f56>
+<s0f42-0f51-0f58>
+<s0f42-0f51-0f60>
+<s0f42-0f51-0f62>
+<s0f42-0f51-0f63>
+<s0f42-0f51-0f66>
+<s0f42-0f51-0f72>
+<s0f42-0f51-0f74>
+<s0f42-0f51-0f7a>
+<s0f42-0f51-0f7c>
+<s0f42-0f51-0fad>
+<s0f56-0f51-0f42>
+<s0f56-0f51-0f44>
+<s0f56-0f51-0f51>
+<s0f56-0f51-0f56>
+<s0f56-0f51-0f58>
+<s0f56-0f51-0f60>
+<s0f56-0f51-0f62>
+<s0f56-0f51-0f63>
+<s0f56-0f51-0f66>
+<s0f56-0f51-0f72>
+<s0f56-0f51-0f74>
+<s0f56-0f51-0f7a>
+<s0f56-0f51-0f7c>
+<s0f56-0f51-0fad>
+<s0f58-0f51-0f42>
+<s0f58-0f51-0f44>
+<s0f58-0f51-0f51>
+<s0f58-0f51-0f53>
+<s0f58-0f51-0f56>
+<s0f58-0f51-0f60>
+<s0f58-0f51-0f62>
+<s0f58-0f51-0f63>
+<s0f58-0f51-0f66>
+<s0f58-0f51-0f72>
+<s0f58-0f51-0f74>
+<s0f58-0f51-0f7a>
+<s0f58-0f51-0f7c>
+<s0f58-0f51-0fad>
+<s0f60-0f51-0f42>
+<s0f60-0f51-0f44>
+<s0f60-0f51-0f51>
+<s0f60-0f51-0f53>
+<s0f60-0f51-0f56>
+<s0f60-0f51-0f58>
+<s0f60-0f51-0f5d>
+<s0f60-0f51-0f60>
+<s0f60-0f51-0f62>
+<s0f60-0f51-0f63>
+<s0f60-0f51-0f66>
+<s0f60-0f51-0f72>
+<s0f60-0f51-0f74>
+<s0f60-0f51-0f7a>
+<s0f60-0f51-0f7c>
+<s0f60-0f51-0fad>
+<s0f60-0f51-0fb2>
+<s0f62-0fa1>
+<s0f63-0fa1>
+<s0f66-0fa1>
+<s0f56-0f62-0fa1>
+<s0f56-0f63-0fa1>
+<s0f56-0f66-0fa1>
+
+<e0f42-0f51-0f42> <s0f42-0f51-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f44> <s0f42-0f51-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f51> <s0f42-0f51-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f53> <s0f42-0f51-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f56> <s0f42-0f51-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f58> <s0f42-0f51-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f7e> <s0f42-0f51-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f42-0f51-0f60> <s0f42-0f51-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f62> <s0f42-0f51-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f63> <s0f42-0f51-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f66> <s0f42-0f51-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f72> <s0f42-0f51-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f74> <s0f42-0f51-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f7a> <s0f42-0f51-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0f7c> <s0f42-0f51-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f51-0fad> <s0f42-0f51-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f42> <s0f56-0f51-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f44> <s0f56-0f51-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f51> <s0f56-0f51-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f56> <s0f56-0f51-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f58> <s0f56-0f51-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f7e> <s0f56-0f51-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f56-0f51-0f60> <s0f56-0f51-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f62> <s0f56-0f51-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f63> <s0f56-0f51-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f66> <s0f56-0f51-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f72> <s0f56-0f51-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f74> <s0f56-0f51-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f7a> <s0f56-0f51-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0f7c> <s0f56-0f51-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f51-0fad> <s0f56-0f51-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f42> <s0f58-0f51-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f44> <s0f58-0f51-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f51> <s0f58-0f51-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f53> <s0f58-0f51-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f56> <s0f58-0f51-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f60> <s0f58-0f51-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f62> <s0f58-0f51-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f63> <s0f58-0f51-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f66> <s0f58-0f51-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f72> <s0f58-0f51-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f74> <s0f58-0f51-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f7a> <s0f58-0f51-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0f7c> <s0f58-0f51-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f51-0fad> <s0f58-0f51-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f42> <s0f60-0f51-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f44> <s0f60-0f51-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f51> <s0f60-0f51-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f53> <s0f60-0f51-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f56> <s0f60-0f51-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f58> <s0f60-0f51-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f7e> <s0f60-0f51-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f60-0f51-0f5d> <s0f60-0f51-0f5d>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f60> <s0f60-0f51-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f62> <s0f60-0f51-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f63> <s0f60-0f51-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f66> <s0f60-0f51-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f72> <s0f60-0f51-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f74> <s0f60-0f51-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f7a> <s0f60-0f51-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0f7c> <s0f60-0f51-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0fad> <s0f60-0f51-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f51-0fb2> <s0f60-0f51-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f62-0fa1>      <s0f62-0fa1>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0fa1>      <s0f63-0fa1>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0fa1>      <s0f66-0fa1>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0fa1> <s0f56-0f62-0fa1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f63-0fa1> <s0f56-0f63-0fa1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0fa1> <s0f56-0f66-0fa1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ན<ཎ<གནག<གནང<གནད<གནན<གནབ<གནམ<<<གནཾ<གནཝ<གནའ<གནར<གནལ<གནས<གནི<གནུ<གནེ<གནོ<གནྭ<མནག<མནང<མནད<མནན<མནབ<མནམ<<<མནཾ<མནའ
+% 		<མནར<མནལ<མནས<མནི<མནུ<མནེ<མནོ<མནྭ<རྣ<སྣ<བརྣ<བསྣ
+reorder-after <S0F53> % TIBETAN LETTER NA
+<S0F4E>
+<s0f42-0f53-0f42>
+<s0f42-0f53-0f44>
+<s0f42-0f53-0f51>
+<s0f42-0f53-0f53>
+<s0f42-0f53-0f56>
+<s0f42-0f53-0f58>
+<s0f42-0f53-0f5d>
+<s0f42-0f53-0f60>
+<s0f42-0f53-0f62>
+<s0f42-0f53-0f63>
+<s0f42-0f53-0f66>
+<s0f42-0f53-0f72>
+<s0f42-0f53-0f74>
+<s0f42-0f53-0f7a>
+<s0f42-0f53-0f7c>
+<s0f42-0f53-0fad>
+<s0f58-0f53-0f42>
+<s0f58-0f53-0f44>
+<s0f58-0f53-0f51>
+<s0f58-0f53-0f53>
+<s0f58-0f53-0f56>
+<s0f58-0f53-0f58>
+<s0f58-0f53-0f60>
+<s0f58-0f53-0f62>
+<s0f58-0f53-0f63>
+<s0f58-0f53-0f66>
+<s0f58-0f53-0f72>
+<s0f58-0f53-0f74>
+<s0f58-0f53-0f7a>
+<s0f58-0f53-0f7c>
+<s0f58-0f53-0fad>
+<s0f62-0fa3>
+<s0f66-0fa3>
+<s0f56-0f62-0fa3>
+<s0f56-0f66-0fa3>
+
+<e0f42-0f53-0f42> <s0f42-0f53-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f44> <s0f42-0f53-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f51> <s0f42-0f53-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f53> <s0f42-0f53-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f56> <s0f42-0f53-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f58> <s0f42-0f53-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f7e> <s0f42-0f53-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f42-0f53-0f5d> <s0f42-0f53-0f5d>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f60> <s0f42-0f53-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f62> <s0f42-0f53-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f63> <s0f42-0f53-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f66> <s0f42-0f53-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f72> <s0f42-0f53-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f74> <s0f42-0f53-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f7a> <s0f42-0f53-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0f7c> <s0f42-0f53-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f53-0fad> <s0f42-0f53-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f42> <s0f58-0f53-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f44> <s0f58-0f53-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f51> <s0f58-0f53-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f53> <s0f58-0f53-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f56> <s0f58-0f53-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f58> <s0f58-0f53-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f7e> <s0f58-0f53-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f58-0f53-0f60> <s0f58-0f53-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f62> <s0f58-0f53-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f63> <s0f58-0f53-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f66> <s0f58-0f53-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f72> <s0f58-0f53-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f74> <s0f58-0f53-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f7a> <s0f58-0f53-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0f7c> <s0f58-0f53-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f58-0f53-0fad> <s0f58-0f53-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f62-0fa3> <s0f62-0fa3>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0fa3> <s0f66-0fa3>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0fa3> <s0f56-0f62-0fa3>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0fa3> <s0f56-0f66-0fa3>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &པ<<ྉྤ<དཔག<དཔང<དཔད<དཔབ<དཔའ<དཔར<དཔལ<དཔས<དཔི<དཔུ<དཔེ<དཔོ<དཔྱ<དཔྲ<ལྤ<སྤ
+<U0F54>      <S0F54>;<BASE>;<MIN>;<U0F54> % TIBETAN LETTER PA
+<e0f89-0fa4> <S0F54>;<VRNT1>;<MIN>;IGNORE
+
+reorder-after <S0F54> % TIBETAN LETTER PA
+<s0f51-0f54-0f42>
+<s0f51-0f54-0f44>
+<s0f51-0f54-0f51>
+<s0f51-0f54-0f56>
+<s0f51-0f54-0f60>
+<s0f51-0f54-0f62>
+<s0f51-0f54-0f63>
+<s0f51-0f54-0f66>
+<s0f51-0f54-0f72>
+<s0f51-0f54-0f74>
+<s0f51-0f54-0f7a>
+<s0f51-0f54-0f7c>
+<s0f51-0f54-0fb1>
+<s0f51-0f54-0fb2>
+<s0f63-0fa4>
+<s0f66-0fa4>
+
+<e0f51-0f54-0f42> <s0f51-0f54-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f44> <s0f51-0f54-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f51> <s0f51-0f54-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f56> <s0f51-0f54-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f60> <s0f51-0f54-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f62> <s0f51-0f54-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f63> <s0f51-0f54-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f66> <s0f51-0f54-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f72> <s0f51-0f54-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f74> <s0f51-0f54-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f7a> <s0f51-0f54-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0f7c> <s0f51-0f54-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0fb1> <s0f51-0f54-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f54-0fb2> <s0f51-0f54-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f63-0fa4> <s0f63-0fa4>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0fa4> <s0f66-0fa4>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ཕ<<ྉྥ<འཕ
+<U0F55>      <S0F55>;<BASE>;<MIN>;<U0F55> % TIBETAN LETTER PHA
+<e0f89-0fa5> <S0F55>;<VRNT1>;<MIN>;IGNORE
+
+reorder-after <S0F55> % TIBETAN LETTER PHA
+<s0f60-0f55>
+
+<e0f60-0f55> <s0f60-0f55>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &བ<དབག<དབང<དབད<དབན<དབབ<དབའ<དབར<དབལ<དབས<དབི<དབུ<དབེ<དབོ<དབྱ<དབྲ<འབག<འབང<འབད<འབན<འབབ<འབམ
+% 	<<<འབཾ<འབའ<འབར<འབལ<འབས<འབི<འབུ<འབེ<འབོ<འབྱ<འབྲ<རྦ<ལྦ<སྦ
+reorder-after <S0F56> % TIBETAN LETTER BA
+<s0f51-0f56-0f42>
+<s0f51-0f56-0f44>
+<s0f51-0f56-0f51>
+<s0f51-0f56-0f53>
+<s0f51-0f56-0f56>
+<s0f51-0f56-0f60>
+<s0f51-0f56-0f62>
+<s0f51-0f56-0f63>
+<s0f51-0f56-0f66>
+<s0f51-0f56-0f72>
+<s0f51-0f56-0f74>
+<s0f51-0f56-0f7a>
+<s0f51-0f56-0f7c>
+<s0f51-0f56-0fb1>
+<s0f51-0f56-0fb2>
+<s0f60-0f56-0f42>
+<s0f60-0f56-0f44>
+<s0f60-0f56-0f51>
+<s0f60-0f56-0f53>
+<s0f60-0f56-0f56>
+<s0f60-0f56-0f58>
+<s0f60-0f56-0f7e>
+<s0f60-0f56-0f60>
+<s0f60-0f56-0f62>
+<s0f60-0f56-0f63>
+<s0f60-0f56-0f66>
+<s0f60-0f56-0f72>
+<s0f60-0f56-0f74>
+<s0f60-0f56-0f7a>
+<s0f60-0f56-0f7c>
+<s0f60-0f56-0fb1>
+<s0f60-0f56-0fb2>
+<s0f62-0fa6>
+<s0f63-0fa6>
+<s0f66-0fa6>
+
+<e0f51-0f56-0f42> <s0f51-0f56-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f44> <s0f51-0f56-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f51> <s0f51-0f56-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f53> <s0f51-0f56-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f56> <s0f51-0f56-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f60> <s0f51-0f56-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f62> <s0f51-0f56-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f63> <s0f51-0f56-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f66> <s0f51-0f56-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f72> <s0f51-0f56-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f74> <s0f51-0f56-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f7a> <s0f51-0f56-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0f7c> <s0f51-0f56-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0fb1> <s0f51-0f56-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f56-0fb2> <s0f51-0f56-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f42> <s0f60-0f56-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f44> <s0f60-0f56-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f51> <s0f60-0f56-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f53> <s0f60-0f56-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f56> <s0f60-0f56-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f58> <s0f60-0f56-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f7e> <s0f60-0f56-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f60-0f56-0f60> <s0f60-0f56-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f62> <s0f60-0f56-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f63> <s0f60-0f56-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f66> <s0f60-0f56-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f72> <s0f60-0f56-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f74> <s0f60-0f56-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f7a> <s0f60-0f56-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0f7c> <s0f60-0f56-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0fb1> <s0f60-0f56-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f60-0f56-0fb2> <s0f60-0f56-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f62-0fa6>      <s0f62-0fa6>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f63-0fa6>      <s0f63-0fa6>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0fa6>      <s0f66-0fa6>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &མ<<<ཾ<དམག<དམང<དམད<དམན<དམབ<དམཝ<དམའ<དམར<དམལ<དམས<དམི<དམུ<དམེ<དམོ<དམྭ<དམྱ<རྨ<སྨ
+<U0F58> <S0F58>;<BASE>;<MIN>;<U0F58> % མ TIBETAN LETTER MA
+<U0F7E> <S0F58>;<BASE>;<CAP>;<U0F7E> %  ཾ TIBETAN SIGN RJES SU NGA RO
+
+reorder-after <S0F58> % མ TIBETAN LETTER MA
+<s0f51-0f58-0f42>
+<s0f51-0f58-0f44>
+<s0f51-0f58-0f51>
+<s0f51-0f58-0f53>
+<s0f51-0f58-0f56>
+<s0f51-0f58-0f5d>
+<s0f51-0f58-0f60>
+<s0f51-0f58-0f62>
+<s0f51-0f58-0f63>
+<s0f51-0f58-0f66>
+<s0f51-0f58-0f72>
+<s0f51-0f58-0f74>
+<s0f51-0f58-0f7a>
+<s0f51-0f58-0f7c>
+<s0f51-0f58-0fad>
+<s0f51-0f58-0fb1>
+<s0f62-0fa8>
+<s0f66-0fa8>
+
+<e0f51-0f58-0f42> <s0f51-0f58-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f44> <s0f51-0f58-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f51> <s0f51-0f58-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f53> <s0f51-0f58-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f56> <s0f51-0f58-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f5d> <s0f51-0f58-0f5d>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f60> <s0f51-0f58-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f62> <s0f51-0f58-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f63> <s0f51-0f58-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f66> <s0f51-0f58-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f72> <s0f51-0f58-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f74> <s0f51-0f58-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f7a> <s0f51-0f58-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0f7c> <s0f51-0f58-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0fad> <s0f51-0f58-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f51-0f58-0fb1> <s0f51-0f58-0fb1>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f62-0fa8>      <s0f62-0fa8>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0fa8>      <s0f66-0fa8>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ཙ<གཙ<བཙ<རྩ<སྩ<བརྩ<བསྩ
+reorder-after <S0F59> % TIBETAN LETTER TSA
+<s0f42-0f59>
+<s0f56-0f59>
+<s0f62-0fa9>
+<s0f66-0fa9>
+<s0f56-0f62-0fa9>
+<s0f56-0f66-0fa9>
+
+<e0f42-0f59>      <s0f42-0f59>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f59>      <s0f56-0f59>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f62-0fa9>      <s0f62-0fa9>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f66-0fa9>      <s0f66-0fa9>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0fa9> <s0f56-0f62-0fa9>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0fa9> <s0f56-0f66-0fa9>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ཚ<མཚ<འཚ
+reorder-after <S0F5A> % ཚ TIBETAN LETTER TSHA
+<s0f58-0f5a>
+<s0f60-0f5a>
+
+<e0f58-0f5a>      <s0f58-0f5a>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f60-0f5a>      <s0f60-0f5a>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ཛ<མཛ<འཛ<རྫ<བརྫ
+reorder-after <S0F5B> % ཛ TIBETAN LETTER DZA
+<s0f58-0f5b>
+<s0f60-0f5b>
+<s0f62-0fab>
+<s0f56-0f62-0fab>
+
+<e0f58-0f5b>      <s0f58-0f5b>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f60-0f5b>      <s0f60-0f5b>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f62-0fab>      <s0f62-0fab>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f62-0fab> <s0f56-0f62-0fab>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% # &ཝ
+% &ཞ<གཞ<བཞ
+reorder-after <S0F5E> % ཞ TIBETAN LETTER ZHA
+<s0f42-0f5e>
+<s0f56-0f5e>
+
+<e0f42-0f5e> <s0f42-0f5e>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f5e> <s0f56-0f5e>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ཟ<གཟ<བཟ
+reorder-after <S0F5F> % ཟ TIBETAN LETTER ZA
+<s0f42-0f5f>
+<s0f56-0f5f>
+
+<e0f42-0f5f> <s0f42-0f5f>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f5f> <s0f56-0f5f>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% # &འ
+% &ཡ<གཡ
+reorder-after <S0F61> % ཡ TIBETAN LETTER YA
+<s0f42-0f61>
+
+<e0f42-0f61> <s0f42-0f61>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ར<<<ཪ<ཬ<བརླ=བཪླ
+<U0F62> <S0F62>;<BASE>;<MIN>;<U0F62> % TIBETAN LETTER RA
+<U0F6A> <S0F62>;<BASE>;<CAP>;<U0F6A> % TIBETAN LETTER FIXED-FORM RA
+
+reorder-after <S0F62> % TIBETAN LETTER RA
+<S0F6C> % ཬ TIBETAN LETTER RRA
+<s0f56-0f62-0fb3>
+
+<e0f56-0f62-0fb3> <s0f56-0f62-0fb3>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";"<U0F56><U0F62><U0FB3>"
+<e0f56-0f6a-0fb3> <s0f56-0f62-0fb3>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";"<U0F56><U0F6A><U0FB3>"
+
+% # &ལ
+% &ཤ<ཥ<གཤ<བཤ
+reorder-after <S0F64> % ཤ TIBETAN LETTER SHA
+<S0F65>
+<s0f42-0f64>
+<s0f56-0f64>
+
+<e0f42-0f64> <s0f42-0f64>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<e0f56-0f64> <s0f56-0f64>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ས<གསག<གསང<གསད<གསན<གསབ<གསའ<གསར<གསལ<གསས<གསི<གསུ<གསེ<གསོ<གསྭ<བསག<བསང<བསད<བསབ<བསམ<<<བསཾ<བསའ<བསར
+% 		<བསལ<བསས<བསི<བསུ<བསེ<བསོ<བསྭ<བསྲ<བསླ
+reorder-after <S0F66> % ས TIBETAN LETTER SA
+<s0f42-0f66-0f42>
+<s0f42-0f66-0f44>
+<s0f42-0f66-0f51>
+<s0f42-0f66-0f53>
+<s0f42-0f66-0f56>
+<s0f42-0f66-0f60>
+<s0f42-0f66-0f62>
+<s0f42-0f66-0f63>
+<s0f42-0f66-0f66>
+<s0f42-0f66-0f72>
+<s0f42-0f66-0f74>
+<s0f42-0f66-0f7a>
+<s0f42-0f66-0f7c>
+<s0f42-0f66-0fad>
+<s0f56-0f66-0f42>
+<s0f56-0f66-0f44>
+<s0f56-0f66-0f51>
+<s0f56-0f66-0f56>
+<s0f56-0f66-0f58>
+<s0f56-0f66-0f60>
+<s0f56-0f66-0f62>
+<s0f56-0f66-0f63>
+<s0f56-0f66-0f66>
+<s0f56-0f66-0f72>
+<s0f56-0f66-0f74>
+<s0f56-0f66-0f7a>
+<s0f56-0f66-0f7c>
+<s0f56-0f66-0fad>
+<s0f56-0f66-0fb2>
+<s0f56-0f66-0fb3>
+
+<e0f42-0f66-0f42> <s0f42-0f66-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f44> <s0f42-0f66-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f51> <s0f42-0f66-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f53> <s0f42-0f66-0f53>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f56> <s0f42-0f66-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f60> <s0f42-0f66-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f62> <s0f42-0f66-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f63> <s0f42-0f66-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f66> <s0f42-0f66-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f72> <s0f42-0f66-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f74> <s0f42-0f66-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f7a> <s0f42-0f66-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0f7c> <s0f42-0f66-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f42-0f66-0fad> <s0f42-0f66-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f42> <s0f56-0f66-0f42>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f44> <s0f56-0f66-0f44>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f51> <s0f56-0f66-0f51>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f56> <s0f56-0f66-0f56>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f58> <s0f56-0f66-0f58>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f7e> <s0f56-0f66-0f58>;"<BASE><BASE><BASE>";"<CAP><CAP><CAP>";IGNORE
+<e0f56-0f66-0f60> <s0f56-0f66-0f60>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f62> <s0f56-0f66-0f62>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f63> <s0f56-0f66-0f63>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f66> <s0f56-0f66-0f66>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f72> <s0f56-0f66-0f72>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f74> <s0f56-0f66-0f74>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f7a> <s0f56-0f66-0f7a>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0f7c> <s0f56-0f66-0f7c>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0fad> <s0f56-0f66-0fad>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0fb2> <s0f56-0f66-0fb2>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+<e0f56-0f66-0fb3> <s0f56-0f66-0fb3>;"<BASE><BASE><BASE>";"<MIN><MIN><MIN>";IGNORE
+
+% &ཧ<ལྷ
+reorder-after <S0F67> % ཧ TIBETAN LETTER HA
+<s0f63-0fb7>
+
+<e0f63-0fb7> <s0f63-0fb7>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+
+% &ཨ
+% # Explicit vowels
+% <ཱ<ི<ཱི<ྀ<ཱྀ<ུ<ཱུ<ེ<ཻ=ེེ<ོ<ཽ=ོོ
+% # Post-radicals
+% 	<ྐ<ྑ<ྒ<ྔ<ྕ<ྖ<ྗ<ྙ<ྟ<ྚ<ྠ<ྛ<ྡ<ྜ<ྣ<ྞ<ྤ<ྥ<ྦ<ྨ<ྩ<ྪ<ྫ<ྭ<<<ྺ<ྮ<ྯ<ྰ<ྱ<<<ྻ<ྲ<<<ྼ<ླ<ྴ
+% 	<ྵ<ྶ<ྷ<ྸ
+reorder-after <S0F68> % TIBETAN LETTER A
+<S0F71>
+<S0F72>
+<s0f71-0f72>
+<S0F80>
+<s0f71-0f80>
+<S0F74>
+<s0f71-0f74>
+<S0F7A>
+<S0F7B>
+<s0f7a-0f7a>
+<S0F7C>
+<S0F7D>
+<s0f7c-0f7c>
+<S0F90>
+<S0F91>
+<S0F92>
+<S0F94>
+<S0F95>
+<S0F96>
+<S0F97>
+<S0F99>
+<S0F9F>
+<S0F9A>
+<S0FA0>
+<S0F9B>
+<S0FA1>
+<S0F9C>
+<S0FA3>
+<S0F9E>
+<S0FA4>
+<S0FA5>
+<S0FA6>
+<S0FA8>
+<S0FA9>
+<S0FAA>
+<S0FAB>
+<S0FAD>
+<S0FBA>
+<S0FAE>
+<S0FAF>
+<S0FB0>
+<S0FB1>
+<S0FBB>
+<S0FB2>
+<S0FBC>
+<S0FB3>
+<S0FB4>
+<S0FB5>
+<S0FB6>
+<S0FB7>
+<S0FB8>
+
+<U0F71_0F72> <s0f71-0f72>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<U0F71_0F80> <s0f71-0f80>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<U0F71_0F74> <s0f71-0f74>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<U0F7B>      <S0F7B>;<BASE>;<MIN>;<U0F7B> % TIBETAN VOWEL SIGN EE
+<e0f7a-0f7a> <S0F7B>;<BASE>;<MIN>;"<U0F7A><U0F7A>"
+<e0f7c-0f7c> <S0F7D>;<BASE>;<MIN>;<VRNT1>
+<U0F7D>      <S0F7D>;<BASE>;<MIN>;<VRNT2> % TIBETAN VOWEL SIGN OO
+<U0FAD>      <S0FAD>;<BASE>;<MIN>;<U0FAD> % TIBETAN SUBJOINED LETTER WA
+<U0FBA>      <S0FAD>;<BASE>;<CAP>;<U0FBA> % TIBETAN SUBJOINED LETTER FIXED-FORM WA
+<U0FB1>      <S0FB1>;<BASE>;<MIN>;<U0FB1> % TIBETAN SUBJOINED LETTER YA
+<U0FBB>      <S0FB1>;<BASE>;<CAP>;<U0FBB> % TIBETAN SUBJOINED LETTER FIXED-FORM YA
+<U0FB2>      <S0FB2>;<BASE>;<MIN>;<U0FB2> % TIBETAN SUBJOINED LETTER RA
+<U0FBC>      <S0FB2>;<BASE>;<CAP>;<U0FBC> % TIBETAN SUBJOINED LETTER FIXED-FORM RA
+
+% # Combining marks and signs (secondary weight)
+% &༹<<྄<<ཿ<<྅<<ྈ<<ྉ<<ྊ<<ྋ<<ྌ<<ྍ<<ྎ<<ྏ
+<U0F39> IGNORE;<D0F39>;<MIN>;<U0F39> % ༹ TIBETAN MARK TSA -PHRU
+<U0F84> IGNORE;"<D0F39><VRNT1><VRNT1>";<MIN>;<U0F84> % TIBETAN MARK HALANTA
+<U0F7F> IGNORE;"<D0F39><VRNT1><VRNT2>";<MIN>;<U0F7F> % TIBETAN SIGN RNAM BCAD
+<U0F85> IGNORE;"<D0F39><VRNT1><VRNT3>";IGNORE;<U0F85> % TIBETAN MARK PALUTA
+<U0F88> IGNORE;"<D0F39><VRNT1><VRNT4>";<MIN>;<U0F88> % TIBETAN SIGN LCE TSA CAN
+<U0F89> IGNORE;"<D0F39><VRNT1><VRNT5>";<MIN>;<U0F89> % TIBETAN SIGN MCHU CAN
+<U0F8A> IGNORE;"<D0F39><VRNT2><VRNT1>";<MIN>;<U0F8A> % TIBETAN SIGN GRU CAN RGYINGS
+<U0F8B> IGNORE;"<D0F39><VRNT2><VRNT2>";<MIN>;<U0F8B> % TIBETAN SIGN GRU MED RGYINGS
+<U0F8C> IGNORE;"<D0F39><VRNT2><VRNT3>";<MIN>;<U0F8C> % TIBETAN SIGN INVERTED MCHU CAN
+<U0F8D> IGNORE;"<D0F39><VRNT2><VRNT4>";<MIN>;<U0F8D> % TIBETAN SUBJOINED SIGN LCE TSA CAN
+<U0F8E> IGNORE;"<D0F39><VRNT2><VRNT5>";<MIN>;<U0F8E> % TIBETAN SUBJOINED SIGN MCHU CAN
+<U0F8F> IGNORE;"<D0F39><VRNT3><VRNT1>";<MIN>;<U0F8F> % TIBETAN SUBJOINED SIGN INVERTED MCHU CAN
+
+% # Treatༀ,  ཷand ,ཹ as decomposed
+% &ཨོཾ=ༀ
+% In the following lines we use <S0F58> instead of <S0F7E> because of
+% the line:
+%    <U0F7E> <S0F58>;<BASE>;<CAP>;<U0F7E> %  ཾ TIBETAN SIGN RJES SU NGA RO
+% which has been used above. So <S0F7E> should be sorted like <S0F58>.
+<e0f68-0f7c-0f7e> "<S0F68><S0F7C><S0F58>";"<BASE><BASE><BASE>";"<MIN><MIN><CAP>";<VRNT1>
+<U0F00>           "<S0F68><S0F7C><S0F58>";"<BASE><BASE><BASE>";"<MIN><MIN><CAP>";<VRNT2> % TIBETAN SYLLABLE OM
+% &ྲཱྀ=ཷ
+<U0F77>           <S0F77>;<BASE>;<MIN>;<U0F77> % TIBETAN VOWEL SIGN VOCALIC RR
+<U0FB2_0F71_0F80> <S0F77>;<BASE>;<MIN>;"<U0FB2><U0F71><U0F80>"
+% &ླཱྀ=ཹ
+<U0F79>           <S0F79>;<BASE>;<MIN>;<U0F79> % TIBETAN VOWEL SIGN VOCALIC LL
+<U0FB3_0F71_0F80> <S0F79>;<BASE>;<MIN>;"<U0FB3><U0F71><U0F80>"
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+
+int_curr_symbol         "BTN "
+currency_symbol    "Nu."
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;2;
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         3
+frac_digits             3
+p_cs_precedes           1
+p_sep_by_space          1
+n_cs_precedes           1
+n_sep_by_space          1
+p_sign_posn             4
+n_sign_posn             4
+
+END LC_MONETARY
+
+LC_NUMERIC
+
+decimal_point           "."
+thousands_sep           ","
+grouping                3;2
+
+END LC_NUMERIC
+
+LC_TIME
+abday   "<U0F5F><U0FB3><U0F0B>";/
+        "<U0F58><U0F72><U0F62><U0F0B>";/
+        "<U0F63><U0FB7><U0F42><U0F0B>";/
+        "<U0F54><U0F74><U0F62><U0F0B>";/
+        "<U0F66><U0F44><U0F66><U0F0B>";/
+        "<U0F66><U0FA4><U0F7A><U0F53><U0F0B>";/
+        "<U0F49><U0F72><U0F0B>"
+
+day     "<U0F42><U0F5F><U0F60><U0F0B><U0F5F><U0FB3><U0F0B><U0F56><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F58><U0F72><U0F42><U0F0B><U0F51><U0F58><U0F62><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F63><U0FB7><U0F42><U0F0B><U0F55><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F54><U0F74><U0F62><U0F0B><U0F56><U0F74><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F54><U0F0B><U0F66><U0F44><U0F66><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F66><U0FA4><U0F7A><U0F53><U0F0B><U0F55><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F49><U0F72><U0F0B><U0F58><U0F0B>"
+
+
+abmon   "<U0F5F><U0FB3><U0F0B><U0F21>";/
+	"<U0F5F><U0FB3><U0F0B><U0F22>";/
+	"<U0F5F><U0FB3><U0F0B><U0F23>";/
+	"<U0F5F><U0FB3><U0F0B><U0F24>";/
+	"<U0F5F><U0FB3><U0F0B><U0F25>";/
+	"<U0F5F><U0FB3><U0F0B><U0F26>";/
+	"<U0F5F><U0FB3><U0F0B><U0F27>";/
+	"<U0F5F><U0FB3><U0F0B><U0F28>";/
+	"<U0F5F><U0FB3><U0F0B><U0F29>";/
+	"<U0F5F><U0FB3><U0F0B><U0F21><U0F20>";/
+	"<U0F5F><U0FB3><U0F0B><U0F21><U0F21>";/
+	"<U0F5F><U0FB3><U0F0B><U0F21><U0F22>"
+
+mon      "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F51><U0F44><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F42><U0F49><U0F72><U0F66><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F42><U0F66><U0F74><U0F58><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F5E><U0F72><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F63><U0F94><U0F0B><U0F55><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F51><U0FB2><U0F74><U0F42><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F51><U0F74><U0F53><U0F54><U0F0B>";/
+    "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F62><U0F92><U0FB1><U0F51><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F51><U0F42><U0F74><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F45><U0F74><U0F0B><U0F54><U0F0B>";/
+"<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F45><U0F74><U0F0B><U0F42><U0F45><U0F72><U0F42><U0F0B><U0F54><U0F0B>";/
+"<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F45><U0F74><U0F0B><U0F42><U0F49><U0F72><U0F66><U0F0B><U0F54><U0F0B>"
+
+
+
+
+% Appropriate date & time representation
+d_t_fmt      "<U0F54><U0F66><U0FB1><U0F72><U0F0B><U0F63><U0F7C>%y/
+<U0F5F><U0F63>%m<U0F5A><U0F7A><U0F66>%d/
+<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>%H<U0F40>/
+<U0F66><U0F62><U0F0B><U0F58>%M/
+<U0F40><U0F66><U0F62><U0F0B><U0F46>%S"
+
+% Appropriate date & time representation for date(1)
+date_fmt      "<U0F54><U0F66><U0FB1><U0F72><U0F0B><U0F63><U0F7C>%y/
+<U0F5F><U0F63>%m<U0F5A><U0F7A><U0F66>%d/
+<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>%H<U0F40>/
+<U0F66><U0F62><U0F0B><U0F58>%M/
+<U0F40><U0F66><U0F62><U0F0B><U0F46>%S"
+
+% Appropriate date representation
+d_fmt        "<U0F54><U0F66><U0FB1><U0F72><U0F0B><U0F63><U0F7C>%y/
+<U0F5F><U0F63>%m<U0F5A><U0F7A><U0F66>%d"
+
+% Appropriate time representation  "%H:%M:%S"
+t_fmt        "<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>/
+%H<U0F40><U0F66><U0F62><U0F0B><U0F58>/
+%M<U0F40><U0F66><U0F62><U0F0B><U0F46>%S"
+
+% AM/PM signs
+am_pm   "<U0F44><U0F66><U0F0B><U0F46>";"<U0F55><U0FB1><U0F72><U0F0B><U0F46>"
+
+% Appropriate 12-hour clock representation  "%I:%M:%S %p"
+t_fmt_ampm        "<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>/
+%I<U0F40><U0F66><U0F62><U0F0B><U0F58>%M/
+<U0F40><U0F66><U0F62><U0F0B><U0F46>%S %p"
+
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0F68>]"
+noexpr  "^[-0nN<U0F58>]"
+yesstr  "<U0F68><U0F72><U0F53><U0F0B>"
+nostr   "<U0F58><U0F7A><U0F53><U0F0B>"
+END LC_MESSAGES
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+% tel_dom_fmt    "0-%a%l"
+int_prefix     "975"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%p%t%g%t%m%t%f"
+name_gen    ""
+name_miss   "<U0F58><U0F7C>"
+name_mr     "<U0F55><U0F7C>"
+name_mrs    "<U0F68><U0F58>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%r%t%e%t%b%N%h%t%s%N%T%N%S%N%z%c%N"
+country_name "<U0F60><U0F56><U0FB2><U0F74><U0F42>"
+%FIXME
+%country_post  ""
+country_ab2 "BT"
+country_ab3 "BTN"
+country_num 064
+country_car "BHT"
+%FIXME
+%country_isbn  ""
+% རྫོང་ཁ
+lang_name    "<U0F62><U0FAB><U0F7C><U0F44><U0F0B><U0F41>"
+lang_ab      "dz"
+lang_term    "dzo"
+lang_lib     "dzo"
+END LC_ADDRESS

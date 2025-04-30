@@ -1,0 +1,151 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Sardinian Language Locale for Italy
+% Language: sc
+% Territory: IT
+% Revision: 0.2
+% Date: 2017-07-21
+% Users: general
+
+LC_IDENTIFICATION
+title      "Sardinian locale for Italy"
+source     "Sardinian Translators Team"
+address    ""
+contact    "Massimeddu Cireddu"
+email      "massimeddu@gmail.com"
+tel        ""
+fax        ""
+language   "Sardinian"
+territory  "Italy"
+revision   "0.2"
+date       "2017-07-21"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "it_IT"
+END LC_CTYPE
+
+LC_COLLATE
+% There is no collation information for Sardinian in CLDR.
+%
+% We implement only this rule here: &C<ç<<<Ç
+copy "iso14651_t1"
+
+collating-symbol <c-cedilla>
+
+reorder-after <AFTER-C>
+<c-cedilla>
+
+<U00E7> <c-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ç
+<U00C7> <c-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ç
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1eEaAsSoOyY]"
+noexpr  "^[-0nN]"
+yesstr  "eja"
+nostr   "nono"
+END LC_MESSAGES
+
+LC_MONETARY
+copy  "it_IT"
+END LC_MONETARY
+
+LC_NUMERIC
+copy  "it_IT"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Dom";"Lun";/
+        "Mar";"M<U00E8>r";/
+        "Gi<U00F2>";"Che";/
+        "S<U00E0>b"
+day     "Dom<U00EC>nigu";/
+        "Lunis";/
+        "Martis";/
+        "M<U00E8>rcuris";/
+        "Gi<U00F2>bia";/
+        "Chen<U00E0>bura";/
+        "S<U00E0>badu"
+abmon   "Ghe";"Fre";/
+        "Mar";"Abr";/
+        "Maj";"L<U00E0>m";/
+        "Arg";"Aus";/
+        "Cab";"Lad";/
+        "Onn";"Nad"
+mon     "Ghenn<U00E0>rgiu";/
+        "Fre<U00E0>rgiu";/
+        "Martzu";/
+        "Abrile";/
+        "Maju";/
+        "L<U00E0>mpadas";/
+        "Argiolas//Tr<U00EC>ulas";/
+        "Austu";/
+        "Cabudanni";/
+        "Santugaine//Lad<U00E0>mine";/
+        "Onniasantu//Santandria";/
+        "Nadale//Idas"
+d_t_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d. %m. %y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt       "%a %e %b %Y %H:%M:%S %Z"
+week	7;19971130;4
+first_weekday	2
+END LC_TIME
+
+LC_PAPER
+copy  "it_IT"
+END LC_PAPER
+
+LC_TELEPHONE
+copy  "it_IT"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "it_IT"
+END LC_MEASUREMENT
+
+LC_NAME
+copy  "it_IT"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% https://sc.wikipedia.org/wiki/It%C3%A0lia : Itàlia
+country_name "It<U00E0>lia"
+country_ab2 "IT"
+country_ab3 "ITA"
+country_num 380
+country_isbn "978-88,979-12"
+country_car  "I"
+lang_name    "sardu"
+lang_ab      "sc"
+lang_term    "srd"
+lang_lib    "srd"
+END LC_ADDRESS

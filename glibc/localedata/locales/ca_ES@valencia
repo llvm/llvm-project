@@ -1,0 +1,87 @@
+comment_char %
+escape_char  /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Valencian (southern Catalan) locale for Spain with Euro
+%
+% Note that this locale is almost the same as ca_ES@euro.  The point of having
+% a separate locale is only for PO translations, which have a lot of social
+% support and are very appreciated by the Valencian-speaking community.
+
+LC_IDENTIFICATION
+title      "Valencian (southern Catalan) locale for Spain with Euro"
+source     ""
+address    ""
+contact    "Jordi Mallach"
+email      "jordi@gnu.org"
+tel        ""
+fax        ""
+language   "Catalan"
+territory  "Spain"
+revision   "1.0"
+date       "2006-04-06"
+%
+category  "i18n:2012";LC_IDENTIFICATION
+category  "i18n:2012";LC_CTYPE
+category  "i18n:2012";LC_COLLATE
+category  "i18n:2012";LC_MONETARY
+category  "i18n:2012";LC_NUMERIC
+category  "i18n:2012";LC_TIME
+category  "i18n:2012";LC_MESSAGES
+category  "i18n:2012";LC_PAPER
+category  "i18n:2012";LC_NAME
+category  "i18n:2012";LC_ADDRESS
+category  "i18n:2012";LC_TELEPHONE
+category  "i18n:2012";LC_MEASUREMENT
+
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "ca_ES"
+END LC_CTYPE
+
+LC_COLLATE
+copy "ca_ES"
+END LC_COLLATE
+
+LC_MONETARY
+copy "ca_ES"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ca_ES"
+END LC_NUMERIC
+
+LC_TIME
+copy "ca_ES"
+END LC_TIME
+
+LC_MESSAGES
+copy "ca_ES"
+END LC_MESSAGES
+
+LC_PAPER
+copy "ca_ES"
+END LC_PAPER
+
+LC_NAME
+copy "ca_ES"
+END LC_NAME
+
+LC_ADDRESS
+copy "ca_ES"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "ca_ES"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "ca_ES"
+END LC_MEASUREMENT

@@ -1,0 +1,6 @@
+GLIBC_2.17 __libc_stack_end D 0x8
+GLIBC_2.17 __tls_get_addr F
+GLIBC_2.17 _dl_mcount F
+GLIBC_2.17 _r_debug D 0x28
+GLIBC_2.22 __tls_get_addr_opt F
+GLIBC_2.23 __parse_hwcap_and_convert_at_platform F

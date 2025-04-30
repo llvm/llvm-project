@@ -1,0 +1,100 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Catalan Language Locale for Italy (L'Alguer)
+% Language: ca
+% Territory: IT
+% Option: euro
+% Revision: 1.0
+% Date: 2006-01-16
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Catalan locale for Italy (L'Alguer) "
+source     "Robert Millan"
+address    ""
+contact    ""
+email      ""
+tel        ""
+fax        ""
+language   "Catalan"
+territory  "Italy"
+revision   "1.0"
+date       "2006-01-16"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "ca_ES"
+END LC_COLLATE
+
+LC_CTYPE
+copy "ca_ES"
+END LC_CTYPE
+
+LC_MESSAGES
+copy "ca_ES"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "ca_ES"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ca_ES"
+END LC_NUMERIC
+
+LC_TIME
+copy "ca_ES"
+END LC_TIME
+
+LC_PAPER
+copy "it_IT"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "it_IT"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "it_IT"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "ca_ES"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "It<U00E0>lia"
+country_ab2 "IT"
+country_ab3 "ITA"
+country_num 380
+country_car    "I"
+country_isbn "978-88,979-12"
+% català
+lang_name    "catal<U00E0>"
+lang_ab      "ca"
+lang_term    "cat"
+lang_lib    "cat"
+END LC_ADDRESS

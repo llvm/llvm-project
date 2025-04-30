@@ -1,0 +1,27 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4
+type {struct pollfd}
+element {struct pollfd} int fd
+element {struct pollfd} {short int} events
+element {struct pollfd} {short int} revents
+
+type nfds_t
+
+constant POLLIN
+constant POLLRDNORM
+constant POLLRDBAND
+constant POLLPRI
+constant POLLOUT
+constant POLLWRNORM
+constant POLLWRBAND
+constant POLLERR
+constant POLLHUP
+constant POLLNVAL
+
+function int poll (struct pollfd[], nfds_t, int)
+
+allow pd_*
+allow ph_*
+allow ps_*
+allow POLL*
+allow *_t
+#endif

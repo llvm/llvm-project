@@ -1,0 +1,51 @@
+# See scripts/check-localplt.awk for how this file is processed.
+# PLT use is required for the malloc family and for matherr because
+# users can define their own functions and have library internals call them.
+# Linker in binutils 2.26 and newer consolidates R_X86_64_JUMP_SLOT
+# relocation with R_386_GLOB_DAT relocation against the same symbol.
+libc.so: calloc + REL R_386_GLOB_DAT
+libc.so: free + REL R_386_GLOB_DAT
+libc.so: malloc + REL R_386_GLOB_DAT
+libc.so: realloc + REL R_386_GLOB_DAT
+libm.so: matherr + REL R_386_GLOB_DAT
+# The TLS-enabled version of these functions is interposed from libc.so.
+ld.so: _dl_signal_error + REL R_386_GLOB_DAT
+ld.so: _dl_catch_error + REL R_386_GLOB_DAT
+ld.so: _dl_signal_exception + REL R_386_GLOB_DAT
+ld.so: _dl_catch_exception + REL R_386_GLOB_DAT
+# The dynamic linker has its own versions of basic functions for initial loading
+# of shared libraries.  These need to be overriden by libc once loaded.
+ld.so: __open ?
+ld.so: __open64 ?
+ld.so: __open_nocancel
+ld.so: __close ?
+ld.so: __close_nocancel
+ld.so: __read ?
+ld.so: __read_nocancel
+ld.so: __pread64
+ld.so: __pread64_nocancel
+ld.so: __write ?
+ld.so: __write_nocancel
+ld.so: __writev
+ld.so: __libc_lseek64
+ld.so: __mmap
+ld.so: __fstat64
+ld.so: __stat64
+ld.so: __access
+ld.so: __access_noerrno
+ld.so: __getpid
+ld.so: __getcwd
+ld.so: __sbrk
+ld.so: _exit ?
+ld.so: abort
+ld.so: _hurd_intr_rpc_mach_msg
+ld.so: __errno_location
+ld.so: _dl_init_first
+#
+# These should ideally be avoided, but is currently difficult
+libc.so: siglongjmp ?
+libc.so: longjmp ?
+# This is from lseek.c
+libc.so: __libc_lseek64 ?
+# This is through cleanup_region_start from vfprintf.c
+libc.so: _IO_funlockfile ?

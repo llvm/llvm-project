@@ -1,0 +1,200 @@
+This file describes changes to the linux-generic infrastructure while
+it was in the ports add-on directory.  This code is no longer maintained
+here and so future changes to it should be listed in the top-level
+ChangeLog file.
+
+
+
+2014-02-10  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic: Move directory to
+	../sysdeps/unix/sysv/linux/generic.
+
+2013-11-13  Chung-Lin Tang  <cltang@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/stat.h (__field64): Use
+	__alignof__(type64) in alignment attribute instead of 8.
+	* sysdeps/unix/sysv/linux/generic/bits/statfs.h (__field64): Use
+	__alignof__(type64) in alignment attribute instead of 8.
+	(struct statfs): Remove alignment attribute.
+	(struct statfs64): Likewise.
+
+2013-06-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/syscalls.list:
+	Remove trailing whitespace.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2013-01-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/getdents.c: Reformat
+	copyright notice.
+
+2012-11-04  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/generic/sysctl.c: Don't include
+	<stub-tag.h>.
+	* sysdeps/unix/sysv/linux/generic/ustat.c: Likewise.
+
+2012-10-27  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/generic/bits/fcntl.h: (__O_LARGEFILE)
+	[__WORDSIZE != 64]: Do not define, take value from
+	<bits/fcntl-linux.h>.
+
+2012-10-23  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/generic/bits/fcntl.h: Remove all
+	definitions and declarations that are provided by
+	<bits/fcntl-linux.h> and include <bits/fcntl-linux.h>.
+
+2012-10-01  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/typesizes.h
+	(__SWBLK_T_TYPE): Macro removed.
+
+2012-08-02  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/typesizes.h
+	[__LP64__] (__OFF_T_MATCHES_OFF64_T): New macro.
+
+2012-05-30  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/syscalls.list: Remove
+	__connect_internal alias.
+
+2012-05-18  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/typesizes.h
+	(__FSWORD_T_TYPE): New macro.
+
+2012-05-16  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/not-cancel.h: Add
+	multiple-inclusion guard.
+
+2012-05-16  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/typesizes.h:
+	Remove now-unused __SNSECONDS_T_TYPE, and add new
+	__SYSCALL_ULONG_TYPE and __SYSCALL_SLONG_TYPE types.
+
+2012-05-14  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/stat.h,
+	sysdeps/unix/sysv/linux/generic/bits/statfs.h:
+	Use "__aligned__" instead of "aligned" in public headers.
+
+2012-05-12  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/syscalls.list:
+	Add entries for prlimit64 and fanotify_mark.
+
+2012-05-12  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/typesizes.h
+	(__SNSECONDS_T_TYPE): New macro.
+
+2012-03-09  Paul Eggert  <eggert@cs.ucla.edu>
+
+	[BZ #13673]
+	Replace FSF snail mail address with URLs, as per GNU coding standards.
+
+2012-01-30  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/not-cancel.h: New file.
+
+2012-01-30  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/epoll_wait.c: Remove
+	libc_hidden_proto declaration now it's in sys/epoll.h override.
+
+2011-12-09  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/bits/msq.h: New file.
+	* sysdeps/unix/sysv/linux/generic/bits/shm.h: New file.
+
+2011-12-03  Chris Metcalf  <cmetcalf@tilera.com>
+
+	* sysdeps/unix/sysv/linux/generic/Makefile: New file.
+	* sysdeps/unix/sysv/linux/generic/____longjmp_chk.c: New file.
+	* sysdeps/unix/sysv/linux/generic/access.c: New file.
+	* sysdeps/unix/sysv/linux/generic/bits/fcntl.h: New file.
+	* sysdeps/unix/sysv/linux/generic/bits/sem.h: New file.
+	* sysdeps/unix/sysv/linux/generic/bits/stat.h: New file.
+	* sysdeps/unix/sysv/linux/generic/bits/statfs.h: New file.
+	* sysdeps/unix/sysv/linux/generic/bits/typesizes.h: New file.
+	* sysdeps/unix/sysv/linux/generic/brk.c: New file.
+	* sysdeps/unix/sysv/linux/generic/chmod.c: New file.
+	* sysdeps/unix/sysv/linux/generic/chown.c: New file.
+	* sysdeps/unix/sysv/linux/generic/creat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/dl-origin.c: New file.
+	* sysdeps/unix/sysv/linux/generic/dup2.c: New file.
+	* sysdeps/unix/sysv/linux/generic/epoll_create.c: New file.
+	* sysdeps/unix/sysv/linux/generic/epoll_wait.c: New file.
+	* sysdeps/unix/sysv/linux/generic/futimesat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/getdents.c: New file.
+	* sysdeps/unix/sysv/linux/generic/getdents64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/inotify_init.c: New file.
+	* sysdeps/unix/sysv/linux/generic/kernel_stat.h: New file.
+	* sysdeps/unix/sysv/linux/generic/lchown.c: New file.
+	* sysdeps/unix/sysv/linux/generic/link.c: New file.
+	* sysdeps/unix/sysv/linux/generic/lxstat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/mkdir.c: New file.
+	* sysdeps/unix/sysv/linux/generic/nptl/not-cancel.h: New file.
+	* sysdeps/unix/sysv/linux/generic/open.c: New file.
+	* sysdeps/unix/sysv/linux/generic/open64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/pause.c: New file.
+	* sysdeps/unix/sysv/linux/generic/pipe.c: New file.
+	* sysdeps/unix/sysv/linux/generic/poll.c: New file.
+	* sysdeps/unix/sysv/linux/generic/readlink.c: New file.
+	* sysdeps/unix/sysv/linux/generic/readlink_chk.c: New file.
+	* sysdeps/unix/sysv/linux/generic/recv.c: New file.
+	* sysdeps/unix/sysv/linux/generic/rename.c: New file.
+	* sysdeps/unix/sysv/linux/generic/rmdir.c: New file.
+	* sysdeps/unix/sysv/linux/generic/select.c: New file.
+	* sysdeps/unix/sysv/linux/generic/send.c: New file.
+	* sysdeps/unix/sysv/linux/generic/symlink.c: New file.
+	* sysdeps/unix/sysv/linux/generic/syscalls.list: New file.
+	* sysdeps/unix/sysv/linux/generic/sysctl.c: New file.
+	* sysdeps/unix/sysv/linux/generic/sysdep.h: New file.
+	* sysdeps/unix/sysv/linux/generic/umount.c: New file.
+	* sysdeps/unix/sysv/linux/generic/unlink.c: New file.
+	* sysdeps/unix/sysv/linux/generic/ustat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/utimes.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/Versions: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/fcntl.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/fstatfs.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/ftruncate.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/ftruncate64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/fxstat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/fxstatat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/getdents.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/llseek.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/lseek.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/lxstat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/lxstat64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/mmap.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/overflow.h: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/posix_fadvise.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/pread.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/pread64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/preadv.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/preadv64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/pwrite.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/pwrite64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/pwritev.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/pwritev64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/sendfile.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/statfs.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/syscalls.list: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/truncate.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/truncate64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/xstat.c: New file.
+	* sysdeps/unix/sysv/linux/generic/wordsize-32/xstat64.c: New file.
+	* sysdeps/unix/sysv/linux/generic/xmknod.c: New file.
+	* sysdeps/unix/sysv/linux/generic/xstat.c: New file.

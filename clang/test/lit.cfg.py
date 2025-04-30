@@ -362,3 +362,6 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+if config.use_classic_flang:
+    config.available_features.add("classic_flang")

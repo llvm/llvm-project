@@ -1,0 +1,52 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008 && !defined XPG4
+constant PRIO_PROCESS
+constant PRIO_PGRP
+constant PRIO_USER
+
+type rlim_t
+
+constant RLIM_INFINITY
+constant RLIM_SAVED_MAX
+constant RLIM_SAVED_CUR
+
+constant RUSAGE_SELF
+constant RUSAGE_CHILDREN
+
+type {struct rlimit}
+
+element {struct rlimit} rlim_t rlim_cur
+element {struct rlimit} rlim_t rlim_max
+
+type {struct rusage}
+
+element {struct rusage} {struct timeval} ru_utime
+element {struct rusage} {struct timeval} ru_stime
+
+type {struct timeval}
+
+constant RLIMIT_CORE
+constant RLIMIT_CPU
+constant RLIMIT_DATA
+constant RLIMIT_FSIZE
+constant RLIMIT_NOFILE
+constant RLIMIT_STACK
+constant RLIMIT_AS
+
+function int getpriority (int, id_t)
+function int getrlimit (int, struct rlimit*)
+function int getrusage (int, struct rusage*)
+function int setpriority (int, id_t, int)
+function int setrlimit (int, const struct rlimit*)
+
+type id_t
+
+allow-header sys/time.h
+
+allow rlim_*
+allow ru_*
+allow PRIO_*
+allow RLIM_*
+allow RLIMIT_*
+allow RUSAGE_*
+allow *_t
+#endif

@@ -1,0 +1,32 @@
+# One of a set of test locales for strfmon()
+
+# The six characters after the "_" in the locale name indicate
+# the last six LC_MONETARY values below.
+
+LC_CTYPE
+copy "POSIX"
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol         "<U0055><U0053><U0043><U0020>"
+currency_symbol         "<U0024>"
+mon_decimal_point       "<U002E>"
+mon_thousands_sep       "<U002C>"
+mon_grouping            3;3
+positive_sign           "<U002B>"
+negative_sign           "<U002D>"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           0
+p_sign_posn             1
+p_sep_by_space          2
+n_cs_precedes           1
+n_sign_posn             1
+n_sep_by_space          1
+int_p_cs_precedes       0
+int_p_sign_posn         1
+int_p_sep_by_space      2
+int_n_cs_precedes       1
+int_n_sign_posn         1
+int_n_sep_by_space      1
+END LC_MONETARY

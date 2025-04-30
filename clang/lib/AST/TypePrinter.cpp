@@ -1950,6 +1950,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::Ptr64:
   case attr::SPtr:
   case attr::UPtr:
+  case attr::Next32Tls:
+  case attr::Next32Global:
+  case attr::Next32Constant:
+  case attr::Next32Local:
   case attr::AddressSpace:
   case attr::CmseNSCall:
   case attr::AnnotateType:
@@ -2484,6 +2488,14 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
+  case LangAS::next32_tls:
+    return "__next32_tls__";
+  case LangAS::next32_global:
+    return "__next32_global__";
+  case LangAS::next32_constant:
+    return "__next32_constant__";
+  case LangAS::next32_local:
+    return "__next32_local__";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

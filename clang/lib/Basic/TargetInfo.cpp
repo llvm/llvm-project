@@ -48,6 +48,10 @@ static const LangASMap FakeAddrSpaceMap = {
     12, // ptr64
     13, // hlsl_groupshared
     20, // wasm_funcref
+    14, // next32_tls
+    15, // next32_global
+    16, // next32_constant
+    17, // next32_local
 };
 
 // TargetInfo Constructor.

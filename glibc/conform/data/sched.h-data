@@ -1,0 +1,42 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined XPG42
+# if defined POSIX || defined UNIX98
+#  include "time.h-data"
+# else
+allow-header time.h
+# endif
+
+type {struct sched_param}
+element {struct sched_param} int sched_priority
+# if !defined POSIX && !defined UNIX98
+optional-element {struct sched_param} int sched_ss_low_priority
+optional-element {struct sched_param} {struct timespec} sched_ss_repl_period
+optional-element {struct sched_param} {struct timespec} sched_ss_init_budget
+optional-element {struct sched_param} int sched_ss_max_repl
+# endif
+
+# if defined XOPEN2K8 || defined POSIX2008
+type pid_t
+type time_t
+type {struct timespec}
+# endif
+
+constant SCHED_FIFO
+constant SCHED_RR
+# if !defined POSIX && !defined UNIX98
+optional-constant SCHED_SPORADIC
+# endif
+constant SCHED_OTHER
+
+function int sched_get_priority_max (int)
+function int sched_get_priority_min (int)
+function int sched_getparam (pid_t, struct sched_param*)
+function int sched_getscheduler (pid_t)
+function int sched_rr_get_interval (pid_t, struct timespec*)
+function int sched_setparam (pid_t, const struct sched_param*)
+function int sched_setscheduler (pid_t, int, const struct sched_param*)
+function int sched_yield (void)
+
+allow sched_*
+allow SCHED_*
+allow *_t
+#endif

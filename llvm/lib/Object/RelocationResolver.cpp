@@ -507,6 +507,41 @@ static uint64_t resolveRISCV(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsNext32(uint64_t Type) {
+  switch (Type) {
+  case ELF::R_NEXT32_NONE:
+  case ELF::R_NEXT32_SYM_BB_IMM:
+  case ELF::R_NEXT32_ABS32:
+  case ELF::R_NEXT32_ABS64:
+  case ELF::R_NEXT32_SYM_FUNCTION:
+  case ELF::R_NEXT32_SYM_MEM_64HI:
+  case ELF::R_NEXT32_SYM_MEM_64LO:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint64_t resolveNext32(uint64_t Type, uint64_t Offset, uint64_t S,
+                              uint64_t LocData, int64_t Addend) {
+  int64_t RA = Addend;
+  uint64_t A = LocData;
+  switch (Type) {
+  case ELF::R_NEXT32_NONE:
+    return A;
+  case ELF::R_NEXT32_ABS64:
+    return S + RA;
+  case ELF::R_NEXT32_ABS32:
+  case ELF::R_NEXT32_SYM_BB_IMM:
+  case ELF::R_NEXT32_SYM_FUNCTION:
+  case ELF::R_NEXT32_SYM_MEM_64HI:
+  case ELF::R_NEXT32_SYM_MEM_64LO:
+    return (S + RA) & 0xFFFFFFFF;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsCSKY(uint64_t Type) {
   switch (Type) {
   case ELF::R_CKCORE_NONE:
@@ -806,6 +841,8 @@ getRelocationResolver(const ObjectFile &Obj) {
         return {supportsAmdgpu, resolveAmdgpu};
       case Triple::riscv64:
         return {supportsRISCV, resolveRISCV};
+      case Triple::next32:
+        return {supportsNext32, resolveNext32};
       default:
         if (isAMDGPU(Obj))
           return {supportsAmdgpu, resolveAmdgpu};

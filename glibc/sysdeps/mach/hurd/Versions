@@ -1,0 +1,67 @@
+libc {
+  GLIBC_2.0 {
+    # functions with a weak definition in the dynamic linker
+    __mmap;
+  }
+  GLIBC_2.2.6 {
+    # functions with a weak definition in the dynamic linker
+    __writev;
+  }
+  GLIBC_2.32 {
+    mremap;
+  }
+  GLIBC_PRIVATE {
+    # Functions shared with the dynamic linker
+    __access; __access_noerrno; __libc_read; __libc_write; __libc_lseek64;
+    __close_nocancel;
+    __open_nocancel;
+    __read_nocancel; __pread64_nocancel;
+    __write_nocancel;
+    __libc_lock_self0; __getcwd;
+    __stat64;
+
+    _dl_init_first;
+    __close_nocancel_nostatus;
+
+    # functions used in other libraries
+    __sigprocmask;
+  }
+}
+
+ld {
+  GLIBC_2.0 {
+    # variables that must be shared with libc
+    __hurd_threadvar_stack_mask;  __hurd_threadvar_stack_offset;
+
+    # functions that must be shared with libc
+    __close; __getpid;
+    __mmap; __open; __read; __sbrk; __strtoul_internal;
+    __write; __writev;
+    _exit; _hurd_intr_rpc_mach_msg;
+    abort;
+  }
+  GLIBC_2.1 {
+    # functions that must be shared with libc
+    __pread64;
+  }
+  GLIBC_2.2 {
+    # functions that must be shared with libc
+    __open64;
+  }
+  GLIBC_2.2.6 {
+    # this also must be shared with libc.
+    __errno_location;
+  }
+  GLIBC_PRIVATE {
+    _dl_init_first;
+
+    # functions that must be shared with libc
+    __access; __access_noerrno; __libc_read; __libc_write; __libc_lseek64;
+    __close_nocancel;
+    __open_nocancel;
+    __read_nocancel; __pread64_nocancel;
+    __write_nocancel;
+    __libc_lock_self0; __getcwd;
+    __stat64; __fstat64;
+  }
+}

@@ -103,6 +103,9 @@ inline StringRef getInstrProfCountersVarPrefix() { return "__profc_"; }
 /// Return the name prefix of profile bitmap variables.
 inline StringRef getInstrProfBitmapVarPrefix() { return "__profbm_"; }
 
+/// Return the name prefix of profile counter variables.
+inline StringRef getInstrProfThreadCountersVarPrefix() { return "__proftc_"; }
+
 /// Return the name prefix of value profile variables.
 inline StringRef getInstrProfValuesVarPrefix() { return "__profvp_"; }
 

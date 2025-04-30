@@ -1,0 +1,75 @@
+libc {
+  GLIBC_2.0 {
+    # variables used in Mach-specific macros
+    __mach_task_self_;
+    __vm_page_size;
+
+    # functions used in inline functions and macros
+    __mach_port_deallocate; __mach_thread_self;
+
+    # functions used by RPC stubs
+    __mach_msg; __mach_msg_overwrite;
+    __mig_allocate; __mig_deallocate; __mig_dealloc_reply_port;
+    __mig_get_reply_port; __mig_put_reply_port;
+    __mig_strncpy;
+
+    # variables in normal name space
+    vm_page_size;
+
+    # functions in normal name space
+
+    # e*
+    evc_wait;
+
+    # m*
+    mach_error; mach_error_string; mach_error_type;
+    mach_host_self;
+    mach_msg; mach_msg_overwrite;
+    mach_msg_destroy;
+    mach_msg_send; mach_msg_receive;
+    mach_msg_server; mach_msg_server_timeout;
+    mach_open_devstream;
+    mach_port_allocate; mach_port_allocate_name; mach_port_deallocate;
+    mach_port_insert_right; mach_reply_port;
+    mach_setup_thread;
+    mach_setup_tls;
+    mach_task_self;
+    mach_thread_self;
+    mig_allocate; mig_dealloc_reply_port; mig_deallocate;
+    mig_get_reply_port; mig_init; mig_put_reply_port;
+
+    # v*
+    vm_allocate; vm_deallocate; vm_map;
+
+    # s*
+    swtch; swtch_pri;
+
+    # t*
+    task_create; task_set_special_port; task_suspend; task_terminate;
+    thread_depress_abort; thread_switch;
+  }
+  GLIBC_2.2.5 {
+    # internal functions used by other libraries (e.g. librt)
+    __mach_msg_destroy; __mach_reply_port;
+
+    # This was always there, but not exported as it should have been.
+    mig_strncpy;
+  }
+  GLIBC_2.21 {
+    __mach_host_self_;
+  }
+  GLIBC_2.32 {
+    mach_print;
+  }
+
+  HURD_CTHREADS_0.3 {
+    __mutex_init; __mutex_lock; __mutex_lock_solid; __mutex_trylock;
+    __mutex_unlock; __mutex_unlock_solid;
+    __spin_lock; __spin_lock_init; __spin_lock_solid; __spin_try_lock;
+    __spin_unlock;
+  }
+  GLIBC_PRIVATE {
+    # functions used by RPC stubs
+    __mig_memcpy;
+  }
+}

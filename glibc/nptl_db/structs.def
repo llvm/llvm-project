@@ -1,0 +1,126 @@
+/* List of types and symbols in libc examined by libthread_db.
+   Copyright (C) 2003-2021 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <https://www.gnu.org/licenses/>.  */
+
+#ifndef DB_STRUCT_ARRAY_FIELD
+# define DB_STRUCT_ARRAY_FIELD(type, field) DB_STRUCT_FIELD (type, field)
+# define DB_ARRAY_VARIABLE(name) DB_VARIABLE (name)
+# define STRUCTS_DEF_DEFAULTS 1
+#endif
+
+/* DB_MAIN_VARIABLE, DB_MAIN_SYMBOL, DB_MAIN_ARRAY_VARIABLE are not
+   covered by the libc symbol check in db-symbols.awk.  */
+#ifndef DB_MAIN_VARIABLE
+# define DB_MAIN_VARIABLE(name) DB_VARIABLE (name)
+#endif
+#ifndef DB_MAIN_SYMBOL
+# define DB_MAIN_SYMBOL(name) DB_SYMBOL (name)
+#endif
+#ifndef DB_MAIN_ARRAY_VARIABLE
+# define DB_MAIN_ARRAY_VARIABLE(name) DB_ARRAY_VARIABLE (name)
+#endif
+
+#ifndef DB_RTLD_GLOBAL_FIELD
+# if !IS_IN (libc)
+#  define DB_RTLD_GLOBAL_FIELD(field)		\
+  DB_STRUCT_FIELD (rtld_global, _##field)	\
+  DB_MAIN_VARIABLE (_##field)
+# elif defined SHARED
+#  define DB_RTLD_GLOBAL_FIELD(field)		\
+  DB_STRUCT_FIELD (rtld_global, _##field)
+# else
+#  define DB_RTLD_GLOBAL_FIELD(field)		\
+  DB_MAIN_VARIABLE (_##field)
+# endif
+#endif /* DB_RTLD_GLOBAL_FIELD */
+
+DB_STRUCT (pthread)
+DB_STRUCT_FIELD (pthread, list)
+DB_STRUCT_FIELD (pthread, report_events)
+DB_STRUCT_FIELD (pthread, tid)
+DB_STRUCT_FIELD (pthread, start_routine)
+DB_STRUCT_FIELD (pthread, cancelhandling)
+DB_STRUCT_FIELD (pthread, schedpolicy)
+DB_STRUCT_FIELD (pthread, schedparam_sched_priority)
+DB_STRUCT_FIELD (pthread, specific)
+DB_STRUCT_FIELD (pthread, eventbuf)
+DB_STRUCT_FIELD (pthread, eventbuf_eventmask)
+DB_STRUCT_ARRAY_FIELD (pthread, eventbuf_eventmask_event_bits)
+DB_STRUCT_FIELD (pthread, nextevent)
+
+DB_STRUCT (list_t)
+DB_STRUCT_FIELD (list_t, next)
+DB_STRUCT_FIELD (list_t, prev)
+
+DB_STRUCT (td_thr_events_t)
+DB_STRUCT_ARRAY_FIELD (td_thr_events_t, event_bits)
+
+DB_STRUCT (td_eventbuf_t)
+DB_STRUCT_FIELD (td_eventbuf_t, eventnum)
+DB_STRUCT_FIELD (td_eventbuf_t, eventdata)
+
+DB_SYMBOL (__nptl_version)
+DB_SYMBOL (__nptl_create_event)
+DB_SYMBOL (__nptl_death_event)
+DB_SYMBOL (__nptl_threads_events)
+DB_VARIABLE (__nptl_nthreads)
+DB_VARIABLE (__nptl_last_event)
+DB_MAIN_VARIABLE (__nptl_initial_report_events)
+
+DB_ARRAY_VARIABLE (__pthread_keys)
+DB_STRUCT (pthread_key_struct)
+DB_STRUCT_FIELD (pthread_key_struct, seq)
+DB_STRUCT_FIELD (pthread_key_struct, destr)
+
+DB_STRUCT (pthread_key_data)
+DB_STRUCT_FIELD (pthread_key_data, seq)
+DB_STRUCT_FIELD (pthread_key_data, data)
+DB_STRUCT (pthread_key_data_level2)
+DB_STRUCT_ARRAY_FIELD (pthread_key_data_level2, data)
+
+DB_STRUCT_FIELD (link_map, l_tls_modid)
+DB_STRUCT_FIELD (link_map, l_tls_offset)
+
+DB_STRUCT_ARRAY_FIELD (dtv, dtv)
+#define pointer_val pointer.val /* Field of anonymous struct in dtv_t.  */
+DB_STRUCT_FIELD (dtv_t, pointer_val)
+DB_STRUCT_FIELD (dtv_t, counter)
+#if !IS_IN (libc) || TLS_TCB_AT_TP
+DB_STRUCT_FIELD (pthread, dtvp)
+#endif
+
+#if !(IS_IN (libc) && !defined SHARED)
+DB_VARIABLE (__nptl_rtld_global)
+#endif
+DB_RTLD_GLOBAL_FIELD (dl_tls_dtv_slotinfo_list)
+DB_RTLD_GLOBAL_FIELD (dl_stack_user)
+DB_RTLD_GLOBAL_FIELD (dl_stack_used)
+
+DB_STRUCT (dtv_slotinfo_list)
+DB_STRUCT_FIELD (dtv_slotinfo_list, len)
+DB_STRUCT_FIELD (dtv_slotinfo_list, next)
+DB_STRUCT_FLEXIBLE_ARRAY (dtv_slotinfo_list, slotinfo)
+
+DB_STRUCT (dtv_slotinfo)
+DB_STRUCT_FIELD (dtv_slotinfo, gen)
+DB_STRUCT_FIELD (dtv_slotinfo, map)
+
+#ifdef STRUCTS_DEF_DEFAULTS
+# undef DB_STRUCT_ARRAY_FIELD
+# undef DB_ARRAY_VARIABLE
+# undef STRUCTS_DEF_DEFAULTS
+#endif

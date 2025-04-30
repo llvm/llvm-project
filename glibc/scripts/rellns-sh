@@ -1,0 +1,78 @@
+#!/bin/sh
+# rellns-sh - Simplified ln program to generate relative symbolic link.
+# Copyright (C) 1996-2021 Free Software Foundation, Inc.
+# Written by Ulrich Drepper <drepper@cygnus.com>, October 1996
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+
+# With -p, instead of creating the link print the computed relative link
+# name.
+do_print=false
+case $1 in
+  -p)
+    do_print=true
+    shift
+    ;;
+esac
+if test $# -ne 2; then
+  echo "Usage: rellns [-p] SOURCE DEST" >&2
+  exit 1
+fi
+
+# Make both paths absolute.
+if test -d $1; then
+  to=`cd $1 && pwd -P`
+else
+  temp=`echo $1 | sed 's%/*[^/]*$%%'`
+  if test -z "$temp"; then
+    to=`pwd -P`
+  else
+    to=`cd $temp && pwd -P`
+  fi
+  to="$to/`echo $1 | sed 's%.*/\([^/][^/]*\)$%\1%'`"
+fi
+to=`echo $to | sed 's%^/%%'`
+
+if test -d $2; then
+  from=`echo $2 | sed 's%/*$%%'`
+else
+  from=`echo $2 | sed 's%/*[^/]*$%%'`
+fi
+
+if test -z "$from"; then
+  from=`pwd -P | sed 's%^/%%'`
+else
+  from=`cd $from && pwd -P | sed 's%^/%%'`
+fi
+
+while test -n "$to" && test -n "$from"; do
+  preto=`echo $to | sed 's%^\([^/]*\)/.*%\1%'`
+  prefrom=`echo $from | sed 's%^\([^/]*\)/.*%\1%'`
+
+  test "$preto" != "$prefrom" && break
+
+  to=`echo $to | sed 's%^[^/]*/*\(.*\)$%\1%'`
+  from=`echo $from | sed 's%^[^/]*/*\(.*\)$%\1%'`
+done
+
+while test -n "$from"; do
+  rfrom="../$rfrom"
+  from=`echo $from | sed 's%^[^/]*/*%%'`
+done
+
+if $do_print; then
+  echo "$rfrom$to"
+else
+  ln -s $rfrom$to $2
+fi

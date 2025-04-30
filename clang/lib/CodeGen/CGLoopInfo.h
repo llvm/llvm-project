@@ -84,6 +84,29 @@ struct LoopAttributes {
 
   /// Value for whether the loop is required to make progress.
   bool MustProgress;
+
+  /// NextSilicon vectorization scheme for the loop.
+  llvm::StringRef NSVectorize;
+
+  /// NextSilicon mark for the loop (to be handled by optimizer).
+  llvm::StringRef NSMark;
+
+  /// NextSilicon location for the loop (to be handled by optimizer).
+  llvm::StringRef NSLocation;
+
+  // NextSilicon mark for loop to unroll it the given amount of times (to be
+  // handled by optimizer).
+  unsigned NSUnrollCount;
+
+  /// NextSilicon slot id for the loop (to be handled by optimizer).
+  llvm::StringRef NSSlot;
+
+  /// NextSilicon CG ID for the loop (to be handled by optimizer).
+  llvm::StringRef NSCGID;
+
+  // NextSilicon loop mark for loop for projection duplication count (to be
+  // handled by the optimizer).
+  unsigned NSDuplicationCount;
 };
 
 /// Information used when generating a structured loop.
@@ -294,6 +317,21 @@ public:
 
   /// Set no progress for the next loop pushed.
   void setMustProgress(bool P) { StagedAttrs.MustProgress = P; }
+
+  void setNSVectorize(llvm::StringRef vectorize) {
+    StagedAttrs.NSVectorize = vectorize;
+  }
+
+  void setNSMark(llvm::StringRef mark) { StagedAttrs.NSMark = mark; }
+  void setNSLocation(llvm::StringRef location) {
+    StagedAttrs.NSLocation = location;
+  }
+
+  void setNSSlot(llvm::StringRef slot) { StagedAttrs.NSSlot = slot; }
+  void setNSUnrollCount(unsigned C) { StagedAttrs.NSUnrollCount = C; }
+
+  void setNSCGID(llvm::StringRef cgid) { StagedAttrs.NSCGID = cgid; }
+  void setNSDuplicationCount(unsigned C) { StagedAttrs.NSDuplicationCount = C; }
 
   /// Returns true if there is LoopInfo on the stack.
   bool hasInfo() const { return !Active.empty(); }

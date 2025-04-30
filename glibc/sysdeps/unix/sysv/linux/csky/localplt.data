@@ -1,0 +1,12 @@
+# See scripts/check-localplt.awk for how this file is processed.
+# PLT use is required for the malloc family and for matherr because
+# users can define their own functions and have library internals call them.
+libc.so: calloc
+libc.so: free
+libc.so: malloc
+libc.so: realloc
+# The TLS-enabled version of these functions is interposed from libc.so.
+ld.so: _dl_signal_error
+ld.so: _dl_catch_error
+ld.so: _dl_signal_exception
+ld.so: _dl_catch_exception

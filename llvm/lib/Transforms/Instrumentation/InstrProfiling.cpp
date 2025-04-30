@@ -58,6 +58,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <stack>
 #include <string>
 
 using namespace llvm;
@@ -194,6 +195,10 @@ static cl::opt<unsigned> SampledInstrBurstDuration(
              "'sampled-instr-period' to a prime number."),
     cl::init(200));
 
+cl::opt<bool> ThreadLocalCounters("thread-local-counters", cl::ZeroOrMore,
+                                  cl::desc("Utilize thread-local counters"),
+                                  cl::init(false));
+
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
 static uint64_t getIntModuleFlagOrZero(const Module &M, StringRef Flag) {
@@ -240,6 +245,7 @@ private:
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
+    GlobalVariable *RegionThreadCounters = nullptr;
     GlobalVariable *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
@@ -273,7 +279,7 @@ private:
 
   /// Lower instrumentation intrinsics in the function. Returns true if there
   /// any lowering.
-  bool lowerIntrinsics(Function *F);
+  bool lowerIntrinsics(Function *F, bool MayUseTLS);
 
   /// Register-promote counter loads and stores in loops.
   void promoteCounterLoadStores(Function *F);
@@ -790,7 +796,7 @@ void InstrLowerer::doSampling(Instruction *I) {
   SamplingVarIncr->moveBefore(ElseTerm);
 }
 
-bool InstrLowerer::lowerIntrinsics(Function *F) {
+bool InstrLowerer::lowerIntrinsics(Function *F, bool MayUseTLS) {
   bool MadeChange = false;
   PromotionCandidates.clear();
   SmallVector<InstrProfInstBase *, 8> InstrProfInsts;
@@ -808,10 +814,16 @@ bool InstrLowerer::lowerIntrinsics(Function *F) {
   for (auto *Instr : InstrProfInsts) {
     doSampling(Instr);
     if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(Instr)) {
-      lowerIncrement(IPIS);
+      if (!MayUseTLS && ThreadLocalCounters)
+        IPIS->eraseFromParent();
+      else
+        lowerIncrement(IPIS);
       MadeChange = true;
     } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(Instr)) {
-      lowerIncrement(IPI);
+      if (!MayUseTLS && ThreadLocalCounters)
+        IPI->eraseFromParent();
+      else
+        lowerIncrement(IPI);
       MadeChange = true;
     } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(Instr)) {
       lowerTimestamp(IPC);
@@ -920,6 +932,67 @@ static bool containsProfilingIntrinsics(Module &M) {
          containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
 }
 
+static const GlobalObject *
+findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases) {
+  if (auto *GO = dyn_cast<GlobalObject>(C))
+    return GO;
+  if (auto *GA = dyn_cast<GlobalAlias>(C))
+    if (Aliases.insert(GA).second)
+      return findBaseObject(GA->getOperand(0), Aliases);
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    switch (CE->getOpcode()) {
+    case Instruction::Add: {
+      auto *LHS = findBaseObject(CE->getOperand(0), Aliases);
+      auto *RHS = findBaseObject(CE->getOperand(1), Aliases);
+      if (LHS && RHS)
+        return nullptr;
+      return LHS ? LHS : RHS;
+    }
+    case Instruction::Sub: {
+      if (findBaseObject(CE->getOperand(1), Aliases))
+        return nullptr;
+      return findBaseObject(CE->getOperand(0), Aliases);
+    }
+    case Instruction::IntToPtr:
+    case Instruction::PtrToInt:
+    case Instruction::BitCast:
+    case Instruction::GetElementPtr:
+      return findBaseObject(CE->getOperand(0), Aliases);
+    default:
+      break;
+    }
+  }
+  return nullptr;
+}
+
+DenseSet<const Function *> collectTLSProhibitedFunctions(const Module &M) {
+  std::stack<const Function *> DFS;
+  DenseSet<const Function *> TLSProhibited;
+
+  for (const GlobalIFunc &GIF : M.ifuncs()) {
+    DenseSet<const GlobalAlias *> Aliases;
+    auto *Resolver =
+        dyn_cast<Function>(findBaseObject(GIF.getResolver(), Aliases));
+    assert(Resolver && "IFunc resolver is not a function");
+    DFS.push(Resolver);
+  }
+
+  while (!DFS.empty()) {
+    const Function *F = DFS.top();
+    DFS.pop();
+    if (!TLSProhibited.insert(F).second)
+      continue;
+
+    for (const BasicBlock &BB : *F)
+      for (const Instruction &I : BB)
+        if (const auto *Call = dyn_cast<CallBase>(&I))
+          if (const Function *Callee = Call->getCalledFunction())
+            DFS.push(Callee);
+  }
+
+  return TLSProhibited;
+}
+
 bool InstrLowerer::lower() {
   bool MadeChange = false;
   bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
@@ -969,8 +1042,13 @@ bool InstrLowerer::lower() {
       if (GV.hasMetadata(LLVMContext::MD_type))
         getOrCreateVTableProfData(&GV);
 
-  for (Function &F : M)
-    MadeChange |= lowerIntrinsics(&F);
+  DenseSet<const Function *> TLSProhibited = collectTLSProhibitedFunctions(M);
+  for (Function &F : M) {
+    // TLS is not yet initialized during IFunc resolution and thus it is
+    // prohibited to use thread-local counters in IFunc resolvers.
+    bool MayUseTLS = !TLSProhibited.contains(&F);
+    MadeChange |= lowerIntrinsics(&F, MayUseTLS);
+  }
 
   if (CoverageNamesVar) {
     lowerCoverageData(CoverageNamesVar);
@@ -1686,6 +1764,8 @@ GlobalVariable *
 InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
+  if (PD.RegionThreadCounters)
+    return PD.RegionThreadCounters;
   if (PD.RegionCounters)
     return PD.RegionCounters;
 
@@ -1721,20 +1801,24 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
           SP, CounterPtr->getName(), /*LinkageName=*/StringRef(), SP->getFile(),
           /*LineNo=*/0, DB.createUnspecifiedType("Profile Data Type"),
           CounterPtr->hasLocalLinkage(), /*IsDefined=*/true, /*Expr=*/nullptr,
-          /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
-          Annotations);
+          /*Decl=*/nullptr, /*TemplateParams=*/nullptr,
+          /*Flags=*/DINode::FlagZero, /*AlignInBits=*/0, Annotations);
       CounterPtr->addDebugInfo(DICounter);
       DB.finalize();
     }
 
     // Mark the counter variable as used so that it isn't optimized out.
     CompilerUsedVars.push_back(PD.RegionCounters);
+    if (ThreadLocalCounters) {
+      CompilerUsedVars.push_back(PD.RegionThreadCounters);
+      return PD.RegionThreadCounters;
+    }
   }
 
   // Create the data variable (if it doesn't already exist).
   createDataVariable(Inc);
 
-  return PD.RegionCounters;
+  return ThreadLocalCounters ? PD.RegionThreadCounters : PD.RegionCounters;
 }
 
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
@@ -1774,6 +1858,35 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
       getVarName(Inc, getInstrProfCountersVarPrefix(), Renamed);
   std::string DataVarName =
       getVarName(Inc, getInstrProfDataVarPrefix(), Renamed);
+
+  // Create the thread-local counters variable.
+  GlobalVariable *ThreadCounterPtr = nullptr;
+  if (ThreadLocalCounters) {
+    uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+    StringRef NamePrefix = getInstrProfThreadCountersVarPrefix();
+    StringRef Name = Inc->getName()->getName().substr(NamePrefix.size());
+    std::string GVName = (NamePrefix + Name).str();
+    auto *CountersTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
+    ThreadCounterPtr =
+        new GlobalVariable(M, CountersTy, false, Linkage,
+                           Constant::getNullValue(CountersTy), GVName);
+    ThreadCounterPtr->setVisibility(Visibility);
+    ThreadCounterPtr->setSection(".tbss." INSTR_PROF_CNTS_SECT_NAME);
+    ThreadCounterPtr->setAlignment(Align(8));
+    maybeSetComdat(ThreadCounterPtr, Fn, GVName);
+    ThreadCounterPtr->setLinkage(Linkage);
+    ThreadCounterPtr->setThreadLocal(true);
+    PD.RegionThreadCounters = ThreadCounterPtr;
+
+    if (!M.getNamedAlias("__llvm_profile_begin_thread_counters")) {
+      auto GA = GlobalAlias::create("__llvm_profile_begin_thread_counters",
+                                    ThreadCounterPtr);
+      GA->setVisibility(GlobalValue::DefaultVisibility);
+      GA->setLinkage(GlobalValue::ExternalLinkage);
+      GA->setThreadLocal(true);
+      UsedVars.push_back(GA);
+    }
+  }
 
   auto *Int8PtrTy = PointerType::getUnqual(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
@@ -1873,6 +1986,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   maybeSetComdat(Data, Fn, CntsVarName);
 
+  PD.RegionCounters = CounterPtr;
+  PD.RegionThreadCounters = ThreadCounterPtr;
   PD.DataVar = Data;
 
   // Mark the data variable as used so that it isn't stripped out.

@@ -1,0 +1,14 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+constant FNM_NOMATCH
+constant FNM_PATHNAME
+constant FNM_PERIOD
+constant FNM_NOESCAPE
+#if !defined POSIX && !defined XOPEN2K8 && !defined POSIX2008
+constant FNM_NOSYS
+#endif
+
+function int fnmatch (const char*, const char*, int)
+
+allow FNM_*
+allow *_t
+#endif

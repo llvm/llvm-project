@@ -1,0 +1,27 @@
+# File name	Caller	Syscall name	Args	Strong name	Weak names
+
+sigstack	-	sigstack	2	sigstack
+
+getpriority	-	getpriority	i:ii	__getpriority	getpriority
+
+# proper socket implementations:
+bind		-	bind		i:ipi	__bind		bind
+getpeername	-	getpeername	i:ipp	__getpeername	getpeername
+getsockname	-	getsockname	i:ipp	__getsockname	getsockname
+listen		-	listen		i:ii	__listen	listen
+shutdown	-	shutdown	i:ii	__shutdown	shutdown
+socket		-	socket		i:iii	__socket	socket
+socketpair	-	socketpair	i:iiif	__socketpair	socketpair
+
+ptrace		-	ptrace		4	__ptrace	ptrace
+
+# access pci space protected from machine checks:
+pciconfig_read	EXTRA	pciconfig_read	5	pciconfig_read
+pciconfig_write	EXTRA	pciconfig_write	5	pciconfig_write
+pciconfig_iobase EXTRA	pciconfig_iobase 3	__pciconfig_iobase pciconfig_iobase
+
+# timeval64 entry points (see osf_*.c for GLIBC_2.0 timeval32 equivalents)
+getitimer	-	getitimer	i:ip	__getitimer	getitimer@@GLIBC_2.1
+setitimer	-	setitimer	i:ipP	__setitimer	setitimer@@GLIBC_2.1
+utimes		-	utimes		i:sp	__utimes	utimes@@GLIBC_2.1
+getrusage	-	getrusage	i:ip	__getrusage	getrusage@@GLIBC_2.1

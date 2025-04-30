@@ -1,0 +1,1569 @@
+@node Error Reporting, Memory, Introduction, Top
+@chapter Error Reporting
+@c %MENU% How library functions report errors
+@cindex error reporting
+@cindex reporting errors
+@cindex error codes
+@cindex status codes
+
+Many functions in @theglibc{} detect and report error conditions,
+and sometimes your programs need to check for these error conditions.
+For example, when you open an input file, you should verify that the
+file was actually opened correctly, and print an error message or take
+other appropriate action if the call to the library function failed.
+
+This chapter describes how the error reporting facility works.  Your
+program should include the header file @file{errno.h} to use this
+facility.
+@pindex errno.h
+
+@menu
+* Checking for Errors::         How errors are reported by library functions.
+* Error Codes::                 Error code macros; all of these expand
+                                 into integer constant values.
+* Error Messages::              Mapping error codes onto error messages.
+@end menu
+
+@node Checking for Errors, Error Codes,  , Error Reporting
+@section Checking for Errors
+
+Most library functions return a special value to indicate that they have
+failed.  The special value is typically @code{-1}, a null pointer, or a
+constant such as @code{EOF} that is defined for that purpose.  But this
+return value tells you only that an error has occurred.  To find out
+what kind of error it was, you need to look at the error code stored in the
+variable @code{errno}.  This variable is declared in the header file
+@file{errno.h}.
+@pindex errno.h
+
+@deftypevr {Variable} {volatile int} errno
+@standards{ISO, errno.h}
+The variable @code{errno} contains the system error number.  You can
+change the value of @code{errno}.
+
+Since @code{errno} is declared @code{volatile}, it might be changed
+asynchronously by a signal handler; see @ref{Defining Handlers}.
+However, a properly written signal handler saves and restores the value
+of @code{errno}, so you generally do not need to worry about this
+possibility except when writing signal handlers.
+
+The initial value of @code{errno} at program startup is zero.  In many
+cases, when a library function encounters an error, it will set
+@code{errno} to a non-zero value to indicate what specific error
+condition occurred.  The documentation for each function lists the
+error conditions that are possible for that function.  Not all library
+functions use this mechanism; some return an error code directly,
+instead.
+
+@strong{Warning:} Many library functions may set @code{errno} to some
+meaningless non-zero value even if they did not encounter any errors,
+and even if they return error codes directly.  Therefore, it is
+usually incorrect to check @emph{whether} an error occurred by
+inspecting the value of @code{errno}.  The proper way to check for
+error is documented for each function.
+
+@strong{Portability Note:} @w{ISO C} specifies @code{errno} as a
+``modifiable lvalue'' rather than as a variable, permitting it to be
+implemented as a macro.  For example, its expansion might involve a
+function call, like @w{@code{*__errno_location ()}}.  In fact, that is
+what it is
+on @gnulinuxhurdsystems{}.  @Theglibc{}, on each system, does
+whatever is right for the particular system.
+
+There are a few library functions, like @code{sqrt} and @code{atan},
+that return a perfectly legitimate value in case of an error, but also
+set @code{errno}.  For these functions, if you want to check to see
+whether an error occurred, the recommended method is to set @code{errno}
+to zero before calling the function, and then check its value afterward.
+@end deftypevr
+
+@pindex errno.h
+All the error codes have symbolic names; they are macros defined in
+@file{errno.h}.  The names start with @samp{E} and an upper-case
+letter or digit; you should consider names of this form to be
+reserved names.  @xref{Reserved Names}.
+
+The error code values are all positive integers and are all distinct,
+with one exception: @code{EWOULDBLOCK} and @code{EAGAIN} are the same.
+Since the values are distinct, you can use them as labels in a
+@code{switch} statement; just don't use both @code{EWOULDBLOCK} and
+@code{EAGAIN}.  Your program should not make any other assumptions about
+the specific values of these symbolic constants.
+
+The value of @code{errno} doesn't necessarily have to correspond to any
+of these macros, since some library functions might return other error
+codes of their own for other situations.  The only values that are
+guaranteed to be meaningful for a particular library function are the
+ones that this manual lists for that function.
+
+Except on @gnuhurdsystems{}, almost any system call can return @code{EFAULT} if
+it is given an invalid pointer as an argument.  Since this could only
+happen as a result of a bug in your program, and since it will not
+happen on @gnuhurdsystems{}, we have saved space by not mentioning
+@code{EFAULT} in the descriptions of individual functions.
+
+In some Unix systems, many system calls can also return @code{EFAULT} if
+given as an argument a pointer into the stack, and the kernel for some
+obscure reason fails in its attempt to extend the stack.  If this ever
+happens, you should probably try using statically or dynamically
+allocated memory instead of stack memory on that system.
+
+@node Error Codes, Error Messages, Checking for Errors, Error Reporting
+@section Error Codes
+
+@pindex errno.h
+The error code macros are defined in the header file @file{errno.h}.
+All of them expand into integer constant values.  Some of these error
+codes can't occur on @gnusystems{}, but they can occur using @theglibc{}
+on other systems.
+
+@deftypevr Macro int EPERM
+@standards{POSIX.1, errno.h}
+@errno{EPERM, 1, Operation not permitted}
+Only the owner of the file (or other resource)
+or processes with special privileges can perform the operation.
+@end deftypevr
+
+@deftypevr Macro int ENOENT
+@standards{POSIX.1, errno.h}
+@errno{ENOENT, 2, No such file or directory}
+This is a ``file doesn't exist'' error
+for ordinary files that are referenced in contexts where they are
+expected to already exist.
+@end deftypevr
+
+@deftypevr Macro int ESRCH
+@standards{POSIX.1, errno.h}
+@errno{ESRCH, 3, No such process}
+No process matches the specified process ID.
+@end deftypevr
+
+@deftypevr Macro int EINTR
+@standards{POSIX.1, errno.h}
+@errno{EINTR, 4, Interrupted system call}
+An asynchronous signal occurred and prevented
+completion of the call.  When this happens, you should try the call
+again.
+
+You can choose to have functions resume after a signal that is handled,
+rather than failing with @code{EINTR}; see @ref{Interrupted
+Primitives}.
+@end deftypevr
+
+@deftypevr Macro int EIO
+@standards{POSIX.1, errno.h}
+@errno{EIO, 5, Input/output error}
+Usually used for physical read or write errors.
+@end deftypevr
+
+@deftypevr Macro int ENXIO
+@standards{POSIX.1, errno.h}
+@errno{ENXIO, 6, No such device or address}
+The system tried to use the device
+represented by a file you specified, and it couldn't find the device.
+This can mean that the device file was installed incorrectly, or that
+the physical device is missing or not correctly attached to the
+computer.
+@end deftypevr
+
+@deftypevr Macro int E2BIG
+@standards{POSIX.1, errno.h}
+@errno{E2BIG, 7, Argument list too long}
+Used when the arguments passed to a new program
+being executed with one of the @code{exec} functions (@pxref{Executing a
+File}) occupy too much memory space.  This condition never arises on
+@gnuhurdsystems{}.
+@end deftypevr
+
+@deftypevr Macro int ENOEXEC
+@standards{POSIX.1, errno.h}
+@errno{ENOEXEC, 8, Exec format error}
+Invalid executable file format.  This condition is detected by the
+@code{exec} functions; see @ref{Executing a File}.
+@end deftypevr
+
+@deftypevr Macro int EBADF
+@standards{POSIX.1, errno.h}
+@errno{EBADF, 9, Bad file descriptor}
+For example, I/O on a descriptor that has been
+closed or reading from a descriptor open only for writing (or vice
+versa).
+@end deftypevr
+
+@deftypevr Macro int ECHILD
+@standards{POSIX.1, errno.h}
+@errno{ECHILD, 10, No child processes}
+This error happens on operations that are
+supposed to manipulate child processes, when there aren't any processes
+to manipulate.
+@end deftypevr
+
+@deftypevr Macro int EDEADLK
+@standards{POSIX.1, errno.h}
+@errno{EDEADLK, 11, Resource deadlock avoided}
+Allocating a system resource would have resulted in a
+deadlock situation.  The system does not guarantee that it will notice
+all such situations.  This error means you got lucky and the system
+noticed; it might just hang.  @xref{File Locks}, for an example.
+@end deftypevr
+
+@deftypevr Macro int ENOMEM
+@standards{POSIX.1, errno.h}
+@errno{ENOMEM, 12, Cannot allocate memory}
+The system cannot allocate more virtual memory
+because its capacity is full.
+@end deftypevr
+
+@deftypevr Macro int EACCES
+@standards{POSIX.1, errno.h}
+@errno{EACCES, 13, Permission denied}
+The file permissions do not allow the attempted operation.
+@end deftypevr
+
+@deftypevr Macro int EFAULT
+@standards{POSIX.1, errno.h}
+@errno{EFAULT, 14, Bad address}
+An invalid pointer was detected.
+On @gnuhurdsystems{}, this error never happens; you get a signal instead.
+@end deftypevr
+
+@deftypevr Macro int ENOTBLK
+@standards{BSD, errno.h}
+@errno{ENOTBLK, 15, Block device required}
+A file that isn't a block special file was given in a situation that
+requires one.  For example, trying to mount an ordinary file as a file
+system in Unix gives this error.
+@end deftypevr
+
+@deftypevr Macro int EBUSY
+@standards{POSIX.1, errno.h}
+@errno{EBUSY, 16, Device or resource busy}
+A system resource that can't be shared is already in use.
+For example, if you try to delete a file that is the root of a currently
+mounted filesystem, you get this error.
+@end deftypevr
+
+@deftypevr Macro int EEXIST
+@standards{POSIX.1, errno.h}
+@errno{EEXIST, 17, File exists}
+An existing file was specified in a context where it only
+makes sense to specify a new file.
+@end deftypevr
+
+@deftypevr Macro int EXDEV
+@standards{POSIX.1, errno.h}
+@errno{EXDEV, 18, Invalid cross-device link}
+An attempt to make an improper link across file systems was detected.
+This happens not only when you use @code{link} (@pxref{Hard Links}) but
+also when you rename a file with @code{rename} (@pxref{Renaming Files}).
+@end deftypevr
+
+@deftypevr Macro int ENODEV
+@standards{POSIX.1, errno.h}
+@errno{ENODEV, 19, No such device}
+The wrong type of device was given to a function that expects a
+particular sort of device.
+@end deftypevr
+
+@deftypevr Macro int ENOTDIR
+@standards{POSIX.1, errno.h}
+@errno{ENOTDIR, 20, Not a directory}
+A file that isn't a directory was specified when a directory is required.
+@end deftypevr
+
+@deftypevr Macro int EISDIR
+@standards{POSIX.1, errno.h}
+@errno{EISDIR, 21, Is a directory}
+You cannot open a directory for writing,
+or create or remove hard links to it.
+@end deftypevr
+
+@deftypevr Macro int EINVAL
+@standards{POSIX.1, errno.h}
+@errno{EINVAL, 22, Invalid argument}
+This is used to indicate various kinds of problems
+with passing the wrong argument to a library function.
+@end deftypevr
+
+@deftypevr Macro int EMFILE
+@standards{POSIX.1, errno.h}
+@errno{EMFILE, 24, Too many open files}
+The current process has too many files open and can't open any more.
+Duplicate descriptors do count toward this limit.
+
+In BSD and GNU, the number of open files is controlled by a resource
+limit that can usually be increased.  If you get this error, you might
+want to increase the @code{RLIMIT_NOFILE} limit or make it unlimited;
+@pxref{Limits on Resources}.
+@end deftypevr
+
+@deftypevr Macro int ENFILE
+@standards{POSIX.1, errno.h}
+@errno{ENFILE, 23, Too many open files in system}
+There are too many distinct file openings in the entire system.  Note
+that any number of linked channels count as just one file opening; see
+@ref{Linked Channels}.  This error never occurs on @gnuhurdsystems{}.
+@end deftypevr
+
+@deftypevr Macro int ENOTTY
+@standards{POSIX.1, errno.h}
+@errno{ENOTTY, 25, Inappropriate ioctl for device}
+Inappropriate I/O control operation, such as trying to set terminal
+modes on an ordinary file.
+@end deftypevr
+
+@deftypevr Macro int ETXTBSY
+@standards{BSD, errno.h}
+@errno{ETXTBSY, 26, Text file busy}
+An attempt to execute a file that is currently open for writing, or
+write to a file that is currently being executed.  Often using a
+debugger to run a program is considered having it open for writing and
+will cause this error.  (The name stands for ``text file busy''.)  This
+is not an error on @gnuhurdsystems{}; the text is copied as necessary.
+@end deftypevr
+
+@deftypevr Macro int EFBIG
+@standards{POSIX.1, errno.h}
+@errno{EFBIG, 27, File too large}
+The size of a file would be larger than allowed by the system.
+@end deftypevr
+
+@deftypevr Macro int ENOSPC
+@standards{POSIX.1, errno.h}
+@errno{ENOSPC, 28, No space left on device}
+Write operation on a file failed because the
+disk is full.
+@end deftypevr
+
+@deftypevr Macro int ESPIPE
+@standards{POSIX.1, errno.h}
+@errno{ESPIPE, 29, Illegal seek}
+Invalid seek operation (such as on a pipe).
+@end deftypevr
+
+@deftypevr Macro int EROFS
+@standards{POSIX.1, errno.h}
+@errno{EROFS, 30, Read-only file system}
+An attempt was made to modify something on a read-only file system.
+@end deftypevr
+
+@deftypevr Macro int EMLINK
+@standards{POSIX.1, errno.h}
+@errno{EMLINK, 31, Too many links}
+The link count of a single file would become too large.
+@code{rename} can cause this error if the file being renamed already has
+as many links as it can take (@pxref{Renaming Files}).
+@end deftypevr
+
+@deftypevr Macro int EPIPE
+@standards{POSIX.1, errno.h}
+@errno{EPIPE, 32, Broken pipe}
+There is no process reading from the other end of a pipe.
+Every library function that returns this error code also generates a
+@code{SIGPIPE} signal; this signal terminates the program if not handled
+or blocked.  Thus, your program will never actually see @code{EPIPE}
+unless it has handled or blocked @code{SIGPIPE}.
+@end deftypevr
+
+@deftypevr Macro int EDOM
+@standards{ISO, errno.h}
+@errno{EDOM, 33, Numerical argument out of domain}
+Used by mathematical functions when an argument value does
+not fall into the domain over which the function is defined.
+@end deftypevr
+
+@deftypevr Macro int ERANGE
+@standards{ISO, errno.h}
+@errno{ERANGE, 34, Numerical result out of range}
+Used by mathematical functions when the result value is
+not representable because of overflow or underflow.
+@end deftypevr
+
+@deftypevr Macro int EAGAIN
+@standards{POSIX.1, errno.h}
+@errno{EAGAIN, 35, Resource temporarily unavailable}
+The call might work if you try again
+later.  The macro @code{EWOULDBLOCK} is another name for @code{EAGAIN};
+they are always the same in @theglibc{}.
+
+This error can happen in a few different situations:
+
+@itemize @bullet
+@item
+An operation that would block was attempted on an object that has
+non-blocking mode selected.  Trying the same operation again will block
+until some external condition makes it possible to read, write, or
+connect (whatever the operation).  You can use @code{select} to find out
+when the operation will be possible; @pxref{Waiting for I/O}.
+
+@strong{Portability Note:} In many older Unix systems, this condition
+was indicated by @code{EWOULDBLOCK}, which was a distinct error code
+different from @code{EAGAIN}.  To make your program portable, you should
+check for both codes and treat them the same.
+
+@item
+A temporary resource shortage made an operation impossible.  @code{fork}
+can return this error.  It indicates that the shortage is expected to
+pass, so your program can try the call again later and it may succeed.
+It is probably a good idea to delay for a few seconds before trying it
+again, to allow time for other processes to release scarce resources.
+Such shortages are usually fairly serious and affect the whole system,
+so usually an interactive program should report the error to the user
+and return to its command loop.
+@end itemize
+@end deftypevr
+
+@deftypevr Macro int EWOULDBLOCK
+@standards{BSD, errno.h}
+@errno{EWOULDBLOCK, EAGAIN, Operation would block}
+In @theglibc{}, this is another name for @code{EAGAIN} (above).
+The values are always the same, on every operating system.
+
+C libraries in many older Unix systems have @code{EWOULDBLOCK} as a
+separate error code.
+@end deftypevr
+
+@deftypevr Macro int EINPROGRESS
+@standards{BSD, errno.h}
+@errno{EINPROGRESS, 36, Operation now in progress}
+An operation that cannot complete immediately was initiated on an object
+that has non-blocking mode selected.  Some functions that must always
+block (such as @code{connect}; @pxref{Connecting}) never return
+@code{EAGAIN}.  Instead, they return @code{EINPROGRESS} to indicate that
+the operation has begun and will take some time.  Attempts to manipulate
+the object before the call completes return @code{EALREADY}.  You can
+use the @code{select} function to find out when the pending operation
+has completed; @pxref{Waiting for I/O}.
+@end deftypevr
+
+@deftypevr Macro int EALREADY
+@standards{BSD, errno.h}
+@errno{EALREADY, 37, Operation already in progress}
+An operation is already in progress on an object that has non-blocking
+mode selected.
+@end deftypevr
+
+@deftypevr Macro int ENOTSOCK
+@standards{BSD, errno.h}
+@errno{ENOTSOCK, 38, Socket operation on non-socket}
+A file that isn't a socket was specified when a socket is required.
+@end deftypevr
+
+@deftypevr Macro int EMSGSIZE
+@standards{BSD, errno.h}
+@errno{EMSGSIZE, 40, Message too long}
+The size of a message sent on a socket was larger than the supported
+maximum size.
+@end deftypevr
+
+@deftypevr Macro int EPROTOTYPE
+@standards{BSD, errno.h}
+@errno{EPROTOTYPE, 41, Protocol wrong type for socket}
+The socket type does not support the requested communications protocol.
+@end deftypevr
+
+@deftypevr Macro int ENOPROTOOPT
+@standards{BSD, errno.h}
+@errno{ENOPROTOOPT, 42, Protocol not available}
+You specified a socket option that doesn't make sense for the
+particular protocol being used by the socket.  @xref{Socket Options}.
+@end deftypevr
+
+@deftypevr Macro int EPROTONOSUPPORT
+@standards{BSD, errno.h}
+@errno{EPROTONOSUPPORT, 43, Protocol not supported}
+The socket domain does not support the requested communications protocol
+(perhaps because the requested protocol is completely invalid).
+@xref{Creating a Socket}.
+@end deftypevr
+
+@deftypevr Macro int ESOCKTNOSUPPORT
+@standards{BSD, errno.h}
+@errno{ESOCKTNOSUPPORT, 44, Socket type not supported}
+The socket type is not supported.
+@end deftypevr
+
+@deftypevr Macro int EOPNOTSUPP
+@standards{BSD, errno.h}
+@errno{EOPNOTSUPP, 45, Operation not supported}
+The operation you requested is not supported.  Some socket functions
+don't make sense for all types of sockets, and others may not be
+implemented for all communications protocols.  On @gnuhurdsystems{}, this
+error can happen for many calls when the object does not support the
+particular operation; it is a generic indication that the server knows
+nothing to do for that call.
+@end deftypevr
+
+@deftypevr Macro int EPFNOSUPPORT
+@standards{BSD, errno.h}
+@errno{EPFNOSUPPORT, 46, Protocol family not supported}
+The socket communications protocol family you requested is not supported.
+@end deftypevr
+
+@deftypevr Macro int EAFNOSUPPORT
+@standards{BSD, errno.h}
+@errno{EAFNOSUPPORT, 47, Address family not supported by protocol}
+The address family specified for a socket is not supported; it is
+inconsistent with the protocol being used on the socket.  @xref{Sockets}.
+@end deftypevr
+
+@deftypevr Macro int EADDRINUSE
+@standards{BSD, errno.h}
+@errno{EADDRINUSE, 48, Address already in use}
+The requested socket address is already in use.  @xref{Socket Addresses}.
+@end deftypevr
+
+@deftypevr Macro int EADDRNOTAVAIL
+@standards{BSD, errno.h}
+@errno{EADDRNOTAVAIL, 49, Cannot assign requested address}
+The requested socket address is not available; for example, you tried
+to give a socket a name that doesn't match the local host name.
+@xref{Socket Addresses}.
+@end deftypevr
+
+@deftypevr Macro int ENETDOWN
+@standards{BSD, errno.h}
+@errno{ENETDOWN, 50, Network is down}
+A socket operation failed because the network was down.
+@end deftypevr
+
+@deftypevr Macro int ENETUNREACH
+@standards{BSD, errno.h}
+@errno{ENETUNREACH, 51, Network is unreachable}
+A socket operation failed because the subnet containing the remote host
+was unreachable.
+@end deftypevr
+
+@deftypevr Macro int ENETRESET
+@standards{BSD, errno.h}
+@errno{ENETRESET, 52, Network dropped connection on reset}
+A network connection was reset because the remote host crashed.
+@end deftypevr
+
+@deftypevr Macro int ECONNABORTED
+@standards{BSD, errno.h}
+@errno{ECONNABORTED, 53, Software caused connection abort}
+A network connection was aborted locally.
+@end deftypevr
+
+@deftypevr Macro int ECONNRESET
+@standards{BSD, errno.h}
+@errno{ECONNRESET, 54, Connection reset by peer}
+A network connection was closed for reasons outside the control of the
+local host, such as by the remote machine rebooting or an unrecoverable
+protocol violation.
+@end deftypevr
+
+@deftypevr Macro int ENOBUFS
+@standards{BSD, errno.h}
+@errno{ENOBUFS, 55, No buffer space available}
+The kernel's buffers for I/O operations are all in use.  In GNU, this
+error is always synonymous with @code{ENOMEM}; you may get one or the
+other from network operations.
+@end deftypevr
+
+@deftypevr Macro int EISCONN
+@standards{BSD, errno.h}
+@errno{EISCONN, 56, Transport endpoint is already connected}
+You tried to connect a socket that is already connected.
+@xref{Connecting}.
+@end deftypevr
+
+@deftypevr Macro int ENOTCONN
+@standards{BSD, errno.h}
+@errno{ENOTCONN, 57, Transport endpoint is not connected}
+The socket is not connected to anything.  You get this error when you
+try to transmit data over a socket, without first specifying a
+destination for the data.  For a connectionless socket (for datagram
+protocols, such as UDP), you get @code{EDESTADDRREQ} instead.
+@end deftypevr
+
+@deftypevr Macro int EDESTADDRREQ
+@standards{BSD, errno.h}
+@errno{EDESTADDRREQ, 39, Destination address required}
+No default destination address was set for the socket.  You get this
+error when you try to transmit data over a connectionless socket,
+without first specifying a destination for the data with @code{connect}.
+@end deftypevr
+
+@deftypevr Macro int ESHUTDOWN
+@standards{BSD, errno.h}
+@errno{ESHUTDOWN, 58, Cannot send after transport endpoint shutdown}
+The socket has already been shut down.
+@end deftypevr
+
+@deftypevr Macro int ETOOMANYREFS
+@standards{BSD, errno.h}
+@errno{ETOOMANYREFS, 59, Too many references: cannot splice}
+@end deftypevr
+
+@deftypevr Macro int ETIMEDOUT
+@standards{BSD, errno.h}
+@errno{ETIMEDOUT, 60, Connection timed out}
+A socket operation with a specified timeout received no response during
+the timeout period.
+@end deftypevr
+
+@deftypevr Macro int ECONNREFUSED
+@standards{BSD, errno.h}
+@errno{ECONNREFUSED, 61, Connection refused}
+A remote host refused to allow the network connection (typically because
+it is not running the requested service).
+@end deftypevr
+
+@deftypevr Macro int ELOOP
+@standards{BSD, errno.h}
+@errno{ELOOP, 62, Too many levels of symbolic links}
+Too many levels of symbolic links were encountered in looking up a file name.
+This often indicates a cycle of symbolic links.
+@end deftypevr
+
+@deftypevr Macro int ENAMETOOLONG
+@standards{POSIX.1, errno.h}
+@errno{ENAMETOOLONG, 63, File name too long}
+Filename too long (longer than @code{PATH_MAX}; @pxref{Limits for
+Files}) or host name too long (in @code{gethostname} or
+@code{sethostname}; @pxref{Host Identification}).
+@end deftypevr
+
+@deftypevr Macro int EHOSTDOWN
+@standards{BSD, errno.h}
+@errno{EHOSTDOWN, 64, Host is down}
+The remote host for a requested network connection is down.
+@end deftypevr
+
+@deftypevr Macro int EHOSTUNREACH
+@standards{BSD, errno.h}
+@errno{EHOSTUNREACH, 65, No route to host}
+The remote host for a requested network connection is not reachable.
+@end deftypevr
+
+@deftypevr Macro int ENOTEMPTY
+@standards{POSIX.1, errno.h}
+@errno{ENOTEMPTY, 66, Directory not empty}
+Directory not empty, where an empty directory was expected.  Typically,
+this error occurs when you are trying to delete a directory.
+@end deftypevr
+
+@deftypevr Macro int EPROCLIM
+@standards{BSD, errno.h}
+@errno{EPROCLIM, 67, Too many processes}
+This means that the per-user limit on new process would be exceeded by
+an attempted @code{fork}.  @xref{Limits on Resources}, for details on
+the @code{RLIMIT_NPROC} limit.
+@end deftypevr
+
+@deftypevr Macro int EUSERS
+@standards{BSD, errno.h}
+@errno{EUSERS, 68, Too many users}
+The file quota system is confused because there are too many users.
+@c This can probably happen in a GNU system when using NFS.
+@end deftypevr
+
+@deftypevr Macro int EDQUOT
+@standards{BSD, errno.h}
+@errno{EDQUOT, 69, Disk quota exceeded}
+The user's disk quota was exceeded.
+@end deftypevr
+
+@deftypevr Macro int ESTALE
+@standards{BSD, errno.h}
+@errno{ESTALE, 70, Stale file handle}
+This indicates an internal confusion in the
+file system which is due to file system rearrangements on the server host
+for NFS file systems or corruption in other file systems.
+Repairing this condition usually requires unmounting, possibly repairing
+and remounting the file system.
+@end deftypevr
+
+@deftypevr Macro int EREMOTE
+@standards{BSD, errno.h}
+@errno{EREMOTE, 71, Object is remote}
+An attempt was made to NFS-mount a remote file system with a file name that
+already specifies an NFS-mounted file.
+(This is an error on some operating systems, but we expect it to work
+properly on @gnuhurdsystems{}, making this error code impossible.)
+@end deftypevr
+
+@deftypevr Macro int EBADRPC
+@standards{BSD, errno.h}
+@errno{EBADRPC, 72, RPC struct is bad}
+@end deftypevr
+
+@deftypevr Macro int ERPCMISMATCH
+@standards{BSD, errno.h}
+@errno{ERPCMISMATCH, 73, RPC version wrong}
+@end deftypevr
+
+@deftypevr Macro int EPROGUNAVAIL
+@standards{BSD, errno.h}
+@errno{EPROGUNAVAIL, 74, RPC program not available}
+@end deftypevr
+
+@deftypevr Macro int EPROGMISMATCH
+@standards{BSD, errno.h}
+@errno{EPROGMISMATCH, 75, RPC program version wrong}
+@end deftypevr
+
+@deftypevr Macro int EPROCUNAVAIL
+@standards{BSD, errno.h}
+@errno{EPROCUNAVAIL, 76, RPC bad procedure for program}
+@end deftypevr
+
+@deftypevr Macro int ENOLCK
+@standards{POSIX.1, errno.h}
+@errno{ENOLCK, 77, No locks available}
+This is used by the file locking facilities; see
+@ref{File Locks}.  This error is never generated by @gnuhurdsystems{}, but
+it can result from an operation to an NFS server running another
+operating system.
+@end deftypevr
+
+@deftypevr Macro int EFTYPE
+@standards{BSD, errno.h}
+@errno{EFTYPE, 79, Inappropriate file type or format}
+The file was the wrong type for the
+operation, or a data file had the wrong format.
+
+On some systems @code{chmod} returns this error if you try to set the
+sticky bit on a non-directory file; @pxref{Setting Permissions}.
+@end deftypevr
+
+@deftypevr Macro int EAUTH
+@standards{BSD, errno.h}
+@errno{EAUTH, 80, Authentication error}
+@end deftypevr
+
+@deftypevr Macro int ENEEDAUTH
+@standards{BSD, errno.h}
+@errno{ENEEDAUTH, 81, Need authenticator}
+@end deftypevr
+
+@deftypevr Macro int ENOSYS
+@standards{POSIX.1, errno.h}
+@errno{ENOSYS, 78, Function not implemented}
+This indicates that the function called is
+not implemented at all, either in the C library itself or in the
+operating system.  When you get this error, you can be sure that this
+particular function will always fail with @code{ENOSYS} unless you
+install a new version of the C library or the operating system.
+@end deftypevr
+
+@deftypevr Macro int ENOTSUP
+@standards{POSIX.1, errno.h}
+@errno{ENOTSUP, 118, Not supported}
+A function returns this error when certain parameter
+values are valid, but the functionality they request is not available.
+This can mean that the function does not implement a particular command
+or option value or flag bit at all.  For functions that operate on some
+object given in a parameter, such as a file descriptor or a port, it
+might instead mean that only @emph{that specific object} (file
+descriptor, port, etc.) is unable to support the other parameters given;
+different file descriptors might support different ranges of parameter
+values.
+
+If the entire function is not available at all in the implementation,
+it returns @code{ENOSYS} instead.
+@end deftypevr
+
+@deftypevr Macro int EILSEQ
+@standards{ISO, errno.h}
+@errno{EILSEQ, 106, Invalid or incomplete multibyte or wide character}
+While decoding a multibyte character the function came along an invalid
+or an incomplete sequence of bytes or the given wide character is invalid.
+@end deftypevr
+
+@deftypevr Macro int EBACKGROUND
+@standards{GNU, errno.h}
+@errno{EBACKGROUND, 100, Inappropriate operation for background process}
+On @gnuhurdsystems{}, servers supporting the @code{term} protocol return
+this error for certain operations when the caller is not in the
+foreground process group of the terminal.  Users do not usually see this
+error because functions such as @code{read} and @code{write} translate
+it into a @code{SIGTTIN} or @code{SIGTTOU} signal.  @xref{Job Control},
+for information on process groups and these signals.
+@end deftypevr
+
+@deftypevr Macro int EDIED
+@standards{GNU, errno.h}
+@errno{EDIED, 101, Translator died}
+On @gnuhurdsystems{}, opening a file returns this error when the file is
+translated by a program and the translator program dies while starting
+up, before it has connected to the file.
+@end deftypevr
+
+@deftypevr Macro int ED
+@standards{GNU, errno.h}
+@errno{ED, 102, ?}
+The experienced user will know what is wrong.
+@c This error code is a joke.  Its perror text is part of the joke.
+@c Don't change it.
+@end deftypevr
+
+@deftypevr Macro int EGREGIOUS
+@standards{GNU, errno.h}
+@errno{EGREGIOUS, 103, You really blew it this time}
+You did @strong{what}?
+@end deftypevr
+
+@deftypevr Macro int EIEIO
+@standards{GNU, errno.h}
+@errno{EIEIO, 104, Computer bought the farm}
+Go home and have a glass of warm, dairy-fresh milk.
+@c Okay.  Since you are dying to know, I'll tell you.
+@c This is a joke, obviously.  There is a children's song which begins,
+@c "Old McDonald had a farm, e-i-e-i-o."  Every time I see the (real)
+@c errno macro EIO, I think about that song.  Probably most of my
+@c compatriots who program on Unix do, too.  One of them must have stayed
+@c up a little too late one night and decided to add it to Hurd or Glibc.
+@c Whoever did it should be castigated, but it made me laugh.
+@c  --jtobey@channel1.com
+@c
+@c "bought the farm" means "died".  -jtobey
+@c
+@c Translators, please do not translate this litteraly, translate it into
+@c an idiomatic funny way of saying that the computer died.
+@end deftypevr
+
+@deftypevr Macro int EGRATUITOUS
+@standards{GNU, errno.h}
+@errno{EGRATUITOUS, 105, Gratuitous error}
+This error code has no purpose.
+@end deftypevr
+
+@deftypevr Macro int EBADMSG
+@standards{XOPEN, errno.h}
+@errno{EBADMSG, 107, Bad message}
+@end deftypevr
+
+@deftypevr Macro int EIDRM
+@standards{XOPEN, errno.h}
+@errno{EIDRM, 108, Identifier removed}
+@end deftypevr
+
+@deftypevr Macro int EMULTIHOP
+@standards{XOPEN, errno.h}
+@errno{EMULTIHOP, 109, Multihop attempted}
+@end deftypevr
+
+@deftypevr Macro int ENODATA
+@standards{XOPEN, errno.h}
+@errno{ENODATA, 110, No data available}
+@end deftypevr
+
+@deftypevr Macro int ENOLINK
+@standards{XOPEN, errno.h}
+@errno{ENOLINK, 111, Link has been severed}
+@end deftypevr
+
+@deftypevr Macro int ENOMSG
+@standards{XOPEN, errno.h}
+@errno{ENOMSG, 112, No message of desired type}
+@end deftypevr
+
+@deftypevr Macro int ENOSR
+@standards{XOPEN, errno.h}
+@errno{ENOSR, 113, Out of streams resources}
+@end deftypevr
+
+@deftypevr Macro int ENOSTR
+@standards{XOPEN, errno.h}
+@errno{ENOSTR, 114, Device not a stream}
+@end deftypevr
+
+@deftypevr Macro int EOVERFLOW
+@standards{XOPEN, errno.h}
+@errno{EOVERFLOW, 115, Value too large for defined data type}
+@end deftypevr
+
+@deftypevr Macro int EPROTO
+@standards{XOPEN, errno.h}
+@errno{EPROTO, 116, Protocol error}
+@end deftypevr
+
+@deftypevr Macro int ETIME
+@standards{XOPEN, errno.h}
+@errno{ETIME, 117, Timer expired}
+@end deftypevr
+
+@deftypevr Macro int ECANCELED
+@standards{POSIX.1, errno.h}
+@errno{ECANCELED, 119, Operation canceled}
+An asynchronous operation was canceled before it
+completed.  @xref{Asynchronous I/O}.  When you call @code{aio_cancel},
+the normal result is for the operations affected to complete with this
+error; @pxref{Cancel AIO Operations}.
+@end deftypevr
+
+@deftypevr Macro int EOWNERDEAD
+@standards{GNU, errno.h}
+@errno{EOWNERDEAD, 120, Owner died}
+@end deftypevr
+
+@deftypevr Macro int ENOTRECOVERABLE
+@standards{GNU, errno.h}
+@errno{ENOTRECOVERABLE, 121, State not recoverable}
+@end deftypevr
+
+
+@emph{The following error codes are defined by the Linux/i386 kernel.
+They are not yet documented.}
+
+@deftypevr Macro int ERESTART
+@standards{Linux???, errno.h}
+@errno{ERESTART, ???/85, Interrupted system call should be restarted}
+@end deftypevr
+
+@deftypevr Macro int ECHRNG
+@standards{Linux???, errno.h}
+@errno{ECHRNG, ???/44, Channel number out of range}
+@end deftypevr
+
+@deftypevr Macro int EL2NSYNC
+@standards{Obsolete, errno.h}
+@errno{EL2NSYNC, ???/45, Level 2 not synchronized}
+@end deftypevr
+
+@deftypevr Macro int EL3HLT
+@standards{Obsolete, errno.h}
+@errno{EL3HLT, ???/46, Level 3 halted}
+@end deftypevr
+
+@deftypevr Macro int EL3RST
+@standards{Obsolete, errno.h}
+@errno{EL3RST, ???/47, Level 3 reset}
+@end deftypevr
+
+@deftypevr Macro int ELNRNG
+@standards{Linux???, errno.h}
+@errno{ELNRNG, ???/48, Link number out of range}
+@end deftypevr
+
+@deftypevr Macro int EUNATCH
+@standards{Linux???, errno.h}
+@errno{EUNATCH, ???/49, Protocol driver not attached}
+@end deftypevr
+
+@deftypevr Macro int ENOCSI
+@standards{Linux???, errno.h}
+@errno{ENOCSI, ???/50, No CSI structure available}
+@end deftypevr
+
+@deftypevr Macro int EL2HLT
+@standards{Obsolete, errno.h}
+@errno{EL2HLT, ???/51, Level 2 halted}
+@end deftypevr
+
+@deftypevr Macro int EBADE
+@standards{Linux???, errno.h}
+@errno{EBADE, ???/52, Invalid exchange}
+@end deftypevr
+
+@deftypevr Macro int EBADR
+@standards{Linux???, errno.h}
+@errno{EBADR, ???/53, Invalid request descriptor}
+@end deftypevr
+
+@deftypevr Macro int EXFULL
+@standards{Linux???, errno.h}
+@errno{EXFULL, ???/54, Exchange full}
+@end deftypevr
+
+@deftypevr Macro int ENOANO
+@standards{Linux???, errno.h}
+@errno{ENOANO, ???/55, No anode}
+@end deftypevr
+
+@deftypevr Macro int EBADRQC
+@standards{Linux???, errno.h}
+@errno{EBADRQC, ???/56, Invalid request code}
+@end deftypevr
+
+@deftypevr Macro int EBADSLT
+@standards{Linux???, errno.h}
+@errno{EBADSLT, ???/57, Invalid slot}
+@end deftypevr
+
+@deftypevr Macro int EDEADLOCK
+@standards{Linux???, errno.h}
+@errno{EDEADLOCK, ???/58, File locking deadlock error}
+@end deftypevr
+
+@deftypevr Macro int EBFONT
+@standards{Linux???, errno.h}
+@errno{EBFONT, ???/59, Bad font file format}
+@end deftypevr
+
+@deftypevr Macro int ENONET
+@standards{Linux???, errno.h}
+@errno{ENONET, ???/64, Machine is not on the network}
+@end deftypevr
+
+@deftypevr Macro int ENOPKG
+@standards{Linux???, errno.h}
+@errno{ENOPKG, ???/65, Package not installed}
+@end deftypevr
+
+@deftypevr Macro int EADV
+@standards{Linux???, errno.h}
+@errno{EADV, ???/68, Advertise error}
+@end deftypevr
+
+@deftypevr Macro int ESRMNT
+@standards{Linux???, errno.h}
+@errno{ESRMNT, ???/69, Srmount error}
+@end deftypevr
+
+@deftypevr Macro int ECOMM
+@standards{Linux???, errno.h}
+@errno{ECOMM, ???/70, Communication error on send}
+@end deftypevr
+
+@deftypevr Macro int EDOTDOT
+@standards{Linux???, errno.h}
+@errno{EDOTDOT, ???/73, RFS specific error}
+@end deftypevr
+
+@deftypevr Macro int ENOTUNIQ
+@standards{Linux???, errno.h}
+@errno{ENOTUNIQ, ???/76, Name not unique on network}
+@end deftypevr
+
+@deftypevr Macro int EBADFD
+@standards{Linux???, errno.h}
+@errno{EBADFD, ???/77, File descriptor in bad state}
+@end deftypevr
+
+@deftypevr Macro int EREMCHG
+@standards{Linux???, errno.h}
+@errno{EREMCHG, ???/78, Remote address changed}
+@end deftypevr
+
+@deftypevr Macro int ELIBACC
+@standards{Linux???, errno.h}
+@errno{ELIBACC, ???/79, Can not access a needed shared library}
+@end deftypevr
+
+@deftypevr Macro int ELIBBAD
+@standards{Linux???, errno.h}
+@errno{ELIBBAD, ???/80, Accessing a corrupted shared library}
+@end deftypevr
+
+@deftypevr Macro int ELIBSCN
+@standards{Linux???, errno.h}
+@errno{ELIBSCN, ???/81, .lib section in a.out corrupted}
+@end deftypevr
+
+@deftypevr Macro int ELIBMAX
+@standards{Linux???, errno.h}
+@errno{ELIBMAX, ???/82, Attempting to link in too many shared libraries}
+@end deftypevr
+
+@deftypevr Macro int ELIBEXEC
+@standards{Linux???, errno.h}
+@errno{ELIBEXEC, ???/83, Cannot exec a shared library directly}
+@end deftypevr
+
+@deftypevr Macro int ESTRPIPE
+@standards{Linux???, errno.h}
+@errno{ESTRPIPE, ???/86, Streams pipe error}
+@end deftypevr
+
+@deftypevr Macro int EUCLEAN
+@standards{Linux???, errno.h}
+@errno{EUCLEAN, ???/117, Structure needs cleaning}
+@end deftypevr
+
+@deftypevr Macro int ENOTNAM
+@standards{Linux???, errno.h}
+@errno{ENOTNAM, ???/118, Not a XENIX named type file}
+@end deftypevr
+
+@deftypevr Macro int ENAVAIL
+@standards{Linux???, errno.h}
+@errno{ENAVAIL, ???/119, No XENIX semaphores available}
+@end deftypevr
+
+@deftypevr Macro int EISNAM
+@standards{Linux???, errno.h}
+@errno{EISNAM, ???/120, Is a named type file}
+@end deftypevr
+
+@deftypevr Macro int EREMOTEIO
+@standards{Linux???, errno.h}
+@errno{EREMOTEIO, ???/121, Remote I/O error}
+@end deftypevr
+
+@deftypevr Macro int ENOMEDIUM
+@standards{Linux???, errno.h}
+@errno{ENOMEDIUM, ???/???, No medium found}
+@end deftypevr
+
+@deftypevr Macro int EMEDIUMTYPE
+@standards{Linux???, errno.h}
+@errno{EMEDIUMTYPE, ???/???, Wrong medium type}
+@end deftypevr
+
+@deftypevr Macro int ENOKEY
+@standards{Linux, errno.h}
+@errno{ENOKEY, ???/???, Required key not available}
+@end deftypevr
+
+@deftypevr Macro int EKEYEXPIRED
+@standards{Linux, errno.h}
+@errno{EKEYEXPIRED, ???/???, Key has expired}
+@end deftypevr
+
+@deftypevr Macro int EKEYREVOKED
+@standards{Linux, errno.h}
+@errno{EKEYREVOKED, ???/???, Key has been revoked}
+@end deftypevr
+
+@deftypevr Macro int EKEYREJECTED
+@standards{Linux, errno.h}
+@errno{EKEYREJECTED, ???/???, Key was rejected by service}
+@end deftypevr
+
+@deftypevr Macro int ERFKILL
+@standards{Linux, errno.h}
+@errno{ERFKILL, ???/???, Operation not possible due to RF-kill}
+@end deftypevr
+
+@deftypevr Macro int EHWPOISON
+@standards{Linux, errno.h}
+@errno{EHWPOISON, ???/???, Memory page has hardware error}
+@end deftypevr
+
+@node Error Messages,  , Error Codes, Error Reporting
+@section Error Messages
+
+The library has functions and variables designed to make it easy for
+your program to report informative error messages in the customary
+format about the failure of a library call.  The functions
+@code{strerror} and @code{perror} give you the standard error message
+for a given error code; the variable
+@w{@code{program_invocation_short_name}} gives you convenient access to the
+name of the program that encountered the error.
+
+@deftypefun {char *} strerror (int @var{errnum})
+@standards{ISO, string.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:strerror}}@asunsafe{@ascuheap{} @ascuintl{}}@acunsafe{@acsmem{}}}
+@c Calls strerror_r with a static buffer allocated with malloc on the
+@c first use.
+The @code{strerror} function maps the error code (@pxref{Checking for
+Errors}) specified by the @var{errnum} argument to a descriptive error
+message string.  The return value is a pointer to this string.
+
+The value @var{errnum} normally comes from the variable @code{errno}.
+
+You should not modify the string returned by @code{strerror}.  Also, if
+you make subsequent calls to @code{strerror}, the string might be
+overwritten.  (But it's guaranteed that no library function ever calls
+@code{strerror} behind your back.)
+
+The function @code{strerror} is declared in @file{string.h}.
+@end deftypefun
+
+@deftypefun {char *} strerror_r (int @var{errnum}, char *@var{buf}, size_t @var{n})
+@standards{GNU, string.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuintl{}}@acunsafe{}}
+The @code{strerror_r} function works like @code{strerror} but instead of
+returning the error message in a statically allocated buffer shared by
+all threads in the process, it returns a private copy for the
+thread.  This might be either some permanent global data or a message
+string in the user supplied buffer starting at @var{buf} with the
+length of @var{n} bytes.
+
+At most @var{n} characters are written (including the NUL byte) so it is
+up to the user to select a buffer large enough.
+
+This function should always be used in multi-threaded programs since
+there is no way to guarantee the string returned by @code{strerror}
+really belongs to the last call of the current thread.
+
+The function @code{strerror_r} is a GNU extension and it is declared in
+@file{string.h}.
+@end deftypefun
+
+@deftypefun void perror (const char *@var{message})
+@standards{ISO, stdio.h}
+@safety{@prelim{}@mtsafe{@mtasurace{:stderr}}@asunsafe{@asucorrupt{} @ascuintl{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c Besides strerror_r's and some of fprintf's issues, if stderr is not
+@c oriented yet, create a new stream with a dup of stderr's fd and write
+@c to that instead of stderr, to avoid orienting it.
+This function prints an error message to the stream @code{stderr};
+see @ref{Standard Streams}.  The orientation of @code{stderr} is not
+changed.
+
+If you call @code{perror} with a @var{message} that is either a null
+pointer or an empty string, @code{perror} just prints the error message
+corresponding to @code{errno}, adding a trailing newline.
+
+If you supply a non-null @var{message} argument, then @code{perror}
+prefixes its output with this string.  It adds a colon and a space
+character to separate the @var{message} from the error string corresponding
+to @code{errno}.
+
+The function @code{perror} is declared in @file{stdio.h}.
+@end deftypefun
+
+@deftypefun {const char *} strerrorname_np (int @var{errnum})
+@standards{GNU, string.h}
+@safety{@mtsafe{}@assafe{}@acsafe{}}
+This function returns the name describing the error @var{errnum} or
+@code{NULL} if there is no known constant with this value (e.g "EINVAL"
+for @code{EINVAL}).
+
+@pindex string.h
+This function is a GNU extension, declared in the header file @file{string.h}.
+@end deftypefun
+
+@deftypefun {const char *} strerrordesc_np (int @var{errnum})
+@standards{GNU, string.h}
+@safety{@mtsafe{}@assafe{}@acsafe{}}
+This function returns the message describing the error @var{errnum} or
+@code{NULL} if there is no known constant with this value (e.g "Invalid
+argument" for @code{EINVAL}).  Different than @code{strerror} the returned
+description is not translated.
+
+@pindex string.h
+This function is a GNU extension, declared in the header file @file{string.h}.
+@end deftypefun
+
+@code{strerror} and @code{perror} produce the exact same message for any
+given error code; the precise text varies from system to system.  With
+@theglibc{}, the messages are fairly short; there are no multi-line
+messages or embedded newlines.  Each error message begins with a capital
+letter and does not include any terminating punctuation.
+
+@cindex program name
+@cindex name of running program
+Many programs that don't read input from the terminal are designed to
+exit if any system call fails.  By convention, the error message from
+such a program should start with the program's name, sans directories.
+You can find that name in the variable
+@code{program_invocation_short_name}; the full file name is stored the
+variable @code{program_invocation_name}.
+
+@deftypevar {char *} program_invocation_name
+@standards{GNU, errno.h}
+This variable's value is the name that was used to invoke the program
+running in the current process.  It is the same as @code{argv[0]}.  Note
+that this is not necessarily a useful file name; often it contains no
+directory names.  @xref{Program Arguments}.
+
+This variable is a GNU extension and is declared in @file{errno.h}.
+@end deftypevar
+
+@deftypevar {char *} program_invocation_short_name
+@standards{GNU, errno.h}
+This variable's value is the name that was used to invoke the program
+running in the current process, with directory names removed.  (That is
+to say, it is the same as @code{program_invocation_name} minus
+everything up to the last slash, if any.)
+
+This variable is a GNU extension and is declared in @file{errno.h}.
+@end deftypevar
+
+The library initialization code sets up both of these variables before
+calling @code{main}.
+
+@strong{Portability Note:} If you want your program to work with
+non-GNU libraries, you must save the value of @code{argv[0]} in
+@code{main}, and then strip off the directory names yourself.  We
+added these extensions to make it possible to write self-contained
+error-reporting subroutines that require no explicit cooperation from
+@code{main}.
+
+Here is an example showing how to handle failure to open a file
+correctly.  The function @code{open_sesame} tries to open the named file
+for reading and returns a stream if successful.  The @code{fopen}
+library function returns a null pointer if it couldn't open the file for
+some reason.  In that situation, @code{open_sesame} constructs an
+appropriate error message using the @code{strerror} function, and
+terminates the program.  If we were going to make some other library
+calls before passing the error code to @code{strerror}, we'd have to
+save it in a local variable instead, because those other library
+functions might overwrite @code{errno} in the meantime.
+
+@smallexample
+#define _GNU_SOURCE
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+FILE *
+open_sesame (char *name)
+@{
+  FILE *stream;
+
+  errno = 0;
+  stream = fopen (name, "r");
+  if (stream == NULL)
+    @{
+      fprintf (stderr, "%s: Couldn't open file %s; %s\n",
+               program_invocation_short_name, name, strerror (errno));
+      exit (EXIT_FAILURE);
+    @}
+  else
+    return stream;
+@}
+@end smallexample
+
+Using @code{perror} has the advantage that the function is portable and
+available on all systems implementing @w{ISO C}.  But often the text
+@code{perror} generates is not what is wanted and there is no way to
+extend or change what @code{perror} does.  The GNU coding standard, for
+instance, requires error messages to be preceded by the program name and
+programs which read some input files should provide information
+about the input file name and the line number in case an error is
+encountered while reading the file.  For these occasions there are two
+functions available which are widely used throughout the GNU project.
+These functions are declared in @file{error.h}.
+
+@deftypefun void error (int @var{status}, int @var{errnum}, const char *@var{format}, @dots{})
+@standards{GNU, error.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @asuheap{} @asuintl{}}@acsafe{}}
+@c Cancellation is disabled throughout the execution.  It flushes stdout
+@c and then holds a lock on stderr while printing the program name and
+@c then running error_tail.  The non-wide case just runs vfprintf; the
+@c wide case converts the message to an alloca/malloc-allocated buffer
+@c with mbsrtowcs, then prints it with vfwprintf.  Afterwards,
+@c print_errno_message calls strerror_r and fxprintf.
+The @code{error} function can be used to report general problems during
+program execution.  The @var{format} argument is a format string just
+like those given to the @code{printf} family of functions.  The
+arguments required for the format can follow the @var{format} parameter.
+Just like @code{perror}, @code{error} also can report an error code in
+textual form.  But unlike @code{perror} the error value is explicitly
+passed to the function in the @var{errnum} parameter.  This eliminates
+the problem mentioned above that the error reporting function must be
+called immediately after the function causing the error since otherwise
+@code{errno} might have a different value.
+
+@code{error} prints first the program name.  If the application
+defined a global variable @code{error_print_progname} and points it to a
+function this function will be called to print the program name.
+Otherwise the string from the global variable @code{program_name} is
+used.  The program name is followed by a colon and a space which in turn
+is followed by the output produced by the format string.  If the
+@var{errnum} parameter is non-zero the format string output is followed
+by a colon and a space, followed by the error message for the error code
+@var{errnum}.  In any case is the output terminated with a newline.
+
+The output is directed to the @code{stderr} stream.  If the
+@code{stderr} wasn't oriented before the call it will be narrow-oriented
+afterwards.
+
+The function will return unless the @var{status} parameter has a
+non-zero value.  In this case the function will call @code{exit} with
+the @var{status} value for its parameter and therefore never return.  If
+@code{error} returns, the global variable @code{error_message_count} is
+incremented by one to keep track of the number of errors reported.
+@end deftypefun
+
+@deftypefun void error_at_line (int @var{status}, int @var{errnum}, const char *@var{fname}, unsigned int @var{lineno}, const char *@var{format}, @dots{})
+@standards{GNU, error.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:error_at_line/error_one_per_line} @mtslocale{}}@asunsafe{@asucorrupt{} @asuheap{} @asuintl{}}@acunsafe{@acucorrupt{/error_one_per_line}}}
+@c The error_one_per_line variable is accessed (without any form of
+@c synchronization, but since it's an int used once, it should be safe
+@c enough) and, if this mode is enabled, static variables used to hold
+@c the last printed file name and line number are accessed and modified
+@c without synchronization; the update is not atomic and it occurs
+@c before disabling cancellation, so it can be interrupted after only
+@c one of the two variables is modified.  After that, it's very much
+@c like error.
+
+The @code{error_at_line} function is very similar to the @code{error}
+function.  The only differences are the additional parameters @var{fname}
+and @var{lineno}.  The handling of the other parameters is identical to
+that of @code{error} except that between the program name and the string
+generated by the format string additional text is inserted.
+
+Directly following the program name a colon, followed by the file name
+pointed to by @var{fname}, another colon, and the value of @var{lineno} is
+printed.
+
+This additional output of course is meant to be used to locate an error
+in an input file (like a programming language source code file etc).
+
+If the global variable @code{error_one_per_line} is set to a non-zero
+value @code{error_at_line} will avoid printing consecutive messages for
+the same file and line.  Repetition which are not directly following
+each other are not caught.
+
+Just like @code{error} this function only returns if @var{status} is
+zero.  Otherwise @code{exit} is called with the non-zero value.  If
+@code{error} returns, the global variable @code{error_message_count} is
+incremented by one to keep track of the number of errors reported.
+@end deftypefun
+
+As mentioned above, the @code{error} and @code{error_at_line} functions
+can be customized by defining a variable named
+@code{error_print_progname}.
+
+@deftypevar {void (*error_print_progname)} (void)
+@standards{GNU, error.h}
+If the @code{error_print_progname} variable is defined to a non-zero
+value the function pointed to is called by @code{error} or
+@code{error_at_line}.  It is expected to print the program name or do
+something similarly useful.
+
+The function is expected to print to the @code{stderr} stream and
+must be able to handle whatever orientation the stream has.
+
+The variable is global and shared by all threads.
+@end deftypevar
+
+@deftypevar {unsigned int} error_message_count
+@standards{GNU, error.h}
+The @code{error_message_count} variable is incremented whenever one of
+the functions @code{error} or @code{error_at_line} returns.  The
+variable is global and shared by all threads.
+@end deftypevar
+
+@deftypevar int error_one_per_line
+@standards{GNU, error.h}
+The @code{error_one_per_line} variable influences only
+@code{error_at_line}.  Normally the @code{error_at_line} function
+creates output for every invocation.  If @code{error_one_per_line} is
+set to a non-zero value @code{error_at_line} keeps track of the last
+file name and line number for which an error was reported and avoids
+directly following messages for the same file and line.  This variable
+is global and shared by all threads.
+@end deftypevar
+
+@noindent
+A program which read some input file and reports errors in it could look
+like this:
+
+@smallexample
+@{
+  char *line = NULL;
+  size_t len = 0;
+  unsigned int lineno = 0;
+
+  error_message_count = 0;
+  while (! feof_unlocked (fp))
+    @{
+      ssize_t n = getline (&line, &len, fp);
+      if (n <= 0)
+        /* @r{End of file or error.}  */
+        break;
+      ++lineno;
+
+      /* @r{Process the line.}  */
+      @dots{}
+
+      if (@r{Detect error in line})
+        error_at_line (0, errval, filename, lineno,
+                       "some error text %s", some_variable);
+    @}
+
+  if (error_message_count != 0)
+    error (EXIT_FAILURE, 0, "%u errors found", error_message_count);
+@}
+@end smallexample
+
+@code{error} and @code{error_at_line} are clearly the functions of
+choice and enable the programmer to write applications which follow the
+GNU coding standard.  @Theglibc{} additionally contains functions which
+are used in BSD for the same purpose.  These functions are declared in
+@file{err.h}.  It is generally advised to not use these functions.  They
+are included only for compatibility.
+
+@deftypefun void warn (const char *@var{format}, @dots{})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @ascuintl{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c Just calls vwarn with the va_list.
+The @code{warn} function is roughly equivalent to a call like
+@smallexample
+  error (0, errno, format, @r{the parameters})
+@end smallexample
+@noindent
+except that the global variables @code{error} respects and modifies
+are not used.
+@end deftypefun
+
+@deftypefun void vwarn (const char *@var{format}, va_list @var{ap})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @ascuintl{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c While holding stderr's recursive lock, it prints the programname, the
+@c given message, and the error string with fw?printf's %m.  When the
+@c stream is wide, convert_and_print converts the format string to an
+@c alloca/malloc-created buffer using mbsrtowcs and then calls fwprintf.
+The @code{vwarn} function is just like @code{warn} except that the
+parameters for the handling of the format string @var{format} are passed
+in as a value of type @code{va_list}.
+@end deftypefun
+
+@deftypefun void warnx (const char *@var{format}, @dots{})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c Same as warn, but without the strerror translation issues.
+The @code{warnx} function is roughly equivalent to a call like
+@smallexample
+  error (0, 0, format, @r{the parameters})
+@end smallexample
+@noindent
+except that the global variables @code{error} respects and modifies
+are not used.  The difference to @code{warn} is that no error number
+string is printed.
+@end deftypefun
+
+@deftypefun void vwarnx (const char *@var{format}, va_list @var{ap})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c Same as vwarn, but without the strerror translation issues.
+The @code{vwarnx} function is just like @code{warnx} except that the
+parameters for the handling of the format string @var{format} are passed
+in as a value of type @code{va_list}.
+@end deftypefun
+
+@deftypefun void err (int @var{status}, const char *@var{format}, @dots{})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @ascuintl{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c Same as warn followed by exit.
+The @code{err} function is roughly equivalent to a call like
+@smallexample
+  error (status, errno, format, @r{the parameters})
+@end smallexample
+@noindent
+except that the global variables @code{error} respects and modifies
+are not used and that the program is exited even if @var{status} is zero.
+@end deftypefun
+
+@deftypefun void verr (int @var{status}, const char *@var{format}, va_list @var{ap})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @ascuintl{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c Same as vwarn followed by exit.
+The @code{verr} function is just like @code{err} except that the
+parameters for the handling of the format string @var{format} are passed
+in as a value of type @code{va_list}.
+@end deftypefun
+
+@deftypefun void errx (int @var{status}, const char *@var{format}, @dots{})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c Same as warnx followed by exit.
+The @code{errx} function is roughly equivalent to a call like
+@smallexample
+  error (status, 0, format, @r{the parameters})
+@end smallexample
+@noindent
+except that the global variables @code{error} respects and modifies
+are not used and that the program is exited even if @var{status}
+is zero.  The difference to @code{err} is that no error number
+string is printed.
+@end deftypefun
+
+@deftypefun void verrx (int @var{status}, const char *@var{format}, va_list @var{ap})
+@standards{BSD, err.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{}}}
+@c Same as vwarnx followed by exit.
+The @code{verrx} function is just like @code{errx} except that the
+parameters for the handling of the format string @var{format} are passed
+in as a value of type @code{va_list}.
+@end deftypefun

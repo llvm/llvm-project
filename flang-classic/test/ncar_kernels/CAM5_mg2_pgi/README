@@ -1,0 +1,7 @@
+MG2 kernel
+
+For general information about MG2 kernel, please read README in https://subversion.ucar.edu/pubasap/kernels/MG2.
+
+This version of MG2 is generated from rev. 69541 of https://svn-ccsm-models.cgd.ucar.edu/cam1/trunk_tags/cam5_3_74 using PGI compiler.
+
+Please contact Youngsung Kim(youngsun@ucar.edu) for any questions concerning this kernel.

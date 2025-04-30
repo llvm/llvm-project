@@ -1,0 +1,29 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4
+type {struct statvfs}
+
+element {struct statvfs} {unsigned long} f_bsize
+element {struct statvfs} {unsigned long} f_frsize
+element {struct statvfs} fsblkcnt_t f_blocks
+element {struct statvfs} fsblkcnt_t f_bfree
+element {struct statvfs} fsblkcnt_t f_bavail
+element {struct statvfs} fsfilcnt_t f_files
+element {struct statvfs} fsfilcnt_t f_ffree
+element {struct statvfs} fsfilcnt_t f_favail
+// Bug 23086: f_fsid has type unsigned long long instead of unsigned long
+xfail[i386-gnu]-element {struct statvfs} {unsigned long} f_fsid
+element {struct statvfs} {unsigned long} f_flag
+element {struct statvfs} {unsigned long} f_namemax
+
+type fsblkcnt_t
+type fsfilcnt_t
+
+constant ST_RDONLY
+constant ST_NOSUID
+
+function int statvfs (const char*, struct statvfs*)
+function int fstatvfs (int, struct statvfs*)
+
+allow f_*
+allow ST_*
+allow *_t
+#endif

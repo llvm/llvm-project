@@ -1,0 +1,236 @@
+# Rules for MiG interfaces that want to go into the C library.
+# Copyright (C) 1991-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+# Makefiles may define these variable before including this file:
+#	user-interfaces		Names of interfaces to put user stubs in for.
+#	server-interfaces	Names of interfaces to put server stubs in for.
+#	interface-library	Name of interface library to build and install.
+# This file sets:
+#	interface-headers	Names of generated interface header files.
+#	interface-routines	Names of generated interface routines.
+# All user stubs are put in individual files, prefixed with RPC_; header
+# for both __ and non-__ names is put in foo.h.  Server interfaces are
+# written to foo_server.c and foo_server.h; the server functions are called
+# _S_rpcname.
+
+# Includers can also add to or modify `migdefines' to set MiG flags.
+# They can also set `migheaderpipe' to mangle the MiG header output.
+
+all:
+
+# Make sure no value comes from the environment, since we append to it.
+# This is done also in ../Rules, but we append to the value before
+# including Rules, which changes the origin.
+ifneq	"$(findstring env,$(origin generated))" ""
+generated :=
+endif
+
+
+include ../Makeconfig
+
+# This makefile contains a lot of implicit rules that get optimized
+# away if the target directory does not exist.
+ifndef no_deps
+-include $(objpfx)dummy.mk
+endif
+$(objpfx)dummy.mk:
+	$(make-target-directory)
+	echo '# Empty' > $@
+
+MIGFLAGS = -DSTANDALONE -DTypeCheck=0 \
+	   $(+includes) $(migdefines) -subrprefix __
+# Putting CC in the enivronment makes the mig wrapper script
+# use the same compiler setup we are using to run cpp.
+MIG := CC='${CC}' CPP='${CPP} -x c' $(MIG)
+
+.SUFFIXES: .defs	# Just to set specified_rule_matched.
+
+define nl	# This is needed by *.ir.
+
+
+endef
+ifdef user-interfaces
+*.ir := $(addprefix $(objpfx),$(foreach if,$(user-interfaces),$(if).ir))
+ifndef no_deps
+ifndef inhibit_interface_rules
+-include $(*.ir)
+endif
+endif
+ifneq "$(*.ir)" "$(wildcard $(*.ir))"
+# If any .ir file is missing, we will be unable to make all the deps.
+no_deps=t
+endif
+generated += $(*.ir:$(objpfx)%=%)
+endif
+
+
+# %.ir defines a variable `%-calls', which lists the RPCs defined by
+# %.defs, and a rule to build $(%-calls:%=RPC_$(%-userprefix)%.c) from
+# %.defs, where $(%-userprefix) is the user prefix given in %.defs.  We use
+# the kludgificacious method of defining a pattern rule to build files
+# matching patterns we are pretty damn sure will only match the particular
+# files we have in mind.  To be so damn sure, we use the silly names
+# RPC_*.c and the pattern R%C_*.c because using __*.c and _%*.c (or any
+# other useful pattern) causes the rule for `host_info' to also match
+# `xxx_host_info', and analogous lossage.
+#
+# Depend on %.h just so they will be built from %.uh in the
+# makefile-rebuilding run which builds %.ir; otherwise, %.uh is built as an
+# intermediate in order to make %.ir and then removed before re-exec, when
+# %.uh is built all over again to build %.h.
+$(objpfx)%.ir: $(objpfx)%.uh $(objpfx)%.h
+	($(AWK) "NF == 4 && (\$$2 == \"Routine\" || \$$2 == \"SimpleRoutine\")\
+	        { printf \"$*-calls += %s\\n\", \$$3 }" $<	;\
+	 echo '$$($*-calls:%=$$(objpfx)R\%C_%.c): $$(objpfx)$*.ustamp ;';\
+	) > $@-new
+	mv -f $@-new $@
+vpath Machrules ../mach	# Find ourselves.
+
+ifndef transform-user-stub-output
+transform-user-stub-output = tmp
+define transform-user-stub
+echo "weak_alias (__$$call, $$call)" >> $(objpfx)tmp_$${call}.c;
+endef
+endif
+
+
+# Generate `#include <NAME.defs>', taking $* for NAME.
+# If $(NAME.defs) is defined use its value in place of `NAME.defs'.
+define include-%.defs
+echo '#include <$(firstword $($*.defs) $*.defs)>'
+endef
+
+ifndef no_deps
+# Not an implicit rule so the stamps are never removed as intermediates!
+$(patsubst %,$(objpfx)%.ustamp,$(user-interfaces)): $(objpfx)%.ustamp:
+	rm -f $@
+	$(include-%.defs) | \
+	$(MIG) - /dev/null -prefix __ \
+	       $(MIGFLAGS) $(user-MIGFLAGS) $(MIGFLAGS-$*) \
+	       -i $(objpfx)tmp_ \
+	       -server /dev/null -user /dev/null -header /dev/null
+	for call in $($*-calls); do \
+	  $(transform-user-stub) \
+	  $(move-if-change) $(objpfx)$(transform-user-stub-output)_$${call}.c \
+			    $(objpfx)RPC_$${call}.c; \
+	done
+	touch $@
+-include $(patsubst %,$(objpfx)%.udeps,$(user-interfaces))
+$(patsubst %,$(objpfx)%.udeps,$(user-interfaces)):
+  $(objpfx)%.udeps: $(..)mach/Machrules
+	$(make-target-directory)
+# We must use $(CFLAGS) to get -O flags that affect #if's in header files.
+	$(include-%.defs) | \
+	$(CC) $(CFLAGS) $(CPPFLAGS) -M -x c - | \
+	sed -e 's,- *:,$(.udeps-targets):,' \
+	    $(sed-remove-objpfx) > $@.new
+	mv -f $@.new $@
+.udeps-targets = $@ $(@:.udeps=.ustamp) $(@:.udeps=.uh) $(@:.udeps=.__h) \
+		 $(@:.udeps=_server.c) $(@:.udeps=_server.h)
+endif
+
+# Look for the server stub files where they will be written.
+vpath %_server.c $(addprefix $(objpfx),$(sort $(dir $(server-interfaces))))
+
+# Build the server stubs in $(objdir).
+$(objpfx)%_server.c $(objpfx)%_server.h:
+	$(make-target-directory)
+	$(include-%.defs) | \
+	$(MIG) - /dev/null -prefix _S_ \
+	       $(MIGFLAGS) $(server-MIGFLAGS) $(MIGFLAGS-$*) \
+	       -user /dev/null -header /dev/null \
+	       -server $(@:.h=.c) -sheader $(@:.c=.h)
+
+# To get header files that declare both the straight and __ functions,
+# we generate two files and paste them together.
+$(patsubst %,$(objpfx)%.uh,$(user-interfaces)): $(objpfx)%.uh:; $(mig.uh)
+define mig.uh
+$(make-target-directory)
+$(include-%.defs) | \
+$(MIG) - /dev/null $(MIGFLAGS) $(MIGFLAGS-$*) \
+       -header $@ -server /dev/null -user /dev/null
+endef
+$(patsubst %,$(objpfx)%.__h,$(user-interfaces)): $(objpfx)%.__h:; $(mig.__h)
+define mig.__h
+$(make-target-directory)
+$(include-%.defs) | \
+$(MIG) - /dev/null $(MIGFLAGS) $(MIGFLAGS-$*) -prefix __ \
+       -header $@ -server /dev/null -user /dev/null
+endef
+
+$(patsubst %,$(objpfx)%.h,$(user-interfaces)): $(objpfx)%.h: $(objpfx)%.__h \
+							     $(objpfx)%.uh
+# The last line of foo.__h is "#endif _foo_user_".
+# The first two lines of foo.uh are "#ifndef _foo_user_"/"#define _foo_user_".
+	(sed -e '$$d' $<; sed -e '1,2d' $(word 2,$^)) $(migheaderpipe) > $@-new
+	mv -f $@-new $@
+
+interface-routines := $(foreach if,$(user-interfaces),			\
+				$(addprefix RPC_,$($(if)-calls)))	\
+		      $(server-interfaces:%=%_server)
+interface-headers := $(user-interfaces:%=%.h) \
+		     $(server-interfaces:%=%_server.h)
+
+# Remove the generated user stub source and header files,
+# and don't distribute them.
+mach-generated = $(interface-routines:%=%.c) $(interface-headers) \
+		 $(foreach h,$(user-interfaces),$h.uh $h.__h)
+generated += $(mach-generated)
+
+# These are needed to generate the dependencies.
+before-compile += $(interface-headers:%=$(objpfx)%)
+
+# Don't let these be intermediate files and get removed.
+$(foreach h,$(interface-headers:%.h=$(objpfx)%),$h.h $h.__h $h.uh) :
+$(interface-routines:%=$(objpfx)%.c) :
+
+# Convenient target to generate all the headers.
+.PHONY: interface-headers
+interface-headers: $(interface-headers)
+
+# Don't automatically generate dependencies for the sources we generate.
+# There are likely to be a whole lot of them, and we know their
+# dependencies ahead of time anyway because they're boilerplate.
+omit-deps += $(interface-routines)
+
+# Choose any single module generated by MiG.  We will compute this module's
+# dependencies and then assume all other MiG-generated modules depend on the
+# same headers.
+some-if-rtn := $(firstword $(interface-routines))
+ifdef some-if-rtn
+$(foreach o,$(object-suffixes),$(interfaces-routines:%=%$o)): $(some-if-rtn).d
+generated += $(some-if-rtn).d
+endif
+
+# If defined, $(interface-library) is `libNAME'.  It is to be a library
+# containing all the MiG-generated functions for the specified interfaces.
+
+ifdef interface-library
+
+$(interface-library)-routines = $(interface-routines) stack_chk_fail_local
+extra-libs += $(interface-library)
+extra-libs-others += $(interface-library)
+
+ifeq (yes,$(build-shared))
+interface.so = $(interface-library:=.so)
+
+# Depend on libc.so so a DT_NEEDED is generated in the shared objects.
+$(objpfx)$(interface.so): $(common-objpfx)libc.so
+endif
+
+endif

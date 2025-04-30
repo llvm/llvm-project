@@ -1,0 +1,16 @@
+libmvec {
+  GLIBC_2.22 {
+    _ZGVbN2v_cos; _ZGVcN4v_cos; _ZGVdN4v_cos; _ZGVeN8v_cos;
+    _ZGVbN2v_sin; _ZGVcN4v_sin; _ZGVdN4v_sin; _ZGVeN8v_sin;
+    _ZGVbN2vvv_sincos; _ZGVcN4vvv_sincos; _ZGVdN4vvv_sincos; _ZGVeN8vvv_sincos;
+    _ZGVbN2v_log; _ZGVcN4v_log; _ZGVdN4v_log; _ZGVeN8v_log;
+    _ZGVbN2v_exp; _ZGVcN4v_exp; _ZGVdN4v_exp; _ZGVeN8v_exp;
+    _ZGVbN2vv_pow; _ZGVcN4vv_pow; _ZGVdN4vv_pow; _ZGVeN8vv_pow;
+    _ZGVbN4v_cosf; _ZGVcN8v_cosf; _ZGVdN8v_cosf; _ZGVeN16v_cosf;
+    _ZGVbN4v_sinf; _ZGVcN8v_sinf; _ZGVdN8v_sinf; _ZGVeN16v_sinf;
+    _ZGVbN4v_logf; _ZGVcN8v_logf; _ZGVdN8v_logf; _ZGVeN16v_logf;
+    _ZGVbN4v_expf; _ZGVcN8v_expf; _ZGVdN8v_expf; _ZGVeN16v_expf;
+    _ZGVbN4vv_powf; _ZGVcN8vv_powf; _ZGVdN8vv_powf; _ZGVeN16vv_powf;
+    _ZGVbN4vvv_sincosf; _ZGVcN8vvv_sincosf; _ZGVdN8vvv_sincosf; _ZGVeN16vvv_sincosf;
+  }
+}

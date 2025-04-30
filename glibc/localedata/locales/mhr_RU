@@ -1,0 +1,166 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Meadow Mari Language Locale
+% Source: PeshSajSoft Ltd.
+% Address: 112, Komsomolskaya Street
+%    Yoshkar-Ola, Mari El Republic, Russia
+% Contact: Vyacheslav Kileev
+% Email: slavakileev@yandex.ru
+% Tel: +7 - 8362 351344
+% Language: mhr
+% Territory: RU
+% Revision: 0.2
+% Date: 2011-04-18
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Mari locale for Russia"
+source     "PeshSajSoft Ltd."
+address    "112, Komsomolskaya Street, Yoshkar-Ola, Mari El Republic, Russia"
+contact    "Vyacheslav Kileev"
+email      "slavakileev@yandex.ru"
+tel        ""
+language   "Meadow Mari"
+territory  "Russia"
+revision   "0.2"
+date       "2011-04-18"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1" % Additional Mari letters already fine sorted in this iso standart
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0422><U0442>]"
+noexpr  "^[-0nN<U0423><U0443>]"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "RUB "
+currency_symbol           "<U20BD>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ru_RU"
+END LC_NUMERIC
+
+LC_TIME
+day     "<U0420><U0443><U0448><U0430><U0440><U043D><U044F>";/
+	"<U0428><U043E><U0447><U043C><U043E>";/
+	"<U041A><U0443><U0448><U043A><U044B><U0436><U043C><U043E>";/
+	"<U0412><U04F1><U0440><U0433><U0435><U0447><U0435>";/
+	"<U0418><U0437><U0430><U0440><U043D><U044F>";/
+	"<U041A><U0443><U0433><U0430><U0440><U043D><U044F>";/
+	"<U0428><U0443><U043C><U0430><U0442><U043A><U0435><U0447><U0435>"
+abday   "<U0420><U0448><U0440>";/
+	"<U0428><U0447><U043C>";/
+	"<U041A><U0436><U043C>";/
+	"<U0412><U0433><U0447>";/
+	"<U0418><U0437><U0440>";/
+	"<U041A><U0433><U0440>";/
+	"<U0428><U043C><U0442>"
+mon     "<U0428><U043E><U0440><U044B><U043A><U0439><U043E><U043B>";/
+	"<U041F><U0443><U0440><U0433><U044B><U0436>";/
+	"<U04F0><U044F><U0440><U043D><U044F>";/
+	"<U0412><U04F1><U0434><U0448><U043E><U0440>";/
+	"<U0410><U0433><U0430>";/
+	"<U041F><U0435><U043B><U0435><U0434><U044B><U0448>";/
+	"<U0421><U04F1><U0440><U0435><U043C>";/
+	"<U0421><U043E><U0440><U043B><U0430>";/
+	"<U0418><U0434><U044B><U043C>";/
+	"<U0428><U044B><U0436><U0430>";/
+	"<U041A><U044B><U043B><U043C><U0435>";/
+	"<U0422><U0435><U043B><U0435>"
+abmon   "<U0428><U0440><U043A>";/
+	"<U041F><U0433><U0436>";/
+	"<U04F0><U0440><U043D>";/
+	"<U0412><U0448><U0440>";/
+	"<U0410><U0433><U0430>";/
+	"<U041F><U0434><U0448>";/
+	"<U0421><U0440><U043C>";/
+	"<U0421><U0440><U043B>";/
+	"<U0418><U0434><U043C>";/
+	"<U0428><U044B><U0436>";/
+	"<U041A><U043B><U043C>";/
+	"<U0422><U0435><U043B>"
+d_t_fmt "%A %Y %B %d %T"
+d_fmt     "%Y.%m.%d"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+date_fmt       "%A %Y %B %d %H:%M:%S %Z"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "ru_RU"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ru_RU"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "ru_RU"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_ab2 "RU"
+country_ab3 "RUS"
+country_num 643
+country_car    "RUS"
+% марий йылме
+lang_name    "<U043C><U0430><U0440><U0438><U0439> <U0439><U044B><U043B><U043C><U0435>"
+lang_term    "mhr"
+lang_lib    "mhr"
+END LC_ADDRESS

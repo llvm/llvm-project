@@ -1,0 +1,36 @@
+libc {
+  GLIBC_2.0 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+
+    # Exception handling support functions from libgcc
+    __register_frame; __register_frame_table; __deregister_frame;
+    __frame_state_for; __register_frame_info_table;
+
+    # Needed by gcc:
+    _flush_cache;
+
+    # c*
+    cachectl; cacheflush;
+
+    # s*
+    sysmips;
+  }
+  GLIBC_2.2 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+
+    # _*
+    _test_and_set;
+  }
+  GLIBC_2.3.3 {
+    # Changed PTHREAD_STACK_MIN.
+    pthread_attr_setstack;
+    pthread_attr_setstacksize;
+  }
+  GLIBC_2.11 {
+    fallocate64;
+  }
+  GLIBC_PRIVATE {
+    # nptl/pthread_cond_timedwait.c uses INTERNAL_VSYSCALL(clock_gettime).
+    __vdso_clock_gettime;
+  }
+}

@@ -1,0 +1,199 @@
+type div_t
+element div_t int quot
+element div_t int rem
+type ldiv_t
+element ldiv_t long quot
+element ldiv_t long rem
+
+macro-int-constant EXIT_FAILURE
+macro-int-constant EXIT_SUCCESS == 0
+
+macro-constant NULL == 0
+macro-int-constant RAND_MAX >= 32767
+macro MB_CUR_MAX
+
+#if defined ISO99 || defined ISO11 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+type lldiv_t
+element lldiv_t {long long} quot
+element lldiv_t {long long} rem
+#endif
+type size_t
+type wchar_t
+
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+constant WNOHANG
+constant WUNTRACED
+
+macro WEXITSTATUS
+macro WIFEXITED
+macro WIFSIGNALED
+macro WIFSTOPPED
+macro WSTOPSIG
+macro WTERMSIG
+#endif
+
+#if !defined ISO && !defined XPG4 && !defined XPG42 && !defined UNIX98 && !defined POSIX
+function void _Exit (int)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function long a64l (const char*)
+#endif
+function void abort (void)
+function int abs (int)
+#if defined ISO11
+function {void *} aligned_alloc (size_t, size_t)
+#endif
+function int atexit (void(*)(void))
+#if defined ISO11
+function int at_quick_exit (void (*) (void))
+#endif
+function double atof (const char*)
+function int atoi (const char*)
+function {long int} atol (const char*)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function {long long} atoll (const char*)
+#endif
+function {void*} bsearch (const void*, const void*, size_t, size_t, int(*)(const void*, const void*))
+function {void*} calloc (size_t, size_t)
+function div_t div (int, int)
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function double drand48 (void)
+#endif
+#if defined XPG42 || defined UNIX98 || defined XOPEN2K
+function {char*} ecvt (double, int, int*, int*)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function double erand48 (unsigned short int[3])
+#endif
+function void exit (int)
+#if defined XPG42 || defined UNIX98 || defined XOPEN2K
+function {char*} fcvt (double, int, int*, int*)
+#endif
+function void free (void*)
+#if defined XPG42 || defined UNIX98 || defined XOPEN2K
+function {char*} gcvt (double, int, char*)
+#endif
+function {char*} getenv (const char*)
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX
+function int getsubopt (char**, char *const*, char**)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int grantpt (int)
+function {char*} initstate (unsigned int, char*, size_t)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function {long int} jrand48 (unsigned short int[3])
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function {char*} l64a (long)
+#endif
+function {long int} labs (long int)
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function void lcong48 (unsigned short int[7])
+#endif
+function ldiv_t ldiv (long int, long int)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function {long long} llabs (long long)
+function lldiv_t lldiv (long long, long long)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function {long int} lrand48 (void)
+#endif
+function {void*} malloc (size_t)
+function int mblen (const char*, size_t)
+function size_t mbstowcs (wchar_t*, const char*, size_t)
+function int mbtowc (wchar_t*, const char*, size_t)
+#if defined XOPEN2K8 || defined POSIX2008
+function {char*} mkdtemp (char*)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined XOPEN2K8 && !defined POSIX2008
+function {char*} mktemp (char*)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX
+function int mkstemp (char*)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function {long int} mrand48 (void)
+function {long int} nrand48 (unsigned short int[3])
+#endif
+#if defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int posix_memalign (void**, size_t, size_t)
+#endif
+#if defined XOPEN2K || defined XOPEN2K8
+function int posix_openpt (int)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function {char*} ptsname (int)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function int putenv (char*)
+#endif
+function void qsort (void*, size_t, size_t, int(*)(const void*, const void*))
+#if defined ISO11
+function void quick_exit (int)
+#endif
+function int rand (void)
+#if defined POSIX || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int rand_r (unsigned int*)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function long random (void)
+#endif
+function {void*} realloc (void*, size_t)
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function {char*} realpath (const char*, char*)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function {unsigned short int*} seed48 (unsigned short int[3])
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function int setenv (const char*, const char*, int)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function {char*} setstate (char*)
+#endif
+function void srand (unsigned int)
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function void srand48 (long int)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function void srandom (unsigned)
+#endif
+function double strtod (const char*, char**)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function float strtof (const char*, char**)
+function {long double} strtold (const char*, char**)
+#endif
+function {long int} strtol (const char*, char**, int)
+function {unsigned long int} strtoul (const char*, char**, int)
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function {long long int} strtoll (const char*, char**, int)
+function {unsigned long long int} strtoull (const char*, char**, int)
+#endif
+function int system (const char*)
+#if defined XPG42 || defined UNIX98
+function int ttyslot (void)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int unlockpt (int)
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function int unsetenv (const char*)
+#endif
+#if defined XPG42 || defined UNIX98
+function {void*} valloc (size_t)
+#endif
+function size_t wcstombs (char*, const wchar_t*, size_t)
+function int wctomb (char*, wchar_t)
+
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+allow-header stddef.h
+allow-header limits.h
+allow-header math.h
+allow-header sys/wait.h
+#endif
+
+allow str[abcdefghijklmnopqrstuvwxyz]*
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif

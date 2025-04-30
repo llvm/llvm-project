@@ -1,0 +1,3056 @@
+@node Date and Time, Resource Usage And Limitation, Arithmetic, Top
+@c %MENU% Functions for getting the date and time and formatting them nicely
+@chapter Date and Time
+
+This chapter describes functions for manipulating dates and times,
+including functions for determining what time it is and conversion
+between different time representations.
+
+@menu
+* Time Basics::                 Concepts and definitions.
+* Time Types::                  Data types to represent time.
+* Calculating Elapsed Time::    How to calculate the length of an interval.
+* Processor And CPU Time::      Time a program has spent executing.
+* Calendar Time::               Manipulation of ``real'' dates and times.
+* Setting an Alarm::            Sending a signal after a specified time.
+* Sleeping::                    Waiting for a period of time.
+@end menu
+
+
+@node Time Basics
+@section Time Basics
+@cindex time
+
+Discussing time in a technical manual can be difficult because the word
+``time'' in English refers to lots of different things.  In this manual,
+we use a rigorous terminology to avoid confusion, and the only thing we
+use the simple word ``time'' for is to talk about the abstract concept.
+
+A @dfn{calendar time} is a point in the time continuum, for example
+November 4, 1990, at 18:02.5 UTC.  Sometimes this is called ``absolute
+time''.
+@cindex calendar time
+
+We don't speak of a ``date'', because that is inherent in a calendar
+time.
+@cindex date
+
+An @dfn{interval} is a contiguous part of the time continuum between two
+calendar times, for example the hour between 9:00 and 10:00 on July 4,
+1980.
+@cindex interval
+
+An @dfn{elapsed time} is the length of an interval, for example, 35
+minutes.  People sometimes sloppily use the word ``interval'' to refer
+to the elapsed time of some interval.
+@cindex elapsed time
+@cindex time, elapsed
+
+An @dfn{amount of time} is a sum of elapsed times, which need not be of
+any specific intervals.  For example, the amount of time it takes to
+read a book might be 9 hours, independently of when and in how many
+sittings it is read.
+
+A @dfn{period} is the elapsed time of an interval between two events,
+especially when they are part of a sequence of regularly repeating
+events.
+@cindex period of time
+
+A @dfn{simple calendar time} is a calendar time represented as an
+elapsed time since a fixed, implementation-specific calendar time
+called the @dfn{epoch}.  This representation is convenient for doing
+calculations on calendar times, such as finding the elapsed time
+between two calendar times.  Simple calendar times are independent of
+time zone; they represent the same instant in time regardless of where
+on the globe the computer is.
+
+POSIX says that simple calendar times do not include leap seconds, but
+some (otherwise POSIX-conformant) systems can be configured to include
+leap seconds in simple calendar times.
+@cindex leap seconds
+@cindex seconds, leap
+@cindex simple time
+@cindex simple calendar time
+@cindex calendar time, simple
+@cindex epoch
+
+A @dfn{broken-down time} is a calendar time represented by its
+components in the Gregorian calendar: year, month, day, hour, minute,
+and second.  A broken-down time value is relative to a specific time
+zone, and so it is also sometimes called a @dfn{local time}.
+Broken-down times are most useful for input and output, as they are
+easier for people to understand, but more difficult to calculate with.
+@cindex broken-down time
+@cindex local time
+@cindex Gregorian calendar
+@cindex calendar, Gregorian
+
+@dfn{CPU time} measures the amount of time that a single process has
+actively used a CPU to perform computations.  It does not include the
+time that process has spent waiting for external events.  The system
+tracks the CPU time used by each process separately.
+@cindex CPU time
+
+@dfn{Processor time} measures the amount of time @emph{any} CPU has
+been in use by @emph{any} process.  It is a basic system resource,
+since there's a limit to how much can exist in any given interval (the
+elapsed time of the interval times the number of CPUs in the computer)
+
+People often call this CPU time, but we reserve the latter term in
+this manual for the definition above.
+@cindex processor time
+
+@node Time Types
+@section Time Types
+
+ISO C and POSIX define several data types for representing elapsed
+times, simple calendar times, and broken-down times.
+
+@deftp {Data Type} clock_t
+@standards{ISO, time.h}
+@code{clock_t} is used to measure processor and CPU time.
+It may be an integer or a floating-point type.
+Its values are counts of @dfn{clock ticks} since some arbitrary event
+in the past.
+The number of clock ticks per second is system-specific.
+@xref{Processor And CPU Time}, for further detail.
+@cindex clock ticks
+@cindex ticks, clock
+@end deftp
+
+@deftp {Data Type} time_t
+@standards{ISO, time.h}
+@code{time_t} is the simplest data type used to represent simple
+calendar time.
+
+In ISO C, @code{time_t} can be either an integer or a floating-point
+type, and the meaning of @code{time_t} values is not specified.  The
+only things a strictly conforming program can do with @code{time_t}
+values are: pass them to @code{difftime} to get the elapsed time
+between two simple calendar times (@pxref{Calculating Elapsed Time}),
+and pass them to the functions that convert them to broken-down time
+(@pxref{Broken-down Time}).
+
+On POSIX-conformant systems, @code{time_t} is an integer type and its
+values represent the number of seconds elapsed since the @dfn{epoch},
+which is 00:00:00 on January 1, 1970, Coordinated Universal Time.
+
+@Theglibc{} additionally guarantees that @code{time_t} is a signed
+type, and that all of its functions operate correctly on negative
+@code{time_t} values, which are interpreted as times before the epoch.
+@cindex epoch
+@end deftp
+
+@deftp {Data Type} {struct timespec}
+@standards{POSIX.1, time.h}
+@cindex timespec
+@code{struct timespec} represents a simple calendar time, or an
+elapsed time, with sub-second resolution.  It is declared in
+@file{time.h} and has the following members:
+
+@table @code
+@item time_t tv_sec
+The number of whole seconds elapsed since the epoch (for a simple
+calendar time) or since some other starting point (for an elapsed
+time).
+
+@item long int tv_nsec
+The number of nanoseconds elapsed since the time given by the
+@code{tv_sec} member.
+
+When @code{struct timespec} values are produced by @glibcadj{}
+functions, the value in this field will always be greater than or
+equal to zero, and less than 1,000,000,000.
+When @code{struct timespec} values are supplied to @glibcadj{}
+functions, the value in this field must be in the same range.
+@end table
+@end deftp
+
+@deftp {Data Type} {struct timeval}
+@standards{BSD, sys/time.h}
+@cindex timeval
+@code{struct timeval} is an older type for representing a simple
+calendar time, or an elapsed time, with sub-second resolution. It is
+almost the same as @code{struct timespec}, but provides only
+microsecond resolution.  It is declared in @file{sys/time.h} and has
+the following members:
+
+@table @code
+@item time_t tv_sec
+The number of whole seconds elapsed since the epoch (for a simple
+calendar time) or since some other starting point (for an elapsed
+time).
+
+@item long int tv_usec
+The number of microseconds elapsed since the time given by the
+@code{tv_sec} member.
+
+When @code{struct timeval} values are produced by @glibcadj{}
+functions, the value in this field will always be greater than or
+equal to zero, and less than 1,000,000.
+When @code{struct timeval} values are supplied to @glibcadj{}
+functions, the value in this field must be in the same range.
+@end table
+@end deftp
+
+@deftp {Data Type} {struct tm}
+@standards{ISO, time.h}
+This is the data type used to represent a broken-down time.  It has
+separate fields for year, month, day, and so on.
+@xref{Broken-down Time}, for further details.
+@end deftp
+
+@node Calculating Elapsed Time
+@section Calculating Elapsed Time
+
+Often, one wishes to calculate an elapsed time as the difference
+between two simple calendar times.  @Theglibc{} provides only one
+function for this purpose.
+
+@deftypefun double difftime (time_t @var{end}, time_t @var{begin})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{difftime} function returns the number of seconds of elapsed
+time from calendar time @var{begin} to calendar time @var{end}, as
+a value of type @code{double}.
+
+On POSIX-conformant systems, the advantage of using
+@samp{difftime (@var{end}, @var{begin})} over @samp{@var{end} - @var{begin}}
+is that it will produce the mathematically correct result even if
+@var{end} and @var{begin} are so far apart that a simple subtraction
+would overflow.  However, if they are so far apart that a @code{double}
+cannot exactly represent the difference, the result will be inexact.
+
+On other systems, @code{time_t} values might be encoded in a way that
+prevents subtraction from working directly, and then @code{difftime}
+would be the only way to compute their difference.
+@end deftypefun
+
+@Theglibc{} does not provide any functions for computing the
+difference between two values of type @w{@code{struct timeval}} or
+@w{@code{struct timespec}}.  Here is the recommended way to do this
+calculation by hand.  It works even on some peculiar operating systems
+where the @code{tv_sec} member has an unsigned type.
+
+@smallexample
+@include timeval_subtract.c.texi
+@end smallexample
+
+@node Processor And CPU Time
+@section Processor And CPU Time
+
+If you're trying to optimize your program or measure its efficiency,
+it's very useful to know how much processor time it uses.  For that,
+calendar time and elapsed times are useless because a process may spend
+time waiting for I/O or for other processes to use the CPU.  However,
+you can get the information with the functions in this section.
+
+CPU time (@pxref{Time Basics}) is represented by the data type
+@code{clock_t}, which is a number of @dfn{clock ticks}.  It gives the
+total amount of time a process has actively used a CPU since some
+arbitrary event.  On @gnusystems{}, that event is the creation of the
+process.  While arbitrary in general, the event is always the same event
+for any particular process, so you can always measure how much time on
+the CPU a particular computation takes by examining the process' CPU
+time before and after the computation.
+@cindex CPU time
+@cindex clock ticks
+@cindex ticks, clock
+
+On @gnulinuxhurdsystems{}, @code{clock_t} is equivalent to @code{long int} and
+@code{CLOCKS_PER_SEC} is an integer value.  But in other systems, both
+@code{clock_t} and the macro @code{CLOCKS_PER_SEC} can be either integer
+or floating-point types.  Casting CPU time values to @code{double}, as
+in the example above, makes sure that operations such as arithmetic and
+printing work properly and consistently no matter what the underlying
+representation is.
+
+Note that the clock can wrap around.  On a 32bit system with
+@code{CLOCKS_PER_SEC} set to one million this function will return the
+same value approximately every 72 minutes.
+
+For additional functions to examine a process' use of processor time,
+and to control it, see @ref{Resource Usage And Limitation}.
+
+
+@menu
+* CPU Time::                    The @code{clock} function.
+* Processor Time::              The @code{times} function.
+@end menu
+
+@node CPU Time
+@subsection CPU Time Inquiry
+
+To get a process' CPU time, you can use the @code{clock} function.  This
+facility is declared in the header file @file{time.h}.
+@pindex time.h
+
+In typical usage, you call the @code{clock} function at the beginning
+and end of the interval you want to time, subtract the values, and then
+divide by @code{CLOCKS_PER_SEC} (the number of clock ticks per second)
+to get processor time, like this:
+
+@smallexample
+@group
+#include <time.h>
+
+clock_t start, end;
+double cpu_time_used;
+
+start = clock();
+@dots{} /* @r{Do the work.} */
+end = clock();
+cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+@end group
+@end smallexample
+
+Do not use a single CPU time as an amount of time; it doesn't work that
+way.  Either do a subtraction as shown above or query processor time
+directly.  @xref{Processor Time}.
+
+Different computers and operating systems vary wildly in how they keep
+track of CPU time.  It's common for the internal processor clock
+to have a resolution somewhere between a hundredth and millionth of a
+second.
+
+@deftypevr Macro int CLOCKS_PER_SEC
+@standards{ISO, time.h}
+The value of this macro is the number of clock ticks per second measured
+by the @code{clock} function.  POSIX requires that this value be one
+million independent of the actual resolution.
+@end deftypevr
+
+@deftypefun clock_t clock (void)
+@standards{ISO, time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c On Hurd, this calls task_info twice and adds user and system time
+@c from both basic and thread time info structs.  On generic posix,
+@c calls times and adds utime and stime.  On bsd, calls getrusage and
+@c safely converts stime and utime to clock.  On linux, calls
+@c clock_gettime.
+This function returns the calling process' current CPU time.  If the CPU
+time is not available or cannot be represented, @code{clock} returns the
+value @code{(clock_t)(-1)}.
+@end deftypefun
+
+
+@node Processor Time
+@subsection Processor Time Inquiry
+
+The @code{times} function returns information about a process'
+consumption of processor time in a @w{@code{struct tms}} object, in
+addition to the process' CPU time.  @xref{Time Basics}.  You should
+include the header file @file{sys/times.h} to use this facility.
+@cindex processor time
+@cindex CPU time
+@pindex sys/times.h
+
+@deftp {Data Type} {struct tms}
+@standards{POSIX.1, sys/times.h}
+The @code{tms} structure is used to return information about process
+times.  It contains at least the following members:
+
+@table @code
+@item clock_t tms_utime
+This is the total processor time the calling process has used in
+executing the instructions of its program.
+
+@item clock_t tms_stime
+This is the processor time the system has used on behalf of the calling
+process.
+
+@item clock_t tms_cutime
+This is the sum of the @code{tms_utime} values and the @code{tms_cutime}
+values of all terminated child processes of the calling process, whose
+status has been reported to the parent process by @code{wait} or
+@code{waitpid}; see @ref{Process Completion}.  In other words, it
+represents the total processor time used in executing the instructions
+of all the terminated child processes of the calling process, excluding
+child processes which have not yet been reported by @code{wait} or
+@code{waitpid}.
+@cindex child process
+
+@item clock_t tms_cstime
+This is similar to @code{tms_cutime}, but represents the total processor
+time the system has used on behalf of all the terminated child processes
+of the calling process.
+@end table
+
+All of the times are given in numbers of clock ticks.  Unlike CPU time,
+these are the actual amounts of time; not relative to any event.
+@xref{Creating a Process}.
+@end deftp
+
+@deftypevr Macro int CLK_TCK
+@standards{POSIX.1, time.h}
+This is an obsolete name for the number of clock ticks per second.  Use
+@code{sysconf (_SC_CLK_TCK)} instead.
+@end deftypevr
+
+@deftypefun clock_t times (struct tms *@var{buffer})
+@standards{POSIX.1, sys/times.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c On HURD, this calls task_info twice, for basic and thread times info,
+@c adding user and system times into tms, and then gettimeofday, to
+@c compute the real time.  On BSD, it calls getclktck, getrusage (twice)
+@c and time.  On Linux, it's a syscall with special handling to account
+@c for clock_t counts that look like error values.
+The @code{times} function stores the processor time information for
+the calling process in @var{buffer}.
+
+The return value is the number of clock ticks since an arbitrary point
+in the past, e.g. since system start-up.  @code{times} returns
+@code{(clock_t)(-1)} to indicate failure.
+@end deftypefun
+
+@strong{Portability Note:} The @code{clock} function described in
+@ref{CPU Time} is specified by the @w{ISO C} standard.  The
+@code{times} function is a feature of POSIX.1.  On @gnusystems{}, the
+CPU time is defined to be equivalent to the sum of the @code{tms_utime}
+and @code{tms_stime} fields returned by @code{times}.
+
+@node Calendar Time
+@section Calendar Time
+
+This section describes the functions for getting, setting, and
+manipulating calendar times.
+
+@menu
+* Getting the Time::            Functions for finding out what time it is.
+* Setting and Adjusting the Time::
+                                Functions for setting and adjusting
+                                  the system clock.
+* Broken-down Time::            Facilities for manipulating local time.
+* Formatting Calendar Time::    Converting times to strings.
+* Parsing Date and Time::       Convert textual time and date information back
+                                 into broken-down time values.
+* TZ Variable::                 How users specify the time zone.
+* Time Zone Functions::         Functions to examine or specify the time zone.
+* Time Functions Example::      An example program showing use of some of
+				 the time functions.
+@end menu
+
+@node Getting the Time
+@subsection Getting the Time
+
+@Theglibc{} provides several functions for getting the current
+calendar time, with different levels of resolution.
+
+@deftypefun time_t time (time_t *@var{result})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This is the simplest function for getting the current calendar time.
+It returns the calendar time as a value of type @code{time_t}; on
+POSIX systems, that means it has a resolution of one second.  It
+uses the same clock as @w{@samp{clock_gettime (CLOCK_REALTIME_COARSE)}},
+when the clock is available or @w{@samp{clock_gettime (CLOCK_REALTIME)}}
+otherwise.
+
+If the argument @var{result} is not a null pointer, the calendar time
+value is also stored in @code{*@var{result}}.
+
+This function cannot fail.
+@end deftypefun
+
+Some applications need more precise timekeeping than is possible with
+a @code{time_t} alone.  Some applications also need more control over
+what is meant by ``the current time.''  For these applications, POSIX
+provides a function @code{clock_gettime} that can retrieve the time
+with up to nanosecond precision, from a variety of different clocks.
+Clocks can be system-wide, measuring time the same for all processes;
+or they can be per-process or per-thread, measuring CPU time consumed
+by a particular process, or some other similar resource.  Each clock
+has its own resolution and epoch.  You can find the resolution of a
+clock with the function @code{clock_getres}.  There is no function to
+get the epoch for a clock; either it is fixed and documented, or the
+clock is not meant to be used to measure absolute times.
+
+@deftp {Data Type} clockid_t
+@standards{POSIX.1, time.h}
+The type @code{clockid_t} is used for constants that indicate which of
+several system clocks one wishes to use.
+@end deftp
+
+All systems that support this family of functions will define at least
+this clock constant:
+
+@deftypevr Macro clockid_t CLOCK_REALTIME
+@standards{POSIX.1, time.h}
+This clock uses the POSIX epoch, 00:00:00 on January 1, 1970, Coordinated
+Universal Time. It is close to, but not necessarily in lock-step with, the
+clocks of @code{time} (above) and of @code{gettimeofday} (below).
+@end deftypevr
+
+@cindex monotonic time
+A second clock constant which is not universal, but still very common,
+is for a clock measuring @dfn{monotonic time}.  Monotonic time is
+useful for measuring elapsed times, because it guarantees that those
+measurements are not affected by changes to the system clock.
+
+@deftypevr Macro clockid_t CLOCK_MONOTONIC
+@standards{POSIX.1, time.h}
+System-wide clock that continuously measures the advancement of
+calendar time, ignoring discontinuous changes to the system's
+setting for absolute calendar time.
+
+The epoch for this clock is an unspecified point in the past.
+The epoch may change if the system is rebooted or suspended.
+Therefore, @code{CLOCK_MONOTONIC} cannot be used to measure
+absolute time, only elapsed time.
+@end deftypevr
+
+Systems may support more than just these two clocks.
+
+@deftypefun int clock_gettime (clockid_t @var{clock}, struct timespec *@var{ts})
+@standards{POSIX.1, time.h}
+Get the current time accoding to the clock identified by @var{clock},
+storing it as seconds and nanoseconds in @code{*@var{ts}}.
+@xref{Time Types}, for a description of @code{struct timespec}.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error condition is defined for this function:
+
+@table @code
+@item EINVAL
+The clock identified by @var{clock} is not supported.
+@end table
+@end deftypefun
+
+@code{clock_gettime} reports the time scaled to seconds and
+nanoseconds, but the actual resolution of each clock may not be as
+fine as one nanosecond, and may not be the same for all clocks.  POSIX
+also provides a function for finding out the actual resolution of a
+clock:
+
+@deftypefun int clock_getres (clockid_t @var{clock}, struct timespec *@var{res})
+@standards{POSIX.1, time.h}
+Get the actual resolution of the clock identified by @var{clock},
+storing it in @code{*@var{ts}}.
+
+For instance, if the clock hardware for @code{CLOCK_REALTIME}
+uses a quartz crystal that oscillates at 32.768 kHz,
+then its resolution would be 30.518 microseconds,
+and @w{@samp{clock_getres (CLOCK_REALTIME, &r)}} would set
+@code{r.tv_sec} to 0 and @code{r.tv_nsec} to 30518.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error condition is defined for this function:
+
+@table @code
+@item EINVAL
+The clock identified by @var{clock} is not supported.
+@end table
+@end deftypefun
+
+These functions, and the constants that identify particular clocks,
+are declared in @file{time.h}.
+
+@strong{Portability Note:} On some systems, including systems that use
+older versions of @theglibc{}, programs that use @code{clock_gettime}
+or @code{clock_setres} must be linked with the @code{-lrt} library.
+This has not been necessary with @theglibc{} since version 2.17.
+
+@Theglibc{} also provides an older, but still widely used, function
+for getting the current time with a resolution of microseconds.  This
+function is declared in @file{sys/time.h}.
+
+@deftypefun int gettimeofday (struct timeval *@var{tp}, void *@var{tzp})
+@standards{BSD, sys/time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Get the current calendar time, storing it as seconds and microseconds
+in @code{*@var{tp}}.  @xref{Time Types}, for a description of
+@code{struct timeval}.  The clock of @code{gettimeofday} is close to,
+but not necessarily in lock-step with, the clocks of @code{time} and of
+@w{@samp{clock_gettime (CLOCK_REALTIME)}} (see above).
+
+On some historic systems, if @var{tzp} was not a null pointer,
+information about a system-wide time zone would be written to
+@code{*@var{tzp}}.  This feature is obsolete and not supported on
+@gnusystems{}.  You should always supply a null pointer for this
+argument.  Instead, use the facilities described in @ref{Time Zone
+Functions} and in @ref{Broken-down Time} for working with time zones.
+
+This function cannot fail, and its return value is always @code{0}.
+
+@strong{Portability Note:} As of the 2008 revision of POSIX, this
+function is considered obsolete.  @Theglibc{} will continue to provide
+this function indefinitely, but new programs should use
+@code{clock_gettime} instead.
+@end deftypefun
+
+@node Setting and Adjusting the Time
+@subsection Setting and Adjusting the Time
+
+The clock hardware inside a modern computer is quite reliable, but it
+can still be wrong.  The functions in this section allow one to set
+the system's idea of the current calendar time, and to adjust the rate
+at which the system counts seconds, so that the calendar time will
+both be accurate, and remain accurate.
+
+The functions in this section require special privileges to use.
+@xref{Users and Groups}.
+
+@deftypefun int clock_settime (clockid_t @var{clock}, const struct timespec *@var{ts})
+@standards{POSIX, time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Change the current calendar time, according to the clock identified by
+@var{clock}, to be the simple calendar time in @code{*@var{ts}}.
+
+Not all of the system's clocks can be changed.  For instance, the
+@code{CLOCK_REALTIME} clock can be changed (with the appropriate
+privileges), but the @code{CLOCK_MONOTONIC} clock cannot.
+
+Because simple calendar times are independent of time zone, this
+function should not be used when the time zone changes (e.g.@: if the
+computer is physically moved from one zone to another).  Instead, use
+the facilities described in @ref{Time Zone Functions}.
+
+@code{clock_settime} causes the clock to jump forwards or backwards,
+which can cause a variety of problems.  Changing the
+@code{CLOCK_REALTIME} clock with @code{clock_settime} does not affect
+when timers expire (@pxref{Setting an Alarm}) or when sleeping
+processes wake up (@pxref{Sleeping}), which avoids some of the
+problems.  Still, for small changes made while the system is running,
+it is better to use @code{ntp_adjtime} (below) to make a smooth
+transition from one time to another.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EINVAL
+The clock identified by @var{clock} is not supported or cannot be set
+at all, or the simple calendar time in @code{*@var{ts}} is invalid
+(for instance, @code{ts->tv_nsec} is negative or greater than 999,999,999).
+
+@item EPERM
+This process does not have the privileges required to set the clock
+identified by @var{clock}.
+@end table
+
+@strong{Portability Note}: On some systems, including systems that use
+older versions of @theglibc{}, programs that use @code{clock_settime}
+must be linked with the @code{-lrt} library.  This has not been
+necessary with @theglibc{} since version 2.17.
+@end deftypefun
+
+@cindex time, high precision
+@cindex clock, high accuracy
+@cindex clock, disciplining
+@pindex sys/timex.h
+For systems that remain up and running for long periods, it is not
+enough to set the time once; one should also @dfn{discipline} the
+clock so that it does not drift away from the true calendar time.
+
+The @code{ntp_gettime} and @code{ntp_adjtime} functions provide an
+interface to monitor and discipline the system clock.  For example,
+you can fine-tune the rate at which the clock ``ticks,'' and make
+small adjustments to the current reported calendar time smoothly, by
+temporarily speeding up or slowing down the clock.
+
+These functions' names begin with @samp{ntp_} because they were
+designed for use by programs implementing the Network Time Protocol to
+synchronize a system's clock with other systems' clocks and/or with
+external high-precision clock hardware.
+
+These functions, and the constants and structures they use, are
+declared in @file{sys/timex.h}.
+
+@tindex struct ntptimeval
+@deftp {Data Type} {struct ntptimeval}
+This structure is used to report information about the system clock.
+It contains the following members:
+@table @code
+@item struct timeval time
+The current calendar time, as if retrieved by @code{gettimeofday}.
+The @code{struct timeval} data type is described in
+@ref{Time Types}.
+
+@item long int maxerror
+This is the maximum error, measured in microseconds.  Unless updated
+via @code{ntp_adjtime} periodically, this value will reach some
+platform-specific maximum value.
+
+@item long int esterror
+This is the estimated error, measured in microseconds.  This value can
+be set by @code{ntp_adjtime} to indicate the estimated offset of the
+system clock from the true calendar time.
+@end table
+@end deftp
+
+@deftypefun int ntp_gettime (struct ntptimeval *@var{tptr})
+@standards{GNU, sys/timex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Wrapper for adjtimex.
+The @code{ntp_gettime} function sets the structure pointed to by
+@var{tptr} to current values.  The elements of the structure afterwards
+contain the values the timer implementation in the kernel assumes.  They
+might or might not be correct.  If they are not, an @code{ntp_adjtime}
+call is necessary.
+
+The return value is @code{0} on success and other values on failure.  The
+following @code{errno} error conditions are defined for this function:
+
+@vtable @code
+@item TIME_ERROR
+The precision clock model is not properly set up at the moment, thus the
+clock must be considered unsynchronized, and the values should be
+treated with care.
+@end vtable
+@end deftypefun
+
+@tindex struct timex
+@deftp {Data Type} {struct timex}
+This structure is used to control and monitor the system clock.  It
+contains the following members:
+@table @code
+@item unsigned int modes
+This variable controls whether and which values are set.  Several
+symbolic constants have to be combined with @emph{binary or} to specify
+the effective mode.  These constants start with @code{MOD_}.
+
+@item long int offset
+This value indicates the current offset of the system clock from the true
+calendar time.  The value is given in microseconds.  If bit
+@code{MOD_OFFSET} is set in @code{modes}, the offset (and possibly other
+dependent values) can be set.  The offset's absolute value must not
+exceed @code{MAXPHASE}.
+
+
+@item long int frequency
+This value indicates the difference in frequency between the true
+calendar time and the system clock.  The value is expressed as scaled
+PPM (parts per million, 0.0001%).  The scaling is @code{1 <<
+SHIFT_USEC}.  The value can be set with bit @code{MOD_FREQUENCY}, but
+the absolute value must not exceed @code{MAXFREQ}.
+
+@item long int maxerror
+This is the maximum error, measured in microseconds.  A new value can be
+set using bit @code{MOD_MAXERROR}.  Unless updated via
+@code{ntp_adjtime} periodically, this value will increase steadily
+and reach some platform-specific maximum value.
+
+@item long int esterror
+This is the estimated error, measured in microseconds.  This value can
+be set using bit @code{MOD_ESTERROR}.
+
+@item int status
+This variable reflects the various states of the clock machinery.  There
+are symbolic constants for the significant bits, starting with
+@code{STA_}.  Some of these flags can be updated using the
+@code{MOD_STATUS} bit.
+
+@item long int constant
+This value represents the bandwidth or stiffness of the PLL (phase
+locked loop) implemented in the kernel.  The value can be changed using
+bit @code{MOD_TIMECONST}.
+
+@item long int precision
+This value represents the accuracy or the maximum error when reading the
+system clock.  The value is expressed in microseconds.
+
+@item long int tolerance
+This value represents the maximum frequency error of the system clock in
+scaled PPM.  This value is used to increase the @code{maxerror} every
+second.
+
+@item struct timeval time
+The current calendar time.
+
+@item long int tick
+The elapsed time between clock ticks in microseconds.  A clock tick is a
+periodic timer interrupt on which the system clock is based.
+
+@item long int ppsfreq
+This is the first of a few optional variables that are present only if
+the system clock can use a PPS (pulse per second) signal to discipline
+the system clock.  The value is expressed in scaled PPM and it denotes
+the difference in frequency between the system clock and the PPS signal.
+
+@item long int jitter
+This value expresses a median filtered average of the PPS signal's
+dispersion in microseconds.
+
+@item int shift
+This value is a binary exponent for the duration of the PPS calibration
+interval, ranging from @code{PPS_SHIFT} to @code{PPS_SHIFTMAX}.
+
+@item long int stabil
+This value represents the median filtered dispersion of the PPS
+frequency in scaled PPM.
+
+@item long int jitcnt
+This counter represents the number of pulses where the jitter exceeded
+the allowed maximum @code{MAXTIME}.
+
+@item long int calcnt
+This counter reflects the number of successful calibration intervals.
+
+@item long int errcnt
+This counter represents the number of calibration errors (caused by
+large offsets or jitter).
+
+@item long int stbcnt
+This counter denotes the number of calibrations where the stability
+exceeded the threshold.
+@end table
+@end deftp
+
+@deftypefun int ntp_adjtime (struct timex *@var{tptr})
+@standards{GNU, sys/timex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Alias to adjtimex syscall.
+The @code{ntp_adjtime} function sets the structure specified by
+@var{tptr} to current values.
+
+In addition, @code{ntp_adjtime} updates some settings to match what
+you pass to it in @code{*@var{tptr}}.  Use the @code{modes} element of
+@code{*@var{tptr}} to select what settings to update.  You can set
+@code{offset}, @code{freq}, @code{maxerror}, @code{esterror},
+@code{status}, @code{constant}, and @code{tick}.
+
+@code{modes} = zero means set nothing.
+
+Only the superuser can update settings.
+
+@c On Linux, ntp_adjtime() also does the adjtime() function if you set
+@c modes = ADJ_OFFSET_SINGLESHOT (in fact, that is how GNU libc implements
+@c adjtime()).  But this should be considered an internal function because
+@c it's so inconsistent with the rest of what ntp_adjtime() does and is
+@c forced in an ugly way into the struct timex.  So we don't document it
+@c and instead document adjtime() as the way to achieve the function.
+
+The return value is @code{0} on success and other values on failure.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item TIME_ERROR
+The high accuracy clock model is not properly set up at the moment, thus the
+clock must be considered unsynchronized, and the values should be
+treated with care.  Another reason could be that the specified new values
+are not allowed.
+
+@item EPERM
+The process specified a settings update, but is not superuser.
+
+@end table
+
+For more details see RFC1305 (Network Time Protocol, Version 3) and
+related documents.
+
+@strong{Portability note:} Early versions of @theglibc{} did not
+have this function, but did have the synonymous @code{adjtimex}.
+@end deftypefun
+
+
+@c On Linux, GNU libc implements adjtime() as a call to adjtimex().
+@deftypefun int adjtime (const struct timeval *@var{delta}, struct timeval *@var{olddelta})
+@standards{BSD, sys/time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c On hurd and mach, call host_adjust_time with a privileged port.  On
+@c Linux, it's implemented in terms of adjtimex.  On other unixen, it's
+@c a syscall.
+This simpler version of @code{ntp_adjtime} speeds up or slows down the
+system clock for a short time, in order to correct it by a small
+amount.  This avoids a discontinuous change in the calendar time
+reported by the @code{CLOCK_REALTIME} clock, at the price of having to
+wait longer for the time to become correct.
+
+The @var{delta} argument specifies a relative adjustment to be made to
+the clock time.  If negative, the system clock is slowed down for a
+while until it has lost this much elapsed time.  If positive, the system
+clock is speeded up for a while.
+
+If the @var{olddelta} argument is not a null pointer, the @code{adjtime}
+function returns information about any previous time adjustment that
+has not yet completed.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error condition is defined for this function:
+
+@table @code
+@item EPERM
+This process does not have the privileges required to adjust the
+@code{CLOCK_REALTIME} clock.
+@end table
+@end deftypefun
+
+For compatibility, @theglibc{} also provides several older functions
+for controlling the system time.  New programs should prefer to use
+the functions above.
+
+@deftypefun int stime (const time_t *@var{newtime})
+@standards{SVID, time.h}
+@standards{XPG, time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Change the @code{CLOCK_REALTIME} calendar time to be the simple
+calendar time in @code{*@var{newtime}}.  Calling this function is
+exactly the same as calling @w{@samp{clock_settime (CLOCK_REALTIME)}},
+except that the new time can only be set to a precision of one second.
+
+This function is no longer available on @gnusystems{}, but it may be
+the @emph{only} way to set the time on very old Unix systems, so we
+continue to document it.  If it is available, it is declared in
+@file{time.h}.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error condition is defined for this function:
+
+@table @code
+@item EPERM
+This process does not have the privileges required to adjust the
+@code{CLOCK_REALTIME} clock.
+@end table
+@end deftypefun
+
+@deftypefun int adjtimex (struct timex *@var{timex})
+@standards{GNU, sys/timex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{adjtimex} is an older name for @code{ntp_adjtime}.
+This function is only available on @gnulinuxsystems{}.
+It is declared in @file{sys/timex.h}.
+@end deftypefun
+
+@deftypefun int settimeofday (const struct timeval *@var{tp}, const void *@var{tzp})
+@standards{BSD, sys/time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Change the @code{CLOCK_REALTIME} calendar time to be the simple
+calendar time in @code{*@var{newtime}}.  This function is declared in
+@file{sys/time.h}.
+
+When @var{tzp} is a null pointer, calling this function is exactly the
+same as calling @w{@samp{clock_settime (CLOCK_REALTIME)}}, except that
+the new time can only be set to a precision of one microsecond.
+
+When @var{tzp} is not a null pointer, the data it points to @emph{may}
+be used to set a system-wide idea of the current timezone.  This
+feature is obsolete and not supported on @gnusystems{}.  Instead, use
+the facilities described in @ref{Time Zone Functions} and in
+@ref{Broken-down Time} for working with time zones.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EPERM
+This process does not have the privileges required to set the
+@code{CLOCK_REALTIME} clock.
+
+@item EINVAL
+Neither @var{tp} nor @var{tzp} is a null pointer.  (For historical
+reasons, it is not possible to set the current time and the current
+time zone in the same call.)
+
+@item ENOSYS
+The operating system does not support setting time zone information, and
+@var{tzp} is not a null pointer.
+@end table
+@end deftypefun
+
+@node Broken-down Time
+@subsection Broken-down Time
+@cindex broken-down time
+@cindex calendar time and broken-down time
+
+Simple calendar times represent absolute times as elapsed times since
+an epoch.  This is convenient for computation, but has no relation to
+the way people normally think of calendar time.  By contrast,
+@dfn{broken-down time} is a binary representation of calendar time
+separated into year, month, day, and so on.  Broken-down time values
+are not useful for calculations, but they are useful for printing
+human readable time information.
+
+A broken-down time value is always relative to a choice of time
+zone, and it also indicates which time zone that is.
+
+The symbols in this section are declared in the header file @file{time.h}.
+
+@deftp {Data Type} {struct tm}
+@standards{ISO, time.h}
+This is the data type used to represent a broken-down time.  The structure
+contains at least the following members, which can appear in any order.
+
+@table @code
+@item int tm_sec
+This is the number of full seconds since the top of the minute (normally
+in the range @code{0} through @code{59}, but the actual upper limit is
+@code{60}, to allow for leap seconds if leap second support is
+available).
+@cindex leap second
+
+@item int tm_min
+This is the number of full minutes since the top of the hour (in the
+range @code{0} through @code{59}).
+
+@item int tm_hour
+This is the number of full hours past midnight (in the range @code{0} through
+@code{23}).
+
+@item int tm_mday
+This is the ordinal day of the month (in the range @code{1} through @code{31}).
+Watch out for this one!  As the only ordinal number in the structure, it is
+inconsistent with the rest of the structure.
+
+@item int tm_mon
+This is the number of full calendar months since the beginning of the
+year (in the range @code{0} through @code{11}).  Watch out for this one!
+People usually use ordinal numbers for month-of-year (where January = 1).
+
+@item int tm_year
+This is the number of full calendar years since 1900.
+
+@item int tm_wday
+This is the number of full days since Sunday (in the range @code{0} through
+@code{6}).
+
+@item int tm_yday
+This is the number of full days since the beginning of the year (in the
+range @code{0} through @code{365}).
+
+@item int tm_isdst
+@cindex Daylight Saving Time
+@cindex summer time
+This is a flag that indicates whether Daylight Saving Time is (or was, or
+will be) in effect at the time described.  The value is positive if
+Daylight Saving Time is in effect, zero if it is not, and negative if the
+information is not available.
+
+@item long int tm_gmtoff
+This field describes the time zone that was used to compute this
+broken-down time value, including any adjustment for daylight saving; it
+is the number of seconds that you must add to UTC to get local time.
+You can also think of this as the number of seconds east of UTC.  For
+example, for U.S. Eastern Standard Time, the value is @code{-5*60*60}.
+The @code{tm_gmtoff} field is derived from BSD and is a GNU library
+extension; it is not visible in a strict @w{ISO C} environment.
+
+@item const char *tm_zone
+This field is the name for the time zone that was used to compute this
+broken-down time value.  Like @code{tm_gmtoff}, this field is a BSD and
+GNU extension, and is not visible in a strict @w{ISO C} environment.
+@end table
+@end deftp
+
+
+@deftypefun {struct tm *} localtime (const time_t *@var{time})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:tmbuf} @mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c Calls tz_convert with a static buffer.
+@c localtime @mtasurace:tmbuf @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  tz_convert dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+The @code{localtime} function converts the simple time pointed to by
+@var{time} to broken-down time representation, expressed relative to the
+user's specified time zone.
+
+The return value is a pointer to a static broken-down time structure, which
+might be overwritten by subsequent calls to @code{ctime}, @code{gmtime},
+or @code{localtime}.  (But no other library function overwrites the contents
+of this object.)
+
+The return value is the null pointer if @var{time} cannot be represented
+as a broken-down time; typically this is because the year cannot fit into
+an @code{int}.
+
+Calling @code{localtime} also sets the current time zone as if
+@code{tzset} were called.  @xref{Time Zone Functions}.
+@end deftypefun
+
+Using the @code{localtime} function is a big problem in multi-threaded
+programs.  The result is returned in a static buffer and this is used in
+all threads.  POSIX.1c introduced a variant of this function.
+
+@deftypefun {struct tm *} localtime_r (const time_t *@var{time}, struct tm *@var{resultp})
+@standards{POSIX.1c, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c localtime_r @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  tz_convert(use_localtime) @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   libc_lock_lock dup @asulock @aculock
+@c   tzset_internal @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c     always called with tzset_lock held
+@c     sets static is_initialized before initialization;
+@c     reads and sets old_tz; sets tz_rules.
+@c     some of the issues only apply on the first call.
+@c     subsequent calls only trigger these when called by localtime;
+@c     otherwise, they're ok.
+@c    getenv dup @mtsenv
+@c    strcmp dup ok
+@c    strdup @ascuheap
+@c    tzfile_read @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c     memcmp dup ok
+@c     strstr dup ok
+@c     getenv dup @mtsenv
+@c     asprintf dup @mtslocale @ascuheap @acsmem
+@c     stat64 dup ok
+@c     fopen dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c     fileno dup ok
+@c     fstat64 dup ok
+@c     fclose dup @ascuheap @asulock @aculock @acsmem @acsfd
+@c     free dup @ascuheap @acsmem
+@c     fsetlocking dup ok [no @mtasurace:stream @asulock, exclusive]
+@c     fread_unlocked dup ok [no @mtasurace:stream @asucorrupt @acucorrupt]
+@c     memcpy dup ok
+@c     decode ok
+@c      bswap_32 dup ok
+@c     fseek dup ok [no @mtasurace:stream @asucorrupt @acucorrupt]
+@c     ftello dup ok [no @mtasurace:stream @asucorrupt @acucorrupt]
+@c     malloc dup @ascuheap @acsmem
+@c     decode64 ok
+@c      bswap_64 dup ok
+@c     getc_unlocked ok [no @mtasurace:stream @asucorrupt @acucorrupt]
+@c     tzstring dup @ascuheap @acsmem
+@c     compute_tzname_max dup ok [guarded by tzset_lock]
+@c    memset dup ok
+@c    update_vars ok [guarded by tzset_lock]
+@c      sets daylight, timezone, tzname and tzname_cur_max;
+@c      called only with tzset_lock held, unless tzset_parse_tz
+@c      (internal, but not static) gets called by users; given the its
+@c      double-underscore-prefixed name, this interface violation could
+@c      be regarded as undefined behavior.
+@c     strlen ok
+@c    tzset_parse_tz @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c     sscanf dup @mtslocale @ascuheap @acsmem
+@c     isalnum dup @mtsenv
+@c     tzstring @ascuheap @acsmem
+@c       reads and changes tzstring_list without synchronization, but
+@c       only called with tzset_lock held (save for interface violations)
+@c      strlen dup ok
+@c      malloc dup @ascuheap @acsmem
+@c      strcpy dup ok
+@c     isdigit dup @mtslocale
+@c     compute_offset ok
+@c     tzfile_default @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c       sets tzname, timezone, types, zone_names, rule_*off, etc; no guards
+@c      strlen dup ok
+@c      tzfile_read dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c      mempcpy dup ok
+@c      compute_tzname_max ok [if guarded by tzset_lock]
+@c        iterates over zone_names; no guards
+@c     free dup @ascuheap @acsmem
+@c     strtoul dup @mtslocale
+@c     update_vars dup ok
+@c   tzfile_compute(use_localtime) @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c     sets tzname; no guards.  with !use_localtime, as in gmtime, it's ok
+@c    tzstring dup @acsuheap @acsmem
+@c    tzset_parse_tz dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    offtime dup ok
+@c    tz_compute dup ok
+@c    strcmp dup ok
+@c   offtime ok
+@c    isleap dup ok
+@c   tz_compute ok
+@c    compute_change ok
+@c     isleap ok
+@c   libc_lock_unlock dup @aculock
+
+The @code{localtime_r} function works just like the @code{localtime}
+function.  It takes a pointer to a variable containing a simple time
+and converts it to the broken-down time format.
+
+But the result is not placed in a static buffer.  Instead it is placed
+in the object of type @code{struct tm} to which the parameter
+@var{resultp} points.
+
+If the conversion is successful the function returns a pointer to the
+object the result was written into, i.e., it returns @var{resultp}.
+@end deftypefun
+
+
+@deftypefun {struct tm *} gmtime (const time_t *@var{time})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:tmbuf} @mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c gmtime @mtasurace:tmbuf @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  tz_convert dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+This function is similar to @code{localtime}, except that the broken-down
+time is expressed as Coordinated Universal Time (UTC) (formerly called
+Greenwich Mean Time (GMT)) rather than relative to a local time zone.
+
+@end deftypefun
+
+As for the @code{localtime} function we have the problem that the result
+is placed in a static variable.  POSIX.1c also provides a replacement for
+@code{gmtime}.
+
+@deftypefun {struct tm *} gmtime_r (const time_t *@var{time}, struct tm *@var{resultp})
+@standards{POSIX.1c, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c You'd think tz_convert could avoid some safety issues with
+@c !use_localtime, but no such luck: tzset_internal will always bring
+@c about all possible AS and AC problems when it's first called.
+@c Calling any of localtime,gmtime_r once would run the initialization
+@c and avoid the heap, mem and fd issues in gmtime* in subsequent calls,
+@c but the unsafe locking would remain.
+@c gmtime_r @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  tz_convert(gmtime_r) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+This function is similar to @code{localtime_r}, except that it converts
+just like @code{gmtime} the given time as Coordinated Universal Time.
+
+If the conversion is successful the function returns a pointer to the
+object the result was written into, i.e., it returns @var{resultp}.
+@end deftypefun
+
+
+@deftypefun time_t mktime (struct tm *@var{brokentime})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c mktime @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   passes a static localtime_offset to mktime_internal; it is read
+@c   once, used as an initial guess, and updated at the end, but not
+@c   used except as a guess for subsequent calls, so it should be safe.
+@c   Even though a compiler might delay the load and perform it multiple
+@c   times (bug 16346), there are at least two unconditional uses of the
+@c   auto variable in which the first load is stored, separated by a
+@c   call to an external function, and a conditional change of the
+@c   variable before the external call, so refraining from allocating a
+@c   local variable at the first load would be a very bad optimization.
+@c  tzset dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  mktime_internal(localtime_r) @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   ydhms_diff ok
+@c   ranged_convert(localtime_r) @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    *convert = localtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    time_t_avg dup ok
+@c   guess_time_tm dup ok
+@c    ydhms_diff dup ok
+@c    time_t_add_ok ok
+@c     time_t_avg ok
+@c   isdst_differ ok
+@c   time_t_int_add_ok ok
+The @code{mktime} function converts a broken-down time structure to a
+simple time representation.  It also normalizes the contents of the
+broken-down time structure, and fills in some components based on the
+values of the others.
+
+The @code{mktime} function ignores the specified contents of the
+@code{tm_wday}, @code{tm_yday}, @code{tm_gmtoff}, and @code{tm_zone}
+members of the broken-down time
+structure.  It uses the values of the other components to determine the
+calendar time; it's permissible for these components to have
+unnormalized values outside their normal ranges.  The last thing that
+@code{mktime} does is adjust the components of the @var{brokentime}
+structure, including the members that were initially ignored.
+
+If the specified broken-down time cannot be represented as a simple time,
+@code{mktime} returns a value of @code{(time_t)(-1)} and does not modify
+the contents of @var{brokentime}.
+
+Calling @code{mktime} also sets the current time zone as if
+@code{tzset} were called; @code{mktime} uses this information instead
+of @var{brokentime}'s initial @code{tm_gmtoff} and @code{tm_zone}
+members.  @xref{Time Zone Functions}.
+@end deftypefun
+
+@deftypefun time_t timelocal (struct tm *@var{brokentime})
+@standards{???, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c Alias to mktime.
+
+@code{timelocal} is functionally identical to @code{mktime}, but more
+mnemonically named.  Note that it is the inverse of the @code{localtime}
+function.
+
+@strong{Portability note:}  @code{mktime} is essentially universally
+available.  @code{timelocal} is rather rare.
+
+@end deftypefun
+
+@deftypefun time_t timegm (struct tm *@var{brokentime})
+@standards{???, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c timegm @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   gmtime_offset triggers the same caveats as localtime_offset in mktime.
+@c   although gmtime_r, as called by mktime, might save some issues,
+@c   tzset calls tzset_internal with always, which forces
+@c   reinitialization, so all issues may arise.
+@c  tzset dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  mktime_internal(gmtime_r) @asulock @aculock
+@c ..gmtime_r @asulock @aculock
+@c    ... dup ok
+@c    tz_convert(!use_localtime) @asulock @aculock
+@c     ... dup @asulock @aculock
+@c     tzfile_compute(!use_localtime) ok
+
+@code{timegm} is functionally identical to @code{mktime} except it
+always takes the input values to be Coordinated Universal Time (UTC)
+regardless of any local time zone setting.
+
+Note that @code{timegm} is the inverse of @code{gmtime}.
+
+@strong{Portability note:}  @code{mktime} is essentially universally
+available.  @code{timegm} is rather rare.  For the most portable
+conversion from a UTC broken-down time to a simple time, set
+the @code{TZ} environment variable to UTC, call @code{mktime}, then set
+@code{TZ} back.
+
+@end deftypefun
+
+
+
+@node Formatting Calendar Time
+@subsection Formatting Calendar Time
+
+The functions described in this section format calendar time values as
+strings.  These functions are declared in the header file @file{time.h}.
+@pindex time.h
+
+@deftypefun {char *} asctime (const struct tm *@var{brokentime})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:asctime} @mtslocale{}}@asunsafe{}@acsafe{}}
+@c asctime @mtasurace:asctime @mtslocale
+@c   Uses a static buffer.
+@c  asctime_internal @mtslocale
+@c   snprintf dup @mtslocale [no @acsuheap @acsmem]
+@c   ab_day_name @mtslocale
+@c   ab_month_name @mtslocale
+The @code{asctime} function converts the broken-down time value that
+@var{brokentime} points to into a string in a standard format:
+
+@smallexample
+"Tue May 21 13:46:22 1991\n"
+@end smallexample
+
+The abbreviations for the days of week are: @samp{Sun}, @samp{Mon},
+@samp{Tue}, @samp{Wed}, @samp{Thu}, @samp{Fri}, and @samp{Sat}.
+
+The abbreviations for the months are: @samp{Jan}, @samp{Feb},
+@samp{Mar}, @samp{Apr}, @samp{May}, @samp{Jun}, @samp{Jul}, @samp{Aug},
+@samp{Sep}, @samp{Oct}, @samp{Nov}, and @samp{Dec}.
+
+The return value points to a statically allocated string, which might be
+overwritten by subsequent calls to @code{asctime} or @code{ctime}.
+(But no other library function overwrites the contents of this
+string.)
+@end deftypefun
+
+@deftypefun {char *} asctime_r (const struct tm *@var{brokentime}, char *@var{buffer})
+@standards{POSIX.1c, time.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c asctime_r @mtslocale
+@c  asctime_internal dup @mtslocale
+This function is similar to @code{asctime} but instead of placing the
+result in a static buffer it writes the string in the buffer pointed to
+by the parameter @var{buffer}.  This buffer should have room
+for at least 26 bytes, including the terminating null.
+
+If no error occurred the function returns a pointer to the string the
+result was written into, i.e., it returns @var{buffer}.  Otherwise
+it returns @code{NULL}.
+@end deftypefun
+
+
+@deftypefun {char *} ctime (const time_t *@var{time})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:tmbuf} @mtasurace{:asctime} @mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c ctime @mtasurace:tmbuf @mtasurace:asctime @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  localtime dup @mtasurace:tmbuf @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  asctime dup @mtasurace:asctime @mtslocale
+The @code{ctime} function is similar to @code{asctime}, except that you
+specify the calendar time argument as a @code{time_t} simple time value
+rather than in broken-down local time format.  It is equivalent to
+
+@smallexample
+asctime (localtime (@var{time}))
+@end smallexample
+
+Calling @code{ctime} also sets the current time zone as if
+@code{tzset} were called.  @xref{Time Zone Functions}.
+@end deftypefun
+
+@deftypefun {char *} ctime_r (const time_t *@var{time}, char *@var{buffer})
+@standards{POSIX.1c, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c ctime_r @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  localtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  asctime_r dup @mtslocale
+This function is similar to @code{ctime}, but places the result in the
+string pointed to by @var{buffer}.  It is equivalent to (written using
+gcc extensions, @pxref{Statement Exprs,,,gcc,Porting and Using gcc}):
+
+@smallexample
+(@{ struct tm tm; asctime_r (localtime_r (time, &tm), buf); @})
+@end smallexample
+
+If no error occurred the function returns a pointer to the string the
+result was written into, i.e., it returns @var{buffer}.  Otherwise
+it returns @code{NULL}.
+@end deftypefun
+
+
+@deftypefun size_t strftime (char *@var{s}, size_t @var{size}, const char *@var{template}, const struct tm *@var{brokentime})
+@standards{ISO, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c strftime @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  strftime_l @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   strftime_internal @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    add ok
+@c     memset_zero dup ok
+@c     memset_space dup ok
+@c    strlen dup ok
+@c    mbrlen @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd [no @mtasurace:mbstate/!ps]
+@c    mbsinit dup ok
+@c    cpy ok
+@c     add dup ok
+@c     memcpy_lowcase ok
+@c      TOLOWER ok
+@c       tolower_l ok
+@c     memcpy_uppcase ok
+@c      TOUPPER ok
+@c       toupper_l ok
+@c     MEMCPY ok
+@c      memcpy dup ok
+@c    ISDIGIT ok
+@c    STRLEN ok
+@c     strlen dup ok
+@c    strftime_internal dup @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    TOUPPER dup ok
+@c    nl_get_era_entry @ascuheap @asulock @acsmem @aculock
+@c     nl_init_era_entries @ascuheap @asulock @acsmem @aculock
+@c      libc_rwlock_wrlock dup @asulock @aculock
+@c      malloc dup @ascuheap @acsmem
+@c      memset dup ok
+@c      free dup @ascuheap @acsmem
+@c      realloc dup @ascuheap @acsmem
+@c      memcpy dup ok
+@c      strchr dup ok
+@c      wcschr dup ok
+@c      libc_rwlock_unlock dup @asulock @aculock
+@c     ERA_DATE_CMP ok
+@c    DO_NUMBER ok
+@c    DO_NUMBER_SPACEPAD ok
+@c    nl_get_alt_digit @ascuheap @asulock @acsmem @aculock
+@c     libc_rwlock_wrlock dup @asulock @aculock
+@c     nl_init_alt_digit @ascuheap @acsmem
+@c      malloc dup @ascuheap @acsmem
+@c      memset dup ok
+@c      strchr dup ok
+@c     libc_rwlock_unlock dup @aculock
+@c    memset_space ok
+@c     memset dup ok
+@c    memset_zero ok
+@c     memset dup ok
+@c    mktime dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    iso_week_days ok
+@c    isleap ok
+@c    tzset dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    localtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    gmtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    tm_diff ok
+This function is similar to the @code{sprintf} function (@pxref{Formatted
+Input}), but the conversion specifications that can appear in the format
+template @var{template} are specialized for printing components of the date
+and time @var{brokentime} according to the locale currently specified for
+time conversion (@pxref{Locales}) and the current time zone
+(@pxref{Time Zone Functions}).
+
+Ordinary characters appearing in the @var{template} are copied to the
+output string @var{s}; this can include multibyte character sequences.
+Conversion specifiers are introduced by a @samp{%} character, followed
+by an optional flag which can be one of the following.  These flags
+are all GNU extensions.  The first three affect only the output of
+numbers:
+
+@table @code
+@item _
+The number is padded with spaces.
+
+@item -
+The number is not padded at all.
+
+@item 0
+The number is padded with zeros even if the format specifies padding
+with spaces.
+
+@item ^
+The output uses uppercase characters, but only if this is possible
+(@pxref{Case Conversion}).
+@end table
+
+The default action is to pad the number with zeros to keep it a constant
+width.  Numbers that do not have a range indicated below are never
+padded, since there is no natural width for them.
+
+Following the flag an optional specification of the width is possible.
+This is specified in decimal notation.  If the natural size of the
+output of the field has less than the specified number of characters,
+the result is written right adjusted and space padded to the given
+size.
+
+An optional modifier can follow the optional flag and width
+specification.  The modifiers, which were first standardized by
+POSIX.2-1992 and by @w{ISO C99}, are:
+
+@table @code
+@item E
+Use the locale's alternative representation for date and time.  This
+modifier applies to the @code{%c}, @code{%C}, @code{%x}, @code{%X},
+@code{%y} and @code{%Y} format specifiers.  In a Japanese locale, for
+example, @code{%Ex} might yield a date format based on the Japanese
+Emperors' reigns.
+
+@item O
+With all format specifiers that produce numbers: use the locale's
+alternative numeric symbols.
+
+With @code{%B}, @code{%b}, and @code{%h}: use the grammatical form for
+month names that is appropriate when the month is named by itself,
+rather than the form that is appropriate when the month is used as
+part of a complete date.  The @code{%OB} and @code{%Ob} formats are a
+C2X feature, specified in C2X to use the locale's `alternative' month
+name; @theglibc{} extends this specification to say that the form used
+in a complete date is the default and the form naming the month by
+itself is the alternative.
+@end table
+
+If the format supports the modifier but no alternative representation
+is available, it is ignored.
+
+The conversion specifier ends with a format specifier taken from the
+following list.  The whole @samp{%} sequence is replaced in the output
+string as follows:
+
+@table @code
+@item %a
+The abbreviated weekday name according to the current locale.
+
+@item %A
+The full weekday name according to the current locale.
+
+@item %b
+The abbreviated month name according to the current locale, in the
+grammatical form used when the month is part of a complete date.
+As a C2X feature (with a more detailed specification in @theglibc{}),
+the @code{O} modifier can be used (@code{%Ob}) to get the grammatical
+form used when the month is named by itself.
+
+@item %B
+The full month name according to the current locale, in the
+grammatical form used when the month is part of a complete date.
+As a C2X feature (with a more detailed specification in @theglibc{}),
+the @code{O} modifier can be used (@code{%OB}) to get the grammatical
+form used when the month is named by itself.
+
+Note that not all languages need two different forms of the month
+names, so the text produced by @code{%B} and @code{%OB}, and by
+@code{%b} and @code{%Ob}, may or may not be the same, depending on
+the locale.
+
+@item %c
+The preferred calendar time representation for the current locale.
+
+@item %C
+The century of the year.  This is equivalent to the greatest integer not
+greater than the year divided by 100.
+
+If the @code{E} modifier is specified (@code{%EC}), instead produces
+the name of the period for the year (e.g.@: an era name) in the
+locale's alternative calendar.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %d
+The day of the month as a decimal number (range @code{01} through @code{31}).
+
+@item %D
+The date using the format @code{%m/%d/%y}.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %e
+The day of the month like with @code{%d}, but padded with spaces (range
+@code{ 1} through @code{31}).
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %F
+The date using the format @code{%Y-%m-%d}.  This is the form specified
+in the @w{ISO 8601} standard and is the preferred form for all uses.
+
+This format was first standardized by @w{ISO C99} and by POSIX.1-2001.
+
+@item %g
+The year corresponding to the ISO week number, but without the century
+(range @code{00} through @code{99}).  This has the same format and value
+as @code{%y}, except that if the ISO week number (see @code{%V}) belongs
+to the previous or next year, that year is used instead.
+
+This format was first standardized by @w{ISO C99} and by POSIX.1-2001.
+
+@item %G
+The year corresponding to the ISO week number.  This has the same format
+and value as @code{%Y}, except that if the ISO week number (see
+@code{%V}) belongs to the previous or next year, that year is used
+instead.
+
+This format was first standardized by @w{ISO C99} and by POSIX.1-2001
+but was previously available as a GNU extension.
+
+@item %h
+The abbreviated month name according to the current locale.  The action
+is the same as for @code{%b}.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %H
+The hour as a decimal number, using a 24-hour clock (range @code{00} through
+@code{23}).
+
+@item %I
+The hour as a decimal number, using a 12-hour clock (range @code{01} through
+@code{12}).
+
+@item %j
+The day of the year as a decimal number (range @code{001} through @code{366}).
+
+@item %k
+The hour as a decimal number, using a 24-hour clock like @code{%H}, but
+padded with spaces (range @code{ 0} through @code{23}).
+
+This format is a GNU extension.
+
+@item %l
+The hour as a decimal number, using a 12-hour clock like @code{%I}, but
+padded with spaces (range @code{ 1} through @code{12}).
+
+This format is a GNU extension.
+
+@item %m
+The month as a decimal number (range @code{01} through @code{12}).
+
+@item %M
+The minute as a decimal number (range @code{00} through @code{59}).
+
+@item %n
+A single @samp{\n} (newline) character.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %p
+Either @samp{AM} or @samp{PM}, according to the given time value; or the
+corresponding strings for the current locale.  Noon is treated as
+@samp{PM} and midnight as @samp{AM}.  In most locales
+@samp{AM}/@samp{PM} format is not supported, in such cases @code{"%p"}
+yields an empty string.
+
+@ignore
+We currently have a problem with makeinfo.  Write @samp{AM} and @samp{am}
+both results in `am'.  I.e., the difference in case is not visible anymore.
+@end ignore
+@item %P
+Either @samp{am} or @samp{pm}, according to the given time value; or the
+corresponding strings for the current locale, printed in lowercase
+characters.  Noon is treated as @samp{pm} and midnight as @samp{am}.  In
+most locales @samp{AM}/@samp{PM} format is not supported, in such cases
+@code{"%P"} yields an empty string.
+
+This format is a GNU extension.
+
+@item %r
+The complete calendar time using the AM/PM format of the current locale.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+In the POSIX locale, this format is equivalent to @code{%I:%M:%S %p}.
+
+@item %R
+The hour and minute in decimal numbers using the format @code{%H:%M}.
+
+This format was first standardized by @w{ISO C99} and by POSIX.1-2001
+but was previously available as a GNU extension.
+
+@item %s
+The number of seconds since the epoch, i.e., since 1970-01-01 00:00:00 UTC.
+Leap seconds are not counted unless leap second support is available.
+
+This format is a GNU extension.
+
+@item %S
+The seconds as a decimal number (range @code{00} through @code{60}).
+
+@item %t
+A single @samp{\t} (tabulator) character.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %T
+The time of day using decimal numbers using the format @code{%H:%M:%S}.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %u
+The day of the week as a decimal number (range @code{1} through
+@code{7}), Monday being @code{1}.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %U
+The week number of the current year as a decimal number (range @code{00}
+through @code{53}), starting with the first Sunday as the first day of
+the first week.  Days preceding the first Sunday in the year are
+considered to be in week @code{00}.
+
+@item %V
+The @w{ISO 8601:1988} week number as a decimal number (range @code{01}
+through @code{53}).  ISO weeks start with Monday and end with Sunday.
+Week @code{01} of a year is the first week which has the majority of its
+days in that year; this is equivalent to the week containing the year's
+first Thursday, and it is also equivalent to the week containing January
+4.  Week @code{01} of a year can contain days from the previous year.
+The week before week @code{01} of a year is the last week (@code{52} or
+@code{53}) of the previous year even if it contains days from the new
+year.
+
+This format was first standardized by POSIX.2-1992 and by @w{ISO C99}.
+
+@item %w
+The day of the week as a decimal number (range @code{0} through
+@code{6}), Sunday being @code{0}.
+
+@item %W
+The week number of the current year as a decimal number (range @code{00}
+through @code{53}), starting with the first Monday as the first day of
+the first week.  All days preceding the first Monday in the year are
+considered to be in week @code{00}.
+
+@item %x
+The preferred date representation for the current locale.
+
+@item %X
+The preferred time of day representation for the current locale.
+
+@item %y
+The year without a century as a decimal number (range @code{00} through
+@code{99}).  This is equivalent to the year modulo 100.
+
+If the @code{E} modifier is specified (@code{%Ey}), instead produces
+the year number according to a locale-specific alternative calendar.
+Unlike @code{%y}, the number is @emph{not} reduced modulo 100.
+However, by default it is zero-padded to a minimum of two digits (this
+can be overridden by an explicit field width or by the @code{_} and
+@code{-} flags).
+
+@item %Y
+The year as a decimal number, using the Gregorian calendar.  Years
+before the year @code{1} are numbered @code{0}, @code{-1}, and so on.
+
+If the @code{E} modifier is specified (@code{%EY}), instead produces a
+complete representation of the year according to the locale's
+alternative calendar.  Generally this will be some combination of the
+information produced by @code{%EC} and @code{%Ey}.  As a GNU
+extension, the formatting flags @code{_} or @code{-} may be used with
+this conversion specifier; they affect how the year number is printed.
+
+@item %z
+@w{RFC 822}/@w{ISO 8601:1988} style numeric time zone (e.g.,
+@code{-0600} or @code{+0100}), or nothing if no time zone is
+determinable.
+
+This format was first standardized by @w{ISO C99} and by POSIX.1-2001
+but was previously available as a GNU extension.
+
+In the POSIX locale, a full @w{RFC 822} timestamp is generated by the format
+@w{@samp{"%a, %d %b %Y %H:%M:%S %z"}} (or the equivalent
+@w{@samp{"%a, %d %b %Y %T %z"}}).
+
+@item %Z
+The time zone abbreviation (empty if the time zone can't be determined).
+
+@item %%
+A literal @samp{%} character.
+@end table
+
+The @var{size} parameter can be used to specify the maximum number of
+characters to be stored in the array @var{s}, including the terminating
+null character.  If the formatted time requires more than @var{size}
+characters, @code{strftime} returns zero and the contents of the array
+@var{s} are undefined.  Otherwise the return value indicates the
+number of characters placed in the array @var{s}, not including the
+terminating null character.
+
+@emph{Warning:} This convention for the return value which is prescribed
+in @w{ISO C} can lead to problems in some situations.  For certain
+format strings and certain locales the output really can be the empty
+string and this cannot be discovered by testing the return value only.
+E.g., in most locales the AM/PM time format is not supported (most of
+the world uses the 24 hour time representation).  In such locales
+@code{"%p"} will return the empty string, i.e., the return value is
+zero.  To detect situations like this something similar to the following
+code should be used:
+
+@smallexample
+buf[0] = '\1';
+len = strftime (buf, bufsize, format, tp);
+if (len == 0 && buf[0] != '\0')
+  @{
+    /* Something went wrong in the strftime call.  */
+    @dots{}
+  @}
+@end smallexample
+
+If @var{s} is a null pointer, @code{strftime} does not actually write
+anything, but instead returns the number of characters it would have written.
+
+Calling @code{strftime} also sets the current time zone as if
+@code{tzset} were called; @code{strftime} uses this information
+instead of @var{brokentime}'s @code{tm_gmtoff} and @code{tm_zone}
+members.  @xref{Time Zone Functions}.
+
+For an example of @code{strftime}, see @ref{Time Functions Example}.
+@end deftypefun
+
+@deftypefun size_t wcsftime (wchar_t *@var{s}, size_t @var{size}, const wchar_t *@var{template}, const struct tm *@var{brokentime})
+@standards{ISO/Amend1, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c wcsftime @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  wcsftime_l @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   wcsftime_internal @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    add ok
+@c     memset_zero dup ok
+@c     memset_space dup ok
+@c    wcslen dup ok
+@c    cpy ok
+@c     add dup ok
+@c     memcpy_lowcase ok
+@c      TOLOWER ok
+@c       towlower_l dup ok
+@c     memcpy_uppcase ok
+@c      TOUPPER ok
+@c       towupper_l dup ok
+@c     MEMCPY ok
+@c      wmemcpy dup ok
+@c    widen @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     memset dup ok
+@c     mbsrtowcs_l @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd [no @mtasurace:mbstate/!ps]
+@c    ISDIGIT ok
+@c    STRLEN ok
+@c     wcslen dup ok
+@c    wcsftime_internal dup @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    TOUPPER dup ok
+@c    nl_get_era_entry dup @ascuheap @asulock @acsmem @aculock
+@c    DO_NUMBER ok
+@c    DO_NUMBER_SPACEPAD ok
+@c    nl_get_walt_digit dup @ascuheap @asulock @acsmem @aculock
+@c     libc_rwlock_wrlock dup @asulock @aculock
+@c     nl_init_alt_digit dup @ascuheap @acsmem
+@c     malloc dup @ascuheap @acsmem
+@c     memset dup ok
+@c     wcschr dup ok
+@c     libc_rwlock_unlock dup @aculock
+@c    memset_space ok
+@c     wmemset dup ok
+@c    memset_zero ok
+@c     wmemset dup ok
+@c    mktime dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    iso_week_days ok
+@c    isleap ok
+@c    tzset dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    localtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    gmtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    tm_diff ok
+The @code{wcsftime} function is equivalent to the @code{strftime}
+function with the difference that it operates on wide character
+strings.  The buffer where the result is stored, pointed to by @var{s},
+must be an array of wide characters.  The parameter @var{size} which
+specifies the size of the output buffer gives the number of wide
+characters, not the number of bytes.
+
+Also the format string @var{template} is a wide character string.  Since
+all characters needed to specify the format string are in the basic
+character set it is portably possible to write format strings in the C
+source code using the @code{L"@dots{}"} notation.  The parameter
+@var{brokentime} has the same meaning as in the @code{strftime} call.
+
+The @code{wcsftime} function supports the same flags, modifiers, and
+format specifiers as the @code{strftime} function.
+
+The return value of @code{wcsftime} is the number of wide characters
+stored in @code{s}.  When more characters would have to be written than
+can be placed in the buffer @var{s} the return value is zero, with the
+same problems indicated in the @code{strftime} documentation.
+@end deftypefun
+
+@node Parsing Date and Time
+@subsection Convert textual time and date information back
+
+The @w{ISO C} standard does not specify any functions which can convert
+the output of the @code{strftime} function back into a binary format.
+This led to a variety of more-or-less successful implementations with
+different interfaces over the years.  Then the Unix standard was
+extended by the addition of two functions: @code{strptime} and
+@code{getdate}.  Both have strange interfaces but at least they are
+widely available.
+
+@menu
+* Low-Level Time String Parsing::  Interpret string according to given format.
+* General Time String Parsing::    User-friendly function to parse data and
+                                    time strings.
+@end menu
+
+@node Low-Level Time String Parsing
+@subsubsection Interpret string according to given format
+
+The first function is rather low-level.  It is nevertheless frequently
+used in software since it is better known.  Its interface and
+implementation are heavily influenced by the @code{getdate} function,
+which is defined and implemented in terms of calls to @code{strptime}.
+
+@deftypefun {char *} strptime (const char *@var{s}, const char *@var{fmt}, struct tm *@var{tp})
+@standards{XPG4, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c strptime @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  strptime_internal @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   memset dup ok
+@c   ISSPACE ok
+@c    isspace_l dup ok
+@c   match_char ok
+@c   match_string ok
+@c    strlen dup ok
+@c    strncasecmp_l dup ok
+@c   strcmp dup ok
+@c   recursive @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    strptime_internal dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   get_number ok
+@c    ISSPACE dup ok
+@c   localtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   nl_select_era_entry @ascuheap @asulock @acsmem @aculock
+@c    nl_init_era_entries dup @ascuheap @asulock @acsmem @aculock
+@c   get_alt_number dup @ascuheap @asulock @acsmem @aculock
+@c    nl_parse_alt_digit dup @ascuheap @asulock @acsmem @aculock
+@c     libc_rwlock_wrlock dup @asulock @aculock
+@c     nl_init_alt_digit dup @ascuheap @acsmem
+@c     libc_rwlock_unlock dup @aculock
+@c    get_number dup ok
+@c   day_of_the_week ok
+@c   day_of_the_year ok
+The @code{strptime} function parses the input string @var{s} according
+to the format string @var{fmt} and stores its results in the
+structure @var{tp}.
+
+The input string could be generated by a @code{strftime} call or
+obtained any other way.  It does not need to be in a human-recognizable
+format; e.g. a date passed as @code{"02:1999:9"} is acceptable, even
+though it is ambiguous without context.  As long as the format string
+@var{fmt} matches the input string the function will succeed.
+
+The user has to make sure, though, that the input can be parsed in a
+unambiguous way.  The string @code{"1999112"} can be parsed using the
+format @code{"%Y%m%d"} as 1999-1-12, 1999-11-2, or even 19991-1-2.  It
+is necessary to add appropriate separators to reliably get results.
+
+The format string consists of the same components as the format string
+of the @code{strftime} function.  The only difference is that the flags
+@code{_}, @code{-}, @code{0}, and @code{^} are not allowed.
+@comment Is this really the intention?  --drepper
+Several of the distinct formats of @code{strftime} do the same work in
+@code{strptime} since differences like case of the input do not matter.
+For reasons of symmetry all formats are supported, though.
+
+The modifiers @code{E} and @code{O} are also allowed everywhere the
+@code{strftime} function allows them.
+
+The formats are:
+
+@table @code
+@item %a
+@itemx %A
+The weekday name according to the current locale, in abbreviated form or
+the full name.
+
+@item %b
+@itemx %B
+@itemx %h
+A month name according to the current locale.  All three specifiers
+will recognize both abbreviated and full month names.  If the
+locale provides two different grammatical forms of month names,
+all three specifiers will recognize both forms.
+
+As a GNU extension, the @code{O} modifier can be used with these
+specifiers; it has no effect, as both grammatical forms of month
+names are recognized.
+
+@item %c
+The date and time representation for the current locale.
+
+@item %Ec
+Like @code{%c} but the locale's alternative date and time format is used.
+
+@item %C
+The century of the year.
+
+It makes sense to use this format only if the format string also
+contains the @code{%y} format.
+
+@item %EC
+The locale's representation of the period.
+
+Unlike @code{%C} it sometimes makes sense to use this format since some
+cultures represent years relative to the beginning of eras instead of
+using the Gregorian years.
+
+@item %d
+@item %e
+The day of the month as a decimal number (range @code{1} through @code{31}).
+Leading zeroes are permitted but not required.
+
+@item %Od
+@itemx %Oe
+Same as @code{%d} but using the locale's alternative numeric symbols.
+
+Leading zeroes are permitted but not required.
+
+@item %D
+Equivalent to @code{%m/%d/%y}.
+
+@item %F
+Equivalent to @code{%Y-%m-%d}, which is the @w{ISO 8601} date
+format.
+
+This is a GNU extension following an @w{ISO C99} extension to
+@code{strftime}.
+
+@item %g
+The year corresponding to the ISO week number, but without the century
+(range @code{00} through @code{99}).
+
+@emph{Note:} Currently, this is not fully implemented.  The format is
+recognized, input is consumed but no field in @var{tm} is set.
+
+This format is a GNU extension following a GNU extension of @code{strftime}.
+
+@item %G
+The year corresponding to the ISO week number.
+
+@emph{Note:} Currently, this is not fully implemented.  The format is
+recognized, input is consumed but no field in @var{tm} is set.
+
+This format is a GNU extension following a GNU extension of @code{strftime}.
+
+@item %H
+@itemx %k
+The hour as a decimal number, using a 24-hour clock (range @code{00} through
+@code{23}).
+
+@code{%k} is a GNU extension following a GNU extension of @code{strftime}.
+
+@item %OH
+Same as @code{%H} but using the locale's alternative numeric symbols.
+
+@item %I
+@itemx %l
+The hour as a decimal number, using a 12-hour clock (range @code{01} through
+@code{12}).
+
+@code{%l} is a GNU extension following a GNU extension of @code{strftime}.
+
+@item %OI
+Same as @code{%I} but using the locale's alternative numeric symbols.
+
+@item %j
+The day of the year as a decimal number (range @code{1} through @code{366}).
+
+Leading zeroes are permitted but not required.
+
+@item %m
+The month as a decimal number (range @code{1} through @code{12}).
+
+Leading zeroes are permitted but not required.
+
+@item %Om
+Same as @code{%m} but using the locale's alternative numeric symbols.
+
+@item %M
+The minute as a decimal number (range @code{0} through @code{59}).
+
+Leading zeroes are permitted but not required.
+
+@item %OM
+Same as @code{%M} but using the locale's alternative numeric symbols.
+
+@item %n
+@itemx %t
+Matches any white space.
+
+@item %p
+@item %P
+The locale-dependent equivalent to @samp{AM} or @samp{PM}.
+
+This format is not useful unless @code{%I} or @code{%l} is also used.
+Another complication is that the locale might not define these values at
+all and therefore the conversion fails.
+
+@code{%P} is a GNU extension following a GNU extension to @code{strftime}.
+
+@item %r
+The complete time using the AM/PM format of the current locale.
+
+A complication is that the locale might not define this format at all
+and therefore the conversion fails.
+
+@item %R
+The hour and minute in decimal numbers using the format @code{%H:%M}.
+
+@code{%R} is a GNU extension following a GNU extension to @code{strftime}.
+
+@item %s
+The number of seconds since the epoch, i.e., since 1970-01-01 00:00:00 UTC.
+Leap seconds are not counted unless leap second support is available.
+
+@code{%s} is a GNU extension following a GNU extension to @code{strftime}.
+
+@item %S
+The seconds as a decimal number (range @code{0} through @code{60}).
+
+Leading zeroes are permitted but not required.
+
+@strong{NB:} The Unix specification says the upper bound on this value
+is @code{61}, a result of a decision to allow double leap seconds.  You
+will not see the value @code{61} because no minute has more than one
+leap second, but the myth persists.
+
+@item %OS
+Same as @code{%S} but using the locale's alternative numeric symbols.
+
+@item %T
+Equivalent to the use of @code{%H:%M:%S} in this place.
+
+@item %u
+The day of the week as a decimal number (range @code{1} through
+@code{7}), Monday being @code{1}.
+
+Leading zeroes are permitted but not required.
+
+@emph{Note:} Currently, this is not fully implemented.  The format is
+recognized, input is consumed but no field in @var{tm} is set.
+
+@item %U
+The week number of the current year as a decimal number (range @code{0}
+through @code{53}).
+
+Leading zeroes are permitted but not required.
+
+@item %OU
+Same as @code{%U} but using the locale's alternative numeric symbols.
+
+@item %V
+The @w{ISO 8601:1988} week number as a decimal number (range @code{1}
+through @code{53}).
+
+Leading zeroes are permitted but not required.
+
+@emph{Note:} Currently, this is not fully implemented.  The format is
+recognized, input is consumed but no field in @var{tm} is set.
+
+@item %w
+The day of the week as a decimal number (range @code{0} through
+@code{6}), Sunday being @code{0}.
+
+Leading zeroes are permitted but not required.
+
+@emph{Note:} Currently, this is not fully implemented.  The format is
+recognized, input is consumed but no field in @var{tm} is set.
+
+@item %Ow
+Same as @code{%w} but using the locale's alternative numeric symbols.
+
+@item %W
+The week number of the current year as a decimal number (range @code{0}
+through @code{53}).
+
+Leading zeroes are permitted but not required.
+
+@emph{Note:} Currently, this is not fully implemented.  The format is
+recognized, input is consumed but no field in @var{tm} is set.
+
+@item %OW
+Same as @code{%W} but using the locale's alternative numeric symbols.
+
+@item %x
+The date using the locale's date format.
+
+@item %Ex
+Like @code{%x} but the locale's alternative data representation is used.
+
+@item %X
+The time using the locale's time format.
+
+@item %EX
+Like @code{%X} but the locale's alternative time representation is used.
+
+@item %y
+The year without a century as a decimal number (range @code{0} through
+@code{99}).
+
+Leading zeroes are permitted but not required.
+
+Note that it is questionable to use this format without
+the @code{%C} format.  The @code{strptime} function does regard input
+values in the range @math{68} to @math{99} as the years @math{1969} to
+@math{1999} and the values @math{0} to @math{68} as the years
+@math{2000} to @math{2068}.  But maybe this heuristic fails for some
+input data.
+
+Therefore it is best to avoid @code{%y} completely and use @code{%Y}
+instead.
+
+@item %Ey
+The offset from @code{%EC} in the locale's alternative representation.
+
+@item %Oy
+The offset of the year (from @code{%C}) using the locale's alternative
+numeric symbols.
+
+@item %Y
+The year as a decimal number, using the Gregorian calendar.
+
+@item %EY
+The full alternative year representation.
+
+@item %z
+The offset from GMT in @w{ISO 8601}/RFC822 format.
+
+@item %Z
+The timezone name.
+
+@emph{Note:} Currently, this is not fully implemented.  The format is
+recognized, input is consumed but no field in @var{tm} is set.
+
+@item %%
+A literal @samp{%} character.
+@end table
+
+All other characters in the format string must have a matching character
+in the input string.  Exceptions are white spaces in the input string
+which can match zero or more whitespace characters in the format string.
+
+@strong{Portability Note:} The XPG standard advises applications to use
+at least one whitespace character (as specified by @code{isspace}) or
+other non-alphanumeric characters between any two conversion
+specifications.  @Theglibc{} does not have this limitation but
+other libraries might have trouble parsing formats like
+@code{"%d%m%Y%H%M%S"}.
+
+The @code{strptime} function processes the input string from right to
+left.  Each of the three possible input elements (white space, literal,
+or format) are handled one after the other.  If the input cannot be
+matched to the format string the function stops.  The remainder of the
+format and input strings are not processed.
+
+The function returns a pointer to the first character it was unable to
+process.  If the input string contains more characters than required by
+the format string the return value points right after the last consumed
+input character.  If the whole input string is consumed the return value
+points to the @code{NULL} byte at the end of the string.  If an error
+occurs, i.e., @code{strptime} fails to match all of the format string,
+the function returns @code{NULL}.
+@end deftypefun
+
+The specification of the function in the XPG standard is rather vague,
+leaving out a few important pieces of information.  Most importantly, it
+does not specify what happens to those elements of @var{tm} which are
+not directly initialized by the different formats.  The
+implementations on different Unix systems vary here.
+
+The @glibcadj{} implementation does not touch those fields which are not
+directly initialized.  Exceptions are the @code{tm_wday} and
+@code{tm_yday} elements, which are recomputed if any of the year, month,
+or date elements changed.  This has two implications:
+
+@itemize @bullet
+@item
+Before calling the @code{strptime} function for a new input string, you
+should prepare the @var{tm} structure you pass.  Normally this will mean
+initializing all values to zero.  Alternatively, you can set all
+fields to values like @code{INT_MAX}, allowing you to determine which
+elements were set by the function call.  Zero does not work here since
+it is a valid value for many of the fields.
+
+Careful initialization is necessary if you want to find out whether a
+certain field in @var{tm} was initialized by the function call.
+
+@item
+You can construct a @code{struct tm} value with several consecutive
+@code{strptime} calls.  A useful application of this is e.g. the parsing
+of two separate strings, one containing date information and the other
+time information.  By parsing one after the other without clearing the
+structure in-between, you can construct a complete broken-down time.
+@end itemize
+
+The following example shows a function which parses a string which
+contains the date information in either US style or @w{ISO 8601} form:
+
+@smallexample
+const char *
+parse_date (const char *input, struct tm *tm)
+@{
+  const char *cp;
+
+  /* @r{First clear the result structure.}  */
+  memset (tm, '\0', sizeof (*tm));
+
+  /* @r{Try the ISO format first.}  */
+  cp = strptime (input, "%F", tm);
+  if (cp == NULL)
+    @{
+      /* @r{Does not match.  Try the US form.}  */
+      cp = strptime (input, "%D", tm);
+    @}
+
+  return cp;
+@}
+@end smallexample
+
+@node General Time String Parsing
+@subsubsection A More User-friendly Way to Parse Times and Dates
+
+The Unix standard defines another function for parsing date strings.
+The interface is weird, but if the function happens to suit your
+application it is just fine.  It is problematic to use this function
+in multi-threaded programs or libraries, since it returns a pointer to
+a static variable, and uses a global variable and global state (an
+environment variable).
+
+@defvar getdate_err
+@standards{Unix98, time.h}
+This variable of type @code{int} contains the error code of the last
+unsuccessful call to @code{getdate}.  Defined values are:
+
+@table @math
+@item 1
+The environment variable @code{DATEMSK} is not defined or null.
+@item 2
+The template file denoted by the @code{DATEMSK} environment variable
+cannot be opened.
+@item 3
+Information about the template file cannot retrieved.
+@item 4
+The template file is not a regular file.
+@item 5
+An I/O error occurred while reading the template file.
+@item 6
+Not enough memory available to execute the function.
+@item 7
+The template file contains no matching template.
+@item 8
+The input date is invalid, but would match a template otherwise.  This
+includes dates like February 31st, and dates which cannot be represented
+in a @code{time_t} variable.
+@end table
+@end defvar
+
+@deftypefun {struct tm *} getdate (const char *@var{string})
+@standards{Unix98, time.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:getdate} @mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c getdate @mtasurace:getdate @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  getdate_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+The interface to @code{getdate} is the simplest possible for a function
+to parse a string and return the value.  @var{string} is the input
+string and the result is returned in a statically-allocated variable.
+
+The details about how the string is processed are hidden from the user.
+In fact, they can be outside the control of the program.  Which formats
+are recognized is controlled by the file named by the environment
+variable @code{DATEMSK}.  This file should contain
+lines of valid format strings which could be passed to @code{strptime}.
+
+The @code{getdate} function reads these format strings one after the
+other and tries to match the input string.  The first line which
+completely matches the input string is used.
+
+Elements not initialized through the format string retain the values
+present at the time of the @code{getdate} function call.
+
+The formats recognized by @code{getdate} are the same as for
+@code{strptime}.  See above for an explanation.  There are only a few
+extensions to the @code{strptime} behavior:
+
+@itemize @bullet
+@item
+If the @code{%Z} format is given the broken-down time is based on the
+current time of the timezone matched, not of the current timezone of the
+runtime environment.
+
+@emph{Note}: This is not implemented (currently).  The problem is that
+timezone names are not unique.  If a fixed timezone is assumed for a
+given string (say @code{EST} meaning US East Coast time), then uses for
+countries other than the USA will fail.  So far we have found no good
+solution to this.
+
+@item
+If only the weekday is specified the selected day depends on the current
+date.  If the current weekday is greater than or equal to the @code{tm_wday}
+value the current week's day is chosen, otherwise the day next week is chosen.
+
+@item
+A similar heuristic is used when only the month is given and not the
+year.  If the month is greater than or equal to the current month, then
+the current year is used.  Otherwise it wraps to next year.  The first
+day of the month is assumed if one is not explicitly specified.
+
+@item
+The current hour, minute, and second are used if the appropriate value is
+not set through the format.
+
+@item
+If no date is given tomorrow's date is used if the time is
+smaller than the current time.  Otherwise today's date is taken.
+@end itemize
+
+It should be noted that the format in the template file need not only
+contain format elements.  The following is a list of possible format
+strings (taken from the Unix standard):
+
+@smallexample
+%m
+%A %B %d, %Y %H:%M:%S
+%A
+%B
+%m/%d/%y %I %p
+%d,%m,%Y %H:%M
+at %A the %dst of %B in %Y
+run job at %I %p,%B %dnd
+%A den %d. %B %Y %H.%M Uhr
+@end smallexample
+
+As you can see, the template list can contain very specific strings like
+@code{run job at %I %p,%B %dnd}.  Using the above list of templates and
+assuming the current time is Mon Sep 22 12:19:47 EDT 1986, we can obtain the
+following results for the given input.
+
+@multitable {xxxxxxxxxxxx} {xxxxxxxxxx} {xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
+@item        Input @tab     Match @tab Result
+@item        Mon @tab       %a @tab    Mon Sep 22 12:19:47 EDT 1986
+@item        Sun @tab       %a @tab    Sun Sep 28 12:19:47 EDT 1986
+@item        Fri @tab       %a @tab    Fri Sep 26 12:19:47 EDT 1986
+@item        September @tab %B @tab    Mon Sep 1 12:19:47 EDT 1986
+@item        January @tab   %B @tab    Thu Jan 1 12:19:47 EST 1987
+@item        December @tab  %B @tab    Mon Dec 1 12:19:47 EST 1986
+@item        Sep Mon @tab   %b %a @tab Mon Sep 1 12:19:47 EDT 1986
+@item        Jan Fri @tab   %b %a @tab Fri Jan 2 12:19:47 EST 1987
+@item        Dec Mon @tab   %b %a @tab Mon Dec 1 12:19:47 EST 1986
+@item        Jan Wed 1989 @tab  %b %a %Y @tab Wed Jan 4 12:19:47 EST 1989
+@item        Fri 9 @tab     %a %H @tab Fri Sep 26 09:00:00 EDT 1986
+@item        Feb 10:30 @tab %b %H:%S @tab Sun Feb 1 10:00:30 EST 1987
+@item        10:30 @tab     %H:%M @tab Tue Sep 23 10:30:00 EDT 1986
+@item        13:30 @tab     %H:%M @tab Mon Sep 22 13:30:00 EDT 1986
+@end multitable
+
+The return value of the function is a pointer to a static variable of
+type @w{@code{struct tm}}, or a null pointer if an error occurred.  The
+result is only valid until the next @code{getdate} call, making this
+function unusable in multi-threaded applications.
+
+The @code{errno} variable is @emph{not} changed.  Error conditions are
+stored in the global variable @code{getdate_err}.  See the
+description above for a list of the possible error values.
+
+@emph{Warning:} The @code{getdate} function should @emph{never} be
+used in SUID-programs.  The reason is obvious: using the
+@code{DATEMSK} environment variable you can get the function to open
+any arbitrary file and chances are high that with some bogus input
+(such as a binary file) the program will crash.
+@end deftypefun
+
+@deftypefun int getdate_r (const char *@var{string}, struct tm *@var{tp})
+@standards{GNU, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c getdate_r @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  getenv dup @mtsenv
+@c  stat64 dup ok
+@c  access dup ok
+@c  fopen dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c  fsetlocking dup ok [no @mtasurace:stream @asulock, exclusive]
+@c  isspace dup @mtslocale
+@c  strlen dup ok
+@c  malloc dup @ascuheap @acsmem
+@c  fclose dup @ascuheap @asulock @aculock @acsmem @acsfd
+@c  memcpy dup ok
+@c  getline dup @ascuheap @acsmem [no @asucorrupt @aculock @acucorrupt, exclusive]
+@c  strptime dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  feof_unlocked dup ok
+@c  free dup @ascuheap @acsmem
+@c  ferror_unlocked dup dup ok
+@c  time dup ok
+@c  localtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  first_wday @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   memset dup ok
+@c   mktime dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  check_mday ok
+@c  mktime dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+The @code{getdate_r} function is the reentrant counterpart of
+@code{getdate}.  It does not use the global variable @code{getdate_err}
+to signal an error, but instead returns an error code.  The same error
+codes as described in the @code{getdate_err} documentation above are
+used, with 0 meaning success.
+
+Moreover, @code{getdate_r} stores the broken-down time in the variable
+of type @code{struct tm} pointed to by the second argument, rather than
+in a static variable.
+
+This function is not defined in the Unix standard.  Nevertheless it is
+available on some other Unix systems as well.
+
+The warning against using @code{getdate} in SUID-programs applies to
+@code{getdate_r} as well.
+@end deftypefun
+
+@node TZ Variable
+@subsection Specifying the Time Zone with @code{TZ}
+
+In POSIX systems, a user can specify the time zone by means of the
+@code{TZ} environment variable.  For information about how to set
+environment variables, see @ref{Environment Variables}.  The functions
+for accessing the time zone are declared in @file{time.h}.
+@pindex time.h
+@cindex time zone
+
+You should not normally need to set @code{TZ}.  If the system is
+configured properly, the default time zone will be correct.  You might
+set @code{TZ} if you are using a computer over a network from a
+different time zone, and would like times reported to you in the time
+zone local to you, rather than what is local to the computer.
+
+In POSIX.1 systems the value of the @code{TZ} variable can be in one of
+three formats.  With @theglibc{}, the most common format is the
+last one, which can specify a selection from a large database of time
+zone information for many regions of the world.  The first two formats
+are used to describe the time zone information directly, which is both
+more cumbersome and less precise.  But the POSIX.1 standard only
+specifies the details of the first two formats, so it is good to be
+familiar with them in case you come across a POSIX.1 system that doesn't
+support a time zone information database.
+
+The first format is used when there is no Daylight Saving Time (or
+summer time) in the local time zone:
+
+@smallexample
+@r{@var{std} @var{offset}}
+@end smallexample
+
+The @var{std} string specifies the name of the time zone.  It must be
+three or more characters long and must not contain a leading colon,
+embedded digits, commas, nor plus and minus signs.  There is no space
+character separating the time zone name from the @var{offset}, so these
+restrictions are necessary to parse the specification correctly.
+
+The @var{offset} specifies the time value you must add to the local time
+to get a Coordinated Universal Time value.  It has syntax like
+[@code{+}|@code{-}]@var{hh}[@code{:}@var{mm}[@code{:}@var{ss}]].  This
+is positive if the local time zone is west of the Prime Meridian and
+negative if it is east.  The hour must be between @code{0} and
+@code{24}, and the minute and seconds between @code{0} and @code{59}.
+
+For example, here is how we would specify Eastern Standard Time, but
+without any Daylight Saving Time alternative:
+
+@smallexample
+EST+5
+@end smallexample
+
+The second format is used when there is Daylight Saving Time:
+
+@smallexample
+@r{@var{std} @var{offset} @var{dst} [@var{offset}]@code{,}@var{start}[@code{/}@var{time}]@code{,}@var{end}[@code{/}@var{time}]}
+@end smallexample
+
+The initial @var{std} and @var{offset} specify the standard time zone, as
+described above.  The @var{dst} string and @var{offset} specify the name
+and offset for the corresponding Daylight Saving Time zone; if the
+@var{offset} is omitted, it defaults to one hour ahead of standard time.
+
+The remainder of the specification describes when Daylight Saving Time is
+in effect.  The @var{start} field is when Daylight Saving Time goes into
+effect and the @var{end} field is when the change is made back to standard
+time.  The following formats are recognized for these fields:
+
+@table @code
+@item J@var{n}
+This specifies the Julian day, with @var{n} between @code{1} and @code{365}.
+February 29 is never counted, even in leap years.
+
+@item @var{n}
+This specifies the Julian day, with @var{n} between @code{0} and @code{365}.
+February 29 is counted in leap years.
+
+@item M@var{m}.@var{w}.@var{d}
+This specifies day @var{d} of week @var{w} of month @var{m}.  The day
+@var{d} must be between @code{0} (Sunday) and @code{6}.  The week
+@var{w} must be between @code{1} and @code{5}; week @code{1} is the
+first week in which day @var{d} occurs, and week @code{5} specifies the
+@emph{last} @var{d} day in the month.  The month @var{m} should be
+between @code{1} and @code{12}.
+@end table
+
+The @var{time} fields specify when, in the local time currently in
+effect, the change to the other time occurs.  If omitted, the default is
+@code{02:00:00}.  The hours part of the time fields can range from
+@minus{}167 through 167; this is an extension to POSIX.1, which allows
+only the range 0 through 24.
+
+Here are some example @code{TZ} values, including the appropriate
+Daylight Saving Time and its dates of applicability.  In North
+American Eastern Standard Time (EST) and Eastern Daylight Time (EDT),
+the normal offset from UTC is 5 hours; since this is
+west of the prime meridian, the sign is positive.  Summer time begins on
+March's second Sunday at 2:00am, and ends on November's first Sunday
+at 2:00am.
+
+@smallexample
+EST+5EDT,M3.2.0/2,M11.1.0/2
+@end smallexample
+
+Israel Standard Time (IST) and Israel Daylight Time (IDT) are 2 hours
+ahead of the prime meridian in winter, springing forward an hour on
+March's fourth Thursday at 26:00 (i.e., 02:00 on the first Friday on or
+after March 23), and falling back on October's last Sunday at 02:00.
+
+@smallexample
+IST-2IDT,M3.4.4/26,M10.5.0
+@end smallexample
+
+Western Argentina Summer Time (WARST) is 3 hours behind the prime
+meridian all year.  There is a dummy fall-back transition on December
+31 at 25:00 daylight saving time (i.e., 24:00 standard time,
+equivalent to January 1 at 00:00 standard time), and a simultaneous
+spring-forward transition on January 1 at 00:00 standard time, so
+daylight saving time is in effect all year and the initial @code{WART}
+is a placeholder.
+
+@smallexample
+WART4WARST,J1/0,J365/25
+@end smallexample
+
+Western Greenland Time (WGT) and Western Greenland Summer Time (WGST)
+are 3 hours behind UTC in the winter.  Its clocks follow the European
+Union rules of springing forward by one hour on March's last Sunday at
+01:00 UTC (@minus{}02:00 local time) and falling back on October's
+last Sunday at 01:00 UTC (@minus{}01:00 local time).
+
+@smallexample
+WGT3WGST,M3.5.0/-2,M10.5.0/-1
+@end smallexample
+
+The schedule of Daylight Saving Time in any particular jurisdiction has
+changed over the years.  To be strictly correct, the conversion of dates
+and times in the past should be based on the schedule that was in effect
+then.  However, this format has no facilities to let you specify how the
+schedule has changed from year to year.  The most you can do is specify
+one particular schedule---usually the present day schedule---and this is
+used to convert any date, no matter when.  For precise time zone
+specifications, it is best to use the time zone information database
+(see below).
+
+The third format looks like this:
+
+@smallexample
+:@var{characters}
+@end smallexample
+
+Each operating system interprets this format differently; in
+@theglibc{}, @var{characters} is the name of a file which describes the time
+zone.
+
+@pindex /etc/localtime
+@pindex localtime
+If the @code{TZ} environment variable does not have a value, the
+operation chooses a time zone by default.  In @theglibc{}, the
+default time zone is like the specification @samp{TZ=:/etc/localtime}
+(or @samp{TZ=:/usr/local/etc/localtime}, depending on how @theglibc{}
+was configured; @pxref{Installation}).  Other C libraries use their own
+rule for choosing the default time zone, so there is little we can say
+about them.
+
+@cindex time zone database
+@pindex /usr/share/zoneinfo
+@pindex zoneinfo
+If @var{characters} begins with a slash, it is an absolute file name;
+otherwise the library looks for the file
+@w{@file{/usr/share/zoneinfo/@var{characters}}}.  The @file{zoneinfo}
+directory contains data files describing local time zones in many
+different parts of the world.  The names represent major cities, with
+subdirectories for geographical areas; for example,
+@file{America/New_York}, @file{Europe/London}, @file{Asia/Hong_Kong}.
+These data files are installed by the system administrator, who also
+sets @file{/etc/localtime} to point to the data file for the local time
+zone.  The files typically come from the @url{http://www.iana.org/time-zones,
+Time Zone Database} of time zone and daylight saving time
+information for most regions of the world, which is maintained by a
+community of volunteers and put in the public domain.
+
+@node Time Zone Functions
+@subsection Functions and Variables for Time Zones
+
+@deftypevar {char *} tzname [2]
+@standards{POSIX.1, time.h}
+The array @code{tzname} contains two strings, which are the standard
+names of the pair of time zones (standard and Daylight
+Saving) that the user has selected.  @code{tzname[0]} is the name of
+the standard time zone (for example, @code{"EST"}), and @code{tzname[1]}
+is the name for the time zone when Daylight Saving Time is in use (for
+example, @code{"EDT"}).  These correspond to the @var{std} and @var{dst}
+strings (respectively) from the @code{TZ} environment variable.  If
+Daylight Saving Time is never used, @code{tzname[1]} is the empty string.
+
+The @code{tzname} array is initialized from the @code{TZ} environment
+variable whenever @code{tzset}, @code{ctime}, @code{strftime},
+@code{mktime}, or @code{localtime} is called.  If multiple abbreviations
+have been used (e.g. @code{"EWT"} and @code{"EDT"} for U.S. Eastern War
+Time and Eastern Daylight Time), the array contains the most recent
+abbreviation.
+
+The @code{tzname} array is required for POSIX.1 compatibility, but in
+GNU programs it is better to use the @code{tm_zone} member of the
+broken-down time structure, since @code{tm_zone} reports the correct
+abbreviation even when it is not the latest one.
+
+Though the strings are declared as @code{char *} the user must refrain
+from modifying these strings.  Modifying the strings will almost certainly
+lead to trouble.
+
+@end deftypevar
+
+@deftypefun void tzset (void)
+@standards{POSIX.1, time.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c tzset @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  libc_lock_lock dup @asulock @aculock
+@c  tzset_internal dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  libc_lock_unlock dup @aculock
+The @code{tzset} function initializes the @code{tzname} variable from
+the value of the @code{TZ} environment variable.  It is not usually
+necessary for your program to call this function, because it is called
+automatically when you use the other time conversion functions that
+depend on the time zone.
+@end deftypefun
+
+The following variables are defined for compatibility with System V
+Unix.  Like @code{tzname}, these variables are set by calling
+@code{tzset} or the other time conversion functions.
+
+@deftypevar {long int} timezone
+@standards{SVID, time.h}
+This contains the difference between UTC and the latest local standard
+time, in seconds west of UTC.  For example, in the U.S. Eastern time
+zone, the value is @code{5*60*60}.  Unlike the @code{tm_gmtoff} member
+of the broken-down time structure, this value is not adjusted for
+daylight saving, and its sign is reversed.  In GNU programs it is better
+to use @code{tm_gmtoff}, since it contains the correct offset even when
+it is not the latest one.
+@end deftypevar
+
+@deftypevar int daylight
+@standards{SVID, time.h}
+This variable has a nonzero value if Daylight Saving Time rules apply.
+A nonzero value does not necessarily mean that Daylight Saving Time is
+now in effect; it means only that Daylight Saving Time is sometimes in
+effect.
+@end deftypevar
+
+@node Time Functions Example
+@subsection Time Functions Example
+
+Here is an example program showing the use of some of the calendar time
+functions.
+
+@smallexample
+@include strftim.c.texi
+@end smallexample
+
+It produces output like this:
+
+@smallexample
+Wed Jul 31 13:02:36 1991
+Today is Wednesday, July 31.
+The time is 01:02 PM.
+@end smallexample
+
+
+@node Setting an Alarm
+@section Setting an Alarm
+
+The @code{alarm} and @code{setitimer} functions provide a mechanism for a
+process to interrupt itself in the future.  They do this by setting a
+timer; when the timer expires, the process receives a signal.
+
+@cindex setting an alarm
+@cindex interval timer, setting
+@cindex alarms, setting
+@cindex timers, setting
+Each process has three independent interval timers available:
+
+@itemize @bullet
+@item
+A real-time timer that counts elapsed time.  This timer sends a
+@code{SIGALRM} signal to the process when it expires.
+@cindex real-time timer
+@cindex timer, real-time
+
+@item
+A virtual timer that counts processor time used by the process.  This timer
+sends a @code{SIGVTALRM} signal to the process when it expires.
+@cindex virtual timer
+@cindex timer, virtual
+
+@item
+A profiling timer that counts both processor time used by the process,
+and processor time spent in system calls on behalf of the process.  This
+timer sends a @code{SIGPROF} signal to the process when it expires.
+@cindex profiling timer
+@cindex timer, profiling
+
+This timer is useful for profiling in interpreters.  The interval timer
+mechanism does not have the fine granularity necessary for profiling
+native code.
+@c @xref{profil} !!!
+@end itemize
+
+You can only have one timer of each kind set at any given time.  If you
+set a timer that has not yet expired, that timer is simply reset to the
+new value.
+
+You should establish a handler for the appropriate alarm signal using
+@code{signal} or @code{sigaction} before issuing a call to
+@code{setitimer} or @code{alarm}.  Otherwise, an unusual chain of events
+could cause the timer to expire before your program establishes the
+handler.  In this case it would be terminated, since termination is the
+default action for the alarm signals.  @xref{Signal Handling}.
+
+To be able to use the alarm function to interrupt a system call which
+might block otherwise indefinitely it is important to @emph{not} set the
+@code{SA_RESTART} flag when registering the signal handler using
+@code{sigaction}.  When not using @code{sigaction} things get even
+uglier: the @code{signal} function has fixed semantics with respect
+to restarts.  The BSD semantics for this function is to set the flag.
+Therefore, if @code{sigaction} for whatever reason cannot be used, it is
+necessary to use @code{sysv_signal} and not @code{signal}.
+
+The @code{setitimer} function is the primary means for setting an alarm.
+This facility is declared in the header file @file{sys/time.h}.  The
+@code{alarm} function, declared in @file{unistd.h}, provides a somewhat
+simpler interface for setting the real-time timer.
+@pindex unistd.h
+@pindex sys/time.h
+
+@deftp {Data Type} {struct itimerval}
+@standards{BSD, sys/time.h}
+This structure is used to specify when a timer should expire.  It contains
+the following members:
+@table @code
+@item struct timeval it_interval
+This is the period between successive timer interrupts.  If zero, the
+alarm will only be sent once.
+
+@item struct timeval it_value
+This is the period between now and the first timer interrupt.  If zero,
+the alarm is disabled.
+@end table
+
+The @code{struct timeval} data type is described in @ref{Time Types}.
+@end deftp
+
+@deftypefun int setitimer (int @var{which}, const struct itimerval *@var{new}, struct itimerval *@var{old})
+@standards{BSD, sys/time.h}
+@safety{@prelim{}@mtsafe{@mtstimer{}}@assafe{}@acsafe{}}
+@c This function is marked with @mtstimer because the same set of timers
+@c is shared by all threads of a process, so calling it in one thread
+@c may interfere with timers set by another thread.  This interference
+@c is not regarded as destructive, because the interface specification
+@c makes this overriding while returning the previous value the expected
+@c behavior, and the kernel will serialize concurrent calls so that the
+@c last one prevails, with each call getting the timer information from
+@c the timer installed by the previous call in that serialization.
+The @code{setitimer} function sets the timer specified by @var{which}
+according to @var{new}.  The @var{which} argument can have a value of
+@code{ITIMER_REAL}, @code{ITIMER_VIRTUAL}, or @code{ITIMER_PROF}.
+
+If @var{old} is not a null pointer, @code{setitimer} returns information
+about any previous unexpired timer of the same kind in the structure it
+points to.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EINVAL
+The timer period is too large.
+@end table
+@end deftypefun
+
+@deftypefun int getitimer (int @var{which}, struct itimerval *@var{old})
+@standards{BSD, sys/time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{getitimer} function stores information about the timer specified
+by @var{which} in the structure pointed at by @var{old}.
+
+The return value and error conditions are the same as for @code{setitimer}.
+@end deftypefun
+
+@vtable @code
+@item ITIMER_REAL
+@standards{BSD, sys/time.h}
+This constant can be used as the @var{which} argument to the
+@code{setitimer} and @code{getitimer} functions to specify the real-time
+timer.
+
+@item ITIMER_VIRTUAL
+@standards{BSD, sys/time.h}
+This constant can be used as the @var{which} argument to the
+@code{setitimer} and @code{getitimer} functions to specify the virtual
+timer.
+
+@item ITIMER_PROF
+@standards{BSD, sys/time.h}
+This constant can be used as the @var{which} argument to the
+@code{setitimer} and @code{getitimer} functions to specify the profiling
+timer.
+@end vtable
+
+@deftypefun {unsigned int} alarm (unsigned int @var{seconds})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{@mtstimer{}}@assafe{}@acsafe{}}
+@c Wrapper for setitimer.
+The @code{alarm} function sets the real-time timer to expire in
+@var{seconds} seconds.  If you want to cancel any existing alarm, you
+can do this by calling @code{alarm} with a @var{seconds} argument of
+zero.
+
+The return value indicates how many seconds remain before the previous
+alarm would have been sent.  If there was no previous alarm, @code{alarm}
+returns zero.
+@end deftypefun
+
+The @code{alarm} function could be defined in terms of @code{setitimer}
+like this:
+
+@smallexample
+unsigned int
+alarm (unsigned int seconds)
+@{
+  struct itimerval old, new;
+  new.it_interval.tv_usec = 0;
+  new.it_interval.tv_sec = 0;
+  new.it_value.tv_usec = 0;
+  new.it_value.tv_sec = (long int) seconds;
+  if (setitimer (ITIMER_REAL, &new, &old) < 0)
+    return 0;
+  else
+    return old.it_value.tv_sec;
+@}
+@end smallexample
+
+There is an example showing the use of the @code{alarm} function in
+@ref{Handler Returns}.
+
+If you simply want your process to wait for a given number of seconds,
+you should use the @code{sleep} function.  @xref{Sleeping}.
+
+You shouldn't count on the signal arriving precisely when the timer
+expires.  In a multiprocessing environment there is typically some
+amount of delay involved.
+
+@strong{Portability Note:} The @code{setitimer} and @code{getitimer}
+functions are derived from BSD Unix, while the @code{alarm} function is
+specified by the POSIX.1 standard.  @code{setitimer} is more powerful than
+@code{alarm}, but @code{alarm} is more widely used.
+
+@node Sleeping
+@section Sleeping
+
+The function @code{sleep} gives a simple way to make the program wait
+for a short interval.  If your program doesn't use signals (except to
+terminate), then you can expect @code{sleep} to wait reliably throughout
+the specified interval.  Otherwise, @code{sleep} can return sooner if a
+signal arrives; if you want to wait for a given interval regardless of
+signals, use @code{select} (@pxref{Waiting for I/O}) and don't specify
+any descriptors to wait for.
+@c !!! select can get EINTR; using SA_RESTART makes sleep win too.
+
+@deftypefun {unsigned int} sleep (unsigned int @var{seconds})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtunsafe{@mtascusig{:SIGCHLD/linux}}@asunsafe{}@acunsafe{}}
+@c On Mach, it uses ports and calls time.  On generic posix, it calls
+@c nanosleep.  On Linux, it temporarily blocks SIGCHLD, which is MT- and
+@c AS-Unsafe, and in a way that makes it AC-Unsafe (C-unsafe, even!).
+The @code{sleep} function waits for @var{seconds} seconds or until a signal
+is delivered, whichever happens first.
+
+If @code{sleep} returns because the requested interval is over,
+it returns a value of zero.  If it returns because of delivery of a
+signal, its return value is the remaining time in the sleep interval.
+
+The @code{sleep} function is declared in @file{unistd.h}.
+@end deftypefun
+
+Resist the temptation to implement a sleep for a fixed amount of time by
+using the return value of @code{sleep}, when nonzero, to call
+@code{sleep} again.  This will work with a certain amount of accuracy as
+long as signals arrive infrequently.  But each signal can cause the
+eventual wakeup time to be off by an additional second or so.  Suppose a
+few signals happen to arrive in rapid succession by bad luck---there is
+no limit on how much this could shorten or lengthen the wait.
+
+Instead, compute the calendar time at which the program should stop
+waiting, and keep trying to wait until that calendar time.  This won't
+be off by more than a second.  With just a little more work, you can use
+@code{select} and make the waiting period quite accurate.  (Of course,
+heavy system load can cause additional unavoidable delays---unless the
+machine is dedicated to one application, there is no way you can avoid
+this.)
+
+On some systems, @code{sleep} can do strange things if your program uses
+@code{SIGALRM} explicitly.  Even if @code{SIGALRM} signals are being
+ignored or blocked when @code{sleep} is called, @code{sleep} might
+return prematurely on delivery of a @code{SIGALRM} signal.  If you have
+established a handler for @code{SIGALRM} signals and a @code{SIGALRM}
+signal is delivered while the process is sleeping, the action taken
+might be just to cause @code{sleep} to return instead of invoking your
+handler.  And, if @code{sleep} is interrupted by delivery of a signal
+whose handler requests an alarm or alters the handling of @code{SIGALRM},
+this handler and @code{sleep} will interfere.
+
+On @gnusystems{}, it is safe to use @code{sleep} and @code{SIGALRM} in
+the same program, because @code{sleep} does not work by means of
+@code{SIGALRM}.
+
+@deftypefun int nanosleep (const struct timespec *@var{requested_time}, struct timespec *@var{remaining})
+@standards{POSIX.1, time.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c On Linux, it's a syscall.  On Mach, it calls gettimeofday and uses
+@c ports.
+If resolution to seconds is not enough the @code{nanosleep} function can
+be used.  As the name suggests the sleep interval can be specified in
+nanoseconds.  The actual elapsed time of the sleep interval might be
+longer since the system rounds the elapsed time you request up to the
+next integer multiple of the actual resolution the system can deliver.
+
+@code{*@var{requested_time}} is the elapsed time of the interval you
+want to sleep.
+
+The function returns as @code{*@var{remaining}} the elapsed time left
+in the interval for which you requested to sleep.  If the interval
+completed without getting interrupted by a signal, this is zero.
+
+@code{struct timespec} is described in @ref{Time Types}.
+
+If the function returns because the interval is over the return value is
+zero.  If the function returns @math{-1} the global variable @code{errno}
+is set to the following values:
+
+@table @code
+@item EINTR
+The call was interrupted because a signal was delivered to the thread.
+If the @var{remaining} parameter is not the null pointer the structure
+pointed to by @var{remaining} is updated to contain the remaining
+elapsed time.
+
+@item EINVAL
+The nanosecond value in the @var{requested_time} parameter contains an
+illegal value.  Either the value is negative or greater than or equal to
+1000 million.
+@end table
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{nanosleep} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this calls to @code{nanosleep} should
+be protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The @code{nanosleep} function is declared in @file{time.h}.
+@end deftypefun

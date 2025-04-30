@@ -1,0 +1,193 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tulu (kannada) language locale for India.
+
+% *** Below just modify to suit your language. I have modified for Kannada
+% *** other language codes - Gujarati - gu, Punjabi - pa, Oriya - or
+
+LC_IDENTIFICATION
+title      "Tulu language locale for India"
+source     "IndLinux.org, Samsung Electronics Co., Ltd."
+address    ""
+contact    ""
+email      "alexey.merzlyakov@samsung.com"
+tel        ""
+fax        ""
+language   "Tulu"
+territory  "India"
+revision   "0.1"
+date       "2014-09-30"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "kn_IN"
+END LC_CTYPE
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+
+LC_NUMERIC
+copy "hi_IN"
+END LC_NUMERIC
+
+
+% *** Modify them for Kannada - eg write down on paper - see what all unicode
+% *** characters are needed, look up their codes & put them here - Kannada
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+% Abbreviated weekday names (%a)
+abday       "<U0C90>";/
+            "<U0CB8><U0CCB>";/
+            "<U0C85><U0C82>";/
+            "<U0CAC><U0CC1>";/
+            "<U0C97><U0CC1>";/
+            "<U0CB6><U0CC1>";/
+            "<U0CB6>"
+%
+% Full weekday names (%A)
+day         "<U0C90><U0CA5><U0CBE><U0CB0>";/
+            "<U0CB8><U0CCB><U0CAE><U0CBE><U0CB0>";/
+            "<U0C85><U0C82><U0C97><U0CB0><U0CC6>";/
+            "<U0CAC><U0CC1><U0CA7><U0CBE><U0CB0>";/
+            "<U0C97><U0CC1><U0CB0><U0CC1><U0CB5><U0CBE><U0CB0>";/
+            "<U0CB6><U0CC1><U0C95><U0CCD><U0CB0><U0CB0>";/
+            "<U0CB6><U0CA8><U0CBF><U0CB5><U0CBE><U0CB0>"
+%
+% Abbreviated month names (%b)
+abmon       "<U0C9C>";/
+            "<U0CAB><U0CC6>";/
+            "<U0CAE><U0CBE>";/
+            "<U0C8F>";/
+            "<U0CAE><U0CC7>";/
+            "<U0C9C><U0CC2>";/
+            "<U0C9C><U0CC1>";/
+            "<U0C86>";/
+            "<U0CB8><U0CC6>";/
+            "<U0C85>";/
+            "<U0CA8>";/
+            "<U0CA1><U0CBF>"
+%
+% Full month names (%B)
+mon         "<U0C9C><U0CA8><U0CB5><U0CB0><U0CBF>";/
+            "<U0CAB><U0CC6><U0CAC><U0CCD><U0CB0><U0CC1><U0CB5><U0CB0><U0CBF>";/
+            "<U0CAE><U0CBE><U0CB0><U0CCD><U0C9A><U0CCD>";/
+            "<U0C8F><U0CAA><U0CCD><U0CB0><U0CBF><U0CB2><U0CCD><U200C><U200C>";/
+            "<U0CAE><U0CC7>";/
+            "<U0C9C><U0CC2><U0CA8><U0CCD>";/
+            "<U0C9C><U0CC1><U0CB2><U0CC8>";/
+            "<U0C86><U0C97><U0CB8><U0CCD><U0C9F><U0CCD>";/
+            "<U0CB8><U0CC6><U0CAA><U0CCD><U0C9F><U0CC6><U0C82><U0CAC><U0CB0><U0CCD><U200C>";/
+            "<U0C85><U0C95><U0CCD><U0C9F><U0CCB><U0CAC><U0CB0><U0CCD>";/
+            "<U0CA8><U0CB5><U0CC6><U0C82><U0CAC><U0CB0><U0CCD>";/
+            "<U0CA1><U0CBF><U0CB8><U0CC6><U0C82><U0CAC><U0CB0><U0CCD>"
+%
+% Equivalent of AM PM
+am_pm       "<U0C95><U0CBE><U0C82><U0CA1><U0CC6>";/
+            "<U0CAC><U0CAF><U0CCD><U0CAF>"
+
+% *** There arent any Devanagari characters below, so for time being
+% *** maintain same for Kannada also,  Karunakar
+
+%
+% Appropriate date and time representation
+d_t_fmt     "%A %d %b %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%A %d %b %Y %I:%M:%S %p %Z"
+%
+% Appropriate date representation
+d_fmt       "%-d//%-m//%y"
+%
+% Appropriate time representation
+t_fmt       "%I:%M:%S %p %Z"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%I:%M:%S %p %Z"
+week 7;19971130;1
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0nN]"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "hi_IN"
+END LC_PAPER
+
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    ""
+name_mr     "<U0CB6><U0CCD><U0CB0><U0CC0>"
+name_mrs    "<U0CB6><U0CCD><U0CB0><U0CC0><U0CAE><U0CA4><U0CBF>"
+name_miss   "<U0C95><U0CC1><U0CAE><U0CBE><U0CB0><U0CBF>"
+name_ms     "<U0C95><U0CC1><U0CAE><U0CBE><U0CB0>"
+
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+% https://tcy.wikipedia.org/wiki/%E0%B2%AD%E0%B2%BE%E0%B2%B0%E0%B2%A4 : "ಭಾರತ"
+country_name "<U0CAD><U0CBE><U0CB0><U0CA4>"
+country_ab2 "IN"
+country_ab3 "IND"
+country_car "IND"
+country_num 356
+lang_name     "<U0CA4><U0CC1><U0CB3><U0CC1>"
+lang_ab       ""
+lang_term     "tcy"
+lang_lib      "tcy"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+copy "hi_IN"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "hi_IN"
+END LC_MEASUREMENT

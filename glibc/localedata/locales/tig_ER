@@ -1,0 +1,217 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Tigre language locale for Eritrea.
+%
+% Tigre terms are provided by Mussie Bekit with coordination by the
+% Shimagale Team <http://www.shimagle.com/>.  Prepared and contributed
+% to glibc by Daniel Yacob <locales@geez.org>
+%
+% build with: localedef -f UTF-8 -i tig_ER tig_ER
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+title      "Tigre language locale for Eritrea"
+source     "Ge'ez Frontier Foundation"
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Tigre"
+territory  "Eritrea"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Tigre Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "ti_ER"
+END LC_COLLATE
+
+LC_CTYPE
+copy "ti_ER"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Eritrea Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "ti_ER"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "ti_ER"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ti_ER"
+END LC_NUMERIC
+
+LC_PAPER
+copy "ti_ER"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ti_ER"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Tigre Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MESSAGES
+copy "ti_ER"
+END LC_MESSAGES
+
+LC_NAME
+copy "ti_ER"
+END LC_NAME
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Tigre/ER Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_ADDRESS category.
+%
+postal_fmt    "%z%c%T%s%b%e%r"
+country_name  "<U12A4><U122D><U1275><U122B>"
+country_post  "ERI"
+country_ab2   "ER"
+country_ab3   "ERI"
+country_num   232
+country_car  "ER"
+% country_isbn  unknown, Need ISO 2108
+lang_name     "<U1275><U130D><U1228>"
+lang_ab       ""
+lang_term     "tig"
+lang_lib      "tig"
+%
+END LC_ADDRESS
+
+
+LC_TIME
+%
+% Abbreviated weekday names (%a)
+%
+abday    "<U1230>//<U12D3>";/
+         "<U1230><U1296> ";/
+         "<U1273><U120B><U1238>";/
+         "<U12A3><U1228><U122D>";/
+         "<U12A8><U121A><U123D>";/
+         "<U1305><U121D><U12D3>";/
+         "<U1230>//<U1295>"
+%
+% Full weekday names (%A)
+%
+day      "<U1230><U1295><U1260><U1275> <U12D3><U1263><U12ED>";/
+         "<U1230><U1296>";/
+         "<U1273><U120B><U1238><U1296>";/
+         "<U12A3><U1228><U122D><U1263><U12D3>";/
+         "<U12A8><U121A><U123D>";/
+         "<U1305><U121D><U12D3><U1275>";/
+         "<U1230><U1295><U1260><U1275> <U1295><U12A2><U123D>"
+%
+% Abbreviated month names (%b)
+%
+abmon    "<U1325><U122A> ";/
+         "<U1208><U12AB><U1272>";/
+         "<U1218><U130B><U1262>";/
+         "<U121A><U12EB><U12DD>";/
+         "<U130D><U1295><U1266>";/
+         "<U1230><U1290> ";/
+         "<U1213><U121D><U1208>";/
+         "<U1290><U1213><U1230>";/
+         "<U1218><U1235><U12A8>";/
+         "<U1325><U1245><U121D>";/
+         "<U1215><U12F3><U122D>";/
+         "<U1273><U1215><U1233>"
+%
+% Full month names (%B)
+%
+mon      "<U1325><U122A>";/
+         "<U1208><U12AB><U1272><U1275>";/
+         "<U1218><U130B><U1262><U1275>";/
+         "<U121A><U12EB><U12DD><U12EB>";/
+         "<U130D><U1295><U1266><U1275>";/
+         "<U1230><U1290>";/
+         "<U1213><U121D><U1208>";/
+         "<U1290><U1213><U1230>";/
+         "<U1218><U1235><U12A8><U1228><U121D>";/
+         "<U1325><U1245><U121D><U1272>";/
+         "<U1215><U12F3><U122D>";/
+         "<U1273><U1215><U1233><U1235>"
+%
+%
+% Equivalent of AM PM
+%
+am_pm    "<U1240><U12F0><U121D> <U1230><U122D> <U121D><U12D5><U120D>";/
+         "<U1213><U1246> <U1230><U122D> <U121D><U12D5><U120D>"
+%
+% Appropriate date representation (%x)
+%
+d_fmt   "%d//%m//%Y"
+%
+% Appropriate time representation (%X)
+%
+t_fmt "%l:%M:%S %p"
+%
+% Appropriate AM/PM time representation (%r)
+%
+t_fmt_ampm "%l:%M:%S %p"
+%
+% Appropriate date and time representation (%c)
+%	"%A፡ %B %e ዮም %Y %r %Z
+%
+d_t_fmt    "%A<U1361> %B %e <U12EE><U121D> %Y %r %Z"
+%
+% Appropriate date representation (date(1))
+%	"%A፡ %B %e ዮም %r %Z %Y ዓ/ም
+%
+date_fmt    "%A<U1361> %B %e <U12EE><U121D> %r %Z %Y <U12D3>//<U121D>"
+%
+week 7;19971130;1
+first_weekday 2
+END LC_TIME

@@ -1,0 +1,7 @@
+libc {
+  GLIBC_2.2 {
+    # Exception handling support functions from libgcc
+    __register_frame; __register_frame_table; __deregister_frame;
+    __frame_state_for; __register_frame_info_table;
+  }
+}

@@ -1,0 +1,11 @@
+GLIBC_PROVIDES dnl See aclocal.m4 in the top level source directory.
+# Local preconfigure fragment for sysdeps/microblaze
+
+AC_EGREP_CPP(yes,[#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+                   yes
+                  #endif
+                  ], endianness=le, endianness=be)
+
+case "$machine" in
+microblaze*)   base_machine=microblaze machine=microblaze/$endianness ;;
+esac

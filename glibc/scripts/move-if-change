@@ -1,0 +1,84 @@
+#!/bin/sh
+# Like mv $1 $2, but if the files are the same, just delete $1.
+# Status is zero if successful, nonzero otherwise.
+
+VERSION='2018-03-07 03:47'; # UTC
+# The definition above must lie within the first 8 lines in order
+# for the Emacs time-stamp write hook (at end) to update it.
+# If you change this file with Emacs, please let the write hook
+# do its job.  Otherwise, update this string manually.
+
+# Copyright (C) 2002-2021 Free Software Foundation, Inc.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+usage="usage: $0 SOURCE DEST"
+
+help="$usage
+  or:  $0 OPTION
+If SOURCE is different than DEST, then move it to DEST; else remove SOURCE.
+
+  --help     display this help and exit
+  --version  output version information and exit
+
+The variable CMPPROG can be used to specify an alternative to 'cmp'.
+
+Report bugs to <bug-gnulib@gnu.org>."
+
+year=`expr "$VERSION" : '\([^-]*\)'`
+version=`expr "$VERSION" : '\([^ ]*\)'`
+version="move-if-change (gnulib) $version
+Copyright $year Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law."
+
+cmpprog=${CMPPROG-cmp}
+
+for arg
+do
+  case $arg in
+    --help | --hel | --he | --h)
+      exec echo "$help" ;;
+    --version | --versio | --versi | --vers | --ver | --ve | --v)
+      exec echo "$version" ;;
+    --)
+      shift
+      break ;;
+    -*)
+      echo "$0: invalid option: $arg" >&2
+      exit 1 ;;
+    *)
+      break ;;
+  esac
+done
+
+test $# -eq 2 || { echo "$0: $usage" >&2; exit 1; }
+
+if test -r "$2" && $cmpprog -- "$1" "$2" >/dev/null; then
+  rm -f -- "$1"
+else
+  if mv -f -- "$1" "$2"; then :; else
+    # Ignore failure due to a concurrent move-if-change.
+    test -r "$2" && $cmpprog -- "$1" "$2" >/dev/null && rm -f -- "$1"
+  fi
+fi
+
+## Local Variables:
+## eval: (add-hook 'before-save-hook 'time-stamp)
+## time-stamp-start: "VERSION='"
+## time-stamp-format: "%:y-%02m-%02d %02H:%02M"
+## time-stamp-time-zone: "UTC0"
+## time-stamp-end: "'; # UTC"
+## End:

@@ -1,0 +1,1685 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 13 ILI
+.re
+.sh 2 Overview
+ILIs (intermediate language instructions) are the second internal
+representation of a source program. Each ILI corresponds to a sequence
+of SC
+micro-ops.  The ILIs are translated from the ILMs by the Expander and
+are the representation of the source seen by the optimizer and code
+scheduler.
+.lp
+ILIs are maintained in a single memory area and are shared for the
+entire source file.  That is, multiple occurrences of an expression
+will be represented by a single ILI. See the section
+.i "ILI Structure"
+for
+a complete description of an ILI.
+.lp
+The ILIs are grouped into basic blocks. An ILM block may produce
+several ILI blocks.
+Associated with each ILI block is a block information header (BIH) which 
+defines what labels and variables are 
+referenced in the block and describes certain attributes of the block.
+See the section
+.i "BIH Structure"
+for more information.
+.lp
+An ILI block consists of a sequence of ILI terminal nodes (ILTs) which
+are linked together and represent ILI
+.q "statements" .
+Each ILT consists of
+previous and next ILT links, a pointer to the ILI tree  which
+represents the ILI statement, and flags which describe the ILI statement
+(see the section,
+.i "ILT Structure" ).
+The Expander buffers one block of ILT at a time in a dynamic storage area.
+When the block is completed, it is written out to a temporary file in binary
+format by the routine
+.cw "wrilts" ,
+and will be read by the optimizer and/or
+code scheduler by the routine
+.cw "rdilts" .
+ILIs are added to the ILI area by the routine
+.cw "srcili" .
+.sh 2 "Static Tables"
+.sh 3 "ILI Attributes"
+Associated with each ILI opcode (located by the value of the opcode) is
+information describing the ILI (its attributes).
+This information is defined symbolically in a file processed by the
+utility ILITP which creates the
+data definition files needed to define the information including the
+above mentioned macros for the ILI opcodes.
+See APPENDIX V for the current symbolic ILI definitions.
+.lp
+The attributes for a given ILI opcode are defined by the following
+structure:
+.(b
+.CS
+typedef struct {
+   char *name;
+   char type;
+   short oprs;
+   long oprflag;
+   short attr;
+}  ILIINFO;
+.CE
+.)b
+where,
+.ip name 9
+pointer to a null terminated character string for the ILI name.
+This is needed only for an ILI debug dump.
+.br
+.ne 10
+.ip type 9
+type of the ILI. The allowed values are:
+.TS
+LfCW L.
+\&'a'	arithmetic
+\&'i'	intrinsic
+\&'b'	branch
+\&'l'	load
+\&'c'	constant
+\&'s'	store
+\&'p'	procedure
+\&'d'	register define
+\&'m'	register move
+\&'o'	other
+.TE
+.ip oprs 9
+number of operands (1\-4).
+.ip oprflag 9
+bit fields defining the type of each operand:
+.TS
+tab(%);
+| C | C | C | C |.
+_
+op\*<n\*>%.\ .\ .%op\*<2\*>%op\*<1\*>
+_
+.TE
+op\*<i\*> is
+4 bit field defining the type of operand
+.i i :
+.ba +9
+.ba +9n
+.nr PS \n(psu
+.nr ps 0
+.nr II \n(iiu
+.nr ii \w'\f(CWILIO_SPLNK\fP'+2n
+.ip \f(CWILIO_SYM\fP
+symbol table pointer
+.ip \f(CWILIO_STC\fP
+short constant
+.ip \f(CWILIO_OFF\fP
+symbol table pointer
+to a constant of type
+.cw DT_CPTR
+.ip \f(CWILIO_NME\fP
+names entry pointer
+.ip \f(CWILIO_LNK\fP
+ILI link (the value
+is not actually used by the ILI; it
+is just defining a dependency on that
+operand)
+.ip \f(CWILIO_IRLNK\fP
+ILI link whose value
+is type integer register
+.ip \f(CWILIO_ARLNK\fP
+ILI link whose value
+is type address register
+.ip \f(CWILIO_SPLNK\fP
+ILI link whose value
+is type single precision register
+.ip \f(CWILIO_DPLNK\fP
+ILI link whose value
+is type double precision register
+.ip \f(CWILIO_IR\fP
+operand i is an integer register
+.ip \f(CWILIO_AR\fP
+operand i is an address register
+.ip \f(CWILIO_DP\fP
+operand i is a single precision register
+.ip \f(CWILIO_SP\fP
+operand i is a double precision register
+.ba +9n
+.nr ii \n(IIu
+.nr ps \n(PSu
+.ba -9
+.ba 0
+.ip attr 9
+bit fields describing other attributes for the ILI
+.TS
+tab(%);
+| Cw(1.0i) | C | C |.
+_
+%res%comm
+_
+.TE
+.ba +9
+.ip comm 8n
+1 bit field denoting if the operands of the ILI are commutative:
+.TS
+LfCW L.
+0	operands are not commutative
+ILIA_COMM	operands are commutative
+.TE
+.ip res 8n
+3 bit field defining the type of the result of the ILI:
+.ba +8n
+.nr II \n(IIu
+.nr PS \n(PSu
+.nr ps 0
+.nr ii \w'\f(CWILIA_TRM\fP'+2n
+.ip \f(CWILIA_TRM\fP
+does not define a result \- this ILI is a terminal ILI
+.ip \f(CWILIA_LNK\fP
+the ILI may be pointed to by other ILI but does not produce a result
+.ip \f(CWILIA_IR\fP
+dr result
+.ip \f(CWILIA_AR\fP
+ar result
+.ip \f(CWILIA_SP\fP
+sp result 
+.ip \f(CWILIA_DP\fP
+dp result 
+.ba -8n
+.nr ii \n(IIu
+.nr ps \n(PSu
+.ba -9
+.lp
+The attributes for the ILIs are represented by an array of
+.cw ILIINFO
+structures called
+.cw ilis .
+The array is indexed by the value of an ILI
+opcode.  Extracting information other than the packed bit fields is
+done by using a construct of the form 
+.cw ilis[opc].member .
+Macros exist in the file
+.i ili.h
+which provide access to the operand
+flags and attribute flags.  These are:
+.(b
+.CS
+IL_OPRFLAG(opc, opn)
+IL_ISLINK(opc, opn)
+IL_COMM(opc)
+IL_REG(opc)
+.CE
+.)b
+where
+.cw opc
+is the opcode of the ILI and
+.cw opn
+is the operand number.
+.sh 3 "ILI Scheduling Information"
+The ILI Scheduling Information is static data created by the
+ILITP utility when processing ILI template definitions,
+and used by the Scheduler to schedule ILI.
+.lp
+The information is stored in a single static array,
+.cw silinfo ,
+which is indexed by ILI opcode number and which contains
+entries of the following structure:
+.(b
+.CS
+struct {
+   short cycles;
+   short rsc_vs;
+   short opr_info;
+   short r_reads;
+   short r_writes;
+   short latch;
+   short first_rs;
+   short rs_avail;
+   short ovlap;
+   short attrs;
+}
+.CE
+.)b
+.ip cycles 10
+Number of template cycles, including those containing only result
+definition micro-ops, of this ILI.  It (1) is used to compute the depth
+of an ili when building the dependency graph, (2) defines how many
+resource vector masks there are for this ili, (3) is used to determine when
+an address register input to an ili is free for other uses, (4) is used to
+determine if an ili needs to be written to the Scheduled Ili file. 
+.ip rsc_vs 10
+Relative pointer into array
+.cw resources
+containing the static resource
+bit masks for this ili (the bit masks are shared by the various ili).
+.ip opr_info 10
+Currently not used.
+.ip r_reads 10
+Relative pointer into array
+.cw r_reads
+containing register
+read information.
+.cw r_reads
+consists of (shared) blocks of records, one record for each
+data register or double precision read in a template.  Each record is a
+3-tuple with the following fields:
+.ba +10
+.ip cyclno 10n
+cycle relative to the beginning of the template on
+which the read occurs (0, 1, ...).
+.ip iliopr 10n
+number (1, 2, ...) of ili operand which is being
+read.
+.ip motype 10n
+.ba +10
+.nr II \n(IIu
+.nr PS \n(PSu
+.nr ps 0
+.nr ii 5n
+.ip 0
+default.
+.ip 1
+first multiplier operand.
+.ip 2
+second multiplier operand.
+.ip 3
+operand which is read on more than one cycle
+and which therefore may not be allowed to
+latch with input.
+.nr ii \n(IIu
+.nr ps \n(PSu
+.ba -10
+.ba -10
+.ip r_writes 10
+Relative pointer into array
+.cw r_writes
+containing register
+write information.
+.cw r_writes
+consists of (shared) blocks of records,
+one record for each result definition micro-op (e.g. rs=xxx) in the
+template.  Each record is a tuple containing the following two values:
+.ba +10
+.ip cyclno 10n
+cycle number relative to beginning of the
+template, on which the write occurs.
+.ip src 10n
+source of the write:
+.(b
+0 - 7	latch id.
+8 - 11	opr1, opr2, ... respectively.
+.)b
+.ba -10
+.ip latch 10
+For ili whose result is available in a latch this
+is the latch id (1 - 7), and 0 for other ili.
+.ip first_rs 10
+Number of first template cycle which contains a result definition (rs= )
+micro-op.
+This is used to determine on what cycle the result register(s) allocated
+for this ili must be free and available.
+.ip rs_avail 10
+Template cycle of the last result definition micro-op.
+If the result type of the ili is ar or lnk, this is the number of the
+first cycle after the end of the template.
+If the last result definition micro-op is of the form
+.q rs=opn ,
+this value is incremented by one.
+.ip "" 10
+This value is used to (1) compute the first cycle on which to attempt
+scheduling a link successor of this ili, and (2) determine if a
+link successor will be able to latch to the result of this ili.
+.ip suc_sched 10
+Number of cycles in template.
+Used to compute the first cycle on which to attempt scheduling
+a non-link successor of this ili.
+.sh 3 "ILI Template Definitions"
+The Template Definitions consist of two arrays which define for
+each ILI opcode, the micro-ops which make up its template.
+.lp
+The first array,
+.cw ilitp ,
+is indexed by ILI opcode and contains
+relative pointers into the second array,
+.cw tmops .
+.(b L
+.br
+.hl
+.\".so ili.pic
+.sz 10
+.ft R
+.sp 2
+.ce
+Figure 13-1 Template Definitions
+.hl
+.)b
+.lp
+The array
+.cw tmops
+consists of a segment for each ILI template.
+The first element of a segment is the depth in cycles,
+.i d ,
+of the
+template.
+Following the depth are
+.i d
+pairs of micro-op numbers
+which define which micro-ops appear on the consecutive cycles
+of the template.
+Note that this implies a maximum of two micro-ops per template cycle,
+but this limit should not cause a problem since any two micro-ops
+can always be merged to form a third.
+If more than two microps are desired for each template line, then
+the MAXTMOPS define should be set to the desired value for both
+the code ("benddep.h") and for the microp and ilitp utilities
+machine dependent include file.
+.lp
+If one of the cycles only contains a single micro-op,
+the succeeding microp values are 0.
+.lp
+Result definition micro-ops are not included in the template.
+.sh 2 "Dynamic Structures"
+.sh 3 "ILI Structure"
+An ILI has the form:
+.(b
+.CS
+typedef struct {
+   unsigned short opc;
+   unsigned short hshlnk;
+   unsigned short count;
+   unsigned short opnd[];
+}  ILI;
+.CE
+.)b
+where,
+.ip opc 8
+value denoting the ILI operation (its opcode)
+.ip hshlnk 8
+hash link field which is used for linking together
+ILIs whose hash values are identical
+.ip count 8
+a count of the number of times the ILI is used (used for reclaiming ILI
+space)
+.ip opnd[] 8
+operands of the ILI where the number of operands ranges from 1 to 4 and
+depends on the ILI opcode.
+The size of the operand array is statically set to a constant which is
+sufficient to hold the operands of all ILIs.
+Note that the ILITP utility will ensure that this size is sufficent.
+.lp
+A pointer to an ILI is just an integer value which is an offset from the 
+beginning of the ILI area, and, this value is represented by an unsigned
+short int.  Since an ILI's operand field can locate
+(link to) an ILI, the number of ILIs allowed for a source program is 
+limited to 65535.
+.lp
+ILI opcodes are non-zero positive integers referenced by macros whose names
+begin with
+.cw IL_ .
+These names appear in the file
+.i iliatt.h
+which is produced
+by the utility, ILITP (see the section
+.i "ILITP Utility" ).
+In the file
+.i ili.h ,
+are the macros which are used to access an
+ILI and a typedef for the ILI structure.
+.lp
+The macros used to access the field
+.cw <field>
+of ILI
+.cw i ,
+where
+.cw <field>
+is one of
+.cw OPC ,
+.cw HSHLNK ,
+or
+.cw COUNT ,
+are of the
+form:
+.(b
+\f(CWILI_<field>(i)\fP
+.)b
+The macro used to access the
+.cw n th
+operand
+of ILI
+.cw i
+is
+.(b
+\f(CWILI_OPND(i, n)\fP
+.)b
+All of these macros can be used to assign a value to or fetch a value from
+an ILI field.
+.lp
+Each ILI is hashed into the common ILI area. The hash tables are logically
+divided into 4 tables where a table is used for the ILI with the same number
+of operands.  Each hash table is of identical size and the hashing function
+uses the values of the opcodes and operands to compute the hash index.
+The routine
+.cw "srcili"
+is used to search the ILI area.  ILIs whose hash values
+are identical are linked together using the HSHLNK field.
+.sh 3 "ILT Structure"
+An ILT is the terminal node of an ILI statement which roughly corresponds
+to a source language statement.  The ILI statement may be a store,
+an unconditional or conditional branch, or a procedure call.
+The ILTs are maintained in a single dynamic memory area.
+The following external variable is used to represent the ILT area:
+.(b
+.CS
+struct {
+    ILT *stg_base;		/* pointer to memory space */
+    unsigned short stg_size;	/* size in ILT units */
+    unsigned short stg_avail;	/* index to the available ILT */
+} iltb;
+.CE
+.)b
+.lp
+The structure of an ILT is:
+.TS
+center;
+| Cw(1.0i) | Cw(1.0i) | .
+_
+ilip	flags
+_
+prev	next
+_
+.TE
+where,
+.ip ilip 8
+ILI pointer to the
+.q "tree"
+of ILIs representing the statement
+.ip flags 8
+various flags of the ILT (a value of one indicates that the flag is set).
+.ba +8
+.nr PS \n(psu
+.nr ps 0
+.ip EX 5n
+ILI tree contains an external reference (either
+a procedure or a function)
+.ip ST 5n
+ILI is a store
+.ip BR 5n
+ILI is a branch
+.nr ps \n(PSu
+.ba -8
+.ip prev 8
+pointer to the previous ILT (a value of zero indicates that the
+ILT is the first in the block
+.ip next 8
+pointer to the next ILT (a value of zero indicates that the
+ILT is the last in the block
+.lp
+An ILI block is doubly linked list of ILTs.
+A block of ILTs is maintained in a dynamic storage area by the Expander.
+This dynamic area is divided into consecutive ILT nodes.
+The free ILT nodes are linked together to manage unused
+nodes.  A pointer to
+an ILT node is an integer value which is a relative pointer
+from the area's base address.
+.lp
+Macros, found in the include file
+.i "ili.h" ,
+provide access to the
+fields of an ILT.  These macros are of the form:
+.ip \f(CWILT_<field>(i)\fP 1.5i
+access field
+.cw <field>
+of ILT
+.cw i ,
+where
+.cw <field>
+is one of the flags
+.cw ILIP ,
+.cw PREV ,
+or
+.cw NEXT .
+.sh 3 "BIH Structure"
+The block information header for an ILT/ILI block contains a list of
+all the labels to which control may flow from this block, and a list
+of the variables and constants referenced in the block.  In addition,
+a BIH contains information such as the line number of the first statement
+in the block, where the block is filed away, flags, storage management
+information,
+and fields used by the optimizer.  The information is generated by
+the Expander (except for the optimizer fields) and used by the
+optimizer and/or code scheduler.
+.lp
+The BIHs are maintained in a dynamic memory area and a pointer
+(the block id) to a BIH is a relative pointer from the beginning of
+the area.
+The following external variable is used to represent the BIH area:
+.(b
+.CS
+struct {
+    BIH *stg_base;            /* pointer to memory space */
+    unsigned short stg_size;  /* size in BIH units */
+    unsigned short stg_avail; /* index to the available BIH */
+} bihb; 
+.CE
+.)b
+.lp
+The structure of a BIH is:
+.(b
+.TS
+tab(%) center;
+| cw(1.0i) | cw(1.0i) |
+| c | c |
+| c   s |
+| c | c |
+| c | c | .
+_
+label%lineno
+_
+flags%assn
+_
+filoff /
+iltfst%iltlst
+_
+prev%next
+_
+.TE
+.)b
+where,
+.ip label 10
+symbol table pointer to the label defined by the block (at the beginning).
+A value of zero indicates no lable is defined.
+.ip lineno 10
+source line number of the first statement in the block
+.ip flags 10
+various bit flags of the block.  A value of one indicates that
+the flag is true
+.ba +10
+.nr PS \n(psu
+.nr ps 0
+.ip RD 5n
+the block has been read into the ILT area
+.ip FT 5n
+the block's control falls through to its
+immediate successor
+.ip EN 5n
+the block is an entry to a procedure \- label locates
+the procedure entry symbol
+.ip EX 5n
+the block references an external. If the block is the
+entry of the function, this flag is for the entire
+function.
+.ip PL 5n
+the block is a pipelinable loop
+.nr ps \n(PSu
+.ba -10
+.ip assn 10
+assigned register and temporary lists (to be completed)
+.ip filoff 10
+locates where the block of ILTs is in the ILT file. This field is
+shared with the fields iltfirst and iltlast.
+.ip iltfirst 10
+pointer to the first ILT in the block
+.ip iltlast 10
+pointer to the last ILT in the block
+.ip prev 10
+pointer to the previous block's BIH
+.ip next 10
+pointer to the next block's BIH
+.lp
+Macros are provided in file
+.i "ili.h"
+which allow access to the fields of
+a BIH.  The macros are of the form:
+.(b
+.CS
+BIH_<field>( blkid )
+.CE
+.)b
+where
+.cw blkid
+is the block id for the BIH. 
+.sh 3 "Names Table"
+The names table consists of entries which denote the references that
+have occurred in the ILI.
+An entry will provide information as to its type (scalar, array, etc.).
+The entries are located by various expander/optimizer
+data structures and the
+load and store ILI's.
+.lp
+The names table is maintained in a single dynmamic area.
+The following external variable is used to represent the NME area:
+.(b
+.CS
+struct {
+    NME *stg_base;		/* pointer to memory space */
+    unsigned short stg_size;	/* size in NME units */
+    unsigned short stg_avail;	/* index to the available NME */
+} nmeb;
+.CE
+.)b
+.lp
+A names (NME) entry has the form:
+.(b
+.CS
+typedef struct {
+    char type;
+    char inlarr;
+    unsigned short sym;
+    unsigned short nm;
+    unsigned short rfptr;
+    unsigned short hshlnk;
+    unsigned short f6;
+    INT cnst;
+}  NME;
+.CE
+.)b
+where,
+.ip type 8
+indicates the type of the entry:
+.TS
+LfCW L.
+NT_UNK	The reference is unknown (i.e., *(f())).
+NT_IND	indirection, i.e., *p
+NT_VAR	variable, (array, structure, or scalar)
+NT_MEM	structure member
+NT_ARR	array element
+.TE
+.ip inlarr 8
+Reference is a subscripted reference of an array which has been
+substituted for a dummy array argument of a function which has
+been inlined.
+.ip hshlnk 8
+hash link field used for linking up names entries whose hash values are
+identical
+.ip f6 8
+field used by the optimizer to record the definitions for
+a symbol
+.lp
+The meanings of the remaining fields depend on type:
+.ne 8
+.uh indirection
+.ip "rfptr" 8
+back pointer (exact use depends on the expander/optimizer). If 
+no reference exists, this field is zero.
+.ip "nm" 8
+base reference (for
+.cw *p ,
+nm is the name entry for
+.cw p )
+.ip "sym" 8
+.ba +8
+.ip 0 8n
+The reference is simple:
+.cw *p ,
+.cw *(p+c)
+where
+.cw c
+is a constant; then
+cnst is
+.cw c
+(in units of bytes)
+.ip 65535 8n
+The reference is complex:
+.cw *(p+i)
+where
+.cw i
+is a variable,
+.cw *f() ,
+etc.
+.ba -8
+.uh variable
+.ip "rfptr" 8
+back pointer (exact use depends on the expander/optimizer). If 
+no reference exists, this field is zero.
+.ip "nm" 8
+0
+.ip "sym" 8
+symbol table pointer
+.uh member
+.ip "rfptr" 8
+back pointer (exact use depends on the expander/optimizer). If 
+no reference exists, this field is zero.
+.ip "nm" 8
+parent of member reference (this is a pointer to a NME item):
+for
+.cw s.x ,
+this locates the NME for
+.cw s .
+.ip "sym" 8
+symbol table pointer to the member
+.uh array
+.ip "rfptr" 8
+back pointer (exact use depends on the expander/optimizer). If 
+no reference exists, this field is zero.
+.ip "nm" 8
+NME item for the array: for
+.cw a[i] ,
+this locates the NME for
+.cw a .
+.ip "sym" 8
+.ba +8
+.ip 0 8n
+the reference has constant subscripts; then
+cnst = constant offset in byte units
+.ip 65535 8n
+the reference has variable subscripts.
+.ba -8
+.lp
+.(b L
+Examples:
+
+The notation
+.cw "<type, rfptr, sym, nm, cnst>"
+represents
+a NME item.
+.cw "'--'"
+indicates that the field is not used.
+.cw 'x'
+indicates a ST item for
+.cw x.
+.cw '(i)'
+indicates the
+.cw i -th
+NME entry.
+.)b
+.(b
+.CS
+struct {
+    struct {
+	int             y, z;
+    }               x;
+    int             a[10];
+    struct {
+	int             c;
+    }               b;
+}               s, *p;
+.CE
+.)b
+.(b
+.CS
+(1)  <  NT_VAR , -- , 's' ,   0 , -- >	"s"
+(2)  <  NT_MEM , -- , 'x' , (1) , -- >	"s.x"
+(3)  <  NT_MEM , -- , 'y' , (2) , -- >	"s.x.y"
+(4)  <  NT_MEM , -- , 'z' , (2) , -- >	"s.x.z"
+.CE
+.)b
+.(b
+.CS
+(5)  <  NT_MEM , -- , 'a' , (1) , -- >	"s.a"
+(6)  <  NT_ARR , -- ,   0 , (5) ,  1 >	"s.a[1]"
+(7)  <  NT_ARR , -- ,  -1 , (5) , -- >	"s.a[i]"
+.CE
+.)b
+.(b
+.CS
+(8)  <  NT_VAR , -- , 'p' ,   0 , -- >	"p"
+(9)  <  NT_IND , -- ,   0 , (8) ,  0 >	"*p"
+(10) <  NT_MEM , -- , 'b' , (9) , -- >	"p->b"
+(11) <  NT_MEM , -- , 'c' , (10), -- >	"p->b.c"
+.CE
+.)b
+.lp
+Macros exist in the file
+.i ili.h
+which allow access to the fields and
+are of the form:
+.(b
+.CS
+NME_<field>(item)
+.CE
+.)b
+.sh 2 "Processing"
+.sh 3 "ILI Processing"
+The ILIs (intermediate language instructions) are maintained in a single
+dynamic memory area and are shared for the entire source program.
+The following
+external structure variable is used to locate the memory area,
+give the size of the area, and to indicate where the available
+area begins :
+.(b L
+.CS
+struct {
+    ILI *stg_base;   /* pointer to memory space */
+    int  stg_size;   /* size in units of ILIs   */
+    int  stg_avail;  /* index to the available ILI in the memory
+                      * space */
+}        ilib;
+.CE
+.)b
+.lp
+Multiple occurrences of an expression will be represented by a single
+ILI.
+Although the number of operands depend on the ILI,
+each ILI entry in the ILI area consists of a fixed size.
+ILI pointers are just integers (greater than zero) which
+are offsets from the beginning of the ILI area.
+.lp
+The operands of an ILI may be pointers to other ILI, immediate values,
+pointers (index values) to names entries,
+and symbol table pointers.  For an ILI whose operands are commutative
+(the operands are two ILI pointers), the ILI pointers are ordered such
+that the index of operand 1 is less than or equal to the index of operand
+2. This provides an easy mechanism to ensure that expressions
+such as
+.cw "a * b"
+and
+.cw "b * a"
+are represented by the same ILI.
+If one of the operands is a pointer to a constant ILI,
+the second operand will always locate the constant ILI. Note that
+this is an exception to the rule that the index value of the first operand
+is not greater than the index value of the second operand.
+.lp
+The ILI module contains two levels of ILI processing. At the lower level
+is the routine
+.cw srcili .
+At the higher level is the routine
+.cw addili
+which is called
+by the various expand and optimizer routines whenever an ILI needs to be added.
+srcili is called by addili when the ILI is to be entered into the ILI area.
+.lp
+.cw srcili
+uses a hashing mechanism based on the ILI's opcode and
+operands. Figure 13-1 gives a description of the
+.cw srcili
+algorithm.
+Note that for a new entry, its count is set to 0.
+.(z
+.hl
+.br
+.CS
+
+    val = HASH(ili);		/* compute hash value */
+    for (p=ILI in the hash chain for val)
+       if (p==ili) return(p);
+
+    /*  create new entry in the ILI area  */
+
+    p = new ILI;
+    copy fields of ili to p;
+    ILI_COUNT(p) = 0;
+    return(p);
+
+.CE
+.ce 1
+Figure 13-1. srcili Algorithm
+.hl
+.)z
+.lp
+The ILI module is entered through the routine
+.cw addili .
+ILIs to be added
+to the ILI area are first handled by
+.cw addili .
+Other routines are provided which call
+.cw addili
+given a specific ILI
+and its operands to be added.
+.cw addili
+processes the ILI
+according to its type and performs certain optimizations such as
+constant folding and strength reduction. For those cases discussed 
+previously,
+.cw addili
+re-arranges operands.
+Depending on the complexity involved, separate routines are called by
+.cw addili
+(although they are logically a part of
+.cw addili )
+to handle certain cases.
+Figure 13-2 gives an overview of
+.cw addili .
+.(z
+.hl
+.br
+.CS
+
+	given ilip (a pointer to the ILI to be added);
+	opc = ilip->opc;
+	select processing depending on type of ILI {
+
+	case ilip is arithmetic:
+	   return addarth(ilip);
+	case ilip is constant, load, store, procedure, define:
+	   return srcili(ilip);
+	case ilip is move:
+	   process move ILI;
+	case ilip is branch:
+	   return addbran(ilip);
+	case ilip is other:
+	   return srcili(ilip);
+
+	}
+
+.CE
+.ce 1
+Figure 13-2. addili
+.hl
+.)z
+.lp
+Optimizations are performed on the ILI (mainly on the arithmetics)
+and include both machine
+independent and dependent optimizations.  Briefly, the optimizations are:
+.ip \(bu
+constant folding
+.ip \(bu
+identities
+.(b
+.CS
+i * 1  \(->  i
+i / 1  \(->  i
+i + 0  \(->  i
+.CE
+.)b
+.ip \(bu
+integer and address association
+.(b
+.CS
+i - c          \(->  i + (-c),  c is a constant
+(i + c1) + c2  \(->  i + (c1 + c2),  c1 and c2 are constants
+(c1 - i) + c2  \(->  (c1 + c2) - i
+.CE
+.)b
+.ip \(bu
+comparison with zero
+.(b
+.CS
+i :: 0  \(->      uses ILI which does not require a memory
+                  reference of the constant 0
+i + c :: 0  \(->  i :: c, where c is a constant
+.CE
+.)b
+.ip \(bu
+branch optimizations - see section entitled
+.i "Branch Optimizations" .
+.sh 4 "Move Processing"
+The move ILI are divided into two types:
+.np
+The move ILI whose link is type IR, DP, SP, or AR to a data register,
+double precision register, or address register, respectively.
+These ILIs (MVIR, MVDP, MVSP, and MVAR) are terminal ILIs and also
+specify the destination register.
+.np
+The move ILIs which convert type AR to IR or IR to AR (AIMV or
+IAMV, respectively).
+These ILIs are non-terminal ILIs and do not specify a register. 
+.lp
+The terminal move ILIs are simply added to the
+ILI area by srcili unless the register specified is \(mi1.  If this 
+occurs, the ILI linked to by the move ILI is returned.
+This is provided for certain expansions which need to simply pass up
+the result of another ILI.
+.lp
+The convert register ILIs may be constant folded.  That is, if
+the value (ILI) being converted is a constant, the appropriate constant
+and constant ILI are created. Also, the following identities may be
+performed:
+.(b
+.CS
+AIMV  j  \(->  i    if j = IAMV  i
+IAMV  j  \(->  i    if j = IAMV  i
+.CE
+.)b
+.sh 4 "Branch Optimizations"
+.lp
+Certain sequences of ILIs are optimized which will allow
+better code to be produced. The optimizations include changing a compare
+ILI followed by a branch ILI to a single ILI which combines the
+compare and branch operations, and
+.q "constant folding"
+branches (changing a compare and branch to an unconditional branch).
+.lp
+These optimizations center around the ICJMPZ ILI and LCJMPZ ILI.
+Depending on the language, the ILMs BRT and BRF expand to one of these ILI.
+For C, the notion of true and false is integer non-zero and zero,
+respectively; therefore, the ICJMPZ would be used (ICJMPZ means comparing
+its operand to zero and branching if the specified condition is true).
+For Fortran, the notion of logical true and false is odd and even,
+respectively; LCJMPZ means checking the low bit
+of its operand and branching if the specified condition is true).
+
+.lp
+The ICJMPZ ILI is of the form:
+.(b
+.CS
+    ICJMPZ drlnk cond sym
+.CE
+.)b
+where,
+.ip drlnk 8n
+is a pointer to an integer ILI
+.ip cond 8n
+is a condition value:
+.(b L
+1 = equal
+2 = not equal
+3 = less than
+4 = greater than or equal
+5 = less than or equal
+6 = greater than
+.)b
+.ip sym 8n
+is a symbol table pointer to the label.
+.lp
+The ILI LCJMPZ is of the form:
+.(b
+.CS
+    LCJMPZ drlnk cond sym
+.CE
+.)b
+where,
+.ip drlnk 8n
+is a pointer to an ILI producing a logical result
+.ip cond 8n
+is a condition value:
+.(b L
+1 = equal (branch if false)
+2 = not equal (branch if true)
+.)b
+.ip sym 8n
+is a symbol table pointer to the label.
+.lp
+For conditional branching, the semantic analyzer outputs a 
+sequence of ILMs corresponding to:
+.(b
+.CS
+(1) compare op1 op2 (this ILM is based on data type)
+(2) relop (1)
+(2) branch true (or false) (1) label
+.CE
+.)b
+For example, comparing two integer values and branching to label L
+in C
+if they are equal results in the following sequence of two ILMs:
+.(b
+.CS
+(1) ICMP op1 op2
+(2) EQ (1)
+(3) BRT (1) L
+.CE
+.)b
+These ILMs, before any optimizations occur, expand to the following
+ILI:
+.(b
+.CS
+(1) ICMP op1 op2 eq
+(2) ICJMPZ (1) ne L
+.CE
+.)b
+The desired ILI in this example is:
+.(b
+.CS
+(1) ICJMP op1 op2 eq L
+.CE
+.)b
+Optimizing the ILI in the ICJMPZ context involves looking at the
+operand of ICJMPZ and creating new ILI depending on what it is.
+If the ILI is a compare, a compare and branch ILI is created
+according to the following table:
+.(b L
+.TS
+tab(%) center;
+c c c
+c s s
+lfCW | cfCW | lfCW 
+lfCW | cfCW | lfCW 
+lfCW | cfCW | lfCW 
+lfCW | cfCW | lfCW .
+operand%%created ILI
+
+ACMP[Z]%\(-> ICJMPZ \(->%ACJMP[Z] *
+ICMP[Z]%\^%ICJMP[Z]
+FCMP[Z]%\^%FCJMP[Z]
+DCMP[Z]%\^%DCJMP[Z]
+.TE
+.ip * \w'NOTE'+1n
+ACJMP becomes ACJMPEQ if the condition is equals
+.ip NOTE \w'NOTE'+1n
+The (optional) Z indicates that the comparison is with zero.
+.)b
+.lp
+If the ILI is a constant, then either an unconditional branch is
+generated or no branch is required.
+.lp
+Additional optimizations performed on the compare and
+branch ILIs (non-Z variety) are:
+.ip \(bu 4
+If the second operand is a constant of value zero, the
+ILI becomes the corresponding Z variety whose link operand
+is the first operand of the original ILI and whose condition and
+and sym fields are copied from the original ILI.
+.ip \(bu 4
+If the first operand is a constant of
+value zero, the ILI becomes the corresponding Z variety 
+whose link operand is the second operand of the original ILI. 
+The comparison is reversed if the condition is not 1 (equal) 
+or 2 (not equal) (i.e., less than becomes greater than, etc.)
+For example,
+.(b
+.CS
+(1) ICON '0'
+(2) ICJMP (1) i ge L
+.CE
+.)b
+becomes
+.(b
+.CS
+(1) ICJMPZ i le L
+.CE
+.)b
+.lp
+For Fortran, the BRT/BRF ILMs expand to the LCJMPZ ILI.
+This ILI is optimized according to the following, recursive, rules:
+.np
+if the operand is any compare ILI, the LCJMPZ becomes an ICJMPZ
+and the ICJMPZ is optimized as above.
+.np
+if the operand is a NOT ILI, the not is deleted and the condition
+in the LCJMPZ is complemented. The operand of the NOT becomes the
+operand of the new LCJMPZ.
+.np
+otherwise, the low bit of the operand's value needs to be checked.
+The LCJMPZ is passed through.
+.lp
+.sh 2 "Program Units"
+.nr ii 5n
+.lp
+The C module file
+.i iliutil.c
+contains the following routines:
+.lp
+.(b L
+.CS
+int addili (ilip)
+    ILI *ilip;
+.CE
+.)b
+.ip
+Main add ili routine; returns the index where the ILI, described by
+.cw ilip ,
+was added.
+.lp
+.(b L
+.CS
+int addarth (ilip)
+    ILI *ilip;
+.CE
+.)b
+.ip
+Adds the arithmetic ili.  Performs the operand switching if the
+ILI has commutative operands.  Performs various arithmetic optimizations
+including constant folding.
+The index to the ILI added is returned.
+.lp
+.(b L
+.CS
+int red_iadd (ilix, con)
+    int ilix;
+    INT con;
+.CE
+.)b
+.ip
+Adds the integer add ILI (IADD) of the form
+.cw ilip+con .
+This routine 
+recursively searches 
+.cw ilip
+for opportunities to fold in
+.cw con ,
+e.g.,
+.(b
+.CS
+(i + 2) + j + 4  -->  (i + 6) + j
+.CE
+.)b
+.lp
+.(b L
+.CS
+int red_aadd (ilix, con)
+    int ilix;
+    INT con[2];
+.CE
+.)b
+.ip
+Adds the address add ILI (AADD) of the form
+.cw ilip+con .
+This routine recursively searches
+.cw ilip
+for opportunities to fold in
+the address constant
+.cw con .
+.lp
+.(b L
+.CS
+int addbran (ilip)
+    ILI *ilip;
+.CE
+.)b
+.ip
+Adds the branch ili. This routine checks for the various branch
+optimizations.
+.lp
+.(b L
+.CS
+INT icmp(val1, val2)
+    INT val1, val2;
+.CE
+.)b
+.ip
+Compares two INT values and returns:
+.TS
+L LfCW.
+\(mi1	val1 < val2
+0	val1 = val2
+1	val1 > val2
+.TE
+.lp
+.(b L
+.CS
+int ad1ili(opc, op1 )
+    int opc, op1;
+.CE
+.)b
+.ip
+Adds an ILI with one operand.
+.cw opc
+is the opcode of the ILI and
+.cw op1
+its
+operand.
+.lp
+.(b L
+.CS
+int ad2ili(opc, op1, op2)
+    int opc, op1, op2;
+.CE
+.)b
+.ip
+Adds an ILI with two operands.
+.lp
+.(b L
+.CS
+int ad3ili(opc, op1, op2, op3)
+    int opc, op1, op2, op3;
+.CE
+.)b
+.ip
+Adds an ILI with three operands.
+.lp
+.(b L
+.CS
+int ad4ili(opc, op1, op2, op3, op4)
+    int opc, op1, op2, op3, op4;
+.CE
+.)b
+.ip
+Adds an ILI with four operands.
+.lp
+.(b L
+.CS
+int ad_icon(val)
+    INT val;
+.CE
+.)b
+.ip
+Adds the ICON ili for the integer constant whose value is
+.cw val .
+.lp
+.(b L
+.CS
+int ad_aconi(val)
+.CE
+.)b
+.ip
+Adds the ACON ili for an integer constant instead of an address constant.
+.lp
+.(b L
+.CS
+int srcili(ilip)
+    ILI *ilip;
+.CE
+.)b
+.ip
+Enters the ILI into the ILI area.  If it already exists, the
+index is returned.  If it is a new entry, its fields are
+set, and its index is returned.
+.lp
+.(b L
+.CS
+void dmpili()
+.CE
+.)b
+.ip
+For compiler debugging purposes, writes to the debug file
+the ILI hash table and/or the ILI area.
+This dump is controlled by vale of debug flag 10.
+.lp
+The following routines are contained in the C module file,
+.i bihutil.c \^:
+.lp
+.(b L
+.CS
+bih_init()
+.CE
+.)b
+.ip
+Initializes the bih area.  This involves creating a list of free nodes
+in the area beginning from its available index to the end of the storage
+(its storage size).  The available index and storage size are
+set when it is allocated or reallocated.
+.lp
+.(b L
+.CS
+int addbih(bihx)
+    int bihx;
+.CE
+.)b
+.ip
+Creates a new bih, initializes its fields, and links it in after
+.cw bihx .
+The index to the new bih is returned.
+.lp
+.(b L
+.CS
+int chk_terminal_func(entbihx, exitbihx)
+    int entbihx, exitbihx;
+.CE
+.)b
+.ip
+Determines if the function's linkage can be changed in order to
+speed it up.  The function is defined by the entry bih index,
+.cw entbihx ,
+and the exit bih index,
+.cw exitbihx .
+The conditions and their corresponding actions are:
+.ba +5n
+.ip (1)
+The function does not make any function calls (the function is a 
+terminal function).  No entry and exit routines are needed.
+A special static array (.STACK) is used to contain any automatic
+data required by the function. The appropriate ILI replace the
+ENTRY and EXIT ILI which will load and restore the stack pointer.
+.ip (2)
+The function does not require any save frame space in the stack
+header (globar registers
+are not used and the exception register is not modified).
+The routines referenced in the ENTRY and EXIT ILI are replaced
+with
+.cw "c$i_qentry"
+and
+.cw "c$i_qexit" ,
+respectively.
+These routines do not check the functions's PED
+to determine if the AR and EXCSTAT fields are used.
+.ba -5
+.lp
+The C module file
+.i iltutil.c
+contains the following routines:
+.lp
+.(b L
+.CS
+ilt_init()
+.CE
+.)b
+.ip
+Initializes the ILT area. This involves creating a list of free ILT
+nodes in the available area.  This area begins at the available index
+and ends at the value denoted by storage size.
+.lp
+.(b L
+.CS
+int addilt(iltx, ilix)
+    int iltx, ilix;
+.CE
+.)b
+.ip
+Creates a new ilt for the ili
+.cw ilix.
+The ilt is inserted after
+.cw iltx
+and its index is returned.
+.lp
+.(b L
+.CS
+int reduce_ilt(iltx)
+    int iltx;
+.CE
+.)b
+.ip
+Recursively searches the ili of the ilt located by
+.cw iltx
+for any function ILIs.
+When one is found, a new ilt is created for it.
+Returns the index to the last ilt created.
+.lp
+.(b L
+.CS
+wrilts(bihx)
+    int bihx;
+.CE
+.)b
+.ip
+Writes out an ilt/ili block given its bih.
+.lp
+.(b L
+.CS
+rdilts(bihx)
+    int bihx;
+.CE
+.)b
+.ip
+Reads in an ilt/ili block given its bih.
+.lp
+.(b L
+.CS
+dmpilt(bihx)
+    int bihx;
+.CE
+.)b
+.ip
+For debugging purposes, the ilt/ili block is written out to the debug
+file.  This dump is controlled by the value in debug flag 10.
+.lp
+The C module file
+.i nmeutil.c
+contains the following routines:
+.lp
+.(b L
+.CS
+int addnme(type, sym, nm, cnst)
+    int type, sym, nm;
+    INT cnst;
+.CE
+.)b
+.ip
+Main add NME routine.
+.lp
+.(b L
+.CS
+void dmpnme()
+.CE
+.)b
+.ip
+For compiler debugging purposes, writes to the debug file the
+names table area. This dump is controlled by debug flag 10.
+.sh 2 "ILITP Utility"
+.lp
+NOTE: This section needs to be revised!!
+.lp
+ILITP reads the file which symbolically defines the ILI opcodes,
+their attributes, and their micro-op templates.
+It also reads a file of micro-op information created by the
+MICROP utility.
+ILITP writes a number of files, containing C macros and data
+definitions for the ILI attributes, templates, etc.
+ILITP must be run when an ILI is deleted or added, or when its
+attributes or templates are modified.
+.sh 3 "Inputs"
+The first file read by ILITP is the file of micro-op information
+created by MICROP.
+This information is stored up in a table indexed by micro-op
+number for later use when processing the
+ILI template definitions.
+.lp
+The main input to ILITP is
+the ILI definition file, which is the first
+file specified on the command line.  For an ILI, there are three
+types of lines processed:
+.ip (1) 5
+The .IL line defines the name, the number of operands, and operand
+types of the ILI.
+The ILI definition line has the form:
+.ba +5
+.(b
+.CS
+\&.IL <name> [ <opr>i ] ...
+.CE
+.)b
+where,
+.ip <name> 10n
+is the name of the ILI
+.ip <opr>i 10n
+is the type of the ith operand and is one of:
+.nr PS \n(psu
+.nr ps 0
+.ba +10
+.ip "sym" 7
+operand locates a symbol table node
+.ip "off" 7
+operand locates an address constant (a symbol table node)
+.ip "nme" 7
+operand locates a names table entry
+.ip "lnk" 7
+operand locates an ILI
+.ip "irlnk" 7
+operand locates a IR ILI
+.ip "splnk" 7
+operand locates a SP ILI
+.ip "dplnk" 7
+operand locates a DP ILI
+.ip "arlnk" 7
+operand locates a AR ILI
+.ip "stc" 7
+operand is a short constant (an immediate value)
+.ip "dr" 7
+operand is data register
+.ip "sp" 7
+operand is a single precision register
+.ip "dp" 7
+operand is a double precision register
+.ip "ar" 7
+operand is an address register
+.ip "x87" 7
+operand is an x87 floating-point stack register
+.nr PS \n(ps
+.ba -10
+.ba -5
+.ip (2) 5
+The .AT line defines the type of the ILI, the register type of the
+ILI, and whether or not the ILI operands are commutative.
+The attribute line is of the form:
+.(b
+.CS
+\&.AT <type> [ <comm> [ <res> ] ]
+.CE
+.)b
+where,
+.ba +5
+.ip <type> 10n
+is the type of the ILI:
+.q "arth" ,
+.q "intr" ,
+.q "branch" ,
+.q "load" ,
+.q "cons" ,
+.q "store" ,
+.q "proc",
+.q "define" ,
+.q "move" ,
+or
+.q "other" .
+.ip <comm> 10n
+is the commutative flag for the operands:
+.q "null"
+(operands are not commutative)
+or
+.q "comm"
+(operands are commutative).
+.ip <res> 10n
+is the result type of the ILI:
+.q "null"
+or
+.q "trm"
+(no result and a terminal ILI),
+.q "lnk"
+(the ILI
+has no result but can be linked to),
+.q "dr"
+(data register),
+.q "ar"
+(address register),
+.q "dp"
+(double precision register), or
+.q "x87"
+(x87 floating-point stack register).
+.ba -5
+.ip (3) 5
+The .TP line defines the micro-operations for an instruction word.
+There may be zero or more .TP lines required for an ILI.  The
+.TP line is of the form:
+.(b
+.CS
+\&.TP <micro-ops> ...
+.CE
+.)b
+At most two micro-ops can appear on a single line.
+The text of a micro-op must match exactly one of the micro-ops
+defined in the Micro-op Definition File (input to MICROP).
+.sh 3 "Outputs"
+Four output files are written by ILITP:
+.i iliatdf.h ,
+.i iliatt.h ,
+.i ilidf.h ,
+and
+.i ilitpdf.h .
+.sh 2 "Summary"
+.sh 3 "Include Files"
+.ip iliatdf.h 11
+Contains the C initializations for the ILI attributes produced
+by ILITP
+.ip ilitpdf.h 11
+Contains the C initializations for the ILI templates
+produced by ILITP
+.ip iliatt.h 11
+Contains the macros which define the C symbol names for the ILI and
+their corresponding opcode values. This file is produced by ILITP.
+.ip ili.h  11
+Contains the declarations for the ILI data structures, ILI attributes,
+and the ILT data structures.
+The necessary external data declarations are in this file including
+the storage management structures for the ILI and ILT areas.
+Macros defined in the file provide access to the ILI and ILT fields,
+and provide the values of the various fields.
+Also, this file
+contains the declarations for the BIH data structure
+and storage management structure.  Macros reside in the file which
+provide access to the fields of these structures.
+.br
+.ne 8
+.sh 3 "Macros"
+.ip IL_ 8
+ILI attributes and names
+.ip ILIO_ 8
+ILI operand types
+.ip ILIA_ 8
+ILI attribute flag values
+.ip ILI_ 8
+ILI structure
+.ip ILT_ 8
+ILT structure
+.ip BIH_ 8
+BIH structure

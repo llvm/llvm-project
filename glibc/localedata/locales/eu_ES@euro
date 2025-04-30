@@ -1,0 +1,102 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Basque Language Locale for Spain with Euro
+% Language: eu
+% Territory: ES
+% Option: euro
+% Date: 2000-08-21
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Basque language locale for Spain with Euro"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Basque"
+territory  "Spain"
+revision   "1.0"
+date       "2000-08-21"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "eu_ES"
+END LC_CTYPE
+
+LC_MESSAGES
+copy "eu_ES"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol      "EUR "
+currency_symbol      "<U20AC>"
+mon_decimal_point    ","
+mon_thousands_sep    "."
+mon_grouping         3;3
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits      0
+frac_digits          0
+p_cs_precedes        1
+p_sep_by_space       1
+n_cs_precedes        1
+n_sep_by_space       1
+p_sign_posn          1
+n_sign_posn          1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "eu_ES"
+END LC_NUMERIC
+
+LC_TIME
+copy "eu_ES"
+END LC_TIME
+
+LC_PAPER
+copy "eu_ES"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "eu_ES"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "eu_ES"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "eu_ES"
+END LC_NAME
+
+LC_ADDRESS
+copy "eu_ES"
+END LC_ADDRESS

@@ -1,0 +1,231 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Berber Language Locale for Morocco (tifinagh)
+% Source:
+% Contact: Pablo Saratxaga
+% Email: <pablo@mandrakesoft.com>
+% Language: ber
+% Territory: MA
+% Revision: 0.1
+% Date: 2004-06-26
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title "Berber language locale for Morocco (tifinagh)"
+source ""
+address ""
+contact "Pablo Saratxaga"
+email "pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Berber"
+territory "Morocco"
+revision "0.1"
+date "2002-06-26"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+END LC_IDENTIFICATION
+
+%
+% TODO: fix LC_TIME, LC_MONETARY, LC_MESSAGES, LC_NAME, LC_ADDRESS
+
+LC_COLLATE
+
+copy "iso14651_t1"
+
+collating-symbol <tif-yag-labialization-mark>
+collating-symbol <tif-yak-labialization-mark>
+
+collating-element <tif-yag-labialization-mark-element> from "<U2D33><U2D6F>"
+collating-element <tif-yak-labialization-mark-element> from "<U2D3D><U2D6F>"
+
+reorder-after <S2D33>
+<tif-yag-labialization-mark>
+reorder-after <S2D3D>
+<tif-yak-labialization-mark>
+
+<tif-yag-labialization-mark-element> <tif-yag-labialization-mark>;"<BASE>";<MIN>;IGNORE
+<U2D35> "<S2D37><S2D4A>";"<BASE><VRNT1>";"<MIN><MIN>";IGNORE
+<U2D36> "<S2D37><S2D4A>";"<BASE><VRNT2>";"<MIN><MIN>";IGNORE
+<tif-yak-labialization-mark-element> <tif-yak-labialization-mark>;"<BASE>";<MIN>;IGNORE
+<U2D5E> "<S2D5C><S2D5B>";"<BASE><VRNT1>";"<MIN><MIN>";IGNORE
+reorder-end
+
+% “reorder-sections-after” unfortunately does not seem to work.
+% Moroccan sorting standard requires tifinagh to come
+% before latin script
+%reorder-sections-after <SPECIAL>
+%<TIFINAGH>
+%reorder-sections-end
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+% FIXME: yes/no. What we currently have here is exactly the same as in the az_AZ locale
+% which is a bit surprising. Is that really correct??
+yesexpr "^[+1Bb]"
+noexpr  "^[-0YyNn]"
+yesstr  "b<U0259>li"
+nostr   "yox"
+END LC_MESSAGES
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+int_curr_symbol       "MAD "
+currency_symbol       "<U2D37>.<U2D4E>."
+mon_decimal_point     "."
+mon_thousands_sep     ","
+mon_grouping          3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       3
+frac_digits           3
+p_cs_precedes         1
+p_sep_by_space        1
+n_cs_precedes         1
+n_sep_by_space        1
+p_sign_posn           1
+n_sign_posn           2
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+% This is the POSIX Locale definition for the LC_NUMERIC  category.
+%
+decimal_point          "."
+thousands_sep          ","
+grouping               3
+%
+END LC_NUMERIC
+
+% FIXME
+LC_TIME
+day     "bazar g<U00FC>n<U00FC>";/
+        "birinci g<U00FC>n";/
+        "ikinci g<U00FC>n";/
+        "<U00FC><U00E7><U00FC>nc<U00FC> g<U00FC>n";/
+        "d<U00F6>rd<U00FC>nc<U00FC> g<U00FC>n";/
+        "be<U015F>inci g<U00FC>n";/
+        "alt<U0131>nc<U0131> g<U00FC>n"
+abday   "baz";/
+        "bir";/
+        "iki";/
+        "<U00FC><U00E7><U00FC>";/
+        "d<U00F6>r";/
+        "be<U015F>";/
+        "alt"
+mon     "yanvar";/
+        "fevral";/
+        "mart";/
+        "aprel";/
+        "may";/
+        "iyun";/
+        "iyul";/
+        "avqust";/
+        "sentyabr";/
+        "oktyabr";/
+        "noyabr";/
+        "dekabr"
+abmon   "Yan";/
+        "Fev";/
+        "Mar";/
+        "Apr";/
+        "May";/
+        "<U0130>yn";/
+        "<U0130>yl";/
+        "Avq";/
+        "Sen";/
+        "Okt";/
+        "Noy";/
+        "Dek"
+d_t_fmt   "%A, %d %B %Y %T"
+date_fmt  "%A, %d %B %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 7
+first_workday 1
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    "-san"
+name_mr     "Mr."
+name_mrs    "Mrs."
+name_miss   "Miss."
+name_ms     "Ms."
+
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+% https://en.wikipedia.org/wiki/Morocco ⵜⴰⴳⵍⴷⵉⵜ ⵏ ⵍⵎⵖⵔⵉⴱ
+country_name "<U2D5C><U2D30><U2D33><U2D4D><U2D37><U2D49><U2D5C> <U2D4F> <U2D4D><U2D4E><U2D56><U2D54><U2D49><U2D31>"
+%country_post ""
+country_ab2 "MA"
+country_ab3 "MAR"
+country_num 504
+%country_isbn ""
+country_car  "MA"
+% ⵜⴰⵎⴰⵣⵉⵖⵜ
+lang_name "<U2D5C><U2D30><U2D4E><U2D30><U2D63><U2D49><U2D56><U2D5C>"
+% lang_ab
+lang_term "ber"
+lang_lib "ber"
+
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the
+%
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix  "212"
+int_select  "00"
+END LC_TELEPHONE

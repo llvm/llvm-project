@@ -1,0 +1,160 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Greenlandic language locale for Greenland
+% Source: Danish Standards Association
+% Address: Kollegievej 6
+%  DK-2920 Charlottenlund, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 39966101
+% Fax: +45 - 39966102
+% Language: kl
+% Territory: GL
+% Revision: 4.3
+% Date: 1996-10-15
+% Users: general
+%
+% Only LC_TIME and LC_MESSAGES are
+% specified here, else the da_DK locale
+% is used.
+
+LC_IDENTIFICATION
+title      "Greenlandic locale for Greenland"
+source     "Danish Standards Association"
+address    "Kollegievej 6, DK-2920 Charlottenlund, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Kalaallisut"
+territory  "Greenland"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "da_DK"
+END LC_CTYPE
+
+LC_COLLATE
+copy "da_DK"
+END LC_COLLATE
+
+LC_MONETARY
+copy "da_DK"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "da_DK"
+END LC_NUMERIC
+
+LC_TIME
+abday    "sap";"ata";/
+         "mar";"pin";/
+         "sis";"tal";/
+         "arf"
+day      "sapaat";/
+         "ataasinngorneq";/
+         "marlunngorneq";/
+         "pingasunngorneq";/
+         "sisamanngorneq";/
+         "tallimanngorneq";/
+         "arfininngorneq"
+abmon    "jan";"feb";/
+         "mar";"apr";/
+         "maj";"jun";/
+         "jul";"aug";/
+         "sep";"okt";/
+         "nov";"dec"
+alt_mon  "januaari";/
+         "februaari";/
+         "marsi";/
+         "apriili";/
+         "maaji";/
+         "juuni";/
+         "juuli";/
+         "aggusti";/
+         "septembari";/
+         "oktobari";/
+         "novembari";/
+         "decembari"
+mon      "januaarip";/
+         "februaarip";/
+         "marsip";/
+         "apriilip";/
+         "maajip";/
+         "juunip";/
+         "juulip";/
+         "aggustip";/
+         "septembarip";/
+         "oktobarip";/
+         "novembarip";/
+         "decembarip"
+d_t_fmt     "%a %b %d %Y %T"
+date_fmt    "%a %b %d %Y %T %Z"
+d_fmt       "%b %d %Y"
+t_fmt       "%T"
+am_pm       "";""
+t_fmt_ampm  ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1JjYyAa]"
+noexpr  "^[-0Nn]"
+yesstr  "aap"
+nostr   "naagga"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "299"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Kalaallit Nunaat"
+country_ab2 "GL"
+country_ab3 "GRL"
+country_num 304
+country_car "KN"
+lang_name    "kalaallisut"
+lang_ab      "kl"
+lang_term    "kal"
+lang_lib    "kal"
+END LC_ADDRESS

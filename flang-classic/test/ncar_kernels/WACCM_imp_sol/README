@@ -1,0 +1,8 @@
+WACCM imp_sol kernel
+
+This version of WACCM imp_sol is generated from rev. 70637 of https://svn-ccsm-models.cgd.ucar.edu/cam1/branch_tags/WACCM_short_lived_not_advected_tags/WACCM_short_lived_not_advected_n01_cam5_3_82 using Intel compiler.
+
+To build and execute the kernel, run "make" in this directory.
+
+Please contact Youngsung Kim(youngsun@ucar.edu) for any questions concerning this kernel.
+

@@ -1,0 +1,135 @@
+The following is the README for UFC-crypt, with those portions deleted
+that are known to be incorrect for the implementation used with the
+GNU C library.
+
+
+	UFC-crypt: ultra fast 'crypt' implementation
+	============================================
+
+	@(#)README	2.27 11 Sep 1996
+
+Design goals/non goals:
+----------------------
+
+- Crypt implementation plugin compatible with crypt(3)/fcrypt.
+
+- High performance when used for password cracking.
+
+- Portable to most 32/64 bit machines.
+
+- Startup time/mixed salt performance not critical.
+
+Features of the implementation:
+------------------------------
+
+- On most machines, UFC-crypt runs 30-60 times faster than crypt(3) when
+  invoked repeated times with the same salt and varying passwords.
+
+- With mostly constant salts, performance is about two to three times
+  that of the default fcrypt implementation shipped with Alec
+  Muffets 'Crack' password cracker. For instructions on how to
+  plug UFC-crypt into 'Crack', see below.
+
+- With alternating salts, performance is only about twice
+  that of crypt(3).
+
+- Requires 165 kb for tables.
+
+Author & licensing etc
+----------------------
+
+UFC-crypt is created by Michael Glad, email: glad@daimi.aau.dk, and has
+been donated to the Free Software Foundation, Inc. It is covered by the
+GNU library license version 2, see the file 'COPYING.LIB'.
+
+NOTES FOR USERS OUTSIDE THE US:
+------------------------------
+
+The US government limits the export of DES based software/hardware.
+This software is written in Aarhus, Denmark. It can therefore be retrieved
+from ftp sites outside the US without breaking US law. Please do not
+ftp it from american sites.
+
+Benchmark table:
+---------------
+
+The table shows how many operations per second UFC-crypt can
+do on various machines.
+
+|--------------|-------------------------------------------|
+|Machine       |  SUN*  SUN*   HP*     DecStation   HP     |
+|              | 3/50   ELC  9000/425e    3100    9000/720 |
+|--------------|-------------------------------------------|
+| Crypt(3)/sec |  4.6    30     15         25        57    |
+| Ufc/sec      |  220   990    780       1015      3500    |
+|--------------|-------------------------------------------|
+| Speedup      |   48    30     52         40        60    |
+|--------------|-------------------------------------------|
+
+*) Compiled using special assembly language support module.
+
+It seems as if performance is limited by CPU bus and data cache capacity.
+This also makes the benchmarks debatable compared to a real test with
+UFC-crypt wired into Crack. However, the table gives an outline of
+what can be expected.
+
+Optimizations:
+-------------
+
+Here are the optimizations used relative to an ordinary implementation
+such as the one said to be used in crypt(3).
+
+Major optimizations
+*******************
+
+- Keep data packed as bits in integer variables -- allows for
+  fast permutations & parallel xor's in CPU hardware.
+
+- Let adjacent final & initial permutations collapse.
+
+- Keep working data in 'E expanded' format all the time.
+
+- Implement DES 'f' function mostly by table lookup
+
+- Calculate the above function on 12 bit basis rather than 6
+  as would be the most natural.
+
+- Implement setup routines so that performance is limited by the DES
+  inner loops only.
+
+- Instead of doing salting in the DES inner loops, modify the above tables
+  each time a new salt is seen. According to the BSD crypt code this is
+  ugly :-)
+
+Minor (dirty) optimizations
+***************************
+
+- combine iterations of DES inner loop so that DES only loops
+  8 times. This saves a lot of variable swapping.
+
+- Implement key access by a walking pointer rather than coding
+  as array indexing.
+
+- As described, the table based f function uses a 3 dimensional array:
+
+	sb ['number of 12 bit segment']['12 bit index']['48 bit half index']
+
+  Code the routine with 4 (one dimensional) vectors.
+
+- Design the internal data format & uglify the DES loops so that
+  the compiler does not need to do bit shifts when indexing vectors.
+
+Revision history
+****************
+
+UFC patchlevel 0: base version; released to alt.sources on Sep 24 1991
+UFC patchlevel 1: patch released to alt.sources on Sep 27 1991.
+		  No longer rebuilds sb tables when seeing a new salt.
+UFC-crypt pl0:	  Essentially UFC pl 1. Released to comp.sources.misc
+		  on Oct 22 1991.
+UFC-crypt pl1:    Released to comp.sources.misc in march 1992
+		  * setkey/encrypt routines added
+		  * added validation/benchmarking programs
+		  * reworked keyschedule setup code
+		  * memory demands reduced
+		  * 64 bit support added

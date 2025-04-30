@@ -1,0 +1,310 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Croatian Language Locale for Croatia
+% Authors:
+% Originaly was a copy of sl_SI made by Borka Jerman-Blažič
+% 1997-06-03 Tomislav Vujec <tvujec@redhat.com>
+% 2009-09-01 Dragan Stanojević - Nevidljivi <invisible@hidden-city.net>
+
+LC_IDENTIFICATION
+title      "Croatian locale for Croatia"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Croatian"
+territory  "Croatia"
+revision   "2.3"
+date       "2016-04-16"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+
+% Historicaly we used ISO-8869-2 and wrote digraphs
+% <U01C6> {ǆ}, <U01C9> {ǉ} and <U01CC> {ǌ}
+% as two letter chars, those are transliterated in i18n
+
+% ć, č, š and ž transliterations are included in
+% "translit_combining" file
+
+% moreover letter <U0111> {đ} was always
+% transliterated as d + j if written in ASCII:
+% transliterate <U0110> {Đ} into D + j
+<U0110> "<U0044><U006A>"
+% transliterate <U0111> {đ} into d + j
+<U0111> "<U0064><U006A>"
+
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% CLDR collation rules for Croatian
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/hr.xml):
+%  &C<č<<<Č<ć<<<Ć
+%  &D<dž<<<ǆ<<<Dž<<<ǅ<<<DŽ<<<Ǆ<đ<<<Đ
+%  &L<lj<<<ǉ<<<Lj<<<ǈ<<<LJ<<<Ǉ
+%  &N<nj<<<ǌ<<<Nj<<<ǋ<<<NJ<<<Ǌ
+%  &S<š<<<Š
+%  &Z<ž<<<Ž
+%
+% The following rules implement the same order for glibc:
+
+% Digraphs dŽ, lJ and nJ (1st char lower, 2nd char upper)
+% are clearly errors and you'd be hard pressed to
+% find them in any Croatian text. Other slavic locales
+% include those combinations probably because user
+% would expect to find them among ǆ, ǉ and ǌ
+
+collating-element <D-Z<> from "<U0044><U017D>"
+collating-element <D-z<> from "<U0044><U017E>"
+collating-element <d-Z<> from "<U0064><U017D>"
+collating-element <d-z<> from "<U0064><U017E>"
+
+collating-element <L-J> from "<U004C><U004A>"
+collating-element <L-j> from "<U004C><U006A>"
+collating-element <l-J> from "<U006C><U004A>"
+collating-element <l-j> from "<U006C><U006A>"
+
+collating-element <N-J> from "<U004E><U004A>"
+collating-element <N-j> from "<U004E><U006A>"
+collating-element <n-J> from "<U006E><U004A>"
+collating-element <n-j> from "<U006E><U006A>"
+
+collating-symbol <ccaron>
+collating-symbol <cacute>
+collating-symbol <d-z-sh>
+collating-symbol <doblique>
+collating-symbol <l-j-sh>
+collating-symbol <n-j-sh>
+collating-symbol <scaron>
+collating-symbol <zcaron>
+
+reorder-after <AFTER-C>
+<ccaron>
+<cacute>
+reorder-after <AFTER-D>
+<d-z-sh>
+<doblique>
+reorder-after <AFTER-L>
+<l-j-sh>
+reorder-after <AFTER-N>
+<n-j-sh>
+reorder-after <AFTER-S>
+<scaron>
+reorder-after <AFTER-Z>
+<zcaron>
+
+<U010D> <ccaron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % č
+<U010C> <ccaron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Č
+<U0107> <cacute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ć
+<U0106> <cacute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ć
+
+<d-z<> "<d-z-sh>";"<BASE><BASE>";"<MIN><MIN>";"<VRNT1>" % dž
+<U01C6> "<d-z-sh>";"<BASE><BASE>";"<MIN><MIN>";"<VRNT2>" % ǆ
+<d-Z<> "<d-z-sh>";"<BASE><BASE>";"<MIN><CAP>";"<VRNT1>" % dŽ
+<D-z<> "<d-z-sh>";"<BASE><BASE>";"<CAP><MIN>";"<VRNT1>" % Dž
+<U01C5> "<d-z-sh>";"<BASE><BASE>";"<CAP><MIN>";"<VRNT2>" % ǅ
+<D-Z<> "<d-z-sh>";"<BASE><BASE>";"<CAP><CAP>";"<VRNT1>" % DŽ
+<U01C4> "<d-z-sh>";"<BASE><BASE>";"<CAP><CAP>";"<VRNT2>" % Ǆ
+<U0111> <doblique>;"<BASE><BASE>";<MIN>;IGNORE % đ
+<U0110> <doblique>;"<BASE><BASE>";<CAP>;IGNORE % Đ
+
+<l-j> "<l-j-sh>";"<BASE><BASE>";"<MIN><MIN>";"<VRNT1>" % lj
+<U01C9> "<l-j-sh>";"<BASE><BASE>";"<MIN><MIN>";"<VRNT2>" % ǉ
+<l-J> "<l-j-sh>";"<BASE><BASE>";"<MIN><CAP>";"<VRNT1>" % lJ
+<L-j> "<l-j-sh>";"<BASE><BASE>";"<CAP><MIN>";"<VRNT1>" % Lj
+<U01C8> "<l-j-sh>";"<BASE><BASE>";"<CAP><MIN>";"<VRNT2>" % ǈ
+<L-J> "<l-j-sh>";"<BASE><BASE>";"<CAP><CAP>";"<VRNT1>" % LJ
+<U01C7> "<l-j-sh>";"<BASE><BASE>";"<CAP><CAP>";"<VRNT2>" % Ǉ
+
+<n-j> "<n-j-sh>";"<BASE><BASE>";"<MIN><MIN>";"<VRNT1>" % nj
+<U01CC> "<n-j-sh>";"<BASE><BASE>";"<MIN><MIN>";"<VRNT2>" % ǌ
+<n-J> "<n-j-sh>";"<BASE><BASE>";"<MIN><CAP>";"<VRNT1>" % nJ
+<N-j> "<n-j-sh>";"<BASE><BASE>";"<CAP><MIN>";"<VRNT1>" % Nj
+<U01CB> "<n-j-sh>";"<BASE><BASE>";"<CAP><MIN>";"<VRNT2>" % ǋ
+<N-J> "<n-j-sh>";"<BASE><BASE>";"<CAP><CAP>";"<VRNT1>" % NJ
+<U01CA> "<n-j-sh>";"<BASE><BASE>";"<CAP><CAP>";"<VRNT2>" % Ǌ
+
+<U0161> <scaron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % š
+<U0160> <scaron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Š
+
+<U017E> <zcaron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ž
+<U017D> <zcaron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ž
+
+reorder-end
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1dDyY]"
+noexpr  "^[-0nN]"
+yesstr  "da"
+nostr   "ne"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "HRK "
+currency_symbol           "kn"
+mon_decimal_point         ","
+mon_thousands_sep         "."
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+n_cs_precedes             0
+int_p_cs_precedes         1
+int_n_cs_precedes         1
+p_sep_by_space            1
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+abday   "ned";"pon";"uto";"sri";"<U010D>et";"pet";"sub"
+day     "nedjelja";/
+        "ponedjeljak";/
+        "utorak";/
+        "srijeda";/
+        "<U010D>etvrtak";/
+        "petak";/
+        "subota"
+abmon   "sij";"velj";/
+        "o<U017E>u";"tra";/
+        "svi";"lip";/
+        "srp";"kol";/
+        "ruj";"lis";/
+        "stu";"pro"
+alt_mon "sije<U010D>anj";/
+        "velja<U010D>a";/
+        "o<U017E>ujak";/
+        "travanj";/
+        "svibanj";/
+        "lipanj";/
+        "srpanj";/
+        "kolovoz";/
+        "rujan";/
+        "listopad";/
+        "studeni";/
+        "prosinac"
+mon     "sije<U010D>nja";/
+        "velja<U010D>e";/
+        "o<U017E>ujka";/
+        "travnja";/
+        "svibnja";/
+        "lipnja";/
+        "srpnja";/
+        "kolovoza";/
+        "rujna";/
+        "listopada";/
+        "studenoga";/
+        "prosinca"
+% %A - full weekday name
+% %d - day of month (with padded 0)
+% %B - full month name (genitive case)
+% %Y - year with century
+% %T - 24-hour time
+% %Z - time zone
+d_t_fmt "%A, %d. %B %Y. %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+% %a - short weekday name
+% %e - day of month (with padded space)
+% %m - short month name
+% %Y - year with century
+% %H - hour (24h)
+% %M - minute (with padded 0)
+% %S - second (with padded 0)
+% %Z - time zone
+date_fmt "%a, %e.%m.%Y.  %H:%M:%S %Z"
+% we use 24 hour format, so these are empty
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+first_workday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "%A %l"
+int_prefix     "385"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_mr     "gosp."
+name_mrs    "g<U0111>a"
+name_miss   "g<U0111>ica"
+END LC_NAME
+
+LC_ADDRESS
+% %f%N%d%N%a%N%s %h%N%z %T%N%c%N
+% where:
+% %f - firm name
+% %d - department name
+% %a - Care of person, or organization
+% %s %h - street name and house number
+% %z %T - zip code and city
+% %c - country
+%
+% %n (name of a person) is currently unsupported so %a is used
+%
+postal_fmt   "%f%N%d%N%a%N%s %h%N%z %T%N%c%N"
+country_name "Hrvatska"
+country_post "HR"
+country_ab2  "HR"
+country_ab3  "HRV"
+country_num  191
+country_car  "HR"
+country_isbn "978-953"
+lang_name    "hrvatski"
+lang_ab      "hr"
+lang_lib     "hrv"
+lang_term    "hrv"
+END LC_ADDRESS

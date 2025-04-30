@@ -1,0 +1,166 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Portuguese Language Locale for Portugal
+% Source: RAP
+% Address: Sankt Jo//rgens Alle 8
+%    DK-1615 Ko//benhavn V, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 31226543
+% Fax: +45 - 33256543
+% Language: pt
+% Territory: PT
+% Revision: 4.3
+% Date: 1996-10-15
+% Users: general
+
+LC_IDENTIFICATION
+title      "Portuguese locale for Portugal"
+source     "RAP"
+address    "Sankt J<U00F8>rgens Alle 8, DK-1615 K<U00F8>benhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "European Portuguese"
+territory  "Portugal"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1SsyY]"
+noexpr  "^[-0nN]"
+yesstr  "sim"
+nostr   "n<U00E3>o"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "EUR "
+currency_symbol           "<U20AC>"
+mon_decimal_point         ","
+mon_thousands_sep         "."
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             ""
+grouping                  0;0
+END LC_NUMERIC
+
+LC_TIME
+abday   "dom";"seg";/
+        "ter";"qua";/
+        "qui";"sex";/
+        "s<U00E1>b"
+day     "domingo";/
+        "segunda";/
+        "ter<U00E7>a";/
+        "quarta";/
+        "quinta";/
+        "sexta";/
+        "s<U00E1>bado"
+abmon   "jan";"fev";/
+        "mar";"abr";/
+        "mai";"jun";/
+        "jul";"ago";/
+        "set";"out";/
+        "nov";"dez"
+mon     "janeiro";/
+        "fevereiro";/
+        "mar<U00E7>o";/
+        "abril";/
+        "maio";/
+        "junho";/
+        "julho";/
+        "agosto";/
+        "setembro";/
+        "outubro";/
+        "novembro";/
+        "dezembro"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d//%m//%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %l"
+tel_dom_fmt    "%l"
+int_select     "00"
+int_prefix     "351"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Portugal"
+country_ab2 "PT"
+country_ab3 "PRT"
+country_num 620
+country_car "P"
+% português
+lang_name    "portugu<U00EA>s"
+lang_ab      "pt"
+lang_term    "por"
+lang_lib    "por"
+END LC_ADDRESS

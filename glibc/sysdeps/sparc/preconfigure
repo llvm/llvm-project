@@ -1,0 +1,10 @@
+# preconfigure fragment for sparc.
+
+case "$machine" in
+sparc | sparcv8 | supersparc | hypersparc)
+		base_machine=sparc machine=sparc/sparc32 ;;
+sparcv8plus* | sparcv9*)
+		base_machine=sparc machine=sparc/sparc32/sparcv9 ;;
+sparc64*)
+		base_machine=sparc machine=sparc/sparc64 ;;
+esac

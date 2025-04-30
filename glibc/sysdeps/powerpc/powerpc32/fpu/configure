@@ -1,0 +1,56 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/powerpc/powerpc32/fpu.
+
+# Test whether integer to floating point conversions use fcfid.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for fcfid use" >&5
+$as_echo_n "checking for fcfid use... " >&6; }
+if ${libc_cv_ppc_fcfid+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  echo 'double foo (int x) { return (double) x; }' > conftest.c
+libc_cv_ppc_fcfid=no
+if { ac_try='${CC-cc} -S $CFLAGS conftest.c -o conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  if grep '[ 	]fcfid' conftest.s > /dev/null 2>&1; then
+    libc_cv_ppc_fcfid=yes
+  fi
+fi
+rm -rf conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_ppc_fcfid" >&5
+$as_echo "$libc_cv_ppc_fcfid" >&6; }
+if test $libc_cv_ppc_fcfid = yes; then
+  $as_echo "#define HAVE_PPC_FCFID 1" >>confdefs.h
+
+fi
+
+# Test whether floating point to long long conversions use fctidz.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for fctidz use" >&5
+$as_echo_n "checking for fctidz use... " >&6; }
+if ${libc_cv_ppc_fctidz+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  echo 'long long int foo (double x) { return (long long int) x; }' > conftest.c
+libc_cv_ppc_fctidz=no
+if { ac_try='${CC-cc} -S $CFLAGS conftest.c -o conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  if grep '[ 	]fctidz' conftest.s > /dev/null 2>&1; then
+    libc_cv_ppc_fctidz=yes
+  fi
+fi
+rm -rf conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_ppc_fctidz" >&5
+$as_echo "$libc_cv_ppc_fctidz" >&6; }
+if test $libc_cv_ppc_fctidz = yes; then
+  $as_echo "#define HAVE_PPC_FCTIDZ 1" >>confdefs.h
+
+fi

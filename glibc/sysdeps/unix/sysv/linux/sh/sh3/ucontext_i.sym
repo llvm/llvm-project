@@ -1,0 +1,38 @@
+#include <stddef.h>
+#include <signal.h>
+#include <sys/ucontext.h>
+
+--
+
+SIG_BLOCK
+SIG_SETMASK
+
+#define ucontext(member)	offsetof (ucontext_t, member)
+#define mcontext(member)	ucontext (uc_mcontext.member)
+
+oLINK		ucontext (uc_link)
+oSS_SP		ucontext (uc_stack.ss_sp)
+oSS_SIZE	ucontext (uc_stack.ss_size)
+oR0		mcontext (gregs[REG_R0])
+oR1		mcontext (gregs[REG_R1])
+oR2		mcontext (gregs[REG_R2])
+oR3		mcontext (gregs[REG_R3])
+oR4		mcontext (gregs[REG_R4])
+oR5		mcontext (gregs[REG_R5])
+oR6		mcontext (gregs[REG_R6])
+oR7		mcontext (gregs[REG_R7])
+oR8		mcontext (gregs[REG_R8])
+oR9		mcontext (gregs[REG_R9])
+oR10		mcontext (gregs[REG_R10])
+oR11		mcontext (gregs[REG_R11])
+oR12		mcontext (gregs[REG_R12])
+oR13		mcontext (gregs[REG_R13])
+oR14		mcontext (gregs[REG_R14])
+oR15		mcontext (gregs[REG_R15])
+oPC		mcontext (pc)
+oPR		mcontext (pr)
+oSR		mcontext (sr)
+oGBR		mcontext (gbr)
+oMACH		mcontext (mach)
+oMACL		mcontext (macl)
+oSIGMASK	ucontext (uc_sigmask)

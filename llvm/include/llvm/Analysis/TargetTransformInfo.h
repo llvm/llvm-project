@@ -1642,6 +1642,9 @@ public:
   /// load/store in the given address space.
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
 
+  /// \returns True if the target wants to vectorize instruction.
+  bool shouldForceVectorizeInst(Instruction *I, Type *Ty) const;
+
   /// \returns True if the load instruction is legal to vectorize.
   bool isLegalToVectorizeLoad(LoadInst *LI) const;
 
@@ -1710,7 +1713,7 @@ public:
 
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop.
-  bool preferEpilogueVectorization() const;
+  bool preferEpilogueVectorization(Loop *L) const;
 
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
@@ -2151,6 +2154,7 @@ public:
   virtual bool isIndexedLoadLegal(MemIndexedMode Mode, Type *Ty) const = 0;
   virtual bool isIndexedStoreLegal(MemIndexedMode Mode, Type *Ty) const = 0;
   virtual unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const = 0;
+  virtual bool shouldForceVectorizeInst(Instruction *I, Type *Ty) const = 0;
   virtual bool isLegalToVectorizeLoad(LoadInst *LI) const = 0;
   virtual bool isLegalToVectorizeStore(StoreInst *SI) const = 0;
   virtual bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
@@ -2173,7 +2177,7 @@ public:
                                      ReductionFlags) const = 0;
   virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
                                                ReductionFlags) const = 0;
-  virtual bool preferEpilogueVectorization() const = 0;
+  virtual bool preferEpilogueVectorization(Loop *L) const = 0;
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
   virtual ReductionShuffle
@@ -2874,6 +2878,9 @@ public:
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override {
     return Impl.getLoadStoreVecRegBitWidth(AddrSpace);
   }
+  bool shouldForceVectorizeInst(Instruction *I, Type *Ty) const override {
+    return Impl.shouldForceVectorizeInst(I, Ty);
+  }
   bool isLegalToVectorizeLoad(LoadInst *LI) const override {
     return Impl.isLegalToVectorizeLoad(LI);
   }
@@ -2918,8 +2925,8 @@ public:
                                        ReductionFlags Flags) const override {
     return Impl.preferPredicatedReductionSelect(Opcode, Ty, Flags);
   }
-  bool preferEpilogueVectorization() const override {
-    return Impl.preferEpilogueVectorization();
+  bool preferEpilogueVectorization(Loop *L) const override {
+    return Impl.preferEpilogueVectorization(L);
   }
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override {

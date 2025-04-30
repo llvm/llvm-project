@@ -1,0 +1,101 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tibetan language locale for India
+%
+% Based on dz_BT by Pema Geyleg
+
+LC_IDENTIFICATION
+title      "Tibetan language locale for India"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc@gnu.org"
+tel        ""
+fax        ""
+language   "Tibetan"
+territory  "India"
+revision   "0.1"
+date       "2007-11-06"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "bo_CN"
+END LC_CTYPE
+
+LC_COLLATE
+copy "bo_CN"
+END LC_COLLATE
+
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+LC_NUMERIC
+% FIXME: check that grouping etc is correct
+copy "bo_CN"
+END LC_NUMERIC
+
+LC_TIME
+copy "bo_CN"
+END LC_TIME
+
+LC_MESSAGES
+copy "bo_CN"
+END LC_MESSAGES
+
+LC_TELEPHONE
+copy "hi_IN"
+END LC_TELEPHONE
+
+LC_PAPER
+copy "hi_IN"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "hi_IN"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+name_fmt	" "
+% name_gen	"FIXME"
+% name_miss	"FIXME"
+% name_mr	"FIXME"
+% name_mrs	"FIXME"
+% name_ms	"FIXME"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+
+postal_fmt "%z%c%T%s%b%e%r"
+country_name "<U0F62><U0F92><U0FB1><U0F0B><U0F42><U0F62><U0F0B>"
+country_ab2 "IN"
+country_ab3 "IND"
+country_num 356
+country_car    "IND"
+lang_name     "<U0F56><U0F7C><U0F51><U0F0B><U0F66><U0F90><U0F51><U0F0B>"
+lang_ab       "bo"
+lang_term     "bod"
+lang_lib      "tib"
+END LC_ADDRESS

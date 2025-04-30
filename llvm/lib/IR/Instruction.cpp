@@ -1254,27 +1254,35 @@ Instruction *Instruction::cloneImpl() const {
   llvm_unreachable("Subclass of Instruction failed to implement cloneImpl");
 }
 
-void Instruction::swapProfMetadata() {
-  MDNode *ProfileData = getBranchWeightMDNode(*this);
-  if (!ProfileData)
-    return;
-  unsigned FirstIdx = getBranchWeightOffset(ProfileData);
-  if (ProfileData->getNumOperands() != 2 + FirstIdx)
-    return;
+constexpr StringRef NextSiliconMDKind = "nextsilicon";
 
-  unsigned SecondIdx = FirstIdx + 1;
-  SmallVector<Metadata *, 4> Ops;
-  // If there are more weights past the second, we can't swap them
-  if (ProfileData->getNumOperands() > SecondIdx + 1)
-    return;
-  for (unsigned Idx = 0; Idx < FirstIdx; ++Idx) {
-    Ops.push_back(ProfileData->getOperand(Idx));
-  }
-  // Switch the order of the weights
-  Ops.push_back(ProfileData->getOperand(SecondIdx));
-  Ops.push_back(ProfileData->getOperand(FirstIdx));
-  setMetadata(LLVMContext::MD_prof,
-              MDNode::get(ProfileData->getContext(), Ops));
+void Instruction::swapProfMetadata() {
+  auto PGOMDSwapper = [&](MDNode *ProfileData, unsigned KindID) {
+    if (!ProfileData)
+      return;
+    unsigned FirstIdx = getBranchWeightOffset(ProfileData);
+    if (ProfileData->getNumOperands() != 2 + FirstIdx)
+      return;
+
+    unsigned SecondIdx = FirstIdx + 1;
+    // If there are more weights past the second, we can't swap them
+    if (ProfileData->getNumOperands() > SecondIdx + 1)
+      return;
+
+    SmallVector<Metadata *, 4> Ops;
+    for (unsigned Idx = 0; Idx < FirstIdx; ++Idx)
+      Ops.push_back(ProfileData->getOperand(Idx));
+
+    // Switch the order of the weights
+    Ops.push_back(ProfileData->getOperand(SecondIdx));
+    Ops.push_back(ProfileData->getOperand(FirstIdx));
+
+    setMetadata(KindID, MDNode::get(ProfileData->getContext(), Ops));
+  };
+
+  PGOMDSwapper(getBranchWeightMDNode(*this), LLVMContext::MD_prof);
+  PGOMDSwapper(getMetadata(NextSiliconMDKind),
+               getContext().getMDKindID(NextSiliconMDKind));
 }
 
 void Instruction::copyMetadata(const Instruction &SrcInst,

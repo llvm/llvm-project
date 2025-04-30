@@ -1,0 +1,21 @@
+ld {
+  GLIBC_PRIVATE {
+    # ia64 specific functions in the dynamic linker, but used by libc.so.
+    _dl_symbol_address; _dl_lookup_address;
+    _dl_function_address;
+  }
+}
+libc {
+  GLIBC_2.2 {
+    # Functions from libgcc.
+    __divtf3; __divdf3; __divsf3; __divdi3; __moddi3; __udivdi3; __umoddi3;
+    __multi3;
+  }
+}
+libm {
+  GLIBC_2.1 {
+    # A generic bug got this omitted from other configurations' version
+    # sets, but we always had it.
+    exp2l;
+  }
+}

@@ -43,3 +43,5 @@ else()
     ${LIT_BASE_DIR}/${LIT_FILE_NAME}
     )
 endif()
+
+install(PROGRAMS ${LIT_BASE_DIR}/${LIT_FILE_NAME} DESTINATION bin)

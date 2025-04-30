@@ -47,6 +47,20 @@ if (OPENMP_STANDALONE_BUILD)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
   set(CMAKE_CXX_STANDARD_REQUIRED NO)
   set(CMAKE_CXX_EXTENSIONS NO)
+
+  set(LIBOMP_ENABLE_FORTRAN_TESTS OFF CACHE BOOL "Enable Fortran tests")
+  # For running tests in Fortran
+  if (${LIBOMP_ENABLE_FORTRAN_TESTS})
+    if(DEFINED CMAKE_Fortran_COMPILER)
+      # For running Fortran tests
+      set(OPENMP_TEST_FLANG_COMPILER ${CMAKE_Fortran_COMPILER} CACHE STRING "Fortran compiler for tests") 
+    else()    
+      message("No Fortran compiler found: ${CMAKE_Fortran_COMPILER}")
+    endif()
+  else()
+    message("No Fortran tests enabled")
+  endif()
+
 else()
   set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 

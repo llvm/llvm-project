@@ -1,0 +1,33 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+
+OLD_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -mcpu=power10"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if the compiler supports -mcpu=power10" >&5
+$as_echo_n "checking if the compiler supports -mcpu=power10... " >&6; }
+if ${libc_cv_mcpu_power10+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_mcpu_power10=yes
+else
+  libc_cv_mcpu_power10=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mcpu_power10" >&5
+$as_echo "$libc_cv_mcpu_power10" >&6; }
+config_vars="$config_vars
+mcpu-power10 = $libc_cv_mcpu_power10"
+if test "$libc_cv_mcpu_power10" == "yes"; then :
+
+	$as_echo "#define USE_PPC64_MCPU_POWER10 1" >>confdefs.h
+
+fi
+CFLAGS="$OLD_CFLAGS"

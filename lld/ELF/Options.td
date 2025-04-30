@@ -276,6 +276,8 @@ defm hash_style: Eq<"hash-style", "Specify hash style (sysv, gnu or both)">;
 
 def help: F<"help">, HelpText<"Print option help">;
 
+def host : JoinedOrSeparate<["-"], "H">, HelpText<"Set host emulation">;
+
 def icf_all: F<"icf=all">, HelpText<"Enable identical code folding">;
 
 def icf_safe: F<"icf=safe">, HelpText<"Enable safe identical code folding">;
@@ -433,6 +435,11 @@ defm section_start: Eq<"section-start", "Set address of section">,
   MetaVarName<"<address>">;
 
 def shared: F<"shared">, HelpText<"Build a shared object">;
+
+def set_binfmt_magic_number
+    : FF<"set-binfmt-magic-number">,
+      HelpText<
+          "Set binfmt magic number in the e_flags field of the ELF header">;
 
 defm soname: Eq<"soname", "Set DT_SONAME">;
 
@@ -612,6 +619,41 @@ def lto_aa_pipeline: JJ<"lto-aa-pipeline=">,
   HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
+def lto_next_instrumentation
+    : F<"lto-next-instrumentation">,
+      HelpText<"Add Instrumentation to enable NextSilicon's software "
+               "acceleration stack">;
+def lto_next_silicon_import_recursion
+    : F<"lto-next-silicon-import-recursion">,
+      HelpText<"Infer ns-import-recursion metadata from ns location marks">;
+def lto_next_silicon_warn_unsupported_omp
+    : F<"lto-next-silicon-warn-unsupported-omp">,
+      HelpText<"Warn about calls to OMP functions unsupported on NextSilicon "
+               "device">;
+def lto_next_silicon_relocate_variadic
+    : F<"lto-next-silicon-relocate-variadic">,
+      HelpText<"Relocate variadic callsites to thunks">;
+def lto_next_silicon_ir_fixup
+    : F<"lto-next-silicon-ir-fixup">,
+      HelpText<"IR manipulations for NextSilicon enriched binaries">;
+def lto_next_silicon_ir_builtins
+    : F<"lto-next-silicon-ir-builtins">,
+      HelpText<"Convert unsupported instructions to IR builtin libcalls">;
+def lto_next_silicon_do_counter_promotion
+    : F<"lto-next-silicon-do-counter-promotion">,
+      HelpText<"Enable promotion of PGO counters, disabled by default">;
+def lto_next_silicon_atomic_fixup
+    : F<"lto-next-silicon-atomic-fixup">,
+      HelpText<"IR manipulations for NextSilicon atomic operations">;
+def lto_next_silicon_split_call_sites
+    : F<"lto-next-silicon-split-call-sites">,
+      HelpText<"Split blocks with multiple call sites">;
+def lto_next_silicon_add_omp_prefix
+    : F<"lto-next-silicon-add-omp-prefix">,
+      HelpText<"NextSilicon IR manipulations on OpenMP outlined functions">;
+def lto_embed_symbol_trackers
+    : F<"lto-embed-symbol-trackers">,
+      HelpText<"Embed symbol trackers after LTO optimization pipeline">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
 def lto_emit_llvm: FF<"lto-emit-llvm">,

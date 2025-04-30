@@ -1,0 +1,173 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Akan locale for Ghana
+%
+% Prepared and contributed to glibc by Chris Leonard <cjl@sugarlabs.org>
+% and Jojoo Imbeah <jojoo.imbeah@kasahorow.com>
+%
+% This locale data has been developed by:
+% Sugar Labs,  http://www.sugarlabs.org/
+% kasahorow, http://www.kasahorow.org/
+%
+% build with: localedef -f UTF-8 -i ak_GH ak_GH
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title        "Akan locale for Ghana"
+source       "Sugar Labs // OLPC"
+address      ""
+contact      "sugarlabs.org"
+email        "libc-alpha@sourceware.org"
+tel          ""
+fax          ""
+language     "Akan"
+territory    "Ghana"
+revision     "1.0"
+date         "2013-08-24"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+% Sanda-Ɔpɛpɔn, Kwakwar-Ɔgyefuo, Ebɔw-Ɔbenem, Ebɔbira-Oforisuo, Esusow Aketseaba-Kɔtɔnimba, Obirade-Ayɛwohomumu, Ayɛwoho-Kitawonsa, Difuu-Ɔsandaa, Fankwa-Ɛbɔ, Ɔbɛsɛ-Ahinime, Ɔberɛfɛw-Obubuo, Mumu-Ɔpɛnimba
+mon  "Sanda-<U0186>p<U025B>p<U0254>n";/
+     "Kwakwar-<U0186>gyefuo";/
+     "Eb<U0254>w-<U0186>benem";/
+     "Eb<U0254>bira-Oforisuo";/
+     "Esusow Aketseaba-K<U0254>t<U0254>nimba";/
+     "Obirade-Ay<U025B>wohomumu";/
+     "Ay<U025B>woho-Kitawonsa";/
+     "Difuu-<U0186>sandaa";/
+     "Fankwa-<U0190>b<U0254>";/
+     "<U0186>b<U025B>s<U025B>-Ahinime";/
+     "<U0186>ber<U025B>f<U025B>w-Obubuo";/
+     "Mumu-<U0186>p<U025B>nimba"
+% S-Ɔ, K-Ɔ, E-Ɔ, E-O, E-K, O-A, A-K, D-Ɔ, F-Ɛ, Ɔ-A, Ɔ-O, M-Ɔ
+abmon  "S-<U0186>";/
+       "K-<U0186>";/
+       "E-<U0186>";/
+       "E-O";/
+       "E-K";/
+       "O-A";/
+       "A-K";/
+       "D-<U0186>";/
+       "F-<U0190>";/
+       "<U0186>-A";/
+       "<U0186>-O";/
+       "M-<U0186>"
+day  "Kwesida";/
+     "Dwowda";/
+     "Benada";/
+     "Wukuda";/
+     "Yawda";/
+     "Fida";/
+     "Memeneda"
+abday  "Kwe";"Dwo";"Ben";"Wuk";"Yaw";"Fia";"Mem"
+d_t_fmt       "%a %d %b %Y %T"
+date_fmt      "%a %d %b %Y %T %Z"
+d_fmt         "%Y//%m//%d"
+t_fmt   "%r"
+% AM/PM time representation
+t_fmt_ampm "%I:%M:%S %p"
+am_pm  "AN";"EW"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+decimal_point "."
+thousands_sep ","
+grouping      3
+END LC_NUMERIC
+
+LC_MONETARY
+int_curr_symbol           "GHS "
+% GH₵
+currency_symbol           "GH<U20B5>"
+mon_decimal_point         "."
+mon_thousands_sep         ","
+mon_grouping              3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0dDnN]"
+yesstr  "Yiw"
+nostr   "Daabi"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T, %S %z%N%c%N"
+country_name "Gaana"
+country_post "GH"
+country_ab2  "GH"
+country_ab3  "GHA"
+country_num  288
+country_car  "GH"
+country_isbn 9964
+lang_name    "Akan"
+lang_ab      "ak"
+lang_term    "aka"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+tel_dom_fmt "%a %l"
+int_select  "00"
+int_prefix  "233"
+END LC_TELEPHONE

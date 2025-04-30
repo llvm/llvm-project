@@ -55,6 +55,8 @@ set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --no-default-config")
 check_cxx_compiler_flag("" COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
 set(CMAKE_REQUIRED_FLAGS "${OLD_CMAKE_REQUIRED_FLAGS}")
 
+option(COMPILER_RT_ENABLE_SHARED "Build shared runtimes" ON)
+mark_as_advanced(COMPILER_RT_ENABLE_SHARED)
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
 option(COMPILER_RT_DISABLE_AARCH64_FMV "Disable AArch64 Function Multi Versioning support" OFF)

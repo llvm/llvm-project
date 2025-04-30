@@ -1,0 +1,524 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 12 "ILMs"
+.sh 2 Overview
+ILMs are the internal representation of a subprogram's
+executable statements created by the Semantic Analyzer
+and translated into the second internal representation, ILI,
+by the Expander.
+.lp
+An ILM consists of an opcode followed by a number of operands
+which depends on the opcode, or may also vary for a given opcode.
+The opcode and operands are of type short int.
+Typical opcodes are arithmetic operations, variable loads and stores,
+conditional branches, function call, etc.
+ILM opcodes are non-zero positive integers referenced via
+macros whose names begin with
+.cw IM_ .
+These macros are defined in the include file
+.i "ilmtp.n" .
+.lp
+The ILMs are grouped into blocks, each of which is a 
+sequential set of words.
+A block generally contains the ILMs generated for a single
+statement.  For C, compound and loop statements
+may generate more than one block, and for Fortran,
+I/O statements with implied
+.cw DO
+loops generate more than one block.
+Each block begins with a
+.cw BOS
+ILM specifying
+(1) the source line number of the statement,
+and (2) the number of words making up this block.
+.lp
+A
+.cw BOS
+may never appear within a block.
+.lp
+ILM operands may be links to other ILMs, but only preceding
+ILMs in the same block.
+Links are integers relative to the beginning of the block
+which contains them.
+The links may point over a branch, label, or
+function call ILM.
+An ILM may be pointed to by more than one other ILM,
+but this is not typical (can happen for
+uses of
+.cw '++'
+or
+.cw '--'
+operator, or for statement function expansion).
+.lp
+ILM operands may also be symbol table pointers or short constants.
+.lp
+The Semantic Analyzer buffers one block of ILMs at a time in
+a dynamic storage area.
+When a block is completed it is written out to a temporary file
+in binary format (by routine
+.cw wrilms ).
+If the
+.cw -nocode
+flag is specified
+writing of the file is inhibited.
+At this point also, a debug dump of the ILM block is performed
+if requested by the compiler maintainer.
+.sh 2 "ILM Attributes and Templates"
+Associated with each ILM opcode is a set of information
+used by the Expander to translate the ILMs into ILI.
+This information is defined symbolically in a file
+which is processed by the utility program ILMTP, described below,
+which creates the declaration and data definition files
+needed to access the information.
+See Appendix IV for the definition of the current ILMs
+and their attributes and templates.
+.sh 3 "ILM Attributes"
+The attributes for a given ILM opcode consist of the
+following structure of information:
+.(b
+.CS
+struct  {
+  char *name;
+  char type;
+  short int oprs;
+  INT oprflag;
+  short int temps;
+  short int template;
+  short int ilict;
+};
+.CE
+.)b
+.ip \f(CWname\fP 12n
+pointer to null terminated character string for the ILM name.
+This is needed for the ILM debug dump only.
+.ip \f(CWtype\fP 12n
+type of the ILM. The allowed values are:
+.(b
+\&'a'	arithmetic
+\&'b'	branch
+\&'c'	constant
+\&'l'	load
+\&'s'	store
+\&'r'	reference
+\&'p'	procedure
+\&'m'	miscellaneous
+.)b
+.ip \f(CWoprs\fP 12n
+number of operands.
+For ILMs which take a variable number of operands,
+this is the number of operands in the
+.q "fixed length part" .
+The number of operands for a given occurrence of such an ILM
+is equal to this value plus the value of the first operand.
+.ip \f(CWoprflag\fP 12n
+Bit map defining the type of each operand, and the attributes of
+the ILM:
+.TS
+tab(%);
+C C C C C C
+| C | C | C | C | C | C | .
+31%30%29%%3:2%1:0
+_
+spec%trm%var%\&.\ .\ .%op2%op1
+_
+.TE
+.ba +9
+.ip \f(CWopi\fP 6n
+2 bit fields corresponding to the ILM operands
+in reverse order. The values (macros defined in
+include file
+.i "ilm.h" )
+are:
+.TS
+LfCW L.
+OPR_LNK	this operand is a link to another ILM.
+OPR_SYM	this operand is a symbol table pointer.
+OPR_STC	this operand is a short constant.
+OPR_N	T{
+.fi
+this operand specifies the number
+of operands in the
+.q "variable length part" .
+Only the first operand of
+an ILM is allowed this value.
+T}
+.TE
+.ip \f(CWspec\fP 6n
+1 bit field which is set if this is a
+.q "special case"
+ILM, i.e. one whose expansion into ILI is
+not purely table driven.
+.ip \f(CWtrm\fP 6n
+1 bit field which is set if the ILM is a terminal
+ILM (i.e., a store, branch, etc.).
+.ip \f(CWvar\fP 6n
+1 bit field which is set if the ILM has a variable
+number of operands.  For these ILMs, operand one
+contains the number of variable operands.
+.ba -9n
+.ip \f(CWtemps\fP 9
+number of temporaries used in the template for this ILM.
+.ip \f(CWtemplate\fP 9
+index into the ILM template array for this ILM (see below).
+.ip \f(CWilict\fP 9
+number of ILI in the template.
+.sp
+.sh 3 "ILM Templates"
+An ILM template defines the sequence of one or more ILI into which
+ILMs of a given opcode are translated by the Expander.
+An ILM template consists of one or more
+.q "ILI specifications"
+which are stored sequentially in the ILM template array (\c
+.cw ilmtp ).
+Each ILI specification has the form:
+.TS
+tab(%);
+| C | C | C | C | C | C |.
+_
+iliopc%result%opr1%opr2%\&.\ .\ .%oprn
+_
+.TE
+.ip \f(CWiliopc\fP 7
+ILI operation code (refer to appendix V).
+.ip \f(CWresult\fP 7
+index into the ILM operand array which defines for the
+Expander how the ILI created for the ILI specification
+is to be handled, i.e., if the ILI is the
+.q "result"
+of the
+ILM, if the ILI is assigned to a template temporary, etc.
+A value of 0 indicates that there is no result.
+.ip \f(CWopri\fP 7
+index into the ILM operand array which defines for the
+Expander how the corresponding ILI operand is to be constructed.
+The number of these entries depends on
+.cw iliopc
+(the
+ILI attribute structure must be referenced - see section 13).
+A value of 0 indicates that there is no operand.
+.lp
+The operand array (\c
+.cw ilmopnd )
+consists of a common pool of operand definitions, each of which defines how
+an ILI operand is constructed or how the result of an ILI is to be
+processed by the Expander.  Each definition has the form:
+.TS
+| C | C | .
+_
+type	aux
+_
+.TE
+where each field is type INT.
+.lp
+.cw "result"
+and each
+.cw "opri"
+are indices (subscripts) into this array.
+The first entry of
+.cw ilmopnd
+(i.e., a subscript value of 0) consists of a single value (0).
+Each result/operand type has a macro definition whose name begins
+with
+.cw ILMO_ .
+These macros are defined in the include file
+.q "ilm.h" .
+.lp
+Result Definition:
+.TS
+tab(%);
+L L L
+LfCW C L.
+type%aux%meaning
+_
+ILMO_R%N/A%ILI is the single template result
+ILMO_RR%N/A%ILI is the real template result (for complex)
+ILMO_IR%N/A%ILI is the imaginary template result
+ILMO_T%\fIn\fP%T{
+.fi
+ILI is the template temporary result
+.i n
+(\fIn\fP >= 1)
+T}
+.TE
+.lp
+Operand Definition:
+.TS
+tab(%);
+L L L
+LfCW CfI L.
+type%aux%meaning
+_
+ILMO_P%n%ILI pointed to by the nth ILM operand
+ILMO_RP%n%T{
+.fi
+ILI pointed to by the
+.i n th
+ILM operand
+is the real part of a complex operand
+T}
+ILMO_IP%n%T{
+.fi
+ILI pointed to by the
+.i n th ILM operand
+is the imaginary part of a complex
+T}
+ILMO_T%n%Template temporary \fIn\fP
+ILMO_V%n%T{
+.fi
+Value of the
+.i n th
+ILM operand (a ST pointer)
+T}
+ILMO_SZ%n%T{
+.fi
+Value of the
+.i n th
+ILM operand which locates
+a data type entry.  The data type entry will be used to determine the size of
+an item.
+T}
+ILMO_IV%n%Immediate value \fIn\fP
+ILMO_ISYM%n%T{
+.fi
+Integer literal
+.i n
+is an index into the ILM
+auxiliary array which is the text of the 
+literal (in this case, an integer) used to
+form a symbol table entry (in this case, an
+integer constant)
+T}
+ILMO_RSYM%n%Real literal (real constant)
+ILMO_XRSYM%n%T{
+.fi
+Hexadecimal literal which represents the
+value of a real constant.
+T}
+ILMO_DSYM%n%Double literal (double constant)
+ILMO_XDSYM%n%T{
+.fi
+Two hexadecimal literals separated by a a comma
+which represents the value of a double constant.
+The first literal is the most significant part;
+the second literal is the least signifcant part.
+T}
+ILMO_ESYM%n%External literal (proc symbol)
+ILMO_DR%n%T{
+.fi
+Integer register for intrinsic argument
+.i n .
+A value of -1 indicates that there is not a register associated with
+the ILI.
+Note that for this operand and the remaining register argument operands,
+the value
+.i n
+represents argument
+.i n+1
+and is mapped to the appropriate target register.
+T}
+ILMO_AR%n%Address register \fIn\fP.
+ILMO_SP%n%Single precision register \fIn\fP.
+ILMO_DP%n%Double precision register \fIn\fP.
+ILMO_ISP%n%Imaginary single precision register \fIn\fP.
+ILMO_IDP%n%Imaginary double precision register \fIn\fP.
+.TE
+.lp
+The ILM auxiliary array (\c
+.cw ilmaux )
+consists of a sequence of character
+strings representing the text of the literals.  Each string
+is null terminated (i.e., it is a normal C character string) and
+will be used to form the
+.q "value"
+of a symbol table entry.
+.sp
+.sh 2 "Auxiliary Data Structures - Switch Lists (C only)"
+Switch Lists are created by the Semantic Analyzer as
+it processes switch (case) statements and their embedded case and
+default (otherwise) labels.
+A switch list is used by the Expander to generate ILI for a
+switch statement when the SWITCH ILM which
+points to the switch list is processed.
+.lp
+Switch lists are stored in a single dynamic storage block.
+All pointers to switch list elements are relative (\c
+.cw "short int" )
+values.
+Each list consists of a header record followed by a linked
+list of case records which define case value, label pairs.
+The elements of this list are ordered by the case value,
+not by the order in which they appeared in the source program.
+There is no list element for a default label.
+Instead, the list header contains the default label
+(if none was specified by the user, the break label is used).
+.lp
+The same structure is used for list headers and list elements:
+.(b
+.CS
+struct {
+    INT   val;
+    short clabel;
+    short next;
+};
+.CE
+.)b
+.lp
+For list headers:
+.TS
+LfCW Lw(3.0i).
+val	not used.
+clabel	symbol table pointer for the default label.
+next	pointer to first list element (0 if no cases).
+.TE
+For list elements:
+.TS
+LfCW Lw(3.0i).
+val	integer case value.
+clabel	T{
+.fi
+case label (compiler created symbol allocated
+by the Semantic Analyzer).
+T}
+next	T{
+.fi
+pointer to next list element (a value of 0 indicates the end of the list).
+T}
+.TE
+.sh 2 "ILM Template Utility (ILMTP)"
+ILMTP reads the file which defines the ILM opcodes and
+their attributes and templates, and writes the C declaration
+and definition files needed to reference the information within the
+compiler.
+ILMTP must be re-run whenever an ILM opcode is deleted or added,
+or its attributes or template modified.
+Certain changes to the ILI definition file (section 13) also
+require that ILMTP be run (see note below).
+.sh 3 Inputs
+ILMTP reads two input files:
+.np
+ILM definition file.
+Defines the ILM opcodes, their attributes and templates.
+This file is in nroff format and is used to create appendix IV
+of this document.
+It contains three types of lines processed by ILMTP:
+.sp
+ILM definition line of the form:
+.(b
+.CS
+\&.IL name type[*] opr1 opr2 ... oprn[* | +]
+.CE
+.)b
+.ba +5
+.ip "name" 8
+name of the ILM.
+.ip "type" 8
+type of the ILM.  Must be one of "arth", "branch", "ref"
+"const", "load", "store", "proc", or "misc".
+.ip "opri" 8
+operand type.  This must be one of "lnk", "sym",
+"stc", or "n".  "n" is only allowed for the
+first operand.  "n" indicates that this is a
+variable length ILM and is allowed only if the last
+operand if followed immediately by "*" or "+".
+This means that the last operand specifier
+defines the type of the variable length part
+operand; "*" means the variable length part
+consists of 0 or more operands, and "+" means
+that it must contain at least one operand.
+The occurrence of n as the first operand will set the "var"
+attribute.
+.ip " " 0
+ILM attribute line. Defines the attributes of the ILM opcodes.
+The appearance of this line is optional; it, however, must precede
+the ILI specification line(s) if it is used. The line is of the form:
+.(b
+.CS
+\&.AT followed by zero or more occurrences of <attribute>
+.CE
+.)b
+where <attribute> is one of the following:
+.ip "spec" 8
+The ILM is to be special cased by the Expander.
+.ip "trm" 8
+The ILM is a terminal ILM.
+.ip " " 0
+ILI specification line.  Zero or more of these follow each
+ILM definition line and together they specify the ILM template.
+The line is of the form:
+.CS
+	.OP ili result opr1 opr2 ... oprn
+.CE
+.ip ili 8
+ILI opcode
+.ip result 8
+result of the ILI; one of:
+.TS
+L L.
+null	no result
+r	single result
+rr	real result
+ir	imaginary result
+tn	temporary result n
+.TE
+.ip opri 8
+operand of the ILI; one of:
+.TS
+L L.
+null	no operand
+pn	pointer from the nth operand of the ILM
+rpn	real pointer n
+ipn	imaginary pointer n
+tn	temporary n
+vn	T{
+value in the nth operand of the ILM which
+is a ST pointer
+T}
+szn	T{
+value in the nth operand of the ILM which
+is a DT pointer whose size is needed
+T}
+ivn	immediate value n
+=i'str	T{
+integer literal (str is the text of the 
+literal)
+T}
+=r'str	real literal
+=d'str	double literal
+=e'str	external literal
+dr(n)	data register n
+ar(n)	address register n
+sp(n)	single precision regsiter n
+dp(n)	double precision register n
+.TE
+.ba -5
+.nr ii 5n
+.np
+ILI Definition File.
+This file is the primary input to the ILITP utility program
+and so is described in section 13.
+It is read by ILMTP in order to extract just the following information:
+the name and opcode number of each ILI, and the number of
+operands of each ILI.
+Note that if any changes to the ILI Definition File affect these
+quantities, ILMTP must be re-run.
+.sh 3 Outputs
+ILMTP produces two output files:
+.np
+.i ilmtpdf.h
+\(em contains the C data definitions and initialization
+code for the ILM templates and attributes.
+.np
+.i ilmtp.h
+\(em contains the C constant symbol definitions for the
+ILM opcodes
+.sh 2 "Miscellaneous Information"
+The file
+.i "ilm.h"
+contains various macro definitions which define
+the possible values of the ILM attributes.  This file also
+contains the declarations and typedefs for the ILM and ILM-related
+data structures (i.e., ILMINFO, the ILM templates, etc.).

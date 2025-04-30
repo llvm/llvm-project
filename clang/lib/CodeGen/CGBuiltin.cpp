@@ -6313,6 +6313,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     if (CGF->getTarget().getTriple().getOS() != llvm::Triple::OSType::AMDHSA)
       return nullptr;
     return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::next32:
+    return CGF->EmitNext32BuiltinExpr(BuiltinID, E);
   default:
     return nullptr;
   }
@@ -22075,4 +22077,15 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
   llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
   return Builder.CreateCall(F, Ops, "");
+}
+
+Value *CodeGenFunction::EmitNext32BuiltinExpr(unsigned BuiltinID,
+                                              const CallExpr *E) {
+  switch (BuiltinID) {
+  case Next32::BI__builtin_next32_threadid:
+    return EmitSpecialRegisterBuiltin(*this, E, Int32Ty, Int32Ty, NormalRead,
+                                      "TID");
+  } // switch
+
+  return nullptr;
 }

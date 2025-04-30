@@ -1,0 +1,154 @@
+/* Handle POSIX compilation environments that may or may not be present.
+   Copyright (C) 2012-2021 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <https://www.gnu.org/licenses/>.  */
+
+/* Before including this file, the including file must have included
+   <bits/environments.h> (generally via <unistd.h>) and must have
+   defined the following macros, exactly one of which will be called
+   for each POSIX environment:
+
+   KNOWN_PRESENT_ENVIRONMENT, for POSIX environments that are known to
+   be supported in this libc.
+
+   KNOWN_ABSENT_ENVIRONMENT, for POSIX environments that are known not
+   to be supported on this system.
+
+   UNKNOWN_ENVIRONMENT, for POSIX environments not supported in this
+   libc but possibly supported by another libc on the same system,
+   that can be selected using the same compiler but different
+   compilation options.
+
+   Each macro has arguments (SC_PREFIX, ENV_PREFIX, SUFFIX).  The
+   corresponding argument to sysconf is _SC_##SC_PREFIX##_##SUFFIX.
+   The environment name, as used with getconf, is
+   ENV_PREFIX##_##SUFFIX, and the corresponding macro is the same with
+   a leading "_".
+
+   In addition, the macros START_ENV_GROUP and END_ENV_GROUP must be
+   defined.  These are called with arguments V5, V6, V7 before and
+   after the relevant groups of environments.  */
+
+#define NEED_SPEC_ARRAY 0
+#include <posix-conf-vars.h>
+
+START_ENV_GROUP (V7)
+
+#if CONF_IS_DEFINED_SET (_POSIX_V7_ILP32_OFF32)
+KNOWN_PRESENT_ENVIRONMENT (V7, POSIX_V7, ILP32_OFF32)
+#elif CONF_IS_DEFINED (_POSIX_V7_ILP32_OFF32)
+KNOWN_ABSENT_ENVIRONMENT (V7, POSIX_V7, ILP32_OFF32)
+#else
+UNKNOWN_ENVIRONMENT (V7, POSIX_V7, ILP32_OFF32)
+#endif
+
+#if CONF_IS_DEFINED_SET (_POSIX_V7_ILP32_OFFBIG)
+KNOWN_PRESENT_ENVIRONMENT (V7, POSIX_V7, ILP32_OFFBIG)
+#elif CONF_IS_DEFINED (_POSIX_V7_ILP32_OFFBIG)
+KNOWN_ABSENT_ENVIRONMENT (V7, POSIX_V7, ILP32_OFFBIG)
+#else
+UNKNOWN_ENVIRONMENT (V7, POSIX_V7, ILP32_OFFBIG)
+#endif
+
+#if CONF_IS_DEFINED_SET (_POSIX_V7_LP64_OFF64)
+KNOWN_PRESENT_ENVIRONMENT (V7, POSIX_V7, LP64_OFF64)
+#elif CONF_IS_DEFINED (_POSIX_V7_LP64_OFF64)
+KNOWN_ABSENT_ENVIRONMENT (V7, POSIX_V7, LP64_OFF64)
+#else
+UNKNOWN_ENVIRONMENT (V7, POSIX_V7, LP64_OFF64)
+#endif
+
+#if CONF_IS_DEFINED_SET (_POSIX_V7_LPBIG_OFFBIG)
+KNOWN_PRESENT_ENVIRONMENT (V7, POSIX_V7, LPBIG_OFFBIG)
+#elif CONF_IS_DEFINED (_POSIX_V7_LPBIG_OFFBIG)
+KNOWN_ABSENT_ENVIRONMENT (V7, POSIX_V7, LPBIG_OFFBIG)
+#else
+UNKNOWN_ENVIRONMENT (V7, POSIX_V7, LPBIG_OFFBIG)
+#endif
+
+END_ENV_GROUP (V7)
+
+START_ENV_GROUP (V6)
+
+#if CONF_IS_DEFINED_SET (_POSIX_V6_ILP32_OFF32)
+KNOWN_PRESENT_ENVIRONMENT (V6, POSIX_V6, ILP32_OFF32)
+#elif CONF_IS_DEFINED (_POSIX_V6_ILP32_OFF32)
+KNOWN_ABSENT_ENVIRONMENT (V6, POSIX_V6, ILP32_OFF32)
+#else
+UNKNOWN_ENVIRONMENT (V6, POSIX_V6, ILP32_OFF32)
+#endif
+
+#if CONF_IS_DEFINED_SET (_POSIX_V6_ILP32_OFFBIG)
+KNOWN_PRESENT_ENVIRONMENT (V6, POSIX_V6, ILP32_OFFBIG)
+#elif CONF_IS_DEFINED (_POSIX_V6_ILP32_OFFBIG)
+KNOWN_ABSENT_ENVIRONMENT (V6, POSIX_V6, ILP32_OFFBIG)
+#else
+UNKNOWN_ENVIRONMENT (V6, POSIX_V6, ILP32_OFFBIG)
+#endif
+
+#if CONF_IS_DEFINED_SET (_POSIX_V6_LP64_OFF64)
+KNOWN_PRESENT_ENVIRONMENT (V6, POSIX_V6, LP64_OFF64)
+#elif CONF_IS_DEFINED (_POSIX_V6_LP64_OFF64)
+KNOWN_ABSENT_ENVIRONMENT (V6, POSIX_V6, LP64_OFF64)
+#else
+UNKNOWN_ENVIRONMENT (V6, POSIX_V6, LP64_OFF64)
+#endif
+
+#if CONF_IS_DEFINED_SET (_POSIX_V6_LPBIG_OFFBIG)
+KNOWN_PRESENT_ENVIRONMENT (V6, POSIX_V6, LPBIG_OFFBIG)
+#elif CONF_IS_DEFINED (_POSIX_V6_LPBIG_OFFBIG)
+KNOWN_ABSENT_ENVIRONMENT (V6, POSIX_V6, LPBIG_OFFBIG)
+#else
+UNKNOWN_ENVIRONMENT (V6, POSIX_V6, LPBIG_OFFBIG)
+#endif
+
+END_ENV_GROUP (V6)
+
+START_ENV_GROUP (V5)
+
+#if CONF_IS_DEFINED_SET (_XBS5_ILP32_OFF32)
+KNOWN_PRESENT_ENVIRONMENT (XBS5, XBS5, ILP32_OFF32)
+#elif CONF_IS_DEFINED (_XBS5_ILP32_OFF32)
+KNOWN_ABSENT_ENVIRONMENT (XBS5, XBS5, ILP32_OFF32)
+#else
+UNKNOWN_ENVIRONMENT (XBS5, XBS5, ILP32_OFF32)
+#endif
+
+#if CONF_IS_DEFINED_SET (_XBS5_ILP32_OFFBIG)
+KNOWN_PRESENT_ENVIRONMENT (XBS5, XBS5, ILP32_OFFBIG)
+#elif CONF_IS_DEFINED (_XBS5_ILP32_OFFBIG)
+KNOWN_ABSENT_ENVIRONMENT (XBS5, XBS5, ILP32_OFFBIG)
+#else
+UNKNOWN_ENVIRONMENT (XBS5, XBS5, ILP32_OFFBIG)
+#endif
+
+#if CONF_IS_DEFINED_SET (_XBS5_LP64_OFF64)
+KNOWN_PRESENT_ENVIRONMENT (XBS5, XBS5, LP64_OFF64)
+#elif CONF_IS_DEFINED (_XBS5_LP64_OFF64)
+KNOWN_ABSENT_ENVIRONMENT (XBS5, XBS5, LP64_OFF64)
+#else
+UNKNOWN_ENVIRONMENT (XBS5, XBS5, LP64_OFF64)
+#endif
+
+#if CONF_IS_DEFINED_SET (_XBS5_LPBIG_OFFBIG)
+KNOWN_PRESENT_ENVIRONMENT (XBS5, XBS5, LPBIG_OFFBIG)
+#elif CONF_IS_DEFINED (_XBS5_LPBIG_OFFBIG)
+KNOWN_ABSENT_ENVIRONMENT (XBS5, XBS5, LPBIG_OFFBIG)
+#else
+UNKNOWN_ENVIRONMENT (XBS5, XBS5, LPBIG_OFFBIG)
+#endif
+
+END_ENV_GROUP (V5)

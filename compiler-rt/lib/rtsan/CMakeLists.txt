@@ -1,3 +1,5 @@
+if(COMPILER_RT_BUILD_RTSAN)
+
 include_directories(..)
 
 set(RTSAN_CXX_SOURCES
@@ -89,4 +91,6 @@ endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
+endif()
+
 endif()

@@ -1,0 +1,274 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Vietnamese language locale for Vietnam
+% Source: glibc locale and info from vietnamese native speakers
+% Address:
+% Contact: Pablo Saratxaga
+% Email: pablo@mandrakesoft.com
+% Tel:
+% Fax:
+% Language: vi
+% Territory: VN
+% Revision: 1.1
+% Date: 2004-01-09
+% Users: general
+
+LC_IDENTIFICATION
+title      "Vietnamese language locale for Vietnam"
+source     "glibc locale and info from vietnamese native speakers"
+address    ""
+contact    "Pablo Saratxaga"
+email      "pablo@mandrakesoft.com"
+tel        ""
+fax        ""
+language   "Vietnamese"
+territory  "Vietnam"
+revision   "1.1"
+date       "2004-01-09"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+
+include  "translit_combining";""
+
+% dong sign -> d// -> dd
+<U20AB> "<U0111>";"<U0064><U0064>"
+
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% CLDR collation rules for Vietnamese:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/vi.xml)
+%
+% <collation type="standard">
+% 	<cr><![CDATA[
+% 		[normalization on]
+% 		&̀<<̉<<̃<<́<<̣
+% 		&a<ă<<<Ă<â<<<Â
+% 		&d<đ<<<Đ
+% 		&e<ê<<<Ê
+% 		&o<ô<<<Ô<ơ<<<Ơ
+% 		&u<ư<<<Ư
+% 	]]></cr>
+% </collation>
+% <collation type="traditional">
+% 	<cr><![CDATA[
+% 		[normalization on]
+% 		&̀<<̉<<̃<<́<<̣
+% 		&a<ă<<<Ă<â<<<Â
+% 		&C<ch<<<Ch<<<CH
+% 		&d<đ<<<Đ
+% 		&e<ê<<<Ê
+% 		&G<gh<<<Gh<<<GH<gi<<<Gi<<<GI
+% 		&K<kh<<<Kh<<<KH
+% 		&N<nh<<<Nh<<<NH<ng<<<Ng<<<NG<ngh<<<Ngh<<<NGh<<<NGH
+% 		&o<ô<<<Ô<ơ<<<Ơ
+% 		&P<ph<<<Ph<<<PH
+% 		&Q<qu<<<Qu<<<QU
+% 		&T<th<<<Th<<<TH<tr<<<Tr<<<TR
+% 		&u<ư<<<Ư
+% 	]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/vi.xml)
+%
+% <exemplarCharacters type="index" draft="contributed">[A Ă Â B C D Đ E Ê F G H I J K L M N O Ô Ơ P Q R S T U Ư V W X Y Z]</exemplarCharacters>
+%
+% The following rules implement the “standard” order for glibc.
+
+copy "iso14651_t1"
+
+collating-symbol <a-breve>
+collating-symbol <a-circumflex>
+collating-symbol <d-stroke>
+collating-symbol <e-circumflex>
+collating-symbol <o-circumflex>
+collating-symbol <o-horn>
+collating-symbol <u-horn>
+
+reorder-after <BASE>
+<GRAVE> % COMBINING GRAVE ACCENT
+<CROOK> % COMBINING HOOK ABOVE
+<TILDE>  % COMBINING TILDE
+<AIGUT>  % COMBINING ACUTE ACCENT
+<POINS>  % COMBINING DOT BELOW
+
+reorder-after <AFTER-A>
+<a-breve>
+<a-circumflex>
+reorder-after <AFTER-D>
+<d-stroke>
+reorder-after <AFTER-E>
+<e-circumflex>
+reorder-after <AFTER-O>
+<o-circumflex>
+<o-horn>
+reorder-after <AFTER-U>
+<u-horn>
+
+<U0103> <a-breve>;"<BASE><BREVE>";"<MIN><MIN>";<U0103> % ă
+<U0102> <a-breve>;"<BASE><BREVE>";"<CAP><MIN>";<U0102> % Ă
+<U00E2> <a-circumflex>;"<BASE><CIRCF>";"<MIN><MIN>";<U00E2> % â
+<U00C2> <a-circumflex>;"<BASE><CIRCF>";"<CAP><MIN>";<U00C2> % Â
+<U0111> <d-stroke>;"<BASE><BARRE>";"<MIN><MIN>";<U0111> % đ
+<U0110> <d-stroke>;"<BASE><BARRE>";"<CAP><MIN>";<U0110> % Đ
+<U00EA> <e-circumflex>;"<BASE><CIRCF>";"<MIN><MIN>";<U00EA> % ê
+<U00CA> <e-circumflex>;"<BASE><CIRCF>";"<CAP><MIN>";<U00CA> % Ê
+<U00F4> <o-circumflex>;"<BASE><CIRCF>";"<MIN><MIN>";<U00F4> % ô
+<U00D4> <o-circumflex>;"<BASE><CIRCF>";"<CAP><MIN>";<U00D4> % Ô
+<U01A1> <o-horn>;"<BASE><HORNU>";"<MIN><MIN>";<U01A1> % ơ
+<U01A0> <o-horn>;"<BASE><HORNU>";"<CAP><MIN>";<U01A0> % Ơ
+<U01B0> <u-horn>;"<BASE><HORNU>";"<MIN><MIN>";<U01B0> % ư
+<U01AF> <u-horn>;"<BASE><HORNU>";"<CAP><MIN>";<U01AF> % Ư
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol       "VND "
+currency_symbol       "<U20AB>"
+mon_decimal_point     ","
+mon_thousands_sep     "."
+mon_grouping          3;3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       0
+frac_digits           0
+p_cs_precedes         0
+p_sep_by_space        0
+n_cs_precedes         1
+n_sep_by_space        0
+p_sign_posn           1
+n_sign_posn           1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point        ","
+thousands_sep        "."
+grouping             3;3
+END LC_NUMERIC
+
+LC_TIME
+abday    "CN";"T2";"T3";"T4";"T5";"T6";"T7"
+day      "Ch<U1EE7> nh<U1EAD>t";/
+         "Th<U1EE9> hai";/
+         "Th<U1EE9> ba";/
+         "Th<U1EE9> t<U01B0>";/
+         "Th<U1EE9> n<U0103>m";/
+         "Th<U1EE9> s<U00E1>u";/
+         "Th<U1EE9> b<U1EA3>y"
+abmon    "Thg 1";/
+         "Thg 2";/
+         "Thg 3";/
+         "Thg 4";/
+         "Thg 5";/
+         "Thg 6";/
+         "Thg 7";/
+         "Thg 8";/
+         "Thg 9";/
+         "Thg 10";/
+         "Thg 11";/
+         "Thg 12"
+mon      "Th<U00E1>ng 1";/
+         "Th<U00E1>ng 2";/
+         "Th<U00E1>ng 3";/
+         "Th<U00E1>ng 4";/
+         "Th<U00E1>ng 5";/
+         "Th<U00E1>ng 6";/
+         "Th<U00E1>ng 7";/
+         "Th<U00E1>ng 8";/
+         "Th<U00E1>ng 9";/
+         "Th<U00E1>ng 10";/
+         "Th<U00E1>ng 11";/
+         "Th<U00E1>ng 12"
+d_t_fmt  "%A, %d %B N<U0103>m %Y %T %Z"
+d_fmt    "%d//%m//%Y"
+t_fmt    "%T"
+am_pm    "AM";"PM"
+t_fmt_ampm  "%I:%M %p"
+date_fmt  "%A, %d %B n<U0103>m %Y %T %Z"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yYcC]"
+noexpr  "^[-0nNkK]"
+yesstr  "C<U00F3>"
+nostr   "Kh<U00F4>ng"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%m%t%g"
+name_gen    ""
+name_mr     "<U00D4>."
+name_mrs    "B."
+name_miss   "C."
+name_ms     ""
+
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "Vi<U1EC7>t Nam"
+lang_name "Ti<U1EBF>ng Vi<U1EC7>t"
+
+country_ab2 "VN"
+country_ab3 "VNM"
+country_num 704
+country_car    "VN"
+lang_ab      "vi"
+lang_term    "vie"
+lang_lib    "vie"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the
+%
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix  "84"
+int_select  "00"
+
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

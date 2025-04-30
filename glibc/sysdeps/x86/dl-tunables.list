@@ -1,0 +1,66 @@
+# x86 specific tunables.
+# Copyright (C) 2017-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+glibc {
+  cpu {
+    hwcaps {
+      type: STRING
+    }
+    x86_ibt {
+      type: STRING
+    }
+    x86_shstk {
+      type: STRING
+    }
+    x86_non_temporal_threshold {
+      type: SIZE_T
+    }
+    x86_rep_movsb_threshold {
+      type: SIZE_T
+      # Since there is overhead to set up REP MOVSB operation, REP MOVSB
+      # isn't faster on short data.  The memcpy micro benchmark in glibc
+      # shows that 2KB is the approximate value above which REP MOVSB
+      # becomes faster than SSE2 optimization on processors with Enhanced
+      # REP MOVSB.  Since larger register size can move more data with a
+      # single load and store, the threshold is higher with larger register
+      # size.  Note: Since the REP MOVSB threshold must be greater than 8
+      # times of vector size and the default value is 2048 * (vector size
+      # / 16), the default value and the minimum value must be updated at
+      # run-time.  NB: Don't set the default value since we can't tell if
+      # the tunable value is set by user or not [BZ #27069].
+      minval: 1
+    }
+    x86_rep_stosb_threshold {
+      type: SIZE_T
+      # Since there is overhead to set up REP STOSB operation, REP STOSB
+      # isn't faster on short data.  The memset micro benchmark in glibc
+      # shows that 2KB is the approximate value above which REP STOSB
+      # becomes faster on processors with Enhanced REP STOSB.  Since the
+      # stored value is fixed, larger register size has minimal impact
+      # on threshold.
+      minval: 1
+      default: 2048
+    }
+    x86_data_cache_size {
+      type: SIZE_T
+    }
+    x86_shared_cache_size {
+      type: SIZE_T
+    }
+  }
+}

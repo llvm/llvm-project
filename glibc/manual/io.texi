@@ -1,0 +1,395 @@
+@node I/O Overview, I/O on Streams, Pattern Matching, Top
+@c %MENU% Introduction to the I/O facilities
+@chapter Input/Output Overview
+
+Most programs need to do either input (reading data) or output (writing
+data), or most frequently both, in order to do anything useful.  @Theglibc{}
+provides such a large selection of input and output functions
+that the hardest part is often deciding which function is most
+appropriate!
+
+This chapter introduces concepts and terminology relating to input
+and output.  Other chapters relating to the GNU I/O facilities are:
+
+@itemize @bullet
+@item
+@ref{I/O on Streams}, which covers the high-level functions
+that operate on streams, including formatted input and output.
+
+@item
+@ref{Low-Level I/O}, which covers the basic I/O and control
+functions on file descriptors.
+
+@item
+@ref{File System Interface}, which covers functions for operating on
+directories and for manipulating file attributes such as access modes
+and ownership.
+
+@item
+@ref{Pipes and FIFOs}, which includes information on the basic interprocess
+communication facilities.
+
+@item
+@ref{Sockets}, which covers a more complicated interprocess communication
+facility with support for networking.
+
+@item
+@ref{Low-Level Terminal Interface}, which covers functions for changing
+how input and output to terminals or other serial devices are processed.
+@end itemize
+
+
+@menu
+* I/O Concepts::       Some basic information and terminology.
+* File Names::         How to refer to a file.
+@end menu
+
+@node I/O Concepts, File Names,  , I/O Overview
+@section Input/Output Concepts
+
+Before you can read or write the contents of a file, you must establish
+a connection or communications channel to the file.  This process is
+called @dfn{opening} the file.  You can open a file for reading, writing,
+or both.
+@cindex opening a file
+
+The connection to an open file is represented either as a stream or as a
+file descriptor.  You pass this as an argument to the functions that do
+the actual read or write operations, to tell them which file to operate
+on.  Certain functions expect streams, and others are designed to
+operate on file descriptors.
+
+When you have finished reading to or writing from the file, you can
+terminate the connection by @dfn{closing} the file.  Once you have
+closed a stream or file descriptor, you cannot do any more input or
+output operations on it.
+
+@menu
+* Streams and File Descriptors::    The GNU C Library provides two ways
+			             to access the contents of files.
+* File Position::                   The number of bytes from the
+                                     beginning of the file.
+@end menu
+
+@node Streams and File Descriptors, File Position,  , I/O Concepts
+@subsection Streams and File Descriptors
+
+When you want to do input or output to a file, you have a choice of two
+basic mechanisms for representing the connection between your program
+and the file: file descriptors and streams.  File descriptors are
+represented as objects of type @code{int}, while streams are represented
+as @code{FILE *} objects.
+
+File descriptors provide a primitive, low-level interface to input and
+output operations.  Both file descriptors and streams can represent a
+connection to a device (such as a terminal), or a pipe or socket for
+communicating with another process, as well as a normal file.  But, if
+you want to do control operations that are specific to a particular kind
+of device, you must use a file descriptor; there are no facilities to
+use streams in this way.  You must also use file descriptors if your
+program needs to do input or output in special modes, such as
+nonblocking (or polled) input (@pxref{File Status Flags}).
+
+Streams provide a higher-level interface, layered on top of the
+primitive file descriptor facilities.  The stream interface treats all
+kinds of files pretty much alike---the sole exception being the three
+styles of buffering that you can choose (@pxref{Stream Buffering}).
+
+The main advantage of using the stream interface is that the set of
+functions for performing actual input and output operations (as opposed
+to control operations) on streams is much richer and more powerful than
+the corresponding facilities for file descriptors.  The file descriptor
+interface provides only simple functions for transferring blocks of
+characters, but the stream interface also provides powerful formatted
+input and output functions (@code{printf} and @code{scanf}) as well as
+functions for character- and line-oriented input and output.
+@c !!! glibc has dprintf, which lets you do printf on an fd.
+
+Since streams are implemented in terms of file descriptors, you can
+extract the file descriptor from a stream and perform low-level
+operations directly on the file descriptor.  You can also initially open
+a connection as a file descriptor and then make a stream associated with
+that file descriptor.
+
+In general, you should stick with using streams rather than file
+descriptors, unless there is some specific operation you want to do that
+can only be done on a file descriptor.  If you are a beginning
+programmer and aren't sure what functions to use, we suggest that you
+concentrate on the formatted input functions (@pxref{Formatted Input})
+and formatted output functions (@pxref{Formatted Output}).
+
+If you are concerned about portability of your programs to systems other
+than GNU, you should also be aware that file descriptors are not as
+portable as streams.  You can expect any system running @w{ISO C} to
+support streams, but @nongnusystems{} may not support file descriptors at
+all, or may only implement a subset of the GNU functions that operate on
+file descriptors.  Most of the file descriptor functions in @theglibc{}
+are included in the POSIX.1 standard, however.
+
+@node File Position,  , Streams and File Descriptors, I/O Concepts
+@subsection File Position
+
+One of the attributes of an open file is its @dfn{file position} that
+keeps track of where in the file the next character is to be read or
+written.  On @gnusystems{}, and all POSIX.1 systems, the file position
+is simply an integer representing the number of bytes from the beginning
+of the file.
+
+The file position is normally set to the beginning of the file when it
+is opened, and each time a character is read or written, the file
+position is incremented.  In other words, access to the file is normally
+@dfn{sequential}.
+@cindex file position
+@cindex sequential-access files
+
+Ordinary files permit read or write operations at any position within
+the file.  Some other kinds of files may also permit this.  Files which
+do permit this are sometimes referred to as @dfn{random-access} files.
+You can change the file position using the @code{fseek} function on a
+stream (@pxref{File Positioning}) or the @code{lseek} function on a file
+descriptor (@pxref{I/O Primitives}).  If you try to change the file
+position on a file that doesn't support random access, you get the
+@code{ESPIPE} error.
+@cindex random-access files
+
+Streams and descriptors that are opened for @dfn{append access} are
+treated specially for output: output to such files is @emph{always}
+appended sequentially to the @emph{end} of the file, regardless of the
+file position.  However, the file position is still used to control where in
+the file reading is done.
+@cindex append-access files
+
+If you think about it, you'll realize that several programs can read a
+given file at the same time.  In order for each program to be able to
+read the file at its own pace, each program must have its own file
+pointer, which is not affected by anything the other programs do.
+
+In fact, each opening of a file creates a separate file position.
+Thus, if you open a file twice even in the same program, you get two
+streams or descriptors with independent file positions.
+
+By contrast, if you open a descriptor and then duplicate it to get
+another descriptor, these two descriptors share the same file position:
+changing the file position of one descriptor will affect the other.
+
+@node File Names,  , I/O Concepts, I/O Overview
+@section File Names
+
+In order to open a connection to a file, or to perform other operations
+such as deleting a file, you need some way to refer to the file.  Nearly
+all files have names that are strings---even files which are actually
+devices such as tape drives or terminals.  These strings are called
+@dfn{file names}.  You specify the file name to say which file you want
+to open or operate on.
+
+This section describes the conventions for file names and how the
+operating system works with them.
+@cindex file name
+
+@menu
+* Directories::                 Directories contain entries for files.
+* File Name Resolution::        A file name specifies how to look up a file.
+* File Name Errors::            Error conditions relating to file names.
+* File Name Portability::       File name portability and syntax issues.
+@end menu
+
+
+@node Directories, File Name Resolution,  , File Names
+@subsection Directories
+
+In order to understand the syntax of file names, you need to understand
+how the file system is organized into a hierarchy of directories.
+
+@cindex directory
+@cindex link
+@cindex directory entry
+A @dfn{directory} is a file that contains information to associate other
+files with names; these associations are called @dfn{links} or
+@dfn{directory entries}.  Sometimes, people speak of ``files in a
+directory'', but in reality, a directory only contains pointers to
+files, not the files themselves.
+
+@cindex file name component
+The name of a file contained in a directory entry is called a @dfn{file
+name component}.  In general, a file name consists of a sequence of one
+or more such components, separated by the slash character (@samp{/}).  A
+file name which is just one component names a file with respect to its
+directory.  A file name with multiple components names a directory, and
+then a file in that directory, and so on.
+
+Some other documents, such as the POSIX standard, use the term
+@dfn{pathname} for what we call a file name, and either @dfn{filename}
+or @dfn{pathname component} for what this manual calls a file name
+component.  We don't use this terminology because a ``path'' is
+something completely different (a list of directories to search), and we
+think that ``pathname'' used for something else will confuse users.  We
+always use ``file name'' and ``file name component'' (or sometimes just
+``component'', where the context is obvious) in GNU documentation.  Some
+macros use the POSIX terminology in their names, such as
+@code{PATH_MAX}.  These macros are defined by the POSIX standard, so we
+cannot change their names.
+
+You can find more detailed information about operations on directories
+in @ref{File System Interface}.
+
+@node File Name Resolution, File Name Errors, Directories, File Names
+@subsection File Name Resolution
+
+A file name consists of file name components separated by slash
+(@samp{/}) characters.  On the systems that @theglibc{} supports,
+multiple successive @samp{/} characters are equivalent to a single
+@samp{/} character.
+
+@cindex file name resolution
+The process of determining what file a file name refers to is called
+@dfn{file name resolution}.  This is performed by examining the
+components that make up a file name in left-to-right order, and locating
+each successive component in the directory named by the previous
+component.  Of course, each of the files that are referenced as
+directories must actually exist, be directories instead of regular
+files, and have the appropriate permissions to be accessible by the
+process; otherwise the file name resolution fails.
+
+@cindex root directory
+@cindex absolute file name
+If a file name begins with a @samp{/}, the first component in the file
+name is located in the @dfn{root directory} of the process (usually all
+processes on the system have the same root directory).  Such a file name
+is called an @dfn{absolute file name}.
+@c !!! xref here to chroot, if we ever document chroot. -rm
+
+@cindex relative file name
+Otherwise, the first component in the file name is located in the
+current working directory (@pxref{Working Directory}).  This kind of
+file name is called a @dfn{relative file name}.
+
+@cindex parent directory
+The file name components @file{.} (``dot'') and @file{..} (``dot-dot'')
+have special meanings.  Every directory has entries for these file name
+components.  The file name component @file{.} refers to the directory
+itself, while the file name component @file{..} refers to its
+@dfn{parent directory} (the directory that contains the link for the
+directory in question).  As a special case, @file{..} in the root
+directory refers to the root directory itself, since it has no parent;
+thus @file{/..} is the same as @file{/}.
+
+Here are some examples of file names:
+
+@table @file
+@item /a
+The file named @file{a}, in the root directory.
+
+@item /a/b
+The file named @file{b}, in the directory named @file{a} in the root directory.
+
+@item a
+The file named @file{a}, in the current working directory.
+
+@item /a/./b
+This is the same as @file{/a/b}.
+
+@item ./a
+The file named @file{a}, in the current working directory.
+
+@item ../a
+The file named @file{a}, in the parent directory of the current working
+directory.
+@end table
+
+@c An empty string may ``work'', but I think it's confusing to
+@c try to describe it.  It's not a useful thing for users to use--rms.
+A file name that names a directory may optionally end in a @samp{/}.
+You can specify a file name of @file{/} to refer to the root directory,
+but the empty string is not a meaningful file name.  If you want to
+refer to the current working directory, use a file name of @file{.} or
+@file{./}.
+
+Unlike some other operating systems, @gnusystems{} don't have any
+built-in support for file types (or extensions) or file versions as part
+of its file name syntax.  Many programs and utilities use conventions
+for file names---for example, files containing C source code usually
+have names suffixed with @samp{.c}---but there is nothing in the file
+system itself that enforces this kind of convention.
+
+@node File Name Errors, File Name Portability, File Name Resolution, File Names
+@subsection File Name Errors
+
+@cindex file name errors
+@cindex usual file name errors
+
+Functions that accept file name arguments usually detect these
+@code{errno} error conditions relating to the file name syntax or
+trouble finding the named file.  These errors are referred to throughout
+this manual as the @dfn{usual file name errors}.
+
+@table @code
+@item EACCES
+The process does not have search permission for a directory component
+of the file name.
+
+@item ENAMETOOLONG
+This error is used when either the total length of a file name is
+greater than @code{PATH_MAX}, or when an individual file name component
+has a length greater than @code{NAME_MAX}.  @xref{Limits for Files}.
+
+On @gnuhurdsystems{}, there is no imposed limit on overall file name
+length, but some file systems may place limits on the length of a
+component.
+
+@item ENOENT
+This error is reported when a file referenced as a directory component
+in the file name doesn't exist, or when a component is a symbolic link
+whose target file does not exist.  @xref{Symbolic Links}.
+
+@item ENOTDIR
+A file that is referenced as a directory component in the file name
+exists, but it isn't a directory.
+
+@item ELOOP
+Too many symbolic links were resolved while trying to look up the file
+name.  The system has an arbitrary limit on the number of symbolic links
+that may be resolved in looking up a single file name, as a primitive
+way to detect loops.  @xref{Symbolic Links}.
+@end table
+
+
+@node File Name Portability,  , File Name Errors, File Names
+@subsection Portability of File Names
+
+The rules for the syntax of file names discussed in @ref{File Names},
+are the rules normally used by @gnusystems{} and by other POSIX
+systems.  However, other operating systems may use other conventions.
+
+There are two reasons why it can be important for you to be aware of
+file name portability issues:
+
+@itemize @bullet
+@item
+If your program makes assumptions about file name syntax, or contains
+embedded literal file name strings, it is more difficult to get it to
+run under other operating systems that use different syntax conventions.
+
+@item
+Even if you are not concerned about running your program on machines
+that run other operating systems, it may still be possible to access
+files that use different naming conventions.  For example, you may be
+able to access file systems on another computer running a different
+operating system over a network, or read and write disks in formats used
+by other operating systems.
+@end itemize
+
+The @w{ISO C} standard says very little about file name syntax, only that
+file names are strings.  In addition to varying restrictions on the
+length of file names and what characters can validly appear in a file
+name, different operating systems use different conventions and syntax
+for concepts such as structured directories and file types or
+extensions.  Some concepts such as file versions might be supported in
+some operating systems and not by others.
+
+The POSIX.1 standard allows implementations to put additional
+restrictions on file name syntax, concerning what characters are
+permitted in file names and on the length of file name and file name
+component strings.  However, on @gnusystems{}, any character except
+the null character is permitted in a file name string, and
+on @gnuhurdsystems{} there are no limits on the length of file name
+strings.

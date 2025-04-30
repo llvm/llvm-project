@@ -1,0 +1,272 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Swedish language locale for Sweden
+% Source: RAP
+% Address: Sankt Jo//rgens Alle 8
+%    DK-1615 Ko//benhavn V, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 31226543
+% Fax: +45 - 33256543
+% Language: sv
+% Territory: SE
+% Revision: 4.4
+% Date: 1997-03-18
+% Application: general
+% Users: general
+
+% This is a 4 step version.
+% The Swedish Technical Standard
+% TN34:1 requires 7 steps, of which the
+% step 3 handling numerics cannot be
+% dealt with correctly with current
+% POSIX specifications.
+
+LC_IDENTIFICATION
+title      "Swedish locale for Sweden"
+source     "RAP"
+address    "Sankt J<U00F8>rgens Alle 8, DK-1615 K<U00F8>benhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Swedish"
+territory  "Sweden"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% CLDR collation rules for Swedish:
+% (https://github.com/unicode-org/cldr/blob/master/common/collation/sv.xml)
+%
+% We use the new "reformed" rules from the 13th edition of Svenska Akademiens
+% ordlista where 'W' is considered a distinct character sorting after 'V'.
+% This matches CLDR 1.5.0 released in 2007.
+%
+% <defaultCollation>reformed</defaultCollation>
+% <collation type="reformed">
+%   <cr><![CDATA[
+%     &D<<đ<<<Đ<<ð<<<Ð
+%     &t<<<þ/h
+%     &T<<<Þ/H
+%     &Y<<ü<<<Ü<<ű<<<Ű
+%     &[before 1]ǀ<å<<<Å<ä<<<Ä<<æ<<<Æ<<ę<<<Ę<ö<<<Ö<<ø<<<Ø<<ő<<<Ő<<œ<<<Œ<<ô<<<Ô
+%   ]]></cr>
+% </collation>
+%
+% And CLDR also lists the following index characters:
+% (https://github.com/unicode-org/cldr/blob/master/common/main/sv.xml)
+%
+% <exemplarCharacters type="index">[A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Å Ä Ö]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <aring>
+collating-symbol <a-diaresis>
+collating-symbol <o-diaresis>
+
+% &[before 1]ǀ<å<<<Å<ä<<<Ä<<æ<<<Æ<<ę<<<Ę<ö<<<Ö<<ø<<<Ø<<ő<<<Ő<<œ<<<Œ<<ô<<<Ô
+reorder-after <AFTER-Z>
+<a-ring>
+<a-diaresis>
+<o-diaresis>
+
+% &D<<đ<<<Đ<<ð<<<Ð
+<U0110> <S0064>;"<BASE><BARRE>";"<CAP><MIN>";IGNORE % Đ
+<U0111> <S0064>;"<BASE><BARRE>";"<MIN><MIN>";IGNORE % đ
+<U00D0> <S0064>;"<BASE><VRNT1>";"<COMPATCAP><COMPAT>";IGNORE % Ð
+<U00F0> <S0064>;"<BASE><VRNT1>";"<COMPAT><COMPAT>";IGNORE % ð
+
+% &T<<<Þ/H
+% &t<<<þ/h
+<U00DE> "<S0074><S0068>";"<BASE><BASE>";"<COMPATCAP><COMPATCAP>";IGNORE % Þ
+<U00FE> "<S0074><S0068>";"<BASE><BASE>";"<COMPAT><COMPAT>";IGNORE % þ
+
+% &Y<<ü<<<Ü<<ű<<<Ű
+<U00DC> <S0079>;"<BASE><TREMA>";"<CAP><MIN>";IGNORE % Ü
+<U00FC> <S0079>;"<BASE><TREMA>";"<MIN><MIN>";IGNORE % ü
+<U0170> <S0079>;"<BASE><2AIGU>";"<CAP><MIN>";IGNORE % Ű
+<U0171> <S0079>;"<BASE><2AIGU>";"<MIN><MIN>";IGNORE % ű
+
+% &[before 1]ǀ<å<<<Å<ä<<<Ä<<æ<<<Æ<<ę<<<Ę<ö<<<Ö<<ø<<<Ø<<ő<<<Ő<<œ<<<Œ<<ô<<<Ô
+<U00C5> <a-ring>;"<BASE><BASE>";"<COMPATCAP><COMPATCAP>";IGNORE % Å
+<U00E5> <a-ring>;"<BASE><BASE>";"<COMPAT><COMPAT>";IGNORE % å
+
+<U00C4> <a-diaresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ä
+<U00E4> <a-diaresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ä
+<U00C6> <a-diaresis>;"<BASE><VRNT1>";"<COMPATCAP><COMPATCAP>";IGNORE % Æ
+<U00E6> <a-diaresis>;"<BASE><VRNT1>";"<COMPAT><COMPAT>";IGNORE % æ
+<U0118> <a-diaresis>;"<BASE><VRNT2>";"<CAP><MIN>";IGNORE % Ę
+<U0119> <a-diaresis>;"<BASE><VRNT2>";"<MIN><MIN>";IGNORE % ę
+
+<U00D6> <o-diaresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ö
+<U00F6> <o-diaresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ö
+<U00D8> <o-diaresis>;"<BASE><VRNT1>";"<COMPATCAP><COMPATCAP>";IGNORE % Ø
+<U00F8> <o-diaresis>;"<BASE><VRNT1>";"<COMPAT><COMPAT>";IGNORE % ø
+<U0150> <o-diaresis>;"<BASE><VRNT2>";"<CAP><MIN>";IGNORE % Ő
+<U0151> <o-diaresis>;"<BASE><VRNT2>";"<MIN><MIN>";IGNORE % ő
+<U0152> <o-diaresis>;"<BASE><VRNT3>";"<CAP><MIN>";IGNORE % Œ
+<U0153> <o-diaresis>;"<BASE><VRNT3>";"<MIN><MIN>";IGNORE % œ
+<U00D4> <o-diaresis>;"<BASE><VRNT4>";"<CAP><MIN>";IGNORE % Ô
+<U00F4> <o-diaresis>;"<BASE><VRNT4>";"<MIN><MIN>";IGNORE % ô
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+
+% LATIN CAPITAL LETTER A WITH DIAERESIS -> "AE"
+<U00C4> "<U0041><U0308>";"<U0041><U0045>"
+% LATIN CAPITAL LETTER A WITH RING ABOVE -> "AA"
+<U00C5> "<U0041><U030A>";"<U0041><U0041>"
+% LATIN CAPITAL LETTER AE -> "AE"
+<U00C6> "<U0041><U0045>"
+% LATIN CAPITAL LETTER O WITH DIAERESIS -> "OE"
+<U00D6> "<U004F><U0308>";"<U004F><U0045>"
+% LATIN CAPITAL LETTER O WITH STROKE -> "OE"
+<U00D8> "<U004F><U0338>";"<U004F><U0045>"
+% LATIN SMALL LETTER A WITH DIAERESIS -> "ae"
+<U00E4> "<U0061><U0308>";"<U0061><U0065>"
+% LATIN SMALL LETTER A WITH RING ABOVE -> "aa"
+<U00E5> "<U0061><U030A>";"<U0061><U0061>"
+% LATIN SMALL LETTER AE -> "ae"
+<U00E6> "<U0061><U0065>"
+% LATIN SMALL LETTER O WITH DIAERESIS -> "oe"
+<U00F6> "<U006F><U0308>";"<U006F><U0065>"
+% LATIN SMALL LETTER O WITH STROKE -> "oe"
+<U00F8> "<U006F><U0338>";"<U006F><U0065>"
+
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol         "SEK "
+currency_symbol         "kr"
+mon_decimal_point       ","
+mon_thousands_sep       "<U202F>"
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           0
+p_sep_by_space          1
+n_cs_precedes           0
+n_sep_by_space          1
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           ","
+thousands_sep           "<U202F>"
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+abday     "s<U00F6>n";"m<U00E5>n";/
+          "tis";"ons";/
+          "tor";"fre";/
+          "l<U00F6>r"
+day       "s<U00F6>ndag";/
+          "m<U00E5>ndag";/
+          "tisdag";/
+          "onsdag";/
+          "torsdag";/
+          "fredag";/
+          "l<U00F6>rdag"
+abmon     "jan";"feb";/
+          "mar";"apr";/
+          "maj";"jun";/
+          "jul";"aug";/
+          "sep";"okt";/
+          "nov";"dec"
+mon       "januari";/
+          "februari";/
+          "mars";/
+          "april";/
+          "maj";/
+          "juni";/
+          "juli";/
+          "augusti";/
+          "september";/
+          "oktober";/
+          "november";/
+          "december"
+d_t_fmt   "%a %e %b %Y %H:%M:%S"
+date_fmt  "%a %e %b %Y %H:%M:%S %Z"
+d_fmt     "%Y-%m-%d"
+t_fmt     "%H:%M:%S"
+am_pm     "";""
+t_fmt_ampm  ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1jJyY]"
+noexpr  "^[-0nN]"
+yesstr  "ja"
+nostr   "nej"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c-%a-%l"
+tel_dom_fmt    "0%a-%l"
+int_select     "00"
+int_prefix     "46"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Sverige"
+country_ab2 "SE"
+country_ab3 "SWE"
+country_num 752
+country_car "S"
+lang_name    "svenska"
+lang_ab      "sv"
+lang_term    "swe"
+lang_lib     "swe"
+END LC_ADDRESS

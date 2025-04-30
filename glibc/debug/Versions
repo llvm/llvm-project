@@ -1,0 +1,64 @@
+libc {
+  GLIBC_2.1 {
+    # functions used in other libraries
+    __backtrace; __backtrace_symbols; __backtrace_symbols_fd;
+
+    # b*
+    backtrace; backtrace_symbols; backtrace_symbols_fd;
+  }
+  GLIBC_2.2 {
+    # These are to support some gcc features.
+    __cyg_profile_func_enter; __cyg_profile_func_exit;
+  }
+  GLIBC_2.3.4 {
+    __chk_fail;
+    __memcpy_chk; __memmove_chk; __mempcpy_chk; __memset_chk; __stpcpy_chk;
+    __strcat_chk; __strcpy_chk; __strncat_chk; __strncpy_chk;
+    __sprintf_chk; __vsprintf_chk; __snprintf_chk; __vsnprintf_chk;
+    __printf_chk; __fprintf_chk; __vprintf_chk; __vfprintf_chk;
+    __gets_chk;
+  }
+  GLIBC_2.4 {
+    __fgets_chk; __fgets_unlocked_chk;
+    __read_chk; __pread_chk; __pread64_chk;
+    __readlink_chk; __getcwd_chk; __getwd_chk;
+    __recv_chk; __recvfrom_chk;
+    __realpath_chk; __wctomb_chk;
+    __stpncpy_chk;
+    __wcscpy_chk; __wmemcpy_chk; __wmemmove_chk; __wmempcpy_chk; __wcpcpy_chk;
+    __wcsncpy_chk; __wcscat_chk; __wcsncat_chk; __wmemset_chk; __wcpncpy_chk;
+    __swprintf_chk; __vswprintf_chk; __wprintf_chk; __fwprintf_chk;
+    __vwprintf_chk; __vfwprintf_chk; __fgetws_chk; __fgetws_unlocked_chk;
+    __confstr_chk; __getgroups_chk; __ttyname_r_chk;
+    __gethostname_chk; __getdomainname_chk; __wcrtomb_chk; __mbsnrtowcs_chk;
+    __wcsnrtombs_chk; __mbsrtowcs_chk; __wcsrtombs_chk; __mbstowcs_chk;
+    __wcstombs_chk;
+
+    __stack_chk_fail;
+  }
+  GLIBC_2.5 {
+    __readlinkat_chk;
+  }
+  GLIBC_2.7 {
+    __fread_chk; __fread_unlocked_chk;
+  }
+  GLIBC_2.8 {
+    __asprintf_chk; __vasprintf_chk;  __dprintf_chk; __vdprintf_chk;
+    __obstack_printf_chk; __obstack_vprintf_chk;
+  }
+  GLIBC_2.11 {
+    __longjmp_chk;
+  }
+  GLIBC_2.15 {
+    __fdelt_chk; __fdelt_warn;
+  }
+  GLIBC_2.16 {
+    __poll_chk; __ppoll_chk;
+  }
+  GLIBC_2.25 {
+    __explicit_bzero_chk;
+  }
+  GLIBC_PRIVATE {
+    __fortify_fail;
+  }
+}

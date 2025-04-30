@@ -1,0 +1,87 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% French Language Locale for Luxemburg with Euro
+% Language: fr
+% Territory: LU
+% Option: euro
+% Date: 2000-08-20
+% Users: general
+
+LC_IDENTIFICATION
+title      "French locale for Luxemburg with Euro"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "French"
+territory  "Luxembourg"
+revision   "1.0"
+date       "2000-08-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "fr_LU"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MESSAGES
+copy "fr_LU"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "fr_LU"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "fr_LU"
+END LC_NUMERIC
+
+LC_TIME
+copy "fr_LU"
+END LC_TIME
+
+LC_PAPER
+copy "fr_LU"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "fr_LU"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "fr_LU"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "fr_LU"
+END LC_NAME
+
+LC_ADDRESS
+copy "fr_LU"
+END LC_ADDRESS

@@ -1,0 +1,170 @@
+libc {
+  GLIBC_2.0 {
+    # variables used in macros & inline functions
+    __hurd_threadvar_stack_mask; __hurd_threadvar_stack_offset;
+
+    # functions used in libmachuser and libhurduser
+    _S_catch_exception_raise;
+    _S_catch_exception_raise_state;
+    _S_catch_exception_raise_state_identity;
+    _S_msg_add_auth; _S_msg_del_auth;
+    _S_msg_describe_ports;
+    _S_msg_get_dtable; _S_msg_set_dtable;
+    _S_msg_get_env_variable; _S_msg_set_env_variable;
+    _S_msg_get_environment; _S_msg_set_environment;
+    _S_msg_get_fd; _S_msg_set_fd;
+    _S_msg_get_init_int; _S_msg_set_init_int;
+    _S_msg_get_init_ints; _S_msg_set_init_ints;
+    _S_msg_get_init_port; _S_msg_set_init_port;
+    _S_msg_get_init_ports; _S_msg_set_init_ports;
+    _S_msg_proc_newids; _S_msg_report_wait;
+    _S_msg_sig_post; _S_msg_sig_post_untraced;
+    _hurd_intr_rpc_mach_msg;
+    _hurdsig_fault_catch_exception_raise;
+    _hurdsig_fault_catch_exception_raise_state;
+    _hurdsig_fault_catch_exception_raise_state_identity;
+
+    # "quasi-internal" variables
+    _hurd_device_master;
+    _hurd_dtable; _hurd_dtablesize; _hurd_dtable_lock;
+    _hurd_host_priv;
+    _hurd_msgport;
+    _hurd_ports;
+
+    # "quasi-internal" functions
+    _hurd_canonicalize_directory_name_internal;
+    _hurd_critical_section_lock;
+    _hurd_critical_section_unlock;
+    _hurd_exception2signal;
+    _hurd_exec;
+    _hurd_fd_get;
+    _hurd_init;
+    _hurd_intern_fd;
+    _hurd_port_cleanup;
+    _hurd_port_free;
+    _hurd_port_get;
+    _hurd_port_locked_get;
+    _hurd_ports_use;
+    _hurd_thread_sigstate;
+
+    # functions in normal name space
+
+    # f*
+    file_name_lookup; file_name_lookup_under; file_name_path_lookup;
+    file_name_split;
+    fopenport;
+
+    # g*
+    get_privileged_ports;
+    getauth; getcrdir; getcwdir; getcttyid; getdport; getproc; getumask;
+
+    # h*
+    hurd_catch_signal;
+    hurd_check_cancel;
+    hurd_file_name_lookup; hurd_file_name_lookup_retry;
+    hurd_file_name_path_lookup; hurd_file_name_split;
+    hurd_preempt_signals;
+    hurd_safe_copyin; hurd_safe_copyout;
+    hurd_safe_memmove; hurd_safe_memset;
+    hurd_sig_post;
+    hurd_thread_cancel; hurd_thread_self;
+    hurd_unpreempt_signals;
+
+    # o*
+    openport;
+
+    # p*
+    pid2task;
+
+    # s*
+    setauth; setcrdir; setcwdir; setproc; setcttyid;
+
+    # t*
+    task2pid;
+
+    # v*
+    vpprintf;
+  }
+  GLIBC_2.1 {
+    # "quasi-internal" functions
+    _hurd_proc_init;
+
+    # g*
+    geteuids;
+
+    # s*
+    seteuids;
+  }
+  GLIBC_2.1.3 {
+    # d*
+    directory_name_split;
+
+    # h*
+    hurd_directory_name_split;
+  }
+  GLIBC_2.2.5 {
+    # These always existed as inlines but the real functions were not exported.
+    __hurd_fail;
+    _hurd_self_sigstate;
+
+    # Same for these "quasi-internal" functions
+    _hurd_port_init;
+    _hurd_port_set;
+
+    # internal symbols used by other libraries (e.g. librt)
+    _hurd_raise_signal;
+    _hurdsig_interrupt_timeout;
+    _hurdsig_fault_preemptor; _hurdsig_fault_env;
+  }
+  GLIBC_2.2.6 {
+    # functions used in macros & inline functions
+    __errno_location;
+  }
+  GLIBC_2.26 {
+    # "quasi-internal" functions
+    _hurd_exec_paths;
+  }
+  GLIBC_2.27 {
+    # These always existed as inlines but the real functions were not exported.
+    _hurd_fd_error_signal; _hurd_fd_error;
+    __hurd_dfail; __hurd_sockfail;
+    _hurd_port_locked_set;
+    __hurd_threadvar_location_from_sp;
+    __hurd_threadvar_location;
+    _hurd_userlink_link; _hurd_userlink_unlink; _hurd_userlink_clear;
+  }
+  GLIBC_2.29 {
+    # "quasi-internal" functions
+    _hurd_port_move;
+  }
+
+  GLIBC_2.34 {
+    # "quasi-internal" functions
+    _hurd_libc_proc_init;
+  }
+
+  HURD_CTHREADS_0.3 {
+    # weak refs to libthreads functions that libc calls iff libthreads in use
+    __cthread_fork; __pthread_create; __cthread_detach; __pthread_detach;
+    __pthread_getattr_np; __pthread_attr_getstack;
+
+    # cthreads functions with stubs in libc
+    __cthread_keycreate; __cthread_getspecific; __cthread_setspecific;
+  }
+
+  GLIBC_PRIVATE {
+    # Used by other libs.
+    __lll_abstimed_wait; __lll_abstimed_wait_intr; __lll_abstimed_xwait;
+    __lll_abstimed_lock; __lll_robust_lock;
+    __lll_robust_abstimed_lock; __lll_robust_trylock;
+    __lll_robust_unlock;
+    __libc_open; __libc_close;
+
+    # Used by libpthread.
+    _hurd_sigstate_set_global_rcv;
+    _hurd_sigstate_lock;
+    _hurd_sigstate_pending;
+    _hurd_sigstate_unlock;
+    _hurd_sigstate_delete;
+  }
+}

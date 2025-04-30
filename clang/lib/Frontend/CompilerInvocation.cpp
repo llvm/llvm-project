@@ -3700,6 +3700,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPTeamSubscription)
     GenerateArg(Consumer, OPT_fopenmp_assume_teams_oversubscription);
 
+  if (Opts.OpenMPDefaultFirstPrivate)
+    GenerateArg(Consumer, OPT_fopenmp_default_first_private);
+
   if (Opts.OpenMPTargetDebug != 0)
     GenerateArg(Consumer, OPT_fopenmp_target_debug_EQ,
                 Twine(Opts.OpenMPTargetDebug));
@@ -4167,6 +4170,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMPThreadSubscription = true;
   }
 
+  Opts.OpenMPDefaultFirstPrivate =
+      Args.hasArg(options::OPT_fopenmp_default_first_private);
+
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
     enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
@@ -4189,7 +4195,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             TT.getArch() == llvm::Triple::nvptx64 ||
             TT.getArch() == llvm::Triple::amdgcn ||
             TT.getArch() == llvm::Triple::x86 ||
-            TT.getArch() == llvm::Triple::x86_64))
+            TT.getArch() == llvm::Triple::x86_64 ||
+            TT.getArch() == llvm::Triple::next32))
         Diags.Report(diag::err_drv_invalid_omp_target) << A->getValue(i);
       else if (getArchPtrSize(T) != getArchPtrSize(TT))
         Diags.Report(diag::err_drv_incompatible_omp_arch)

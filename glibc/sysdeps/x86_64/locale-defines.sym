@@ -1,0 +1,11 @@
+#include <locale/localeinfo.h>
+#include <langinfo.h>
+#include <stddef.h>
+
+--
+
+LOCALE_T___LOCALES		offsetof (struct __locale_struct, __locales)
+LC_CTYPE
+_NL_CTYPE_NONASCII_CASE
+LOCALE_DATA_VALUES		offsetof (struct __locale_data, values)
+SIZEOF_VALUES			sizeof (((struct __locale_data *) 0)->values[0])

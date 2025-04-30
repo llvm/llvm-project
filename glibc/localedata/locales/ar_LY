@@ -1,0 +1,203 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Arabic language locale for Libyan Arab Jamahiriya.
+% Contributed by Kentaroh Noji <knoji@jp.ibm.com> and
+% Tetsuji Orita <orita@jp.ibm.com>.
+
+LC_IDENTIFICATION
+title      "Arabic language locale for Libyan Arab Jamahiriya"
+source     "IBM Globalization Center of Competency, Yamato Software Laboratory"
+address    "1623-14, Shimotsuruma, Yamato-shi, Kanagawa-ken, 242-8502, Japan"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Arabic"
+territory  "Libya"
+revision   "1.0"
+date       "2000-07-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "ar_EG"
+END LC_CTYPE
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+int_curr_symbol       "LYD "
+currency_symbol       "<U062F>.<U0644>."
+mon_decimal_point     "."
+mon_thousands_sep     ","
+mon_grouping          3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       3
+frac_digits           3
+p_cs_precedes         1
+p_sep_by_space        1
+n_cs_precedes         1
+n_sep_by_space        1
+p_sign_posn           1
+n_sign_posn           2
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+% This is the POSIX Locale definition for the LC_NUMERIC  category.
+%
+decimal_point          "."
+thousands_sep          ","
+grouping               3
+%
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+% Abbreviated weekday names (%a)
+abday       "<U062D>";"<U0646>";/
+            "<U062B>";"<U0631>";/
+            "<U062E>";"<U062C>";/
+            "<U0633>"
+%
+% Full weekday names (%A)
+day         "<U0627><U0644><U0623><U062D><U062F>";/
+            "<U0627><U0644><U0627><U062B><U0646><U064A><U0646>";/
+            "<U0627><U0644><U062B><U0644><U0627><U062B><U0627><U0621>";/
+            "<U0627><U0644><U0623><U0631><U0628><U0639><U0627><U0621>";/
+            "<U0627><U0644><U062E><U0645><U064A><U0633>";/
+            "<U0627><U0644><U062C><U0645><U0639><U0629>";/
+            "<U0627><U0644><U0633><U0628><U062A>"
+%
+% Abbreviated month names (%b)
+abmon       "<U064A><U0646><U0627>";"<U0641><U0628><U0631>";/
+            "<U0645><U0627><U0631>";"<U0623><U0628><U0631>";/
+            "<U0645><U0627><U064A>";"<U064A><U0648><U0646>";/
+            "<U064A><U0648><U0644>";"<U0623><U063A><U0633>";/
+            "<U0633><U0628><U062A>";"<U0623><U0643><U062A>";/
+            "<U0646><U0648><U0641>";"<U062F><U064A><U0633>"
+%
+% Full month names (%B)
+mon         "<U064A><U0646><U0627><U064A><U0631>";/
+            "<U0641><U0628><U0631><U0627><U064A><U0631>";/
+            "<U0645><U0627><U0631><U0633>";/
+            "<U0623><U0628><U0631><U064A><U0644>";/
+            "<U0645><U0627><U064A><U0648>";/
+            "<U064A><U0648><U0646><U064A><U0648>";/
+            "<U064A><U0648><U0644><U064A><U0648>";/
+            "<U0623><U063A><U0633><U0637><U0633>";/
+            "<U0633><U0628><U062A><U0645><U0628><U0631>";/
+            "<U0623><U0643><U062A><U0648><U0628><U0631>";/
+            "<U0646><U0648><U0641><U0645><U0628><U0631>";/
+            "<U062F><U064A><U0633><U0645><U0628><U0631>"
+%
+% Equivalent of AM PM
+am_pm       "<U0635>";"<U0645>"
+%
+% Appropriate date and time representation
+d_t_fmt     "%d %b, %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%d %b, %Y %Z %I:%M:%S %p"
+%
+% Appropriate date representation
+d_fmt       "%d %b, %Y"
+%
+% Appropriate time representation
+t_fmt       "%Z %I:%M:%S %p"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%Z %I:%M:%S %p"
+week 7;19971130;1
+first_weekday 7
+first_workday 1
+END LC_TIME
+
+
+LC_MESSAGES
+copy "ar_EG"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    "-san"
+name_mr     "Mr."
+name_mrs    "Mrs."
+name_miss   "Miss."
+name_ms     "Ms."
+
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U0644><U064A><U0628><U064A><U0627>"
+country_ab2 "LY"
+country_ab3 "LBY"
+country_num 434
+country_car  "LAR"
+lang_name    "<U0627><U0644><U0639><U0631><U0628><U064A><U0629>"
+lang_ab      "ar"
+lang_term    "ara"
+lang_lib    "ara"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the
+%
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix  "218"
+int_select  "00"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

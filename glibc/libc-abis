@@ -1,0 +1,51 @@
+# Definition of features which introduce new libc ABI versions.  This
+# file is used to create a header file with definitions for the various
+# versions.  The static linker will encode in the EI_ABIVERSION field in
+# the e_ident array in the ELF program header the required ABI version.
+# This is not a bitmask.  The maximum ABI version required must be
+# encoded.
+#
+# Adding new features should always happen by appending new lines.  Never
+# add entries in the middle or where they seem "logical".  Once a version
+# is assigned to a feature it must not change again.  Since some features
+# are conditionally added this can only ever be done securely without much
+# risk is by adding at the end.
+#
+# The following lines have one of two formats:
+#
+#	SYMBOL
+# With just a symbol on the line this is the name of a feature which
+# is architecture independent.
+#
+#	SYMBOL	PLATFORM
+# Using this form architecture (and platform) dependent features can be
+# specified.  The PLATFORM name can use the wildcards available in
+# the Bourne shell's case expression.
+#
+# Note that the same symbol can be used using different platform triples.
+# They don't have to be in the same order relative to other entries.  This
+# can happen if the feature is implemented for different architectures
+# at different times.
+#
+# This file is parsed by a script which produces a header file containing
+# a single enum definition.  An extra symbol is added as entry zero to
+# specify the default ABI with number 0 and an artificial last entry is
+# added to allow computing the maximum ABI version for the platform.
+#
+# Feature Name	Configuration
+# ------------	-------------
+#
+# Unique symbol definitions for C++.
+# Architecture independent, all ELF targets (== all targets)
+UNIQUE
+#
+# Indirect PLT relocations.  Architecture dependent.
+IFUNC		x86_64-*-linux*
+IFUNC		i?86-*-linux*
+IFUNC		powerpc64-*-linux*
+IFUNC		powerpc-*-linux*
+IFUNC		sparc64-*-linux*
+IFUNC		sparc-*-linux*
+# Absolute (SHN_ABS) symbols working correctly.
+ABSOLUTE
+IFUNC		riscv*-linux*

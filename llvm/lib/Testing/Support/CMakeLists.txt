@@ -5,7 +5,7 @@ if (NOT ${LLVM_INSTALL_GTEST})
   set(EXCLUDE_FROM_ALL ON)
 endif()
 
-add_llvm_library(LLVMTestingSupport
+add_llvm_component_library(LLVMTestingSupport
   Error.cpp
   SupportHelpers.cpp
 

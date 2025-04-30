@@ -1,0 +1,35 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+# ifndef XPG4
+type {struct FTW}
+element {struct FTW} int base
+element {struct FTW} int level
+# endif
+
+macro FTW_F
+macro FTW_D
+macro FTW_DNR
+# if !defined XPG4 && !defined XPG42
+macro FTW_DP
+# endif
+macro FTW_NS
+
+# ifndef XPG4
+macro FTW_SL
+macro FTW_SLN
+
+macro FTW_PHYS
+macro FTW_MOUNT
+macro FTW_DEPTH
+macro FTW_CHDIR
+# endif
+
+function int ftw (const char*, int (*) (const char *, const struct stat*, int), int)
+# ifndef XPG4
+function int nftw (const char*, int (*) (const char *, const struct stat*, int, struct FTW *), int, int)
+# endif
+
+allow-header sys/stat.h
+
+allow *_t
+allow FTW*
+#endif

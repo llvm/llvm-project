@@ -889,6 +889,10 @@ public:
 
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const { return 128; }
 
+  bool shouldForceVectorizeInst(Instruction *I, Type *Ty) const {
+    return false;
+  }
+
   bool isLegalToVectorizeLoad(LoadInst *LI) const { return true; }
 
   bool isLegalToVectorizeStore(StoreInst *SI) const { return true; }
@@ -934,9 +938,7 @@ public:
     return false;
   }
 
-  bool preferEpilogueVectorization() const {
-    return true;
-  }
+  bool preferEpilogueVectorization(Loop *L) const { return true; }
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return true; }
 

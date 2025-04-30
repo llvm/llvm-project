@@ -1,0 +1,168 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Bosnian Language Locale for Bosnia
+% Source: adapted from Croatian locale
+% Contact: Tomislav Vujec
+% Email: tvujec@carnet.hr
+% Language: bs
+% Territory: BA
+% Revision: 0.4
+% Date: 2004-01-09
+% Application: general
+% Users: general
+%
+% Revisions:
+% 2004-01-09 pablo@mandrakesoft.com: fixed LC_COLLATE
+
+LC_IDENTIFICATION
+title "Bosnian language locale for Bosnia and Herzegowina"
+source "adapted from Croatian locale"
+address ""
+contact "Tomislav Vujec"
+email "tvujec@carnet.hr"
+tel ""
+fax ""
+language "Bosnian"
+territory "Bosnia & Herzegovina"
+revision "0.4"
+date "2004-01-09"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% According to CLDR, collation rules
+% for Bosnian are the same as for Croatian, see:
+%
+% https://unicode.org/cldr/trac/browser/trunk/common/collation/bs.xml
+%
+% it contains only
+%
+% “[import hr]”
+copy "hr_HR"
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_DK"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1dDyY]"
+noexpr  "^[-0nN]"
+yesstr  "da"
+nostr   "ne"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "BAM "
+currency_symbol           "KM"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             1
+p_sep_by_space            1
+n_cs_precedes             1
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             ""
+grouping                  0;0
+END LC_NUMERIC
+
+LC_TIME
+
+abday   "Ned";"Pon";"Uto";"Sri";"<U010C>et";"Pet";"Sub"
+day     "Nedjelja";/
+        "Ponedjeljak";/
+        "Utorak";/
+        "Srijeda";/
+        "<U010C>etvrtak";/
+        "Petak";/
+        "Subota"
+abmon   "Jan";"Feb";/
+        "Mar";"Apr";/
+        "Maj";"Jun";/
+        "Jul";"Aug";/
+        "Sep";"Okt";/
+        "Nov";"Dec"
+mon     "Januar";/
+        "Februar";/
+        "Mart";/
+        "April";/
+        "Maj";/
+        "Juni";/
+        "Juli";/
+        "August";/
+        "Septembar";/
+        "Oktobar";/
+        "Novembar";/
+        "Decembar"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_DK"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T %z%N%c%N"
+country_name "Bosna i Hercegovina"
+country_ab2 "BA"
+country_ab3 "BIH"
+country_num 070
+country_car    "BIH"
+lang_name    "bosanski"
+lang_ab      "bs"
+lang_term    "bos"
+lang_lib    "bos"
+END LC_ADDRESS
+
+LC_TELEPHONE
+% FIXME (tel_int_fmt copied from en_DK)
+tel_int_fmt    "+%c %a %l"
+int_prefix "387"
+int_select "00"
+END LC_TELEPHONE

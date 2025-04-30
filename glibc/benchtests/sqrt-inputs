@@ -1,0 +1,10 @@
+## args: double
+## ret: double
+## includes: math.h
+0.25
+0.75
+2.0
+4.0
+2209.0
+6642.25
+15190.5625

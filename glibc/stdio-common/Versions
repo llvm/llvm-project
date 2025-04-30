@@ -1,0 +1,72 @@
+libc {
+  GLIBC_2.0 {
+    # global variables
+    _sys_errlist; _sys_nerr; _sys_siglist;
+
+    # functions used in other libraries
+    __printf_fp; __vfscanf;
+
+    # variables in normal name space
+    sys_errlist; sys_nerr; sys_sigabbrev; sys_siglist;
+
+    # a*
+    asprintf;
+
+    # c*
+    ctermid; cuserid;
+
+    # d*
+    dprintf;
+
+    # f*
+    flockfile; fprintf; fscanf; ftrylockfile; funlockfile;
+
+    # g*
+    getline; getw;
+
+    # p*
+    parse_printf_format; perror; printf; putw;
+
+    # r*
+    register_printf_function; remove; rename;
+
+    # s*
+    scanf; snprintf; sprintf; sscanf;
+
+    # t*
+    tempnam; tmpfile; tmpnam; tmpnam_r;
+
+    # v*
+    vfprintf; vfscanf; vprintf;
+  }
+  GLIBC_2.1 {
+    # p*
+    printf_size; printf_size_info;
+
+    # t*
+    tmpfile; tmpfile64;
+  }
+  GLIBC_2.4 {
+    renameat;
+  }
+  GLIBC_2.7 {
+    __isoc99_scanf; __isoc99_vscanf; __isoc99_fscanf; __isoc99_vfscanf;
+    __isoc99_sscanf; __isoc99_vsscanf;
+  }
+  GLIBC_2.10 {
+    psiginfo;
+    register_printf_modifier; register_printf_type; register_printf_specifier;
+  }
+  GLIBC_2.28 {
+    renameat2;
+  }
+  GLIBC_2.29 {
+    # SHLIB_COMPAT(GLIBC_2_0, GLIBC_2_29) used in iovfscanf.c etc.
+  }
+  GLIBC_PRIVATE {
+    # global variables
+    _itoa_lower_digits;
+    # Used in libcrypt.
+    __snprintf;
+  }
+}

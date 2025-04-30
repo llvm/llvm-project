@@ -296,6 +296,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
   }
+
+  if (Subtarget.hasNSGen1ExtMem128()) {
+    setOperationAction({ISD::LOAD, ISD::STORE}, MVT::i128, Custom);
+  }
   if (!Subtarget.hasStdExtZmmul()) {
     setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
@@ -1513,6 +1517,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // corresponding branch. This information is used in CGP/SelectOpt to decide
   // when to convert selects into branches.
   PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
+
+  MaxStoresPerMemset = Subtarget.getMaxStoresPerMemset();
+  MaxStoresPerMemcpy = Subtarget.getMaxStoresPerMemcpy();
+  MaxStoresPerMemmove = Subtarget.getMaxStoresPerMemmove();
 }
 
 EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -6911,12 +6919,32 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Op.getValueType().isFixedLengthVector())
       return lowerFixedLengthVectorLoadToRVV(Op, DAG);
     return Op;
-  case ISD::STORE:
+  case ISD::STORE: {
+    StoreSDNode *Sd = cast<StoreSDNode>(Op);
+    SDLoc dl(Op);
+    EVT MemVT = Sd->getMemoryVT();
+    if (Subtarget.hasNSGen1ExtMem128()) {
+      if (MemVT.getSizeInBits() == 128 && Sd->getAlign() >= Align(16)) {
+        assert(Sd->getValue()->getValueType(0) == MVT::i128);
+        SDValue Lo =
+            DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Sd->getValue(),
+                        DAG.getConstant(0, dl, MVT::i64));
+        SDValue Hi =
+            DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Sd->getValue(),
+                        DAG.getConstant(1, dl, MVT::i64));
+        SDValue Result = DAG.getMemIntrinsicNode(
+            RISCVISD::NS_STORE, dl, DAG.getVTList(MVT::Other),
+            {Sd->getChain(), Lo, Hi, Sd->getBasePtr()}, Sd->getMemoryVT(),
+            Sd->getMemOperand());
+        return Result;
+      }
+    }
     if (auto V = expandUnalignedRVVStore(Op, DAG))
       return V;
     if (Op.getOperand(1).getValueType().isFixedLengthVector())
       return lowerFixedLengthVectorStoreToRVV(Op, DAG);
     return Op;
+  }
   case ISD::MLOAD:
   case ISD::VP_LOAD:
     return lowerMaskedLoad(Op, DAG);
@@ -12318,17 +12346,30 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case ISD::LOAD: {
+    LoadSDNode *Ld = cast<LoadSDNode>(N);
+    SDLoc dl(N);
+    EVT MemVT = Ld->getMemoryVT();
+    if (Subtarget.hasNSGen1ExtMem128()) {
+      if (MemVT.getSizeInBits() == 128 && Ld->getAlign() >= Align(16)) {
+        SDValue Chain = Ld->getChain();
+        SDValue Result = DAG.getMemIntrinsicNode(
+            RISCVISD::NS_LOAD, dl, DAG.getVTList({MVT::i64, MVT::i64}),
+            {Chain, Ld->getBasePtr()}, MemVT, Ld->getMemOperand());
+
+        SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i128,
+                                   Result.getValue(0), Result.getValue(1));
+
+        Results.append({Pair, Chain});
+        return;
+      }
+    }
     if (!ISD::isNON_EXTLoad(N))
       return;
 
     // Use a SEXTLOAD instead of the default EXTLOAD. Similar to the
     // sext_inreg we emit for ADD/SUB/MUL/SLLI.
-    LoadSDNode *Ld = cast<LoadSDNode>(N);
-
-    SDLoc dl(N);
     SDValue Res = DAG.getExtLoad(ISD::SEXTLOAD, dl, MVT::i64, Ld->getChain(),
-                                 Ld->getBasePtr(), Ld->getMemoryVT(),
-                                 Ld->getMemOperand());
+                                 Ld->getBasePtr(), MemVT, Ld->getMemOperand());
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Res));
     Results.push_back(Res.getValue(1));
     return;
@@ -20627,6 +20668,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SF_VC_V_IVW_SE)
   NODE_NAME_CASE(SF_VC_V_VVW_SE)
   NODE_NAME_CASE(SF_VC_V_FVW_SE)
+  NODE_NAME_CASE(NS_LOAD)
+  NODE_NAME_CASE(NS_STORE)
   }
   // clang-format on
   return nullptr;
@@ -21579,9 +21622,17 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
 bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // When aggressively optimizing for code size, we prefer to use a div
   // instruction, as it is usually smaller than the alternative sequence.
-  // TODO: Add vector division?
   bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
-  return OptSize && !VT.isVector();
+
+  // Some subtargets have a fast integer divide instruction.
+  bool HasCheapIntDiv = Subtarget.hasCheapIntDiv();
+
+  // TODO: Consider adding vector division after measuring the effect on
+  // performance.
+  if (VT.isVector())
+    return false;
+
+  return OptSize || HasCheapIntDiv;
 }
 
 bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {

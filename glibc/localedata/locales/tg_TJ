@@ -1,0 +1,237 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tajik Language Locale for Tajikistan
+% Source:
+% Contact: Pablo Saratxaga, Roger Kovacs
+% Email: <pablo@mandrakesoft.com>, <ROGERKO@micromotion.com>
+% Language: tg
+% Territory: TJ
+% Revision: 0.4
+% Date: 2004-01-09
+% Application: general
+% Users: general
+
+%
+% TODO: check LC_COLLATE
+% TODO: fix LC_TIME
+%
+% needed extra chars: <U0493>, <U04E3>, <U049B>, <U04EF>, <U04B3>, <U04B7>
+
+LC_IDENTIFICATION
+title "Tajik language locale for Tajikistan"
+source "Roger Kovacs"
+address ""
+contact "Pablo Saratxaga, Roger Kovacs"
+email "pablo@mandrakesoft.com, ROGERKO@micromotion.com"
+tel ""
+fax ""
+language "Tajik"
+territory "Tajikistan"
+revision "0.4"
+date "2004-01-09"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+
+% There is no collation information for Tadjik in CLDR.
+%
+% Tadjik cyrillic alphabet is:
+% а, б, в, г, ғ (cyr ghe with stroke), д, е,
+% ё, ж, з, и, ӣ (cyr i with macron), й, к,
+% қ (cyr k with descender), л, м, н, о, п, р,
+% с, т, у, ӯ (cyr u with macron), ф, х,
+% ҳ (cyr ha with descender), ч, ҷ (cyr che with descender),
+% ш, ъ (cyr hard sign), э, ю, я
+%
+% https://en.wikipedia.org/wiki/Tajik_alphabet#Cyrillic
+%
+% А а  Б б  В в  Г г  Ғ ғ  Д д  Е е  Ё ё  Ж ж  З з  И и  Ӣ ӣ
+% Й й  К к  Қ қ  Л л  М м  Н н  О о  П п  Р р  С с  Т т  У у
+% Ӯ ӯ  Ф ф  Х х  Ҳ ҳ  Ч ч  Ҷ ҷ  Ш ш  Ъ ъ  Э э  Ю ю  Я я
+
+copy "iso14651_t1"
+
+collating-symbol <ghe-with-stroke>
+collating-symbol <io>
+collating-symbol <i-with-macron>
+collating-symbol <k-descender>
+collating-symbol <u-macron>
+collating-symbol <ha-descender>
+collating-symbol <che-descender>
+
+reorder-after <S0433> % CYRILLIC SMALL LETTER GHE
+<ghe-with-stroke>
+reorder-after <S0435> % CYRILLIC SMALL LETTER IE
+<io>
+reorder-after <S0438> % CYRILLIC SMALL LETTER I
+<i-with-macron>
+reorder-after <S043A> % CYRILLIC SMALL LETTER KA
+<k-descender>
+reorder-after <S0443> % CYRILLIC SMALL LETTER U
+<u-macron>
+reorder-after <S0445> % CYRILLIC SMALL LETTER HA
+<ha-descender>
+reorder-after <S0447> % CYRILLIC SMALL LETTER CHE
+<che-descender>
+
+<U0493>   <ghe-with-stroke>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ғ
+<U0492>   <ghe-with-stroke>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ғ
+<U0451>                <io>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ё
+<U0401>                <io>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ё
+<U04E3>     <i-with-macron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ӣ
+<U04E2>     <i-with-macron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ӣ
+<U049B>       <k-descender>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % қ
+<U049A>       <k-descender>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Қ
+<U04EF>          <u-macron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ӯ
+<U04EE>          <u-macron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ӯ
+<U04B3>      <ha-descender>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ҳ
+<U04B2>      <ha-descender>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ҳ
+<U04B7>     <che-descender>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ҷ
+<U04B6>     <che-descender>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ҷ
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1yY<U04B2><U04B3><U0425><U0445><U0414><U0434>]"
+noexpr  "^[-0nN<U041D><U043D>]"
+yesstr  "<U04B3><U0430>"
+nostr   "<U043D><U0435>"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "TJS "
+currency_symbol           "<U0440><U0443><U0431>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+day     "<U0412><U043E><U0441><U043A><U0440><U0435><U0441><U0435><U043D><U044C><U0435>";/
+        "<U041F><U043E><U043D><U0435><U0434><U0435><U043B><U044C><U043D><U0438><U043A>";/
+        "<U0412><U0442><U043E><U0440><U043D><U0438><U043A>";/
+        "<U0421><U0440><U0435><U0434><U0430>";/
+        "<U0427><U0435><U0442><U0432><U0435><U0440><U0433>";/
+        "<U041F><U044F><U0442><U043D><U0438><U0446><U0430>";/
+        "<U0421><U0443><U0431><U0431><U043E><U0442><U0430>"
+abday   "<U0412><U0441><U043A>";/
+        "<U041F><U043D><U0434>";/
+        "<U0412><U0442><U0440>";/
+        "<U0421><U0440><U0434>";/
+        "<U0427><U0442><U0432>";/
+        "<U041F><U0442><U043D>";/
+        "<U0421><U0431><U0442>"
+mon     "<U042F><U043D><U0432><U0430><U0440><U044F>";/
+        "<U0424><U0435><U0432><U0440><U0430><U043B><U044F>";/
+        "<U041C><U0430><U0440><U0442><U0430>";/
+        "<U0410><U043F><U0440><U0435><U043B><U044F>";/
+        "<U041C><U0430><U044F>";/
+        "<U0418><U044E><U043D><U044F>";/
+        "<U0418><U044E><U043B><U044F>";/
+        "<U0410><U0432><U0433><U0443><U0441><U0442><U0430>";/
+        "<U0421><U0435><U043D><U0442><U044F><U0431><U0440><U044F>";/
+        "<U041E><U043A><U0442><U044F><U0431><U0440><U044F>";/
+        "<U041D><U043E><U044F><U0431><U0440><U044F>";/
+        "<U0414><U0435><U043A><U0430><U0431><U0440><U044F>"
+abmon   "<U042F><U043D><U0432>";/
+        "<U0424><U0435><U0432>";/
+        "<U041C><U0430><U0440>";/
+        "<U0410><U043F><U0440>";/
+        "<U041C><U0430><U0439>";/
+        "<U0418><U044E><U043D>";/
+        "<U0418><U044E><U043B>";/
+        "<U0410><U0432><U0433>";/
+        "<U0421><U0435><U043D>";/
+        "<U041E><U043A><U0442>";/
+        "<U041D><U043E><U044F>";/
+        "<U0414><U0435><U043A>"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_DK"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T %z%N%c%N"
+% https://tg.wikipedia.org/wiki/%D0%A2%D0%BE%D2%B7%D0%B8%D0%BA%D0%B8%D1%81%D1%82%D0%BE%D0%BD : Тоҷикистон
+country_name "<U0422><U043E><U04B7><U0438><U043A><U0438><U0441><U0442><U043E><U043D>"
+country_ab2 "TJ"
+country_ab3 "TJK"
+country_num 762
+country_car    "TJ"
+% тоҷикӣ
+lang_name    "<U0442><U043E><U04B7><U0438><U043A><U04E3>"
+lang_ab      "tg"
+lang_term    "tgk"
+lang_lib    "tgk"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a%t%l"
+int_prefix "992"
+int_select "00"
+END LC_TELEPHONE

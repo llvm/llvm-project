@@ -1,0 +1,139 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 14 "Data Initialization File"
+.lp
+The file,
+.i astb.df ,
+and the
+Data Initialization File are external binary files defining the 
+initialization of variables.
+.i astb.df
+is written by 
+the Semantic Analyzer as it processes initializers for variables
+and is read by the ast transformer in order to
+write the necessary data initialization statements.
+The Data Initialization File is written by many phases of the compiler
+to effect data initialization statements for certain variables
+(format arrays, namelist descriptors, array constructors) created
+by the compiler; this file is also processed by the ast transformer.
+.lp
+The file ,
+.i astb.df ,
+is written by the semantic analyzer as it processes initialization
+statements; this includes DATA statements and initializers in type
+statements.
+The file consists of a sequence of records, where a group of
+three consecutive records represents a single DATA statement.
+The first record is a single word whose value (a 4-byte value) is
+the line number where the initialization occurred in the source file.
+The second record is a variable length record which is the
+Initializer Variable List (IVL) representing the variables, implied-do's, etc.
+which are being initialized (see the chapter
+.i "Semantic Analyzer" ")."
+The third record is a variable length record which is the
+Initializer Constant Tree associated with the IVL
+(see the chapter
+.i "Semantic Analyzer" ")."
+.lp
+The Data Initialization File consists of one or more
+.ul
+records.
+Each record consists of 2 fields, a \*(cfshort int\*(rf (dtype)
+and a 32-bit \*(cfINT\*(rf (conval).
+Records are written to, and read from the file via the routines
+\*(mfdinit_put\*(rf and \*(mfdinit_read\*(rf in the module 
+\*(ffdinitutil.c\*(rf.  These routines are also responsible 
+for opening and possibly buffering the file.
+.lp
+There are several types of record in the file,
+distinguished by the value of the first field (dtype):
+.IP "dtype = DINIT_LOC" CW
+.br
+\*(cfDINIT_LOC\*(rf
+is a special value chosen so as to not conflict
+with any of the other possible values of this field.
+\*(cfconval\*(rf, the second field of the record, will be a
+symbol table pointer to a variable, array, pointer, or structure.
+This record indicates that a new symbol is being initialized.
+It results in the name of the variable being written.
+Ensuing records, up to the
+\*(cfDINIT_END\*(rf record, will initialize consecutive
+locations within this variable.
+.IP "dtype = DINIT_FMT" CW
+.br
+The value of \*(cfconval\*(rf is the symbol table of the array which
+represents the format descriptor for the specifiers in a FORMAT
+statement.
+Ensuing records, up to the next 
+\*(cfDINIT_END\*(rf, will initialize consecutive
+locations within this array.
+.IP "dtype = DINIT_NML" CW
+.br
+The value of \*(cfconval\*(rf is the symbol table of the array which
+represents the namelist descriptor for the variables in a NAMELIST
+statement.
+Ensuing records, up to the next 
+\*(cfDINIT_END\*(rf, will initialize consecutive
+locations within this array.
+.IP "dtype = DINIT_END" CW
+.br
+This record marks the end of the initializers for the variable specified
+in the corresponding DINIT_LOC, DINIT_FMT, or DINIT_NML.
+.IP "dtype = DT_DBLE" CW
+.br
+Indicates that 2 32-bit words are to be initialized with
+a 64-bit double precision floating point value.
+\*(cfconval\*(rf is a symbol table pointer to a double precision constant.
+.IP "dtype = DT_CMPLX" CW
+.br
+Indicates that 2 32-bit words are to be initialized with
+two 32-bit floating point values.
+\*(cfconval\*(rf is a symbol table pointer to a
+.cw complex
+constant.
+.IP "dtype = DT_DCMPLX" CW
+.br
+Indicates that 2 64-bit words are to be initialized with
+two 64-bit double precision floating point values.
+\*(cfconval\*(rf is a symbol table pointer to a
+.cw doublecomplex
+constant.
+.IP "dtype = Fortran Hollerith or CHARACTER" CW
+.br
+.cw dtype
+is actually \*(cfDT_CHAR\*(rf which indicates that
+a sequence of bytes is to be initialized to the
+characters in the
+.cw Hollerith
+or
+.cw CHARACTER
+string.
+.cw conval
+is a symbol table pointer to the
+.i string
+constant.
+The length of the initialization is derived from the
+.i string "'s"
+.cw DTYPE ,
+not
+.cw dtype .
+.IP "dtype = other Fortran types" CW
+.br
+Includes the integer, logical, and single precision data
+types.
+Indicates that the value of the current initializer
+is conval.
+.IP "dtype = DINIT_LABEL" CW
+Indicates that the next integer is to be initialized with the address
+of a variable.
+.cw conval
+is the symbol table pointer for the variable.
+An initializer of this type does not actually appear in the 
+DATA statement which is emitted.
+Instead, an assignment statement is added to the prologue of
+the subprogram and each applicable ENTRY.
+For example, a namelist descriptor requires the address of a variable.

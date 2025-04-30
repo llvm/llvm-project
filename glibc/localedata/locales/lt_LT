@@ -1,0 +1,281 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Lithuanian language locale for Lithuania
+% Created on January 30, 1992
+%  by Edmundas Miseikis, Algimantas
+%  Oskinis and Evaldas Kulbokas
+% Revised on April 10, 1992
+% Revised on February 8, 1993
+% Revised on April 3, 1993
+% Revised on May 22, 1993
+% Revised on November 21, 1993
+% Revised on December 1, 1993
+% Source: Lithuanian Computer Society and
+%   Technical committee for IT standardisation
+% Address: P.O Box 1147, Donelaic<io 60
+%   3000 Kaunas, Lithuania
+% Tel: +370 - 7 - 223510
+% Fax: +370 - 7 - 228500
+% Contact: Evaldas Kulbokas
+% Email: coolbox@seka.ktu.lt
+% Language: lt
+% Territory: LT
+% Revision: 4.0
+% Date: 1995-08-28
+% Application: general
+% Users: general
+% Charset: BALTIC
+
+LC_IDENTIFICATION
+title      "Lithuanian locale for Lithuania"
+source     "Lithuanian Computer Society and"
+address    "P.O Box 1147, Donelaicio 60, 3000 Kaunas, Lithuania"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Lithuanian"
+territory  "Lithuania"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% CLDR collation rules for Lithuanian:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/lt.xml)
+%
+% &̀=̇̀
+% &́=̇́
+% &̃=̇̃
+% &A<<ą<<<Ą
+% &C<č<<<Č
+% &E<<ę<<<Ę<<ė<<<Ė
+% &I<<į<<<Į<<y<<<Y
+% &S<š<<<Š
+% &U<<ų<<<Ų<<ū<<<Ū
+% &Z<ž<<<Ž
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/lt.xml)
+%
+% <exemplarCharacters type="index">[A Ą B C Č D E Ę Ė F G H I Į Y J K L M N O P R S Š T U Ų Ū V Z Ž]</exemplarCharacters>
+%
+% I am surprised that the characters Ą, Ę, Ė, Į, Y, Ų, and Ū
+% have only a secondary (accent) difference to the
+% characters A, E, I, and U in the
+% collation rules but have their own index bucket.
+%
+% This seems inconsistent to me.
+%
+% If Ą has only a secondary difference to A, it should not have its own index
+% bucket. So either the index bucket should be removed or the collation rule
+% should be changed to
+%
+% &A<ą<<<Ą
+%
+% Therefore, I reported:
+%
+% https://unicode.org/cldr/trac/ticket/10801
+%
+% Comparing with https://en.wikipedia.org/wiki/Lithuanian_orthography
+% makes me think the index buckets are correct and the secondary
+% differences in the collation rules should be primary differences.
+%
+% So for the moment I’ll implement it like this in glibc.
+
+collating-symbol <a-ogonek>
+collating-symbol <c-caron>
+collating-symbol <e-ogonek>
+collating-symbol <e-dot-above>
+collating-symbol <i-ogonek>
+collating-symbol <s-caron>
+collating-symbol <u-ogonek>
+collating-symbol <u-macron>
+collating-symbol <z-caron>
+
+reorder-after <AFTER-A>
+<a-ogonek>
+reorder-after <AFTER-C>
+<c-caron>
+reorder-after <AFTER-E>
+<e-ogonek>
+<e-dot-above>
+reorder-after <AFTER-I>
+<i-ogonek>
+<S0079>
+reorder-after <AFTER-S>
+<s-caron>
+reorder-after <AFTER-U>
+<u-ogonek>
+<u-macron>
+reorder-after <AFTER-Z>
+<z-caron>
+
+<U0105> <a-ogonek>;<BASE>;<MIN>;IGNORE % ą
+<U0104> <a-ogonek>;<BASE>;<CAP>;IGNORE % Ą
+<U010D> <c-caron>;<BASE>;<MIN>;IGNORE % č
+<U010C> <c-caron>;<BASE>;<CAP>;IGNORE % Č
+<U0119> <e-ogonek>;<BASE>;<MIN>;IGNORE % ę
+<U0118> <e-ogonek>;<BASE>;<CAP>;IGNORE % Ę
+<U0117> <e-dot-above>;<BASE>;<MIN>;IGNORE % ė
+<U0116> <e-dot-above>;<BASE>;<CAP>;IGNORE % Ė
+<U012F> <i-ogonek>;<BASE>;<MIN>;IGNORE % į
+<U012E> <i-ogonek>;<BASE>;<CAP>;IGNORE % Į
+<U0161> <s-caron>;<BASE>;<MIN>;IGNORE % š
+<U0160> <s-caron>;<BASE>;<CAP>;IGNORE % Š
+<U0173> <u-ogonek>;<BASE>;<MIN>;IGNORE % ų
+<U0172> <u-ogonek>;<BASE>;<CAP>;IGNORE % Ų
+<U016B> <u-macron>;<BASE>;<MIN>;IGNORE % ū
+<U016A> <u-macron>;<BASE>;<CAP>;IGNORE % Ū
+<U017E> <z-caron>;<BASE>;<MIN>;IGNORE % ž
+<U017D> <z-caron>;<BASE>;<CAP>;IGNORE % Ž
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol     "EUR "
+currency_symbol     "<U20AC>"
+mon_decimal_point   ","
+mon_thousands_sep   "."
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       0
+p_sep_by_space      1
+n_cs_precedes       0
+n_sep_by_space      1
+p_sign_posn         1
+n_sign_posn         1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point       ","
+thousands_sep       "."
+grouping            3;3
+END LC_NUMERIC
+
+LC_TIME
+abday     "Sk";"Pr";"An";/
+          "Tr";"Kt";"Pn";/
+          "<U0160>t"
+day       "Sekmadienis";/
+          "Pirmadienis";/
+          "Antradienis";/
+          "Tre<U010D>iadienis";/
+          "Ketvirtadienis";/
+          "Penktadienis";/
+          "<U0160>e<U0161>tadienis"
+abmon     "saus.";"vas.";/
+          "kov.";"bal.";/
+          "geg.";"bir<U017E>.";/
+          "liep.";"rugp.";/
+          "rugs.";"spal.";/
+          "lapkr.";"gruod."
+alt_mon   "sausis";/
+          "vasaris";/
+          "kovas";/
+          "balandis";/
+          "gegu<U017E><U0117>";/
+          "bir<U017E>elis";/
+          "liepa";/
+          "rugpj<U016B>tis";/
+          "rugs<U0117>jis";/
+          "spalis";/
+          "lapkritis";/
+          "gruodis"
+mon       "sausio";/
+          "vasario";/
+          "kovo";/
+          "baland<U017E>io";/
+          "gegu<U017E><U0117>s";/
+          "bir<U017E>elio";/
+          "liepos";/
+          "rugpj<U016B><U010D>io";/
+          "rugs<U0117>jo";/
+          "spalio";/
+          "lapkri<U010D>io";/
+          "gruod<U017E>io"
+d_t_fmt   "%Y m. %B %d d. %T"
+date_fmt  "%Y m. %B %d d. %T %Z"
+d_fmt     "%Y-%m-%d"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1TtYy]"
+noexpr  "^[-0Nn]"
+yesstr  "taip"
+nostr   "ne"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "370"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Lietuva"
+country_ab2 "LT"
+country_ab3 "LTU"
+country_num 440
+country_car    "LT"
+% lietuvių kalba
+lang_name    "lietuvi<U0173>"
+lang_ab      "lt"
+lang_term    "lit"
+lang_lib    "lit"
+END LC_ADDRESS

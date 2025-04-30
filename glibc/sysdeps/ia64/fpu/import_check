@@ -1,0 +1,81 @@
+#!/bin/sh
+
+objdir="$1"
+
+num_errors=0
+
+check_syms() {
+    global_count=0
+    entry_count=0
+    while read value type name; do
+	if [ $value = "U" ]; then
+	    name=$type
+	    # undefined symbols must start with double-underscore
+	    if [ $(expr $name : '\(..\)') != "__" ]; then
+		echo -e "$(basename $file):\tError: undefined reference $name doesn't start with \"__\"."
+		num_errors=$(($num_errors + 1))
+	    fi
+	    continue
+	fi
+
+	case "$type" in
+	    W)
+		entry_count=$(($entry_count + 1))
+		;;
+	    *)
+		entry_count=$(($entry_count + 1))
+		if [ "$(expr $name : '\(..\)')" != "__" ]; then
+		    global_count=$(($global_count + 1))
+		fi
+		;;
+	esac
+    done
+    if [ $entry_count -gt 1 -a $global_count -gt 0 ]; then
+	echo -e "$(basename $file):\tError: detected $global_count strong " \
+	    "global and $entry_count entry-points."
+	num_errors=$(($num_errors + 1))
+    fi
+}
+
+check_file() {
+    file=$1
+    size=$(readelf -S $file | \
+	(sz=0; while read line; do
+		if echo $line | fgrep -q " .rodata"; then
+		    read sz rest
+		    break
+		fi
+	    done;
+	    printf "%d" 0x$sz))
+
+    summands=$(readelf -s $file | fgrep " OBJECT " | tr -s ' ' |
+	cut -f4 -d' ' | sed 's,$,+,')0
+    sum=$(($summands))
+    if [ $sum != $size ]; then
+	echo -e "$(basename $file):\tError: sum of objects=$sum bytes, .rodata size=$size bytes"
+	num_errors=$(($num_errors + 1))
+    fi
+
+    tmp=$(tempfile -p syms)
+    nm -g $file > $tmp
+    check_syms < $tmp
+}
+
+do_checks() {
+    echo "Note: 1 error expected in w_tgammal.o due to 64-byte alignment-padding."
+    while read func_pattern src_file dst_file; do
+	if [ "$(expr $dst_file : '.*\(S\)$')" = "S" ]; then
+	    objfile=$(expr $dst_file : '\(.*\)[.]S$')
+	    check_file $objdir/$objfile.o
+	fi
+    done
+}
+
+do_checks < import_file_list
+
+if [ $num_errors -gt 0 ]; then
+    echo "FAILURE: Detected $num_errors error(s)."
+    exit 1
+fi
+echo SUCCESS
+exit 0

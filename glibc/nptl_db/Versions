@@ -1,0 +1,24 @@
+libthread_db {
+  GLIBC_2.1.3 {
+    # t*
+    td_init; td_log; td_ta_clear_event; td_ta_delete; td_ta_enable_stats;
+    td_ta_event_addr; td_ta_event_getmsg; td_ta_get_nthreads; td_ta_get_ph;
+    td_ta_get_stats; td_ta_map_id2thr; td_ta_map_lwp2thr; td_ta_new;
+    td_ta_reset_stats; td_ta_set_event; td_ta_setconcurrency;
+    td_ta_thr_iter; td_ta_tsd_iter; td_thr_clear_event; td_thr_dbresume;
+    td_thr_dbsuspend; td_thr_event_enable; td_thr_event_getmsg;
+    td_thr_get_info; td_thr_getfpregs; td_thr_getgregs; td_thr_getxregs;
+    td_thr_getxregsize; td_thr_set_event; td_thr_setfpregs; td_thr_setgregs;
+    td_thr_setprio; td_thr_setsigpending; td_thr_setxregs; td_thr_sigsetmask;
+    td_thr_tsd; td_thr_validate;
+  }
+  GLIBC_2.2.3 {
+    td_symbol_list;
+  }
+  GLIBC_2.3 {
+    td_thr_tls_get_addr;
+  }
+  GLIBC_2.3.3 {
+    td_thr_tlsbase;
+  }
+}

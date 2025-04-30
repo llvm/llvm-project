@@ -1,0 +1,266 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Oromo language locale for Kenya.
+%
+% Oromo terms are provided by Mahdi Hamid Muudee of Sagalee Oromoo
+% Publishing Co. Inc and formatted in this locale by Daniel Yacob of
+% the Ge'ez Frontier Foundation.  The Oromo language terms used here
+% are those considered to be canonical in the Oromo language under
+% contemporary and progressive usage adopted by government bureaus
+% across the Oromo region.  Regional synonyms naturally exist for many
+% of the month and day names.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f ISO-8859-1 -i om_KE om_KE
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Oromo language locale for Kenya."
+source     "Ge'ez Frontier Foundation & Sagalee Oromoo Publishing Co. Inc."
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Oromo"
+territory  "Kenya"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Qubee Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+% CLDR collation rules for Oromo:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/om.xml)
+%
+% <collation type="standard" >
+%  <cr><![CDATA[
+%    &Z<ch<<<Ch<<<CH<dh<<<Dh<<<DH<kh<<<Kh<<<KH<ny<<<Ny<<<NY<ph<<<Ph<<<PH<sh<<<Sh
+%  ]]></cr>
+% </collation  >
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/om.xml)
+%
+% <exemplarCharacters type="index">[A B C D E F G H I J K L M N O P Q R S T U V W X Y Z]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+copy "iso14651_t1"
+
+collating-symbol  <ch-digraph>
+collating-element <ch> from "ch"
+collating-element <cH> from "cH"
+collating-element <Ch> from "Ch"
+collating-element <CH> from "CH"
+collating-symbol  <dh-digraph>
+collating-element <dh> from "dh"
+collating-element <dH> from "dH"
+collating-element <Dh> from "Dh"
+collating-element <DH> from "DH"
+collating-symbol  <kh-digraph>
+collating-element <kh> from "kh"
+collating-element <kH> from "kH"
+collating-element <Kh> from "Kh"
+collating-element <KH> from "KH"
+collating-symbol  <ny-digraph>
+collating-element <ny> from "ny"
+collating-element <nY> from "nY"
+collating-element <Ny> from "Ny"
+collating-element <NY> from "NY"
+collating-symbol  <ph-digraph>
+collating-element <ph> from "ph"
+collating-element <pH> from "pH"
+collating-element <Ph> from "Ph"
+collating-element <PH> from "PH"
+collating-symbol  <sh-digraph>
+collating-element <sh> from "sh"
+collating-element <sH> from "sH"
+collating-element <Sh> from "Sh"
+collating-element <SH> from "SH"
+
+reorder-after <AFTER-Z>
+<ch-digraph>
+<dh-digraph>
+<kh-digraph>
+<ny-digraph>
+<ph-digraph>
+<sh-digraph>
+
+<ch>	<ch-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<cH>	<ch-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ch>	<ch-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<CH>	<ch-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<dh>	<dh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<dH>	<dh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Dh>	<dh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<DH>	<dh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<kh>	<kh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<kH>	<kh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Kh>	<kh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<KH>	<kh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ny>	<ny-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<nY>	<ny-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ny>	<ny-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<NY>	<ny-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ph>	<ph-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<pH>	<ph-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ph>	<ph-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<PH>	<ph-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<sh>	<sh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<sH>	<sh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Sh>	<sh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<SH>	<sh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+reorder-end
+%
+END LC_COLLATE
+
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Kenya Specific and Shared Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MONETARY
+%
+int_curr_symbol       "KES "
+currency_symbol       "Ksh"
+mon_decimal_point     "."
+mon_thousands_sep     ","
+mon_grouping          3;3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       2
+frac_digits           2
+p_cs_precedes         1
+p_sep_by_space        0
+n_cs_precedes         1
+n_sep_by_space        0
+p_sign_posn           1
+n_sign_posn           1
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+%
+% This is the POSIX Locale definition for the LC_NUMERIC category.
+%
+decimal_point          "."
+thousands_sep          ","
+grouping               3;3
+%
+END LC_NUMERIC
+
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+
+LC_TELEPHONE
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_TELEPHONE category.
+%
+tel_dom_fmt    "%a-%l"
+tel_int_fmt    "%c-%a-%l"
+int_prefix     "254"
+int_select   "000"
+%
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Oromo Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MESSAGES
+copy "om_ET"
+END LC_MESSAGES
+
+LC_NAME
+copy "om_ET"
+END LC_NAME
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Oromo/KE Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_ADDRESS category.
+%
+postal_fmt    "%z%c%T%s%b%e%r"
+country_name  "Keeniyaa"
+country_post  "KEN"
+country_ab2   "KE"
+country_ab3   "KEN"
+country_num   404
+country_car   "EAK"
+% country_isbn  unknown, Need ISO 2108
+lang_name     "Oromoo"
+lang_ab       "om"
+lang_term     "orm"
+lang_lib      "orm"
+%
+END LC_ADDRESS
+
+
+LC_TIME
+copy "om_ET"
+END LC_TIME

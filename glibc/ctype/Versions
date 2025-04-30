@@ -1,0 +1,27 @@
+libc {
+  GLIBC_2.0 {
+    # global variables
+    __ctype_b; __ctype32_b; __ctype_tolower; __ctype_toupper;
+    _tolower; _toupper;
+
+    # i*
+    isalnum; isalpha; isascii; isblank; iscntrl; isdigit; isgraph; islower;
+    isprint; ispunct; isspace; isupper; isxdigit;
+
+    # t*
+    toascii; tolower; toupper;
+  }
+  GLIBC_2.2 {
+    # global variables
+    __ctype32_tolower; __ctype32_toupper;
+  }
+  GLIBC_2.3 {
+    isctype; __isctype;
+
+    # functions used by optimized macros in ctype.h
+    __ctype_b_loc; __ctype_tolower_loc; __ctype_toupper_loc;
+  }
+  GLIBC_PRIVATE {
+    __ctype_init;
+  }
+}

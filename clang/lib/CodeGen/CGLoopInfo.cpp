@@ -448,6 +448,52 @@ MDNode *LoopInfo::createMetadata(
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
   }
 
+  // If the loop has a NextSilicon mark, add the mark as metadata.
+  if (!Attrs.NSMark.empty())
+    LoopProperties.push_back(
+        MDNode::get(Ctx, {MDString::get(Ctx, "ns.loop.mark"),
+                          MDString::get(Ctx, Attrs.NSMark.str())}));
+
+  // If the loop has a NextSilicon location, add the location as metadata.
+  if (!Attrs.NSLocation.empty()) {
+    LoopProperties.push_back(
+        MDNode::get(Ctx, {MDString::get(Ctx, "ns.loop.location"),
+                          MDString::get(Ctx, Attrs.NSLocation.str())}));
+  }
+
+  // If the loop has a NextSilicon vectorize scheme, add to metadata.
+  if (!Attrs.NSVectorize.empty()) {
+    LoopProperties.push_back(
+        MDNode::get(Ctx, {MDString::get(Ctx, "ns.loop.vectorize"),
+                          MDString::get(Ctx, Attrs.NSVectorize.str())}));
+  }
+
+  // If the loop has a NextSilicon unroll count, add to metadata.
+  if (Attrs.NSUnrollCount)
+    LoopProperties.push_back(MDNode::get(
+        Ctx, {MDString::get(Ctx, "ns.loop.unroll.count"),
+              ConstantAsMetadata::get(ConstantInt::get(
+                  llvm::Type::getInt32Ty(Ctx), Attrs.NSUnrollCount))}));
+
+  // If the loop has a NextSilicon slot, add to metadata.
+  if (!Attrs.NSSlot.empty())
+    LoopProperties.push_back(
+        MDNode::get(Ctx, {MDString::get(Ctx, "ns.loop.slot"),
+                          MDString::get(Ctx, Attrs.NSSlot.str())}));
+
+  // If the loop has a NextSilicon CG ID, add to metadata.
+  if (!Attrs.NSCGID.empty())
+    LoopProperties.push_back(
+        MDNode::get(Ctx, {MDString::get(Ctx, "ns.loop.cgid"),
+                          MDString::get(Ctx, Attrs.NSCGID.str())}));
+
+  // If the loop has a NextSilicon duplication count, add to metadata.
+  if (Attrs.NSDuplicationCount)
+    LoopProperties.push_back(MDNode::get(
+        Ctx, {MDString::get(Ctx, "ns.loop.duplication_count"),
+              ConstantAsMetadata::get(ConstantInt::get(
+                  llvm::Type::getInt32Ty(Ctx), Attrs.NSDuplicationCount))}));
+
   LoopProperties.insert(LoopProperties.end(), AdditionalLoopProperties.begin(),
                         AdditionalLoopProperties.end());
   return createFullUnrollMetadata(Attrs, LoopProperties, HasUserTransforms);
@@ -461,7 +507,8 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizeScalable(LoopAttributes::Unspecified), InterleaveCount(0),
       UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0), CodeAlign(0), MustProgress(false) {}
+      PipelineInitiationInterval(0), CodeAlign(0), MustProgress(false),
+      NSMark(), NSUnrollCount(0), NSSlot(), NSCGID(), NSDuplicationCount(0) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -479,6 +526,12 @@ void LoopAttributes::clear() {
   PipelineInitiationInterval = 0;
   CodeAlign = 0;
   MustProgress = false;
+  NSMark = StringRef();
+  NSLocation = StringRef();
+  NSUnrollCount = 0;
+  NSSlot = StringRef();
+  NSCGID = StringRef();
+  NSDuplicationCount = 0;
 }
 
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
@@ -503,7 +556,8 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollAndJamEnable == LoopAttributes::Unspecified &&
       Attrs.DistributeEnable == LoopAttributes::Unspecified &&
-      Attrs.CodeAlign == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress)
+      Attrs.CodeAlign == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress &&
+      Attrs.NSMark.empty())
     return;
 
   TempLoopID = MDNode::getTemporary(Header->getContext(), std::nullopt);
@@ -613,8 +667,14 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     const OpenCLUnrollHintAttr *OpenCLHint =
         dyn_cast<OpenCLUnrollHintAttr>(Attr);
     const HLSLLoopHintAttr *HLSLLoopHint = dyn_cast<HLSLLoopHintAttr>(Attr);
+    const NextSiliconLoopMarkAttr *NSHint =
+        dyn_cast<NextSiliconLoopMarkAttr>(Attr);
+    const NextSiliconLoopLocationAttr *NSLocHint =
+        dyn_cast<NextSiliconLoopLocationAttr>(Attr);
+    const NextSiliconLoopVectorizeAttr *NSVecHint =
+        dyn_cast<NextSiliconLoopVectorizeAttr>(Attr);
     // Skip non loop hint attributes
-    if (!LH && !OpenCLHint && !HLSLLoopHint) {
+    if (!LH && !OpenCLHint && !HLSLLoopHint && !NSHint && !NSLocHint && !NSVecHint) {
       continue;
     }
 
@@ -655,6 +715,45 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
 
       Option = LH->getOption();
       State = LH->getState();
+    } else if (NSHint) {
+      if (NSHint->getMark().str() != "bb") {
+        auto IsMark = llvm::StringSwitch<bool>(NSHint->getMark())
+                          .Case("unroll_count", false)
+                          .Case("slot", false)
+                          .Case("cgid", false)
+                          .Case("duplication_count", false)
+                          .Default(true);
+
+        if (IsMark)
+          setNSMark(NSHint->getMark());
+
+        auto *ValueExpr = NSHint->getValue();
+        if (ValueExpr) {
+          if (NSHint->getMark().str() == "slot") {
+            // slot has string argument
+            auto *E = dyn_cast<clang::StringLiteral>(ValueExpr);
+            setNSSlot(E->getString());
+          } else if (NSHint->getMark().str() == "unroll_count") {
+            // unroll count has integer argument
+            llvm::APSInt ValueAPS = ValueExpr->EvaluateKnownConstInt(Ctx);
+            ValueInt = ValueAPS.getSExtValue();
+            setNSUnrollCount(ValueInt);
+          } else if (NSHint->getMark().str() == "cgid") {
+            // cgid has string argument
+            auto *E = dyn_cast<clang::StringLiteral>(ValueExpr);
+            setNSCGID(E->getString());
+          } else if (NSHint->getMark().str() == "duplication_count") {
+            // duplication count has integer argument
+            llvm::APSInt ValueAPS = ValueExpr->EvaluateKnownConstInt(Ctx);
+            ValueInt = ValueAPS.getSExtValue();
+            setNSDuplicationCount(ValueInt);
+          }
+        }
+      }
+    } else if (NSLocHint) {
+      setNSLocation(NSLocHint->getLocation());
+    } else if (NSVecHint) {
+      setNSVectorize(NSVecHint->getVectorize());
     }
     switch (State) {
     case LoopHintAttr::Disable:

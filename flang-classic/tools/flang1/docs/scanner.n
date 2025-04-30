@@ -1,0 +1,501 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 3 "Scanner"
+.sh 2 Overview
+The Scanner reads the source input file and extracts tokens, which
+are passed to the Parser.
+Tokens include identifiers, keywords, numbers, and special characters
+such as "/", "+", "-", etc.
+If the -list flag is specified, the Scanner writes the source listing
+as it reads the source input.
+.lp
+In order to accomplish its basic task, the Scanner must:
+.BL
+process either fixed-form or freeform input
+.BL
+process statements up to and including 132 columns if the -extend
+flag is specified.
+.BL
+process statements separated by semicolons.
+.BL
+recognize and process statements which begin with the tab character
+(following the VMS conventions).
+.BL
+recognize and ignore comment lines and inline comments.
+.BL
+recognize continuation cards.
+.BL
+recognize and process OpenMP directives
+.BL
+recognize \*(cfINCLUDE\*(rf statements and \*(cf$INSERT\*(rf directives and open
+the specified files.
+.BL
+extract labels from the label field of statements and enter them into the
+symbol table.
+.BL
+convert integer and floating point constants including any optional kind values
+into the target machine's
+format.
+.BL
+look up Fortran keywords in the keyword table.
+.BL
+maintain a certain amount of "syntactic awareness" in order to
+distinguish keywords from identically named identifiers.
+.BL
+convert characters to lower case unless the -upcase flag is specified.
+.BL
+recognize character strings including any optional kind values
+and the various C backslash escape sequences which are allowed within them.
+.BL
+recognize hollerith constants.
+.BL
+issue error messages for the various syntactic errors which it is able
+to recognize.
+.sp
+.sh 2 "Data Structures"
+.US "Token Id's"
+The Scanner returns token id numbers and possibly additional information
+such as a symbol table pointer to the Parser.
+These numbers are defined by the
+.i prstab
+utility (see section 4) and are referenced within the scanner using C
+constant symbols whose names begin with "\*(cfTK_\*(rf".
+.US "Statement Buffer"
+an array (\*(cfstmtb\*(rf)
+of char local to the scanner module which holds an entire Fortran
+statement including up to 99 continuation lines, but not including
+the label field.
+The end of the statement is marked by the newline character.
+.lp
+Initially, the statement buffer contains the statement text as it appears
+in the source file.
+After the routine
+.i crunch
+has processed the statement, it contains the
+.i crunched
+statement (see below).
+If the input is in fixed form, blanks and tabs are removed; for freeform
+input, consectutive blanks are collapsed into a single.
+.US "Keyword Tables"
+four tables local to the scanner module are initialized within the scanner.
+Note that if a grammar change uses a new token, not only must the token input
+file be changed, but the token must also be added to one of the tables.
+The keyword tables allow a binary search to be performed in order to
+determine if a given identifier is a keyword and if so, what its
+token id number is.
+The four tables correspond to four classes of keywords:
+.np
+normal keywords, i.e., those which can begin a statement.
+.np
+logical keywords, i.e., those which may appear in logical expressions
+(beginning and ending with '.').
+.np
+I/O keywords, i.e., those which are used as specifiers within I/O
+statements.
+.np
+format keywords, i.e., those which appear within FORMAT statements.
+.lp
+Certain keywords may contain optional blanks; for example,
+.cw DOUBLEPRECISION ,
+.cw "DOUBLE PRECISION" ,
+.cw "END DO",
+and
+.cw ENDDO .
+For cases where a blank is optional and the first part of the keyword
+is itself not a keyword, a
+.i pseudo
+keyword representing its name appears in the keyword table.
+This
+.i pseudo
+keyword is associated with a token macro whose name is prefixed with
+.cw "TKF_" .
+When a
+.i pseudo
+keyword is recognized, the scanner checks if what follows
+matches the name of any of the keyword's second parts.
+If a matching name is not found, an identifier token is returned.
+If the first part of the keyword is itself a keyword,
+the processing is the same to determine if a
+.i longer
+keyword can be recognized;
+however, if a matching name is not found, a keyword token is returned.
+.lp
+.US "Symbol Table"
+The scanner enters identifiers and certain constants into the symbol table
+when it recognizes them (refer to section 11).
+When an identifier is recognized,
+the scanner must check if the symbol table entry represents an
+.i alias
+(e.g., the \*(cfRESULT\*(rf identifier for a function).
+If the identifer is an alias, the aliased identfier is returned.
+.sp
+.sh 2 "Processing"
+The Scanner is initialized by calling the routine
+.i scan_init
+at the beginning of processing. From then on, the routine
+.i get_token
+is called to extract and return the next token. The routine
+.i scan_reset
+is called to resume scanning at the next Fortran statement
+(for instance after the Parser or Scanner finds a syntax error).
+.lp
+The form of the input to the compiler may either be fixed-form
+or freeform and is controlled by a compiler option.
+Each type of input has its own set of routines for reading the next
+statement (\fIget_stmt\fP), including continuations, 
+and for reading the next card or line (\fIread_card\fP).
+.lp
+If the current character pointer is \*(cfNULL\*(rf, the input-type's
+.i get_stmt
+is called to read the next Fortran statement including any continuations
+into the statement buffer.
+This may involve scanning past comment lines and processing compiler
+directives.
+When a card is read, the position within \*(cfstmtb\*(rf
+marking the last character of the card is remembered.
+.i get_stmt
+calls the input-type's
+.i read_card
+to read in a single card or line.
+This routine determines what type of card has been read.
+The card types are described by the following C macros which are local
+to the scanner:
+.nr ii \w'\*(cfCT_CONTINUATION\*(rf'+2n
+.ip \*(cfCT_COMMENT\*(rf
+any card which is considered a comment card.  This includes
+a "blank" card, a card which begins with '!' except if it is in column
+6, and a card
+beginning with 'D' in column 1 and if the -dlines flag is NOT set.
+.ip \*(cfCT_DIRECTIVE\*(rf
+those beginning with '$' or '%' in column 1.
+.ip \*(cfCT_END\*(rf
+the \*(cfEND\*(rf statement.
+.ip \*(cfCT_CONTINUATION\*(rf
+continuation card.
+.ip \*(cfCT_PRAGMA\*(rf
+a C pragma directive card.
+.ip \*(cfCT_LINE\*(rf
+a '# line' card.
+.ip \*(cfCT_EOF\*(rf
+end of file.
+.ip \*(cfCT_INITIAL\*(rf
+any other Fortran statement.
+.nr ii 5n
+.lp
+Next the routine
+.i crunch
+is called to prepare the statement for further scanning.
+Crunching involves:
+.np
+eliminating blanks and tab characters ("whitespace" characters,
+actually, any character whose ASCII value is not greater than the
+ASCII value of a space is eliminated).
+If the input form is freeform,
+consecutive blanks are collapsed into a single
+blank.
+Whenever the scanner must examine the
+.i first
+character after a token,
+either that character or the second character (if the first
+character is a blank) is examined.
+.np
+converting upper case letters to lower case unless the -upcase flag is
+specified or the letters occur in character strings.
+.np
+recognizing and entering into the symbol table hollerith and character
+constants.  The resulting symbol table is placed and marked in the
+statement buffer.  Note that the number of positions in the statement
+buffer required to encode the symbol table pointer
+is three (1 for a special marker, and 2 for the 16-bit
+symbol table pointer).
+.np
+recognizing non-decimal constants and marking them in the statement
+buffer.
+.np
+stripping in-line comments.
+.np
+balancing parentheses.
+.np
+determining if the statement contains an equals sign, comma, or
+the lexical entity for attributed declarations (i.e., two consecutive
+colons)
+which is not nested within parentheses and does not occur in a hollerith or
+character constant.
+.lp
+.i get_token
+next performs a switch statement using the current character in the
+statement buffer.
+Subsequent processing depends on the type of the character.
+.lp
+If the character can begin an identifier (alphabetic, '_', or '$'),
+the routine 
+.i alpha
+is called to determine if the token is a keyword or an identifier.
+To do this,
+.i alpha
+is required in many cases to remember what type of statement it is
+scanning, and where it is within that statement.  This information
+is maintained in the following variables:
+.nr ii \w'\*(cfsem.pghase\*(rf'+2n
+.ip "\*(cfpar_depth\*(rf"
+current nesting level of parentheses (the value is incremented and
+decremented when
+.i get_token
+sees a ')' and a '(', respectively).
+.ip "\*(cfscmode\*(rf"
+scan mode - depends on the type of the statement currently being processed
+and possibly the position within that statement (see the next section,
+.i "Scan Modes" ).
+.ip "\*(cfexp_equal\*(rf"
+exposed equals sign.  An equals sign is in the statement that is not
+in a nest of parentheses and not in a hollerith or character constant.
+This variable is set by routine
+.i crunch .
+.ip "\*(cfexp_comma\*(rf"
+exposed comma.  A comma is in the statement that is not
+in a nest of parentheses and not in a hollerith or character constant.
+This variable is set by routine
+.i crunch .
+.ip "\*(cfexp_attr\*(rf"
+exposed atttribute.  Two consecutive colons are in the statement that are not
+in a nest of parentheses and not in a hollerith or character constant.
+This variable is set by routine
+.i crunch .
+.ip "\*(cfsem.pgphase\*(rf"
+program phase tracked by the Semantic Analyzer. The value of this variable
+indicates the "phase" of the statements in the current subprogram being
+scanned.  This value corresponds to the statement ordering accepted by
+the Fortran compiler.
+.nr ii 5n
+.lp
+If the first character is a digit, the routine
+.i get_number
+is called to extract and convert the integer or floating point constant.
+.i get_number
+may also be called when the first character is '(', since this could
+represent the beginning of a complex constant.
+.lp
+If the first character is a period, the routine
+.i do_dot
+is called to perform more analysis on the characters after the period.
+.i do_dot
+returns either a logical keyword, a floating point constant,
+or the token \*(cfTK_DOT\*(rf.
+.lp
+.i get_token
+returns two values to the Parser each time it is called:
+.np
+Token id number for the token.
+.np
+Token value. This value depends on the type of token:
+.ba +5n
+.nr ii \w'identifier'+2n
+.ip identifier
+the symbol table pointer to the identifier
+.ip constant
+symbol table pointer to the constant, except for integer, real, and logical
+constants, in which case the actual 32-bit value is returned.
+.ip letter
+the ASCII character value.
+.nr ii 5n
+.ba -5n
+.sp
+.sh 3 "Scan Modes"
+In order to distinguish between an identifier and a keyword, several scan
+modes are defined.
+The scanner enters one of the modes when
+the first keyword or identifier of a statement is scanned.
+The following C macros, local to the scanner module,
+indicate the modes:
+.nr ii \w'\*(cfSCM_INDEPENDENT\*(rf'+2n
+.ip \*(cfSCM_FIRST\*(rf
+the first token of a statement is to be processed.
+When in this mode, the scanner must watch out for certain cases where there
+is an exposed equals sign.
+The equals sign could be part of an assignment statement, a DO statement,
+an assignment statement following "\*(cfIF(...)\*(rf",
+an assignment statement following "\*(cfWHERE(...)\*(rf",
+or in the non-parentheses form of the \*(cfPARAMETER\*(rf statement.
+.ip \*(cfSCM_IDENT\*(rf
+look only for identifiers.
+.ip \*(cfSCM_FORMAT\*(rf
+current statement is a \*(cfFORMAT\*(rf statement; look for format keywords
+only if the current position is not in a nest of angle brackets.
+.ip \*(cfSCM_IMPLICIT\*(rf
+current statement is an \*(cfIMPLICIT\*(rf statement; look for a letter
+or the keyword \*(cfNONE\*(rf.
+.ip \*(cfSCM_FUNCTION\*(rf
+look for the keyword \*(cfFUNCTION\*(rf.
+The scanner enters this mode when the first keyword
+of the statement is one of the allowed Fortran data types.
+If the next token is \*(cfFUNCTION\*(rf, then the current statement is
+a function statement.
+Upon recognizing the keyword, the scanner enters the mode
+\*(cfSCM_IDENT\*(rf.
+.ip \*(cfSCM_IO\*(rf
+current statement is an I/O statement; the I/O keyword table must be
+searched only if the character following the identifier is not an equals
+sign.
+Note that when
+.i get_token
+sees a ')', the variable \*(cfpar_depth\*(rf
+is decremented.
+If the resulting value is zero and if the scanner is currently in the
+mode \*(cfSCM_IO\*(rf, the scanner enters the mode \*(cfSCM_IDENT\*(rf.
+.ip \*(cfSCM_TO\*(rf
+current statement begins with "\*(cfASSIGN <label>\*(rf";
+the \*(cfTO\*(rf keyword is expected.
+The scanner enters the mode \*(cfSCM_IDENT\*(rf.
+.ip \*(cfSCM_IF\*(rf
+current statement is an \*(cfIF\*(rf or \*(cfELSEIF\*(rf.
+Note that once the scanner has processed the corresponding
+right parenthesis of the left parenthesis following one
+of these keywords, the scanner enters the mode \*(cfSCM_FIRST\*(rf.
+.ip \*(cfSCM_DOLAB\*(rf
+the scanner has processed the "\*(cfDO <label>\*(rf" prefix.
+The scanner enters the mode \*(cfSCM_IDENT\*(rf.
+.ip \*(cfSCM_GOTO\*(rf
+current statement is a \*(cfGOTO\*(rf.
+.ip \*(cfSCM_DOWHILE\*(rf
+current statement begins with the keyword \*(cfDO\*(rf and does not
+represent the DO-iteration type.
+The next identifier should be the keyword \*(cfWHILE\*(rf; if it's
+found, the scanner enters the mode \*(cfSCM_IDENT\*(rf.
+Note that the keyword \*(cfDO\*(rf for the DO-iteration statement
+is found by checking \*(cfexp_equal\*(rf and \*(cfexp_comma\*(rf in
+routine
+.i alpha .
+.ip \*(cfSCM_ALLOC\*(rf
+current statement is an \*(cfALLOCATE\*(rf or \*(cfDEALLOCATE\*(rf
+statement; the I/O keyword table must be searched (since these statements'
+specifiers are also I/O specifiers) only if the character following
+the identifier is not an equals sign.
+.ip \*(cfSCM_WITH\*(rf
+current statement is an \*(cfALIGN\*(rf or \*(cfREALIGN\*(rf statement;
+If
+.cw exp_attr
+is set, the next token is the
+.cw WITH
+keyword (mode \*(cfSCM_WITH\*(rf is entered); when the
+.cw WITH
+keyword is recognized, the scanner enters the mode \(*cfSCM_ID_ATTR\*(rf.
+If
+.cw exp_attr
+is not set, the next token is an identifier followed by the
+keyword
+.cw WITH
+(mode \*(cfSCM_ID_WITH\*(rf is entered).
+.ip \*(cfSCM_ID_WITH\*(rf
+the scanner has processed an identifier and the scanner enters the
+mode \*(cfSCM_WITH\*(rf.
+.ip \*(cfSCM_ID_ATTR\*(rf
+the next identifer is just an identifier token.
+This mode is the general case for a statement in
+.i entity
+form (i.e.,
+.cw exp_attr
+is set.
+This mode indcates that identifiers are scanned until an
+exposed comma is seen; when the the exposed comma is seen the
+scanner enters the mode \(*cfSCM_FIRST\*(rf (i.e., the comma precedes
+a comma).
+This mode is entered whenever a keyword in an
+.i entity
+form of a statement is detected (for this type of statement,
+.cw exp_attr
+is set).
+.ip \*(cfSCM_ONTO\*(rf
+current statement is an \*(cfDISTRIBUTE\*(rf
+or \*(cfREDISTRIBUTE\*(rf statement;
+If
+.cw exp_attr
+is set, the next token is the
+.cw ONTO
+keyword (mode \*(cfSCM_ONTO\*(rf is entered);
+when the
+.cw ONTO
+keyword is recognized, the scanner enters the mode \(*cfSCM_ID_ATTR\*(rf.
+If
+.cw exp_attr
+is not set, the next token is an identifier followed by the
+keyword
+.cw ONTO
+(mode \*(cfSCM_ID_ONTO\*(rf is entered).
+.ip \*(cfSCM_ID_ONTO\*(rf
+the scanner has processed an identifier and the scanner enters the
+mode \*(cfSCM_ONTO\*(rf.
+.ip \*(cfSCM_EXTRINSIC\*(rf
+the next identifier should be enclosed in parenthesis and represents the
+type of \f(CWEXTRINSIC\fP interface.
+.ip \*(cfSCM_INTERFACE\*(rf
+current statement is an \f(CWINTERFACE\fP statement;
+this keyword may be followed by either the \fIgeneric\fP
+keyword \f(CWOPERATOR\fP or \f(CWASSIGNMENT\fP.
+.ip \*(cfSCM_INDEPENDENT\*(rf
+current statement is an \f(CWINDEPENDENT\fP statement;
+any exposed identifer after \f(CWINDEPENDENT\fP is either the \f(CWNEW\fP
+or \f(CWONHOME\fP keyword.
+.nr ii 5n
+.sp
+.sh 3 "Encoded Tokens"
+When routine
+.i crunch
+is processing a statement, it is removing whitespace characters, thus
+compressing the statement buffer. Generally, characters are just copied
+from their current positions to positions to their left in \*(cfstmtb\*(rf.
+In certain cases,
+.i crunch
+recognizes tokens and places a special marker in \*(cfstmtb\*(rf
+to communicate to
+.i get_token
+that what follows is an encoded token.
+These markers are just integer values chosen from the set of
+non-printing characters. The following C macros describe the markers:
+.nr ii \w'\*(cfCH_HOLLERITH\*(rf'+2n
+.ip \*(cfCH_X\*(rf
+hexadecimal constant - the sequence of characters following this value
+are the digits of the constant.  The sequence is terminated by a single
+quote.
+Note that when
+.i get_token
+sees this case and the following case, it calls the routine
+.i get_nondec
+to extract the constant and returns the constant value as the token value
+and the non-decimal constant token id.
+.ip \*(cfCH_O\*(rf
+octal constant - the sequence of characters following this value
+are the digits of the constant.  The sequence is terminated by a single
+quote.
+.ip \*(cfCH_B\*(rf
+binary constant - the sequence of characters following this value
+are the digits of the constant.  The sequence is terminated by a single
+quote.
+.ip \*(cfCH_HOLLERITH\*(rf
+hollerith constant - the following 2 positions contain the symbol table
+pointer for the constant.
+.ip \*(cfCH_STRING\*(rf
+character constant - the following 2 positions contain the symbol table
+pointer for the constant.
+.ip \*(cfCH_IOLP\*(rf
+this marker is actually stored when the statement is recognized as an
+I/O statement.
+The left parenthesis after the I/O keyword is replaced by this marker.
+When
+.i get_token
+sees this marker, the token TK_IOLP is returned.
+Without this special token, the grammar is ambiguous.
+.ip \*(cfCH_IMLP\*(rf
+this marker is actually stored when the statement is recognized as
+an \*(cfIMPLICIT\*(rf statement.
+The left parenthesis after the IMPLICIT keyword which encloses the
+implicit specifiers is replaced by this marker.
+When
+.i get_token
+sees this marker, the token TK_IMLP is returned.
+Without this special token, the grammar is ambiguous.
+.nr ii 5n
+.sp

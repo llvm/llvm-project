@@ -22,6 +22,9 @@
 
 #if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
 
+# This is first because Next32 frontend currently also defines __x86_64__.
+#if !defined(__NEXT__)
+
 #if defined(__i386__)
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #
@@ -1245,6 +1248,8 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
   jr      $ra
 
 #endif
+
+#endif /* !defined(__NEXT__) */
 
 #endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
 

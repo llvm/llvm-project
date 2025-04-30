@@ -1,0 +1,21 @@
+!
+! Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+! See https://llvm.org/LICENSE.txt for license information.
+! SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+!
+
+! flang2 should not crash when invoked with no command line argument.
+! RUN: not %flang2 > %t 2>&1
+! RUN: FileCheck --check-prefix=CHECK-NO-CMDLINE-ARG %s < %t
+
+! CHECK-NO-CMDLINE-ARG: F90-F-0001-Source input file name not specified
+
+! flang2 should print a warning for a blank .ilm file.
+! RUN: %flang2 %S/Inputs/blank.ilm > %t 2>&1
+! RUN: FileCheck --check-prefix=CHECK-BLANK-INPUT %s < %t
+
+! flang2 should print a warning for a blank .stb file.
+! RUN: %flang2 %S/Inputs/nop.ilm -stbfile %S/Inputs/blank.stb > %t 2>&1
+! RUN: FileCheck --check-prefix=CHECK-BLANK-INPUT %s < %t
+
+! CHECK-BLANK-INPUT: F90-W-0006-Input file empty

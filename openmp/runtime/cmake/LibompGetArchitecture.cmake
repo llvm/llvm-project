@@ -15,7 +15,9 @@
 # - Returns the architecture in return_arch
 function(libomp_get_architecture return_arch)
   set(detect_arch_src_txt "
-    #if defined(__KNC__)
+    #if defined(__NEXT32__)
+      #error ARCHITECTURE=next32
+    #elif defined(__KNC__)
       #error ARCHITECTURE=mic
     #elif defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
       #error ARCHITECTURE=x86_64

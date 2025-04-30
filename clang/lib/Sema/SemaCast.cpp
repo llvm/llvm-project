@@ -2685,6 +2685,24 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
       Nested = true;
       DiagID = diag::ext_nested_pointer_qualifier_mismatch;
     }
+  } else {
+    const Type *DestPtr, *SrcPtr;
+    unsigned DiagID = diag::err_typecheck_incompatible_address_space;
+    DestPtr = Self.getASTContext().getCanonicalType(DestType.getTypePtr()),
+    SrcPtr = Self.getASTContext().getCanonicalType(SrcType.getTypePtr());
+    if (isa<PointerType>(DestPtr) && isa<PointerType>(SrcPtr)) {
+      const PointerType *DestPPtr = cast<PointerType>(DestPtr);
+      const PointerType *SrcPPtr = cast<PointerType>(SrcPtr);
+      QualType DestPPointee = DestPPtr->getPointeeType();
+      QualType SrcPPointee = SrcPPtr->getPointeeType();
+      if (DestPPointee.getAddressSpace() != SrcPPointee.getAddressSpace() &&
+          (isNext32AddrSpaceSpecific(DestPPointee.getAddressSpace()) &&
+           isNext32AddrSpaceSpecific(SrcPPointee.getAddressSpace()))) {
+        Self.Diag(OpRange.getBegin(), DiagID)
+            << SrcType << DestType << Sema::AA_Casting
+            << SrcExpr.get()->getSourceRange();
+      }
+    }
   }
 }
 

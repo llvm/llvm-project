@@ -1,0 +1,53 @@
+SCRIPT_PATH=$(cd $(dirname $0) && pwd)
+CFG=Release
+BUILD_DIR=../Release
+BUILD_SYSROOT=${BUILD_DIR}/sysroot/usr
+LIB_CFG=RelWithDebInfo
+INSTALL_SYSROOT=${NEXT_HOME}/sysroot/usr
+export FC=${NEXTCC_BUILD_DIR}/nextflang # note this is not built yet!
+
+DEFAULT_MAX_NPROC=16
+NPROC=${NPROC_CI:-$(nproc)}
+NPROC=$((NPROC < DEFAULT_MAX_NPROC ? NPROC : DEFAULT_MAX_NPROC))
+
+LLVM_DIR_NAME=llvm
+LLVM_BUILD_DIR=${BUILD_DIR}/${LLVM_DIR_NAME}
+LLVM_INSTALL_PREFIX=${NEXT_HOME}/${LLVM_DIR_NAME}
+LLVM_BINDIR=${LLVM_BUILD_DIR}/bin
+LLVM_LIBDIR=${LLVM_BUILD_DIR}/lib
+LLVM_INCDIR=${LLVM_BUILD_DIR}/include
+LLVM_CONFIG=${LLVM_BINDIR}/llvm-config
+BUILD_TARGET="install"
+
+NEXTSILICON_RISC_OMP=TRUE
+
+function build_openmp() {
+    # [ $CLEAN_COMPONENTS == true ] && rm -rf openmp
+    #mkdir -p ../openmp
+    pushd ../Release/openmp
+
+
+
+    cmake -GNinja ../../openmp \
+     -DCMAKE_BUILD_TYPE=${LIB_CFG} \
+     -DCMAKE_INSTALL_PREFIX=${INSTALL_SYSROOT} \
+     -DLIBOMP_LIBFLAGS="-lm" \
+     -DOPENMP_LLVM_TOOLS_DIR=${LLVM_BINDIR} \
+     -DLIBOMP_NEXTSILICON=${NEXTSILICON_RISC_OMP} \
+     -DLIBOMP_NEXTSILICON_LOOP_SCHEDULE_BY_THREAD=TRUE \
+     -DLIBOMP_NEXTSILICON_ATOMICS_BYPASS=TRUE \
+     -DLIBOMP_NEXTSILICON_MULTI_INJECT=TRUE \
+     -DLIBOMP_OMPT_OPTIONAL=FALSE \
+     -DLIBOMP_ENABLE_FORTRAN_TESTS=ON \
+     -DOPENMP_TEST_FLANG_COMPILER=${FC} \
+     -DOPENMP_ENABLE_LIBOMPTARGET=FALSE
+
+    ninja -j ${NPROC} ${BUILD_TARGET}
+
+    # NOTE/HACK: See BUILD_SYSROOT explanation above
+    cmake -DCMAKE_INSTALL_PREFIX=${BUILD_SYSROOT} -P cmake_install.cmake
+
+ #   popd
+}
+
+build_openmp

@@ -37,4 +37,3 @@ define void @wrong_implicit_type(<4 x i32> %a) {
   %add = add <4 x i32> %a, splat (i8 7)
   ret void
 }
-

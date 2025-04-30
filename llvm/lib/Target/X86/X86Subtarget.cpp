@@ -32,6 +32,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -311,6 +312,12 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     PreferVectorWidth = 128;
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
+
+  if (UseNext32Vectorization && !hasAVX()) {
+    WithColor::warning() << "Next32 vectorization needs AVX support, "
+                            "enabling AVX.\n";
+    X86SSELevel = AVX;
+  }
 }
 
 X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,

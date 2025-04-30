@@ -1,0 +1,85 @@
+libc {
+  GLIBC_2.0 {
+    # global variables
+    __daylight; __timezone; __tzname;
+
+    # functions with special/multiple interfaces
+    __adjtimex;
+
+    # functions used in other libraries
+    __gmtime_r; __gettimeofday;
+
+    # variables in normal name space
+    daylight; timezone; tzname;
+
+    # a*
+    adjtime; adjtimex; asctime; asctime_r;
+
+    # c*
+    clock; ctime; ctime_r;
+
+    # d*
+    difftime; dysize;
+
+    # f*
+    ftime;
+
+    # g*
+    getitimer; gettimeofday; gmtime; gmtime_r;
+
+    # l*
+    localtime; localtime_r;
+
+    # m*
+    mktime;
+
+    # s*
+    setitimer; settimeofday; stime; strftime; strptime;
+
+    # t*
+    time; timegm; timelocal; tzset;
+  }
+  GLIBC_2.1 {
+    # variables in normal name space
+    getdate_err;
+
+    # g*
+    getdate; getdate_r;
+  }
+  GLIBC_2.2 {
+    # w*
+    wcsftime;
+
+    # c*; actually in librt in version 2.2, moved to libc in 2.17
+    clock_getres; clock_gettime; clock_settime; clock_getcpuclockid;
+    clock_nanosleep;
+  }
+  GLIBC_2.3 {
+    # these internal names are used by libstdc++
+    __strftime_l; __wcsftime_l;
+
+    # s*
+    strftime_l;
+    # w*
+    wcsftime_l;
+  }
+  GLIBC_2.3.2 {
+    strptime_l;
+  }
+  GLIBC_2.16 {
+    timespec_get;
+  }
+  GLIBC_2.17 {
+    # c*
+    clock_getres; clock_gettime; clock_settime; clock_getcpuclockid;
+    clock_nanosleep;
+  }
+  GLIBC_2.34 {
+    timespec_getres;
+  }
+  GLIBC_PRIVATE {
+    # same as clock_gettime; used in other libraries
+    __clock_gettime;
+    __clock_gettime64;
+  }
+}

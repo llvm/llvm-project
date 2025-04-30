@@ -1,0 +1,5 @@
+wordsize-64
+# SPARC uses IEEE 754 floating point.
+ieee754/ldbl-128
+ieee754/dbl-64
+ieee754/flt-32

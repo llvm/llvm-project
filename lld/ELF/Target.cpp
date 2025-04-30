@@ -91,6 +91,8 @@ TargetInfo *elf::getTarget() {
     return getSystemZTargetInfo();
   case EM_X86_64:
     return getX86_64TargetInfo();
+  case EM_NEXT32:
+    return getNext32TargetInfo();
   default:
     fatal("unsupported e_machine value: " + Twine(config->emachine));
   }

@@ -1,0 +1,1153 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Ukrainian Language Locale for Ukraine
+% Source:
+% Contact: Volodymyr M. Lisivka
+% Email: v_lisivka@users.sourceforge.net
+% Contact: Max Kutny
+% Email: mkutny@gmail.com
+% Language: uk
+% Territory: UA
+% Revision: 2.1.12
+% Date: 2006-05-20
+% Application: general
+% Users: general
+%
+% Keywords in this file are treated according to ISO/IEC 14652
+% http://anubis.dkuug.dk/jtc1/sc22/wg20/docs/14652fcd.txt
+%
+% Minor fixes and overall cleanup by Max Kutny <mkutny@gmail.com>
+%
+
+
+LC_IDENTIFICATION
+title      "Ukrainian Language Locale for Ukraine"
+source     ""
+address    ""
+contact    "GNU libc maintainers"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Ukrainian"
+territory  "Ukraine"
+revision   "2.1.12"
+date       "2006-05-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+
+LC_CTYPE
+
+copy "i18n"
+
+translit_start
+
+% http://www.rada.gov.ua/translit.htm
+% UKRAINIAN-ENGLISH TRANSLITERATION TABLE
+%
+% On 19 April 1996, an official Ukrainian-English transliteration system
+% was adopted by the Ukrainian Legal Terminology Commission (Decision
+% No 9).
+%
+%    * Use of the approved system is not mandatory for the transliteration
+% of foreign names into Ukrainian.
+%    * Transliteration should be made directly between Ukrainian and English
+% without the use of any intermediary languages.
+%    * Decision No9, in accordance with the Legal Terminology Commission's
+% express authority, is binding only for the transliteration of Ukrainian
+% names in English in legislative and official acts.
+%    * For brevity's sake, the system routinely allows for names such as the
+% city of 'Zaporizhzhia' to be given as 'Zaporizhia,' 'L`viv' as 'Lviv',
+% etc. Also included is a short list of official spellings for miscellaneous
+% terms: 'Ukraine' (no use of the article 'the'), 'Crimea' (as opposed to
+% 'Krym'), 'Black Sea,' and 'Sea of Azov'. In certain cases, 'traditional'
+% forms may be shown in parentheses after the official form:
+% 'Dnipro (Dnieper).'
+%    * In addition, apostrophe marks and softening marks may be omitted upon
+%  transliteration into English.
+%
+% Ukrainian  English  Note  Example
+% letter     letter
+%
+
+% <U0410>	<U0410>	-	<U0410><U043B><U0443><U0448><U0442><U0430> - Alushta
+<U0410> "<U0041>"
+<U0430> "<U0061>"
+
+% <U0411>	B	-	<U0411><U043E><U0440><U0449><U0430><U0433><U0456><U0432><U043A><U0430> - Borschahivka
+<U0411> "<U0042>"
+<U0431> "<U0062>"
+
+% <U0412>	V	-	<U0412><U0438><U0448><U0433><U043E><U0440><U043E><U0434> - Vyshhorod
+<U0412> "<U0056>"
+<U0432> "<U0076>"
+
+% <U0413>	H, gh	<U041D>-in most cases, gh - when recreating the combination "<U0437><U0433>"	<U0413><U0430><U0434><U044F><U0447> - Hadiach; <U0417><U0433><U043E><U0440><U0430><U043D><U0438> - Zghorany
+<U0413> "<U0048>"
+<U0433> "<U0068>"
+<U0417><U0413> "<U005A><U0047><U0048>"
+<U0417><U0433> "<U005A><U0067><U0068>"
+<U0437><U0413> "<U007A><U0047><U0048>"
+<U0437><U0433> "<U007A><U0067><U0068>"
+
+% <U0490>	G	-	<U0490><U0430><U043B><U0430><U0491><U0430><U043D> - Galagan
+<U0490> "<U0047>"
+<U0491> "<U0067>"
+
+% <U0414>	D	-	<U0414><U043E><U043D> - Don
+<U0414> "<U0044>"
+<U0434> "<U0064>"
+
+% <U0415>	E	-	<U0420><U0456><U0432><U043D><U0435> - Rivne
+<U0415> "<U0045>"
+<U0435> "<U0065>"
+
+% <U0404>	Ye, ie	Ye - at the beginning of words, ie - in other positions 	<U0404><U043D><U0430><U043A><U0456><U0454><U0432><U0435> - Yenakiieve; <U041D><U0430><U0454><U043D><U043A><U043E> - Naienko
+<U0404> "<U0059><U0045>"
+<U0454> "<U0079><U0065>"
+% TODO: 'ie' if after any letter
+
+% <U0416>	Zh	-	<U0416><U0438><U0442><U043E><U043C><U0438><U0440> - Zhytomyr
+<U0416> "<U005A><U0048>"
+<U0436> "<U007A><U0068>"
+
+% <U0417>	Z	-	<U0417><U0430><U043A><U0430><U0440><U043F><U0430><U0442><U0442><U044F> - Zakarpattia
+<U0417> "<U005A>"
+<U0437> "<U007A>"
+
+% <U0418>	Y	-	<U041C><U0435><U0434><U0432><U0438><U043D> - Medvyn
+<U0418> "<U0059>"
+<U0438> "<U0079>"
+
+% <U0406>	I	-	<U0406><U0440><U0448><U0430><U0432><U0430> - Irshava
+<U0406> "<U0049>"
+<U0456> "<U0069>"
+
+% <U0407>	Yi, I	Yi - at the beginning of words, i - in other positions	<U0407><U0436><U0430><U043A><U0435><U0432><U0438><U0447> - Yizhakevych; <U041A><U0430><U0434><U0456><U0457><U0432><U043A><U0430> - Kadiivka
+<U0407> "<U0059><U0049>"
+<U0457> "<U0079><U0069>"
+
+% TODO: 'i' if after any letter
+% <U0419>	Y, i	Y - at the beginning of words, i - in other positions	<U0419><U043E><U0441><U0438><U043F><U0456><U0432><U043A><U0430> - Yosypivka; <U0421><U0442><U0440><U0438><U0439> - Stryi
+<U0419> "<U0059>"
+<U0439> "<U0079>"
+% TODO: 'i' if after any letter
+
+% <U041A>	K	-	<U041A><U0438><U0457><U0432> - Kyiv
+<U041A> "<U004B>"
+<U043A> "<U006B>"
+
+% <U041B>	L	-	<U041B><U0435><U0431><U0435><U0434><U0438><U043D> - Lebedyn
+<U041B> "<U004C>"
+<U043B> "<U006C>"
+
+% <U041C>	M	-	<U041C><U0438><U043A><U043E><U043B><U0430><U0457><U0432> - Mykolaiv
+<U041C> "<U004D>"
+<U043C> "<U006D>"
+
+% <U041D>	N	-	<U041D><U0456><U0436><U0438><U043D> - Nizhin
+<U041D> "<U004E>"
+<U043D> "<U006E>"
+
+% <U041E>	O	-	<U041E><U0434><U0435><U0441><U0430> - Odesa
+<U041E> "<U004F>"
+<U043E> "<U006F>"
+
+% <U041F>	P	-	<U041F><U043E><U043B><U0442><U0430><U0432><U0430> - Poltava
+<U041F> "<U0050>"
+<U043F> "<U0070>"
+
+% <U0420>	R	-	<U0420><U043E><U043C><U043D><U0438> - Romny
+<U0420> "<U0052>"
+<U0440> "<U0072>"
+
+% <U0421>	S	-	<U0421><U0443><U043C><U0438> - Sumy
+<U0421> "<U0053>"
+<U0441> "<U0073>"
+
+% <U0422>	T	-	<U0422><U0435><U0442><U0435><U0440><U0456><U0432> - Teteriv
+<U0422> "<U0054>"
+<U0442> "<U0074>"
+
+% <U0423>	U	-	<U0423><U0436><U0433><U043E><U0440><U043E><U0434> - Uzhhorod
+<U0423> "<U0055>"
+<U0443> "<U0075>"
+
+% <U0424>	F	-	<U0424><U0430><U0441><U0442><U0456><U0432> - Fastiv
+<U0424> "<U0046>"
+<U0444> "<U0066>"
+
+% <U0425>	Kh	-	<U0425><U0430><U0440><U043A><U0456><U0432> - Kharkiv
+<U0425> "<U004B><U0048>"
+<U0445> "<U006B><U0068>"
+
+% <U0426>	Ts	-	<U0411><U0456><U043B><U0430> <U0426><U0435><U0440><U043A><U0432><U0430> - Bila Tserkva
+<U0426> "<U0054><U0053>"
+<U0446> "<U0074><U0073>"
+
+% <U0427>	Ch	-	<U0427><U0435><U0440><U043D><U0456><U0432><U0446><U0456> - Chernivtsi
+<U0427> "<U0043><U0048>"
+<U0447> "<U0063><U0068>"
+
+% <U0428>	Sh	-	<U0428><U043E><U0441><U0442><U043A><U0430> - Shostka
+<U0428> "<U0053><U0048>"
+<U0448> "<U0073><U0068>"
+
+% <U0429>	Sch	-	<U0413><U043E><U0449><U0430> - Hoscha
+<U0429> "<U0053><U0043><U0048>"
+<U0449> "<U0073><U0063><U0068>"
+
+% <U042C>	`	(see commentary)	<U0420><U0443><U0441><U044C> - Rus`; <U041B><U044C><U0432><U0456><U0432> - L`viv
+<U042C> "<U0060>"
+<U044C> "<U0060>"
+
+% <U042E>	Yu, iu	Yu - at the beginning of words, iu - in other positions 	<U042E><U0440><U0456><U0439> - Yurii;<U041A><U0440><U044E><U043A><U0456><U0432><U043A><U0430> - Krukivka
+<U042E> "<U0059><U0055>"
+<U044E> "<U0079><U0075>"
+% TODO: 'iu' if after any letter
+
+% <U042F>	Ya, ia	Ya - at the beginning of words, ia - in other positions 	<U042F><U0433><U043E><U0442><U0438><U043D> - Yahotyn;I<U0447><U043D><U044F> - Ichnia
+<U042F> "<U0059><U0041>"
+<U044F> "<U0079><U0061>"
+
+% TODO: 'ia' if after any letter
+% '	'	(see commentary)	<U0417><U043D><U0430><U043C>'<U044F><U043D><U043A><U0430> - Znamianka
+
+
+% Specials:
+
+% NUMERO SIGN
+<U2116> "<U004E><U006F>"
+
+% LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+<U00AB> "<U003C><U003C>"
+
+% RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
+<U00BB> "<U003E><U003E>"
+
+translit_end
+
+END LC_CTYPE
+
+
+
+LC_COLLATE
+% Ukrainian Alpahabet (1881-1933) (old and correct)
+%
+% Аа Бб Вв Гг Ґґ Дд Ее Єє Жж Зз Ии Іі Її Йй Кк Лл Мм Нн Оо Пп Рр Сс Тт Уу Фф
+% Хх Цц Чч Шш Щщ Юю Яя Ьь
+%
+% Ukrainian Alpahabet (1933-1991) (old)
+%
+% Аа Бб Вв Гг Дд Ее Єє Жж Зз Ии Іі Її Йй Кк Лл Мм Нн Оо Пп Рр Сс Тт Уу Фф
+% Хх Цц Чч Шш Щщ Юю Яя Ьь
+%
+% Note:
+% Ukrainian letter GHE_WITH_UPTURN (Ґ) was removed from Ukrainian
+% alphabet by Stalin in 1933 and was returned back in 1991 when
+% Ukraine became independent from Soviet Union.
+%
+% Ukrainian Alphabet (1991) (current but not correct)
+%
+% Аа Бб Вв Гг Ґґ Дд Ее Єє Жж Зз Ии Іі Її Йй Кк Лл Мм Нн Оо Пп Рр Сс Тт Уу
+% Фф Хх Цц Чч Шш Щщ Ьь Юю Яя
+%
+% Note:
+% Soft sign (Ь) is not considered to be a letter and therefore should have been
+% placed at the end of the table. Unfortunately this letter was reordered in
+% Ukrainian alpabet right before Ukraine got independency (1990-1991) by Soviet
+% academic Ivanenko who tried to make MS DOS code pages compatible between
+% Russian, Ukrainian and Belarusian languages.
+%
+% See "Problemy ukrainizatcii komputeriv" N2 (UDK 681.3.06), p. 16
+% Ivanenko L. M. "Na shliakhu pobudovy <<idealnoho>> standartu abo
+% synii ptakh Neokyrylytci".
+
+copy "iso14651_t1"
+
+% CLDR collation rules for Ukrainian:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/uk.xml)
+%
+% 		<collation type="standard">
+% 			<cr><![CDATA[
+% [reorder Cyrl]
+% # The root collation already sorts й/Й as a base letter.
+% &Г<ґ<<<Ґ
+% &ꙇ<ї<<<\uA676<<<Ї  # U+A676=COMBINING CYRILLIC LETTER YI
+% 			]]></cr>
+% 		</collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/uk.xml)
+%
+% <exemplarCharacters type="index">[А Б В Г Ґ Д Е Є Ж З И І Ї Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Щ Ю Я]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <cyrillic-ghe-with-upturn>
+collating-symbol <cyrillic-yi>
+
+reorder-after <RES-1>
+<COMPATCAP>
+<CAP>
+<COMPAT>
+<MIN>
+
+% Put Cyrillic before Latin because CLDR has:
+%
+% [reorder Cyrl]
+%
+% and because the old glibc collation for Ukrainian also did put
+% Cyrillic before Latin.
+%
+% I copied the whole Cyrillic block from iso14651_t1_common here.
+%
+% I cannot find any better way doing this.
+reorder-after <BEFORE-LATIN>
+<S0430> % CYRILLIC SMALL LETTER A
+<S04D9> % CYRILLIC SMALL LETTER SCHWA
+<S04D5> % CYRILLIC SMALL LIGATURE A IE
+<S0431> % CYRILLIC SMALL LETTER BE
+<S0432> % CYRILLIC SMALL LETTER VE
+<S0433> % CYRILLIC SMALL LETTER GHE
+<S0493> % CYRILLIC SMALL LETTER GHE WITH STROKE
+<S04FB> % CYRILLIC SMALL LETTER GHE WITH STROKE AND HOOK
+<S0495> % CYRILLIC SMALL LETTER GHE WITH MIDDLE HOOK
+<S04F7> % CYRILLIC SMALL LETTER GHE WITH DESCENDER
+<S0434> % CYRILLIC SMALL LETTER DE
+<S0501> % CYRILLIC SMALL LETTER KOMI DE
+<SA681> % CYRILLIC SMALL LETTER DWE
+<S0452> % CYRILLIC SMALL LETTER DJE
+<SA663> % CYRILLIC SMALL LETTER SOFT DE
+<S0503> % CYRILLIC SMALL LETTER KOMI DJE
+<S0499> % CYRILLIC SMALL LETTER ZE WITH DESCENDER
+<S0435> % CYRILLIC SMALL LETTER IE
+<S0454> % CYRILLIC SMALL LETTER UKRAINIAN IE
+<S0436> % CYRILLIC SMALL LETTER ZHE
+<S052B> % CYRILLIC SMALL LETTER DZZHE
+<SA685> % CYRILLIC SMALL LETTER ZHWE
+<S0497> % CYRILLIC SMALL LETTER ZHE WITH DESCENDER
+<S0437> % CYRILLIC SMALL LETTER ZE
+<SA641> % CYRILLIC SMALL LETTER ZEMLYA
+<S0505> % CYRILLIC SMALL LETTER KOMI ZJE
+<S0511> % CYRILLIC SMALL LETTER REVERSED ZE
+<SA643> % CYRILLIC SMALL LETTER DZELO
+<S0455> % CYRILLIC SMALL LETTER DZE
+<SA645> % CYRILLIC SMALL LETTER REVERSED DZE
+<S04E1> % CYRILLIC SMALL LETTER ABKHASIAN DZE
+<SA689> % CYRILLIC SMALL LETTER DZZE
+<S0507> % CYRILLIC SMALL LETTER KOMI DZJE
+<SA683> % CYRILLIC SMALL LETTER DZWE
+<S0438> % CYRILLIC SMALL LETTER I
+<S048B> % CYRILLIC SMALL LETTER SHORT I WITH TAIL
+<S0456> % CYRILLIC SMALL LETTER BYELORUSSIAN-UKRAINIAN I
+<SA647> % CYRILLIC SMALL LETTER IOTA
+<S0439> % CYRILLIC SMALL LETTER SHORT I
+<S0458> % CYRILLIC SMALL LETTER JE
+<SA649> % CYRILLIC SMALL LETTER DJERV
+<S043A> % CYRILLIC SMALL LETTER KA
+<S049B> % CYRILLIC SMALL LETTER KA WITH DESCENDER
+<S04C4> % CYRILLIC SMALL LETTER KA WITH HOOK
+<S04A1> % CYRILLIC SMALL LETTER BASHKIR KA
+<S049F> % CYRILLIC SMALL LETTER KA WITH STROKE
+<S049D> % CYRILLIC SMALL LETTER KA WITH VERTICAL STROKE
+<S051F> % CYRILLIC SMALL LETTER ALEUT KA
+<S051B> % CYRILLIC SMALL LETTER QA
+<S043B> % CYRILLIC SMALL LETTER EL
+<S1D2B> % CYRILLIC LETTER SMALL CAPITAL EL
+<S04C6> % CYRILLIC SMALL LETTER EL WITH TAIL
+<S052F> % CYRILLIC SMALL LETTER EL WITH DESCENDER
+<S0513> % CYRILLIC SMALL LETTER EL WITH HOOK
+<S0521> % CYRILLIC SMALL LETTER EL WITH MIDDLE HOOK
+<S0459> % CYRILLIC SMALL LETTER LJE
+<SA665> % CYRILLIC SMALL LETTER SOFT EL
+<S0509> % CYRILLIC SMALL LETTER KOMI LJE
+<S0515> % CYRILLIC SMALL LETTER LHA
+<S043C> % CYRILLIC SMALL LETTER EM
+<S04CE> % CYRILLIC SMALL LETTER EM WITH TAIL
+<SA667> % CYRILLIC SMALL LETTER SOFT EM
+<S043D> % CYRILLIC SMALL LETTER EN
+<S0529> % CYRILLIC SMALL LETTER EN WITH LEFT HOOK
+<S04CA> % CYRILLIC SMALL LETTER EN WITH TAIL
+<S04A3> % CYRILLIC SMALL LETTER EN WITH DESCENDER
+<S04C8> % CYRILLIC SMALL LETTER EN WITH HOOK
+<S0523> % CYRILLIC SMALL LETTER EN WITH MIDDLE HOOK
+<S04A5> % CYRILLIC SMALL LIGATURE EN GHE
+<S045A> % CYRILLIC SMALL LETTER NJE
+<S050B> % CYRILLIC SMALL LETTER KOMI NJE
+<S043E> % CYRILLIC SMALL LETTER O
+<S04E9> % CYRILLIC SMALL LETTER BARRED O
+<S043F> % CYRILLIC SMALL LETTER PE
+<S0525> % CYRILLIC SMALL LETTER PE WITH DESCENDER
+<S04A7> % CYRILLIC SMALL LETTER PE WITH MIDDLE HOOK
+<S0481> % CYRILLIC SMALL LETTER KOPPA
+<S0440> % CYRILLIC SMALL LETTER ER
+<S048F> % CYRILLIC SMALL LETTER ER WITH TICK
+<S0517> % CYRILLIC SMALL LETTER RHA
+<S0441> % CYRILLIC SMALL LETTER ES
+<S050D> % CYRILLIC SMALL LETTER KOMI SJE
+<S04AB> % CYRILLIC SMALL LETTER ES WITH DESCENDER
+<S0442> % CYRILLIC SMALL LETTER TE
+<SA68D> % CYRILLIC SMALL LETTER TWE
+<S050F> % CYRILLIC SMALL LETTER KOMI TJE
+<S04AD> % CYRILLIC SMALL LETTER TE WITH DESCENDER
+<SA68B> % CYRILLIC SMALL LETTER TE WITH MIDDLE HOOK
+<S045B> % CYRILLIC SMALL LETTER TSHE
+<S0443> % CYRILLIC SMALL LETTER U
+<S04AF> % CYRILLIC SMALL LETTER STRAIGHT U
+<S04B1> % CYRILLIC SMALL LETTER STRAIGHT U WITH STROKE
+<SA64B> % CYRILLIC SMALL LETTER MONOGRAPH UK
+<S0479> % CYRILLIC SMALL LETTER UK
+<S0444> % CYRILLIC SMALL LETTER EF
+<S0445> % CYRILLIC SMALL LETTER HA
+<S04FD> % CYRILLIC SMALL LETTER HA WITH HOOK
+<S04FF> % CYRILLIC SMALL LETTER HA WITH STROKE
+<S04B3> % CYRILLIC SMALL LETTER HA WITH DESCENDER
+<S04BB> % CYRILLIC SMALL LETTER SHHA
+<S0527> % CYRILLIC SMALL LETTER SHHA WITH DESCENDER
+<SA695> % CYRILLIC SMALL LETTER HWE
+<S0461> % CYRILLIC SMALL LETTER OMEGA
+<S047F> % CYRILLIC SMALL LETTER OT
+<SA64D> % CYRILLIC SMALL LETTER BROAD OMEGA
+<S047D> % CYRILLIC SMALL LETTER OMEGA WITH TITLO
+<S047B> % CYRILLIC SMALL LETTER ROUND OMEGA
+<S0446> % CYRILLIC SMALL LETTER TSE
+<SA661> % CYRILLIC SMALL LETTER REVERSED TSE
+<SA68F> % CYRILLIC SMALL LETTER TSWE
+<S04B5> % CYRILLIC SMALL LIGATURE TE TSE
+<SA691> % CYRILLIC SMALL LETTER TSSE
+<S0447> % CYRILLIC SMALL LETTER CHE
+<S052D> % CYRILLIC SMALL LETTER DCHE
+<SA693> % CYRILLIC SMALL LETTER TCHE
+<S04B7> % CYRILLIC SMALL LETTER CHE WITH DESCENDER
+<S04CC> % CYRILLIC SMALL LETTER KHAKASSIAN CHE
+<S04B9> % CYRILLIC SMALL LETTER CHE WITH VERTICAL STROKE
+<SA687> % CYRILLIC SMALL LETTER CCHE
+<S04BD> % CYRILLIC SMALL LETTER ABKHASIAN CHE
+<S04BF> % CYRILLIC SMALL LETTER ABKHASIAN CHE WITH DESCENDER
+<S045F> % CYRILLIC SMALL LETTER DZHE
+<S0448> % CYRILLIC SMALL LETTER SHA
+<SA697> % CYRILLIC SMALL LETTER SHWE
+<S0449> % CYRILLIC SMALL LETTER SHCHA
+<SA64F> % CYRILLIC SMALL LETTER NEUTRAL YER
+<S2E2F> % VERTICAL TILDE
+<SA67F> % CYRILLIC PAYEROK
+<S044A> % CYRILLIC SMALL LETTER HARD SIGN
+<SA651> % CYRILLIC SMALL LETTER YERU WITH BACK YER
+<S044B> % CYRILLIC SMALL LETTER YERU
+<S044C> % CYRILLIC SMALL LETTER SOFT SIGN
+<S048D> % CYRILLIC SMALL LETTER SEMISOFT SIGN
+<S0463> % CYRILLIC SMALL LETTER YAT
+<SA653> % CYRILLIC SMALL LETTER IOTIFIED YAT
+<S044D> % CYRILLIC SMALL LETTER E
+<S044E> % CYRILLIC SMALL LETTER YU
+<SA655> % CYRILLIC SMALL LETTER REVERSED YU
+<SA657> % CYRILLIC SMALL LETTER IOTIFIED A
+<S044F> % CYRILLIC SMALL LETTER YA
+<S0519> % CYRILLIC SMALL LETTER YAE
+<S0465> % CYRILLIC SMALL LETTER IOTIFIED E
+<S0467> % CYRILLIC SMALL LETTER LITTLE YUS
+<SA659> % CYRILLIC SMALL LETTER CLOSED LITTLE YUS
+<S046B> % CYRILLIC SMALL LETTER BIG YUS
+<SA65B> % CYRILLIC SMALL LETTER BLENDED YUS
+<S0469> % CYRILLIC SMALL LETTER IOTIFIED LITTLE YUS
+<SA65D> % CYRILLIC SMALL LETTER IOTIFIED CLOSED LITTLE YUS
+<S046D> % CYRILLIC SMALL LETTER IOTIFIED BIG YUS
+<S046F> % CYRILLIC SMALL LETTER KSI
+<S0471> % CYRILLIC SMALL LETTER PSI
+<S0473> % CYRILLIC SMALL LETTER FITA
+<S0475> % CYRILLIC SMALL LETTER IZHITSA
+<SA65F> % CYRILLIC SMALL LETTER YN
+<S04A9> % CYRILLIC SMALL LETTER ABKHASIAN HA
+<S051D> % CYRILLIC SMALL LETTER WE
+<S04CF> % CYRILLIC SMALL LETTER PALOCHKA
+
+% &Г<ґ<<<Ґ
+reorder-after <S0433> % г CYRILLIC SMALL LETTER GHE
+<cyrillic-ghe-with-upturn>
+
+% &ꙇ<ї<<<\uA676<<<Ї  # U+A676=COMBINING CYRILLIC LETTER YI
+reorder-after <SA647> % ꙇ CYRILLIC SMALL LETTER IOTA
+<cyrillic-yi>
+
+% &Г<ґ<<<Ґ
+<U0491> <cyrillic-ghe-with-upturn>;"<BASE>";"<MIN>";<U0491> % ґ CYRILLIC SMALL LETTER GHE WITH UPTURN
+<U0490> <cyrillic-ghe-with-upturn>;"<BASE>";"<CAP>";<U0490> % Ґ CYRILLIC CAPITAL LETTER GHE WITH UPTURN
+
+% &ꙇ<ї<<<\uA676<<<Ї  # U+A676=COMBINING CYRILLIC LETTER YI
+<U0457> <cyrillic-yi>;"<BASE>";"<MIN>";<U0457> % ї CYRILLIC SMALL LETTER YI
+<UA676> <cyrillic-yi>;"<BASE>";"<COMPAT>";<UA676> % ꙶ COMBINING CYRILLIC LETTER YI
+<U0407> <cyrillic-yi>;"<BASE>";"<CAP>";<U0407> % Ї CYRILLIC CAPITAL LETTER YI
+
+% Make ʼ U+02BC MODIFIER LETTER APOSTROPHE behave like
+% ' U+0027 APOSTROPHE and ’ U+2019 RIGHT SINGLE QUOTATION MARK
+% to make these sort close to each other. The original entry in
+% iso14651_t1_common for ʼ U+S02BC MODIFIER LETTER APOSTROPHE
+% looks like:
+%
+%     <U02BC> <S02BC>;<BASE>;<MIN>;<U02BC> % MODIFIER LETTER APOSTROPHE
+%
+% i.e. it is treated as a base letter whereas U+0027 and U+2019 are
+% treated as punctuation.
+%
+% See also: https://en.wikipedia.org/wiki/Modifier_letter_apostrophe
+%
+% These apostrophe variants are sorted in  the order of the
+% following lines:
+<U0027> IGNORE;IGNORE;IGNORE;<U0027> % APOSTROPHE
+<U2019> IGNORE;IGNORE;IGNORE;<U2019> % RIGHT SINGLE QUOTATION MARK
+<U02BC> IGNORE;IGNORE;IGNORE;<U02BC> % MODIFIER LETTER APOSTROPHE
+
+reorder-end
+
+
+END LC_COLLATE
+
+
+
+LC_MESSAGES
+% WARNING: symbols "Y" and "Cyrillic_N" are placed at one key in Ukrainian keyboard
+% layout although the meaning is semantically opposite ("Y" stands for "Yes"
+% while "Cyrillic_N" stands for "No").
+%
+% This problem may be dealt with by requiring at least two letters to be
+% entered in Ukrainian language.
+
+% A regular expression that describes possible yes-responses
+% "y", "Y", "+", "ta" or "tak" in Cyrillic
+yesexpr "^([+1Yy]|[<U0422><U0442>][<U0410><U0430>][<U041A><U043A>]?)$"
+
+% WARNING: symbols "N" and "Cyrillic_T" are placed at one key in Ukrainian
+% keyboard layout although the meaning is semantically opposite ("N" stands for
+% "No" while "Cyrillic_T" stands for "Yes").
+%
+% We may require two Ukrainian letters as input to deal with this potential
+% problem.
+
+% A regular expression that describes possible no-responses.
+% "n", "N", "-" or word "ni" in Cyrillic
+noexpr  "^([-0Nn]|[<U041D><U043D>][<U0406><U0456>])$"
+
+% Output string for ``yes'' ("tak").
+yesstr "<U0442><U0430><U043A>"
+
+% Output string for ``no'' ("ni").
+nostr "<U043D><U0456>"
+
+END LC_MESSAGES
+
+
+
+LC_MONETARY
+
+% Examples:
+%
+% 100,00 hr
+% -100,00 hr
+% UAH 100,00
+% UAH -100,00
+%
+%         0,01 hr
+%         0,10 hr
+%         1,00 hr
+%        10,00 hr
+%       100,00 hr
+%      1000,00 hr (EXCEPTION)
+%    10 000,00 hr
+%   100 000,00 hr
+% 1 000 000,00 hr
+% ...
+%
+% Note:
+% There is potential conflict between "hryvnya" ("hr", "hrv.", money),
+% "hram" ("h","hr.", weight) and "hodyna" ("hod","hod.", time),
+% because some people uses "h" for "hodyny", "hr" for "hramy", etc.
+%
+% 200h - 200 hram (weight)
+% 200 hr. - 200 hram (weight)
+% 200hd - 200 hodyn (time)
+% 200 hod. - 200 hodyn (time)
+% 200hr - 200 hryven (money)
+% 200 hrv. - 200 hryven (money)
+
+% the local currency symbol
+currency_symbol           "<U0433><U0440><U043D>." % hr (hryvnya)
+
+% This must be a 4-character string containing the international currency
+% symbol as defined by the ISO 4217 standard (three characters) followed
+% by a separator.
+%
+% DSTU ISO 3166
+% Code   Name    Name in English language
+% UAH    <U0433><U0440><U0438><U0432><U043D><U044F>  hryvnya
+int_curr_symbol           "UAH "
+
+% This string is used as the decimal delimiter when formatting monetary
+% quantities.
+% see LC_NUMERIC:decimal_point
+mon_decimal_point         ","
+
+% This string is used as a thousands separator when formatting monetary
+% quantities.
+% see LC_NUMERIC:thousands separator
+mon_thousands_sep         "<U202F>" % <NNBSP> (0X202F)
+
+% Define  the  size of each group of digits in formatted monetary
+% quantities.  The operand is a sequence of integers separated by
+% semicolons. Each integer specifies the number of digits in each
+% group,  with the initial integer defining the size of the group
+% immediately  preceding the decimal delimiter, and the following
+% integers  defining the preceding groups. If the last integer is
+% not  -1,  then the size of the previous group (if any) shall be
+% repeatedly  used  for  the remainder of the digits. If the last
+% integer is -1, then no further grouping shall be performed.
+%
+% FIXME:
+%   Note difference between "123 456 789,01" and "1234,56".
+%   Unfortunately, it can't be implemented with current (2.3.6) glibc.
+mon_grouping              3;3
+
+% String that is used to indicate a positive sign for monetary
+% quantities
+positive_sign             ""
+
+% String that is used to indicate a negative sign for monetary
+% quantities
+negative_sign             "-"
+
+% An integer representing the number of fractional digits (those to the right of
+% the decimal delimiter) to be written in a formatted monetary quantity using
+% int_curr_symbol.
+int_frac_digits           2
+
+% An integer representing the number of fractional digits (those to the right of
+% the decimal delimiter) to be written in a formatted monetary quantity using
+% currency_symbol.
+frac_digits               2
+
+% 1 - the currency_symbol or int_curr_symbol should precede the
+% formatted monetary quantity.
+% 0 - the symbol succeeds the value.
+p_cs_precedes             0
+int_p_cs_precedes         1
+
+% 0 - the currency_symbol succeeds the negative value.
+% 1 - the currency_symbol precedes the negative value.
+n_cs_precedes             0
+int_n_cs_precedes         1
+
+% 0 - means that no space should be printed between the currency_symbol
+% and the value for a monetary quantity with a non-negative value.
+% 1 - means that a space should be printed between the currency_symbol
+% and the value.
+% 2 - means that a space should be printed between the symbol and the
+% sign string, if adjacent.
+p_sep_by_space            2
+int_p_sep_by_space        2
+
+% 0 - no space separates the currency_symbol or int_curr_symbol from the
+% value for a negative monetary quantity.
+% 1 - a space separates the symbol from the value.
+% 2 - a space separates the symbol and the sign string, if adjacent.
+n_sep_by_space            1
+int_n_sep_by_space        1
+
+% An integer set to a value indicating the positioning of the
+% positive_sign for a monetary quantity with a non-negative value.
+%
+% 0 - Parentheses enclose the quantity and the currency_symbol or
+% int_curr_symbol.
+% 1 - The sign string precedes the quantity and the currency_symbol or the
+% int_curr_symbol.
+% 2 - The sign string succeeds the quantity and the currency_symbol or the
+% int_curr_symbol.
+% 3 - The sign string precedes the currency_symbol or the int_curr_symbol.
+% 4 - The sign string succeeds the currency_symbol or the int_curr_symbol.
+p_sign_posn               1
+int_p_sign_posn           4
+
+% An integer set to a value indicating the positioning of the
+% negative_sign for a monetary quantity with a negative value.
+%
+% 0 - Parentheses enclose the quantity and the currency_symbol or
+% int_curr_symbol.
+% 1 - The sign string precedes the quantity and the currency_symbol or the
+% int_curr_symbol.
+% 2 - The sign string succeeds the quantity and the currency_symbol or the
+% int_curr_symbol.
+% 3 - The sign string precedes the currency_symbol or the int_curr_symbol.
+% 4 - The sign string succeeds the currency_symbol or the int_curr_symbol.
+n_sign_posn               1
+int_n_sign_posn           4
+
+END LC_MONETARY
+
+
+
+LC_NUMERIC
+
+% Examples:
+%
+%         1
+%	 10
+%       100
+%      1000 (EXCEPTION)
+%    10 000
+%   100 000
+% 1 000 000
+%
+% 1,0
+% 0,1
+% 0,01
+% 0,001
+% 0,0001
+% 0,00001
+%
+%  1
+% -1
+%
+% List with numbers - 1,0; 2,0; 3,0; 4,0.
+%
+% Note:
+% We use ';' as separator between numbers.
+
+% The string that will be used as the decimal delimiter when formatting
+% numeric quantities.
+decimal_point             "," % see LC_MONETARY:mon_decimal_pint
+% Comma cause lot of problems - changed to dot.
+% decimal_point             "." % see LC_MONETARY:mon_decimal_pint
+
+% The string that will be used as a group separator when formatting
+% numeric quantities.
+% see LC_MONETARY:mon_thousands_sep
+thousands_sep             "<U202F>" % <NNBSP> (0X202F)
+
+% A string that describes the formatting of numeric quantities.
+%
+% See mon_grouping
+%
+% FIXME:
+%   Note difference between "123 456 789,01" and "1234,56".
+%   Unfortunately, it can't be implemented with current glibc.
+grouping                  3;3
+
+END LC_NUMERIC
+
+
+
+LC_TIME
+
+% Examples of date:
+%
+% sereda, chotyrnadtcyate travnya dvitysyachi tret`oho roku n.e.
+% sereda, chotyrnadtcyate travnya dvitysyachi tret`oho roku
+% sereda, 14-e travnya 2003-ho roku n.e.
+% sereda, 1-e travnya 2003-ho roku
+% sereda, 1 travnya 2003
+% sereda, 01-tra-2003
+% sr, 01-tra-03
+% sr, 01-tra-2003
+% 01.05.03 (Recomended by DSTU)
+% 01.05.2003 (Allowed but not recomended by DSTU)
+% 2003.05.01 (Allowed but not recomended by DSTU)
+% 01/tra/03 (Deprecated, but still commonly used format)
+% 1-e travnya (not "1 travnya" or "1 traven`" or "1-tra")
+%
+% Notes:
+%  month after day, year after month
+%  all month/weekday names and abbreviations in lower case
+%  month name in date must be used in another form, than in calendar
+%  day name may be used in another form in another context
+%  (sereda, v seredu, tciyeyi seredy, etc.)
+
+% Examples of time:
+% 23:59:59 +0200
+% 00:00:00 +0200
+% 00:00
+
+week 7;19971130;1
+
+% A list of abbreviated weekday names. (%a)
+% Note:
+% Never use three letters for day abbreviations because of conflict between
+% SEReda (day name) and
+% SERpen` (month name).
+abday /
+        "<U043D><U0434>"; %nd  /
+        "<U043F><U043D>"; %pn  /
+        "<U0432><U0442>"; %vt  /
+        "<U0441><U0440>"; %sr  /
+        "<U0447><U0442>"; %cht /
+        "<U043F><U0442>"; %pt  /
+        "<U0441><U0431>"  %sb
+
+% A list of weekday names starting with first day of week as defined by <week> keyword. (%A)
+day /
+        "<U043D><U0435><U0434><U0456><U043B><U044F>";    %nedilya   /
+	"<U043F><U043E><U043D><U0435><U0434><U0456><U043B><U043E><U043A>"; %ponedilok /
+        "<U0432><U0456><U0432><U0442><U043E><U0440><U043E><U043A>";  %vivtorok  /
+	"<U0441><U0435><U0440><U0435><U0434><U0430>";    %sereda    /
+        "<U0447><U0435><U0442><U0432><U0435><U0440>";    %chetver   /
+        "<U043F>'<U044F><U0442><U043D><U0438><U0446><U044F>";  %pjatnycya /
+        "<U0441><U0443><U0431><U043E><U0442><U0430>"     %subota
+
+% A list of abbreviated month names. (%b)
+abmon /
+        "<U0441><U0456><U0447>"; %sich /
+        "<U043B><U044E><U0442>"; %lyut /
+        "<U0431><U0435><U0440>"; %ber  /
+        "<U043A><U0432><U0456>"; %kvi  /
+        "<U0442><U0440><U0430>"; %tra  /
+        "<U0447><U0435><U0440>"; %cher /
+        "<U043B><U0438><U043F>"; %lyp  /
+        "<U0441><U0435><U0440>"; %ser  /
+        "<U0432><U0435><U0440>"; %ver  /
+        "<U0436><U043E><U0432>"; %zhov /
+        "<U043B><U0438><U0441>"; %lys  /
+        "<U0433><U0440><U0443>"  %hru
+
+% A list of month names in proper form for calendar (%OB).  See also mon.
+alt_mon /
+        "<U0441><U0456><U0447><U0435><U043D><U044C>";   %sichen`  /
+        "<U043B><U044E><U0442><U0438><U0439>";    %lyutyj   /
+        "<U0431><U0435><U0440><U0435><U0437><U0435><U043D><U044C>"; %berezen` /
+        "<U043A><U0432><U0456><U0442><U0435><U043D><U044C>";  %kviten`  /
+        "<U0442><U0440><U0430><U0432><U0435><U043D><U044C>";  %traven`  /
+        "<U0447><U0435><U0440><U0432><U0435><U043D><U044C>";  %cherven` /
+        "<U043B><U0438><U043F><U0435><U043D><U044C>";   %lypen`   /
+        "<U0441><U0435><U0440><U043F><U0435><U043D><U044C>";  %serpen`  /
+        "<U0432><U0435><U0440><U0435><U0441><U0435><U043D><U044C>"; %veresen` /
+        "<U0436><U043E><U0432><U0442><U0435><U043D><U044C>";  %zhovten` /
+        "<U043B><U0438><U0441><U0442><U043E><U043F><U0430><U0434>"; %lystopad /
+        "<U0433><U0440><U0443><U0434><U0435><U043D><U044C>"   %hruden`
+
+% A list of month names in genitive form, for full date format, with day (%B).
+mon /
+        "<U0441><U0456><U0447><U043D><U044F>";     % sichnya   /
+        "<U043B><U044E><U0442><U043E><U0433><U043E>";    % lyutoho   /
+        "<U0431><U0435><U0440><U0435><U0437><U043D><U044F>";   % bereznya  /
+        "<U043A><U0432><U0456><U0442><U043D><U044F>";    % kvitnya   /
+        "<U0442><U0440><U0430><U0432><U043D><U044F>";    % travnya   /
+        "<U0447><U0435><U0440><U0432><U043D><U044F>";    % chervnya  /
+        "<U043B><U0438><U043F><U043D><U044F>";     % lypnya    /
+        "<U0441><U0435><U0440><U043F><U043D><U044F>";    % serpnya   /
+        "<U0432><U0435><U0440><U0435><U0441><U043D><U044F>";   % veresnya  /
+        "<U0436><U043E><U0432><U0442><U043D><U044F>";    % zhovtnya  /
+        "<U043B><U0438><U0441><U0442><U043E><U043F><U0430><U0434><U0430>"; % lystopada /
+        "<U0433><U0440><U0443><U0434><U043D><U044F>"     % hrudnya
+
+% Appropriate date representation for date(1).
+date_fmt       "%A, %-d %B %Y %X %z"
+
+% The appropriate date and time format. (%c)
+d_t_fmt  "%a, %d-%b-%Y %X %z"
+
+% The appropriate date format. (%x)
+d_fmt     "%d.%m.%y"
+
+% The appropriate time format. (%X)
+t_fmt     "%T"
+
+% The appropriate time format when using 12h clock format. (%r)
+% If the string is empty the 12-hour format is not supported by in the FDCC-set.
+t_fmt_ampm ""
+
+%The appropriate representation of the am and pm strings. (%p)
+%am_pm     "<U0434><U043E>";"<U043F><U043E>"   % "do" ; "po" - do obidu/po obidi
+% Empty strings are used to force 24h time format.
+am_pm     "";""
+
+% Define the first day of the week to be displayed in a calendar.
+% This weekday is relative to the date defined in the <week> keyword.
+first_weekday 2
+
+% Example:
+%
+%           traven`         cherven`
+% pn      5 12 19 26       2  9 16 23 30
+% vt      6 13 20 27       3 10 17 24
+% sr      7 14 21 28       4 11 18 25
+% ct  +1+ 8 15 22 29       5 12 19 26
+% pt  +2++9+16 23 30       6 13 20 27
+% *sb* *3*10*17*24*31*     *7*14*21+28+
+% +nd+ +4+11+18+25+    +1+ +8+15+22+29+
+%
+% + - means red color
+% * - means bold font
+%
+% Direction of the display of calendar dates:
+% 1 - left-right from top
+% 2 - top-down from left
+% 3 - right-left from top
+cal_direction 2
+
+END LC_TIME
+
+
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+
+
+LC_TELEPHONE
+
+% Format of a telephone number for international use.
+%
+% a area code without nationwide prefix (prefix is often <0>).
+% A area code including nationwide prefix (prefix is often <0>).
+% l local number (within area code).
+% e extension (to local number)
+% c country code
+% C alternate carrier service code used for dialling abroad
+% t Insert a <space> if the previous descriptor's value was not an empty
+%  string; otherwise ignore.
+%
+% Example: +380 44 4908888
+%
+tel_int_fmt    "+%c %a %l"
+
+% Format of a telephone number for domestic use.
+% See tel_int_fmt.
+%
+% Example:  (044) 4908888
+%
+tel_dom_fmt    "(%A) %l"
+
+% Prefix to call international phone numbers.
+int_select     "8~10"
+
+% Prefix used from other countries to dial Ukraine. (%c)
+int_prefix     "380"
+
+END LC_TELEPHONE
+
+
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+
+
+LC_NAME
+% Examples:
+% Full name: pan Volodymyr Mykolayovych Lisivka
+% Means:
+%     pan - mister
+%     Volodymyr - the man name (be Lord of the World :) )
+%     Mykolayovych - middle name (son of Mykola)
+%     Lisivka - family name
+%
+% For documents: Lisivka V. M.
+% Regular name: pan Volodymyr Lisivka
+% Bossname: Volodymyr Mykolayovych
+% For friends: Volodya
+% For family: Vovka (for brothers), Vova(for mother)
+%
+% Begining of official letters:
+%  Shanovnyj(-na) Volodymyre Lisivka, ...
+%
+% A salutation to not well known person:
+%   pane Lisivka
+%
+% A salutation to boss:
+%   Volodymyre Mykolayovychu
+%
+% A salutation to well known person (but not a friend):
+%   pane Volodymyre
+%
+% FIXME:
+%  to make proper salutation, we must change person name and middle name
+%  to proper forms (klychna forma), but this is imposible without
+%  ispell-like rules.
+%  Now I use regular form, like in Russian (sic!) langauge.
+
+% Field descriptors for the <name_fmt> keyword:
+% f - family name
+% F - family name in uppercase
+% g - first given name
+% G - first given initial
+% l - first given name with Latin letters
+% o - other shorter name
+% m - additional given name
+% M - initials for additional given names
+% p - profession
+% s - salutation, such as "Doctor"
+% S - abbreviated salutation, such as "Mr." or "Dr."
+% d - salutation, using the FDCC-sets conventions
+%    1 for the name_gen
+%    2 for name_mr
+%    3 for name_mrs
+%    4 for name_miss
+%    5 for name_ms
+% t - if the preceding field descriptor resulted in an empty string,
+%     then the empty string, else a <space>.
+name_fmt    "%d%t%g%t%m%t%f" % pan Volodymyr Mykolayovych Lisivka
+
+% A salutation valid for all persons
+name_gen    "<U0448><U0430><U043D><U043E><U0432><U043D><U0438><U0439>(-<U043D><U0430>)" % shanovnyj(-na)
+
+% A salutation valid for males
+name_mr     "<U043F><U0430><U043D>" % pane
+
+% A salutation valid for all females
+name_ms     "<U043F><U0430><U043D><U0456>" % pani
+
+% A salutation valid for married females
+name_mrs    "<U043F><U0430><U043D><U0456>" % pani
+
+% A salutation valid for unmarried females
+name_miss   "<U043F><U0430><U043D><U043D><U0430>" % panna
+
+END LC_NAME
+
+
+
+LC_ADDRESS
+
+% Example of address in a city:
+%
+%  Volodymyru Lisivtci
+%  vul. Pul`uya 9, kv. 21
+%  m. L`viv
+%  79005
+%
+% Means:
+%  Volodymyru Lisivtci - to what person
+%  vul. Pul`uya 9, kv. 21 - street and building, apartment number (or firm name)
+%  m. L`viv - city name (m. - misto)
+%  79005 - ZIP code
+%
+% Example of firm address in a city:
+%
+%  Volodymyru Lisivtci, firma "Misteriya"
+%  vul. Naukova 5a, 2-yj poverh, k. 239
+%  m. L`viv
+%  79005
+%
+% Means:
+%  firma "Misteriya" - firm name
+%  2-yj poverh - floor number (ground floor has number one)
+%
+% Example of address in a town:
+%
+%  Volodymyru Lisivtci
+%  vul. Myru, kv. 19
+%  m. Zdolbuniv
+%  Rivnens`koji oblasti
+%  00000
+%
+% Means:
+%  Rivnens`koji oblasti - in region of city Rivne (oblast`)
+%
+% Example of address in a village:
+%
+%  Volodymyru Lisivtci
+%  vul. Hranychna 7
+%  s. Bohdashiv
+%  Zdolbunivs`koho rajonu Rivnens`koji oblasti
+%  00000
+%
+% Means:
+%  vul. Hranychna 7 - street and building
+%  s. Bohdashiv - village name (s. - selo)
+%  Zdolbunivs`koho rajonu - in region of town Zdolbuniv (rajon)
+
+
+% n Person's name, possibly constructed with the LC_NAME <name_fmt> keyword.
+% a Care of person, or organization.
+% f Firm name.
+% d Department name.
+% b Building name.
+% s Street or block (eg. Japanese) name.
+% h House number or designation.
+% N Insert an <end-of-line> if the previous descriptor s value was not an empty
+% string; otherwise ignore.
+% t Insert a <space> if the previous descriptor s value was not an empty string;
+% otherwise ignore.
+% r Room number, door designation.
+% e Floor number.
+% C Country designation, from the <country_post> keyword.
+% l Local township within town or city
+% z Zip number, postal code.
+% T Town, city.
+% S State, province, or prefecture.
+% c Country, as taken from data record.
+%
+% Each field descriptor may have an <R> after the <%> to specify that the
+% information is taken from a Romanized version string of the
+% entity.
+%
+% BUG: %n escape sequence from ISO/IEC 14652:2002 is not supported by glibc-2.3.2.
+% BUG: %l escape sequence from ISO/IEC 14652:2002 is not supported by glibc-2.3.2.
+%postal_fmt "%a%t%n%t%f%t%d%N%s%t%h%t, %b%t%e%t%r%N%l%t%T%t%S%N%z%N%c"
+postal_fmt "%a%t%f%t%d%N%s%t%h%t, %b%t%e%t%r%N%T%t%S%N%z%N%c"
+
+% Giving:
+%
+% Care of person Person's name Firm Department
+% Street Number, Building Floor Room
+% Town City State
+% Zip
+% Country
+
+% Country name in the language of the current document.
+country_name  "<U0423><U043A><U0440><U0430><U0457><U043D><U0430>" % Ukrayina
+
+% Language name in the language of the current document.
+lang_name     "<U0443><U043A><U0440><U0430><U0457><U043D><U0441><U044C><U043A><U0430>" % ukrayins`ka [mova]
+
+% Abbreviation of the country, see CERT-MAILCODES. (%c)
+country_post  "UA"
+
+% Two-letter abbreviation of the country, see ISO 3166.
+country_ab2   "UA"
+
+% Three-letter abbreviation of the country, see ISO 3166.
+country_ab3   "UKR"
+
+% Numeric country code, see ISO 3166.
+country_num   804
+
+% Code for country car number.
+country_car   "UA"
+
+% ISBN code, for books.
+country_isbn  966
+
+% Two-letter abbreviation of the language, see ISO 639.
+lang_ab       "uk"
+% lang_ab2      "uk" % ISO/IEC 14652:2002
+
+% Three-letter abbreviation of the language, see ISO 639-2.
+lang_term     "ukr"
+% lang_ab3_term "ukr" % ISO/IEC 14652:2002
+
+% Three-letter abbreviation of the language for library use, see ISO 639-2.
+lang_lib      "ukr"
+% lang_ab3_lib  "ukr" % ISO/IEC 14652:2002
+
+END LC_ADDRESS

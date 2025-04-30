@@ -1,0 +1,27 @@
+libm {
+  GLIBC_2.1 {
+    # symbols used in macros from sysdeps/powerpc/bits/fenv.h
+    __fe_dfl_env; __fe_enabled_env; __fe_nonieee_env; __fe_nomask_env;
+  }
+  GLIBC_2.25 {
+    __fe_dfl_mode;
+  }
+}
+
+libc {
+  GLIBC_2.3.4 {
+    _longjmp; __sigsetjmp; _setjmp;
+    longjmp; setjmp;
+  }
+}
+
+ld {
+  GLIBC_2.22 {
+    __tls_get_addr_opt;
+  }
+  GLIBC_2.23 {
+    # Symbol used to version control when the ABI started to specify that HWCAP
+    # and AT_PLATFORM data should be stored into the TCB.
+    __parse_hwcap_and_convert_at_platform;
+  }
+}

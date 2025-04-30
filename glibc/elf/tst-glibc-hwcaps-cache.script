@@ -1,0 +1,32 @@
+# test-container does not support scripts in sysdeps directories, so
+# collect everything in one file.
+
+cp $B/elf/libmarkermod2-1.so $L/libmarkermod2.so
+cp $B/elf/libmarkermod3-1.so $L/libmarkermod3.so
+cp $B/elf/libmarkermod4-1.so $L/libmarkermod4.so
+
+mkdirp 0770 $L/glibc-hwcaps/power9
+cp $B/elf/libmarkermod2-2.so $L/glibc-hwcaps/power9/libmarkermod2.so
+mkdirp 0770 $L/glibc-hwcaps/power10
+cp $B/elf/libmarkermod3-2.so $L/glibc-hwcaps/power9/libmarkermod3.so
+cp $B/elf/libmarkermod3-3.so $L/glibc-hwcaps/power10/libmarkermod3.so
+
+mkdirp 0770 $L/glibc-hwcaps/z13
+cp $B/elf/libmarkermod2-2.so $L/glibc-hwcaps/z13/libmarkermod2.so
+mkdirp 0770 $L/glibc-hwcaps/z14
+cp $B/elf/libmarkermod3-2.so $L/glibc-hwcaps/z13/libmarkermod3.so
+cp $B/elf/libmarkermod3-3.so $L/glibc-hwcaps/z14/libmarkermod3.so
+mkdirp 0770 $L/glibc-hwcaps/z15
+cp $B/elf/libmarkermod4-2.so $L/glibc-hwcaps/z13/libmarkermod4.so
+cp $B/elf/libmarkermod4-3.so $L/glibc-hwcaps/z14/libmarkermod4.so
+cp $B/elf/libmarkermod4-4.so $L/glibc-hwcaps/z15/libmarkermod4.so
+
+mkdirp 0770 $L/glibc-hwcaps/x86-64-v2
+cp $B/elf/libmarkermod2-2.so $L/glibc-hwcaps/x86-64-v2/libmarkermod2.so
+mkdirp 0770 $L/glibc-hwcaps/x86-64-v3
+cp $B/elf/libmarkermod3-2.so $L/glibc-hwcaps/x86-64-v2/libmarkermod3.so
+cp $B/elf/libmarkermod3-3.so $L/glibc-hwcaps/x86-64-v3/libmarkermod3.so
+mkdirp 0770 $L/glibc-hwcaps/x86-64-v4
+cp $B/elf/libmarkermod4-2.so $L/glibc-hwcaps/x86-64-v2/libmarkermod4.so
+cp $B/elf/libmarkermod4-3.so $L/glibc-hwcaps/x86-64-v3/libmarkermod4.so
+cp $B/elf/libmarkermod4-4.so $L/glibc-hwcaps/x86-64-v4/libmarkermod4.so

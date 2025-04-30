@@ -3648,6 +3648,28 @@ bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero) {
   return false;
 }
 
+bool Sema::CheckLoopHintExprStr(Expr *E, SourceLocation Loc) {
+  assert(E && "Invalid expression");
+
+  if (E->isValueDependent())
+    return false;
+
+  QualType QT = E->getType();
+  if (!QT->isConstantArrayType()) {
+    Diag(E->getExprLoc(), diag::err_pragma_ns_invalid_argument_type) << QT;
+    return true;
+  }
+
+  const auto *AT = dyn_cast<ConstantArrayType>(QT);
+  QualType ET = AT->getElementType();
+  if (!ET->isCharType()) {
+    Diag(E->getExprLoc(), diag::err_pragma_ns_invalid_argument_type) << QT;
+    return true;
+  }
+
+  return false;
+}
+
 ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
   // Fast path for a single digit (which is quite common).  A single digit
   // cannot have a trigraph, escaped newline, radix prefix, or suffix.

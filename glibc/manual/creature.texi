@@ -1,0 +1,338 @@
+@node Feature Test Macros
+@subsection Feature Test Macros
+
+@cindex feature test macros
+The exact set of features available when you compile a source file
+is controlled by which @dfn{feature test macros} you define.
+
+If you compile your programs using @samp{gcc -ansi}, you get only the
+@w{ISO C} library features, unless you explicitly request additional
+features by defining one or more of the feature macros.
+@xref{Invoking GCC,, GNU CC Command Options, gcc, The GNU CC Manual},
+for more information about GCC options.@refill
+
+You should define these macros by using @samp{#define} preprocessor
+directives at the top of your source code files.  These directives
+@emph{must} come before any @code{#include} of a system header file.  It
+is best to make them the very first thing in the file, preceded only by
+comments.  You could also use the @samp{-D} option to GCC, but it's
+better if you make the source files indicate their own meaning in a
+self-contained way.
+
+This system exists to allow the library to conform to multiple standards.
+Although the different standards are often described as supersets of each
+other, they are usually incompatible because larger standards require
+functions with names that smaller ones reserve to the user program.  This
+is not mere pedantry --- it has been a problem in practice.  For instance,
+some non-GNU programs define functions named @code{getline} that have
+nothing to do with this library's @code{getline}.  They would not be
+compilable if all features were enabled indiscriminately.
+
+This should not be used to verify that a program conforms to a limited
+standard.  It is insufficient for this purpose, as it will not protect you
+from including header files outside the standard, or relying on semantics
+undefined within the standard.
+
+@defvr Macro _POSIX_SOURCE
+@standards{POSIX.1, (none)}
+If you define this macro, then the functionality from the POSIX.1
+standard (IEEE Standard 1003.1) is available, as well as all of the
+@w{ISO C} facilities.
+
+The state of @code{_POSIX_SOURCE} is irrelevant if you define the
+macro @code{_POSIX_C_SOURCE} to a positive integer.
+@end defvr
+
+@defvr Macro _POSIX_C_SOURCE
+@standards{POSIX.2, (none)}
+Define this macro to a positive integer to control which POSIX
+functionality is made available.  The greater the value of this macro,
+the more functionality is made available.
+
+If you define this macro to a value greater than or equal to @code{1},
+then the functionality from the 1990 edition of the POSIX.1 standard
+(IEEE Standard 1003.1-1990) is made available.
+
+If you define this macro to a value greater than or equal to @code{2},
+then the functionality from the 1992 edition of the POSIX.2 standard
+(IEEE Standard 1003.2-1992) is made available.
+
+If you define this macro to a value greater than or equal to @code{199309L},
+then the functionality from the 1993 edition of the POSIX.1b standard
+(IEEE Standard 1003.1b-1993) is made available.
+
+If you define this macro to a value greater than or equal to
+@code{199506L}, then the functionality from the 1995 edition of the
+POSIX.1c standard (IEEE Standard 1003.1c-1995) is made available.
+
+If you define this macro to a value greater than or equal to
+@code{200112L}, then the functionality from the 2001 edition of the
+POSIX standard (IEEE Standard 1003.1-2001) is made available.
+
+If you define this macro to a value greater than or equal to
+@code{200809L}, then the functionality from the 2008 edition of the
+POSIX standard (IEEE Standard 1003.1-2008) is made available.
+
+Greater values for @code{_POSIX_C_SOURCE} will enable future extensions.
+The POSIX standards process will define these values as necessary, and
+@theglibc{} should support them some time after they become standardized.
+The 1996 edition of POSIX.1 (ISO/IEC 9945-1: 1996) states that
+if you define @code{_POSIX_C_SOURCE} to a value greater than
+or equal to @code{199506L}, then the functionality from the 1996
+edition is made available.  In general, in @theglibc{}, bugfixes to
+the standards are included when specifying the base version; e.g.,
+POSIX.1-2004 will always be included with a value of @code{200112L}.
+@end defvr
+
+@defvr Macro _XOPEN_SOURCE
+@defvrx Macro _XOPEN_SOURCE_EXTENDED
+@standards{X/Open, (none)}
+If you define this macro, functionality described in the X/Open
+Portability Guide is included.  This is a superset of the POSIX.1 and
+POSIX.2 functionality and in fact @code{_POSIX_SOURCE} and
+@code{_POSIX_C_SOURCE} are automatically defined.
+
+As the unification of all Unices, functionality only available in
+BSD and SVID is also included.
+
+If the macro @code{_XOPEN_SOURCE_EXTENDED} is also defined, even more
+functionality is available.  The extra functions will make all functions
+available which are necessary for the X/Open Unix brand.
+
+If the macro @code{_XOPEN_SOURCE} has the value @math{500} this includes
+all functionality described so far plus some new definitions from the
+Single Unix Specification, @w{version 2}.  The value @math{600}
+(corresponding to the sixth revision) includes definitions from SUSv3,
+and using @math{700} (the seventh revision) includes definitions from
+SUSv4.
+@end defvr
+
+@defvr Macro _LARGEFILE_SOURCE
+@standards{X/Open, (NONE)}
+If this macro is defined some extra functions are available which
+rectify a few shortcomings in all previous standards.  Specifically,
+the functions @code{fseeko} and @code{ftello} are available.  Without
+these functions the difference between the @w{ISO C} interface
+(@code{fseek}, @code{ftell}) and the low-level POSIX interface
+(@code{lseek}) would lead to problems.
+
+This macro was introduced as part of the Large File Support extension (LFS).
+@end defvr
+
+@defvr Macro _LARGEFILE64_SOURCE
+@standards{X/Open, (NONE)}
+If you define this macro an additional set of functions is made available
+which enables @w{32 bit} systems to use files of sizes beyond
+the usual limit of 2GB.  This interface is not available if the system
+does not support files that large.  On systems where the natural file
+size limit is greater than 2GB (i.e., on @w{64 bit} systems) the new
+functions are identical to the replaced functions.
+
+The new functionality is made available by a new set of types and
+functions which replace the existing ones.  The names of these new objects
+contain @code{64} to indicate the intention, e.g., @code{off_t}
+vs. @code{off64_t} and @code{fseeko} vs. @code{fseeko64}.
+
+This macro was introduced as part of the Large File Support extension
+(LFS).  It is a transition interface for the period when @w{64 bit}
+offsets are not generally used (see @code{_FILE_OFFSET_BITS}).
+@end defvr
+
+@defvr Macro _FILE_OFFSET_BITS
+@standards{X/Open, (NONE)}
+This macro determines which file system interface shall be used, one
+replacing the other.  Whereas @code{_LARGEFILE64_SOURCE} makes the @w{64
+bit} interface available as an additional interface,
+@code{_FILE_OFFSET_BITS} allows the @w{64 bit} interface to
+replace the old interface.
+
+If @code{_FILE_OFFSET_BITS} is defined to the
+value @code{32}, the @w{32 bit} interface is used and
+types like @code{off_t} have a size of @w{32 bits} on @w{32 bit}
+systems.
+
+If the macro is defined to the value @code{64}, the large file interface
+replaces the old interface.  I.e., the functions are not made available
+under different names (as they are with @code{_LARGEFILE64_SOURCE}).
+Instead the old function names now reference the new functions, e.g., a
+call to @code{fseeko} now indeed calls @code{fseeko64}.
+
+If the macro is not defined it currently defaults to @code{32}, but
+this default is planned to change due to a need to update
+@code{time_t} for Y2038 safety, and applications should not rely on
+the default.
+
+This macro should only be selected if the system provides mechanisms for
+handling large files.  On @w{64 bit} systems this macro has no effect
+since the @code{*64} functions are identical to the normal functions.
+
+This macro was introduced as part of the Large File Support extension
+(LFS).
+@end defvr
+
+@defvr Macro _TIME_BITS
+This macro determines the bit size of @code{time_t}, and therefore the
+bit size of all @code{time_t}-derived types and the prototypes of all
+related functions.
+
+@enumerate
+
+@item
+If @code{_TIME_BITS} is undefined, the bit size of @code{time_t} is
+architecture dependent.  Currently it defaults to 64 bits on most
+architectures.  Although it defaults to 32 bits on some traditional
+architectures (i686, ARM), this is planned to change and applications
+should not rely on this.
+
+@item
+If @code{_TIME_BITS} is defined to be 64, @code{time_t} is defined
+to be a 64-bit integer.  On platforms where @code{time_t} was
+traditionally 32 bits, calls to proper syscalls depend on the
+Linux kernel version on which the system is running. For Linux kernel
+version above @b{5.1} syscalls supporting 64-bit time are used. Otherwise,
+a fallback code is used with legacy (i.e. 32-bit) syscalls.
+
+@item
+If @code{_TIME_BITS} is defined to be 32, @code{time_t} is defined to
+be a 32-bit integer where that is supported.  This is not recommended,
+as 32-bit @code{time_t} stops working in the year 2038.
+
+@item
+For any other use case a compile-time error is emitted.
+@end enumerate
+
+@code{_TIME_BITS=64} can be defined only when
+@code{_FILE_OFFSET_BITS=64} is also defined.
+
+By using this macro certain ports gain support for 64-bit time and as
+a result become immune to the Y2038 problem.
+@end defvr
+
+@defvr Macro _ISOC99_SOURCE
+@standards{GNU, (none)}
+If this macro is defined, features from ISO C99 are included.  Since
+these features are included by default, this macro is mostly relevant
+when the compiler uses an earlier language version.
+@end defvr
+
+@defvr Macro _ISOC11_SOURCE
+@standards{C11, (none)}
+If this macro is defined, ISO C11 extensions to ISO C99 are included.
+@end defvr
+
+@defvr Macro _ISOC2X_SOURCE
+@standards{C2X, (none)}
+If this macro is defined, ISO C2X extensions to ISO C11 are included.
+Only some features from this draft standard are supported by
+@theglibc{}.
+@end defvr
+
+@defvr Macro __STDC_WANT_LIB_EXT2__
+@standards{ISO, (none)}
+If you define this macro to the value @code{1}, features from ISO/IEC
+TR 24731-2:2010 (Dynamic Allocation Functions) are enabled.  Only some
+of the features from this TR are supported by @theglibc{}.
+@end defvr
+
+@defvr Macro __STDC_WANT_IEC_60559_BFP_EXT__
+@standards{ISO, (none)}
+If you define this macro, features from ISO/IEC TS 18661-1:2014
+(Floating-point extensions for C: Binary floating-point arithmetic)
+are enabled.  Only some of the features from this TS are supported by
+@theglibc{}.
+@end defvr
+
+@defvr Macro __STDC_WANT_IEC_60559_FUNCS_EXT__
+@standards{ISO, (none)}
+If you define this macro, features from ISO/IEC TS 18661-4:2015
+(Floating-point extensions for C: Supplementary functions) are
+enabled.  Only some of the features from this TS are supported by
+@theglibc{}.
+@end defvr
+
+@defvr Macro __STDC_WANT_IEC_60559_TYPES_EXT__
+@standards{ISO, (none)}
+If you define this macro, features from ISO/IEC TS 18661-3:2015
+(Floating-point extensions for C: Interchange and extended types) are
+enabled.  Only some of the features from this TS are supported by
+@theglibc{}.
+@end defvr
+
+@defvr Macro __STDC_WANT_IEC_60559_EXT__
+@standards{ISO, (none)}
+If you define this macro, ISO C2X features defined in Annex F of that
+standard are enabled.  This affects declarations of the
+@code{totalorder} functions and functions related to NaN payloads.
+@end defvr
+
+@defvr Macro _GNU_SOURCE
+@standards{GNU, (none)}
+If you define this macro, everything is included: @w{ISO C89}, @w{ISO
+C99}, POSIX.1, POSIX.2, BSD, SVID, X/Open, LFS, and GNU extensions.  In
+the cases where POSIX.1 conflicts with BSD, the POSIX definitions take
+precedence.
+@end defvr
+
+@defvr Macro _DEFAULT_SOURCE
+@standards{GNU, (none)}
+If you define this macro, most features are included apart from
+X/Open, LFS and GNU extensions: the effect is to enable features from
+the 2008 edition of POSIX, as well as certain BSD and SVID features
+without a separate feature test macro to control them.
+
+Be aware that compiler options also affect included features:
+
+@itemize
+@item
+If you use a strict conformance option, features beyond those from the
+compiler's language version will be disabled, though feature test
+macros may be used to enable them.
+
+@item
+Features enabled by compiler options are not overridden by feature
+test macros.
+@end itemize
+@end defvr
+
+@defvr Macro _ATFILE_SOURCE
+@standards{GNU, (none)}
+If this macro is defined, additional @code{*at} interfaces are
+included.
+@end defvr
+
+@defvr Macro _FORTIFY_SOURCE
+@standards{GNU, (none)}
+If this macro is defined to @math{1}, security hardening is added to
+various library functions.  If defined to @math{2}, even stricter
+checks are applied. If defined to @math{3}, @theglibc{} may also use
+checks that may have an additional performance overhead.
+@end defvr
+
+@defvr Macro _DYNAMIC_STACK_SIZE_SOURCE
+@standards{GNU, (none)}
+If this macro is defined, correct (but non compile-time constant)
+MINSIGSTKSZ, SIGSTKSZ and PTHREAD_STACK_MIN are defined.
+@end defvr
+
+@defvr Macro _REENTRANT
+@defvrx Macro _THREAD_SAFE
+@standards{Obsolete, (none)}
+These macros are obsolete.  They have the same effect as defining
+@code{_POSIX_C_SOURCE} with the value @code{199506L}.
+
+Some very old C libraries required one of these macros to be defined
+for basic functionality (e.g.@: @code{getchar}) to be thread-safe.
+@end defvr
+
+We recommend you use @code{_GNU_SOURCE} in new programs.  If you don't
+specify the @samp{-ansi} option to GCC, or other conformance options
+such as @option{-std=c99}, and don't define any of these macros
+explicitly, the effect is the same as defining @code{_DEFAULT_SOURCE}
+to 1.
+
+When you define a feature test macro to request a larger class of features,
+it is harmless to define in addition a feature test macro for a subset of
+those features.  For example, if you define @code{_POSIX_C_SOURCE}, then
+defining @code{_POSIX_SOURCE} as well has no effect.  Likewise, if you
+define @code{_GNU_SOURCE}, then defining either @code{_POSIX_SOURCE} or
+@code{_POSIX_C_SOURCE} as well has no effect.

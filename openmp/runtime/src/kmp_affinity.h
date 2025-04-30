@@ -232,6 +232,19 @@ public:
 #elif __NR_sched_getaffinity != 204
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
+/* NEXT32 doesn't have a C library, so just copy this from
+   KMP_ARCH_X86_64. */
+#elif KMP_ARCH_NEXT32
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 203
+#elif __NR_sched_setaffinity != 203
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 204
+#elif __NR_sched_getaffinity != 204
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
 #elif KMP_ARCH_PPC64
 #ifndef __NR_sched_setaffinity
 #define __NR_sched_setaffinity 222

@@ -1,0 +1,6 @@
+#include <sysdep.h>
+#include <tls.h>
+
+TID			offsetof (struct pthread, tid) - TLS_PRE_TCB_SIZE
+MULTIPLE_THREADS_OFFSET offsetof (struct pthread, header.multiple_threads) - TLS_PRE_TCB_SIZE
+SYSINFO_OFFSET		offsetof (tcbhead_t, __private)

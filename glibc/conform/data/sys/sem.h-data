@@ -1,0 +1,40 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+constant SEM_UNDO
+
+constant GETNCNT
+constant GETPID
+constant GETVAL
+constant GETALL
+constant GETZCNT
+constant SETVAL
+constant SETALL
+
+type {struct semid_ds}
+
+element {struct semid_ds} {struct ipc_perm} sem_perm
+// Bug 18232: wrong type for sem_nsems member.
+xfail-element {struct semid_ds} {unsigned short int} sem_nsems
+element {struct semid_ds} time_t sem_otime
+element {struct semid_ds} time_t sem_ctime
+
+type pid_t
+type time_t
+type key_t
+type size_t
+
+type {struct sembuf}
+
+element {struct sembuf} {unsigned short int} sem_num
+element {struct sembuf} {short int} sem_op
+element {struct sembuf} {short int} sem_flg
+
+function int semctl (int, int, int, ...)
+function int semget (key_t, int, int)
+function int semop (int, struct sembuf*, size_t)
+
+allow-header sys/ipc.h
+
+allow sem*
+allow SEM_*
+allow *_t
+#endif

@@ -1,0 +1,5 @@
+libc {
+  GLIBC_2.31 {
+    msgctl; semctl; shmctl;
+  }
+}

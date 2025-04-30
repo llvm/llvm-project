@@ -235,6 +235,20 @@
 // MCPU-SIFIVE-E76: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-E76: "-target-abi" "ilp32f"
 
+// mcpu with default march
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=nextsilicon-gen1-ecore | FileCheck -check-prefix=MCPU-NEXTSILICON-GEN1-ECORE %s
+// MCPU-NEXTSILICON-GEN1-ECORE: "-nostdsysteminc" "-target-cpu" "nextsilicon-gen1-ecore"
+// MCPU-NEXTSILICON-GEN1-ECORE: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-NEXTSILICON-GEN1-ECORE: "-target-feature" "+c"
+// MCPU-NEXTSILICON-GEN1-ECORE: "-target-abi" "lp64d"
+
+// mcpu with default march
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=nextsilicon-gen2-ecore | FileCheck -check-prefix=MCPU-NEXTSILICON-GEN2-ECORE %s
+// MCPU-NEXTSILICON-GEN2-ECORE: "-nostdsysteminc" "-target-cpu" "nextsilicon-gen2-ecore"
+// MCPU-NEXTSILICON-GEN2-ECORE: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-NEXTSILICON-GEN2-ECORE: "-target-feature" "+c"
+// MCPU-NEXTSILICON-GEN2-ECORE: "-target-abi" "lp64d"
+
 // mcpu with mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u74 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U74 %s
 // MCPU-ABI-SIFIVE-U74: "-nostdsysteminc" "-target-cpu" "sifive-u74"

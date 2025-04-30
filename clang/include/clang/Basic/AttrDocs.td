@@ -4128,6 +4128,37 @@ extended when converted to a 64-bit pointer.
   }];
 }
 
+def Next32TlsDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__next32_tls__`` qualifier represents 'tls' address space
+for next32 architecture.
+  }];
+}
+
+def Next32GlobalDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__next32_global__`` qualifier represents 'global' address space
+for next32 architecture.
+  }];
+}
+
+def Next32LocalDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__next32_local__`` qualifier represents local address space, shared by
+threads, for next32 architecture.
+  }];
+}
+
+def Next32ConstantDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__next32_constant__`` qualifier represents 'constant' address space
+for next32 architecture.
+  }];
+}
 
 def NullabilityDocs : DocumentationCategory<"Nullability Attributes"> {
   let Content = [{

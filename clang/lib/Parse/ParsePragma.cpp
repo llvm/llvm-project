@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -24,10 +25,12 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Support/NextSiliconUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 using namespace clang;
+using namespace ns;
 
 namespace {
 
@@ -415,6 +418,25 @@ void markAsReinjectedForRelexing(llvm::MutableArrayRef<clang::Token> Toks) {
   for (auto &T : Toks)
     T.setFlag(clang::Token::IsReinjected);
 }
+
+struct PragmaNSMarkHandler : public PragmaHandler {
+  explicit PragmaNSMarkHandler(const char *name) : PragmaHandler(name) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
+struct PragmaNSLocationHandler : public PragmaHandler {
+  explicit PragmaNSLocationHandler(const char *name) : PragmaHandler(name) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
+struct PragmaNSVectorizeHandler : public PragmaHandler {
+  explicit PragmaNSVectorizeHandler(const char *name) : PragmaHandler(name) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 }  // end namespace
 
 void Parser::initializePragmaHandlers() {
@@ -568,6 +590,15 @@ void Parser::initializePragmaHandlers() {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
   }
+
+  NSMarkHandler = std::make_unique<PragmaNSMarkHandler>("mark");
+  PP.AddPragmaHandler("ns", NSMarkHandler.get());
+
+  NSLocationHandler = std::make_unique<PragmaNSLocationHandler>("location");
+  PP.AddPragmaHandler("ns", NSLocationHandler.get());
+
+  NSVectorizeHandler = std::make_unique<PragmaNSVectorizeHandler>("vectorize");
+  PP.AddPragmaHandler("ns", NSVectorizeHandler.get());
 }
 
 void Parser::resetPragmaHandlers() {
@@ -702,6 +733,15 @@ void Parser::resetPragmaHandlers() {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
   }
+
+  PP.RemovePragmaHandler("ns", NSMarkHandler.get());
+  NSMarkHandler.reset();
+
+  PP.RemovePragmaHandler("ns", NSLocationHandler.get());
+  NSLocationHandler.reset();
+
+  PP.RemovePragmaHandler("ns", NSVectorizeHandler.get());
+  NSVectorizeHandler.reset();
 }
 
 /// Handle the annotation token produced for #pragma unused(...)
@@ -1411,6 +1451,211 @@ static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
                          .Case("unroll_and_jam", Str)
                          .Case("unroll", Str)
                          .Default(""));
+}
+
+void Parser::HandlePragmaNSMark() {
+  assert(Tok.is(tok::annot_pragma_ns_mark));
+  const PragmaNSMarkInfo *Info =
+      static_cast<PragmaNSMarkInfo *>(Tok.getAnnotationValue());
+
+  // Consume token even in case of error to not get stuck
+  SourceLocation MarkLoc = ConsumeAnnotationToken();
+  if (!Info)
+    return;
+
+  if (Info->ValidFlags != PragmaNSMarkInfo::MarkValidFlags::Function) {
+    PP.Diag(MarkLoc, diag::err_pragma_ns_function_mark_unexpected);
+    return;
+  }
+
+  Actions.ActOnPragmaNSMark(MarkLoc, Info->Mark);
+}
+
+void Parser::HandlePragmaNSLocation() {
+  assert(Tok.is(tok::annot_pragma_ns_location));
+  const PragmaNSLocationInfo *Info =
+      static_cast<PragmaNSLocationInfo *>(Tok.getAnnotationValue());
+
+  // Consume token even in case of error to not get stuck
+  SourceLocation PragmaLoc = ConsumeAnnotationToken();
+  if (!Info)
+    return;
+
+  Actions.ActOnPragmaNSLocation(PragmaLoc, Info->NSLocation);
+}
+
+/// Parse a NextSilicon mark pragma in a similar fashion to loop hint pragmas.
+/// The annotation token should have a PragmaNSMarkInfo struct as a value.
+StmtResult Parser::ParsePragmaNSMark(StmtVector &Stmts,
+                                     ParsedStmtContext StmtCtx,
+                                     SourceLocation *TrailingElseLoc,
+                                     ParsedAttributes &Attrs) {
+  while (Tok.is(tok::annot_pragma_ns_mark)) {
+    // Get info from token.
+    const PragmaNSMarkInfo *Info =
+        static_cast<PragmaNSMarkInfo *>(Tok.getAnnotationValue());
+
+    IdentifierInfo *PragmaNameInfo = Info->PragmaName.getIdentifierInfo();
+    auto PragmaNameLoc = IdentifierLoc::create(
+        Actions.Context, Info->PragmaName.getLocation(), PragmaNameInfo);
+    auto Range = Info->PragmaName.getLocation();
+
+    QualType StrType = Actions.Context.getStringLiteralArrayType(
+        Actions.Context.CharTy, Info->Mark.size() + 1);
+
+    // Generate mark ASCII string literal.
+    auto Mark = clang::StringLiteral::Create(
+        Actions.Context, Info->Mark, StringLiteralKind::Ordinary, false,
+        StrType, Info->PragmaName.getLocation());
+
+    if (Info->ValidFlags != PragmaNSMarkInfo::MarkValidFlags::Loop) {
+      PP.Diag(Info->PragmaName, diag::err_pragma_ns_loop_mark_unexpected);
+      ConsumeAnnotationToken();
+      return StmtError();
+    }
+
+    Expr *ValueExpr = nullptr;
+    if (Info->ArgumentCount > 0) {
+      llvm::ArrayRef<Token> Toks = Info->Toks;
+      // Enter constant expression including eof terminator into token
+      // stream.
+      PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false,
+                          /*IsReinject=*/false);
+      ConsumeAnnotationToken();
+      ExprResult R = ParseConstantExpression();
+
+      // Tokens following an error in an ill-formed constant expression will
+      // remain in the token stream and must be removed.
+      if (Tok.isNot(tok::eof)) {
+        Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol) << Mark;
+        while (Tok.isNot(tok::eof))
+          ConsumeAnyToken();
+      }
+
+      ConsumeToken(); // Consume the constant expression eof terminator.
+
+      if (R.isInvalid())
+        return StmtError();
+
+      auto CheckLoopHintArgumentInteger = llvm::StringSwitch<bool>(Info->Mark)
+                                              .Case("unroll_count", true)
+                                              .Case("duplication_count", true)
+                                              .Default(false);
+
+      if (CheckLoopHintArgumentInteger &&
+          Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation(), false))
+        return StmtError();
+
+      if (!CheckLoopHintArgumentInteger &&
+          Actions.CheckLoopHintExprStr(R.get(), Toks[0].getLocation()))
+        return StmtError();
+
+      // Argument is a constant expression with an integer type / string
+      // literal.
+      ValueExpr = R.get();
+    } else {
+      llvm::SmallSet<StringRef, 3> ConflictingMarks;
+      for (const auto &mark : {"mill", "nomill", "submill"})
+        ConflictingMarks.insert(mark);
+
+      if (ConflictingMarks.contains(Info->Mark)) {
+        for (const auto &Attr : Attrs) {
+          auto *Arg = Attr.getArgAsExpr(0);
+          auto *CurMark = dyn_cast<clang::StringLiteral>(Arg);
+          if (!CurMark || !ConflictingMarks.contains(CurMark->getString()))
+            continue;
+
+          if (CurMark->getString() != Info->Mark) {
+            PP.Diag(Tok.getLocation(), diag::err_pragma_ns_loop_mark_conflict);
+            return StmtError();
+          }
+        }
+      }
+
+      // eat the annot_pragma_ns_mark token.
+      ConsumeAnnotationToken();
+    }
+
+    // Add attribute according to the information.
+    ArgsUnion ArgHints[] = {ArgsUnion(Mark), ArgsUnion(ValueExpr)};
+    Attrs.addNew(PragmaNameLoc->Ident, Range, nullptr, PragmaNameLoc->Loc,
+                 ArgHints, 2, ParsedAttr::Form::Pragma());
+  }
+
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  return ParseStatementOrDeclarationAfterAttributes(
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs);
+}
+
+/// Parse a NextSilicon location pragma in a similar fashion to loop hint
+/// pragmas. The annotation token should have a PragmaNSLocationInfo struct as a
+/// value.
+StmtResult Parser::ParsePragmaNSLocation(StmtVector &Stmts,
+                                         ParsedStmtContext StmtCtx,
+                                         SourceLocation *TrailingElseLoc,
+                                         ParsedAttributes &Attrs) {
+
+  while (Tok.is(tok::annot_pragma_ns_location)) {
+    // Get info from token.
+    const PragmaNSLocationInfo *Info =
+        static_cast<PragmaNSLocationInfo *>(Tok.getAnnotationValue());
+
+    IdentifierInfo *PragmaNameInfo = Info->PragmaName.getIdentifierInfo();
+    auto *PragmaNameLoc = IdentifierLoc::create(
+        Actions.Context, Info->PragmaName.getLocation(), PragmaNameInfo);
+    auto Range = Info->PragmaName.getLocation();
+
+    QualType StrType = Actions.Context.getStringLiteralArrayType(
+        Actions.Context.CharTy, Info->NSLocation.size() + 1);
+
+    // Generate location ASCII string literal.
+    auto *NSLocation = clang::StringLiteral::Create(
+        Actions.Context, Info->NSLocation, StringLiteralKind::Ordinary, false,
+        StrType, Info->PragmaName.getLocation());
+
+    ArgsUnion ArgHints[] = {ArgsUnion(NSLocation)};
+
+    ConsumeAnnotationToken();
+    Attrs.addNew(PragmaNameLoc->Ident, Range, nullptr, PragmaNameLoc->Loc,
+                 ArgHints, 1, ParsedAttr::Form::Pragma());
+  }
+
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  return ParseStatementOrDeclarationAfterAttributes(
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs);
+}
+
+StmtResult Parser::ParsePragmaNSVectorize(StmtVector &Stmts,
+                                          ParsedStmtContext StmtCtx,
+                                          SourceLocation *TrailingElseLoc,
+                                          ParsedAttributes &Attrs) {
+  while (Tok.is(tok::annot_pragma_ns_vectorize)) {
+    const PragmaNSVectorizeInfo *Info =
+        static_cast<PragmaNSVectorizeInfo *>(Tok.getAnnotationValue());
+
+    IdentifierInfo *PragmaNameInfo = Info->PragmaName.getIdentifierInfo();
+    auto *PragmaNameLoc = IdentifierLoc::create(
+        Actions.Context, Info->PragmaName.getLocation(), PragmaNameInfo);
+    auto Range = Info->PragmaName.getLocation();
+
+    QualType StrType = Actions.Context.getStringLiteralArrayType(
+        Actions.Context.CharTy, Info->NSVectorize.size() + 1);
+
+    // Generate vectorize ASCII string literal.
+    auto *NSVectorize = clang::StringLiteral::Create(
+        Actions.Context, Info->NSVectorize, StringLiteralKind::Ordinary, false,
+        StrType, Info->PragmaName.getLocation());
+
+    ArgsUnion ArgHints[] = {ArgsUnion(NSVectorize)};
+
+    ConsumeAnnotationToken();
+    Attrs.addNew(PragmaNameLoc->Ident, Range, nullptr, PragmaNameLoc->Loc,
+                 ArgHints, 1, ParsedAttr::Form::Pragma());
+  }
+
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  return ParseStatementOrDeclarationAfterAttributes(
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs);
 }
 
 bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
@@ -4158,4 +4403,215 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.RISCV().DeclareRVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
     Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
+}
+
+// Handle '#pragma ns mark [mark]'.
+void PragmaNSMarkHandler::HandlePragma(Preprocessor &PP,
+                                       PragmaIntroducer Introducer,
+                                       Token &FirstToken) {
+
+  SmallVector<Token, 1> TokenList;
+  Token Tok;
+
+  PP.Lex(Tok); // eat 'mark'.
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_ns_mark_no_arg) << "ns mark";
+    return;
+  }
+
+  while (Tok.is(tok::identifier)) {
+
+    const IdentifierInfo *SecType = Tok.getIdentifierInfo();
+    auto PragmaName = Tok;
+    PP.Lex(Tok);
+
+    auto *Info = new (PP.getPreprocessorAllocator()) PragmaNSMarkInfo;
+
+    // Point the info on the first ("mark") token as the ns mark identifier.
+    Info->PragmaName = FirstToken;
+    Info->Mark = SecType->getName();
+
+    Info->ValidFlags = getNSMarkValidFlag(Info->Mark);
+
+    if (Info->ValidFlags == PragmaNSMarkInfo::MarkValidFlags::None) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_ns_mark_unexpected)
+          << "ns mark";
+      return;
+    }
+
+    Info->ArgumentCount = llvm::StringSwitch<unsigned int>(Info->Mark)
+                              .Case("slot", 1)
+                              .Case("cgid", 1)
+                              .Case("duplication_count", 1)
+                              .Default(0);
+
+    if (Info->ArgumentCount == 1) {
+      // Read '('
+      if (Tok.isNot(tok::l_paren)) {
+        PP.Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
+        return;
+      }
+      PP.Lex(Tok);
+
+      // Read Number
+      SmallVector<Token, 1> ValueList;
+      while (Tok.isNot(tok::eod)) {
+        if (Tok.is(tok::r_paren))
+          break;
+
+        ValueList.push_back(Tok);
+        PP.Lex(Tok);
+      }
+
+      // Read ')'
+      if (Tok.isNot(tok::r_paren)) {
+        PP.Diag(Tok.getLocation(), diag::err_expected) << tok::r_paren;
+        return;
+      }
+      PP.Lex(Tok);
+
+      Token EOFTok;
+      EOFTok.startToken();
+      EOFTok.setKind(tok::eof);
+      EOFTok.setLocation(Tok.getLocation());
+      ValueList.push_back(EOFTok); // Terminates expression for parsing.
+
+      Info->Toks =
+          llvm::ArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
+    }
+
+    // Allow multiple marks only for loops
+    if ((Tok.isNot(tok::eod) &&
+         Info->ValidFlags != PragmaNSMarkInfo::MarkValidFlags::Loop) ||
+        Info->ArgumentCount > 1) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_ns_mark_too_many_args)
+          << "ns mark";
+      return;
+    }
+
+    // Generate the hint token.
+    Token NSTok;
+    NSTok.startToken();
+    NSTok.setKind(tok::annot_pragma_ns_mark);
+    NSTok.setLocation(Introducer.Loc);
+    NSTok.setAnnotationEndLoc(PragmaName.getLocation());
+    NSTok.setAnnotationValue(static_cast<void *>(Info));
+    TokenList.push_back(NSTok);
+  }
+
+  auto TokenArray = std::make_unique<Token[]>(TokenList.size());
+  std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
+
+  PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+// Handle '#pragma ns location [location]'.
+void PragmaNSLocationHandler::HandlePragma(Preprocessor &PP,
+                                           PragmaIntroducer Introducer,
+                                           Token &FirstToken) {
+
+  SmallVector<Token, 1> TokenList;
+  Token Tok;
+
+  PP.Lex(Tok); // eat 'location'.
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_ns_location_no_arg)
+        << "ns location";
+    return;
+  }
+
+  const IdentifierInfo *SecType = Tok.getIdentifierInfo();
+  auto PragmaName = Tok;
+  PP.Lex(Tok);
+
+  auto *Info = new (PP.getPreprocessorAllocator()) PragmaNSLocationInfo;
+  // Point the info on the first ("location") token as the ns location
+  // identifier.
+  Info->PragmaName = FirstToken;
+  Info->NSLocation = SecType->getName();
+
+  if (!isNSLocationValid(Info->NSLocation)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_ns_location_unexpected)
+        << "ns location";
+    return;
+  }
+
+  Info->ArgumentCount = 0;
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_ns_location_too_many_args)
+        << "ns location";
+    return;
+  }
+
+  // Generate the hint token.
+  Token NSTok;
+  NSTok.startToken();
+  NSTok.setKind(tok::annot_pragma_ns_location);
+  NSTok.setLocation(Introducer.Loc);
+  NSTok.setAnnotationEndLoc(PragmaName.getLocation());
+  NSTok.setAnnotationValue(static_cast<void *>(Info));
+  TokenList.push_back(NSTok);
+
+  auto TokenArray = std::make_unique<Token[]>(TokenList.size());
+  std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
+
+  PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+// Handle '#pragma ns vectorize [type]'.
+void PragmaNSVectorizeHandler::HandlePragma(Preprocessor &PP,
+                                            PragmaIntroducer Introducer,
+                                            Token &FirstToken) {
+
+  SmallVector<Token, 1> TokenList;
+  Token Tok;
+
+  PP.Lex(Tok); // eat 'vectorize'.
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_ns_vectorize_no_arg)
+        << "ns vectorize";
+    return;
+  }
+
+  const IdentifierInfo *SecType = Tok.getIdentifierInfo();
+  auto PragmaName = Tok;
+  PP.Lex(Tok);
+
+  auto *Info = new (PP.getPreprocessorAllocator()) PragmaNSVectorizeInfo;
+  Info->PragmaName = FirstToken;
+  Info->NSVectorize = SecType->getName();
+
+  bool isVectorizeValid = llvm::StringSwitch<bool>(Info->NSVectorize)
+                              .Case("nopredicate", true)
+                              .Case("predicate", true)
+                              .Default(false);
+
+  if (!isVectorizeValid) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_ns_vectorize_unexpected)
+        << "ns vectorize";
+    return;
+  }
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_ns_vectorize_too_many_args)
+        << "ns vectorize";
+    return;
+  }
+
+  // Generate the hint token.
+  Token NSTok;
+  NSTok.startToken();
+  NSTok.setKind(tok::annot_pragma_ns_vectorize);
+  NSTok.setLocation(Introducer.Loc);
+  NSTok.setAnnotationEndLoc(PragmaName.getLocation());
+  NSTok.setAnnotationValue(static_cast<void *>(Info));
+  TokenList.push_back(NSTok);
+
+  auto TokenArray = std::make_unique<Token[]>(TokenList.size());
+  std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
+
+  PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }

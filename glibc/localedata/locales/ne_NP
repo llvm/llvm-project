@@ -1,0 +1,184 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Nepali language locale for Nepal.
+% Contributed by Pawan Chitrakar <pc@info.com.np>
+
+LC_IDENTIFICATION
+title      "Nepali language locale for Nepal"
+source     "Madan Puraskar Pustakalaya"
+address    "Rato Bangala, Patan Dhoka,Lalitpur,Nepal"
+contact    ""
+email      "info@mpp.org.np"
+tel        ""
+fax        ""
+language   "Nepali"
+territory  "Nepal"
+revision   "1.1"
+date       "2003-05-12"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+int_curr_symbol       "NPR "
+currency_symbol       "<U0930><U0942>"
+mon_decimal_point     "."
+mon_thousands_sep     ","
+mon_grouping          3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       2
+frac_digits           2
+p_cs_precedes         1
+p_sep_by_space        1
+n_cs_precedes         1
+n_sep_by_space        1
+p_sign_posn           1
+n_sign_posn           1
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+% This is the POSIX Locale definition for the LC_NUMERIC  category.
+%
+decimal_point          "."
+thousands_sep          ","
+grouping               3
+%
+END LC_NUMERIC
+
+
+LC_TIME
+abday       "<U0906><U0907><U0924>";/
+            "<U0938><U094B><U092E>";/
+            "<U092E><U0919><U094D><U0917><U0932>";/
+            "<U092C><U0941><U0927>";/
+            "<U092C><U093F><U0939><U0940>";/
+            "<U0936><U0941><U0915><U094D><U0930>";/
+            "<U0936><U0928><U093F>"
+day         "<U0906><U0907><U0924><U092C><U093E><U0930>";/
+            "<U0938><U094B><U092E><U092C><U093E><U0930>";/
+            "<U092E><U0919><U094D><U0917><U0932><U092C><U093E><U0930>";/
+            "<U092C><U0941><U0927><U092C><U093E><U0930>";/
+            "<U092C><U093F><U0939><U0940><U092C><U093E><U0930>";/
+            "<U0936><U0941><U0915><U094D><U0930><U092C><U093E><U0930>";/
+            "<U0936><U0928><U093F><U092C><U093E><U0930>"
+abmon       "<U091C><U0928>";/
+            "<U092B><U0947><U092C><U094D><U0930><U0941><U0905><U0930><U0940>";/
+            "<U092E><U093E><U0930><U094D><U091A>";/
+            "<U0905><U092A><U094D><U0930><U093F><U0932>";/
+            "<U092E><U0947>";/
+            "<U091C><U0941><U0928>";/
+            "<U091C><U0941><U0932><U093E><U0908>";/
+            "<U0905><U0917><U0938><U094D><U091F>";/
+            "<U0938><U0947><U092A><U094D><U091F><U0947><U092E><U094D><U092C><U0930>";/
+            "<U0905><U0915><U094D><U091F><U094B><U092C><U0930>";/
+            "<U0928><U094B><U092D><U0947><U092E><U094D><U092C><U0930>";/
+            "<U0921><U093F><U0938><U0947><U092E><U094D><U092C><U0930>"
+mon         "<U091C><U0928><U0935><U0930><U0940>";/
+            "<U092B><U0947><U092C><U094D><U0930><U0941><U0905><U0930><U0940>";/
+            "<U092E><U093E><U0930><U094D><U091A>";/
+            "<U0905><U092A><U094D><U0930><U093F><U0932>";/
+            "<U092E><U0947>";/
+            "<U091C><U0941><U0928>";/
+            "<U091C><U0941><U0932><U093E><U0908>";/
+            "<U0905><U0917><U0938><U094D><U091F>";/
+            "<U0938><U0947><U092A><U094D><U091F><U0947><U092E><U094D><U092C><U0930>";/
+            "<U0905><U0915><U094D><U091F><U094B><U092C><U0930>";/
+            "<U0928><U094B><U092D><U0947><U092E><U094D><U092C><U0930>";/
+            "<U0921><U093F><U0938><U0947><U092E><U094D><U092C><U0930>"
+am_pm       "<U092A><U0942><U0930><U094D><U0935><U093E><U0939><U094D><U0928>";/
+            "<U0905><U092A><U0930><U093E><U0939><U094D><U0928>"
+d_t_fmt     "%Y %B %d %I:%M:%S %p"
+date_fmt    "%Y %B %d %I:%M:%S %p %Z"
+d_fmt       "%y//%-m//%-d"
+t_fmt       "%H:%M:%S"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0nN]"
+yesstr  "<U0939><U094B>"
+nostr   "<U0939><U094B><U0907><U0928>"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+
+LC_NAME
+name_fmt  "%p%t%g%t%m%t%f"
+name_gen  "<U091C><U094D><U092F><U0942>"
+name_mr   "<U0936><U094D><U0930><U0940><U092E><U093E><U0928><U094D>"
+name_mrs  "<U0936><U094D><U0930><U0940><U092E><U0924><U0940>"
+name_miss "<U0938><U0941><U0936><U094D><U0930><U0940>"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt	 "%f%N%h%s%N%T"
+country_name "<U0928><U0947><U092A><U093E><U0932>"
+country_ab2 "NP"
+country_ab3 "NPL"
+country_num 524
+country_car    "NEP"
+% नेपाली
+lang_name    "<U0928><U0947><U092A><U093E><U0932><U0940>"
+lang_ab      "ne"
+lang_term    "nep"
+lang_lib    "nep"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a%t%l"
+int_prefix     "977"
+int_select     "00"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

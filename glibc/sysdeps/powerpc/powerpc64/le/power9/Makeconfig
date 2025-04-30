@@ -1,0 +1,3 @@
+# Hint to multiarch (if used) we support power9
+# on powerpc64le.
+libc-submachine-power9 = yes

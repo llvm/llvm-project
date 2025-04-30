@@ -1,0 +1,168 @@
+\input texinfo                  @c -*- Texinfo -*-
+@comment %**start of header (This is for running Texinfo on a region.)
+@setfilename libc.info
+@settitle The GNU C Library
+@documentencoding UTF-8
+@c '@codequotebacktick on' and '@codequoteundirected on' require
+@c Texinfo 5.0 or later, so use the older equivalent @set variables
+@c supported in Texinfo 4.11 and later.
+@set txicodequoteundirected
+@set txicodequotebacktick
+
+@c setchapternewpage odd
+
+@include macros.texi
+
+@comment Tell install-info what to do.
+@dircategory Software libraries
+@direntry
+* Libc: (libc).                 C library.
+@end direntry
+@include dir-add.texi
+
+@include pkgvers.texi
+
+@c This tells texinfo.tex to use the real section titles in xrefs in
+@c place of the node name, when no section title is explicitly given.
+@set xref-automatic-section-title
+@c @smallbook
+@comment %**end of header (This is for running Texinfo on a region.)
+
+@c Everything related to printed editions is disabled until we have
+@c resolved how to keep them in sync with the master sources of the
+@c manual.
+@c sold 0.06/1.09, print run out 21may96
+@c @set EDITION 0.13
+@c @set ISBN 1-882114-55-8
+
+@include version.texi
+
+@set FDL_VERSION 1.3
+
+@copying
+This is
+@c Disabled (printed editions, see above).
+@c Edition @value{EDITION} of
+@cite{The GNU C Library Reference Manual}, for version
+@ifset PKGVERSION_DEFAULT
+@value{VERSION}.
+@end ifset
+@ifclear PKGVERSION_DEFAULT
+@value{VERSION} @value{PKGVERSION}.
+@end ifclear
+
+Copyright @copyright{} 1993--2021 Free Software Foundation, Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version
+@value{FDL_VERSION} or any later version published by the Free
+Software Foundation; with the Invariant Sections being ``Free Software
+Needs Free Documentation'' and ``GNU Lesser General Public License'',
+the Front-Cover texts being ``A GNU Manual'', and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License".
+
+(a) The FSF's Back-Cover Text is: ``You have the freedom to
+copy and modify this GNU manual.  Buying copies from the FSF
+supports it in developing GNU and promoting software freedom.''
+@end copying
+
+@iftex
+@shorttitlepage The GNU C Library Reference Manual
+@end iftex
+@titlepage
+@center @titlefont{The GNU C Library}
+@sp 1
+@center @titlefont{Reference Manual}
+@sp 2
+@center Sandra Loosemore
+@center with
+@center Richard M. Stallman, Roland McGrath, Andrew Oram, and Ulrich Drepper
+@sp 3
+@c Disabled (printed editions, see above).
+@c @center Edition @value{EDITION}
+@c @sp 1
+@center for version @value{VERSION}
+@ifclear PKGVERSION_DEFAULT
+@sp 1
+@center @value{PKGVERSION}
+@end ifclear
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+
+@c Disabled (printed editions, see above).
+@c @sp 2
+@c Published by the @uref{https://www.fsf.org/, Free Software Foundation} @*
+@c ISBN @value{ISBN} @*
+
+@c Disabled (printed editions, see above).
+@c @sp 2
+@c Cover art for the Free Software Foundation's printed edition
+@c by Etienne Suvasa.
+
+@end titlepage
+
+@c @titlepage is only visible in the printed manual.  Show the
+@c copyright information elsewhere in other renderings.  For the HTML
+@c version, it should come above the short table of contents.  In the
+@c Info manual, the option below is used.
+@ifhtml
+@insertcopying
+@end ifhtml
+
+@shortcontents
+@contents
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top Main Menu
+@c Disabled (printed editions, see above).
+@ifnothtml
+@insertcopying
+@end ifnothtml
+@end ifnottex
+
+@include top-menu.texi
+@include chapters.texi
+
+@node Free Manuals, Copying, Contributors, Top
+@appendix Free Software Needs Free Documentation
+@include freemanuals.texi
+
+@node Copying, Documentation License, Free Manuals, Top
+@appendix GNU Lesser General Public License
+@include lgpl-2.1.texi
+
+@node Documentation License, Concept Index, Copying, Top
+@appendix GNU Free Documentation License
+@cindex FDL, GNU Free Documentation License
+@include fdl-@value{FDL_VERSION}.texi
+
+@node Concept Index, Type Index, Documentation License, Top
+@unnumbered Concept Index
+
+@printindex cp
+
+@node Type Index, Function Index, Concept Index, Top
+@unnumbered Type Index
+
+@printindex tp
+
+@node Function Index, Variable Index, Type Index, Top
+@unnumbered Function and Macro Index
+
+@printindex fn
+
+@node Variable Index, File Index, Function Index, Top
+@unnumbered Variable and Constant Macro Index
+
+@printindex vr
+
+@node File Index, , Variable Index, Top
+@unnumbered Program and File Index
+
+@printindex pg
+
+
+@bye

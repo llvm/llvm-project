@@ -33,6 +33,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
@@ -59,6 +60,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
+#include "clang/Support/NextSiliconUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -73,6 +75,7 @@
 
 using namespace clang;
 using namespace sema;
+using namespace ns;
 
 namespace AttributeLangSupport {
   enum LANG {
@@ -5317,6 +5320,68 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
 }
 
+/// Check if the ns location attribute is valid for the declaration.
+static void handleNextSiliconLocationAttr(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  if (AL.getNumArgs() < 1) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL << 1;
+    return;
+  }
+  if (AL.getNumArgs() > 1) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 1;
+    return;
+  }
+
+  auto *E = dyn_cast<clang::StringLiteral>(AL.getArgAsExpr(0));
+  if (!E)
+    return;
+
+  StringRef NSLocation;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, NSLocation))
+    return;
+
+  if (!isNSLocationValid(NSLocation)) {
+    S.Diag(AL.getLoc(), diag::err_pragma_ns_location_unexpected)
+        << "ns location";
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+                 NextSiliconLocationAttr(S.Context, AL, NSLocation));
+}
+
+/// Check if the ns mark attribute is valid for the declaration.
+static void handleNextSiliconMarkAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (AL.getNumArgs() < 1) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL << 1;
+    return;
+  }
+  if (AL.getNumArgs() > 2) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 2;
+    return;
+  }
+
+  auto *E = dyn_cast<clang::StringLiteral>(AL.getArgAsExpr(0));
+  if (!E)
+    return;
+
+  StringRef NSMark;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, NSMark))
+    return;
+
+  // Support only ns mark flags valid for functions.
+  bool isMarkValid =
+      getNSMarkValidFlag(NSMark) == PragmaNSMarkInfo::MarkValidFlags::Function;
+
+  if (!isMarkValid) {
+    S.Diag(AL.getLoc(), diag::err_pragma_ns_function_mark_unexpected)
+        << "ns mark";
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NextSiliconMarkAttr(S.Context, AL, NSMark));
+}
+
 //===----------------------------------------------------------------------===//
 // Microsoft specific attribute handlers.
 //===----------------------------------------------------------------------===//
@@ -7099,6 +7164,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_VTablePointerAuthentication:
     handleVTablePointerAuthentication(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_NextSiliconLocation:
+    handleNextSiliconLocationAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_NextSiliconMark:
+    handleNextSiliconMarkAttr(S, D, AL);
     break;
   }
 }

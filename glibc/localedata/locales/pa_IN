@@ -1,0 +1,211 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Punjabi language locale for Indian Punjabi(Gurmukhi)
+% Last update by A Alam <amanlinux@netscape.net>
+
+LC_IDENTIFICATION
+title      "Punjabi language locale for Indian Punjabi(Gurmukhi)"
+source     "IndLinux.org"
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Punjabi"
+territory  "India"
+revision   "0.2"
+date       "2004-09-30"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy	"i18n"
+
+% Punjabi uses the alternate digits U+0A66..U+0A6F
+outdigit <U0A66>..<U0A6F>
+
+% This is used in the scanf family of functions to read Punjabi numbers
+% using "%Id" and such.
+map to_inpunct; /
+  (<U0030>,<U0A66>); /
+  (<U0031>,<U0A67>); /
+  (<U0032>,<U0A68>); /
+  (<U0033>,<U0A69>); /
+  (<U0034>,<U0A6A>); /
+  (<U0035>,<U0A6B>); /
+  (<U0036>,<U0A6C>); /
+  (<U0037>,<U0A6D>); /
+  (<U0038>,<U0A6E>); /
+  (<U0039>,<U0A6F>);
+
+translit_start
+include     "translit_combining";""
+translit_end
+END LC_CTYPE
+
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+
+LC_NUMERIC
+copy "hi_IN"
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+% Abbreviated weekday names (%a)
+abday       "<U0A10><U0A24>";/
+            "<U0A38><U0A4B><U0A2E>";/
+            "<U0A2E><U0A70><U0A17><U0A32>";/
+            "<U0A2C><U0A41><U0A71><U0A27>";/
+            "<U0A35><U0A40><U0A30>";/
+            "<U0A36><U0A41><U0A71><U0A15><U0A30>";/
+            "<U0A36><U0A28><U0A3F><U0A71><U0A1A><U0A30>"
+%
+% Full weekday names (%A)
+day         "<U0A10><U0A24><U0A35><U0A3E><U0A30>";/
+            "<U0A38><U0A4B><U0A2E><U0A35><U0A3E><U0A30>";/
+            "<U0A2E><U0A70><U0A17><U0A32><U0A35><U0A3E><U0A30>";/
+            "<U0A2C><U0A41><U0A71><U0A27><U0A35><U0A3E><U0A30>";/
+            "<U0A35><U0A40><U0A30><U0A35><U0A3E><U0A30>";/
+            "<U0A36><U0A41><U0A71><U0A15><U0A30><U0A35><U0A3E><U0A30>";/
+            "<U0A36><U0A28><U0A3F><U0A71><U0A1A><U0A30><U0A35><U0A3E><U0A30>"
+
+
+% Abbreviated month names (%b)
+abmon       "<U0A1C><U0A28>";/
+            "<U0A2B><U0A3C><U0A30>";/
+            "<U0A2E><U0A3E><U0A30><U0A1A>";/
+            "<U0A05><U0A2A><U0A4D><U0A30><U0A48>";/
+            "<U0A2E><U0A08>";/
+	    "<U0A1C><U0A42><U0A28>";/
+            "<U0A1C><U0A41><U0A32><U0A3E>";/
+            "<U0A05><U0A17>";/
+            "<U0A38><U0A24><U0A70>";/
+            "<U0A05><U0A15><U0A24><U0A42>";/
+            "<U0A28><U0A35><U0A70>";/
+            "<U0A26><U0A38><U0A70>"
+%
+% Full month names (%B)
+mon         "<U0A1C><U0A28><U0A35><U0A30><U0A40>";/
+            "<U0A2B><U0A3C><U0A30><U0A35><U0A30><U0A40>";/
+            "<U0A2E><U0A3E><U0A30><U0A1A>";/
+            "<U0A05><U0A2A><U0A4D><U0A30><U0A48><U0A32>";/
+            "<U0A2E><U0A08>";/
+	    "<U0A1C><U0A42><U0A28>";/
+            "<U0A1C><U0A41><U0A32><U0A3E><U0A08>";/
+            "<U0A05><U0A17><U0A38><U0A24>";/
+            "<U0A38><U0A24><U0A70><U0A2C><U0A30>";/
+            "<U0A05><U0A15><U0A24><U0A42><U0A2C><U0A30>";/
+            "<U0A28><U0A35><U0A70><U0A2C><U0A30>";/
+            "<U0A26><U0A38><U0A70><U0A2C><U0A30>"
+
+%
+% Equivalent of AM PM
+am_pm       "<U0A38><U0A35><U0A47><U0A30><U0A47>";/
+            "<U0A36><U0A3E><U0A2E>"
+
+%
+% Appropriate date and time representation
+d_t_fmt     "%A %d %b %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%A %d %b %Y %I:%M:%S %p %Z"
+%
+% Appropriate date representation
+d_fmt       "%-d//%-m//%y"
+%
+% Appropriate time representation
+t_fmt       "%I:%M:%S %p %Z"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%I:%M:%S %p %Z"
+week 7;19971130;1
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0A39>]"
+noexpr  "^[-0nN<U0A28>]"
+yesstr  "<U0A39><U0A3E><U0A02>"
+nostr   "<U0A28><U0A39><U0A40><U0A02>"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "hi_IN"
+END LC_PAPER
+
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    ""
+name_mr     "Mr."
+name_mrs    "Mrs."
+name_miss   "Miss."
+name_ms     "Ms."
+
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U0A2D><U0A3E><U0A30><U0A24>"
+country_ab2 "IN"
+country_ab3 "IND"
+country_num 356
+country_car    "IND"
+% ਪੰਜਾਬੀ
+lang_name    "<U0A2A><U0A70><U0A1C><U0A3E><U0A2C><U0A40>"
+lang_ab      "pa"
+lang_term    "pan"
+lang_lib    "pan"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+copy "hi_IN"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "hi_IN"
+END LC_MEASUREMENT

@@ -1,0 +1,134 @@
+macro-int-constant EDOM {int} > 0
+#if !defined ISO && !defined POSIX
+macro-int-constant EILSEQ {int} > 0
+#endif
+macro-int-constant ERANGE {int} > 0
+
+// variable int errno
+allow errno
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+macro-int-constant E2BIG {int} > 0
+macro-int-constant EACCES {int} > 0
+# if !defined POSIX
+macro-int-constant EADDRINUSE {int} > 0
+macro-int-constant EADDRNOTAVAIL {int} > 0
+macro-int-constant EAFNOSUPPORT {int} > 0
+# endif
+macro-int-constant EAGAIN {int} > 0
+# if !defined POSIX
+macro-int-constant EALREADY {int} > 0
+# endif
+macro-int-constant EBADF {int} > 0
+macro-int-constant EBADMSG {int} > 0
+macro-int-constant EBUSY {int} > 0
+macro-int-constant ECANCELED {int} > 0
+macro-int-constant ECHILD {int} > 0
+# if !defined POSIX
+macro-int-constant ECONNABORTED {int} > 0
+macro-int-constant ECONNREFUSED {int} > 0
+macro-int-constant ECONNRESET {int} > 0
+# endif
+macro-int-constant EDEADLK {int} > 0
+# if !defined POSIX
+macro-int-constant EDESTADDRREQ {int} > 0
+macro-int-constant EDQUOT {int} > 0
+# endif
+macro-int-constant EEXIST {int} > 0
+macro-int-constant EFAULT {int} > 0
+macro-int-constant EFBIG {int} > 0
+# if !defined POSIX
+macro-int-constant EHOSTUNREACH {int} > 0
+macro-int-constant EIDRM {int} > 0
+# endif
+macro-int-constant EINPROGRESS {int} > 0
+macro-int-constant EINTR {int} > 0
+macro-int-constant EINVAL {int} > 0
+macro-int-constant EIO {int} > 0
+# if !defined POSIX
+macro-int-constant EISCONN {int} > 0
+# endif
+macro-int-constant EISDIR {int} > 0
+# if !defined POSIX
+macro-int-constant ELOOP {int} > 0
+# endif
+macro-int-constant EMFILE {int} > 0
+macro-int-constant EMLINK {int} > 0
+macro-int-constant EMSGSIZE {int} > 0
+# if !defined POSIX
+macro-int-constant EMULTIHOP {int} > 0
+# endif
+macro-int-constant ENAMETOOLONG {int} > 0
+# if !defined POSIX
+macro-int-constant ENETDOWN {int} > 0
+macro-int-constant ENETUNREACH {int} > 0
+# endif
+macro-int-constant ENFILE {int} > 0
+# if !defined POSIX
+macro-int-constant ENOBUFS {int} > 0
+macro-int-constant ENODATA {int} > 0
+# endif
+macro-int-constant ENODEV {int} > 0
+macro-int-constant ENOENT {int} > 0
+macro-int-constant ENOEXEC {int} > 0
+macro-int-constant ENOLCK {int} > 0
+# if !defined POSIX
+macro-int-constant ENOLINK {int} > 0
+# endif
+macro-int-constant ENOMEM {int} > 0
+# if !defined POSIX
+macro-int-constant ENOMSG {int} > 0
+macro-int-constant ENOPROTOOPT {int} > 0
+# endif
+macro-int-constant ENOSPC {int} > 0
+# if !defined POSIX
+macro-int-constant ENOSR {int} > 0
+macro-int-constant ENOSTR {int} > 0
+# endif
+macro-int-constant ENOSYS {int} > 0
+# if !defined POSIX
+macro-int-constant ENOTCONN {int} > 0
+# endif
+macro-int-constant ENOTDIR {int} > 0
+macro-int-constant ENOTEMPTY {int} > 0
+# if !defined POSIX
+macro-int-constant ENOTSOCK {int} > 0
+# endif
+macro-int-constant ENOTSUP {int} > 0
+macro-int-constant ENOTTY {int} > 0
+macro-int-constant ENXIO {int} > 0
+# if !defined POSIX
+macro-int-constant EOPNOTSUPP {int} > 0
+macro-int-constant EOVERFLOW {int} > 0
+# endif
+macro-int-constant EPERM {int} > 0
+macro-int-constant EPIPE {int} > 0
+# if !defined POSIX
+macro-int-constant EPROTO {int} > 0
+macro-int-constant EPROTONOSUPPORT {int} > 0
+macro-int-constant EPROTOTYPE {int} > 0
+# endif
+macro-int-constant EROFS {int} > 0
+macro-int-constant ESPIPE {int} > 0
+macro-int-constant ESRCH {int} > 0
+# if !defined POSIX
+macro-int-constant ESTALE {int} > 0
+macro-int-constant ETIME {int} > 0
+# endif
+macro-int-constant ETIMEDOUT {int} > 0
+# if !defined POSIX
+macro-int-constant ETXTBSY {int} > 0
+macro-int-constant EWOULDBLOCK {int} > 0
+# endif
+macro-int-constant EXDEV {int} > 0
+
+# if defined XOPEN2K8 || defined POSIX2008
+macro-int-constant ENOTRECOVERABLE {int} > 0
+macro-int-constant EOWNERDEAD {int} > 0
+# endif
+
+allow *_t
+#endif
+
+allow E[0123456789]*
+allow E[ABCDEFGHIJKLMNOPQRSTUVWXYZ]*

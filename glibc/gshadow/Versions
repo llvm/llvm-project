@@ -1,0 +1,21 @@
+libc {
+  GLIBC_2.10 {
+    # e*
+    endsgent;
+
+    # f*
+    fgetsgent; fgetsgent_r;
+
+    # g*
+    getsgent; getsgent_r; getsgnam; getsgnam_r;
+
+    # p*
+    putsgent;
+
+    # s*
+    setsgent;
+
+    # s*
+    sgetsgent; sgetsgent_r;
+  }
+}

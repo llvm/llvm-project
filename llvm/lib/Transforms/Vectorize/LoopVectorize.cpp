@@ -188,6 +188,10 @@ static cl::opt<unsigned> EpilogueVectorizationForceVF(
              "1 is specified, forces the given VF for all applicable epilogue "
              "loops."));
 
+static cl::opt<bool> MarkRemainderAsNoMill(
+    "no-mill-remainder-loop", cl::init(false), cl::Hidden,
+    cl::desc("Option to mark reminder loop with NS custom nomill metadata"));
+
 static cl::opt<unsigned> EpilogueVectorizationMinVF(
     "epilogue-vectorization-minimum-VF", cl::init(16), cl::Hidden,
     cl::desc("Only loops with vectorization factor equal to or larger than "
@@ -4633,7 +4637,7 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   // with vectorization factors larger than a certain value.
 
   // Allow the target to opt out entirely.
-  if (!TTI.preferEpilogueVectorization())
+  if (!TTI.preferEpilogueVectorization(TheLoop))
     return false;
 
   // We also consider epilogue vectorization unprofitable for targets that don't
@@ -6376,6 +6380,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     VectorTy = ToVectorTy(RetTy, VF);
 
   if (VF.isVector() && VectorTy->isVectorTy() &&
+      !TTI.shouldForceVectorizeInst(I, VectorTy) &&
       !TTI.getNumberOfParts(VectorTy))
     return InstructionCost::getInvalid();
 
@@ -7267,6 +7272,26 @@ static void createAndCollectMergePhiForReduction(
   OrigPhi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
 
   ReductionResumeValues[&RdxDesc] = BCBlockPhi;
+}
+
+static void AddNoMillMetaData(Loop *L) {
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+
+  if (MDNode *LoopID = L->getLoopID())
+    append_range(MDs, drop_begin(LoopID->operands()));
+
+  // Add no mill metadata.
+  LLVMContext &Context = L->getHeader()->getContext();
+  MDNode *NoMillNode =
+      MDNode::get(Context, {MDString::get(Context, "ns.loop.mark"),
+                            MDString::get(Context, "nomill")});
+  MDs.push_back(NoMillNode);
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L->setLoopID(NewLoopID);
 }
 
 std::pair<DenseMap<const SCEV *, Value *>,
@@ -10100,6 +10125,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     if (DisableRuntimeUnroll)
       AddRuntimeUnrollDisableMetaData(L);
 
+    if (MarkRemainderAsNoMill)
+      AddNoMillMetaData(L);
     // Mark the loop as already vectorized to avoid vectorizing again.
     Hints.setAlreadyVectorized();
   }

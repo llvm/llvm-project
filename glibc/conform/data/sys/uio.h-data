@@ -1,0 +1,14 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined POSIX2008
+type {struct iovec}
+
+element {struct iovec} {void*} iov_base
+element {struct iovec} size_t iov_len
+
+function ssize_t readv (int, const struct iovec*, int)
+function ssize_t writev (int, const struct iovec*, int)
+
+allow iov_*
+allow IOV_*
+allow *_t
+allow UIO_MAXIOV
+#endif

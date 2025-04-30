@@ -1,0 +1,1 @@
+/* This function is defined in ffs.S.  */

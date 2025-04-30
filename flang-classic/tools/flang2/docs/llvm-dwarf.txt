@@ -1,0 +1,228 @@
+ Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ See https://llvm.org/LICENSE.txt for license information.
+ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+
+              LLVM Metadata Extensions for Debugging Fortran
+                                Version 0.2
+
+This document describes the extensions to LLVM debug metadata that have
+been implemented to support standard DWARF constructed used to represent
+Fortran.
+
+These changes are committed to in flang-compiler/llvm but not yet committed
+to llvm.org/llvm.
+
+This document does not cover all the changes required to support debug
+metadata generation for Fortran.  There is a companion document that is
+used for discussion of proposed changes to LLVM to support LLVM metadata
+changes for Fortran.
+
+Extensions to LLVM Metadata
+
+This document describes the extensions that PGI has added to LLVM to
+support debugging Fortran programs.
+
+Work In Progress
+
+Array stride information is not implemented in the extended metadata
+described in this document.  The implication is that arrays will have
+single-unit stride, which is often, but not always, the case with Flang
+array parameters.
+
+CHARACTER Type
+
+There is no analog in C or C++ for the Fortran CHARACTER type. The runtime
+representation of Fortran CHARACTER type is significantly different from C
+strings and C char VLAs.
+
+The Fortran CHARACTER type maps to the DWARF DW_TAG_string_type.
+
+   DW_TAG_string_type:
+      DW_AT_name: "character(5)"
+      DW_AT_byte_size: 5
+
+A new named DI was implemented to generate this DWARF information:
+
+   !21 = !DIStringType(name: "character(5)", size: 40)
+
+CHARACTER Type with Deferred Length
+
+CHARACTER types can also have deferred length.
+
+The Fortran CHARACTER type with a deferred length maps to the following DWARF:
+
+   DW_TAG_string_type:
+      DW_AT_name: character(*)!1
+      DW_AT_string_length: 0x9b (location list)
+      DW_AT_byte_size: 4
+
+This is supported in the new metadata as follows.
+
+   !22 = !DIStringType(name: "character(*)!1, size: 32, stringLength: !23,
+       stringLengthExpression: !24)
+   !23 = !DILocalVariable(scope: !3, arg: 4, file: !4, type: !5,
+       flags: DIFlagArtificial)
+   !24 = !DIExpression()
+
+
+
+
+
+Fortran Array Types and Bounds
+
+Fortran arrays have multiple dimensions.  Generally, Fortran arrays are
+described using descriptors which includes the number of dimensions, the
+upper and lower bound for each dimension, the stride, and the element size.
+
+Explicit array dimensions
+
+An array may be given a constant size as in the following example. The
+example shows a two-dimensional array, named array, that has indices from 1
+to 10 for the rows and 2 to 11 for the columns.TYPE(t) :: array(10,2:11)
+
+For this declaration, the compiler generates the following LLVM metadata.
+
+   !100 = !DIFortranArrayType(baseType: !7, elements: !101)
+   !101 = !{ !102, !103 }
+   !102 = !DIFortranSubrange(constLowerBound: 1, constUpperBound: 10)
+   !103 = !DIFortranSubrange(constLowerBound: 2, constUpperBound: 11)
+
+The DWARF generated for this is as follows.
+
+   DW_TAG_array_type:
+      DW_AT_name: array
+      DW_AT_type: 4d08 ;TYPE(t)
+      DW_TAG_subrange_type:
+         DW_AT_type: int
+         DW_AT_lower_bound: 1
+         DW_AT_upper_bound: 10
+      DW_TAG_subrange_type:
+         DW_AT_type: int
+         DW_AT_lower_bound: 2
+         DW_AT_upper_bound: 11
+
+Adjustable arrays
+
+An adjustable array is an array that is a local array or argument array
+with one or more of its dimensions or bounds as an expression of variables
+that are either dummy arguments or in a common block.
+
+   SUBROUTINE subr2(array2,N)
+      INTEGER :: N
+      TYPE(t) :: array2(N)
+
+In this case, we want to be able to express the !DISubrange as an
+expression that references the dummy argument, N.
+
+   call void @llvm.dbg.declare(metadata i64* %N, metadata !113, metadata !114)
+   ...
+   !110 = !DIFortranArrayType(baseType: !7, elements: !111)
+   !111 = !{ !112 }
+   !112 = !DIFortranSubrange(lowerBound: 1, upperBound: !113,
+        upperBoundExpression: !114)
+   !113 = !DILocalVariable(scope: !2, name: "zb1", file: !3, type: !4,
+        flags: DIFlagArtificial)
+   !114 = !DIExpression()
+
+It turns out the gdb does not properly interpret location lists or variable
+references in the DW_AT_lower_bound and DW_AT_upper_bound attribute forms,
+so we must generate either a constant or a block with the DW_OP operations
+for each of them.
+
+   DW_TAG_array_type:
+      DW_AT_name: array2
+      DW_AT_type: 4d08 ;TYPE(t)
+      DW_TAG_subrange_type:
+         DW_AT_type: int
+         DW_AT_lower_bound: 1
+         DW_AT_upper_bound: 2 byte block: 91 70
+
+Assumed size arrays
+
+An assumed size array leaves the last dimension of the array unspecified.
+
+   SUBROUTINE subr3(array3)
+      TYPE(t):: array3(*)
+
+We want the compiler to generate DWARF information without an upper bound,
+such as in this snippet.
+
+   DW_TAG_array_type
+      DW_AT_name: array3
+      DW_TAG_subrange_type
+         DW_AT_type = int
+         DW_AT_lower_bound = 1
+
+This DWARF is produced by omission of the upper bound information.
+
+   !122 = !DIFortranSubrange(lowerBound: 1)
+
+Assumed shape arrays
+
+Fortran also has assumed shape arrays, which allow extra state to be passed
+into the procedure to describe the shape of the array dummy argument. This
+extra information is the array descriptor, generated by the compiler, and
+passed as a hidden argument.SUBROUTINE subr4(array4)
+
+   TYPE(t) :: array4(:,:)
+
+In this case, we want to be able to generate DWARF expressions to access
+the results of the procedure's usage of the array descriptor argument when
+it computes the lower bound (DW_AT_lower_bound) and upper bound
+(DW_AT_upper_bound).
+
+   ...
+   call void @llvm.dbg.declare(metadata i64* %4, metadata !134, metadata !135)
+   call void @llvm.dbg.declare(metadata i64* %8, metadata !136, metadata !135)
+   call void @llvm.dbg.declare(metadata i64* %9, metadata !137, metadata !138)
+   call void @llvm.dbg.declare(metadata i64* %13, metadata !139, metadata !138)
+   ...
+   !130 = !DIFortranArrayType(baseType: !80, elements: !131)
+   !131 = !{ !132, !133 }
+   !132 = !DISubrange(lowerBound: !134, lowerBoundExpression: !135, upperBound:
+       !136, upperBoundExpression: !135)
+   !133 = !DISubrange(lowerBound: !137, lowerBoundExpression: !138, upperBound:
+       !139, upperBoundExpression: !138)
+   !134 = !DILocalVariable(scope: !2, name: "zb1", file: !3, type: !9, flags:
+       DIArtificial)
+   !135 = !DIExpression()
+   !136 = !DILocalVariable(scope: !2, name: "zb3", file: !3, type: !9, flags:
+       DIArtificial)
+   !137 = !DILocalVariable(scope: !2, name: "zb4", file: !3, type: !9, flags:
+       DIArtificial)
+   !138 = !DIExpression(DW_OP_deref)
+   !139 = !DILocalVariable(scope: !2, name: "zb5", file: !3, type: !9, flags:
+       DIArtificial)
+
+The DWARF generated for this is as follows.
+
+   DW_TAG_array_type:
+      DW_AT_name: array4
+      DW_AT_type: 4d08 ;TYPE(t)
+      DW_TAG_subrange_type:
+         DW_AT_type: int
+         DW_AT_lower_bound: 2 byte block: 91 78
+         DW_AT_upper_bound: 2 byte block: 91 70
+      DW_TAG_subrange_type:
+         DW_AT_type: int
+         DW_AT_lower_bound: 2 byte block: 91 68
+         DW_AT_upper_bound: 2 byte block: 91 60
+
+
+Elemental, Pure, and Recursive Procedures
+
+DWARF 4 defines attributes for the Fortran function specifiers ELEMENTAL,
+PURE, and RECURSIVE: DW_AT_elemental, DW_AT_pure, DW_AT_recursive,
+resp. LLVM has an existing way of informing the DWARF generator of simple
+boolean attributes in the metadata. We have added these to the collection
+of flags.
+
+   !60 = !DISubprogram(..., flags: DIFlagElemental)
+   !61 = !DISubprogram(..., flags: DIFlagPure)
+   !62 = !DISubprogram(..., flags: DIFlagRecursive)
+
+The Fortran 2018 standard defines a new attribute, NON_RECURSIVE.  DWARF
+does not yet have a way to represent NON_RECURSIVE.
+
+

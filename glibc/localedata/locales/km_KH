@@ -1,0 +1,1024 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Khmer Language Locale for Cambodia
+% Author:       Jens Herden
+
+LC_IDENTIFICATION
+title      "Khmer locale for Cambodia"
+source     ""
+address    ""
+contact    "Jens Herden at: jens@khmeros.info"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Khmer"
+territory  "Cambodia"
+revision   "1.0"
+date       "2005-3-15"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+
+%
+
+collating-element <KHMER_LETTER_KA-KHMER_SIGN_ROBAT> from "<U1780><U17CC>"
+collating-element <KHMER_LETTER_KHA-KHMER_SIGN_ROBAT> from "<U1781><U17CC>"
+collating-element <KHMER_LETTER_KO-KHMER_SIGN_ROBAT> from "<U1782><U17CC>"
+collating-element <KHMER_LETTER_KHO-KHMER_SIGN_ROBAT> from "<U1783><U17CC>"
+collating-element <KHMER_LETTER_NGO-KHMER_SIGN_ROBAT> from "<U1784><U17CC>"
+collating-element <KHMER_LETTER_CA-KHMER_SIGN_ROBAT> from "<U1785><U17CC>"
+collating-element <KHMER_LETTER_CHA-KHMER_SIGN_ROBAT> from "<U1786><U17CC>"
+collating-element <KHMER_LETTER_CO-KHMER_SIGN_ROBAT> from "<U1787><U17CC>"
+collating-element <KHMER_LETTER_CHO-KHMER_SIGN_ROBAT> from "<U1788><U17CC>"
+collating-element <KHMER_LETTER_NYO-KHMER_SIGN_ROBAT> from "<U1789><U17CC>"
+collating-element <KHMER_LETTER_DA-KHMER_SIGN_ROBAT> from "<U178A><U17CC>"
+collating-element <KHMER_LETTER_TTHA-KHMER_SIGN_ROBAT> from "<U178B><U17CC>"
+collating-element <KHMER_LETTER_DO-KHMER_SIGN_ROBAT> from "<U178C><U17CC>"
+collating-element <KHMER_LETTER_TTHO-KHMER_SIGN_ROBAT> from "<U178D><U17CC>"
+collating-element <KHMER_LETTER_NNO-KHMER_SIGN_ROBAT> from "<U178E><U17CC>"
+collating-element <KHMER_LETTER_TA-KHMER_SIGN_ROBAT> from "<U178F><U17CC>"
+collating-element <KHMER_LETTER_THA-KHMER_SIGN_ROBAT> from "<U1790><U17CC>"
+collating-element <KHMER_LETTER_TO-KHMER_SIGN_ROBAT> from "<U1791><U17CC>"
+collating-element <KHMER_LETTER_THO-KHMER_SIGN_ROBAT> from "<U1792><U17CC>"
+collating-element <KHMER_LETTER_NO-KHMER_SIGN_ROBAT> from "<U1793><U17CC>"
+collating-element <KHMER_LETTER_BA-KHMER_SIGN_ROBAT> from "<U1794><U17CC>"
+collating-element <KHMER_LETTER_PHA-KHMER_SIGN_ROBAT> from "<U1795><U17CC>"
+collating-element <KHMER_LETTER_PO-KHMER_SIGN_ROBAT> from "<U1796><U17CC>"
+collating-element <KHMER_LETTER_PHO-KHMER_SIGN_ROBAT> from "<U1797><U17CC>"
+collating-element <KHMER_LETTER_MO-KHMER_SIGN_ROBAT> from "<U1798><U17CC>"
+collating-element <KHMER_LETTER_YO-KHMER_SIGN_ROBAT> from "<U1799><U17CC>"
+collating-element <KHMER_LETTER_RO-KHMER_SIGN_ROBAT> from "<U179A><U17CC>"
+collating-element <KHMER_INDEPENDENT_VOWEL_RY-KHMER_SIGN_ROBAT> from "<U17AB><U17CC>"
+collating-element <KHMER_INDEPENDENT_VOWEL_RYY-KHMER_SIGN_ROBAT> from "<U17AC><U17CC>"
+collating-element <KHMER_LETTER_LO-KHMER_SIGN_ROBAT> from "<U179B><U17CC>"
+collating-element <KHMER_INDEPENDENT_VOWEL_LY-KHMER_SIGN_ROBAT> from "<U17AD><U17CC>"
+collating-element <KHMER_INDEPENDENT_VOWEL_LYY-KHMER_SIGN_ROBAT> from "<U17AE><U17CC>"
+collating-element <KHMER_LETTER_VO-KHMER_SIGN_ROBAT> from "<U179C><U17CC>"
+collating-element <KHMER_LETTER_SHA-KHMER_SIGN_ROBAT> from "<U179D><U17CC>"
+collating-element <KHMER_LETTER_SSO-KHMER_SIGN_ROBAT> from "<U179E><U17CC>"
+collating-element <KHMER_LETTER_SA-KHMER_SIGN_ROBAT> from "<U179F><U17CC>"
+collating-element <KHMER_LETTER_HA-KHMER_SIGN_ROBAT> from "<U17A0><U17CC>"
+collating-element <KHMER_LETTER_LA-KHMER_SIGN_ROBAT> from "<U17A1><U17CC>"
+collating-element <KHMER_LETTER_QA-KHMER_SIGN_ROBAT> from "<U17A2><U17CC>"
+collating-element <KHMER_INDEPENDENT_VOWEL_QAQ-KHMER_SIGN_ROBAT> from "<U17A3><U17CC>"
+collating-element <KHMER_VOWEL_SIGN_U-KHMER_SIGN_NIKAHIT> from "<U17BB><U17C6>"
+collating-element <KHMER_VOWEL_SIGN_AA-KHMER_SIGN_NIKAHIT> from "<U17B6><U17C6>"
+
+
+% Define collation weights as symbols
+
+collating-symbol <X0001>
+collating-symbol <X0005>
+collating-symbol <X0006>
+collating-symbol <X0007>
+collating-symbol <X0008>
+collating-symbol <X0015>
+collating-symbol <X0019>
+collating-symbol <X0025>
+collating-symbol <X0087>
+collating-symbol <X0088>
+collating-symbol <X0089>
+collating-symbol <X008A>
+collating-symbol <X008B>
+collating-symbol <X008C>
+collating-symbol <X008D>
+collating-symbol <X008E>
+collating-symbol <X008F>
+collating-symbol <X0090>
+collating-symbol <X0091>
+collating-symbol <X0092>
+collating-symbol <X0093>
+collating-symbol <X0094>
+collating-symbol <X0095>
+collating-symbol <X0096>
+collating-symbol <X0097>
+collating-symbol <X0098>
+collating-symbol <X0099>
+collating-symbol <X009A>
+collating-symbol <X009B>
+collating-symbol <X009C>
+collating-symbol <X009D>
+collating-symbol <X009E>
+collating-symbol <X009F>
+collating-symbol <X00A0>
+collating-symbol <X00A1>
+collating-symbol <X00A2>
+collating-symbol <X00A3>
+collating-symbol <X00A4>
+collating-symbol <X00A5>
+collating-symbol <X00A6>
+collating-symbol <X00A7>
+collating-symbol <X00A8>
+collating-symbol <X00A9>
+collating-symbol <X00AA>
+collating-symbol <X00AB>
+collating-symbol <X00AC>
+collating-symbol <X00AD>
+collating-symbol <X00C0>
+collating-symbol <X00D6>
+collating-symbol <X00D7>
+collating-symbol <X00D8>
+collating-symbol <X00D9>
+collating-symbol <X00DA>
+collating-symbol <X00DB>
+collating-symbol <X00DC>
+collating-symbol <X00DD>
+collating-symbol <X00DE>
+collating-symbol <X00DF>
+collating-symbol <X00E2>
+collating-symbol <X0400>
+collating-symbol <X0500>
+collating-symbol <X0507>
+collating-symbol <X0509>
+collating-symbol <X050B>
+collating-symbol <X050D>
+collating-symbol <X050F>
+collating-symbol <X0600>
+collating-symbol <X0700>
+collating-symbol <X0764>
+collating-symbol <X076A>
+collating-symbol <X0782>
+collating-symbol <X078E>
+collating-symbol <X07AA>
+collating-symbol <X07C0>
+collating-symbol <X07C6>
+collating-symbol <X07EE>
+collating-symbol <X07F6>
+collating-symbol <X0800>
+collating-symbol <X080B>
+collating-symbol <X082E>
+collating-symbol <X083F>
+collating-symbol <X084D>
+collating-symbol <X0861>
+collating-symbol <X0863>
+collating-symbol <X0865>
+collating-symbol <X0867>
+collating-symbol <X0869>
+collating-symbol <X086B>
+collating-symbol <X08DF>
+collating-symbol <X08E1>
+collating-symbol <X08E9>
+collating-symbol <X08ED>
+collating-symbol <X08EF>
+collating-symbol <X08F5>
+collating-symbol <X08F7>
+collating-symbol <X0900>
+collating-symbol <X0A00>
+collating-symbol <X0A53>
+collating-symbol <X0A55>
+collating-symbol <X0A57>
+collating-symbol <X0A59>
+collating-symbol <X0A5B>
+collating-symbol <X0A5D>
+collating-symbol <X0A5F>
+collating-symbol <X0A61>
+collating-symbol <X0A63>
+collating-symbol <X0A65>
+collating-symbol <X0A67>
+collating-symbol <X0A69>
+collating-symbol <X0A6B>
+collating-symbol <X0A6D>
+collating-symbol <X0A6F>
+collating-symbol <X0A71>
+collating-symbol <X0A73>
+collating-symbol <X0A75>
+collating-symbol <X0A77>
+collating-symbol <X0A79>
+collating-symbol <X0A7B>
+collating-symbol <X0A7D>
+collating-symbol <X0A7F>
+collating-symbol <X0A81>
+collating-symbol <X0A83>
+collating-symbol <X0A85>
+collating-symbol <X0A87>
+collating-symbol <X0A89>
+collating-symbol <X0A8B>
+collating-symbol <X0A8D>
+collating-symbol <X0A8F>
+collating-symbol <X0A91>
+collating-symbol <X0B00>
+collating-symbol <X0BB3>
+collating-symbol <X0BBB>
+collating-symbol <X0BBD>
+collating-symbol <X0BBF>
+collating-symbol <X0BC3>
+collating-symbol <X0BC9>
+collating-symbol <X0C00>
+collating-symbol <X233C>
+collating-symbol <X234C>
+collating-symbol <X2370>
+collating-symbol <X2372>
+collating-symbol <X2374>
+collating-symbol <X2376>
+collating-symbol <X2378>
+collating-symbol <X237A>
+collating-symbol <X237C>
+collating-symbol <X237E>
+collating-symbol <X2380>
+collating-symbol <X2382>
+collating-symbol <X2600>
+collating-symbol <X2800>
+collating-symbol <X2A00>
+collating-symbol <X2C00>
+collating-symbol <X2E00>
+collating-symbol <X3000>
+collating-symbol <X3200>
+collating-symbol <X3400>
+collating-symbol <X3600>
+collating-symbol <X3800>
+collating-symbol <X3A00>
+collating-symbol <X3C00>
+collating-symbol <X3E00>
+collating-symbol <X4000>
+collating-symbol <X4200>
+collating-symbol <X4400>
+collating-symbol <X4600>
+collating-symbol <X4800>
+collating-symbol <X4A00>
+collating-symbol <X4C00>
+collating-symbol <X4E00>
+collating-symbol <X5000>
+collating-symbol <X5200>
+collating-symbol <X5400>
+collating-symbol <X5600>
+collating-symbol <X5800>
+collating-symbol <X7A20>
+collating-symbol <X7A22>
+collating-symbol <X7A24>
+collating-symbol <X7A26>
+collating-symbol <X7A28>
+collating-symbol <X7A2A>
+collating-symbol <X7A2C>
+collating-symbol <X7A2E>
+collating-symbol <X7A30>
+collating-symbol <X7A32>
+collating-symbol <X7A34>
+collating-symbol <X7A36>
+collating-symbol <X7A38>
+collating-symbol <X7A3A>
+collating-symbol <X7A3C>
+collating-symbol <X7A3E>
+collating-symbol <X7A40>
+collating-symbol <X7A42>
+collating-symbol <X7A44>
+collating-symbol <X7A46>
+collating-symbol <X7A48>
+collating-symbol <X7A4A>
+collating-symbol <X7A4C>
+collating-symbol <X7A4E>
+collating-symbol <X7A50>
+collating-symbol <X7A52>
+collating-symbol <X7A54>
+collating-symbol <X7A55>
+collating-symbol <X7A56>
+collating-symbol <X7A57>
+collating-symbol <X7A58>
+collating-symbol <X7A5A>
+collating-symbol <X7A5C>
+collating-symbol <X7A5E>
+collating-symbol <X7A60>
+collating-symbol <X7A62>
+collating-symbol <X7A64>
+collating-symbol <X7A8E>
+collating-symbol <X7A90>
+collating-symbol <X7A92>
+collating-symbol <X7A94>
+collating-symbol <X7A96>
+collating-symbol <X7A98>
+collating-symbol <X7A9A>
+collating-symbol <X7A9C>
+collating-symbol <X7A9E>
+collating-symbol <X7AA0>
+collating-symbol <X7AA2>
+collating-symbol <X7AA4>
+collating-symbol <X7AA6>
+collating-symbol <X7AA8>
+collating-symbol <X7AAA>
+collating-symbol <X7AAC>
+collating-symbol <X7AAD>
+collating-symbol <X7AAE>
+
+order_start forward;forward;forward;forward
+
+
+% collation weights in order
+
+<X0001>
+<X0005>
+<X0006>
+<X0007>
+<X0008>
+<X0015>
+<X0019>
+<X0025>
+<X0087>
+<X0088>
+<X0089>
+<X008A>
+<X008B>
+<X008C>
+<X008D>
+<X008E>
+<X008F>
+<X0090>
+<X0091>
+<X0092>
+<X0093>
+<X0094>
+<X0095>
+<X0096>
+<X0097>
+<X0098>
+<X0099>
+<X009A>
+<X009B>
+<X009C>
+<X009D>
+<X009E>
+<X009F>
+<X00A0>
+<X00A1>
+<X00A2>
+<X00A3>
+<X00A4>
+<X00A5>
+<X00A6>
+<X00A7>
+<X00A8>
+<X00A9>
+<X00AA>
+<X00AB>
+<X00AC>
+<X00AD>
+<X00C0>
+<X00D6>
+<X00D7>
+<X00D8>
+<X00D9>
+<X00DA>
+<X00DB>
+<X00DC>
+<X00DD>
+<X00DE>
+<X00DF>
+<X00E2>
+<X0400>
+<X0500>
+<X0507>
+<X0509>
+<X050B>
+<X050D>
+<X050F>
+<X0600>
+<X0700>
+<X0764>
+<X076A>
+<X0782>
+<X078E>
+<X07AA>
+<X07C0>
+<X07C6>
+<X07EE>
+<X07F6>
+<X0800>
+<X080B>
+<X082E>
+<X083F>
+<X084D>
+<X0861>
+<X0863>
+<X0865>
+<X0867>
+<X0869>
+<X086B>
+<X08DF>
+<X08E1>
+<X08E9>
+<X08ED>
+<X08EF>
+<X08F5>
+<X08F7>
+<X0900>
+<X0A00>
+<X0A53>
+<X0A55>
+<X0A57>
+<X0A59>
+<X0A5B>
+<X0A5D>
+<X0A5F>
+<X0A61>
+<X0A63>
+<X0A65>
+<X0A67>
+<X0A69>
+<X0A6B>
+<X0A6D>
+<X0A6F>
+<X0A71>
+<X0A73>
+<X0A75>
+<X0A77>
+<X0A79>
+<X0A7B>
+<X0A7D>
+<X0A7F>
+<X0A81>
+<X0A83>
+<X0A85>
+<X0A87>
+<X0A89>
+<X0A8B>
+<X0A8D>
+<X0A8F>
+<X0A91>
+<X0B00>
+<X0BB3>
+<X0BBB>
+<X0BBD>
+<X0BBF>
+<X0BC3>
+<X0BC9>
+<X0C00>
+<X233C>
+<X234C>
+<X2370>
+<X2372>
+<X2374>
+<X2376>
+<X2378>
+<X237A>
+<X237C>
+<X237E>
+<X2380>
+<X2382>
+<X2600>
+<X2800>
+<X2A00>
+<X2C00>
+<X2E00>
+<X3000>
+<X3200>
+<X3400>
+<X3600>
+<X3800>
+<X3A00>
+<X3C00>
+<X3E00>
+<X4000>
+<X4200>
+<X4400>
+<X4600>
+<X4800>
+<X4A00>
+<X4C00>
+<X4E00>
+<X5000>
+<X5200>
+<X5400>
+<X5600>
+<X5800>
+<X7A20>
+<X7A22>
+<X7A24>
+<X7A26>
+<X7A28>
+<X7A2A>
+<X7A2C>
+<X7A2E>
+<X7A30>
+<X7A32>
+<X7A34>
+<X7A36>
+<X7A38>
+<X7A3A>
+<X7A3C>
+<X7A3E>
+<X7A40>
+<X7A42>
+<X7A44>
+<X7A46>
+<X7A48>
+<X7A4A>
+<X7A4C>
+<X7A4E>
+<X7A50>
+<X7A52>
+<X7A54>
+<X7A55>
+<X7A56>
+<X7A57>
+<X7A58>
+<X7A5A>
+<X7A5C>
+<X7A5E>
+<X7A60>
+<X7A62>
+<X7A64>
+<X7A8E>
+<X7A90>
+<X7A92>
+<X7A94>
+<X7A96>
+<X7A98>
+<X7A9A>
+<X7A9C>
+<X7A9E>
+<X7AA0>
+<X7AA2>
+<X7AA4>
+<X7AA6>
+<X7AA8>
+<X7AAA>
+<X7AAC>
+<X7AAD>
+<X7AAE>
+
+% assignment of characters to weights
+
+<U000F>                             IGNORE;IGNORE;IGNORE;<U000F>
+<U001E>            IGNORE;IGNORE;IGNORE;<U001E>
+<U0008>                            IGNORE;IGNORE;IGNORE;<U0008>
+<U0017>            IGNORE;IGNORE;IGNORE;<U0017>
+<U001F>            IGNORE;IGNORE;IGNORE;<U001F>
+<U0010>                     IGNORE;IGNORE;IGNORE;<U0010>
+<U17B5>              IGNORE;IGNORE;IGNORE;<U17B5>
+<U0007>                                 IGNORE;IGNORE;IGNORE;<U0007>
+<U0016>                     IGNORE;IGNORE;IGNORE;<U0016>
+<U0015>                 IGNORE;IGNORE;IGNORE;<U0015>
+<U0006>                          IGNORE;IGNORE;IGNORE;<U0006>
+<U2401>                     IGNORE;IGNORE;IGNORE;<U2401>
+<U001D>          IGNORE;IGNORE;IGNORE;<U001D>
+<U000E>                            IGNORE;IGNORE;IGNORE;<U000E>
+<U0018>                               IGNORE;IGNORE;IGNORE;<U0018>
+<U0004>                  IGNORE;IGNORE;IGNORE;<U0004>
+<U0013>                 IGNORE;IGNORE;IGNORE;<U0013>
+<U001A>                           IGNORE;IGNORE;IGNORE;<U001A>
+<U17B4>              IGNORE;IGNORE;IGNORE;<U17B4>
+<U007F>                               IGNORE;IGNORE;IGNORE;<U007F>
+<U0012>                   IGNORE;IGNORE;IGNORE;<U0012>
+<U0003>                          IGNORE;IGNORE;IGNORE;<U0003>
+<U001B>                               IGNORE;IGNORE;IGNORE;<U001B>
+<U0011>                   IGNORE;IGNORE;IGNORE;<U0011>
+<U0002>                        IGNORE;IGNORE;IGNORE;<U0002>
+<U001C>           IGNORE;IGNORE;IGNORE;<U001C>
+<U0014>                  IGNORE;IGNORE;IGNORE;<U0014>
+<U0019>                        IGNORE;IGNORE;IGNORE;<U0019>
+<U0005>                              IGNORE;IGNORE;IGNORE;<U0005>
+<U0000>                                 IGNORE;IGNORE;IGNORE;<U0000>
+<U17CE>                   IGNORE;"<X00DA><X00D6>";"<X0005><X00C0>";IGNORE
+<U17CF>                     IGNORE;"<X00DA><X00D7>";"<X0005><X00C0>";IGNORE
+<U17D1>                    IGNORE;"<X00DA><X00D8>";"<X0005><X00C0>";IGNORE
+<U17D0>             IGNORE;"<X00DA><X00D9>";"<X0005><X00C0>";IGNORE
+<U17C8>             IGNORE;"<X00DA><X00DA>";"<X0005><X00C0>";IGNORE
+<U17DD>                  IGNORE;"<X00DA><X00DB>";"<X0005><X00C0>";IGNORE
+<U17CB>                    IGNORE;"<X00DA><X00DC>";"<X0005><X00C0>";IGNORE
+<U17C9>               IGNORE;"<X00DA><X00DD>";"<X0005><X00C0>";IGNORE
+<U17CA>                   IGNORE;"<X00DA><X00DE>";"<X0005><X00C0>";IGNORE
+<U17CD>               IGNORE;"<X00DA><X00DF>";"<X0005><X00C0>";IGNORE
+<U17CC>                     IGNORE;"<X00DB><X0019>";"<X0005><X00C0>";IGNORE
+<U0009>                                  <X0507>;<X0005>;<X0005>;IGNORE
+<U000A>                              <X0509>;<X0005>;<X0005>;IGNORE
+<U000B>                         <X050B>;<X0005>;<X0005>;IGNORE
+<U000C>                            <X050D>;<X0005>;<X0005>;IGNORE
+<U000D>                      <X050F>;<X0005>;<X0005>;IGNORE
+<U0020>                                <X0600>;<X0005>;<X0005>;IGNORE
+<U0060>                         <X0764>;<X0005>;<X0005>;IGNORE
+<U005E>                    <X076A>;<X0005>;<X0005>;IGNORE
+<U005F>                             <X0782>;<X0005>;<X0005>;IGNORE
+<U002D>                         <X078E>;<X0005>;<X0005>;IGNORE
+<U002C>                                <X07AA>;<X0005>;<X0005>;IGNORE
+<U003B>                            <X07C0>;<X0005>;<X0005>;IGNORE
+<U003A>                                <X07C6>;<X0005>;<X0005>;IGNORE
+<U0021>                     <X07EE>;<X0005>;<X0005>;IGNORE
+<U003F>                        <X07F6>;<X0005>;<X0005>;IGNORE
+<U002E>                            <X080B>;<X0005>;<X0005>;IGNORE
+<U17D7>                   "<X082E><X0400>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17D3>                "<X082E><X0500>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17D4>                      "<X082E><X0600>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17D5>                "<X082E><X0700>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17D6>           "<X082E><X0800>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17D8>                    "<X082E><X0900>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17D9>               "<X082E><X0A00>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17DA>                   "<X082E><X0B00>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17DC>             "<X082E><X0C00>";<X0005>;"<X0005><X00C0>";IGNORE
+<U0027>                           <X083F>;<X0005>;<X0005>;IGNORE
+<U0022>                       <X084D>;<X0005>;<X0005>;IGNORE
+<U0028>                     <X0861>;<X0005>;<X0005>;IGNORE
+<U0029>                    <X0863>;<X0005>;<X0005>;IGNORE
+<U005B>                  <X0865>;<X0005>;<X0005>;IGNORE
+<U005D>                 <X0867>;<X0005>;<X0005>;IGNORE
+<U007B>                   <X0869>;<X0005>;<X0005>;IGNORE
+<U007D>                  <X086B>;<X0005>;<X0005>;IGNORE
+<U0040>                        <X08DF>;<X0005>;<X0005>;IGNORE
+<U002A>                             <X08E1>;<X0005>;<X0005>;IGNORE
+<U002F>                              <X08E9>;<X0005>;<X0005>;IGNORE
+<U005C>                      <X08ED>;<X0005>;<X0005>;IGNORE
+<U0026>                            <X08EF>;<X0005>;<X0005>;IGNORE
+<U0023>                          <X08F5>;<X0005>;<X0005>;IGNORE
+<U0025>                         <X08F7>;<X0005>;<X0005>;IGNORE
+<U19E0>              <X0A53>;<X0005>;<X0005>;IGNORE
+<U19E1>               <X0A55>;<X0005>;<X0005>;IGNORE
+<U19E2>                <X0A57>;<X0005>;<X0005>;IGNORE
+<U19E3>                <X0A59>;<X0005>;<X0005>;IGNORE
+<U19E4>               <X0A5B>;<X0005>;<X0005>;IGNORE
+<U19E5>               <X0A5D>;<X0005>;<X0005>;IGNORE
+<U19E6>          <X0A5F>;<X0005>;<X0005>;IGNORE
+<U19E7>           <X0A61>;<X0005>;<X0005>;IGNORE
+<U19E8>           <X0A63>;<X0005>;<X0005>;IGNORE
+<U19E9>          <X0A65>;<X0005>;<X0005>;IGNORE
+<U19EA>                <X0A67>;<X0005>;<X0005>;IGNORE
+<U19EB>           <X0A69>;<X0005>;<X0005>;IGNORE
+<U19EC>            <X0A6B>;<X0005>;<X0005>;IGNORE
+<U19ED>            <X0A6D>;<X0005>;<X0005>;IGNORE
+<U19EE>           <X0A6F>;<X0005>;<X0005>;IGNORE
+<U19EF>           <X0A71>;<X0005>;<X0005>;IGNORE
+<U19F0>               <X0A73>;<X0005>;<X0005>;IGNORE
+<U19F1>                <X0A75>;<X0005>;<X0005>;IGNORE
+<U19F2>                 <X0A77>;<X0005>;<X0005>;IGNORE
+<U19F3>                 <X0A79>;<X0005>;<X0005>;IGNORE
+<U19F4>                <X0A7B>;<X0005>;<X0005>;IGNORE
+<U19F5>                <X0A7D>;<X0005>;<X0005>;IGNORE
+<U19F6>           <X0A7F>;<X0005>;<X0005>;IGNORE
+<U19F7>            <X0A81>;<X0005>;<X0005>;IGNORE
+<U19F8>            <X0A83>;<X0005>;<X0005>;IGNORE
+<U19F9>           <X0A85>;<X0005>;<X0005>;IGNORE
+<U19FA>                 <X0A87>;<X0005>;<X0005>;IGNORE
+<U19FB>            <X0A89>;<X0005>;<X0005>;IGNORE
+<U19FC>             <X0A8B>;<X0005>;<X0005>;IGNORE
+<U19FD>             <X0A8D>;<X0005>;<X0005>;IGNORE
+<U19FE>            <X0A8F>;<X0005>;<X0005>;IGNORE
+<U19FF>            <X0A91>;<X0005>;<X0005>;IGNORE
+<U002B>                            <X0BB3>;<X0005>;<X0005>;IGNORE
+<U003C>                       <X0BBB>;<X0005>;<X0005>;IGNORE
+<U003D>                          <X0BBD>;<X0005>;<X0005>;IGNORE
+<U003E>                    <X0BBF>;<X0005>;<X0005>;IGNORE
+<U007C>                        <X0BC3>;<X0005>;<X0005>;IGNORE
+<U007E>                                <X0BC9>;<X0005>;<X0005>;IGNORE
+<U0024>                          <X233C>;<X0005>;<X0005>;IGNORE
+<U17DB>           <X234C>;<X0005>;<X0005>;IGNORE
+<U0030>                                 <X2370>;<X0005>;<X0005>;IGNORE
+<U17E0>                     <X2370>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F0>           <X2370>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0031>                                  <X2372>;<X0005>;<X0005>;IGNORE
+<U17E1>                      <X2372>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F1>          <X2372>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0032>                                  <X2374>;<X0005>;<X0005>;IGNORE
+<U17E2>                      <X2374>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F2>           <X2374>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0033>                                <X2376>;<X0005>;<X0005>;IGNORE
+<U17E3>                    <X2376>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F3>           <X2376>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0034>                                 <X2378>;<X0005>;<X0005>;IGNORE
+<U17E4>                     <X2378>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F4>          <X2378>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0035>                                 <X237A>;<X0005>;<X0005>;IGNORE
+<U17E5>                     <X237A>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F5>          <X237A>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0036>                                  <X237C>;<X0005>;<X0005>;IGNORE
+<U17E6>                      <X237C>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F6>     <X237C>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0037>                                <X237E>;<X0005>;<X0005>;IGNORE
+<U17E7>                    <X237E>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F7>      <X237E>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0038>                                <X2380>;<X0005>;<X0005>;IGNORE
+<U17E8>                    <X2380>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F8>      <X2380>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0039>                                 <X2382>;<X0005>;<X0005>;IGNORE
+<U17E9>                     <X2382>;"<X0005><X00E2><X0015>";"<X0005><X0005><X00C0>";IGNORE
+<U17F9>     <X2382>;"<X0005><X00E2><X0025>";"<X0005><X0005><X00C0>";IGNORE
+<U0061>                                    <X2600>;<X0005>;<X0005>;IGNORE
+<U0041>                                    <X2600>;<X0005>;<X008F>;IGNORE
+<U0062>                                    <X2800>;<X0005>;<X0005>;IGNORE
+<U0042>                                    <X2800>;<X0005>;<X008F>;IGNORE
+<U0063>                                    <X2A00>;<X0005>;<X0005>;IGNORE
+<U0043>                                    <X2A00>;<X0005>;<X008F>;IGNORE
+<U0064>                                    <X2C00>;<X0005>;<X0005>;IGNORE
+<U0044>                                    <X2C00>;<X0005>;<X008F>;IGNORE
+<U0065>                                    <X2E00>;<X0005>;<X0005>;IGNORE
+<U0045>                                    <X2E00>;<X0005>;<X008F>;IGNORE
+<U0066>                                    <X3000>;<X0005>;<X0005>;IGNORE
+<U0046>                                    <X3000>;<X0005>;<X008F>;IGNORE
+<U0067>                                    <X3200>;<X0005>;<X0005>;IGNORE
+<U0047>                                    <X3200>;<X0005>;<X008F>;IGNORE
+<U0068>                                    <X3400>;<X0005>;<X0005>;IGNORE
+<U0048>                                    <X3400>;<X0005>;<X008F>;IGNORE
+<U0069>                                    <X3600>;<X0005>;<X0005>;IGNORE
+<U0049>                                    <X3600>;<X0005>;<X008F>;IGNORE
+<U006A>                                    <X3800>;<X0005>;<X0005>;IGNORE
+<U004A>                                    <X3800>;<X0005>;<X008F>;IGNORE
+<U006B>                                    <X3A00>;<X0005>;<X0005>;IGNORE
+<U004B>                                    <X3A00>;<X0005>;<X008F>;IGNORE
+<U006C>                                    <X3C00>;<X0005>;<X0005>;IGNORE
+<U004C>                                    <X3C00>;<X0005>;<X008F>;IGNORE
+<U006D>                                    <X3E00>;<X0005>;<X0005>;IGNORE
+<U004D>                                    <X3E00>;<X0005>;<X008F>;IGNORE
+<U006E>                                    <X4000>;<X0005>;<X0005>;IGNORE
+<U004E>                                    <X4000>;<X0005>;<X008F>;IGNORE
+<U006F>                                    <X4200>;<X0005>;<X0005>;IGNORE
+<U004F>                                    <X4200>;<X0005>;<X008F>;IGNORE
+<U0070>                                    <X4400>;<X0005>;<X0005>;IGNORE
+<U0050>                                    <X4400>;<X0005>;<X008F>;IGNORE
+<U0071>                                    <X4600>;<X0005>;<X0005>;IGNORE
+<U0051>                                    <X4600>;<X0005>;<X008F>;IGNORE
+<U0072>                                    <X4800>;<X0005>;<X0005>;IGNORE
+<U0052>                                    <X4800>;<X0005>;<X008F>;IGNORE
+<U0073>                                    <X4A00>;<X0005>;<X0005>;IGNORE
+<U0053>                                    <X4A00>;<X0005>;<X008F>;IGNORE
+<U0074>                                    <X4C00>;<X0005>;<X0005>;IGNORE
+<U0054>                                    <X4C00>;<X0005>;<X008F>;IGNORE
+<U0075>                                    <X4E00>;<X0005>;<X0005>;IGNORE
+<U0055>                                    <X4E00>;<X0005>;<X008F>;IGNORE
+<U0076>                                    <X5000>;<X0005>;<X0005>;IGNORE
+<U0056>                                    <X5000>;<X0005>;<X008F>;IGNORE
+<U0077>                                    <X5200>;<X0005>;<X0005>;IGNORE
+<U0057>                                    <X5200>;<X0005>;<X008F>;IGNORE
+<U0078>                                    <X5400>;<X0005>;<X0005>;IGNORE
+<U0058>                                    <X5400>;<X0005>;<X008F>;IGNORE
+<U0079>                                    <X5600>;<X0005>;<X0005>;IGNORE
+<U0059>                                    <X5600>;<X0005>;<X008F>;IGNORE
+<U007A>                                    <X5800>;<X0005>;<X0005>;IGNORE
+<U005A>                                    <X5800>;<X0005>;<X008F>;IGNORE
+<U1780>                      <X7A20>;<X0005>;<X0005>;IGNORE
+<U1781>                     <X7A22>;<X0005>;<X0005>;IGNORE
+<U1782>                      <X7A24>;<X0005>;<X0005>;IGNORE
+<U1783>                     <X7A26>;<X0005>;<X0005>;IGNORE
+<U1784>                     <X7A28>;<X0005>;<X0005>;IGNORE
+<U1785>                      <X7A2A>;<X0005>;<X0005>;IGNORE
+<U1786>                     <X7A2C>;<X0005>;<X0005>;IGNORE
+<U1787>                      <X7A2E>;<X0005>;<X0005>;IGNORE
+<U1788>                     <X7A30>;<X0005>;<X0005>;IGNORE
+<U1789>                     <X7A32>;<X0005>;<X0005>;IGNORE
+<U178A>                      <X7A34>;<X0005>;<X0005>;IGNORE
+<U178B>                    <X7A36>;<X0005>;<X0005>;IGNORE
+<U178C>                      <X7A38>;<X0005>;<X0005>;IGNORE
+<U178D>                    <X7A3A>;<X0005>;<X0005>;IGNORE
+<U178E>                     <X7A3C>;<X0005>;<X0005>;IGNORE
+<U178F>                      <X7A3E>;<X0005>;<X0005>;IGNORE
+<U1790>                     <X7A40>;<X0005>;<X0005>;IGNORE
+<U1791>                      <X7A42>;<X0005>;<X0005>;IGNORE
+<U1792>                     <X7A44>;<X0005>;<X0005>;IGNORE
+<U1793>                      <X7A46>;<X0005>;<X0005>;IGNORE
+<U1794>                      <X7A48>;<X0005>;<X0005>;IGNORE
+<U1795>                     <X7A4A>;<X0005>;<X0005>;IGNORE
+<U1796>                      <X7A4C>;<X0005>;<X0005>;IGNORE
+<U1797>                     <X7A4E>;<X0005>;<X0005>;IGNORE
+<U1798>                      <X7A50>;<X0005>;<X0005>;IGNORE
+<U1799>                      <X7A52>;<X0005>;<X0005>;IGNORE
+<U179A>                      <X7A54>;<X0005>;<X0005>;IGNORE
+<KHMER_LETTER_KA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A20>";"<X00AD><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_KHA-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A22>";"<X00AC><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_KO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A24>";"<X00AB><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_KHO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A26>";"<X00AA><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_NGO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A28>";"<X00A9><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_CA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A2A>";"<X00A8><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_CHA-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A2C>";"<X00A7><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_CO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A2E>";"<X00A6><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_CHO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A30>";"<X00A5><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_NYO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A32>";"<X00A4><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_DA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A34>";"<X00A3><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_TTHA-KHMER_SIGN_ROBAT>   "<X7A54><X7AAE><X7A36>";"<X00A2><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_DO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A38>";"<X00A1><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_TTHO-KHMER_SIGN_ROBAT>   "<X7A54><X7AAE><X7A3A>";"<X00A0><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_NNO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A3C>";"<X009F><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_TA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A3E>";"<X009E><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_THA-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A40>";"<X009D><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_TO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A42>";"<X009C><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_THO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A44>";"<X009B><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_NO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A46>";"<X009A><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_BA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A48>";"<X0099><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_PHA-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A4A>";"<X0098><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_PO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A4C>";"<X0097><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_PHO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A4E>";"<X0096><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_MO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A50>";"<X0095><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_YO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A52>";"<X0094><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_RO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A54>";"<X0093><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_INDEPENDENT_VOWEL_RY-KHMER_SIGN_ROBAT> "<X7A54><X7AAE><X7A55><X0400>";"<X0092><X0005><X0005>";"<X0005><X0005><X0005><X00C0>";IGNORE
+<KHMER_INDEPENDENT_VOWEL_RYY-KHMER_SIGN_ROBAT> "<X7A54><X7AAE><X7A55><X0500>";"<X0091><X0005><X0005>";"<X0005><X0005><X0005><X00C0>";IGNORE
+<KHMER_LETTER_LO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A56>";"<X0090><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_INDEPENDENT_VOWEL_LY-KHMER_SIGN_ROBAT> "<X7A54><X7AAE><X7A57><X0400>";"<X008F><X0005><X0005>";"<X0005><X0005><X0005><X00C0>";IGNORE
+<KHMER_INDEPENDENT_VOWEL_LYY-KHMER_SIGN_ROBAT> "<X7A54><X7AAE><X7A57><X0500>";"<X008E><X0005><X0005>";"<X0005><X0005><X0005><X00C0>";IGNORE
+<KHMER_LETTER_VO-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A58>";"<X008D><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_SHA-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A5A>";"<X008C><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_SSO-KHMER_SIGN_ROBAT>    "<X7A54><X7AAE><X7A5C>";"<X008B><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_SA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A5E>";"<X008A><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_HA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A60>";"<X0089><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_LA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A62>";"<X0088><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_LETTER_QA-KHMER_SIGN_ROBAT>     "<X7A54><X7AAE><X7A64>";"<X0087><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<KHMER_INDEPENDENT_VOWEL_QAQ-KHMER_SIGN_ROBAT> "<X7A54><X7AAE><X7A64>";"<X0087><X0005><X0005>";"<X0006><X0005><X0005>";IGNORE
+<U17AB>           "<X7A55><X0400>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17AC>          "<X7A55><X0500>";<X0005>;"<X0005><X00C0>";IGNORE
+<U179B>                      <X7A56>;<X0005>;<X0005>;IGNORE
+<U17AD>           "<X7A57><X0400>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17AE>          "<X7A57><X0500>";<X0005>;"<X0005><X00C0>";IGNORE
+<U179C>                      <X7A58>;<X0005>;<X0005>;IGNORE
+<U179D>                     <X7A5A>;<X0005>;<X0005>;IGNORE
+<U179E>                     <X7A5C>;<X0005>;<X0005>;IGNORE
+<U179F>                      <X7A5E>;<X0005>;<X0005>;IGNORE
+<U17A0>                      <X7A60>;<X0005>;<X0005>;IGNORE
+<U17A1>                      <X7A62>;<X0005>;<X0005>;IGNORE
+<U17A2>                      <X7A64>;<X0005>;<X0005>;IGNORE
+<U17A3>          <X7A64>;<X0005>;<X0008>;IGNORE
+<U17A4>          "<X7A64><X7A8E>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17A5>           "<X7A64><X7A90>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17A6>          "<X7A64><X7A92>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17A7>           "<X7A64><X7A98>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17A8>          "<X7A64><X7A98>";"<X0005><X0005>";"<X0007><X0005>";IGNORE
+<U17AA>         "<X7A64><X7A98><X7A64>";"<X0005><X0005><X0005>";"<X0005><X0005><X0005>";IGNORE
+<U17A9>          "<X7A64><X7A9A>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17AF>           "<X7A64><X7AA6>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17B0>          "<X7A64><X7AA8>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17B1> "<X7A64><X7AAA>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17B2> "<X7A64><X7AAA>";"<X0005><X0005>";"<X0006><X0005>";IGNORE
+<U17B3>          "<X7A64><X7AAC>";"<X0005><X0005>";"<X0005><X0005>";IGNORE
+<U17B6>                  <X7A8E>;<X0005>;<X0005>;IGNORE
+<U17B7>                   <X7A90>;<X0005>;<X0005>;IGNORE
+<U17B8>                  <X7A92>;<X0005>;<X0005>;IGNORE
+<U17B9>                   <X7A94>;<X0005>;<X0005>;IGNORE
+<U17BA>                  <X7A96>;<X0005>;<X0005>;IGNORE
+<U17BB>                   <X7A98>;<X0005>;<X0005>;IGNORE
+<U17BC>                  <X7A9A>;<X0005>;<X0005>;IGNORE
+<U17BD>                  <X7A9C>;<X0005>;<X0005>;IGNORE
+<U17BE>                  <X7A9E>;<X0005>;<X0005>;IGNORE
+<U17BF>                  <X7AA0>;<X0005>;<X0005>;IGNORE
+<U17C0>                  <X7AA2>;<X0005>;<X0005>;IGNORE
+<U17C1>                   <X7AA4>;<X0005>;<X0005>;IGNORE
+<U17C2>                  <X7AA6>;<X0005>;<X0005>;IGNORE
+<U17C3>                  <X7AA8>;<X0005>;<X0005>;IGNORE
+<U17C4>                  <X7AAA>;<X0005>;<X0005>;IGNORE
+<U17C5>                  <X7AAC>;<X0005>;<X0005>;IGNORE
+<KHMER_VOWEL_SIGN_U-KHMER_SIGN_NIKAHIT> "<X7AAD><X0400>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17C6>                   "<X7AAD><X0500>";<X0005>;"<X0005><X00C0>";IGNORE
+<KHMER_VOWEL_SIGN_AA-KHMER_SIGN_NIKAHIT> "<X7AAD><X0600>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17C7>                   "<X7AAD><X0700>";<X0005>;"<X0005><X00C0>";IGNORE
+<U17D2>                     <X7AAE>;<X0005>;<X0005>;IGNORE
+UNDEFINED                              IGNORE;IGNORE;IGNORE;IGNORE
+
+order_end
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol      "KHR "
+% monetary unit: Riel
+currency_symbol      "<U17DB>"
+mon_decimal_point    "."
+mon_thousands_sep    ","
+mon_grouping         3;3
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits       2
+frac_digits           2
+p_cs_precedes         0
+p_sep_by_space        0
+n_cs_precedes         0
+n_sep_by_space        0
+p_sign_posn           1
+n_sign_posn           1
+int_p_cs_precedes     0
+int_p_sep_by_space    0
+int_n_cs_precedes     0
+int_n_sep_by_space    0
+int_p_sign_posn       1
+int_n_sign_posn       1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3
+END LC_NUMERIC
+
+LC_TIME
+
+abday   "<U17A2><U17B6>";/
+        "<U1785>";/
+        "<U17A2>";/
+        "<U1796><U17BB>";/
+        "<U1796><U17D2><U179A>";/
+        "<U179F><U17BB>";/
+        "<U179F>"
+
+day     "<U1790><U17D2><U1784><U17C3><U200B><U17A2><U17B6><U1791><U17B7><U178F><U17D2><U1799>";/
+        "<U1790><U17D2><U1784><U17C3><U200B><U1785><U17D0><U1793><U17D2><U1791>";/
+        "<U1790><U17D2><U1784><U17C3><U200B><U17A2><U1784><U17D2><U1782><U17B6><U179A>";/
+        "<U1790><U17D2><U1784><U17C3><U200B><U1796><U17BB><U1792>";/
+        "<U1790><U17D2><U1784><U17C3><U200B><U1796><U17D2><U179A><U17A0><U179F><U17D2><U1794><U178F><U17B7><U17CD>";/
+        "<U1790><U17D2><U1784><U17C3><U200B><U179F><U17BB><U1780><U17D2><U179A>";/
+        "<U1790><U17D2><U1784><U17C3><U200B><U179F><U17C5><U179A><U17CD>"
+
+abmon   "<U17E1>";/
+        "<U17E2>";/
+        "<U17E3>";/
+        "<U17E4>";/
+        "<U17E5>";/
+        "<U17E6>";/
+        "<U17E7>";/
+        "<U17E8>";/
+        "<U17E9>";/
+        "<U17E1><U17E0>";/
+        "<U17E1><U17E1>";/
+        "<U17E1><U17E2>"
+
+mon     "<U1798><U1780><U179A><U17B6>";/
+        "<U1780><U17BB><U1798><U17D2><U1797><U17C8>";/
+        "<U1798><U17B8><U1793><U17B6>";/
+        "<U1798><U17C1><U179F><U17B6>";/
+        "<U17A7><U179F><U1797><U17B6>";/
+        "<U1798><U17B7><U1790><U17BB><U1793><U17B6>";/
+        "<U1780><U1780><U17D2><U1780><U178A><U17B6>";/
+        "<U179F><U17B8><U17A0><U17B6>";/
+        "<U1780><U1789><U17D2><U1789><U17B6>";/
+        "<U178F><U17BB><U179B><U17B6>";/
+        "<U179C><U17B7><U1785><U17D2><U1786><U17B7><U1780><U17B6>";/
+        "<U1792><U17D2><U1793><U17BC>"
+
+d_t_fmt  "%A <U1790><U17D2><U1784><U17C3> %e <U1781><U17C2> %B <U1786><U17D2><U1793><U17B6><U17C6> %Y, %H <U1798><U17C9><U17C4><U1784> %M <U1793><U17B6><U1791><U17B8> %S <U179C><U17B7><U1793><U17B6><U1791><U17B8><U200B>"
+
+date_fmt "%A <U1790><U17D2><U1784><U17C3> %e <U1781><U17C2> %B <U1786><U17D2><U1793><U17B6><U17C6> %Y, %H <U1798><U17C9><U17C4><U1784> %M <U1793><U17B6><U1791><U17B8> %S <U179C><U17B7><U1793><U17B6><U1791><U17B8><U200B>"
+
+d_fmt    "%e %B %Y"
+
+t_fmt    "%H:%M:%S"
+
+am_pm    "<U1796><U17D2><U179A><U17B9><U1780>";"<U179B><U17D2><U1784><U17B6><U1785>"
+
+% Appropriate 12-hour clock representation  "%I:%M:%S %p"
+%t_fmt_ampm  "%I:%M:%S %p"
+
+week 7;19971130;1
+first_weekday 1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U1794>]"
+noexpr  "^[-0nN<U1791>]"
+yesstr  "<U1794><U17B6><U1791><U002F><U1785><U17B6><U179F>"
+nostr   "<U1791><U17C1>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "(%A)%l"
+int_select     "001"
+int_prefix     "855"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+%    "%f%N%a%N%d%N%r%t%e%t%b%N%h%t%s%N%T%N%S%N%z%c%N"
+postal_fmt    "%f%N%a%N%d%N%r%t%e%t%b%N%h%t%s%N%T%N%S%N%z%c%N"
+% កម្ពុជា (Kampuchea)
+country_name "<U1780><U1798><U17D2><U1796><U17BB><U1787><U17B6>"
+%FIXME
+%country_post  ""
+country_ab2 "KH"
+country_ab3 "KHM"
+country_num 116
+country_car "KH"
+%country_isbn  "978-9924"
+% ភាសាខ្មែរ (Khmer)
+lang_name     "<U1781><U17D2><U1798><U17C2><U179A>"
+lang_ab       "km"
+lang_term     "khm"
+lang_lib      "khm"
+END LC_ADDRESS

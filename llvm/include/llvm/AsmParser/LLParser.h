@@ -165,6 +165,8 @@ namespace llvm {
         ForwardRefValueInfos;
     std::map<unsigned, std::vector<std::pair<AliasSummary *, LocTy>>>
         ForwardRefAliasees;
+    std::map<unsigned, std::vector<std::pair<IfuncSummary *, LocTy>>>
+        ForwardRefResolvers;
     std::vector<ValueInfo> NumberedValueInfos;
 
     // Summary type id reference information.
@@ -391,6 +393,7 @@ namespace llvm {
     bool parseFunctionSummary(std::string Name, GlobalValue::GUID, unsigned ID);
     bool parseVariableSummary(std::string Name, GlobalValue::GUID, unsigned ID);
     bool parseAliasSummary(std::string Name, GlobalValue::GUID, unsigned ID);
+    bool parseIfuncSummary(std::string Name, GlobalValue::GUID, unsigned ID);
     bool parseGVFlags(GlobalValueSummary::GVFlags &GVFlags);
     bool parseGVarFlags(GlobalVarSummary::GVarFlags &GVarFlags);
     bool parseOptionalFFlags(FunctionSummary::FFlags &FFlags);

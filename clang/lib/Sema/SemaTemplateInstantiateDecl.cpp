@@ -34,10 +34,12 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "clang/Support/NextSiliconUtils.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
 using namespace clang;
+using namespace ns;
 
 static bool isDeclWithinFunction(const Decl *D) {
   const DeclContext *DC = D->getDeclContext();
@@ -2109,6 +2111,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     if (SpecFunc)
       return SpecFunc;
   }
+
+  // Template function declaration with ns attribute, but no definition.
+  if (!isValidFunctionDeclForNSAttr(D))
+    SemaRef.Diag(D->getLocation(), diag::warn_ns_attr_requires_def) << D;
 
   bool isFriend;
   if (FunctionTemplate)

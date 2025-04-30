@@ -1,0 +1,51 @@
+function int isalnum (int)
+function int isalpha (int)
+function int iscntrl (int)
+function int isdigit (int)
+function int isgraph (int)
+function int islower (int)
+function int isprint (int)
+function int ispunct (int)
+function int isspace (int)
+function int isupper (int)
+function int isxdigit (int)
+function int tolower (int)
+function int toupper (int)
+
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+function int isblank (int)
+#endif
+
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+function int isascii (int)
+function int toascii (int)
+
+// XPG says the following two are macros.  But we test a bit more strictly.
+function int _toupper (int)
+function int _tolower (int)
+#endif
+
+# if defined XOPEN2K8 || defined POSIX2008
+type locale_t
+
+function int isalnum_l (int, locale_t)
+function int isalpha_l (int, locale_t)
+function int iscntrl_l (int, locale_t)
+function int isdigit_l (int, locale_t)
+function int isgraph_l (int, locale_t)
+function int islower_l (int, locale_t)
+function int isprint_l (int, locale_t)
+function int ispunct_l (int, locale_t)
+function int isspace_l (int, locale_t)
+function int isupper_l (int, locale_t)
+function int isxdigit_l (int, locale_t)
+function int tolower_l (int, locale_t)
+function int toupper_l (int, locale_t)
+# endif
+
+allow is[abcdefghijklmnopqrstuvwxyz]*
+allow to[abcdefghijklmnopqrstuvwxyz]*
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif

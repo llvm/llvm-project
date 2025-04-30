@@ -1,0 +1,183 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Niuean, Vagahau Niue language locale for Niue
+%
+% Niuean terms provided by Emani Fakaotimanava-Lui <emani@niue.nu>
+%
+% Prepared and contributed to glibc by Chris Leonard <cjl@sugarlabs.org> and
+% Emani Fakaotimanava-Lui <emani@niue.nu>
+%
+% This locale data has been developed in collaboration between:
+% Sugar Labs,  http://www.sugarlabs.org/
+% RockET Systems, http://rocketsystems.nu/
+%
+% with support from the Internet Society (ISOC)
+% http://pacific.scoop.co.nz/2012/06/internet-society-funds-niue-language-lifeline/
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title        "Niuean (Vagahau Niue) locale for Niue"
+source       "RockET Systems"
+address      "PO Box 229, Fatalupe, Alofi, Niue"
+contact      "Emani Fakaotimanava-Lui"
+email        "emani@niue.nu"
+tel          ""
+fax          ""
+language     "Niuean"
+territory    "Niue"
+revision     "1.0"
+date         "2012-07-18"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+
+mon           "Ianuali";/
+     "Fepuali";/
+     "Masi";/
+     "Apelila";/
+     "Me";/
+     "Iuni";/
+     "Iulai";/
+     "Aokuso";/
+     "Sepetema";/
+     "Oketopa";/
+     "Novema";/
+     "Tesemo"
+
+abmon         "Ian";/
+       "Fep";/
+       "Mas";/
+       "Ape";/
+       "Me";/
+       "Iun";/
+       "Iul";/
+       "Aok";/
+       "Sep";/
+       "Oke";/
+       "Nov";/
+       "Tes"
+
+day           "Aho Tapu";/
+     "Aho Gofua";/
+     "Aho Ua";/
+     "Aho Lotu";/
+     "Aho Tuloto";/
+     "Aho Falaile";/
+     "Aho Faiumu"
+
+abday         "Tapu";/
+       "Gofua";/
+       "Ua";/
+       "Lotu";/
+       "Tuloto";/
+       "Falaile";/
+       "Faiumu"
+
+% Abbreviated date and time representation to be referenced by the "%c" field descriptor -
+%
+% "%a" (short weekday name),
+% "%d" (day of month as a decimal number),
+% "%b" (short month name),
+% "%Y" (year with century as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+d_t_fmt       "%a %d %b %Y %T"
+
+% Abbreviated date and time representation to be used by date(1)
+date_fmt      "%a %d %b %Y %T %Z"
+
+% Date representation to be referenced by the "%x" field descriptor -
+% "%d/%m/%Y", day/month/year as decimal numbers (01/01/2000).
+d_fmt         "%d//%m//%y"
+
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+t_fmt         "%T"
+
+am_pm       "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %p"
+
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "en_NZ"
+END LC_NUMERIC
+
+LC_MONETARY
+copy "en_NZ"
+END LC_MONETARY
+
+LC_PAPER
+copy "en_NZ"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "en_NZ"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0113><U0112>]"
+noexpr  "^[-0nN]"
+yesstr  "Talia"
+nostr   "Nakai"
+END LC_MESSAGES
+
+LC_NAME
+copy "en_NZ"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Niu<U0113>"
+country_post "NU"
+country_ab2  "NU"
+country_ab3  "NIU"
+country_num  570
+lang_name    "ko e vagahau Niu<U0113>"
+lang_term    "niu"
+lang_lib    "niu"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+int_prefix  "683"
+int_select     "00"
+END LC_TELEPHONE

@@ -1,0 +1,1949 @@
+# translation of libc-2.7 to Lithuanian
+# Copyright (C) 2008 Free Software Foundation, Inc.
+# This file is distributed under the same license as the glibc package.
+#
+# Gintautas Miliauskas <gintas@akl.lt>, 2008.
+msgid ""
+msgstr ""
+"Project-Id-Version: libc-2.7\n"
+"POT-Creation-Date: 2021-07-28 22:02-0400\n"
+"PO-Revision-Date: 2009-02-12 05:24+0200\n"
+"Last-Translator: Gintautas Miliauskas <gintas@akl.lt>\n"
+"Language-Team: Lithuanian <komp_lt@konferencijos.lt>\n"
+"Language: lt\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Bugs: Report translation errors to the Language-Team address.\n"
+"X-Generator: KBabel 1.11.4\n"
+"Plural-Forms:  nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: argp/argp-help.c:229
+#, c-format
+msgid "%.*s: ARGP_HELP_FMT parameter requires a value"
+msgstr "%.*s: ARGP_HELP_FMT parametrui reikia reikšmės"
+
+#: argp/argp-help.c:239
+#, c-format
+msgid "%.*s: Unknown ARGP_HELP_FMT parameter"
+msgstr "%.*s: Nežinomas ARGP_HELP_FMT parametras"
+
+#: argp/argp-help.c:252
+#, c-format
+msgid "Garbage in ARGP_HELP_FMT: %s"
+msgstr "Šiukšlės ARGP_HELP_FMT: %s"
+
+#: argp/argp-help.c:1350
+msgid "Mandatory or optional arguments to long options are also mandatory or optional for any corresponding short options."
+msgstr "Būtini ar nebūtini argumentai ilgiems parametrams atitinkamai būtini ar nebūtini trumpoms jų formoms."
+
+#: argp/argp-help.c:1713
+msgid "Usage:"
+msgstr "Naudojimas:"
+
+#: argp/argp-help.c:1717
+msgid "  or: "
+msgstr "  arba: "
+
+#: argp/argp-help.c:1729
+msgid " [OPTION...]"
+msgstr "[PARAMETRAS...]"
+
+#: argp/argp-help.c:1784
+#, c-format
+msgid "Report bugs to %s.\n"
+msgstr "Praneškite apie klaidas %s.\n"
+
+#: argp/argp-parse.c:101
+msgid "Give this help list"
+msgstr "Pateikti šį pagalbinį sąrašą"
+
+#: argp/argp-parse.c:102
+msgid "Give a short usage message"
+msgstr "Pateikti trumpą pranešimą apie naudojimą"
+
+#: argp/argp-parse.c:103 catgets/gencat.c:109 catgets/gencat.c:113
+#: iconv/iconv_prog.c:61 iconv/iconv_prog.c:62 nscd/nscd.c:107 nscd/nscd.c:111
+#: nss/makedb.c:121
+msgid "NAME"
+msgstr "PAVADINIMAS"
+
+#: argp/argp-parse.c:104
+msgid "Set the program name"
+msgstr "Nustatyti programos pavadinimą"
+
+#: argp/argp-parse.c:106
+msgid "Hang for SECS seconds (default 3600)"
+msgstr "Laukti SEK sekundžių (standartiškai 3600)"
+
+#: argp/argp-parse.c:167
+msgid "Print program version"
+msgstr "Išspausdinti programos versiją"
+
+#: argp/argp-parse.c:183
+msgid "(PROGRAM ERROR) No version known!?"
+msgstr "(PROGRAM ERROR) Nežinoma jokia versija!?"
+
+#: argp/argp-parse.c:623
+#, c-format
+msgid "%s: Too many arguments\n"
+msgstr "%s: Per daug argumentų\n"
+
+#: argp/argp-parse.c:766
+msgid "(PROGRAM ERROR) Option should have been recognized!?"
+msgstr "(PROGRAM ERROR) Parametras turėjo būti atpažintas!?"
+
+#: catgets/gencat.c:110
+msgid "Create C header file NAME containing symbol definitions"
+msgstr "Sukurti C antraščių failą duotu PAVADINIMU, kuriame surašyti simbolių apibrėžimus"
+
+#: catgets/gencat.c:112
+msgid "Do not use existing catalog, force new output file"
+msgstr "Nenaudoti egzistuojančio katalogo, kurti naują išvedimo failą"
+
+#: catgets/gencat.c:113 nss/makedb.c:121
+msgid "Write output to file NAME"
+msgstr "Išvesti į failą duotu PAVADINIMU"
+
+#: catgets/gencat.c:123
+msgid ""
+"-o OUTPUT-FILE [INPUT-FILE]...\n"
+"[OUTPUT-FILE [INPUT-FILE]...]"
+msgstr ""
+"-o IŠVEDIMO-FAILAS [DUOMENŲ-FAILAS]...\n"
+"[IŠVEDIMO-FAILAS [DUOMENŲ-FAILAS]...]"
+
+#: catgets/gencat.c:250 debug/pcprofiledump.c:230 debug/xtrace.sh:68
+#: elf/ldconfig.c:333 elf/pldd.c:268 elf/sprof.c:395 iconv/iconv_prog.c:410
+#: iconv/iconvconfig.c:403 locale/programs/locale.c:298
+#: locale/programs/localedef.c:465 malloc/memusage.sh:75
+#: malloc/memusagestat.c:586 nscd/nscd.c:527 nss/getent.c:93 nss/makedb.c:391
+#: posix/getconf.c:490
+#, c-format
+msgid "Written by %s.\n"
+msgstr "Parašė %s.\n"
+
+#: catgets/gencat.c:281
+msgid "*standard input*"
+msgstr "*standartinis įvedimas*"
+
+#: catgets/gencat.c:443
+msgid "duplicate set definition"
+msgstr "pakartotinis rinkinio apibrėžimas"
+
+#: catgets/gencat.c:445 catgets/gencat.c:617 catgets/gencat.c:669
+msgid "this is the first definition"
+msgstr "šis apibrėžimas pirmasis"
+
+#: catgets/gencat.c:516
+#, c-format
+msgid "unknown set `%s'"
+msgstr "nežinomas rinkinys „%s“"
+
+#: catgets/gencat.c:557
+msgid "invalid quote character"
+msgstr "netaisyklingas kabučių simbolis"
+
+#: catgets/gencat.c:570
+#, c-format
+msgid "unknown directive `%s': line ignored"
+msgstr "nežinoma direktyva „%s“: eilutė ignoruota"
+
+#: catgets/gencat.c:615
+msgid "duplicated message number"
+msgstr "pakartotas pranešimo numeris"
+
+#: catgets/gencat.c:666
+msgid "duplicated message identifier"
+msgstr "pakartotas pranešimo identifikatorius"
+
+#: catgets/gencat.c:723
+msgid "invalid character: message ignored"
+msgstr "netaisyklingas simbolis: pranešimas ignoruotas"
+
+#: catgets/gencat.c:766
+msgid "invalid line"
+msgstr "nekorektiška eilutė"
+
+#: catgets/gencat.c:820
+msgid "malformed line ignored"
+msgstr "nekorektiška eilutė ignoruota"
+
+#: catgets/gencat.c:984 catgets/gencat.c:1025
+#, c-format
+msgid "cannot open output file `%s'"
+msgstr "nepavyko atverti išvedimo failo: „%s“"
+
+#: catgets/gencat.c:1211
+msgid "unterminated message"
+msgstr "neužbaigtas pranešimas"
+
+#: debug/pcprofiledump.c:61
+msgid "[FILE]"
+msgstr "[FAILAS]"
+
+#: debug/pcprofiledump.c:108
+#, c-format
+msgid "cannot open input file"
+msgstr "nepavyko atverti įvedimo failo"
+
+#: debug/pcprofiledump.c:115
+#, c-format
+msgid "cannot read header"
+msgstr "nepavyko perskaityti antraštės"
+
+#: debug/xtrace.sh:138
+msgid "No program name given\\n"
+msgstr "Nenurodytas programos vardas\\n"
+
+#: dlfcn/dlinfo.c:43
+msgid "unsupported dlinfo request"
+msgstr "nepalaikoma dlinfo užklausa"
+
+#: dlfcn/dlmopen.c:58
+msgid "invalid mode"
+msgstr "netaisyklinga veiksena"
+
+#: elf/cache.c:180
+msgid "unknown"
+msgstr "nežinoma"
+
+#: elf/cache.c:254
+msgid "Unknown OS"
+msgstr "Nežinoma OS"
+
+#: elf/cache.c:259
+#, c-format
+msgid ", OS ABI: %s %d.%d.%d"
+msgstr ", OS ABI: %s %d.%d.%d"
+
+#: elf/cache.c:320 elf/ldconfig.c:1434
+#, c-format
+msgid "Can't open cache file %s\n"
+msgstr "Nepavyko atverti podėlio failo %s\n"
+
+#: elf/cache.c:338 elf/cache.c:352 elf/cache.c:363
+#, c-format
+msgid "File is not a cache file.\n"
+msgstr "Failas nėra podėlio failas.\n"
+
+#: elf/cache.c:392 elf/cache.c:407
+#, c-format
+msgid "%d libs found in cache `%s'\n"
+msgstr "Rasta %d bibliotekų podėlyje „%s“\n"
+
+#: elf/cache.c:775
+#, c-format
+msgid "Renaming of %s to %s failed"
+msgstr "%s pervadinimas į %s nesėkmingas"
+
+#: elf/dl-close.c:870
+msgid "shared object not open"
+msgstr "bendrasis objektas neatvertas"
+
+#: elf/dl-deps.c:112
+msgid "DST not allowed in SUID/SGID programs"
+msgstr "DST neleidžiamas SUID/SGID programose"
+
+#: elf/dl-error-skeleton.c:80
+msgid "error while loading shared libraries"
+msgstr "klaida įkeliant bendrąsias bibliotekas"
+
+#: elf/dl-load.c:1118 elf/dl-load.c:1689 elf/dl-load.c:1791
+msgid "cannot read file data"
+msgstr "nepavyko nuskaityti failo duomenų"
+
+#: elf/dl-load.c:1250
+msgid "object file has no loadable segments"
+msgstr "objektiniame faile nėra įkeliamų segmentų"
+
+#: elf/dl-load.c:1288
+msgid "object file has no dynamic section"
+msgstr "objektiniame faile nėra dinaminės sekcijos"
+
+#: elf/dl-load.c:1308
+msgid "shared object cannot be dlopen()ed"
+msgstr "bendrasis objektas negali būti atvertas su dlopen()"
+
+#: elf/dl-load.c:1321
+msgid "cannot allocate memory for program header"
+msgstr "nepavyko išskirti atminties programos antraštei"
+
+#: elf/dl-load.c:1406
+msgid "cannot close file descriptor"
+msgstr "nepavyko užverti failo deskriptoriaus"
+
+#: elf/dl-load.c:1689
+msgid "file too short"
+msgstr "failas per trumpas"
+
+#: elf/dl-load.c:1725
+msgid "invalid ELF header"
+msgstr "netaisyklinga ELF antraštė"
+
+#: elf/dl-load.c:1737
+msgid "ELF file data encoding not big-endian"
+msgstr "ELF failo duomenų koduotė ne big-endian"
+
+#: elf/dl-load.c:1739
+msgid "ELF file data encoding not little-endian"
+msgstr "ELF failo duomenų koduotė ne little-endian"
+
+#: elf/dl-load.c:1743
+msgid "ELF file version ident does not match current one"
+msgstr "ELF failo versijos identifikatorius neatitinka esamo"
+
+#: elf/dl-load.c:1747
+msgid "ELF file OS ABI invalid"
+msgstr "ELF failo OS ABI netaisyklingas"
+
+#: elf/dl-load.c:1750
+msgid "ELF file ABI version invalid"
+msgstr "ELF failo ABI versija netaisyklinga"
+
+#: elf/dl-load.c:1756
+msgid "internal error"
+msgstr "vidinė klaida"
+
+#: elf/dl-load.c:1763
+msgid "ELF file version does not match current one"
+msgstr "ELF failo versija neatitinka esamos"
+
+#: elf/dl-load.c:2333
+msgid "wrong ELF class: ELFCLASS64"
+msgstr "klaidinga ELF klasė: ELFCLASS64"
+
+#: elf/dl-load.c:2334
+msgid "wrong ELF class: ELFCLASS32"
+msgstr "klaidinga ELF klasė: ELFCLASS32"
+
+#: elf/dl-load.c:2337
+msgid "cannot open shared object file"
+msgstr "nepavyko atverti bendrojo objekto failo"
+
+#: elf/dl-lookup.c:876
+msgid "symbol lookup error"
+msgstr "simbolio paieškos klaida"
+
+#: elf/dl-open.c:401
+msgid "TLS generation counter wrapped!  Please report this."
+msgstr "TLS kartų skaitiklis persivertė!  Prašytume apie tai pranešti."
+
+#: elf/dl-open.c:814
+msgid "invalid mode for dlopen()"
+msgstr "netaisyklinga veiksena dlopen()"
+
+#: elf/dl-tls.c:1039
+msgid "cannot create TLS data structures"
+msgstr "nepavyko sukurti TLS duomenų struktūrų"
+
+#: elf/ldconfig.c:151
+msgid "Print cache"
+msgstr "Spausdinti podėlį"
+
+#: elf/ldconfig.c:152
+msgid "Generate verbose messages"
+msgstr "Generuoti išsamius pranešimus"
+
+#: elf/ldconfig.c:153
+msgid "Don't build cache"
+msgstr "Nekurti podėlio"
+
+#: elf/ldconfig.c:155
+msgid "Change to and use ROOT as root directory"
+msgstr "Naudoti ŠAKNĮ kaip šakninį aplanką"
+
+#: elf/ldconfig.c:155
+msgid "ROOT"
+msgstr "ŠAKNIS"
+
+#: elf/ldconfig.c:156
+msgid "CACHE"
+msgstr "PODĖLIS"
+
+#: elf/ldconfig.c:156
+msgid "Use CACHE as cache file"
+msgstr "Naudoti PODĖLĮ kaip podėlio failą"
+
+#: elf/ldconfig.c:157
+msgid "CONF"
+msgstr "KONF"
+
+#: elf/ldconfig.c:157
+msgid "Use CONF as configuration file"
+msgstr "Naudoti KONF kaip konfigūracijos failą"
+
+#: elf/ldconfig.c:158
+msgid "Only process directories specified on the command line.  Don't build cache."
+msgstr "Apdoroti tik aplankus, nurodytus komandų eilutėje. Nekurti podėlio."
+
+#: elf/ldconfig.c:159
+msgid "Manually link individual libraries."
+msgstr "Rankiniu būdu susaistyti (link) atskiras bibliotekas."
+
+#: elf/ldconfig.c:160
+msgid "FORMAT"
+msgstr "FORMATAS"
+
+#: elf/ldconfig.c:161
+msgid "Ignore auxiliary cache file"
+msgstr "Ignoruoti pagalbinį podėlio failą"
+
+#: elf/ldconfig.c:372
+#, c-format
+msgid "Path `%s' given more than once"
+msgstr "Kelias „%s“ nurodytas daugiau negu vieną kartą"
+
+#: elf/ldconfig.c:488
+#, c-format
+msgid "%s is not a known library type"
+msgstr "%s nėra žinomas bibliotekos tipas"
+
+#: elf/ldconfig.c:607
+#, c-format
+msgid "%s is not a symbolic link\n"
+msgstr "%s nėra simbolinė nuoroda\n"
+
+#: elf/ldconfig.c:632
+#, c-format
+msgid "Can't link %s to %s"
+msgstr "Nepavyko susaistyti (link) %s su %s"
+
+#: elf/ldconfig.c:638
+msgid " (changed)\n"
+msgstr " (pakeista)\n"
+
+#: elf/ldconfig.c:640
+msgid " (SKIPPED)\n"
+msgstr " (PRALEISTA)\n"
+
+#: elf/ldconfig.c:696
+#, c-format
+msgid "Can't find %s"
+msgstr "Nepavyko rasti %s"
+
+#: elf/ldconfig.c:718
+#, c-format
+msgid "Ignored file %s since it is not a regular file."
+msgstr "Failas %s praleistas, nes tai nėra paprastas failas"
+
+#: elf/ldconfig.c:825
+#, c-format
+msgid "Can't open directory %s"
+msgstr "Nepavyko atverti aplanko %s"
+
+#: elf/ldconfig.c:910 elf/ldconfig.c:972 elf/readlib.c:98
+#, c-format
+msgid "Input file %s not found.\n"
+msgstr "Įvedimo failas %s nerastas.\n"
+
+#: elf/ldconfig.c:1070
+#, c-format
+msgid "libc5 library %s in wrong directory"
+msgstr "libc5 biblioteka %s ne tame aplanke"
+
+#: elf/ldconfig.c:1073
+#, c-format
+msgid "libc6 library %s in wrong directory"
+msgstr "libc6 biblioteka %s ne tame aplanke"
+
+#: elf/ldconfig.c:1076
+#, c-format
+msgid "libc4 library %s in wrong directory"
+msgstr "libc4 biblioteka %s ne tame aplanke"
+
+#: elf/ldconfig.c:1308 locale/programs/xasprintf.c:31
+#: locale/programs/xmalloc.c:63 malloc/obstack.c:416 malloc/obstack.c:418
+#: posix/getconf.c:458 posix/getconf.c:697
+#, c-format
+msgid "memory exhausted"
+msgstr "baigėsi atmintis"
+
+#: elf/ldconfig.c:1341
+#, c-format
+msgid "%s:%u: cannot read directory %s"
+msgstr "%s:%u: nepavyko atverti aplanko %s"
+
+#: elf/ldconfig.c:1454
+#, c-format
+msgid "Can't open cache file directory %s\n"
+msgstr "Nepavyko atverti podėlio failo aplanko %s\n"
+
+#: elf/ldd.bash.in:42
+msgid "Written by %s and %s.\n"
+msgstr "Parašė %s ir %s.\n"
+
+#: elf/ldd.bash.in:80
+msgid "ldd: option \\`$1' is ambiguous"
+msgstr "ldd: parametras „$1“ dviprasmis"
+
+#: elf/ldd.bash.in:87
+msgid "unrecognized option"
+msgstr "neatpažintas parametras"
+
+#: elf/ldd.bash.in:124
+msgid "missing file arguments"
+msgstr "trūksta failo argumento"
+
+#. TRANS This is a ``file doesn't exist'' error
+#. TRANS for ordinary files that are referenced in contexts where they are
+#. TRANS expected to already exist.
+#: elf/ldd.bash.in:147 sysdeps/gnu/errlist.h:13
+msgid "No such file or directory"
+msgstr "Toks failas ar aplankas neegzistuoja"
+
+#: elf/ldd.bash.in:150 inet/rcmd.c:481
+msgid "not regular file"
+msgstr "ne paprastas failas"
+
+#: elf/ldd.bash.in:153
+msgid "warning: you do not have execution permission for"
+msgstr "įspėjimas: neturite teisės paleisti"
+
+#: elf/ldd.bash.in:170
+msgid "\tnot a dynamic executable"
+msgstr "\tne dinaminis paleidžiamasis failas"
+
+#: elf/ldd.bash.in:178
+msgid "exited with unknown exit code"
+msgstr "išėjo su nežinomu išėjimo kodu"
+
+#: elf/ldd.bash.in:183
+msgid "error: you do not have read permission for"
+msgstr "klaida: neturite skaitymo teisių"
+
+#: elf/readelflib.c:67
+#, c-format
+msgid "%s is a 32 bit ELF file.\n"
+msgstr "%s yra 32 bitų ELF failas.\n"
+
+#: elf/readelflib.c:69
+#, c-format
+msgid "%s is a 64 bit ELF file.\n"
+msgstr "%s yra 64 bitų ELF failas.\n"
+
+#: elf/readelflib.c:71
+#, c-format
+msgid "Unknown ELFCLASS in file %s.\n"
+msgstr "Netaisyklinga ELFCLASS faile %s.\n"
+
+#: elf/readelflib.c:106
+#, c-format
+msgid "more than one dynamic segment\n"
+msgstr "daugiau negu vienas dinaminis segmentas\n"
+
+#: elf/readlib.c:115
+#, c-format
+msgid "File %s is empty, not checked."
+msgstr "Failas %s tuščias, todėl netikrintas."
+
+#: elf/readlib.c:121
+#, c-format
+msgid "File %s is too small, not checked."
+msgstr "Failas %s per mažas, todėl netikrintas."
+
+#: elf/readlib.c:170
+#, c-format
+msgid "%s is not an ELF file - it has the wrong magic bytes at the start.\n"
+msgstr "%s nėra ELF failas - magiškieji baitai failo pradžioje neteisingi.\n"
+
+#: iconv/iconv_prog.c:61
+msgid "encoding of original text"
+msgstr "originalaus teksto koduotė"
+
+#: iconv/iconv_prog.c:63
+msgid "Information:"
+msgstr "Informacija:"
+
+#: iconv/iconv_prog.c:78
+msgid "[FILE...]"
+msgstr "[FAILAS...]"
+
+#: iconv/iconv_prog.c:337
+#, c-format
+msgid "error while closing output file"
+msgstr "klaida užveriant išvedimo failą"
+
+#: iconv/iconv_prog.c:523
+#, c-format
+msgid "internal error (illegal descriptor)"
+msgstr "vidinė klaida (nekorektiškas deskriptorius)"
+
+#: inet/rcmd.c:203
+#, c-format
+msgid "connect to address %s: "
+msgstr "jungtis prie adreso %s: "
+
+#: inet/rcmd.c:216
+#, c-format
+msgid "Trying %s...\n"
+msgstr "Bandoma %s...\n"
+
+#: inet/ruserpass.c:165 inet/ruserpass.c:188
+msgid "out of memory"
+msgstr "baigėsi atmintis"
+
+#: locale/programs/charmap.c:408
+#, c-format
+msgid "duplicate definition of <%s>"
+msgstr "kartotinis <%s> apibrėžimas"
+
+#: locale/programs/charmap.c:415
+#, c-format
+msgid "value for <%s> must be 1 or greater"
+msgstr "<%s> reikšmė turi būti 1 arba didesnė"
+
+#: locale/programs/charmap.c:427
+#, c-format
+msgid "value of <%s> must be greater or equal than the value of <%s>"
+msgstr "<%s> reikšmė turi būti lygi arba didesnė už <%s> reikšmę"
+
+#: locale/programs/charmap.c:450 locale/programs/repertoire.c:182
+#, c-format
+msgid "argument to <%s> must be a single character"
+msgstr "<%s> argumentas turi būti vienas simbolis"
+
+#: locale/programs/charmap.c:504 locale/programs/charmap.c:684
+#: locale/programs/charmap.c:781 locale/programs/repertoire.c:229
+msgid "no symbolic name given"
+msgstr "neduotas joks simbolinis vardas"
+
+#: locale/programs/charmap.c:558
+msgid "invalid encoding given"
+msgstr "nurodyta netaisyklinga koduotė"
+
+#: locale/programs/charmap.c:567
+msgid "too few bytes in character encoding"
+msgstr "per mažai baitų simbolio koduotėje"
+
+#: locale/programs/charmap.c:569
+msgid "too many bytes in character encoding"
+msgstr "per daug baitų simbolio koduotėje"
+
+#: locale/programs/charmap.c:615 locale/programs/ld-address.c:524
+#: locale/programs/ld-collate.c:2619 locale/programs/ld-collate.c:3777
+#: locale/programs/ld-ctype.c:2118 locale/programs/ld-ctype.c:2830
+#: locale/programs/ld-identification.c:397 locale/programs/ld-measurement.c:213
+#: locale/programs/ld-messages.c:295 locale/programs/ld-monetary.c:748
+#: locale/programs/ld-name.c:262 locale/programs/ld-numeric.c:325
+#: locale/programs/ld-paper.c:212 locale/programs/ld-telephone.c:276
+#: locale/programs/ld-time.c:959 locale/programs/repertoire.c:312
+#, c-format
+msgid "%1$s: definition does not end with `END %1$s'"
+msgstr "%1$s: apibrėžimas neužbaigtas „END %1$s“"
+
+#: locale/programs/charmap.c:656 locale/programs/charmap.c:720
+#, c-format
+msgid "value for %s must be an integer"
+msgstr "%s reikšmė turi būti sveikasis skaičius"
+
+#: locale/programs/charmap.c:848
+#, c-format
+msgid "%s: error in state machine"
+msgstr "%s: klaida būsenų automate"
+
+#: locale/programs/charmap.c:856 locale/programs/ld-address.c:540
+#: locale/programs/ld-collate.c:2616 locale/programs/ld-collate.c:3970
+#: locale/programs/ld-ctype.c:2115 locale/programs/ld-ctype.c:2847
+#: locale/programs/ld-identification.c:413 locale/programs/ld-measurement.c:229
+#: locale/programs/ld-messages.c:311 locale/programs/ld-monetary.c:764
+#: locale/programs/ld-name.c:278 locale/programs/ld-numeric.c:341
+#: locale/programs/ld-paper.c:228 locale/programs/ld-telephone.c:292
+#: locale/programs/ld-time.c:990 locale/programs/locfile.c:1010
+#: locale/programs/repertoire.c:323
+#, c-format
+msgid "%s: premature end of file"
+msgstr "%s: ankstyva failo pabaiga"
+
+#: locale/programs/charmap.c:875 locale/programs/charmap.c:886
+#, c-format
+msgid "unknown character `%s'"
+msgstr "nežinomas simbolis „%s“"
+
+#: locale/programs/charmap.c:1035 locale/programs/repertoire.c:455
+msgid "upper limit in range is smaller than lower limit"
+msgstr "viršutinė riba mažesnė už apatinę ribą"
+
+#: locale/programs/ld-address.c:133 locale/programs/ld-collate.c:1566
+#: locale/programs/ld-ctype.c:430 locale/programs/ld-identification.c:131
+#: locale/programs/ld-measurement.c:92 locale/programs/ld-messages.c:96
+#: locale/programs/ld-monetary.c:192 locale/programs/ld-name.c:93
+#: locale/programs/ld-numeric.c:97 locale/programs/ld-paper.c:89
+#: locale/programs/ld-telephone.c:92 locale/programs/ld-time.c:164
+#, c-format
+msgid "No definition for %s category found"
+msgstr "Nerastas %s kategorijos apibrėžimas"
+
+#: locale/programs/ld-address.c:432 locale/programs/ld-address.c:469
+#: locale/programs/ld-address.c:507 locale/programs/ld-ctype.c:2479
+#: locale/programs/ld-identification.c:309 locale/programs/ld-measurement.c:196
+#: locale/programs/ld-messages.c:264 locale/programs/ld-monetary.c:503
+#: locale/programs/ld-monetary.c:538 locale/programs/ld-monetary.c:579
+#: locale/programs/ld-name.c:235 locale/programs/ld-numeric.c:217
+#: locale/programs/ld-paper.c:195 locale/programs/ld-telephone.c:251
+#: locale/programs/ld-time.c:864 locale/programs/ld-time.c:906
+#, c-format
+msgid "%s: field `%s' declared more than once"
+msgstr "%s: laukas „%s“ apibrėžtas daugiau negu vieną kartą"
+
+#: locale/programs/ld-address.c:436 locale/programs/ld-address.c:474
+#: locale/programs/ld-identification.c:313 locale/programs/ld-messages.c:274
+#: locale/programs/ld-monetary.c:507 locale/programs/ld-monetary.c:542
+#: locale/programs/ld-name.c:239 locale/programs/ld-numeric.c:221
+#: locale/programs/ld-telephone.c:255 locale/programs/ld-time.c:756
+#: locale/programs/ld-time.c:827 locale/programs/ld-time.c:869
+#, c-format
+msgid "%s: unknown character in field `%s'"
+msgstr "%s: nežinomas simbolis lauke „%s“"
+
+#: locale/programs/ld-address.c:521 locale/programs/ld-collate.c:3775
+#: locale/programs/ld-ctype.c:2827 locale/programs/ld-identification.c:394
+#: locale/programs/ld-measurement.c:210 locale/programs/ld-messages.c:293
+#: locale/programs/ld-monetary.c:746 locale/programs/ld-name.c:260
+#: locale/programs/ld-numeric.c:323 locale/programs/ld-paper.c:210
+#: locale/programs/ld-telephone.c:274 locale/programs/ld-time.c:957
+#, c-format
+msgid "%s: incomplete `END' line"
+msgstr "%s: nepilna „END“ eilutė"
+
+#: locale/programs/ld-address.c:531 locale/programs/ld-collate.c:550
+#: locale/programs/ld-collate.c:602 locale/programs/ld-collate.c:898
+#: locale/programs/ld-collate.c:911 locale/programs/ld-collate.c:2585
+#: locale/programs/ld-collate.c:2606 locale/programs/ld-collate.c:3960
+#: locale/programs/ld-ctype.c:1847 locale/programs/ld-ctype.c:2105
+#: locale/programs/ld-ctype.c:2677 locale/programs/ld-ctype.c:2838
+#: locale/programs/ld-identification.c:404 locale/programs/ld-measurement.c:220
+#: locale/programs/ld-messages.c:302 locale/programs/ld-monetary.c:755
+#: locale/programs/ld-name.c:269 locale/programs/ld-numeric.c:332
+#: locale/programs/ld-paper.c:219 locale/programs/ld-telephone.c:283
+#: locale/programs/ld-time.c:981
+#, c-format
+msgid "%s: syntax error"
+msgstr "%s: sintaksės klaida"
+
+#: locale/programs/ld-collate.c:1607
+#, c-format
+msgid "symbol `%s' not defined"
+msgstr "simbolis „%s“ neapibrėžtas"
+
+#: locale/programs/ld-collate.c:1687 locale/programs/ld-collate.c:1792
+#, c-format
+msgid "symbol `%s'"
+msgstr "simbolis „%s“"
+
+#: locale/programs/ld-collate.c:1855
+msgid "too many errors; giving up"
+msgstr "per daug klaidų; pasiduodu"
+
+#: locale/programs/ld-ctype.c:1963 locale/programs/ld-ctype.c:2014
+#: locale/programs/ld-ctype.c:2056
+msgid "syntax error"
+msgstr "sintaksės klaida"
+
+#: locale/programs/ld-time.c:740
+#, c-format
+msgid "%s: too few values for field `%s'"
+msgstr "%s: per mažai reikšmių laukui „%s“"
+
+#: locale/programs/ld-time.c:785
+msgid "extra trailing semicolon"
+msgstr "papildomas kabliataškis pabaigoje"
+
+#: locale/programs/linereader.c:130
+msgid "trailing garbage at end of line"
+msgstr "šiukšlės eilutės pabaigoje"
+
+#: locale/programs/linereader.c:298
+msgid "garbage at end of number"
+msgstr "šiukšlės skaičiaus pabaigoje"
+
+#: locale/programs/locale.c:70
+msgid "System information:"
+msgstr "Sistemos informacija:"
+
+#: locale/programs/locale.c:78
+msgid "Print more information"
+msgstr "Spausdinti daugiau informacijos"
+
+#: login/programs/pt_chown.c:204
+#, c-format
+msgid "too many arguments"
+msgstr "per daug argumentų"
+
+#: login/programs/pt_chown.c:212
+#, c-format
+msgid "needs to be installed setuid `root'"
+msgstr "turi būti instaliuota setuid „root“"
+
+#: malloc/mcheck-impl.c:355
+msgid "memory is consistent, library is buggy\n"
+msgstr "atminties turinys korektiškas, bibliotekoje yra klaida\n"
+
+#: malloc/mcheck-impl.c:364
+msgid "block freed twice\n"
+msgstr "blokas atlaisvintas du kartus\n"
+
+#: malloc/memusage.sh:213
+msgid "No program name given"
+msgstr "Nenurodytas programos vardas"
+
+#: misc/error.c:192
+msgid "Unknown system error"
+msgstr "Nežinoma sistemos klaida"
+
+#: nis/nis_error.h:1 nis/ypclnt.c:833 nis/ypclnt.c:922 posix/regcomp.c:135
+#: sysdeps/gnu/errlist.h:1
+msgid "Success"
+msgstr "Sėkmė"
+
+#: nis/nis_error.h:27
+msgid "Partial success"
+msgstr "Dalinė sėkmė"
+
+#: nis/nis_error.h:28
+msgid "Too many attributes"
+msgstr "Per daug atributų"
+
+#: nis/nis_print.c:52
+msgid "UNKNOWN"
+msgstr "NEŽINOMA"
+
+#: nis/ypclnt.c:881
+msgid "Database is busy"
+msgstr "Duomenų bazė užimta"
+
+#: nis/ypclnt.c:931
+msgid "System resource allocation failure"
+msgstr "Sistemos resursų išskyrimo sutrikimas"
+
+#: nscd/nscd_stat.c:174
+msgid "yes"
+msgstr "taip"
+
+#: nscd/nscd_stat.c:175
+msgid "no"
+msgstr "ne"
+
+#: nscd/selinux.c:255
+msgid "Failed to determine if kernel supports SELinux"
+msgstr "Nepavyko nustatyti, ar branduolys palaiko SELinux"
+
+#: nss/getent.c:901
+#, c-format
+msgid "Unknown database name"
+msgstr "Nežinomas duomenų bazės vardas"
+
+#: nss/getent.c:931
+msgid "Supported databases:\n"
+msgstr "Palaikomos duomenų bazės:\n"
+
+#: nss/getent.c:997
+#, c-format
+msgid "Unknown database: %s\n"
+msgstr "Nežinoma duomenų bazė: %s\n"
+
+#: nss/makedb.c:569
+#, c-format
+msgid "problems while reading `%s'"
+msgstr "problemos skaitant „%s“"
+
+#: posix/getconf.c:624
+#, c-format
+msgid "Couldn't execute %s"
+msgstr "Nepavyko paleisti %s"
+
+#: posix/getconf.c:669 posix/getconf.c:685
+msgid "undefined"
+msgstr "neapibrėžta"
+
+#: posix/getconf.c:707
+#, c-format
+msgid "Unrecognized variable `%s'"
+msgstr "Neatpažintas kintamasis „%s“"
+
+#: posix/regcomp.c:141
+msgid "Invalid regular expression"
+msgstr "Netaisyklinga reguliarioji išraiška"
+
+#: posix/regcomp.c:171
+msgid "Memory exhausted"
+msgstr "Baigėsi atmintis"
+
+#: posix/regcomp.c:177
+msgid "Premature end of regular expression"
+msgstr "Netikėta reguliariosios išraiškos pabaiga"
+
+#: posix/regcomp.c:180
+msgid "Regular expression too big"
+msgstr "Reguliarioji išraiška per didelė"
+
+#: posix/regcomp.c:183
+msgid "Unmatched ) or \\)"
+msgstr "Nesuderintas ) arba \\)"
+
+#: posix/regcomp.c:676
+msgid "No previous regular expression"
+msgstr "Nėra ankstesniosios reguliariosios išraiškos"
+
+#: posix/wordexp.c:1795
+msgid "parameter null or not set"
+msgstr "parametras tuščias arba nenustatytas"
+
+#: resolv/herror.c:63
+msgid "Resolver Error 0 (no error)"
+msgstr "Paieškos klaida 0 (jokios klaidos)"
+
+#: resolv/herror.c:64
+msgid "Unknown host"
+msgstr "Nežinomas serveris"
+
+#: resolv/herror.c:65
+msgid "Host name lookup failure"
+msgstr "Adreso paieškos sutrikimas"
+
+#: resolv/herror.c:66
+msgid "Unknown server error"
+msgstr "Nežinoma serverio klaida"
+
+#: resolv/herror.c:67
+msgid "No address associated with name"
+msgstr "Su vardu susietų adresų nėra"
+
+#: resolv/herror.c:102
+msgid "Resolver internal error"
+msgstr "Vardų paieškos vidinė klaida"
+
+#: resolv/herror.c:105
+msgid "Unknown resolver error"
+msgstr "Nežinoma vardų paieškos klaida"
+
+#: resolv/res_hconf.c:219
+#, c-format
+msgid "%s: line %d: bad command `%s'\n"
+msgstr "%s: eilutė %d: bloga komanda „%s“\n"
+
+#: stdio-common/psignal.c:43
+#, c-format
+msgid "%s%sUnknown signal %d\n"
+msgstr "%s%sNežinomas signalas %d\n"
+
+#: stdio-common/psignal.c:44
+msgid "Unknown signal"
+msgstr "Nežinomas signalas"
+
+#: string/_strerror.c:30 sysdeps/mach/_strerror.c:55
+msgid "Unknown error "
+msgstr "Nežinoma klaida "
+
+#: string/strsignal.c:39
+#, c-format
+msgid "Real-time signal %d"
+msgstr "Realaus laiko signalas %d"
+
+#: string/strsignal.c:43
+#, c-format
+msgid "Unknown signal %d"
+msgstr "Nežinomas signalas %d"
+
+#: sunrpc/clnt_perr.c:150
+msgid "RPC: Success"
+msgstr "RPC: Sėkmės"
+
+#: sunrpc/clnt_perr.c:201
+msgid "RPC: Unknown host"
+msgstr "RPC: Nežinomas serveris"
+
+#: sunrpc/clnt_perr.c:213
+msgid "RPC: Program not registered"
+msgstr "RPC: Programa neregistruota"
+
+#: sunrpc/clnt_perr.c:334
+msgid "Authentication OK"
+msgstr "Autentikacija sėkminga"
+
+#: sunrpc/clnt_perr.c:361
+msgid "Failed (unspecified error)"
+msgstr "Nesėkmė (nenurodyta klaida)"
+
+#: sunrpc/pmap_clnt.c:128
+msgid "Cannot register service"
+msgstr "Nepavyko užregistruoti tarnybos"
+
+#: sysdeps/generic/siglist.h:30
+msgid "Interrupt"
+msgstr "Pertraukimas"
+
+#: sysdeps/generic/siglist.h:31
+msgid "Quit"
+msgstr "Išeita (quit)"
+
+#: sysdeps/generic/siglist.h:32
+msgid "Illegal instruction"
+msgstr "Netaisyklinga instrukcija"
+
+#: sysdeps/generic/siglist.h:34
+msgid "Aborted"
+msgstr "Nutraukta (aborted)"
+
+#: sysdeps/generic/siglist.h:35
+msgid "Floating point exception"
+msgstr "Slankaus kablelio klaida"
+
+#: sysdeps/generic/siglist.h:36
+msgid "Killed"
+msgstr "Nutraukta (killed)"
+
+#: sysdeps/generic/siglist.h:37
+msgid "Bus error"
+msgstr "Magistralės klaida"
+
+#: sysdeps/generic/siglist.h:38
+msgid "Bad system call"
+msgstr "Blogas sisteminis kvietimas"
+
+#: sysdeps/generic/siglist.h:39
+msgid "Segmentation fault"
+msgstr "Segmentavimo klaida"
+
+#. TRANS There is no process reading from the other end of a pipe.
+#. TRANS Every library function that returns this error code also generates a
+#. TRANS @code{SIGPIPE} signal; this signal terminates the program if not handled
+#. TRANS or blocked.  Thus, your program will never actually see @code{EPIPE}
+#. TRANS unless it has handled or blocked @code{SIGPIPE}.
+#: sysdeps/generic/siglist.h:40 sysdeps/gnu/errlist.h:216
+msgid "Broken pipe"
+msgstr "Nutrūko saitas (pipe)"
+
+#: sysdeps/generic/siglist.h:41
+msgid "Alarm clock"
+msgstr "Žadintuvas"
+
+#: sysdeps/generic/siglist.h:42
+msgid "Terminated"
+msgstr "Užbaigta (terminated)"
+
+#: sysdeps/generic/siglist.h:43
+msgid "Urgent I/O condition"
+msgstr "Skubi Įv./Išv. situacija"
+
+#: sysdeps/generic/siglist.h:44
+msgid "Stopped (signal)"
+msgstr "Sustabdyta (signalas)"
+
+#: sysdeps/generic/siglist.h:45
+msgid "Stopped"
+msgstr "Sustabdyta"
+
+#: sysdeps/generic/siglist.h:46
+msgid "Continued"
+msgstr "Pratęsta"
+
+#: sysdeps/generic/siglist.h:48
+msgid "Stopped (tty input)"
+msgstr "Sustabdyta (tty įvedimas)"
+
+#: sysdeps/generic/siglist.h:49
+msgid "Stopped (tty output)"
+msgstr "Sustabdyta (tty išvedimas)"
+
+#: sysdeps/generic/siglist.h:50
+msgid "I/O possible"
+msgstr "Galimas įvedimas/išvedimas"
+
+#: sysdeps/generic/siglist.h:51
+msgid "CPU time limit exceeded"
+msgstr "Viršyta CPU laiko riba"
+
+#: sysdeps/generic/siglist.h:52
+msgid "File size limit exceeded"
+msgstr "Viršyta failo dydžio riba"
+
+#: sysdeps/generic/siglist.h:55
+msgid "User defined signal 1"
+msgstr "Naudotojo apibrėžtas signalas 1"
+
+#: sysdeps/generic/siglist.h:56
+msgid "User defined signal 2"
+msgstr "Naudotojo apibrėžtas signalas 2"
+
+#: sysdeps/generic/siglist.h:57
+msgid "Window changed"
+msgstr "Langas pasikeitė"
+
+#: sysdeps/generic/siglist.h:61
+msgid "EMT trap"
+msgstr "EMT gaudyklė"
+
+#: sysdeps/generic/siglist.h:64
+msgid "Stack fault"
+msgstr "Steko klaida"
+
+#: sysdeps/generic/siglist.h:67
+msgid "Power failure"
+msgstr "Elektros maitinimo sutrikimas"
+
+#: sysdeps/generic/siglist.h:70
+msgid "Information request"
+msgstr "Informacijos užklausa"
+
+#: sysdeps/generic/siglist.h:73
+msgid "Resource lost"
+msgstr "Resursas prarastas"
+
+#. TRANS Only the owner of the file (or other resource)
+#. TRANS or processes with special privileges can perform the operation.
+#: sysdeps/gnu/errlist.h:6
+msgid "Operation not permitted"
+msgstr "Operacija neleidžiama"
+
+#. TRANS No process matches the specified process ID.
+#: sysdeps/gnu/errlist.h:18
+msgid "No such process"
+msgstr "Tokio proceso nėra"
+
+#. TRANS An asynchronous signal occurred and prevented
+#. TRANS completion of the call.  When this happens, you should try the call
+#. TRANS again.
+#. TRANS
+#. TRANS You can choose to have functions resume after a signal that is handled,
+#. TRANS rather than failing with @code{EINTR}; see @ref{Interrupted
+#. TRANS Primitives}.
+#: sysdeps/gnu/errlist.h:29
+msgid "Interrupted system call"
+msgstr "Nutrauktas sistemos iškvietimas"
+
+#. TRANS Usually used for physical read or write errors.
+#: sysdeps/gnu/errlist.h:34
+msgid "Input/output error"
+msgstr "Įvedimo/išvedimo klaida"
+
+#. TRANS The system tried to use the device
+#. TRANS represented by a file you specified, and it couldn't find the device.
+#. TRANS This can mean that the device file was installed incorrectly, or that
+#. TRANS the physical device is missing or not correctly attached to the
+#. TRANS computer.
+#: sysdeps/gnu/errlist.h:43
+msgid "No such device or address"
+msgstr "Nėra tokio įrenginio ar adreso"
+
+#. TRANS Used when the arguments passed to a new program
+#. TRANS being executed with one of the @code{exec} functions (@pxref{Executing a
+#. TRANS File}) occupy too much memory space.  This condition never arises on
+#. TRANS @gnuhurdsystems{}.
+#: sysdeps/gnu/errlist.h:51
+msgid "Argument list too long"
+msgstr "Argumentų sąrašas per ilgas"
+
+#. TRANS Invalid executable file format.  This condition is detected by the
+#. TRANS @code{exec} functions; see @ref{Executing a File}.
+#: sysdeps/gnu/errlist.h:57
+msgid "Exec format error"
+msgstr "Paleidžiamojo failo formato klaida"
+
+#. TRANS For example, I/O on a descriptor that has been
+#. TRANS closed or reading from a descriptor open only for writing (or vice
+#. TRANS versa).
+#: sysdeps/gnu/errlist.h:64
+msgid "Bad file descriptor"
+msgstr "Blogas failo deskriptorius"
+
+#. TRANS Allocating a system resource would have resulted in a
+#. TRANS deadlock situation.  The system does not guarantee that it will notice
+#. TRANS all such situations.  This error means you got lucky and the system
+#. TRANS noticed; it might just hang.  @xref{File Locks}, for an example.
+#: sysdeps/gnu/errlist.h:79
+msgid "Resource deadlock avoided"
+msgstr "Išvengta resursų aklavietės (deadlock)"
+
+#. TRANS The system cannot allocate more virtual memory
+#. TRANS because its capacity is full.
+#: sysdeps/gnu/errlist.h:85
+msgid "Cannot allocate memory"
+msgstr "Nepavyko išskirti atminties"
+
+#. TRANS An invalid pointer was detected.
+#. TRANS On @gnuhurdsystems{}, this error never happens; you get a signal instead.
+#: sysdeps/gnu/errlist.h:96
+msgid "Bad address"
+msgstr "Blogas adresas"
+
+#. TRANS A file that isn't a block special file was given in a situation that
+#. TRANS requires one.  For example, trying to mount an ordinary file as a file
+#. TRANS system in Unix gives this error.
+#: sysdeps/gnu/errlist.h:103
+msgid "Block device required"
+msgstr "Reikalingas blokinis įrenginys"
+
+#. TRANS A system resource that can't be shared is already in use.
+#. TRANS For example, if you try to delete a file that is the root of a currently
+#. TRANS mounted filesystem, you get this error.
+#: sysdeps/gnu/errlist.h:110
+msgid "Device or resource busy"
+msgstr "Įrenginys ar resursas užimtas"
+
+#. TRANS An existing file was specified in a context where it only
+#. TRANS makes sense to specify a new file.
+#: sysdeps/gnu/errlist.h:116
+msgid "File exists"
+msgstr "Failas jau egzistuoja"
+
+#. TRANS The wrong type of device was given to a function that expects a
+#. TRANS particular sort of device.
+#: sysdeps/gnu/errlist.h:129
+msgid "No such device"
+msgstr "Tokio įrenginio nėra"
+
+#. TRANS A file that isn't a directory was specified when a directory is required.
+#: sysdeps/gnu/errlist.h:134
+msgid "Not a directory"
+msgstr "Ne aplankas"
+
+#. TRANS You cannot open a directory for writing,
+#. TRANS or create or remove hard links to it.
+#: sysdeps/gnu/errlist.h:140
+msgid "Is a directory"
+msgstr "Aplankas"
+
+#. TRANS This is used to indicate various kinds of problems
+#. TRANS with passing the wrong argument to a library function.
+#: sysdeps/gnu/errlist.h:146
+msgid "Invalid argument"
+msgstr "Netinkamas argumentas"
+
+#. TRANS The current process has too many files open and can't open any more.
+#. TRANS Duplicate descriptors do count toward this limit.
+#. TRANS
+#. TRANS In BSD and GNU, the number of open files is controlled by a resource
+#. TRANS limit that can usually be increased.  If you get this error, you might
+#. TRANS want to increase the @code{RLIMIT_NOFILE} limit or make it unlimited;
+#. TRANS @pxref{Limits on Resources}.
+#: sysdeps/gnu/errlist.h:157
+msgid "Too many open files"
+msgstr "Per daug atvertų failų"
+
+#. TRANS There are too many distinct file openings in the entire system.  Note
+#. TRANS that any number of linked channels count as just one file opening; see
+#. TRANS @ref{Linked Channels}.  This error never occurs on @gnuhurdsystems{}.
+#: sysdeps/gnu/errlist.h:164
+msgid "Too many open files in system"
+msgstr "Sistemoje per daug atvertų failų"
+
+#. TRANS Inappropriate I/O control operation, such as trying to set terminal
+#. TRANS modes on an ordinary file.
+#: sysdeps/gnu/errlist.h:170
+msgid "Inappropriate ioctl for device"
+msgstr "Netinkamas ioctl įrenginiui"
+
+#. TRANS An attempt to execute a file that is currently open for writing, or
+#. TRANS write to a file that is currently being executed.  Often using a
+#. TRANS debugger to run a program is considered having it open for writing and
+#. TRANS will cause this error.  (The name stands for ``text file busy''.)  This
+#. TRANS is not an error on @gnuhurdsystems{}; the text is copied as necessary.
+#: sysdeps/gnu/errlist.h:179
+msgid "Text file busy"
+msgstr "Tekstinis failas užimtas"
+
+#. TRANS The size of a file would be larger than allowed by the system.
+#: sysdeps/gnu/errlist.h:184
+msgid "File too large"
+msgstr "Failas per didelis"
+
+#. TRANS Write operation on a file failed because the
+#. TRANS disk is full.
+#: sysdeps/gnu/errlist.h:190
+msgid "No space left on device"
+msgstr "Įrenginyje neliko vietos"
+
+#. TRANS An attempt was made to modify something on a read-only file system.
+#: sysdeps/gnu/errlist.h:200
+msgid "Read-only file system"
+msgstr "Failų sistema tik skaitymui"
+
+#. TRANS The link count of a single file would become too large.
+#. TRANS @code{rename} can cause this error if the file being renamed already has
+#. TRANS as many links as it can take (@pxref{Renaming Files}).
+#: sysdeps/gnu/errlist.h:207
+msgid "Too many links"
+msgstr "Per daug nuorodų"
+
+#. TRANS Used by mathematical functions when an argument value does
+#. TRANS not fall into the domain over which the function is defined.
+#: sysdeps/gnu/errlist.h:222
+msgid "Numerical argument out of domain"
+msgstr "Skaitinis argumentas už apibrėžimo srities"
+
+#. TRANS Used by mathematical functions when the result value is
+#. TRANS not representable because of overflow or underflow.
+#: sysdeps/gnu/errlist.h:228
+msgid "Numerical result out of range"
+msgstr "Skaitinis rezultatas už ribų"
+
+#. TRANS The call might work if you try again
+#. TRANS later.  The macro @code{EWOULDBLOCK} is another name for @code{EAGAIN};
+#. TRANS they are always the same in @theglibc{}.
+#. TRANS
+#. TRANS This error can happen in a few different situations:
+#. TRANS
+#. TRANS @itemize @bullet
+#. TRANS @item
+#. TRANS An operation that would block was attempted on an object that has
+#. TRANS non-blocking mode selected.  Trying the same operation again will block
+#. TRANS until some external condition makes it possible to read, write, or
+#. TRANS connect (whatever the operation).  You can use @code{select} to find out
+#. TRANS when the operation will be possible; @pxref{Waiting for I/O}.
+#. TRANS
+#. TRANS @strong{Portability Note:} In many older Unix systems, this condition
+#. TRANS was indicated by @code{EWOULDBLOCK}, which was a distinct error code
+#. TRANS different from @code{EAGAIN}.  To make your program portable, you should
+#. TRANS check for both codes and treat them the same.
+#. TRANS
+#. TRANS @item
+#. TRANS A temporary resource shortage made an operation impossible.  @code{fork}
+#. TRANS can return this error.  It indicates that the shortage is expected to
+#. TRANS pass, so your program can try the call again later and it may succeed.
+#. TRANS It is probably a good idea to delay for a few seconds before trying it
+#. TRANS again, to allow time for other processes to release scarce resources.
+#. TRANS Such shortages are usually fairly serious and affect the whole system,
+#. TRANS so usually an interactive program should report the error to the user
+#. TRANS and return to its command loop.
+#. TRANS @end itemize
+#: sysdeps/gnu/errlist.h:261
+msgid "Resource temporarily unavailable"
+msgstr "Resursas laikinai neprieinamas"
+
+#. TRANS An operation that cannot complete immediately was initiated on an object
+#. TRANS that has non-blocking mode selected.  Some functions that must always
+#. TRANS block (such as @code{connect}; @pxref{Connecting}) never return
+#. TRANS @code{EAGAIN}.  Instead, they return @code{EINPROGRESS} to indicate that
+#. TRANS the operation has begun and will take some time.  Attempts to manipulate
+#. TRANS the object before the call completes return @code{EALREADY}.  You can
+#. TRANS use the @code{select} function to find out when the pending operation
+#. TRANS has completed; @pxref{Waiting for I/O}.
+#: sysdeps/gnu/errlist.h:273
+msgid "Operation now in progress"
+msgstr "Operacija dabar vykdoma"
+
+#. TRANS An operation is already in progress on an object that has non-blocking
+#. TRANS mode selected.
+#: sysdeps/gnu/errlist.h:279
+msgid "Operation already in progress"
+msgstr "Operacija jau vykdoma"
+
+#. TRANS A file that isn't a socket was specified when a socket is required.
+#: sysdeps/gnu/errlist.h:284
+msgid "Socket operation on non-socket"
+msgstr "Lizdo operacija taikoma ne lizdui"
+
+#. TRANS The size of a message sent on a socket was larger than the supported
+#. TRANS maximum size.
+#: sysdeps/gnu/errlist.h:290
+msgid "Message too long"
+msgstr "Pranešimas per ilgas"
+
+#. TRANS The socket type does not support the requested communications protocol.
+#: sysdeps/gnu/errlist.h:295
+msgid "Protocol wrong type for socket"
+msgstr "Netinkamas protokolo tipas lizdui"
+
+#. TRANS You specified a socket option that doesn't make sense for the
+#. TRANS particular protocol being used by the socket.  @xref{Socket Options}.
+#: sysdeps/gnu/errlist.h:301
+msgid "Protocol not available"
+msgstr "Protokolas nepalaikomas"
+
+#. TRANS The socket domain does not support the requested communications protocol
+#. TRANS (perhaps because the requested protocol is completely invalid).
+#. TRANS @xref{Creating a Socket}.
+#: sysdeps/gnu/errlist.h:308
+msgid "Protocol not supported"
+msgstr "Protokolas nepalaikomas"
+
+#. TRANS The socket type is not supported.
+#: sysdeps/gnu/errlist.h:313
+msgid "Socket type not supported"
+msgstr "Lizdo tipas nepalaikomas"
+
+#. TRANS The operation you requested is not supported.  Some socket functions
+#. TRANS don't make sense for all types of sockets, and others may not be
+#. TRANS implemented for all communications protocols.  On @gnuhurdsystems{}, this
+#. TRANS error can happen for many calls when the object does not support the
+#. TRANS particular operation; it is a generic indication that the server knows
+#. TRANS nothing to do for that call.
+#: sysdeps/gnu/errlist.h:323
+msgid "Operation not supported"
+msgstr "Operacija nepalaikoma"
+
+#. TRANS The socket communications protocol family you requested is not supported.
+#: sysdeps/gnu/errlist.h:328
+msgid "Protocol family not supported"
+msgstr "Protokolo šeima nepalaikoma"
+
+#. TRANS The address family specified for a socket is not supported; it is
+#. TRANS inconsistent with the protocol being used on the socket.  @xref{Sockets}.
+#: sysdeps/gnu/errlist.h:334
+msgid "Address family not supported by protocol"
+msgstr "Adreso šeima nepalaikoma protokolo"
+
+#. TRANS The requested socket address is already in use.  @xref{Socket Addresses}.
+#: sysdeps/gnu/errlist.h:339
+msgid "Address already in use"
+msgstr "Adresas jau naudojamas"
+
+#. TRANS The requested socket address is not available; for example, you tried
+#. TRANS to give a socket a name that doesn't match the local host name.
+#. TRANS @xref{Socket Addresses}.
+#: sysdeps/gnu/errlist.h:346
+msgid "Cannot assign requested address"
+msgstr "Nepavyko priskirti prašomo adreso"
+
+#. TRANS A socket operation failed because the network was down.
+#: sysdeps/gnu/errlist.h:351
+msgid "Network is down"
+msgstr "Tinklas išjungtas"
+
+#. TRANS A socket operation failed because the subnet containing the remote host
+#. TRANS was unreachable.
+#: sysdeps/gnu/errlist.h:357
+msgid "Network is unreachable"
+msgstr "Tinklas neprieinamas"
+
+#. TRANS A network connection was reset because the remote host crashed.
+#: sysdeps/gnu/errlist.h:362
+msgid "Network dropped connection on reset"
+msgstr "Prisijungimas nutrauktas iš tinklo pusės"
+
+#. TRANS A network connection was aborted locally.
+#: sysdeps/gnu/errlist.h:367
+msgid "Software caused connection abort"
+msgstr "Prisijungimas nutrauktas programiškai"
+
+#. TRANS A network connection was closed for reasons outside the control of the
+#. TRANS local host, such as by the remote machine rebooting or an unrecoverable
+#. TRANS protocol violation.
+#: sysdeps/gnu/errlist.h:374
+msgid "Connection reset by peer"
+msgstr "Prisijungimas nutrauktas kito serverio"
+
+#. TRANS The kernel's buffers for I/O operations are all in use.  In GNU, this
+#. TRANS error is always synonymous with @code{ENOMEM}; you may get one or the
+#. TRANS other from network operations.
+#: sysdeps/gnu/errlist.h:381
+msgid "No buffer space available"
+msgstr "Nėra vietos buferyje"
+
+#. TRANS You tried to connect a socket that is already connected.
+#. TRANS @xref{Connecting}.
+#: sysdeps/gnu/errlist.h:387
+msgid "Transport endpoint is already connected"
+msgstr "Transporto galinis taškas jau prijungtas"
+
+#. TRANS The socket is not connected to anything.  You get this error when you
+#. TRANS try to transmit data over a socket, without first specifying a
+#. TRANS destination for the data.  For a connectionless socket (for datagram
+#. TRANS protocols, such as UDP), you get @code{EDESTADDRREQ} instead.
+#: sysdeps/gnu/errlist.h:395
+msgid "Transport endpoint is not connected"
+msgstr "Transporto galinis taškas neprijungtas"
+
+#. TRANS No default destination address was set for the socket.  You get this
+#. TRANS error when you try to transmit data over a connectionless socket,
+#. TRANS without first specifying a destination for the data with @code{connect}.
+#: sysdeps/gnu/errlist.h:402
+msgid "Destination address required"
+msgstr "Reikia paskirties adreso"
+
+#. TRANS The socket has already been shut down.
+#: sysdeps/gnu/errlist.h:407
+msgid "Cannot send after transport endpoint shutdown"
+msgstr "Negalima siųsti po transporto galinio taško išjungimo (shutdown)"
+
+#. TRANS A socket operation with a specified timeout received no response during
+#. TRANS the timeout period.
+#: sysdeps/gnu/errlist.h:416
+msgid "Connection timed out"
+msgstr "Baigėsi prisijungimo laukimo laikas"
+
+#. TRANS A remote host refused to allow the network connection (typically because
+#. TRANS it is not running the requested service).
+#: sysdeps/gnu/errlist.h:422
+msgid "Connection refused"
+msgstr "Prisijungimas atmestas"
+
+#. TRANS Too many levels of symbolic links were encountered in looking up a file name.
+#. TRANS This often indicates a cycle of symbolic links.
+#: sysdeps/gnu/errlist.h:428
+msgid "Too many levels of symbolic links"
+msgstr "Per daug simbolinių nuorodų lygmenų"
+
+#. TRANS Filename too long (longer than @code{PATH_MAX}; @pxref{Limits for
+#. TRANS Files}) or host name too long (in @code{gethostname} or
+#. TRANS @code{sethostname}; @pxref{Host Identification}).
+#: sysdeps/gnu/errlist.h:435
+msgid "File name too long"
+msgstr "Failo vardas per ilgas"
+
+#. TRANS The remote host for a requested network connection is down.
+#: sysdeps/gnu/errlist.h:440
+msgid "Host is down"
+msgstr "Serveris neveikia"
+
+#: sysdeps/gnu/errlist.h:445
+msgid "No route to host"
+msgstr "Nėra kelio iki serverio"
+
+#. TRANS Directory not empty, where an empty directory was expected.  Typically,
+#. TRANS this error occurs when you are trying to delete a directory.
+#: sysdeps/gnu/errlist.h:451
+msgid "Directory not empty"
+msgstr "Aplankas netuščias"
+
+#. TRANS The file quota system is confused because there are too many users.
+#. TRANS @c This can probably happen in a GNU system when using NFS.
+#: sysdeps/gnu/errlist.h:457
+msgid "Too many users"
+msgstr "Per daug naudotojų"
+
+#. TRANS The user's disk quota was exceeded.
+#: sysdeps/gnu/errlist.h:462
+msgid "Disk quota exceeded"
+msgstr "Viršyta disko kvota"
+
+#. TRANS An attempt was made to NFS-mount a remote file system with a file name that
+#. TRANS already specifies an NFS-mounted file.
+#. TRANS (This is an error on some operating systems, but we expect it to work
+#. TRANS properly on @gnuhurdsystems{}, making this error code impossible.)
+#: sysdeps/gnu/errlist.h:479
+msgid "Object is remote"
+msgstr "Objektas nutolęs"
+
+#. TRANS This is used by the file locking facilities; see
+#. TRANS @ref{File Locks}.  This error is never generated by @gnuhurdsystems{}, but
+#. TRANS it can result from an operation to an NFS server running another
+#. TRANS operating system.
+#: sysdeps/gnu/errlist.h:487
+msgid "No locks available"
+msgstr "Nėra laisvų spynų (locks)"
+
+#. TRANS This indicates that the function called is
+#. TRANS not implemented at all, either in the C library itself or in the
+#. TRANS operating system.  When you get this error, you can be sure that this
+#. TRANS particular function will always fail with @code{ENOSYS} unless you
+#. TRANS install a new version of the C library or the operating system.
+#: sysdeps/gnu/errlist.h:496
+msgid "Function not implemented"
+msgstr "Funkcija nerealizuota"
+
+#. TRANS While decoding a multibyte character the function came along an invalid
+#. TRANS or an incomplete sequence of bytes or the given wide character is invalid.
+#: sysdeps/gnu/errlist.h:502
+msgid "Invalid or incomplete multibyte or wide character"
+msgstr "Netaisyklingas arba nepilnas daugiabaitis simbolis"
+
+#: sysdeps/gnu/errlist.h:505
+msgid "Bad message"
+msgstr "Blogas pranešimas"
+
+#: sysdeps/gnu/errlist.h:508
+msgid "Identifier removed"
+msgstr "Identifikatorius pašalintas"
+
+#: sysdeps/gnu/errlist.h:511
+msgid "Multihop attempted"
+msgstr "Bandomas daugybinis šuolis (multihop)"
+
+#: sysdeps/gnu/errlist.h:514
+msgid "No data available"
+msgstr "Nėra duomenų"
+
+#: sysdeps/gnu/errlist.h:517
+msgid "Link has been severed"
+msgstr "Saitas nutrauktas"
+
+#: sysdeps/gnu/errlist.h:520
+msgid "No message of desired type"
+msgstr "Nerasta norimo tipo pranešimų"
+
+#: sysdeps/gnu/errlist.h:523
+msgid "Out of streams resources"
+msgstr "Baigėsi srautų resursai"
+
+#: sysdeps/gnu/errlist.h:526
+msgid "Device not a stream"
+msgstr "Įrenginys nėra srautas"
+
+#: sysdeps/gnu/errlist.h:529
+msgid "Value too large for defined data type"
+msgstr "Reikšmė per didelė apibrėžtam duomenų tipui"
+
+#: sysdeps/gnu/errlist.h:532
+msgid "Protocol error"
+msgstr "Protokolo klaida"
+
+#. TRANS An asynchronous operation was canceled before it
+#. TRANS completed.  @xref{Asynchronous I/O}.  When you call @code{aio_cancel},
+#. TRANS the normal result is for the operations affected to complete with this
+#. TRANS error; @pxref{Cancel AIO Operations}.
+#: sysdeps/gnu/errlist.h:543
+msgid "Operation canceled"
+msgstr "Operacija nutraukta"
+
+#: sysdeps/gnu/errlist.h:549
+msgid "State not recoverable"
+msgstr "Būsena neatstatoma"
+
+#: sysdeps/gnu/errlist.h:552
+msgid "Interrupted system call should be restarted"
+msgstr "Pertrauktas sistemos iškvietimas turėtų būti įvykdytas iš naujo"
+
+#: sysdeps/gnu/errlist.h:555
+msgid "Channel number out of range"
+msgstr "Kanalo numeris už ribų"
+
+#: sysdeps/gnu/errlist.h:558
+msgid "Level 2 not synchronized"
+msgstr "2 lygmuo nesinchronizuotas"
+
+#: sysdeps/gnu/errlist.h:561
+msgid "Level 3 halted"
+msgstr "3 lygmuo sustabdytas"
+
+#: sysdeps/gnu/errlist.h:570
+msgid "Protocol driver not attached"
+msgstr "Neprijungta protokolo tvarkyklė"
+
+#: sysdeps/gnu/errlist.h:573
+msgid "No CSI structure available"
+msgstr "Nėra CSI struktūros"
+
+#: sysdeps/gnu/errlist.h:576
+msgid "Level 2 halted"
+msgstr "2 lygmuo sustabdytas"
+
+#: sysdeps/gnu/errlist.h:582
+msgid "Invalid request descriptor"
+msgstr "Netaisyklingas užklausos deskriptorius"
+
+#: sysdeps/gnu/errlist.h:588
+msgid "No anode"
+msgstr "Nėra anodo"
+
+#: sysdeps/gnu/errlist.h:591
+msgid "Invalid request code"
+msgstr "Netinkamas užklausos kodas"
+
+#: sysdeps/gnu/errlist.h:594
+msgid "Invalid slot"
+msgstr "Netinkamas lizdas (slot)"
+
+#: sysdeps/gnu/errlist.h:597
+msgid "Bad font file format"
+msgstr "Netinkamas šriftų failo formatas"
+
+#: sysdeps/gnu/errlist.h:600
+msgid "Machine is not on the network"
+msgstr "Kompiuterio nėra tinkle"
+
+#: sysdeps/gnu/errlist.h:603
+msgid "Package not installed"
+msgstr "Paketas neįdiegtas"
+
+#: sysdeps/gnu/errlist.h:609
+msgid "Srmount error"
+msgstr "Srmount klaida"
+
+#: sysdeps/gnu/errlist.h:612
+msgid "Communication error on send"
+msgstr "Komunikacijos klaida siunčiant"
+
+#: sysdeps/gnu/errlist.h:615
+msgid "RFS specific error"
+msgstr "RFS specifinė klaida"
+
+#: sysdeps/gnu/errlist.h:618
+msgid "Name not unique on network"
+msgstr "Vardas tinkle neunikalus"
+
+#: sysdeps/gnu/errlist.h:621
+msgid "File descriptor in bad state"
+msgstr "Failo deskriptorius nekorektiškoje būsenoje"
+
+#: sysdeps/gnu/errlist.h:624
+msgid "Remote address changed"
+msgstr "Nutolęs adresas pasikeitė"
+
+#: sysdeps/gnu/errlist.h:627
+msgid "Can not access a needed shared library"
+msgstr "Nepavyko pasiekti reikiamos bendrosios bibliotekos"
+
+#: sysdeps/gnu/errlist.h:630
+msgid "Accessing a corrupted shared library"
+msgstr "Kreipiamasi į sugadintą bendrąją biblioteką"
+
+#: sysdeps/gnu/errlist.h:633
+msgid ".lib section in a.out corrupted"
+msgstr ".lib sekcija a.out faile sugadinta"
+
+#: sysdeps/gnu/errlist.h:636
+msgid "Attempting to link in too many shared libraries"
+msgstr "Bandoma įkelti per daug bendrųjų bibliotekų"
+
+#: sysdeps/gnu/errlist.h:639
+msgid "Cannot exec a shared library directly"
+msgstr "Negalima tiesiogiai paleisti bibliotekos"
+
+#: sysdeps/gnu/errlist.h:642
+msgid "Streams pipe error"
+msgstr "Srautų jungties (pipe) klaida"
+
+#: sysdeps/gnu/errlist.h:645
+msgid "Structure needs cleaning"
+msgstr "Reikia išvalyti struktūrą"
+
+#: sysdeps/gnu/errlist.h:648
+msgid "Not a XENIX named type file"
+msgstr "Ne XENIX vardinio tipo failas"
+
+#: sysdeps/gnu/errlist.h:651
+msgid "No XENIX semaphores available"
+msgstr "Nėra laisvų XENIX semaforų"
+
+#: sysdeps/gnu/errlist.h:654
+msgid "Is a named type file"
+msgstr "Vardinio tipo failas"
+
+#: sysdeps/gnu/errlist.h:657
+msgid "Remote I/O error"
+msgstr "Nutolusio įvedimo/išvedimo klaida"
+
+#: sysdeps/gnu/errlist.h:660
+msgid "No medium found"
+msgstr "Nerasta laikmena"
+
+#: sysdeps/gnu/errlist.h:663
+msgid "Wrong medium type"
+msgstr "Netinkamas laikmenos tipas"
+
+#: sysdeps/gnu/errlist.h:666
+msgid "Required key not available"
+msgstr "Reikalingas raktas nerastas"
+
+#: sysdeps/gnu/errlist.h:669
+msgid "Key has expired"
+msgstr "Baigėsi rakto galiojimo laikas"
+
+#: sysdeps/gnu/errlist.h:672
+msgid "Key has been revoked"
+msgstr "Raktas atšauktas"
+
+#: sysdeps/gnu/errlist.h:675
+msgid "Key was rejected by service"
+msgstr "Raktas atmestas tarnybos"
+
+#: sysdeps/gnu/errlist.h:684
+msgid "RPC struct is bad"
+msgstr "bloga RPC struktūra"
+
+#. TRANS The file was the wrong type for the
+#. TRANS operation, or a data file had the wrong format.
+#. TRANS
+#. TRANS On some systems @code{chmod} returns this error if you try to set the
+#. TRANS sticky bit on a non-directory file; @pxref{Setting Permissions}.
+#: sysdeps/gnu/errlist.h:693
+msgid "Inappropriate file type or format"
+msgstr "Netinkamas failo tipas ar formatas"
+
+#: sysdeps/gnu/errlist.h:696
+msgid "RPC bad procedure for program"
+msgstr "RPC bloga procedūra programai"
+
+#: sysdeps/gnu/errlist.h:699
+msgid "Authentication error"
+msgstr "Autentikacijos klaida"
+
+#. TRANS On @gnuhurdsystems{}, opening a file returns this error when the file is
+#. TRANS translated by a program and the translator program dies while starting
+#. TRANS up, before it has connected to the file.
+#: sysdeps/gnu/errlist.h:706
+msgid "Translator died"
+msgstr "Transliatoriaus programa nutrūko"
+
+#: sysdeps/gnu/errlist.h:709
+msgid "RPC version wrong"
+msgstr "netinkama RPC versija"
+
+#. TRANS You did @strong{what}?
+#: sysdeps/gnu/errlist.h:714
+msgid "You really blew it this time"
+msgstr "Šįkart susimovei kaip reikiant"
+
+#. TRANS This means that the per-user limit on new process would be exceeded by
+#. TRANS an attempted @code{fork}.  @xref{Limits on Resources}, for details on
+#. TRANS the @code{RLIMIT_NPROC} limit.
+#: sysdeps/gnu/errlist.h:721
+msgid "Too many processes"
+msgstr "Per daug procesų"
+
+#. TRANS This error code has no purpose.
+#: sysdeps/gnu/errlist.h:726
+msgid "Gratuitous error"
+msgstr "Perteklinė klaida"
+
+#. TRANS A function returns this error when certain parameter
+#. TRANS values are valid, but the functionality they request is not available.
+#. TRANS This can mean that the function does not implement a particular command
+#. TRANS or option value or flag bit at all.  For functions that operate on some
+#. TRANS object given in a parameter, such as a file descriptor or a port, it
+#. TRANS might instead mean that only @emph{that specific object} (file
+#. TRANS descriptor, port, etc.) is unable to support the other parameters given;
+#. TRANS different file descriptors might support different ranges of parameter
+#. TRANS values.
+#. TRANS
+#. TRANS If the entire function is not available at all in the implementation,
+#. TRANS it returns @code{ENOSYS} instead.
+#: sysdeps/gnu/errlist.h:742
+msgid "Not supported"
+msgstr "Nepalaikoma"
+
+#: sysdeps/gnu/errlist.h:745
+msgid "RPC program version wrong"
+msgstr "netinkama RPC programos versija"
+
+#. TRANS Go home and have a glass of warm, dairy-fresh milk.
+#. TRANS @c Okay.  Since you are dying to know, I'll tell you.
+#. TRANS @c This is a joke, obviously.  There is a children's song which begins,
+#. TRANS @c "Old McDonald had a farm, e-i-e-i-o."  Every time I see the (real)
+#. TRANS @c errno macro EIO, I think about that song.  Probably most of my
+#. TRANS @c compatriots who program on Unix do, too.  One of them must have stayed
+#. TRANS @c up a little too late one night and decided to add it to Hurd or Glibc.
+#. TRANS @c Whoever did it should be castigated, but it made me laugh.
+#. TRANS @c  --jtobey@channel1.com
+#. TRANS @c
+#. TRANS @c "bought the farm" means "died".  -jtobey
+#. TRANS @c
+#. TRANS @c Translators, please do not translate this litteraly, translate it into
+#. TRANS @c an idiomatic funny way of saying that the computer died.
+#: sysdeps/gnu/errlist.h:773
+msgid "Computer bought the farm"
+msgstr "Kompiuteris nupirko fermą"
+
+#. TRANS In @theglibc{}, this is another name for @code{EAGAIN} (above).
+#. TRANS The values are always the same, on every operating system.
+#. TRANS
+#. TRANS C libraries in many older Unix systems have @code{EWOULDBLOCK} as a
+#. TRANS separate error code.
+#: sysdeps/gnu/errlist.h:782
+msgid "Operation would block"
+msgstr "Operacija blokuotųsi"
+
+#: sysdeps/gnu/errlist.h:785
+msgid "Need authenticator"
+msgstr "Reikia autentikatoriaus"
+
+#. TRANS The experienced user will know what is wrong.
+#. TRANS @c This error code is a joke.  Its perror text is part of the joke.
+#. TRANS @c Don't change it.
+#: sysdeps/gnu/errlist.h:792
+msgid "?"
+msgstr "?"
+
+#: sysdeps/gnu/errlist.h:795
+msgid "RPC program not available"
+msgstr "RPC programa nerasta"
+
+#: sysdeps/mach/_strerror.c:43
+msgid "Error in unknown error system: "
+msgstr "Klaida nežinomoje klaidų sistemoje: "
+
+#: sysdeps/posix/gai_strerror-strs.h:1
+msgid "Address family for hostname not supported"
+msgstr "Adresų šeima vardui nepalaikoma"
+
+#: sysdeps/posix/gai_strerror-strs.h:2
+msgid "Temporary failure in name resolution"
+msgstr "Laikinas vardų paieškos sutrikimas"
+
+#: sysdeps/posix/gai_strerror-strs.h:3
+msgid "Bad value for ai_flags"
+msgstr "Bloga ai_flags reikšmė"
+
+#: sysdeps/posix/gai_strerror-strs.h:4
+msgid "Non-recoverable failure in name resolution"
+msgstr "Kritinė klaida vardų paieškoje"
+
+#: sysdeps/posix/gai_strerror-strs.h:5
+msgid "ai_family not supported"
+msgstr "ai_family nepalaikomas"
+
+#: sysdeps/posix/gai_strerror-strs.h:6
+msgid "Memory allocation failure"
+msgstr "Atminties išskyrimo klaida"
+
+#: sysdeps/posix/gai_strerror-strs.h:7
+msgid "No address associated with hostname"
+msgstr "Nėra su vardu susieto adreso"
+
+#: sysdeps/posix/gai_strerror-strs.h:8
+msgid "Name or service not known"
+msgstr "Pavadinimas arba tarnyba nežinoma"
+
+#: sysdeps/posix/gai_strerror-strs.h:10
+msgid "ai_socktype not supported"
+msgstr "ai_socktype nepalaikomas"
+
+#: sysdeps/posix/gai_strerror-strs.h:11
+msgid "System error"
+msgstr "Sistemos klaida"
+
+#: sysdeps/posix/gai_strerror-strs.h:13
+msgid "Request canceled"
+msgstr "Užklausa nutraukta"
+
+#: sysdeps/posix/gai_strerror-strs.h:14
+msgid "Request not canceled"
+msgstr "Užklausa nenutraukta"
+
+#: sysdeps/posix/gai_strerror-strs.h:15
+msgid "All requests done"
+msgstr "Visos užklausos baigtos"
+
+#: sysdeps/posix/gai_strerror-strs.h:16
+msgid "Interrupted by a signal"
+msgstr "Nutraukta signalo"
+
+#: sysdeps/posix/gai_strerror-strs.h:17
+msgid "Parameter string not correctly encoded"
+msgstr "Parametrų seka netaisyklingai užkoduota"
+
+#: sysdeps/unix/sysv/linux/lddlibc4.c:81
+#, c-format
+msgid "cannot open `%s'"
+msgstr "nepavyko atverti „%s“"
+
+#: sysdeps/unix/sysv/linux/lddlibc4.c:85
+#, c-format
+msgid "cannot read header from `%s'"
+msgstr "nepavyko perskaityti „%s“ antraštės"
+
+#: timezone/zic.c:1561 timezone/zic.c:1769 timezone/zic.c:1783
+msgid "invalid day of month"
+msgstr "netinkama mėnesio diena"
+
+#: timezone/zic.c:1774
+msgid "invalid weekday name"
+msgstr "netinkamas savaitės dienos pavadinimas"
+
+#: timezone/zic.c:2987
+msgid "too many local time types"
+msgstr "per daug lokalaus laiko tipų"
+
+#: timezone/zic.c:3005
+msgid "too many leap seconds"
+msgstr "per daug keliamųjų sekundžių"
+
+#: timezone/zic.c:3267
+msgid "Odd number of quotation marks"
+msgstr "Nelyginis kabučių skaičius"
+
+#: timezone/zic.c:3361
+msgid "use of 2/29 in non leap-year"
+msgstr "vasario 29 d. nekeliamuosiuose metuose"

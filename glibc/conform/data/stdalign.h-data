@@ -1,0 +1,6 @@
+#if defined ISO11
+macro alignas
+macro alignof
+macro-int-constant __alignas_is_defined {int} == 1
+macro-int-constant __alignof_is_defined {int} == 1
+#endif

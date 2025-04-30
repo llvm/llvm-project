@@ -1,0 +1,23 @@
+libc {
+  GLIBC_2.0 {
+    # functions used in other libraries
+    __ieee_get_fp_control; __ieee_set_fp_control;
+  }
+}
+libm {
+  GLIBC_2.3.4 {
+    # functions implementing old complex float abi
+    __c1_cabsf; __c1_cacosf; __c1_cacoshf; __c1_cargf; __c1_casinf;
+    __c1_casinhf; __c1_catanf; __c1_catanhf; __c1_ccosf; __c1_ccoshf;
+    __c1_cexpf; __c1_cimagf; __c1_clog10f; __c1_clogf; __c1_conjf;
+    __c1_cpowf; __c1_cprojf; __c1_crealf; __c1_csinf; __c1_csinhf;
+    __c1_csqrtf; __c1_ctanf; __c1_ctanhf;
+
+    # functions implementing new complex float abi
+    cabsf; cacosf; cacoshf; cargf; casinf;
+    casinhf; catanf; catanhf; ccosf; ccoshf;
+    cexpf; cimagf; clog10f; clogf; conjf;
+    cpowf; cprojf; crealf; csinf; csinhf;
+    csqrtf; ctanf; ctanhf;
+  }
+}

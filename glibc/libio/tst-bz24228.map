@@ -1,0 +1,5 @@
+# Hide the symbol from libc.so.6 to switch to the libio/oldfileops.c
+# implementation when it is available for the architecture.
+{
+  local: _IO_stdin_used;
+};

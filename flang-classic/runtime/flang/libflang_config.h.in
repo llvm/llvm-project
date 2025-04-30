@@ -1,0 +1,4 @@
+#ifndef LIBFLANG_CONFIG_H
+#define LIBFLANG_CONFIG_H
+#cmakedefine HAVE_CLOCK_SETTIME
+#endif

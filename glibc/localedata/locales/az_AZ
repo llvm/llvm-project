@@ -1,0 +1,262 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Azeri Language Locale for Azerbaijan (latin)
+% Source:
+% Contact: Pablo Saratxaga
+% Email: <pablo@mandrakesoft.com>
+% Language: az
+% Territory: AZ
+% Revision: 0.6
+% Date: 2003-12-06
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title "Azeri language locale for Azerbaijan (latin)"
+source ""
+address ""
+contact "Pablo Saratxaga"
+email "pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Azerbaijani"
+territory "Azerbaijan"
+revision "0.4"
+date "2001-01-26"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+END LC_IDENTIFICATION
+
+%
+% TODO: fix LC_MONETARY
+
+LC_COLLATE
+% CLDR collation rules for Azerbaijani:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/az.xml)
+%
+% <collation type="standard" >
+% 	<cr><![CDATA[
+% 		[reorder Latn Cyrl]
+% 		&C<ç<<<Ç
+% 		&G<ğ<<<Ğ
+% 		&[before 1]i<ı<<<I
+% 		&i<<<İ
+% 		&O<ö<<<Ö
+% 		&S<ş<<<Ş
+% 		&U<ü<<<Ü
+% 		&K<q<<<Q
+% 		&E<ə<<<Ə
+% 		&H<x<<<X
+% 		&Z<w<<<W
+% 	]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/az.xml)
+%
+% <exemplarCharacters type="index" draft="contributed">[A B C Ç D E Ə F G Ğ H X I İ J K Q L M N O Ö P R S Ş T U Ü V Y Z W]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+
+copy "iso14651_t1"
+
+collating-symbol <c-cedilla>
+collating-symbol <g-breve>
+collating-symbol <schwa>
+collating-symbol <i-dotless>
+collating-symbol <i-dot>
+collating-symbol <o-diaresis>
+collating-symbol <s-cedilla>
+collating-symbol <u-diaresis>
+
+reorder-after <AFTER-C>
+<c-cedilla>
+reorder-after <AFTER-G>
+<g-breve>
+reorder-after <AFTER-E>
+<schwa>
+reorder-after <BEFORE-I>
+<i-dotless>
+reorder-after <AFTER-O>
+<o-diaresis>
+reorder-after <AFTER-S>
+<s-cedilla>
+reorder-after <AFTER-U>
+<u-diaresis>
+reorder-after <AFTER-K>
+<S0071> % LATIN SMALL LETTER Q
+reorder-after <AFTER-H>
+<S0078> % LATIN SMALL LETTER X
+reorder-after <AFTER-Z>
+<S0077> % LATIN SMALL LETTER W
+
+<U00E7> <c-cedilla>;<BASE>;<MIN>;IGNORE % ç
+<U00C7> <c-cedilla>;<BASE>;<CAP>;IGNORE % Ç
+<U011F> <g-breve>;<BASE>;<MIN>;IGNORE % ğ
+<U011E> <g-breve>;<BASE>;<CAP>;IGNORE % Ğ
+<U0131> <i-dotless>;<BASE>;<MIN>;IGNORE % ı
+<U0049> <i-dotless>;<BASE>;<CAP>;IGNORE % I
+<U0069> <S0069>;<BASE>;<MIN>;IGNORE % i
+<U0130> <S0069>;<BASE>;<CAP>;IGNORE % İ
+<U00F6> <o-diaresis>;<BASE>;<MIN>;IGNORE % ö
+<U00D6> <o-diaresis>;<BASE>;<CAP>;IGNORE % Ö
+<U015F> <s-cedilla>;<BASE>;<MIN>;IGNORE % ş
+<U015E> <s-cedilla>;<BASE>;<CAP>;IGNORE % Ş
+<U00FC> <u-diaresis>;<BASE>;<MIN>;IGNORE % ü
+<U00DC> <u-diaresis>;<BASE>;<CAP>;IGNORE % Ü
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "tr_TR"
+translit_start
+
+% schwa -> a:
+<U0259> "<U00E4>"
+<U018F> "<U00C4>"
+
+translit_end
+
+END LC_CTYPE
+
+LC_MESSAGES
+% No is "yox"; that conflicts with English "yes". The man page of
+% rpmatch says: “Regardless  of  the  locale, responses  matching  ^[Yy]  are
+% always accepted as affirmative, and those matching ^[Nn] are
+% always accepted as negative.”. But that is not quite right, actually
+% yesexpr "^[+1Bb]" and noexpr  "^[-0YyNn]" make a response matching “^[Yy]”
+% accepted as *negative*. So the expressions below do work as they
+% should for Azeri.
+yesexpr "^[+1bBhH]"
+noexpr  "^[-0YyNn]"
+yesstr  "h<U0259>"
+nostr   "yox"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "AZN "
+currency_symbol           "<U20BC>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+day     "bazar g<U00FC>n<U00FC>";/
+        "bazar ert<U0259>si";/
+        "<U00E7><U0259>r<U015F><U0259>nb<U0259> ax<U015F>am<U0131>";/
+        "<U00E7><U0259>r<U015F><U0259>nb<U0259>";/
+        "c<U00FC>m<U0259> ax<U015F>am<U0131>";/
+        "c<U00FC>m<U0259>";/
+        "<U015F><U0259>nb<U0259>"
+abday   "baz";/
+        "ber";/
+        "<U00E7>ax";/
+        "<U00E7><U0259>r";/
+        "cax";/
+        "c<U00FC>m";/
+        "<U015F>nb"
+mon     "yanvar";/
+        "fevral";/
+        "mart";/
+        "aprel";/
+        "may";/
+        "iyun";/
+        "iyul";/
+        "avqust";/
+        "sentyabr";/
+        "oktyabr";/
+        "noyabr";/
+        "dekabr"
+abmon   "Yan";/
+        "Fev";/
+        "Mar";/
+        "Apr";/
+        "May";/
+        "<U0130>yn";/
+        "<U0130>yl";/
+        "Avq";/
+        "Sen";/
+        "Okt";/
+        "Noy";/
+        "Dek"
+d_t_fmt   "%A, %d %B %Y %T"
+date_fmt  "%A, %d %B %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_ADDRESS
+% FIXME
+postal_fmt "???"
+country_name "Az<U0259>rbaycan"
+country_ab2 "AZ"
+country_ab3 "AZE"
+country_num 031
+country_car    "AZ"
+% Azərbaycanca
+lang_name    "az<U0259>rbaycan"
+lang_ab      "az"
+lang_term    "aze"
+lang_lib    "aze"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+int_prefix "994"
+int_select "00"
+END LC_TELEPHONE
+
+LC_NAME
+% FIXME
+name_fmt "???"
+END LC_NAME

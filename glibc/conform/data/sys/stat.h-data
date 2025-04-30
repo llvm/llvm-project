@@ -1,0 +1,162 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+
+#if !defined POSIX && !defined POSIX2008 && !defined XPG4 && !defined XPG42
+type blkcnt_t
+type blksize_t
+#endif
+#ifndef POSIX
+type dev_t
+type ino_t
+type mode_t
+type nlink_t
+type uid_t
+type gid_t
+type off_t
+type time_t
+#else
+# define dev_t __dev_t
+# define ino_t __ino_t
+# define mode_t __mode_t
+# define nlink_t __nlink_t
+# define uid_t __uid_t
+# define gid_t __gid_t
+# define off_t __off_t
+# define time_t __time_t
+#endif
+
+type {struct stat}
+
+// Bug 17786: st_dev has wrong type.
+// Bug 23084: st_dev has type unsigned long long instead of dev_t (unsigned).
+xfail[mips-o32-linux|i386-gnu]-element {struct stat} dev_t st_dev
+element {struct stat} ino_t st_ino
+element {struct stat} mode_t st_mode
+element {struct stat} nlink_t st_nlink
+element {struct stat} uid_t st_uid
+element {struct stat} gid_t st_gid
+#if !defined POSIX && !defined POSIX2008
+// Bug 21278: st_rdev has wrong type.
+xfail[mips-o32-linux]-element {struct stat} dev_t st_rdev
+#endif
+element {struct stat} off_t st_size
+element {struct stat} time_t st_atime
+element {struct stat} time_t st_mtime
+element {struct stat} time_t st_ctime
+#if defined XOPEN2K8 || defined POSIX2008
+element {struct stat} {struct timespec} st_atim
+element {struct stat} {struct timespec} st_mtim
+element {struct stat} {struct timespec} st_ctim
+#endif
+#if !defined XPG4 && !defined POSIX && !defined POSIX2008
+# ifdef XPG42
+// The XPG42 use of "long" for these fields is not compatible with the
+// use of typedefs in future standards to support values outside the
+// range of "long".
+xfail-element {struct stat} long st_blksize
+xfail-element {struct stat} long st_blocks
+# else
+element {struct stat} blksize_t st_blksize
+element {struct stat} blkcnt_t st_blocks
+# endif
+#endif
+
+# if defined XOPEN2K8 || defined POSIX2008
+type {struct timespec}
+element {struct timespec} time_t tv_sec
+// Bug 16437: tv_nsec has wrong type.
+xfail[x86_64-x32-linux]-element {struct timespec} long tv_nsec
+# endif
+
+#if !defined POSIX && !defined POSIX2008
+constant S_IFMT
+constant S_IFBLK
+constant S_IFCHR
+constant S_IFIFO
+constant S_IFREG
+constant S_IFDIR
+# ifndef XPG4
+constant S_IFLNK
+constant S_IFSOCK
+# endif
+#endif
+
+constant S_IRWXU
+constant S_IRUSR
+constant S_IWUSR
+constant S_IXUSR
+constant S_IRWXG
+constant S_IRGRP
+constant S_IWGRP
+constant S_IXGRP
+constant S_IRWXO
+constant S_IROTH
+constant S_IWOTH
+constant S_IXOTH
+constant S_ISUID
+constant S_ISGID
+#if !defined XPG4 && !defined POSIX && !defined POSIX2008
+constant S_ISVTX
+#endif
+
+macro S_ISBLK
+macro S_ISCHR
+macro S_ISDIR
+macro S_ISFIFO
+macro S_ISREG
+#if !defined XPG4 && !defined POSIX
+macro S_ISLNK
+macro S_ISSOCK
+#endif
+
+// How to represent optional tests?
+optional-macro S_TYPEISMQ
+optional-macro S_TYPEISSEM
+optional-macro S_TYPEISSHM
+# if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+optional-macro S_TYPEISTMO
+# endif
+
+# if defined XOPEN2K8 || defined POSIX2008
+constant UTIME_NOW
+constant UTIME_OMIT
+# endif
+
+function int chmod (const char*, mode_t)
+# ifndef XPG4
+function int fchmod (int, mode_t)
+# endif
+# if defined XOPEN2K8 || defined POSIX2008
+function int fchmodat (int, const char*, mode_t, int)
+# endif
+function int fstat (int, struct stat*)
+# if defined XOPEN2K8 || defined POSIX2008
+function int fstatat (int, const char*, struct stat*, int)
+function int futimens (int, const struct timespec[2])
+# endif
+#if !defined XPG4 && !defined POSIX
+function int lstat (const char*, struct stat*)
+#endif
+function int mkdir (const char*, mode_t)
+# if defined XOPEN2K8 || defined POSIX2008
+function int mkdirat (int, const char*, mode_t)
+# endif
+function int mkfifo (const char*, mode_t)
+# if defined XOPEN2K8 || defined POSIX2008
+function int mkfifoat (int, const char*, mode_t)
+# endif
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int mknod (const char*, mode_t, dev_t)
+# endif
+# ifdef XOPEN2K8
+function int mknodat (int, const char*, mode_t, dev_t)
+# endif
+function int stat (const char*, struct stat*)
+function mode_t umask (mode_t)
+# if defined XOPEN2K8 || defined POSIX2008
+function int utimensat (int, const char*, const struct timespec[2], int)
+# endif
+
+allow st_*
+allow S_*
+allow *_t
+#endif

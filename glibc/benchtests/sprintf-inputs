@@ -1,0 +1,10 @@
+## args: char *:const char *:int:char:char:char:char:char:const char *:float:unsigned int
+## ret: int
+## includes: stdio.h
+## include-sources: sprintf-source.c
+## name: positional
+# Test positional arguments:
+buf, FORMAT1, 1001, '1', '2', '3', '4', '5', "string", 1.5, 0x1234
+## name: non-positional
+# Test non-positional arguments:
+buf, FORMAT2, 1001, '1', '2', '3', '4', '5', "string", 1.5, 0x1234

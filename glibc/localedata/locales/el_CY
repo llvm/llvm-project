@@ -1,0 +1,151 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Greek Language Locale for Cyprus
+% Based on locale el_GR by Keld Simonsen.
+
+LC_IDENTIFICATION
+title      "Greek locale for Cyprus"
+source     "Greek Debian Translation Team"
+address    "Konstantinos Margaritis, M. Asias 50, Nafplion 21100, Greece"
+contact    ""
+email      "bug-glibc@gnu.org"
+tel        ""
+fax        ""
+language   "Greek"
+territory  "Cyprus"
+revision   "1.0"
+date       "2004-10-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "el_GR"
+END LC_CTYPE
+
+LC_MESSAGES
+copy "el_GR"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "el_GR"
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  0;0
+END LC_NUMERIC
+
+LC_TIME
+abday   "<U039A><U03C5><U03C1>";"<U0394><U03B5><U03C5>";/
+        "<U03A4><U03C1><U03B9>";"<U03A4><U03B5><U03C4>";/
+        "<U03A0><U03B5><U03BC>";"<U03A0><U03B1><U03C1>";/
+        "<U03A3><U03B1><U03B2>"
+day     "<U039A><U03C5><U03C1><U03B9><U03B1><U03BA><U03AE>";/
+        "<U0394><U03B5><U03C5><U03C4><U03AD><U03C1><U03B1>";/
+        "<U03A4><U03C1><U03AF><U03C4><U03B7>";/
+        "<U03A4><U03B5><U03C4><U03AC><U03C1><U03C4><U03B7>";/
+        "<U03A0><U03AD><U03BC><U03C0><U03C4><U03B7>";/
+        "<U03A0><U03B1><U03C1><U03B1><U03C3><U03BA><U03B5><U03C5><U03AE>";/
+        "<U03A3><U03AC><U03B2><U03B2><U03B1><U03C4><U03BF>"
+ab_alt_mon "<U0399><U03B1><U03BD>";"<U03A6><U03B5><U03B2>";/
+        "<U039C><U03AC><U03C1>";"<U0391><U03C0><U03C1>";/
+        "<U039C><U03AC><U03B9>";"<U0399><U03BF><U03CD><U03BD>";/
+        "<U0399><U03BF><U03CD><U03BB>";"<U0391><U03CD><U03B3>";/
+        "<U03A3><U03B5><U03C0>";"<U039F><U03BA><U03C4>";/
+        "<U039D><U03BF><U03AD>";"<U0394><U03B5><U03BA>"
+abmon   "<U0399><U03B1><U03BD>";"<U03A6><U03B5><U03B2>";/
+        "<U039C><U03B1><U03C1>";"<U0391><U03C0><U03C1>";/
+        "<U039C><U03B1><U0390>";"<U0399><U03BF><U03C5><U03BD>";/
+        "<U0399><U03BF><U03C5><U03BB>";"<U0391><U03C5><U03B3>";/
+        "<U03A3><U03B5><U03C0>";"<U039F><U03BA><U03C4>";/
+        "<U039D><U03BF><U03B5>";"<U0394><U03B5><U03BA>"
+alt_mon "<U0399><U03B1><U03BD><U03BF><U03C5><U03AC><U03C1><U03B9><U03BF><U03C2>";/
+        "<U03A6><U03B5><U03B2><U03C1><U03BF><U03C5><U03AC><U03C1><U03B9><U03BF><U03C2>";/
+        "<U039C><U03AC><U03C1><U03C4><U03B9><U03BF><U03C2>";/
+        "<U0391><U03C0><U03C1><U03AF><U03BB><U03B9><U03BF><U03C2>";/
+        "<U039C><U03AC><U03B9><U03BF><U03C2>";/
+        "<U0399><U03BF><U03CD><U03BD><U03B9><U03BF><U03C2>";/
+        "<U0399><U03BF><U03CD><U03BB><U03B9><U03BF><U03C2>";/
+        "<U0391><U03CD><U03B3><U03BF><U03C5><U03C3><U03C4><U03BF><U03C2>";/
+        "<U03A3><U03B5><U03C0><U03C4><U03AD><U03BC><U03B2><U03C1><U03B9><U03BF><U03C2>";/
+        "<U039F><U03BA><U03C4><U03CE><U03B2><U03C1><U03B9><U03BF><U03C2>";/
+        "<U039D><U03BF><U03AD><U03BC><U03B2><U03C1><U03B9><U03BF><U03C2>";/
+        "<U0394><U03B5><U03BA><U03AD><U03BC><U03B2><U03C1><U03B9><U03BF><U03C2>"
+mon     "<U0399><U03B1><U03BD><U03BF><U03C5><U03B1><U03C1><U03AF><U03BF><U03C5>";/
+        "<U03A6><U03B5><U03B2><U03C1><U03BF><U03C5><U03B1><U03C1><U03AF><U03BF><U03C5>";/
+        "<U039C><U03B1><U03C1><U03C4><U03AF><U03BF><U03C5>";/
+        "<U0391><U03C0><U03C1><U03B9><U03BB><U03AF><U03BF><U03C5>";/
+        "<U039C><U03B1><U0390><U03BF><U03C5>";/
+        "<U0399><U03BF><U03C5><U03BD><U03AF><U03BF><U03C5>";/
+        "<U0399><U03BF><U03C5><U03BB><U03AF><U03BF><U03C5>";/
+        "<U0391><U03C5><U03B3><U03BF><U03CD><U03C3><U03C4><U03BF><U03C5>";/
+        "<U03A3><U03B5><U03C0><U03C4><U03B5><U03BC><U03B2><U03C1><U03AF><U03BF><U03C5>";/
+        "<U039F><U03BA><U03C4><U03C9><U03B2><U03C1><U03AF><U03BF><U03C5>";/
+        "<U039D><U03BF><U03B5><U03BC><U03B2><U03C1><U03AF><U03BF><U03C5>";/
+        "<U0394><U03B5><U03BA><U03B5><U03BC><U03B2><U03C1><U03AF><U03BF><U03C5>"
+d_t_fmt "%a %d %b %Y %r %Z"
+d_fmt   "%d//%m//%Y"
+t_fmt   "%r"
+am_pm   "<U03c0><U03bc>";"<U03bc><U03bc>"
+t_fmt_ampm "%I:%M:%S %p"
+date_fmt "%a %d %b %Y %r %Z"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "el_GR"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "357"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "el_GR"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U039A><U03CD><U03C0><U03C1><U03BF><U03C2>"
+country_ab2 "CY"
+country_ab3 "CYP"
+country_num 196
+country_car  "CY"
+% ελληνικά
+lang_name    "<U0395><U03BB><U03BB><U03B7><U03BD><U03B9><U03BA><U03AC>"
+lang_ab      "el"
+lang_term    "ell"
+lang_lib    "gre"
+END LC_ADDRESS

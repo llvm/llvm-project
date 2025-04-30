@@ -1,0 +1,748 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Lao Lanuage Locale for Laos
+%
+% Name:         lo_LA
+% Author:       Anousak Souphavanh
+% Contact:
+% E-mail:       Anousak@muanglao.com
+% Language:     Lao
+% Territory:    Laos
+% Revision:     1.2
+% Date:         2003-09-15
+
+LC_IDENTIFICATION
+title      "Lao locale for Laos"
+source     ""
+address    ""
+contact    "Anousak Souphavanh at: anousak@muanglao.com"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Lao"
+territory  "Laos"
+revision   "1.0"
+date       "2003-4-1"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+
+%
+
+collating-element <ko-e> from "<U0EC0><U0E81>"
+collating-element <ko-ae> from "<U0EC1><U0E81>"
+collating-element <ko-o> from "<U0EC2><U0E81>"
+collating-element <ko-ai-maimuan> from "<U0EC3><U0E81>"
+collating-element <ko-ai-maimalai> from "<U0EC4><U0E81>"
+
+collating-element <kho-sung-e> from "<U0EC0><U0E82>"
+collating-element <kho-sung-ae> from "<U0EC1><U0E82>"
+collating-element <kho-sung-o> from "<U0EC2><U0E82>"
+collating-element <kho-sung-ai-maimuan> from "<U0EC3><U0E82>"
+collating-element <kho-sung-ai-maimalai> from "<U0EC4><U0E82>"
+
+collating-element <kho-tam-e> from "<U0EC0><U0E84>"
+collating-element <kho-tam-ae> from "<U0EC1><U0E84>"
+collating-element <kho-tam-o> from "<U0EC2><U0E84>"
+collating-element <kho-tam-ai-maimuan> from "<U0EC3><U0E84>"
+collating-element <kho-tam-ai-maimalai> from "<U0EC4><U0E84>"
+
+collating-element <ngo-e> from "<U0EC0><U0E87>"
+collating-element <ngo-ae> from "<U0EC1><U0E87>"
+collating-element <ngo-o> from "<U0EC2><U0E87>"
+collating-element <ngo-ai-maimuan> from "<U0EC3><U0E87>"
+collating-element <ngo-ai-maimalai> from "<U0EC4><U0E87>"
+
+collating-element <cho-e> from "<U0EC0><U0E88>"
+collating-element <cho-ae> from "<U0EC1><U0E88>"
+collating-element <cho-o> from "<U0EC2><U0E88>"
+collating-element <cho-ai-maimuan> from "<U0EC3><U0E88>"
+collating-element <cho-ai-maimalai> from "<U0EC4><U0E88>"
+
+collating-element <xo-e> from "<U0EC0><U0E8A>"
+collating-element <xo-ae> from "<U0EC1><U0E8A>"
+collating-element <xo-o> from "<U0EC2><U0E8A>"
+collating-element <xo-ai-maimuan> from "<U0EC3><U0E8A>"
+collating-element <xo-ai-maimalai> from "<U0EC4><U0E8A>"
+
+collating-element <nyo-e> from "<U0EC0><U0E8D>"
+collating-element <nyo-ae> from "<U0EC1><U0E8D>"
+collating-element <nyo-o> from "<U0EC2><U0E8D>"
+collating-element <nyo-ai-maimuan> from "<U0EC3><U0E8D>"
+collating-element <nyo-ai-maimalai> from "<U0EC4><U0E8D>"
+
+collating-element <do-e> from "<U0EC0><U0E94>"
+collating-element <do-ae> from "<U0EC1><U0E94>"
+collating-element <do-o> from "<U0EC2><U0E94>"
+collating-element <do-ai-maimuan> from "<U0EC3><U0E94>"
+collating-element <do-ai-maimalai> from "<U0EC4><U0E94>"
+
+collating-element <to-e> from "<U0EC0><U0E95>"
+collating-element <to-ae> from "<U0EC1><U0E95>"
+collating-element <to-o> from "<U0EC2><U0E95>"
+collating-element <to-ai-maimuan> from "<U0EC3><U0E95>"
+collating-element <to-ai-maimalai> from "<U0EC4><U0E95>"
+
+collating-element <tho-sung-e> from "<U0EC0><U0E96>"
+collating-element <tho-sung-ae> from "<U0EC1><U0E96>"
+collating-element <tho-sung-o> from "<U0EC2><U0E96>"
+collating-element <tho-sung-ai-maimuan> from "<U0EC3><U0E96>"
+collating-element <tho-sung-ai-maimalai> from "<U0EC4><U0E96>"
+
+collating-element <tho-tam-e> from "<U0EC0><U0E97>"
+collating-element <tho-tam-ae> from "<U0EC1><U0E97>"
+collating-element <tho-tam-o> from "<U0EC2><U0E97>"
+collating-element <tho-tam-ai-maimuan> from "<U0EC3><U0E97>"
+collating-element <tho-tam-ai-maimalai> from "<U0EC4><U0E97>"
+
+collating-element <no-e> from "<U0EC0><U0E99>"
+collating-element <no-ae> from "<U0EC1><U0E99>"
+collating-element <no-o> from "<U0EC2><U0E99>"
+collating-element <no-ai-maimuan> from "<U0EC3><U0E99>"
+collating-element <no-ai-maimalai> from "<U0EC4><U0E99>"
+
+collating-element <bo-e> from "<U0EC0><U0E9A>"
+collating-element <bo-ae> from "<U0EC1><U0E9A>"
+collating-element <bo-o> from "<U0EC2><U0E9A>"
+collating-element <bo-ai-maimuan> from "<U0EC3><U0E9A>"
+collating-element <bo-ai-maimalai> from "<U0EC4><U0E9A>"
+
+collating-element <po-e> from "<U0EC0><U0E9B>"
+collating-element <po-ae> from "<U0EC1><U0E9B>"
+collating-element <po-o> from "<U0EC2><U0E9B>"
+collating-element <po-ai-maimuan> from "<U0EC3><U0E9B>"
+collating-element <po-ai-maimalai> from "<U0EC4><U0E9B>"
+
+collating-element <pho-sung-e> from "<U0EC0><U0E9C>"
+collating-element <pho-sung-ae> from "<U0EC1><U0E9C>"
+collating-element <pho-sung-o> from "<U0EC2><U0E9C>"
+collating-element <pho-sung-ai-maimuan> from "<U0EC3><U0E9C>"
+collating-element <pho-sung-ai-maimalai> from "<U0EC4><U0E9C>"
+
+collating-element <fo-tam-e> from "<U0EC0><U0E9D>"
+collating-element <fo-tam-ae> from "<U0EC1><U0E9D>"
+collating-element <fo-tam-o> from "<U0EC2><U0E9D>"
+collating-element <fo-tam-ai-maimuan> from "<U0EC3><U0E9D>"
+collating-element <fo-tam-ai-maimalai> from "<U0EC4><U0E9D>"
+
+collating-element <pho-tam-e> from "<U0EC0><U0E9E>"
+collating-element <pho-tam-ae> from "<U0EC1><U0E9E>"
+collating-element <pho-tam-o> from "<U0EC2><U0E9E>"
+collating-element <pho-tam-ai-maimuan> from "<U0EC3><U0E9E>"
+collating-element <pho-tam-ai-maimalai> from "<U0EC4><U0E9E>"
+
+collating-element <fo-sung-e> from "<U0EC0><U0E9F>"
+collating-element <fo-sung-ae> from "<U0EC1><U0E9F>"
+collating-element <fo-sung-o> from "<U0EC2><U0E9F>"
+collating-element <fo-sung-ai-maimuan> from "<U0EC3><U0E9F>"
+collating-element <fo-sung-ai-maimalai> from "<U0EC4><U0E9F>"
+
+collating-element <mo-e> from "<U0EC0><U0EA1>"
+collating-element <mo-ae> from "<U0EC1><U0EA1>"
+collating-element <mo-o> from "<U0EC2><U0EA1>"
+collating-element <mo-ai-maimuan> from "<U0EC3><U0EA1>"
+collating-element <mo-ai-maimalai> from "<U0EC4><U0EA1>"
+
+collating-element <yo-e> from "<U0EC0><U0EA2>"
+collating-element <yo-ae> from "<U0EC1><U0EA2>"
+collating-element <yo-o> from "<U0EC2><U0EA2>"
+collating-element <yo-ai-maimuan> from "<U0EC3><U0EA2>"
+collating-element <yo-ai-maimalai> from "<U0EC4><U0EA2>"
+
+collating-element <ro-e> from "<U0EC0><U0EA3>"
+collating-element <ro-ae> from "<U0EC1><U0EA3>"
+collating-element <ro-o> from "<U0EC2><U0EA3>"
+collating-element <ro-ai-maimuan> from "<U0EC3><U0EA3>"
+collating-element <ro-ai-maimalai> from "<U0EC4><U0EA3>"
+
+collating-element <lo-e> from "<U0EC0><U0EA5>"
+collating-element <lo-ae> from "<U0EC1><U0EA5>"
+collating-element <lo-o> from "<U0EC2><U0EA5>"
+collating-element <lo-ai-maimuan> from "<U0EC3><U0EA5>"
+collating-element <lo-ai-maimalai> from "<U0EC4><U0EA5>"
+
+collating-element <wo-e> from "<U0EC0><U0EA7>"
+collating-element <wo-ae> from "<U0EC1><U0EA7>"
+collating-element <wo-o> from "<U0EC2><U0EA7>"
+collating-element <wo-ai-maimuan> from "<U0EC3><U0EA7>"
+collating-element <wo-ai-maimalai> from "<U0EC4><U0EA7>"
+
+collating-element <so-e> from "<U0EC0><U0EAA>"
+collating-element <so-ae> from "<U0EC1><U0EAA>"
+collating-element <so-o> from "<U0EC2><U0EAA>"
+collating-element <so-ai-maimuan> from "<U0EC3><U0EAA>"
+collating-element <so-ai-maimalai> from "<U0EC4><U0EAA>"
+
+collating-element <ho-e> from "<U0EC0><U0EAB>"
+collating-element <ho-ae> from "<U0EC1><U0EAB>"
+collating-element <ho-o> from "<U0EC2><U0EAB>"
+collating-element <ho-ai-maimuan> from "<U0EC3><U0EAB>"
+collating-element <ho-ai-maimalai> from "<U0EC4><U0EAB>"
+
+collating-element <o-e> from "<U0EC0><U0EAD>"
+collating-element <o-ae> from "<U0EC1><U0EAD>"
+collating-element <o-o> from "<U0EC2><U0EAD>"
+collating-element <o-ai-maimuan> from "<U0EC3><U0EAD>"
+collating-element <o-ai-maimalai> from "<U0EC4><U0EAD>"
+
+collating-element <hor-e> from "<U0EC0><U0EAE>"
+collating-element <hor-ae> from "<U0EC1><U0EAE>"
+collating-element <hor-o> from "<U0EC2><U0EAE>"
+collating-element <hor-ai-maimuan> from "<U0EC3><U0EAE>"
+collating-element <hor-ai-maimalai> from "<U0EC4><U0EAE>"
+
+collating-element <nhor-e> from "<U0EC0><U0EDC>"
+collating-element <nhor-ae> from "<U0EC1><U0EDC>"
+collating-element <nhor-o> from "<U0EC2><U0EDC>"
+collating-element <nhor-ai-maimuan> from "<U0EC3><U0EDC>"
+collating-element <nhor-ai-maimalai> from "<U0EC4><U0EDC>"
+
+collating-element <mhor-e> from "<U0EC0><U0EDD>"
+collating-element <mhor-ae> from "<U0EC1><U0EDD>"
+collating-element <mhor-o> from "<U0EC2><U0EDD>"
+collating-element <mhor-ai-maimuan> from "<U0EC3><U0EDD>"
+collating-element <mhor-ai-maimalai> from "<U0EC4><U0EDD>"
+
+
+collating-symbol  <BLANK>
+collating-symbol  <LaoI>
+collating-symbol  <CAP>
+collating-symbol  <MIN>
+collating-symbol  <EXTRA>
+
+order_start   forward;forward;forward;forward
+
+% definitions of extra collating symbols
+<BLANK>
+<LaoI>
+<CAP>
+<MIN>
+<EXTRA>
+
+UNDEFINED      IGNORE;IGNORE;IGNORE;IGNORE
+
+% punctuation marks, ordered after ISO/IEC 14651
+<U0020>        IGNORE;IGNORE;<U0020>;IGNORE          % SPACE
+<U005F>   IGNORE;IGNORE;<U005F>;IGNORE     % LOW LINE
+<U002D>       IGNORE;IGNORE;<U002D>;IGNORE         % HYPHEN-MINUS
+<U002C>        IGNORE;IGNORE;<U002C>;IGNORE          % COMMA
+<U003B>    IGNORE;IGNORE;<U003B>;IGNORE      % SEMICOLON
+<U003A>        IGNORE;IGNORE;<U003A>;IGNORE          % COLON
+<U0021> IGNORE;IGNORE;<U0021>;IGNORE  % EXCLAMATION MARK
+<U003F>    IGNORE;IGNORE;<U003F>;IGNORE     % QUESTION MARK
+<U002F>        IGNORE;IGNORE;<U002F>;IGNORE          % SOLIDUS
+<U002E>       IGNORE;IGNORE;<U002E>;IGNORE         % FULL STOP
+<U0EAF>        IGNORE;IGNORE;<U0EAF>;IGNORE          % Lao CHARACTER Lao Ellipse
+<U0060> IGNORE;IGNORE;<U0060>;IGNORE   % GRAVE ACCENT
+<U005E>   IGNORE;IGNORE;<U005E>;IGNORE     % CIRCUMFLEX
+<U007E>        IGNORE;IGNORE;<U007E>;IGNORE          % TILDE
+<U0027>        IGNORE;IGNORE;<U0027>;IGNORE    % APOSTROPHE
+<U0022>    IGNORE;IGNORE;<U0022>;IGNORE    % QUOTATION MARK
+<U0028>  IGNORE;IGNORE;<U0028>;IGNORE  % LEFT PAREN.
+<U005B> IGNORE;IGNORE;<U005B>;IGNORE  % LT BRACKET
+<U007B>        IGNORE;IGNORE;<U007B>;IGNORE    % LEFT CURLY BRACKET
+<U007D>       IGNORE;IGNORE;<U007D>;IGNORE   % RIGHT CURLY BRACKET
+<U005D> IGNORE;IGNORE;<U005D>;IGNORE % RT BRACKET
+<U0029> IGNORE;IGNORE;<U0029>;IGNORE % RIGHT PAREN.
+<U0040>     IGNORE;IGNORE;<U0040>;IGNORE     % COMMERCIAL AT
+<U20AD>             IGNORE;IGNORE;<U20AD>;IGNORE  % Lao CHARACTER SYMBOL KIP
+<U0024>       IGNORE;IGNORE;<U0024>;IGNORE   % DOLLAR SIGN
+<U002A>          IGNORE;IGNORE;<U002A>;IGNORE      % ASTERISK
+<U005C>         IGNORE;IGNORE;<U005C>;IGNORE     % BACK SOLIDUS
+<U0026>         IGNORE;IGNORE;<U0026>;IGNORE     % AMPERSAND
+<U0023>       IGNORE;IGNORE;<U0023>;IGNORE   % NUMBER SIGN
+<U0025>      IGNORE;IGNORE;<U0025>;IGNORE  % PERCENT
+<U002B>         IGNORE;IGNORE;<U002B>;IGNORE     % PLUS
+<U003C>    IGNORE;IGNORE;<U003C>;IGNORE     % LESS THAN
+<U003D>       IGNORE;IGNORE;<U003D>;IGNORE   % EQUAL
+<U003E> IGNORE;IGNORE;<U003E>;IGNORE  % GREATER THAN
+<U007C>     IGNORE;IGNORE;<U007C>;IGNORE % VERTICAL LINE
+
+% Lao tone marks and diacritics
+
+<U0ECC>        IGNORE;<U0ECC>;<BLANK>;<BLANK>  % Lao CHARACTER THANTHAKHAT Or Cancellation Mark
+<U0EC8>        IGNORE;<U0EC8>;<BLANK>;<BLANK>  % Lao CHARACTER MAI EK
+<U0EC9>        IGNORE;<U0EC9>;<BLANK>;<BLANK>  % Lao CHARACTER MAI THO
+<U0ECA>        IGNORE;<U0ECA>;<BLANK>;<BLANK>  % Lao CHARACTER MAI TI
+<U0ECB>        IGNORE;<U0ECB>;<BLANK>;<BLANK>  % Lao CHARACTER MAI CHATTAWA
+<U0EBB>        IGNORE;<U0ECA>;<BLANK>;<BLANK>  % Lao CHARACTER MAI Kon
+<U0ECD>        IGNORE;<U0ECA>;<BLANK>;<BLANK>  % Lao CHARACTER MAI Niggahita
+<U0EC6>        IGNORE;<U0ECA>;<BLANK>;<BLANK>  % Lao CHARACTER MAI Ko Lao
+
+
+
+
+% Arabic and Lao decimal digits
+<U0030>  <U0030>;<BLANK>;<BLANK>;<BLANK>   % DIGIT ZERO
+<U0ED0> <U0030>;<LaoI>;<BLANK>;<BLANK>   % Lao DIGIT ZERO
+<U0031>   <U0031>;<BLANK>;<BLANK>;<BLANK>    % DIGIT ONE
+<U0ED1> <U0031>;<LaoI>;<BLANK>;<BLANK>    % Lao DIGIT ONE
+<U0032>   <U0032>;<BLANK>;<BLANK>;<BLANK>    % DIGIT TWO
+<U0ED2> <U0032>;<LaoI>;<BLANK>;<BLANK>    % Lao DIGIT TWO
+<U0033> <U0033>;<BLANK>;<BLANK>;<BLANK>  % DIGIT THREE
+<U0ED3> <U0033>;<LaoI>;<BLANK>;<BLANK>  % Lao DIGIT THREE
+<U0034>  <U0034>;<BLANK>;<BLANK>;<BLANK>   % DIGIT FOUR
+<U0ED4> <U0034>;<LaoI>;<BLANK>;<BLANK>   % Lao DIGIT FOUR
+<U0035>  <U0035>;<BLANK>;<BLANK>;<BLANK>   % DIGIT FIVE
+<U0ED5> <U0035>;<LaoI>;<BLANK>;<BLANK>   % Lao DIGIT FIVE
+<U0036>   <U0036>;<BLANK>;<BLANK>;<BLANK>    % DIGIT SIX
+<U0ED6> <U0036>;<LaoI>;<BLANK>;<BLANK>    % Lao DIGIT SIX
+<U0037> <U0037>;<BLANK>;<BLANK>;<BLANK>  % DIGIT SEVEN
+<U0ED7> <U0037>;<LaoI>;<BLANK>;<BLANK>  % Lao DIGIT SEVEN
+<U0038> <U0038>;<BLANK>;<BLANK>;<BLANK>  % DIGIT EIGHT
+<U0ED8> <U0038>;<LaoI>;<BLANK>;<BLANK>  % Lao DIGIT EIGHT
+<U0039>  <U0039>;<BLANK>;<BLANK>;<BLANK>   % DIGIT NINE
+<U0ED9> <U0039>;<LaoI>;<BLANK>;<BLANK>   % Lao DIGIT NINE
+
+% Latin alphabet
+<U0041> <U0041>;<BLANK>;<BLANK>;<CAP>  % A
+<U0061> <U0041>;<BLANK>;<BLANK>;<MIN>  % a
+<U0042> <U0042>;<BLANK>;<BLANK>;<CAP>  % B
+<U0062> <U0042>;<BLANK>;<BLANK>;<MIN>  % b
+<U0043> <U0043>;<BLANK>;<BLANK>;<CAP>  % C
+<U0063> <U0043>;<BLANK>;<BLANK>;<MIN>  % c
+<U0044> <U0044>;<BLANK>;<BLANK>;<CAP>  % D
+<U0064> <U0044>;<BLANK>;<BLANK>;<MIN>  % d
+<U0045> <U0045>;<BLANK>;<BLANK>;<CAP>  % E
+<U0065> <U0045>;<BLANK>;<BLANK>;<MIN>  % e
+<U0046> <U0046>;<BLANK>;<BLANK>;<CAP>  % F
+<U0066> <U0046>;<BLANK>;<BLANK>;<MIN>  % f
+<U0047> <U0047>;<BLANK>;<BLANK>;<CAP>  % G
+<U0067> <U0047>;<BLANK>;<BLANK>;<MIN>  % g
+<U0048> <U0048>;<BLANK>;<BLANK>;<CAP>  % H
+<U0068> <U0048>;<BLANK>;<BLANK>;<MIN>  % h
+<U0049> <U0049>;<BLANK>;<BLANK>;<CAP>  % I
+<U0069> <U0049>;<BLANK>;<BLANK>;<MIN>  % i
+<U004A> <U004A>;<BLANK>;<BLANK>;<CAP>  % J
+<U006A> <U004A>;<BLANK>;<BLANK>;<MIN>  % j
+<U004B> <U004B>;<BLANK>;<BLANK>;<CAP>  % K
+<U006B> <U004B>;<BLANK>;<BLANK>;<MIN>  % k
+<U004C> <U004C>;<BLANK>;<BLANK>;<CAP>  % L
+<U006C> <U004C>;<BLANK>;<BLANK>;<MIN>  % l
+<U004D> <U004D>;<BLANK>;<BLANK>;<CAP>  % M
+<U006D> <U004D>;<BLANK>;<BLANK>;<MIN>  % m
+<U004E> <U004E>;<BLANK>;<BLANK>;<CAP>  % N
+<U006E> <U004E>;<BLANK>;<BLANK>;<MIN>  % n
+<U004F> <U004F>;<BLANK>;<BLANK>;<CAP>  % O
+<U006F> <U004F>;<BLANK>;<BLANK>;<MIN>  % o
+<U0050> <U0050>;<BLANK>;<BLANK>;<CAP>  % P
+<U0070> <U0050>;<BLANK>;<BLANK>;<MIN>  % p
+<U0051> <U0051>;<BLANK>;<BLANK>;<CAP>  % Q
+<U0071> <U0051>;<BLANK>;<BLANK>;<MIN>  % q
+<U0052> <U0052>;<BLANK>;<BLANK>;<CAP>  % R
+<U0072> <U0052>;<BLANK>;<BLANK>;<MIN>  % r
+<U0053> <U0053>;<BLANK>;<BLANK>;<CAP>  % S
+<U0073> <U0053>;<BLANK>;<BLANK>;<MIN>  % s
+<U0054> <U0054>;<BLANK>;<BLANK>;<CAP>  % T
+<U0074> <U0054>;<BLANK>;<BLANK>;<MIN>  % t
+<U0055> <U0055>;<BLANK>;<BLANK>;<CAP>  % U
+<U0075> <U0055>;<BLANK>;<BLANK>;<MIN>  % u
+<U0056> <U0056>;<BLANK>;<BLANK>;<CAP>  % V
+<U0076> <U0056>;<BLANK>;<BLANK>;<MIN>  % v
+<U0057> <U0057>;<BLANK>;<BLANK>;<CAP>  % W
+<U0077> <U0057>;<BLANK>;<BLANK>;<MIN>  % w
+<U0058> <U0058>;<BLANK>;<BLANK>;<CAP>  % X
+<U0078> <U0058>;<BLANK>;<BLANK>;<MIN>  % x
+<U0059> <U0059>;<BLANK>;<BLANK>;<CAP>  % Y
+<U0079> <U0059>;<BLANK>;<BLANK>;<MIN>  % y
+<U005A> <U005A>;<BLANK>;<BLANK>;<CAP>  % Z
+<U007A> <U005A>;<BLANK>;<BLANK>;<MIN>  % z
+
+%
+% Lao consonants, with leading vowels rearrangement
+%
+<U0E81>        <U0E81>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER KO
+<ko-e>           "<U0E81><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<ko-ae>          "<U0E81><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<ko-o>           "<U0E81><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<ko-ai-maimuan>  "<U0E81><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<ko-ai-maimalai> "<U0E81><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E82>        <U0E82>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER KHO sung
+<kho-sung-e>           "<U0E82><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<kho-sung-ae>          "<U0E82><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<kho-sung-o>           "<U0E82><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<kho-sung-ai-maimuan>  "<U0E82><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<kho-sung-ai-maimalai> "<U0E82><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E84>        <U0E84>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER KHO tam
+<kho-tam-e>           "<U0E84><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<kho-tam-ae>          "<U0E84><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<kho-tam-o>           "<U0E84><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<kho-tam-ai-maimuan>  "<U0E84><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<kho-tam-ai-maimalai> "<U0E84><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E87>        <U0E87>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER NGO
+<ngo-e>           "<U0E87><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<ngo-ae>          "<U0E87><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<ngo-o>           "<U0E87><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<ngo-ai-maimuan>  "<U0E87><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<ngo-ai-maimalai> "<U0E87><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E88>        <U0E88>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER CHO
+<cho-e>           "<U0E88><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<cho-ae>          "<U0E88><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<cho-o>           "<U0E88><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<cho-ai-maimuan>  "<U0E88><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<cho-ai-maimalai> "<U0E88><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E8A>        <U0E8A>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER SO
+<xo-e>           "<U0E8A><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<xo-ae>          "<U0E8A><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<xo-o>           "<U0E8A><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<xo-ai-maimuan>  "<U0E8A><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<xo-ai-maimalai> "<U0E8A><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E8D>        <U0E8D>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER Nyo
+<nyo-e>           "<U0E8D><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<nyo-ae>          "<U0E8D><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<nyo-o>           "<U0E8D><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<nyo-ai-maimuan>  "<U0E8D><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<nyo-ai-maimalai> "<U0E8D><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E94>        <U0E94>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER DO
+<do-e>           "<U0E94><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<do-ae>          "<U0E94><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<do-o>           "<U0E94><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<do-ai-maimuan>  "<U0E94><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<do-ai-maimalai> "<U0E94><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E95>        <U0E95>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER TO
+<to-e>           "<U0E95><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<to-ae>          "<U0E95><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<to-o>           "<U0E95><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<to-ai-maimuan>  "<U0E95><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<to-ai-maimalai> "<U0E95><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E96>        <U0E96>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER THO Sung
+<tho-sung-e>           "<U0E96><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<tho-sung-ae>          "<U0E96><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<tho-sung-o>           "<U0E96><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<tho-sung-ai-maimuan>  "<U0E96><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<tho-sung-ai-maimalai> "<U0E96><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E97>        <U0E97>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER THO Tam
+<tho-tam-e>           "<U0E97><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<tho-tam-ae>          "<U0E97><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<tho-tam-o>           "<U0E97><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<tho-tam-ai-maimuan>  "<U0E97><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<tho-tam-ai-maimalai> "<U0E97><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E99>        <U0E99>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER NO
+<no-e>           "<U0E99><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<no-ae>          "<U0E99><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<no-o>           "<U0E99><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<no-ai-maimuan>  "<U0E99><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<no-ai-maimalai> "<U0E99><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E9A>        <U0E9A>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER BO
+<bo-e>           "<U0E9A><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<bo-ae>          "<U0E9A><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<bo-o>           "<U0E9A><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<bo-ai-maimuan>  "<U0E9A><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<bo-ai-maimalai> "<U0E9A><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E9B>        <U0E9B>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER PO
+<po-e>           "<U0E9B><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<po-ae>          "<U0E9B><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<po-o>           "<U0E9B><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<po-ai-maimuan>  "<U0E9B><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<po-ai-maimalai> "<U0E9B><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E9C>        <U0E9C>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER PHO sUNG
+<pho-sung-e>           "<U0E9C><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<pho-sung-ae>          "<U0E9C><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<pho-sung-o>           "<U0E9C><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<pho-sung-ai-maimuan>  "<U0E9C><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<pho-sung-ai-maimalai> "<U0E9C><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E9D>        <U0E9D>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER FO tam
+<fo-tam-e>           "<U0E9D><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<fo-tam-ae>          "<U0E9D><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<fo-tam-o>           "<U0E9D><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<fo-tam-ai-maimuan>  "<U0E9D><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<fo-tam-ai-maimalai> "<U0E9D><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E9E>        <U0E9E>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER pho tam
+<pho-tam-e>           "<U0E9E><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<pho-tam-ae>          "<U0E9E><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<pho-tam-o>           "<U0E9E><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<pho-tam-ai-maimuan>  "<U0E9E><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<pho-tam-ai-maimalai> "<U0E9E><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0E9F>        <U0E9F>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER fo sung
+<fo-sung-e>           "<U0E9F><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<fo-sung-ae>          "<U0E9F><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<fo-sung-o>           "<U0E9F><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<fo-sung-ai-maimuan>  "<U0E9F><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<fo-sung-ai-maimalai> "<U0E9F><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EA1>        <U0EA1>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER MO
+<mo-e>           "<U0EA1><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<mo-ae>          "<U0EA1><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<mo-o>           "<U0EA1><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<mo-ai-maimuan>  "<U0EA1><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<mo-ai-maimalai> "<U0EA1><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EA2>        <U0EA2>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER YO
+<yo-e>           "<U0EA2><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<yo-ae>          "<U0EA2><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<yo-o>           "<U0EA2><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<yo-ai-maimuan>  "<U0EA2><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<yo-ai-maimalai> "<U0EA2><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EA3>        <U0EA3>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER RO
+<ro-e>           "<U0EA3><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<ro-ae>          "<U0EA3><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<ro-o>           "<U0EA3><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<ro-ai-maimuan>  "<U0EA3><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<ro-ai-maimalai> "<U0EA3><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EA5>        <U0EA5>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER LO
+<lo-e>           "<U0EA5><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<lo-ae>          "<U0EA5><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<lo-o>           "<U0EA5><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<lo-ai-maimuan>  "<U0EA5><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<lo-ai-maimalai> "<U0EA5><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EA7>        <U0EA7>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER WO
+<wo-e>           "<U0EA7><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<wo-ae>          "<U0EA7><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<wo-o>           "<U0EA7><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<wo-ai-maimuan>  "<U0EA7><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<wo-ai-maimalai> "<U0EA7><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EAA>        <U0EAA>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER SO
+<so-e>           "<U0EAA><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<so-ae>          "<U0EAA><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<so-o>           "<U0EAA><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<so-ai-maimuan>  "<U0EAA><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<so-ai-maimalai> "<U0EAA><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EAB>        <U0EAB>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER HO
+<ho-e>           "<U0EAB><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<ho-ae>          "<U0EAB><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<ho-o>           "<U0EAB><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<ho-ai-maimuan>  "<U0EAB><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<ho-ai-maimalai> "<U0EAB><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EAD>        <U0EAD>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER O
+<o-e>           "<U0EAD><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<o-ae>          "<U0EAD><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<o-o>           "<U0EAD><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<o-ai-maimuan>  "<U0EAD><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<o-ai-maimalai> "<U0EAD><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+<U0EAE>        <U0EAE>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER HOr
+<hor-e>           "<U0EAE><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<hor-ae>          "<U0EAE><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<hor-o>           "<U0EAE><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<hor-ai-maimuan>  "<U0EAE><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<hor-ai-maimalai> "<U0EAE><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+
+<U0EDC>        <U0EDC>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER NHOr
+<nhor-e>           "<U0EDC><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<nhor-ae>          "<U0EDC><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<nhor-o>           "<U0EDC><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<nhor-ai-maimuan>  "<U0EDC><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<nhor-ai-maimalai> "<U0EDC><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+
+<U0EDD>        <U0EDC>;<BLANK>;<BLANK>;<BLANK> % Lao CHARACTER HHOr
+<mhor-e>           "<U0EDD><U0EC0>";<BLANK>;<BLANK>;<BLANK>
+<mhor-ae>          "<U0EDD><U0EC1>";<BLANK>;<BLANK>;<BLANK>
+<mhor-o>           "<U0EDD><U0EC2>";<BLANK>;<BLANK>;<BLANK>
+<mhor-ai-maimuan>  "<U0EDD><U0EC3>";<BLANK>;<BLANK>;<BLANK>
+<mhor-ai-maimalai> "<U0EDD><U0EC4>";<BLANK>;<BLANK>;<BLANK>
+
+
+% order of Lao vowels
+<U0EB0> <U0EB0>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER SAlA A
+<U0EB1> <U0EB1>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER MAI HAN-AKAT
+<U0EB2> <U0EB2>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER SAlA AA
+<U0EB3> <U0EB3>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala AM
+<U0EB4> <U0EB4>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala I
+<U0EB5> <U0EB5>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala II
+<U0EB6> <U0EB6>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala UE
+<U0EB7> <U0EB7>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala UEE
+<U0EB8> <U0EB8>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala U
+<U0EB9> <U0EB9>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala UU
+<U0EBC> <U0EB9>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala Lo
+<U0EBD> <U0EB9>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala Oy
+<U0EC0> <U0EC0>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala E
+<U0EC1> <U0EC1>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala AE
+<U0EC2> <U0EC2>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala O
+<U0EC3> <U0EC3>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala AI MAIMUAN
+<U0EC4> <U0EC4>;<BLANK>;<BLANK>;<BLANK>  % Lao CHARACTER Sala AI MAIMALAI
+
+order_end
+
+END LC_COLLATE
+
+LC_MONETARY
+
+int_curr_symbol      "LAK "
+
+% monetary unit: Kip
+currency_symbol      "<U20AD>"
+mon_decimal_point    "."
+mon_thousands_sep    ","
+mon_grouping         3;3
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits      2
+frac_digits          2
+p_cs_precedes        1
+p_sep_by_space       2
+n_cs_precedes        1
+n_sep_by_space       2
+p_sign_posn          4
+n_sign_posn          4
+END LC_MONETARY
+
+
+LC_NUMERIC
+
+decimal_point           "."
+thousands_sep           ","
+grouping                3
+
+END LC_NUMERIC
+
+LC_TIME
+
+abday   "<U0EAD><U0EB2>.";"<U0E88>.";"<U0E84>.";/
+        "<U0E9E>.";"<U0E9E><U0EAB>.";"<U0EAA>.";/
+        "<U0EAA>."
+day     "<U0EAD><U0EB2><U0E97><U0EB4><U0E94>";/
+        "<U0E88><U0EB1><U0E99>";/
+        "<U0EAD><U0EB1><U0E87><U0E84><U0EB2><U0E99>";/
+        "<U0E9E><U0EB8><U0E94>";/
+        "<U0E9E><U0EB0><U0EAB><U0EB1><U0E94>";/
+        "<U0EAA><U0EB8><U0E81>";/
+        "<U0EC0><U0EAA><U0EBB><U0EB2>"
+abmon   "<U0EA1>.<U0E81>.";/
+        "<U0E81>.<U0E9E>.";/
+        "<U0EA1>.<U0E99>.";/
+        "<U0EA1>.<U0EAA>.";/
+        "<U0E9E>.<U0E9E>.";/
+        "<U0EA1><U0EB4>.<U0E96>.";/
+        "<U0E81>.<U0EA5>.";/
+        "<U0EAA>.<U0EAB>.";/
+        "<U0E81>.<U0E8D>.";/
+        "<U0E95>.<U0EA5>.";/
+        "<U0E9E>.<U0E88>.";/
+        "<U0E97>.<U0EA7>."
+mon     "<U0EA1><U0EB1><U0E87><U0E81><U0EAD><U0E99>";/
+        "<U0E81><U0EB8><U0EA1><U0E9E><U0EB2>";/
+        "<U0EA1><U0EB5><U0E99><U0EB2>";/
+        "<U0EC0><U0EA1><U0EAA><U0EB2>";/
+        "<U0E9E><U0EB6><U0E94><U0EAA><U0EB0><U0E9E><U0EB2>";/
+        "<U0EA1><U0EB4><U0E96><U0EB8><U0E99><U0EB2>";/
+        "<U0E81><U0ECD><U0EA5><U0EB0><U0E81><U0EBB><U0E94>";/
+        "<U0EAA><U0EB4><U0E87><U0EAB><U0EB2>";/
+        "<U0E81><U0EB1><U0E99><U0E8D><U0EB2>";/
+        "<U0E95><U0EB8><U0EA5><U0EB2>";/
+        "<U0E9E><U0EB0><U0E88><U0EB4><U0E81>";/
+        "<U0E97><U0EB1><U0E99><U0EA7><U0EB2>"
+% Appropriate date & time representation
+d_t_fmt "%a %e %b %Ey, %H:%M:%S"
+% Appropriate date representation
+d_fmt   "%d//%m//%Ey"
+% Appropriate time representation
+t_fmt   "%H:%M:%S"
+% AM/PM signs
+am_pm   "AM";"PM"
+% Appropriate 12-hour clock representation
+t_fmt_ampm  "%I:%M:%S %p"
+% Era : Buddhist Era
+era     "+:1:-543//01//01:+*:<U0E9E>.<U0EAA>.:%EC %Ey"
+era_d_fmt       "%e %b %Ey"
+era_t_fmt       "%H.%M.%S <U0E99>."
+era_d_t_fmt     "<U0EA7><U0EB1><U0E99>%A<U0E97><U0EB5><U0EC8> %e %B %EC %Ey, %H.%M.%S <U0E99>."
+% Appropriate date representation (date(1))
+date_fmt       "%a %e %b %Ey %H:%M:%S %Z"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+
+% yesexpr : begins with "y", "Y", or mo
+% noexpr : begins with "n", "N", or Bo
+% yesstr = "men" = Sala ae + Mo + MAI EK + No
+% nostr = "Bo Men" = Letter Bo +salo Or+ MAI EK + mo+ Ma Ek+ No
+
+yesexpr "^[+1yY<U0EA1>]"
+noexpr  "^[-0nN<U0E9A>]"
+yesstr  "<U0EC1><U0EA1><U0EC8><U0E99>"
+nostr   "<U0E9A><U0ECD><U0EC8><U0EC1><U0EA1><U0EC8><U0E99>"
+
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "(%A)%l"
+int_select     "001"
+int_prefix     "856"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+
+name_mr     "<U0E97>."
+name_mrs    "<U0E99>."
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%r%t%e%t%b%N%h%t%s%N%T%N%S%N%z%c%N"
+country_name  "<U0EA5><U0EB2><U0EA7>"
+%FIXME
+%country_post  ""
+country_ab2   "LA"
+country_ab3   "LAO"
+country_num   418
+country_car   "LAO"
+%FIXME
+%country_isbn  ""
+lang_name     "<U0EA5><U0EB2><U0EA7>"
+lang_ab       "lo"
+lang_term     "lao"
+lang_lib      "lao"
+END LC_ADDRESS

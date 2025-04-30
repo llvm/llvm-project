@@ -1,0 +1,9 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+constant UL_GETFSIZE
+constant UL_SETFSIZE
+
+function {long int} ulimit (int, ...)
+
+allow UL_*
+allow *_t
+#endif

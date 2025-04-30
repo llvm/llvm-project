@@ -1,0 +1,28 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008 && !defined XPG4
+type datum
+element datum {void*} dptr
+element datum size_t dsize
+
+type size_t
+
+type DBM
+
+type mode_t
+
+constant DBM_INSERT
+constant DBM_REPLACE
+
+function int dbm_clearerr (DBM*)
+function void dbm_close (DBM*)
+function int dbm_delete (DBM*, datum)
+function int dbm_error (DBM*)
+function datum dbm_fetch (DBM*, datum)
+function datum dbm_firstkey (DBM*)
+function datum dbm_nextkey (DBM*)
+function {DBM*} dbm_open (const char*, int, mode_t)
+function int dbm_store (DBM*, datum, datum, int)
+
+allow dbm_*
+allow DBM_*
+allow *_t
+#endif

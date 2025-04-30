@@ -1,0 +1,102 @@
+# File name	Caller	Syscall name	Args	Strong name	Weak names
+
+alarm		-	alarm		i:i	alarm
+bdflush		EXTRA	bdflush		i:ii	__compat_bdflush	bdflush@GLIBC_2.0:GLIBC_2.23
+capget		EXTRA	capget		i:pp	capget
+capset		EXTRA	capset		i:pp	capset
+create_module	EXTRA	create_module	3	__compat_create_module	create_module@GLIBC_2.0:GLIBC_2.23
+delete_module	EXTRA	delete_module	3	delete_module
+epoll_create	EXTRA	epoll_create	i:i	epoll_create
+epoll_create1	EXTRA	epoll_create1	i:i	epoll_create1
+epoll_ctl	EXTRA	epoll_ctl	i:iiip	epoll_ctl
+eventfd		EXTRA	eventfd2	i:ii	eventfd
+execve		-	execve		i:spp	__execve	execve
+flock		-	flock		i:ii	__flock		flock
+get_kernel_syms	EXTRA	get_kernel_syms	i:p	__compat_get_kernel_syms	get_kernel_syms@GLIBC_2.0:GLIBC_2.23
+getpid          -       getpid          Ei:     __getpid        getpid
+getegid		-	getegid		Ei:	__getegid	getegid
+geteuid		-	geteuid		Ei:	__geteuid	geteuid
+getpgid		-	getpgid		i:i	__getpgid	getpgid
+getpgrp		-	getpgrp		Ei:	getpgrp
+getppid		-	getppid		Ei:	__getppid	getppid
+getresuid	-	getresuid	i:ppp	getresuid
+getresgid	-	getresgid	i:ppp	getresgid
+getsid		-	getsid		i:i	getsid
+init_module	EXTRA	init_module	5	init_module
+inotify_add_watch	EXTRA	inotify_add_watch	i:isi	inotify_add_watch
+inotify_init	EXTRA	inotify_init	i:	inotify_init
+inotify_init1	EXTRA	inotify_init1	i:I	inotify_init1
+inotify_rm_watch	EXTRA	inotify_rm_watch	i:ii	inotify_rm_watch
+ioperm		-	ioperm		i:UUi	ioperm
+iopl		-	iopl		i:i	iopl
+klogctl		EXTRA	syslog		i:isi	klogctl
+lchown		-	lchown		i:sii	__lchown	lchown
+mincore		-	mincore		i:aUV	mincore
+mlock		-	mlock		i:bU	mlock
+mlockall	-	mlockall	i:i	mlockall
+mount		EXTRA	mount		i:sssUp	__mount	mount
+mremap		EXTRA	mremap		b:aUUip	__mremap	mremap
+munlock		-	munlock		i:aU	munlock
+munlockall	-	munlockall	i:	munlockall
+nfsservctl	EXTRA	nfsservctl	i:ipp	__compat_nfsservctl	nfsservctl@GLIBC_2.0:GLIBC_2.28
+pipe		-	pipe		i:f	__pipe		pipe
+pipe2		-	pipe2		i:fi	__pipe2		pipe2
+pivot_root	EXTRA	pivot_root	i:ss	pivot_root
+query_module	EXTRA	query_module	i:sipip	__compat_query_module	query_module@GLIBC_2.0:GLIBC_2.23
+quotactl	EXTRA	quotactl	i:isip	quotactl
+remap_file_pages -	remap_file_pages i:pUiUi	__remap_file_pages remap_file_pages
+sched_getp	-	sched_getparam	i:ip	__sched_getparam	sched_getparam
+sched_gets	-	sched_getscheduler	i:i	__sched_getscheduler	sched_getscheduler
+sched_primax	-	sched_get_priority_max	i:i	__sched_get_priority_max	sched_get_priority_max
+sched_primin	-	sched_get_priority_min	i:i	__sched_get_priority_min	sched_get_priority_min
+sched_setp	-	sched_setparam	i:ip	__sched_setparam	sched_setparam
+sched_sets	-	sched_setscheduler	i:iip	__sched_setscheduler	sched_setscheduler
+sched_yield	-	sched_yield	i:	__sched_yield	sched_yield
+sendfile	-	sendfile	i:iipU	sendfile
+sendfile64	-	sendfile64	i:iipU	sendfile64
+setfsgid	EXTRA	setfsgid	i:i	setfsgid
+setfsuid	EXTRA	setfsuid	i:i	setfsuid
+setpgid		-	setpgid		i:ii	__setpgid	setpgid
+sigaltstack	-	sigaltstack	i:PP	__sigaltstack	sigaltstack
+sysinfo		EXTRA	sysinfo		i:p	__sysinfo	sysinfo
+swapon		-	swapon		i:si	__swapon	swapon
+swapoff		-	swapoff		i:s	__swapoff	swapoff
+unshare		EXTRA	unshare		i:i	unshare
+uselib		EXTRA	uselib		i:s	__compat_uselib	uselib@GLIBC_2.0:GLIBC_2.23
+
+chown		-	chown		i:sii	__libc_chown	__chown chown
+
+fchownat	-	fchownat	i:isiii	fchownat
+linkat		-	linkat		i:isisi	linkat
+mkdirat		-	mkdirat		i:isi	mkdirat
+readlinkat	-	readlinkat	i:issU	readlinkat
+symlinkat	-	symlinkat	i:sis	symlinkat
+unlinkat	-	unlinkat	i:isi	unlinkat
+
+setxattr	-	setxattr	i:sspUi	setxattr
+lsetxattr	-	lsetxattr	i:sspUi	lsetxattr
+fsetxattr	-	fsetxattr	i:ispUi	fsetxattr
+getxattr	-	getxattr	i:sspU	getxattr
+lgetxattr	-	lgetxattr	i:sspU	lgetxattr
+fgetxattr	-	fgetxattr	i:ispU	fgetxattr
+listxattr	-	listxattr	i:ssU	listxattr
+llistxattr	-	llistxattr	i:ssU	llistxattr
+flistxattr	-	flistxattr	i:isU	flistxattr
+removexattr	-	removexattr	i:ss	removexattr
+lremovexattr	-	lremovexattr	i:ss	lremovexattr
+fremovexattr	-	fremovexattr	i:is	fremovexattr
+
+timerfd_create	EXTRA	timerfd_create	i:ii	timerfd_create
+
+fanotify_init	EXTRA	fanotify_init	i:ii	fanotify_init
+
+name_to_handle_at EXTRA	name_to_handle_at i:isppi name_to_handle_at
+
+setns		EXTRA	setns		i:ii	setns
+
+memfd_create    EXTRA	memfd_create	i:si    memfd_create
+pkey_alloc	EXTRA	pkey_alloc	i:ii	pkey_alloc
+pkey_free	EXTRA	pkey_free	i:i	pkey_free
+gettid          EXTRA   gettid          Ei:     __gettid	gettid
+tgkill          EXTRA   tgkill          i:iii   __tgkill	tgkill
+close_range     EXTRA   close_range     i:iii   __close_range   close_range

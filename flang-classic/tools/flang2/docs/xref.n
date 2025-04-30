@@ -1,0 +1,90 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 13 "Cross Reference"
+.sh 2 Overview
+The Cross Reference Generator is the compiler module
+responsible for generating the Cross Reference Listing,
+appearing in the Listing File.
+It is called if the user has specified the
+.cw -xref
+switch.
+.lp
+The Cross Reference Listing is an alphabetic listing of user defined
+symbols with their associated attributes, such as data type, relative
+memory address, etc.
+In addition, the source line number of each occurrence of the
+symbol is given with an indicator of the type of use:
+.ip \fId\fP
+definition or declaration of the symbol.
+This includes occurrence of a symbol in a declaration or definition statement.
+.ip \fIr\fP
+reference of the symbol.
+.ip \fIi\fP
+initialization of the symbol.
+.ip \fIm\fP
+modification of the symbol's value. (NOT IMPLEMENTED)
+This includes occurrence of a symbol on the left side of
+an assignment or in a declaration with an initializer.
+.ip \fIa\fP
+The symbol is an operand of the address (unary &) operator.(NOT IMPLEMENTED)
+.sh 2 "Data Structures"
+.us "Symbol Table"
+contains symbol names and attributes used in the
+Cross Reference Listing.
+See section 11.
+.us "Reference File"
+temporary binary file containing a record for each occurrence
+of a user defined symbol in the input source.
+This file is written only if the
+.cw -xref
+flag is specified.
+All records are written by the Semantic Analyzer.
+.lp
+Each record consists of 3 words :
+.np
+symbol table pointer to a user defined symbol (type
+.cw INT ).
+.np
+source input file line number of occurrence (type
+.cw short int ).
+Negated if occurrence was in an include file? (HAVE NOT DETERMINED HOW
+TO HANDLE INCLUDE FILES.)
+.np
+type of occurrence (type
+.cw short int ).
+One of the characters
+.i d ,
+.i r ,
+.i i ,
+.i m ,
+or
+.i a ,
+representing
+the occurrence types defined above.
+.sh 2 "Processing Overview"
+The Cross Reference Generator performs the following steps:
+.np
+Reads the Reference File and constructs a list of references
+for each symbol.
+All reference records are read into memory. 
+The symbol pointer field is used to link the records to the appropriate
+list.
+The head of the list is pointed to by a field in the symbol table entry
+for the symbol referenced.
+Macros exist to access this field.
+.np
+Sorts referenced symbols alphabetically using a mergesort.
+Insertion sort is used for small subsequences. 
+To determine whether or not a symbol is referenced, only the
+Reference File records are used, not the symbol table
+.cw REF
+flag or any 
+other symbol table field.
+The insertion sort is responsible for excluding nonreferenced symbols
+of the symbol table.
+.np
+Writes the Cross Reference Listing.

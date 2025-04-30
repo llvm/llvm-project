@@ -1,0 +1,165 @@
+libc {
+  GLIBC_2.1 {
+%if PTHREAD_IN_LIBC
+    aio_init;
+    aio_cancel;
+    aio_cancel64;
+    aio_error;
+    aio_error64;
+    aio_fsync;
+    aio_fsync64;
+    aio_read;
+    aio_read64;
+    aio_return;
+    aio_return64;
+    aio_suspend;
+    aio_suspend64;
+    aio_write;
+    aio_write64;
+    lio_listio;
+    lio_listio64;
+%endif
+  }
+  GLIBC_2.2 {
+%if PTHREAD_IN_LIBC
+    timer_create;
+    timer_delete;
+    timer_getoverrun;
+    timer_gettime;
+    timer_settime;
+%endif
+    shm_open;
+    shm_unlink;
+  }
+  GLIBC_2.3.4 {
+%if PTHREAD_IN_LIBC
+    mq_close;
+    mq_getattr;
+    mq_notify;
+    mq_open;
+    mq_receive;
+    mq_send;
+    mq_setattr;
+    mq_timedreceive;
+    mq_timedsend;
+    mq_unlink;
+%endif
+  }
+  GLIBC_2.4 {
+%if PTHREAD_IN_LIBC
+    lio_listio;
+    lio_listio64;
+%endif
+  }
+  GLIBC_2.7 {
+%if PTHREAD_IN_LIBC
+   __mq_open_2;
+%endif
+  }
+  GLIBC_2.34 {
+%if PTHREAD_IN_LIBC
+    __mq_open_2;
+    aio_cancel64;
+    aio_cancel;
+    aio_error64;
+    aio_error;
+    aio_fsync64;
+    aio_fsync;
+    aio_init;
+    aio_read64;
+    aio_read;
+    aio_return64;
+    aio_return;
+    aio_suspend64;
+    aio_suspend;
+    aio_write64;
+    aio_write;
+    lio_listio64;
+    lio_listio;
+    mq_close;
+    mq_getattr;
+    mq_notify;
+    mq_open;
+    mq_receive;
+    mq_send;
+    mq_setattr;
+    mq_timedreceive;
+    mq_timedsend;
+    mq_unlink;
+    timer_create;
+    timer_delete;
+    timer_getoverrun;
+    timer_gettime;
+    timer_settime;
+%endif
+    shm_open;
+    shm_unlink;
+  }
+}
+librt {
+  GLIBC_2.1 {
+%if PTHREAD_IN_LIBC
+    __librt_version_placeholder;
+%else
+    aio_cancel;
+    aio_cancel64;
+    aio_error;
+    aio_error64;
+    aio_fsync;
+    aio_fsync64;
+    aio_init;
+    aio_read;
+    aio_read64;
+    aio_return;
+    aio_return64;
+    aio_suspend;
+    aio_suspend64;
+    aio_write;
+    aio_write64;
+    lio_listio;
+    lio_listio64;
+%endif
+  }
+  GLIBC_2.2 {
+%if PTHREAD_IN_LIBC
+    __librt_version_placeholder;
+%else
+    timer_create;
+    timer_delete;
+    timer_getoverrun;
+    timer_gettime;
+    timer_settime;
+%endif
+  }
+  GLIBC_2.3.4 {
+%if PTHREAD_IN_LIBC
+    __librt_version_placeholder;
+%else
+    mq_close;
+    mq_getattr;
+    mq_notify;
+    mq_open;
+    mq_receive;
+    mq_send;
+    mq_setattr;
+    mq_timedreceive;
+    mq_timedsend;
+    mq_unlink;
+%endif
+  }
+  GLIBC_2.4 {
+%if PTHREAD_IN_LIBC
+    __librt_version_placeholder;
+%else
+    lio_listio;
+    lio_listio64;
+%endif
+  }
+  GLIBC_2.7 {
+%if PTHREAD_IN_LIBC
+    __librt_version_placeholder;
+%else
+   __mq_open_2;
+%endif
+  }
+}

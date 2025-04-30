@@ -1,0 +1,28 @@
+GLIBC_2.10 malloc_info F
+GLIBC_2.16 aligned_alloc F
+GLIBC_2.3 __free_hook D 0x8
+GLIBC_2.3 __malloc_hook D 0x8
+GLIBC_2.3 __memalign_hook D 0x8
+GLIBC_2.3 __realloc_hook D 0x8
+GLIBC_2.3 calloc F
+GLIBC_2.3 free F
+GLIBC_2.3 mallinfo F
+GLIBC_2.3 malloc F
+GLIBC_2.3 malloc_get_state F
+GLIBC_2.3 malloc_set_state F
+GLIBC_2.3 malloc_stats F
+GLIBC_2.3 malloc_trim F
+GLIBC_2.3 malloc_usable_size F
+GLIBC_2.3 mallopt F
+GLIBC_2.3 mcheck F
+GLIBC_2.3 mcheck_check_all F
+GLIBC_2.3 mcheck_pedantic F
+GLIBC_2.3 memalign F
+GLIBC_2.3 mprobe F
+GLIBC_2.3 mtrace F
+GLIBC_2.3 muntrace F
+GLIBC_2.3 posix_memalign F
+GLIBC_2.3 pvalloc F
+GLIBC_2.3 realloc F
+GLIBC_2.3 valloc F
+GLIBC_2.33 mallinfo2 F

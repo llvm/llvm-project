@@ -1,0 +1,4 @@
+.root root:x:0:0:root:/root:/bin/bash
+=0 root:x:0:0:root:/root:/bin/bash
+.bin bin:x:1:1:bin:/bin:/sbin/nologin
+=1 bin:x:1:1:bin:/bin:/sbin/nologin

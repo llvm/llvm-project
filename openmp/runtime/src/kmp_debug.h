@@ -15,6 +15,10 @@
 
 #include <stdarg.h>
 
+#if LIBOMP_NEXTSILICON
+#include "nsapi/intrinsics.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -25,6 +29,14 @@ extern "C" {
 // New C++11 style build assert
 #define KMP_BUILD_ASSERT(expr) static_assert(expr, "Build condition error")
 
+#if LIBOMP_NEXTSILICON
+// When code is imported into NextSilicon runtime, debug/asserts are excluded
+// to slim down the code and make it millable.
+#define KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() (!__nsapi_is_on_cg())
+#else
+#define KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() (1)
+#endif
+
 // -----------------------------------------------------------------------------
 // Run-time assertions.
 
@@ -34,11 +46,11 @@ extern void __kmp_dump_debug_buffer(void);
 extern int __kmp_debug_assert(char const *expr, char const *file, int line);
 #ifdef KMP_DEBUG
 #define KMP_ASSERT(cond)                                                       \
-  if (!(cond)) {                                                               \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && !(cond)) {                          \
     __kmp_debug_assert(#cond, __FILE__, __LINE__);                             \
   }
 #define KMP_ASSERT2(cond, msg)                                                 \
-  if (!(cond)) {                                                               \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && !(cond)) {                          \
     __kmp_debug_assert((msg), __FILE__, __LINE__);                             \
   }
 #define KMP_DEBUG_ASSERT(cond) KMP_ASSERT(cond)
@@ -79,27 +91,27 @@ extern int kmp_f_debug;
 extern int kmp_diag;
 
 #define KA_TRACE(d, x)                                                         \
-  if (kmp_a_debug >= d) {                                                      \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_a_debug >= d)) {               \
     __kmp_debug_printf x;                                                      \
   }
 #define KB_TRACE(d, x)                                                         \
-  if (kmp_b_debug >= d) {                                                      \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_b_debug >= d)) {               \
     __kmp_debug_printf x;                                                      \
   }
 #define KC_TRACE(d, x)                                                         \
-  if (kmp_c_debug >= d) {                                                      \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_c_debug >= d)) {               \
     __kmp_debug_printf x;                                                      \
   }
 #define KD_TRACE(d, x)                                                         \
-  if (kmp_d_debug >= d) {                                                      \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_d_debug >= d)) {               \
     __kmp_debug_printf x;                                                      \
   }
 #define KE_TRACE(d, x)                                                         \
-  if (kmp_e_debug >= d) {                                                      \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_e_debug >= d)) {               \
     __kmp_debug_printf x;                                                      \
   }
 #define KF_TRACE(d, x)                                                         \
-  if (kmp_f_debug >= d) {                                                      \
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_f_debug >= d)) {               \
     __kmp_debug_printf x;                                                      \
   }
 #define K_DIAG(d, x)                                                           \

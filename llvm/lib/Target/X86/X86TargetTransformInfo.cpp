@@ -49,6 +49,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86TargetTransformInfo.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
@@ -56,11 +57,50 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <optional>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "x86tti"
+
+// NEXT32
+// When compiling the code for X86 host through the Next32 compilation
+// pipeline, we want to control the behavior of the host loop vectorizer
+// in order to generate code that is more suitable for the Next32 backend.
+// We utilize the AVX cost model and codegen for the host, because it has
+// dedicated masked load and store instructions, so it won't introduce
+// additional basic blocks during codegen (and mess up the telemetry).
+// The following flags are used to influence the vectorizer.
+
+// Control the generation of gather and scatter instructions.
+// Next32 backend doesn't have dedicated gather and scatter instructions,
+// and lowering them would be extremely expensive.
+static cl::opt<bool> EnableGatherScatterVectorOptimizations(
+    "x86-enable-gather-scatter", cl::init(true),
+    cl::desc("Enable x86 gather/scatter vector optimizations"), cl::Hidden);
+
+// Control the generation of masked load and store instructions.
+// Next32 backend prefers the use of predicated loads and stores instead of
+// the loop epilogue.
+static cl::opt<bool> PreferPredicateOverEpilogue(
+    "x86-prefer-predicate-over-epilogue", cl::init(false),
+    cl::desc("Prefer predicated instructions over epilogue generation"),
+    cl::Hidden);
+
+// Control the generation of emitGetActiveLaneMask intrinsic.
+// This allows us to perform custom lowering of the mask calculation later on
+// in the Next32 backend.
+static cl::opt<bool> EnableEmitGetActiveLaneMask(
+    "x86-enable-emit-get-active-lane-mask", cl::init(false),
+    cl::desc("Enable getActiveLaneMask intrinsic generation"), cl::Hidden);
+
+// Control whether we should use interleaving together with masked
+// vectorization. This prevents the scalarization of strided masked loads and
+// stores.
+static cl::opt<bool> EnableMaskedInterleavedAccessVectorization(
+    "x86-enable-masked-interleaved-access-vectorization", cl::init(false),
+    cl::desc("Enable masked interleaved access vectorization"), cl::Hidden);
 
 //===----------------------------------------------------------------------===//
 //
@@ -225,6 +265,7 @@ unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
       .getFixedValue();
 }
 
+// TODO: Check whether we want to do interleaving in Next32.
 unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   // If the loop will not be vectorized, don't interleave the loop.
   // Let regular unroll to unroll the loop, which saves the overflow
@@ -1443,10 +1484,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
-  static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::ADD,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
-    { ISD::SUB,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
-    { ISD::MUL,  MVT::i64,  {  2,  6,  1,  2 } },
+  static const CostKindTblEntry X64CostTbl[] = {
+      // 64-bit targets
+      {ISD::ADD, MVT::i64, {1}}, // Core (Merom) from http://www.agner.org/
+      {ISD::SUB, MVT::i64, {1}}, // Core (Merom) from http://www.agner.org/
+      {ISD::MUL, MVT::i64, {2}}, // Nehalem from http://www.agner.org/
   };
 
   if (ST->is64Bit())
@@ -6035,7 +6077,12 @@ bool X86TTIImpl::supportsGather() const {
   // Some CPUs have better gather performance than others.
   // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
   // enable gather with a -march.
-  return ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2());
+
+  // NEXT32
+  // Disable gather/scatter instruction generation, as Next32 doesn't have an
+  // efficient implementation.
+  return (EnableGatherScatterVectorOptimizations &&
+          (ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2())));
 }
 
 bool X86TTIImpl::forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {
@@ -6106,7 +6153,11 @@ bool X86TTIImpl::isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
 
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType, Align Alignment) {
   // AVX2 doesn't support scatter
-  if (!ST->hasAVX512() || !ST->preferScatter())
+  // NEXT32
+  // Disable gather/scatter instruction generation, as Next32 doesn't have an
+  // efficient implementation.
+  if (!EnableGatherScatterVectorOptimizations ||
+      (!ST->hasAVX512() || !ST->preferScatter()))
     return false;
   return isLegalMaskedGatherScatter(DataType, Alignment);
 }
@@ -6247,6 +6298,61 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() {
   // but there are currently some unexplained performance artifacts on Atom.
   // As a temporary solution, disable on Atom.
   return !(ST->isAtom());
+}
+
+// NEXT32
+// Prefer predicated instructions over epilogue generation when running
+// the Next32 compilation pipeline.
+bool X86TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
+  // If the loop is specifically marked with pragma "ns vectorize", then let the
+  // pragma win over all other compile options.
+  if (auto *NSVectorize =
+          findOptionMDForLoop(TFI->LVL->getLoop(), "ns.loop.vectorize")) {
+    if (auto *NSVectorizeString =
+            dyn_cast<MDString>(NSVectorize->getOperand(1))) {
+      return NSVectorizeString->getString() == "predicate";
+    }
+  }
+
+  return ST->useNext32Vectorization() && PreferPredicateOverEpilogue &&
+         ST->hasAVX();
+}
+
+// NEXT32
+// Prefer predicated instructions over epilogue generation when running
+// the Next32 compilation pipeline.
+bool X86TTIImpl::preferEpilogueVectorization(Loop *L) const {
+  // If the loop is specifically marked with pragma "ns vectorize", then let the
+  // pragma win over all other compile options.
+  if (auto *NSVectorize = findOptionMDForLoop(L, "ns.loop.vectorize")) {
+    if (auto *NSVectorizeString =
+            dyn_cast<MDString>(NSVectorize->getOperand(1))) {
+      return NSVectorizeString->getString() == "predicate";
+    }
+  }
+
+  return !(ST->useNext32Vectorization() && PreferPredicateOverEpilogue &&
+           ST->hasAVX());
+}
+
+// NEXT32
+// Generate the active lane mask intrinsic when running the Next32
+// compilation pipeline. This allows us to efficiently lower the
+// mask calculation in the Next32 backend.
+TailFoldingStyle
+X86TTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
+  if (!EnableEmitGetActiveLaneMask)
+    return TailFoldingStyle::DataWithoutLaneMask;
+  if (ST->hasAVX())
+    return TailFoldingStyle::Data;
+  return TailFoldingStyle::DataWithoutLaneMask;
+}
+
+// NEXT32
+// Interleave masked load/store operations when running the Next32 compilation
+// pipeline.
+bool X86TTIImpl::enableMaskedInterleavedAccessVectorization() const {
+  return EnableMaskedInterleavedAccessVectorization;
 }
 
 // Get estimation for interleaved load/store operations and strided load.

@@ -478,6 +478,7 @@ set(LLVM_ALL_TARGETS
   LoongArch
   Mips
   MSP430
+  Next32
   NVPTX
   PowerPC
   RISCV

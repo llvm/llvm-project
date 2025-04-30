@@ -1,0 +1,70 @@
+type {struct lconv}
+element {struct lconv} {char*} currency_symbol
+element {struct lconv} {char*} decimal_point
+element {struct lconv} char frac_digits
+element {struct lconv} {char*} grouping
+element {struct lconv} {char*} int_curr_symbol
+element {struct lconv} char int_frac_digits
+element {struct lconv} {char*} mon_decimal_point
+element {struct lconv} {char*} mon_thousands_sep
+element {struct lconv} {char*} mon_grouping
+element {struct lconv} {char*} negative_sign
+element {struct lconv} char n_cs_precedes
+element {struct lconv} char n_sep_by_space
+element {struct lconv} char n_sign_posn
+element {struct lconv} {char*} positive_sign
+element {struct lconv} char p_cs_precedes
+element {struct lconv} char p_sep_by_space
+element {struct lconv} char p_sign_posn
+element {struct lconv} {char*} thousands_sep
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+element {struct lconv} char int_n_cs_precedes
+element {struct lconv} char int_n_sep_by_space
+element {struct lconv} char int_n_sign_posn
+element {struct lconv} char int_p_cs_precedes
+element {struct lconv} char int_p_sep_by_space
+element {struct lconv} char int_p_sign_posn
+#endif
+
+macro-constant NULL == 0
+
+macro-int-constant LC_ALL
+macro-int-constant LC_COLLATE
+macro-int-constant LC_CTYPE
+#if !defined ISO && !defined ISO99 && !defined ISO11
+macro-int-constant LC_MESSAGES
+#endif
+macro-int-constant LC_MONETARY
+macro-int-constant LC_NUMERIC
+macro-int-constant LC_TIME
+
+#if defined XOPEN2K8 || defined POSIX2008
+constant LC_GLOBAL_LOCALE
+
+macro LC_COLLATE_MASK
+macro LC_CTYPE_MASK
+macro LC_MESSAGES_MASK
+macro LC_MONETARY_MASK
+macro LC_NUMERIC_MASK
+macro LC_TIME_MASK
+macro LC_ALL_MASK
+
+type locale_t
+#endif
+
+function {struct lconv*} localeconv (void)
+function {char*} setlocale (int, const char*)
+#if defined XOPEN2K8 || defined POSIX2008
+function locale_t duplocale (locale_t)
+function void freelocale (locale_t)
+function locale_t newlocale (int, const char*, locale_t)
+function locale_t uselocale (locale_t)
+#endif
+
+allow LC_[ABCDEFGHIJKLMNOPQRSTUVWXYZ]*
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif
+#if defined XOPEN2K8 || defined POSIX2008
+allow LC_*_MASK
+#endif

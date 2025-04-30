@@ -1,0 +1,5 @@
+libc {
+  GLIBC_2.15 {
+    fallocate64;
+  }
+}

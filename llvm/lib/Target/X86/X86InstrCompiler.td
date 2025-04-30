@@ -1190,33 +1190,87 @@ def : Pat<(i32 (atomic_load_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_64 addr:$src)), (MOV64rm addr:$src)>;
 
 // Floating point loads/stores.
-def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
-          (MOVSSmr addr:$dst, FR32:$src)>, Requires<[UseSSE1]>;
-def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
-          (VMOVSSmr addr:$dst, FR32:$src)>, Requires<[UseAVX]>;
-def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
-          (VMOVSSZmr addr:$dst, FR32:$src)>, Requires<[HasAVX512]>;
+def : Pat<(atomic_store_32(i32(bitconvert(f32 FR32
+                                          : $src))),
+           addr
+           : $dst),
+          (MOVSSmr addr
+           : $dst, FR32
+           : $src)>,
+      Requires<[UseSSE1, ShouldCombineMovss]>;
+def : Pat<(atomic_store_32(i32(bitconvert(f32 FR32
+                                          : $src))),
+           addr
+           : $dst),
+          (VMOVSSmr addr
+           : $dst, FR32
+           : $src)>,
+      Requires<[UseAVX, ShouldCombineMovss]>;
+def : Pat<(atomic_store_32(i32(bitconvert(f32 FR32
+                                          : $src))),
+           addr
+           : $dst),
+          (VMOVSSZmr addr
+           : $dst, FR32
+           : $src)>,
+      Requires<[HasAVX512, ShouldCombineMovss]>;
 
-def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
-          (MOVSDmr addr:$dst, FR64:$src)>, Requires<[UseSSE2]>;
-def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
-          (VMOVSDmr addr:$dst, FR64:$src)>, Requires<[UseAVX]>;
-def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
-          (VMOVSDmr addr:$dst, FR64:$src)>, Requires<[HasAVX512]>;
+def : Pat<(atomic_store_64(i64(bitconvert(f64 FR64
+                                          : $src))),
+           addr
+           : $dst),
+          (MOVSDmr addr
+           : $dst, FR64
+           : $src)>,
+      Requires<[UseSSE2, ShouldCombineMovss]>;
+def : Pat<(atomic_store_64(i64(bitconvert(f64 FR64
+                                          : $src))),
+           addr
+           : $dst),
+          (VMOVSDmr addr
+           : $dst, FR64
+           : $src)>,
+      Requires<[UseAVX, ShouldCombineMovss]>;
+def : Pat<(atomic_store_64(i64(bitconvert(f64 FR64
+                                          : $src))),
+           addr
+           : $dst),
+          (VMOVSDmr addr
+           : $dst, FR64
+           : $src)>,
+      Requires<[HasAVX512, ShouldCombineMovss]>;
 
-def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
-          (MOVSSrm_alt addr:$src)>, Requires<[UseSSE1]>;
-def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
-          (VMOVSSrm_alt addr:$src)>, Requires<[UseAVX]>;
-def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),
-          (VMOVSSZrm_alt addr:$src)>, Requires<[HasAVX512]>;
+def : Pat<(f32(bitconvert(i32(atomic_load_32 addr
+                              : $src)))),
+          (MOVSSrm_alt addr
+           : $src)>,
+      Requires<[UseSSE1, ShouldCombineMovss]>;
+def : Pat<(f32(bitconvert(i32(atomic_load_32 addr
+                              : $src)))),
+          (VMOVSSrm_alt addr
+           : $src)>,
+      Requires<[UseAVX, ShouldCombineMovss]>;
+def : Pat<(f32(bitconvert(i32(atomic_load_32 addr
+                              : $src)))),
+          (VMOVSSZrm_alt addr
+           : $src)>,
+      Requires<[HasAVX512, ShouldCombineMovss]>;
 
-def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
-          (MOVSDrm_alt addr:$src)>, Requires<[UseSSE2]>;
-def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
-          (VMOVSDrm_alt addr:$src)>, Requires<[UseAVX]>;
-def : Pat<(f64 (bitconvert (i64 (atomic_load_64 addr:$src)))),
-          (VMOVSDZrm_alt addr:$src)>, Requires<[HasAVX512]>;
+def : Pat<(f64(bitconvert(i64(atomic_load_64 addr
+                              : $src)))),
+          (MOVSDrm_alt addr
+           : $src)>,
+      Requires<[UseSSE2, ShouldCombineMovss]>;
+def : Pat<(f64(bitconvert(i64(atomic_load_64 addr
+                              : $src)))),
+          (VMOVSDrm_alt addr
+           : $src)>,
+      Requires<[UseAVX, ShouldCombineMovss]>;
+def : Pat<(f64(bitconvert(i64(atomic_load_64 addr
+                              : $src)))),
+          (VMOVSDZrm_alt addr
+           : $src)>,
+      Requires<[HasAVX512, ShouldCombineMovss]>;
 
 //===----------------------------------------------------------------------===//
 // DAG Pattern Matching Rules

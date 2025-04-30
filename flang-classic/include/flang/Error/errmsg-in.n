@@ -1,0 +1,1532 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 23 "Error Messages" "Appendix II - "
+.af EN 001    \" define format for EN
+.de MS
+.br
+.nr EN \\$2
+.in 0
+.sp .25i
+.ne 6
+.nf
+.in +7n
+.ti -7n
+.ft CB
+.if ? ?\\$3? \\$1\\n(EN\\ \\ \\fI<reserved message number>\\f(CB
+.if !? ?\\$3? \\$1\\n(EN\\ \\ \\fI\\$3\\f(CB
+.sp 4p
+.fi
+.ft R
+.ad b
+..
+.nf
+Error message severities:
+
+.ft CW
+     I - informative.
+     W - warning.
+     S - severe error.
+     F - fatal error.
+     V - variable.
+.ft R
+
+.MS V 0 "Internal compiler error. $ $"
+This  message indicates an error in the compiler, rather than
+a user error - although it may be possible for a user error to
+cause an internal error.  The severity may vary; if it is informative or
+warning, correct object code was probably generated - but it is not
+real safe to rely on this.
+Regardless of the severity or cause, internal errors should be reported
+to the compiler maintenance group.
+.MS F 1 "Source input file name not specified"
+On the command line, source file name should be specified either before all
+the switches, or after them.
+.MS F 2 "Unable to open source input file: $"
+Source file name misspelled, file not in current working directory,
+or file is read protected.
+.MS F 3 "Unable to open listing file"
+Probably, user does not have write permission for the current working
+directory.
+.MS F 4 "$ $"
+Generic message for file errors.
+.MS F 5 "Unable to open temporary file - $"
+The compiler uses directory "/usr/tmp" or "/tmp" in which to create
+temporary files.  If neither of these directories is available on
+the node on which the compiler is being used, this error will occur.
+.MS S 6 "Input file empty"
+Source input file does not contain any Fortran statements other
+than comments or compiler directives.
+.MS F 7 "Subprogram too large to compile at this optimization level $"
+Internal compiler data structure overflow, working storage
+exhausted, or some other non-recoverable
+problem related to the size of the subprogram.
+If this error occurs at opt 2, reducing the opt level to 1 may
+work around the problem.
+Moving the subprogram being compiled to its own source file may
+eliminate the problem.
+If this error occurs while compiling a subprogram of fewer than
+2000 statements it should be reported to the compiler maintenance
+group as a possible compiler problem.
+.MS F 8 "Error limit exceeded"
+The compiler gives up because too many severe errors were issued;
+the error limit can be reset on the command line.
+.MS F 9 "Unable to open assembly file"
+Probably, user does not have write permission for the current working
+directory.
+.MS F 10 "File write error occurred $"
+Probably the file system is full.
+.MS S 11 "Unrecognized command line switch: $"
+Refer to PDS reference document for list of allowed compiler switches.
+.MS S 12 "Value required for command line switch: $"
+Certain switches require an immediately following value,
+such as "-opt 2".
+.MS S 13 "Unrecognized value specified for command line switch: $"
+.MS S 14 "Ambiguous command line switch: $"
+Too short an abbreviation was used for one of the switches.
+.MS W 15 "Hexadecimal or octal constant truncated to fit data type"
+.MS I 16 "Identifier, $, truncated to $ chars"
+If -Mstandard is used, an identifier may be at most 63 characters in length;
+characters after the 63rd are ignored. Otherwise, the maximum number of
+characters is specified in gbldefs.h (see #define MAXIDLEN)
+.MS S 17 "Unable to open include file: $"
+File is missing, read protected, or maximum include depth (10) exceeded.
+Remember that the file name should be enclosed in quotes.
+.MS S 18 "Illegal label $ $"
+Used for label 'field' errors or illegal values.
+E.g., in fixed source form,
+the label field (first five characters) of the indicated line contains
+a non-numeric character.
+.MS S 19 "Illegally placed continuation line"
+A continuation line does not follow an initial line, or more than
+99 continuation lines were specified.
+.MS S 20 "Unrecognized compiler directive"
+Refer to PGI reference manual for list of allowed compiler directives.
+.MS S 21 "Label field of continuation line is not blank"
+The first five characters of a continuation line must be blank.
+.MS S 22 "Unexpected end of file - missing END statement"
+.MS W 23 "Syntax error - unbalanced $"
+Unbalanced parentheses or brackets.
+.MS W 24 "CHARACTER or Hollerith constant truncated to fit data type"
+A character or hollerith constant was converted to a data type that was not
+large enough to contain all of the characters in the constant.  This type
+conversion occurs when the constant is used in an arithmetic expression or is
+assigned to a non-character variable.  The character or hollerith constant is
+truncated on the right, that is, if 4 characters are needed then the first 4
+are used and the remaining characters are discarded.
+.MS W 25 "Illegal character ($) - ignored"
+The current line contains a character, possibly non-printing,
+which is not a legal Fortran character (characters inside of character
+or Hollerith constants cannot cause this error).
+As a general rule, all non-printing characters are treated as white space
+characters (blanks and tabs); no error message is generated when this occurs.
+If for some reason, a non-printing character is not treated as a white
+space character,
+its hex representation is printed in the form dd where each d is a hex digit.
+.MS S 26 "Unmatched quote"
+.MS S 27 "Illegal integer constant: $"
+Integer constant is too large for 32 bit word.
+.MS S 28 "Illegal real or double precision constant: $"
+.MS S 29 "Illegal $ constant: $"
+Illegal hexadecimal, octal, or binary constant.
+A hexadecimal constant consists of digits 0..9 and letters A..F or a..f;
+any other character in a hexadecimal constant is illegal.
+An octal constant consists of digits 0..7; any other digit or
+character in an octal constant is illegal.
+A binary constant consists of digits 0 or 1; any other digit or
+character in a binary constant is illegal.
+.MS S 30 "Explicit shape must be specified for $"
+.MS S 31 "Illegal data type length specifier for $"
+The data type length specifier (e.g. 4 in INTEGER*4) is not a
+constant expression that is a member of the set of allowed
+values for this particular data type.
+.MS W 32 "Data type length specifier not allowed for $"
+The data type length specifier (e.g. 4 in INTEGER*4) is not allowed
+in the given syntax (e.g. DIMENSION A(10)*4).
+.MS S 33 "Illegal use of constant $"
+A constant was used in an illegal context, such as on the left side of
+an assignment statement or as the target of a data initialization
+statement.
+.MS S 34 "Syntax error at or near $"
+.MS I 35 "Predefined intrinsic $ loses intrinsic property"
+An intrinsic name was used in a manner inconsistent with the language
+definition for that intrinsic.  The compiler, based on the context, will
+treat the name as a variable or an external function.
+.MS S 36 "Illegal implicit character range"
+First character must alphabetically precede second.
+.MS S 37 "Contradictory data type specified for $"
+The indicated identifier appears in more than one type specification
+statement and different data types are specified for it.
+.MS S 38 "Symbol, $, has not been explicitly declared"
+The indicated identifier must be declared in a type statement;
+this is required when the IMPLICIT NONE statement occurs in the
+subprogram.
+.MS W 39 "Symbol, $, appears illegally in a SAVE statement $"
+An identifier appearing in a SAVE statement must be a local
+variable or array.
+.MS S 40 "Illegal common variable $"
+Indicated identifier is a dummy variable, is already in
+a common block, or has previously been defined to be
+something other than a variable or array.
+.MS W 41 "Illegal use of dummy argument $"
+This error can occur in several situations.  It can occur if dummy
+arguments were specified on a PROGRAM statement.  It can also occur
+if a dummy argument name occurs in a DATA, COMMON, SAVE, or EQUIVALENCE
+statement.
+A program statement must have an empty argument list.
+.MS S 42 "$ is a duplicate dummy argument"
+.MS S 43 "Illegal attempt to redefine $ $"
+An attempt was made to define a symbol in a manner inconsistent with
+an earlier definition of the same symbol.  This can happen for a number
+of reasons.  The message attempts to indicate the situation that occurred.
+.US "\*(tfintrinsic\*(rf"
+An attempt was made to redefine an intrinsic function.
+A symbol that represents an intrinsic function may be redefined if that
+symbol has not been previously verified to be an intrinsic function.  For
+example, the intrinsic \*(tfsin\*(rf can be defined to be an integer array.
+If a symbol is verified to be an intrinsic function via the
+\*(cfINTRINSIC\*(rf statement or via an intrinsic function reference then
+it must be referred to as an intrinsic function for the remainder of the
+program unit.
+.US "\*(tfsymbol\*(rf"
+An attempt was made to redefine a symbol that was
+previously defined.  An example of this is to declare a symbol to be
+a \*(rfPARAMETER\*(rf which was previously declared to be a subprogram
+argument.
+.MS S 44 "Multiple declaration for symbol $"
+A redundant declaration of a symbol has occurred.
+For example, an attempt was made to declare a symbol
+as an \*(cfENTRY\*(rf when that symbol
+was previously declared as an \*(cfENTRY\*(rf.
+.MS S 45 "Data type of entry point $ disagrees with function $"
+The current function has entry points with data types inconsistent with the
+data type of the current function.  For example, the function returns type
+character and an entry point returns type complex.
+.MS S 46 "Data type length specifier in wrong position"
+The CHARACTER data type specifier has a different position for the length
+specifier from the other data types.  Suppose, we want to declare arrays
+ARRAYA and ARRAYB to have 8 elements each having an element length of
+4 bytes.  The difference is that ARRAYA is character and ARRAYB is integer.
+The declarations would be CHARACTER ARRAYA(8)*4 and INTEGER ARRAYB*4(8).
+.MS S 47 "More than seven dimensions specified for array"
+.MS S 48 "Illegal use of '*' in declaration of array $"
+An asterisk may be used only as the upper bound of the last dimension.
+.MS S 49 "Illegal use of '*' in non-subroutine subprogram"
+The alternate return specifier '*' is legal only in the subroutine
+statement.  Programs, functions, and block data are not allowed to
+have alternate return specifiers.
+.MS S 50 "Assumed size array, $, is not a dummy argument"
+.MS S 51 "Unrecognized built-in % function"
+The allowable built-in functions are %VAL, %REF, %LOC, and %FILL.  One
+was encountered that did not match one of these allowed forms.
+.MS S 52 "Illegal argument to %VAL or %LOC"
+.MS S 53 "%REF or %VAL not legal in this context"
+The built-in functions %REF and %VAL can only be used as actual
+parameters in procedure calls.
+.MS W 54 "Implicit character $ used in a previous implicit statement"
+An implicit character has been given an implied data type more than once.
+The implied data type for the implicit character is changed anyway.
+.MS W 55 "Multiple implicit none statements"
+The IMPLICIT NONE statement can occur only once in a subprogram.
+.MS W 56 "Implicit type declaration"
+The -dclchk switch and an implicit declaration following an IMPLICIT
+NONE statement will produce a warning message for IMPLICIT statements.
+.MS S 57 "Illegal equivalence of dummy variable, $"
+Dummy arguments may not appear in EQUIVALENCE statements.
+.MS S 58 "Equivalenced variables $ and $ not in same common block"
+A common block variable must not be equivalenced with a variable
+in another common block.
+.MS S 59 "Conflicting equivalence between $ and $"
+The indicated equivalence implies a storage layout inconsistent
+with other equivalences.
+.MS S 60 "Illegal equivalence of structure variable, $"
+STRUCTURE and UNION variables may not appear in EQUIVALENCE statements.
+.MS S 61 "Equivalence of $ and $ extends common block backwards"
+.MS W 62 "Equivalence forces $ to be unaligned"
+EQUIVALENCE statements have defined an address for the variable
+which has an alignment not optimal for variables of its data type.
+This can occur when INTEGER and CHARACTER data are equivalenced,
+for instance.
+.MS I 63 "Gap in common block $ before $"
+.MS S 64 "Illegal use of $ in DATA statement implied DO loop"
+The indicated variable is referenced where it is
+not an active implied DO index variable.
+.MS S 65 "Repeat factor less than zero"
+.MS S 66 "Too few data constants in initialization statement"
+.MS S 67 "Too many data constants in initialization statement"
+.MS S 68 "Numeric initializer for CHARACTER $ out of range 0 through 255"
+A CHARACTER*1 variable or character array element
+can be initialized to an integer, octal, or hexadecimal constant if that
+constant is in the range 0 through 255.
+.MS S 69 "Illegal implied DO expression"
+The only operations allowed within an implied DO expression are
+integer +, -, *, and /.
+.MS S 70 "Incorrect sequence of statements $"
+The statement order is incorrect.  For instance, an IMPLICIT NONE statement
+must precede a specification statement which in turn must precede an
+executable statement.
+.MS S 71 "Executable statements not allowed in block data"
+.MS S 72 "Assignment operation illegal to $ $"
+The destination of an assignment operation must be a variable, array
+reference, or vector reference.  The assignment operation may be by
+way of an assignment statement, a data statement, or the index variable
+of an implied DO-loop.  The compiler has determined that the identifier
+used as the destination, is not a storage location.  The error message
+attempts to indicate the type of entity used.
+.US "\*(tfentry point\*(rf"
+An assignment to an entry point that was not
+a function procedure was attempted.
+.US "\*(tfexternal procedure\*(rf"
+An assignment to an external procedure
+or a Fortran intrinsic name was attempted.
+if the identifier is the name of an entry point
+that is not a function, an external procedure...
+.MS S 73 "Intrinsic or predeclared, $, cannot be passed as an argument"
+.MS S 74 "Illegal number or type of arguments to $ $"
+The indicated symbol is an intrinsic or generic function, or
+a predeclared subroutine or function,
+requiring a certain number of arguments of a fixed data type.
+.MS S 75 "Subscript, substring, or argument illegal in this context for $"
+This can happen if you try to doubly index an array such as ra(2)(3).
+This also applies to substring and function references.
+.MS S 76 "Subscripts specified for non-array variable $"
+.MS S 77 "Subscripts omitted from array $"
+.MS S 78 "Wrong number of subscripts specified for $"
+.MS S 79 "Keyword form of argument illegal in this context for $$"
+.MS S 80 "Subscript for array $ is out of bounds"
+.MS S 81 "Illegal selector $ $"
+.MS S 82 "Illegal substring expression for variable $"
+Substring expressions must be of type integer and if constant
+must be greater than zero.
+.MS S 83 "Vector expression used where scalar expression required"
+A vector expression was used in an illegal context.  For example,
+iscalar = iarray, where a scalar is assigned the value of an array.
+Also, character and record references are not vectorizable.
+.MS S 84 "Illegal use of symbol $ $"
+This message is used for many different errors.
+.MS S 85 "Incorrect number of arguments to statement function $"
+.MS S 86 "Dummy argument to statement function must be a variable"
+.MS S 87 "Non-constant expression where constant expression required"
+.MS S 88 "Recursive subroutine or function call of $"
+A function may not call itself.
+.MS S 89 "Illegal use of symbol, $, with character length = *"
+Symbols of type CHARACTER*(*) must be dummy variables and must
+not be used as statement function dummy parameters and statement
+function names.  Also, a dummy variable of type CHARACTER*(*) cannot
+be used as a function.
+.MS S 90 "Hollerith constant more than 4 characters"
+In certain contexts, Hollerith constants may not be more
+than 4 characters long.
+.MS S 91 "Constant expression of wrong data type"
+.MS S 92 "Illegal use of variable length character expression"
+A character expression used as an actual argument, or in certain
+contexts within I/O statements, must not consist of a concatenation
+involving a passed length character variable.
+.MS W 93 "Type conversion of expression performed"
+An expression of some data type appears in a context which requires
+an expression of some other data type.
+The compiler generates code to convert the expression into the required type.
+.MS S 94 "Variable $ is of wrong data type $"
+The indicated variable is used in a context which requires a variable
+of some other data type.
+.MS S 95 "Expression has wrong data type"
+An expression of some data type appears in a context which requires
+an expression of some other data type.
+.MS S 96 "Illegal complex comparison"
+The relations .LT., .GT., .GE., and .LE. are not
+allowed for complex values.
+.MS S 97 "Statement label $ has been defined more than once"
+More than one statement with the indicated
+statement number occurs in the subprogram.
+.MS S 98 "Divide by zero"
+.MS S 99 "Illegal use of $"
+Aggregate record references may only appear in aggregate assignment
+statements, unformatted I/O statements, and as parameters to subprograms.
+They may not appear, for example, in expressions.  Also, records with
+differing structure types may not be assigned to one another.
+.MS S 100 "Expression cannot be promoted to a vector"
+An expression was used that required a scalar quantity to be promoted
+to a vector illegally.  For example, the assignment of a character constant
+string to a character array.  Records, too, cannot be promoted to vectors.
+.MS S 101 "Vector operation not allowed on $"
+Record and character typed entities may only be referenced as scalar quantities.
+.MS S 102 "Arithmetic IF expression has wrong data type"
+The parenthetical expression of an arithmetic if statement must be an
+integer, real, or doubleprecision scalar expression.
+.MS S 103 "Type conversion of subscript expression for $"
+The data type of a subscript expression must be integer.  If it is not, it is
+converted.
+.MS S 104 "Illegal control structure $"
+This message is issued for a number of errors involving
+IF-THEN statements and DO loops.
+If the line number specified is the last line (END statement) of
+the subprogram, the error is probably an unterminated DO loop or
+IF-THEN statement.
+.MS S 105 "Unmatched ELSEIF, ELSE or ENDIF statement"
+An ELSEIF, ELSE, or ENDIF statement cannot be matched with a
+preceding IF-THEN statement.
+.MS S 106 "DO index variable must be a scalar variable"
+The DO index variable cannot be an array name, a subscripted variable,
+a PARAMETER name, a function name, a structure name, etc.
+.MS S 107 "Illegal assigned goto variable $"
+.MS S 108 "Illegal variable, $, in NAMELIST group $"
+A NAMELIST group can only consist of arrays and scalars.
+.MS I 109 "Overflow in $ constant $, constant truncated at left"
+A non-decimal (hexadecimal, octal, or binary) constant requiring more than
+64-bits produces an overflow.  The constant is truncated at
+left (e.g. '1234567890abcdef1'x will be '234567890abcdef1'x).
+.MS I 110 " "
+.MS I 111 "Underflow of real or double precision constant"
+.MS I 112 "Overflow of real or double precision constant"
+.MS S 113 "Label $ is referenced but never defined"
+.MS S 114 "Cannot initialize $"
+.MS W 115 "Assignment to DO variable $ in loop"
+.MS S 116 "Illegal use of pointer-based variable $ $"
+.MS S 117 "Statement not allowed within a $ definition"
+The statement may not appear in a STRUCTURE or derived type definition.
+.MS S 118 "Statement not allowed in BLOCK, DO, IF, WHERE, or other executable construct"
+.MS I 119 "Redundant specification for $"
+Data type of indicated symbol specified more than once.
+.MS I 120 "Label $ is defined but never referenced"
+.MS I 121 "Operation requires logical or integer data types"
+An operation in an expression was attempted on data having a data type
+incompatible with the operation.  For example, a logical expression can
+consist of only logical elements of type integer or logical.  Real data
+would be invalid.
+.MS I 122 "Character string truncated"
+Character string or Hollerith constant appearing in a DATA statement
+or PARAMETER statement has been truncated to fit the declared size of
+the corresponding identifier.
+.MS W 123 "Hollerith length specification too big, reduced"
+The length specifier field of a hollerith constant specified more characters
+than were present in the character field of the hollerith constant.  The
+length specifier was reduced to agree with the number of characters
+present.
+.MS S 124 "Relational expression mixes character with numeric data"
+A relational expression is used to compare two arithmetic expressions or
+two character expressions.  A character expression cannot be compared to an
+arithmetic expression.
+.MS I 125 "Dummy procedure $ not declared EXTERNAL"
+A dummy argument which is not declared in an EXTERNAL statement is used
+as the subprogram name in a CALL statement, or is called as a function,
+and is therefore assumed to be a dummy procedure.
+This message can result from a failure to declare a dummy array.
+.MS I 126 "Name $ is not an intrinsic function"
+.MS I 127 "Optimization level for $ changed to opt 1 $"
+.MS W 128 "Integer constant truncated to fit data type: $ "
+An integer constant will be truncated when assigned to data types smaller
+than 32-bits, such as a BYTE.
+.MS I 129 "Floating point overflow. Check constants and constant expressions"
+.MS I 130 "Floating point underflow. Check constants and constant expressions"
+.MS I 131 "Integer overflow. Check floating point expressions cast to integer"
+.MS I 132 "Floating pt. invalid oprnd. Check constants and constant expressions"
+.MS I 133 "Divide by 0.0. Check constants and constant expressions"
+.MS S 134 "Illegal attribute $ $"
+.MS W 135 "Missing STRUCTURE name field"
+A STRUCTURE name field is required on the outermost structure.
+.MS W 136 "Field-namelist not allowed"
+The field-namelist field of the STRUCTURE statement is disallowed on the
+outermost structure.
+.MS W 137 "Field-namelist is required in nested structures"
+.MS W 138 "Multiply defined STRUCTURE member name $"
+A member name was used more than once within a structure.
+.MS W 139 "Structure $ in RECORD statement not defined"
+A RECORD statement contains a reference to a STRUCTURE that has not yet been
+defined.
+.MS S 140 "Variable $ is not a RECORD"
+.MS S 141 "$ required on left of $"
+.MS S 142 "$ is not a component of this OBJECT"
+.MS S 143 "$ requires initializer "
+.MS W 144 "NEED ERROR MESSAGE $ $"
+This is used as a temporary message for compiler development.
+.MS W 145 "%FILL only valid within STRUCTURE block"
+The %FILL special name was used outside of a STRUCTURE multiline statement.
+It is only valid when used within a STRUCTURE multiline statement even
+though it is ignored.
+.MS S 146 "Expression must be character type"
+.\".MS S 146 "Arithmetic expression where character value required"
+.MS S 147 "Character expression not allowed in this context"
+.\".MS S 147 "Character expression where arithmetic value required"
+.MS S 148 "Reference to $ required"
+An aggregate reference to a record was expected during statement compilation
+but another data type was found instead.
+.MS S 149 "Record where arithmetic value required"
+An aggregate record reference was encountered when an arithmetic
+expression was expected.
+.MS S 150 "Structure, Record, derived type, or member $ not allowed in this context"
+A structure, record, or member reference was found in a context which is
+not supported.
+.MS S 151 "Empty TYPE, STRUCTURE, UNION, or MAP"
+TYPE - ENDTYPE, STRUCTURE - ENDSTRUCTURE, UNION - ENDUNION MAP - ENDMAP
+declaration contains no members.
+.MS S 152 "All dimension specifiers must be ':'"
+.MS S 153 "Array objects are not conformable $"
+.MS S 154 "DISTRIBUTE target, $, must be a processor"
+.MS S 155 "$ $"
+.MS S 156 "Number of colons and triplets must be equal in ALIGN $ with $"
+.MS S 157 "Illegal subscript use of ALIGN dummy $ - $"
+.MS S 158 "Alternate return not specified in SUBROUTINE or ENTRY"
+An alternate return can only be used if alternate return
+specifiers appeared in the SUBROUTINE or ENTRY statements.
+.MS S 159 "Alternate return illegal in FUNCTION subprogram"
+An alternate return cannot be used in a FUNCTION.
+.MS S 160 "ENDSTRUCTURE, ENDUNION, or ENDMAP does not match top"
+.MS S 161 "Vector subscript must be rank-one array"
+.MS W 162 "Not equal test of loop control variable $ replaced with < or > test."
+.MS S 163 " "
+.MS S 164 "Overlapping data initializations of $"
+An attempt was made to data initialize a variable or
+array element already initialized.
+.MS S 165 "$ appeared more than once as a subprogram"
+A subprogram name appeared more than once in the source file.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS S 166 "$ cannot be a common block and a subprogram"
+A name appeared as a common block name and a subprogram name.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS I 167 "Inconsistent size of common block $"
+A common block occurs in more than one subprogram of a source file
+and its size is not identical. The maximum size is chosen.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS S 168 "Incompatible size of common block $"
+A common block occurs in more than one subprogram of a source file
+and is initialized in one subprogram.
+Its initialized size was found to be less than
+its size in the other subprogram(s).
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS W 169 "Multiple data initializations of common block $"
+A common block is initialized in more than one subprogram of a source file.
+Only the first set of initializations apply.
+The message is applicable only when an assembly file is the
+output of the compiler.
+.MS W 170 "PGI Fortran extension: $ $"
+Use of a nonstandard feature. A description of the feature is provided.
+.MS W 171 "PGI Fortran extension: nonstandard statement type $"
+.MS W 172 "PGI Fortran extension: numeric initialization of CHARACTER $"
+A CHARACTER*1 variable or array element was initialized with a numeric value.
+.MS W 173 "PGI Fortran extension: nonstandard use of data type length specifier"
+.MS W 174 "PGI Fortran extension: type declaration contains data initialization"
+.MS W 175 "PGI Fortran extension: IMPLICIT range contains nonalpha characters"
+.MS W 176 "PGI Fortran extension: nonstandard operator $"
+.MS W 177 "PGI Fortran extension: nonstandard use of keyword argument $"
+.MS W 178 " "
+.MS W 179 "PGI Fortran extension: use of structure field reference $"
+.MS W 180 "PGI Fortran extension: nonstandard form of constant"
+.MS W 181 "PGI Fortran extension: & alternate return"
+.MS W 182 "PGI Fortran extension: mixed non-character and character elements in COMMON $"
+.MS W 183 "PGI Fortran extension: mixed non-character and character EQUIVALENCE ($,$)"
+.MS W 184 "Mixed type elements (numeric and/or character types) in COMMON $"
+.MS W 185 "Mixed numeric and/or character type EQUIVALENCE ($,$)"
+.MS S 186 "Argument missing for formal argument $"
+.MS S 187 "Too many arguments specified for $"
+.MS S 188 "Argument number $ to $: type mismatch"
+.MS S 189 "Argument number $ to $: association of scalar actual argument to array dummy argument"
+.MS S 190 "Argument number $ to $: non-conformable arrays"
+.MS S 191 "Argument number $ to $ cannot be an assumed-size array"
+.MS S 192 "Argument number $ to $ must be a label"
+.MS W 193 "Argument number $ to $ does not match INTENT (OUT)"
+.MS W 194 "INTENT(IN) argument cannot be defined - $"
+.MS S 195 "Statement may not appear in an INTERFACE block $"
+.MS S 196 "Deferred-shape specifiers are required for $"
+.MS S 197 "Invalid qualifier or qualifier value (/$) in OPTIONS statement"
+An illegal qualifier was found or a value was specified for a qualifier
+which does not expect a value.
+In either case, the qualifier for which the error occurred is indicated
+in the error message.
+.MS S 198 "$ $ in ALLOCATE/DEALLOCATE"
+.MS W 199 "Unaligned memory reference"
+A memory reference occurred whose address does not meet its
+data alignment requirement.
+.MS S 200 "Missing UNIT/FILE specifier"
+.MS S 201 "Illegal I/O specifier - $"
+.MS S 202 "Repeated I/O specifier - $"
+.MS S 203 "FORMAT statement has no label"
+.MS S 204 "$ $"
+Miscellaneous I/O error.
+.MS S 205 "Illegal specification of scale factor"
+The integer following + or - has been omitted, or P does not follow
+the integer value.
+.MS S 206 "Repeat count is zero"
+.MS S 207 "Integer constant expected in edit descriptor"
+.MS S 208 "Period expected in edit descriptor"
+.MS S 209 "Illegal edit descriptor"
+.MS S 210 "Exponent width not used in the Ew.dEe or Gw.dEe edit descriptors"
+.MS S 211 "Internal I/O not allowed in this I/O statement"
+.MS S 212 "Illegal NAMELIST I/O"
+Namelist I/O cannot be performed with internal, unformatted, formatted,
+and list-directed I/O. Also, I/O lists must not be present.
+.MS S 213 "$ is not a NAMELIST group name"
+.MS S 214 "Input item is not a variable reference"
+.MS S 215 "Assumed sized array name cannot be used as an I/O item or specifier"
+An assumed sized array was used as an item to be read or written or as
+an I/O specifier (i.e., FMT = array-name).  In these contexts the size
+of the array must be known.
+.MS S 216 "STRUCTURE/UNION cannot be used as an I/O item"
+.MS S 217 "ENCODE/DECODE buffer must be a variable, array, or array element"
+.MS S 218 "Statement labeled $ $"
+.MS S 219 "Array $ is too large"
+If supported, compile with -mcmodel=medium or -Mlarge_arrays.
+.MS S 220 "Redefining predefined macro $"
+.MS S 221 "#elif after #else"
+A preprocessor #elif directive was found after a #else directive; only
+#endif is allowed in this context.
+.MS S 222 "#else after #else"
+A preprocessor #else directive was found after a #else directive; only
+#endif is allowed in this context.
+.MS S 223 "#if-directives too deeply nested"
+Preprocessor #if directive nesting exceeded the maximum allowed (currently
+10).
+.MS S 224 "Actual parameters too long for $"
+The total length of the
+parameters in a macro call to the indicated macro exceeded the maximum
+allowed (currently 2048).
+.MS W 225 "Argument mismatch for $"
+The number of arguments supplied in the call to the indicated macro did
+not agree with the number of parameters in the macro's definition.
+.MS F 226 "Can't find include file $"
+The indicated include file could not be opened.
+.MS S 227 "Definition too long for $"
+The length of the macro definition of the indicated macro exceeded the
+maximum allowed (currently 2048).
+.MS S 228 "EOF in comment"
+The end of a file was encountered while processing a comment.
+.MS S 229 "EOF in macro call to $"
+The end of a file was encountered while processing a call to the indicated
+macro.
+.MS S 230 "EOF in string"
+The end of a file was encountered while processing a quoted string.
+.MS S 231 "Formal parameters too long for $"
+The total length of the
+parameters in the definition
+of the indicated macro exceeded the maximum
+allowed (currently 2048).
+.MS S 232 "Identifier too long"
+The length of an identifier
+exceeded the maximum allowed (currently
+2048).
+.MS F 233 "Macro recursion: $"
+.MS W 234 "Illegal directive name"
+The sequence of characters following a # sign was not an identifier.
+.MS W 235 "Illegal macro name"
+A macro name was not an identifier.
+.MS S 236 "Illegal number $"
+The indicated number contained a syntax error.
+.MS F 237 "Line too long"
+The input source line length exceeded the maximum allowed (currently 2048).
+.MS W 238 "Missing #endif"
+End of file was encountered before a required #endif directive was found.
+.MS W 239 "Missing argument list for $"
+A call of the indicated macro had no argument list.
+.MS S 240 "Number too long"
+The length of a number exceeded the maximum allowed (currently 2048).
+.MS W 241 "Redefinition of symbol $"
+The indicated macro name was redefined.
+.MS I 242 "Redundant definition for symbol $"
+A definition for the indicated macro name was found that was the same as
+a previous definition.
+.MS F 243 "String too long"
+The length of a quoted string exceeded the maximum allowed (currently 2048).
+.MS S 244 "Syntax error in #define, formal $ not identifier"
+A formal parameter that was not an identifier was used in a macro definition.
+.MS W 245 "Syntax error in #define, missing blank after name or arglist"
+There was no space or tab between a macro name or argument list
+and the macro's definition.
+.MS S 246 "Syntax error in #if"
+A syntax error was found while parsing the expression following a
+#if or #elif directive.
+.MS S 247 "Syntax error in #include"
+The #include directive was not correctly formed.
+.MS W 248 "Syntax error in #line"
+A #line directive was not correctly formed.
+.MS W 249 "Syntax error in #module"
+A #module directive was not correctly formed.
+.MS W 250 "Syntax error in #undef"
+A #undef directive was not correctly formed.
+.MS W 251 "Token after #ifdef must be identifier"
+The #ifdef directive was not followed by an identifier.
+.MS W 252 "Token after #ifndef must be identifier"
+The #ifndef directive was not followed by an identifier.
+.MS S 253 "Too many actual parameters to $"
+The number of actual arguments to the indicated macro exceeded the maximum
+allowed (currently 31).
+.MS S 254 "Too many formal parameters to $"
+The number of formal arguments to the indicated macro exceeded the maximum
+allowed (currently 31).
+.MS F 255 "Too much pushback"
+The preprocessor ran out of space while processing a macro expansion.
+The macro may be recursive.
+.MS W 256 "Undefined directive $"
+The identifier following a # was not a directive name.
+.MS S 257 "EOF in #include directive"
+End of file was encountered while processing a #include directive.
+.MS S 258 "Unmatched #elif"
+A #elif directive was encountered with no preceding #if or #elif
+directive.
+.MS S 259 "Unmatched #else"
+A #else directive was encountered with no preceding #if or #elif
+directive.
+.MS S 260 "Unmatched #endif"
+A #endif directive was encountered with no preceding #if, #ifdef, or
+#ifndef directive.
+.MS S 261 "Include files nested too deeply"
+The nesting depth of #include directives exceeded the maximum
+(currently 20).
+.MS S 262 "Unterminated macro definition for $"
+A newline was encountered in the formal parameter list for the indicated
+macro.
+.MS S 263 "Unterminated string or character constant"
+A newline with no preceding backslash was found in a quoted string.
+.MS I 264 "Possible nested comment"
+The characters /* were found within a comment.
+.MS S 265 " "
+.MS S 266 " "
+.MS S 267 " "
+.MS W 268 "Cannot inline subprogram; common block mismatch"
+.MS W 269 "Cannot inline subprogram; argument type mismatch"
+This message may be Severe if have gone too far to undo inlining process.
+.MS F 270  "Missing -exlib option"
+.MS W 271 "Can't inline $ - wrong number of arguments"
+.MS I 272 "Argument of inlined function not used"
+.MS S 273 "Inline library not specified on command line (-inlib switch)"
+.MS F 274 "Unable to access file $/TOC"
+.MS S 275 "Unable to open file $ while extracting or inlining"
+.MS F 276 "Assignment to constant actual parameter in inlined subprogram"
+.MS I 277 "Inlining of function $ may result in recursion"
+.MS S 278 " "
+.MS W 279 "Possible use of $ before definition in $"
+The optimizer has detected the possibility that a variable is used
+before it has been assigned a value.
+The names of the variable and the function in which
+the use occurred are listed.
+The line number, if specified, is the line number of the basic block
+containing the use of the variable.
+.MS W 280 "Syntax error in directive $"
+Messages 280-300 RESERVED for directive handling
+.MS W 281 "Directive ignored - $ $"
+.MS F 282 "#error $"
+This message appears when preprocessing a file and a #error line is reached.
+.MS F 283 "#warning $"
+This message appears when preprocessing a file and a #warning line is reached.
+.MS W 284 "A statement with an HPF keyword must begin with $ - $"
+HPF keyword statements (like DISTRIBUTE, ALIGN) must appear on lines
+that begin with the HPF sentinel !hpf$.
+.MS E 285 "Source line too long"
+The source line was too long to process.
+.MS W 286 "Each CDIR directive must appear on its own line"
+A classical CDIR directive must appear at the start of the line.
+.MS W 287 "Unrecognized $ directive - $"
+This line began with the HPF sentinel !hpf$, the OpenMP sentinel !$omp,
+the memory sentinel !$mem, the accelerator sentinel !$acc,
+the DEC sentinel !dec$, or the PGI sentinel !pgi$,
+but the statement or directive keyword was not recognized.
+.MS W 288 "Unrecognized $ directive"
+This line began with the HPF sentinel !hpf$, the OpenMP sentinel !$omp,
+the memory sentinel !$mem, the accelerator sentinel !$acc,
+the DEC sentinel !dec$, or the PGI sentinel !pgi$,
+but the statement or directive keyword was missing or not recognized.
+.MS E 290 "Unexpected continuation line"
+This may be caused by a continuation line following a directive line.
+.MS E 291 "Non-comment character after '&'"
+A Fortran line may end with ampersand (&), signifying that the statement will be
+continued on the next line, but this line may only contain blanks and comments after
+the ampersand.
+.MS E 292 "Illegal continuation line"
+A continuation line appeared after a directive line.
+.MS E 295 "Non-comment character after a '&'"
+The ampersand signifies the end of this line, and that the statement will
+be contined on the next non-comment line.  Only a comment is allowed
+after the ampersand on this line.
+.MS W 299 "Unrecognized directive - $"
+.MS S 300 "Too few data constants in initialization of derived type $"
+.MS S 301 "$ must be TEMPLATE or PROCESSOR"
+.MS S 302 "Unmatched END$ statement"
+.MS S 303 "END statement for $ required in an interface block"
+.MS S 304 "EXIT/CYCLE statement must appear in a DO/DOWHILE loop$$"
+.MS S 305 "$ cannot be named, $"
+.MS S 306 "$ names more than one construct"
+.MS S 307 "$ must have the construct name $"
+.MS S 308 "DO may not terminate at an EXIT, CYCLE, RETURN, STOP, GOTO, or arithmetic IF"
+.MS S 309 "Incorrect name, $, specified in END statement"
+.MS S 310 "$ $"
+Generic message for MODULE errors.
+.MS W 311 "Non-replicated mapping for $ array, $, ignored"
+.MS W 312 "Array $ should be declared SEQUENCE"
+.MS W 313 "Subprogram $ called within INDEPENDENT loop is not PURE"
+.MS E 314 "IPA: actual argument $ is a label, but dummy argument $ is not an asterisk"
+The call passes a label to the subprogram; the corresponding dummy argument
+in the subprogram should be an asterisk to declare this as the alternate
+return.
+.MS I 315 "IPA: routine $, $ constant dummy arguments"
+This many dummy arguments are being replaced by constants
+due to interprocedural analysis.
+.MS I 316 "IPA: routine $, $ INTENT(IN) dummy arguments"
+This many dummy arguments are being marked as INTENT(IN)
+due to interprocedural analysis.
+.MS I 317 "IPA: routine $, $ array alignments propagated"
+This many array alignments were propagated by
+interprocedural analysis.
+.MS I 318 "IPA: routine $, $ distribution formats propagated"
+This many array distribution formats were propagated by
+interprocedural analysis.
+.MS I 319 "IPA: routine $, $ distribution targets propagated"
+This many array distribution targets were propagated by
+interprocedural analysis.
+.MS I 320 "IPA: routine $, $ common blocks optimized"
+This many mapped common blocks were optimized by
+interprocedural analysis.
+.MS I 321 "IPA: routine $, $ common blocks not optimized"
+This many mapped common blocks were not optimized by
+interprocedural analysis, either because they were declared differently
+in different routines, or they did not appear in the main program.
+.MS I 322 "IPA: analyzing main program $"
+Interprocedural analysis is building the call graph and propagating
+information with the named main program.
+.MS I 323 "IPA: collecting information for $"
+Interprocedural analysis is saving information for the current subprogram
+for subsequent analysis and propagation.
+.MS W 324 "IPA file $ appears to be out of date"
+.MS W 325 "IPA file $ is for wrong subprogram: $"
+.MS W 326 "Unable to open file $ to propagate IPA information to $"
+.MS I 327 "IPA: $ subprograms analyzed"
+.MS I 328 "IPA: $ dummy arguments replaced by constants"
+.MS I 329 "IPA: $ INTENT(IN) dummy arguments should be INTENT(INOUT)"
+.MS I 330 "IPA: $ dummy arguments changed to INTENT(IN)"
+.MS I 331 "IPA: $ inherited array alignments replaced"
+.MS I 332 "IPA: $ transcriptive distribution formats replaced"
+.MS I 333 "IPA: $ transcriptive distribution targets replaced"
+.MS I 334 "IPA: $ descriptive/prescriptive array alignments verified"
+.MS I 335 "IPA: $ descriptive/prescriptive distribution formats verified"
+.MS I 336 "IPA: $ descriptive/prescriptive distribution targets verified"
+.MS I 337 "IPA: $ common blocks optimized"
+.MS I 338 "IPA: $ common blocks not optimized"
+.MS S 339 "Bad IPA contents file: $"
+.MS S 340 "Bad IPA file format: $"
+.MS S 341 "Unable to create file $ while analyzing IPA information"
+.MS S 342 "Unable to open file $ while analyzing IPA information"
+.MS S 343 "Unable to open IPA contents file $"
+.MS S 344 "Unable to create file $ while collecting IPA information"
+.MS F 345 "Internal error in $: table overflow"
+Analysis failed due to a table overflowing its maximum size.
+.MS W 346 "Subprogram $ appears twice"
+The subprogram appears twice in the same source file;
+IPA will ignore the first appearance.
+.MS F 347 "Missing -ipalib option"
+Interprocedural analysis, enabled with the -ipacollect, -ipaanalyze,
+or -ipapropagate options, requires the -ipalib option to specify the library
+directory.
+.MS W 348 "Common /$/ $ has different distribution target"
+The array was declared in a common block with a different distribution target
+in another subprogram.
+.MS W 349 "Common /$/ $ has different distribution format"
+The array was declared in a common block with a different distribution format
+in another subprogram.
+.MS W 350 "Common /$/ $ has different alignment"
+The array was declared in a common block with a different alignment
+in another subprogram.
+.MS W 351 "Wrong number of arguments passed to $"
+The subroutine or function statement for the given subprogram has a different
+number of dummy arguments than appear in the call.
+.MS W 352 "Wrong number of arguments passed to $ when bound to $"
+The subroutine or function statement for the given subprogram has a different
+number of dummy arguments than appear in the call to the EXTERNAL name given.
+.MS W 353 "Subprogram $ is missing"
+A call to a subroutine or function with this name appears, but it could
+not be found or analyzed.
+.MS I 354 "Subprogram $ is not called"
+No calls to the given subroutine or function appear anywhere in the program.
+.MS W 355 "Missing argument in call to $"
+A nonoptional argument is missing in a call to the given subprogram.
+.MS I 356 "Array section analysis incomplete"
+Interprocedural analysis for array section arguments is incomplete;
+some information may not be available for optimization.
+.MS I 357 "Expression analysis incomplete"
+Interprocedural analysis for expression arguments is incomplete;
+some information may not be available for optimization.
+.MS W 358 "Dummy argument $ is EXTERNAL, but actual is not subprogram"
+The call statement passes a scalar or array to a dummy argument
+that is declared EXTERNAL.
+.MS W 359 "SUBROUTINE $ passed to FUNCTION dummy argument $"
+The call statement passes a subroutine name to a dummy argument
+that is used as a function.
+.MS W 360 "FUNCTION $ passed to FUNCTION dummy argument $ with different result type"
+The call statement passes a function argument to a function dummy
+argument, but the dummy has a different result type.
+.MS W 361 "FUNCTION $ passed to SUBROUTINE dummy argument $"
+The call statement passes a function name to a dummy argument
+that is used as a subroutine.
+.MS W 362 "Argument $ has a different type than dummy argument $"
+The type of the actual argument is different than the type of the corresponding
+dummy argument.
+.MS W 363 "Dummy argument $ is a POINTER but actual argument $ is not"
+The dummy argument is a pointer, so the actual argument must be also.
+.MS W 364 "Array or array expression passed to scalar dummy argument $"
+The actual argument is an array, but the dummy argument is a scalar variable.
+.MS W 365 "Scalar or scalar expression passed to array dummy argument $"
+The actual argument is a scalar variable, but the dummy argument is an array.
+.MS F 366 "Internal error: interprocedural analysis fails"
+An internal error occurred during interprocedural analysis;
+please report this to the compiler maintenance group.
+If user errors were reported when collecting IPA information
+or during IPA analysis, correcting them may avoid this error.
+.MS I 367 "Array $ bounds cannot be matched to formal argument"
+Passing a nonsequential array to a sequential dummy argument may require
+copying the array to sequential storage.
+The most common cause is passing an ALLOCATABLE array or array expression
+to a dummy argument that is declared with explicit bounds.
+Declaring the dummy argument as assumed shape, with bounds (:,:,:), will
+remove this warning.
+.MS W 368 "Array-valued expression passed to scalar dummy argument $"
+The actual argument is an array-valued expression, but the dummy argument
+is a scalar variable.
+.MS W 369 "Dummy argument $ has different rank than actual argument"
+The actual argument is an array or array-valued expression with a different
+rank than the dummy argument.
+.MS W 370 "Dummy argument $ has different shape than actual argument"
+The actual argument is an array or array-valued expression with a different
+shape than the dummy argument;
+this may require copying the actual argument into sequential storage.
+.MS W 371 "Dummy argument $ is INTENT(IN) but may be modified"
+The dummy argument was declared as INTENT(IN), but analysis has found that
+the argument may be modified;
+the INTENT(IN) declaration should be changed.
+.MS W 372 "Cannot propagate alignment from $ to $"
+The most common cause is when passing an array with an inherited alignment
+to a dummy argument with noninherited alignment.
+.MS I 373 "Cannot propagate distribution format from $ to $"
+The most common cause is when passing an array with a transcriptive
+distribution format
+to a dummy argument with prescriptive or descriptive distribution format.
+.MS I 374 "Cannot propagate distribution target from $ to $"
+The most common cause is when passing an array with a transcriptive
+distribution target
+to a dummy argument with prescriptive or descriptive distribution target.
+.MS I 375 "Distribution format mismatch between $ and $"
+Usually this arises when the actual and dummy arguments are distributed
+in different dimensions.
+.MS I 376 "Alignment stride mismatch between $ and $"
+This may arise when the actual argument has a different stride
+in its alignment to its template than does the dummy argument.
+.MS I 377 "Alignment offset mismatch between $ and $"
+This may arise when the actual argument has a different offset
+in its alignment to its template than does the dummy argument.
+.MS I 378 "Distribution target mismatch between $ and $"
+This may arise when the actual and dummy arguments have different
+distribution target sizes.
+.MS I 379 "Alignment of $ is too complex"
+The alignment specification of the array is too complex for interprocedural
+analysis to verify or propagate;
+the program will work correctly, but without the benefit of IPA.
+.MS I 380 "Distribution format of $ is too complex"
+The distribution format specification of the array is too complex for
+interprocedural analysis to verify or propagate;
+the program will work correctly, but without the benefit of IPA.
+.MS I 381 "Distribution target of $ is too complex"
+The distribution target specification of the array is too complex for
+interprocedural analysis to verify or propagate;
+the program will work correctly, but without the benefit of IPA.
+.MS I 382 "IPA: $ subprograms analyzed"
+Interprocedural analysis succeeded in finding and analyzing this many
+subprograms in the whole program.
+.MS I 383 "IPA: $ dummy arguments replaced by constants"
+Interprocedural analysis has found this many dummy arguments in the whole
+program that can be replaced by constants.
+.MS I 384 "IPA: $ dummy arguments changed to INTENT(IN)"
+Interprocedural analysis has found this many dummy arguments in the whole
+program that are not modified and can be declared as INTENT(IN).
+.MS W 385 "IPA: $ INTENT(IN) dummy arguments should be INTENT(INOUT)"
+Interprocedural analysis has found this many dummy arguments in the whole
+program that were declared as INTENT(IN) but should be INTENT(INOUT).
+.MS I 386 "IPA: $ array alignments propagated"
+Interprocedural analysis has found this many array dummy arguments that
+could have the inherited array alignment replaced by a descriptive alignment.
+.MS I 387 "IPA: $ array alignments verified"
+Interprocedural analysis has verified that the prescriptive or descriptive
+alignments of this many array dummy arguments match the alignments of the
+actual argument.
+.MS I 388 "IPA: $ array distribution formats propagated"
+Interprocedural analysis has found this many array dummy arguments that
+could have the transcriptive distribution format replaced by a descriptive format.
+.MS I 389 "IPA: $ array distribution formats verified"
+Interprocedural analysis has verified that the prescriptive or descriptive
+distribution formats of this many array dummy arguments match the formats of the
+actual argument.
+.MS I 390 "IPA: $ array distribution targets propagated"
+Interprocedural analysis has found this many array dummy arguments that
+could have the transcriptive distribution target replaced by a descriptive target.
+.MS I 391 "IPA: $ array distribution targets verified"
+Interprocedural analysis has verified that the prescriptive or descriptive
+distribution targets of this many array dummy arguments match the targets of the
+actual argument.
+.MS I 392 "IPA: $ common blocks optimized"
+Interprocedural analysis has found this many common blocks that could be
+optimized.
+.MS I 393 "IPA: $ common blocks not optimized"
+Interprocedural analysis has found this many common blocks that could not be
+optimized, either because the common block was not declared in the main
+program, or because it was declared differently in different subprograms.
+.MS I 394 "IPA: $ replaced by constant value"
+The dummy argument was replaced by a constant
+as per interprocedural analysis.
+.MS I 395 "IPA: $ changed to INTENT(IN)"
+The dummy argument was changed to INTENT(IN)
+as per interprocedural analysis.
+.MS I 396 "IPA: array alignment propagated to $"
+The template alignment for the dummy argument was changed
+as per interprocedural analysis.
+.MS I 397 "IPA: distribution format propagated to $"
+The distribution format for the dummy argument was changed
+as per interprocedural analysis.
+.MS I 398 "IPA: distribution target propagated to $"
+The distribution target for the dummy argument was changed
+as per interprocedural analysis.
+.MS I 399 "IPA: common block $ not optimized"
+The given common block was not optimized by interprocedural analysis
+either because it was not declared
+in the main program, or because it was declared differently in
+different subprograms.
+.MS E 400 "IPA: dummy argument $ is an asterisk, but actual argument is not a label"
+The subprogram expects an alternate return label for this argument.
+.MS E 401 "Actual argument $ is a subprogram, but Dummy argument $ is not declared EXTERNAL"
+The call statement passes a function or subroutine name to a dummy
+argument that is a scalar variable or array.
+.MS E 402 "Actual argument $ is illegal"
+.MS E 403 "Actual argument $ and formal argument $ have different ranks"
+The actual and formal array arguments differ in rank, which is allowed only
+if both arrays are declared with the HPF SEQUENCE attribute.
+.MS E 404 "Sequential array section of $ in argument $ is not contiguous"
+When passing an array section to a formal argument that has the
+HPF SEQUENCE attribute, the actual argument must be a whole array with
+the HPF SEQUENCE attribute, or an array section of such an array
+where the section is a contiguous sequence of elements.
+.MS E 405 "Array expression argument $ may not be passed to sequential dummy argument $"
+When the dummy argument has the HPF SEQUENCE attribute, the actual argument
+must be a whole array with the HPF SEQUENCE attribute or a contiguous
+array section of such an array, unless an INTERFACE block is used.
+.MS E 406 "Actual argument $ and formal argument $ have different character lengths"
+The actual and formal array character arguments have different character
+lengths, which is allowed only
+if both character arrays are declared with the HPF SEQUENCE attribute,
+unless an INTERFACE block is used.
+.MS W 407 "Argument $ has a different character length than dummy argument $"
+The character length of the actual argument is different than the length
+specified for the corresponding dummy argument.
+.MS W 408 "Specified main program $ is not a PROGRAM"
+The main program specified on the command line is a subroutine, function,
+or block data subprogram.
+.MS W 409 "More than one main program in IPA directory: $ and $"
+There is more than one main program analyzed in the IPA directory shown.
+The first one found is used.
+.MS W 410 "No main program found; IPA analysis fails."
+The main program must appear in the IPA directory for analysis to proceed.
+.MS W 411 "Formal argument $ is DYNAMIC but actual argument is an expression"
+.MS W 412 "Formal argument $ is DYNAMIC but actual argument $ is not"
+.MS I 413 "Formal argument $ has two reaching distributions and may be a candidate for cloning"
+.MS I 414 "$ and $ may be aliased and one of them is assigned"
+Interprocedural analysis has determined that two formal arguments
+because the same variable is passed in both argument positions,
+or one formal argument and a global or COMMON variable may be aliased,
+because the global or COMMON variable is passed as an actual argument.
+If either alias is assigned in the subroutine, unexpected results may occur;
+this message alerts the user that
+this situation is disallowed by the Fortran standard.
+.MS F 415 "IPA fails: incorrect IPA file"
+Interprocedural analysis saves its information in special IPA files in the
+specified IPA directory.  One of these files has been renamed or corrupted.
+This can arise when there are two files with the same prefix,
+such as 'a.hpf' and 'a.f90'.
+.MS E 416 "Argument $ has the SEQUENCE attribute, but the dummy parameter $ does not"
+When an actual argument is an array with the SEQUENCE attribute, the
+dummy parameter must have the SEQUENCE attribute or an INTERFACE block must
+be used.
+.MS E 417 "Interface block for $ is a SUBROUTINE but should be a FUNCTION"
+.MS E 418 "Interface block for $ is a FUNCTION but should be a SUBROUTINE"
+.MS E 419 "Interface block for $ is a FUNCTION has wrong result type"
+.MS W 420 "Earlier $ directive overrides $ directive"
+.MS W 421 "$ directive can only appear in a function or subroutine"
+.MS E 422 "Nonconstant DIM= argument is not supported"
+.MS E 423 "Constant DIM= argument is out of range"
+.MS E 424 "Equivalence using substring or vector triplets is not allowed"
+.MS E 425 "A record is not allowed in this context"
+.MS E 426 "WORD type cannot be converted"
+.MS E 427 "Interface block for $ has wrong number of arguments"
+.MS E 428 "Interface block for $ should have $"
+.MS E 429 "Interface block for $ should not have $"
+.MS E 430 "Interface block for $ has wrong $"
+.MS W 431 "Program is too large for Interprocedural Analysis to complete"
+.MS W 432 "Illegal type conversion $"
+.MS E 433 "Subprogram $ called within INDEPENDENT loop not LOCAL"
+.MS W 434 "Incorrect home array specification ignored"
+.MS S 435 "Array declared with zero size"
+An array was declared with a zero or negative dimension bound, as 'real a(-1)',
+or an upper bound less than the lower bound, as 'real a(4:2)'.
+.MS W 436 "Independent loop not parallelized$"
+.MS W 437 "Type $ will be mapped to $"
+Where DOUBLE PRECISION is not supported, it is mapped to REAL,
+and similarly for COMPLEX(16) or COMPLEX*32.
+.MS E 438 "$ $ not supported on this platform"
+This construct is not supported by the compiler for this target.
+.MS S 439 "An internal subprogram cannot be passed as argument - $"
+.MS S 440 "Defined assignment statements may not appear in WHERE statement or WHERE block"
+.MS S 441 "$ may not appear in a FORALL block"
+.MS E 442 "Adjustable-length character type not supported on this host - $ $"
+.MS S 443 "EQUIVALENCE of derived types not supported on this host - $"
+.MS S 444 "Derived type in EQUIVALENCE statement must have SEQUENCE attribute - $"
+A variable or array with derived type appears in an EQUIVALENCE statement.
+The derived type must have the SEQUENCE attribute, but does not.
+.MS E 445 "Array bounds must be integer $ $"
+The expressions in the array bounds must be integer.
+.MS S 446 "Argument number $ to $: rank mismatch"
+The number of dimensions in the array or array expression does not match
+the number of dimensions in the dummy argument.
+.MS S 447 "Argument number $ to $ must be a subroutine or function name"
+.MS S 448 "Argument number $ to $ must be a subroutine name"
+.MS S 449 "Argument number $ to $ must be a function name"
+.MS S 450 "Argument number $ to $: kind mismatch"
+.MS S 451 "Arrays of derived type with a distributed member are not supported -"
+.MS S 452 "Assumed length character, $, is not a dummy argument"
+.MS S 453 "Derived type variable with pointer member not allowed in IO - $ $"
+.MS S 454 "Subprogram $ is not a module procedure"
+Only names of module procedures declared in this module or accessed through USE
+association can appear in a MODULE PROCEDURE statement.
+.MS S 455 "A derived type array section cannot appear with a member array section - $"
+A reference like A(:)%B(:), where 'A' is a derived type array and 'B' is
+a member array, is not allowed; a section subscript may appear after 'A'
+or after 'B', but not both.
+.MS S 456 "Unimplemented for data type for MATMUL"
+.MS S 457 "Illegal expression in initialization"
+.MS S 458 "Argument to NULL() must be a pointer"
+.MS S 459 "Target of NULL() assignment must be a pointer"
+.MS S 460 "ELEMENTAL procedures cannot be RECURSIVE"
+.MS S 461 "Dummy arguments of ELEMENTAL procedures must be scalar"
+.MS S 462 "Arguments and return values of ELEMENTAL procedures cannot have the POINTER attribute"
+.MS S 463 "Arguments of ELEMENTAL procedures cannot be procedures"
+.MS S 464 "An ELEMENTAL procedure cannot be passed as argument - $"
+.MS S 465 "Functions returning a POINTER require an explicit interface"
+.MS S 466 "Member '$' of derived type '$' has PRIVATE type"
+.MS S 467 "Target of NULL() assignment must have the ALLOCATABLE attribute"
+.MS W 468 "Argument to ISO_C_BINDING intrinsic  must have TARGET attribute set"
+.MS W 469 "Character argument to C_LOC intrinsic must have length of one"
+.MS W 470 "Accelerator feature license not found; accelerator features disabled"
+.MS W 471 "CUDA Fortran feature license not found; CUDA Fortran features disabled"
+.MS E 472 "A Scalar element of a nonsequential array cannot be passed to a dummy array argument - $"
+A subroutine or function call may not pass an element of an array, like 'A(N)', to a dummy array argument if the array 'A' is not sequential.
+If the array is sequential, then Fortran sequence and storage association rules will treat the dummy argument as a new array equivalenced to the actual argument starting at the element passed.
+If the array is not sequential, then Fortran sequence and storage association rules do not apply.
+.MS W 473 "$ must have the PURE attribute"
+A PURE subprogram can only call other PURE subprograms.
+.MS E 475 "A dummy argument may not be distributed in a PURE interface - $"
+A dummy argument to a routine defined with a PURE interface may not have the DISTRIBUTE attribute.
+.MS E 476 "A dummy argument may only be aligned with another dummy in a PURE interface - $"
+A dummy argument to a routine defined with a PURE interface may only be aligned to another dummy.
+.MS E 477 "The device array section actual argument was not stride-1 in the leading dimension - $"
+A device (device, shared, or constant attribute) array passed as an array section to an assumed-shape dummy argument must be stride-1 in the leading dimension.
+.MS E 478 "Invalid actual argument to REFLECTED dummy argument - $"
+The actual argument symbol or expression to a dummy argument with the Accelerator REFLECTED attribute must be a symbol that has a visible device copy.
+Expressions are not allowed.
+.MS E 479 "The dummy argument $ is REFLECTED; the actual argument $ must have a visible device copy"
+If a dummy argument has the Accelerator REFLECTED attribute, the actual argument must be a symbol
+with a visible device copy.
+This may be because the symbol appeared in a MIRROR, REFLECTED, COPYIN, COPYOUT, COPY or LOCAL declarative Accelerator directive,
+or because it appeared in a COPYIN, COPYOUT, COPY or LOCAL clause for an Accelerator
+DATA REGION or REGION surrounding the procedure call.
+.MS E 480 "Argument $ is passed to dummy argument $, which is REFLECTED; the actual argument must not require runtime reshaping"
+When an actual argument is an array section or pointer array section, sometimes the
+actual argument must be copied to a temporary array.  This may occur if the
+dummy argument is not assumed-shape, and so must be contiguous in memory, or if
+the actual argument is not stride-1 in the leftmost (first) dimension.  In these
+cases, the REFLECTED argument is not supported.
+.MS F 481 "An ENTRY name must not appear as a dummy argument - $"
+The name of the subprogram or an ENTRY to the subprogram must not appear as a dummy argument to the subprogram.
+.MS E 482 "COMMON /$/ is declared differently in two subprograms - $"
+The COMMON block name was declared with different distribution or alignment for one
+or more members in two different subprograms.
+.MS E 483 "Storage association due to EQUIVALENCE($,$) causes HPF alignments and distributions to be ignored"
+An EQUIVALENCE statement causes Fortran storage association between entries in this COMMON block.
+The storage association overrides the HPF alignments and distributions for the COMMON block members.
+.MS E 484 "Datatype conflict in EQUIVALENCE between two distributed or aligned COMMON block members: $ and $"
+Two distributed COMMON block members that appear in a COMMON block must have the same datatype.
+.MS E 485 "Datatype conflict in EQUIVALENCE between a distributed or aligned COMMON block member and another: $ and $"
+A distributed COMMON block member may not be EQUIVALENCEd with another COMMON member.
+.MS E 486 "The dummy argument $ is REFLECTED; an array element cannot be passed to a REFLECTED argument"
+An actual argument that is an array element cannot be passed to a REFLECTED dummy argument.
+.MS E 487 "Index variable $ does not appear in a subscript on the left hand side of the FORALL assignment"
+In a FORALL statement, each index variable in the FORALL must appear in some subscript of the left hand side of the FORALL assignment.
+Otherwise, the FORALL will assign the same left hand side elements for different values of that index.
+.MS S 488 "$ is not PURE - $"
+DO CONCURRENT and FORALL subprogram calls must be PURE or ELEMENTAL.
+.MS I 489 "An ALLOCATE of a POINTER with transcriptive or inherited distribution causes replication - $"
+When an array with the POINTER attribute and with a distributed that is transcriptive or inherited is allocated,
+the alignment and distribution are ignored and the array pointer is treated as replicated,
+since there is no symbol from which to inherit a distribution.
+.MS E 490 "An array section of $ is passed to the REFLECTED argument $, which is not supported"
+When an actual argument is an array section, the dummy argument must not have
+the REFLECTED argument.
+.MS E 492 "DYNAMIC distribution is only supported in HPF_GLOBAL subprograms - $"
+Variables with DYNAMIC distribution are not supported.
+.MS E 493 "$ arrays may not be aligned with ALLOCATABLE arrays - $"
+Static local array, common arrays, and dummy argument arrays may not be aligned
+with arrays that have the ALLOCATABLE attribute, since the allocatable alignee
+may not be allocated.
+.MS E 494 "COMMON arrays may not be aligned with dummy argument arrays - $"
+An array in a COMMON block may specify an alignment with a dummy argument array.
+.MS W 495 "The SHADOW directive for CYCLIC distributed dimensions is ignored - $"
+A shadow boundary specified for array dimensions that are
+distributed with the CYCLIC distribution is ignored.
+.MS I 496 "A $ of an unused template is eliminated"
+The HPF executable REDISTRIBUTE or REALIGN directive appeared specifying an HPF TEMPLATE
+that is not used; the REDISTRIBUTE or REALIGN is eliminated.
+.MS E 498 "Alignment cycle involving two or more arguments - $"
+This dummy argument appears in an HPF ALIGN directive specifying alignment to another
+dummy argument that is then aligned to this argument, or aligned to another dummy
+argument that is eventually aligned to this argument.
+.MS W 499 "The descriptive distribution or alignment for this dummy argument is treated as prescriptive - $"
+Even though the distribution or alignment for this dummy argument was specified as
+descriptive, it is treated as prescriptive.
+.MS E 500 "MODULE $ uses (directly or indirectly) MODULE $, which causes a USE cycle"
+If MODULE A has a USE statement for MODULE B, we say that MODULE A directly uses MODULE B.
+If MODULE B has a USE statement for MODULE C, we say that MODULE A indirectly uses MODULE C.
+If MODULE C then has a USE statement for MODULE A, then MODULE A indirectly uses itself,
+which is a USE cycle, and is not allowed.
+.MS E 504 "DIM argument out of range for this symbol - $"
+The DIM argument to this transformation intrinsic (CSHIFT, EOSHIFT, ...) must
+be between 1 and the rank of the array or expression being transformed.
+.MS E 505 "DIM argument out of range for this reduction - $"
+The DIM argument to this reduction intrinsic (SUM, PRODUCT, ...) must
+be between 1 and the rank of the expression being reduced.
+.MS E 506 "The argument to ASSOCIATED must be a pointer - $"
+The argument to the ASSOCIATED intrinsic function must be a variable or array
+with the POINTER attribute.
+.MS E 507 "The arguments to MOVE_ALLOC must be ALLOCATABLE - $"
+The arguments to the MOVE_ALLOC procedure must have the ALLOCATABLE attribute.
+.MS E 508 "The array objects in a call to an elemental function are not conformable - $"
+When calling an elemental function, the arguments must be scalars or
+conformable arrays or array expressions.
+.MS E 509 "Variables in a PURE subprogram may not have the SAVE attribute - $"
+PURE subprograms cannot refer to external, module, or COMMON data, and cannot
+save state in a SAVEd variable.
+.MS E 510 "Only assignment statements are allowed in a WHERE construct"
+A WHERE construct is the WHERE statement and all the statements until the matching ENDWHERE.
+The body of the WHERE construct can only contain assignment statements.
+.MS E 511 "The WHERE mask expression and the array assignment do not conform"
+The assignment under control of a WHERE mask must have the same shape as the WHERE mask.
+.MS E 512 "The WHERE mask is not an array expression"
+The WHERE mask expression must be a logical array expression.
+.MS E 513 "The alignment or distribution target may not be a private variable - $"
+This is a HPF_CRAFT restriction.
+.MS E 514 "The alignment extends beyond the bounds of the template - $"
+When aligning to a template, the entire array must align to template elements that lie
+within the bounds of the template.
+.MS E 515 "Static variable aligned with allocatable symbol - $"
+A nonallocatable symbol cannot be aligned to an allocatable symbol.
+.MS E 516 "PURE subprograms may not have distributed variables - $"
+Distributed arrays are not allowed in PURE subprograms.
+.MS E 517 "Variables in HPF_LOCAL subprograms may not be distributed - $"
+Distributed arrays are not allowed in HPF_LOCAL subprograms.
+.MS W 518 "Function result could not be distributed; replicating - $"
+The compiler will replicate the function result.
+.MS E 519 "More than one device-resident object in assignment"
+Only one device-resident variable or array is allowed in an assignment.
+.MS E 520 "Host MODULE data cannot be used in a DEVICE or GLOBAL subprogram - $"
+CUDA Fortran DEVICE or GLOBAL subprograms cannot access host data directly.
+.MS E 521 "MODULE data cannot be used in a DEVICE or GLOBAL subprogram unless compiling for compute capability >= 2.0 - $"
+CUDA Fortran DEVICE or GLOBAL subprograms cannot access data from any MODULE except
+the MODULE containing the subprogram, unless they are being compiled for compute
+capability 2.0 or higher.  This feature requires the unified memory system provided
+in compute capability 2.0.
+.MS E 522 "MODULE data cannot be used in a DEVICE or GLOBAL subprogram unless compiling with CUDA Toolkit 3.0 or later - $"
+CUDA Fortran DEVICE or GLOBAL subprograms cannot access data from any MODULE except
+the MODULE containing the subprogram, unless they are being compiled for compute
+capability 2.0 or higher with the CUDA Toolkit 3.0 or later.
+This feature requires the unified memory system provided in compute capability 2.0.
+.MS W 523 "MODULE data used in a DEVICE or GLOBAL subprogram forces compute capability >= 2.0 only - $"
+CUDA Fortran DEVICE or GLOBAL subprograms can access MODULE data only when compiled
+for compute capability 2.0 or greater.
+.MS E 524 "Dependency in assignment causes allocation of a temporary which is not supported in DEVICE or GLOBAL subprograms"
+The compiler has identified a possible dependency in an assignment statement
+which requires allocation of temporary storage to produce a correct result.
+Dynamic allocation of memory is not supported in subprograms that run on
+the device.
+.MS E 525 "Array reshaping is not supported for device subprogram calls: argument $ to subprogram $"
+Passing an array section or assumed-shape array to a non-assumed-shape dummy argument is not supported
+in global or device subprograms.
+This would require a run-time test and a possible run-time copy to a dynamically allocated temporary array.
+.MS W 526 "SHARED attribute ignored on dummy argument $"
+The SHARED attribute has no meaning when applied to a dummy argument.
+.MS E 527 "Argument number $ requires allocation of a temporary which is not supported in DEVICE or GLOBAL subprograms"
+Evaluation of the specified argument requires allocation of temporary storage
+for the result to be passed to the subprogram being called.  Dynamic
+allocation of memory is not supported in subprograms that run on the device.
+.MS E 528 "Argument number $ to $: device attribute mismatch"
+Device attributes of the actual and formal arguments are not the same.
+.MS E 529 "PRINT and WRITE statements in device subprograms are only supported when compiling with CUDA Toolkit 4.0 or later"
+Support for PRINT * or WRITE(*,*) statements in CUDA Fortran device subprograms
+requires CUDA Toolkit 4.0 or later and compute capability 2.0 or higher.
+.MS E 530 "PRINT and WRITE statements in device subprograms are only supported with compute capability 2.0 or higher"
+Support for PRINT * or WRITE(*,*) statements in CUDA Fortran device subprograms
+requires CUDA Toolkit 4.0 or later and compute capability 2.0 or higher.
+.MS W 531 "PGI extension to OpenACC: $"
+This program is using a PGI extension to OpenACC.
+.MS W 532 "OpenACC feature not yet implemented: $"
+This OpenACC feature is not yet implemented.
+This program is using a PGI extension to OpenACC.
+.MS E 533 "Clause '$' not allowed in $"
+This clause is not allowed on the specified directive.
+.MS E 534 "A loop scheduling directive may not appear within a KERNEL loop"
+An accelerator or OpenACC loop directive that specifies a schedule,
+such as PARALLEL, VECTOR, WORKER or GANG, may not appear inside a loop
+that has an accelerator loop directive with the KERNEL clause.
+This clause is not allowed on the specified directive.
+.MS E 535 "Undeclared symbol '$' used in directive"
+Symbols used in OpenACC directives must be declared.
+.MS E 536 "Argument number $ to $: managed attribute mismatch"
+Managed attributes of the actual and formal arguments are not the same.
+.MS E 537 "Device-resident object $ not allowed in EQUIVALENCE statement"
+Device-resident objects are not allowed in EQUIVALENCE statement as defined in CUDA Fortran programming guidde and reference chapter 3
+.MS E 538 "CUDA Fortran MANAGED attribute is not supported on OS/X"
+The CUDA Fortran MANAGED attributed is only supported for 64-bit Linux and Windows applications.
+.MS E 539 "CUDA Fortran MANAGED attribute is not supported in 32-bit mode"
+The CUDA Fortran MANAGED attributed is only supported for 64-bit Linux and Windows applications.
+.MS E 540 "Fortran transformational array intrinsic function '$' is not supported in device code"
+The following Fortran transformational intrinsics are not supported in device code:
+pack, unpack, reshape, transpose, cshift, eoshift.
+In cases where these routines are not inlined, this message will be issued.
+.MS E 541 "Assumed-shape arguments are not supported in device code at call to '$'"
+Assumed-shape dummy arguments are not supported in calls to CUDA Fortran
+global or device subprograms, or calls from OpenACC compute regions to subprograms
+compiled with the acc routine directive.
+.MS E 542 "Assumed-shape arguments are not supported in device code: '$'"
+Assumed-shape dummy arguments are not supported CUDA Fortran
+global or device subprograms, or OpenACC subprograms
+compiled with the acc routine directive.
+.MS W 543 "The -Msave flag is disabled for CUDA Fortran device subprograms"
+The -Msave flag implicitly adds the SAVE attribute for all local variables in
+a subprogram, but does not affect variables in attributes(global) or attributes(device)
+subprograms.
+.MS E 544 "The SAVE attribute is not supported in CUDA Fortran device subprograms"
+The -Msave flag implicitly adds the SAVE attribute for all local variables in
+a subprogram, but does not affect variables in attributes(global) or attributes(device)
+subprograms.
+.MS E 545 "Subprogram prefixes PURE and IMPURE are mutually exclusive"
+The subprogram attributes PURE and IMPURE cannot be applied to the same subprogram.
+.MS E 546 "Non-pointer argument associated with contiguous, pointer dummy argument '$'"
+A non-pointer actual argument associated with a CONTIGUOUS POINTER dummy argment must be simply continguous
+.MS F 547 "OpenMP feature, $, not yet implemented in this version of the compiler."
+This OpenMP feature is not yet implemented.
+.MS W 548 "Incorrect use of unlimited repetition"
+An unlimited repetition count (*) is allowed by the Fortran 2008 standard
+only on a parenthesized list of edit descriptors that appears as the the last
+(or only) item at the top level of a FORMAT.
+.MS E 550 "Allocatable device array is not in c_f_pointer with -Mallocatable=03 - $."
+The second argument in c_f_pointer may not be an allocatable device array
+with -Mallocatable=03 semantics.  A device pointer may be used,
+or the program may be compiled with the -Mallocatable=95 compiler flag.
+.MS E 551 "LAUNCH_BOUNDS() must follow ATTRIBUTES(GLOBAL)"
+The LAUNCH_BOUNDS specification must follow a ATTRIBUTES(GLOBAL)
+or ATTRIBUTES(GRID_GLOBAL) specification.
+LAUNCH_BOUNDS is now allowed on ATTRIBUTES(DEVICE) or host subprograms.
+.MS E 552 "LAUNCH_BOUNDS() values must be positive"
+The LAUNCH_BOUNDS maximum number of threads and minimum grid size must
+be positive integer values.
+.MS S 601 "Unmatched quote - backslash treated as escape. Try recompiling with -fno-backslash."
+.MS W 602 "No clause specified for the vector directive. Note: Only the always clause is supported."
+.MS W 603 "Unsupported clause specified for the vector directive. Only the always and vectorlength clauses are supported."
+.MS W 604 "Unsupported clause specified for the omp simd directive. The directive will be ignored."
+.MS W 605 "Unsupported clause specified for the dir simd directive. Only the simdlen clause is supported, other directive clauses will be ignored."
+.MS W 803 "Unsupported argument in the vectorlength clause; allowed values are one of: 'fixed', 'scalable', or a numeric literal"
+.MS W 804 "Unsupported argument in the simdlen clause; allowed values are positive numeric literal."
+.MS S 901 "#elif after #else"
+A preprocessor #elif directive was found after a #else directive; only
+#endif is allowed in this context.
+.MS S 902 "#else after #else"
+A preprocessor #else directive was found after a #else directive; only
+#endif is allowed in this context.
+.MS S 903 " "
+.MS S 904 " "
+.MS W 905 "Argument mismatch for $"
+The number of arguments supplied in the call to the indicated macro did
+not agree with the number of parameters in the macro's definition.
+.MS F 906 "Can't find include file $"
+The indicated include file could not be opened.
+.MS S 907 " "
+.MS S 908 "EOF in comment"
+The end of a file was encountered while processing a comment.
+.MS S 909 "EOF in macro call to $"
+The end of a file was encountered while processing a call to the indicated
+macro.
+.MS S 910 " "
+.MS S 911 " "
+.MS S 912 "Identifier too long"
+The length of an identifier
+exceeded the maximum allowed (currently
+2048).
+.MS S 913 " "
+.MS W 914 "Illegal directive name"
+The sequence of characters following a # sign was not an identifier.
+.MS W 915 "Illegal macro name"
+A macro name was not an identifier.
+.MS S 916 " "
+.MS S 917 " "
+.MS W 918 "Missing #endif"
+End of file was encountered before a required #endif directive was found.
+.MS W 919 " "
+A call of the indicated macro had no argument list.
+.MS S 920 "Number too long"
+The length of a number exceeded the maximum allowed (currently 2048).
+.MS W 921 "Redefinition of symbol $"
+The indicated macro name was redefined.
+.MS I 922 "Redundant definition for symbol $"
+A definition for the indicated macro name was found that was the same as
+a previous definition.
+.MS F 923 "String too long"
+The length of a quoted string exceeded the maximum allowed (currently 2048).
+.MS S 924 "Syntax error in #define, formal $ not identifier"
+A formal parameter that was not an identifier was used in a macro definition.
+.MS W 925 " "
+.MS S 926 "Syntax error in #if"
+A syntax error was found while parsing the expression following a
+#if or #elif directive.
+.MS S 927 "Syntax error in #include"
+The #include directive was not correctly formed.
+.MS W 928 "Syntax error in #line"
+A #line directive was not correctly formed.
+.MS W 929 "Syntax error in #module"
+A #module directive was not correctly formed.
+.MS W 930 "Syntax error in #undef"
+A #undef directive was not correctly formed.
+.MS W 931 "Token after #ifdef must be identifier"
+The #ifdef directive was not followed by an identifier.
+.MS W 932 "Token after #ifndef must be identifier"
+The #ifndef directive was not followed by an identifier.
+.MS S 933 "Too many actual parameters to $"
+The number of actual arguments to the indicated macro exceeded the maximum
+allowed (currently 31).
+.MS S 934 "Too many formal parameters to $"
+The number of formal arguments to the indicated macro exceeded the maximum
+allowed (currently 31).
+.MS S 935 "Illegal context for __VA_ARGS__"
+.MS W 936 "Undefined directive $"
+The identifier following a # was not a directive name.
+.MS S 937 "EOF in #include directive"
+End of file was encountered while processing a #include directive.
+.MS S 938 "Unmatched #elif"
+A #elif directive was encountered with no preceding #if or #elif
+directive.
+.MS S 939 "Unmatched #else"
+A #else directive was encountered with no preceding #if or #elif
+directive.
+.MS S 940 "Unmatched #endif"
+A #endif directive was encountered with no preceding #if, #ifdef, or
+#ifndef directive.
+.MS W 941 "Illegal token in directive, $"
+A directive token contains a illegal character.
+.MS S 942 "Unterminated macro definition for $"
+A newline was encountered in the formal parameter list for the indicated
+macro.
+.MS S 943 "Unterminated string or character constant"
+A newline with no preceding backslash was found in a quoted string.
+.MS I 944 "Possible nested comment"
+The characters /* were found within a comment.
+.MS I 945 "Redefining predefined macro $"
+.MS I 946 "Undefining predefined macro $"
+.MS W 947 "Can't redefine predefined macro $"
+.MS W 948 "Can't undefine predefined macro $"
+.MS F 949 "#error -- $"
+.MS W 950 "#ident not followed by quoted string"
+.MS W 951 "Extraneous tokens ignored following # directive"
+.MS F 952 "Unexpected EOF following # directive"
+.MS W 953 "Unexpected # ignored in #if expression"
+.MS S 954 "Illegal number in directive"
+.MS S 955 "Illegal token in #if expression"
+.MS S 956 "Missing > in #include"
+.MS W 957 "Arguments in macro $ are not unique"
+.MS S 958 " "
+.MS S 959 "## directive occurs at beginning or end of macro definition"
+.MS S 960 "$ is not an argument"
+.MS W 961 "no macro replacement within a character constant"
+.MS W 962 "macro replacement within a character constant"
+.MS W 963 " "
+.MS W 964 "macro replacement within a string literal"
+.MS F 965 "Recursive include file $"
+.MS W 966 "Null argument to macro"
+Argument to macro is a null value.
+.MS F 967 "#warning -- $"
+.MS F 968 " "
+.MS S 969 "_Pragma $"
+Pragma operator errors.
+.MS S 1008 "Interface mismatch in procedure pointer assignment $"
+.MS S 1009 "Interface mismatch between actual argument $ and dummy argument $"
+.MS S 1010 "Illegal use of an elemental interface with procedure pointer $"
+.MS S 1011 "Device variable cannot be THREADPRIVATE - $"
+.MS S 1012 "Threadprivate variables are not supported in acc routine - $"
+.MS S 1013 "Static Threadprivate variables are not supported - $"
+.MS S 1014 "Global Threadprivate variables are not supported - $"
+.MS S 1015 "Cannot access private intrinsic - $"
+.MS S 1042 "$ mask expression must be scalar"
+A DO CONCURRENT or FORALL mask expression must be scalar.
+.MS S 1043 "DO CONCURRENT $ references construct variable $"
+A DO CONCURRENT limit or step control expression may not reference an index
+name or LOCAL name.  A DO CONCURRENT mask expression may not reference a
+LOCAL name.
+.MS S 1044 "Invalid DO CONCURRENT locality spec variable $"
+A name in a DO CONCURRENT locality spec must be a valid variable name in the containing scope.
+.MS S 1045 "DO CONCURRENT index name $ may not appear in a locality spec"
+.MS S 1046 "Variable $ has multiple DO CONCURRENT locality spec references"
+.MS S 1047 "Multiple DO CONCURRENT DEFAULT(NONE) locality specs"
+.MS S 1048 "LOCAL/LOCAL_INIT variable $ $"
+A DO CONCURRENT LOCAL or LOCAL_INIT variable must not have the ALLOCATABLE,
+INTENT (IN), or OPTIONAL attribute, must not be of finalizable type, must
+not be a nonpointer polymorphic dummy argument, must not be a an assumed-size
+array, and must be permitted to appear in a variable definition context.
+.MS S 1049 "Variable $ is not in a DO CONCURRENT locality list"
+When DEFAULT(NONE) is specified for a DO CONCURRENT loop, construct variables and variables from containing scopes must appear in a locality spec.
+.MS S 1050 "$ DO CONCURRENT construct"
+A DO CONCURRENT construct may not contain a RETURN, EXIT, GOTO, or other branch
+out of the construct.  A CYCLE statement is permitted.
+.MS S 1051 "DO CONCURRENT polymorphic variable deallocation - $"
+A DO CONCURRENT construct must not contain a statement that might result in
+the deallocation of a polymorphic variable.
+.MS S 1052 "$ call in DO CONCURRENT construct"
+A DO CONCURRENT construct may not contain a call to IEEE_GET_FLAG,
+IEEE_SET_HALTING_MODE, or IEEE_GET_HALTING_MODE from intrinsic module
+IEEE_EXCEPTIONS.
+.MS S 1053 "Duplicate $ index name"
+A DO CONCURRENT or FORALL construct or statement may not specify an index name multiple times.
+.MS W 1054 "Duplicate subprogram prefix $ is used"
+.MS S 1055 "MODULE prefix cannot be inside an abstract interface"
+.MS S 1056 "MODULE prefix is only allowed for subprograms that were declared as separate module procedures"
+.MS S 1057 "Definition argument name $ does not match declaration argument name $"
+.MS S 1058 "The type of definition argument $ does not match its declaration type"
+.MS S 1059 "The definition of subprogram $ does not have the same number of arguments as its declaration"
+.MS S 1060 "The $ of the definition and declaration of subprogram $ must match"
+.MS S 1061 "The definition of function return type of $ does not match its declaration type"
+.MS S 1062 "LOCAL_INIT variable does not have an outside variable of the same name - $"
+A DO CONCURRENT variable with LOCAL_INIT locality must have a host variable of the same name.
+Starting from 1100, Reserved for OpenMP GPU
+.MS S 1198 "OpenMP GPU - The feature is not implemented yet for the target device"
+.MS W 1199 "OpenMP GPU - \"$\" is ignored for the target device"
+.MS S 1200 "OpenMP GPU - \"$\" is used, it is not implemented yet"
+.MS S 1201 "OpenMP GPU - [$] is used with [$], this usage is not implemented yet."
+.MS S 1202 "OpenMP GPU - [$] is used independently than [$], this usage is not implemented yet."
+.MS S 1203 "OpenMP GPU - Directive target exit data is used, map type [$] cannot be used. It should be one of 'from', 'release', or 'delete'"
+.MS S 1204 "OpenMP GPU - Directive target data is used, map type [$] cannot be used. It should be one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'"
+.MS S 1205 "OpenMP GPU - Directive target enter data is used, map type [$] cannot be used. It should be one of 'to', or 'alloc'"
+.MS W 1206 "OpenMP GPU - Array sections in \"map\" clause is not implemented yet, the entire array will be mapped"
+.MS S 1207 "ERROR STOP stop-code requires either a character or integer expression."
+.MS S 1208 "QUIET requires a logical expression."
+.MS S 1209 "ERROR STOP stop-code integer expression must be an integer of default kind."
+.MS S 1210 "Parent module $ must declare a separate module procedure."
+.MS S 1211 "Submodule's ancestor module $ must be a nonintrinsic module."
+.MS S 1212 "$ was previously declared to be a module procedure."
+.MS S 1213 "OpenACC $ data clause may not follow a device_type clause."
+.MS S 1214 "PGI Accelerator $ data clause may not follow a device_type clause."
+.MS S 1215 "OpenACC data clause expected after $."
+.MS S 1216 "Expression in assignment statement contains type bound procedure name $. This may be a function call that's missing parentheses."
+.MS S 1217 "Left hand side of polymorphic assignment must be allocatable - $"
+.MS S 1218 "$ statement may not appear in a BLOCK construct."
+.MS S 1219 "Unimplemented feature: $."

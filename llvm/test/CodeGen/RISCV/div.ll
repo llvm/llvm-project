@@ -3,10 +3,14 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+m -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IM %s
+; RUN: llc -mtriple=riscv32 -mattr=+m -mattr=+cheap-int-div -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32IM-CHEAP %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IM %s
+; RUN: llc -mtriple=riscv64 -mattr=+m -mattr=+cheap-int-div -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64IM-CHEAP %s
 
 define i32 @udiv(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: udiv:
@@ -17,6 +21,11 @@ define i32 @udiv(i32 %a, i32 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    divu a0, a0, a1
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: udiv:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv:
 ; RV64I:       # %bb.0:
@@ -35,6 +44,11 @@ define i32 @udiv(i32 %a, i32 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    divuw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    divuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i32 %a, %b
   ret i32 %1
 }
@@ -52,6 +66,12 @@ define i32 @udiv_constant(i32 %a) nounwind {
 ; RV32IM-NEXT:    mulhu a0, a0, a1
 ; RV32IM-NEXT:    srli a0, a0, 2
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: udiv_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, 5
+; RV32IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv_constant:
 ; RV64I:       # %bb.0:
@@ -74,6 +94,12 @@ define i32 @udiv_constant(i32 %a) nounwind {
 ; RV64IM-NEXT:    mulhu a0, a0, a1
 ; RV64IM-NEXT:    srli a0, a0, 34
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    divuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i32 %a, 5
   ret i32 %1
 }
@@ -89,6 +115,11 @@ define i32 @udiv_pow2(i32 %a) nounwind {
 ; RV32IM-NEXT:    srli a0, a0, 3
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv_pow2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    srli a0, a0, 3
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a0, a0, 3
@@ -98,6 +129,11 @@ define i32 @udiv_pow2(i32 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    srliw a0, a0, 3
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv_pow2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    srliw a0, a0, 3
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i32 %a, 8
   ret i32 %1
 }
@@ -114,6 +150,12 @@ define i32 @udiv_constant_lhs(i32 %a) nounwind {
 ; RV32IM-NEXT:    li a1, 10
 ; RV32IM-NEXT:    divu a0, a1, a0
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: udiv_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, 10
+; RV32IM-CHEAP-NEXT:    divu a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv_constant_lhs:
 ; RV64I:       # %bb.0:
@@ -132,6 +174,12 @@ define i32 @udiv_constant_lhs(i32 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    divuw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    divuw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i32 10, %a
   ret i32 %1
 }
@@ -155,6 +203,15 @@ define i64 @udiv64(i64 %a, i64 %b) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv64:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    call __udivdi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    tail __udivdi3
@@ -163,6 +220,11 @@ define i64 @udiv64(i64 %a, i64 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    divu a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv64:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i64 %a, %b
   ret i64 %1
 }
@@ -203,6 +265,27 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ; RV32IM-NEXT:    mul a0, a5, a4
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv64_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    add a2, a0, a1
+; RV32IM-CHEAP-NEXT:    sltu a3, a2, a0
+; RV32IM-CHEAP-NEXT:    add a2, a2, a3
+; RV32IM-CHEAP-NEXT:    li a3, 5
+; RV32IM-CHEAP-NEXT:    remu a2, a2, a3
+; RV32IM-CHEAP-NEXT:    sub a3, a0, a2
+; RV32IM-CHEAP-NEXT:    lui a4, 838861
+; RV32IM-CHEAP-NEXT:    addi a5, a4, -820
+; RV32IM-CHEAP-NEXT:    mul a5, a3, a5
+; RV32IM-CHEAP-NEXT:    addi a4, a4, -819
+; RV32IM-CHEAP-NEXT:    mulhu a6, a3, a4
+; RV32IM-CHEAP-NEXT:    add a5, a6, a5
+; RV32IM-CHEAP-NEXT:    sltu a0, a0, a2
+; RV32IM-CHEAP-NEXT:    sub a1, a1, a0
+; RV32IM-CHEAP-NEXT:    mul a1, a1, a4
+; RV32IM-CHEAP-NEXT:    add a1, a5, a1
+; RV32IM-CHEAP-NEXT:    mul a0, a3, a4
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv64_constant:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a1, 5
@@ -217,6 +300,12 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ; RV64IM-NEXT:    mulhu a0, a0, a1
 ; RV64IM-NEXT:    srli a0, a0, 2
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv64_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i64 %a, 5
   ret i64 %1
 }
@@ -248,6 +337,19 @@ define i64 @udiv64_constant_lhs(i64 %a) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv64_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    mv a3, a1
+; RV32IM-CHEAP-NEXT:    mv a2, a0
+; RV32IM-CHEAP-NEXT:    li a0, 10
+; RV32IM-CHEAP-NEXT:    li a1, 0
+; RV32IM-CHEAP-NEXT:    call __udivdi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv64_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a1, a0
@@ -259,6 +361,12 @@ define i64 @udiv64_constant_lhs(i64 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    divu a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv64_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    divu a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i64 10, %a
   ret i64 %1
 }
@@ -282,6 +390,13 @@ define i8 @udiv8(i8 %a, i8 %b) nounwind {
 ; RV32IM-NEXT:    divu a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv8:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    andi a1, a1, 255
+; RV32IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV32IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -299,6 +414,13 @@ define i8 @udiv8(i8 %a, i8 %b) nounwind {
 ; RV64IM-NEXT:    andi a0, a0, 255
 ; RV64IM-NEXT:    divuw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv8:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    andi a1, a1, 255
+; RV64IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV64IM-CHEAP-NEXT:    divuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i8 %a, %b
   ret i8 %1
 }
@@ -323,6 +445,13 @@ define i8 @udiv8_constant(i8 %a) nounwind {
 ; RV32IM-NEXT:    srli a0, a0, 10
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv8_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV32IM-CHEAP-NEXT:    li a1, 5
+; RV32IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv8_constant:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -341,6 +470,13 @@ define i8 @udiv8_constant(i8 %a) nounwind {
 ; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    srli a0, a0, 10
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv8_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    divuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i8 %a, 5
   ret i8 %1
 }
@@ -358,6 +494,12 @@ define i8 @udiv8_pow2(i8 %a) nounwind {
 ; RV32IM-NEXT:    srli a0, a0, 27
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv8_pow2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 24
+; RV32IM-CHEAP-NEXT:    srli a0, a0, 27
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv8_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 56
@@ -369,6 +511,12 @@ define i8 @udiv8_pow2(i8 %a) nounwind {
 ; RV64IM-NEXT:    slli a0, a0, 56
 ; RV64IM-NEXT:    srli a0, a0, 59
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv8_pow2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 56
+; RV64IM-CHEAP-NEXT:    srli a0, a0, 59
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i8 %a, 8
   ret i8 %1
 }
@@ -392,6 +540,13 @@ define i8 @udiv8_constant_lhs(i8 %a) nounwind {
 ; RV32IM-NEXT:    divu a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv8_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV32IM-CHEAP-NEXT:    li a1, 10
+; RV32IM-CHEAP-NEXT:    divu a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv8_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -409,6 +564,13 @@ define i8 @udiv8_constant_lhs(i8 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    divuw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv8_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    andi a0, a0, 255
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    divuw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i8 10, %a
   ret i8 %1
 }
@@ -436,6 +598,15 @@ define i16 @udiv16(i16 %a, i16 %b) nounwind {
 ; RV32IM-NEXT:    divu a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv16:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    lui a2, 16
+; RV32IM-CHEAP-NEXT:    addi a2, a2, -1
+; RV32IM-CHEAP-NEXT:    and a1, a1, a2
+; RV32IM-CHEAP-NEXT:    and a0, a0, a2
+; RV32IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -457,6 +628,15 @@ define i16 @udiv16(i16 %a, i16 %b) nounwind {
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    divuw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv16:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    lui a2, 16
+; RV64IM-CHEAP-NEXT:    addi a2, a2, -1
+; RV64IM-CHEAP-NEXT:    and a1, a1, a2
+; RV64IM-CHEAP-NEXT:    and a0, a0, a2
+; RV64IM-CHEAP-NEXT:    divuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i16 %a, %b
   ret i16 %1
 }
@@ -482,6 +662,14 @@ define i16 @udiv16_constant(i16 %a) nounwind {
 ; RV32IM-NEXT:    srli a0, a0, 18
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv16_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    li a1, 5
+; RV32IM-CHEAP-NEXT:    divu a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv16_constant:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -502,6 +690,14 @@ define i16 @udiv16_constant(i16 %a) nounwind {
 ; RV64IM-NEXT:    mulhu a0, a0, a1
 ; RV64IM-NEXT:    srli a0, a0, 18
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv16_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    divuw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i16 %a, 5
   ret i16 %1
 }
@@ -519,6 +715,12 @@ define i16 @udiv16_pow2(i16 %a) nounwind {
 ; RV32IM-NEXT:    srli a0, a0, 19
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv16_pow2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srli a0, a0, 19
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv16_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 48
@@ -530,6 +732,12 @@ define i16 @udiv16_pow2(i16 %a) nounwind {
 ; RV64IM-NEXT:    slli a0, a0, 48
 ; RV64IM-NEXT:    srli a0, a0, 51
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv16_pow2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srli a0, a0, 51
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i16 %a, 8
   ret i16 %1
 }
@@ -555,6 +763,14 @@ define i16 @udiv16_constant_lhs(i16 %a) nounwind {
 ; RV32IM-NEXT:    divu a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: udiv16_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    li a1, 10
+; RV32IM-CHEAP-NEXT:    divu a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: udiv16_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -574,6 +790,14 @@ define i16 @udiv16_constant_lhs(i16 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    divuw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: udiv16_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    divuw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = udiv i16 10, %a
   ret i16 %1
 }
@@ -587,6 +811,11 @@ define i32 @sdiv(i32 %a, i32 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    div a0, a0, a1
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: sdiv:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: sdiv:
 ; RV64I:       # %bb.0:
@@ -603,6 +832,11 @@ define i32 @sdiv(i32 %a, i32 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    divw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i32 %a, %b
   ret i32 %1
 }
@@ -622,6 +856,12 @@ define i32 @sdiv_constant(i32 %a) nounwind {
 ; RV32IM-NEXT:    srai a0, a0, 1
 ; RV32IM-NEXT:    add a0, a0, a1
 ; RV32IM-NEXT:    ret
+;
+; RV32IM-CHEAP-LABEL: sdiv_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, 5
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
 ;
 ; RV64I-LABEL: sdiv_constant:
 ; RV64I:       # %bb.0:
@@ -644,6 +884,12 @@ define i32 @sdiv_constant(i32 %a) nounwind {
 ; RV64IM-NEXT:    srai a0, a0, 33
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i32 %a, 5
   ret i32 %1
 }
@@ -665,6 +911,12 @@ define i32 @sdiv_pow2(i32 %a) nounwind {
 ; RV32IM-NEXT:    srai a0, a0, 3
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv_pow2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, 8
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
@@ -680,6 +932,12 @@ define i32 @sdiv_pow2(i32 %a) nounwind {
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    sraiw a0, a0, 3
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv_pow2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 8
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i32 %a, 8
   ret i32 %1
 }
@@ -701,6 +959,12 @@ define i32 @sdiv_pow2_2(i32 %a) nounwind {
 ; RV32IM-NEXT:    srai a0, a0, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv_pow2_2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    lui a1, 16
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv_pow2_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
@@ -716,6 +980,12 @@ define i32 @sdiv_pow2_2(i32 %a) nounwind {
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    sraiw a0, a0, 16
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv_pow2_2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    lui a1, 16
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i32 %a, 65536
   ret i32 %1
 }
@@ -733,6 +1003,12 @@ define i32 @sdiv_constant_lhs(i32 %a) nounwind {
 ; RV32IM-NEXT:    div a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    li a1, -10
+; RV32IM-CHEAP-NEXT:    div a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -749,6 +1025,12 @@ define i32 @sdiv_constant_lhs(i32 %a) nounwind {
 ; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    divw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, -10
+; RV64IM-CHEAP-NEXT:    divw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i32 -10, %a
   ret i32 %1
 }
@@ -772,6 +1054,15 @@ define i64 @sdiv64(i64 %a, i64 %b) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv64:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    call __divdi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    tail __divdi3
@@ -780,6 +1071,11 @@ define i64 @sdiv64(i64 %a, i64 %b) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    div a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv64:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    div a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i64 %a, %b
   ret i64 %1
 }
@@ -807,6 +1103,17 @@ define i64 @sdiv64_constant(i64 %a) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv64_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    li a2, 5
+; RV32IM-CHEAP-NEXT:    li a3, 0
+; RV32IM-CHEAP-NEXT:    call __divdi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv64_constant:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a1, 5
@@ -821,6 +1128,12 @@ define i64 @sdiv64_constant(i64 %a) nounwind {
 ; RV64IM-NEXT:    srai a0, a0, 1
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv64_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    div a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i64 %a, 5
   ret i64 %1
 }
@@ -852,6 +1165,19 @@ define i64 @sdiv64_constant_lhs(i64 %a) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv64_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    mv a3, a1
+; RV32IM-CHEAP-NEXT:    mv a2, a0
+; RV32IM-CHEAP-NEXT:    li a0, 10
+; RV32IM-CHEAP-NEXT:    li a1, 0
+; RV32IM-CHEAP-NEXT:    call __divdi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv64_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a1, a0
@@ -863,6 +1189,12 @@ define i64 @sdiv64_constant_lhs(i64 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    div a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv64_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    li a1, 10
+; RV64IM-CHEAP-NEXT:    div a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i64 10, %a
   ret i64 %1
 }
@@ -895,6 +1227,18 @@ define i64 @sdiv64_sext_operands(i32 %a, i32 %b) nounwind {
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv64_sext_operands:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    addi sp, sp, -16
+; RV32IM-CHEAP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IM-CHEAP-NEXT:    mv a2, a1
+; RV32IM-CHEAP-NEXT:    srai a1, a0, 31
+; RV32IM-CHEAP-NEXT:    srai a3, a2, 31
+; RV32IM-CHEAP-NEXT:    call __divdi3
+; RV32IM-CHEAP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IM-CHEAP-NEXT:    addi sp, sp, 16
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv64_sext_operands:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a0, a0
@@ -907,6 +1251,13 @@ define i64 @sdiv64_sext_operands(i32 %a, i32 %b) nounwind {
 ; RV64IM-NEXT:    sext.w a1, a1
 ; RV64IM-NEXT:    div a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv64_sext_operands:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    sext.w a0, a0
+; RV64IM-CHEAP-NEXT:    sext.w a1, a1
+; RV64IM-CHEAP-NEXT:    div a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sext i32 %a to i64
   %2 = sext i32 %b to i64
   %3 = sdiv i64 %1, %2
@@ -936,6 +1287,15 @@ define i8 @sdiv8(i8 %a, i8 %b) nounwind {
 ; RV32IM-NEXT:    div a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv8:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a1, a1, 24
+; RV32IM-CHEAP-NEXT:    srai a1, a1, 24
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 24
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 24
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -957,6 +1317,15 @@ define i8 @sdiv8(i8 %a, i8 %b) nounwind {
 ; RV64IM-NEXT:    srai a0, a0, 56
 ; RV64IM-NEXT:    divw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv8:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a1, a1, 56
+; RV64IM-CHEAP-NEXT:    srai a1, a1, 56
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 56
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 56
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i8 %a, %b
   ret i8 %1
 }
@@ -986,6 +1355,14 @@ define i8 @sdiv8_constant(i8 %a) nounwind {
 ; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv8_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 24
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 24
+; RV32IM-CHEAP-NEXT:    li a1, 5
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv8_constant:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -1009,6 +1386,14 @@ define i8 @sdiv8_constant(i8 %a) nounwind {
 ; RV64IM-NEXT:    srli a0, a0, 63
 ; RV64IM-NEXT:    add a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv8_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 56
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 56
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i8 %a, 5
   ret i8 %1
 }
@@ -1036,6 +1421,14 @@ define i8 @sdiv8_pow2(i8 %a) nounwind {
 ; RV32IM-NEXT:    srai a0, a0, 27
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv8_pow2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 24
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 24
+; RV32IM-CHEAP-NEXT:    li a1, 8
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv8_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 56
@@ -1057,6 +1450,14 @@ define i8 @sdiv8_pow2(i8 %a) nounwind {
 ; RV64IM-NEXT:    slli a0, a0, 56
 ; RV64IM-NEXT:    srai a0, a0, 59
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv8_pow2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 56
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 56
+; RV64IM-CHEAP-NEXT:    li a1, 8
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i8 %a, 8
   ret i8 %1
 }
@@ -1082,6 +1483,14 @@ define i8 @sdiv8_constant_lhs(i8 %a) nounwind {
 ; RV32IM-NEXT:    div a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv8_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 24
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 24
+; RV32IM-CHEAP-NEXT:    li a1, -10
+; RV32IM-CHEAP-NEXT:    div a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv8_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -1101,6 +1510,14 @@ define i8 @sdiv8_constant_lhs(i8 %a) nounwind {
 ; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    divw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv8_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 56
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 56
+; RV64IM-CHEAP-NEXT:    li a1, -10
+; RV64IM-CHEAP-NEXT:    divw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i8 -10, %a
   ret i8 %1
 }
@@ -1128,6 +1545,15 @@ define i16 @sdiv16(i16 %a, i16 %b) nounwind {
 ; RV32IM-NEXT:    div a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv16:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a1, a1, 16
+; RV32IM-CHEAP-NEXT:    srai a1, a1, 16
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 16
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -1149,6 +1575,15 @@ define i16 @sdiv16(i16 %a, i16 %b) nounwind {
 ; RV64IM-NEXT:    srai a0, a0, 48
 ; RV64IM-NEXT:    divw a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv16:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a1, a1, 48
+; RV64IM-CHEAP-NEXT:    srai a1, a1, 48
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 48
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i16 %a, %b
   ret i16 %1
 }
@@ -1178,6 +1613,14 @@ define i16 @sdiv16_constant(i16 %a) nounwind {
 ; RV32IM-NEXT:    add a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv16_constant:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 16
+; RV32IM-CHEAP-NEXT:    li a1, 5
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv16_constant:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -1201,6 +1644,14 @@ define i16 @sdiv16_constant(i16 %a) nounwind {
 ; RV64IM-NEXT:    srai a0, a0, 17
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv16_constant:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 48
+; RV64IM-CHEAP-NEXT:    li a1, 5
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i16 %a, 5
   ret i16 %1
 }
@@ -1228,6 +1679,14 @@ define i16 @sdiv16_pow2(i16 %a) nounwind {
 ; RV32IM-NEXT:    srai a0, a0, 19
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv16_pow2:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 16
+; RV32IM-CHEAP-NEXT:    li a1, 8
+; RV32IM-CHEAP-NEXT:    div a0, a0, a1
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv16_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 48
@@ -1249,6 +1708,14 @@ define i16 @sdiv16_pow2(i16 %a) nounwind {
 ; RV64IM-NEXT:    slli a0, a0, 48
 ; RV64IM-NEXT:    srai a0, a0, 51
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv16_pow2:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 48
+; RV64IM-CHEAP-NEXT:    li a1, 8
+; RV64IM-CHEAP-NEXT:    divw a0, a0, a1
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i16 %a, 8
   ret i16 %1
 }
@@ -1274,6 +1741,14 @@ define i16 @sdiv16_constant_lhs(i16 %a) nounwind {
 ; RV32IM-NEXT:    div a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
+; RV32IM-CHEAP-LABEL: sdiv16_constant_lhs:
+; RV32IM-CHEAP:       # %bb.0:
+; RV32IM-CHEAP-NEXT:    slli a0, a0, 16
+; RV32IM-CHEAP-NEXT:    srai a0, a0, 16
+; RV32IM-CHEAP-NEXT:    li a1, -10
+; RV32IM-CHEAP-NEXT:    div a0, a1, a0
+; RV32IM-CHEAP-NEXT:    ret
+;
 ; RV64I-LABEL: sdiv16_constant_lhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -1293,6 +1768,14 @@ define i16 @sdiv16_constant_lhs(i16 %a) nounwind {
 ; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    divw a0, a1, a0
 ; RV64IM-NEXT:    ret
+;
+; RV64IM-CHEAP-LABEL: sdiv16_constant_lhs:
+; RV64IM-CHEAP:       # %bb.0:
+; RV64IM-CHEAP-NEXT:    slli a0, a0, 48
+; RV64IM-CHEAP-NEXT:    srai a0, a0, 48
+; RV64IM-CHEAP-NEXT:    li a1, -10
+; RV64IM-CHEAP-NEXT:    divw a0, a1, a0
+; RV64IM-CHEAP-NEXT:    ret
   %1 = sdiv i16 -10, %a
   ret i16 %1
 }

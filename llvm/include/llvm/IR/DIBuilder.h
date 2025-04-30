@@ -719,7 +719,8 @@ namespace llvm {
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DIType *Ty, bool IsLocalToUnit, bool isDefined = true,
         DIExpression *Expr = nullptr, MDNode *Decl = nullptr,
-        MDTuple *TemplateParams = nullptr, uint32_t AlignInBits = 0,
+        MDTuple *TemplateParams = nullptr,
+        DINode::DIFlags Flags = DINode::FlagZero, uint32_t AlignInBits = 0,
         DINodeArray Annotations = nullptr);
 
     /// Identical to createGlobalVariable
@@ -727,7 +728,8 @@ namespace llvm {
     DIGlobalVariable *createTempGlobalVariableFwdDecl(
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DIType *Ty, bool IsLocalToUnit, MDNode *Decl = nullptr,
-        MDTuple *TemplateParams = nullptr, uint32_t AlignInBits = 0);
+        MDTuple *TemplateParams = nullptr,
+        DINode::DIFlags Flags = DINode::FlagZero, uint32_t AlignInBits = 0);
 
     /// Create a new descriptor for an auto variable.  This is a local variable
     /// that is not a subprogram parameter.
@@ -857,6 +859,17 @@ namespace llvm {
     DICommonBlock *createCommonBlock(DIScope *Scope, DIGlobalVariable *decl,
                                      StringRef Name, DIFile *File,
                                      unsigned LineNo);
+
+    /// Create common block entry for a Fortran common block
+    /// \param Scope       Scope of this common block
+    /// \param Name        The name of this common block
+    /// \param File        The file this common block is defined
+    /// \param LineNo      Line number
+    /// \param VarList     List of variables that a located in common block
+    /// \param AlignInBits Common block alignment
+    DICommonBlock *createCommonBlock(DIScope *Scope, DIGlobalVariable *decl,
+                                     StringRef Name, DIFile *File,
+                                     unsigned LineNo, uint32_t AlignInBits = 0);
 
     /// This creates new descriptor for a namespace with the specified
     /// parent scope.

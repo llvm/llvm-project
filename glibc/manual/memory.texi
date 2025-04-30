@@ -1,0 +1,3740 @@
+@node Memory, Character Handling, Error Reporting, Top
+@chapter Virtual Memory Allocation And Paging
+@c %MENU% Allocating virtual memory and controlling paging
+@cindex memory allocation
+@cindex storage allocation
+
+This chapter describes how processes manage and use memory in a system
+that uses @theglibc{}.
+
+@Theglibc{} has several functions for dynamically allocating
+virtual memory in various ways.  They vary in generality and in
+efficiency.  The library also provides functions for controlling paging
+and allocation of real memory.
+
+
+@menu
+* Memory Concepts::             An introduction to concepts and terminology.
+* Memory Allocation::           Allocating storage for your program data
+* Resizing the Data Segment::   @code{brk}, @code{sbrk}
+* Memory Protection::           Controlling access to memory regions.
+* Locking Pages::               Preventing page faults
+@end menu
+
+Memory mapped I/O is not discussed in this chapter.  @xref{Memory-mapped I/O}.
+
+
+
+@node Memory Concepts
+@section Process Memory Concepts
+
+One of the most basic resources a process has available to it is memory.
+There are a lot of different ways systems organize memory, but in a
+typical one, each process has one linear virtual address space, with
+addresses running from zero to some huge maximum.  It need not be
+contiguous; i.e., not all of these addresses actually can be used to
+store data.
+
+The virtual memory is divided into pages (4 kilobytes is typical).
+Backing each page of virtual memory is a page of real memory (called a
+@dfn{frame}) or some secondary storage, usually disk space.  The disk
+space might be swap space or just some ordinary disk file.  Actually, a
+page of all zeroes sometimes has nothing at all backing it -- there's
+just a flag saying it is all zeroes.
+@cindex page frame
+@cindex frame, real memory
+@cindex swap space
+@cindex page, virtual memory
+
+The same frame of real memory or backing store can back multiple virtual
+pages belonging to multiple processes.  This is normally the case, for
+example, with virtual memory occupied by @glibcadj{} code.  The same
+real memory frame containing the @code{printf} function backs a virtual
+memory page in each of the existing processes that has a @code{printf}
+call in its program.
+
+In order for a program to access any part of a virtual page, the page
+must at that moment be backed by (``connected to'') a real frame.  But
+because there is usually a lot more virtual memory than real memory, the
+pages must move back and forth between real memory and backing store
+regularly, coming into real memory when a process needs to access them
+and then retreating to backing store when not needed anymore.  This
+movement is called @dfn{paging}.
+
+When a program attempts to access a page which is not at that moment
+backed by real memory, this is known as a @dfn{page fault}.  When a page
+fault occurs, the kernel suspends the process, places the page into a
+real page frame (this is called ``paging in'' or ``faulting in''), then
+resumes the process so that from the process' point of view, the page
+was in real memory all along.  In fact, to the process, all pages always
+seem to be in real memory.  Except for one thing: the elapsed execution
+time of an instruction that would normally be a few nanoseconds is
+suddenly much, much, longer (because the kernel normally has to do I/O
+to complete the page-in).  For programs sensitive to that, the functions
+described in @ref{Locking Pages} can control it.
+@cindex page fault
+@cindex paging
+
+Within each virtual address space, a process has to keep track of what
+is at which addresses, and that process is called memory allocation.
+Allocation usually brings to mind meting out scarce resources, but in
+the case of virtual memory, that's not a major goal, because there is
+generally much more of it than anyone needs.  Memory allocation within a
+process is mainly just a matter of making sure that the same byte of
+memory isn't used to store two different things.
+
+Processes allocate memory in two major ways: by exec and
+programmatically.  Actually, forking is a third way, but it's not very
+interesting.  @xref{Creating a Process}.
+
+Exec is the operation of creating a virtual address space for a process,
+loading its basic program into it, and executing the program.  It is
+done by the ``exec'' family of functions (e.g. @code{execl}).  The
+operation takes a program file (an executable), it allocates space to
+load all the data in the executable, loads it, and transfers control to
+it.  That data is most notably the instructions of the program (the
+@dfn{text}), but also literals and constants in the program and even
+some variables: C variables with the static storage class (@pxref{Memory
+Allocation and C}).
+@cindex executable
+@cindex literals
+@cindex constants
+
+Once that program begins to execute, it uses programmatic allocation to
+gain additional memory.  In a C program with @theglibc{}, there
+are two kinds of programmatic allocation: automatic and dynamic.
+@xref{Memory Allocation and C}.
+
+Memory-mapped I/O is another form of dynamic virtual memory allocation.
+Mapping memory to a file means declaring that the contents of certain
+range of a process' addresses shall be identical to the contents of a
+specified regular file.  The system makes the virtual memory initially
+contain the contents of the file, and if you modify the memory, the
+system writes the same modification to the file.  Note that due to the
+magic of virtual memory and page faults, there is no reason for the
+system to do I/O to read the file, or allocate real memory for its
+contents, until the program accesses the virtual memory.
+@xref{Memory-mapped I/O}.
+@cindex memory mapped I/O
+@cindex memory mapped file
+@cindex files, accessing
+
+Just as it programmatically allocates memory, the program can
+programmatically deallocate (@dfn{free}) it.  You can't free the memory
+that was allocated by exec.  When the program exits or execs, you might
+say that all its memory gets freed, but since in both cases the address
+space ceases to exist, the point is really moot.  @xref{Program
+Termination}.
+@cindex execing a program
+@cindex freeing memory
+@cindex exiting a program
+
+A process' virtual address space is divided into segments.  A segment is
+a contiguous range of virtual addresses.  Three important segments are:
+
+@itemize @bullet
+
+@item
+
+The @dfn{text segment} contains a program's instructions and literals and
+static constants.  It is allocated by exec and stays the same size for
+the life of the virtual address space.
+
+@item
+The @dfn{data segment} is working storage for the program.  It can be
+preallocated and preloaded by exec and the process can extend or shrink
+it by calling functions as described in @xref{Resizing the Data
+Segment}.  Its lower end is fixed.
+
+@item
+The @dfn{stack segment} contains a program stack.  It grows as the stack
+grows, but doesn't shrink when the stack shrinks.
+
+@end itemize
+
+
+
+@node Memory Allocation
+@section Allocating Storage For Program Data
+
+This section covers how ordinary programs manage storage for their data,
+including the famous @code{malloc} function and some fancier facilities
+special to @theglibc{} and GNU Compiler.
+
+@menu
+* Memory Allocation and C::     How to get different kinds of allocation in C.
+* The GNU Allocator::		An overview of the GNU @code{malloc}
+				implementation.
+* Unconstrained Allocation::    The @code{malloc} facility allows fully general
+		 		 dynamic allocation.
+* Allocation Debugging::        Finding memory leaks and not freed memory.
+* Replacing malloc::            Using your own @code{malloc}-style allocator.
+* Obstacks::                    Obstacks are less general than malloc
+				 but more efficient and convenient.
+* Variable Size Automatic::     Allocation of variable-sized blocks
+				 of automatic storage that are freed when the
+				 calling function returns.
+@end menu
+
+
+@node Memory Allocation and C
+@subsection Memory Allocation in C Programs
+
+The C language supports two kinds of memory allocation through the
+variables in C programs:
+
+@itemize @bullet
+@item
+@dfn{Static allocation} is what happens when you declare a static or
+global variable.  Each static or global variable defines one block of
+space, of a fixed size.  The space is allocated once, when your program
+is started (part of the exec operation), and is never freed.
+@cindex static memory allocation
+@cindex static storage class
+
+@item
+@dfn{Automatic allocation} happens when you declare an automatic
+variable, such as a function argument or a local variable.  The space
+for an automatic variable is allocated when the compound statement
+containing the declaration is entered, and is freed when that
+compound statement is exited.
+@cindex automatic memory allocation
+@cindex automatic storage class
+
+In GNU C, the size of the automatic storage can be an expression
+that varies.  In other C implementations, it must be a constant.
+@end itemize
+
+A third important kind of memory allocation, @dfn{dynamic allocation},
+is not supported by C variables but is available via @glibcadj{}
+functions.
+@cindex dynamic memory allocation
+
+@subsubsection Dynamic Memory Allocation
+@cindex dynamic memory allocation
+
+@dfn{Dynamic memory allocation} is a technique in which programs
+determine as they are running where to store some information.  You need
+dynamic allocation when the amount of memory you need, or how long you
+continue to need it, depends on factors that are not known before the
+program runs.
+
+For example, you may need a block to store a line read from an input
+file; since there is no limit to how long a line can be, you must
+allocate the memory dynamically and make it dynamically larger as you
+read more of the line.
+
+Or, you may need a block for each record or each definition in the input
+data; since you can't know in advance how many there will be, you must
+allocate a new block for each record or definition as you read it.
+
+When you use dynamic allocation, the allocation of a block of memory is
+an action that the program requests explicitly.  You call a function or
+macro when you want to allocate space, and specify the size with an
+argument.  If you want to free the space, you do so by calling another
+function or macro.  You can do these things whenever you want, as often
+as you want.
+
+Dynamic allocation is not supported by C variables; there is no storage
+class ``dynamic'', and there can never be a C variable whose value is
+stored in dynamically allocated space.  The only way to get dynamically
+allocated memory is via a system call (which is generally via a @glibcadj{}
+function call), and the only way to refer to dynamically
+allocated space is through a pointer.  Because it is less convenient,
+and because the actual process of dynamic allocation requires more
+computation time, programmers generally use dynamic allocation only when
+neither static nor automatic allocation will serve.
+
+For example, if you want to allocate dynamically some space to hold a
+@code{struct foobar}, you cannot declare a variable of type @code{struct
+foobar} whose contents are the dynamically allocated space.  But you can
+declare a variable of pointer type @code{struct foobar *} and assign it the
+address of the space.  Then you can use the operators @samp{*} and
+@samp{->} on this pointer variable to refer to the contents of the space:
+
+@smallexample
+@{
+  struct foobar *ptr = malloc (sizeof *ptr);
+  ptr->name = x;
+  ptr->next = current_foobar;
+  current_foobar = ptr;
+@}
+@end smallexample
+
+@node The GNU Allocator
+@subsection The GNU Allocator
+@cindex gnu allocator
+
+The @code{malloc} implementation in @theglibc{} is derived from ptmalloc
+(pthreads malloc), which in turn is derived from dlmalloc (Doug Lea malloc).
+This @code{malloc} may allocate memory
+in two different ways depending on their size
+and certain parameters that may be controlled by users. The most common way is
+to allocate portions of memory (called chunks) from a large contiguous area of
+memory and manage these areas to optimize their use and reduce wastage in the
+form of unusable chunks. Traditionally the system heap was set up to be the one
+large memory area but the @glibcadj{} @code{malloc} implementation maintains
+multiple such areas to optimize their use in multi-threaded applications.  Each
+such area is internally referred to as an @dfn{arena}.
+
+As opposed to other versions, the @code{malloc} in @theglibc{} does not round
+up chunk sizes to powers of two, neither for large nor for small sizes.
+Neighboring chunks can be coalesced on a @code{free} no matter what their size
+is.  This makes the implementation suitable for all kinds of allocation
+patterns without generally incurring high memory waste through fragmentation.
+The presence of multiple arenas allows multiple threads to allocate
+memory simultaneously in separate arenas, thus improving performance.
+
+The other way of memory allocation is for very large blocks, i.e. much larger
+than a page. These requests are allocated with @code{mmap} (anonymous or via
+@file{/dev/zero}; @pxref{Memory-mapped I/O})). This has the great advantage
+that these chunks are returned to the system immediately when they are freed.
+Therefore, it cannot happen that a large chunk becomes ``locked'' in between
+smaller ones and even after calling @code{free} wastes memory.  The size
+threshold for @code{mmap} to be used is dynamic and gets adjusted according to
+allocation patterns of the program.  @code{mallopt} can be used to statically
+adjust the threshold using @code{M_MMAP_THRESHOLD} and the use of @code{mmap}
+can be disabled completely with @code{M_MMAP_MAX};
+@pxref{Malloc Tunable Parameters}.
+
+A more detailed technical description of the GNU Allocator is maintained in
+the @glibcadj{} wiki. See
+@uref{https://sourceware.org/glibc/wiki/MallocInternals}.
+
+It is possible to use your own custom @code{malloc} instead of the
+built-in allocator provided by @theglibc{}.  @xref{Replacing malloc}.
+
+@node Unconstrained Allocation
+@subsection Unconstrained Allocation
+@cindex unconstrained memory allocation
+@cindex @code{malloc} function
+@cindex heap, dynamic allocation from
+
+The most general dynamic allocation facility is @code{malloc}.  It
+allows you to allocate blocks of memory of any size at any time, make
+them bigger or smaller at any time, and free the blocks individually at
+any time (or never).
+
+@menu
+* Basic Allocation::            Simple use of @code{malloc}.
+* Malloc Examples::             Examples of @code{malloc}.  @code{xmalloc}.
+* Freeing after Malloc::        Use @code{free} to free a block you
+				 got with @code{malloc}.
+* Changing Block Size::         Use @code{realloc} to make a block
+				 bigger or smaller.
+* Allocating Cleared Space::    Use @code{calloc} to allocate a
+				 block and clear it.
+* Aligned Memory Blocks::       Allocating specially aligned memory.
+* Malloc Tunable Parameters::   Use @code{mallopt} to adjust allocation
+                                 parameters.
+* Heap Consistency Checking::   Automatic checking for errors.
+* Statistics of Malloc::        Getting information about how much
+				 memory your program is using.
+* Summary of Malloc::           Summary of @code{malloc} and related functions.
+@end menu
+
+@node Basic Allocation
+@subsubsection Basic Memory Allocation
+@cindex allocation of memory with @code{malloc}
+
+To allocate a block of memory, call @code{malloc}.  The prototype for
+this function is in @file{stdlib.h}.
+@pindex stdlib.h
+
+@deftypefun {void *} malloc (size_t @var{size})
+@standards{ISO, malloc.h}
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c Malloc hooks and __morecore pointers, as well as such parameters as
+@c max_n_mmaps and max_mmapped_mem, are accessed without guards, so they
+@c could pose a thread safety issue; in order to not declare malloc
+@c MT-unsafe, it's modifying the hooks and parameters while multiple
+@c threads are active that is regarded as unsafe.  An arena's next field
+@c is initialized and never changed again, except for main_arena's,
+@c that's protected by list_lock; next_free is only modified while
+@c list_lock is held too.  All other data members of an arena, as well
+@c as the metadata of the memory areas assigned to it, are only modified
+@c while holding the arena's mutex (fastbin pointers use catomic ops
+@c because they may be modified by free without taking the arena's
+@c lock).  Some reassurance was needed for fastbins, for it wasn't clear
+@c how they were initialized.  It turns out they are always
+@c zero-initialized: main_arena's, for being static data, and other
+@c arena's, for being just-mmapped memory.
+
+@c Leaking file descriptors and memory in case of cancellation is
+@c unavoidable without disabling cancellation, but the lock situation is
+@c a bit more complicated: we don't have fallback arenas for malloc to
+@c be safe to call from within signal handlers.  Error-checking mutexes
+@c or trylock could enable us to try and use alternate arenas, even with
+@c -DPER_THREAD (enabled by default), but supporting interruption
+@c (cancellation or signal handling) while holding the arena list mutex
+@c would require more work; maybe blocking signals and disabling async
+@c cancellation while manipulating the arena lists?
+
+@c __libc_malloc @asulock @aculock @acsfd @acsmem
+@c  force_reg ok
+@c  *malloc_hook unguarded
+@c  arena_lock @asulock @aculock @acsfd @acsmem
+@c   mutex_lock @asulock @aculock
+@c   arena_get2 @asulock @aculock @acsfd @acsmem
+@c    get_free_list @asulock @aculock
+@c     mutex_lock (list_lock) dup @asulock @aculock
+@c     mutex_unlock (list_lock) dup @aculock
+@c     mutex_lock (arena lock) dup @asulock @aculock [returns locked]
+@c    __get_nprocs ext ok @acsfd
+@c    NARENAS_FROM_NCORES ok
+@c    catomic_compare_and_exchange_bool_acq ok
+@c    _int_new_arena ok @asulock @aculock @acsmem
+@c     new_heap ok @acsmem
+@c      mmap ok @acsmem
+@c      munmap ok @acsmem
+@c      mprotect ok
+@c     chunk2mem ok
+@c     set_head ok
+@c     tsd_setspecific dup ok
+@c     mutex_init ok
+@c     mutex_lock (just-created mutex) ok, returns locked
+@c     mutex_lock (list_lock) dup @asulock @aculock
+@c     atomic_write_barrier ok
+@c     mutex_unlock (list_lock) @aculock
+@c    catomic_decrement ok
+@c    reused_arena @asulock @aculock
+@c      reads&writes next_to_use and iterates over arena next without guards
+@c      those are harmless as long as we don't drop arenas from the
+@c      NEXT list, and we never do; when a thread terminates,
+@c      __malloc_arena_thread_freeres prepends the arena to the free_list
+@c      NEXT_FREE list, but NEXT is never modified, so it's safe!
+@c     mutex_trylock (arena lock) @asulock @aculock
+@c     mutex_lock (arena lock) dup @asulock @aculock
+@c     tsd_setspecific dup ok
+@c  _int_malloc @acsfd @acsmem
+@c   checked_request2size ok
+@c    REQUEST_OUT_OF_RANGE ok
+@c    request2size ok
+@c   get_max_fast ok
+@c   fastbin_index ok
+@c   fastbin ok
+@c   catomic_compare_and_exhange_val_acq ok
+@c   malloc_printerr dup @mtsenv
+@c     if we get to it, we're toast already, undefined behavior must have
+@c     been invoked before
+@c    libc_message @mtsenv [no leaks with cancellation disabled]
+@c     FATAL_PREPARE ok
+@c      pthread_setcancelstate disable ok
+@c     libc_secure_getenv @mtsenv
+@c      getenv @mtsenv
+@c     open_not_cancel_2 dup @acsfd
+@c     strchrnul ok
+@c     WRITEV_FOR_FATAL ok
+@c      writev ok
+@c     mmap ok @acsmem
+@c     munmap ok @acsmem
+@c     BEFORE_ABORT @acsfd
+@c      backtrace ok
+@c      write_not_cancel dup ok
+@c      backtrace_symbols_fd @aculock
+@c      open_not_cancel_2 dup @acsfd
+@c      read_not_cancel dup ok
+@c      close_not_cancel_no_status dup @acsfd
+@c     abort ok
+@c    itoa_word ok
+@c    abort ok
+@c   check_remalloced_chunk ok/disabled
+@c   chunk2mem dup ok
+@c   alloc_perturb ok
+@c   in_smallbin_range ok
+@c   smallbin_index ok
+@c   bin_at ok
+@c   last ok
+@c   malloc_consolidate ok
+@c    get_max_fast dup ok
+@c    clear_fastchunks ok
+@c    unsorted_chunks dup ok
+@c    fastbin dup ok
+@c    atomic_exchange_acq ok
+@c    check_inuse_chunk dup ok/disabled
+@c    chunk_at_offset dup ok
+@c    chunksize dup ok
+@c    inuse_bit_at_offset dup ok
+@c    unlink dup ok
+@c    clear_inuse_bit_at_offset dup ok
+@c    in_smallbin_range dup ok
+@c    set_head dup ok
+@c    malloc_init_state ok
+@c     bin_at dup ok
+@c     set_noncontiguous dup ok
+@c     set_max_fast dup ok
+@c     initial_top ok
+@c      unsorted_chunks dup ok
+@c    check_malloc_state ok/disabled
+@c   set_inuse_bit_at_offset ok
+@c   check_malloced_chunk ok/disabled
+@c   largebin_index ok
+@c   have_fastchunks ok
+@c   unsorted_chunks ok
+@c    bin_at ok
+@c   chunksize ok
+@c   chunk_at_offset ok
+@c   set_head ok
+@c   set_foot ok
+@c   mark_bin ok
+@c    idx2bit ok
+@c   first ok
+@c   unlink ok
+@c    malloc_printerr dup ok
+@c    in_smallbin_range dup ok
+@c   idx2block ok
+@c   idx2bit dup ok
+@c   next_bin ok
+@c   sysmalloc @acsfd @acsmem
+@c    MMAP @acsmem
+@c    set_head dup ok
+@c    check_chunk ok/disabled
+@c    chunk2mem dup ok
+@c    chunksize dup ok
+@c    chunk_at_offset dup ok
+@c    heap_for_ptr ok
+@c    grow_heap ok
+@c     mprotect ok
+@c    set_head dup ok
+@c    new_heap @acsmem
+@c     MMAP dup @acsmem
+@c     munmap @acsmem
+@c    top ok
+@c    set_foot dup ok
+@c    contiguous ok
+@c    MORECORE ok
+@c     *__morecore ok unguarded
+@c      __default_morecore
+@c       sbrk ok
+@c    force_reg dup ok
+@c    *__after_morecore_hook unguarded
+@c    set_noncontiguous ok
+@c    malloc_printerr dup ok
+@c    _int_free (have_lock) @acsfd @acsmem [@asulock @aculock]
+@c     chunksize dup ok
+@c     mutex_unlock dup @aculock/!have_lock
+@c     malloc_printerr dup ok
+@c     check_inuse_chunk ok/disabled
+@c     chunk_at_offset dup ok
+@c     mutex_lock dup @asulock @aculock/@have_lock
+@c     chunk2mem dup ok
+@c     free_perturb ok
+@c     set_fastchunks ok
+@c      catomic_and ok
+@c     fastbin_index dup ok
+@c     fastbin dup ok
+@c     catomic_compare_and_exchange_val_rel ok
+@c     chunk_is_mmapped ok
+@c     contiguous dup ok
+@c     prev_inuse ok
+@c     unlink dup ok
+@c     inuse_bit_at_offset dup ok
+@c     clear_inuse_bit_at_offset ok
+@c     unsorted_chunks dup ok
+@c     in_smallbin_range dup ok
+@c     set_head dup ok
+@c     set_foot dup ok
+@c     check_free_chunk ok/disabled
+@c     check_chunk dup ok/disabled
+@c     have_fastchunks dup ok
+@c     malloc_consolidate dup ok
+@c     systrim ok
+@c      MORECORE dup ok
+@c      *__after_morecore_hook dup unguarded
+@c      set_head dup ok
+@c      check_malloc_state ok/disabled
+@c     top dup ok
+@c     heap_for_ptr dup ok
+@c     heap_trim @acsfd @acsmem
+@c      top dup ok
+@c      chunk_at_offset dup ok
+@c      prev_chunk ok
+@c      chunksize dup ok
+@c      prev_inuse dup ok
+@c      delete_heap @acsmem
+@c       munmap dup @acsmem
+@c      unlink dup ok
+@c      set_head dup ok
+@c      shrink_heap @acsfd
+@c       check_may_shrink_heap @acsfd
+@c        open_not_cancel_2 @acsfd
+@c        read_not_cancel ok
+@c        close_not_cancel_no_status @acsfd
+@c       MMAP dup ok
+@c       madvise ok
+@c     munmap_chunk @acsmem
+@c      chunksize dup ok
+@c      chunk_is_mmapped dup ok
+@c      chunk2mem dup ok
+@c      malloc_printerr dup ok
+@c      munmap dup @acsmem
+@c    check_malloc_state ok/disabled
+@c  arena_get_retry @asulock @aculock @acsfd @acsmem
+@c   mutex_unlock dup @aculock
+@c   mutex_lock dup @asulock @aculock
+@c   arena_get2 dup @asulock @aculock @acsfd @acsmem
+@c  mutex_unlock @aculock
+@c  mem2chunk ok
+@c  chunk_is_mmapped ok
+@c  arena_for_chunk ok
+@c   chunk_non_main_arena ok
+@c   heap_for_ptr ok
+This function returns a pointer to a newly allocated block @var{size}
+bytes long, or a null pointer (setting @code{errno})
+if the block could not be allocated.
+@end deftypefun
+
+The contents of the block are undefined; you must initialize it yourself
+(or use @code{calloc} instead; @pxref{Allocating Cleared Space}).
+Normally you would convert the value to a pointer to the kind of object
+that you want to store in the block.  Here we show an example of doing
+so, and of initializing the space with zeros using the library function
+@code{memset} (@pxref{Copying Strings and Arrays}):
+
+@smallexample
+struct foo *ptr = malloc (sizeof *ptr);
+if (ptr == 0) abort ();
+memset (ptr, 0, sizeof (struct foo));
+@end smallexample
+
+You can store the result of @code{malloc} into any pointer variable
+without a cast, because @w{ISO C} automatically converts the type
+@code{void *} to another type of pointer when necessary.  However, a cast
+is necessary if the type is needed but not specified by context.
+
+Remember that when allocating space for a string, the argument to
+@code{malloc} must be one plus the length of the string.  This is
+because a string is terminated with a null character that doesn't count
+in the ``length'' of the string but does need space.  For example:
+
+@smallexample
+char *ptr = malloc (length + 1);
+@end smallexample
+
+@noindent
+@xref{Representation of Strings}, for more information about this.
+
+@node Malloc Examples
+@subsubsection Examples of @code{malloc}
+
+If no more space is available, @code{malloc} returns a null pointer.
+You should check the value of @emph{every} call to @code{malloc}.  It is
+useful to write a subroutine that calls @code{malloc} and reports an
+error if the value is a null pointer, returning only if the value is
+nonzero.  This function is conventionally called @code{xmalloc}.  Here
+it is:
+@cindex @code{xmalloc} function
+
+@smallexample
+void *
+xmalloc (size_t size)
+@{
+  void *value = malloc (size);
+  if (value == 0)
+    fatal ("virtual memory exhausted");
+  return value;
+@}
+@end smallexample
+
+Here is a real example of using @code{malloc} (by way of @code{xmalloc}).
+The function @code{savestring} will copy a sequence of characters into
+a newly allocated null-terminated string:
+
+@smallexample
+@group
+char *
+savestring (const char *ptr, size_t len)
+@{
+  char *value = xmalloc (len + 1);
+  value[len] = '\0';
+  return memcpy (value, ptr, len);
+@}
+@end group
+@end smallexample
+
+The block that @code{malloc} gives you is guaranteed to be aligned so
+that it can hold any type of data.  On @gnusystems{}, the address is
+always a multiple of eight on 32-bit systems, and a multiple of 16 on
+64-bit systems.  Only rarely is any higher boundary (such as a page
+boundary) necessary; for those cases, use @code{aligned_alloc} or
+@code{posix_memalign} (@pxref{Aligned Memory Blocks}).
+
+Note that the memory located after the end of the block is likely to be
+in use for something else; perhaps a block already allocated by another
+call to @code{malloc}.  If you attempt to treat the block as longer than
+you asked for it to be, you are liable to destroy the data that
+@code{malloc} uses to keep track of its blocks, or you may destroy the
+contents of another block.  If you have already allocated a block and
+discover you want it to be bigger, use @code{realloc} (@pxref{Changing
+Block Size}).
+
+@strong{Portability Notes:}
+
+@itemize @bullet
+@item
+In @theglibc{}, a successful @code{malloc (0)}
+returns a non-null pointer to a newly allocated size-zero block;
+other implementations may return @code{NULL} instead.
+POSIX and the ISO C standard allow both behaviors.
+
+@item
+In @theglibc{}, a failed @code{malloc} call sets @code{errno},
+but ISO C does not require this and non-POSIX implementations
+need not set @code{errno} when failing.
+
+@item
+In @theglibc{}, @code{malloc} always fails when @var{size} exceeds
+@code{PTRDIFF_MAX}, to avoid problems with programs that subtract
+pointers or use signed indexes.  Other implementations may succeed in
+this case, leading to undefined behavior later.
+@end itemize
+
+@node Freeing after Malloc
+@subsubsection Freeing Memory Allocated with @code{malloc}
+@cindex freeing memory allocated with @code{malloc}
+@cindex heap, freeing memory from
+
+When you no longer need a block that you got with @code{malloc}, use the
+function @code{free} to make the block available to be allocated again.
+The prototype for this function is in @file{stdlib.h}.
+@pindex stdlib.h
+
+@deftypefun void free (void *@var{ptr})
+@standards{ISO, malloc.h}
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c __libc_free @asulock @aculock @acsfd @acsmem
+@c   releasing memory into fastbins modifies the arena without taking
+@c   its mutex, but catomic operations ensure safety.  If two (or more)
+@c   threads are running malloc and have their own arenas locked when
+@c   each gets a signal whose handler free()s large (non-fastbin-able)
+@c   blocks from each other's arena, we deadlock; this is a more general
+@c   case of @asulock.
+@c  *__free_hook unguarded
+@c  mem2chunk ok
+@c  chunk_is_mmapped ok, chunk bits not modified after allocation
+@c  chunksize ok
+@c  munmap_chunk dup @acsmem
+@c  arena_for_chunk dup ok
+@c  _int_free (!have_lock) dup @asulock @aculock @acsfd @acsmem
+The @code{free} function deallocates the block of memory pointed at
+by @var{ptr}.
+@end deftypefun
+
+Freeing a block alters the contents of the block.  @strong{Do not expect to
+find any data (such as a pointer to the next block in a chain of blocks) in
+the block after freeing it.}  Copy whatever you need out of the block before
+freeing it!  Here is an example of the proper way to free all the blocks in
+a chain, and the strings that they point to:
+
+@smallexample
+struct chain
+  @{
+    struct chain *next;
+    char *name;
+  @}
+
+void
+free_chain (struct chain *chain)
+@{
+  while (chain != 0)
+    @{
+      struct chain *next = chain->next;
+      free (chain->name);
+      free (chain);
+      chain = next;
+    @}
+@}
+@end smallexample
+
+Occasionally, @code{free} can actually return memory to the operating
+system and make the process smaller.  Usually, all it can do is allow a
+later call to @code{malloc} to reuse the space.  In the meantime, the
+space remains in your program as part of a free-list used internally by
+@code{malloc}.
+
+The @code{free} function preserves the value of @code{errno}, so that
+cleanup code need not worry about saving and restoring @code{errno}
+around a call to @code{free}.  Although neither @w{ISO C} nor
+POSIX.1-2017 requires @code{free} to preserve @code{errno}, a future
+version of POSIX is planned to require it.
+
+There is no point in freeing blocks at the end of a program, because all
+of the program's space is given back to the system when the process
+terminates.
+
+@node Changing Block Size
+@subsubsection Changing the Size of a Block
+@cindex changing the size of a block (@code{malloc})
+
+Often you do not know for certain how big a block you will ultimately need
+at the time you must begin to use the block.  For example, the block might
+be a buffer that you use to hold a line being read from a file; no matter
+how long you make the buffer initially, you may encounter a line that is
+longer.
+
+You can make the block longer by calling @code{realloc} or
+@code{reallocarray}.  These functions are declared in @file{stdlib.h}.
+@pindex stdlib.h
+
+@deftypefun {void *} realloc (void *@var{ptr}, size_t @var{newsize})
+@standards{ISO, malloc.h}
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c It may call the implementations of malloc and free, so all of their
+@c issues arise, plus the realloc hook, also accessed without guards.
+
+@c __libc_realloc @asulock @aculock @acsfd @acsmem
+@c  *__realloc_hook unguarded
+@c  __libc_free dup @asulock @aculock @acsfd @acsmem
+@c  __libc_malloc dup @asulock @aculock @acsfd @acsmem
+@c  mem2chunk dup ok
+@c  chunksize dup ok
+@c  malloc_printerr dup ok
+@c  checked_request2size dup ok
+@c  chunk_is_mmapped dup ok
+@c  mremap_chunk
+@c   chunksize dup ok
+@c   __mremap ok
+@c   set_head dup ok
+@c  MALLOC_COPY ok
+@c   memcpy ok
+@c  munmap_chunk dup @acsmem
+@c  arena_for_chunk dup ok
+@c  mutex_lock (arena mutex) dup @asulock @aculock
+@c  _int_realloc @acsfd @acsmem
+@c   malloc_printerr dup ok
+@c   check_inuse_chunk dup ok/disabled
+@c   chunk_at_offset dup ok
+@c   chunksize dup ok
+@c   set_head_size dup ok
+@c   chunk_at_offset dup ok
+@c   set_head dup ok
+@c   chunk2mem dup ok
+@c   inuse dup ok
+@c   unlink dup ok
+@c   _int_malloc dup @acsfd @acsmem
+@c   mem2chunk dup ok
+@c   MALLOC_COPY dup ok
+@c   _int_free (have_lock) dup @acsfd @acsmem
+@c   set_inuse_bit_at_offset dup ok
+@c   set_head dup ok
+@c  mutex_unlock (arena mutex) dup @aculock
+@c  _int_free (!have_lock) dup @asulock @aculock @acsfd @acsmem
+
+The @code{realloc} function changes the size of the block whose address is
+@var{ptr} to be @var{newsize}.
+
+Since the space after the end of the block may be in use, @code{realloc}
+may find it necessary to copy the block to a new address where more free
+space is available.  The value of @code{realloc} is the new address of the
+block.  If the block needs to be moved, @code{realloc} copies the old
+contents.
+
+If you pass a null pointer for @var{ptr}, @code{realloc} behaves just
+like @samp{malloc (@var{newsize})}.
+Otherwise, if @var{newsize} is zero
+@code{realloc} frees the block and returns @code{NULL}.
+Otherwise, if @code{realloc} cannot reallocate the requested size
+it returns @code{NULL} and sets @code{errno}; the original block
+is left undisturbed.
+@end deftypefun
+
+@deftypefun {void *} reallocarray (void *@var{ptr}, size_t @var{nmemb}, size_t @var{size})
+@standards{BSD, malloc.h}
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+
+The @code{reallocarray} function changes the size of the block whose address
+is @var{ptr} to be long enough to contain a vector of @var{nmemb} elements,
+each of size @var{size}.  It is equivalent to @samp{realloc (@var{ptr},
+@var{nmemb} * @var{size})}, except that @code{reallocarray} fails safely if
+the multiplication overflows, by setting @code{errno} to @code{ENOMEM},
+returning a null pointer, and leaving the original block unchanged.
+
+@code{reallocarray} should be used instead of @code{realloc} when the new size
+of the allocated block is the result of a multiplication that might overflow.
+
+@strong{Portability Note:} This function is not part of any standard.  It was
+first introduced in OpenBSD 5.6.
+@end deftypefun
+
+Like @code{malloc}, @code{realloc} and @code{reallocarray} may return a null
+pointer if no memory space is available to make the block bigger.  When this
+happens, the original block is untouched; it has not been modified or
+relocated.
+
+In most cases it makes no difference what happens to the original block
+when @code{realloc} fails, because the application program cannot continue
+when it is out of memory, and the only thing to do is to give a fatal error
+message.  Often it is convenient to write and use subroutines,
+conventionally called @code{xrealloc} and @code{xreallocarray},
+that take care of the error message
+as @code{xmalloc} does for @code{malloc}:
+@cindex @code{xrealloc} and @code{xreallocarray} functions
+
+@smallexample
+void *
+xreallocarray (void *ptr, size_t nmemb, size_t size)
+@{
+  void *value = reallocarray (ptr, nmemb, size);
+  if (value == 0)
+    fatal ("Virtual memory exhausted");
+  return value;
+@}
+
+void *
+xrealloc (void *ptr, size_t size)
+@{
+  return xreallocarray (ptr, 1, size);
+@}
+@end smallexample
+
+You can also use @code{realloc} or @code{reallocarray} to make a block
+smaller.  The reason you would do this is to avoid tying up a lot of memory
+space when only a little is needed.
+@comment The following is no longer true with the new malloc.
+@comment But it seems wise to keep the warning for other implementations.
+In several allocation implementations, making a block smaller sometimes
+necessitates copying it, so it can fail if no other space is available.
+
+@strong{Portability Notes:}
+
+@itemize @bullet
+@item
+Portable programs should not attempt to reallocate blocks to be size zero.
+On other implementations if @var{ptr} is non-null, @code{realloc (ptr, 0)}
+might free the block and return a non-null pointer to a size-zero
+object, or it might fail and return @code{NULL} without freeing the block.
+The ISO C17 standard allows these variations.
+
+@item
+In @theglibc{}, reallocation fails if the resulting block
+would exceed @code{PTRDIFF_MAX} in size, to avoid problems with programs
+that subtract pointers or use signed indexes.  Other implementations may
+succeed, leading to undefined behavior later.
+
+@item
+In @theglibc{}, if the new size is the same as the old, @code{realloc} and
+@code{reallocarray} are guaranteed to change nothing and return the same
+address that you gave.  However, POSIX and ISO C allow the functions
+to relocate the object or fail in this situation.
+@end itemize
+
+@node Allocating Cleared Space
+@subsubsection Allocating Cleared Space
+
+The function @code{calloc} allocates memory and clears it to zero.  It
+is declared in @file{stdlib.h}.
+@pindex stdlib.h
+
+@deftypefun {void *} calloc (size_t @var{count}, size_t @var{eltsize})
+@standards{ISO, malloc.h}
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c Same caveats as malloc.
+
+@c __libc_calloc @asulock @aculock @acsfd @acsmem
+@c  *__malloc_hook dup unguarded
+@c  memset dup ok
+@c  arena_get @asulock @aculock @acsfd @acsmem
+@c   arena_lock dup @asulock @aculock @acsfd @acsmem
+@c  top dup ok
+@c  chunksize dup ok
+@c  heap_for_ptr dup ok
+@c  _int_malloc dup @acsfd @acsmem
+@c  arena_get_retry dup @asulock @aculock @acsfd @acsmem
+@c  mutex_unlock dup @aculock
+@c  mem2chunk dup ok
+@c  chunk_is_mmapped dup ok
+@c  MALLOC_ZERO ok
+@c   memset dup ok
+This function allocates a block long enough to contain a vector of
+@var{count} elements, each of size @var{eltsize}.  Its contents are
+cleared to zero before @code{calloc} returns.
+@end deftypefun
+
+You could define @code{calloc} as follows:
+
+@smallexample
+void *
+calloc (size_t count, size_t eltsize)
+@{
+  void *value = reallocarray (0, count, eltsize);
+  if (value != 0)
+    memset (value, 0, count * eltsize);
+  return value;
+@}
+@end smallexample
+
+But in general, it is not guaranteed that @code{calloc} calls
+@code{reallocarray} and @code{memset} internally.  For example, if the
+@code{calloc} implementation knows for other reasons that the new
+memory block is zero, it need not zero out the block again with
+@code{memset}.  Also, if an application provides its own
+@code{reallocarray} outside the C library, @code{calloc} might not use
+that redefinition.  @xref{Replacing malloc}.
+
+@node Aligned Memory Blocks
+@subsubsection Allocating Aligned Memory Blocks
+
+@cindex page boundary
+@cindex alignment (with @code{malloc})
+@pindex stdlib.h
+The address of a block returned by @code{malloc} or @code{realloc} in
+@gnusystems{} is always a multiple of eight (or sixteen on 64-bit
+systems).  If you need a block whose address is a multiple of a higher
+power of two than that, use @code{aligned_alloc} or @code{posix_memalign}.
+@code{aligned_alloc} and @code{posix_memalign} are declared in
+@file{stdlib.h}.
+
+@deftypefun {void *} aligned_alloc (size_t @var{alignment}, size_t @var{size})
+@standards{???, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c Alias to memalign.
+The @code{aligned_alloc} function allocates a block of @var{size} bytes whose
+address is a multiple of @var{alignment}.  The @var{alignment} must be a
+power of two and @var{size} must be a multiple of @var{alignment}.
+
+The @code{aligned_alloc} function returns a null pointer on error and sets
+@code{errno} to one of the following values:
+
+@table @code
+@item ENOMEM
+There was insufficient memory available to satisfy the request.
+
+@item EINVAL
+@var{alignment} is not a power of two.
+
+This function was introduced in @w{ISO C11} and hence may have better
+portability to modern non-POSIX systems than @code{posix_memalign}.
+@end table
+
+@end deftypefun
+
+@deftypefun {void *} memalign (size_t @var{boundary}, size_t @var{size})
+@standards{BSD, malloc.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c Same issues as malloc.  The padding bytes are safely freed in
+@c _int_memalign, with the arena still locked.
+
+@c __libc_memalign @asulock @aculock @acsfd @acsmem
+@c  *__memalign_hook dup unguarded
+@c  __libc_malloc dup @asulock @aculock @acsfd @acsmem
+@c  arena_get dup @asulock @aculock @acsfd @acsmem
+@c  _int_memalign @acsfd @acsmem
+@c   _int_malloc dup @acsfd @acsmem
+@c   checked_request2size dup ok
+@c   mem2chunk dup ok
+@c   chunksize dup ok
+@c   chunk_is_mmapped dup ok
+@c   set_head dup ok
+@c   chunk2mem dup ok
+@c   set_inuse_bit_at_offset dup ok
+@c   set_head_size dup ok
+@c   _int_free (have_lock) dup @acsfd @acsmem
+@c   chunk_at_offset dup ok
+@c   check_inuse_chunk dup ok
+@c  arena_get_retry dup @asulock @aculock @acsfd @acsmem
+@c  mutex_unlock dup @aculock
+The @code{memalign} function allocates a block of @var{size} bytes whose
+address is a multiple of @var{boundary}.  The @var{boundary} must be a
+power of two!  The function @code{memalign} works by allocating a
+somewhat larger block, and then returning an address within the block
+that is on the specified boundary.
+
+The @code{memalign} function returns a null pointer on error and sets
+@code{errno} to one of the following values:
+
+@table @code
+@item ENOMEM
+There was insufficient memory available to satisfy the request.
+
+@item EINVAL
+@var{boundary} is not a power of two.
+
+@end table
+
+The @code{memalign} function is obsolete and @code{aligned_alloc} or
+@code{posix_memalign} should be used instead.
+@end deftypefun
+
+@deftypefun int posix_memalign (void **@var{memptr}, size_t @var{alignment}, size_t @var{size})
+@standards{POSIX, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+@c Calls memalign unless the requirements are not met (powerof2 macro is
+@c safe given an automatic variable as an argument) or there's a
+@c memalign hook (accessed unguarded, but safely).
+The @code{posix_memalign} function is similar to the @code{memalign}
+function in that it returns a buffer of @var{size} bytes aligned to a
+multiple of @var{alignment}.  But it adds one requirement to the
+parameter @var{alignment}: the value must be a power of two multiple of
+@code{sizeof (void *)}.
+
+If the function succeeds in allocation memory a pointer to the allocated
+memory is returned in @code{*@var{memptr}} and the return value is zero.
+Otherwise the function returns an error value indicating the problem.
+The possible error values returned are:
+
+@table @code
+@item ENOMEM
+There was insufficient memory available to satisfy the request.
+
+@item EINVAL
+@var{alignment} is not a power of two multiple of @code{sizeof (void *)}.
+
+@end table
+
+This function was introduced in POSIX 1003.1d.  Although this function is
+superseded by @code{aligned_alloc}, it is more portable to older POSIX
+systems that do not support @w{ISO C11}.
+@end deftypefun
+
+@deftypefun {void *} valloc (size_t @var{size})
+@standards{BSD, malloc.h}
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtuinit{}}@asunsafe{@asuinit{} @asulock{}}@acunsafe{@acuinit{} @aculock{} @acsfd{} @acsmem{}}}
+@c __libc_valloc @mtuinit @asuinit @asulock @aculock @acsfd @acsmem
+@c  ptmalloc_init (once) @mtsenv @asulock @aculock @acsfd @acsmem
+@c   _dl_addr @asucorrupt? @aculock
+@c    __rtld_lock_lock_recursive (dl_load_lock) @asucorrupt? @aculock
+@c    _dl_find_dso_for_object ok, iterates over dl_ns and its _ns_loaded objs
+@c      the ok above assumes no partial updates on dl_ns and _ns_loaded
+@c      that could confuse a _dl_addr call in a signal handler
+@c     _dl_addr_inside_object ok
+@c    determine_info ok
+@c    __rtld_lock_unlock_recursive (dl_load_lock) @aculock
+@c   *_environ @mtsenv
+@c   next_env_entry ok
+@c   strcspn dup ok
+@c   __libc_mallopt dup @mtasuconst:mallopt [setting mp_]
+@c   *__malloc_initialize_hook unguarded, ok
+@c  *__memalign_hook dup ok, unguarded
+@c  arena_get dup @asulock @aculock @acsfd @acsmem
+@c  _int_valloc @acsfd @acsmem
+@c   malloc_consolidate dup ok
+@c   _int_memalign dup @acsfd @acsmem
+@c  arena_get_retry dup @asulock @aculock @acsfd @acsmem
+@c  _int_memalign dup @acsfd @acsmem
+@c  mutex_unlock dup @aculock
+Using @code{valloc} is like using @code{memalign} and passing the page size
+as the value of the first argument.  It is implemented like this:
+
+@smallexample
+void *
+valloc (size_t size)
+@{
+  return memalign (getpagesize (), size);
+@}
+@end smallexample
+
+@ref{Query Memory Parameters} for more information about the memory
+subsystem.
+
+The @code{valloc} function is obsolete and @code{aligned_alloc} or
+@code{posix_memalign} should be used instead.
+@end deftypefun
+
+@node Malloc Tunable Parameters
+@subsubsection Malloc Tunable Parameters
+
+You can adjust some parameters for dynamic memory allocation with the
+@code{mallopt} function.  This function is the general SVID/XPG
+interface, defined in @file{malloc.h}.
+@pindex malloc.h
+
+@deftypefun int mallopt (int @var{param}, int @var{value})
+@safety{@prelim{}@mtunsafe{@mtuinit{} @mtasuconst{:mallopt}}@asunsafe{@asuinit{} @asulock{}}@acunsafe{@acuinit{} @aculock{}}}
+@c __libc_mallopt @mtuinit @mtasuconst:mallopt @asuinit @asulock @aculock
+@c  ptmalloc_init (once) dup @mtsenv @asulock @aculock @acsfd @acsmem
+@c  mutex_lock (main_arena->mutex) @asulock @aculock
+@c  malloc_consolidate dup ok
+@c  set_max_fast ok
+@c  mutex_unlock dup @aculock
+
+When calling @code{mallopt}, the @var{param} argument specifies the
+parameter to be set, and @var{value} the new value to be set.  Possible
+choices for @var{param}, as defined in @file{malloc.h}, are:
+
+@vtable @code
+@item M_MMAP_MAX
+The maximum number of chunks to allocate with @code{mmap}.  Setting this
+to zero disables all use of @code{mmap}.
+
+The default value of this parameter is @code{65536}.
+
+This parameter can also be set for the process at startup by setting the
+environment variable @env{MALLOC_MMAP_MAX_} to the desired value.
+
+@item M_MMAP_THRESHOLD
+All chunks larger than this value are allocated outside the normal
+heap, using the @code{mmap} system call.  This way it is guaranteed
+that the memory for these chunks can be returned to the system on
+@code{free}.  Note that requests smaller than this threshold might still
+be allocated via @code{mmap}.
+
+If this parameter is not set, the default value is set as 128 KiB and the
+threshold is adjusted dynamically to suit the allocation patterns of the
+program. If the parameter is set, the dynamic adjustment is disabled and the
+value is set statically to the input value.
+
+This parameter can also be set for the process at startup by setting the
+environment variable @env{MALLOC_MMAP_THRESHOLD_} to the desired value.
+@comment TODO: @item M_MXFAST
+
+@item M_PERTURB
+If non-zero, memory blocks are filled with values depending on some
+low order bits of this parameter when they are allocated (except when
+allocated by @code{calloc}) and freed.  This can be used to debug the
+use of uninitialized or freed heap memory.  Note that this option does not
+guarantee that the freed block will have any specific values.  It only
+guarantees that the content the block had before it was freed will be
+overwritten.
+
+The default value of this parameter is @code{0}.
+
+This parameter can also be set for the process at startup by setting the
+environment variable @env{MALLOC_PERTURB_} to the desired value.
+
+@item M_TOP_PAD
+This parameter determines the amount of extra memory to obtain from the system
+when an arena needs to be extended.  It also specifies the number of bytes to
+retain when shrinking an arena.  This provides the necessary hysteresis in heap
+size such that excessive amounts of system calls can be avoided.
+
+The default value of this parameter is @code{0}.
+
+This parameter can also be set for the process at startup by setting the
+environment variable @env{MALLOC_TOP_PAD_} to the desired value.
+
+@item M_TRIM_THRESHOLD
+This is the minimum size (in bytes) of the top-most, releasable chunk
+that will trigger a system call in order to return memory to the system.
+
+If this parameter is not set, the default value is set as 128 KiB and the
+threshold is adjusted dynamically to suit the allocation patterns of the
+program. If the parameter is set, the dynamic adjustment is disabled and the
+value is set statically to the provided input.
+
+This parameter can also be set for the process at startup by setting the
+environment variable @env{MALLOC_TRIM_THRESHOLD_} to the desired value.
+
+@item M_ARENA_TEST
+This parameter specifies the number of arenas that can be created before the
+test on the limit to the number of arenas is conducted. The value is ignored if
+@code{M_ARENA_MAX} is set.
+
+The default value of this parameter is 2 on 32-bit systems and 8 on 64-bit
+systems.
+
+This parameter can also be set for the process at startup by setting the
+environment variable @env{MALLOC_ARENA_TEST} to the desired value.
+
+@item M_ARENA_MAX
+This parameter sets the number of arenas to use regardless of the number of
+cores in the system.
+
+The default value of this tunable is @code{0}, meaning that the limit on the
+number of arenas is determined by the number of CPU cores online. For 32-bit
+systems the limit is twice the number of cores online and on 64-bit systems, it
+is eight times the number of cores online.  Note that the default value is not
+derived from the default value of M_ARENA_TEST and is computed independently.
+
+This parameter can also be set for the process at startup by setting the
+environment variable @env{MALLOC_ARENA_MAX} to the desired value.
+@end vtable
+
+@end deftypefun
+
+@node Heap Consistency Checking
+@subsubsection Heap Consistency Checking
+
+@cindex heap consistency checking
+@cindex consistency checking, of heap
+
+You can ask @code{malloc} to check the consistency of dynamic memory by
+using the @code{mcheck} function and preloading the malloc debug library
+@file{libc_malloc_debug} using the @var{LD_PRELOAD} environment variable.
+This function is a GNU extension, declared in @file{mcheck.h}.
+@pindex mcheck.h
+
+@deftypefun int mcheck (void (*@var{abortfn}) (enum mcheck_status @var{status}))
+@standards{GNU, mcheck.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:mcheck} @mtasuconst{:malloc_hooks}}@asunsafe{@asucorrupt{}}@acunsafe{@acucorrupt{}}}
+@c The hooks must be set up before malloc is first used, which sort of
+@c implies @mtuinit/@asuinit but since the function is a no-op if malloc
+@c was already used, that doesn't pose any safety issues.  The actual
+@c problem is with the hooks, designed for single-threaded
+@c fully-synchronous operation: they manage an unguarded linked list of
+@c allocated blocks, and get temporarily overwritten before calling the
+@c allocation functions recursively while holding the old hooks.  There
+@c are no guards for thread safety, and inconsistent hooks may be found
+@c within signal handlers or left behind in case of cancellation.
+
+Calling @code{mcheck} tells @code{malloc} to perform occasional
+consistency checks.  These will catch things such as writing
+past the end of a block that was allocated with @code{malloc}.
+
+The @var{abortfn} argument is the function to call when an inconsistency
+is found.  If you supply a null pointer, then @code{mcheck} uses a
+default function which prints a message and calls @code{abort}
+(@pxref{Aborting a Program}).  The function you supply is called with
+one argument, which says what sort of inconsistency was detected; its
+type is described below.
+
+It is too late to begin allocation checking once you have allocated
+anything with @code{malloc}.  So @code{mcheck} does nothing in that
+case.  The function returns @code{-1} if you call it too late, and
+@code{0} otherwise (when it is successful).
+
+The easiest way to arrange to call @code{mcheck} early enough is to use
+the option @samp{-lmcheck} when you link your program; then you don't
+need to modify your program source at all.  Alternatively you might use
+a debugger to insert a call to @code{mcheck} whenever the program is
+started, for example these gdb commands will automatically call @code{mcheck}
+whenever the program starts:
+
+@smallexample
+(gdb) break main
+Breakpoint 1, main (argc=2, argv=0xbffff964) at whatever.c:10
+(gdb) command 1
+Type commands for when breakpoint 1 is hit, one per line.
+End with a line saying just "end".
+>call mcheck(0)
+>continue
+>end
+(gdb) @dots{}
+@end smallexample
+
+This will however only work if no initialization function of any object
+involved calls any of the @code{malloc} functions since @code{mcheck}
+must be called before the first such function.
+
+@end deftypefun
+
+@deftypefun {enum mcheck_status} mprobe (void *@var{pointer})
+@safety{@prelim{}@mtunsafe{@mtasurace{:mcheck} @mtasuconst{:malloc_hooks}}@asunsafe{@asucorrupt{}}@acunsafe{@acucorrupt{}}}
+@c The linked list of headers may be modified concurrently by other
+@c threads, and it may find a partial update if called from a signal
+@c handler.  It's mostly read only, so cancelling it might be safe, but
+@c it will modify global state that, if cancellation hits at just the
+@c right spot, may be left behind inconsistent.  This path is only taken
+@c if checkhdr finds an inconsistency.  If the inconsistency could only
+@c occur because of earlier undefined behavior, that wouldn't be an
+@c additional safety issue problem, but because of the other concurrency
+@c issues in the mcheck hooks, the apparent inconsistency could be the
+@c result of mcheck's own internal data race.  So, AC-Unsafe it is.
+
+The @code{mprobe} function lets you explicitly check for inconsistencies
+in a particular allocated block.  You must have already called
+@code{mcheck} at the beginning of the program, to do its occasional
+checks; calling @code{mprobe} requests an additional consistency check
+to be done at the time of the call.
+
+The argument @var{pointer} must be a pointer returned by @code{malloc}
+or @code{realloc}.  @code{mprobe} returns a value that says what
+inconsistency, if any, was found.  The values are described below.
+@end deftypefun
+
+@deftp {Data Type} {enum mcheck_status}
+This enumerated type describes what kind of inconsistency was detected
+in an allocated block, if any.  Here are the possible values:
+
+@table @code
+@item MCHECK_DISABLED
+@code{mcheck} was not called before the first allocation.
+No consistency checking can be done.
+@item MCHECK_OK
+No inconsistency detected.
+@item MCHECK_HEAD
+The data immediately before the block was modified.
+This commonly happens when an array index or pointer
+is decremented too far.
+@item MCHECK_TAIL
+The data immediately after the block was modified.
+This commonly happens when an array index or pointer
+is incremented too far.
+@item MCHECK_FREE
+The block was already freed.
+@end table
+@end deftp
+
+Another possibility to check for and guard against bugs in the use of
+@code{malloc}, @code{realloc} and @code{free} is to set the environment
+variable @code{MALLOC_CHECK_}.  When @code{MALLOC_CHECK_} is set to a
+non-zero value less than 4, a special (less efficient) implementation is
+used which is designed to be tolerant against simple errors, such as
+double calls of @code{free} with the same argument, or overruns of a
+single byte (off-by-one bugs).  Not all such errors can be protected
+against, however, and memory leaks can result.  Like in the case of
+@code{mcheck}, one would need to preload the @file{libc_malloc_debug}
+library to enable @code{MALLOC_CHECK_} functionality.  Without this
+preloaded library, setting @code{MALLOC_CHECK_} will have no effect.
+
+Any detected heap corruption results in immediate termination of the
+process.
+
+There is one problem with @code{MALLOC_CHECK_}: in SUID or SGID binaries
+it could possibly be exploited since diverging from the normal programs
+behavior it now writes something to the standard error descriptor.
+Therefore the use of @code{MALLOC_CHECK_} is disabled by default for
+SUID and SGID binaries.  It can be enabled again by the system
+administrator by adding a file @file{/etc/suid-debug} (the content is
+not important it could be empty).
+
+So, what's the difference between using @code{MALLOC_CHECK_} and linking
+with @samp{-lmcheck}?  @code{MALLOC_CHECK_} is orthogonal with respect to
+@samp{-lmcheck}.  @samp{-lmcheck} has been added for backward
+compatibility.  Both @code{MALLOC_CHECK_} and @samp{-lmcheck} should
+uncover the same bugs - but using @code{MALLOC_CHECK_} you don't need to
+recompile your application.
+
+@c __morecore, __after_morecore_hook are undocumented
+@c It's not clear whether to document them.
+
+@node Statistics of Malloc
+@subsubsection Statistics for Memory Allocation with @code{malloc}
+
+@cindex allocation statistics
+You can get information about dynamic memory allocation by calling the
+@code{mallinfo2} function.  This function and its associated data type
+are declared in @file{malloc.h}; they are an extension of the standard
+SVID/XPG version.
+@pindex malloc.h
+
+@deftp {Data Type} {struct mallinfo2}
+@standards{GNU, malloc.h}
+This structure type is used to return information about the dynamic
+memory allocator.  It contains the following members:
+
+@table @code
+@item size_t arena
+This is the total size of memory allocated with @code{sbrk} by
+@code{malloc}, in bytes.
+
+@item size_t ordblks
+This is the number of chunks not in use.  (The memory allocator
+size_ternally gets chunks of memory from the operating system, and then
+carves them up to satisfy individual @code{malloc} requests;
+@pxref{The GNU Allocator}.)
+
+@item size_t smblks
+This field is unused.
+
+@item size_t hblks
+This is the total number of chunks allocated with @code{mmap}.
+
+@item size_t hblkhd
+This is the total size of memory allocated with @code{mmap}, in bytes.
+
+@item size_t usmblks
+This field is unused and always 0.
+
+@item size_t fsmblks
+This field is unused.
+
+@item size_t uordblks
+This is the total size of memory occupied by chunks handed out by
+@code{malloc}.
+
+@item size_t fordblks
+This is the total size of memory occupied by free (not in use) chunks.
+
+@item size_t keepcost
+This is the size of the top-most releasable chunk that normally
+borders the end of the heap (i.e., the high end of the virtual address
+space's data segment).
+
+@end table
+@end deftp
+
+@deftypefun {struct mallinfo2} mallinfo2 (void)
+@standards{SVID, malloc.h}
+@safety{@prelim{}@mtunsafe{@mtuinit{} @mtasuconst{:mallopt}}@asunsafe{@asuinit{} @asulock{}}@acunsafe{@acuinit{} @aculock{}}}
+@c Accessing mp_.n_mmaps and mp_.max_mmapped_mem, modified with atomics
+@c but non-atomically elsewhere, may get us inconsistent results.  We
+@c mark the statistics as unsafe, rather than the fast-path functions
+@c that collect the possibly inconsistent data.
+
+@c __libc_mallinfo2 @mtuinit @mtasuconst:mallopt @asuinit @asulock @aculock
+@c  ptmalloc_init (once) dup @mtsenv @asulock @aculock @acsfd @acsmem
+@c  mutex_lock dup @asulock @aculock
+@c  int_mallinfo @mtasuconst:mallopt [mp_ access on main_arena]
+@c   malloc_consolidate dup ok
+@c   check_malloc_state dup ok/disabled
+@c   chunksize dup ok
+@c   fastbin dupo ok
+@c   bin_at dup ok
+@c   last dup ok
+@c  mutex_unlock @aculock
+
+This function returns information about the current dynamic memory usage
+in a structure of type @code{struct mallinfo2}.
+@end deftypefun
+
+@node Summary of Malloc
+@subsubsection Summary of @code{malloc}-Related Functions
+
+Here is a summary of the functions that work with @code{malloc}:
+
+@table @code
+@item void *malloc (size_t @var{size})
+Allocate a block of @var{size} bytes.  @xref{Basic Allocation}.
+
+@item void free (void *@var{addr})
+Free a block previously allocated by @code{malloc}.  @xref{Freeing after
+Malloc}.
+
+@item void *realloc (void *@var{addr}, size_t @var{size})
+Make a block previously allocated by @code{malloc} larger or smaller,
+possibly by copying it to a new location.  @xref{Changing Block Size}.
+
+@item void *reallocarray (void *@var{ptr}, size_t @var{nmemb}, size_t @var{size})
+Change the size of a block previously allocated by @code{malloc} to
+@code{@var{nmemb} * @var{size}} bytes as with @code{realloc}.  @xref{Changing
+Block Size}.
+
+@item void *calloc (size_t @var{count}, size_t @var{eltsize})
+Allocate a block of @var{count} * @var{eltsize} bytes using
+@code{malloc}, and set its contents to zero.  @xref{Allocating Cleared
+Space}.
+
+@item void *valloc (size_t @var{size})
+Allocate a block of @var{size} bytes, starting on a page boundary.
+@xref{Aligned Memory Blocks}.
+
+@item void *aligned_alloc (size_t @var{size}, size_t @var{alignment})
+Allocate a block of @var{size} bytes, starting on an address that is a
+multiple of @var{alignment}.  @xref{Aligned Memory Blocks}.
+
+@item int posix_memalign (void **@var{memptr}, size_t @var{alignment}, size_t @var{size})
+Allocate a block of @var{size} bytes, starting on an address that is a
+multiple of @var{alignment}.  @xref{Aligned Memory Blocks}.
+
+@item void *memalign (size_t @var{size}, size_t @var{boundary})
+Allocate a block of @var{size} bytes, starting on an address that is a
+multiple of @var{boundary}.  @xref{Aligned Memory Blocks}.
+
+@item int mallopt (int @var{param}, int @var{value})
+Adjust a tunable parameter.  @xref{Malloc Tunable Parameters}.
+
+@item int mcheck (void (*@var{abortfn}) (void))
+Tell @code{malloc} to perform occasional consistency checks on
+dynamically allocated memory, and to call @var{abortfn} when an
+inconsistency is found.  @xref{Heap Consistency Checking}.
+
+@item struct mallinfo2 mallinfo2 (void)
+Return information about the current dynamic memory usage.
+@xref{Statistics of Malloc}.
+@end table
+
+@node Allocation Debugging
+@subsection Allocation Debugging
+@cindex allocation debugging
+@cindex malloc debugger
+
+A complicated task when programming with languages which do not use
+garbage collected dynamic memory allocation is to find memory leaks.
+Long running programs must ensure that dynamically allocated objects are
+freed at the end of their lifetime.  If this does not happen the system
+runs out of memory, sooner or later.
+
+The @code{malloc} implementation in @theglibc{} provides some
+simple means to detect such leaks and obtain some information to find
+the location.  To do this the application must be started in a special
+mode which is enabled by an environment variable.  There are no speed
+penalties for the program if the debugging mode is not enabled.
+
+@menu
+* Tracing malloc::               How to install the tracing functionality.
+* Using the Memory Debugger::    Example programs excerpts.
+* Tips for the Memory Debugger:: Some more or less clever ideas.
+* Interpreting the traces::      What do all these lines mean?
+@end menu
+
+@node Tracing malloc
+@subsubsection How to install the tracing functionality
+
+@deftypefun void mtrace (void)
+@standards{GNU, mcheck.h}
+@safety{@prelim{}@mtunsafe{@mtsenv{} @mtasurace{:mtrace} @mtuinit{}}@asunsafe{@asuinit{} @ascuheap{} @asucorrupt{} @asulock{}}@acunsafe{@acuinit{} @acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Like the mcheck hooks, these are not designed with thread safety in
+@c mind, because the hook pointers are temporarily modified without
+@c regard to other threads, signals or cancellation.
+
+@c mtrace @mtuinit @mtasurace:mtrace @mtsenv @asuinit @ascuheap @asucorrupt @acuinit @acucorrupt @aculock @acsfd @acsmem
+@c  __libc_secure_getenv dup @mtsenv
+@c  malloc dup @ascuheap @acsmem
+@c  fopen dup @ascuheap @asulock @aculock @acsmem @acsfd
+@c  fcntl dup ok
+@c  setvbuf dup @aculock
+@c  fprintf dup (on newly-created stream) @aculock
+@c  __cxa_atexit (once) dup @asulock @aculock @acsmem
+@c  free dup @ascuheap @acsmem
+The @code{mtrace} function provides a way to trace memory allocation
+events in the program that calls it.  It is disabled by default in the
+library and can be enabled by preloading the debugging library
+@file{libc_malloc_debug} using the @code{LD_PRELOAD} environment
+variable.
+
+When the @code{mtrace} function is called it looks for an environment
+variable named @code{MALLOC_TRACE}.  This variable is supposed to
+contain a valid file name.  The user must have write access.  If the
+file already exists it is truncated.  If the environment variable is not
+set or it does not name a valid file which can be opened for writing
+nothing is done.  The behavior of @code{malloc} etc. is not changed.
+For obvious reasons this also happens if the application is installed
+with the SUID or SGID bit set.
+
+If the named file is successfully opened, @code{mtrace} installs special
+handlers for the functions @code{malloc}, @code{realloc}, and
+@code{free}.  From then on, all uses of these functions are traced and
+protocolled into the file.  There is now of course a speed penalty for all
+calls to the traced functions so tracing should not be enabled during normal
+use.
+
+This function is a GNU extension and generally not available on other
+systems.  The prototype can be found in @file{mcheck.h}.
+@end deftypefun
+
+@deftypefun void muntrace (void)
+@standards{GNU, mcheck.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:mtrace} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{} @aculock{} @acsfd{}}}
+
+@c muntrace @mtasurace:mtrace @mtslocale @asucorrupt @ascuheap @acucorrupt @acsmem @aculock @acsfd
+@c  fprintf (fputs) dup @mtslocale @asucorrupt @ascuheap @acsmem @aculock @acucorrupt
+@c  fclose dup @ascuheap @asulock @aculock @acsmem @acsfd
+The @code{muntrace} function can be called after @code{mtrace} was used
+to enable tracing the @code{malloc} calls.  If no (successful) call of
+@code{mtrace} was made @code{muntrace} does nothing.
+
+Otherwise it deinstalls the handlers for @code{malloc}, @code{realloc},
+and @code{free} and then closes the protocol file.  No calls are
+protocolled anymore and the program runs again at full speed.
+
+This function is a GNU extension and generally not available on other
+systems.  The prototype can be found in @file{mcheck.h}.
+@end deftypefun
+
+@node Using the Memory Debugger
+@subsubsection Example program excerpts
+
+Even though the tracing functionality does not influence the runtime
+behavior of the program it is not a good idea to call @code{mtrace} in
+all programs.  Just imagine that you debug a program using @code{mtrace}
+and all other programs used in the debugging session also trace their
+@code{malloc} calls.  The output file would be the same for all programs
+and thus is unusable.  Therefore one should call @code{mtrace} only if
+compiled for debugging.  A program could therefore start like this:
+
+@example
+#include <mcheck.h>
+
+int
+main (int argc, char *argv[])
+@{
+#ifdef DEBUGGING
+  mtrace ();
+#endif
+  @dots{}
+@}
+@end example
+
+This is all that is needed if you want to trace the calls during the
+whole runtime of the program.  Alternatively you can stop the tracing at
+any time with a call to @code{muntrace}.  It is even possible to restart
+the tracing again with a new call to @code{mtrace}.  But this can cause
+unreliable results since there may be calls of the functions which are
+not called.  Please note that not only the application uses the traced
+functions, also libraries (including the C library itself) use these
+functions.
+
+This last point is also why it is not a good idea to call @code{muntrace}
+before the program terminates.  The libraries are informed about the
+termination of the program only after the program returns from
+@code{main} or calls @code{exit} and so cannot free the memory they use
+before this time.
+
+So the best thing one can do is to call @code{mtrace} as the very first
+function in the program and never call @code{muntrace}.  So the program
+traces almost all uses of the @code{malloc} functions (except those
+calls which are executed by constructors of the program or used
+libraries).
+
+@node Tips for the Memory Debugger
+@subsubsection Some more or less clever ideas
+
+You know the situation.  The program is prepared for debugging and in
+all debugging sessions it runs well.  But once it is started without
+debugging the error shows up.  A typical example is a memory leak that
+becomes visible only when we turn off the debugging.  If you foresee
+such situations you can still win.  Simply use something equivalent to
+the following little program:
+
+@example
+#include <mcheck.h>
+#include <signal.h>
+
+static void
+enable (int sig)
+@{
+  mtrace ();
+  signal (SIGUSR1, enable);
+@}
+
+static void
+disable (int sig)
+@{
+  muntrace ();
+  signal (SIGUSR2, disable);
+@}
+
+int
+main (int argc, char *argv[])
+@{
+  @dots{}
+
+  signal (SIGUSR1, enable);
+  signal (SIGUSR2, disable);
+
+  @dots{}
+@}
+@end example
+
+I.e., the user can start the memory debugger any time s/he wants if the
+program was started with @code{MALLOC_TRACE} set in the environment.
+The output will of course not show the allocations which happened before
+the first signal but if there is a memory leak this will show up
+nevertheless.
+
+@node Interpreting the traces
+@subsubsection Interpreting the traces
+
+If you take a look at the output it will look similar to this:
+
+@example
+= Start
+@ [0x8048209] - 0x8064cc8
+@ [0x8048209] - 0x8064ce0
+@ [0x8048209] - 0x8064cf8
+@ [0x80481eb] + 0x8064c48 0x14
+@ [0x80481eb] + 0x8064c60 0x14
+@ [0x80481eb] + 0x8064c78 0x14
+@ [0x80481eb] + 0x8064c90 0x14
+= End
+@end example
+
+What this all means is not really important since the trace file is not
+meant to be read by a human.  Therefore no attention is given to
+readability.  Instead there is a program which comes with @theglibc{}
+which interprets the traces and outputs a summary in an
+user-friendly way.  The program is called @code{mtrace} (it is in fact a
+Perl script) and it takes one or two arguments.  In any case the name of
+the file with the trace output must be specified.  If an optional
+argument precedes the name of the trace file this must be the name of
+the program which generated the trace.
+
+@example
+drepper$ mtrace tst-mtrace log
+No memory leaks.
+@end example
+
+In this case the program @code{tst-mtrace} was run and it produced a
+trace file @file{log}.  The message printed by @code{mtrace} shows there
+are no problems with the code, all allocated memory was freed
+afterwards.
+
+If we call @code{mtrace} on the example trace given above we would get a
+different outout:
+
+@example
+drepper$ mtrace errlog
+- 0x08064cc8 Free 2 was never alloc'd 0x8048209
+- 0x08064ce0 Free 3 was never alloc'd 0x8048209
+- 0x08064cf8 Free 4 was never alloc'd 0x8048209
+
+Memory not freed:
+-----------------
+   Address     Size     Caller
+0x08064c48     0x14  at 0x80481eb
+0x08064c60     0x14  at 0x80481eb
+0x08064c78     0x14  at 0x80481eb
+0x08064c90     0x14  at 0x80481eb
+@end example
+
+We have called @code{mtrace} with only one argument and so the script
+has no chance to find out what is meant with the addresses given in the
+trace.  We can do better:
+
+@example
+drepper$ mtrace tst errlog
+- 0x08064cc8 Free 2 was never alloc'd /home/drepper/tst.c:39
+- 0x08064ce0 Free 3 was never alloc'd /home/drepper/tst.c:39
+- 0x08064cf8 Free 4 was never alloc'd /home/drepper/tst.c:39
+
+Memory not freed:
+-----------------
+   Address     Size     Caller
+0x08064c48     0x14  at /home/drepper/tst.c:33
+0x08064c60     0x14  at /home/drepper/tst.c:33
+0x08064c78     0x14  at /home/drepper/tst.c:33
+0x08064c90     0x14  at /home/drepper/tst.c:33
+@end example
+
+Suddenly the output makes much more sense and the user can see
+immediately where the function calls causing the trouble can be found.
+
+Interpreting this output is not complicated.  There are at most two
+different situations being detected.  First, @code{free} was called for
+pointers which were never returned by one of the allocation functions.
+This is usually a very bad problem and what this looks like is shown in
+the first three lines of the output.  Situations like this are quite
+rare and if they appear they show up very drastically: the program
+normally crashes.
+
+The other situation which is much harder to detect are memory leaks.  As
+you can see in the output the @code{mtrace} function collects all this
+information and so can say that the program calls an allocation function
+from line 33 in the source file @file{/home/drepper/tst-mtrace.c} four
+times without freeing this memory before the program terminates.
+Whether this is a real problem remains to be investigated.
+
+@node Replacing malloc
+@subsection Replacing @code{malloc}
+
+@cindex @code{malloc} replacement
+@cindex @code{LD_PRELOAD} and @code{malloc}
+@cindex alternative @code{malloc} implementations
+@cindex customizing @code{malloc}
+@cindex interposing @code{malloc}
+@cindex preempting @code{malloc}
+@cindex replacing @code{malloc}
+@Theglibc{} supports replacing the built-in @code{malloc} implementation
+with a different allocator with the same interface.  For dynamically
+linked programs, this happens through ELF symbol interposition, either
+using shared object dependencies or @code{LD_PRELOAD}.  For static
+linking, the @code{malloc} replacement library must be linked in before
+linking against @code{libc.a} (explicitly or implicitly).
+
+@strong{Note:} Failure to provide a complete set of replacement
+functions (that is, all the functions used by the application,
+@theglibc{}, and other linked-in libraries) can lead to static linking
+failures, and, at run time, to heap corruption and application crashes.
+Replacement functions should implement the behavior documented for
+their counterparts in @theglibc{}; for example, the replacement
+@code{free} should also preserve @code{errno}.
+
+The minimum set of functions which has to be provided by a custom
+@code{malloc} is given in the table below.
+
+@table @code
+@item malloc
+@item free
+@item calloc
+@item realloc
+@end table
+
+These @code{malloc}-related functions are required for @theglibc{} to
+work.@footnote{Versions of @theglibc{} before 2.25 required that a
+custom @code{malloc} defines @code{__libc_memalign} (with the same
+interface as the @code{memalign} function).}
+
+The @code{malloc} implementation in @theglibc{} provides additional
+functionality not used by the library itself, but which is often used by
+other system libraries and applications.  A general-purpose replacement
+@code{malloc} implementation should provide definitions of these
+functions, too.  Their names are listed in the following table.
+
+@table @code
+@item aligned_alloc
+@item malloc_usable_size
+@item memalign
+@item posix_memalign
+@item pvalloc
+@item valloc
+@end table
+
+In addition, very old applications may use the obsolete @code{cfree}
+function.
+
+Further @code{malloc}-related functions such as @code{mallopt} or
+@code{mallinfo2} will not have any effect or return incorrect statistics
+when a replacement @code{malloc} is in use.  However, failure to replace
+these functions typically does not result in crashes or other incorrect
+application behavior, but may result in static linking failures.
+
+There are other functions (@code{reallocarray}, @code{strdup}, etc.) in
+@theglibc{} that are not listed above but return newly allocated memory to
+callers.  Replacement of these functions is not supported and may produce
+incorrect results.  @Theglibc{} implementations of these functions call
+the replacement allocator functions whenever available, so they will work
+correctly with @code{malloc} replacement.
+
+@node Obstacks
+@subsection Obstacks
+@cindex obstacks
+
+An @dfn{obstack} is a pool of memory containing a stack of objects.  You
+can create any number of separate obstacks, and then allocate objects in
+specified obstacks.  Within each obstack, the last object allocated must
+always be the first one freed, but distinct obstacks are independent of
+each other.
+
+Aside from this one constraint of order of freeing, obstacks are totally
+general: an obstack can contain any number of objects of any size.  They
+are implemented with macros, so allocation is usually very fast as long as
+the objects are usually small.  And the only space overhead per object is
+the padding needed to start each object on a suitable boundary.
+
+@menu
+* Creating Obstacks::		How to declare an obstack in your program.
+* Preparing for Obstacks::	Preparations needed before you can
+				 use obstacks.
+* Allocation in an Obstack::    Allocating objects in an obstack.
+* Freeing Obstack Objects::     Freeing objects in an obstack.
+* Obstack Functions::		The obstack functions are both
+				 functions and macros.
+* Growing Objects::             Making an object bigger by stages.
+* Extra Fast Growing::		Extra-high-efficiency (though more
+				 complicated) growing objects.
+* Status of an Obstack::        Inquiries about the status of an obstack.
+* Obstacks Data Alignment::     Controlling alignment of objects in obstacks.
+* Obstack Chunks::              How obstacks obtain and release chunks;
+				 efficiency considerations.
+* Summary of Obstacks::
+@end menu
+
+@node Creating Obstacks
+@subsubsection Creating Obstacks
+
+The utilities for manipulating obstacks are declared in the header
+file @file{obstack.h}.
+@pindex obstack.h
+
+@deftp {Data Type} {struct obstack}
+@standards{GNU, obstack.h}
+An obstack is represented by a data structure of type @code{struct
+obstack}.  This structure has a small fixed size; it records the status
+of the obstack and how to find the space in which objects are allocated.
+It does not contain any of the objects themselves.  You should not try
+to access the contents of the structure directly; use only the functions
+described in this chapter.
+@end deftp
+
+You can declare variables of type @code{struct obstack} and use them as
+obstacks, or you can allocate obstacks dynamically like any other kind
+of object.  Dynamic allocation of obstacks allows your program to have a
+variable number of different stacks.  (You can even allocate an
+obstack structure in another obstack, but this is rarely useful.)
+
+All the functions that work with obstacks require you to specify which
+obstack to use.  You do this with a pointer of type @code{struct obstack
+*}.  In the following, we often say ``an obstack'' when strictly
+speaking the object at hand is such a pointer.
+
+The objects in the obstack are packed into large blocks called
+@dfn{chunks}.  The @code{struct obstack} structure points to a chain of
+the chunks currently in use.
+
+The obstack library obtains a new chunk whenever you allocate an object
+that won't fit in the previous chunk.  Since the obstack library manages
+chunks automatically, you don't need to pay much attention to them, but
+you do need to supply a function which the obstack library should use to
+get a chunk.  Usually you supply a function which uses @code{malloc}
+directly or indirectly.  You must also supply a function to free a chunk.
+These matters are described in the following section.
+
+@node Preparing for Obstacks
+@subsubsection Preparing for Using Obstacks
+
+Each source file in which you plan to use the obstack functions
+must include the header file @file{obstack.h}, like this:
+
+@smallexample
+#include <obstack.h>
+@end smallexample
+
+@findex obstack_chunk_alloc
+@findex obstack_chunk_free
+Also, if the source file uses the macro @code{obstack_init}, it must
+declare or define two functions or macros that will be called by the
+obstack library.  One, @code{obstack_chunk_alloc}, is used to allocate
+the chunks of memory into which objects are packed.  The other,
+@code{obstack_chunk_free}, is used to return chunks when the objects in
+them are freed.  These macros should appear before any use of obstacks
+in the source file.
+
+Usually these are defined to use @code{malloc} via the intermediary
+@code{xmalloc} (@pxref{Unconstrained Allocation}).  This is done with
+the following pair of macro definitions:
+
+@smallexample
+#define obstack_chunk_alloc xmalloc
+#define obstack_chunk_free free
+@end smallexample
+
+@noindent
+Though the memory you get using obstacks really comes from @code{malloc},
+using obstacks is faster because @code{malloc} is called less often, for
+larger blocks of memory.  @xref{Obstack Chunks}, for full details.
+
+At run time, before the program can use a @code{struct obstack} object
+as an obstack, it must initialize the obstack by calling
+@code{obstack_init}.
+
+@deftypefun int obstack_init (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acsafe{@acsmem{}}}
+@c obstack_init @mtsrace:obstack-ptr @acsmem
+@c  _obstack_begin @acsmem
+@c    chunkfun = obstack_chunk_alloc (suggested malloc)
+@c    freefun = obstack_chunk_free (suggested free)
+@c   *chunkfun @acsmem
+@c    obstack_chunk_alloc user-supplied
+@c   *obstack_alloc_failed_handler user-supplied
+@c    -> print_and_abort (default)
+@c
+@c print_and_abort
+@c  _ dup @ascuintl
+@c  fxprintf dup @asucorrupt @aculock @acucorrupt
+@c  exit @acucorrupt?
+Initialize obstack @var{obstack-ptr} for allocation of objects.  This
+function calls the obstack's @code{obstack_chunk_alloc} function.  If
+allocation of memory fails, the function pointed to by
+@code{obstack_alloc_failed_handler} is called.  The @code{obstack_init}
+function always returns 1 (Compatibility notice: Former versions of
+obstack returned 0 if allocation failed).
+@end deftypefun
+
+Here are two examples of how to allocate the space for an obstack and
+initialize it.  First, an obstack that is a static variable:
+
+@smallexample
+static struct obstack myobstack;
+@dots{}
+obstack_init (&myobstack);
+@end smallexample
+
+@noindent
+Second, an obstack that is itself dynamically allocated:
+
+@smallexample
+struct obstack *myobstack_ptr
+  = (struct obstack *) xmalloc (sizeof (struct obstack));
+
+obstack_init (myobstack_ptr);
+@end smallexample
+
+@defvar obstack_alloc_failed_handler
+@standards{GNU, obstack.h}
+The value of this variable is a pointer to a function that
+@code{obstack} uses when @code{obstack_chunk_alloc} fails to allocate
+memory.  The default action is to print a message and abort.
+You should supply a function that either calls @code{exit}
+(@pxref{Program Termination}) or @code{longjmp} (@pxref{Non-Local
+Exits}) and doesn't return.
+
+@smallexample
+void my_obstack_alloc_failed (void)
+@dots{}
+obstack_alloc_failed_handler = &my_obstack_alloc_failed;
+@end smallexample
+
+@end defvar
+
+@node Allocation in an Obstack
+@subsubsection Allocation in an Obstack
+@cindex allocation (obstacks)
+
+The most direct way to allocate an object in an obstack is with
+@code{obstack_alloc}, which is invoked almost like @code{malloc}.
+
+@deftypefun {void *} obstack_alloc (struct obstack *@var{obstack-ptr}, int @var{size})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_alloc @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_blank dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_finish dup @mtsrace:obstack-ptr @acucorrupt
+This allocates an uninitialized block of @var{size} bytes in an obstack
+and returns its address.  Here @var{obstack-ptr} specifies which obstack
+to allocate the block in; it is the address of the @code{struct obstack}
+object which represents the obstack.  Each obstack function or macro
+requires you to specify an @var{obstack-ptr} as the first argument.
+
+This function calls the obstack's @code{obstack_chunk_alloc} function if
+it needs to allocate a new chunk of memory; it calls
+@code{obstack_alloc_failed_handler} if allocation of memory by
+@code{obstack_chunk_alloc} failed.
+@end deftypefun
+
+For example, here is a function that allocates a copy of a string @var{str}
+in a specific obstack, which is in the variable @code{string_obstack}:
+
+@smallexample
+struct obstack string_obstack;
+
+char *
+copystring (char *string)
+@{
+  size_t len = strlen (string) + 1;
+  char *s = (char *) obstack_alloc (&string_obstack, len);
+  memcpy (s, string, len);
+  return s;
+@}
+@end smallexample
+
+To allocate a block with specified contents, use the function
+@code{obstack_copy}, declared like this:
+
+@deftypefun {void *} obstack_copy (struct obstack *@var{obstack-ptr}, void *@var{address}, int @var{size})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_copy @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_grow dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_finish dup @mtsrace:obstack-ptr @acucorrupt
+This allocates a block and initializes it by copying @var{size}
+bytes of data starting at @var{address}.  It calls
+@code{obstack_alloc_failed_handler} if allocation of memory by
+@code{obstack_chunk_alloc} failed.
+@end deftypefun
+
+@deftypefun {void *} obstack_copy0 (struct obstack *@var{obstack-ptr}, void *@var{address}, int @var{size})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_copy0 @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_grow0 dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_finish dup @mtsrace:obstack-ptr @acucorrupt
+Like @code{obstack_copy}, but appends an extra byte containing a null
+character.  This extra byte is not counted in the argument @var{size}.
+@end deftypefun
+
+The @code{obstack_copy0} function is convenient for copying a sequence
+of characters into an obstack as a null-terminated string.  Here is an
+example of its use:
+
+@smallexample
+char *
+obstack_savestring (char *addr, int size)
+@{
+  return obstack_copy0 (&myobstack, addr, size);
+@}
+@end smallexample
+
+@noindent
+Contrast this with the previous example of @code{savestring} using
+@code{malloc} (@pxref{Basic Allocation}).
+
+@node Freeing Obstack Objects
+@subsubsection Freeing Objects in an Obstack
+@cindex freeing (obstacks)
+
+To free an object allocated in an obstack, use the function
+@code{obstack_free}.  Since the obstack is a stack of objects, freeing
+one object automatically frees all other objects allocated more recently
+in the same obstack.
+
+@deftypefun void obstack_free (struct obstack *@var{obstack-ptr}, void *@var{object})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{}}}
+@c obstack_free @mtsrace:obstack-ptr @acucorrupt
+@c  (obstack_free) @mtsrace:obstack-ptr @acucorrupt
+@c   *freefun dup user-supplied
+If @var{object} is a null pointer, everything allocated in the obstack
+is freed.  Otherwise, @var{object} must be the address of an object
+allocated in the obstack.  Then @var{object} is freed, along with
+everything allocated in @var{obstack-ptr} since @var{object}.
+@end deftypefun
+
+Note that if @var{object} is a null pointer, the result is an
+uninitialized obstack.  To free all memory in an obstack but leave it
+valid for further allocation, call @code{obstack_free} with the address
+of the first object allocated on the obstack:
+
+@smallexample
+obstack_free (obstack_ptr, first_object_allocated_ptr);
+@end smallexample
+
+Recall that the objects in an obstack are grouped into chunks.  When all
+the objects in a chunk become free, the obstack library automatically
+frees the chunk (@pxref{Preparing for Obstacks}).  Then other
+obstacks, or non-obstack allocation, can reuse the space of the chunk.
+
+@node Obstack Functions
+@subsubsection Obstack Functions and Macros
+@cindex macros
+
+The interfaces for using obstacks may be defined either as functions or
+as macros, depending on the compiler.  The obstack facility works with
+all C compilers, including both @w{ISO C} and traditional C, but there are
+precautions you must take if you plan to use compilers other than GNU C.
+
+If you are using an old-fashioned @w{non-ISO C} compiler, all the obstack
+``functions'' are actually defined only as macros.  You can call these
+macros like functions, but you cannot use them in any other way (for
+example, you cannot take their address).
+
+Calling the macros requires a special precaution: namely, the first
+operand (the obstack pointer) may not contain any side effects, because
+it may be computed more than once.  For example, if you write this:
+
+@smallexample
+obstack_alloc (get_obstack (), 4);
+@end smallexample
+
+@noindent
+you will find that @code{get_obstack} may be called several times.
+If you use @code{*obstack_list_ptr++} as the obstack pointer argument,
+you will get very strange results since the incrementation may occur
+several times.
+
+In @w{ISO C}, each function has both a macro definition and a function
+definition.  The function definition is used if you take the address of the
+function without calling it.  An ordinary call uses the macro definition by
+default, but you can request the function definition instead by writing the
+function name in parentheses, as shown here:
+
+@smallexample
+char *x;
+void *(*funcp) ();
+/* @r{Use the macro}.  */
+x = (char *) obstack_alloc (obptr, size);
+/* @r{Call the function}.  */
+x = (char *) (obstack_alloc) (obptr, size);
+/* @r{Take the address of the function}.  */
+funcp = obstack_alloc;
+@end smallexample
+
+@noindent
+This is the same situation that exists in @w{ISO C} for the standard library
+functions.  @xref{Macro Definitions}.
+
+@strong{Warning:} When you do use the macros, you must observe the
+precaution of avoiding side effects in the first operand, even in @w{ISO C}.
+
+If you use the GNU C compiler, this precaution is not necessary, because
+various language extensions in GNU C permit defining the macros so as to
+compute each argument only once.
+
+@node Growing Objects
+@subsubsection Growing Objects
+@cindex growing objects (in obstacks)
+@cindex changing the size of a block (obstacks)
+
+Because memory in obstack chunks is used sequentially, it is possible to
+build up an object step by step, adding one or more bytes at a time to the
+end of the object.  With this technique, you do not need to know how much
+data you will put in the object until you come to the end of it.  We call
+this the technique of @dfn{growing objects}.  The special functions
+for adding data to the growing object are described in this section.
+
+You don't need to do anything special when you start to grow an object.
+Using one of the functions to add data to the object automatically
+starts it.  However, it is necessary to say explicitly when the object is
+finished.  This is done with the function @code{obstack_finish}.
+
+The actual address of the object thus built up is not known until the
+object is finished.  Until then, it always remains possible that you will
+add so much data that the object must be copied into a new chunk.
+
+While the obstack is in use for a growing object, you cannot use it for
+ordinary allocation of another object.  If you try to do so, the space
+already added to the growing object will become part of the other object.
+
+@deftypefun void obstack_blank (struct obstack *@var{obstack-ptr}, int @var{size})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_blank @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  _obstack_newchunk @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c   *chunkfun dup @acsmem
+@c   *obstack_alloc_failed_handler dup user-supplied
+@c   *freefun
+@c  obstack_blank_fast dup @mtsrace:obstack-ptr
+The most basic function for adding to a growing object is
+@code{obstack_blank}, which adds space without initializing it.
+@end deftypefun
+
+@deftypefun void obstack_grow (struct obstack *@var{obstack-ptr}, void *@var{data}, int @var{size})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_grow @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  _obstack_newchunk dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  memcpy ok
+To add a block of initialized space, use @code{obstack_grow}, which is
+the growing-object analogue of @code{obstack_copy}.  It adds @var{size}
+bytes of data to the growing object, copying the contents from
+@var{data}.
+@end deftypefun
+
+@deftypefun void obstack_grow0 (struct obstack *@var{obstack-ptr}, void *@var{data}, int @var{size})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_grow0 @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c   (no sequence point between storing NUL and incrementing next_free)
+@c   (multiple changes to next_free => @acucorrupt)
+@c  _obstack_newchunk dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  memcpy ok
+This is the growing-object analogue of @code{obstack_copy0}.  It adds
+@var{size} bytes copied from @var{data}, followed by an additional null
+character.
+@end deftypefun
+
+@deftypefun void obstack_1grow (struct obstack *@var{obstack-ptr}, char @var{c})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_1grow @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  _obstack_newchunk dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_1grow_fast dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+To add one character at a time, use the function @code{obstack_1grow}.
+It adds a single byte containing @var{c} to the growing object.
+@end deftypefun
+
+@deftypefun void obstack_ptr_grow (struct obstack *@var{obstack-ptr}, void *@var{data})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_ptr_grow @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  _obstack_newchunk dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_ptr_grow_fast dup @mtsrace:obstack-ptr
+Adding the value of a pointer one can use the function
+@code{obstack_ptr_grow}.  It adds @code{sizeof (void *)} bytes
+containing the value of @var{data}.
+@end deftypefun
+
+@deftypefun void obstack_int_grow (struct obstack *@var{obstack-ptr}, int @var{data})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_int_grow @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  _obstack_newchunk dup @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c  obstack_int_grow_fast dup @mtsrace:obstack-ptr
+A single value of type @code{int} can be added by using the
+@code{obstack_int_grow} function.  It adds @code{sizeof (int)} bytes to
+the growing object and initializes them with the value of @var{data}.
+@end deftypefun
+
+@deftypefun {void *} obstack_finish (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{}}}
+@c obstack_finish @mtsrace:obstack-ptr @acucorrupt
+When you are finished growing the object, use the function
+@code{obstack_finish} to close it off and return its final address.
+
+Once you have finished the object, the obstack is available for ordinary
+allocation or for growing another object.
+
+This function can return a null pointer under the same conditions as
+@code{obstack_alloc} (@pxref{Allocation in an Obstack}).
+@end deftypefun
+
+When you build an object by growing it, you will probably need to know
+afterward how long it became.  You need not keep track of this as you grow
+the object, because you can find out the length from the obstack just
+before finishing the object with the function @code{obstack_object_size},
+declared as follows:
+
+@deftypefun int obstack_object_size (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acsafe{}}
+This function returns the current size of the growing object, in bytes.
+Remember to call this function @emph{before} finishing the object.
+After it is finished, @code{obstack_object_size} will return zero.
+@end deftypefun
+
+If you have started growing an object and wish to cancel it, you should
+finish it and then free it, like this:
+
+@smallexample
+obstack_free (obstack_ptr, obstack_finish (obstack_ptr));
+@end smallexample
+
+@noindent
+This has no effect if no object was growing.
+
+@cindex shrinking objects
+You can use @code{obstack_blank} with a negative size argument to make
+the current object smaller.  Just don't try to shrink it beyond zero
+length---there's no telling what will happen if you do that.
+
+@node Extra Fast Growing
+@subsubsection Extra Fast Growing Objects
+@cindex efficiency and obstacks
+
+The usual functions for growing objects incur overhead for checking
+whether there is room for the new growth in the current chunk.  If you
+are frequently constructing objects in small steps of growth, this
+overhead can be significant.
+
+You can reduce the overhead by using special ``fast growth''
+functions that grow the object without checking.  In order to have a
+robust program, you must do the checking yourself.  If you do this checking
+in the simplest way each time you are about to add data to the object, you
+have not saved anything, because that is what the ordinary growth
+functions do.  But if you can arrange to check less often, or check
+more efficiently, then you make the program faster.
+
+The function @code{obstack_room} returns the amount of room available
+in the current chunk.  It is declared as follows:
+
+@deftypefun int obstack_room (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acsafe{}}
+This returns the number of bytes that can be added safely to the current
+growing object (or to an object about to be started) in obstack
+@var{obstack-ptr} using the fast growth functions.
+@end deftypefun
+
+While you know there is room, you can use these fast growth functions
+for adding data to a growing object:
+
+@deftypefun void obstack_1grow_fast (struct obstack *@var{obstack-ptr}, char @var{c})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c obstack_1grow_fast @mtsrace:obstack-ptr @acucorrupt @acsmem
+@c   (no sequence point between copying c and incrementing next_free)
+The function @code{obstack_1grow_fast} adds one byte containing the
+character @var{c} to the growing object in obstack @var{obstack-ptr}.
+@end deftypefun
+
+@deftypefun void obstack_ptr_grow_fast (struct obstack *@var{obstack-ptr}, void *@var{data})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acsafe{}}
+@c obstack_ptr_grow_fast @mtsrace:obstack-ptr
+The function @code{obstack_ptr_grow_fast} adds @code{sizeof (void *)}
+bytes containing the value of @var{data} to the growing object in
+obstack @var{obstack-ptr}.
+@end deftypefun
+
+@deftypefun void obstack_int_grow_fast (struct obstack *@var{obstack-ptr}, int @var{data})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acsafe{}}
+@c obstack_int_grow_fast @mtsrace:obstack-ptr
+The function @code{obstack_int_grow_fast} adds @code{sizeof (int)} bytes
+containing the value of @var{data} to the growing object in obstack
+@var{obstack-ptr}.
+@end deftypefun
+
+@deftypefun void obstack_blank_fast (struct obstack *@var{obstack-ptr}, int @var{size})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acsafe{}}
+@c obstack_blank_fast @mtsrace:obstack-ptr
+The function @code{obstack_blank_fast} adds @var{size} bytes to the
+growing object in obstack @var{obstack-ptr} without initializing them.
+@end deftypefun
+
+When you check for space using @code{obstack_room} and there is not
+enough room for what you want to add, the fast growth functions
+are not safe.  In this case, simply use the corresponding ordinary
+growth function instead.  Very soon this will copy the object to a
+new chunk; then there will be lots of room available again.
+
+So, each time you use an ordinary growth function, check afterward for
+sufficient space using @code{obstack_room}.  Once the object is copied
+to a new chunk, there will be plenty of space again, so the program will
+start using the fast growth functions again.
+
+Here is an example:
+
+@smallexample
+@group
+void
+add_string (struct obstack *obstack, const char *ptr, int len)
+@{
+  while (len > 0)
+    @{
+      int room = obstack_room (obstack);
+      if (room == 0)
+        @{
+          /* @r{Not enough room.  Add one character slowly,}
+             @r{which may copy to a new chunk and make room.}  */
+          obstack_1grow (obstack, *ptr++);
+          len--;
+        @}
+      else
+        @{
+          if (room > len)
+            room = len;
+          /* @r{Add fast as much as we have room for.} */
+          len -= room;
+          while (room-- > 0)
+            obstack_1grow_fast (obstack, *ptr++);
+        @}
+    @}
+@}
+@end group
+@end smallexample
+
+@node Status of an Obstack
+@subsubsection Status of an Obstack
+@cindex obstack status
+@cindex status of obstack
+
+Here are functions that provide information on the current status of
+allocation in an obstack.  You can use them to learn about an object while
+still growing it.
+
+@deftypefun {void *} obstack_base (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asucorrupt{}}@acsafe{}}
+This function returns the tentative address of the beginning of the
+currently growing object in @var{obstack-ptr}.  If you finish the object
+immediately, it will have that address.  If you make it larger first, it
+may outgrow the current chunk---then its address will change!
+
+If no object is growing, this value says where the next object you
+allocate will start (once again assuming it fits in the current
+chunk).
+@end deftypefun
+
+@deftypefun {void *} obstack_next_free (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asucorrupt{}}@acsafe{}}
+This function returns the address of the first free byte in the current
+chunk of obstack @var{obstack-ptr}.  This is the end of the currently
+growing object.  If no object is growing, @code{obstack_next_free}
+returns the same value as @code{obstack_base}.
+@end deftypefun
+
+@deftypefun int obstack_object_size (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@c dup
+@safety{@prelim{}@mtsafe{@mtsrace{:obstack-ptr}}@assafe{}@acsafe{}}
+This function returns the size in bytes of the currently growing object.
+This is equivalent to
+
+@smallexample
+obstack_next_free (@var{obstack-ptr}) - obstack_base (@var{obstack-ptr})
+@end smallexample
+@end deftypefun
+
+@node Obstacks Data Alignment
+@subsubsection Alignment of Data in Obstacks
+@cindex alignment (in obstacks)
+
+Each obstack has an @dfn{alignment boundary}; each object allocated in
+the obstack automatically starts on an address that is a multiple of the
+specified boundary.  By default, this boundary is aligned so that
+the object can hold any type of data.
+
+To access an obstack's alignment boundary, use the macro
+@code{obstack_alignment_mask}, whose function prototype looks like
+this:
+
+@deftypefn Macro int obstack_alignment_mask (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The value is a bit mask; a bit that is 1 indicates that the corresponding
+bit in the address of an object should be 0.  The mask value should be one
+less than a power of 2; the effect is that all object addresses are
+multiples of that power of 2.  The default value of the mask is a value
+that allows aligned objects to hold any type of data: for example, if
+its value is 3, any type of data can be stored at locations whose
+addresses are multiples of 4.  A mask value of 0 means an object can start
+on any multiple of 1 (that is, no alignment is required).
+
+The expansion of the macro @code{obstack_alignment_mask} is an lvalue,
+so you can alter the mask by assignment.  For example, this statement:
+
+@smallexample
+obstack_alignment_mask (obstack_ptr) = 0;
+@end smallexample
+
+@noindent
+has the effect of turning off alignment processing in the specified obstack.
+@end deftypefn
+
+Note that a change in alignment mask does not take effect until
+@emph{after} the next time an object is allocated or finished in the
+obstack.  If you are not growing an object, you can make the new
+alignment mask take effect immediately by calling @code{obstack_finish}.
+This will finish a zero-length object and then do proper alignment for
+the next object.
+
+@node Obstack Chunks
+@subsubsection Obstack Chunks
+@cindex efficiency of chunks
+@cindex chunks
+
+Obstacks work by allocating space for themselves in large chunks, and
+then parceling out space in the chunks to satisfy your requests.  Chunks
+are normally 4096 bytes long unless you specify a different chunk size.
+The chunk size includes 8 bytes of overhead that are not actually used
+for storing objects.  Regardless of the specified size, longer chunks
+will be allocated when necessary for long objects.
+
+The obstack library allocates chunks by calling the function
+@code{obstack_chunk_alloc}, which you must define.  When a chunk is no
+longer needed because you have freed all the objects in it, the obstack
+library frees the chunk by calling @code{obstack_chunk_free}, which you
+must also define.
+
+These two must be defined (as macros) or declared (as functions) in each
+source file that uses @code{obstack_init} (@pxref{Creating Obstacks}).
+Most often they are defined as macros like this:
+
+@smallexample
+#define obstack_chunk_alloc malloc
+#define obstack_chunk_free free
+@end smallexample
+
+Note that these are simple macros (no arguments).  Macro definitions with
+arguments will not work!  It is necessary that @code{obstack_chunk_alloc}
+or @code{obstack_chunk_free}, alone, expand into a function name if it is
+not itself a function name.
+
+If you allocate chunks with @code{malloc}, the chunk size should be a
+power of 2.  The default chunk size, 4096, was chosen because it is long
+enough to satisfy many typical requests on the obstack yet short enough
+not to waste too much memory in the portion of the last chunk not yet used.
+
+@deftypefn Macro int obstack_chunk_size (struct obstack *@var{obstack-ptr})
+@standards{GNU, obstack.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This returns the chunk size of the given obstack.
+@end deftypefn
+
+Since this macro expands to an lvalue, you can specify a new chunk size by
+assigning it a new value.  Doing so does not affect the chunks already
+allocated, but will change the size of chunks allocated for that particular
+obstack in the future.  It is unlikely to be useful to make the chunk size
+smaller, but making it larger might improve efficiency if you are
+allocating many objects whose size is comparable to the chunk size.  Here
+is how to do so cleanly:
+
+@smallexample
+if (obstack_chunk_size (obstack_ptr) < @var{new-chunk-size})
+  obstack_chunk_size (obstack_ptr) = @var{new-chunk-size};
+@end smallexample
+
+@node Summary of Obstacks
+@subsubsection Summary of Obstack Functions
+
+Here is a summary of all the functions associated with obstacks.  Each
+takes the address of an obstack (@code{struct obstack *}) as its first
+argument.
+
+@table @code
+@item void obstack_init (struct obstack *@var{obstack-ptr})
+Initialize use of an obstack.  @xref{Creating Obstacks}.
+
+@item void *obstack_alloc (struct obstack *@var{obstack-ptr}, int @var{size})
+Allocate an object of @var{size} uninitialized bytes.
+@xref{Allocation in an Obstack}.
+
+@item void *obstack_copy (struct obstack *@var{obstack-ptr}, void *@var{address}, int @var{size})
+Allocate an object of @var{size} bytes, with contents copied from
+@var{address}.  @xref{Allocation in an Obstack}.
+
+@item void *obstack_copy0 (struct obstack *@var{obstack-ptr}, void *@var{address}, int @var{size})
+Allocate an object of @var{size}+1 bytes, with @var{size} of them copied
+from @var{address}, followed by a null character at the end.
+@xref{Allocation in an Obstack}.
+
+@item void obstack_free (struct obstack *@var{obstack-ptr}, void *@var{object})
+Free @var{object} (and everything allocated in the specified obstack
+more recently than @var{object}).  @xref{Freeing Obstack Objects}.
+
+@item void obstack_blank (struct obstack *@var{obstack-ptr}, int @var{size})
+Add @var{size} uninitialized bytes to a growing object.
+@xref{Growing Objects}.
+
+@item void obstack_grow (struct obstack *@var{obstack-ptr}, void *@var{address}, int @var{size})
+Add @var{size} bytes, copied from @var{address}, to a growing object.
+@xref{Growing Objects}.
+
+@item void obstack_grow0 (struct obstack *@var{obstack-ptr}, void *@var{address}, int @var{size})
+Add @var{size} bytes, copied from @var{address}, to a growing object,
+and then add another byte containing a null character.  @xref{Growing
+Objects}.
+
+@item void obstack_1grow (struct obstack *@var{obstack-ptr}, char @var{data-char})
+Add one byte containing @var{data-char} to a growing object.
+@xref{Growing Objects}.
+
+@item void *obstack_finish (struct obstack *@var{obstack-ptr})
+Finalize the object that is growing and return its permanent address.
+@xref{Growing Objects}.
+
+@item int obstack_object_size (struct obstack *@var{obstack-ptr})
+Get the current size of the currently growing object.  @xref{Growing
+Objects}.
+
+@item void obstack_blank_fast (struct obstack *@var{obstack-ptr}, int @var{size})
+Add @var{size} uninitialized bytes to a growing object without checking
+that there is enough room.  @xref{Extra Fast Growing}.
+
+@item void obstack_1grow_fast (struct obstack *@var{obstack-ptr}, char @var{data-char})
+Add one byte containing @var{data-char} to a growing object without
+checking that there is enough room.  @xref{Extra Fast Growing}.
+
+@item int obstack_room (struct obstack *@var{obstack-ptr})
+Get the amount of room now available for growing the current object.
+@xref{Extra Fast Growing}.
+
+@item int obstack_alignment_mask (struct obstack *@var{obstack-ptr})
+The mask used for aligning the beginning of an object.  This is an
+lvalue.  @xref{Obstacks Data Alignment}.
+
+@item int obstack_chunk_size (struct obstack *@var{obstack-ptr})
+The size for allocating chunks.  This is an lvalue.  @xref{Obstack Chunks}.
+
+@item void *obstack_base (struct obstack *@var{obstack-ptr})
+Tentative starting address of the currently growing object.
+@xref{Status of an Obstack}.
+
+@item void *obstack_next_free (struct obstack *@var{obstack-ptr})
+Address just after the end of the currently growing object.
+@xref{Status of an Obstack}.
+@end table
+
+@node Variable Size Automatic
+@subsection Automatic Storage with Variable Size
+@cindex automatic freeing
+@cindex @code{alloca} function
+@cindex automatic storage with variable size
+
+The function @code{alloca} supports a kind of half-dynamic allocation in
+which blocks are allocated dynamically but freed automatically.
+
+Allocating a block with @code{alloca} is an explicit action; you can
+allocate as many blocks as you wish, and compute the size at run time.  But
+all the blocks are freed when you exit the function that @code{alloca} was
+called from, just as if they were automatic variables declared in that
+function.  There is no way to free the space explicitly.
+
+The prototype for @code{alloca} is in @file{stdlib.h}.  This function is
+a BSD extension.
+@pindex stdlib.h
+
+@deftypefun {void *} alloca (size_t @var{size})
+@standards{GNU, stdlib.h}
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The return value of @code{alloca} is the address of a block of @var{size}
+bytes of memory, allocated in the stack frame of the calling function.
+@end deftypefun
+
+Do not use @code{alloca} inside the arguments of a function call---you
+will get unpredictable results, because the stack space for the
+@code{alloca} would appear on the stack in the middle of the space for
+the function arguments.  An example of what to avoid is @code{foo (x,
+alloca (4), y)}.
+@c This might get fixed in future versions of GCC, but that won't make
+@c it safe with compilers generally.
+
+@menu
+* Alloca Example::              Example of using @code{alloca}.
+* Advantages of Alloca::        Reasons to use @code{alloca}.
+* Disadvantages of Alloca::     Reasons to avoid @code{alloca}.
+* GNU C Variable-Size Arrays::  Only in GNU C, here is an alternative
+				 method of allocating dynamically and
+				 freeing automatically.
+@end menu
+
+@node Alloca Example
+@subsubsection @code{alloca} Example
+
+As an example of the use of @code{alloca}, here is a function that opens
+a file name made from concatenating two argument strings, and returns a
+file descriptor or minus one signifying failure:
+
+@smallexample
+int
+open2 (char *str1, char *str2, int flags, int mode)
+@{
+  char *name = (char *) alloca (strlen (str1) + strlen (str2) + 1);
+  stpcpy (stpcpy (name, str1), str2);
+  return open (name, flags, mode);
+@}
+@end smallexample
+
+@noindent
+Here is how you would get the same results with @code{malloc} and
+@code{free}:
+
+@smallexample
+int
+open2 (char *str1, char *str2, int flags, int mode)
+@{
+  char *name = malloc (strlen (str1) + strlen (str2) + 1);
+  int desc;
+  if (name == 0)
+    fatal ("virtual memory exceeded");
+  stpcpy (stpcpy (name, str1), str2);
+  desc = open (name, flags, mode);
+  free (name);
+  return desc;
+@}
+@end smallexample
+
+As you can see, it is simpler with @code{alloca}.  But @code{alloca} has
+other, more important advantages, and some disadvantages.
+
+@node Advantages of Alloca
+@subsubsection Advantages of @code{alloca}
+
+Here are the reasons why @code{alloca} may be preferable to @code{malloc}:
+
+@itemize @bullet
+@item
+Using @code{alloca} wastes very little space and is very fast.  (It is
+open-coded by the GNU C compiler.)
+
+@item
+Since @code{alloca} does not have separate pools for different sizes of
+blocks, space used for any size block can be reused for any other size.
+@code{alloca} does not cause memory fragmentation.
+
+@item
+@cindex longjmp
+Nonlocal exits done with @code{longjmp} (@pxref{Non-Local Exits})
+automatically free the space allocated with @code{alloca} when they exit
+through the function that called @code{alloca}.  This is the most
+important reason to use @code{alloca}.
+
+To illustrate this, suppose you have a function
+@code{open_or_report_error} which returns a descriptor, like
+@code{open}, if it succeeds, but does not return to its caller if it
+fails.  If the file cannot be opened, it prints an error message and
+jumps out to the command level of your program using @code{longjmp}.
+Let's change @code{open2} (@pxref{Alloca Example}) to use this
+subroutine:@refill
+
+@smallexample
+int
+open2 (char *str1, char *str2, int flags, int mode)
+@{
+  char *name = (char *) alloca (strlen (str1) + strlen (str2) + 1);
+  stpcpy (stpcpy (name, str1), str2);
+  return open_or_report_error (name, flags, mode);
+@}
+@end smallexample
+
+@noindent
+Because of the way @code{alloca} works, the memory it allocates is
+freed even when an error occurs, with no special effort required.
+
+By contrast, the previous definition of @code{open2} (which uses
+@code{malloc} and @code{free}) would develop a memory leak if it were
+changed in this way.  Even if you are willing to make more changes to
+fix it, there is no easy way to do so.
+@end itemize
+
+@node Disadvantages of Alloca
+@subsubsection Disadvantages of @code{alloca}
+
+@cindex @code{alloca} disadvantages
+@cindex disadvantages of @code{alloca}
+These are the disadvantages of @code{alloca} in comparison with
+@code{malloc}:
+
+@itemize @bullet
+@item
+If you try to allocate more memory than the machine can provide, you
+don't get a clean error message.  Instead you get a fatal signal like
+the one you would get from an infinite recursion; probably a
+segmentation violation (@pxref{Program Error Signals}).
+
+@item
+Some @nongnusystems{} fail to support @code{alloca}, so it is less
+portable.  However, a slower emulation of @code{alloca} written in C
+is available for use on systems with this deficiency.
+@end itemize
+
+@node GNU C Variable-Size Arrays
+@subsubsection GNU C Variable-Size Arrays
+@cindex variable-sized arrays
+
+In GNU C, you can replace most uses of @code{alloca} with an array of
+variable size.  Here is how @code{open2} would look then:
+
+@smallexample
+int open2 (char *str1, char *str2, int flags, int mode)
+@{
+  char name[strlen (str1) + strlen (str2) + 1];
+  stpcpy (stpcpy (name, str1), str2);
+  return open (name, flags, mode);
+@}
+@end smallexample
+
+But @code{alloca} is not always equivalent to a variable-sized array, for
+several reasons:
+
+@itemize @bullet
+@item
+A variable size array's space is freed at the end of the scope of the
+name of the array.  The space allocated with @code{alloca}
+remains until the end of the function.
+
+@item
+It is possible to use @code{alloca} within a loop, allocating an
+additional block on each iteration.  This is impossible with
+variable-sized arrays.
+@end itemize
+
+@strong{NB:} If you mix use of @code{alloca} and variable-sized arrays
+within one function, exiting a scope in which a variable-sized array was
+declared frees all blocks allocated with @code{alloca} during the
+execution of that scope.
+
+
+@node Resizing the Data Segment
+@section Resizing the Data Segment
+
+The symbols in this section are declared in @file{unistd.h}.
+
+You will not normally use the functions in this section, because the
+functions described in @ref{Memory Allocation} are easier to use.  Those
+are interfaces to a @glibcadj{} memory allocator that uses the
+functions below itself.  The functions below are simple interfaces to
+system calls.
+
+@deftypefun int brk (void *@var{addr})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+@code{brk} sets the high end of the calling process' data segment to
+@var{addr}.
+
+The address of the end of a segment is defined to be the address of the
+last byte in the segment plus 1.
+
+The function has no effect if @var{addr} is lower than the low end of
+the data segment.  (This is considered success, by the way.)
+
+The function fails if it would cause the data segment to overlap another
+segment or exceed the process' data storage limit (@pxref{Limits on
+Resources}).
+
+The function is named for a common historical case where data storage
+and the stack are in the same segment.  Data storage allocation grows
+upward from the bottom of the segment while the stack grows downward
+toward it from the top of the segment and the curtain between them is
+called the @dfn{break}.
+
+The return value is zero on success.  On failure, the return value is
+@code{-1} and @code{errno} is set accordingly.  The following @code{errno}
+values are specific to this function:
+
+@table @code
+@item ENOMEM
+The request would cause the data segment to overlap another segment or
+exceed the process' data storage limit.
+@end table
+
+@c The Brk system call in Linux (as opposed to the GNU C Library function)
+@c is considerably different.  It always returns the new end of the data
+@c segment, whether it succeeds or fails.  The GNU C library Brk determines
+@c it's a failure if and only if the system call returns an address less
+@c than the address requested.
+
+@end deftypefun
+
+
+@deftypefun void *sbrk (ptrdiff_t @var{delta})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+This function is the same as @code{brk} except that you specify the new
+end of the data segment as an offset @var{delta} from the current end
+and on success the return value is the address of the resulting end of
+the data segment instead of zero.
+
+This means you can use @samp{sbrk(0)} to find out what the current end
+of the data segment is.
+
+@end deftypefun
+
+@node Memory Protection
+@section Memory Protection
+@cindex memory protection
+@cindex page protection
+@cindex protection flags
+
+When a page is mapped using @code{mmap}, page protection flags can be
+specified using the protection flags argument.  @xref{Memory-mapped
+I/O}.
+
+The following flags are available:
+
+@vtable @code
+@item PROT_WRITE
+@standards{POSIX, sys/mman.h}
+The memory can be written to.
+
+@item PROT_READ
+@standards{POSIX, sys/mman.h}
+The memory can be read.  On some architectures, this flag implies that
+the memory can be executed as well (as if @code{PROT_EXEC} had been
+specified at the same time).
+
+@item PROT_EXEC
+@standards{POSIX, sys/mman.h}
+The memory can be used to store instructions which can then be executed.
+On most architectures, this flag implies that the memory can be read (as
+if @code{PROT_READ} had been specified).
+
+@item PROT_NONE
+@standards{POSIX, sys/mman.h}
+This flag must be specified on its own.
+
+The memory is reserved, but cannot be read, written, or executed.  If
+this flag is specified in a call to @code{mmap}, a virtual memory area
+will be set aside for future use in the process, and @code{mmap} calls
+without the @code{MAP_FIXED} flag will not use it for subsequent
+allocations.  For anonymous mappings, the kernel will not reserve any
+physical memory for the allocation at the time the mapping is created.
+@end vtable
+
+The operating system may keep track of these flags separately even if
+the underlying hardware treats them the same for the purposes of access
+checking (as happens with @code{PROT_READ} and @code{PROT_EXEC} on some
+platforms).  On GNU systems, @code{PROT_EXEC} always implies
+@code{PROT_READ}, so that users can view the machine code which is
+executing on their system.
+
+Inappropriate access will cause a segfault (@pxref{Program Error
+Signals}).
+
+After allocation, protection flags can be changed using the
+@code{mprotect} function.
+
+@deftypefun int mprotect (void *@var{address}, size_t @var{length}, int @var{protection})
+@standards{POSIX, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+A successful call to the @code{mprotect} function changes the protection
+flags of at least @var{length} bytes of memory, starting at
+@var{address}.
+
+@var{address} must be aligned to the page size for the mapping.  The
+system page size can be obtained by calling @code{sysconf} with the
+@code{_SC_PAGESIZE} parameter (@pxref{Sysconf Definition}).  The system
+page size is the granularity in which the page protection of anonymous
+memory mappings and most file mappings can be changed.  Memory which is
+mapped from special files or devices may have larger page granularity
+than the system page size and may require larger alignment.
+
+@var{length} is the number of bytes whose protection flags must be
+changed.  It is automatically rounded up to the next multiple of the
+system page size.
+
+@var{protection} is a combination of the @code{PROT_*} flags described
+above.
+
+The @code{mprotect} function returns @math{0} on success and @math{-1}
+on failure.
+
+The following @code{errno} error conditions are defined for this
+function:
+
+@table @code
+@item ENOMEM
+The system was not able to allocate resources to fulfill the request.
+This can happen if there is not enough physical memory in the system for
+the allocation of backing storage.  The error can also occur if the new
+protection flags would cause the memory region to be split from its
+neighbors, and the process limit for the number of such distinct memory
+regions would be exceeded.
+
+@item EINVAL
+@var{address} is not properly aligned to a page boundary for the
+mapping, or @var{length} (after rounding up to the system page size) is
+not a multiple of the applicable page size for the mapping, or the
+combination of flags in @var{protection} is not valid.
+
+@item EACCES
+The file for a file-based mapping was not opened with open flags which
+are compatible with @var{protection}.
+
+@item EPERM
+The system security policy does not allow a mapping with the specified
+flags.  For example, mappings which are both @code{PROT_EXEC} and
+@code{PROT_WRITE} at the same time might not be allowed.
+@end table
+@end deftypefun
+
+If the @code{mprotect} function is used to make a region of memory
+inaccessible by specifying the @code{PROT_NONE} protection flag and
+access is later restored, the memory retains its previous contents.
+
+On some systems, it may not be possible to specify additional flags
+which were not present when the mapping was first created.  For example,
+an attempt to make a region of memory executable could fail if the
+initial protection flags were @samp{PROT_READ | PROT_WRITE}.
+
+In general, the @code{mprotect} function can be used to change any
+process memory, no matter how it was allocated.  However, portable use
+of the function requires that it is only used with memory regions
+returned by @code{mmap} or @code{mmap64}.
+
+@subsection Memory Protection Keys
+
+@cindex memory protection key
+@cindex protection key
+@cindex MPK
+On some systems, further restrictions can be added to specific pages
+using @dfn{memory protection keys}.  These restrictions work as follows:
+
+@itemize @bullet
+@item
+All memory pages are associated with a protection key.  The default
+protection key does not cause any additional protections to be applied
+during memory accesses.  New keys can be allocated with the
+@code{pkey_alloc} function, and applied to pages using
+@code{pkey_mprotect}.
+
+@item
+Each thread has a set of separate access right restriction for each
+protection key.  These access rights can be manipulated using the
+@code{pkey_set} and @code{pkey_get} functions.
+
+@item
+During a memory access, the system obtains the protection key for the
+accessed page and uses that to determine the applicable access rights,
+as configured for the current thread.  If the access is restricted, a
+segmentation fault is the result ((@pxref{Program Error Signals}).
+These checks happen in addition to the @code{PROT_}* protection flags
+set by @code{mprotect} or @code{pkey_mprotect}.
+@end itemize
+
+New threads and subprocesses inherit the access rights of the current
+thread.  If a protection key is allocated subsequently, existing threads
+(except the current) will use an unspecified system default for the
+access rights associated with newly allocated keys.
+
+Upon entering a signal handler, the system resets the access rights of
+the current thread so that pages with the default key can be accessed,
+but the access rights for other protection keys are unspecified.
+
+Applications are expected to allocate a key once using
+@code{pkey_alloc}, and apply the key to memory regions which need
+special protection with @code{pkey_mprotect}:
+
+@smallexample
+  int key = pkey_alloc (0, PKEY_DISABLE_ACCESS);
+  if (key < 0)
+    /* Perform error checking, including fallback for lack of support.  */
+    ...;
+
+  /* Apply the key to a special memory region used to store critical
+     data.  */
+  if (pkey_mprotect (region, region_length,
+                     PROT_READ | PROT_WRITE, key) < 0)
+    ...; /* Perform error checking (generally fatal).  */
+@end smallexample
+
+If the key allocation fails due to lack of support for memory protection
+keys, the @code{pkey_mprotect} call can usually be skipped.  In this
+case, the region will not be protected by default.  It is also possible
+to call @code{pkey_mprotect} with a key value of @math{-1}, in which
+case it will behave in the same way as @code{mprotect}.
+
+After key allocation assignment to memory pages, @code{pkey_set} can be
+used to temporarily acquire access to the memory region and relinquish
+it again:
+
+@smallexample
+  if (key >= 0 && pkey_set (key, 0) < 0)
+    ...; /* Perform error checking (generally fatal).  */
+  /* At this point, the current thread has read-write access to the
+     memory region.  */
+  ...
+  /* Revoke access again.  */
+  if (key >= 0 && pkey_set (key, PKEY_DISABLE_ACCESS) < 0)
+    ...; /* Perform error checking (generally fatal).  */
+@end smallexample
+
+In this example, a negative key value indicates that no key had been
+allocated, which means that the system lacks support for memory
+protection keys and it is not necessary to change the the access rights
+of the current thread (because it always has access).
+
+Compared to using @code{mprotect} to change the page protection flags,
+this approach has two advantages: It is thread-safe in the sense that
+the access rights are only changed for the current thread, so another
+thread which changes its own access rights concurrently to gain access
+to the mapping will not suddenly see its access rights revoked.  And
+@code{pkey_set} typically does not involve a call into the kernel and a
+context switch, so it is more efficient.
+
+@deftypefun int pkey_alloc (unsigned int @var{flags}, unsigned int @var{restrictions})
+@standards{Linux, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acunsafe{@acucorrupt{}}}
+Allocate a new protection key.  The @var{flags} argument is reserved and
+must be zero.  The @var{restrictions} argument specifies access rights
+which are applied to the current thread (as if with @code{pkey_set}
+below).  Access rights of other threads are not changed.
+
+The function returns the new protection key, a non-negative number, or
+@math{-1} on error.
+
+The following @code{errno} error conditions are defined for this
+function:
+
+@table @code
+@item ENOSYS
+The system does not implement memory protection keys.
+
+@item EINVAL
+The @var{flags} argument is not zero.
+
+The @var{restrictions} argument is invalid.
+
+The system does not implement memory protection keys or runs in a mode
+in which memory protection keys are disabled.
+
+@item ENOSPC
+All available protection keys already have been allocated.
+
+The system does not implement memory protection keys or runs in a mode
+in which memory protection keys are disabled.
+
+@end table
+@end deftypefun
+
+@deftypefun int pkey_free (int @var{key})
+@standards{Linux, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Deallocate the protection key, so that it can be reused by
+@code{pkey_alloc}.
+
+Calling this function does not change the access rights of the freed
+protection key.  The calling thread and other threads may retain access
+to it, even if it is subsequently allocated again.  For this reason, it
+is not recommended to call the @code{pkey_free} function.
+
+@table @code
+@item ENOSYS
+The system does not implement memory protection keys.
+
+@item EINVAL
+The @var{key} argument is not a valid protection key.
+@end table
+@end deftypefun
+
+@deftypefun int pkey_mprotect (void *@var{address}, size_t @var{length}, int @var{protection}, int @var{key})
+@standards{Linux, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Similar to @code{mprotect}, but also set the memory protection key for
+the memory region to @code{key}.
+
+Some systems use memory protection keys to emulate certain combinations
+of @var{protection} flags.  Under such circumstances, specifying an
+explicit protection key may behave as if additional flags have been
+specified in @var{protection}, even though this does not happen with the
+default protection key.  For example, some systems can support
+@code{PROT_EXEC}-only mappings only with a default protection key, and
+memory with a key which was allocated using @code{pkey_alloc} will still
+be readable if @code{PROT_EXEC} is specified without @code{PROT_READ}.
+
+If @var{key} is @math{-1}, the default protection key is applied to the
+mapping, just as if @code{mprotect} had been called.
+
+The @code{pkey_mprotect} function returns @math{0} on success and
+@math{-1} on failure.  The same @code{errno} error conditions as for
+@code{mprotect} are defined for this function, with the following
+addition:
+
+@table @code
+@item EINVAL
+The @var{key} argument is not @math{-1} or a valid memory protection
+key allocated using @code{pkey_alloc}.
+
+@item ENOSYS
+The system does not implement memory protection keys, and @var{key} is
+not @math{-1}.
+@end table
+@end deftypefun
+
+@deftypefun int pkey_set (int @var{key}, unsigned int @var{rights})
+@standards{Linux, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Change the access rights of the current thread for memory pages with the
+protection key @var{key} to @var{rights}.  If @var{rights} is zero, no
+additional access restrictions on top of the page protection flags are
+applied.  Otherwise, @var{rights} is a combination of the following
+flags:
+
+@vtable @code
+@item PKEY_DISABLE_WRITE
+@standards{Linux, sys/mman.h}
+Subsequent attempts to write to memory with the specified protection
+key will fault.
+
+@item PKEY_DISABLE_ACCESS
+@standards{Linux, sys/mman.h}
+Subsequent attempts to write to or read from memory with the specified
+protection key will fault.
+@end vtable
+
+Operations not specified as flags are not restricted.  In particular,
+this means that the memory region will remain executable if it was
+mapped with the @code{PROT_EXEC} protection flag and
+@code{PKEY_DISABLE_ACCESS} has been specified.
+
+Calling the @code{pkey_set} function with a protection key which was not
+allocated by @code{pkey_alloc} results in undefined behavior.  This
+means that calling this function on systems which do not support memory
+protection keys is undefined.
+
+The @code{pkey_set} function returns @math{0} on success and @math{-1}
+on failure.
+
+The following @code{errno} error conditions are defined for this
+function:
+
+@table @code
+@item EINVAL
+The system does not support the access rights restrictions expressed in
+the @var{rights} argument.
+@end table
+@end deftypefun
+
+@deftypefun int pkey_get (int @var{key})
+@standards{Linux, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Return the access rights of the current thread for memory pages with
+protection key @var{key}.  The return value is zero or a combination of
+the @code{PKEY_DISABLE_}* flags; see the @code{pkey_set} function.
+
+Calling the @code{pkey_get} function with a protection key which was not
+allocated by @code{pkey_alloc} results in undefined behavior.  This
+means that calling this function on systems which do not support memory
+protection keys is undefined.
+@end deftypefun
+
+@node Locking Pages
+@section Locking Pages
+@cindex locking pages
+@cindex memory lock
+@cindex paging
+
+You can tell the system to associate a particular virtual memory page
+with a real page frame and keep it that way --- i.e., cause the page to
+be paged in if it isn't already and mark it so it will never be paged
+out and consequently will never cause a page fault.  This is called
+@dfn{locking} a page.
+
+The functions in this chapter lock and unlock the calling process'
+pages.
+
+@menu
+* Why Lock Pages::                Reasons to read this section.
+* Locked Memory Details::         Everything you need to know locked
+                                    memory
+* Page Lock Functions::           Here's how to do it.
+@end menu
+
+@node Why Lock Pages
+@subsection Why Lock Pages
+
+Because page faults cause paged out pages to be paged in transparently,
+a process rarely needs to be concerned about locking pages.  However,
+there are two reasons people sometimes are:
+
+@itemize @bullet
+
+@item
+Speed.  A page fault is transparent only insofar as the process is not
+sensitive to how long it takes to do a simple memory access.  Time-critical
+processes, especially realtime processes, may not be able to wait or
+may not be able to tolerate variance in execution speed.
+@cindex realtime processing
+@cindex speed of execution
+
+A process that needs to lock pages for this reason probably also needs
+priority among other processes for use of the CPU.  @xref{Priority}.
+
+In some cases, the programmer knows better than the system's demand
+paging allocator which pages should remain in real memory to optimize
+system performance.  In this case, locking pages can help.
+
+@item
+Privacy.  If you keep secrets in virtual memory and that virtual memory
+gets paged out, that increases the chance that the secrets will get out.
+If a passphrase gets written out to disk swap space, for example, it might
+still be there long after virtual and real memory have been wiped clean.
+
+@end itemize
+
+Be aware that when you lock a page, that's one fewer page frame that can
+be used to back other virtual memory (by the same or other processes),
+which can mean more page faults, which means the system runs more
+slowly.  In fact, if you lock enough memory, some programs may not be
+able to run at all for lack of real memory.
+
+@node Locked Memory Details
+@subsection Locked Memory Details
+
+A memory lock is associated with a virtual page, not a real frame.  The
+paging rule is: If a frame backs at least one locked page, don't page it
+out.
+
+Memory locks do not stack.  I.e., you can't lock a particular page twice
+so that it has to be unlocked twice before it is truly unlocked.  It is
+either locked or it isn't.
+
+A memory lock persists until the process that owns the memory explicitly
+unlocks it.  (But process termination and exec cause the virtual memory
+to cease to exist, which you might say means it isn't locked any more).
+
+Memory locks are not inherited by child processes.  (But note that on a
+modern Unix system, immediately after a fork, the parent's and the
+child's virtual address space are backed by the same real page frames,
+so the child enjoys the parent's locks).  @xref{Creating a Process}.
+
+Because of its ability to impact other processes, only the superuser can
+lock a page.  Any process can unlock its own page.
+
+The system sets limits on the amount of memory a process can have locked
+and the amount of real memory it can have dedicated to it.  @xref{Limits
+on Resources}.
+
+In Linux, locked pages aren't as locked as you might think.
+Two virtual pages that are not shared memory can nonetheless be backed
+by the same real frame.  The kernel does this in the name of efficiency
+when it knows both virtual pages contain identical data, and does it
+even if one or both of the virtual pages are locked.
+
+But when a process modifies one of those pages, the kernel must get it a
+separate frame and fill it with the page's data.  This is known as a
+@dfn{copy-on-write page fault}.  It takes a small amount of time and in
+a pathological case, getting that frame may require I/O.
+@cindex copy-on-write page fault
+@cindex page fault, copy-on-write
+
+To make sure this doesn't happen to your program, don't just lock the
+pages.  Write to them as well, unless you know you won't write to them
+ever.  And to make sure you have pre-allocated frames for your stack,
+enter a scope that declares a C automatic variable larger than the
+maximum stack size you will need, set it to something, then return from
+its scope.
+
+@node Page Lock Functions
+@subsection Functions To Lock And Unlock Pages
+
+The symbols in this section are declared in @file{sys/mman.h}.  These
+functions are defined by POSIX.1b, but their availability depends on
+your kernel.  If your kernel doesn't allow these functions, they exist
+but always fail.  They @emph{are} available with a Linux kernel.
+
+@strong{Portability Note:} POSIX.1b requires that when the @code{mlock}
+and @code{munlock} functions are available, the file @file{unistd.h}
+define the macro @code{_POSIX_MEMLOCK_RANGE} and the file
+@code{limits.h} define the macro @code{PAGESIZE} to be the size of a
+memory page in bytes.  It requires that when the @code{mlockall} and
+@code{munlockall} functions are available, the @file{unistd.h} file
+define the macro @code{_POSIX_MEMLOCK}.  @Theglibc{} conforms to
+this requirement.
+
+@deftypefun int mlock (const void *@var{addr}, size_t @var{len})
+@standards{POSIX.1b, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+@code{mlock} locks a range of the calling process' virtual pages.
+
+The range of memory starts at address @var{addr} and is @var{len} bytes
+long.  Actually, since you must lock whole pages, it is the range of
+pages that include any part of the specified range.
+
+When the function returns successfully, each of those pages is backed by
+(connected to) a real frame (is resident) and is marked to stay that
+way.  This means the function may cause page-ins and have to wait for
+them.
+
+When the function fails, it does not affect the lock status of any
+pages.
+
+The return value is zero if the function succeeds.  Otherwise, it is
+@code{-1} and @code{errno} is set accordingly.  @code{errno} values
+specific to this function are:
+
+@table @code
+@item ENOMEM
+@itemize @bullet
+@item
+At least some of the specified address range does not exist in the
+calling process' virtual address space.
+@item
+The locking would cause the process to exceed its locked page limit.
+@end itemize
+
+@item EPERM
+The calling process is not superuser.
+
+@item EINVAL
+@var{len} is not positive.
+
+@item ENOSYS
+The kernel does not provide @code{mlock} capability.
+
+@end table
+@end deftypefun
+
+@deftypefun int mlock2 (const void *@var{addr}, size_t @var{len}, unsigned int @var{flags})
+@standards{Linux, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+This function is similar to @code{mlock}.  If @var{flags} is zero, a
+call to @code{mlock2} behaves exactly as the equivalent call to @code{mlock}.
+
+The @var{flags} argument must be a combination of zero or more of the
+following flags:
+
+@vtable @code
+@item MLOCK_ONFAULT
+@standards{Linux, sys/mman.h}
+Only those pages in the specified address range which are already in
+memory are locked immediately.  Additional pages in the range are
+automatically locked in case of a page fault and allocation of memory.
+@end vtable
+
+Like @code{mlock}, @code{mlock2} returns zero on success and @code{-1}
+on failure, setting @code{errno} accordingly.  Additional @code{errno}
+values defined for @code{mlock2} are:
+
+@table @code
+@item EINVAL
+The specified (non-zero) @var{flags} argument is not supported by this
+system.
+@end table
+@end deftypefun
+
+You can lock @emph{all} a process' memory with @code{mlockall}.  You
+unlock memory with @code{munlock} or @code{munlockall}.
+
+To avoid all page faults in a C program, you have to use
+@code{mlockall}, because some of the memory a program uses is hidden
+from the C code, e.g. the stack and automatic variables, and you
+wouldn't know what address to tell @code{mlock}.
+
+@deftypefun int munlock (const void *@var{addr}, size_t @var{len})
+@standards{POSIX.1b, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+@code{munlock} unlocks a range of the calling process' virtual pages.
+
+@code{munlock} is the inverse of @code{mlock} and functions completely
+analogously to @code{mlock}, except that there is no @code{EPERM}
+failure.
+
+@end deftypefun
+
+@deftypefun int mlockall (int @var{flags})
+@standards{POSIX.1b, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+@code{mlockall} locks all the pages in a process' virtual memory address
+space, and/or any that are added to it in the future.  This includes the
+pages of the code, data and stack segment, as well as shared libraries,
+user space kernel data, shared memory, and memory mapped files.
+
+@var{flags} is a string of single bit flags represented by the following
+macros.  They tell @code{mlockall} which of its functions you want.  All
+other bits must be zero.
+
+@vtable @code
+
+@item MCL_CURRENT
+Lock all pages which currently exist in the calling process' virtual
+address space.
+
+@item MCL_FUTURE
+Set a mode such that any pages added to the process' virtual address
+space in the future will be locked from birth.  This mode does not
+affect future address spaces owned by the same process so exec, which
+replaces a process' address space, wipes out @code{MCL_FUTURE}.
+@xref{Executing a File}.
+
+@end vtable
+
+When the function returns successfully, and you specified
+@code{MCL_CURRENT}, all of the process' pages are backed by (connected
+to) real frames (they are resident) and are marked to stay that way.
+This means the function may cause page-ins and have to wait for them.
+
+When the process is in @code{MCL_FUTURE} mode because it successfully
+executed this function and specified @code{MCL_CURRENT}, any system call
+by the process that requires space be added to its virtual address space
+fails with @code{errno} = @code{ENOMEM} if locking the additional space
+would cause the process to exceed its locked page limit.  In the case
+that the address space addition that can't be accommodated is stack
+expansion, the stack expansion fails and the kernel sends a
+@code{SIGSEGV} signal to the process.
+
+When the function fails, it does not affect the lock status of any pages
+or the future locking mode.
+
+The return value is zero if the function succeeds.  Otherwise, it is
+@code{-1} and @code{errno} is set accordingly.  @code{errno} values
+specific to this function are:
+
+@table @code
+@item ENOMEM
+@itemize @bullet
+@item
+At least some of the specified address range does not exist in the
+calling process' virtual address space.
+@item
+The locking would cause the process to exceed its locked page limit.
+@end itemize
+
+@item EPERM
+The calling process is not superuser.
+
+@item EINVAL
+Undefined bits in @var{flags} are not zero.
+
+@item ENOSYS
+The kernel does not provide @code{mlockall} capability.
+
+@end table
+
+You can lock just specific pages with @code{mlock}.  You unlock pages
+with @code{munlockall} and @code{munlock}.
+
+@end deftypefun
+
+
+@deftypefun int munlockall (void)
+@standards{POSIX.1b, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+@code{munlockall} unlocks every page in the calling process' virtual
+address space and turns off @code{MCL_FUTURE} future locking mode.
+
+The return value is zero if the function succeeds.  Otherwise, it is
+@code{-1} and @code{errno} is set accordingly.  The only way this
+function can fail is for generic reasons that all functions and system
+calls can fail, so there are no specific @code{errno} values.
+
+@end deftypefun
+
+
+
+
+@ignore
+@c This was never actually implemented.  -zw
+@node Relocating Allocator
+@section Relocating Allocator
+
+@cindex relocating memory allocator
+Any system of dynamic memory allocation has overhead: the amount of
+space it uses is more than the amount the program asks for.  The
+@dfn{relocating memory allocator} achieves very low overhead by moving
+blocks in memory as necessary, on its own initiative.
+
+@c @menu
+@c * Relocator Concepts::		How to understand relocating allocation.
+@c * Using Relocator::		Functions for relocating allocation.
+@c @end menu
+
+@node Relocator Concepts
+@subsection Concepts of Relocating Allocation
+
+@ifinfo
+The @dfn{relocating memory allocator} achieves very low overhead by
+moving blocks in memory as necessary, on its own initiative.
+@end ifinfo
+
+When you allocate a block with @code{malloc}, the address of the block
+never changes unless you use @code{realloc} to change its size.  Thus,
+you can safely store the address in various places, temporarily or
+permanently, as you like.  This is not safe when you use the relocating
+memory allocator, because any and all relocatable blocks can move
+whenever you allocate memory in any fashion.  Even calling @code{malloc}
+or @code{realloc} can move the relocatable blocks.
+
+@cindex handle
+For each relocatable block, you must make a @dfn{handle}---a pointer
+object in memory, designated to store the address of that block.  The
+relocating allocator knows where each block's handle is, and updates the
+address stored there whenever it moves the block, so that the handle
+always points to the block.  Each time you access the contents of the
+block, you should fetch its address anew from the handle.
+
+To call any of the relocating allocator functions from a signal handler
+is almost certainly incorrect, because the signal could happen at any
+time and relocate all the blocks.  The only way to make this safe is to
+block the signal around any access to the contents of any relocatable
+block---not a convenient mode of operation.  @xref{Nonreentrancy}.
+
+@node Using Relocator
+@subsection Allocating and Freeing Relocatable Blocks
+
+@pindex malloc.h
+In the descriptions below, @var{handleptr} designates the address of the
+handle.  All the functions are declared in @file{malloc.h}; all are GNU
+extensions.
+
+@comment malloc.h
+@comment GNU
+@c @deftypefun {void *} r_alloc (void **@var{handleptr}, size_t @var{size})
+This function allocates a relocatable block of size @var{size}.  It
+stores the block's address in @code{*@var{handleptr}} and returns
+a non-null pointer to indicate success.
+
+If @code{r_alloc} can't get the space needed, it stores a null pointer
+in @code{*@var{handleptr}}, and returns a null pointer.
+@end deftypefun
+
+@comment malloc.h
+@comment GNU
+@c @deftypefun void r_alloc_free (void **@var{handleptr})
+This function is the way to free a relocatable block.  It frees the
+block that @code{*@var{handleptr}} points to, and stores a null pointer
+in @code{*@var{handleptr}} to show it doesn't point to an allocated
+block any more.
+@end deftypefun
+
+@comment malloc.h
+@comment GNU
+@c @deftypefun {void *} r_re_alloc (void **@var{handleptr}, size_t @var{size})
+The function @code{r_re_alloc} adjusts the size of the block that
+@code{*@var{handleptr}} points to, making it @var{size} bytes long.  It
+stores the address of the resized block in @code{*@var{handleptr}} and
+returns a non-null pointer to indicate success.
+
+If enough memory is not available, this function returns a null pointer
+and does not modify @code{*@var{handleptr}}.
+@end deftypefun
+@end ignore
+
+
+
+
+@ignore
+@comment No longer available...
+
+@comment @node Memory Warnings
+@comment @section Memory Usage Warnings
+@comment @cindex memory usage warnings
+@comment @cindex warnings of memory almost full
+
+@pindex malloc.c
+You can ask for warnings as the program approaches running out of memory
+space, by calling @code{memory_warnings}.  This tells @code{malloc} to
+check memory usage every time it asks for more memory from the operating
+system.  This is a GNU extension declared in @file{malloc.h}.
+
+@comment malloc.h
+@comment GNU
+@comment @deftypefun void memory_warnings (void *@var{start}, void (*@var{warn-func}) (const char *))
+Call this function to request warnings for nearing exhaustion of virtual
+memory.
+
+The argument @var{start} says where data space begins, in memory.  The
+allocator compares this against the last address used and against the
+limit of data space, to determine the fraction of available memory in
+use.  If you supply zero for @var{start}, then a default value is used
+which is right in most circumstances.
+
+For @var{warn-func}, supply a function that @code{malloc} can call to
+warn you.  It is called with a string (a warning message) as argument.
+Normally it ought to display the string for the user to read.
+@end deftypefun
+
+The warnings come when memory becomes 75% full, when it becomes 85%
+full, and when it becomes 95% full.  Above 95% you get another warning
+each time memory usage increases.
+
+@end ignore

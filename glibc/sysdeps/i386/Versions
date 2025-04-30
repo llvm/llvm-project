@@ -1,0 +1,38 @@
+ld {
+  GLIBC_2.3 {
+    # The alternative i386 runtime interface to TLS.
+    ___tls_get_addr;
+  }
+}
+libc {
+  GLIBC_2.0 {
+    # Functions from libgcc.
+    __divdi3; __moddi3; __udivdi3; __umoddi3;
+  }
+  GLIBC_2.1 {
+    # global variable
+    _fp_hw;
+  }
+  GLIBC_2.1.1 {
+    # extern inline functions used by <bits/string.h>
+    __memcpy_c; __memset_cc; __memset_cg; __memset_gg;
+    __memcpy_by2; __memcpy_by4; __memcpy_g; __mempcpy_by2; __mempcpy_by4;
+    __mempcpy_byn; __memset_ccn_by2; __memset_ccn_by4; __memset_gcn_by2;
+    __memset_gcn_by4; __stpcpy_g; __strcat_c; __strcat_g; __strchr_c;
+    __strchr_g; __strchrnul_c; __strchrnul_g; __strcmp_gg; __strcpy_g;
+    __strcspn_c1; __strcspn_cg; __strcspn_g; __strlen_g; __strncat_g;
+    __strncmp_g; __strncpy_by2; __strncpy_by4; __strncpy_byn; __strncpy_gg;
+    __strpbrk_cg; __strpbrk_g; __strrchr_c; __strrchr_g; __strspn_c1;
+    __strspn_cg; __strspn_g; __strstr_cg; __strstr_g;
+  }
+  GLIBC_2.13 {
+    __fentry__;
+  }
+}
+libm {
+  GLIBC_2.1 {
+    # A generic bug got this omitted from other configurations' version
+    # sets, but we always had it.
+    exp2l;
+  }
+}

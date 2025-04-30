@@ -1377,6 +1377,28 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
 
+def FeatureNSGen1ExtMem128
+    : SubtargetFeature<"mem128ext", "HasNSGen1ExtMem128", "true",
+                       "Enable NextSilicon Gen1 128-bit memory instructions.">;
+def HasNSGen1ExtMem128 : Predicate<"Subtarget->hasNSGen1ExtMem128()">;
+
+def TuneNSGen1ECore
+    : SubtargetFeature<"nextsilicon-gen1-ecore", "RISCVProcFamily",
+                       "NextSiliconGen1Ecore",
+                       "NextSilicon Gen1 ECORE processors",
+                       [TuneNoDefaultUnroll, FeatureNSGen1ExtMem128]>;
+
+def FeatureCheapIntDiv
+    : SubtargetFeature<"cheap-int-div", "HasCheapIntDiv", "true",
+                       "Has cheap integer division.">;
+def HasCheapIntDiv : Predicate<"Subtarget->hasCheapIntDiv()">;
+
+def TuneNSGen2ECore
+    : SubtargetFeature<"nextsilicon-gen2-ecore", "RISCVProcFamily",
+                       "NextSiliconGen2Ecore",
+                       "NextSilicon Gen2 ECORE processors",
+                       [TuneNoDefaultUnroll, FeatureCheapIntDiv]>;
+
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user
 // is responsible for providing any necessary __sync implementations. Code

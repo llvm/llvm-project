@@ -435,6 +435,7 @@ private:
   bool optimizeExt(Instruction *&I);
   bool optimizeExtUses(Instruction *I);
   bool optimizeLoadExt(LoadInst *Load);
+  bool optimizeOrInst(BinaryOperator *Or);
   bool optimizeShiftInst(BinaryOperator *BO);
   bool optimizeFunnelShift(IntrinsicInst *Fsh);
   bool optimizeSelectInst(SelectInst *SI);
@@ -7039,6 +7040,35 @@ getTrueOrFalseValue(SelectInst *SI, bool isTrue,
   return V;
 }
 
+/// Convert Or that is used in address computations to Add. For some targets,
+/// this exposes opportunities to use complex addressing modes.
+bool CodeGenPrepare::optimizeOrInst(BinaryOperator *Or) {
+  Value *LHS = Or->getOperand(0), *RHS = Or->getOperand(1);
+  Function *F = Or->getParent()->getParent();
+  if (!Or->hasOneUse() || !isa<ConstantInt>(RHS) ||
+      !TLI->shouldConvertOrToAdd() ||
+      !haveNoCommonBitsSet(LHS, RHS,
+                           SimplifyQuery(*DL, &getDT(*F), nullptr, Or)))
+    return false;
+
+  Instruction *Usr = cast<Instruction>(*Or->user_begin());
+
+  // Look through an extension.
+  if (Usr->hasOneUse() && (isa<ZExtInst>(Usr) || isa<SExtInst>(Usr)))
+    Usr = cast<Instruction>(*Usr->user_begin());
+
+  // Bail out if it is not a GEP.
+  if (!isa<GetElementPtrInst>(Usr))
+    return false;
+
+  IRBuilder<> Builder(Or);
+  Value *Add = Builder.CreateAdd(LHS, RHS, "", true, true);
+  Add->takeName(Or);
+  Or->replaceAllUsesWith(Add);
+  Or->eraseFromParent();
+  return true;
+}
+
 bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   assert(Shift->isShift() && "Expected a shift");
 
@@ -8455,6 +8485,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     return true;
 
   switch (I->getOpcode()) {
+  case Instruction::Or:
+    return optimizeOrInst(cast<BinaryOperator>(I));
   case Instruction::Shl:
   case Instruction::LShr:
   case Instruction::AShr:

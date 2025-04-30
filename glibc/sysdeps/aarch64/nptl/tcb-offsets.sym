@@ -1,0 +1,6 @@
+#include <sysdep.h>
+#include <tls.h>
+
+PTHREAD_MULTIPLE_THREADS_OFFSET		offsetof (struct pthread, header.multiple_threads)
+PTHREAD_TID_OFFSET			offsetof (struct pthread, tid)
+PTHREAD_SIZEOF				sizeof (struct pthread)

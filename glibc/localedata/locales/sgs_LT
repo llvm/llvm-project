@@ -1,0 +1,149 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Samogitian language locale for Lithuania
+% Created on January 28, 2011
+%  by Arnas Udovičius
+% Source:
+% Address:
+% Contact: Arnas Udovičius
+% Email: arnas.udovicius@gmail.com
+% Language: sgs
+% Territory: LT
+% Revision: 1.1
+% Date: 2016-04-21
+% Application: general
+% Users: general
+% Repertoiremap: mnemonic.ds
+% Distribution and use is free, also
+% for commercial purposes.
+
+% <CAPITAL> before <SMALL> letters
+
+LC_IDENTIFICATION
+title      "Samogitian language locale for Lithuania"
+source     ""
+address    ""
+contact    "Arnas Udovi<U010D>ius"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Samogitian"
+territory  "Lithuania"
+revision   "1.1"
+date       "2016-04-21"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+copy "lt_LT"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "lt_LT"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Nd";"Pn";"Ot";/
+        "Sr";"<U010C>t";"Pt";/
+        "Sb"
+day     "nediel<U0117>s d<U00EB>na";/
+        "panedielis";/
+        "oterninks";/
+        "sereda";/
+        "<U010D>etvergs";/
+        "petn<U012B><U010D><U0117>";/
+        "sobata"
+abmon   "Sau";"Vas";/
+        "Kuo";"Bal";/
+        "Geg";"B<U0117>r";/
+        "L<U00EB>p";"Rgp";/
+        "Sie";"Spa";/
+        "Lap";"Grd"
+mon     "saus<U0117>";/
+        "vasar<U0117>";/
+        "kuova";/
+        "balond<U0117>";/
+        "gego<U017E><U0117>s";/
+        "b<U0117>r<U017E>el<U0117>";/
+        "l<U00EB>pas";/
+        "rogpj<U016B>t<U0117>";/
+        "siej<U0117>s";/
+        "spal<U0117>";/
+        "lapkr<U0117>st<U0117>";/
+        "gr<U016F>d<U0117>"
+d_t_fmt  "%Y m. %B %d d. %T"
+date_fmt "%Y m. %B %d d. %T %Z"
+d_fmt   "%Y.%m.%d"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1TtYy]"
+noexpr  "^[-0Nn]"
+yesstr  "t<U01E1>p"
+nostr   "n<U0113>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "lt_LT"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "lt_LT"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "lt_LT"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt  "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Lietova"
+country_post "LT"
+country_ab2  "LT"
+country_ab3  "LTU"
+country_num  440
+country_car  "LT"
+lang_name    "<U017D>emait<U0117><U0161>k<U0101>"
+lang_term    "sgs"
+lang_lib     "sgs"
+END LC_ADDRESS

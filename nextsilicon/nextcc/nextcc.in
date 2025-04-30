@@ -1,0 +1,443 @@
+#! /bin/bash
+#
+# Simple script to use the NextSilicon alternative clang-llvm compiler
+SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_PATH="${SCRIPT_PATH}/.."
+SYSROOT_PATH="${ROOT_PATH}/sysroot/usr"
+INVOKED_AS="$(basename "$0")"
+
+# Paths to the LLVM libraries.
+NEXT_LLVM_LIBS="${ROOT_PATH}/@LLVM_DIR_NAME@/lib"
+NEXT_IR_LIBS="${NEXT_LLVM_LIBS}/next-ir-lib"
+
+# Set up an integer representing a Next toolchain version.
+# It's made visible to user code through __NEXT_TOOLCHAIN_VERSION__ macro.
+NEXT_TOOLCHAIN_VERSION_MAJOR="@NEXT_TOOLCHAIN_VERSION_MAJOR@"
+NEXT_TOOLCHAIN_VERSION_MINOR="@NEXT_TOOLCHAIN_VERSION_MINOR@"
+NEXT_TOOLCHAIN_VERSION_PATCHLEVEL="@NEXT_TOOLCHAIN_VERSION_PATCHLEVEL@"
+NEXT_TOOLCHAIN_VERSION_INTEGER=$(($NEXT_TOOLCHAIN_VERSION_MAJOR * 10000 + $NEXT_TOOLCHAIN_VERSION_MINOR * 100 + $NEXT_TOOLCHAIN_VERSION_PATCHLEVEL))
+
+NEXTCC_VERSION="@NEXTCC_VERSION@"
+NEXTCC_VERSION_BC="${SCRIPT_PATH}/nextcc_version.o"
+NEXTLOADER_BC="${SCRIPT_PATH}/nextloader.o"
+NEXTLOADER_VERSION_SCRIPT="${SCRIPT_PATH}/nextloader.script"
+
+SYSROOT_CFLAGS="-isystem ${SYSROOT_PATH}/include"
+SYSROOT_CXXFLAGS="-nostdinc++ -isystem ${SYSROOT_PATH}/include/c++/v1"
+# flang driver ignores -isystem
+SYSROOT_FFLAGS="-I${SYSROOT_PATH}/include"
+
+case "${INVOKED_AS}" in
+    flatcc|nextcc)
+        SYSROOT_FLAGS="${SYSROOT_CFLAGS}"
+    ;;
+    flatcxx|nextcxx)
+        SYSROOT_FLAGS="${SYSROOT_CXXFLAGS} ${SYSROOT_CFLAGS}"
+    ;;
+    flatflang|flatfort|nextfort|nextflang)
+        SYSROOT_FLAGS="${SYSROOT_FFLAGS}"
+    ;;
+    *)
+        SYSROOT_FLAGS=""
+    ;;
+esac
+
+FLAT_NEXT_CFLAGS="-fno-math-errno -fno-optimize-sibling-calls -Wno-error=unused-command-line-argument"
+NEXT_CFLAGS_APPEND="${SYSROOT_FLAGS}"
+FLAT_NEXT_CFLAGS_APPEND="${SYSROOT_FLAGS}"
+FLAT_NEXT_CFLAGS_FORCE="-D__NEXTSILICON__=1 -D__NEXT_TOOLCHAIN_VERSION__=${NEXT_TOOLCHAIN_VERSION_INTEGER}"
+
+# nextutils does not support DWARFv5, which is the default in clang
+DWARF_VERSION_ARG="-gdwarf-4"
+NEXT_CFLAGS=${FLAT_NEXT_CFLAGS}" \
+    -flto \
+    -fxray-instrument \
+    -fxray-instruction-threshold=1 \
+    -fxray-instrumentation-bundle=function-entry \
+    -g \
+    ${DWARF_VERSION_ARG} \
+    "
+NEXT_CFLAGS_FORCE=${FLAT_NEXT_CFLAGS_FORCE}" \
+    -fno-unroll-loops \
+    -fno-vectorize \
+    -fno-slp-vectorize \
+    -fveclib=none \
+    "
+
+# NOTE: using -mllvm -indvars-widen-indvars=0 because induction variable
+#       promotion is largely a pessimization in Next32.
+NEXT_CFLAGS_FORCE_COMPILE_ONLY="\
+    -mllvm -indvars-widen-indvars=0 \
+    -mllvm -x86-enable-gather-scatter=false \
+    -mllvm -x86-enable-masked-interleaved-access-vectorization=true \
+    -mllvm -x86-prefer-predicate-over-epilogue=true \
+    -mllvm -x86-enable-emit-get-active-lane-mask=true \
+    -mllvm --ns-disallow-unsupported-omp-features \
+    "
+
+OMPT_CFLAGS=${FLAT_NEXT_CFLAGS}" \
+    -flto \
+    -g \
+    ${DWARF_VERSION_ARG} \
+    "
+
+OMPT_CFLAGS_FORCE=${NEXT_CFLAGS_FORCE}" \
+    -Xopenmp-target -mnext32-vectorization \
+    -Xopenmp-target -mavx2 \
+    -Xopenmp-target -fno-exceptions \
+    -foffload-lto \
+    "
+
+NEXT_LDFLAGS_RELOCATABLE="-fuse-ld=lld -fno-xray-link-deps"
+NEXT_LDFLAGS_PIE="-pie"
+NEXT_LDFLAGS_INTERPRETER="\
+    -Xlinker --dynamic-linker=${SYSROOT_PATH}/lib/ld-linux-x86-64.so.2 \
+    "
+NEXT_LDFLAGS_RPATH="
+    -Xlinker --disable-new-dtags \
+    -Xlinker -rpath=${SYSROOT_PATH}/lib \
+    "
+
+NEXT_LDFLAGS_PROFILE_THREAD_COUNTERS="
+    -Xlinker -plugin-opt=-thread-local-counters=true \
+"
+
+NEXT_LDFLAGS_SET_BINFMT_MAGIC_NUMBER="
+    -Xlinker --set-binfmt-magic-number \
+"
+
+NEXT_LDFLAGS_PROFILE="
+    -fcreate-profile \
+    -Xlinker --lto-next-instrumentation \
+    -Xlinker -plugin-opt=-pgo-instr-select=false \
+    -Xlinker -plugin-opt=-pgo-instr-memop=false \
+    ${NEXT_LDFLAGS_PROFILE_THREAD_COUNTERS} \
+    "
+
+FLAT_NEXT_LDFLAGS=${NEXT_LDFLAGS_RELOCATABLE}" \
+    -Wl,--undefined=__ehdr_start \
+    -B${SYSROOT_PATH}/lib \
+    -L${SYSROOT_PATH}/lib \
+    ${NEXT_LDFLAGS_INTERPRETER} \
+    ${NEXT_LDFLAGS_PIE} \
+    "
+
+# Append the rpath arguments, to allow user to override them.
+FLAT_NEXT_LDFLAGS_APPEND="${NEXT_LDFLAGS_RPATH}"
+NEXT_LDFLAGS_APPEND="${FLAT_NEXT_LDFLAGS_APPEND}"
+
+NEXT_LDFLAGS=${FLAT_NEXT_LDFLAGS}" \
+    -Xlinker --lto-next-silicon-import-recursion \
+    -Xlinker --lto-next-silicon-relocate-variadic \
+    -Xlinker --lto-next-silicon-ir-fixup \
+    -Xlinker --lto-next-silicon-ir-builtins \
+    -Xlinker --lto-next-silicon-atomic-fixup \
+    -Xlinker --lto-next-silicon-split-call-sites \
+    -Xlinker --lto-embed-symbol-trackers \
+    -Xlinker --lto-next-silicon-warn-unsupported-omp \
+    -Xlinker -plugin-opt=--lto-embed-bitcode=optimized \
+    -Xlinker --lto-O0 \
+    -Xlinker -plugin-opt=-compute-dead=false \
+    -Xlinker -plugin-opt=-nextsilicon-ir-fixup-add-xray-attrs=true \
+    -L${NEXT_IR_LIBS} -lnextatomic \
+    ${NEXT_LDFLAGS_PROFILE} \
+    ${NEXT_LDFLAGS_SET_BINFMT_MAGIC_NUMBER} \
+    "
+
+OMPT_LDFLAGS=${FLAT_NEXT_LDFLAGS}" \
+    -Xlinker --lto-next-silicon-import-recursion \
+    -Xlinker --lto-next-silicon-ir-fixup \
+    -Xlinker --lto-next-silicon-ir-builtins \
+    -Xlinker --lto-next-silicon-atomic-fixup \
+    -Xlinker --lto-next-silicon-split-call-sites \
+    -Xlinker --lto-embed-symbol-trackers \
+    -Xlinker -plugin-opt=-compute-dead=false \
+    -Xlinker -plugin-opt=--lto-embed-bitcode=optimized \
+    -Xlinker --lto-O0 \
+    ${NEXT_LDFLAGS_PROFILE} \
+    ${NEXT_LDFLAGS_SET_BINFMT_MAGIC_NUMBER} \
+    "
+
+OMPT_LDFLAGS_DEVICE="
+    -Xlinker --device-lto-next-silicon-import-recursion \
+    -Xlinker --device-lto-next-silicon-ir-fixup \
+    -Xlinker --lto-next-silicon-ir-builtins \
+    -Xlinker --device-lto-next-silicon-atomic-fixup \
+    -Xlinker --device-lto-next-silicon-split-call-sites \
+    -Xlinker --device-lto-embed-symbol-trackers \
+    -Xlinker --device-lto-next-silicon-warn-unsupported-omp \
+    -Wl,-mllvm,-nextsilicon-ir-fixup-add-xray-attrs=false \
+    -Wl,--embed-bitcode \
+    -nogpulib \
+    "
+
+OMPT_LDFLAGS=${OMPT_LDFLAGS}" \
+    ${OMPT_LDFLAGS_DEVICE} \
+    "
+
+invoke_flat=no
+
+case "${INVOKED_AS}" in
+    nextcc)
+        NEXTCC_COMPILER="clang"
+    ;;
+    nextcxx)
+        NEXTCC_COMPILER="clang++"
+    ;;
+    nextfort|nextflang)
+        NEXTCC_COMPILER="flang"
+    ;;
+    flatcc)
+        NEXTCC_COMPILER="clang"
+        invoke_flat=yes
+    ;;
+    flatcxx)
+        NEXTCC_COMPILER="clang++"
+        invoke_flat=yes
+    ;;
+    flatfort|flatflang)
+        NEXTCC_COMPILER="flang"
+        invoke_flat=yes
+    ;;
+    *)
+        echo "Error: Unknown compiler identity (\"${INVOKED_AS}\")"
+        exit 1
+    ;;
+esac
+
+openmp_target=false
+if [[ "$@" == *"-fopenmp-targets="* ]] || [[ "$@" == *"-offload-arch="* ]]; then
+    openmp_target=true
+fi
+
+if [ ${openmp_target} = true ] ; then
+    NEXT_CFLAGS=$OMPT_CFLAGS
+    NEXT_CFLAGS_FORCE=$OMPT_CFLAGS_FORCE
+    NEXT_LDFLAGS=$OMPT_LDFLAGS
+fi
+
+if [ ${invoke_flat} = yes ] ; then
+    NEXT_CFLAGS=$FLAT_NEXT_CFLAGS
+    NEXT_CFLAGS_APPEND=$FLAT_NEXT_CFLAGS_APPEND
+    NEXT_CFLAGS_FORCE=$FLAT_NEXT_CFLAGS_FORCE
+    NEXT_LDFLAGS="${FLAT_NEXT_LDFLAGS}"
+    NEXT_LDFLAGS_APPEND="${FLAT_NEXT_LDFLAGS_APPEND}"
+fi
+
+# Default settings for compiler, flags, and libraries.
+NEXT_CC="${ROOT_PATH}/@LLVM_DIR_NAME@/bin/${NEXTCC_COMPILER}"
+NEXT_LD="${NEXT_CC}"
+
+# Show is set to echo to cause the compilation command to be echoed instead
+# of executed.
+Show=
+
+#
+# ------------------------------------------------------------------------
+# Argument processing.
+# This is somewhat awkward because of the handling of arguments within
+# the shell.  We want to handle arguments that include spaces without
+# loosing the spacing (an alternative would be to use a more powerful
+# scripting language that would allow us to retain the array of values,
+# which the basic (rather than enhanced) Bourne shell does not.
+#
+# Look through the arguments for arguments that indicate compile only.
+# If these are *not* found, add the library options
+
+debug_symbols=no
+compiling=yes
+linking=yes
+relocatable=no
+allargs=("$@")
+argno=0
+
+for arg in "$@" ; do
+    # Set addarg to no if this arg should be ignored by the C compiler
+    addarg=yes
+    case "${arg}" in
+
+    # Compiler option which adds debug symbols, tells us whether we need to
+    # force the DWARF version
+    -g)
+        debug_symbols=yes
+    ;;
+    # ----------------------------------------------------------------
+    # Compiler options that affect whether we are linking or not
+    -c|-M|-MM)
+        # The compiler links by default
+        linking=no
+    ;;
+    -E)
+        # When running the preprocessor only add the sysroot flag
+        linking=no
+        NEXT_CFLAGS=$SYSROOT_FLAGS
+    ;;
+    -S|--assemble)
+        # Assembler file is needed. Optimization seems to interfere
+        linking=no
+        NEXT_CFLAGS=$SYSROOT_FLAGS
+    ;;
+    -r|--relocatable)
+        # Suppress enrichment because to do otherwise would break the
+        # One EXE/DSO <=> One Bitcode Module correspondence.
+        NEXT_LDFLAGS="${NEXT_LDFLAGS_RELOCATABLE}"
+
+        relocatable=yes
+    ;;
+    -static|-static-pie)
+        NEXT_LDFLAGS=${NEXT_LDFLAGS//$NEXT_LDFLAGS_INTERPRETER/}
+        NEXT_LDFLAGS=${NEXT_LDFLAGS//$NEXT_LDFLAGS_PIE/}
+    ;;
+    -shared|-pie|-nopie|-no-pie)
+        NEXT_LDFLAGS=${NEXT_LDFLAGS//$NEXT_LDFLAGS_PIE/}
+    ;;
+    # Respect the parameters and remove our own prioritized -isystem that
+    # point to our sysroot.
+    -nostdinc)
+        NEXT_CFLAGS_APPEND=${NEXT_CFLAGS_APPEND//$SYSROOT_CFLAGS/}
+        NEXT_CFLAGS_APPEND=${NEXT_CFLAGS_APPEND//$SYSROOT_CXXFLAGS/}
+        NEXT_CFLAGS_APPEND=${NEXT_CFLAGS_APPEND//$SYSROOT_FFLAGS/}
+    ;;
+    -nostdinc++)
+        NEXT_CFLAGS_APPEND=${NEXT_CFLAGS_APPEND//$SYSROOT_CXXFLAGS/}
+    ;;
+    --next-instr)
+        NEXT_LDFLAGS=${NEXT_LDFLAGS//$NEXT_LDFLAGS_PROFILE/}
+        NEXT_LDFLAGS="${NEXT_LDFLAGS} ${NEXT_LDFLAGS_PROFILE}"
+        addarg=no
+    ;;
+    --no-next-instr)
+        NEXT_LDFLAGS=${NEXT_LDFLAGS//$NEXT_LDFLAGS_PROFILE/}
+        addarg=no
+    ;;
+    --no-next-thread-local-counters)
+        NEXT_LDFLAGS=${NEXT_LDFLAGS//$NEXT_LDFLAGS_PROFILE_THREAD_COUNTERS/}
+        addarg=no
+    ;;
+    --no-next-binfmt-magic-number)
+        NEXT_LDFLAGS=${NEXT_LDFLAGS//$NEXT_LDFLAGS_SET_BINFMT_MAGIC_NUMBER/}
+        addarg=no
+    ;;
+    --no-next-rpath)
+        NEXT_LDFLAGS_APPEND=${NEXT_LDFLAGS_APPEND//$NEXT_LDFLAGS_RPATH/}
+        addarg=no
+    ;;
+    --ns-disallow-unsupported-omp-features=false)
+        NEXT_CFLAGS_FORCE_COMPILE_ONLY=${NEXT_CFLAGS_FORCE_COMPILE_ONLY//"-mllvm --ns-disallow-unsupported-omp-features"/}
+    ;;
+    # Filter out bitcode modules that this script inserts into the compilation
+    # if they are being specified explicitly in the command-line.
+    # Some tools that prefer to control the linking more manually, like libtool,
+    # parse out the compiler's output too see which objects it adds and in what
+    # order they are specified.
+    # If that's the case, prevent it from linking our modules twice.
+    ${NEXTCC_VERSION_BC}|${NEXTLOADER_BC})
+        addarg=no
+    ;;
+
+    # ----------------------------------------------------------------
+    # Options that control how we use mpicc (e.g., -show)
+    -echo)
+        addarg=no
+        set -x
+    ;;
+    -show)
+        addarg=no
+        Show=echo
+    ;;
+    -compile-info|-compile_info)
+        # -compile_info included for backward compatibility
+        Show=echo
+        addarg=no
+    ;;
+    -link-info|-link_info)
+        # -link_info included for backward compatibility
+        Show=echo
+        addarg=no
+    ;;
+    -v)
+        # Pass this argument to the compiler as well.
+        echo "nextcc version is ${NEXTCC_VERSION}"
+        # if there is only 1 argument, it must be -v.
+        if [ "$#" -eq "1" ] ; then
+            linking=no
+        fi
+    ;;
+#    -help)
+#        NC=`echo "$CC" | sed 's%\/% %g' | awk '{print $NF}' -`
+#        exit 0
+#    ;;
+
+    # -----------------------------------------------------------------
+    # Make sure the linker does not remove our enrichment sections
+    *--gc-sections)
+        addarg=no
+        if [[ ${allargs[${argno}-1]} =~ "linker" ]] ; then
+            unset allargs[${argno}-1]
+        fi
+    ;;
+    *)
+    ;;
+
+    esac
+
+    if [ ${addarg} = no ] ; then
+        unset allargs[${argno}]
+    fi
+
+    # Some versions of bash do not accept ((argno++))
+    argno=`expr ${argno} + 1`
+done
+
+if [ $# -eq 0 ] ; then
+    echo "Error: Command line argument is needed!"
+    "$0" -help
+    exit 1
+fi
+
+# Note: We add the nextcc versioning object to the end of the link command line.
+# It is added for both the enriched and non-enriched ('flat') cases so that the
+# extra information is always available. It is added to the *end* of the linking
+# command line (via ${final_libs}) so that it does not end up dictating various
+# linkage-global properties that lld auto-deduces (target, relocation model).
+
+final_cflags_prepend="-fPIC ${NEXT_CFLAGS}"
+final_cflags_append="${NEXT_CFLAGS_FORCE} ${NEXT_CFLAGS_APPEND}"
+final_ldflags_prepend="${NEXT_LDFLAGS}"
+final_ld_flags_append="${NEXT_LDFLAGS_APPEND}"
+final_libs="\
+    -Wl,${NEXTCC_VERSION_BC} \
+    -Wl,${NEXTLOADER_BC} \
+    -Wl,--version-script=${NEXTLOADER_VERSION_SCRIPT} \
+"
+
+if [ "$debug_symbols" = yes ] ; then
+    final_cflags_append="$final_cflags_append ${DWARF_VERSION_ARG}"
+fi
+
+if [ "${relocatable}" = "yes" ] ; then
+    final_libs=""
+fi
+
+if [ "$linking" = yes ] ; then
+    # FIXME: an invocation of the compiler could conceivably
+    # do both compiling and linking, so this implication is not generally sound
+    compiling=no
+fi
+
+if [ "$compiling" = yes ] ; then
+    final_cflags_append="$final_cflags_append $NEXT_CFLAGS_FORCE_COMPILE_ONLY"
+fi
+
+# -----------------------------------------------------------------------
+# We use a single invocation of the compiler.  This will be adequate until
+# we run into a system that uses a separate linking command.  With any luck,
+# such archaic systems are no longer with us.  This also lets us
+# accept any argument; we don't need to know if we've seen a source
+# file or an object file.  Instead, we just check for an option that
+# suppressing linking, such as -c or -M.
+if [ "$linking" = yes ] ; then
+    exec ${Show} ${NEXT_CC} ${final_cflags_prepend} ${final_ldflags_prepend} "${allargs[@]}" ${final_ld_flags_append}  ${final_cflags_append} ${final_libs}
+else
+    exec ${Show} ${NEXT_CC} ${final_cflags_prepend} "${allargs[@]}" ${final_cflags_append}
+fi

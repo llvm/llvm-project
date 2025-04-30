@@ -36,6 +36,8 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
+#include <unordered_set>
+
 using namespace clang;
 using namespace CodeGen;
 
@@ -57,13 +59,70 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
   }
 }
 
+void addBBMetadata(llvm::BasicBlock *block,
+                   const std::unordered_set<std::string> metadata) {
+  for (llvm::BasicBlock::iterator it = block->getFirstInsertionPt();
+       it != block->end(); ++it) {
+    llvm::Instruction *inst = &*it;
+    llvm::LLVMContext &C = inst->getContext();
+    llvm::MDNode *N = nullptr;
+    for (const auto &str : metadata)
+      N = llvm::MDNode::concatenate(
+          N, llvm::MDNode::get(C, llvm::MDString::get(C, str)));
+    if (inst->hasMetadata("ns.bb.mark"))
+      N = llvm::MDNode::concatenate(N, inst->getMetadata("ns.bb.mark"));
+    inst->setMetadata("ns.bb.mark", N);
+  }
+}
+
+std::string getBBMetadataString(const NextSiliconLoopMarkAttr *attr,
+                                ASTContext &AC) {
+  std::string metadataStr;
+  clang::Expr *ValueExpr = attr->getValue();
+  clang::Expr::EvalResult EvalResult;
+
+  if (ValueExpr) {
+    bool e = ValueExpr->EvaluateAsLValue(EvalResult, AC);
+    if (e) {
+      metadataStr = EvalResult.Val.getAsString(AC, ValueExpr->getType());
+      // String comes like &"foo1", cut the '&""'
+      metadataStr = metadataStr.substr(2, std::string::npos);
+      metadataStr.pop_back();
+    }
+  }
+  return metadataStr;
+}
+
+void CodeGenFunction::updateBBMetadata(
+    const std::unordered_set<std::string> &StmtBBMeta) {
+  if (Builder.GetInsertBlock() == lastBB)
+    BBMetadata.insert(StmtBBMeta.begin(), StmtBBMeta.end());
+  else
+    BBMetadata = StmtBBMeta;
+  lastBB = Builder.GetInsertBlock();
+  if (!BBMetadata.empty())
+    addBBMetadata(Builder.GetInsertBlock(), BBMetadata);
+}
+
 void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   assert(S && "Null statement?");
   PGO.setCurrentStmt(S);
 
+  std::unordered_set<std::string> StmtBBMetadata;
+  for (const Attr *attr : Attrs) {
+    if (attr->getKind() == attr::NextSiliconLoopMark) {
+      const auto *nsAttr = (const NextSiliconLoopMarkAttr *)attr;
+      if (nsAttr->getMark().str() == "bb") {
+        StmtBBMetadata.insert(getBBMetadataString(nsAttr, CGM.getContext()));
+      }
+    }
+  }
+
   // These statements have their own debug info handling.
-  if (EmitSimpleStmt(S, Attrs))
+  if (EmitSimpleStmt(S, Attrs)) {
+    updateBBMetadata(StmtBBMetadata);
     return;
+  }
 
   // Check if we are generating unreachable code.
   if (!HaveInsertPoint()) {
@@ -76,6 +135,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
       // Verify that any decl statements were handled as simple, they may be in
       // scope of subsequent reachable statements.
       assert(!isa<DeclStmt>(*S) && "Unexpected DeclStmt!");
+      updateBBMetadata(StmtBBMetadata);
       return;
     }
 
@@ -91,6 +151,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   if (getLangOpts().OpenMP && getLangOpts().OpenMPSimd) {
     if (const auto *D = dyn_cast<OMPExecutableDirective>(S)) {
       EmitSimpleOMPExecutableDirective(*D);
+      updateBBMetadata(StmtBBMetadata);
       return;
     }
   }
@@ -453,6 +514,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOpenACCLoopConstruct(cast<OpenACCLoopConstruct>(*S));
     break;
   }
+  updateBBMetadata(StmtBBMetadata);
 }
 
 bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,

@@ -1,0 +1,171 @@
+Using the glibc microbenchmark suite
+====================================
+
+The glibc microbenchmark suite automatically generates code for specified
+functions, builds and calls them repeatedly for given inputs to give some
+basic performance properties of the function.
+
+Running the benchmark:
+=====================
+
+The benchmark needs python 2.7 or later in addition to the
+dependencies required to build the GNU C Library.  One may run the
+benchmark by invoking make as follows:
+
+  $ make bench
+
+This runs each function for 10 seconds and appends its output to
+benchtests/bench.out.  To ensure that the tests are rebuilt, one could run:
+
+  $ make bench-clean
+
+The duration of each test can be configured setting the BENCH_DURATION variable
+in the call to make.  One should run `make bench-clean' before changing
+BENCH_DURATION.
+
+  $ make BENCH_DURATION=1 bench
+
+The benchmark suite does function call measurements using architecture-specific
+high precision timing instructions whenever available.  When such support is
+not available, it uses clock_gettime (CLOCK_MONOTONIC).  One can force the
+benchmark to use clock_gettime by invoking make as follows:
+
+  $ make USE_CLOCK_GETTIME=1 bench
+
+Again, one must run `make bench-clean' before changing the measurement method.
+
+On x86 processors, RDTSCP instruction provides more precise timing data
+than RDTSC instruction.  All x86 processors since 2010 support RDTSCP
+instruction.  One can force the benchmark to use RDTSCP by invoking make
+as follows:
+
+  $ make USE_RDTSCP=1 bench
+
+One must run `make bench-clean' before changing the measurement method.
+
+Running benchmarks on another target:
+====================================
+
+If the target where you want to run benchmarks is not capable of building the
+code or you're cross-building, you could build and execute the benchmark in
+separate steps.  On the build system run:
+
+  $ make bench-build
+
+and then copy the source and build directories to the target and run the
+benchmarks from the build directory as usual:
+
+  $ make bench
+
+make sure the copy preserves timestamps by using either rsync or scp -p
+otherwise the above command may try to build the benchmark again.  Benchmarks
+that require generated code to be executed during the build are skipped when
+cross-building.
+
+Running subsets of benchmarks:
+==============================
+
+To run only a subset of benchmarks, one may invoke make as follows
+
+  $ make bench BENCHSET="bench-pthread bench-math malloc-thread"
+
+where BENCHSET may be a space-separated list of the following values:
+
+    bench-math
+    bench-pthread
+    bench-string
+    string-benchset
+    wcsmbs-benchset
+    stdlib-benchset
+    stdio-common-benchset
+    math-benchset
+    malloc-thread
+
+Adding a function to benchtests:
+===============================
+
+If the name of the function is `foo', then the following procedure should allow
+one to add `foo' to the bench tests:
+
+- Append the function name to the bench variable in the Makefile.
+
+- Make a file called `foo-inputs` to provide the definition and input for the
+  function.  The file should have some directives telling the parser script
+  about the function and then one input per line.  Directives are lines that
+  have a special meaning for the parser and they begin with two hashes '##'.
+  The following directives are recognized:
+
+  - args: This should be assigned a colon separated list of types of the input
+    arguments.  This directive may be skipped if the function does not take any
+    inputs.  One may identify output arguments by nesting them in <>.  The
+    generator will create variables to get outputs from the calling function.
+  - ret: This should be assigned the type that the function returns.  This
+    directive may be skipped if the function does not return a value.
+  - includes: This should be assigned a comma-separated list of headers that
+    need to be included to provide declarations for the function and types it
+    may need (specifically, this includes using "#include <header>").
+  - include-sources: This should be assigned a comma-separated list of source
+    files that need to be included to provide definitions of global variables
+    and functions (specifically, this includes using "#include "source").
+    See pthread_once-inputs and pthreads_once-source.c for an example of how
+    to use this to benchmark a function that needs state across several calls.
+  - init: Name of an initializer function to call to initialize the benchtest.
+  - name: See following section for instructions on how to use this directive.
+
+  Lines beginning with a single hash '#' are treated as comments.  See
+  pow-inputs for an example of an input file.
+
+Multiple execution units per function:
+=====================================
+
+Some functions have distinct performance characteristics for different input
+domains and it may be necessary to measure those separately.  For example, some
+math functions perform computations at different levels of precision (64-bit vs
+240-bit vs 768-bit) and mixing them does not give a very useful picture of the
+performance of these functions.  One could separate inputs for these domains in
+the same file by using the `name' directive that looks something like this:
+
+  ##name: 240bits
+
+All inputs after the ##name: 240bits directive and until the next `name'
+directive (or the end of file) are part of the "240bits" benchmark and
+will be output separately in benchtests/bench.out.  See the pow-inputs file
+for an example of what such a partitioned input file would look like.
+
+It is also possible to measure latency and reciprocal throughput of a
+(partial) trace extracted from a real workload.  In this case the whole trace
+is iterated over multiple times rather than repeating every input multiple
+times.  This can be done via:
+
+  ##name: workload-<name>
+
+where <name> is simply used to distinguish between different traces in the
+same file.  To create such a trace, you can simply extract using printf()
+values uses for a specific application, or generate random values in some
+interval.  See the expf-inputs file for an example of this workload mechanism.
+
+Benchmark Sets:
+==============
+
+In addition to standard benchmarking of functions, one may also generate
+custom outputs for a set of functions.  This is currently used by string
+function benchmarks where the aim is to compare performance between
+implementations at various alignments and for various sizes.
+
+To add a benchset for `foo':
+
+- Add `foo' to the benchset variable.
+- Write your bench-foo.c that prints out the measurements to stdout.
+- On execution, a bench-foo.out is created in $(objpfx) with the contents of
+  stdout.
+
+Reading String Benchmark Results:
+================================
+
+Some of the string benchmark results are now in JSON to make it easier to read
+in scripts.  Use the benchtests/compare_strings.py script to show the results
+in a tabular format, generate graphs and more. Run
+
+    benchtests/scripts/compare_strings.py -h
+
+for usage information.

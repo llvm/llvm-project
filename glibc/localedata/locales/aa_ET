@@ -1,0 +1,211 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Afar language locale for Ethiopia (Cadu//Carra Dialects).
+%
+% Afar terms provided by Mohamed Obakar <loubak@6sens.com> of the
+% Afar Civilization Researcher, Melka Werer Research Center.
+% Prepared and contributed to glibc by Daniel Yacob <locales@geez.org>.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f UTF-8 -i aa_ET aa_ET
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Afar language locale for Ethiopia (Cadu//Carra Dialects)."
+source     "Ge'ez Frontier Foundation"
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Afar"
+territory  "Ethiopia"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopic Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "am_ET"
+END LC_COLLATE
+
+LC_CTYPE
+copy "ti_ET"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopia Specifc and Shared Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "ti_ET"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "ti_ET"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ti_ET"
+END LC_NUMERIC
+
+LC_PAPER
+copy "ti_ET"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ti_ET"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Afar/ET Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_ADDRESS category.
+%
+postal_fmt    "%z%c%T%s%b%e%r"
+country_name  "Otobbia"
+country_post  "ETH"
+country_ab2   "ET"
+country_ab3   "ETH"
+country_num   231   % 210 found in at least one ISO 3166 doc
+country_car   "ETH"
+% country_isbn  unknown, Need ISO 2108
+lang_name     "Qafar"
+lang_ab       "aa"
+lang_term     "aar"
+lang_lib      "aar"
+END LC_ADDRESS
+
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0mnMN]"
+yesstr  "Yeey"
+nostr   "Maleey"
+END LC_MESSAGES
+
+
+LC_NAME
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_NAME category.
+%
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    ""
+name_mr     "Toobokoyta"
+name_mrs    "Gisti"
+name_miss   "Maqanxa"
+name_ms     ""
+%
+END LC_NAME
+
+
+LC_TIME
+%
+% Abbreviated weekday names (%a)
+%
+abday    "Aca";"Etl";"Tal";"Arb";"Kam";"Gum";"Sab"
+%
+% Full weekday names (%A)
+%
+day      "Acaada";/
+         "Etleeni";/
+         "Talaata";/
+         "Arbaqa";/
+         "Kamiisi";/
+         "Gumqata";/
+         "Sabti"
+%
+% Abbreviated month names (%b)
+%
+abmon    "Qun";/
+         "Nah";/
+         "Cig";/
+         "Agd";/
+         "Cax";/
+         "Qas";/
+         "Qad";/
+         "Leq";/
+         "Way";/
+         "Dit";/
+         "Xim";/
+         "Kax"
+%
+% Full month names (%B)
+%
+mon      "Qunxa Garablu";/
+         "Naharsi Kudo";/
+         "Ciggilta Kudo";/
+         "Agda Baxis";/
+         "Caxah Alsa";/
+         "Qasa Dirri";/
+         "Qado Dirri";/
+         "Liiqen";/
+         "Waysu";/
+         "Diteli";/
+         "Ximoli";/
+         "Kaxxa Garablu"
+%
+% Equivalent of AM PM
+%
+am_pm    "saaku";"carra"
+%
+% Appropriate date representation (%x)
+d_fmt   "%d//%m//%Y"
+%
+% Appropriate time representation (%X)
+t_fmt "%l:%M:%S %p"
+%
+% Appropriate AM/PM time representation (%r)
+t_fmt_ampm "%l:%M:%S %p"
+%
+% Appropriate date and time representation (%c)
+d_t_fmt    "%A, %B %e, %Y %r %Z"
+%
+% Appropriate date representation (date(1))
+date_fmt    "%A, %B %e, %r %Z %Y"
+%
+week 7;19971130;1
+END LC_TIME

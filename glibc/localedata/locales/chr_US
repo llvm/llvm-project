@@ -1,0 +1,136 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Locale for Cherokee locale in the USA
+% Contributed by Joseph Erb <josepherb7@gmail.com>, 2010
+
+LC_IDENTIFICATION
+title      "Cherokee language locale for United States"
+source     "Cherokee Nation"
+address    "http:////cldr.unicode.org//index//process"
+contact    "Joseph Erb"
+email      "josepherb7@gmail.com"
+tel        ""
+fax        ""
+language   "Cherokee"
+territory  "United States"
+revision   "1.0"
+date       "2010-10-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "en_US"
+END LC_CTYPE
+
+LC_COLLATE
+copy "en_US"
+END LC_COLLATE
+
+LC_MONETARY
+copy "en_US"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_US"
+END LC_NUMERIC
+
+LC_TIME
+abday	"<U13C6><U13CD><U13AC>";/
+	"<U13C9><U13C5><U13AF>";/
+	"<U13D4><U13B5><U13C1>";/
+	"<U13E6><U13A2><U13C1>";/
+	"<U13C5><U13A9><U13C1>";/
+	"<U13E7><U13BE><U13A9>";/
+	"<U13C8><U13D5><U13BE>"
+day	"<U13A4><U13BE><U13D9><U13D3><U13C6><U13CD><U13AC>";/
+	"<U13A4><U13BE><U13D9><U13D3><U13C9><U13C5><U13AF>";/
+	"<U13D4><U13B5><U13C1><U13A2><U13A6>";/
+	"<U13E6><U13A2><U13C1><U13A2><U13A6>";/
+	"<U13C5><U13A9><U13C1><U13A2><U13A6>";/
+	"<U13E7><U13BE><U13A9><U13B6><U13CD><U13D7>";/
+	"<U13A4><U13BE><U13D9><U13D3><U13C8><U13D5><U13BE>"
+abmon	"<U13A4><U13C3>"; "<U13A7><U13A6>";/
+	"<U13A0><U13C5>"; "<U13A7><U13EC>";/
+	"<U13A0><U13C2>"; "<U13D5><U13AD>";/
+	"<U13AB><U13F0>"; "<U13A6><U13B6>";/
+	"<U13DA><U13B5>"; "<U13DA><U13C2>";/
+	"<U13C5><U13D3>"; "<U13A5><U13CD>"
+mon	"<U13A4><U13C3><U13B8><U13D4><U13C5>";/
+	"<U13A7><U13A6><U13B5>";/
+	"<U13A0><U13C5><U13F1>";/
+	"<U13A7><U13EC><U13C2>";/
+	"<U13A0><U13C2><U13CD><U13AC><U13D8>";/
+	"<U13D5><U13AD><U13B7><U13F1>";/
+	"<U13AB><U13F0><U13C9><U13C2>";/
+	"<U13A6><U13B6><U13C2>";/
+	"<U13DA><U13B5><U13CD><U13D7>";/
+	"<U13DA><U13C2><U13C5><U13D7>";/
+	"<U13C5><U13D3><U13D5><U13C6>";/
+	"<U13A5><U13CD><U13A9><U13F1>"
+d_t_fmt  "%a %d %b %Y %r"
+date_fmt "%a %d %b %Y %r %Z"
+d_fmt   "%m//%d//%Y"
+t_fmt   "%r"
+t_fmt_ampm "%I:%M:%S %p"
+am_pm   "<U13CC><U13BE><U13B4>";"<U13D2><U13AF><U13F1><U13A2><U13D7><U13E2>"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^([+1yY]|<U13A5><U13A5>)"
+noexpr  "^([-0nN]|<U13A5><U13DD>)"
+yesstr  "<U13A5><U13A5>"
+nostr   "<U13A5><U13DD>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_US"
+END LC_PAPER
+
+LC_NAME
+% FIXME
+copy "en_US"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt "%a%N%f%N%d%N%b%N%h %s %e %r%N%T, %S %z%N%c%N"
+country_name "<U13CC><U13CA><U0020><U13A2><U13F3><U13BE><U13B5><U13CD><U13D4><U13C5><U0020><U13CD><U13A6><U13DA><U13A9>"
+country_post "USA"
+country_ab2  "US"
+country_ab3  "USA"
+country_num  840
+country_car  "USA"
+country_isbn 0
+lang_name    "<U13E3><U13B3><U13A9>"
+lang_ab      ""
+lang_term    "chr"
+lang_lib     "chr"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "en_US"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "en_US"
+END LC_MEASUREMENT

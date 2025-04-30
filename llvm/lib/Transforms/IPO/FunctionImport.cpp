@@ -22,6 +22,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -217,6 +218,11 @@ static auto qualifyCalleeCandidates(
         if (GlobalValue::isInterposableLinkage(GVSummary->linkage()))
           return {FunctionImporter::ImportFailureReason::InterposableLinkage,
                   GVSummary};
+
+        if (GVSummary->getSummaryKind() == GlobalValueSummary::IfuncKind) {
+          return {FunctionImporter::ImportFailureReason::InterposableLinkage,
+                  GVSummary};
+        }
 
         auto *Summary = dyn_cast<FunctionSummary>(GVSummary->getBaseObject());
 
@@ -1327,7 +1333,7 @@ void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
   }
 
   // Make value live and add it to the worklist if it was not live before.
-  auto visit = [&](ValueInfo VI, bool IsAliasee) {
+  auto visit = [&](ValueInfo VI, bool IsAliaseeOrResolver) {
     // FIXME: If we knew which edges were created for indirect call profiles,
     // we could skip them here. Any that are live should be reached via
     // other edges, e.g. reference edges. Otherwise, using a profile collected
@@ -1360,7 +1366,7 @@ void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
           Interposable = true;
       }
 
-      if (!IsAliasee) {
+      if (!IsAliaseeOrResolver) {
         if (!KeepAliveLinkage)
           return;
 
@@ -1385,6 +1391,13 @@ void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
         // are marked live and it is added to the worklist for further
         // processing of its references.
         visit(AS->getAliaseeVI(), true);
+        continue;
+      }
+      if (auto *IS = dyn_cast<IfuncSummary>(Summary.get())) {
+        // If this is an ifunc, visit the resolver VI to ensure that all copies
+        // are marked live and it is added to the worklist for further
+        // processing of its references.
+        visit(IS->getResolverVI(), true);
         continue;
       }
       for (auto Ref : Summary->refs())

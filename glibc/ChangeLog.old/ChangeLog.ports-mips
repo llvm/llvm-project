@@ -1,0 +1,2657 @@
+This file describes changes to the MIPS port while it was in the ports
+add-on directory.  This port is no longer part of an add-on and so
+future changes to it should be listed in the top-level ChangeLog file,
+not here.
+
+
+
+2014-02-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips: Move directory to ../sysdeps/mips.
+	* sysdeps/unix/mips: Move directory to ../sysdeps/unix/mips.
+	* sysdeps/unix/sysv/linux/mips: Move directory to
+	../sysdeps/unix/sysv/linux/mips.
+
+	* sysdeps/unix/sysv/linux/mips/mips64/umount.c: Move from
+	sysdeps/unix/sysv/linux/hppa/umount.c instead of #include of that
+	file.
+
+	* sysdeps/unix/sysv/linux/mips/ipc_priv.h: Directly include
+	sysdeps/unix/sysv/linux/powerpc/ipc_priv.h instead of via
+	sysdeps/unix/sysv/linux/alpha/ipc_priv.h.
+
+2014-01-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: Move to
+	....
+	* sysdeps/unix/sysv/linux/mips/mips32/fpu/nptl/libc.abilist:
+	... here.
+	* sysdeps/unix/sysv/linux/mips/mips32/nofpu/nptl/libc.abilist: New
+	file.
+
+2014-01-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips32/libm-test-ulps: Regenerated.
+	* sysdeps/mips/mips64/libm-test-ulps: Likewise.
+
+2013-12-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2013-11-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/fegetround.c (fegetround): Use libm_hidden_def.
+
+2013-11-27  Aurelien Jarno <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h (RLIM64_INFINITY): Fix
+	Fix 64-bit value for 32-bit ABIs.
+	* sysdeps/unix/sysv/linux/mips/getrlimit64.c: Rename generic getrlimit64
+	version as getrlimit64@@GLIBC_2_2.  Provide the getrlimit64 as
+	getrlimit64@@GLIBC_2_19.
+	* sysdeps/unix/sysv/linux/mips/setrlimit64.c: Ditto with setrlimit64.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist (GLIBC_2.19):
+	Add getrlimit64 and setrlimit64.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libc.abilist: Ditto.
+	* sysdeps/unix/sysv/linux/mips/mips32/Versions (libc): Add
+	getrlimit64@@GLIBC_2_19 and setrlimit64@@GLIBC_2_19.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/Versions: Ditto.
+
+2013-11-27  Aurelien Jarno <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/mips/getrlimit64.c: On O32 and N32 ABIs,
+	include the generic getrlimit64 version as __internal_getrlimit64
+	and add a wrapper around it to convert the RLIM64_INFINITY constant
+	between the libc and the kernel version.
+	* sysdeps/unix/sysv/linux/mips/setrlimit64.c: Ditto with setrlimit64.
+
+2013-11-26  Ondřej Bílka  <neleai@seznam.cz>
+	* sysdeps/unix/sysv/linux/mips/bits/ipc.h: Use __glibc_reserved instead __unused.
+	* sysdeps/unix/sysv/linux/mips/bits/msq.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/bits/sem.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/bits/shm.h: Likewise.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/mips/configure.in: Moved to ...
+	* sysdeps/mips/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/mips/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/mips/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/mips/mips64/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/mips/mips64/configure.ac: ... here.
+	* sysdeps/mips/configure: Regenerated.
+	* sysdeps/unix/sysv/linux/mips/configure: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/configure: Likewise.
+
+2013-09-26  Steve Ellcey  <sellcey@mips.com>
+
+	[BZ #15632]
+	* sysdeps/mips/mips32/fpu/e_sqrt.c: New.
+	* sysdeps/mips/mips32/fpu/e_sqrtf.c: New.
+	* sysdeps/mips/mips64/n32/fpu/e_sqrt.c: New.
+	* sysdeps/mips/mips64/n32/fpu/e_sqrtf.c: New.
+	* sysdeps/mips/mips64/n64/fpu/e_sqrt.c: New.
+	* sysdeps/mips/mips64/n64/fpu/e_sqrtf.c: New.
+
+2013-09-23  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/math_private.h (libc_feholdexcept_mips): New function.
+	(libc_feholdexcept): New macro.
+	(libc_feholdexceptf): New macro.
+	(libc_feholdexceptl): New macro.
+	(libc_fesetround_mips): New function.
+	(libc_fesetround): New macro.
+	(libc_fesetroundf): New macro.
+	(libc_fesetroundl): New macro.
+	(libc_feholdexcept_setround_mips): New function.
+	(libc_feholdexcept_setround): New macro.
+	(libc_feholdexcept_setroundf): New macro.
+	(libc_feholdexcept_setroundl): New macro.
+	(libc_fesetenv_mips): New function.
+	(libc_fesetenv): New macro.
+	(libc_fesetenvf): New macro.
+	(libc_fesetenvl): New macro.
+	(libc_feupdateenv_mips): New function.
+	(libc_feupdateenv): New macro.
+	(libc_feupdateenvf): New macro.
+	(libc_feupdateenvl): New macro.
+
+2013-09-23  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/mips/bits/atomic.h: Fix comment typo.
+
+2013-09-23  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/fpu/fegetround.c (fegetround): Use _FPU_RC_MASK.
+	* sysdeps/mips/fpu/fesetround.c (fesetround): Use _FPU_RC_MASK.
+
+2013-09-23  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/fpu_control.h (_FPU_RC_MASK): New.
+
+2013-09-23  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/fpu_control.h (comments): Add capitalization and
+	periods to match GNU standard.
+
+2013-09-20  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/memset.S: Change prefetching and add loop unrolling.
+	* sysdeps/mips/mips64/memset.S: Remove.
+
+2013-09-18  Maciej W. Rozycki  <macro@codesourcery.com>
+	    Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/mips/dl-machine.h (ELF_MACHINE_NAN2008): New macro.
+	(elf_machine_matches_host): Reject objects that use a different
+	NaN encoding convention.
+	* sysdeps/mips/fpu_control.h: Document IEEE 754-2008 feature
+	control bits.
+	(_FPU_ABS2008, _FPU_NAN2008): New macros.
+	(_FPU_RESERVED): Clear bits #20 and #19.
+	(_FPU_DEFAULT) [__mips_nan2008]: Set bit #18.
+	(_FPU_IEEE) [__mips_nan2008]: Likewise.
+	* sysdeps/mips/math_private.h [__mips_nan2008]
+	(HIGH_ORDER_BIT_IS_SET_FOR_SNAN): Don't define.
+	* sysdeps/mips/bits/nan.h [__mips_nan2008] (__qnan_bytes): Define
+	appropriately.
+	* sysdeps/mips/mips64/soft-fp/sfp-machine.h [__mips_nan2008]
+	(_FP_NANFRAC_S, _FP_NANFRAC_D, _FP_NANFRAC_Q): Define 2008-NaN
+	payloads.
+	(_FP_QNANNEGATEDP): Set to 0.
+	* sysdeps/mips/soft-fp/sfp-machine.h [__mips_nan2008]
+	(_FP_NANFRAC_S, _FP_NANFRAC_D, _FP_NANFRAC_Q): Define 2008-NaN
+	payloads.
+	(_FP_QNANNEGATEDP): Set to 0.
+	* sysdeps/unix/sysv/linux/mips/dl-cache.h (_DL_CACHE_DEFAULT_ID):
+	Define 2008 NaN encoding values.
+	* sysdeps/unix/sysv/linux/mips/readelflib.c (process_elf_file):
+	Handle 2008-NaN libraries.
+	* sysdeps/mips/shlib-versions [HAVE_MIPS_NAN2008]: Set
+	ld=ld-linux-mipsn8.so.1.
+	* sysdeps/mips/configure.in: Define HAVE_MIPS_NAN2008 if the
+	2008 NaN encoding is used.
+	* sysdeps/unix/sysv/linux/mips/Makefile (abi-variants): Add
+	2008-NaN ABI variants.
+	(abi-o32_soft-options, abi-o32_soft-condition): Update with the
+	__mips_nan2008 macro.
+	(abi-o32_hard-options, abi-o32_hard-condition): Likewise.
+	(abi-n32_soft-options, abi-n32_soft-condition): Likewise.
+	(abi-n32_hard-options, abi-n32_hard-condition): Likewise.
+	(abi-n64_soft-options, abi-n64_soft-condition): Likewise.
+	(abi-n64_hard-options, abi-n64_hard-condition): Likewise.
+	(abi-o32_soft-ld-soname, abi-o32_hard-ld-soname): New macros.
+	(abi-n32_soft-ld-soname, abi-n32_hard-ld-soname): Likewise.
+	(abi-n64_soft-ld-soname, abi-n64_hard-ld-soname): Likewise.
+	(abi-o32_soft_2008-options): Likewise.
+	(abi-o32_soft_2008-condition): Likewise.
+	(abi-o32_hard_2008-options): Likewise.
+	(abi-o32_hard_2008-condition): Likewise.
+	(abi-n32_soft_2008-options): Likewise.
+	(abi-n32_soft_2008-condition): Likewise.
+	(abi-n32_hard_2008-options): Likewise.
+	(abi-n32_hard_2008-condition): Likewise.
+	(abi-n64_soft_2008-options): Likewise.
+	(abi-n64_soft_2008-condition): Likewise.
+	(abi-n64_hard_2008-options): Likewise.
+	(abi-n64_hard_2008-condition): Likewise.
+	(abi-o32_soft_2008-ld-soname): Likewise.
+	(abi-o32_hard_2008-ld-soname): Likewise.
+	(abi-n32_soft_2008-ld-soname): Likewise.
+	(abi-n32_hard_2008-ld-soname): Likewise.
+	(abi-n64_soft_2008-ld-soname): Likewise.
+	(abi-n64_hard_2008-ld-soname): Likewise.
+	* sysdeps/unix/sysv/linux/mips/configure.in: Include the NaN
+	encoding selection in default-abi.  Set arch_minimum_kernel to
+	10.0.0 if 2008 NaN encoding is used.
+	* sysdeps/mips/configure: Regenerate.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerate.
+
+2013-08-30   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/mips/memcpy.S: Fix then/than typos.
+
+2013-08-30   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/mips/memcpy.S: Fix typos.
+
+2013-08-29  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/ldsodefs.h (VALID_ELF_ABIVERSION):
+	Use ELFOSABI_GNU instead of ELFOSABI_LINUX.
+
+2013-08-29   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/mips/sys/asm.h: Fix typos.
+
+2013-08-22  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/mips/fpu_control.h: Document bits reserved for
+	architecture implementers.
+	(_FPU_RESERVED): Clear bit #21.
+	* sysdeps/mips/fpu/fedisblxcpt.c (fedisableexcept): Don't clear
+	reserved bits.
+	* sysdeps/mips/fpu/feenablxcpt.c (feenableexcept): Likewise.
+
+2013-07-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips32/libm-test-ulps: Regenerated.
+	* sysdeps/mips/mips64/libm-test-ulps: Likewise.
+
+	[BZ #13304]
+	* sysdeps/mips/ieee754/s_fma.c: New file.
+	* sysdeps/mips/ieee754/s_fmaf.c: Likewise.
+	* sysdeps/mips/ieee754/s_fmal.c: Likewise.
+	* sysdeps/mips/mips32/Implies: Add mips/soft-fp.
+	* sysdeps/mips/mips64/n32/s_fma.c: Remove file.
+	* sysdeps/mips/mips64/n64/s_fma.c: Likewise.
+	* sysdeps/mips/mips64/soft-fp/sfp-machine.h (_FP_MUL_MEAT_DW_S):
+	New macro.
+	(_FP_MUL_MEAT_DW_D): Likewise.
+	(_FP_MUL_MEAT_DW_Q): Likewise.
+	* sysdeps/mips/soft-fp/sfp-machine.h (_FP_MUL_MEAT_DW_S): New
+	macro.
+	(_FP_MUL_MEAT_DW_D): Likewise.
+	(_FP_MUL_MEAT_DW_Q): Likewise.
+
+2013-06-28  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	* sysdeps/mips/dl-procinfo.h (_dl_procinfo): Add TYPE parameter
+	to macro prototype for AT_HWCAP2 support.
+
+2013-06-27  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/dl-static.c: Do not include
+	<bits/libc-lock.h>.
+	(_dl_static_lock): Remove variable.
+	(_dl_static_init): Remove _dl_static_lock locking.
+
+2013-06-15  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libpthread.abilist:
+	Update.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libpthread.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libpthread.abilist:
+	Likewise.
+
+2013-06-14  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14909]
+	* sysdeps/mips/bits/setjmp.h (struct __jmp_buf_internal_tag):
+	Rename __fpc_csr field to __glibc_reserved1.
+	* sysdeps/mips/setjmp_aux.c (__sigsetjmp_aux) [__mips_hard_float]:
+	Do not set __fpc_csr.
+	* sysdeps/mips/mips64/setjmp_aux.c (__sigsetjmp_aux)
+	[__mips_hard_float]: Likewise.
+	* sysdeps/mips/__longjmp.c (____longjmp) [__mips_hard_float]: Do
+	not use __fpc_csr.
+	* sysdeps/mips/mips64/__longjmp.c (__longjmp) [__mips_hard_float]:
+	Likewise.
+
+	* sysdeps/mips/math-tests.h: New file.
+
+2013-06-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/fgetexcptflg.c: Remove trailing whitespace.
+	* sysdeps/mips/fpu/fraiseexcpt.c: Likewise.
+	* sysdeps/mips/memset.S: Likewise.
+	* sysdeps/mips/mips64/bsd-_setjmp.S: Likewise.
+	* sysdeps/mips/mips64/bsd-setjmp.S: Likewise.
+	* sysdeps/mips/mips64/memset.S: Likewise.
+	* sysdeps/mips/mips64/setjmp.S: Likewise.
+	* sysdeps/mips/start.S: Likewise.
+	* sysdeps/unix/mips/sysdep.S: Likewise.
+	* sysdeps/unix/sysv/linux/mips/dl-static.c: Likewise.
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h: Likewise.
+
+2013-05-29  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	[BZ #15465]
+	* sysdeps/mips/dl-lookup.c (do_lookup_x): Use DSO_FILENAME.
+	(add_dependency): Likewise.
+	(_dl_lookup_symbol_x): Likewise.
+	(_dl_debug_bindings): Likewise.
+	* sysdeps/mips/dl-machine.h (elf_machine_reloc): Use
+	RTLD_PROGNAME.
+
+2013-05-22  Edjunior Barbosa Machado  <emachado@linux.vnet.ibm.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/siginfo.h (siginfo_t): Add
+	si_addr_lsb to _sifields.sifault.
+	(si_addr_lsb): Define new macro.
+	(BUS_MCEERR_AR, BUS_MCEERR_AO): Define new values.
+
+2013-05-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips32/libm-test-ulps: Update test names.
+	* sysdeps/mips/mips64/libm-test-ulps: Likewise.
+
+2013-05-21  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #15506]
+	* sysdeps/unix/sysv/linux/mips/mips64/nptl/sysdep-cancel.h
+	[!__PIC__] (PSEUDO): Undefine and redefine.
+	(PSEUDO_END): Undefine and redefine unconditionally.
+	[!__PIC__] (STK_PAD): Define to 0.
+	[!__PIC__] (STKOFF_GP): Do not define.
+	[!__PIC__] (STKSPACE): Define to (STKOFF_SVMSK + SZREG).
+	(PSEUDO_JMP): Define depending on [__PIC__].
+	(CENABLE): Use PSEUDO_JMP in all definitions.
+	(CDISABLE): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h
+	(SYSCALL_ERROR_LABEL): Define unconditionally.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h
+	(SYSCALL_ERROR_LABEL): Define unconditionally.
+
+2013-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips32/libm-test-ulps: Update names of sincos
+	tests.
+	* sysdeps/mips/mips64/libm-test-ulps: Likewise.
+
+2013-05-16  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	[BZ #15442]
+	* sysdeps/mips/mips64/soft-fp/sfp-machine.h (_FP_QNANNEGATEDP):
+	New macro.
+	(_FP_NANFRAC_S): Don't set the quiet bit.
+	(_FP_NANFRAC_D): Likewise.
+	(_FP_NANFRAC_Q): Likewise.
+	* sysdeps/mips/soft-fp/sfp-machine.h (_FP_QNANNEGATEDP): New
+	macro.
+	(_FP_NANFRAC_S): Don't set the quiet bit.
+	(_FP_NANFRAC_D): Likewise.
+	(_FP_NANFRAC_Q): Likewise.
+
+2013-05-16  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel_rt_sigframe.h: Add missing
+	#include <stdint.h> due to uint64_t or uint32_t usage.
+	* sysdeps/mips/bits/atomic.h: Likewise.
+
+2013-04-02  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/mips/math_private.h: New file.
+
+2013-03-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/configure.in (default-abi): Set
+	using LIBC_CONFIG_VAR.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerated.
+	* sysdeps/unix/sysv/linux/mips/Makefile: Do not include
+	default-abi.make.
+
+2013-03-15  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/mman.h [__USE_MISC]
+	(MAP_ANONYMOUS): Don't define.
+
+2013-03-06  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/mips/bits/mman.h: Remove all defines
+	provided by bits/mman-linux.h and include <bits/mman-linux.h>.
+	(__MAP_ANONYMOUS): Define.
+
+	* sysdeps/unix/sysv/linux/mips/bits/msq.h (MSG_COPY): Define.
+
+2013-02-27  Chung-Lin Tang  <cltang@codesourcery.com>
+	    Maciej W. Rozycki  <macro@codesourcery.com>
+	    Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* sysdeps/mips/abort-instr.h (ABORT_INSTRUCTION) [__mips16]:
+	New macro.
+	* sysdeps/mips/dl-machine.h (elf_machine_load_address): Add
+	MIPS16 version of assembly code.
+	(RTLD_START) [__mips16]: New macro.
+	* sysdeps/mips/fpu_control.h (__mips_fpu_getcw): New prototype.
+	(__mips_fpu_setcw): Likewise.
+	(_FPU_GETCW) [__mips16]: New macro.
+	(_FPU_SETCW) [__mips16]: Likewise.
+	* sysdeps/mips/machine-gmon.h (MCOUNT): Add `.set nomips16'.
+	* sysdeps/mips/tls-macros.h (LOAD_GP) [__mips16]: New macro.
+	(TLS_GD, TLS_LD, TLS_IE, TLS_LE) [__mips16]: Likewise.
+	* sysdeps/mips/bits/atomic.h: Also use __atomic_* builtins with
+	GCC 4.7 in MIPS16 code.
+	(atomic_compare_and_exchange_val_acq) [__mips16]: New macro.
+	(atomic_compare_and_exchange_bool_acq) [__mips16]: Likewise.
+	(atomic_exchange_acq) [__mips16]: Likewise.
+	(atomic_exchange_and_add) [__mips16]: Likewise.
+	(atomic_bit_test_set) [__mips16]: Likewise.
+	(atomic_and, atomic_and_val) [__mips16]: Likewise.
+	(atomic_or, atomic_or_val) [__mips16]: Likewise.
+	(atomic_full_barrier) [__mips16]: Likewise.
+	* sysdeps/mips/nptl/tls.h (READ_THREAD_POINTER) [__mips16]:
+	Likewise.
+	* sysdeps/mips/sys/tas.h (_test_and_set): Add `__nomips16__'
+	attribute.
+	* sysdeps/unix/mips/sysdep.h (PSEUDO_NOERRNO): Add
+	`.set nomips16'.
+	(PSEUDO_ERRVAL): Likewise.
+	* sysdeps/unix/mips/mips32/sysdep.h (PSEUDO): Likewise.
+	* sysdeps/unix/mips/mips64/n32/sysdep.h (PSEUDO): Likewise.
+	* sysdeps/unix/mips/mips64/n64/sysdep.h (PSEUDO): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h
+	(INTERNAL_SYSCALL, INTERNAL_SYSCALL_NCS) [__mips16]: New macros.
+	(INTERNAL_SYSCALL_MIPS16) [__mips16]: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall.h:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/nptl/sysdep-cancel.h (PSEUDO):
+	Add `.set nomips16'.
+	* sysdeps/mips/bsd-_setjmp.S (_setjmp): Likewise.
+	* sysdeps/mips/bsd-setjmp.S (setjmp): Likewise.
+	* sysdeps/mips/memset.S (memset): Likewise.
+	* sysdeps/mips/setjmp.S (__sigsetjmp): Likewise.
+	* sysdeps/mips/start.S (ENTRY_POINT) [__mips16]: New function.
+	* sysdeps/mips/mips32/crti.S: Add `.set nomips16'.
+	* sysdeps/mips/mips32/crtn.S: Likewise.
+	* sysdeps/mips/mips64/n32/crti.S: Likewise.
+	* sysdeps/mips/mips64/n32/crtn.S: Likewise.
+	* sysdeps/mips/mips64/n64/crti.S: Likewise.
+	* sysdeps/mips/mips64/n64/crtn.S: Likewise.
+	* sysdeps/unix/mips/sysdep.S: Likewise.
+	* sysdeps/unix/sysv/linux/mips/clone.S: Likewise.
+	* sysdeps/unix/sysv/linux/mips/getcontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/mips/makecontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/mips/setcontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/mips/swapcontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/mips/vfork.S: Likewise.
+	* sysdeps/mips/__longjmp.c (__longjmp): Rename function to...
+	(____longjmp): ... this.  Make static and add `nomips16'
+	attribute.
+	(__longjmp): New alias.
+	* sysdeps/mips/dl-trampoline.c (_dl_runtime_resolve) [__mips16]:
+	New function.
+	(_dl_runtime_pltresolve): Likewise.
+	* sysdeps/mips/setjmp_aux.c (__sigsetjmp_aux): Add `nomips16'
+	attribute.
+	* sysdeps/mips/fpu/e_sqrt.c (__ieee754_sqrt): Likewise.
+	* sysdeps/mips/fpu/e_sqrtf.c (__ieee754_sqrtf): Likewise.
+	* sysdeps/unix/sysv/linux/mips/brk.c (__brk): Rewrite in terms
+	of INTERNAL_SYSCALL.
+	* sysdeps/mips/mips32/fpu/fpu_control.c: New file.
+	* sysdeps/mips/mips32/mips16/add_n.c: New file.
+	* sysdeps/mips/mips32/mips16/addmul_1.c: New file.
+	* sysdeps/mips/mips32/mips16/lshift.c: New file.
+	* sysdeps/mips/mips32/mips16/mul_1.c: New file.
+	* sysdeps/mips/mips32/mips16/rshift.c: New file.
+	* sysdeps/mips/mips32/mips16/sub_n.c: New file.
+	* sysdeps/mips/mips32/mips16/submul_1.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall0.c:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall1.c:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall2.c:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall3.c:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall4.c:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall5.c:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall6.c:
+	New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/mips16-syscall7.c:
+	New file.
+	* sysdeps/mips/mips32/fpu/Versions: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/Versions: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: New
+	file.
+	* sysdeps/mips/mips32/mips16/fpu/Makefile: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/mips16/Makefile: New file.
+	* sysdeps/mips/preconfigure: Handle o32 MIPS16 compilation.
+
+2013-02-20  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/mips/bits/nan.h [!__GNUC__] (__nan_union): Change
+	__attribute__ ((unused)) to __attribute__ ((__unused__)).
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: Sort
+	properly.
+
+	* sysdeps/mips/bits/nan.h [!__GNUC__] (__nan_union): Change
+	__attribute_used__ to __attribute__ ((unused)).
+
+	* sysdeps/mips/bits/nan.h [!__GNUC__] (__nan_union): Add
+	__attribute_used__.
+
+	* sysdeps/mips/bits/nan.h: Align to generic IEEE 754 file.
+
+2013-02-19  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14920]
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h
+	(FUTEX_WAIT_REQUEUE_PI): Define.
+	(FUTEX_CMP_REQUEUE_PI): Likewise.
+	(lll_futex_wait_requeue_pi): Likewise.
+	(lll_futex_timed_wait_requeue_pi): Likewise.
+	(lll_futex_cmp_requeue_pi): Likewise.
+
+2013-02-18  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: Add
+	__cxa_thread_atexit_impl.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libc.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libc.abilist:
+	Likewise.
+
+2013-02-13  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/mips/mips64/fxstat64.c (__fxstat64): Do
+	not use __ptrvalue.
+	* sysdeps/unix/sysv/linux/mips/mips64/fxstatat64.c (__fxstatat64):
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/lxstat64.c (__lxstat64):
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/xstat64.c (__xstat64):
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/sigaction.c (__libc_sigaction):
+	Likewise.
+
+2013-02-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/include/sys/asm.h: New file.
+	* sysdeps/mips/mips64/bsd-_setjmp.S (_setjmp): Use SETUP_GP64_REG
+	and RESTORE_GP64_REG.
+	* sysdeps/mips/mips64/bsd-setjmp.S (setjmp): Likewise.
+	* sysdeps/mips/mips64/setjmp.S (__sigsetjmp): Likewise.
+	* sysdeps/mips/sys/asm.h (__mips_cfi_startproc): Define to empty.
+	(__mips_cfi_endproc): Likewise.
+	(LEAF): Use __mips_cfi_startproc.
+	(NESTED): Likewise.
+	(END): Use __mips_cfi_endproc.
+	(EXPORT): Use __mips_cfi_startproc.
+	* sysdeps/unix/mips/mips32/sysdep.h (PSEUDO): Add CFI information
+	for error-handling code in both definitions.
+	* sysdeps/unix/mips/mips64/n32/sysdep.h (PSEUDO): Likewise.
+	* sysdeps/unix/mips/mips64/n64/sysdep.h (PSEUDO): Likewise.
+	* sysdeps/unix/mips/sysdep.h (ENTRY): Use cfi_startproc.
+	(END): Use cfi_endproc.
+	(PSEUDO_END): Likewise.
+	(PSEUDO_END_NOERRNO): Likewise.
+	(PSEUDO_END_ERRVAL): Likewise.
+	* sysdeps/unix/sysv/linux/mips/clone.S (__clone): Add CFI
+	information.  Use SETUP_GP64_STACK and RESTORE_GP64_STACK.
+	* sysdeps/unix/sysv/linux/mips/getcontext.S (__getcontext):
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/makecontext.S (__makecontext):
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/ioctl.S (__ioctl): Use
+	SETUP_GP64_REG and RESTORE_GP64_REG.
+	* sysdeps/unix/sysv/linux/mips/mips64/nptl/sysdep-cancel.h
+	[(!NOT_IN_libc || IS_IN_libpthread || IS_IN_librt) && __PIC__]
+	(PSEUDO): Use cfi_endproc before ENTRY.
+	* sysdeps/unix/sysv/linux/mips/mips64/syscall.S (syscall): Add CFI
+	information.  Use SETUP_GP64_REG and RESTORE_GP64_REG.
+	* sysdeps/unix/sysv/linux/mips/nptl/sysdep-cancel.h [(!NOT_IN_libc
+	|| IS_IN_libpthread || IS_IN_librt) && __PIC__] (PSEUDO): Use
+	cfi_endproc before ENTRY.
+	* sysdeps/unix/sysv/linux/mips/setcontext.S (__setcontext): Add
+	CFI information.  Use SETUP_GP64_STACK and RESTORE_GP64_STACK.
+	* sysdeps/unix/sysv/linux/mips/swapcontext.S (__swapcontext):
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/vfork.S (__vfork): Add CFI
+	information.  Use SETUP_GP64_REG and RESTORE_GP64_REG.
+
+2013-02-08  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/mips/mips64/fxstat64.c: Don't include
+	<bp-checks.h>.
+	* sysdeps/unix/sysv/linux/mips/pread.c: Likewise.
+	(__libc_pread): Don't use CHECK_N.
+	* sysdeps/unix/sysv/linux/mips/pread64.c: Don't include
+	<bp-checks.h>.
+	(__libc_pread64): Don't use CHECK_N.
+	* sysdeps/unix/sysv/linux/mips/pwrite.c: Don't include
+	<bp-checks.h>.
+	(__libc_pwrite): Don't use CHECK_N.
+	* sysdeps/unix/sysv/linux/mips/pwrite64.c: Don't include
+	<bp-checks.h>.
+	(__libc_pwrite64): Don't use CHECK_N.
+
+	* sysdeps/mips/add_n.S (__mpn_add_n): Use END.
+	* sysdeps/mips/bsd-_setjmp.S (_setjmp): Likewise.
+	* sysdeps/mips/bsd-setjmp.S (setjmp): Likewise.
+	* sysdeps/mips/mips64/add_n.S (__mpn_add_n): Use ENTRY and END.
+	* sysdeps/mips/mips64/addmul_1.S (__mpn_addmul_1): Likewise.
+	* sysdeps/mips/mips64/bsd-_setjmp.S (_setjmp): Use END.
+	* sysdeps/mips/mips64/bsd-setjmp.S (setjmp): Likewise.
+	* sysdeps/mips/mips64/lshift.S (__mpn_lshift): Use ENTRY and END.
+	* sysdeps/mips/mips64/mul_1.S (__mpn_mul_1): Likewise.
+	* sysdeps/mips/mips64/rshift.S (__mpn_rshift): Likewise.
+	* sysdeps/mips/mips64/setjmp.S (__sigsetjmp): Use END.
+	* sysdeps/mips/mips64/sub_n.S (__mpn_sub_n): Use ENTRY and END.
+	* sysdeps/mips/mips64/submul_1.S (__mpn_submul_1): Likewise.
+	* sysdeps/mips/setjmp.S (__sigsetjmp): Use END.
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/mips/mips64/msgctl.c: Do not include
+	<bp-checks.h>.
+	(__msgctl): Do not use CHECK_1.
+	* sysdeps/unix/sysv/linux/mips/mips64/shmctl.c: Do not include
+	<bp-checks.h>.
+	(__shmctl): Do not use CHECK_1.
+	* sysdeps/unix/sysv/linux/mips/ustat.c: Do not include
+	<bp-checks.h>.
+	(ustat): Do not use CHECK_1.
+
+2013-02-05  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h: Add a missing
+	space in asm register specifiers throughout.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h: Likewise.
+
+	[BZ #15054]
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h (MOVE32):
+	New macro.
+	(INTERNAL_SYSCALL_NCS): Use it.  Rewrite to respect the syscall
+	restart convention.
+	(INTERNAL_SYSCALL): Rewrite to respect the syscall restart
+	convention.
+	(internal_syscall0, internal_syscall1): Likewise.
+	(internal_syscall2, internal_syscall3): Likewise.
+	(internal_syscall4, internal_syscall5): Likewise.
+	(internal_syscall6, internal_syscall7): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h (MOVE32):
+	New macro.
+	(INTERNAL_SYSCALL_NCS): Use it.  Rewrite to respect the syscall
+	restart convention.
+	(INTERNAL_SYSCALL): Rewrite to respect the syscall restart
+	convention.
+	(internal_syscall0, internal_syscall1): Likewise.
+	(internal_syscall2, internal_syscall3): Likewise.
+	(internal_syscall4, internal_syscall5): Likewise.
+	(internal_syscall6): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h (MOVE32):
+	New macro.
+	(INTERNAL_SYSCALL_NCS): Use it.  Rewrite to respect the syscall
+	restart convention.
+	(INTERNAL_SYSCALL): Rewrite to respect the syscall restart
+	convention.
+	(internal_syscall0, internal_syscall1): Likewise.
+	(internal_syscall2, internal_syscall3): Likewise.
+	(internal_syscall4, internal_syscall5): Likewise.
+	(internal_syscall6): Likewise.
+
+2013-02-04  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/mips/mips32/truncate64.c: Do not include
+	<bp-checks.h>.
+	(truncate64): Do not use CHECK_STRING.
+	* sysdeps/unix/sysv/linux/mips/mips64/fxstatat64.c: Do not include
+	<bp-checks.h>.
+	(__fxstatat64): Do not use CHECK_STRING.
+	* sysdeps/unix/sysv/linux/mips/mips64/lxstat64.c: Do not include
+	<bp-checks.h>.
+	(__lxstat64): Do not use CHECK_STRING.
+	* sysdeps/unix/sysv/linux/mips/mips64/xstat64.c: Do not include
+	<bp-checks.h>.
+	(__xstat64): Do not use CHECK_STRING.
+
+2013-01-31  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/mips/mips64/semctl.c: Don't include
+	<bp-checks.h> and <bp-semctl.h>.
+	(__semctl): Don't use CHECK_SEMCTL.
+
+2013-01-29  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h: Correct
+	whitespace damage throughout.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h: Likewise.
+
+2013-01-25  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/memmove.c: Remove.
+
+2013-01-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/sigcontext.h (struct
+	sigcontext): Use __extension__ with long long in all definitions.
+
+2013-01-08  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/memcpy.S: Change prefetch hint, reorder partial
+	loads and stores, set and use MAX_PREFETCH_SIZE.
+
+2013-01-08  Andreas Jaeger  <aj@suse.de>
+
+	[BZ #14985]
+	* sysdeps/unix/sysv/linux/mips/bits/epoll.h (EPOLL_NONBLOCK): Remove.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2013-01-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/bits/dlfcn.h: Reformat copyright notice.
+	* sysdeps/mips/bits/mathdef.h: Likewise.
+	* sysdeps/mips/bits/setjmp.h: Likewise.
+	* sysdeps/mips/ieee754/ieee754.h: Likewise.
+	* sysdeps/mips/machine-gmon.h: Likewise.
+	* sysdeps/mips/mips64/bsd-_setjmp.S: Likewise.
+	* sysdeps/mips/mips64/setjmp.S: Likewise.
+	* sysdeps/mips/start.S: Likewise.
+	* sysdeps/unix/mips/mips64/n32/sysdep.h: Likewise.
+	* sysdeps/unix/mips/mips64/n64/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/bits/sigaction.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/procfs.h: Likewise.
+
+2012-12-04  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu_control.h [__mips_soft_float] (_FPU_GETCW):
+	Define to set cw to 0, not just to plain "0" as a statement.
+	[__mips_soft_float] (_FPU_SETCW): Define to (void) (cw), rather
+	than doing nothing with cw.
+
+2012-11-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips32/libm-test-ulps: Update.
+	* sysdeps/mips/mips64/libm-test-ulps: Likewise.
+
+2012-11-29  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14893]
+	* sysdeps/mips/mips64/n32/_itoa.h: New file.
+	* sysdeps/unix/sysv/linux/mips/register-dump.h: Include
+	<sgidefs.h>.
+	(CTX_TYPE): New macro.
+	(CTX_REG): Likewise.
+	(CTX_PC): Likewise.
+	(CTX_MDHI): Likewise.
+	(CTX_MDLO): Likewise.
+	(REG_HEX_SIZE): Likewise.
+	(hexvalue): Take _ITOA_WORD_TYPE argument.
+	(register_dump): Use these macros instead of hardcoding struct
+	sigcontext * type and accesses and 8-byte textual output for
+	registers.
+
+2012-11-22  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14822]
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/syscalls.list
+	(sendfile): New syscall entry.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sendfile64.c: New file.
+	Copy of ../sysdeps/unix/sysv/linux/wordsize-64/sendfile64.c.
+
+2012-11-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/jmpbuf-unwind.h (_jmpbuf_sp): Cast regs[0].__sp to
+	uintptr_t.
+
+	* sysdeps/mips/sotruss-lib.c: New file.
+
+2012-11-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h
+	(internal_syscall1): Use parentheses around macro arguments.
+	(internal_syscall2): Likewise.
+	(internal_syscall3): Likewise.
+	(internal_syscall4): Likewise.
+	(internal_syscall5): Likewise.
+	(internal_syscall6): Likewise.
+	(internal_syscall7): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h
+	(internal_syscall1): Likewise.
+	(internal_syscall2): Likewise.
+	(internal_syscall3): Likewise.
+	(internal_syscall4): Likewise.
+	(internal_syscall5): Likewise.
+	(internal_syscall6): Likewise.
+
+	* sysdeps/mips/jmpbuf-unwind.h (_JMPBUF_CFA_UNWINDS_ADJ): Cast
+	_Unwind_GetCFA return to _Unwind_Ptr before casting to a pointer
+	type.
+	* sysdeps/unix/sysv/linux/mips/____longjmp_chk.c (CHECK_SP): Cast
+	ss_sp to long before casting to sp_type.
+	* sysdeps/unix/sysv/linux/mips/sigcontextinfo.h [_MIPS_SIM ==
+	_ABIO32] (GET_PC): Cast to unsigned long before casting to a
+	pointer type.
+	[_MIPS_SIM == _ABIO32] (GET_FRAME): Likewise.
+	[_MIPS_SIM == _ABIO32] (GET_STACK): Likewise.
+	[_MIPS_SIM != _ABIO32] (GET_PC): Likewise.
+	[_MIPS_SIM != _ABIO32] (GET_FRAME): Likewise.
+	[_MIPS_SIM != _ABIO32] (GET_STACK): Likewise.
+
+	* sysdeps/mips/bits/atomic.h [!__GNUC_PREREQ (4, 8)]
+	(__arch_compare_and_exchange_xxx_8_int): Separate assignments to
+	__prev and __cmp.  Cast __cmp to void.
+	[!__GNUC_PREREQ (4, 8)] (__arch_compare_and_exchange_xxx_16_int):
+	Likewise.
+	[!__GNUC_PREREQ (4, 8) && _MIPS_SIM == _ABIO32]
+	(__arch_compare_and_exchange_xxx_64_int): Likewise.
+
+2012-11-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-machine.h (RESOLVE_GOTSYM): Declare VERSION
+	variable with __attribute__ ((unused)).
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h
+	(INTERNAL_SYSCALL_DECL): Use __attribute__ ((unused)).
+	(INTERNAL_SYSCALL_ERROR_P): Cast val to void.
+	(INTERNAL_SYSCALL_ERRNO): Cast err to void.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h
+	(INTERNAL_SYSCALL_DECL): Use __attribute__ ((unused)).
+	(INTERNAL_SYSCALL_ERROR_P): Cast val to void.
+	(INTERNAL_SYSCALL_ERRNO): Cast err to void.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h
+	(INTERNAL_SYSCALL_DECL): Use __attribute__ ((unused)).
+	(INTERNAL_SYSCALL_ERROR_P): Cast val to void.
+	(INTERNAL_SYSCALL_ERRNO): Cast err to void.
+
+2012-11-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/bits/atomic.h
+	(__arch_compare_and_exchange_bool_8_int): Mark __PREV variable
+	with __attribute__ ((unused)).
+	(__arch_compare_and_exchange_bool_16_int): Likewise.
+	(__arch_compare_and_exchange_bool_32_int): Likewise.
+	(__arch_compare_and_exchange_bool_64_int): Likewise.
+
+2012-11-06  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* sysdeps/mips/memmove.c: New file.  Use memcpy for forward memmove.
+
+2012-11-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h
+	(lll_futex_timed_wait_bitset): New macro.
+
+2012-11-04  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sync_file_range.c: Don't
+	include <stub-tag.h>.
+
+2012-11-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/fclrexcpt.c (feclearexcept): Add
+	libm_hidden_def.
+
+	[BZ #3439]
+	* sysdeps/mips/bits/fenv.h (FE_INEXACT): Define macro to integer
+	constant usable in #if and use that to give value to enum
+	constant.
+	(FE_UNDERFLOW): Likewise.
+	(FE_OVERFLOW): Likewise.
+	(FE_DIVBYZERO): Likewise.
+	(FE_INVALID): Likewise.
+	(FE_TONEAREST): Likewise.
+	(FE_TOWARDZERO): Likewise.
+	(FE_UPWARD): Likewise.
+	(FE_DOWNWARD): Likewise.
+
+2012-11-01  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerate.
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libc.abilist
+	(GLIBC_2.17): Add clock_* symbols.
+
+2012-10-31  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/memcpy.S: Add prefetching and more unrolling, make
+	it work in 32 or 64 bit modes.
+	* sysdeps/mips/mips64/memcpy.S: Remove.
+
+2012-10-30  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14047]
+	* sysdeps/mips/tininess.h: New file.
+
+2012-10-29  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/Makefile: Remove.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/Makefile: Remove.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/Makefile: Remove.
+	* sysdeps/unix/sysv/linux/mips/configure.in: Create default_abi.make.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerate.
+	* sysdeps/unix/sysv/linux/mips/Makefile: Include default_abi.make.
+	(abi-variants): Add hard and soft float versions.
+	(abi-o32-options): Remove.
+	(abi-o32-condition): Remove.
+	(abi-n32-options): Remove.
+	(abi-n32-condition): Remove.
+	(abi-n64-options): Remove.
+	(abi-n64-condition): Remove.
+	(abi-o32_soft-options): New.
+	(abi-o32_soft-condition): New.
+	(abi-o32_hard-options): New.
+	(abi-o32_hard-condition): New.
+	(abi-n32_soft-options): New.
+	(abi-n32_soft-condition): New.
+	(abi-n32_hard-options): New.
+	(abi-n32_hard-condition): New.
+	(abi-n64_soft-options): New.
+	(abi-n64_soft-condition): New.
+	(abi-n64_hard-options): New.
+	(abi-n64_hard-condition): New.
+
+2012-10-19  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist
+	(GLIBC_2.17): Add clock_* symbols.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libc.abilist: Likewise.
+
+2012-10-24  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Remove all
+	definitions and declarations that are provided by
+	<bits/fcntl-linux.h> and include <bits/fcntl-linux.h>.
+
+2012-10-03  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/ieee754.h: Move to...
+	* sysdeps/mips/ieee754/ieee754.h: Here.
+	* sysdeps/mips/mips32/Implies: Add mips/ieee754.
+	* sysdeps/mips/mips64/Implies: Ditto.
+	* sysdeps/mips/mips64/n32/Implies: Ditto.
+	* sysdeps/mips/mips64/n64/Implies: Ditto.
+
+2012-10-02  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h: Fix clone
+	flag name in comment to CLONE_CHILD_CLEARTID.
+
+2012-09-28  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/mips/init-first.c: File removed.
+
+2012-09-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* sysdeps/mips/dl-trampoline.c (VERSYMIDX): Removed.
+
+2012-08-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h
+	(__ASSUME_STAT64_SYSCALL): Remove.
+
+2012-08-27  Guido Guenther  <agx@sigxcpu.org>
+
+	* sysdeps/mips/fpu_control.h (_FPU_RESERVED): Set bit 23.
+
+2012-08-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h [_MIPS_SIM ==
+	_ABIO32] (__ASSUME_STAT64_SYSCALL): Define.
+	* sysdeps/unix/sysv/linux/mips/mips64/fxstat64.c: New file.  Based
+	on version from ../sysdeps/unix/sysv/linux/.
+	* sysdeps/unix/sysv/linux/mips/mips64/lxstat64.c: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/xstat64.c: Likewise.
+
+2012-08-16  Carlos O'Donell  <carlos_odonell@mentor.com>
+
+	* sysdeps/mips/ldsodefs.h (ARCH_PLTENTER_MEMBERS)
+	<mips_o32_gnu_pltenter, mips_n32_gnu_pltenter, mips_n64_gnu_pltenter>:
+	struct La_mips_32_regs and struct La_mips_64_regs are not constant.
+
+2012-08-15  Tom de Vries  <vries@codesourcery.com>
+	    Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h (__libc_lock_lock)
+	(__libc_lock_trylock): Define versions optimized for MIPS.
+
+2012-08-15  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* sysdeps/mips/nptl/pthread_spin_lock.S: Remove, use generic version.
+	* sysdeps/mips/nptl/pthread_spin_lock.c: New file.
+	* sysdeps/mips/nptl/pthread_spin_trylock.S: Remove, use generic version.
+
+2012-08-15  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2012-08-13  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	[__GNUC_PREREQ (4, 8)]
+	(atomic_exchange_and_add): Split into ...
+	(atomic_exchange_and_add_acq, atomic_exchange_and_add_rel): ... these.
+	New atomic macros.
+	[!__GNUC_PREREQ (4, 8)]
+	(atomic_exchange_and_add): Split into ...
+	(atomic_exchange_and_add_acq, atomic_exchange_and_add_rel): ... these.
+	New atomic macros.
+
+2012-08-09  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h
+	(__ASSUME_UTIMES): Define.
+
+2012-08-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/configure.in (arch_minimum_kernel):
+	Remove.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerated.
+
+2012-08-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h
+	(__ASSUME_FCNTL64): Remove.
+
+2012-08-01  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/mips/sys/asm.h [_MIPS_ISA != _MIPS_ISA_MIPS4 &&
+	_MIPS_ISA != _MIPS_ISA_MIPS5 && _MIPS_ISA != _MIPS_ISA_MIPS32 &&
+	_MIPS_ISA != _MIPS_ISA_MIPS64] (PREF): Define as function-like
+	macro.
+	(PREFX): Likewise.
+
+2012-07-31  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/fcntl.c: Remove.
+	* sysdeps/unix/sysv/linux/mips/lockf64.c: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/fcntl.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/lockf64.c: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/fcntl.c: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/lockf64.c: Likewise.
+
+2012-07-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/syscalls.list (mmap): New.
+	* sysdeps/unix/sysv/linux/mips/mips64/mmap64.c: New file.
+
+2012-07-25  Florian Weimer  <fweimer@redhat.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: Add
+	secure_getenv.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libc.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libc.abilist:
+	Likewise.
+
+2012-07-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/configure.in: Remove TLS check.
+	* sysdeps/mips/configure: Regenerated.
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/c++-types.data: New
+	file.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/c++-types.data:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/c++-types.data:
+	Likewise.
+
+2012-07-11  Tom de Vries  <vries@codesourcery.com>
+	    Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* sysdeps/mips/bits/atomic.h [__GNUC_PREREQ (4, 8)]
+	(__arch_compare_and_exchange_bool_32_int)
+	(__arch_compare_and_exchange_val_32_int)
+	(__arch_compare_and_exchange_bool_64_int)
+	(__arch_compare_and_exchange_val_64_int)
+	Define in terms of __atomic_compare_exchange_n.
+	[__GNUC_PREREQ (4, 8)]
+	(__arch_exchange_32_int, __arch_exchange_64_int):
+	Define in terms of __atomic_exchange_n.
+	[__GNUC_PREREQ (4, 8)]
+	(__arch_exchange_and_add_32_int, __arch_exchange_and_add_64_int):
+	Define in terms of __atomic_fetch_add.
+	[!__GNUC_PREREQ (4, 8)]: Update formatting.
+
+2012-07-06  Petar Jovanovic  <petar.jovanovic@rt-rk.com>
+
+	* sysdeps/mips/dl-machine.h (RTLD_START): Do not store data below
+	the stack pointer.
+
+2012-06-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/ld.abilist: Update
+	_gp_disp entry.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libBrokenLocale.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libanl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libcidn.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libcrypt.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libdl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libm.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnsl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_compat.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_db.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_dns.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_files.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_hesiod.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_nis.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_nisplus.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libpthread.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libresolv.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/librt.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libthread_db.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libutil.abilist:
+	Likewise.
+
+2012-06-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h
+	(FORCE_FRAME_POINTER): Assign result of alloca to a volatile
+	variable.
+
+2012-06-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips64/n32/s_fma.c: New file.
+	* sysdeps/mips/mips64/n64/s_fma.c: Likewise.
+
+	* sysdeps/unix/sysv/linux/mips/Makefile (abi-n32-condition): Fix
+	typo.
+
+2012-05-31  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips64/libm-test-ulps: Remove sqrt ulps.
+
+	* sysdeps/mips/mips32/libm-test-ulps: Regenerate.
+	* sysdeps/mips/mips64/libm-test-ulps: Likewise.
+
+2012-05-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/Makefile [subdir = misc]: Move ABI
+	settings out of conditional.
+
+	* sysdeps/unix/sysv/linux/mips/syscalls.list: Remove
+	__connect_internal alias.
+
+	* sysdeps/mips/mips64/soft-fp/sfp-machine.h
+	(FP_TRAPPING_EXCEPTIONS): Define.
+
+	* sysdeps/unix/sysv/linux/mips/Makefile (syscall-list-variants):
+	Rename to abi-variants.
+	(syscall-list-includes): Rename to abi-includes.
+	(syscall-list-o32-options): Rename to abi-o32-options.
+	(syscall-list-o32-condition): Rename to abi-o32-condition.
+	(syscall-list-n32-options): Rename to abi-n32-options.
+	(syscall-list-n32-condition): Rename to abi-n32-condition.
+	(syscall-list-n64-options): Rename to abi-n64-options.
+	(syscall-list-n64-condition): Rename to abi-n64-condition.
+	* sysdeps/unix/sysv/linux/mips/mips32/Makefile: New file.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/Makefile: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/Makefile: Likewise.
+
+	* sysdeps/unix/sysv/linux/mips/nptl/pthread_once.c: Replace
+	_internal alias by hidden_def.
+
+2012-05-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libcidn.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_compat.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_db.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_dns.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_files.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_hesiod.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_nis.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnss_nisplus.abilist:
+	Likewise.
+
+2012-05-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h
+	(__ASSUME_32BITUIDS): Remove.
+
+2012-05-23  Steve Ellcey  <sellcey@mips.com>
+
+	* sysdeps/unix/sysv/linux/mips/Makefile
+	(syscall-list-o32-options): Use -D_MIPS_SIM=1.
+	(syscall-list-n32-options): Use -D_MIPS_SIM=2.
+	(syscall-list-n64-options): Use -D_MIPS_SIM=3.
+
+2012-05-23  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/mman.h (MADV_DONTDUMP):
+	Define.
+	(MADV_DODUMP): Likewise.
+
+2012-05-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/bits/wordsize.h (__WORDSIZE_COMPAT32): Rename to
+	__WORDSIZE_TIME64_COMPAT32.
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: Update.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libc.abilist: Update.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libc.abilist: Update.
+
+2012-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/ftruncate64.c: Move to ...
+	* sysdeps/unix/sysv/linux/mips/mips32/ftruncate64.c: ... here.
+	(kernel-features.h): Don't include.
+	[__NR_ftruncate64]: Make code unconditional.
+	[!__NR_ftruncate64]: Remove conditional code.
+	[!__ASSUME_TRUNCATE64_SYSCALL]: Likewise.
+	* sysdeps/unix/sysv/linux/mips/truncate64.c: Move to ...
+	* sysdeps/unix/sysv/linux/mips/mips32/truncate64.c: ... here.
+	(kernel-features.h): Don't include.
+	[__NR_truncate64]: Make code unconditional.
+	[!__NR_truncate64]: Remove conditional code.
+	[!__ASSUME_TRUNCATE64_SYSCALL]: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/syscalls.list (ftruncate):
+	Add syscall.
+	(truncate): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/syscalls.list
+	(ftruncate): Remove syscall.
+	(truncate): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/ftruncate64.c: Move to ...
+	* sysdeps/unix/sysv/linux/mips/mips64/ftruncate64.c: ... here.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/truncate64.c: Move to ...
+	* sysdeps/unix/sysv/linux/mips/mips64/truncate64.c: ... here.
+
+2012-05-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/stat.h (struct stat)
+	[!__USE_MISC && !__USE_XOPEN2K8]: Declare nanoseconds fields with
+	type unsigned long and names st_atimensec, st_mtimensec and
+	st_ctimensec.
+	(struct stat64) [!__USE_MISC && !__USE_XOPEN2K8]: Likewise.
+
+2012-05-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/pread.c [!__ASSUME_PREAD_SYSCALL]:
+	Remove conditional code.
+	[__ASSUME_PREAD_SYSCALL]: Make code unconditional.
+	* sysdeps/unix/sysv/linux/mips/pread64.c
+	[!__ASSUME_PREAD_SYSCALL]: Remove conditional code.
+	[__ASSUME_PREAD_SYSCALL]: Make code unconditional.
+	* sysdeps/unix/sysv/linux/mips/pwrite.c
+	[!__ASSUME_PWRITE_SYSCALL]: Remove conditional code.
+	[__ASSUME_PWRITE_SYSCALL]: Make code unconditional.
+	* sysdeps/unix/sysv/linux/mips/pwrite64.c
+	[!__ASSUME_PWRITE_SYSCALL]: Remove conditional code.
+	[__ASSUME_PWRITE_SYSCALL]: Make code unconditional.
+	* sysdeps/unix/sysv/linux/mips/sigaction.c
+	[!__ASSUME_REALTIME_SIGNALS]: Remove conditional code.
+	[__ASSUME_REALTIME_SIGNALS]: Make code unconditional.
+
+2012-05-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2012-05-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/libm-test-ulps: Move to ...
+	* sysdeps/mips/mips32/libm-test-ulps: ... here.
+	* sysdeps/mips/mips64/n32/libm-test-ulps: Move to ...
+	* sysdeps/mips/mips64/libm-test-ulps: ... here.
+	* sysdeps/mips/mips64/n64/libm-test-ulps: Remove file.
+
+2012-05-01  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14044]
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/posix_fadvise.c: Copy
+	from libc version and add symbol versions.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libc.abilis
+	(GLIBC_2.3.3): Add posix_fadvise64.
+
+2012-04-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/ld.abilist: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libBrokenLocale.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libanl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libc.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libcrypt.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libdl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libm.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libnsl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libpthread.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libresolv.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/librt.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libthread_db.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips32/nptl/libutil.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/ld.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libBrokenLocale.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libanl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libc.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libcrypt.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libdl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libm.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libnsl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libpthread.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libresolv.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/librt.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libthread_db.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/nptl/libutil.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/ld.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libBrokenLocale.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libanl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libc.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libcrypt.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libdl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libm.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libnsl.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libpthread.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libresolv.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/librt.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libthread_db.abilist:
+	Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/nptl/libutil.abilist:
+	Likewise.
+
+	* sysdeps/mips/mips64/memcpy.S: Don't include <endian.h>.  Test
+	__MIPSEB instead of __BYTE_ORDER.
+	* sysdeps/mips/mips64/memset.S: Likewise.
+
+2012-04-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/configure.in (arch_minimum_kernel):
+	Change to 2.6.12.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerated.
+
+2012-04-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/mips/brk.S: Remove file.
+	* sysdeps/unix/mips/dl-brk.S: Likewise.
+	* sysdeps/unix/mips/sigreturn.S: Likewise.
+	* sysdeps/unix/mips/wait.S: Likewise.
+
+2012-04-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/memcpy.S: Don't include <endian.h>.  Test __MIPSEB
+	instead of __BYTE_ORDER.
+	* sysdeps/mips/memset.S: Likewise.
+
+	* sysdeps/unix/sysv/linux/mips/kernel_rt_sigframe.h (struct
+	kernel_rt_sigframe): Use siginfo_t instead of struct siginfo.
+
+2012-04-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/mips/fork.S: Remove file.
+
+2012-04-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/configure.in
+	(ldd_rewrite_script): Change $dest to $dir.
+	* sysdeps/unix/sysv/linux/mips/mips64/configure: Regenerate.
+
+2012-04-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/readahead.c: Include
+	sysdeps/unix/sysv/linux/arm/readahead.c not
+	sysdeps/unix/sysv/linux/arm/eabi/readahead.c.
+
+2012-03-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/mman.h (MAP_STACK): Define.
+	(MAP_HUGETLB): Likewise.
+
+2012-03-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/elf/start.S: Moved to ...
+	* sysdeps/mips/start.S: ...here.
+	* sysdeps/mips/elf/configure.in: Moved to ...
+	* sysdeps/mips/configure.in: ...here.  Update comment.
+	* sysdeps/mips/configure: New generated file.
+
+2012-03-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/register-dump.h: Include <_itoa.h>
+	instead of <stdio-common/_itoa.h>.
+
+2012-03-10  Paul Eggert  <eggert@cs.ucla.edu>
+
+	[BZ #13673]
+	* sysdeps/mips/mips64/gmp-mparam.h: Replace FSF snail mail address
+	with URL.
+
+2012-03-09  Paul Eggert  <eggert@cs.ucla.edu>
+
+	[BZ #13673]
+	Replace FSF snail mail address with URLs, as per GNU coding standards.
+
+2012-03-09  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket_type.h: New file.
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Remove.
+
+2012-02-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h [!__USE_GNU]: Do not
+	declare recvmmsg and sendmmsg.
+
+2012-02-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/siginfo.h (pthread_attr_t):
+	Change union tag to pthread_attr_t.  Only define typedef if not
+	already defined.
+	* sysdeps/unix/sysv/linux/mips/nptl/bits/pthreadtypes.h
+	(pthread_attr_t): Change union tag to pthread_attr_t.  Only define
+	typedef if not already defined.
+
+2012-02-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/siginfo.h: Don't name
+	siginfo_t struct.  Add forward declaration of pthread_attr_t and
+	use it in sigevent.
+	* sysdeps/unix/sysv/linux/mips/nptl/bits/pthreadtypes.h: Name
+	pthread_attr_t union.
+
+2012-02-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/epoll.h: New file.
+	* sysdeps/unix/sysv/linux/mips/bits/timerfd.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/epoll.h: Remove.
+	* sysdeps/unix/sysv/linux/mips/sys/timerfd.h: Likewise.
+
+2012-02-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/mips/bits/errno.h (EHWPOISON): Define if
+	not defined.
+
+2012-02-17  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/mips/dl-procinfo.h(_DL_PLATFORMS_COUNT): define to 4,
+	matching the array in dl-procinfo.c.
+
+2012-02-17  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/mips/fpu/libm-test-ulps: Adjust ULPs for jn tests.
+	* sysdeps/mips/mips64/n32/fpu/libm-test-ulps: Likewise.
+	* sysdeps/mips/mips64/n64/fpu/libm-test-ulps: Likewise.
+
+2012-02-15  Robert Millan  <rmh@gnu.org>
+
+	[BZ #12301]
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h [__ASSEMBLER__]
+	[__PIC__] (SYSCALL_ERROR_LABEL): New macro.
+
+2012-02-15  Robert Millan  <rmh@gnu.org>
+
+	[BZ #12298]
+	* sysdeps/unix/sysv/linux/mips/sys/tas.h: Moved to ...
+	* sysdeps/mips/sys/tas.h: ... here.
+
+2012-02-15  Robert Millan  <rmh@gnu.org>
+
+	[BZ #12297]
+	* sysdeps/mips/dl-machine.h: Fix a comment regarding __start.
+	* sysdeps/unix/sysv/linux/mips/entry.h: Moved to ...
+	* sysdeps/unix/mips/entry.h: ... here.
+
+2012-02-15  Robert Millan  <rmh@gnu.org>
+
+	[BZ #12193]
+	* sysdeps/mips/dl-machine.h (DL_PLATFORM_INIT, dl_platform_init):
+	Define.
+	* sysdeps/mips/dl-procinfo.c: New file.
+	* sysdeps/mips/dl-procinfo.h: Likewise.
+
+2012-02-15  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/signalfd.h: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/signalfd.h: Remove.
+
+2012-02-15  Viju Vincent  <vijuvince@gmail.com>
+
+	* sysdeps/mips/dl-trampoline.c (__dl_runtime_resolve): Use locking
+	around calls to _dl_lookup_symbol_x.
+
+2012-02-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/inotify.h: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/inotify.h: Remove.
+
+2012-02-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/eventfd.h: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/eventfd.h: Remove.
+
+2012-02-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips32/crti.S: New file, based on compiler output
+	for sysdeps/generic/initfini.c.
+	* sysdeps/mips/mips32/crtn.S: Likewise.
+	* sysdeps/mips/mips64/n32/crti.S: Likewise.
+	* sysdeps/mips/mips64/n32/crtn.S: Likewise.
+	* sysdeps/mips/mips64/n64/crti.S: Likewise.
+	* sysdeps/mips/mips64/n64/crtn.S: Likewise.
+	* sysdeps/mips/Makefile (CFLAGS-initfini.s): Remove variable.
+	(CFLAGS-pt-initfini.s): Likewise.
+	(CPPFLAGS-crti.S, CPPFLAGS-crtn.S, CPPFLAGS-pt-crti.S): Define
+	variables.
+
+2012-01-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/sys/asm.h: Remove __STDC__ conditionals.
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h: Likewise.
+
+2012-01-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/bits/fenv.h: Use const instead of __const.
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/cachectl.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/epoll.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/sysmips.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/timerfd.h: Likewise.
+
+2012-01-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/nptl/shlib-versions: New.
+
+2012-01-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/backtrace.c: Use x86_64 version of backtrace.c.
+
+2012-01-04  Tom de Vries  <tom@codesourcery.com>
+
+	* sysdeps/mips/Makefile: Compile initfini.c, pt-initfini.c with
+	-fno-unwind-tables.
+
+2012-01-03  Tom de Vries  <tom@codesourcery.com>
+
+	* sysdeps/mips/backtrace.c: New file, including ia64 backtrace.c.
+	* sysdeps/mips/Makefile: Compile backtrace.c with -funwind-tables.
+
+2011-12-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/Makefile (no_syscall_list_h)
+	(mips_list_syscalls, $(objpfx)syscall-%.h $(objpfx)syscall-%.d):
+	Remove.
+	(syscall-list-variants, syscall-list-includes)
+	(syscall-list-o32-options, syscall-list-o32-condition)
+	(syscall-list-n32-options, syscall-list-n32-condition)
+	(syscall-list-n64-options, syscall-list-n64-condition): Define.
+	* sysdeps/unix/sysv/linux/mips/configure.in: Don't generate
+	asm-unistd.h.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerate.
+	* sysdeps/unix/sysv/linux/mips/sys/syscall.h: Remove.
+
+2011-12-22  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13538]
+	* sysdeps/unix/sysv/linux/mips/sys/epoll.h (EPOLLONESHOT)
+	(EPOLLET): Initialize with unsigned values.
+
+2011-12-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/Makefile ($(objpfx)syscall-%.h
+	$(objpfx)syscall-%.d): Use sysdeps path to locate sys/syscall.h.
+
+2011-11-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/ftw.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/ftw64.c: New.
+
+2011-11-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2011-10-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/e_sqrt.c: Add __sqrt_finite alias.
+	* sysdeps/mips/fpu/e_sqrtf.c: Add __sqrtf_finite alias.
+	* sysdeps/mips/mips64/soft-fp/e_sqrtl.c: Add __sqrtl_finite alias.
+
+2011-10-05  Andreas Schwab  <schwab@redhat.com>
+
+	* sysdeps/mips/dl-machine.h (elf_machine_rel, elf_machine_rela)
+	(elf_machine_lazy_rel): Add parameter skip_ifunc.
+
+2011-09-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h (__cmsg_nxthdr): Cast
+	return value to (struct cmsghdr *).
+
+2011-09-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/elf/configure.in: Always test for TLS support and
+	error out in case it is missing.
+	* sysdeps/mips/elf/configure: Regenerate.
+	* sysdeps/mips/nptl/tls.h: Remove test for HAVE_TLS_SUPPORT.
+
+2011-09-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-machine.h, sysdeps/mips/libc-tls.c,
+	sysdeps/mips/nptl/tls.h: Don't define or use USE_TLS.
+
+2011-09-06  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13109]
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/syscalls.list (fstatfs)
+	(statfs): New.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/fstatfs64.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/statfs64.c: New.
+
+2011-08-02  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/mips/bits/atomic.h: Workaround R10K ll/sc errata.
+
+2011-07-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h (PF_NFC, AF_NFC):
+	Define.
+
+2011-06-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sendmmsg.c,
+	sysdeps/unix/sysv/linux/mips/mips32/internal_sendmmsg.S: New.
+
+2011-06-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/siginfo.h (SI_USER): Don't
+	mention raise in the comment.
+
+2011-05-23  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h (RLIMIT_RTTIME):
+	Add.
+
+2011-05-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2011-05-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2011-04-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-tls.h (TLS_DTV_UNALLOCATED): Define.
+
+2011-04-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Rename open_by_handle
+	to open_by_handle_at.
+
+2011-04-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h (O_PATH): Define.
+
+2011-04-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Define struct
+	file_handle and MAX_HANDLE_SZ.  Declare name_to_handle_at and
+	open_by_handle.  Augment a few comments.
+
+2011-04-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sync_file_range.c: Make
+	cancelable.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/fallocate.c: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/fallocate64.c: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/syscalls.list: Mark
+	sync_file_range as cancellation point.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/syscalls.list: Mark
+	sync_file_range as cancellation point.
+
+2011-04-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/syscalls.list: Add
+	sync_file_range.
+
+2011-03-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2011-01-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/mman.h (MADV_HUGEPAGE,
+	MADV_NOHUGEPAGE): Define.
+
+2011-01-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h (AF_CAIF, AF_ALG,
+	PF_CAIF, PF_ALG): Define.
+
+2010-12-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/init-first.c: Don't call __libc_global_ctors if
+	NO_CTORS_DTORS_SECTIONS is defined.
+	* sysdeps/mach/hurd/mips/init-first.c: Likewise.
+
+2010-12-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/stackinfo.h: Define DEFAULT_STACK_PERMS with PF_X.
+
+2010-12-06  Matt Turner  <mattst88@gmail.com>
+
+	* sysdeps/unix/sysv/linux/mips/getpagesize.c: Delete file.
+
+2010-12-06  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/configure.in (arch_minimum_kernel):
+	Change to 2.4.1.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerate.
+
+2010-10-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/syscalls.list,
+	sysdeps/unix/sysv/linux/mips/mips64/n32/syscalls.list,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/syscalls.list: Add entries
+	for fanotify_mark.
+
+2010-10-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/feupdateenv.c (feupdateenv): Add
+	libm_hidden_def.
+	* sysdeps/mips/fpu/ftestexcept.c (fetestexcept): Likewise.
+
+2010-08-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h
+	(__ASSUME_GETDENTS64_SYSCALL): Undefine for n32 ABI before 2.6.35.
+
+2010-08-13  Chandrakala Chavva  <cchavva@caviumnetworks.com>
+
+	* sysdeps/unix/mips/mips64/n64/sysdep.h (PSEUDO): Add 'nop' in
+	jump delay slot.
+	* sysdeps/unix/mips/mips64/n32/sysdep.h (PSEUDO): Ditto.
+
+2010-08-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/termios.h (EXTPROC): Define.
+
+2010-08-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/statfs.h (struct statfs,
+	struct statfs64): Add f_flags field.
+
+2010-08-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/sys/inotify.h (IN_EXCL_UNLINK):
+	Define.
+
+2010-08-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h: Declare prlimit
+	and prlimit64.
+	* sysdeps/unix/sysv/linux/mips/mips32/syscalls.list,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/syscalls.list: New files.
+	* sysdeps/unix/sysv/linux/mips/n32/syscalls.list: Add entry for
+	prlimit64 syscall.
+
+2010-06-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h (F_SETPIPE_SZ,
+	F_GETPIPE_SZ): Define.
+
+2010-05-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/recvmmsg.c,
+	sysdeps/unix/sysv/linux/mips/mips32/internal_recvmmsg.S: New.
+
+2010-04-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/libc-abis: New.
+
+2010-04-06  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-machine.h (VALID_ELF_ABIVERSION,
+	VALID_ELF_OSABI, VALID_ELF_HEADER): Remove.
+	* sysdeps/unix/sysv/linux/mips/ldsodefs.h (VALID_ELF_ABIVERSION):
+	Define.
+
+2010-03-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Define
+	MSG_WAITFORONE.
+
+2010-03-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2010-03-23  Mischa Jonker  <mischa.jonker@viragelogic.com>
+
+	[BZ #11291]
+	* sysdeps/mips/bits/atomic.h
+	(__arch_compare_and_exchange_xxx_32_int,
+	__arch_compare_and_exchange_xxx_64_int,
+	__arch_exchange_xxx_32_int, __arch_exchange_xxx_64_int,
+	__arch_exchange_and_add_32_int, __arch_exchange_and_add_64_int):
+	Specify *mem as asm output as well as input.
+
+2010-02-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/fegetenv.c: Add hidden alias.
+
+2010-01-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-trampoline.c (_dl_runtime_resolve,
+	_dl_runtime_pltresolve): Calculate offset from start of function
+	to .cpload instead of hardcoding instruction size.
+
+2010-01-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/stat.h: Fix double-inclusion
+	problem.
+
+2010-01-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/sigaction.h: Define
+	SA_RESTART, SA_NODEFER and SA_RESETHAND if __USE_XOPEN2K8.
+
+2010-01-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Define O_DIRECTORY,
+	O_NOFOLLOW, O_CLOEXEC, F_DUPFD_CLOEXEC, F_SETOWN, and F_GETOWN for
+	XPG7.
+	* sysdeps/unix/sysv/linux/mips/bits/stat.h: Enable using from
+	fcntl.h.
+
+2009-12-16  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #11093]
+	* sysdeps/unix/sysv/linux/mips/bits/poll.h: Define POLLRDNORM,
+	POLLRDBAND, POLLWRNORM, and POLLWRBAND also for POSIX 2008.
+
+2009-12-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2009-12-15  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Redefine O_SYNC and
+	O_DSYNC to match 2.6.33+ kernels.
+
+2009-12-09  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Define mmsghdr and
+	declare recvmmsg.
+
+2009-12-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/syscalls.list
+	(posix_fadvise): Remove.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/posix_fadvise.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/posix_fadvise.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/posix_fadvise64.c: New.
+
+2009-12-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/dl-lookup.c: Update from generic version.
+
+2009-11-23  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/stat.h: Use struct timespec
+	for timestamps also if __USE_XOPEN2K8.
+
+2009-11-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Introduce new symbol
+	F_OWNER_PGRP and mark F_OWNER_GID obsolete.
+
+2009-11-18  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Change misleading
+	names of parameters of sync_file_range.
+
+2009-11-17  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #10972]
+	* sysdeps/unix/sysv/linux/mips/bits/mman.h: Add new MADV_*
+	constants from recent kernels.
+
+2009-11-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/errno.h (ERFKILL): Define if
+	not already defined.
+
+2009-11-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h (F_SETOWN_EX,
+	F_GETOWN_EX): Update values.
+
+2009-11-06  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h (fallocate): Fix types
+	of last two arguments when -D_FILE_OFFSET_BITS=64.
+
+2009-10-29  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Define F_OWNER_* and
+	f_owner_ex.
+
+2009-10-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Define F_SETOWN_EX
+	and F_GETOWN_EX.
+
+2009-09-25  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h
+	(__SYSCALL_CLOBBERS): Add "hi" and "lo".
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h
+	(__SYSCALL_CLOBBERS): Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h
+	(__SYSCALL_CLOBBERS): Likewise.
+
+2009-08-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/____longjmp_chk.c: Remove.  Replaced by....
+	* sysdeps/unix/sysv/linux/mips/____longjmp_chk.c: This.  New file.
+	* sysdeps/mips/__longjmp.c (__longjmp): Use explicit register
+	variable for env.  Use expansion of CHECK_SP macro for check.
+	* sysdeps/mips/mips64/__longjmp.c (__Longjmp): Likewise.
+
+2009-08-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/accept4.c,
+	sysdeps/unix/sysv/linux/mips/mips32/internal_accept4.S: New.
+
+2009-07-20  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h: Define
+	__ASSUME_EVENTFD2 and __ASSUME_SIGNALFD4.
+
+2009-07-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/do-lookup.h: Remove.
+	* sysdeps/mips/dl-lookup.c: Update from generic version, with
+	non-PIC handling integrated.
+
+2009-06-18  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Define PF_IEEE802154
+	and AF_IEEE802154.
+
+2009-05-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/____longjmp_chk.c: New file.
+	* sysdeps/mips/__longjmp.c: If CHECK_SP is defined, use it.  Don't
+	undefine __longjmp.
+	* sysdeps/mips64/__longjmp.c: Likewise.
+
+2009-05-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/fallocate.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n32/fallocate64.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/fallocate.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/fallocate64.c: New.
+
+2009-05-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/Versions (libc): Add
+	fallocate64@@GLIBC_2.11.
+
+2009-05-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/preadv64.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/pwritev64.c: New files.
+
+2009-04-18  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/getcontext.S: New file.
+	* sysdeps/unix/sysv/linux/mips/makecontext.S: New file.
+	* sysdeps/unix/sysv/linux/mips/setcontext.S: New file.
+	* sysdeps/unix/sysv/linux/mips/swapcontext.S: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/ucontext.h (mcontext_t):
+	Update comment.
+	* sysdeps/unix/sysv/linux/mips/kernel_rt_sigframe.h: New file.
+	* sysdeps/unix/sysv/linux/mips/ucontext_i.sym: New file.
+	* sysdeps/unix/sysv/linux/mips/Makefile (gen-as-const-headers):
+	Add ucontext_i.sym.
+
+2009-04-18  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h (__ASSUME_PREADV,
+	__ASSUME_PWRITEV): Don't define here.
+
+2009-04-15  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/mips/sys/fpregdef.h: Update for new ABIs.
+
+2009-04-09  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Add missing protocol
+	numbers.
+	* sysdeps/unix/sysv/linux/mips/sys/eventfd.h (EFD_SEMAPHORE):
+	Define.
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h: Add entries for
+	preadv and pwritev.
+
+2009-03-18  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/readelflib.c (process_elf_file):
+	Use the Elf32_Ehdr type to check for EF_MIPS_ABI2 in the flags.
+
+2009-03-18  Zhang Le  <r0bertz@gentoo.org>
+
+	[BZ #7074]
+	* sysdeps/unix/sysv/linux/mips/readelflib.c (process_elf_file):
+	Fix the condition used to annotate n32 objects.
+
+2009-03-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/getsysstats.c (GET_NPROCS_PARSER):
+	Change parameters and use next_line.
+
+2009-03-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h: Include errno.h.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h: Likewise.
+
+2009-03-15  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/bits/link.h: Uglify function parameter names.
+	* sysdeps/unix/sysv/linux/mips/sys/cachectl.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/eventfd.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/sysmips.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/sys/tas.h: Likewise.
+
+2009-03-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Declare
+	fallocate{,64}.
+
+2009-02-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/stat.h: Protect UTIME_NOW and
+	UTIME_OMIT only with __USE_ATFILE.
+
+2009-02-13  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #7040]
+	* sysdeps/unix/sysv/linux/mips/sys/inotify.h: Second parameter of
+	inotify_rm_watch should have type int.
+
+2009-02-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/shm.h (SHM_EXEC): Define.
+
+2009-01-27  Maciej W. Rozycki  <macro@linux-mips.org>
+	    Atsushi Nemoto  <anemo@mba.ocn.ne.jp>
+
+	PR glibc/1048
+	* sysdeps/unix/sysv/linux/mips/dl-static.c: New file to support
+	variable page size for MIPS.
+	* sysdeps/unix/sysv/linux/mips/ldsodefs.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/Makefile: Build dl-static in elf.
+	* sysdeps/unix/sysv/linux/mips/Versions: Add _dl_var_init.
+
+2009-01-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h (enum
+	__rusage_who): Avoid comma after RUSAGE_CHILDREN if not
+	-D_GNU_SOURCE.
+
+2009-01-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h: Define
+	FUTEX_CLOCK_REALTIME and FUTEX_BITSET_MATCH_ANY.
+
+2008-12-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/posix_fallocate64.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n32/posix_fallocate.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/posix_fallocate64.c,
+	sysdeps/unix/sysv/linux/mips/mips64/n64/posix_fallocate.c: New.
+
+2008-12-09  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h (SCM_CREDENTIALS):
+	Make available only for __USE_GNU.
+
+2008-12-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h: Define
+	FUTEX_WAIT_BITSET and FUTEX_WAKE_BITSET.
+
+2008-11-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/sys/signalfd.h (signalfd): Fix
+	__THROW vs. __nonnull order for C++.
+
+2008-10-15  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/mips/dl-dtprocnum.h (DT_MIPS_NUM): Do not redefine.
+	* sysdeps/mips/dl-machine.h (STO_MIPS_PLT, R_MIPS_COPY,
+	R_MIPS_JUMP_SLOT, DT_MIPS_PLTGOT): Do not redefine.
+
+2008-10-01  Mark Shinwell  <shinwell@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+	    Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* sysdeps/mips/dl-dtprocnum.h (DT_MIPS_NUM): Redefine.
+	* sysdeps/mips/dl-lookup.c: New.
+	* sysdeps/mips/do-lookup.h: New.
+	* sysdeps/mips/dl-machine.h (ELF_MACHINE_NO_PLT): Remove
+	definition.
+	(STO_MIPS_PLT, R_MIPS_COPY, R_MIPS_JUMP_SLOT, DT_MIPS_PLTGOT): Define
+	if needed.
+	(ELF_MACHINE_JMP_SLOT): Alter definition and update comment.
+	(elf_machine_type_class): Likewise.
+	(ELF_MACHINE_PLT_REL): Define.
+	(elf_machine_fixup_plt): New.
+	(elf_machine_plt_value): New.
+	(elf_machine_reloc): Handle jump slot and copy relocations.
+	(elf_machine_lazy_rel): Point relocation place at PLT if
+	required.
+	(RESOLVE_GOTSYM): Take a relocation type argument.
+	(elf_machine_got_rel): Bind lazy stubs directly to their target if
+	!lazy.  Skip lazy binding for PLT symbols.
+	(elf_machine_runtime_setup): Fill in .got.plt header.
+	* sysdeps/mips/dl-trampoline.c (IFNEWABI): New macro.
+	(ELF_DL_PLT_FRAME_SIZE, ELF_DL_PLT_SAVE_ARG_REGS,
+	ELF_DL_PLT_RESTORE_ARG_REGS): Define.
+	(_dl_runtime_pltresolve): New.
+	* sysdeps/mips/bits/linkmap.h: New file.
+	* sysdeps/mips/tls-macros.h: Load $gp as required.  Merge 32-bit and
+	64-bit versions.
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h (SYSCALL_ERROR_LABEL):
+	Delete definition.
+	* sysdeps/unix/sysv/linux/mips/nptl/sysdep-cancel.h (PSEUDO_CPLOAD,
+	PSEUDO_ERRJMP, PSEUDO_SAVEGP, PSEUDO_LOADGP): Define.
+	(PSEUDO): Use them.  Move outside __PIC__.
+	(PSEUDO_JMP): New.
+	(CENABLE, CDISABLE): Use it.
+
+2008-08-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/sys/epoll.h: Change epoll_create2
+	to epoll_create1.
+
+2008-08-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Define SOCK_CLOEXEC,
+	SOCK_NONBLOCK, PF_ISDN and AF_ISDN.
+	* sysdeps/unix/sysv/linux/mips/sys/epoll.h: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/eventfd.h: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/inotify.h: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/signalfd.h: New file.
+	* sysdeps/unix/sysv/linux/mips/sys/timerfd.h: New file.
+
+2008-08-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu_control.h (_FPU_GETCW, _FPU_SETCW): Make asms
+	volatile.
+
+2008-07-18  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/bits/setjmp.h (__jmp_buf): Give name to structure
+	type.
+
+2008-05-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h: Cleanup namespace.
+	(SOCK_DCCP): Define.
+
+2008-05-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h: Define
+	RUSAGE_THREAD and RUSAGE_LWP.
+
+2008-04-21  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/shm.h: Fix comment describing
+	shmid_ds.
+
+2008-04-21  Khem Raj  <kraj@mvista.com>
+
+	* sysdeps/unix/sysv/linux/mips/xmknod.c: Delete file.
+
+2008-04-02  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/syscalls.list: Add
+	truncate and ftruncate systems calls.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/ftruncate64.c: Make an
+	empty file.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/truncate64.c: Ditto.
+
+2008-03-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/bits/local_lim.h: Undefine
+	ARG_MAX if <linux/limits.h> has defined it.
+
+2008-03-28  Robin Randhawa  <robin@mips.com>
+
+	* sysdeps/unix/sysv/linux/mips/sys/tas.h (_test_and_set): Added memory
+	barriers to enforce strict ordering on weakly ordered systems.
+
+2008-03-26  David Stephenson  <david.stephenson@sicortex.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/mips/fpu/fesetround.c (fesetround): Use fpu_control_t.
+	* sysdeps/mips/fpu/fgetexcptflg.c (fegetexceptflag): Likewise.
+	* sysdeps/mips/fpu/fsetexcptflg.c (fesetexceptflag): Likewise.
+
+2008-03-09  Andreas Jaeger  <aj@suse.de>
+
+	[BZ #5753]
+	* sysdeps/mips/ieee754.h: Use protected namespace
+	__BIG_ENDIAN/__LITTLE_ENDIAN.
+	Patch by Aurelien Jarno <aurelien@aurel32.net>.
+
+2008-03-04  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/siginfo.h (struct siginfo):
+	Reorganize to match other architectures.  Replace _timer._timer1
+	and _timer._timer2 with _timer.si_tid, _timer.si_overrun, and
+	_timer.si_sigval.  Correct the type of _sigpoll.si_band.
+	(si_timerid, si_overrun): Define.
+	(__SIGEV_PAD_SIZE): Correct for __WORDSIZE == 64.
+	(__pthread_attr_s): Remove declaration.
+	(struct sigevent): Remove XXX.  Add _tid.
+
+2007-10-22  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h (F_DUPFD_CLOEXEC): Define.
+
+2007-09-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Correct return value
+	type and __THROW marker of splice, vmsplice, and tee.
+
+2007-09-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/nptl/tls.h (THREAD_GSCOPE_RESET_FLAG): Pass
+	LLL_PRIVATE argument to lll_futex_wake.
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h (O_CLOEXEC): Define.
+	* sysdeps/unix/sysv/linux/mips/bits/socket.h (PF_UNIX): Update
+	comment.
+	(PF_IUCV, PF_RXRPC): Define.
+	(PF_MAX): Update.
+	(AF_IUCV, AF_RXRPC): Define.
+	(MSG_CMSG_CLOEXEC): Define.
+	(_EXTERN_INLINE): Define to __extern_inline.
+	* sysdeps/unix/sysv/linux/mips/bits/stat.h (UTIME_NOW,
+	UTIME_OMIT): Define.
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h: Include <tls.h>.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h: Renamed all
+	lll_mutex_* resp. lll_robust_mutex_* macros to lll_*
+	resp. lll_robust_*.  Renamed all LLL_MUTEX_LOCK_* macros to
+	LLL_LOCK_*.  Include <kernel-features.h>.
+	(LLL_LOCK_INITIALIZER): Remove duplicate definition.
+	(LLL_PRIVATE, LLL_SHARED, __lll_private_flag): Define.
+	* sysdeps/unix/sysv/linux/mips/nptl/pthread_once.c
+	(clear_once_control, __pthread_once): Pass LLL_PRIVATE argument to
+	lll_futex_wait.
+	(lll_futex_wait, lll_futex_timed_wait, lll_futex_wake,
+	lll_robust_dead, lll_futex_requeue, lll_futex_wake_unlock): Take
+	private arguments.
+	(__lll_robust_trylock): Convert to macro.
+	(__lll_robust_lock_wait): Add private argument.
+	(__lll_lock_wait_private, __lll_lock_wait): Declare.
+	(__lll_lock): Convert to macro.  Take private argument.
+	(__lll_cond_lock): Likewise.
+	(lll_lock, lll_cond_lock): Take private arguments.
+	(__lll_robust_lock): Take private argument.  Convert to macro.
+	(lll_robust_lock, __lll_cond_lock, lll_cond_lock,
+	lll_robust_cond_lock): Take private arguments.
+	(__lll_timedlock_wait, __lll_robust_timedlock_wait): Take private
+	arguments.
+	(__lll_timedlock, __lll_robust_timedlock): Take private arguments.
+	(lll_timedlock, lll_robust_timedlock): Take private arguments.
+	(__lll_unlock, __lll_robust_unlock): Convert to macros.  Take
+	private arguments.
+	(lll_unlock, lll_robust_unlock): Take private arguments.
+	(__lll_mutex_unlock_force, lll_mutex_unlock_force, lll_lock_t,
+	lll_trylock, lll_lock, lll_unlock, lll_islocked): Remove.
+	(lll_wait_tid): Pass LLL_SHARED to lll_futex_wait.
+	(__lll_cond_wait, __lll_cond_timedwait, __lll_cond_wake,
+	__lll_cond_broadcast, lll_cond_wait, lll_cond_timedwait,
+	lll_cond_wake, lll_cond_broadcast): Remove.
+	* sysdeps/unix/sysv/linux/mips/sys/tas.h (_EXTERN_INLINE): Define
+	to __extern_inline.
+
+2007-08-06  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* sysdeps/unix/sysv/linux/mips/dl-cache.h (_DL_CACHE_DEFAULT_ID):
+	New macros for the (n)64 and n32 ABIs.
+	(_dl_cache_check_flags): Define if _DL_CACHE_DEFAULT_ID has been.
+
+2007-07-13  Carlos O'Donell  <carlos@codesourcery.com>
+
+	* sysdeps/mips/bits/wordsize.h [_MIPS_SIM == _ABI64]:
+	Define __WORDSIZE_COMPAT32 as 1.
+
+2007-07-13  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/bits/local_lim.h: Copy from
+	libc/nptl/sysdeps/unix/sysv/linux/bits/local_lim.h.  Increase
+	PTHREAD_STACK_MIN.
+
+2007-07-10  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Comment fix.
+
+	* sysdeps/unix/sysv/linux/mips/nptl/bits/semaphore.h (SEM_VALUE_MAX):
+	Delete.
+
+2007-06-07  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h (ARGIFY): New.
+	(internal_syscall1, internal_syscall2, internal_syscall3,
+	internal_syscall4, internal_syscall5, internal_syscall6): Use it.
+
+2007-06-06  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/mips/nptl/tls.h (THREAD_GSCOPE_FLAG_UNUSED,
+	THREAD_GSCOPE_FLAG_USED, THREAD_GSCOPE_FLAG_WAIT): Define.
+	(THREAD_GSCOPE_RESET_FLAG, THREAD_GSCOPE_SET_FLAG,
+	THREAD_GSCOPE_WAIT): Define.
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h
+	(FUTEX_PRIVATE_FLAG): Define.
+	(lll_unlock_wake_cb): Delete prototype.
+	* sysdeps/unix/sysv/linux/mips/nptl/bits/pthreadtypes.h: Include
+	<endian.h>.
+	(pthread_rwlock_t): Shrink __flags and add __shared.
+
+2007-05-24  Atsushi Nemoto  <anemo@mba.ocn.ne.jp>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/posix_fadvise.c
+	(posix_fadvise): Fix high word of len argument.
+
+2007-05-23  Atsushi Nemoto  <anemo@mba.ocn.ne.jp>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/posix_fadvise.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/posix_fadvise64.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/readahead.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips32/sync_file_range.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/posix_fadvise64.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/syscalls.list: New file.
+
+2007-05-23  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips64/n32/Implies: Add mips/mips64/soft-fp.
+	* sysdeps/mips/mips64/n64/Implies: Likewise.
+	* sysdeps/mips/mips64/soft-fp/Makefile: New.
+	* sysdeps/mips/mips64/soft-fp/e_sqrtl.c: New.
+	* sysdeps/mips/mips64/soft-fp/sfp-machine.h: Include <fenv.h> and
+	<fpu_control.h>.  Use hardware exception and rounding mode
+	settings.
+
+2007-05-23  Richard Sandiford  <rsandifo@nildram.co.uk>
+
+	* sysdeps/mips/dl-machine.h (elf_machine_reloc): Change type of
+	r_info argument to ElfW(Addr).
+
+2007-02-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/bits/mathdef.h (float_t): Change to float.
+
+2007-01-25  Atsushi Nemoto <anemo@mba.ocn.ne.jp>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/syscalls.list: Remove msgctl,
+	shmctl, and semctl.
+	* sysdeps/unix/sysv/linux/mips/misp64/semctl.c,
+	sysdeps/unix/sysv/linux/mips/mips64/shmctl.c,
+	sysdeps/unix/sysv/linux/mips/mips64/msgctl.c: New files.
+
+2007-01-23  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips32/sysdep.h (PTR_MANGLE,
+	PTR_DEMANGLE): Define.
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h (PTR_MANGLE,
+	PTR_DEMANGLE): Define.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h (PTR_MANGLE,
+	PTR_DEMANGLE): Define.
+
+2007-01-23  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/nptl/sysdep-cancel.h
+	(cfi_same_value): Delete definition.
+
+2007-01-08  Richard Sandiford  <richard@codesourcery.com>
+
+	* sysdeps/mips/dl-machine.h (ELF_MACHINE_NO_RELA): Delete.
+	(elf_machine_reloc): New function, retaining the body of
+	elf_machine_rel.  Take the reloc's r_info field as an argument,
+	not the reloc itself.  Add extra r_addend and inplace_p arguments.
+	When inplace_p is false, use r_addend as the addend, not the contents
+	of the relocation field.  Hoist the conversion of reloc_addr to
+	"ELFW(Addr) *".  Don't try to apply TLS relocations against
+	undefined symbols.  Add R_MIPS_GLOB_DAT support.
+	(elf_machine_rel, elf_machine_rela): Use elf_machine_reloc.
+	(elf_machine_lazy_rel): Change the reloc type from ElfW(Rel)
+	to ElfW(Rela).
+
+2007-01-08  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/mips/ldsodefs.h: Merge sysdeps/mips/elf/ldsodefs.h.  Correct
+	multiple inclusion guard.
+	* sysdeps/mips/elf/ldsodefs.h: Delete file.
+
+2007-01-04  Thiemo Seufer  <ths@networkno.de>
+
+	* sysdeps/unix/sysv/linux/mips/bits/msq.h (struct msqid_ds): Update
+	to match the kernel.
+
+2006-10-31  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/sysdep-cancel.h
+	(RTLD_SINGLE_THREAD_P): Define.
+	* sysdeps/unix/sysv/linux/mips/mips64/nptl/sysdep-cancel.h: Likewise.
+
+2006-10-31  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h (splice): Update
+	prototype.
+
+2006-09-22  Richard Sandiford  <richard@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/xstatconv.c: Remove STAT_IS_KERNEL_STAT
+	code.
+	(__xstat_conv): Use memset to clear padding arrays.  Check for
+	overflow.
+	(__xstat64_conv): Use memset to clear padding arrays.
+	(__xstat32_conv): New function.
+	* sysdeps/unix/sysv/linux/mips/mips32/fxstatat.c: New file.
+	* sysdeps/unix/sysv/linux/mips/mips64/fxstatat64.c: Likewise.
+
+2006-09-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu_control.h: If soft-float, don't use
+	floating-point registers.
+	* sysdeps/mips/__longjmp.c, sysdeps/mips/setjmp_aux.c,
+	sysdeps/mips/mips64/__longjmp.c, sysdeps/mips/mips64/setjmp_aux.c:
+	Likewise.
+
+2006-08-04  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h (FUTEX_LOCK_PI,
+	FUTEX_UNLOCK_PI, FUTEX_TRYLOCK_PI): Define.
+
+2006-07-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/mips64/n32/libm-test-ulps,
+	sysdeps/mips/mips64/n64/libm-test-ulps: New.
+
+2006-07-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/sigaction.c: If WRAPPER_INCLUDE is
+	defined, include the named file.
+
+2006-06-08  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Reformat.
+	(SPLICE_F_MOVE, SPLICE_F_NONBLOCK, SPLICE_F_MORE, SPLICE_F_GIFT):
+	Define.
+
+2006-06-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h (RLIM_INFINITY,
+	RLIM64_INFINITY): Define appropriately for N64.  Use unsigned
+	types.
+
+2006-06-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/kernel_stat.h (struct kernel_stat):
+	Don't use struct timespec.
+	* sysdeps/unix/sysv/linux/mips/xstatconv.c (__xstat_conv,
+	__xstat64_conv): Copy individual timespec fields.
+
+2006-06-02  Richard Sandiford  <richard@codesourcery.com>
+
+	* sysdeps/mips/Makefile (ASFLAGS-.os): Define.
+
+2006-06-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/mips/fpu/feholdexcpt.c: Add libm_hidden_def.
+	* sysdeps/mips/fpu/fesetround.c: Likewise.
+
+2006-05-10  Richard Sandiford  <richard@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/register-dump.h (register_dump): Don't
+	dump sc_cause, sc_status or sc_badvaddr.
+	* sysdeps/unix/sysv/linux/mips/bits/sigcontext.h: Rewrite.  Update
+	structure definitions after DSP kernel changes.
+	* sysdeps/unix/sysv/linux/mips/sys/ucontext.h (mcontext_t): Update
+	after the same DSP changes.
+
+2006-05-08  Richard Sandiford  <richard@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/stat.h (struct stat): Add
+	st_atim, st_mtim and st_ctim interface.
+	(struct stat64): Likewise.
+	* sysdeps/unix/sysv/linux/mips/kernel_stat.h (struct kernel_stat):
+	Replace st_atime and its padding field with st_atim.  Likewise
+	st_mtime/st_mtim and st_ctime/st_ctim.
+	* sysdeps/unix/sysv/linux/mips/xstatconv.c (__xstat_conv): Update
+	after above changes.
+	(__xstat64_conv): Likewise.
+
+2006-05-08  Richard Sandiford  <richard@codesourcery.com>
+
+	* sysdeps/mips/ldsodefs.h: New file.
+	* sysdeps/mips/tst-audit.h: New file.
+
+2006-05-05  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/mman.h: Formatting changes
+	for consistency with other ports.
+	(MADV_REMOVE): Correct value.
+	(MADV_DONTFORK, MADV_DOFORK, POSIX_MADV_NORMAL,
+	POSIX_MADV_RANDOM, POSIX_MADV_SEQUENTIAL, POSIX_MADV_WILLNEED,
+	POSIX_MADV_DONTNEED): Define.
+
+2006-05-05  Lior Balkohen  <balkohen@gmail.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Remove
+	LINUX_FADV_ASYNC_WRITE and LINUX_FADV_WRITE_WAIT.
+	Define SYNC_FILE_RANGE_WAIT_BEFORE, SYNC_FILE_RANGE_WRITE
+	and SYNC_FILE_RANGE_WAIT_AFTER.
+	Declare sync_file_range, vmsplice, splice and tee.
+
+2006-03-27  Lior Balkohen  <balkohen@gmail.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/fcntl.h: Define
+	LINUX_FADV_ASYNC_WRITE and LINUX_FADV_WRITE_WAIT.  Add readahead
+	prototype.
+
+2006-03-27  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/bits/poll.h (POLLREMOVE, POLLRDHUP):
+	Define.
+
+2006-03-27  Denis Barbier  <barbier@linuxfr.org>
+
+	* sysdeps/unix/sysv/linux/mips/bits/resource.h (RLIMIT_RTPRIO): Fix
+	typo.
+
+2006-03-11  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/fork.c: Correct path to
+	i386/fork.c.
+
+2006-03-11  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/configure.in: Set libc_cv_slibdir,
+	libc_cv_localedir, libdir, arch_minimum_kernel, and
+	libc_cv_gcc_unwind_find_fde.
+	* sysdeps/unix/sysv/linux/mips/mips64/configure.in: New file.
+	* sysdeps/unix/sysv/linux/mips/configure: Regenerated.
+	* sysdeps/unix/sysv/linux/mips/mips64/configure: Generated.
+
+2006-03-02  Lior Balkohen  <balkohen@gmail.com>
+
+	* sysdeps/unix/sysv/linux/mips/nptl/bits/pthreadtypes.h
+	(__pthread_list_t, __pthread_slist_t): New typedefs.
+	(pthread_mutex_t): Replace __next and __prev fields with __list.
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h (FUTEX_WAKE_OP,
+	FUTEX_OP_CLEAR_WAKE_IF_GT_ONE): Define.
+	(lll_futex_wake_unlock): Define.
+	(lll_robust_mutex_dead, lll_robust_mutex_trylock, lll_robust_mutex_lock,
+	lll_robust_mutex_cond_lock, lll_robust_mutex_timedlock,
+	lll_robust_mutex_unlock): New macros.
+	(__lll_robust_lock_wait, __lll_robust_timedlock_wait): New prototypes.
+	* sysdeps/unix/sysv/linux/mips/nptl/pt-vfork.S: Use correct path to
+	vfork.S.
+	* sysdeps/unix/sysv/linux/mips/nptl/vfork.S: Likewise.
+
+2006-03-02  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/ptrace.c: Delete file.
+	* sysdeps/unix/sysv/linux/mips/sys/ptrace.h: Delete file.
+
+2006-03-02  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/mips/mips64/n32/sysdep.h
+	(INTERNAL_SYSCALL): Update internal_syscall##nr invocation.
+	(INTERNAL_SYSCALL_NCS): New.
+	(internal_syscall0, internal_syscall1, internal_syscall2,
+	internal_syscall3, internal_syscall4, internal_syscall5,
+	internal_syscall6): Take ncs_init, cs_init, and input arguments.
+	Use them.  Correct types for registers.
+	* sysdeps/unix/sysv/linux/mips/mips64/n64/sysdep.h
+	(INTERNAL_SYSCALL): Update internal_syscall##nr invocation.
+	(INTERNAL_SYSCALL_NCS): New.
+	(internal_syscall0, internal_syscall1, internal_syscall2,
+	internal_syscall3, internal_syscall4, internal_syscall5,
+	internal_syscall6): Take ncs_init, cs_init, and input arguments.
+	Use them.
+	* sysdeps/unix/sysv/linux/mips/mips64/syscalls.list: Remove
+	recvfrom and sendto.  Mark lseek, msgrcv, and msgsnd as cancellation
+	points.
+	* sysdeps/mips/dl-machine.h (elf_machine_rel): Remove unused "value".
+	Use Elf(Addr) for TLS relocation targets.
+	* sysdeps/unix/sysv/linux/mips/mips64/Makefile: New file.
+	* sysdeps/unix/sysv/linux/mips/nptl/lowlevellock.h (lll_futex_wait,
+	lll_futex_timed_wait, lll_futex_wake, lll_futex_requeue): Cast
+	futexp to long for n64.
+	* sysdeps/unix/sysv/linux/mips/mips64/nptl/sysdep-cancel.h: New file.
+
+2006-02-20  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/mips/shlib-versions: New file.
+	* sysdeps/mips/preconfigure: New file.
+	* sysdeps/unix/sysv/linux/mips/kernel-features.h: New file.

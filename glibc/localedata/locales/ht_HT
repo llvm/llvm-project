@@ -1,0 +1,185 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Haitian Kreyol (Kreyòl Ayisyen) language locale for Haiti
+%
+% Prepared and contributed to glibc by Bastien Guerry <bzg@laptop.org> and
+% Chris Leonard <cjl@sugarlabs.org>
+% This locale data has been developed in collaboration between:
+% Sugar Labs,  http://www.sugarlabs.org/
+% One Laptop Per Child, http://one.laptop.org/
+% OLPC France, http://olpc-france.org
+% and members of the OLPC Haiti volunteer team
+%
+% build with: localedef -f UTF-8 -i ht_HT ht_HT
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+title        "Kreyol locale for Haiti"
+source       "Sugar Labs // OLPC"
+address      ""
+contact      "sugarlabs.org"
+email        "libc-alpha@sourceware.org"
+tel          ""
+fax          ""
+language     "Haitian Creole"
+territory    "Haiti"
+revision     "1.1"
+date         "2013-08-09"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+% In Haitian Kreyol, accents are simply omitted if they cannot be represented.
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+% janvye, fevriye, mas, avril, me, jen, jiyè, out, septanm, oktòb, novanm, desanm
+mon           "janvye";/
+     "fevriye";/
+     "mas";/
+     "avril";/
+     "me";/
+     "jen";/
+     "jiy<U00E8>";/
+     "out";/
+     "septanm";/
+     "okt<U00F2>b";/
+     "novanm";/
+     "desanm"
+% jan, fev, mas, avr, me, jen, jiy, out, sep, okt, nov, des
+abmon         "jan";/
+       "fev";/
+       "mas";/
+       "avr";/
+       "me";/
+       "jen";/
+       "jiy";/
+       "out";/
+       "sep";/
+       "okt";/
+       "nov";/
+       "des"
+% dimanch, lendi, madi, mèkredi, jedi, vandredi, samdi
+day           "dimanch";/
+     "lendi";/
+     "madi";/
+     "m<U00E8>kredi";/
+     "jedi";/
+     "vandredi";/
+     "samdi"
+% dim, len, mad, mèk, jed, van, sam
+abday         "dim";/
+       "len";/
+       "mad";/
+       "m<U00E8>k";/
+       "jed";/
+       "van";/
+       "sam"
+week 7;19971130;1
+first_weekday 2
+d_t_fmt       "%a %d %b %Y %T"
+date_fmt      "%a %d %b %Y %T %Z"
+d_fmt         "%d//%m//%Y"
+t_fmt         "%T"
+am_pm         "";""
+t_fmt_ampm    ""
+END LC_TIME
+
+LC_NUMERIC
+decimal_point ","
+thousands_sep "<U202F>"
+grouping      3
+END LC_NUMERIC
+
+LC_MONETARY
+int_curr_symbol           "HTG "
+currency_symbol           "g"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1wWoOyY]"
+noexpr  "^[-0nN]"
+yesstr  "Wi"
+nostr   "Non"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %R%N%%Z %t%N%c%N"
+country_name "Ayiti"
+country_post "HT"
+country_ab2  "HT"
+country_ab3  "HTI"
+country_num  332
+country_isbn 99935
+country_car  "RH"
+%
+% Kreyòl ayisyen
+lang_name    "Krey<U00F2>l ayisyen"
+lang_ab      "ht"
+lang_term    "hat"
+lang_lib    "hat"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+tel_dom_fmt "%a %l"
+int_select  "00"
+int_prefix  "509"
+END LC_TELEPHONE

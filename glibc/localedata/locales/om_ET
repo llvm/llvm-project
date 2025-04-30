@@ -1,0 +1,223 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Oromo language locale for Ethiopia.
+%
+% Oromo terms are provided by Mahdi Hamid Muudee of Sagalee Oromoo
+% Publishing Co. Inc and formatted in this locale by Daniel Yacob of
+% the Ge'ez Frontier Foundation.  The Oromo language terms used here
+% are those considered to be canonical in the Oromo language under
+% contemporary and progressive usage adopted by government bureaus
+% across the Oromo region.  Regional synonyms naturally exist for many
+% of the month and day names.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f UTF-8 -i om_ET om_ET
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Oromo language locale for Ethiopia."
+source     "Ge'ez Frontier Foundation & Sagalee Oromoo Publishing Co. Inc."
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Oromo"
+territory  "Ethiopia"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopic & Qubee Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "am_ET"
+copy "om_KE"
+END LC_COLLATE
+
+LC_CTYPE
+copy "ti_ET"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopia Specifc and Shared Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "ti_ET"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "ti_ET"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ti_ET"
+END LC_NUMERIC
+
+LC_PAPER
+copy "ti_ET"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ti_ET"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Oromo Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MESSAGES
+yesexpr "^[+1eEyY]"
+noexpr  "^[-0mMnN]"
+yesstr  "eeyyee"
+nostr   "miti"
+END LC_MESSAGES
+
+
+LC_NAME
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_NAME category.
+%
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    ""
+name_mr     "Ob"
+name_mrs    "Ad"
+name_miss   "Du"
+name_ms     ""
+%
+END LC_NAME
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Oromo/ET Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_ADDRESS category.
+%
+postal_fmt    "%z%c%T%s%b%e%r"
+country_name  "Itoophiyaa"
+country_post  "ETH"
+country_ab2   "ET"
+country_ab3   "ETH"
+country_num   231   % 210 found in at least one ISO 3166 doc
+country_car    "ETH"
+% country_isbn  unknown, Need ISO 2108
+lang_name     "Oromoo"
+lang_ab       "om"
+lang_term     "orm"
+lang_lib      "orm"
+%
+END LC_ADDRESS
+
+
+LC_TIME
+%
+% Abbreviated weekday names (%a)
+%
+abday    "Dil";"Wix";"Qib";"Rob";"Kam";"Jim";"San"
+%
+% Full weekday names (%A)
+%
+day      "Dilbata";/
+	 "Wiixata";/
+	 "Qibxata";/
+	 "Roobii";/
+	 "Kamiisa";/
+	 "Jimaata";/
+	 "Sanbata"
+%
+% Abbreviated month names (%b)
+%
+abmon    "Ama";/
+         "Gur";/
+         "Bit";/
+         "Elb";/
+         "Cam";/
+         "Wax";/
+         "Ado";/
+         "Hag";/
+         "Ful";/
+         "Onk";/
+         "Sad";/
+         "Mud"
+%
+% Full month names (%B)
+%
+mon      "Amajjii";/
+         "Guraandhala";/
+         "Bitooteessa";/
+         "Elba";/
+         "Caamsa";/
+         "Waxabajjii";/
+         "Adooleessa";/
+         "Hagayya";/
+         "Fuulbana";/
+         "Onkololeessa";/
+         "Sadaasa";/
+         "Muddee"
+%
+% Equivalent of AM PM
+%
+am_pm    "WD";"WB"
+%
+% Appropriate date representation (%x)
+d_fmt   "%d//%m//%Y"
+%
+% Appropriate time representation (%X)
+t_fmt "%l:%M:%S %p"
+%
+% Appropriate AM/PM time representation (%r)
+t_fmt_ampm "%l:%M:%S %p"
+%
+% Appropriate date and time representation (%c)
+d_t_fmt    "%A, %B %e, %Y %r %Z"
+%
+% Appropriate date representation (date(1))
+date_fmt    "%A, %B %e, %r %Z %Y"
+%
+week 7;19971130;1
+END LC_TIME

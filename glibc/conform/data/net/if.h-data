@@ -1,0 +1,16 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+type {struct if_nameindex}
+
+element {struct if_nameindex} {unsigned int} if_index
+element {struct if_nameindex} {char*} if_name
+
+macro IF_NAMESIZE
+
+function {unsigned int} if_nametoindex (const char*)
+function {char*} if_indextoname (unsigned int, char*)
+function {struct if_nameindex*} if_nameindex (void)
+function void if_freenameindex (struct if_nameindex*)
+
+allow *_t
+allow IF_*
+#endif

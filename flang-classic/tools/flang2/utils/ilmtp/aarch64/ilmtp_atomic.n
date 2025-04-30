@@ -1,0 +1,72 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+
+
+.IL BEGINATOMIC misc
+Start marker for an ACC Atomic statement.
+.AT spec trm
+.IL ENDATOMIC misc
+End marker for an ACC Atomic statement.
+.AT spec trm
+.IL BEGINATOMICREAD misc
+Start marker for an ACC Atomic Read statement.
+.AT spec trm
+.IL ENDATOMICREAD misc
+End marker for an ACC Atomic Read statement.
+.AT spec trm
+.IL BEGINATOMICWRITE misc
+Start marker for an ACC Atomic Write statement.
+.AT spec trm
+.IL ENDATOMICWRITE misc
+End marker for an ACC Atomic Write statement.
+.AT spec trm
+.IL BEGINATOMICCAPTURE misc
+Start marker for an ACC Atomic Capture block.
+.AT spec trm
+.IL ENDATOMICCAPTURE misc
+End marker for an ACC Atomic Capture block.
+.AT spec trm
+.IL MP_ATOMIC SMP
+Begin atomic region.
+Always matches a ENDATOMIC ilm.
+.AT spec trm
+.IL MP_ENDATOMIC SMP
+End atomic region.
+Always matches a MP_ATOMIC ilm.
+.AT spec trm
+.IL MP_ATOMICREAD SMP lnk stc
+Atomic read 
+.nf
+lnk - link variable to be loaded
+stc - memory order
+.AT spec trm
+.IL MP_ATOMICWRITE SMP lnk lnk stc
+Atomic write
+.nf
+lnk1 - link to left hand side of atomic write
+lnk2 - link to right hand side of atomic write
+stc1 - memory order
+.AT spec trm
+.IL MP_ATOMICUPDATE SMP lnk lnk stc stc
+Atomic write
+.nf
+lnk1 - link to left hand side of atomic update
+lnk2 - link to rhs atomic update
+stc1 - memory order
+stc2 - aop
+.AT spec trm
+.IL MP_ATOMICCAPTURE SMP lnk lnk stc stc stc
+Atomic write
+.nf
+lnk1 - link to left hand side of atomic capture
+lnk2 - link to right hand side of capture statement
+stc1 - memory order
+stc2 - aop
+stc4 - bit vector(unused): 
+0x01 - set if we capture before update
+0x02 - set if this is a capture & write
+.AT spec trm

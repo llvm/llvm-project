@@ -221,6 +221,9 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  std::unique_ptr<PragmaHandler> NSMarkHandler;
+  std::unique_ptr<PragmaHandler> NSLocationHandler;
+  std::unique_ptr<PragmaHandler> NSVectorizeHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -848,11 +851,20 @@ private:
   /// #pragma clang loop and #pragma unroll.
   bool HandlePragmaLoopHint(LoopHint &Hint);
 
+  /// Get NextSilicon loop mark from token info.
+  StringRef PragmaNSLoopGetMark();
+
   bool ParsePragmaAttributeSubjectMatchRuleSet(
       attr::ParsedSubjectMatchRuleSet &SubjectMatchRules,
       SourceLocation &AnyLoc, SourceLocation &LastMatchRuleEndLoc);
 
   void HandlePragmaAttribute();
+
+  /// Handle function mark NextSilicon #pragma.
+  void HandlePragmaNSMark();
+
+  /// Handle function mark NextSilicon #pragma location.
+  void HandlePragmaNSLocation();
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)
@@ -2207,6 +2219,16 @@ private:
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs);
+  StmtResult ParsePragmaNSMark(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                               SourceLocation *TrailingElseLoc,
+                               ParsedAttributes &Attrs);
+  StmtResult ParsePragmaNSLocation(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                                   SourceLocation *TrailingElseLoc,
+                                   ParsedAttributes &Attrs);
+  StmtResult ParsePragmaNSVectorize(StmtVector &Stmts,
+                                    ParsedStmtContext StmtCtx,
+                                    SourceLocation *TrailingElseLoc,
+                                    ParsedAttributes &Attrs);
 
   /// Describes the behavior that should be taken for an __if_exists
   /// block.

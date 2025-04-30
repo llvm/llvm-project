@@ -1,0 +1,12 @@
+#include <sysdep.h>
+#include <tls.h>
+#include <kernel-features.h>
+
+RESULT			offsetof (struct pthread, result)
+TID			offsetof (struct pthread, tid)
+CANCELHANDLING		offsetof (struct pthread, cancelhandling)
+CLEANUP_JMP_BUF		offsetof (struct pthread, cleanup_jmp_buf)
+MULTIPLE_THREADS_OFFSET	offsetof (struct pthread, header.multiple_threads)
+TLS_PRE_TCB_SIZE	sizeof (struct pthread)
+MUTEX_FUTEX		offsetof (pthread_mutex_t, __data.__lock)
+POINTER_GUARD		offsetof (tcbhead_t, pointer_guard)

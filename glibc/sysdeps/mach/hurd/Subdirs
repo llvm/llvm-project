@@ -1,0 +1,9 @@
+# This file says that the hurd subdirectory should appear before all others.
+# The mach and hurd subdirectories have many generated header files which
+# much of the rest of the library depends on, so it is best to build them
+# first (and mach before hurd, at that).  The before-compile additions in
+# sysdeps/{mach,hurd}/Makefile should make it reliably work for these files
+# not to exist when making in other directories, but it will be slower that
+# way with more somewhat expensive `make' invocations.
+
+first hurd

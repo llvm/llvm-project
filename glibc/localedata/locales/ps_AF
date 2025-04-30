@@ -1,0 +1,333 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%% locale definition file "ps_AF"  %%%%%%%%%%%%%%%%%%%%%%
+
+% Pashto Locale for Afghanistan
+% Filename: ps_AF
+% Locale name: ps_AF.UTF-8
+% Language: Pashto
+% Territory: Afghanistan
+% Revision: 0.1
+% By: Nasir Gulzade<nasirgulzade@hotmail.com>
+% Creation Date: Thu, 15 Jan 2009 18:16:15 +0500 GMT
+% Last Modification Date: Fri, 16 Jan 2009 20:33:40 +0500 GMT
+%
+
+
+LC_IDENTIFICATION
+title      "Pashto locale for Afghanistan"
+source     "Nasir Gulzade"
+address    "see e-mail."
+contact    "Nasir Gulzade"
+email      "nasirgulzade@hotmail.com"
+tel        ""
+fax        ""
+language   "Pashto"
+territory  "Afghanistan"
+revision   "0.2"
+date       "2009-01-16"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy	"i18n"
+outdigit	<U0660>..<U0663>;<U06F4>;<U0665>..<U0669>
+map to_outpunct;  (<U002E>,<U066B>);(<U002C>,<U066C>)
+END LC_CTYPE
+
+LC_COLLATE
+% CLDR collation rules for Pashto:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/ps.xml)
+%
+% <collation type="standard">
+%   <cr><![CDATA[
+%     [normalization on]
+%     [reorder Arab]
+%     &َ<<ِ<<ُ<<ً<<ٍ<<ٌ
+%     &[before 1]ا<آ
+%     &ا<<أ<<ٲ<<ٱ<<إ<<ٳ<ء
+%     &ت<ټ<<ٹ
+%     &ج<ځ<<حٔ
+%     &چ<څ
+%     &د<ډ<<ڈ
+%     &ر<ړ<<ڑ
+%     &ژ<ږ
+%     &ک<<*ڪك
+%     &ګ<<گ
+%     &ڼ<<ڻ
+%     &و<<ؤ<<ۇ<<ۉ
+%     &ه<<<ۀ<<<هٔ<<*ەہھةۃ
+%     &ی<<*ىےيېۍ<<یٔ<<<ىٔ<<<ئ
+%     &\u00A0<<\u200C<<\u200D
+%   ]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/ps.xml)
+%
+% <exemplarCharacters type="index" draft="unconfirmed">[آ ا ء ب پ ت ټ ث ج ځ چ څ ح خ د ډ ذ ر ړ ز ژ ږ س ش ښ ص ض ط ظ ع غ ف ق ک ګ ل م ن ڼ ه و ی]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+copy "iso14651_t1"
+
+collating-element <arabic-letter-heh-with-hamza-above> from "<U0647><U0654>" % هٔ
+collating-element <arabic-letter-farsi-yeh-with-hamza-above> from "<U06CC><U0654>" % یٔ
+collating-element <arabic-letter-alef-maksura-with-hamza-above> from "<U0649><U0654>" % ىٔ
+
+% &َ<<ِ<<ُ<<ً<<ٍ<<ٌ
+reorder-after <FATHA>
+<KASRA>
+<DAMMA>
+<FATHATAN>
+<KASRATAN>
+<DAMMATAN>
+
+% &[before 1]ا<آ
+reorder-after <S08AC> % ARABIC LETTER ROHINGYA YEH
+<S0622> % ARABIC LETTER ALEF WITH MADDA ABOVE
+
+% &ا<<أ<<ٲ<<ٱ<<إ<<ٳ<ء
+% Entry in iso14651_t1_common:
+%
+%    <U0627> <S0627>;<BASE>;<MIN>;<U0627> % ARABIC LETTER ALEF
+%
+<U0623> <S0627>;"<BASE><VRNT1>";<MIN>;<U0623> % ARABIC LETTER ALEF WITH HAMZA ABOVE
+<U0672> <S0627>;"<BASE><VRNT2>";<MIN>;<U0672> % ARABIC LETTER ALEF WITH WAVY HAMZA ABOVE
+<U0671> <S0627>;"<BASE><VRNT3>";<MIN>;<U0671> % ARABIC LETTER ALEF WASLA
+<U0625> <S0627>;"<BASE><VRNT4>";<MIN>;<U0625> % ARABIC LETTER ALEF WITH HAMZA BELOW
+<U0673> <S0627>;"<BASE><VRNT5>";<MIN>;<U0673> % ARABIC LETTER ALEF WITH WAVY HAMZA BELOW
+
+reorder-after <S0627> % ARABIC LETTER ALEF
+<S0621> % ARABIC LETTER HAMZA
+
+% &ت<ټ<<ٹ
+reorder-after <S062A> % ARABIC LETTER TEH
+<S067C> % ARABIC LETTER TEH WITH RING
+
+<U067C> <S067C>;"<BASE><BASE>";<MIN>;<U067C> % ARABIC LETTER TEH WITH RING
+<U0679> <S067C>;"<BASE><VRNT1>";<MIN>;<U0679> % ARABIC LETTER TTEH
+
+% &ج<ځ<<حٔ
+reorder-after <S062C> % ARABIC LETTER JEEM
+<S0681> % ARABIC LETTER HAH WITH HAMZA ABOVE
+
+<U0681> <S0681>;"<BASE><BASE>";<MIN>;<U0681> % ARABIC LETTER HAH WITH HAMZA ABOVE
+<U062D> <S0681>;"<BASE><VRNT1>";<MIN>;<U062D> % ARABIC LETTER HAH
+
+% &چ<څ
+reorder-after <S0686> % ARABIC LETTER TCHEH
+<S0685> % ARABIC LETTER HAH WITH THREE DOTS ABOVE
+
+% &د<ډ<<ڈ
+reorder-after <S062F> % ARABIC LETTER DAL
+<S0689> % ARABIC LETTER DAL WITH RING
+
+<U0689> <S0689>;"<BASE><BASE>";<MIN>;<U0689> % ARABIC LETTER DAL WITH RING
+<U0688> <S0689>;"<BASE><VRNT1>";<MIN>;<U0688> % ARABIC LETTER DDAL
+
+% &ر<ړ<<ڑ
+reorder-after <S0631> % ARABIC LETTER REH
+
+<U0693> <S0693>;"<BASE><BASE>";<MIN>;<U0693> % ARABIC LETTER REH WITH RING
+<U0691> <S0693>;"<BASE><VRNT1>";<MIN>;<U0691> % ARABIC LETTER RREH
+
+% &ژ<ږ
+reorder-after <S0698> % ARABIC LETTER JEH
+<S0696> % ARABIC LETTER REH WITH DOT BELOW AND DOT ABOVE
+
+% &ک<<*ڪك
+<U06A9> <S06A9>;"<BASE><BASE>";<MIN>;<U06A9> % ARABIC LETTER KEHEH
+<U06AA> <S06A9>;"<BASE><VRNT1>";<MIN>;<U06AA> % ARABIC LETTER SWASH KAF
+<U0643> <S06A9>;"<BASE><VRNT2>";<MIN>;<U0643> % ARABIC LETTER KAF
+
+% &ګ<<گ
+<U06AB> <S06AB>;"<BASE><BASE>";<MIN>;<U06AB> % ARABIC LETTER KAF WITH RING
+<U06AF> <S06AB>;"<BASE><VRNT1>";<MIN>;<U06AF> % ARABIC LETTER GAF
+
+% &ڼ<<ڻ
+<U06BC> <S06BC>;"<BASE><BASE>";<MIN>;<U06BC> % ARABIC LETTER NOON WITH RING
+<U06BB> <S06BC>;"<BASE><VRNT1>";<MIN>;<U06BB> % ARABIC LETTER RNOON
+
+% &و<<ؤ<<ۇ<<ۉ
+<U0648> <S0648>;"<BASE><BASE>";<MIN>;<U0648> % ARABIC LETTER WAW
+<U0624> <S0648>;"<BASE><VRNT1>";<MIN>;<U0624> % ARABIC LETTER WAW WITH HAMZA ABOVE
+<U06C7> <S0648>;"<BASE><VRNT2>";<MIN>;<U06C7> % ARABIC LETTER U
+<U06C9> <S0648>;"<BASE><VRNT3>";<MIN>;<U06C9> % ARABIC LETTER KIRGHIZ YU
+
+% &ه<<<ۀ<<<هٔ<<*ەہھةۃ
+<U0647> <S0647>;"<BASE><BASE>";"<MIN><VRNT1>";<U0647> % ARABIC LETTER HEH
+<U06C0> <S0647>;"<BASE><BASE>";"<MIN><VRNT2>";<U06C0> % ARABIC LETTER HEH WITH YEH ABOVE
+<arabic-letter-heh-with-hamza-above> <S0647>;"<BASE><BASE>";"<MIN><VRNT3>";"<U0647><U0654>" % ARABIC LETTER HEH WITH HAMZA ABOVE
+
+<U06D5> <S0647>;"<BASE><VRNT1>";<MIN>;<U06D5> % ARABIC LETTER AE
+<U06C1> <S0647>;"<BASE><VRNT2>";<MIN>;<U06C1> % ARABIC LETTER HEH GOAL
+<U06BE> <S0647>;"<BASE><VRNT3>";<MIN>;<U06BE> % ARABIC LETTER HEH DOACHASHMEE
+<U0629> <S0647>;"<BASE><VRNT4>";<MIN>;<U0629> % ARABIC LETTER TEH MARBUTA
+<U06C3> <S0647>;"<BASE><VRNT5>";<MIN>;<U06C3> % ARABIC LETTER TEH MARBUTA GOAL
+
+% &ی<<*ىےيېۍ<<یٔ<<<ىٔ<<<ئ
+% Entry in iso14651_t1_common:
+%
+% <U06CC> <S06CC>;<BASE>;<MIN>;<U06CC> % ARABIC LETTER FARSI YEH
+<U0649> <S06CC>;"<BASE><VRNT1><VRNT1>";<MIN>;<U0649> % ARABIC LETTER ALEF MAKSURA
+<U06D2> <S06CC>;"<BASE><VRNT1><VRNT2>";<MIN>;<U06D2> % ARABIC LETTER YEH BARREE
+<U064A> <S06CC>;"<BASE><VRNT1><VRNT3>";<MIN>;<U064A> % ARABIC LETTER YEH
+<U06D0> <S06CC>;"<BASE><VRNT1><VRNT4>";<MIN>;<U06D0> % ARABIC LETTER E
+<U06CD> <S06CC>;"<BASE><VRNT2><VRNT1>";<MIN>;<U06CD> % ARABIC LETTER YEH WITH TAIL
+<arabic-letter-farsi-yeh-with-hamza-above> <S06CC>;"<BASE><VRNT2><VRNT2>";<MIN>;<U06CC>
+<arabic-letter-alef-maksura-with-hamza-above> <S06CC>;"<BASE><VRNT2><VRNT2>";<CAP>;<U0649>
+<U0626> <S06CC>;"<BASE><VRNT2><VRNT2>";<COMPATCAP>;<U0626> % ARABIC LETTER YEH WITH HAMZA ABOVE
+
+% &\u00A0<<\u200C<<\u200D
+<U00A0> IGNORE;"<VRNT1>";IGNORE;<U00A0> % NO-BREAK SPACE
+<U200C> IGNORE;"<VRNT2>";IGNORE;<U200C> % ZERO WIDTH NON-JOINER
+<U200D> IGNORE;"<VRNT3>";IGNORE;<U200D> % ZERO WIDTH JOINER
+
+reorder-end
+
+END LC_COLLATE
+
+LC_TIME
+abday	"<U06CC>.";/
+	"<U062F>.";/
+	"<U0633>.";/
+	"<U0686>.";/
+	"<U067E>.";/
+	"<U062C>.";/
+	"<U0634>."
+day	"<U06CC><U06A9><U0634><U0646><U0628><U0647>";/
+	"<U062F><U0648><U0634><U0646><U0628><U0647>";/
+	"<U0633><U0647><U200C><U0634><U0646><U0628><U0647>";/
+	"<U0686><U0627><U0631><U0634><U0646><U0628><U0647>";/
+	"<U067E><U0646><U062C><U0634><U0646><U0628><U0647>";/
+	"<U062C><U0645><U0639><U0647>";/
+	"<U0634><U0646><U0628><U0647>"
+abmon	"<U062C><U0646><U0648><U0631><U064A>";/
+	"<U0641><U0628><U0631><U0648><U0631><U064A>";/
+	"<U0645><U0627><U0631><U0686>";/
+	"<U0627><U067E><U0631><U06CC><U0644>";/
+	"<U0645><U06CD>";/
+	"<U062C><U0648><U0646>";/
+	"<U062C><U0648><U0644><U0627><U06CC>";/
+	"<U0627><U06AB><U0633><U062A>";/
+	"<U0633><U067E><U062A><U0645><U0628><U0631>";/
+	"<U0627><U06A9><U062A><U0648><U0628><U0631>";/
+	"<U0646><U0648><U0645><U0628><U0631>";/
+	"<U062F><U0633><U0645><U0628><U0631>"
+mon	"<U062C><U0646><U0648><U0631><U064A>";/
+	"<U0641><U0628><U0631><U0648><U0631><U064A>";/
+	"<U0645><U0627><U0631><U0686>";/
+	"<U0627><U067E><U0631><U06CC><U0644>";/
+	"<U0645><U06CD>";/
+	"<U062C><U0648><U0646>";/
+	"<U062C><U0648><U0644><U0627><U06CC>";/
+	"<U0627><U06AB><U0633><U062A>";/
+	"<U0633><U067E><U062A><U0645><U0628><U0631>";/
+	"<U0627><U06A9><U062A><U0648><U0628><U0631>";/
+	"<U0646><U0648><U0645><U0628><U0631>";/
+	"<U062F><U0633><U0645><U0628><U0631>"
+d_t_fmt	"%A <U062F> %Y <U062F> %B %e<U060C> %H:%M:%S"
+date_fmt	"%A <U062F> %Y <U062F> %B %e<U060C> %Z %H:%M:%S"
+d_fmt	"<U062F> %Y <U062F> %B %e"
+t_fmt	"%H:%M:%S"
+am_pm	"<U063A>.<U0645>.";"<U063A>.<U0648>."
+t_fmt_ampm	"<U202B>%I:%M:%S %p<U202C>"
+week 7;19971130;1
+first_weekday	7
+first_workday	7
+cal_direction	3
+END LC_TIME
+
+LC_NUMERIC
+decimal_point	"<U066B>"
+thousands_sep	"<U066C>"
+grouping	3
+END LC_NUMERIC
+
+LC_MONETARY
+int_curr_symbol	"AFN "
+currency_symbol	"<U060B>"
+mon_decimal_point	"<U066B>"
+mon_thousands_sep	"<U066C>"
+mon_grouping	3
+positive_sign	""
+negative_sign	"-"
+int_frac_digits	0
+frac_digits	0
+p_cs_precedes	0
+p_sep_by_space	1
+n_cs_precedes	0
+n_sep_by_space	1
+p_sign_posn	1
+n_sign_posn	1
+END LC_MONETARY
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0628>f]"
+noexpr  "^[-0nN<U062E><U0646>o]"
+yesstr "<U0647><U0648>"
+nostr "<U0646><U0647>"
+END LC_MESSAGES
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+name_fmt	"%s%t%p%t%g%t%m%t%f"
+name_gen	"" % No general salutation for all persons in Pashto.
+name_mr	"<U069A><U0627><U063A><U0644><U06D0>"
+name_mrs	"<U0628><U064A> <U0628><U064A>"
+name_miss	"<U0628><U064A> <U0628><U064A>"
+name_ms	"<U0628><U064A> <U0628><U064A>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt	"%a%N%f%N%d%N%b%N%s %h %e %r%N%C-%z %T%N%c%N"
+country_name	"<U0627><U0641><U063A><U0627><U0646><U0633><U062A><U0627><U0646>"
+country_post	"AF"
+country_ab2	"AF"
+country_ab3	"AFG"
+country_num	004
+country_car	"AFG"
+
+%country_isbn	"" % Unfortunately not yet assigned :-(
+% Since to date there is no ISBN agency working in Afghanistan.
+
+lang_name	"<U067E><U069A><U062A><U0648>"
+lang_ab	"ps"
+lang_term	"pus"
+lang_lib	"pus"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt	"+%c %a %l"
+tel_dom_fmt	"%A<U2012>%l"
+int_select	"00"
+int_prefix	"93"
+END LC_TELEPHONE

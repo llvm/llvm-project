@@ -1,0 +1,1906 @@
+# Hungarian translation of libc
+# Copyright (C) 2003, 2009 Free Software Foundation, Inc.
+# This file is distributed under the same license as the glibc package.
+#
+# Egmont Koblinger <egmont@uhulinux.hu>, 2002.
+# Gabor Kelemen <kelemeng@gnome.hu>, 2009.
+msgid ""
+msgstr ""
+"Project-Id-Version: libc 2.10.1\n"
+"POT-Creation-Date: 2021-07-28 22:02-0400\n"
+"PO-Revision-Date: 2009-08-04 02:23+0200\n"
+"Last-Translator: Gabor Kelemen <kelemeng@gnome.hu>\n"
+"Language-Team: Hungarian <translation-team-hu@lists.sourceforge.net>\n"
+"Language: hu\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Bugs: Report translation errors to the Language-Team address.\n"
+"X-Generator: KBabel 1.11.4\n"
+"Plural-Forms:  nplurals=2; plural=(n != 1);\n"
+
+#: argp/argp-help.c:229
+#, c-format
+msgid "%.*s: ARGP_HELP_FMT parameter requires a value"
+msgstr "%.*s: Az ARGP_HELP_FMT paraméter értéket igényel"
+
+#: argp/argp-help.c:239
+#, c-format
+msgid "%.*s: Unknown ARGP_HELP_FMT parameter"
+msgstr "%.*s: Ismeretlen ARGP_HELP_FMT paraméter"
+
+#: argp/argp-help.c:252
+#, c-format
+msgid "Garbage in ARGP_HELP_FMT: %s"
+msgstr "Szemét az ARGP_HELP_FMT-ben: %s"
+
+#: argp/argp-help.c:1350
+msgid "Mandatory or optional arguments to long options are also mandatory or optional for any corresponding short options."
+msgstr "Ha egy hosszú kapcsolóhoz kötelező vagy opcinális argumentumot megadni, akkor ez a megfelelő rövid kapcsolónál is kötelező vagy opcinális."
+
+#: argp/argp-help.c:1713
+msgid "Usage:"
+msgstr "Használat:"
+
+#: argp/argp-help.c:1717
+msgid "  or: "
+msgstr "  vagy: "
+
+#: argp/argp-help.c:1729
+msgid " [OPTION...]"
+msgstr " [KAPCSOLÓ...]"
+
+#: argp/argp-help.c:1756
+#, c-format
+msgid "Try `%s --help' or `%s --usage' for more information.\n"
+msgstr "További információkért lásd a(z) „%s --help” vagy „%s --usage” kimenetét.\n"
+
+#: argp/argp-help.c:1784
+#, c-format
+msgid "Report bugs to %s.\n"
+msgstr "A hibák itt jelenthetők: %s.\n"
+
+#: argp/argp-parse.c:101
+msgid "Give this help list"
+msgstr "Ezen súgó megjelenítése"
+
+#: argp/argp-parse.c:102
+msgid "Give a short usage message"
+msgstr "Rövid használati utasítás"
+
+#: argp/argp-parse.c:103 catgets/gencat.c:109 catgets/gencat.c:113
+#: iconv/iconv_prog.c:61 iconv/iconv_prog.c:62 nscd/nscd.c:107 nscd/nscd.c:111
+#: nss/makedb.c:121
+msgid "NAME"
+msgstr "NÉV"
+
+#: argp/argp-parse.c:104
+msgid "Set the program name"
+msgstr "A programnév beállítása"
+
+#: argp/argp-parse.c:106
+msgid "Hang for SECS seconds (default 3600)"
+msgstr "Várakozás MP másodpercig (alapértlemezés: 3600)"
+
+#: argp/argp-parse.c:167
+msgid "Print program version"
+msgstr "Programverzió kiírása"
+
+#: argp/argp-parse.c:183
+msgid "(PROGRAM ERROR) No version known!?"
+msgstr "(PROGRAMHIBA) A verzió nem ismert!"
+
+#: argp/argp-parse.c:623
+#, c-format
+msgid "%s: Too many arguments\n"
+msgstr "%s: Túl sok argumentum\n"
+
+#: argp/argp-parse.c:766
+msgid "(PROGRAM ERROR) Option should have been recognized!?"
+msgstr "(PROGRAMHIBA) A kapcsolót ismerni kellene?"
+
+#: catgets/gencat.c:110
+msgid "Create C header file NAME containing symbol definitions"
+msgstr "A szimbólumdefiníciókat tartalmazó NÉV nevű C fejlécfájl előállítása"
+
+#: catgets/gencat.c:112
+msgid "Do not use existing catalog, force new output file"
+msgstr "Ne használja a meglévő katalógust, új kimeneti fájl kényszerítése"
+
+#: catgets/gencat.c:113 nss/makedb.c:121
+msgid "Write output to file NAME"
+msgstr "A kimenet írása a NÉV nevű fájlba"
+
+#: catgets/gencat.c:118
+msgid ""
+"Generate message catalog.\vIf INPUT-FILE is -, input is read from standard input.  If OUTPUT-FILE\n"
+"is -, output is written to standard output.\n"
+msgstr ""
+"Üzenetkatalógus előállítása\v Ha a BEMENETIFÁJL a -, akkor a szabványos bemenetet olvassa. Ha a \n"
+"KIMENETIFÁJL a -, akkor a szabványos kimenetre ír.\n"
+
+#: catgets/gencat.c:123
+msgid ""
+"-o OUTPUT-FILE [INPUT-FILE]...\n"
+"[OUTPUT-FILE [INPUT-FILE]...]"
+msgstr ""
+"-o KIMENETIFÁJL [BEMENETIFÁJL]...\n"
+"[KIMENETIFÁJL [BEMENETIFÁJL]...]"
+
+#: catgets/gencat.c:245 debug/pcprofiledump.c:225 debug/xtrace.sh:64
+#: elf/ldconfig.c:328 elf/ldd.bash.in:38 elf/pldd.c:263 elf/sotruss.sh:75
+#: elf/sprof.c:389 iconv/iconv_prog.c:405 iconv/iconvconfig.c:398
+#: locale/programs/locale.c:293 locale/programs/localedef.c:460
+#: login/programs/pt_chown.c:63 malloc/memusage.sh:71 malloc/memusagestat.c:581
+#: nscd/nscd.c:522 nss/getent.c:88 nss/makedb.c:386 posix/getconf.c:485
+#: sysdeps/unix/sysv/linux/lddlibc4.c:68
+#, c-format
+msgid ""
+"Copyright (C) %s Free Software Foundation, Inc.\n"
+"This is free software; see the source for copying conditions.  There is NO\n"
+"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+msgstr ""
+"Copyright (C) %s Free Software Foundation, Inc.\n"
+"Ez egy szabad szoftver, lásd a forrást a másolási feltételekért. NINCS\n"
+"garancia, még az ADOTT CÉLRE VALÓ ELADHATÓSÁGRA VAGY MEGFELELŐSÉGRE SEM.\n"
+
+#: catgets/gencat.c:250 debug/pcprofiledump.c:230 debug/xtrace.sh:68
+#: elf/ldconfig.c:333 elf/pldd.c:268 elf/sprof.c:395 iconv/iconv_prog.c:410
+#: iconv/iconvconfig.c:403 locale/programs/locale.c:298
+#: locale/programs/localedef.c:465 malloc/memusage.sh:75
+#: malloc/memusagestat.c:586 nscd/nscd.c:527 nss/getent.c:93 nss/makedb.c:391
+#: posix/getconf.c:490
+#, c-format
+msgid "Written by %s.\n"
+msgstr "Írta: %s.\n"
+
+#: catgets/gencat.c:281
+msgid "*standard input*"
+msgstr "*szabványos bemenet*"
+
+#: catgets/gencat.c:287 iconv/iconv_charmap.c:173 iconv/iconv_prog.c:273
+#: nss/makedb.c:247
+#, c-format
+msgid "cannot open input file `%s'"
+msgstr "a bemeneti fájl („%s”) nem nyitható meg"
+
+#: catgets/gencat.c:416 catgets/gencat.c:491
+msgid "illegal set number"
+msgstr "érvénytelen halmazszám"
+
+#: catgets/gencat.c:443
+msgid "duplicate set definition"
+msgstr "többszörös halmazdefiníció"
+
+#: catgets/gencat.c:445 catgets/gencat.c:617 catgets/gencat.c:669
+msgid "this is the first definition"
+msgstr "ez az első definíció"
+
+#: catgets/gencat.c:516
+#, c-format
+msgid "unknown set `%s'"
+msgstr "ismeretlen halmaz: \"%s\""
+
+#: catgets/gencat.c:557
+msgid "invalid quote character"
+msgstr "érvénytelen idézőjel-karakter"
+
+#: catgets/gencat.c:570
+#, c-format
+msgid "unknown directive `%s': line ignored"
+msgstr "ismeretlen utasítás (\"%s2): a sor kihagyva"
+
+#: catgets/gencat.c:615
+msgid "duplicated message number"
+msgstr "többszörös üzenetszám"
+
+#: catgets/gencat.c:666
+msgid "duplicated message identifier"
+msgstr "többszörös üzenetazonosító"
+
+#: catgets/gencat.c:723
+msgid "invalid character: message ignored"
+msgstr "érvénytelen karakter: az üzenet figyelmen kívül maradt"
+
+#: catgets/gencat.c:766
+msgid "invalid line"
+msgstr "érvénytelen sor"
+
+#: catgets/gencat.c:820
+msgid "malformed line ignored"
+msgstr "a rosszul formált sor figyelmen kívül maradt"
+
+#: catgets/gencat.c:984 catgets/gencat.c:1025
+#, c-format
+msgid "cannot open output file `%s'"
+msgstr "a kimeneti fájl (\"%s\") nem nyitható meg"
+
+#: catgets/gencat.c:1187 locale/programs/linereader.c:560
+msgid "invalid escape sequence"
+msgstr "érvénytelen escape-sorozat"
+
+#: catgets/gencat.c:1211
+msgid "unterminated message"
+msgstr "befejezetlen üzenet"
+
+#: catgets/gencat.c:1235
+#, c-format
+msgid "while opening old catalog file"
+msgstr "hiba a régi katalógusfájl megnyitásakor"
+
+#: catgets/gencat.c:1326
+#, c-format
+msgid "conversion modules not available"
+msgstr "az átalakítási modulok nem érhetők el"
+
+#: catgets/gencat.c:1352
+#, c-format
+msgid "cannot determine escape character"
+msgstr "az escape-karakter nem határozható meg"
+
+#: debug/pcprofiledump.c:53
+msgid "Don't buffer output"
+msgstr "Ne pufferelje a kimenetet"
+
+#: debug/pcprofiledump.c:58
+msgid "Dump information generated by PC profiling."
+msgstr "PC profilozással előállt információk kiírása"
+
+#: debug/pcprofiledump.c:61
+msgid "[FILE]"
+msgstr "[FÁJL]"
+
+#: debug/pcprofiledump.c:108
+#, c-format
+msgid "cannot open input file"
+msgstr "a bemeneti fájl nem nyitható meg"
+
+#: debug/pcprofiledump.c:115
+#, c-format
+msgid "cannot read header"
+msgstr "a fejléc nem olvasható"
+
+#: debug/pcprofiledump.c:179
+#, c-format
+msgid "invalid pointer size"
+msgstr "érvénytelen mutatóméret"
+
+#: debug/xtrace.sh:26 debug/xtrace.sh:44
+msgid "Usage: xtrace [OPTION]... PROGRAM [PROGRAMOPTION]...\\n"
+msgstr "Használat: xtrace [KAPCSOLÓ]... PROGRAM [PROGRAM KAPCSOLÓI]...\\n"
+
+#: debug/xtrace.sh:45
+msgid ""
+"Trace execution of program by printing currently executed function.\n"
+"\n"
+"     --data=FILE          Don't run the program, just print the data from FILE.\n"
+"\n"
+"   -?,--help              Print this help and exit\n"
+"      --usage             Give a short usage message\n"
+"   -V,--version           Print version information and exit\n"
+"\n"
+"Mandatory arguments to long options are also mandatory for any corresponding\n"
+"short options.\n"
+"\n"
+msgstr ""
+"Program-végrehajtás nyomon követése az épp végrehajtott függvény kiírásával.\n"
+"\n"
+"     --data=FÁJL          Ne futtassa a programot, csak írja ki a FÁJL adatait.\n"
+"\n"
+"   -?,--help              Ezen súgó kiírása és kilépés\n"
+"      --usage             Rövid használati utasítás\n"
+"   -V,--version           Verzióinformációk kiírása és kilépés\n"
+"\n"
+"A hosszú kapcsolókhoz kötelező argumentumok a megfelelő rövid kapcsolókhoz\n"
+"is kötelezők.\n"
+"\n"
+
+#: debug/xtrace.sh:125
+msgid "xtrace: unrecognized option \\`$1'\\n"
+msgstr "xtrace: ismeretlen kapcsoló: \\„$1”\\n"
+
+#: debug/xtrace.sh:138
+msgid "No program name given\\n"
+msgstr "Nincs megadva programnév\\n"
+
+#: debug/xtrace.sh:146
+#, sh-format
+msgid "executable \\`$program' not found\\n"
+msgstr "A „$program” nem található\\n"
+
+#: debug/xtrace.sh:150
+#, sh-format
+msgid "\\`$program' is no executable\\n"
+msgstr "A „$program” nem hajtható végre\\n"
+
+#: dlfcn/dlinfo.c:43
+msgid "unsupported dlinfo request"
+msgstr "nem támogatott dlinfo kérés"
+
+#: dlfcn/dlmopen.c:53
+msgid "invalid namespace"
+msgstr "érvénytelen névtér"
+
+#: dlfcn/dlmopen.c:58
+msgid "invalid mode"
+msgstr "érvénytelen mód"
+
+#: dlfcn/dlopen.c:54
+msgid "invalid mode parameter"
+msgstr "érvénytelen módparaméter"
+
+#: elf/cache.c:180
+msgid "unknown"
+msgstr "ismeretlen"
+
+#: elf/cache.c:254
+msgid "Unknown OS"
+msgstr "Ismeretlen OS"
+
+#: elf/cache.c:259
+#, c-format
+msgid ", OS ABI: %s %d.%d.%d"
+msgstr ", OS ABI: %s %d.%d.%d"
+
+#: elf/cache.c:320 elf/ldconfig.c:1434
+#, c-format
+msgid "Can't open cache file %s\n"
+msgstr "Nem nyitható meg a gyorsítótárfájl (%s)\n"
+
+#: elf/cache.c:334
+#, c-format
+msgid "mmap of cache file failed.\n"
+msgstr "a gyorsítótár mmap-olása meghiúsult.\n"
+
+#: elf/cache.c:338 elf/cache.c:352 elf/cache.c:363
+#, c-format
+msgid "File is not a cache file.\n"
+msgstr "A fájl nem gyorsítótárfájl.\n"
+
+#: elf/cache.c:392 elf/cache.c:407
+#, c-format
+msgid "%d libs found in cache `%s'\n"
+msgstr "%d programkönyvtár található a gyorsítótárban („%s”)\n"
+
+#: elf/cache.c:726
+#, c-format
+msgid "Can't create temporary cache file %s"
+msgstr "Nem hozható létre az ideiglenes gyorsítótárfájl (%s)"
+
+#: elf/cache.c:734 elf/cache.c:744 elf/cache.c:748 elf/cache.c:753
+#: elf/cache.c:771
+#, c-format
+msgid "Writing of cache data failed"
+msgstr "A gyorsítótáradatok írása meghiúsult"
+
+#: elf/cache.c:766
+#, c-format
+msgid "Changing access rights of %s to %#o failed"
+msgstr "%s hozzáférési jogainak módosítása meghiúsult erre: %#o"
+
+#: elf/cache.c:775
+#, c-format
+msgid "Renaming of %s to %s failed"
+msgstr "%s átnevezése meghiúsult erre: %s"
+
+#: elf/dl-close.c:409 elf/dl-open.c:294
+msgid "cannot create scope list"
+msgstr "Nem hozható létre hatókörlista"
+
+#: elf/dl-close.c:870
+msgid "shared object not open"
+msgstr "a megosztott objektum nincs megnyitva"
+
+#: elf/dl-deps.c:112
+msgid "DST not allowed in SUID/SGID programs"
+msgstr "a DST nem engedélyezett SUID/SGID programokban"
+
+#: elf/dl-deps.c:125
+msgid "empty dynamic string token substitution"
+msgstr "üres dinamikus karakterlánc-helyettesítés"
+
+#: elf/dl-deps.c:131
+#, c-format
+msgid "cannot load auxiliary `%s' because of empty dynamic string token substitution\n"
+msgstr "nem tölthető be a külső „%s”, az üres dinamikus karakterlánc-helyettesítés miatt\n"
+
+#: elf/dl-deps.c:443
+msgid "cannot allocate dependency list"
+msgstr "nem foglalható le a függőségi lista"
+
+#: elf/dl-deps.c:483 elf/dl-deps.c:548
+msgid "cannot allocate symbol search list"
+msgstr "nem foglalható le a szimbólumkeresési lista"
+
+#: elf/dl-deps.c:528
+msgid "Filters not supported with LD_TRACE_PRELINKING"
+msgstr "A szűrők nem támogatottak az LD_TRACE_PRELINKING mellett"
+
+#: elf/dl-error-skeleton.c:80
+msgid "error while loading shared libraries"
+msgstr "hiba a megosztott programkönyvtárak betöltésekor"
+
+#: elf/dl-error-skeleton.c:113
+msgid "DYNAMIC LINKER BUG!!!"
+msgstr "HIBA A DINAMIKUS LINKELŐBEN!"
+
+#: elf/dl-fptr.c:88 sysdeps/hppa/dl-fptr.c:95
+msgid "cannot map pages for fdesc table"
+msgstr "nem képezhetők le a lapok az fdesc táblára"
+
+#: elf/dl-fptr.c:192 sysdeps/hppa/dl-fptr.c:213
+msgid "cannot map pages for fptr table"
+msgstr "nem képezhetők le a lapok az fptr táblára"
+
+#: elf/dl-fptr.c:221 sysdeps/hppa/dl-fptr.c:242
+msgid "internal error: symidx out of range of fptr table"
+msgstr "belső hiba: a symidx kívül van az fptr tábla tartományán"
+
+#: elf/dl-load.c:432
+msgid "cannot allocate name record"
+msgstr "nem foglalható le névrekord"
+
+#: elf/dl-load.c:534 elf/dl-load.c:647 elf/dl-load.c:741 elf/dl-load.c:838
+msgid "cannot create cache for search path"
+msgstr "nem hozható létre gyorsítótár a keresési útvonalhoz"
+
+#: elf/dl-load.c:630
+msgid "cannot create RUNPATH/RPATH copy"
+msgstr "nem hozható létre RUNPATH/RPATH másolat"
+
+#: elf/dl-load.c:727
+msgid "cannot create search path array"
+msgstr "nem hozható létre keresésiútvonal-tömb"
+
+#: elf/dl-load.c:968
+msgid "cannot stat shared object"
+msgstr "nem érhető el a megosztott objektum"
+
+#: elf/dl-load.c:1099 elf/dl-load.c:2314
+msgid "cannot create shared object descriptor"
+msgstr "nem hozható létre megosztott objektumleíró"
+
+#: elf/dl-load.c:1118 elf/dl-load.c:1689 elf/dl-load.c:1791
+msgid "cannot read file data"
+msgstr "nem olvashatók a fájladatok"
+
+#: elf/dl-load.c:1164
+msgid "ELF load command alignment not page-aligned"
+msgstr "az ELF betöltési parancs igazítása nem lapokhoz igazított"
+
+#: elf/dl-load.c:1171
+msgid "ELF load command address/offset not properly aligned"
+msgstr "az ELF betöltési parancs címe/eltolása nincs megfelelően igazítva"
+
+#: elf/dl-load.c:1250
+msgid "object file has no loadable segments"
+msgstr "az objektumfájlnak nincsenek betölthető szakaszai"
+
+#: elf/dl-load.c:1263
+msgid "cannot dynamically load executable"
+msgstr "nem tölthető be dinamikusan a végrehajtható fájl"
+
+#: elf/dl-load.c:1288
+msgid "object file has no dynamic section"
+msgstr "az objektumfájlnak nincs dinamikus szakasza"
+
+#: elf/dl-load.c:1308
+msgid "shared object cannot be dlopen()ed"
+msgstr "megosztott objektumra nem hívható meg a dlopen()"
+
+#: elf/dl-load.c:1321
+msgid "cannot allocate memory for program header"
+msgstr "nem foglalható memória a program fejlécének"
+
+#: elf/dl-load.c:1354 elf/dl-load.h:130
+msgid "cannot change memory protections"
+msgstr "a memóriavédelem nem módosítható"
+
+#: elf/dl-load.c:1378
+msgid "cannot enable executable stack as shared object requires"
+msgstr "nem engedélyezhető a végrehajtható verem, mint ahogy a megosztott objektum megköveteli"
+
+#: elf/dl-load.c:1406
+msgid "cannot close file descriptor"
+msgstr "nem zárható le a fájlleíró"
+
+#: elf/dl-load.c:1689
+msgid "file too short"
+msgstr "a fájl túl rövid"
+
+#: elf/dl-load.c:1725
+msgid "invalid ELF header"
+msgstr "érvénytelen ELF fejléc"
+
+#: elf/dl-load.c:1737
+msgid "ELF file data encoding not big-endian"
+msgstr "az ELF fájladatok kódolása nem big endian"
+
+#: elf/dl-load.c:1739
+msgid "ELF file data encoding not little-endian"
+msgstr "az ELF fájladatok kódolása nem little endian"
+
+#: elf/dl-load.c:1743
+msgid "ELF file version ident does not match current one"
+msgstr "az ELF fájlverzió azonosítója nem felel meg az aktuálisnak"
+
+#: elf/dl-load.c:1747
+msgid "ELF file OS ABI invalid"
+msgstr "az ELF fájl OS ABI-ja érvénytelen"
+
+#: elf/dl-load.c:1750
+msgid "ELF file ABI version invalid"
+msgstr "az ELF fájl ABI verziója érvénytelen"
+
+#: elf/dl-load.c:1756
+msgid "internal error"
+msgstr "belső hiba"
+
+#: elf/dl-load.c:1763
+msgid "ELF file version does not match current one"
+msgstr "az ELF fájlverzió nem felel meg az aktuálisnak"
+
+#: elf/dl-load.c:1771
+msgid "only ET_DYN and ET_EXEC can be loaded"
+msgstr "csak az ET_DYN és ET_EXEC tölthető be"
+
+#: elf/dl-load.c:1776
+msgid "ELF file's phentsize not the expected size"
+msgstr "az ELF fájl phentsize értéke nem a várt méretű"
+
+#: elf/dl-load.c:2333
+msgid "wrong ELF class: ELFCLASS64"
+msgstr "hibás ELF osztály: ELFCLASS64"
+
+#: elf/dl-load.c:2334
+msgid "wrong ELF class: ELFCLASS32"
+msgstr "hibás ELF osztály: ELFCLASS32"
+
+#: elf/dl-load.c:2337
+msgid "cannot open shared object file"
+msgstr "nem nyitható meg a megosztott objektumfájl"
+
+#: elf/dl-load.h:128
+msgid "failed to map segment from shared object"
+msgstr "a szegmens leképezése meghiúsult a megosztott objektumból"
+
+#: elf/dl-load.h:132
+msgid "cannot map zero-fill pages"
+msgstr "nem képezhetők le a nullával kitöltött lapok"
+
+#: elf/dl-lookup.c:876
+msgid "symbol lookup error"
+msgstr "szimbólumkikeresési hiba"
+
+#: elf/dl-open.c:80
+msgid "cannot extend global scope"
+msgstr "a globális hatáskör nem bővíthető"
+
+#: elf/ldconfig.c:1308 locale/programs/xasprintf.c:31
+#: locale/programs/xmalloc.c:63 malloc/obstack.c:416 malloc/obstack.c:418
+#: posix/getconf.c:458 posix/getconf.c:697
+#, c-format
+msgid "memory exhausted"
+msgstr "elfogyott a memória"
+
+#: elf/ldd.bash.in:42
+msgid "Written by %s and %s.\n"
+msgstr "Írta: %s és %s.\n"
+
+#: elf/ldd.bash.in:47
+msgid ""
+"Usage: ldd [OPTION]... FILE...\n"
+"      --help              print this help and exit\n"
+"      --version           print version information and exit\n"
+"  -d, --data-relocs       process data relocations\n"
+"  -r, --function-relocs   process data and function relocations\n"
+"  -u, --unused            print unused direct dependencies\n"
+"  -v, --verbose           print all information\n"
+msgstr ""
+"Használat: ldd [KAPCSOLÓ]... FÁJL...\n"
+"      --help              ezen súgó kiírása és kilépés\n"
+"      --version           verzióinformációk kiírása és kilépés\n"
+"  -d, --data-relocs       adatáthelyezések feldolgozása\n"
+"  -r, --function-relocs   adat- és függvényáthelyezések feldolgozása\n"
+"  -u, --unused            nem használt közvetlen függőségek kiírása\n"
+"  -v, --verbose           minden információ kiírása\n"
+
+#: elf/ldd.bash.in:87
+msgid "unrecognized option"
+msgstr "ismeretlen kapcsoló"
+
+#. TRANS This is a ``file doesn't exist'' error
+#. TRANS for ordinary files that are referenced in contexts where they are
+#. TRANS expected to already exist.
+#: elf/ldd.bash.in:147 sysdeps/gnu/errlist.h:13
+msgid "No such file or directory"
+msgstr "Nincs ilyen fájl vagy könyvtár"
+
+#: iconv/iconv_prog.c:74
+msgid "Convert encoding of given files from one encoding to another."
+msgstr "Megadott fájlok kódolásának átalakítása"
+
+#: iconv/iconv_prog.c:78
+msgid "[FILE...]"
+msgstr "[FÁJL…]"
+
+#: inet/ruserpass.c:165 inet/ruserpass.c:188
+msgid "out of memory"
+msgstr "elfogyott a memória"
+
+#: locale/programs/ld-ctype.c:1963 locale/programs/ld-ctype.c:2014
+#: locale/programs/ld-ctype.c:2056
+msgid "syntax error"
+msgstr "szintaktikai hiba"
+
+#: misc/error.c:192
+msgid "Unknown system error"
+msgstr "Ismeretlen rendszerhiba"
+
+#: nis/nis_error.h:1 nis/ypclnt.c:833 nis/ypclnt.c:922 posix/regcomp.c:135
+#: sysdeps/gnu/errlist.h:1
+msgid "Success"
+msgstr "Siker"
+
+#: nis/nis_error.h:2
+msgid "Probable success"
+msgstr "Valószínű siker"
+
+#: nis/nis_error.h:3
+msgid "Not found"
+msgstr "Nem található"
+
+#: nis/nis_error.h:4
+msgid "Probably not found"
+msgstr "Valószínűleg nem található"
+
+#. TRANS The file permissions do not allow the attempted operation.
+#: nis/nis_error.h:11 nis/ypclnt.c:878 sysdeps/gnu/errlist.h:90
+msgid "Permission denied"
+msgstr "Engedély megtagadva"
+
+#: nis/nis_error.h:12
+msgid "Not owner"
+msgstr "Nem tulajdonos"
+
+#: nis/nis_error.h:29
+msgid "Error in RPC subsystem"
+msgstr "Hiba az RPC alrendszerben"
+
+#: nis/nis_error.h:43
+msgid "Yes, 42 is the meaning of life"
+msgstr "Igen, az élet értelme 42"
+
+#: nis/nis_print.c:52
+msgid "UNKNOWN"
+msgstr "ISMERETLEN"
+
+#: nis/ypclnt.c:854
+msgid "Local resource allocation failure"
+msgstr "A helyi erőforrás-foglalás meghiúsult"
+
+#: nis/ypclnt.c:860
+msgid "Can't communicate with portmapper"
+msgstr "Nem lehet a portmapperrel kommunikálni"
+
+#: nis/ypclnt.c:863
+msgid "Can't communicate with ypbind"
+msgstr "Nem lehet az ypbinddal kommunikálni"
+
+#: nis/ypclnt.c:866
+msgid "Can't communicate with ypserv"
+msgstr "Nem lehet az ypservvel kommunikálni"
+
+#: nis/ypclnt.c:869
+msgid "Local domain name not set"
+msgstr "Helyi tartománynév nincs beállítva"
+
+#: nis/ypclnt.c:928
+msgid "Domain not bound"
+msgstr "A tartomány nincs csatlakoztatva"
+
+#: nscd/nscd.c:115
+msgid "NUMBER"
+msgstr "SZÁM"
+
+#: nscd/nscd.c:207
+#, c-format
+msgid "cannot fork"
+msgstr "fork() rendszerhívás sikertelen"
+
+#: nscd/nscd_stat.c:174
+msgid "yes"
+msgstr "igen"
+
+#: nscd/nscd_stat.c:175
+msgid "no"
+msgstr "nem"
+
+#: posix/getconf.c:572
+#, c-format
+msgid "unknown specification \"%s\""
+msgstr "érvénytelen meghatározás: \"%s\""
+
+#: posix/getconf.c:624
+#, c-format
+msgid "Couldn't execute %s"
+msgstr "%s nem hajtható végre"
+
+#: posix/getconf.c:669 posix/getconf.c:685
+msgid "undefined"
+msgstr "nem definiált"
+
+#: posix/getconf.c:707
+#, c-format
+msgid "Unrecognized variable `%s'"
+msgstr "Ismeretlen változó: „%s”"
+
+#: posix/getopt.c:620
+#, c-format
+msgid "%s: invalid option -- '%c'\n"
+msgstr "%s: érvénytelen kapcsoló -- \"%c\"\n"
+
+#: posix/getopt.c:635 posix/getopt.c:681
+#, c-format
+msgid "%s: option requires an argument -- '%c'\n"
+msgstr "%s: a kapcsoló egy argumentumot igényel -- \"%c\"\n"
+
+#: posix/regcomp.c:138
+msgid "No match"
+msgstr "Nincs találat"
+
+#: posix/regcomp.c:141
+msgid "Invalid regular expression"
+msgstr "Érvénytelen szabályos kifejezés"
+
+#: posix/regcomp.c:144
+msgid "Invalid collation character"
+msgstr "Érvénytelen leválogatási karakter"
+
+#: posix/regcomp.c:147
+msgid "Invalid character class name"
+msgstr "Érvénytelen karakterosztálynév"
+
+#: posix/regcomp.c:150
+msgid "Trailing backslash"
+msgstr "Záró visszaper"
+
+#: posix/regcomp.c:153
+msgid "Invalid back reference"
+msgstr "Érvénytelen visszahivatkozás"
+
+#: posix/regcomp.c:159
+msgid "Unmatched ( or \\("
+msgstr "Pár nélküli ( vagy \\("
+
+#: posix/regcomp.c:162
+msgid "Unmatched \\{"
+msgstr "Pár nélküli \\{"
+
+#: posix/regcomp.c:165
+msgid "Invalid content of \\{\\}"
+msgstr "A \\{\\} tartalma érvénytelen"
+
+#: posix/regcomp.c:168
+msgid "Invalid range end"
+msgstr "Érvénytelen tartományvég"
+
+#: posix/regcomp.c:171
+msgid "Memory exhausted"
+msgstr "Elfogyott a memória"
+
+#: posix/regcomp.c:174
+msgid "Invalid preceding regular expression"
+msgstr "Érvénytelen megelőző szabályos kifejezés"
+
+#: posix/regcomp.c:177
+msgid "Premature end of regular expression"
+msgstr "A szabályos kifejezés túl korán véget ért"
+
+#: posix/regcomp.c:180
+msgid "Regular expression too big"
+msgstr "A szabályos kifejezés túl nagy"
+
+#: posix/regcomp.c:183
+msgid "Unmatched ) or \\)"
+msgstr "Pár nélküli ) vagy \\)"
+
+#: posix/regcomp.c:676
+msgid "No previous regular expression"
+msgstr "Nincs megelőző szabályos kifejezés"
+
+#: resolv/herror.c:64
+msgid "Unknown host"
+msgstr "Ismeretlen gép"
+
+#: resolv/herror.c:65
+msgid "Host name lookup failure"
+msgstr "Gépnév keresése nem sikerült"
+
+#: stdio-common/psignal.c:44
+msgid "Unknown signal"
+msgstr "Ismeretlen szignál"
+
+#: string/_strerror.c:30 sysdeps/mach/_strerror.c:55
+msgid "Unknown error "
+msgstr "Ismeretlen hiba "
+
+#: string/strsignal.c:39
+#, c-format
+msgid "Real-time signal %d"
+msgstr "Valós idejű szignál %d"
+
+#: string/strsignal.c:43
+#, c-format
+msgid "Unknown signal %d"
+msgstr "Ismeretlen szignál %d"
+
+#: sunrpc/auth_unix.c:113 sunrpc/clnt_tcp.c:124 sunrpc/clnt_udp.c:140
+#: sunrpc/clnt_unix.c:125 sunrpc/svc_tcp.c:189 sunrpc/svc_tcp.c:233
+#: sunrpc/svc_udp.c:161 sunrpc/svc_unix.c:189 sunrpc/svc_unix.c:229
+#: sunrpc/xdr.c:631 sunrpc/xdr.c:791 sunrpc/xdr_array.c:102
+#: sunrpc/xdr_rec.c:153 sunrpc/xdr_ref.c:79
+msgid "out of memory\n"
+msgstr "elfogyott a memória\n"
+
+#: sysdeps/generic/siglist.h:29
+msgid "Hangup"
+msgstr "Fennakadás"
+
+#: sysdeps/generic/siglist.h:30
+msgid "Interrupt"
+msgstr "Félbeszakítás"
+
+#: sysdeps/generic/siglist.h:31
+msgid "Quit"
+msgstr "Kilépés"
+
+#: sysdeps/generic/siglist.h:32
+msgid "Illegal instruction"
+msgstr "Érvénytelen utasítás"
+
+#: sysdeps/generic/siglist.h:33
+msgid "Trace/breakpoint trap"
+msgstr "Nyomkövetési/töréspont csapda"
+
+#: sysdeps/generic/siglist.h:34
+msgid "Aborted"
+msgstr "Félbeszakítva"
+
+#: sysdeps/generic/siglist.h:35
+msgid "Floating point exception"
+msgstr "Lebegőpontos kivétel"
+
+#: sysdeps/generic/siglist.h:36
+msgid "Killed"
+msgstr "Kilőve"
+
+#: sysdeps/generic/siglist.h:37
+msgid "Bus error"
+msgstr "Busz hiba"
+
+#: sysdeps/generic/siglist.h:38
+msgid "Bad system call"
+msgstr "Hibás rendszerhívás"
+
+#: sysdeps/generic/siglist.h:39
+msgid "Segmentation fault"
+msgstr "Szegmentálási hiba"
+
+#. TRANS There is no process reading from the other end of a pipe.
+#. TRANS Every library function that returns this error code also generates a
+#. TRANS @code{SIGPIPE} signal; this signal terminates the program if not handled
+#. TRANS or blocked.  Thus, your program will never actually see @code{EPIPE}
+#. TRANS unless it has handled or blocked @code{SIGPIPE}.
+#: sysdeps/generic/siglist.h:40 sysdeps/gnu/errlist.h:216
+msgid "Broken pipe"
+msgstr "Törött adatcsatorna"
+
+#: sysdeps/generic/siglist.h:41
+msgid "Alarm clock"
+msgstr "Időzítő óra"
+
+#: sysdeps/generic/siglist.h:42
+msgid "Terminated"
+msgstr "Befejeződött"
+
+#: sysdeps/generic/siglist.h:43
+msgid "Urgent I/O condition"
+msgstr "Sürgős I/O feltétel"
+
+#: sysdeps/generic/siglist.h:44
+msgid "Stopped (signal)"
+msgstr "Leállítva (szignál)"
+
+#: sysdeps/generic/siglist.h:45
+msgid "Stopped"
+msgstr "Leállítva"
+
+#: sysdeps/generic/siglist.h:46
+msgid "Continued"
+msgstr "Folytatva"
+
+#: sysdeps/generic/siglist.h:47
+msgid "Child exited"
+msgstr "Gyerekfolyamat kilépett"
+
+#: sysdeps/generic/siglist.h:48
+msgid "Stopped (tty input)"
+msgstr "Leállítva (tty bemenet)"
+
+#: sysdeps/generic/siglist.h:49
+msgid "Stopped (tty output)"
+msgstr "Leállítva (tty kimenet)"
+
+#: sysdeps/generic/siglist.h:50
+msgid "I/O possible"
+msgstr "I/O lehetséges"
+
+#: sysdeps/generic/siglist.h:51
+msgid "CPU time limit exceeded"
+msgstr "CPU-időkorlát túllépve"
+
+#: sysdeps/generic/siglist.h:52
+msgid "File size limit exceeded"
+msgstr "Fájlméretkorlát túllépve"
+
+#: sysdeps/generic/siglist.h:53
+msgid "Virtual timer expired"
+msgstr "Virtuális időzítés lejárt"
+
+#: sysdeps/generic/siglist.h:54
+msgid "Profiling timer expired"
+msgstr "A profilozási időzítő lejárt"
+
+#: sysdeps/generic/siglist.h:55
+msgid "User defined signal 1"
+msgstr "Felhasználói 1-es szignál"
+
+#: sysdeps/generic/siglist.h:56
+msgid "User defined signal 2"
+msgstr "Felhasználói 2-es szignál"
+
+#: sysdeps/generic/siglist.h:57
+msgid "Window changed"
+msgstr "Ablakméret változott"
+
+#: sysdeps/generic/siglist.h:61
+msgid "EMT trap"
+msgstr "EMT csapda"
+
+#: sysdeps/generic/siglist.h:64
+msgid "Stack fault"
+msgstr "Veremhiba"
+
+#: sysdeps/generic/siglist.h:67
+msgid "Power failure"
+msgstr "Tápfeszültség-kimaradás"
+
+#: sysdeps/generic/siglist.h:70
+msgid "Information request"
+msgstr "Információkérés"
+
+#: sysdeps/generic/siglist.h:73
+msgid "Resource lost"
+msgstr "Erőforrás elveszítve"
+
+#. TRANS Only the owner of the file (or other resource)
+#. TRANS or processes with special privileges can perform the operation.
+#: sysdeps/gnu/errlist.h:6
+msgid "Operation not permitted"
+msgstr "A művelet nem engedélyezett"
+
+#. TRANS No process matches the specified process ID.
+#: sysdeps/gnu/errlist.h:18
+msgid "No such process"
+msgstr "Nincs ilyen folyamat"
+
+#. TRANS An asynchronous signal occurred and prevented
+#. TRANS completion of the call.  When this happens, you should try the call
+#. TRANS again.
+#. TRANS
+#. TRANS You can choose to have functions resume after a signal that is handled,
+#. TRANS rather than failing with @code{EINTR}; see @ref{Interrupted
+#. TRANS Primitives}.
+#: sysdeps/gnu/errlist.h:29
+msgid "Interrupted system call"
+msgstr "Félbeszakított rendszerhívás"
+
+#. TRANS Usually used for physical read or write errors.
+#: sysdeps/gnu/errlist.h:34
+msgid "Input/output error"
+msgstr "Kimeneti/bemeneti hiba"
+
+#. TRANS The system tried to use the device
+#. TRANS represented by a file you specified, and it couldn't find the device.
+#. TRANS This can mean that the device file was installed incorrectly, or that
+#. TRANS the physical device is missing or not correctly attached to the
+#. TRANS computer.
+#: sysdeps/gnu/errlist.h:43
+msgid "No such device or address"
+msgstr "Nem létező eszköz vagy cím"
+
+#. TRANS Used when the arguments passed to a new program
+#. TRANS being executed with one of the @code{exec} functions (@pxref{Executing a
+#. TRANS File}) occupy too much memory space.  This condition never arises on
+#. TRANS @gnuhurdsystems{}.
+#: sysdeps/gnu/errlist.h:51
+msgid "Argument list too long"
+msgstr "Túl hosszú argumentumlista"
+
+#. TRANS Invalid executable file format.  This condition is detected by the
+#. TRANS @code{exec} functions; see @ref{Executing a File}.
+#: sysdeps/gnu/errlist.h:57
+msgid "Exec format error"
+msgstr "Érvénytelen végrehajtható fájlformátum"
+
+#. TRANS For example, I/O on a descriptor that has been
+#. TRANS closed or reading from a descriptor open only for writing (or vice
+#. TRANS versa).
+#: sysdeps/gnu/errlist.h:64
+msgid "Bad file descriptor"
+msgstr "Hibás fájlleíró"
+
+#. TRANS This error happens on operations that are
+#. TRANS supposed to manipulate child processes, when there aren't any processes
+#. TRANS to manipulate.
+#: sysdeps/gnu/errlist.h:71
+msgid "No child processes"
+msgstr "Nincs gyerek folyamat"
+
+#. TRANS Allocating a system resource would have resulted in a
+#. TRANS deadlock situation.  The system does not guarantee that it will notice
+#. TRANS all such situations.  This error means you got lucky and the system
+#. TRANS noticed; it might just hang.  @xref{File Locks}, for an example.
+#: sysdeps/gnu/errlist.h:79
+msgid "Resource deadlock avoided"
+msgstr "Erőforrás-holtpont elkerülve"
+
+#. TRANS The system cannot allocate more virtual memory
+#. TRANS because its capacity is full.
+#: sysdeps/gnu/errlist.h:85
+msgid "Cannot allocate memory"
+msgstr "Nem foglalható memória"
+
+#. TRANS An invalid pointer was detected.
+#. TRANS On @gnuhurdsystems{}, this error never happens; you get a signal instead.
+#: sysdeps/gnu/errlist.h:96
+msgid "Bad address"
+msgstr "Hibás cím"
+
+#. TRANS A file that isn't a block special file was given in a situation that
+#. TRANS requires one.  For example, trying to mount an ordinary file as a file
+#. TRANS system in Unix gives this error.
+#: sysdeps/gnu/errlist.h:103
+msgid "Block device required"
+msgstr "Blokk eszközre van szükség"
+
+#. TRANS A system resource that can't be shared is already in use.
+#. TRANS For example, if you try to delete a file that is the root of a currently
+#. TRANS mounted filesystem, you get this error.
+#: sysdeps/gnu/errlist.h:110
+msgid "Device or resource busy"
+msgstr "Az eszköz vagy erőforrás foglalt"
+
+#. TRANS An existing file was specified in a context where it only
+#. TRANS makes sense to specify a new file.
+#: sysdeps/gnu/errlist.h:116
+msgid "File exists"
+msgstr "A fájl már létezik"
+
+#. TRANS An attempt to make an improper link across file systems was detected.
+#. TRANS This happens not only when you use @code{link} (@pxref{Hard Links}) but
+#. TRANS also when you rename a file with @code{rename} (@pxref{Renaming Files}).
+#: sysdeps/gnu/errlist.h:123
+msgid "Invalid cross-device link"
+msgstr "Érvénytelen eszközközi link"
+
+#. TRANS The wrong type of device was given to a function that expects a
+#. TRANS particular sort of device.
+#: sysdeps/gnu/errlist.h:129
+msgid "No such device"
+msgstr "Nincs ilyen eszköz"
+
+#. TRANS A file that isn't a directory was specified when a directory is required.
+#: sysdeps/gnu/errlist.h:134
+msgid "Not a directory"
+msgstr "Nem könyvtár"
+
+#. TRANS You cannot open a directory for writing,
+#. TRANS or create or remove hard links to it.
+#: sysdeps/gnu/errlist.h:140
+msgid "Is a directory"
+msgstr "Ez egy könyvtár"
+
+#. TRANS This is used to indicate various kinds of problems
+#. TRANS with passing the wrong argument to a library function.
+#: sysdeps/gnu/errlist.h:146
+msgid "Invalid argument"
+msgstr "Érvénytelen argumentum"
+
+#. TRANS The current process has too many files open and can't open any more.
+#. TRANS Duplicate descriptors do count toward this limit.
+#. TRANS
+#. TRANS In BSD and GNU, the number of open files is controlled by a resource
+#. TRANS limit that can usually be increased.  If you get this error, you might
+#. TRANS want to increase the @code{RLIMIT_NOFILE} limit or make it unlimited;
+#. TRANS @pxref{Limits on Resources}.
+#: sysdeps/gnu/errlist.h:157
+msgid "Too many open files"
+msgstr "Túl sok nyitott fájl"
+
+#. TRANS There are too many distinct file openings in the entire system.  Note
+#. TRANS that any number of linked channels count as just one file opening; see
+#. TRANS @ref{Linked Channels}.  This error never occurs on @gnuhurdsystems{}.
+#: sysdeps/gnu/errlist.h:164
+msgid "Too many open files in system"
+msgstr "Túl sok nyitott fájl a rendszerben"
+
+#. TRANS Inappropriate I/O control operation, such as trying to set terminal
+#. TRANS modes on an ordinary file.
+#: sysdeps/gnu/errlist.h:170
+msgid "Inappropriate ioctl for device"
+msgstr "Helytelen ioctl hívás az eszköznek"
+
+#. TRANS An attempt to execute a file that is currently open for writing, or
+#. TRANS write to a file that is currently being executed.  Often using a
+#. TRANS debugger to run a program is considered having it open for writing and
+#. TRANS will cause this error.  (The name stands for ``text file busy''.)  This
+#. TRANS is not an error on @gnuhurdsystems{}; the text is copied as necessary.
+#: sysdeps/gnu/errlist.h:179
+msgid "Text file busy"
+msgstr "A szövegfájl foglalt"
+
+#. TRANS The size of a file would be larger than allowed by the system.
+#: sysdeps/gnu/errlist.h:184
+msgid "File too large"
+msgstr "A fájl túl nagy"
+
+#. TRANS Write operation on a file failed because the
+#. TRANS disk is full.
+#: sysdeps/gnu/errlist.h:190
+msgid "No space left on device"
+msgstr "Nincs több hely a lemezen"
+
+#. TRANS Invalid seek operation (such as on a pipe).
+#: sysdeps/gnu/errlist.h:195
+msgid "Illegal seek"
+msgstr "Érvénytelen fájlpozicionálás"
+
+#. TRANS An attempt was made to modify something on a read-only file system.
+#: sysdeps/gnu/errlist.h:200
+msgid "Read-only file system"
+msgstr "Írásvédett fájlrendszer"
+
+#. TRANS The link count of a single file would become too large.
+#. TRANS @code{rename} can cause this error if the file being renamed already has
+#. TRANS as many links as it can take (@pxref{Renaming Files}).
+#: sysdeps/gnu/errlist.h:207
+msgid "Too many links"
+msgstr "Túl sok link"
+
+#. TRANS Used by mathematical functions when an argument value does
+#. TRANS not fall into the domain over which the function is defined.
+#: sysdeps/gnu/errlist.h:222
+msgid "Numerical argument out of domain"
+msgstr "A numerikus paraméter kívül esik a tartományon"
+
+#. TRANS Used by mathematical functions when the result value is
+#. TRANS not representable because of overflow or underflow.
+#: sysdeps/gnu/errlist.h:228
+msgid "Numerical result out of range"
+msgstr "A numerikus eredmény kívül esik a tartományon"
+
+#. TRANS The call might work if you try again
+#. TRANS later.  The macro @code{EWOULDBLOCK} is another name for @code{EAGAIN};
+#. TRANS they are always the same in @theglibc{}.
+#. TRANS
+#. TRANS This error can happen in a few different situations:
+#. TRANS
+#. TRANS @itemize @bullet
+#. TRANS @item
+#. TRANS An operation that would block was attempted on an object that has
+#. TRANS non-blocking mode selected.  Trying the same operation again will block
+#. TRANS until some external condition makes it possible to read, write, or
+#. TRANS connect (whatever the operation).  You can use @code{select} to find out
+#. TRANS when the operation will be possible; @pxref{Waiting for I/O}.
+#. TRANS
+#. TRANS @strong{Portability Note:} In many older Unix systems, this condition
+#. TRANS was indicated by @code{EWOULDBLOCK}, which was a distinct error code
+#. TRANS different from @code{EAGAIN}.  To make your program portable, you should
+#. TRANS check for both codes and treat them the same.
+#. TRANS
+#. TRANS @item
+#. TRANS A temporary resource shortage made an operation impossible.  @code{fork}
+#. TRANS can return this error.  It indicates that the shortage is expected to
+#. TRANS pass, so your program can try the call again later and it may succeed.
+#. TRANS It is probably a good idea to delay for a few seconds before trying it
+#. TRANS again, to allow time for other processes to release scarce resources.
+#. TRANS Such shortages are usually fairly serious and affect the whole system,
+#. TRANS so usually an interactive program should report the error to the user
+#. TRANS and return to its command loop.
+#. TRANS @end itemize
+#: sysdeps/gnu/errlist.h:261
+msgid "Resource temporarily unavailable"
+msgstr "Erőforrás átmenetileg nem érhető el"
+
+#. TRANS An operation that cannot complete immediately was initiated on an object
+#. TRANS that has non-blocking mode selected.  Some functions that must always
+#. TRANS block (such as @code{connect}; @pxref{Connecting}) never return
+#. TRANS @code{EAGAIN}.  Instead, they return @code{EINPROGRESS} to indicate that
+#. TRANS the operation has begun and will take some time.  Attempts to manipulate
+#. TRANS the object before the call completes return @code{EALREADY}.  You can
+#. TRANS use the @code{select} function to find out when the pending operation
+#. TRANS has completed; @pxref{Waiting for I/O}.
+#: sysdeps/gnu/errlist.h:273
+msgid "Operation now in progress"
+msgstr "A művelet folyamatban van"
+
+#. TRANS An operation is already in progress on an object that has non-blocking
+#. TRANS mode selected.
+#: sysdeps/gnu/errlist.h:279
+msgid "Operation already in progress"
+msgstr "A művelet már folyamatban"
+
+#. TRANS A file that isn't a socket was specified when a socket is required.
+#: sysdeps/gnu/errlist.h:284
+msgid "Socket operation on non-socket"
+msgstr "Foglalatművelet egy nem foglalat elemen"
+
+#. TRANS The size of a message sent on a socket was larger than the supported
+#. TRANS maximum size.
+#: sysdeps/gnu/errlist.h:290
+msgid "Message too long"
+msgstr "Az üzenet túl hosszú"
+
+#. TRANS The socket type does not support the requested communications protocol.
+#: sysdeps/gnu/errlist.h:295
+msgid "Protocol wrong type for socket"
+msgstr "A protokoll típusa hibás a foglalathoz"
+
+#. TRANS You specified a socket option that doesn't make sense for the
+#. TRANS particular protocol being used by the socket.  @xref{Socket Options}.
+#: sysdeps/gnu/errlist.h:301
+msgid "Protocol not available"
+msgstr "A protokoll nem érhető el"
+
+#. TRANS The socket domain does not support the requested communications protocol
+#. TRANS (perhaps because the requested protocol is completely invalid).
+#. TRANS @xref{Creating a Socket}.
+#: sysdeps/gnu/errlist.h:308
+msgid "Protocol not supported"
+msgstr "A protokoll nem támogatott"
+
+#. TRANS The socket type is not supported.
+#: sysdeps/gnu/errlist.h:313
+msgid "Socket type not supported"
+msgstr "A foglalattípus nem támogatott"
+
+#. TRANS The operation you requested is not supported.  Some socket functions
+#. TRANS don't make sense for all types of sockets, and others may not be
+#. TRANS implemented for all communications protocols.  On @gnuhurdsystems{}, this
+#. TRANS error can happen for many calls when the object does not support the
+#. TRANS particular operation; it is a generic indication that the server knows
+#. TRANS nothing to do for that call.
+#: sysdeps/gnu/errlist.h:323
+msgid "Operation not supported"
+msgstr "A művelet nem támogatott"
+
+#. TRANS The socket communications protocol family you requested is not supported.
+#: sysdeps/gnu/errlist.h:328
+msgid "Protocol family not supported"
+msgstr "A protokollcsalád nem támogatott"
+
+#. TRANS The address family specified for a socket is not supported; it is
+#. TRANS inconsistent with the protocol being used on the socket.  @xref{Sockets}.
+#: sysdeps/gnu/errlist.h:334
+msgid "Address family not supported by protocol"
+msgstr "A protokoll nem támogatja a címcsaládot"
+
+#. TRANS The requested socket address is already in use.  @xref{Socket Addresses}.
+#: sysdeps/gnu/errlist.h:339
+msgid "Address already in use"
+msgstr "A cím már használatban van"
+
+#. TRANS The requested socket address is not available; for example, you tried
+#. TRANS to give a socket a name that doesn't match the local host name.
+#. TRANS @xref{Socket Addresses}.
+#: sysdeps/gnu/errlist.h:346
+msgid "Cannot assign requested address"
+msgstr "Nem sikerült a kért címet hozzárendelni"
+
+#. TRANS A socket operation failed because the network was down.
+#: sysdeps/gnu/errlist.h:351
+msgid "Network is down"
+msgstr "A hálózat nem működik"
+
+#. TRANS A socket operation failed because the subnet containing the remote host
+#. TRANS was unreachable.
+#: sysdeps/gnu/errlist.h:357
+msgid "Network is unreachable"
+msgstr "A hálózat elérhetetlen"
+
+#. TRANS A network connection was reset because the remote host crashed.
+#: sysdeps/gnu/errlist.h:362
+msgid "Network dropped connection on reset"
+msgstr "A hálózat eldobta a kapcsolatot visszaálláskor"
+
+#. TRANS A network connection was aborted locally.
+#: sysdeps/gnu/errlist.h:367
+msgid "Software caused connection abort"
+msgstr "A szoftver kapcsolatszakadást okozott"
+
+#. TRANS A network connection was closed for reasons outside the control of the
+#. TRANS local host, such as by the remote machine rebooting or an unrecoverable
+#. TRANS protocol violation.
+#: sysdeps/gnu/errlist.h:374
+msgid "Connection reset by peer"
+msgstr "A kapcsolatot bontotta a távoli fél"
+
+#. TRANS The kernel's buffers for I/O operations are all in use.  In GNU, this
+#. TRANS error is always synonymous with @code{ENOMEM}; you may get one or the
+#. TRANS other from network operations.
+#: sysdeps/gnu/errlist.h:381
+msgid "No buffer space available"
+msgstr "Nem érhető el pufferterület"
+
+#. TRANS You tried to connect a socket that is already connected.
+#. TRANS @xref{Connecting}.
+#: sysdeps/gnu/errlist.h:387
+msgid "Transport endpoint is already connected"
+msgstr "A szállítási végpont már csatlakoztatva"
+
+#. TRANS The socket is not connected to anything.  You get this error when you
+#. TRANS try to transmit data over a socket, without first specifying a
+#. TRANS destination for the data.  For a connectionless socket (for datagram
+#. TRANS protocols, such as UDP), you get @code{EDESTADDRREQ} instead.
+#: sysdeps/gnu/errlist.h:395
+msgid "Transport endpoint is not connected"
+msgstr "A szállítási végpont nincs csatlakoztatva"
+
+#. TRANS No default destination address was set for the socket.  You get this
+#. TRANS error when you try to transmit data over a connectionless socket,
+#. TRANS without first specifying a destination for the data with @code{connect}.
+#: sysdeps/gnu/errlist.h:402
+msgid "Destination address required"
+msgstr "Célcím szükséges"
+
+#. TRANS The socket has already been shut down.
+#: sysdeps/gnu/errlist.h:407
+msgid "Cannot send after transport endpoint shutdown"
+msgstr "Nem lehet küldeni a szállítási végpont leállása után"
+
+#: sysdeps/gnu/errlist.h:410
+msgid "Too many references: cannot splice"
+msgstr "Túl sok hivatkozás: nem lehet csatlakoztatni"
+
+#. TRANS A socket operation with a specified timeout received no response during
+#. TRANS the timeout period.
+#: sysdeps/gnu/errlist.h:416
+msgid "Connection timed out"
+msgstr "Időtúllépés a kapcsolatban"
+
+#. TRANS A remote host refused to allow the network connection (typically because
+#. TRANS it is not running the requested service).
+#: sysdeps/gnu/errlist.h:422
+msgid "Connection refused"
+msgstr "Kapcsolat elutasítva"
+
+#. TRANS Too many levels of symbolic links were encountered in looking up a file name.
+#. TRANS This often indicates a cycle of symbolic links.
+#: sysdeps/gnu/errlist.h:428
+msgid "Too many levels of symbolic links"
+msgstr "Túl sok szimbolikus link"
+
+#. TRANS Filename too long (longer than @code{PATH_MAX}; @pxref{Limits for
+#. TRANS Files}) or host name too long (in @code{gethostname} or
+#. TRANS @code{sethostname}; @pxref{Host Identification}).
+#: sysdeps/gnu/errlist.h:435
+msgid "File name too long"
+msgstr "Túl hosszú fájlnév"
+
+#. TRANS The remote host for a requested network connection is down.
+#: sysdeps/gnu/errlist.h:440
+msgid "Host is down"
+msgstr "A gép nem működik"
+
+#: sysdeps/gnu/errlist.h:445
+msgid "No route to host"
+msgstr "Nincs útvonal a gép felé"
+
+#. TRANS Directory not empty, where an empty directory was expected.  Typically,
+#. TRANS this error occurs when you are trying to delete a directory.
+#: sysdeps/gnu/errlist.h:451
+msgid "Directory not empty"
+msgstr "A könyvtár nem üres"
+
+#. TRANS The file quota system is confused because there are too many users.
+#. TRANS @c This can probably happen in a GNU system when using NFS.
+#: sysdeps/gnu/errlist.h:457
+msgid "Too many users"
+msgstr "Túl sok felhasználó"
+
+#. TRANS The user's disk quota was exceeded.
+#: sysdeps/gnu/errlist.h:462
+msgid "Disk quota exceeded"
+msgstr "Lemezkvóta túllépve"
+
+#. TRANS An attempt was made to NFS-mount a remote file system with a file name that
+#. TRANS already specifies an NFS-mounted file.
+#. TRANS (This is an error on some operating systems, but we expect it to work
+#. TRANS properly on @gnuhurdsystems{}, making this error code impossible.)
+#: sysdeps/gnu/errlist.h:479
+msgid "Object is remote"
+msgstr "Az objektum távoli"
+
+#. TRANS This is used by the file locking facilities; see
+#. TRANS @ref{File Locks}.  This error is never generated by @gnuhurdsystems{}, but
+#. TRANS it can result from an operation to an NFS server running another
+#. TRANS operating system.
+#: sysdeps/gnu/errlist.h:487
+msgid "No locks available"
+msgstr "Nem érhetők el zárolások"
+
+#. TRANS This indicates that the function called is
+#. TRANS not implemented at all, either in the C library itself or in the
+#. TRANS operating system.  When you get this error, you can be sure that this
+#. TRANS particular function will always fail with @code{ENOSYS} unless you
+#. TRANS install a new version of the C library or the operating system.
+#: sysdeps/gnu/errlist.h:496
+msgid "Function not implemented"
+msgstr "A függvény nincs megvalósítva"
+
+#. TRANS While decoding a multibyte character the function came along an invalid
+#. TRANS or an incomplete sequence of bytes or the given wide character is invalid.
+#: sysdeps/gnu/errlist.h:502
+msgid "Invalid or incomplete multibyte or wide character"
+msgstr "Érvénytelen vagy részleges több bájtos vagy széles karakter"
+
+#: sysdeps/gnu/errlist.h:505
+msgid "Bad message"
+msgstr "Rossz üzenet"
+
+#: sysdeps/gnu/errlist.h:508
+msgid "Identifier removed"
+msgstr "Azonosító eltávolítva"
+
+#: sysdeps/gnu/errlist.h:511
+msgid "Multihop attempted"
+msgstr "Kísérlet többszörös ugrásra"
+
+#: sysdeps/gnu/errlist.h:514
+msgid "No data available"
+msgstr "Nincs elérhető adat"
+
+#: sysdeps/gnu/errlist.h:517
+msgid "Link has been severed"
+msgstr "A kapcsolat megsérült"
+
+#: sysdeps/gnu/errlist.h:520
+msgid "No message of desired type"
+msgstr "Nem található a kívánt típusú üzenet"
+
+#: sysdeps/gnu/errlist.h:523
+msgid "Out of streams resources"
+msgstr "Az adatfolyam erőforrásai elfogytak"
+
+#: sysdeps/gnu/errlist.h:526
+msgid "Device not a stream"
+msgstr "Az eszköz nem adatfolyam"
+
+#: sysdeps/gnu/errlist.h:529
+msgid "Value too large for defined data type"
+msgstr "Az érték túl nagy a megadott adattípushoz"
+
+#: sysdeps/gnu/errlist.h:532
+msgid "Protocol error"
+msgstr "Protokollhiba"
+
+#: sysdeps/gnu/errlist.h:535
+msgid "Timer expired"
+msgstr "Időzítés lejárt"
+
+#. TRANS An asynchronous operation was canceled before it
+#. TRANS completed.  @xref{Asynchronous I/O}.  When you call @code{aio_cancel},
+#. TRANS the normal result is for the operations affected to complete with this
+#. TRANS error; @pxref{Cancel AIO Operations}.
+#: sysdeps/gnu/errlist.h:543
+msgid "Operation canceled"
+msgstr "Művelet megszakítva"
+
+#: sysdeps/gnu/errlist.h:546
+msgid "Owner died"
+msgstr "A tulajdonos meghalt"
+
+#: sysdeps/gnu/errlist.h:549
+msgid "State not recoverable"
+msgstr "Az állapot nem állítható vissza"
+
+#: sysdeps/gnu/errlist.h:552
+msgid "Interrupted system call should be restarted"
+msgstr "A megszakított rendszerhívást újra kell indítani"
+
+#: sysdeps/gnu/errlist.h:555
+msgid "Channel number out of range"
+msgstr "A csatornaszám kívül esik a tartományon"
+
+#: sysdeps/gnu/errlist.h:558
+msgid "Level 2 not synchronized"
+msgstr "2. szint nincs szinkronizálva"
+
+#: sysdeps/gnu/errlist.h:561
+msgid "Level 3 halted"
+msgstr "3. szint leállt"
+
+#: sysdeps/gnu/errlist.h:564
+msgid "Level 3 reset"
+msgstr "3. szint újraindítása"
+
+#: sysdeps/gnu/errlist.h:567
+msgid "Link number out of range"
+msgstr "Hivatkozás száma kívül esik a tartományon"
+
+#: sysdeps/gnu/errlist.h:570
+msgid "Protocol driver not attached"
+msgstr "A protokollmeghajtó nincs csatolva"
+
+#: sysdeps/gnu/errlist.h:573
+msgid "No CSI structure available"
+msgstr "Nem érhető el CSI struktúra"
+
+#: sysdeps/gnu/errlist.h:576
+msgid "Level 2 halted"
+msgstr "2. szint leállt"
+
+#: sysdeps/gnu/errlist.h:579
+msgid "Invalid exchange"
+msgstr "Érvénytelen adatcsere"
+
+#: sysdeps/gnu/errlist.h:582
+msgid "Invalid request descriptor"
+msgstr "Érvénytelen kérésleíró"
+
+#: sysdeps/gnu/errlist.h:585
+msgid "Exchange full"
+msgstr "Az adatcsere megtelt"
+
+#: sysdeps/gnu/errlist.h:588
+msgid "No anode"
+msgstr "Nincs anode"
+
+#: sysdeps/gnu/errlist.h:591
+msgid "Invalid request code"
+msgstr "Érvénytelen kéréskód"
+
+#: sysdeps/gnu/errlist.h:594
+msgid "Invalid slot"
+msgstr "Érvénytelen hely"
+
+#: sysdeps/gnu/errlist.h:597
+msgid "Bad font file format"
+msgstr "Hibás betűfájl-formátum"
+
+#: sysdeps/gnu/errlist.h:600
+msgid "Machine is not on the network"
+msgstr "A gép nincs a hálózaton"
+
+#: sysdeps/gnu/errlist.h:603
+msgid "Package not installed"
+msgstr "A csomag nincs telepítve"
+
+#: sysdeps/gnu/errlist.h:606
+msgid "Advertise error"
+msgstr "Hirdetési hiba"
+
+#: sysdeps/gnu/errlist.h:609
+msgid "Srmount error"
+msgstr "Srmount hiba"
+
+#: sysdeps/gnu/errlist.h:612
+msgid "Communication error on send"
+msgstr "Kommunikációs hiba küldéskor"
+
+#: sysdeps/gnu/errlist.h:615
+msgid "RFS specific error"
+msgstr "RFS-specifikus hiba"
+
+#: sysdeps/gnu/errlist.h:618
+msgid "Name not unique on network"
+msgstr "A név nem egyértelmű a hálózaton"
+
+#: sysdeps/gnu/errlist.h:621
+msgid "File descriptor in bad state"
+msgstr "Hibás állapotú fájlleíró"
+
+#: sysdeps/gnu/errlist.h:624
+msgid "Remote address changed"
+msgstr "Távoli cím megváltozott"
+
+#: sysdeps/gnu/errlist.h:627
+msgid "Can not access a needed shared library"
+msgstr "Egy szükséges osztott programkönyvtár nem érhető el"
+
+#: sysdeps/gnu/errlist.h:630
+msgid "Accessing a corrupted shared library"
+msgstr "Sérült osztott programkönyvtár elérése"
+
+#: sysdeps/gnu/errlist.h:633
+msgid ".lib section in a.out corrupted"
+msgstr "A .lib szakasz az a.out fájlban sérült"
+
+#: sysdeps/gnu/errlist.h:636
+msgid "Attempting to link in too many shared libraries"
+msgstr "Kísérket túl sok osztott programkönyvtárban való linkelésre"
+
+#: sysdeps/gnu/errlist.h:639
+msgid "Cannot exec a shared library directly"
+msgstr "Nem hajtható végre közvetlenül az osztott programkönyvtár"
+
+#: sysdeps/gnu/errlist.h:642
+msgid "Streams pipe error"
+msgstr "Adatcsatorna-hiba az adatfolyamokban"
+
+#: sysdeps/gnu/errlist.h:645
+msgid "Structure needs cleaning"
+msgstr "A struktúrát meg kell tisztítani"
+
+#: sysdeps/gnu/errlist.h:648
+msgid "Not a XENIX named type file"
+msgstr "Nem XENIX megnevezett típusú fájl"
+
+#: sysdeps/gnu/errlist.h:651
+msgid "No XENIX semaphores available"
+msgstr "Nem érhetők el XENIX szemaforok"
+
+#: sysdeps/gnu/errlist.h:654
+msgid "Is a named type file"
+msgstr "Ez egy megnevezett típusú fájl"
+
+#: sysdeps/gnu/errlist.h:657
+msgid "Remote I/O error"
+msgstr "Távoli ki-/bemeneti hiba"
+
+#: sysdeps/gnu/errlist.h:660
+msgid "No medium found"
+msgstr "Nem található adathordozó"
+
+#: sysdeps/gnu/errlist.h:663
+msgid "Wrong medium type"
+msgstr "Hibás adathordozó-típus"
+
+#: sysdeps/gnu/errlist.h:666
+msgid "Required key not available"
+msgstr "A szükséges kulcs nem érhető el"
+
+#: sysdeps/gnu/errlist.h:669
+msgid "Key has expired"
+msgstr "A kulcs lejárt"
+
+#: sysdeps/gnu/errlist.h:672
+msgid "Key has been revoked"
+msgstr "A kulcsot visszavonták"
+
+#: sysdeps/gnu/errlist.h:675
+msgid "Key was rejected by service"
+msgstr "A kulcsot a szolgáltatás elutasította"
+
+#: sysdeps/gnu/errlist.h:684
+msgid "RPC struct is bad"
+msgstr "Az RPC struct hibás"
+
+#. TRANS The file was the wrong type for the
+#. TRANS operation, or a data file had the wrong format.
+#. TRANS
+#. TRANS On some systems @code{chmod} returns this error if you try to set the
+#. TRANS sticky bit on a non-directory file; @pxref{Setting Permissions}.
+#: sysdeps/gnu/errlist.h:693
+msgid "Inappropriate file type or format"
+msgstr "Helytelen fájltípus vagy -formátum"
+
+#: sysdeps/gnu/errlist.h:696
+msgid "RPC bad procedure for program"
+msgstr "Hibás RPC hívás a programhoz"
+
+#: sysdeps/gnu/errlist.h:699
+msgid "Authentication error"
+msgstr "Hitelesítési hiba"
+
+#. TRANS On @gnuhurdsystems{}, opening a file returns this error when the file is
+#. TRANS translated by a program and the translator program dies while starting
+#. TRANS up, before it has connected to the file.
+#: sysdeps/gnu/errlist.h:706
+msgid "Translator died"
+msgstr "A fordító meghalt"
+
+#: sysdeps/gnu/errlist.h:709
+msgid "RPC version wrong"
+msgstr "Az RPC verzió rossz"
+
+#. TRANS You did @strong{what}?
+#: sysdeps/gnu/errlist.h:714
+msgid "You really blew it this time"
+msgstr "Most tényleg eltolta"
+
+#. TRANS This means that the per-user limit on new process would be exceeded by
+#. TRANS an attempted @code{fork}.  @xref{Limits on Resources}, for details on
+#. TRANS the @code{RLIMIT_NPROC} limit.
+#: sysdeps/gnu/errlist.h:721
+msgid "Too many processes"
+msgstr "Túl sok folyamat"
+
+#. TRANS This error code has no purpose.
+#: sysdeps/gnu/errlist.h:726
+msgid "Gratuitous error"
+msgstr "Fölösleges hiba"
+
+#. TRANS A function returns this error when certain parameter
+#. TRANS values are valid, but the functionality they request is not available.
+#. TRANS This can mean that the function does not implement a particular command
+#. TRANS or option value or flag bit at all.  For functions that operate on some
+#. TRANS object given in a parameter, such as a file descriptor or a port, it
+#. TRANS might instead mean that only @emph{that specific object} (file
+#. TRANS descriptor, port, etc.) is unable to support the other parameters given;
+#. TRANS different file descriptors might support different ranges of parameter
+#. TRANS values.
+#. TRANS
+#. TRANS If the entire function is not available at all in the implementation,
+#. TRANS it returns @code{ENOSYS} instead.
+#: sysdeps/gnu/errlist.h:742
+msgid "Not supported"
+msgstr "Nem támogatott"
+
+#: sysdeps/gnu/errlist.h:745
+msgid "RPC program version wrong"
+msgstr "Az RPC program verziója rossz"
+
+#. TRANS On @gnuhurdsystems{}, servers supporting the @code{term} protocol return
+#. TRANS this error for certain operations when the caller is not in the
+#. TRANS foreground process group of the terminal.  Users do not usually see this
+#. TRANS error because functions such as @code{read} and @code{write} translate
+#. TRANS it into a @code{SIGTTIN} or @code{SIGTTOU} signal.  @xref{Job Control},
+#. TRANS for information on process groups and these signals.
+#: sysdeps/gnu/errlist.h:755
+msgid "Inappropriate operation for background process"
+msgstr "Nem megfelelő művelet a háttérfolyamathoz"
+
+#. TRANS Go home and have a glass of warm, dairy-fresh milk.
+#. TRANS @c Okay.  Since you are dying to know, I'll tell you.
+#. TRANS @c This is a joke, obviously.  There is a children's song which begins,
+#. TRANS @c "Old McDonald had a farm, e-i-e-i-o."  Every time I see the (real)
+#. TRANS @c errno macro EIO, I think about that song.  Probably most of my
+#. TRANS @c compatriots who program on Unix do, too.  One of them must have stayed
+#. TRANS @c up a little too late one night and decided to add it to Hurd or Glibc.
+#. TRANS @c Whoever did it should be castigated, but it made me laugh.
+#. TRANS @c  --jtobey@channel1.com
+#. TRANS @c
+#. TRANS @c "bought the farm" means "died".  -jtobey
+#. TRANS @c
+#. TRANS @c Translators, please do not translate this litteraly, translate it into
+#. TRANS @c an idiomatic funny way of saying that the computer died.
+#: sysdeps/gnu/errlist.h:773
+msgid "Computer bought the farm"
+msgstr "A számítógép fűbe harapott"
+
+#. TRANS In @theglibc{}, this is another name for @code{EAGAIN} (above).
+#. TRANS The values are always the same, on every operating system.
+#. TRANS
+#. TRANS C libraries in many older Unix systems have @code{EWOULDBLOCK} as a
+#. TRANS separate error code.
+#: sysdeps/gnu/errlist.h:782
+msgid "Operation would block"
+msgstr "A művelet blokkoló lenne"
+
+#: sysdeps/gnu/errlist.h:785
+msgid "Need authenticator"
+msgstr "Hitelesítő szükséges"
+
+#. TRANS The experienced user will know what is wrong.
+#. TRANS @c This error code is a joke.  Its perror text is part of the joke.
+#. TRANS @c Don't change it.
+#: sysdeps/gnu/errlist.h:792
+msgid "?"
+msgstr "?"
+
+#: sysdeps/gnu/errlist.h:795
+msgid "RPC program not available"
+msgstr "Az RPC program nem érhető el"
+
+#: sysdeps/mach/_strerror.c:43
+msgid "Error in unknown error system: "
+msgstr "Hiba az ismeretlen hibarendszerben: "
+
+#: sysdeps/posix/gai_strerror-strs.h:1
+msgid "Address family for hostname not supported"
+msgstr "A címcsalád a gépnévhez nem támogatott"
+
+#: sysdeps/posix/gai_strerror-strs.h:2
+msgid "Temporary failure in name resolution"
+msgstr "Átmeneti névfeloldási hiba"
+
+#: sysdeps/posix/gai_strerror-strs.h:3
+msgid "Bad value for ai_flags"
+msgstr "Az ai_flags értéke hibás"
+
+#: sysdeps/posix/gai_strerror-strs.h:4
+msgid "Non-recoverable failure in name resolution"
+msgstr "Helyreállíthatatlan névfeloldási hiba"
+
+#: sysdeps/posix/gai_strerror-strs.h:5
+msgid "ai_family not supported"
+msgstr "az ai_family nem támogatott"
+
+#: sysdeps/posix/gai_strerror-strs.h:6
+msgid "Memory allocation failure"
+msgstr "Memóriafoglalási hiba"
+
+#: sysdeps/posix/gai_strerror-strs.h:7
+msgid "No address associated with hostname"
+msgstr "Nincs cím társítva a gépnévhez"
+
+#: sysdeps/posix/gai_strerror-strs.h:8
+msgid "Name or service not known"
+msgstr "A név vagy a szolgáltatás nem ismert"
+
+#: sysdeps/posix/gai_strerror-strs.h:9
+msgid "Servname not supported for ai_socktype"
+msgstr "A Servname nem támogatott az ai_socktype-hoz"
+
+#: sysdeps/posix/gai_strerror-strs.h:10
+msgid "ai_socktype not supported"
+msgstr "az ai_socktype nem támogatott"
+
+#: sysdeps/posix/gai_strerror-strs.h:11
+msgid "System error"
+msgstr "Rendszerhiba"
+
+#: sysdeps/posix/gai_strerror-strs.h:12
+msgid "Processing request in progress"
+msgstr "Kérés feldolgozása folyamatban"
+
+#: sysdeps/posix/gai_strerror-strs.h:13
+msgid "Request canceled"
+msgstr "Kérés megszakítva"
+
+#: sysdeps/posix/gai_strerror-strs.h:14
+msgid "Request not canceled"
+msgstr "A kérés nem lett megszakítva"
+
+#: sysdeps/posix/gai_strerror-strs.h:15
+msgid "All requests done"
+msgstr "Minden kérés kész"
+
+#: sysdeps/posix/gai_strerror-strs.h:16
+msgid "Interrupted by a signal"
+msgstr "Egy szignál megszakította"
+
+#: sysdeps/posix/gai_strerror-strs.h:17
+msgid "Parameter string not correctly encoded"
+msgstr "A paraméter-karakterlánc kódolása nem megfelelő"
+
+#: sysdeps/unix/sysv/linux/ia64/makecontext.c:58
+#, c-format
+msgid "makecontext: does not know how to handle more than 8 arguments\n"
+msgstr "makecontext: 8-nál több paraméter nem kezelhető\n"
+
+#: sysdeps/unix/sysv/linux/lddlibc4.c:60
+#, c-format
+msgid ""
+"Usage: lddlibc4 FILE\n"
+"\n"
+msgstr ""
+"Használat: lddlibc4 FÁJL\n"
+"\n"
+
+#: sysdeps/unix/sysv/linux/lddlibc4.c:81
+#, c-format
+msgid "cannot open `%s'"
+msgstr "„%s” nem nyitható meg"
+
+#: sysdeps/unix/sysv/linux/x86/readelflib.c:66
+#, c-format
+msgid "%s is for unknown machine %d.\n"
+msgstr "%s az ismeretlen géphez tartozik: %d.\n"
+
+#: timezone/zic.c:1191
+msgid "standard input"
+msgstr "szabványos bemenet"

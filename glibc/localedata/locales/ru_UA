@@ -1,0 +1,118 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Russian Language Locale for Ukraine
+% Source: RFC 2319
+% Contact: Denis V. Dmitrienko
+% Email: denis@denix.org
+% Language: ru
+% Territory: UA
+% Revision: 1.2
+% Date: 1998-05-03
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Russian locale for Ukraine"
+source     "RFC 2319"
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Russian"
+territory  "Ukraine"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "ru_RU"
+END LC_CTYPE
+
+LC_COLLATE
+copy "ru_RU"
+END LC_COLLATE
+
+LC_MESSAGES
+copy "ru_RU"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "UAH "
+currency_symbol           "<U20B4>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+copy "ru_RU"
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "380"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U0423><U043A><U0440><U0430><U0438><U043D><U0430>"
+country_ab2 "UA"
+country_ab3 "UKR"
+country_num 804
+country_car    "UA"
+lang_name   "<U0440><U0443><U0441><U0441><U043A><U0438><U0439>"
+lang_ab      "ru"
+lang_term    "rus"
+lang_lib    "rus"
+END LC_ADDRESS

@@ -1,0 +1,43 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008 && !defined XPG4
+type {struct timeval}
+
+element {struct timeval} time_t tv_sec
+element {struct timeval} suseconds_t tv_usec
+
+type {struct itimerval}
+
+element {struct itimerval} {struct timeval} it_interval
+element {struct itimerval} {struct timeval} it_value
+
+type time_t
+type suseconds_t
+
+type fd_set
+element fd_set long fds_bits []
+
+constant ITIMER_REAL
+constant ITIMER_VIRTUAL
+constant ITIMER_PROF
+
+macro FD_CLR
+macro FD_ISSET
+macro FD_SET
+macro FD_ZERO
+
+constant FD_SETSIZE
+
+function int getitimer (int, struct itimerval*)
+function int setitimer (int, const struct itimerval*, struct itimerval*)
+function int gettimeofday (struct timeval*, void*)
+function int select (int, fd_set*, fd_set*, fd_set*, struct timeval*)
+function int utimes (const char*, const struct timeval [2])
+
+allow fds_*
+allow it_*
+allow tv_*
+allow FD_*
+allow ITIMER_*
+allow *_t
+
+allow-header sys/select.h
+#endif

@@ -1,0 +1,23 @@
+/* pthread initializer is weak in glibc.  It must be included if glibc
+   is to start threading. */
+EXTERN(__pthread_initialize_minimal)
+
+/* Weak references in glibc that must be filled if glibc is to be
+   thread safe.  */
+EXTERN(cthread_detach)
+EXTERN(cthread_fork)
+EXTERN(cthread_keycreate)
+EXTERN(cthread_getspecific)
+EXTERN(cthread_setspecific)
+EXTERN(__mutex_lock_solid)
+EXTERN(__mutex_unlock_solid)
+/* For libio stream locking.  */
+EXTERN(_cthreads_flockfile)
+EXTERN(_cthreads_funlockfile)
+EXTERN(_cthreads_ftrylockfile)
+/* To create the sigthread and get its stack layout on fork */
+EXTERN(pthread_create)
+EXTERN(pthread_detach)
+EXTERN(pthread_getattr_np)
+EXTERN(pthread_attr_getstack)
+EXTERN(__pthread_enable_asynccancel)

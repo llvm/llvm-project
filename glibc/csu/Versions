@@ -1,0 +1,16 @@
+libc {
+  GLIBC_2.0 {
+    # helper functions
+    __libc_init_first; __libc_start_main;
+  }
+  GLIBC_2.1 {
+    # New special glibc functions.
+    gnu_get_libc_release; gnu_get_libc_version;
+  }
+  GLIBC_2.34 {
+    __libc_start_main;
+  }
+  GLIBC_PRIVATE {
+    errno;
+  }
+}

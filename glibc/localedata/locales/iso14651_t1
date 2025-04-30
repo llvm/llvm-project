@@ -1,0 +1,23 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_COLLATE
+
+copy "iso14651_t1_common"
+
+script <HAN>
+
+order_start <HAN>;forward;forward;forward;forward,position
+<U4E00> <U4E00>;IGNORE;IGNORE;IGNORE
+.. ..;IGNORE;IGNORE;IGNORE
+<U9FA5> <U9FA5>;IGNORE;IGNORE;IGNORE
+order_end
+
+END LC_COLLATE

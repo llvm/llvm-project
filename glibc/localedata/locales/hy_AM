@@ -1,0 +1,209 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title "Armenian language locale for Armenia"
+source "http:////www.freenet.am//armscii"
+%	Eugene Sevinian <sevinian@crdlx2.yerphi.am> completed
+%	LC_MONETARY and LC_TIME
+address ""
+contact "Pablo Saratxaga"
+email "pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Armenian"
+territory "Armenia"
+revision "0.4"
+date "2001-01-26"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+END LC_IDENTIFICATION
+
+
+% IMORTANT NOTE:
+%
+%    Dictionaries, spelling checkers and other linguistic systems, as
+%    well as operating environments distinguishing human languages and
+%    locale identification should take into consideration the existence
+%    of 4 mutually incomprehensible forms (dialects) of the Armenian
+%    language: Eastern, Western, Grabar and Middle. Table 3 presents two
+%    forms of suggested mnemonic tags: MIME-style (RFC-1766) and
+%    Windows-style 3-letter abbreviations.
+%
+%    Table 3. Language tags
+%
+%               Mime-style name  3-letter code   Full name
+%                   hy-eastern   AME      Armenian Eastern
+%                   hy-western   AMW      Armenian Western
+%                   hy-grabar    AMG      Armenian Grabar
+%                   hy-middle    AMM      Armenian Middle
+%
+% That will affect LC_TIME and LC_MESSAGES; as well as any translation
+% of programs. the locale names will probably be hy@eastern, hy@western,
+% hy@grabar, and hy@middle in Linux (eg, as you pass them to LANG variable).
+
+%%%%%%%%%%%%%
+%
+% TODO: check LC_MESSAGES
+%	see IMPORTANT NOTE above.
+%
+%%%%%%%%%%%%
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol      "AMD "
+currency_symbol      "<U058F>"
+mon_decimal_point    "."
+mon_thousands_sep    ","
+mon_grouping         3;3
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits      2
+frac_digits          2
+p_cs_precedes        1
+p_sep_by_space       0
+n_cs_precedes        1
+n_sep_by_space       0
+p_sign_posn          1
+n_sign_posn          1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point        "."
+thousands_sep        ","
+grouping             3;3
+END LC_NUMERIC
+
+LC_TIME
+
+abday       "<U053F><U0580><U056F>";/
+            "<U0535><U0580><U056F>";/
+            "<U0535><U0580><U0584>";/
+            "<U0549><U0580><U0584>";/
+            "<U0540><U0576><U0563>";/
+            "<U0548><U0582><U0580>";/
+            "<U0547><U0562><U0569>"
+day         "<U053F><U056B><U0580><U0561><U056F><U056B>";/
+            "<U0535><U0580><U056F><U0578><U0582><U0577><U0561><U0562><U0569><U056B>";/
+            "<U0535><U0580><U0565><U0584><U0577><U0561><U0562><U0569><U056B>";/
+            "<U0549><U0578><U0580><U0565><U0584><U0577><U0561><U0562><U0569><U056B>";/
+            "<U0540><U056B><U0576><U0563><U0577><U0561><U0562><U0569><U056B>";/
+            "<U0548><U0582><U0580><U0562><U0561><U0569>";/
+            "<U0547><U0561><U0562><U0561><U0569>"
+abmon       "<U0540><U0576><U057E>";/
+            "<U0553><U057F><U0580>";/
+            "<U0544><U0561><U0580>";/
+            "<U0531><U057A><U0580>";/
+            "<U0544><U0561><U0575>";/
+            "<U0540><U0576><U057D>";/
+            "<U0540><U056C><U057D>";/
+            "<U0555><U0563><U057D>";/
+            "<U054D><U0565><U057A>";/
+            "<U0540><U0578><U056F>";/
+            "<U0546><U0574><U0562>";/
+            "<U0534><U0565><U056F>"
+alt_mon     "<U0570><U0578><U0582><U0576><U057E><U0561><U0580>";/
+            "<U0583><U0565><U057F><U0580><U057E><U0561><U0580>";/
+            "<U0574><U0561><U0580><U057F>";/
+            "<U0561><U057A><U0580><U056B><U056C>";/
+            "<U0574><U0561><U0575><U056B><U057D>";/
+            "<U0570><U0578><U0582><U0576><U056B><U057D>";/
+            "<U0570><U0578><U0582><U056C><U056B><U057D>";/
+            "<U0585><U0563><U0578><U057D><U057F><U0578><U057D>";/
+            "<U057D><U0565><U057A><U057F><U0565><U0574><U0562><U0565><U0580>";/
+            "<U0570><U0578><U056F><U057F><U0565><U0574><U0562><U0565><U0580>";/
+            "<U0576><U0578><U0575><U0565><U0574><U0562><U0565><U0580>";/
+            "<U0564><U0565><U056F><U057F><U0565><U0574><U0562><U0565><U0580>"
+mon         "<U0570><U0578><U0582><U0576><U057E><U0561><U0580><U056B>";/
+            "<U0583><U0565><U057F><U0580><U057E><U0561><U0580><U056B>";/
+            "<U0574><U0561><U0580><U057F><U056B>";/
+            "<U0561><U057A><U0580><U056B><U056C><U056B>";/
+            "<U0574><U0561><U0575><U056B><U057D><U056B>";/
+            "<U0570><U0578><U0582><U0576><U056B><U057D><U056B>";/
+            "<U0570><U0578><U0582><U056C><U056B><U057D><U056B>";/
+            "<U0585><U0563><U0578><U057D><U057F><U0578><U057D><U056B>";/
+            "<U057D><U0565><U057A><U057F><U0565><U0574><U0562><U0565><U0580><U056B>";/
+            "<U0570><U0578><U056F><U057F><U0565><U0574><U0562><U0565><U0580><U056B>";/
+            "<U0576><U0578><U0575><U0565><U0574><U0562><U0565><U0580><U056B>";/
+            "<U0564><U0565><U056F><U057F><U0565><U0574><U0562><U0565><U0580><U056B>"
+d_t_fmt     "%a %d %b %Y %r"
+date_fmt    "%a %d %b %Y %r %Z"
+d_fmt       "%m//%d//%y"
+t_fmt       "%r"
+am_pm       "";""
+t_fmt_ampm  ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yYsS<U0561><U0531>]"
+noexpr  "^[-0nN<U0578><U0548>]"
+yesstr  "<U0561><U0575><U0578>"
+nostr   "<U0578><U0579>"
+END LC_MESSAGES
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+% FIXME Find tel_dom_fmt
+int_select "00"
+int_prefix "374"
+END LC_TELEPHONE
+
+LC_ADDRESS
+postal_fmt "%d%N%f%N%d%N%b%N%s %h 5e %r%N%C%z %T%N%c%N"
+country_name "<U0540><U0561><U0575><U0561><U057D><U057F><U0561><U0576>"
+country_post "AM"
+country_ab2 "AM"
+country_ab3 "ARM"
+country_num 051
+country_car "AM"
+country_isbn "978-9939,978-99930,978-99941"
+lang_name "<U0570><U0561><U0575><U0565><U0580><U0565><U0576>"
+lang_ab      "hy"
+lang_term    "hye"
+lang_lib     "arm"
+END LC_ADDRESS
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "<U0585><U0580><U056B><U0578><U0580><U0564>"
+name_mr     "<U057A><U0580><U0576>"
+name_mrs    "<U057F><U056F><U0576>"
+END LC_NAME

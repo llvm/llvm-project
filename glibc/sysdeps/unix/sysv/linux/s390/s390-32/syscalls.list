@@ -1,0 +1,20 @@
+# File name	Caller	Syscall name	Args	Strong name	Weak names
+
+chown		-	chown32		i:sii	__chown		chown@@GLIBC_2.1
+lchown		-	lchown32	i:sii	__lchown	lchown@@GLIBC_2.0 chown@GLIBC_2.0
+fchown		-	fchown32	i:iii	__fchown	fchown
+
+getegid		-	getegid32	Ei:	__getegid	getegid
+geteuid		-	geteuid32	Ei:	__geteuid	geteuid
+getgid		-	getgid32	Ei:	__getgid	getgid
+getuid		-	getuid32	Ei:	__getuid	getuid
+getresgid	-	getresgid32	i:ppp	__getresgid	getresgid
+getresuid	-	getresuid32	i:ppp	__getresuid	getresuid
+getgroups	-	getgroups32	i:ip	__getgroups	getgroups
+
+setfsgid	-	setfsgid32	Ei:i	setfsgid
+setfsuid	-	setfsuid32	Ei:i	setfsuid
+
+prlimit64	EXTRA	prlimit64	i:iipp	prlimit64
+fanotify_mark	EXTRA	fanotify_mark	i:iiiiis	fanotify_mark
+personality	EXTRA	personality	Ei:i	__personality	personality

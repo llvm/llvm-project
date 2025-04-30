@@ -1,0 +1,79 @@
+		       POSIX locale descriptions
+				  and
+		    POSIX character set descriptions
+
+Ulrich Drepper			Time-stamp: <2004/11/27 13:06:54 drepper>
+drepper@redhat.com
+
+
+This directory contains the data needed to build the locale data files
+to use the internationalization features of the GNU libc.
+
+POSIX.2 describes the `localedef' utility which is part of the GNU libc.
+You need this program to "compile" the locale description in a form
+suitable for fast access by the GNU libc functions.  Any compilation is
+based on a given character set.
+
+Once you run `make install' for the GNU libc the data files are
+automatically installed in the right place, ready for use by the
+`localedef' program.
+
+To compile the locale data files you simply have to decide which locale
+(based on the location and the language) and which character set you
+use.  E.g., French speaking Canadians would use the locale `fr_CA' and
+the character set `ISO_8859-1,1987'.  Calling `localedef' to get the
+desired data should happen like this:
+
+	localedef -i fr_CA -f ISO-8859-1 fr_CA
+
+This will place the 6 output files in the appropriate directory where
+the GNU libc functions can find them.  Please note that you need
+permission to write to this directory ($(prefix)/share/locale, where
+$(prefix) is the value you specified while configuring GNU libc).  If
+you do not have the necessary permissions, you can write the files into an
+arbitrary directory by giving a path including a '/' character instead
+of `fr_CA'.  E.g., to put the new files in a subdirectory of the
+current directory simply use
+
+	localedef -i fr_CA -f ISO-8859-1 ./fr_CA
+
+How to use these data files is described in the GNU libc manual,
+especially in the section describing the `setlocale' function.
+
+All problems should be reported using
+
+  https://sourceware.org/bugzilla/
+
+
+One more note: the `POSIX' locale definition is not meant to be used
+as an input file for `localedef'.  It is rather there to show the
+values with are built in the libc binaries as default values when no
+legal locale is found or the "C" or "POSIX" locale is selected.
+
+
+		       The collation test suite
+		       ########################
+
+This package also contains a (beginning of a) test suite for the
+collation functions in the GNU libc.  The files are provided sorted.
+The test program shuffles the lines and sort them afterwards.
+
+Some of the files are provided in 8bit form, i.e., not only ASCII
+characters.  So the tools you use to process the files should be 8bit
+clean.
+
+To run the test program the appropriate locale information must be
+installed.  Therefore the localedef program is used to generate this
+data used the locale and charmap description files contained here.
+Since we cannot run the localedef program in case of cross-compilation
+no tests at all are performed.
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Local Variables:
+ mode:text
+ eval:(load-library "time-stamp")
+ eval:(make-local-variable 'write-file-hooks)
+ eval:(add-hook 'write-file-hooks 'time-stamp)
+ eval:(setq time-stamp-format '(time-stamp-yyyy/mm/dd time-stamp-hh:mm:ss user-login-name))
+End:

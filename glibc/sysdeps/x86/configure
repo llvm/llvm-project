@@ -1,0 +1,177 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/x86.
+
+if test $enable_cet != no; then
+  # Check if CET can be enabled.
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether CET can be enabled" >&5
+$as_echo_n "checking whether CET can be enabled... " >&6; }
+if ${libc_cv_x86_cet_available+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.c <<EOF
+#if !defined __CET__ || __CET__ != 3
+# error CET isn't available.
+#endif
+EOF
+		 if { ac_try='${CC-cc} -c $CFLAGS -fcf-protection -include cet.h conftest.c 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+		   libc_cv_x86_cet_available=yes
+		 else
+		   libc_cv_x86_cet_available=no
+		 fi
+		 rm -rf conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_x86_cet_available" >&5
+$as_echo "$libc_cv_x86_cet_available" >&6; }
+  if test $libc_cv_x86_cet_available != yes; then
+    as_fn_error $? "$CC doesn't support CET" "$LINENO" 5
+  fi
+fi
+if test $enable_cet != no; then
+  # Check if assembler supports CET.
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $AS supports CET" >&5
+$as_echo_n "checking whether $AS supports CET... " >&6; }
+if ${libc_cv_x86_cet_as+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.s <<EOF
+	incsspd %ecx
+EOF
+		 if { ac_try='${CC-cc} -c $CFLAGS conftest.s -o conftest.o 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+		   libc_cv_x86_cet_as=yes
+		 else
+		   libc_cv_x86_cet_as=no
+		 fi
+		 rm -rf conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_x86_cet_as" >&5
+$as_echo "$libc_cv_x86_cet_as" >&6; }
+  if test $libc_cv_x86_cet_as = no; then
+    as_fn_error $? "$AS doesn't support CET" "$LINENO" 5
+  fi
+fi
+if test $enable_cet = yes; then
+  $as_echo "#define DEFAULT_DL_X86_CET_CONTROL cet_elf_property" >>confdefs.h
+
+elif test $enable_cet = permissive; then
+  $as_echo "#define DEFAULT_DL_X86_CET_CONTROL cet_permissive" >>confdefs.h
+
+fi
+config_vars="$config_vars
+enable-cet = $enable_cet"
+
+# Check if linker supports x86 ISA level.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for linker x86 ISA level support" >&5
+$as_echo_n "checking for linker x86 ISA level support... " >&6; }
+if ${libc_cv_include_x86_isa_level+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest1.S <<EOF
+#ifdef __LP64__
+# define P2ALIGN 3
+#else
+# define P2ALIGN 2
+#endif
+	.section ".note.gnu.property", "a"
+	.p2align P2ALIGN
+	.long 1f - 0f		/* name length.  */
+	.long 4f - 1f		/* data length.  */
+	/* NT_GNU_PROPERTY_TYPE_0 */
+	.long 5			/* note type.  */
+0:
+	.asciz "GNU"		/* vendor name.  */
+1:
+	.p2align P2ALIGN
+	/* GNU_PROPERTY_X86_ISA_1_NEEDED */
+	.long 0xc0008002	/* pr_type.  */
+	.long 3f - 2f		/* pr_datasz.  */
+2:
+	.long 0x1
+3:
+	.p2align P2ALIGN
+4:
+EOF
+cat > conftest2.S <<EOF
+#ifdef __LP64__
+# define P2ALIGN 3
+#else
+# define P2ALIGN 2
+#endif
+	.section ".note.gnu.property", "a"
+	.p2align P2ALIGN
+	.long 1f - 0f		/* name length.  */
+	.long 4f - 1f		/* data length.  */
+	/* NT_GNU_PROPERTY_TYPE_0 */
+	.long 5			/* note type.  */
+0:
+	.asciz "GNU"		/* vendor name.  */
+1:
+	.p2align P2ALIGN
+	/* GNU_PROPERTY_X86_ISA_1_NEEDED */
+	.long 0xc0008002	/* pr_type.  */
+	.long 3f - 2f		/* pr_datasz.  */
+2:
+	.long 0x2
+3:
+	.p2align P2ALIGN
+4:
+EOF
+libc_cv_include_x86_isa_level=no
+libc_cv_have_x86_lahf_sahf=no
+libc_cv_have_x86_movbe=no
+if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS -nostartfiles -nostdlib -r -o conftest conftest1.S conftest2.S'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  count=`LC_ALL=C $READELF -n conftest | grep NT_GNU_PROPERTY_TYPE_0 | wc -l`
+  if test "$count" = 1; then
+    libc_cv_include_x86_isa_level=yes
+    cat > conftest.c <<EOF
+EOF
+    if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS -fverbose-asm -S -o - conftest.c'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; } | grep -q "\-msahf"; then
+      libc_cv_have_x86_lahf_sahf=yes
+    fi
+    if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS -fverbose-asm -S -o - conftest.c'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; } | grep -q "\-mmovbe"; then
+      libc_cv_have_x86_movbe=yes
+    fi
+  fi
+fi
+rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_include_x86_isa_level" >&5
+$as_echo "$libc_cv_include_x86_isa_level" >&6; }
+if test $libc_cv_include_x86_isa_level = yes; then
+  $as_echo "#define INCLUDE_X86_ISA_LEVEL 1" >>confdefs.h
+
+fi
+if test $libc_cv_have_x86_lahf_sahf = yes; then
+  $as_echo "#define HAVE_X86_LAHF_SAHF 1" >>confdefs.h
+
+fi
+if test $libc_cv_have_x86_movbe = yes; then
+  $as_echo "#define HAVE_X86_MOVBE 1" >>confdefs.h
+
+fi
+config_vars="$config_vars
+enable-x86-isa-level = $libc_cv_include_x86_isa_level"

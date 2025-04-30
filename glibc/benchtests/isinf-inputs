@@ -1,0 +1,21 @@
+## includes: math.h
+## args: double
+## ret: int
+0.9
+2.3
+3.7
+3.9
+4.0
+4.7
+5.9
+0x1.000000cf4a2a1p0
+0x1.0000010b239a8p0
+0x1.00000162a932ap0
+0x1.000002d452a11p0
+0x1.000005bc7d86cp0
+## name: INF
+__builtin_inf ()
+-__builtin_inf ()
+## name: NAN
+__builtin_nan ("")
+__builtin_nans ("")

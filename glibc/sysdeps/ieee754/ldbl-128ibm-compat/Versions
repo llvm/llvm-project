@@ -1,0 +1,247 @@
+%include <ldbl-128ibm-compat-abi.h>
+%ifndef LDBL_IBM128_VERSION
+% error "ldbl-128ibm-compat-abi.h must define LDBL_IBM128_VERSION"
+%endif
+
+libm {
+  LDBL_IBM128_VERSION {
+    __acoshieee128;
+    __acosieee128;
+    __asinhieee128;
+    __asinieee128;
+    __atan2ieee128;
+    __atanhieee128;
+    __atanieee128;
+    __cabsieee128;
+    __cacoshieee128;
+    __cacosieee128;
+    __canonicalizeieee128;
+    __cargieee128;
+    __casinhieee128;
+    __casinieee128;
+    __catanhieee128;
+    __catanieee128;
+    __cbrtieee128;
+    __ccoshieee128;
+    __ccosieee128;
+    __ceilieee128;
+    __cexpieee128;
+    __cimagieee128;
+    __clog10ieee128;
+    __clogieee128;
+    __conjieee128;
+    __copysignieee128;
+    __coshieee128;
+    __cosieee128;
+    __cpowieee128;
+    __cprojieee128;
+    __crealieee128;
+    __csinhieee128;
+    __csinieee128;
+    __csqrtieee128;
+    __ctanhieee128;
+    __ctanieee128;
+    __erfcieee128;
+    __erfieee128;
+    __exp10ieee128;
+    __exp2ieee128;
+    __expieee128;
+    __expm1ieee128;
+    __f32addieee128;
+    __f32divieee128;
+    __f32mulieee128;
+    __f32subieee128;
+    __f64addieee128;
+    __f64divieee128;
+    __f64mulieee128;
+    __f64subieee128;
+    __fabsieee128;
+    __fdimieee128;
+    __floorieee128;
+    __fmaieee128;
+    __fmaxieee128;
+    __fmaxmagieee128;
+    __fminieee128;
+    __fminmagieee128;
+    __fmodieee128;
+    __frexpieee128;
+    __fromfpieee128;
+    __fromfpxieee128;
+    __getpayloadieee128;
+    __hypotieee128;
+    __ilogbieee128;
+    __j0ieee128;
+    __j1ieee128;
+    __jnieee128;
+    __ldexpieee128;
+    __lgammaieee128;
+    __lgammaieee128_r;
+    __llogbieee128;
+    __llrintieee128;
+    __llroundieee128;
+    __log10ieee128;
+    __log1pieee128;
+    __log2ieee128;
+    __logbieee128;
+    __logieee128;
+    __lrintieee128;
+    __lroundieee128;
+    __modfieee128;
+    __nanieee128;
+    __nearbyintieee128;
+    __nextafterieee128;
+    __nextdownieee128;
+    __nexttowardf_to_ieee128;
+    __nexttowardieee128;
+    __nexttoward_to_ieee128;
+    __nextupieee128;
+    __powieee128;
+    __remainderieee128;
+    __remquoieee128;
+    __rintieee128;
+    __roundevenieee128;
+    __roundieee128;
+    __scalbieee128;
+    __scalblnieee128;
+    __scalbnieee128;
+    __setpayloadieee128;
+    __setpayloadsigieee128;
+    __significandieee128;
+    __sincosieee128;
+    __sinhieee128;
+    __sinieee128;
+    __sqrtieee128;
+    __tanhieee128;
+    __tanieee128;
+    __tgammaieee128;
+    __totalorderieee128;
+    __totalordermagieee128;
+    __truncieee128;
+    __ufromfpieee128;
+    __ufromfpxieee128;
+    __y0ieee128;
+    __y1ieee128;
+    __ynieee128;
+  }
+}
+libc {
+  LDBL_IBM128_VERSION {
+    __strfromieee128;
+    __strtoieee128;
+    __strtoieee128_l;
+    __wcstoieee128;
+    __wcstoieee128_l;
+
+    __printf_sizeieee128;
+
+    __asprintfieee128;
+    __dprintfieee128;
+    __fprintfieee128;
+    __printfieee128;
+    __snprintfieee128;
+    __sprintfieee128;
+
+    __vasprintfieee128;
+    __vdprintfieee128;
+    __vfprintfieee128;
+    __vprintfieee128;
+    __vsnprintfieee128;
+    __vsprintfieee128;
+
+    __fwprintfieee128;
+    __swprintfieee128;
+    __wprintfieee128;
+
+    __vfwprintfieee128;
+    __vswprintfieee128;
+    __vwprintfieee128;
+
+    __asprintf_chkieee128;
+    __dprintf_chkieee128;
+    __fprintf_chkieee128;
+    __printf_chkieee128;
+    __snprintf_chkieee128;
+    __sprintf_chkieee128;
+
+    __vasprintf_chkieee128;
+    __vdprintf_chkieee128;
+    __vfprintf_chkieee128;
+    __vprintf_chkieee128;
+    __vsnprintf_chkieee128;
+    __vsprintf_chkieee128;
+
+    __fwprintf_chkieee128;
+    __swprintf_chkieee128;
+    __wprintf_chkieee128;
+
+    __vfwprintf_chkieee128;
+    __vswprintf_chkieee128;
+    __vwprintf_chkieee128;
+
+    __obstack_printfieee128;
+    __obstack_vprintfieee128;
+    __obstack_printf_chkieee128;
+    __obstack_vprintf_chkieee128;
+
+    __syslogieee128;
+    __vsyslogieee128;
+    __syslog_chkieee128;
+    __vsyslog_chkieee128;
+
+    __fscanfieee128;
+    __scanfieee128;
+    __sscanfieee128;
+
+    __vfscanfieee128;
+    __vscanfieee128;
+    __vsscanfieee128;
+
+    __fwscanfieee128;
+    __swscanfieee128;
+    __wscanfieee128;
+
+    __vfwscanfieee128;
+    __vswscanfieee128;
+    __vwscanfieee128;
+
+    __isoc99_fscanfieee128;
+    __isoc99_scanfieee128;
+    __isoc99_sscanfieee128;
+
+    __isoc99_vfscanfieee128;
+    __isoc99_vscanfieee128;
+    __isoc99_vsscanfieee128;
+
+    __isoc99_fwscanfieee128;
+    __isoc99_swscanfieee128;
+    __isoc99_wscanfieee128;
+
+    __isoc99_vfwscanfieee128;
+    __isoc99_vswscanfieee128;
+    __isoc99_vwscanfieee128;
+
+    __argp_errorieee128;
+    __argp_failureieee128;
+
+    __warnieee128;
+    __warnxieee128;
+    __vwarnieee128;
+    __vwarnxieee128;
+    __errieee128;
+    __errxieee128;
+    __verrieee128;
+    __verrxieee128;
+
+    __errorieee128;
+    __error_at_lineieee128;
+
+    __strfmonieee128;
+    __strfmon_lieee128;
+
+    __qecvtieee128;
+    __qfcvtieee128;
+    __qgcvtieee128;
+    __qecvtieee128_r;
+    __qfcvtieee128_r;
+  }
+}

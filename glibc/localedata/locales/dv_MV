@@ -1,0 +1,193 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Dhivehi Language Locale for Maldives
+% Source:
+% Contact: Sofwathuallah Mohamed
+% Email: smohamed@wataniya-maldives.com , sofwath@hotmail.com
+% Language: dv
+% Territory: MV
+% Revision: 0.1
+% Date: 2006-05-13
+% Users: general
+
+LC_IDENTIFICATION
+title      "Dhivehi Language Locale for Maldives"
+source     ""
+address    ""
+contact    ""
+email      "sofwath@hotmail.com"
+tel        ""
+fax        ""
+language   "Divehi"
+territory  "Maldives"
+revision   "0.1"
+date       "2006-05-13"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+
+
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "en_DK"
+END LC_COLLATE
+
+LC_MONETARY
+% MVR
+int_curr_symbol "MVR "
+currency_symbol "<U0783>."
+mon_decimal_point "."
+mon_thousands_sep ","
+mon_grouping  3;3
+positive_sign ""
+negative_sign "-"
+int_frac_digits 2
+frac_digits 2
+p_cs_precedes 1
+p_sep_by_space 1
+n_cs_precedes        1
+n_sep_by_space       0
+p_sign_posn 2
+n_sign_posn 1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point "."
+thousands_sep ","
+grouping 3;3
+END LC_NUMERIC
+
+% Since their is no abbreviated version of the days in dhivehi I have used the
+% full names of the days and months
+LC_TIME
+
+abday   "<U0787><U07A7><U078B><U07A9><U0787><U07B0><U078C><U07A6>";/
+	"<U0780><U07AF><U0789><U07A6>";/
+	"<U0787><U07A6><U0782><U07B0><U078E><U07A7><U0783><U07A6>";/
+	"<U0784><U07AA><U078B><U07A6>";/
+	"<U0784><U07AA><U0783><U07A7><U0790><U07B0><U078A><U07A6><U078C><U07A8>";/
+	"<U0780><U07AA><U0786><U07AA><U0783><U07AA>";/
+	"<U0780><U07AE><U0782><U07A8><U0780><U07A8><U0783><U07AA>"
+day     "<U0787><U07A7><U078B><U07A9><U0787><U07B0><U078C><U07A6>";/
+	"<U0780><U07AF><U0789><U07A6>";/
+	"<U0787><U07A6><U0782><U07B0><U078E><U07A7><U0783><U07A6>";/
+	"<U0784><U07AA><U078B><U07A6>";/
+	"<U0784><U07AA><U0783><U07A7><U0790><U07B0><U078A><U07A6><U078C><U07A8>";/
+	"<U0780><U07AA><U0786><U07AA><U0783><U07AA>";/
+	"<U0780><U07AE><U0782><U07A8><U0780><U07A8><U0783><U07AA>"
+abmon	"<U0796><U07AC><U0782><U07AA><U0787><U07A6><U0783><U07A9>";/
+	"<U078A><U07AC><U0784><U07B0><U0783><U07AA><U0787><U07A6><U0783><U07A9>";/
+	"<U0789><U07A7><U0783><U0797><U07B0>";/
+	"<U0787><U07AC><U0795><U07B0><U0783><U07A9><U078D><U07B0>";/
+	"<U0789><U07AC><U0787><U07A8>";/
+	"<U0796><U07AB><U0782><U07B0>";/
+	"<U0796><U07AA><U078D><U07A6><U0787><U07A8>";/
+	"<U0787><U07AE><U078E><U07A6><U0790><U07B0><U0793><U07B0>";/
+	"<U0790><U07AC><U0795><U07B0><U0793><U07AC><U0782><U07B0><U0784><U07A6><U0783>";/
+	"<U0787><U07AE><U0786><U07B0><U0793><U07AB><U0784><U07A6><U0783>";/
+	"<U0782><U07AE><U0788><U07AC><U0782><U07B0><U0784><U07A6><U0783>";/
+	"<U0791><U07A8><U0790><U07AC><U0782><U07B0><U0784><U07A6><U0783>"
+mon	"<U0796><U07AC><U0782><U07AA><U0787><U07A6><U0783><U07A9>";/
+	"<U078A><U07AC><U0784><U07B0><U0783><U07AA><U0787><U07A6><U0783><U07A9>";/
+	"<U0789><U07A7><U0783><U0797><U07B0>";/
+	"<U0787><U07AC><U0795><U07B0><U0783><U07A9><U078D><U07B0>";/
+	"<U0789><U07AC><U0787><U07A8>";/
+	"<U0796><U07AB><U0782><U07B0>";/
+	"<U0796><U07AA><U078D><U07A6><U0787><U07A8>";/
+	"<U0787><U07AE><U078E><U07A6><U0790><U07B0><U0793><U07B0>";/
+	"<U0790><U07AC><U0795><U07B0><U0793><U07AC><U0782><U07B0><U0784><U07A6><U0783>";/
+	"<U0787><U07AE><U0786><U07B0><U0793><U07AB><U0784><U07A6><U0783>";/
+	"<U0782><U07AE><U0788><U07AC><U0782><U07B0><U0784><U07A6><U0783>";/
+	"<U0791><U07A8><U0790><U07AC><U0782><U07B0><U0784><U07A6><U0783>"
+
+% Date Time Format
+d_t_fmt "%H:%M:%S %Y %b %d %a"
+
+% Date Time Format for date(1)
+date_fmt "%Z %H:%M:%S %Y %b %d %a"
+
+% date Format. I have put this in reverse order to try to get the date
+% in R->L order
+d_fmt "%d//%m//%Y"
+
+% time format
+t_fmt "%H:%M:%S"
+
+%<U0635> stands for <U0635><U0628><U062D>
+%<U0634> stands for <U0634><U0627><U0645>
+%am_pm "<U0020>";"<U0789><U07AC><U0782><U07B0><U078B><U07AA><U0782><U07AA><U0782><U07B0><U0787><U07A6><U0784><U07AA><U0783><U07A7>"
+am_pm "<U0789><U0786>";"<U0789><U078A>"
+
+% time format in 12 hour clock
+t_fmt_ampm "%P %I:%M:%S"
+
+% display columns right to left ?
+cal_direction	3
+week 7;19971130;1
+first_weekday 6
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0nN]"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "%a %l"
+int_select     "00"
+int_prefix     "960"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%%z %T%N%c%N"
+% https://dv.wikipedia.org/wiki/%DE%8B%DE%A8%DE%88%DE%AC%DE%80%DE%A8%DE%83%DE%A7%DE%87%DE%B0%DE%96%DE%AC : ދިވެހިރާއްޖެ
+country_name "<U078B><U07A8><U0788><U07AC><U0780><U07A8><U0783><U07A7><U0787><U07B0><U0796><U07AC>"
+country_ab2 "MV"
+country_ab3 "MDV"
+country_num 462
+country_car "MV"
+% ދިވެހި
+lang_name    "<U078B><U07A8><U0788><U07AC><U0780><U07A8>"
+lang_ab      "dv"
+lang_term    "div"
+lang_lib    "div"
+END LC_ADDRESS

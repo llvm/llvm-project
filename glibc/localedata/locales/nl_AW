@@ -1,0 +1,144 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Dutch language locale for Aruba.
+% Contributed by Ulrich Drepper <drepper@redhat.com>, 2008
+
+LC_IDENTIFICATION
+title      "Dutch language locale for Aruba"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Dutch"
+territory  "Aruba"
+revision   "1.0"
+date       "2008-09-16"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "nl_NL"
+END LC_CTYPE
+
+LC_COLLATE
+copy "nl_NL"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol     "AWG "
+currency_symbol     "Afl."
+mon_decimal_point   ","
+mon_thousands_sep   "."
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       1
+p_sep_by_space      1
+n_cs_precedes       1
+n_sep_by_space      2
+p_sign_posn         1
+n_sign_posn         4
+END LC_MONETARY
+
+LC_NUMERIC
+copy "nl_NL"
+END LC_NUMERIC
+
+LC_TIME
+abday   "zo";"ma";"di";/
+	"wo";"do";"vr";/
+	"za"
+day     "zondag";/
+	"maandag";/
+	"dinsdag";/
+	"woensdag";/
+	"donderdag";/
+	"vrijdag";/
+	"zaterdag"
+abmon   "jan";"feb";/
+	"mrt";"apr";/
+	"mei";"jun";/
+	"jul";"aug";/
+	"sep";"okt";/
+	"nov";"dec"
+mon     "januari";/
+	"februari";/
+	"maart";/
+	"april";/
+	"mei";/
+	"juni";/
+	"juli";/
+	"augustus";/
+	"september";/
+	"oktober";/
+	"november";/
+	"december"
+d_t_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d-%m-%y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt       "%a %e %b %Y %k:%M:%S %Z"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+copy "nl_NL"
+END LC_MESSAGES
+
+LC_PAPER
+copy "nl_NL"
+END LC_PAPER
+
+LC_NAME
+copy "nl_NL"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%%z %T%N%c%N"
+country_name "Aruba"
+country_ab2   "AW"
+country_ab3   "ABW"
+country_num   533
+country_car "AUA"
+lang_name    "Nederlands"
+lang_ab "nl"
+lang_term "nld"
+lang_lib "dut"
+END LC_ADDRESS
+
+LC_TELEPHONE
+% FIXME
+tel_int_fmt    "+%c %a %l"
+int_prefix     "297"
+int_select     "011"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "nl_NL"
+END LC_MEASUREMENT

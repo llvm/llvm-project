@@ -1,0 +1,166 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Yue Chinese (Cantonese) language locale for Hong Kong.
+% Maintained by Chunshek Chan <chunshek@gmail.com>
+% Based on Chinese locale by Kentaroh Noji <knoji@jp.ibm.com> and
+% Tetsuji Orita <orita@jp.ibm.com>.
+
+LC_IDENTIFICATION
+title      "Yue Chinese (Cantonese) language locale for Hong Kong"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Cantonese"
+territory  "Hong Kong SAR China"
+revision   "1.0"
+date       "2010-11-07"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+
+LC_CTYPE
+copy "zh_CN"
+END LC_CTYPE
+
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+END LC_COLLATE
+
+
+LC_MONETARY
+copy "zh_HK"
+END LC_MONETARY
+
+
+LC_NUMERIC
+copy "zh_HK"
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale difintion file
+% for IBM Class for Unicode/Java
+abday       "<U65E5>";"<U4E00>";/
+            "<U4E8C>";"<U4E09>";/
+            "<U56DB>";"<U4E94>";/
+            "<U516D>"
+%
+% Full weekday names (%A)
+day         "<U661F><U671F><U65E5>";"<U661F><U671F><U4E00>";/
+            "<U661F><U671F><U4E8C>";"<U661F><U671F><U4E09>";/
+            "<U661F><U671F><U56DB>";"<U661F><U671F><U4E94>";/
+            "<U661F><U671F><U516D>"
+%
+% Abbreviated month names (%b)
+abmon       "1<U6708>";"2<U6708>";/
+            "3<U6708>";"4<U6708>";/
+            "5<U6708>";"6<U6708>";/
+            "7<U6708>";"8<U6708>";/
+            "9<U6708>";"10<U6708>";/
+            "11<U6708>";"12<U6708>"
+%
+% Full month names (%B)
+mon         "1<U6708>";"2<U6708>";/
+            "3<U6708>";"4<U6708>";/
+            "5<U6708>";"6<U6708>";/
+            "7<U6708>";"8<U6708>";/
+            "9<U6708>";"10<U6708>";/
+            "11<U6708>";"12<U6708>"
+%
+% Equivalent of AM PM
+% 上午;下午
+am_pm       "<U4E0A><U5348>";"<U4E0B><U5348>"
+%
+% Appropriate date and time representation
+% %Y年%m月%d日 %A %H點%M分%S秒
+d_t_fmt     "%Y<U5E74>%m<U6708>%d<U65E5> %A %H<U9EDE>%M<U5206>%S<U79D2>"
+%
+% Appropriate date representation
+% %Y年%m月%d日 %A
+d_fmt       "%Y<U5E74>%m<U6708>%d<U65E5> %A"
+%
+% Appropriate time representation
+% %H點%M分%S秒
+t_fmt       "%H<U9EDE>%M<U5206>%S<U79D2>"
+%
+% Appropriate 12 h time representation
+% %p%I點%M分%S秒
+t_fmt_ampm  "%p%I<U9EDE>%M<U5206>%S<U79D2>"
+%
+% Appropriate date representation (date(1))
+% %Y年 %b %e日 %A %H:%M:%S %Z
+date_fmt       "%Y<U5E74> %b %e<U65E5> %A %H:%M:%S %Z"
+%  FIXME: found in CLDR
+week 7;19971130;1
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0nN]"
+yesstr  "<U4FC2>"
+nostr   "<U5514><U4FC2>"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "zh_HK"
+END LC_PAPER
+
+
+LC_NAME
+copy "zh_TW"
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+% postal_fmt: "%c%T%s%h%N%b%e%r%N%f%N%d%N%a"
+postal_fmt  "%c%T%s%h%N%b%e%r%N%f%N%d%N%a"
+country_name "<U4E2D><U83EF><U4EBA><U6C11><U5171><U548C><U570B><U9999><U6E2F><U7279><U5225><U884C><U653F><U5340>"
+country_ab2 "HK"
+country_ab3 "HKG"
+country_num 344
+country_car "HK"
+country_isbn 962
+lang_name "<U7CB5><U8A9E>"
+lang_term    "yue"
+lang_lib    "yue"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+copy "zh_HK"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "zh_HK"
+END LC_MEASUREMENT

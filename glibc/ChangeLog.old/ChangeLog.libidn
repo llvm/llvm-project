@@ -1,0 +1,184 @@
+2017-01-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2016-01-04  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using ../scripts/update-copyrights.
+
+2015-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using ../scripts/update-copyrights.
+
+2014-09-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* shlib-versions: Remove first column with configuration names.
+
+2014-02-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* Makefile: Include Makeconfig immediately after defining subdir.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.in: Moved to ...
+	* configure.ac: ... here.
+	* configure: Regenerated.
+
+2013-08-29   Ondřej Bílka  <neleai@seznam.cz>
+
+	* stringprep.c: Fix typos.
+
+2013-06-11   Ondřej Bílka  <neleai@seznam.cz>
+
+	* gunicomp.h: Fix trailing whitespaces.
+	* gunidecomp.h: Likewise.
+	* nfkc.c: Likewise.
+	* rfc3454.c: Likewise.
+
+2013-05-31  Joseph Myers  <joseph@codesourcery.com>
+
+	* Makefile ($(objpfx)libcidn.so): Remove dependencies on libc.
+
+2013-05-16  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	* idna.c: Add missing #include <stdint.h> due to uint64_t or uint32_t
+	usage.
+	* nfkc.c: Likewise.
+	* stringprep.c: Likewise.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2012-10-09  Roland McGrath  <roland@hack.frob.com>
+
+	* configure.in: If $shared != yes, just disable the add-on entirely
+	and issue a warning.
+	* configure: Regenerated.
+
+2012-03-07  Ulrich Drepper  <drepper@gmail.com>
+
+	* Makefile (distribute): Remove variable.
+
+2011-12-03  Ulrich Drepper  <drepper@gmail.com>
+
+	* idna.c (idna_to_unicode_4z4z): Remove variable rc.
+
+2008-02-10  Jim Meyering  <meyering@redhat.com>
+
+	* stringprep.c (stringprep, stringprep_profile): Remove useless
+	"if" before "free".
+
+2006-02-27  Roland McGrath  <roland@redhat.com>
+
+	* Makefile: Use $(..) in place of ../.
+	* configure.in (libc_add_on_canonical, libc_add_on_subdirs): Set them.
+	* configure: Regenerated.
+
+2006-02-25  Roland McGrath  <roland@redhat.com>
+
+	* configure.in: New file.
+	* configure: Replaced with generated file.
+	* sysdeps/unix/configure: File removed.
+
+2005-03-08  Paul Eggert  <eggert@cs.ucla.edu>
+
+	* iconvme.c (SIZE_MAX): New macro, if not already defined.
+	(iconv_string): Don't guess a size-zero buffer, as that might cause
+	buffer overrun.  Instead, avoid multiplying by MB_LEN_MAX if the
+	result would be 'too large', where 'too large' is (heuristically)
+	the square root of SIZE_MAX, divided by MB_LEN_MAX to allay
+	overflow concerns.  This will prevent some unwanted malloc failures
+	when the inputs are very large.
+
+2005-02-12  Simon Josefsson  <jas@extundo.com >
+
+	* iconvme.h: New file, extracted from toutf8.c but improved.
+	* iconvme.c: New file.
+	* toutf8.c: Include stringprep.h first, to make the compiler check
+	that stringprep.h is standalone.  Improve comments.  Replace
+	#include of errno.h and sys/param.h with iconvme.h.  Don't define
+	ICONV_CONST.
+	(stringprep_convert): Rewrite to use iconvme.h.
+	* Makefile (libcidn-routines): Add iconvme.
+
+2004-10-05  Ulrich Drepper  <drepper@redhat.com>
+
+	* idn-stub.c (unload_libidn): Don't define outside libc.
+
+2004-07-02  Roland McGrath  <roland@redhat.com>
+
+	* configure: Don't exit.
+
+2004-05-21  Ulrich Drepper  <drepper@redhat.com>
+
+	* idna.c (idna_to_unicode_4z4z): Fix test for failed memory allocation.
+	Patch by Simon Josefsson.
+
+2004-05-06  Ulrich Drepper  <drepper@redhat.com>
+
+	* stringprep.c (stringprep): Free memory if allocation failed.
+	* idna.c: Fix memory handling in several places.
+
+2004-04-22  Simon Josefsson  <jas@extundo.com>
+
+	* stringprep.h: Update to latest libidn version.
+	* stringprep.c: Likewise.
+	* idna.c: Likewise.
+
+2004-03-14  Ulrich Drepper  <drepper@redhat.com>
+
+	* idn-stub.c (__idna_to_unicode_lzlz): Use __strchrnul, not strchrnul.
+
+	* idna.c (idna_to_ascii_4z): Revert last patch.
+
+2004-03-12  Ulrich Drepper  <drepper@redhat.com>
+
+	* idna.c (idna_to_ascii_4z): Use strdup if available.  Unify two ifs.
+
+	* idn-stub.c: Implement __idna_to_unicode_lzlz.  Split
+	__idna_to_ascii_lz in two parts so that loading can be shared with
+	the new function.
+	* Versions (libcidn): Export idna_to_unicode_lzlz.
+
+	* Makefile (libcidn-inhibit-o): Define.  We need no archive.
+
+2004-03-08  Simon Josefsson  <jas@extundo.com>
+
+	* toutf8.c: Update to latest libidn version.
+
+2004-03-08  Ulrich Drepper  <drepper@redhat.com>
+
+	* stringprep.h: Don't include idn-int.h in glibc.
+	* idn-int.h: Removed.
+
+2004-03-07  Ulrich Drepper  <drepper@redhat.com>
+
+	* idn-stub.c: Include <gnu/lib-names.h>.  Use LIBCIDN_SO for dlopen.
+	* shlib-versions: New file.
+	* toutf8.c: Include <sys/param.h>.
+
+2004-03-07  Simon Josefsson  <jas@extundo.com>
+
+	* Banner: New file.
+	* Makefile: New file.
+	* Version: New file.
+	* configure: New file.
+	* idn-stub.c: New file.
+	* gunibreak.h: New file.  Copied from Libidn.
+	* gunicomp.h: New file.  Copied from Libidn.
+	* gunidecomp.h: New file.  Copied from Libidn.
+	* idna.h: New file.  Copied from Libidn.
+	* idna.c: New file.  Copied from Libidn.
+	* nfkc.c: New file.  Copied from Libidn.
+	* profiles.c: New file.  Copied from Libidn.
+	* punycode.c: New file.  Copied from Libidn.
+	* punycode.h: New file.  Copied from Libidn.
+	* rfc3454.c: New file.  Copied from Libidn.
+	* stringprep.c: New file.  Copied from Libidn.
+	* stringprep.h: New file.  Copied from Libidn.
+	* toutf8.c: New file.  Copied from Libidn.  Modified for use in glibc.

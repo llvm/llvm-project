@@ -1,0 +1,285 @@
+@c Define common macros used to keep phrasing consistent in the manual.
+
+@ifclear MACROS
+@set MACROS
+
+@c Names used to refer to the library, as noun phrases at the start or
+@c not at the start of a sentence.
+@macro Theglibc
+The GNU C Library
+@end macro
+@macro theglibc
+the GNU C Library
+@end macro
+
+@c Name used to refer to the library as an adjective.
+@macro glibcadj
+GNU C Library
+@end macro
+
+@c Description applying to all GNU systems; that is, used in
+@c describing a property of a system such that no system without that
+@c property would be considered a variant of the GNU system.
+@macro gnusystems
+GNU systems
+@end macro
+
+@c Systems that are not GNU systems.
+@macro nongnusystems
+non-GNU systems
+@end macro
+
+@c Description applying to GNU/Linux and GNU/Hurd systems, but not
+@c necessarily to other variants of the GNU system.
+@macro gnulinuxhurdsystems
+GNU/Linux and GNU/Hurd systems
+@end macro
+
+@c Description applying to GNU/Hurd systems; that is, systems using the
+@c GNU Hurd with the GNU C Library.
+@macro gnuhurdsystems
+GNU/Hurd systems
+@end macro
+
+@c Description applying to GNU/Linux systems; that is, systems using
+@c the Linux kernel with the GNU C Library.
+@macro gnulinuxsystems
+GNU/Linux systems
+@end macro
+
+@c Document the safety functions as preliminary.  It does NOT expand its
+@c comments.
+@macro prelim {comments}
+Preliminary:
+
+@end macro
+@c Document a function as thread safe.
+@macro mtsafe {comments}
+| MT-Safe \comments\
+
+@end macro
+@c Document a function as thread unsafe.
+@macro mtunsafe {comments}
+| MT-Unsafe \comments\
+
+@end macro
+@c Document a function as safe for use in asynchronous signal handlers.
+@macro assafe {comments}
+| AS-Safe \comments\
+
+@end macro
+@c Document a function as unsafe for use in asynchronous signal
+@c handlers.  This distinguishes unmarked functions, for which this
+@c property has not been assessed, from those that have been analyzed.
+@macro asunsafe {comments}
+| AS-Unsafe \comments\
+
+@end macro
+@c Document a function as safe for use when asynchronous cancellation is
+@c enabled.
+@macro acsafe {comments}
+| AC-Safe \comments\
+
+@end macro
+@c Document a function as unsafe for use when asynchronous cancellation
+@c is enabled.  This distinguishes unmarked functions, for which this
+@c property has not been assessed, from those that have been analyzed.
+@macro acunsafe {comments}
+| AC-Unsafe \comments\
+
+@end macro
+@c Format safety properties without referencing the section of the
+@c definitions.  To be used in the definitions of the properties
+@c themselves.
+@macro sampsafety {notes}
+@noindent
+\notes\|
+
+
+@end macro
+@c Format the safety properties of a function.
+@macro safety {notes}
+\notes\| @xref{POSIX Safety Concepts}.
+
+
+@end macro
+@c Function is MT- and AS-Unsafe due to an internal race.
+@macro mtasurace {comments}
+race\comments\
+@end macro
+@c Function is AS-Unsafe due to an internal race.
+@macro asurace {comments}
+race\comments\
+@end macro
+@c Function is MT-Safe, but with potential race on user-supplied object
+@c of opaque type.
+@macro mtsrace {comments}
+race\comments\
+@end macro
+@c Function is MT- and AS-Unsafe for modifying an object that is decreed
+@c MT-constant due to MT-Unsafe accesses elsewhere.
+@macro mtasuconst {comments}
+const\comments\
+@end macro
+@c Function accesses the assumed-constant locale object.
+@macro mtslocale {comments}
+locale\comments\
+@end macro
+@c Function accesses the assumed-constant environment.
+@macro mtsenv {comments}
+env\comments\
+@end macro
+@c Function accesses the assumed-constant hostid.
+@macro mtshostid {comments}
+hostid\comments\
+@end macro
+@c Function accesses the assumed-constant _sigintr variable.
+@macro mtssigintr {comments}
+sigintr\comments\
+@end macro
+@c Function performs MT-Unsafe initialization at the first call.
+@macro mtuinit {comments}
+init\comments\
+@end macro
+@c Function performs libc_once AS-Unsafe initialization.
+@macro asuinit {comments}
+init\comments\
+@end macro
+@c Function performs libc_once AC-Unsafe initialization.
+@macro acuinit {comments}
+init\comments\
+@end macro
+@c Function is AS-Unsafe because it takes a non-recursive mutex that may
+@c already be held by the function interrupted by the signal.
+@macro asulock {comments}
+lock\comments\
+@end macro
+@c Function is AC-Unsafe because it may fail to release a mutex.
+@macro aculock {comments}
+lock\comments\
+@end macro
+@c Function is AS-Unsafe because some data structure may be inconsistent
+@c due to an ongoing updated interrupted by a signal.
+@macro asucorrupt {comments}
+corrupt\comments\
+@end macro
+@c Function is AC-Unsafe because some data structure may be left
+@c inconsistent when cancelled.
+@macro acucorrupt {comments}
+corrupt\comments\
+@end macro
+@c Function is AS- and AC-Unsafe because of malloc/free.
+@macro ascuheap {comments}
+heap\comments\
+@end macro
+@c Function is AS-Unsafe because of malloc/free.
+@macro asuheap {comments}
+heap\comments\
+@end macro
+@c Function is AS- and AC-Unsafe because of dlopen/dlclose.
+@macro ascudlopen {comments}
+dlopen\comments\
+@end macro
+@c Function is AS- and AC-Unsafe because of unknown plugins.
+@macro ascuplugin {comments}
+plugin\comments\
+@end macro
+@c Function is AS- and AC-Unsafe because of i18n.
+@macro ascuintl {comments}
+i18n\comments\
+@end macro
+@c Function is AS--Unsafe because of i18n.
+@macro asuintl {comments}
+i18n\comments\
+@end macro
+@c Function may leak file descriptors if async-cancelled.
+@macro acsfd {comments}
+fd\comments\
+@end macro
+@c Function may leak memory if async-cancelled.
+@macro acsmem {comments}
+mem\comments\
+@end macro
+@c Function is unsafe due to temporary overriding a signal handler.
+@macro mtascusig {comments}
+sig\comments\
+@end macro
+@c Function is MT- and AS-Unsafe due to temporarily changing attributes
+@c of the controlling terminal.
+@macro mtasuterm {comments}
+term\comments\
+@end macro
+@c Function is AC-Unsafe for failing to restore attributes of the
+@c controlling terminal.
+@macro acuterm {comments}
+term\comments\
+@end macro
+@c Function sets timers atomically.
+@macro mtstimer {comments}
+timer\comments\
+@end macro
+@c Function sets and restores timers.
+@macro mtascutimer {comments}
+timer\comments\
+@end macro
+@c Function temporarily changes the current working directory.
+@macro mtasscwd {comments}
+cwd\comments\
+@end macro
+@c Function may fail to restore to the original current working
+@c directory after temporarily changing it.
+@macro acscwd {comments}
+cwd\comments\
+@end macro
+@c Function is MT-Safe while POSIX says it needn't be MT-Safe.
+@macro mtsposix {comments}
+!posix\comments\
+@end macro
+@c Function is MT-Unsafe while POSIX says it should be MT-Safe.
+@macro mtuposix {comments}
+!posix\comments\
+@end macro
+@c Function is AS-Safe while POSIX says it needn't be AS-Safe.
+@macro assposix {comments}
+!posix\comments\
+@end macro
+@c Function is AS-Unsafe while POSIX says it should be AS-Safe.
+@macro asuposix {comments}
+!posix\comments\
+@end macro
+@c Function is AC-Safe while POSIX says it needn't be AC-Safe.
+@macro acsposix {comments}
+!posix\comments\
+@end macro
+@c Function is AC-Unsafe while POSIX says it should be AC-Safe.
+@macro acuposix {comments}
+!posix\comments\
+@end macro
+
+@iftex
+@macro twoexp{exp}
+@math{2^{{\exp\}}}
+@end macro
+@end iftex
+@ifnottex
+@macro twoexp{exp}
+2^\exp\
+@end macro
+@end ifnottex
+
+@c Used by errlist.awk and errnos.awk to generate other files.
+@c Note that error values have ABI implications for the Hurd.
+@macro errno {err, val, str}
+@cindex \str\
+``\str\.''
+@end macro
+
+@c Dummy placeholder while converting annotations.
+@c For details on expected use, see `summary.pl --help'.
+@macro standards {standard, header}
+@end macro
+@c To be used for @*x lists of elements.
+@macro standardsx {element, standard, header}
+@end macro
+
+@end ifclear

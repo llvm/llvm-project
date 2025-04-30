@@ -799,7 +799,12 @@ public:
                                    : getStackElemAtLevel(Level).DefaultAttr;
   }
   DefaultDataSharingAttributes getDefaultDSA() const {
-    return isStackEmpty() ? DSA_unspecified : getTopOfStack().DefaultAttr;
+    auto DefaultDSA =
+        isStackEmpty() ? DSA_unspecified : getTopOfStack().DefaultAttr;
+    if (SemaRef.getLangOpts().OpenMPDefaultFirstPrivate &&
+        (DefaultDSA == DSA_unspecified))
+      DefaultDSA = DSA_firstprivate;
+    return DefaultDSA;
   }
   SourceLocation getDefaultDSALocation() const {
     return isStackEmpty() ? SourceLocation() : getTopOfStack().DefaultAttrLoc;
@@ -1388,7 +1393,9 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
     if ((isOpenMPParallelDirective(DVar.DKind) &&
          !isOpenMPTaskLoopDirective(DVar.DKind)) ||
         isOpenMPTeamsDirective(DVar.DKind)) {
-      DVar.CKind = OMPC_shared;
+      DVar.CKind = SemaRef.getLangOpts().OpenMPDefaultFirstPrivate
+                       ? OMPC_firstprivate
+                       : OMPC_shared;
       return DVar;
     }
 

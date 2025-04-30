@@ -278,6 +278,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
         T.getEnvironment() == llvm::Triple::GNUABIN32)
       return "elf32ltsmipn32";
     return "elf64ltsmip";
+  case llvm::Triple::next32:
+    return "next32";
   case llvm::Triple::systemz:
     return "elf64_s390";
   case llvm::Triple::x86_64:
@@ -574,7 +576,11 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // AddRunTimeLibs).
   if (D.IsFlangMode()) {
     addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+#ifdef ENABLE_CLASSIC_FLANG
     addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+#else
+    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+#endif
     CmdArgs.push_back("-lm");
   }
 
@@ -1855,9 +1861,10 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   // currently only support the set of multilibs like riscv-gnu-toolchain does.
   // TODO: support MULTILIB_REUSE
   constexpr RiscvMultilib RISCVMultilibSet[] = {
-      {"rv32i", "ilp32"},     {"rv32im", "ilp32"},     {"rv32iac", "ilp32"},
-      {"rv32imac", "ilp32"},  {"rv32imafc", "ilp32f"}, {"rv64imac", "lp64"},
-      {"rv64imafdc", "lp64d"}};
+      {"rv32i", "ilp32"},      {"rv32im", "ilp32"},
+      {"rv32iac", "ilp32"},    {"rv32imac", "ilp32"},
+      {"rv32imafc", "ilp32f"}, {"rv64imac", "lp64"},
+      {"rv64imafdc", "lp64d"}, {"rv64imafdc_zicsr_zifencei", "lp64d"}};
 
   std::vector<MultilibBuilder> Ms;
   for (auto Element : RISCVMultilibSet) {

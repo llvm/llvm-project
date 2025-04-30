@@ -39,6 +39,7 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   bool usesPhysRegsForValues() const override { return false; }
+  bool usesVRegsForVariadicDefs() const override { return true; }
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();

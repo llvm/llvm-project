@@ -1,0 +1,326 @@
+%include <time64-compat.h>
+libc {
+  GLIBC_2.0 {
+    # functions used in inline functions or macros
+    __cmsg_nxthdr;
+
+    # functions used in other libraries
+    __clone;
+
+    # helper functions
+    __errno_location;
+
+    # b*
+    bdflush;
+
+    # c*
+    clone; create_module;
+
+    # d*
+    delete_module;
+
+    # g*
+    get_kernel_syms; getresgid; getresuid;
+
+    # i*
+    init_module;
+
+    # k*
+    klogctl;
+
+    # l*
+    llseek;
+
+    # m*
+    mremap;
+
+    # n*
+    nfsservctl;
+
+    # p*
+    personality; prctl;
+
+    # q*
+    query_module; quotactl;
+
+    # s*
+    setfsgid; setfsuid;
+
+    # s*
+    setresgid; setresuid; swapoff; swapon; sysctl; sysinfo;
+
+    # u*
+    umount; uselib;
+
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.1 {
+    # functions used in inline functions or macros
+    __libc_sa_len;
+
+    # Since we have new signals this structure changed.
+    _sys_siglist; sys_siglist; sys_sigabbrev;
+
+    # New errlist.
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+
+    # chown interface change.
+    chown;
+
+    # Change in pthread_attr_t.
+    pthread_attr_init;
+
+    # c*
+    capget; capset;
+
+    # n*
+    ntp_adjtime; ntp_gettime;
+
+    # u*
+    umount2;
+
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.2 {
+    # needed in other libraries.
+    __endmntent; __getmntent_r; __setmntent; __statfs; __sysctl;
+
+    # ipc ctl interface change.
+    semctl; shmctl; msgctl;
+
+    # Old symbol versions from libpthread.
+    __pread64;
+    __pwrite64;
+    lseek64;
+    open64;
+    pread;
+    pread64;
+    pwrite;
+    pwrite64;
+  }
+  GLIBC_2.2.1 {
+    # p*
+    pivot_root;
+  }
+  GLIBC_2.3 {
+    # r*
+    readahead;
+
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.3.2 {
+    # New kernel interfaces.
+    epoll_create; epoll_ctl; epoll_wait;
+  }
+  GLIBC_2.3.3 {
+    _sys_siglist;
+    gnu_dev_major;
+    gnu_dev_makedev;
+    gnu_dev_minor;
+    posix_fadvise64;
+    posix_fallocate64;
+    sys_sigabbrev;
+    sys_siglist;
+
+    # Changed timer_t.  Only used by some 64-bit targets.
+    timer_create;
+    timer_delete;
+    timer_getoverrun;
+    timer_gettime;
+    timer_settime;
+  }
+  GLIBC_2.3.4 {
+    sched_getaffinity; sched_setaffinity;
+  }
+  GLIBC_2.4 {
+    inotify_init; inotify_add_watch; inotify_rm_watch;
+
+    unshare;
+
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.5 {
+    splice; tee; vmsplice;
+  }
+  GLIBC_2.6 {
+    epoll_pwait; sync_file_range; sched_getcpu;
+  }
+  GLIBC_2.7 {
+    eventfd; eventfd_read; eventfd_write; signalfd;
+  }
+  GLIBC_2.8 {
+    timerfd_create; timerfd_settime; timerfd_gettime;
+  }
+  GLIBC_2.9 {
+    epoll_create1; inotify_init1;
+  }
+  GLIBC_2.10 {
+    fallocate;
+  }
+  GLIBC_2.12 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+
+    ntp_gettimex;
+
+    recvmmsg;
+  }
+  GLIBC_2.13 {
+    prlimit; prlimit64;
+
+    fanotify_init; fanotify_mark;
+  }
+  GLIBC_2.14 {
+    clock_adjtime;
+
+    name_to_handle_at; open_by_handle_at;
+
+    setns;
+
+    sendmmsg;
+  }
+  GLIBC_2.15 {
+    process_vm_readv; process_vm_writev;
+  }
+  GLIBC_2.27 {
+    memfd_create;
+    mlock2;
+    pkey_alloc; pkey_free; pkey_set; pkey_get; pkey_mprotect;
+  }
+  GLIBC_2.29 {
+    getcpu;
+  }
+  GLIBC_2.30 {
+    getdents64; gettid; tgkill;
+  }
+  GLIBC_2.32 {
+  }
+  GLIBC_2.34 {
+%ifdef TIME64_NON_DEFAULT
+    # 64-bit time_t support
+    __adjtime64;
+    ___adjtimex64;
+    __aio_suspend_time64;
+    __clock_adjtime64;
+    __clock_getres64;
+    __clock_gettime64;
+    __clock_nanosleep_time64;
+    __clock_settime64;
+    __cnd_timedwait64;
+    __ctime64;
+    __ctime64_r;
+    __difftime64;
+    __fcntl_time64;
+    __fstat64_time64;
+    __fstatat64_time64;
+    __futimens64;
+    __futimes64;
+    __futimesat64;
+    __fts64_open_time64;
+    __fts64_close_time64;
+    __fts64_read_time64;
+    __fts64_set_time64;
+    __fts64_children_time64;
+    __ftw64_time64;
+    __nftw64_time64;
+    __gai_suspend_time64;
+    __getitimer64;
+    __getrusage64;
+    __getsockopt64;
+    __gettimeofday64;
+    __glob64_time64;
+    __globfree64_time64;
+    __gmtime64;
+    __gmtime64_r;
+    __ioctl_time64;
+    __localtime64;
+    __localtime64_r;
+    __lstat64_time64;
+    __lutimes64;
+    __mktime64;
+    __mq_timedreceive_time64;
+    __mq_timedsend_time64;
+    __msgctl64;
+    __mtx_timedlock64;
+    __nanosleep64;
+    __nanosleep64;
+    __ntp_gettime64;
+    __ntp_gettimex64;
+    __ppoll64;
+    __prctl_time64;
+    __pselec64;
+    __pselect64;
+    __pthread_clockjoin_np64;
+    __pthread_cond_clockwait64;
+    __pthread_cond_timedwait64;
+    __pthread_mutex_clocklock64;
+    __pthread_mutex_timedlock64;
+    __pthread_rwlock_clockrdlock64;
+    __pthread_rwlock_clockwrlock64;
+    __pthread_rwlock_timedrdlock64;
+    __pthread_rwlock_timedwrlock64;
+    __pthread_timedjoin_np64;
+    __recvmmsg64;
+    __recvmsg64;
+    __sched_rr_get_interval64;
+    __select64;
+    __sem_clockwait64;
+    __semctl64;
+    __semtimedop64;
+    __sem_timedwait64;
+    __sendmmsg64;
+    __sendmsg64;
+    __setitimer64;
+    __setsockopt64;
+    __settimeofday64;
+    __shmctl64;
+    __sigtimedwait64;
+    __stat64_time64;
+    __thrd_sleep64;
+    __time64;
+    __timegm64;
+    __timer_gettime64;
+    __timer_settime64;
+    __timerfd_gettime64;
+    __timerfd_settime64;
+    __timespec_get64;
+    __timespec_getres64;
+    __utime64;
+    __utimensat64;
+    __utimes64;
+    __utimes64;
+    __wait3_time64;
+    __wait4_time64;
+%endif
+    close_range;
+  }
+  GLIBC_PRIVATE {
+    # functions used in other libraries
+    __syscall_rt_sigqueueinfo;
+    __open_nocancel;
+    __read_nocancel;
+    __pread64_nocancel;
+    __close_nocancel;
+    __sigtimedwait;
+    # functions used by nscd
+    __netlink_assert_response;
+    __mremap_nextsilicon;
+    __shmat_nextsilicon;
+    __shmdt_nextsilicon;
+    __shmget_nextsilicon;
+  }
+}
+
+librt {
+  GLIBC_2.3.3 {
+    # Leftover from the int -> timer_t transition.  For ABIs that came later
+    # and do not have the symbol version, this version node is merged with
+    # the baseline version.
+    __librt_version_placeholder;
+  }
+}
+
+ld {
+  GLIBC_PRIVATE {
+    __nptl_change_stack_perm;
+  }
+}

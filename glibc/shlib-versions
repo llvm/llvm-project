@@ -1,0 +1,78 @@
+# This file (and shlib-versions files in sysdeps directories) defines
+# the shared library version numbers we will install.
+
+# The following lines list the associated versions to use for various
+# libraries.  The entire list is processed, with earlier entries
+# taking precedence over later entries (and the files from sysdeps
+# directories coming before those from other subdirectories, which
+# come before this file).
+
+# This file can use cpp-style conditionals starting with % instead of #
+# to test the symbols defined in config.h by configure.
+
+# In the optional second column, there can one or more symbol set names
+# listed, which must be in ascending version order reading left to right
+# and must appear in this same order in the Versions.def file.  Each listed
+# version subsumes all prior versions back to the previous listed version.
+#
+# An entry with DEFAULT in the first column gives a default second
+# column to apply when the matching entry for a particular library has
+# no second column.  The defaults must precede the entries they apply
+# to.
+
+# Library=version		Earliest symbol set (optional)
+# ---------------		------------------------------
+
+# We use the ELF ABI standard name for the default.
+ld=ld.so.1
+
+# The -ldl interface (see <dlfcn.h>) is the same on all platforms.
+libdl=2
+
+# So far the -lutil interface is the same on all platforms, except for the
+# `struct utmp' format, which depends on libc.
+libutil=1
+
+# Version number 2 is used on other systems for the BIND 4.9.5 resolver
+# interface.
+libresolv=2
+
+# Interface revision of nss_* modules.  This must match NSS_SHLIB_REVISION
+# in nss/nsswitch.h, which determines the library names used for service
+# names given in /etc/nsswitch.conf.
+libnss_files=2
+libnss_dns=2
+libnss_compat=2
+libnss_ldap=2
+libnss_hesiod=2
+libnss_db=2
+
+# Tests for NSS.  They must have the same NSS_SHLIB_REVISION number as
+# the rest.
+libnss_test1=2
+libnss_test2=2
+
+# Version for libnsl with YP and NIS+ functions.
+libnsl=1
+
+# This defines the shared library version numbers we will install.
+libcrypt=1
+
+# The gross patch for programs assuming broken locale implementations.
+libBrokenLocale=1
+
+# The real-time library from POSIX.1b.
+librt=1
+
+# The asynchronous name lookup library.
+libanl=1
+
+# This defines the libgcc soname version this glibc is to load for
+# asynchronous cancellation to work correctly.
+libgcc_s=1
+
+# The vector math library
+libmvec=1
+
+# The malloc debug library
+libc_malloc_debug=0

@@ -1,0 +1,9 @@
+libc {
+  GLIBC_2.19 {
+    getrlimit64;
+    setrlimit64;
+  }
+  GLIBC_PRIVATE {
+    __mips_syscall5; __mips_syscall6; __mips_syscall7;
+  }
+}

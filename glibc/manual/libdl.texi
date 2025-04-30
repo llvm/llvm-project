@@ -1,0 +1,10 @@
+@c FIXME these are undocumented:
+@c dladdr
+@c dladdr1
+@c dlclose
+@c dlerror
+@c dlinfo
+@c dlmopen
+@c dlopen
+@c dlsym
+@c dlvsym

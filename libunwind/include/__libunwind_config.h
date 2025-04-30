@@ -16,6 +16,7 @@
 #define _LIBUNWIND_ARM_EHABI
 #endif
 
+#define _LIBUNWIND_HIGHEST_DWARF_REGISTER_NEXT 32
 #define _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86       8
 #define _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86_64    32
 #define _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC       112
@@ -39,6 +40,15 @@
 # if defined(__HAIKU__)
 #  define _LIBUNWIND_TARGET_HAIKU 1
 # endif
+
+// This is first because Next32 frontend currently also defines __x86_64__.
+#if defined(__NEXT__)
+#define _LIBUNWIND_TARGET_NEXT 1
+#define _LIBUNWIND_CONTEXT_SIZE 21
+#define _LIBUNWIND_CURSOR_SIZE 13
+#define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_NEXT
+#else // !defined(__NEXT__)
+
 # if defined(__i386__)
 #  define _LIBUNWIND_TARGET_I386
 #  define _LIBUNWIND_CONTEXT_SIZE 8
@@ -187,6 +197,9 @@
 # else
 #  error "Unsupported architecture."
 # endif
+
+#endif // defined(__NEXT__)
+
 #else // !_LIBUNWIND_IS_NATIVE_ONLY
 # define _LIBUNWIND_TARGET_I386
 # define _LIBUNWIND_TARGET_X86_64 1

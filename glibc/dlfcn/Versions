@@ -1,0 +1,50 @@
+libc {
+  GLIBC_2.0 {
+    dladdr;
+    dlclose;
+    dlerror;
+    dlopen;
+    dlsym;
+  }
+  GLIBC_2.1 {
+    dlopen;
+    dlvsym;
+  }
+  GLIBC_2.3.3 {
+    dladdr1;
+    dlinfo;
+  }
+  GLIBC_2.3.4 {
+    dlmopen;
+  }
+  GLIBC_2.34 {
+    dladdr1;
+    dladdr;
+    dlclose;
+    dlerror;
+    dlinfo;
+    dlmopen;
+    dlopen;
+    dlsym;
+    dlvsym;
+  }
+  GLIBC_PRIVATE {
+    __libc_dlerror_result;
+    _dlerror_run;
+    _dlfcn_hook;
+  }
+}
+libdl {
+  GLIBC_2.0 {
+    __libdl_version_placeholder;
+  }
+  GLIBC_2.1 {
+    __libdl_version_placeholder;
+  }
+  GLIBC_2.3.3 {
+    __libdl_version_placeholder;
+  }
+  GLIBC_2.3.4 {
+    __libdl_version_placeholder;
+  }
+}

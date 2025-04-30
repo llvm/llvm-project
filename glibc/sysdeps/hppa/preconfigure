@@ -1,0 +1,6 @@
+# This fragment canonicalizes the machine names for hppa variants.
+
+case "$machine" in
+hppa*64*)	base_machine=hppa machine=hppa/hppa64 ;;
+hppa*)		base_machine=hppa machine=hppa/hppa1.1 ;;
+esac

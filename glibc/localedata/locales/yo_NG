@@ -1,0 +1,308 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Yoruba language locale for Nigeria
+% Source:
+% Contact: Pablo Saratxaga
+% Email: pablo@mandriva.com
+% Language: yo
+% Territory: NG
+% Revision: 0.2
+% Date: 2005-11-21
+% Users: general
+
+LC_IDENTIFICATION
+title      "Yoruba locale for Nigeria"
+source     ""
+address    ""
+contact    ""
+email      "pablo@mandriva.com"
+tel        ""
+fax        ""
+language   "Yoruba"
+territory  "Nigeria"
+revision   "0.2"
+date       "2005-11-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+
+% Yoruba uses the following extra letters:
+% edotbelow, odotbelow, sdotbelow
+% plus acute and grave combining marks over vowels and n
+% of those, the following have precombined forms:
+% aacute, eacute, iacute, oacute, uacute, nacute
+% agrave, egrave, igrave, ograve, ugrave, ngrave
+% * m and n may be nazalization marks when they follow a vowel;
+%   or they can be vocalic, in such case they get the three
+%   tones, and middle tone is marked with a macron
+% * a same vowel with following up/down or down/up tones
+%   may be written with respectively a circumflex or a caron,
+%   eg: áà = â, àá = ǎ
+% * old orthography also has tilde on vowels, but is deprecated
+%   (not implemented in this yo_NG file)
+% * info from: http://www.eki.ee/letter
+%
+% order: a, b, c, d, e, e., f, g, gb, h, i, j, k, l, m, n, o, o., p
+% [q], r, s, s., t, u, [v], w, [x], y, [z]
+
+copy "iso14651_t1"
+
+% CLDR collation rules for Yoruba:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/yo.xml)
+%
+% <collation type="standard" references="Nigeria University Press: A dictionary of the Yoruba language ISBN 978-030-760-5">
+%   <cr><![CDATA[
+%     [normalization on]
+%     &E<ẹ<<<Ẹ
+%     &G<gb<<<Gb<<<GB
+%     &O<ọ<<<Ọ
+%     &S<ṣ<<<Ṣ
+%   ]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/yo.xml)
+%
+% <exemplarCharacters type="index">[A B D E F G H I J K L M N O P R S T U W Y]</exemplarCharacters>
+%
+% The list of index characters looks wrong when comparing with the
+% collation rules.
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <e-dot-below>
+collating-symbol <gb-digraph>
+collating-symbol <o-dot-below>
+collating-symbol <s-dot-below>
+
+collating-element <e-combining-dot-below> from "e<U0323>"
+collating-element <E-combining-dot-below> from "E<U0323>"
+
+collating-element <g-b> from "gb"
+collating-element <g-B> from "gB"
+collating-element <G-b> from "Gb"
+collating-element <G-B> from "GB"
+
+collating-element <o-combining-dot-below> from "o<U0323>"
+collating-element <O-combining-dot-below> from "O<U0323>"
+
+collating-element <s-combining-dot-below> from "s<U0323>"
+collating-element <S-combining-dot-below> from "S<U0323>"
+
+% &E<ẹ<<<Ẹ
+reorder-after <AFTER-E>
+<e-dot-below>
+% &G<gb<<<Gb<<<GB
+reorder-after <AFTER-G>
+<gb-digraph>
+% &O<ọ<<<Ọ
+reorder-after <AFTER-O>
+<o-dot-below>
+% &S<ṣ<<<Ṣ
+reorder-after <AFTER-S>
+<s-dot-below>
+
+% &E<ẹ<<<Ẹ
+<U1EB9> <e-dot-below>;"<BASE><BASE>";"<MIN><MIN>";<VRNT1> % LATIN SMALL LETTER E WITH DOT BELOW
+<e-combining-dot-below> <e-dot-below>;"<BASE><BASE>";"<MIN><MIN>";<VRNT2>
+<U1EB8> <e-dot-below>;"<BASE><BASE>";"<CAP><MIN>";<VRNT1> % LATIN CAPITAL LETTER E WITH DOT BELOW
+<E-combining-dot-below> <e-dot-below>;"<BASE><BASE>";"<CAP><MIN>";<VRNT2>
+
+% &G<gb<<<Gb<<<GB
+<g-b> <gb-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<g-B> <gb-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<G-b> <gb-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<G-B> <gb-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+% &O<ọ<<<Ọ
+<U1ECD> <o-dot-below>;"<BASE><BASE>";"<MIN><MIN>";<VRNT1> % LATIN SMALL LETTER O WITH DOT BELOW
+<o-combining-dot-below> <o-dot-below>;"<BASE><BASE>";"<MIN><MIN>";<VRNT2>
+<U1ECC> <o-dot-below>;"<BASE><BASE>";"<CAP><MIN>";<VRNT1> % LATIN CAPITAL LETTER O WITH DOT BELOW
+<O-combining-dot-below> <o-dot-below>;"<BASE><BASE>";"<CAP><MIN>";<VRNT2>
+
+% &S<ṣ<<<Ṣ
+<U1E63> <s-dot-below>;"<BASE><BASE>";"<MIN><MIN>";<VRNT1> % LATIN SMALL LETTER S WITH DOT BELOW
+<s-combining-dot-below> <s-dot-below>;"<BASE><BASE>";"<MIN><MIN>";<VRNT2>
+<U1E62> <s-dot-below>;"<BASE><BASE>";"<CAP><MIN>";<VRNT1> % LATIN CAPITAL LETTER S WITH DOT BELOW
+<S-combining-dot-below> <s-dot-below>;"<BASE><BASE>";"<CAP><MIN>";<VRNT2>
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_NG"
+END LC_CTYPE
+
+LC_MONETARY
+copy "en_NG"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_NG"
+END LC_NUMERIC
+
+LC_TELEPHONE
+copy "en_NG"
+END LC_TELEPHONE
+
+LC_TIME
+% Àìkú, Ajé, Ìsẹ́gun, Ọjọ́rú, Ọjọ́bọ, Ẹtì, Àbámẹ́ta
+abday       "<U00C0><U00EC>k<U00FA>";/
+            "Aj<U00E9>";/
+            "<U00CC>s<U1EB9><U0301>gun";/
+            "<U1ECC>j<U1ECD><U0301>r<U00FA>";/
+            "<U1ECC>j<U1ECD><U0301>b<U1ECD>";/
+            "<U1EB8>t<U00EC>";/
+            "<U00C0>b<U00E1>m<U1EB9><U0301>ta"
+% Ọjọ́ Àìkú, Ọjọ́ Ajé, Ọjọ́ Ìsẹ́gun, Ọjọ́rú, Ọjọ́bọ, Ọjọ́ Ẹtì, Ọjọ́ Àbámẹ́ta
+day         "<U1ECC>j<U1ECD><U0301> <U00C0><U00EC>k<U00FA>";/
+            "<U1ECC>j<U1ECD><U0301> Aj<U00E9>";/
+            "<U1ECC>j<U1ECD><U0301> <U00CC>s<U1EB9><U0301>gun";/
+            "<U1ECC>j<U1ECD><U0301>r<U00FA>";/
+            "<U1ECC>j<U1ECD><U0301>b<U1ECD>";/
+            "<U1ECC>j<U1ECD><U0301> <U1EB8>t<U00EC>";/
+            "<U1ECC>j<U1ECD><U0301> <U00C0>b<U00E1>m<U1EB9><U0301>ta"
+% Ṣẹ́rẹ́, Èrèlè, Ẹrẹ̀nà, Ìgbé, Ẹ̀bibi, Òkúdu,
+% Agẹmọ, Ògún, Owewe, Ọ̀wàrà, Bélú, Ọ̀pẹ̀
+abmon       "<U1E62><U1EB9><U0301>r<U1EB9><U0301>";/
+            "<U00C8>r<U00E8>l<U00E8>";/
+            "<U1EB8>r<U1EB9><U0300>n<U00E0>";/
+            "<U00CC>gb<U00E9>";/
+            "<U1EB8><U0300>bibi";/
+            "<U00D2>k<U00FA>du";/
+            "Ag<U1EB9>m<U1ECD>";/
+            "<U00D2>g<U00FA>n";/
+            "Owewe";/
+            "<U1ECC><U0300>w<U00E0>r<U00E0>";/
+            "B<U00E9>l<U00FA>";/
+            "<U1ECC><U0300>p<U1EB9><U0300>"
+% Oṣù Ṣẹ́rẹ́, Oṣù Èrèlè, Oṣù Ẹrẹ̀nà, Oṣù Ìgbé, Oṣù Ẹ̀bibi, Oṣù Òkúdu,
+% Oṣù Agẹmọ, Oṣù Ògún, Oṣù Owewe, Oṣù Ọ̀wàrà, Oṣù Bélú, Oṣù Ọ̀pẹ̀
+mon         "O<U1E63><U00F9> <U1E62><U1EB9><U0301>r<U1EB9><U0301>";/
+            "O<U1E63><U00F9> <U00C8>r<U00E8>l<U00E8>";/
+            "O<U1E63><U00F9> <U1EB8>r<U1EB9><U0300>n<U00E0>";/
+            "O<U1E63><U00F9> <U00CC>gb<U00E9>";/
+            "O<U1E63><U00F9> <U1EB8><U0300>bibi";/
+            "O<U1E63><U00F9> <U00D2>k<U00FA>du";/
+            "O<U1E63><U00F9> Ag<U1EB9>m<U1ECD>";/
+            "O<U1E63><U00F9> <U00D2>g<U00FA>n";/
+            "O<U1E63><U00F9> Owewe";/
+            "O<U1E63><U00F9> <U1ECC><U0300>w<U00E0>r<U00E0>";/
+            "O<U1E63><U00F9> B<U00E9>l<U00FA>";/
+            "O<U1E63><U00F9> <U1ECC><U0300>p<U1EB9><U0300>"
+% ọjọ́ %a, %d oṣù %b ọdún %Y %T
+d_t_fmt     "<U1ECD>j<U1ECD><U0301> %a, %d o<U1E63><U00F9> %b <U1ECD>d<U00FA>n %Y %T"
+% ọjọ́ %a, %d oṣù %b ọdún %Y %T %Z
+date_fmt    "<U1ECD>j<U1ECD><U0301> %a, %d o<U1E63><U00F9> %b <U1ECD>d<U00FA>n %Y %T %Z"
+d_fmt       "%d//%m//%y"
+t_fmt       "%r"
+am_pm       "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1EeyYNn]"
+noexpr  "^[-0rROoKk]"
+yesstr  "B<U1EB9><U0301><U1EB9><U0300>ni"
+nostr   "B<U1EB9><U0301><U1EB9><U0300>k<U1ECD><U0301>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_NG"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "en_NG"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_NG"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+% Representation of postal addresses (minus the addressee's name) in South
+% Africa. (Ignored for now)
+% "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N", which gives -
+%
+% "firm name",
+% "end of line",
+% "C/O address",
+% "end of line",
+% "department name",
+% "Building name",
+% "end of line",
+% "street or block name",
+% "space",
+% "house number or designation",
+% "space",
+% "floor number",
+% "space",
+% "room number, door designation",
+% "end of line",
+% "postal code",
+% "space",
+% "town, city",
+% "end of line",
+% "country designation for the <country_post> keyword",
+% "end of line
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% https://yo.wikipedia.org/wiki/N%C3%A0%C3%ACj%C3%ADr%C3%AD%C3%A0 and CLDR: Orilẹ̀-èdè Nàìjíríà
+country_name "Oril<U1EB9><U0300><U002D><U00E8>d<U00E8> N<U00E0><U00EC>j<U00ED>r<U00ED><U00E0>"
+
+% Language name in Yoruba - "Yorùbá"
+lang_name     "<U00C8>d<U00E8> Yor<U00F9>b<U00E1>"
+
+% CEPT MAILCODES are suggested
+% Alternatively use the code found on your countries postal item tracking number
+% "NG"?
+%country_post   "NG"
+
+% UN Geneve 1949:68 Distinguishing signs of vehicles in international traffic
+% http://www.unece.org/trans/conventn/Distsigns_Sept2003.pdf
+country_car   "WAN"
+
+% ISO 2108
+% http://www.isbn-international.org/
+country_isbn  978
+
+% ISO 639 language abbreviations:
+% 639-1 2 letter, 639-2 3 letter terminology
+% http://www.loc.gov/standards/iso639-2/englagn.html
+lang_ab       "yo"
+lang_term     "yor"
+lang_lib      "yor"
+
+% ISO 3166 country number and 2 and 3 letter abreviations
+% http://www.unicode.org/onlinedat/countries.html
+country_ab2   "NG"
+country_ab3   "NGA"
+country_num   566
+
+END LC_ADDRESS

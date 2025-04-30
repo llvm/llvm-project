@@ -1,0 +1,223 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Kazakh Language Locale for Kazakhstan
+% Source: linukz.org
+% Address:
+% Contact: Timur Birsh
+% Email: taem@linukz.org
+% Tel:
+% Fax:
+% Language: kk
+% Territory: KZ
+% Revision: 1.1
+% Date: 2016-03-22
+% Application: general
+% Users: general
+% License: Public Domain
+
+LC_IDENTIFICATION
+title      "Kazakh locale for Kazakhstan"
+source     "linukz.org"
+address    ""
+contact    "Timur Birsh"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Kazakh"
+territory  "Kazakhstan"
+revision   "1.1"
+date       "2016-03-22"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% CLDR collation rules for Kazakh:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/kk.xml)
+%
+% <collation type="standard">
+% 	<cr><![CDATA[
+% 		[reorder Cyrl]
+% 		# The root collation already sorts й/Й as a base letter.
+% 		&Е<ё<<<Ё
+% 		&Ұ<ү<<<Ү
+% 		&[before 1]ь<і<<<І
+% 	]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/kk.xml)
+%
+% <exemplarCharacters type="index">[А Ә Б В Г Ғ Д Е Ё Ж З И Й К Қ Л М Н Ң О Ө П Р С Т У Ұ Ү Ф Х Һ Ц Ч Ш Щ Ъ Ы І Ь Э Ю Я]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+copy "iso14651_t1"
+
+collating-symbol <io>
+collating-symbol <straight-u>
+collating-symbol <i>
+
+reorder-after <S0435> % CYRILLIC SMALL LETTER IE
+<io>
+reorder-after <S04B1> % CYRILLIC SMALL LETTER STRAIGHT U WITH STROKE
+<straight-u>
+reorder-after <S044B> % CYRILLIC SMALL LETTER YERU
+<i>
+
+<U0451>                <io>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ё
+<U0401>                <io>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ё
+<U04AF>        <straight-u>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ү
+<U04AE>        <straight-u>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ү
+<U0456>                 <i>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % і
+<U0406>                 <i>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % І
+
+reorder-end
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0418><U0438>]"
+noexpr  "^[-0nN<U0416><U0436>N]"
+yesstr  "<U0438><U04D9>"
+nostr   "<U0436><U043E><U049B>"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "KZT "
+currency_symbol           "<U20B8>"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            2
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+int_p_cs_precedes         1
+int_p_sep_by_space        2
+int_n_cs_precedes         1
+int_n_sep_by_space        1
+int_p_sign_posn           4
+int_n_sign_posn           4
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "<U202F>"
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+day     "<U0416><U0435><U043A><U0441><U0435><U043D><U0431><U0456>";/
+        "<U0414><U04AF><U0439><U0441><U0435><U043D><U0431><U0456>";/
+        "<U0421><U0435><U0439><U0441><U0435><U043D><U0431><U0456>";/
+        "<U0421><U04D9><U0440><U0441><U0435><U043D><U0431><U0456>";/
+        "<U0411><U0435><U0439><U0441><U0435><U043D><U0431><U0456>";/
+        "<U0416><U04B1><U043C><U0430>";/
+        "<U0421><U0435><U043D><U0431><U0456>"
+abday   "<U0416><U043A>";/
+        "<U0414><U0441>";/
+        "<U0421><U0441>";/
+        "<U0421><U0440>";/
+        "<U0411><U0441>";/
+        "<U0416><U043C>";/
+        "<U0421><U0431>"
+mon     "<U049A><U0430><U04A3><U0442><U0430><U0440>";/
+        "<U0410><U049B><U043F><U0430><U043D>";/
+        "<U041D><U0430><U0443><U0440><U044B><U0437>";/
+        "<U0421><U04D9><U0443><U0456><U0440>";/
+        "<U041C><U0430><U043C><U044B><U0440>";/
+        "<U041C><U0430><U0443><U0441><U044B><U043C>";/
+        "<U0428><U0456><U043B><U0434><U0435>";/
+        "<U0422><U0430><U043C><U044B><U0437>";/
+        "<U049A><U044B><U0440><U043A><U04AF><U0439><U0435><U043A>";/
+        "<U049A><U0430><U0437><U0430><U043D>";/
+        "<U049A><U0430><U0440><U0430><U0448><U0430>";/
+        "<U0416><U0435><U043B><U0442><U043E><U049B><U0441><U0430><U043D>"
+abmon   "<U049A><U0430><U04A3>";/
+        "<U0410><U049B><U043F>";/
+        "<U041D><U0430><U0443>";/
+        "<U0421><U04D9><U0443>";/
+        "<U041C><U0430><U043C>";/
+        "<U041C><U0430><U0443>";/
+        "<U0428><U0456><U043B>";/
+        "<U0422><U0430><U043C>";/
+        "<U049A><U044B><U0440>";/
+        "<U049A><U0430><U0437>";/
+        "<U049A><U0430><U0440>";/
+        "<U0416><U0435><U043B>"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+tel_dom_fmt "(%A) %l"
+int_prefix  "7"
+int_select  "8~10"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U049A><U0430><U0437><U0430><U049B><U0441><U0442><U0430><U043D>"
+country_post "KAZ"
+country_ab2  "KZ"
+country_ab3  "KAZ"
+country_num  398
+country_car  "KZ"
+country_isbn "978-601"
+lang_name    "<U049B><U0430><U0437><U0430><U049B> <U0442><U0456><U043B><U0456>"
+lang_ab      "kk"
+lang_term    "kaz"
+lang_lib     "kaz"
+END LC_ADDRESS

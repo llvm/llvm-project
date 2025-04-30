@@ -1,0 +1,76 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+constant CODESET
+constant D_T_FMT
+constant D_FMT
+constant T_FMT
+constant T_FMT_AMPM
+constant AM_STR
+constant PM_STR
+constant DAY_1
+constant DAY_2
+constant DAY_3
+constant DAY_4
+constant DAY_5
+constant DAY_6
+constant DAY_7
+constant ABDAY_1
+constant ABDAY_2
+constant ABDAY_3
+constant ABDAY_4
+constant ABDAY_5
+constant ABDAY_6
+constant ABDAY_7
+constant MON_1
+constant MON_2
+constant MON_3
+constant MON_4
+constant MON_5
+constant MON_6
+constant MON_7
+constant MON_8
+constant MON_9
+constant MON_10
+constant MON_11
+constant MON_12
+constant ABMON_1
+constant ABMON_2
+constant ABMON_3
+constant ABMON_4
+constant ABMON_5
+constant ABMON_6
+constant ABMON_7
+constant ABMON_8
+constant ABMON_9
+constant ABMON_10
+constant ABMON_11
+constant ABMON_12
+constant ERA
+constant ERA_D_FMT
+constant ERA_D_T_FMT
+constant ERA_T_FMT
+constant ALT_DIGITS
+constant RADIXCHAR
+constant THOUSEP
+constant YESEXPR
+constant NOEXPR
+constant CRNCYSTR
+
+# if defined XPG4 || defined XPG42 || defined UNIX98
+constant YESSTR
+constant NOSTR
+# endif
+
+type nl_item
+# if defined XOPEN2K8 || defined POSIX2008
+type locale_t
+# endif
+
+function {char*} nl_langinfo (nl_item)
+# if defined XOPEN2K8 || defined POSIX2008
+function {char*} nl_langinfo_l (nl_item, locale_t)
+# endif
+
+allow-header nl_types.h
+
+allow *_t
+#endif

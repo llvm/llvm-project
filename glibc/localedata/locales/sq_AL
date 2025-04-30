@@ -1,0 +1,365 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Albanian language locale for Albania.
+% Contributed by Kentaroh Noji <knoji@jp.ibm.com> and
+% Tetsuji Orita <orita@jp.ibm.com>.
+% fixed LC_COLLATE <pablo@mandrakesoft.com>
+
+LC_IDENTIFICATION
+title      "Albanian language locale for Albania"
+source     "IBM Globalization Center of Competency, Yamato Software Laboratory"
+address    "1623-14, Shimotsuruma, Yamato-shi, Kanagawa-ken, 242-8502, Japan"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Albanian"
+territory  "Albania"
+revision   "1.1"
+date       "2004-07-01"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% CLDR collation rules for :
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/sq.xml)
+%
+% <collation type="standard" >
+%   <cr><![CDATA[
+%     &[before 1]D<ç<<<Ç
+%     &[before 1]E<dh<<<Dh<<<DH
+%     &[before 1]F<ë<<<Ë
+%     &[before 1]H<gj<<<Gj<<<GJ
+%     &[before 1]M<ll<<<Ll<<<LL
+%     &[before 1]O<nj<<<Nj<<<NJ
+%     &[before 1]S<rr<<<Rr<<<RR
+%     &[before 1]T<sh<<<Sh<<<SH
+%     &[before 1]U<th<<<Th<<<TH
+%     &[before 1]Y<xh<<<Xh<<<XH
+%     &[before 1]Ʒ<zh<<<Zh<<<ZH
+%   ]]></cr>
+% </collation  >
+% <collation draft="unconfirmed" alt="proposed" type="standard" >
+%   <cr><![CDATA[
+%     &[before 1]D<ç<<<Ç
+%     &[before 1]E<dh<<<dH<<<Dh<<<DH
+%     &[before 1]F<ë<<<Ë
+%     &[before 1]H<gj<<<gJ<<<Gj<<<GJ
+%     &[before 1]M<ll<<<lL<<<Ll<<<LL
+%     &[before 1]O<nj<<<nJ<<<Nj<<<NJ
+%     &[before 1]S<rr<<<rR<<<Rr<<<RR
+%     &[before 1]T<sh<<<sH<<<Sh<<<SH
+%     &[before 1]U<th<<<tH<<<Th<<<TH
+%     &[before 1]Y<xh<<<xH<<<Xh<<<XH
+%     &[before 1]Ʒ<zh<<<zH<<<Zh<<<ZH
+%   ]]></cr>
+% </collation  >
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/sq.xml)
+%
+% <exemplarCharacters type="index">[A B C Ç D {DH} E Ë F G {GJ} H I J K L {LL} M N {NJ} O P Q R {RR} S {SH} T {TH} U V X {XH} Y Z {ZH}]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+
+copy "iso14651_t1"
+
+collating-symbol <c-cedilla>
+collating-symbol <dh-digraph>
+collating-symbol <e-diaeresis>
+collating-symbol <gj-digraph>
+collating-symbol <ll-digraph>
+collating-symbol <nj-digraph>
+collating-symbol <rr-digraph>
+collating-symbol <sh-digraph>
+collating-symbol <th-digraph>
+collating-symbol <xh-digraph>
+collating-symbol <zh-digraph>
+
+collating-element <dh> from "dh"
+collating-element <dH> from "dH"
+collating-element <Dh> from "Dh"
+collating-element <DH> from "DH"
+collating-element <gj> from "gj"
+collating-element <gJ> from "gJ"
+collating-element <Gj> from "Gj"
+collating-element <GJ> from "GJ"
+collating-element <ll> from "ll"
+collating-element <lL> from "lL"
+collating-element <Ll> from "Ll"
+collating-element <LL> from "LL"
+collating-element <nj> from "nj"
+collating-element <nJ> from "nJ"
+collating-element <Nj> from "Nj"
+collating-element <NJ> from "NJ"
+collating-element <rr> from "rr"
+collating-element <rR> from "rR"
+collating-element <Rr> from "Rr"
+collating-element <RR> from "RR"
+collating-element <sh> from "sh"
+collating-element <sH> from "sH"
+collating-element <Sh> from "Sh"
+collating-element <SH> from "SH"
+collating-element <th> from "th"
+collating-element <tH> from "tH"
+collating-element <Th> from "Th"
+collating-element <TH> from "TH"
+collating-element <xh> from "xh"
+collating-element <xH> from "xH"
+collating-element <Xh> from "Xh"
+collating-element <XH> from "XH"
+collating-element <zh> from "zh"
+collating-element <zH> from "zH"
+collating-element <Zh> from "Zh"
+collating-element <ZH> from "ZH"
+
+reorder-after <BEFORE-D>
+<c-cedilla>
+reorder-after <BEFORE-E>
+<dh-digraph>
+reorder-after <BEFORE-F>
+<e-diaeresis>
+reorder-after <BEFORE-H>
+<gj-digraph>
+reorder-after <BEFORE-M>
+<ll-digraph>
+reorder-after <BEFORE-O>
+<nj-digraph>
+reorder-after <BEFORE-S>
+<rr-digraph>
+reorder-after <BEFORE-T>
+<sh-digraph>
+reorder-after <BEFORE-U>
+<th-digraph>
+reorder-after <BEFORE-Y>
+<xh-digraph>
+reorder-after <BEFORE-EZH>
+<zh-digraph>
+
+<U00E7> <c-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ç
+<U00C7> <c-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ç
+<dh>    <dh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<dH>    <dh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Dh>    <dh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<DH>    <dh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<U00EB> <e-diaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ë
+<U00CB> <e-diaeresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ë
+<gj>    <gj-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<gJ>    <gj-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Gj>    <gj-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<GJ>    <gj-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ll>    <ll-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<lL>    <ll-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ll>    <ll-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<LL>    <ll-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<nj>    <nj-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<nJ>    <nj-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Nj>    <nj-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<NJ>    <nj-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<rr>    <rr-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<rR>    <rr-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Rr>    <rr-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<RR>    <rr-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<sh>    <sh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<sH>    <sh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Sh>    <sh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<SH>    <sh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<th>    <th-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<tH>    <th-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Th>    <th-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<TH>    <th-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<xh>    <xh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<xH>    <xh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Xh>    <xh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<XH>    <xh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<zh>    <zh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<zH>    <zh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Zh>    <zh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<ZH>    <zh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+int_curr_symbol       "ALL "
+currency_symbol       "L"
+mon_decimal_point     ","
+mon_thousands_sep     "."
+mon_grouping          3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       3
+frac_digits           3
+p_cs_precedes         1
+p_sep_by_space        0
+n_cs_precedes         1
+n_sep_by_space        0
+p_sign_posn           1
+n_sign_posn           1
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+% This is the POSIX Locale definition for the LC_NUMERIC  category.
+%
+decimal_point          ","
+thousands_sep          "."
+grouping               3
+%
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+% Abbreviated weekday names (%a)
+abday       "Die";"H<U00EB>n";/
+	    "Mar";"M<U00EB>r";/
+	    "Enj";"Pre";"Sht"
+%
+% Full weekday names (%A)
+day         "e diel";/
+	    "e h<U00EB>n<U00EB>";/
+	    "e mart<U00EB>";/
+	    "e m<U00EB>rkur<U00EB>";/
+	    "e enjte";/
+	    "e premte";/
+	    "e shtun<U00EB>"
+%
+% Abbreviated month names (%b)
+abmon       "Jan";"Shk";/
+	    "Mar";"Pri";/
+	    "Maj";"Qer";/
+	    "Kor";"Gsh";/
+	    "Sht";"Tet";/
+	    "N<U00EB>n";"Dhj"
+%
+% Full month names (%B)
+mon         "janar";/
+	    "shkurt";/
+	    "mars";/
+	    "prill";/
+	    "maj";/
+	    "qershor";/
+	    "korrik";/
+	    "gusht";/
+	    "shtator";/
+	    "tetor";/
+	    "n<U00EB>ntor";/
+	    "dhjetor"
+%
+% Equivalent of AM PM
+am_pm       "PD";"MD"
+%
+% Appropriate date and time representation
+d_t_fmt     "%a %-d %b %Y %I:%M:%S.%p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%a %-d %b %Y %I:%M:%S.%p %Z"
+%
+% Appropriate date representation
+d_fmt       "%-d.%-m.%y"
+%
+% Appropriate time representation
+t_fmt       "%I:%M:%S.%p %Z"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%I:%M:%S.%p %Z"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yYpP]"
+noexpr  "^[-0nNjJ]"
+yesstr  "po"
+nostr   "jo"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    ""
+name_mr     "Z."
+name_mrs    "Znj."
+name_miss   "Zsh."
+name_ms     "Znj."
+
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "Shqip<U00EB>ri"
+country_ab2 "AL"
+country_ab3 "ALB"
+country_num 008
+country_car    "AL"
+lang_name    "shqip"
+lang_ab      "sq"
+lang_term    "sqi"
+lang_lib    "alb"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the
+%
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix     "355"
+int_select     "00"
+
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

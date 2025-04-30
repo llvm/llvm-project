@@ -1,0 +1,113 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+macro complex
+macro _Complex_I
+optional-macro imaginary
+optional-macro _Imaginary_I
+macro I
+
+function double cabs (double complex)
+function {double complex} cacos (double complex)
+function {double complex} cacosh (double complex)
+function double carg (double complex)
+function {double complex} casin (double complex)
+function {double complex} casinh (double complex)
+function {double complex} catan (double complex)
+function {double complex} catanh (double complex)
+function {double complex} ccos (double complex)
+function {double complex} ccosh (double complex)
+function {double complex} cexp (double complex)
+function double cimag (double complex)
+function {double complex} clog (double complex)
+function {double complex} conj (double complex)
+function {double complex} cpow (double complex, double complex)
+function {double complex} cproj (double complex)
+function double creal (double complex)
+function {double complex} csin (double complex)
+function {double complex} csinh (double complex)
+function {double complex} csqrt (double complex)
+function {double complex} ctan (double complex)
+function {double complex} ctanh (double complex)
+
+function float cabsf (float complex)
+function {float complex} cacosf (float complex)
+function {float complex} cacoshf (float complex)
+function float cargf (float complex)
+function {float complex} casinf (float complex)
+function {float complex} casinhf (float complex)
+function {float complex} catanf (float complex)
+function {float complex} catanhf (float complex)
+function {float complex} ccosf (float complex)
+function {float complex} ccoshf (float complex)
+function {float complex} cexpf (float complex)
+function float cimagf (float complex)
+function {float complex} clogf (float complex)
+function {float complex} conjf (float complex)
+function {float complex} cpowf (float complex, float complex)
+function {float complex} cprojf (float complex)
+function float crealf (float complex)
+function {float complex} csinf (float complex)
+function {float complex} csinhf (float complex)
+function {float complex} csqrtf (float complex)
+function {float complex} ctanf (float complex)
+function {float complex} ctanhf (float complex)
+
+function {long double} cabsl (long double complex)
+function {long double complex} cacosl (long double complex)
+function {long double complex} cacoshl (long double complex)
+function {long double} cargl (long double complex)
+function {long double complex} casinhl (long double complex)
+function {long double complex} casinl (long double complex)
+function {long double complex} catanhl (long double complex)
+function {long double complex} catanl (long double complex)
+function {long double complex} ccoshl (long double complex)
+function {long double complex} ccosl (long double complex)
+function {long double complex} cexpl (long double complex)
+function {long double} cimagl (long double complex)
+function {long double complex} clogl (long double complex)
+function {long double complex} conjl (long double complex)
+function {long double complex} cpowl (long double complex, long double complex)
+function {long double complex} cprojl (long double complex)
+function {long double} creall (long double complex)
+function {long double complex} csinhl (long double complex)
+function {long double complex} csinl (long double complex)
+function {long double complex} csqrtl (long double complex)
+function {long double complex} ctanhl (long double complex)
+function {long double complex} ctanl (long double complex)
+
+# if defined ISO11
+macro-function {double complex} CMPLX (double, double)
+macro-function {float complex} CMPLXF (float, float)
+macro-function {long double complex} CMPLXL (long double, long double)
+# endif
+
+allow cerf
+allow cerfc
+allow cexp2
+allow cexpm1
+allow clog10
+allow clog1p
+allow clog2
+allow clgamma
+allow ctgamma
+
+allow cerff
+allow cerfcf
+allow cexp2f
+allow cexpm1f
+allow clog10f
+allow clog1pf
+allow clog2f
+allow clgammaf
+allow ctgammaf
+
+allow cerfl
+allow cerfcl
+allow cexp2l
+allow cexpm1l
+allow clog10l
+allow clog1pl
+allow clog2l
+allow clgammal
+allow ctgammal
+
+#endif

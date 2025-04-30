@@ -1,0 +1,79 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/unix/sysv/linux/powerpc/.
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC $CFLAGS -mlong-double-128 uses IBM extended format" >&5
+$as_echo_n "checking whether $CC $CFLAGS -mlong-double-128 uses IBM extended format... " >&6; }
+if ${libc_cv_mlong_double_128ibm+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -mlong-double-128"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <float.h>
+int
+main ()
+{
+
+#if LDBL_MANT_DIG != 106
+# error "compiler doesn't implement IBM extended format of long double"
+#endif
+long double foobar (long double x) { return x; }
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_mlong_double_128ibm=yes
+else
+  libc_cv_mlong_double_128ibm=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+CFLAGS="$save_CFLAGS"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mlong_double_128ibm" >&5
+$as_echo "$libc_cv_mlong_double_128ibm" >&6; }
+
+if test "$libc_cv_mlong_double_128ibm" = no; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC $CFLAGS supports -mabi=ibmlongdouble" >&5
+$as_echo_n "checking whether $CC $CFLAGS supports -mabi=ibmlongdouble... " >&6; }
+if ${libc_cv_mabi_ibmlongdouble+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+    save_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS -mlong-double-128 -mabi=ibmlongdouble"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <float.h>
+int
+main ()
+{
+
+#if LDBL_MANT_DIG != 106
+# error "compiler doesn't implement IBM extended format of long double"
+#endif
+long double foobar (long double x) { return x; }
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_mabi_ibmlongdouble=yes
+else
+  libc_cv_mabi_ibmlongdouble=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CFLAGS="$save_CFLAGS"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_mabi_ibmlongdouble" >&5
+$as_echo "$libc_cv_mabi_ibmlongdouble" >&6; }
+
+  if test "$libc_cv_mabi_ibmlongdouble" = yes; then
+    CFLAGS="$CFLAGS -mabi=ibmlongdouble"
+  else
+    as_fn_error $? "this configuration requires -mlong-double-128 IBM extended format support" "$LINENO" 5
+  fi
+fi
+
+ldd_rewrite_script=sysdeps/unix/sysv/linux/powerpc/ldd-rewrite.sed

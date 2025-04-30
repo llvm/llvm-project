@@ -1,0 +1,108 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+
+.CP DOUBLEDOUBLECON cons sym
+Double-double constant.
+.OP DOUBLEDOUBLECON r v1
+.CP DOUBLEDOUBLELD load lnk
+Double-double load.
+.AT spec
+.CP DOUBLEDOUBLEST store lnk lnk
+Double-double store
+.AT spec trm
+.CP DOUBLEDOUBLEFROM arth lnk
+Convert double to double-double.
+.OP DOUBLEDOUBLEFROM r p1
+.CP DOUBLEDOUBLETO arth lnk
+Convert double-double to double.
+.OP DOUBLEDOUBLETO r p1
+.CP DOUBLEDOUBLECHS arth lnk
+Double-double negation.
+.OP DOUBLEDOUBLECHS r p1
+.CP DOUBLEDOUBLEADD arth lnk lnk
+Double-double addition.
+.OP DOUBLEDOUBLEADD r p1 p2
+.CP DOUBLEDOUBLESUB arth lnk lnk
+Double-double subtraction.
+.OP DOUBLEDOUBLESUB r p1 p2
+.CP DOUBLEDOUBLEMUL arth lnk lnk
+Double-double multiplication.
+.OP DOUBLEDOUBLEMUL r p1 p2
+.CP DOUBLEDOUBLEDIV arth lnk lnk
+Double-double division.
+.OP DOUBLEDOUBLEDIV r p1 p2
+.CP DOUBLEDOUBLECMP arth lnk lnk
+Double-double comparison.
+.AT spec
+.CP DOUBLEDOUBLEFUNC proc n lnk lnk*
+Call function returning double-double.
+.AT spec
+.CP DOUBLEDOUBLECMPLX arth lnk lnk
+.AT spec
+.CP DOUBLEDOUBLEREAL arth lnk
+.AT spec
+.CP DOUBLEDOUBLEIMAG arth lnk
+.AT spec
+.CP CDOUBLEDOUBLECON cons sym
+Double-double complex constant.
+.AT spec doubledoublecmplx
+.CP CDOUBLEDOUBLELD load lnk
+Double-double complex load.
+.AT spec doubledoublecmplx
+.CP CDOUBLEDOUBLEST store lnk lnk
+Double-double complex store.
+.AT spec trm doubledoublecmplx
+.CP CDOUBLEDOUBLESTR store lnk lnk
+Store the real part of double-double complex.
+.AT spec trm
+.CP CDOUBLEDOUBLESTI store lnk lnk
+Store the imaginary part of double-double complex.
+.AT spec trm
+.CP CDOUBLEDOUBLECHS arth lnk
+Double-double complex negation.
+.AT doubledoublecmplx
+.OP DOUBLEDOUBLECHS rr rp1
+.OP DOUBLEDOUBLECHS ir ip1
+.CP CDOUBLEDOUBLEADD arth lnk lnk
+Double-double complex addition.
+.AT doubledoublecmplx
+.OP DOUBLEDOUBLEADD rr rp1 rp2
+.OP DOUBLEDOUBLEADD ir ip1 ip2
+.CP CDOUBLEDOUBLESUB arth lnk lnk
+Double-double complex addition.
+.AT doubledoublecmplx
+.OP DOUBLEDOUBLESUB rr rp1 rp2
+.OP DOUBLEDOUBLESUB ir ip1 ip2
+.CP CDOUBLEDOUBLEMUL arth lnk lnk
+Double-double complex addition.
+.AT doubledoublecmplx
+.OP DOUBLEDOUBLEMUL t1 rp1 rp2
+.OP DOUBLEDOUBLEMUL t2 ip1 ip2
+.OP DOUBLEDOUBLESUB rr t1 t2
+.OP DOUBLEDOUBLEMUL t1 ip1 rp2
+.OP DOUBLEDOUBLEMUL t2 ip2 rp1
+.OP DOUBLEDOUBLEADD ir t2 t1
+.CP CDOUBLEDOUBLEDIV arth lnk lnk
+Double-double complex addition.
+.AT doubledoublecmplx
+.OP DOUBLEDOUBLEMUL t1 rp2 rp2
+.OP DOUBLEDOUBLEMUL t2 ip2 ip2
+.OP DOUBLEDOUBLEADD t1 t1 t2
+.OP DOUBLEDOUBLEMUL t2 rp1 rp2
+.OP DOUBLEDOUBLEMUL t3 ip1 ip2
+.OP DOUBLEDOUBLEADD t2 t2 t3
+.OP DOUBLEDOUBLEDIV rr t2 t1
+.OP DOUBLEDOUBLEMUL t2 ip1 rp2
+.OP DOUBLEDOUBLEMUL t3 rp1 ip2
+.OP DOUBLEDOUBLESUB t2 t2 t3
+.OP DOUBLEDOUBLEDIV ir t2 t1
+.CP CDOUBLEDOUBLECMP arth lnk lnk
+Double-double complex comparison.
+.AT spec doubledoublecmplx
+.CP CDOUBLEDOUBLEFUNC proc n lnk lnk*
+Call function returning double-double complex.
+.AT spec doubledoublecmplx

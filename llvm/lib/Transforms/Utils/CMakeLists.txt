@@ -63,6 +63,13 @@ add_llvm_component_library(LLVMTransformUtils
   ModuleUtils.cpp
   MoveAutoInit.cpp
   NameAnonGlobals.cpp
+  NextSiliconImportRecursion.cpp
+  NextSiliconWarnUnsupportedOMP.cpp
+  NextSiliconRelocateVariadic.cpp
+  NextSiliconIRFixup.cpp
+  NextSiliconIRBuiltins.cpp
+  NextSiliconHostAtomicFixup.cpp
+  NextSiliconSplitCallSites.cpp
   PredicateInfo.cpp
   PromoteMemoryToRegister.cpp
   RelLookupTableConverter.cpp
@@ -81,6 +88,7 @@ add_llvm_component_library(LLVMTransformUtils
   SplitModule.cpp
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
+  SymbolTracker.cpp
   UnifyFunctionExitNodes.cpp
   UnifyLoopExits.cpp
   Utils.cpp

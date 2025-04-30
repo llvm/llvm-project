@@ -1,0 +1,1 @@
+/* Implemented in memcpy.S.  */

@@ -1,0 +1,150 @@
+%include <float128-abi.h>
+libc {
+  GLIBC_2.0 {
+    # functions with required interface outside normal name space
+    __xpg_basename;
+
+    # functions used in inline functions or macros
+    __strtod_internal; __strtof_internal; __strtold_internal;
+    __strtol_internal; __strtoll_internal;
+    __strtoul_internal; __strtoull_internal;
+    # functions formerly so used (compatibility symbols)
+    __strtoq_internal; __strtouq_internal;
+
+    # compatibility symbol
+    __secure_getenv;
+
+    # a*
+    a64l; abort; abs; atexit; atof; atoi; atol; atoll;
+
+    # b*
+    bsearch;
+
+    # c*
+    canonicalize_file_name; clearenv;
+
+    # d*
+    div; drand48; drand48_r;
+
+    # e*
+    erand48; erand48_r; exit;
+
+    # g*
+    getenv; getsubopt;
+
+    # i*
+    initstate; initstate_r;
+
+    # l*
+    l64a; labs; lcong48; lcong48_r; ldiv; llabs; lldiv; lrand48; lrand48_r;
+
+    # m*
+    mblen; mbrlen; mbrtowc; mbsinit; mbsnrtowcs; mbsrtowcs; mbstowcs;
+    mbtowc; mcount; mrand48; mrand48_r;
+
+    # n*
+    nrand48; nrand48_r;
+
+    # o*
+    on_exit;
+
+    # p*
+    putenv;
+
+    # q*
+    qsort;
+
+    # r*
+    rand; rand_r; random; random_r; realpath; rpmatch;
+
+    # s*
+    seed48; seed48_r; setcontext; setenv; setstate; setstate_r; srand; srand48;
+    srand48_r; srandom; srandom_r; step; strfmon; strtod; strtof; strtol;
+    strtold; strtoll; strtoq; strtoul; strtoull; strtouq; system;
+
+    # u*
+    unsetenv;
+
+    # w*
+    wcstombs; wctomb;
+  }
+  GLIBC_2.1 {
+    # a*
+    addseverity;
+
+    # f*
+    fmtmsg;
+
+    # g*
+    getcontext;
+
+    # m*
+    makecontext;
+
+    # s*
+    strtoimax; strtoumax; swapcontext;
+  }
+  GLIBC_2.1.1 {
+    # _*
+    _Exit;
+
+    # i*
+    imaxabs; imaxdiv;
+  }
+  GLIBC_2.1.3 {
+    # used by new G++ ABI
+    __cxa_atexit; __cxa_finalize;
+  }
+  GLIBC_2.3 {
+    # Silent change in SUS.
+    realpath;
+  }
+  GLIBC_2.8 {
+    qsort_r;
+  }
+  GLIBC_2.10 {
+    quick_exit; __cxa_at_quick_exit;
+  }
+  GLIBC_2.17 {
+    secure_getenv;
+  }
+  GLIBC_2.18 {
+    __cxa_thread_atexit_impl;
+  }
+  GLIBC_2.24 {
+    quick_exit;
+  }
+  GLIBC_2.25 {
+    # s*
+    strfromd; strfromf; strfroml;
+    getrandom; getentropy;
+  }
+%ifdef FLOAT128_VERSION
+  FLOAT128_VERSION {
+    strfromf128;
+    strtof128;
+    strtof128_l;
+  }
+%endif
+  GLIBC_2.27 {
+    # _Float64x functions, only present for some configurations.
+    strfromf64x;
+    strtof64x;
+    strtof64x_l;
+    # _Float32, _Float64 and _Float32x functions, for all configurations.
+    strfromf32; strfromf64; strfromf32x;
+    strtof32; strtof64; strtof32x;
+    strtof32_l; strtof64_l; strtof32x_l;
+  }
+  GLIBC_PRIVATE {
+    # functions which have an additional interface since they are
+    # are cancelable.
+    __libc_system;
+    # Variable which needs a dynamic symbol table entry.
+    __abort_msg;
+    # Used from other libraries
+    __libc_secure_getenv;
+    __call_tls_dtors;
+    __strtof_nan; __strtod_nan; __strtold_nan;
+  }
+}

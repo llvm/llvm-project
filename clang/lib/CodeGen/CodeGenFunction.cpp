@@ -1012,6 +1012,16 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::FnRetThunkExtern);
   }
 
+  if (D) {
+    // Add ns location attribute to the function.
+    if (const auto *NSL = D->getAttr<NextSiliconLocationAttr>())
+      Fn->addFnAttr("ns-location", NSL->getLocation());
+
+    // Add ns mark attribute to the function.
+    if (const auto *NSM = D->getAttr<NextSiliconMarkAttr>())
+      Fn->addFnAttr("ns-mark", NSM->getMark());
+  }
+
   if (FD && (getLangOpts().OpenCL ||
              (getLangOpts().HIP && getLangOpts().CUDAIsDevice))) {
     // Add metadata for a kernel function.

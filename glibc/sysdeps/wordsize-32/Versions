@@ -1,0 +1,7 @@
+libc {
+  GLIBC_2.3 {
+    # These were erroneously omitted for 64-bit platforms in 2.3
+    # and so we don't put them in locale/Versions.
+    strtoll_l; strtoull_l;
+  }
+}

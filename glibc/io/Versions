@@ -1,0 +1,154 @@
+libc {
+  GLIBC_2.0 {
+    # functions used in inline functions or macros
+    __xstat; __fxstat; __lxstat; __xmknod; __write; __close; __fcntl;
+    __lseek; __open; __read;
+
+    # functions used by libstdc++ 2.7.2
+    __dup2; __pipe;
+
+    # a*
+    access;
+
+    # c*
+    chdir; chmod; chown; close; creat;
+
+    # d*
+    dup; dup2;
+
+    # e*
+    euidaccess;
+
+    # f*
+    fchdir; fchmod; fchown; fcntl; flock; fstatfs; fts_children; fts_close;
+    fts_open; fts_read; fts_set; ftw;
+
+    # g*
+    get_current_dir_name; getcwd; getwd;
+
+    # i*
+    isatty;
+
+    # l*
+    lchown; link; lockf; lseek;
+
+    # m*
+    mkdir; mkfifo;
+
+    # o*
+    open;
+
+    # p*
+    pipe; poll;
+
+    # r*
+    read; readlink; rmdir;
+
+    # s*
+    statfs; symlink;
+
+    # t*
+    ttyname; ttyname_r;
+
+    # u*
+    umask; unlink; utime;
+
+    # w*
+    write;
+  }
+  GLIBC_2.1 {
+    # functions used in other libraries
+    __xstat64; __fxstat64; __lxstat64; __poll;
+
+    # c*
+    creat64;
+
+    # f*
+    fstatfs64; fstatvfs; fstatvfs64; ftw64;
+
+    # l*
+    lockf64; lseek64;
+
+    # n*
+    nftw; nftw64;
+
+    # o*
+    open64;
+
+    # s*
+    sendfile;
+    statfs64; statvfs; statvfs64;
+  }
+  GLIBC_2.2 {
+    # p*
+    posix_fadvise; posix_fadvise64; posix_fallocate; posix_fallocate64;
+
+    __open64;
+  }
+  GLIBC_2.3 {
+    # s*
+    sendfile64;
+  }
+  GLIBC_2.3.2 {
+    # l*
+    lchmod;
+  }
+  GLIBC_2.3.3 {
+    # n*
+    nftw; nftw64;
+  }
+  GLIBC_2.4 {
+    eaccess;
+
+    faccessat;
+    fchmodat;
+    fchownat;
+    __fxstatat; __fxstatat64;
+    linkat;
+    mkdirat; mkfifoat; __xmknodat;
+    openat; openat64;
+    readlinkat;
+    symlinkat;
+    unlinkat;
+
+    ppoll;
+  }
+  GLIBC_2.6 {
+    utimensat; futimens;
+  }
+  GLIBC_2.7 {
+    __open_2; __open64_2; __openat_2; __openat64_2;
+  }
+  GLIBC_2.9 {
+    dup3; pipe2;
+  }
+  GLIBC_2.23 {
+    fts64_children; fts64_close; fts64_open; fts64_read; fts64_set;
+  }
+  GLIBC_2.27 {
+    copy_file_range;
+  }
+  GLIBC_2.28 {
+    fcntl;
+    fcntl64;
+    statx;
+  }
+  GLIBC_2.33 {
+    stat; stat64; fstat; fstat64; lstat; lstat64; fstatat; fstatat64;
+    mknod; mknodat;
+  }
+  GLIBC_2.34 {
+    closefrom;
+  }
+  GLIBC_PRIVATE {
+    __libc_fcntl64;
+    __fcntl_nocancel;
+    __open64_nocancel;
+    __write_nocancel;
+    __file_is_unchanged;
+    __file_change_detection_for_stat;
+    __file_change_detection_for_path;
+    __file_change_detection_for_fp;
+    __fstat64;
+  }
+}

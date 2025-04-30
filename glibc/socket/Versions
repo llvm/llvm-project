@@ -1,0 +1,44 @@
+libc {
+  GLIBC_2.0 {
+    # functions used in other libraries
+    __connect; __send;
+
+    # a*
+    accept;
+
+    # b*
+    bind;
+
+    # c*
+    connect;
+
+    # g*
+    getpeername; getsockname; getsockopt;
+
+    # i*
+    isfdtype;
+
+    # l*
+    listen;
+
+    # r*
+    recv; recvfrom; recvmsg;
+
+    # s*
+    send; sendmsg; sendto; setsockopt; shutdown; socket; socketpair;
+  }
+  GLIBC_2.2.4 {
+    # Addition from P1003.1-200x
+    sockatmark;
+  }
+  GLIBC_2.10 {
+    accept4;
+  }
+  GLIBC_2.17 {
+    recvmmsg; sendmmsg;
+  }
+  GLIBC_PRIVATE {
+    __sendmmsg;
+    __recv; __socket;
+  }
+}

@@ -1,0 +1,138 @@
+<code_set_name> JUS_I.B1.003-SERB
+<comment_char> %
+<escape_char> /
+% version: 1.0
+%  source: ECMA registry
+
+% alias ISO-IR-146
+% alias SERBIAN
+CHARMAP
+<U0000>     /x00         NULL (NUL)
+<U0001>     /x01         START OF HEADING (SOH)
+<U0002>     /x02         START OF TEXT (STX)
+<U0003>     /x03         END OF TEXT (ETX)
+<U0004>     /x04         END OF TRANSMISSION (EOT)
+<U0005>     /x05         ENQUIRY (ENQ)
+<U0006>     /x06         ACKNOWLEDGE (ACK)
+<U0007>     /x07         BELL (BEL)
+<U0008>     /x08         BACKSPACE (BS)
+<U0009>     /x09         CHARACTER TABULATION (HT)
+<U000A>     /x0a         LINE FEED (LF)
+<U000B>     /x0b         LINE TABULATION (VT)
+<U000C>     /x0c         FORM FEED (FF)
+<U000D>     /x0d         CARRIAGE RETURN (CR)
+<U000E>     /x0e         SHIFT OUT (SO)
+<U000F>     /x0f         SHIFT IN (SI)
+<U0010>     /x10         DATALINK ESCAPE (DLE)
+<U0011>     /x11         DEVICE CONTROL ONE (DC1)
+<U0012>     /x12         DEVICE CONTROL TWO (DC2)
+<U0013>     /x13         DEVICE CONTROL THREE (DC3)
+<U0014>     /x14         DEVICE CONTROL FOUR (DC4)
+<U0015>     /x15         NEGATIVE ACKNOWLEDGE (NAK)
+<U0016>     /x16         SYNCHRONOUS IDLE (SYN)
+<U0017>     /x17         END OF TRANSMISSION BLOCK (ETB)
+<U0018>     /x18         CANCEL (CAN)
+<U0019>     /x19         END OF MEDIUM (EM)
+<U001A>     /x1a         SUBSTITUTE (SUB)
+<U001B>     /x1b         ESCAPE (ESC)
+<U001C>     /x1c         FILE SEPARATOR (IS4)
+<U001D>     /x1d         GROUP SEPARATOR (IS3)
+<U001E>     /x1e         RECORD SEPARATOR (IS2)
+<U001F>     /x1f         UNIT SEPARATOR (IS1)
+<U0020>     /x20         SPACE
+<U0021>     /x21         EXCLAMATION MARK
+<U0022>     /x22         QUOTATION MARK
+<U0023>     /x23         NUMBER SIGN
+<U0024>     /x24         DOLLAR SIGN
+<U0025>     /x25         PERCENT SIGN
+<U0026>     /x26         AMPERSAND
+<U0027>     /x27         APOSTROPHE
+<U0028>     /x28         LEFT PARENTHESIS
+<U0029>     /x29         RIGHT PARENTHESIS
+<U002A>     /x2a         ASTERISK
+<U002B>     /x2b         PLUS SIGN
+<U002C>     /x2c         COMMA
+<U002D>     /x2d         HYPHEN-MINUS
+<U002E>     /x2e         FULL STOP
+<U002F>     /x2f         SOLIDUS
+<U0030>     /x30         DIGIT ZERO
+<U0031>     /x31         DIGIT ONE
+<U0032>     /x32         DIGIT TWO
+<U0033>     /x33         DIGIT THREE
+<U0034>     /x34         DIGIT FOUR
+<U0035>     /x35         DIGIT FIVE
+<U0036>     /x36         DIGIT SIX
+<U0037>     /x37         DIGIT SEVEN
+<U0038>     /x38         DIGIT EIGHT
+<U0039>     /x39         DIGIT NINE
+<U003A>     /x3a         COLON
+<U003B>     /x3b         SEMICOLON
+<U003C>     /x3c         LESS-THAN SIGN
+<U003D>     /x3d         EQUALS SIGN
+<U003E>     /x3e         GREATER-THAN SIGN
+<U003F>     /x3f         QUESTION MARK
+<U0416>     /x40         CYRILLIC CAPITAL LETTER ZHE
+<U0410>     /x41         CYRILLIC CAPITAL LETTER A
+<U0411>     /x42         CYRILLIC CAPITAL LETTER BE
+<U0426>     /x43         CYRILLIC CAPITAL LETTER TSE
+<U0414>     /x44         CYRILLIC CAPITAL LETTER DE
+<U0415>     /x45         CYRILLIC CAPITAL LETTER IE
+<U0424>     /x46         CYRILLIC CAPITAL LETTER EF
+<U0413>     /x47         CYRILLIC CAPITAL LETTER GHE
+<U0425>     /x48         CYRILLIC CAPITAL LETTER HA
+<U0418>     /x49         CYRILLIC CAPITAL LETTER I
+<U0408>     /x4a         CYRILLIC CAPITAL LETTER JE
+<U041A>     /x4b         CYRILLIC CAPITAL LETTER KA
+<U041B>     /x4c         CYRILLIC CAPITAL LETTER EL
+<U041C>     /x4d         CYRILLIC CAPITAL LETTER EM
+<U041D>     /x4e         CYRILLIC CAPITAL LETTER EN
+<U041E>     /x4f         CYRILLIC CAPITAL LETTER O
+<U041F>     /x50         CYRILLIC CAPITAL LETTER PE
+<U0409>     /x51         CYRILLIC CAPITAL LETTER LJE
+<U0420>     /x52         CYRILLIC CAPITAL LETTER ER
+<U0421>     /x53         CYRILLIC CAPITAL LETTER ES
+<U0422>     /x54         CYRILLIC CAPITAL LETTER TE
+<U0423>     /x55         CYRILLIC CAPITAL LETTER U
+<U0412>     /x56         CYRILLIC CAPITAL LETTER VE
+<U040A>     /x57         CYRILLIC CAPITAL LETTER NJE
+<U040F>     /x58         CYRILLIC CAPITAL LETTER DZHE
+<U0405>     /x59         CYRILLIC CAPITAL LETTER DZE
+<U0417>     /x5a         CYRILLIC CAPITAL LETTER ZE
+<U0428>     /x5b         CYRILLIC CAPITAL LETTER SHA
+<U0402>     /x5c         CYRILLIC CAPITAL LETTER DJE (Serbocroatian)
+<U040B>     /x5d         CYRILLIC CAPITAL LETTER TSHE (Serbocroatian)
+<U0427>     /x5e         CYRILLIC CAPITAL LETTER CHE
+<U005F>     /x5f         LOW LINE
+<U0436>     /x60         CYRILLIC SMALL LETTER ZHE
+<U0430>     /x61         CYRILLIC SMALL LETTER A
+<U0431>     /x62         CYRILLIC SMALL LETTER BE
+<U0446>     /x63         CYRILLIC SMALL LETTER TSE
+<U0434>     /x64         CYRILLIC SMALL LETTER DE
+<U0435>     /x65         CYRILLIC SMALL LETTER IE
+<U0444>     /x66         CYRILLIC SMALL LETTER EF
+<U0433>     /x67         CYRILLIC SMALL LETTER GHE
+<U0445>     /x68         CYRILLIC SMALL LETTER HA
+<U0438>     /x69         CYRILLIC SMALL LETTER I
+<U0458>     /x6a         CYRILLIC SMALL LETTER JE
+<U043A>     /x6b         CYRILLIC SMALL LETTER KA
+<U043B>     /x6c         CYRILLIC SMALL LETTER EL
+<U043C>     /x6d         CYRILLIC SMALL LETTER EM
+<U043D>     /x6e         CYRILLIC SMALL LETTER EN
+<U043E>     /x6f         CYRILLIC SMALL LETTER O
+<U043F>     /x70         CYRILLIC SMALL LETTER PE
+<U0459>     /x71         CYRILLIC SMALL LETTER LJE
+<U0440>     /x72         CYRILLIC SMALL LETTER ER
+<U0441>     /x73         CYRILLIC SMALL LETTER ES
+<U0442>     /x74         CYRILLIC SMALL LETTER TE
+<U0443>     /x75         CYRILLIC SMALL LETTER U
+<U0432>     /x76         CYRILLIC SMALL LETTER VE
+<U045A>     /x77         CYRILLIC SMALL LETTER NJE
+<U045F>     /x78         CYRILLIC SMALL LETTER DZHE
+<U0455>     /x79         CYRILLIC SMALL LETTER DZE
+<U0437>     /x7a         CYRILLIC SMALL LETTER ZE
+<U0448>     /x7b         CYRILLIC SMALL LETTER SHA
+<U0452>     /x7c         CYRILLIC SMALL LETTER DJE (Serbocroatian)
+<U045B>     /x7d         CYRILLIC SMALL LETTER TSHE (Serbocroatian)
+<U0447>     /x7e         CYRILLIC SMALL LETTER CHE
+<U007F>     /x7f         DELETE (DEL)
+END CHARMAP

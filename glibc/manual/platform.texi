@@ -1,0 +1,706 @@
+@node Platform, Contributors, Maintenance, Top
+@c %MENU% Describe all platform-specific facilities provided
+@appendix Platform-specific facilities
+
+@Theglibc{} can provide machine-specific functionality.
+
+@menu
+* PowerPC::           Facilities Specific to the PowerPC Architecture
+* RISC-V::            Facilities Specific to the RISC-V Architecture
+* X86::               Facilities Specific to the X86 Architecture
+@end menu
+
+@node PowerPC
+@appendixsec PowerPC-specific Facilities
+
+Facilities specific to PowerPC that are not specific to a particular
+operating system are declared in @file{sys/platform/ppc.h}.
+
+@deftypefun {uint64_t} __ppc_get_timebase (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Read the current value of the Time Base Register.
+
+The @dfn{Time Base Register} is a 64-bit register that stores a monotonically
+incremented value updated at a system-dependent frequency that may be
+different from the processor frequency.  More information is available in
+@cite{Power ISA 2.06b - Book II - Section 5.2}.
+
+@code{__ppc_get_timebase} uses the processor's time base facility directly
+without requiring assistance from the operating system, so it is very
+efficient.
+@end deftypefun
+
+@deftypefun {uint64_t} __ppc_get_timebase_freq (void)
+@safety{@prelim{}@mtunsafe{@mtuinit{}}@asunsafe{@asucorrupt{:init}}@acunsafe{@acucorrupt{:init}}}
+@c __ppc_get_timebase_freq=__get_timebase_freq @mtuinit @acsfd
+@c  __get_clockfreq @mtuinit @asucorrupt:init @acucorrupt:init @acsfd
+@c    the initialization of the static timebase_freq is not exactly
+@c    safe, because hp_timing_t cannot be atomically set up.
+@c   syscall:get_tbfreq ok
+@c   open dup @acsfd
+@c   read dup ok
+@c   memcpy dup ok
+@c   memmem dup ok
+@c   close dup @acsfd
+Read the current frequency at which the Time Base Register is updated.
+
+This frequency is not related to the processor clock or the bus clock.
+It is also possible that this frequency is not constant.  More information is
+available in @cite{Power ISA 2.06b - Book II - Section 5.2}.
+@end deftypefun
+
+The following functions provide hints about the usage of resources that are
+shared with other processors.  They can be used, for example, if a program
+waiting on a lock intends to divert the shared resources to be used by other
+processors.  More information is available in @cite{Power ISA 2.06b - Book II -
+Section 3.2}.
+
+@deftypefun {void} __ppc_yield (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Provide a hint that performance will probably be improved if shared resources
+dedicated to the executing processor are released for use by other processors.
+@end deftypefun
+
+@deftypefun {void} __ppc_mdoio (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Provide a hint that performance will probably be improved if shared resources
+dedicated to the executing processor are released until all outstanding storage
+accesses to caching-inhibited storage have been completed.
+@end deftypefun
+
+@deftypefun {void} __ppc_mdoom (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Provide a hint that performance will probably be improved if shared resources
+dedicated to the executing processor are released until all outstanding storage
+accesses to cacheable storage for which the data is not in the cache have been
+completed.
+@end deftypefun
+
+@deftypefun {void} __ppc_set_ppr_med (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Set the Program Priority Register to medium value (default).
+
+The @dfn{Program Priority Register} (PPR) is a 64-bit register that controls
+the program's priority.  By adjusting the PPR value the programmer may
+improve system throughput by causing the system resources to be used
+more efficiently, especially in contention situations.
+The three unprivileged states available are covered by the functions
+@code{__ppc_set_ppr_med} (medium -- default), @code{__ppc_set_ppc_low} (low)
+and @code{__ppc_set_ppc_med_low} (medium low).  More information
+available in @cite{Power ISA 2.06b - Book II - Section 3.1}.
+@end deftypefun
+
+@deftypefun {void} __ppc_set_ppr_low (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Set the Program Priority Register to low value.
+@end deftypefun
+
+@deftypefun {void} __ppc_set_ppr_med_low (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Set the Program Priority Register to medium low value.
+@end deftypefun
+
+Power ISA 2.07 extends the priorities that can be set to the Program Priority
+Register (PPR).  The following functions implement the new priority levels:
+very low and medium high.
+
+@deftypefun {void} __ppc_set_ppr_very_low (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Set the Program Priority Register to very low value.
+@end deftypefun
+
+@deftypefun {void} __ppc_set_ppr_med_high (void)
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Set the Program Priority Register to medium high value.  The medium high
+priority is privileged and may only be set during certain time intervals by
+problem-state programs.  If the program priority is medium high when the time
+interval expires or if an attempt is made to set the priority to medium high
+when it is not allowed, the priority is set to medium.
+@end deftypefun
+
+@node RISC-V
+@appendixsec RISC-V-specific Facilities
+
+Cache management facilities specific to RISC-V systems that implement the Linux
+ABI are declared in @file{sys/cachectl.h}.
+
+@deftypefun {void} __riscv_flush_icache (void *@var{start}, void *@var{end}, unsigned long int @var{flags})
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Enforce ordering between stores and instruction cache fetches.  The range of
+addresses over which ordering is enforced is specified by @var{start} and
+@var{end}.  The @var{flags} argument controls the extent of this ordering, with
+the default behavior (a @var{flags} value of 0) being to enforce the fence on
+all threads in the current process.  Setting the
+@code{SYS_RISCV_FLUSH_ICACHE_LOCAL} bit allows users to indicate that enforcing
+ordering on only the current thread is necessary.  All other flag bits are
+reserved.
+@end deftypefun
+
+@node X86
+@appendixsec X86-specific Facilities
+
+Facilities specific to X86 that are not specific to a particular
+operating system are declared in @file{sys/platform/x86.h}.
+
+@deftypefun {const struct cpuid_feature *} __x86_get_cpuid_feature_leaf (unsigned int @var{leaf})
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+Return a pointer to x86 CPU feature structure used by query macros for x86
+CPU feature @var{leaf}.
+@end deftypefun
+
+@deftypefn Macro int CPU_FEATURE_PRESENT (@var{name})
+This macro returns a nonzero value (true) if the processor has the feature
+@var{name}.
+@end deftypefn
+
+@deftypefn Macro int CPU_FEATURE_ACTIVE (@var{name})
+This macro returns a nonzero value (true) if the processor has the feature
+@var{name} and the feature is active.  There may be other preconditions,
+like sufficient stack space or further setup for AMX, which must be
+satisfied before the feature can be used.
+@end deftypefn
+
+The supported processor features are:
+
+@itemize @bullet
+
+@item
+@code{ACPI} -- Thermal Monitor and Software Controlled Clock Facilities.
+
+@item
+@code{ADX} -- ADX instruction extensions.
+
+@item
+@code{APIC} -- APIC On-Chip.
+
+@item
+@code{AES} -- The AES instruction extensions.
+
+@item
+@code{AESKLE} -- AES Key Locker instructions are enabled by OS.
+
+@item
+@code{AMD_IBPB} -- Indirect branch predictor barrier (IBPB) for AMD cpus.
+
+@item
+@code{AMD_IBRS} -- Indirect branch restricted speculation (IBPB) for AMD cpus.
+
+@item
+@code{AMD_SSBD} -- Speculative Store Bypass Disable (SSBD) for AMD cpus.
+
+@item
+@code{AMD_STIBP} -- Single thread indirect branch predictors (STIBP) for AMD cpus.
+
+@item
+@code{AMD_VIRT_SSBD} -- Speculative Store Bypass Disable (SSBD) for AMD cpus (older systems).
+
+@item
+@code{AMX_BF16} -- Tile computational operations on bfloat16 numbers.
+
+@item
+@code{AMX_INT8} -- Tile computational operations on 8-bit numbers.
+
+@item
+@code{AMX_TILE} -- Tile architecture.
+
+@item
+@code{ARCH_CAPABILITIES} -- IA32_ARCH_CAPABILITIES MSR.
+
+@item
+@code{AVX} -- The AVX instruction extensions.
+
+@item
+@code{AVX2} -- The AVX2 instruction extensions.
+
+@item
+@code{AVX_VNNI} -- The AVX-VNNI instruction extensions.
+
+@item
+@code{AVX512_4FMAPS} -- The AVX512_4FMAPS instruction extensions.
+
+@item
+@code{AVX512_4VNNIW} -- The AVX512_4VNNIW instruction extensions.
+
+@item
+@code{AVX512_BF16} -- The AVX512_BF16 instruction extensions.
+
+@item
+@code{AVX512_BITALG} -- The AVX512_BITALG instruction extensions.
+
+@item
+@code{AVX512_FP16} -- The AVX512_FP16 instruction extensions.
+
+@item
+@code{AVX512_IFMA} -- The AVX512_IFMA instruction extensions.
+
+@item
+@code{AVX512_VBMI} -- The AVX512_VBMI instruction extensions.
+
+@item
+@code{AVX512_VBMI2} -- The AVX512_VBMI2 instruction extensions.
+
+@item
+@code{AVX512_VNNI} -- The AVX512_VNNI instruction extensions.
+
+@item
+@code{AVX512_VP2INTERSECT} -- The AVX512_VP2INTERSECT instruction
+extensions.
+
+@item
+@code{AVX512_VPOPCNTDQ} -- The AVX512_VPOPCNTDQ instruction extensions.
+
+@item
+@code{AVX512BW} -- The AVX512BW instruction extensions.
+
+@item
+@code{AVX512CD} -- The AVX512CD instruction extensions.
+
+@item
+@code{AVX512ER} -- The AVX512ER instruction extensions.
+
+@item
+@code{AVX512DQ} -- The AVX512DQ instruction extensions.
+
+@item
+@code{AVX512F} -- The AVX512F instruction extensions.
+
+@item
+@code{AVX512PF} -- The AVX512PF instruction extensions.
+
+@item
+@code{AVX512VL} -- The AVX512VL instruction extensions.
+
+@item
+@code{BMI1} -- BMI1 instructions.
+
+@item
+@code{BMI2} -- BMI2 instructions.
+
+@item
+@code{CLDEMOTE} -- CLDEMOTE instruction.
+
+@item
+@code{CLFLUSHOPT} -- CLFLUSHOPT instruction.
+
+@item
+@code{CLFSH} -- CLFLUSH instruction.
+
+@item
+@code{CLWB} -- CLWB instruction.
+
+@item
+@code{CMOV} -- Conditional Move instructions.
+
+@item
+@code{CMPXCHG16B} -- CMPXCHG16B instruction.
+
+@item
+@code{CNXT_ID} -- L1 Context ID.
+
+@item
+@code{CORE_CAPABILITIES} -- IA32_CORE_CAPABILITIES MSR.
+
+@item
+@code{CX8} -- CMPXCHG8B instruction.
+
+@item
+@code{DCA} -- Data prefetch from a memory mapped device.
+
+@item
+@code{DE} -- Debugging Extensions.
+
+@item
+@code{DEPR_FPU_CS_DS} -- Deprecates FPU CS and FPU DS values.
+
+@item
+@code{DS} -- Debug Store.
+
+@item
+@code{DS_CPL} -- CPL Qualified Debug Store.
+
+@item
+@code{DTES64} -- 64-bit DS Area.
+
+@item
+@code{EIST} -- Enhanced Intel SpeedStep technology.
+
+@item
+@code{ENQCMD} -- Enqueue Stores instructions.
+
+@item
+@code{ERMS} -- Enhanced REP MOVSB/STOSB.
+
+@item
+@code{F16C} -- 16-bit floating-point conversion instructions.
+
+@item
+@code{FMA} -- FMA extensions using YMM state.
+
+@item
+@code{FMA4} -- FMA4 instruction extensions.
+
+@item
+@code{FPU} -- X87 Floating Point Unit On-Chip.
+
+@item
+@code{FSGSBASE} -- RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE instructions.
+
+@item
+@code{FSRCS} -- Fast Short REP CMP and SCA.
+
+@item
+@code{FSRM} -- Fast Short REP MOV.
+
+@item
+@code{FSRS} -- Fast Short REP STO.
+
+@item
+@code{FXSR} -- FXSAVE and FXRSTOR instructions.
+
+@item
+@code{FZLRM} -- Fast Zero-Length REP MOV.
+
+@item
+@code{GFNI} -- GFNI instruction extensions.
+
+@item
+@code{HLE} -- HLE instruction extensions.
+
+@item
+@code{HTT} -- Max APIC IDs reserved field is Valid.
+
+@item
+@code{HRESET} -- History reset.
+
+@item
+@code{HYBRID} -- Hybrid processor.
+
+@item
+@code{IBRS_IBPB} -- Indirect branch restricted speculation (IBRS) and
+the indirect branch predictor barrier (IBPB).
+
+@item
+@code{IBT} -- Intel Indirect Branch Tracking instruction extensions.
+
+@item
+@code{INVARIANT_TSC} -- Invariant TSC.
+
+@item
+@code{INVPCID} -- INVPCID instruction.
+
+@item
+@code{KL} -- AES Key Locker instructions.
+
+@item
+@code{LAM} -- Linear Address Masking.
+
+@item
+@code{L1D_FLUSH} -- IA32_FLUSH_CMD MSR.
+
+@item
+@code{LAHF64_SAHF64} -- LAHF/SAHF available in 64-bit mode.
+
+@item
+@code{LM} -- Long mode.
+
+@item
+@code{LWP} -- Lightweight profiling.
+
+@item
+@code{LZCNT} -- LZCNT instruction.
+
+@item
+@code{MCA} -- Machine Check Architecture.
+
+@item
+@code{MCE} -- Machine Check Exception.
+
+@item
+@code{MD_CLEAR} -- MD_CLEAR.
+
+@item
+@code{MMX} -- Intel MMX Technology.
+
+@item
+@code{MONITOR} --  MONITOR/MWAIT instructions.
+
+@item
+@code{MOVBE} -- MOVBE instruction.
+
+@item
+@code{MOVDIRI} -- MOVDIRI instruction.
+
+@item
+@code{MOVDIR64B} -- MOVDIR64B instruction.
+
+@item
+@code{MPX} -- Intel Memory Protection Extensions.
+
+@item
+@code{MSR} -- Model Specific Registers RDMSR and WRMSR instructions.
+
+@item
+@code{MTRR} -- Memory Type Range Registers.
+
+@item
+@code{NX} -- No-execute page protection.
+
+@item
+@code{OSPKE} -- OS has set CR4.PKE to enable protection keys.
+
+@item
+@code{OSXSAVE} -- The OS has set CR4.OSXSAVE[bit 18] to enable
+XSETBV/XGETBV instructions to access XCR0 and to support processor
+extended state management using XSAVE/XRSTOR.
+
+@item
+@code{PAE} -- Physical Address Extension.
+
+@item
+@code{PAGE1GB} -- 1-GByte page.
+
+@item
+@code{PAT} -- Page Attribute Table.
+
+@item
+@code{PBE} -- Pending Break Enable.
+
+@item
+@code{PCID} -- Process-context identifiers.
+
+@item
+@code{PCLMULQDQ} -- PCLMULQDQ instruction.
+
+@item
+@code{PCONFIG} -- PCONFIG instruction.
+
+@item
+@code{PDCM} -- Perfmon and Debug Capability.
+
+@item
+@code{PGE} -- Page Global Bit.
+
+@item
+@code{PKS} -- Protection keys for supervisor-mode pages.
+
+@item
+@code{PKU} -- Protection keys for user-mode pages.
+
+@item
+@code{POPCNT} -- POPCNT instruction.
+
+@item
+@code{PREFETCHW} -- PREFETCHW instruction.
+
+@item
+@code{PREFETCHWT1} -- PREFETCHWT1 instruction.
+
+@item
+@code{PSE} -- Page Size Extension.
+
+@item
+@code{PSE_36} -- 36-Bit Page Size Extension.
+
+@item
+@code{PSN} -- Processor Serial Number.
+
+@item
+@code{PTWRITE} -- PTWRITE instruction.
+
+@item
+@code{RDPID} -- RDPID instruction.
+
+@item
+@code{RDRAND} -- RDRAND instruction.
+
+@item
+@code{RDSEED} -- RDSEED instruction.
+
+@item
+@code{RDT_A} -- Intel Resource Director Technology (Intel RDT) Allocation
+capability.
+
+@item
+@code{RDT_M} -- Intel Resource Director Technology (Intel RDT) Monitoring
+capability.
+
+@item
+@code{RDTSCP} -- RDTSCP instruction.
+
+@item
+@code{RTM} -- RTM instruction extensions.
+
+@item
+@code{RTM_ALWAYS_ABORT} -- Transactions always abort, making RTM unusable.
+
+@item
+@code{SDBG} -- IA32_DEBUG_INTERFACE MSR for silicon debug.
+
+@item
+@code{SEP} -- SYSENTER and SYSEXIT instructions.
+
+@item
+@code{SERIALIZE} -- SERIALIZE instruction.
+
+@item
+@code{SGX} -- Intel Software Guard Extensions.
+
+@item
+@code{SGX_LC} -- SGX Launch Configuration.
+
+@item
+@code{SHA} -- SHA instruction extensions.
+
+@item
+@code{SHSTK} -- Intel Shadow Stack instruction extensions.
+
+@item
+@code{SMAP} -- Supervisor-Mode Access Prevention.
+
+@item
+@code{SMEP} -- Supervisor-Mode Execution Prevention.
+
+@item
+@code{SMX} -- Safer Mode Extensions.
+
+@item
+@code{SS} -- Self Snoop.
+
+@item
+@code{SSBD} -- Speculative Store Bypass Disable (SSBD).
+
+@item
+@code{SSE} -- Streaming SIMD Extensions.
+
+@item
+@code{SSE2} -- Streaming SIMD Extensions 2.
+
+@item
+@code{SSE3} -- Streaming SIMD Extensions 3.
+
+@item
+@code{SSE4_1} -- Streaming SIMD Extensions 4.1.
+
+@item
+@code{SSE4_2} -- Streaming SIMD Extensions 4.2.
+
+@item
+@code{SSE4A} -- SSE4A instruction extensions.
+
+@item
+@code{SSSE3} -- Supplemental Streaming SIMD Extensions 3.
+
+@item
+@code{STIBP} -- Single thread indirect branch predictors (STIBP).
+
+@item
+@code{SVM} -- Secure Virtual Machine.
+
+@item
+@code{SYSCALL_SYSRET} -- SYSCALL/SYSRET instructions.
+
+@item
+@code{TBM} -- Trailing bit manipulation instructions.
+
+@item
+@code{TM} -- Thermal Monitor.
+
+@item
+@code{TM2} -- Thermal Monitor 2.
+
+@item
+@code{TRACE} -- Intel Processor Trace.
+
+@item
+@code{TSC} -- Time Stamp Counter.  RDTSC instruction.
+
+@item
+@code{TSC_ADJUST} -- IA32_TSC_ADJUST MSR.
+
+@item
+@code{TSC_DEADLINE} -- Local APIC timer supports one-shot operation
+using a TSC deadline value.
+
+@item
+@code{TSXLDTRK} -- TSXLDTRK instructions.
+
+@item
+@code{UINTR} -- User interrupts.
+
+@item
+@code{UMIP} -- User-mode instruction prevention.
+
+@item
+@code{VAES} -- VAES instruction extensions.
+
+@item
+@code{VME} -- Virtual 8086 Mode Enhancements.
+
+@item
+@code{VMX} -- Virtual Machine Extensions.
+
+@item
+@code{VPCLMULQDQ} -- VPCLMULQDQ instruction.
+
+@item
+@code{WAITPKG} -- WAITPKG instruction extensions.
+
+@item
+@code{WBNOINVD} -- WBINVD/WBNOINVD instructions.
+
+@item
+@code{WIDE_KL} -- AES wide Key Locker instructions.
+
+@item
+@code{X2APIC} -- x2APIC.
+
+@item
+@code{XFD} -- Extended Feature Disable (XFD).
+
+@item
+@code{XGETBV_ECX_1} -- XGETBV with ECX = 1.
+
+@item
+@code{XOP} -- XOP instruction extensions.
+
+@item
+@code{XSAVE} -- The XSAVE/XRSTOR processor extended states feature, the
+XSETBV/XGETBV instructions, and XCR0.
+
+@item
+@code{XSAVEC} -- XSAVEC instruction.
+
+@item
+@code{XSAVEOPT} -- XSAVEOPT instruction.
+
+@item
+@code{XSAVES} -- XSAVES/XRSTORS instructions.
+
+@item
+@code{XTPRUPDCTRL} -- xTPR Update Control.
+
+@end itemize
+
+You could query if a processor supports @code{AVX} with:
+
+@smallexample
+#include <sys/platform/x86.h>
+
+int
+avx_present (void)
+@{
+  return CPU_FEATURE_PRESENT (AVX);
+@}
+@end smallexample
+
+and if @code{AVX} is active and may be used with:
+
+@smallexample
+#include <sys/platform/x86.h>
+
+int
+avx_active (void)
+@{
+  return CPU_FEATURE_ACTIVE (AVX);
+@}
+@end smallexample

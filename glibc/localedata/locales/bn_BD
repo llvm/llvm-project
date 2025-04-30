@@ -1,0 +1,198 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title      "Bangla language locale for Bangladesh"
+source     "Ankur Group, http:////www.ankurbangla.org, http:////www.bengalinux.org"
+address    "Dhaka, Bangladesh"
+contact    "Taneem Ahmed, Jamil Ahmed"
+email      "taneem@bengalinux.org, jamil@bengalinux.org"
+tel        ""
+fax        ""
+language   "Bangla"
+territory  "Bangladesh"
+revision   "0.5"
+date       "2007-01-10"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_NAME
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+% Bangla uses the alternate digits U+09E6..U+09EF
+outdigit <U09E6>..<U09EF>
+
+% This is used in the scanf family of functions to read Bangla numbers
+% using "%Id" and such.
+map to_inpunct; /
+  (<U0030>,<U09E6>); /
+  (<U0031>,<U09E7>); /
+  (<U0032>,<U09E8>); /
+  (<U0033>,<U09E9>); /
+  (<U0034>,<U09EA>); /
+  (<U0035>,<U09EB>); /
+  (<U0036>,<U09EC>); /
+  (<U0037>,<U09ED>); /
+  (<U0038>,<U09EE>); /
+  (<U0039>,<U09EF>);
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+%this is the taka sign
+currency_symbol      "<U09F3>"
+int_curr_symbol      "BDT "
+mon_decimal_point    "."
+mon_thousands_sep    ","
+mon_grouping         3;2
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits      2
+frac_digits          2
+p_cs_precedes        1
+p_sep_by_space       1
+n_cs_precedes        1
+n_sep_by_space       1
+p_sign_posn          1
+n_sign_posn          1
+END LC_MONETARY
+
+
+LC_NUMERIC
+decimal_point        "."
+thousands_sep        ","
+grouping             3;2
+END LC_NUMERIC
+
+LC_TIME
+abday       "<U09B0><U09AC><U09BF>"; /
+            "<U09B8><U09CB><U09AE>";/
+            "<U09AE><U0999><U09CD><U0997><U09B2>";/
+            "<U09AC><U09C1><U09A7>";/
+            "<U09AC><U09C3><U09B9><U0983>";/
+            "<U09B6><U09C1><U0995><U09CD><U09B0>";/
+            "<U09B6><U09A8><U09BF>"
+
+day         "<U09B0><U09AC><U09BF><U09AC><U09BE><U09B0>";/
+            "<U09B8><U09CB><U09AE><U09AC><U09BE><U09B0>";/
+            "<U09AE><U0999><U09CD><U0997><U09B2><U09AC><U09BE><U09B0>";/
+            "<U09AC><U09C1><U09A7><U09AC><U09BE><U09B0>";/
+            "<U09AC><U09C3><U09B9><U09B8><U09CD><U09AA><U09A4><U09BF><U09AC><U09BE><U09B0>";/
+            "<U09B6><U09C1><U0995><U09CD><U09B0><U09AC><U09BE><U09B0>";/
+            "<U09B6><U09A8><U09BF><U09AC><U09BE><U09B0>"
+
+%janu febru march apri may jun jul aug septe octo nove dece
+abmon       "<U099C><U09BE><U09A8><U09C1>";/
+            "<U09AB><U09C7><U09AC>";/
+            "<U09AE><U09BE><U09B0><U09CD><U099A>";/
+            "<U098F><U09AA><U09CD><U09B0><U09BF><U09B2>";/
+            "<U09AE><U09C7>";/
+            "<U099C><U09C1><U09A8>";/
+            "<U099C><U09C1><U09B2><U09BE><U0987>";/
+            "<U0986><U0997><U09B8><U09CD><U099F>";/
+            "<U09B8><U09C7><U09AA><U09CD><U099F><U09C7><U09AE><U09CD><U09AC><U09B0>";/
+            "<U0985><U0995><U09CD><U099F><U09CB><U09AC><U09B0>";/
+            "<U09A8><U09AD><U09C7><U09AE><U09CD><U09AC><U09B0>";/
+            "<U09A1><U09BF><U09B8><U09C7><U09AE><U09CD><U09AC><U09B0>"
+
+mon         "<U099C><U09BE><U09A8><U09C1><U09AF><U09BC><U09BE><U09B0><U09C0>";/
+            "<U09AB><U09C7><U09AC><U09CD><U09B0><U09C1><U09AF><U09BC><U09BE><U09B0><U09C0>";/
+            "<U09AE><U09BE><U09B0><U09CD><U099A>";/
+            "<U098F><U09AA><U09CD><U09B0><U09BF><U09B2>";/
+            "<U09AE><U09C7>";/
+            "<U099C><U09C1><U09A8>";/
+            "<U099C><U09C1><U09B2><U09BE><U0987>";/
+            "<U0986><U0997><U09B8><U09CD><U099F>";/
+            "<U09B8><U09C7><U09AA><U09CD><U099F><U09C7><U09AE><U09CD><U09AC><U09B0>";/
+            "<U0985><U0995><U09CD><U099F><U09CB><U09AC><U09B0>";/
+            "<U09A8><U09AD><U09C7><U09AE><U09CD><U09AC><U09B0>";/
+            "<U09A1><U09BF><U09B8><U09C7><U09AE><U09CD><U09AC><U09B0>"
+
+am_pm       "<U09AA><U09C2><U09B0><U09CD><U09AC><U09BE><U09B9><U09CD><U09A3>";"<U0985><U09AA><U09B0><U09BE><U09B9><U09CD><U09A3>"
+d_t_fmt     "%A %d %b %Y %I:%M:%S %p"
+date_fmt    "%A %d %b %Y %I:%M:%S %p %Z"
+d_fmt       "%-d//%-m//%y"
+t_fmt       "%I:%M:%S %p %Z"
+t_fmt_ampm  "%I:%M:%S %p %Z"
+week 7;19971130;1
+first_weekday 6
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U09B9>]"
+noexpr  "^[-0nN<U09A8>]"
+yesstr  "<U09B9><U09CD><U09AF><U09BE><U0981>"
+nostr   "<U09A8><U09BE>"
+END LC_MESSAGES
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt   "+%c %a %l"
+tel_dom_fmt   "%a %l"
+int_select    "00"
+int_prefix    "880"
+END LC_TELEPHONE
+
+LC_NAME
+%           [profession] Given_Name [middle_name] Family_Name
+name_fmt    "%p%t%f%t%m%t%g"
+name_gen    ""
+%jonab
+name_mr     "<U099c><U09a8><U09be><U09ac>"
+%begom
+name_mrs    "<U09AC><U09C7><U0997><U09AE>"
+name_ms     "<U09AC><U09C7><U0997><U09AE>"
+name_miss   "<U09AC><U09C7><U0997><U09AE>"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt      "%a%N%f%N%d%N%b%N%h %s %e %r%N%T %z%N%c%N"
+country_name    "<U09AC><U09BE><U0982><U09B2><U09BE><U09A6><U09C7><U09B6>"
+country_ab2     "BD"
+country_ab3     "BGD"
+lang_ab      "bn"
+lang_term    "ben"
+lang_lib       "ben"
+%lang_ab3_term   "ben"
+% বাংলা
+lang_name    "<U09AC><U09BE><U0982><U09B2><U09BE>"
+% todo
+%country_post   ""
+country_num     050
+country_car    "BD"
+%country_isbn   ""
+END LC_ADDRESS

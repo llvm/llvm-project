@@ -1,0 +1,211 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Urdu Language Locale for Pakistan
+% Source:
+% Contact: Shehzad Ashiq Ali, Pablo Saratxaga
+% Email: shehzadashiq@hotmail.com, <pablo@mandrakesoft.com>
+% Language: ur
+% Territory: PK
+% Revision: 0.3
+% Date: 2000-07-11
+% Users: general
+
+LC_IDENTIFICATION
+title      "Urdu Language Locale for Pakistan"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Urdu"
+territory  "Pakistan"
+revision   "0.3"
+date       "2000-07-11"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+
+% those two lettes are not in cp1256...
+
+% Maddah above -> Alef with madda above
+<U0653> "<U0622>"
+% Farsi yeh -> yeh
+<U06CC> "<U064A>"
+
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "en_DK"
+END LC_COLLATE
+
+LC_MONETARY
+%it is meant to be Pak RS, could you see if it is correct please
+int_curr_symbol "PKR "
+currency_symbol "Rs"
+mon_decimal_point "."
+mon_thousands_sep ","
+mon_grouping  3;3
+positive_sign ""
+negative_sign "-"
+int_frac_digits 2
+frac_digits 2
+p_cs_precedes 1
+p_sep_by_space 1
+n_cs_precedes        1
+n_sep_by_space       0
+p_sign_posn 2
+n_sign_posn 1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point "."
+thousands_sep ","
+grouping 3;3
+END LC_NUMERIC
+
+% Since their is no abbreviated version of the days in urdu I have used the
+% full names of the days
+% Using only the first letters of the day would have caused a conflict here
+% as both "Jumairat(Thurs)" and "Juma(Friday)" have the same starting letter
+% Jeem <U062C>
+LC_TIME
+
+abday   "<U0627><U062A><U0648><U0627><U0631>";/
+	"<U067E><U064A><U0631>";/
+	"<U0645><U0646><U06AF><U0644>";/
+	"<U0628><U062F><U06BE>";/
+	"<U062C><U0645><U0639><U0631><U0627><U062A>";/
+	"<U062C><U0645><U0639><U0647>";/
+	"<U0647><U0641><U062A><U0647>"
+day	"<U0627><U062A><U0648><U0627><U0631>";/
+	"<U067E><U064A><U0631>";/
+	"<U0645><U0646><U06AF><U0644>";/
+	"<U0628><U062F><U06BE>";/
+	"<U062C><U0645><U0639><U0631><U0627><U062A>";/
+	"<U062C><U0645><U0639><U0647>";/
+	"<U0647><U0641><U062A><U0647>"
+abmon	"<U062C><U0646><U0648><U0631><U06CC>";/
+	"<U0641><U0631><U0648><U0631><U06CC>";/
+	"<U0645><U0627><U0631><U0686>";/
+	"<U0627><U067E><U0631><U06CC><U0644>";/
+	"<U0645><U0626><U06CC>";/
+	"<U062C><U0648><U0646>";/
+	"<U062C><U0648><U0644><U0627><U0626><U06CC>";/
+	"<U0627><U06AF><U0633><U062A>";/
+	"<U0633><U062A><U0645><U0628><U0631>";/
+	"<U0627><U06A9><U062A><U0648><U0628><U0631>";/
+	"<U0646><U0648><U0645><U0628><U0631>";/
+	"<U062F><U0633><U0645><U0628><U0631>"
+mon	"<U062C><U0646><U0648><U0631><U06CC>";/
+	"<U0641><U0631><U0648><U0631><U06CC>";/
+	"<U0645><U0627><U0631><U0686>";/
+	"<U0627><U067E><U0631><U06CC><U0644>";/
+	"<U0645><U0626><U06CC>";/
+	"<U062C><U0648><U0646>";/
+	"<U062C><U0648><U0644><U0627><U0626><U06CC>";/
+	"<U0627><U06AF><U0633><U062A>";/
+	"<U0633><U062A><U0645><U0628><U0631>";/
+	"<U0627><U06A9><U062A><U0648><U0628><U0631>";/
+	"<U0646><U0648><U0645><U0628><U0631>";/
+	"<U062F><U0633><U0645><U0628><U0631>"
+
+% Date Time Format
+d_t_fmt "<U0648> %H:%M:%S <U062A> %d %B %Y"
+
+% Date Time Format for date(1)
+date_fmt "<U0648> %H:%M:%S %Z <U062A> %d %B %Y"
+
+% date Format. I have put this in reverse order to try to get the date
+% in R->L order
+d_fmt "%d//%m//%Y"
+
+% time format
+t_fmt "%H:%M:%S"
+
+%<U0635> stands for <U0635><U0628><U062D>
+%<U0634> stands for <U0634><U0627><U0645>
+am_pm "<U0635>";"<U0634>"
+
+%time format in 12 hour clock
+t_fmt_ampm "%P %I:%M:%S"
+
+% display columns right to left ?
+cal_direction	3
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+
+% locale based messages
+% Can we put in the values for a cancel exression here?? I found a term that
+% would define cancel appropriately
+% <U0647> = <U0647><U0627><U06BA> , the last tag is for noon-ghunna!
+% <U0628> = <U0628><U0644><U0643><U0644>
+% again "f" and "o" are place holders
+% <U0646> = <U0646><U0647><U064A><U06BA>
+yesexpr "^[+1yY<U0647><U0628>f]"
+noexpr  "^[-0nN<U0646>o]"
+yesstr  "<U06C1><U0627><U06BA>"
+nostr   "<U0646><U06C1><U06CC><U06BA>"
+END LC_MESSAGES
+
+%Draft Finished: 17:00 09/07/2000
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_DK"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T %z%N%c%N"
+country_name "<U067E><U0627><U06A9><U0633><U062A><U0627><U0646>"
+country_ab2 "PK"
+country_ab3 "PAK"
+country_num 586
+country_car "PK"
+lang_name   "<U0627><U0631><U062F><U0648>"
+lang_ab      "ur"
+lang_term    "urd"
+lang_lib    "urd"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix "92"
+int_select "00"
+END LC_TELEPHONE

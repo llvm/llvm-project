@@ -1,0 +1,233 @@
+<code_set_name> TIS-620
+<comment_char> %
+<escape_char> /
+% version: 1.0
+%  sources: Thai Industrial Standards Institute, ECMA registry, IANA
+% alias TIS620
+% alias TIS620-0
+% alias TIS620.2529-1
+% alias TIS620.2533-0
+% alias ISO-IR-166
+CHARMAP
+<U0000>     /x00         NULL (NUL)
+<U0001>     /x01         START OF HEADING (SOH)
+<U0002>     /x02         START OF TEXT (STX)
+<U0003>     /x03         END OF TEXT (ETX)
+<U0004>     /x04         END OF TRANSMISSION (EOT)
+<U0005>     /x05         ENQUIRY (ENQ)
+<U0006>     /x06         ACKNOWLEDGE (ACK)
+<U0007>     /x07         BELL (BEL)
+<U0008>     /x08         BACKSPACE (BS)
+<U0009>     /x09         CHARACTER TABULATION (HT)
+<U000A>     /x0a         LINE FEED (LF)
+<U000B>     /x0b         LINE TABULATION (VT)
+<U000C>     /x0c         FORM FEED (FF)
+<U000D>     /x0d         CARRIAGE RETURN (CR)
+<U000E>     /x0e         SHIFT OUT (SO)
+<U000F>     /x0f         SHIFT IN (SI)
+<U0010>     /x10         DATALINK ESCAPE (DLE)
+<U0011>     /x11         DEVICE CONTROL ONE (DC1)
+<U0012>     /x12         DEVICE CONTROL TWO (DC2)
+<U0013>     /x13         DEVICE CONTROL THREE (DC3)
+<U0014>     /x14         DEVICE CONTROL FOUR (DC4)
+<U0015>     /x15         NEGATIVE ACKNOWLEDGE (NAK)
+<U0016>     /x16         SYNCHRONOUS IDLE (SYN)
+<U0017>     /x17         END OF TRANSMISSION BLOCK (ETB)
+<U0018>     /x18         CANCEL (CAN)
+<U0019>     /x19         END OF MEDIUM (EM)
+<U001A>     /x1a         SUBSTITUTE (SUB)
+<U001B>     /x1b         ESCAPE (ESC)
+<U001C>     /x1c         FILE SEPARATOR (IS4)
+<U001D>     /x1d         GROUP SEPARATOR (IS3)
+<U001E>     /x1e         RECORD SEPARATOR (IS2)
+<U001F>     /x1f         UNIT SEPARATOR (IS1)
+<U0020>     /x20         SPACE
+<U0021>     /x21         EXCLAMATION MARK
+<U0022>     /x22         QUOTATION MARK
+<U0023>     /x23         NUMBER SIGN
+<U0024>     /x24         DOLLAR SIGN
+<U0025>     /x25         PERCENT SIGN
+<U0026>     /x26         AMPERSAND
+<U0027>     /x27         APOSTROPHE
+<U0028>     /x28         LEFT PARENTHESIS
+<U0029>     /x29         RIGHT PARENTHESIS
+<U002A>     /x2a         ASTERISK
+<U002B>     /x2b         PLUS SIGN
+<U002C>     /x2c         COMMA
+<U002D>     /x2d         HYPHEN-MINUS
+<U002E>     /x2e         FULL STOP
+<U002F>     /x2f         SOLIDUS
+<U0030>     /x30         DIGIT ZERO
+<U0031>     /x31         DIGIT ONE
+<U0032>     /x32         DIGIT TWO
+<U0033>     /x33         DIGIT THREE
+<U0034>     /x34         DIGIT FOUR
+<U0035>     /x35         DIGIT FIVE
+<U0036>     /x36         DIGIT SIX
+<U0037>     /x37         DIGIT SEVEN
+<U0038>     /x38         DIGIT EIGHT
+<U0039>     /x39         DIGIT NINE
+<U003A>     /x3a         COLON
+<U003B>     /x3b         SEMICOLON
+<U003C>     /x3c         LESS-THAN SIGN
+<U003D>     /x3d         EQUALS SIGN
+<U003E>     /x3e         GREATER-THAN SIGN
+<U003F>     /x3f         QUESTION MARK
+<U0040>     /x40         COMMERCIAL AT
+<U0041>     /x41         LATIN CAPITAL LETTER A
+<U0042>     /x42         LATIN CAPITAL LETTER B
+<U0043>     /x43         LATIN CAPITAL LETTER C
+<U0044>     /x44         LATIN CAPITAL LETTER D
+<U0045>     /x45         LATIN CAPITAL LETTER E
+<U0046>     /x46         LATIN CAPITAL LETTER F
+<U0047>     /x47         LATIN CAPITAL LETTER G
+<U0048>     /x48         LATIN CAPITAL LETTER H
+<U0049>     /x49         LATIN CAPITAL LETTER I
+<U004A>     /x4a         LATIN CAPITAL LETTER J
+<U004B>     /x4b         LATIN CAPITAL LETTER K
+<U004C>     /x4c         LATIN CAPITAL LETTER L
+<U004D>     /x4d         LATIN CAPITAL LETTER M
+<U004E>     /x4e         LATIN CAPITAL LETTER N
+<U004F>     /x4f         LATIN CAPITAL LETTER O
+<U0050>     /x50         LATIN CAPITAL LETTER P
+<U0051>     /x51         LATIN CAPITAL LETTER Q
+<U0052>     /x52         LATIN CAPITAL LETTER R
+<U0053>     /x53         LATIN CAPITAL LETTER S
+<U0054>     /x54         LATIN CAPITAL LETTER T
+<U0055>     /x55         LATIN CAPITAL LETTER U
+<U0056>     /x56         LATIN CAPITAL LETTER V
+<U0057>     /x57         LATIN CAPITAL LETTER W
+<U0058>     /x58         LATIN CAPITAL LETTER X
+<U0059>     /x59         LATIN CAPITAL LETTER Y
+<U005A>     /x5a         LATIN CAPITAL LETTER Z
+<U005B>     /x5b         LEFT SQUARE BRACKET
+<U005C>     /x5c         REVERSE SOLIDUS
+<U005D>     /x5d         RIGHT SQUARE BRACKET
+<U005E>     /x5e         CIRCUMFLEX ACCENT
+<U005F>     /x5f         LOW LINE
+<U0060>     /x60         GRAVE ACCENT
+<U0061>     /x61         LATIN SMALL LETTER A
+<U0062>     /x62         LATIN SMALL LETTER B
+<U0063>     /x63         LATIN SMALL LETTER C
+<U0064>     /x64         LATIN SMALL LETTER D
+<U0065>     /x65         LATIN SMALL LETTER E
+<U0066>     /x66         LATIN SMALL LETTER F
+<U0067>     /x67         LATIN SMALL LETTER G
+<U0068>     /x68         LATIN SMALL LETTER H
+<U0069>     /x69         LATIN SMALL LETTER I
+<U006A>     /x6a         LATIN SMALL LETTER J
+<U006B>     /x6b         LATIN SMALL LETTER K
+<U006C>     /x6c         LATIN SMALL LETTER L
+<U006D>     /x6d         LATIN SMALL LETTER M
+<U006E>     /x6e         LATIN SMALL LETTER N
+<U006F>     /x6f         LATIN SMALL LETTER O
+<U0070>     /x70         LATIN SMALL LETTER P
+<U0071>     /x71         LATIN SMALL LETTER Q
+<U0072>     /x72         LATIN SMALL LETTER R
+<U0073>     /x73         LATIN SMALL LETTER S
+<U0074>     /x74         LATIN SMALL LETTER T
+<U0075>     /x75         LATIN SMALL LETTER U
+<U0076>     /x76         LATIN SMALL LETTER V
+<U0077>     /x77         LATIN SMALL LETTER W
+<U0078>     /x78         LATIN SMALL LETTER X
+<U0079>     /x79         LATIN SMALL LETTER Y
+<U007A>     /x7a         LATIN SMALL LETTER Z
+<U007B>     /x7b         LEFT CURLY BRACKET
+<U007C>     /x7c         VERTICAL LINE
+<U007D>     /x7d         RIGHT CURLY BRACKET
+<U007E>     /x7e         TILDE
+<U007F>     /x7f         DELETE (DEL)
+<U0E01>     /xa1         THAI CHARACTER KO KAI
+<U0E02>     /xa2         THAI CHARACTER KHO KHAI
+<U0E03>     /xa3         THAI CHARACTER KHO KHUAT
+<U0E04>     /xa4         THAI CHARACTER KHO KHWAI
+<U0E05>     /xa5         THAI CHARACTER KHO KHON
+<U0E06>     /xa6         THAI CHARACTER KHO RAKHANG
+<U0E07>     /xa7         THAI CHARACTER NGO NGU
+<U0E08>     /xa8         THAI CHARACTER CHO CHAN
+<U0E09>     /xa9         THAI CHARACTER CHO CHING
+<U0E0A>     /xaa         THAI CHARACTER CHO CHANG
+<U0E0B>     /xab         THAI CHARACTER SO SO
+<U0E0C>     /xac         THAI CHARACTER CHO CHOE
+<U0E0D>     /xad         THAI CHARACTER YO YING
+<U0E0E>     /xae         THAI CHARACTER DO CHADA
+<U0E0F>     /xaf         THAI CHARACTER TO PATAK
+<U0E10>     /xb0         THAI CHARACTER THO THAN
+<U0E11>     /xb1         THAI CHARACTER THO NANGMONTHO
+<U0E12>     /xb2         THAI CHARACTER THO PHUTHAO
+<U0E13>     /xb3         THAI CHARACTER NO NEN
+<U0E14>     /xb4         THAI CHARACTER DO DEK
+<U0E15>     /xb5         THAI CHARACTER TO TAO
+<U0E16>     /xb6         THAI CHARACTER THO THUNG
+<U0E17>     /xb7         THAI CHARACTER THO THAHAN
+<U0E18>     /xb8         THAI CHARACTER THO THONG
+<U0E19>     /xb9         THAI CHARACTER NO NU
+<U0E1A>     /xba         THAI CHARACTER BO BAIMAI
+<U0E1B>     /xbb         THAI CHARACTER PO PLA
+<U0E1C>     /xbc         THAI CHARACTER PHO PHUNG
+<U0E1D>     /xbd         THAI CHARACTER FO FA
+<U0E1E>     /xbe         THAI CHARACTER PHO PHAN
+<U0E1F>     /xbf         THAI CHARACTER FO FAN
+<U0E20>     /xc0         THAI CHARACTER PHO SAMPHAO
+<U0E21>     /xc1         THAI CHARACTER MO MA
+<U0E22>     /xc2         THAI CHARACTER YO YAK
+<U0E23>     /xc3         THAI CHARACTER RO RUA
+<U0E24>     /xc4         THAI CHARACTER RU
+<U0E25>     /xc5         THAI CHARACTER LO LING
+<U0E26>     /xc6         THAI CHARACTER LU
+<U0E27>     /xc7         THAI CHARACTER WO WAEN
+<U0E28>     /xc8         THAI CHARACTER SO SALA
+<U0E29>     /xc9         THAI CHARACTER SO RUSI
+<U0E2A>     /xca         THAI CHARACTER SO SUA
+<U0E2B>     /xcb         THAI CHARACTER HO HIP
+<U0E2C>     /xcc         THAI CHARACTER LO CHULA
+<U0E2D>     /xcd         THAI CHARACTER O ANG
+<U0E2E>     /xce         THAI CHARACTER HO NOKHUK
+<U0E2F>     /xcf         THAI CHARACTER PAIYANNOI
+<U0E30>     /xd0         THAI CHARACTER SARA A
+<U0E31>     /xd1         THAI CHARACTER MAI HAN-AKAT
+<U0E32>     /xd2         THAI CHARACTER SARA AA
+<U0E33>     /xd3         THAI CHARACTER SARA AM
+<U0E34>     /xd4         THAI CHARACTER SARA I
+<U0E35>     /xd5         THAI CHARACTER SARA II
+<U0E36>     /xd6         THAI CHARACTER SARA UE
+<U0E37>     /xd7         THAI CHARACTER SARA UEE
+<U0E38>     /xd8         THAI CHARACTER SARA U
+<U0E39>     /xd9         THAI CHARACTER SARA UU
+<U0E3A>     /xda         THAI CHARACTER PHINTHU
+<U0E3F>     /xdf         THAI CURRENCY SYMBOL BAHT
+<U0E40>     /xe0         THAI CHARACTER SARA E
+<U0E41>     /xe1         THAI CHARACTER SARA AE
+<U0E42>     /xe2         THAI CHARACTER SARA O
+<U0E43>     /xe3         THAI CHARACTER SARA AI MAIMUAN
+<U0E44>     /xe4         THAI CHARACTER SARA AI MAIMALAI
+<U0E45>     /xe5         THAI CHARACTER LAKKHANGYAO
+<U0E46>     /xe6         THAI CHARACTER MAIYAMOK
+<U0E47>     /xe7         THAI CHARACTER MAITAIKHU
+<U0E48>     /xe8         THAI CHARACTER MAI EK
+<U0E49>     /xe9         THAI CHARACTER MAI THO
+<U0E4A>     /xea         THAI CHARACTER MAI TRI
+<U0E4B>     /xeb         THAI CHARACTER MAI CHATTAWA
+<U0E4C>     /xec         THAI CHARACTER THANTHAKHAT
+<U0E4D>     /xed         THAI CHARACTER NIKHAHIT
+<U0E4E>     /xee         THAI CHARACTER YAMAKKAN
+<U0E4F>     /xef         THAI CHARACTER FONGMAN
+<U0E50>     /xf0         THAI DIGIT ZERO
+<U0E51>     /xf1         THAI DIGIT ONE
+<U0E52>     /xf2         THAI DIGIT TWO
+<U0E53>     /xf3         THAI DIGIT THREE
+<U0E54>     /xf4         THAI DIGIT FOUR
+<U0E55>     /xf5         THAI DIGIT FIVE
+<U0E56>     /xf6         THAI DIGIT SIX
+<U0E57>     /xf7         THAI DIGIT SEVEN
+<U0E58>     /xf8         THAI DIGIT EIGHT
+<U0E59>     /xf9         THAI DIGIT NINE
+<U0E5A>     /xfa         THAI CHARACTER ANGKHANKHU
+<U0E5B>     /xfb         THAI CHARACTER KHOMUT
+END CHARMAP
+
+WIDTH
+<U0E31>			0
+<U0E34>...<U0E3A>	0
+<U0E47>...<U0E4E>	0
+END WIDTH

@@ -1,0 +1,294 @@
+@node Internal Probes
+@c @node Internal Probes, Tunables, Threads, Top
+@c %MENU% Probes to monitor libc internal behavior
+@chapter Internal probes
+
+In order to aid in debugging and monitoring internal behavior,
+@theglibc{} exposes nearly-zero-overhead SystemTap probes marked with
+the @code{libc} provider.
+
+These probes are not part of the @glibcadj{} stable ABI, and they are
+subject to change or removal across releases.  Our only promise with
+regard to them is that, if we find a need to remove or modify the
+arguments of a probe, the modified probe will have a different name, so
+that program monitors relying on the old probe will not get unexpected
+arguments.
+
+@menu
+* Memory Allocation Probes::  Probes in the memory allocation subsystem
+* Non-local Goto Probes::  Probes in setjmp and longjmp
+@end menu
+
+@node Memory Allocation Probes
+@section Memory Allocation Probes
+
+These probes are designed to signal relatively unusual situations within
+the virtual memory subsystem of @theglibc{}.
+
+@deftp Probe memory_sbrk_more (void *@var{$arg1}, size_t @var{$arg2})
+This probe is triggered after the main arena is extended by calling
+@code{sbrk}.  Argument @var{$arg1} is the additional size requested to
+@code{sbrk}, and @var{$arg2} is the pointer that marks the end of the
+@code{sbrk} area, returned in response to the request.
+@end deftp
+
+@deftp Probe memory_sbrk_less (void *@var{$arg1}, size_t @var{$arg2})
+This probe is triggered after the size of the main arena is decreased by
+calling @code{sbrk}.  Argument @var{$arg1} is the size released by
+@code{sbrk} (the positive value, rather than the negative value passed
+to @code{sbrk}), and @var{$arg2} is the pointer that marks the end of
+the @code{sbrk} area, returned in response to the request.
+@end deftp
+
+@deftp Probe memory_heap_new (void *@var{$arg1}, size_t @var{$arg2})
+This probe is triggered after a new heap is @code{mmap}ed.  Argument
+@var{$arg1} is a pointer to the base of the memory area, where the
+@code{heap_info} data structure is held, and @var{$arg2} is the size of
+the heap.
+@end deftp
+
+@deftp Probe memory_heap_free (void *@var{$arg1}, size_t @var{$arg2})
+This probe is triggered @emph{before} (unlike the other sbrk and heap
+probes) a heap is completely removed via @code{munmap}.  Argument
+@var{$arg1} is a pointer to the heap, and @var{$arg2} is the size of the
+heap.
+@end deftp
+
+@deftp Probe memory_heap_more (void *@var{$arg1}, size_t @var{$arg2})
+This probe is triggered after a trailing portion of an @code{mmap}ed
+heap is extended.  Argument @var{$arg1} is a pointer to the heap, and
+@var{$arg2} is the new size of the heap.
+@end deftp
+
+@deftp Probe memory_heap_less (void *@var{$arg1}, size_t @var{$arg2})
+This probe is triggered after a trailing portion of an @code{mmap}ed
+heap is released.  Argument @var{$arg1} is a pointer to the heap, and
+@var{$arg2} is the new size of the heap.
+@end deftp
+
+@deftp Probe memory_malloc_retry (size_t @var{$arg1})
+@deftpx Probe memory_realloc_retry (size_t @var{$arg1}, void *@var{$arg2})
+@deftpx Probe memory_memalign_retry (size_t @var{$arg1}, size_t @var{$arg2})
+@deftpx Probe memory_calloc_retry (size_t @var{$arg1})
+These probes are triggered when the corresponding functions fail to
+obtain the requested amount of memory from the arena in use, before they
+call @code{arena_get_retry} to select an alternate arena in which to
+retry the allocation.  Argument @var{$arg1} is the amount of memory
+requested by the user; in the @code{calloc} case, that is the total size
+computed from both function arguments.  In the @code{realloc} case,
+@var{$arg2} is the pointer to the memory area being resized.  In the
+@code{memalign} case, @var{$arg2} is the alignment to be used for the
+request, which may be stricter than the value passed to the
+@code{memalign} function.  A @code{memalign} probe is also used by functions
+@code{posix_memalign, valloc} and @code{pvalloc}.
+
+Note that the argument order does @emph{not} match that of the
+corresponding two-argument functions, so that in all of these probes the
+user-requested allocation size is in @var{$arg1}.
+@end deftp
+
+@deftp Probe memory_arena_retry (size_t @var{$arg1}, void *@var{$arg2})
+This probe is triggered within @code{arena_get_retry} (the function
+called to select the alternate arena in which to retry an allocation
+that failed on the first attempt), before the selection of an alternate
+arena.  This probe is redundant, but much easier to use when it's not
+important to determine which of the various memory allocation functions
+is failing to allocate on the first try.  Argument @var{$arg1} is the
+same as in the function-specific probes, except for extra room for
+padding introduced by functions that have to ensure stricter alignment.
+Argument @var{$arg2} is the arena in which allocation failed.
+@end deftp
+
+@deftp Probe memory_arena_new (void *@var{$arg1}, size_t @var{$arg2})
+This probe is triggered when @code{malloc} allocates and initializes an
+additional arena (not the main arena), but before the arena is assigned
+to the running thread or inserted into the internal linked list of
+arenas.  The arena's @code{malloc_state} internal data structure is
+located at @var{$arg1}, within a newly-allocated heap big enough to hold
+at least @var{$arg2} bytes.
+@end deftp
+
+@deftp Probe memory_arena_reuse (void *@var{$arg1}, void *@var{$arg2})
+This probe is triggered when @code{malloc} has just selected an existing
+arena to reuse, and (temporarily) reserved it for exclusive use.
+Argument @var{$arg1} is a pointer to the newly-selected arena, and
+@var{$arg2} is a pointer to the arena previously used by that thread.
+
+This occurs within
+@code{reused_arena}, right after the mutex mentioned in probe
+@code{memory_arena_reuse_wait} is acquired; argument @var{$arg1} will
+point to the same arena.  In this configuration, this will usually only
+occur once per thread.  The exception is when a thread first selected
+the main arena, but a subsequent allocation from it fails: then, and
+only then, may we switch to another arena to retry that allocation, and
+for further allocations within that thread.
+@end deftp
+
+@deftp Probe memory_arena_reuse_wait (void *@var{$arg1}, void *@var{$arg2}, void *@var{$arg3})
+This probe is triggered when @code{malloc} is about to wait for an arena
+to become available for reuse.  Argument @var{$arg1} holds a pointer to
+the mutex the thread is going to wait on, @var{$arg2} is a pointer to a
+newly-chosen arena to be reused, and @var{$arg3} is a pointer to the
+arena previously used by that thread.
+
+This occurs within
+@code{reused_arena}, when a thread first tries to allocate memory or
+needs a retry after a failure to allocate from the main arena, there
+isn't any free arena, the maximum number of arenas has been reached, and
+an existing arena was chosen for reuse, but its mutex could not be
+immediately acquired.  The mutex in @var{$arg1} is the mutex of the
+selected arena.
+@end deftp
+
+@deftp Probe memory_arena_reuse_free_list (void *@var{$arg1})
+This probe is triggered when @code{malloc} has chosen an arena that is
+in the free list for use by a thread, within the @code{get_free_list}
+function.  The argument @var{$arg1} holds a pointer to the selected arena.
+@end deftp
+
+@deftp Probe memory_mallopt (int @var{$arg1}, int @var{$arg2})
+This probe is triggered when function @code{mallopt} is called to change
+@code{malloc} internal configuration parameters, before any change to
+the parameters is made.  The arguments @var{$arg1} and @var{$arg2} are
+the ones passed to the @code{mallopt} function.
+@end deftp
+
+@deftp Probe memory_mallopt_mxfast (int @var{$arg1}, int @var{$arg2})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_MXFAST}, and the requested
+value is in an acceptable range.  Argument @var{$arg1} is the requested
+value, and @var{$arg2} is the previous value of this @code{malloc}
+parameter.
+@end deftp
+
+@deftp Probe memory_mallopt_trim_threshold (int @var{$arg1}, int @var{$arg2}, int @var{$arg3})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_TRIM_THRESHOLD}.  Argument
+@var{$arg1} is the requested value, @var{$arg2} is the previous value of
+this @code{malloc} parameter, and @var{$arg3} is nonzero if dynamic
+threshold adjustment was already disabled.
+@end deftp
+
+@deftp Probe memory_mallopt_top_pad (int @var{$arg1}, int @var{$arg2}, int @var{$arg3})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_TOP_PAD}.  Argument
+@var{$arg1} is the requested value, @var{$arg2} is the previous value of
+this @code{malloc} parameter, and @var{$arg3} is nonzero if dynamic
+threshold adjustment was already disabled.
+@end deftp
+
+@deftp Probe memory_mallopt_mmap_threshold (int @var{$arg1}, int @var{$arg2}, int @var{$arg3})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_MMAP_THRESHOLD}, and the
+requested value is in an acceptable range.  Argument @var{$arg1} is the
+requested value, @var{$arg2} is the previous value of this @code{malloc}
+parameter, and @var{$arg3} is nonzero if dynamic threshold adjustment
+was already disabled.
+@end deftp
+
+@deftp Probe memory_mallopt_mmap_max (int @var{$arg1}, int @var{$arg2}, int @var{$arg3})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_MMAP_MAX}.  Argument
+@var{$arg1} is the requested value, @var{$arg2} is the previous value of
+this @code{malloc} parameter, and @var{$arg3} is nonzero if dynamic
+threshold adjustment was already disabled.
+@end deftp
+
+@deftp Probe memory_mallopt_perturb (int @var{$arg1}, int @var{$arg2})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_PERTURB}.  Argument
+@var{$arg1} is the requested value, and @var{$arg2} is the previous
+value of this @code{malloc} parameter.
+@end deftp
+
+@deftp Probe memory_mallopt_arena_test (int @var{$arg1}, int @var{$arg2})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_ARENA_TEST}, and the
+requested value is in an acceptable range.  Argument @var{$arg1} is the
+requested value, and @var{$arg2} is the previous value of this
+@code{malloc} parameter.
+@end deftp
+
+@deftp Probe memory_mallopt_arena_max (int @var{$arg1}, int @var{$arg2})
+This probe is triggered shortly after the @code{memory_mallopt} probe,
+when the parameter to be changed is @code{M_ARENA_MAX}, and the
+requested value is in an acceptable range.  Argument @var{$arg1} is the
+requested value, and @var{$arg2} is the previous value of this
+@code{malloc} parameter.
+@end deftp
+
+@deftp Probe memory_mallopt_free_dyn_thresholds (int @var{$arg1}, int @var{$arg2})
+This probe is triggered when function @code{free} decides to adjust the
+dynamic brk/mmap thresholds.  Argument @var{$arg1} and @var{$arg2} are
+the adjusted mmap and trim thresholds, respectively.
+@end deftp
+
+@deftp Probe memory_tunable_tcache_max_bytes (int @var{$arg1}, int @var{$arg2})
+This probe is triggered when the @code{glibc.malloc.tcache_max}
+tunable is set.  Argument @var{$arg1} is the requested value, and
+@var{$arg2} is the previous value of this tunable.
+@end deftp
+
+@deftp Probe memory_tunable_tcache_count (int @var{$arg1}, int @var{$arg2})
+This probe is triggered when the @code{glibc.malloc.tcache_count}
+tunable is set.  Argument @var{$arg1} is the requested value, and
+@var{$arg2} is the previous value of this tunable.
+@end deftp
+
+@deftp Probe memory_tunable_tcache_unsorted_limit (int @var{$arg1}, int @var{$arg2})
+This probe is triggered when the
+@code{glibc.malloc.tcache_unsorted_limit} tunable is set.  Argument
+@var{$arg1} is the requested value, and @var{$arg2} is the previous
+value of this tunable.
+@end deftp
+
+@deftp Probe memory_tcache_double_free (void *@var{$arg1}, int @var{$arg2})
+This probe is triggered when @code{free} determines that the memory
+being freed has probably already been freed, and resides in the
+per-thread cache.  Note that there is an extremely unlikely chance
+that this probe will trigger due to random payload data remaining in
+the allocated memory matching the key used to detect double frees.
+This probe actually indicates that an expensive linear search of the
+tcache, looking for a double free, has happened.  Argument @var{$arg1}
+is the memory location as passed to @code{free}, Argument @var{$arg2}
+is the tcache bin it resides in.
+@end deftp
+
+@node Non-local Goto Probes
+@section Non-local Goto Probes
+
+These probes are used to signal calls to @code{setjmp}, @code{sigsetjmp},
+@code{longjmp} or @code{siglongjmp}.
+
+@deftp Probe setjmp (void *@var{$arg1}, int @var{$arg2}, void *@var{$arg3})
+This probe is triggered whenever @code{setjmp} or @code{sigsetjmp} is
+called.  Argument @var{$arg1} is a pointer to the @code{jmp_buf}
+passed as the first argument of @code{setjmp} or @code{sigsetjmp},
+@var{$arg2} is the second argument of @code{sigsetjmp} or zero if this
+is a call to @code{setjmp} and @var{$arg3} is a pointer to the return
+address that will be stored in the @code{jmp_buf}.
+@end deftp
+
+@deftp Probe longjmp (void *@var{$arg1}, int @var{$arg2}, void *@var{$arg3})
+This probe is triggered whenever @code{longjmp} or @code{siglongjmp}
+is called.  Argument @var{$arg1} is a pointer to the @code{jmp_buf}
+passed as the first argument of @code{longjmp} or @code{siglongjmp},
+@var{$arg2} is the return value passed as the second argument of
+@code{longjmp} or @code{siglongjmp} and @var{$arg3} is a pointer to
+the return address @code{longjmp} or @code{siglongjmp} will return to.
+
+The @code{longjmp} probe is triggered at a point where the registers
+have not yet been restored to the values in the @code{jmp_buf} and
+unwinding will show a call stack including the caller of
+@code{longjmp} or @code{siglongjmp}.
+@end deftp
+
+@deftp Probe longjmp_target (void *@var{$arg1}, int @var{$arg2}, void *@var{$arg3})
+This probe is triggered under the same conditions and with the same
+arguments as the @code{longjmp} probe.
+
+The @code{longjmp_target} probe is triggered at a point where the
+registers have been restored to the values in the @code{jmp_buf} and
+unwinding will show a call stack including the caller of @code{setjmp}
+or @code{sigsetjmp}.
+@end deftp

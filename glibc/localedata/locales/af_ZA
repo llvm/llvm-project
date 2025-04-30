@@ -1,0 +1,258 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% ChangeLog
+% 1.2.1 (2005-10-13):
+%      2005-10-12 Dwayne Bailey <dwayne@translate.org.za>
+%        - Added 'Charset: ISO-8859-1' information
+%        - Updated contact information
+% 1.2 (2004-10-28):
+%      2004-10-28 Dwayne Bailey <dwayne@translate.org.za>
+%        - Corrected country_name should be "Suid-Afrika"
+%      2004-10-27 Dwayne Bailey <dwayne@translate.org.za>
+%        - Change decimal and thousand separator to match common convention of
+%          [comma]==thousand, [point]==decimal.  Thus copy en_ZA
+%        - Add country_post, lang_lib
+%        - abmon March: Mar -> Mrt
+%        - name_* corrected all capitalisation
+%        - Add Translate.org.za to clarify "source"
+%        - Update all contact details
+%        - Change yesexpr to also accept yY
+%        - Update yes/noexpr to remove .*
+%      2004-03-30 Dwayne Bailey <dwayne@translate.org.za>
+%        - Added name_miss
+% 1.1 (2003-04-23):
+%      2003-04-23 Dwayne Bailey <dwayne@translate.org.za>
+%        - Added LC_MEASUREMENT to LC_IDENTIFICATION
+%        - PAPER, TELEPHONE and MEASUREMENT copy en_ZA
+%        - Added "^" to yesexpr and noexpr ie "^[nN].*"
+%        - Change maintainer to Zuza Software Foundation
+%        - Add all missing items in LC_ADDRESS
+%        - Add all name_* to LC_NAME
+%        - Add various comments explaining items
+
+LC_IDENTIFICATION
+title      "Afrikaans locale for South Africa"
+source     "Zuza Software Foundation (Translate.org.za)"
+address    "Box 28364, Sunnyside, 0132, South Africa"
+contact    "Dwayne Bailey"
+email      "dwayne@translate.org.za"
+tel        ""
+fax        ""
+language   "Afrikaans"
+territory  "South Africa"
+revision   "1.2.1"
+date       "2005-10-13"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+copy "en_ZA"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_ZA"
+END LC_NUMERIC
+
+LC_TIME
+% abday - The abbreviations for the week days:
+abday       "So";"Ma";"Di";"Wo";"Do";"Vr";"Sa"
+
+% day - The full names of the week days:
+% Sondag, Maandag, Dinsdag, Woensdag, Donderdag, Vrydag, Saterdag
+day         "Sondag";/
+            "Maandag";/
+            "Dinsdag";/
+            "Woensdag";/
+            "Donderdag";/
+            "Vrydag";/
+            "Saterdag"
+
+% abmon - The abbreviations for the months
+abmon       "Jan";"Feb";"Mrt";"Apr";"Mei";"Jun";/
+            "Jul";"Aug";"Sep";"Okt";"Nov";"Des"
+
+% mon - The full names of the months -
+mon         "Januarie";/
+            "Februarie";/
+            "Maart";/
+            "April";/
+            "Mei";/
+            "Junie";/
+            "Julie";/
+            "Augustus";/
+            "September";/
+            "Oktober";/
+            "November";/
+            "Desember"
+
+% Abbreviated date and time representation to be referenced by the "%c" field descriptor -
+%
+% "%a" (short weekday name),
+% "%d" (day of month as a decimal number),
+% "%b" (short month name),
+% "%Y" (year with century as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+d_t_fmt     "%a %d %b %Y %T"
+
+% Abbreviated date and time representation to be used by date(1)
+date_fmt    "%a %d %b %Y %T %Z"
+
+% Date representation to be referenced by the "%x" field descriptor -
+% "%d/%m/%Y", day/month/year as decimal numbers (01/01/2000).
+d_fmt       "%d//%m//%Y"
+
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+t_fmt       "%T"
+
+% Define representation of ante meridian and post maritime strings -
+% The "" mean 'default to "AM" and "PM".
+am_pm       "VM";"NM"
+
+% Define time representation in 12-hour format with "am_pm", to be referenced by the "%r"
+% The "" means that this format is not supported.
+t_fmt_ampm  ""
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1jJyY]"
+noexpr  "^[-0nN]"
+yesstr  "ja"
+nostr   "nee"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_ZA"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "en_ZA"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "en_ZA"
+END LC_MEASUREMENT
+
+LC_NAME
+% Format for addressing a person.
+% "%d%t%g%t%m%t%f"
+%
+% "Salutation",
+% "Empty string, or <Space>",
+% "First given name",
+% "Empty string, or <Space>",
+% "Middle names",
+% "Empty string, or <Space>",
+% "Clan names"
+name_fmt    "%d%t%g%t%m%t%f"
+
+% General salutation for any sex
+name_gen    ""
+
+% Salutation for unmarried females
+name_miss   "mej"
+
+% Salutation for males
+name_mr     "mnr"
+
+% Salutation for married females
+name_mrs    "mev"
+
+% Salutation valid for all females
+name_ms     "me"
+END LC_NAME
+
+LC_ADDRESS
+% Representation of postal addresses (minus the addressee's name) in South
+% Africa. (Ignored for now)
+% "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N", which gives -
+%
+% "firm name",
+% "end of line",
+% "C/O address",
+% "end of line",
+% "department name",
+% "Building name",
+% "end of line",
+% "street or block name",
+% "space",
+% "house number or designation",
+% "space",
+% "floor number",
+% "space",
+% "room number, door designation",
+% "end of line",
+% "postal code",
+% "space",
+% "town, city",
+% "end of line",
+% "country designation for the <country_post> keyword",
+% "end of line
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+
+% Country name in Afrikaans
+country_name  "Suid-Afrika"
+
+% Language name in Afrikaans
+lang_name     "Afrikaans"
+
+% CEPT MAILCODES are suggested
+% Alternatively use the code found on your countries postal item tracking number
+country_post   "ZA"
+
+% UN Geneve 1949:68 Distinguishing signs of vehicles in international traffic
+% http://www.unece.org/trans/conventn/disting-signs-5-2001.pdf
+country_car   "ZA"
+
+% ISO 2108
+% http://www.isbn-international.org/html/prefix/prefa.htm
+country_isbn  0
+
+% ISO 639 language abbreviations:
+% 639-1 2 letter, 639-2 3 letter terminology
+% http://www.loc.gov/standards/iso639-2/englangn.html
+lang_ab      "af"
+lang_term    "afr"
+lang_lib     "afr"
+
+% ISO 3166 country number and 2 and 3 letter abbreviations
+% http://www.unicode.org/onlinedat/countries.html
+% "ZA", "ZAF"
+country_ab2   "ZA"
+country_ab3   "ZAF"
+country_num   710
+END LC_ADDRESS

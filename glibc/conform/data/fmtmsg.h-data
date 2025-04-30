@@ -1,0 +1,63 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008 && !defined XPG4
+macro MM_HARD
+constant MM_HARD
+
+macro MM_SOFT
+constant MM_SOFT
+
+macro MM_FIRM
+constant MM_FIRM
+
+macro MM_APPL
+constant MM_APPL
+
+macro MM_UTIL
+constant MM_UTIL
+
+macro MM_OPSYS
+constant MM_OPSYS
+
+macro MM_RECOVER
+constant MM_RECOVER
+
+macro MM_NRECOV
+constant MM_NRECOV
+
+macro MM_HALT
+constant MM_HALT
+
+macro MM_ERROR
+constant MM_ERROR
+
+macro MM_WARNING
+constant MM_WARNING
+
+macro MM_INFO
+constant MM_INFO
+
+macro MM_NOSEV
+constant MM_NOSEV
+
+macro MM_PRINT
+constant MM_PRINT
+
+macro MM_CONSOLE
+constant MM_CONSOLE
+
+constant MM_NULLLBL == 0
+constant MM_NULLSEV == 0
+constant MM_NULLMC == 0
+constant MM_NULLTXT == 0
+constant MM_NULLACT == 0
+constant MM_NULLTAG == 0
+
+macro MM_OK
+macro MM_NOTOK
+macro MM_NOMSG
+macro MM_NOCON
+
+function int fmtmsg (long, const char*, int, const char*, const char*, const char*)
+
+allow *_t
+allow MM_*
+#endif

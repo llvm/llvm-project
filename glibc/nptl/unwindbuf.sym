@@ -1,0 +1,7 @@
+#include <pthread.h>
+#include <stddef.h>
+
+--
+
+UNWINDBUFSIZE	sizeof (__pthread_unwind_buf_t)
+UWJMPBUF	offsetof (__pthread_unwind_buf_t, __cancel_jmp_buf)

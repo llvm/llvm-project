@@ -1,0 +1,107 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+
+.IL CMPXCHG_DST arlnk irlnk irlnk irlnk
+2nd operand for CMPXCHx instructions.  Illegal in any other context.
+Code outside of iliutil.c should avoid mentioning CMPXCHG_DST since
+it is considered an implementation detail of the CMPXCHGx instructions.
+.br
+\'arlnk' points to an address expression
+.br
+\'irlnk1' points to an expression for whether the CMPXCHG is weak.
+If 1, the CMPXCHG is allowed to fail spuriously occasionally.
+If 0, the CMPXCHG is not allowed to fail spuriously.
+Otherwise behavior is undefined.
+.br
+\'irlnk2' points to an expression for the memory order if the CMPXCHG succeeds.
+.br
+\'irlnk3' points to an expression for the memory order if the CMPXCHG fails.
+.AT other null ar
+
+.IL CMPXCHG{I,KR,A} {ir,kr,ar}lnk arlnk nme stc {ir,kr,ar}lnk
+Atomic compare and exchange.
+Valid only as operand of CMPXCHG_SUCCESS or CMPXCHG_OLDx.
+.br
+\'{ir,kr,ar}lnk1' points to an expression for the value to be stored.
+.br
+\'Operand 2 points to a CMPXCHG_DST expression.
+.br
+\'nme' is pointer to the names table entry.  
+.br
+stc holds an encoding of the size modifier, syncscope, and origin (C, OMP, ACC).  
+.br
+\'{ir,kr,ar}lnk2' points to an expression for the comparand.
+.AT other null {ir,kr,ar} fence cmpxchg
+.CG terminal notAILI
+
+.IL CMPXCHG_SUCCESS lnk
+lnk must point to a CMPXCHGx instruction.
+Returns 1 if CMPXCHG succeeded, 0 otherwise.
+.AT other null ir
+
+.IL CMPXCHG_OLD{I,KR,A} lnk
+lnk must point to a CMPXCHGx instruction where x matches the x in this instruction.
+Returns old value of the location on which CMPXCHG instruction acted.
+.AT other null {ir,kr,ar}
+
+.IL ATOMICLD{I,KR,A,SP,DP} arlnk nme stc irlnk
+Atomic load.
+.br
+\'arlnk' points to an address expression.
+.br
+\'nme' points to the names table entry of the variable being referenced.
+.br
+\'stc' hold an encoding of the size modifier, syncscope, and origin.
+.br
+\'irlnk' points to an expression for the memory order.
+.AT load null {ir,kr,ar,sp,dp} fence
+.CG notAILI
+
+.IL ATOMICST{I,KR,A,SP,DP} {ir,kr,ar,sp,dp}lnk arlnk nme stc irlnk
+Atomic store.
+.br
+The first operand points to an expression for the value to be stored.
+.br
+\'arlnk' points to an address expression.
+.br
+\'nme' points to the names table entry of the variable being referenced.
+.br
+\'stc' hold an encoding of the size modifier, syncscope, and origin.
+.br
+Last operand points to an expression for the memory order.
+.br
+.AT store null trm fence
+.CG terminal notAILI
+
+.IL ATOMICRMW{I,KR,A,SP,DP} {ir,kr,ar,sp,dp}lnk arlnk nme stc irlnk
+Atomic read-modify-write.
+.br
+The first operand points to an expression for the value to be operated
+on the address specified in 2nd operand. This operand is must be combined
+with the function exposed in 4th operand.
+For example, if the function in 4th operand is add, 1st operand is accumulated
+into the memory address specified in the 2nd operand.
+.br
+\'arlnk' The second operand points to the address expression that atomic operation is going to 
+modify.
+.br
+\'nme' points the name table entry of the variable being referenced.
+.br
+\'stc' holds an encoding of the size modifier, syncscope, origin, and function.
+.br
+\'irlnk' points to an expression for the memory order.
+.br
+.AT other null {ir,kr,ar,sp,dp} fence atomicrmw
+.CG terminal notAILI
+
+.IL FENCE stc irlnk
+Memory fence.
+\'stc' holds an encoding of the syncscope and origin. 
+\'irlnk' points to an expression for the memory order.
+In the context of AILI, a FENCE generates no code, but restricts instruction re-ordering.
+.AT other null trm dom fence
+.CG terminal asm_special

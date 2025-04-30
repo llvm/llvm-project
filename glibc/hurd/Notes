@@ -1,0 +1,37 @@
+The library pays attention to some envariables:
+
+CORESERVER     -- Name of core server naming point; falls back to /servers/core
+COREFILE       -- Name of file to write core dump in; falls back to core
+GNUTARGET      -- Passed to core server to specify flavor of core dump format
+
+New functions:
+
+int openport (io_t port);
+FILE *fopenport (mach_port_t, const char *mode);
+file_t getdport (int fd);
+
+task_t pid2task (pid_t);
+pid_t task2pid (task_t);
+
+int fchroot (int fd);
+mode_t getumask (void);
+
+int getuids (int n, uid_t *uidset);
+
+error_t hurd_path_lookup (file_t root, file_t cwd,
+			  const char *path, int flags, mode_t mode,
+			  file_t *port);
+error_t hurd_path_split (file_t root, file_t cwd,
+			 const char *path,
+			 file_t *dir, char **name);
+file_t path_lookup (const char *path, int flags, mode_t mode);
+file_t path_split (const char *path, char **name);
+
+process_t getproc (void);
+int setproc (process_t);
+file_t getcrdir (void);
+int setcrdir (file_t);
+file_t getcwdir (void);
+int setcwdir (file_t);
+auth_t getauth (void);
+int setauth (auth_t);		/* Reauthenticates all library ports.  */

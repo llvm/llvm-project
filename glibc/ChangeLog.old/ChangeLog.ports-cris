@@ -1,0 +1,40 @@
+This file describes changes to the CRIS port while it was in the ports/
+add-on directory.  That port has since been removed entirely.
+The ports/ directory is no longer used, so reintroduction of AIX code
+would be described in the top-level ChangeLog file, not here.
+
+
+
+2012-02-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/cris: Remove.
+	* sysdeps/unix/sysv/linux/cris: Likewise.
+
+2011-10-05  Andreas Schwab  <schwab@redhat.com>
+
+	* sysdeps/cris/dl-machine.h (elf_machine_rela)
+	(elf_machine_lazy_rel): Add parameter skip_ifunc.
+
+2007-10-22  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/cris/bits/fcntl.h (F_DUPFD_CLOEXEC): Define.
+
+2007-07-10  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/cris/bits/fcntl.h: Comment fix.
+
+2005-12-27  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/cris/bits/setjmp.h (_JMPBUF_UNWINDS): Take third argument
+	DEMANGLE, and pass SP value through it.
+
+2004-10-25  Roland McGrath  <roland@frob.com>
+
+	* sysdeps/cris/configure.in: New file, with test moved out of main
+	libc configure.in file.
+	* sysdeps/cris/configure: New generated file.
+
+2004-10-23  Roland McGrath  <roland@frob.com>
+
+	* sysdeps/cris, sysdeps/unix/sysv/linux/cris: Moved here from main
+	libc source tree.

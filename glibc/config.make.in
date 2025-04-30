@@ -1,0 +1,153 @@
+# @configure_input@
+# Don't edit this file.  Put configuration parameters in configparms instead.
+
+version = @VERSION@
+release = @RELEASE@
+
+# Installation prefixes.
+install_root = $(DESTDIR)
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datadir = @datadir@
+libdir = @libdir@
+bindir = @bindir@
+slibdir = @libc_cv_slibdir@
+rtlddir = @libc_cv_rtlddir@
+complocaledir = @libc_cv_complocaledir@
+sysconfdir = @libc_cv_sysconfdir@
+libexecdir = @libexecdir@
+rootsbindir = @libc_cv_rootsbindir@
+infodir = @infodir@
+includedir = @includedir@
+datarootdir = @datarootdir@
+localstatedir = @libc_cv_localstatedir@
+localedir = @localedir@
+multidir= @libc_cv_multidir@
+
+# Should we use and build ldconfig?
+use-ldconfig = @use_ldconfig@
+
+# Maybe the `ldd' script must be rewritten.
+ldd-rewrite-script = @ldd_rewrite_script@
+
+# System configuration.
+config-machine = @host_cpu@
+base-machine = @base_machine@
+config-vendor = @host_vendor@
+config-os = @host_os@
+config-sysdirs = @sysnames@
+cflags-cpu = @libc_cv_cc_submachine@
+asflags-cpu = @libc_cv_cc_submachine@
+
+config-extra-cflags = @libc_extra_cflags@
+config-extra-cppflags = @libc_extra_cppflags@
+config-cflags-nofma = @libc_cv_cc_nofma@
+
+defines = @DEFINES@
+sysheaders = @sysheaders@
+sysincludes = @SYSINCLUDES@
+c++-sysincludes = @CXX_SYSINCLUDES@
+c++-cstdlib-header = @CXX_CSTDLIB_HEADER@
+c++-cmath-header = @CXX_CMATH_HEADER@
+c++-bits-std_abs-h = @CXX_BITS_STD_ABS_H@
+all-warnings = @all_warnings@
+enable-werror = @enable_werror@
+
+have-z-combreloc = @libc_cv_z_combreloc@
+have-z-execstack = @libc_cv_z_execstack@
+have-protected-data = @libc_cv_protected_data@
+have-insert = @libc_cv_insert@
+have-glob-dat-reloc = @libc_cv_has_glob_dat@
+with-fp = @libc_cv_with_fp@
+enable-timezone-tools = @enable_timezone_tools@
+unwind-find-fde = @libc_cv_gcc_unwind_find_fde@
+have-fpie = @libc_cv_fpie@
+have-ssp = @libc_cv_ssp@
+stack-protector = @stack_protector@
+no-stack-protector = @no_stack_protector@
+have-selinux = @have_selinux@
+have-libaudit = @have_libaudit@
+have-libcap = @have_libcap@
+have-cc-with-libunwind = @libc_cv_cc_with_libunwind@
+fno-unit-at-a-time = @fno_unit_at_a_time@
+bind-now = @bindnow@
+have-hash-style = @libc_cv_hashstyle@
+use-default-link = @use_default_link@
+have-cxx-thread_local = @libc_cv_cxx_thread_local@
+have-loop-to-function = @libc_cv_cc_loop_to_function@
+have-textrel_ifunc = @libc_cv_textrel_ifunc@
+
+multi-arch = @multi_arch@
+
+mach-interface-list = @mach_interface_list@
+
+experimental-malloc = @experimental_malloc@
+
+memory-tagging = @memory_tagging@
+
+nss-crypt = @libc_cv_nss_crypt@
+static-nss-crypt = @libc_cv_static_nss_crypt@
+
+# Configuration options.
+build-shared = @shared@
+build-pic-default= @libc_cv_pic_default@
+build-pie-default= @libc_cv_pie_default@
+cc-pie-default= @libc_cv_cc_pie_default@
+build-profile = @profile@
+build-static-nss = @static_nss@
+cross-compiling = @cross_compiling@
+force-install = @force_install@
+build-crypt = @build_crypt@
+build-nscd = @build_nscd@
+use-nscd = @use_nscd@
+build-hardcoded-path-in-tests= @hardcoded_path_in_tests@
+build-pt-chown = @build_pt_chown@
+have-tunables = @have_tunables@
+pthread-in-libc = @pthread_in_libc@
+
+# Build tools.
+CC = @CC@
+CXX = @CXX@
+BUILD_CC = @BUILD_CC@
+CFLAGS = @CFLAGS@
+CPPFLAGS-config = @CPPFLAGS@
+CPPUNDEFS = @CPPUNDEFS@
+extra-nonshared-cflags = @extra_nonshared_cflags@
+ASFLAGS-config = @ASFLAGS_config@
+AR = @AR@
+NM = @NM@
+MAKEINFO = @MAKEINFO@
+AS = $(CC) -c
+BISON = @BISON@
+AUTOCONF = @AUTOCONF@
+OBJDUMP = @OBJDUMP@
+OBJCOPY = @OBJCOPY@
+GPROF = @GPROF@
+READELF = @READELF@
+LLVM_DIS = @LLVM_DIS@
+
+# Installation tools.
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_INFO = @INSTALL_INFO@
+LN_S = @LN_S@
+MSGFMT = @MSGFMT@
+
+# Script execution tools.
+BASH = @BASH_SHELL@
+AWK = @AWK@
+PERL = @PERL@
+PYTHON = @PYTHON@
+
+# Additional libraries.
+LIBGD = @LIBGD@
+
+# Package versions and bug reporting configuration.
+PKGVERSION = @PKGVERSION@
+PKGVERSION_TEXI = @PKGVERSION_TEXI@
+REPORT_BUGS_TO = @REPORT_BUGS_TO@
+REPORT_BUGS_TEXI = @REPORT_BUGS_TEXI@
+
+# More variables may be inserted below by configure.

@@ -1,0 +1,87 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Swedish Language Locale for Finland with Euro
+% Language: sv
+% Territory: FI
+% Option: euro
+% Date: 2000-08-21
+% Users: general
+
+LC_IDENTIFICATION
+title      "Swedish locale for Finland with Euro"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Swedish"
+territory  "Finland"
+revision   "1.0"
+date       "2000-08-21"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "sv_FI"
+END LC_CTYPE
+
+LC_COLLATE
+copy "sv_SE"
+END LC_COLLATE
+
+LC_MESSAGES
+copy "sv_FI"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "fi_FI@euro"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "fi_FI"
+END LC_NUMERIC
+
+LC_TIME
+copy "sv_FI"
+END LC_TIME
+
+LC_PAPER
+copy "sv_FI"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "sv_FI"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "sv_FI"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "sv_FI"
+END LC_NAME
+
+LC_ADDRESS
+copy "sv_FI"
+END LC_ADDRESS

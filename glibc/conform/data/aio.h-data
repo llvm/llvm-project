@@ -1,0 +1,43 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined XPG42
+type {struct aiocb}
+
+// Test elements of the AIO control struct.
+element {struct aiocb} int aio_fildes
+element {struct aiocb} off_t aio_offset
+element {struct aiocb} {volatile void*} aio_buf
+element {struct aiocb} size_t aio_nbytes
+element {struct aiocb} int aio_reqprio
+element {struct aiocb} {struct sigevent} aio_sigevent
+element {struct aiocb} int aio_lio_opcode
+
+constant AIO_CANCELED
+constant AIO_NOTCANCELED
+constant AIO_ALLDONE
+constant LIO_WAIT
+constant LIO_NOWAIT
+constant LIO_READ
+constant LIO_WRITE
+constant LIO_NOP
+
+function int aio_cancel (int, struct aiocb*)
+function int aio_error (const struct aiocb*)
+function int aio_fsync (int, struct aiocb*)
+function int aio_read (struct aiocb*)
+function ssize_t aio_return (struct aiocb*)
+function int aio_suspend (const struct aiocb* const[], int, const struct timespec*)
+function int aio_write (struct aiocb*)
+function int lio_listio (int, struct aiocb *const[], int, struct sigevent*)
+
+// POSIX in theory doesn't allow the header to be self contained but
+// this was fixed later and we do not test for this here.
+allow-header fcntl.h
+allow-header signal.h
+allow-header sys/types.h
+allow-header time.h
+
+allow aio_*
+allow lio_*
+allow AIO_*
+allow LIO_*
+allow *_t
+#endif

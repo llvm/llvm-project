@@ -1,0 +1,116 @@
+name: Flang build for Windows (build only)
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**/.github/workflows/build_flang_arm64.yml'
+      - '**/.github/workflows/build_flang.yml'
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+      - '**/.github/workflows/build_flang_arm64.yml'
+      - '**/.github/workflows/build_flang.yml'
+
+jobs:
+  build-win:
+    name: Windows build
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+          # - self-hosted
+        llvm_branch: [release_16x, release_17x]
+        include:
+          - os: windows-latest
+            arch: amd64
+            target: X86
+          # Enable Windows on ARM build, when an official
+          # self-hosted machine is available.
+          #- os: self-hosted
+          #  arch: arm64
+          #  target: AArch64
+    if: github.repository_owner == 'flang-compiler'
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Clean Workspace
+        run: Remove-Item * -Recurse -Force
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, so the job can access it
+      - uses: actions/checkout@v3
+
+      - name: Setup Windows
+        uses: llvm/actions/setup-windows@main
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Setup Ninja
+        uses: llvm/actions/install-ninja@main
+
+      - name: Setup Graphviz for Doxygen
+        if: ${{ matrix.os == 'windows-latest'}}
+        run: choco install  graphviz
+
+      - name: Setup Sphinx
+        if: ${{ matrix.os == 'windows-latest'}}
+        run: pip install sphinx
+
+      - name: Display path
+        run: write-output ${env:PATH}
+
+      - name: Check tools
+        run: |
+          git --version
+          cmake --version
+          clang --version
+          ninja --version
+
+      # Download artifacts for the classic-flang-llvm-project-related builds (all toolchains)
+      - name: Download artifact
+        run: |
+          cd ../..
+          # Search backwards in the workflow history for the specified branch
+          # for the first successful run that produced the desired artifact.
+          $build_name="llvm_build_win_${{ matrix.arch }}_clangcl_${{ matrix.llvm_branch }}"
+          Invoke-WebRequest -Uri https://api.github.com/repos/flang-compiler/classic-flang-llvm-project/actions/workflows/pre-compile_llvm.yml/runs -OutFile llvm_runs.json
+          $urls = @($(jq -r --arg b ${{ matrix.llvm_branch }} '.workflow_runs[] | select(.head_branch == $b) | select (.conclusion == ""success"") | .artifacts_url?' llvm_runs.json))
+          Invoke-WebRequest "$(jq -r '.workflow_runs[0].artifacts_url?' llvm_runs.json)" -OutFile llvm_artifacts.json
+          for ($i = 0; $i -lt $urls.Count; $i++) {
+            $artifacts_url = $urls[$i]
+            Invoke-WebRequest -Uri "$artifacts_url" -o llvm_artifacts.json
+            $archive_url = "$(jq -r --arg b $build_name '.artifacts[] | select(.name == $b) | .archive_download_url' llvm_artifacts.json)"
+            if (! $archive_url) {
+              Write-Output "$artifacts_url did not contain a $build_name archive; too old?"
+              continue
+            }
+            Write-Output "Downloading $archive_url."
+            $artifact_path = "$pwd\${build_name}.zip"
+            try {
+              $response = Invoke-WebRequest -Method Get -Uri $archive_url -OutFile $artifact_path -Headers @{ "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}" }
+              if ($response.StatusCode -lt 300) {
+                break
+              }
+            } catch {}
+          }
+          if (!(Test-Path "$artifact_path")) {
+            Write-Output "Could not download the correct prebuilt compiler; aborting."
+            exit 1
+          }
+          Expand-Archive -Force -Path "${build_name}.zip" -DestinationPath .
+          & 7z x "$pwd\llvm_build.7z" -o"$pwd\classic-flang-llvm-project\" -y
+          Write-Output "$(Get-ChildItem)"
+
+      - name: Build and install flang & libpgmath
+        run: |
+          $pcount = $($(Get-WmiObject -class Win32_ComputerSystem).numberoflogicalprocessors)
+          python .\scripts\build_flang.py -d build -t ${{ matrix.target }} -p "$(pwd)\..\..\classic-flang-llvm-project\classic-flang-llvm-project\build\" -j $pcount -v
+        shell: powershell
+
+      - name: Copy llvm-lit
+        run: |
+          Copy-Item "$(pwd)\..\..\classic-flang-llvm-project\classic-flang-llvm-project\build\" -Destination build\bin\.
+
+      - name: Test flang
+        run: |
+          echo "Flang tests aren't supported on Windows at the moment."

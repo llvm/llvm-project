@@ -1,0 +1,156 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Locale for Kinyarwanda locale in Rwanda
+% Contributed by Steve Murphy <murf@e-tools.com>, 2004
+% with help from:
+%  Mr. Safali
+
+LC_IDENTIFICATION
+title      "Kinyarwanda language locale for Rwanda"
+source     "Rwanda"
+address    "Rwanda, Africa"
+contact    "Steve Murphy"
+email      "murf@e-tools.com"
+tel        ""
+fax        ""
+language   "Kinyarwanda"
+territory  "Rwanda"
+revision   "1.0"
+date       "2004-02-24"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+END LC_COLLATE
+
+
+LC_MONETARY
+int_curr_symbol           "RWF "
+currency_symbol           "FRw"
+mon_decimal_point         ","
+mon_thousands_sep         "."
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             ""
+grouping                  -1
+END LC_NUMERIC
+
+LC_TIME
+abday   "Mwe";"Mbe";/
+        "Kab";"Gtu";/
+        "Kan";"Gnu";/
+        "Gnd"
+day     "Ku cyumweru";/
+        "Kuwa mbere";/
+        "Kuwa kabiri";/
+        "Kuwa gatatu";/
+        "Kuwa kane";/
+        "Kuwa gatanu";/
+        "Kuwa gatandatu"
+abmon   "Mut";"Gas";/
+        "Wer";"Mat";/
+        "Gic";"Kam";/
+        "Nya";"Kan";/
+        "Nze";"Ukw";/
+        "Ugu";"Uku"
+mon     "Mutarama";/
+        "Gashyantare";/
+        "Werurwe";/
+        "Mata";/
+        "Gicuransi";/
+        "Kamena";/
+        "Nyakanga";/
+        "Kanama";/
+        "Nzeli";/
+        "Ukwakira";/
+        "Ugushyingo";/
+        "Ukuboza"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY]"
+noexpr  "^[-0nNoO]"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name   "U Rwanda"
+country_ab2    "RW"
+country_ab3    "RWA"
+country_num 646
+country_car  "RWA"
+lang_name      "Kinyarwanda"
+lang_ab        "rw"
+lang_term      "kin"
+lang_lib       "kin"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "%a%l"
+int_prefix     "250"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

@@ -1,0 +1,4 @@
+# DEFAULT			Earliest symbol set
+# ---------------		------------------------------
+DEFAULT			GLIBC_2.16
+ld=ld-linux-x32.so.2

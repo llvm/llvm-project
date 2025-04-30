@@ -1,0 +1,26 @@
+#include <stddef.h>
+#include <signal.h>
+#include <sys/ucontext.h>
+
+--
+
+SIG_BLOCK
+SIG_SETMASK
+
+-- Offsets in ucontext_t.
+#define ucontext(member)	offsetof (ucontext_t, member)
+_UC_LINK		ucontext (uc_link)
+_UC_STACK_SP		ucontext (uc_stack.ss_sp)
+_UC_STACK_SIZE		ucontext (uc_stack.ss_size)
+_UC_REGS_PTR		ucontext (uc_mcontext.uc_regs)
+_UC_SIGMASK		ucontext (uc_sigmask)
+_UC_REG_SPACE		ucontext (uc_reg_space)
+
+-- Offsets in mcontext_t.
+#define mcontext(member)	offsetof (mcontext_t, member)
+_UC_GREGS		mcontext (gregs)
+_UC_FREGS		mcontext (fpregs)
+_UC_VREGS		mcontext (vrregs)
+_UC_VREGS		mcontext (vrregs)
+_UC_VSCR		mcontext (vrregs.vscr)
+_UC_VRSAVE		mcontext (vrregs.vrsave)

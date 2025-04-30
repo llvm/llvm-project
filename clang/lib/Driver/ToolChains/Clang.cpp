@@ -10,10 +10,10 @@
 #include "AMDGPU.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
-#include "Arch/CSKY.h"
 #include "Arch/LoongArch.h"
 #include "Arch/M68k.h"
 #include "Arch/Mips.h"
+#include "Arch/Next32.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
 #include "Arch/Sparc.h"
@@ -22,7 +22,6 @@
 #include "Arch/X86.h"
 #include "CommonArgs.h"
 #include "Hexagon.h"
-#include "MSP430.h"
 #include "PS4CPU.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CharInfo.h"
@@ -1743,6 +1742,10 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   case llvm::Triple::ve:
     AddVETargetArgs(Args, CmdArgs);
     break;
+
+  case llvm::Triple::next32:
+    AddNext32TargetArgs(Args, CmdArgs);
+    break;
   }
 }
 
@@ -2412,6 +2415,14 @@ void Clang::AddVETargetArgs(const ArgList &Args, ArgStringList &CmdArgs) const {
   // Floating point operations and argument passing are hard.
   CmdArgs.push_back("-mfloat-abi");
   CmdArgs.push_back("hard");
+}
+
+void Clang::AddNext32TargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Args.hasArg(options::OPT_mnext32disablemem2reg)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--disable-next32-mem2reg");
+  }
 }
 
 void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
@@ -5660,6 +5671,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+#ifndef ENABLE_CLASSIC_FLANG
   if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
     StringRef Name = A->getValue();
     if (Name == "SVML") {
@@ -5680,6 +5692,81 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
     A->render(Args, CmdArgs);
   }
+#else
+  if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef Name = A->getValue();
+    if (Name == "SVML") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "LIBMVEC-X86") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "SLEEF") {
+      if (Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    }
+    A->render(Args, CmdArgs);
+  } else
+    CmdArgs.push_back("-fveclib=PGMATH");
+
+  std::string PassRemarkVal(""), PassRemarkOpt("");
+  if (Args.getLastArg(options::OPT_Minfoall)) {
+    PassRemarkVal = ".*";
+    Args.ClaimAllArgs(options::OPT_Minfoall);
+  } else if (Arg *A = Args.getLastArg(options::OPT_Minfo_EQ)) {
+    for (StringRef val : A->getValues()) {
+      if (val == "all") {
+        PassRemarkVal = ".*";
+        break;
+      } else if (val == "inline" || val == "vect") {
+        PassRemarkVal += PassRemarkVal.empty() ? "" : "|";
+        PassRemarkVal += val;
+      } else {
+        D.Diag(diag::err_drv_clang_unsupported_minfo_arg)
+            << A->getOption().getName() << val.str();
+        break;
+      }
+    }
+  }
+  PassRemarkOpt = "-pass-remarks=" + PassRemarkVal;
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back(Args.MakeArgString(PassRemarkOpt));
+  Args.ClaimAllArgs(options::OPT_Minfo_EQ);
+  PassRemarkVal.clear();
+  PassRemarkOpt.clear();
+
+  if (Args.getLastArg(options::OPT_Mneginfoall)) {
+    PassRemarkVal = ".*";
+    Args.ClaimAllArgs(options::OPT_Mneginfoall);
+  } else if (Arg *A = Args.getLastArg(options::OPT_Mneginfo_EQ)) {
+    for (StringRef val : A->getValues()) {
+      if (val == "all") {
+        PassRemarkVal = ".*";
+        break;
+      } else if (val == "inline" || val == "vect") {
+        PassRemarkVal += PassRemarkVal.empty() ? "" : "|";
+        PassRemarkVal += val;
+      } else {
+        D.Diag(diag::err_drv_clang_unsupported_minfo_arg)
+            << A->getOption().getName() << val.str();
+        break;
+      }
+    }
+  }
+  PassRemarkOpt = "-pass-remarks-missed=" + PassRemarkVal;
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back(Args.MakeArgString(PassRemarkOpt));
+  PassRemarkOpt = "-pass-remarks-analysis=" + PassRemarkVal;
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back(Args.MakeArgString(PassRemarkOpt));
+  Args.ClaimAllArgs(options::OPT_Mneginfo_EQ);
+#endif
 
   if (Args.hasFlag(options::OPT_fmerge_all_constants,
                    options::OPT_fno_merge_all_constants, false))
@@ -6671,6 +6758,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasFlag(options::OPT_fopenmp_target_debug,
                        options::OPT_fno_openmp_target_debug, /*Default=*/false))
         CmdArgs.push_back("-fopenmp-target-debug");
+
+      if (Args.hasArg(options::OPT_fopenmp_default_first_private))
+        CmdArgs.push_back("-fopenmp-default-first-private");
 
       // When in OpenMP offloading mode, forward assumptions information about
       // thread and team counts in the device.

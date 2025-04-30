@@ -1,0 +1,134 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Frisian Language Locale for the Netherlands
+% Language: fy
+% Territory: NL
+% Date: 2006-8-13
+% Users: general
+
+LC_IDENTIFICATION
+title      "Frisian locale for the Netherlands"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Western Frisian"
+territory  "Netherlands"
+revision   "1.0"
+date       "2006-08-13"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "nl_NL"
+END LC_CTYPE
+
+LC_COLLATE
+copy "nl_NL"
+END LC_COLLATE
+
+LC_TIME
+abday   "Sn";"Mo";"Ti";"Wo";"To";"Fr";"Sn"
+day     "Snein";/
+        "Moandei";/
+        "Tiisdei";/
+        "Woansdei";/
+        "Tongersdei";/
+        "Freed";/
+        "Sneon"
+abmon   "Jan";/
+        "Feb";/
+        "Mrt";/
+        "Apr";/
+        "Mai";/
+        "Jun";/
+        "Jul";/
+        "Aug";/
+        "Sep";/
+        "Okt";/
+        "Nov";/
+        "Des"
+mon     "Jannewaris";/
+        "Febrewaris";/
+        "Maart";/
+        "April";/
+        "Maaie";/
+        "Juny";/
+        "July";/
+        "Augustus";/
+        "Septimber";/
+        "Oktober";/
+        "Novimber";/
+        "Desimber"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d-%m-%y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "nl_NL"
+END LC_NUMERIC
+
+LC_MONETARY
+copy "nl_NL"
+END LC_MONETARY
+
+LC_MEASUREMENT
+copy "nl_NL"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+copy "nl_NL"
+END LC_MESSAGES
+
+LC_PAPER
+copy "nl_NL"
+END LC_PAPER
+
+LC_NAME
+copy "nl_NL"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Nederl<U00E2>n"
+country_ab2 "NL"
+country_ab3 "NLD"
+country_num 528
+country_car "NL"
+lang_name    "West-Frysk"
+lang_ab      "fy"
+lang_term    "fry"
+lang_lib "fry"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "nl_NL"
+END LC_TELEPHONE

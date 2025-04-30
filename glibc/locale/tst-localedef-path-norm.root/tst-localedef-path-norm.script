@@ -1,0 +1,2 @@
+# Must run localedef as root to write into default paths.
+su

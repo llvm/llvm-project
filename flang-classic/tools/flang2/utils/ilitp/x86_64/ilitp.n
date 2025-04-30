@@ -1,0 +1,6783 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 13 "X86-64 ILI Definitions"
+.sh 2 "Key to ILI Template Listing"
+.lp
+.de OP
+.ip \f(CW\\$1\fP 12n
+..
+.ul
+ILI Operand Types:
+.OP irlnk
+link to previous ili with result type ir.
+.OP splnk
+link to previous ili with result type sp.
+.OP dplnk
+link to previous ili with result type dp.
+.OP arlnk
+link to previous ili with result type ar.
+.OP krlnk
+link to previous ili with result type kr.
+.OP qplnk
+link to previous ili with result type qp.
+.OP cslnk
+link to previous ili with result type cs.
+.OP cdlnk
+link to previous ili with result type cd.
+.OP cqlnk
+link to previous ili with result type cq.
+.OP 128lnk
+link to previous ili with result type 128.
+.OP 256lnk
+link to previous ili with result type 256.
+.OP 512lnk
+link to previous ili with result type 512.
+.OP x87lnk
+link to previous ili with result type x87.
+.OP lnk
+link to previous ili with result type lnk.
+.OP ir
+integer register number (for x86-64, one of the general purpose registers).
+.OP sp
+floating-point register number.
+.OP dp
+double-precision register.
+.OP kr
+64 bit integer register.
+.OP cs
+single(4+4 bytes) precision complex register.
+.OP cd
+double(8+8 bytes) precision complex register.
+.OP cq
+16x2 bytes complex register.
+.OP qp
+16x2 bytes register.
+.OP 128
+128 bits register.
+.OP 256
+256 bits register.
+.OP 512
+512 bits register.
+.OP x87
+80-bit x87 register.
+.OP ar
+Address register (for x86-64, one of the general purpose registers).
+.OP stc
+16 bit constant.  May be interpreted as either signed or unsigned depending
+on the machine instruction operand which uses it.
+.OP nme
+pointer to names table entry for a load or store.
+.OP sym
+symbol table pointer.
+
+.de TY
+.ip \f(CW\\$1\fP 12n
+..
+.lp
+.ul
+ILI Types (1st attribute of each ILI):
+.TY arth
+arithmetic operation.
+.TY branch
+branch operation.
+.TY cons
+constant.
+.TY load
+.TY store
+.TY define
+register define.
+.TY proc
+function call.
+.TY move
+register move.
+.TY other
+.sp
+.de CM
+.ip \f(CW\\$1\fP 12n
+..
+.de RT
+.ip \f(CW\\$1\fP 12n
+..
+.lp
+.ul
+Commutivity attribute (2nd attribute of each ILI):
+.CM comm
+Commutative operation.
+.CM null
+Not commutative.
+.sp
+.lp
+.ul
+ILI result type (3rd attribute of each ILI):
+.RT lnk
+no result, but ili is pointed-to by link.
+.RT ir
+result goes into an integer register.
+.RT sp
+result goes into a floating-point register.
+.RT dp
+double-precision floating-point.
+.RT ar
+address register result.
+.RT trm
+this ili does not produce a value and cannot be pointed to by any
+link operand of another ili.
+.de IA
+.ip \f(CW\\$1\fP 12n
+..
+.lp
+.ul
+Other ILI Attributes:
+.IA dom
+specifies that this ili is a dominator ili.
+.IA cse
+specifies that this ili is a candidate for constant subexpression elimination.
+An ili is not allowed to have both the cse and the dom attributes.
+.IA ssenme
+indicates that this is an sse operation with operand 1 an arlnk field and
+operand 3 a nme field.
+.sp
+.de CA
+.ip \f(CW\\$1\fP 12n
+..
+.lp
+.ul
+Code Generator ILI Attributes (x86-64 compilers):
+.CA notCG
+ili opcode never used within the code generator, though it may process
+such an ili while linearizing the shared ili form.
+.CA CGonly
+ili is created and used only by the code generator.
+.CA notAILI
+opcode which should not appear in the AILI (set automatically if notCG
+is specified).
+.CA replaceby
+specifies opcode which replaces this one during linearization.
+.CA terminal
+specifies ili for which code_gen is called directly from cgmain.
+.CA move
+Indicates aili which can be eliminated if src1 is the same as dest.
+.CA conditional_branch
+.CA asm_special
+during generation of assembly code by the code generator,
+this opcode is treated as a special case.
+.CA asm_nop
+No assembly output is required for this aili.
+.\".sp
+.\".lp
+.\".ul
+.\"Scheduling Attributes (x86-64 compilers):
+.sp 2
+.br
+.sp 2
+.sh 2 "ILI Definitions"
+.ft CW
+.sz 8
+.nr IN 0 1
+.\"
+.\"  define macro used to define ilo:
+.de IL
+.nr IN +1
+.in 0
+.ne 5
+.nf
+\\n(IN. \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8
+.in 5
+.fi
+..
+.de FL
+.sp
+.in 0
+.ne 5
+.nf
+XX. \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 - (Fortran only)
+.in 5
+.fi
+..
+.de CL
+.sp
+.in 0
+.ne 5
+.nf
+XX. \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 - (C only)
+.in 5
+.fi
+..
+.de OL
+.sp
+.in 0
+.ne 5
+.nf
+XX. \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 - (OpenCL only)
+.in 5
+.fi
+..
+.\"
+.\"  define macro used to define ilo attributes:
+.de AT
+.br
+Attributes:  \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.br
+..
+.de CG
+.br
+Code Generator Attributes:  \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.sp
+.br
+..
+.\".de SI
+.\".br
+.\"Scheduling Attributes:  \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.\".sp
+.\".br
+.\"..
+.\"
+.\"  define macro used to define machine instruction for an ilo:
+.ta 33 36 40 44 48 52 56 60 64 68 72 76 80
+.\"  begin ilo definitions:
+.\"
+
+.IL ICON sym
+32-bit integer constant.
+.br
+The value is pulled from the CONVAL2 field of sym.
+.AT cons null ir cse
+.CG "mov" 'l'
+.SI direct lat(1)
+
+.IL ACON sym
+Load address constant into address register.
+\'sym' must be a symtab ptr to an address constant.
+.AT cons null ar cse
+.CG notAILI
+
+.IL ACON_PIC_EXTRN sym
+Address constant used for PIC generation.  It represents the load
+of the address of an external variable from the GOTPCREL table.
+\'sym' is the symbol table pointer for the external variable, NOT
+an address constant symbol.
+.AT cons null ar cse
+.CG CGonly "mov" 'q' asm_special
+.SI direct lat(1)
+
+.IL ACON_STATIC sym sym
+Used in the linear ili to represent an address constant with
+a full 64-bit offset.  The first sym points to a static or external
+variable, or a label, and the second to a symbol table 64-bit integer constant.
+.AT cons null ar cse
+.CG CGonly "lea" 'q'
+.SI direct lat(2)
+
+.IL ACON_TLS sym
+Load a TLS immediate address
+\'sym' must be a symtab ptr to an address constant.
+.AT cons null ar
+.CG CGonly "lea" 'q' asm_special
+.SI direct lat(1)
+
+.IL ACON_TLS_PIC sym
+Load a TLS address that is stored as a PIC value
+\'sym' is the symbol table pointer for the external variable, NOT
+an address constant symbol.
+.AT cons null ar
+.CG CGonly "lea" 'q' asm_special
+.SI direct lat(1)
+
+.IL ACON_AUTO sym sym
+Same as ACON_STATIC, but the first sym is a stack variable.
+.AT cons null ar cse
+.CG CGonly "lea" 'q'
+.SI direct lat(2)
+
+.IL KCON sym
+64-bit integer constant.  'sym' is a symbol table constant of type
+DT_INT or DT_INT8.
+.AT cons null kr cse
+.CG "mov" 'q'
+.SI direct lat(1)
+
+.IL ACEXT sym nme
+Label address.
+\'sym' is address constant for label symbol.
+\'nme' is zero.
+.AT cons null ar cse
+.CG "mov"
+.SI direct lat(1)
+
+.IL FCON sym
+Single-precision floating-point constant.
+.AT cons null sp cse
+.CG "movss" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL DCON sym
+Double-precision floating-point constant.
+.AT cons null dp cse
+.CG "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL SCMPLXCON sym
+Single-precision complex constant.
+.AT cons null cs cse
+.CG "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL DCMPLXCON sym
+Double-precision complex constant.
+.AT cons null cd cse
+.CG "movapd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LD arlnk nme stc
+\'arlnk' points to an address expression.
+.br
+\'nme' points to the names table entry of the variable being referenced.
+.br
+\'stc' size modifier of the memory operation - one of the MSZ_ macros
+defined in ili.h.
+For the code generator, possible values are:
+        MSZ_SBYTE	signed byte
+        MSZ_UBYTE	unsigned byte
+        MSZ_SHWORD	signed half-word
+        MSZ_UHWORD	unsigned half-word
+        MSZ_SWORD	signed word (32-bit)
+        MSZ_UWORD	unsigned word
+.AT load null ir
+.CG "mov" move
+.SI direct lat(1)
+.SI ld direct lat(3)
+.SI st direct lat(3)
+
+.IL LDSP arlnk nme stc
+Load single-precision floating value.  'stc' is not used.
+.AT load null sp
+.CG "movss" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL LDDP arlnk nme stc
+Load double precision value.  'stc' is not used.
+.AT load null dp
+.CG "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LDSCMPLX arlnk nme stc
+Load single precision complex value.  'stc' is not used.
+.AT load null cs
+.CG "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LDDCMPLX arlnk nme stc
+Load double precision complex value.  'stc' is not used.
+.AT load null cd
+.CG "movupd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LDQ arlnk nme stc
+Load an __m128 value.  'stc' is not used.
+.AT load null dp
+.CG "movapd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LDQU arlnk nme stc
+Load an unaligned __m128 value.  'stc' is not used.
+.AT load null dp
+.CG "movupd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LD256 arlnk nme stc
+Load an __m256 value.  'stc' is not used.
+May generate a LD256U.
+.AT load null dp
+.CG "vmovapd" 'y' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LD256A arlnk nme stc
+Load an aligned __m256 value.  'stc' is not used.
+Will generate the aligned case for LD256.
+.AT load null dp
+.CG notAILI
+
+.IL LD256U arlnk nme stc
+Load an unaligned __m256 value.  'stc' is not used.
+.AT load null dp
+.CG "vmovupd" 'y' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LD512 arlnk nme stc
+Load an __m512 value.  'stc' is not used.
+.AT load null 512
+.CG "vmovupd" 'z' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL LDA arlnk nme
+Load address register from memory location whose address
+is represented by op1.
+For x86-64 compilers, LDA's are replaced by LDKR's by cgoptim1.
+.AT load null ar
+.CG notAILI
+
+.IL LDKR arlnk nme stc
+Load 64 bit integer value.  'stc' is not used.
+.AT load null kr
+.CG notAILI
+
+.IL INEG irlnk
+Signed integer32 negate.
+.AT arth null ir cse
+.CG memdest ccarith "neg" 'l'
+.SI direct lat(4:1)
+
+.IL UINEG irlnk
+Unsigned integer32 negate.
+.AT arth null ir cse
+.CG notCG replaceby INEG
+
+.IL KNEG krlnk
+Signed integer64 negate.
+.AT arth null kr cse
+.CG memdest ccarith "neg" 'q'
+.SI direct lat(4:1)
+
+.IL UKNEG krlnk
+Unsigned integer64 negate.
+.AT arth null kr cse
+.CG notCG replaceby KNEG
+
+.IL FNEG splnk
+Real*4 negation.  This LILI is replaced by an FXOR LILI in
+cgoptim1.c:lili_peephole_opts_2().
+.AT arth null sp cse
+.CG notAILI
+
+.IL DNEG dplnk
+Real*8 negation.  This LILI is replaced by a DXOR LILI in
+cgoptim1.c:lili_peephole_opts_2().
+.AT arth null dp cse
+.CG notAILI
+
+.IL SCMPLXNEG cslnk
+Complex*8 negation.  This LILI is replaced by an SCMPLXXOR LILI in
+cgoptim1.c:lili_peephole_opts_2().
+.AT arth null cs cse
+.CG notAILI
+
+.IL DCMPLXNEG cdlnk
+Complex*16 negation.  This LILI is replaced by a DCMPLXXOR LILI in
+cgoptim1.c:lili_peephole_opts_2().
+.AT arth null cd cse
+.CG notAILI
+
+.IL FXOR splnk splnk
+This only appears in the LILIs and AILIs, not in shared ILIs.  It is
+generated in cgoptim1.c:lili_peephole_opts_2() by transforming
+FNEG( op1 ) into an FXOR LILI in order to negate 'op1' by XORing its
+sign bit with 1.  This ILI is specified as non-commutative
+(i.e. 'null', not 'comm') for reasons explained in that function.
+.AT arth null sp cse
+.CG CGonly "xorps" sse_avx
+
+.IL DXOR dplnk dplnk
+This only appears in the LILIs and AILIs, not in shared ILIs.  It is
+generated in cgoptim1.c:lili_peephole_opts_2() by transforming
+DNEG( op1 ) into a DXOR LILI in order to negate 'op1' by XORing its
+sign bit with 1.  This ILI is specified as non-commutative
+(i.e. 'null', not 'comm') for reasons explained in that function.
+.AT arth null dp cse
+.CG CGonly "xorpd" sse_avx
+.SI double fmul lat(5:3)
+
+.IL SCMPLXXOR cslnk cslnk
+This only appears in the LILIs and AILIs, not in shared ILIs.  It is
+generated in cgoptim1.c:lili_peephole_opts_2() by transforming
+SCMPLXNEG( op1 ) into an SCMPLXXOR LILI in order to negate 'op1' by
+XORing its sign bits with 1.  This ILI is specified as non-commutative
+(i.e. 'null', not 'comm') for reasons explained in that function.
+.AT arth null cs cse
+.CG CGonly "xorps" sse_avx
+
+.IL DCMPLXXOR cdlnk cdlnk
+This only appears in the LILIs and AILIs, not in shared ILIs.  It is
+generated in cgoptim1.c:lili_peephole_opts_2() by transforming
+DCMPLXNEG( op1 ) into a DCMPLXXOR LILI in order to negate 'op1' by
+XORing its sign bits with 1.  This ILI is specified as non-commutative
+(i.e. 'null', not 'comm') for reasons explained in that function.
+.AT arth null cd cse
+.CG CGonly "xorpd" sse_avx
+
+.IL SCMPLXCONJG cslnk
+Single-precision complex conjugate.
+.AT arth null cs cse
+.CG "xorps" sse_avx asm_special
+
+.IL DCMPLXCONJG cdlnk
+Double-precision complex conjugate.
+.AT arth null cd cse
+.CG "xorpd" sse_avx asm_special
+
+.IL IABS irlnk
+Integer absolute value.  Expanded into shift-xor-sub sequence.
+.AT arth null ir cse
+.CG notCG
+
+.IL KABS krlnk
+Integer64 absolute value.  Expanded into shift-xor-sub sequence.
+.AT arth null kr cse
+.CG notCG
+
+.IL FABS splnk
+Real (single-precision) absolute value.
+.AT arth null sp cse
+.CG notAILI
+
+.IL FAND splnk splnk
+This is generated either in iliutil.c:addarth() to implement an
+approximate scalar FSQRT or in cglinear.c:gen_lilis() to compute
+FABS( op1 ) by clearing 'op1's sign bit.  This ILI is specified as
+non-commutative (i.e. 'null', not 'comm') for the same reason that
+FXOR is non-commutative.
+.AT arth null sp cse
+.CG "andps" sse_avx
+.SI double fmul lat(5:3)
+
+.IL DABS dplnk
+Double precision absolute value.
+.AT arth null dp cse
+.CG notAILI
+
+.IL DAND dplnk dplnk
+This only appears in the LILIs and AILIs, not in shared ILIs.  It is
+generated in cglinear.c:gen_lilis() by transforming a DABS( op1 ) ILI
+into a DAND LILI which computes the absolute value of 'op1' by
+clearing its sign bit.  This ILI is specified as non-commutative
+(i.e. 'null', not 'comm') for the same reason that DXOR is
+non-commutative.
+.AT arth null dp cse
+.CG CGonly "andpd" sse_avx
+.SI direct fadd lat(5:3)
+
+.IL NOT irlnk
+32 bit bitwise not.
+.AT arth null ir cse
+.CG memdest "not" 'l'
+.SI direct lat(4:1)
+
+.IL UNOT irlnk
+Unsigned bitwise negation of 32 bit bitwise not.
+.AT arth null ir cse
+.CG notCG replaceby NOT
+
+.IL KNOT krlnk
+64 bit bitwise not.
+.AT arth null kr cse
+.CG memdest "not" 'q'
+.SI direct lat(4:1)
+
+.IL UKNOT krlnk
+64 bit bitwise not.
+.AT arth null kr cse
+.CG notCG replaceby KNOT
+
+.IL FSQRT splnk
+Single-precision floating-point square root.
+.AT arth null sp cse
+.CG "sqrtss" avx_special
+.SI direct fmul lat(21:19)
+
+.IL DSQRT dplnk
+Double-precision square root.
+.AT arth null dp cse
+.CG "sqrtsd" avx_special
+.SI direct fmul lat(29:27)
+
+.IL FRSQRT splnk
+Single-precision floating-point reciprocal square root.
+1.0/sqrt(x) -- will be replaced by the Newton's appx via the
+ALT field
+.AT arth null sp cse
+.CG notCG
+
+.IL RCPSS splnk
+Single-precision approximation to reciprocal.
+.AT arth null sp cse
+.CG "rcpss" avx_special
+.SI direct fmul lat(21:19)
+
+.IL RSQRTSS splnk
+Single-precision approximation to reciprocal square root.
+.AT arth null sp cse
+.CG "rsqrtss" avx_special
+.SI direct fmul lat(21:19)
+
+.IL CMPNEQSS splnk splnk
+Used for single-precision square root approximation.
+.AT arth null sp cse
+.CG "cmpneqss" sse_avx
+
+.IL FNSIN splnk
+Utility ili: only referenced by the 'alt' field of an FSIN ili;
+always points to an FSINCOS ili.
+.AT arth null sp cse
+.CG notAILI
+
+.IL DNSIN dplnk
+Utility ili: only referenced by the 'alt' field of an DSIN ili;
+always points to an DSINCOS ili.
+.AT arth null dp cse
+.CG notAILI
+
+.IL FSIN splnk
+Single precision floating point sine.  Implemented as a function call.
+.AT arth null sp cse
+.CG notAILI
+
+.IL DSIN dplnk
+Double precision sine.  Implemented as a function call.
+.AT arth null dp cse
+.CG notAILI
+
+.IL FNCOS splnk
+Utility ili: only referenced by the 'alt' field of an FCOS ili;
+always points to an FSINCOS ili.
+.AT arth null sp cse
+.CG notAILI
+
+.IL DNCOS dplnk
+Utility ili: only referenced by the 'alt' field of an DCOS ili;
+always points to an DSINCOS ili.
+.AT arth null dp cse
+.CG notAILI
+
+.IL FCOS splnk
+Single precision floating point cosine.  Implemented as library call.
+.AT arth null sp cse
+.CG notAILI
+
+.IL DCOS dplnk
+Double precision cosine.  Implemented as library call.
+.AT arth null dp cse
+.CG notAILI
+
+.IL FSINCOS splnk
+Used to implement SINCOS optimization (single precision).
+.AT arth null sp cse
+.CG notAILI
+
+.IL DSINCOS dplnk
+Used to implement SINCOS optimization (double precision).
+.AT arth null dp cse
+.CG notAILI
+
+.IL FTAN splnk
+Single-precision floating-point tangent.
+.AT arth null sp cse
+.CG notCG
+
+.IL DTAN dplnk
+Double-precision tangent.
+.AT arth null dp cse
+.CG notCG
+
+.IL FLOG splnk
+Single-precision floating-point natural logarithm.
+.AT arth null sp cse
+.CG notCG
+
+.IL DLOG dplnk
+Double-precision natural logarithm.
+.AT arth null dp cse
+.CG notCG
+
+.IL FLOG10 splnk
+Single-precision floating-point common logarithm.
+.AT arth null sp cse
+.CG notCG
+
+.IL DLOG10 dplnk
+Double-precision common logarithm.
+.AT arth null dp cse
+.CG notCG
+
+.IL FEXP splnk
+Single-precision floating-point exponential.
+.AT arth null sp cse
+.CG notCG
+
+.IL DEXP dplnk
+Double-precision exponential.
+.AT arth null dp cse
+.CG notCG
+
+.IL FACOS splnk
+Single-precision floating-point arccosine.
+.AT arth null sp cse
+.CG notCG
+
+.IL DACOS dplnk
+Double-precision  arccosine.
+.AT arth null dp cse
+.CG notCG
+
+.IL FASIN splnk
+Single-precision floating-point arcsine.
+.AT arth null sp cse
+.CG notCG
+
+.IL DASIN dplnk
+Double-precision  arcsine.
+.AT arth null dp cse
+.CG notCG
+
+.IL FATAN splnk
+Single-precision floating-point arctangent.
+.AT arth null sp cse
+.CG notCG
+
+.IL DATAN dplnk
+Double-precision  arctangent.
+.AT arth null dp cse
+.CG notCG
+
+.IL FATAN2 splnk splnk
+Single-precision floating-point two-argument arctangent.
+.AT arth null sp cse
+.CG notCG
+
+.IL DATAN2 dplnk dplnk
+Double-precision two-argument arctangent.
+.AT arth null dp cse
+.CG notCG
+
+.IL FSINH splnk
+Single-precision floating-point hyperbolic sin
+.AT arth null sp cse
+.CG notCG
+
+.IL DSINH dplnk
+Double-precision hyperbolic sin
+.AT arth null dp cse
+.CG notCG
+
+.IL FCOSH splnk
+Single-precision floating-point hyperbolic cos
+.AT arth null sp cse
+.CG notCG
+
+.IL DCOSH dplnk
+Double-precision hyperbolic cos
+.AT arth null dp cse
+.CG notCG
+
+.IL FTANH splnk
+Single-precision floating-point hyperbolic tan
+.AT arth null sp cse
+.CG notCG
+
+.IL DTANH dplnk
+Double-precision hyperbolic tan
+.AT arth null dp cse
+.CG notCG
+
+.IL FNEWT splnk splnk splnk
+Single-precision floating-point multiply used for single divides.
+Not used by the x86-64 compilers.
+.AT arth null sp cse
+.CG notCG
+
+.IL DNEWT dplnk dplnk dplnk
+Double-precision floating-point multiply used for double divides.
+Not used by the x86-64 compilers.
+.AT arth null dp cse
+.CG notCG
+
+.IL NINT splnk
+Real NINT.
+.AT arth null ir cse
+.CG notCG
+
+.IL KNINT splnk
+Real NINT.
+.AT arth null kr cse
+.CG notCG
+
+.IL IDNINT dplnk
+Double NINT.
+.AT arth null ir cse
+.CG notCG
+
+.IL KIDNINT dplnk
+Double NINT.
+.AT arth null kr cse
+.CG notCG
+
+.IL ISIGN irlnk irlnk
+Integer sign intrinsic.
+.AT arth null ir cse
+.CG notCG
+
+.IL SIGN splnk splnk
+Real sign.
+.AT arth null sp cse
+.CG notCG
+
+.IL DSIGN dplnk dplnk
+Double sign.
+.AT arth null dp cse
+.CG notCG
+
+.IL IDIM irlnk irlnk
+Integer dim intrinsic.
+.AT arth null ir cse
+.CG notCG
+
+.IL FDIM splnk splnk
+Real dim.
+.AT arth null sp cse
+.CG notCG
+
+.IL DDIM dplnk dplnk
+Double dim.
+.AT arth null dp cse
+.CG notCG
+
+.IL FFLOOR splnk
+Real FLOOR.
+.AT arth null sp cse
+.CG "roundss" sse_avx
+
+.IL DFLOOR dplnk
+Double FLOOR.
+.AT arth null dp cse
+.CG "roundsd" sse_avx
+
+.IL FCEIL splnk
+Real CEILING.
+.AT arth null sp cse
+.CG "roundss" sse_avx
+
+.IL DCEIL dplnk
+Double CEILING.
+.AT arth null dp cse
+.CG "roundsd" sse_avx
+
+.IL AINT splnk
+Single precision trunction. 
+.AT arth null sp cse
+.CG notAILI
+
+.IL DINT dplnk
+Double precision trunction. 
+.AT arth null dp cse
+.CG notAILI
+
+.IL SCMPLXEXP cslnk
+Single-precision complex exponential.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXEXP cdlnk
+Double-precision complex exponential.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXCOS cslnk
+Single-precision complex cosine.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXCOS cdlnk
+Double-precision complex cosine.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXSIN cslnk
+Single-precision complex sine.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXSIN cdlnk
+Double-precision complex sine.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXTAN cslnk
+Single-precision complex tangent.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXTAN cdlnk
+Double-precision complex tangent.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXACOS cslnk
+Single-precision complex arccosine.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXACOS cdlnk
+Double-precision complex arccosine.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXASIN cslnk
+Single-precision complex arcsine.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXASIN cdlnk
+Double-precision complex arcsine.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXATAN cslnk
+Single-precision complex arctangent.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXATAN cdlnk
+Double-precision complex arctangent.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXCOSH cslnk
+Single-precision complex hyperbolic cos.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXCOSH cdlnk
+Double-precision complex hyperbolic cos.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXSINH cslnk
+Single-precision complex hyperbolic sin.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXSINH cdlnk
+Double-precision complex hyperbolic sin.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXTANH cslnk
+Single-precision complex hyperbolic tan.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXTANH cdlnk
+Double-precision complex hyperbolic tan.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXLOG cslnk
+Single-precision complex natural logarithm.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXLOG cdlnk
+Double-precision complex natural logarithm.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXSQRT cslnk
+Single-precision complex square root.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXSQRT cdlnk
+Double-precision complex square root.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXPOW cslnk cslnk
+Single-precision complex raised to a single-precision complex power.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXPOW cdlnk cdlnk
+Double-precision complex raised to a double-precision complex power.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXPOWI cslnk irlnk
+Single-precision complex raised to an integer power.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXPOWI cdlnk irlnk
+Double-precision complex raised to an integer power.
+.AT arth null cd cse
+.CG notCG
+
+.IL SCMPLXPOWK cslnk krlnk
+Single-precision complex raised to an integer power.
+.AT arth null cs cse
+.CG notCG
+
+.IL DCMPLXPOWK cdlnk krlnk
+Double-precision complex raised to an integer power.
+.AT arth null cd cse
+.CG notCG
+
+.\"
+.\" Start of type conversion ILIs.
+.\"
+
+.IL ITOUI irlnk
+Integer to unsigned integer conversion.
+Treated as a nop by linearization.
+.AT arth null ir cse
+.CG notCG
+
+.IL UITOI irlnk
+Unsigned integer to integer conversion.
+Treated as a nop by linearization.
+.AT arth null ir cse
+.CG notCG
+
+
+.IL IKMV irlnk
+Signed integer*4 to signed or unsigned integer*8 type conversion.
+.AT move null kr cse
+.CG asm_special "movslq" 'q'
+.SI ld direct lat(1)
+.SI st direct lat(4)
+.SI direct lat(1)
+
+.IL PIKMV arlnk xmm nme
+Convert 'N' packed signed integer*4 values from 'arlnk' into 'N'
+packed signed or unsigned integer*8 values in 'xmm', where 'N' is 2, 4
+or 8 if 'xmm' is an xmm (>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512)
+register respectively.
+.AT other null trm ssenme
+.CG terminal "pmovsxdq" sse_avx
+
+.IL PIKMVX xmm xmm
+Convert 'N' packed signed integer*4 values from 'xmm1' (an xmm or ymm
+register) into 'N' packed signed or unsigned integer*8 values in
+'xmm2' (an xmm, ymm or zmm register), where 'N' is 2, 4 or 8 if 'xmm2'
+is an xmm (>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512) register
+respectively.
+.AT other null trm
+.CG terminal "pmovsxdq" avx_special
+
+
+.IL UIKMV irlnk
+Unsigned integer*4 to signed or unsigned integer*8 type conversion.
+.AT move null kr cse
+.CG asm_special "movl" 'q'
+
+.IL PUIKMV arlnk xmm nme
+Convert 'N' packed unsigned integer*4 values from 'arlnk' into 'N'
+packed signed or unsigned integer*8 values in 'xmm', where 'N' is 2, 4
+or 8 if 'xmm' is an xmm (>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512)
+register respectively.
+.AT other null trm ssenme
+.CG terminal "pmovzxdq" sse_avx
+
+.IL PUIKMVX xmm xmm
+Convert 'N' packed unsigned integer*4 values from 'xmm1' (an xmm or
+ymm register) into 'N' packed signed or unsigned integer*8 values in
+'xmm2' (an xmm, ymm or zmm register), where 'N' is 2, 4 or 8 if 'xmm2'
+is an xmm (>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512) register
+respectively.
+.AT other null trm
+.CG terminal "pmovzxdq" avx_special
+
+
+.IL KIMV krlnk
+Signed or unsigned integer*8 to signed or unsigned integer*4 type
+conversion with truncation.  Note, we mustn't treat this as a move for
+the purposes of register allocation.
+.AT move null ir cse
+.CG "mov" 'l'
+.SI direct lat(1)
+.SI ld direct lat(3)
+.SI st direct lat(3)
+
+.IL PKIMVX xmm xmm
+Truncate 'N' packed signed or unsigned integer*8 values from 'xmm1'
+(an xmm, ymm or zmm register) into 'N' packed signed or unsigned
+integer*4 values in 'xmm2' (an xmm or ymm register), where 'N' is 2, 4
+or 8 if 'xmm1' is an xmm, ymm or zmm register respectively.  This
+instruction requires support for AVX-512F and AVX-512VL, and the
+source operand must be a register (unusually for AVX instructions the
+destination can be a memory operand!).
+.AT other null trm
+.CG terminal "vpmovqd" avx_only avx_special
+
+
+.IL IAMV irlnk
+Move an integer reg into an address reg.
+Sign extension required?
+.AT move null ar cse
+.CG notCG replaceby IKMV
+
+.IL AIMV arlnk
+Move an address register to a integer register.
+Truncation required.
+.AT move null ir cse
+.CG notCG replaceby KIMV
+
+.IL KAMV krlnk
+Move an 64 bit integer reg into an address reg.
+Treated as a nop by Linearize.
+.AT move null ar cse
+.CG notCG
+
+.IL AKMV arlnk
+Move an address register to a 64 bit integer register.
+Treated as a nop in Linearize.
+.AT move null kr cse
+.CG notCG
+
+
+.IL MOVSB irlnk
+Load a signed byte into a 32 or 64 bit register.
+.AT move null ir
+.CG CGonly asm_special "movsb" 'l'
+
+.IL MOVSBQ irlnk
+Load a signed byte into a 64 bit register.  (JHM, 1 Oct 2013: Redundant?)
+.AT move null kr
+.CG CGonly asm_special "movsb" 'q'
+
+.IL PMOVSB arlnk xmm nme
+Convert 'N' packed signed byte values from 'arlnk' into 'N' packed
+integer*4 values in 'xmm', where 'N' is 4, 8 or 16 if 'xmm' is an xmm
+(>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512) register respectively.
+.AT other null trm ssenme
+.CG terminal "pmovsxbd" sse_avx
+
+.IL PMOVSBX xmm xmm
+Convert 'N' packed signed byte values from 'xmm1' (an xmm register)
+into 'N' packed integer*4 values in 'xmm2' (an xmm, ymm or zmm
+register), where 'N' is 4, 8 or 16 if 'xmm2' is an xmm (>= SSE4.1),
+ymm (>= AVX2) or zmm (AVX-512) register respectively.
+.AT other null trm
+.CG terminal "pmovsxbd" avx_special
+
+
+.IL MOVZB irlnk
+Load an unsigned byte into a 32 or 64 bit register.
+.AT move null ir
+.CG CGonly asm_special "movzb" 'l'
+
+.IL MOVZBQ irlnk
+Load an unsigned byte into a 64 bit register.  (JHM, 1 Oct 2013: Redundant?)
+.AT move null kr
+.CG CGonly asm_special "movzb" 'q'
+
+.IL PMOVZB arlnk xmm nme
+Convert 'N' packed unsigned byte values from 'arlnk' into 'N' packed
+integer*4 values in 'xmm', where 'N' is 4, 8 or 16 if 'xmm' is an xmm
+(>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512) register respectively.
+.AT other null trm ssenme
+.CG terminal "pmovzxbd" sse_avx
+
+.IL PMOVZBX xmm xmm
+Convert 'N' packed unsigned byte values from 'xmm1' (an xmm register)
+into 'N' packed integer*4 values in 'xmm2' (an xmm, ymm or zmm
+register), where 'N' is 4, 8 or 16 if 'xmm2' is an xmm (>= SSE4.1),
+ymm (>= AVX2) or zmm (AVX-512) register respectively.
+.AT other null trm
+.CG terminal "pmovzxbd" avx_special
+
+
+.IL MOVSW irlnk
+Load a signed integer*2 value into a 32 or 64 bit register.
+.AT move null ir
+.CG CGonly asm_special "movsw" 'l'
+
+.IL MOVSWQ irlnk
+Load a signed integer*2 value into a 64 bit register.
+(JHM, 1 Oct 2013: Redundant?)
+.AT move null kr
+.CG CGonly asm_special "movsw" 'q'
+
+.IL PMOVSW arlnk xmm nme
+Convert 'N' packed signed integer*2 values from 'arlnk' into 'N'
+packed integer*4 values in 'xmm', where 'N' is 4, 8 or 16 if 'xmm' is
+an xmm (>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512) register
+respectively.
+.AT other null trm ssenme
+.CG terminal "pmovsxwd" sse_avx
+
+.IL PMOVSWX xmm xmm
+Convert 'N' packed signed integer*2 values from 'xmm1' (an xmm or ymm
+register) into 'N' packed integer*4 values in 'xmm2' (an xmm, ymm or
+zmm register), where 'N' is 4, 8 or 16 if 'xmm2' is an xmm (>= SSE4.1),
+ymm (>= AVX2) or zmm (AVX-512) register respectively.
+.AT other null trm
+.CG terminal "pmovsxwd" avx_special
+
+
+.IL MOVZW irlnk
+Load an unsigned integer*2 value into a 32 or 64 bit register.
+.AT move null ir
+.CG CGonly asm_special "movzw" 'l'
+
+.IL MOVZWQ irlnk
+Load an unsigned integer*2 value into a 64 bit register.
+(JHM, 1 Oct 2013: Redundant?)
+.AT move null kr
+.CG CGonly asm_special "movzw" 'q'
+
+.IL PMOVZW arlnk xmm nme
+Convert 'N' packed unsigned integer*2 values from 'arlnk' into 'N'
+packed integer*4 values in 'xmm', where 'N' is 4, 8 or 16 if 'xmm' is
+an xmm (>= SSE4.1), ymm (>= AVX2) or zmm (AVX-512) register
+respectively.
+.AT other null trm ssenme
+.CG terminal "pmovzxwd" sse_avx
+
+.IL PMOVZWX xmm xmm
+Convert 'N' packed unsigned integer*2 values from 'xmm1' (an xmm or
+ymm register) into 'N' packed integer*4 values in 'xmm2' (an xmm, ymm
+or zmm register), where 'N' is 4, 8 or 16 if 'xmm2' is an xmm (>= SSE4.1),
+ymm (>= AVX2) or zmm (AVX-512) register respectively.
+.AT other null trm
+.CG terminal "pmovzxwd" avx_special
+
+
+.IL FLOAT irlnk
+Integer*4 to real*4 type conversion.
+.AT arth null sp cse
+.CG "cvtsi2ss" 'l' sse_avx asm_special
+
+.IL PFLOAT irlnk
+Packed integer*4 to real*4 type conversion.  ONLY USED ON x86-64.
+WE SHOULD DELETE THIS AND USE PSFLOAT INSTEAD.
+.AT arth null sp cse
+.CG "cvtdq2ps" 'l' sse_avx asm_special
+
+.IL PSFLOAT arlnk xmm nme
+Convert 4 integer*4 values from 'arlnk' into 4 real*4 values in 'xmm'.
+.AT other null trm ssenme
+.CG terminal "cvtdq2ps" sse_avx
+
+.IL PSFLOATX xmm xmm
+Convert 4 integer*4 values from 'xmm1' into 4 real*4 values in 'xmm2'.
+.AT other null trm
+.CG terminal "cvtdq2ps" sse_avx
+
+
+.IL FLOATU irlnk
+Unsigned integer*4 to real*4 type conversion.
+Equivalent to UIKMV + FLOATK combination.
+.AT arth null sp cse
+.CG notCG
+
+.IL FLOATK krlnk
+Integer*8 to real*4 type conversion.
+.AT arth null sp cse
+.CG "cvtsi2ss" 'q' avx_special
+
+.IL FLOATUK krlnk
+Unsigned integer*8 to real*4 type conversion.
+.AT arth null sp cse
+.CG notAILI
+
+
+.IL DFLOAT irlnk
+Integer*4 to real*8 type conversion.
+.AT arth null dp cse
+.CG "cvtsi2sd" 'l' sse_avx asm_special
+.SI ld direct fst lat(6)
+.SI double fst lat(11)
+
+.IL PDFLOAT arlnk xmm nme
+Convert 'N' packed signed integer*4 values from 'arlnk' into 'N'
+packed real*8 values in 'xmm', where 'N' is 2, 4 or 8 if 'xmm' is an
+xmm (>= SSE2), ymm (>= AVX) or zmm (AVX-512F) register respectively.
+.AT other null trm ssenme
+.CG terminal "cvtdq2pd" ssedp sse_avx
+
+.IL PDFLOATX xmm xmm
+Convert 'N' packed signed integer*4 values from 'xmm1' (an xmm or ymm
+register) into 'N' packed real*8 values in 'xmm2' (an xmm, ymm or zmm
+register), where 'N' is 2, 4 or 8 if 'xmm' is an xmm (>= SSE2), ymm
+(>= AVX) or zmm (AVX-512F) register respectively.
+.AT other null trm
+.CG terminal "cvtdq2pd" ssedp avx_special
+
+
+.IL DFLOATU irlnk
+Unsigned integer*4 to real*8 type conversion.
+Equivalent to UIKMV + DFLOATK combination.
+.AT arth null dp cse
+.CG notCG
+
+.IL DFLOATK krlnk
+Integer*8 to real*8 type conversion.
+.AT arth null dp cse
+.CG "cvtsi2sd" 'q' avx_special
+.SI ld direct fst lat(6)
+.SI double fst lat(11)
+
+.IL DFLOATUK krlnk
+Unsigned integer*8 to real*8 type conversion.
+.AT arth null dp cse
+.CG notAILI
+
+.IL PDFLOATK arlnk xmm nme
+AVX512-DQ instruction to convert packed integer*8 values from 'arlnk'
+into real*8 values in 'xmm'.
+.AT other null trm ssenme
+.CG terminal notAILI
+
+.IL PDFLOATKX xmm xmm
+AVX512-DQ instruction to convert packed integer*8 values from 'xmm1'
+into real*8 values in 'xmm2'.
+.AT other null trm
+.CG terminal notAILI
+
+
+.IL FIX splnk
+Real*4 to integer*4 type conversion.
+.AT arth null ir cse
+.CG "cvttss2si" 'l' sse_avx asm_special
+.SI ld vector fst lat(10)
+.SI double fst lat(9)
+
+.IL UFIX splnk
+Real*4 to unsigned integer*4 type conversion.  Equivalent to FIXK +
+KIMV combination.
+.AT arth null ir
+.CG notCG
+
+.IL PSFIX arlnk xmm nme
+Convert 4 real*4 values from 'arlnk' into 4 integer*4 values in 'xmm'.
+.AT other null trm ssenme
+.CG terminal "cvttps2dq" sse_avx
+
+.IL PSFIXX xmm xmm
+Convert 4 real*4 values from 'xmm1' into 4 integer*4 values in 'xmm2'.
+.AT other null trm
+.CG terminal "cvttps2dq" sse_avx
+
+
+.IL FIXK splnk
+Real*4 to integer*8 type conversion.
+.AT arth null kr cse
+.CG "cvttss2si" 'q' sse_avx asm_special
+.SI ld vector fst lat(10)
+.SI double fst lat(9)
+
+.IL FIXUK splnk
+Real*4 to unsigned integer*8 type conversion.  Implemented as a QJSR.
+.AT arth null kr cse
+.CG notCG
+
+
+.IL DFIX dplnk
+Real*8 to integer*4 type conversion.
+.AT arth null ir cse
+.CG "cvttsd2si" 'l' sse_avx asm_special
+.SI double fst lat(9)
+.SI ld vector fadd fmul fstore lat(10)
+
+.IL DFIXU dplnk
+Real*8 to unsigned integer*4 type conversion.  Equivalent to DFIXK +
+KIMV combination.
+.AT arth null ir cse
+.CG notCG
+
+.IL PDFIX arlnk xmm nme
+Convert 2 real*8 values from 'arlnk' into 2 integer*4 values in the
+low half of 'xmm'.
+.AT other null trm ssenme
+.CG terminal "cvttpd2dq" avx_special
+
+.IL PDFIXX xmm xmm
+Convert 2 real*8 values from 'xmm1' into 2 integer*4 values in the low
+half of 'xmm2'.
+.AT other null trm
+.CG terminal "cvttpd2dq" avx_special
+
+
+.IL DFIXK dplnk
+Real*8 to to integer*8 type conversion.
+.AT arth null kr cse
+.CG "cvttsd2si" 'q' sse_avx asm_special
+.SI double fst lat(9)
+.SI ld vector fadd fmul fstore lat(10)
+
+.IL DFIXUK dplnk
+Real*8 to unsigned integer*8 type conversion.  Implemented as a QJSR.
+.AT arth null kr cse
+.CG notCG
+
+
+.IL SNGL dplnk
+Real*8 to real*4 type conversion.
+.AT arth null sp cse
+.CG "cvtsd2ss" avx_special
+
+.IL PSNGL arlnk xmm nme
+Convert 2 real*8 values from 'arlnk' into 2 real*4 values in the low
+half of 'xmm'.
+.AT other null trm ssenme
+.CG terminal "cvtpd2ps" avx_special
+.SI vector lat(10)
+
+.IL PSNGLX xmm xmm
+Convert 2 real*8 values from 'xmm1' into 2 real*4 values in the low
+half of 'xmm2'.
+.AT other null trm
+.CG terminal "cvtpd2ps" avx_special
+.SI vector lat(8)
+
+
+.IL DBLE splnk
+Real*4 to real*8 type conversion.
+.AT arth null dp cse
+.CG "cvtss2sd" avx_special
+
+.IL PDBLE arlnk xmm nme
+Convert 'N' packed real*4 values from 'arlnk' into 'N' packed real*8
+values in 'xmm', where 'N' is 2, 4 or 8 if 'xmm' is an xmm (>= SSE2),
+ymm (>= AVX) or zmm (AVX-512F) register respectively.
+.AT other null trm ssenme
+.CG terminal "cvtps2pd" ssedp sse_avx
+.SI double lat(5)
+
+.IL PDBLEX xmm xmm
+Convert 'N' packed real*4 values from 'xmm1' (an xmm or ymm register)
+into 'N' packed real*8 values in 'xmm2' (an xmm, ymm or zmm register),
+where 'N' is 2, 4 or 8 if 'xmm' is an xmm (>= SSE2), ymm (>= AVX) or
+zmm (AVX-512F) register respectively.
+.AT other null trm
+.CG terminal "cvtps2pd" ssedp avx_special
+.SI double lat(3)
+
+.\"
+.\" End of type conversion ILIs.
+.\"
+
+.IL IR2SP irlnk
+Copy an integer*4 value from a 'gp' register to an 'xmm' register without
+type conversion.  The upper 12 bytes of the 'xmm' register are zeroed.
+.AT arth null sp cse
+.CG "movd" 'l' sse_avx asm_special
+
+.IL KR2SP krlnk
+To be eliminated?
+.AT arth null sp
+.CG notCG
+
+.IL KR2DP krlnk
+Copy an integer*8 value from a 'gp' register to an 'xmm' register without
+type conversion.  The upper 8 bytes of the 'xmm' register are zeroed.
+.AT arth null dp
+.CG 'q' sse_avx asm_special
+
+.IL KR2CS krlnk
+Copy an integer*8 value from a 'gp' register to an 'xmm' register without
+type conversion.  The upper 8 bytes of the 'xmm' register are zeroed.
+.AT arth null cs
+.CG 'q' sse_avx asm_special
+
+.IL SP2IR splnk
+Copy a real*4 value from an 'xmm' register to a 'gp' register without
+type conversion.
+.AT arth null ir cse
+.CG "movd" 'l' sse_avx asm_special
+
+.IL SP2KR splnk
+Not used.
+.AT arth null kr
+.CG notCG
+
+.IL DP2KR dplnk
+Copy a real*8 value from an 'xmm' register to a 'gp' register without
+type conversion.
+.AT arth null kr
+.CG 'q' sse_avx asm_special
+
+.IL CS2KR cslnk
+Copy a single precision complex from an 'xmm' register to a 'gp' register
+without type conversion.
+.AT arth null kr
+.CG 'q' sse_avx asm_special
+
+.IL ROTL irlnk irlnk
+.AT arth null ir cse
+.CG ccarith "rol" 'l'
+
+.IL ROTR irlnk irlnk
+.AT arth null ir cse
+.CG ccarith "ror" 'l'
+
+.IL IADD irlnk irlnk
+Signed integer addition.
+.AT arth comm ir cse
+.CG memdest ccarith "add" 'l'
+.SI direct lat(4:1)
+
+.IL UIADD irlnk irlnk
+Unsigned integer addition.
+.AT arth comm ir cse
+.CG memdest ccarith "add" 'l'
+.SI direct lat(4:1)
+
+.IL KADD krlnk krlnk
+Signed integer64 addition.
+.AT arth comm kr cse
+.CG memdest ccarith "add" 'q'
+.SI direct lat(4:1)
+
+.IL UKADD krlnk krlnk
+Unsigned integer64 addition.
+.AT arth comm kr cse
+.CG notCG replaceby KADD
+
+.IL AADD arlnk arlnk stc
+Address unit add.
+The stc operand is not used by the x86-64 code generator.
+.AT arth null ar cse
+.CG notCG replaceby KADD
+
+.IL FADD splnk splnk
+Single-precision floating-point addition.
+.AT arth comm sp cse
+.CG "addss" sse_avx
+.SI fadd double lat(6:4)
+
+.IL DADD dplnk dplnk
+Double-precision floating-point addition.
+.AT arth comm dp cse
+.CG "addsd" sse_avx
+.SI fadd direct lat(6:4)
+
+.IL SCMPLXADD cslnk cslnk
+Single-precision complex addition.
+.AT arth comm cs cse
+.CG "addps" sse_avx
+.SI double fadd lat(5:7)
+
+.IL DCMPLXADD cdlnk cdlnk
+Double-precision complex addition.
+.AT arth comm cd cse
+.CG "addpd" sse_avx
+.SI double fadd lat(5:7)
+
+.IL ISUB irlnk irlnk
+Signed 32-bit integer subtraction.
+.AT arth null ir cse
+.CG memdest ccarith "sub" 'l'
+.SI direct lat(4:1)
+
+.IL UISUB irlnk irlnk
+Unsigned integer subtract.  op1 - op2.
+.AT arth null ir cse
+.CG memdest ccarith "sub" 'l'
+.SI direct lat(4:1)
+
+.IL KSUB krlnk krlnk
+Signed integer64 subtraction.
+.AT arth null kr cse
+.CG memdest ccarith "sub" 'q'
+.SI direct lat(4:1)
+
+.IL UKSUB krlnk krlnk
+Unsigned integer64 subtraction.
+.AT arth null kr cse
+.CG notCG replaceby KSUB
+
+.IL ASUB arlnk arlnk stc
+Address unit subtract.
+The stc operand is not used.
+.AT arth null ar cse
+.CG notCG replaceby KSUB
+
+.IL FSUB splnk splnk
+Single-precision floating-point subtraction.
+.AT arth null sp cse
+.CG "subss" sse_avx
+.SI direct fadd lat(6:4)
+
+.IL FSUBR splnk splnk
+Single-precision floating-point subtraction - operands reversed
+(used by llvect.c as a convenience).
+.AT arth null sp cse
+.CG notCG
+
+.IL DSUB dplnk dplnk
+Double-precision floating-point subtraction.
+.AT arth null dp cse
+.CG "subsd" sse_avx
+.SI direct fadd lat(6:4)
+
+.IL SCMPLXSUB cslnk cslnk
+Single-precision complex subtraction.
+.AT arth null cs cse
+.CG "subps" sse_avx
+.SI double fadd lat(7:5)
+
+.IL DCMPLXSUB cdlnk cdlnk
+Double-precision complex subtraction.
+.AT arth null cd cse
+.CG "subpd" sse_avx
+.SI double fadd lat(7:5)
+
+.IL IMUL irlnk irlnk
+Integer Multiply.  It'a a bug to give this opcode the 'cc' attribute.
+.AT arth comm ir cse
+.CG "imul" 'l' ccmod
+.SI direct lat(7)
+
+.IL UIMUL irlnk irlnk
+Unsigned integer multiply. Same as signed.
+.AT arth comm ir cse
+.CG notCG replaceby IMUL
+
+.IL IMULH irlnk irlnk
+Integer multiply, high 32-bits of product as result
+.AT arth comm ir cse
+.CG "imul" 'l' ccmod
+.SI direct lat(7)
+
+.IL UIMULH irlnk irlnk
+Integer multiply, high 32-bits of product as result
+.AT arth comm ir cse
+.CG "mul" 'l' ccmod
+.SI direct lat(7)
+
+.IL KMUL krlnk krlnk
+Integer64 Multiply.
+.AT arth comm kr cse
+.CG "imul" 'q' ccmod
+.SI direct lat(8)
+
+.IL KMULH krlnk krlnk
+Integer64 Multiply, high 64-bits of product returned.
+.AT other comm kr cse
+.CG "imul" 'q' ccmod
+.SI direct lat(8)
+
+.IL UKMUL krlnk krlnk
+Unsigned integer64 Multiply.
+.AT arth comm kr cse
+.CG notCG replaceby KMUL
+
+.IL UKMULH krlnk krlnk
+Integer64 Multiply, high 64-bits of product returned.
+.AT other comm kr cse
+.CG "mul" 'q' ccmod
+.SI direct lat(8)
+
+.IL FMUL splnk splnk
+Single-precision floating-point multiply.
+.AT arth comm sp cse
+.CG "mulss" sse_avx
+.SI direct fmul lat(4)
+
+.IL DMUL dplnk dplnk
+Double-precision multiply.
+.AT arth comm dp cse
+.CG "mulsd" sse_avx
+.SI direct fmul lat(6:4)
+
+.IL SCMPLXMUL cslnk cslnk
+Single-complex multiply.
+.AT arth comm cs cse
+.CG sse_avx asm_special
+
+.IL DCMPLXMUL cdlnk cdlnk
+Double-complex multiply.
+.AT arth comm cd cse
+.CG sse_avx asm_special
+
+.IL IDIV irlnk irlnk
+Signed integer divide.
+.AT arth null ir cse
+.CG notCG
+
+.IL UIDIV irlnk irlnk
+Unsigned integer divide.
+.AT arth null ir cse
+.CG notCG
+
+.IL KDIV krlnk krlnk
+Signed integer64 divide.
+.AT arth null kr cse
+.CG notCG
+
+.IL UKDIV krlnk krlnk
+Unsigned integer64 divide.
+.AT arth null kr cse
+.CG notCG
+
+.IL IDIVZ irlnk irlnk
+Signed integer divide where divide by zero does not fault.
+.AT arth null ir cse
+.CG notCG
+
+.IL UIDIVZ irlnk irlnk
+Unsigned integer divide where divide by zero does not fault.
+.AT arth null ir cse
+.CG notCG
+
+.IL KDIVZ krlnk krlnk
+Signed integer64 divide where divide by zero does not fault.
+.AT arth null kr cse
+.CG notCG
+
+.IL UKDIVZ krlnk krlnk
+Unsigned integer64 divide where divide by zero does not fault.
+.AT arth null kr cse
+.CG notCG
+
+.IL IDIVZR irlnk irlnk
+Signed integer divide where the remainder is zero
+.AT arth null ir cse
+.CG notCG
+
+.IL KDIVZR krlnk krlnk
+Signed integer64 divide where the remainder is zero
+.AT arth null kr cse
+.CG notCG
+
+.IL QUOREM irlnk irlnk
+Represents an integer divide and/or mod operation.  Use of this ili allows
+a single divide instruction to both a divide and mod result.
+.AT arth null ir cse
+.CG notAILI 'l'
+
+.IL KQUOREM krlnk krlnk
+Represents a long divide and/or mod operation.  Use of this ili allows
+a single divide instruction to both a divide and mod result.
+.AT arth null kr cse
+.CG notAILI 'q'
+
+.IL NIDIV irlnk
+Signed integer divide that points to QUOREM.  Result is in register %eax.
+.AT arth null ir cse
+.CG "idiv" 'l' ccmod
+
+.IL NUIDIV irlnk
+Unsigned integer divide that points to QUOREM.  Result is in register %eax.
+.AT arth null ir cse
+.CG "div" 'l' ccmod
+
+.IL NKDIV krlnk
+Signed integer64 divide that points to QUOREM.  Result is in register %rax.
+.AT arth null kr cse
+.CG "idiv" 'q' ccmod
+
+.IL NUKDIV krlnk
+Unsigned integer64 divide that points to QUOREM.  Result is in register %rax.
+.AT arth null kr cse
+.CG "div" 'q' ccmod
+
+.IL FDIV splnk splnk
+Single-precision divide.
+.AT arth null sp cse
+.CG "divss" sse_avx
+.SI direct fmul lat(18:16)
+
+.IL FDIVR splnk splnk
+Single-precision divide - operands reversed (used by llvect.c
+as a convenience).
+.AT arth null sp cse
+.CG notCG
+
+.IL DDIV dplnk dplnk
+Double divide.
+.AT arth null dp cse
+.CG "divsd" sse_avx
+.SI direct fmul lat(22:20)
+
+.IL SCMPLXDIV cslnk cslnk
+Single precision complex divide.
+.AT arth null cs cse
+.CG "divps" sse_avx
+
+.IL DCMPLXDIV cdlnk cdlnk
+Double precision complex divide.
+.AT arth null cd cse
+.CG "divpd" sse_avx
+
+.IL MOD irlnk irlnk
+Integer remainder.
+.AT arth null ir cse
+.CG notCG
+
+.IL UIMOD irlnk irlnk
+Unsigned integer mod.
+.AT arth null ir cse
+.CG notCG
+
+.IL KMOD krlnk krlnk
+Integer64 remainder.
+.AT arth null kr
+.CG notCG
+
+.IL KUMOD krlnk krlnk
+Integer64 remainder.
+.AT arth null kr
+.CG notCG
+
+.IL MODZ irlnk irlnk
+Integer remainder where divide by zero does not fault.
+.AT arth null ir cse
+.CG notCG
+
+.IL UIMODZ irlnk irlnk
+Unsigned integer mod where divide by zero does not fault.
+.AT arth null ir cse
+.CG notCG
+
+.IL KMODZ krlnk krlnk
+Integer64 remainder where divide by zero does not fault.
+.AT arth null kr
+.CG notCG
+
+.IL KUMODZ krlnk krlnk
+Integer64 remainder where divide by zero does not fault.
+.AT arth null kr
+.CG notCG
+
+.IL NMOD irlnk
+Integer remainder that points to a QUOREM ili.  Result is in register %edx.
+.AT arth null ir cse
+.CG "idiv" 'l' ccmod
+
+.IL NUIMOD irlnk
+Unsigned integer mod that points to QUOREM ili.  Result is in register %edx.
+.AT arth null ir cse
+.CG "div" 'l' ccmod
+
+.IL NKMOD krlnk
+Integer remainder that points to a QUOREM ili.  Result is in register %rdx.
+.AT arth null kr cse
+.CG "idiv" 'q' ccmod
+
+.IL NUKMOD krlnk
+Unsigned integer mod that points to QUOREM ili.  Result is in register %rdx.
+.AT arth null kr cse
+.CG "div" 'q' ccmod
+
+.IL FMOD splnk splnk
+Single-precision mod.
+.AT arth null sp cse
+.CG notCG
+
+.IL DMOD dplnk dplnk
+Double-precision mod.
+.AT arth null dp cse
+.CG notCG
+
+.IL IMAX irlnk irlnk
+Integer maximum value.  Expanded in-line by Code Generator.
+.AT arth comm ir cse
+.CG asm_special "cmpl" 'l' ccmod
+
+.IL UIMAX irlnk irlnk
+Unsigned integer maximum value.  Expanded in-line by Code Generator.
+.AT arth comm ir cse
+.CG notCG
+
+.IL IMIN irlnk irlnk
+Integer minimum value.  Expanded in-line by Code Generator.
+.AT arth comm ir cse
+.CG asm_special "cmpl" 'l' ccmod
+
+.IL UIMIN irlnk irlnk
+Unsigned integer minimum value.  Expanded in-line by Code Generator.
+.AT arth comm ir cse
+.CG notCG
+
+.IL KMAX krlnk krlnk
+Integer64 maximum value.  Expanded in-line by Code Generator.
+.AT arth comm kr cse
+.CG asm_special "cmpq" 'q' ccmod
+
+.IL UKMAX krlnk krlnk
+Unsigned integer64 maximum value.  Expanded in-line by Code Generator.
+.AT arth comm kr cse
+.CG notCG
+
+.IL KMIN krlnk krlnk
+Integer64 minimum value.  Expanded in-line by Code Generator.
+.AT arth comm kr cse
+.CG asm_special "cmpq" 'q' ccmod
+
+.IL UKMIN krlnk krlnk
+Unsigned integer64 minimum value.  Expanded in-line by Code Generator.
+.AT arth comm kr cse
+.CG notCG
+
+.IL FMAX splnk splnk
+Single precision maximum.
+.AT arth comm sp cse
+.CG "maxss" sse_avx
+.SI direct fadd lat(4:2)
+
+.IL FMIN splnk splnk
+Single precision minimum.
+.AT arth comm sp cse
+.CG "minss" sse_avx
+.SI direct fadd lat(4:2)
+
+.IL DMAX dplnk dplnk
+Double precision maximum.
+.AT arth comm dp cse
+.CG "maxsd" sse_avx
+.SI direct fadd lat(4:2)
+
+.IL DMIN dplnk dplnk
+Double precison minimum.
+.AT arth comm dp cse
+.CG "minsd" sse_avx
+.SI direct fadd lat(4:2)
+
+.IL JN  irlnk splnk
+float bessel_jn
+.AT arth null sp cse
+.CG notCG
+
+.IL DJN  irlnk dplnk
+double bessel_jn
+.AT arth null dp cse
+.CG notCG
+
+.IL YN  irlnk splnk
+float bessel_yn
+.AT arth null sp cse
+.CG notCG
+
+.IL DYN  irlnk dplnk
+double bessel_yn
+.AT arth null dp cse
+.CG notCG
+
+.IL DFMA dplnk dplnk dplnk
+This opcode is only used in AILIs, not shared or linear ILIs.  It
+represents a scalar double-precision FMA3 or FMA4 instruction which
+computes:
+    dest = <sign> (src1 * src2) <addop> src3
+.br
+Either 'src2' or 'src3', but not both, can be a memory operand, and
+the other operands are xmm register operands.  The values of <sign>
+(+/-) and <addop> (+/-) are specified by an 'FMA_...' flag set in the
+cc field of the AILI.  Since AILIs allow at most 2 source operands,
+this AILI is always immediately preceded by a USE AILI which specifies
+the 'src1' operand.
+.AT arth null dp
+.CG CGonly asm_special
+
+.IL FFMA splnk splnk splnk
+This is the same as DFMA except that it represents a scalar single
+precision FMA3 or FMA4 instruction.
+.AT arth null sp
+.CG CGonly asm_special
+
+.IL IPOWI irlnk irlnk
+Integer raised to an integer power.
+.AT arth null ir cse
+.CG notCG
+
+.IL KPOWI krlnk irlnk
+Integer raised to an integer power.
+.AT arth null kr cse
+.CG notCG
+
+.IL KPOWK krlnk krlnk
+Integer raised to an integer power.
+.AT arth null kr cse
+.CG notCG
+
+.IL FPOWI splnk irlnk
+Real raised to an integer power.
+.AT arth null sp cse
+.CG notCG
+
+.IL FPOWK splnk krlnk
+Real raised to an integer power.
+.AT arth null sp cse
+.CG notCG
+
+.IL FPOWF splnk splnk
+Real raised to a real power.
+.AT arth null sp cse
+.CG notCG
+
+.IL DPOWI dplnk irlnk
+Double raised to a integer power.
+.AT arth null dp cse
+.CG notCG
+
+.IL DPOWK dplnk krlnk
+Double raised to a integer power.
+.AT arth null dp cse
+.CG notCG
+
+.IL DPOWD dplnk dplnk
+Double raised to a double power.
+.AT arth null dp cse
+.CG notCG
+
+.IL ICMP irlnk irlnk stc
+Integer compare with result of true or false.
+For C the value of true is 1, and for Fortran, -1.
+\'stc' denotes condition code, as for the ICJMP ili.
+Due to problems when this operation is used with SELECT ili, it is
+not given the 'cse' attribute.
+.AT arth null ir cse
+.CG asm_special "cmpl" 'l' ccmod
+.SI direct lat(4:1)
+
+.IL UICMP irlnk irlnk stc
+Unsigned integer compare.
+.AT arth null ir cse
+.CG notAILI 'l'
+
+.IL KCMP krlnk krlnk stc
+Integer64 compare with result of true or false.
+Conditions are same as ICJMP ILI.
+.AT arth null ir cse
+.CG notAILI "cmpq" 'q'
+.SI direct lat(4:1)
+
+.IL UKCMP krlnk krlnk stc
+Integer compare with result of true or false.
+Conditions are same as ICJMP ILI.
+.AT arth null ir cse
+.CG notAILI 'q'
+
+.IL ACMP arlnk arlnk stc
+Address compare with result of true or false.
+The conditions (stc) are the same as for ICMP.
+.AT arth null ir cse
+.CG notCG replaceby UKCMP
+
+.IL FCMP splnk splnk stc
+Single float compare with result of true or false.
+.AT arth null ir cse
+.CG asm_special "ucomiss" ccmod sse_avx
+.SI vector lat(6:4)
+
+.IL DCMP dplnk dplnk stc
+Double precision compare with result of true or false.
+.AT arth null ir cse
+.CG asm_special "ucomisd" ccmod sse_avx
+.SI vector fadd lat(5:4)
+
+.IL SCMPLXCMP dplnk dplnk stc
+Single precision complex compare with result of true or false.
+.AT arth comm ir cse
+.CG asm_special "ucomisd" ccmod sse_avx
+.SI vector fadd lat(5:4)
+
+.IL DCMPLXCMP dplnk dplnk stc
+Double precision complex compare with result of true or false.
+.AT arth comm ir cse
+.CG asm_special "ucomisd" ccmod sse_avx
+.SI vector fadd lat(5:4)
+
+.IL ICMPZ irlnk stc
+Integer compare with zero.
+Conditions are same as ICJMP ILI.
+.AT arth null ir cse
+.CG notAILI 'l'
+
+.IL UICMPZ irlnk stc
+Unsigned integer compare with zero.
+.AT arth null ir cse
+.CG notAILI 'l'
+
+.IL KCMPZ krlnk stc
+Integer64 compare with zero; returns integer value.
+Conditions are same as ICJMP ILI.
+.AT arth null ir cse
+.CG notAILI 'q'
+
+.IL UKCMPZ krlnk stc
+Integer64 compare with zero.
+Conditions are same as ICJMP ILI.
+.AT arth null ir cse
+.CG notAILI 'q'
+
+.IL ACMPZ arlnk stc
+Address compare with zero.
+The conditions (stc) are the same as for ICMP.
+.AT arth null ir cse
+.CG notCG replaceby UKCMPZ
+
+.IL FCMPZ splnk stc
+Single float compare with zero; result is TRUE or FALSE.
+.AT arth null ir cse
+.CG notCG
+
+.IL DCMPZ dplnk stc
+Double precision compare with zero.
+.AT arth null ir cse
+.CG notCG
+
+.IL QCMPZ qplnk stc
+Quad precision compare with zero.
+.AT arth null ir cse
+.CG notCG
+
+.IL TEST irlnk irlnk
+Compare register value with 0.
+.AT arth comm ir cse
+.CG CGonly "testl" cclogical 'l' asm_special
+.SI direct lat(4:1)
+
+.IL KTEST krlnk krlnk
+Compare register value with 0.
+.AT arth comm ir cse
+.CG CGonly "testq" cclogical 'q' asm_special
+.SI direct lat(4:1)
+
+.IL ISELECT irlnk irlnk irlnk
+Select either the 2nd or 3rd operand value based on the comparison
+operation pointed to by the 1st operand.
+.AT other null ir cse
+.CG notAILI 'l'
+
+.IL KSELECT irlnk krlnk krlnk
+.AT other null kr cse
+.CG notAILI 'q'
+
+.IL ASELECT irlnk arlnk arlnk
+.AT other null ar cse
+.CG notCG replaceby KSELECT
+
+.IL FSELECT irlnk splnk splnk
+.AT other null sp cse
+.CG notAILI
+
+.IL DSELECT irlnk dplnk dplnk
+.AT other null dp cse
+.CG notAILI
+
+.IL CSSELECT irlnk cslnk cslnk
+.AT other null cs cse
+.CG notAILI
+
+.IL CDSELECT irlnk cdlnk cdlnk
+.AT other null cd cse
+.CG notAILI
+
+.IL AND irlnk irlnk
+Bitwise 32-bit 'and' operation.
+.AT arth comm ir cse
+.CG memdest cclogical "and" 'l'
+.SI direct lat(4:1)
+
+.IL KAND krlnk krlnk
+Bitwise 64-bit 'and' operation.
+.AT arth comm kr
+.CG memdest cclogical "and" 'q'
+.SI direct lat(4:1)
+
+.IL OR irlnk irlnk
+Bitwise 32-bit 'or' operation.
+.AT arth comm ir cse
+.CG memdest cclogical "or" 'l'
+.SI direct lat(4:1)
+
+.IL KOR krlnk krlnk
+Bitwise 64-bit 'or' operation.
+.AT arth comm kr
+.CG memdest cclogical "or" 'q'
+.SI direct lat(4:1)
+
+.IL XOR irlnk irlnk
+Bitwise exclusive-or operation.
+.AT arth comm ir cse
+.CG memdest cclogical "xor" 'l'
+.SI direct lat(4:1)
+
+.IL LEQV irlnk irlnk
+Bitwise exclusive-or followed by not operation.
+.AT arth comm ir cse
+.CG memdest cclogical "notxor" 'l'
+.SI direct lat(4:1)
+
+.IL KXOR krlnk krlnk
+Bitwise 64-bit exclusive-or operation.
+.AT arth comm kr
+.CG memdest cclogical "xor" 'q'
+.SI direct lat(4:1)
+
+.IL EQV irlnk irlnk
+.AT arth comm ir cse
+.CG notCG
+
+.IL JISHFT irlnk irlnk
+Shift op1 by op2.  Left if op2 is > 0; else right (no sign extension).
+This ili only shows up for Fortran, specifically for the JISHFT intrinsic.
+If 2nd operand is compile time constant, this ili will have been
+replaced by either a left or right shift ili by the Expander.
+Otherwise, it is implemented as a call to a run-time function.
+.AT arth null ir cse
+.CG notCG
+
+.IL KISHFT krlnk krlnk
+Shift op1 by op2.  Left if op2 is > 0; else right (no sign extension).
+This ili only shows up for Fortran, specifically for the KISHFT intrinsic.
+If 2nd operand is compile time constant, this ili will have been
+replaced by either a left or right shift ili by the Expander.
+Otherwise, it is implemented as a call to a run-time function.
+.AT arth null kr cse
+.CG notCG
+
+.IL USHIFT irlnk irlnk
+Shift op1 logically by op2.  Left if op2 is > 0; else right.
+This ili should have been replaced before code generator.
+.AT arth null ir cse
+.CG notCG
+
+.IL SHIFTA irlnk arlnk
+Shift op1 logically by op2.  Left if op2 is > 0; else right.
+.AT arth null ir cse
+.CG notCG
+
+.IL USHIFTA irlnk arlnk
+Unsigned shift op1 logically by op2.  Left if op2 is > 0; else right.
+.AT arth null ir cse
+.CG notCG
+
+.IL LSHIFT irlnk irlnk
+Shift op1 left logically by op2.
+.AT arth null ir cse
+.CG memdest ccarith shiftop asm_special "shl" 'l'
+.SI direct lat(4:1)
+
+.IL ULSHIFT irlnk irlnk
+Shift op1 left logically by op2.
+.AT arth null ir cse
+.CG notCG replaceby LSHIFT
+
+.IL LSHIFTI irlnk stc
+Shift left immediate.   This opcode used only in Code Generator.
+.AT arth null ir cse
+.CG memdest ccarith shiftop "shl" CGonly 'l'
+.SI direct lat(4:1)
+
+.IL KLSHIFTI krlnk stc
+Shift left immediate of 64-bit value.
+.AT arth null kr cse
+.CG memdest ccarith shiftop "shl" CGonly 'q'
+.SI direct lat(4:1)
+
+.IL RSHIFT irlnk irlnk
+Shift op1 logically right by op2 (sign extended).
+.AT arth null ir cse
+.CG notCG replaceby ARSHIFT
+
+.IL URSHIFT irlnk irlnk
+Shift op1 logically right by op2 (0 fill).
+.AT arth null ir cse
+.CG memdest ccarith shiftop asm_special "shr" 'l'
+.SI direct lat(4:1)
+
+.IL ARSHIFT irlnk irlnk
+Shift op1 arithmetically (sign extended) right by op2.
+Used for right shifts (>> operator) of signed values.
+.AT arth null ir cse
+.CG memdest ccarith shiftop asm_special "sar" 'l'
+.SI direct lat(4:1)
+
+.IL KLSHIFT krlnk irlnk
+Left shift of 64-bit value.
+.AT arth null kr cse
+.CG memdest ccarith shiftop asm_special "shl" 'q'
+.SI direct lat(4:1)
+
+.IL KURSHIFT krlnk irlnk
+Zero-fill right shift of 64-bit value.
+.AT arth null kr cse
+.CG memdest ccarith shiftop asm_special "shr" 'q'
+.SI direct lat(4:1)
+
+.IL KARSHIFT krlnk irlnk
+Sign-extended right shift of 64-bit value.
+.AT arth null kr cse
+.CG memdest ccarith shiftop asm_special "sar" 'q'
+.SI direct lat(4:1)
+
+.IL ILEADZI irlnk stc
+8-/16- bit integer LEADZ intrinsic.
+The value, 0 or 1, of the second operand indicates
+8-bit or 16-bit, respectively.
+.AT arth null ir cse
+
+.IL ILEADZ irlnk
+32-bit integer LEADZ intrinsic.
+.AT arth null ir cse
+.CG "lzcnt" 'l'
+
+.IL KLEADZ krlnk
+64-bit integer LEADZ intrinsic.
+.AT arth null kr cse
+.CG "lzcnt" 'q'
+
+.IL ITRAILZI irlnk stc
+8-/16- bit integer TRAILZ intrinsic.
+The value, 0 or 1, of the second operand indicates
+8-bit or 16-bit, respectively.
+.AT arth null ir cse
+
+.IL ITRAILZ irlnk
+32-bit integer TRAILZ intrinsic.
+.AT arth null ir cse
+.CG "tzcnt" 'l'
+
+.IL KTRAILZ krlnk
+64-bit integer TRAILZ intrinsic.
+.AT arth null kr cse
+.CG "tzcnt" 'q'
+
+.IL IPOPCNTI irlnk stc
+8-/16- bit integer POPCNT intrinsic.
+The value of second operand indicates 8-bit if 0 and 16-bit
+if 1.
+.AT arth null ir cse
+
+.IL IPOPCNT irlnk
+32-bit integer POPCNT intrinsic.
+.AT arth null ir cse
+.CG "popcnt" 'l'
+
+.IL KPOPCNT krlnk
+64-bit integer POPCNT intrinsic.
+.AT arth null kr cse
+.CG "popcnt" 'q'
+
+.IL IPOPPARI irlnk stc
+8-/16- bit integer POPPAR intrinsic.
+The value of second operand indicates 8-bit if 0 and 16-bit
+if 1.
+.AT arth null ir cse
+
+.IL IPOPPAR irlnk
+32-bit integer POPPAR intrinsic.
+.AT arth null ir cse
+
+.IL KPOPPAR krlnk
+64-bit integer POPPAR intrinsic.
+.AT arth null kr cse
+
+.IL EXTRACT irlnk stc stc
+Note that this ILI is defined for machines with bit field extract
+HW support (e.g. 88000).
+The two stc operand definitions are architecture DEPENDENT.
+.AT arth null ir cse
+.CG notCG
+
+.IL JMP sym
+Unconditional jump to indicated label.
+.AT branch null trm dom
+.CG terminal "jmp"
+.SI direct lat(4:1)
+
+.IL JMPA krlnk
+Branch indirect.  Fortran only.
+.AT branch null trm dom
+.CG terminal "jmp" asm_special
+.SI direct lat(4:1)
+
+.IL JMPM irlnk irlnk sym sym
+Indexed jump from a memory table of jump addresses.
+.sp
+irlnk1 - integer index expression.
+.br
+irlnk2 - table_size
+.br
+sym - label for memory table containing addresses
+.br
+sym  - default label
+.AT branch null trm dom
+.CG terminal asm_special 'l'
+
+.IL JMPMK krlnk irlnk sym sym
+Indexed jump using a 64-bit integer as index value.
+.AT branch null trm dom
+.CG terminal notAILI 'q'
+
+.IL JMPT irlnk irlnk
+NOT USED.
+Indexed jump into a table of jump instructions.
+.nf
+irlnk1 - integer index expression. The expression has
+       already been normalized to 1 (the value 0 is
+       reserved for the "default" jump). If the expression
+       is not in the range 1:(n-1) where n is the jump table
+       size, the default jump is taken.
+irlnk2 - table_size (includes the default label).
+.fi
+.AT branch null trm dom
+.CG notCG
+
+.IL QSWITCH sym lnk stc
+.AT proc null lnk dom
+.CG notCG
+
+.IL ICJMP irlnk irlnk stc sym
+Integer compare and jump to the label 'sym'
+if the condition, denoted by stc, is true.
+.sp
+Allowed values of stc:
+.sp
+    1 = CC_EQ   (jump if equal)
+    2 = CC_NE   (jump if not equal)
+    3 = CC_LT   (jump if less than)
+    4 = CC_GE   (jump if greater than or equal to)
+    5 = CC_LE   (jump if less than or equal to)
+    6 = CC_GT   (jump if greater than)
+.sp
+.AT branch null trm dom
+.CG terminal notAILI 'l' conditional_branch
+
+.IL UICJMP irlnk irlnk stc sym
+Unsigned integer compare and jump to the label 'sym'
+if the condition, denoted by stc, is true.
+Conditions same as for ICJMP.
+.AT branch null trm dom
+.CG terminal notAILI 'l' conditional_branch
+
+.IL KCJMP krlnk krlnk stc sym
+integer64 compare and jump to the label 'sym'
+if the condition, denoted by stc, is true:
+The same conditions as ICJMP
+.AT branch null trm dom
+.CG terminal notAILI 'q' conditional_branch
+
+.IL UKCJMP krlnk krlnk stc sym
+unsigned integer64 compare and jump to the label 'sym'
+if the condition, denoted by stc, is true:
+The same conditions as ICJMP
+.AT branch null trm dom
+.CG terminal notAILI 'q' conditional_branch
+
+.IL ACJMP arlnk arlnk stc sym
+Address compare and jump to the label 'sym'
+if the condition, denoted by stc, is true:
+Conditions same as for ICJMP.
+.AT branch null trm dom
+.CG notCG replaceby UKCJMP conditional_branch
+
+.IL FCJMP splnk splnk stc sym
+Single precision compare and jump to the label 'sym'
+if the condition, denoted by stc, is true.
+.AT branch null trm dom
+.CG terminal conditional_branch notAILI
+
+.IL DCJMP dplnk dplnk stc sym
+Double precision compare and jump to the label 'sym'
+if the condition, denoted by stc, is true.
+.AT branch null trm dom
+.CG terminal conditional_branch notAILI
+
+.IL QCJMP qplnk qplnk stc sym
+Quad precision compare and jump to the label 'sym'
+if the condition, denoted by stc, is true.
+.AT branch null trm dom
+.CG terminal conditional_branch notAILI
+
+.IL ICJMPZ irlnk stc sym
+Integer compare with zero and branch to label 'sym' -
+the allowed values (and meanings) for stc are the same as
+for the ICJMP ILI.
+.AT branch null trm dom
+.CG terminal notAILI 'l' conditional_branch
+
+.IL UICJMPZ irlnk stc sym
+Unsigned integer compare with zero and branch to label 'sym' -
+the allowed values (and meanings) for stc are the same as
+for the ICJMP ILI.
+.AT branch null trm dom
+.CG terminal notAILI 'l' conditional_branch
+
+.IL LCJMPZ irlnk stc sym
+Logical compare with zero and branch to label 'sym' -
+the allowed values (and meanings) for stc are the same as
+for the ICJMP ILI.
+.AT branch null trm dom
+.CG notCG replaceby UICJMPZ conditional_branch
+
+.IL KCJMPZ krlnk stc sym
+Integer64 compare with zero and branch to label 'sym' -
+the allowed values (and meanings) for stc are the same as
+for the ICJMP ILI.
+.AT branch null trm dom
+.CG terminal notAILI 'q' conditional_branch
+
+.IL UKCJMPZ krlnk stc sym
+Integer64 compare with zero and branch to label 'sym' -
+the allowed values (and meanings) for stc are the same as
+for the ICJMP ILI.
+.AT branch null trm dom
+.CG terminal notAILI 'q' conditional_branch
+
+.IL ACJMPZ arlnk stc sym
+Address compare with zero and branch to label 'sym' -
+the allowed values (and meanings) for stc are the same as
+for the ICJMP ILI.
+.AT branch null trm dom
+.CG notCG replaceby UKCJMPZ conditional_branch
+
+.IL FCJMPZ splnk stc sym
+Single compare with zero and branch to label 'sym'.
+.AT branch null trm dom
+.CG notCG conditional_branch
+
+.IL DCJMPZ dplnk stc sym
+Double compare with zero and branch to label 'sym'.
+.AT branch null trm dom
+.CG notCG conditional_branch
+
+.IL QCJMPZ qplnk stc sym
+quad compare with zero and branch to label 'sym'.
+.AT branch null trm dom
+.CG notCG conditional_branch
+
+.IL JCC
+Conditional jump based on immediately preceding compare operation.
+Used only in the AILI.
+.AT branch null trm dom
+.CG CGonly asm_special conditional_branch
+.SI direct lat(1)
+
+.IL CSEIR irlnk
+Integer register cse (common subexpression). The ILI located by the cse
+ILI is one whose value is to be re-used (the ILI need not be "evaluated").
+This ILI is used when multiple references of an ILM occur in the same
+ILM block.
+The CSE ili are treated as a special case by the linearizer, and never
+appear in a linear ili block.
+.AT arth null ir
+.CG notCG
+
+.IL CSESP splnk
+Single precision register cse.
+.AT arth null sp
+.CG notCG
+
+.IL CSEDP dplnk
+Double precision register cse.
+.AT arth null dp
+.CG notCG
+
+.IL CSEQP qplnk
+Quad precision register cse.
+.AT arth null qp
+.CG notCG
+
+.IL CSECS cslnk
+Single precision complex register cse.
+.AT arth null cs
+.CG notCG
+
+.IL CSECD cdlnk
+Double precision complex register cse.
+.AT arth null cd
+.CG notCG
+
+.IL CSEAR arlnk
+Address register cse.
+.AT arth null ar
+.CG notCG
+
+.IL CSEKR krlnk
+Integer64 register cse.
+.AT arth null kr
+.CG notCG
+
+.IL CSE lnk stc
+Complex cse (common subexpression). The ILI located by the cse
+ILI is one whose value is to be re-used (the ILI need not be "evaluated").
+This ILI is used when multiple references of an ILM occur in the same
+ILM block.
+This ili is seen by the code generator but never appears in the
+linear ili.
+.AT arth null ir
+.CG notCG
+
+.IL APURE arlnk
+Call a pure function with no arguments and returns an AR value.
+Will always have an ALT which is the actual call.
+arlnk is an ACON ili of the function being called.
+.AT arth null ar cse
+.CG notCG
+
+.IL APUREA arlnk arlnk
+Call a pure function with one AR argument and returns an AR value.
+Will always have an ALT which is the actual call.
+arlnk is an ACON ili of the function being called.
+.AT arth null ar cse
+.CG notCG
+
+.IL APUREI arlnk irlnk
+Call a pure function with one IR argument and returns an AR value.
+Will always have an ALT which is the actual call.
+arlnk is an ACON ili of the function being called.
+.AT arth null ar cse
+.CG notCG
+
+.IL IPURE arlnk
+Call a pure function with no arguments and returns an IR value.
+Will always have an ALT which is the actual call.
+arlnk is an ACON ili of the function being called.
+.AT arth null ir cse
+.CG notCG
+
+.IL IPUREA arlnk arlnk
+Call a pure function with one AR argument and returns an IR value.
+Will always have an ALT which is the actual call.
+arlnk is an ACON ili of the function being called.
+.AT arth null ir cse
+.CG notCG
+
+.IL IPUREI arlnk irlnk
+Call a pure function with one IR argument and returns an IR value.
+Will always have an ALT which is the actual call.
+arlnk is an ACON ili of the function being called.
+.AT arth null ir cse
+.CG notCG
+
+.IL REP
+Repeat prefix opcode for string operations (such as the following SMOVE).
+Emitted immediately before an SMOVE operation.
+.AT other null trm dom
+.CG CGonly "rep"
+
+.IL GSMOVE arlnk arlnk nme nme stc
+General structure copy.
+A structure store (SMOVE ILM) is expanded into the GSMOVE ILI; a phase, such as
+the ACC CG, needs to have the structure assignment presented as a first-class
+ILI operation.
+After the last phase requiring GSMOVE, GSMOVE will then be expanded into
+lower level ILI which will be dependent on target, alignment, small vs large,
+etc.
+  \'op1' is the source address.
+  \'op2' is the destination address.
+  \'nme1' is the names table entry for source struct.
+  \'nme2' is the names table entry for the destination struct.
+  \'stc' is the dtype of the struct.
+.AT other null trm dom
+.CG notCG
+
+.IL SMOVE arlnk arlnk arlnk nme
+Structure copy.
+  \'op1' is the source address.
+  \'op2' is the destination address.
+  \'op3' is number of 8-byte units to copy.
+  \'nme' is names table entry for destination struct.
+.AT other null trm dom
+.CG terminal "movs"
+
+.IL SMOVEJ arlnk arlnk nme nme stc
+Simple structure copy.  (MOVS is x86 parlance.)
+This is used to replace the SMOVEI/SMOVES pair, which was used when
+the ILI operand count was only 4.
+\'op1' is the source address
+\'op2' is the destination address
+\'nme1' is the names table entry for source struct.
+\'nme2' is the names table entry for the destination struct.
+\'op5' is actual number of bytes to copy.
+This gets turned into SMOVE and load/store operations by rm_smove
+.AT other null trm dom
+.CG notCG
+
+.IL XMOVE arlnk arlnk nme
+Structure copy.
+  \'op1' is the source address.
+  \'op2' is the destination address.
+  \'nme' is names table entry for destination struct.
+.AT other null trm dom
+.CG terminal "movapd" sse_avx
+
+.IL ST irlnk arlnk nme stc
+Store integer value.
+In ILI, the value to be stored must fit without implicit truncation, i.e. immediately
+reloading using LD with the same size modifier must reproduce the value that was stored.
+In LILI or AILI, ST may perform implicit truncation.
+\'op1' is a pointer to an ili representing the value being stored.
+.br
+\'op2' is a pointer to the address expression of the variable being defined.
+.br
+\'nme' is a pointer to a names table entry of the variable being defined.
+.br
+\'stc' is the size modifier of the memory operation as described for
+the LD ili above.
+.AT store null trm
+.CG terminal "mov" move
+.SI direct lat(1)
+.SI ld direct lat(3)
+.SI st direct lat(3)
+
+.IL STSP splnk arlnk nme stc
+Store single precision quantity.  'stc' must be MSZ_F4.
+.AT store null trm
+.CG terminal "movss" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL STDP dplnk arlnk nme stc
+Store double precision quantity.  'stc' must be MSZ_F8.
+.AT store null trm
+.CG terminal "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL STSCMPLX cslnk arlnk nme stc
+Store single precision complex quantity.  'stc' is not used.
+.AT store null trm
+.CG terminal "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL STDCMPLX cdlnk arlnk nme stc
+Store double precision complex quantity.  'stc' is not used.
+.AT store null trm
+.CG terminal "movupd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL STQ dplnk arlnk nme stc
+Store an __m128 quantity.  'stc' is not used.
+.AT store null trm
+.CG terminal "movapd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL STQU dplnk arlnk nme stc
+Store an unaligned __m128 quantity.  'stc' is not used.
+.AT store null trm
+.CG terminal "movupd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL ST256 dplnk arlnk nme stc
+Store an __m256 quantity.  'stc' is not used.
+.AT store null trm
+.CG terminal "vmovapd" 'y' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL ST256U dplnk arlnk nme stc
+Store an unaligned __m256 quantity.  'stc' is not used.
+.AT store null trm
+.CG terminal "vmovupd" 'y' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL ST512 512lnk arlnk nme stc
+Store an __m512 value.  'stc' is not used.
+.AT store null trm
+.CG terminal "vmovupd" 'z' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL STA arlnk arlnk nme
+Store address quantity inside of op1 into op2.
+Replaced by ST opcode in cgoptim1.
+.AT store null trm
+.CG terminal notAILI
+
+.IL STRG1 arlnk stc
+Store address quantity inside of op1 argument register described by stc.
+Used in g++ style
+thunks when adjusting the *this* pointer, (the first argument) just
+before jumping through to the function Replaced by ST opcode in cgoptim1.
+.AT store null trm
+.CG terminal notAILI
+
+.IL STKR krlnk arlnk nme stc
+Store 64 bit integer value.  'stc' should be MSZ_I8.
+(There may be legacy cases needing repair where it is zero.)
+Replaced by ST opcode with size == MSZ_I8 in cgoptim1.
+.AT store null trm
+.CG terminal notAILI
+
+.IL VZST arlnk
+Special ili created by the vectorizer indicating that the variable
+whose address is op1 is stored; necessary in cases where
+the vectorizer replaces assignments with calls.  The optimizer will process
+the ili to create store information and then delete the ili.  Code generator
+will not see this ili.
+.AT other null trm
+.CG notCG
+
+.IL JSR sym lnk
+\'sym' is external function or subroutine being called (standard linkage).
+\'lnk' points to a list (terminated by NULL) of ARG ili for the
+arguments.
+.AT proc null lnk dom
+.CG terminal "call" asm_special ccmod
+
+.IL JSRA arlnk lnk stc stc
+JSR to routine whose address is pointed to by arlnk.
+lnk points to the list of ARG ILIs which represents the arguments.
+stc1 attribute flag (stdcall in x86)
+stc2 dtype
+.AT proc null lnk dom
+.CG terminal notAILI
+
+.IL QJSR sym lnk
+Quick (intrinsic) call.
+\'sym' is the external procedure being called.
+\'lnk' locates the list of arguments (define arg ILI - DAAR, DADR, DADP).
+.AT proc null lnk dom
+.CG terminal "call" asm_special ccmod
+
+.IL GJSR sym lnk sym
+Same as JSR, but the argument list is expressed using the general argument
+ILI, i.e., before applying the ABI.
+\'sym2' is the label to jump to if an exception is thrown,
+0 if the call cannot throw,
+or -1 if there is no cleanup.
+.AT proc null lnk dom
+.CG terminal notCG
+
+.IL GJSRA arlnk lnk stc stc sym
+Same as JSRA, but the argument list is expressed using the general argument
+ILI, i.e., before applying the ABI.
+.AT proc null lnk dom
+.CG terminal notCG
+
+.IL NULL stc
+Used to mark the end of an argument list for a JSR, QJSR or JSRA ili.
+.AT other null lnk
+.CG notAILI
+
+.IL GARG lnk lnk stc nme
+A general argument link, used before applying the ABI
+.sp
+\'lnk' (first) points to the value of the argument.
+\'lnk' (second) points to the next ARG ILI.
+First \'stc' is the dtype.
+Second \'stc' is an NME value, if set, for address arguments.
+.AT define null lnk
+.CG notCG
+
+.IL GARGRET lnk lnk stc nme
+A general argument link representing the return value of the function
+.sp
+\'lnk' (first) points to the value of the argument.
+\'lnk' (second) points to the next ARG ILI.
+\'stc' is the dtype
+\'nme' is the nme
+.AT define null lnk
+.CG notCG
+
+.IL VA_ARG arlnk stc
+va_arg(va_list x, typeof_arg) computes the address of the argument
+'arlnk' address of the va_list
+'stc' the dtype of the argument being reference
+.AT arth null ar
+.CG notCG
+
+.IL ARGIR irlnk lnk
+Defines an integer memory argument.
+\'irlnk' points to the register value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "mov" 'l'
+.SI direct lat(1)
+.SI ld direct lat(3)
+.SI st direct lat(3)
+
+.IL ARGSP splnk lnk
+Defines a single-precision memory argument.
+\'splnk' points to the register value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "movss" avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL ARGDP dplnk lnk
+Defines a double precision memory argument.
+\'dplnk' points to the register value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "movsd" avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL ARGAR arlnk lnk stc
+A memory argument of type pointer or struct/union.
+.sp
+\'arlnk' points to the value of the argument.
+\'lnk' points to the next ARG ILI.
+\'stc' is the dtype if this is a struct arg, else it is 0.
+.AT define null lnk
+.CG memarg "mov" 'q'
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL ARGKR krlnk lnk
+Defines a 64 bit integer memory argument.
+\'krlnk' points to the value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "mov" 'q'
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL ARGRSRV stc lnk
+For WINDOWS-ABI - reserve space in memory argument area for register arguments.
+\'stc' defines the number of bytes to reserve.
+.AT define null lnk
+.CG memarg notAILI
+
+.IL DAIR irlnk ir lnk
+Define integer argument in general purpose register for a JSR or QJSR.
+.AT define null lnk
+.CG "mov" 'l' move
+.SI direct lat(1)
+.SI ld direct lat(3)
+.SI st direct lat(3)
+
+.IL DASP splnk sp lnk
+Define a single precision register argument for a JSR or QJSR.
+.AT define null lnk
+.CG "movss" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL DASPSP dplnk dp lnk
+Define a C struct argument of two floats, passed in the indicated xmm register.
+.AT define null lnk
+.CG "movq" sse_avx
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL DACS cslnk cs lnk
+Define a C struct argument of two floats, passed in the indicated xmm register.
+.AT define null lnk
+.CG "movsd" move sse_avx
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL DACD cdlnk cd lnk
+Define a C struct argument of two double, passed in the indicated xmm register.
+.AT define null lnk
+.CG "movupd" move sse_avx
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL DADP dplnk dp lnk
+Define a double precision argument for a JSR or QJSR.
+.AT define null lnk
+.CG "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL DA128 dplnk dp lnk
+Define an __m128 argument for a JSR or QJSR.
+.AT define null lnk
+.CG "movupd" move sse_avx
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL DA256 dplnk dp lnk
+Define an __m256 argument in a ymm register for a JSR or QJSR (AVX only).
+.AT define null lnk
+.CG "vmovupd" 'y' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL PSARG xmm stc lnk
+Move symbolic register 'xmm' into actual register 'stc' (typically
+XR_XMM0 or XR_XMM1) in preparation for call to vector intrinsic function.
+.AT define null lnk
+.CG "movaps" move sse_avx
+.SI ld double lat(4)
+.SI st double lat(3)
+.SI double lat(2)
+
+.IL PDARG xmm stc lnk
+Move symbolic register 'xmm' into actual register 'stc' (typically
+XR_XMM0 or XR_XMM1) in preparation for call to vector intrinsic function.
+.AT define null lnk
+.CG "movapd" move ssedp sse_avx
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL DAAR arlnk ar lnk
+Define argument in address register for a JSR or QJSR.
+Lnk1 points to the expression to be moved into the specified (ar2)
+address register. Lnk3 locates the next argument for the JSR.
+.AT define null lnk
+.CG notCG replaceby DAKR
+
+.IL DAKR krlnk kr lnk
+Define argument in integer64 register for a JSR or QJSR.
+.AT define null lnk
+.CG "mov" 'q' move
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL DFRIR lnk ir
+Define function result in a integer register.
+.AT define null ir cse
+.CG terminal asm_nop 'l'
+
+.IL DFRSP lnk sp
+Define single precision function result.
+.AT define null sp cse
+.CG terminal asm_nop
+
+.IL DFRDP lnk dp
+Define double precision function result in an xmm register.
+.AT define null dp cse
+.CG terminal asm_nop
+
+.IL DFRCS lnk cs
+Define single precision complex function result in an xmm register.
+.AT define null cs cse
+.CG terminal asm_nop
+
+.IL DFRCD lnk cd
+Define double precision complex function result in an xmm register.
+.AT define null cd cse
+.CG terminal asm_nop
+
+.IL DFR128 lnk dp
+Define 128-bit function result in an xmm register.
+.AT define null dp cse
+.CG terminal asm_nop
+
+.IL DFR256 lnk dp
+Define 256-bit function result in an ymm register.
+.AT define null dp cse
+.CG terminal asm_nop 'y' avx_only
+
+.IL DFRAR lnk ar
+Define function result in an address register.
+\'op1' points to one of the JSR ILI.
+.AT define null ar cse
+.CG notCG replaceby DFRKR
+
+.IL DFRKR lnk kr
+Define function result in a integer64 register.
+.AT define null kr cse
+.CG terminal asm_nop 'q'
+
+.IL STSPSP dplnk arlnk nme stc
+Store the result of a function returning a struct of two floats.
+dplnk always points to a DFRDP or DPDF ili.
+stc is always MSZ_F8.
+.AT other null trm
+.CG terminal "movq" ssest sse_avx
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL IRDF ir
+Define one of the 64-bit general purpose registers.
+.AT define null ir cse
+.CG terminal asm_nop 'l'
+
+.IL SPDF sp
+Define single precision register (xmm register).
+.AT define null sp cse
+.CG terminal asm_nop
+
+.IL DPDF dp
+Define double precision register (xmm register).
+.AT define null dp cse
+.CG terminal asm_nop
+
+.IL ARDF ar
+Define address register. (ar is actual register number).
+.AT define null ar cse
+.CG notCG replaceby KRDF
+
+.IL KRDF kr
+Define integer64 register.
+.AT define null kr
+.CG terminal asm_nop 'q'
+
+.IL MVIR irlnk ir
+Move integer value into specific integer register, ir.
+.AT move null trm
+.CG terminal notAILI 'l'
+
+.IL MVSP splnk sp
+This ili represents a single precision function return value.
+For X86_64, the value is moved into the specified xmm register.
+.AT move null trm
+.CG terminal "movss" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL MVSPSP dplnk dp
+Move two single precision values to the lower 64 bits of the
+specified xmm register.  dplnk always points to a LDDP ili.
+.AT move null trm
+.CG terminal "movq" sse_avx
+.SI ld double fadd fmul fst lat(4)
+.SI st double fst lat(4)
+.SI double fadd fmul lat(2)
+
+.IL SPSP2SCMPLX splnk splnk
+Form a single complex value out of two single precision real values.
+.AT other null cs cse
+.CG "unpcklps" sse_avx asm_special
+
+.IL SPSP2SCMPLXI0 splnk
+Form a single complex value out of two single precision real values, imaginary part is 0.
+.AT other null cs cse
+.CG "unpcklps" sse_avx asm_special
+
+.IL DPDP2DCMPLX dplnk dplnk
+Form a double complex value out of two double precision real values.
+.AT other null cd cse
+.CG "unpcklpd" sse_avx asm_special
+
+.IL DPDP2DCMPLXI0 dplnk
+Form a double complex value out of two double precision real values, imaginary part is 0.
+.AT other null cd cse
+.CG "unpcklpd" sse_avx asm_special
+
+.IL SCMPLX2IMAG cslnk
+Return single precision imaginary part of a single complex value.
+.AT other null sp cse
+.CG "movshdup" sse_avx asm_special
+
+.IL DCMPLX2IMAG cdlnk
+Return double precision imaginary part of a double complex value.
+.AT other null dp cse
+.CG "unpckhpd" sse_avx asm_special
+
+.IL SCMPLX2REAL cslnk
+Return single precision real part of a single complex value.
+.AT other null sp cse
+.CG "movss" sse_avx asm_special
+
+.IL DCMPLX2REAL cdlnk
+Return double precision real part of a double complex value.
+.AT other null dp cse
+.CG "movsd" sse_avx asm_special
+
+.IL MVDP dplnk dp
+This ili represents a double precision function return value.
+For X86_64, the value is moved into the specified xmm register.
+.AT move null trm
+.CG terminal "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL MVQ dplnk dp
+This ili represents an __m128 function return value.
+For X86_64, the value is moved into the specified xmm register.
+.AT move null trm
+.CG terminal "movapd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL MV256 dplnk dp
+This ili represents an __m256 function return value.
+For X86_64, the value is moved into the specified ymm register.
+.AT move null trm
+.CG terminal "vmovapd" 'y' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL MOVSP
+Move a single-precision xmm register value.
+.AT move null sp
+.CG CGonly "movss" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL MOVDP
+Move a double-precision xmm register value.
+.AT move null dp
+.CG CGonly "movsd" move avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL MOVCS
+Move a single-precision complex xmm register value.
+.AT move null cs
+.CG CGonly "movsd" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL MOVCD
+Move a double-precision complex xmm register value.
+.AT move null cd
+.CG CGonly "movupd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL MOVQP
+Move an __m128 xmm register value.
+.AT move null dp
+.CG CGonly "movapd" move sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL MOV256
+Move an __m256 ymm register value.
+.AT move null dp
+.CG CGonly "vmovapd" 'y' move avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL MVAR arlnk ar
+Move address value into specific address register, ar.
+.AT move null trm
+.CG terminal notCG replaceby MVKR
+
+.IL MVKR krlnk kr
+Move integer value into specific integer register, kr.
+.AT move null trm
+.CG terminal notAILI 'q'
+
+.IL FREEIR irlnk
+Ensures that the result reg is freed.
+The FREExx ili are eliminated by the linearizer phase of the code generator.
+.AT other null trm
+.CG terminal notAILI
+
+.IL FREESP splnk
+.AT other null trm
+.CG terminal notAILI
+
+.IL FREEDP dplnk
+.AT other null trm
+.CG terminal notAILI
+
+.IL FREECS cslnk
+.AT other null trm
+.CG terminal notAILI
+
+.IL FREECD cdlnk
+.AT other null trm
+.CG terminal notAILI
+
+.IL FREEAR arlnk
+.AT other null trm
+.CG terminal notCG replaceby FREEKR
+
+.IL FREEKR krlnk
+.AT other null trm
+.CG terminal notAILI
+
+.IL FREE lnk stc
+.AT other null trm
+.CG terminal notAILI
+
+.IL ENTRY sym
+Main function entry or fortran ENTRY.
+.AT other null trm dom
+.CG terminal asm_nop
+
+.IL EXIT sym
+Exit the procedure.
+.AT other null trm dom
+.CG terminal asm_special
+
+.IL ARGSAVE sym
+For varargs/stdargs functions, this ili appears immediately after ENTRY
+ili.  This ili stores the registers which may contain incoming arguments
+into a stack array where they can be accessed by the varargs/stdarg macros.
+\'sym' is a symbol table pointer to the stack array.
+.AT other null trm dom
+.CG terminal asm_special "leaq"
+.SI direct lat(2)
+
+.IL NOP
+Null operation - used when a linear ilo is deleted.
+Also, is the opcode for the head of the aili list.
+.AT other null trm
+.CG asm_nop
+
+.IL ASM sym
+Implements C inline assembly code, asm(), feature. Also used as
+a convenience by the code generator.  'sym' is a symbol table
+pointer to a string constant.
+.AT other null trm dom
+.CG terminal asm_special
+
+.IL GASM sym lnk lnk lnk
+Compatible ASM language representation to support asm().
+sym - the asm string
+lnk1 - linked list of generic GASMLNKOs of output expressions
+lnk2 - linked list of specific GASMLNKI/SP/DP/As of input expressions
+lnk3 - linked list of generic GASMLNKCs of clobber strings
+NOTE: For now we add ccmod. In the future we may only want to indicate ccmod
+if the user specifies "cc" in the clobber list.
+.AT other null trm dom
+.CG terminal asm_special ccmod
+
+.IL GASMCNM sym sym
+Used to represent a symbolic name for a gasm constraint
+sym - identifier of constraint name. Stored as an int since we only care
+      about the name, not its type.
+sym - constraint number
+.AT other null trm
+.CG terminal asm_nop
+
+.IL GASMLNKG sym nme lnk lnk
+generic gasmlnk;
+sym - descriptor string
+nme - nme being stored
+lnk1 - input or output expression
+lnk2 - next GASMLNKG
+.AT other null lnk
+.CG asm_nop
+
+.IL GASMLNKTYP stc lnk
+generic gasmlnk - stores type
+stc - base type of expression
+lnk1 - input or output expression
+.AT other null lnk
+.CG asm_nop
+
+.IL GASMLNKC sym lnk
+sym - descriptor string
+lnk - next GASMLNKC
+.AT other null lnk
+.CG asm_nop
+
+.IL GASMLNKO sym nme lnk stc
+sym - descriptor string
+nme - nme being stored
+lnk - next GASMLNKO
+stc - dtype of expression
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKI sym nme irlnk lnk
+Represents Word reg.
+sym - descriptor string
+nme - nme being stored
+irlnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKB sym nme irlnk lnk
+Same as GASMLNKI, but represents byte reg
+sym - descriptor string
+nme - nme being stored
+irlnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKH sym nme irlnk lnk
+Same as GASMLNKI, but represents Half-word reg
+sym - descriptor string
+nme - nme being stored
+irlnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKKR sym nme krlnk lnk
+Same as GASMLNKI, but represents quad word reg
+sym - descriptor string
+nme - nme being stored
+krlnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKSP sym nme splnk lnk
+sym - descriptor string
+nme - nme being stored
+splnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKDP sym nme dplnk lnk
+sym - descriptor string
+nme - nme being stored
+dplnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNK256 sym nme dplnk lnk
+__m256
+sym - descriptor string
+nme - nme being stored
+dplnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKQP sym nme dplnk lnk
+__m128
+sym - descriptor string
+nme - nme being stored
+dplnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKA sym nme arlnk lnk
+sym - descriptor string
+nme - nme being stored
+arlnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLNKS sym nme arlnk lnk
+the operand is a struct
+sym - descriptor string
+nme - nme being stored
+arlnk - the input expression
+lnk - next specific GASMLNK
+.AT other null lnk
+.CG "" asm_nop
+
+.IL GASMLDI stc stc nme
+word register
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null ir
+.CG asm_nop
+
+.IL GASMLDH stc stc nme
+half word register
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null ir
+.CG asm_nop
+
+.IL GASMLDB stc stc nme
+byte register
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null ir
+.CG asm_nop
+
+.IL GASMLDKR stc stc nme
+quad register
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null kr
+.CG asm_nop
+
+.IL GASMLDSP stc stc nme
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null sp
+.CG asm_nop
+
+.IL GASMLDDP stc stc nme
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null dp
+.CG asm_nop
+
+.IL GASMLDQP stc stc nme
+128-bit object (typically used for XMM reg)
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null dp
+.CG asm_nop
+
+.IL GASMLD256 stc stc nme
+256-bit object (typically used for YMM reg)
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null dp
+.CG asm_nop
+
+.IL GASMLDA stc stc nme
+stc - output argument number, 0..n
+stc - optional field filled in by CG, this is the constaint used.
+nme - nme of object we're loading
+.AT other null ar
+.CG asm_nop
+
+.IL FPSAVE arlnk
+Store the frame pointer in the location whose address is specified
+by op1.
+.AT other null trm dom
+.CG terminal notAILI
+
+.IL VFENTER arlnk
+Enter a "function" which will compute the value of an expression
+used as a variable format field. op1 locates a temporary area
+used to set up the environment of the expression:
+\ op1+0 -- contains the fp to use for the expression
+\ op1+4 -- where to save the current fp
+The code for VFENTER performs the following:
+\1.  save current fp in addr(op1)+4
+\2.  load fp from addr(op1)+0
+.AT other null trm dom
+.CG terminal asm_special
+
+.IL VFEXIT arlnk irlnk
+Exit the variable format field function.  lnk1 locates the temporary
+area (see VFENTER).  lnk2 is the function return value. The code for
+VFEXIT performs the following:
+\1.  value of lnk2 --> integer function return register
+\2.  restore fp from addr(lnk1)+4
+\3.  return.
+.AT other null trm dom
+.CG terminal asm_special
+
+.IL PREFETCHNTA arlnk stc nme
+Prefetch cache line.  Non-Temporal Access - prefetch in such a way to
+minimize cache pollution.  Second operand, 'stc' is not used.
+.AT other null trm ssenme
+.CG terminal "prefetchnta"
+.SI direct lat(20)
+
+.IL PREFETCHT0 arlnk stc nme
+Prefetch cache line into all cache levels.
+.AT other null trm ssenme
+.CG terminal "prefetcht0"
+.SI direct lat(20)
+
+.IL PREFETCHW arlnk stc nme
+Prefetch cache line into L1 data cache.  Used in anticipation to subsequent
+store into the cache line.
+.AT other null trm ssenme
+.CG terminal "prefetchw"
+.SI direct lat(20)
+
+.IL PREFETCH arlnk stc nme
+Prefetch cache line into L1 data cache.
+.AT other null trm ssenme
+.CG terminal "prefetch"
+.SI direct lat(20)
+
+.IL BPREFETCHI irlnk irlnk sym
+This ILI immediately precedes a sequence of PREFETCHxx ILIs.  During
+linearisation it is replaced by:
+    if ( irlnk1 != irlnk2 ) goto sym
+where 'sym' is a label which immediately follows the last prefetch in
+the sequence (at the position marked by an EPREFETCH ILI).
+.AT other null trm dom
+.CG notCG terminal
+
+.IL BPREFETCHK krlnk krlnk sym
+This is the same as BPREFETCHI except that the first two operands are
+'krlnk's instead of 'irlnk's.
+.AT other null trm dom
+.CG notCG terminal
+
+.IL EPREFETCH sym sym
+This ILI immediately follows a sequence of PREFETCHxx ILIs.  'sym1' is
+a label which is the target of the conditional jump from a BPREFETCH
+ILI.  If ( sym2 != sym1 ) then the label 'sym1' is immediately preceded
+by an unconditional jump to 'sym2'.
+.AT other null trm dom
+.CG terminal asm_special
+
+.IL LABEL sym
+This ILI represents a label 'sym' that is within a basic block.
+.AT other null trm dom
+.CG terminal asm_special
+
+.\"
+.\" Start of packed SSE and AVX ILIs, which have 'xmm' operands
+.\" and are generated by llvect().
+.\"
+
+.IL PSLD arlnk xmm nme
+Load packed real*4 values from address 'arlnk' into 'xmm'.  'xmm' may
+be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or 64-byte
+aligned respectively.
+.AT pload null trm ssenme
+.CG terminal "movaps" move sse_avx
+.SI ld double lat(4)
+.SI st double lat(3)
+.SI double lat(2)
+
+.IL PDLD arlnk xmm nme
+Load packed real*8 values from address 'arlnk' into 'xmm'.  'xmm' may
+be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or 64-byte
+aligned respectively.
+.AT pload null trm ssenme
+.CG terminal "movapd" move ssedp sse_avx
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PI4LD arlnk xmm nme
+Load packed integer*4 values from address 'arlnk' into 'xmm'.  'xmm'
+may be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or
+64-byte aligned respectively.
+.AT pload null trm ssenme
+.CG terminal "movdqa" move ssedp avx3_special
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PI8LD arlnk xmm nme
+Load packed integer*8 values from address 'arlnk' into 'xmm'.  'xmm'
+may be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or
+64-byte aligned respectively.
+.AT pload null trm ssenme
+.CG terminal "movdqa" move ssedp avx3_special
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PILD arlnk xmm nme
+Load packed integer*4 or integer*8 values from address 'arlnk' into
+'xmm'.  'xmm' may be an xmm, ymm or zmm register and 'arlnk' must be
+16, 32 or 64-byte aligned respectively.
+.AT pload null trm ssenme
+.CG terminal "movdqa" move ssedp sse_avx
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PSLDU arlnk xmm nme
+Load packed real*4 values from address 'arlnk' into 'xmm'.  'xmm' may
+be an xmm, ymm or zmm register and there are no alignment requirements
+for 'arlnk'.
+.AT pload null trm ssenme
+.CG terminal "movups" move sse_avx
+
+.IL PDLDU arlnk xmm nme
+Load packed real*8 values from address 'arlnk' into 'xmm'.  'xmm' may
+be an xmm, ymm or zmm register and there are no alignment requirements
+for 'arlnk'.
+.AT pload null trm ssenme
+.CG terminal "movupd" move ssedp sse_avx
+
+.IL PI4LDU arlnk xmm nme
+Load packed integer*4 values from address 'arlnk' into 'xmm'.  'xmm'
+may be an xmm, ymm or zmm register and there are no alignment
+requirements for 'arlnk'.
+.AT pload null trm ssenme
+.CG terminal "movdqu" move ssedp avx3_special
+
+.IL PI8LDU arlnk xmm nme
+Load packed integer*8 values from address 'arlnk' into 'xmm'.  'xmm'
+may be an xmm, ymm or zmm register and there are no alignment
+requirements for 'arlnk'.
+.AT pload null trm ssenme
+.CG terminal "movdqu" move ssedp avx3_special
+
+.IL PILDU arlnk xmm nme
+Load packed integer*4 or integer*8 values from address 'arlnk' into
+'xmm'.  'xmm' may be an xmm, ymm or zmm register and there are no
+alignment requirements for 'arlnk'.
+.AT pload null trm ssenme
+.CG terminal "movdqu" move ssedp sse_avx
+
+.IL PSMASKLD arlnk xmm nme xmm
+Conditionally load packed real*4 elements from the 16-byte (for xmm)
+or 32-byte (for ymm) memory location whose starting address is given
+by 'arlnk' into the corresponding elements of the destination register
+'xmm1', under the control of a mask in 'xmm2'.  The mask bit for each
+real*4 element is the most significant bit of that element in the mask
+register 'xmm2'.  If a mask bit is 1 then the corresponding real*4
+element is copied from memory to 'xmm1', otherwise that element of
+'xmm1' is set to 0.
+.AT pload null trm ssenme
+.CG terminal "vmaskmovps" avx_only
+
+.IL PDMASKLD arlnk xmm nme xmm
+Conditionally load packed real*8 elements from the 16-byte (for xmm)
+or 32-byte (for ymm) memory location whose starting address is given
+by 'arlnk' into the corresponding elements of the destination register
+'xmm1', under the control of a mask in 'xmm2'.  The mask bit for each
+real*8 element is the most significant bit of that element in the mask
+register 'xmm2'.  If a mask bit is 1 then the corresponding real*8
+element is copied from memory to 'xmm1', otherwise that element of
+'xmm1' is set to 0.
+.AT pload null trm ssenme
+.CG terminal "vmaskmovpd" ssedp avx_only
+
+.IL PSLD_SCALAR arlnk xmm nme
+Move 4-byte scalar value whose address is indicated by arlnk,
+into least significant word of the 16-byte xmm register indicated by 'xmm'.
+.AT other null trm ssenme
+.CG terminal "movss" avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL PSLD_LOWH arlnk xmm nme
+Load 2 single precision values to low half of xmm register.
+This opcode and the next are used in combination, in place of "movups"
+due to a Hammer performance penalty for using "movups".
+.AT other null trm ssenme
+.CG terminal "movlps" avx_special
+
+.IL PSLD_HIGHH arlnk xmm nme
+Load 2 single precision values to high half of xmm register.
+.AT other null trm ssenme
+.CG terminal "movhps" avx_special
+
+.IL PDLD_LOWH arlnk xmm nme
+Load 8 bytes from memory into low half of xmm register denoted by xmm.
+.AT other null trm ssenme
+.CG terminal "movlpd" ssedp avx_special
+.SI ld direct fadd fmul fst lat(4)
+.SI st direct fst lat(2)
+
+.IL PDLD_HIGHH arlnk xmm nme
+Load 8 bytes from memory into high half of xmm register denoted by xmm.
+.AT other null trm ssenme
+.CG terminal "movhpd" ssedp avx_special
+.SI ld direct fadd fmul fst lat(4)
+.SI st direct fst lat(2)
+
+.IL PI1INSERT arlnk xmm nme stc
+SSE4.1 and AVX instruction to load an integer*1 value from 'arlnk' and
+insert it into 'xmm' at the byte offset given by 'stc'.
+.AT other null trm ssenme
+.CG terminal "pinsrb" sse_avx asm_special
+
+.IL PI2INSERT arlnk xmm nme stc
+SSE2 and AVX instruction to load an integer*2 value from 'arlnk' and
+insert it into 'xmm' at the word offset given by 'stc' (where a 'word'
+is 2 bytes).
+.AT other null trm ssenme
+.CG terminal "pinsrw" sse_avx asm_special
+
+.IL PI4INSERT arlnk xmm nme stc
+SSE4.1 and AVX instruction to load an integer*4 value from 'arlnk' and
+insert it into 'xmm' at the dword offset given by 'stc' (where a
+'dword' is 4 bytes).
+.AT other null trm ssenme
+.CG terminal "pinsrd" sse_avx asm_special
+
+.IL PI8INSERT arlnk xmm nme stc
+SSE4.1 and AVX instruction to load an integer*8 value from 'arlnk' and
+insert it into 'xmm' at the qword offset given by 'stc' (where a
+'qword' is 8 bytes).  This instruction can only be used on x86-64.
+.AT other null trm ssenme
+.CG terminal "pinsrq" sse_avx asm_special
+
+
+.IL PSST arlnk xmm nme
+Store packed real*4 values from 'xmm' to address 'arlnk'.  'xmm' may
+be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or 64-byte
+aligned respectively.
+.AT pstore null trm ssenme
+.CG terminal "movaps" move ssest sse_avx
+.SI ld double lat(4)
+.SI st double lat(3)
+.SI double lat(2)
+
+.IL PDST arlnk xmm nme
+Store packed real*8 values from 'xmm' to address 'arlnk'.  'xmm' may
+be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or 64-byte
+aligned respectively.
+.AT pstore null trm ssenme
+.CG terminal "movapd" move ssedp ssest sse_avx
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PI4ST arlnk xmm nme
+Store packed integer*4 values from 'xmm' to address 'arlnk'.  'xmm'
+may be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or
+64-byte aligned respectively.
+.AT pstore null trm ssenme
+.CG terminal "movdqa" move ssedp ssest avx3_special
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PI8ST arlnk xmm nme
+Store packed integer*8 values from 'xmm' to address 'arlnk'.  'xmm'
+may be an xmm, ymm or zmm register and 'arlnk' must be 16, 32 or
+64-byte aligned respectively.
+.AT pstore null trm ssenme
+.CG terminal "movdqa" move ssedp ssest avx3_special
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PIST arlnk xmm nme
+Store packed integer*4 or integer*8 values from 'xmm' to address
+'arlnk'.  'xmm' may be an xmm, ymm or zmm register and 'arlnk' must be
+16, 32 or 64-byte aligned respectively.
+.AT pstore null trm ssenme
+.CG terminal "movdqa" move ssedp ssest sse_avx
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PSSTU arlnk xmm nme
+Store packed real*4 values from 'xmm' to address 'arlnk'.  'xmm' may
+be an xmm, ymm or zmm register and there are no alignment requirements
+for 'arlnk'.
+.AT pstore null trm ssenme
+.CG terminal "movups" move ssest sse_avx
+
+.IL PDSTU arlnk xmm nme
+Store packed real*8 values from 'xmm' to address 'arlnk'.  'xmm' may
+be an xmm, ymm or zmm register and there are no alignment requirements
+for 'arlnk'.
+.AT pstore null trm ssenme
+.CG terminal "movupd" move ssedp ssest sse_avx
+
+.IL PI4STU arlnk xmm nme
+Store packed integer*4 values from 'xmm' to address 'arlnk'.  'xmm'
+may be an xmm, ymm or zmm register and there are no alignment
+requirements for 'arlnk'.
+.AT pstore null trm ssenme
+.CG terminal "movdqu" move ssedp ssest avx3_special
+
+.IL PI8STU arlnk xmm nme
+Store packed integer*8 values from 'xmm' to address 'arlnk'.  'xmm'
+may be an xmm, ymm or zmm register and there are no alignment
+requirements for 'arlnk'.
+.AT pstore null trm ssenme
+.CG terminal "movdqu" move ssedp ssest avx3_special
+
+.IL PISTU arlnk xmm nme
+Store packed integer*4 or integer*8 values from 'xmm' to address
+'arlnk'.  'xmm' may be an xmm, ymm or zmm register and there are no
+alignment requirements for 'arlnk'.
+.AT pstore null trm ssenme
+.CG terminal "movdqu" move ssedp ssest sse_avx
+
+.IL PSMASKST arlnk xmm nme xmm
+Conditionally store packed real*4 elements from the source register
+'xmm1' into the corresponding elements of the 16-byte (for xmm) or
+32-byte (for ymm) memory location whose starting address is given by
+'arlnk', under the control of a mask in 'xmm2'.  The mask bit for each
+real*4 element is the most significant bit of that element in the mask
+register 'xmm2'.  If a mask bit is 1 then the corresponding real*4
+element is copied from 'xmm1' to memory, otherwise that element of
+memory is left unchanged.
+.AT pstore null trm ssenme
+.CG terminal "vmaskmovps" ssest avx_only
+
+.IL PDMASKST arlnk xmm nme xmm
+Conditionally store packed real*8 elements from the source register
+'xmm1' into the corresponding elements of the 16-byte (for xmm) or
+32-byte (for ymm) memory location whose starting address is given by
+'arlnk', under the control of a mask in 'xmm2'.  The mask bit for each
+real*8 element is the most significant bit of that element in the mask
+register 'xmm2'.  If a mask bit is 1 then the corresponding real*8
+element is copied from 'xmm1' to memory, otherwise that element of
+memory is left unchanged.
+.AT pstore null trm ssenme
+.CG terminal "vmaskmovpd" ssedp ssest avx_only
+
+.IL PSSTS arlnk xmm nme
+Streaming store.
+Store 16 bytes from xmm register denoted by xmm into aligned memory
+bypassing cache.
+.AT pstore null trm ssenme
+.CG terminal "movntps" move ssest sse_avx
+
+.IL PSSTS_SCALAR arlnk xmm nme
+Scalar streaming store single precision quantity.
+.AT other null trm ssenme
+.CG terminal "movntss" move ssest
+
+.IL SSTS_SCALAR splnk arlnk nme stc
+Scalar streaming store single precision quantity.
+.AT store null trm
+.CG terminal "movntss" move
+
+.IL PDSTS arlnk xmm nme
+Streaming store.
+Store 16 bytes from xmm register denoted by xmm into aligned memory
+bypassing cache.
+.AT pstore null trm ssenme
+.CG terminal "movntpd" move ssedp ssest sse_avx
+
+.IL PDSTS_SCALAR arlnk xmm nme
+Scalar streaming store double precision quantity.
+.AT other null trm ssenme
+.CG terminal "movntsd" move ssedp ssest
+
+.IL DSTS_SCALAR dplnk arlnk nme
+Scalar streaming store double precision quantity.
+.AT store null trm
+.CG terminal "movntsd" move
+
+.IL PISTS arlnk xmm nme
+Streaming store.  Store 16 bytes, 4 or byte integer, from xmm register
+denoted by xmm into aligned memory, bypassing cache.
+.AT pstore null trm ssenme
+.CG terminal "movntdq" move ssedp ssest sse_avx
+
+.IL PSST_SCALAR arlnk xmm nme
+Store value from xmm register into 4-byte variable.
+.AT other null trm ssenme
+.CG terminal "movss" move ssest avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL PDST_LOWH arlnk xmm nme
+Store low half of xmm register into 8-byte memory location.
+.AT other null trm ssenme
+.CG terminal "movsd" move ssedp ssest avx_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL PDST_HIGHH arlnk xmm nme
+Store high half of xmm register into 8-byte memory location.
+.AT other null trm ssenme
+.CG terminal "movhpd" ssedp ssest avx_special
+.SI ld direct fadd fmul fst lat(4)
+.SI st direct fst lat(2)
+
+.IL PSST_LOWH arlnk xmm nme
+Store 2 single precision values from low half of xmm register.
+This opcode and the next are used in combination, in place of "movups"
+due to a Hammer performance penalty for using "movups".
+.AT other null trm ssenme
+.CG terminal "movlps" ssest avx_special
+
+.IL PSST_HIGHH arlnk xmm nme
+Store 2 single precision values from high half of xmm register.
+.AT other null trm ssenme
+.CG terminal "movhps" ssest avx_special
+
+.IL SFENCE
+X86 sfence instruction used in conjunction with streaming stores.
+.AT other null trm dom
+.CG terminal "sfence"
+
+
+.IL PSMOVX xmm xmm
+Move low order 4 byte value of xmm1 into low order 4 bytes of xmm2,
+without disturbing the other 12 bytes of xmm2.
+.AT other null trm
+.CG terminal "movss" avx_special
+.SI ld double lat(4)
+.SI st double lat(3)
+.SI double lat(2)
+
+.IL PSMOV xmm xmm
+Copy the packed real*4 values from 'xmm1' to 'xmm2'.
+.AT other null trm
+.CG terminal "movaps" move sse_avx
+.SI ld double lat(4)
+.SI st double lat(3)
+.SI double lat(2)
+
+.IL PDMOV xmm xmm
+Copy the packed real*8 values from 'xmm1' to 'xmm2'.
+.AT other null trm
+.CG terminal "movapd" move ssedp sse_avx
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PI4MOV xmm xmm
+Copy the packed integer*4 values from 'xmm1' to 'xmm2'.
+.AT other null trm
+.CG terminal "movdqa" move avx3_special
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PI8MOV xmm xmm
+Copy the packed integer*8 values from 'xmm1' to 'xmm2'.
+.AT other null trm
+.CG terminal "movdqa" move avx3_special
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL PIMOV xmm xmm
+Copy the packed integer*4 or integer*8 values from 'xmm1' to 'xmm2'.
+.AT other null trm
+.CG terminal "movdqa" move sse_avx
+.SI ld double fadd fmul fst lat(2)
+.SI st double fst lat(3)
+.SI double fadd fmul lat(2)
+
+.IL MOVSHDUP xmm xmm
+'xmm1' and 'xmm2' contain packed real*4 values.  This sets:
+    xmm2(3:0) = [ xmm1(3), xmm1(3), xmm1(1), xmm1(1) ]
+where the subscripts refer to real*4 elements.
+.AT other null trm
+.CG terminal "movshdup" sse_avx
+
+.IL MOVSLDUP xmm xmm
+'xmm1' and 'xmm2' contain packed real*4 values.  This sets:
+    xmm2(3:0) = [ xmm1(2), xmm1(2), xmm1(0), xmm1(0) ]
+where the subscripts refer to real*4 elements.
+.AT other null trm
+.CG terminal "movsldup" sse_avx
+
+.IL MOVDDUP xmm xmm
+'xmm1' and 'xmm2' contain packed real*8 values.  This sets:
+    xmm2(1:0) = [ xmm1(0), xmm1(0) ]
+where the subscripts refer to real*8 elements.
+.AT other null trm
+.CG terminal "movddup" ssedp sse_avx
+
+
+.IL PSDFR stc xmm
+Move 16-byte register 'stc' containing result of vector intrinsic function,
+into symbolic register 'xmm'.  'stc' is typically XR_XMM0.
+.AT other null trm
+.CG terminal "movaps" move sse_avx
+
+.IL PDDFR stc xmm
+Move 16-byte register 'stc' containing result of vector intrinsic function,
+into symbolic register 'xmm'.  'stc' is typically XR_XMM0.
+.AT other null trm
+.CG terminal "movapd" move ssedp sse_avx
+
+
+.IL PSMV_LOW splnk xmm
+Copy a real*4 value into the bottom of an 'xmm' register.
+.AT other null trm
+.CG terminal "movss" move avx_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL PDMV_LOWH dplnk xmm
+Copy a real*8 value into the low half of an 'xmm' register.
+.AT other null trm
+.CG terminal "movlpd" move ssedp avx_special
+.SI ld direct fadd fmul fst lat(4)
+.SI st direct fst lat(2)
+
+.IL PDMV_HIGHH dplnk xmm
+Copy a real*8 value into the high half of an 'xmm' register.  If the
+input operand is a register, the "unpcklpd" instruction is used instead.
+.AT other null trm
+.CG terminal "movhpd" ssedp avx_special
+.SI ld direct fadd fmul fst lat(4)
+.SI st direct fst lat(2)
+
+.IL PDMV_DUP dplnk xmm
+Copy a real*8 value into both the low and high halves of an 'xmm' register.
+.AT other null trm
+.CG terminal "movddup" ssedp sse_avx
+.SI double fmul lat(4)
+
+.IL PSCMPLXMV_LOWH cslnk xmm
+Copy a complex*8 value into the low half of an 'xmm' register.
+.AT other null trm
+.CG terminal "movlps" move avx_special
+
+.IL PDCMPLXMV cdlnk xmm
+Copy a complex*16 value into an 'xmm' register.
+.AT other null trm
+.CG terminal "movupd" move sse_avx
+
+.IL PI4MV_LOW irlnk xmm
+Copy an integer*4 value into the bottom of an 'xmm' register with zero
+extension to 16 bytes.  E.g. llvect uses this followed by PI4SHUF to
+store 4 copies of an integer*4 value in an 'xmm' register.  Typically
+this is done in the preheader of a vectorised loop to initialise the
+register for packed integer*4 operations.
+.AT other null trm
+.CG terminal "movd" 'l' sse_avx asm_special
+
+.IL PI8MV_LOW krlnk xmm
+Copy an integer*8 value into the low half of an 'xmm' register with
+zero extension to 16 bytes.  E.g. llvect uses this followed by
+UNPCKLQDQ to store 2 copies of an integer*8 value in an 'xmm'
+register.  Typically this is done in the preheader of a vectorised
+loop to initialise the register for packed integer*8 operations.
+.AT other null trm
+.CG terminal "movd" 'q' sse_avx asm_special
+
+
+.IL MOVHLPS xmm xmm
+Move high half of sp values from one xmm register into a low half of 2nd
+xmm register.
+.AT other null trm
+.CG terminal "movhlps" sse_avx
+
+.IL MOVLHPS xmm xmm
+Move low half of sp values from one xmm register into a high half of 2nd
+xmm register.
+.AT other null trm
+.CG terminal "movlhps" sse_avx
+
+.IL UNPCKLPS xmm xmm
+'xmm1' and 'xmm2' contain packed real*4 values.  This sets:
+    xmm2(3:0) = [ xmm1(1), xmm2(1), xmm1(0), xmm2(0) ]
+where the subscripts refer to real*4 elements.
+.AT other null trm
+.CG terminal "unpcklps" sse_avx
+
+.IL UNPCKHPS xmm xmm
+'xmm1' and 'xmm2' contain packed real*4 values.  This sets:
+    xmm2(3:0) = [ xmm1(3), xmm2(3), xmm1(2), xmm2(2) ]
+where the subscripts refer to real*4 elements.
+.AT other null trm
+.CG terminal "unpckhps" sse_avx
+
+.IL UNPCKLPD xmm xmm
+'xmm1' and 'xmm2' contain packed real*8 values.  This sets:
+    xmm2(1:0) = [ xmm1(0), xmm2(0) ]
+where the subscripts refer to real*8 elements.
+.AT other null trm
+.CG terminal "unpcklpd" ssedp sse_avx
+
+.IL UNPCKHPD xmm xmm
+'xmm1' and 'xmm2' contain packed real*8 values.  This sets:
+    xmm2(1:0) = [ xmm1(1), xmm2(1) ]
+where the subscripts refer to real*8 elements.
+.AT other null trm
+.CG terminal "unpckhpd" ssedp sse_avx
+
+.IL UNPCKLDQ xmm xmm
+'xmm1' and 'xmm2' contain packed integer*4 values.  This sets:
+    xmm2(3:0) = [ xmm1(1), xmm2(1), xmm1(0), xmm2(0) ]
+where the subscripts refer to integer*4 elements.  This is only used
+in AILIs on x86-32, where it is generated from a PI8MV_LOW ILI.
+.AT other null trm
+.CG CGonly terminal "punpckldq" ssedp sse_avx
+
+.IL UNPCKHQDQ xmm xmm
+'xmm1' and 'xmm2' contain packed integer*8 values.  This sets:
+    xmm2(1:0) = [ xmm1(1), xmm2(1) ]
+where the subscripts refer to integer*8 elements.  This is only used
+in AILIs on x86-64, where it is generated from a PDFLOATK ILI.
+.AT other null trm
+.CG CGonly terminal "punpckhqdq" ssedp sse_avx
+
+.IL UNPCKLQDQ xmm xmm
+'xmm1' and 'xmm2' contain packed integer*8 values.  This sets:
+    xmm2(1:0) = [ xmm1(0), xmm2(0) ]
+where the subscripts refer to integer*8 elements.
+.AT other null trm
+.CG terminal "punpcklqdq" ssedp sse_avx
+
+.IL PSSHUF xmm xmm stc
+Shuffle contents of xmm registers.  Used to move value in
+least significant word into the 3 other words of a register:
+xmm1 and xmm2 denote the (same) xmm register, and stc3 is the
+immediate constant 0.
+.AT other null trm
+.CG terminal "shufps" sse_avx asm_special
+
+.IL PDSHUF xmm xmm stc
+Shuffle contents of xmm registers.  Used to switch 2 d.p. values
+in register.
+.AT other null trm
+.CG terminal "shufpd" ssedp sse_avx asm_special
+
+.IL PI4SHUF xmm xmm stc
+Shuffle contents of xmm register containing 4-byte integers.
+.AT other null trm
+.CG terminal "pshufd" sse_avx asm_special
+
+
+.IL PTEST xmm xmm
+This sets the ZF flag if the bitwise AND of all the bits in the xmm
+register operands is 0, otherwise it clears the ZF flag, and it sets
+the CF flag if the bitwise ANDN of all the bits in the operands is 0,
+otherwise it clears the CF flag.  Due to the latter operation its
+operands are not commutative.  It clears the AF, OF, PF and SF flags.
+.AT other null ir
+.CG "ptest" ccmod sse_avx asm_special
+
+
+.IL PI4ADD arlnk xmm nme
+SSE2 packed signed or unsigned integer*4 addition.
+.AT other comm trm ssenme
+.CG terminal "paddd" sse_avx
+
+.IL PI4AND arlnk xmm nme
+SSE2 packed bitwise AND.  For pre-AVX512 targets the same instruction
+'[v]pand' is generated for all integer sizes, but for AVX512 the
+letter 'd' is added to the instruction mnemonic to denote integer*4
+operands and result.
+.AT other comm trm ssenme
+.CG terminal "pand" avx3_special
+
+.IL PI4ANDN arlnk xmm nme
+SSE2 packed bitwise AND NOT.  For pre-AVX512 targets the same
+instruction '[v]pandn' is generated for all integer sizes, but for
+AVX512 the letter 'd' is added to the instruction mnemonic to denote
+integer*4 operands and result.
+.AT other null trm ssenme
+.CG terminal "pandn" avx3_special
+
+.IL PI4MAX arlnk xmm nme
+SSE4.1 packed signed integer*4 maximum.
+.AT other comm trm ssenme
+.CG terminal "pmaxsd" sse_avx
+
+.IL PI4MIN arlnk xmm nme
+SSE4.1 packed signed integer*4 minimum.
+.AT other comm trm ssenme
+.CG terminal "pminsd" sse_avx
+
+.IL PI4MUL arlnk xmm nme
+SSE4.1 packed signed integer*4 multiplication, yielding the low half
+of the integer*8 result.
+.AT other comm trm ssenme
+.CG terminal "pmulld" sse_avx
+
+.IL PI4OR arlnk xmm nme
+SSE2 packed bitwise OR.  For pre-AVX512 targets the same instruction
+'[v]por' is generated for all integer sizes, but for AVX512 the letter
+'d' is added to the instruction mnemonic to denote integer*4 operands
+and result.
+.AT other comm trm ssenme
+.CG terminal "por" avx3_special
+
+.IL PI4SUBR arlnk xmm nme
+SSE2 packed signed or unsigned integer*4 reverse subtraction.
+.AT other null trm ssenme
+.CG terminal "psubd" sse_avx
+
+.IL PI4XOR arlnk xmm nme
+SSE2 packed bitwise XOR.  For pre-AVX512 targets the same instruction
+'[v]pxor' is generated for all integer sizes, but for AVX512 the
+letter 'd' is added to the instruction mnemonic to denote integer*4
+operands and result.
+.AT other comm trm ssenme
+.CG terminal "pxor" avx3_special
+
+
+.IL PI4ADDX xmm xmm
+SSE2 packed signed or unsigned integer*4 addition.
+.AT other comm trm
+.CG terminal "paddd" sse_avx
+
+.IL PI4ANDX xmm xmm
+SSE2 packed bitwise AND.  For pre-AVX512 targets the same instruction
+'[v]pand' is generated for all integer sizes, but for AVX512 the
+letter 'd' is added to the instruction mnemonic to denote integer*4
+operands and result.
+.AT other comm trm
+.CG terminal "pand" avx3_special
+
+.IL PI4ANDNX xmm xmm
+SSE2 packed bitwise AND NOT.  For pre-AVX512 targets the same
+instruction '[v]pandn' is generated for all integer sizes, but for
+AVX512 the letter 'd' is added to the instruction mnemonic to denote
+integer*4 operands and result.
+.AT other null trm
+.CG terminal "pandn" avx3_special
+
+.IL PI4MAXX xmm xmm
+SSE4.1 packed signed integer*4 maximum.
+.AT other comm trm
+.CG terminal "pmaxsd" sse_avx
+
+.IL PI4MINX xmm xmm
+SSE4.1 packed signed integer*4 minimum.
+.AT other comm trm
+.CG terminal "pminsd" sse_avx
+
+.IL PI4MULX xmm xmm
+SSE4.1 packed signed integer*4 multiplication, yielding the low half
+of the integer*8 result.
+.AT other comm trm
+.CG terminal "pmulld" sse_avx
+
+.IL PI4ORX xmm xmm
+SSE2 packed bitwise OR.  For pre-AVX512 targets the same instruction
+'[v]por' is generated for all integer sizes, but for AVX512 the letter
+'d' is added to the instruction mnemonic to denote integer*4 operands
+and result.
+.AT other comm trm
+.CG terminal "por" avx3_special
+
+.IL PI4SUBRX xmm xmm
+SSE2 packed signed or unsigned integer*4 reverse subtraction.
+.AT other null trm
+.CG terminal "psubd" sse_avx
+
+.IL PI4XORX xmm xmm
+SSE2 packed bitwise XOR.  For pre-AVX512 targets the same instruction
+'[v]pxor' is generated for all integer sizes, but for AVX512 the
+letter 'd' is added to the instruction mnemonic to denote integer*4
+operands and result.
+.AT other comm trm
+.CG terminal "pxor" avx3_special
+
+
+.IL PI8ADD arlnk xmm nme
+SSE2 packed signed or unsigned integer*8 addition.
+.AT other comm trm ssenme
+.CG terminal "paddq" sse_avx
+
+.IL PI8AND arlnk xmm nme
+SSE2 packed bitwise AND.  For pre-AVX512 targets the same instruction
+'[v]pand' is generated for all integer sizes, but for AVX512 the
+letter 'q' is added to the instruction mnemonic to denote integer*8
+operands and result.
+.AT other comm trm ssenme
+.CG terminal "pand" avx3_special
+
+.IL PI8ANDN arlnk xmm nme
+SSE2 packed bitwise AND NOT.  For pre-AVX512 targets the same
+instruction '[v]pandn' is generated for all integer sizes, but for
+AVX512 the letter 'q' is added to the instruction mnemonic to denote
+integer*8 operands and result.
+.AT other null trm ssenme
+.CG terminal "pandn" avx3_special
+
+.IL PI8OR arlnk xmm nme
+SSE2 packed bitwise OR.  For pre-AVX512 targets the same instruction
+'[v]por' is generated for all integer sizes, but for AVX512 the letter
+'q' is added to the instruction mnemonic to denote integer*8 operands
+and result.
+.AT other comm trm ssenme
+.CG terminal "por" avx3_special
+
+.IL PI8SUBR arlnk xmm nme
+SSE2 packed signed or unsigned integer*8 reverse subtraction.
+.AT other null trm ssenme
+.CG terminal "psubq" sse_avx
+
+.IL PI8XOR arlnk xmm nme
+SSE2 packed bitwise XOR.  For pre-AVX512 targets the same instruction
+'[v]pxor' is generated for all integer sizes, but for AVX512 the
+letter 'q' is added to the instruction mnemonic to denote integer*8
+operands and result.
+.AT other comm trm ssenme
+.CG terminal "pxor" avx3_special
+
+
+.IL PI8ADDX xmm xmm
+SSE2 packed signed or unsigned integer*8 addition.
+.AT other comm trm
+.CG terminal "paddq" sse_avx
+
+.IL PI8ANDX xmm xmm
+SSE2 packed bitwise AND.  For pre-AVX512 targets the same instruction
+'[v]pand' is generated for all integer sizes, but for AVX512 the
+letter 'q' is added to the instruction mnemonic to denote integer*8
+operands and result.
+.AT other comm trm
+.CG terminal "pand" avx3_special
+
+.IL PI8ANDNX xmm xmm
+SSE2 packed bitwise AND NOT.  For pre-AVX512 targets the same
+instruction '[v]pandn' is generated for all integer sizes, but for
+AVX512 the letter 'q' is added to the instruction mnemonic to denote
+integer*8 operands and result.
+.AT other null trm
+.CG terminal "pandn" avx3_special
+
+.IL PI8ORX xmm xmm
+SSE2 packed bitwise OR.  For pre-AVX512 targets the same instruction
+'[v]por' is generated for all integer sizes, but for AVX512 the letter
+'q' is added to the instruction mnemonic to denote integer*8 operands
+and result.
+.AT other comm trm
+.CG terminal "por" avx3_special
+
+.IL PI8SUBRX xmm xmm
+SSE2 packed signed or unsigned integer*8 reverse subtraction.
+.AT other null trm
+.CG terminal "psubq" sse_avx
+
+.IL PI8XORX xmm xmm
+SSE2 packed bitwise XOR.  For pre-AVX512 targets the same instruction
+'[v]pxor' is generated for all integer sizes, but for AVX512 the
+letter 'q' is added to the instruction mnemonic to denote integer*8
+operands and result.
+.AT other comm trm
+.CG terminal "pxor" avx3_special
+
+
+.IL PI4CMPX xmm xmm stc
+Vector dword integer compare; stc is the compare code;
+one of the instructions pcmpXXd is generated for this ili.
+.AT other null trm
+.CG terminal sse_avx asm_special
+
+.IL PI8CMPX xmm xmm stc
+Vector qword integer compare; stc is the compare code;
+one of the instructions pcmpXXq is generated for this ili.
+.AT other null trm
+.CG terminal sse_avx asm_special
+
+.IL PUI4MAXX xmm xmm
+SSE4.1 packed unsigned dword integer maximum.
+.AT other comm trm
+.CG terminal "pmaxud"
+
+.IL PUI4MINX xmm xmm
+SSE4.1 packed unsigned dword integer minimum.
+.AT other comm trm
+.CG terminal "pminud"
+
+.IL PUI4MAX arlnk xmm nme
+SSE4.1 packed unsigned dword integer maximum.
+.AT other comm trm ssenme
+.CG terminal "pmaxud"
+
+.IL PUI4MIN arlnk xmm nme
+SSE4.1 packed unsigned dword integer minimum.
+.AT other comm trm ssenme
+.CG terminal "pminud"
+
+
+.IL PSADD arlnk xmm nme
+Perform 4 single-precision floating-point adds of the 4 values
+in the 16-byte aligned memory location denoted by arlnk, and
+the 4 values in the xmm register denoted by xmm.
+The results are placed in xmm register 'xmm'.
+.AT other comm trm ssenme
+.CG terminal "addps" sse_avx
+.SI double fadd lat(7:5)
+
+.IL PSSUBR arlnk xmm nme
+Reverse subtract: computes 'xmm' - 'arlnk', result placed in the
+xmm register denoted by 'xmm'.
+.AT other null trm ssenme
+.CG terminal "subps" sse_avx
+.SI double fadd lat(7:5)
+
+.IL PSMUL arlnk xmm nme
+Multiply contents of memory and 16-byte xmm register.
+.AT other comm trm ssenme
+.CG terminal "mulps" sse_avx
+.SI double fmul lat(7:5)
+
+.IL PSDIVR arlnk xmm nme
+Reverse divide: op2/op1 -> op2.
+.AT other null trm ssenme
+.CG terminal "divps" sse_avx
+.SI double fmul lat(35:33)
+
+.IL PSAND arlnk xmm nme
+Bitwise AND operation on s.p. values - used to implement absolute value.
+.AT other comm trm ssenme
+.CG terminal "andps" sse_avx
+.SI double fmul lat(5:3)
+
+.IL PSXOR arlnk xmm nme
+Bitwise XOR operation on s.p. values.
+.AT other comm trm ssenme
+.CG terminal "xorps" sse_avx
+.SI double fmul lat(5:3)
+
+.IL PSMAX arlnk xmm nme
+Single-precision packed maximum.
+.AT other comm trm ssenme
+.CG terminal "maxps" sse_avx
+.SI double fadd lat(5:3)
+
+.IL PSMIN arlnk xmm nme
+Single-precison packed minimum.
+.AT other comm trm ssenme
+.CG terminal "minps" sse_avx
+.SI double fadd lat(5:3)
+
+.IL PSSQRT arlnk xmm nme
+Compute square root of 4 s.p. values in memory and put result into
+xmm register denoted by xmm.
+.AT other null trm ssenme
+.CG terminal "sqrtps" sse_avx
+.SI double fmul lat(41:39)
+
+.IL RCPPS arlnk xmm nme
+Compute single-precision approximations to reciprocal.
+.AT other null trm ssenme
+.CG terminal "rcpps" avx3_special
+.SI double fmul lat(41:39)
+
+.IL RSQRTPS arlnk xmm nme
+Compute single-precision approximations to reciprocal square root.
+.AT other null trm ssenme
+.CG terminal "rsqrtps" avx3_special
+.SI double fmul lat(41:39)
+
+.IL CMPNEQPS arlnk xmm nme
+Used for single-precision sqrt approximation.
+.AT other null trm ssenme
+.CG terminal "cmpneqps" sse_avx
+.SI double fadd lat(5:3)
+
+
+.IL HADDPS xmm xmm
+Horizontal add packed single.
+.AT other null trm
+.CG terminal "haddps" sse_avx
+
+.IL PSADDX xmm xmm
+Perform 4 single-precision floating point additions of the 4
+values in xmm register xmm1 and the 4 values in register xmm2.
+The results are placed in register xmm2.
+.AT other comm trm
+.CG terminal "addps" sse_avx
+.SI double fadd lat(7:5)
+
+.IL PSADDSUBX xmm xmm
+'xmm1' and 'xmm2' contain packed real*4 values.  This subtracts the
+even-index values in 'xmm1' from the corresponding values in 'xmm2',
+and adds the odd-index values in 'xmm1' to the corresponding values in
+'xmm2', placing the result in 'xmm2'.
+.AT other null trm
+.CG terminal "addsubps" sse_avx
+.SI double fadd lat(5:7)
+
+.IL PSSUBRX xmm xmm
+Reverse-subtract contents of two 16-byte xmm registers.
+.AT other null trm
+.CG terminal "subps" sse_avx
+.SI double fadd lat(7:5)
+
+.IL PSMULX xmm xmm
+Multiply contents of two 16-byte xmm registers.
+.AT other comm trm
+.CG terminal "mulps" sse_avx
+.SI double fmul lat(7:5)
+
+.IL PSDIVRX xmm xmm
+Reverse-divide contents of two 16-byte xmm registers.
+.AT other null trm
+.CG terminal "divps" sse_avx
+.SI double fmul lat(35:33)
+
+.IL PSANDX xmm xmm
+Bitwise AND operation on s.p. values - used to implement absolute value.
+.AT other comm trm
+.CG terminal "andps" sse_avx
+.SI double fmul lat(5:3)
+
+.IL PSANDNX xmm xmm
+Bitwise ANDNOT operation on s.p. values.
+.AT other null trm
+.CG terminal "andnps" sse_avx
+.SI double fmul lat(5:3)
+
+.IL PSORX xmm xmm
+Bitwise OR operation on s.p. values.
+.AT other comm trm
+.CG terminal "orps" sse_avx
+.SI double fadd lat(5:3)
+
+.IL PSXORX xmm xmm
+Compute bitwise exclusive-OR of two xmm registers and place result
+in second register.
+.AT other comm trm
+.CG terminal "xorps" sse_avx
+.SI double fmul lat(5:3)
+
+.IL PSMAXX xmm xmm
+Single precision packed maximum.
+.AT other comm trm
+.CG terminal "maxps" sse_avx
+.SI double fadd lat(5:3)
+
+.IL PSMINX xmm xmm
+Single precision packed minimum.
+.AT other comm trm
+.CG terminal "minps" sse_avx
+.SI double fadd lat(5:3)
+
+.IL PSSQRTX xmm xmm
+Compute square root of 4 s.p. values in 1st xmm register and put result into
+2nd xmm register.
+.AT other null trm
+.CG terminal "sqrtps" sse_avx
+.SI double fmul lat(41:39)
+
+.IL RCPPSX xmm xmm
+Compute single-precision approximations to reciprocal.
+.AT other null trm
+.CG terminal "rcpps" avx3_special
+.SI double fmul lat(41:39)
+
+.IL RSQRTPSX xmm xmm
+Compute single-precision approximations to reciprocal square root.
+.AT other null trm
+.CG terminal "rsqrtps" avx3_special
+.SI double fmul lat(41:39)
+
+.IL CMPNEQPSX xmm xmm
+Used for single-precision square root approximation.
+.AT other null trm
+.CG terminal "cmpneqps" sse_avx
+
+.IL PSCMPX xmm xmm stc
+Vector compare of single precision values.  'stc' is comparison code.
+One of the instructions cmpXXps is generated for this ili.
+.AT other null trm
+.CG terminal sse_avx asm_special
+
+
+.IL PDADD arlnk xmm nme
+Perform 2 double-precision floating-point adds of the 2 values
+in the 16-byte aligned memory location denoted by arlnk, and
+the 2 values in the xmm register denoted by xmm.
+The results are placed in xmm register 'xmm'.
+.AT other comm trm ssenme
+.CG terminal "addpd" ssedp sse_avx
+.SI double fadd lat(7:5)
+
+.IL PDSUBR arlnk xmm nme
+Reverse subtract: computes 'xmm' - 'arlnk', result placed in the
+xmm register denoted by 'xmm'.
+.AT other null trm ssenme
+.CG terminal "subpd" ssedp sse_avx
+.SI double fadd lat(7:5)
+
+.IL PDMUL arlnk xmm nme
+Multiply contents of memory and 16-byte xmm register.
+.AT other comm trm ssenme
+.CG terminal "mulpd" ssedp sse_avx
+.SI double fmul lat(7:5)
+
+.IL PDDIVR arlnk xmm nme
+Reverse divide: op2/op1 -> op2.
+.AT other null trm ssenme
+.CG terminal "divpd" ssedp sse_avx
+.SI double fmul lat(39:37)
+
+.IL PDAND arlnk xmm nme
+Bitwise AND operation on d.p. values - used to implement absolute value.
+.AT other comm trm ssenme
+.CG terminal "andpd" ssedp sse_avx
+.SI direct fadd lat(5:3)
+
+.IL PDXOR arlnk xmm nme
+Bitwise XOR operation on d.p. values.
+.AT other comm trm ssenme
+.CG terminal "xorpd" ssedp sse_avx
+.SI double fmul lat(5:3)
+
+.IL PDMAX arlnk xmm nme
+Double precision packed maximum.
+.AT other comm trm ssenme
+.CG terminal "maxpd" ssedp sse_avx
+.SI direct fadd lat(5:3)
+
+.IL PDMIN arlnk xmm nme
+Double precision packed minimum.
+.AT other comm trm ssenme
+.CG terminal "minpd" ssedp sse_avx
+.SI direct fadd lat(5:3)
+
+.IL PDSQRT arlnk xmm nme
+Compute square root of 2 d.p. values in memory and put result into
+xmm register denoted by xmm.
+.AT other null trm ssenme
+.CG terminal "sqrtpd" ssedp sse_avx
+.SI double fmul lat(53:51)
+
+
+.IL HADDPD xmm xmm
+Horizontal add packed double.
+.AT other null trm
+.CG terminal "haddpd" ssedp sse_avx
+
+.IL PDADDX xmm xmm
+Perform 2 double-precision floating point additions of the 2
+values in xmm register xmm1 and the 2 values in register xmm2.
+The results are placed in register xmm2.
+.AT other comm trm
+.CG terminal "addpd" ssedp sse_avx
+.SI double fadd lat(5:7)
+
+.IL PDADDSUBX xmm xmm
+'xmm1' and 'xmm2' contain packed real*8 values.  This subtracts the
+even-index values in 'xmm1' from the corresponding values in 'xmm2',
+and adds the odd-index values in 'xmm1' to the corresponding values in
+'xmm2', placing the result in 'xmm2'.
+.AT other null trm
+.CG terminal "addsubpd" ssedp sse_avx
+.SI double fadd lat(5:7)
+
+.IL PDSUBRX xmm xmm
+Reverse-subtract contents of two 16-byte xmm registers.
+.AT other null trm
+.CG terminal "subpd" ssedp sse_avx
+.SI double fadd lat(7:5)
+
+.IL PDMULX xmm xmm
+Multiply contents of two 16-byte xmm registers.
+.AT other comm trm
+.CG terminal "mulpd" ssedp sse_avx
+.SI double fmul lat(7:5)
+
+.IL PDDIVRX xmm xmm
+Reverse-divide contents of two 16-byte xmm registers.
+.AT other null trm
+.CG terminal "divpd" ssedp sse_avx
+.SI double fmul lat(39:37)
+
+.IL PDANDX xmm xmm
+Bitwise AND operation on d.p. values - used to implement absolute value.
+.AT other comm trm
+.CG terminal "andpd" ssedp sse_avx
+.SI direct fadd lat(5:3)
+
+.IL PDANDNX xmm xmm
+Bitwise ANDNOT operation on d.p. values.
+.AT other null trm
+.CG terminal "andnpd" ssedp sse_avx
+
+.IL PDORX xmm xmm
+Bitwise OR operation on d.p. values.
+.AT other comm trm
+.CG terminal "orpd" ssedp sse_avx
+
+.IL PDXORX xmm xmm
+Compute bitwise exclusive-OR of two xmm registers and place result
+in second register.
+.AT other comm trm
+.CG terminal "xorpd" ssedp sse_avx
+.SI double fmul lat(5:3)
+
+.IL PDMAXX xmm xmm
+Double precision packed maximum.
+.AT other comm trm
+.CG terminal "maxpd" ssedp sse_avx
+.SI double fadd lat(5:3)
+
+.IL PDMINX xmm xmm
+Double precision packed minimum.
+.AT other comm trm
+.CG terminal "minpd" ssedp sse_avx
+.SI double fadd lat(5:3)
+
+.IL PDSQRTX xmm xmm
+Compute square root of 2 d.p. values in 1st xmm register and put result into
+2nd xmm register.
+.AT other null trm
+.CG terminal "sqrtpd" ssedp sse_avx
+.SI double fmul lat(53:51)
+
+.IL PDCMPX xmm xmm stc
+Vector compare of double precision values.  'stc' is comparison code.
+One of the instructions cmpXXpd is generated for this ili.
+.AT other null trm
+.CG terminal sse_avx asm_special ssedp
+
+
+.IL PSLLSH irlnk xmm
+Shift packed 4-byte integers left.
+.AT other null trm
+.CG terminal "pslld" sse_avx
+
+.IL PSRLSH irlnk xmm
+Shift packed 4-byte integers logical right (zero fill).
+.AT other null trm
+.CG terminal "psrld" sse_avx
+
+.IL PSRASH irlnk xmm
+Shift packed 4-byte integers arithmetically right (sign extend).
+.AT other null trm
+.CG terminal "psrad" sse_avx
+
+.IL PDLLSH irlnk xmm
+Shift packed 8-byte integers left.
+.AT other null trm
+.CG terminal "psllq" ssedp sse_avx
+
+.IL PDRLSH irlnk xmm
+Shift packed 8-byte integers logical right (zero fill).
+.AT other null trm
+.CG terminal "psrlq" ssedp sse_avx
+
+.IL PDRASH irlnk xmm
+Shift packed 8-byte integers arithmetically right (sign extend).
+NO SUCH INSTRUCTION.
+.AT other null trm
+.CG notCG terminal "psraq" ssedp
+
+
+.IL PBBLENDX xmm xmm xmm
+SSE4.1 Variable Blend Packed Bytes
+.AT other null trm
+.CG terminal "pblendvb" sse_avx asm_special
+
+.IL PDBLENDX xmm xmm xmm
+SSE4.1 Variable Blend Packed Double Precision Floating-Point Values
+.AT other null trm
+.CG terminal "blendvpd" sse_avx asm_special ssedp
+
+.IL PSBLENDX xmm xmm xmm
+SSE4.1 Variable Blend Packed Single Precision Floating-Point Values
+.AT other null trm
+.CG terminal "blendvps" sse_avx asm_special
+
+.IL PBBLEND arlnk xmm nme xmm
+SSE4.1 Variable Blend Packed Bytes
+.AT other null trm ssenme
+.CG terminal "pblendvb" sse_avx asm_special
+
+.IL PDBLEND arlnk xmm nme xmm
+SSE4.1 Variable Blend Packed Double Precision Floating-Point Values
+.AT other null trm ssenme
+.CG terminal "blendvpd" sse_avx asm_special ssedp
+
+.IL PSBLEND arlnk xmm nme xmm
+SSE4.1 Variable Blend Packed Single Precision Floating-Point Values
+.AT other null trm ssenme
+.CG terminal "blendvps" sse_avx asm_special
+
+.\"
+.\" Start of AVX-only ILIs.
+.\"
+
+.IL PDBROADCAST dplnk xmm
+An AVX-only ILI which broadcasts a real*8 value to all 8-byte elements
+of a ymm or zmm register 'xmm'.
+.AT other null trm
+.CG terminal "vbroadcastsd" ssedp avx_only avx_special
+
+.IL PSBROADCAST splnk xmm
+An AVX-only ILI which broadcasts a real*4 value to all 4-byte elements
+of an xmm, ymm or zmm register 'xmm'.
+.AT other null trm
+.CG terminal "vbroadcastss" avx_only avx_special
+
+.IL PCDBROADCAST cdlnk xmm
+An AVX-only ILI which broadcasts a (real*8, real*8) complex value to
+all 16-byte elements of a zmm register 'xmm'.
+.AT other null trm
+.CG terminal "vbroadcastf32x4" ssedp avx_only avx_special
+
+.IL PCSBROADCAST cslnk xmm
+An AVX-only ILI which broadcasts a (real*4, real*4) complex value to
+all 8-byte elements of a ymm or zmm register 'xmm'.
+.AT other null trm
+.CG terminal "vbroadcastsd" avx_only avx_special
+
+.IL PI4BROADCAST irlnk xmm
+An AVX-only ILI which broadcasts an integer*4 value to all 4-byte
+elements of an xmm, ymm or zmm register 'xmm'.
+.AT other null trm
+.CG terminal "vpbroadcastd" avx_only avx_special
+
+.IL PI8BROADCAST krlnk xmm
+An AVX-only ILI which broadcasts an integer*8 value to all 8-byte
+elements of an xmm, ymm or zmm register 'xmm'.
+.AT other null trm
+.CG terminal "vpbroadcastq" avx_only avx_special
+
+.IL VEXTRACT arlnk xmm nme stc
+An AVX-only ILI.  stc = (suffix_flag | n), where 'suffix_flag' is a
+flag such as SUF_f128 that specifies which 'vextract...' instruction
+to use and 'n' is an integer in the range 0-3.  'xmm' is a ymm or zmm
+source register, and this ILI stores the contents of its n'th 128-bit
+or 256-bit element to the address 'arlnk'.
+.AT other null trm ssenme
+.CG terminal "vextract" avx_only avx_special
+
+.IL VEXTRACTX xmm xmm stc
+This is the same as VEXTRACT except that the destination is 'xmm2' (an
+xmm or ymm register) rather than the address 'arlnk'.
+.AT other null trm
+.CG terminal "vextract" avx_only avx_special
+
+.IL VINSERT arlnk xmm nme stc
+An AVX-only ILI.  stc = (suffix_flag | n), where 'suffix_flag' is a
+flag such as SUF_f128 that specifies which 'vinsert...' instruction to
+use and 'n' is an integer in the range 0-3.  This ILI loads 128 or 256
+bits of data from address 'arlnk' to the n'th 128-bit or 256-bit
+element of 'xmm', which is a ymm or zmm register, leaving its other
+element(s) unchanged.
+.AT other null trm ssenme
+.CG terminal "vinsert" avx_only avx_special
+
+.IL VINSERTX xmm xmm stc
+This is the same as VINSERT except that the source is 'xmm1' (an xmm
+or ymm register) rather than the address 'arlnk'.
+.AT other null trm
+.CG terminal "vinsert" avx_only avx_special
+
+.IL VEXTRACTF128 arlnk xmm nme
+An AVX-only ILI.  Store the high lane of 'xmm' (a ymm register
+containing floating-point data) to the address 'arlnk'.
+.AT other null trm ssenme
+.CG terminal "vextractf128" avx_only avx_special
+
+.IL VEXTRACTF128X xmm xmm
+An AVX-only ILI.  Copy the high lane of 'xmm1' (a ymm register
+containing floating-point data) to 'xmm2' (an xmm register).
+.AT other null trm
+.CG terminal "vextractf128" avx_only avx_special
+
+.IL VEXTRACTI128 arlnk xmm nme
+An AVX2-only ILI.  Store the high lane of 'xmm' (a ymm register
+containing integer data) to the address 'arlnk'.
+.AT other null trm ssenme
+.CG terminal "vextracti128" avx_only avx_special
+
+.IL VEXTRACTI128X xmm xmm
+An AVX2-only ILI.  Copy the high lane of 'xmm1' (a ymm register
+containing integer data) to 'xmm2' (an xmm register).
+.AT other null trm
+.CG terminal "vextracti128" avx_only avx_special
+
+.IL VINSERTF128 arlnk xmm nme
+An AVX-only ILI.  Load 128 bits of floating-point data from address
+'arlnk' to the high lane of 'xmm' (a ymm register), leaving its low
+lane unchanged.
+.AT other null trm ssenme
+.CG terminal "vinsertf128" avx_only avx_special
+
+.IL VINSERTF128X xmm xmm
+An AVX-only ILI.  Copy the contents of 'xmm1' (an xmm register
+containing floating-point data) to the high lane of 'xmm2' (a ymm
+register), leaving its low lane unchanged.
+.AT other null trm
+.CG terminal "vinsertf128" avx_only avx_special
+
+.IL VINSERTI128 arlnk xmm nme
+An AVX2-only ILI.  Load 128 bits of integer data from address 'arlnk' to
+the high lane of 'xmm' (a ymm register), leaving its low lane unchanged.
+.AT other null trm ssenme
+.CG terminal "vinserti128" avx_only avx_special
+
+.IL VINSERTI128X xmm xmm
+An AVX2-only ILI.  Copy the contents of 'xmm1' (an xmm register
+containing integer data) to the high lane of 'xmm2' (a ymm register),
+leaving its low lane unchanged.
+.AT other null trm
+.CG terminal "vinserti128" avx_only avx_special
+
+.\"
+.\" End of AVX-only ILIs.
+.\"
+
+.IL PDFMA arlnk xmm nme xmm
+A packed real*8 FMA3 or FMA4 instruction which computes:
+    dest = <sign> (factor1 * factor2) <addop> term
+where:
+    arlink = factor2 or term
+    xmm1   = ((arlnk == factor2) ? term : factor2)
+    xmm2   = dest
+.br
+Since ILIs have a maximum of 4 operands this ILI is always immediately
+preceded by an FMATYPE ILI which provides other information about the
+FMA instruction, namely (i) flags to specify the values of <sign>
+(+/-) and <addop> (+/-), and whether 'dest' is the same as 'factor1'
+or 'term', and for P[DS]FMA, whether arlnk is 'factor2' or 'term', and
+(ii) the 'factor1' operand.
+.br
+Note, for FMA3 'dest' must be the same as either 'factor1' or 'term'.
+.AT other null trm ssenme
+.CG terminal asm_special ssedp
+
+.IL PDFMAX xmm xmm xmm xmm
+A packed real*8 FMA3 or FMA4 instruction which computes:
+	dest = <sign> (factor1 * factor2) <addop> term
+where:
+	xmm1 = factor1
+	xmm2 = factor2
+	xmm3 = term
+	xmm4 = dest
+.br
+Since ILIs have a maximum of 4 operands this ILI is always immediately
+preceded by an FMATYPE ILI which specifies the values of <sign> (+/-)
+and <addop> (+/-).
+.br
+Note, for FMA3 'dest' must be the same as either 'factor1' or 'term'.
+.AT other null trm
+.CG terminal asm_special ssedp
+
+.IL PSFMA arlnk xmm nme xmm
+This is the same as PDFMA except that it specifies a packed real*4
+FMA3 or FMA4 instruction.
+.AT other null trm ssenme
+.CG terminal asm_special
+
+.IL PSFMAX xmm xmm xmm xmm
+This is the same as PDFMAX except that it specifies a packed real*4
+FMA3 or FMA4 instruction.
+.AT other null trm
+.CG terminal asm_special
+
+.IL FMATYPE stc xmm
+This provides extra information about the immediately following
+P[DS]FMA or P[DS]FMAX ILI.  Its operands are:
+.br
+stc = a set of flags which specify the values of <sign> (+/-) and
+      <addop> (+/-), and whether 'dest' is the same as 'factor1' or
+      'term', and for P[DS]FMA, whether arlnk is 'factor2' or 'term'.
+      The flags are defined by 'FMA_...' macros in "ili.h".
+.br
+xmm = the 'factor1' operand for P[DS]FMA, or 0 for P[DS]FMAX.
+.AT other null trm
+.CG terminal notAILI
+
+.\"
+.\" End of packed SSE and AVX ILIs.
+.\"
+
+.IL CLTD
+Used with signed integer divide/mod instruction.
+Sign extends %eax into %edx.
+.AT other null ir
+.CG CGonly "cltd" ccmod asm_special
+.SI direct lat(1)
+
+.IL CQTO
+Used with signed integer64 divide/mod instruction.
+.AT other null kr
+.CG CGonly "cqto" ccmod asm_special
+.SI direct lat(1)
+
+.IL CLTQ
+Sign extends register %rax from 32 to 64 bits.  Used in the final peephole
+pass to replace IKMV when possible.
+.AT other null trm
+.CG CGonly "cltq" ccmod asm_special
+.SI direct lat(1)
+
+.IL CMOV
+Conditionally copy op2 into op1 based on condition codes.
+.AT load null ir
+.CG CGonly asm_special "cmov"
+.SI ld direct lat(4)
+.SI direct lat(1)
+
+.IL CMOVSP
+Single precision conditional move.  Expanded by the CG.
+.AT load null sp
+.CG CGonly "movss" sse_avx asm_special
+.SI ld double lat(3)
+.SI st direct lat(2)
+.SI direct lat(2)
+
+.IL CMOVDP
+Double precision conditional move.  Expanded by the CG.
+.AT load null dp
+.CG CGonly "movsd" sse_avx asm_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL CMOVSCMPLX
+Single precision complex conditional move.  Expanded by the CG.
+.AT load null cs
+.CG CGonly "movsd" sse_avx asm_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL CMOVDCMPLX
+Double precision complex conditional move.  Expanded by the CG.
+.AT load null cd
+.CG CGonly "movupd" sse_avx asm_special
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL CMOVLPD
+Same as CMOVDP, but used when "movlpd" is preferred.
+.AT load null dp
+.CG CGonly "movlpd" sse_avx asm_special
+.SI ld direct fadd fmul fst lat(4)
+.SI st direct fst lat(2)
+
+.IL CSETB
+Conditional set of a byte
+.AT store null ir
+.CG CGonly asm_special "set"
+.SI ld direct lat(4)
+.SI direct lat(1)
+
+.IL INC
+Increment integer register or memory operand.
+.AT arth null ir cse
+.CG CGonly ccarith "inc"
+.SI direct lat(1)
+
+.IL DEC
+Decrement integer register or memory operand.
+.AT arth null ir cse
+.CG CGonly ccarith "dec"
+.SI direct lat(1)
+
+.IL LEA irlnk stc
+32-bit load effective address instruction.  This only appears in the
+linear and attributed ILIs, not the shared ILIs.  The LILI is created
+by 'cglinear.c:optimize_imul()', in which case 'irlnk' is used as both
+the base and index register, and 'stc' is the shift count, which may
+be 1, 2, 4 or 8.  The AILI may be generated from a LEA LILI or it may
+be created by a peephole optimisation.
+.AT arth null ir cse
+.CG CGonly "lea" 'l'
+.SI direct lat(1)
+
+.IL KLEA krlnk stc
+64-bit load effective address instruction.  This is only generated on
+x86-64, and it only appears in the linear and attributed ILIs, not the
+shared ILIs.  It is created by 'cglinear.c:optimize_imul()'.  'krlnk'
+is used as both the base and index register, and 'stc' is the shift
+count, which may be 1, 2, 4 or 8.
+.AT arth null kr cse
+.CG CGonly "lea" 'q'
+.SI direct lat(1)
+
+.IL MOV
+Synonym for LD and ST, and register to register moves.
+.AT move null ir cse
+.CG CGonly "mov" move
+.SI direct lat(1)
+.SI ld direct lat(3)
+.SI st direct lat(3)
+
+.IL MOVABS
+Used in place of MOV and ACON_STATIC, etc., when a full 64-bit address
+is required.  Used to support the Hammer-64 medium code model.
+.AT move null ir cse
+.CG CGonly "movabs" move
+
+.IL BIH stc stc
+Created by the code generator to represent, in the linear ili and the AILI,
+the beginning of a basic block.  The first operand is the bih number, and
+the second is the label symbol table pointer, if any.
+.AT other null trm dom
+.CG CGonly terminal asm_nop
+
+.IL DEF
+Placed into the AILI to indicate the definition of a register which is
+otherwise not explicitly defined (by appearing in the 'dest' field of
+some aili).  The register allocators need this information in certain
+cases.
+.AT other null trm
+.CG CGonly asm_nop
+
+.IL USE
+Placed into the AILI to indicate the use of a register which is otherwise
+not explicitly used.  The register allocators need to know this in order
+to avoid a conflicting register allocation, etc.
+.AT other null trm
+.CG CGonly asm_nop
+
+.IL STACK_ADJ
+Placed into the AILI to indicate that the stack pointer has been
+modified by the value specified in the src1 field of the aili.
+No code is generated for this ili.
+.AT other null trm
+.CG CGonly asm_special
+
+.IL ALLOC krlnk
+Allocate memory for a C or C++ variable length array.
+'krlnk' is the size.  Result is the address of the allocated memory.
+.AT arth null ar
+.CG notCG
+
+.IL DEALLOC arlnk
+Deallocate memory that was allocated by ALLOC.
+'arlnk' is the memory address.
+.AT other null trm
+.CG notCG
+
+.IL ALLOCA krlnk
+Allocate memory with alloca
+'krlnk' is the size.  Result is the address of the allocated memory.
+.AT arth null ar
+.CG notAILI
+
+.IL CFA arlnk nme
+Materialize the outer call frame address as a builtin.  This is
+placed into a load address register from a memory location whose address
+is represented by op1.
+.AT other null ar cse
+.CG 'l' asm_special
+
+.IL EHRET arlnk nme
+Materialize the return address of the caller as a builtin.  This is
+placed into a load address register from a memory location whose address
+is represented by op1.
+.AT other null ar cse
+.CG 'l' asm_special
+
+.IL EHREGST sym sym
+Store implicit registers into the syms: catch_clause and caught_object
+.AT other null trm
+.CG asm_special terminal
+
+.IL EHREGLD sym sym
+Materialize the syms: catch_clause and caught_object into the two symbols
+from implicit registers
+.AT other null trm
+.CG asm_special terminal
+
+.IL EHRESUME sym sym
+Resume propagation of an existing in-flight exception whose unwinding was
+interrupted to run some cleanup code.
+.AT other null trm
+.CG asm_special terminal
+
+.IL ACCEL lnk
+Start a block of code to be targeted for accelerator.
+Link to list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ENDACCEL lnk
+End a block of code to be targeted for accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCKERNELS lnk
+Start a block of kernels to be targeted for accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCENDKERNELS lnk
+End a block of kernels to be targeted for accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCPAR lnk
+Start a block of parallel code to be targeted for accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCENDPAR lnk
+End a block of parallel code to be targeted for accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCSCALARREG lnk
+Start a block of code to run as a scalar kernel on the accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCENDSCALARREG
+End a block of code to run as a scalar kernel on the accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCSERIAL lnk
+Start a block of code to run as a serial kernel on the accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCENDSERIAL
+End a block of code to run as a serial kernel on the accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCELLP lnk
+The following loop is to be targeted for the accelerator.
+Link to a list of clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCSLOOP lnk stc
+The following loop in a serial region is to be targeted for the accelerator.
+Link to a list of clauses.
+The second operand is one when this loop is tightly nested in the compute construct, and zero otherwise;
+.AT other null trm
+.CG notCG
+
+.IL ACCKLOOP lnk stc
+The following loop in a kernels region is to be targeted for the accelerator.
+Link to a list of clauses.
+The second operand is one when this loop is tightly nested in the compute construct, and zero otherwise;
+.AT other null trm
+.CG notCG
+
+.IL ACCPLOOP lnk stc
+The following loop in a parallel region is to be targeted for the accelerator.
+Link to a list of clauses.
+The second operand is one when this loop is tightly nested in the compute construct, and zero otherwise;
+.AT other null trm
+.CG notCG
+
+.IL ACCATTACH lnk lnk lnk sym
+Attach the pointer/allocatable member in an aggregate structure data variable
+.AT other null lnk
+.CG notCG
+
+.IL ACCDETACH lnk lnk lnk sym
+Detach the pointer/allocatable member in an aggregate structure data variable
+.AT other null lnk
+.CG notCG
+
+.IL ACCCOPY lnk lnk lnk sym stc
+Variable or array will be copied from host to device and back.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCCOPYIN lnk lnk lnk sym stc
+Variable or array will be copied from host to device.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCCOPYOUT lnk lnk lnk sym stc
+Variable or array will be copied from device to host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCLOCAL lnk lnk lnk sym stc
+Variable or array will be allocated on the device but not copied.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCCREATE lnk lnk lnk sym stc
+Variable or array will be allocated on the device but not copied
+to or from the host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCDELETE lnk lnk lnk sym stc
+Variable or array will be deleted from the device but not copied
+to or from the host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCPDELETE lnk lnk lnk sym stc
+Variable or array will be deleted from the device but not copied,
+unless in a data region to or from the host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCPRESENT lnk lnk lnk sym stc
+Variable or array must be present on the device.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCPCOPY lnk lnk lnk sym stc
+Variable or array may be present on the device, but if not will be copied.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCPCOPYIN lnk lnk lnk sym stc
+Variable or array may be present on the device, but if not will be copied in.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCPCOPYOUT lnk lnk lnk sym stc
+Variable or array may be present on the device, but if not will be copied out.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+.AT other null lnk
+Fifth arg is the policy index
+.CG notCG
+
+.IL ACCPCREATE lnk lnk lnk sym stc
+Variable or array may be present on the device, but if not will be allocated,
+but not copied.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCPNOT lnk lnk lnk sym stc
+Variable or array may be present on the device, but if not will NOT be allocated
+nor copied.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCNO_CREATE lnk lnk lnk sym stc
+Variable or array may be present on the device, but if not will NOT be allocated
+nor copied.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCUPDATEHOST lnk lnk lnk stc
+Variable or array will be copied from device back to host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCUPDATESELF lnk lnk lnk stc
+Variable or array will be copied from device back to the current thread.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCUPDATEDEV lnk lnk lnk stc
+Variable or array will be copied from host to device.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCUPDATEHOSTIFP lnk lnk lnk stc
+Variable or array will be copied from device back to host, if present.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCUPDATESELFIFP lnk lnk lnk stc
+Variable or array will be copied from device back to the current thread, if present.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCUPDATEDEVIFP lnk lnk lnk stc
+Variable or array will be copied from host to device, if present.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCUPDATE lnk
+Head of a list of update clauses.
+.AT other null trm
+.CG notCG
+
+.IL PCASTCOMPARE lnk
+Head of a list of PCAST compare clauses.
+.AT other null trm
+.CG notCG
+
+.IL ACCCOMPARE lnk lnk lnk stc
+Variable or array will be copied from device back to host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL PGICOMPARE lnk lnk lnk stc
+Variable or array will be copied from device back to host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCPRIVATE lnk lnk lnk
+Variable or array is private to an iteration of the loop or to a worker.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fourth argument is the symbol that points to the device copy, if there is such
+a symbol.
+.AT other null lnk
+.CG notCG
+
+.IL ACCFIRSTPRIV lnk lnk lnk
+Variable or array is private to the workers, but initialize with values from the host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+.AT other null lnk
+.CG notCG
+
+.IL ACCCACHE lnk lnk lnk
+The compiler should move the array to the highest level of the
+software-managed cache.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+.AT other null lnk
+.CG notCG
+
+.IL ACCDEVICEPTR lnk lnk lnk sym stc
+Variable or array will be copied from device to host.
+First link is to next clause.
+Second link is to the array bounds.
+Third link is to ACCSYMLNK.
+Fifth arg is the policy index
+.AT other null lnk
+.CG notCG
+
+.IL ACCAUTO lnk stc
+The execution mode will be selected by the compiler (gang/worker/vector/seq)
+First link is to next clause.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCVECTOR lnk lnk stc
+The iterations of the loop will be executed in vector mode on the accelerator
+First link is to next clause.
+Second link is to the vector size expression, or to IL_NULL if not set.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCPARALLEL lnk lnk stc
+The iterations of the loop will be executed in parallel on the accelerator.
+Same as ACCGANG except for the name.
+First argument is the link to the next clause.
+Second argument is the number of gangs.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCGANG lnk lnk stc stc
+The iterations of the loop will be executed in across gangs on the accelerator.
+First argument is the link to the next clause.
+Second argument is the number of gangs.
+Third argument is the device_type argument.
+Fourth argument is the dimension, where the default is dimension zero (cuda X dimension).
+.AT other null lnk
+.CG notCG
+
+.IL ACCGANGCHUNK lnk lnk stc
+The gang static-scheduling chunk size.
+First argument is the link to the next clause.
+Second argument is the chunk size.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCWORKER lnk lnk stc
+The iterations of the loop will be executed in across workers on the accelerator
+First argument is the link to the next clause.
+Second argument is the number of workers.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCSEQ lnk lnk stc
+The iterations of the loop will be executed sequentially on the accelerator.
+First argument is the link to the next clause.
+Second argument is the block size, if any.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCHOST lnk lnk stc
+The iterations of the loop will be executed on the host.
+First link is the link to the next clause.
+Second link is the block size, if any.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCSHORTLOOP lnk stc
+Trip count is less than the maximum size of a vector operation
+(for vector schedule) or less than the maximum number of
+simultaneously active parallel iterations (for parallel schedule)
+First link is the link to the next clause.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCTILE lnk lnk stc stc
+Tile this loop.
+First link is to the next clause.
+Second link is to a list of ACCSIZE ILI.
+Third argument is the tile depth.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCSIZE lnk lnk
+A size expression.
+The first link is to the next size expression, if any, or to NULL.
+The second link is the expression, if any, or to NULL.
+.AT other null lnk
+.CG notCG
+
+.IL ACCINDEPENDENT lnk
+The iterations of the loop are data-independent.
+Link to the next clause.
+.AT other null lnk
+.CG notCG
+
+.IL ACCNUMGANGS lnk lnk stc stc
+How many gangs to instantiate.
+First link is the link to the next clause.
+Second argument is the number of gangs.
+Third argument is the device_type argument.
+Fourth argument is the dimension, where the default is dimension zero (cuda X dimension).
+.AT other null lnk
+.CG notCG
+
+.IL ACCNUMWORKERS lnk lnk stc
+How many workers to instantiate.
+First link is the link to the next clause.
+Second argument is the number of workers.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCVLENGTH lnk lnk stc
+How long a vector to instantiate.
+First link is the link to the next clause.
+Second argument is the vector length expression.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCIF lnk lnk
+Region will execute conditionally on host or accelerator.
+First link is the link to the next clause.
+Second link is the conditional expression.
+.AT other null lnk
+.CG notCG
+
+.IL ACCDEVID lnk lnk stc
+Device ID of the device to use for this directive or construct.
+First link is the link to the next clause.
+Second link is the device ID expression.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCUNROLL lnk lnk stc stc
+Control loop unrolling; the 3rd element tells whether it's the parallel, vector, or sequential loop to be unrolled
+First link is the link to the next clause.
+Second link is the unroll expression, which must be a constant.
+Third argument is 1 to unroll sequential loop, 2 to unroll parallel/gang loop,
+3 to unroll vector loop, 0 to unroll the original loop.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCKERNEL lnk
+Mark this loop as the kernel loop; link to other arguments.
+.AT other null lnk
+.CG notCG
+
+.IL ACCTRIPLE lnk lnk lnk lnk
+Specify bounds of sub-arrays in accelerator clauses.
+First link to subsequent ACCTRIPLE.
+Second link to lower bound, third to upper bound, last to stride.
+.AT other null lnk
+.CG notCG
+
+.IL ACCDATAREG lnk
+Generate data movement to/from accelerator.
+Link to list of arguments.
+.AT other null trm
+.CG notCG
+
+.IL ACCENTERDATA lnk
+Generate data movement at enter data directive.
+Link to list of arguments.
+.AT other null trm
+.CG notCG
+
+.IL ACCEXITDATA lnk
+Generate data movement at exit data directive.
+Link to list of arguments.
+.AT other null trm
+.CG notCG
+
+.IL ACCFINALEXITDATA lnk
+Generate data movement at exit data directive with finalize clause.
+Link to list of arguments.
+.AT other null trm
+.CG notCG
+
+.IL ACCENDDATAREG
+Generate matching data movement to/from accelerator
+.AT other null trm
+.CG notCG
+
+.IL ACCPHI lnk stc stc
+PHI operator used in accelerator optimizing code generator.
+Link points to ACCPHILINK, and the 2nd operand is a symbol numbering.
+3rd operand is nonzero for loop header phi
+.AT other null trm
+.CG notCG notAILI accel
+
+.IL ACCLHPHI lnk stc
+PHI operator for loop headers used in accelerator optimizing code generator.
+Link points to ACCPHILINK, and the 2nd operand is a symbol numbering.
+.AT other null trm
+.CG notCG notAILI accel
+
+.IL ACCPHILINK lnk lnk
+PHI operator for loop headers used in accelerator optimizing code generator.
+First link is to next PHILINK, 2nd link is the chain to the reaching def.
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCINIT
+Dummy initial value for factored use-def chains.
+First link is to next PHILINK, 2nd link is the chain to the reaching def.
+.AT other null trm
+.CG notCG notAILI accel
+
+.IL ACCVAR stc
+Used in accelerator optimizing code generator, a builtin variable ref.
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCLDSYM stc stc
+Used in accelerator optimizing code generator, a load of a temp variable
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCSTSYM lnk stc stc
+Used in accelerator optimizing code generator, a load of a temp variable
+.AT other null trm
+.CG notCG notAILI accel
+
+.IL ACCIVAL stc stc
+Used in accelerator optimizing code generator, a literal constant;
+uses two operands to hold an ISZ_T value.
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCJSR stc lnk
+Used in accelerator optimizing code generator, special routine call
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCRETURN stc lnk
+Used in accelerator optimizing code generator, return value from a function call
+Short constant holds the return datatype.
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCLOR lnk lnk
+Used in accelerator optimizing code generator, logical OR
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCCAST lnk stc
+Used in accelerator optimizing code generator, type casting
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCJMP lnk sym
+Used in accelerator optimizing code generator, conditional jump
+The 'sym' is a normally an ACBLK index.  During linearization, the 'stc' will
+be a symbol index if positive and an ACBLK index negated if negative, until
+'acc_replace_labels'.
+.AT branch null trm
+.CG notCG notAILI accel
+
+.IL ACCARG lnk lnk
+Used in accelerator optimizing code generator, argument list
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCBOUND lnk lnk stc stc
+Used in accelerator optimizing code generator, array bounds check.
+Fields are subscript expression, ACCBOUND2, line number, array symbol
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCBOUND2 lnk lnk stc
+Used in accelerator optimizing code generator, array bounds check.
+Fields are lower bound, upper bound, subscript number.
+.AT other null lnk
+.CG notCG notAILI accel
+
+.IL ACCWAIT lnk stc
+Used in accelerator code, wait on the host for each kernel to finish.
+Link to next argument.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG notAILI
+
+.IL ACCNOWAIT lnk
+Used in accelerator code, don't wait on the host for each kernel to finish.
+Link to next argument.
+.AT other null lnk
+.CG notCG notAILI
+
+.IL ACCASYNC lnk lnk stc
+Used in accelerator code, perform this activity asynchronously.
+First link to next argument.
+Second link to async expression.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG notAILI
+
+.IL ACCWAITDIR lnk
+Used in accelerator code, wait on the host for async activities to finish.
+Link to list of clauses.
+.AT other null trm
+.CG notCG notAILI
+
+.IL ACCWAITARG lnk lnk stc
+Used in accelerator code, wait on the host for async activities to finish.
+First link to next argument.
+Second link to async expression.
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG notAILI
+
+.IL ACCLOOP lnk stc sym
+Used in accelerator code, to generate an explicit 'vector' loop.
+The first argument is the trip count, the second is an accelerator symbol number of the loop variable.
+The third argument is the label of the exit branch.
+.AT branch null trm
+.CG notCG notAILI accel
+
+.IL ACCENDLOOP sym
+Used in accelerator code, to end an explicit 'vector' loop.
+The argument is the label of the top of the loop.
+.AT branch null trm
+.CG notCG notAILI accel
+
+
+.IL ARGQP dplnk lnk
+Defines a quad precision memory argument.
+\'dplnk' points to the register value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "movupd" sse_avx
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL ARG256 dplnk lnk
+Defines a 256-bit memory argument.
+\'dplnk' points to the register value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "vmovupd" 'y' avx_only
+.SI ld double fadd fmul fst lat(3)
+.SI st direct fst lat(2)
+.SI direct fadd fmul lat(2)
+
+.IL GENARG lnk lnk stc stc
+Define an argument for a function call.
+The ARG ILIs for all of a function's arguments are linked together.
+\'lnk1' points to the argument.
+\'lnk2' points to the next ARG ILI.
+\'stc1' is the datatype of the argument, if available
+\'stc2' is the NME
+.AT define null lnk
+.CG notCG
+
+.IL GENARG2 lnk lnk stc stc
+Define 2nd argument of an argument pair for a function call.
+This will be linked immediately to the matching GENARG
+The ARG ILIs for all of a function's arguments are linked together.
+\'lnk1' points to the argument.
+\'lnk2' points to the next ARG ILI.
+\'stc1' is the datatype of the argument, if available
+\'stc2' is the NME
+.AT define null lnk
+.CG notCG
+
+.IL RETURN lnk stc nme
+Define return value from a function.
+\'lnk' points to the return value.
+\'stc' is the datatype of the argument.
+\'nme' is the nme of the argument
+.AT move null trm
+.CG notCG
+
+.IL KERNEL lnk
+Start a nest of loops to be turned into CUDA kernels
+.AT other null trm
+.CG notCG
+
+.IL ENDKERNEL lnk
+End a nest of loops to be turned into CUDA kernels
+.AT other null trm
+.CG notCG
+
+.IL KERNELBLOCK lnk lnk stc
+Block size for one kernel loop.
+The constant is the loop nest level.
+.AT other null trm
+.CG notCG
+
+.IL KERNELGRID lnk lnk stc
+Grid size for one kernel loop.
+The constant is the loop nest level.
+.AT other null trm
+.CG notCG
+
+.IL KERNELNEST lnk stc
+nest depth of kernel loops
+.AT other null trm
+.CG notCG
+
+.IL KERNELSTREAM lnk stc
+stream argument to CUF kernel
+.AT other null trm
+.CG notCG
+
+.IL KERNELDEVICE lnk stc
+device argument to CUF kernel
+.AT other null trm
+.CG notCG
+
+.IL ACCIMPDATAREG lnk stc
+Generate data movement to/from accelerator.
+This is for the implicit data region; the constant is normally zero,
+but is '1' when there is a need for a pgi_cu_init call regardless of
+whether there is any data to move or allocate
+.AT other null trm
+.CG notCG
+
+.IL ACCENDIMPDATAREG stc
+Generate matching data movement to/from accelerator
+This is for the implicit data region
+The short constant tells how many implicit data regions were generated
+.AT other null trm
+.CG notCG
+
+.IL ACCMIRROR lnk lnk lnk sym
+Variable or array will be mirrored on the device as on the host
+.AT other null lnk
+.CG notCG
+
+.IL ACCREFLECT lnk lnk lnk sym
+Variable or array has been reflected on the device as on the host
+.AT other null lnk
+.CG notCG
+
+.IL ACCREDUCTION lnk lnk lnk stc
+Variable is a reduction variable.  'stc' is the operator.
+.AT other null lnk
+.CG notCG
+
+.IL ACCCACHEDIR lnk stc
+Accelerator CACHE directive.
+The 'stc' argument is normally zero, but is set to '1' if this is a 'readonly' cache directive.
+.AT other null lnk
+.CG notCG
+
+.IL ACCCACHEARG lnk lnk lnk
+Accelerator CACHE argument.
+First lnk argument is the link to the next ACCCACHEARG or clause.
+Second is a list of ACCTRIPLE ilis for the array bounds.
+Third is an ACCSYMLNK.
+.AT other null lnk
+.CG notCG
+
+.IL ACCHOSTDATA lnk
+Begin host data region.
+.AT other null trm
+.CG notCG
+
+.IL ACCENDHOSTDATA
+End host data region.
+.AT other null trm
+.CG notCG
+
+.IL ACCUSEDEVICE lnk lnk lnk sym
+Use the device address of a variable or array.
+.AT other null lnk
+.CG notCG
+
+.IL ACCUSEDEVICEIFP lnk lnk lnk sym
+Use the device address of a variable or array, if present
+.AT other null lnk
+.CG notCG
+
+.IL ACCSYMLNK sym lnk lnk nme
+This is used from a link from many other accelerator ILI to
+recover the original symbol as well as a link to the address tree,
+if appropriate.
+Symbol is a symbol pointer.
+The first link is a link to reference the symbol.
+The second link is a link to reference the parent of the symbol, if the symbol was a member.
+The constant value is the NME of the parent, if the symbol was a member.
+.AT other null lnk
+.CG notCG
+
+.IL ACCCOLLAPSE lnk stc stc stc
+Number of loops associated with the loop construct.
+First link to next argument.
+Second argument is the collapse depth.
+Third argument is set if this is a nontightly nested loop (force)
+Last argument is the device_type argument.
+.AT other null lnk
+.CG notCG
+
+.IL ACCDEFNONE lnk
+Tells the accelerator CG that a default-none clause is in effect.
+The link is to other clauses.
+.AT other null lnk
+.CG notCG
+
+.IL ACCDEFPRESENT lnk
+Tells the accelerator CG that a default-present clause is in effect.
+The link is to other clauses.
+.AT other null lnk
+.CG notCG
+
+.IL ACCDEVICERES lnk lnk lnk sym
+Variable or array will be resident on the device.
+.AT other null lnk
+.CG notCG
+
+.IL ACCLINK lnk lnk lnk sym
+A link to the variable or array will be resident on the device.
+.AT other null lnk
+.CG notCG
+
+.IL ACCLOOPPRIVATE sym
+The symbol must be made implicitly private in the containing loop.
+.AT other null trm
+.CG notCG
+
+.IL ACCJMPTABLE lnk lnk stc
+Used in the Accelerator CG.
+A jump table.
+The first link is to a linked list of ACCJMPENTRY ACLILI.
+The second link is to the expression used to index the table.
+The 'stc' is an ACBLK index of the default jump target.
+.AT other null trm
+.CG notCG
+
+.IL ACCJMPENTRY lnk lnk stc
+Used in the Accelerator CG.
+A jump table entry.
+The first link is to the next entry in a linked list of ACCJMPENTRY ACLILI.
+The second link is to an ACCIVAL that contains the value to match for this jump table entry.
+The 'stc' is an ACBLK index of this jump target.
+.AT other null lnk
+.CG notCG
+
+.IL VCON sym
+.AT cons null lnk cse vect
+.CG notCG
+.IL VLD arlnk nme stc
+For all vector ILI except VCON the last operand is the vector dtype
+.AT load null lnk vect
+.CG notCG
+.IL VLDU arlnk nme stc
+.AT load null lnk vect
+.CG notCG
+.IL VNEG lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VADD lnk lnk stc
+.AT arth comm lnk cse vect
+.CG notCG
+.IL VSUB lnk lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VMUL lnk lnk stc
+.AT arth comm lnk cse vect
+.CG notCG
+.IL VDIV lnk lnk lnk stc
+Last lnk is a potential mask
+.AT arth null lnk cse vect
+.CG notCG
+.IL VDIVZ lnk lnk lnk stc
+Vector divide where divide by zero does not fault.
+.AT arth null lnk cse vect
+.CG notCG
+.IL VMOD lnk lnk lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VMODZ lnk lnk lnk stc
+Vector remainder where divide by zero does not fault.
+.AT arth null lnk cse vect
+.CG notCG
+.IL VCVTV lnk stc stc
+.AT arth null lnk cse vect
+.IL VCVTS lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VCVTR lnk stc stc
+Reinterpret the bits of a vector as if they were a different vector type.
+This should always be a no-op at runtime.
+.AT arth null lnk cse vect
+.IL VNOT lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VAND lnk lnk stc
+.AT arth comm lnk cse vect
+.CG notCG
+.IL VOR lnk lnk stc
+.AT arth comm lnk cse vect
+.CG notCG
+.IL VXOR lnk lnk stc
+.AT arth comm lnk cse vect
+.CG notCG
+.IL VCMPNEQ lnk lnk stc
+Used for single-precision square root approximation.
+.AT arth comm lnk cse vect
+.CG notCG
+.IL VLSHIFTV lnk lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VRSHIFTV lnk lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VLSHIFTS lnk lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VRSHIFTS lnk lnk stc
+.AT arth null lnk cse vect
+.CG notCG
+.IL VURSHIFTS lnk lnk stc
+Vector unsigned (logical) right shift by a scalar
+.AT arth null lnk cse vect
+.CG notCG
+.IL VMIN lnk lnk stc
+Vector minimum
+.AT arth null lnk cse vect
+.CG notCG
+.IL VMAX lnk lnk stc
+Vector maximum
+.AT arth null lnk cse vect
+.CG notCG
+.IL VABS lnk stc
+Vector absolute value
+.AT arth null lnk cse vect
+.CG notCG
+.IL VSQRT lnk lnk stc
+Vector square root
+.AT arth null lnk cse vect
+.CG notCG
+.IL VCOS lnk lnk stc
+Vector cosine - final link is potential mask as it is
+for all the math intrinsic calls (will be IL_NULL if no mask)
+.AT arth null lnk cse vect
+.CG notCG
+.IL VSIN lnk lnk stc
+Vector sine
+.AT arth null lnk cse vect
+.CG notCG
+.IL VSINCOS lnk lnk stc
+Vector sine-cosine
+.AT arth null lnk cse vect
+.CG notCG
+.IL VASIN lnk lnk stc
+Vector arc sine
+.AT arth null lnk cse vect
+.CG notCG
+.IL VACOS lnk lnk stc
+Vector arc cosine
+.AT arth null lnk cse vect
+.CG notCG
+.IL VATAN lnk lnk stc
+Vector arctangent
+.AT arth null lnk cse vect
+.CG notCG
+.IL VATAN2 lnk lnk lnk stc
+Vector arctangent2
+.AT arth null lnk cse vect
+.CG notCG
+.IL VTAN lnk lnk stc
+Vector tangent
+.AT arth null lnk cse vect
+.CG notCG
+.IL VSINH lnk lnk stc
+Vector hyperbolic sine
+.AT arth null lnk cse vect
+.CG notCG
+.IL VCOSH lnk lnk stc
+Vector hyperbolic cosine
+.AT arth null lnk cse vect
+.CG notCG
+.IL VTANH lnk lnk stc
+Vector hyperbolic tangent
+.AT arth null lnk cse vect
+.CG notCG
+.IL VEXP lnk lnk stc
+Vector natural exponential
+.AT arth null lnk cse vect
+.CG notCG
+.IL VLOG lnk lnk stc
+Vector natural logarithm
+.AT arth null lnk cse vect
+.CG notCG
+.IL VLOG10 lnk lnk stc
+Vector logarithm base 10
+.AT arth null lnk cse vect
+.CG notCG
+.IL VPOW lnk lnk lnk stc
+Vector pow float lnk
+.AT arth null lnk cse vect
+.CG notCG
+.IL VPOWI lnk lnk lnk stc
+Vector pow float to integer
+.AT arth null lnk cse vect
+.CG notCG
+.IL VPOWK lnk lnk lnk stc
+Vector pow double to integer*8
+.AT arth null lnk cse vect
+.CG notCG
+.IL VPOWIS lnk lnk lnk stc
+Vector pow float to scalar integer
+.AT arth null lnk cse vect
+.CG notCG
+.IL VPOWKS lnk lnk lnk stc
+Vector pow double to scalar integer*8
+.AT arth null lnk cse vect
+.CG notCG
+.IL VFPOWK lnk lnk lnk stc
+Vector pow float to integer*8
+.AT arth null lnk cse vect
+.CG notCG
+.IL VFPOWKS lnk lnk lnk stc
+Vector pow float to scalar integer*8
+.AT arth null lnk cse vect
+.CG notCG
+.IL VDPOWI lnk lnk lnk stc
+Vector pow double to integer
+.AT arth null lnk cse vect
+.CG notCG
+.IL VDPOWIS lnk lnk lnk stc
+Vector pow double to scalar integer
+.AT arth null lnk cse vect
+.CG notCG
+.IL VRSQRT lnk lnk stc
+Vector reciprocal square root
+.AT arth null lnk cse vect
+.CG notCG
+.IL VFLOOR lnk lnk stc
+Vector floor
+.AT arth null lnk cse vect
+.CG notCG
+.IL VCEIL lnk lnk stc
+Vector ceiling
+.AT arth null lnk cse vect
+.CG notCG
+.IL VAINT lnk lnk stc
+Vector truncation
+.AT arth null lnk cse vect
+.CG notCG
+.IL VRCP lnk lnk stc
+Vector reciprocal
+.AT arth null lnk cse vect
+.CG notCG
+.IL VST lnk arlnk nme stc
+.AT store null trm vect
+.CG terminal notCG
+.IL VSTU lnk arlnk nme stc
+.AT store null trm vect
+.CG terminal notCG
+.IL VFMA1 lnk lnk lnk stc
+Vector FMA for LLVM intrinsic - lnk1*lnk2+lnk3, with stc the dtype
+.AT arth null lnk cse vect
+.CG notCG
+.IL VFMA2 lnk lnk lnk stc
+Vector FMA for LLVM intrinsic - lnk1*lnk2-lnk3, with stc the dtype
+.AT arth null lnk cse vect
+.CG notCG
+.IL VFMA3 lnk lnk lnk stc
+Vector FMA for LLVM intrinsic - -lnk1*lnk2+lnk3, with stc the dtype
+.AT arth null lnk cse vect
+.CG notCG
+.IL VFMA4 lnk lnk lnk stc
+Vector FMA for LLVM intrinsic - -lnk1*lnk2-lnk3, with stc the dtype
+.AT arth null lnk cse vect
+.CG notCG
+.IL VPERMUTE lnk lnk lnk stc
+Shuffle contents of vector registers. lnk1 and lnk2 can be the same vector
+or lnk2 can be null. lnk1 dtype is used as dtype for both lnk1 and lnk2, 
+unless lnk2 is null. stc is the result dtype, lnk3 is a vector constant
+representing a mask where each field represents which L-to-R element of
+concatenated <lnk1,lnk2> vector is to be placed in corresponding result
+field. lnk3 size must match the size of the result vector, but can be 
+different than lnk1 and lnk2's size.
+.AT other null lnk vect
+.CG notCG
+.IL VBLEND lnk lnk lnk stc
+Vector blend/select of lnk2 & lnk3. lnk1 is the mask, stc is the dtype
+.AT other  null lnk cse vect
+.CG notCG
+.IL VCMP stc lnk lnk stc
+Vector compare of lnk1 & lnk2. stc1 is the condition code, stc2 is the dtype
+.AT arth null lnk cse vect
+.CG notCG
+
+.\".so ilitp_longdouble.n
+.IL X87CON sym
+x87 80-bit extended precision floating-point constant.
+.AT cons null x87 cse
+
+.IL X87LD arlnk nme stc
+Load integer or floating-point data into the X87 FPU from memory.
+'stc' is a MSZ_... memory size/type code.
+.AT load null x87
+.CG asm_special
+
+.IL X87ST x87lnk arlnk nme stc
+Store, possibly with conversion, data from the X87 FPU to memory.
+'stc' is a MSZ_... memory size/type code.
+.AT store null trm
+.CG asm_special terminal
+
+.IL X87ABS x87lnk
+x87 80-bit extended precision absolute value.
+.AT arth null x87 cse
+.CG "fabs"
+
+.IL X87CHS x87lnk
+x87 80-bit extended precision negation.
+.AT arth null x87 cse
+.CG "fchs"
+
+.IL X87RNDINT x87lnk
+x87 80-bit extended precision round to integer with current rounding mode.
+.AT arth null x87 cse
+.CG "frndint"
+
+.IL X87ADD x87lnk x87lnk
+x87 80-bit extended precision floating-point addition.
+.AT arth comm x87 cse
+.CG "fadd" asm_special
+
+.IL X87SUB x87lnk x87lnk
+x87 80-bit extended precision floating-point subtraction.
+.AT arth null x87 cse
+.CG "fsub" asm_special
+
+.IL X87MUL x87lnk x87lnk
+x87 80-bit extended precision multiply.
+.AT arth comm x87 cse
+.CG "fmul" asm_special
+
+.IL X87DIV x87lnk x87lnk
+x87 80-bit extended precision divide.
+.AT arth null x87 cse
+.CG "fdiv" asm_special
+
+.IL X87CMP x87lnk x87lnk stc
+x87 80-bit extended precision comparison.
+.AT arth null ir cse
+.CG "fucomi" asm_special ccmod
+
+.IL X87CMOV irlnk x87lnk x87lnk
+Select op2 if X87CMP test in op1 is satisfied, else op3.
+.AT other null x87 cse
+.CG "fcmov" asm_special
+
+.IL X87ARG x87lnk lnk
+Defines an x87 80-bit extended precision value to be passed as an
+argument to a function call via memory.
+\'x87lnk' points to the value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG memarg "fstpt"
+
+.IL X87TOINT x87lnk
+Convert an x87 80-bit extended precision value to a signed integer
+Used by LLVM only.
+.AT arth null ir cse
+.CG notCG
+
+.IL X87TOUINT x87lnk
+Convert an x87 80-bit extended precision value to an unsigned integer
+Used by LLVM only.
+.AT arth null ir cse
+.CG notCG
+
+.IL X87TOKINT x87lnk
+Convert an x87 80-bit extended precision value to a long long integer
+Used by LLVM only.
+.AT arth null kr cse
+.CG notCG
+
+.IL X87TOUKINT x87lnk
+Convert an x87 80-bit extended precision value to an unsigned long long integer
+Used by LLVM only.
+.AT arth null kr cse
+.CG notCG
+
+.IL X87TOSP x87lnk
+Convert an x87 80-bit extended precision value single precision
+Used by LLVM only.
+.AT arth null sp cse
+.CG notCG
+
+.IL X87TODP x87lnk
+Convert an x87 80-bit extended precision value to double precision
+Used by LLVM only.
+.AT arth null dp cse
+.CG notCG
+
+.IL X87FROMINT irlnk
+Convert a signed integer to an  x87 80-bit extended precision value
+Used by LLVM only.
+.AT arth null x87 cse
+.CG notCG
+
+.IL X87FROMUINT irlnk
+Convert an unsigned integer to an x87 80-bit extended precision value
+Used by LLVM only.
+.AT arth null x87 cse
+.CG notCG
+
+.IL X87FROMKINT krlnk
+Convert a long long to an  x87 80-bit extended precision value
+Used by LLVM only.
+.AT arth null x87 cse
+.CG notCG
+
+.IL X87FROMUKINT krlnk
+Convert an unsigned long long to an x87 80-bit extended precision value
+Used by LLVM only.
+.AT arth null x87 cse
+.CG notCG
+
+.IL X87FROMSP splnk
+Convert a float to an x87 80-bit extended precision value
+Used by LLVM only.
+.AT arth null x87 cse
+.CG notCG
+
+.IL X87FROMDP dplnk
+Convert a double to an x87 80-bit extended precision value
+Used by LLVM only.
+.AT arth null x87 cse
+.CG notCG
+
+.IL X87RETURN x87lnk stc
+Define a x87 80-bit extended precision real function result.
+Appears twice for complex-valued function results, in which case the
+imaginary part is returned first so that the real part is returned on
+top of the stack.
+.AT define null trm
+.CG terminal asm_nop
+
+.IL X87RESULT lnk stc
+Acquire the x87 80-bit extended precision result of a function call.
+Appears twice for complex-valued function calls, in which case the first
+acquires the real part and the second acquires the imaginary part.
+.AT define null x87 dom
+.CG terminal asm_nop
+
+.IL X87FREE x87lnk
+.AT other null trm
+.CG terminal notAILI
+
+.IL X87CSE x87lnk
+.AT arth null x87
+.CG notCG
+
+.IL X87XCH x87lnk
+Exchanges the top of the x87 floating-point register stack with another entry.
+.AT define null x87
+.CG CGonly "fxch"
+
+.IL X87POP
+Pops an entry from the x87 floating-point register stack.
+.AT define null x87
+.CG CGonly "fstp" asm_special
+
+.IL X87DUP
+Duplicates an entry on the x87 floating-point register stack.
+.AT define null x87
+.CG CGonly "fld" asm_special
+
+.IL BCONCUR sym lnk
+Start auto parallel region of an outlined function sym.
+.AT other null trm
+.CG notCG
+
+.IL ECONCUR sym
+End auto parallel region of an outlined function sym.
+.AT other null trm
+.CG notCG
+
+.IL HFADD hplnk hplnk
+Half-precision floating-point addition.
+.AT arth comm hp cse
+.CG notCG
+
+.IL HFNEG hplnk
+Half-precision negation.
+.AT arth null hp cse
+.CG notCG
+
+.IL HFSUB hplnk hplnk
+Half-precision floating-point subtraction.
+.AT arth null hp cse
+.CG notCG
+
+.IL HFMUL hplnk hplnk
+Half-precision floating-point multiply.
+.AT arth comm hp cse
+.CG notCG
+
+.IL HFDIV hplnk hplnk
+Half-precision divide.
+.AT arth null hp cse
+.CG notCG
+
+.IL HFCMP hplnk hplnk stc
+Half float compare with result of true or false.
+.AT arth null ir cse
+.CG notCG
+
+.IL HFCMPZ hplnk stc
+Half float compare with zero; result is TRUE or FALSE.
+.AT arth null ir cse
+.CG notCG
+
+.IL DFRHP lnk hp
+Define half precision function result.
+.AT define null hp cse
+.CG terminal asm_nop
+
+.IL HFCON sym
+Half-precision floating-point constant.
+.AT cons null hp cse
+.CG notCG
+
+.IL LDHP arlnk nme stc
+Load half-precision floating value.  'stc' is not used.
+.AT load null hp
+.CG notCG
+
+.IL HP2SP hplnk
+Half precison to single precision conversion.
+.AT arth null sp
+.CG notCG
+
+.IL SP2HP splnk
+Single precison to half precision conversion.
+.AT arth null hp
+.CG notCG
+
+.IL DP2HP dplnk
+Double precison to half precision conversion.
+.AT arth null hp
+.CG notCG
+
+.IL STHP hplnk arlnk nme stc
+Store half precision quantity.  'stc' must be MSZ_F2.
+.AT store null trm
+.CG notCG
+
+.IL ARGHP hplnk lnk
+Defines a half-precision memory argument.
+\'hplnk' points to the register value of the argument.
+\'lnk' points to the next ARG ILI.
+.AT define null lnk
+.CG notCG
+
+.IL CSEHP hplnk
+Half precision register cse.
+.AT arth null hp
+.CG notCG
+
+.IL HFCJMP hplnk hplnk stc sym
+Half precision compare and jump to the label 'sym'
+if the condition, denoted by stc, is true.
+.AT branch null trm dom
+.CG terminal conditional_branch notAILI
+
+.IL HFCJMPZ hplnk stc sym
+Half precision compare with zero and branch to label 'sym'.
+.AT branch null trm dom
+.CG notCG conditional_branch
+
+.IL MVHP hplnk ir
+Move half FP value into specific integer register, ir.
+.AT move null trm
+.CG terminal notAILI 'l'
+
+.IL HFMAX hplnk hplnk
+Half-precision max
+.AT arth comm hp cse
+.CG notCG
+
+.IL HFMIN hplnk hplnk
+Half-precision min
+.AT arth comm hp cse
+.CG notCG
+
+.IL LDQP arlnk nme stc
+Load quad-precision floating value.  'stc' is not used.
+.AT load null qp
+.CG notCG
+
+.IL STQP qplnk arlnk nme stc
+Store quad precision quantity.  'stc' must be MSZ_F16.
+.AT store null trm
+.CG notCG
+
+.IL QADD qplnk qplnk
+quad-precision floating-point addition.
+.AT arth comm qp cse
+.CG notCG
+
+.so ilitp_atomic.n
+
+.IL MFENCE
+x86 MFENCE instruction.
+.AT other null trm fence
+.CG CGonly terminal "mfence"
+
+.IL X86XCHG
+x86 XCHG instruction. Used only in AILI, and only with memory operand as destination.
+Always immediately followed by a DEF instruction that defines
+the same register as the source operand of the XCHG.
+.AT other null ir
+.CG CGonly "xchg"
+
+.IL X86XADD
+x86 XADD instruction. Use and constraints are same as for XCHG.
+.AT other null ir
+.CG CGonly "xadd"
+
+.IL X86CMPXCHG
+x86 CMPXCHG instruction. Used only in AILI, and only with memory operand as destination.
+Always immediately followed by a DEF instruction that defines
+the same register as the second source operand (comparand),
+which must be one of AL, AX, EAX, RAX.
+.AT other null ir
+.CG CGonly "cmpxchg" ccmod

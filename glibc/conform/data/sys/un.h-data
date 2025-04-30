@@ -1,0 +1,10 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4
+type {struct sockaddr_un}
+
+element {struct sockaddr_un} sa_family_t sun_family
+element {struct sockaddr_un} char sun_path []
+
+type sa_family_t
+
+allow sun_*
+#endif

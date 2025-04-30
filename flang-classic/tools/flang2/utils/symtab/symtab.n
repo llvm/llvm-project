@@ -1,0 +1,2927 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+.NS 11 "Symbol Table"
+.de OC		\"overloading class
+.ie '\\$1'B' .nr ii \\$2u
+.el .ip "\\f(CW\\$1\\fP"
+..
+.de SF		\"shared field
+.ie '\\$1'B' .nr ii \\$2u
+.el .ip "\\f(CW\\$1\\fP"
+..
+.de ST		\"symbol type
+.ie '\\$1'B' \{\
+.	sp \\n(psu
+.	nr II \\n(ii
+.	ba +\\n(IIu
+.	nr ii \\$2u
+.	nr PS \\n(ps
+.	nr ps 0 \}
+.el .ie '\\$1'E' \{\
+.	nr ps \\n(PS
+.	nr ii \\n(II
+.	ba -\\n(IIu \}
+.el .ip "\\f(CW\\$1\\fP"
+..
+.de Sc		\"storage class
+.ie '\\$1'B' \{\
+.	sp \\n(psu
+.	nr II \\n(ii
+.	ba +\\n(IIu
+.	nr ii \\$2u
+.	nr PS \\n(ps
+.	nr ps 0 \}
+.el .ie '\\$1'E' \{\
+.	nr ps \\n(PS
+.	nr ii \\n(II
+.	ba -\\n(IIu \}
+.el .ip "\\f(CW\\$1\\fP"
+..
+.de SM		\"symbol
+.if !'\\$1'E' \{\
+.if !\\n(Sx=0 .bp
+.if \\n(.$=1 .sh 4 "\\$1"
+.if \\n(.$=2 .sh 4 "\\$1,\\$2"
+.if \\n(.$=3 .sh 4 "\\$1,\\$2,\\$3"
+.if \\n(.$=4 .sh 4 "\\$1,\\$2,\\$3,\\$4"
+.if \\n(.$=5 .sh 4 "\\$1,\\$2,\\$3,\\$4,\\$5"
+.if \\n(.$=6 .sh 4 "\\$1,\\$2,\\$3,\\$4,\\$5,\\$6"
+.sp 1v
+.nr ii 1.0i \}
+..
+.de SI		\"symbol information
+..
+.de FL		\"flag
+.ip "\\f(CW\\$1\\fP"
+..
+.de SE		\"symbol element
+.ip "\\f(CW\\$1\\fP"
+..
+.de TY		\"type word
+.ie '\\$1'B' \{\
+.	sp \\n(psu
+.	nr II \\n(ii
+.	nr ii \\$2u
+.	nr PS \\n(ps
+.	nr ps 0 \}
+.el .ie '\\$1'E' \{\
+.	nr ps \\n(PS
+.	nr ii \\n(II \}
+.el \{\
+.	ip "\\f(CW\\$1\\fP"
+\&\\f(CW\\$2\\fP \}
+..
+.de DT	\"Data type
+..
+.de DE	\" data type element
+.ip "\\fI\\$1\\fP" 8n
+..
+.de PD	\" predef data type
+.ie '\\$1'B' \{\
+.	sp \\n(psu
+.	nr II \\n(ii
+.	nr ii \\$2u
+.	nr PS \\n(ps
+.	nr ps 0 \}
+.el .ie '\\$1'E' \{\
+.	nr ps \\n(PS
+.	nr ii \n(II \}
+.el \{\
+.	ip "\\f(CW\\$1\\fP"
+\&\\f(CW\\$2\\fP \}
+..
+.de OV		\"ST overloaded element
+.ip "\\f(CW\\$1 (\\$2)\\fP"
+..
+.nr ii 11n
+.sh 2 Overview
+.lp
+The Symbol Table is used throughout PGF90 to maintain information on
+user defined and compiler created symbols, constants, and labels.
+.lp
+The Symbol Table is maintained in dynamic storage space which is extended
+if necessary.
+Each symbol table entry consists of
+16 32-bit words
+which are divided into fields of various lengths.
+The layout of the \f(CWSYM\fP structure is strict
+(see type \f(CWSYM\fP in \fIsymacc.h\fP);
+overlaying fields with fields of different types is not allowed.
+Symbol table pointers
+are integers (greater than zero) which are stored as ints
+and used as relative pointers from a base pointer.
+.lp
+A second dynamic storage area, the symbol name area, is used to
+store the text of symbol names and character string constants.
+.lp
+Symbols are added to the Symbol Table using a set of access
+routines which are described later on in this section.
+.lp
+Symbol Table fields are accessed via a set of C macros.  These macros are
+upper case and consist of the name of the field followed by either
+.q P
+for the put macro or
+.q G
+for the get macro.  The put macros take two arguments,
+a symbol table pointer and the value to be inserted.  The get macros take
+a single argument which is a symbol table pointer, and return the value
+of the field.
+For example:
+.sp
+.CS
+    STYPEP(sptr, ST_VAR);     stype = STYPEG(sptr);
+.CE
+.lp
+The macro definitions and the necessary C data declaration statements
+required to access the Symbol Table are in the include file
+.i symtab.n .
+.lp
+The Symbol Table initially contains entries for all of
+the intrinsic and generic functions supported by PGFTN.
+This initial Symbol Table is created by the utility program SYMINI,
+which is described later on in this section.
+Appendix III contains the input file to SYMINI which
+defines the intrinsics and generics.
+.br
+.ne 12
+.sh 2 "Symbol Name Overloading"
+.lp
+Because of symbol name overloading, and multiple scopes,
+the Symbol Table will often contain more than one
+entry for a given name.
+.lp
+The concept of
+.ul
+overloading class
+is used by the compiler.
+By definition, two entities in different overloading
+classes are allowed to share the same name. The
+context in which the name is used will always determine
+which entity is being referred to.
+The overloading class of a symbol is determined by its
+stype,
+.cw STYPE ;
+the overloading classes are:
+.OC B \w'\f(CWOC_TYPEDEF\fP'+2n
+.OC OC_TYPEDEF
+Typedef names (not used by PGFTN).
+.OC OC_MEMBERS
+Structure and union member names.  Actually, there is a separate overloading
+class for each structure or union (i.e.,
+two different structures or unions
+are allowed to have identically named members).
+.OC OC_STAG
+Structure tags (structure template name).
+.OC OC_CMBLK
+Common block names.
+.OC OC_OTHER
+Other names.
+This class includes variables, functions.
+.OC OC_NONE
+Overloading class is not applicable.
+.sh 2 "Symbol Table Fields"
+.sh 3 "Shared Fields"
+In general, each type of symbol table entry (see STYPE below) has
+a different set of fields associated with it.
+This section describes those fields which are used by all or most
+of the symbol types.
+.SF B \w'\f(CWHASHLK\fP'+2n
+.SF STYPE w1:b1
+This field defines the type of symbol table entry.  C constant (\c
+.cw #define d)
+symbols
+are used for the various values which the stype may take on.
+The different symbol types and their values are:
+.ST B \w'\f(CWST_UNKNOWN\fP'+2n
+.ST ST_UNKNOWN
+Symbol entered initially by scanner but not yet resolved by semantic analysis.
+.ST ST_IDENT
+Identifier.  Used for symbols during semantic analysis until the true
+type of the symbol can be determined.  See note below.
+.ST ST_LABEL
+Statement label.
+.ST ST_CONST
+Constant.  Includes integer, real, character, etc. constants.
+.ST ST_STAG
+Structure template name
+.ST ST_MEMBER
+Member of a struct or union.
+.ST ST_VAR
+Scalar variable.
+.ST ST_ARRAY
+Array.
+.ST ST_STRUCT
+Structure variable.
+.ST ST_UNION
+Union variable.
+.ST ST_CMBLK
+Common block.
+.ST ST_NML
+Namelist.
+.ST ST_ENTRY
+Entry point to current subprogram unit.  i.e. name specified on
+.cw SUBROUTINE ,
+.cw FUNCTION ,
+.cw BLOCKDATA ,
+.cw PROGRAM ,
+or
+.cw ENTRY
+statement.
+.ST ST_PROC
+External subprogram referenced by current subprogram.
+.ST ST_STFUNC
+Statement function.
+.ST ST_PARAM
+Constant symbol defined in a
+.cw PARAMETER
+statement.
+.ST ST_INTRIN
+Intrinsic function.
+.ST ST_GENERIC
+Generic function name.
+.ST ST_PD
+Predeclared subroutine name.
+.ST ST_TYPEDEF
+Fortran 90 derived type template name.
+.ST ST_PLIST
+Parameter list.
+.ST ST_BLOCK
+Lexical block.
+.ST ST_BASE
+Symbol whose name is used as the base address for a set of static variables.
+.ST ST_DPNAME
+name sptr for deep copy directives
+.ST E
+.SF SC w1:b2
+Storage class of a variable.
+Indicates storage class/psect containing this variable.
+The following values are allowed:
+.Sc B \w'\f(CWSC_CMBLK\fP'+2n
+.Sc SC_NONE
+No storage class yet defined.  This is used internally until the
+storage class of a symbol is determined.
+.Sc SC_LOCAL
+local variables not initialized.
+.Sc SC_STATIC
+local variables which are initialized or saved.
+.Sc SC_DUMMY
+variables which are dummy arguments
+.Sc SC_CMBLK
+common block variables
+.Sc SC_EXTERN
+external subprograms
+.Sc SC_BASED
+pointer-based variables
+.Sc SC_PRIVATE
+variables declared within a parallel region.
+.Sc E
+.SF b3 w1:b3
+Always an unsigned 8-bit field.
+.SF b4 w1:b4
+Always an unsigned 8-bit field.
+.SF DTYPE w2
+Data type of symbol.
+Relative pointer into the data type area to a record or list of records
+which define the type of symbol.
+See section ???.
+.SF HASHLK w3
+Hash link.  This field is used to link together those symbols
+which hash to the same value, and is used only by the
+symbol look-up routines.
+.SF SYMLK w4
+Field used to create a list of symbols.
+.SF SCOPE w5
+Symbol scope.
+.SF NMPTR w6
+Name pointer.  Relative pointer into the symbol name storage
+to the null terminated character string for the symbol name.
+.SF flags w7
+Flags per symbol (named f1 through f32).
+.SF flags2 w19
+Flags per symbol (named f33 through f64).
+.SF flags3 w21
+Flags per symbol (named f65 through f96).
+.SF flags4 w25
+Flags per symbol (named f97 through f128).
+.SF PALIGN w33
+Store the symbol's alignment value specified by align pragma in the form of '!DIR$ ALIGN alignment'.
+.nr II \n(iiu
+.nr ii 0
+.lp
+.hl
+.ce
+.b NOTE
+.fi
+A symbol is entered in the symbol table initially by the scanner.  Its
+stype is set to
+.cw ST_UNKNOWN.
+The semantic analysis phase will change the
+stype field as it interprets the source code.  The stype field will change
+to
+.cw ST_IDENT
+when a type declaration is analyzed.  The stype field is not
+immediately set to
+.cw ST_VAR
+on a type declaration because the type
+declaration alone is not enough information to conclude that the intended
+use of the identifier is as a variable.  For example,
+.CS
+    INTEGER*2 IMIN
+.CE
+.fi
+In this example the source line could be reaffirming the declaration of
+an intrinsic or could actually be defining a local variable called
+.cw IMIN.
+It will not be known until the first reference to
+.cw IMIN
+is analyzed.  At this time the stype of
+.cw IMIN
+is either confirmed as an intrinsic use or as a variable use.  This 
+would not be a problem if the declaration of
+.cw IMIN
+was an array or if
+.cw IMIN
+was in common or an equivalence.  These cases clearly set the stype of
+.cw IMIN
+to ST_VAR, overriding its intrinsic properties.
+.hl
+.nr ii \n(IIu
+.bp
+.sh 3 "Fields by Symbol Type"
+.nr Sx 0
+.SM ST_UNKNOWN
+.nr Sx 1
+.SI OC_NONE unknown
+Symbol entered by the scanner but not yet resolved.
+.lp
+.ul
+Other Fields
+.SM ST_LABEL
+.SI OC_OTHER "label"
+.ul
+Flags
+.br
+.FL DEFD f1
+Set by the scanner when label definition has been processed.
+.FL CCSYM f2
+Compiler created label.
+.FL VOL f21
+Label is volatile and should not be deleted.
+.FL BEGINSCOPE f92
+Set for a label that marks the beginning of a lexical scope for symbols.
+.FL ENDSCOPE f93
+Set for a label that marks the beginning of a lexical scope for symbols.
+.FL SWIGNORE f94
+Set for a label that is part of switch statement and it is replaced by optimizer.
+.FL RESTRICTED f95
+Set for restricted use of module.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE RFCNT w13
+Number of references of this label.
+This includes references in
+.SE RFCNTDEV w14
+Number of references of this label for openmp device code.
+.cw ASSIGN
+and assigned
+.cw GOTO
+statements, and references of FORMAT statement labels.
+.SE SYMLK
+For
+labels which are referenced, the Semantic Analyzer links together these labels
+using this field.
+The head of the list is pointed to by
+.cw sem.flabels
+and the list is terminated by
+.cw 0 .
+.sp
+For variable format expressions,
+the Semantic Analyzer links together these compiler created labels
+using this field.
+The head of the list is pointed to by
+.cw sem.vf_expr.labels
+and the list is terminated by
+.cw 0 .
+.SE ADDRESS w10
+Byte address relative to beginning of code psect.
+Set by Code Scheduler.
+.sp
+For the label of a variable format expression,
+the Semantic Analyzer uses this field as a pointer to an area in
+dynamic storage containing the ILMs for the expression;
+the field is cleared at the end of semantic processing.
+.SE ILIBLK w11
+Number of the ILI block which defines this label.
+This may be zero for labels with BEGINSCOPE/ENDSCOPE set.
+.sp
+For the label of a variable format expression,
+the Semantic Analyzer uses this field as the index of
+the ILMs for the expression;
+the field is cleared at the end of semantic processing.
+.SE FMTPT w12
+Zero if this label is not on a
+.cw FORMAT
+statement, else is a symbol table pointer to compiler created array containing
+the encoded form of the
+.cw FORMAT
+statement.
+.SM ST_STAG ST_TYPEDEF
+.SI OC_STAG "struct tag"
+Structure template name.
+.lp
+.ul
+Flags
+.FL CLASS f60
+This is set when an object is polymorphic.
+.FL UNLPOLY f68
+This is set when object is unlimited polymorphic
+.FL VARDSC f61
+This is set when the descriptor associated with this object is for a scalar.
+.FL ISOCTYPE f63
+This is set when the type is iso_c_binding type.
+.FL DCLD f3
+Set if
+.cw "STRUCTURE-ENDSTRUCTURE"
+statement block has defined this structure tag.
+The
+.cw "STRUCTURE"
+statement effects the creation of the tag.  When the matching
+.cw ENDSTRUCTURE
+statement is seen, the tag's
+.cw DCLD
+is set.
+If a
+.cw RECORD
+statement references a symbol without
+.cw DCLD
+set, an error is generated and
+.cw DCLD
+is set to avoid further error messages on subsequent references to this tag.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE PARENT w15
+Contains sptr of parent of the type extension
+.SE TYPDEF_INIT w16
+Initialization template (an ST_VAR), if any.
+.SM ST_MEMBER
+.SI OC_MEMBERS "member"
+.lp
+.ul
+Flags
+.lp
+.ul
+Flags2
+.FL DESCARRAY f49
+Set if this is a descriptor array, managed by the compiler/runtime.
+.FL ALLOCATTR f53
+This flag is set if and only if the symbol was declared
+to have the ALLOCATABLE attribute (unlike the ALLOC flag
+.lp
+.ul
+Flags3
+.FL F90POINTER f66
+This flag is set if and only if the symbol was declared
+to have the POINTER attribute
+.FL TPALLOC f102
+Set if this component uses a type parameter and this component is implicitly 
+allocatable.
+.FL KINDPARM f75
+Set if this component is a kind type parameter
+.FL LENPARM f76
+Set if this component is a length type parameter
+.FL SDSCCONTIG f47
+Set if this is a descriptor array, and the compiler has determined that
+the object for which this is a descriptor is always contiguous.
+.FL FINALIZED f72
+Set if this is an allocatable derived type member that must be finalized.
+.FL CONTIGATTR f95
+This variable was declared with the CONTIGUOUS attribute.
+.FL TLS f89
+This variable is in thread local storage.
+.lp
+.ul
+Other Fields
+.lp
+.ul
+.SE SYMLK
+Members of each struct or union type are linked together using
+this field.  The end of the list has a value of
+.cw NOSYM .
+.SE ADDRESS
+Byte offset from the beginning of the struct (its parent) for this member.
+For a
+.cw UNION ,
+the compiler creates a ST_MEMBER whose
+.cw DTYPE
+field
+will locate a data type record of type
+.cw TY_UNION .
+For a
+.cw MAP ,
+the compiler creates a ST_MEMBER whose
+.cw DTYPE
+field
+will locate a data type record of type
+.cw TY_STRUCT .
+The members of a
+.cw UNION
+are the compiler-created structures representing the
+.cw MAP "s."
+The members of a
+.cw MAP
+are the variables which appear in the
+.cw MAP
+body.
+Since the offset of the structure representing a
+.cw MAP
+is zero,
+the offsets of the members in the map are actually relative
+to the beginning of the
+.cw MAP "'s"
+.cw UNION
+(note the first member of each
+.cw MAP
+has an offset of zero).
+.SE VARIANT w11
+Field used by the Semantic Analyzer to link together, in reverse order,
+the members of a
+.SE TBPLNK w20
+When this member is a type bound procedure, this field will hold an sptr to
+the binding name.
+.SE VTABLE w16
+When this member is a type bound procedure, this field will hold an sptr to the implementation ST_PROC.
+.SE IFACE w17
+When this member is a type bound procedure, this field will hold the sptr of theinterface-name
+.SE FINAL w23
+If > 0, member is a final subroutine. Value is the rank of the dummy argument
++ 1 (e.g., 1 is for a scalar, 2 is for a single dimensional array, 3 is for
+a double dimensional array, etc.).
+.cw STRUCTURE
+which appear at the same naming (scope) level.
+.SE PSMEM w12
+This field exists for compatibility with PGC.
+For PGFTN it normally would point to this symbol
+table entry.
+.SE ETLS w28
+Extended TLS levels
+.SE ASSOC_PTR w31
+When set, this is the sptr of a pointer that is initialized with this symbol.
+.SE PTR_TARGET w32
+When set, this symbol a place holder for a pointer target. This field holds the sptr of the original pointer target.
+.SM ST_IDENT ST_VAR ST_ARRAY ST_STRUCT ST_UNION
+.SI OC_OTHER ident variable array structure union
+.lp
+.ul
+Flags
+.FL DCLD
+Set if the data type of the variable has been explicitly declared.
+.FL DINIT f4
+Set if the variable has been data initialized.
+.FL CCSYM
+Indicates that this variable is a compiler created variable.
+.FL SAVE f6
+Set if the variable is referenced in a
+.cw SAVE
+statement.
+Overloaded with PURE.
+.FL REF f7
+Set if variable is referenced.  Set by sym_is_refd - for local
+variables, indicates that address has been assigned.
+.FL REREF f62
+Set if we need to "re-reference" variable (call back-end's sym_is_refd). This
+can occur if we have a type extension with initializations in the parent
+component which require a call to assn_static_off() in back end's sym_is_refd() function.
+.FL PTR_INITIALIZER f126
+Set when this symbol is used as an initializer for a pointer. Assumes
+ASSOC_PTR and/or PTR_TARGET are also set.
+.FL WEAK f119
+Set if this variable is a weak symbol.
+.FL ADDRTKN f8
+Variable has appeared as a subprogram argument or in a %LOC.
+Set by Expander.
+.FL ASUMSZ f9
+Assumed size array.
+.FL ADJARR f10
+Adjustable array.
+.FL ASSUMRANK f37
+Assumed-rank array.
+.FL ASSUMSHP f19
+Assumed-shape array.
+.FL AFTENT f20
+Set if an adjustable array and its declaration occurs after an
+ENTRY statement.
+.FL COPYPRMS f16
+Set if the variable is a dummy argument and is copied.
+Set by the expander.
+.FL REGARG f17
+Variable is a dummy argument which is passed in a register.
+Set by the expander.
+.FL MEMARG f18
+If the variable is a dummy argument, the actual argument
+is passed in the memory argument area.
+If the variable is a non-dummy array, the array is
+the memory area which is passed to the called routine.
+Set by Expander.
+The flags
+.cw REGARG
+and
+.cw MEMARG
+are defined when arguments are passed in registers;
+a memory area is needed if there are more arguments than registers.
+.FL HOMED f40
+Set in the expander for register dummies that have had code generated 
+to 'home' the register to a local memory location.  Space will be allocated 
+in sym_is_refd when use is seen by code generator.
+.FL OPTARG f25
+This is a dummy argument that is a Fortran-90 optional argument.
+.FL AUTOBJ f26
+For arrays, this is a Fortran-90 automatically-allocated array.
+.FL UPLEVEL f27
+If this bit is set, the variable or array must be addressed as an offset
+from the containing procedure's stack frame pointer; this is used for
+Fortran-90 contained procedures.
+.FL POINTER f5
+This variable is actually a Fortran-90 pointer variable.
+.FL VOL f21
+Variable appeared in a 
+.cw VOLATILE
+statement.
+.FL ALLOC f22
+Variable (an array) is allocatable (its shape is
+.i deferred .
+In the first implementation of allocatable, deferred-shape arrays
+will be restricted to pointer-based objects (\f(CWSC_BASED\fP).
+.FL ASSN f23
+Variable is assigned a value explicitly (detected by Expand) or
+implicitly (namelist I/O item, detected by Semant).
+Valid for only scalar variables (may be set for other types
+of variables, but does not apply).
+For local scalar variables, the
+.cw REDUC
+flag is set if it is data initialized and its
+.cw ASSN
+flag is not set;
+also, if the local variable and its constant value is entered
+into the
+.cw DVL
+table.
+.FL QALN f24
+Quad-align variable.
+.FL DOVAR f11
+when set, the variable (ST_VAR) is a do loop index variable of
+a do loop currently being processed by semant (used only by semant).
+.FL E38 f15
+when set, the message \fIsymbol not explicitly declared\fP (-dclchk)
+has been issued for symbol.
+Prevents repeating the message for the same symbol;
+overloaded with the
+flag
+.cw EXPST .
+.FL INLN f14
+if set, variable was created
+when its containing function was inlined; also, the variable's
+.cw CCSYM
+flag is set.
+.FL GSCOPE f28
+For Fortran-90 subprograms that contain other subprograms, some symbols
+may not be used in the outer subprogram but used in the contained subprograms.
+When optimizing the outer subprogram, these symbols can not be optimized away,
+and must be stored in memory, so the internal subprograms can see them.
+This flag is set for outer-subprogram symbols that are used by the internal
+subprograms.
+This flag has a similar meaning in the C++ compiler.
+.FL UNSAFE f29
+If set, the variable is a dummy argument which does not appear
+in all entries to the subprogram (set by the expander and used by
+the expander/optimizer).
+This flag could be extended to include other cases where it's not safe
+to allow optimizations to occur for variables.
+.FL NOCONFLICT f30
+References to this pointer-based object do not conflict with references
+to other pointer-based objects.
+.FL THREAD f32
+If set, the variable is a member of a common block and the common block
+is \f(CWTHREADPRIVATE\fP; see \f(CWST_CMBLK\fP.
+.lp
+.ul
+Flags2
+.FL SDSCS1 f36
+This is set in an F90 program for an array that is being used as a
+section descriptor with a non-stride-1 leading dimension;
+in this case, the leftmost subscript must be multiplied by the 
+stride in the section descriptor.
+.FL LSCOPE f41
+If set, the local variable is accessed only in the function's local
+scope; any internal procedure does not access this variable.
+.FL PARAM f42
+If set, this variable was declared as a PARAMETER,
+and its constant value is available as an CONST list via the
+PARAMVAL field.
+.FL PTRSAFE f43
+If set, this variable is pointer safe; for example, a section
+descriptor, regardless of its storage class or addrtkn flag,
+is never the target of a pointer.
+.FL INLNARR f44
+If set, this variable is an inlined dummy array.
+Used in exp_ftn.c
+.FL RESERVED_f45 f45
+reserved
+.FL SDSCCONTIG
+Set if this is a descriptor array, and the compiler has determined that
+the object for which this is a descriptor is always contiguous.
+.FL DESCARRAY
+Set if this is a descriptor array, managed by the compiler/runtime.
+.FL IS_PROC_DESCR f109
+Set if this is a descriptor associated with a procedure dummy argument.
+.FL RESERVED_f50 f50
+reserved
+.FL PASSBYVAL f51
+If set, this f90 dummy parameter or subroutine(parameter
+default) is pass by value: cDEC$ ATTRIBUTES VALUE
+.FL PASSBYREF f52
+If set, this f90 dummy parameter or subroutine(parameter
+default) is pass by reference: cDEC$ ATTRIBUTES REFERENCE
+This is required because string paramters may or may not have a
+length, depending on PASSBYREF set on the variable or subroutine
+.FL SCFXD f46
+Storage class has been set by AUTOMATIC or STATIC; it cannot be
+changed by SAVE, -Mrecursive, etc.
+.FL BASEADDR f48
+If set, this is a static variable whose address is relative to a global
+symbol; that global symbol is entered into the symbol table as an
+ST_BASE, with an unhashed name.
+.FL ALLOCATTR f53
+This flag is set if and only if the symbol was declared
+to have the ALLOCATABLE attribute.
+.FL DEVICE f54
+If set, the variable is a CUDA \f(CWDEVICE\fP variable.
+.FL PINNED f55
+If set, the variable is a CUDA \f(CWPINNED\fP variable.
+.FL CFUNC f56
+If set, function/subroutine's name linkage name follows C conventions
+(i.e., underscore is not appended to name).
+Also set for module variables, functions, common blocks that have
+externally visible C linkage BIND(c)
+For NT, this flag and 
+.cw STDCALL
+are set for DVF's
+.cw C
+attribute.
+.FL SHARED f57
+If set, the variable is a CUDA \f(CWSHARED\fP variable.
+.FL CONSTANT f58
+If set, the variable is a CUDA \f(CWCONSTANT\fP variable.
+.FL TEXTURE f59
+If set, the variable is a CUDA \f(CWTEXTURE\fP variable.
+.FL INTENTIN f78
+This dummy variable has the \fCWINTENT(IN)\fP attribute.
+.FL DATACONST f80
+Set if this variable is data-initialized (its \f(CWDINIT\fP flag is
+also set) and can be presented as a  \f(CWPARAMETER\fP.
+The front-end has replaced all of the variable's uses with its
+dinit value and the backend can elide the dinit.
+.FL DEVICECOPY f63
+This variable is a pointer to a device copy of a host variable.
+This might come from the reflected clause, mirror clause, copy clause, local clause,
+.FL REFLECTED f64
+This variable is a dummy argument which is reflected on the device.
+.lp
+.ul
+Flags3
+.FL MIRRORED f65
+This variable is mirrored on the device.
+This will typically be set for global (module) symbols.
+.FL F90POINTER f66
+This flag is set if and only if the symbol was declared
+to have the POINTER attribute
+.FL ARG1PTR f67
+This variable (compiler-created temporary) is the first argument
+passed to the special runtime routine that acts like a function,
+.FL LOCLIFETM f69
+This is set when the storage class is optimized to be static,
+but is has the same lifetime as a local.
+.FL TASK f77
+Set if this private variable was declared within the scope of an OMP TASK
+.FL EXPOSED f79
+(Optimizer) Set if any of the uses of a variable are exposed to the
+function entry (esentially a use-before-def if the variable is local).
+Currently, this flag is only intended for scalar variables; eventually, it
+may apply to array/aggregates.
+.FL SECT f81
+Variable was created and initialized in a special section.
+.FL ACCCREATE f82
+This variable has the create flag set for the device.
+This will typically be set for global (module) symbols.
+.FL ACCRESIDENT f83
+This variable has the device_resident flag set for the device.
+.FL CONTIGATTR
+This variable was declared with the CONTIGUOUS attribute.
+.FL MANAGED f84
+If set, the variable is a CUDA \f(CWMANAGED\fP variable.
+.FL ACCLINK f86
+This variable has the link flag set for the device.
+.FL ACCCOPYIN f87
+This global variable was in a declare copyin()
+.FL TLS f89
+This variable is allocated in thread local storage
+.FL INTERNREF f88
+Set if the uplevel symbol is referenced internal subroutine.
+.FL ACCINITDATA f91
+This variable is a data initialized variable packed into an array.
+.FL PARREF f94
+Set if variable is shared in parallel region.
+.FL PARREFLOAD f96
+Set if variable is already loaded into struct to be passed to outlined function.
+.lp
+.ul
+Flags4
+.FL LOCARG f99
+Variable has appeared in a %LOC.
+.FL ALLDEFAULTINIT f100
+default initialization.
+.FL TARGET f108
+Set if variable has the target attribute
+.FL LIBSYM f111
+Indicates that this is a variable symbol from a standard module, such as
+ieee_arithmetic or iso_c_binding, that is resolved from a system library.
+.lp
+.ul
+Other Fields
+.SE SYMLK
+For common block variables, this field is used to link together
+all of the elements of the common block (including variables
+added to the common block by
+.cw EQUIVALENCE
+statements).
+.cw NOSYM
+is used to mark the end of the list.
+.SE SDSC w8
+For Fortran-90 arrays, this is the symbol number of the section descriptor
+containing the actual bounds.
+.SE BASESYM w9 
+If BASEADDR is set, BASESYM will host a symbol pointer to an ST_BASE
+symbol with the base address of this symbol.
+.SE ORIGDIM w17
+For arrays, this is the original number of dimensions; this is needed
+for the Fortran-90 arrays that get linearized.
+Overloaded with GNDSC.
+.SE TDLNK w16
+If this array is a type descriptor, then this is used to link this type
+descriptor with the other type descriptors.
+.SE ETLS w28
+Extended TLS levels
+.SE ASSOC_PTR w31
+When set, this is the sptr of a pointer that is initialized with this symbol.
+.SE ORIGDUMMY w32
+When dummy arguments are relocated by the Fortran-90 front end, this
+points from the dummy to the original dummy argument.
+#.SE PTR_TARGET w32
+This field overloads ORIGDUMMY, so it's commented out for documentation 
+purposes. This usage cannot be a dummy argument which is why it can overload
+ORIGDUMMY. 
+When set, this symbol is a place holder for a pointer target. This field holds the sptr of the original pointer target.
+.OV PARAMVAL w15
+if the PARAM bit is set, this field
+holds a pointer to the saved CONST value list
+.SE TPLNK w15
+For a threadprivate common block or variable, a vector of pointers will be
+created by the front-end and will be subscripted by _mp_lcpu2().
+Each element will contain the address of a thread's copy of the common block
+or variable.
+The vector will be represented by an \f(CWST_ARRAY\fP with a storage class
+of \f(CWSC_EXTERN\fP or \f(CWSC_STATIC\fP,
+depending on whether or not the object has global scope.
+The symbols will be linked into a list using the
+.cw TPLNK
+field.
+The head of thie list is pointed to by
+.cw gbl.threadprivate .
+.SE PAROFFSET w29
+If this var is part of an uplevel structure (for OpenMP) this
+value represents the field's byte offset into the uplevel structure.
+.SE ADDRESS
+Address assigned to the variable.
+.ip
+For dummy variables,
+this is an integer,
+assigned by the Expander,
+between 1 and n where
+n is the total number of dummy variables appearing in
+.cw SUBROUTINE ,
+.cw FUNCTION ,
+or
+.cw ENTRY
+statements.
+.ip
+For other variables, it is the byte address, beginning at zero,
+relative to the psect containing the variable.
+For common block elements, this value is computed at the end
+of semantic analysis, and for local variables it is
+computed during Assembler initialization for just those
+variables which were found to be referenced by the Code Scheduler.
+(local variables will actually have addresses assigned during Scheduling? ).
+.ip
+Those local variables which are determined to be referenced by the
+Code Scheduler are linked into a single list using this field.
+The list head is pointed to by
+.cw gbl.locals .
+.SE MIDNUM w11
+If the variable belongs to a common block (its storage class is
+.cw SC_CMBLK) ,
+this field locates its corresponding
+.cw ST_CMBLK
+symbol (set by the Semantic Analyzer).
+Depending on the target environment, the Assembler phase may
+replace this field with a target dependent value (e.g., the
+object file MID block index for this common block (Psect)
+computed by Assembler initialization phase).
+For an allocatable common, the
+.cw ALLOC
+flag is set.
+.ip
+If the variable's storage class is
+.cw SC_BASED ,
+the variable is a pointer-based object and
+this field locates the symbol table item of the
+variable's pointer variable.
+.ip
+If the variable's storage class is
+.cw SC_BASED
+and its
+.cw ALLOC
+flag set, the variable (an array) is allocatable; its
+shape is
+.i deferred .
+.ip
+If the variable is an array and its storage class is
+.cw SC_EXTERN,
+the variable may represent a threadprivate common's vector of pointers.
+If this is the case, the
+.cw MIDNUM
+field will be the symbol table entry of the corresponding
+threadprivate common block (see \f(CWST_CMBLK\fP).
+Also, this variable will be linked (using \f(CWSYMLK\fP into
+the list located by
+.cw gbl.threadprivate .
+.ip
+If the variable is a dummy variable, this field locates the
+compiler-created temporary used to represent the dummy's
+address (i.e., the variable that contains the dummy's address).
+This temporary will have its storage class set to
+.cw SC_DUMMY ;
+this temporary will have its
+.cw REDUC
+flag set.
+For data initialized local scalar variables which are entered into
+the
+.cw DVL
+table, their
+.cw REDUC
+flags are set (also implies that their
+.cw ASSN
+flags are not set.
+.SE CLEN w12
+If the variable is a 
+.i "passed length"
+character argument,
+this field locates a compiler created symbol (SC is
+.cw SC_DUMMY )
+which represents its length.
+Set by the expander.
+.SE REVMIDLNK w23
+For a CCSYM that is the MIDNUM of a POINTER type object. This links the CCSYM
+back to the POINTER object. The invariant is ptr == REVMIDLNKG(MIDNUMG(ptr)).
+.SE SOCPTR w13
+Pointer to storage overlap chain (see auxiliary data structures)
+for variables involved in equivalences.
+.ip
+Also, during semantic analysis is used to mark
+currently active DO-control variables.
+.OV PDALN b4
+If the value, v,  of this field is nonzero,
+used to pad and align the object with respect to 2^v bytes.
+For example, if v is 3, the size of the object is
+a multiple of 8 (2^3) bytes and will be aligned
+on an 8-byte boundary.
+This field uses the least signficant 4 bits of b4.
+.SE ENCLFUNC w20
+Symbol table pointer to the enclosing block (scope) for
+this variable.
+Zero for variables with
+.cw SCOPE
+equal to 0.
+.SE DEVCOPY w22
+For a variable with the DEVICECOPY flag set, this field will tell which host
+variable or array this variable is a device copy of.
+For a host variable (DEVICECOPY flag not set), this field will give the
+symbol number of the device copy currently being used.
+.SM ST_CMBLK
+.SI OC_CMBLK "common block"
+.lp
+.ul
+Flags
+.FL DINIT
+Common block has been data initialized.
+.FL SAVE
+Common block referenced in a
+.cw SAVE
+statement.
+.FL VOL
+Common block appeared in a 
+.cw VOLATILE
+statement.
+.FL ALLOC
+Common block is an
+.cw ALLOCATABLE
+common.
+.FL THREAD
+If set, common block is \f(CWTHREADPRIVATE\fP; see
+\f(CWMIDNUM\fP.
+.lp
+.ul
+Flags2
+.FL MODCMN f36
+If set, common block is a compiler-created module common block
+.FL STDCALL f33
+Set if this common block has DVF's
+.cw STDCALL
+attribute.
+.FL FROMMOD f38
+Set if the common block was defined in a module.  
+Used to inhibit the output of debug information 
+for a common block defined in module at a `use' of the module.
+.FL DEVICECOPY
+This variable is a pointer to a device copy of a host variable.
+This might come from the reflected clause, mirror clause, copy clause, local clause,
+.FL MIRRORED
+This variable is mirrored on the device.
+This will typically be set for global (module) symbols.
+.FL ACCCREATE
+This common block is in a declare create directive.
+.FL ACCRESIDENT
+This common block is in a declare device_resident directive.
+.FL ACCLINK
+This common block is in a declare link directive.
+.FL ACCCOPYIN
+This common block was in a declare copyin()
+.lp
+.ul
+Flags3
+.FL TLS f89
+This variable is allocated in thread local storage
+.lp
+.ul
+Other Fields
+.SE SYMLK
+Field is used to link together all common blocks.
+List head is pointed to by
+.cw gbl.cmblks
+and
+.cw NOSYM
+marks the end of the list.
+.SE NMPTR
+For blank common, this points to the compiler created name, "_BLNK_".
+.SE SIZE w10
+Size in bytes of common block.
+Computed at the end of semantic processing and possibly
+updated by equivalence processing.
+.SE MIDNUM
+For a threadprivate common block, a vector of pointers will be created
+by the front-end and will be subscripted by _mp_lcpu2().
+Each element will contain the address of a thread's copy of the common block.
+The vector will be represented by an \f(CWST_ARRAY\fP with storage
+class \f(CWSC_EXTERN\fP.
+The
+.cw MIDNUM
+field of the threadprivate common block will be set to the symbol table
+entry of the corresponding \f(CWST_ARRAY\fP, and vice versa.
+.SE CMEMF w13
+Pointer to first element of linked list of common block members.
+A value of zero indicates that the common block has not yet been defined.
+.SE CMEML w14
+Pointer to last element of linked list of common block members.
+.SE ALTNAME w18
+Set if the common block has DVF's
+.SE ETLS w28
+Extended TLS levels
+.SE THPRVTOPT w30
+Store an address of threadprivate after calling kmpc_threadprivate_cached.
+.cw ALIAS
+attribute.
+If set, this field is a
+symbol table pointer to character constant representing
+the alternate name.
+.SE DEVCOPY
+For a common block with the DEVICECOPY flag set, this field will tell which host
+variable or array this variable is a device copy of.
+For a host variable (DEVICECOPY flag not set), this field will give the
+symbol number of the device copy currently being used.
+.SM ST_NML
+.SI OC_OTHER namelist
+.lp
+.ul
+Flags
+.br
+.FL REF
+The namelist group has been referenced in a
+.cw READ
+or
+.cw WRITE
+statement.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE SYMLK
+Field is used to link together all namelist groups.
+List head is pointed to by
+.cw sem.nml
+and
+.cw NOSYM
+marks the end of the list.
+.SE ADDRESS
+Locates the
+.cw ST_PLIST
+symbol which represents the namelist descriptor for this namelist
+group; if the namelist I/O using this group name occurs,
+the plist will be data initialized.
+.SE CMEMF
+Relative pointer into the namelist auxiliary data structure to
+the first element of the linked list of entities belonging to this
+name list group.
+.SE CMEML
+Relative pointer into the namelist auxiliary data structure to
+the last element of the linked list of entities belonging to this
+name list group.
+.SM ST_ENTRY
+.SI OC_OTHER "entry"
+.lp
+.ul
+Flags
+.FL DCLD
+Set if currently processing a function subprogram and the
+data type of this entry has been explicitly declared.
+.FL COPYPRMS
+Set if parameter list was copied for this entry.
+.FL ADJARR
+Set if entry has adjustable array argument(s).
+.FL AFTENT
+Set if entry has adjustable array arguments which are declared after
+an ENTRY statement. This flag is always set for an entry which appeared
+in an ENTRY statement (and it has adjustable array arguments).
+.FL MSCALL f31
+Set if this ST_ENTRY is defined to use the MS (stdcall) calling
+sequence.
+This flag also applies to ST_PROCs and any variable which is a pointer to
+a function.
+This flag also applies to ST_MEMBERs that are type bound procedures.
+.lp
+.ul
+Flags2
+.FL CREF f57
+Set if this procedure is defined to use the MS cref calling sequence.
+.FL NOMIXEDSTRLEN f58
+Set if the character length arguments are to be passed after all of the
+the other arguments (i.e., unix-style). If this flag is set, then
+either
+.cw MSCALL
+or
+.cw CREF
+is also set.
+.FL STDCALL
+Set if this ST_ENTRY has DVF's
+.cw STDCALL
+or
+.cw C
+attribute.
+If this flag is set, then arguments are passed by value.
+.cw MSCALL
+or
+.cw
+C
+will also be set.
+.FL DECORATE f55
+Set if this ST_ENTRY has DVF's
+.cw DECORATE
+attribute.
+.FL CONTAINED f39
+If this bit is set, the entry point is for a contained subprogram.
+.FL UNIFIED f53
+If this is set, the name for this entry point has been mangled as
+a unified binary name, and should be used directly.
+.FL SDSCSAFE f54
+Calls to this routine do not modify any section descriptors,
+either passed as arguments or for globals.
+.FL AVX f74
+Set if the function is known to be AVX-compiled (i.e., do not generate
+a vzeroupper before and after its call).
+.lp
+.ul
+Flags3
+.lp
+.ul
+Flags4
+.FL ARET f102
+Subroutine contains alternate return arguments
+.FL DEVCOMP f107
+Set if this routine was compiled with the -acc or -ta flag, meaning the
+compiler was device-aware.
+.FL OMPACCRT f109
+Set if the symbol is created for libomptarget runtime.
+.FL OMPACCSTRUCT f111
+Set if the symbol is openmp offload entry struct and createad for libomptarget runtime.
+.FL OMPACCFUNCDEV f112
+Set if the symbol is device function of openmp accelerator model
+.FL OMPACCFUNCKERNEL f113
+Set if the symbol is device kernel of openmp accelerator model
+.FL OMPACCDEVSYM f114
+Set if the symbol is used in target region.
+.FL OMPACCSHMEM f115
+Set if the symbol is scrathpad memory aka. shared memory
+.FL TEXTSTARTUP f117
+Set as text startup item
+.FL CONSTRUCTOR f118
+Set as constructor
+.FL IS_INTERFACE f120
+Set if the symbol is a Fortran interface
+.FL OMPTEAMPRIVATE f121
+Team private symbol
+.FL BITVECTOR f122
+LLVM bitvector symbol
+.FL ELEMENTAL f123
+Set if this is an elemental subprogram.
+.FL RECUR f124
+Set if this is a recursive subprogram.
+.SE PRIORITY w27
+If CONSTRUCTORG() or DESTRUCTORG() is true, then this has
+the value 0-65535 for the priority value.
+A value of -1 means that the priority was not set.
+.FL HAS_OPT_ARGS f110
+Set if this entry has optional arguments.
+.lp
+.ul
+Other Fields
+.SE SYMLK
+Used to link together all entry symbols as their definitions
+are processed.  List head pointed to by
+.cw gbl.entries .
+The main entry is always the first in the list (also located
+by \f(CWgbl.currsub\fP; the
+order of the remaining entries is undefined.
+.cw NOSYM
+is used to mark the end of the list.  The list is
+empty if the current subprogram is a block data.
+.SE ARGSIZE w8
+For the x86, number of bytes on the stack used to pass arguments
+to the subprogram; this field is set by the expander.
+This field is only used when the symbol's MSCALL flag is set.
+.SE BEGADJ w9
+During semant, this field is the label of the
+entry's adjustable array code.
+.OV RETADJ ADDRESS
+During semant, this field is the label where
+entry's adjustable array code returns.
+.SE ADDRESS
+Byte address relative to program code space of this entry
+point, computed by Code Scheduler.
+.SE MIDNUM
+For the targets which an object file is generated, this field is the
+index into the
+.cw MID
+block for this entry, computed by the Assembler initialization phase.
+During Expand, this field is assigned an integer value (zero based)
+denoting the order in which an entry is processed; this value is used
+to index a table which contains information for all of the entries
+(such as target-specific information of an entry's arguments).
+.SE DPDSC w12
+Pointer to the dummy parameter descriptor for this entry (see
+auxiliary data structures described below).
+.SE PARAMCT w13
+Number of dummy parameters for this entry point.
+This count also includes any implicit arguments required for the entry.
+containing the initialization values for this variable.
+.SE FUNCLINE w14
+Source line number of first line of function definition (used for LSD block
+entry for this function).
+.SE BIHNUM w15
+The
+.cw BIH
+index
+of the prologue/entry block for this entry.
+Used only by the Expander and Optimizer.
+.SE FVAL w16
+Prior to the cross reference phase, this field locates the compiler
+created symbol which represents the return value if this entry is
+a function.  Depending on the type and target, this symbol will
+either have storage class local or dummy.
+.SE INMODULE w17
+For pgf90, this points to a ST_PROC symbol that represents the module,
+and in fact has the name of the module.
+This module is used to create the actual name of the module subprogram.
+This is also set for subprograms contained in module subprograms.
+.SE ALTNAME
+Set if the ST_ENTRY has DVF's
+.cw ALIAS
+attribute.
+If set, this field is a
+symbol table pointer to character constant representing
+the alternate name.
+.SE ACCROUT w22
+Holds the index to the ACC ROUTINE data structure with information about
+this procedure.
+.SE OUTLINED w23
+Store st_block sptr for outlined function.
+.SE NUMSECT w24
+Store number of section's for outlined function for omp sections - use in backend only.
+.SE TASKDUP w26
+Store taskdup routine sptr for outlined taskloop routine.
+.SM ST_PROC
+.SI OC_OTHER "subroutine"
+.lp
+.ul
+Flags
+.FL DCLD
+Data type of this (function) subprogram has been explicitly declared.
+.FL CCSYM
+Set for compiler created functions (support routines) except for those
+which are created for the procedural forms of the intrinsics.
+.FL PURE f6
+If set, the subrogram doesn't have any side-effects (overloaded with SAVE)
+.FL FUNC f12
+This external is a function subprogram.
+This flag is used for semantic error checking,
+object file LSD blocks (potentially), and the
+Cross Reference Listing.
+.FL REDUC f13
+This external has no common block side-effects?
+.FL CSTRUCTRET f11
+The first arg is a hidden argument that is the address of the structure return area.
+.FL CFUNC f56
+If set, function/subroutine's name linkage name follows C conventions
+(i.e., underscore is not appended to name).
+Also set for module variables, functions, common blocks that have
+externally visible C linkage BIND(c)
+For NT, this flag and 
+.cw STDCALL
+are set for DVF's
+.cw C
+attribute.
+.FL UPLEVEL
+If this bit is set, the function/subroutine is a dummy procedure
+argument which must be addressed as an offset
+from the containing procedure's stack frame pointer; this is used for
+Fortran-90 contained procedures.
+.FL NOPAD f4
+If set, the CG does not pad the stack when generating code to call
+the function.  Certain
+.cw mp
+run-time functions, such as
+.cw _mp_ncpus() ,
+assume that the run-time has created a data structure
+at the bottom of the stack.
+(This flag is overloaded with DINIT).
+.FL TYPD f15
+If set,
+.cw NEEDMOD
+will also be set and indicates that the procedure represents a 
+.cw MODULE
+and that the module contains dinits; a hard reference to the
+module's global name will be generated so that the module's
+object must appear on the link.
+Overloaded with the
+flags
+.cw EXPST
+and
+.cw E38 .
+.lp
+.ul
+Flags2
+.FL CREF
+Set if this procedure is defined to use the MS cref calling sequence.
+.FL NOMIXEDSTRLEN
+Set if the character length arguments are to be passed after all of the
+the other arguments (i.e., unix-style). If this flag is set, then
+either
+.cw MSCALL
+or
+.cw CREF
+is also set.
+.FL STDCALL
+Set if this ST_PROC has DVF's
+.cw STDCALL
+or
+.cw C
+attribute.
+If this flag is set, then arguments are passed by value.
+.cw MSCALL
+or
+.cw
+C
+will also be set.
+.FL DECORATE
+Set if this ST_PROC has DVF's
+.cw DECORATE
+attribute.
+.FL NOPIC f34
+Set if it's known that this function is not position independent.
+The function will not be referenced through the PLT (procedure linkage table).
+.FL NEEDMOD f35
+If set, this function represents the blockdata which is generated for
+the module.
+On certain systems,
+an external reference may need to be generated so
+that if it lives in a library, the blockdata is linked into the
+executable.
+.FL CONTAINED
+If this bit is set, this is a contained subprogram.
+.FL CNCALL f47
+Concurrent call; the function is parallel-safe.
+.FL XMMSAFE f49
+If set, the function does not alter any xmm registers.
+.FL SDSCSAFE
+Calls to this routine do not modify any section descriptors,
+either passed as arguments or for globals.
+.FL TASKFN f64
+If set, this function represents an OpenMP task.
+.FL ISTASKDUP f65
+If set, this function is a task dup routine for OpenMP taskloop.
+.FL ARG1PTR f67
+Set if this is a special runtime routine that acts like a function,
+but which writes to its first argument, where the first argument
+is passed by address.
+.FL FWDREF f68
+Set if this is a forward reference from a type bound procedure declaration
+to a module procedure defined in the same module.
+.FL LIBM f70
+Set if this is a function from the standard libm library.
+.FL LIBC f71
+Set if this is a function from the standard libc library.
+.FL CALLS_SYNCTHD f73
+Set if this is a function from the standard libc library.
+.FL ACCCREATE
+This common block has the create flag set for the device.
+.FL ACCRESIDENT
+This common block has the device_resident flag set for the device.
+.FL CUDAMODULE f85
+Set if this routine is declared in a CUDA module, so the compiler knows
+that there is a device version of this routine.
+.lp
+.ul
+Flags3
+.lp
+.ul
+Flags4
+.FL ARET
+Subroutine contains alternate return arguments
+.FL VARARG f97
+The function has a variable number of arguments (aka varargs/variadic)
+.FL INVOBJINC f106
+The INVOBJ field has been incremented to reflect the shift
+in dummy argument positions caused by the conversion of a function
+into a subroutine whose first argument is the original result.
+.FL DEVCOMP f107
+Set if this routine was compiled with the -acc or -ta flag, meaning the
+compiler was device-aware.
+.FL HAS_OPT_ARGS 
+Set if this procedure has optional arguments.
+.FL LIBSYM f111
+Indicates that this is a routine symbol from a standard module, such as
+ieee_arithmetic or iso_c_binding, that is resolved from a system library.
+.FL IS_PROC_PTR_IFACE f125
+Indicates that this symbol is used as an interface with a procedure pointer. IS_INTERFACE should also be set in this case.
+.FL PTR_INITIALIZER f126
+Set when this symbol is used as an initializer for a pointer. Assumes
+ASSOC_PTR and/or PTR_TARGET are also set.
+.ul
+Other Fields
+.SE SYMLK
+used to link together referenced externals, i.e. those that are
+referenced in an
+.cw EXTERNAL
+statement, or which are determined to be referenced by the Code Scheduler.
+List head is pointed to by
+.cw gbl.externs .
+The end of the list is denoted by
+.cw NOSYM .
+#.SE SDSC
+When ST_PROC symbol is a dummy argument, SDSC is set to its descriptor 
+argument. (SDSC needs to be commented out here since it overloads ARGSIZE
+but does not conflict with it in practice).
+.SE ARGSIZE
+For the x86, number of bytes on the stack used to pass arguments
+to the subprogram; this field is set by the expander.
+This field is only used when the symbol's MSCALL flag is set.
+.SE ADDRESS
+Byte address relative to program code space of this entry
+point, computed by Code Scheduler.
+.SE MIDNUM
+index of this external in the Object File
+.cw MID
+block.  Computed by Assembler initialization phase.
+.SE INMODULE
+For pgf90, this points to a ST_PROC symbol that represents the
+module containing this subprogram, and which has the name of the module.
+This name is used to create the actual name of the module subprogram.
+.SE INVOBJ w20
+When this is a type bound procedure, this will hold the argument # of the pass pobject. 
+.SE VTOFF w15
+This is used to hold the type bound procedure's offset into the virtual function table. 
+.SE ALTNAME
+Set if the ST_PROC has DVF's
+.cw ALIAS
+attribute.
+If set, this field is a
+symbol table pointer to character constant representing
+the alternate name.
+.SE ACCROUT w22
+Holds the index to the ACC ROUTINE data structure with information about
+this procedure.
+.SE ASSOC_PTR w31
+When set, this is the sptr of a pointer that is initialized with this symbol.
+.SE PTR_TARGET w32
+When set, this symbol a place holder for a pointer target. This field holds the sptr of the original pointer target.
+.SM ST_CONST
+.SI OC_OTHER constant
+Note that constants of the partial word data types (\c
+.cw DT_BINT ,
+.cw DT_SLOG ,
+etc.) are not allowed;
+the corresponding full-word data type (\c
+.cw DT_INT ,
+.cw DT_LOG )
+is always used.
+.lp
+.ul
+Flags
+.br
+.FL HOLL f19
+If set, the character constant is also used as a Hollerith
+constant.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE SYMLK
+Used to link together all referenced constants (i.e., those which
+will be allocated memory).
+List head is pointed to by
+.cw gbl.consts .
+The end of the list is denoted by 
+.cw NOSYM .
+.SE ADDRESS
+Relative byte address computed by Assembler initialization.
+.SE CONVAL1 w13
+Constant value, depends on dtype of constant:
+.nr PS \n(psu
+.nr ps 0
+.sp \n(PSu
+.ba +\n(iiu
+.ip \f(CWTY_INT\fP
+undefined.
+.ip \f(CWTY_REAL\fP
+undefined.
+.ip \f(CWTY_DBLE\fP
+First 32-bit word of d.p. constant in
+SC format.
+.ip \f(CWTY_CMPLX\fP
+32-bit floating point value of real part.
+.ip \f(CWTY_DCMPLX\fP
+symbol table pointer to double precision constant for real part.
+.ip \f(CWTY_QCMPLX\fP
+symbol table pointer to quad precision constant for real part.
+.ip \f(CWTY_LOG\fP
+undefined.
+.ip \f(CWTY_CHAR\fP
+relative, integer pointer to character text in symbol name storage area.
+.ip \f(CWTY_NCHAR\fP
+relative, integer pointer to character text (EUC format) in symbol name storage area.
+.ip \f(CWTY_PTR\fP
+symbol table pointer to array or variable symbol.  May be zero.
+.ip \f(CWTY_DWORD\fP
+Left 32-bits (most significant) of the 64-bit value
+.ip \f(CWTY_INT8\fP
+Left 32-bits (most significant) of the 64-bit value
+.ip \f(CWTY_LOG8\fP
+0
+.ip \f(CWTY_128\fP
+First (leftmost) 32-bit word of the 128-bit value.
+.ba -\n(iiu
+.ip "Vector"
+Relative pointer to the VCON auxiliary area which contains the
+values of constant's vector elements.
+The number of elements in the vector constant is stored in
+the constant's \f(CWTY_VECT\fP data type record.
+.ba -\n(iiu
+.sp \n(psu
+.SE CONVAL2 w14
+Second constant value:
+.ba +\n(iiu
+.sp \n(PSu
+.ip \f(CWTY_INT\fP
+32-bit integer value.
+.ip \f(CWTY_REAL\fP
+32-bit floating point value.
+.ip \f(CWTY_DBLE\fP
+Second 32-bit word of double precision constant.
+.ip \f(CWTY_CMPLX\fP
+32-bit floating point value of imaginary part.
+.ip \f(CWTY_DCMPLX\fP
+symbol table pointer to double precision constant for imaginary part.
+.ip \f(CWTY_QCMPLX\fP
+symbol table pointer to quad precision constant for imaginary part.
+.ip \f(CWTY_LOG\fP
+1 for TRUE, and 0 for FALSE.
+.ip \f(CWTY_CHAR\fP
+undefined
+.ip \f(CWTY_NCHAR\fP
+undefined
+.ip \f(CWTY_PTR\fP
+(signed) integer offset value.
+.ip \f(CWTY_DWORD\fP
+Right 32-bits (least significant) of the 64-bit value
+.ip \f(CWTY_INT8\fP
+Right 32-bits (least significant) of the 64-bit value
+.ip \f(CWTY_LOG8\fP
+1 for TRUE, and 0 for FALSE.
+.ip \f(CWTY_128\fP
+Second 32-bit word of the 128-bit value.
+.nr ps \n(PSu
+.ba -\n(iiu
+.SE CONVAL3 w15
+Third constant value:
+.ba +\n(iiu
+.sp \n(PSu
+.ip \f(CWTY_128\fP
+Third 32-bit word of 128-bit value.
+.ip Otherwise
+Undefined
+.nr ps \n(PSu
+.ba -\n(iiu
+.SE CONVAL4 w16
+Fourth constant value:
+.ba +\n(iiu
+.sp \n(PSu
+.ip \f(CWTY_128\fP
+Fourth 32-bit word of 128-bit value.
+.ip Otherwise
+Undefined
+.nr ps \n(PSu
+.ba -\n(iiu
+.SM ST_STFUNC
+.SI OC_OTHER "statement function"
+.lp
+.ul
+Flags
+.FL DCLD
+Data type of this statement function has been explicitly declared.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE SFDSC w10
+pointer to statement function descriptor. Set and used only by
+the semantic analyzer.
+.SE EXCVLEN w11
+If dtype of this statement function is
+.cw DT_CHAR
+or
+.cw DT_NCHAR ,
+this is the character length of the expression on the right hand
+side of the statement function definition.
+.SE PARAMCT
+Number of dummy parameters for this statement function.
+.SM ST_PARAM
+.SI OC_OTHER "parameter"
+.lp
+.ul
+Flags
+.br
+.FL REF
+This constant parameter is referenced.
+Set by Scanner and used only for the -debug ref option.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE CONVAL1
+Symbol table pointer to a
+.cw ST_CONST
+entry, except when dtype equals
+.cw DT_INT ,
+.cw DT_WORD ,
+.cw DT_REAL ,
+or
+.cw DT_LOG ,
+in which case is the actual 32-bit constant value.
+.SM ST_INTRIN
+.SI OC_OTHER "intrinsic"
+.lp
+.ul
+Flags
+.FL DCLD
+Data type of this intrinsic has been explicitly declared.
+.FL EXPST f15
+Stype of this intrinsic has been frozen.
+Set when a symbol is declared in an
+.cw INTRINSIC
+statement, or is used as an intrinsic.
+Overloaded with the flag
+.cw E38
+for variables.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Has a value of \*(cfDT_NONE\*(rf if intrinsic did not occur in a type 
+declaration.  If it did occur in a type declaration this field contains the 
+data type value specified in the type declaration statement.  This data
+type will be used if it happens that the symbol for this intrinsic is used
+as a Fortran variable, array, or external function instead of an intrinsic.
+.SE ARGTYP w11
+Data type of arguments to this intrinsic.
+Used by Semantic Analyzer to do type checking on
+intrinsic arguments.
+Two special values are allowed,
+.cw DT_NUMERIC
+and
+.cw DT_ANY .
+.cw DT_NUMERIC
+means the arguments can be either
+.cw DT_INT ,
+.cw DT_REAL ,
+.cw DT_DBLE ,
+.cw DT_CMPLX ,
+or
+.cw DT_DCMPLX .
+.cw DT_WORD
+means the argument must be one of the 32-bit data types,
+.cw DT_INT ,
+.cw DT_REAL ,
+or
+.cw DT_LOG .
+.cw DT_ANY
+means any data type is allowed.
+.SE INTTYP w12
+Data type of the result returned by this intrinsic.  The \*(cfDTYPE\*(rf
+field won't necessarily be the same as the \*(cfINTTYP\*(rf
+field.  The \*(cfDTYPE\*(rf
+field will change if the intrinsic name occurs in a type declaration
+statement.  The \*(cfDTYPE\*(rf and \*(cfINTTYP\*(rf fields are kept
+separate because an intrinsic name can occur in a type declaration 
+statement and must not have any effect on the intrinsic unless later it 
+is determined that the intrinsic name loses its intrinsic properties 
+and becomes a normal user symbol.
+.SE PNMPTR w9
+Pointer (relative) into the symbol names area to the null terminated
+text string for the name of the standard entry external subprogram
+for this intrinsic.
+Zero if there is no such external (i.e. this intrinsic may not
+be passed as a subprogram argument).
+.SE PARAMCT
+Number of arguments for this intrinsic.
+A value of 11 is used to mark the 2 intrinsics which convert
+to complex and double complex, which take either 1 or 2 arguments.
+A value of 12 or 13 marks the max and min intrinsics, which
+take two or more arguments.  13 marks the max/min intrinsics
+for which a type conversion must be performed.
+.SE ILM w14
+ILM opcode number for this intrinsic.
+Equals zero if this is a type conversion intrinsic.
+.SE ARRAYF w15
+ILM opcode number for this intrinsic when argument is an array.
+.SM ST_GENERIC
+.SI OC_OTHER "generic"
+.lp
+.ul
+Flags
+.br
+.FL DCLD
+Set if a data type is declared for this symbol.
+.FL EXPST
+Stype of this symbol is frozen at
+.cw ST_GENERIC.
+Set when generic name is declared in an
+.cw INTRINSIC
+statement or when it is used as a generic name.
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Has a value of \*(cfDT_NONE\*(rf if generic did not occur in a type 
+declaration.  If it did occur in a type declaration this field contains the 
+data type value specified in the type declaration statement.  This data
+type will be used if it happens that the symbol for this intrinsic is used
+as a Fortran variable, array, or external function instead of an generic.
+.SE GINT w9
+Symbol table pointer to intrinsic for integer arguments.
+Zero if there is no such intrinsic.
+.SE GREAL w10
+Pointer to real intrinsic.
+.SE GDBLE w11
+Pointer to double precision intrinsic.
+.SE GCMPLX w12
+Pointer to complex intrinsic.
+.SE GDCMPLX w13
+Pointer to double complex intrinsic.
+.SE GSAME w14
+Pointer to the intrinsic with the same name as this
+generic.
+.SE GSINT w15
+Pointer to short integer intrinsic.
+.SE GINT8 w16
+Pointer to 64-bit integer intrinsic.
+.SE GNDSC w17
+For a user-defined generic,
+this field locates a list of symbols
+which maps the generic to its overloaded functions.
+This symbol list is represented by a list of \f(CWSYMI\fP items
+(see auxiliary data structures described below).
+.SE GNCNT w18
+Number of overloaded functions for the user-defined generic.
+.SM ST_PD
+.SI OC_OTHER predeclared
+.lp
+.ul
+Flags
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Has a value of \*(cfDT_NONE\*(rf if predeclared did not occur in a type 
+declaration.  If it did occur in a type declaration this field contains the 
+data type value specified in the type declaration statement.  This data
+type will be used if it happens that the symbol for this intrinsic is used
+as a Fortran variable, array, or external function instead of an predeclared.
+.SE PDNUM w11
+Predeclared symbol number corresponding to value of
+.cw PD_xxx
+macro in \*(cfpd.h\*(rf include file.
+Used for special casing code generation 
+for these symbols.
+.SM ST_PLIST
+.SI OC_NONE plist
+Parameter list -
+Aused for compiler-created one dimension arrays (i.e. format lists).
+.lp
+.ul
+Flags
+.br
+.FL DINIT
+Set if the variable has been data initialized.
+.FL CCSYM
+Indicates that this variable is a compiler created variable.
+.FL REF
+Set if this variable is referenced.
+.FL BASEADDR
+If set, this is a static variable whose address is relative to a global
+symbol; that global symbol is entered into the symbol table as an
+ST_BASE, with an unhashed name.
+.lp
+.ul
+Flags2
+.br
+.FL LOCLIFETM 
+This is set when the storage class is optimized to be static,
+but is has the same lifetime as a local.
+.lp
+.ul
+Flags3
+.FL TLS f89
+This variable is allocated in thread local storage
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type indicating size of each parameter list entry (i.e. when used for
+format lists, each entry is 32 bits wide - \*(cfDT_INT\*(rf).
+.SE SYMLK
+Used to link plists into the local data area.
+.SE ADDRESS
+Address assigned to the parameter list.
+.SE BASESYM
+If BASEADDR is set, BASESYM will host a symbol pointer to an ST_BASE
+symbol with the base address of this symbol.
+.SE PLLEN w11
+Number of entries in the parameter lists.
+.SE SWEL w13
+If this plist is used to describe the
+.cw "COMPUTED GOTO"
+list, this field is
+is the index into the
+.cw swel
+area (base is located by
+.cw switch_base )
+representing where the its list of labels and values begins.
+This field is only used by the expander and optimizer when
+processing the
+.cw JMPM
+ILI .
+.SE DEFLAB w14
+If this plist is used to describe the
+.cw "COMPUTED GOTO"
+list,
+this field is is the default label for the
+.cw "COMPUTED GOTO" .
+This field is only used by the expander and optimizer when
+processing the
+.cw JMPM
+ILI .
+.SE ETLS w28
+Extended TLS levels
+.SM ST_BLOCK
+.SI OC_NONE block
+A symbol is created for each lexical block.
+.lp
+.ul
+Flags
+.br
+.lp
+.ul
+Flags2
+.lp
+.ul
+Other Fields
+.SE ADDRESS
+Unused (???).
+.SE STARTLINE w13
+Start line number of block.
+.SE ENDLINE w14
+End line number of block.
+.SE STARTLAB w15
+Start label of block.
+.SE AUTOBJ
+Links together automatic data objects local to the function.
+.SE ENDLAB w17
+End label of block.
+.SE BEGINSCOPELAB w22
+For a lexical block, if nonzero, this is a link to a label symbol with the BEGINSCOPE flag set.
+.SE ENDSCOPELAB w23
+For a lexical block, if nonzero, this is a link to a label symbol with the ENDSCOPE flag set.
+.SE FIHSCOPE w27
+If nonzero, this is a link to the FIH table; for source that is included or inlined,
+the FIH table contains information about the file from which the source was included
+or inlined.
+.SE ENCLFUNC
+Pointer to block or function enclosing this block.
+.SE PARSYMSCT w24
+Count number of contigious items in the AUX parsyms field.
+.SE PARSYMS w26
+Starting index into the AUX parsyms field.
+.SE PARUPLEVEL w29
+Store uplevel sptr for openmp outlined function.
+.SE PARENCLFUNC w30
+If set to outlined function, this block represents an OpenMP scope sptr.
+.SM ST_BASE
+.nr Sx 1
+.SI OC_NONE base
+Symbol whose name is used as the base address for a set of static variables.
+This is used when inlining a subprogram that has static variables;
+instead of .BSS1 or .STATICS1 as the base name, the compiler creates
+a unique global name and uses that in the original subprogram as well as
+all places where the function is inlined.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.SM ST_DPNAME
+.SI OC_OTHER "deep copy name"
+Flags
+.FL USED f1
+Set if this name is referenced.
+.SM E
+.bp
+.sh 2 "Auxiliary Data Structures"
+.sh 3 "Data Type Lists"
+The data types of symbols (\c
+.cw DTYPE
+field) and expressions are
+represented by an integer which is used as a relative pointer
+into the data type area.
+This area is a contiguous block in dynamic storage, consisting
+of a series of variable length records.
+Basic data types such as
+.q integer
+are represented by
+a unique, single word record in this area.
+Others, such as structure types,
+are represented by a multi-word record.
+Complex data types
+are represented by linked lists of records.
+.lp
+The first word of each record defines the type of record.
+The allowed values of this first word are covered by the
+following macros:
+.TY B \w'\f(CWTY_STRUCT\fP'+2n
+.TY TY_NONE "none"
+\(em no type assigned
+.TY TY_WORD "word" INT BASIC SCALAR VEC WORD
+\(em 32-bit value whose interpretation depends on context.
+Used only for intrinsic symbols within Semantic Analyzer.
+.TY TY_DWORD "dword" INT BASIC SCALAR VEC DWORD
+\(em 64-bit value whose interpretation depends on context.
+Internal to the PGFTN compiler.
+.TY TY_HOLL "hollerith" BASIC SCALAR
+(semantic stack only)
+.TY TY_BINT "byte" INT BASIC SCALAR VEC WORD
+.TY TY_SINT integer*2 INT BASIC SCALAR VEC WORD
+.TY TY_INT integer INT BASIC SCALAR VEC WORD
+or
+.cw "integer*4" .
+.TY TY_INT8 integer*8 INT BASIC SCALAR VEC DWORD
+.TY TY_HALF "real*2" REAL BASIC SCALAR VEC WORD
+.TY TY_REAL real REAL BASIC SCALAR VEC WORD
+.TY TY_DBLE "double precision" REAL BASIC SCALAR VEC DWORD
+.TY TY_QUAD "real*16" REAL BASIC SCALAR VEC
+.TY TY_HCMPLX "half complex" CMPLX BASIC SCALAR VEC WORD
+.TY TY_CMPLX complex CMPLX BASIC SCALAR VEC DWORD
+(2 x 32-bit).
+.TY TY_DCMPLX "double complex" CMPLX BASIC SCALAR VEC
+(2 x 64-bit).
+.TY TY_QCMPLX "quad complex" CMPLX BASIC SCALAR VEC
+(2 x 128-bit).
+.TY TY_BLOG logical*1 LOG BASIC SCALAR VEC WORD INT
+.TY TY_SLOG logical*2 LOG BASIC SCALAR VEC WORD INT
+.TY TY_LOG logical LOG BASIC SCALAR VEC WORD INT
+or
+.cw logical*4 .
+.TY TY_LOG8 logical*8 LOG BASIC SCALAR VEC DWORD INT
+.TY TY_128 128-bit BASIC SCALAR VEC INT
+.TY TY_CHAR "character" BASIC SCALAR
+.TY TY_NCHAR "ncharacter" BASIC SCALAR
+\(em kanji character string).
+.TY TY_PTR "pointer" BASIC SCALAR
+\(em Pointer to ... (internal)
+.TY TY_ARRAY "array"
+\(em Array of ...
+.TY TY_STRUCT "structure"
+\(em Struct x.
+.TY TY_UNION "union"
+\(em UNION statement).
+.TY TY_NUMERIC "numeric"
+.TY TY_256 256-bit BASIC SCALAR VEC INT
+.TY TY_512 512-bit BASIC SCALAR VEC INT
+.TY TY_INT128 integer*16 BASIC SCALAR VEC INT
+.TY TY_LOG128 logical*16 LOG BASIC SCALAR VEC INT
+.TY TY_FLOAT128 real*16 REAL BASIC SCALAR VEC
+.TY TY_CMPLX128 complex*32 CMPLX BASIC SCALAR VEC
+.TY TY_UBINT ubyte INT BASIC SCALAR VEC WORD UNSIGNED
+.TY TY_USINT uinteger*2 INT BASIC SCALAR VEC WORD UNSIGNED
+.TY TY_UINT uinteger INT BASIC SCALAR VEC WORD UNSIGNED
+.TY TY_UINT8 uinteger*8 INT BASIC SCALAR VEC DWORD UNSIGNED
+.TY TY_UINT128 uinteger*16 BASIC SCALAR VEC INT UNSIGNED
+.TY TY_ANY "any"
+.TY TY_PROC "procedure"
+.TY TY_VECT "vect" VECT
+\(em vectn of ...
+.TY TY_PFUNC "proto func"
+\(em prototype function returning ...
+.TY TY_PARAM "param"
+\(em function param list (not a type)
+.TY E
+.lp
+Records of type
+.cw TY_WORD
+through
+.cw TY_LOG
+consist of a single word.
+The format of other record types are as follows:
+.(b L
+.DT TY_CHAR
+.DE len
+length of character data in bytes. A length value of 0
+indicates that the symbol is an assumed size.
+.)b
+.(b L
+.DT TY_NCHAR
+.DE len
+Number of characters in the string. A length value of 0
+indicates that the symbol is an assumed size dummy argument.
+.)b
+.(b L
+.DT TY_PTR
+.DE dtype
+relative pointer to a record in the dtype area.
+.)b
+.(b L
+.DT TY_ARRAY
+.DE dtype
+relative pointer to a record in the dtype area.
+.DE desc
+relative pointer to the array bounds descriptor
+describing this array.
+.)b
+.(b L
+.DT TY_STRUCT TY_UNION
+.DE sptr
+symbol table pointer to the first member of this struct or union type.
+.DE size
+size in bytes of this struct or union type.  32-bit quantity.
+.DE tag
+symbol table pointer to struct or union tag.  0 if none was specified.
+.DE align
+alignment required for this struct or union.
+0 \(em byte, 1 \(em halfword, 3 \(em word, or 7 \(em double word.
+.DE ict
+initializer constant tree pointer.
+.)b
+.(b L
+.DT TY_PROC
+.DE dtype
+relative pointer to a record in the dtype area; return type of the
+procedure.
+.DE interface
+symbol table pointer to the interface, a SUBROUTINE or FUNCTION; could
+be zero.
+.DE paramct
+Number of dummy parameters for this procedure.
+.DE dpdsc
+Pointer to the dummy parameter descriptor for this procedure.
+.DE fval
+symbol table pointer to the FVAL if FUNCTION; could be zero.
+.)b
+.(b L
+.DT TY_PFUNC
+.DE dtype
+relative pointer to record in dtype area
+representing type returned by function.
+.DE params
+relative pointer to parameter list (see below).
+.)b
+.(b L
+.DT TY_PARAM
+.lp
+Parameter list for functions.
+The parameter list is a list of four word records in the dtype
+area.
+.DE dtype
+data type of the parameter or zero if not known.
+.DE sptr
+The third word is a symbol table pointer to a
+dummy argument or zero if none.
+.DE next
+relative pointer to the
+four-word record for the next dummy parameter.
+.)b
+.DT E
+.lp
+When the Symbol Table is initialized, the data type
+area is allocated and a number of predefined
+types are added to it.
+These types can be referenced via the following macros:
+.PD B \w'\f(CWDT_ASSCHAR\fP'+2n
+.PD DT_NONE none TY_NONE
+.PD DT_WORD word TY_WORD
+32-bit value whose interpretation depends
+on context.  Used only for intrinsic
+symbols within Semantic Analyzer.
+.PD DT_DWORD dword TY_DWORD
+64-bit value whose interpretation depends
+on context.  Internal to the PGFTN compiler.
+.PD DT_HOLL "hollerith" TY_HOLL
+.PD DT_BINT byte TY_BINT
+.PD DT_SINT integer*2 TY_SINT
+.PD DT_INT integer TY_INT
+.PD DT_INT8 "integer*8" TY_INT8
+.PD DT_HALF "real*2" TY_HALF
+.PD DT_REAL real TY_REAL
+.PD DT_DBLE real*8 TY_DBLE
+.PD DT_QUAD real*16 TY_QUAD
+.PD DT_HCMPLX "half complex" TY_HCMPLX
+.PD DT_CMPLX complex TY_CMPLX
+.PD DT_DCMPLX "double complex" TY_DCMPLX
+.PD DT_QCMPLX "quad complex" TY_QCMPLX
+.PD DT_BLOG "logical*1" TY_BLOG
+.PD DT_SLOG "logical*2" TY_SLOG
+.PD DT_LOG "logical" TY_LOG
+.PD DT_LOG8 "logical*8" TY_LOG8
+.PD DT_128 "128-bit" TY_128
+.PD DT_ADDR "address" TY_PTR DT_ANY
+.PD DT_CHAR "character*1" TY_CHAR 1
+One byte character string.
+.PD DT_NCHAR "ncharacter*1" TY_NCHAR 1
+One character kanji string.
+.PD DT_ANY "any" TY_ANY
+Any type (for intrinsics).
+.PD DT_NUMERIC "numeric" TY_NUMERIC
+Any numeric type (for intrinsics).
+.PD DT_ASSNCHAR " " TY_NCHAR 0
+Assumed size kanji string dummy argument.
+.PD DT_ASSCHAR "assumed-size char" TY_CHAR 0
+Assumed size character.
+.PD DT_128F "__m128" TY_128
+.PD DT_128D "__m128d" TY_128
+.PD DT_128I "__m128i" TY_128
+.PD DT_256 "256-bit" TY_256
+.PD DT_256F "__m256" TY_256
+.PD DT_256D "__m256d" TY_256
+.PD DT_256I "__m256i" TY_256
+.PD DT_512 "512-bit" TY_512
+.PD DT_512F "__m512" TY_512
+.PD DT_512D "__m512d" TY_512
+.PD DT_512I "__m512i" TY_512
+.PD DT_INT128 "integer*128" TY_INT128
+.PD DT_LOG128 "logical*128" TY_LOG128
+.PD DT_FLOAT128 "real*16" TY_FLOAT128
+.PD DT_CMPLX128 "complex*32" TY_CMPLX128
+.PD DT_UBINT ubyte TY_UBINT
+.PD DT_USINT uinteger*2 TY_USINT
+.PD DT_UINT uinteger TY_UINT
+.PD DT_UINT8 "uinteger*8" TY_UINT8
+.PD DT_UINT128 "uinteger*128" TY_INT128
+.PD DT_DEFERNCHAR " " TY_NCHAR 0
+Deferred-length kanji character.
+.PD DT_DEFERCHAR "deferred-length  char" TY_CHAR 0
+Deferred-length character.
+.PD E
+.rr Sx
+.rr II
+.rr PS
+.rm OC
+.rm SF
+.rm ST
+.rm Sc
+.rm SM
+.rm SI
+.rm FL
+.rm SE
+.rm TY
+.rm DT
+.rm DE
+.rm PD
+.sh 3 "Array Bounds Descriptors"
+An array bounds descriptor is created for each array when the
+declaration for the array is processed by the Semantic
+Analyzer.
+The descriptors specify the upper and lower bounds of the array,
+and other information derived from the bounds which the Expander
+uses to generate code for array references.
+The descriptor is pointed to by the desc field of the array dtype record.
+.lp
+Except for
+.cw NUMDIM
+and
+.cw SCHECK,
+the fields of the descriptor
+are symbol table pointers which point to an integer constant if
+the particular value is known at compile time, or
+point to a compiler created variable if the array is an
+adjustable array and the particular value is known only at
+run time.
+.lp
+When the Semantic Analyzer processes an adjustable array declaration,
+it writes out the ILM's necessary to assign the correct values to
+the compiler created variables referenced in the descriptor.
+.lp
+Descriptors can be shared between two arrays with identical
+bounds.  The Semantic Analyzer currently shares descriptors
+for arrays with constant bounds.
+.lp
+The form of a array bounds descriptor is as follows:
+.TS
+allbox tab(%);
+ cw(1.0i)fCW cw(1.0i)fCW cw(1.0i)fCW
+ cfCW s s
+ cw(1.0i)fCW cw(1.0i)fCW cw(1.0i)fCW .
+NUMDIM%SCHECK%ZBASE
+ILMP
+MLPYR(1)%LWBD(1)%UPBD(1)
+ ... % ... % ...
+MLPYR(DIM)%LWBD(DIM)%UPBD(DIM)
+NUMELM%-%-
+.TE
+
+.IP "NUMDIM:" CW
+Number of dimensions of the array.
+Integer constant in the range 1 to 7.
+.IP "ILMP:" CW
+Pointer to the ILMs which have been saved in a
+.cw getitem
+area if the array is an adjustable array (used only by the  semantic analyzer).
+.IP "LWBD(i):" CW
+Lower bound for the ith dimension of the array.
+If a lower bound is non-constant, a compiler created
+variable whic contains the value is set.
+.IP "UPBD(i):" CW
+Upper bound for the ith dimension of the array.
+This value is zero for the last dimension of an assumed size array.
+As with the lower bounds, this field is needed for adjustable
+arrays.
+.IP "MLPYR(i):" CW
+Multiplier for the ith dimension of the array.
+The multiplier is computed as follows:
+.ip
+.CS
+For i == 1,  MLPYR(i) == 1
+
+For i > 1,   MLPYR(i) = MLPYR(i-1) *
+                          (UPBD(i-1)-LWBD(i-1)+1)
+.CE
+.IP "SCHECK:" CW
+Symbol table pointer to an array containing subscript
+checking descriptor for runtime checks.
+.IP "ZBASE:" CW
+Zero base offset.
+The value of
+.cw ZBASE
+is defined by the following expression:
+.CS
+
+LWBD(1)*MLPYR(1) + ... + LWBD(NUMDIM) * MLPYR(NUMDIM)
+.CE
+.ip NUMELM:
+Number of elements in the array.
+Note that this value may be computed as the multiplier for
+dimension
+.cw "NUMDIM+1."
+For an assumed size array, this value is zero.
+.lp
+For example, the offset of an array element of the form:
+.CS
+     a(SUB(1), SUB(2), ..., SUB(NUMDIM))
+.CE
+
+is the summation of the terms:
+.CS
+     (SUB(i) - LWBD(i)) * MLPYR(i)
+		for i = 1, ... NUMDIM.
+.CE
+
+or :
+.CS
+     (SUB(i) * MLPYR(i) for i = 1, ... NUMDIM.) - ZBASE
+.CE
+
+
+.sp
+.sh 3 "Storage Overlap Chains"
+Storage overlap chains are created during equivalence processing
+by the Semantic Analyzer, and specify for each variable or array
+involved in an equivalence which other variables or arrays overlap
+it in storage.
+.lp
+Storage overlap chains are pointed to by the
+.cw SOCPTR
+field of variables and arrays.
+.lp
+The chains are used by the Expander and Optimizer to ensure
+that the generated code is correct.
+.lp
+The easiest implementation of
+.cw SOC's
+is as linked lists.
+.sp
+.sh 3 "Namelist Group Lists"
+Namelist group lists are created by the Semantic Analyzer when
+processing the
+.cw NAMELIST
+statement.  Each item in the list consists of the following fields:
+.ip sptr: 9
+relative pointer into the symtab table area of the variable
+or array representing the item which belongs
+to the namelist group.
+.ip next: 9
+relative pointer into the namelist area of the next item of
+the list. A value of
+.cw 0
+marks the end of the list.
+.ip lineno: 9
+line number of the
+.cw NAMELIST
+statement containing the item.
+.lp
+The
+.cw CMEMF
+field of a namelist symbol (stype
+.cw ST_NML
+locates the beginning of its group
+list; the
+.cw CMEML
+locates the end of its group list.
+.lp
+Each namelist group is processed at the end of the Semantic Analyzer.
+If namelist I/O occurred for a group, its associated
+.cw ST_PLIST
+(located by the field
+.cw ADDRESS )
+must be data initialized with the group's namelist descriptor.
+This descriptor is passed to the I/O library and controls the
+namelist editing.
+.lp
+The namelist group descriptor is described by the following structure:
+.(b L
+.CS
+struct nml {
+    char        group[32];
+    int         ndesc;
+    struct desc desc[];
+};
+.CE
+.)b
+.lp
+The fields in the
+.cw nml
+structure have the following meanings:
+.nr ii 6*\w'\f(CW \fP'+2n
+.ip \f(CWgroup\fP
+Name of the group.  This is a null-terminated character string.
+.ip \f(CWndesc\fP
+Number of descriptors.  There is one descriptor for each item
+in the group.
+.ip \f(CWdesc\fP
+Array of descriptors.  This is a variable length array with
+.cw ndesc
+elements.
+.(b L
+.lp
+The item descriptor is described by the following structure:
+.CS
+struct desc {
+    char  sym[32];
+    char *addr;
+    int   type;
+    int   len;
+    int   ndims;
+    int   dims[];
+};
+.CE
+.)b
+.lp
+The fields in the
+.cw desc
+structure have the following meanings:
+.ip \f(CWsym\fP
+Name of this item.  This is a null-terminated character string.
+.ip \f(CWaddr\fP
+Address of this item.
+Note that dummy arguments may not appear in a \f(CWNAMELIST\fP statement.
+.ip \f(CWtype\fP
+Type of this item.  The legal types are the same as those in the description
+of
+.cw fio$unf_read .
+.ip \f(CWlen\fP
+Length of the item if it is a \f(CWCHARACTER\fP variable; length of the
+array element if it is a \f(CWCHARACTER\fP array;
+otherwise, it's
+.cw 0 .
+For type \f(CWNCHARACTER\fP, is number of \f(CWw_char\fP data items.
+.ip \f(CWndims\fP
+Number of dimensions of this item.  Zero if the item is not an array.
+.ip \f(CWdims\fP
+Dimension information.  If
+.cw ndims
+is 0, then this information does not appear;
+otherwise, it contains 2*\c
+.cw ndims
+words of information.
+For
+.cw 1\(<=i\(<=ndims ,
+.cw dims[2*(i-1)]
+is the lower bound for dimension
+.cw i ,
+and
+.cw dims[2*(i-1)+1]
+is the upper bound for dimension
+.cw i .
+.nr ps \n(PS
+.sp
+.sh 3 "Dummy Parameter Descriptors"
+A dummy parameter descriptor is built for each entry point in a program
+unit.  The DPDSC field of the entry point's symbol table entry points to the
+dummy parameter descriptor.  The dummy parameter descriptor is simply a list
+of symbol table pointers, one for each dummy parameter.  If the entry
+happens to be a character function then there is an additional symbol table
+pointer at the end of the dummy parameter descriptor for the return value of
+the function.
+.sp
+.sh 3 "Symbol List Items"
+For certain situations, it's necessary to create a list of symbols, such
+as to represent the list of overloaded subprograms for user-defined
+generics and operators.
+A symbol list item (\f(CWSYMI\fP represents each item in the list and
+has two fields: 
+.ip sptr: 9         
+relative pointer into the symtab area.
+.ip next: 9
+relative pointer into the \f(CWSYMI\fP area locating the next item
+in the list.
+This field is zero for the last item in the list.
+.lp
+Macros used to access the fields of a symbol list item are:
+.nr ii \w'\f(CWSYMI_SPTR(i)\fP'+2n
+.ip \f(CWSYMI_SPTR(i)\fP
+.ip \f(CWSYMI_NEXT(i)\fP
+.sp
+.sh 3 "Data-initialized Value Tables"
+Certain data-initialized variables and their values are entered into
+a table which can be used by the optimizer
+to replace loads of the variables with their respective constant values.
+To be a candidate for this type of replacement, the variable must be
+a scalar variable and must be local.  Also, the variable cannot have
+been assigned a value in the subprogram via an assignment (including
+.cw DO
+index statements), cannot appear as an argument to the
+.cw LOC
+intrinsic, and cannot be an actual argument (including I/O statements).
+The \*(cfASSN\*(rf and/or \*(cfADDRTKN\*(rf
+flags of the variable are set if any of these restrictions
+are not met. Also, the variable cannot be equivalenced (\*(cfSOCPTR\*(rf
+field is non-zero).
+.lp
+At the time the data initializaton is processed, it can be determined
+if a variable can be added to the table based on its type (i.e., scalar
+versus other), storage class.
+During Expand, assignments of variables, if in the table, are ruled out
+(\*(cfASSN\*(rf flag is set).
+.lp
+Each (\*(cfDVL\*(rf) entry of the table has the form:
+.CS
+struct {
+    int   sptr;
+    INT   conval; 
+}
+
+where,
+    sptr   - the symbol table pointer of the variable
+    conval - the constant value (either a value or a symbol table
+             pointer, depending on the type -- see chapter on
+             dinit processing).
+.CE
+.sp
+.sh 3 "VCON Table"
+The values of a vector constant are stored in the auxilary
+vcon table beginning at the relative pointer stored in the
+constant's \f(CWCONVAL1\fP field.
+This field is the index
+into the
+.cw vcon
+area (located by
+.cw aux.vcon_base )
+representing where the beginning of the constant's element values
+in sequential order.
+Each entry in the vcon table is a 32-bit value whose meaning
+is dependent on the element data type of the vector; an entry
+can be accessed by the macro, \f(CWVCON_CONVAL(i)\fP:
+.ba +\n(iiu
+.ip \f(CWDT_INT8\fP
+sptr to \f(CWST_CONST\fP entry of type
+\f(CWDT_INT8\fP
+representing the
+64-bit integer
+value of the vector element
+.ip \f(CWDT_FLOAT\fP
+SC single precision representation
+of the vector element
+.ip \f(CWDT_DBLE\fP
+sptr to \f(CWST_CONST\fP entry of type
+\f(CWDT_DBLE\fP
+representing the
+double precision
+value of the vector element
+.ip "Remaining Integer Types"
+32-bit integer value
+representing the value of the vector element
+The values of integer types smaller than \f(CWint\fP,
+such as 
+\f(CWchar\fP and \f(CW short\fP,
+have been cast to the 32-bit value.
+.ba -\n(iiu
+.sh 2 "Program Units"
+The following routines make up the C module file, 'symtab.c'.
+In addition to being used by PGFTN itself, this module is
+used by the utility program SYMINI which sets up entries
+for the intrinsics and generics.
+.sp 2
+.CS
+void sym_init(symini)
+.CE
+.br
+Initialize symbol table:
+allocate dynamic storage space, initialize implicit data type
+arrays, initialize intrinsic and generic entries of symbol table,
+and add entries for predefined constants.
+The argument is a flag which indicates whether syminit is being called
+from the utility program SYMINI, in which case the symbol table is
+initialized to be completely empty (this flag is also used at compiler
+startup).
+.sp 2
+.CS
+int getsym(name, length)
+.CE
+.br
+Enter symbol with indicated name into symbol table,
+initialize the new entry, and return pointer to it.
+New symbols are initialized to a type of
+.cw ST_UNKNOWN.
+If there is already a symbol with this name, return pointer
+to it instead.  The overloading class of the symbol is determined
+by the semantic analyzer using the semsym.c routines.
+.sp 2
+.CS
+int getcon(value, dtype)
+.CE
+.br
+Enter constant (symbol with stype ==
+.cw ST_CONST)
+of given
+dtype and value into the symbol table and return pointer to it.
+If an entry for the constant already exists, return pointer to it
+instead.
+.sp 2
+.CS
+int getstring(value, length)
+.CE
+.br
+Enter character string constant into the symbol table and return
+pointer to it.
+If the string is already in the table, return pointer to existing
+entry instead.
+.sp 2
+.CS
+int putsname(name, length)
+.CE
+.br
+Enter string of characters of indicated length into the
+symbol names area and return pointer (relative to
+name area base) to it.
+.sp 2
+.CS
+void newimplicit(firstc, lastc, dtype)
+.CE
+.br
+Change the current settings for implicit data types and
+variable lengths for characters from firstc to lastc.
+.sp 2
+.CS
+void setimplicit(sptr)
+.CE
+.br
+Assign to the indicated symbol table entry, the current
+implicit dtype, depending on the first character of its name.
+.sp 2
+.CS
+int getsname(sptr, ptr)
+.CE
+.br
+Move name of symbol into the character buffer pointed to by ptr.
+For constant symbols, a printable representation of the constant
+value suitable for the Object Code Listing is created.
+.sp 2
+.CS
+int getsname2(sptr, ptr)
+.CE
+.br
+This function gets called from mk_impsym() on WIN64 target only.
+Move name of symbol into the character buffer pointed to by ptr.
+It first gives a priority to alternate name.  If it has alternate
+name, return getsname.  Then check if this has trailing underbar 
+or it is CFUNCG, if so returns SYMNAME, otherwise returns getsname.
+.sp 2
+.CS
+void symdmp(file, full)
+.CE
+.br
+For compiler debugging purposes, dump the symbol table in
+readable form to the indicated file.
+If full == 1, include the predefined symbols (intrinsics, generics,
+and certain constants) in the dump, otherwise begin the dump
+with the first user symbol.
+.lp
+The following routines, in module semsym.c, are used to resolve
+symbols according to overloading class:
+.sp 2
+.CS
+int declref(sptr, stype, def)
+.CE
+.sp 2
+.CS
+int refsym(sptr, oclass)
+.CE
+Return a pointer to symbol with the same name as sptr and overloading class
+oclass.
+.br
+.lp
+The following routines, in module dtypeutil.c, are used
+to allocate dtype area records and perform certain
+operations upon data types:
+.sp 2
+.CS
+int get_type(n, v1, v2)
+.CE
+.br
+Allocate a data type record of n words and assign the
+values v1 (record id) and v2 to the first two elements.
+.sp 2
+.CS
+void getdtype(dtype, ptr)
+int dtype;
+char *ptr;
+.CE
+.sp 2
+.CS
+LOGICAL eq_dtype(d1, d2)
+.CE
+.br
+Return
+.cw TRUE
+if the two data types are equivalent, else
+.cw FALSE.
+This may involve traversing two data type lists in parallel.
+Arrays and pointers are considered equivalent.
+.sp 2
+.CS
+INT size_of( dtype )
+.CE
+.br
+Return the size in bytes of the indicated data type.
+.sp 2
+.CS
+int alignment( dtype )
+.CE
+.br
+Return the alignment requirement of the indicated data type.
+0 for byte, 1 for halfword, or 3 for word alignment.
+.sp 2
+.CS
+void dmp_dtype()
+.CE
+.br
+Dump dtype area to debug file for compiler debugging purposes.
+.br
+.ne 15
+.sh 2 "SYMINI Utility Program"
+.sh 3 Overview
+SYMINI is a utility program which reads the intrinsic/generic
+definition file and writes a file of C code defining and
+initializing the data structure for the initial symbol table,
+which consists of predefined intrinsic functions and generic
+names only.
+.lp
+This utility is built using PGFTN source files (most importantly
+the symbol table access module) to guarantee that the
+table it constructs is of the correct format.  The utility resides
+in the \*(cfsymtab.c\*(rf file using conditional assembly.  To compile it,
+one must define the macro name \*(cfSYMINI\*(rf, e.g.,
+.CS
+cc -c -DSYMINI symini.c
+.CE
+The command line to invoke symini is of the form:
+.CS
+symini [-d] symini.n ilmtp.n -o syminidf.h pd.h [syminidf.dmp]
+.CE
+.TS
+box tab(%);
+cw(6.0i)b
+Lw(6.0i).
+IMPORTANT
+T{
+
+SYMINI must be run whenever an intrinsic or generic is modified,
+when a change is made to the symbol table format,
+or when a change to the ILM Definition File changes
+ILM numbers.
+T}
+.TE
+.sp
+.sh 3 Inputs
+SYMINI reads two input files:
+.np
+The Intrinsic, Generic, and Predeclared
+Definition File is in nroff format and
+is used for Appendix III of this document.
+It consists of an intrinsic definition line for each intrinsic
+function supported by PGFTN, followed by a generic definition line
+for each generic name, followed by a predeclared definition line for
+each predeclared symbol.
+.ip
+Intrinsic definition lines have the format:
+.nf
+ 
+ .IN name paramct atype dtype {ilm | "tc"} {pname | "-"} {arrayf}
+ 
+name    Name of the intrinsic function.  If an intrinsic
+        name conflicts with a generic name, a "." is
+        appended to the intrinsic name.
+ 
+paramct Number of parameters required by the intrinsic. A value
+	of 11 is used to mark the two intrinsics that convert
+	to complex and double complex data types.  A value of 12
+	or 13 marks the \*(cfMAX\*(rf and \*(cfMIN\*(rf intrinsics,
+	which take two or more arguments.  The value 13 marks the
+	\*(cfMAX\*(rf or \*(cfMIN\*(rf intrinsics that require a
+	data type conversion.
+ 
+atype   Data type of the intrinsic arguments.
+        One of the following letters is used to
+        specifiy the type:
+ 
+        W   - word (any 32-bit data type allowed).
+        I   - integer.
+	SI  - integer*2.
+        R   - real.
+        D   - double precision.
+        C   - complex.
+        Z   - double complex.
+        L   - logical.
+	SL  - logical*2.
+        H   - character.
+        N   - numeric.
+        A   - any.
+ 
+dtype   Data type of the intrinsic return value.
+        The values allowed are the same as atype,
+        except that N and A are not allowed.
+ 
+ilm     ILM opcode number for this intrinsic.
+        If "tc" is specified instead, this
+        intrinsic is a type conversion intrinsic
+        and is special cased.
+ 
+pname   Name of the external function (standard
+        entry) used when this intrinsic is passed as
+        a subprogram argument.  "-" indicates that
+        passing this intrinsic as an argument
+        is not allowed.
+
+arrayf  ILM opcode number for this intrinsic if
+	an array operand is allowed.  Zero otherwise.
+.fi
+
+Generic definition lines are of the form:
+
+.nf
+ .GN name iname rname dname cname dcname
+ 
+
+name    Name of the generic.
+ 
+xname   Names of the intrinsic functions for integer,
+        real, double precision, complex, and
+        double complex arguments, respectively.
+        "-" is specified when there is no such
+        intrinsic.
+.fi
+
+Predeclared definition lines are of the form:
+
+.nf
+ .PD name class type
+
+name	Name of the symbol
+class	"generic", "specific", or "subroutine" (unused now)
+type	"reduction", "array", "scalar", "elemental" (unused now)
+.fi
+
+.np
+ILM Definition File (see section 12).
+This file is read just to determine the names and
+opcode numbers of the ILM's.
+.sh 3 Outputs
+The primary output of SYMINI is the
+Initial Symbol Table Definition File.
+This file contains the C data definitions and initialization
+code for the arrays containing the initial symbol table,
+symbol names area, and hash table.
+.lp
+SYMINI also puts out the predeclared symbol definition file, containing
+#define names for each predeclared symbol.  These names are of the form:
+.cw PD_xxx 
+where 
+.cw xxx 
+is the predeclared name (in lower case, e.g., 
+.cw PD_exit).
+.lp
+SYMINI also calls the 'symdmp' routine to write
+a symbol table dump of the initial symbol table,
+if desired.  The -d switch must immediately follow the program name if
+this is desired.

@@ -1,0 +1,14 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+type size_t
+type ssize_t
+# if defined XOPEN2K8 || defined POSIX2008
+type locale_t
+# endif
+
+function ssize_t strfmon (char*, size_t, const char*, ...)
+# if defined XOPEN2K8 || defined POSIX2008
+function ssize_t strfmon_l (char*, size_t, locale_t, const char*, ...)
+# endif
+
+allow *_t
+#endif

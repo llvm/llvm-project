@@ -13,6 +13,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 endif()
 
 set(LIBUNWIND_C_SOURCES
+    UnwindRegisters.c
     UnwindLevel1.c
     UnwindLevel1-gcc-ext.c
     Unwind-sjlj.c

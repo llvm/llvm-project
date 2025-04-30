@@ -874,6 +874,26 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   Index.addGlobalValueSummary(A, std::move(AS));
 }
 
+static void computeIfuncSummary(ModuleSummaryIndex &Index, const GlobalIFunc &I,
+                                DenseSet<GlobalValue::GUID> &CantBePromoted) {
+  bool NonRenamableLocal = isNonRenamableLocal(I);
+  GlobalValueSummary::GVFlags Flags(
+      I.getLinkage(), I.getVisibility(), NonRenamableLocal,
+      /* Live = */ false, I.isDSOLocal(),
+      I.hasLinkOnceODRLinkage() && I.hasGlobalUnnamedAddr(),
+      GlobalValueSummary::Definition);
+  auto IF = std::make_unique<IfuncSummary>(Flags);
+  auto *Resolver = I.getResolverFunction();
+  auto ResolverVI = Index.getValueInfo(Resolver->getGUID());
+  assert(ResolverVI && "Ifunc expects ifunc summary to be available");
+  assert(ResolverVI.getSummaryList().size() == 1 &&
+         "Expected a single entry per ifunc in per-module index");
+  IF->setResolver(ResolverVI, ResolverVI.getSummaryList()[0].get());
+  if (NonRenamableLocal)
+    CantBePromoted.insert(I.getGUID());
+  Index.addGlobalValueSummary(I, std::move(IF));
+}
+
 // Set LiveRoot flag on entries matching the given value name.
 static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
   if (ValueInfo VI = Index.getValueInfo(GlobalValue::getGUID(Name)))
@@ -1020,6 +1040,11 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
       continue;
     computeVariableSummary(Index, G, CantBePromoted, M, Types);
   }
+
+  // Compute summaries for all ifuncs defined in module, and save in the
+  // index.
+  for (const GlobalIFunc &I : M.ifuncs())
+    computeIfuncSummary(Index, I, CantBePromoted);
 
   // Compute summaries for all aliases defined in module, and save in the
   // index.

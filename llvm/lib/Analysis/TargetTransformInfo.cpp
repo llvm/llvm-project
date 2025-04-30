@@ -1247,6 +1247,11 @@ unsigned TargetTransformInfo::getLoadStoreVecRegBitWidth(unsigned AS) const {
   return TTIImpl->getLoadStoreVecRegBitWidth(AS);
 }
 
+bool TargetTransformInfo::shouldForceVectorizeInst(Instruction *I,
+                                                   Type *Ty) const {
+  return TTIImpl->shouldForceVectorizeInst(I, Ty);
+}
+
 bool TargetTransformInfo::isLegalToVectorizeLoad(LoadInst *LI) const {
   return TTIImpl->isLegalToVectorizeLoad(LI);
 }
@@ -1304,8 +1309,8 @@ bool TargetTransformInfo::preferPredicatedReductionSelect(
   return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty, Flags);
 }
 
-bool TargetTransformInfo::preferEpilogueVectorization() const {
-  return TTIImpl->preferEpilogueVectorization();
+bool TargetTransformInfo::preferEpilogueVectorization(Loop *L) const {
+  return TTIImpl->preferEpilogueVectorization(L);
 }
 
 TargetTransformInfo::VPLegalization

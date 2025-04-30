@@ -1,0 +1,26 @@
+#!/bin/sh
+triple="$1"
+
+printf "#ifndef _LIBC_ABIS_H\n#define _LIBC_ABIS_H 1\n\n"
+printf "enum\n{\n  LIBC_ABI_DEFAULT = 0,\n"
+
+while read s t; do
+  if test "$s" = "#" || test -z "$s"; then continue; fi
+  if test -z "$t"; then
+    printf "  LIBC_ABI_%s,\n" "$s"
+    features="$features $s"
+  else
+    case "$triple" in
+      $t) printf "  LIBC_ABI_%s,\n" "$s"
+	  features="$features $s" ;;
+       *) ;;
+    esac
+  fi
+done
+
+printf "  LIBC_ABI_MAX\n};\n"
+printf "\n#endif\n"
+
+if test -n "$features"; then
+  printf "#define LIBC_ABIS_STRING \"libc ABIs:%s\\\\n\"\n" "$features"
+fi

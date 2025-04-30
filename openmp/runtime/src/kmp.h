@@ -119,10 +119,10 @@ class kmp_stats_list;
 #endif
 
 // The below has to be defined before including "kmp_barrier.h".
-#define KMP_INTERNAL_MALLOC(sz) malloc(sz)
-#define KMP_INTERNAL_FREE(p) free(p)
-#define KMP_INTERNAL_REALLOC(p, sz) realloc((p), (sz))
-#define KMP_INTERNAL_CALLOC(n, sz) calloc((n), (sz))
+#define KMP_INTERNAL_MALLOC(sz) __KMP_LIBC_MALLOC(sz)
+#define KMP_INTERNAL_FREE(p) __KMP_LIBC_FREE(p)
+#define KMP_INTERNAL_REALLOC(p, sz) __KMP_LIBC_REALLOC((p), (sz))
+#define KMP_INTERNAL_CALLOC(n, sz) __KMP_LIBC_CALLOC((n), (sz))
 
 #include "kmp_debug.h"
 #include "kmp_lock.h"

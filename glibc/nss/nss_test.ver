@@ -1,0 +1,4 @@
+{
+  _nss_test1_init_hook;
+  _nss_test2_init_hook;
+};

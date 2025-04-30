@@ -1,4 +1,4 @@
-# The LLVM Compiler Infrastructure
+# The LLVM Compiler Infrastructure (forked by next)
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
@@ -32,6 +32,30 @@ page for information on building and running LLVM.
 
 For information on how to contribute to the LLVM project, please take a look at
 the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+
+## Pull request merge flow
+
+LLVM pull request merge flow auto bump the toolchain version.
+When merging a pull request, a commit with an updated toolchain version is added to the pull request as part of LLVM pre merge flow.
+`next-llvm-project` version is set at the toolchain [version file](https://github.com/nextsilicon/next-llvm-project/blob/next_release_170/nextsilicon/nextcc/CMakeLists.txt), no need to update the version manualy.
+When a newer toolchain version is desired in `nextutils`, please set the expected toolchain version in `nextutils` expected toolchain [version file](https://github.com/nextsilicon/nextutils/blob/master/cmake/NextLLVMVersion.cmake).
+
+Toolchain versioning levels - `MAJOR.MINOR.PATCHLEVEL` (`X.Y.Z`):
+1. **MAJOR (X)** - major version update (usually requires code changes in `nextutils` repository).
+2. **MINOR (Y)** - minor version update (usually requires code changes in `nextutils` repository).
+3. **PATCHLEVEL (Z)** - patch level version update.
+
+The pull request pre merge flow is triggered by a comment.
+The comment set the toolchain bump level - `[ci-merge-<bump_level>]`:
+1. `[ci-merge-major]` - trigger *pre merge* that bump toolchaion MAJOR version.
+2. `[ci-merge-minor]` - trigger *pre merge* that bump toolchaion MINOR version.
+3. `[ci-merge-patch]` - trigger *pre merge* that bump toolchaion PATCHLEVEL version.
+
+In order to test pull request pre merge flow, trigger pre merge test by a comment.
+The comment set the toolchain bump level - `[ci-test-<bump_level>]`:
+1. `[ci-test-major]` - trigger *test pre merge* that bump toolchaion MAJOR version without merging the PR.
+2. `[ci-test-minor]` - trigger *test pre merge* that bump toolchaion MINOR version without merging the PR.
+3. `[ci-test-patch]` - trigger *test pre merge* that bump toolchaion PATCHLEVEL version without merging the PR.
 
 ## Getting in touch
 

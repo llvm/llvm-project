@@ -1,0 +1,44 @@
+{
+  "title": "string benchmark",
+  "type": "object",
+  "properties": {
+    "timing_type": {
+      "type": "string"
+    },
+    "functions": {
+      "title": "Associative array of functions",
+      "type": "object",
+      "patternProperties": {
+        "^[_a-zA-Z][_a-zA-Z0-9]+$": {
+          "title": "Function names",
+          "type": "object",
+          "properties": {
+            "bench-variant": {"type": "string"},
+	    "ifuncs": {
+              "type": "array",
+	      "items": {"type": "string"}
+	    },
+	    "results": {
+              "type": "array",
+	      "items": {
+                "type": "object",
+		"properties": {
+                  "timings": {
+	            "type": "array",
+		    "items": {"type": "number"}
+                   }
+		 },
+		 "additionalProperties": {"type": "number"},
+		 "minProperties": 2
+	      }
+	    }
+          },
+          "additionalProperties": false
+        }
+      },
+      "minProperties": 1
+    }
+  },
+  "required": ["timing_type", "functions"],
+  "additionalProperties": false
+}

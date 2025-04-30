@@ -14,6 +14,8 @@
 #include "kmp_i18n.h"
 #include "kmp_itt.h"
 
+#include "kmp_ns.h"
+
 #define USE_CHECKS_COMMON
 
 #define KMP_INLINE_SUBR 1
@@ -36,6 +38,8 @@ static
 
 {
   struct private_common *tn;
+
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
 
 #ifdef KMP_TASK_COMMON_DEBUG
   KC_TRACE(10, ("__kmp_threadprivate_find_task_common: thread#%d, called with "
@@ -65,6 +69,8 @@ static
     __kmp_find_shared_task_common(struct shared_table *tbl, int gtid,
                                   void *pc_addr) {
   struct shared_common *tn;
+
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
 
   for (tn = tbl->data[KMP_HASH(pc_addr)]; tn; tn = tn->next) {
     if (tn->gbl_addr == pc_addr) {
@@ -224,6 +230,8 @@ void __kmp_common_destroy_gtid(int gtid) {
   struct private_common *tn;
   struct shared_common *d_tn;
 
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
+
   if (!TCR_4(__kmp_init_gtid)) {
     // This is possible when one of multiple roots initiates early library
     // termination in a sequential region while other teams are active, and its
@@ -297,6 +305,9 @@ static void dump_list(void) {
 void kmp_threadprivate_insert_private_data(int gtid, void *pc_addr,
                                            void *data_addr, size_t pc_size) {
   struct shared_common **lnk_tn, *d_tn;
+
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
+
   KMP_DEBUG_ASSERT(__kmp_threads[gtid] &&
                    __kmp_threads[gtid]->th.th_root->r.r_active == 0);
 
@@ -335,6 +346,8 @@ struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
                                                 size_t pc_size) {
   struct private_common *tn, **tt;
   struct shared_common *d_tn;
+
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
 
   /* +++++++++ START OF CRITICAL SECTION +++++++++ */
   __kmp_acquire_lock(&__kmp_global_lock, gtid);
@@ -541,6 +554,8 @@ void *__kmpc_threadprivate(ident_t *loc, kmp_int32 global_tid, void *data,
   void *ret;
   struct private_common *tn;
 
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
+
   KC_TRACE(10, ("__kmpc_threadprivate: T#%d called\n", global_tid));
 
 #ifdef USE_CHECKS_COMMON
@@ -616,6 +631,9 @@ __kmpc_threadprivate_cached(ident_t *loc,
                             void *data, // Pointer to original global variable.
                             size_t size, // Size of original global variable.
                             void ***cache) {
+
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
+
   KC_TRACE(10, ("__kmpc_threadprivate_cached: T#%d called with cache: %p, "
                 "address: %p, size: %" KMP_SIZE_T_SPEC "\n",
                 global_tid, *cache, data, size));

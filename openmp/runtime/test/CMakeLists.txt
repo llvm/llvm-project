@@ -42,6 +42,9 @@ target_include_directories(ompt-print-callback INTERFACE ${CMAKE_CURRENT_SOURCE_
 
 
 add_openmp_testsuite(check-libomp "Running libomp tests" ${CMAKE_CURRENT_BINARY_DIR} DEPENDS omp)
+if (LIBOMP_NEXTSILICON)
+  add_openmp_testsuite(check-libomp-nextsilicon "Running nextsilicon openmp tests" ${CMAKE_CURRENT_BINARY_DIR}/nextsilicon DEPENDS omp)
+endif()
 # Add target check-ompt, but make sure to not add the tests twice to check-openmp.
 add_openmp_testsuite(check-ompt "Running OMPT tests" ${CMAKE_CURRENT_BINARY_DIR}/ompt EXCLUDE_FROM_CHECK_ALL DEPENDS omp)
 

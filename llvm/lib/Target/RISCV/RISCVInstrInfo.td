@@ -46,6 +46,12 @@ def SDT_RISCVIntBinOpW : SDTypeProfile<1, 2, [
 def SDT_RISCVIntShiftDOpW : SDTypeProfile<1, 3, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>, SDTCisVT<3, i64>
 ]>;
+def SDT_NS_LOAD
+    : SDTypeProfile<2, 1,
+                    [SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>]>;
+def SDT_NS_STORE
+    : SDTypeProfile<0, 3,
+                    [SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>]>;
 
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -93,6 +99,14 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisSameAs<0, 2>,
                                                   SDTCisSameAs<0, 3>,
                                                   SDTCisInt<0>]>>;
+
+def riscv_la_tls_ie : SDNode<"RISCVISD::LA_TLS_IE", SDTLoad,
+                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def riscv_la_tls_gd : SDNode<"RISCVISD::LA_TLS_GD", SDTIntUnaryOp>;
+def riscv_ns_load : SDNode<"RISCVISD::NS_LOAD", SDT_NS_LOAD,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def riscv_ns_store : SDNode<"RISCVISD::NS_STORE", SDT_NS_STORE,
+                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -775,6 +789,37 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // IsSignExtendingOpW = 1
 } // Predicates = [IsRV64]
+
+let hasSideEffects = 0, mayLoad = 1,
+    mayStore = 0 in def LQ
+    : RVInstR4NSMem128<0b00, 0b101, OPC_CUSTOM_0,
+                       (outs GPR
+                        : $rs2, GPR
+                        : $rd),
+                       (ins GPR
+                        : $rs1),
+                       "lq", "$rs2, $rd, $rs1", [(set GPR
+                                                  : $rs2, GPR
+                                                  : $rd, (riscv_ns_load GPR
+                                                          : $rs1))]>,
+    Requires<[HasNSGen1ExtMem128]> {
+let rs3 = 0;
+}
+
+let hasSideEffects = 0, mayLoad = 0,
+    mayStore = 1 in def SQ
+    : RVInstR4NSMem128<0b01, 0b101, OPC_CUSTOM_0, (outs),
+                       (ins GPR
+                        : $rs3, GPR
+                        : $rs2, GPR
+                        : $rs1),
+                       "sq", "$rs3, $rs2, $rs1", [(riscv_ns_store GPR
+                                                   : $rs3, GPR
+                                                   : $rs2, GPR
+                                                   : $rs1)]>,
+    Requires<[HasNSGen1ExtMem128]> {
+let rd = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // Privileged instructions

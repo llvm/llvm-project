@@ -1,0 +1,28 @@
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+
+########## Make rule for test ei04  ########
+
+
+ei04: run
+	
+
+build:  $(SRC)/ei04.f90
+	-$(RM) ei04.$(EXESUFFIX) core *.d *.mod FOR*.DAT FTN* ftn* fort.*
+	@echo ------------------------------------ building test $@
+	-$(CC) -c $(CFLAGS) $(SRC)/check.c -o check.$(OBJX)
+	-$(FC) -c $(FFLAGS) $(LDFLAGS) $(SRC)/ei04.f90 -o ei04.$(OBJX)
+	-$(FC) $(FFLAGS) $(LDFLAGS) ei04.$(OBJX) check.$(OBJX) $(LIBS) -o ei04.$(EXESUFFIX)
+
+
+run:
+	@echo ------------------------------------ executing test ei04
+	ei04.$(EXESUFFIX)
+
+verify: ;
+
+ei04.run: run
+

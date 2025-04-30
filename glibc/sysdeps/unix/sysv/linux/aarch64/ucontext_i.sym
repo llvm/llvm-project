@@ -1,0 +1,55 @@
+#include <inttypes.h>
+#include <signal.h>
+#include <stddef.h>
+#include <sys/ucontext.h>
+#include <asm/sigcontext.h>
+
+#include "kernel_rt_sigframe.h"
+
+SIG_BLOCK
+SIG_SETMASK
+
+_NSIG8				(_NSIG / 8)
+
+-- Offsets of the fields in the kernel rt_sigframe_t structure.
+#define rt_sigframe(member)	offsetof (struct kernel_rt_sigframe, member)
+
+RT_SIGFRAME_UCONTEXT		rt_sigframe (uc)
+
+RT_SIGFRAME_SIZE		sizeof (struct kernel_rt_sigframe)
+FPSIMD_CONTEXT_SIZE             sizeof (struct fpsimd_context)
+
+#define ucontext(member)	offsetof (ucontext_t, member)
+#define stack(member)		ucontext (uc_stack.member)
+#define mcontext(member)	ucontext (uc_mcontext.member)
+
+UCONTEXT_FLAGS			ucontext (uc_flags)
+UCONTEXT_LINK			ucontext (uc_link)
+UCONTEXT_STACK			ucontext (uc_stack)
+UCONTEXT_MCONTEXT		ucontext (uc_mcontext)
+UCONTEXT_SIGMASK		ucontext (uc_sigmask)
+UCONTEXT_SIZE			sizeof (ucontext_t)
+
+STACK_SP			stack (ss_sp)
+STACK_SIZE			stack (ss_size)
+STACK_FLAGS			stack (ss_flags)
+
+oX0				mcontext (regs)
+oSP				mcontext (sp)
+oPC				mcontext (pc)
+oPSTATE				mcontext (pstate)
+oEXTENSION                      mcontext (__reserved)
+
+#define fpsimd_context(member)  offsetof (struct fpsimd_context, member)
+
+oHEAD                           fpsimd_context (head)
+oV0                             fpsimd_context (vregs)
+oFPSR                           fpsimd_context (fpsr)
+oFPCR                           fpsimd_context (fpcr)
+
+#define aarch64_ctx(member)  offsetof (struct _aarch64_ctx, member)
+
+oMAGIC                          aarch64_ctx (magic)
+oSIZE                           aarch64_ctx (size)
+
+FPSIMD_MAGIC

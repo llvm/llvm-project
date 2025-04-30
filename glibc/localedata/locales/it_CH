@@ -1,0 +1,137 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Italian Language Locale for Switzerland
+% Language: it
+% Territory: CH
+% Revision: ........
+% Date: 1999-01-21
+% Users: general
+
+LC_IDENTIFICATION
+title      "Italian locale for Switzerland"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Italian"
+territory  "Switzerland"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "it_IT"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1sSjJoOyY]"
+noexpr  "^[-0nN]"
+yesstr  "s<U00EC>"
+nostr   "no"
+END LC_MESSAGES
+
+LC_MONETARY
+copy  "de_CH"
+END LC_MONETARY
+
+LC_NUMERIC
+copy  "de_CH"
+END LC_NUMERIC
+
+LC_TIME
+abday   "dom";"lun";/
+	"mar";"mer";/
+	"gio";"ven";/
+	"sab"
+day     "domenica";/
+	"luned<U00EC>";/
+	"marted<U00EC>";/
+	"mercoled<U00EC>";/
+	"gioved<U00EC>";/
+	"venerd<U00EC>";/
+	"sabato"
+abmon   "gen";"feb";/
+	"mar";"apr";/
+	"mag";"giu";/
+	"lug";"ago";/
+	"set";"ott";/
+	"nov";"dic"
+mon     "gennaio";/
+	"febbraio";/
+	"marzo";/
+	"aprile";/
+	"maggio";/
+	"giugno";/
+	"luglio";/
+	"agosto";/
+	"settembre";/
+	"ottobre";/
+	"novembre";/
+	"dicembre"
+d_t_fmt "%a %-d %b %Y, %T"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt   "%a %-d %b %Y, %T, %Z"
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "41"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Svizzera"
+country_ab2 "CH"
+country_ab3 "CHE"
+country_num 756
+country_car "CH"
+lang_name    "italiano"
+lang_ab      "it"
+lang_term    "ita"
+lang_lib    "ita"
+END LC_ADDRESS

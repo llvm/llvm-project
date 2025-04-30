@@ -1684,6 +1684,12 @@ const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
   ENUM_ENT(EF_RISCV_TSO, "TSO"),
 };
 
+// clang-format off
+const EnumEntry<unsigned> ElfHeaderX86_64Flags[] = {
+  ENUM_ENT(EF_NEXT32_BINFMT_MAGIC_NUMBER, "next32 binfmt magic number"),
+};
+// clang-format on
+
 const EnumEntry<unsigned> ElfHeaderAVRFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR1),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR2),
@@ -3671,7 +3677,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
       }
     } break;
     }
-  }
+  } else if (e.e_machine == EM_X86_64)
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderX86_64Flags));
   Str = "0x" + utohexstr(e.e_flags);
   if (!ElfFlags.empty())
     Str = Str + ", " + ElfFlags;
@@ -7127,6 +7134,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_CUDA)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
                    unsigned(ELF::EF_CUDA_SM));
+    else if (E.e_machine == EM_X86_64)
+      W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderX86_64Flags));
     else
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);

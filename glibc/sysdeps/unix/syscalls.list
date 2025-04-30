@@ -1,0 +1,93 @@
+# File name	Caller	Syscall name	Args	Strong name	Weak names
+
+accept		-	accept		Ci:iBN	__libc_accept	accept
+access		-	access		i:si	__access	access
+acct		-	acct		i:S	acct
+adjtime		-	adjtime		i:pp	__adjtime	adjtime
+bind		-	bind		i:ipi	__bind		bind
+chdir		-	chdir		i:s	__chdir		chdir
+chmod		-	chmod		i:si	__chmod		chmod
+chown		-	chown		i:sii	__chown		chown
+chroot		-	chroot		i:s	chroot
+close		-	close		Ci:i	__libc_close	__close close
+connect		-	connect		Ci:ipi	__libc_connect	__connect connect
+dup		-	dup		i:i	__dup		dup
+dup2		-	dup2		i:ii	__dup2		dup2
+dup3		-	dup3		i:iii	__dup3		dup3
+fchdir		-	fchdir		i:i	__fchdir	fchdir
+fchmod		-	fchmod		i:ii	__fchmod	fchmod
+fchown		-	fchown		i:iii	__fchown	fchown
+fcntl		-	fcntl		Ci:iiF	__libc_fcntl	__fcntl fcntl
+fstatfs		-	fstatfs		i:ip	__fstatfs	fstatfs
+ftruncate	-	ftruncate	i:ii	__ftruncate	ftruncate
+getdomain	-	getdomainname	i:si	getdomainname
+getgid		-	getgid		Ei:	__getgid	getgid
+getgroups	-	getgroups	i:ip	__getgroups	getgroups
+gethostid	-	gethostid	i:	gethostid
+gethostname	-	gethostname	i:bn	__gethostname	gethostname
+getpeername	-	getpeername	i:ibN	__getpeername	getpeername
+getpid		-	getpid		Ei:	__getpid	getpid
+getpriority	-	getpriority	i:ii	__getpriority	getpriority
+getrlimit	-	getrlimit	i:ip	__getrlimit	getrlimit
+getsockname	-	getsockname	i:ibN	__getsockname	getsockname
+getsockopt	-	getsockopt	i:iiiBN	getsockopt
+getuid		-	getuid		Ei:	__getuid	getuid
+ioctl		-	ioctl		i:iiI	__ioctl		ioctl __ioctl_time64
+kill		-	kill		i:ii	__kill		kill
+link		-	link		i:ss	__link		link
+listen		-	listen		i:ii	__listen	listen
+lseek		-	lseek		i:iii	__libc_lseek	__lseek lseek
+madvise		-	madvise		i:pUi	__madvise	madvise
+mkdir		-	mkdir		i:si	__mkdir		mkdir
+mmap		-	mmap		b:aUiiii __mmap		mmap
+mprotect	-	mprotect	i:aUi	__mprotect	mprotect
+munmap		-	munmap		i:aU	__munmap	munmap
+open		-	open		Ci:siv	__libc_open __open open
+profil		-	profil		i:piii	__profil	profil
+ptrace		-	ptrace		i:iiii	ptrace
+read		-	read		Ci:ibU	__libc_read	__read read
+readlink	-	readlink	i:spU	__readlink	readlink
+readv		-	readv		Ci:ipi	__readv		readv
+reboot		-	reboot		i:i	reboot
+recv		-	recv		Ci:ibUi	__libc_recv	recv
+recvfrom	-	recvfrom	Ci:ibUiBN	__libc_recvfrom __recvfrom recvfrom
+recvmsg		-	recvmsg		Ci:ipi	__libc_recvmsg	__recvmsg recvmsg
+rename		-	rename		i:ss	rename
+rmdir		-	rmdir		i:s	__rmdir		rmdir
+select		-	select		Ci:iPPPP	__select	__libc_select select
+send		-	send		Ci:ibUi	__libc_send	__send send
+sendmsg		-	sendmsg		Ci:ipi	__libc_sendmsg	__sendmsg sendmsg
+sendto		-	sendto		Ci:ibUibn	__libc_sendto	__sendto sendto
+setdomain	-	setdomainname	i:si	setdomainname
+setegid		-	setegid		i:i	__setegid	setegid
+seteuid		-	seteuid		i:i	__seteuid	seteuid
+setgid		-	setgid		i:i	__setgid	setgid
+setgroups	-	setgroups	i:ip	setgroups
+sethostid	-	sethostid	i:i	sethostid
+sethostname	-	sethostname	i:pi	sethostname
+setpgid		-	setpgrp		i:ii	__setpgid	setpgid
+setpriority	-	setpriority	i:iii	__setpriority	setpriority
+setregid	-	setregid	i:ii	__setregid	setregid
+setreuid	-	setreuid	i:ii	__setreuid	setreuid
+setrlimit	-	setrlimit	i:ip	__setrlimit setrlimit
+setsid		-	setsid		i:	__setsid	setsid
+setsockopt	-	setsockopt	i:iiibn	setsockopt	__setsockopt
+setuid		-	setuid		i:i	__setuid	setuid
+shutdown	-	shutdown	i:ii	shutdown
+sigsuspend	-	sigsuspend	Ci:p	sigsuspend
+socket		-	socket		i:iii	__socket	socket
+socketpair	-	socketpair	i:iiif	socketpair
+statfs		-	statfs		i:sp	__statfs	statfs
+swapoff		-	swapoff		i:s	swapoff
+swapon		-	swapon		i:s	swapon
+symlink		-	symlink		i:ss	__symlink	symlink
+sync		-	sync		i:	sync
+syncfs		-	syncfs		i:i	syncfs
+truncate	-	truncate	i:si	__truncate	truncate
+umask		-	umask		Ei:i	__umask		umask
+uname		-	uname		i:p	__uname		uname
+unlink		-	unlink		i:s	__unlink	unlink
+utimes		-	utimes		i:sp	__utimes	utimes
+vhangup		-	vhangup		i:i	vhangup
+write		-	write		Ci:ibU	__libc_write	__write write
+writev		-	writev		Ci:ipi	__writev	writev

@@ -320,6 +320,10 @@ enum GlobalValueSummarySymtabCodes {
   //  numver x version, [nummib x total size]?]
   FS_COMBINED_ALLOC_INFO = 29,
   FS_STACK_IDS = 30,
+  // IFUNC: [valueid, flags, valueid]
+  FS_IFUNC = 31,
+  // COMBINED_IFUNC: [valueid, modid, flags, valueid]
+  FS_COMBINED_IFUNC = 32,
 };
 
 enum MetadataCodes {

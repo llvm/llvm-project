@@ -116,6 +116,7 @@
 #define KMP_ARCH_LOONGARCH64 0
 #define KMP_ARCH_VE 0
 #define KMP_ARCH_S390X 0
+#define KMP_ARCH_NEXT32 0
 
 #if KMP_OS_WINDOWS
 #if defined(_M_AMD64) || defined(__x86_64)
@@ -134,7 +135,10 @@
 #endif
 
 #if KMP_OS_UNIX
-#if defined __x86_64
+#if defined __NEXT32__
+#undef KMP_ARCH_NEXT32
+#define KMP_ARCH_NEXT32 1
+#elif defined __x86_64
 #undef KMP_ARCH_X86_64
 #define KMP_ARCH_X86_64 1
 #elif defined __i386
@@ -259,7 +263,7 @@
               KMP_ARCH_AARCH64 + KMP_ARCH_MIPS + KMP_ARCH_MIPS64 +             \
               KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 + KMP_ARCH_VE +          \
               KMP_ARCH_S390X + KMP_ARCH_WASM + KMP_ARCH_PPC +                  \
-              KMP_ARCH_AARCH64_32)
+              KMP_ARCH_AARCH64_32 + KMP_ARCH_NEXT32)
 #error Unknown or unsupported architecture
 #endif
 

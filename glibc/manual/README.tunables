@@ -1,0 +1,154 @@
+			TUNABLE FRAMEWORK
+			=================
+
+Tunables is a feature in the GNU C Library that allows application authors and
+distribution maintainers to alter the runtime library behaviour to match their
+workload.
+
+The tunable framework allows modules within glibc to register variables that
+may be tweaked through an environment variable.  It aims to enforce a strict
+namespace rule to bring consistency to naming of these tunable environment
+variables across the project.  This document is a guide for glibc developers to
+add tunables to the framework.
+
+ADDING A NEW TUNABLE
+--------------------
+
+The TOP_NAMESPACE macro is defined by default as 'glibc'.  If distributions
+intend to add their own tunables, they should do so in a different top
+namespace by overriding the TOP_NAMESPACE macro for that tunable.  Downstream
+implementations are discouraged from using the 'glibc' top namespace for
+tunables they don't already have consensus to push upstream.
+
+There are three steps to adding a tunable:
+
+1. Add a tunable to the list and fully specify its properties:
+
+For each tunable you want to add, make an entry in elf/dl-tunables.list.  The
+format of the file is as follows:
+
+TOP_NAMESPACE {
+  NAMESPACE1 {
+    TUNABLE1 {
+      # tunable attributes, one per line
+    }
+    # A tunable with default attributes, i.e. string variable.
+    TUNABLE2
+    TUNABLE3 {
+      # its attributes
+    }
+  }
+  NAMESPACE2 {
+    ...
+  }
+}
+
+The list of allowed attributes are:
+
+- type:			Data type.  Defaults to STRING.  Allowed types are:
+			INT_32, UINT_64, SIZE_T and STRING.  Numeric types may
+			be in octal or hexadecimal format too.
+
+- minval:		Optional minimum acceptable value.  For a string type
+			this is the minimum length of the value.
+
+- maxval:		Optional maximum acceptable value.  For a string type
+			this is the maximum length of the value.
+
+- default:		Specify an optional default value for the tunable.
+
+- env_alias:		An alias environment variable
+
+- security_level:	Specify security level of the tunable for AT_SECURE
+			binaries.  Valid values are:
+
+			SXID_ERASE: (default) Do not read and do not pass on to
+			child processes.
+			SXID_IGNORE: Do not read, but retain for non-AT_SECURE
+			child processes.
+			NONE: Read all the time.
+
+2. Use TUNABLE_GET/TUNABLE_SET/TUNABLE_SET_WITH_BOUNDS to get and set tunables.
+
+3. OPTIONAL: If tunables in a namespace are being used multiple times within a
+   specific module, set the TUNABLE_NAMESPACE macro to reduce the amount of
+   typing.
+
+GETTING AND SETTING TUNABLES
+----------------------------
+
+When the TUNABLE_NAMESPACE macro is defined, one may get tunables in that
+module using the TUNABLE_GET macro as follows:
+
+  val = TUNABLE_GET (check, int32_t, TUNABLE_CALLBACK (check_callback))
+
+where 'check' is the tunable name, 'int32_t' is the C type of the tunable and
+'check_callback' is the function to call if the tunable got initialized to a
+non-default value.  The macro returns the value as type 'int32_t'.
+
+The callback function should be defined as follows:
+
+  void
+  TUNABLE_CALLBACK (check_callback) (int32_t *valp)
+  {
+  ...
+  }
+
+where it can expect the tunable value to be passed in VALP.
+
+Tunables in the module can be updated using:
+
+  TUNABLE_SET (check, val)
+
+where 'check' is the tunable name and 'val' is a value of same type.
+
+To get and set tunables in a different namespace from that module, use the full
+form of the macros as follows:
+
+  val = TUNABLE_GET_FULL (glibc, cpu, hwcap_mask, uint64_t, NULL)
+
+  TUNABLE_SET_FULL (glibc, cpu, hwcap_mask, val)
+
+where 'glibc' is the top namespace, 'cpu' is the tunable namespace and the
+remaining arguments are the same as the short form macros.
+
+The minimum and maximum values can updated together with the tunable value
+using:
+
+  TUNABLE_SET_WITH_BOUNDS (check, val, min, max)
+
+where 'check' is the tunable name, 'val' is a value of same type, 'min' and
+'max' are the minimum and maximum values of the tunable.
+
+To set the minimum and maximum values of tunables in a different namespace
+from that module, use the full form of the macros as follows:
+
+  val = TUNABLE_GET_FULL (glibc, cpu, hwcap_mask, uint64_t, NULL)
+
+  TUNABLE_SET_WITH_BOUNDS_FULL (glibc, cpu, hwcap_mask, val, min, max)
+
+where 'glibc' is the top namespace, 'cpu' is the tunable namespace and the
+remaining arguments are the same as the short form macros.
+
+When TUNABLE_NAMESPACE is not defined in a module, TUNABLE_GET is equivalent to
+TUNABLE_GET_FULL, so you will need to provide full namespace information for
+both macros.  Likewise for TUNABLE_SET, TUNABLE_SET_FULL,
+TUNABLE_SET_WITH_BOUNDS and TUNABLE_SET_WITH_BOUNDS_FULL.
+
+** IMPORTANT NOTE **
+
+The tunable list is set as read-only after the dynamic linker relocates itself,
+so setting tunable values must be limited only to tunables within the dynamic
+linker, that too before relocation.
+
+FUTURE WORK
+-----------
+
+The framework currently only allows a one-time initialization of variables
+through environment variables and in some cases, modification of variables via
+an API call.  A future goals for this project include:
+
+- Setting system-wide and user-wide defaults for tunables through some
+  mechanism like a configuration file.
+
+- Allow tweaking of some tunables at runtime

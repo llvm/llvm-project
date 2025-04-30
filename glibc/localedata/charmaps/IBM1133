@@ -1,0 +1,237 @@
+<code_set_name> IBM1133
+<comment_char> %
+<escape_char> /
+
+% alias CP1133
+CHARMAP
+<U0000>     /x00         <control>
+<U0001>     /x01         <control>
+<U0002>     /x02         <control>
+<U0003>     /x03         <control>
+<U0004>     /x04         <control>
+<U0005>     /x05         <control>
+<U0006>     /x06         <control>
+<U0007>     /x07         <control>
+<U0008>     /x08         <control>
+<U0009>     /x09         <control>
+<U000A>     /x0a         <control>
+<U000B>     /x0b         <control>
+<U000C>     /x0c         <control>
+<U000D>     /x0d         <control>
+<U000E>     /x0e         <control>
+<U000F>     /x0f         <control>
+<U0010>     /x10         <control>
+<U0011>     /x11         <control>
+<U0012>     /x12         <control>
+<U0013>     /x13         <control>
+<U0014>     /x14         <control>
+<U0015>     /x15         <control>
+<U0016>     /x16         <control>
+<U0017>     /x17         <control>
+<U0018>     /x18         <control>
+<U0019>     /x19         <control>
+<U001A>     /x1a         <control>
+<U001B>     /x1b         <control>
+<U001C>     /x1c         <control>
+<U001D>     /x1d         <control>
+<U001E>     /x1e         <control>
+<U001F>     /x1f         <control>
+<U0020>     /x20         SPACE
+<U0021>     /x21         EXCLAMATION MARK
+<U0022>     /x22         QUOTATION MARK
+<U0023>     /x23         NUMBER SIGN
+<U0024>     /x24         DOLLAR SIGN
+<U0025>     /x25         PERCENT SIGN
+<U0026>     /x26         AMPERSAND
+<U0027>     /x27         APOSTROPHE
+<U0028>     /x28         LEFT PARENTHESIS
+<U0029>     /x29         RIGHT PARENTHESIS
+<U002A>     /x2a         ASTERISK
+<U002B>     /x2b         PLUS SIGN
+<U002C>     /x2c         COMMA
+<U002D>     /x2d         HYPHEN-MINUS
+<U002E>     /x2e         FULL STOP
+<U002F>     /x2f         SOLIDUS
+<U0030>     /x30         DIGIT ZERO
+<U0031>     /x31         DIGIT ONE
+<U0032>     /x32         DIGIT TWO
+<U0033>     /x33         DIGIT THREE
+<U0034>     /x34         DIGIT FOUR
+<U0035>     /x35         DIGIT FIVE
+<U0036>     /x36         DIGIT SIX
+<U0037>     /x37         DIGIT SEVEN
+<U0038>     /x38         DIGIT EIGHT
+<U0039>     /x39         DIGIT NINE
+<U003A>     /x3a         COLON
+<U003B>     /x3b         SEMICOLON
+<U003C>     /x3c         LESS-THAN SIGN
+<U003D>     /x3d         EQUALS SIGN
+<U003E>     /x3e         GREATER-THAN SIGN
+<U003F>     /x3f         QUESTION MARK
+<U0040>     /x40         COMMERCIAL AT
+<U0041>     /x41         LATIN CAPITAL LETTER A
+<U0042>     /x42         LATIN CAPITAL LETTER B
+<U0043>     /x43         LATIN CAPITAL LETTER C
+<U0044>     /x44         LATIN CAPITAL LETTER D
+<U0045>     /x45         LATIN CAPITAL LETTER E
+<U0046>     /x46         LATIN CAPITAL LETTER F
+<U0047>     /x47         LATIN CAPITAL LETTER G
+<U0048>     /x48         LATIN CAPITAL LETTER H
+<U0049>     /x49         LATIN CAPITAL LETTER I
+<U004A>     /x4a         LATIN CAPITAL LETTER J
+<U004B>     /x4b         LATIN CAPITAL LETTER K
+<U004C>     /x4c         LATIN CAPITAL LETTER L
+<U004D>     /x4d         LATIN CAPITAL LETTER M
+<U004E>     /x4e         LATIN CAPITAL LETTER N
+<U004F>     /x4f         LATIN CAPITAL LETTER O
+<U0050>     /x50         LATIN CAPITAL LETTER P
+<U0051>     /x51         LATIN CAPITAL LETTER Q
+<U0052>     /x52         LATIN CAPITAL LETTER R
+<U0053>     /x53         LATIN CAPITAL LETTER S
+<U0054>     /x54         LATIN CAPITAL LETTER T
+<U0055>     /x55         LATIN CAPITAL LETTER U
+<U0056>     /x56         LATIN CAPITAL LETTER V
+<U0057>     /x57         LATIN CAPITAL LETTER W
+<U0058>     /x58         LATIN CAPITAL LETTER X
+<U0059>     /x59         LATIN CAPITAL LETTER Y
+<U005A>     /x5a         LATIN CAPITAL LETTER Z
+<U005B>     /x5b         LEFT SQUARE BRACKET
+<U005C>     /x5c         REVERSE SOLIDUS
+<U005D>     /x5d         RIGHT SQUARE BRACKET
+<U005E>     /x5e         CIRCUMFLEX ACCENT
+<U005F>     /x5f         LOW LINE
+<U0060>     /x60         GRAVE ACCENT
+<U0061>     /x61         LATIN SMALL LETTER A
+<U0062>     /x62         LATIN SMALL LETTER B
+<U0063>     /x63         LATIN SMALL LETTER C
+<U0064>     /x64         LATIN SMALL LETTER D
+<U0065>     /x65         LATIN SMALL LETTER E
+<U0066>     /x66         LATIN SMALL LETTER F
+<U0067>     /x67         LATIN SMALL LETTER G
+<U0068>     /x68         LATIN SMALL LETTER H
+<U0069>     /x69         LATIN SMALL LETTER I
+<U006A>     /x6a         LATIN SMALL LETTER J
+<U006B>     /x6b         LATIN SMALL LETTER K
+<U006C>     /x6c         LATIN SMALL LETTER L
+<U006D>     /x6d         LATIN SMALL LETTER M
+<U006E>     /x6e         LATIN SMALL LETTER N
+<U006F>     /x6f         LATIN SMALL LETTER O
+<U0070>     /x70         LATIN SMALL LETTER P
+<U0071>     /x71         LATIN SMALL LETTER Q
+<U0072>     /x72         LATIN SMALL LETTER R
+<U0073>     /x73         LATIN SMALL LETTER S
+<U0074>     /x74         LATIN SMALL LETTER T
+<U0075>     /x75         LATIN SMALL LETTER U
+<U0076>     /x76         LATIN SMALL LETTER V
+<U0077>     /x77         LATIN SMALL LETTER W
+<U0078>     /x78         LATIN SMALL LETTER X
+<U0079>     /x79         LATIN SMALL LETTER Y
+<U007A>     /x7a         LATIN SMALL LETTER Z
+<U007B>     /x7b         LEFT CURLY BRACKET
+<U007C>     /x7c         VERTICAL LINE
+<U007D>     /x7d         RIGHT CURLY BRACKET
+<U007E>     /x7e         TILDE
+<U007F>     /x7f         <control>
+<U0080>     /x80         <control>
+<U0081>     /x81         <control>
+<U0082>     /x82         <control>
+<U0083>     /x83         <control>
+<U0084>     /x84         <control>
+<U0085>     /x85         <control>
+<U0086>     /x86         <control>
+<U0087>     /x87         <control>
+<U0088>     /x88         <control>
+<U0089>     /x89         <control>
+<U008A>     /x8a         <control>
+<U008B>     /x8b         <control>
+<U008C>     /x8c         <control>
+<U008D>     /x8d         <control>
+<U008E>     /x8e         <control>
+<U008F>     /x8f         <control>
+<U0090>     /x90         <control>
+<U0091>     /x91         <control>
+<U0092>     /x92         <control>
+<U0093>     /x93         <control>
+<U0094>     /x94         <control>
+<U0095>     /x95         <control>
+<U0096>     /x96         <control>
+<U0097>     /x97         <control>
+<U0098>     /x98         <control>
+<U0099>     /x99         <control>
+<U009A>     /x9a         <control>
+<U009B>     /x9b         <control>
+<U009C>     /x9c         <control>
+<U009D>     /x9d         <control>
+<U009E>     /x9e         <control>
+<U009F>     /x9f         <control>
+<U0E81>     /xa1         LAO LETTER KO
+<U0E82>     /xa2         LAO LETTER KHO SUNG
+<U0E84>     /xa3         LAO LETTER KHO TAM
+<U0E87>     /xa4         LAO LETTER NGO
+<U0E88>     /xa5         LAO LETTER CO
+<U0EAA>     /xa6         LAO LETTER SO SUNG
+<U0E8A>     /xa7         LAO LETTER SO TAM
+<U0E8D>     /xa8         LAO LETTER NYO
+<U0E94>     /xa9         LAO LETTER DO
+<U0E95>     /xaa         LAO LETTER TO
+<U0E96>     /xab         LAO LETTER THO SUNG
+<U0E97>     /xac         LAO LETTER THO TAM
+<U0E99>     /xad         LAO LETTER NO
+<U0E9A>     /xae         LAO LETTER BO
+<U0E9B>     /xaf         LAO LETTER PO
+<U0E9C>     /xb0         LAO LETTER PHO SUNG
+<U0E9D>     /xb1         LAO LETTER FO TAM
+<U0E9E>     /xb2         LAO LETTER PHO TAM
+<U0E9F>     /xb3         LAO LETTER FO SUNG
+<U0EA1>     /xb4         LAO LETTER MO
+<U0EA2>     /xb5         LAO LETTER YO
+<U0EA3>     /xb6         LAO LETTER LO LING
+<U0EA5>     /xb7         LAO LETTER LO LOOT
+<U0EA7>     /xb8         LAO LETTER WO
+<U0EAB>     /xb9         LAO LETTER HO SUNG
+<U0EAD>     /xba         LAO LETTER O
+<U0EAE>     /xbb         LAO LETTER HO TAM
+<U0EAF>     /xbf         LAO ELLIPSIS
+<U0EB0>     /xc0         LAO VOWEL SIGN A
+<U0EB2>     /xc1         LAO VOWEL SIGN AA
+<U0EB3>     /xc2         LAO VOWEL SIGN AM
+<U0EB4>     /xc3         LAO VOWEL SIGN I
+<U0EB5>     /xc4         LAO VOWEL SIGN II
+<U0EB6>     /xc5         LAO VOWEL SIGN Y
+<U0EB7>     /xc6         LAO VOWEL SIGN YY
+<U0EB8>     /xc7         LAO VOWEL SIGN U
+<U0EB9>     /xc8         LAO VOWEL SIGN UU
+<U0EBC>     /xc9         LAO SEMIVOWEL SIGN LO
+<U0EB1>     /xca         LAO VOWEL SIGN MAI KAN
+<U0EBB>     /xcb         LAO VOWEL SIGN MAI KON
+<U0EBD>     /xcc         LAO SEMIVOWEL SIGN NYO
+<U0EC0>     /xd0         LAO VOWEL SIGN E
+<U0EC1>     /xd1         LAO VOWEL SIGN EI
+<U0EC2>     /xd2         LAO VOWEL SIGN O
+<U0EC3>     /xd3         LAO VOWEL SIGN AY
+<U0EC4>     /xd4         LAO VOWEL SIGN AI
+<U0EC8>     /xd5         LAO TONE MAI EK
+<U0EC9>     /xd6         LAO TONE MAI THO
+<U0ECA>     /xd7         LAO TONE MAI TI
+<U0ECB>     /xd8         LAO TONE MAI CATAWA
+<U0ECC>     /xd9         LAO CANCELLATION MARK
+<U0ECD>     /xda         LAO NIGGAHITA
+<U0EC6>     /xdb         LAO KO LA
+<U0EDC>     /xdd         LAO HO NO
+<U0EDD>     /xde         LAO HO MO
+%IRREVERSIBLE%<U006B>     /xdf         LATIN SMALL LETTER K
+<U0ED0>     /xf0         LAO DIGIT ZERO
+<U0ED1>     /xf1         LAO DIGIT ONE
+<U0ED2>     /xf2         LAO DIGIT TWO
+<U0ED3>     /xf3         LAO DIGIT THREE
+<U0ED4>     /xf4         LAO DIGIT FOUR
+<U0ED5>     /xf5         LAO DIGIT FIVE
+<U0ED6>     /xf6         LAO DIGIT SIX
+<U0ED7>     /xf7         LAO DIGIT SEVEN
+<U0ED8>     /xf8         LAO DIGIT EIGHT
+<U0ED9>     /xf9         LAO DIGIT NINE
+<U00A2>     /xfc         CENT SIGN
+<U00AC>     /xfd         NOT SIGN
+<U00A6>     /xfe         BROKEN BAR
+<U00A0>     /xff         NO-BREAK SPACE
+END CHARMAP

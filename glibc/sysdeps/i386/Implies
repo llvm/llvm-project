@@ -1,0 +1,6 @@
+x86
+wordsize-32
+ieee754/float128
+ieee754/ldbl-96
+ieee754/dbl-64
+ieee754/flt-32

@@ -1,0 +1,624 @@
+This file describes changes to the AArch64 port while it was in the ports
+add-on directory.  This port is no longer part of an add-on and so
+future changes to it should be listed in the top-level ChangeLog file,
+not here.
+
+
+
+2014-02-11  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* sysdeps/aarch64: Move directory to ../sysdeps/aarch64.
+	* sysdeps/unix/sysv/linux/aarch64: Move directory to
+	../sysdeps/unix/sysv/linux/aarch64.
+
+2014-01-22  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerated.
+
+2014-01-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/Makefile (abi-lp64_be-options): Fix
+	type in define.
+
+2014-01-20  Tom Tromey  <tromey@redhat.com>
+
+	[BZ #16169]
+	* sysdeps/unix/sysv/linux/aarch64/clone.S (__clone): Add CFI
+	directives;  Zero x29.
+
+2014-01-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/configure.ac: New file.
+	* sysdeps/aarch64/configure: New file.
+	* sysdeps/aarch64/shlib-versions: Define ld-linux-aarch64_be.so.1
+	* sysdeps/unix/sysv/linux/aarch64/Makefile (abi-variants)
+	(abi-lp64-options, abi-lp64-condition, abi-lp64-ld-soname)
+	(abi-lp64_be-options, abi-lp64_be-condition)
+	(abi-lp64_be-ld-soname) Define.
+	* sysdeps/unix/sysv/linux/aarch64/ldconfig.h
+	(SYSDEP_KNOWN_INTERPRETER_NAMES): Add ld-linux-aarch64_be.so.1
+
+2014-01-07  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	[BZ #16387]
+	* sysdeps/aarch64/fpu/fpu_control.h (_FPU_FPCR_RM_MASK): Define.
+	* sysdeps/aarch64/soft-fp/sfp-machine.h (FP_ROUNDMODE): Adjust
+	rounding mode mask.
+
+2014-01-07  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Drop sqrt ULPs.
+
+2014-01-07  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/dl-trampoline.S (_dl_runtime_resolve): Correct
+	cfi_adjust_cfa_offset offset.
+
+2014-01-06  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/sys/ptrace.h (ptrace_peeksiginfo_args):
+	Rename to ...
+	(__ptrace_peeksiginfo_args): ... this.
+
+2014-01-01  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerated.
+
+2014-01-01  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/abort-instr.h: New file.
+
+2014-01-01  Venkataramanan Kumar  <venkataramanan.kumar@linaro.org>
+
+	* sysdeps/aarch64/__longjmp.S (__longjmp): Demangle sp and lr when
+	restoring register values.
+	* sysdeps/aarch64/setjmp.S (__sigsetjmp): Mangle sp and lr
+	before storing register values.
+	* sysdeps/arm/jmpbuf-unwind.h (_jmpbuf_sp): Remove.
+	* sysdeps/aarch64/jmpbuf-offsets.h (_jmpbuf_sp): Add.
+	(JB_FRAME_ADDRESS): call  _jmpbuf_sp.
+	* sysdeps/aarch64/sysdep.h (LDST_PCREL) : New macros.
+	(LDST_GLOBAL): Likewise.
+	* sysdeps/unix/sysv/linux/aarch64/sysdep.h (PTR_MANGLE): New macro.
+	(PTR_DEMANGLE): Likewise.
+	(PTR_MANGLE2): Likewise.
+	(PTR_DEMANGLE2): Likewise.
+
+2013-12-18  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	[BZ #15128]
+	* sysdeps/aarch64/dl-trampoline.S (_dl_runtime_resolve): Save and
+	restore q0-q7.
+
+2013-12-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/nptl/lowlevellock.h
+	(FUTEX_WAIT_REQUEUE_PI): Define.
+	(FUTEX_CMP_REQUEUE_PI): Likewise.
+	(lll_futex_wait_requeue_pi): Likewise.
+	(lll_futex_timed_wait_requeue_pi): Likewise.
+	(lll_futex_cmp_requeue_pi): Likewise.
+
+2013-12-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerated.
+
+2013-12-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Remove sqrt.
+
+2013-12-11  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerate.
+
+2013-11-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/aarch64/fpu/fegetround.c (fegetround): Use
+	libm_hidden_def.
+
+2013-11-26  Will Newton  <will.newton@linaro.org>
+
+	* sysdeps/aarch64/dl-irel.h: Include ldsodefs.h.
+	(ELF_MACHINE_IRELA): Define.  (elf_ifunc_invoke): Pass
+	hwcap to ifunc resolver function.  (elf_irela): New function.
+	* sysdeps/aarch64/dl-machine.h: Include dl-irel.h.
+	(elf_machine_rela) Handle STT_GNU_IFUNC symbols and
+	R_AARCH64_IRELATIVE relocations.  (elf_machine_lazy_rel):
+	Handle R_AARCH64_IRELATIVE relocations.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/aarch64/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/aarch64/configure: Regenerated.
+
+2013-09-30  Andrew Pinski <andrew.pinski@caviumnetworks.com>
+
+	* sysdeps/unix/sysv/linux/aarch64/sysdep.h (SYSCALL_ERROR_HANDLER):
+	Fix store to errno to use 32bits.
+
+2013-09-24  Venkataramanan Kumar  <venkataramanan.kumar@linaro.org>
+
+	* sysdeps/aarch64/machine-gmon.h (__mcount): Accept parameter and
+	pass it to mcount_internal.
+
+2013-09-24 Venkataramanan Kumar  <venkataramanan.kumar@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/sigcontextinfo.h: New file.
+
+2013-07-26  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/Versions: New file.
+	* sysdeps/aarch64/machine-gmon.h: New file.
+	* sysdeps/aarch64/mcount.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libc.abilist (_mcount): Add.
+
+2013-07-12  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/Makefile (CFLAGS-backtrace.c): Define.
+
+2013-07-09  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/dl-static.c: New file to support
+	variable page size for AArch64.
+	* sysdeps/unix/sysv/linux/aarch64/ldsodefs.h: Likewise.
+	* sysdeps/unix/sysv/linux/aarch64/Makefile: Build dl-static in elf.
+	* sysdeps/unix/sysv/linux/aarch64/Versions: Add _dl_var_init.
+
+2013-07-05  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerate.
+
+2013-07-04  Andreas Jaeger  <aj@suse.de>
+
+	For ChangeLog.aarch64:
+	* sysdeps/unix/sysv/linux/aarch64/sys/ptrace.h (PTRACE_LISTEN):
+	Add define.
+	(PTRACE_PEEKSIGINFO): Add new value from Linux 3.10.
+	(ptrace_peeksiginfo_args): Add.
+	(__ptrace_peeksiginfo_flags): Add.
+
+2013-06-28  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/dl-machine.h (elf_machine_dynamic): De-reference
+	_GLOBAL_OFFSET_TABLE_.
+
+2013-06-28  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/getcontext.S (__getcontext): Simplify
+	oPSTATE initialization.
+
+2013-06-15  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libpthread.abilist:
+	Update.
+
+2013-06-04  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/getcontext.S (__getcontext):
+	Initialize pstate.
+	* sysdeps/unix/sysv/linux/aarch64/ucontext_i.sym (oPSTATE): Define.
+
+2013-05-29  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	[BZ #15465]
+	* sysdeps/aarch64/dl-machine.h (elf_machine_rela): Use
+	RTLD_PROGNAME.
+
+2013-05-23  Venkataranmanan Kumar  <venkataramanan.kumar@linaro.org>
+
+	* sysdeps/aarch64/machine-gmon.h: Remove.
+
+2013-05-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/aarch64/libm-test-ulps: Update test names.
+
+2013-05-21  Andreas Schwab  <schwab@suse.de>
+
+	[BZ #15493]
+	* sysdeps/aarch64/setjmp.S (__sigsetjmp): Don't clobber register
+	x1.
+	[NOT_IN_libc && IS_IN_rtld]: Don't call __sigjmp_save.
+
+2013-05-21  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerate.
+
+2013-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/aarch64/libm-test-ulps: Update names of sincos tests.
+
+2013-05-16  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	[BZ #15442]
+	* sysdeps/aarch64/soft-fp/sfp-machine.h (_FP_QNANNEGATEDP): New
+	macro.
+
+2013-05-12  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/clone.S (__clone):
+	Do not call sycall_error directly with a confitional branch.
+
+	* sysdeps/unix/sysv/linux/aarch64/ioctl.S (__ioctl):
+	Do not call sycall_error directly with a confitional branch.
+
+2013-03-19  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/unix/sysv/linux/aarch64/configure.in: Set
+	libc_cv_rtlddir.
+	* sysdeps/unix/sysv/linux/aarch64/configure: Regenerate.
+
+2013-03-14  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/unix/sysv/linux/aarch64/configure.in: Set
+	libc_cv_slibdir, libdir and libc_cv_localedir.
+	* sysdeps/unix/sysv/linux/aarch64/configure: Regenerate.
+
+2013-03-11  Andreas Schwab  <schwab@suse.de>
+
+	[BZ #15234]
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libpthread.abilist
+	(GLIBC_2.17): Remove pthread_atfork.
+
+2013-03-07  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/aarch64/bits/mman.h: Remove all defines
+	provided by bits/mman-linux.h and include <bits/mman-linux.h>.
+
+2013-02-18  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libc.abilist: Add
+	__cxa_thread_atexit_impl.
+
+2013-02-14  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerate.
+
+2013-02-13  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/aarch64/sigaction.c (__libc_sigaction):
+	Do not use __ptrvalue.
+
+2013-02-08  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/aarch64/gettimeofday.c: Do not include
+	<bp-checks.h>.
+	(__gettimeofday): Do not use CHECK_1.
+
+2013-01-23  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/strncmp.S: New file.
+
+2013-01-23  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/sysdep.h (ENTRY_ALIGN_AND_PAD): New.
+	* sysdeps/aarch64/strnlen.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/strlen.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/strcmp.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/bzero.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/memmove.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/memcpy.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/memset.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/sysdep.h (ENTRY_ALIGN): New.
+	* sysdeps/aarch64/memcmp.S: New file.
+
+2013-01-17  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/sysdep.h (ENTRY, END): Adjust
+	whitespace.
+
+2013-01-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/aarch64/bits/setjmp.h (__jmp_buf): Use __extension__
+	with long long.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2012-12-10  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/sysdep.h (INTERNAL_VSYSCALL):
+	Remove _x0 declarations.
+
+2012-12-07  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerate.
+
+2012-12-07  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/sysdep.h (INLINE_VSYSCALL):
+	Remove _x0 and sc_err declarations.
+
+2012-12-07  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/mmap.c (mmap): Cast return value.
+
+2012-12-07  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/dl-machine.h (elf_machine_rela): Remove
+	strtab.
+
+2012-12-04  Steve McIntyre <steve.mcintyre@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/ldconfig.h: Add entries
+	for /lib/ld-linux.so.3 and /lib/ld-linux-armhf.so.3.
+
+2012-12-04  Steve McIntyre <steve.mcintyre@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/readelflib.c: New file.
+
+2012-11-29  Steve McIntyre <steve.mcintyre@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/dl-cache.h: New file.
+
+2012-11-22  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/libm-test-ulps: Regenerate.
+
+2012-11-21  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/unix/sysv/linux/aarch64/nptl/lowlevellock.h
+	(lll_futex_timed_wait_bitset): Remove INTERNAL_SYSCALL_ERROR_P.
+
+2012-11-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/fpu/s_fma.c (weak_alias_x):
+	Remove and switch to weak_alias.
+	* sysdeps/aarch64/fpu/s_fmin.c (weak_alias_x): Likewise.
+	* sysdeps/aarch64/fpu/s_frint.c (weak_alias_x): Likewise.
+	* sysdeps/aarch64/fpu/s_lrint.c (weak_alias_x): Likewise.
+	* sysdeps/aarch64/fpu/s_lround.c (weak_alias_x): Likewise.
+
+2012-11-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/fpu/s_fma.c (strong_aliasx, NO_LONG_DOUBLE): Remove.
+	* sysdeps/aarch64/fpu/s_fmin.c (strong_aliasx, NO_LONG_DOUBLE): Likewise.
+	* sysdeps/aarch64/fpu/s_frint.c (strong_aliasx, NO_LONG_DOUBLE): Likewise.
+	* sysdeps/aarch64/fpu/s_lrint.c (strong_aliasx, NO_LONG_DOUBLE): Likewise.
+	* sysdeps/aarch64/fpu/s_lround.c (strong_aliasx, NO_LONG_DOUBLE): Likewise.
+
+2012-11-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/fpu/s_fma.c: Indent preprocessor directives.
+	* sysdeps/aarch64/fpu/s_fmin.c: Likewise.
+	* sysdeps/aarch64/fpu/s_frint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_frintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_lrint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_lround.c: Likewise.
+
+2012-11-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/dl-tlsdesc.S: Use range for copyright years.
+	* sysdeps/aarch64/dl-tlsdesc.h: Likewise.
+	* sysdeps/aarch64/tlsdesc.c: Likewise.
+	* sysdeps/aarch64/fpu/s_ceil.c: Likewise.
+	* sysdeps/aarch64/fpu/s_ceilf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_floor.c: Likewise.
+	* sysdeps/aarch64/fpu/s_floorf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_fmaf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_fmax.c: Likewise.
+	* sysdeps/aarch64/fpu/s_fmaxf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_fmin.c: Likewise.
+	* sysdeps/aarch64/fpu/s_fminf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_frint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_frintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_llrint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_llrintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_llround.c: Likewise.
+	* sysdeps/aarch64/fpu/s_llroundf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_lrint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_lrintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_lround.c: Likewise.
+	* sysdeps/aarch64/fpu/s_lroundf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_nearbyint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_nearbyintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_rint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_rintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_round.c: Likewise.
+	* sysdeps/aarch64/fpu/s_roundf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_trunc.c: Likewise.
+	* sysdeps/aarch64/fpu/s_truncf.c: Likewise.
+
+2012-11-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/fpu/s_frint.x: Renamed to...
+	* sysdeps/aarch64/fpu/s_frint.c: ... this new file.
+	* sysdeps/aarch64/fpu/s_frintf.x: Renamed to...
+	* sysdeps/aarch64/fpu/s_frintf.c: ... this new file.
+	* sysdeps/aarch64/fpu/s_ceil.c: Include s_frint.c.
+	* sysdeps/aarch64/fpu/s_floor.c: Likewise.
+	* sysdeps/aarch64/fpu/s_nearbyint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_rint.c: Likewise.
+	* sysdeps/aarch64/fpu/s_round.c: Likewise.
+	* sysdeps/aarch64/fpu/s_trunc.c: Likewise.
+	* sysdeps/aarch64/fpu/s_ceilf.c: Include s_frintf.c.
+	* sysdeps/aarch64/fpu/s_floorf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_nearbyintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_rintf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_roundf.c: Likewise.
+	* sysdeps/aarch64/fpu/s_truncf.c: Likewise.
+
+2012-11-20  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/fpu/s_fma.c (__CONCATX): Don't use K&R.
+	* sysdeps/aarch64/fpu/s_fmin.c (__CONCATX): Likewise.
+	* sysdeps/aarch64/fpu/s_lrint.c (__CONCATX): Likewise.
+	* sysdeps/aarch64/fpu/s_lround.c (__CONCATX): Likewise.
+	* sysdeps/aarch64/fpu/s_frint.x (__CONCATX): Likewise.
+
+2012-11-19  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/fpu/s_ceil.c: New file.
+	* sysdeps/aarch64/fpu/s_ceilf.c: New file.
+	* sysdeps/aarch64/fpu/s_floor.c: New file.
+	* sysdeps/aarch64/fpu/s_floorf.c: New file.
+	* sysdeps/aarch64/fpu/s_fma.c: Replace file.
+	* sysdeps/aarch64/fpu/s_fmaf.c: New file.
+	* sysdeps/aarch64/fpu/s_fmax.c: New file.
+	* sysdeps/aarch64/fpu/s_fmaxf.c: New file.
+	* sysdeps/aarch64/fpu/s_fmin.c: New file.
+	* sysdeps/aarch64/fpu/s_fminf.c: New file.
+	* sysdeps/aarch64/fpu/s_frint.x: New file.
+	* sysdeps/aarch64/fpu/s_frintf.x: New file.
+	* sysdeps/aarch64/fpu/s_llrint.c: New file.
+	* sysdeps/aarch64/fpu/s_llrintf.c: New file.
+	* sysdeps/aarch64/fpu/s_llround.c: New file.
+	* sysdeps/aarch64/fpu/s_llroundf.c: New file.
+	* sysdeps/aarch64/fpu/s_lrint.c: New file.
+	* sysdeps/aarch64/fpu/s_lrintf.c: New file.
+	* sysdeps/aarch64/fpu/s_lround.c: New file.
+	* sysdeps/aarch64/fpu/s_lroundf.c: New file.
+	* sysdeps/aarch64/fpu/s_nearbyint.c: New file.
+	* sysdeps/aarch64/fpu/s_nearbyintf.c: New file.
+	* sysdeps/aarch64/fpu/s_rint.c: New file.
+	* sysdeps/aarch64/fpu/s_rintf.c: New file.
+	* sysdeps/aarch64/fpu/s_round.c: New file.
+	* sysdeps/aarch64/fpu/s_roundf.c: New file.
+	* sysdeps/aarch64/fpu/s_trunc.c: New file.
+	* sysdeps/aarch64/fpu/s_truncf.c: New file.
+
+2012-11-09  Marcus Shawcroft  <marcus.shawcroft@linaro.org>
+
+	* sysdeps/aarch64/Implies: New file.
+	* sysdeps/aarch64/Makefile: New file.
+	* sysdeps/aarch64/__longjmp.S: New file.
+	* sysdeps/aarch64/backtrace.c: New file.
+	* sysdeps/aarch64/bits: New file.
+	* sysdeps/aarch64/bits/atomic.h: New file.
+	* sysdeps/aarch64/bits/endian.h: New file.
+	* sysdeps/aarch64/bits/fenv.h: New file.
+	* sysdeps/aarch64/bits/link.h: New file.
+	* sysdeps/aarch64/bits/linkmap.h: New file.
+	* sysdeps/aarch64/bits/mathdef.h: New file.
+	* sysdeps/aarch64/bits/setjmp.h: New file.
+	* sysdeps/aarch64/bsd-_setjmp.S: New file.
+	* sysdeps/aarch64/bsd-setjmp.S: New file.
+	* sysdeps/aarch64/crti.S: New file.
+	* sysdeps/aarch64/crtn.S: New file.
+	* sysdeps/aarch64/dl-irel.h: New file.
+	* sysdeps/aarch64/dl-link.sym: New file.
+	* sysdeps/aarch64/dl-machine.h: New file.
+	* sysdeps/aarch64/dl-sysdep.h: New file.
+	* sysdeps/aarch64/dl-tls.h: New file.
+	* sysdeps/aarch64/dl-tlsdesc.S: New file.
+	* sysdeps/aarch64/dl-tlsdesc.h: New file.
+	* sysdeps/aarch64/dl-trampoline.S: New file.
+	* sysdeps/aarch64/fpu/fclrexcpt.c: New file.
+	* sysdeps/aarch64/fpu/fedisblxcpt.c: New file.
+	* sysdeps/aarch64/fpu/feenablxcpt.c: New file.
+	* sysdeps/aarch64/fpu/fegetenv.c: New file.
+	* sysdeps/aarch64/fpu/fegetexcept.c: New file.
+	* sysdeps/aarch64/fpu/fegetround.c: New file.
+	* sysdeps/aarch64/fpu/feholdexcpt.c: New file.
+	* sysdeps/aarch64/fpu/fesetenv.c: New file.
+	* sysdeps/aarch64/fpu/fesetround.c: New file.
+	* sysdeps/aarch64/fpu/feupdateenv.c: New file.
+	* sysdeps/aarch64/fpu/fgetexcptflg.c: New file.
+	* sysdeps/aarch64/fpu/fraiseexcpt.c: New file.
+	* sysdeps/aarch64/fpu/fsetexcptflg.c: New file.
+	* sysdeps/aarch64/fpu/ftestexcept.c: New file.
+	* sysdeps/aarch64/fpu/get-rounding-mode.h: New file.
+	* sysdeps/aarch64/fpu/s_fma.c: New file.
+	* sysdeps/aarch64/fpu_control.h: New file.
+	* sysdeps/aarch64/jmpbuf-offsets.h: New file.
+	* sysdeps/aarch64/jmpbuf-unwind.h: New file.
+	* sysdeps/aarch64/ldsodefs.h: New file.
+	* sysdeps/aarch64/libc-tls.c: New file.
+	* sysdeps/aarch64/libm-test-ulps: New file.
+	* sysdeps/aarch64/machine-gmon.h: New file.
+	* sysdeps/aarch64/memusage.h: New file.
+	* sysdeps/aarch64/nptl/Makefile: New file.
+	* sysdeps/aarch64/nptl/pthread_spin_lock.c: New file.
+	* sysdeps/aarch64/nptl/pthreaddef.h: New file.
+	* sysdeps/aarch64/nptl/tcb-offsets.sym: New file.
+	* sysdeps/aarch64/nptl/tls.h: New file.
+	* sysdeps/aarch64/sotruss-lib.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/Implies: New file.
+	* sysdeps/unix/sysv/linux/aarch64/Makefile: New file.
+	* sysdeps/unix/sysv/linux/aarch64/Versions: New file.
+	* sysdeps/unix/sysv/linux/aarch64/__read_tp.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/bits: New file.
+	* sysdeps/unix/sysv/linux/aarch64/bits/fcntl.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/bits/libc-vdso.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/bits/mman.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/clone.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/configure: New file.
+	* sysdeps/unix/sysv/linux/aarch64/configure.in: New file.
+	* sysdeps/unix/sysv/linux/aarch64/getcontext.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/gettimeofday.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/init-first.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/ioctl.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/kernel-features.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/kernel_rt_sigframe.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/ldconfig.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/libc-__read_tp.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/makecontext.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/mmap.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/bits: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/bits/local_lim.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/bits/pthreadtypes.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/bits/semaphore.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/c++-types.data: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/clone.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/createthread.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/fork.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/ld.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libBrokenLocale.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libanl.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libc.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libcrypt.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libdl.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libm.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libnsl.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libpthread.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libresolv.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/librt.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libthread_db.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/libutil.abilist: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/localplt.data: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/lowlevellock.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/pt-vfork.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/pthread_once.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/sysdep-cancel.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/nptl/vfork.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/profil-counter.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/setcontext.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sigaction.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/swapcontext.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sys/elf.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sys/procfs.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sys/ptrace.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sys/ucontext.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sys/user.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/syscall.S: New file.
+	* sysdeps/unix/sysv/linux/aarch64/syscalls.list: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sysdep.c: New file.
+	* sysdeps/unix/sysv/linux/aarch64/sysdep.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/ucontext-internal.h: New file.
+	* sysdeps/unix/sysv/linux/aarch64/ucontext_i.sym: New file.
+	* sysdeps/unix/sysv/linux/aarch64/vfork.S: New file.

@@ -1,0 +1,45 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+type regex_t
+element regex_t size_t re_nsub
+
+type regoff_t
+
+type regmatch_t
+element regmatch_t regoff_t rm_so
+element regmatch_t regoff_t rm_eo
+
+constant REG_EXTENDED
+constant REG_ICASE
+constant REG_NOSUB
+constant REG_NEWLINE
+
+constant REG_NOTBOL
+constant REG_NOTEOL
+
+constant REG_NOMATCH
+constant REG_BADPAT
+constant REG_ECOLLATE
+constant REG_ECTYPE
+constant REG_EESCAPE
+constant REG_ESUBREG
+constant REG_EBRACK
+constant REG_EPAREN
+constant REG_EBRACE
+constant REG_BADBR
+constant REG_ERANGE
+constant REG_ESPACE
+constant REG_BADRPT
+# if !defined POSIX && !defined XOPEN2K8 && !defined POSIX2008
+constant REG_ENOSYS
+# endif
+
+function int regcomp (regex_t*, const char*, int)
+function int regexec (const regex_t*, const char*, size_t, regmatch_t[], int)
+function size_t regerror (int, const regex_t*, char*, size_t)
+function void regfree (regex_t*)
+
+allow REG_*
+allow re_*
+allow rm_*
+allow *_t
+#endif

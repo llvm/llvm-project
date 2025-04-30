@@ -1,0 +1,32 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+#ifdef POSIX
+# define size_t __size_t
+#endif
+
+type glob_t
+element glob_t size_t gl_pathc
+element glob_t {char**} gl_pathv
+element glob_t size_t gl_offs
+
+constant GLOB_APPEND
+constant GLOB_DOOFFS
+constant GLOB_ERR
+constant GLOB_MARK
+constant GLOB_NOCHECK
+constant GLOB_NOESCAPE
+constant GLOB_NOSORT
+
+constant GLOB_ABORTED
+constant GLOB_NOMATCH
+constant GLOB_NOSPACE
+# if !defined XOPEN2K8 && !defined POSIX2008 && !defined POSIX
+constant GLOB_NOSYS
+# endif
+
+function int glob (const char*, int, int (*) (const char*, int), glob_t*)
+function void globfree (glob_t *)
+
+allow gl_*
+allow GLOB_*
+allow *_t
+#endif

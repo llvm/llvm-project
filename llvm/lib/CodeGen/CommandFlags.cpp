@@ -110,6 +110,7 @@ CGOPT(bool, DebugStrictDwarf)
 CGOPT(unsigned, AlignLoops)
 CGOPT(bool, JMCInstrument)
 CGOPT(bool, XCOFFReadOnlyPointers)
+CGOPT(bool, EnableMovssCombine)
 
 codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 #define CGBINDOPT(NAME)                                                        \
@@ -516,6 +517,13 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(DisableIntegratedAS);
 
+  static cl::opt<bool> EnableMovssCombine(
+      "enable-movss-combine",
+      cl::desc("Enable optimizations that combine into movsd and movss "
+               "instructions"),
+      cl::init(false));
+  CGBINDOPT(EnableMovssCombine);
+
 #undef CGBINDOPT
 
   mc::RegisterMCTargetOptionsFlags();
@@ -597,6 +605,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.LoopAlignment = getAlignLoops();
   Options.JMCInstrument = getJMCInstrument();
   Options.XCOFFReadOnlyPointers = getXCOFFReadOnlyPointers();
+  Options.EnableMovssCombine = getEnableMovssCombine();
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 

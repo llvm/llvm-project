@@ -1,0 +1,20 @@
+#include "link.h"
+#include <stddef.h>
+
+--
+LONG_DOUBLE_SIZE	sizeof (long double)
+
+LR_SIZE			sizeof (struct La_i86_regs)
+LR_EDX_OFFSET		offsetof (struct La_i86_regs, lr_edx)
+LR_ECX_OFFSET		offsetof (struct La_i86_regs, lr_ecx)
+LR_EAX_OFFSET		offsetof (struct La_i86_regs, lr_eax)
+LR_EBP_OFFSET		offsetof (struct La_i86_regs, lr_ebp)
+LR_ESP_OFFSET		offsetof (struct La_i86_regs, lr_esp)
+
+LRV_SIZE		sizeof (struct La_i86_retval)
+LRV_EAX_OFFSET		offsetof (struct La_i86_retval, lrv_eax)
+LRV_EDX_OFFSET		offsetof (struct La_i86_retval, lrv_edx)
+LRV_ST0_OFFSET		offsetof (struct La_i86_retval, lrv_st0)
+LRV_ST1_OFFSET		offsetof (struct La_i86_retval, lrv_st1)
+LRV_BND0_OFFSET		offsetof (struct La_i86_retval, lrv_bnd0)
+LRV_BND1_OFFSET		offsetof (struct La_i86_retval, lrv_bnd1)

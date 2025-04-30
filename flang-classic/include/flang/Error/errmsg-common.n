@@ -1,0 +1,21 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.MS F 701 "Error reading temp file - $"
+This may occur if the file system failed, or the file system or directory containing
+the temporary file filled up.
+The compiler typically uses the "/tmp" directory to create temporary files.
+You may specify a directory to use for temporary files with the TMPDIR environment variable.
+.MS F 702 "Error writing temp file - $"
+This may occur if the file system containing the temporary file is full.
+The compiler typically uses the "/tmp" directory to create temporary files.
+You may specify a directory to use for temporary files with the TMPDIR environment variable.
+.MS F 703 "only the last -preinclude switch is processed"
+We have one spot for the preinclude file in the gbl. structure.  This is not 
+a user visible switch.
+.MS F 704 "Compilation aborted due to previous errors."
+Compilation will abort immediately in case of Severe or Fatal error.
+.MS F 705 "Half precision implementation missing support - $"

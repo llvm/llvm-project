@@ -1,0 +1,9 @@
+#include <locale/localeinfo.h>
+
+--
+
+LOCALE_CTYPE_TOLOWER	offsetof (struct __locale_struct, __ctype_tolower)
+LOCALE_CTYPE_TOUPPER	offsetof (struct __locale_struct, __ctype_toupper)
+_NL_CTYPE_NONASCII_CASE
+LOCALE_DATA_VALUES	offsetof (struct __locale_data, values)
+SIZEOF_VALUES		sizeof (((struct __locale_data *) 0)->values[0])

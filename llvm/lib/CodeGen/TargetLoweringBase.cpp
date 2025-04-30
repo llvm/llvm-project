@@ -628,6 +628,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
   BooleanFloatContents = UndefinedBooleanContent;
   BooleanVectorContents = UndefinedBooleanContent;
   SchedPreferenceInfo = Sched::ILP;
+  GatherAllAliasesMaxTFOperands = 16;
   GatherAllAliasesMaxDepth = 18;
   IsStrictFPEnabled = DisableStrictNodeMutation;
   MaxBytesForAlignment = 0;

@@ -1,0 +1,159 @@
+# Copyright (C) 2016-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+# Allowed attributes for tunables:
+#
+# type: Defaults to STRING
+# minval: Optional minimum acceptable value
+# maxval: Optional maximum acceptable value
+# env_alias: An alias environment variable
+# security_level: Specify security level of the tunable for AT_SECURE binaries.
+# 		  Valid values are:
+#
+# 	     SXID_ERASE: (default) Do not read and do not pass on to
+# 	     child processes.
+# 	     SXID_IGNORE: Do not read, but retain for non-AT_SECURE
+# 	     subprocesses.
+# 	     NONE: Read all the time.
+
+glibc {
+  malloc {
+    check {
+      type: INT_32
+      minval: 0
+      maxval: 3
+      env_alias: MALLOC_CHECK_
+    }
+    top_pad {
+      type: SIZE_T
+      env_alias: MALLOC_TOP_PAD_
+      security_level: SXID_IGNORE
+    }
+    perturb {
+      type: INT_32
+      minval: 0
+      maxval: 0xff
+      env_alias: MALLOC_PERTURB_
+      security_level: SXID_IGNORE
+    }
+    mmap_threshold {
+      type: SIZE_T
+      env_alias: MALLOC_MMAP_THRESHOLD_
+      security_level: SXID_IGNORE
+    }
+    trim_threshold {
+      type: SIZE_T
+      env_alias: MALLOC_TRIM_THRESHOLD_
+      security_level: SXID_IGNORE
+    }
+    mmap_max {
+      type: INT_32
+      env_alias: MALLOC_MMAP_MAX_
+      security_level: SXID_IGNORE
+      minval: 0
+    }
+    arena_max {
+      type: SIZE_T
+      env_alias: MALLOC_ARENA_MAX
+      minval: 1
+      security_level: SXID_IGNORE
+    }
+    arena_test {
+      type: SIZE_T
+      env_alias: MALLOC_ARENA_TEST
+      minval: 1
+      security_level: SXID_IGNORE
+    }
+    tcache_max {
+      type: SIZE_T
+    }
+    tcache_count {
+      type: SIZE_T
+    }
+    tcache_unsorted_limit {
+      type: SIZE_T
+    }
+    mxfast {
+      type: SIZE_T
+      minval: 0
+      security_level: SXID_IGNORE
+    }
+  }
+  cpu {
+    hwcap_mask {
+      type: UINT_64
+      env_alias: LD_HWCAP_MASK
+      default: HWCAP_IMPORTANT
+    }
+  }
+
+  elision {
+    enable {
+      type: INT_32
+      minval: 0
+      maxval: 1
+    }
+    skip_lock_busy {
+      type: INT_32
+      default: 3
+      minval: 0
+    }
+    skip_lock_internal_abort {
+      type: INT_32
+      default: 3
+      minval: 0
+    }
+    skip_lock_after_retries {
+      type: INT_32
+      default: 3
+      minval: 0
+    }
+    tries {
+      type: INT_32
+      default: 3
+      minval: 0
+    }
+    skip_trylock_internal_abort {
+      type: INT_32
+      default: 3
+      minval: 0
+    }
+  }
+
+  rtld {
+    nns {
+      type: SIZE_T
+      minval: 1
+      maxval: 16
+      default: 4
+    }
+    optional_static_tls {
+      type: SIZE_T
+      minval: 0
+      default: 512
+    }
+  }
+
+  mem {
+    tagging {
+      type: INT_32
+      minval: 0
+      maxval: 255
+      security_level: SXID_IGNORE
+    }
+  }
+}

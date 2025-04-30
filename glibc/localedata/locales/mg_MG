@@ -1,0 +1,167 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Malagasy Language Locale for Madagascar
+% Source: The Debian Project modified by http://linuxmg.org
+% Contact: Christian Perrier
+% Email: bubulle@debian.org, linux@linuxmg.org
+% Tel: +33 - 130699222
+% Language: mg
+% Territory: MG
+% Revision: 1.0
+% Date: 2004-09-08
+% Users: general
+
+LC_IDENTIFICATION
+title      "Malagasy locale for Madagascar"
+source     "The Debian Project modified by GNU//Linux Malagasy"
+address    ""
+contact    "Rado Ramarotafika,Do-Risika RAFIEFERANTSIARONJY"
+email      "rado@linuxmg.org,dourix@free.fr"
+tel        ""
+fax        ""
+language   "Malagasy"
+territory  "Madagascar"
+revision   "1.1"
+date       "2005-02-02"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+
+% Accents are simply omitted if they cannot be represented.
+include "translit_combining";""
+
+translit_end
+
+END LC_CTYPE
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1eEyY]"
+noexpr  "^[-0tTnN]"
+yesstr  "Eny"
+nostr   "Tsia"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "MGA "
+currency_symbol           "Ar"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             ""
+grouping                  0;0
+END LC_NUMERIC
+
+LC_TIME
+abday   "lhd";"lts";/
+        "tlt";"lrb";/
+        "lkm";"zom";/
+        "sab"
+day     "alahady";/
+        "alatsinainy";/
+        "talata";/
+        "alarobia";/
+        "alakamisy";/
+        "zoma";/
+        "sabotsy"
+abmon   "Jan";"Feb";/
+        "Mar";"Apr";/
+        "Mey";"Jon";/
+        "Jol";"Aog";/
+        "Sep";"Okt";/
+        "Nov";"Des"
+mon     "Janoary";/
+        "Febroary";/
+        "Martsa";/
+        "Aprily";/
+        "Mey";/
+        "Jona";/
+        "Jolay";/
+        "Aogositra";/
+        "Septambra";/
+        "Oktobra";/
+        "Novambra";/
+        "Desambra"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "%a %l"
+int_prefix     "261"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Madagasikara"
+country_ab2 "MG"
+country_ab3 "MDG"
+country_num 450
+country_car "RM"
+lang_name    "Malagasy"
+lang_ab      "mg"
+lang_term    "mlg"
+lang_lib    "mlg"
+END LC_ADDRESS

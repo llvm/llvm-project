@@ -1,0 +1,32 @@
+libc.so: _OtsAddX ?
+libc.so: _OtsConvertFloatTX ?
+libc.so: _OtsConvertFloatXT ?
+libc.so: _OtsCvtQUX ?
+libc.so: _OtsCvtQX ?
+libc.so: _OtsCvtXQ ?
+libc.so: _OtsDivX ?
+libc.so: _OtsEqlX ?
+libc.so: _OtsGeqX ?
+libc.so: _OtsGtrX ?
+libc.so: _OtsLeqX ?
+libc.so: _OtsLssX ?
+libc.so: _OtsMulX ?
+libc.so: _OtsNeqX ?
+libc.so: _OtsNintXQ ?
+libc.so: _OtsSubX ?
+libc.so: _Unwind_Find_FDE
+libc.so: calloc + RELA R_ALPHA_GLOB_DAT
+libc.so: free + RELA R_ALPHA_GLOB_DAT
+libc.so: malloc + RELA R_ALPHA_GLOB_DAT
+libc.so: realloc + RELA R_ALPHA_GLOB_DAT
+libm.so: matherr + RELA R_ALPHA_GLOB_DAT
+# We used to offer inline functions that used this, so it must be exported.
+# Ought to reorg things such that carg isn't thus forced to use a plt.
+libm.so: __atan2
+# The dynamic loader needs __tls_get_addr for TLS.
+ld.so: __tls_get_addr ?
+# The TLS-enabled version of these functions is interposed from libc.so.
+ld.so: _dl_signal_error + RELA R_ALPHA_GLOB_DAT
+ld.so: _dl_catch_error + RELA R_ALPHA_GLOB_DAT
+ld.so: _dl_signal_exception + RELA R_ALPHA_GLOB_DAT
+ld.so: _dl_catch_exception + RELA R_ALPHA_GLOB_DAT

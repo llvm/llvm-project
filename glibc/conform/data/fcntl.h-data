@@ -1,0 +1,135 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+constant F_DUPFD
+constant F_GETFD
+constant F_SETFD
+constant F_GETFL
+constant F_SETFL
+constant F_GETLK
+constant F_SETLK
+constant F_SETLKW
+#if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+constant F_GETOWN
+constant F_SETOWN
+#endif
+
+constant FD_CLOEXEC
+
+constant F_RDLCK
+constant F_UNLCK
+constant F_WRLCK
+
+#if defined POSIX
+allow SEEK_SET
+allow SEEK_CUR
+allow SEEK_END
+#else
+constant SEEK_SET
+constant SEEK_CUR
+constant SEEK_END
+#endif
+
+constant O_CREAT
+constant O_EXCL
+constant O_NOCTTY
+constant O_TRUNC
+
+constant O_APPEND
+constant O_NONBLOCK
+constant O_SYNC
+#if !defined XPG4 && !defined XPG42
+constant O_DSYNC
+constant O_RSYNC
+#endif
+
+constant O_ACCMODE
+
+constant O_RDONLY
+constant O_RDWR
+constant O_WRONLY
+
+#if !defined POSIX
+constant S_IRWXU
+constant S_IRUSR
+constant S_IWUSR
+constant S_IXUSR
+constant S_IRWXG
+constant S_IRGRP
+constant S_IWGRP
+constant S_IXGRP
+constant S_IRWXO
+constant S_IROTH
+constant S_IWOTH
+constant S_IXOTH
+constant S_ISUID
+constant S_ISGID
+#if !defined POSIX2008
+constant S_ISVTX
+#endif
+#endif
+
+#if defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+constant POSIX_FADV_NORMAL
+constant POSIX_FADV_SEQUENTIAL
+constant POSIX_FADV_RANDOM
+constant POSIX_FADV_WILLNEED
+constant POSIX_FADV_DONTNEED
+constant POSIX_FADV_NOREUSE
+#endif
+
+type {struct flock}
+
+// Bug 23081: l_type and l_whence members of flock structure have type int instead of short
+xfail[i386-gnu]-element {struct flock} short l_type
+xfail[i386-gnu]-element {struct flock} short l_whence
+element {struct flock} off_t l_start
+element {struct flock} off_t l_len
+element {struct flock} pid_t l_pid
+
+#if !defined POSIX
+# if !defined UNIX98
+type mode_t
+# endif
+type off_t
+type pid_t
+#endif
+
+function int creat (const char*, mode_t)
+function int fcntl (int, int, ...)
+function int open (const char*, int, ...)
+#if defined XOPEN2K8 || defined POSIX2008
+function int openat (int, const char*, int, ...)
+#endif
+#if defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int posix_fadvise (int, off_t, off_t, int)
+function int posix_fallocate (int, off_t, off_t)
+#endif
+
+#if defined XOPEN2K8 || defined POSIX2008
+// Bug 18228: O_TTY_INIT, O_EXEC, O_SEARCH missing.
+xfail-constant O_TTY_INIT
+constant O_CLOEXEC
+xfail-constant O_EXEC
+xfail-constant O_SEARCH
+constant O_DIRECTORY
+constant O_NOFOLLOW
+constant F_DUPFD_CLOEXEC
+constant AT_FDCWD
+constant AT_EACCESS
+constant AT_SYMLINK_NOFOLLOW
+constant AT_SYMLINK_FOLLOW
+constant AT_REMOVEDIR
+
+function int openat (int, const char*, int, ...)
+#endif
+
+#if !defined POSIX
+allow-header sys/stat.h
+allow-header unistd.h
+#endif
+
+allow l_*
+allow F_*
+allow O_*
+allow S_*
+allow *_t
+#endif

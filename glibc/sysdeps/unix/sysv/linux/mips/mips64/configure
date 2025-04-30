@@ -1,0 +1,4 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/unix/sysv/linux/mips/mips64.
+
+ldd_rewrite_script=$dir/ldd-rewrite.sed

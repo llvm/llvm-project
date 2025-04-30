@@ -1,0 +1,188 @@
+libc {
+  GLIBC_2.0 {
+    __nss_configure_lookup;
+
+    # Functions exported as no-op compat symbols.
+    __nss_passwd_lookup; __nss_group_lookup; __nss_hosts_lookup; __nss_next;
+    __nss_database_lookup;
+  }
+  GLIBC_2.2.2 {
+    __nss_hostname_digits_dots;
+  }
+  GLIBC_2.27 {
+  }
+  GLIBC_PRIVATE {
+    _nss_files_parse_grent; _nss_files_parse_pwent; _nss_files_parse_spent;
+    __nss_disable_nscd; __nss_lookup_function; _nss_files_parse_sgent;
+
+    __nss_passwd_lookup2; __nss_group_lookup2; __nss_hosts_lookup2;
+    __nss_services_lookup2; __nss_next2; __nss_lookup;
+    __nss_hash; __nss_database_get;
+    __nss_files_fopen; __nss_readline; __nss_parse_line_result;
+    __nss_files_data_endent;
+    __nss_files_data_open;
+    __nss_files_data_put;
+    __nss_files_data_setent;
+
+    # Routines formerly in libnss_files.so.2.
+    _nss_files_setaliasent;
+    _nss_files_endaliasent;
+    _nss_files_getaliasbyname_r;
+    _nss_files_getaliasent_r;
+
+    _nss_files_setetherent;
+    _nss_files_endetherent;
+    _nss_files_getetherent_r;
+    _nss_files_parse_etherent;
+    _nss_files_gethostton_r;
+    _nss_files_getntohost_r;
+
+    _nss_files_setgrent;
+    _nss_files_endgrent;
+    _nss_files_getgrent_r;
+    _nss_files_getgrgid_r;
+    _nss_files_getgrnam_r;
+
+    _nss_files_sethostent;
+    _nss_files_endhostent;
+    _nss_files_gethostbyaddr_r;
+    _nss_files_gethostbyname2_r;
+    _nss_files_gethostbyname3_r;
+    _nss_files_gethostbyname4_r;
+    _nss_files_gethostbyname_r;
+    _nss_files_gethostent_r;
+
+    _nss_files_setnetent;
+    _nss_files_endnetent;
+    _nss_files_getnetbyaddr_r;
+    _nss_files_getnetbyname_r;
+    _nss_files_getnetent_r;
+    _nss_files_parse_netent;
+
+    _nss_files_setnetgrent;
+    _nss_files_endnetgrent;
+    _nss_files_getnetgrent_r;
+
+    _nss_files_setprotoent;
+    _nss_files_endprotoent;
+    _nss_files_getprotobyname_r;
+    _nss_files_getprotobynumber_r;
+    _nss_files_getprotoent_r;
+    _nss_files_parse_protoent;
+
+    _nss_files_setpwent;
+    _nss_files_endpwent;
+    _nss_files_getpwent_r;
+    _nss_files_getpwnam_r;
+    _nss_files_getpwuid_r;
+
+    _nss_files_setrpcent;
+    _nss_files_endrpcent;
+    _nss_files_getrpcbyname_r;
+    _nss_files_getrpcbynumber_r;
+    _nss_files_getrpcent_r;
+    _nss_files_parse_rpcent;
+
+    _nss_files_setservent;
+    _nss_files_endservent;
+    _nss_files_getservbyname_r;
+    _nss_files_getservbyport_r;
+    _nss_files_getservent_r;
+    _nss_files_parse_servent;
+
+    _nss_files_setspent;
+    _nss_files_endspent;
+    _nss_files_getspent_r;
+    _nss_files_getspnam_r;
+
+    _nss_files_setsgent;
+    _nss_files_endsgent;
+    _nss_files_getsgent_r;
+    _nss_files_getsgnam_r;
+
+    _nss_netgroup_parseline;
+    _nss_files_getpublickey;
+    _nss_files_getsecretkey;
+
+    _nss_files_initgroups_dyn;
+
+    _nss_files_init;
+  }
+}
+
+libnss_files {
+  GLIBC_PRIVATE {
+    # Keep a version node (with a synthesized local: * directive) so that
+    # __bss_* symbols are hidden on targets that need it.
+    __libnss_files_version_placeholder;
+  }
+}
+
+libnss_db {
+  GLIBC_PRIVATE {
+    _nss_db_setetherent;
+    _nss_db_endetherent;
+    _nss_db_getetherent_r;
+    _nss_db_gethostton_r;
+    _nss_db_getntohost_r;
+
+    _nss_db_setgrent;
+    _nss_db_endgrent;
+    _nss_db_getgrent_r;
+    _nss_db_getgrgid_r;
+    _nss_db_getgrnam_r;
+
+    _nss_db_setnetgrent;
+    _nss_db_endnetgrent;
+    _nss_db_getnetgrent_r;
+
+    _nss_db_setprotoent;
+    _nss_db_endprotoent;
+    _nss_db_getprotoent_r;
+    _nss_db_getprotobyname_r;
+    _nss_db_getprotobynumber_r;
+
+    _nss_db_setpwent;
+    _nss_db_endpwent;
+    _nss_db_getpwent_r;
+    _nss_db_getpwnam_r;
+    _nss_db_getpwuid_r;
+
+    _nss_db_setrpcent;
+    _nss_db_endrpcent;
+    _nss_db_getrpcent_r;
+    _nss_db_getrpcbyname_r;
+    _nss_db_getrpcbynumber_r;
+
+    _nss_db_setservent;
+    _nss_db_endservent;
+    _nss_db_getservent_r;
+    _nss_db_getservbyname_r;
+    _nss_db_getservbyport_r;
+
+    _nss_db_setsgent;
+    _nss_db_endsgent;
+    _nss_db_getsgent_r;
+    _nss_db_getsgnam_r;
+
+    _nss_db_setspent;
+    _nss_db_endspent;
+    _nss_db_getspent_r;
+    _nss_db_getspnam_r;
+
+    _nss_db_initgroups_dyn;
+
+    _nss_db_init;
+  }
+}
+
+libnss_compat {
+  GLIBC_PRIVATE {
+    _nss_compat_endgrent; _nss_compat_endpwent; _nss_compat_endspent;
+    _nss_compat_getgrent_r; _nss_compat_getgrgid_r; _nss_compat_getgrnam_r;
+    _nss_compat_getpwent_r; _nss_compat_getpwnam_r; _nss_compat_getpwuid_r;
+    _nss_compat_getspent_r; _nss_compat_getspnam_r;
+    _nss_compat_setgrent; _nss_compat_setpwent; _nss_compat_setspent;
+    _nss_compat_initgroups_dyn;
+  }
+}

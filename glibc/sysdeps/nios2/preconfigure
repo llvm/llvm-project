@@ -1,0 +1,6 @@
+case "$machine" in
+nios2*)
+	base_machine=nios2
+	machine=nios2
+	;;
+esac

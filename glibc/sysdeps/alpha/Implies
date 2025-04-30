@@ -1,0 +1,5 @@
+wordsize-64
+# Alpha uses IEEE 754 single, double and quad precision floating point.
+ieee754/ldbl-128
+ieee754/dbl-64
+ieee754/flt-32

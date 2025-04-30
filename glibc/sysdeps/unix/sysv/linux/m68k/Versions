@@ -1,0 +1,41 @@
+libc {
+  GLIBC_2.0 {
+    # Exception handling support functions from libgcc
+    __register_frame; __register_frame_table; __deregister_frame;
+    __frame_state_for; __register_frame_info_table;
+
+    # c*
+    cacheflush;
+  }
+  GLIBC_2.2 {
+    # functions used in other libraries
+    __xstat64; __fxstat64; __lxstat64;
+
+    # a*
+    alphasort64;
+
+    # g*
+    glob64;
+
+    # New rlimit interface
+    getrlimit; setrlimit; getrlimit64;
+
+    # r*
+    readdir64; readdir64_r;
+
+    # s*
+    scandir64;
+
+    # v*
+    versionsort64;
+  }
+  GLIBC_2.11 {
+    fallocate64;
+  }
+  GLIBC_2.31 {
+    msgctl; semctl; shmctl;
+  }
+  GLIBC_2.12 {
+    __m68k_read_tp;
+  }
+}

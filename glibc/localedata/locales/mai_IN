@@ -1,0 +1,170 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Maithili language locale for India.
+% Contributed by Rajesh Ranjan <rajeshkajha@yahoo.com> and
+% Sangeeta Kumari <sangeeta09@gmail.com>.
+% Akhilesh Kumar <akhilesh.k@samusng.com>.
+
+LC_IDENTIFICATION
+title      "Maithili language locale for India"
+source     "Maithili Computing Research Center, Pune, India"
+address    "B-3//302, Lunkad Daffodills, Viman Nagar, Pune, India"
+contact    ""
+email      "rajeshkajha@yahoo.com,akhilesh.k@samusng.com"
+tel        ""
+fax        ""
+language   "Maithili"
+territory  "India"
+revision   "1.1"
+date       "2017-07-24"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "hi_IN"
+END LC_CTYPE
+
+LC_COLLATE
+copy "hi_IN"
+END LC_COLLATE
+
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+
+LC_NUMERIC
+copy "hi_IN"
+END LC_NUMERIC
+
+
+LC_TIME
+% Abbreviated weekday names (%a)
+abday   "<U0930><U0935><U093F>";/
+	"<U0938><U094B><U092E>";/
+	"<U092E><U0902><U0917><U0932>";/
+	"<U092C><U0941><U0927>";/
+	"<U092C><U0943><U0939><U0938><U094D><U092A><U0924><U0940>";/
+	"<U0936><U0941><U0915><U094D><U0930>";/
+	"<U0936><U0928><U0940>"
+%
+% Full weekday names (%A)
+day	"<U0930><U0935><U093F><U0926><U093F><U0928>";/
+	"<U0938><U094B><U092E><U0926><U093F><U0928>";/
+	"<U092E><U0902><U0917><U0932><U0926><U093F><U0928>";/
+	"<U092C><U0941><U0927><U0926><U093F><U0928>";/
+	"<U092C><U0943><U0939><U0938><U094D><U092A><U0924><U0940><U0926><U093F><U0928>";/
+	"<U0936><U0941><U0915><U094D><U0930><U0926><U093F><U0928>";/
+	"<U0936><U0928><U0940><U0926><U093F><U0928>"
+%
+% Abbreviated month names (%b)
+abmon	"<U092C><U0948><U0938><U093E><U0916>";/
+	"<U091C><U0947><U0920>";/
+	"<U0905><U0937><U093E><U0922><U093C>";/
+	"<U0938><U093E><U0935><U094B><U0928>";/
+	"<U092D><U093E><U0926><U094B>";/
+	"<U0906><U0938><U093F><U0928>";/
+	"<U0915><U093E><U0924><U093F><U0915>";/
+	"<U0905><U0917><U0939><U0928>";/
+	"<U092A><U0942><U0938>";/
+	"<U092E><U093E><U0918>";/
+	"<U092B><U093E><U0917><U0941><U0928>";/
+	"<U091A><U0948><U0924><U093F>"
+% Full month names (%B)
+% Maithili uses a lunar calendar. When gregorian month names
+% are needed, the names are the same names than those used
+% by Hindi
+% https://en.wikipedia.org/wiki/Tirhuta_Panchang
+% https://en.wikipedia.org/wiki/Maithili_language#cite_ref-20
+mon  "<U092C><U0948><U0938><U093E><U0916>";/
+	"<U091C><U0947><U0920>";/
+	"<U0905><U0937><U093E><U0922><U093C>";/
+	"<U0938><U093E><U0935><U094B><U0928>";/
+	"<U092D><U093E><U0926><U094B>";/
+	"<U0906><U0938><U093F><U0928>";/
+	"<U0915><U093E><U0924><U093F><U0915>";/
+	"<U0905><U0917><U0939><U0928>";/
+	"<U092A><U0942><U0938>";/
+	"<U092E><U093E><U0918>";/
+	"<U092B><U093E><U0917><U0941><U0928>";/
+	"<U091A><U0948><U0924><U093F>"
+%
+% Equivalent of AM PM
+am_pm   "<U092A><U0942><U0930><U094D><U0935><U093E><U0939><U094D><U0928>";/
+        "<U0905><U092A><U0930><U093E><U0939><U094D><U0928>"
+%
+% Appropriate date and time representation
+d_t_fmt  "%A %d %b %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt "%A %d %b %Y %I:%M:%S %p %Z"
+%
+% Appropriate date representation
+d_fmt   "%-d//%-m//%y"
+%
+% Appropriate time representation
+t_fmt   "%I:%M:%S %p %Z"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%I:%M:%S %p %Z"
+week 7;19971130;1
+END LC_TIME
+
+
+LC_MESSAGES
+copy "hi_IN"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "hi_IN"
+END LC_PAPER
+
+
+LC_NAME
+copy "hi_IN"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U092D><U093E><U0930><U0924>"
+country_ab2 "IN"
+country_ab3 "IND"
+country_num 356
+country_car "IND"
+% मैथिली
+lang_name    "<U092E><U0948><U0925><U093F><U0932><U0940>"
+lang_term    "mai"
+lang_lib    "mai"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+copy "hi_IN"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "hi_IN"
+END LC_MEASUREMENT

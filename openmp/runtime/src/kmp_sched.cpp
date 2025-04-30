@@ -23,6 +23,8 @@
 #include "kmp_stats.h"
 #include "kmp_str.h"
 
+#include "kmp_ns.h"
+
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
 #endif
@@ -64,22 +66,25 @@ char const *traits_t<long>::spec = "ld";
 
 #if USE_ITT_BUILD || defined KMP_DEBUG
 static ident_t loc_stub = {0, KMP_IDENT_KMPC, 0, 0, ";unknown;unknown;0;0;;"};
-static inline void check_loc(ident_t *&loc) {
+[[maybe_unused]] static inline void check_loc(ident_t *&loc) {
   if (loc == NULL)
     loc = &loc_stub; // may need to report location info to ittnotify
 }
 #endif
 
+#if LIBOMP_NEXTSILICON
+#pragma ns mark noimport
+#endif
 template <typename T>
-static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
-                                  kmp_int32 schedtype, kmp_int32 *plastiter,
-                                  T *plower, T *pupper,
-                                  typename traits_t<T>::signed_t *pstride,
-                                  typename traits_t<T>::signed_t incr,
-                                  typename traits_t<T>::signed_t chunk
+__attribute__((noinline)) static void
+__kmp_for_static_init_impl(ident_t *loc, kmp_int32 global_tid,
+                           kmp_int32 schedtype, kmp_int32 *plastiter, T *plower,
+                           T *pupper, typename traits_t<T>::signed_t *pstride,
+                           typename traits_t<T>::signed_t incr,
+                           typename traits_t<T>::signed_t chunk
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-                                  ,
-                                  void *codeptr
+                           ,
+                           void *codeptr
 #endif
 ) {
   KMP_COUNT_BLOCK(OMP_LOOP_STATIC);
@@ -91,13 +96,17 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
+
+  /* Do the usual handling on host after restoring gtid */
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   /*  this all has to be changed back to TID and such.. */
   kmp_int32 gtid = global_tid;
   kmp_uint32 tid;
   kmp_uint32 nth;
   UT trip_count;
   kmp_team_t *team;
-  __kmp_assert_valid_gtid(gtid);
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME())
+    __kmp_assert_valid_gtid(gtid);
   kmp_info_t *th = __kmp_threads[gtid];
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
@@ -107,7 +116,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 
   static kmp_int8 warn = 0;
 
-  if (ompt_enabled.ompt_callback_work || ompt_enabled.ompt_callback_dispatch) {
+  if (ompt_enabled.ompt_callback_work) {
     // Only fully initialize variables needed by OMPT if OMPT is enabled.
     team_info = __ompt_get_teaminfo(0, NULL);
     task_info = __ompt_get_task_info_object(0);
@@ -133,7 +142,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   KMP_DEBUG_ASSERT(plastiter && plower && pupper && pstride);
   KE_TRACE(10, ("__kmpc_for_static_init called (%d)\n", global_tid));
 #ifdef KMP_DEBUG
-  {
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_d_debug >= 100)) {
     char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format(
@@ -147,7 +156,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
 #endif
 
-  if (__kmp_env_consistency_check) {
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && __kmp_env_consistency_check) {
     __kmp_push_workshare(global_tid, ct_pdo, loc);
     if (incr == 0) {
       __kmp_error_construct(kmp_i18n_msg_CnsLoopIncrZeroProhibited, ct_pdo,
@@ -165,7 +174,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 // THE LINE COMMENTED ABOVE CAUSED shape2F/h_tests_1.f TO HAVE A FAILURE
 // ON A ZERO-TRIP LOOP (lower=1, upper=0,stride=1) - JPH June 23, 2009.
 #ifdef KMP_DEBUG
-    {
+    if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_d_debug >= 100)) {
       char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmpc_for_static_init:(ZERO TRIP) liter=%%d "
@@ -208,8 +217,8 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
       team = th->th.th_team->t.t_parent;
     }
   } else {
-    tid = __kmp_tid_from_gtid(global_tid);
     team = th->th.th_team;
+    tid = __kmp_tid_from_gtid(global_tid);
   }
 
   /* determine if "for" loop is an active worksharing construct */
@@ -222,7 +231,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
         (incr > 0) ? (*pupper - *plower + 1) : (-(*plower - *pupper + 1));
 
 #ifdef KMP_DEBUG
-    {
+    if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_d_debug >= 100)) {
       char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmpc_for_static_init: (serial) liter=%%d "
@@ -252,7 +261,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     *pstride =
         (incr > 0) ? (*pupper - *plower + 1) : (-(*plower - *pupper + 1));
 #ifdef KMP_DEBUG
-    {
+    if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_d_debug >= 100)) {
       char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmpc_for_static_init: (serial) liter=%%d "
@@ -295,7 +304,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
 #endif
 
-  if (__kmp_env_consistency_check) {
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && __kmp_env_consistency_check) {
     /* tripcount overflow? */
     if (trip_count == 0 && *pupper != *plower) {
       __kmp_error_construct(kmp_i18n_msg_CnsIterationRangeTooLarge, ct_pdo,
@@ -416,9 +425,9 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 
 #if USE_ITT_BUILD
   // Report loop metadata
-  if (KMP_MASTER_TID(tid) && __itt_metadata_add_ptr &&
-      __kmp_forkjoin_frames_mode == 3 && th->th.th_teams_microtask == NULL &&
-      team->t.t_active_level == 1) {
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && KMP_MASTER_TID(tid) &&
+      __itt_metadata_add_ptr && __kmp_forkjoin_frames_mode == 3 &&
+      th->th.th_teams_microtask == NULL && team->t.t_active_level == 1) {
     kmp_uint64 cur_chunk = chunk;
     check_loc(loc);
     // Calculate chunk in case it was not specified; it is specified for
@@ -432,7 +441,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
 #endif
 #ifdef KMP_DEBUG
-  {
+  if (KMP_NS_INCLUDE_DEBUG_AT_RUNTIME() && (kmp_d_debug >= 100)) {
     char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format("__kmpc_for_static_init: liter=%%d lower=%%%s "
@@ -472,7 +481,197 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #endif
 
   KMP_STATS_LOOP_END(OMP_loop_static_iterations);
-  return;
+}
+
+template <typename T>
+static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
+                                  kmp_int32 schedtype, kmp_int32 *plastiter,
+                                  T *plower, T *pupper,
+                                  typename traits_t<T>::signed_t *pstride,
+                                  typename traits_t<T>::signed_t incr,
+                                  typename traits_t<T>::signed_t chunk
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+                                  ,
+                                  void *codeptr
+#endif
+) {
+#if LIBOMP_NEXTSILICON
+
+#if !LIBOMP_NEXTSILICON_DEVICE_BUILD
+  if (__nsapi_is_on_cg()) {
+#endif // !LIBOMP_NEXTSILICON_DEVICE_BUILD
+    KMP_COUNT_BLOCK(OMP_LOOP_STATIC);
+    KMP_PUSH_PARTITIONED_TIMER(OMP_loop_static);
+    KMP_PUSH_PARTITIONED_TIMER(OMP_loop_static_scheduling);
+
+    // Clear monotonic/nonmonotonic bits (ignore it)
+    schedtype = SCHEDULE_WITHOUT_MODIFIERS(schedtype);
+
+    typedef typename traits_t<T>::unsigned_t UT;
+    typedef typename traits_t<T>::signed_t ST;
+
+    // These API calls translate either into unpacking of the thread index and
+    // team size from the OpenMP GTID mode (when NextSilicon OpenMP mode is
+    // disabled), or are converted into direct usages of the thread index
+    // (provided by the hardware) and team size (passed as an argument).
+    const uint32_t nth = __kmp_ns_gtid_decode_num_threads(global_tid);
+    const uint32_t tid = __kmp_ns_gtid_decode_thread_index(global_tid);
+
+    T upper = *pupper, lower = *plower;
+    ST stride = *pstride, lastiter;
+    if (plastiter)
+      lastiter = *plastiter;
+
+    // NOTE:
+    // Once the nth and tid are extracted from the gtid, we can proceed with the
+    // standard static scheduling logic. Note that this is the original logic as
+    // it appears after this 'if.. then...' clause. In this replicated version,
+    // all debug and OMPT logic are stripped, which is not essential and not
+    // implemented when imported as code-graph to the NextSilicon runtime. Also,
+    // the code is copied as is, with its somewhat non-favorable code-style.
+    UT trip_count;
+
+    /* determine if "for" loop is an active worksharing construct */
+    if (UNLIKELY(nth == 0)) {
+      /* serialized parallel, each thread executes whole iteration space */
+      if (plastiter != nullptr)
+        lastiter = TRUE;
+      /* leave upper and lower set to entire iteration space */
+      stride = (incr > 0) ? (upper - lower + 1) : (-(lower - upper + 1));
+
+      goto set_args_and_exit;
+    }
+
+    if (UNLIKELY(nth == 1)) {
+      if (plastiter != NULL)
+        lastiter = TRUE;
+      stride = (incr > 0) ? (upper - lower + 1) : (-(lower - upper + 1));
+
+      goto set_args_and_exit;
+    }
+
+    /* compute trip count */
+    if (incr == 1) {
+      trip_count = upper - lower + 1;
+    } else if (incr == -1) {
+      trip_count = lower - upper + 1;
+    } else if (incr > 0) {
+      // upper-lower can exceed the limit of signed type
+      trip_count = (UT)(upper - lower) / incr + 1;
+    } else {
+      trip_count = (UT)(lower - upper) / (-incr) + 1;
+    }
+
+    /* compute remaining parameters */
+    switch (schedtype) {
+    case kmp_sch_static: {
+      if (trip_count < nth) {
+        if (tid < trip_count) {
+          upper = lower = lower + tid * incr;
+        } else {
+          // set bounds so non-active threads execute no iterations
+          lower = upper + (incr > 0 ? 1 : -1);
+        }
+        if (plastiter != NULL)
+          lastiter = (tid == trip_count - 1);
+      } else {
+        T big_chunk_inc_count =
+            (trip_count / nth + ((trip_count % nth) ? 1 : 0)) * incr;
+        T old_upper = upper;
+
+        lower += tid * big_chunk_inc_count;
+        upper = lower + big_chunk_inc_count - incr;
+        if (incr > 0) {
+          if (upper < lower)
+            upper = traits_t<T>::max_value;
+          if (plastiter != NULL)
+            lastiter = lower <= old_upper && upper > old_upper - incr;
+          if (upper > old_upper)
+            upper = old_upper; // tracker C73258
+        } else {
+          if (upper > lower)
+            upper = traits_t<T>::min_value;
+          if (plastiter != NULL)
+            lastiter = lower >= old_upper && upper < old_upper - incr;
+          if (upper < old_upper)
+            upper = old_upper; // tracker C73258
+        }
+      }
+      stride = trip_count;
+      break;
+    }
+    case kmp_sch_static_chunked: {
+      ST span;
+      UT nchunks;
+      if (chunk < 1)
+        chunk = 1;
+      else if ((UT)chunk > trip_count)
+        chunk = trip_count;
+      nchunks = (trip_count) / (UT)chunk + (trip_count % (UT)chunk ? 1 : 0);
+      span = chunk * incr;
+      if (nchunks < nth) {
+        stride = span * nchunks;
+        if (tid < nchunks) {
+          lower = lower + (span * tid);
+          upper = lower + span - incr;
+        } else {
+          lower = upper + (incr > 0 ? 1 : -1);
+        }
+      } else {
+        stride = span * nth;
+        lower = lower + (span * tid);
+        upper = lower + span - incr;
+      }
+      if (plastiter != NULL)
+        lastiter = (tid == (nchunks - 1) % nth);
+      break;
+    }
+    case kmp_sch_static_balanced_chunked: {
+      T old_upper = upper;
+      // round up to make sure the chunk is enough to cover all iterations
+      UT span = (trip_count + nth - 1) / nth;
+
+      // perform chunk adjustment
+      chunk = (span + chunk - 1) & ~(chunk - 1);
+
+      span = chunk * incr;
+      lower = lower + (span * tid);
+      upper = lower + span - incr;
+      if (incr > 0) {
+        if (upper > old_upper)
+          upper = old_upper;
+      } else if (upper < old_upper)
+        upper = old_upper;
+
+      if (plastiter != NULL)
+        lastiter = (tid == ((trip_count - 1) / (UT)chunk));
+      break;
+    }
+    } // switch //
+
+  set_args_and_exit:
+
+    *pupper = upper;
+    *plower = lower;
+    *pstride = stride;
+    if (plastiter)
+      *plastiter = lastiter;
+
+    return;
+#if !LIBOMP_NEXTSILICON_DEVICE_BUILD
+  } // __nsapi_is_on_cg()
+#endif // !LIBOMP_NEXTSILICON_DEVICE_BUILD
+#endif // LIBOMP_NEXTSILICON
+
+#if !LIBOMP_NEXTSILICON_DEVICE_BUILD
+  __kmp_for_static_init_impl(loc, global_tid, schedtype, plastiter, plower,
+                             pupper, pstride, incr, chunk
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+                             ,
+                             codeptr
+#endif
+  );
+#endif // !LIBOMP_NEXTSILICON_DEVICE_BUILD
 }
 
 template <typename T>

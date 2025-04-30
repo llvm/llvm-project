@@ -1,0 +1,10 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+macro bool
+macro-int-constant true {int} == 1
+macro-int-constant false {int} == 0
+macro-int-constant __bool_true_false_are_defined {int} == 1
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif
+#endif

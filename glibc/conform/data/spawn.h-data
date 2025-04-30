@@ -1,0 +1,43 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+type posix_spawnattr_t
+type posix_spawn_file_actions_t
+# if defined XOPEN2K8 || defined POSIX2008
+type mode_t
+type pid_t
+type sigset_t
+type {struct sched_param}
+# endif
+
+constant POSIX_SPAWN_RESETIDS
+constant POSIX_SPAWN_SETPGROUP
+constant POSIX_SPAWN_SETSCHEDPARAM
+constant POSIX_SPAWN_SETSCHEDULER
+constant POSIX_SPAWN_SETSIGDEF
+constant POSIX_SPAWN_SETSIGMASK
+
+function int posix_spawnattr_destroy (posix_spawnattr_t*)
+function int posix_spawnattr_getsigdefault (const posix_spawnattr_t*, sigset_t*)
+function int posix_spawnattr_getflags (const posix_spawnattr_t*, short*)
+function int posix_spawnattr_getpgroup (const posix_spawnattr_t*, pid_t*)
+function int posix_spawnattr_getschedparam (const posix_spawnattr_t*, struct sched_param*)
+function int posix_spawnattr_getschedpolicy (const posix_spawnattr_t*, int*)
+function int posix_spawnattr_getsigmask (const posix_spawnattr_t*, sigset_t*)
+function int posix_spawnattr_init (posix_spawnattr_t*)
+function int posix_spawnattr_setsigdefault (posix_spawnattr_t*, const sigset_t*)
+function int posix_spawnattr_setflags (posix_spawnattr_t*, short)
+function int posix_spawnattr_setpgroup (posix_spawnattr_t*, pid_t)
+function int posix_spawnattr_setschedparam (posix_spawnattr_t*, const struct sched_param*)
+function int posix_spawnattr_setschedpolicy (posix_spawnattr_t*, int)
+function int posix_spawnattr_setsigmask (posix_spawnattr_t*, const sigset_t*)
+function int posix_spawn_file_actions_addclose (posix_spawn_file_actions_t*, int)
+function int posix_spawn_file_actions_adddup2 (posix_spawn_file_actions_t*, int, int)
+function int posix_spawn_file_actions_addopen (posix_spawn_file_actions_t*, int, const char *, int, mode_t)
+function int posix_spawn_file_actions_destroy (posix_spawn_file_actions_t*)
+function int posix_spawn_file_actions_init (posix_spawn_file_actions_t*)
+function int posix_spawn (pid_t*, const char*, const posix_spawn_file_actions_t*, const posix_spawnattr_t*, char *const[], char *const[])
+function int posix_spawnp (pid_t*, const char*, const posix_spawn_file_actions_t*, const posix_spawnattr_t*, char *const[], char *const[])
+
+allow-header sched.h
+allow-header signal.h
+allow-header sys/types.h
+#endif

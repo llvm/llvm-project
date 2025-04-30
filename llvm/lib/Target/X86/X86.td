@@ -16,6 +16,14 @@
 include "llvm/Target/Target.td"
 
 //===----------------------------------------------------------------------===//
+// X86 Next32 vectorization mode
+//===----------------------------------------------------------------------===//
+
+def UseNext32Vectorization
+    : SubtargetFeature<"next32-vectorization", "UseNext32Vectorization", "true",
+                       "Use Next32 vectorization mode">;
+
+//===----------------------------------------------------------------------===//
 // X86 Subtarget state
 //
 // disregarding specific ABI / programming model

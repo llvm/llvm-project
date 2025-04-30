@@ -1,0 +1,9 @@
+Checks: 'clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI*,cert-*,-cert-dcl37-c,-cert-dcl51-cpp,-cert-msc30-c,-cert-msc50-cpp,performance-*,portability-*,bugprone-*,-bugprone-reserved-identifier,-bugprone-sizeof-expression,misc-*,-misc-no-recursion,readability-*,-readability-braces-around-statements,-readability-implicit-bool-conversion,-readability-isolate-declaration,-readability-magic-numbers,-readability-naming'
+WarningsAsErrors: ''
+HeaderFilterRegex: '*'
+AnalyzeTemporaryDtors: false
+FormatStyle: file
+CheckOptions:
+  - key:             cert-dcl16-c.NewSuffixes
+    value:           'L;LL;LU;LLU'
+

@@ -1,0 +1,172 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Belarusian Language Latin-Script Locale for Belarus
+% Contact: Ihar Hrachyshka
+% Email: boox.svaboda2006@gmail.com
+% Language: be
+% Territory: BY
+% Revision: 1.0
+% Date: 2005-09-24
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Belarusian Latin-Script locale for Belarus"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Belarusian"
+territory  "Belarus"
+revision   "1.0"
+date       "2005-09-15"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+LC_NUMERIC
+copy "be_BY"
+END LC_NUMERIC
+
+LC_MESSAGES
+yesexpr "^[+1TtYy]"
+noexpr  "^[-0Nn]"
+END LC_MESSAGES
+
+LC_TIME
+abday   "Nia";/
+        "Pan";/
+        "A<U016D>t";/
+        "Sie";/
+        "<U010C>a<U0107>";/
+        "Pia";/
+        "Sub"
+day     "Niadziela";/
+        "Paniadzie<U0142>ak";/
+        "A<U016D>torak";/
+        "Sierada";/
+        "<U010C>a<U0107>vier";/
+        "Piatnica";/
+        "Subota"
+abmon   "Stu";/
+        "Lut";/
+        "Sak";/
+        "Kra";/
+        "Maj";/
+        "<U010C>er";/
+        "Lip";/
+        "<U017D>ni";/
+        "Vie";/
+        "Kas";/
+        "Lis";/
+        "<U015A>ni"
+alt_mon	"Studzie<U0144>";/
+	"Luty";/
+	"Sakavik";/
+	"Krasavik";/
+	"Maj";/
+	"<U010C>ervie<U0144>";/
+	"Lipie<U0144>";/
+	"<U017D>nivie<U0144>";/
+	"Vierasie<U0144>";/
+	"Kastry<U010D>nik";/
+	"Listapad";/
+	"<U015A>nie<U017E>a<U0144>"
+mon	"studzienia";/
+	"lutaha";/
+	"sakavika";/
+	"krasavika";/
+	"maja";/
+	"<U010D>ervienia";/
+	"lipienia";/
+	"<U017E>ni<U016D>nia";/
+	"viera<U015B>nia";/
+	"kastry<U010D>nika";/
+	"listapada";/
+	"<U015B>nie<U017E>nia"
+am_pm     "";""
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol           "BYR "
+currency_symbol           "Rub"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_PAPER
+copy "be_BY"
+END LC_PAPER
+
+LC_NAME
+copy "be_BY"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% https://en.wikipedia.org/wiki/Belarus: "Belarusian: Беларусь, Belaruś or Bełaruś"
+country_name "Bie<U0142>aru<U015B>"
+country_ab2 "BY"
+country_ab3 "BLR"
+country_num 112
+country_car    "BY"
+lang_name    "bie<U0142>aruskaja"
+lang_ab      "be"
+lang_term    "bel"
+lang_lib    "bel"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "be_BY"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "be_BY"
+END LC_MEASUREMENT

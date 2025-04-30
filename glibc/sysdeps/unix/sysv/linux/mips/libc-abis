@@ -1,0 +1,20 @@
+# See the copy of this file in libc for detailed explanations.  This
+# copy needs to include all libc definitions applicable to MIPS; only
+# one copy will be used.
+#
+# Feature Name	Configuration
+# ------------	-------------
+#
+# MIPS PLTs.
+MIPS_PLT	mips*-*-linux*
+#
+# Unique symbol definitions for C++.
+# Architecture independent, all ELF targets (== all targets)
+UNIQUE
+#
+# MIPS O32 FP64
+MIPS_O32_FP64   mips*-*-linux*
+# Absolute (SHN_ABS) symbols working correctly.
+ABSOLUTE
+# GNU-style hash table with translation table.
+MIPS_XHASH

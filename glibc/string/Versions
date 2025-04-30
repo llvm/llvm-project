@@ -1,0 +1,92 @@
+libc {
+  GLIBC_2.0 {
+    # functions with required interface outside normal name space
+    __argz_count; __argz_stringify; __argz_next;
+
+    # functions used in inline functions or macros
+    __bzero; __strtok_r;
+
+    # functions used in other libraries
+    __ffs; __mempcpy; __stpncpy; __stpcpy; __strcasecmp; __strdup;
+    __strerror_r;
+
+    # a*
+    argz_add; argz_add_sep; argz_append; argz_count; argz_create;
+    argz_create_sep; argz_delete; argz_extract; argz_insert; argz_next;
+    argz_replace; argz_stringify;
+
+    # b*
+    basename; bcmp; bcopy; bzero;
+
+    # e*
+    envz_add; envz_entry; envz_get; envz_merge; envz_remove;
+    envz_strip;
+
+    # f*
+    ffs;
+
+    # i*
+    index;
+
+    # m*
+    memccpy; memchr; memcmp; memcpy; memfrob; memmem; memmove; memset;
+
+    # r*
+    rindex;
+
+    # s*
+    stpcpy; stpncpy; strcasecmp; strcat; strchr; strcmp; strcoll; strcpy;
+    strcspn; strdup; strerror; strerror_r; strfry; strlen; strncasecmp;
+    strncat; strncmp; strncpy; strndup; strnlen; strpbrk; strrchr; strsep;
+    strsignal; strspn; strstr; strtok; strtok_r; strxfrm; swab;
+  }
+  GLIBC_2.1 {
+    # functions used in macros and other libraries
+    __rawmemchr; __strcasestr;
+
+    # f*
+    ffsl; ffsll;
+
+    # m*
+    mempcpy;
+
+    # r*
+    rawmemchr;
+
+    # s*
+    strcasestr; strverscmp;
+  }
+  GLIBC_2.1.1 {
+    # extern inline functions used by <bits/string2.h>
+    __mempcpy_small; __stpcpy_small; __strcspn_c1; __strcspn_c2; __strcspn_c3;
+    __strcpy_small; __strspn_c1; __strspn_c2; __strspn_c3; __strpbrk_c2;
+    __strpbrk_c3; __strsep_1c; __strsep_2c; __strsep_3c; __strsep_g;
+    __strtok_r_1c;
+
+    # s*
+    strchrnul; __strverscmp;
+  }
+  GLIBC_2.2 {
+    # functions used in macros.
+    __strndup;
+
+    # m*
+    memrchr;
+  }
+  GLIBC_2.3.4 {
+    # x*
+    __xpg_strerror_r;
+  }
+  GLIBC_2.6 {
+    strerror_l;
+  }
+  GLIBC_2.24 {
+  }
+  GLIBC_2.25 {
+    explicit_bzero;
+  }
+  GLIBC_2.32 {
+    sigdescr_np; sigabbrev_np;
+    strerrordesc_np; strerrorname_np;
+  }
+}

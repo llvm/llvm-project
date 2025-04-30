@@ -1,0 +1,10 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+# Socket APIs
+socket		-	socket		i:iii	__socket	socket
+socketpair	-	socketpair	i:iiif	__socketpair	socketpair
+bind		-	bind		i:ipi	__bind		bind
+listen		-	listen		i:ii	__listen	listen
+getsockname	-	getsockname	i:ipp	__getsockname	getsockname
+getpeername	-	getpeername	i:ipp	__getpeername	getpeername
+shutdown	-	shutdown	i:ii	__shutdown	shutdown

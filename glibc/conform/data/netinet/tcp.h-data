@@ -1,0 +1,5 @@
+#if defined XOPEN2K || defined POSIX2008 || defined XOPEN2K8
+macro TCP_NODELAY
+
+allow TCP_*
+#endif

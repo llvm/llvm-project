@@ -1,0 +1,7 @@
+abc:x:10:
+def:x:20:
+ghi:x:30:dj
+jkl:x:40:
+m:x:50:not,dj
+n:x:51:dj,not
+np:x:60:djx

@@ -1,0 +1,31 @@
+!libc_pre_versions
+libc {
+  GLIBC_2.2 {
+    # functions used in other libraries
+    __xstat64; __fxstat64; __lxstat64;
+
+    # a*
+    alphasort64;
+
+    # g*
+    glob64;
+
+    # New rlimit interface
+    getrlimit; setrlimit; getrlimit64;
+
+    # r*
+    readdir64; readdir64_r;
+
+    # s*
+    scandir64;
+
+    # v*
+    versionsort64;
+  }
+  GLIBC_2.11 {
+    fallocate64;
+  }
+  GLIBC_2.16 {
+    fanotify_mark;
+  }
+}

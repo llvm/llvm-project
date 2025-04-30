@@ -1,0 +1,17 @@
+#include <pthread.h>
+#include <tls.h>
+
+RESULT			offsetof (struct pthread, result)
+TID			offsetof (struct pthread, tid)
+CANCELHANDLING		offsetof (struct pthread, cancelhandling)
+CLEANUP_JMP_BUF		offsetof (struct pthread, cleanup_jmp_buf)
+MULTIPLE_THREADS_OFFSET	offsetof (struct pthread, header.multiple_threads)
+TLS_PRE_TCB_SIZE	sizeof (struct pthread)
+MUTEX_FUTEX		offsetof (pthread_mutex_t, __data.__lock)
+
+-- Use a thread_offset when working with asm to make things simpler
+-- This way we get the offset of a member in the struct pthread that
+-- preceeds the thread pointer (which points to the dtv).
+#define thread_offsetof(mem)    (unsigned int)(offsetof(struct pthread, mem) - sizeof(struct pthread))
+TID_THREAD_OFFSET		thread_offsetof (tid)
+MULTIPLE_THREADS_THREAD_OFFSET	thread_offsetof (header.multiple_threads)

@@ -37,7 +37,10 @@ void DebugLocStream::finalizeEntry() {
          "Popped off more entries than are in the list");
 }
 
-DebugLocStream::ListBuilder::~ListBuilder() {
+void DebugLocStream::ListBuilder::finalize() {
+  if (Finalized)
+    return;
+  Finalized = true;
   if (!Locs.finalizeList(Asm))
     return;
   V.emplace<Loc::Multi>(ListIndex, TagOffset);

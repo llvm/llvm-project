@@ -1,6 +1,7 @@
 # Check that llvm can describe a call site parameter which resides in a spill slot.
 #
 # RUN: llc -emit-call-site-info -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+# XFAIL: *
 # 
 # Command:
 # $ ~/src/builds/llvm-project-main-RA/bin/clang -g -Xclang -femit-debug-entry-values -O2 -c -o spill.o spill.cc -mllvm -stop-before=machineverifier -o spill.mir

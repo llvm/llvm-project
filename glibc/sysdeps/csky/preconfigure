@@ -1,0 +1,54 @@
+case "$machine" in
+csky*)
+    abi=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null |
+      sed -n 's/^#define __CSKYABI__ \(.*\)/\1/p'`
+    hard_float=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null |
+      sed -n 's/^#define __CSKY_HARD_FLOAT__ \(.*\)/\1/p'`
+    hard_float_sf=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null |
+      sed -n 's/^#define __CSKY_HARD_FLOAT_FPU_SF__ \(.*\)/\1/p'`
+    hard_float_abi=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null |
+      sed -n 's/^#define __CSKY_HARD_FLOAT_ABI__ \(.*\)/\1/p'`
+
+    case "$abi" in
+    1)
+        echo "glibc does not support abiv1 yet" >&2
+        exit 1
+        ;;
+    2)
+        machine=abiv2
+        ;;
+    *)
+        echo "Unknown abi" >&2
+        exit 1
+        ;;
+    esac
+
+    # __CSKY_HARD_FLOAT_ABI__ was added on gcc 11 to specify whether
+    # -mfloat-abi=hard is set.  On older gcc, the float ABI is defined solely
+    # with __CSKY_HARD_FLOAT__.  If __CSKY_HARD_FLOAT__ is set, it can be
+    # either a hard-float ABI (gcc older than 11, or gcc11 -mfloat-abi=hard
+    # (__CSKY_HARD_FLOAT_ABI__ is set) or -mfloat-abi=softfp
+    # (__CSKY_HARD_FLOAT_ABI__ is not set). To be compatible with older gcc,
+    # use __CSKY_HARD_FLOAT_FPU_SF__ identify if -mfloat-abi is supported,
+    # because it is added to gcc at the same time as -mfloat-abi.
+    if test -n "$hard_float"; then
+	if test -z "$hard_float_sf"; then
+	    with_fp_cond=1
+	else
+	    if test -n "$hard_float_abi"; then
+		with_fp_cond=1
+	    else
+		with_fp_cond=0
+	    fi
+	fi
+    else
+	with_fp_cond=0
+    fi
+
+    base_machine=csky
+    machine=csky/$machine
+
+    $as_echo "#define CSKYABI $abi" >>confdefs.h
+    $as_echo "#define CSKY_HARD_FLOAT $with_fp_cond" >>confdefs.h
+    ;;
+esac

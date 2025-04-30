@@ -1,0 +1,415 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Turkmen Language Locale for Turkmenistan (latin)
+% Source: Ghorban M. Tavakoly
+% Contact: Pablo Saratxaga & Ghorban M. Tavakoly
+% Email: <pablo@walon.org & gmt314@yahoo.com>
+% Language: tk
+% Territory: TM
+% Revision: 0.5
+% Date: 2011-04-09
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+
+title     "Turkmen locale for Turkmenistan"
+source    "Ghorban M. Tavakoly"
+address   ""
+contact   "Pablo Saratxaga & Ghorban M. Tavakoly"
+email     "pablo@walon.org & gmt314@yahoo.com"
+tel       ""
+fax       ""
+language  "Turkmen"
+territory "Turkmenistan"
+revision  "0.5"
+date      "2011-04-09"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+
+% cyrillic -> latin
+% lower case letters
+
+<U0430> "<U0061>"        % а -> a
+<U0431> "<U0062>"        % б -> b
+<U0432> "<U0077>"        % в -> w
+<U0433> "<U0067>"        % г -> g
+<U0434> "<U0064>"        % д -> d
+<U0435> "<U0065>"        % е -> e (y'e also, but context dependent)
+<U0451> "<U00FD><U006F>" % ё -> y'o
+<U0436> "<U017E>"        % ж -> z<
+<U0497> "<U006A>"        % җ -> j
+<U0437> "<U007A>"        % з -> z
+<U0438> "<U0069>"        % и -> i
+<U0439> "<U00FD>"        % й -> y'
+<U043A> "<U006B>"        % к -> k
+<U043B> "<U006C>"        % л -> l
+<U043C> "<U006D>"        % м -> m
+<U043D> "<U006E>"        % н -> n
+<U04A3> "<U0148>"        % ң -> n<
+<U043E> "<U006F>"        % о -> o
+<U04E9> "<U00F6>"        % ө -> o:
+<U043F> "<U0070>"        % п -> p
+<U0440> "<U0072>"        % р -> r
+<U0441> "<U0073>"        % с -> s
+<U0442> "<U0074>"        % т -> t
+<U0443> "<U0075>"        % у -> u
+<U04AF> "<U00FC>"        % ү -> u:
+<U0444> "<U0066>"        % ф -> f
+<U0445> "<U0068>"        % х -> h
+<U0446> "<U0074><U0073>" % ц -> ts
+<U0447> "<U00E7>"        % ч -> c,
+<U0448> "<U015F>"        % ш -> s,
+<U044A> ""               % ъ hard sign omitted
+<U044B> "<U0079>"        % ы -> y
+<U044C> ""               % ь soft sign omitted.
+<U044D> "<U0065>"        % э -> e
+<U04D9> "<U00E4>"        % ә -> a:
+<U044E> "<U00FD><U0075>" % ю -> y'u
+<U044F> "<U00FD><U0061>" % я -> y'a
+
+% upper case letters
+
+<U0410> "<U0041>"        % А -> a
+<U0411> "<U0042>"        % Б -> b
+<U0412> "<U0057>"        % В -> w
+<U0413> "<U0047>"        % Г -> g
+<U0414> "<U0044>"        % Д -> d
+<U0415> "<U0045>"        % Е -> e (y'e also, but context dependent)
+<U0401> "<U00DD><U006F>" % Ё -> y'o
+<U0416> "<U017D>"        % Ж -> z<
+<U0496> "<U004A>"        % Җ -> j
+<U0417> "<U005A>"        % З -> z
+<U0418> "<U0049>"        % И -> i
+<U0419> "<U00DD>"        % Й -> y'
+<U041A> "<U004B>"        % К -> k
+<U041B> "<U004C>"        % Л -> l
+<U041C> "<U004D>"        % М -> m
+<U041D> "<U004E>"        % Н -> n
+<U04A2> "<U0147>"        % Ң -> n<
+<U041E> "<U004F>"        % О -> o
+<U04E8> "<U00D6>"        % Ө -> o:
+<U041F> "<U0050>"        % П -> p
+<U0420> "<U0052>"        % Р -> r
+<U0421> "<U0053>"        % С -> s
+<U0422> "<U0054>"        % Т -> t
+<U0423> "<U0055>"        % У -> u
+<U04AE> "<U00DC>"        % Ү -> u:
+<U0424> "<U0046>"        % Ф -> f
+<U0425> "<U0048>"        % Х -> h
+<U0426> "<U0054><U0073>" % Ц -> ts
+<U0427> "<U00C7>"        % Ч -> c,
+<U0428> "<U015E>"        % Ш -> s,
+<U042A> ""               % Ъ hard sign omitted
+<U042B> "<U0059>"        % Ы -> y
+<U042C> ""               % Ь soft sign omitted.
+<U042D> "<U0045>"        % Э -> e
+<U04D8> "<U00C4>"        % Ә -> a:
+<U042E> "<U00DD><U0075>" % Ю -> y'u
+<U042F> "<U00DD><U0061>" % Я -> y'a
+
+translit_end
+
+END LC_CTYPE
+
+LC_COLLATE
+
+% CLDR collation rules for Turkmen:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/tk.xml)
+%
+% <collation type="standard">
+% 	<cr><![CDATA[
+% 		&C<ç<<<Ç
+% 		&E<ä<<<Ä
+% 		&J<ž<<<Ž
+% 		&N<ň<<<Ň
+% 		&O<ö<<<Ö
+% 		&S<ş<<<Ş
+% 		&U<ü<<<Ü
+% 		&Y<ý<<<Ý
+% 	]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/tk.xml)
+%
+%
+% <exemplarCharacters type="index">[A B Ç D E Ä F G H I J Ž K L M N Ň O Ö P R S Ş T U Ü W Y Ý Z]</exemplarCharacters>
+%
+% https://en.wikipedia.org/wiki/Turkmen_alphabet
+%
+% Alphabetic order
+%
+% Latin alphabet (1995-present)
+%
+% Aa, Bb, Çç, Dd, Ee, Ää, Ff, Gg, Hh, Ii, Jj, Žž, Kk, Ll, Mm, Nn, Ňň, Oo, Öö, Pp, Rr, Ss, Şş, Tt, Uu, Üü, Ww, Yy, Ýý, Zz
+%
+%Cyrillic alphabet
+%
+% Аа, Бб, Вв, Гг, Дд, Ее, Ёё, Жж, Җҗ, Зз, Ии, Йй, Кк, Лл, Мм, Нн, Ңң, Оо, Өө, Пп, Рр, Сс, Тт, Уу, Үү, Фф, Хх, (Цц), Чч, Шш, (Щщ), (Ъъ), Ыы, (Ьь), Ээ, Әә, Юю, Яя
+copy "iso14651_t1"
+
+collating-symbol <latin-c-cedilla>
+collating-symbol <latin-a-diaeresis>
+collating-symbol <latin-z-caron>
+collating-symbol <latin-n-caron>
+collating-symbol <latin-o-diaeresis>
+collating-symbol <latin-s-cedilla>
+collating-symbol <latin-u-diaeresis>
+collating-symbol <latin-y-acute>
+collating-symbol <cyrillic-io>
+collating-symbol <cyrillic-zhe-descender>
+collating-symbol <cyrillic-en-descender>
+collating-symbol <cyrillic-barred-o>
+collating-symbol <cyrillic-straight-u>
+collating-symbol <cyrillic-schwa>
+
+reorder-after <AFTER-C>
+<latin-c-cedilla>
+reorder-after <AFTER-E>
+<latin-a-diaeresis>
+reorder-after <AFTER-J>
+<latin-z-caron>
+reorder-after <AFTER-N>
+<latin-n-caron>
+reorder-after <AFTER-O>
+<latin-o-diaeresis>
+reorder-after <AFTER-S>
+<latin-s-cedilla>
+reorder-after <AFTER-U>
+<latin-u-diaeresis>
+reorder-after <AFTER-Y>
+<latin-y-acute>
+
+reorder-after <S0435> % CYRILLIC SMALL LETTER IE
+<cyrillic-io>
+reorder-after <S0436> % CYRILLIC SMALL LETTER ZHE
+<cyrillic-zhe-descender>
+reorder-after <S043D> % CYRILLIC SMALL LETTER EN
+<cyrillic-en-descender>
+reorder-after <S043E> % CYRILLIC SMALL LETTER O
+<cyrillic-barred-o>
+reorder-after <S0443> % CYRILLIC SMALL LETTER U
+<cyrillic-straight-u>
+reorder-after <S044D> % CYRILLIC SMALL LETTER E
+<cyrillic-schwa>
+
+<U00E7>        <latin-c-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ç
+<U00C7>        <latin-c-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ç
+<U00E4>      <latin-a-diaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ä
+<U00C4>      <latin-a-diaeresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ä
+<U017E>          <latin-z-caron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ž
+<U017D>          <latin-z-caron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ž
+<U0148>          <latin-n-caron>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ň
+<U0147>          <latin-n-caron>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ň
+<U00F1>          <latin-n-caron>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE % ñ
+<U00D1>          <latin-n-caron>;"<BASE><VRNT1>";"<CAP><MIN>";IGNORE % Ñ
+<U014B>          <latin-n-caron>;"<BASE><VRNT2>";"<MIN><MIN>";IGNORE % ŋ
+<U014A>          <latin-n-caron>;"<BASE><VRNT2>";"<CAP><MIN>";IGNORE % Ŋ
+<U00F6>      <latin-o-diaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ö
+<U00D6>      <latin-o-diaeresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ö
+<U015F>        <latin-s-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ş
+<U015E>        <latin-s-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ş
+<U00FC>      <latin-u-diaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ü
+<U00DC>      <latin-u-diaeresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ü
+<U00FD>          <latin-y-acute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ý
+<U00DD>          <latin-y-acute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ý
+<U00FF>          <latin-y-acute>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE % ÿ
+<U0178>          <latin-y-acute>;"<BASE><VRNT1>";"<CAP><MIN>";IGNORE % Ÿ
+<U0451>            <cyrillic-io>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ё
+<U0401>            <cyrillic-io>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ё
+<U0497> <cyrillic-zhe-descender>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % җ
+<U0496> <cyrillic-zhe-descender>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Җ
+<U04A3>  <cyrillic-en-descender>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ң
+<U04A2>  <cyrillic-en-descender>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ң
+<U04E9>      <cyrillic-barred-o>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ө
+<U04E8>      <cyrillic-barred-o>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ө
+<U04AF>    <cyrillic-straight-u>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ү
+<U04AE>    <cyrillic-straight-u>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ү
+<U04D9>         <cyrillic-schwa>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ә
+<U04D8>         <cyrillic-schwa>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ә
+
+reorder-end
+
+END LC_COLLATE
+
+LC_TIME
+
+% Turkmen days are
+% Monday    => Duşenbe
+% Tuesday   => Sişenbe
+% Wednesday => Çarşenbe
+% Thursday  => Penşenbe
+% Friday    => Anna
+% Saturday  => Şenbe
+% Sunday    => Ýekşenbe
+
+day     "Du<U015F>enbe";/
+        "Si<U015F>enbe";/
+        "<U00C7>ar<U015F>enbe";/
+        "Pen<U015F>enbe";/
+        "Anna";/
+        "<U015E>enbe";/
+        "<U00DD>ek<U015F>enbe"
+
+abday   "Du<U015F>";"Si<U015F>";/
+        "<U00C7>ar";"Pen";/
+        "Ann";"<U015E>en";/
+        "<U00DD>ek"
+
+% Turkmen monthes are
+% January   => Ýanwar
+% February  => Fewral
+% March     => Mart
+% April     => Aprel
+% May       => Maý
+% June      => Iýun
+% July      => Iýul
+% August    => Awgust
+% September => Sentýabr
+% October   => Oktýabr
+% November  => Noýabr
+% December  => Dekabr
+
+mon     "<U00DD>anwar";/
+        "Fewral";/
+        "Mart";/
+        "Aprel";/
+        "Ma<U00FD>";/
+        "I<U00FD>un";/
+        "I<U00FD>ul";/
+        "Awgust";/
+        "Sent<U00FD>abr";/
+        "Okt<U00FD>abr";/
+        "No<U00FD>abr";/
+        "Dekabr"
+
+abmon   "<U00DD>an";"Few";/
+        "Mar";"Apr";/
+        "Ma<U00FD>";"I<U00FD>n";/
+        "I<U00FD>l";"Awg";/
+        "Sen";"Okt";/
+        "No<U00FD>";"Dek"
+
+%
+% Turkmen date and time format
+% date  dd.mm.yyyy %d.%m.%Y %T
+% time  hh:mm:ss (24 hour - no am/pm)
+%
+d_t_fmt   "%d.%m.%Y %T"
+date_fmt  "%d.%m.%Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+decimal_point             "."
+thousands_sep             ","
+grouping                  3;3
+END LC_NUMERIC
+
+LC_MONETARY
+int_curr_symbol           "TMM "
+currency_symbol           "MANAT"
+mon_decimal_point         "."
+mon_thousands_sep         ","
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+%%%%%%%%
+% NOTE:
+% there is a possible conflict between English and Turkmen for letter "y"
+% (used for "yes" in English, but corresponding to "no" in Turkmen (well,
+%  ý actually)
+%%%%%%%%
+yesexpr "^[+1hH]"
+noexpr  "^[-0nN<U00FD><U00DD>]"
+yesstr  "hawa"
+nostr   "<U00FD>ok"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+% TODO: complete me
+name_fmt  "%d%t%g%t%m%t%f"
+name_gen  ""
+name_mr   ""
+name_mrs  ""
+name_miss ""
+name_ms   ""
+END LC_NAME
+
+LC_ADDRESS
+% TODO: fix me
+
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% Türkmenistan
+country_name "T<U00FC>rkmenistan"
+country_post "TM"
+country_car  "TM"
+country_num  795
+country_ab2 "TM"
+country_ab3 "TKM"
+% Türkmençe
+lang_name   "t<U00FC>rkmen dili"
+lang_term   "tuk"
+lang_lib    "tuk"
+lang_ab     "tk"
+END LC_ADDRESS
+
+LC_TELEPHONE
+% TODO: complete me
+tel_int_fmt "+%c %a %l"
+int_prefix "993"
+% dial "8 pause 10" (after dialing 8 pause for a new dial tone,then dial 10
+int_select "8<U00A0>10"
+END LC_TELEPHONE

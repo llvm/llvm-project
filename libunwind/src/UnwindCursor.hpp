@@ -1193,6 +1193,10 @@ private:
     return dwarfEncoding(dummy);
   }
 
+#if defined(_LIBUNWIND_TARGET_NEXT)
+  compact_unwind_encoding_t dwarfEncoding(Registers_NEXT &) const { return 0; }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_X86_64)
   compact_unwind_encoding_t dwarfEncoding(Registers_x86_64 &) const {
     return UNWIND_X86_64_MODE_DWARF;

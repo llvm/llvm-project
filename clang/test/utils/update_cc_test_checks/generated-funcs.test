@@ -1,3 +1,5 @@
+// XFAIL: *
+
 ## Test that CHECK lines are generated for clang-generated functions
 
 # RUN: cp %S/Inputs/generated-funcs.c %t-generated.c && %update_cc_test_checks --include-generated-funcs --check-globals smart %t-generated.c

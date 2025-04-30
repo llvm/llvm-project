@@ -1,0 +1,3 @@
+SONAME_MOVE {
+  global: other_function;
+};

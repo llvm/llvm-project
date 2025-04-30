@@ -1,0 +1,257 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Icelandic Language Locale for Iceland
+% Source: Stadlarad I'slands
+% Address: Keldnaholt-ITI'
+%   IS-112 Reykjavi'k, Iceland
+% Contact: Thorvardur K. Olafsson
+% Email: tobbi@iti.is
+% Tel: +354 - 1 - 687000
+% Fax: +354 - 1 - 687409
+% Language: is
+% Territory: IS
+% Revision: 4.3
+% Date: 1996-10-15
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Icelandic locale for Iceland"
+source     "Stadlarad I'slands"
+address    "Keldnaholt-ITI', IS-112 Reykjavi'k, Iceland"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Icelandic"
+territory  "Iceland"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% CLDR collation rules for Icelandic:
+% (see:https://unicode.org/cldr/trac/browser/trunk/common/collation/is.xml)
+% &[before 1]b<á<<<Á
+% &d<<đ<<<Đ<ð<<<Ð
+% &[before 1]f<é<<<É
+% &[before 1]j<í<<<Í
+% &[before 1]p<ó<<<Ó
+% &[before 1]v<ú<<<Ú
+% &[before 1]z<ý<<<Ý
+% &[before 1]ǀ<æ<<<Æ<<ä<<<Ä<ö<<<Ö<<ø<<<Ø<å<<<Å
+%
+% The following rules implement the same order for glibc.
+%
+% I added rules for þ and Þ, see:
+% https://unicode.org/cldr/trac/browser/trunk/common/main/is.xml
+% which contains:
+% <exemplarCharacters type="index" draft="contributed">[A Á B C D Ð E É F G H I Í J K L M N O Ó P Q R S T U Ú V W X Y Ý Z Þ Æ Ö]</exemplarCharacters>
+%
+% So þ and Þ should be considred base characters between Z and Æ.
+
+collating-symbol <a-acute>
+collating-symbol <d-stroke>
+collating-symbol <eth>
+collating-symbol <e-acute>
+collating-symbol <i-acute>
+collating-symbol <o-acute>
+collating-symbol <u-acute>
+collating-symbol <y-acute>
+collating-symbol <thorn>
+collating-symbol <ae-ligature>
+collating-symbol <a-diaresis>
+collating-symbol <o-diaresis>
+collating-symbol <o-stroke>
+collating-symbol <a-ring>
+
+reorder-after <BEFORE-B>
+<a-acute>
+reorder-after <AFTER-D>
+<d-stroke>
+<eth>
+reorder-after <BEFORE-F>
+<e-acute>
+reorder-after <BEFORE-J>
+<i-acute>
+reorder-after <BEFORE-P>
+<o-acute>
+reorder-after <BEFORE-V>
+<u-acute>
+reorder-after <BEFORE-Z>
+<y-acute>
+reorder-after <AFTER-EZH>
+<thorn>
+<ae-ligature>
+<a-diaresis>
+<o-diaresis>
+<o-stroke>
+<a-ring>
+
+<U00E1> <a-acute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % á
+<U00C1> <a-acute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Á
+<U0111> <d-stroke>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % đ
+<U0110> <d-stroke>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Đ
+<U00F0> <eth>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ð
+<U00D0> <eth>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ð
+<U00E9> <e-acute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % é
+<U00C9> <e-acute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % É
+<U00ED> <i-acute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % í
+<U00CD> <i-acute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Í
+<U00F3> <o-acute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ó
+<U00D3> <o-acute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ó
+<U00FA> <u-acute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ú
+<U00DA> <u-acute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ú
+<U00FD> <y-acute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ý
+<U00DD> <y-acute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ý
+<U00FE> <thorn>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % þ
+<U00DE> <thorn>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Þ
+<U00E6> <ae-ligature>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % æ
+<U00C6> <ae-ligature>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Æ
+<U00E4> <a-diaresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ä
+<U00C4> <a-diaresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ä
+<U00F6> <o-diaresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ö
+<U00D6> <o-diaresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ö
+<U00F8> <o-stroke>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ø
+<U00D8> <o-stroke>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ø
+<U00E5> <a-ring>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % å
+<U00C5> <a-ring>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Å
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol         "ISK "
+currency_symbol         "kr"
+mon_decimal_point       ","
+mon_thousands_sep       "."
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+% *_frac_* must be checked
+int_frac_digits         0
+frac_digits             0
+p_cs_precedes           0
+p_sep_by_space          1
+n_cs_precedes           0
+n_sep_by_space          1
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           ","
+thousands_sep           "."
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+abday "sun";"m<U00E1>n";/
+      "<U00FE>ri";"mi<U00F0>";/
+      "fim";"f<U00F6>s";/
+      "lau"
+day   "sunnudagur";/
+      "m<U00E1>nudagur";/
+      "<U00FE>ri<U00F0>judagur";/
+      "mi<U00F0>vikudagur";/
+      "fimmtudagur";/
+      "f<U00F6>studagur";/
+      "laugardagur"
+abmon "jan";"feb";/
+      "mar";"apr";/
+      "ma<U00ED>";"j<U00FA>n";/
+      "j<U00FA>l";"<U00E1>g<U00FA>";/
+      "sep";"okt";/
+      "n<U00F3>v";"des"
+mon   "jan<U00FA>ar";/
+      "febr<U00FA>ar";/
+      "mars";/
+      "apr<U00ED>l";/
+      "ma<U00ED>";/
+      "j<U00FA>n<U00ED>";/
+      "j<U00FA>l<U00ED>";/
+      "<U00E1>g<U00FA>st";/
+      "september";/
+      "okt<U00F3>ber";/
+      "n<U00F3>vember";/
+      "desember"
+d_t_fmt  "%a %e.%b %Y, %T"
+date_fmt "%a %e.%b %Y, %T %Z"
+d_fmt   "%a %e.%b %Y"
+t_fmt   "%T"
+am_pm   "fh";"eh"
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1jJyY]"
+noexpr  "^[-0nN]"
+yesstr  "j<U00E1>"
+nostr   "nei"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "354"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U00CD>sland"
+country_ab2 "IS"
+country_ab3 "ISL"
+country_num 352
+country_car    "IS"
+% íslenska
+lang_name    "<U00ED>slenska"
+lang_ab      "is"
+lang_term    "isl"
+lang_lib    "ice"
+END LC_ADDRESS

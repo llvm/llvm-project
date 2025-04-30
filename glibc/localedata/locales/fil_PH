@@ -1,0 +1,192 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Filipino Language Locale for Philippines
+% Source:
+% Contact: Rene Torres, Pablo Saratxaga
+% Email: <rgtorre@rocketmail.com>, <pablo@mandrakesoft.com>
+% Language: fil
+% Territory: PH
+% Revision: 0.5
+% Date: 2005-02-02
+% Users: general
+
+LC_IDENTIFICATION
+title "Filipino language locale for Philippines"
+source "Rene Torres"
+address ""
+contact "Rene Torres, Pablo Saratxaga"
+email "rgtorre@rocketmail.com, pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Filipino"
+territory "Philippines"
+revision "0.5"
+date "2005-02-02"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "tl_PH"
+END LC_CTYPE
+
+LC_COLLATE
+% CLDR collation rules for Filipino:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/fil.xml)
+%
+% <collation type="standard" references="http://std.dkuug.dk/jtc1/sc2/wg2/docs/N2300.htm (N2165)">
+% 	<cr><![CDATA[
+% 		&N<ñ<<<Ñ<ng<<<Ng<<<NG
+% 	]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/fil.xml)
+%
+% <exemplarCharacters type="index">[A B C D E F G H I J K L M N Ñ {Ng} O P Q R S T U V W X Y Z]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+
+copy "iso14651_t1"
+
+collating-symbol  <ntilde>
+collating-symbol  <ng-digraph>
+collating-element <ng> from "ng"
+collating-element <nG> from "nG"
+collating-element <Ng> from "Ng"
+collating-element <NG> from "NG"
+
+reorder-after <AFTER-N>
+<ntilde>
+<ng-digraph>
+
+<U00F1> <ntilde>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ñ
+<U00D1> <ntilde>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ñ
+<ng>	<ng-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<nG>	<ng-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<NG>	<ng-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<Ng>	<ng-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "PHP "
+currency_symbol         "<U20B1>"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          1
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "tl_PH"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Lin";"Lun";/
+        "Mar";"Miy";/
+        "Huw";"Biy";/
+        "Sab"
+day     "Linggo";/
+        "Lunes";/
+        "Martes";/
+        "Miyerkoles";/
+        "Huwebes";/
+        "Biyernes";/
+        "Sabado"
+abmon   "Ene";"Peb";/
+        "Mar";"Abr";/
+        "May";"Hun";/
+        "Hul";"Ago";/
+        "Set";"Okt";/
+        "Nob";"Dis"
+mon     "Enero";/
+        "Pebrero";/
+        "Marso";/
+        "Abril";/
+        "Mayo";/
+        "Hunyo";/
+        "Hulyo";/
+        "Agosto";/
+        "Setyembre";/
+        "Oktubre";/
+        "Nobyembre";/
+        "Disyembre"
+%
+d_t_fmt     "%a %d %b %Y %r"
+date_fmt    "%a %d %b %Y %r %Z"
+d_fmt       "%m//%d//%y"
+t_fmt       "%r"
+am_pm       "N.U.";"N.H."
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1oOyY]"
+noexpr  "^[-0hHnN]"
+yesstr  "oo"
+nostr	"hindi"
+END LC_MESSAGES
+
+LC_PAPER
+copy "tl_PH"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "tl_PH"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    ""
+name_mr     "G."
+name_mrs    "Gng."
+name_ms     "Bb."
+name_miss   "Bb."
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T %z%N%c%N"
+country_name "Pilipinas"
+country_ab2 "PH"
+country_ab3 "PHL"
+country_num 608
+country_car  "RP"
+lang_name    "Filipino"
+lang_term    "fil"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "en_PH"
+END LC_TELEPHONE

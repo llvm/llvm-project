@@ -1,0 +1,112 @@
+%include <nldbl-abi.h>
+%ifndef NLDBL_VERSION
+% error "nldbl-abi.h must define NLDBL_VERSION"
+%endif
+
+libc {
+  NLDBL_VERSION {
+    # IEEE quad long double functions (older symver is for
+    # IEEE double long double).
+    ldexpl; copysignl; finitel; frexpl; isinfl; isnanl; modfl;
+    __isinfl; __isnanl; __finitel; __signbitl;
+    scalbnl;
+    qecvt; qfcvt; qgcvt; qecvt_r; qfcvt_r;
+
+    strtold; __strtold_internal; wcstold; __wcstold_internal;
+    __strtold_l; strtold_l; __wcstold_l; wcstold_l;
+
+    strfmon; __strfmon_l; strfmon_l;
+    __nldbl_strfmon; __nldbl___strfmon_l; __nldbl_strfmon_l;
+    __nldbl___vstrfmon; __nldbl___vstrfmon_l;
+
+    syslog; vsyslog;
+    __nldbl_syslog; __nldbl_vsyslog;
+    __nldbl___syslog_chk; __nldbl___vsyslog_chk;
+
+    # *printf* family, using IEEE quad long double
+    __asprintf; asprintf; dprintf; fprintf; fwprintf; _IO_fprintf;
+    _IO_printf; _IO_sprintf; _IO_vfprintf; _IO_vsprintf; obstack_printf;
+    obstack_vprintf; printf; __printf_fp; printf_size; snprintf; sprintf;
+    swprintf; vasprintf; vdprintf; vfprintf; vfwprintf; vprintf; vsnprintf;
+    __vsnprintf; vsprintf; vswprintf; vwprintf; wprintf;
+
+    # *printf* family, using IEEE double as long double
+    # The standard functions are __REDIRECTed to these if -mlong-double-64
+    __nldbl___asprintf; __nldbl_asprintf; __nldbl_dprintf; __nldbl_fprintf;
+    __nldbl_fwprintf; __nldbl__IO_fprintf; __nldbl__IO_printf;
+    __nldbl__IO_sprintf; __nldbl__IO_vfprintf; __nldbl__IO_vsprintf;
+    __nldbl_obstack_printf; __nldbl_obstack_vprintf; __nldbl_printf;
+    __nldbl___printf_fp; __nldbl_printf_size; __nldbl_snprintf;
+    __nldbl_sprintf; __nldbl_swprintf; __nldbl_vasprintf; __nldbl_vdprintf;
+    __nldbl_vfprintf; __nldbl_vfwprintf; __nldbl_vprintf; __nldbl_vsnprintf;
+    __nldbl___vsnprintf; __nldbl_vsprintf; __nldbl_vswprintf;
+    __nldbl_vwprintf; __nldbl_wprintf;
+
+    # *scanf family, using IEEE quad long double
+    _IO_sscanf; _IO_vfscanf; __vfscanf; __vsscanf; fscanf; fwscanf; scanf;
+    sscanf; swscanf; vfscanf; vfwscanf; vscanf; vsscanf; vswscanf; vwscanf;
+    wscanf;
+
+    # *scanf family, using IEEE double as long double
+    __nldbl__IO_sscanf; __nldbl__IO_vfscanf; __nldbl___vfscanf;
+    __nldbl___vsscanf; __nldbl_fscanf; __nldbl_fwscanf; __nldbl_scanf;
+    __nldbl_sscanf; __nldbl_swscanf; __nldbl_vfscanf; __nldbl_vfwscanf;
+    __nldbl_vscanf; __nldbl_vsscanf; __nldbl_vswscanf; __nldbl_vwscanf;
+    __nldbl_wscanf;
+
+    # checking versions, using IEEE quad long double
+    __sprintf_chk; __vsprintf_chk; __snprintf_chk; __vsnprintf_chk;
+    __printf_chk; __fprintf_chk; __vprintf_chk; __vfprintf_chk;
+
+    # checking versions, using IEEE double as long double
+    __nldbl___sprintf_chk; __nldbl___vsprintf_chk; __nldbl___snprintf_chk;
+    __nldbl___vsnprintf_chk; __nldbl___printf_chk; __nldbl___fprintf_chk;
+    __nldbl___vprintf_chk; __nldbl___vfprintf_chk;
+    __nldbl___swprintf_chk; __nldbl___vswprintf_chk; __nldbl___fwprintf_chk;
+    __nldbl___wprintf_chk; __nldbl___vfwprintf_chk; __nldbl___vwprintf_chk;
+  }
+  GLIBC_2.7 {
+    __nldbl___isoc99_scanf; __nldbl___isoc99_fscanf;
+    __nldbl___isoc99_sscanf; __nldbl___isoc99_vscanf;
+    __nldbl___isoc99_vfscanf; __nldbl___isoc99_vsscanf;
+    __nldbl___isoc99_wscanf; __nldbl___isoc99_fwscanf;
+    __nldbl___isoc99_swscanf; __nldbl___isoc99_vwscanf;
+    __nldbl___isoc99_vfwscanf; __nldbl___isoc99_vswscanf;
+  }
+  GLIBC_2.8 {
+    __nldbl___asprintf_chk; __nldbl___vasprintf_chk;
+    __nldbl___dprintf_chk; __nldbl___vdprintf_chk;
+    __nldbl___obstack_printf_chk; __nldbl___obstack_vprintf_chk;
+  }
+  GLIBC_2.30 {
+    __nldbl_argp_error; __nldbl_argp_failure;
+    __nldbl_warn; __nldbl_vwarn; __nldbl_warnx; __nldbl_vwarnx;
+    __nldbl_err; __nldbl_verr; __nldbl_errx; __nldbl_verrx;
+    __nldbl_error; __nldbl_error_at_line;
+  }
+}
+libm {
+  NLDBL_VERSION {
+    # IEEE quad long double functions (older symver is for
+    # IEEE double as long double).
+    cabsl; cargl; cimagl; conjl; creall; cacosl; cacoshl; casinl;
+    catanl; catanhl; ccosl; ccoshl; casinhl; cexpl; clogl; __clog10l;
+    clog10l; cpowl; cprojl; csinl; csinhl; csqrtl; ctanl; ctanhl;
+    fdiml; fmal; fmaxl; fminl; ldexpl; nanl; nextafterl; nexttowardl;
+    significandl; acosl; acoshl; asinl; atan2l; atanhl; coshl; dreml;
+    exp10l; pow10l; exp2l; fmodl; hypotl; j0l; y0l; j1l; y1l; jnl; ynl;
+    lgammal; gammal; lgammal_r; logl; log10l; log2l; powl; remainderl;
+    scalbl; sinhl; sqrtl; tgammal; asinhl; atanl; cbrtl; ceill; copysignl;
+    erfl; erfcl; expm1l; fabsl; finitel; floorl; frexpl; ilogbl;
+    llrintl; llroundl; log1pl; logbl; lrintl; lroundl; modfl;
+    nearbyintl; remquol; rintl; roundl; scalblnl; scalbnl; sinl; cosl;
+    sincosl; tanl; tanhl; truncl; expl; __finitel; __signbitl;
+    __fpclassifyl; nexttowardf; nexttoward; __nldbl_nexttowardf;
+  }
+  GLIBC_2.28 {
+    # Functions taking long double = double argument and rounding
+    # result to double (same as f32x*f64 functions, but those names
+    # are not reserved in TS 18661-1).
+    __nldbl_daddl; __nldbl_ddivl; __nldbl_dmull; __nldbl_dsubl;
+  }
+}

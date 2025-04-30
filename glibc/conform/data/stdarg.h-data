@@ -1,0 +1,14 @@
+type va_list
+
+// XXX We didn't check the parameters.
+macro va_start
+macro va_arg
+macro va_end
+
+#if defined ISO99 || defined ISO11 || defined XOPEN2K || defined POSIX2008 || defined XOPEN2K8
+macro va_copy
+#endif
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif

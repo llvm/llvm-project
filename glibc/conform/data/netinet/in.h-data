@@ -1,0 +1,97 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4
+type in_port_t
+type in_addr_t
+
+type sa_family_t
+
+type {struct in_addr}
+
+element {struct in_addr} in_addr_t s_addr
+
+type {struct sockaddr_in}
+
+element {struct sockaddr_in} sa_family_t sin_family
+element {struct sockaddr_in} in_port_t sin_port
+element {struct sockaddr_in} {struct in_addr} sin_addr
+element {struct sockaddr_in} {unsigned char} sin_zero [8]
+
+type {struct in6_addr}
+
+element {struct in6_addr} uint8_t s6_addr [16]
+
+type {struct sockaddr_in6}
+
+element {struct sockaddr_in6} sa_family_t sin6_family
+element {struct sockaddr_in6} in_port_t sin6_port
+element {struct sockaddr_in6} uint32_t sin6_flowinfo
+element {struct sockaddr_in6} {struct in6_addr} sin6_addr
+element {struct sockaddr_in6} uint32_t sin6_scope_id
+
+variable {const struct in6_addr} in6addr_any
+
+// constant IN6ADDR_ANY_INIT
+macro IN6ADDR_ANY_INIT
+
+variable {const struct in6_addr} in6addr_loopback
+
+// constant IN6ADDR_LOOPBACK_INIT
+macro IN6ADDR_LOOPBACK_INIT
+
+type {struct ipv6_mreq}
+
+element {struct ipv6_mreq} {struct in6_addr} ipv6mr_multiaddr
+element {struct ipv6_mreq} {unsigned int} ipv6mr_interface
+
+macro IPPROTO_IP
+macro IPPROTO_IPV6
+macro IPPROTO_ICMP
+macro IPPROTO_TCP
+macro IPPROTO_UDP
+
+macro INADDR_ANY
+macro INADDR_BROADCAST
+
+constant INET_ADDRSTRLEN == 16
+
+function uint32_t htonl (uint32_t)
+function uint16_t htons (uint16_t)
+function uint32_t ntohl (uint32_t)
+function uint16_t ntohs (uint16_t)
+
+allow-header inttypes.h
+allow-header sys/socket.h
+
+constant INET6_ADDRSTRLEN == 46
+
+macro IPV6_JOIN_GROUP
+macro IPV6_LEAVE_GROUP
+macro IPV6_MULTICAST_HOPS
+macro IPV6_MULTICAST_IF
+macro IPV6_MULTICAST_LOOP
+macro IPV6_UNICAST_HOPS
+
+macro IN6_IS_ADDR_UNSPECIFIED
+macro IN6_IS_ADDR_LOOPBACK
+macro IN6_IS_ADDR_MULTICAST
+macro IN6_IS_ADDR_LINKLOCAL
+macro IN6_IS_ADDR_SITELOCAL
+macro IN6_IS_ADDR_V4MAPPED
+macro IN6_IS_ADDR_V4COMPAT
+macro IN6_IS_ADDR_MC_NODELOCAL
+macro IN6_IS_ADDR_MC_LINKLOCAL
+macro IN6_IS_ADDR_MC_SITELOCAL
+macro IN6_IS_ADDR_MC_ORGLOCAL
+macro IN6_IS_ADDR_MC_GLOBAL
+
+allow IMPLINK_*
+allow IN_*
+allow IN6_*
+allow INADDR_*
+allow IP_*
+allow IPV6_*
+allow IPPORT_*
+allow IPPROTO_*
+allow SOCK_*
+allow sin_*
+allow sin6_*
+#endif

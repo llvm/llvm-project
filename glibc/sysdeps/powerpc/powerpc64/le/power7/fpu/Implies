@@ -1,0 +1,5 @@
+powerpc/powerpc64/power7/fpu
+powerpc/powerpc64/power6/fpu
+powerpc/powerpc64/power5+/fpu
+powerpc/powerpc64/power5/fpu
+powerpc/powerpc64/le/fpu

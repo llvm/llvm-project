@@ -1,0 +1,573 @@
+@node Syslog, Mathematics, Low-Level Terminal Interface, Top
+@c %MENU% System logging and messaging
+@chapter Syslog
+
+
+This chapter describes facilities for issuing and logging messages of
+system administration interest.  This chapter has nothing to do with
+programs issuing messages to their own users or keeping private logs
+(One would typically do that with the facilities described in
+@ref{I/O on Streams}).
+
+Most systems have a facility called ``Syslog'' that allows programs to
+submit messages of interest to system administrators and can be
+configured to pass these messages on in various ways, such as printing
+on the console, mailing to a particular person, or recording in a log
+file for future reference.
+
+A program uses the facilities in this chapter to submit such messages.
+
+@menu
+* Overview of Syslog::           Overview of a system's Syslog facility
+* Submitting Syslog Messages::   Functions to submit messages to Syslog
+@end menu
+
+@node Overview of Syslog
+@section Overview of Syslog
+
+System administrators have to deal with lots of different kinds of
+messages from a plethora of subsystems within each system, and usually
+lots of systems as well.  For example, an FTP server might report every
+connection it gets.  The kernel might report hardware failures on a disk
+drive.  A DNS server might report usage statistics at regular intervals.
+
+Some of these messages need to be brought to a system administrator's
+attention immediately.  And it may not be just any system administrator
+-- there may be a particular system administrator who deals with a
+particular kind of message.  Other messages just need to be recorded for
+future reference if there is a problem.  Still others may need to have
+information extracted from them by an automated process that generates
+monthly reports.
+
+To deal with these messages, most Unix systems have a facility called
+"Syslog."  It is generally based on a daemon called ``Syslogd''
+Syslogd listens for messages on a Unix domain socket named
+@file{/dev/log}.  Based on classification information in the messages
+and its configuration file (usually @file{/etc/syslog.conf}), Syslogd
+routes them in various ways.  Some of the popular routings are:
+
+@itemize @bullet
+@item
+Write to the system console
+@item
+Mail to a specific user
+@item
+Write to a log file
+@item
+Pass to another daemon
+@item
+Discard
+@end itemize
+
+Syslogd can also handle messages from other systems.  It listens on the
+@code{syslog} UDP port as well as the local socket for messages.
+
+Syslog can handle messages from the kernel itself.  But the kernel
+doesn't write to @file{/dev/log}; rather, another daemon (sometimes
+called ``Klogd'') extracts messages from the kernel and passes them on to
+Syslog as any other process would (and it properly identifies them as
+messages from the kernel).
+
+Syslog can even handle messages that the kernel issued before Syslogd or
+Klogd was running.  A Linux kernel, for example, stores startup messages
+in a kernel message ring and they are normally still there when Klogd
+later starts up.  Assuming Syslogd is running by the time Klogd starts,
+Klogd then passes everything in the message ring to it.
+
+In order to classify messages for disposition, Syslog requires any process
+that submits a message to it to provide two pieces of classification
+information with it:
+
+@table @asis
+@item facility
+This identifies who submitted the message.  There are a small number of
+facilities defined.  The kernel, the mail subsystem, and an FTP server
+are examples of recognized facilities.  For the complete list,
+@xref{syslog; vsyslog}.  Keep in mind that these are
+essentially arbitrary classifications.  "Mail subsystem" doesn't have any
+more meaning than the system administrator gives to it.
+
+@item priority
+This tells how important the content of the message is.  Examples of
+defined priority values are: debug, informational, warning and critical.
+For the complete list, see @ref{syslog; vsyslog}.  Except for
+the fact that the priorities have a defined order, the meaning of each
+of these priorities is entirely determined by the system administrator.
+
+@end table
+
+A ``facility/priority'' is a number that indicates both the facility
+and the priority.
+
+@strong{Warning:} This terminology is not universal.  Some people use
+``level'' to refer to the priority and ``priority'' to refer to the
+combination of facility and priority.  A Linux kernel has a concept of a
+message ``level,'' which corresponds both to a Syslog priority and to a
+Syslog facility/priority (It can be both because the facility code for
+the kernel is zero, and that makes priority and facility/priority the
+same value).
+
+@Theglibc{} provides functions to submit messages to Syslog.  They
+do it by writing to the @file{/dev/log} socket.  @xref{Submitting Syslog
+Messages}.
+
+The @glibcadj{} functions only work to submit messages to the Syslog
+facility on the same system.  To submit a message to the Syslog facility
+on another system, use the socket I/O functions to write a UDP datagram
+to the @code{syslog} UDP port on that system.  @xref{Sockets}.
+
+
+@node Submitting Syslog Messages
+@section Submitting Syslog Messages
+
+@Theglibc{} provides functions to submit messages to the Syslog
+facility:
+
+@menu
+* openlog::                      Open connection to Syslog
+* syslog; vsyslog::              Submit message to Syslog
+* closelog::                     Close connection to Syslog
+* setlogmask::                   Cause certain messages to be ignored
+* Syslog Example::               Example of all of the above
+@end menu
+
+These functions only work to submit messages to the Syslog facility on
+the same system.  To submit a message to the Syslog facility on another
+system, use the socket I/O functions to write a UDP datagram to the
+@code{syslog} UDP port on that system.  @xref{Sockets}.
+
+
+
+@node openlog
+@subsection openlog
+
+The symbols referred to in this section are declared in the file
+@file{syslog.h}.
+
+@deftypefun void openlog (const char *@var{ident}, int @var{option}, int @var{facility})
+@standards{BSD, syslog.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{}}}
+@c openlog @asulock @aculock @acsfd
+@c  libc_lock_lock @asulock @aculock
+@c  openlog_internal @acsfd [always guarded by syslog_lock, so no race]
+@c   strncpy dup ok
+@c   socket dup @acsfd
+@c   fcntl dup ok
+@c   connect dup ok
+@c   close dup @acsfd
+@c  cancel_handler(NULL) @aculock
+@c   libc_lock_unlock @aculock
+
+@code{openlog} opens or reopens a connection to Syslog in preparation
+for submitting messages.
+
+@var{ident} is an arbitrary identification string which future
+@code{syslog} invocations will prefix to each message.  This is intended
+to identify the source of the message, and people conventionally set it
+to the name of the program that will submit the messages.
+
+If @var{ident} is NULL, or if @code{openlog} is not called, the default
+identification string used in Syslog messages will be the program name,
+taken from argv[0].
+
+Please note that the string pointer @var{ident} will be retained
+internally by the Syslog routines.  You must not free the memory that
+@var{ident} points to.  It is also dangerous to pass a reference to an
+automatic variable since leaving the scope would mean ending the
+lifetime of the variable.  If you want to change the @var{ident} string,
+you must call @code{openlog} again; overwriting the string pointed to by
+@var{ident} is not thread-safe.
+
+You can cause the Syslog routines to drop the reference to @var{ident} and
+go back to the default string (the program name taken from argv[0]), by
+calling @code{closelog}: @xref{closelog}.
+
+In particular, if you are writing code for a shared library that might get
+loaded and then unloaded (e.g. a PAM module), and you use @code{openlog},
+you must call @code{closelog} before any point where your library might
+get unloaded, as in this example:
+
+@smallexample
+#include <syslog.h>
+
+void
+shared_library_function (void)
+@{
+  openlog ("mylibrary", option, priority);
+
+  syslog (LOG_INFO, "shared library has been invoked");
+
+  closelog ();
+@}
+@end smallexample
+
+Without the call to @code{closelog}, future invocations of @code{syslog}
+by the program using the shared library may crash, if the library gets
+unloaded and the memory containing the string @code{"mylibrary"} becomes
+unmapped.  This is a limitation of the BSD syslog interface.
+
+@code{openlog} may or may not open the @file{/dev/log} socket, depending
+on @var{option}.  If it does, it tries to open it and connect it as a
+stream socket.  If that doesn't work, it tries to open it and connect it
+as a datagram socket.  The socket has the ``Close on Exec'' attribute,
+so the kernel will close it if the process performs an exec.
+
+You don't have to use @code{openlog}.  If you call @code{syslog} without
+having called @code{openlog}, @code{syslog} just opens the connection
+implicitly and uses defaults for the information in @var{ident} and
+@var{options}.
+
+@var{options} is a bit string, with the bits as defined by the following
+single bit masks:
+
+@vtable @code
+@item LOG_PERROR
+If on, @code{openlog} sets up the connection so that any @code{syslog}
+on this connection writes its message to the calling process' Standard
+Error stream in addition to submitting it to Syslog.  If off, @code{syslog}
+does not write the message to Standard Error.
+
+@item LOG_CONS
+If on, @code{openlog} sets up the connection so that a @code{syslog} on
+this connection that fails to submit a message to Syslog writes the
+message instead to system console.  If off, @code{syslog} does not write
+to the system console (but of course Syslog may write messages it
+receives to the console).
+
+@item LOG_PID
+When on, @code{openlog} sets up the connection so that a @code{syslog}
+on this connection inserts the calling process' Process ID (PID) into
+the message.  When off, @code{openlog} does not insert the PID.
+
+@item LOG_NDELAY
+When on, @code{openlog} opens and connects the @file{/dev/log} socket.
+When off, a future @code{syslog} call must open and connect the socket.
+
+@strong{Portability note:}  In early systems, the sense of this bit was
+exactly the opposite.
+
+@item LOG_ODELAY
+This bit does nothing.  It exists for backward compatibility.
+
+@end vtable
+
+If any other bit in @var{options} is on, the result is undefined.
+
+@var{facility} is the default facility code for this connection.  A
+@code{syslog} on this connection that specifies default facility causes
+this facility to be associated with the message.  See @code{syslog} for
+possible values.  A value of zero means the default, which is
+@code{LOG_USER}.
+
+If a Syslog connection is already open when you call @code{openlog},
+@code{openlog} ``reopens'' the connection.  Reopening is like opening
+except that if you specify zero for the default facility code, the
+default facility code simply remains unchanged and if you specify
+LOG_NDELAY and the socket is already open and connected, @code{openlog}
+just leaves it that way.
+
+@c There is a bug in closelog() (glibc 2.1.3) wherein it does not reset the
+@c default log facility to LOG_USER, which means the default default log
+@c facility could be whatever the default log facility was for a previous
+@c Syslog connection.  I have documented what the function should be rather
+@c than what it is because I think if anyone ever gets concerned, the code
+@c will change.
+
+@end deftypefun
+
+
+@node syslog; vsyslog
+@subsection syslog, vsyslog
+
+The symbols referred to in this section are declared in the file
+@file{syslog.h}.
+
+@c syslog() is implemented as a call to vsyslog().
+@deftypefun void syslog (int @var{facility_priority}, const char *@var{format}, @dots{})
+@standards{BSD, syslog.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c syslog @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  va_start dup ok
+@c  vsyslog_chk @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   syslog(INTERNALLOG) dup @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   open_memstream @ascuheap @acsmem
+@c   stpcpy dup ok
+@c   getpid dup ok
+@c   mempcpy dup ok
+@c   fsetlocking [no @mtasurace:stream @asulock for exclusive stream]
+@c   fprintf @mtslocale @ascuheap @acsmem [no @asucorrupt @aculock @acucorrupt on temp memstream]
+@c   time dup ok
+@c   localtime_r dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   strftime_l(C) dup @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   ftell dup ok [no @asucorrupt @aculock @acucorrupt on temp memstream]
+@c   fputs_unlocked dup ok [no @mtasurace:stream @asucorrupt @acucorrupt on temp memstream]
+@c   putc_unlocked dup ok [no @mtasurace:stream @asucorrupt @acucorrupt on temp memstream]
+@c   vfprintf/vfprintf_chk dup @mtslocale @ascuheap @acsmem [no @mtasurace:stream @asucorrupt @acucorrupt on temp memstream]
+@c   fclose dup @ascuheap @acsmem [no @asulock @aculock @acsfd on caller-locked memstream]
+@c   writev dup ok
+@c   libc_lock_lock dup @asulock @aculock
+@c   memset dup ok
+@c   sigemptyset dup ok
+@c   sigaction(SIGPIPE) dup @mtasusig:PIPE @acusig:PIPE
+@c   openlog_internal dup @acsfd
+@c   send dup ok
+@c   closelog_internal dup @acsfd
+@c   open dup @acsfd
+@c   dprintf dup ok
+@c   libc_lock_unlock @asulock @aculock
+@c   free dup @acsuheap @acsmem
+@c  va_end dup ok
+
+@code{syslog} submits a message to the Syslog facility.  It does this by
+writing to the Unix domain socket @code{/dev/log}.
+
+@code{syslog} submits the message with the facility and priority indicated
+by @var{facility_priority}.  The macro @code{LOG_MAKEPRI} generates a
+facility/priority from a facility and a priority, as in the following
+example:
+
+@smallexample
+LOG_MAKEPRI(LOG_USER, LOG_WARNING)
+@end smallexample
+
+The possible values for the facility code are (macros):
+
+@c Internally, there is also LOG_KERN, but LOG_KERN == 0, which means
+@c if you try to use it here, just selects default.
+
+@vtable @code
+@item LOG_USER
+A miscellaneous user process
+@item LOG_MAIL
+Mail
+@item LOG_DAEMON
+A miscellaneous system daemon
+@item LOG_AUTH
+Security (authorization)
+@item LOG_SYSLOG
+Syslog
+@item LOG_LPR
+Central printer
+@item LOG_NEWS
+Network news (e.g. Usenet)
+@item LOG_UUCP
+UUCP
+@item LOG_CRON
+Cron and At
+@item LOG_AUTHPRIV
+Private security (authorization)
+@item LOG_FTP
+Ftp server
+@item LOG_LOCAL0
+Locally defined
+@item LOG_LOCAL1
+Locally defined
+@item LOG_LOCAL2
+Locally defined
+@item LOG_LOCAL3
+Locally defined
+@item LOG_LOCAL4
+Locally defined
+@item LOG_LOCAL5
+Locally defined
+@item LOG_LOCAL6
+Locally defined
+@item LOG_LOCAL7
+Locally defined
+@end vtable
+
+Results are undefined if the facility code is anything else.
+
+@strong{NB:} @code{syslog} recognizes one other facility code: that of
+the kernel.  But you can't specify that facility code with these
+functions.  If you try, it looks the same to @code{syslog} as if you are
+requesting the default facility.  But you wouldn't want to anyway,
+because any program that uses @theglibc{} is not the kernel.
+
+You can use just a priority code as @var{facility_priority}.  In that
+case, @code{syslog} assumes the default facility established when the
+Syslog connection was opened.  @xref{Syslog Example}.
+
+The possible values for the priority code are (macros):
+
+@vtable @code
+@item LOG_EMERG
+The message says the system is unusable.
+@item LOG_ALERT
+Action on the message must be taken immediately.
+@item LOG_CRIT
+The message states a critical condition.
+@item LOG_ERR
+The message describes an error.
+@item LOG_WARNING
+The message is a warning.
+@item LOG_NOTICE
+The message describes a normal but important event.
+@item LOG_INFO
+The message is purely informational.
+@item LOG_DEBUG
+The message is only for debugging purposes.
+@end vtable
+
+Results are undefined if the priority code is anything else.
+
+If the process does not presently have a Syslog connection open (i.e.,
+it did not call @code{openlog}), @code{syslog} implicitly opens the
+connection the same as @code{openlog} would, with the following defaults
+for information that would otherwise be included in an @code{openlog}
+call: The default identification string is the program name.  The
+default default facility is @code{LOG_USER}.  The default for all the
+connection options in @var{options} is as if those bits were off.
+@code{syslog} leaves the Syslog connection open.
+
+If the @file{/dev/log} socket is not open and connected, @code{syslog}
+opens and connects it, the same as @code{openlog} with the
+@code{LOG_NDELAY} option would.
+
+@code{syslog} leaves @file{/dev/log} open and connected unless its attempt
+to send the message failed, in which case @code{syslog} closes it (with the
+hope that a future implicit open will restore the Syslog connection to a
+usable state).
+
+Example:
+
+@smallexample
+
+#include <syslog.h>
+syslog (LOG_MAKEPRI(LOG_LOCAL1, LOG_ERROR),
+        "Unable to make network connection to %s.  Error=%m", host);
+
+@end smallexample
+
+@end deftypefun
+
+
+@deftypefun void vsyslog (int @var{facility_priority}, const char *@var{format}, va_list @var{arglist})
+@standards{BSD, syslog.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c vsyslog @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  vsyslog_chk dup @mtsenv @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+
+This is functionally identical to @code{syslog}, with the BSD style variable
+length argument.
+
+@end deftypefun
+
+
+@node closelog
+@subsection closelog
+
+The symbols referred to in this section are declared in the file
+@file{syslog.h}.
+
+@deftypefun void closelog (void)
+@standards{BSD, syslog.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{}}}
+@c closelog @asulock @aculock @acsfd
+@c  libc_lock_lock @asulock @aculock
+@c  closelog_internal @acsfd [always guarded by syslog_lock, so no race]
+@c   close dup@acsfd
+@c  cancel_handler(NULL) @aculock
+@c   libc_lock_unlock @aculock
+
+@code{closelog} closes the current Syslog connection, if there is one.
+This includes closing the @file{/dev/log} socket, if it is open.
+@code{closelog} also sets the identification string for Syslog messages
+back to the default, if @code{openlog} was called with a non-NULL argument
+to @var{ident}.  The default identification string is the program name
+taken from argv[0].
+
+If you are writing shared library code that uses @code{openlog} to
+generate custom syslog output, you should use @code{closelog} to drop
+@theglibc{}'s internal reference to the @var{ident} pointer when you are
+done.  Please read the section on @code{openlog} for more information:
+@xref{openlog}.
+
+@code{closelog} does not flush any buffers.  You do not have to call
+@code{closelog} before re-opening a Syslog connection with @code{openlog}.
+Syslog connections are automatically closed on exec or exit.
+
+@end deftypefun
+
+
+@node setlogmask
+@subsection setlogmask
+
+The symbols referred to in this section are declared in the file
+@file{syslog.h}.
+
+@deftypefun int setlogmask (int @var{mask})
+@standards{BSD, syslog.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:LogMask}}@asunsafe{}@acsafe{}}
+@c Read and modify are not guarded by syslog_lock, so concurrent changes
+@c or even uses are undefined.  This should use an atomic swap instead,
+@c at least for modifications.
+
+@code{setlogmask} sets a mask (the ``logmask'') that determines which
+future @code{syslog} calls shall be ignored.  If a program has not
+called @code{setlogmask}, @code{syslog} doesn't ignore any calls.  You
+can use @code{setlogmask} to specify that messages of particular
+priorities shall be ignored in the future.
+
+A @code{setlogmask} call overrides any previous @code{setlogmask} call.
+
+Note that the logmask exists entirely independently of opening and
+closing of Syslog connections.
+
+Setting the logmask has a similar effect to, but is not the same as,
+configuring Syslog.  The Syslog configuration may cause Syslog to
+discard certain messages it receives, but the logmask causes certain
+messages never to get submitted to Syslog in the first place.
+
+@var{mask} is a bit string with one bit corresponding to each of the
+possible message priorities.  If the bit is on, @code{syslog} handles
+messages of that priority normally.  If it is off, @code{syslog}
+discards messages of that priority.  Use the message priority macros
+described in @ref{syslog; vsyslog} and the @code{LOG_MASK} to construct
+an appropriate @var{mask} value, as in this example:
+
+@smallexample
+LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ERROR)
+@end smallexample
+
+or
+
+@smallexample
+~(LOG_MASK(LOG_INFO))
+@end smallexample
+
+There is also a @code{LOG_UPTO} macro, which generates a mask with the bits
+on for a certain priority and all priorities above it:
+
+@smallexample
+LOG_UPTO(LOG_ERROR)
+@end smallexample
+
+The unfortunate naming of the macro is due to the fact that internally,
+higher numbers are used for lower message priorities.
+
+@end deftypefun
+
+
+@node Syslog Example
+@subsection Syslog Example
+
+Here is an example of @code{openlog}, @code{syslog}, and @code{closelog}:
+
+This example sets the logmask so that debug and informational messages
+get discarded without ever reaching Syslog.  So the second @code{syslog}
+in the example does nothing.
+
+@smallexample
+#include <syslog.h>
+
+setlogmask (LOG_UPTO (LOG_NOTICE));
+
+openlog ("exampleprog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+
+syslog (LOG_NOTICE, "Program started by User %d", getuid ());
+syslog (LOG_INFO, "A tree falls in a forest");
+
+closelog ();
+
+@end smallexample

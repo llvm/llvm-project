@@ -1,0 +1,2 @@
+# Compile libc code to do internal locking.
+libc-reentrant = yes

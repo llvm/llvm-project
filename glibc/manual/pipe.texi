@@ -1,0 +1,319 @@
+@node Pipes and FIFOs, Sockets, File System Interface, Top
+@c %MENU% A simple interprocess communication mechanism
+@chapter Pipes and FIFOs
+
+@cindex pipe
+A @dfn{pipe} is a mechanism for interprocess communication; data written
+to the pipe by one process can be read by another process.  The data is
+handled in a first-in, first-out (FIFO) order.  The pipe has no name; it
+is created for one use and both ends must be inherited from the single
+process which created the pipe.
+
+@cindex FIFO special file
+A @dfn{FIFO special file} is similar to a pipe, but instead of being an
+anonymous, temporary connection, a FIFO has a name or names like any
+other file.  Processes open the FIFO by name in order to communicate
+through it.
+
+A pipe or FIFO has to be open at both ends simultaneously.  If you read
+from a pipe or FIFO file that doesn't have any processes writing to it
+(perhaps because they have all closed the file, or exited), the read
+returns end-of-file.  Writing to a pipe or FIFO that doesn't have a
+reading process is treated as an error condition; it generates a
+@code{SIGPIPE} signal, and fails with error code @code{EPIPE} if the
+signal is handled or blocked.
+
+Neither pipes nor FIFO special files allow file positioning.  Both
+reading and writing operations happen sequentially; reading from the
+beginning of the file and writing at the end.
+
+@menu
+* Creating a Pipe::             Making a pipe with the @code{pipe} function.
+* Pipe to a Subprocess::        Using a pipe to communicate with a
+				 child process.
+* FIFO Special Files::          Making a FIFO special file.
+* Pipe Atomicity::		When pipe (or FIFO) I/O is atomic.
+@end menu
+
+@node Creating a Pipe
+@section Creating a Pipe
+@cindex creating a pipe
+@cindex opening a pipe
+@cindex interprocess communication, with pipes
+
+The primitive for creating a pipe is the @code{pipe} function.  This
+creates both the reading and writing ends of the pipe.  It is not very
+useful for a single process to use a pipe to talk to itself.  In typical
+use, a process creates a pipe just before it forks one or more child
+processes (@pxref{Creating a Process}).  The pipe is then used for
+communication either between the parent or child processes, or between
+two sibling processes.
+
+The @code{pipe} function is declared in the header file
+@file{unistd.h}.
+@pindex unistd.h
+
+@deftypefun int pipe (int @var{filedes}@t{[2]})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+@c On Linux, syscall pipe2.  On HURD, call socketpair.
+The @code{pipe} function creates a pipe and puts the file descriptors
+for the reading and writing ends of the pipe (respectively) into
+@code{@var{filedes}[0]} and @code{@var{filedes}[1]}.
+
+An easy way to remember that the input end comes first is that file
+descriptor @code{0} is standard input, and file descriptor @code{1} is
+standard output.
+
+If successful, @code{pipe} returns a value of @code{0}.  On failure,
+@code{-1} is returned.  The following @code{errno} error conditions are
+defined for this function:
+
+@table @code
+@item EMFILE
+The process has too many files open.
+
+@item ENFILE
+There are too many open files in the entire system.  @xref{Error Codes},
+for more information about @code{ENFILE}.  This error never occurs on
+@gnuhurdsystems{}.
+@end table
+@end deftypefun
+
+Here is an example of a simple program that creates a pipe.  This program
+uses the @code{fork} function (@pxref{Creating a Process}) to create
+a child process.  The parent process writes data to the pipe, which is
+read by the child process.
+
+@smallexample
+@include pipe.c.texi
+@end smallexample
+
+@node Pipe to a Subprocess
+@section Pipe to a Subprocess
+@cindex creating a pipe to a subprocess
+@cindex pipe to a subprocess
+@cindex filtering i/o through subprocess
+
+A common use of pipes is to send data to or receive data from a program
+being run as a subprocess.  One way of doing this is by using a combination of
+@code{pipe} (to create the pipe), @code{fork} (to create the subprocess),
+@code{dup2} (to force the subprocess to use the pipe as its standard input
+or output channel), and @code{exec} (to execute the new program).  Or,
+you can use @code{popen} and @code{pclose}.
+
+The advantage of using @code{popen} and @code{pclose} is that the
+interface is much simpler and easier to use.  But it doesn't offer as
+much flexibility as using the low-level functions directly.
+
+@deftypefun {FILE *} popen (const char *@var{command}, const char *@var{mode})
+@standards{POSIX.2, stdio.h}
+@standards{SVID, stdio.h}
+@standards{BSD, stdio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asucorrupt{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c popen @ascuheap @asucorrupt @acucorrupt @aculock @acsfd @acsmem
+@c  malloc dup @ascuheap @acsmem
+@c  _IO_init ok
+@c   _IO_no_init ok
+@c    _IO_old_init ok
+@c     _IO_lock_init ok
+@c  _IO_new_file_init @asucorrupt @acucorrupt @aculock @acsfd
+@c   _IO_link_in @asucorrupt @acucorrupt @aculock @acsfd
+@c     the linked list is guarded by a recursive lock;
+@c     it may get corrupted with async signals and cancellation
+@c    _IO_lock_lock dup @aculock
+@c    _IO_flockfile dup @aculock
+@c    _IO_funlockfile dup @aculock
+@c    _IO_lock_unlock dup @aculock
+@c  _IO_new_proc_open @asucorrupt @acucorrupt @aculock @acsfd
+@c    the linked list is guarded by a recursive lock;
+ @c   it may get corrupted with async signals and cancellation
+@c   _IO_file_is_open ok
+@c   pipe2 dup @acsfd
+@c   pipe dup @acsfd
+@c   _IO_fork=fork @aculock
+@c   _IO_close=close_not_cancel dup @acsfd
+@c   fcntl dup ok
+@c   _IO_lock_lock @aculock
+@c   _IO_lock_unlock @aculock
+@c   _IO_mask_flags ok [no @mtasurace:stream, nearly but sufficiently exclusive access]
+@c  _IO_un_link @asucorrupt @acucorrupt @aculock @acsfd
+@c    the linked list is guarded by a recursive lock;
+@c    it may get corrupted with async signals and cancellation
+@c   _IO_lock_lock dup @aculock
+@c   _IO_flockfile dup @aculock
+@c   _IO_funlockfile dup @aculock
+@c   _IO_lock_unlock dup @aculock
+@c  free dup @ascuheap @acsmem
+The @code{popen} function is closely related to the @code{system}
+function; see @ref{Running a Command}.  It executes the shell command
+@var{command} as a subprocess.  However, instead of waiting for the
+command to complete, it creates a pipe to the subprocess and returns a
+stream that corresponds to that pipe.
+
+If you specify a @var{mode} argument of @code{"r"}, you can read from the
+stream to retrieve data from the standard output channel of the subprocess.
+The subprocess inherits its standard input channel from the parent process.
+
+Similarly, if you specify a @var{mode} argument of @code{"w"}, you can
+write to the stream to send data to the standard input channel of the
+subprocess.  The subprocess inherits its standard output channel from
+the parent process.
+
+In the event of an error @code{popen} returns a null pointer.  This
+might happen if the pipe or stream cannot be created, if the subprocess
+cannot be forked, or if the program cannot be executed.
+@end deftypefun
+
+@deftypefun int pclose (FILE *@var{stream})
+@standards{POSIX.2, stdio.h}
+@standards{SVID, stdio.h}
+@standards{BSD, stdio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @ascuplugin{} @asucorrupt{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Although the stream cannot be used after the call, even in case of
+@c async cancellation, because the stream must not be used after pclose
+@c is called, other stdio linked lists and their locks may be left in
+@c corrupt states; that's where the corrupt and lock annotations come
+@c from.
+@c
+@c pclose @ascuheap @ascuplugin @asucorrupt @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  _IO_new_fclose @ascuheap @ascuplugin @asucorrupt @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   _IO_un_link dup @asucorrupt @acucorrupt @aculock @acsfd
+@c   _IO_acquire_lock dup @aculock
+@c    _IO_flockfile dup @aculock
+@c   _IO_file_close_it @ascuheap @ascuplugin @asucorrupt @aculock @acucorrupt @acsfd @acsmem
+@c    _IO_file_is_open dup ok
+@c    _IO_do_flush @asucorrupt @ascuplugin @acucorrupt
+@c     _IO_do_write @asucorrupt @acucorrupt
+@c      new_do_write @asucorrupt @acucorrupt
+@c       _IO_SYSSEEK ok
+@c        lseek64 dup ok
+@c       _IO_SYSWRITE ok
+@c        write_not_cancel dup ok
+@c        write dup ok
+@c       _IO_adjust_column ok
+@c       _IO_setg dup @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c     _IO_wdo_write @asucorrupt @ascuplugin @acucorrupt
+@c      _IO_new_do_write=_IO_do_write dup @asucorrupt @acucorrupt
+@c      *cc->__codecvt_do_out @ascuplugin
+@c      _IO_wsetg dup @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c    _IO_unsave_markers @ascuheap @asucorrupt @acucorrupt @acsmem
+@c     _IO_have_backup dup ok
+@c     _IO_free_backup_area dup @ascuheap @asucorrupt @acucorrupt @acsmem
+@c    _IO_SYSCLOSE @aculock @acucorrupt @acsfd
+@c     _IO_lock_lock dup @aculock
+@c     _IO_close=close_not_cancel dup @acsfd
+@c     _IO_lock_unlock dup @aculock
+@c     _IO_waitpid=waitpid_not_cancel dup ok
+@c    _IO_have_wbackup ok
+@c    _IO_free_wbackup_area @ascuheap @asucorrupt @acucorrupt @acsmem
+@c     _IO_in_backup dup ok
+@c     _IO_switch_to_main_wget_area @asucorrupt @acucorrupt
+@c     free dup @ascuheap @acsmem
+@c    _IO_wsetb @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c    _IO_wsetg @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c    _IO_wsetp @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c    _IO_setb @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c    _IO_setg @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c    _IO_setp @asucorrupt @acucorrupt [no @mtasurace:stream, locked]
+@c    _IO_un_link dup @asucorrupt @acucorrupt @aculock @acsfd
+@c   _IO_release_lock dup @aculock
+@c    _IO_funlockfile dup @aculock
+@c   _IO_FINISH @ascuheap @ascuplugin @asucorrupt @acucorrupt @aculock @acsfd @acsmem
+@c    _IO_new_file_finish @ascuheap @ascuplugin @asucorrupt @acucorrupt @aculock @acsfd @acsmem
+@c     _IO_file_is_open dup ok
+@c     _IO_do_flush dup @ascuplugin @asucorrupt @acucorrupt
+@c     _IO_SYSCLOSE dup @aculock @acucorrupt @acsfd
+@c     _IO_default_finish @ascuheap @asucorrupt @acucorrupt @aculock @acsfd @acsmem
+@c      FREE_BUF @acsmem
+@c       munmap dup @acsmem
+@c      free dup @ascuheap @acsmem
+@c      _IO_un_link dup @asucorrupt @acucorrupt @aculock @acsfd
+@c      _IO_lock_fini ok
+@c       libc_lock_fini_recursive ok
+@c   libc_lock_lock dup @asulock @aculock
+@c   gconv_release_step ok
+@c   libc_lock_unlock dup @asulock @aculock
+@c   _IO_have_backup ok
+@c   _IO_free_backup_area @ascuheap @asucorrupt @acucorrupt @acsmem
+@c    _IO_in_backup ok
+@c    _IO_switch_to_main_get_area @asucorrupt @acucorrupt
+@c    free dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+The @code{pclose} function is used to close a stream created by @code{popen}.
+It waits for the child process to terminate and returns its status value,
+as for the @code{system} function.
+@end deftypefun
+
+Here is an example showing how to use @code{popen} and @code{pclose} to
+filter output through another program, in this case the paging program
+@code{more}.
+
+@smallexample
+@include popen.c.texi
+@end smallexample
+
+@node FIFO Special Files
+@section FIFO Special Files
+@cindex creating a FIFO special file
+@cindex interprocess communication, with FIFO
+
+A FIFO special file is similar to a pipe, except that it is created in a
+different way.  Instead of being an anonymous communications channel, a
+FIFO special file is entered into the file system by calling
+@code{mkfifo}.
+
+Once you have created a FIFO special file in this way, any process can
+open it for reading or writing, in the same way as an ordinary file.
+However, it has to be open at both ends simultaneously before you can
+proceed to do any input or output operations on it.  Opening a FIFO for
+reading normally blocks until some other process opens the same FIFO for
+writing, and vice versa.
+
+The @code{mkfifo} function is declared in the header file
+@file{sys/stat.h}.
+@pindex sys/stat.h
+
+@deftypefun int mkfifo (const char *@var{filename}, mode_t @var{mode})
+@standards{POSIX.1, sys/stat.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c On generic Posix, calls xmknod.
+The @code{mkfifo} function makes a FIFO special file with name
+@var{filename}.  The @var{mode} argument is used to set the file's
+permissions; see @ref{Setting Permissions}.
+
+The normal, successful return value from @code{mkfifo} is @code{0}.  In
+the case of an error, @code{-1} is returned.  In addition to the usual
+file name errors (@pxref{File Name Errors}), the following
+@code{errno} error conditions are defined for this function:
+
+@table @code
+@item EEXIST
+The named file already exists.
+
+@item ENOSPC
+The directory or file system cannot be extended.
+
+@item EROFS
+The directory that would contain the file resides on a read-only file
+system.
+@end table
+@end deftypefun
+
+@node Pipe Atomicity
+@section Atomicity of Pipe I/O
+
+Reading or writing pipe data is @dfn{atomic} if the size of data written
+is not greater than @code{PIPE_BUF}.  This means that the data transfer
+seems to be an instantaneous unit, in that nothing else in the system
+can observe a state in which it is partially complete.  Atomic I/O may
+not begin right away (it may need to wait for buffer space or for data),
+but once it does begin it finishes immediately.
+
+Reading or writing a larger amount of data may not be atomic; for
+example, output data from other processes sharing the descriptor may be
+interspersed.  Also, once @code{PIPE_BUF} characters have been written,
+further writes will block until some characters are read.
+
+@xref{Limits for Files}, for information about the @code{PIPE_BUF}
+parameter.

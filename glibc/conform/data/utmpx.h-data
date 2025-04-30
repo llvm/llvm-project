@@ -1,0 +1,41 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008 && !defined XPG4
+type {struct utmpx}
+
+element {struct utmpx} char ut_user []
+element {struct utmpx} char ut_id []
+element {struct utmpx} char ut_line []
+element {struct utmpx} pid_t ut_pid
+element {struct utmpx} {short int} ut_type
+// Layout chosen to be compatible on 32-bit and 64-bit bi-arch
+// systems, which is incompatible with the standard type (see bug
+// 18235).
+xfail-element {struct utmpx} {struct timeval} ut_tv
+
+type pid_t
+
+type {struct timeval}
+
+element {struct timeval} time_t tv_sec
+element {struct timeval} suseconds_t tv_usec
+
+constant EMPTY
+constant BOOT_TIME
+constant OLD_TIME
+constant NEW_TIME
+constant USER_PROCESS
+constant INIT_PROCESS
+constant LOGIN_PROCESS
+constant DEAD_PROCESS
+
+function void endutxent (void)
+function {struct utmpx*} getutxent (void)
+function {struct utmpx*} getutxid (const struct utmpx*)
+function {struct utmpx*} getutxline (const struct utmpx*)
+function {struct utmpx*} pututxline (const struct utmpx*)
+function void setutxent (void)
+
+allow-header sys/time.h
+
+allow ut_*
+allow *_t
+#endif

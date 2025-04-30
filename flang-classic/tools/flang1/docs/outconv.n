@@ -1,0 +1,69 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 11 "Output Converter"
+.sh 2 "Overview"
+The output converter converts foralls into DO loops, handles allocate
+and deallocate statements, and optimizes array descriptor handling.
+.sh 2 "Data Structures"
+.sh 3 "Global Data Structures"
+.uh "Symbol Table"
+The symbol table is accessed.
+.uh "AST"
+Statements are inserted and deleted.
+.sh 3 "Local Data Structures"
+There are no significant local data structures in the Output Converter.
+.sh 2 Processing
+.sh 3 Overview
+The main entry point to the output converter is
+.cw convert_output() .
+It calls
+.cw convert_forall()
+to convert forall statements and allocate/deallocate statements. It then
+calls
+.cw transform_wrapup()
+to output descriptor information.
+.sh 3 "Forall Conversion"
+This task is performed by
+.cw "conv_forall()" .
+One DO loop is created for each forall index, and the forall statement
+is converted to a comment.  No dependence checking is done; currently
+it is assumed that earlier phases have removed any dependences that prevent
+simple conversion to DO loops.
+.lp
+Mask expressions are converted to IF statements inside the loop.
+.lp
+Forall conversion will likely be changed in a future release to perform more
+optimal scalarization, loop fusions, etc.
+.sh 3 "Allocate/Deallocate"
+Allocate and deallocate statements are handled by
+.cw conv_allocate
+and
+.cw conv_deallocate .
+If necessary,
+descriptors are created and initialized. It may also be necessary to
+initialize the array bounds variables if a deferred-shape array is allocated.
+.sh 3 "Descriptors"
+.cw transform_wrapup()
+is contained in the file
+.cw dpm_out.c .
+It loops over each entry point in the subprogram, and performs the following
+tasks:
+.np
+Transform arguments to support the Fotran calling convention.
+.np
+Initialize processor and template descriptors.
+.np
+Perform copy_in and copy_out on array arguments.
+.np
+Initialize common blocks.
+.np
+Create alignment and distribution descriptors.
+.np
+Allocate distributed array sections.
+.lp
+The program return statement is preceeded by statements to free the
+descriptors, local arrays, and so forth.

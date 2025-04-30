@@ -1,0 +1,121 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Albanian language locale for Macedonia.
+% Contributed by Agron Selimaj <linuxmaster@verizon.net>
+
+LC_IDENTIFICATION
+title      "Albanian language locale for Macedonia"
+source     "Albanian Language Team"
+address    "465 4th St. 2nd Floor, Palisades Park, NJ 07650, U.S.A."
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Albanian"
+territory  "Macedonia"
+revision   "0.01"
+date       "2010-04-06"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "sq_AL"
+END LC_CTYPE
+
+LC_COLLATE
+copy "sq_AL"
+END LC_COLLATE
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+int_curr_symbol           "MKD "
+currency_symbol           "den"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+copy "sq_AL"
+END LC_NUMERIC
+
+
+LC_TIME
+copy "sq_AL"
+END LC_TIME
+
+
+LC_MESSAGES
+copy "sq_AL"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "mk_MK"
+END LC_PAPER
+
+
+LC_NAME
+copy "sq_AL"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Maqedoni"
+country_post  "MK"
+country_ab2 "MK"
+country_ab3 "MKD"
+country_car "MK"
+country_num 807
+country_isbn "9989"
+lang_name    "shqip"
+lang_ab      "sq"
+lang_term    "sqi"
+lang_lib    "alb"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+copy "mk_MK"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "mk_MK"
+END LC_MEASUREMENT

@@ -192,7 +192,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
          "IMPLICIT_DEF should have been handled as a special case elsewhere!");
 
   unsigned NumResults = CountResults(Node);
-  bool HasVRegVariadicDefs = !MF->getTarget().usesPhysRegsForValues() &&
+  bool HasVRegVariadicDefs = MF->getTarget().usesVRegsForVariadicDefs() &&
                              II.isVariadic() && II.variadicOpsAreDefs();
   unsigned NumVRegs = HasVRegVariadicDefs ? NumResults : II.getNumDefs();
   if (Node->getMachineOpcode() == TargetOpcode::STATEPOINT)
@@ -1046,7 +1046,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   unsigned NumImpUses = 0;
   unsigned NodeOperands =
     countOperands(Node, II.getNumOperands() - NumDefs, NumImpUses);
-  bool HasVRegVariadicDefs = !MF->getTarget().usesPhysRegsForValues() &&
+  bool HasVRegVariadicDefs = MF->getTarget().usesVRegsForVariadicDefs() &&
                              II.isVariadic() && II.variadicOpsAreDefs();
   bool HasPhysRegOuts = NumResults > NumDefs && !II.implicit_defs().empty() &&
                         !HasVRegVariadicDefs;

@@ -1,0 +1,9 @@
+[submodule "glibc"]
+	path = glibc
+	url = git@github.com:nextsilicon/glibc.git
+[submodule "flang-classic"]
+	path = flang-classic
+	url = git@github.com:nextsilicon/flang.git
+[submodule "musl"]
+	path = musl
+	url = git@github.com:nextsilicon/musl.git

@@ -1,0 +1,18 @@
+#include <sysdep.h>
+#include <tls.h>
+#include <kernel-features.h>
+
+RESULT			offsetof (struct pthread, result)
+TID			offsetof (struct pthread, tid)
+CANCELHANDLING		offsetof (struct pthread, cancelhandling)
+CLEANUP_JMP_BUF		offsetof (struct pthread, cleanup_jmp_buf)
+CLEANUP			offsetof (struct pthread, cleanup)
+CLEANUP_PREV		offsetof (struct _pthread_cleanup_buffer, __prev)
+MUTEX_FUTEX		offsetof (pthread_mutex_t, __data.__lock)
+MULTIPLE_THREADS_OFFSET	offsetof (tcbhead_t, multiple_threads)
+POINTER_GUARD		offsetof (tcbhead_t, pointer_guard)
+FEATURE_1_OFFSET	offsetof (tcbhead_t, feature_1)
+SSP_BASE_OFFSET		offsetof (tcbhead_t, ssp_base)
+
+-- Not strictly offsets, but these values are also used in the TCB.
+TCB_CANCELED_BITMASK	 CANCELED_BITMASK

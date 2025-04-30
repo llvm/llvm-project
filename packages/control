@@ -1,0 +1,10 @@
+Package: {{PKG_NAME}}
+Version: {{VERSION}}
+Architecture: amd64
+Depends: libatomic1, lld, libmpfr6, libgmp10
+Description: NextSilicon's LLVM
+ Branch: {{BRANCH}}
+ GIT_SHA: {{GIT_SHA}}
+Homepage: www.nextsilicon.com
+Maintainer: NextSilicon Support <support@nextsilicon.com>
+

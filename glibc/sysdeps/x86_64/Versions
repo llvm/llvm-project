@@ -1,0 +1,15 @@
+libc {
+  GLIBC_2.14 {
+    memcpy;
+  }
+  GLIBC_2.13 {
+    __fentry__;
+  }
+}
+libm {
+  GLIBC_2.1 {
+    # A generic bug got this omitted from other configurations' version
+    # sets, but we always had it.
+    exp2l;
+  }
+}

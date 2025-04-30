@@ -1,0 +1,34 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+#ifdef POSIX
+# define uid_t __uid_t
+# define gid_t __gid_t
+#endif
+
+type {struct passwd}
+element {struct passwd} {char*} pw_name
+element {struct passwd} uid_t pw_uid
+element {struct passwd} gid_t pw_gid
+element {struct passwd} {char*} pw_dir
+element {struct passwd} {char*} pw_shell
+
+# ifndef POSIX
+type uid_t
+type gid_t
+#  if defined XOPEN2K8 || defined POSIX2008
+type size_t
+#  endif
+# endif
+
+function {struct passwd*} getpwnam (const char*)
+function {struct passwd*} getpwuid (uid_t)
+function int getpwnam_r (const char*, struct passwd*, char*, size_t, struct passwd**)
+function int getpwuid_r (uid_t, struct passwd*, char*, size_t, struct passwd**)
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function void endpwent (void)
+function {struct passwd*} getpwent (void)
+function void setpwent (void)
+# endif
+
+allow pw_*
+allow *_t
+#endif

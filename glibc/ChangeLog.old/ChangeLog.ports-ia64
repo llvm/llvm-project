@@ -1,0 +1,1399 @@
+This file describes changes to the machine while it was in the ports
+add-on directory.  This port is no longer part of an add-on and so
+future changes to it should be listed in the top-level ChangeLog file,
+not here.
+
+
+
+2014-02-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64: Move directory to ../sysdeps/ia64.
+	* sysdeps/unix/sysv/linux/ia64: Move directory to
+	../sysdeps/unix/sysv/linux/ia64.
+
+2014-01-29  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/ia64/setjmp.S: Remove spaces before
+	tabs.
+
+2014-01-06  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/libm-test-ulps: Update after truncating.
+
+2014-01-06  Mike Frysinger  <vapier@gentoo.org>
+
+	[BZ #16401]
+	* sysdeps/ia64/fpu/libm-test-ulps: Delete large pow entries.
+
+2014-01-06  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/libm-test-ulps: Update.
+
+2014-01-06  Mike Frysinger  <vapier@gentoo.org>
+
+	[BZ #762]
+	* sysdeps/unix/sysv/linux/ia64/bits/sigcontext.h (ia64_fpreg):
+	Rename to ...
+	(__ia64_fpreg): ... this.
+	(sigcontext): Use __ia64_fpreg.
+	* sysdeps/unix/sysv/linux/ia64/sys/procfs.h (elf_fpreg_t): Use
+	__ia64_fpreg.
+	* sysdeps/unix/sysv/linux/ia64/sys/ptrace.h (pt_all_user_regs):
+	Rename to ...
+	(__pt_all_user_regs): ... this.  Use __ia64_fpreg.
+
+2014-01-06  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/sys/ptrace.h (ptrace_peeksiginfo_args):
+	Rename to ...
+	(__ptrace_peeksiginfo_args): ... this.
+
+2014-01-04  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/dl-tls.h (GET_ADDR_ARGS): Add "tls_ia64_" prefix to vars.
+	(GET_ADDR_PARAM): Likewise.
+	(GET_ADDR_MODULE): Likewise.
+	(GET_ADDR_OFFSET): Likewise.
+
+2013-12-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/Makefile (gen-as-const-headers): Add
+	sigaltstack-offsets.sym.
+	* sysdeps/unix/sysv/linux/ia64/____longjmp_chk.S: Include new
+	sigaltstack-offsets.h header.
+	(STACK_SPACE): Define.
+	(CHECK_RSP): Rewrite to support sigaltstack.
+	* sysdeps/unix/sysv/linux/ia64/__longjmp.S: Move CHECK_RSP to top.
+	* sysdeps/unix/sysv/linux/ia64/sigaltstack-offsets.sym: New file.
+
+2013-12-30  Mike Frysinger  <vapier@gentoo.org>
+
+	[BZ #16379]
+	* sysdeps/unix/sysv/linux/ia64/__longjmp.S: Comment out loading of
+	fpsr.  Update offsets accordingly.
+	* sysdeps/unix/sysv/linux/ia64/nptl/__ia64_longjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/setjmp.S: Comment out saving of
+	fpsr.  Update offsets accordingly.
+
+2013-12-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/setjmp.S (setjmp): Call __sigsetjmp
+	via HIDDEN_JUMPTARGET.
+	(_setjmp): Likewise.
+	(__sigsetjmp): Delete strong_alias.  Call libc_hidden_def and
+	rtld_hidden_def.
+
+2013-12-29  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/syscall.S: Add a comment.
+
+2013-12-25  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/lowlevellock.h
+	(FUTEX_WAIT_REQUEUE_PI): Define.
+	(FUTEX_CMP_REQUEUE_PI): Likewise.
+	(lll_futex_wait_requeue_pi): Likewise.
+	(lll_futex_timed_wait_requeue_pi): Likewise.
+	(lll_futex_cmp_requeue_pi): Likewise.
+
+2013-12-25  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/lowlevellock.h
+	(lll_futex_timed_wait_bitset): Define.
+
+2013-12-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/ioperm.c: Delete code behind #if 0.
+
+2013-12-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/sotruss-lib.c: New file.
+
+2013-12-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/bits/link.h: Fix whitespace.
+
+2013-11-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/ia64/fpu/fegetround.c (fegetround): Use libm_hidden_def.
+
+2013-11-26  Ondřej Bílka  <neleai@seznam.cz>
+	* sysdeps/unix/sysv/linux/ia64/bits/ipc.h: Use __glibc_reserved instead __unused.
+	* sysdeps/unix/sysv/linux/ia64/bits/msq.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sem.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/shm.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/stat.h: Likewise.
+
+2013-11-21  Guy Martin  <gmsoft@tuxicoman.be>
+
+	* sysdeps/ia64/dl-lookupcfg.h: Remove obsolete
+	DL_DT_INIT_ADDRESS() and DL_DT_FINI_ADDRESS() macro and implement
+	DL_CALL_DT_INIT() as well as DL_CALL_DT_FINI().
+	Define DL_DT_FUNCTION_ADDRESS().
+	* sysdeps/ia64/dl-machine.h: Update ELF_MACHINE_START_ADDRESS()
+	to use DL_DT_FUNCTION_ADDRESS().
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/configure.in: Moved to ...
+	* sysdeps/ia64/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/ia64/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/ia64/configure.ac: ... here.
+	* sysdeps/ia64/configure: Regenerated.
+	* sysdeps/unix/sysv/linux/ia64/configure: Likewise.
+
+2013-10-04  Alan Modra  <amodra@gmail.com>
+
+	* sysdeps/ia64/fpu/printf_fphex.c: Adjust for fpnum change.
+
+2013-09-22  Carlos O'Donell  <carlos@redhat.com>
+
+	[BZ #15754]
+	* sysdeps/ia64/stackguard-macros.h: Define POINTER_CHK_GUARD.
+
+2013-08-30   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/ia64/fpu/libm_reduce.S: Fix typos.
+	* sysdeps/ia64/fpu/s_erfcf.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfcl.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfc.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/__sigstack_longjmp.c: Likewise.
+
+2013-08-29   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/ia64/fpu/e_acoshl.S: Fix typos.
+	* sysdeps/ia64/fpu/e_logf.S: Likewise.
+	* sysdeps/ia64/fpu/e_log.S: Likewise.
+	* sysdeps/ia64/fpu/libm_lgammaf.S: Likewise.
+	* sysdeps/ia64/fpu/libm_lgammal.S: Likewise.
+	* sysdeps/ia64/fpu/s_log1p.S: Likewise.
+	* sysdeps/ia64/fpu/w_tgammal.S: Likewise.
+
+2013-08-21   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/ia64/fpu/e_atanhl.S: Fix typos.
+	* sysdeps/ia64/fpu/e_log2l.S: Likewise.
+	* sysdeps/ia64/fpu/e_logl.S: Likewise.
+	* sysdeps/ia64/fpu/fraiseexcpt.c: Likewise.
+	* sysdeps/ia64/fpu/libm_lgammal.S: Likewise.
+	* sysdeps/ia64/fpu/s_log1pl.S: Likewise.
+
+2013-07-04  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/ia64/sys/ptrace.h (PTRACE_LISTEN):
+	Add define.
+	(PTRACE_PEEKSIGINFO): Add new value from Linux 3.10.
+	(ptrace_peeksiginfo_args): Add.
+	(__ptrace_peeksiginfo_flags): Add.
+
+2013-06-27  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/ia64/dl-static.c: Do not include
+	<bits/libc-lock.h>.
+	(_dl_static_lock): Remove variable.
+	(_dl_static_init): Remove _dl_static_lock locking.
+
+2013-06-15  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/libpthread.abilist: Update.
+
+2013-06-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/ia64/getpagesize.c (__getpagesize): Use
+	(void) in function definition.
+
+2013-06-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/ia64/bits/byteswap-16.h [__GNUC__ && __GNUC__ >= 2]
+	(__bswap_16): Do not use "register".
+	* sysdeps/ia64/bits/byteswap.h [__GNUC__ && __GNUC__ >= 2]
+	(__bswap_32): Likewise.
+	[__GNUC__ && __GNUC__ >= 2] (__bswap_64): Likewise.
+
+2013-05-22  Edjunior Barbosa Machado  <emachado@linux.vnet.ibm.com>
+
+	* sysdeps/unix/sysv/linux/ia64/bits/siginfo.h (siginfo_t): Add
+	si_addr_lsb to _sifields.sigfault.
+	(si_addr_lsb): Define new macro.
+	(BUS_MCEERR_AR, BUS_MCEERR_AO): Define new values.
+
+2013-05-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/ia64/fpu/libm-test-ulps: Update test names.
+
+2013-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/ia64/fpu/libm-test-ulps: Update names of sincos tests.
+
+2013-03-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/sysdep.h (INTERNAL_SYSCALL_DECL): Add
+	__attribute__ ((unused)) to err decl.
+	(INTERNAL_SYSCALL_ERROR_P): Add (void)val dummy reference.
+
+2013-03-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/libm_error.c (STATIC): Delete redundant definition.
+	(_DECL_NUM, DECL_FLOAT, DECL_DOUBLE, DECL_LONG_DOUBLE): New defines.
+	(float_inf): Change definition to use DECL_FLOAT.
+	(float_huge, float_zero, float_neg_inf, float_neg_huge,
+	float_neg_zero): Likewise.
+	(double_inf): Change definition to use DECL_DOUBLE.
+	(double_huge, double_zero, double_neg_inf, double_neg_huge,
+	double_neg_zero): Likewise.
+	(long_double_inf): Change definition to use DECL_LONG_DOUBLE.
+	(long_double_huge, long_double_zero, long_double_neg_inf,
+	long_double_neg_huge, long_double_neg_zero): Likewise.
+	(RETVAL_HUGE_VALL): Change from casting a pointer to using the num
+	field of the union.
+	(RETVAL_NEG_HUGE_VALL, RETVAL_HUGEL, RETVAL_NEG_HUGEL,
+	RETVAL_HUGE_VALL, RETVAL_NEG_HUGE_VALL, RETVAL_HUGEL,
+	RETVAL_NEG_HUGEL, RETVAL_HUGE_VALD, RETVAL_NEG_HUGE_VALD,
+	RETVAL_HUGED, RETVAL_NEG_HUGED, RETVAL_HUGE_VALF,
+	RETVAL_NEG_HUGE_VALF, RETVAL_HUGEF, RETVAL_NEG_HUGEF,
+	ZEROL_VALUE, ZEROD_VALUE, ZEROF_VALUE, RETVAL_ZEROL,
+	RETVAL_ZEROD, RETVAL_ZEROF, RETVAL_NEG_ZEROL, RETVAL_NEG_ZEROD,
+	RETVAL_NEG_ZEROF): Likewise.
+
+2013-03-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/dl-fptr.h (ELF_PTR_TO_FDESC): New definition.
+	* sysdeps/ia64/dl-machine.h (elf_machine_runtime_setup): Change
+	struct fdesc * casts to use new ELF_PTR_TO_FDESC helper.
+	* sysdeps/ia64/entry.h: Include link.h and dl-fptr.h.
+	(ENTRY_POINT): Change cast to use new ELF_PTR_TO_FDESC helper.
+	* sysdeps/unix/sysv/linux/ia64/makecontext.c: Include link.h and
+	dl-fptr.h.
+	(struct fdesc): Remove structure, now redundant.
+	(makecontext): Change casts to use new ELF_PTR_TO_FDESC helper.
+
+2013-03-11  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/ia64/bits/mman.h: Remove all defines
+	provided by bits/mman-linux.h and include <bits/mman-linux.h>.
+
+2013-03-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/makecontext.c (__makecontext): Change
+	type of rbs to unsigned.  Change stack_start cast to unsigned.
+
+2013-03-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/dl-sysdep.h:
+	Change multiple inclusion guard to _LINUX_IA64_DL_SYSDEP_H.
+	Use #include_next.
+	(RTLD_PRIVATE_ERRNO): Remove definition, now redundant.
+	(NEED_DL_SYSINFO, _dl_discover_osversion,
+	HAVE_DL_DISCOVER_OSVERSION): Likewise.
+
+2013-03-06  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/ia64/bits/msq.h (MSG_COPY): Define.
+	(MSG_EXCEPT): Make conditional on __USE_GNU.
+
+2013-02-18  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/libc.abilist: Add
+	__cxa_thread_atexit_impl.
+
+2013-02-08  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/ia64/sigaction.c: Do not include
+	<bp-checks.h>.
+	(__libc_sigaction): Do not use CHECK_1_NULL_OK.
+
+2013-02-04  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/ia64/memchr.S [!__BOUNDED_POINTERS__] (__ubp_memchr):
+	Remove alias.
+	* sysdeps/unix/sysv/linux/ia64/umount.c: Do not include
+	<bp-checks.h>.
+	(umount): Do not use CHECK_STRING.
+
+2013-01-31  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/unix/sysv/linux/ia64/sigpending.c: Don't include
+	<bp-checks.h>.
+	(sigpending): Don't use CHECK_SIGSET.
+	* sysdeps/unix/sysv/linux/ia64/sigprocmask.c: Don't include
+	<bp-checks.h>.
+	(__sigprocmask): Don't use CHECK_SIGSET and CHECK_SIGSET_NULL_OK.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2012-11-29  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/clock_getcpuclockid.c: Delete.
+
+2012-11-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/ia64/fpu/fclrexcpt.c (feclearexcept): Add
+	libm_hidden_def.
+
+	[BZ #3439]
+	* sysdeps/ia64/bits/fenv.h (FE_INEXACT): Define macro to integer
+	constant usable in #if and use that to give value to enum
+	constant.
+	(FE_UNDERFLOW): Likewise.
+	(FE_OVERFLOW): Likewise.
+	(FE_DIVBYZERO): Likewise.
+	(FE_UNNORMAL): Likewise.
+	(FE_INVALID): Likewise.
+	(FE_ALL_EXCEPT): Likewise.
+	(FE_TOWARDZERO): Likewise.
+	(FE_UPWARD): Likewise.
+	(FE_DOWNWARD): Likewise.
+	(FE_TONEAREST): Likewise.
+
+2012-10-30  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #14047]
+	* sysdeps/ia64/tininess.h: New file.
+
+2012-10-25  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/ia64/bits/fcntl.h: Remove all
+	definitions and declarations that are provided by
+	<bits/fcntl-linux.h> and include <bits/fcntl-linux.h>.
+
+2012-10-19  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/libc.abilist
+	(GLIBC_2.17): Add clock_* symbols.
+
+	* sysdeps/unix/sysv/linux/ia64/get_clockfreq.c (__get_clockfreq):
+	Use __open, __read, __close rather than their public counterparts.
+
+2012-10-09  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/ia64/configure: Regenerated.
+
+2012-10-02  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/lowlevellock.h: Fix clone
+	flag name in comment to CLONE_CHILD_CLEARTID.
+
+2012-09-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/fegetround.c (fegetround): Move contents
+	of function to ...
+	* sysdeps/ia64/fpu/get-rounding-mode.h: ... here.
+
+2012-09-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/Makeconfig: New file.
+
+2012-08-16  Carlos O'Donell  <carlos_odonell@mentor.com>
+
+	* sysdeps/ia64/ldsodefs.h (ARCH_PLTENTER_MEMBERS)
+	<ia64_gnu_pltenter>: struct La_ia64_regs is not constant.
+
+2012-08-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/configure.in: Remove assembler-with-cpp debug check.
+	* sysdeps/ia64/configure: Regenerated.
+
+2012-08-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/ia64/kernel-features.h
+	(__ASSUME_CLONE_THREAD_FLAGS): Remove.
+	* sysdeps/unix/sysv/linux/ia64/system.c (FORK): Define
+	unconditionally.
+
+2012-08-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/configure.in: Remove TLS check.
+	* sysdeps/ia64/configure: Regenerated.
+
+2012-08-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/libm-symbols.h (ASM_TYPE_DIRECTIVE): Remove.
+	(LOCAL_OBJECT_START): Do not use ASM_TYPE_DIRECTIVE.
+	(WEAK_LIBM_END): Likewise.
+	(GLOBAL_IEEE754_END): Likewise.
+	* sysdeps/ia64/fpu/libm_tan.S: Likewise.
+
+2012-08-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/dl-sysdep.h
+	(_dl_discover_osversion): Do not condition on
+	__LINUX_KERNEL_VERSION < 0x020617.
+	(HAVE_DL_DISCOVER_OSVERSION): Likewise.
+
+2012-08-03  Mike Frysinger  <vapier@gentoo.org>
+
+	[BZ #12194]
+	* sysdeps/ia64/bits/byteswap-16.h (__bswap_16): Avoid -Wconversion
+	warning.
+	* sysdeps/ia64/bits/byteswap.h (__bswap_constant_16): Likewise.
+
+2012-08-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/ia64/configure.in (arch_minimum_kernel):
+	Remove.
+	* sysdeps/unix/sysv/linux/ia64/configure: Regenerated.
+
+2012-07-26  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/ia64/sys/ptrace.h (__ptrace_eventcodes):
+	Add new value PTRACE_EVENT_SECCOMP from Linux 3.5.
+	(__ptrace_setoptions): Add new value PTRACE_O_TRACESECCOMP, adjust
+	PTRACE_O_MASK.
+
+2012-07-25  Florian Weimer  <fweimer@redhat.com>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/libc.abilist: Add
+	secure_getenv.
+
+2012-07-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* data/localplt-ia64-linux-gnu.data: Move to ...
+	* sysdeps/unix/sysv/linux/ia64/nptl/localplt.data: ... here.
+
+2012-07-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/c++-types.data: Move from
+	../scripts/data/c++-types-ia64-linux-gnu.data.
+
+2012-05-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/syscalls.list: Remove
+	__connect_internal alias.
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/pthread_once.c: Replace
+	_internal alias by hidden_def.
+
+2012-05-25  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/libc.abilist: Update.
+
+2012-05-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/bits/mman.h (MADV_DONTDUMP): Define.
+	(MADV_DODUMP): Likewise.
+
+2012-05-23  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/bits/siginfo.h: Add forward
+	declaration of pthread_attr_t and use it in sigevent.
+
+2012-05-15  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/elf/stackguard-macros.h: Delete unused file.
+
+2012-05-14  Mike Frysinger  <vapier@gentoo.org>
+
+	[BZ #14109]
+	* sysdeps/unix/sysv/linux/ia64/bits/setjmp.h (__jmp_buf): Use
+	__aligned__ in attribute.
+	* sysdeps/unix/sysv/linux/ia64/bits/sigcontext.h (ia64_fpreg):
+	Likewise.
+
+2012-05-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/libm-symbols.h: Delete __ELF__ checks.
+
+2012-05-07  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/sysdep.h: Include errno.h.
+
+2012-05-06  Mike Frysinger  <vapier@gentoo.org>
+
+	* data/localplt-ia64-linux-gnu.data: New file.
+
+2012-05-06  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/ld.abilist: Update symbol list.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libc.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libdl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libm.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libpthread.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libresolv.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/librt.abilist: Likewise.
+
+2012-05-06  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/ld.abilist: Generated from
+	files found in glibc-2.15.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libBrokenLocale.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libanl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libc.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libcrypt.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libdl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libm.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libnsl.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libpthread.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libresolv.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/librt.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libthread_db.abilist: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/libutil.abilist: Likewise.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/s_ilogbl.S: Move to ...
+	* sysdeps/ia64/fpu/e_ilogbl.S: ... here.
+	(__ieee754_ilogbl): Rename from ilogbl.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/kernel-features.h (__ASSUME_ACCEPT4):
+	Define.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/dl-tls.h (GET_ADDR_PARAM): Define.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/bits/byteswap.h (__bswap_16): Removed.
+	Include <bits/byteswap-16.h> to get __bswap_16.
+	* sysdeps/ia64/bits/byteswap-16.h: New file.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/sys/ucontext.h: Delete __cplusplus
+	define check.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/bits/pthreadtypes.h
+	(pthread_attr_t): Change union tag to pthread_attr_t.  Only define
+	typedef if not already defined.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/bits/mman.h (MAP_STACK): Define.
+	(MAP_HUGETLB): Likewise.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/s_scalbn.c (__scalbn): Rename from scalbn.
+	Add weak alias from scalbn to __scalbn.
+	* sysdeps/ia64/fpu/s_scalbnf.c (__scalbnf): Rename from scalbnf.
+	Add weak alias from scalbnf to __scalbnf.
+	* sysdeps/ia64/fpu/s_scalbnl.c (__scalbnl): Rename from scalbnl.
+	Add weak alias from scalbnl to __scalbnl.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/s_matherrf.c: Delete __STDC__.
+	* sysdeps/ia64/fpu/s_matherrl.c,
+	sysdeps/unix/sysv/linux/ia64/sysdep.h: Likewise.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/e_rem_pio2l.c: New file.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/bits/fenv.h: Change __const to const.
+	* sysdeps/unix/sysv/linux/ia64/swapcontext.c: Likewise.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/s_matherrf.c: Change "math.h" and "math_private.h"
+	to <math.h> and <math_private.h>.
+	* sysdeps/ia64/fpu/s_matherrl.c: Likewise.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/hp-timing.h: Change stdio-common/_itoa.h to _itoa.h.
+	* sysdeps/unix/sysv/linux/ia64/register-dump.h: Likewise.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/crti.S: New file.
+	* sysdeps/ia64/crtn.S: Likewise.
+	* sysdeps/ia64/elf/initfini.c: Delete.
+	* sysdeps/unix/sysv/linux/ia64/nptl/pt-initfini.c: Likewise.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/elf/configure.in: Merge contents to ...
+	* sysdeps/ia64/configure.in: ... here.
+	* sysdeps/ia64/elf/configure: Delete.
+	* sysdeps/ia64/configure: Regenerate.
+	* sysdeps/ia64/elf/entry.h: Move to ...
+	* sysdeps/ia64/entry.h: ... here.
+	* sysdeps/ia64/elf/start.S: Move to ...
+	* sysdeps/ia64/start.S: ... here.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/elf/stackguard-macros.h: New stub include file.
+	* sysdeps/ia64/ldsodefs.h: Move ia64 logic from
+	sysdeps/generic/ldsodefs.h.
+	* sysdeps/ia64/nptl/shlib-versions: Move ia64 logic from
+	nptl/shlib-versions.
+	* sysdeps/ia64/preconfigure: Move ia64 logic from configure.in.
+	* sysdeps/ia64/shlib-versions: Move ia64 logic from shlib-versions.
+	* sysdeps/ia64/stackguard-macros.h: Move ia64 logic from
+	elf/stackguard-macros.h.
+	* sysdeps/ia64/tls-macros.h: Move ia64 logic from elf/tls-macros.h.
+	* sysdeps/ia64/tst-audit.h: Move ia64 logic from elf/tst-auditmod1.c.
+	* sysdeps/unix/sysv/linux/ia64/configure.in: Move ia64 logic from
+	sysdeps/unix/sysv/linux/configure.
+	* sysdeps/unix/sysv/linux/ia64/configure: Generate.
+	* sysdeps/unix/sysv/linux/ia64/kernel-features.h: Move ia64 logic
+	from sysdeps/unix/sysv/linux/kernel-features.h.
+
+2012-04-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/backtrace.c: Replace all contents with a single
+	include of sysdeps/x86_64/backtrace.c.
+	* sysdeps/unix/sysv/linux/ia64/nptl/fork.c: Change include path
+	prefix from ../ to sysdeps/unix/sysv/linux/, and "..." to <...>.
+	* sysdeps/unix/sysv/linux/ia64/nptl/timer_create.c,
+	sysdeps/unix/sysv/linux/ia64/nptl/timer_delete.c,
+	sysdeps/unix/sysv/linux/ia64/nptl/timer_getoverr.c,
+	sysdeps/unix/sysv/linux/ia64/nptl/timer_gettime.c,
+	sysdeps/unix/sysv/linux/ia64/nptl/timer_settime.c,
+	sysdeps/unix/sysv/linux/ia64/sysconf.c,
+	sysdeps/unix/sysv/linux/ia64/system.c: Likewise.
+
+2012-04-25  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/ia64/nptl/bits/local_lim.h: Replace
+	boiler license text with standard GNU Lesser General Public.
+	* sysdeps/unix/sysv/linux/ia64/nptl/unwind-forcedunwind.c: Likewise.
+
+2012-04-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/_mcount.S: Replace FSF snail mail address with URL.
+	* sysdeps/ia64/backtrace.c: Likewise.
+	* sysdeps/ia64/bits/atomic.h: Likewise.
+	* sysdeps/ia64/bits/byteswap.h: Likewise.
+	* sysdeps/ia64/bits/fenv.h: Likewise.
+	* sysdeps/ia64/bits/huge_vall.h: Likewise.
+	* sysdeps/ia64/bits/link.h: Likewise.
+	* sysdeps/ia64/bits/mathdef.h: Likewise.
+	* sysdeps/ia64/bits/xtitypes.h: Likewise.
+	* sysdeps/ia64/bzero.S: Likewise.
+	* sysdeps/ia64/dl-dtprocnum.h: Likewise.
+	* sysdeps/ia64/dl-fptr.h: Likewise.
+	* sysdeps/ia64/dl-lookupcfg.h: Likewise.
+	* sysdeps/ia64/dl-machine.h: Likewise.
+	* sysdeps/ia64/dl-sysdep.h: Likewise.
+	* sysdeps/ia64/dl-tls.h: Likewise.
+	* sysdeps/ia64/dl-trampoline.S: Likewise.
+	* sysdeps/ia64/elf/initfini.c: Likewise.
+	* sysdeps/ia64/elf/start.S: Likewise.
+	* sysdeps/ia64/fpu/bits/math-finite.h: Likewise.
+	* sysdeps/ia64/fpu/bits/mathinline.h: Likewise.
+	* sysdeps/ia64/fpu/fclrexcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fedisblxcpt.c: Likewise.
+	* sysdeps/ia64/fpu/feenablxcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fegetenv.c: Likewise.
+	* sysdeps/ia64/fpu/fegetexcept.c: Likewise.
+	* sysdeps/ia64/fpu/fegetround.c: Likewise.
+	* sysdeps/ia64/fpu/feholdexcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fesetenv.c: Likewise.
+	* sysdeps/ia64/fpu/fesetround.c: Likewise.
+	* sysdeps/ia64/fpu/feupdateenv.c: Likewise.
+	* sysdeps/ia64/fpu/fgetexcptflg.c: Likewise.
+	* sysdeps/ia64/fpu/fraiseexcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fsetexcptflg.c: Likewise.
+	* sysdeps/ia64/fpu/ftestexcept.c: Likewise.
+	* sysdeps/ia64/fpu/printf_fphex.c: Likewise.
+	* sysdeps/ia64/fpu/s_copysign.S: Likewise.
+	* sysdeps/ia64/fpu/s_finite.S: Likewise.
+	* sysdeps/ia64/fpu/s_fpclassify.S: Likewise.
+	* sysdeps/ia64/fpu/s_isinf.S: Likewise.
+	* sysdeps/ia64/fpu/s_isnan.S: Likewise.
+	* sysdeps/ia64/fpu/s_signbit.S: Likewise.
+	* sysdeps/ia64/gccframe.h: Likewise.
+	* sysdeps/ia64/hp-timing.c: Likewise.
+	* sysdeps/ia64/hp-timing.h: Likewise.
+	* sysdeps/ia64/htonl.S: Likewise.
+	* sysdeps/ia64/htons.S: Likewise.
+	* sysdeps/ia64/ieee754.h: Likewise.
+	* sysdeps/ia64/jmpbuf-unwind.h: Likewise.
+	* sysdeps/ia64/libc-tls.c: Likewise.
+	* sysdeps/ia64/machine-gmon.h: Likewise.
+	* sysdeps/ia64/memccpy.S: Likewise.
+	* sysdeps/ia64/memchr.S: Likewise.
+	* sysdeps/ia64/memcmp.S: Likewise.
+	* sysdeps/ia64/memcpy.S: Likewise.
+	* sysdeps/ia64/memmove.S: Likewise.
+	* sysdeps/ia64/memset.S: Likewise.
+	* sysdeps/ia64/memusage.h: Likewise.
+	* sysdeps/ia64/nptl/Makefile: Likewise.
+	* sysdeps/ia64/nptl/pthread_spin_lock.c: Likewise.
+	* sysdeps/ia64/nptl/pthread_spin_trylock.c: Likewise.
+	* sysdeps/ia64/nptl/pthread_spin_unlock.c: Likewise.
+	* sysdeps/ia64/nptl/pthreaddef.h: Likewise.
+	* sysdeps/ia64/nptl/tls.h: Likewise.
+	* sysdeps/ia64/sched_cpucount.c: Likewise.
+	* sysdeps/ia64/softpipe.h: Likewise.
+	* sysdeps/ia64/stackinfo.h: Likewise.
+	* sysdeps/ia64/strcat.c: Likewise.
+	* sysdeps/ia64/strchr.S: Likewise.
+	* sysdeps/ia64/strcmp.S: Likewise.
+	* sysdeps/ia64/strcpy.S: Likewise.
+	* sysdeps/ia64/strlen.S: Likewise.
+	* sysdeps/ia64/strncmp.S: Likewise.
+	* sysdeps/ia64/strncpy.S: Likewise.
+	* sysdeps/ia64/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/____longjmp_chk.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/__longjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/__start_context.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/fcntl.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/ipc.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/mman.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/msq.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sem.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/setjmp.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/shm.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sigaction.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sigcontext.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/siginfo.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sigstack.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/stat.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/brk.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/clock_getcpuclockid.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/clone2.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/dl-cache.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/dl-static.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/fork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/get_clockfreq.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/getcontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/getpagesize.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/has_cpuclock.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ioperm.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/kernel_stat.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ldconfig.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ldsodefs.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/makecontext.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/__ia64_longjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/__sigstack_longjmp.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/bits/pthreadtypes.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/bits/semaphore.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/createthread.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/dl-sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/fork.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/lowlevellock.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/pt-vfork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/pthread_once.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/sysdep-cancel.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/unwind_longjmp.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/vfork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/pipe.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/profil-counter.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/readelflib.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/register-dump.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/setcontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/setjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigaction.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigcontextinfo.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigpending.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigprocmask.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/swapcontext.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/io.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/procfs.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/ptrace.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/rse.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/ucontext.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/user.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/syscall.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sysconf.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sysdep.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/system.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ucontext_i.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/umount.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/vfork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/wordexp.c: Likewise.
+
+2012-04-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/fpu/e_acosf.S: Trim trailing whitespace.
+	* sysdeps/ia64/fpu/e_acoshl.S: Likewise.
+	* sysdeps/ia64/fpu/e_acosl.S: Likewise.
+	* sysdeps/ia64/fpu/e_asinf.S: Likewise.
+	* sysdeps/ia64/fpu/e_asinl.S: Likewise.
+	* sysdeps/ia64/fpu/e_atan2f.S: Likewise.
+	* sysdeps/ia64/fpu/e_atanhl.S: Likewise.
+	* sysdeps/ia64/fpu/e_coshl.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp.S: Likewise.
+	* sysdeps/ia64/fpu/e_expf.S: Likewise.
+	* sysdeps/ia64/fpu/e_fmodl.S: Likewise.
+	* sysdeps/ia64/fpu/e_hypot.S: Likewise.
+	* sysdeps/ia64/fpu/e_hypotf.S: Likewise.
+	* sysdeps/ia64/fpu/e_hypotl.S: Likewise.
+	* sysdeps/ia64/fpu/e_log.S: Likewise.
+	* sysdeps/ia64/fpu/e_log2.S: Likewise.
+	* sysdeps/ia64/fpu/e_log2f.S: Likewise.
+	* sysdeps/ia64/fpu/e_log2l.S: Likewise.
+	* sysdeps/ia64/fpu/e_logl.S: Likewise.
+	* sysdeps/ia64/fpu/e_powf.S: Likewise.
+	* sysdeps/ia64/fpu/e_remainder.S: Likewise.
+	* sysdeps/ia64/fpu/e_remainderf.S: Likewise.
+	* sysdeps/ia64/fpu/e_remainderl.S: Likewise.
+	* sysdeps/ia64/fpu/e_scalb.S: Likewise.
+	* sysdeps/ia64/fpu/e_scalbf.S: Likewise.
+	* sysdeps/ia64/fpu/e_scalbl.S: Likewise.
+	* sysdeps/ia64/fpu/e_sinhl.S: Likewise.
+	* sysdeps/ia64/fpu/e_sqrt.S: Likewise.
+	* sysdeps/ia64/fpu/e_sqrtf.S: Likewise.
+	* sysdeps/ia64/fpu/e_sqrtl.S: Likewise.
+	* sysdeps/ia64/fpu/libm_cpu_defs.h: Likewise.
+	* sysdeps/ia64/fpu/libm_error_codes.h: Likewise.
+	* sysdeps/ia64/fpu/libm_frexp.S: Likewise.
+	* sysdeps/ia64/fpu/libm_frexpf.S: Likewise.
+	* sysdeps/ia64/fpu/libm_frexpl.S: Likewise.
+	* sysdeps/ia64/fpu/libm_scalblnf.S: Likewise.
+	* sysdeps/ia64/fpu/libm_tan.S: Likewise.
+	* sysdeps/ia64/fpu/s_asinhl.S: Likewise.
+	* sysdeps/ia64/fpu/s_atanf.S: Likewise.
+	* sysdeps/ia64/fpu/s_atanl.S: Likewise.
+	* sysdeps/ia64/fpu/s_cbrtl.S: Likewise.
+	* sysdeps/ia64/fpu/s_cos.S: Likewise.
+	* sysdeps/ia64/fpu/s_cosf.S: Likewise.
+	* sysdeps/ia64/fpu/s_erf.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfc.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfcf.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfcl.S: Likewise.
+	* sysdeps/ia64/fpu/s_erff.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfl.S: Likewise.
+	* sysdeps/ia64/fpu/s_expm1.S: Likewise.
+	* sysdeps/ia64/fpu/s_expm1f.S: Likewise.
+	* sysdeps/ia64/fpu/s_expm1l.S: Likewise.
+	* sysdeps/ia64/fpu/s_fabs.S: Likewise.
+	* sysdeps/ia64/fpu/s_fabsf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fabsl.S: Likewise.
+	* sysdeps/ia64/fpu/s_finite.S: Likewise.
+	* sysdeps/ia64/fpu/s_fma.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmaf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmal.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmax.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmaxf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmaxl.S: Likewise.
+	* sysdeps/ia64/fpu/s_fpclassify.S: Likewise.
+	* sysdeps/ia64/fpu/s_frexp.c: Likewise.
+	* sysdeps/ia64/fpu/s_frexpf.c: Likewise.
+	* sysdeps/ia64/fpu/s_frexpl.c: Likewise.
+	* sysdeps/ia64/fpu/s_ldexp.c: Likewise.
+	* sysdeps/ia64/fpu/s_ldexpf.c: Likewise.
+	* sysdeps/ia64/fpu/s_ldexpl.c: Likewise.
+	* sysdeps/ia64/fpu/s_log1pl.S: Likewise.
+	* sysdeps/ia64/fpu/s_modf.S: Likewise.
+	* sysdeps/ia64/fpu/s_modff.S: Likewise.
+	* sysdeps/ia64/fpu/s_modfl.S: Likewise.
+	* sysdeps/ia64/fpu/s_nextafter.S: Likewise.
+	* sysdeps/ia64/fpu/s_nextafterf.S: Likewise.
+	* sysdeps/ia64/fpu/s_nextafterl.S: Likewise.
+	* sysdeps/ia64/fpu/s_nexttoward.S: Likewise.
+	* sysdeps/ia64/fpu/s_nexttowardf.S: Likewise.
+	* sysdeps/ia64/fpu/s_nexttowardl.S: Likewise.
+	* sysdeps/ia64/fpu/s_round.S: Likewise.
+	* sysdeps/ia64/fpu/s_roundf.S: Likewise.
+	* sysdeps/ia64/fpu/s_roundl.S: Likewise.
+	* sysdeps/ia64/fpu/s_scalblnf.c: Likewise.
+	* sysdeps/ia64/fpu/s_scalbn.c: Likewise.
+	* sysdeps/ia64/fpu/s_scalbnf.c: Likewise.
+	* sysdeps/ia64/fpu/s_scalbnl.c: Likewise.
+	* sysdeps/ia64/fpu/s_signbit.S: Likewise.
+	* sysdeps/ia64/fpu/s_significand.S: Likewise.
+	* sysdeps/ia64/fpu/s_significandf.S: Likewise.
+	* sysdeps/ia64/fpu/s_significandl.S: Likewise.
+	* sysdeps/ia64/fpu/s_tan.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanf.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanh.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanhf.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanhl.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanl.S: Likewise.
+	* sysdeps/ia64/fpu/w_tgamma.S: Likewise.
+	* sysdeps/ia64/fpu/w_tgammaf.S: Likewise.
+	* sysdeps/ia64/fpu/w_tgammal.S: Likewise.
+	* sysdeps/ia64/softpipe.h: Likewise.
+	* sysdeps/ia64/strchr.S: Likewise.
+	* sysdeps/ia64/strlen.S: Likewise.
+	* sysdeps/ia64/strncmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/register-dump.h: Likewise.
+
+2012-04-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/ia64/Implies: Copied from the main tree.
+	* sysdeps/ia64/Makefile: Likewise.
+	* sysdeps/ia64/Versions: Likewise.
+	* sysdeps/ia64/_mcount.S: Likewise.
+	* sysdeps/ia64/abort-instr.h: Likewise.
+	* sysdeps/ia64/backtrace.c: Likewise.
+	* sysdeps/ia64/bcopy.S: Likewise.
+	* sysdeps/ia64/bits/atomic.h: Likewise.
+	* sysdeps/ia64/bits/byteswap.h: Likewise.
+	* sysdeps/ia64/bits/fenv.h: Likewise.
+	* sysdeps/ia64/bits/huge_vall.h: Likewise.
+	* sysdeps/ia64/bits/link.h: Likewise.
+	* sysdeps/ia64/bits/linkmap.h: Likewise.
+	* sysdeps/ia64/bits/mathdef.h: Likewise.
+	* sysdeps/ia64/bits/xtitypes.h: Likewise.
+	* sysdeps/ia64/bzero.S: Likewise.
+	* sysdeps/ia64/configure: Likewise.
+	* sysdeps/ia64/configure.in: Likewise.
+	* sysdeps/ia64/dl-dtprocnum.h: Likewise.
+	* sysdeps/ia64/dl-fptr.h: Likewise.
+	* sysdeps/ia64/dl-lookupcfg.h: Likewise.
+	* sysdeps/ia64/dl-machine.h: Likewise.
+	* sysdeps/ia64/dl-sysdep.h: Likewise.
+	* sysdeps/ia64/dl-tls.h: Likewise.
+	* sysdeps/ia64/dl-trampoline.S: Likewise.
+	* sysdeps/ia64/elf/configure: Likewise.
+	* sysdeps/ia64/elf/configure.in: Likewise.
+	* sysdeps/ia64/elf/entry.h: Likewise.
+	* sysdeps/ia64/elf/initfini.c: Likewise.
+	* sysdeps/ia64/elf/start.S: Likewise.
+	* sysdeps/ia64/fpu/Makefile: Likewise.
+	* sysdeps/ia64/fpu/README: Likewise.
+	* sysdeps/ia64/fpu/Versions: Likewise.
+	* sysdeps/ia64/fpu/bits/math-finite.h: Likewise.
+	* sysdeps/ia64/fpu/bits/mathinline.h: Likewise.
+	* sysdeps/ia64/fpu/branred.c: Likewise.
+	* sysdeps/ia64/fpu/doasin.c: Likewise.
+	* sysdeps/ia64/fpu/dosincos.c: Likewise.
+	* sysdeps/ia64/fpu/e_acos.S: Likewise.
+	* sysdeps/ia64/fpu/e_acosf.S: Likewise.
+	* sysdeps/ia64/fpu/e_acosh.S: Likewise.
+	* sysdeps/ia64/fpu/e_acoshf.S: Likewise.
+	* sysdeps/ia64/fpu/e_acoshl.S: Likewise.
+	* sysdeps/ia64/fpu/e_acosl.S: Likewise.
+	* sysdeps/ia64/fpu/e_asin.S: Likewise.
+	* sysdeps/ia64/fpu/e_asinf.S: Likewise.
+	* sysdeps/ia64/fpu/e_asinl.S: Likewise.
+	* sysdeps/ia64/fpu/e_atan2.S: Likewise.
+	* sysdeps/ia64/fpu/e_atan2f.S: Likewise.
+	* sysdeps/ia64/fpu/e_atan2l.c: Likewise.
+	* sysdeps/ia64/fpu/e_atanh.S: Likewise.
+	* sysdeps/ia64/fpu/e_atanhf.S: Likewise.
+	* sysdeps/ia64/fpu/e_atanhl.S: Likewise.
+	* sysdeps/ia64/fpu/e_cosh.S: Likewise.
+	* sysdeps/ia64/fpu/e_coshf.S: Likewise.
+	* sysdeps/ia64/fpu/e_coshl.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp10.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp10f.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp10l.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp2.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp2f.S: Likewise.
+	* sysdeps/ia64/fpu/e_exp2l.S: Likewise.
+	* sysdeps/ia64/fpu/e_expf.S: Likewise.
+	* sysdeps/ia64/fpu/e_expl.c: Likewise.
+	* sysdeps/ia64/fpu/e_fmod.S: Likewise.
+	* sysdeps/ia64/fpu/e_fmodf.S: Likewise.
+	* sysdeps/ia64/fpu/e_fmodl.S: Likewise.
+	* sysdeps/ia64/fpu/e_gamma_r.c: Likewise.
+	* sysdeps/ia64/fpu/e_gammaf_r.c: Likewise.
+	* sysdeps/ia64/fpu/e_gammal_r.c: Likewise.
+	* sysdeps/ia64/fpu/e_hypot.S: Likewise.
+	* sysdeps/ia64/fpu/e_hypotf.S: Likewise.
+	* sysdeps/ia64/fpu/e_hypotl.S: Likewise.
+	* sysdeps/ia64/fpu/e_lgamma_r.c: Likewise.
+	* sysdeps/ia64/fpu/e_lgammaf_r.c: Likewise.
+	* sysdeps/ia64/fpu/e_lgammal_r.c: Likewise.
+	* sysdeps/ia64/fpu/e_log.S: Likewise.
+	* sysdeps/ia64/fpu/e_log10.c: Likewise.
+	* sysdeps/ia64/fpu/e_log10f.c: Likewise.
+	* sysdeps/ia64/fpu/e_log10l.c: Likewise.
+	* sysdeps/ia64/fpu/e_log2.S: Likewise.
+	* sysdeps/ia64/fpu/e_log2f.S: Likewise.
+	* sysdeps/ia64/fpu/e_log2l.S: Likewise.
+	* sysdeps/ia64/fpu/e_logf.S: Likewise.
+	* sysdeps/ia64/fpu/e_logl.S: Likewise.
+	* sysdeps/ia64/fpu/e_pow.S: Likewise.
+	* sysdeps/ia64/fpu/e_powf.S: Likewise.
+	* sysdeps/ia64/fpu/e_powl.S: Likewise.
+	* sysdeps/ia64/fpu/e_rem_pio2.c: Likewise.
+	* sysdeps/ia64/fpu/e_rem_pio2f.c: Likewise.
+	* sysdeps/ia64/fpu/e_remainder.S: Likewise.
+	* sysdeps/ia64/fpu/e_remainderf.S: Likewise.
+	* sysdeps/ia64/fpu/e_remainderl.S: Likewise.
+	* sysdeps/ia64/fpu/e_scalb.S: Likewise.
+	* sysdeps/ia64/fpu/e_scalbf.S: Likewise.
+	* sysdeps/ia64/fpu/e_scalbl.S: Likewise.
+	* sysdeps/ia64/fpu/e_sinh.S: Likewise.
+	* sysdeps/ia64/fpu/e_sinhf.S: Likewise.
+	* sysdeps/ia64/fpu/e_sinhl.S: Likewise.
+	* sysdeps/ia64/fpu/e_sqrt.S: Likewise.
+	* sysdeps/ia64/fpu/e_sqrtf.S: Likewise.
+	* sysdeps/ia64/fpu/e_sqrtl.S: Likewise.
+	* sysdeps/ia64/fpu/fclrexcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fedisblxcpt.c: Likewise.
+	* sysdeps/ia64/fpu/feenablxcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fegetenv.c: Likewise.
+	* sysdeps/ia64/fpu/fegetexcept.c: Likewise.
+	* sysdeps/ia64/fpu/fegetround.c: Likewise.
+	* sysdeps/ia64/fpu/feholdexcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fesetenv.c: Likewise.
+	* sysdeps/ia64/fpu/fesetround.c: Likewise.
+	* sysdeps/ia64/fpu/feupdateenv.c: Likewise.
+	* sysdeps/ia64/fpu/fgetexcptflg.c: Likewise.
+	* sysdeps/ia64/fpu/fraiseexcpt.c: Likewise.
+	* sysdeps/ia64/fpu/fsetexcptflg.c: Likewise.
+	* sysdeps/ia64/fpu/ftestexcept.c: Likewise.
+	* sysdeps/ia64/fpu/gen_import_file_list: Likewise.
+	* sysdeps/ia64/fpu/halfulp.c: Likewise.
+	* sysdeps/ia64/fpu/import_check: Likewise.
+	* sysdeps/ia64/fpu/import_diffs: Likewise.
+	* sysdeps/ia64/fpu/import_file.awk: Likewise.
+	* sysdeps/ia64/fpu/import_intel_libm: Likewise.
+	* sysdeps/ia64/fpu/k_rem_pio2.c: Likewise.
+	* sysdeps/ia64/fpu/k_rem_pio2f.c: Likewise.
+	* sysdeps/ia64/fpu/k_rem_pio2l.c: Likewise.
+	* sysdeps/ia64/fpu/libc_libm_error.c: Likewise.
+	* sysdeps/ia64/fpu/libm-symbols.h: Likewise.
+	* sysdeps/ia64/fpu/libm-test-ulps: Likewise.
+	* sysdeps/ia64/fpu/libm_cpu_defs.h: Likewise.
+	* sysdeps/ia64/fpu/libm_error.c: Likewise.
+	* sysdeps/ia64/fpu/libm_error_codes.h: Likewise.
+	* sysdeps/ia64/fpu/libm_frexp.S: Likewise.
+	* sysdeps/ia64/fpu/libm_frexp4.S: Likewise.
+	* sysdeps/ia64/fpu/libm_frexp4f.S: Likewise.
+	* sysdeps/ia64/fpu/libm_frexp4l.S: Likewise.
+	* sysdeps/ia64/fpu/libm_frexpf.S: Likewise.
+	* sysdeps/ia64/fpu/libm_frexpl.S: Likewise.
+	* sysdeps/ia64/fpu/libm_lgamma.S: Likewise.
+	* sysdeps/ia64/fpu/libm_lgammaf.S: Likewise.
+	* sysdeps/ia64/fpu/libm_lgammal.S: Likewise.
+	* sysdeps/ia64/fpu/libm_reduce.S: Likewise.
+	* sysdeps/ia64/fpu/libm_scalblnf.S: Likewise.
+	* sysdeps/ia64/fpu/libm_sincos.S: Likewise.
+	* sysdeps/ia64/fpu/libm_sincos_large.S: Likewise.
+	* sysdeps/ia64/fpu/libm_sincosf.S: Likewise.
+	* sysdeps/ia64/fpu/libm_sincosl.S: Likewise.
+	* sysdeps/ia64/fpu/libm_support.h: Likewise.
+	* sysdeps/ia64/fpu/libm_tan.S: Likewise.
+	* sysdeps/ia64/fpu/math_ldbl.h: Likewise.
+	* sysdeps/ia64/fpu/mpa.c: Likewise.
+	* sysdeps/ia64/fpu/mpatan.c: Likewise.
+	* sysdeps/ia64/fpu/mpatan2.c: Likewise.
+	* sysdeps/ia64/fpu/mpexp.c: Likewise.
+	* sysdeps/ia64/fpu/mplog.c: Likewise.
+	* sysdeps/ia64/fpu/mpsqrt.c: Likewise.
+	* sysdeps/ia64/fpu/mptan.c: Likewise.
+	* sysdeps/ia64/fpu/printf_fphex.c: Likewise.
+	* sysdeps/ia64/fpu/s_asinh.S: Likewise.
+	* sysdeps/ia64/fpu/s_asinhf.S: Likewise.
+	* sysdeps/ia64/fpu/s_asinhl.S: Likewise.
+	* sysdeps/ia64/fpu/s_atan.S: Likewise.
+	* sysdeps/ia64/fpu/s_atanf.S: Likewise.
+	* sysdeps/ia64/fpu/s_atanl.S: Likewise.
+	* sysdeps/ia64/fpu/s_cbrt.S: Likewise.
+	* sysdeps/ia64/fpu/s_cbrtf.S: Likewise.
+	* sysdeps/ia64/fpu/s_cbrtl.S: Likewise.
+	* sysdeps/ia64/fpu/s_ceil.S: Likewise.
+	* sysdeps/ia64/fpu/s_ceilf.S: Likewise.
+	* sysdeps/ia64/fpu/s_ceill.S: Likewise.
+	* sysdeps/ia64/fpu/s_copysign.S: Likewise.
+	* sysdeps/ia64/fpu/s_copysignf.S: Likewise.
+	* sysdeps/ia64/fpu/s_copysignl.S: Likewise.
+	* sysdeps/ia64/fpu/s_cos.S: Likewise.
+	* sysdeps/ia64/fpu/s_cosf.S: Likewise.
+	* sysdeps/ia64/fpu/s_cosl.S: Likewise.
+	* sysdeps/ia64/fpu/s_erf.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfc.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfcf.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfcl.S: Likewise.
+	* sysdeps/ia64/fpu/s_erff.S: Likewise.
+	* sysdeps/ia64/fpu/s_erfl.S: Likewise.
+	* sysdeps/ia64/fpu/s_expm1.S: Likewise.
+	* sysdeps/ia64/fpu/s_expm1f.S: Likewise.
+	* sysdeps/ia64/fpu/s_expm1l.S: Likewise.
+	* sysdeps/ia64/fpu/s_fabs.S: Likewise.
+	* sysdeps/ia64/fpu/s_fabsf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fabsl.S: Likewise.
+	* sysdeps/ia64/fpu/s_fdim.S: Likewise.
+	* sysdeps/ia64/fpu/s_fdimf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fdiml.S: Likewise.
+	* sysdeps/ia64/fpu/s_finite.S: Likewise.
+	* sysdeps/ia64/fpu/s_finitef.S: Likewise.
+	* sysdeps/ia64/fpu/s_finitel.S: Likewise.
+	* sysdeps/ia64/fpu/s_floor.S: Likewise.
+	* sysdeps/ia64/fpu/s_floorf.S: Likewise.
+	* sysdeps/ia64/fpu/s_floorl.S: Likewise.
+	* sysdeps/ia64/fpu/s_fma.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmaf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmal.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmax.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmaxf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fmaxl.S: Likewise.
+	* sysdeps/ia64/fpu/s_fpclassify.S: Likewise.
+	* sysdeps/ia64/fpu/s_fpclassifyf.S: Likewise.
+	* sysdeps/ia64/fpu/s_fpclassifyl.S: Likewise.
+	* sysdeps/ia64/fpu/s_frexp.c: Likewise.
+	* sysdeps/ia64/fpu/s_frexpf.c: Likewise.
+	* sysdeps/ia64/fpu/s_frexpl.c: Likewise.
+	* sysdeps/ia64/fpu/s_ilogb.S: Likewise.
+	* sysdeps/ia64/fpu/s_ilogbf.S: Likewise.
+	* sysdeps/ia64/fpu/s_ilogbl.S: Likewise.
+	* sysdeps/ia64/fpu/s_isinf.S: Likewise.
+	* sysdeps/ia64/fpu/s_isinff.S: Likewise.
+	* sysdeps/ia64/fpu/s_isinfl.S: Likewise.
+	* sysdeps/ia64/fpu/s_isnan.S: Likewise.
+	* sysdeps/ia64/fpu/s_isnanf.S: Likewise.
+	* sysdeps/ia64/fpu/s_isnanl.S: Likewise.
+	* sysdeps/ia64/fpu/s_ldexp.c: Likewise.
+	* sysdeps/ia64/fpu/s_ldexpf.c: Likewise.
+	* sysdeps/ia64/fpu/s_ldexpl.c: Likewise.
+	* sysdeps/ia64/fpu/s_libm_ldexp.S: Likewise.
+	* sysdeps/ia64/fpu/s_libm_ldexpf.S: Likewise.
+	* sysdeps/ia64/fpu/s_libm_ldexpl.S: Likewise.
+	* sysdeps/ia64/fpu/s_libm_scalbn.S: Likewise.
+	* sysdeps/ia64/fpu/s_libm_scalbnf.S: Likewise.
+	* sysdeps/ia64/fpu/s_libm_scalbnl.S: Likewise.
+	* sysdeps/ia64/fpu/s_log1p.S: Likewise.
+	* sysdeps/ia64/fpu/s_log1pf.S: Likewise.
+	* sysdeps/ia64/fpu/s_log1pl.S: Likewise.
+	* sysdeps/ia64/fpu/s_logb.S: Likewise.
+	* sysdeps/ia64/fpu/s_logbf.S: Likewise.
+	* sysdeps/ia64/fpu/s_logbl.S: Likewise.
+	* sysdeps/ia64/fpu/s_matherrf.c: Likewise.
+	* sysdeps/ia64/fpu/s_matherrl.c: Likewise.
+	* sysdeps/ia64/fpu/s_modf.S: Likewise.
+	* sysdeps/ia64/fpu/s_modff.S: Likewise.
+	* sysdeps/ia64/fpu/s_modfl.S: Likewise.
+	* sysdeps/ia64/fpu/s_nearbyint.S: Likewise.
+	* sysdeps/ia64/fpu/s_nearbyintf.S: Likewise.
+	* sysdeps/ia64/fpu/s_nearbyintl.S: Likewise.
+	* sysdeps/ia64/fpu/s_nextafter.S: Likewise.
+	* sysdeps/ia64/fpu/s_nextafterf.S: Likewise.
+	* sysdeps/ia64/fpu/s_nextafterl.S: Likewise.
+	* sysdeps/ia64/fpu/s_nexttoward.S: Likewise.
+	* sysdeps/ia64/fpu/s_nexttowardf.S: Likewise.
+	* sysdeps/ia64/fpu/s_nexttowardl.S: Likewise.
+	* sysdeps/ia64/fpu/s_rint.S: Likewise.
+	* sysdeps/ia64/fpu/s_rintf.S: Likewise.
+	* sysdeps/ia64/fpu/s_rintl.S: Likewise.
+	* sysdeps/ia64/fpu/s_round.S: Likewise.
+	* sysdeps/ia64/fpu/s_roundf.S: Likewise.
+	* sysdeps/ia64/fpu/s_roundl.S: Likewise.
+	* sysdeps/ia64/fpu/s_scalblnf.c: Likewise.
+	* sysdeps/ia64/fpu/s_scalbn.c: Likewise.
+	* sysdeps/ia64/fpu/s_scalbnf.c: Likewise.
+	* sysdeps/ia64/fpu/s_scalbnl.c: Likewise.
+	* sysdeps/ia64/fpu/s_signbit.S: Likewise.
+	* sysdeps/ia64/fpu/s_signbitf.S: Likewise.
+	* sysdeps/ia64/fpu/s_signbitl.S: Likewise.
+	* sysdeps/ia64/fpu/s_significand.S: Likewise.
+	* sysdeps/ia64/fpu/s_significandf.S: Likewise.
+	* sysdeps/ia64/fpu/s_significandl.S: Likewise.
+	* sysdeps/ia64/fpu/s_sin.c: Likewise.
+	* sysdeps/ia64/fpu/s_sincos.c: Likewise.
+	* sysdeps/ia64/fpu/s_sincosf.c: Likewise.
+	* sysdeps/ia64/fpu/s_sincosl.c: Likewise.
+	* sysdeps/ia64/fpu/s_sinf.c: Likewise.
+	* sysdeps/ia64/fpu/s_sinl.c: Likewise.
+	* sysdeps/ia64/fpu/s_tan.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanf.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanh.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanhf.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanhl.S: Likewise.
+	* sysdeps/ia64/fpu/s_tanl.S: Likewise.
+	* sysdeps/ia64/fpu/s_trunc.S: Likewise.
+	* sysdeps/ia64/fpu/s_truncf.S: Likewise.
+	* sysdeps/ia64/fpu/s_truncl.S: Likewise.
+	* sysdeps/ia64/fpu/sincos32.c: Likewise.
+	* sysdeps/ia64/fpu/slowexp.c: Likewise.
+	* sysdeps/ia64/fpu/slowpow.c: Likewise.
+	* sysdeps/ia64/fpu/t_exp.c: Likewise.
+	* sysdeps/ia64/fpu/w_acos.c: Likewise.
+	* sysdeps/ia64/fpu/w_acosf.c: Likewise.
+	* sysdeps/ia64/fpu/w_acosh.c: Likewise.
+	* sysdeps/ia64/fpu/w_acoshf.c: Likewise.
+	* sysdeps/ia64/fpu/w_acoshl.c: Likewise.
+	* sysdeps/ia64/fpu/w_acosl.c: Likewise.
+	* sysdeps/ia64/fpu/w_asin.c: Likewise.
+	* sysdeps/ia64/fpu/w_asinf.c: Likewise.
+	* sysdeps/ia64/fpu/w_asinl.c: Likewise.
+	* sysdeps/ia64/fpu/w_atan2.c: Likewise.
+	* sysdeps/ia64/fpu/w_atan2f.c: Likewise.
+	* sysdeps/ia64/fpu/w_atan2l.c: Likewise.
+	* sysdeps/ia64/fpu/w_atanh.c: Likewise.
+	* sysdeps/ia64/fpu/w_atanhf.c: Likewise.
+	* sysdeps/ia64/fpu/w_atanhl.c: Likewise.
+	* sysdeps/ia64/fpu/w_cosh.c: Likewise.
+	* sysdeps/ia64/fpu/w_coshf.c: Likewise.
+	* sysdeps/ia64/fpu/w_coshl.c: Likewise.
+	* sysdeps/ia64/fpu/w_exp.c: Likewise.
+	* sysdeps/ia64/fpu/w_exp10.c: Likewise.
+	* sysdeps/ia64/fpu/w_exp10f.c: Likewise.
+	* sysdeps/ia64/fpu/w_exp10l.c: Likewise.
+	* sysdeps/ia64/fpu/w_exp2.c: Likewise.
+	* sysdeps/ia64/fpu/w_exp2f.c: Likewise.
+	* sysdeps/ia64/fpu/w_exp2l.c: Likewise.
+	* sysdeps/ia64/fpu/w_expf.c: Likewise.
+	* sysdeps/ia64/fpu/w_expl.c: Likewise.
+	* sysdeps/ia64/fpu/w_fmod.c: Likewise.
+	* sysdeps/ia64/fpu/w_fmodf.c: Likewise.
+	* sysdeps/ia64/fpu/w_fmodl.c: Likewise.
+	* sysdeps/ia64/fpu/w_hypot.c: Likewise.
+	* sysdeps/ia64/fpu/w_hypotf.c: Likewise.
+	* sysdeps/ia64/fpu/w_hypotl.c: Likewise.
+	* sysdeps/ia64/fpu/w_lgamma.c: Likewise.
+	* sysdeps/ia64/fpu/w_lgamma_r.c: Likewise.
+	* sysdeps/ia64/fpu/w_lgammaf.c: Likewise.
+	* sysdeps/ia64/fpu/w_lgammaf_r.c: Likewise.
+	* sysdeps/ia64/fpu/w_lgammal.c: Likewise.
+	* sysdeps/ia64/fpu/w_lgammal_r.c: Likewise.
+	* sysdeps/ia64/fpu/w_log.c: Likewise.
+	* sysdeps/ia64/fpu/w_log10.c: Likewise.
+	* sysdeps/ia64/fpu/w_log10f.c: Likewise.
+	* sysdeps/ia64/fpu/w_log10l.c: Likewise.
+	* sysdeps/ia64/fpu/w_log2.c: Likewise.
+	* sysdeps/ia64/fpu/w_log2f.c: Likewise.
+	* sysdeps/ia64/fpu/w_log2l.c: Likewise.
+	* sysdeps/ia64/fpu/w_logf.c: Likewise.
+	* sysdeps/ia64/fpu/w_logl.c: Likewise.
+	* sysdeps/ia64/fpu/w_pow.c: Likewise.
+	* sysdeps/ia64/fpu/w_powf.c: Likewise.
+	* sysdeps/ia64/fpu/w_powl.c: Likewise.
+	* sysdeps/ia64/fpu/w_remainder.c: Likewise.
+	* sysdeps/ia64/fpu/w_remainderf.c: Likewise.
+	* sysdeps/ia64/fpu/w_remainderl.c: Likewise.
+	* sysdeps/ia64/fpu/w_scalb.c: Likewise.
+	* sysdeps/ia64/fpu/w_scalbf.c: Likewise.
+	* sysdeps/ia64/fpu/w_scalbl.c: Likewise.
+	* sysdeps/ia64/fpu/w_sinh.c: Likewise.
+	* sysdeps/ia64/fpu/w_sinhf.c: Likewise.
+	* sysdeps/ia64/fpu/w_sinhl.c: Likewise.
+	* sysdeps/ia64/fpu/w_sqrt.c: Likewise.
+	* sysdeps/ia64/fpu/w_sqrtf.c: Likewise.
+	* sysdeps/ia64/fpu/w_sqrtl.c: Likewise.
+	* sysdeps/ia64/fpu/w_tgamma.S: Likewise.
+	* sysdeps/ia64/fpu/w_tgammaf.S: Likewise.
+	* sysdeps/ia64/fpu/w_tgammal.S: Likewise.
+	* sysdeps/ia64/gccframe.h: Likewise.
+	* sysdeps/ia64/hp-timing.c: Likewise.
+	* sysdeps/ia64/hp-timing.h: Likewise.
+	* sysdeps/ia64/htonl.S: Likewise.
+	* sysdeps/ia64/htons.S: Likewise.
+	* sysdeps/ia64/ia64libgcc.S: Likewise.
+	* sysdeps/ia64/ieee754.h: Likewise.
+	* sysdeps/ia64/jmpbuf-unwind.h: Likewise.
+	* sysdeps/ia64/ldbl2mpn.c: Likewise.
+	* sysdeps/ia64/libc-tls.c: Likewise.
+	* sysdeps/ia64/machine-gmon.h: Likewise.
+	* sysdeps/ia64/memccpy.S: Likewise.
+	* sysdeps/ia64/memchr.S: Likewise.
+	* sysdeps/ia64/memcmp.S: Likewise.
+	* sysdeps/ia64/memcpy.S: Likewise.
+	* sysdeps/ia64/memmove.S: Likewise.
+	* sysdeps/ia64/memset.S: Likewise.
+	* sysdeps/ia64/memusage.h: Likewise.
+	* sysdeps/ia64/nptl/Makefile: Likewise.
+	* sysdeps/ia64/nptl/pthread_spin_lock.c: Likewise.
+	* sysdeps/ia64/nptl/pthread_spin_trylock.c: Likewise.
+	* sysdeps/ia64/nptl/pthread_spin_unlock.c: Likewise.
+	* sysdeps/ia64/nptl/pthreaddef.h: Likewise.
+	* sysdeps/ia64/nptl/tcb-offsets.sym: Likewise.
+	* sysdeps/ia64/nptl/tls.h: Likewise.
+	* sysdeps/ia64/sched_cpucount.c: Likewise.
+	* sysdeps/ia64/softpipe.h: Likewise.
+	* sysdeps/ia64/stackinfo.h: Likewise.
+	* sysdeps/ia64/strcat.c: Likewise.
+	* sysdeps/ia64/strchr.S: Likewise.
+	* sysdeps/ia64/strcmp.S: Likewise.
+	* sysdeps/ia64/strcpy.S: Likewise.
+	* sysdeps/ia64/strlen.S: Likewise.
+	* sysdeps/ia64/strncmp.S: Likewise.
+	* sysdeps/ia64/strncpy.S: Likewise.
+	* sysdeps/ia64/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/Implies: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/Makefile: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/Versions: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/____longjmp_chk.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/__longjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/__start_context.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/endian.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/fcntl.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/ipc.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/mman.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/msq.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sem.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/setjmp.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/shm.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sigaction.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sigcontext.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/siginfo.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/sigstack.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bits/stat.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/brk.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bsd-_setjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/bsd-setjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/clock_getcpuclockid.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/clone.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/clone2.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/dl-brk.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/dl-cache.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/dl-static.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/fork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/get_clockfreq.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/getclktck.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/getcontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/getpagesize.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/has_cpuclock.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ioperm.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/kernel_stat.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ldconfig.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ldd-rewrite.sed: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ldsodefs.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/makecontext.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/Makefile: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/Versions: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/__ia64_longjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/__sigstack_longjmp.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/bits/local_lim.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/bits/pthreadtypes.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/bits/semaphore.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/clone2.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/createthread.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/dl-sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/fork.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/lowlevellock.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/pt-initfini.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/pt-vfork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/pthread_once.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/sysdep-cancel.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/timer_create.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/timer_delete.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/timer_getoverr.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/timer_gettime.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/timer_settime.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/unwind-forcedunwind.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/unwind_longjmp.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/nptl/vfork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/pipe.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/profil-counter.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/readelflib.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/register-dump.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/rt-sysdep.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/setcontext.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/setjmp.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigaction.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigcontext-offsets.sym: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigcontextinfo.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigpending.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sigprocmask.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/swapcontext.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/io.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/procfs.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/ptrace.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/rse.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/ucontext.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sys/user.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/syscall.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/syscalls.list: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sysconf.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sysdep.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/system.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/ucontext_i.h: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/umount.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/unwind-dw2-fde.c: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/vfork.S: Likewise.
+	* sysdeps/unix/sysv/linux/ia64/wordexp.c: Likewise.

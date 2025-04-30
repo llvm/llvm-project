@@ -1,0 +1,7 @@
+LC_COLLATE
+order_start forward
+<b1001>
+<B1001>
+UNDEFINED       IGNORE
+order_end
+END LC_COLLATE

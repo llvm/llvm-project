@@ -1,0 +1,54 @@
+%include <float128-abi.h>
+%ifndef FLOAT128_VERSION
+% error "float128-abi.h must define FLOAT128_VERSION"
+%endif
+libc {
+  FLOAT128_VERSION {
+    __isnanf128;
+    __strtof128_internal;
+    __wcstof128_internal;
+  }
+  GLIBC_2.34 {
+    __isnanf128;
+  }
+  GLIBC_PRIVATE {
+    # For __nanf128.
+    __strtof128_nan;
+  }
+}
+libm {
+  FLOAT128_VERSION {
+    __acosf128_finite;
+    __acoshf128_finite;
+    __asinf128_finite;
+    __atan2f128_finite;
+    __atanhf128_finite;
+    __coshf128_finite;
+    __exp10f128_finite;
+    __exp2f128_finite;
+    __expf128_finite;
+    __finitef128;
+    __fmodf128_finite;
+    __fpclassifyf128;
+    __gammaf128_r_finite;
+    __hypotf128_finite;
+    __iseqsigf128;
+    __isinff128;
+    __issignalingf128;
+    __j0f128_finite;
+    __j1f128_finite;
+    __jnf128_finite;
+    __lgammaf128_r_finite;
+    __log10f128_finite;
+    __log2f128_finite;
+    __logf128_finite;
+    __powf128_finite;
+    __remainderf128_finite;
+    __signbitf128;
+    __sinhf128_finite;
+    __sqrtf128_finite;
+    __y0f128_finite;
+    __y1f128_finite;
+    __ynf128_finite;
+  }
+}

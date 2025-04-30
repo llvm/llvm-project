@@ -1,0 +1,270 @@
+# Begin of automatic generation
+
+# Maximal error of functions:
+Function: "acos":
+float: 1
+
+Function: "acosh":
+double: 2
+float: 2
+
+Function: "asin":
+float: 1
+
+Function: "asinh":
+double: 1
+float: 1
+
+Function: "atan":
+float: 1
+
+Function: "atan2":
+float: 1
+
+Function: "atanh":
+double: 2
+float: 2
+
+Function: "cabs":
+double: 1
+
+Function: Real part of "cacos":
+double: 1
+float: 2
+
+Function: Imaginary part of "cacos":
+double: 2
+float: 2
+
+Function: Real part of "cacosh":
+double: 2
+float: 2
+
+Function: Imaginary part of "cacosh":
+double: 1
+float: 2
+
+Function: "carg":
+float: 1
+
+Function: Real part of "casin":
+double: 1
+float: 1
+
+Function: Imaginary part of "casin":
+double: 2
+float: 2
+
+Function: Real part of "casinh":
+double: 2
+float: 2
+
+Function: Imaginary part of "casinh":
+double: 1
+float: 1
+
+Function: Real part of "catan":
+double: 1
+float: 1
+
+Function: Imaginary part of "catan":
+double: 1
+float: 1
+
+Function: Real part of "catanh":
+double: 1
+float: 1
+
+Function: Imaginary part of "catanh":
+double: 1
+float: 1
+
+Function: "cbrt":
+double: 3
+float: 1
+
+Function: Real part of "ccos":
+double: 1
+float: 1
+
+Function: Imaginary part of "ccos":
+double: 1
+float: 1
+
+Function: Real part of "ccosh":
+double: 1
+float: 1
+
+Function: Imaginary part of "ccosh":
+double: 1
+float: 1
+
+Function: Real part of "cexp":
+double: 2
+float: 1
+
+Function: Imaginary part of "cexp":
+double: 1
+float: 2
+
+Function: Real part of "clog":
+double: 3
+float: 3
+
+Function: Imaginary part of "clog":
+float: 1
+
+Function: Real part of "clog10":
+double: 3
+float: 4
+
+Function: Imaginary part of "clog10":
+double: 2
+float: 2
+
+Function: "cos":
+float: 1
+
+Function: "cosh":
+double: 1
+float: 1
+
+Function: Real part of "cpow":
+double: 2
+float: 4
+
+Function: Imaginary part of "cpow":
+float: 2
+
+Function: Real part of "csin":
+double: 1
+float: 1
+
+Function: Real part of "csinh":
+float: 1
+
+Function: Imaginary part of "csinh":
+double: 1
+float: 1
+
+Function: Real part of "csqrt":
+double: 2
+float: 2
+
+Function: Imaginary part of "csqrt":
+double: 2
+float: 2
+
+Function: Real part of "ctan":
+double: 1
+float: 1
+
+Function: Imaginary part of "ctan":
+double: 2
+float: 1
+
+Function: Real part of "ctanh":
+double: 2
+float: 1
+
+Function: Imaginary part of "ctanh":
+double: 2
+float: 2
+
+Function: "erf":
+double: 1
+float: 1
+
+Function: "erfc":
+double: 3
+float: 2
+
+Function: "exp":
+float: 1
+
+Function: "exp10":
+double: 2
+
+Function: "exp2":
+double: 1
+float: 1
+
+Function: "expm1":
+double: 1
+float: 1
+
+Function: "gamma":
+double: 4
+float: 4
+
+Function: "hypot":
+double: 1
+
+Function: "j0":
+double: 2
+float: 2
+
+Function: "j1":
+double: 1
+float: 2
+
+Function: "jn":
+double: 4
+float: 4
+
+Function: "lgamma":
+double: 4
+float: 4
+
+Function: "log":
+float: 1
+
+Function: "log10":
+double: 2
+float: 2
+
+Function: "log1p":
+double: 1
+float: 1
+
+Function: "log2":
+double: 2
+float: 1
+
+Function: "pow":
+float: 1
+
+Function: "sin":
+float: 1
+
+Function: "sincos":
+float: 1
+
+Function: "sinh":
+double: 2
+float: 2
+
+Function: "tan":
+float: 1
+
+Function: "tanh":
+double: 2
+float: 2
+
+Function: "tgamma":
+double: 5
+float: 4
+
+Function: "y0":
+double: 2
+float: 1
+
+Function: "y1":
+double: 3
+float: 2
+
+Function: "yn":
+double: 3
+float: 2
+
+# end of automatic generation

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Simple wrapper around the pylint program that uses the pylintrc file to
+# validate the source code in files passed on command line.
+
+exec pylint --rcfile "${0%/*}/pylintrc" "$@"

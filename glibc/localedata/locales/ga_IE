@@ -1,0 +1,163 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Irish language locale for Ireland
+% Source: NSAI
+% Address: Glasnevin, Dublin 9, Ireland
+% Contact: Michael Everson
+% Email: everson@irlearn.ucd.ie
+% Tel: +353 1 280-0701
+% Fax: +353 1 830-9821
+% Language: ga
+% Territory: IE
+% Revision: 4.3
+% Date: 1996-10-15
+% Users: general
+
+LC_IDENTIFICATION
+title      "Irish locale for Ireland"
+source     "NSAI"
+address    "Glasnevin, Dublin 9, Ireland"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Irish"
+territory  "Ireland"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "EUR "
+currency_symbol         "<U20AC>"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          0
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+abday       "Domh";"Luan";/
+            "M<U00E1>irt";"C<U00E9>ad";/
+            "D<U00E9>ar";"Aoine";/
+            "Sath"
+day         "D<U00E9> Domhnaigh";/
+            "D<U00E9> Luain";/
+            "D<U00E9> M<U00E1>irt";/
+            "D<U00E9> C<U00E9>adaoin";/
+            "D<U00E9>ardaoin";/
+            "D<U00E9> hAoine";/
+            "D<U00E9> Sathairn"
+abmon       "Ean";"Feabh";/
+            "M<U00E1>rta";"Aib";/
+            "Beal";"Meith";/
+            "I<U00FA>il";"L<U00FA>n";/
+            "MF<U00F3>mh";"DF<U00F3>mh";/
+            "Samh";"Noll"
+mon         "Ean<U00E1>ir";/
+            "Feabhra";/
+            "M<U00E1>rta";/
+            "Aibre<U00E1>n";/
+            "Bealtaine";/
+            "Meitheamh";/
+            "I<U00FA>il";/
+            "L<U00FA>nasa";/
+            "Me<U00E1>n F<U00F3>mhair";/
+            "Deireadh F<U00F3>mhair";/
+            "Samhain";/
+            "Nollaig"
+d_t_fmt     "%a %d %b %Y %T"
+date_fmt    "%a %d %b %Y %T %Z"
+d_fmt       "%d.%m.%y"
+t_fmt       "%T"
+am_pm       "";""
+t_fmt_ampm  ""
+first_weekday 2
+week 7;19971130;4
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1tTyY]"
+noexpr  "^[-0nN]"
+yesstr  "t<U00E1>"
+nostr   "n<U00ED>l"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "353"
+int_select  "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U00C9>ire"
+country_ab2 "IE"
+country_ab3 "IRL"
+country_num 372
+country_car "IRL"
+lang_name    "Gaeilge"
+lang_ab      "ga"
+lang_term    "gle"
+lang_lib    "gle"
+END LC_ADDRESS

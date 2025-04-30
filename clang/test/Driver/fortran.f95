@@ -1,6 +1,8 @@
 ! Check that the clang driver can invoke gcc to compile Fortran when in
 ! --driver-mode=clang. This is legacy behaviour - see also --driver-mode=flang.
 
+! UNSUPPORTED: classic_flang
+
 ! RUN: %clang --target=x86_64-unknown-linux-gnu -integrated-as -c %s -### 2>&1 \
 ! RUN:   | FileCheck --check-prefix=CHECK-OBJECT %s
 ! CHECK-OBJECT: gcc

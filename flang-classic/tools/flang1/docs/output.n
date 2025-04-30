@@ -1,0 +1,17 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 12 "Output"
+.sh 2 Overview
+The AST transformer performs the following tasks:
+.BL
+lower the AST representation to the compiler's ILM intermediate representation.
+.BL
+write out the ILMs and symbol information into a temporary (.ilm) file that
+is read by f90 (the LLVM bridge).
+.BL
+If we are generating code for a module, then write ILMs and symbols to a 
+module (.mod) file.

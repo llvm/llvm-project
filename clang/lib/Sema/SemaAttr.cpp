@@ -1459,3 +1459,13 @@ bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                         bool SkipArgCountCheck) {
   return ::checkCommonAttributeFeatures(*this, S, A, SkipArgCountCheck);
 }
+
+void Sema::ActOnPragmaNSMark(SourceLocation PragmaLoc, StringRef Mark) {
+  NSMark.Mark = Mark;
+  NSMark.Location = PragmaLoc;
+}
+
+void Sema::ActOnPragmaNSLocation(SourceLocation PragmaLoc, StringRef Location) {
+  NSLocation.NSLocation = Location;
+  NSLocation.PragmaLoc = PragmaLoc;
+}

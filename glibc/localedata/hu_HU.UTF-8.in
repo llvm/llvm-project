@@ -1,0 +1,560 @@
+AkH-14-a1 acél          ; The "AkH" tests are from:
+AkH-14-a1 cukor         ;
+AkH-14-a1 csók          ; A magyar helyesírás szabályai, 12. kiadás
+AkH-14-a1 gép           ; [The Rules of Hungarian Orthography, 12th edition]
+AkH-14-a1 hideg         ;
+AkH-14-a1 kettő         ; often referred to as akadémiai helyesírás (AkH.) [academic orthography]
+AkH-14-a1 Nagy          ;
+AkH-14-a1 nyúl          ; http://helyesiras.mta.hu/helyesiras/default/akh12
+AkH-14-a1 olasz         ;
+AkH-14-a1 öröm          ; Alphabetical ordering described in #14-16.
+AkH-14-a1 remény
+AkH-14-a1 sokáig        ; #14-a1: Sort based on first letter.
+AkH-14-a1 szabad
+AkH-14-a1 Tamás
+AkH-14-a1 vásárol
+AkH-14-a2 jácint        ; #14-a2: If no other difference, lowercase initial precedes uppercase.
+AkH-14-a2 Jácint
+AkH-14-a2 opera
+AkH-14-a2 Opera
+AkH-14-a2 szűcs
+AkH-14-a2 Szűcs
+AkH-14-a2 viola
+AkH-14-a2 Viola
+AkH-14-a3 cudar         ; #14-a3: Compound letters (cs, dz, dzs, gy, ly, ny, sz, ty, zs)
+AkH-14-a3 cukor         ; are sorted separately, after their first letter:
+AkH-14-a3 cuppant       ; a b c cs d dz dzs e f g gy h ... l ly m n ny o ... s sz t ty u ... z zs
+AkH-14-a3 csalit
+AkH-14-a3 csata
+AkH-14-a3 Csepel
+AkH-14-a3 Zoltán
+AkH-14-a3 zongora
+AkH-14-a3 zúdul
+AkH-14-a3 zsalu
+AkH-14-a3 zseni
+AkH-14-a3 Zsigmond
+AkH-14-b1 lom           ; #14-b1: The first difference matters.
+AkH-14-b1 lomb
+AkH-14-b1 lombik
+AkH-14-b1 Lontay
+AkH-14-b1 lovagol
+AkH-14-b1 pirinkó
+AkH-14-b1 pirinyó
+AkH-14-b1 pirít
+AkH-14-b1 pirkad
+AkH-14-b1 Piroska
+AkH-14-b1 tükör
+AkH-14-b1 Tünde
+AkH-14-b1 tünemény
+AkH-14-b1 tüntet
+AkH-14-b1 tüzér
+AkH-14-b2 kas           ; #14-b2: If a compound letter is pronounced long, only the first letter
+AkH-14-b2 Kasmír        ; is duplicated in writing: <cs><cs> becomes ccs, <dzs><dzs> is ddzs etc.
+AkH-14-b2 Kassák        ; (unless it's at the boundary of a compound word where it's written out twice).
+AkH-14-b2 kastély       ; Sort according to the actual tokens, not the shorthand written form.
+AkH-14-b2 kasza         ; <k><a><sz><a>
+AkH-14-b2 kaszinó       ; <k><a><sz><i><n><ó>
+AkH-14-b2 kassza        ; <k><a><sz><sz><a>
+AkH-14-b2 kaszt         ; <k><a><sz><t>
+AkH-14-b2 mennek
+AkH-14-b2 mennének
+AkH-14-b2 menü
+AkH-14-b2 menza
+AkH-14-b2 meny          ; <m><e><ny>
+AkH-14-b2 Menyhért      ; <M><e><ny><h><é><r><t>
+AkH-14-b2 mennybolt     ; <m><e><ny><ny><b><o><l><t>
+AkH-14-b2 mennyi        ; <m><e><ny><ny><i>
+AkH-14-b2 nagy          ; <n><a><gy>
+AkH-14-b2 naggyá        ; <n><a><gy><gy><á>
+AkH-14-b2 nagygyakorlat ; <n><a><gy><gy><a><k><o><r><l><a><t> (compound word: nagy+gyakorlat)
+AkH-14-b2 naggyal       ; <n><a><gy><gy><a><l>
+AkH-14-b2 nagyít        ; <n><a><gy><í><t>
+AkH-14-b2 nagyobb
+AkH-14-b2 nagyol
+AkH-14-b2 nagyoll
+AkH-14-c1 ír            ; #14-c1: Vowels collate equally in pairs: a-á, e-é, i-í, o-ó, ö-ő, u-ú, ü-ű.
+AkH-14-c1 Irak
+AkH-14-c1 iram
+AkH-14-c1 Irán
+AkH-14-c1 írandó
+AkH-14-c1 iránt
+AkH-14-c1 író
+AkH-14-c1 iroda
+AkH-14-c1 irónia
+AkH-14-c2 Eger          ; #14-c2: Short vowel (unaccented, or with diaeresis) comes first if that's the only difference.
+AkH-14-c2 egér
+AkH-14-c2 egyfelé
+AkH-14-c2 egyféle
+AkH-14-c2 elöl
+AkH-14-c2 elől
+AkH-14-c2 kerek
+AkH-14-c2 kerék
+AkH-14-c2 keres
+AkH-14-c2 kérés
+AkH-14-c2 koros
+AkH-14-c2 kóros
+AkH-14-c2 szel
+AkH-14-c2 szél
+AkH-14-c2 szeles
+AkH-14-c2 széles
+AkH-14-c2 szüret
+AkH-14-c2 szűret
+AkH-14-d1 kis részben   ; #14-d1: Spaces, hyphens are ignored.
+AkH-14-d1 kissé
+AkH-14-d1 Kiss Ernő
+AkH-14-d1 kis sorozat
+AkH-14-d1 kissorozat-gyártás
+AkH-14-d1 kis számban
+AkH-14-d1 kistányér
+AkH-14-d1 kis virág
+AkH-14-d1 márvány
+AkH-14-d1 márványkő
+AkH-14-d1 márvány sírkő
+AkH-14-d1 Márvány-tenger
+AkH-14-d1 márványtömb
+AkH-14-d1 Márvány Zsolt
+AkH-14-d1 másféle
+AkH-14-d1 másol
+AkH-14-d1 tiszafa
+AkH-14-d1 Tiszahát
+AkH-14-d1 Tisza Kálmán
+AkH-14-d1 Tisza menti
+AkH-14-d1 Tiszántúl
+AkH-14-d1 Tisza-part
+AkH-14-d1 tiszavirág
+AkH-14-d1 tiszt
+AkH-15 cérna            ; #15: Foreign accents are ignored, unless they're the only difference,
+AkH-15 Černý            ; in which case they are sorted after the Hungarian ones (in unspecified order).
+AkH-15 Champagne
+AkH-15 Cholnoky
+AkH-15 címez
+AkH-15 cukor
+AkH-15 Czuczor
+AkH-15 csapat
+AkH-15 Gaal
+AkH-15 galamb
+AkH-15 Gärtner
+AkH-15 gáz
+AkH-15 geodézia
+AkH-15 Georges
+AkH-15 góc
+AkH-15 Goethe
+AkH-15 moshat
+AkH-15 mosna
+AkH-15 Mošna
+AkH-15 mosópor
+AkH-15 Møsstrand
+AkH-15 mostan
+AkH-15 munka
+AkH-15 Muñoz
+alphabet a              ; All the remaining tests were added by glibc.
+alphabet á
+alphabet aa             ; a = á unless that's the only difference in which case a < á.
+alphabet aá             ; (Same for e = é, i = í, o = ó, ö = ő, u = ú, ü = ű below.)
+alphabet áa             ; Differences in accents matter from left to right.
+alphabet áá
+alphabet áp
+alphabet aq
+alphabet b
+alphabet c
+alphabet cz             ; <c><z>
+alphabet cs             ; <cs>        -- or rarely <c><s>, can't tell for sure, assume <cs>.
+alphabet csc            ; <cs><c>
+alphabet ccs            ; <cs><cs>    -- or rarely <c><cs>, can't tell for sure, assume <cs><cs>.
+alphabet cscs           ; <cs><cs>    -- Make sure ccs and cscs don't collate as equal, see bug 13547.
+alphabet ccsa           ; <cs><cs><a> -- The order of ccs and cscs is not specified in the rules and is arbitrarily chosen by glibc.
+alphabet cscsa          ; <cs><cs><a>
+alphabet csd            ; <cs><d>     -- (These comments also apply to all other compound letters below.)
+alphabet d
+alphabet dz             ; <dz>
+alphabet dzd            ; <dz><d>
+alphabet ddz            ; <dz><dz>
+alphabet dzdz           ; <dz><dz>
+alphabet ddza           ; <dz><dz><a>
+alphabet dzdza          ; <dz><dz><a>
+alphabet dzdzs          ; <dz><dzs>
+alphabet dze            ; <dz><e>
+alphabet dzz            ; <dz><z>
+alphabet dzs            ; <dzs>
+alphabet dzsdz          ; <dzs><dz>
+alphabet ddzs           ; <dzs><dzs>
+alphabet dzsdzs         ; <dzs><dzs>
+alphabet ddzsa          ; <dzs><dzs><a>
+alphabet dzsdzsa        ; <dzs><dzs><a>
+alphabet dzse           ; <dzs><e>
+alphabet e
+alphabet é
+alphabet ee
+alphabet eé
+alphabet ée
+alphabet éé
+alphabet ép
+alphabet eq
+alphabet f
+alphabet g
+alphabet gz             ; <g><z>
+alphabet gy             ; <gy>
+alphabet gyg            ; <gy><g>
+alphabet ggy            ; <gy><gy>
+alphabet gygy           ; <gy><gy>
+alphabet ggya           ; <gy><gy><a>
+alphabet gygya          ; <gy><gy><a>
+alphabet gyh            ; <gy><h>
+alphabet h
+alphabet i
+alphabet í
+alphabet ii
+alphabet ií
+alphabet íi
+alphabet íí
+alphabet íp
+alphabet iq
+alphabet j
+alphabet k
+alphabet l
+alphabet lz             ; <l><z>
+alphabet ly             ; <ly>
+alphabet lyl            ; <ly><l>
+alphabet lly            ; <ly><ly>
+alphabet lyly           ; <ly><ly>
+alphabet llya           ; <ly><ly><a>
+alphabet lylya          ; <ly><ly><a>
+alphabet lym            ; <ly><m>
+alphabet m
+alphabet n
+alphabet nz             ; <n><z>
+alphabet ny             ; <ny>
+alphabet nyn            ; <ny><n>
+alphabet nny            ; <ny><ny>
+alphabet nyny           ; <ny><ny>
+alphabet nnya           ; <ny><ny><a>
+alphabet nynya          ; <ny><ny><a>
+alphabet nyo            ; <ny><o>
+alphabet o
+alphabet ó
+alphabet oo
+alphabet oó
+alphabet óo
+alphabet óó
+alphabet óp
+alphabet oq
+alphabet ö              ; ö = ő (unless that's the only difference), but these come strictly after o and ó.
+alphabet ő
+alphabet öö
+alphabet öő
+alphabet őö
+alphabet őő
+alphabet őp
+alphabet öq
+alphabet p
+alphabet q
+alphabet r
+alphabet s
+alphabet sz             ; <sz>
+alphabet szs            ; <sz><s>
+alphabet ssz            ; <sz><sz>
+alphabet szsz           ; <sz><sz>
+alphabet ssza           ; <sz><sz><a>
+alphabet szsza          ; <sz><sz><a>
+alphabet szt            ; <sz><t>
+alphabet t
+alphabet tz             ; <t><z>
+alphabet ty             ; <ty>
+alphabet tyt            ; <ty><t>
+alphabet tty            ; <ty><ty>
+alphabet tyty           ; <ty><ty>
+alphabet ttya           ; <ty><ty><a>
+alphabet tytya          ; <ty><ty><a>
+alphabet tyu            ; <ty><u>
+alphabet u
+alphabet ú
+alphabet úp
+alphabet uq
+alphabet uu
+alphabet uú
+alphabet úu
+alphabet úú
+alphabet ü              ; ü = ű (unless that's the only difference), but these come strictly after u and ú.
+alphabet ű
+alphabet űp
+alphabet üq
+alphabet üü
+alphabet üű
+alphabet űü
+alphabet űű
+alphabet v
+alphabet w
+alphabet x
+alphabet y
+alphabet z
+alphabet zz             ; <z><z>
+alphabet zs             ; <zs>
+alphabet zsz            ; <zs><z>
+alphabet zzs            ; <zs><zs>
+alphabet zszs           ; <zs><zs>
+alphabet zzsa           ; <zs><zs><a>
+alphabet zszsa          ; <zs><zs><a>
+case a                  ; #14-a2 specifies that if the same word appears in lowercase as well as with
+case A                  ; uppercase initial, the lowercase one is to be sorted first.
+case á                  ; Arbitrarily extend this to all other weird combinations of upper- and lowercases in compound letters.
+case Á
+case cs                 ; <cs>
+case cS
+case Cs
+case CS
+case ccs                ; <cs><cs>
+case ccS
+case cCs
+case cCS
+case Ccs
+case CcS
+case CCs
+case CCS
+case dz                 ; <dz>
+case dZ
+case Dz
+case DZ
+case ddz                ; <dz><dz>
+case ddZ
+case dDz
+case dDZ
+case Ddz
+case DdZ
+case DDz
+case DDZ
+case dzs                ; <dzs>
+case dzS
+case dZs
+case dZS
+case Dzs
+case DzS
+case DZs
+case DZS
+case ddzs               ; <dzs><dzs>
+case ddzS
+case ddZs
+case ddZS
+case dDzs
+case dDzS
+case dDZs
+case dDZS
+case Ddzs
+case DdzS
+case DdZs
+case DdZS
+case DDzs
+case DDzS
+case DDZs
+case DDZS
+case e
+case E
+case é
+case É
+case gy                 ; <gy>
+case gY
+case Gy
+case GY
+case ggy                ; <gy><gy>
+case ggY
+case gGy
+case gGY
+case Ggy
+case GgY
+case GGy
+case GGY
+case i
+case I
+case í
+case Í
+case ly                 ; <ly>
+case lY
+case Ly
+case LY
+case lly                ; <ly><ly>
+case llY
+case lLy
+case lLY
+case Lly
+case LlY
+case LLy
+case LLY
+case ny                 ; <ny>
+case nY
+case Ny
+case NY
+case nny                ; <ny><ny>
+case nnY
+case nNy
+case nNY
+case Nny
+case NnY
+case NNy
+case NNY
+case o
+case O
+case ó
+case Ó
+case ö
+case Ö
+case ő
+case Ő
+case sz                 ; <sz>
+case sZ
+case Sz
+case SZ
+case ssz                ; <sz><sz>
+case ssZ
+case sSz
+case sSZ
+case Ssz
+case SsZ
+case SSz
+case SSZ
+case ty                 ; <ty>
+case tY
+case Ty
+case TY
+case tty                ; <ty><ty>
+case ttY
+case tTy
+case tTY
+case Tty
+case TtY
+case TTy
+case TTY
+case u
+case U
+case ú
+case Ú
+case ü
+case Ü
+case ű
+case Ű
+case zs                 ; <zs>
+case zS
+case Zs
+case ZS
+case zzs                ; <zs><zs>
+case zzS
+case zZs
+case zZS
+case Zzs
+case ZzS
+case ZZs
+case ZZS
+foreign-a1 á            ; More thorough tests for foreign accents (#15).
+foreign-a1 à            ; Each test consists of 4 lines. The foreign accent is in the middle two.
+foreign-a1 àp           ; That is, on their own they come after the Hungarian accent, but a
+foreign-a1 áq           ; subsequent difference (p and q) overrides this.
+foreign-a2 á
+foreign-a2 â
+foreign-a2 âp
+foreign-a2 áq
+foreign-a3 á
+foreign-a3 ã
+foreign-a3 ãp
+foreign-a3 áq
+foreign-a4 á
+foreign-a4 ä
+foreign-a4 äp
+foreign-a4 áq
+foreign-a5 á
+foreign-a5 å
+foreign-a5 åp
+foreign-a5 áq
+foreign-a6 á
+foreign-a6 ă
+foreign-a6 ăp
+foreign-a6 áq
+foreign-c1 c
+foreign-c1 ç
+foreign-c1 çp
+foreign-c1 cq
+foreign-d1 d
+foreign-d1 đ
+foreign-d1 đp
+foreign-d1 dq
+foreign-e1 é
+foreign-e1 è
+foreign-e1 èp
+foreign-e1 éq
+foreign-e2 é
+foreign-e2 ê
+foreign-e2 êp
+foreign-e2 éq
+foreign-e3 é
+foreign-e3 ë
+foreign-e3 ëp
+foreign-e3 éq
+foreign-e4 é
+foreign-e4 ě
+foreign-e4 ěp
+foreign-e4 éq
+foreign-i1 í
+foreign-i1 ì
+foreign-i1 ìp
+foreign-i1 íq
+foreign-i2 í
+foreign-i2 î
+foreign-i2 îp
+foreign-i2 íq
+foreign-i3 í
+foreign-i3 ï
+foreign-i3 ïp
+foreign-i3 íq
+foreign-l1 l
+foreign-l1 ł
+foreign-l1 łp
+foreign-l1 lq
+foreign-n1 n
+foreign-n1 ñ
+foreign-n1 ñp
+foreign-n1 nq
+foreign-n2 n
+foreign-n2 ň
+foreign-n2 ňp
+foreign-n2 nq
+foreign-o1 ó            ; The rules are not explicit whether foreign accents on top of o or u
+foreign-o1 ò            ; should be sorted among o-ó and u-ú, or among ö-ő and ü-ű, but the
+foreign-o1 òp           ; AkH #15 example with Møsstrand implicitly shows that it's the former.
+foreign-o1 óq
+foreign-o2 ó
+foreign-o2 ô
+foreign-o2 ôp
+foreign-o2 óq
+foreign-o3 ó
+foreign-o3 õ
+foreign-o3 õp
+foreign-o3 óq
+foreign-o4 ó
+foreign-o4 ø
+foreign-o4 øp
+foreign-o4 óq
+foreign-r1 r
+foreign-r1 ř
+foreign-r1 řp
+foreign-r1 rq
+foreign-s1 s
+foreign-s1 š
+foreign-s1 šp
+foreign-s1 sq
+foreign-u1 ú
+foreign-u1 ù
+foreign-u1 ùp
+foreign-u1 úq
+foreign-u2 ú
+foreign-u2 û
+foreign-u2 ûp
+foreign-u2 úq
+foreign-u3 ú
+foreign-u3 ũ
+foreign-u3 ũp
+foreign-u3 úq
+foreign-u4 ú
+foreign-u4 ů
+foreign-u4 ůp
+foreign-u4 úq
+foreign-y1 y
+foreign-y1 ÿ
+foreign-y1 ÿp
+foreign-y1 yq

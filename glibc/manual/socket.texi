@@ -1,0 +1,3666 @@
+@node Sockets, Low-Level Terminal Interface, Pipes and FIFOs, Top
+@c %MENU% A more complicated IPC mechanism, with networking support
+@chapter Sockets
+
+This chapter describes the GNU facilities for interprocess
+communication using sockets.
+
+@cindex socket
+@cindex interprocess communication, with sockets
+A @dfn{socket} is a generalized interprocess communication channel.
+Like a pipe, a socket is represented as a file descriptor.  Unlike pipes
+sockets support communication between unrelated processes, and even
+between processes running on different machines that communicate over a
+network.  Sockets are the primary means of communicating with other
+machines; @code{telnet}, @code{rlogin}, @code{ftp}, @code{talk} and the
+other familiar network programs use sockets.
+
+Not all operating systems support sockets.  In @theglibc{}, the
+header file @file{sys/socket.h} exists regardless of the operating
+system, and the socket functions always exist, but if the system does
+not really support sockets these functions always fail.
+
+@strong{Incomplete:} We do not currently document the facilities for
+broadcast messages or for configuring Internet interfaces.  The
+reentrant functions and some newer functions that are related to IPv6
+aren't documented either so far.
+
+@menu
+* Socket Concepts::	Basic concepts you need to know about.
+* Communication Styles::Stream communication, datagrams and other styles.
+* Socket Addresses::	How socket names (``addresses'') work.
+* Interface Naming::	Identifying specific network interfaces.
+* Local Namespace::	Details about the local namespace.
+* Internet Namespace::	Details about the Internet namespace.
+* Misc Namespaces::	Other namespaces not documented fully here.
+* Open/Close Sockets::  Creating sockets and destroying them.
+* Connections::		Operations on sockets with connection state.
+* Datagrams::		Operations on datagram sockets.
+* Inetd::		Inetd is a daemon that starts servers on request.
+			   The most convenient way to write a server
+			   is to make it work with Inetd.
+* Socket Options::	Miscellaneous low-level socket options.
+* Networks Database::   Accessing the database of network names.
+@end menu
+
+@node Socket Concepts
+@section Socket Concepts
+
+@cindex communication style (of a socket)
+@cindex style of communication (of a socket)
+When you create a socket, you must specify the style of communication
+you want to use and the type of protocol that should implement it.
+The @dfn{communication style} of a socket defines the user-level
+semantics of sending and receiving data on the socket.  Choosing a
+communication style specifies the answers to questions such as these:
+
+@itemize @bullet
+@item
+@cindex packet
+@cindex byte stream
+@cindex stream (sockets)
+@strong{What are the units of data transmission?}  Some communication
+styles regard the data as a sequence of bytes with no larger
+structure; others group the bytes into records (which are known in
+this context as @dfn{packets}).
+
+@item
+@cindex loss of data on sockets
+@cindex data loss on sockets
+@strong{Can data be lost during normal operation?}  Some communication
+styles guarantee that all the data sent arrives in the order it was
+sent (barring system or network crashes); other styles occasionally
+lose data as a normal part of operation, and may sometimes deliver
+packets more than once or in the wrong order.
+
+Designing a program to use unreliable communication styles usually
+involves taking precautions to detect lost or misordered packets and
+to retransmit data as needed.
+
+@item
+@strong{Is communication entirely with one partner?}  Some
+communication styles are like a telephone call---you make a
+@dfn{connection} with one remote socket and then exchange data
+freely.  Other styles are like mailing letters---you specify a
+destination address for each message you send.
+@end itemize
+
+@cindex namespace (of socket)
+@cindex domain (of socket)
+@cindex socket namespace
+@cindex socket domain
+You must also choose a @dfn{namespace} for naming the socket.  A socket
+name (``address'') is meaningful only in the context of a particular
+namespace.  In fact, even the data type to use for a socket name may
+depend on the namespace.  Namespaces are also called ``domains'', but we
+avoid that word as it can be confused with other usage of the same
+term.  Each namespace has a symbolic name that starts with @samp{PF_}.
+A corresponding symbolic name starting with @samp{AF_} designates the
+address format for that namespace.
+
+@cindex network protocol
+@cindex protocol (of socket)
+@cindex socket protocol
+@cindex protocol family
+Finally you must choose the @dfn{protocol} to carry out the
+communication.  The protocol determines what low-level mechanism is used
+to transmit and receive data.  Each protocol is valid for a particular
+namespace and communication style; a namespace is sometimes called a
+@dfn{protocol family} because of this, which is why the namespace names
+start with @samp{PF_}.
+
+The rules of a protocol apply to the data passing between two programs,
+perhaps on different computers; most of these rules are handled by the
+operating system and you need not know about them.  What you do need to
+know about protocols is this:
+
+@itemize @bullet
+@item
+In order to have communication between two sockets, they must specify
+the @emph{same} protocol.
+
+@item
+Each protocol is meaningful with particular style/namespace
+combinations and cannot be used with inappropriate combinations.  For
+example, the TCP protocol fits only the byte stream style of
+communication and the Internet namespace.
+
+@item
+For each combination of style and namespace there is a @dfn{default
+protocol}, which you can request by specifying 0 as the protocol
+number.  And that's what you should normally do---use the default.
+@end itemize
+
+Throughout the following description at various places
+variables/parameters to denote sizes are required.  And here the trouble
+starts.  In the first implementations the type of these variables was
+simply @code{int}.  On most machines at that time an @code{int} was 32
+bits wide, which created a @emph{de facto} standard requiring 32-bit
+variables.  This is important since references to variables of this type
+are passed to the kernel.
+
+Then the POSIX people came and unified the interface with the words "all
+size values are of type @code{size_t}".  On 64-bit machines
+@code{size_t} is 64 bits wide, so pointers to variables were no longer
+possible.
+
+The Unix98 specification provides a solution by introducing a type
+@code{socklen_t}.  This type is used in all of the cases that POSIX
+changed to use @code{size_t}.  The only requirement of this type is that
+it be an unsigned type of at least 32 bits.  Therefore, implementations
+which require that references to 32-bit variables be passed can be as
+happy as implementations which use 64-bit values.
+
+
+@node Communication Styles
+@section Communication Styles
+
+@Theglibc{} includes support for several different kinds of sockets,
+each with different characteristics.  This section describes the
+supported socket types.  The symbolic constants listed here are
+defined in @file{sys/socket.h}.
+@pindex sys/socket.h
+
+@deftypevr Macro int SOCK_STREAM
+@standards{BSD, sys/socket.h}
+The @code{SOCK_STREAM} style is like a pipe (@pxref{Pipes and FIFOs}).
+It operates over a connection with a particular remote socket and
+transmits data reliably as a stream of bytes.
+
+Use of this style is covered in detail in @ref{Connections}.
+@end deftypevr
+
+@deftypevr Macro int SOCK_DGRAM
+@standards{BSD, sys/socket.h}
+The @code{SOCK_DGRAM} style is used for sending
+individually-addressed packets unreliably.
+It is the diametrical opposite of @code{SOCK_STREAM}.
+
+Each time you write data to a socket of this kind, that data becomes
+one packet.  Since @code{SOCK_DGRAM} sockets do not have connections,
+you must specify the recipient address with each packet.
+
+The only guarantee that the system makes about your requests to
+transmit data is that it will try its best to deliver each packet you
+send.  It may succeed with the sixth packet after failing with the
+fourth and fifth packets; the seventh packet may arrive before the
+sixth, and may arrive a second time after the sixth.
+
+The typical use for @code{SOCK_DGRAM} is in situations where it is
+acceptable to simply re-send a packet if no response is seen in a
+reasonable amount of time.
+
+@xref{Datagrams}, for detailed information about how to use datagram
+sockets.
+@end deftypevr
+
+@ignore
+@c This appears to be only for the NS domain, which we aren't
+@c discussing and probably won't support either.
+@deftypevr Macro int SOCK_SEQPACKET
+@standards{BSD, sys/socket.h}
+This style is like @code{SOCK_STREAM} except that the data are
+structured into packets.
+
+A program that receives data over a @code{SOCK_SEQPACKET} socket
+should be prepared to read the entire message packet in a single call
+to @code{read}; if it only reads part of the message, the remainder of
+the message is simply discarded instead of being available for
+subsequent calls to @code{read}.
+
+Many protocols do not support this communication style.
+@end deftypevr
+@end ignore
+
+@ignore
+@deftypevr Macro int SOCK_RDM
+@standards{BSD, sys/socket.h}
+This style is a reliable version of @code{SOCK_DGRAM}: it sends
+individually addressed packets, but guarantees that each packet sent
+arrives exactly once.
+
+@strong{Warning:} It is not clear this is actually supported
+by any operating system.
+@end deftypevr
+@end ignore
+
+@deftypevr Macro int SOCK_RAW
+@standards{BSD, sys/socket.h}
+This style provides access to low-level network protocols and
+interfaces.  Ordinary user programs usually have no need to use this
+style.
+@end deftypevr
+
+@node Socket Addresses
+@section Socket Addresses
+
+@cindex address of socket
+@cindex name of socket
+@cindex binding a socket address
+@cindex socket address (name) binding
+The name of a socket is normally called an @dfn{address}.  The
+functions and symbols for dealing with socket addresses were named
+inconsistently, sometimes using the term ``name'' and sometimes using
+``address''.  You can regard these terms as synonymous where sockets
+are concerned.
+
+A socket newly created with the @code{socket} function has no
+address.  Other processes can find it for communication only if you
+give it an address.  We call this @dfn{binding} the address to the
+socket, and the way to do it is with the @code{bind} function.
+
+You need only be concerned with the address of a socket if other processes
+are to find it and start communicating with it.  You can specify an
+address for other sockets, but this is usually pointless; the first time
+you send data from a socket, or use it to initiate a connection, the
+system assigns an address automatically if you have not specified one.
+
+Occasionally a client needs to specify an address because the server
+discriminates based on address; for example, the rsh and rlogin
+protocols look at the client's socket address and only bypass passphrase
+checking if it is less than @code{IPPORT_RESERVED} (@pxref{Ports}).
+
+The details of socket addresses vary depending on what namespace you are
+using.  @xref{Local Namespace}, or @ref{Internet Namespace}, for specific
+information.
+
+Regardless of the namespace, you use the same functions @code{bind} and
+@code{getsockname} to set and examine a socket's address.  These
+functions use a phony data type, @code{struct sockaddr *}, to accept the
+address.  In practice, the address lives in a structure of some other
+data type appropriate to the address format you are using, but you cast
+its address to @code{struct sockaddr *} when you pass it to
+@code{bind}.
+
+@menu
+* Address Formats::		About @code{struct sockaddr}.
+* Setting Address::		Binding an address to a socket.
+* Reading Address::		Reading the address of a socket.
+@end menu
+
+@node Address Formats
+@subsection Address Formats
+
+The functions @code{bind} and @code{getsockname} use the generic data
+type @code{struct sockaddr *} to represent a pointer to a socket
+address.  You can't use this data type effectively to interpret an
+address or construct one; for that, you must use the proper data type
+for the socket's namespace.
+
+Thus, the usual practice is to construct an address of the proper
+namespace-specific type, then cast a pointer to @code{struct sockaddr *}
+when you call @code{bind} or @code{getsockname}.
+
+The one piece of information that you can get from the @code{struct
+sockaddr} data type is the @dfn{address format designator}.  This tells
+you which data type to use to understand the address fully.
+
+@pindex sys/socket.h
+The symbols in this section are defined in the header file
+@file{sys/socket.h}.
+
+@deftp {Data Type} {struct sockaddr}
+@standards{BSD, sys/socket.h}
+The @code{struct sockaddr} type itself has the following members:
+
+@table @code
+@item short int sa_family
+This is the code for the address format of this address.  It
+identifies the format of the data which follows.
+
+@item char sa_data[14]
+This is the actual socket address data, which is format-dependent.  Its
+length also depends on the format, and may well be more than 14.  The
+length 14 of @code{sa_data} is essentially arbitrary.
+@end table
+@end deftp
+
+Each address format has a symbolic name which starts with @samp{AF_}.
+Each of them corresponds to a @samp{PF_} symbol which designates the
+corresponding namespace.  Here is a list of address format names:
+
+@vtable @code
+@item AF_LOCAL
+@standards{POSIX, sys/socket.h}
+This designates the address format that goes with the local namespace.
+(@code{PF_LOCAL} is the name of that namespace.)  @xref{Local Namespace
+Details}, for information about this address format.
+
+@item AF_UNIX
+@standards{BSD, sys/socket.h}
+@standards{Unix98, sys/socket.h}
+This is a synonym for @code{AF_LOCAL}.  Although @code{AF_LOCAL} is
+mandated by POSIX.1g, @code{AF_UNIX} is portable to more systems.
+@code{AF_UNIX} was the traditional name stemming from BSD, so even most
+POSIX systems support it.  It is also the name of choice in the Unix98
+specification. (The same is true for @code{PF_UNIX}
+vs. @code{PF_LOCAL}).
+
+@item AF_FILE
+@standards{GNU, sys/socket.h}
+This is another synonym for @code{AF_LOCAL}, for compatibility.
+(@code{PF_FILE} is likewise a synonym for @code{PF_LOCAL}.)
+
+@item AF_INET
+@standards{BSD, sys/socket.h}
+This designates the address format that goes with the Internet
+namespace.  (@code{PF_INET} is the name of that namespace.)
+@xref{Internet Address Formats}.
+
+@item AF_INET6
+@standards{IPv6 Basic API, sys/socket.h}
+This is similar to @code{AF_INET}, but refers to the IPv6 protocol.
+(@code{PF_INET6} is the name of the corresponding namespace.)
+
+@item AF_UNSPEC
+@standards{BSD, sys/socket.h}
+This designates no particular address format.  It is used only in rare
+cases, such as to clear out the default destination address of a
+``connected'' datagram socket.  @xref{Sending Datagrams}.
+
+The corresponding namespace designator symbol @code{PF_UNSPEC} exists
+for completeness, but there is no reason to use it in a program.
+@end vtable
+
+@file{sys/socket.h} defines symbols starting with @samp{AF_} for many
+different kinds of networks, most or all of which are not actually
+implemented.  We will document those that really work as we receive
+information about how to use them.
+
+@node Setting Address
+@subsection Setting the Address of a Socket
+
+@pindex sys/socket.h
+Use the @code{bind} function to assign an address to a socket.  The
+prototype for @code{bind} is in the header file @file{sys/socket.h}.
+For examples of use, see @ref{Local Socket Example}, or see @ref{Inet Example}.
+
+@deftypefun int bind (int @var{socket}, struct sockaddr *@var{addr}, socklen_t @var{length})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Direct syscall, except on Hurd.
+The @code{bind} function assigns an address to the socket
+@var{socket}.  The @var{addr} and @var{length} arguments specify the
+address; the detailed format of the address depends on the namespace.
+The first part of the address is always the format designator, which
+specifies a namespace, and says that the address is in the format of
+that namespace.
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The @var{socket} argument is not a valid file descriptor.
+
+@item ENOTSOCK
+The descriptor @var{socket} is not a socket.
+
+@item EADDRNOTAVAIL
+The specified address is not available on this machine.
+
+@item EADDRINUSE
+Some other socket is already using the specified address.
+
+@item EINVAL
+The socket @var{socket} already has an address.
+
+@item EACCES
+You do not have permission to access the requested address.  (In the
+Internet domain, only the super-user is allowed to specify a port number
+in the range 0 through @code{IPPORT_RESERVED} minus one; see
+@ref{Ports}.)
+@end table
+
+Additional conditions may be possible depending on the particular namespace
+of the socket.
+@end deftypefun
+
+@node Reading Address
+@subsection Reading the Address of a Socket
+
+@pindex sys/socket.h
+Use the function @code{getsockname} to examine the address of an
+Internet socket.  The prototype for this function is in the header file
+@file{sys/socket.h}.
+
+@deftypefun int getsockname (int @var{socket}, struct sockaddr *@var{addr}, socklen_t *@var{length-ptr})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsmem{/hurd}}}
+@c Direct syscall, except on Hurd, where it seems like it might leak
+@c VM if cancelled.
+The @code{getsockname} function returns information about the
+address of the socket @var{socket} in the locations specified by the
+@var{addr} and @var{length-ptr} arguments.  Note that the
+@var{length-ptr} is a pointer; you should initialize it to be the
+allocation size of @var{addr}, and on return it contains the actual
+size of the address data.
+
+The format of the address data depends on the socket namespace.  The
+length of the information is usually fixed for a given namespace, so
+normally you can know exactly how much space is needed and can provide
+that much.  The usual practice is to allocate a place for the value
+using the proper data type for the socket's namespace, then cast its
+address to @code{struct sockaddr *} to pass it to @code{getsockname}.
+
+The return value is @code{0} on success and @code{-1} on error.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The @var{socket} argument is not a valid file descriptor.
+
+@item ENOTSOCK
+The descriptor @var{socket} is not a socket.
+
+@item ENOBUFS
+There are not enough internal buffers available for the operation.
+@end table
+@end deftypefun
+
+You can't read the address of a socket in the file namespace.  This is
+consistent with the rest of the system; in general, there's no way to
+find a file's name from a descriptor for that file.
+
+@node Interface Naming
+@section Interface Naming
+
+Each network interface has a name.  This usually consists of a few
+letters that relate to the type of interface, which may be followed by a
+number if there is more than one interface of that type.  Examples
+might be @code{lo} (the loopback interface) and @code{eth0} (the first
+Ethernet interface).
+
+Although such names are convenient for humans, it would be clumsy to
+have to use them whenever a program needs to refer to an interface.  In
+such situations an interface is referred to by its @dfn{index}, which is
+an arbitrarily-assigned small positive integer.
+
+The following functions, constants and data types are declared in the
+header file @file{net/if.h}.
+
+@deftypevr Constant size_t IFNAMSIZ
+@standards{???, net/if.h}
+This constant defines the maximum buffer size needed to hold an
+interface name, including its terminating zero byte.
+@end deftypevr
+
+@deftypefun {unsigned int} if_nametoindex (const char *@var{ifname})
+@standards{IPv6 basic API, net/if.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{}}}
+@c It opens a socket to use ioctl on the fd to get the index.
+@c opensock may call socket and access multiple times until it finds a
+@c socket family that works.  The Linux implementation has a potential
+@c concurrency issue WRT last_type and last_family not being updated
+@c atomically, but it is harmless; the generic implementation, OTOH,
+@c takes a lock, which makes all callers AS- and AC-Unsafe.
+@c  opensock @asulock @aculock @acsfd
+This function yields the interface index corresponding to a particular
+name.  If no interface exists with the name given, it returns 0.
+@end deftypefun
+
+@deftypefun {char *} if_indextoname (unsigned int @var{ifindex}, char *@var{ifname})
+@standards{IPv6 basic API, net/if.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{}}}
+@c It opens a socket with opensock to use ioctl on the fd to get the
+@c name from the index.
+This function maps an interface index to its corresponding name.  The
+returned name is placed in the buffer pointed to by @code{ifname}, which
+must be at least @code{IFNAMSIZ} bytes in length.  If the index was
+invalid, the function's return value is a null pointer, otherwise it is
+@code{ifname}.
+@end deftypefun
+
+@deftp {Data Type} {struct if_nameindex}
+@standards{IPv6 basic API, net/if.h}
+This data type is used to hold the information about a single
+interface.  It has the following members:
+
+@table @code
+@item unsigned int if_index;
+This is the interface index.
+
+@item char *if_name
+This is the null-terminated index name.
+
+@end table
+@end deftp
+
+@deftypefun {struct if_nameindex *} if_nameindex (void)
+@standards{IPv6 basic API, net/if.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asulock{/hurd}}@acunsafe{@aculock{/hurd} @acsfd{} @acsmem{}}}
+@c if_nameindex @ascuheap @asulock/hurd @aculock/hurd @acsfd @acsmem
+@c  [linux]
+@c   netlink_open @acsfd @acsmem/hurd
+@c    socket dup @acsfd
+@c    memset dup ok
+@c    bind dup ok
+@c    netlink_close dup @acsfd
+@c    getsockname dup @acsmem/hurd
+@c   netlink_request @ascuheap @acsmem
+@c    getpagesize dup ok
+@c    malloc dup @ascuheap @acsmem
+@c    netlink_sendreq ok
+@c     memset dup ok
+@c     sendto dup ok
+@c    recvmsg dup ok
+@c    memcpy dup ok
+@c    free dup @ascuheap @acsmem
+@c   netlink_free_handle @ascuheap @acsmem
+@c    free dup @ascuheap @acsmem
+@c   netlink_close @acsfd
+@c    close dup @acsfd
+@c   malloc dup @asuheap @acsmem
+@c   strndup @ascuheap @acsmem
+@c   if_freenameindex @ascuheap @acsmem
+@c  [hurd]
+@c   opensock dup @asulock @aculock @acsfd
+@c   hurd_socket_server ok
+@c   pfinet_siocgifconf ok
+@c   malloc @ascuheap @acsmem
+@c   strdup @ascuheap @acsmem
+@c   ioctl dup ok
+@c   free @ascuheap @acsmem
+This function returns an array of @code{if_nameindex} structures, one
+for every interface that is present.  The end of the list is indicated
+by a structure with an interface of 0 and a null name pointer.  If an
+error occurs, this function returns a null pointer.
+
+The returned structure must be freed with @code{if_freenameindex} after
+use.
+@end deftypefun
+
+@deftypefun void if_freenameindex (struct if_nameindex *@var{ptr})
+@standards{IPv6 basic API, net/if.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c if_freenameindex @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+This function frees the structure returned by an earlier call to
+@code{if_nameindex}.
+@end deftypefun
+
+@node Local Namespace
+@section The Local Namespace
+@cindex local namespace, for sockets
+
+This section describes the details of the local namespace, whose
+symbolic name (required when you create a socket) is @code{PF_LOCAL}.
+The local namespace is also known as ``Unix domain sockets''.  Another
+name is file namespace since socket addresses are normally implemented
+as file names.
+
+@menu
+* Concepts: Local Namespace Concepts. What you need to understand.
+* Details: Local Namespace Details.   Address format, symbolic names, etc.
+* Example: Local Socket Example.      Example of creating a socket.
+@end menu
+
+@node Local Namespace Concepts
+@subsection Local Namespace Concepts
+
+In the local namespace socket addresses are file names.  You can specify
+any file name you want as the address of the socket, but you must have
+write permission on the directory containing it.
+@c XXX The following was said to be wrong.
+@c In order to connect to a socket you must have read permission for it.
+It's common to put these files in the @file{/tmp} directory.
+
+One peculiarity of the local namespace is that the name is only used
+when opening the connection; once open the address is not meaningful and
+may not exist.
+
+Another peculiarity is that you cannot connect to such a socket from
+another machine--not even if the other machine shares the file system
+which contains the name of the socket.  You can see the socket in a
+directory listing, but connecting to it never succeeds.  Some programs
+take advantage of this, such as by asking the client to send its own
+process ID, and using the process IDs to distinguish between clients.
+However, we recommend you not use this method in protocols you design,
+as we might someday permit connections from other machines that mount
+the same file systems.  Instead, send each new client an identifying
+number if you want it to have one.
+
+After you close a socket in the local namespace, you should delete the
+file name from the file system.  Use @code{unlink} or @code{remove} to
+do this; see @ref{Deleting Files}.
+
+The local namespace supports just one protocol for any communication
+style; it is protocol number @code{0}.
+
+@node Local Namespace Details
+@subsection Details of Local Namespace
+
+@pindex sys/socket.h
+To create a socket in the local namespace, use the constant
+@code{PF_LOCAL} as the @var{namespace} argument to @code{socket} or
+@code{socketpair}.  This constant is defined in @file{sys/socket.h}.
+
+@deftypevr Macro int PF_LOCAL
+@standards{POSIX, sys/socket.h}
+This designates the local namespace, in which socket addresses are local
+names, and its associated family of protocols.  @code{PF_LOCAL} is the
+macro used by POSIX.1g.
+@end deftypevr
+
+@deftypevr Macro int PF_UNIX
+@standards{BSD, sys/socket.h}
+This is a synonym for @code{PF_LOCAL}, for compatibility's sake.
+@end deftypevr
+
+@deftypevr Macro int PF_FILE
+@standards{GNU, sys/socket.h}
+This is a synonym for @code{PF_LOCAL}, for compatibility's sake.
+@end deftypevr
+
+The structure for specifying socket names in the local namespace is
+defined in the header file @file{sys/un.h}:
+@pindex sys/un.h
+
+@deftp {Data Type} {struct sockaddr_un}
+@standards{BSD, sys/un.h}
+This structure is used to specify local namespace socket addresses.  It has
+the following members:
+
+@table @code
+@item short int sun_family
+This identifies the address family or format of the socket address.
+You should store the value @code{AF_LOCAL} to designate the local
+namespace.  @xref{Socket Addresses}.
+
+@item char sun_path[108]
+This is the file name to use.
+
+@strong{Incomplete:}  Why is 108 a magic number?  RMS suggests making
+this a zero-length array and tweaking the following example to use
+@code{alloca} to allocate an appropriate amount of storage based on
+the length of the filename.
+@end table
+@end deftp
+
+You should compute the @var{length} parameter for a socket address in
+the local namespace as the sum of the size of the @code{sun_family}
+component and the string length (@emph{not} the allocation size!) of
+the file name string.  This can be done using the macro @code{SUN_LEN}:
+
+@deftypefn {Macro} int SUN_LEN (@emph{struct sockaddr_un *} @var{ptr})
+@standards{BSD, sys/un.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This macro computes the length of the socket address in the local namespace.
+@end deftypefn
+
+@node Local Socket Example
+@subsection Example of Local-Namespace Sockets
+
+Here is an example showing how to create and name a socket in the local
+namespace.
+
+@smallexample
+@include mkfsock.c.texi
+@end smallexample
+
+@node Internet Namespace
+@section The Internet Namespace
+@cindex Internet namespace, for sockets
+
+This section describes the details of the protocols and socket naming
+conventions used in the Internet namespace.
+
+Originally the Internet namespace used only IP version 4 (IPv4).  With
+the growing number of hosts on the Internet, a new protocol with a
+larger address space was necessary: IP version 6 (IPv6).  IPv6
+introduces 128-bit addresses (IPv4 has 32-bit addresses) and other
+features, and will eventually replace IPv4.
+
+To create a socket in the IPv4 Internet namespace, use the symbolic name
+@code{PF_INET} of this namespace as the @var{namespace} argument to
+@code{socket} or @code{socketpair}.  For IPv6 addresses you need the
+macro @code{PF_INET6}.  These macros are defined in @file{sys/socket.h}.
+@pindex sys/socket.h
+
+@deftypevr Macro int PF_INET
+@standards{BSD, sys/socket.h}
+This designates the IPv4 Internet namespace and associated family of
+protocols.
+@end deftypevr
+
+@deftypevr Macro int PF_INET6
+@standards{X/Open, sys/socket.h}
+This designates the IPv6 Internet namespace and associated family of
+protocols.
+@end deftypevr
+
+A socket address for the Internet namespace includes the following components:
+
+@itemize @bullet
+@item
+The address of the machine you want to connect to.  Internet addresses
+can be specified in several ways; these are discussed in @ref{Internet
+Address Formats}, @ref{Host Addresses} and @ref{Host Names}.
+
+@item
+A port number for that machine.  @xref{Ports}.
+@end itemize
+
+You must ensure that the address and port number are represented in a
+canonical format called @dfn{network byte order}.  @xref{Byte Order},
+for information about this.
+
+@menu
+* Internet Address Formats::    How socket addresses are specified in the
+                                 Internet namespace.
+* Host Addresses::	        All about host addresses of Internet host.
+* Ports::			Internet port numbers.
+* Services Database::           Ports may have symbolic names.
+* Byte Order::		        Different hosts may use different byte
+                                 ordering conventions; you need to
+                                 canonicalize host address and port number.
+* Protocols Database::		Referring to protocols by name.
+* Inet Example::	        Putting it all together.
+@end menu
+
+@node Internet Address Formats
+@subsection Internet Socket Address Formats
+
+In the Internet namespace, for both IPv4 (@code{AF_INET}) and IPv6
+(@code{AF_INET6}), a socket address consists of a host address
+and a port on that host.  In addition, the protocol you choose serves
+effectively as a part of the address because local port numbers are
+meaningful only within a particular protocol.
+
+The data types for representing socket addresses in the Internet namespace
+are defined in the header file @file{netinet/in.h}.
+@pindex netinet/in.h
+
+@deftp {Data Type} {struct sockaddr_in}
+@standards{BSD, netinet/in.h}
+This is the data type used to represent socket addresses in the
+Internet namespace.  It has the following members:
+
+@table @code
+@item sa_family_t sin_family
+This identifies the address family or format of the socket address.
+You should store the value @code{AF_INET} in this member.  The address
+family is stored in host byte order.  @xref{Socket Addresses}.
+
+@item struct in_addr sin_addr
+This is the IPv4 address.  @xref{Host Addresses}, and @ref{Host
+Names}, for how to get a value to store here.  The IPv4 address is
+stored in network byte order.
+
+@item unsigned short int sin_port
+This is the port number.  @xref{Ports}.  The port number is stored in
+network byte order.
+@end table
+@end deftp
+
+When you call @code{bind} or @code{getsockname}, you should specify
+@code{sizeof (struct sockaddr_in)} as the @var{length} parameter if
+you are using an IPv4 Internet namespace socket address.
+
+@deftp {Data Type} {struct sockaddr_in6}
+This is the data type used to represent socket addresses in the IPv6
+namespace.  It has the following members:
+
+@table @code
+@item sa_family_t sin6_family
+This identifies the address family or format of the socket address.
+You should store the value of @code{AF_INET6} in this member.
+@xref{Socket Addresses}.  The address family is stored in host byte
+order.
+
+@item struct in6_addr sin6_addr
+This is the IPv6 address of the host machine.  @xref{Host
+Addresses}, and @ref{Host Names}, for how to get a value to store
+here.  The address is stored in network byte order.
+
+@item uint32_t sin6_flowinfo
+@cindex flow label
+@cindex IPv6 flow label
+@cindex traffic class
+@cindex IPv6 traffic class
+This combines the IPv6 traffic class and flow label values, as found
+in the IPv6 header.  This field is stored in network byte order.  Only
+the 28 lower bits (of the number in network byte order) are used; the
+remainig bits must be zero.  The lower 20 bits are the flow label, and
+bits 20 to 27 are the the traffic class.  Typically, this field is
+zero.
+
+@item uint32_t sin6_scope_id
+@cindex scope ID
+@cindex IPv6 scope ID
+For link-local addresses, this identifies the interface on which this
+address is valid.  The scope ID is stored in host byte order.
+Typically, this field is zero.
+
+@item uint16_t sin6_port
+This is the port number.  @xref{Ports}.  The port number is stored in
+network byte order.
+
+@end table
+@end deftp
+
+@node Host Addresses
+@subsection Host Addresses
+
+Each computer on the Internet has one or more @dfn{Internet addresses},
+numbers which identify that computer among all those on the Internet.
+Users typically write IPv4 numeric host addresses as sequences of four
+numbers, separated by periods, as in @samp{128.52.46.32}, and IPv6
+numeric host addresses as sequences of up to eight numbers separated by
+colons, as in @samp{5f03:1200:836f:c100::1}.
+
+Each computer also has one or more @dfn{host names}, which are strings
+of words separated by periods, as in @samp{www.gnu.org}.
+
+Programs that let the user specify a host typically accept both numeric
+addresses and host names.  To open a connection a program needs a
+numeric address, and so must convert a host name to the numeric address
+it stands for.
+
+@menu
+* Abstract Host Addresses::	What a host number consists of.
+* Data type: Host Address Data Type.	Data type for a host number.
+* Functions: Host Address Functions.	Functions to operate on them.
+* Names: Host Names.		Translating host names to host numbers.
+@end menu
+
+@node Abstract Host Addresses
+@subsubsection Internet Host Addresses
+@cindex host address, Internet
+@cindex Internet host address
+
+@ifinfo
+Each computer on the Internet has one or more Internet addresses,
+numbers which identify that computer among all those on the Internet.
+@end ifinfo
+
+@cindex network number
+@cindex local network address number
+An IPv4 Internet host address is a number containing four bytes of data.
+Historically these are divided into two parts, a @dfn{network number} and a
+@dfn{local network address number} within that network.  In the
+mid-1990s classless addresses were introduced which changed this
+behavior.  Since some functions implicitly expect the old definitions,
+we first describe the class-based network and will then describe
+classless addresses.  IPv6 uses only classless addresses and therefore
+the following paragraphs don't apply.
+
+The class-based IPv4 network number consists of the first one, two or
+three bytes; the rest of the bytes are the local address.
+
+IPv4 network numbers are registered with the Network Information Center
+(NIC), and are divided into three classes---A, B and C.  The local
+network address numbers of individual machines are registered with the
+administrator of the particular network.
+
+Class A networks have single-byte numbers in the range 0 to 127.  There
+are only a small number of Class A networks, but they can each support a
+very large number of hosts.  Medium-sized Class B networks have two-byte
+network numbers, with the first byte in the range 128 to 191.  Class C
+networks are the smallest; they have three-byte network numbers, with
+the first byte in the range 192-255.  Thus, the first 1, 2, or 3 bytes
+of an Internet address specify a network.  The remaining bytes of the
+Internet address specify the address within that network.
+
+The Class A network 0 is reserved for broadcast to all networks.  In
+addition, the host number 0 within each network is reserved for broadcast
+to all hosts in that network.  These uses are obsolete now but for
+compatibility reasons you shouldn't use network 0 and host number 0.
+
+The Class A network 127 is reserved for loopback; you can always use
+the Internet address @samp{127.0.0.1} to refer to the host machine.
+
+Since a single machine can be a member of multiple networks, it can
+have multiple Internet host addresses.  However, there is never
+supposed to be more than one machine with the same host address.
+
+@c !!! this section could document the IN_CLASS* macros in <netinet/in.h>.
+@c No, it shouldn't since they're obsolete.
+
+@cindex standard dot notation, for Internet addresses
+@cindex dot notation, for Internet addresses
+There are four forms of the @dfn{standard numbers-and-dots notation}
+for Internet addresses:
+
+@table @code
+@item @var{a}.@var{b}.@var{c}.@var{d}
+This specifies all four bytes of the address individually and is the
+commonly used representation.
+
+@item @var{a}.@var{b}.@var{c}
+The last part of the address, @var{c}, is interpreted as a 2-byte quantity.
+This is useful for specifying host addresses in a Class B network with
+network address number @code{@var{a}.@var{b}}.
+
+@item @var{a}.@var{b}
+The last part of the address, @var{b}, is interpreted as a 3-byte quantity.
+This is useful for specifying host addresses in a Class A network with
+network address number @var{a}.
+
+@item @var{a}
+If only one part is given, this corresponds directly to the host address
+number.
+@end table
+
+Within each part of the address, the usual C conventions for specifying
+the radix apply.  In other words, a leading @samp{0x} or @samp{0X} implies
+hexadecimal radix; a leading @samp{0} implies octal; and otherwise decimal
+radix is assumed.
+
+@subsubheading Classless Addresses
+
+IPv4 addresses (and IPv6 addresses also) are now considered classless;
+the distinction between classes A, B and C can be ignored.  Instead an
+IPv4 host address consists of a 32-bit address and a 32-bit mask.  The
+mask contains set bits for the network part and cleared bits for the
+host part.  The network part is contiguous from the left, with the
+remaining bits representing the host.  As a consequence, the netmask can
+simply be specified as the number of set bits.  Classes A, B and C are
+just special cases of this general rule.  For example, class A addresses
+have a netmask of @samp{255.0.0.0} or a prefix length of 8.
+
+Classless IPv4 network addresses are written in numbers-and-dots
+notation with the prefix length appended and a slash as separator.  For
+example the class A network 10 is written as @samp{10.0.0.0/8}.
+
+@subsubheading IPv6 Addresses
+
+IPv6 addresses contain 128 bits (IPv4 has 32 bits) of data.  A host
+address is usually written as eight 16-bit hexadecimal numbers that are
+separated by colons.  Two colons are used to abbreviate strings of
+consecutive zeros.  For example, the IPv6 loopback address
+@samp{0:0:0:0:0:0:0:1} can just be written as @samp{::1}.
+
+@node Host Address Data Type
+@subsubsection Host Address Data Type
+
+IPv4 Internet host addresses are represented in some contexts as integers
+(type @code{uint32_t}).  In other contexts, the integer is
+packaged inside a structure of type @code{struct in_addr}.  It would
+be better if the usage were made consistent, but it is not hard to extract
+the integer from the structure or put the integer into a structure.
+
+You will find older code that uses @code{unsigned long int} for
+IPv4 Internet host addresses instead of @code{uint32_t} or @code{struct
+in_addr}.  Historically @code{unsigned long int} was a 32-bit number but
+with 64-bit machines this has changed.  Using @code{unsigned long int}
+might break the code if it is used on machines where this type doesn't
+have 32 bits.  @code{uint32_t} is specified by Unix98 and guaranteed to have
+32 bits.
+
+IPv6 Internet host addresses have 128 bits and are packaged inside a
+structure of type @code{struct in6_addr}.
+
+The following basic definitions for Internet addresses are declared in
+the header file @file{netinet/in.h}:
+@pindex netinet/in.h
+
+@deftp {Data Type} {struct in_addr}
+@standards{BSD, netinet/in.h}
+This data type is used in certain contexts to contain an IPv4 Internet
+host address.  It has just one field, named @code{s_addr}, which records
+the host address number as an @code{uint32_t}.
+@end deftp
+
+@deftypevr Macro {uint32_t} INADDR_LOOPBACK
+@standards{BSD, netinet/in.h}
+You can use this constant to stand for ``the address of this machine,''
+instead of finding its actual address.  It is the IPv4 Internet address
+@samp{127.0.0.1}, which is usually called @samp{localhost}.  This
+special constant saves you the trouble of looking up the address of your
+own machine.  Also, the system usually implements @code{INADDR_LOOPBACK}
+specially, avoiding any network traffic for the case of one machine
+talking to itself.
+@end deftypevr
+
+@deftypevr Macro {uint32_t} INADDR_ANY
+@standards{BSD, netinet/in.h}
+You can use this constant to stand for ``any incoming address'' when
+binding to an address.  @xref{Setting Address}.  This is the usual
+address to give in the @code{sin_addr} member of @w{@code{struct
+sockaddr_in}} when you want to accept Internet connections.
+@end deftypevr
+
+@deftypevr Macro {uint32_t} INADDR_BROADCAST
+@standards{BSD, netinet/in.h}
+This constant is the address you use to send a broadcast message.
+@c !!! broadcast needs further documented
+@end deftypevr
+
+@deftypevr Macro {uint32_t} INADDR_NONE
+@standards{BSD, netinet/in.h}
+This constant is returned by some functions to indicate an error.
+@end deftypevr
+
+@deftp {Data Type} {struct in6_addr}
+@standards{IPv6 basic API, netinet/in.h}
+This data type is used to store an IPv6 address.  It stores 128 bits of
+data, which can be accessed (via a union) in a variety of ways.
+@end deftp
+
+@deftypevr Constant {struct in6_addr} in6addr_loopback
+@standards{IPv6 basic API, netinet/in.h}
+This constant is the IPv6 address @samp{::1}, the loopback address.  See
+above for a description of what this means.  The macro
+@code{IN6ADDR_LOOPBACK_INIT} is provided to allow you to initialize your
+own variables to this value.
+@end deftypevr
+
+@deftypevr Constant {struct in6_addr} in6addr_any
+@standards{IPv6 basic API, netinet/in.h}
+This constant is the IPv6 address @samp{::}, the unspecified address.  See
+above for a description of what this means.  The macro
+@code{IN6ADDR_ANY_INIT} is provided to allow you to initialize your
+own variables to this value.
+@end deftypevr
+
+@node Host Address Functions
+@subsubsection Host Address Functions
+
+@pindex arpa/inet.h
+@noindent
+These additional functions for manipulating Internet addresses are
+declared in the header file @file{arpa/inet.h}.  They represent Internet
+addresses in network byte order, and network numbers and
+local-address-within-network numbers in host byte order.  @xref{Byte
+Order}, for an explanation of network and host byte order.
+
+@deftypefun int inet_aton (const char *@var{name}, struct in_addr *@var{addr})
+@standards{BSD, arpa/inet.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c inet_aton @mtslocale
+@c  isdigit dup @mtslocale
+@c  strtoul dup @mtslocale
+@c  isascii dup @mtslocale
+@c  isspace dup @mtslocale
+@c  htonl dup ok
+This function converts the IPv4 Internet host address @var{name}
+from the standard numbers-and-dots notation into binary data and stores
+it in the @code{struct in_addr} that @var{addr} points to.
+@code{inet_aton} returns nonzero if the address is valid, zero if not.
+@end deftypefun
+
+@deftypefun {uint32_t} inet_addr (const char *@var{name})
+@standards{BSD, arpa/inet.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c inet_addr @mtslocale
+@c  inet_aton dup @mtslocale
+This function converts the IPv4 Internet host address @var{name} from the
+standard numbers-and-dots notation into binary data.  If the input is
+not valid, @code{inet_addr} returns @code{INADDR_NONE}.  This is an
+obsolete interface to @code{inet_aton}, described immediately above.  It
+is obsolete because @code{INADDR_NONE} is a valid address
+(255.255.255.255), and @code{inet_aton} provides a cleaner way to
+indicate error return.
+@end deftypefun
+
+@deftypefun {uint32_t} inet_network (const char *@var{name})
+@standards{BSD, arpa/inet.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c inet_network @mtslocale
+@c  isdigit dup @mtslocale
+@c  isxdigit dup @mtslocale
+@c  tolower dup @mtslocale
+@c  isspace dup @mtslocale
+This function extracts the network number from the address @var{name},
+given in the standard numbers-and-dots notation.  The returned address is
+in host order.  If the input is not valid, @code{inet_network} returns
+@code{-1}.
+
+The function works only with traditional IPv4 class A, B and C network
+types.  It doesn't work with classless addresses and shouldn't be used
+anymore.
+@end deftypefun
+
+@deftypefun {char *} inet_ntoa (struct in_addr @var{addr})
+@standards{BSD, arpa/inet.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asurace{}}@acsafe{}}
+@c inet_ntoa @mtslocale @asurace
+@c   writes to a thread-local static buffer
+@c  snprintf @mtslocale [no @ascuheap or @acsmem]
+This function converts the IPv4 Internet host address @var{addr} to a
+string in the standard numbers-and-dots notation.  The return value is
+a pointer into a statically-allocated buffer.  Subsequent calls will
+overwrite the same buffer, so you should copy the string if you need
+to save it.
+
+In multi-threaded programs each thread has its own statically-allocated
+buffer.  But still subsequent calls of @code{inet_ntoa} in the same
+thread will overwrite the result of the last call.
+
+Instead of @code{inet_ntoa} the newer function @code{inet_ntop} which is
+described below should be used since it handles both IPv4 and IPv6
+addresses.
+@end deftypefun
+
+@deftypefun {struct in_addr} inet_makeaddr (uint32_t @var{net}, uint32_t @var{local})
+@standards{BSD, arpa/inet.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c inet_makeaddr ok
+@c  htonl dup ok
+This function makes an IPv4 Internet host address by combining the network
+number @var{net} with the local-address-within-network number
+@var{local}.
+@end deftypefun
+
+@deftypefun uint32_t inet_lnaof (struct in_addr @var{addr})
+@standards{BSD, arpa/inet.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c inet_lnaof ok
+@c  ntohl dup ok
+@c  IN_CLASSA ok
+@c  IN_CLASSB ok
+This function returns the local-address-within-network part of the
+Internet host address @var{addr}.
+
+The function works only with traditional IPv4 class A, B and C network
+types.  It doesn't work with classless addresses and shouldn't be used
+anymore.
+@end deftypefun
+
+@deftypefun uint32_t inet_netof (struct in_addr @var{addr})
+@standards{BSD, arpa/inet.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c inet_netof ok
+@c  ntohl dup ok
+@c  IN_CLASSA ok
+@c  IN_CLASSB ok
+This function returns the network number part of the Internet host
+address @var{addr}.
+
+The function works only with traditional IPv4 class A, B and C network
+types.  It doesn't work with classless addresses and shouldn't be used
+anymore.
+@end deftypefun
+
+@deftypefun int inet_pton (int @var{af}, const char *@var{cp}, void *@var{buf})
+@standards{IPv6 basic API, arpa/inet.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c inet_pton @mtslocale
+@c  inet_pton4 ok
+@c   memcpy dup ok
+@c  inet_pton6 @mtslocale
+@c   memset dup ok
+@c   tolower dup @mtslocale
+@c   strchr dup ok
+@c   inet_pton4 dup ok
+@c   memcpy dup ok
+This function converts an Internet address (either IPv4 or IPv6) from
+presentation (textual) to network (binary) format.  @var{af} should be
+either @code{AF_INET} or @code{AF_INET6}, as appropriate for the type of
+address being converted.  @var{cp} is a pointer to the input string, and
+@var{buf} is a pointer to a buffer for the result.  It is the caller's
+responsibility to make sure the buffer is large enough.
+@end deftypefun
+
+@deftypefun {const char *} inet_ntop (int @var{af}, const void *@var{cp}, char *@var{buf}, socklen_t @var{len})
+@standards{IPv6 basic API, arpa/inet.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@assafe{}@acsafe{}}
+@c inet_ntop @mtslocale
+@c  inet_ntop4 @mtslocale
+@c   sprintf dup @mtslocale [no @ascuheap or @acsmem]
+@c   strcpy dup ok
+@c  inet_ntop6 @mtslocale
+@c   memset dup ok
+@c   inet_ntop4 dup @mtslocale
+@c   sprintf dup @mtslocale [no @ascuheap or @acsmem]
+@c   strcpy dup ok
+This function converts an Internet address (either IPv4 or IPv6) from
+network (binary) to presentation (textual) form.  @var{af} should be
+either @code{AF_INET} or @code{AF_INET6}, as appropriate.  @var{cp} is a
+pointer to the address to be converted.  @var{buf} should be a pointer
+to a buffer to hold the result, and @var{len} is the length of this
+buffer.  The return value from the function will be this buffer address.
+@end deftypefun
+
+@node Host Names
+@subsubsection Host Names
+@cindex hosts database
+@cindex converting host name to address
+@cindex converting host address to name
+
+Besides the standard numbers-and-dots notation for Internet addresses,
+you can also refer to a host by a symbolic name.  The advantage of a
+symbolic name is that it is usually easier to remember.  For example,
+the machine with Internet address @samp{158.121.106.19} is also known as
+@samp{alpha.gnu.org}; and other machines in the @samp{gnu.org}
+domain can refer to it simply as @samp{alpha}.
+
+@pindex /etc/hosts
+@pindex netdb.h
+Internally, the system uses a database to keep track of the mapping
+between host names and host numbers.  This database is usually either
+the file @file{/etc/hosts} or an equivalent provided by a name server.
+The functions and other symbols for accessing this database are declared
+in @file{netdb.h}.  They are BSD features, defined unconditionally if
+you include @file{netdb.h}.
+
+@deftp {Data Type} {struct hostent}
+@standards{BSD, netdb.h}
+This data type is used to represent an entry in the hosts database.  It
+has the following members:
+
+@table @code
+@item char *h_name
+This is the ``official'' name of the host.
+
+@item char **h_aliases
+These are alternative names for the host, represented as a null-terminated
+vector of strings.
+
+@item int h_addrtype
+This is the host address type; in practice, its value is always either
+@code{AF_INET} or @code{AF_INET6}, with the latter being used for IPv6
+hosts.  In principle other kinds of addresses could be represented in
+the database as well as Internet addresses; if this were done, you
+might find a value in this field other than @code{AF_INET} or
+@code{AF_INET6}.  @xref{Socket Addresses}.
+
+@item int h_length
+This is the length, in bytes, of each address.
+
+@item char **h_addr_list
+This is the vector of addresses for the host.  (Recall that the host
+might be connected to multiple networks and have different addresses on
+each one.)  The vector is terminated by a null pointer.
+
+@item char *h_addr
+This is a synonym for @code{h_addr_list[0]}; in other words, it is the
+first host address.
+@end table
+@end deftp
+
+As far as the host database is concerned, each address is just a block
+of memory @code{h_length} bytes long.  But in other contexts there is an
+implicit assumption that you can convert IPv4 addresses to a
+@code{struct in_addr} or an @code{uint32_t}.  Host addresses in
+a @code{struct hostent} structure are always given in network byte
+order; see @ref{Byte Order}.
+
+You can use @code{gethostbyname}, @code{gethostbyname2} or
+@code{gethostbyaddr} to search the hosts database for information about
+a particular host.  The information is returned in a
+statically-allocated structure; you must copy the information if you
+need to save it across calls.  You can also use @code{getaddrinfo} and
+@code{getnameinfo} to obtain this information.
+
+@deftypefun {struct hostent *} gethostbyname (const char *@var{name})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hostbyname} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acucorrupt{} @acsmem{} @acsfd{}}}
+@c gethostbyname @mtasurace:hostbyname @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  nss_hostname_digits_dots @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   res_maybe_init(!preinit) @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    res_iclose @acsuheap @acsmem @acsfd
+@c     close_not_cancel_no_status dup @acsfd
+@c     free dup @acsuheap @acsmem
+@c    res_vinit @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c     res_randomid ok
+@c      getpid dup ok
+@c     getenv dup @mtsenv
+@c     strncpy dup ok
+@c     fopen dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c     fsetlocking dup ok [no concurrent uses]
+@c     fgets_unlocked dup ok [no concurrent uses]
+@c     MATCH ok
+@c      strncmp dup ok
+@c     strpbrk dup ok
+@c     strchr dup ok
+@c     inet_aton dup @mtslocale
+@c     htons dup
+@c     inet_pton dup @mtslocale
+@c     malloc dup @ascuheap @acsmem
+@c     IN6_IS_ADDR_LINKLOCAL ok
+@c      htonl dup ok
+@c     IN6_IS_ADDR_MC_LINKLOCAL ok
+@c     if_nametoindex dup @asulock @aculock @acsfd
+@c     strtoul dup @mtslocale
+@c     ISSORTMASK ok
+@c      strchr dup ok
+@c     isascii dup @mtslocale
+@c     isspace dup @mtslocale
+@c     net_mask ok
+@c      ntohl dup ok
+@c      IN_CLASSA dup ok
+@c      htonl dup ok
+@c      IN_CLASSB dup ok
+@c     res_setoptions @mtslocale
+@c      strncmp dup ok
+@c      atoi dup @mtslocale
+@c     fclose dup @ascuheap @asulock @aculock @acsmem @acsfd
+@c     inet_makeaddr dup ok
+@c     gethostname dup ok
+@c     strcpy dup ok
+@c     rawmemchr dup ok
+@c    res_ninit @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c     res_vinit dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   isdigit dup @mtslocale
+@c   isxdigit dup @mtslocale
+@c   strlen dup ok
+@c   realloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c   memset dup ok
+@c   inet_aton dup @mtslocale
+@c   inet_pton dup @mtslocale
+@c   strcpy dup ok
+@c   memcpy dup ok
+@c   strchr dup ok
+@c  gethostbyname_r dup @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c  set_h_errno ok
+The @code{gethostbyname} function returns information about the host
+named @var{name}.  If the lookup fails, it returns a null pointer.
+@end deftypefun
+
+@deftypefun {struct hostent *} gethostbyname2 (const char *@var{name}, int @var{af})
+@standards{IPv6 Basic API, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hostbyname2} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acucorrupt{} @acsmem{} @acsfd{}}}
+@c gethostbyname2 @mtasurace:hostbyname2 @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  nss_hostname_digits_dots dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  gethostbyname2_r dup @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c  set_h_errno dup ok
+The @code{gethostbyname2} function is like @code{gethostbyname}, but
+allows the caller to specify the desired address family (e.g.@:
+@code{AF_INET} or @code{AF_INET6}) of the result.
+@end deftypefun
+
+@deftypefun {struct hostent *} gethostbyaddr (const void *@var{addr}, socklen_t @var{length}, int @var{format})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hostbyaddr} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acucorrupt{} @acsmem{} @acsfd{}}}
+@c gethostbyaddr @mtasurace:hostbyaddr @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  gethostbyaddr_r dup @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c  set_h_errno dup ok
+The @code{gethostbyaddr} function returns information about the host
+with Internet address @var{addr}.  The parameter @var{addr} is not
+really a pointer to char - it can be a pointer to an IPv4 or an IPv6
+address.  The @var{length} argument is the size (in bytes) of the address
+at @var{addr}.  @var{format} specifies the address format; for an IPv4
+Internet address, specify a value of @code{AF_INET}; for an IPv6
+Internet address, use @code{AF_INET6}.
+
+If the lookup fails, @code{gethostbyaddr} returns a null pointer.
+@end deftypefun
+
+@vindex h_errno
+If the name lookup by @code{gethostbyname} or @code{gethostbyaddr}
+fails, you can find out the reason by looking at the value of the
+variable @code{h_errno}.  (It would be cleaner design for these
+functions to set @code{errno}, but use of @code{h_errno} is compatible
+with other systems.)
+
+Here are the error codes that you may find in @code{h_errno}:
+
+@vtable @code
+@item HOST_NOT_FOUND
+@standards{BSD, netdb.h}
+No such host is known in the database.
+
+@item TRY_AGAIN
+@standards{BSD, netdb.h}
+This condition happens when the name server could not be contacted.  If
+you try again later, you may succeed then.
+
+@item NO_RECOVERY
+@standards{BSD, netdb.h}
+A non-recoverable error occurred.
+
+@item NO_ADDRESS
+@standards{BSD, netdb.h}
+The host database contains an entry for the name, but it doesn't have an
+associated Internet address.
+@end vtable
+
+The lookup functions above all have one thing in common: they are not
+reentrant and therefore unusable in multi-threaded applications.
+Therefore provides @theglibc{} a new set of functions which can be
+used in this context.
+
+@deftypefun int gethostbyname_r (const char *restrict @var{name}, struct hostent *restrict @var{result_buf}, char *restrict @var{buf}, size_t @var{buflen}, struct hostent **restrict @var{result}, int *restrict @var{h_errnop})
+@standards{GNU, netdb.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acucorrupt{} @acsmem{} @acsfd{}}}
+@c gethostbyname_r @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  nss_hostname_digits_dots dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  nscd_gethostbyname_r @mtsenv @ascuheap @acsfd @acsmem
+@c   nscd_gethst_r @mtsenv @ascuheap @acsfd @acsmem
+@c    getenv dup @mtsenv
+@c    nscd_get_map_ref dup @ascuheap @acsfd @acsmem
+@c    nscd_cache_search dup ok
+@c    memcpy dup ok
+@c    nscd_open_socket dup @acsfd
+@c    readvall dup ok
+@c    readall dup ok
+@c    close_not_cancel_no_status dup @acsfd
+@c    nscd_drop_map_ref dup @ascuheap @acsmem
+@c    nscd_unmap dup @ascuheap @acsmem
+@c  res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  res_hconf_init @mtsenv @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem [no @asuinit:reshconf @acuinit:reshconf, conditionally called]
+@c   res_hconf.c:do_init @mtsenv @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem
+@c    memset dup ok
+@c    getenv dup @mtsenv
+@c    fopen dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c    fsetlocking dup ok [no concurrent uses]
+@c    fgets_unlocked dup ok [no concurrent uses]
+@c    strchrnul dup ok
+@c    res_hconf.c:parse_line @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem
+@c     skip_ws dup @mtslocale
+@c     skip_string dup @mtslocale
+@c     strncasecmp dup @mtslocale
+@c     strlen dup ok
+@c     asprintf dup @mtslocale @ascuheap @acsmem
+@c     fxprintf dup @asucorrupt @aculock @acucorrupt
+@c     free dup @ascuheap @acsmem
+@c     arg_trimdomain_list dup @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem
+@c     arg_spoof dup @mtslocale
+@c     arg_bool dup @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem
+@c     isspace dup @mtslocale
+@c    fclose dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c    arg_spoof @mtslocale
+@c     skip_string @mtslocale
+@c      isspace dup @mtslocale
+@c     strncasecmp dup @mtslocale
+@c    arg_bool @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem
+@c     strncasecmp dup @mtslocale
+@c     asprintf dup @mtslocale @ascuheap @acsmem
+@c     fxprintf dup @asucorrupt @aculock @acucorrupt
+@c     free dup @ascuheap @acsmem
+@c    arg_trimdomain_list @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem
+@c     skip_string dup @mtslocale
+@c     asprintf dup @mtslocale @ascuheap @acsmem
+@c     fxprintf dup @asucorrupt @aculock @acucorrupt
+@c     free dup @ascuheap @acsmem
+@c     strndup dup @ascuheap @acsmem
+@c     skip_ws @mtslocale
+@c      isspace dup @mtslocale
+@c  nss_hosts_lookup2 @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   nss_database_lookup dup @mtslocale @ascuheap @asulock @acucorrupt @acsmem @acsfd @aculock
+@c   nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_gethostbyname_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  res_hconf_reorder_addrs @asulock @ascuheap @aculock @acsmem @acsfd
+@c   socket dup @acsfd
+@c   libc_lock_lock dup @asulock @aculock
+@c   ifreq @ascuheap @acsmem
+@c   malloc dup @ascuheap @acsmem
+@c   if_nextreq dup ok
+@c   ioctl dup ok
+@c   realloc dup @ascuheap @acsmem
+@c   if_freereq dup @acsmem
+@c   libc_lock_unlock dup @aculock
+@c   close dup @acsfd
+The @code{gethostbyname_r} function returns information about the host
+named @var{name}.  The caller must pass a pointer to an object of type
+@code{struct hostent} in the @var{result_buf} parameter.  In addition
+the function may need extra buffer space and the caller must pass a
+pointer and the size of the buffer in the @var{buf} and @var{buflen}
+parameters.
+
+A pointer to the buffer, in which the result is stored, is available in
+@code{*@var{result}} after the function call successfully returned.  The
+buffer passed as the @var{buf} parameter can be freed only once the caller
+has finished with the result hostent struct, or has copied it including all
+the other memory that it points to.  If an error occurs or if no entry is
+found, the pointer @code{*@var{result}} is a null pointer.  Success is
+signalled by a zero return value.  If the function failed the return value
+is an error number.  In addition to the errors defined for
+@code{gethostbyname} it can also be @code{ERANGE}.  In this case the call
+should be repeated with a larger buffer.  Additional error information is
+not stored in the global variable @code{h_errno} but instead in the object
+pointed to by @var{h_errnop}.
+
+Here's a small example:
+@smallexample
+struct hostent *
+gethostname (char *host)
+@{
+  struct hostent *hostbuf, *hp;
+  size_t hstbuflen;
+  char *tmphstbuf;
+  int res;
+  int herr;
+
+  hostbuf = malloc (sizeof (struct hostent));
+  hstbuflen = 1024;
+  tmphstbuf = malloc (hstbuflen);
+
+  while ((res = gethostbyname_r (host, hostbuf, tmphstbuf, hstbuflen,
+                                 &hp, &herr)) == ERANGE)
+    @{
+      /* Enlarge the buffer.  */
+      tmphstbuf = reallocarray (tmphstbuf, hstbuflen, 2);
+      hstbuflen *= 2;
+    @}
+
+  free (tmphstbuf);
+  /*  Check for errors.  */
+  if (res || hp == NULL)
+    return NULL;
+  return hp;
+@}
+@end smallexample
+@end deftypefun
+
+@deftypefun int gethostbyname2_r (const char *@var{name}, int @var{af}, struct hostent *restrict @var{result_buf}, char *restrict @var{buf}, size_t @var{buflen}, struct hostent **restrict @var{result}, int *restrict @var{h_errnop})
+@standards{GNU, netdb.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acucorrupt{} @acsmem{} @acsfd{}}}
+@c gethostbyname2_r @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  nss_hostname_digits_dots dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  nscd_gethostbyname2_r @mtsenv @ascuheap @asulock @aculock @acsfd @acsmem
+@c   nscd_gethst_r dup @mtsenv @ascuheap @asulock @aculock @acsfd @acsmem
+@c  res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  res_hconf_init dup @mtsenv @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem [no @asuinit:reshconf @acuinit:reshconf, conditionally called]
+@c  nss_hosts_lookup2 dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_gethostbyname2_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  res_hconf_reorder_addrs dup @asulock @ascuheap @aculock @acsmem @acsfd
+The @code{gethostbyname2_r} function is like @code{gethostbyname_r}, but
+allows the caller to specify the desired address family (e.g.@:
+@code{AF_INET} or @code{AF_INET6}) for the result.
+@end deftypefun
+
+@deftypefun int gethostbyaddr_r (const void *@var{addr}, socklen_t @var{length}, int @var{format}, struct hostent *restrict @var{result_buf}, char *restrict @var{buf}, size_t @var{buflen}, struct hostent **restrict @var{result}, int *restrict @var{h_errnop})
+@standards{GNU, netdb.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acucorrupt{} @acsmem{} @acsfd{}}}
+@c gethostbyaddr_r @mtsenv @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @aculock @acucorrupt @acsmem @acsfd
+@c  memcmp dup ok
+@c  nscd_gethostbyaddr_r @mtsenv @ascuheap @asulock @aculock @acsfd @acsmem
+@c   nscd_gethst_r dup @mtsenv @ascuheap @asulock @aculock @acsfd @acsmem
+@c  res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  res_hconf_init dup @mtsenv @mtslocale @asucorrupt @ascuheap @aculock @acucorrupt @acsmem [no @asuinit:reshconf @acuinit:reshconf, conditionally called]
+@c  nss_hosts_lookup2 dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_gethostbyaddr_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  res_hconf_reorder_addrs dup @asulock @ascuheap @aculock @acsmem @acsfd
+@c  res_hconf_trim_domains @mtslocale
+@c   res_hconf_trim_domain @mtslocale
+@c    strlen dup ok
+@c    strcasecmp dup @mtslocale
+The @code{gethostbyaddr_r} function returns information about the host
+with Internet address @var{addr}.  The parameter @var{addr} is not
+really a pointer to char - it can be a pointer to an IPv4 or an IPv6
+address.  The @var{length} argument is the size (in bytes) of the address
+at @var{addr}.  @var{format} specifies the address format; for an IPv4
+Internet address, specify a value of @code{AF_INET}; for an IPv6
+Internet address, use @code{AF_INET6}.
+
+Similar to the @code{gethostbyname_r} function, the caller must provide
+buffers for the result and memory used internally.  In case of success
+the function returns zero.  Otherwise the value is an error number where
+@code{ERANGE} has the special meaning that the caller-provided buffer is
+too small.
+@end deftypefun
+
+You can also scan the entire hosts database one entry at a time using
+@code{sethostent}, @code{gethostent} and @code{endhostent}.  Be careful
+when using these functions because they are not reentrant.
+
+@deftypefun void sethostent (int @var{stayopen})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hostent} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c sethostent @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_setent(nss_hosts_lookup2) @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   set_h_errno dup ok
+@c   setup(nss_hosts_lookup2) @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    *lookup_fct = nss_hosts_lookup2 dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:hostent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock dup @aculock
+This function opens the hosts database to begin scanning it.  You can
+then call @code{gethostent} to read the entries.
+
+@c There was a rumor that this flag has different meaning if using the DNS,
+@c but it appears this description is accurate in that case also.
+If the @var{stayopen} argument is nonzero, this sets a flag so that
+subsequent calls to @code{gethostbyname} or @code{gethostbyaddr} will
+not close the database (as they usually would).  This makes for more
+efficiency if you call those functions several times, by avoiding
+reopening the database for each call.
+@end deftypefun
+
+@deftypefun {struct hostent *} gethostent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hostent} @mtasurace{:hostentbuf} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c gethostent @mtasurace:hostent @mtasurace:hostentbuf @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent(gethostent_r) @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   malloc dup @ascuheap @acsmem
+@c   *func = gethostent_r dup @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   realloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c gethostent_r @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent_r(nss_hosts_lookup2) @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   setup(nss_hosts_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:hostent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *sfct.f @mtasurace:hostent @ascuplugin
+@c  libc_lock_unlock dup @aculock
+
+This function returns the next entry in the hosts database.  It
+returns a null pointer if there are no more entries.
+@end deftypefun
+
+@deftypefun void endhostent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hostent} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c endhostent @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock @asulock @aculock
+@c  nss_endent(nss_hosts_lookup2) @mtasurace:hostent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   setup(nss_passwd_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:hostent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock @aculock
+This function closes the hosts database.
+@end deftypefun
+
+@node Ports
+@subsection Internet Ports
+@cindex port number
+
+A socket address in the Internet namespace consists of a machine's
+Internet address plus a @dfn{port number} which distinguishes the
+sockets on a given machine (for a given protocol).  Port numbers range
+from 0 to 65,535.
+
+Port numbers less than @code{IPPORT_RESERVED} are reserved for standard
+servers, such as @code{finger} and @code{telnet}.  There is a database
+that keeps track of these, and you can use the @code{getservbyname}
+function to map a service name onto a port number; see @ref{Services
+Database}.
+
+If you write a server that is not one of the standard ones defined in
+the database, you must choose a port number for it.  Use a number
+greater than @code{IPPORT_USERRESERVED}; such numbers are reserved for
+servers and won't ever be generated automatically by the system.
+Avoiding conflicts with servers being run by other users is up to you.
+
+When you use a socket without specifying its address, the system
+generates a port number for it.  This number is between
+@code{IPPORT_RESERVED} and @code{IPPORT_USERRESERVED}.
+
+On the Internet, it is actually legitimate to have two different
+sockets with the same port number, as long as they never both try to
+communicate with the same socket address (host address plus port
+number).  You shouldn't duplicate a port number except in special
+circumstances where a higher-level protocol requires it.  Normally,
+the system won't let you do it; @code{bind} normally insists on
+distinct port numbers.  To reuse a port number, you must set the
+socket option @code{SO_REUSEADDR}.  @xref{Socket-Level Options}.
+
+@pindex netinet/in.h
+These macros are defined in the header file @file{netinet/in.h}.
+
+@deftypevr Macro int IPPORT_RESERVED
+@standards{BSD, netinet/in.h}
+Port numbers less than @code{IPPORT_RESERVED} are reserved for
+superuser use.
+@end deftypevr
+
+@deftypevr Macro int IPPORT_USERRESERVED
+@standards{BSD, netinet/in.h}
+Port numbers greater than or equal to @code{IPPORT_USERRESERVED} are
+reserved for explicit use; they will never be allocated automatically.
+@end deftypevr
+
+@node Services Database
+@subsection The Services Database
+@cindex services database
+@cindex converting service name to port number
+@cindex converting port number to service name
+
+@pindex /etc/services
+The database that keeps track of ``well-known'' services is usually
+either the file @file{/etc/services} or an equivalent from a name server.
+You can use these utilities, declared in @file{netdb.h}, to access
+the services database.
+@pindex netdb.h
+
+@deftp {Data Type} {struct servent}
+@standards{BSD, netdb.h}
+This data type holds information about entries from the services database.
+It has the following members:
+
+@table @code
+@item char *s_name
+This is the ``official'' name of the service.
+
+@item char **s_aliases
+These are alternate names for the service, represented as an array of
+strings.  A null pointer terminates the array.
+
+@item int s_port
+This is the port number for the service.  Port numbers are given in
+network byte order; see @ref{Byte Order}.
+
+@item char *s_proto
+This is the name of the protocol to use with this service.
+@xref{Protocols Database}.
+@end table
+@end deftp
+
+To get information about a particular service, use the
+@code{getservbyname} or @code{getservbyport} functions.  The information
+is returned in a statically-allocated structure; you must copy the
+information if you need to save it across calls.
+
+@deftypefun {struct servent *} getservbyname (const char *@var{name}, const char *@var{proto})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:servbyname} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getservbyname =~ getpwuid @mtasurace:servbyname @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  getservbyname_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getservbyname_r =~ getpwuid_r @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  nscd_getservbyname_r @ascuheap @acsfd @acsmem
+@c   nscd_getserv_r @ascuheap @acsfd @acsmem
+@c    nscd_get_map_ref dup @ascuheap @acsfd @acsmem
+@c    strlen dup ok
+@c    malloc dup @ascuheap @acsmem
+@c    mempcpy dup ok
+@c    memcpy dup ok
+@c    nscd_cache_search dup ok
+@c    nscd_open_socket dup @acsfd
+@c    readvall dup ok
+@c    readall dup ok
+@c    close_not_cancel_no_status dup @acsfd
+@c    nscd_drop_map_ref dup @ascuheap @acsmem
+@c    nscd_unmap dup @ascuheap @acsmem
+@c    free dup @ascuheap @acsmem
+@c  nss_services_lookup2 =~ nss_passwd_lookup2 @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_getservbyname_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+The @code{getservbyname} function returns information about the
+service named @var{name} using protocol @var{proto}.  If it can't find
+such a service, it returns a null pointer.
+
+This function is useful for servers as well as for clients; servers
+use it to determine which port they should listen on (@pxref{Listening}).
+@end deftypefun
+
+@deftypefun {struct servent *} getservbyport (int @var{port}, const char *@var{proto})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:servbyport} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getservbyport =~ getservbyname @mtasurace:servbyport @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  getservbyport_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getservbyport_r =~ getservbyname_r @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  nscd_getservbyport_r @ascuheap @acsfd @acsmem
+@c   nscd_getserv_r dup @ascuheap @acsfd @acsmem
+@c  nss_services_lookup2 =~ nss_passwd_lookup2 @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_getservbyport_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+The @code{getservbyport} function returns information about the
+service at port @var{port} using protocol @var{proto}.  If it can't
+find such a service, it returns a null pointer.
+@end deftypefun
+
+@noindent
+You can also scan the services database using @code{setservent},
+@code{getservent} and @code{endservent}.  Be careful when using these
+functions because they are not reentrant.
+
+@deftypefun void setservent (int @var{stayopen})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:servent} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c setservent @mtasurace:servent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_setent(nss_services_lookup2) @mtasurace:servenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   setup(nss_services_lookup2) @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    *lookup_fct = nss_services_lookup2 dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:servent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock dup @aculock
+This function opens the services database to begin scanning it.
+
+If the @var{stayopen} argument is nonzero, this sets a flag so that
+subsequent calls to @code{getservbyname} or @code{getservbyport} will
+not close the database (as they usually would).  This makes for more
+efficiency if you call those functions several times, by avoiding
+reopening the database for each call.
+@end deftypefun
+
+@deftypefun {struct servent *} getservent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:servent} @mtasurace{:serventbuf} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getservent @mtasurace:servent @mtasurace:serventbuf @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent(getservent_r) @mtasurace:servent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   malloc dup @ascuheap @acsmem
+@c   *func = getservent_r dup @mtasurace:servent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   realloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getservent_r @mtasurace:servent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent_r(nss_services_lookup2) @mtasurace:servent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   setup(nss_services_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:servent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *sfct.f @mtasurace:servent @ascuplugin
+@c  libc_lock_unlock dup @aculock
+This function returns the next entry in the services database.  If
+there are no more entries, it returns a null pointer.
+@end deftypefun
+
+@deftypefun void endservent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:servent} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c endservent @mtasurace:servent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock @asulock @aculock
+@c  nss_endent(nss_services_lookup2) @mtasurace:servent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   setup(nss_services_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:servent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock @aculock
+This function closes the services database.
+@end deftypefun
+
+@node Byte Order
+@subsection Byte Order Conversion
+@cindex byte order conversion, for socket
+@cindex converting byte order
+
+@cindex big-endian
+@cindex little-endian
+Different kinds of computers use different conventions for the
+ordering of bytes within a word.  Some computers put the most
+significant byte within a word first (this is called ``big-endian''
+order), and others put it last (``little-endian'' order).
+
+@cindex network byte order
+So that machines with different byte order conventions can
+communicate, the Internet protocols specify a canonical byte order
+convention for data transmitted over the network.  This is known
+as @dfn{network byte order}.
+
+When establishing an Internet socket connection, you must make sure that
+the data in the @code{sin_port} and @code{sin_addr} members of the
+@code{sockaddr_in} structure are represented in network byte order.
+If you are encoding integer data in the messages sent through the
+socket, you should convert this to network byte order too.  If you don't
+do this, your program may fail when running on or talking to other kinds
+of machines.
+
+If you use @code{getservbyname} and @code{gethostbyname} or
+@code{inet_addr} to get the port number and host address, the values are
+already in network byte order, and you can copy them directly into
+the @code{sockaddr_in} structure.
+
+Otherwise, you have to convert the values explicitly.  Use @code{htons}
+and @code{ntohs} to convert values for the @code{sin_port} member.  Use
+@code{htonl} and @code{ntohl} to convert IPv4 addresses for the
+@code{sin_addr} member.  (Remember, @code{struct in_addr} is equivalent
+to @code{uint32_t}.)  These functions are declared in
+@file{netinet/in.h}.
+@pindex netinet/in.h
+
+@deftypefun {uint16_t} htons (uint16_t @var{hostshort})
+@standards{BSD, netinet/in.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c htons ok
+@c  bswap_16 ok
+@c   bswap_constant_16 ok
+
+This function converts the @code{uint16_t} integer @var{hostshort} from
+host byte order to network byte order.
+@end deftypefun
+
+@deftypefun {uint16_t} ntohs (uint16_t @var{netshort})
+@standards{BSD, netinet/in.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Alias to htons.
+This function converts the @code{uint16_t} integer @var{netshort} from
+network byte order to host byte order.
+@end deftypefun
+
+@deftypefun {uint32_t} htonl (uint32_t @var{hostlong})
+@standards{BSD, netinet/in.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c htonl ok
+@c  bswap_32 dup ok
+This function converts the @code{uint32_t} integer @var{hostlong} from
+host byte order to network byte order.
+
+This is used for IPv4 Internet addresses.
+@end deftypefun
+
+@deftypefun {uint32_t} ntohl (uint32_t @var{netlong})
+@standards{BSD, netinet/in.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Alias to htonl.
+This function converts the @code{uint32_t} integer @var{netlong} from
+network byte order to host byte order.
+
+This is used for IPv4 Internet addresses.
+@end deftypefun
+
+@node Protocols Database
+@subsection Protocols Database
+@cindex protocols database
+
+The communications protocol used with a socket controls low-level
+details of how data are exchanged.  For example, the protocol implements
+things like checksums to detect errors in transmissions, and routing
+instructions for messages.  Normal user programs have little reason to
+mess with these details directly.
+
+@cindex TCP (Internet protocol)
+The default communications protocol for the Internet namespace depends on
+the communication style.  For stream communication, the default is TCP
+(``transmission control protocol'').  For datagram communication, the
+default is UDP (``user datagram protocol'').  For reliable datagram
+communication, the default is RDP (``reliable datagram protocol'').
+You should nearly always use the default.
+
+@pindex /etc/protocols
+Internet protocols are generally specified by a name instead of a
+number.  The network protocols that a host knows about are stored in a
+database.  This is usually either derived from the file
+@file{/etc/protocols}, or it may be an equivalent provided by a name
+server.  You look up the protocol number associated with a named
+protocol in the database using the @code{getprotobyname} function.
+
+Here are detailed descriptions of the utilities for accessing the
+protocols database.  These are declared in @file{netdb.h}.
+@pindex netdb.h
+
+@deftp {Data Type} {struct protoent}
+@standards{BSD, netdb.h}
+This data type is used to represent entries in the network protocols
+database.  It has the following members:
+
+@table @code
+@item char *p_name
+This is the official name of the protocol.
+
+@item char **p_aliases
+These are alternate names for the protocol, specified as an array of
+strings.  The last element of the array is a null pointer.
+
+@item int p_proto
+This is the protocol number (in host byte order); use this member as the
+@var{protocol} argument to @code{socket}.
+@end table
+@end deftp
+
+You can use @code{getprotobyname} and @code{getprotobynumber} to search
+the protocols database for a specific protocol.  The information is
+returned in a statically-allocated structure; you must copy the
+information if you need to save it across calls.
+
+@deftypefun {struct protoent *} getprotobyname (const char *@var{name})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:protobyname} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getprotobyname =~ getpwuid @mtasurace:protobyname @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  getprotobyname_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getprotobyname_r =~ getpwuid_r @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   no nscd support
+@c  nss_protocols_lookup2 =~ nss_passwd_lookup2 @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_getprotobyname_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+The @code{getprotobyname} function returns information about the
+network protocol named @var{name}.  If there is no such protocol, it
+returns a null pointer.
+@end deftypefun
+
+@deftypefun {struct protoent *} getprotobynumber (int @var{protocol})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:protobynumber} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getprotobynumber =~ getpwuid @mtasurace:protobynumber @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  getprotobynumber_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getprotobynumber_r =~ getpwuid_r @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   no nscd support
+@c  nss_protocols_lookup2 =~ nss_passwd_lookup2 @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_getprotobynumber_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+The @code{getprotobynumber} function returns information about the
+network protocol with number @var{protocol}.  If there is no such
+protocol, it returns a null pointer.
+@end deftypefun
+
+You can also scan the whole protocols database one protocol at a time by
+using @code{setprotoent}, @code{getprotoent} and @code{endprotoent}.
+Be careful when using these functions because they are not reentrant.
+
+@deftypefun void setprotoent (int @var{stayopen})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:protoent} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c setprotoent @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_setent(nss_protocols_lookup2) @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   setup(nss_protocols_lookup2) @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    *lookup_fct = nss_protocols_lookup2 dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:protoent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock dup @aculock
+This function opens the protocols database to begin scanning it.
+
+If the @var{stayopen} argument is nonzero, this sets a flag so that
+subsequent calls to @code{getprotobyname} or @code{getprotobynumber} will
+not close the database (as they usually would).  This makes for more
+efficiency if you call those functions several times, by avoiding
+reopening the database for each call.
+@end deftypefun
+
+@deftypefun {struct protoent *} getprotoent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:protoent} @mtasurace{:protoentbuf} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getprotoent @mtasurace:protoent @mtasurace:protoentbuf @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent(getprotoent_r) @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   malloc dup @ascuheap @acsmem
+@c   *func = getprotoent_r dup @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   realloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getprotoent_r @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent_r(nss_protocols_lookup2) @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   setup(nss_protocols_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:servent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *sfct.f @mtasurace:protoent @ascuplugin
+@c  libc_lock_unlock dup @aculock
+This function returns the next entry in the protocols database.  It
+returns a null pointer if there are no more entries.
+@end deftypefun
+
+@deftypefun void endprotoent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:protoent} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c endprotoent @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock @asulock @aculock
+@c  nss_endent(nss_protocols_lookup2) @mtasurace:protoent @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   setup(nss_protocols_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:protoent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock @aculock
+This function closes the protocols database.
+@end deftypefun
+
+@node Inet Example
+@subsection Internet Socket Example
+
+Here is an example showing how to create and name a socket in the
+Internet namespace.  The newly created socket exists on the machine that
+the program is running on.  Rather than finding and using the machine's
+Internet address, this example specifies @code{INADDR_ANY} as the host
+address; the system replaces that with the machine's actual address.
+
+@smallexample
+@include mkisock.c.texi
+@end smallexample
+
+Here is another example, showing how you can fill in a @code{sockaddr_in}
+structure, given a host name string and a port number:
+
+@smallexample
+@include isockad.c.texi
+@end smallexample
+
+@node Misc Namespaces
+@section Other Namespaces
+
+@vindex PF_NS
+@vindex PF_ISO
+@vindex PF_CCITT
+@vindex PF_IMPLINK
+@vindex PF_ROUTE
+Certain other namespaces and associated protocol families are supported
+but not documented yet because they are not often used.  @code{PF_NS}
+refers to the Xerox Network Software protocols.  @code{PF_ISO} stands
+for Open Systems Interconnect.  @code{PF_CCITT} refers to protocols from
+CCITT.  @file{socket.h} defines these symbols and others naming protocols
+not actually implemented.
+
+@code{PF_IMPLINK} is used for communicating between hosts and Internet
+Message Processors.  For information on this and @code{PF_ROUTE}, an
+occasionally-used local area routing protocol, see the GNU Hurd Manual
+(to appear in the future).
+
+@node Open/Close Sockets
+@section Opening and Closing Sockets
+
+This section describes the actual library functions for opening and
+closing sockets.  The same functions work for all namespaces and
+connection styles.
+
+@menu
+* Creating a Socket::           How to open a socket.
+* Closing a Socket::            How to close a socket.
+* Socket Pairs::                These are created like pipes.
+@end menu
+
+@node Creating a Socket
+@subsection Creating a Socket
+@cindex creating a socket
+@cindex socket, creating
+@cindex opening a socket
+
+The primitive for creating a socket is the @code{socket} function,
+declared in @file{sys/socket.h}.
+@pindex sys/socket.h
+
+@deftypefun int socket (int @var{namespace}, int @var{style}, int @var{protocol})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+This function creates a socket and specifies communication style
+@var{style}, which should be one of the socket styles listed in
+@ref{Communication Styles}.  The @var{namespace} argument specifies
+the namespace; it must be @code{PF_LOCAL} (@pxref{Local Namespace}) or
+@code{PF_INET} (@pxref{Internet Namespace}).  @var{protocol}
+designates the specific protocol (@pxref{Socket Concepts}); zero is
+usually right for @var{protocol}.
+
+The return value from @code{socket} is the file descriptor for the new
+socket, or @code{-1} in case of error.  The following @code{errno} error
+conditions are defined for this function:
+
+@table @code
+@item EPROTONOSUPPORT
+The @var{protocol} or @var{style} is not supported by the
+@var{namespace} specified.
+
+@item EMFILE
+The process already has too many file descriptors open.
+
+@item ENFILE
+The system already has too many file descriptors open.
+
+@item EACCES
+The process does not have the privilege to create a socket of the specified
+@var{style} or @var{protocol}.
+
+@item ENOBUFS
+The system ran out of internal buffer space.
+@end table
+
+The file descriptor returned by the @code{socket} function supports both
+read and write operations.  However, like pipes, sockets do not support file
+positioning operations.
+@end deftypefun
+
+For examples of how to call the @code{socket} function,
+see @ref{Local Socket Example}, or @ref{Inet Example}.
+
+
+@node Closing a Socket
+@subsection Closing a Socket
+@cindex socket, closing
+@cindex closing a socket
+@cindex shutting down a socket
+@cindex socket shutdown
+
+When you have finished using a socket, you can simply close its
+file descriptor with @code{close}; see @ref{Opening and Closing Files}.
+If there is still data waiting to be transmitted over the connection,
+normally @code{close} tries to complete this transmission.  You
+can control this behavior using the @code{SO_LINGER} socket option to
+specify a timeout period; see @ref{Socket Options}.
+
+@pindex sys/socket.h
+You can also shut down only reception or transmission on a
+connection by calling @code{shutdown}, which is declared in
+@file{sys/socket.h}.
+
+@deftypefun int shutdown (int @var{socket}, int @var{how})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{shutdown} function shuts down the connection of socket
+@var{socket}.  The argument @var{how} specifies what action to
+perform:
+
+@table @code
+@item 0
+Stop receiving data for this socket.  If further data arrives,
+reject it.
+
+@item 1
+Stop trying to transmit data from this socket.  Discard any data
+waiting to be sent.  Stop looking for acknowledgement of data already
+sent; don't retransmit it if it is lost.
+
+@item 2
+Stop both reception and transmission.
+@end table
+
+The return value is @code{0} on success and @code{-1} on failure.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+@var{socket} is not a valid file descriptor.
+
+@item ENOTSOCK
+@var{socket} is not a socket.
+
+@item ENOTCONN
+@var{socket} is not connected.
+@end table
+@end deftypefun
+
+@node Socket Pairs
+@subsection Socket Pairs
+@cindex creating a socket pair
+@cindex socket pair
+@cindex opening a socket pair
+
+@pindex sys/socket.h
+A @dfn{socket pair} consists of a pair of connected (but unnamed)
+sockets.  It is very similar to a pipe and is used in much the same
+way.  Socket pairs are created with the @code{socketpair} function,
+declared in @file{sys/socket.h}.  A socket pair is much like a pipe; the
+main difference is that the socket pair is bidirectional, whereas the
+pipe has one input-only end and one output-only end (@pxref{Pipes and
+FIFOs}).
+
+@deftypefun int socketpair (int @var{namespace}, int @var{style}, int @var{protocol}, int @var{filedes}@t{[2]})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+This function creates a socket pair, returning the file descriptors in
+@code{@var{filedes}[0]} and @code{@var{filedes}[1]}.  The socket pair
+is a full-duplex communications channel, so that both reading and writing
+may be performed at either end.
+
+The @var{namespace}, @var{style} and @var{protocol} arguments are
+interpreted as for the @code{socket} function.  @var{style} should be
+one of the communication styles listed in @ref{Communication Styles}.
+The @var{namespace} argument specifies the namespace, which must be
+@code{AF_LOCAL} (@pxref{Local Namespace}); @var{protocol} specifies the
+communications protocol, but zero is the only meaningful value.
+
+If @var{style} specifies a connectionless communication style, then
+the two sockets you get are not @emph{connected}, strictly speaking,
+but each of them knows the other as the default destination address,
+so they can send packets to each other.
+
+The @code{socketpair} function returns @code{0} on success and @code{-1}
+on failure.  The following @code{errno} error conditions are defined
+for this function:
+
+@table @code
+@item EMFILE
+The process has too many file descriptors open.
+
+@item EAFNOSUPPORT
+The specified namespace is not supported.
+
+@item EPROTONOSUPPORT
+The specified protocol is not supported.
+
+@item EOPNOTSUPP
+The specified protocol does not support the creation of socket pairs.
+@end table
+@end deftypefun
+
+@node Connections
+@section Using Sockets with Connections
+
+@cindex connection
+@cindex client
+@cindex server
+The most common communication styles involve making a connection to a
+particular other socket, and then exchanging data with that socket
+over and over.  Making a connection is asymmetric; one side (the
+@dfn{client}) acts to request a connection, while the other side (the
+@dfn{server}) makes a socket and waits for the connection request.
+
+@iftex
+@itemize @bullet
+@item
+@ref{Connecting}, describes what the client program must do to
+initiate a connection with a server.
+
+@item
+@ref{Listening} and @ref{Accepting Connections} describe what the
+server program must do to wait for and act upon connection requests
+from clients.
+
+@item
+@ref{Transferring Data}, describes how data are transferred through the
+connected socket.
+@end itemize
+@end iftex
+
+@menu
+* Connecting::    	     What the client program must do.
+* Listening::		     How a server program waits for requests.
+* Accepting Connections::    What the server does when it gets a request.
+* Who is Connected::	     Getting the address of the
+				other side of a connection.
+* Transferring Data::        How to send and receive data.
+* Byte Stream Example::	     An example program: a client for communicating
+			      over a byte stream socket in the Internet namespace.
+* Server Example::	     A corresponding server program.
+* Out-of-Band Data::         This is an advanced feature.
+@end menu
+
+@node Connecting
+@subsection Making a Connection
+@cindex connecting a socket
+@cindex socket, connecting
+@cindex socket, initiating a connection
+@cindex socket, client actions
+
+In making a connection, the client makes a connection while the server
+waits for and accepts the connection.  Here we discuss what the client
+program must do with the @code{connect} function, which is declared in
+@file{sys/socket.h}.
+
+@deftypefun int connect (int @var{socket}, struct sockaddr *@var{addr}, socklen_t @var{length})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{connect} function initiates a connection from the socket
+with file descriptor @var{socket} to the socket whose address is
+specified by the @var{addr} and @var{length} arguments.  (This socket
+is typically on another machine, and it must be already set up as a
+server.)  @xref{Socket Addresses}, for information about how these
+arguments are interpreted.
+
+Normally, @code{connect} waits until the server responds to the request
+before it returns.  You can set nonblocking mode on the socket
+@var{socket} to make @code{connect} return immediately without waiting
+for the response.  @xref{File Status Flags}, for information about
+nonblocking mode.
+@c !!! how do you tell when it has finished connecting?  I suspect the
+@c way you do it is select for writing.
+
+The normal return value from @code{connect} is @code{0}.  If an error
+occurs, @code{connect} returns @code{-1}.  The following @code{errno}
+error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The socket @var{socket} is not a valid file descriptor.
+
+@item ENOTSOCK
+File descriptor @var{socket} is not a socket.
+
+@item EADDRNOTAVAIL
+The specified address is not available on the remote machine.
+
+@item EAFNOSUPPORT
+The namespace of the @var{addr} is not supported by this socket.
+
+@item EISCONN
+The socket @var{socket} is already connected.
+
+@item ETIMEDOUT
+The attempt to establish the connection timed out.
+
+@item ECONNREFUSED
+The server has actively refused to establish the connection.
+
+@item ENETUNREACH
+The network of the given @var{addr} isn't reachable from this host.
+
+@item EADDRINUSE
+The socket address of the given @var{addr} is already in use.
+
+@item EINPROGRESS
+The socket @var{socket} is non-blocking and the connection could not be
+established immediately.  You can determine when the connection is
+completely established with @code{select}; @pxref{Waiting for I/O}.
+Another @code{connect} call on the same socket, before the connection is
+completely established, will fail with @code{EALREADY}.
+
+@item EALREADY
+The socket @var{socket} is non-blocking and already has a pending
+connection in progress (see @code{EINPROGRESS} above).
+@end table
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, file descriptors, semaphores or
+whatever) are freed even if the thread is canceled.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+
+@node Listening
+@subsection Listening for Connections
+@cindex listening (sockets)
+@cindex sockets, server actions
+@cindex sockets, listening
+
+Now let us consider what the server process must do to accept
+connections on a socket.  First it must use the @code{listen} function
+to enable connection requests on the socket, and then accept each
+incoming connection with a call to @code{accept} (@pxref{Accepting
+Connections}).  Once connection requests are enabled on a server socket,
+the @code{select} function reports when the socket has a connection
+ready to be accepted (@pxref{Waiting for I/O}).
+
+The @code{listen} function is not allowed for sockets using
+connectionless communication styles.
+
+You can write a network server that does not even start running until a
+connection to it is requested.  @xref{Inetd Servers}.
+
+In the Internet namespace, there are no special protection mechanisms
+for controlling access to a port; any process on any machine
+can make a connection to your server.  If you want to restrict access to
+your server, make it examine the addresses associated with connection
+requests or implement some other handshaking or identification
+protocol.
+
+In the local namespace, the ordinary file protection bits control who has
+access to connect to the socket.
+
+@deftypefun int listen (int @var{socket}, int @var{n})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+The @code{listen} function enables the socket @var{socket} to accept
+connections, thus making it a server socket.
+
+The argument @var{n} specifies the length of the queue for pending
+connections.  When the queue fills, new clients attempting to connect
+fail with @code{ECONNREFUSED} until the server calls @code{accept} to
+accept a connection from the queue.
+
+The @code{listen} function returns @code{0} on success and @code{-1}
+on failure.  The following @code{errno} error conditions are defined
+for this function:
+
+@table @code
+@item EBADF
+The argument @var{socket} is not a valid file descriptor.
+
+@item ENOTSOCK
+The argument @var{socket} is not a socket.
+
+@item EOPNOTSUPP
+The socket @var{socket} does not support this operation.
+@end table
+@end deftypefun
+
+@node Accepting Connections
+@subsection Accepting Connections
+@cindex sockets, accepting connections
+@cindex accepting connections
+
+When a server receives a connection request, it can complete the
+connection by accepting the request.  Use the function @code{accept}
+to do this.
+
+A socket that has been established as a server can accept connection
+requests from multiple clients.  The server's original socket
+@emph{does not become part of the connection}; instead, @code{accept}
+makes a new socket which participates in the connection.
+@code{accept} returns the descriptor for this socket.  The server's
+original socket remains available for listening for further connection
+requests.
+
+The number of pending connection requests on a server socket is finite.
+If connection requests arrive from clients faster than the server can
+act upon them, the queue can fill up and additional requests are refused
+with an @code{ECONNREFUSED} error.  You can specify the maximum length of
+this queue as an argument to the @code{listen} function, although the
+system may also impose its own internal limit on the length of this
+queue.
+
+@deftypefun int accept (int @var{socket}, struct sockaddr *@var{addr}, socklen_t *@var{length_ptr})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+This function is used to accept a connection request on the server
+socket @var{socket}.
+
+The @code{accept} function waits if there are no connections pending,
+unless the socket @var{socket} has nonblocking mode set.  (You can use
+@code{select} to wait for a pending connection, with a nonblocking
+socket.)  @xref{File Status Flags}, for information about nonblocking
+mode.
+
+The @var{addr} and @var{length-ptr} arguments are used to return
+information about the name of the client socket that initiated the
+connection.  @xref{Socket Addresses}, for information about the format
+of the information.
+
+Accepting a connection does not make @var{socket} part of the
+connection.  Instead, it creates a new socket which becomes
+connected.  The normal return value of @code{accept} is the file
+descriptor for the new socket.
+
+After @code{accept}, the original socket @var{socket} remains open and
+unconnected, and continues listening until you close it.  You can
+accept further connections with @var{socket} by calling @code{accept}
+again.
+
+If an error occurs, @code{accept} returns @code{-1}.  The following
+@code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The @var{socket} argument is not a valid file descriptor.
+
+@item ENOTSOCK
+The descriptor @var{socket} argument is not a socket.
+
+@item EOPNOTSUPP
+The descriptor @var{socket} does not support this operation.
+
+@item EWOULDBLOCK
+@var{socket} has nonblocking mode set, and there are no pending
+connections immediately available.
+@end table
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, file descriptors, semaphores or
+whatever) are freed even if the thread is canceled.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+
+The @code{accept} function is not allowed for sockets using
+connectionless communication styles.
+
+@node Who is Connected
+@subsection Who is Connected to Me?
+
+@deftypefun int getpeername (int @var{socket}, struct sockaddr *@var{addr}, socklen_t *@var{length-ptr})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{getpeername} function returns the address of the socket that
+@var{socket} is connected to; it stores the address in the memory space
+specified by @var{addr} and @var{length-ptr}.  It stores the length of
+the address in @code{*@var{length-ptr}}.
+
+@xref{Socket Addresses}, for information about the format of the
+address.  In some operating systems, @code{getpeername} works only for
+sockets in the Internet domain.
+
+The return value is @code{0} on success and @code{-1} on error.  The
+following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The argument @var{socket} is not a valid file descriptor.
+
+@item ENOTSOCK
+The descriptor @var{socket} is not a socket.
+
+@item ENOTCONN
+The socket @var{socket} is not connected.
+
+@item ENOBUFS
+There are not enough internal buffers available.
+@end table
+@end deftypefun
+
+
+@node Transferring Data
+@subsection Transferring Data
+@cindex reading from a socket
+@cindex writing to a socket
+
+Once a socket has been connected to a peer, you can use the ordinary
+@code{read} and @code{write} operations (@pxref{I/O Primitives}) to
+transfer data.  A socket is a two-way communications channel, so read
+and write operations can be performed at either end.
+
+There are also some I/O modes that are specific to socket operations.
+In order to specify these modes, you must use the @code{recv} and
+@code{send} functions instead of the more generic @code{read} and
+@code{write} functions.  The @code{recv} and @code{send} functions take
+an additional argument which you can use to specify various flags to
+control special I/O modes.  For example, you can specify the
+@code{MSG_OOB} flag to read or write out-of-band data, the
+@code{MSG_PEEK} flag to peek at input, or the @code{MSG_DONTROUTE} flag
+to control inclusion of routing information on output.
+
+@menu
+* Sending Data::		Sending data with @code{send}.
+* Receiving Data::		Reading data with @code{recv}.
+* Socket Data Options::		Using @code{send} and @code{recv}.
+@end menu
+
+@node Sending Data
+@subsubsection Sending Data
+
+@pindex sys/socket.h
+The @code{send} function is declared in the header file
+@file{sys/socket.h}.  If your @var{flags} argument is zero, you can just
+as well use @code{write} instead of @code{send}; see @ref{I/O
+Primitives}.  If the socket was connected but the connection has broken,
+you get a @code{SIGPIPE} signal for any use of @code{send} or
+@code{write} (@pxref{Miscellaneous Signals}).
+
+@deftypefun ssize_t send (int @var{socket}, const void *@var{buffer}, size_t @var{size}, int @var{flags})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{send} function is like @code{write}, but with the additional
+flags @var{flags}.  The possible values of @var{flags} are described
+in @ref{Socket Data Options}.
+
+This function returns the number of bytes transmitted, or @code{-1} on
+failure.  If the socket is nonblocking, then @code{send} (like
+@code{write}) can return after sending just part of the data.
+@xref{File Status Flags}, for information about nonblocking mode.
+
+Note, however, that a successful return value merely indicates that
+the message has been sent without error, not necessarily that it has
+been received without error.
+
+The following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The @var{socket} argument is not a valid file descriptor.
+
+@item EINTR
+The operation was interrupted by a signal before any data was sent.
+@xref{Interrupted Primitives}.
+
+@item ENOTSOCK
+The descriptor @var{socket} is not a socket.
+
+@item EMSGSIZE
+The socket type requires that the message be sent atomically, but the
+message is too large for this to be possible.
+
+@item EWOULDBLOCK
+Nonblocking mode has been set on the socket, and the write operation
+would block.  (Normally @code{send} blocks until the operation can be
+completed.)
+
+@item ENOBUFS
+There is not enough internal buffer space available.
+
+@item ENOTCONN
+You never connected this socket.
+
+@item EPIPE
+This socket was connected but the connection is now broken.  In this
+case, @code{send} generates a @code{SIGPIPE} signal first; if that
+signal is ignored or blocked, or if its handler returns, then
+@code{send} fails with @code{EPIPE}.
+@end table
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, file descriptors, semaphores or
+whatever) are freed even if the thread is canceled.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+
+@node Receiving Data
+@subsubsection Receiving Data
+
+@pindex sys/socket.h
+The @code{recv} function is declared in the header file
+@file{sys/socket.h}.  If your @var{flags} argument is zero, you can
+just as well use @code{read} instead of @code{recv}; see @ref{I/O
+Primitives}.
+
+@deftypefun ssize_t recv (int @var{socket}, void *@var{buffer}, size_t @var{size}, int @var{flags})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{recv} function is like @code{read}, but with the additional
+flags @var{flags}.  The possible values of @var{flags} are described
+in @ref{Socket Data Options}.
+
+If nonblocking mode is set for @var{socket}, and no data are available to
+be read, @code{recv} fails immediately rather than waiting.  @xref{File
+Status Flags}, for information about nonblocking mode.
+
+This function returns the number of bytes received, or @code{-1} on failure.
+The following @code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The @var{socket} argument is not a valid file descriptor.
+
+@item ENOTSOCK
+The descriptor @var{socket} is not a socket.
+
+@item EWOULDBLOCK
+Nonblocking mode has been set on the socket, and the read operation
+would block.  (Normally, @code{recv} blocks until there is input
+available to be read.)
+
+@item EINTR
+The operation was interrupted by a signal before any data was read.
+@xref{Interrupted Primitives}.
+
+@item ENOTCONN
+You never connected this socket.
+@end table
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, file descriptors, semaphores or
+whatever) are freed even if the thread is canceled.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+
+@node Socket Data Options
+@subsubsection Socket Data Options
+
+@pindex sys/socket.h
+The @var{flags} argument to @code{send} and @code{recv} is a bit
+mask.  You can bitwise-OR the values of the following macros together
+to obtain a value for this argument.  All are defined in the header
+file @file{sys/socket.h}.
+
+@deftypevr Macro int MSG_OOB
+@standards{BSD, sys/socket.h}
+Send or receive out-of-band data.  @xref{Out-of-Band Data}.
+@end deftypevr
+
+@deftypevr Macro int MSG_PEEK
+@standards{BSD, sys/socket.h}
+Look at the data but don't remove it from the input queue.  This is
+only meaningful with input functions such as @code{recv}, not with
+@code{send}.
+@end deftypevr
+
+@deftypevr Macro int MSG_DONTROUTE
+@standards{BSD, sys/socket.h}
+Don't include routing information in the message.  This is only
+meaningful with output operations, and is usually only of interest for
+diagnostic or routing programs.  We don't try to explain it here.
+@end deftypevr
+
+@node Byte Stream Example
+@subsection Byte Stream Socket Example
+
+Here is an example client program that makes a connection for a byte
+stream socket in the Internet namespace.  It doesn't do anything
+particularly interesting once it has connected to the server; it just
+sends a text string to the server and exits.
+
+This program uses @code{init_sockaddr} to set up the socket address; see
+@ref{Inet Example}.
+
+@smallexample
+@include inetcli.c.texi
+@end smallexample
+
+@node Server Example
+@subsection Byte Stream Connection Server Example
+
+The server end is much more complicated.  Since we want to allow
+multiple clients to be connected to the server at the same time, it
+would be incorrect to wait for input from a single client by simply
+calling @code{read} or @code{recv}.  Instead, the right thing to do is
+to use @code{select} (@pxref{Waiting for I/O}) to wait for input on
+all of the open sockets.  This also allows the server to deal with
+additional connection requests.
+
+This particular server doesn't do anything interesting once it has
+gotten a message from a client.  It does close the socket for that
+client when it detects an end-of-file condition (resulting from the
+client shutting down its end of the connection).
+
+This program uses @code{make_socket} to set up the socket address; see
+@ref{Inet Example}.
+
+@smallexample
+@include inetsrv.c.texi
+@end smallexample
+
+@node Out-of-Band Data
+@subsection Out-of-Band Data
+
+@cindex out-of-band data
+@cindex high-priority data
+Streams with connections permit @dfn{out-of-band} data that is
+delivered with higher priority than ordinary data.  Typically the
+reason for sending out-of-band data is to send notice of an
+exceptional condition.  To send out-of-band data use
+@code{send}, specifying the flag @code{MSG_OOB} (@pxref{Sending
+Data}).
+
+Out-of-band data are received with higher priority because the
+receiving process need not read it in sequence; to read the next
+available out-of-band data, use @code{recv} with the @code{MSG_OOB}
+flag (@pxref{Receiving Data}).  Ordinary read operations do not read
+out-of-band data; they read only ordinary data.
+
+@cindex urgent socket condition
+When a socket finds that out-of-band data are on their way, it sends a
+@code{SIGURG} signal to the owner process or process group of the
+socket.  You can specify the owner using the @code{F_SETOWN} command
+to the @code{fcntl} function; see @ref{Interrupt Input}.  You must
+also establish a handler for this signal, as described in @ref{Signal
+Handling}, in order to take appropriate action such as reading the
+out-of-band data.
+
+Alternatively, you can test for pending out-of-band data, or wait
+until there is out-of-band data, using the @code{select} function; it
+can wait for an exceptional condition on the socket.  @xref{Waiting
+for I/O}, for more information about @code{select}.
+
+Notification of out-of-band data (whether with @code{SIGURG} or with
+@code{select}) indicates that out-of-band data are on the way; the data
+may not actually arrive until later.  If you try to read the
+out-of-band data before it arrives, @code{recv} fails with an
+@code{EWOULDBLOCK} error.
+
+Sending out-of-band data automatically places a ``mark'' in the stream
+of ordinary data, showing where in the sequence the out-of-band data
+``would have been''.  This is useful when the meaning of out-of-band
+data is ``cancel everything sent so far''.  Here is how you can test,
+in the receiving process, whether any ordinary data was sent before
+the mark:
+
+@smallexample
+success = ioctl (socket, SIOCATMARK, &atmark);
+@end smallexample
+
+The @code{integer} variable @var{atmark} is set to a nonzero value if
+the socket's read pointer has reached the ``mark''.
+
+@c Posix  1.g specifies sockatmark for this ioctl.  sockatmark is not
+@c implemented yet.
+
+Here's a function to discard any ordinary data preceding the
+out-of-band mark:
+
+@smallexample
+int
+discard_until_mark (int socket)
+@{
+  while (1)
+    @{
+      /* @r{This is not an arbitrary limit; any size will do.}  */
+      char buffer[1024];
+      int atmark, success;
+
+      /* @r{If we have reached the mark, return.}  */
+      success = ioctl (socket, SIOCATMARK, &atmark);
+      if (success < 0)
+        perror ("ioctl");
+      if (result)
+        return;
+
+      /* @r{Otherwise, read a bunch of ordinary data and discard it.}
+         @r{This is guaranteed not to read past the mark}
+         @r{if it starts before the mark.}  */
+      success = read (socket, buffer, sizeof buffer);
+      if (success < 0)
+        perror ("read");
+    @}
+@}
+@end smallexample
+
+If you don't want to discard the ordinary data preceding the mark, you
+may need to read some of it anyway, to make room in internal system
+buffers for the out-of-band data.  If you try to read out-of-band data
+and get an @code{EWOULDBLOCK} error, try reading some ordinary data
+(saving it so that you can use it when you want it) and see if that
+makes room.  Here is an example:
+
+@smallexample
+struct buffer
+@{
+  char *buf;
+  int size;
+  struct buffer *next;
+@};
+
+/* @r{Read the out-of-band data from SOCKET and return it}
+   @r{as a `struct buffer', which records the address of the data}
+   @r{and its size.}
+
+   @r{It may be necessary to read some ordinary data}
+   @r{in order to make room for the out-of-band data.}
+   @r{If so, the ordinary data are saved as a chain of buffers}
+   @r{found in the `next' field of the value.}  */
+
+struct buffer *
+read_oob (int socket)
+@{
+  struct buffer *tail = 0;
+  struct buffer *list = 0;
+
+  while (1)
+    @{
+      /* @r{This is an arbitrary limit.}
+         @r{Does anyone know how to do this without a limit?}  */
+#define BUF_SZ 1024
+      char *buf = (char *) xmalloc (BUF_SZ);
+      int success;
+      int atmark;
+
+      /* @r{Try again to read the out-of-band data.}  */
+      success = recv (socket, buf, BUF_SZ, MSG_OOB);
+      if (success >= 0)
+        @{
+          /* @r{We got it, so return it.}  */
+          struct buffer *link
+            = (struct buffer *) xmalloc (sizeof (struct buffer));
+          link->buf = buf;
+          link->size = success;
+          link->next = list;
+          return link;
+        @}
+
+      /* @r{If we fail, see if we are at the mark.}  */
+      success = ioctl (socket, SIOCATMARK, &atmark);
+      if (success < 0)
+        perror ("ioctl");
+      if (atmark)
+        @{
+          /* @r{At the mark; skipping past more ordinary data cannot help.}
+             @r{So just wait a while.}  */
+          sleep (1);
+          continue;
+        @}
+
+      /* @r{Otherwise, read a bunch of ordinary data and save it.}
+         @r{This is guaranteed not to read past the mark}
+         @r{if it starts before the mark.}  */
+      success = read (socket, buf, BUF_SZ);
+      if (success < 0)
+        perror ("read");
+
+      /* @r{Save this data in the buffer list.}  */
+      @{
+        struct buffer *link
+          = (struct buffer *) xmalloc (sizeof (struct buffer));
+        link->buf = buf;
+        link->size = success;
+
+        /* @r{Add the new link to the end of the list.}  */
+        if (tail)
+          tail->next = link;
+        else
+          list = link;
+        tail = link;
+      @}
+    @}
+@}
+@end smallexample
+
+@node Datagrams
+@section Datagram Socket Operations
+
+@cindex datagram socket
+This section describes how to use communication styles that don't use
+connections (styles @code{SOCK_DGRAM} and @code{SOCK_RDM}).  Using
+these styles, you group data into packets and each packet is an
+independent communication.  You specify the destination for each
+packet individually.
+
+Datagram packets are like letters: you send each one independently
+with its own destination address, and they may arrive in the wrong
+order or not at all.
+
+The @code{listen} and @code{accept} functions are not allowed for
+sockets using connectionless communication styles.
+
+@menu
+* Sending Datagrams::    Sending packets on a datagram socket.
+* Receiving Datagrams::  Receiving packets on a datagram socket.
+* Datagram Example::     An example program: packets sent over a
+                           datagram socket in the local namespace.
+* Example Receiver::	 Another program, that receives those packets.
+@end menu
+
+@node Sending Datagrams
+@subsection Sending Datagrams
+@cindex sending a datagram
+@cindex transmitting datagrams
+@cindex datagrams, transmitting
+
+@pindex sys/socket.h
+The normal way of sending data on a datagram socket is by using the
+@code{sendto} function, declared in @file{sys/socket.h}.
+
+You can call @code{connect} on a datagram socket, but this only
+specifies a default destination for further data transmission on the
+socket.  When a socket has a default destination you can use
+@code{send} (@pxref{Sending Data}) or even @code{write} (@pxref{I/O
+Primitives}) to send a packet there.  You can cancel the default
+destination by calling @code{connect} using an address format of
+@code{AF_UNSPEC} in the @var{addr} argument.  @xref{Connecting}, for
+more information about the @code{connect} function.
+
+@deftypefun ssize_t sendto (int @var{socket}, const void *@var{buffer}, size_t @var{size}, int @var{flags}, struct sockaddr *@var{addr}, socklen_t @var{length})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{sendto} function transmits the data in the @var{buffer}
+through the socket @var{socket} to the destination address specified
+by the @var{addr} and @var{length} arguments.  The @var{size} argument
+specifies the number of bytes to be transmitted.
+
+The @var{flags} are interpreted the same way as for @code{send}; see
+@ref{Socket Data Options}.
+
+The return value and error conditions are also the same as for
+@code{send}, but you cannot rely on the system to detect errors and
+report them; the most common error is that the packet is lost or there
+is no-one at the specified address to receive it, and the operating
+system on your machine usually does not know this.
+
+It is also possible for one call to @code{sendto} to report an error
+owing to a problem related to a previous call.
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, file descriptors, semaphores or
+whatever) are freed even if the thread is canceled.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+
+@node Receiving Datagrams
+@subsection Receiving Datagrams
+@cindex receiving datagrams
+
+The @code{recvfrom} function reads a packet from a datagram socket and
+also tells you where it was sent from.  This function is declared in
+@file{sys/socket.h}.
+
+@deftypefun ssize_t recvfrom (int @var{socket}, void *@var{buffer}, size_t @var{size}, int @var{flags}, struct sockaddr *@var{addr}, socklen_t *@var{length-ptr})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{recvfrom} function reads one packet from the socket
+@var{socket} into the buffer @var{buffer}.  The @var{size} argument
+specifies the maximum number of bytes to be read.
+
+If the packet is longer than @var{size} bytes, then you get the first
+@var{size} bytes of the packet and the rest of the packet is lost.
+There's no way to read the rest of the packet.  Thus, when you use a
+packet protocol, you must always know how long a packet to expect.
+
+The @var{addr} and @var{length-ptr} arguments are used to return the
+address where the packet came from.  @xref{Socket Addresses}.  For a
+socket in the local domain the address information won't be meaningful,
+since you can't read the address of such a socket (@pxref{Local
+Namespace}).  You can specify a null pointer as the @var{addr} argument
+if you are not interested in this information.
+
+The @var{flags} are interpreted the same way as for @code{recv}
+(@pxref{Socket Data Options}).  The return value and error conditions
+are also the same as for @code{recv}.
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, file descriptors, semaphores or
+whatever) are freed even if the thread is canceled.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+
+You can use plain @code{recv} (@pxref{Receiving Data}) instead of
+@code{recvfrom} if you don't need to find out who sent the packet
+(either because you know where it should come from or because you
+treat all possible senders alike).  Even @code{read} can be used if
+you don't want to specify @var{flags} (@pxref{I/O Primitives}).
+
+@ignore
+@c sendmsg and recvmsg are like readv and writev in that they
+@c use a series of buffers.  It's not clear this is worth
+@c supporting or that we support them.
+@c !!! they can do more; it is hairy
+
+@deftp {Data Type} {struct msghdr}
+@standards{BSD, sys/socket.h}
+@end deftp
+
+@deftypefun ssize_t sendmsg (int @var{socket}, const struct msghdr *@var{message}, int @var{flags})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, files descriptors, semaphores or
+whatever) are freed even if the thread is cancel.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+
+@deftypefun ssize_t recvmsg (int @var{socket}, struct msghdr *@var{message}, int @var{flags})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+This function is defined as a cancellation point in multi-threaded
+programs, so one has to be prepared for this and make sure that
+allocated resources (like memory, files descriptors, semaphores or
+whatever) are freed even if the thread is canceled.
+@c @xref{pthread_cleanup_push}, for a method how to do this.
+@end deftypefun
+@end ignore
+
+@node Datagram Example
+@subsection Datagram Socket Example
+
+Here is a set of example programs that send messages over a datagram
+stream in the local namespace.  Both the client and server programs use
+the @code{make_named_socket} function that was presented in @ref{Local
+Socket Example}, to create and name their sockets.
+
+First, here is the server program.  It sits in a loop waiting for
+messages to arrive, bouncing each message back to the sender.
+Obviously this isn't a particularly useful program, but it does show
+the general ideas involved.
+
+@smallexample
+@include filesrv.c.texi
+@end smallexample
+
+@node Example Receiver
+@subsection Example of Reading Datagrams
+
+Here is the client program corresponding to the server above.
+
+It sends a datagram to the server and then waits for a reply.  Notice
+that the socket for the client (as well as for the server) in this
+example has to be given a name.  This is so that the server can direct
+a message back to the client.  Since the socket has no associated
+connection state, the only way the server can do this is by
+referencing the name of the client.
+
+@smallexample
+@include filecli.c.texi
+@end smallexample
+
+Keep in mind that datagram socket communications are unreliable.  In
+this example, the client program waits indefinitely if the message
+never reaches the server or if the server's response never comes
+back.  It's up to the user running the program to kill and restart
+it if desired.  A more automatic solution could be to use
+@code{select} (@pxref{Waiting for I/O}) to establish a timeout period
+for the reply, and in case of timeout either re-send the message or
+shut down the socket and exit.
+
+@node Inetd
+@section The @code{inetd} Daemon
+
+We've explained above how to write a server program that does its own
+listening.  Such a server must already be running in order for anyone
+to connect to it.
+
+Another way to provide a service on an Internet port is to let the daemon
+program @code{inetd} do the listening.  @code{inetd} is a program that
+runs all the time and waits (using @code{select}) for messages on a
+specified set of ports.  When it receives a message, it accepts the
+connection (if the socket style calls for connections) and then forks a
+child process to run the corresponding server program.  You specify the
+ports and their programs in the file @file{/etc/inetd.conf}.
+
+@menu
+* Inetd Servers::
+* Configuring Inetd::
+@end menu
+
+@node Inetd Servers
+@subsection @code{inetd} Servers
+
+Writing a server program to be run by @code{inetd} is very simple.  Each time
+someone requests a connection to the appropriate port, a new server
+process starts.  The connection already exists at this time; the
+socket is available as the standard input descriptor and as the
+standard output descriptor (descriptors 0 and 1) in the server
+process.  Thus the server program can begin reading and writing data
+right away.  Often the program needs only the ordinary I/O facilities;
+in fact, a general-purpose filter program that knows nothing about
+sockets can work as a byte stream server run by @code{inetd}.
+
+You can also use @code{inetd} for servers that use connectionless
+communication styles.  For these servers, @code{inetd} does not try to accept
+a connection since no connection is possible.  It just starts the
+server program, which can read the incoming datagram packet from
+descriptor 0.  The server program can handle one request and then
+exit, or you can choose to write it to keep reading more requests
+until no more arrive, and then exit.  You must specify which of these
+two techniques the server uses when you configure @code{inetd}.
+
+@node Configuring Inetd
+@subsection Configuring @code{inetd}
+
+The file @file{/etc/inetd.conf} tells @code{inetd} which ports to listen to
+and what server programs to run for them.  Normally each entry in the
+file is one line, but you can split it onto multiple lines provided
+all but the first line of the entry start with whitespace.  Lines that
+start with @samp{#} are comments.
+
+Here are two standard entries in @file{/etc/inetd.conf}:
+
+@smallexample
+ftp	stream	tcp	nowait	root	/libexec/ftpd	ftpd
+talk	dgram	udp	wait	root	/libexec/talkd	talkd
+@end smallexample
+
+An entry has this format:
+
+@smallexample
+@var{service} @var{style} @var{protocol} @var{wait} @var{username} @var{program} @var{arguments}
+@end smallexample
+
+The @var{service} field says which service this program provides.  It
+should be the name of a service defined in @file{/etc/services}.
+@code{inetd} uses @var{service} to decide which port to listen on for
+this entry.
+
+The fields @var{style} and @var{protocol} specify the communication
+style and the protocol to use for the listening socket.  The style
+should be the name of a communication style, converted to lower case
+and with @samp{SOCK_} deleted---for example, @samp{stream} or
+@samp{dgram}.  @var{protocol} should be one of the protocols listed in
+@file{/etc/protocols}.  The typical protocol names are @samp{tcp} for
+byte stream connections and @samp{udp} for unreliable datagrams.
+
+The @var{wait} field should be either @samp{wait} or @samp{nowait}.
+Use @samp{wait} if @var{style} is a connectionless style and the
+server, once started, handles multiple requests as they come in.
+Use @samp{nowait} if @code{inetd} should start a new process for each message
+or request that comes in.  If @var{style} uses connections, then
+@var{wait} @strong{must} be @samp{nowait}.
+
+@var{user} is the user name that the server should run as.  @code{inetd} runs
+as root, so it can set the user ID of its children arbitrarily.  It's
+best to avoid using @samp{root} for @var{user} if you can; but some
+servers, such as Telnet and FTP, read a username and passphrase
+themselves.  These servers need to be root initially so they can log
+in as commanded by the data coming over the network.
+
+@var{program} together with @var{arguments} specifies the command to
+run to start the server.  @var{program} should be an absolute file
+name specifying the executable file to run.  @var{arguments} consists
+of any number of whitespace-separated words, which become the
+command-line arguments of @var{program}.  The first word in
+@var{arguments} is argument zero, which should by convention be the
+program name itself (sans directories).
+
+If you edit @file{/etc/inetd.conf}, you can tell @code{inetd} to reread the
+file and obey its new contents by sending the @code{inetd} process the
+@code{SIGHUP} signal.  You'll have to use @code{ps} to determine the
+process ID of the @code{inetd} process as it is not fixed.
+
+@c !!! could document /etc/inetd.sec
+
+@node Socket Options
+@section Socket Options
+@cindex socket options
+
+This section describes how to read or set various options that modify
+the behavior of sockets and their underlying communications protocols.
+
+@cindex level, for socket options
+@cindex socket option level
+When you are manipulating a socket option, you must specify which
+@dfn{level} the option pertains to.  This describes whether the option
+applies to the socket interface, or to a lower-level communications
+protocol interface.
+
+@menu
+* Socket Option Functions::     The basic functions for setting and getting
+                                 socket options.
+* Socket-Level Options::        Details of the options at the socket level.
+@end menu
+
+@node Socket Option Functions
+@subsection Socket Option Functions
+
+@pindex sys/socket.h
+Here are the functions for examining and modifying socket options.
+They are declared in @file{sys/socket.h}.
+
+@deftypefun int getsockopt (int @var{socket}, int @var{level}, int @var{optname}, void *@var{optval}, socklen_t *@var{optlen-ptr})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{getsockopt} function gets information about the value of
+option @var{optname} at level @var{level} for socket @var{socket}.
+
+The option value is stored in the buffer that @var{optval} points to.
+Before the call, you should supply in @code{*@var{optlen-ptr}} the
+size of this buffer; on return, it contains the number of bytes of
+information actually stored in the buffer.
+
+Most options interpret the @var{optval} buffer as a single @code{int}
+value.
+
+The actual return value of @code{getsockopt} is @code{0} on success
+and @code{-1} on failure.  The following @code{errno} error conditions
+are defined:
+
+@table @code
+@item EBADF
+The @var{socket} argument is not a valid file descriptor.
+
+@item ENOTSOCK
+The descriptor @var{socket} is not a socket.
+
+@item ENOPROTOOPT
+The @var{optname} doesn't make sense for the given @var{level}.
+@end table
+@end deftypefun
+
+@deftypefun int setsockopt (int @var{socket}, int @var{level}, int @var{optname}, const void *@var{optval}, socklen_t @var{optlen})
+@standards{BSD, sys/socket.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function is used to set the socket option @var{optname} at level
+@var{level} for socket @var{socket}.  The value of the option is passed
+in the buffer @var{optval} of size @var{optlen}.
+
+@c Argh. -zw
+@iftex
+@hfuzz 6pt
+The return value and error codes for @code{setsockopt} are the same as
+for @code{getsockopt}.
+@end iftex
+@ifinfo
+The return value and error codes for @code{setsockopt} are the same as
+for @code{getsockopt}.
+@end ifinfo
+
+@end deftypefun
+
+@node Socket-Level Options
+@subsection Socket-Level Options
+
+@deftypevr Constant int SOL_SOCKET
+@standards{BSD, sys/socket.h}
+Use this constant as the @var{level} argument to @code{getsockopt} or
+@code{setsockopt} to manipulate the socket-level options described in
+this section.
+@end deftypevr
+
+@pindex sys/socket.h
+@noindent
+Here is a table of socket-level option names; all are defined in the
+header file @file{sys/socket.h}.
+
+@vtable @code
+@item SO_DEBUG
+@standards{BSD, sys/socket.h}
+@c Extra blank line here makes the table look better.
+
+This option toggles recording of debugging information in the underlying
+protocol modules.  The value has type @code{int}; a nonzero value means
+``yes''.
+@c !!! should say how this is used
+@c OK, anyone who knows, please explain.
+
+@item SO_REUSEADDR
+@standards{BSD, sys/socket.h}
+This option controls whether @code{bind} (@pxref{Setting Address})
+should permit reuse of local addresses for this socket.  If you enable
+this option, you can actually have two sockets with the same Internet
+port number; but the system won't allow you to use the two
+identically-named sockets in a way that would confuse the Internet.  The
+reason for this option is that some higher-level Internet protocols,
+including FTP, require you to keep reusing the same port number.
+
+The value has type @code{int}; a nonzero value means ``yes''.
+
+@item SO_KEEPALIVE
+@standards{BSD, sys/socket.h}
+This option controls whether the underlying protocol should
+periodically transmit messages on a connected socket.  If the peer
+fails to respond to these messages, the connection is considered
+broken.  The value has type @code{int}; a nonzero value means
+``yes''.
+
+@item SO_DONTROUTE
+@standards{BSD, sys/socket.h}
+This option controls whether outgoing messages bypass the normal
+message routing facilities.  If set, messages are sent directly to the
+network interface instead.  The value has type @code{int}; a nonzero
+value means ``yes''.
+
+@item SO_LINGER
+@standards{BSD, sys/socket.h}
+This option specifies what should happen when the socket of a type
+that promises reliable delivery still has untransmitted messages when
+it is closed; see @ref{Closing a Socket}.  The value has type
+@code{struct linger}.
+
+@deftp {Data Type} {struct linger}
+@standards{BSD, sys/socket.h}
+This structure type has the following members:
+
+@table @code
+@item int l_onoff
+This field is interpreted as a boolean.  If nonzero, @code{close}
+blocks until the data are transmitted or the timeout period has expired.
+
+@item int l_linger
+This specifies the timeout period, in seconds.
+@end table
+@end deftp
+
+@item SO_BROADCAST
+@standards{BSD, sys/socket.h}
+This option controls whether datagrams may be broadcast from the socket.
+The value has type @code{int}; a nonzero value means ``yes''.
+
+@item SO_OOBINLINE
+@standards{BSD, sys/socket.h}
+If this option is set, out-of-band data received on the socket is
+placed in the normal input queue.  This permits it to be read using
+@code{read} or @code{recv} without specifying the @code{MSG_OOB}
+flag.  @xref{Out-of-Band Data}.  The value has type @code{int}; a
+nonzero value means ``yes''.
+
+@item SO_SNDBUF
+@standards{BSD, sys/socket.h}
+This option gets or sets the size of the output buffer.  The value is a
+@code{size_t}, which is the size in bytes.
+
+@item SO_RCVBUF
+@standards{BSD, sys/socket.h}
+This option gets or sets the size of the input buffer.  The value is a
+@code{size_t}, which is the size in bytes.
+
+@item SO_STYLE
+@itemx SO_TYPE
+@standards{GNU, sys/socket.h}
+@standardsx{SO_TYPE, BSD, sys/socket.h}
+This option can be used with @code{getsockopt} only.  It is used to
+get the socket's communication style.  @code{SO_TYPE} is the
+historical name, and @code{SO_STYLE} is the preferred name in GNU.
+The value has type @code{int} and its value designates a communication
+style; see @ref{Communication Styles}.
+
+@item SO_ERROR
+@standards{BSD, sys/socket.h}
+@c Extra blank line here makes the table look better.
+
+This option can be used with @code{getsockopt} only.  It is used to reset
+the error status of the socket.  The value is an @code{int}, which represents
+the previous error status.
+@c !!! what is "socket error status"?  this is never defined.
+@end vtable
+
+@node Networks Database
+@section Networks Database
+@cindex networks database
+@cindex converting network number to network name
+@cindex converting network name to network number
+
+@pindex /etc/networks
+@pindex netdb.h
+Many systems come with a database that records a list of networks known
+to the system developer.  This is usually kept either in the file
+@file{/etc/networks} or in an equivalent from a name server.  This data
+base is useful for routing programs such as @code{route}, but it is not
+useful for programs that simply communicate over the network.  We
+provide functions to access this database, which are declared in
+@file{netdb.h}.
+
+@deftp {Data Type} {struct netent}
+@standards{BSD, netdb.h}
+This data type is used to represent information about entries in the
+networks database.  It has the following members:
+
+@table @code
+@item char *n_name
+This is the ``official'' name of the network.
+
+@item char **n_aliases
+These are alternative names for the network, represented as a vector
+of strings.  A null pointer terminates the array.
+
+@item int n_addrtype
+This is the type of the network number; this is always equal to
+@code{AF_INET} for Internet networks.
+
+@item unsigned long int n_net
+This is the network number.  Network numbers are returned in host
+byte order; see @ref{Byte Order}.
+@end table
+@end deftp
+
+Use the @code{getnetbyname} or @code{getnetbyaddr} functions to search
+the networks database for information about a specific network.  The
+information is returned in a statically-allocated structure; you must
+copy the information if you need to save it.
+
+@deftypefun {struct netent *} getnetbyname (const char *@var{name})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:netbyname} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getnetbyname =~ getpwuid @mtasurace:netbyname @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  getnetbyname_r dup @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getnetbyname_r =~ getpwuid_r @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   no nscd support
+@c  res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c  nss_networks_lookup2 =~ nss_passwd_lookup2 @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_getnetbyname_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+The @code{getnetbyname} function returns information about the network
+named @var{name}.  It returns a null pointer if there is no such
+network.
+@end deftypefun
+
+@deftypefun {struct netent *} getnetbyaddr (uint32_t @var{net}, int @var{type})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:netbyaddr} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getnetbyaddr =~ getpwuid @mtasurace:netbyaddr @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  malloc dup @ascuheap @acsmem
+@c  getnetbyaddr_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  realloc dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getnetbyaddr_r =~ getpwuid_r @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   no nscd support
+@c  nss_networks_lookup2 =~ nss_passwd_lookup2 @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  *fct.l -> _nss_*_getnetbyaddr_r @ascuplugin
+@c  nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+The @code{getnetbyaddr} function returns information about the network
+of type @var{type} with number @var{net}.  You should specify a value of
+@code{AF_INET} for the @var{type} argument for Internet networks.
+
+@code{getnetbyaddr} returns a null pointer if there is no such
+network.
+@end deftypefun
+
+You can also scan the networks database using @code{setnetent},
+@code{getnetent} and @code{endnetent}.  Be careful when using these
+functions because they are not reentrant.
+
+@deftypefun void setnetent (int @var{stayopen})
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:netent} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c setnetent @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_setent(nss_networks_lookup2) @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   setup(nss_networks_lookup2) @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    *lookup_fct = nss_networks_lookup2 dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:netent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock dup @aculock
+This function opens and rewinds the networks database.
+
+If the @var{stayopen} argument is nonzero, this sets a flag so that
+subsequent calls to @code{getnetbyname} or @code{getnetbyaddr} will
+not close the database (as they usually would).  This makes for more
+efficiency if you call those functions several times, by avoiding
+reopening the database for each call.
+@end deftypefun
+
+@deftypefun {struct netent *} getnetent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:netent} @mtasurace{:netentbuf} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c getnetent @mtasurace:netent @mtasurace:netentbuf @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent(getnetent_r) @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   malloc dup @ascuheap @acsmem
+@c   *func = getnetent_r dup @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   realloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c  libc_lock_unlock dup @aculock
+@c
+@c getnetent_r @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock dup @asulock @aculock
+@c  nss_getent_r(nss_networks_lookup2) @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   setup(nss_networks_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:servent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   nss_lookup dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *sfct.f @mtasurace:netent @ascuplugin
+@c  libc_lock_unlock dup @aculock
+This function returns the next entry in the networks database.  It
+returns a null pointer if there are no more entries.
+@end deftypefun
+
+@deftypefun void endnetent (void)
+@standards{BSD, netdb.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:netent} @mtsenv{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c endnetent @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_lock @asulock @aculock
+@c  nss_endent(nss_networks_lookup2) @mtasurace:netent @mtsenv @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   res_maybe_init(!preinit) dup @mtsenv @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c   setup(nss_networks_lookup2) dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   *fct.f @mtasurace:netent @ascuplugin
+@c   nss_next2 dup @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  libc_lock_unlock @aculock
+This function closes the networks database.
+@end deftypefun

@@ -1,0 +1,113 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 2 "Program Controller"
+The Program Controller controls invocation of the initialization
+routines, the other major compiler modules, and the finish routine.
+.lp
+Initialization is performed by the routine 
+.i init
+at the
+very beginning of execution.
+.sh 2 "Program Controller"
+See figure 2-1 for a pseudo-code description of the Program Controller processing.
+.(z
+.hl
+.CS
+init();
+  
+for (each subprogram) {
+    reinit();   /* init for subprogram */
+    parser();   /* Scan, parse and semantically analyze */
+ 
+    if (no severe errors) {
+        transform();
+        convert_output();
+        output();
+    }
+}
+ 
+finish();
+ 
+.CE
+.sp
+.ce
+Figure 2-1 Program Controller Operation
+.hl
+.)z
+.lp
+Note that each subprogram is completely processed and output before the
+next subprogram is processed. Conceptually, it is as if each subprogram
+were in a separate file.
+.lp
+Also, note that invocation of the Scanner and Semantic Analyzer are
+controlled by the Parser in a traditional bottom-up
+syntax directed translation.
+.sh 2 Init
+The
+.cw init
+module performs the following five major tasks:
+.np
+Processes command line and sets values of internal variables
+depending on the flags specified by the user.
+.np
+Opens input and output files.
+.np
+If a listing file is being generated, writes the Listing
+Header.
+.np
+Initializes the Error message module, Symbol table module,
+Scanner, and Semantic Analyzer by calling the appropriate
+init routine for each.
+.np
+If the user requested that the source file be run through the
+C preprocessor, invoke the internal preprocessor (\c
+.cw fpp )
+and write its output to a temporary file, which becomes the input
+file to the parser.
+.sh 3 "Adding Command Line Flags"
+The command line processor searches the structure
+.cw "swtchtab[]"
+(defined in
+.i main.c
+)
+to
+find valid flags or flag prefixes.  
+To add a flag, add the new flag (without
+the preceeding
+.q "\(mi" )
+to
+.cw swtchtab[] 's
+initialization, keeping the flags in lexicographic order.  
+Also add a case constant to the initialization.
+Switch case constants are
+.cw #define 'd
+constants of the form
+.cw "SW_<flag name in caps>" ,
+and appear
+above the definition
+of
+.cw swtchtab .
+The case constant must be unique but numerical order is not necessary.   
+(i.e., you don't have to change existing constants, just use the next
+biggest unused integer.)
+.lp
+Add the case label
+.cw "SW_<flag name in caps>:"
+to
+.cw init()
+(also defined in
+.i main.c
+).
+Also, add code to process flag and any values that follow the flag.
+See existing code in
+.cw init()
+for examples.
+.sh 2 Finish
+.cw finish
+is called at the end of compiler execution to
+close files, write a compilation summary line to the
+user's terminal, and exit.

@@ -48,6 +48,15 @@ remove_definitions(-DUNICODE -D_UNICODE)
 libomp_get_definitions_flags(LIBOMP_CONFIGURED_DEFINITIONS_FLAGS)
 add_definitions(${LIBOMP_CONFIGURED_DEFINITIONS_FLAGS})
 
+# Add NextSilicon extensions.
+if(LIBOMP_NEXTSILICON)
+  include_directories(${LIBOMP_SRC_DIR}/nextsilicon)
+  add_definitions(-DLIBOMP_NEXTSILICON)
+  if(LIBOMP_NEXTSILICON_ATOMICS_BYPASS)
+    add_definitions(-DLIBOMP_NEXTSILICON_ATOMICS_BYPASS)
+  endif()
+endif()
+
 # Set the -I includes for all sources
 include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -127,6 +136,19 @@ else()
   libomp_append(LIBOMP_CXXFILES kmp_stats_timing.cpp LIBOMP_STATS)
   libomp_append(LIBOMP_CXXFILES kmp_taskdeps.cpp)
   libomp_append(LIBOMP_CXXFILES kmp_cancel.cpp)
+
+  if(LIBOMP_NEXTSILICON)
+    # NextSilicon Optimization Sources
+    libomp_append(LIBOMP_CXXFILES nextsilicon/kmp_ns.cpp)
+
+    # NextSilicon allocation better suited for HW
+    if(LIBOMP_NEXTSILICON_ATOMICS_BYPASS)
+      libomp_append(LIBOMP_CXXFILES nextsilicon/tinyalloc/tinyalloc.c)
+      libomp_append(LIBOMP_CXXFILES nextsilicon/tinyalloc/tinyalloc_wrapper.cpp)
+      libomp_append(LIBOMP_CXXFILES nextsilicon/tinyalloc/kmp_ns_mark_page.cpp)
+    endif()
+
+  endif()
 endif()
 # Files common to stubs and normal library
 libomp_append(LIBOMP_CXXFILES kmp_ftn_cdecl.cpp)
@@ -148,7 +170,7 @@ set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES 
 
 # Remove any cmake-automatic linking of the standard C++ library.
 # We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
-if(NOT ${LIBOMP_USE_STDCPPLIB})
+if(NOT (${LIBOMP_USE_STDCPPLIB}))
   set(LIBOMP_LINKER_LANGUAGE C)
   set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
 else()

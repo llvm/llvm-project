@@ -1,0 +1,2017 @@
+@c We need some definitions here.
+@ifclear mult
+@ifhtml
+@set mult @U{00B7}
+@set infty @U{221E}
+@set pie @U{03C0}
+@end ifhtml
+@iftex
+@set mult @cdot
+@set infty @infty
+@end iftex
+@ifclear mult
+@set mult *
+@set infty oo
+@set pie pi
+@end ifclear
+@macro mul
+@value{mult}
+@end macro
+@macro infinity
+@value{infty}
+@end macro
+@ifnottex
+@macro pi
+@value{pie}
+@end macro
+@end ifnottex
+@end ifclear
+
+@node Mathematics, Arithmetic, Syslog, Top
+@c %MENU% Math functions, useful constants, random numbers
+@chapter Mathematics
+
+This chapter contains information about functions for performing
+mathematical computations, such as trigonometric functions.  Most of
+these functions have prototypes declared in the header file
+@file{math.h}.  The complex-valued functions are defined in
+@file{complex.h}.
+@pindex math.h
+@pindex complex.h
+
+All mathematical functions which take a floating-point argument
+have three variants, one each for @code{double}, @code{float}, and
+@code{long double} arguments.  The @code{double} versions are mostly
+defined in @w{ISO C89}.  The @code{float} and @code{long double}
+versions are from the numeric extensions to C included in @w{ISO C99}.
+
+Which of the three versions of a function should be used depends on the
+situation.  For most calculations, the @code{float} functions are the
+fastest.  On the other hand, the @code{long double} functions have the
+highest precision.  @code{double} is somewhere in between.  It is
+usually wise to pick the narrowest type that can accommodate your data.
+Not all machines have a distinct @code{long double} type; it may be the
+same as @code{double}.
+
+@Theglibc{} also provides @code{_Float@var{N}} and
+@code{_Float@var{N}x} types.  These types are defined in @w{ISO/IEC TS
+18661-3}, which extends @w{ISO C} and defines floating-point types that
+are not machine-dependent.  When such a type, such as @code{_Float128},
+is supported by @theglibc{}, extra variants for most of the mathematical
+functions provided for @code{double}, @code{float}, and @code{long
+double} are also provided for the supported type.  Throughout this
+manual, the @code{_Float@var{N}} and @code{_Float@var{N}x} variants of
+these functions are described along with the @code{double},
+@code{float}, and @code{long double} variants and they come from
+@w{ISO/IEC TS 18661-3}, unless explicitly stated otherwise.
+
+Support for @code{_Float@var{N}} or @code{_Float@var{N}x} types is
+provided for @code{_Float32}, @code{_Float64} and @code{_Float32x} on
+all platforms.
+It is also provided for @code{_Float128} and @code{_Float64x} on
+powerpc64le (PowerPC 64-bits little-endian), x86_64, x86, ia64,
+aarch64, alpha, mips64, riscv, s390 and sparc.
+
+@menu
+* Mathematical Constants::      Precise numeric values for often-used
+                                 constants.
+* Trig Functions::              Sine, cosine, tangent, and friends.
+* Inverse Trig Functions::      Arcsine, arccosine, etc.
+* Exponents and Logarithms::    Also pow and sqrt.
+* Hyperbolic Functions::        sinh, cosh, tanh, etc.
+* Special Functions::           Bessel, gamma, erf.
+* Errors in Math Functions::    Known Maximum Errors in Math Functions.
+* Pseudo-Random Numbers::       Functions for generating pseudo-random
+				 numbers.
+* FP Function Optimizations::   Fast code or small code.
+@end menu
+
+@node Mathematical Constants
+@section Predefined Mathematical Constants
+@cindex constants
+@cindex mathematical constants
+
+The header @file{math.h} defines several useful mathematical constants.
+All values are defined as preprocessor macros starting with @code{M_}.
+The values provided are:
+
+@vtable @code
+@item M_E
+The base of natural logarithms.
+@item M_LOG2E
+The logarithm to base @code{2} of @code{M_E}.
+@item M_LOG10E
+The logarithm to base @code{10} of @code{M_E}.
+@item M_LN2
+The natural logarithm of @code{2}.
+@item M_LN10
+The natural logarithm of @code{10}.
+@item M_PI
+Pi, the ratio of a circle's circumference to its diameter.
+@item M_PI_2
+Pi divided by two.
+@item M_PI_4
+Pi divided by four.
+@item M_1_PI
+The reciprocal of pi (1/pi)
+@item M_2_PI
+Two times the reciprocal of pi.
+@item M_2_SQRTPI
+Two times the reciprocal of the square root of pi.
+@item M_SQRT2
+The square root of two.
+@item M_SQRT1_2
+The reciprocal of the square root of two (also the square root of 1/2).
+@end vtable
+
+These constants come from the Unix98 standard and were also available in
+4.4BSD; therefore they are only defined if
+@code{_XOPEN_SOURCE=500}, or a more general feature select macro, is
+defined.  The default set of features includes these constants.
+@xref{Feature Test Macros}.
+
+All values are of type @code{double}.  As an extension, @theglibc{}
+also defines these constants with type @code{long double}.  The
+@code{long double} macros have a lowercase @samp{l} appended to their
+names: @code{M_El}, @code{M_PIl}, and so forth.  These are only
+available if @code{_GNU_SOURCE} is defined.
+
+Likewise, @theglibc{} also defines these constants with the types
+@code{_Float@var{N}} and @code{_Float@var{N}x} for the machines that
+have support for such types enabled (@pxref{Mathematics}) and if
+@code{_GNU_SOURCE} is defined.  When available, the macros names are
+appended with @samp{f@var{N}} or @samp{f@var{N}x}, such as @samp{f128}
+for the type @code{_Float128}.
+
+@vindex PI
+@emph{Note:} Some programs use a constant named @code{PI} which has the
+same value as @code{M_PI}.  This constant is not standard; it may have
+appeared in some old AT&T headers, and is mentioned in Stroustrup's book
+on C++.  It infringes on the user's name space, so @theglibc{}
+does not define it.  Fixing programs written to expect it is simple:
+replace @code{PI} with @code{M_PI} throughout, or put @samp{-DPI=M_PI}
+on the compiler command line.
+
+@node Trig Functions
+@section Trigonometric Functions
+@cindex trigonometric functions
+
+These are the familiar @code{sin}, @code{cos}, and @code{tan} functions.
+The arguments to all of these functions are in units of radians; recall
+that pi radians equals 180 degrees.
+
+@cindex pi (trigonometric constant)
+The math library normally defines @code{M_PI} to a @code{double}
+approximation of pi.  If strict ISO and/or POSIX compliance
+are requested this constant is not defined, but you can easily define it
+yourself:
+
+@smallexample
+#define M_PI 3.14159265358979323846264338327
+@end smallexample
+
+@noindent
+You can also compute the value of pi with the expression @code{acos
+(-1.0)}.
+
+@deftypefun double sin (double @var{x})
+@deftypefunx float sinf (float @var{x})
+@deftypefunx {long double} sinl (long double @var{x})
+@deftypefunx _FloatN sinfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx sinfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{sinfN, TS 18661-3:2015, math.h}
+@standardsx{sinfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the sine of @var{x}, where @var{x} is given in
+radians.  The return value is in the range @code{-1} to @code{1}.
+@end deftypefun
+
+@deftypefun double cos (double @var{x})
+@deftypefunx float cosf (float @var{x})
+@deftypefunx {long double} cosl (long double @var{x})
+@deftypefunx _FloatN cosfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx cosfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{cosfN, TS 18661-3:2015, math.h}
+@standardsx{cosfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the cosine of @var{x}, where @var{x} is given in
+radians.  The return value is in the range @code{-1} to @code{1}.
+@end deftypefun
+
+@deftypefun double tan (double @var{x})
+@deftypefunx float tanf (float @var{x})
+@deftypefunx {long double} tanl (long double @var{x})
+@deftypefunx _FloatN tanfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx tanfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{tanfN, TS 18661-3:2015, math.h}
+@standardsx{tanfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the tangent of @var{x}, where @var{x} is given in
+radians.
+
+Mathematically, the tangent function has singularities at odd multiples
+of pi/2.  If the argument @var{x} is too close to one of these
+singularities, @code{tan} will signal overflow.
+@end deftypefun
+
+In many applications where @code{sin} and @code{cos} are used, the sine
+and cosine of the same angle are needed at the same time.  It is more
+efficient to compute them simultaneously, so the library provides a
+function to do that.
+
+@deftypefun void sincos (double @var{x}, double *@var{sinx}, double *@var{cosx})
+@deftypefunx void sincosf (float @var{x}, float *@var{sinx}, float *@var{cosx})
+@deftypefunx void sincosl (long double @var{x}, long double *@var{sinx}, long double *@var{cosx})
+@deftypefunx _FloatN sincosfN (_Float@var{N} @var{x}, _Float@var{N} *@var{sinx}, _Float@var{N} *@var{cosx})
+@deftypefunx _FloatNx sincosfNx (_Float@var{N}x @var{x}, _Float@var{N}x *@var{sinx}, _Float@var{N}x *@var{cosx})
+@standards{GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the sine of @var{x} in @code{*@var{sinx}} and the
+cosine of @var{x} in @code{*@var{cosx}}, where @var{x} is given in
+radians.  Both values, @code{*@var{sinx}} and @code{*@var{cosx}}, are in
+the range of @code{-1} to @code{1}.
+
+All these functions, including the @code{_Float@var{N}} and
+@code{_Float@var{N}x} variants, are GNU extensions.  Portable programs
+should be prepared to cope with their absence.
+@end deftypefun
+
+@cindex complex trigonometric functions
+
+@w{ISO C99} defines variants of the trig functions which work on
+complex numbers.  @Theglibc{} provides these functions, but they
+are only useful if your compiler supports the new complex types defined
+by the standard.
+@c XXX Change this when gcc is fixed. -zw
+(As of this writing GCC supports complex numbers, but there are bugs in
+the implementation.)
+
+@deftypefun {complex double} csin (complex double @var{z})
+@deftypefunx {complex float} csinf (complex float @var{z})
+@deftypefunx {complex long double} csinl (complex long double @var{z})
+@deftypefunx {complex _FloatN} csinfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} csinfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{csinfN, TS 18661-3:2015, complex.h}
+@standardsx{csinfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c There are calls to nan* that could trigger @mtslocale if they didn't get
+@c empty strings.
+These functions return the complex sine of @var{z}.
+The mathematical definition of the complex sine is
+
+@ifnottex
+@math{sin (z) = 1/(2*i) * (exp (z*i) - exp (-z*i))}.
+@end ifnottex
+@tex
+$$\sin(z) = {1\over 2i} (e^{zi} - e^{-zi})$$
+@end tex
+@end deftypefun
+
+@deftypefun {complex double} ccos (complex double @var{z})
+@deftypefunx {complex float} ccosf (complex float @var{z})
+@deftypefunx {complex long double} ccosl (complex long double @var{z})
+@deftypefunx {complex _FloatN} ccosfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} ccosfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{ccosfN, TS 18661-3:2015, complex.h}
+@standardsx{ccosfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the complex cosine of @var{z}.
+The mathematical definition of the complex cosine is
+
+@ifnottex
+@math{cos (z) = 1/2 * (exp (z*i) + exp (-z*i))}
+@end ifnottex
+@tex
+$$\cos(z) = {1\over 2} (e^{zi} + e^{-zi})$$
+@end tex
+@end deftypefun
+
+@deftypefun {complex double} ctan (complex double @var{z})
+@deftypefunx {complex float} ctanf (complex float @var{z})
+@deftypefunx {complex long double} ctanl (complex long double @var{z})
+@deftypefunx {complex _FloatN} ctanfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} ctanfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{ctanfN, TS 18661-3:2015, complex.h}
+@standardsx{ctanfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the complex tangent of @var{z}.
+The mathematical definition of the complex tangent is
+
+@ifnottex
+@math{tan (z) = -i * (exp (z*i) - exp (-z*i)) / (exp (z*i) + exp (-z*i))}
+@end ifnottex
+@tex
+$$\tan(z) = -i \cdot {e^{zi} - e^{-zi}\over e^{zi} + e^{-zi}}$$
+@end tex
+
+@noindent
+The complex tangent has poles at @math{pi/2 + 2n}, where @math{n} is an
+integer.  @code{ctan} may signal overflow if @var{z} is too close to a
+pole.
+@end deftypefun
+
+
+@node Inverse Trig Functions
+@section Inverse Trigonometric Functions
+@cindex inverse trigonometric functions
+
+These are the usual arcsine, arccosine and arctangent functions,
+which are the inverses of the sine, cosine and tangent functions
+respectively.
+
+@deftypefun double asin (double @var{x})
+@deftypefunx float asinf (float @var{x})
+@deftypefunx {long double} asinl (long double @var{x})
+@deftypefunx _FloatN asinfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx asinfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{asinfN, TS 18661-3:2015, math.h}
+@standardsx{asinfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute the arcsine of @var{x}---that is, the value whose
+sine is @var{x}.  The value is in units of radians.  Mathematically,
+there are infinitely many such values; the one actually returned is the
+one between @code{-pi/2} and @code{pi/2} (inclusive).
+
+The arcsine function is defined mathematically only
+over the domain @code{-1} to @code{1}.  If @var{x} is outside the
+domain, @code{asin} signals a domain error.
+@end deftypefun
+
+@deftypefun double acos (double @var{x})
+@deftypefunx float acosf (float @var{x})
+@deftypefunx {long double} acosl (long double @var{x})
+@deftypefunx _FloatN acosfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx acosfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{acosfN, TS 18661-3:2015, math.h}
+@standardsx{acosfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute the arccosine of @var{x}---that is, the value
+whose cosine is @var{x}.  The value is in units of radians.
+Mathematically, there are infinitely many such values; the one actually
+returned is the one between @code{0} and @code{pi} (inclusive).
+
+The arccosine function is defined mathematically only
+over the domain @code{-1} to @code{1}.  If @var{x} is outside the
+domain, @code{acos} signals a domain error.
+@end deftypefun
+
+@deftypefun double atan (double @var{x})
+@deftypefunx float atanf (float @var{x})
+@deftypefunx {long double} atanl (long double @var{x})
+@deftypefunx _FloatN atanfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx atanfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{atanfN, TS 18661-3:2015, math.h}
+@standardsx{atanfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute the arctangent of @var{x}---that is, the value
+whose tangent is @var{x}.  The value is in units of radians.
+Mathematically, there are infinitely many such values; the one actually
+returned is the one between @code{-pi/2} and @code{pi/2} (inclusive).
+@end deftypefun
+
+@deftypefun double atan2 (double @var{y}, double @var{x})
+@deftypefunx float atan2f (float @var{y}, float @var{x})
+@deftypefunx {long double} atan2l (long double @var{y}, long double @var{x})
+@deftypefunx _FloatN atan2fN (_Float@var{N} @var{y}, _Float@var{N} @var{x})
+@deftypefunx _FloatNx atan2fNx (_Float@var{N}x @var{y}, _Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{atan2fN, TS 18661-3:2015, math.h}
+@standardsx{atan2fNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function computes the arctangent of @var{y}/@var{x}, but the signs
+of both arguments are used to determine the quadrant of the result, and
+@var{x} is permitted to be zero.  The return value is given in radians
+and is in the range @code{-pi} to @code{pi}, inclusive.
+
+If @var{x} and @var{y} are coordinates of a point in the plane,
+@code{atan2} returns the signed angle between the line from the origin
+to that point and the x-axis.  Thus, @code{atan2} is useful for
+converting Cartesian coordinates to polar coordinates.  (To compute the
+radial coordinate, use @code{hypot}; see @ref{Exponents and
+Logarithms}.)
+
+@c This is experimentally true.  Should it be so? -zw
+If both @var{x} and @var{y} are zero, @code{atan2} returns zero.
+@end deftypefun
+
+@cindex inverse complex trigonometric functions
+@w{ISO C99} defines complex versions of the inverse trig functions.
+
+@deftypefun {complex double} casin (complex double @var{z})
+@deftypefunx {complex float} casinf (complex float @var{z})
+@deftypefunx {complex long double} casinl (complex long double @var{z})
+@deftypefunx {complex _FloatN} casinfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} casinfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{casinfN, TS 18661-3:2015, complex.h}
+@standardsx{casinfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute the complex arcsine of @var{z}---that is, the
+value whose sine is @var{z}.  The value returned is in radians.
+
+Unlike the real-valued functions, @code{casin} is defined for all
+values of @var{z}.
+@end deftypefun
+
+@deftypefun {complex double} cacos (complex double @var{z})
+@deftypefunx {complex float} cacosf (complex float @var{z})
+@deftypefunx {complex long double} cacosl (complex long double @var{z})
+@deftypefunx {complex _FloatN} cacosfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} cacosfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{cacosfN, TS 18661-3:2015, complex.h}
+@standardsx{cacosfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute the complex arccosine of @var{z}---that is, the
+value whose cosine is @var{z}.  The value returned is in radians.
+
+Unlike the real-valued functions, @code{cacos} is defined for all
+values of @var{z}.
+@end deftypefun
+
+
+@deftypefun {complex double} catan (complex double @var{z})
+@deftypefunx {complex float} catanf (complex float @var{z})
+@deftypefunx {complex long double} catanl (complex long double @var{z})
+@deftypefunx {complex _FloatN} catanfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} catanfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{catanfN, TS 18661-3:2015, complex.h}
+@standardsx{catanfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute the complex arctangent of @var{z}---that is,
+the value whose tangent is @var{z}.  The value is in units of radians.
+@end deftypefun
+
+
+@node Exponents and Logarithms
+@section Exponentiation and Logarithms
+@cindex exponentiation functions
+@cindex power functions
+@cindex logarithm functions
+
+@deftypefun double exp (double @var{x})
+@deftypefunx float expf (float @var{x})
+@deftypefunx {long double} expl (long double @var{x})
+@deftypefunx _FloatN expfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx expfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{expfN, TS 18661-3:2015, math.h}
+@standardsx{expfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute @code{e} (the base of natural logarithms) raised
+to the power @var{x}.
+
+If the magnitude of the result is too large to be representable,
+@code{exp} signals overflow.
+@end deftypefun
+
+@deftypefun double exp2 (double @var{x})
+@deftypefunx float exp2f (float @var{x})
+@deftypefunx {long double} exp2l (long double @var{x})
+@deftypefunx _FloatN exp2fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx exp2fNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{exp2fN, TS 18661-3:2015, math.h}
+@standardsx{exp2fNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute @code{2} raised to the power @var{x}.
+Mathematically, @code{exp2 (x)} is the same as @code{exp (x * log (2))}.
+@end deftypefun
+
+@deftypefun double exp10 (double @var{x})
+@deftypefunx float exp10f (float @var{x})
+@deftypefunx {long double} exp10l (long double @var{x})
+@deftypefunx _FloatN exp10fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx exp10fNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{exp10fN, TS 18661-4:2015, math.h}
+@standardsx{exp10fNx, TS 18661-4:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute @code{10} raised to the power @var{x}.
+Mathematically, @code{exp10 (x)} is the same as @code{exp (x * log (10))}.
+
+The @code{exp10} functions are from TS 18661-4:2015.
+@end deftypefun
+
+
+@deftypefun double log (double @var{x})
+@deftypefunx float logf (float @var{x})
+@deftypefunx {long double} logl (long double @var{x})
+@deftypefunx _FloatN logfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx logfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{logfN, TS 18661-3:2015, math.h}
+@standardsx{logfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions compute the natural logarithm of @var{x}.  @code{exp (log
+(@var{x}))} equals @var{x}, exactly in mathematics and approximately in
+C.
+
+If @var{x} is negative, @code{log} signals a domain error.  If @var{x}
+is zero, it returns negative infinity; if @var{x} is too close to zero,
+it may signal overflow.
+@end deftypefun
+
+@deftypefun double log10 (double @var{x})
+@deftypefunx float log10f (float @var{x})
+@deftypefunx {long double} log10l (long double @var{x})
+@deftypefunx _FloatN log10fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx log10fNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{log10fN, TS 18661-3:2015, math.h}
+@standardsx{log10fNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the base-10 logarithm of @var{x}.
+@code{log10 (@var{x})} equals @code{log (@var{x}) / log (10)}.
+
+@end deftypefun
+
+@deftypefun double log2 (double @var{x})
+@deftypefunx float log2f (float @var{x})
+@deftypefunx {long double} log2l (long double @var{x})
+@deftypefunx _FloatN log2fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx log2fNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{log2fN, TS 18661-3:2015, math.h}
+@standardsx{log2fNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the base-2 logarithm of @var{x}.
+@code{log2 (@var{x})} equals @code{log (@var{x}) / log (2)}.
+@end deftypefun
+
+@deftypefun double logb (double @var{x})
+@deftypefunx float logbf (float @var{x})
+@deftypefunx {long double} logbl (long double @var{x})
+@deftypefunx _FloatN logbfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx logbfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{logbfN, TS 18661-3:2015, math.h}
+@standardsx{logbfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions extract the exponent of @var{x} and return it as a
+floating-point value.  If @code{FLT_RADIX} is two, @code{logb} is equal
+to @code{floor (log2 (x))}, except it's probably faster.
+
+If @var{x} is de-normalized, @code{logb} returns the exponent @var{x}
+would have if it were normalized.  If @var{x} is infinity (positive or
+negative), @code{logb} returns @math{@infinity{}}.  If @var{x} is zero,
+@code{logb} returns @math{@infinity{}}.  It does not signal.
+@end deftypefun
+
+@deftypefun int ilogb (double @var{x})
+@deftypefunx int ilogbf (float @var{x})
+@deftypefunx int ilogbl (long double @var{x})
+@deftypefunx int ilogbfN (_Float@var{N} @var{x})
+@deftypefunx int ilogbfNx (_Float@var{N}x @var{x})
+@deftypefunx {long int} llogb (double @var{x})
+@deftypefunx {long int} llogbf (float @var{x})
+@deftypefunx {long int} llogbl (long double @var{x})
+@deftypefunx {long int} llogbfN (_Float@var{N} @var{x})
+@deftypefunx {long int} llogbfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{ilogbfN, TS 18661-3:2015, math.h}
+@standardsx{ilogbfNx, TS 18661-3:2015, math.h}
+@standardsx{llogbfN, TS 18661-3:2015, math.h}
+@standardsx{llogbfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions are equivalent to the corresponding @code{logb}
+functions except that they return signed integer values.  The
+@code{ilogb}, @code{ilogbf}, and @code{ilogbl} functions are from ISO
+C99; the @code{llogb}, @code{llogbf}, @code{llogbl} functions are from
+TS 18661-1:2014; the @code{ilogbfN}, @code{ilogbfNx}, @code{llogbfN},
+and @code{llogbfNx} functions are from TS 18661-3:2015.
+@end deftypefun
+
+@noindent
+Since integers cannot represent infinity and NaN, @code{ilogb} instead
+returns an integer that can't be the exponent of a normal floating-point
+number.  @file{math.h} defines constants so you can check for this.
+
+@deftypevr Macro int FP_ILOGB0
+@standards{ISO, math.h}
+@code{ilogb} returns this value if its argument is @code{0}.  The
+numeric value is either @code{INT_MIN} or @code{-INT_MAX}.
+
+This macro is defined in @w{ISO C99}.
+@end deftypevr
+
+@deftypevr Macro {long int} FP_LLOGB0
+@standards{ISO, math.h}
+@code{llogb} returns this value if its argument is @code{0}.  The
+numeric value is either @code{LONG_MIN} or @code{-LONG_MAX}.
+
+This macro is defined in TS 18661-1:2014.
+@end deftypevr
+
+@deftypevr Macro int FP_ILOGBNAN
+@standards{ISO, math.h}
+@code{ilogb} returns this value if its argument is @code{NaN}.  The
+numeric value is either @code{INT_MIN} or @code{INT_MAX}.
+
+This macro is defined in @w{ISO C99}.
+@end deftypevr
+
+@deftypevr Macro {long int} FP_LLOGBNAN
+@standards{ISO, math.h}
+@code{llogb} returns this value if its argument is @code{NaN}.  The
+numeric value is either @code{LONG_MIN} or @code{LONG_MAX}.
+
+This macro is defined in TS 18661-1:2014.
+@end deftypevr
+
+These values are system specific.  They might even be the same.  The
+proper way to test the result of @code{ilogb} is as follows:
+
+@smallexample
+i = ilogb (f);
+if (i == FP_ILOGB0 || i == FP_ILOGBNAN)
+  @{
+    if (isnan (f))
+      @{
+        /* @r{Handle NaN.}  */
+      @}
+    else if (f  == 0.0)
+      @{
+        /* @r{Handle 0.0.}  */
+      @}
+    else
+      @{
+        /* @r{Some other value with large exponent,}
+           @r{perhaps +Inf.}  */
+      @}
+  @}
+@end smallexample
+
+@deftypefun double pow (double @var{base}, double @var{power})
+@deftypefunx float powf (float @var{base}, float @var{power})
+@deftypefunx {long double} powl (long double @var{base}, long double @var{power})
+@deftypefunx _FloatN powfN (_Float@var{N} @var{base}, _Float@var{N} @var{power})
+@deftypefunx _FloatNx powfNx (_Float@var{N}x @var{base}, _Float@var{N}x @var{power})
+@standards{ISO, math.h}
+@standardsx{powfN, TS 18661-3:2015, math.h}
+@standardsx{powfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These are general exponentiation functions, returning @var{base} raised
+to @var{power}.
+
+Mathematically, @code{pow} would return a complex number when @var{base}
+is negative and @var{power} is not an integral value.  @code{pow} can't
+do that, so instead it signals a domain error. @code{pow} may also
+underflow or overflow the destination type.
+@end deftypefun
+
+@cindex square root function
+@deftypefun double sqrt (double @var{x})
+@deftypefunx float sqrtf (float @var{x})
+@deftypefunx {long double} sqrtl (long double @var{x})
+@deftypefunx _FloatN sqrtfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx sqrtfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{sqrtfN, TS 18661-3:2015, math.h}
+@standardsx{sqrtfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the nonnegative square root of @var{x}.
+
+If @var{x} is negative, @code{sqrt} signals a domain error.
+Mathematically, it should return a complex number.
+@end deftypefun
+
+@cindex cube root function
+@deftypefun double cbrt (double @var{x})
+@deftypefunx float cbrtf (float @var{x})
+@deftypefunx {long double} cbrtl (long double @var{x})
+@deftypefunx _FloatN cbrtfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx cbrtfNx (_Float@var{N}x @var{x})
+@standards{BSD, math.h}
+@standardsx{cbrtfN, TS 18661-3:2015, math.h}
+@standardsx{cbrtfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the cube root of @var{x}.  They cannot
+fail; every representable real value has a representable real cube root.
+@end deftypefun
+
+@deftypefun double hypot (double @var{x}, double @var{y})
+@deftypefunx float hypotf (float @var{x}, float @var{y})
+@deftypefunx {long double} hypotl (long double @var{x}, long double @var{y})
+@deftypefunx _FloatN hypotfN (_Float@var{N} @var{x}, _Float@var{N} @var{y})
+@deftypefunx _FloatNx hypotfNx (_Float@var{N}x @var{x}, _Float@var{N}x @var{y})
+@standards{ISO, math.h}
+@standardsx{hypotfN, TS 18661-3:2015, math.h}
+@standardsx{hypotfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return @code{sqrt (@var{x}*@var{x} +
+@var{y}*@var{y})}.  This is the length of the hypotenuse of a right
+triangle with sides of length @var{x} and @var{y}, or the distance
+of the point (@var{x}, @var{y}) from the origin.  Using this function
+instead of the direct formula is wise, since the error is
+much smaller.  See also the function @code{cabs} in @ref{Absolute Value}.
+@end deftypefun
+
+@deftypefun double expm1 (double @var{x})
+@deftypefunx float expm1f (float @var{x})
+@deftypefunx {long double} expm1l (long double @var{x})
+@deftypefunx _FloatN expm1fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx expm1fNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{expm1fN, TS 18661-3:2015, math.h}
+@standardsx{expm1fNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return a value equivalent to @code{exp (@var{x}) - 1}.
+They are computed in a way that is accurate even if @var{x} is
+near zero---a case where @code{exp (@var{x}) - 1} would be inaccurate owing
+to subtraction of two numbers that are nearly equal.
+@end deftypefun
+
+@deftypefun double log1p (double @var{x})
+@deftypefunx float log1pf (float @var{x})
+@deftypefunx {long double} log1pl (long double @var{x})
+@deftypefunx _FloatN log1pfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx log1pfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{log1pfN, TS 18661-3:2015, math.h}
+@standardsx{log1pfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return a value equivalent to @w{@code{log (1 + @var{x})}}.
+They are computed in a way that is accurate even if @var{x} is
+near zero.
+@end deftypefun
+
+@cindex complex exponentiation functions
+@cindex complex logarithm functions
+
+@w{ISO C99} defines complex variants of some of the exponentiation and
+logarithm functions.
+
+@deftypefun {complex double} cexp (complex double @var{z})
+@deftypefunx {complex float} cexpf (complex float @var{z})
+@deftypefunx {complex long double} cexpl (complex long double @var{z})
+@deftypefunx {complex _FloatN} cexpfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} cexpfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{cexpfN, TS 18661-3:2015, complex.h}
+@standardsx{cexpfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return @code{e} (the base of natural
+logarithms) raised to the power of @var{z}.
+Mathematically, this corresponds to the value
+
+@ifnottex
+@math{exp (z) = exp (creal (z)) * (cos (cimag (z)) + I * sin (cimag (z)))}
+@end ifnottex
+@tex
+$$\exp(z) = e^z = e^{{\rm Re}\,z} (\cos ({\rm Im}\,z) + i \sin ({\rm Im}\,z))$$
+@end tex
+@end deftypefun
+
+@deftypefun {complex double} clog (complex double @var{z})
+@deftypefunx {complex float} clogf (complex float @var{z})
+@deftypefunx {complex long double} clogl (complex long double @var{z})
+@deftypefunx {complex _FloatN} clogfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} clogfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{clogfN, TS 18661-3:2015, complex.h}
+@standardsx{clogfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the natural logarithm of @var{z}.
+Mathematically, this corresponds to the value
+
+@ifnottex
+@math{log (z) = log (cabs (z)) + I * carg (z)}
+@end ifnottex
+@tex
+$$\log(z) = \log |z| + i \arg z$$
+@end tex
+
+@noindent
+@code{clog} has a pole at 0, and will signal overflow if @var{z} equals
+or is very close to 0.  It is well-defined for all other values of
+@var{z}.
+@end deftypefun
+
+
+@deftypefun {complex double} clog10 (complex double @var{z})
+@deftypefunx {complex float} clog10f (complex float @var{z})
+@deftypefunx {complex long double} clog10l (complex long double @var{z})
+@deftypefunx {complex _FloatN} clog10fN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} clog10fNx (complex _Float@var{N}x @var{z})
+@standards{GNU, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the base 10 logarithm of the complex value
+@var{z}.  Mathematically, this corresponds to the value
+
+@ifnottex
+@math{log10 (z) = log10 (cabs (z)) + I * carg (z) / log (10)}
+@end ifnottex
+@tex
+$$\log_{10}(z) = \log_{10}|z| + i \arg z / \log (10)$$
+@end tex
+
+All these functions, including the @code{_Float@var{N}} and
+@code{_Float@var{N}x} variants, are GNU extensions.
+@end deftypefun
+
+@deftypefun {complex double} csqrt (complex double @var{z})
+@deftypefunx {complex float} csqrtf (complex float @var{z})
+@deftypefunx {complex long double} csqrtl (complex long double @var{z})
+@deftypefunx {complex _FloatN} csqrtfN (_Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} csqrtfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{csqrtfN, TS 18661-3:2015, complex.h}
+@standardsx{csqrtfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the complex square root of the argument @var{z}.  Unlike
+the real-valued functions, they are defined for all values of @var{z}.
+@end deftypefun
+
+@deftypefun {complex double} cpow (complex double @var{base}, complex double @var{power})
+@deftypefunx {complex float} cpowf (complex float @var{base}, complex float @var{power})
+@deftypefunx {complex long double} cpowl (complex long double @var{base}, complex long double @var{power})
+@deftypefunx {complex _FloatN} cpowfN (complex _Float@var{N} @var{base}, complex _Float@var{N} @var{power})
+@deftypefunx {complex _FloatNx} cpowfNx (complex _Float@var{N}x @var{base}, complex _Float@var{N}x @var{power})
+@standards{ISO, complex.h}
+@standardsx{cpowfN, TS 18661-3:2015, complex.h}
+@standardsx{cpowfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return @var{base} raised to the power of
+@var{power}.  This is equivalent to @w{@code{cexp (y * clog (x))}}
+@end deftypefun
+
+@node Hyperbolic Functions
+@section Hyperbolic Functions
+@cindex hyperbolic functions
+
+The functions in this section are related to the exponential functions;
+see @ref{Exponents and Logarithms}.
+
+@deftypefun double sinh (double @var{x})
+@deftypefunx float sinhf (float @var{x})
+@deftypefunx {long double} sinhl (long double @var{x})
+@deftypefunx _FloatN sinhfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx sinhfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{sinhfN, TS 18661-3:2015, math.h}
+@standardsx{sinhfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the hyperbolic sine of @var{x}, defined
+mathematically as @w{@code{(exp (@var{x}) - exp (-@var{x})) / 2}}.  They
+may signal overflow if @var{x} is too large.
+@end deftypefun
+
+@deftypefun double cosh (double @var{x})
+@deftypefunx float coshf (float @var{x})
+@deftypefunx {long double} coshl (long double @var{x})
+@deftypefunx _FloatN coshfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx coshfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{coshfN, TS 18661-3:2015, math.h}
+@standardsx{coshfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the hyperbolic cosine of @var{x},
+defined mathematically as @w{@code{(exp (@var{x}) + exp (-@var{x})) / 2}}.
+They may signal overflow if @var{x} is too large.
+@end deftypefun
+
+@deftypefun double tanh (double @var{x})
+@deftypefunx float tanhf (float @var{x})
+@deftypefunx {long double} tanhl (long double @var{x})
+@deftypefunx _FloatN tanhfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx tanhfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{tanhfN, TS 18661-3:2015, math.h}
+@standardsx{tanhfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the hyperbolic tangent of @var{x},
+defined mathematically as @w{@code{sinh (@var{x}) / cosh (@var{x})}}.
+They may signal overflow if @var{x} is too large.
+@end deftypefun
+
+@cindex hyperbolic functions
+
+There are counterparts for the hyperbolic functions which take
+complex arguments.
+
+@deftypefun {complex double} csinh (complex double @var{z})
+@deftypefunx {complex float} csinhf (complex float @var{z})
+@deftypefunx {complex long double} csinhl (complex long double @var{z})
+@deftypefunx {complex _FloatN} csinhfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} csinhfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{csinhfN, TS 18661-3:2015, complex.h}
+@standardsx{csinhfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the complex hyperbolic sine of @var{z}, defined
+mathematically as @w{@code{(exp (@var{z}) - exp (-@var{z})) / 2}}.
+@end deftypefun
+
+@deftypefun {complex double} ccosh (complex double @var{z})
+@deftypefunx {complex float} ccoshf (complex float @var{z})
+@deftypefunx {complex long double} ccoshl (complex long double @var{z})
+@deftypefunx {complex _FloatN} ccoshfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} ccoshfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{ccoshfN, TS 18661-3:2015, complex.h}
+@standardsx{ccoshfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the complex hyperbolic cosine of @var{z}, defined
+mathematically as @w{@code{(exp (@var{z}) + exp (-@var{z})) / 2}}.
+@end deftypefun
+
+@deftypefun {complex double} ctanh (complex double @var{z})
+@deftypefunx {complex float} ctanhf (complex float @var{z})
+@deftypefunx {complex long double} ctanhl (complex long double @var{z})
+@deftypefunx {complex _FloatN} ctanhfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} ctanhfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{ctanhfN, TS 18661-3:2015, complex.h}
+@standardsx{ctanhfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the complex hyperbolic tangent of @var{z},
+defined mathematically as @w{@code{csinh (@var{z}) / ccosh (@var{z})}}.
+@end deftypefun
+
+
+@cindex inverse hyperbolic functions
+
+@deftypefun double asinh (double @var{x})
+@deftypefunx float asinhf (float @var{x})
+@deftypefunx {long double} asinhl (long double @var{x})
+@deftypefunx _FloatN asinhfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx asinhfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{asinhfN, TS 18661-3:2015, math.h}
+@standardsx{asinhfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the inverse hyperbolic sine of @var{x}---the
+value whose hyperbolic sine is @var{x}.
+@end deftypefun
+
+@deftypefun double acosh (double @var{x})
+@deftypefunx float acoshf (float @var{x})
+@deftypefunx {long double} acoshl (long double @var{x})
+@deftypefunx _FloatN acoshfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx acoshfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{acoshfN, TS 18661-3:2015, math.h}
+@standardsx{acoshfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the inverse hyperbolic cosine of @var{x}---the
+value whose hyperbolic cosine is @var{x}.  If @var{x} is less than
+@code{1}, @code{acosh} signals a domain error.
+@end deftypefun
+
+@deftypefun double atanh (double @var{x})
+@deftypefunx float atanhf (float @var{x})
+@deftypefunx {long double} atanhl (long double @var{x})
+@deftypefunx _FloatN atanhfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx atanhfNx (_Float@var{N}x @var{x})
+@standards{ISO, math.h}
+@standardsx{atanhfN, TS 18661-3:2015, math.h}
+@standardsx{atanhfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the inverse hyperbolic tangent of @var{x}---the
+value whose hyperbolic tangent is @var{x}.  If the absolute value of
+@var{x} is greater than @code{1}, @code{atanh} signals a domain error;
+if it is equal to 1, @code{atanh} returns infinity.
+@end deftypefun
+
+@cindex inverse complex hyperbolic functions
+
+@deftypefun {complex double} casinh (complex double @var{z})
+@deftypefunx {complex float} casinhf (complex float @var{z})
+@deftypefunx {complex long double} casinhl (complex long double @var{z})
+@deftypefunx {complex _FloatN} casinhfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} casinhfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{casinhfN, TS 18661-3:2015, complex.h}
+@standardsx{casinhfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the inverse complex hyperbolic sine of
+@var{z}---the value whose complex hyperbolic sine is @var{z}.
+@end deftypefun
+
+@deftypefun {complex double} cacosh (complex double @var{z})
+@deftypefunx {complex float} cacoshf (complex float @var{z})
+@deftypefunx {complex long double} cacoshl (complex long double @var{z})
+@deftypefunx {complex _FloatN} cacoshfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} cacoshfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{cacoshfN, TS 18661-3:2015, complex.h}
+@standardsx{cacoshfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the inverse complex hyperbolic cosine of
+@var{z}---the value whose complex hyperbolic cosine is @var{z}.  Unlike
+the real-valued functions, there are no restrictions on the value of @var{z}.
+@end deftypefun
+
+@deftypefun {complex double} catanh (complex double @var{z})
+@deftypefunx {complex float} catanhf (complex float @var{z})
+@deftypefunx {complex long double} catanhl (complex long double @var{z})
+@deftypefunx {complex _FloatN} catanhfN (complex _Float@var{N} @var{z})
+@deftypefunx {complex _FloatNx} catanhfNx (complex _Float@var{N}x @var{z})
+@standards{ISO, complex.h}
+@standardsx{catanhfN, TS 18661-3:2015, complex.h}
+@standardsx{catanhfNx, TS 18661-3:2015, complex.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+These functions return the inverse complex hyperbolic tangent of
+@var{z}---the value whose complex hyperbolic tangent is @var{z}.  Unlike
+the real-valued functions, there are no restrictions on the value of
+@var{z}.
+@end deftypefun
+
+@node Special Functions
+@section Special Functions
+@cindex special functions
+@cindex Bessel functions
+@cindex gamma function
+
+These are some more exotic mathematical functions which are sometimes
+useful.  Currently they only have real-valued versions.
+
+@deftypefun double erf (double @var{x})
+@deftypefunx float erff (float @var{x})
+@deftypefunx {long double} erfl (long double @var{x})
+@deftypefunx _FloatN erffN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx erffNx (_Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{erffN, TS 18661-3:2015, math.h}
+@standardsx{erffNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{erf} returns the error function of @var{x}.  The error
+function is defined as
+@tex
+$$\hbox{erf}(x) = {2\over\sqrt{\pi}}\cdot\int_0^x e^{-t^2} \hbox{d}t$$
+@end tex
+@ifnottex
+@smallexample
+erf (x) = 2/sqrt(pi) * integral from 0 to x of exp(-t^2) dt
+@end smallexample
+@end ifnottex
+@end deftypefun
+
+@deftypefun double erfc (double @var{x})
+@deftypefunx float erfcf (float @var{x})
+@deftypefunx {long double} erfcl (long double @var{x})
+@deftypefunx _FloatN erfcfN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx erfcfNx (_Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{erfcfN, TS 18661-3:2015, math.h}
+@standardsx{erfcfNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{erfc} returns @code{1.0 - erf(@var{x})}, but computed in a
+fashion that avoids round-off error when @var{x} is large.
+@end deftypefun
+
+@deftypefun double lgamma (double @var{x})
+@deftypefunx float lgammaf (float @var{x})
+@deftypefunx {long double} lgammal (long double @var{x})
+@deftypefunx _FloatN lgammafN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx lgammafNx (_Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{lgammafN, TS 18661-3:2015, math.h}
+@standardsx{lgammafNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:signgam}}@asunsafe{}@acsafe{}}
+@code{lgamma} returns the natural logarithm of the absolute value of
+the gamma function of @var{x}.  The gamma function is defined as
+@tex
+$$\Gamma(x) = \int_0^\infty t^{x-1} e^{-t} \hbox{d}t$$
+@end tex
+@ifnottex
+@smallexample
+gamma (x) = integral from 0 to @infinity{} of t^(x-1) e^-t dt
+@end smallexample
+@end ifnottex
+
+@vindex signgam
+The sign of the gamma function is stored in the global variable
+@var{signgam}, which is declared in @file{math.h}.  It is @code{1} if
+the intermediate result was positive or zero, or @code{-1} if it was
+negative.
+
+To compute the real gamma function you can use the @code{tgamma}
+function or you can compute the values as follows:
+@smallexample
+lgam = lgamma(x);
+gam  = signgam*exp(lgam);
+@end smallexample
+
+The gamma function has singularities at the non-positive integers.
+@code{lgamma} will raise the zero divide exception if evaluated at a
+singularity.
+@end deftypefun
+
+@deftypefun double lgamma_r (double @var{x}, int *@var{signp})
+@deftypefunx float lgammaf_r (float @var{x}, int *@var{signp})
+@deftypefunx {long double} lgammal_r (long double @var{x}, int *@var{signp})
+@deftypefunx _FloatN lgammafN_r (_Float@var{N} @var{x}, int *@var{signp})
+@deftypefunx _FloatNx lgammafNx_r (_Float@var{N}x @var{x}, int *@var{signp})
+@standards{XPG, math.h}
+@standardsx{lgammafN_r, GNU, math.h}
+@standardsx{lgammafNx_r, GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{lgamma_r} is just like @code{lgamma}, but it stores the sign of
+the intermediate result in the variable pointed to by @var{signp}
+instead of in the @var{signgam} global.  This means it is reentrant.
+
+The @code{lgammaf@var{N}_r} and @code{lgammaf@var{N}x_r} functions are
+GNU extensions.
+@end deftypefun
+
+@deftypefun double gamma (double @var{x})
+@deftypefunx float gammaf (float @var{x})
+@deftypefunx {long double} gammal (long double @var{x})
+@standards{SVID, math.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:signgam}}@asunsafe{}@acsafe{}}
+These functions exist for compatibility reasons.  They are equivalent to
+@code{lgamma} etc.  It is better to use @code{lgamma} since for one the
+name reflects better the actual computation, and moreover @code{lgamma} is
+standardized in @w{ISO C99} while @code{gamma} is not.
+@end deftypefun
+
+@deftypefun double tgamma (double @var{x})
+@deftypefunx float tgammaf (float @var{x})
+@deftypefunx {long double} tgammal (long double @var{x})
+@deftypefunx _FloatN tgammafN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx tgammafNx (_Float@var{N}x @var{x})
+@standardsx{tgamma, XPG, math.h}
+@standardsx{tgamma, ISO, math.h}
+@standardsx{tgammaf, XPG, math.h}
+@standardsx{tgammaf, ISO, math.h}
+@standardsx{tgammal, XPG, math.h}
+@standardsx{tgammal, ISO, math.h}
+@standardsx{tgammafN, TS 18661-3:2015, math.h}
+@standardsx{tgammafNx, TS 18661-3:2015, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{tgamma} applies the gamma function to @var{x}.  The gamma
+function is defined as
+@tex
+$$\Gamma(x) = \int_0^\infty t^{x-1} e^{-t} \hbox{d}t$$
+@end tex
+@ifnottex
+@smallexample
+gamma (x) = integral from 0 to @infinity{} of t^(x-1) e^-t dt
+@end smallexample
+@end ifnottex
+
+This function was introduced in @w{ISO C99}.  The @code{_Float@var{N}}
+and @code{_Float@var{N}x} variants were introduced in @w{ISO/IEC TS
+18661-3}.
+@end deftypefun
+
+@deftypefun double j0 (double @var{x})
+@deftypefunx float j0f (float @var{x})
+@deftypefunx {long double} j0l (long double @var{x})
+@deftypefunx _FloatN j0fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx j0fNx (_Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{j0fN, GNU, math.h}
+@standardsx{j0fNx, GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{j0} returns the Bessel function of the first kind of order 0 of
+@var{x}.  It may signal underflow if @var{x} is too large.
+
+The @code{_Float@var{N}} and @code{_Float@var{N}x} variants are GNU
+extensions.
+@end deftypefun
+
+@deftypefun double j1 (double @var{x})
+@deftypefunx float j1f (float @var{x})
+@deftypefunx {long double} j1l (long double @var{x})
+@deftypefunx _FloatN j1fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx j1fNx (_Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{j1fN, GNU, math.h}
+@standardsx{j1fNx, GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{j1} returns the Bessel function of the first kind of order 1 of
+@var{x}.  It may signal underflow if @var{x} is too large.
+
+The @code{_Float@var{N}} and @code{_Float@var{N}x} variants are GNU
+extensions.
+@end deftypefun
+
+@deftypefun double jn (int @var{n}, double @var{x})
+@deftypefunx float jnf (int @var{n}, float @var{x})
+@deftypefunx {long double} jnl (int @var{n}, long double @var{x})
+@deftypefunx _FloatN jnfN (int @var{n}, _Float@var{N} @var{x})
+@deftypefunx _FloatNx jnfNx (int @var{n}, _Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{jnfN, GNU, math.h}
+@standardsx{jnfNx, GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{jn} returns the Bessel function of the first kind of order
+@var{n} of @var{x}.  It may signal underflow if @var{x} is too large.
+
+The @code{_Float@var{N}} and @code{_Float@var{N}x} variants are GNU
+extensions.
+@end deftypefun
+
+@deftypefun double y0 (double @var{x})
+@deftypefunx float y0f (float @var{x})
+@deftypefunx {long double} y0l (long double @var{x})
+@deftypefunx _FloatN y0fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx y0fNx (_Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{y0fN, GNU, math.h}
+@standardsx{y0fNx, GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{y0} returns the Bessel function of the second kind of order 0 of
+@var{x}.  It may signal underflow if @var{x} is too large.  If @var{x}
+is negative, @code{y0} signals a domain error; if it is zero,
+@code{y0} signals overflow and returns @math{-@infinity}.
+
+The @code{_Float@var{N}} and @code{_Float@var{N}x} variants are GNU
+extensions.
+@end deftypefun
+
+@deftypefun double y1 (double @var{x})
+@deftypefunx float y1f (float @var{x})
+@deftypefunx {long double} y1l (long double @var{x})
+@deftypefunx _FloatN y1fN (_Float@var{N} @var{x})
+@deftypefunx _FloatNx y1fNx (_Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{y1fN, GNU, math.h}
+@standardsx{y1fNx, GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{y1} returns the Bessel function of the second kind of order 1 of
+@var{x}.  It may signal underflow if @var{x} is too large.  If @var{x}
+is negative, @code{y1} signals a domain error; if it is zero,
+@code{y1} signals overflow and returns @math{-@infinity}.
+
+The @code{_Float@var{N}} and @code{_Float@var{N}x} variants are GNU
+extensions.
+@end deftypefun
+
+@deftypefun double yn (int @var{n}, double @var{x})
+@deftypefunx float ynf (int @var{n}, float @var{x})
+@deftypefunx {long double} ynl (int @var{n}, long double @var{x})
+@deftypefunx _FloatN ynfN (int @var{n}, _Float@var{N} @var{x})
+@deftypefunx _FloatNx ynfNx (int @var{n}, _Float@var{N}x @var{x})
+@standards{SVID, math.h}
+@standardsx{ynfN, GNU, math.h}
+@standardsx{ynfNx, GNU, math.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@code{yn} returns the Bessel function of the second kind of order @var{n} of
+@var{x}.  It may signal underflow if @var{x} is too large.  If @var{x}
+is negative, @code{yn} signals a domain error; if it is zero,
+@code{yn} signals overflow and returns @math{-@infinity}.
+
+The @code{_Float@var{N}} and @code{_Float@var{N}x} variants are GNU
+extensions.
+@end deftypefun
+
+@node Errors in Math Functions
+@section Known Maximum Errors in Math Functions
+@cindex math errors
+@cindex ulps
+
+This section lists the known errors of the functions in the math
+library.  Errors are measured in ``units of the last place''.  This is a
+measure for the relative error.  For a number @math{z} with the
+representation @math{d.d@dots{}d@mul{}2^e} (we assume IEEE
+floating-point numbers with base 2) the ULP is represented by
+
+@tex
+$${|d.d\dots d - (z/2^e)|}\over {2^{p-1}}$$
+@end tex
+@ifnottex
+@smallexample
+|d.d...d - (z / 2^e)| / 2^(p - 1)
+@end smallexample
+@end ifnottex
+
+@noindent
+where @math{p} is the number of bits in the mantissa of the
+floating-point number representation.  Ideally the error for all
+functions is always less than 0.5ulps in round-to-nearest mode.  Using
+rounding bits this is also
+possible and normally implemented for the basic operations.  Except
+for certain functions such as @code{sqrt}, @code{fma} and @code{rint}
+whose results are fully specified by reference to corresponding IEEE
+754 floating-point operations, and conversions between strings and
+floating point, @theglibc{} does not aim for correctly rounded results
+for functions in the math library, and does not aim for correctness in
+whether ``inexact'' exceptions are raised.  Instead, the goals for
+accuracy of functions without fully specified results are as follows;
+some functions have bugs meaning they do not meet these goals in all
+cases.  In the future, @theglibc{} may provide some other correctly
+rounding functions under the names such as @code{crsin} proposed for
+an extension to ISO C.
+
+@itemize @bullet
+
+@item
+Each function with a floating-point result behaves as if it computes
+an infinite-precision result that is within a few ulp (in both real
+and complex parts, for functions with complex results) of the
+mathematically correct value of the function (interpreted together
+with ISO C or POSIX semantics for the function in question) at the
+exact value passed as the input.  Exceptions are raised appropriately
+for this value and in accordance with IEEE 754 / ISO C / POSIX
+semantics, and it is then rounded according to the current rounding
+direction to the result that is returned to the user.  @code{errno}
+may also be set (@pxref{Math Error Reporting}).  (The ``inexact''
+exception may be raised, or not raised, even if this is inconsistent
+with the infinite-precision value.)
+
+@item
+For the IBM @code{long double} format, as used on PowerPC GNU/Linux,
+the accuracy goal is weaker for input values not exactly representable
+in 106 bits of precision; it is as if the input value is some value
+within 0.5ulp of the value actually passed, where ``ulp'' is
+interpreted in terms of a fixed-precision 106-bit mantissa, but not
+necessarily the exact value actually passed with discontiguous
+mantissa bits.
+
+@item
+For the IBM @code{long double} format, functions whose results are
+fully specified by reference to corresponding IEEE 754 floating-point
+operations have the same accuracy goals as other functions, but with
+the error bound being the same as that for division (3ulp).
+Furthermore, ``inexact'' and ``underflow'' exceptions may be raised
+for all functions for any inputs, even where such exceptions are
+inconsistent with the returned value, since the underlying
+floating-point arithmetic has that property.
+
+@item
+Functions behave as if the infinite-precision result computed is zero,
+infinity or NaN if and only if that is the mathematically correct
+infinite-precision result.  They behave as if the infinite-precision
+result computed always has the same sign as the mathematically correct
+result.
+
+@item
+If the mathematical result is more than a few ulp above the overflow
+threshold for the current rounding direction, the value returned is
+the appropriate overflow value for the current rounding direction,
+with the overflow exception raised.
+
+@item
+If the mathematical result has magnitude well below half the least
+subnormal magnitude, the returned value is either zero or the least
+subnormal (in each case, with the correct sign), according to the
+current rounding direction and with the underflow exception raised.
+
+@item
+Where the mathematical result underflows (before rounding) and is not
+exactly representable as a floating-point value, the function does not
+behave as if the computed infinite-precision result is an exact value
+in the subnormal range.  This means that the underflow exception is
+raised other than possibly for cases where the mathematical result is
+very close to the underflow threshold and the function behaves as if
+it computes an infinite-precision result that does not underflow.  (So
+there may be spurious underflow exceptions in cases where the
+underflowing result is exact, but not missing underflow exceptions in
+cases where it is inexact.)
+
+@item
+@Theglibc{} does not aim for functions to satisfy other properties of
+the underlying mathematical function, such as monotonicity, where not
+implied by the above goals.
+
+@item
+All the above applies to both real and complex parts, for complex
+functions.
+
+@end itemize
+
+Therefore many of the functions in the math library have errors.  The
+table lists the maximum error for each function which is exposed by one
+of the existing tests in the test suite.  The table tries to cover as much
+as possible and list the actual maximum error (or at least a ballpark
+figure) but this is often not achieved due to the large search space.
+
+The table lists the ULP values for different architectures.  Different
+architectures have different results since their hardware support for
+floating-point operations varies and also the existing hardware support
+is different.  Only the round-to-nearest rounding mode is covered by
+this table, and vector versions of functions are not covered.
+Functions not listed do not have known errors.
+
+@page
+@c This multitable does not fit on a single page
+@include libm-err.texi
+
+@node Pseudo-Random Numbers
+@section Pseudo-Random Numbers
+@cindex random numbers
+@cindex pseudo-random numbers
+@cindex seed (for random numbers)
+
+This section describes the GNU facilities for generating a series of
+pseudo-random numbers.  The numbers generated are not truly random;
+typically, they form a sequence that repeats periodically, with a period
+so large that you can ignore it for ordinary purposes.  The random
+number generator works by remembering a @dfn{seed} value which it uses
+to compute the next random number and also to compute a new seed.
+
+Although the generated numbers look unpredictable within one run of a
+program, the sequence of numbers is @emph{exactly the same} from one run
+to the next.  This is because the initial seed is always the same.  This
+is convenient when you are debugging a program, but it is unhelpful if
+you want the program to behave unpredictably.  If you want a different
+pseudo-random series each time your program runs, you must specify a
+different seed each time.  For ordinary purposes, basing the seed on the
+current time works well.  For random numbers in cryptography,
+@pxref{Unpredictable Bytes}.
+
+You can obtain repeatable sequences of numbers on a particular machine type
+by specifying the same initial seed value for the random number
+generator.  There is no standard meaning for a particular seed value;
+the same seed, used in different C libraries or on different CPU types,
+will give you different random numbers.
+
+@Theglibc{} supports the standard @w{ISO C} random number functions
+plus two other sets derived from BSD and SVID.  The BSD and @w{ISO C}
+functions provide identical, somewhat limited functionality.  If only a
+small number of random bits are required, we recommend you use the
+@w{ISO C} interface, @code{rand} and @code{srand}.  The SVID functions
+provide a more flexible interface, which allows better random number
+generator algorithms, provides more random bits (up to 48) per call, and
+can provide random floating-point numbers.  These functions are required
+by the XPG standard and therefore will be present in all modern Unix
+systems.
+
+@menu
+* ISO Random::                  @code{rand} and friends.
+* BSD Random::                  @code{random} and friends.
+* SVID Random::                 @code{drand48} and friends.
+@end menu
+
+@node ISO Random
+@subsection ISO C Random Number Functions
+
+This section describes the random number functions that are part of
+the @w{ISO C} standard.
+
+To use these facilities, you should include the header file
+@file{stdlib.h} in your program.
+@pindex stdlib.h
+
+@deftypevr Macro int RAND_MAX
+@standards{ISO, stdlib.h}
+The value of this macro is an integer constant representing the largest
+value the @code{rand} function can return.  In @theglibc{}, it is
+@code{2147483647}, which is the largest signed integer representable in
+32 bits.  In other libraries, it may be as low as @code{32767}.
+@end deftypevr
+
+@deftypefun int rand (void)
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+@c Just calls random.
+The @code{rand} function returns the next pseudo-random number in the
+series.  The value ranges from @code{0} to @code{RAND_MAX}.
+@end deftypefun
+
+@deftypefun void srand (unsigned int @var{seed})
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+@c Alias to srandom.
+This function establishes @var{seed} as the seed for a new series of
+pseudo-random numbers.  If you call @code{rand} before a seed has been
+established with @code{srand}, it uses the value @code{1} as a default
+seed.
+
+To produce a different pseudo-random series each time your program is
+run, do @code{srand (time (0))}.
+@end deftypefun
+
+POSIX.1 extended the C standard functions to support reproducible random
+numbers in multi-threaded programs.  However, the extension is badly
+designed and unsuitable for serious work.
+
+@deftypefun int rand_r (unsigned int *@var{seed})
+@standards{POSIX.1, stdlib.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function returns a random number in the range 0 to @code{RAND_MAX}
+just as @code{rand} does.  However, all its state is stored in the
+@var{seed} argument.  This means the RNG's state can only have as many
+bits as the type @code{unsigned int} has.  This is far too few to
+provide a good RNG.
+
+If your program requires a reentrant RNG, we recommend you use the
+reentrant GNU extensions to the SVID random number generator.  The
+POSIX.1 interface should only be used when the GNU extensions are not
+available.
+@end deftypefun
+
+
+@node BSD Random
+@subsection BSD Random Number Functions
+
+This section describes a set of random number generation functions that
+are derived from BSD.  There is no advantage to using these functions
+with @theglibc{}; we support them for BSD compatibility only.
+
+The prototypes for these functions are in @file{stdlib.h}.
+@pindex stdlib.h
+
+@deftypefun {long int} random (void)
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+@c Takes a lock and calls random_r with an automatic variable and the
+@c global state, while holding a lock.
+This function returns the next pseudo-random number in the sequence.
+The value returned ranges from @code{0} to @code{2147483647}.
+
+@strong{NB:} Temporarily this function was defined to return a
+@code{int32_t} value to indicate that the return value always contains
+32 bits even if @code{long int} is wider.  The standard demands it
+differently.  Users must always be aware of the 32-bit limitation,
+though.
+@end deftypefun
+
+@deftypefun void srandom (unsigned int @var{seed})
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+@c Takes a lock and calls srandom_r with an automatic variable and a
+@c static buffer.  There's no MT-safety issue because the static buffer
+@c is internally protected by a lock, although other threads may modify
+@c the set state before it is used.
+The @code{srandom} function sets the state of the random number
+generator based on the integer @var{seed}.  If you supply a @var{seed} value
+of @code{1}, this will cause @code{random} to reproduce the default set
+of random numbers.
+
+To produce a different set of pseudo-random numbers each time your
+program runs, do @code{srandom (time (0))}.
+@end deftypefun
+
+@deftypefun {char *} initstate (unsigned int @var{seed}, char *@var{state}, size_t @var{size})
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+The @code{initstate} function is used to initialize the random number
+generator state.  The argument @var{state} is an array of @var{size}
+bytes, used to hold the state information.  It is initialized based on
+@var{seed}.  The size must be between 8 and 256 bytes, and should be a
+power of two.  The bigger the @var{state} array, the better.
+
+The return value is the previous value of the state information array.
+You can use this value later as an argument to @code{setstate} to
+restore that state.
+@end deftypefun
+
+@deftypefun {char *} setstate (char *@var{state})
+@standards{BSD, stdlib.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+The @code{setstate} function restores the random number state
+information @var{state}.  The argument must have been the result of
+a previous call to @var{initstate} or @var{setstate}.
+
+The return value is the previous value of the state information array.
+You can use this value later as an argument to @code{setstate} to
+restore that state.
+
+If the function fails the return value is @code{NULL}.
+@end deftypefun
+
+The four functions described so far in this section all work on a state
+which is shared by all threads.  The state is not directly accessible to
+the user and can only be modified by these functions.  This makes it
+hard to deal with situations where each thread should have its own
+pseudo-random number generator.
+
+@Theglibc{} contains four additional functions which contain the
+state as an explicit parameter and therefore make it possible to handle
+thread-local PRNGs.  Besides this there is no difference.  In fact, the
+four functions already discussed are implemented internally using the
+following interfaces.
+
+The @file{stdlib.h} header contains a definition of the following type:
+
+@deftp {Data Type} {struct random_data}
+@standards{GNU, stdlib.h}
+
+Objects of type @code{struct random_data} contain the information
+necessary to represent the state of the PRNG.  Although a complete
+definition of the type is present the type should be treated as opaque.
+@end deftp
+
+The functions modifying the state follow exactly the already described
+functions.
+
+@deftypefun int random_r (struct random_data *restrict @var{buf}, int32_t *restrict @var{result})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buf}}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{random_r} function behaves exactly like the @code{random}
+function except that it uses and modifies the state in the object
+pointed to by the first parameter instead of the global state.
+@end deftypefun
+
+@deftypefun int srandom_r (unsigned int @var{seed}, struct random_data *@var{buf})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buf}}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{srandom_r} function behaves exactly like the @code{srandom}
+function except that it uses and modifies the state in the object
+pointed to by the second parameter instead of the global state.
+@end deftypefun
+
+@deftypefun int initstate_r (unsigned int @var{seed}, char *restrict @var{statebuf}, size_t @var{statelen}, struct random_data *restrict @var{buf})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buf}}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{initstate_r} function behaves exactly like the @code{initstate}
+function except that it uses and modifies the state in the object
+pointed to by the fourth parameter instead of the global state.
+@end deftypefun
+
+@deftypefun int setstate_r (char *restrict @var{statebuf}, struct random_data *restrict @var{buf})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buf}}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{setstate_r} function behaves exactly like the @code{setstate}
+function except that it uses and modifies the state in the object
+pointed to by the first parameter instead of the global state.
+@end deftypefun
+
+@node SVID Random
+@subsection SVID Random Number Function
+
+The C library on SVID systems contains yet another kind of random number
+generator functions.  They use a state of 48 bits of data.  The user can
+choose among a collection of functions which return the random bits
+in different forms.
+
+Generally there are two kinds of function.  The first uses a state of
+the random number generator which is shared among several functions and
+by all threads of the process.  The second requires the user to handle
+the state.
+
+All functions have in common that they use the same congruential
+formula with the same constants.  The formula is
+
+@smallexample
+Y = (a * X + c) mod m
+@end smallexample
+
+@noindent
+where @var{X} is the state of the generator at the beginning and
+@var{Y} the state at the end.  @code{a} and @code{c} are constants
+determining the way the generator works.  By default they are
+
+@smallexample
+a = 0x5DEECE66D = 25214903917
+c = 0xb = 11
+@end smallexample
+
+@noindent
+but they can also be changed by the user.  @code{m} is of course 2^48
+since the state consists of a 48-bit array.
+
+The prototypes for these functions are in @file{stdlib.h}.
+@pindex stdlib.h
+
+
+@deftypefun double drand48 (void)
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+@c Uses of the static state buffer are not guarded by a lock (thus
+@c @mtasurace:drand48), so they may be found or left at a
+@c partially-updated state in case of calls from within signal handlers
+@c or cancellation.  None of this will break safety rules or invoke
+@c undefined behavior, but it may affect randomness.
+This function returns a @code{double} value in the range of @code{0.0}
+to @code{1.0} (exclusive).  The random bits are determined by the global
+state of the random number generator in the C library.
+
+Since the @code{double} type according to @w{IEEE 754} has a 52-bit
+mantissa this means 4 bits are not initialized by the random number
+generator.  These are (of course) chosen to be the least significant
+bits and they are initialized to @code{0}.
+@end deftypefun
+
+@deftypefun double erand48 (unsigned short int @var{xsubi}[3])
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+@c The static buffer is just initialized with default parameters, which
+@c are later read to advance the state held in xsubi.
+This function returns a @code{double} value in the range of @code{0.0}
+to @code{1.0} (exclusive), similarly to @code{drand48}.  The argument is
+an array describing the state of the random number generator.
+
+This function can be called subsequently since it updates the array to
+guarantee random numbers.  The array should have been initialized before
+initial use to obtain reproducible results.
+@end deftypefun
+
+@deftypefun {long int} lrand48 (void)
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+The @code{lrand48} function returns an integer value in the range of
+@code{0} to @code{2^31} (exclusive).  Even if the size of the @code{long
+int} type can take more than 32 bits, no higher numbers are returned.
+The random bits are determined by the global state of the random number
+generator in the C library.
+@end deftypefun
+
+@deftypefun {long int} nrand48 (unsigned short int @var{xsubi}[3])
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+This function is similar to the @code{lrand48} function in that it
+returns a number in the range of @code{0} to @code{2^31} (exclusive) but
+the state of the random number generator used to produce the random bits
+is determined by the array provided as the parameter to the function.
+
+The numbers in the array are updated afterwards so that subsequent calls
+to this function yield different results (as is expected of a random
+number generator).  The array should have been initialized before the
+first call to obtain reproducible results.
+@end deftypefun
+
+@deftypefun {long int} mrand48 (void)
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+The @code{mrand48} function is similar to @code{lrand48}.  The only
+difference is that the numbers returned are in the range @code{-2^31} to
+@code{2^31} (exclusive).
+@end deftypefun
+
+@deftypefun {long int} jrand48 (unsigned short int @var{xsubi}[3])
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+The @code{jrand48} function is similar to @code{nrand48}.  The only
+difference is that the numbers returned are in the range @code{-2^31} to
+@code{2^31} (exclusive).  For the @code{xsubi} parameter the same
+requirements are necessary.
+@end deftypefun
+
+The internal state of the random number generator can be initialized in
+several ways.  The methods differ in the completeness of the
+information provided.
+
+@deftypefun void srand48 (long int @var{seedval})
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+The @code{srand48} function sets the most significant 32 bits of the
+internal state of the random number generator to the least
+significant 32 bits of the @var{seedval} parameter.  The lower 16 bits
+are initialized to the value @code{0x330E}.  Even if the @code{long
+int} type contains more than 32 bits only the lower 32 bits are used.
+
+Owing to this limitation, initialization of the state of this
+function is not very useful.  But it makes it easy to use a construct
+like @code{srand48 (time (0))}.
+
+A side-effect of this function is that the values @code{a} and @code{c}
+from the internal state, which are used in the congruential formula,
+are reset to the default values given above.  This is of importance once
+the user has called the @code{lcong48} function (see below).
+@end deftypefun
+
+@deftypefun {unsigned short int *} seed48 (unsigned short int @var{seed16v}[3])
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+The @code{seed48} function initializes all 48 bits of the state of the
+internal random number generator from the contents of the parameter
+@var{seed16v}.  Here the lower 16 bits of the first element of
+@var{seed16v} initialize the least significant 16 bits of the internal
+state, the lower 16 bits of @code{@var{seed16v}[1]} initialize the mid-order
+16 bits of the state and the 16 lower bits of @code{@var{seed16v}[2]}
+initialize the most significant 16 bits of the state.
+
+Unlike @code{srand48} this function lets the user initialize all 48 bits
+of the state.
+
+The value returned by @code{seed48} is a pointer to an array containing
+the values of the internal state before the change.  This might be
+useful to restart the random number generator at a certain state.
+Otherwise the value can simply be ignored.
+
+As for @code{srand48}, the values @code{a} and @code{c} from the
+congruential formula are reset to the default values.
+@end deftypefun
+
+There is one more function to initialize the random number generator
+which enables you to specify even more information by allowing you to
+change the parameters in the congruential formula.
+
+@deftypefun void lcong48 (unsigned short int @var{param}[7])
+@standards{SVID, stdlib.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:drand48}}@asunsafe{}@acunsafe{@acucorrupt{}}}
+The @code{lcong48} function allows the user to change the complete state
+of the random number generator.  Unlike @code{srand48} and
+@code{seed48}, this function also changes the constants in the
+congruential formula.
+
+From the seven elements in the array @var{param} the least significant
+16 bits of the entries @code{@var{param}[0]} to @code{@var{param}[2]}
+determine the initial state, the least significant 16 bits of
+@code{@var{param}[3]} to @code{@var{param}[5]} determine the 48 bit
+constant @code{a} and @code{@var{param}[6]} determines the 16-bit value
+@code{c}.
+@end deftypefun
+
+All the above functions have in common that they use the global
+parameters for the congruential formula.  In multi-threaded programs it
+might sometimes be useful to have different parameters in different
+threads.  For this reason all the above functions have a counterpart
+which works on a description of the random number generator in the
+user-supplied buffer instead of the global state.
+
+Please note that it is no problem if several threads use the global
+state if all threads use the functions which take a pointer to an array
+containing the state.  The random numbers are computed following the
+same loop but if the state in the array is different all threads will
+obtain an individual random number generator.
+
+The user-supplied buffer must be of type @code{struct drand48_data}.
+This type should be regarded as opaque and not manipulated directly.
+
+@deftypefun int drand48_r (struct drand48_data *@var{buffer}, double *@var{result})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+This function is equivalent to the @code{drand48} function with the
+difference that it does not modify the global random number generator
+parameters but instead the parameters in the buffer supplied through the
+pointer @var{buffer}.  The random number is returned in the variable
+pointed to by @var{result}.
+
+The return value of the function indicates whether the call succeeded.
+If the value is less than @code{0} an error occurred and @code{errno} is
+set to indicate the problem.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@deftypefun int erand48_r (unsigned short int @var{xsubi}[3], struct drand48_data *@var{buffer}, double *@var{result})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{erand48_r} function works like @code{erand48}, but in addition
+it takes an argument @var{buffer} which describes the random number
+generator.  The state of the random number generator is taken from the
+@code{xsubi} array, the parameters for the congruential formula from the
+global random number generator data.  The random number is returned in
+the variable pointed to by @var{result}.
+
+The return value is non-negative if the call succeeded.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@deftypefun int lrand48_r (struct drand48_data *@var{buffer}, long int *@var{result})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+This function is similar to @code{lrand48}, but in addition it takes a
+pointer to a buffer describing the state of the random number generator
+just like @code{drand48}.
+
+If the return value of the function is non-negative the variable pointed
+to by @var{result} contains the result.  Otherwise an error occurred.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@deftypefun int nrand48_r (unsigned short int @var{xsubi}[3], struct drand48_data *@var{buffer}, long int *@var{result})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{nrand48_r} function works like @code{nrand48} in that it
+produces a random number in the range @code{0} to @code{2^31}.  But instead
+of using the global parameters for the congruential formula it uses the
+information from the buffer pointed to by @var{buffer}.  The state is
+described by the values in @var{xsubi}.
+
+If the return value is non-negative the variable pointed to by
+@var{result} contains the result.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@deftypefun int mrand48_r (struct drand48_data *@var{buffer}, long int *@var{result})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+This function is similar to @code{mrand48} but like the other reentrant
+functions it uses the random number generator described by the value in
+the buffer pointed to by @var{buffer}.
+
+If the return value is non-negative the variable pointed to by
+@var{result} contains the result.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@deftypefun int jrand48_r (unsigned short int @var{xsubi}[3], struct drand48_data *@var{buffer}, long int *@var{result})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{jrand48_r} function is similar to @code{jrand48}.  Like the
+other reentrant functions of this function family it uses the
+congruential formula parameters from the buffer pointed to by
+@var{buffer}.
+
+If the return value is non-negative the variable pointed to by
+@var{result} contains the result.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+Before any of the above functions are used the buffer of type
+@code{struct drand48_data} should be initialized.  The easiest way to do
+this is to fill the whole buffer with null bytes, e.g. by
+
+@smallexample
+memset (buffer, '\0', sizeof (struct drand48_data));
+@end smallexample
+
+@noindent
+Using any of the reentrant functions of this family now will
+automatically initialize the random number generator to the default
+values for the state and the parameters of the congruential formula.
+
+The other possibility is to use any of the functions which explicitly
+initialize the buffer.  Though it might be obvious how to initialize the
+buffer from looking at the parameter to the function, it is highly
+recommended to use these functions since the result might not always be
+what you expect.
+
+@deftypefun int srand48_r (long int @var{seedval}, struct drand48_data *@var{buffer})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+The description of the random number generator represented by the
+information in @var{buffer} is initialized similarly to what the function
+@code{srand48} does.  The state is initialized from the parameter
+@var{seedval} and the parameters for the congruential formula are
+initialized to their default values.
+
+If the return value is non-negative the function call succeeded.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@deftypefun int seed48_r (unsigned short int @var{seed16v}[3], struct drand48_data *@var{buffer})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+This function is similar to @code{srand48_r} but like @code{seed48} it
+initializes all 48 bits of the state from the parameter @var{seed16v}.
+
+If the return value is non-negative the function call succeeded.  It
+does not return a pointer to the previous state of the random number
+generator like the @code{seed48} function does.  If the user wants to
+preserve the state for a later re-run s/he can copy the whole buffer
+pointed to by @var{buffer}.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@deftypefun int lcong48_r (unsigned short int @var{param}[7], struct drand48_data *@var{buffer})
+@standards{GNU, stdlib.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:buffer}}@assafe{}@acunsafe{@acucorrupt{}}}
+This function initializes all aspects of the random number generator
+described in @var{buffer} with the data in @var{param}.  Here it is
+especially true that the function does more than just copying the
+contents of @var{param} and @var{buffer}.  More work is required and
+therefore it is important to use this function rather than initializing
+the random number generator directly.
+
+If the return value is non-negative the function call succeeded.
+
+This function is a GNU extension and should not be used in portable
+programs.
+@end deftypefun
+
+@node FP Function Optimizations
+@section Is Fast Code or Small Code preferred?
+@cindex Optimization
+
+If an application uses many floating point functions it is often the case
+that the cost of the function calls themselves is not negligible.
+Modern processors can often execute the operations themselves
+very fast, but the function call disrupts the instruction pipeline.
+
+For this reason @theglibc{} provides optimizations for many of the
+frequently-used math functions.  When GNU CC is used and the user
+activates the optimizer, several new inline functions and macros are
+defined.  These new functions and macros have the same names as the
+library functions and so are used instead of the latter.  In the case of
+inline functions the compiler will decide whether it is reasonable to
+use them, and this decision is usually correct.
+
+This means that no calls to the library functions may be necessary, and
+can increase the speed of generated code significantly.  The drawback is
+that code size will increase, and the increase is not always negligible.
+
+There are two kinds of inline functions: those that give the same result
+as the library functions and others that might not set @code{errno} and
+might have a reduced precision and/or argument range in comparison with
+the library functions.  The latter inline functions are only available
+if the flag @code{-ffast-math} is given to GNU CC.
+
+Not all hardware implements the entire @w{IEEE 754} standard, and even
+if it does there may be a substantial performance penalty for using some
+of its features.  For example, enabling traps on some processors forces
+the FPU to run un-pipelined, which can more than double calculation time.
+@c ***Add explanation of -lieee, -mieee.

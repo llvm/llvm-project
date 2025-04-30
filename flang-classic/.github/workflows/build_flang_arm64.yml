@@ -1,0 +1,67 @@
+name: Flang build & test ARM64
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**/.github/workflows/build_flang.yml'
+      - '**/.github/workflows/build_flang_windows.yml'
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+      - '**/.github/workflows/build_flang.yml'
+      - '**/.github/workflows/build_flang_windows.yml'
+
+jobs:
+  build_flang:
+    if: github.repository_owner == 'flang-compiler'
+    runs-on: self-hosted
+    env:
+      build_path: /home/github
+      install_prefix: /home/github/usr/local
+    container:
+      image: ghcr.io/${{ github.repository_owner}}/ubuntu20-flang-${{ matrix.llvm_branch }}:latest
+      credentials:
+        username: github
+    strategy:
+      matrix:
+        target: [AArch64]
+        llvm_branch: [release_16x, release_17x]
+
+    steps:
+      - name: Check tools
+        run: |
+          git --version
+          cmake --version
+          make --version
+          ${{ env.install_prefix }}/bin/clang --version
+
+      - name: Manual checkout to build in user's home dir (push)
+        if: github.ref == 'refs/heads/master'
+        run: |
+          cd ${{ env.build_path }}
+          git clone https://github.com/flang-compiler/flang.git
+
+      - name: Manual checkout to build in user's home dir (pull_request)
+        if: github.ref != 'refs/heads/master'
+        run: |
+          cd ${{ env.build_path }}
+          git clone https://github.com/flang-compiler/flang.git
+          cd flang
+          git fetch origin ${{github.ref}}:pr_branch
+          git checkout pr_branch
+
+      - name: Build and install flang & libpgmath
+        run: |
+          cd ${{ env.build_path }}/flang
+          ./build-flang.sh -t ${{ matrix.target }} -p ${{ env.install_prefix }} -n `nproc --ignore=1` -v -l /home/root/classic-flang-llvm-project/llvm
+
+      - name: Copy llvm-lit
+        run: |
+          cd ${{ env.build_path }}/flang
+          cp /home/root/classic-flang-llvm-project/build/bin/llvm-lit build/flang/bin/.
+
+      - name: Test flang
+        run: |
+          cd ${{ env.build_path }}/flang/build/flang
+          make check-flang-long

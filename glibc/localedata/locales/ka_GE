@@ -1,0 +1,166 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title "Georgian language locale for Georgia"
+source ""
+address ""
+contact "Pablo Saratxaga"
+email "srtxg@chanae.alphanet.ch"
+tel ""
+fax ""
+language "Georgian"
+territory "Georgia"
+revision "0.6"
+date "2001-01-26"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+END LC_IDENTIFICATION
+
+LC_ADDRESS
+postal_fmt "%d%N%f%N%d%N%b%N%s %h 5e %r%N%C%z %T%N%c%N"
+country_name "<U10E1><U10D0><U10E5><U10D0><U10E0><U10D7><U10D5><U10D4><U10DA><U10DD>"
+% country_post "GE" for Georgia ?
+country_ab2 "GE"
+country_ab3 "GEO"
+country_num 268
+country_car "GE"
+country_isbn "99928"
+% ქართული
+lang_name    "<U10E5><U10D0><U10E0><U10D7><U10E3><U10DA><U10D8>"
+lang_ab      "ka"
+lang_term    "kat"
+lang_lib     "geo"
+END LC_ADDRESS
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_DK"
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol      "GEL "
+currency_symbol      "<U20BE>"
+mon_decimal_point    ","
+mon_thousands_sep    "."
+mon_grouping         3;3
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits      2
+frac_digits          2
+p_cs_precedes        1
+p_sep_by_space       0
+n_cs_precedes        1
+n_sep_by_space       0
+p_sign_posn          1
+n_sign_posn          1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point        ","
+thousands_sep        "."
+grouping             3;3
+END LC_NUMERIC
+
+LC_TIME
+abday	/
+"<U10D9><U10D5><U10D8>";/
+"<U10DD><U10E0><U10E8>";/
+"<U10E1><U10D0><U10DB>";/
+"<U10DD><U10D7><U10EE>";/
+"<U10EE><U10E3><U10D7>";/
+"<U10DE><U10D0><U10E0>";/
+"<U10E8><U10D0><U10D1>"
+day	/
+"<U10D9><U10D5><U10D8><U10E0><U10D0>";/
+"<U10DD><U10E0><U10E8><U10D0><U10D1><U10D0><U10D7><U10D8>";/
+"<U10E1><U10D0><U10DB><U10E8><U10D0><U10D1><U10D0><U10D7><U10D8>";/
+"<U10DD><U10D7><U10EE><U10E8><U10D0><U10D1><U10D0><U10D7><U10D8>";/
+"<U10EE><U10E3><U10D7><U10E8><U10D0><U10D1><U10D0><U10D7><U10D8>";/
+"<U10DE><U10D0><U10E0><U10D0><U10E1><U10D9><U10D4><U10D5><U10D8>";/
+"<U10E8><U10D0><U10D1><U10D0><U10D7><U10D8>"
+abmon	/
+"<U10D8><U10D0><U10DC>";/
+"<U10D7><U10D4><U10D1>";/
+"<U10DB><U10D0><U10E0>";/
+"<U10D0><U10DE><U10E0>";/
+"<U10DB><U10D0><U10D8>";/
+"<U10D8><U10D5><U10DC>";/
+"<U10D8><U10D5><U10DA>";/
+"<U10D0><U10D2><U10D5>";/
+"<U10E1><U10D4><U10E5>";/
+"<U10DD><U10E5><U10E2>";/
+"<U10DC><U10DD><U10D4>";/
+"<U10D3><U10D4><U10D9>"
+mon	/
+"<U10D8><U10D0><U10DC><U10D5><U10D0><U10E0><U10D8>";/
+"<U10D7><U10D4><U10D1><U10D4><U10E0><U10D5><U10D0><U10DA><U10D8>";/
+"<U10DB><U10D0><U10E0><U10E2><U10D8>";/
+"<U10D0><U10DE><U10E0><U10D8><U10DA><U10D8>";/
+"<U10DB><U10D0><U10D8><U10E1><U10D8>";/
+"<U10D8><U10D5><U10DC><U10D8><U10E1><U10D8>";/
+"<U10D8><U10D5><U10DA><U10D8><U10E1><U10D8>";/
+"<U10D0><U10D2><U10D5><U10D8><U10E1><U10E2><U10DD>";/
+"<U10E1><U10D4><U10E5><U10E2><U10D4><U10DB><U10D1><U10D4><U10E0><U10D8>";/
+"<U10DD><U10E5><U10E2><U10DD><U10DB><U10D1><U10D4><U10E0><U10D8>";/
+"<U10DC><U10DD><U10D4><U10DB><U10D1><U10D4><U10E0><U10D8>";/
+"<U10D3><U10D4><U10D9><U10D4><U10DB><U10D1><U10D4><U10E0><U10D8>"
+
+%"%Y ÜÊÈÑ %d %B"
+d_t_fmt  "%Y <U10EC><U10DA><U10D8><U10E1> %d %B, %T"
+date_fmt "%Y <U10EC><U10DA><U10D8><U10E1> %d %B, %T %Z"
+d_fmt    "%m//%d//%Y"
+t_fmt    "%T"
+am_pm    "";""
+t_fmt_ampm  ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yYkKxX<U10D9>]"
+noexpr  "^[-0nNaA<U10D0>]"
+yesstr  "<U10D9><U10D8>"
+nostr   "<U10D0><U10E0><U10D0>"
+END LC_MESSAGES
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+% FIXME Find tel_dom_fmt
+int_select "8~10"
+int_prefix "995"
+END LC_TELEPHONE
+
+LC_NAME
+% FIXME
+copy "en_DK"
+END LC_NAME

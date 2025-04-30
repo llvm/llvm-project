@@ -1,0 +1,10 @@
+ld {
+  GLIBC_PRIVATE {
+    _dl_x86_get_cpu_features;
+  }
+}
+libc {
+  GLIBC_2.33 {
+    __x86_get_cpuid_feature_leaf;
+  }
+}

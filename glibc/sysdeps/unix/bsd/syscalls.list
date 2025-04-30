@@ -1,0 +1,15 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+chflags		-	chflags		2	chflags
+fchflags	-	fchflags	2	fchflags
+flock		-	flock		2	__flock		flock
+getdents	-	getdirentries	4	__getdirentries	getdirentries
+getdtsz		-	getdtablesize	0	__getdtablesize	getdtablesize
+getpagesize	-	getpagesize	0	__getpagesize	getpagesize
+killpg		-	killpg		2	killpg
+revoke		-	revoke		1	revoke
+setlogin	-	setlogin	2	setlogin
+sigaltstack	-	sigaltstack	2	__sigaltstack	sigaltstack
+sigpause	-	sigpause	1	__sigpause	sigpause
+sigstack	-	sigstack	2	sigstack
+wait4		-	wait4		4	__wait4		wait4

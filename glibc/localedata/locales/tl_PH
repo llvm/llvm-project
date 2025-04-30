@@ -1,0 +1,150 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tagalog Language Locale for Philippines
+% Source:
+% Contact:
+% Email:
+% Language: tl
+% Territory: PH
+% Revision: 0.2
+% Date: 2001-01-28
+% Users: general
+
+LC_IDENTIFICATION
+title "Tagalog language locale for Philippines"
+source "Rene Torres"
+address ""
+contact "Rene Torres, Pablo Saratxaga"
+email "rgtorre@rocketmail.com, pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Tagalog"
+territory "Philippines"
+revision "0.2"
+date "2001-01-28"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "en_DK"
+END LC_CTYPE
+
+LC_COLLATE
+copy "fil_PH"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "PHP "
+currency_symbol         "<U20B1>"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          1
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_US"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Lin";"Lun";/
+        "Mar";"Miy";/
+        "Huw";"Biy";/
+        "Sab"
+day     "Linggo";/
+        "Lunes";/
+        "Martes";/
+        "Miyerkoles";/
+        "Huwebes";/
+        "Biyernes";/
+        "Sabado"
+abmon   "Ene";"Peb";/
+        "Mar";"Abr";/
+        "May";"Hun";/
+        "Hul";"Ago";/
+        "Sep";"Okt";/
+        "Nob";"Dis"
+mon     "Enero";/
+        "Pebrero";/
+        "Marso";/
+        "Abril";/
+        "Mayo";/
+        "Hunyo";/
+        "Hulyo";/
+        "Agosto";/
+        "Septiyembre";/
+        "Oktubre";/
+        "Nobiyembre";/
+        "Disyembre"
+%
+d_t_fmt     "%a %d %b %Y %r"
+date_fmt    "%a %d %b %Y %r %Z"
+d_fmt       "%m//%d//%y"
+t_fmt       "%r"
+am_pm       "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+copy "fil_PH"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_US"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_US"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T %z%N%c%N"
+% https://tl.wikipedia.org/wiki/Pilipinas
+country_name "Pilipinas"
+country_ab2 "PH"
+country_ab3 "PHL"
+country_num 608
+country_car    "RP"
+lang_name    "Tagalog"
+lang_ab      "tl"
+lang_term    "tgl"
+lang_lib    "tgl"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "en_PH"
+END LC_TELEPHONE

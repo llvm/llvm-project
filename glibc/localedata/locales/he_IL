@@ -1,0 +1,167 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Hebrew Language Locale for Israel
+% Source: RAP
+% Address: Sankt Jo/rgens Alle 8
+%    DK-1615 Ko/benhavn V, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 31226543
+% Fax: +45 - 33256543
+% Language: iw
+% Territory: IL
+% Revision: 4.4
+% Date: 1997-03-18
+% Users: general
+%
+% This locale replaces iw_IL, as the ISO-639 code for Hebrew was changed
+% from 'iw' to 'he' in 1989, according to Bruno Haible on libc-alpha
+% 2003-09-01.
+
+LC_IDENTIFICATION
+title      "Hebrew locale for Israel"
+source     "RAP"
+address    "Sankt Jo//rgens Alle 8, DK-1615 Ko//benhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Hebrew"
+territory  "Israel"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol   "ILS "
+currency_symbol   "<U20AA>"
+mon_decimal_point "."
+mon_thousands_sep ","
+mon_grouping      3;3
+positive_sign     ""
+negative_sign     "-"
+int_frac_digits   2
+frac_digits       2
+p_cs_precedes     1
+p_sep_by_space    1
+n_cs_precedes     1
+n_sep_by_space    1
+p_sign_posn       2
+n_sign_posn       2
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point     "."
+thousands_sep     ","
+grouping          3;3
+END LC_NUMERIC
+
+LC_TIME
+abday   "<U05D0>'";"<U05D1>'";"<U05D2>'";/
+        "<U05D3>'";"<U05D4>'";"<U05D5>'";/
+	"<U05E9>'"
+day     "<U05E8><U05D0><U05E9><U05D5><U05DF>";/
+        "<U05E9><U05E0><U05D9>";/
+        "<U05E9><U05DC><U05D9><U05E9><U05D9>";/
+        "<U05E8><U05D1><U05D9><U05E2><U05D9>";/
+        "<U05D7><U05DE><U05D9><U05E9><U05D9>";/
+        "<U05E9><U05D9><U05E9><U05D9>";/
+        "<U05E9><U05D1><U05EA>"
+mon     "<U05D9><U05E0><U05D5><U05D0><U05E8>";/
+        "<U05E4><U05D1><U05E8><U05D5><U05D0><U05E8>";/
+        "<U05DE><U05E8><U05E5>";/
+        "<U05D0><U05E4><U05E8><U05D9><U05DC>";/
+        "<U05DE><U05D0><U05D9>";/
+        "<U05D9><U05D5><U05E0><U05D9>";/
+        "<U05D9><U05D5><U05DC><U05D9>";/
+        "<U05D0><U05D5><U05D2><U05D5><U05E1><U05D8>";/
+        "<U05E1><U05E4><U05D8><U05DE><U05D1><U05E8>";/
+        "<U05D0><U05D5><U05E7><U05D8><U05D5><U05D1><U05E8>";/
+        "<U05E0><U05D5><U05D1><U05DE><U05D1><U05E8>";/
+        "<U05D3><U05E6><U05DE><U05D1><U05E8>"
+abmon   "<U05D9><U05E0><U05D5>";"<U05E4><U05D1><U05E8>";/
+        "<U05DE><U05E8><U05E5>";"<U05D0><U05E4><U05E8>";/
+        "<U05DE><U05D0><U05D9>";"<U05D9><U05D5><U05E0>";/
+        "<U05D9><U05D5><U05DC>";"<U05D0><U05D5><U05D2>";/
+        "<U05E1><U05E4><U05D8>";"<U05D0><U05D5><U05E7>";/
+        "<U05E0><U05D5><U05D1>";"<U05D3><U05E6><U05DE>"
+d_t_fmt  "%H:%M:%S %Y %b %d %a"
+date_fmt "%Z %H:%M:%S %Y %b %d %a"
+d_fmt   "%d//%m//%y"
+t_fmt   "%H:%M:%S"
+am_pm   "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %P"
+week 7;19971130;1
+first_workday 1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U05DB>]"
+noexpr  "^[-0nN<U05DC>]"
+yesstr  "<U05DB><U05DF>"
+nostr   "<U05DC><U05D0>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "972"
+int_select     "00,012,013,014,018"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U05D9><U05E9><U05E8><U05D0><U05DC>"
+country_ab2 "IL"
+country_ab3 "ISR"
+country_num 376
+country_car "IL"
+lang_name   "<U05E2><U05D1><U05E8><U05D9><U05EA>"
+lang_ab      "he"
+lang_term    "heb"
+lang_lib    "heb"
+END LC_ADDRESS

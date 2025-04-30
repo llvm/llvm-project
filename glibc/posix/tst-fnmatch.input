@@ -1,0 +1,824 @@
+# Tests for fnmatch.
+# Copyright (C) 2000-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+# Contributes by Ulrich Drepper <drepper@redhat.com>.
+#
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+
+# Derived from the IEEE 2003.2 text.  The standard only contains some
+# wording describing the situations to be tested.  It does not specify
+# any specific tests.  I.e., the tests below are in no case sufficient.
+# They are hopefully necessary, though.
+#
+# See:
+#
+# http://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xbd_chap09.html
+#
+# > RE Bracket Expression
+# >
+# > Range expressions are, historically, an integral part of REs.
+# > However, the requirements of "natural language behavior" and
+# > portability do conflict. In the POSIX locale, ranges must be treated
+# > according to the collating sequence and include such characters that
+# > fall within the range based on that collating sequence, regardless
+# > of character values. In other locales, ranges have unspecified behavior.
+# > ...
+# > The current standard leaves unspecified the behavior of a range
+# > expression outside the POSIX locale. This makes it clearer that
+# > conforming applications should avoid range expressions outside the
+# > POSIX locale, and it allows implementations and compatible user-mode
+# > matchers to interpret range expressions using native order, CEO,
+# > collation sequence, or other, more advanced techniques. The concerns
+# > which led to this change were raised in IEEE PASC interpretation
+# > 1003.2 #43 and others, and related to ambiguities in the
+# > specification of how multi-character collating elements should be
+# > handled in range expressions. These ambiguities had led to multiple
+# > interpretations of the specification, in conflicting ways, which led
+# > to varying implementations. As noted above, efforts were made to
+# > resolve the differences, but no solution has been found that would
+# > be specific enough to allow for portable software while not
+# > invalidating existing implementations.
+#
+# Therefore, using [a-z] does not make much sense except in the C/POSIX locale.
+# The new iso14651_t1_common lists upper case and lower case Latin characters
+# in a different order than the old one which causes surprising results
+# for example in the de_DE locale: [a-z] now includes A because A comes
+# after a in iso14651_t1_common but does not include Z because that comes
+# after z in iso14651_t1_common.
+#
+# This lead to several bugs and problems with user scripts that do not
+# expect [a-z] to match uppercase characters.
+#
+# See the following bugs:
+# https://sourceware.org/bugzilla/show_bug.cgi?id=23393
+# https://sourceware.org/bugzilla/show_bug.cgi?id=23420
+#
+# No consensus exists on how best to handle the changes so the
+# iso14651_t1_common collation element order (CEO) has been changed to
+# deinterlace the a-z and A-Z regions.
+#
+# With the deinterlacing commit ac3a3b4b0d561d776b60317d6a926050c8541655
+# could be reverted to re-test the correct non-interleaved expectations.
+#
+# Please note that despite the region being deinterlaced, the ordering
+# of collation remains the same.  In glibc we implement CEO and because of
+# that we can reorder the elements to reorder ranges without impacting
+# collation which depends on weights.  The collation element ordering
+# could have been changed to include just a-z, A-Z, and 0-9 in three
+# distinct blocks, but this needs more discussion by the community.
+
+# B.6 004(C)
+C		 "!#%+,-./01234567889"	"!#%+,-./01234567889"  0
+C		 ":;=@ABCDEFGHIJKLMNO"	":;=@ABCDEFGHIJKLMNO"  0
+C		 "PQRSTUVWXYZ]abcdefg"	"PQRSTUVWXYZ]abcdefg"  0
+C		 "hijklmnopqrstuvwxyz"	"hijklmnopqrstuvwxyz"  0
+C		 "^_{}~"		"^_{}~"		       0
+
+# B.6 005(C)
+C		 "\"$&'()"		"\\\"\\$\\&\\'\\(\\)"  0
+C		 "*?[\\`|"		"\\*\\?\\[\\\\\\`\\|"  0
+C		 "<>"			"\\<\\>"	       0
+
+# B.6 006(C)
+C		 "?*["			"[?*[][?*[][?*[]"      0
+C		 "a/b"			"?/b"		       0
+
+# B.6 007(C)
+C		 "a/b"			"a?b"		       0
+C		 "a/b"			"a/?"		       0
+C		 "aa/b"			"?/b"		       NOMATCH
+C		 "aa/b"			"a?b"		       NOMATCH
+C		 "a/bb"			"a/?"		       NOMATCH
+
+# B.6 009(C)
+C		 "abc"			"[abc]"		       NOMATCH
+C		 "x"			"[abc]"		       NOMATCH
+C		 "a"			"[abc]"		       0
+C		 "["			"[[abc]"	       0
+C		 "a"			"[][abc]"	       0
+C		 "a]"			"[]a]]"		       0
+
+# B.6 010(C)
+C		 "xyz"			"[!abc]"	       NOMATCH
+C		 "x"			"[!abc]"	       0
+C		 "a"			"[!abc]"	       NOMATCH
+
+# B.6 011(C)
+C		 "]"			"[][abc]"	       0
+C		 "abc]"			"[][abc]"	       NOMATCH
+C		 "[]abc"		"[][]abc"	       NOMATCH
+C		 "]"			"[!]]"		       NOMATCH
+C		 "aa]"			"[!]a]"		       NOMATCH
+C		 "]"			"[!a]"		       0
+C		 "]]"			"[!a]]"		       0
+
+# B.6 012(C)
+C		 "a"			"[[.a.]]"	       0
+C		 "-"			"[[.-.]]"	       0
+C		 "-"			"[[.-.][.].]]"	       0
+C		 "-"			"[[.].][.-.]]"	       0
+C		 "-"			"[[.-.][=u=]]"	       0
+C		 "-"			"[[.-.][:alpha:]]"     0
+C		 "a"			"[![.a.]]"	       NOMATCH
+
+# B.6 013(C)
+C		 "a"			"[[.b.]]"	       NOMATCH
+C		 "a"			"[[.b.][.c.]]"	       NOMATCH
+C		 "a"			"[[.b.][=b=]]"	       NOMATCH
+
+
+# B.6 015(C)
+C		 "a"			"[[=a=]]"	       0
+C		 "b"			"[[=a=]b]"	       0
+C		 "b"			"[[=a=][=b=]]"	       0
+C		 "a"			"[[=a=][=b=]]"	       0
+C		 "a"			"[[=a=][.b.]]"	       0
+C		 "a"			"[[=a=][:digit:]]"     0
+
+# B.6 016(C)
+C		 "="			"[[=a=]b]"	       NOMATCH
+C		 "]"			"[[=a=]b]"	       NOMATCH
+C		 "a"			"[[=b=][=c=]]"	       NOMATCH
+C		 "a"			"[[=b=][.].]]"	       NOMATCH
+C		 "a"			"[[=b=][:digit:]]"     NOMATCH
+
+# B.6 017(C)
+C		 "a"			"[[:alnum:]]"	       0
+C		 "a"			"[![:alnum:]]"	       NOMATCH
+C		 "-"			"[[:alnum:]]"	       NOMATCH
+C		 "a]a"			"[[:alnum:]]a"	       NOMATCH
+C		 "-"			"[[:alnum:]-]"	       0
+C		 "aa"			"[[:alnum:]]a"	       0
+C		 "-"			"[![:alnum:]]"	       0
+C		 "]"			"[!][:alnum:]]"	       NOMATCH
+C		 "["			"[![:alnum:][]"	       NOMATCH
+C		 "a"			"[[:alnum:]]"	       0
+C		 "b"			"[[:alnum:]]"	       0
+C		 "c"			"[[:alnum:]]"	       0
+C		 "d"			"[[:alnum:]]"	       0
+C		 "e"			"[[:alnum:]]"	       0
+C		 "f"			"[[:alnum:]]"	       0
+C		 "g"			"[[:alnum:]]"	       0
+C		 "h"			"[[:alnum:]]"	       0
+C		 "i"			"[[:alnum:]]"	       0
+C		 "j"			"[[:alnum:]]"	       0
+C		 "k"			"[[:alnum:]]"	       0
+C		 "l"			"[[:alnum:]]"	       0
+C		 "m"			"[[:alnum:]]"	       0
+C		 "n"			"[[:alnum:]]"	       0
+C		 "o"			"[[:alnum:]]"	       0
+C		 "p"			"[[:alnum:]]"	       0
+C		 "q"			"[[:alnum:]]"	       0
+C		 "r"			"[[:alnum:]]"	       0
+C		 "s"			"[[:alnum:]]"	       0
+C		 "t"			"[[:alnum:]]"	       0
+C		 "u"			"[[:alnum:]]"	       0
+C		 "v"			"[[:alnum:]]"	       0
+C		 "w"			"[[:alnum:]]"	       0
+C		 "x"			"[[:alnum:]]"	       0
+C		 "y"			"[[:alnum:]]"	       0
+C		 "z"			"[[:alnum:]]"	       0
+C		 "A"			"[[:alnum:]]"	       0
+C		 "B"			"[[:alnum:]]"	       0
+C		 "C"			"[[:alnum:]]"	       0
+C		 "D"			"[[:alnum:]]"	       0
+C		 "E"			"[[:alnum:]]"	       0
+C		 "F"			"[[:alnum:]]"	       0
+C		 "G"			"[[:alnum:]]"	       0
+C		 "H"			"[[:alnum:]]"	       0
+C		 "I"			"[[:alnum:]]"	       0
+C		 "J"			"[[:alnum:]]"	       0
+C		 "K"			"[[:alnum:]]"	       0
+C		 "L"			"[[:alnum:]]"	       0
+C		 "M"			"[[:alnum:]]"	       0
+C		 "N"			"[[:alnum:]]"	       0
+C		 "O"			"[[:alnum:]]"	       0
+C		 "P"			"[[:alnum:]]"	       0
+C		 "Q"			"[[:alnum:]]"	       0
+C		 "R"			"[[:alnum:]]"	       0
+C		 "S"			"[[:alnum:]]"	       0
+C		 "T"			"[[:alnum:]]"	       0
+C		 "U"			"[[:alnum:]]"	       0
+C		 "V"			"[[:alnum:]]"	       0
+C		 "W"			"[[:alnum:]]"	       0
+C		 "X"			"[[:alnum:]]"	       0
+C		 "Y"			"[[:alnum:]]"	       0
+C		 "Z"			"[[:alnum:]]"	       0
+C		 "0"			"[[:alnum:]]"	       0
+C		 "1"			"[[:alnum:]]"	       0
+C		 "2"			"[[:alnum:]]"	       0
+C		 "3"			"[[:alnum:]]"	       0
+C		 "4"			"[[:alnum:]]"	       0
+C		 "5"			"[[:alnum:]]"	       0
+C		 "6"			"[[:alnum:]]"	       0
+C		 "7"			"[[:alnum:]]"	       0
+C		 "8"			"[[:alnum:]]"	       0
+C		 "9"			"[[:alnum:]]"	       0
+C		 "!"			"[[:alnum:]]"	       NOMATCH
+C		 "#"			"[[:alnum:]]"	       NOMATCH
+C		 "%"			"[[:alnum:]]"	       NOMATCH
+C		 "+"			"[[:alnum:]]"	       NOMATCH
+C		 ","			"[[:alnum:]]"	       NOMATCH
+C		 "-"			"[[:alnum:]]"	       NOMATCH
+C		 "."			"[[:alnum:]]"	       NOMATCH
+C		 "/"			"[[:alnum:]]"	       NOMATCH
+C		 ":"			"[[:alnum:]]"	       NOMATCH
+C		 ";"			"[[:alnum:]]"	       NOMATCH
+C		 "="			"[[:alnum:]]"	       NOMATCH
+C		 "@"			"[[:alnum:]]"	       NOMATCH
+C		 "["			"[[:alnum:]]"	       NOMATCH
+C		 "\\"			"[[:alnum:]]"	       NOMATCH
+C		 "]"			"[[:alnum:]]"	       NOMATCH
+C		 "^"			"[[:alnum:]]"	       NOMATCH
+C		 "_"			"[[:alnum:]]"	       NOMATCH
+C		 "{"			"[[:alnum:]]"	       NOMATCH
+C		 "}"			"[[:alnum:]]"	       NOMATCH
+C		 "~"			"[[:alnum:]]"	       NOMATCH
+C		 "\""			"[[:alnum:]]"	       NOMATCH
+C		 "$"			"[[:alnum:]]"	       NOMATCH
+C		 "&"			"[[:alnum:]]"	       NOMATCH
+C		 "'"			"[[:alnum:]]"	       NOMATCH
+C		 "("			"[[:alnum:]]"	       NOMATCH
+C		 ")"			"[[:alnum:]]"	       NOMATCH
+C		 "*"			"[[:alnum:]]"	       NOMATCH
+C		 "?"			"[[:alnum:]]"	       NOMATCH
+C		 "`"			"[[:alnum:]]"	       NOMATCH
+C		 "|"			"[[:alnum:]]"	       NOMATCH
+C		 "<"			"[[:alnum:]]"	       NOMATCH
+C		 ">"			"[[:alnum:]]"	       NOMATCH
+C		 "\t"			"[[:cntrl:]]"	       0
+C		 "t"			"[[:cntrl:]]"	       NOMATCH
+C		 "t"			"[[:lower:]]"	       0
+C		 "\t"			"[[:lower:]]"	       NOMATCH
+C		 "T"			"[[:lower:]]"	       NOMATCH
+C		 "\t"			"[[:space:]]"	       0
+C		 "t"			"[[:space:]]"	       NOMATCH
+C		 "t"			"[[:alpha:]]"	       0
+C		 "\t"			"[[:alpha:]]"	       NOMATCH
+C		 "0"			"[[:digit:]]"	       0
+C		 "\t"			"[[:digit:]]"	       NOMATCH
+C		 "t"			"[[:digit:]]"	       NOMATCH
+C		 "\t"			"[[:print:]]"	       NOMATCH
+C		 "t"			"[[:print:]]"	       0
+C		 "T"			"[[:upper:]]"	       0
+C		 "\t"			"[[:upper:]]"	       NOMATCH
+C		 "t"			"[[:upper:]]"	       NOMATCH
+C		 "\t"			"[[:blank:]]"	       0
+C		 "t"			"[[:blank:]]"	       NOMATCH
+C		 "\t"			"[[:graph:]]"	       NOMATCH
+C		 "t"			"[[:graph:]]"	       0
+C		 "."			"[[:punct:]]"	       0
+C		 "t"			"[[:punct:]]"	       NOMATCH
+C		 "\t"			"[[:punct:]]"	       NOMATCH
+C		 "0"			"[[:xdigit:]]"	       0
+C		 "\t"			"[[:xdigit:]]"	       NOMATCH
+C		 "a"			"[[:xdigit:]]"	       0
+C		 "A"			"[[:xdigit:]]"	       0
+C		 "t"			"[[:xdigit:]]"	       NOMATCH
+C		 "a"			"[[alpha]]"	       NOMATCH
+C		 "a"			"[[alpha:]]"	       NOMATCH
+C		 "a]"			"[[alpha]]"	       0
+C		 "a]"			"[[alpha:]]"	       0
+C		 "a"			"[[:alpha:][.b.]]"     0
+C		 "a"			"[[:alpha:][=b=]]"     0
+C		 "a"			"[[:alpha:][:digit:]]" 0
+C		 "a"			"[[:digit:][:alpha:]]" 0
+
+# B.6 018(C)
+C		 "a"			"[a-c]"		       0
+C		 "b"			"[a-c]"		       0
+C		 "c"			"[a-c]"		       0
+C		 "a"			"[b-c]"		       NOMATCH
+C		 "d"			"[b-c]"		       NOMATCH
+C		 "B"			"[a-c]"		       NOMATCH
+C		 "b"			"[A-C]"		       NOMATCH
+C		 ""			"[a-c]"		       NOMATCH
+C		 "as"			"[a-ca-z]"	       NOMATCH
+C		 "a"			"[[.a.]-c]"	       0
+C		 "a"			"[a-[.c.]]"	       0
+C		 "a"			"[[.a.]-[.c.]]"	       0
+C		 "b"			"[[.a.]-c]"	       0
+C		 "b"			"[a-[.c.]]"	       0
+C		 "b"			"[[.a.]-[.c.]]"	       0
+C		 "c"			"[[.a.]-c]"	       0
+C		 "c"			"[a-[.c.]]"	       0
+C		 "c"			"[[.a.]-[.c.]]"	       0
+C		 "d"			"[[.a.]-c]"	       NOMATCH
+C		 "d"			"[a-[.c.]]"	       NOMATCH
+C		 "d"			"[[.a.]-[.c.]]"	       NOMATCH
+
+# B.6 019(C)
+C		 "a"			"[c-a]"		       NOMATCH
+C		 "a"			"[[.c.]-a]"	       NOMATCH
+C		 "a"			"[c-[.a.]]"	       NOMATCH
+C		 "a"			"[[.c.]-[.a.]]"	       NOMATCH
+C		 "c"			"[c-a]"		       NOMATCH
+C		 "c"			"[[.c.]-a]"	       NOMATCH
+C		 "c"			"[c-[.a.]]"	       NOMATCH
+C		 "c"			"[[.c.]-[.a.]]"	       NOMATCH
+
+# B.6 020(C)
+C		 "a"			"[a-c0-9]"	       0
+C		 "d"			"[a-c0-9]"	       NOMATCH
+C		 "B"			"[a-c0-9]"	       NOMATCH
+
+# B.6 021(C)
+C		 "-"			"[-a]"		       0
+C		 "a"			"[-b]"		       NOMATCH
+C		 "-"			"[!-a]"		       NOMATCH
+C		 "a"			"[!-b]"		       0
+C		 "-"			"[a-c-0-9]"	       0
+C		 "b"			"[a-c-0-9]"	       0
+C		 "a:"			"a[0-9-a]"	       NOMATCH
+C		 "a:"			"a[09-a]"	       0
+
+# B.6 024(C)
+C		 ""			"*"		       0
+C		 "asd/sdf"		"*"		       0
+
+# B.6 025(C)
+C		 "as"			"[a-c][a-z]"	       0
+C		 "as"			"??"		       0
+
+# B.6 026(C)
+C		 "asd/sdf"		"as*df"		       0
+C		 "asd/sdf"		"as*"		       0
+C		 "asd/sdf"		"*df"		       0
+C		 "asd/sdf"		"as*dg"		       NOMATCH
+C		 "asdf"			"as*df"		       0
+C		 "asdf"			"as*df?"	       NOMATCH
+C		 "asdf"			"as*??"		       0
+C		 "asdf"			"a*???"		       0
+C		 "asdf"			"*????"		       0
+C		 "asdf"			"????*"		       0
+C		 "asdf"			"??*?"		       0
+
+# B.6 027(C)
+C		 "/"			"/"		       0
+C		 "/"			"/*"		       0
+C		 "/"			"*/"		       0
+C		 "/"			"/?"		       NOMATCH
+C		 "/"			"?/"		       NOMATCH
+C		 "/"			"?"		       0
+C		 "."			"?"		       0
+C		 "/."			"??"		       0
+C		 "/"			"[!a-c]"	       0
+C		 "."			"[!a-c]"	       0
+
+# B.6 029(C)
+C		 "/"			"/"		       0       PATHNAME
+C		 "//"			"//"		       0       PATHNAME
+C		 "/.a"			"/*"		       0       PATHNAME
+C		 "/.a"			"/?a"		       0       PATHNAME
+C		 "/.a"			"/[!a-z]a"	       0       PATHNAME
+C		 "/.a/.b"		"/*/?b"		       0       PATHNAME
+
+# B.6 030(C)
+C		 "/"			"?"		       NOMATCH PATHNAME
+C		 "/"			"*"		       NOMATCH PATHNAME
+C		 "a/b"			"a?b"		       NOMATCH PATHNAME
+C		 "/.a/.b"		"/*b"		       NOMATCH PATHNAME
+
+# B.6 031(C)
+C		 "/$"			"\\/\\$"	       0
+C		 "/["			"\\/\\["	       0
+C		 "/["			"\\/["		       0
+C		 "/[]"			"\\/\\[]"	       0
+
+# B.6 032(C)
+C		 "/$"			"\\/\\$"	       NOMATCH NOESCAPE
+C		 "/\\$"			"\\/\\$"	       NOMATCH NOESCAPE
+C		 "\\/\\$"		"\\/\\$"	       0       NOESCAPE
+
+# B.6 033(C)
+C		 ".asd"			".*"		       0       PERIOD
+C		 "/.asd"		"*"		       0       PERIOD
+C		 "/as/.df"		"*/?*f"		       0       PERIOD
+C		 "..asd"		".[!a-z]*"	       0       PERIOD
+
+# B.6 034(C)
+C		 ".asd"			"*"		       NOMATCH PERIOD
+C		 ".asd"			"?asd"		       NOMATCH PERIOD
+C		 ".asd"			"[!a-z]*"	       NOMATCH PERIOD
+
+# B.6 035(C)
+C		 "/."			"/."		       0       PATHNAME|PERIOD
+C		 "/.a./.b."		"/.*/.*"	       0       PATHNAME|PERIOD
+C		 "/.a./.b."		"/.??/.??"	       0       PATHNAME|PERIOD
+
+# B.6 036(C)
+C		 "/."			"*"		       NOMATCH PATHNAME|PERIOD
+C		 "/."			"/*"		       NOMATCH PATHNAME|PERIOD
+C		 "/."			"/?"		       NOMATCH PATHNAME|PERIOD
+C		 "/."			"/[!a-z]"	       NOMATCH PATHNAME|PERIOD
+C		 "/a./.b."		"/*/*"		       NOMATCH PATHNAME|PERIOD
+C		 "/a./.b."		"/??/???"	       NOMATCH PATHNAME|PERIOD
+
+# Some home-grown tests.
+C		"foobar"		"foo*[abc]z"	       NOMATCH
+C		"foobaz"		"foo*[abc][xyz]"       0
+C		"foobaz"		"foo?*[abc][xyz]"      0
+C		"foobaz"		"foo?*[abc][x/yz]"     0
+C		"foobaz"		"foo?*[abc]/[xyz]"     NOMATCH PATHNAME
+C		"a"			"a/"                   NOMATCH PATHNAME
+C		"a/"			"a"		       NOMATCH PATHNAME
+C		"//a"			"/a"		       NOMATCH PATHNAME
+C		"/a"			"//a"		       NOMATCH PATHNAME
+C		"az"			"[a-]z"		       0
+C		"bz"			"[ab-]z"	       0
+C		"cz"			"[ab-]z"	       NOMATCH
+C		"-z"			"[ab-]z"	       0
+C		"az"			"[-a]z"		       0
+C		"bz"			"[-ab]z"	       0
+C		"cz"			"[-ab]z"	       NOMATCH
+C		"-z"			"[-ab]z"	       0
+C		"\\"			"[\\\\-a]"	       0
+C		"_"			"[\\\\-a]"	       0
+C		"a"			"[\\\\-a]"	       0
+C		"-"			"[\\\\-a]"	       NOMATCH
+C		"\\"			"[\\]-a]"	       NOMATCH
+C		"_"			"[\\]-a]"	       0
+C		"a"			"[\\]-a]"	       0
+C		"]"			"[\\]-a]"	       0
+C		"-"			"[\\]-a]"	       NOMATCH
+C		"\\"			"[!\\\\-a]"	       NOMATCH
+C		"_"			"[!\\\\-a]"	       NOMATCH
+C		"a"			"[!\\\\-a]"	       NOMATCH
+C		"-"			"[!\\\\-a]"	       0
+C		"!"			"[\\!-]"	       0
+C		"-"			"[\\!-]"	       0
+C		"\\"			"[\\!-]"	       NOMATCH
+C		"Z"			"[Z-\\\\]"	       0
+C		"["			"[Z-\\\\]"	       0
+C		"\\"			"[Z-\\\\]"	       0
+C		"-"			"[Z-\\\\]"	       NOMATCH
+C		"Z"			"[Z-\\]]"	       0
+C		"["			"[Z-\\]]"	       0
+C		"\\"			"[Z-\\]]"	       0
+C		"]"			"[Z-\\]]"	       0
+C		"-"			"[Z-\\]]"	       NOMATCH
+
+# Following are tests outside the scope of IEEE 2003.2 since they are using
+# locales other than the C locale.  The main focus of the tests is on the
+# handling of ranges and the recognition of character (vs bytes).
+de_DE.ISO-8859-1 "a"			"[a-z]"		       0
+de_DE.ISO-8859-1 "z"			"[a-z]"		       0
+de_DE.ISO-8859-1 "ä"			"[a-z]"		       0
+de_DE.ISO-8859-1 "ö"			"[a-z]"		       0
+de_DE.ISO-8859-1 "ü"			"[a-z]"		       0
+de_DE.ISO-8859-1 "A"			"[a-z]"		       NOMATCH
+de_DE.ISO-8859-1 "Z"			"[a-z]"		       NOMATCH
+de_DE.ISO-8859-1 "Ä"			"[a-z]"		       NOMATCH
+de_DE.ISO-8859-1 "Ö"			"[a-z]"		       NOMATCH
+de_DE.ISO-8859-1 "Ü"			"[a-z]"		       NOMATCH
+de_DE.ISO-8859-1 "a"			"[A-Z]"		       NOMATCH
+de_DE.ISO-8859-1 "z"			"[A-Z]"		       NOMATCH
+de_DE.ISO-8859-1 "ä"			"[A-Z]"		       NOMATCH
+de_DE.ISO-8859-1 "ö"			"[A-Z]"		       NOMATCH
+de_DE.ISO-8859-1 "ü"			"[A-Z]"		       NOMATCH
+de_DE.ISO-8859-1 "A"			"[A-Z]"		       0
+de_DE.ISO-8859-1 "Z"			"[A-Z]"		       0
+de_DE.ISO-8859-1 "Ä"			"[A-Z]"		       0
+de_DE.ISO-8859-1 "Ö"			"[A-Z]"		       0
+de_DE.ISO-8859-1 "Ü"			"[A-Z]"		       0
+de_DE.ISO-8859-1 "a"			"[[:lower:]]"	       0
+de_DE.ISO-8859-1 "z"			"[[:lower:]]"	       0
+de_DE.ISO-8859-1 "ä"			"[[:lower:]]"	       0
+de_DE.ISO-8859-1 "ö"			"[[:lower:]]"	       0
+de_DE.ISO-8859-1 "ü"			"[[:lower:]]"	       0
+de_DE.ISO-8859-1 "A"			"[[:lower:]]"	       NOMATCH
+de_DE.ISO-8859-1 "Z"			"[[:lower:]]"	       NOMATCH
+de_DE.ISO-8859-1 "Ä"			"[[:lower:]]"	       NOMATCH
+de_DE.ISO-8859-1 "Ö"			"[[:lower:]]"	       NOMATCH
+de_DE.ISO-8859-1 "Ü"			"[[:lower:]]"	       NOMATCH
+de_DE.ISO-8859-1 "a"			"[[:upper:]]"	       NOMATCH
+de_DE.ISO-8859-1 "z"			"[[:upper:]]"	       NOMATCH
+de_DE.ISO-8859-1 "ä"			"[[:upper:]]"	       NOMATCH
+de_DE.ISO-8859-1 "ö"			"[[:upper:]]"	       NOMATCH
+de_DE.ISO-8859-1 "ü"			"[[:upper:]]"	       NOMATCH
+de_DE.ISO-8859-1 "A"			"[[:upper:]]"	       0
+de_DE.ISO-8859-1 "Z"			"[[:upper:]]"	       0
+de_DE.ISO-8859-1 "Ä"			"[[:upper:]]"	       0
+de_DE.ISO-8859-1 "Ö"			"[[:upper:]]"	       0
+de_DE.ISO-8859-1 "Ü"			"[[:upper:]]"	       0
+de_DE.ISO-8859-1 "a"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "z"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "ä"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "ö"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "ü"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "A"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "Z"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "Ä"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "Ö"			"[[:alpha:]]"	       0
+de_DE.ISO-8859-1 "Ü"			"[[:alpha:]]"	       0
+
+de_DE.ISO-8859-1 "a"			"[[=a=]b]"	       0
+de_DE.ISO-8859-1 "â"			"[[=a=]b]"	       0
+de_DE.ISO-8859-1 "à"			"[[=a=]b]"	       0
+de_DE.ISO-8859-1 "á"			"[[=a=]b]"	       0
+de_DE.ISO-8859-1 "ä"			"[[=a=]b]"	       0
+de_DE.ISO-8859-1 "b"			"[[=a=]b]"	       0
+de_DE.ISO-8859-1 "c"			"[[=a=]b]"	       NOMATCH
+de_DE.ISO-8859-1 "a"			"[[=â=]b]"	       0
+de_DE.ISO-8859-1 "â"			"[[=â=]b]"	       0
+de_DE.ISO-8859-1 "à"			"[[=â=]b]"	       0
+de_DE.ISO-8859-1 "á"			"[[=â=]b]"	       0
+de_DE.ISO-8859-1 "ä"			"[[=â=]b]"	       0
+de_DE.ISO-8859-1 "b"			"[[=â=]b]"	       0
+de_DE.ISO-8859-1 "c"			"[[=â=]b]"	       NOMATCH
+de_DE.ISO-8859-1 "a"			"[[=à=]b]"	       0
+de_DE.ISO-8859-1 "â"			"[[=à=]b]"	       0
+de_DE.ISO-8859-1 "à"			"[[=à=]b]"	       0
+de_DE.ISO-8859-1 "á"			"[[=à=]b]"	       0
+de_DE.ISO-8859-1 "ä"			"[[=à=]b]"	       0
+de_DE.ISO-8859-1 "b"			"[[=à=]b]"	       0
+de_DE.ISO-8859-1 "c"			"[[=à=]b]"	       NOMATCH
+de_DE.ISO-8859-1 "a"			"[[=á=]b]"	       0
+de_DE.ISO-8859-1 "â"			"[[=á=]b]"	       0
+de_DE.ISO-8859-1 "à"			"[[=á=]b]"	       0
+de_DE.ISO-8859-1 "á"			"[[=á=]b]"	       0
+de_DE.ISO-8859-1 "ä"			"[[=á=]b]"	       0
+de_DE.ISO-8859-1 "b"			"[[=á=]b]"	       0
+de_DE.ISO-8859-1 "c"			"[[=á=]b]"	       NOMATCH
+de_DE.ISO-8859-1 "a"			"[[=ä=]b]"	       0
+de_DE.ISO-8859-1 "â"			"[[=ä=]b]"	       0
+de_DE.ISO-8859-1 "à"			"[[=ä=]b]"	       0
+de_DE.ISO-8859-1 "á"			"[[=ä=]b]"	       0
+de_DE.ISO-8859-1 "ä"			"[[=ä=]b]"	       0
+de_DE.ISO-8859-1 "b"			"[[=ä=]b]"	       0
+de_DE.ISO-8859-1 "c"			"[[=ä=]b]"	       NOMATCH
+
+de_DE.ISO-8859-1 "aa"			"[[.a.]]a"	       0
+de_DE.ISO-8859-1 "ba"			"[[.a.]]a"	       NOMATCH
+
+
+# And with a multibyte character set.
+en_US.UTF-8	 "a"			"[a-z]"		       0
+en_US.UTF-8	 "z"			"[a-z]"		       0
+en_US.UTF-8	 "A"			"[a-z]"		       NOMATCH
+en_US.UTF-8	 "Z"			"[a-z]"		       NOMATCH
+en_US.UTF-8	 "a"			"[A-Z]"		       NOMATCH
+en_US.UTF-8	 "z"			"[A-Z]"		       NOMATCH
+en_US.UTF-8	 "A"			"[A-Z]"		       0
+en_US.UTF-8	 "Z"			"[A-Z]"		       0
+en_US.UTF-8	 "0"			"[0-9]"		       0
+en_US.UTF-8	 "9"			"[0-9]"		       0
+de_DE.UTF-8	 "a"			"[a-z]"		       0
+de_DE.UTF-8	 "z"			"[a-z]"		       0
+de_DE.UTF-8	 "Ã¤"			"[a-z]"		       0
+de_DE.UTF-8	 "Ã¶"			"[a-z]"		       0
+de_DE.UTF-8	 "Ã¼"			"[a-z]"		       0
+de_DE.UTF-8	 "A"			"[a-z]"		       NOMATCH
+de_DE.UTF-8	 "Z"			"[a-z]"		       NOMATCH
+de_DE.UTF-8	 "Ã„"			"[a-z]"		       NOMATCH
+de_DE.UTF-8	 "Ã–"			"[a-z]"		       NOMATCH
+de_DE.UTF-8	 "Ãœ"			"[a-z]"		       NOMATCH
+de_DE.UTF-8	 "a"			"[A-Z]"		       NOMATCH
+de_DE.UTF-8	 "z"			"[A-Z]"		       NOMATCH
+de_DE.UTF-8	 "Ã¤"			"[A-Z]"		       NOMATCH
+de_DE.UTF-8	 "Ã¶"			"[A-Z]"		       NOMATCH
+de_DE.UTF-8	 "Ã¼"			"[A-Z]"		       NOMATCH
+de_DE.UTF-8	 "A"			"[A-Z]"		       0
+de_DE.UTF-8	 "Z"			"[A-Z]"		       0
+de_DE.UTF-8	 "Ã„"			"[A-Z]"		       0
+de_DE.UTF-8	 "Ã–"			"[A-Z]"		       0
+de_DE.UTF-8	 "Ãœ"			"[A-Z]"		       0
+de_DE.UTF-8	 "a"			"[[:lower:]]"	       0
+de_DE.UTF-8	 "z"			"[[:lower:]]"	       0
+de_DE.UTF-8	 "Ã¤"			"[[:lower:]]"	       0
+de_DE.UTF-8	 "Ã¶"			"[[:lower:]]"	       0
+de_DE.UTF-8	 "Ã¼"			"[[:lower:]]"	       0
+de_DE.UTF-8	 "A"			"[[:lower:]]"	       NOMATCH
+de_DE.UTF-8	 "Z"			"[[:lower:]]"	       NOMATCH
+de_DE.UTF-8	 "Ã„"			"[[:lower:]]"	       NOMATCH
+de_DE.UTF-8	 "Ã–"			"[[:lower:]]"	       NOMATCH
+de_DE.UTF-8	 "Ãœ"			"[[:lower:]]"	       NOMATCH
+de_DE.UTF-8	 "a"			"[[:upper:]]"	       NOMATCH
+de_DE.UTF-8	 "z"			"[[:upper:]]"	       NOMATCH
+de_DE.UTF-8	 "Ã¤"			"[[:upper:]]"	       NOMATCH
+de_DE.UTF-8	 "Ã¶"			"[[:upper:]]"	       NOMATCH
+de_DE.UTF-8	 "Ã¼"			"[[:upper:]]"	       NOMATCH
+de_DE.UTF-8	 "A"			"[[:upper:]]"	       0
+de_DE.UTF-8	 "Z"			"[[:upper:]]"	       0
+de_DE.UTF-8	 "Ã„"			"[[:upper:]]"	       0
+de_DE.UTF-8	 "Ã–"			"[[:upper:]]"	       0
+de_DE.UTF-8	 "Ãœ"			"[[:upper:]]"	       0
+de_DE.UTF-8	 "a"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "z"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "Ã¤"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "Ã¶"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "Ã¼"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "A"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "Z"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "Ã„"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "Ã–"			"[[:alpha:]]"	       0
+de_DE.UTF-8	 "Ãœ"			"[[:alpha:]]"	       0
+
+de_DE.UTF-8	 "a"			"[[=a=]b]"	       0
+de_DE.UTF-8	 "Ã¢"			"[[=a=]b]"	       0
+de_DE.UTF-8	 "Ã "			"[[=a=]b]"	       0
+de_DE.UTF-8	 "Ã¡"			"[[=a=]b]"	       0
+de_DE.UTF-8	 "Ã¤"			"[[=a=]b]"	       0
+de_DE.UTF-8	 "b"			"[[=a=]b]"	       0
+de_DE.UTF-8	 "c"			"[[=a=]b]"	       NOMATCH
+de_DE.UTF-8	 "a"			"[[=Ã¢=]b]"	       0
+de_DE.UTF-8	 "Ã¢"			"[[=Ã¢=]b]"	       0
+de_DE.UTF-8	 "Ã "			"[[=Ã¢=]b]"	       0
+de_DE.UTF-8	 "Ã¡"			"[[=Ã¢=]b]"	       0
+de_DE.UTF-8	 "Ã¤"			"[[=Ã¢=]b]"	       0
+de_DE.UTF-8	 "b"			"[[=Ã¢=]b]"	       0
+de_DE.UTF-8	 "c"			"[[=Ã¢=]b]"	       NOMATCH
+de_DE.UTF-8	 "a"			"[[=Ã =]b]"	       0
+de_DE.UTF-8	 "Ã¢"			"[[=Ã =]b]"	       0
+de_DE.UTF-8	 "Ã "			"[[=Ã =]b]"	       0
+de_DE.UTF-8	 "Ã¡"			"[[=Ã =]b]"	       0
+de_DE.UTF-8	 "Ã¤"			"[[=Ã =]b]"	       0
+de_DE.UTF-8	 "b"			"[[=Ã =]b]"	       0
+de_DE.UTF-8	 "c"			"[[=Ã =]b]"	       NOMATCH
+de_DE.UTF-8	 "a"			"[[=Ã¡=]b]"	       0
+de_DE.UTF-8	 "Ã¢"			"[[=Ã¡=]b]"	       0
+de_DE.UTF-8	 "Ã "			"[[=Ã¡=]b]"	       0
+de_DE.UTF-8	 "Ã¡"			"[[=Ã¡=]b]"	       0
+de_DE.UTF-8	 "Ã¤"			"[[=Ã¡=]b]"	       0
+de_DE.UTF-8	 "b"			"[[=Ã¡=]b]"	       0
+de_DE.UTF-8	 "c"			"[[=Ã¡=]b]"	       NOMATCH
+de_DE.UTF-8	 "a"			"[[=Ã¤=]b]"	       0
+de_DE.UTF-8	 "Ã¢"			"[[=Ã¤=]b]"	       0
+de_DE.UTF-8	 "Ã "			"[[=Ã¤=]b]"	       0
+de_DE.UTF-8	 "Ã¡"			"[[=Ã¤=]b]"	       0
+de_DE.UTF-8	 "Ã¤"			"[[=Ã¤=]b]"	       0
+de_DE.UTF-8	 "b"			"[[=Ã¤=]b]"	       0
+de_DE.UTF-8	 "c"			"[[=Ã¤=]b]"	       NOMATCH
+
+de_DE.UTF-8	 "aa"			"[[.a.]]a"	       0
+de_DE.UTF-8	 "ba"			"[[.a.]]a"	       NOMATCH
+
+
+# Test of GNU extensions.
+C		 "x"			"x"		       0       PATHNAME|LEADING_DIR
+C		 "x/y"			"x"		       0       PATHNAME|LEADING_DIR
+C		 "x/y/z"		"x"		       0       PATHNAME|LEADING_DIR
+C		 "x"			"*"		       0       PATHNAME|LEADING_DIR
+C		 "x/y"			"*"		       0       PATHNAME|LEADING_DIR
+C		 "x/y/z"		"*"		       0       PATHNAME|LEADING_DIR
+C		 "x"			"*x"		       0       PATHNAME|LEADING_DIR
+
+en_US.UTF-8	 "\366.csv"		"*.csv"                0
+C		 "x/y"			"*x"		       0       PATHNAME|LEADING_DIR
+C		 "x/y/z"		"*x"		       0       PATHNAME|LEADING_DIR
+C		 "x"			"x*"		       0       PATHNAME|LEADING_DIR
+C		 "x/y"			"x*"		       0       PATHNAME|LEADING_DIR
+C		 "x/y/z"		"x*"		       0       PATHNAME|LEADING_DIR
+C		 "x"			"a"		       NOMATCH PATHNAME|LEADING_DIR
+C		 "x/y"			"a"		       NOMATCH PATHNAME|LEADING_DIR
+C		 "x/y/z"		"a"		       NOMATCH PATHNAME|LEADING_DIR
+C		 "x"			"x/y"		       NOMATCH PATHNAME|LEADING_DIR
+C		 "x/y"			"x/y"		       0       PATHNAME|LEADING_DIR
+C		 "x/y/z"		"x/y"		       0       PATHNAME|LEADING_DIR
+C		 "x"			"x?y"		       NOMATCH PATHNAME|LEADING_DIR
+C		 "x/y"			"x?y"		       NOMATCH PATHNAME|LEADING_DIR
+C		 "x/y/z"		"x?y"		       NOMATCH PATHNAME|LEADING_DIR
+
+# ksh style matching.
+C		"abcd"			"?@(a|b)*@(c)d"	       0       EXTMATCH
+C		"/dev/udp/129.22.8.102/45" "/dev/@(tcp|udp)/*/*" 0     PATHNAME|EXTMATCH
+C		"12"			"[1-9]*([0-9])"        0       EXTMATCH
+C		"12abc"			"[1-9]*([0-9])"        NOMATCH EXTMATCH
+C		"1"			"[1-9]*([0-9])"	       0       EXTMATCH
+C		"07"			"+([0-7])"	       0       EXTMATCH
+C		"0377"			"+([0-7])"	       0       EXTMATCH
+C		"09"			"+([0-7])"	       NOMATCH EXTMATCH
+C		"paragraph"		"para@(chute|graph)"   0       EXTMATCH
+C		"paramour"		"para@(chute|graph)"   NOMATCH EXTMATCH
+C		"para991"		"para?([345]|99)1"     0       EXTMATCH
+C		"para381"		"para?([345]|99)1"     NOMATCH EXTMATCH
+C		"paragraph"		"para*([0-9])"	       NOMATCH EXTMATCH
+C		"para"			"para*([0-9])"	       0       EXTMATCH
+C		"para13829383746592"	"para*([0-9])"	       0       EXTMATCH
+C		"paragraph"		"para+([0-9])"	       NOMATCH EXTMATCH
+C		"para"			"para+([0-9])"	       NOMATCH EXTMATCH
+C		"para987346523"		"para+([0-9])"	       0       EXTMATCH
+C		"paragraph"		"para!(*.[0-9])"       0       EXTMATCH
+C		"para.38"		"para!(*.[0-9])"       0       EXTMATCH
+C		"para.graph"		"para!(*.[0-9])"       0       EXTMATCH
+C		"para39"		"para!(*.[0-9])"       0       EXTMATCH
+C		""			"*(0|1|3|5|7|9)"       0       EXTMATCH
+C		"137577991"		"*(0|1|3|5|7|9)"       0       EXTMATCH
+C		"2468"			"*(0|1|3|5|7|9)"       NOMATCH EXTMATCH
+C		"1358"			"*(0|1|3|5|7|9)"       NOMATCH EXTMATCH
+C		"file.c"		"*.c?(c)"	       0       EXTMATCH
+C		"file.C"		"*.c?(c)"	       NOMATCH EXTMATCH
+C		"file.cc"		"*.c?(c)"	       0       EXTMATCH
+C		"file.ccc"		"*.c?(c)"	       NOMATCH EXTMATCH
+C		"parse.y"		"!(*.c|*.h|Makefile.in|config*|README)" 0 EXTMATCH
+C		"shell.c"		"!(*.c|*.h|Makefile.in|config*|README)" NOMATCH EXTMATCH
+C		"Makefile"		"!(*.c|*.h|Makefile.in|config*|README)" 0 EXTMATCH
+C		"VMS.FILE;1"		"*\;[1-9]*([0-9])"     0       EXTMATCH
+C		"VMS.FILE;0"		"*\;[1-9]*([0-9])"     NOMATCH EXTMATCH
+C		"VMS.FILE;"		"*\;[1-9]*([0-9])"     NOMATCH EXTMATCH
+C		"VMS.FILE;139"		"*\;[1-9]*([0-9])"     0       EXTMATCH
+C		"VMS.FILE;1N"		"*\;[1-9]*([0-9])"     NOMATCH EXTMATCH
+C		"abcfefg"		"ab**(e|f)"	       0       EXTMATCH
+C		"abcfefg"		"ab**(e|f)g"	       0       EXTMATCH
+C		"ab"			"ab*+(e|f)"	       NOMATCH EXTMATCH
+C		"abef"			"ab***ef"	       0       EXTMATCH
+C		"abef"			"ab**"		       0       EXTMATCH
+C		"fofo"			"*(f*(o))"	       0       EXTMATCH
+C		"ffo"			"*(f*(o))"	       0       EXTMATCH
+C		"foooofo"		"*(f*(o))"	       0       EXTMATCH
+C		"foooofof"		"*(f*(o))"	       0       EXTMATCH
+C		"fooofoofofooo"		"*(f*(o))"	       0       EXTMATCH
+C		"foooofof"		"*(f+(o))"	       NOMATCH EXTMATCH
+C		"xfoooofof"		"*(f*(o))"	       NOMATCH EXTMATCH
+C		"foooofofx"		"*(f*(o))"	       NOMATCH EXTMATCH
+C		"ofxoofxo"		"*(*(of*(o)x)o)"       0       EXTMATCH
+C		"ofooofoofofooo"	"*(f*(o))"	       NOMATCH EXTMATCH
+C		"foooxfooxfoxfooox"	"*(f*(o)x)"	       0       EXTMATCH
+C		"foooxfooxofoxfooox"	"*(f*(o)x)"	       NOMATCH EXTMATCH
+C		"foooxfooxfxfooox"	"*(f*(o)x)"	       0       EXTMATCH
+C		"ofxoofxo"		"*(*(of*(o)x)o)"       0       EXTMATCH
+C		"ofoooxoofxo"		"*(*(of*(o)x)o)"       0       EXTMATCH
+C		"ofoooxoofxoofoooxoofxo" "*(*(of*(o)x)o)"      0       EXTMATCH
+C		"ofoooxoofxoofoooxoofxoo" "*(*(of*(o)x)o)"     0       EXTMATCH
+C		"ofoooxoofxoofoooxoofxofo" "*(*(of*(o)x)o)"    NOMATCH EXTMATCH
+C		"ofoooxoofxoofoooxoofxooofxofxo" "*(*(of*(o)x)o)" 0    EXTMATCH
+C		"aac"			"*(@(a))a@(c)"	       0       EXTMATCH
+C		"ac"			"*(@(a))a@(c)"	       0       EXTMATCH
+C		"c"			"*(@(a))a@(c)"	       NOMATCH EXTMATCH
+C		"aaac"			"*(@(a))a@(c)"	       0       EXTMATCH
+C		"baaac"			"*(@(a))a@(c)"	       NOMATCH EXTMATCH
+C		"abcd"			"?@(a|b)*@(c)d"	       0       EXTMATCH
+C		"abcd"			"@(ab|a*@(b))*(c)d"    0       EXTMATCH
+C		"acd"			"@(ab|a*(b))*(c)d"     0       EXTMATCH
+C		"abbcd"			"@(ab|a*(b))*(c)d"     0       EXTMATCH
+C		"effgz"			"@(b+(c)d|e*(f)g?|?(h)i@(j|k))" 0 EXTMATCH
+C		"efgz"			"@(b+(c)d|e*(f)g?|?(h)i@(j|k))" 0 EXTMATCH
+C		"egz"			"@(b+(c)d|e*(f)g?|?(h)i@(j|k))" 0 EXTMATCH
+C		"egzefffgzbcdij"	"*(b+(c)d|e*(f)g?|?(h)i@(j|k))" 0 EXTMATCH
+C		"egz"			"@(b+(c)d|e+(f)g?|?(h)i@(j|k))" NOMATCH EXTMATCH
+C		"ofoofo"		"*(of+(o))"	       0       EXTMATCH
+C		"oxfoxoxfox"		"*(oxf+(ox))"	       0       EXTMATCH
+C		"oxfoxfox"		"*(oxf+(ox))"	       NOMATCH EXTMATCH
+C		"ofoofo"		"*(of+(o)|f)"	       0       EXTMATCH
+C		"foofoofo"		"@(foo|f|fo)*(f|of+(o))" 0     EXTMATCH
+C		"oofooofo"		"*(of|oof+(o))"	       0       EXTMATCH
+C		"fffooofoooooffoofffooofff" "*(*(f)*(o))"      0       EXTMATCH
+C		"fofoofoofofoo"		"*(fo|foo)"	       0       EXTMATCH
+C		"foo"			"!(x)"		       0       EXTMATCH
+C		"foo"			"!(x)*"		       0       EXTMATCH
+C		"foo"			"!(foo)"	       NOMATCH EXTMATCH
+C		"foo"			"!(foo)*"	       0       EXTMATCH
+C		"foobar"		"!(foo)"	       0       EXTMATCH
+C		"foobar"		"!(foo)*"	       0       EXTMATCH
+C		"moo.cow"		"!(*.*).!(*.*)"	       0       EXTMATCH
+C		"mad.moo.cow"		"!(*.*).!(*.*)"	       NOMATCH EXTMATCH
+C		"mucca.pazza"		"mu!(*(c))?.pa!(*(z))?" NOMATCH EXTMATCH
+C		"fff"			"!(f)"		       0       EXTMATCH
+C		"fff"			"*(!(f))"	       0       EXTMATCH
+C		"fff"			"+(!(f))"	       0       EXTMATCH
+C		"ooo"			"!(f)"		       0       EXTMATCH
+C		"ooo"			"*(!(f))"	       0       EXTMATCH
+C		"ooo"			"+(!(f))"	       0       EXTMATCH
+C		"foo"			"!(f)"		       0       EXTMATCH
+C		"foo"			"*(!(f))"	       0       EXTMATCH
+C		"foo"			"+(!(f))"	       0       EXTMATCH
+C		"f"			"!(f)"		       NOMATCH EXTMATCH
+C		"f"			"*(!(f))"	       NOMATCH EXTMATCH
+C		"f"			"+(!(f))"	       NOMATCH EXTMATCH
+C		"foot"			"@(!(z*)|*x)"	       0       EXTMATCH
+C		"zoot"			"@(!(z*)|*x)"	       NOMATCH EXTMATCH
+C		"foox"			"@(!(z*)|*x)"	       0       EXTMATCH
+C		"zoox"			"@(!(z*)|*x)"	       0       EXTMATCH
+C		"foo"			"*(!(foo))"	       0       EXTMATCH
+C		"foob"			"!(foo)b*"	       NOMATCH EXTMATCH
+C		"foobb"			"!(foo)b*"	       0       EXTMATCH
+C		"["			"*([a[])"	       0       EXTMATCH
+C		"]"			"*([]a[])"	       0       EXTMATCH
+C		"a"			"*([]a[])"	       0       EXTMATCH
+C		"b"			"*([!]a[])"	       0       EXTMATCH
+C		"["			"*([!]a[]|[[])"	       0       EXTMATCH
+C		"]"			"*([!]a[]|[]])"	       0       EXTMATCH
+C		"["			"!([!]a[])"	       0       EXTMATCH
+C		"]"			"!([!]a[])"	       0       EXTMATCH
+C		")"			"*([)])"	       0       EXTMATCH
+C		"*"			"*([*(])"	       0       EXTMATCH
+C		"abcd"			"*!(|a)cd"	       0       EXTMATCH
+C		"ab/.a"			"+([abc])/*"	       NOMATCH EXTMATCH|PATHNAME|PERIOD
+C		""			""		       0
+C		""			""		       0       EXTMATCH
+C		""			"*([abc])"	       0       EXTMATCH
+C		""			"?([abc])"	       0       EXTMATCH

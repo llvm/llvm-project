@@ -1,0 +1,6 @@
+libc {
+  GLIBC_PRIVATE {
+    __vdso_clock_gettime;
+    __vdso_clock_getres;
+  }
+}

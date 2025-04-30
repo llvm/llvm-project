@@ -1,0 +1,7 @@
+DEFAULT                 GLIBC_2.32
+
+%ifdef HAVE_ARC_BE
+ld=ld-linux-arceb.so.2
+%else
+ld=ld-linux-arc.so.2
+%endif

@@ -1,0 +1,166 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Authors:
+% 2011-03-28, admin@pulaar-fulfulde.org
+% 2011-03-28, info@2xlibre.net
+
+LC_IDENTIFICATION
+title      "Fulah locale for Senegal"
+source     "Pular-Fulfulde.org"
+contact    "Ibrahima Sarr"
+email      "admin@pulaar-fulfulde.org"
+language   "Fulah"
+territory  "Senegal"
+revision   "1.0"
+date       "2011-03-28"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+mon  "siilo";/
+     "colte";/
+     "mbooy";/
+     "see<U0257>to";/
+     "duujal";/
+     "korse";/
+     "morso";/
+     "juko";/
+     "siilto";/
+     "yarkomaa";/
+     "jolal";/
+     "bowte"
+abmon  "sii";/
+       "col";/
+       "mbo";/
+       "see";/
+       "duu";/
+       "kor";/
+       "mor";/
+       "juk";/
+       "slt";/
+       "yar";/
+       "jol";/
+       "bow"
+day  "dewo";/
+     "aa<U0253>nde";/
+     "mawbaare";/
+     "njeslaare";/
+     "naasaande";/
+     "mawnde";/
+     "hoore-biir"
+abday  "dew";/
+       "aa<U0253>";/
+       "maw";/
+       "nje";/
+       "naa";/
+       "mwd";/
+       "hbi"
+week 7;19971130;1
+first_weekday 2
+d_t_fmt  "%a %d %b %Y %R"
+date_fmt "%a %d %b %Y %R %Z"
+d_fmt    "%d//%m//%Y"
+t_fmt    "%R"
+am_pm    "subaka";"kikii<U0257>e"
+END LC_TIME
+
+LC_NUMERIC
+decimal_point  ","
+thousands_sep  "."
+grouping       3
+END LC_NUMERIC
+
+LC_MONETARY
+currency_symbol  "CFA"
+int_curr_symbol  "XOF "
+mon_decimal_point  "."
+mon_thousands_sep  ","
+mon_grouping  3
+positive_sign  ""
+negative_sign  "-"
+frac_digits     2
+int_frac_digits 2
+p_cs_precedes   0
+p_sep_by_space  1
+n_cs_precedes   0
+n_sep_by_space  1
+p_sign_posn     1
+n_sign_posn     1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1yYeE]"
+noexpr  "^[-0nNaA]"
+yesstr  "Eey"
+nostr   "Alaa"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt  "%p%t%g%m%t%f"
+name_gen  "kaddol"
+name_miss "sokna"
+name_mr   "ceerno"
+name_mrs  "sokna"
+name_ms   "sokna"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt  "%a%N%f%N%d%N%b%N%h %s %e %r%N%T, %S %z%N%c%N"
+country_name  "Senegaal"
+country_post  "SN"
+country_ab2  "SN"
+country_ab3  "SEN"
+country_num  686
+country_car  "SN"
+lang_name    "Pulaar"
+lang_ab      "ff"
+lang_term    "ful"
+lang_lib    "ful"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt  "%c %a %l"
+tel_dom_fmt  "%a %l"
+int_select   "00"
+int_prefix   "221"
+END LC_TELEPHONE

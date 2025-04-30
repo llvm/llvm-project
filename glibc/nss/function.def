@@ -1,0 +1,84 @@
+/* List of all functions defined for the NSS in GNU C Library.
+   Copyright (C) 1996-2021 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <https://www.gnu.org/licenses/>.  */
+
+/* This list must be kept sorted!!!  */
+
+DEFINE_NSS_FUNCTION (endaliasent)
+DEFINE_NSS_FUNCTION (endetherent)
+DEFINE_NSS_FUNCTION (endgrent)
+DEFINE_NSS_FUNCTION (endhostent)
+DEFINE_NSS_FUNCTION (endnetent)
+DEFINE_NSS_FUNCTION (endnetgrent)
+DEFINE_NSS_FUNCTION (endprotoent)
+DEFINE_NSS_FUNCTION (endpwent)
+DEFINE_NSS_FUNCTION (endrpcent)
+DEFINE_NSS_FUNCTION (endservent)
+DEFINE_NSS_FUNCTION (endsgent)
+DEFINE_NSS_FUNCTION (endspent)
+DEFINE_NSS_FUNCTION (getaliasbyname_r)
+DEFINE_NSS_FUNCTION (getaliasent_r)
+DEFINE_NSS_FUNCTION (getcanonname_r)
+DEFINE_NSS_FUNCTION (getetherent_r)
+DEFINE_NSS_FUNCTION (getgrent_r)
+DEFINE_NSS_FUNCTION (getgrgid_r)
+DEFINE_NSS_FUNCTION (getgrnam_r)
+DEFINE_NSS_FUNCTION (gethostbyaddr2_r)
+DEFINE_NSS_FUNCTION (gethostbyaddr_r)
+DEFINE_NSS_FUNCTION (gethostbyname2_r)
+DEFINE_NSS_FUNCTION (gethostbyname3_r)
+DEFINE_NSS_FUNCTION (gethostbyname4_r)
+DEFINE_NSS_FUNCTION (gethostbyname_r)
+DEFINE_NSS_FUNCTION (gethostent_r)
+DEFINE_NSS_FUNCTION (gethostton_r)
+DEFINE_NSS_FUNCTION (getnetbyaddr_r)
+DEFINE_NSS_FUNCTION (getnetbyname_r)
+DEFINE_NSS_FUNCTION (getnetent_r)
+DEFINE_NSS_FUNCTION (getnetgrent_r)
+DEFINE_NSS_FUNCTION (getntohost_r)
+DEFINE_NSS_FUNCTION (getprotobyname_r)
+DEFINE_NSS_FUNCTION (getprotobynumber_r)
+DEFINE_NSS_FUNCTION (getprotoent_r)
+DEFINE_NSS_FUNCTION (getpublickey)
+DEFINE_NSS_FUNCTION (getpwent_r)
+DEFINE_NSS_FUNCTION (getpwnam_r)
+DEFINE_NSS_FUNCTION (getpwuid_r)
+DEFINE_NSS_FUNCTION (getrpcbyname_r)
+DEFINE_NSS_FUNCTION (getrpcbynumber_r)
+DEFINE_NSS_FUNCTION (getrpcent_r)
+DEFINE_NSS_FUNCTION (getsecretkey)
+DEFINE_NSS_FUNCTION (getservbyname_r)
+DEFINE_NSS_FUNCTION (getservbyport_r)
+DEFINE_NSS_FUNCTION (getservent_r)
+DEFINE_NSS_FUNCTION (getsgent_r)
+DEFINE_NSS_FUNCTION (getsgnam_r)
+DEFINE_NSS_FUNCTION (getspent_r)
+DEFINE_NSS_FUNCTION (getspnam_r)
+DEFINE_NSS_FUNCTION (initgroups_dyn)
+DEFINE_NSS_FUNCTION (netname2user)
+DEFINE_NSS_FUNCTION (setaliasent)
+DEFINE_NSS_FUNCTION (setetherent)
+DEFINE_NSS_FUNCTION (setgrent)
+DEFINE_NSS_FUNCTION (sethostent)
+DEFINE_NSS_FUNCTION (setnetent)
+DEFINE_NSS_FUNCTION (setnetgrent)
+DEFINE_NSS_FUNCTION (setprotoent)
+DEFINE_NSS_FUNCTION (setpwent)
+DEFINE_NSS_FUNCTION (setrpcent)
+DEFINE_NSS_FUNCTION (setservent)
+DEFINE_NSS_FUNCTION (setsgent)
+DEFINE_NSS_FUNCTION (setspent)

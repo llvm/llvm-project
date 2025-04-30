@@ -1,0 +1,29 @@
+#include <inttypes.h>
+#include <signal.h>
+#include <stddef.h>
+#include <sys/ucontext.h>
+
+#include "kernel_rt_sigframe.h"
+
+SIG_BLOCK
+SIG_SETMASK
+
+_NSIG8				(_NSIG / 8)
+
+MCONTEXT_VERSION
+
+-- Offsets of the fields in the kernel rt_sigframe_t structure.
+#define rt_sigframe(member)	offsetof (struct kernel_rt_sigframe, member)
+
+RT_SIGFRAME_SIZE		sizeof (struct kernel_rt_sigframe)
+RT_SIGFRAME_UCONTEXT		rt_sigframe (uc)
+
+-- Offsets of the fields in the ucontext_t structure.
+#define ucontext(member)	offsetof (ucontext_t, member)
+
+UCONTEXT_FLAGS			ucontext (uc_flags)
+UCONTEXT_LINK			ucontext (uc_link)
+UCONTEXT_STACK			ucontext (uc_stack)
+UCONTEXT_MCONTEXT		ucontext (uc_mcontext)
+UCONTEXT_SIGMASK		ucontext (uc_sigmask)
+UCONTEXT_SIZE			sizeof (ucontext_t)

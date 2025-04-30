@@ -1626,6 +1626,12 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
   "'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; "
   "%0 is ignored">, InGroup<OpenMPExtensions>;
 
+// NextSilicon unsupported OpenMP features.
+def err_omp_nextsilicon_unsupported_directive
+    : Error<"OpenMP directive '%0' is not supported on NextSilicon system">;
+def err_omp_nextsilicon_unsupported_clause
+    : Error<"OpenMP clause '%0' is not supported on NextSilicon system">;
+
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
   "missing argument; expected %select{an integer value|"
@@ -1772,5 +1778,37 @@ def ext_hlsl_access_specifiers : ExtWarn<
   InGroup<HLSLExtension>;
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
+
+// '#pragma ns mark' related messages
+def err_pragma_ns_mark_no_arg : Error<"expected a valid mark in '#pragma %0'">;
+def err_pragma_ns_mark_too_many_args
+    : Error<"expected only one mark in '#pragma %0'">;
+def err_pragma_ns_mark_unexpected
+    : Error<"invalid ns mark argument (expected "
+            "{noimport|handoff|boundary|import_single|import_recursive} on "
+            "function)">;
+def err_pragma_ns_loop_mark_unexpected
+    : Error<"expected one of {slot|cgid|duplication_count} as loop mark">;
+def err_pragma_ns_function_mark_unexpected
+    : Error<"expected one of "
+            "{noimport|handoff|boundary|import_single|import_recursive} "
+            "as function mark">;
+def err_pragma_ns_loop_mark_conflict : Error<"conflicting loop marks">;
+
+// '#pragma ns location' related messages
+def err_pragma_ns_location_no_arg
+    : Error<"expected a valid location in '#pragma %0'">;
+def err_pragma_ns_location_unexpected
+    : Error<"invalid ns location argument (expected {grid|risc|host})">;
+def err_pragma_ns_location_too_many_args
+    : Error<"expected only one location in '#pragma %0'">;
+
+// '#pragma ns vectorize' related messages
+def err_pragma_ns_vectorize_no_arg
+    : Error<"expected a valid vectorization scheme in '#pragma %0'">;
+def err_pragma_ns_vectorize_unexpected
+    : Error<"invalid ns vectorization scheme (expected {epilogue|masked})">;
+def err_pragma_ns_vectorize_too_many_args
+    : Error<"expected only one vectorization scheme in '#pragma %0'">;
 
 } // end of Parser diagnostics

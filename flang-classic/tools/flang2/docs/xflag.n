@@ -1,0 +1,5588 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 18 "Other Compiler Switches"
+.nr ii 8
+
+.de XF
+.ip \\$1 8
+..
+.de XB
+.br
+.b \\$1
+..
+.lp
+.ul
+-x Compiler Switches
+.lp
+The compilers have a number of supported and unsupported switches
+that are used internal to the compilers.
+These are referred to as
+.b xflags .
+This section documents the xflags.
+.lp
+These xflags can be invoked in two ways.
+.np
+Use
+.cw -x
+.i "<number> <value>"
+where
+.i "<number>"
+is a decimal number and ranges from 0 to 127.
+For example, to turn on information generation during compilation use:
+.cw "-x 0 2" .
+.np
+The compiler may use symbolic names to map to certain xflags.
+For example, the
+.cw "-alpha"
+switch is identical to using
+.cw "-x 25 15"
+and
+.cw "-beta"
+is identical to using
+.cw "-x 25 240" .
+.lp
+The first number in an xflag invocation is an array index into the array
+.cw "flg.x[128]" .
+The second number is used to mask the value from that array.
+This sets up the xflag switches to be easily used as bit masks.
+The macro,
+.cw "XBIT(n,m)" ,
+should be used to test an xflag where
+.cw n
+is the xflag number and
+.cw m
+is the mask.
+.lp
+The following is a brief summary of the reserved xflags.  Note that
+not all are implemented.
+.lp
+.sz 14
+.ce 1
+flg.x[] - Values and Meanings
+.sz 10
+.lp
+.XF "0:" 
+Used to turn on information reporting regarding compiler (stderr):
+.XB 0x01:
+compilation statistics
+.XB 0x02:
+general information on loops
+.XB 0x04:
+(pgc dev only) - prototypes for function definitons
+.XB 0x08:
+inlining information (TBD)
+.XB 0x10:
+code block sizes in cycles
+.XB 0x20:
+put symbol comments into assembly file
+.XB 0x40:
+put verbose comments into assembly file (includes ili)
+.XB 0x80:
+put misc info out to stderr
+.XB 0x100:
+OpenMp information.
+.XB 0x200:
+Variable information within parallel regions.
+.XB 0x400:
+Integrate info messages with source code and save to a .info file
+.XB 0x800:
+Info on data flow optimizations (e.g. CSE, PRE, hoisting)
+.XB 0x1000:
+issue variable use before def warning messages.
+.XB 0x2000:
+for ST100, override default and put command line into assembly file
+.XB 0x4000:
+Compute / Data Intensity output
+.XB 0x8000:
+issue unrecognized pragma/directive messages (development/DEBUG
+versions only)
+.XB 0x10000:
+Info on control flow optimizations (e.g. predication)
+.XB 0x20000:
+describe when loops can be parallelized
+.XB 0x40000:
+describe vector streaming calls
+.XB 0x80000:
+produce negative loop information
+.XB 0x100000:
+describe when barriers are deleted
+.XB 0x200000:
+minfo messages for IPA optimizations
+.XB 0x400000:
+minfo messages for Unified Binary optimizations
+.XB 0x800000:
+minfo messages for -Mautoinline
+.XB 0x1000000:
+don't demangle C++ function names in minfo messages
+.XB 0x2000000:
+Output CCFF to STDERR
+.XB 0x4000000:
+Use CCFF messages
+.XB 0x8000000:
+Output minfo/CCFF to stderr when lowering (pgf901)
+.XB 0x20000000:
+Don't emit error message text for select error messages.
+.XB 0x40000000:
+Error messages in dev studio format:
+.nf
+block1 : block2 : block3
+block1 : block3
+block1 contains <filename>(line number); block2 contains either
+error or warning; block3 contains message text.
+.fi
+In addition, the line number in block1 can also include the column
+number, <filename>(n,m). In all cases the line number is required. 
+.XB 0x80000000:
+L-suffixed constants (dev pgc only).
+
+.XF "1:"
+Used to turn on producing negative and other information (stderr):
+.XB 0x01:
+Enable enhanced error messages.
+.XB 0x02:
+general information on loop optimizations not performed
+.XB 0x04:
+For ST100, describe when (and why) dsp intrinsics are NOT expanded.
+.XB 0x08:
+For IPA negative information.
+.XB 0x10:
+For inliner failures
+.XB 0x800:
+Give failure information on data-flow optimizations (e.g. CSE, PRE, hoisting).
+.XB 0x10000:
+Give failure information on control-flow optimizations (e.g. predication).
+.XB 0x20000:
+describe when loops can not be parallelized
+.XB 0x40000:
+For PFO.
+.XB 0x80000:
+For PRE.
+
+.XF "2:" 
+Used to turn on various non-standard optimizations
+Note that combinations can be used to get a desired effect.
+.XB 0x01:
+C dummy args are treated with the same copyin/copyout semantics
+as Fortran dummy args.
+.XB 0x02:
+C local ptrs do not conflict with any other local variables.
+.XB 0x04:
+C static ptrs do not conflict with any other static variables.
+.XB 0x08:
+C global ptrs do not conflict with any other global variables.
+.XB 0x10:
+C malloc ptrs do not conflict with any other variables.
+.XB 0x20:
+C struct ptrs do not conflict with other struct ptrs of the same
+type unless they are either the same structure or the same field.
+In other words, ptrs to structures are not skewed.
+.XB 0x80:
+Relax dependence checking for unknown dependence relations.
+.XB 0x100:
+C private ptrs do not conflict with any other private variables.
+.XB 0x200
+In dependence testing, assume 0/x and x/x are 0 and 1, even when
+x is an unknown nonconstant value.
+.XB 0x400
+Turn off ANSI C pointer rules:
+ANSI C pointer rules are implemented in  dependence testing and alias analysis,
+it assumes that a pointer to type A cannot conflict with pointer to type B.
+.XB 0x800
+Disable checking if a member reference is derived from a pointer dereference.
+.XB 0x1000
+Compile (keep) C/C++ static functions that are never called and
+whose addresses are never taken
+.XB 0x2000
+For x86-64 extended asm, do not consider PDALNG field on pointer input/output
+item. Otherwise, look at PDALNG field to see if it's 16-byte aligned. If so,
+we can generate movapd for the input/output item. 
+.XB 0x4000
+Set ADDRTKNP bit for C/C++ structure moves, 
+.XB 0x8000
+AVAILABLE (Was "safer interpretation of -Msafeptr")
+.XB 0x10000
+C++ class type-based disambiguation rule.  Different class types do not conflict.
+Class objects do not conflict with their pointers.
+.XB 0x20000
+Do not generate members NMEs for union members (just elide the member).
+.XB 0x40000
+Do not mangle members name with line number information: so that IPA inlining
+can match class types. 
+.XB 0x100000
+Fill in BIH_LINENO with line numbers on inlined blocks.
+.XB 0x200000
+don't use SMOVEI/SMOVES instead of SMOVE in exp_rte.c
+.XB 0x400000
+F90 pointer optimizations.
+.XB 0x800000
+Use GSMOVE in exp_rte.c
+.XB 0x1000000
+Don't expand SMOVEs (struct moves) in a single IL_SMOVEI/IL_SMOVES
+
+.XF "3:" 
+Used to turn on/off various dual-op/dual-inst/pipelined ops.
+.XB 0x01:
+turn on pipelined operations
+.XB 0x02:
+turn on dual-instructions
+.XB 0x04:
+turn off pipelined operations
+.XB 0x08:
+turn off dual-instructions on i860 or swpipe on ST100 
+.XB 0x10:
+block level heuristics for above (default is file level)
+.XB 0x20:
+loop level heuristics for above (dual mod if 1 column loop)
+.XB 0x40:
+multi-block loop level heuristics for above
+.XB 0x80:
+function level heuristics for above
+.XB 0x100:
+Use pipelined moves instead of static dp moves.
+.XB 0x200:
+For LLVM, use ymm registers on x86 to perform LRE
+.XB 0x400:
+Don't perform reduction compression
+
+.XF "4:" 
+Used to alter optimization/code generation techniques.
+.XB 0x01:
+Use pipelined operations
+.XB 0x02:
+Use dual-instruction mode
+.XB 0x04:
+Enable multiple fp registers to be cached (used on the x86)
+.XB 0x08:
+used in cgsched.c
+.XB 0x10:
+used in cgsched.c
+.XB 0x20:
+used in cgsched.c
+.XB 0x40:
+used in cgsched.c
+.XB 0x80:
+used in cgsched.c
+.XB 0x1000
+Generate a null pointer store fault.
+.XB 0x2000
+Generate a divide by zero fault.
+.XB 0x4000
+Generate the above or below fault on the third function, not the first.
+.XB 0x8000
+Generate an infinite loop fault
+.XB 0x100000
+In Fortran front end, disable any dependence checking, and assume no forall
+or array assignment needs a temp.
+.XB 0x200000
+In Fortran front end, disable early flow analysis to determine if the forall
+or array assignment needs a temp.
+.XB 0x400000
+In Fortran front end, disable kernels rescoping.
+.XB 0x800000
+Initialization of an array with zeros can sometimes be done directly with
+machine instructions, rather than a loop nest (array assignment collapsing).
+Disable array assignment collapsing optimization.
+
+.XF "5:"
+CG uses
+.XB 0x01:
+Ignore deletable store information.
+Hammer - disable register allocation at -O0.
+.XB 0x02:
+Perform hardcoded register allocation in CG
+.XB 0x04:
+used in cgsched.c
+.XB 0x08:
+used in cgsched.c
+.XB 0x10:
+used in cgsched.c
+.XB 0x20:
+used in cgsched.c
+.XB 0x40:
+used in cgsched.c
+.XB 0x80:
+used in cgsched.c
+
+.XF "6:" 
+Inhibit optimizations
+.XB 0x01:
+global constant propagation (opt >= 2)
+.XB 0x02:
+store deletion due to constant propagation (opt >= 2)
+.XB 0x04:
+copy LOOP ili (bla instruction) (opt >= 2)
+.XB 0x08:
+br_to_br (opt >= 2)
+.XB 0x10
+remove useless register moves (opt >= 2)
+.XB 0x20
+loop live variable checks (opt >= 2)
+.XB 0x40
+replacement of data initialized local fortran variables or
+data initialized const C variables (opt >= 2)
+.XB 0x80
+using function return registers for global register assignments (opt >= 1,
+and only when function returns a value)
+.XB 0x100
+copy propagation where value already loaded; floating point constant
+propagation.
+.XB 0x200
+prevent copy propagation of values with any floating point compare (x86)
+.XB 0x400
+inhibit optimization to replace divide-by-constant by multiplication
+.XB 0x800
+inhibit floating point constant prop. (like 0x100), but this still allows
+floating point global regs.
+.XB 0x1000
+inhibit multiply-accumulate/subtract optimization (e.g. x += a * b).
+.XB 0x2000
+inhibit remove_jump() optimization
+.XB 0x4000
+store deletion within an extended basic block.
+.XB 0x8000
+SAVE (SC_STATIC) removal (invarif.c:save_elim(), fortran-only).
+.XB 0x10000
+inhibit optimizations based on the LSCOPE f90 symbol table flag.
+.XB 0x20000
+inhibit optimizations of 'pure' functions.
+.XB 0x40000
+Inhibit block splitting at inline points in expander followed by
+block unsplitting call in main.
+.XB 0x80000
+Inhibit 'equals' propagation.
+.XB 0x100000
+TEMPORARY -- topsort the loops
+.XB 0x200000
+don't defer compilation of routines based on whether they are called
+.XB 0x400000
+don't remove unreachable blocks in fgraph
+.XB 0x20000000
+Do max/min pattern, but inhibit all other transformations.
+.XB 0x40000000
+TEMPORARY -- don't check address of threadprivate variables in recog;
+Q&D QA to work-around regressions.
+.XB 0x80000000
+perform analysis only: inhibit all transformations when
+building the flowgraph, discovering loops, and building the flow
+information.
+Generally, the transformations should not occur when the cg
+is calling the optimizer's functions.
+
+.XF "7:" 
+Inhibit optimizations
+.XB 0x01:
+non-constant def copy (opt >= 2)
+.XB 0x02:
+terminal function optimization (opt >= 1)
+.XB 0x04:
+a = a (opt >= 2)
+.XB 0x08:
+separate base pointers (opt >= 3)
+.XB 0x10:
+glue arg copy (opt >= 2)
+.XB 0x20:
+non-glue arg copy (opt >= 2)
+.XB 0x40:
+use scratch as globals if calls present
+.XB 0x80:
+copy arg/glue if loops present
+.XB 0x100:
+member store is within its boundaries
+(doesn't mark parent structure as 'stored').
+.XB 0x200:
+invariant hoisting of the LPSTRT & LDLPCT ili (ST100, opt >= 2).
+.XB 0x400:
+hoisting of the LPSTRT & LDLPCT ili if there exists a call in the
+preheader block to which the ili are hoisted (ST100, opt >= 2).
+.XB 0x800:
+Disable use of scratch as globals in terminal (leaf) functions.
+.XB 0x1000:
+Inhibit global sign-extension elimination.
+.XB 0x2000:
+For ST1xx, disable the `HRA16' (`Holes Register Allocator for GP16')
+GP16 register allocator enhancements.
+.XB 0x4000:
+Inhibit setting the XMMSAFE flag for functions.
+.XB 0x8000:
+Enable scalar replacement.
+.XB 0x10000:
+Enable transitive loop invariant motion.
+.XB 0x20000:
+Stress transitive loop invariant motion, i.e., disable heuristics to control register pressure.
+.XB 0x40000:
+Enable class/struct based mod/div replacement by reciprical code emit.
+There were problems with this, so we've inverted the flag.
+.XB 0x80000:
+Disable invariant searching of ILI_ALT.
+.XB 0x100000:
+Disable replacement of data initialized local fortran scalar variables with
+assignment statement (opt >= 2)
+.XB 0x200000:
+Disable optimization where we set GSCOPE on Fortran host subprogram declared symbols only when they are used in a contains subprogram. 
+.XB 0x400000:
+Disable dissociation of local C/C++ struct/class instance members,
+an optimization for the modern STL iterator implementation to get
+sole members into registers.
+.XB 0x800000:
+Disable clearing the "address taken" flag on local symbols whose
+addresses are taken only in normal load/store sequences.
+.XB 0x1000000:
+Disable more aggressive expression rewriting with store forwarding to loads.
+.XB 0x2000000:
+Disable NME rewriting to clean up after constant propagation.
+.XB 0x4000000:
+Don't return fast from forward() if other xflags have disabled everything.
+.XB 0x8000000:
+Disable interval analysis in hlscrub.c.
+.XB 0x10000000:
+Disable block duplication in hlscrub.c.
+.XB 0x20000000:
+Disable dead code elimination in hlscrub.c.
+.XB 0x40000000:
+Disable conversion of pointer inequality loop tests in hlscrub.c.
+.XB 0x80000000:
+Disable CSE replacements in hlscrub.c.
+
+.XF "8:" 
+Inhibit optimizations
+.XB 0x01:
+loop count (opt >= 2)
+.XB 0x02:
+store deletion (opt >= 2)
+.XB 0x04:
+block merging (opt >= 2)
+.XB 0x08:
+global register assignment (opt >= 1)
+(also disables loop count)
+.XB 0x10:
+recurrence relations (opt >= 3)
+.XB 0x20:
+invariant array addresses (opt >= 3)
+.XB 0x40:
+last value computations (opt >= 2)
+.XB 0x80:
+loop count if non-induction use occurs (opt >= 2)
+.XB 0x100:
+replace not-equal test of loop control variable with less than or
+greater than test (opt >= 2)
+.XB 0x200:
+reducing the number of induction variables (opt >= 2)
+.XB 0x400
+global register allocation (opt >=2) using live ranges (both
+integer and floating point globals)
+.XB 0x800
+allow fp caching in x86 if not innermost loop
+.XB 0x1000
+turn off fp caching in x86 
+.XB 0x2000:
+recognizer.
+.XB 0x4000:
+finding common base pointers.
+.XB 0x8000:
+ignoring a short/char extend when searching for basic induction
+variables.
+.XB 0x10000:
+searching for stores via the same pointer (invar.c) when the
+pointer is 'safe'.
+.XB 0x20000:
+allowing QJSRs as candidates for invariancy (ST100) -- should always
+be safe but there may be regarg problems introduced by hoisting QJRs.
+.XB 0x40000:
+When finding a common base pointer (recog.c), select the use whose
+linear reference has offset 0.
+.XB 0x80000:
+hw looping.
+.XB 0x100000:
+allocating hw loop registers with respect to the total number of
+loops in a loop nest; if XBIT is set, allocate hw loop registers
+with respect to the 'level' of a loop, i.e., inner-to-outer.
+.XB 0x200000:
+hw looping for 'while' loops.
+.XB 0x400000:
+hw looping for loops containing calls.
+.XB 0x800000:
+Inhibit use of H/W loop reload registers (ST1xx)
+.XB 0x1000000:
+Inhibit signextend elimination (ST1xx)
+.XB 0x2000000:
+Inhibit detecting PTRSAFE members and POINTER members in invar (PGF90)
+.XB 0x4000000:
+Inhibit recognition of loops with constant loop count of 1
+.XB 0x8000000:
+Inhibit hlinduc0:memset/memzero/memcopy idiom recognition.
+.XB 0x10000000:
+Inhibit hlinduc0:memcopy idiom recognition
+.XB 0x20000000:
+Disable inhibiting strength reduction for address-mode expressions
+.XB 0x40000000:
+reserved
+.XB 0x80000000:
+inhibit iltutil.c:merge_bih() - WARNING: in certain cases, merging must
+occur to complete an optimization, e.g. br_flatten().
+
+.XF "9:" 
+Non-zero value invokes the loop unroller.
+If value is other than 1, represents the number of times to unroll loops
+or the maximum iteration count if completely unrolling a loop.
+
+.XF "10:" 
+Number of unrolls (# of loop bodies) of a loop with non-constant
+iteration count.
+
+.XF "11:" 
+Unrolling
+.XB "0x01:"
+Enable completely unrolling a loop when the UNROLL directive is used.
+.XB "0x02:"
+Enable unrolling a loop by a factor specified via the UNROLL(n) directive.
+.XB "0x04:"
+(I386,X86_64) Ignore the check of the number of variable
+strides.
+.XB "0x08:"
+Inhibit completely unrolling outer loops.
+.XB "0x10:"
+(I386,X86_64) Don't reduce the scoring by a factor of two
+when there are only variable strides.
+.XB "0x20:"
+(I386,X86_64) Ignore the check of the number of variable
+strides when attempting to completely unroll a loop.
+.XB "0x40:"
+(I386,X86_64) Ignore the check of the number of nested
+invariant array references when attempting to completely unroll a loop.
+.XB "0x80:"
+(I386,X86_64) Ignore the check of the number of variable
+strides from an innerloop when attempting to completely unroll its
+containing (outer) loop.
+.XB "0x100:"
+(I386,X86_64) Ignore the check of the number of nested invariant array
+references from an innerloop when attempting to completely unroll its
+containing (outer) loop.
+.XB "0x200:"
+Enable unrolling of multi-block loops.
+The unroll count is initially default 4 or flg.x[10] if that is set.
+.XB "0x400:"
+Disable unrolling of a loop marked with the NOUNROLL directive.
+.XB "0x800:"
+Do not attempt to increase the threshold for completely unrolling
+an innermost multi-block loops.
+
+.XF "12:" 
+Inhibit local optimizations
+.XB 0x01:
+short bte/btne branching
+.XB 0x02:
+Change float 0.0 compares so that the compare is done in integer unit.
+.XB 0x04:
+inhibit elimination of redundant float register movement
+for SNGL or DBLE casts into
+argument registers or global registers.
+.XB 0x08:
+inhibit branch to bla and branch to branch optimization inside linearizer.
+.XB 0x10:
+inhibit st_sta_ld pointer precedence checking.
+.XB 0x20:
+inhibit ulshifti followed by lshifti folding (or visa-versa).
+.XB 0x40:
+inhibit ANDHI followed by BIEQI/BINEI folding into a BEQANDHI.
+.XB 0x80:
+Inhibit special treatment of ICJMPZ pointing to a ISUB or ISUBI.
+.XB 0x100:
+Inhibit BIH_RGSET(bih) register optimization and just use curr_entry->regset.
+.XB 0x200:
+Inhibit moving of individual members of a structure.
+.XB 0x400:
+Inhibit deletion of odd global reg obtained from -x 12 256
+.XB 0x800:
+Inhibit LDINC/STINC optimizations.
+.XB 0x1000:
+Inhibit replacement of uplevel variable address load optimization for llvm target.
+
+.XF "13:" 
+Used to turn on experimental inliner techniques.
+.XB 0x01:
+array formal parameters replaced with pointers;
+expressions as arguments allowed.
+.XB 0x02:
+Turn off CG checking of Fortran inlined SC_BASED variable dependency
+checking.
+.XB 0x04:
+used in inliner.c
+.XB 0x08:
+Suppress accelerator error messages with -Mextract.
+.XB 0x10:
+Only available in the dev (under #if DEBUG)
+calls inline_mulh to inline IMULH UIMULH KMULH UKMULH calls into the appropriate
+ILI to get the upper half of integer/i8 signed/unsigned multiplies.
+.XB 0x20:
+Replace memcpy/memset with faster hammer __c_mcopy1/__c_mset1 calls.
+.XB 0x40:
+Replace memset of value 0 with __c_mzero1 on hammer.
+.XB 0x800
+AVAILABLE
+.XB 0x1000
+When the extents of the dummy array and actual argument do not
+match, linearize the subscript expressions; this amounts to generating
+the ilm, INLELEM.
+Normally, the dummy array is expressed as a cray pointee and its
+corresponding pointer is assigned the address of the actual
+argument.
+.XB 0x8000
+Call-site inlining: inliner will inline those call sites where ipa
+auto-inlining has decided to inline. This is in contrast to inline
+all call sites for a given callee in a function if ipa finds at least 
+one call site beneficial to inline.
+.XB 0x20000
+Replace all memset with __c_mset1 in the fast_libc_calls(). This is
+only for an experimental purpose, not for production.
+.XB 0x20000000
+Enable inlining into OpenACC host_data regions.
+.XB 0x40000000
+Enable inlining into OpenMP task regions.
+.XB 0x80000000
+turn on alpha-level experimental features.
+
+.XF "14:"
+Extractor/Inliner.
+.XB 0x01:
+Require actual & dummy arrays to match in type, rather than just the
+size and alignment of their base types.
+.XB 0x02:
+Don't perform the optimization when '&var' is an actual argument.
+The optimization replaces the dereference of the formal argument
+with '&var'.
+.XB 0x04:
+Don't reuse inliner temps across inlinings; this allows more precise IPA
+pointer target analysis (C)
+.XB 0x08:
+Don't extract this function (set by pragma noinline)
+.XB 0x10:
+Run the extractor in the compiler itself; this is used for one-pass IPA
+and IPA-driven inlining.
+.XB 0x20:
+Do inlining during the expand phase, instead of during the parse phase.
+This allows multiple levels of inlining during the compiler without
+multiple levels of extraction.
+.XB 0x40:
+Leave the original names during inlining, instead of changing all names
+to ..inline
+.XB 0x80:
+For Fortran, use IM_FARG for arguments
+.XB 0x100:
+Compress the extract file, using lz.c
+.XB 0x200:
+Share inliner temps for local variables from multiple inlines of 
+the same function (fortran); hopefully, in the near future, will
+be reversing the sense of this XBIT.
+.XB 0x400:
+For C, USED in inliner.c
+.XB 0x800:
+inliner.c PGCPLUS decode_identifer???
+.XB 0x1000:
+Don't automatically create a new ili block if there are calls.
+calls.
+.XB 0x2000:
+Do not mark 'inline' functions as 'static' (this-file-only).
+The default is treat inline like static.
+.XB 0x4000:
+Used with IPA, allow extracting and inlining of functions or subprograms
+with C statics or Fortran SAVE.
+.XB 0x8000:
+Do not automatically mark static functions as this-file-only,
+if extracting for IPA.
+.XB 0x10000:
+Disable global inliner
+.XB 0x20000:
+Enable global ILM module, which reads in all ILMs at once
+.XB 0x40000:
+In the inliner, try to reuse struct/union datatypes and member symbols
+.XB 0x80000:
+In the inliner, implement 'small function' heuristic
+.XB 0x100000:
+Apply compression to the inline file when extracting 'inline' keyword functions.
+.XB 0x200000:
+Extract and inline functions with the 'inline' keyword.
+.XB 0x400000:
+Used with -x 14 0x200000, extract and inline all functions
+.XB 0x800000:
+Used with -x 14 0x200000, when extracting functions with the inline keyword,
+save the extract file, named EXFILE (for debugging).
+.XB 0x1000000:
+Apply libc memset() inlining.  
+.XB 0x2000000:
+For C/C++ extractor, extract ALL symbols, change language from C or D to E
+.XB 0x4000000:
+For Fortran inliner, don't inline if we must reshape array arguments
+with a Cray-pointer style based array.
+.XB 0x8000000:
+For C/C++, also inline IPA-discovered 'tiny' routines.
+.XB 0x10000000:
+for C/C++, increase the block ilm limit from 60,000 to 90,000
+.XB 0x20000000:
+for C/C++, don't extract routines with the INLINE_THIS_FILE_ONLY flag set.
+This is useful for extracting for libraries that we only are going to inline
+across files, like the libstd or libcpp routines.
+.XB 0x40000000:
+Allow IPA-driven inlining of file static functions across files in some cases.
+.XB 0x80000000:
+Don't allow inlining functions into parallel regions.
+.XB 0x10000000:
+Allow functions with statics in C and SAVE in Fortran to be inlined with Minline.
+
+.XF "15:"
+ILI strength reductions or transformations
+.XB 0x01:
+Compute 'x/y' as  'x *(1.0/y)', where x is not a constant & y is a constant;
+also set by -Mnouniform.
+.XB 0x02
+Compute 'x/y/z' as 'x/(y*z)'.
+.XB 0x04
+Compute 'x/y' as  'x *(1.0/y)', (if not IEEE switch & -Mprelaxed=div)
+.XB 0x08
+Disable the sincos transformation
+.XB 0x10
+Relaxed fpmath.
+Enables a set of operations that can be performed using various
+methods, such as Newton's method, that provide reasonable
+approximations to the actual results.
+.XB 0x20
+Do not check cpu type for relaxed fpmath. 
+.XB 0x40
+call mkfunc() instead of mkfunc_cncall() when creating functions as ili
+replacements.
+.XB 0x80
+Don't transform '(double)x <relop> y' into 'x <relop> yy', where y
+is a double constant and can be exactly represented as the float yy.
+.XB 0x100
+Inhibit combining IAMV/KAMV in the operands of an AADD (fortran only).
+.XB 0x200
+-Mnouniform - do not require fp transformations/optimizatons to be
+uniform across simd and scalar generated code; e.g.,
+x/constant -> x * (1.0/constant);
+the vectorizer may hoist an invarant reciprocal, but the residual will
+perform a divide; undo of -Mfprelaxed=div if the recip only has one use,
+etc.
+.XB 0x400
+-Mfprelaxed=intrinsic
+.XB 0x800
+Disable the generation of [SD]CMPLXDIV ILIs, which perform complex
+division using the new representation of complex data types by calling
+the fastmath routines "__f[sv][cz]_div".
+.XB 0x1000
+Disable sorting of the ILI free list after garbage collection.
+.XB 0x2000
+AVAILABLE
+.XB 0x4000
+AVAILABLE
+.XB 0x8000
+AVAILABLE
+.XB 0x10000
+Disable the Newton's appx for single precision sqrt
+.XB 0x20000
+Disable the Newton's appx for single precision recip sqrt
+.XB 0x40000
+Disable the Newton's appx for single precision divide
+.XB 0x80000
+AVAILABLE
+.XB 0x100000
+AVAILABLE
+.XB 0x200000
+AVAILABLE
+.XB 0x400000
+AVAILABLE
+.XB 0x800000
+AVAILABLE
+.XB 0x1000000
+AVAILABLE
+.XB 0x2000000
+AVAILABLE
+.XB 0x4000000
+Do not use the vex/fma4 fast math naming conventions.
+.XB 0x8000000
+Inhibit IEEE compare semantics unless -Kieee is present
+.XB 0x10000000
+Compute divide using the approximating instruction.
+.XB 0x20000000
+Compute sqrt using the approximating instruction.
+.XB 0x40000000
+Compute rsqrt using the approximating instruction.
+.XB 0x80000000
+Experimental ili transformations
+
+.XF "16"
+alternate code for vectorization;
+vectorized code is executed if count is
+greater than n, i.e., the value of x[16].
+
+.XF "17"
+alternate code for software pipelining;
+pipelined code is executed if count is
+greater than n, i.e., the value of x[17].
+
+.XF "18"
+alternate code for unrolling;
+completely unrolled code is executed if count is
+less than or equal to n, i.e., the value of x[18].
+
+.XF "19:"
+Modify optimizations (pragmas/directives)
+.XB "0x01"
+noeqvchk. Don't check equivalences for data dependencies.
+.XB "0x02"
+nolstval. Don't compute last values.
+.XB "0x04"
+split.
+can split subroutine/function calls from loop.
+.XB "0x08"
+notransform (no hlvect); also novector sets this bit
+.XB "0x10"
+norecog (no llvect); also novector sets this bit
+.XB "0x20"
+noswpipe (no recognize)
+.XB "0x40"
+nostream
+.XB "0x80"
+noinvarif. Don't perform loop invariant conditional optimizations.
+.XB "0x100"
+independent loop (forall-independent loop).
+.XB "0x200"
+don't perform tail recursion elimination
+.XB "0x400"
+perform loop vectorisation.
+.XB "Ox800"
+Perform zero trip elimination - will we ever be able to switch the sense?
+.XB "0x1000"
+Allow an induction variable with a nonconstant stride to be 
+used to compute a loop count.
+.XB "0x2000"
+is_invariant:always_executed() - when is_invariant() is called,
+the default is to assume that the fg node containing the ili is
+always executed; if the XBIT is set, assume that the fg node
+is not always executed.
+.XB "0x4000"
+induc.c:while_repl() - allow calls to be present when attempting
+to use hw looping for while loops.
+.XB "0x8000"
+assume that induc.c:max_loop_count() cannot determine the maximum
+value of a loop count.
+.XB "0x10000"
+assume that the loop count after unrolling, returned by
+unroll.c:unrolled_lpcnt(), is large.
+.XB "0x20000"
+don't reassociate adds/mults in the front-end
+.XB "0x40000"
+Allow 'extended range loops' (a node is not within the lexical scope
+of the head and tail nodes) to be countable.  If these types of loops
+must be allowed by default, detection needs to be added to the vectorizer
+and other high level opts (unrolling).
+.XB "0x80000"
+Change zero-trip checks to use the ST122c 'skiplp' instruction.
+.XB "0x100000"
+Assume addresses of dummy array arguments & allocatables/pointers
+are valid.
+.XB "0x200000"
+Don't allow 64-bit int variables as induction variables (TEMPORARY)
+.XB "0x400000"
+Rely on the ADDRTKN flag of static variables being set by the front-end;
+phases after the front-end can check the ADDRTKN flag of statics (PGC).
+.XB "0x800000"
+assume that the subscripts to invariant array references which
+appear in block that do not dominate the tail of the loop
+will not cause an illegal address to be generated.
+.XB "0x1000000"
+only allow reassociation if the terms are variables or constants.
+Reassociation is disabled if XBIT(19,0x20000) is set.
+.XB "0x2000000"
+Inhibit prefetching in induc.
+.XB "0x4000000"
+Don't assume guarded invariant floating point expressions are valid.
+.XB "0x8000000"
+Disable replacing induc's loop count.
+.XB "0x10000000"
+Turn off tail recursion for X86_32,X86_64
+.XB "0x20000000"
+Select the prefetching in induc.c using the implementation which integrates 
+both inductive pointers and array address expressions.
+.XB "0x40000000"
+Disable prefetching for indirect loads. 
+.XB "0x80000000"
+USED.
+
+.XF "20:" 
+Used to affect exception handling:
+.XB 0x01:
+hw has exceptions in 21/22 turned off (default is on)
+.XB 0x02:
+compiler turns off exceptions in 21/22 on program level
+.XB 0x04:
+compiler turns off exceptions in 21/22 on file level
+.XB 0x08:
+compiler turns off exceptions in 21/22 on function level (TBD)
+.XB 0x10:
+compiler turns off exceptions in 21/22 on block level (TBD)
+
+.XF "21:" 
+Used to affect exception handling:
+Active status of individual fp exceptions.
+.XB 0x01:
+all fp exceptions active
+.XB 0x02:
+divide by zero (DIVZ)
+.XB 0x04:
+fp overflow (FOVF)
+.XB 0x08:
+fp underflow (FUNF)
+.XB 0x10:
+fp invalid input (src denormalized, NaN, or inf)
+.XB 0x20:
+fp inexact result (pipe or result denorm, NaN)
+.XB 0x40
+used in cgutil.c for n10
+.XB 0x80
+used in cgutil.c for n10
+
+.XF "22:" 
+Used to affect exception handling:
+Active status of individual integer exceptions.
+.XB 0x01:
+all int exceptions active
+.XB 0x02:
+divide by zero (DIVZ)
+.XB 0x04:
+int overflow (FOVF)
+.XB 0x08:
+int underflow (FUNF)
+
+.XF "23:" 
+Used to affect exception handling (fsr):
+.XB 0x01:
+FTE (floating point trap enable), no flushz
+.XB 0x02:
+FTE, TI, no flushz
+.XB 0x04
+FTE, flushz
+.XB 0x08
+no FTE, flushz
+
+.XF "24:" 
+Used to affect exception handling (traps)
+.XB 0x01:
+-Ktrap=fp (ABI systems only)
+.XB 0x02
+-Ktrap=align (ABI systems only)
+.XB 0x04
+All normal calls are followed by a call to a system routine
+that only modifies R30/R31.
+.XB 0x08
+Ktrap=inv (x86-FCW invalid operation))
+.XB 0x10
+Ktrap=denorm (x86-FCW denormalized operand))
+.XB 0x20
+Ktrap=divz (x86-FCW zero divide)
+.XB 0x40
+Ktrap=ovf (x86-FCW overflow))
+.XB 0x80
+Ktrap=unf (x86-FCW underflow))
+.XB 0x100
+Ktrap=inexact (x86-FCW precision)
+
+.XF "25:" 
+Experimental features of compilers.
+.XB 0x01:
+Turn on alpha-level experimental front-end features.
+.XB 0x02:
+Turn on alpha-level experimental vectorizer features.
+.XB 0x04:
+Turn on alpha-level experimental optimizer features.
+.XB 0x08:
+Turn on alpha-level experimental code generation.
+.XB 0x10:
+Turn on beta-level experimental front-end features.
+.XB 0x20:
+Turn on beta-level experimental vectorizer features.
+.XB 0x40:
+Turn on beta-level experimental optimizer features.
+.XB 0x80:
+Turn on beta-level experimental code generation.
+
+.XF "26:"
+Modify ILI. Was pipe flushing (deprecated)
+.XB 0x01:
+TEMPORARY - enable new math names for complex routines under development
+(XBIT(164,0x800000) must also be set.
+Was "Flush pipes in minimal fashion" (deprecated)
+.XB 0x02:
+When using the new math naming scheme for scalar routines, follow the 'vector'
+ABI instead of the C ABI.  On x64, this will alter passing a complex double
+scalar.
+Was "Full flush of all pipes" (deprecated)
+.XB 0x04:
+used in cgutil.c for n10
+.XB 0x08:
+used in cgutil.c for n10
+
+.XF "27:"
+reserved
+
+.XF "28:"
+Optimizer - modify behavior
+.XB 0x01:
+turn on global reg for region 0 if function exits early - a function exits
+early if there exists a branch to the exit from the 4th (or earlier) block
+of the function.  For region 0 of a function which exits early, new global
+regs are not assigned and any registers which were previously assigned are
+not propagated; goal is to minimize the amount of code prior to the early
+exit.
+.XB 0x02:
+perform complete induction analysis (override attempts to
+exclude certain linear, integer, array references).
+.XB 0x04:
+propagate any registers assignments for a function which was determined to
+exit early.
+.XB 0x08:
+inhibit recognition of min/max pattern ( if (a <rel> b) a = b ).
+.XB 0x10:
+Disables copying of POINTER array to sequential temp array at calls.
+Disables using the descriptor's 'len' field as the final subscript
+multiplier, i.e., assume that the pointer locates a contiguous
+array.
+Enabling this is nonstandard F90.
+.XB 0x20:
+At subroutine call, when passing POINTER array to sequential dummy array,
+we usually copy to a sequential temp.  If this bit is set, a run-time test for
+NULL pointer is inserted, and the temp is not created or copied if it is null.
+Note: passing the NULL pointer is nonstandard, but some other compilers 
+implement this.
+.XB 0x40
+Allow [unsigned] long long variables to be assigned global registers
+for targets, such as the ST100, where the default is to disallow such
+assignments.
+.XB 0x80
+Allow float/double variables to be assigned global registers
+for targets, such as the ST100, where the default is to disallow such
+assignments.
+.XB 0x100
+Allow copy propagation of all exprs.  Currently we disallow costly exprs
+(if the vectorizer is on.)   [ in optutil.c - cp_loop. ]
+.XB 0x200
+Use alternate induc method to reduce induction variables; the
+actual methods are target dependent.
+.XB 0x400
+When inlining Fortran, passing 1D array element to array, use a base pointer
+.XB 0x800
+Do not allow a temp to be assigned to certain types of invariant loads
+if its address computation is "costly"; normally, we do not trade a simple
+load for a load of a temp.
+.XB 0x1000
+Use unique temps when replacing fp constants during invar.
+May be extended to include scalar replacement.
+.XB 0x2000
+Use unique temps when replacing invariant expressions.
+available
+.XB 0x4000
+Disable optimizations fg_opt_comp_one/fg_opt_comp_zero from fgraph.c
+These are designed to remove useless test/use of intermediate variables that hold results of comparisons
+.CS
+cond = (a>b) ;
+if (cond) {
+    ...
+}
+.CE
+will be transformed into
+.CS
+cond = (a>b) ;
+if (a>b) {
+    ...
+}
+.CE
+Thus if variable cond is no longer used it gets eliminated.
+This optimization mainly benefits C++ codes.
+.XB 0x8000
+Inhibit checking for invariant common base pointers.
+.XB 0x10000
+inhibit recognition of the if-then-else pattern
+.XB 0x20000
+inhibit recognition of the if-then pattern
+.XB 0x40000
+inhibit recognition of the if-the-else & if-then patterns when the
+conditional is floating point and the expression are integer or pointer
+.XB 0x80000
+Disable replacing narrow integer scalars with int temporaries
+.XB 0x100000
+Disable recognition of the if-then pattern with FREE* ops (often
+due to post-mod) and replacement of such a pattern with SELECT.
+.XB 0x200000
+Reassociate address computation expressions to improve code floating of
+subexpressions.
+.XB 0x400000
+Do not classify an address constant as costly to compute, such as
+one for computing the address of an external when -fpic for 64-bit
+Costly acons or invariant loads via costly acons may be assigned to
+temp.
+.XB 0x800000
+Exclude all induction pointers used as basepointers in load/store
+operations.
+.XB 0x1000000
+Inhibit combining of invariants in address expressions generated
+for subscripting of fortran arrays.
+.XB 0x2000000
+Restrict -x 28 0x1000000 (combining of invariants ...) to fortran pointers.
+.XB 0x4000000
+Inhibit hlinduc0:do_ptr_branch - create countable loops out of
+pointer-controlled loops
+.XB 0x8000000
+Inhibit hlinduc0:do_ptr_branch - create countable loops out of all
+candidate pointer-controlled loops (aggressive)
+.XB 0x10000000
+Replace loop_cnt with new induction variable even if we cannot determine 
+that init + (loop_cnt * skip) will not overflow.
+.XB 0x20000000
+Do not attempt to SIMD-ize a sequence of reciprocal sqrts (aka the gromacs
+hack).
+.XB 0x40000000
+Experimental invar
+.XB 0x80000000
+Experimental induc
+
+.XF "29:"
+Optimizer - modify behavior
+.XB 0x01:
+For the gromacs optimization on AVX, use avx (256-bit avx)
+.XB 0x02:
+For the gromacs optimization on AVX, use vex (128-bit avx)
+.XB 0x04:
+(C++) inhibit flow.c:delete_unrefd()
+.XB 0x08:
+Inhibit recognition of the if-the-else & if-then patterns when the
+expressions are floating point
+.XB 0x10:
+Inhibit recognition of the if-the-else & if-then patterns for a LHS which
+is not a scalar variable
+.XB 0x20:
+Inhibit recognition of power-of-2 multipliers of induction variables
+appearing as subscripts
+.XB 0x40
+For scalar prefetching (induc.c:prefetch_integrated()), the non-stride-1
+constraint is applied to the candidate's induction variable rather than
+the induction family/master variable.
+.XB 0x80
+Experimental flow.c: treat uses of COMPLEX differently.
+.XB 0x100
+Inhibit the induction branch optimization if a call occurs.
+.XB 0x200
+Inhibit creating countable loops from pointer-controlled loops; does not apply
+when the loop-end condition is a known 'distance' away from the initial value
+of the pointer
+.XB 0x400
+Disable scalar replacement for invariant array references within loops.
+.XB 0x800
+reserved.
+
+.XF "30-39"
+Reserved for low-level vectorizer.
+
+.XF "30:"
+High level vectorizer - maximum size of loop nests to process.
+
+.XF "31:"
+Low-level vectorizer - cache vectors only if strip size >= n.
+(860 only).
+
+.XF "32:"
+Low-level vectorizer - amount of cache used by low-level vectorizer.
+(860 only).
+
+High-level vectorizer - size of on-chip cache (x86 only).
+
+.XF "33:"
+Low-level vectorizer - maximum strip size of loops with non-invariant
+complex vectors.
+
+.XF "34:"
+Low-level vectorizer - modify behavior.
+.XB 0x01:
+Generate mcp calls (FPS option).
+.XB 0x02:
+Streamin/out all linear loads/stores
+.XB 0x04:
+Generate XP calls.
+.XB 0x08:
+Inhibit vector intrinsics recognition.
+.XB 0x10:
+(Sparc only) Don't allow parallel outer loop.
+.XB 0x20:
+Sparc: Don't allow parallel inner loop.
+860: Don't allow parallel loop.
+.XB 0x40:
+(Sparc only) Designate outer loop to be parallel.
+.XB 0x80:
+Sparc: Designate inner loop to be parallel.
+860: Designate loop to be parallel.
+.XB 0x100:
+(860 only) Allocate loop iterations to CPUs cyclically.
+.XB 0x200:
+(mp sparc & 860) Permit automatic parallelization of loops.
+.XB 0x400:
+(860 only) Permit parallel inner loops to contain invariant vectors.
+.XB 0x800
+Last values are computed on the last iteration of a loop.
+.XB 0x1000
+permit innermost loop to be parallelized if parallelizable
+.XB 0x2000
+don't check loop count when parallelizing non-innermost loops
+.XB 0x4000
+disallow to parallelize innermost with conditional reduction
+.XB 0x8000
+set thread number to be constant 2 for dual_core system
+.XB 0x10000
+generate only parallel version for runtime testings
+.XB 0x20000
+generate serial version regarding ncpus setting value 1
+.XB 0x40000
+disallow pipeline parallelization
+.XB 0x80000:
+Ignore any array bounds information when determining if stripmining
+needs to be performed (i.e., assume that array bounds will be violated in
+a vectorizable loop).
+.XB 0x100000:
+nolastdim. Ignore the (declared) extents of an array in blank common
+if the extent of the last dimension is 1 (pgftn-sparc only); directive
+scope is either routine or global (not loop).
+.XB 0x200000:
+in llvect for hammer, disable enhanced array reference alignment testing
+.XB 0x400000:
+(hammer and x8632 only) `#pragma altcode alignment': if possible,
+generate an alternative version of the loop with extra aligned moves,
+guarded by a runtime alignment test.
+.XB 0x800000:
+Set the minimum loop count of innermost loops to 128 for -Mconcur
+.XB 0x1000000:
+Disable the the profitablity check for -Mconcur
+.XB 0x2000000:
+Inhibit the 2nd pass of the high-level vectorizer
+.XB 0x4000000:
+Classify single level loops as innermost for -Mconcur
+.XB 0x8000000:
+Disable multi-level invariant hoisting for loop created by array
+assignment or loop with same loop bounds.
+.XB 0x10000000:
+Disable the generation of altcode whose execution is governed by
+runtime pointer conflict tests.
+.XB 0x20000000:
+Enable the following performance enhancement: on x86 targets that
+support AVX, only perform LRE (i.e. loop-carried redundancy
+elimination) on a loop if it removes at least 10% of the loop's
+real*4, real*8, complex*8 or complex*16 operations.  The rationale for
+this is that LRE forces a loop to be vectorised using xmm registers
+rather than ymm or zmm ones, so if it only removes a small percentage
+of the loop's operations then its benefit may be outweighed by the
+cost of vectorising the loop using smaller vector registers.  For
+example this enhancement gives a speed-up for applu by preventing LRE
+from being performed on the loop at line 1673 of applu.f, for which it
+only removes 2% of the operations.
+.XB 0x40000000
+Allow conditional vectorization containing reductions (experimental)
+.XB 0x80000000
+Disable LLVM vectorization containing SELECT 
+
+.XF "35:"
+Low-level vectorizer - maximum loop iteration count; 0 means
+unknown.
+.XB 0x01:
+Disable limiting number of non temporal stores according to relative alignments's impact
+on write-combining buffer.
+
+.XF "36":
+.XB 0x01:
+Place the vcache area on the stack.
+(860 only).
+.XB 0x02:
+In parallel loops, allocate static area for the vcache.
+(860 only).
+.XB 0x04:
+Beta fast- and/or relaxed- math scalar/vector versions of certain intrinsics.
+.XB 0x08:
+LLVM - disable extended scalar analysis in conditional loops with a
+definition on only one side of the conditional. 
+.XB 0x10:
+LLVM - disable extended conditional vectorization in all loops where the
+predicate size is different than the computational size.
+.XB 0x20:
+LLVM - allow vectorization if multiple lhs data type sizes exist
+       within the inner loop
+.XB 0x40:
+LLVM - don't allow vectorization of DBLE ili
+.XB 0x80:
+LLVM - don't allow vectorization of DFLOAT/IKMV ili
+
+.XF "37":
+.XB 0x01:
+Sparc only -- generate code for VPU.
+.XB 0x02:
+Sparc only -- use old-style parameter block code.
+.XB 0x04:
+Put all loops in llv loop table. With loop scope, the following loop
+will be placed in the llv loop table, even if not parallelizable.
+.XB 0x08:
+Put no loops in llv loop table. With loop scope, the following loop
+will not be placed in the llv loop table, even if parallelizable.
+.XB 0x10
+Insert Meiko polling code into outer loops.
+.XB 0x20
+Allow loops containing stack-based variables to be vectorized.
+.XB 0x80
+Temporary switch - turns of insertion of vsld32 instruction in front
+of certain single precision vector loads.  This instruction is inserted
+to work around a hardware problem.
+.XB 0x100
+Turn off extended scalar expansion
+.XB 0x200
+Turn off calculation of condtitional vectorization possibilities
+.XB 0x400
+Disable llvect from generating vectorization code for conditionals
+.XB 0x800
+Disable llvect from generating masked fdiv fp routine for conditionals
+.XB 0x1000
+Disable conditional vectorization for compound predicates
+.XB 0x2000
+Don't check conditional vectorization masks for all 0's or 1's (short circuiting)
+.XB 0x4000
+Conditional vectorization: turn off extended CSE for code outside current block
+.XB 0x8000
+Conditional vectorization: don't use mask vector intrinsics
+.XB 0x10000
+Check for all 0's and 1's regardless of threshhold value
+.XB 0x20000
+Don't let intrinsic calls prevent short circuiting
+.XB 0x40000
+Treat scalars the old way - NOP analysis not affected by conditional vect
+.XB 0x80000
+Allow chained control dependence with conditional vectorization
+.XB 0x100000
+Allow complex chained control dependence with conditional vectorization
+.XB 0x200000
+Turn off vectorization with assigments to logical compares
+.XB 0x400000
+For llvm compilers, do vectorize max/min operations
+.XB 0x800000
+For llvm compilers, don't construct vector ILI trees with math intrinsic calls
+.XB 0x1000000
+For LLVM compilers, enable vectorization with small ints on rhs
+.XB 0x2000000
+For LLVM compilers, don't allow scalar expansion with vector temps within loops
+.XB 0x4000000
+Native x86 compilers, don't vectorize conditionals with any "OR" predicates`
+.XB 0x8000000
+LLVM compilers, check use counts
+.XB 0x10000000
+LLVM compilers, don't perform newton's method within llvect
+.XB 0x20000000
+Allow CVECT with just one link to flow down this value without merge
+.XB 0x40000000
+LLVM compilers, don't perform vectorization on induction iterators
+.XB 0x80000000
+LLVM compilers, don't allow any store matching to the RHS within add_vili()
+
+.XF "38":
+reserved.
+
+.XF "39:"
+i860 low-level vectorizer: Maximum number of elements over which
+array references may span before they can be combined within a single
+cache vector. The span between A(i+k1) and A(i+k2) is defined to be
+|k1-k2|+1. If this switch is 0, allow any span.
+Hammer and x8632 low-level vectoriser:
+.XB 0x01:
+Don't generate prefetches in vectorised loops or loops that are
+unrolled by the vectoriser.
+.XB 0x02:
+Don't vectorise loops (though the vectoriser can unroll them).
+.XB 0x04:
+Don't unroll a vector loop body.
+.XB 0x08:
+Prefetch one vector iteration ahead.
+.XB 0x10:
+Disable the vectorisation profitability test for real*4 loads and
+stores with (stride != 1).
+.XB 0x20:
+Disable the streaming store optimization.
+.XB 0x80:
+Enable vectorisation and llvect unrolling of loops containing
+intrinsic function calls.
+.XB 0x100:
+Disable all vectorisation profitability tests.
+.XB 0x200:
+-Mnontemporal or -Mmovnt: generate non-temporal stores even in loops
+that are not in memory altcode.  (They're generated by default in
+memory altcode loops.)
+.XB 0x400:
+Disable the optimisation of stride-2 loads and stores.
+.XB 0x800:
+Generate "prefetchnta" instructions instead of the default prefetch
+instructions.
+.XB 0x1000:
+Generate "prefetchw" instructions for arrays that are stored into.
+.XB 0x2000:
+Don't vectorise loops that are "too big".
+.XB 0x4000:
+Generate "prefetcht0" instructions.  (This is the default anyway.)
+.XB 0x8000:
+Disable unrolling of non-vectorised loops by the vectoriser.
+.XB 0x10000:
+Generate "prefetch" instructions instead of the default prefetch
+instructions.
+.XB 0x20000:
+Generate prefetches for loads with any stride, rather than just for
+loads with stride 1 or 2.
+.XB 0x40000:
+Disable the complex_add_loop optimisation.
+.XB 0x80000:
+Don't peel vectorised loops that contain non-stride-1 loads.
+.XB 0x100000:
+Mark an array that has been parallelized as aligned if its initial
+non-parallel address is aligned.
+.XB 0x200000:
+Don't vectorize loops that have a lexically forward anti-flow
+dependence with (<) direction.
+.XB 0x400000:
+In llvect, when checking whether a load and store with different addresses
+conflict, if 'hlconflict' returns 'SAME' we normally change that to 'CONFLICT',
+because the NMEs are not updated by loop unrolling, so 'SAME' is imprecise.
+This flag disables that behavior.
+.XB 0x800000:
+Don't vectorise loops that contain a store to an array element whose
+address is not a linear function of the loop index with a compile-time
+constant stride.
+.XB 0x1000000
+Vectorize loops with a constant small loop count if possible.
+.XB 0x2000000
+Don't generate scalar non-temporal stores.
+.XB 0x4000000
+No induction analysis in the presence of indirect array refs; also checked
+in induc.c to inhibit all induc optimizations on loops that been vectorized.
+.XB 0x8000000
+Use 'movlpd' and 'movhpd' to load and store real*8 stride-2 pairs.
+.XB 0x10000000
+Use multiple registers to accumulate a vectorised reduction, i.e. use
+a different register to accumulate the reduction in each copy of the
+unrolled vector loop body.  By default the same register is used to
+accumulate the reduction in all copies of the unrolled vector loop body.
+.XB 0x20000000
+Double the default number of vector loop unrolls for AMD processors >=
+greyhound.
+.XB 0x40000000
+Don't vectorise or unroll a loop that contains conditional multiple blocks.
+.XB 0x80000000
+Allow vectorizing multiple blocks and 64-bit selects.
+
+.XF "40:"
+High-level vectorizer:  loop-splitting heuristic; number of array loads/stores
+allowed before loop is split.  Default is 20.
+
+.XF "41:"
+High-level vectorizer:  loop-splitting heuristic; number of floating point
+operations allowed before loop is split.  Double precision ops count 2,
+single precision ops count 1.  Default is 40.
+
+.XF "42:"
+High-level vectorizer behavior modification.
+.XB 0x01
+(Obsolete) Inhibit loop distribution and interchange.
+.XB 0x02
+Inhibit breaking cycles of anti-dependences in the Sparc compilers.
+.XB 0x04
+Permit external calls in vectorized loops.
+.XB 0x08
+Inhibit array expansion.
+.XB 0x10
+Disable loop blocking (tiling)
+.XB 0x20
+Disable unroll and jam
+.XB 0x40
+Disable outer loop distribution
+.XB 0x80
+ENABLE  inner loop distribution (NOTICE sense difference here)
+.XB 0x100
+Disable loop interchange
+.XB 0x200
+Perform scalar unroll & jam on loop
+.XB 0x400
+Disable reduction marking in hlv
+.XB 0x800
+Disable scalar replacement in hlv
+.XB 0x1000
+Don't enter hlv_vectorize() for a particular routine
+.XB 0x2000
+Go ahead and perform outer loop distribution on single-nested loops
+.XB 0x4000
+Don't generate strip loop around loop-distributed code
+.XB 0x8000
+Limit vectorization on functions based upon heuristics
+.XB 0x10000
+Allow loop distribution as the only loop transformation
+.XB 0x20000
+Enable loop fusion.
+.XB 0x40000
+Allow loop fusion with calls
+.XB 0x80000
+Disable loop fusion of noninner loops.
+.XB 0x100000
+Disable scalar unroll and jam
+.XB 0x200000
+Disable loop-carried redundancy elimination
+.XB 0x400000
+Loop-carried redundancy elimination: disallow reassociation
+.XB 0x800000
+Loop-carried redundancy elimination: disallow reassociation
+.XB 0x1000000
+For testing: LRE temps do not get CCSYM flag set
+.XB 0x2000000
+LRE: treat array refs as expressions, so a[k] and a[k-1] will be recognized as LREs
+.XB 0x4000000
+LRE: allow modifications in the loop, so a[k]= will not eliminate a[k]+b[k]
+and a[k-1]+b[k-1] from being considered as LREs
+.XB 0x8000000
+LRE: build balanced tree of operands when rebuilding expressions
+should only be used with reassociation
+.XB 0x10000000
+LRE: run vanilla LRE before vectorizer; default is after vectorizer
+.XB 0x20000000
+LRE: run LRE with X heuristic before vectorizer; also runs full LRE after vectorizer
+.XB 0x40000000
+LRE: allow indirection
+.XB 0x80000000
+Enable loop fusion when loop contains array dummy argument read/write
+(default not allowed).
+
+.XF "43:"
+(860) Minimum loop count for an innermost loop to be parallelized if it
+contains a reduction.
+
+.XF "44:"
+(860) Minimum loop count for an innermost loop to be parallelized.
+
+.XF "45:"
+The 'machine number' to use for the datatype table.
+The default is machine zero.
+
+.XF "46:"
+reserved
+
+.XF "47:"
+reserved
+.XB 0x100
+Disable shmem_get inlining.
+.XB 0x200
+Disable inline_small_matmul.
+.XB 0x1000
+Disable dead code and scalar optimization phase.
+.XB 0x2000
+Disable optimization of gather/scatter/copy/overlap-shift communication
+.XB 0x4000
+Disable optimization of hcstart
+.XB 0x8000
+Disable optimization of allobnds
+.XB 0x10000
+Disable optimization of localize-bounds and section
+.XB 0x20000
+Disable optimization of get_scalar
+.XB 0x40000
+Disable optimization of copy communication
+.XB 0x80000
+Disable optimization of gather/scatter communication
+.XB 0x100000
+Disable optimization of overlap-shift communication
+.XB 0x200000
+Enable automatic loop parallelization
+.XB 0x400000
+inline pgf90_sect calls
+.XB 0x800000
+Disable using the lhs of an assignment as the result of
+a call to a use function.
+.XB 0x1000000
+in fe90/outconv, do set the global-size for descriptors even if not global
+and not passed as arguments
+.XB 0x2000000
+in fe90/lowersym, do initialize pointer/sdsc for compiler-generated
+temp pointer arrays
+.XB 0x4000000
+Do fuse foralls even if the RHS is a constant zero;
+by default, we don't fuse these, because we can efficiently turn them into mzero calls
+.XB 0x8000000
+Emit call to pghpf_associated for the ASSOCIATED intrinsic.
+.XB 0x10000000
+Do not call our streamlined/dgemm-like matmul run-time routines.
+.XB 0x20000000
+Disable the optimization of reshape
+.XB 0x40000000
+Do not attempt to dial down the opt level in the f90 frontend
+.XB 0x80000000
+reserved
+
+.XF "48:"
+reserved
+
+.XF "49:"
+Behavior modification.
+.XB 0x1
+Inhibit transformation passes -- directive processing is done.
+.XB 0x2
+Inhibit forall conversion.
+.XB 0x4
+reserved
+.XB 0x8
+Inhibit discarding parentheses.
+.XB 0x10
+Don't include PARAMETER variables when AST expression simplification is
+performed.
+.XB 0x20
+Inhibit communication analyzer and optimizer.
+.XB 0x40
+Allow CM fortran's intrinsics.
+.XB 0x80
+f77 output (pgftn extensions not allowed; Cray POINTERS allowed).
+.XB 0x100
+Target's pointers are 64-bits.
+.XB 0x200
+Normally double precision is twice real; this makes it the same as real.
+Similarly for double complex.
+.XB 0x400
+reserved
+.XB 0x800
+reserved
+.XB 0x1000
+Emit function & line number information for runtime error handling and for
+communication profiling.
+.XB 0x2000
+reserved
+.XB 0x4000
+Source profiling.
+.XB 0x8000
+Cray POINTERs not allowed in the output.
+Valid only if the output is f77 (-x 49 0x80).
+.XB 0x10000
+reserved
+.XB 0x20000
+Disable invariant communication call hoisting.
+.XB 0x40000
+C90 target.
+.XB 0x80000
+reserved
+.XB 0x100000
+Don't pass character constants as arguments to pgf90_loc (e.g., when
+the platform is HP).
+.XB 0x200000
+Inhibit inlining on following loop.
+.XB 0x400000
+F90 output -- kinded constants, pass some intrinsics through.
+.XB 0x800000
+Native REAL is REAL8 and CMPLX is CMPLX16.
+Map double precision constants (0.0d0) to real constant format (0.0e0).
+.XB 0x1000000
+T3D/T3E target.
+.XB 0x2000000
+reserved
+.XB 0x4000000
+reserved
+.XB 0x8000000
+reserved
+.XB 0x10000000
+For POINTERs in commons, place their associated variables near the
+beginning of the common.  This is non/-f90/-f95/-f2003 behavior but was
+our original behavior.
+.XB 0x20000000
+In lowerilm, don't use PLD and PST for load/store of pointer variables
+.XB 0x40000000
+Return the value of complex functions the same as C (e.g. be XLF compatible)).XB 0x80000000
+Native INTEGER is INTEGER*8 and LOGICAL is LOGICAL*8.
+.XB 0x80000000
+reserved
+
+.XF "50:" 
+.XB 0x01:
+i860/apx under DOS (default is under UNIX)
+.XB 0x02:
+native Fortran 
+.XB 0x04:
+Only put out # linenum or #line linenum when the line number changes,
+rather than the default which is when the line number sequence is broken.
+Good for debugging.
+.XB 0x10:
+For Fortran, generate 'verbose' .ilm files.
+.XB 0x20:
+Inhibit any specific DOS end-of-line checks.
+.XB 0x40:
+Enable unconditional_branches() (Fortran): look for conditional branches
+with constant conditions;  remove the branch, remove unreachable code as well.
+.XB 0x100:
+Don't generate pgdbg_stub reference, used for generating shared libraries
+
+.XF "51:"
+In Fortran, determines host specific output options for TINY/HUGE.
+.XB 0x01:
+Defines smallest integer*1 as -HUGE(integer*1).
+.XB 0x02:
+Defines smallest integer*2 as -HUGE(integer*2).
+.XB 0x04:
+Defines smallest integer*4 as -HUGE(integer*4).
+In two's complement arithmetic, 0x80000000 is -2147483648,
+whereas 0x7fffffff is +2147483647; some compilers reserve the value 0x80000000,
+so we have to use 0x80000001 as the smallest integer (this is used
+for MAXVAL initialization).
+.XB 0x08:
+Defines smallest integer*8 as -HUGE(integer*8).
+.XB 0x10:
+Tells the compiler to use a hexadecimal double-word constant to represent
+TINY(1.0d0); the normal value for TINY(1.0e0) is 1.175494351E-38 
+(represented by 0x00800000 in IEEE floating point), and
+TINY(1.0d0) is 2.22507385850720138E-308
+(represented by 0x0010000000000000 in IEEE).
+However, the IBM xlf compiler (and perhaps others) will round a value of
+2.22507385850720138E-308 to zero; it will accept the 
+z'0010000000000000' syntax and will then use this and print it as the
+correct value (go figure).
+.XB 0x20:
+Disallow REAL/DOUBLE PRECISION/COMPLEX in typeless pgi predefined
+functions AND, OR, EQV, NEQV, COMPL, and SHIFT.
+.XB 0x40:
+Keeps 'TINY' and 'HUGE' even without F90 output.
+.XB 0x80
+When generating code for reductions, don't generate quad-precision
+accumulators for double precision arguments.
+
+.XF "52:" 
+Host dependent:
+.XB 0x01:
+Fortran: Complex in Common blocks must be aligned to double-word boundaries.
+.XB 0x02:
+AVAILABLE
+.XB 0x04:
+Fortran: do linearize arrays.
+(used to be don't linearize, but we reversed the sense of the bit).
+.XB 0x08:
+Do use the old method of filling in .A0000 variables for adjustable
+array bounds temps.
+.XB 0x10:
+reserved
+.XB 0x20
+reserved
+.XB 0x40
+Generate unified .mod module output file.
+.XB 0x80
+Front-end generates the linkage names for module subrprograms (still
+experimental)
+
+.XF "53:" 
+.XB 0x01:
+Require pointer target analysis or interprocedural pointer disambiguation
+to be enabled when testing nme loop safeness (optutil.c, is_nme_loop_safe).
+.XB 0x02:
+Enable intraprocedural pointer target analysis.
+.XB 0x04:
+Remove points-to information before schedule().
+.XB 0x08:
+Build the LP_PLOADS (loop pointer loads) structure when doing flow analysis
+on loops, allowing more pointer target analysis on loops.
+.XB 0x10000
+Disable checking
+the ptr refs information collected in flow for determining
+if there are any pointer conflicts with respect to the ansi alias
+rules.
+.XB 0x20000
+Enable creating DEFS for calls whose uses will be loads of variables
+that can be modified by calls.
+.XB 0x40000
+is_sym_parsect_safe() - only consider private variables safe in parallel
+sections; inhibit more aggressive checks.
+.XB 0x80000
+Enable ipa pointer alias analysis
+.XB 0x100000
+Enable ipa structure reaggregation optimization
+.XB 0x200000
+Don't use cgr_modifies() (optutil.c:is_static_call_safe()).
+.XB 0x400000
+Disable propagation of certain IPA pointer information from actual arguments
+to ..inline temporaries when a call-site is inlined.
+
+.XF "54:" 
+More Flang behavior modification
+.XB 0x01:
+Enable full Fortran 2003 allocatable attribute regularization 
+.XB 0x02:
+don't assume assumed-shape arrays are stride 1
+.XB 0x04:
+No 2003 allocatable assignment semantics for allocatable components
+.XB 0x08:
+Allocate automatic arrays on the stack instead of the heap by using
+an alloca-like method (affects the frontend)
+.XB 0x10:
+Fortran Back-End only:
+Where possible, Implement the alloca-like method by inlining alloca;
+otherwise, call our 'builtin' alloca routine (affects the backend).
+Note that XBIT(54,0x08) must be set.
+.XB 0x10:
+Fortran Front-End only:
+Use pre-F2008 STOP command semantics; do not return integer values 
+from STOP commands as the program exit status.
+.XB 0x20:
+Assume that dummy arguments declared EXTERNAL are Fortran routines
+that were compiled with Flang.
+.XB 0x40:
+Enable contiguity pointer checks on pointer assignments and on actual arguments
+inside callees.
+.XB 0x80:
+Enable contiguity pointer checks at call-sites.
+.XB 0x100:
+Use an alternate contiguity pointer check inline that checks whether the
+pointer target's descriptor flags have __SEQUENTIAL_SECTION set and
+whether the object's data type length match the descriptor's data type
+length. This check is experimental and intended for pointer
+assignments and actual arguments inside callees. This check cannot currently
+be generated at a call-sites. The XBIT(54, 0x40) must also be enabled. If
+XBIT(54, 0x80) is enabled, then we perform the contiguity check at
+call-sites using a library routine. Note: In the case of an optional argument,
+the inline check will also check whether the argument is present.
+.XB 0x200:
+When checking contiguity (using XBIT(54,0x40), XBIT(54,0x80), XBIT(54,0x100)), 
+do not flag null pointer targets as noncontiguous. 
+
+.XF "55:" 
+.XB 0x01:
+AVAILABLE
+.XB 0x02:
+reserved
+.XB 0x04:
+AVAILABLE
+.XB 0x80:
+Don't call update_shape_info() when assumed-shape array is marked target.
+.XB 0x100:
+Try to reduce array copies in argument passing 
+.XB 0x200:
+AVAILABLE
+
+.XF "56:"
+Algebraic transformation; llvect overflow
+.XB 0x01
+unused
+.XB 0x02
+Eable the floating-point factoring transformation.
+.XB 0x04
+Eable the integer factoring transformation.
+.XB 0x08
+Disallow prefetchnta auto-generation in llvect.c
+.XB 0x20
+Disable putting term to the end of each group in factoring_tm() 
+when breaking them into 2 groups to keep them in the same order as 
+before as much as possible in algetrans.c.
+.XB 0x40
+This x-flag is set by the command-line option -Mvect=simd:128.  It
+restricts vectorisation to a vector length of 128 bits even if the
+target processor supports larger vector lengths.
+.XB 0x80
+Enable multiple outer loop unroll_and_jam.
+.XB 0x100
+This x-flag is set by the command-line option -Mvect=simd:256.  It
+asserts that the target processor supports SIMD instructions with a
+vector length of at least 256 bits and restricts vectorisation to 256
+bits even if the target processor supports larger vector lengths.
+.XB 0x200
+Do not replace a scalar expression of the form (+-(a * b) +- c) or
+(c +- (a * b)) by a scalar FMA instruction if the product (a * b) has
+more than one use.
+.XB 0x400
+Do not replace a vectorised expression of the form 
+(+-(a(i) * b(i)) +- c(i)) or (c(i) +- (a(i) * b(i))) by a vector FMA
+instruction if the product (a(i) * b(i)) has more than one use.
+.XB 0x800
+This x-flag is set by the command-line option -Mvect=simd:512.  It
+asserts that the target processor supports SIMD instructions with a
+vector length of at least 512 bits and restricts vectorisation to 512
+bits even if the target processor supports larger vector lengths.
+.XB 0x80000000
+If a user-written prefetch inhibits vectorization, do not attempt to replace
+its address expression with the address of a matching array reference.
+
+.XF "57:"
+Fortran behavior modification
+.XB 0x01
+Replace "$" with "_" in symbols occurring within the debug output file.
+.XB 0x02
+Disallow integer*8/logical*8.
+.XB 0x04
+Disallow real*16
+.XB 0x08
+Disallow complex*32.
+.XB 0x10
+Map REAL*16 and REAL(16) to REAL*8,
+and map COMPLEX*32 and COMPLEX(16) to COMPLEX*16.
+Map kinded real constants (0.0_16) to appropriate kinded constants (0.0_8)
+as appropriate.
+Give a warning in each case.
+.XB 0x20
+For F90, export all symbols from front end to back end, as with -debug,
+without creating -debug file.
+.XB 0x40
+For source to source compiler with F90 output, dollar signs and underscores are
+(by default)
+disallowed.  Setting this switch allows them (with a warning).
+.XB 0x80
+When using base/offset (instead of cray pointers), for formal arguments,
+don't use a $bs array, instead use the original variable as the formal argument.
+This prevents problems of having a local derived type that is unaligned with
+respect to the dummy argument.
+.XB 0x100
+For native compilers, renumber lines to be sequential as generated.
+.XB 0x200
+Print "DOUBLE COMPLEX" as "COMPLEX*16" (for Sun's F90 compiler).
+.XB 0x400
+Set INHERIT bit for dummy arrays with TARGET attribute that don't have 
+explicit distributions.
+.XB 0x800
+Print -128_1 as (-127_1-1_1), and similarly for _2, _4, _8 types.
+This is for some compilers that treat -128_1 as negative 128_1, which overflows.
+.XB 0x1000
+Print integer*8 with _8 suffix, even if not 'f90output'.
+.XB 0x2000
+remove unused variables from source to source output
+.XB 0x4000
+don't allow an ac-do-variable to be in limit expression of an implied-do-loop
+.XB 0x8000
+Don't replace references to the pghpf_ commons with other values (constants,
+static addresses, etc.); e.g., the value of an 'absent' argument was
+represented by &pghpf_0_; now, it's just 0.
+.XB 0x10000
+Don't generate pghpf_copy_in/copy_out calls for assumed-shape arguments.
+Instead, use the descriptors as passed in directly.
+For Fortran.
+.XB 0x20000
+Don't generate pghpf_ptr_in/ptr_out calls for pointer arguments.
+Use the pointer and descriptor as passed in directly.
+For Fortran.
+.XB 0x40000
+For F90, generate pghpf_template/pghpf_instance calls in host subprograms for
+all globals and host arrays that MIGHT be used in the subprogram.
+.XB 0x80000
+Only for F90, pass pointer actual to pointer dummies as the pointer itself,
+eliminate the pghpf_ptr_in/pghpf_ptr_out calls in the callee.
+.XB 0x100000
+For F90,
+when passing a continuous section to a subroutine,
+don't call pghpf_sect, instead call _template and build a new template.
+This allows the template creation routine call to float out of a loop.
+.XB 0x200000
+For F90, when passing a section to a subroutine, pass the address of the
+first element of the section, not the starting address of the array.
+Requires building the right section descriptor.
+.XB 0x400000
+For F90, don't try to share section descriptors for arrays,
+build a new section descriptor for each array.
+.XB 0x800000
+Set PDALN field for arrays in module common blocks.
+.XB 0x1000000
+Do not apply any PDALN (pad & align) values to common block members.
+.XB 0x2000000
+Don't perform additional padding beyond PDALN for module common blocks.
+.XB 0x4000000
+Special code for Rice CAF support.
+Recognize pgi_get_descriptor and pgi_set_descriptor functions.
+.XB 0x8000000
+Do not call lighter-weight alloc/dealloc functions for automatic
+arrays, (... hope to expand this list to include compiler-created
+allocatable temps ...).
+.XB 0x10000000
+For 32-bit, do not check the PDALN field of module-created commons to
+to set their default alignment 16-byte; PDALN is set by module.c (fe90)
+and checked in f90's assem.c
+.XB 0x20000000
+Do not inline PRESENT.
+.XB 0x40000000
+in outconv, generate value-arguments to pgf90_template[123]v routines
+even for 64-bit compilers
+.XB 0x80000000
+Do not make the default for the allocate size argument a 64-bit integer
+(64-bit targets only).
+
+.XF "58:"
+Fortran behavior modification
+.XB 0x01:
+Cray-style POINTERs allowed, but the pointer objects may not
+be character (e.g., Cray's f77 compilers).
+Valid only if the output is f77 (-x 49 0x80).
+.XB 0x02:
+caller mapping, if remapping occurs, caller would have explicit interface.
+.XB 0x04:
+SERIAL_ONLY directive: the program unit will only be called from
+serial regions.
+.XB 0x08:
+PARALLEL_ONLY directive: the program unit can only be called from
+parallel regions.
+.XB 0x10:
+PARALLEL_AND_SERIAL directive: the program unit can be called from both
+parallel and serial regions.
+.XB 0x20:
+no copy_in and copy_out inside callee.
+.XB 0x40:
+reserved
+.XB 0x80:
+Generate shared-memory communications.
+.XB 0x100:
+Enables CRAFT features.
+.XB 0x200:
+Create character constants for FORMATs.
+.XB 0x400:
+ON HOME clause of INDEPENDENT loops cannot be overridden.
+.XB 0x800:
+is f77 (-x 49 0x80).
+.XB 0x1000:
+Set if this is an F90 compiler; only extrinsic F90/SERIAL allowed.
+.XB 0x2000:
+Default extrinsic model is LOCAL
+.XB 0x4000:
+Default extrinsic model is SERIAL
+.XB 0x8000:
+Default extrinsic language is F77
+.XB 0x10000:
+Pass F90 pointer variables through to the back end, I think.
+.XB 0x20000:
+This is used for the Fortran compiler; 
+the Fortran compiler allocates temporary arrays (such as for WHERE statements)
+to the full size of the aligned array, so the temporary array will be 
+distributed and aligned to that array.
+The Fortran 90 compiler should not do that, and this flag disables that;
+when set, temporary array sizes will come from the array shape.
+.XB 0x40000:
+Cray-style POINTERs allowed, but the pointer objects may not
+be derived type (e.g., Cray's f77 compilers).
+Valid only if the output is f77 (-x 49 0x80).
+.XB 0x80000:
+Fortran - for the compiler-created module commons,
+do not prepend an underscore.
+.XB 0x100000:
+Compiler owned module.
+.XB 0x200000:
+Revert to previous behavior of including module name in link name of bind(C) routine.
+.XB 0x400000:
+Don't make a copy of assumed-shape array arguments if the callee has it marked
+as target.
+.XB 0x800000:
+Don't attempt to call the descriptor-less read/write I/O function of an array.
+.XB 0x1000000:
+Disable the use of rhs constant bound for forall loop:-
+When converting array assignment to forall if lhs bound is not constant,
+check array on rhs if it has constant bound and use to make forall
+loop bound.
+.XB 0x2000000:
+AVAILABLE
+.XB 0x4000000:
+AVAILABLE
+.XB 0x8000000:
+For Fortran, don't expand pointer references with multiply by section stride
+and add section offset in each dimension (pointer_squeezer) in fe90;
+do perform this in f90 back end
+.XB 0x10000000:
+used for ??? (outconv.c:convert_output())
+.XB 0x20000000:
+For Fortran, don't replace alloc calls with calloc calls
+when allocating derived type objecs containing a pointer member.
+.XB 0x40000000:
+For F90 native, don't add multiply-by-section-stride
+and add-section-offset
+requires modified runtime to fold these into the linear offset
+and linear stride
+.XB 0x80000000:
+When checking if a pointer lhs in a  forall has a scatter dependency, revert
+to the old/conservative method where any array used in the lhs' subscripts
+causes a conflict.
+
+.XF "59:"
+.XB 0x01:
+Loop-scope pragmas and directives applied to loops affect all nested loops.
+.XB 0x02:
+Ignore all pragmas and directives (no message is generated).
+.XB 0x04:
+Allow the 'mem' pragmas/directives.
+.XB 0x08:
+Allow block statements in the scope of OpenMP and OpenACC directives.
+
+.XF "60:" 
+Used to affect code generation when -debug is used.
+Turning all these on will produce code under -debug that
+is 'nearly' identical to that without -debug.  Especially
+valuable for the higher optimization levels.
+.XB 0x01:
+fill delay slot of delay branch.
+.XB 0x02
+do not fill delay slot of delay branch.
+
+.XF "61:"
+Used to affect general delay slot filling for sparc.
+.XB 0x01:
+(DON'T) fill unconditional delay slots (IL_JMP,...)
+.XB 0x02:
+(DON'T) fill delay slots for ISUBI, BIGTI ..,0  combos
+.XB 0x04:
+General delay???
+.XB 0x08:
+used in cgasm.c
+.XB 0x10:
+used in cgasm.c
+.XB 0x20:
+used in cgasm.c
+.XB 0x40:
+used in cgasm.c
+.XB 0x80:
+used in cgasm.c
+
+.XF "62"
+General code gen mods
+.XB 0x01
+Targets of branches can execute multiple instr instead of just 1.
+.XB 0x02
+Change ICJMPZ into ICMPZ1...ICJMPZ1.
+.XB 0x04
+Inhibit MAX/MIN optimization whereby the results of the MAX/MIN
+are stored directly within ili template.
+.XB 0x08:
+Generate position-independent code
+
+.XF "63"
+Used to pass opt level to CUDA back end code generator.
+
+.XF "64"
+Controls code straightener;
+the lower 8 bits are used as a branch probability percentage 
+(must be between 50 and 100) to be treated as high percentage;
+if it is below 50, a compiled-in default is used, and >100 is treated as 100
+(essentially disabling straightening).
+
+The rest of the word is used as the minimum block size to try to
+straighten out, that is, the block size which is more profitable to
+leave in place (perhaps to predicate) that to avoid branching over.
+
+.XF "65"
+
+.XF "66"
+Used by DSP function expansion, ipa, etc.
+.XB 0x01:
+Enable expansion of long long intrinsics by dspfunc
+.XB 0x02:
+Remove constant pointer arguments made redundant via IPA.
+.XB 0x04:
+Test bit for IPA
+.XB 0x08:
+Externalize locals or global statics that are used as precise unique
+pointer targets, to allow those arguments to be removed.
+.XB 0x10:
+Remove constant integer arguments made redundant via IPA.
+.XB 0x20:
+Optimize which arguments get removed:
+for st100, don't remove all pointer arguments, only those in excess of three.
+.XB 0x40:
+IPA: automatic assign variables to SDA area
+.XB 0x80:
+IPA: automatic assign variables to TDA area
+.XB 0x100:
+Internal use only: for DSP user intrinsics, generate table
+of instructions that might be matched.
+.XB 0x200:
+For user-defined intrinsics, prefix __ to name, convert to lower case,
+like the DMD intrinsics.
+.XB 0x400:
+Disable Scalar Replacement optimization (no chains will be generated and
+no code generation for accelerator region)
+.XB 0x1000:
+Use 'old' integer array dependence test
+.XB 0x2000:
+IPA: propagate qalignment to dummy pointers
+.XB 0x4000:
+Recognize #pragma ipa
+.XB 0x8000:
+Recognize #pragma ipofile, and halt compile just after parser (used
+to create ipofiles for library routines)
+.XB 0x10000:
+Propagate information about function calls, whether function modifies
+globals/statics, etc.
+.XB 0x20000:
+Propagate user assignments of globals to SDA/TDA.
+.XB 0x40000:
+reserved
+.XB 0x80000:
+Use old method in dspfunc to determine whether to assign an intrinsic
+argument to a temp variable
+.XB 0x100000
+For IPA argument removal, don't actually remove the argument
+.XB 0x200000
+ST100: For user-defined intrinsic creation, be silent.
+X86: when running with #pragma ipofile, prepend a character to the ipofile name.
+.XB 0x400000
+Instead insert check code to check that the removed argument actually 
+receives the value that IPA propagates; use with -x 66 0x100000
+.XB 0x800000
+Don't rename functions that have arguments removed
+.XB 0x1000000
+Simple Fortran 90 pointer disambiguation
+.XB 0x2000000
+allow .xrodata/.yrodata = bank assignment for CONST data
+.XB 0x4000000
+Fortran 90 assumed-shape dummy argument shape-propagation
+.XB 0x8000000
+allow RODATA to be placed in SDA/TDA
+.XB 0x10000000
+Don't mangle function names
+.XB 0x20000000
+Use small IPA export protocol.
+.XB 0x40000000
+datadep.c, disable Fortran based-array conflict addition for unknown base vars
+.XB 0x80000000
+Use the 'optimized' datatype for a called function
+
+.XF "67:"
+Branch optimizations.
+.XB 0x01
+Eliminates serially nested redundant conditionals.
+.XB 0x02
+Performs structure transposition optimization.
+.XB 0x04
+Performs loop peeling and loop index splitting optimizations.
+.XB 0x08
+Performs more branch elimination optimization.
+.XB 0x10
+Disable peephole redundant instruction elimination.
+.XB 0x20
+Performs structure transposition optimization unconditionally.
+.XB 0x40
+Performs loop invariant imul strength reduction optimization.
+.XB 0x80
+Replaces movsd with movlpd in certain loops.
+.XB 0x100
+Turn off invarif_merge invariant if analysis
+.XB 0x200
+Performs conditional loop invariant hoisting.
+.XB 0x400
+struct transposition - when transpose_struct_ili() recurses for an
+AADD, pass the AADD as the parent of its left operands instead
+of the AADD's parent.
+
+.XF "68:"
+Multiple language implementation-defined behavior modifications.
+.XB 0x01
+Assume large arrays: implies that the array bounds information
+will be stored as 64-bit integers and subscripts expressions
+are 64-bit; also, the macro BIGOBJ must be defined.
+.XB 0x02
+For large arrays, make the return data type of size, lbound, and
+ubound integer*8; the usual return type is default integer.
+.XB 0x04
+Disable assignment of type descriptor to an allocatable/pointer descriptor.
+By default, we will assign a type descriptor to an allocatable/pointer
+descriptor for all allocatable/pointer derived type objects. This is required
+to support F2003 features. However, if F2003 features are never used 
+then this XBIT could be used to eliminate an extra assignment when we set
+up the allocatable/pointer descriptor. This XBIT will also disable creation
+of type descriptors for base types.
+.XB 0x08
+Automatically put non system and non constant global and static variables
+that are not TLS in the TLS or ETLS if the ETLS switch is set.
+.XB 0x10
+Use ETLS. As a result, it puts threadprivates in ETLS at the ETLS_OMP
+level, and it modify the 68,0x08 switch privatization by putting the symbols
+auto-privatized at the ETLS_TASK level.
+.XB 0x20
+Fortran character length for 64-bit target is integer*8 by default.
+.XB 0x40
+Use TLS to implemement OpenMP threadprivates instead of TP vectors. Has no
+effect if the ETLS switch is set.
+.XB 0x80
+Allow non-standard F2003 type bound procedure calls of the form z = x%foo
+(i.e., assume missing parenthesis as an empty arg list).
+
+.XF "69:"
+SMP implementation-defined behavior modifications.
+.XB 0x01:
+Don't recognize OpenMP directives (-Mnoopenmp).
+.XB 0x02:
+Don't recognize SGI directives (-Mnosgimp).
+.XB 0x04:
+For block-static parallel do/for, make the thread's loop count a multiple
+of a value sufficient to keep the alignment of arrays the same as their
+alignment when serial.
+.XB 0x08:
+Default schedule is dynamic (the normal default is static).
+.XB 0x10:
+Default schedule is guided.
+.XB 0x20:
+Default schedule is runtime.
+.XB 0x40:
+P & V functions specifically for unnamed critical sections.
+.XB 0x80:
+RESERVED for threadprivate-tls work.
+.XB 0x100:
+Cache align & pad semaphore variables.
+.XB 0x200:
+Allocate threadprivate data in parallel, i.e., a thread's copy
+will hopefully be local to the thread (call _mp_cdeclp()).
+.XB 0x400:
+Use the 'fair' schedule as the default static schedule for parallel
+do loops in pgf90.
+.XB 0x800:
+linux 64 C++ : revert to .rodata sections, instead of linkonce.r sections for
+jump tables in weak(templated) functions
+.XB 0x1000:
+Disable new OpenMP atomic and reduction implementation.
+Currently new OpenMP atomic is enabled with LLVM target only.
+.XB 0x2000:
+Available
+.XB 0x4000:
+Available
+.XB 0x8000:
+Available
+.XB 0x10000:
+Add trace points for the mp/omp constructs.
+.XB 0x20000:
+Unconditionally generate prtcnt.
+.XB 0x40000:
+Execute tasks immediately 
+.XB 0x80000:
+In the outliner used for KPMC openmp regions, when filling the argument
+.XB 0x100000:
+Enable nodepchk for simd construct/clause.
+
+.XF "70-79:"
+RESERVED FOR ALTERNATE CODE GENERATION
+
+.XF "70:"
+Used to effect alternate code generation
+.XB 0x01:
+Generate zero stride check when non-constant stride is used
+in the basepointer optimization (opt >= 3)
+.XB 0x02:
+Check subscripts.
+.XB 0x04:
+Check null pointers (f90).
+.XB 0x08
+Linearize arrays, and remove distributed members.
+.XB 0x10
+Linearize arrays, do not remove distributed members.
+.XB 0x20
+reserved
+.XB 0x40
+Don't call redundant subscript removal - removes common subscript expressions to
+temps, floats out of loops, etc.
+.XB 0x80
+For ST100 -small, generate two versions of each function, one in -gp32, one in
+-gp16 (unless disabled for some other reason).
+.XB 0x100
+For ST100: Disable the H/W Loop check to determine if -small will generate two 
+versions of the same function. By default, if a H/W loop uses a GP32 only HW 
+loop (which is anything other than 2) then we only generate this function in 
+GP32. Enabling this XBIT causes -small to always generate a GP16 and a GP32 
+version.
+.XB 0x200
+in redundant subscript removal - also remove redundancies in basic blocks
+.XB 0x400
+for PGF90, call sectfloat, float section descriptor calls out of loops
+.XB 0x800
+for PGF90, in sectfloat, floating section descriptor calls out of loops,
+also look at non-DO loops
+.XB 0x1000
+in flow.c, allow constant propagation of HCCSYM symbols
+.XB 0x2000
+in optimize.c, for PGF90, set -x 70 0x1000 around the call to flow()
+.XB 0x4000
+in optimize.c, remove empty loops
+.XB 0x8000
+Generate 'unified binary', that is, AMD and Intel binaries in one
+.XB 0x10000
+Generate 'self-debugging' binary, that is, one with -g and no opt, with
+with regular options
+.XB 0x20000
+When generating multiple versions of a function, generate each into a 
+different .text section.
+.XB 0x40000
+Use the old unified-binary-version selection method
+.XB 0x80000
+When generating unified binary, generate two copies of version 1.
+(for debugging)
+.XB 0x100000
+When generating unified binary, generate two copies of version 2.
+(for debugging)
+.XB 0x200000
+When inlining code for F90 sum-like reduction intrinsics,
+don't use a temp if the argument is 'simple-enough' to evaluate in-line,
+and the DIM argument is one.
+.XB 0x400000
+When inlining code for F90 sum-like reduction intrinsics,
+don't use a temp if the argument is 'simple-enough' to evaluate in-line,
+regardless of the DIM argument.
+.XB 0x1000000
+Don't expand reductions with expression arguments and DIM=1 inline.
+.XB 0x2000000
+Don't bother to fill in the runtime pointer field of the section descriptor, 
+unless debug set set.
+.XB 0x4000000
+for F90, in exp_ftn.c, always subtract zbase*size from array base
+even if zbase or size is not a constant.
+for F90, in func.c, don't expand complex dot_product inline
+.XB 0x8000000
+in fe90/redundss.c, don't remove subscripts from non-pointer arrays
+.XB 0x10000000
+For unified binary, disable culling
+.XB 0x40000000
+Enable complex operation; add, subtract, multiply, etc., as a single complex 
+operation instead operating on 2 parts.
+.XB 0x80000000
+WIN DLL target where pgf90 generates indirections for its own
+commons which are shared between the run-time and the generated
+code; pointers are generated by the compiler and are filled in
+upon program startup.
+For the MS-method of DLL (the default for hammer as of 6.0), these
+commons are simply imported.
+
+.XF "71:"
+Used to affect candidate list creation.
+.XB 0x01:
+Make ili containing frcp appear to have standard latency + 1.
+.XB 0x02:
+Make ili containing frcp appear to have standard latency + 2.
+.XB 0x04:
+Make ili containing frcp appear to have standard latency + 4.
+.XB 0x08:
+Make ili containing frcp appear to have standard latency + 8.
+.XB 0x10
+Create breadth first candidate list.
+
+.XF "72:"
+Used to affect Scheduling of ili for link predecessors.
+.XB 0x01:
+Make ili containing frcp appear to have standard latency + 1.
+(On the i860, it is frcp; on the SuperSparc it is fpop result).
+Enable the dag scheduler for X86_64 & X86_32.
+.XB 0x02:
+Make ili containing frcp appear to have standard latency + 2.
+(X86_64 & X86_32) EM64T heuristic
+.XB 0x04:
+Make ili containing frcp appear to have standard latency + 4.
+(X86_64 & X86_32) EM64T heuristic
+.XB 0x08:
+Make ili containing frcp appear to have standard latency + 8.
+.XB 0x10000:
+(X86_64 & X86_32) Don't check for profitability.  Presumably,
+this flag will be used to rule out performance regressions
+due to throttling the scheduler.
+
+.XF "73:"
+Used to affect Scheduling of ili for non-link predecessors.
+.XB 0x01:
+Make ili containing frcp appear to have standard latency + 1.
+.XB 0x02:
+Make ili containing frcp appear to have standard latency + 2.
+.XB 0x04:
+Make ili containing frcp appear to have standard latency + 4.
+.XB 0x08:
+Make ili containing frcp appear to have standard latency + 8.
+
+.XF "74:"
+Fadd and Fmul handling.
+.XB 0x01:
+Make stores off of these fadd,dadd,fmul and dmul operations delay
+by one more cycle in single-operation mode.  This should allow
+another fadd or fmul to begin earlier.
+.XB 0x02:
+Allow dualops that take outputs from the fadder and feed the data
+into the fmul through a register and not a direct data path.
+This caused a problem in DYNA?? and is useful for 33MHz chips.
+mi2tpa instruction.
+
+.XF "75:"
+Used for pipelined load selection
+.XB 0x01:
+Change the first ldinc
+
+.XF "76:"
+Used to affect scheduling technique
+.XB 0x01
+Do not use the default scheduling scheme for the Sparc.
+Currently (12/27/93), the default is XBIT(83,2) (i.e. psched_ili()).
+.XB 0x02
+Software Pipeline the instructions.
+.XB 0x04
+Change LDword to LDSP when possible.
+.XB 0x08
+Schedule next ili after last ili scheduled instead of as early as
+possible.
+
+.XF "77:"
+Used to affect preemption and spilling.
+.XB 0x1:
+Don't spill constants, just reload.
+.XB 0x2:
+Turn on expermimental spilling.
+.XB 0x4:
+(ST100 only) In a block containing an extended asm statement, any
+argument registers (r0-3, p0-2) that are in the asm statement's
+clobber list are removed from the scratch register list.  N.B.: At the
+time of writing (11/19/02) this has not been implemented.  Instead an
+alternative way of handling clobbered argument registers has been
+implemented, namely by preempting them if they are in use, which is
+enclosed in the condition "if ( ! XBIT(77,4))".
+
+.XF "78:"
+Used to affect spilling of registers:
+.XB 0xf:
+Number of ir registers to spill == 0xf (default is 3).
+.XB 0xf0:
+Number of sp registers to spill == (0xf0 >> 4) (default is 3).
+.XB 0xf00:
+Number of dp registers to spill == (0xf00 >> 8) (default is 3).
+.XB 0xf000:
+used in cgregmgr.c
+
+.XF "79:"
+Used to CSE of a DP load.  This is hardwired at a distance of
+16 linear ili.  If you want to CSE always, then just supply a
+value of 255.  If you never want to CSE a DP load, then
+supply a value of 0.
+.XB 0x01:
+used in cglinear.c
+.XB 0x02:
+used in cglinear.c
+.XB 0x04:
+used in cglinear.c
+.XB 0x08:
+used in cglinear.c
+.XB 0x10:
+used in cglinear.c
+.XB 0x20:
+used in cglinear.c
+.XB 0x40:
+used in cglinear.c
+.XB 0x80:
+used in cglinear.c
+
+.XF "80:"
+Sparc/X86 Versions
+First byte reserved for the sparc; second byte reserved for the X86.
+.XB 0x01:
+Version 8 (has smul, umul, sdiv, udiv instructions + version 7)
+.XB 0x02:
+Version 7 (has sqrt instr.)
+.XB 0x04:
+Version 9
+.XB 0x100:
+P6-only
+.XB 0x200:
+P6-optimized but doesn't use P6-only code unless 0x100 set
+.XB 0x400:
+Following unconditional branch, align code on 16-byte boundary
+.XB 0x800:
+Don't generate store-load sequence to round floats before conversion to int.
+.XB 0x1000:
+Interleave f.p. operations using FXCH; a P5-specific optimization
+.XB 0x2000:
+Don't eliminate floating pt. spilling; even right after a fp load from mem.
+.XB 0x4000:
+Don't pre-allocate argument space, always push arguments onto stack
+.XB 0x8000:
+Issue the 'CLD' instruction (clears the direction flag, DF) when generating
+the rep-movestring instruction sequence.
+.XB 0x10000:
+Don't use the standard prolog; use our own variety
+.XB 0x20000:
+perform a runtime check to assure internal floating point stack consistency;
+at the beginning of each routine and after all calls (not QJSR or CCSYM)
+.XB 0x40000:
+don't put in argument checking code for sin, cos, and tan
+.XB 0x80000:
+use .byte instead of fcom and fcmov instructions (for old x86 assemblers)
+.XB 0x100000:
+disable GH tuning for scalar conversion merge dependencies.
+.XB 0x200000:
+disable GH tuning to eliminate merge dependencies on movhpd, movlhpx, movhlpx loads.
+.XB 0x400000:
+AVAILABLE
+use cvttsd2si instruction. (Pentium IV specific. Uses opcode in assembly.)
+.XB 0x800000:
+scalar sse code generation
+.XB 0x1000000:
+sse4/mni/core2
+.XB 0x2000000:
+gh
+.XB 0x4000000:
+sse3/Prescott (pni).
+.XB 0x8000000:
+AMD x86-32 (hammer-32).
+.XB 0x10000000:
+AMD x86-64 (hammer).
+.XB 0x20000000:
+AMD Athlon XP.
+.XB 0x40000000:
+Willamette (wni)
+.XB 0x80000000:
+AMD Athlon.
+
+.XF "81:"
+Sparc chip
+.XB 0x01:
+Regular Sparc Chip.  This is the default (MT_S)
+.XB 0x02:
+SuperSparc Chip (MT_SS)
+.XB 0x03
+HyperSparc Chip (MT_HS)
+.XB 0x04
+UltraSparc Chip (MT_US)
+.XB 0x05
+ST100 Chip (MT_STGP32)
+.XB 0x06
+ST100 Chip (MT_STVLIW)
+.XB 0x07
+ST100 Chip (MT_STGP16)
+
+.XF "82:"
+i860 and Sparc CSE of loads in SW pipelined loops.
+If set, then the value set to determines when a load is CSE'd in a software
+pipelined loop.
+
+.XF "83:"
+Scheduling technique of Sparc compiler.
+.XB 0x01
+Use scheduling such that ili are laid down in order determined by candidate list.
+.XB 0x02
+Use scheduling that uses cyc/subcyc in general but not for register allocation.
+.XB 0x04
+Use scheduling that uses cyc/subcyc in everwhere even for register allocation.
+.XB 0x08
+Schedule next ili after last ili scheduled instead of as early as possible.
+
+.XF "84:"
+Register allocation scheme of Sparc compiler.
+.XB 0x01
+Try to release reg exactly on subcycle available.
+.XB 0x02
+Try to substitute freed up DP reg on cycle needed for new reg.
+.XB 0x04
+Suppress optimization of an AADD by not swapping operands.
+(cgoptim.c, peep_ar_res)
+
+.XF "85:"
+Affect linearization process:
+.XB 0x01:
+Do not CSE QJSRs.
+.XB 0x02:
+used in cglinear.c
+.XB 0x08:
+Originally this invoked the old version of PRE (partial redundancy
+elimination), i.e. function 'cg_pre()', but that call has been
+commented out since it has been superseded by the new version of PRE,
+i.e. function 'pre_lilis()'.  We should remove all references to this
+flag in the compiler.
+.XB 0x10:
+do value hashing on distributed expressions in PRE.
+.XB 0x20:
+disable hashing of loads missing data flow info in traditional extended block scope.
+.XB 0x40:
+signal in PRE phase, desired to be set/unset only by PRE.
+.XB 0x80:
+disable pattern-match forward propagation in PRE.
+.XB 0x100:
+do value hashing of loads missing data flow info in tree-region-style extended blocks.
+.XB 0x200:
+enable most aggressive PRE.
+.XB 0x400:
+disable the tracking of point register pressure for innermost loops.
+.XB 0x800
+disable heuristic to avoid force stores.
+.XB 0x1000
+Enable 'peephole0' phase for x8632/hammer CG;
+initially this eliminates or reduces redundant %esp/%rsp updates.
+
+.XF "86:"
+Reserved for VLIW/DSP compiler usage.
+.XB 0x1
+Force VLIW/scalar code gen heuristic
+.XB 0x2
+Allow generation of VLIW code for non-loop regions.
+.XB 0x4
+Disable generation of VLIW code for inter-loop regions.
+
+.XF "87:"
+Code generation options for DSPs
+.XB 0x1
+16-bit code generation mode
+.XB 0x2
+GP32-bit code generation  w/ scheduling  (Default on ST100)
+.XB 0x4
+VLIW-bit code generation  w/ scheduling
+.XB 0x8
+reserved
+.XB 0x10
+reserved
+.XB 0x20
+reserved
+.XB 0x40
+reserved
+.XB 0x80
+reserved
+.XB 0xNNXX
+NN indicates the memory latency in cycles for the ST100.
+Default is 6 on ST100.
+.XB 0x100000
+This is used in direct.c to imply that the mode flags flg.x[87] & 0xff
+should be inherited; that is, not changed.
+Generally this is set for loop directives, not set for global/routine directives
+
+.XF "88:"
+Predication optimizations 
+.XB 0x01
+Simple control-flow flattening (use predication rather than jumps)
+.XB 0x02
+Advanced control-flow flattening using APT information.
+.XB 0x04
+More aggressive predication scheme.
+.XB 0x08
+Re-compute SLIW legality after predication.
+.XB 0x10
+Allow guarded procedure calls.
+
+.XF "89:"
+Advanced optimizations for dsp chips and IPA-related stuff:
+.XB 0x01
+Enable inlining of DSP functions.
+.XB 0x02
+Enable IPA analysis.
+.XB 0x04
+Enable 2nd inlining pass of DSP functions.
+.XB 0x08
+Stop immediately after IPA analysis (don't generate assembly file).
+.XB 0x10
+In IPA collection phase, output all function names, even if not used.
+.XB 0x20
+Enable 'fake IPA collection' mode, whereby IPA information is saved
+only for the given functions into a specified .ipo file;
+this is used to create IPA info for library functions for which we
+have no source.
+.XB 0x40
+Enable IPA inheritance (This is set for the IPA recompile).
+.XB 0x80
+Used internally to disable future IPA inheritance; used in case of
+errors when inheriting (such as stale .ipa file),
+or when the IPA collection is stale.
+.XB 0x100
+Do IPA pointer disambiguation in cgutil.c/nm_conflict
+.XB 0x200
+Do IPA pointer disambiguation in cgutil.c/st_sta_ld_conflict
+.XB 0x400
+Do IPA vestigial function elimination.
+.XB 0x800
+Do IPA constant propagation.
+.XB 0x1000
+Do IPA bank assignment.
+.XB 0x2000
+Do automatic fast/slow mode selection.
+.XB 0x4000
+Test IPA frequency feedback.
+.XB 0x8000
+Do IPA driven inlining.
+.XB 0x10000
+Enable IPA frequency feedback.
+.XB 0x20000
+Do IPA-driven global register allocation (safe to allocate global to register).
+.XB 0x40000
+Enable array-of-struct transpose to struct-of-array
+.XB 0x80000
+For DSP function expansion, use the 'second' set of functions.
+.XB 0x100000
+Enable outliner.
+.XB 0x200000
+Read .lai file to produce .dsp file.
+.XB 0x400000
+Read .dsp file for user-defined dsp functions.
+.XB 0x800000
+Propagate user-assignments of globals to X/Y banks.
+.XB 0x1000000
+Slim profiler mode.
+.XB 0x2000000
+Disable extended basic-block creation (more accurate line profiles).
+.XB 0x4000000
+Do actual replacement of loops in outlining.
+.XB 0x8000000
+Used for testing of 'dsplai' converter.
+.XB 0x10000000
+Enables IPA constant-range propagation and IF removal
+.XB 0x20000000
+Enables enhanced safe pointer optimizations using target analysis
+.XB 0x40000000
+For dsplai, generate .prn file
+.XB 0x80000000
+Compress the .ipo file (using lz)
+
+.XF "90:"
+Used to affect candidate list creation.
+.XB 0x01:
+Make ili containing ptr load appear to have standard latency + 1.
+(On the SuperSparc, it is all loads.)
+.XB 0x02:
+Make ili containing ptr load appear to have standard latency + 2.
+.XB 0x04:
+Make ili containing ptr load appear to have standard latency + 4.
+.XB 0x08:
+Make ili containing ptr load appear to have standard latency + 8.
+.XB 0x10:
+used in cgcand.c
+.XB 0x20:
+used in machreg.c for st100
+
+.XF "91:"
+Used to enable H/Q bug workarounds for ST1xx
+.XB 0x01: 
+Handle CB-15
+.XB 0x08: 
+Handle CB-4 & CB-10
+
+.XF "92:"
+CG optimizations.
+.XB 0x1:
+Do analysis on the candidate list to determine what schema to
+use (currently only breadth-first or depth-first selection.
+.XB 0x2:
+On ST100, disable speculative scheduling.  On hammer and x8632, move
+the tail block to the end of the sequence.
+.XB 0x4
+in sched-dag.c:selectinst(), check for prefetch instructions
+.XB 0x8:
+Old behavior of sched-dag.c:isRM().
+.XB 0x10:
+Generate fisst level of LAI output (up to, not including, virtual
+registers).
+.XB 0x20: 
+Generate LAI virtual registers (should probably only be used with
+92,0x10).
+.XB 0x80:
+used in cgoptim.c
+.XB 0x100:
+Omit non LAI-friendly directives (e.g. the .word before a function
+for debug info)
+.XB 0x1000:
+used in cgcand.c
+.XB 0x2000:
+used in cgcand.c
+.XB 0x4000:
+used in cglinear.c
+.XB 0x8000:
+used in cgregmgr.c
+.XB 0x10000:
+usedin cgsched.c
+.XB 0x20000:
+used in cgregmgr.c
+.XB 0x40000:
+Disable propagate and eliminate sign extensions. Used in cgoptim2.c.
+
+.XF "93:"
+VJS XFLAG for ST100 CG alpha/beta opts.  DO NOT TOUCH unless you're VJS.
+.XB 0x01:
+Allow for X Y banked loads.
+.XB 0x02:
+Allow for new scheduling (MT_STGP32) mode for PL loops at -O3.
+This will put it thru ssched_ili32a
+.XB 0x04:
+Set up 0 load latencies for DR loads inside loops.
+.XB 0x08:
+Output 'nop's into Superscalar assembly code stream even when not needed.
+NOP will be inserted upon any empty subcycle.
+.XB 0x10:
+Set up 0 load latencies for DR outside of loops.
+.XB 0x20:
+Try scheduling at all opt levels.  Do not drop down to -O2.
+.XB 0x40:
+Set up 0 store latencies for DR register assigns from the DU unit
+and stored.
+.XB 0x80
+Change result availability for latest ILI.
+On 4/25/01, AIMV and IAMV were changed.
+
+.XF "94:"
+Used for new CG pass.
+.XB 0x1
+Enable new pass
+
+.XF "95:"
+Used to alter inner resource checking bounds for sparc.
+.XB 0x1
+Have each ili schedule exactly one cycle after last scheduled ili.
+Increments between microps is one full cycle.
+.XB 0x2
+Each ili microp must schedule within two cycles after last scheduled microp
+within the ili but ili must start exactly one cycle after last scheduled ili.
+Increments between microps is one subcycle.
+.XB 0x4
+Each ili microp must schedule within one cycle after last scheduled microp.
+ILI can start anytime after early start time.  Increments between microps
+is one full cycle.
+.XB 0x8
+Each ili microp must schedule within one cycles after last scheduled microp.
+ILI can start anytime after early start time.  Increments between microps
+is one subcycle.
+.XB 0x10
+Each ili microp must schedule within two cycles after last scheduled microp.
+ILI can start anytime after early start time.  Increments between microps
+is one subcycle.
+.XB 0x20
+Each ili microp must schedule within three cycles after last scheduled microp.
+ILI can start anytime after early start time.  Increments between microps
+is one subcycle.
+.XB 0x40
+Do not allow a cascade from an alu into the shifter within the same group.
+.XB 0x80
+Only split a condition code if it is set as a cascade into an alu.
+Otherwise branch can be performed within the same group.
+
+.XF "96:" 
+Used for scheduling multiple blocks.
+.XB 0x01:
+Schedule inner loops that form a region with multiple blocks.
+Attempt to SW pipeline these loops.
+.XB 0x02:
+Generate the multi-column loop even if 'iteration count' < 'swpipe loop columns'.
+
+.XF "97:" 
+Used for guards
+.XB 0x01:
+Force cg to guard ambiguous fp loads following fp stores.
+LDINC/STINC only.
+.XB 0x02:
+Force cg to assume all stores within a SW pipelined loops do not hit cache.
+.XB 0x04:
+Force cg to ignore the fact when stores that are marked to miss cache (ILT_MCACHE).
+
+.XF "98:" 
+Used for alternate memory accesses.
+.XB 0x01:
+Force cg to use pipelined stores for fp autoinc stores.
+.XB 0x02:
+Force cg to assume all double memory references are aligned.
+
+.XF "99:" 
+Used for alternate cg IL handling.
+.XB 0x01:
+Force cg to choose dual-inst at -opt 4
+.XB 0x02:
+Force cg to choose non-dual-inst at -opt 4
+.XB 0x04:
+Let cg choose dual-inst at -opt 4
+.XB 0x08:
+Let cg process .pgi file for alternate cg stuff (pgvision).
+.XB 0x10:
+Let cg process loop level pragmas for innermost blocks only.
+.XB 0x20:
+used in cgutil.c
+.XB 0x40
+used in cgutil.c
+.XB 0x80
+used in cgutil.c
+
+.XF "100:" 
+If nonzero, break blocks.
+break block if # ilm words for an ili block exceeds
+(2 ** (val % 31))
+
+.XF "101:" 
+ST Processor stepping information.  See "stepping.h"
+
+.XF "102:"
+Used to affect cg register handling.
+.XB 0x01:
+Allow the ARDF of a scratch reg to be freed of the NOUSE flag and put back in list.
+.XB 0x02:
+Handle special case of assigning to a DP reg out of an SP that is the same as that
+of the DP and whose usecnt is > 1.
+
+.XF "103:"
+Used to affect cg.
+.XB 0x01:
+Use alternate FRCP/DRCP ili that leave larger holes.
+.XB 0x02:
+UNUSED
+.XB 0x04:
+inhibit IL_ZFSUBFMP code generation.
+.XB 0x08:
+change IL_FMLOW to IL_PFMLOW for dualop code code generation.
+
+.XF "104:"
+Used to affect names conflict checking (CONFLICT and nm_conflict).
+.XB 0x01:
+Inhibit check for unequal member names checking.  Just return conflict.
+.XB 0x02:
+Modify SAFE checking so that distance is always 6 for safe names.
+.XB 0x04:
+inhibit NME_INLARR() inline array checking.
+.XB 0x08:
+preform additional checks of inliner-created cray pointees with other
+inlined-created cray pointees and user arrays (hlconflict()).
+.XB 0x10:
+Perform further looking at member symbols that are marked as noconflict.
+This is particularly used to determine that regular user symbols can't
+conflict with section descriptor members.
+.XB 0x20:
+in conflict, Fortran symbols marked as CCSYM will not conflict with a pointer NT_IND
+reference; this is unsafe, since even CCSYM symbols may be pointer targets
+.XB 0x40:
+Assume a conflict between an 'unknown' NME and an NME for a symbol of nonbasic type
+(like struct, union, array).
+
+.XF "105:"
+Used to specify maximum unroll factor in unroll & jam transformation
+
+.XF "106:"
+Used to specify scalar unroll factor in unroll & jam transformation
+
+.XF "107:"
+Used to specify loop threshold for entering vectorization
+
+.XF "108:"
+Used to specify stripmine size for scalar expansion (STRIPSIZE in hlvect.h)
+
+.XF "109:"
+Used to specify ili count threshold  in br_flatten (ST100)
+
+.XF "110:"
+Used to affect latency for 'alu_latency' sparc resource.
+Value is # of cycles + 1 of latency (note: 0 will not work).
+
+.XF "111:"
+Used to affect latency for 'fpu_latency' sparc resource.
+Value is # of cycles + 1 of latency (note: 0 will not work).
+
+.XF "112:"
+Used to affect latency for 'fdiv_latency' sparc resource.
+Value is # of cycles + 1 of latency (note: 0 will not work).
+
+.XF "113:"
+Used to affect latency for 'fld_latency' sparc resource.
+Value is # of cycles + 1 of latency (note: 0 will not work).
+
+.XF "114:"
+Used to affect latency for 'ld_latency' sparc resource.
+Value is # of cycles + 1 of latency (note: 0 will not work).
+
+.XF "115:"
+n from -Minline=levels:n
+how many levels of inlining to do
+
+.XF "116:"
+Used as a value between 0 and 100 to determine whether a function
+should execute in fast mode (gp32 for ST100) or slow mode.
+Sort the functions by the amount of execution time spent in each on a profiling run.
+From fastest to slowest, compute cumulative amount of time spent in this and 
+more time-consuming functions.
+For each function, compute the percent of that cumulative time relative to the total
+time of the profiling run.
+If this percent is less than the value of the x flag, run in fast mode.
+
+.XF "117:"
+Reserved for C++.
+.XB 0x01:
+turn off extra C++ debug information when EDG produces C code (--c)
+.XB 0x02:
+turn on output of mangled names in  C++ debug information: for dolphin inc
+.XB 0x04:
+Put out TAG_formal_parameter instead of TAG_unspecified_parameters for the this
+parameter
+.XB 0x08
+Turn off the translation of the EDG generated call to  _mp_lcpu3() to 
+IM_LCPUS3. This is an MP optimization. 
+.XB 0x10
+Turn off a new optimization for --one_instantiation_pre_object
+where we don't read the file scope information for every new template
+.XB 0x20
+Extract only C++ functions with the inline keyword.
+The default is to allow all functions to be inlinable.
+.XB 0x40 
+Turn off the on gnu style inlining in which we mark all non static
+member functions as inlinable, even those that are declared outside the
+class.
+.XB 0x80
+turn on ADDRTKN flag setting according to EDG collected information on variable.
+.XB 0x100
+AVAILABLE 
+(Formerly indicated setjmp/longjmp style exceptions, which are no 
+longer supported.)
+.XB 0x200
+C++ exceptions are enabled.  (Formerly indicated zero-cost exceptions, as
+opposed to setjmp/longjmp exceptions.  But zero-cost exceptions are
+now the only style of exceptions that are supported.)
+.XB 0x400
+Disable GSCOPE optimization retarget.  (Does not appear to be used anywhere.)
+.XB 0x800
+When using the auto-reinliner, treat flg.autoinline as having value 1
+.XB 0x1000
+Enable the auto-reinliner, that is, inline during the extract phase of
+auto-inline.  This allows multiple levels of auto-inlining with a single
+inliner pass, since the inlining will have been done during the extract.
+.XB 0x2000
+Do not generate instrumented profile calls (e.g., prof_ruent, etc.) inside templated functions.
+.XB 0x4000
+Enable restart for levels-driven bottom-up auto-inlining from the leaves.
+.XB 0x8000
+AVAILABLE
+(Formerly indicated that exceptions had been disabled, but 117,0x200 now 
+covers that case.)
+.XB 0x10000
+Enable bottom-up inlining for -Minline.
+
+.XF "118:"
+Reserved for C++.
+.XB 0x01:
+Force .ctor sections instead of .init sections, as an temporary step for
+x86 C++. Hammer C++ already uses .ctor sections.  Win64 does not.
+.XB 0x02:
+pgc++ is the nvcc host compiler : remove gnu __builtin for  --c 
+.XB 0x04:
+emit gnu compatible DW.ref sections when -fpic is set.  We don't turn 
+this on right now because libpgc.so contains a c++ file, and would 
+give a gxx_personality undefine .
+.XF "119:" 
+Assembler - (NOTE: overflow at 129)
+.XB 0x01:
+sym+off not allowed in .val for debug (coff)
+.XB 0x02:
+unix-style (mcount()) profiling (augments -profile); see -x 119 0x40000.
+.XB 0x04:
+align functions to 32 bytes, rather than 8 bytes.
+.XB 0x08:
+emit unreferenced data-initialized statics (C).
+.XB 0x10:
+For i860, misc directive hacks to generate a.out assembly language acceptable
+for input to gas i860 assembler (should be an astype) [ temp ].
+For i386, (old) linux compatibility mode:
+the value placed in the .align directive is used as a power of 2 (number of
+low-order zero bits);
+fp instructions which pop the stack are suffixed with 'p';
+.s comment character is '#';
+\'include_next' is recognized as a synonym for 'include'.
+.XB 0x20:
+Place strings in read-only section (C).
+.XB 0x40:
+Allow repeat counts in data-initializing directives.
+.XB 0x80:
+efficient SP & DP constants generated in-line.
+.XB 0x100:
+Compiler-created variables allocated in vcache.
+.XB 0x200:
+all SP & DP constants generated in-line.
+.XB 0x400:
+Generate ..sys local symbol (i860).
+Generate call to __pgimain() (x86-nt, pgc, pgc++).
+.XB "0x800:
+Don't emit definition of __mp_fsr (i860).
+.XB "0x1000:
+Add leading underscore to external names.
+.XB "0x2000:
+x86 precision control: -pc 32
+.XB "0x4000:
+x86 precision control: -pc 64
+.XB "0x8000:
+x86 precision control: -pc 80
+.XB "0x10000:
+x86 fp instructions without operands which pop the stack are suffixed with 'p'.
+.XB "0x20000:
+x86 ELF .section directive - don't enclose the name of the section
+in quotes ('"') 
+.XB "0x40000:
+x86 - Same as mcount profiling, but libcount() is called rather than mcount
+(used by SSD to instrument library functions).
+.XB "0x80000:
+x86 - .lcomm & .comm directives require values to indicate alignment.
+.XB "0x100000"
+Don't require 8-byte alignment for long long, unsigned long long, integer*8,
+and logical*8 data; instead, use 4-byte (int) alignment.
+-nodalign affects both double precision and 64-bit integer
+data.
+.XB "0x200000"
+Assembly comment character is '#'.
+.XB "0x400000"
+No .version directive.
+.XB "0x800000"
+x86 - use .local, .comm directive sequence instead of .lcomm.;  add value
+to .comm directive to indicate alignment.
+.XB "0x1000000"
+x86 fortran - Don't add any trailing underscores
+.XB "0x2000000"
+x86 fortran - add a second trailing underscore if name contains an underscore
+.XB "0x4000000":
+Do not append @#bytes to function references for MS standard call
+(weird g77 compatibility mode)
+.XB "0x8000000"
+Align stack in prolog of main routine, rather than crt1
+.XB "0x10000000"
+Cache align data sections, e.g., the stack, common blocks.
+.XB "0x20000000"
+Align outermost loops on a 4-byte boundary (pmn. changed from 16)
+.XB "0x40000000"
+Align innermost loops on a 4-byte boundary (pmn. changed from 16)
+.XB "0x80000000"
+Generate profiliing calls for all loads and stores on x86
+
+.XF "120:" 
+Coff debug information
+.XB 0x01:
+generate additional symbolic information for pgftn.
+.XB 0x02:
+???
+.XB 0x04:
+turn off translation of prototyped function info: P_FUNC is needed to
+produce correct debug info for overloaded functions, but may create user 
+errors.
+.XB 0x08:
+turn off generation of BASED array stab debug information if stab_sym is
+N_LSYM.
+.XB 0x10:
+For the sparc, stab debug information uses stab 2.0 for the data type entries,
+allowing debugging on PGI's Sun OS 4.x compilers with sunpro's debugger.
+For the x86, generate gnu-style stab debug information.
+.XB 0x20:
+generate stabs in ELF or COFF object files.
+.XB 0x40:
+generate C++ debug information for all symbols.  Do not delete according to
+the "referenced" flag.
+.XB 0x80:
+generate dwarf in COFF object files.
+.XB 0x100
+Print DWARF comments
+.XB 0x200
+Generate dwarf2 (X86)
+.XB 0x400
+Do not generate dwarf2 call frame (ST100).
+Do not generate xdata/pdata (WIN64).
+.XB 0x800
+Do not allocate unreferenced variables when generating dwarf1 or dwarf2.
+.XB 0x1000
+Generate debug lite.
+.XB 0x2000
+Inhibit dwarf2 generation for fortran block data.
+.XB 0x4000
+Set the dwarf version to 3.
+Emit 4-byte quantity for DW_FORM_ref_addr regardless of the size of
+and address on the target machine.
+.XB 0x8000
+For the DT_AT_upper_bound of a VLA, generate the address of the
+compiler-created temp which is assigned the upper bound.  This is
+actually incorrect, but needed as a work-around for pgdbg reporting
+'not compiled with -g' when the correct info is present.
+When pgdbg is fixed, remove the use of the XBIT.
+.XB 0x10000
+Inhibit emission of DW_TAG_imported_declaration DIEs for each used module.
+.XB 0x20000
+Generate a popsection/previous.
+.XB 0x40000
+Do not extract the file name from the first line, a # line directive, of a
+file when it's the output of the preprocessor.  If the name is extracted,
+it  will be used as the name of the file to be debugged.
+.XB 0x80000
+Obtain OpenMP thread id using DWARF3 compliant operations (as opposed to using DWARF3 extension DW_OP_PGI_OMP_THREAD_NUM).
+.XB 0x100000:
+Do not generate attribute DW_AT_MIPS_linkage_name (C++/F90).
+.XB 0x200000:
+Do not generate .pgi_trace section.
+.XB 0x400000:
+Do not generate the addressing hacks for common blocks and statically
+allocated locals on Mac OS X.
+.XB 0x800000:
+Do not emit artificial dwarf entries for compiler-created arguments to function/subroutine.
+.XB 0x1000000
+Set the dwarf version to 4.
+.XB 0x2000000
+Set the dwarf version to 5.
+.XB 0x4000000:
+Do not generate include file tables.
+.XB 0x8000000h
+AVAILABLE
+.XB 0x10000000:
+Generating eh_frame.
+.XB 0x20000000:
+Generating eh_frame with .cfi directives: requires 120,0x10000000 to be on
+.XB 0x40000000
+Generate .debug_names/.debug_pubnames section.
+.XB 0x80000000:
+no license check in executable.
+
+.XF "121:" 
+Linkage modifications
+.XB 0x01:
+don't set up frame (only if not debug, alloca(), and varargs)
+.XB 0x02:
+additional restriction for -x 121 1, no (*p)()
+.XB 0x04:
+Replace normal calls (JSR all platform and QJSR for ST100) with far calls (JSRFAR).
+.XB 0x08:
+in use
+.XB 0x100:
+Do not generate calls to __builtin_stinit() on Windows (when allocating stack)
+.XB 0x200:
+Use __chkstk instead of __builtin_stinit() on Windows (when allocating stack)
+.XB 0x400:
+Generate ABI-neutral IL_RETURN for aggregate data types
+The expander does generic argument and return value bindings.
+.XB 0x800:
+Generate ABI-neutral calls (GJSR/GJSRA) -- eventually, this will be default
+with CUDA & OpenACC
+.XB "0x10000":
+WINNT/WIN95 calling conventions are the default for pgf77, pgf90.
+.XB "0x20000":
+pgcc, pgCC - for MSCALL defined names, also emit the undecorated entry name.
+.XB "0x40000":
+WIN CREF calling conventions for pgf77, pgf90. 
+.XB "0x80000":
+WIN NOMIXED_STRLENs for pgf77, pgf90 (augments mscall or cref). 
+.XB "0x100000":
+x86 - return small structs in registers (eax or eax+edx).
+.XB "0x200000":
+WIN - use lowercase names for fortran external names.
+.XB "0x400000":
+x86 C - return float complex the same as gcc (in registers eax+edx).
+.XB "0x8000000":
+call a check-stack-overflow function to check the per-thread stack size
+and perhaps a function's stack size
+
+.XF "122-127:" 
+RESERVED FOR NON-STANDARD/IMPLEMENTATION-DEFINED BEHAVIOR MODIFICATIONS
+
+.XF "122:" 
+C implementation-defined behavior modifications.
+.XB 0x01:
+Perform a narrowing operation from an int value by sign extending.
+.XB 0x02:
+implied by -Xs:
+K&R
+.XB 0x04:
+long long, unsigned long long
+.XB 0x08:
+treat extern and static data as volatile
+.XB 0x10:
+treat plain char as unsigned char; the default is signed char.
+.XB 0x20:
+treat long as int and unsigned long as unsigned int.
+.XB 0x40:
+Allow the GNU-defined __signed__ keyword as a synonym for signed (unless
+in strict ansi mode).
+.XB 0x80:
+Use alternate builtin functions for arithmetic operations (e.g., integer divide).
+.XB 0x100:
+ST100 - Disable enhanced jump table method for switch statements.
+.XB 0x200:
+ST100 - Disable non-conservative approach in all enhanced switch statements (applies to enhanced jump table method and constant time method).
+.XB 0x400:
+ST100 - Disable enhanced inline jump table method for switch statements (a.k.a. the constant time method).
+.XB 0x800:
+ST100 - Disable copya elimination enhancement in constant time switch method.
+.XB 0x1000:
+ST100 - Disable use of multiple guards in constant time switch method.
+.XB 0x2000:
+nonST100 - For a use of a store ILM, don't attempt to refer to the 
+result as a load of the left-hand side; instead, refer to the result
+as a cse of the right-hand side.  Someday, will want uses of store ILMs
+to be consistent across targets.
+.XB 0x4000:
+allow narrow int arguments in a prototyped function declaration to be
+compatible with int arguments in an old-style function definition.
+.XB 0x8000:
+for "bug compatibility", revert to alignment used in previous releases
+for certain structures containing long integers and int bit fields that
+cross 2-byte boundaries.
+.XB 0x10000:
+Output C macro definitions as they are encountered.
+.XB 0x20000:
+Output C #include definitions as they are encountered
+.XB 0x40000:
+Output C macro definitions for predefined macros.
+.XB 0x80000:
+When outputting macro definitions, do NOT include the definitions.
+.XB 0x100000:
+Emit warnings when invoking prototype-less functions.
+.XB 0x200000:
+Drop limit on the maximum length of a line generated after preprocessing
+('cpp' mode).
+.XB 0x400000:
+C11
+.XB 0x800000:
+AVAILABLE
+.XB 0x1000000:
+AVAILABLE
+.XB 0x2000000:
+AVAILABLE
+.XB 0x4000000:
+AVAILABLE
+.XB 0x8000000:
+AVAILABLE
+.XB 0x10000000:
+AVAILABLE
+.XB 0x20000000:
+AVAILABLE
+.XB 0x40000000:
+AVAILABLE
+.XB 0x80000000:
+temporary, 03/25/2010 (I hope) - at the center of fixing 16741, ST_UNKNOWNs
+are created immediately for formal arguments; however, this has the effect
+of 'hiding' previously declared variables which semant has to deal with.
+Just in case a regression occurs in the field, this XBIT says don't create
+ST_UNKNOWNs (yes, f16741 will then fail).
+
+.XF "123:" 
+C implementation-defined behavior modifications (cont).
+.XB 0x01:
+preprocessor passes comments thru (also implies -es); driver option -C
+.XB 0x02:
+preprocessor generates makefile information to stdout; driver option -M
+.XB 0x04:
+preprocessor allows C++ style comments; driver option -B
+.XB 0x08:
+preprocessor generates makefile information to <program.d>; driver option -MD
+.XB 0x10:
+implied by -Xa:
+att cc compatibility; default value of __STDC__ is 0
+and XBIT(123,0x100) is set.
+.XB 0x20:
+preprocessor does not separate tokens with spaces.
+.XB 0x40:
+preprocessor performs macro replacement within character constants and strings
+.XB 0x80:
+implied by -Xt:
+k&r compatibility plus transitional msgs.
+.XB 0x100:
+implied by -Xc (C):
+strict Ansi conformance (C); default value of __STDC__ is 1 and
+XBIT(123,0x10) is not set.
+For fortran, don't emit the #line directives, 
+.XB 0x200:
+preprocessor suppresses whitespace between tokens that are OUTSIDE of
+macro bodies.  Whitespace is still added between tokens that are
+in macro bodies.
+.XB 0x400:
+Don't alter optimizations when generating debugging information.
+For example, if this bit is set, inhibit generating the lexical block
+debugging information by semant.
+.XB 0x800
+Don't collapse whitespace ('cpp' mode)
+.XB 0x1000
+C preprocessor - allow gcc's preprocessor extensions: #include_next,
+#warning, arg ... (vararg function macros), CPATH, C_INCLUDE_PATH, etc.
+.XB 0x2000
+C preprocessor - expand macros within #pragma lines
+.XB 0x4000:
+preprocessor ignores system files (<a.h>) when generating makefile information
+either to stdout (123 2) or file.d (123 8); only quoted files are handled.
+.XB 0x8000:
+Do not check the first preprocessing token after #pragma to determine
+if macro replacement is to be performed for the #pragma line; normally,
+macro replace will occur in the line if the token "omp", "acc", or "pgi".
+.XB 0x10000:
+F90: print out .mod files needed to compile this file to stdout
+.XB 0x20000:
+F90: print out .mod files needed to compile this file to filename.m
+.XB 0x40000:
+PVF build dependencies.
+.XB 0x80000:
+Keep blank lines ... for -Mcpp switch
+.XB 0x100000:
+When preprocesing,  $ is not allowed in an identifier.
+.XB 0x200000:
+When preprocessing assembly file, unrecognized # directives are just text.
+.XB 0x400000:
+Don't check definition of __STDC__
+.XB 0x800000:
+Don't attempt to distinguish include files as system header files
+.XB 0x1000000
+Don't issue messages for extra tokens for line directives, as produced by gcc preprocessor.
+.XB 0x2000000
+Don't terminate the expansion of the _Pragma preprocessor operator with
+a newline (i.e., the old behavior)
+.XB 0x4000000
+Use the legacy Fortran preprocessor (fpp), and not the ANSI-C99 preprocessor.
+.XB 0x8000000
+Preprocessor puts out dependence lines to gbl.cppfil instead of file.d or stdout
+.XB 0x10000000
+Unused.
+.XB 0x20000000
+preprocessor generates makefile information to stdout; driver option -MT
+.XB 0x40000000
+preprocessor generates makefile information to stdout; driver option -MQ
+.XB 0x80000000
+C9X
+
+.XF "124:" 
+F77 implementation-defined behavior modifications.
+.XB 0x01:
+Perform a narrowing operation from an int value by sign extending.
+.XB 0x02:
+pack common blocks and structures (not impl.)
+.XB 0x04:
+treat unit '*' as stdin if read, stdout if write
+.XB 0x08:
+treat REAL as DOUBLEPRECISION and COMPLEX as DOUBLECOMPLEX
+(also applies to real/complex constants)
+.XB 0x10:
+treat INTEGER as INTEGER*8 and LOGICAL as LOGICAL*8
+.XB 0x20:
+treat the intrinsics REAL and CMPLX as DBLE and DCMPLX (obsolete in Fortran).
+.XB 0x40:
+treat backslash as an ordinary character (no escape sequences)
+.XB 0x80:
+don't marked data initialized locals as SAVEd (not impl.)
+.XB 0x100:
+enable cexe$ lines
+.XB 0x200:
+inhibit expanding x**c, 1<=c<=__MAXPOW (10), to a sequence of multiplies
+.XB 0x400:
+64 bits of precision for integer*8 and logical*8 operations.
+.XB 0x800:
+Perform hardcoded register allocation in CG
+.XB 0x1000:
+Emit references to unreferenced EXTERNALs.
+This flag implies that global directives will be issued; for an actual
+reference, -x 124 0x4000, must also be present.
+.XB 0x2000:
+AVAILABLE
+.XB 0x4000
+Emit an actual reference to unreferenced EXTERNALs; -x 124 0x1000 must also
+be present.
+.XB 0x8000
+Null-terminate character literals.
+.XB 0x10000
+The preprocessor behaves like cpp; for example, a function-like macro is
+expanded whenever the name appears irrespective of the presence of actual
+arguments.
+.XB 0x20000
+Change the level of the "has not been explicitly declared" error (#38)
+from severe to warning (f77, f90).
+.XB 0x40000
+Inhibit transforming x**c into x**i, where c is the integer i expressed as
+a real or double constant.
+.XB 0x80000
+Expand the list of real intrinsics to be treated as double to include
+float, TBD.
+.XB 0x100000
+Preprocessor - skip over fortran comments (e.g., don't expand macros
+in comments, etc.).
+.XB 0x200000
+Preprocessor - 'pgi' is no longer defined by default (f15141); define
+pgi iff -Mx,124,0x200000 is set (just in case)
+
+.XF "125:" 
+F77 implementation-defined behavior modifications (cont).
+.XB 0x01:
+treat an i/o statement as a critical section.
+.XB 0x02:
+byte-swapped unformatted i/o
+.XB 0x04:
+Treat all EUC characters as a single column position for Hollerith,
+source line length.
+.XB 0x08:
+When testing logical values, treat zero as false and non-zero as true
+instead of odd and even, respectively.
+.XB 0x10:
+Print error messages in Kanji.
+.XB 0x20:
+Allocatable commons are allocated just once (can use precise names
+entries).
+.XB 0x40:
+Use Cray's 'no conflict' semantics for references via pointers; expander
+generates precise NMEs for references of pointer-based objects.
+.XB 0x80:
+Allow implicit statements after specification statements.
+.XB 0x100:
+The bounds of pointer-based arrays are precise; normally, it's assumed that
+the last dimension is not valid even if it's a constant.
+.XB 0x200:
+Assume varargs callee (hammer)
+.XB 0x400:
+For f90 array pointers, don't attempt to multiply the subscript by the
+section stride and add in the section offset (don't set ptrexpand).
+.XB 0x800:
+Don't replace calling ...str_cpy1 with a  'block move'.
+.XB 0x1000:
+When replacing ...str_cpy2 with a 'block move' and the rhs is a shorter
+constant, create a new constant completely paded with blanks. Normally,
+the new constant is a multiple of 8 (64-bit ) or 4 (32-bit).
+.XB 0x2000
+For F90, use TY_PTR for f90 pointers instead of Cray pointer integer types
+.XB 0x4000
+When expanding a subscript expression for non-pointer arrays, do not attempt
+to move the first subscript when constant into the zbase computation.
+.XB 0x8000
+When expanding a subscript expression for pointer arrays, do not attempt
+to move the first subscript when constant into the zbase computation.
+.XB 0x10000
+I was experimenting with a different way to expand array subscripts,
+and that's controlled here.
+.XB 0x20000
+Use 64-bit subscripting (ALSO for C)
+.XB 0x40000
+Pass string lengths as 'int' (not as the target's size_t)
+.XB 0x80000
+-Mcontiguous (fortran front-end and back-end)
+.XB 0x100000
+-Mnovariadic_macros (-Mvariadic_macros is the default and is used to augment the -c89 switch when we need to turn them back on )
+
+.XF "126:" 
+FTN keyword extensions
+
+.XF "127:" 
+C keyword extensions
+.XB 0x01:
+asm
+.XB 0x02:
+volatile (backend handling)
+.XB 0x04:
+gcc keywords - __attribute__, ... (see semant.c)
+.XB 0x08:
+ghs keywords - __inline, ... (see semant.c)
+.XB 0x10:
+gcc compatible asm (see semant.c); incompatible with 127,1
+.XB 0x20:
+disable built-in __m128, __m128d, __m128i, __m256, __m256d, __m256i  data types
+
+.XF "128:"
+LAI/LAO extensions
+.XB 0x01:
+Enable basic LAI output by inhibiting harmful directives.
+.XB 0x02:
+Enable Virtual Register output.
+.XB 0x04:
+Inhibit push/pop sequence; emit .sliw - .ends; emit .leave
+.XB 0x08:
+Enable .livein/.liveout directives.
+.XB 0x10:
+Enable .proto and .loopinfo directives.
+.XB 0x20:
+Enable LAO defect workarounds.
+
+.XF "129:"
+Assembler - (NOTE: overflow from 119:)
+.XB 0x01:
+don't put out profiling line entry calls for lineno:0
+.XB 0x02:
+x86/assem.c  Set sse flush to zero mode.
+.XB 0x04:
+x86/assem.c  Set sse denorms are zero mode.
+.XB 0x08:
+x86/assem.c  Align smaller than  size_of(int) auto vars on int boundary.
+.XB 0x10:
+Generate %rip-relative addressing on WIN64.
+.XB 0x20:
+Unified binary - generate test/jump in reverse order in stub
+.XB 0x40:
+Unified binary - generate stub between the two versions, not after both
+.XB 0x80:
+x86 - .lcomm (not .comm) directives require values to indicate alignment.
+.XB 0x100:
+Allow 16-byte misaligned memory operands in vector arithmetic instructions
+and maximize the usage of memory operands in vector arithmetic instructions.
+.XB 0x200:
+No special startup/initialization for main().
+.XB 0x400:
+x86/assem.c  Don't set sse denorms to zero mode
+We need this negative flag because the -tp type sometimes sets the mode
+.XB 0x800:
+hammer  - -Mprof=instrument:functions -- same as -Mprof=func, but
+call instent64/instret64
+.XB 0x1000:
+Disable 32-byte stack alignment.  Note that this only applies to AVX
+targets, since 32-byte stack alignment is not used for non-AVX targets.
+.XB 0x2000:
+The stack is kept 16-byte aligned for 32-bit Linux per the OSX abi.
+When XBIT(129,0x2000) is set, allow legacy callers in which case we can
+only emit unaligned 16-byte moves.
+.XB 0x4000:
+x86/assem.c: don't set sse denorms to zero mode
+This is used with -Mnodaz; for x86 processors, the default is target CPU
+specific, this overrides the CPU-specific default.
+.XB 0x8000:
+.XB 0x10000:
+Use .align 8 at the function entry (hammer).
+.XB 0x20000:
+Don't align the function entry (hammer).
+.XB 0x40000:
+.XB 0x80000:
+.XB 0x100000:
+Inhibit writing .ident info to assembly file.
+.XB 0x200000:
+Sun assembler syntax for amd64:
+Assembly comment character is '/';
+movdq instead of movd.
+.XB 0x400000:
+Don't add a second '#' to the comment char (when XBIT(119,0x10) or
+XBIT(119,0x200000).
+.XB 0x800000:
+Including comments for floating point constants has become a compile-time
+problem since the cost of converting the fp representation to
+ascii can be relatively high.  Do not emit the values of fp constants
+in comments unless this XBIT is used.
+.XB 0x1000000:
+use 16 byte alignment for stack data less than 16 bytes on x64
+.XB 0x2000000:
+Don't place constants in a read-only section.
+The default is to not protect constants.
+.XB 0x4000000:
+.XB 0x8000000:
+.XB 0x10000000:
+The present of -Msmartalloc=huge; note that the value , in
+-Msmartalloc=huge:n  is passed via flg.x[156].
+.XB 0x20000000:
+mallopt secret
+.XB 0x40000000:
+Hammer - 64-byte (cache) alignment and padding
+for locals (bss) 64 bytes or larger.
+.XB 0x80000000:
+ST100 - when placing objects in the small data/bss sections, use
+use the minimum alignment rule, i.e., the possible sections are
+.s[bss|data][1|2|4]. The default is to only use .sbss1/.sdata1.
+
+.XF "130:"
+VLIW levels. 
+
+.XF "131:"
+Predication levels.
+
+.XF "132:"
+ST100 local register allocation.
+.XB 0x1:
+Use the static local register allocator (-Mregalloc=static) for GP32
+and SLIW code.
+.XB 0x4:
+Use the optimized local register allocator and re-allocator, also
+known as the `holes' register allocator (HRA), for GP32 and SLIW code.
+This is incompatible with -Mregalloc=static, i.e. with XBIT(132,
+0x19).  If any of the latter flags are set they take precedence and
+the HRA is disabled.
+.XB 0x8:
+Use -Mregalloc=static only for GP32 code.
+.XB 0x10:
+Use -Mregalloc=static only for SLIW code.  Currently (11/19/02) this
+is not supported.
+.XB 0x20:
+Use the HRA only for GP32 code.  This may be combined with the use of
+-Mregalloc=static for SLIW code, i.e. XBIT(132, 0x10), but not for
+GP32 code, i.e. XBIT(132, 9).  If either of the latter flags are set
+they take precedence and the HRA is disabled.
+.XB 0x40:
+Use the HRA only for SLIW code.  This may be combined with the use of
+-Mregalloc=static for GP32 code, i.e. XBIT(132, 8), but not for SLIW
+code, i.e. XBIT(132, 0x11).  If either of the latter flags are set
+they take precedence and the HRA is disabled.
+
+.XF "133:"
+A number n where 0 >= n  && n <= 40.  This gives the density threshold
+for SLIW scheduling on the ST100.  Thus, if one uses '20' for the value,
+the density would be 20.0/10.0, or 2.0 instructions/bundle.  The
+threshold is open, so in the case of a 2.0 inst/bundle threshold, there must
+be more than 2.0 inst/bundle.
+
+.XF "134:"
+Hammer/X8632 CG reg stall values
+The GP stall limit is the bottom nibble; the next nibble is the
+smm stall limit (see cgopt2rg.c)
+
+.XF "135:"
+Hammer CG.  (NOTE: continued at 164)
+.XB 0x1:
+-mcmodel=medium
+.XB 0x2:
+DOCUMENT
+.XB 0x4:
+DOCUMENT
+.XB 0x8:
+DOCUMENT
+.XB 0x10:
+DOCUMENT
+.XB 0x20:
+DOCUMENT
+.XB 0x40:
+DOCUMENT
+.XB 0x80:
+skip move exit code
+.XB 0x100
+use PUSH/POP for callee-save GP regs in entry/exit code
+.XB 0x200
+cgoptim2.c:cg_global_opts() - such as -Mdse
+.XB 0x400
+use PUSH/POP for callee-save GP regs in entry/exit code
+.XB 0x800:
+no .p2align for labels of non-innermost loops (see xflag 155 for altering
+the .p2align values).
+.XB 0x1000:
+AVAILABLE
+.XB 0x2000:
+.align 16 before loop; no .align after jmp
+.XB 0x4000:
+.align 8 before loop; no .align after jmp
+.XB 0x8000:
+no align before loop; no .align after jmp
+.XB 0x10000:
+no align after jmp
+.XB 0x20000:
+allow coalescing of register-to-register moves of different sizes.
+.XB 0x40000:
+disable two byte return for branch-to-ret scenario
+.XB 0x80000:
+DOCUMENT
+.XB 0x100000:
+Force OPT1 regalloc method
+.XB 0x400000:
+Enable 32B loop alignment for GH.  (!)
+.XB 0x800000:
+Enable 'tregion' CSE.
+.XB 0x1000000:
+DOCUMENT
+.XB 0x2000000:
+DOCUMENT
+.XB 0x4000000:
+DOCUMENT
+.XB 0x8000000:
+DOCUMENT
+.XB 0x10000000:
+DOCUMENT
+.XB 0x20000000:
+DOCUMENT
+.XB 0x40000000:
+enables experimental enhancements to CSE elimination.  See also
+-Mx,145, 146 and 147.
+.XB 0x80000000:
+enables Steve Christiansen's experimental enhancement to CSE
+elimination.
+
+.XF "136:"
+Branch prediction and optimizations
+.XB 0x1:
+Enable static branch prediction
+.XB 0x2:
+.XB 0x4:
+.XB 0x8:
+.XB 0x10:
+Enable return heuristic
+.XB 0x20:
+Enable call heuristic
+.XB 0x40:
+Enable guard heuristic
+.XB 0x80:
+Enable opcode heuristic
+.XB 0x100:
+Enable pointer compare heuristic
+.XB 0x200:
+Enable loop heuristic
+.XB 0x400:
+Disable exit heuristic
+.XB 0x800:
+Disable eh (exception handling) heuristic
+.XB 0x2000:
+A compilation-time efficient block position implementation.
+.XB 0x4000:
+Use edge frequencies to guide merging sequences in the block position final
+phase.
+.XB 0x10000:
+Region-based (allowing small hammack regions, instead of pure trace-based) 
+code layout. 
+.XB 0x40000:
+Skip dynamic code layout if the number of edges without matched edge counts
+is over a threshold.
+.XB 0x80000:
+Experiment with code layout with C++ --zc_eh.  The brpred.c blkcnt threshold
+is set to MAX_BLOCKS rather than 500.
+
+.XF "137:"
+.XB 0x01:
+Enable CUDA C++ and Fortran parsing.
+.XB 0x02:
+Enable CUDA Fortran emulation.
+.XB 0x04:
+CUDA Fortran old/new calls to global routines.
+.XB 0x08:
+Disable CUDA Fortran parallel task creation for emulation.
+.XB 0x10:
+Enable CUDA Fortran automatic USE of cudadevice.mod in device routines.
+.XB 0x20:
+Enable inlining of pgf90_lba and pgf90_uba even if not in device code.
+.XB 0x40:
+Put the device array descriptor into constant memory.  Perf optimization.
+.XB 0x100:
+Enable CUDA X86 back end code generation.
+.XB 0x200:
+allow automatic shared arrays
+.XB 0x400:
+Don't use optimized CUDA X86 back end
+.XB 0x800:
+Do use optimized CUDA X86 back end, even at opt 0 or 1
+.XB 0x1000:
+Temporarily, use kernel optimization in F90
+.XB 0x2000:
+Imply MANAGED for all ALLOCATABLE objects in F90
+.XB 0x4000:
+Don't put managed variable array descriptors in constant memory
+.XB 0x8000:
+Allow character strings in CUDA Fortran
+.XB 0x10000:
+Allow some formatted print statements in CUDA Fortran, EXPERIMENTAL
+.XB 0x20000:
+Don't allow statements between the DO loops of a cuf kernels do construct
+.XB 0x40000:
+reserved
+.XB 0x80000:
+reserved
+.XB 0x100000:
+reserved
+
+.XF "138:"
+vect prefetch limit
+
+.XF "139:"
+single precision SSE size limit
+
+.XF "140:"
+single precision SSE size limit
+
+.XF "141:"
+iteration count passed to llvect
+
+.XF "142:"
+vect prefetch distance
+
+.XF "143:"
+iteration limit for use of non-temporal stores
+
+.XF "144:"
+Limit on number of non-temporal stores to use per loop
+(currently 1 for amd and 2 for intel targets).
+
+.XF "145:"
+.XB 0x1:
+Enable static and inline unreferenced functions removal (LX-only for now).
+
+(Temporary, for hammer only): if -Mx,135,0x40000000 is specified and
+(opt >= 2), then a non-zero value for -Mx,145 gives the maximum live
+range for constant CSEs.  By default their maximum live range is
+calculated in the same way as for other types of CSE.
+
+.XF "146:"
+(Temporary, for hammer only): a tuning parameter for CSE elimination
+at (opt >= 2).  If either flg.x[146] or flg.x[147] is non-zero the
+maximum CSE live range is given by (flg.x[146] + (flg.x[147] *
+n_nodes_ilitree( ili ))), otherwise it is 170.
+
+.XF "147:"
+(Temporary, for hammer only): a tuning parameter for CSE elimination
+at (opt >= 2).  If either flg.x[146] or flg.x[147] is non-zero the
+maximum CSE live range is given by (flg.x[146] + (flg.x[147] *
+n_nodes_ilitree( ili ))), otherwise it is 170.
+
+.XF "148:"
+Options for controlling collection and use of data for PFO.
+.XB 0x1:
+Enable collection of information
+.XB 0x2:
+Disable collection of edge information
+.XB 0x4:
+Disable collection of value information
+.XB 0x8:
+Use Min-MST form of edge instrumentation
+.XB 0x10:
+Output BIH numbers instead of FG numbers for (src, dst) of EFCs.
+.XB 0x20:
+The PFI_LONG members of the PFO structure are aligned on 8-byte boundaries
+(32-bit targets only).
+.XB 0x1000:
+Enable use of PF data
+.XB 0x2000:
+Enable old edge propagation.
+.XB 0x4000:
+Disable new edge propagation.
+.XB 0x8000:
+Enable simple forward edge propagation without dealing with inlined functions and loops.
+.XB 0x10000:
+Disable basic block reordering based on profile data
+.XB 0x20000:
+Disable optimizations of code involving semi-invariant values
+.XB 0x40000:
+PFO-guided switch expansion to peel off hot cases.
+.XB 0x80000:
+Disable profile feedback guidance of register allocation.
+.XB 0x100000:
+Disable pgInstrumentValues() and pgInstrumentLoops().
+.XB 0x200000:
+Disable the call to pgInstrumentEdges().
+.XB 0x400000:
+Invoke PFO_Edges() again from optimize() under PFO.
+.XB 0x800000:
+Enable the new method of computing BIH_BLKCNT values.
+.XB 0x1000000:
+Disable the invocation of branch_prediction from latepredict().
+.XB 0x2000000:
+Force block position even in the presence of missing or inconsistent edge counts.
+.XB 0x4000000:
+Indirect call profiling.
+.XB 0x8000000:
+Disable the fixup of ILM tags in edge count propagation.
+.XB 0x10000000:
+Enable partial edge propagation in inlinee even if inliner's profile data is missing.
+.XB 0x20000000:
+Disable the shutdown of certain optimizations for cold loops.
+.XB 0x40000000:
+Disable the code layout heuristic to favor a lexical order in the case of
+a tie on execution frequency.
+
+.XF "149:"
+For hammer and x8632 only, a non-zero value
+.i "n" 
+invokes the generation of alternative loop code without peeling.  Its
+precise meaning depends on the value of
+.i n :
+
+(1) If
+.i n
+> 1 it means: if 
+.i "(cnt <= n)" ,
+where
+.i cnt
+is the loop count, then execute loop code that does not have any
+iterations peeled, otherwise execute the loop code that is generated
+by default, which may or may not be peeled.
+
+Alternative code is only generated for a loop that has a non-constant
+count and is peeled by default.  Otherwise only one version of the
+loop is generated, which is not peeled if
+.i "(cnt <= n)" ,
+and which is peeled or not according to the default heuristics if
+.i "(cnt > n)" .
+
+(2) If
+.i n
+== 1 the meaning is the same as above, but the critical value
+.i n
+is calculated by the compiler using a cost-benefit analysis to
+estimate the minimum loop count for which peeling is profitable.
+
+.XF "150:"
+For hammer and x8632 only, a non-zero value 
+.i n 
+invokes the generation of alternative loop code with non-temporal
+stores.  Its precise meaning depends on the value of
+.i n :
+
+(1) If
+.i n
+> 1 it means: if 
+.i "(cnt <= n)" ,
+where
+.i cnt
+is the loop count, then execute loop code that does not perform
+non-temporal stores, otherwise execute loop code that performs
+non-temporal stores if possible.  In the latter case the maximum
+number of non-temporal stores is determined in the usual way, namely
+it is given by the value of x[144] if it is non-zero, otherwise it is
+1, 2 or 4 depending on the target.
+
+Alternative loop code is only generated if a loop has a non-constant
+count and the compiler 
+.i can 
+generate non-temporal stores in it.  Otherwise only one version of the
+loop is generated, which does not have non-temporal stores if
+.i "(cnt <= n)" ,
+and which has them if possible if
+.i "(cnt > n)" .
+
+This option overrides -Mx,39,0x200, which means "use non-temporal
+stores if possible".
+
+(2) If
+.i n
+== 1 it means: if a loop has a 
+.i "non-constant" 
+count and the compiler can generate non-temporal stores in it, then
+generate two versions of the loop, one with and one without
+non-temporal stores.  The latter is executed if
+.i "(cnt <= N)" , 
+where 
+.i N
+equals
+.cw "(flg.x[143] ? flg.x[143] : 200000)/B" .
+.i B 
+is the approximate total number of bytes loaded and stored in one
+iteration of the loop, so the value of 
+.i N 
+is loop-dependent.
+
+If a loop has a 
+.i constant 
+count then the default heuristic is still used to decide whether to
+generate non-temporal stores, namely they are only generated if
+.cw "(cnt*B >= (flg.x[143] ? flg.x[143] : 200000))" .
+By default the compiler does not generate non-temporal stores for
+loops with a non-constant count.  Thus, -Mx,150,1 employs alternative
+code generation to apply the same (or a very similar) condition for
+using non-temporal stores to all loops, regardless of whether their
+loop count is constant.
+
+.XF "151:"
+(Temporary, for hammer and x8632 only): provides parameters and flags
+for controlling and tuning alternative code generation.  See file
+hammer/src/llvect.c for full details.
+
+.XB 0x4000000:
+Enable peel and shuffle transformation which is not enabled by default for non-GH.
+
+.XF "152:"
+Provides a parameter
+.i n
+for loop splitting.  If loop splitting is enabled and
+.i n
+> 0, then split the loop after every n'th statement where possible. 
+
+.XF "153:"
+Provides a parameter
+.i n
+for .p2align emission after a JMP instruction.  If 
+.i n
+!= 0, it overrides .align directive emission driven by xflag 135.
+.i n
+=2^
+.i x
++
+.i z
+with
+.i z
+<2^
+.i x
+, we emit .p2align 
+.i x
+,,
+.i z
+directive.
+For example, -Mx,153,25 implies (25 = 2^4+9) .p2align 4,,9 directives.
+
+.XF "154:"
+Similar to xflag 153 but .p2align directives are generated in fornt of loop start.
+.XF "155:"
+Change the default values for .p2align emitted for labels of non-innermost
+loops.  The form of .p2align is
+.nf
+    .p2align	m,,n
+.fi
+where, m is the number of low order bits of the address which are zero, and
+n is the maximum number of bytes that can be used to align the address.
+The default values for m and n are 4 and 7, respectively.
+Use, if nonzero, the value of the lower nibble of flg.x[155] as n.
+Use, if nonzero, the value of the next nibble of flg.x[155] as m.
+of flg.x[155] 
+.XF "156:"
+The value n in -Msmartalloc=huge:n 
+.XF "157:"
+Number of unrolls (# of loop bodies) of a loop with non-constant
+iteration count and multiple blocks.
+.XF "158:"
+An upper bound to control the scale of code generation phase global data flow analysis. The value is
+(number_of_flow_graph_nodes * number_of_definitions * number_of_locations). 
+.XF "159:"
+The value is:
+(number_of_definitions for ALL_GLOBAL_LOCS * number_of_global_locations).
+Above this threashold, global locations are not tracked in the code generation phase global data flow.
+.XF "160:"
+Used in intense.c for computing intensity
+.XB 0x01:
+Display load/store information per loop
+.XB 0x02:
+Display verifier messages.  This flag will go away when verifier errors are rare.
+.XF "161:"
+Used in ccffinfo to turn on informational messages
+.XB 0x01:
+Inliner messages
+.XB 0x02:
+Loop optimization messages
+.XB 0x04:
+LRE messages
+.XB 0x08:
+Intensity messages
+.XB 0x10:
+IPA messages
+.XB 0x20:
+Fusion messages
+.XB 0x40:
+Vectorizer messages
+.XB 0x80:
+OpenMP messages
+.XB 0x100:
+Optimizer messages
+.XB 0x200:
+Prefetch messages
+.XB 0x400:
+Fortran-specific messages
+.XB 0x800:
+Parallelization messages
+.XB 0x1000:
+reserved
+.XB 0x2000:
+PFO messages
+.XB 0x4000:
+Accelerator messages
+.XB 0x8000:
+Unified binary messages
+.XB 0x10000:
+Additional information, usually used only for regression testing
+.XB 0x20000:
+PCAST messages
+.XB 0x100000:
+Use short tags
+
+.XF "162:"
+Used in ccffinfo to turn on neg-informational messages.
+It uses the same bit mapping as above, for those that have negative information.
+
+.XF "163:"
+.XB 0x01:
+Enable accelerator pragma/directive recognition
+.XB 0x02:
+Just do the analysis, don't generate the code
+.XB 0x04:
+Do the analysis and generate the code, but don't call the CUDA compiler
+.XB 0x08:
+Do the analysis and generate the code and save the .gpu files
+.XB 0x10:
+Save all the GPU files
+.XB 0x20:
+don't cache even with user cache directives
+.XB 0x40:
+Generate __fmul_rn instead of '*' instructions, to avoid coalescing multiply and add into FMA instructions, which gives different roundoff.
+.XB 0x80:
+Disable double precision.
+.XB 0x100:
+Enable shared-memory caching
+.XB 0x200:
+Use fast math library
+.XB 0x400:
+use 24-bit multiplies for subscripting
+.XB 0x800:
+Generate 'emulation mode' code
+.XB 0x1000:
+Generate strip-mined code on the host when private arrays are used.
+.XB 0x2000:
+Original behavior: live-out induction variable marks a loop a invalid;
+now we usually just make it sequential on the device
+.XB 0x4000:
+When compiling for a host version of the accelerator as well.
+.XB 0x8000:
+For debugging, set unknown bounds of an array to 1:100
+.XB 0x10000:
+test caching
+.XB 0x20000:
+Save all the GPU files and load the modules from the .gpu files instead of
+inlining the GPU code.
+.XB 0x40000:
+Keep .ptx file.
+.XB 0x80000:
+Keep .bin file.
+.XB 0x100000:
+Used only for testing
+.XB 0x200000:
+Enable output from pgnvd
+.XB 0x400000:
+Generate -ptxas -v output
+.XB 0x800000:
+debug GPU code
+.XB 0x1000000:
+Disable linear CG optimizations
+.XB 0x2000000:
+Disable linear CG unrolling
+.XB 0x4000000:
+for testing: insert call to __Test in the constructor
+.XB 0x8000000:
+Disable dead-code after unrolling
+.XB 0x10000000:
+for testing: change cudaRegisterFatBinary call to pgiRegisterFatBinary
+.XB 0x20000000:
+Override default, unroll loops with calls
+.XB 0x40000000:
+default is wait, don't wait for each kernel to finish
+.XB 0x80000000:
+always wait for each kernel to finish
+
+.XF "164:"
+Hammer llvect and CG.  (NOTE: continued from 135)
+.XB 0x1:
+pragma save_all_gp_regs: At the entry and exit of a function, in
+addition to saving and restoring the used callee-saved GP and XMM
+registers (which is the normal action) also save and restore all
+non-callee-saved GP registers, except for any that are used to return
+the function result.
+.XB 0x2:
+pragma save_all_regs: At the entry and exit of a function, in addition
+to saving and restoring the used callee-saved GP and XMM registers
+(which is the normal action) also save and restore all
+non-callee-saved GP and XMM registers, except for any that are used to
+return the function result.
+.XB 0x4:
+pragma save_used_gp_regs: At the entry and exit of a function, in
+addition to saving and restoring the used callee-saved GP and XMM
+registers (which is the normal action) also save and restore used
+non-callee-saved GP registers, except for any that are used to return
+the function result.
+.XB 0x8:
+pragma save_used_regs: At the entry and exit of a function, in
+addition to saving and restoring the used callee-saved GP and XMM
+registers (which is the normal action) also save and restore used
+non-callee-saved GP and XMM registers, except for any that are used to
+return the function result.
+.XB 0x10:
+Disable the new method for reducing block pressures so that they
+are within limits.
+.XB 0x20:
+Disable the new method for reducing loop pressures so that they
+are within limits.
+.XB 0x40:
+Disable the new method for selecting register candidates to eliminate
+in order to reduce loop pressures to within limit.
+.XB 0x80:
+Disable the improvements to the estimation of block execution frequencies.
+.XB 0x100:
+Enable an experimental register allocator optimisation that attempts
+to restore eliminated register candidates at the end of the 'limit
+resources' phase.
+.XB 0x200:
+Disable an enhancement to the 'optimize_imul()' function.
+.XB 0x400:
+Disable a KIMV peephole optimisation.
+.XB 0x800:
+Disable store re-scheduling, i.e. the cggenai.c optimisation of moving
+a store LILI forwards if it avoids the pre-emption of a load.
+.XB 0x1000:
+Enable partial redundancy elimination on the linear ILIs.
+.XB 0x2000:
+Enable copy propagation
+.XB 0x4000:
+Do not perform CSE on QJSR ILIs.
+.XB 0x8000:
+Disable the optimisation that inserts an xorps or xorpd instruction
+before cvtsi2ss, cvtsd2ss and cvtss2sd instructions whose dest != src
+in order to break merge dependences on the 'dest' register.
+.XB 0x10000:
+Used by the f90 front end: enable float code in sfloat() in an
+accelerator region.
+.XB 0x20000:
+Do not allow partial redundancy elimination to add new blocks after
+the lexically-last block in a function.
+.XB 0x40000:
+Use the old heuristics for performing partial redundancy elimination.
+.XB 0x80000:
+For AVX-512, enable the generation of calls to 64-byte-wide versions
+of the vector fastmath intrinsic functions, which take zmm register
+operands and return zmm register results.  Without this x-flag such
+calls are replaced by two calls to the ymm version of the intrinsic.
+Currently the latter behaviour is enabled by default because zmm
+versions of the fastmath intrinsics are not available yet.
+.XB 0x100000:
+For AVX, do not insert any 'vzeroupper' instructions.
+.XB 0x200000:
+For AVX, only insert 'vzeroupper' instructions before calls to run-time
+library functions, not before 'ret' instructions or calls to user-defined
+functions as is done by default.
+.XB 0x400000:
+Disable the vectorisation of loops containing ILIs that operate on the
+new representation of complex data-types.
+.XB 0x800000:
+Use the new math naming scheme (not yet default), i.e.
+.CS
+ __f<type><data type>_<name>_<vectlen><mask>
+ <type>      : f - fastmath (default)
+               r - relaxed math (-Mfprelaxed ...)
+               p - precise math (-Kieee)
+ <data type> : s - single precision
+               d - double precision
+               c - single precision complex
+               z - double precision complex
+ <name>      : exp, log, log10, pow, powi, powk, sin, cos, tan, asin, acos,
+               atan, sinh, cosh, tanh, atan2, 
+ <vectlen>   : 1 (scalar), 2, 4, 8, 16
+ <mask>      : m or null
+.CE
+Currently, the new method only applies to exp, log, pow, & atan on 64-bit
+linux
+.XB 0x1000000:
+For AVX, replace 32-byte aligned load and store instructions by their
+unaligned equivalents.  This is a 'quick fix' that was added to avoid
+32-byte alignment errors in AVX code, but these errors have now been
+fixed so this quick fix should not be necessary.
+.XB 0x2000000:
+For AVX, generate 'vzeroupper' instructions even if -Mvect=simd:128
+is used.  By default 'vzeroupper' instructions are not generated for
+-Mvect=simd:128.
+.XB 0x4000000:
+Disable the generation of non-destructive syntax, i.e. (dest != src2),
+for AVX packed merge-type instructions.
+.XB 0x8000000:
+Disable the following optimisations to the generation of prefetch
+instructions in vectorised and unrolled loops:
+(i) increasing the default prefetch distance if necessary to ensure
+that none of the prefetched data is required in the current iteration;
+(ii) issuing 2 prefetch instructions per array reference instead of one
+if the vector loop processes 128 bytes of data per iteration; and
+(iii) spreading out the prefetches across the first half of the loop
+body instead of generating them all at the start of the loop body.
+.XB 0x10000000:
+Disable the improvements to the LILI peephole optimisations for
+integer constant folding and address code generation.
+.XB 0x20000000:
+Halve the unroll factor that is used for AVX 256-bit vectorised loops
+(or to be more precise, inhibit the doubling of the unroll factor that
+is normally performed for such loops), provided that it is legal to do
+so, i.e. provided the loop still processes at least 32 bytes of data
+per vector iteration.
+.XB 0x40000000:
+Disable the generation of scalar FMA instructions.  (This only affects
+bulldozer code generation, since currently these instructions are only
+generated on bulldozer.)
+.XB 0x80000000:
+Disable the vectorisation of loops that contain any of the following:
+(i) a reference to the loop induction variable as a primary in a
+non-address expression, e.g.: for ( i = 0; i < 10; i++ ) a[i] = i;
+(ii) a FLOAT, DFLOAT or DFLOATK ILI, i.e. an integer*4 to real*4,
+integer*4 to real*8 or integer*8 to real*8 type conversion.
+
+.XF "165:"
+Used temporarily in accelerator compiler to set thread-block size.
+
+.XF "166:"
+Used for testing in the accelerator compiler to test selection criteria.
+
+.XF "167:"
+Used for testing in the accelerator compiler to control automatic
+insertion of accelerator regions.
+
+.XF "168:"
+For C/C++, control maximum size of auto-inlined function.
+
+.XF "169:"
+.XB 0x01:
+For C/C++, we now normally remove compiler-created symbols from the symbol table
+hash lists after each function; this disables that.
+.XB 0x02:
+TEMPORARY for 9.0-2... promote member inlined functions to extern weak
+symbols (as with member templated functions)
+.XB 0x04:
+for C++ only. Can use with -Wc,--zc_eh_no_opt : do not remove zc_eh regions marked no_throw.  --zc_eh_no_opt is the equivalent switch for pgcpp1.
+.XB 0x08:
+for C++ only. Turn off removal of all the regions in a function if all
+landing pads are zero.
+.XB 0x10:
+Turn off the special processiong of lambdas in accellerated regions to 
+copy them in on the data clause
+
+.XF "170:"
+Used temporarily for debugging loop fusion
+
+.XF "171:"
+.XB 0x01:
+Override FEATURE_SCALAR_SSE in x86 settings, set to zero
+.XB 0x02:
+Override FEATURE_SSE in x86 settings, set to zero
+.XB 0x04:
+Override FEATURE_SSE2 in x86 settings, set to zero
+.XB 0x08:
+Override FEATURE_SSE3 in x86 settings, set to zero
+.XB 0x10:
+Override FEATURE_SSE41 in x86 settings, set to zero
+.XB 0x20:
+Override FEATURE_SSE42 in x86 settings, set to zero
+.XB 0x40:
+Override FEATURE_SSE4A in x86 settings, set to zero
+.XB 0x80:
+Override FEATURE_SSE5 in x86 settings, set to zero
+.XB 0x100:
+Override FEATURE_MNI in x86 settings, set to zero
+.XB 0x200:
+Override FEATURE_DAZ in x86 settings, set to zero
+.XB 0x400:
+Override FEATURE_PREFER_MOVLPD in x86 settings, set to zero
+.XB 0x800:
+Override FEATURE_USE_INC in x86 settings, set to zero
+.XB 0x1000:
+Override FEATURE_USE_MOVAPD in x86 settings, set to zero
+.XB 0x2000:
+Override FEATURE_MERGE_DEPENDENT in x86 settings, set to zero
+.XB 0x4000:
+Override FEATURE_SCALAR_NONTEMP in x86 settings, set to zero
+.XB 0x8000:
+Override FEATURE_SSEIMAX in x86 settings, set to zero
+.XB 0x10000:
+Override FEATURE_MISALIGNEDSSE in x86 settings, set to zero
+.XB 0x20000:
+Override FEATURE_LD_MOVUPD in x86 settings, set to zero
+.XB 0x40000:
+Override FEATURE_ST_MOVUPD in x86 settings, set to zero
+.XB 0x80000:
+Override FEATURE_UNROLL_16 in x86 settings, set to zero
+.XB 0x100000:
+Override FEATURE_DOUBLE_UNROLL in x86 settings, set to zero
+.XB 0x200000:
+Override FEATURE_PEEL_SHUFFLE in x86 settings, set to zero
+.XB 0x400000:
+Override FEATURE_PREFETCHNTA in x86 settings, set to zero
+.XB 0x800000:
+Override FEATURE_PDSHUF in x86 settings, set to zero
+.XB 0x1000000:
+Override FEATURE_SSEPMAX in x86 settings, set to zero
+.XB 0x2000000:
+Override FEATURE_GHLIBS in x86 settings, set to zero
+.XB 0x4000000:
+Override FEATURE_SSEMISALN in x86 settings, set to zero
+.XB 0x8000000:
+Override FEATURE_ABM in x86 settings, set to zero
+.XB 0x10000000:
+Override FEATURE_AVX in x86 settings, set to zero
+.XB 0x20000000:
+Override FEATURE_LRBNI in x86 settings, set to zero
+.XB 0x40000000:
+Override FEATURE_FMA4 in x86 settings, set to zero
+.XB 0x80000000:
+Override FEATURE_XOP in x86 settings, set to zero
+
+.XF "172:"
+This uses the same bits as xflag 171, but overrides to set to 1; reset overrides set.
+
+.XF "173:"
+(Temporary, for hammer only): a tuning parameter for common subexpression
+elimination (CSE).  If flg.x[173] is non-zero then the maximum range
+over which a CSE can be applied on 64-bit targets at (opt >= 2) is
+flg.x[173], otherwise it is 170.
+
+.XF "174:"
+Another throttle for auto-inliner for C/C++.
+This sets the maximum function size into which to auto-inline.
+
+.XF "175:"
+Set max-reg-count for NVIDIA assembler
+
+.XF "176:
+Accelerator flags
+.XB 0x01:
+Formerly: For NVIDIA, use the CUDA 2.3 toolkit and all that implies; no longer supported.
+.XB 0x02:
+For NVIDIA, use the CUDA 3.0 toolkit
+.XB 0x04:
+For NVIDIA, use the CUDA 3.1 toolkit
+.XB 0x08:
+For NVIDIA, use the CUDA 3.2 toolkit
+.XB 0x10:
+Use 32-bit mode on 64-bit systems
+.XB 0x20:
+Use the more general upload/download routines to allow asynchronous uploads
+.XB 0x40:
+Inverted: Don't use updated general upload/download routines; this should become the default.
+.XB 0x80:
+Don't try to minimize expression insertions, use redundancy elimination instead
+.XB 0x100
+Generate only compute capability that we specify on the command line.
+.XB 0x200
+Generate compute capability 1.0.
+.XB 0x400
+Generate compute capability 1.1.
+.XB 0x800
+Generate compute capability 1.2.
+.XB 0x1000
+Generate compute capability 1.3.
+.XB 0x2000
+Generate compute capability 2.0.
+.XB 0x4000
+output block numbers in .gpu file
+.XB 0x8000
+Testing a new planner
+.XB 0x10000
+do generate cache memory loads, but don't use the cache memory in the expressions.
+This is for debugging bad cache memory references.
+.XB 0x20000
+Disable loop test replacement
+.XB 0x40000
+don't regularize the compare operations (which changes a<b ==> b>a, and so forth).
+.XB 0x80000
+use the old loop unroller
+.XB 0x100000
+Mark induction variables live only if they are used.
+.XB 0x200000
+enable expression reassociation
+.XB 0x400000
+do generate register loads, but don't use the register in the expressions.
+This is for debugging bad cache memory references.
+.XB 0x800000
+For testing, generate common blocks as a single block of bytes
+.XB 0x1000000
+when reassociating, invert the loop order
+.XB 0x2000000
+add induction increment at top of loop; default is at the bottom
+.XB 0x4000000
+disable some expression floating
+.XB 0x8000000
+used in accel.c to do lifetime analysis on whole accelerator region
+.XB 0x10000000
+use fdiv_rn instead of divide
+.XB 0x20000000
+Disable scalar kernels
+.XB 0x40000000
+use new paramset struct
+.XB 0x80000000
+Old method for placing fast-path tests, which tends to put them farther out
+but allows for fewer fast-path tests.
+
+.XF "177:"
+More accelerator optimizer flags
+.XB 0x01
+Enable initial forward substitution
+.XB 0x02
+Enable initial expression reassociation
+.XB 0x04
+Enable induction variable substitution
+.XB 0x08
+Enable loop unrolling
+.XB 0x10
+Enable forward substitution after unrolling
+.XB 0x20
+Enable reassociation after substitution
+.XB 0x40
+Enable final forward substitution
+.XB 0x80
+Enable available expression replacement
+.XB 0x100
+Enable distribution of multiplication over addition when reassociating expressions.
+.XB 0x200
+Only float available expressions out of inner loops, or loops which
+contain unrolled code.
+.XB 0x400
+Do remove partially available expressions that are cheap, even
+try to float them out of a loop.
+.XB 0x800
+For distribution, only distribute multiplication over addition even when it's not a constant times addition of a constant plus another value.
+.XB 0x1000
+Do generate fastpath even if there aren't enough fastpath tests to warrant it.
+.XB 0x2000
+Count the maximum number of live variables we have in the program.
+.XB 0x4000
+Don't regularize comparisons (in accelerator mode), put threadIdx.x on one side of the compare,
+everything else on the other side
+.XB 0x8000
+Regularize comparisons (in cuda fortran mode), put threadIdx.x on one side of the compare,
+everything else on the other side
+.XB 0x10000
+Don't make induction variables be protected symbols.
+.XB 0x20000
+Do find positive, zero, negative expressions.
+.XB 0x40000
+Don't replace positive, zero, negative comparisons with constant, when possible
+.XB 0x80000
+If unswitching
+.XB 0x100000
+Disable trivial PLOOP optimizations
+.XB 0x200000
+Don't insert syncthreads calls for vector synchronization; this limits vector length == 32 for vector/nonparallel loops
+.XB 0x400000
+Disable scalar kernels
+.XB 0x800000
+testing fastpath
+.XB 0x1000000
+Don't create FSINCOS to eliminate redundant sin/cos operations
+.XB 0x2000000
+Late basic-block-local redundancy elimination
+.XB 0x4000000
+Enable generate of 'fast-path'
+.XB 0x8000000
+Don't create a 'temp' for an address computation
+.XB 0x10000000
+Don't multiply by the constant tile size, use the blockdim variable
+.XB 0x20000000
+Fastpath for arefs
+.XB 0x40000000
+disable 'protected' sequential loops, which puts the strip counters in shared memory
+.XB 0x80000000
+Split cache loads into register loads followed by cache stores
+
+.XF "178:"
+.XB 0x01:
+Override FEATURE_FMA3 in x86 settings, set to zero
+.XB 0x02:
+Override FEATURE_MULTI_ACCUM in x86 settings, set to zero
+.XB 0x04:
+Override FEATURE_SIMD128 in x86 settings, set to zero
+.XB 0x08:
+Override FEATURE_NOPREFETCH in x86 settings, set to zero
+.XB 0x10:
+Override FEATURE_ALIGNLOOP4 in x86 settings, set to zero
+.XB 0x20:
+Override FEATURE_ALIGNLOOP8 in x86 settings, set to zero
+.XB 0x40:
+Override FEATURE_ALIGNLOOP16 in x86 settings, set to zero
+.XB 0x80:
+Override FEATURE_ALIGNLOOP32 in x86 settings, set to zero
+.XB 0x100:
+Override FEATURE_LD_VMOVUPD in x86 settings, set to zero
+.XB 0x200:
+Override FEATURE_ST_VMOVUPD in x86 settings, set to zero
+.XB 0x400:
+Override FEATURE_AVX2 in x86 settings, set to zero
+.XB 0x800:
+Override FEATURE_AVX512F in x86 settings, set to zero
+.XB 0x1000:
+Override ACC_FEATURE_OCLOFFSET in accel settings, set to zero
+.XB 0x2000:
+Override FEATURE_AVX512VL in x86 settings, set to zero
+
+.XF "179:"
+This uses the same bits as xflag 178, but overrides to set to 1; reset overrides set.
+
+.XF "180:"
+.XB 0x01:
+Use OpenCL compiler to build accelerator output
+.XB 0x02:
+one of -acc=required or -acc=norequired was set
+.XB 0x04:
+-acc=required
+.XB 0x08:
+for Fermi cards (compute capability 2.0), disable L1 caching
+.XB 0x10:
+Reclaimed flag: now used to Disable flush-to-zero mode.
+.XB 0x20:
+Enable passing array sections to reflected arguments.
+.XB 0x40:
+Print user variable names in the .gpu file.
+.XB 0x80:
+Enable flush-to-zero mode.
+.XB 0x100:
+Extract device routines to an accelerator inline library
+(for development purposes so far)
+.XB 0x200:
+Use old multiple paramset/launch routines instead of single routine to launch kernels
+.XB 0x400:
+Enable OpenACC parsing
+.XB 0x800:
+Save the fatbinary file.
+.XB 0x1000:
+Don't parse REFLECTED directive
+.XB 0x2000:
+Don't parse MIRROR directive
+.XB 0x4000:
+Don't parse LOCAL directive
+.XB 0x8000:
+Don't parse COPY/COPYIN/COPYOUT directive
+.XB 0x10000:
+For OpenCL, use any device.
+.XB 0x20000:
+Don't pass unused arguments.
+.XB 0x40000:
+Don't remove late redundant operations in a basic block.
+.XB 0x80000:
+For debugging generated code.
+.XB 0x100000:
+Insert implicit copyin/copyout of the whole array for any REFLECTED arrays used.
+.XB 0x200000:
+Insert implicit copyin/copyout of the whole array for any MIRROR arrays used.
+.XB 0x400000:
+Insert implicit copyin/copyout of the whole array for any LOCAL arrays used.
+.XB 0x800000:
+Insert implicit copyin/copyout of the whole array for any COPY/COPYIN/COPYOUT arrays used.
+.XB 0x1000000:
+Don't generate unrolled reduction code for accelerator reductions
+.XB 0x2000000:
+don't add __threadfence_block() calls after each synchronous update in unrolled reduction code
+.XB 0x4000000:
+Use dataon/off/up/down instead of upload/download/alloc/etc.
+.XB 0x8000000:
+Don't generate acclin temps for TY_PTR data (workaround for another problem)
+.XB 0x10000000:
+Insert implicit update device of all reflected arrays at the implicit data region top,
+and update host at the bottom.
+.XB 0x20000000:
+add -verbose to pgocld call
+.XB 0x40000000:
+for compute capability 2.0+, enable L1+L2 caching
+.XB 0x80000000:
+Don't change IL_AADD to IL_IADD or IL_KADD before acclinopt does its work; improves redundancy elimination
+
+.XF "181:"
+Enables the 3D 'mgrid' tiling, i.e., tile at most the outer two loops in a
+loop nest of depth 3:
+.nf
+  The lower halfword of -x 181 must be non-zero and is the tilesize.
+  If the upper halfword of -x 181 is non-zero, the outer loop is
+  tiled and this value is its tilesize; the outer loop is not
+  tiled if it's a parallel loop.
+.fi
+
+.XF "182:"
+OpenCL modifications
+
+.XF "183:"
+LLVM modifications
+.XB 0x01:
+Do not attempt to replace calls to our run-time for certain 'builtins' with
+llvm instructions
+.XB 0x02:
+Replace VLDU/VSTU of vect3 dtypes with bcopy calls - temporary front-end
+work-around for bugs in llc with unaligned vect3 references.
+.XB 0x04:
+Print the data layout for intended target.
+.XB 0x08:
+Copy-in all formal arguments into the function's stack -- appears that
+llc has a problem with generating dwarf location expressions for arguments
+which are passed on the stack
+.XB 0x10:
+(Fortran only) Enable LLVM inlining by not marking all routines with the LLVM attribute 'noinline'.
+.XB 0x20:
+Disable cse load optimization and dead instr removal in LLVM bridge
+.XB 0x40:
+Enable scheduling of llvm instructions for interesting blocks. This opt is only performed
+if cse load optimization is enabled.
+.XB 0x80:
+Enable experimental enhanced conflict detection in LLVM bridge
+.XB 0x100:
+Enable scheduling of llvm instructions for all blocks. This opt is only performed
+if cse load optimization is enabled and scheduling is enabled.
+.XB 0x200:
+Use ILI_ALT when available.
+.XB 0x400:
+Enable block level optimization (peep-hole)
+.XB 0x800:
+Dump some extra information as comments of LLMV instructions, available only in DEBUG mode
+.XB 0x1000:
+Temporary flag used by compiler back end, enable stb processing if set.  Should be removed 
+once stb processing is working.
+.XB 0x2000:
+Disable openmp parallel region outlined function through kmpc_fork_call.
+.XB 0x4000:
+Disable workaround to mark x86 dp vector math calls as not varargs for Fortran
+.XB 0x8000:
+Disable reciprocal multiply undo
+.XB 0x10000:
+Enable the use of Newton's approximation for square root
+.XB 0x20000:
+Disable generation of TBAA metadata in LLVM output
+.XB 0x40000:
+Disable GEP folding
+.XB 0x80000:
+For references to uplevel PAR variables in the outlined functions for OpenMP
+regions, emit indirect (NT_IND) nmes. Otherwise (the default), use NT_VAR; 
+with NT_VAR, we have 'precise' info for flow anaysis, subscripting, etc.,
+i.e., this is the same as NT_IND vs NT_VAR for cray pointers).
+.XB 0x100000:
+Use intermediate temp variables in the call to __kmpc_for_..._init routines
+.XB 0x200000:
+Turn off ENHANCED_CSE_OPT in cgmain for LLVM 
+.XB 0x400000:
+Disable promotion of INTEGER*2 in called function on X86-64
+.XB 0x800000:
+Allow loop distribution on POWER even when routine is outlined
+.XB 0x1000000:
+Allow new fast math power vector routines when real base elements are different 
+size from integer power elements
+.XB 0x2000000:
+Switch definition of "long double" on Power from "double double" to __float128
+.XB 0x4000000:
+Disable generation of !llvm.loop metadata
+.XB 0x8000000:
+(C/C++ only) Disable the LLVM inliner by marking all routines with the LLVM attribute 'noinline'.
+.XB 0x10000000:
+Enable arithmetic widening on address arithmetic.
+.XB 0x20000000:
+Put constants in non read-only memories.
+.XB 0x40000000:
+Emit DWARF name for Fortran COMMON blocks.
+
+.XF "184:"
+ARM modifications
+.XB 0x01:
+Generate the equivalent of 'float-abi=hard' where fp values are passed
+according to the vfp register conventions.
+.XB 0x02:
+Specify in datalayout for ARM target that 8-bits/16-bits are native types for the target
+
+.XF "185:"
+Accelerator OpenCL output flags
+.XB 0x01:
+Accelerator OpenCL output for NVIDIA
+.XB 0x02:
+Accelerator OpenCL output for Platform 2012
+.XB 0x04:
+Accelerator OpenCL output for ATI
+.XB 0x08:
+Accelerator OpenCL output for X86
+.XB 0x10:
+Accelerator OpenCL output for Generic target (anything)
+.XB 0x20:
+Accelerator OpenCL output for Generic host
+.XB 0x40:
+Accelerator OpenCL output for Generic GPU
+
+.XF "186:"
+More Accelerator flags
+.XB 0x01:
+For NVIDIA, use the CUDA 4.0 toolkit
+.XB 0x02:
+For NVIDIA, use the CUDA 4.1 toolkit
+.XB 0x04:
+For NVIDIA, use the CUDA 4.1 or 4.2 toolkit with old CG
+.XB 0x10:
+Failure mitigation mode is on by default; this turns it off
+.XB 0x20:
+Disentangle data regions from compute regions
+Every compute region must re-determine whether the data is present
+.XB 0x80:
+Enable warning messages with users attempt to use PGI Accelerator Directives 
+that are being deprecated.
+.XB 0x1000:
+Remove extra 'protected' symbol assignments that are only used in the same basic block.
+.XB 0x2000:
+Forward substitution only for integer symbols.
+.XB 0x4000:
+debug use
+.XB 0x8000:
+for IEEE NOTxx comparisons, instead of generating the if(!(a>b)), generate if(a<=b).
+.XB 0x10000:
+Generate smallest compute capability 1.x that is supported.
+.XB 0x20000:
+Generate smallest compute capability 2.x that is supported.
+.XB 0x40000:
+Array subscript range test in generated device code.
+.XB 0x80000:
+Enable OpenACC interpretation of directives
+.XB 0x100000:
+ACCSTRICT: Strict compliance with OpenACC syntax; issue warnings for any
+non-OpenACC accelerator directive
+.XB 0x200000:
+ACCVERYSTRICT: Stricter compliance with OpenACC syntax; issue errors for any
+non-OpenACC accelerator directive
+.XB 0x400000:
+Reorganize array calculations like we're doing subscript range tests,
+but don't insert the array checks.
+.XB 0x800000:
+Combine redundant conditionals
+.XB 0x1000000:
+Allow non-tightly nested vector/worker loops
+.XB 0x2000000:
+enable or disable fmaopt
+.XB 0x4000000:
+Remove unreachable code
+.XB 0x8000000:
+change the way conditionals are generated testing for cache loads
+.XB 0x10000000:
+Insert threadfence_block for cache-line sharing before the syncthreads call
+.XB 0x20000000:
+Implicit 'present' on all data clauses
+.XB 0x40000000:
+Add data region enter/exit calls.
+.XB 0x80000000:
+Create local shadows of all argument symbols
+
+.XF "187:"
+.XB 0x01:
+Enable store-forwarding
+.XB 0x02:
+Strict kernels gang scheduling; don't make a loop 'gang parallel' if it
+was specified as only worker or vector.
+.XB 0x10:
+convert 1/sqrt(x) to rsqrt(x) (single and double)
+.XB 0x20:
+convert 1/(x*sqrt(x)) to t=rsqrt(x), t*t*t (single and double)
+.XB 0x40:
+Extend the above two to include y/sqrt(x) and y/(x*sqrt(x))
+.XB 0x100:
+"Protect" symbols that hold descriptor values
+.XB 0x200:
+"Protect" symbols that hold descriptor values even in CUDA Fortran
+.XB 0x400:
+earliest useful placement of a computation
+.XB 0x800:
+Combine conditionals again after unrolling
+.XB 0x1000:
+Debug output for comparing outputs.
+.XB 0x10000:
+Acclinopt: compute earliest computation points at edges.
+.XB 0x20000:
+Disable finding single-entry/single-exit regions in acclinopt.
+.XB 0x100000:
+Override default for GPU code: llvm version 3.5
+.XB 0x200000:
+Override default for GPU code: llvm version 3.6
+.XB 0x400000:
+Override default for GPU code: llvm version 3.7
+.XB 0x800000:
+Override default for GPU code: llvm version 3.8
+.XB 0x1000000:
+Override default for GPU code: llvm version 3.9
+.XB 0x2000000:
+Override default for GPU code: llvm version 4.0
+.XB 0x4000000:
+Override default for GPU code: llvm version 5.0
+
+.XF "188:"
+The default OpenACC vector length
+
+.XF "189:"
+More Accelerator flags
+.XB 0x01:
+Generate compute capability 3.0 (Kepler-1)
+.XB 0x02:
+Generate compute capability 3.5 (Kepler-2)
+.XB 0x04:
+Generate both compute capability 3.0 and 3.5.
+.XB 0x08:
+For NVIDIA, use the CUDA 4.2 toolkit
+.XB 0x10:
+Generate llvm LL file, using llc llvm-ptx compiler
+.XB 0x20:
+For NVIDIA, use the CUDA 5.0 toolkit
+.XB 0x40:
+Don't generate __ldg() refs to INTENT(IN) with compute capability 3.5 and up.
+.XB 0x80:
+Generate calls to __pgiSetupArgument and __pgiLaunch instead of cudaSetupArgument and cudaLaunch, so we can intercept the calls for debugging.
+.XB 0x100:
+generate declarations of all struct datatypes, used or not.
+.XB 0x200
+Generate cache loads by recreating the expression tree instead of using the memref info.
+.XB 0x400
+Generate AMD Trinity APU code
+.XB 0x800
+Generate AMD Tahiti GPU code
+.XB 0x1000
+Debugging: use VALUE for index variable names
+.XB 0x2000
+Multi-target accelerator code
+.XB 0x4000
+Use offsets to call OpenCL kernels.
+.XB 0x8000
+Generate relocatable device code, link at link time.
+.XB 0x10000
+Add -restrict to the build line.
+.XB 0x20000
+Add __restrict to pointer arguments to a kernel.
+.XB 0x40000
+Special code generation mode to call device-specific runtime routines,
+with no begin/end calls.
+.XB 0x80000
+generate __align__ on the common block declaration whether 'extern' or not
+.XB 0x100000
+don't run the 'demote' pass in acclinopt
+.XB 0x200000
+don't run the 'lin_peep' pass in acclinopt
+.XB 0x400000
+old way to load register data, for comparison only
+.XB 0x800000
+Add __restrict to pointer arguments to an accelerator kernel.
+.XB 0x1000000
+Use modified dataon/dataoff routines with baseoffset argument
+.XB 0x2000000
+In acclinopt, do demote IL_AADD, IL_KMUL operands; useful for 32-bit targets.
+.XB 0x4000000
+Disable autoparallelization of loops in acc parallel constructs.
+.XB 0x8000000
+Disable autoscoping and automatic detection of reductions in loops.
+.XB 0x10000000
+Implicit 'present_or_' on all data clauses
+.XB 0x20000000
+Don't implicitly collapse outer parallel loops
+.XB 0x40000000
+.XB 0x80000000
+only two nested gang loops
+
+.XF "190:"
+Extractor/Inliner (overflow).
+.XB 0x01:
+Don't perform the optimization of replacing a struct/union formal with
+its an actual argument.
+When the optimization occurs, the actual argument is not copied into
+an inliner-generated temporary.
+.XB 0x02:
+Set LVAL for dummy variables of a PST and LOC ilms in the extractor;
+setting LVAL is no longer the default given the front-ends are now
+tracking lval/rval.
+.XB 0x04:
+Inhibit replacing CONST pointer formals with the actual argument.
+.XB 0x08:
+Don't attempt to use the number of switch case to throttle inlining 
+.XB 0x10:
+Turn on bottom-up autoinlining when IPA inlining is used.
+
+.XF "191:"
+Temporary flags
+.XB 0x01:
+Turn on C++ prototype implementation of the gnu visibility attribute 
+"hidden"
+.XB 0x02:
+Enable "alwaysinline" attribute for a function, using "forceinline" pragma
+.XB 0x04:
+Enable vectorize always loop directive
+
+.XF "192:"
+More Accelerator flags
+.XB 0x01:
+Accelerator: Move planned strip-mine ploops outwards
+.XB 0x02:
+Accelerator: Move planned gang loops outwards
+.XB 0x04:
+Accelerator: Enable user-written planner
+.XB 0x08:
+Accelerator: save the planner files
+.XB 0x10:
+Accelerator: Always set blockDim, even if the block dim is constant
+.XB 0x20:
+Accelerator: use nightly build of the next cuda release
+.XB 0x40:
+Add const __restrict to pointer arguments to a kernel.
+.XB 0x80:
+Add const __restrict to pointer arguments to an accelerator kernel.
+.XB 0x100:
+GPS - gang private shared; inverted: gang private arrays don't all get put into shared memory
+.XB 0x200:
+WPS - worker private shared; worker private arrays all get put into shared memory.
+This is not yet implemented.
+.XB 0x400:
+VPS - vector private shared; inverted: vector private arrays do not get put into local memory
+.XB 0x800:
+Generate a different plan and kernel for each compute capability
+.XB 0x1000:
+for CUDA output, disable insertion of __ldg() for global memory loads that are read-only
+.XB 0x2000:
+Defer private array allocation
+.XB 0x4000:
+Optimize vector0/worker0 sections of code
+.XB 0x8000:
+Generate AMD Barts GPU code
+.XB 0x10000:
+Generate AMD Cayman GPU code
+.XB 0x20000:
+Generate AMD Pitcairn GPU code
+.XB 0x40000:
+Generate AMD Bonaire GPU code
+.XB 0x80000:
+Generate AMD Hawaii GPU code
+.XB 0x100000:
+Special OpenCL code for reductions
+.XB 0x200000:
+Allow variable-sized private arrays in the cache
+.XB 0x400000:
+Accelerator: Don't move planned vector loops outwards
+.XB 0x800000:
+Treat all kernel launches as asynchronous.
+.XB 0x1000000:
+Do call mark_array_subscripts in reassociate in acclinopt
+so array subscript multiply-by-array-size is not reassociated
+.XB 0x2000000:
+Implicitly mark all routines as 'acc routine'
+.XB 0x4000000:
+Reserved to extend above flag
+.XB 0x8000000:
+Reserved to extend above flag
+.XB 0x10000000:
+Reserved to extend above flag
+.XB 0x20000000:
+enable auto-loop-collapse without collapse directive
+.XB 0x40000000:
+enable lineinfo generation for accelerator target
+.XB 0x80000000:
+Code-sinking: allow non-tightly nested loops to be tiled.
+
+.XF "193:"
+Used to set an unroll size and count limit in acclinopt
+
+.XF "194:"
+More Accelerator flags
+.XB 0x01:
+Generate AMD Capeverde GPU code
+.XB 0x02:
+Generate AMD Spectre GPU code
+.XB 0x04:
+.XB 0x1000:
+Treat all parallel and kernels regions like 'acc scalar region'
+.XB 0x2000:
+Run on accelerator and host, and compare results.
+.XB 0x4000:
+don't print out 'const' (inverted)
+.XB 0x8000:
+Default(none) implied on all OpenACC compute regions.
+.XB 0x10000:
+gang-vector mode, ignore 'worker' dimension
+.XB 0x20000:
+gang-worker mode, ignore 'vector' dimension
+.XB 0x40000:
+Generate alternate code for reductions
+.XB 0x80000:
+Generate multiple versions for different compute capabilities
+.XB 0x100000:
+Maxwell compute capability 5.x
+.XB 0x200000:
+Maxwell compute capability 5.0
+.XB 0x400000:
+Maxwell compute capability 5.2
+.XB 0x800000:
+For testing: allow unknown NME types in acc references
+.XB 0x1000000:
+Allow expressions in vector() and vector_length() clauses
+.XB 0x2000000:
+A loop with a user annotation of 'vector' implicitly scheduled as 'shortloop'
+.XB 0x4000000:
+don't generate vector loop tests or strip loop branches if we know the
+trip count is less than the vector length
+.XB 0x8000000:
+For AMD GPU, keep the OpenCL or SPIR source, don't compile it.
+.XB 0x10000000:
+Default(present) implied on all OpenACC compute regions.
+.XB 0x20000000:
+Allow unknown-sized arrays, essentially assuming they will be present
+.XB 0x40000000:
+Recognize libm functions even if we don't know they are libm
+.XB 0x80000000:
+For CUDA output, generate --devdebug flag to generate dwarf for cuda C
+
+.XF "195:"
+reserved
+
+.XF "196:"
+Threshhold value for conditional vectorization short circuiting.
+
+.XF "197:"
+For NVIDIA code generation, the lower 12 bits set the __launch_bounds__ 2nd argument value.
+The next 8 bits are masked into the blockIdx value to randomize block assignment.
+
+.XF "198:"
+More Accelerator flags
+.XB 0x01:
+Accelerator scalar replacement.
+.XB 0x02:
+Do generate 'dev only' Minfo messages even in the release.
+.XB 0x04:
+Don't combine list-oriented Minfo messages
+.XB 0x08:
+acclinopt: check for uninitialized values
+.XB 0x10:
+when compiling for NVIDIA, set PTXOPT level to zero
+.XB 0x20:
+when compiling for NVIDIA, set PTXOPT level to one
+.XB 0x40:
+when compiling for NVIDIA, set PTXOPT level to two
+.XB 0x7f:
+when compiling for NVIDIA, set PTXOPT level to three
+.XB 0x100
+Compile with -ta=tesla:managed, use managed memory interface
+.XB 0x1000:
+acclinopt: check for uninitialized values
+.XB 0x2000:
+acclinopt: check for uninitialized values and give errors if there are any
+.XB 0x4000:
+acclinopt: disable the wide load/store global memory optimization
+.XB 0x8000:
+Use the open source llc GPU back end instead of libnvvm from the CUDA team.
+.XB 0x10000:
+test multicore planner
+.XB 0x20000:
+reserved
+.XB 0x40000:
+Disable the insertion of begin/end labels for lexical scopes. These scope labels
+are used to privatize arrays and structs that are local to an accelerator
+region. See -Mnoautoprivatize.
+.XB 0x80000:
+Don't depend on warp-synchronous execution, insert syncs even with vector(32).
+.XB 0x100000:
+For -ta=multicore, don't actually go parallel but do everything else for the multicore code generation.
+.XB 0x200000:
+For -ta=multicore, call __test_malloc and __test_free instead of malloc and free,
+so we can intercept the calls for debugging.
+.XB 0x400000:
+Compile with -ta=tesla:pin, allocate using pinned memory
+.XB 0x800000:
+Experimenting with statement unrolling
+.XB 0x1000000:
+Experimenting with changing placement of synchronizations for calls to vector routines.
+.XB 0x2000000:
+global vector-32 mode; GPU code uses vector length of 32 for nvidia
+.XB 0x4000000:
+don't go into vector-32 mode; GPU code will not restrict to vector length of 32 for
+nvidia even with 'acc routine' calls
+.XB 0x8000000:
+Enable -ta=tesla:safecache, allowing variable-sized array section in cache directives.
+.XB 0x10000000:
+Print out line numbers for all ccff messages.
+.XB 0x20000000:
+In acclinopt, allow some builtin function calls to be marked redundant.
+.XB 0x40000000:
+In acclin, disable printing of the lilix index for each statement in cuda C output.
+This makes it easier to compare two outputs from slightly different versions.
+.XB 0x80000000:
+Enable unified memory support for OpenACC
+
+.XF "199:"
+Non-zero value enable -Mvect=fastfuse.  This flag is/must be passed only when
+-fast is enabled.  Value other than 0 represents the miximum number of blocks 
+to enable -Mvect=fastfuse.  default value is 10.
+
+.XF "200:"
+how many levels of inlining to do from leaves for bottom-up auto-inlining
+
+.XF "201:"
+Enable/Disable Accelerator optimizations
+.XB 0x04:
+Disable FMA generation
+.XB 0x08:
+Enable FMA generation
+.XB 0x10:
+Disable vector sync optimization - add vector syncs after every worker/vector loop
+.XB 0x100:
+Enable gang-vector mode globally
+.XB 0x200:
+Enable gang-vector mode only with gang/worker/vector routines or calls to them
+.XB 0x400:
+Disable gang-vector mode entirely
+.XB 0x800:
+Enable gang-worker mode globally
+.XB 0x1000:
+Enable gang-worker mode only with gang/worker/vector routines or calls to them
+.XB 0x2000:
+Disable gang-worker mode entirely
+.XB 0x4000:
+Enable vector-32 mode for NVIDIA GPUs globally
+.XB 0x8000:
+Enable vector-32 mode only with gang/worker/vector routines or calls to them
+.XB 0x10000:
+Disable vector-32 entirely
+.XB 0x20000:
+.XB 0x40000:
+Set accelerator CG loop index variables as 'noforward'
+.XB 0x80000:
+Print array assignments using pointer arithmetic always.
+.XB 0x100000:
+Don't demote address KMUL operations
+.XB 0x200000:
+in LLVM output, don't output the instruction info (lilix index, opcode)
+.XB 0x400000:
+.XB 0x800000:
+If the number of ACIV induction variables is too large, kill off all
+but the innermost loop ones.
+.XB 0x1000000:
+Only find ACIV induction variables for innermost loops.
+reserved
+.XB 0x2000000:
+Assume that complex arrays on GPU are aligned as follows: complex:8-byte dcmplx:16-byte
+
+.XF "202:"
+Set number of bigbuffers for multi-buffer memory management for AMD GPU.
+(moved from 250)
+
+.XF "203:"
+Set the default vector_length for OpenACC scheduling for NVIDIA
+
+.XF "204:"
+Set the default num_workers for OpenACC scheduling for NVIDIA
+
+.XF "205:"
+Set the default vector_length for OpenACC scheduling for AMD
+
+.XF "206:"
+Set the default num_workers for OpenACC scheduling for AMD
+
+.XF "207:"
+Set the default vector_length for OpenACC scheduling for Generic OpenCL
+
+.XF "208:"
+Set the default num_workers for OpenACC scheduling for Generic OpenCL
+
+.XF "209:"
+.XB 0x01:
+.XB 0x02:
+.XB 0x04:
+Restore old IL_SMOVE usage, don't expand into IL_SMOVEI/IL_SMOVES tree
+
+.XF "210:"
+OpenACC Multicore behavior
+.XB 0x01:
+Old behavior for collapsed gang loops
+.XB 0x02:
+Remove unused induction variable assignments
+.XB 0x04:
+don't optimize away unused private variable assignments
+.XB 0x08:
+enable tracing with -ta=multicore.
+.XB 0x10:
+Enable master-thread task distribution model.
+.XB 0x20:
+Generate "guided" schedule by default for OpenACC multicore with the LLVM backend.
+
+.XF "211:"
+Enable various accelerator CG optimizations
+.XB 0x01:
+Revoving unreachable code. (unreachable)
+.XB 0x02:
+Rearranging threadidx compares.  (threadidxcompares)
+.XB 0x04:
+Unswitching. (unswitching)
+.XB 0x08:
+Simplify threadidx compares. (simplifycompares);
+.XB 0x10:
+Loop unrolling.
+.XB 0x20:
+Combine conditionals.
+.XB 0x40:
+Find fused mul-add opportunities.
+.XB 0x80:
+Redundancy elimination.
+.XB 0x100:
+Local store forwarding.
+
+.XF "212:"
+Disable various accelerator CG optimizations. The bits here are the same
+as for flag 211.  Disable overrides Enable.
+
+.XF "213:"
+Enable O2 accelerator CG optimizations
+.XB 0x01:
+Initial forward substitution (forward1)
+.XB 0x02:
+Find expressions that are only positive or negative, and optimize away some branches. (findsign)
+.XB 0x04:
+Combine conditionals. (combineconditionals)
+.XB 0x08:
+Initial reassociation.  (reassociate1, reassociatedead)
+.XB 0x10:
+Induction variable recognition and replacement.  (induct)
+.XB 0x20:
+Safe expression forward substitition. (safeforward)
+.XB 0x40:
+Reassociate after safe expression forward substitution  (setlevel and reassociatesafe)
+.XB 0x80:
+peephole optimizations. (peephole)
+.XB 0x100:
+Mark cheap expressions
+.XB 0x200:
+Forward substitution after marking cheap expressions. (forward2)
+.XB 0x400:
+Local redundancy elimination. (localredund)
+.XB 0x800:
+Local forward substitution. (localforward)
+.XB 0x1000:
+Protext symbols holding descriptor values in OpenACC
+.XB 0x2000:
+Protext symbols holding descriptor values in CUDA Fortran
+.XB 0x4000:
+Second peephole optimization pass
+.XB 0x8000:
+Wide load/store global memory optimization
+.XB 0x10000:
+Use LDG instruction for CUDA and cc35+
+.XB 0x20000:
+Interchange vector ploops outwards
+.XB 0x40000:
+Scalar replacement.
+.XB 0x80000:
+Late expression deassociation: turn 8*n + 8*m into 8*(n+m)
+.XB 0x100000:
+Conditional removal based on min/max value determination
+.XB 0x200000:
+Enable induction variable analysis across the memsize*subscript 
+multiply for an array reference.
+.XB 0x400000:
+When combining induction variables to families with the same step,
+do or don't (default) limit to those with constant-offsets from the base value.
+.XB 0x800000:
+Mark IL_IKMV as induction variable
+.XB 0x1000000:
+Optimize branches based on finding min/max values of variables and expressions.
+.XB 0x2000000:
+When combining induction variables to families with the same step,
+do or don't (default) limit to those with constant-offsets and maybe a constant
+multiple of threadIdx, blockIdx, blockDim or gridDim from the base value.
+
+.XF "214:"
+Disable O2 accelerator CG optimizations. The bits here are the same
+as for flag 213.  Disable overrides Enable.
+
+.XF "215:"
+reserved
+
+.XF "216:"
+FLANG flags
+.XB 0x01:
+The -ffast-math command-line option is present.
+.XB 0x02:
+Disable fast math attribute on floating-point addition.
+.XB 0x04:
+Disable fast math attribute on floating-point division.
+.XB 0x08:
+Add nsz attribute to LLVM arithmetic operations.
+.XB 0x10:
+Add reassoc attribute to LLVM arithmetic operations.
+.XB 0x1000:
+The -ffp-contract=[fast|on] command-line option is present.
+
+.XF "217:"
+POWER Modifications
+.XB 0x01:
+Enable auto initialization of stack memory to 64bit signaling NaNs.
+
+.XF "218:"
+reserved
+
+.XF "220:"
+Enable tuning code for -Minline.
+.XF "221:"
+This sets the maximum caller function size into which to Minline.
+.XF "222:"
+Functions whose size if smaller than this value will get inlined by Minline.
+
+.XF "232:"
+OpenMP Accelerator Model flags for Flang compiler
+.XB 0x01:
+Enable outlining for device functions. Compiler creates a extra function for teams, parallel directives in the device.
+.XB 0x02:
+Disable symbol replacer while saving ILM of outlined function. It is enabled normally for OpenMP GPU offload.
+.XB 0x04:
+Disable skipping openmp cpu reduction code generation. We normally skip it since gpu has different implementation.
+.XB 0x08:
+Enable debug information for GPU code. Experimental
+.XB 0x10:
+Init libomptarget library in the main instead of constructor.
+.XB 0x20:
+Enable codegne for push loop trip count for libomptarget runtime.
+.XB 0x40:
+Enable codegen for spmd kernel init.
+
+.XF "233:"
+reserved
+
+.XF "234:"
+vector vectorlength identifier
+.XB "0x01:"
+vector vectorlength(number)
+.XB "0x02:"
+vector vectorlength(fixed)
+.XB "0x04:"
+vector vectorlength(scalable)
+
+.XF "235:"
+Provides a parameter
+.i n
+for vector vectorlength(number)
+
+.XF "237:"
+Provides a parameter
+.i n
+for the simd simdlen.  If simdlen is enabled and
+.i n
+> 0, then generate !llvm.loop.vectorize.width metadata.
+
+.XF "248:"
+OpenMP Threadprivate TLS/TPvector implementation control.
+
+.XF "249:"
+LLVM version number, computed as:
+Major = n / 10
+Minor = n - (Major * 10)
+where, n = flg.x[249]
+
+.XF "250:"
+Set number of bigbuffers for multi-buffer memory management for AMD GPU.
+(moved to 202)
+
+.XF "251:"
+Reserved to save an alignment passed by pragma `!DIR$ ALIGN alignment`
+
+.XF "252:"
+(NOT available - check declaration in global.h for flg.x[], all compilers)

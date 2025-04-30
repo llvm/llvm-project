@@ -1,0 +1,24 @@
+libc {
+  GLIBC_2.4 {
+    # ARM EABI compatibility routines
+    __aeabi_assert;
+    __aeabi_atexit;
+    __aeabi_errno_addr;
+    __aeabi_localeconv;
+    __aeabi_MB_CUR_MAX;
+    __aeabi_memclr; __aeabi_memclr4; __aeabi_memclr8;
+    __aeabi_memcpy; __aeabi_memcpy4; __aeabi_memcpy8;
+    __aeabi_memmove; __aeabi_memmove4; __aeabi_memmove8;
+    __aeabi_memset; __aeabi_memset4; __aeabi_memset8;
+
+    # Helper routines
+    __gnu_Unwind_Find_exidx;
+  }
+  GLIBC_2.8 {
+    __gnu_mcount_nc;
+  }
+  GLIBC_2.19 {
+    # This set has to exist in some Versions file so we can use 2.19 in
+    # SHLIB_COMPAT.  Since it didn't exist anywhere else, we add it here.
+  }
+}

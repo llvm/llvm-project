@@ -16,10 +16,10 @@ ad x1, x1, x1
 # CHECK-NEXT: ad x1, x1, x1
 
 fl ft0, 0(sp)
-# CHECK-RV32I: did you mean: la, lb, lh, li, lw
-# CHECK-RV32IF: did you mean: flw, la, lb, lh, li, lw
-# CHECK-RV64I: did you mean: la, lb, ld, lh, li, lw
-# CHECK-RV64IF: did you mean: flw, la, lb, ld, lh, li, lw
+# CHECK-RV32I: did you mean: la, lb, lh, li, lq, lw
+# CHECK-RV32IF: did you mean: flw, la, lb, lh, li, lq, lw
+# CHECK-RV64I: did you mean: la, lb, ld, lh, li, lq, lw
+# CHECK-RV64IF: did you mean: flw, la, lb, ld, lh, li, lq, lw
 # CHECK-NEXT: fl ft0, 0(sp)
 
 addd x1, x1, x1

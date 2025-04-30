@@ -1,0 +1,11 @@
+This hierarchy supports Linux systems using the new
+asm-generic/unistd.h, which removes many familiar old syscalls.  For
+example, to implement open(), newer Linux architectures require glibc
+to invoke the __NR_openat syscall with AT_FDCWD.  This hierarchy
+provides all those implementations.
+
+It also provides support for 32-bit platforms using the 64-bit kernel
+syscall APIs, as the 32-bit ones are no longer provided.  Note that
+newer ILP32 environments (x32 or AArch64:ILP32, for example) are
+converting to use more 64-bit types in kernel syscalls, so that aspect
+of this support is in more flux as of this writing.

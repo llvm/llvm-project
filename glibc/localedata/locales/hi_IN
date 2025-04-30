@@ -1,0 +1,236 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Hindi language locale for India.
+% Contributed by Kentaroh Noji <knoji@jp.ibm.com> and
+% Tetsuji Orita <orita@jp.ibm.com>.
+
+LC_IDENTIFICATION
+title      "Hindi language locale for India"
+source     "IBM Globalization Center of Competency, Yamato Software Laboratory"
+address    "1623-14, Shimotsuruma, Yamato-shi, Kanagawa-ken, 242-8502, Japan"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Hindi"
+territory  "India"
+revision   "1.0"
+date       "2000-07-21"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+% Devanagari uses the alternate digits U+0966..U+096F
+outdigit <U0966>..<U096F>
+
+% This is used in the scanf family of functions to read devanagari numbers
+% using "%Id" and such.
+map to_inpunct; /
+  (<U0030>,<U0966>); /
+  (<U0031>,<U0967>); /
+  (<U0032>,<U0968>); /
+  (<U0033>,<U0969>); /
+  (<U0034>,<U096A>); /
+  (<U0035>,<U096B>); /
+  (<U0036>,<U096C>); /
+  (<U0037>,<U096D>); /
+  (<U0038>,<U096E>); /
+  (<U0039>,<U096F>);
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+int_curr_symbol       "INR "
+currency_symbol       "<U20B9>"
+mon_decimal_point     "."
+mon_thousands_sep     ","
+% https://en.wikipedia.org/wiki/Indian_numbering_system
+mon_grouping          3;2
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       2
+frac_digits           2
+% https://en.wikipedia.org/wiki/Indian_rupee
+p_cs_precedes         1
+p_sep_by_space        0
+n_cs_precedes         1
+n_sep_by_space        0
+p_sign_posn           1
+n_sign_posn           1
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+% This is the POSIX Locale definition for the LC_NUMERIC  category.
+%
+decimal_point          "."
+thousands_sep          ","
+grouping               3
+%
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME category.
+% These are generated based on XML base Locale definition file
+% for IBM Class for Unicode/Java
+%
+% Abbreviated weekday names (%a)
+abday       "<U0930><U0935><U093F>";/
+            "<U0938><U094B><U092E>";/
+            "<U092E><U0902><U0917><U0932>";/
+            "<U092C><U0941><U0927>";/
+            "<U0917><U0941><U0930><U0941>";/
+            "<U0936><U0941><U0915><U094D><U0930>";/
+            "<U0936><U0928><U093F>"
+%
+% Full weekday names (%A)
+day         "<U0930><U0935><U093F><U0935><U093E><U0930>";/
+            "<U0938><U094B><U092E><U0935><U093E><U0930>";/
+            "<U092E><U0902><U0917><U0932><U0935><U093E><U0930>";/
+            "<U092C><U0941><U0927><U0935><U093E><U0930>";/
+            "<U0917><U0941><U0930><U0941><U0935><U093E><U0930>";/
+            "<U0936><U0941><U0915><U094D><U0930><U0935><U093E><U0930>";/
+            "<U0936><U0928><U093F><U0935><U093E><U0930>"
+%
+% Abbreviated month names (%b)
+abmon       "<U091C><U0928><U0970>";/
+            "<U092B><U093C><U0930><U0970>";/
+            "<U092E><U093E><U0930><U094D><U091A>";/
+            "<U0905><U092A><U094D><U0930><U0948><U0932>";/
+            "<U092E><U0908>";"<U091C><U0942><U0928>";/
+            "<U091C><U0941><U0932><U0970>";/
+            "<U0905><U0917><U0970>";/
+            "<U0938><U093F><U0924><U0970>";/
+            "<U0905><U0915><U094D><U0924><U0942><U0970>";/
+            "<U0928><U0935><U0970>";/
+            "<U0926><U093F><U0938><U0970>"
+%
+% Full month names (%B)
+mon         "<U091C><U0928><U0935><U0930><U0940>";/
+            "<U092B><U093C><U0930><U0935><U0930><U0940>";/
+            "<U092E><U093E><U0930><U094D><U091A>";/
+            "<U0905><U092A><U094D><U0930><U0948><U0932>";/
+            "<U092E><U0908>";"<U091C><U0942><U0928>";/
+            "<U091C><U0941><U0932><U093E><U0908>";/
+            "<U0905><U0917><U0938><U094D><U0924>";/
+            "<U0938><U093F><U0924><U0902><U092C><U0930>";/
+            "<U0905><U0915><U094D><U0924><U0942><U092C><U0930>";/
+            "<U0928><U0935><U0902><U092C><U0930>";/
+            "<U0926><U093F><U0938><U0902><U092C><U0930>"
+%
+% Equivalent of AM PM
+am_pm       "<U092A><U0942><U0930><U094D><U0935><U093E><U0939><U094D><U0928>";/
+            "<U0905><U092A><U0930><U093E><U0939><U094D><U0928>"
+%
+% Appropriate date and time representation
+d_t_fmt     "%A %d %b %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%A %d %b %Y %I:%M:%S %p %Z"
+%
+% Appropriate date representation
+d_fmt       "%-d//%-m//%y"
+%
+% Appropriate time representation
+t_fmt       "%I:%M:%S %p %Z"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm  "%I:%M:%S %p %Z"
+week 7;19971130;1
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0939>]"
+noexpr  "^[-0nN<U0928>]"
+yesstr  "<U0939><U093E><U0901>"
+nostr   "<U0928><U0939><U0940><U0902>"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    ""
+name_mr     "<U0936><U094D><U0930><U0940><U092E><U093E><U0928><U094D>"
+name_mrs    "<U0936><U094D><U0930><U0940><U092E><U0924><U0940>"
+name_miss   "<U0915><U0941><U092E><U093E><U0930><U0940>"
+name_ms     "<U0938><U0941><U0936><U094D><U0930><U0940>"
+
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U092D><U093E><U0930><U0924>"
+country_ab2 "IN"
+country_ab3 "IND"
+country_num 356
+country_car "IND"
+% हिन्दी
+lang_name    "<U0939><U093F><U0928><U094D><U0926><U0940>"
+lang_ab      "hi"
+lang_term    "hin"
+lang_lib    "hin"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the LC_TELEPHONE
+% generated by IBM Basic CountryPack Transformer.
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix "91"
+int_select "00"
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

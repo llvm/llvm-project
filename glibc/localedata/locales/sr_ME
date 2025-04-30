@@ -1,0 +1,160 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Serbian Language locale for Montenegro
+% Source: sr_YU, sr_CS locale
+% Address:
+%
+% Contact: Danilo Segan
+% Email: danilo@gnome.org
+% Tel: +381 63 323456
+% Fax: none
+% Language: sr
+% Territory: ME
+% Revision: 1.2
+% Date: 2006-10-11
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Serbian locale for Montenegro"
+source     "sr_YU, sr_CS locale"
+address    ""
+contact    "Danilo Segan"
+email      "bug-glibc@gnu.org"
+tel        ""
+fax        ""
+language   "Serbian"
+territory  "Montenegro"
+revision   "1.2"
+date       "2006-10-11"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+LC_COLLATE
+copy "sr_RS"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol           "EUR "
+currency_symbol           "<U20AC>"
+mon_decimal_point         ","
+mon_thousands_sep         "."
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "sr_RS"
+END LC_NUMERIC
+
+LC_TIME
+abday   "<U043D><U0435><U0434>";"<U043F><U043E><U043D>";/
+        "<U0443><U0442><U043E>";"<U0441><U0440><U0438>";/
+        "<U0447><U0435><U0442>";"<U043F><U0435><U0442>";/
+        "<U0441><U0443><U0431>"
+day     "<U043D><U0435><U0434><U0458><U0435><U0459><U0430>";/
+        "<U043F><U043E><U043D><U0435><U0434><U0435><U0459><U0430><U043A>";/
+        "<U0443><U0442><U043E><U0440><U0430><U043A>";/
+	"<U0441><U0440><U0438><U0458><U0435><U0434><U0430>";/
+        "<U0447><U0435><U0442><U0432><U0440><U0442><U0430><U043A>";/
+        "<U043F><U0435><U0442><U0430><U043A>";/
+        "<U0441><U0443><U0431><U043E><U0442><U0430>"
+abmon   "<U0458><U0430><U043D>";"<U0444><U0435><U0431>";/
+        "<U043C><U0430><U0440>";"<U0430><U043F><U0440>";/
+        "<U043C><U0430><U0458>";"<U0458><U0443><U043D>";/
+        "<U0458><U0443><U043B>";"<U0430><U0432><U0433>";/
+        "<U0441><U0435><U043F>";"<U043E><U043A><U0442>";/
+        "<U043D><U043E><U0432>";"<U0434><U0435><U0446>"
+mon     "<U0458><U0430><U043D><U0443><U0430><U0440>";/
+        "<U0444><U0435><U0431><U0440><U0443><U0430><U0440>";/
+        "<U043C><U0430><U0440><U0442>";/
+        "<U0430><U043F><U0440><U0438><U043B>";/
+        "<U043C><U0430><U0458>";/
+        "<U0458><U0443><U043D>";/
+        "<U0458><U0443><U043B>";/
+        "<U0430><U0432><U0433><U0443><U0441><U0442>";/
+        "<U0441><U0435><U043F><U0442><U0435><U043C><U0431><U0430><U0440>";/
+        "<U043E><U043A><U0442><U043E><U0431><U0430><U0440>";/
+        "<U043D><U043E><U0432><U0435><U043C><U0431><U0430><U0440>";/
+        "<U0434><U0435><U0446><U0435><U043C><U0431><U0430><U0440>"
+
+d_t_fmt "%A, %d. %B %Y. %T %Z"
+d_fmt   "%d.%m.%Y."
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm "%T"
+date_fmt  "%a, %e. %b %Y.  %H:%M:%S %Z"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+copy "sr_RS"
+END LC_MESSAGES
+
+LC_PAPER
+copy "sr_RS"
+END LC_PAPER
+
+LC_NAME
+copy "sr_RS"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_ab2   "ME"
+country_ab3   "MNE"
+country_post  "MNE"
+country_name  "<U0426><U0440><U043D><U0430> <U0413><U043E><U0440><U0430>"
+country_num   499
+country_car   "MNE"
+country_isbn  "86"
+lang_name     "<U0441><U0440><U043F><U0441><U043A><U0438>"
+lang_term     "srp"
+lang_lib      "srp"
+lang_ab	      "sr"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+tel_dom_fmt "%A %l"
+int_prefix "382"
+int_select "99"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "sr_RS"
+END LC_MEASUREMENT

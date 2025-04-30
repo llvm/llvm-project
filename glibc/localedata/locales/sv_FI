@@ -1,0 +1,142 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Swedish Language Locale for Finland
+% Source: RAP
+% Address: Sankt Jo//rgens Alle 8
+%    DK-1615 Ko//benhavn V, Danmark
+% Contact: Keld Simonsen
+% Email: keld@keldix.com
+% Tel: +45 - 31226543
+% Fax: +45 - 33256543
+% Language: sv
+% Territory: FI
+% Revision: 4.3
+% Date: 1996-10-15
+% Users: general
+
+LC_IDENTIFICATION
+title      "Swedish locale for Finland"
+source     "RAP"
+address    "Sankt J<U00F8>rgens Alle 8, DK-1615 K<U00F8>benhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Swedish"
+territory  "Finland"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "sv_SE"
+END LC_CTYPE
+
+LC_COLLATE
+copy "sv_SE"
+END LC_COLLATE
+
+LC_MESSAGES
+copy "sv_SE"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "fi_FI"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "fi_FI"
+END LC_NUMERIC
+
+LC_TIME
+% copy "sv_SE"
+abday     "s<U00F6>n";"m<U00E5>n";/
+	  "tis";"ons";/
+	  "tor";"fre";/
+	  "l<U00F6>r"
+day       "s<U00F6>ndag";/
+	  "m<U00E5>ndag";/
+	  "tisdag";/
+	  "onsdag";/
+	  "torsdag";/
+	  "fredag";/
+	  "l<U00F6>rdag"
+abmon     "jan";"feb";/
+	  "mar";"apr";/
+	  "maj";"jun";/
+	  "jul";"aug";/
+	  "sep";"okt";/
+	  "nov";"dec"
+mon       "januari";/
+	  "februari";/
+	  "mars";/
+	  "april";/
+	  "maj";/
+	  "juni";/
+	  "juli";/
+	  "augusti";/
+	  "september";/
+	  "oktober";/
+	  "november";/
+	  "december"
+d_t_fmt  "%a %e. %B %Y %H.%M.%S"
+d_fmt    "%d.%m.%Y"
+t_fmt     "%H.%M.%S"
+am_pm     "";""
+t_fmt_ampm  ""
+date_fmt       "%a %-d.%-m.%Y %H.%M.%S %z"
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "fi_FI"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "fi_FI"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "fi_FI"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%d%N%b%N%a%N%s %h%t%e%t%r%N%z %T%N%c%N"
+country_ab2 "FI"
+country_ab3 "FIN"
+country_num 246
+country_name "Finland"
+country_post "FI"
+country_car  "FIN"
+country_isbn 952
+lang_name    "svenska"
+lang_ab      "sv"
+lang_term    "swe"
+lang_lib     "swe"
+END LC_ADDRESS

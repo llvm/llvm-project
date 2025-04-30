@@ -1,0 +1,204 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Uyghur language locale for China
+% Source:
+% Contact:   Eagle Burkut
+% Email:     eagle.burkut@gmail.com
+% Language:  ug
+% Territory: CN
+% Revision:  2.00
+% Date:      2012-02-26
+% Users:     general
+
+LC_IDENTIFICATION
+title      "Uyghur locale for China"
+source     ""
+address    ""
+contact    "Eagle Burkut"
+email      "eagle.burkut@gmail.com"
+tel        ""
+fax        ""
+language   "Uyghur"
+territory  "China"
+revision   "2.00"
+date       "2011-02-26"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% CLDR collation rules for Uyghur:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/ug.xml)
+%
+% <collation type="standard">
+%  <cr><![CDATA[
+%    [reorder Arab]
+%    &ا<ە<ب
+%    &ك<گ<ڭ<ل
+%    &ھ<و<ۇ<ۆ<ۈ<ۋ<ې<ى<ي
+%  ]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/ug.xml)
+%
+% <exemplarCharacters type="index" draft="contributed">[ئ ا ە ب پ ت ج چ خ د ر ز ژ س ش غ ف ق ك گ ڭ ل م ن ھ و ۇ ۆ ۈ ۋ ې ى ي]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+copy "iso14651_t1"
+
+% &ا<ە<ب
+reorder-after <S0627> % ARABIC LETTER ALEF
+<S06D5> % ARABIC LETTER AE
+<S0628> % ARABIC LETTER BEH
+
+% &ك<گ<ڭ<ل
+reorder-after <S0643> % ARABIC LETTER KAF
+<S06AF> % ARABIC LETTER GAF
+<S06AD> % ARABIC LETTER NG
+<S0644> % ARABIC LETTER LAM
+
+% &ھ<و<ۇ<ۆ<ۈ<ۋ<ې<ى<ي
+reorder-after <S06BE> % ARABIC LETTER HEH DOACHASHMEE
+<S0648> % ARABIC LETTER WAW
+<S06C7> % ARABIC LETTER U
+<S06C6> % ARABIC LETTER OE
+<S06C8> % ARABIC LETTER YU
+<S06CB> % ARABIC LETTER VE
+<S06D0> % ARABIC LETTER E
+<S0649> % ARABIC LETTER ALEF MAKSURA
+<S064A> % ARABIC LETTER YEH
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+LC_MONETARY
+copy "zh_CN"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "zh_CN"
+END LC_NUMERIC
+
+LC_TELEPHONE
+copy "zh_CN"
+END LC_TELEPHONE
+
+LC_TIME
+
+abday "<U064A>";/
+      "<U062F>";/
+      "<U0633>";/
+      "<U0686>";/
+      "<U067E>";/
+      "<U062C>";/
+      "<U0634>"
+day   "<U064A><U06D5><U0643><U0634><U06D5><U0646><U0628><U06D5>";/
+      "<U062F><U06C8><U0634><U06D5><U0646><U0628><U06D5>";/
+      "<U0633><U06D5><U064A><U0634><U06D5><U0646><U0628><U06D5>";/
+      "<U0686><U0627><U0631><U0634><U06D5><U0646><U0628><U06D5>";/
+      "<U067E><U06D5><U064A><U0634><U06D5><U0646><U0628><U06D5>";/
+      "<U062C><U06C8><U0645><U06D5>";/
+      "<U0634><U06D5><U0646><U0628><U06D5>"
+abmon "<U064A><U0627><U0646><U06CB><U0627><U0631>";/
+      "<U0641><U06D0><U06CB><U0631><U0627><U0644>";/
+      "<U0645><U0627><U0631><U062A>";/
+      "<U0626><U0627><U067E><U0631><U06D0><U0644>";/
+      "<U0645><U0627><U064A>";/
+      "<U0626><U0649><U064A><U06C7><U0646>";/
+      "<U0626><U0649><U064A><U06C7><U0644>";/
+      "<U0626><U0627><U06CB><U063A><U06C7><U0633><U062A>";/
+      "<U0633><U06D0><U0646><U062A><U06D5><U0628><U0649><U0631>";/
+      "<U0626><U06C6><U0643><U062A><U06D5><U0628><U0649><U0631>";/
+      "<U0646><U0648><U064A><U0627><U0628><U0649><U0631>";/
+      "<U062F><U06D0><U0643><U0627><U0628><U0649><U0631>"
+mon   "<U064A><U0627><U0646><U06CB><U0627><U0631>";/
+      "<U0641><U06D0><U06CB><U0631><U0627><U0644>";/
+      "<U0645><U0627><U0631><U062A>";/
+      "<U0626><U0627><U067E><U0631><U06D0><U0644>";/
+      "<U0645><U0627><U064A>";/
+      "<U0626><U0649><U064A><U06C7><U0646>";/
+      "<U0626><U0649><U064A><U06C7><U0644>";/
+      "<U0626><U0627><U06CB><U063A><U06C7><U0633><U062A>";/
+      "<U0633><U06D0><U0646><U062A><U06D5><U0628><U0649><U0631>";/
+      "<U0626><U06C6><U0643><U062A><U06D5><U0628><U0649><U0631>";/
+      "<U0646><U0648><U064A><U0627><U0628><U0649><U0631>";/
+      "<U062F><U06D0><U0643><U0627><U0628><U0649><U0631>"
+
+% %a، %d-%m-%Y، %T (w، dd-mm-YYYY، HH:MM:SS) (قىسقا ھەپتە، 31-12-2012، 23:08:59)
+d_t_fmt  "%a<U060C> %d-%m-%Y<U060C> %T"
+
+% %a، %d-%m-%Y (w، dd-mm-YYYY) (قىسقا ھەپتە، 31-12-2012)
+d_fmt    "%a<U060C> %d-%m-%Y"
+
+% %T (HH:MM:SS)
+t_fmt    "%T"
+
+am_pm    "";""
+
+% %a، %d-%m-%Y، %T (w، dd-mm-YYYY، HH:MM:SS) (قىسقا ھەپتە، 31-12-2012، 23:08:59)
+date_fmt "%a<U060C> %d-%m-%Y<U060C> %T"
+
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U06BE>]"
+noexpr  "^[-0nN<U064A>]"
+yesstr  "<U06BE><U06D5><U0626><U06D5>"
+nostr   "<U064A><U0627><U0642>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "zh_CN"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "zh_CN"
+END LC_MEASUREMENT
+
+LC_NAME % to be fixed
+copy "zh_CN"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt	"%c%N%T%N%s %h %e %r%N%b%N%d%N%f%N%a%N"
+country_name "<U062C><U06C7><U06AD><U06AF><U0648>"
+%country_post	"FIXME"
+country_ab2	"CN"
+country_ab3	"CHN"
+country_num	156
+country_car "CHN"
+country_isbn	7
+% ئۇيغۇرچە
+lang_name    "<U0626><U06C7><U064A><U063A><U06C7><U0631><U0686><U06D5>"
+lang_ab      "ug"
+lang_term    "uig"
+lang_lib    "uig"
+END LC_ADDRESS

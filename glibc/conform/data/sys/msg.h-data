@@ -1,0 +1,35 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+type {struct msqid_ds}
+
+type msgqnum_t
+type msglen_t
+
+constant MSG_NOERROR
+
+element {struct msqid_ds} {struct ipc_perm} msg_perm
+element {struct msqid_ds} msgqnum_t msg_qnum
+element {struct msqid_ds} msglen_t msg_qbytes
+// Bug 23083: msg_lspid/msg_lrpid have type unsigned short instead of pid_t.
+xfail[i386-gnu]-element {struct msqid_ds} pid_t msg_lspid
+xfail[i386-gnu]-element {struct msqid_ds} pid_t msg_lrpid
+element {struct msqid_ds} time_t msg_stime
+element {struct msqid_ds} time_t msg_rtime
+element {struct msqid_ds} time_t msg_ctime
+
+type pid_t
+type time_t
+type key_t
+type size_t
+type ssize_t
+
+function int msgctl (int, int, struct msqid_ds*)
+function int msgget (key_t, int)
+function ssize_t msgrcv (int, void*, size_t, long int, int)
+function int msgsnd (int, const void*, size_t, int)
+
+allow-header sys/ipc.h
+
+allow msg*
+allow MSG*
+allow *_h
+#endif

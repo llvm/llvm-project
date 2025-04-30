@@ -1,0 +1,289 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Hausa language locale for Nigeria
+% Source:
+% Contact: Pablo Saratxaga
+% Email: pablo@mandriva.com
+% Language: ha
+% Territory: NG
+% Revision: 0.2
+% Date: 2006-02-01
+% Users: general
+
+LC_IDENTIFICATION
+title      "Hausa locale for Nigeria"
+source     ""
+address    ""
+contact    ""
+email      "pablo@mandriva.com"
+tel        ""
+fax        ""
+language   "Hausa"
+territory  "Nigeria"
+revision   "0.2"
+date       "2006-02-01"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+
+% Hausa uses the following extra letters:
+% bhook, dhook, khook, rtilde.
+% accent marks?%
+%
+% ' is used as glotal stop (should it count on sorting?)
+%
+% Hausa in Niger uses also yhook; implemented here too
+% so it sorts as 'y
+%
+% order: a, b, b+, c, d, d+, e, f, g, h, i, j, k, k+, l, m, n, o, p
+% q, r, r~, s, sh, t, ts, u, [v], w, [x], 'y, y, z
+
+% CLDR collation rules for Hausa:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/ha.xml)
+%
+% <collation type="standard" references="Paul Newman: Hausa-English Dictionary ISBN 978-0-300-12246-6">
+%   <cr><![CDATA[
+%     &B<ɓ<<<Ɓ
+%     &D<ɗ<<<Ɗ
+%     &K<ƙ<<<Ƙ
+%     &S<sh<<<Sh<<<SH
+%     &T<ts<<<Ts<<<TS
+%     &Y<ƴ<<<ʼy<<<''y<<<Ƴ<<<ʼY<<<''Y
+%   ]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/ha.xml)
+%
+% <exemplarCharacters type="index" draft="contributed">[A B Ɓ C D Ɗ E F G H I J K Ƙ L M N O P Q R S T U V W X Y {ʼY} Z]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+%
+% The original order as described above also had r-tilde (r̃) but
+% as CLDR doesn’t have it, I omit it.
+
+copy "iso14651_t1"
+
+collating-symbol  <b-hook>
+collating-symbol  <d-hook>
+collating-symbol  <k-hook>
+collating-symbol  <sh-digraph>
+collating-symbol  <ts-digraph>
+collating-symbol  <'-y-ha>
+
+collating-element <sh> from "sh"
+collating-element <sH> from "sH"
+collating-element <Sh> from "Sh"
+collating-element <SH> from "SH"
+collating-element <ts> from "ts"
+collating-element <tS> from "tS"
+collating-element <Ts> from "Ts"
+collating-element <TS> from "TS"
+collating-element <modifier-letter-apostrophe-y> from "<U02BC>y"
+collating-element <modifier-letter-apostrophe-Y> from "<U02BC>Y"
+collating-element <right-single-quotation-mark-y> from "<U2019>y"
+collating-element <right-single-quotation-mark-Y> from "<U2019>Y"
+collating-element <double-apostrophe-y> from "''y"
+collating-element <double-apostrophe-Y> from "''Y"
+
+reorder-after <AFTER-B>
+<b-hook>
+reorder-after <AFTER-D>
+<d-hook>
+reorder-after <AFTER-K>
+<k-hook>
+reorder-after <AFTER-S>
+<sh-digraph>
+reorder-after <AFTER-T>
+<ts-digraph>
+reorder-after <AFTER-Y>
+<'-y-ha>
+
+<U0253>     <b-hook>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ɓ
+<U0181>     <b-hook>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ɓ
+<U0257>     <d-hook>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ɗ
+<U018A>     <d-hook>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ɗ
+<U0199>     <k-hook>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ƙ
+<U0198>     <k-hook>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ƙ
+<sh>    <sh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<sH>    <sh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<SH>    <sh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<Sh>    <sh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<ts>    <ts-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<tS>    <ts-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<TS>    <ts-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<Ts>    <ts-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+
+<U01B4>                         <'-y-ha>;"<BASE><BASE>";"<MIN><VRNT1>";IGNORE % ƴ
+<modifier-letter-apostrophe-y>  <'-y-ha>;"<BASE><BASE>";"<MIN><VRNT2>";IGNORE
+<right-single-quotation-mark-y> <'-y-ha>;"<BASE><BASE>";"<MIN><VRNT3>";IGNORE
+<double-apostrophe-y>           <'-y-ha>;"<BASE><BASE>";"<MIN><VRNT4>";IGNORE
+<U01B3>                         <'-y-ha>;"<BASE><BASE>";"<CAP><VRNT1>";IGNORE % Ƴ
+<modifier-letter-apostrophe-Y>  <'-y-ha>;"<BASE><BASE>";"<CAP><VRNT2>";IGNORE
+<right-single-quotation-mark-Y> <'-y-ha>;"<BASE><BASE>";"<CAP><VRNT3>";IGNORE
+<double-apostrophe-Y>           <'-y-ha>;"<BASE><BASE>";"<CAP><VRNT4>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_NG"
+END LC_CTYPE
+
+LC_MONETARY
+copy "en_NG"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_NG"
+END LC_NUMERIC
+
+LC_TELEPHONE
+copy "en_NG"
+END LC_TELEPHONE
+
+LC_TIME
+% maybe "Lhd" "Lrb" => "Lh"/"Lb" on 2letter tables?
+abday       "Lah";"Lit";/
+            "Tal";"Lar";/
+            "Alh";"Jum";/
+            "Asa"
+day         "Lahadi";/
+            "Litini";/
+            "Talata";/
+            "Laraba";/
+            "Alhamis";/
+            "Juma'a";/
+            "Asabar"
+abmon       "Jan";"Fab";/
+            "Mar";"Afi";/
+            "May";"Yun";/
+            "Yul";"Agu";/
+            "Sat";"Okt";/
+            "Nuw";"Dis"
+mon         "Janairu";/
+            "Faburairu";/
+            "Maris";/
+            "Afirilu";/
+            "Mayu";/
+            "Yuni";/
+            "Yuli";/
+            "Agusta";/
+            "Satumba";/
+            "Oktoba";/
+            "Nuwamba";/
+            "Disamba"
+d_t_fmt     "ranar %A, %d ga %B cikin %r"
+date_fmt    "ranar %A, %d ga %B cikin %r %Z"
+d_fmt       "%d//%m//%y"
+t_fmt       "%r"
+am_pm       "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1TtiIYy]"
+noexpr  "^[-0bBaAnN]"
+yesstr  "i"
+nostr   "a<U02BC>a"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_NG"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "en_NG"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_NG"
+END LC_NAME
+
+% FIXME
+LC_ADDRESS
+% Representation of postal addresses (minus the addressee's name) in South
+% Africa. (Ignored for now)
+% "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N", which gives -
+%
+% "firm name",
+% "end of line",
+% "C/O address",
+% "end of line",
+% "department name",
+% "Building name",
+% "end of line",
+% "street or block name",
+% "space",
+% "house number or designation",
+% "space",
+% "floor number",
+% "space",
+% "room number, door designation",
+% "end of line",
+% "postal code",
+% "space",
+% "town, city",
+% "end of line",
+% "country designation for the <country_post> keyword",
+% "end of line
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+
+country_name "Najeriya"
+
+% Language name in Hausa
+lang_name     "Hausa"
+
+% CEPT MAILCODES are suggested
+% Alternatively use the code found on your countries postal item tracking number
+% "NG"?
+%country_post   "NG"
+
+% UN Geneve 1949:68 Distinguishing signs of vehicles in international traffic
+% http://www.unece.org/trans/conventn/Distsigns_Sept2003.pdf
+country_car   "WAN"
+
+% ISO 2108
+% http://www.isbn-international.org/
+country_isbn  978
+
+% ISO 639 language abbreviations:
+% 639-1 2 letter, 639-2 3 letter terminology
+% http://www.loc.gov/standards/iso639-2/englagn.html
+lang_ab       "ha"
+lang_term     "hau"
+lang_lib      "hau"
+
+% ISO 3166 country number and 2 and 3 letter abreviations
+% http://www.unicode.org/onlinedat/countries.html
+country_ab2   "NG"
+country_ab3   "NGA"
+country_num   566
+
+END LC_ADDRESS

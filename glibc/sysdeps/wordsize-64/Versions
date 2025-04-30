@@ -1,0 +1,6 @@
+libc {
+  GLIBC_2.3.3 {
+    # These were erroneously omitted for 64-bit platforms in 2.3.
+    strtoll_l; strtoull_l;
+  }
+}

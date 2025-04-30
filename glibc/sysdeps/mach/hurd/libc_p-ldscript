@@ -1,0 +1,6 @@
+/* GNU ld script
+   This linker script is installed as /lib/libc_p.a.
+   It makes -lc_p become just like -( -lcrt_p -lmachuser_p -lhurduser_p -).
+   */
+
+GROUP ( libcrt_p.a libmachuser_p.a libhurduser_p.a )

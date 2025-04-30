@@ -989,6 +989,7 @@ static void bfreed(kmp_info_t *th) {
     __kmp_printf_no_lock("__kmp_printpool: T#%d No free blocks\n", gtid);
 }
 
+#pragma ns mark noimport
 void __kmp_initialize_bget(kmp_info_t *th) {
   KMP_DEBUG_ASSERT(SizeQuant >= sizeof(void *) && (th != 0));
 
@@ -998,6 +999,7 @@ void __kmp_initialize_bget(kmp_info_t *th) {
         (bufsize)__kmp_malloc_pool_incr);
 }
 
+#pragma ns mark noimport
 void __kmp_finalize_bget(kmp_info_t *th) {
   thr_data_t *thr;
   bfhead_t *b;

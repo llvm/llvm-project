@@ -1,0 +1,22 @@
+@node Library Summary, Installation, Language Features, Top
+@c %MENU% A summary showing the syntax, header file, and derivation of each library feature
+@appendix Summary of Library Facilities
+
+This appendix is a complete list of the facilities declared within the
+header files supplied with @theglibc{}.  Each entry also lists the
+standard or other source from which each facility is derived, and tells
+you where in the manual you can find more information about how to use
+it.
+
+@c This table runs wide.  Shrink fonts.
+@iftex
+@smallfonts @rm
+@end iftex
+@table @code
+@comment summary.texi is generated from the other Texinfo files.
+@comment See the Makefile and summary.pl for the details.
+@include summary.texi
+@end table
+@iftex
+@textfonts @rm
+@end iftex

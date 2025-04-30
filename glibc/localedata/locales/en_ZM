@@ -1,0 +1,128 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Authors:
+% 2011-04-18, Anthony Musaluke <goof2092@gmail.com>
+% 2011-04-18, info@2xlibre.net
+
+LC_IDENTIFICATION
+title     "English locale for Zambia"
+source	  "ANLoc"
+contact   "Martin Benjamin"
+email     "locales@africanlocalization.net"
+language  "English"
+territory "Zambia"
+revision  "1.0"
+date      "2011-04-18"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+abday       "Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"
+day         "Sunday";/
+            "Monday";/
+            "Tuesday";/
+            "Wednesday";/
+            "Thursday";/
+            "Friday";/
+            "Saturday"
+abmon       "Jan";"Feb";/
+            "Mar";"Apr";/
+            "May";"Jun";/
+            "Jul";"Aug";/
+            "Sep";"Oct";/
+            "Nov";"Dec"
+mon         "January";/
+            "February";/
+            "March";/
+            "April";/
+            "May";/
+            "June";/
+            "July";/
+            "August";/
+            "September";/
+            "October";/
+            "November";/
+            "December"
+d_t_fmt     "%a %d %b %Y %T %Z"
+d_fmt       "%d//%m//%y"
+t_fmt       "%T"
+am_pm       "am";"pm"
+t_fmt_ampm  "%l:%M:%S %P %Z"
+date_fmt    "%a %e %b %H:%M:%S %Z %Y"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "en_GB"
+END LC_NUMERIC
+
+LC_MONETARY
+copy "bem_ZM"
+END LC_MONETARY
+
+LC_PAPER
+copy "bem_ZM"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "bem_ZM"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+copy "bem_ZM"
+END LC_MESSAGES
+
+LC_NAME
+copy "en_GB"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt  "%a%N%f%N%e %h%N%b %s%N%z%N%T%N%c%N"
+country_name  "Zambia"
+country_post  "ZM"
+country_ab2   "ZM"
+country_ab3   "ZMB"
+country_num   894
+country_car  "Z"
+lang_name     "English"
+lang_ab      "en"
+lang_term    "eng"
+lang_lib    "eng"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "bem_ZM"
+END LC_TELEPHONE

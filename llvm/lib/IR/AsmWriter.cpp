@@ -2424,6 +2424,7 @@ static void writeDIGlobalVariable(raw_ostream &Out, const DIGlobalVariable *N,
   Printer.printBool("isDefinition", N->isDefinition());
   Printer.printMetadata("declaration", N->getRawStaticDataMemberDeclaration());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
+  Printer.printDIFlags("flags", N->getFlags());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
@@ -2764,6 +2765,7 @@ public:
   void printSummaryInfo(unsigned Slot, const ValueInfo &VI);
   void printSummary(const GlobalValueSummary &Summary);
   void printAliasSummary(const AliasSummary *AS);
+  void printIfuncSummary(const IfuncSummary *IF);
   void printGlobalVarSummary(const GlobalVarSummary *GS);
   void printFunctionSummary(const FunctionSummary *FS);
   void printTypeIdSummary(const TypeIdSummary &TIS);
@@ -3241,6 +3243,8 @@ static const char *getSummaryKindName(GlobalValueSummary::SummaryKind SK) {
   switch (SK) {
   case GlobalValueSummary::AliasKind:
     return "alias";
+  case GlobalValueSummary::IfuncKind:
+    return "ifunc";
   case GlobalValueSummary::FunctionKind:
     return "function";
   case GlobalValueSummary::GlobalVarKind:
@@ -3256,6 +3260,17 @@ void AssemblyWriter::printAliasSummary(const AliasSummary *AS) {
   // that case by just emitting "null" as the aliasee.
   if (AS->hasAliasee())
     Out << "^" << Machine.getGUIDSlot(SummaryToGUIDMap[&AS->getAliasee()]);
+  else
+    Out << "null";
+}
+
+void AssemblyWriter::printIfuncSummary(const IfuncSummary *IF) {
+  Out << ", resolver: ";
+  // The indexes emitted for distributed backends may not include the
+  // resolver summary (only if it is being imported directly). Handle
+  // that case by just emitting "null" as the resolver.
+  if (IF->hasResolver())
+    Out << "^" << Machine.getGUIDSlot(SummaryToGUIDMap[&IF->getResolver()]);
   else
     Out << "null";
 }
@@ -3587,6 +3602,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)
     printAliasSummary(cast<AliasSummary>(&Summary));
+  else if (Summary.getSummaryKind() == GlobalValueSummary::IfuncKind)
+    printIfuncSummary(cast<IfuncSummary>(&Summary));
   else if (Summary.getSummaryKind() == GlobalValueSummary::FunctionKind)
     printFunctionSummary(cast<FunctionSummary>(&Summary));
   else

@@ -1,0 +1,157 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% This file is derived from pap_AN ver0.2 (after AN was deprecated in ISO-3166)
+% revision "0.2" date "2000-11-15"
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title "Papiamento Language for Aruba"
+source "information from native speaker"
+address ""
+contact "Pablo Saratxaga"
+email "pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Papiamento"
+territory "Aruba"
+revision "1.0"
+date "2013-09-27"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+END LC_IDENTIFICATION
+
+LC_ADDRESS
+postal_fmt "%d%N%f%N%d%N%b%N%s %h 5e %r%N%C%z %T%N%c%N"
+% https://pap.wikipedia.org/wiki/Aruba
+country_name "Aruba"
+country_post "AW"
+country_ab2  "AW"
+country_ab3  "ABW"
+country_num  533
+country_isbn ""
+country_car "AUA"
+lang_name    "Papiamento"
+% lang_ab
+lang_term "pap"
+lang_lib "pap"
+END LC_ADDRESS
+
+LC_CTYPE
+copy "en_DK"
+END LC_CTYPE
+
+LC_COLLATE
+copy "en_DK"
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1sSyY]"
+noexpr  "^[-0nN]"
+yesstr  "s<U00ED>"
+nostr   "n<U00F2>"
+END LC_MESSAGES
+
+
+LC_MONETARY
+int_curr_symbol           "AWG "
+currency_symbol           "<U0192>"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             1
+p_sep_by_space            1
+n_cs_precedes             1
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               2
+END LC_MONETARY
+
+LC_TIME
+abday   "do";"lu";"ma";/
+        "we";"ra";"bi";/
+        "sa"
+day     "Djadomingo";/
+        "Djaluna";/
+        "Djamars";/
+        "Djawebs";/
+        "Djarason";/
+        "Djabierne";/
+        "Djasabra"
+abmon   "Yan";"Feb";/
+        "Mar";"Apr";/
+        "Mei";"Y<U00FC>n";/
+        "Y<U00FC>l";"Oug";/
+        "S<U00E8>p";"Okt";/
+        "Nov";"Des"
+mon     "Yan<U00FC>ari";/
+        "Febr<U00FC>ari";/
+        "Mart";/
+        "Aprel";/
+        "Mei";/
+        "Y<U00FC>ni";/
+        "Y<U00FC>li";/
+        "Oug<U00F9>st<U00F9>s";/
+        "S<U00E8>pt<U00E8>mber";/
+        "Oktober";/
+        "Nov<U00E8>mber";/
+        "Des<U00E8>mber"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d-%m-%y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             ""
+grouping                  0;0
+END LC_NUMERIC
+
+LC_MEASUREMENT
+copy "en_DK"
+END LC_MEASUREMENT
+
+LC_PAPER
+copy "en_DK"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+% FIXME FIND tel_dom_fmt
+int_select  "00"
+int_prefix  "297"
+END LC_TELEPHONE
+
+LC_NAME
+% Todo
+copy "en_DK"
+END LC_NAME

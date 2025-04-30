@@ -77,6 +77,7 @@
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
+#include "clang/Support/NextSiliconUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -119,6 +120,7 @@
 
 using namespace clang;
 using namespace sema;
+using namespace ns;
 
 SourceLocation Sema::getLocationOfStringLiteralByte(const StringLiteral *SL,
                                                     unsigned ByteNo) const {
@@ -3188,6 +3190,12 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
   }
+
+  // Non-template function declaration with ns attribute requires a definition
+  // instead.
+  if (FD && !isValidFunctionDeclForNSAttr(FD) &&
+      FD->getTemplatedKind() == FunctionDecl::TK_NonTemplate)
+    Diag(FD->getLocation(), diag::warn_ns_attr_requires_def) << FD;
 
   if (FDecl || Proto) {
     CheckNonNullArguments(*this, FDecl, Proto, Args, Loc);

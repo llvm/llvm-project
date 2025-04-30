@@ -1,0 +1,81 @@
+libc {
+  GLIBC_2.0 {
+%ifdef EXPORT_UNWIND_FIND_FDE
+    __deregister_frame_info; __register_frame_info;
+%endif
+  }
+  GLIBC_2.1 {
+    # functions used in other libraries
+    _dl_mcount_wrapper; _dl_mcount_wrapper_check;
+  }
+  GLIBC_2.2.4 {
+    dl_iterate_phdr;
+  }
+%ifdef EXPORT_UNWIND_FIND_FDE
+  # Needed for SHLIB_COMPAT calls using this version.
+  GLIBC_2.2.5 {
+  }
+  GCC_3.0 {
+    __deregister_frame_info_bases; __register_frame_info_bases;
+    __register_frame_info_table_bases; _Unwind_Find_FDE;
+  }
+%endif
+  GLIBC_PRIVATE {
+    # functions used in other libraries
+    __libc_early_init;
+
+    # Internal error handling support.  Interposes the functions in ld.so.
+    _dl_signal_exception; _dl_catch_exception;
+    _dl_signal_error; _dl_catch_error;
+  }
+}
+
+ld {
+  GLIBC_2.0 {
+    _r_debug;
+  }
+  GLIBC_2.1 {
+    # functions used in other libraries
+    _dl_mcount;
+    # historically used by Garbage Collectors
+    __libc_stack_end;
+  }
+  GLIBC_2.3 {
+    # runtime interface to TLS
+    __tls_get_addr;
+  }
+  GLIBC_2.4 {
+    # stack canary
+    __stack_chk_guard;
+  }
+  GLIBC_PRIVATE {
+    # Those are in the dynamic linker, but used by libc.so.
+    __libc_enable_secure;
+    _dl_allocate_tls; _dl_allocate_tls_init;
+    _dl_argv; _dl_find_dso_for_object; _dl_get_tls_static_info;
+    _dl_deallocate_tls; _dl_make_stack_executable;
+    _dl_rtld_di_serinfo; _dl_starting_up; _dl_fatal_printf;
+    _rtld_global; _rtld_global_ro;
+
+    # Only here for gdb while a better method is developed.
+    _dl_debug_state;
+
+    # Pointer protection.
+    __pointer_chk_guard;
+
+    # Internal error handling support.
+    _dl_exception_create; _dl_exception_create_format; _dl_exception_free;
+
+    # Internal error handling support.  Interposed by libc.so.
+    _dl_signal_exception; _dl_catch_exception;
+    _dl_signal_error; _dl_catch_error;
+
+    # Set value of a tunable.
+    __tunable_get_val;
+
+    # Export for libnextloader5, used to undo the prepreloader hooks.
+    __mmap_hook;
+    __mprotect_hook;
+    __munmap_hook;
+  }
+}

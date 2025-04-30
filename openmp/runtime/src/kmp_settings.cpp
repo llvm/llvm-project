@@ -5758,7 +5758,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if OMPX_TASKGRAPH
     {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
      0, 0},
-    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0, 0},
+    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0,
+     0},
 #endif
 
 #if OMPT_SUPPORT
@@ -5780,6 +5781,7 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if KMP_HAVE_UMWAIT
     {"KMP_TPAUSE", __kmp_stg_parse_tpause, __kmp_stg_print_tpause, NULL, 0, 0},
 #endif
+
     {"", NULL, NULL, NULL, 0, 0}}; // settings
 
 static int const __kmp_stg_count =

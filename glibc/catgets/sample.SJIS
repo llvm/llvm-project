@@ -1,0 +1,14 @@
+$	test message catalog
+
+$ codeset=sjis
+$quote	"
+$set 1
+1 sample1:ABCDEF:
+2 sample2:日本語:
+3 sample3:予定表:
+4 sample4:TEST\tTAB:
+5 sample5:機能\t十種類:
+6 double slash\\
+7 "another line"
+$set Another
+FOO "message foo"

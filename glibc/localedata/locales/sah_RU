@@ -1,0 +1,290 @@
+escape_char  /
+comment_char  %
+
+% Sakha (Yakut) locale for Russian Federation
+% Source: Valery Timiriliyev
+% Email: timiriliyev@gmail.com
+% Tel:
+% Fax:
+% Language: sah
+% Territory: RU
+% Revision: 1.1.0
+% Date: 2018-07-06
+% Users: general
+
+LC_IDENTIFICATION
+title      "Sakha (Yakut) locale for Russian Federation"
+source     "Valery Timiriliyev"
+address    ""
+contact    "Valery Timiriliyev"
+email      "timiriliyev@gmail.com"
+tel        ""
+fax        ""
+language   "Sakha"
+territory  "Russian Federation"
+revision   "1.1.0"
+date       "2018-07-06"
+
+category  "i18n:2012";LC_IDENTIFICATION
+category  "i18n:2012";LC_CTYPE
+category  "i18n:2012";LC_COLLATE
+category  "i18n:2012";LC_TIME
+category  "i18n:2012";LC_NUMERIC
+category  "i18n:2012";LC_MONETARY
+category  "i18n:2012";LC_MESSAGES
+category  "i18n:2012";LC_PAPER
+category  "i18n:2012";LC_MEASUREMENT
+category  "i18n:2012";LC_NAME
+category  "i18n:2012";LC_ADDRESS
+category  "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "ru_RU"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% As of July 2018, the Yakut collating rules are not provided by CLDR.
+% This content is based on the alphabet from Wikipedia:
+% https://en.wikipedia.org/wiki/Yakut_language#Writing_system
+%
+% А Б В Г Ҕ Д Дь Е Ё Ж З И Й К Л М Н Ҥ Нь О Ө П Р С Һ Т У Ү Ф Х Ц Ч Ш Щ
+% Ъ Ы Ь Э Ю Я
+
+collating-element <d-soft-sign> from "<U0434><U044C>"
+collating-element <d-Soft-sign> from "<U0434><U042C>"
+collating-element <D-soft-sign> from "<U0414><U044C>"
+collating-element <D-Soft-sign> from "<U0414><U042C>"
+collating-element <n-soft-sign> from "<U043D><U044C>"
+collating-element <n-Soft-sign> from "<U043D><U042C>"
+collating-element <N-soft-sign> from "<U041D><U044C>"
+collating-element <N-Soft-sign> from "<U041D><U042C>"
+
+collating-symbol <yak-ghe>
+collating-symbol <yak-eng>
+collating-symbol <yak-oe>
+collating-symbol <yak-he>
+collating-symbol <yak-ue>
+
+collating-symbol <d-soft-sign-digraph>
+collating-symbol <n-soft-sign-digraph>
+
+% Ҕ after Г and after Ӷ
+reorder-after <S04F7> % CYRILLIC SMALL LETTER GHE WITH DESCENDER
+<yak-ghe>
+
+% Дь after Д and after Ԃ
+reorder-after <S0503> % CYRILLIC SMALL LETTER KOMI DJE
+<d-soft-sign-digraph>
+
+% Ҥ after Н and after Ԋ
+reorder-after <S050B> % CYRILLIC SMALL LETTER KOMI NJE
+<yak-eng>
+% Followed by Нь
+<n-soft-sign-digraph>
+
+% Ө after О
+% This is already default in iso14651_t1_common, no reorder needed.
+
+% Һ after С and after Ҫ
+reorder-after <S04AB> % CYRILLIC SMALL LETTER ES WITH DESCENDER
+<yak-he>
+
+% Ү after У and after Ӯ but before Ұ, Ꙋ, and Ѹ
+% This is already default in iso14651_t1_common, better leave unchanged.
+
+<U0495> <yak-ghe>;<BASE>;<MIN>;IGNORE % ҕ
+<U0494> <yak-ghe>;<BASE>;<CAP>;IGNORE % Ҕ
+<U04A5> <yak-eng>;<BASE>;<MIN>;IGNORE % ҥ
+<U04A4> <yak-eng>;<BASE>;<CAP>;IGNORE % Ҥ
+<U04BB> <yak-he>;<BASE>;<MIN>;IGNORE % һ
+<U04BA> <yak-he>;<BASE>;<CAP>;IGNORE % Һ
+
+<d-soft-sign> <d-soft-sign-digraph>;<BASE>;"<MIN><MIN>";IGNORE % дь
+<d-Soft-sign> <d-soft-sign-digraph>;<BASE>;"<MIN><CAP>";IGNORE % дЬ
+<D-soft-sign> <d-soft-sign-digraph>;<BASE>;"<CAP><MIN>";IGNORE % Дь
+<D-Soft-sign> <d-soft-sign-digraph>;<BASE>;"<CAP><CAP>";IGNORE % ДЬ
+<n-soft-sign> <n-soft-sign-digraph>;<BASE>;"<MIN><MIN>";IGNORE % нь
+<n-Soft-sign> <n-soft-sign-digraph>;<BASE>;"<MIN><CAP>";IGNORE % нЬ
+<N-soft-sign> <n-soft-sign-digraph>;<BASE>;"<CAP><MIN>";IGNORE % Нь
+<N-Soft-sign> <n-soft-sign-digraph>;<BASE>;"<CAP><CAP>";IGNORE % НЬ
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+copy "ru_RU"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ru_RU"
+END LC_NUMERIC
+
+LC_TIME
+% abday - The abbreviations for the week days:
+% - бс, бн, оп, ср, чп, бт, сб
+abday       "<U0431><U0441>";"<U0431><U043D>";/
+            "<U043E><U043F>";"<U0441><U0440>";/
+            "<U0447><U043F>";"<U0431><U0442>";/
+            "<U0441><U0431>"
+
+% day - The full names of the week days:
+% - баскыһыанньа, бэнидиэнньик, оптуорунньук,
+%   сэрэдэ, чэппиэр, бээтинсэ, субуота
+day         "<U0431><U0430><U0441><U043A><U044B><U04BB><U044B><U0430><U043D><U043D><U044C><U0430>";/
+            "<U0431><U044D><U043D><U0438><U0434><U0438><U044D><U043D><U043D><U044C><U0438><U043A>";/
+            "<U043E><U043F><U0442><U0443><U043E><U0440><U0443><U043D><U043D><U044C><U0443><U043A>";/
+            "<U0441><U044D><U0440><U044D><U0434><U044D>";/
+            "<U0447><U044D><U043F><U043F><U0438><U044D><U0440>";/
+            "<U0431><U044D><U044D><U0442><U0438><U043D><U0441><U044D>";/
+            "<U0441><U0443><U0431><U0443><U043E><U0442><U0430>"
+
+% abmon - The abbreviations for the months
+% - тохс, олун, кул, муус, ыам, бэс, от, атыр, бал, алт, сэт, ахс
+abmon       "<U0442><U043E><U0445><U0441>";"<U043E><U043B><U0443><U043D>";/
+            "<U043A><U0443><U043B>";"<U043C><U0443><U0443><U0441>";/
+            "<U044B><U0430><U043C>";"<U0431><U044D><U0441>";/
+            "<U043E><U0442>";"<U0430><U0442><U044B><U0440>";/
+            "<U0431><U0430><U043B>";"<U0430><U043B><U0442>";/
+            "<U0441><U044D><U0442>";"<U0430><U0445><U0441>"
+
+% mon - The full names of the months (genitive case) -
+% - тохсунньу, олунньу, кулун тутар, муус устар, ыам ыйын,
+%   бэс ыйын, от ыйын, атырдьах ыйын, балаҕан ыйын, алтынньы,
+%   сэтинньи, ахсынньы
+mon         "<U0442><U043E><U0445><U0441><U0443><U043D><U043D><U044C><U0443>";/
+            "<U043E><U043B><U0443><U043D><U043D><U044C><U0443>";/
+            "<U043A><U0443><U043B><U0443><U043D> <U0442><U0443><U0442><U0430><U0440>";/
+            "<U043C><U0443><U0443><U0441> <U0443><U0441><U0442><U0430><U0440>";/
+            "<U044B><U0430><U043C> <U044B><U0439><U044B><U043D>";/
+            "<U0431><U044D><U0441> <U044B><U0439><U044B><U043D>";/
+            "<U043E><U0442> <U044B><U0439><U044B><U043D>";/
+            "<U0430><U0442><U044B><U0440><U0434><U044C><U0430><U0445> <U044B><U0439><U044B><U043D>";/
+            "<U0431><U0430><U043B><U0430><U0495><U0430><U043D> <U044B><U0439><U044B><U043D>";/
+            "<U0430><U043B><U0442><U044B><U043D><U043D><U044C><U044B>";/
+            "<U0441><U044D><U0442><U0438><U043D><U043D><U044C><U0438>";/
+            "<U0430><U0445><U0441><U044B><U043D><U043D><U044C><U044B>"
+
+% alt_mon - The full names of the months (nominative case) -
+% - тохсунньу, олунньу, кулун тутар, муус устар, ыам ыйа,
+%   бэс ыйа, от ыйа, атырдьах ыйа, балаҕан ыйа, алтынньы,
+%   сэтинньи, ахсынньы
+alt_mon     "<U0442><U043E><U0445><U0441><U0443><U043D><U043D><U044C><U0443>";/
+            "<U043E><U043B><U0443><U043D><U043D><U044C><U0443>";/
+            "<U043A><U0443><U043B><U0443><U043D> <U0442><U0443><U0442><U0430><U0440>";/
+            "<U043C><U0443><U0443><U0441> <U0443><U0441><U0442><U0430><U0440>";/
+            "<U044B><U0430><U043C> <U044B><U0439><U0430>";/
+            "<U0431><U044D><U0441> <U044B><U0439><U0430>";/
+            "<U043E><U0442> <U044B><U0439><U0430>";/
+            "<U0430><U0442><U044B><U0440><U0434><U044C><U0430><U0445> <U044B><U0439><U0430>";/
+            "<U0431><U0430><U043B><U0430><U0495><U0430><U043D> <U044B><U0439><U0430>";/
+            "<U0430><U043B><U0442><U044B><U043D><U043D><U044C><U044B>";/
+            "<U0441><U044D><U0442><U0438><U043D><U043D><U044C><U0438>";/
+            "<U0430><U0445><U0441><U044B><U043D><U043D><U044C><U044B>"
+
+% Abbreviated date and time representation to be referenced by the "%c" field
+% descriptor -
+%
+% "%a" (short weekday name),
+% "%Y" (year with century as a decimal number),
+% "%b" (short month name),
+% "%d" (day of month as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+d_t_fmt "%a %Y %b %d %T (%Z)"
+
+% Date representation to be referenced by the "%x" field descriptor -
+% "%d/%m/%Y", day/month/year as decimal numbers (01/01/2000).
+d_fmt       "%Y.%m.%d"
+
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+t_fmt       "%T"
+
+% Define representation of ante meridiem and post meridiem strings -
+% The "" mean default to "AM" and "PM".
+am_pm       "";""
+
+% Define time representation in 12-hour format with "am_pm", to be referenced by the "%r"
+% The "" means that this format is not supported.
+t_fmt_ampm  ""
+
+% Date representation not described in ISO/IEC 14652. Comes out as -
+% "%a %b %e %H:%M:%S %Z %Y" which is default "date" command output
+%
+% %a - abbreviated weekday name,
+% %Y - year with century as a decimal number,e.g. 2001.
+% %e - day of month as a decimal number with leading space (1 to 31),
+% %B - full month name,
+% %T - (24-hour clock time in format HH:MM:SS),
+% %Z - time-zone name,
+% "%a %Y с. %B %e к. %T (%Z)"
+date_fmt "%a %Y <U0441>. %B %e <U043A>. %T (%Z)"
+
+week    7;19971130;1
+first_weekday 2
+first_workday 2
+END LC_TIME
+
+LC_MESSAGES
+% The affirmative response -
+% '^[+1yYдДэЭ]'
+yesexpr "^[+1yY<U0434><U0414><U044D><U042D>]"
+
+% The negative response -
+% '^[-0nNнНсС]'
+noexpr "^[-0nN<U043D><U041D><U0441><U0421>]"
+
+% 'ээх'
+yesstr "<U044D><U044D><U0445>"
+
+% 'суох'
+nostr "<U0441><U0443><U043E><U0445>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "ru_RU"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ru_RU"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "ru_RU"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "ru_RU"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+
+% Арассыыйа
+country_name  "<U0410><U0440><U0430><U0441><U0441><U044B><U044B><U0439><U0430>"
+
+% саха тыла
+lang_name     "<U0441><U0430><U0445><U0430><U0020><U0442><U044B><U043B><U0430>"
+
+% UN Geneve 1949:68 Distinguishing signs of vehicles in international traffic
+% RUS
+country_car    "RUS"
+
+% ISO 639 language abbreviations:
+% 639-1 2 letter, 639-2 3 letter terminology
+% (empty), sah, sah
+lang_ab       ""
+lang_term     "sah"
+lang_lib      "sah"
+
+% ISO 3166 country number and 2 and 3 letter abreviations
+% RU, RUS
+country_ab2   "RU"
+country_ab3   "RUS"
+country_num   643
+
+END LC_ADDRESS

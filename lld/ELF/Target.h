@@ -101,6 +101,10 @@ public:
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
 
+  virtual bool forceEmitSectionRelocs(const InputSectionBase *Target) const {
+    return false;
+  }
+
   virtual ~TargetInfo();
 
   // This deletes a jump insn at the end of the section if it is a fall thru to
@@ -191,6 +195,7 @@ TargetInfo *getSPARCV9TargetInfo();
 TargetInfo *getSystemZTargetInfo();
 TargetInfo *getX86TargetInfo();
 TargetInfo *getX86_64TargetInfo();
+TargetInfo *getNext32TargetInfo();
 template <class ELFT> TargetInfo *getMipsTargetInfo();
 
 struct ErrorPlace {

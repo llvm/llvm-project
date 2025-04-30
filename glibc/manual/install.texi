@@ -1,0 +1,768 @@
+@include macros.texi
+@include pkgvers.texi
+
+@ifclear plain
+@node Installation, Maintenance, Library Summary, Top
+@end ifclear
+
+@c %MENU% How to install the GNU C Library
+@appendix Installing @theglibc{}
+
+Before you do anything else, you should read the FAQ at
+@url{https://sourceware.org/glibc/wiki/FAQ}.  It answers common
+questions and describes problems you may experience with compilation
+and installation.
+
+You will need recent versions of several GNU tools: definitely GCC and
+GNU Make, and possibly others.  @xref{Tools for Compilation}, below.
+
+@ifclear plain
+@menu
+* Configuring and compiling::   How to compile and test GNU libc.
+* Running make install::        How to install it once you've got it
+ compiled.
+* Tools for Compilation::       You'll need these first.
+* Linux::                       Specific advice for GNU/Linux systems.
+* Reporting Bugs::              So they'll get fixed.
+@end menu
+@end ifclear
+
+@node Configuring and compiling
+@appendixsec Configuring and compiling @theglibc{}
+@cindex configuring
+@cindex compiling
+
+@Theglibc{} cannot be compiled in the source directory.  You must build
+it in a separate build directory.  For example, if you have unpacked
+the @glibcadj{} sources in @file{/src/gnu/glibc-@var{version}},
+create a directory
+@file{/src/gnu/glibc-build} to put the object files in.  This allows
+removing the whole build directory in case an error occurs, which is
+the safest way to get a fresh start and should always be done.
+
+From your object directory, run the shell script @file{configure} located
+at the top level of the source tree.  In the scenario above, you'd type
+
+@smallexample
+$ ../glibc-@var{version}/configure @var{args@dots{}}
+@end smallexample
+
+Please note that even though you're building in a separate build
+directory, the compilation may need to create or modify files and
+directories in the source directory.
+
+@noindent
+@code{configure} takes many options, but the only one that is usually
+mandatory is @samp{--prefix}.  This option tells @code{configure}
+where you want @theglibc{} installed.  This defaults to @file{/usr/local},
+but the normal setting to install as the standard system library is
+@samp{--prefix=/usr} for @gnulinuxsystems{} and @samp{--prefix=} (an
+empty prefix) for @gnuhurdsystems{}.
+
+It may also be useful to pass @samp{CC=@var{compiler}} and
+@code{CFLAGS=@var{flags}} arguments to @code{configure}.  @code{CC}
+selects the C compiler that will be used, and @code{CFLAGS} sets
+optimization options for the compiler.  Any compiler options required
+for all compilations, such as options selecting an ABI or a processor
+for which to generate code, should be included in @code{CC}.  Options
+that may be overridden by the @glibcadj{} build system for particular
+files, such as for optimization and debugging, should go in
+@code{CFLAGS}.  The default value of @code{CFLAGS} is @samp{-g -O2},
+and @theglibc{} cannot be compiled without optimization, so if
+@code{CFLAGS} is specified it must enable optimization.  For example:
+
+@smallexample
+$ ../glibc-@var{version}/configure CC="gcc -m32" CFLAGS="-O3"
+@end smallexample
+
+The following list describes all of the available options for
+ @code{configure}:
+
+@table @samp
+@item --prefix=@var{directory}
+Install machine-independent data files in subdirectories of
+@file{@var{directory}}.  The default is to install in @file{/usr/local}.
+
+@item --exec-prefix=@var{directory}
+Install the library and other machine-dependent files in subdirectories
+of @file{@var{directory}}.  The default is to the @samp{--prefix}
+directory if that option is specified, or @file{/usr/local} otherwise.
+
+@item --with-headers=@var{directory}
+Look for kernel header files in @var{directory}, not
+@file{/usr/include}.  @Theglibc{} needs information from the kernel's header
+files describing the interface to the kernel.  @Theglibc{} will normally
+look in @file{/usr/include} for them,
+but if you specify this option, it will look in @var{DIRECTORY} instead.
+
+This option is primarily of use on a system where the headers in
+@file{/usr/include} come from an older version of @theglibc{}.  Conflicts can
+occasionally happen in this case.  You can also use this option if you want to
+compile @theglibc{} with a newer set of kernel headers than the ones found in
+@file{/usr/include}.
+
+@item --enable-kernel=@var{version}
+This option is currently only useful on @gnulinuxsystems{}.  The
+@var{version} parameter should have the form X.Y.Z and describes the
+smallest version of the Linux kernel the generated library is expected
+to support.  The higher the @var{version} number is, the less
+compatibility code is added, and the faster the code gets.
+
+@item --with-binutils=@var{directory}
+Use the binutils (assembler and linker) in @file{@var{directory}}, not
+the ones the C compiler would default to.  You can use this option if
+the default binutils on your system cannot deal with all the constructs
+in @theglibc{}.  In that case, @code{configure} will detect the
+problem and suppress these constructs, so that the library will still be
+usable, but functionality may be lost---for example, you can't build a
+shared libc with old binutils.
+
+@item --with-nonshared-cflags=@var{cflags}
+Use additional compiler flags @var{cflags} to build the parts of the
+library which are always statically linked into applications and
+libraries even with shared linking (that is, the object files contained
+in @file{lib*_nonshared.a} libraries).  The build process will
+automatically use the appropriate flags, but this option can be used to
+set additional flags required for building applications and libraries,
+to match local policy.  For example, if such a policy requires that all
+code linked into applications must be built with source fortification,
+@samp{--with-nonshared-cflags=-Wp,-D_FORTIFY_SOURCE=2} will make sure
+that the objects in @file{libc_nonshared.a} are compiled with this flag
+(although this will not affect the generated code in this particular
+case and potentially change debugging information and metadata only).
+
+@c disable static doesn't work currently
+@c @item --disable-static
+@c Don't build static libraries.  Static libraries aren't that useful these
+@c days, but we recommend you build them in case you need them.
+
+@item --disable-shared
+Don't build shared libraries even if it is possible.  Not all systems
+support shared libraries; you need ELF support and (currently) the GNU
+linker.
+
+@item --enable-static-pie
+Enable static position independent executable (static PIE) support.
+Static PIE is similar to static executable, but can be loaded at any
+address without help from a dynamic linker.  All static programs as
+well as static tests are built as static PIE, except for those marked
+with no-pie.  The resulting glibc can be used with the GCC option,
+-static-pie, which is available with GCC 8 or above, to create static
+PIE.  This option also implies that glibc programs and tests are created
+as dynamic position independent executables (PIE) by default.
+
+@item --enable-cet
+@itemx --enable-cet=permissive
+Enable Intel Control-flow Enforcement Technology (CET) support.  When
+@theglibc{} is built with @option{--enable-cet} or
+@option{--enable-cet=permissive}, the resulting library
+is protected with indirect branch tracking (IBT) and shadow stack
+(SHSTK)@.  When CET is enabled, @theglibc{} is compatible with all
+existing executables and shared libraries.  This feature is currently
+supported on i386, x86_64 and x32 with GCC 8 and binutils 2.29 or later.
+Note that when CET is enabled, @theglibc{} requires CPUs capable of
+multi-byte NOPs, like x86-64 processors as well as Intel Pentium Pro or
+newer.  With @option{--enable-cet}, it is an error to dlopen a non CET
+enabled shared library in CET enabled application.  With
+@option{--enable-cet=permissive}, CET is disabled when dlopening a
+non CET enabled shared library in CET enabled application.
+
+NOTE: @option{--enable-cet} has been tested for i686, x86_64 and x32
+on non-CET processors.  @option{--enable-cet} has been tested for
+i686, x86_64 and x32 on CET processors.
+
+@item --enable-memory-tagging
+Enable memory tagging support if the architecture supports it.  When
+@theglibc{} is built with this option then the resulting library will
+be able to control the use of tagged memory when hardware support is
+present by use of the tunable @samp{glibc.mem.tagging}.  This includes
+the generation of tagged memory when using the @code{malloc} APIs.
+
+At present only AArch64 platforms with MTE provide this functionality,
+although the library will still operate (without memory tagging) on
+older versions of the architecture.
+
+The default is to disable support for memory tagging.
+
+@item --disable-profile
+Don't build libraries with profiling information.  You may want to use
+this option if you don't plan to do profiling.
+
+@item --enable-static-nss
+Compile static versions of the NSS (Name Service Switch) libraries.
+This is not recommended because it defeats the purpose of NSS; a program
+linked statically with the NSS libraries cannot be dynamically
+reconfigured to use a different name database.
+
+@item --enable-hardcoded-path-in-tests
+By default, dynamic tests are linked to run with the installed C library.
+This option hardcodes the newly built C library path in dynamic tests
+so that they can be invoked directly.
+
+@item --disable-timezone-tools
+By default, timezone related utilities (@command{zic}, @command{zdump},
+and @command{tzselect}) are installed with @theglibc{}.  If you are building
+these independently (e.g. by using the @samp{tzcode} package), then this
+option will allow disabling the install of these.
+
+Note that you need to make sure the external tools are kept in sync with
+the versions that @theglibc{} expects as the data formats may change over
+time.  Consult the @file{timezone} subdirectory for more details.
+
+@item --enable-stack-protector
+@itemx --enable-stack-protector=strong
+@itemx --enable-stack-protector=all
+Compile the C library and all other parts of the glibc package
+(including the threading and math libraries, NSS modules, and
+transliteration modules) using the GCC @option{-fstack-protector},
+@option{-fstack-protector-strong} or @option{-fstack-protector-all}
+options to detect stack overruns.  Only the dynamic linker and a small
+number of routines called directly from assembler are excluded from this
+protection.
+
+@item --enable-bind-now
+Disable lazy binding for installed shared objects and programs.  This
+provides additional security hardening because it enables full RELRO
+and a read-only global offset table (GOT), at the cost of slightly
+increased program load times.
+
+@pindex pt_chown
+@findex grantpt
+@item --enable-pt_chown
+The file @file{pt_chown} is a helper binary for @code{grantpt}
+(@pxref{Allocation, Pseudo-Terminals}) that is installed setuid root to
+fix up pseudo-terminal ownership on GNU/Hurd.  It is not required on
+GNU/Linux, and @theglibc{} will not use the installed @file{pt_chown}
+program when configured with @option{--enable-pt_chown}.
+
+@item --disable-werror
+By default, @theglibc{} is built with @option{-Werror}.  If you wish
+to build without this option (for example, if building with a newer
+version of GCC than this version of @theglibc{} was tested with, so
+new warnings cause the build with @option{-Werror} to fail), you can
+configure with @option{--disable-werror}.
+
+@item --disable-mathvec
+By default for x86_64, @theglibc{} is built with the vector math library.
+Use this option to disable the vector math library.
+
+@item --enable-tunables
+Tunables support allows additional library parameters to be customized at
+runtime.  This feature is enabled by default.  This option can take the
+following values:
+
+@table @code
+@item yes
+This is the default if no option is passed to configure. This enables tunables
+and selects the default frontend (currently @samp{valstring}).
+
+@item no
+This option disables tunables.
+
+@item valstring
+This enables tunables and selects the @samp{valstring} frontend for tunables.
+This frontend allows users to specify tunables as a colon-separated list in a
+single environment variable @env{GLIBC_TUNABLES}.
+@end table
+
+@item --disable-crypt
+Do not install the passphrase-hashing library @file{libcrypt} or the
+header file @file{crypt.h}.  @file{unistd.h} will still declare the
+function @code{crypt}.  Using this option does not change the set of
+programs that may need to be linked with @option{-lcrypt}; it only
+means that @theglibc{} will not provide that library.
+
+This option is for hackers and distributions experimenting with
+independently-maintained implementations of libcrypt.  It may become
+the default in a future release.
+
+@item --disable-experimental-malloc
+By default, a per-thread cache is enabled in @code{malloc}.  While
+this cache can be disabled on a per-application basis using tunables
+(set glibc.malloc.tcache_count to zero), this option can be used to
+remove it from the build completely.
+
+@item --disable-scv
+Disable using @code{scv} instruction for syscalls. All syscalls will use
+@code{sc} instead, even if the kernel supports @code{scv}. PowerPC only.
+
+@item --build=@var{build-system}
+@itemx --host=@var{host-system}
+These options are for cross-compiling.  If you specify both options and
+@var{build-system} is different from @var{host-system}, @code{configure}
+will prepare to cross-compile @theglibc{} from @var{build-system} to be used
+on @var{host-system}.  You'll probably need the @samp{--with-headers}
+option too, and you may have to override @var{configure}'s selection of
+the compiler and/or binutils.
+
+If you only specify @samp{--host}, @code{configure} will prepare for a
+native compile but use what you specify instead of guessing what your
+system is.  This is most useful to change the CPU submodel.  For example,
+if @code{configure} guesses your machine as @code{i686-pc-linux-gnu} but
+you want to compile a library for 586es, give
+@samp{--host=i586-pc-linux-gnu} or just @samp{--host=i586-linux} and add
+the appropriate compiler flags (@samp{-mcpu=i586} will do the trick) to
+@code{CC}.
+
+If you specify just @samp{--build}, @code{configure} will get confused.
+
+@item --with-pkgversion=@var{version}
+Specify a description, possibly including a build number or build
+date, of the binaries being built, to be included in
+@option{--version} output from programs installed with @theglibc{}.
+For example, @option{--with-pkgversion='FooBar GNU/Linux glibc build
+123'}.  The default value is @samp{GNU libc}.
+
+@item --with-bugurl=@var{url}
+Specify the URL that users should visit if they wish to report a bug,
+to be included in @option{--help} output from programs installed with
+@theglibc{}.  The default value refers to the main bug-reporting
+information for @theglibc{}.
+@end table
+
+To build the library and related programs, type @code{make}.  This will
+produce a lot of output, some of which may look like errors from
+@code{make} but aren't.  Look for error messages from @code{make}
+containing @samp{***}.  Those indicate that something is seriously wrong.
+
+The compilation process can take a long time, depending on the
+configuration and the speed of your machine.  Some complex modules may
+take a very long time to compile, as much as several minutes on slower
+machines.  Do not panic if the compiler appears to hang.
+
+If you want to run a parallel make, simply pass the @samp{-j} option
+with an appropriate numeric parameter to @code{make}.  You need a recent
+GNU @code{make} version, though.
+
+To build and run test programs which exercise some of the library
+facilities, type @code{make check}.  If it does not complete
+successfully, do not use the built library, and report a bug after
+verifying that the problem is not already known.  @xref{Reporting Bugs},
+for instructions on reporting bugs.  Note that some of the tests assume
+they are not being run by @code{root}.  We recommend you compile and
+test @theglibc{} as an unprivileged user.
+
+Before reporting bugs make sure there is no problem with your system.
+The tests (and later installation) use some pre-existing files of the
+system such as @file{/etc/passwd}, @file{/etc/nsswitch.conf} and others.
+These files must all contain correct and sensible content.
+
+Normally, @code{make check} will run all the tests before reporting
+all problems found and exiting with error status if any problems
+occurred.  You can specify @samp{stop-on-test-failure=y} when running
+@code{make check} to make the test run stop and exit with an error
+status immediately when a failure occurs.
+
+To format the @cite{GNU C Library Reference Manual} for printing, type
+@w{@code{make dvi}}.  You need a working @TeX{} installation to do
+this.  The distribution builds the on-line formatted version of the
+manual, as Info files, as part of the build process.  You can build
+them manually with @w{@code{make info}}.
+
+The library has a number of special-purpose configuration parameters
+which you can find in @file{Makeconfig}.  These can be overwritten with
+the file @file{configparms}.  To change them, create a
+@file{configparms} in your build directory and add values as appropriate
+for your system.  The file is included and parsed by @code{make} and has
+to follow the conventions for makefiles.
+
+It is easy to configure @theglibc{} for cross-compilation by
+setting a few variables in @file{configparms}.  Set @code{CC} to the
+cross-compiler for the target you configured the library for; it is
+important to use this same @code{CC} value when running
+@code{configure}, like this: @samp{configure @var{target}
+CC=@var{target}-gcc}.  Set @code{BUILD_CC} to the compiler to use for programs
+run on the build system as part of compiling the library.  You may need to
+set @code{AR} to cross-compiling versions of @code{ar}
+if the native tools are not configured to work with
+object files for the target you configured for.  When cross-compiling
+@theglibc{}, it may be tested using @samp{make check
+test-wrapper="@var{srcdir}/scripts/cross-test-ssh.sh @var{hostname}"},
+where @var{srcdir} is the absolute directory name for the main source
+directory and @var{hostname} is the host name of a system that can run
+the newly built binaries of @theglibc{}.  The source and build
+directories must be visible at the same locations on both the build
+system and @var{hostname}.
+The @samp{cross-test-ssh.sh} script requires @samp{flock} from
+@samp{util-linux} to work when @var{glibc_test_allow_time_setting}
+environment variable is set.
+
+It is also possible to execute tests, which require setting the date on
+the target machine.  Following use cases are supported:
+@itemize @bullet
+@item
+@code{GLIBC_TEST_ALLOW_TIME_SETTING} is set in the environment in
+which eligible tests are executed and have the privilege to run
+@code{clock_settime}.  In this case, nothing prevents those tests from
+running in parallel, so the caller shall assure that those tests
+are serialized or provide a proper wrapper script for them.
+
+@item
+The @code{cross-test-ssh.sh} script is used and one passes the
+@option{--allow-time-setting} flag.  In this case, both sets
+@code{GLIBC_TEST_ALLOW_TIME_SETTING} and serialization of test
+execution are assured automatically.
+@end itemize
+
+In general, when testing @theglibc{}, @samp{test-wrapper} may be set
+to the name and arguments of any program to run newly built binaries.
+This program must preserve the arguments to the binary being run, its
+working directory and the standard input, output and error file
+descriptors.  If @samp{@var{test-wrapper} env} will not work to run a
+program with environment variables set, then @samp{test-wrapper-env}
+must be set to a program that runs a newly built program with
+environment variable assignments in effect, those assignments being
+specified as @samp{@var{var}=@var{value}} before the name of the
+program to be run.  If multiple assignments to the same variable are
+specified, the last assignment specified must take precedence.
+Similarly, if @samp{@var{test-wrapper} env -i} will not work to run a
+program with an environment completely empty of variables except those
+directly assigned, then @samp{test-wrapper-env-only} must be set; its
+use has the same syntax as @samp{test-wrapper-env}, the only
+difference in its semantics being starting with an empty set of
+environment variables rather than the ambient set.
+
+For AArch64 with SVE, when testing @theglibc{}, @samp{test-wrapper}
+may be set to "@var{srcdir}/sysdeps/unix/sysv/linux/aarch64/vltest.py
+@var{vector-length}" to change Vector Length.
+
+@node Running make install
+@appendixsec Installing the C Library
+@cindex installing
+
+To install the library and its header files, and the Info files of the
+manual, type @code{make install}.  This will
+build things, if necessary, before installing them; however, you should
+still compile everything first.  If you are installing @theglibc{} as your
+primary C library, we recommend that you shut the system down to
+single-user mode first, and reboot afterward.  This minimizes the risk
+of breaking things when the library changes out from underneath.
+
+@samp{make install} will do the entire job of upgrading from a
+previous installation of @theglibc{} version 2.x.  There may sometimes
+be headers
+left behind from the previous installation, but those are generally
+harmless.  If you want to avoid leaving headers behind you can do
+things in the following order.
+
+You must first build the library (@samp{make}), optionally check it
+(@samp{make check}), switch the include directories and then install
+(@samp{make install}).  The steps must be done in this order.  Not moving
+the directory before install will result in an unusable mixture of header
+files from both libraries, but configuring, building, and checking the
+library requires the ability to compile and run programs against the old
+library.  The new @file{/usr/include}, after switching the include
+directories and before installing the library should contain the Linux
+headers, but nothing else.  If you do this, you will need to restore
+any headers from libraries other than @theglibc{} yourself after installing the
+library.
+
+You can install @theglibc{} somewhere other than where you configured
+it to go by setting the @code{DESTDIR} GNU standard make variable on
+the command line for @samp{make install}.  The value of this variable
+is prepended to all the paths for installation.  This is useful when
+setting up a chroot environment or preparing a binary distribution.
+The directory should be specified with an absolute file name. Installing
+with the @code{prefix} and @code{exec_prefix} GNU standard make variables
+set is not supported.
+
+@Theglibc{} includes a daemon called @code{nscd}, which you
+may or may not want to run.  @code{nscd} caches name service lookups; it
+can dramatically improve performance with NIS+, and may help with DNS as
+well.
+
+One auxiliary program, @file{/usr/libexec/pt_chown}, is installed setuid
+@code{root} if the @samp{--enable-pt_chown} configuration option is used.
+This program is invoked by the @code{grantpt} function; it sets the
+permissions on a pseudoterminal so it can be used by the calling process.
+If you are using a Linux kernel with the @code{devpts} filesystem enabled
+and mounted at @file{/dev/pts}, you don't need this program.
+
+After installation you should configure the timezone and install locales
+for your system.  The time zone configuration ensures that your system
+time matches the time for your current timezone.  The locales ensure that
+the display of information on your system matches the expectations of
+your language and geographic region.
+
+@Theglibc{} is able to use two kinds of localization information sources, the
+first is a locale database named @file{locale-archive} which is generally
+installed as @file{/usr/lib/locale/locale-archive}.  The locale archive has the
+benefit of taking up less space and being very fast to load, but only if you
+plan to install sixty or more locales.  If you plan to install one or two
+locales you can instead install individual locales into their self-named
+directories e.g.@: @file{/usr/lib/locale/en_US.utf8}.  For example to install
+the German locale using the character set for UTF-8 with name @code{de_DE} into
+the locale archive issue the command @samp{localedef -i de_DE -f UTF-8 de_DE},
+and to install just the one locale issue the command @samp{localedef
+--no-archive -i de_DE -f UTF-8 de_DE}.  To configure all locales that are
+supported by @theglibc{}, you can issue from your build directory the command
+@samp{make localedata/install-locales} to install all locales into the locale
+archive or @samp{make localedata/install-locale-files} to install all locales
+as files in the default configured locale installation directory (derived from
+@samp{--prefix} or @code{--localedir}).  To install into an alternative system
+root use @samp{DESTDIR} e.g.@: @samp{make localedata/install-locale-files
+DESTDIR=/opt/glibc}, but note that this does not change the configured prefix.
+
+To configure the locally used timezone, set the @code{TZ} environment
+variable.  The script @code{tzselect} helps you to select the right value.
+As an example, for Germany, @code{tzselect} would tell you to use
+@samp{TZ='Europe/Berlin'}.  For a system wide installation (the given
+paths are for an installation with @samp{--prefix=/usr}), link the
+timezone file which is in @file{/usr/share/zoneinfo} to the file
+@file{/etc/localtime}.  For Germany, you might execute @samp{ln -s
+/usr/share/zoneinfo/Europe/Berlin /etc/localtime}.
+
+@node Tools for Compilation
+@appendixsec Recommended Tools for Compilation
+@cindex installation tools
+@cindex tools, for installing library
+
+We recommend installing the following GNU tools before attempting to
+build @theglibc{}:
+
+@itemize @bullet
+@item
+GNU @code{make} 4.0 or newer
+
+As of relase time, GNU @code{make} 4.3 is the newest verified to work
+to build @theglibc{}.
+
+@item
+GCC 6.2 or newer
+
+GCC 6.2 or higher is required.  In general it is recommended to use
+the newest version of the compiler that is known to work for building
+@theglibc{}, as newer compilers usually produce better code.  As of
+release time, GCC 11.2 is the newest compiler verified to work to build
+@theglibc{}.
+
+For PowerPC 64-bits little-endian (powerpc64le), a GCC version with support
+for @option{-mno-gnu-attribute}, @option{-mabi=ieeelongdouble}, and
+@option{-mabi=ibmlondouble} is required.  Likewise, the compiler must also
+support passing @option{-mlong-double-128} with the preceding options.  As
+of release, this implies GCC 7.4 and newer (excepting GCC 7.5.0, see GCC
+PR94200).  These additional features are required for building the GNU C
+Library with support for IEEE long double.
+
+@c powerpc64le performs an autoconf test to verify the compiler compiles with
+@c commands like "$CC -c foo.c -mabi=ibmlongdouble -mlong-double-128".
+
+For ARC architecture builds, GCC 8.3 or higher is needed.
+
+For s390x architecture builds, GCC 7.1 or higher is needed (See gcc Bug 98269).
+
+For multi-arch support it is recommended to use a GCC which has been built with
+support for GNU indirect functions.  This ensures that correct debugging
+information is generated for functions selected by IFUNC resolvers.  This
+support can either be enabled by configuring GCC with
+@samp{--enable-gnu-indirect-function}, or by enabling it by default by setting
+@samp{default_gnu_indirect_function} variable for a particular architecture in
+the GCC source file @file{gcc/config.gcc}.
+
+You can use whatever compiler you like to compile programs that use
+@theglibc{}.
+
+Check the FAQ for any special compiler issues on particular platforms.
+
+@item
+GNU @code{binutils} 2.25 or later
+
+You must use GNU @code{binutils} (as and ld) to build @theglibc{}.
+No other assembler or linker has the necessary functionality at the
+moment. As of release time, GNU @code{binutils} 2.35.1 is the newest
+verified to work to build @theglibc{}.
+
+For PowerPC 64-bits little-endian (powerpc64le), @command{objcopy} is required
+to support @option{--update-section}.  This option requires binutils 2.26 or
+newer.
+
+ARC architecture needs @code{binutils} 2.32 or higher for TLS related fixes.
+
+@item
+GNU @code{texinfo} 4.7 or later
+
+To correctly translate and install the Texinfo documentation you need
+this version of the @code{texinfo} package.  Earlier versions do not
+understand all the tags used in the document, and the installation
+mechanism for the info files is not present or works differently.
+As of release time, @code{texinfo} 6.7 is the newest verified to work
+to build @theglibc{}.
+
+@item
+GNU @code{awk} 3.1.2, or higher
+
+@code{awk} is used in several places to generate files.
+Some @code{gawk} extensions are used, including the @code{asorti}
+function, which was introduced in version 3.1.2 of @code{gawk}.
+As of release time, @code{gawk} version 5.1 is the newest verified
+to work to build @theglibc{}.
+
+@item
+GNU @code{bison} 2.7 or later
+
+@code{bison} is used to generate the @code{yacc} parser code in the @file{intl}
+subdirectory.  As of release time, @code{bison} version 3.7.4 is the newest
+verified to work to build @theglibc{}.
+
+@item
+Perl 5
+
+Perl is not required, but if present it is used in some tests and the
+@code{mtrace} program, to build the @glibcadj{} manual.  As of release
+time @code{perl} version 5.32.1 is the newest verified to work to
+build @theglibc{}.
+
+@item
+GNU @code{sed} 3.02 or newer
+
+@code{Sed} is used in several places to generate files.  Most scripts work
+with any version of @code{sed}.  As of release time, @code{sed} version
+4.8 is the newest verified to work to build @theglibc{}.
+
+@item
+Python 3.4 or later
+
+Python is required to build @theglibc{}.  As of release time, Python
+3.9.6 is the newest verified to work for building and testing
+@theglibc{}.
+
+@item PExpect 4.0
+
+The pretty printer tests drive GDB through test programs and compare
+its output to the printers'.  PExpect is used to capture the output of
+GDB, and should be compatible with the Python version in your system.
+As of release time PExpect 4.8 is the newest verified to work to test
+the pretty printers.
+
+@item
+GDB 7.8 or later with support for Python 2.7/3.4 or later
+
+GDB itself needs to be configured with Python support in order to use
+the pretty printers.  Notice that your system having Python available
+doesn't imply that GDB supports it, nor that your system's Python and
+GDB's have the same version.  As of release time GNU @code{debugger}
+10.2 is the newest verified to work to test the pretty printers.
+
+Unless Python, PExpect and GDB with Python support are present, the
+printer tests will report themselves as @code{UNSUPPORTED}.  Notice
+that some of the printer tests require @theglibc{} to be compiled with
+debugging symbols.
+@end itemize
+
+@noindent
+If you change any of the @file{configure.ac} files you will also need
+
+@itemize @bullet
+@item
+GNU @code{autoconf} 2.69 (exactly)
+@end itemize
+
+@noindent
+and if you change any of the message translation files you will need
+
+@itemize @bullet
+@item
+GNU @code{gettext} 0.10.36 or later
+
+As of release time, GNU @code{gettext} version 0.21 is the newest
+version verified to work to build @theglibc{}.
+@end itemize
+
+
+@noindent
+You may also need these packages if you upgrade your source tree using
+patches, although we try to avoid this.
+
+@node Linux
+@appendixsec Specific advice for @gnulinuxsystems{}
+@cindex kernel header files
+
+If you are installing @theglibc{} on @gnulinuxsystems{}, you need to have
+the header files from a 3.2 or newer kernel around for reference.
+(For the ia64 architecture, you need version 3.2.18 or newer because this
+is the first version with support for the @code{accept4} system call.)
+These headers must be installed using @samp{make headers_install}; the
+headers present in the kernel source directory are not suitable for
+direct use by @theglibc{}.  You do not need to use that kernel, just have
+its headers installed where @theglibc{} can access them, referred to here as
+@var{install-directory}.  The easiest way to do this is to unpack it
+in a directory such as @file{/usr/src/linux-@var{version}}.  In that
+directory, run @samp{make headers_install
+INSTALL_HDR_PATH=@var{install-directory}}.  Finally, configure @theglibc{}
+with the option @samp{--with-headers=@var{install-directory}/include}.
+Use the most recent kernel you can get your hands on.  (If you are
+cross-compiling @theglibc{}, you need to specify
+@samp{ARCH=@var{architecture}} in the @samp{make headers_install}
+command, where @var{architecture} is the architecture name used by the
+Linux kernel, such as @samp{x86} or @samp{powerpc}.)
+
+After installing @theglibc{}, you may need to remove or rename
+directories such as @file{/usr/include/linux} and
+@file{/usr/include/asm}, and replace them with copies of directories
+such as @file{linux} and @file{asm} from
+@file{@var{install-directory}/include}.  All directories present in
+@file{@var{install-directory}/include} should be copied, except that
+@theglibc{} provides its own version of @file{/usr/include/scsi}; the
+files provided by the kernel should be copied without replacing those
+provided by @theglibc{}.  The @file{linux}, @file{asm} and
+@file{asm-generic} directories are required to compile programs using
+@theglibc{}; the other directories describe interfaces to the kernel but
+are not required if not compiling programs using those interfaces.
+You do not need to copy kernel headers if you did not specify an
+alternate kernel header source using @samp{--with-headers}.
+
+The Filesystem Hierarchy Standard for @gnulinuxsystems{} expects some
+components of the @glibcadj{} installation to be in
+@file{/lib} and some in @file{/usr/lib}.  This is handled automatically
+if you configure @theglibc{} with @samp{--prefix=/usr}.  If you set some other
+prefix or allow it to default to @file{/usr/local}, then all the
+components are installed there.
+
+@node Reporting Bugs
+@appendixsec Reporting Bugs
+@cindex reporting bugs
+@cindex bugs, reporting
+
+There are probably bugs in @theglibc{}.  There are certainly
+errors and omissions in this manual.  If you report them, they will get
+fixed.  If you don't, no one will ever know about them and they will
+remain unfixed for all eternity, if not longer.
+
+It is a good idea to verify that the problem has not already been
+reported.  Bugs are documented in two places: The file @file{BUGS}
+describes a number of well known bugs and the central @glibcadj{}
+bug tracking system has a
+WWW interface at
+@url{https://sourceware.org/bugzilla/}.  The WWW
+interface gives you access to open and closed reports.  A closed report
+normally includes a patch or a hint on solving the problem.
+
+To report a bug, first you must find it.  With any luck, this will be the
+hard part.  Once you've found a bug, make sure it's really a bug.  A
+good way to do this is to see if @theglibc{} behaves the same way
+some other C library does.  If so, probably you are wrong and the
+libraries are right (but not necessarily).  If not, one of the libraries
+is probably wrong.  It might not be @theglibc{}.  Many historical
+Unix C libraries permit things that we don't, such as closing a file
+twice.
+
+If you think you have found some way in which @theglibc{} does not
+conform to the ISO and POSIX standards (@pxref{Standards and
+Portability}), that is definitely a bug.  Report it!
+
+Once you're sure you've found a bug, try to narrow it down to the
+smallest test case that reproduces the problem.  In the case of a C
+library, you really only need to narrow it down to one library
+function call, if possible.  This should not be too difficult.
+
+The final step when you have a simple test case is to report the bug.
+Do this at @value{REPORT_BUGS_TO}.
+
+If you are not sure how a function should behave, and this manual
+doesn't tell you, that's a bug in the manual.  Report that too!  If the
+function's behavior disagrees with the manual, then either the library
+or the manual has a bug, so report the disagreement.  If you find any
+errors or omissions in this manual, please report them to the
+bug database.  If you refer to specific
+sections of the manual, please include the section names for easier
+identification.

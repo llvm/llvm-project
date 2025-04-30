@@ -45,7 +45,9 @@ _LIBUNWIND_HIDDEN int __unw_init_local(unw_cursor_t *cursor,
   _LIBUNWIND_TRACE_API("__unw_init_local(cursor=%p, context=%p)",
                        static_cast<void *>(cursor),
                        static_cast<void *>(context));
-#if defined(__i386__)
+#if defined(__NEXT__)
+#define REGISTER_KIND Registers_NEXT
+#elif defined(__i386__)
 # define REGISTER_KIND Registers_x86
 #elif defined(__x86_64__)
 # define REGISTER_KIND Registers_x86_64

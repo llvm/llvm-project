@@ -1,0 +1,1 @@
+#include "tst-affinity.c"

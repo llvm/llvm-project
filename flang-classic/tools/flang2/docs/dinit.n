@@ -1,0 +1,180 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 14 "Data Initialization File"
+.lp
+The Data Initialization File is an external binary file defining the 
+initialization of external and static variables.  It is written by 
+the Semantic Analyzer as it processes initializers for external 
+and static variables, and is read by the Assembler in order to
+write the necessary \*(cfTXT\*(rf blocks and/or assembler directives
+to initialize the data.
+.lp
+The file consists of one or more
+.ul
+records.
+Each record consists of 2 fields, a \*(cfshort int\*(rf (dtype)
+and a 32-bit \*(cfINT\*(rf (conval).
+Records are written to, and read from the file via the routines
+\*(mfdinit_put\*(rf and \*(mfdinit_read\*(rf in the module 
+\*(ffdinitutil.c\*(rf.  These routines are also responsible 
+for opening and possibly buffering the file.
+.lp
+There are several types of record in the file,
+distinguished by the value of the first field (dtype):
+.IP "dtype = DINIT_LOC" CW
+.br
+\*(cfDINIT_LOC\*(rf
+is a special value chosen so as to not conflict
+with any of the other possible values of this field.
+\*(cfconval\*(rf, the second field of the record, will be a
+symbol table pointer to a variable, array, pointer, or structure.
+This record indicates that a new symbol is being initialized.
+It results in a \*(cf$LOC\*(rf directive being written to 
+the Object Code Listing.  Ensuing records, up to the next 
+\*(cfDINIT_LOC\*(rf, will initialize consecutive locations 
+within this variable.
+.IP "dtype = DINIT_OFFSET" CW
+.cw "(FORTRAN)" .
+The value in \*(cfconval\*(rf is added to the base address given by the
+\*(cfDINIT_LOC\*(rf record to determine the effective address for data
+initialization.  This is useful for Fortran style structures where fields
+in a structure can be skipped and individual array elements can be
+initialized.
+.IP "dtype = DINIT_PAD" CW
+.br
+This record indicates that the next \*(cfconval\*(rf bytes are to 
+be zerofilled for padding.
+.IP "dtype = DINIT_ZEROES" CW
+.br
+This record indicates that the next \*(cfconval\*(rf bytes are to 
+be zerofilled.
+.IP "dtype = DINIT_REPEAT" CW
+.br
+.cw "(FORTRAN)" .
+The value of \*(cfconval\*(rf specifies the repeat count for the constant
+that is specified in the following dinit record.
+.IP "dtype = DINIT_LEN" CW
+.br
+.cw "(C)" .
+This record follows the record initializing an array of char with a string
+and is used to provide extra information for the initialization.
+Its conval field indicates the number of characters to use from the string.
+This value will either be the length of the string with the null terminating
+character or the length of the string without the null terminating character.
+.IP "dtype = DT_DBLE" CW
+.br
+Indicates that 2 32-bit words are to be initialized with
+a 64-bit double precision floating point value.
+\*(cfconval\*(rf is a symbol table pointer to a double precision constant.
+.IP "dtype = DT_CMPLX" CW
+.br
+.cw "(FORTRAN)" .
+Indicates that 2 32-bit words are to be initialized with
+two 32-bit floating point values.
+\*(cfconval\*(rf is a symbol table pointer to a
+.cw complex
+constant.
+.IP "dtype = DT_DCMPLX" CW
+.br
+.cw "(FORTRAN)" .
+Indicates that 2 64-bit words are to be initialized with
+two 64-bit double precision floating point values.
+\*(cfconval\*(rf is a symbol table pointer to a
+.cw doublecomplex
+constant.
+.IP "dtype = pointer to x, conval = address constant" CW
+.br
+Indicates that the next 32-bit word is to be initialized
+to a variable address plus an optional byte offset.
+\*(cfconval\*(rf is a symbol table pointer to an address constant.
+.IP "dtype = pointer to x, conval = string" CW
+.br
+.cw "(C)" .
+Indicates that a sequence of bytes is to be initialized
+to the characters in the string, possibly including the terminating
+null character.  This record immediately precedes a record of type 
+.cw DINIT_LEN
+which indicates the number of characters to use from string
+for the initialization.
+\*(cfconval\*(rf is a symbol table pointer to a string.
+.IP "dtype = other C types" CW
+.br
+Includes the
+.i integral
+and single precision data types.
+Indicates that the current byte (e.g. \*(cfDT_CHAR\*(rf),
+halfword (e.g. \*(cfDT_SINT\*(rf),
+or word (e.g. \*(cfDT_FLOAT\*(rf),
+is to be initialized
+to the value in conval.
+The Assembler must perform word or halfword 
+alignment if necessary.
+.IP "dtype = Fortran Hollerith or CHARACTER" CW
+.br
+.cw dtype
+is actually \*(cfDT_CHAR\*(rf which indicates that
+a sequence of bytes is to be initialized to the
+characters in the
+.cw Hollerith
+or
+.cw CHARACTER
+string.
+.cw conval
+is a symbol table pointer to the
+.i string
+constant.
+The length of the initialization is derived from the
+.i string "'s"
+.cw DTYPE ,
+not
+.cw dtype .
+.IP "dtype = other Fortran types" CW
+.br
+Includes the integer, logical, and single precision data
+types.
+Indicates that the current byte (e.g. \*(cfDT_BINT\*(rf),
+halfword (e.g. \*(cfDT_SINT\*(rf),
+or word (e.g. \*(cfDT_FLOAT\*(rf),
+is to be initialized
+to the value in conval.
+The Assembler must perform word or halfword 
+alignment if necessary.
+.IP "dtype = DINIT_LABEL" CW
+.br
+Indicates that the next 64-bit word is to be initialized
+to the address of a label.  \*(cfconval\*(rf is a symbol 
+table pointer to a label.
+.IP "dtype = 0 - alignment record" CW
+.br
+Indicates that byte, halfword, or word alignment is required.
+The value of conval will be 0, 1, 3, or 7 respectively.
+Note that in the usual case (e.g. a char followed by an int),
+alignment is automatic and this record is not written.
+This record is only required for certain cases where a struct
+is a member of another struct or is an array element.
+For example, word alignment is required between the initialization
+record for c and the one for d in the following code:
+.CS
+
+    struct {
+        char c;
+        struct {
+            char d;
+            int e;
+        } f;
+    } x = { 'c', {'d', 77}};
+.CE
+.IP "dtype = DINIT_FIELD" CW
+.br
+.cw "(C)" .
+This record is only used for certain implementations where bit fields
+are initialized in a special way.
+Normally, bit fields are initialized using "dtype" dinit records
+whose \*(cfconval\*(rf fields have been filled by the data initalizing
+process during semantic analysis.
+If used, this record always precedes the records which initialize a
+sequence of fields.

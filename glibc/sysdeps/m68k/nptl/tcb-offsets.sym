@@ -1,0 +1,10 @@
+#include <sysdep.h>
+#include <tls.h>
+
+--
+
+-- Derive offsets relative to the thread register.
+#define thread_offsetof(mem)	(long)(offsetof(struct pthread, mem) - TLS_TCB_OFFSET - TLS_PRE_TCB_SIZE)
+
+MULTIPLE_THREADS_OFFSET		thread_offsetof (header.multiple_threads)
+TID_OFFSET			thread_offsetof (tid)

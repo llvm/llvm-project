@@ -14,6 +14,12 @@ if(WIN32)
   set(system_libs version)
 endif()
 
+if(LLVM_ENABLE_CLASSIC_FLANG)
+  set(TOOLCHAINS_FLANG_CPP ToolChains/ClassicFlang.cpp)
+else()
+  set(TOOLCHAINS_FLANG_CPP ToolChains/Flang.cpp)
+endif()
+
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
@@ -35,6 +41,7 @@ add_clang_library(clangDriver
   ToolChains/Arch/LoongArch.cpp
   ToolChains/Arch/M68k.cpp
   ToolChains/Arch/Mips.cpp
+  ToolChains/Arch/Next32.cpp
   ToolChains/Arch/PPC.cpp
   ToolChains/Arch/RISCV.cpp
   ToolChains/Arch/Sparc.cpp
@@ -53,7 +60,7 @@ add_clang_library(clangDriver
   ToolChains/Cuda.cpp
   ToolChains/Darwin.cpp
   ToolChains/DragonFly.cpp
-  ToolChains/Flang.cpp
+  ${TOOLCHAINS_FLANG_CPP}
   ToolChains/FreeBSD.cpp
   ToolChains/Fuchsia.cpp
   ToolChains/Gnu.cpp
@@ -71,6 +78,7 @@ add_clang_library(clangDriver
   ToolChains/MSVC.cpp
   ToolChains/NaCl.cpp
   ToolChains/NetBSD.cpp
+  ToolChains/Next32ELF.cpp
   ToolChains/OHOS.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp

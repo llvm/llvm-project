@@ -1,0 +1,1505 @@
+@node Introduction, Error Reporting, Top, Top
+@chapter Introduction
+@c %MENU% Purpose of the GNU C Library
+
+The C language provides no built-in facilities for performing such
+common operations as input/output, memory management, string
+manipulation, and the like.  Instead, these facilities are defined
+in a standard @dfn{library}, which you compile and link with your
+programs.
+@cindex library
+
+@Theglibc{}, described in this document, defines all of the
+library functions that are specified by the @w{ISO C} standard, as well as
+additional features specific to POSIX and other derivatives of the Unix
+operating system, and extensions specific to @gnusystems{}.
+
+The purpose of this manual is to tell you how to use the facilities
+of @theglibc{}.  We have mentioned which features belong to which
+standards to help you identify things that are potentially non-portable
+to other systems.  But the emphasis in this manual is not on strict
+portability.
+
+@menu
+* Getting Started::             What this manual is for and how to use it.
+* Standards and Portability::   Standards and sources upon which the GNU
+                                 C library is based.
+* Using the Library::           Some practical uses for the library.
+* Roadmap to the Manual::       Overview of the remaining chapters in
+                                 this manual.
+@end menu
+
+@node Getting Started, Standards and Portability,  , Introduction
+@section Getting Started
+
+This manual is written with the assumption that you are at least
+somewhat familiar with the C programming language and basic programming
+concepts.  Specifically, familiarity with ISO standard C
+(@pxref{ISO C}), rather than ``traditional'' pre-ISO C dialects, is
+assumed.
+
+@Theglibc{} includes several @dfn{header files}, each of which
+provides definitions and declarations for a group of related facilities;
+this information is used by the C compiler when processing your program.
+For example, the header file @file{stdio.h} declares facilities for
+performing input and output, and the header file @file{string.h}
+declares string processing utilities.  The organization of this manual
+generally follows the same division as the header files.
+
+If you are reading this manual for the first time, you should read all
+of the introductory material and skim the remaining chapters.  There are
+a @emph{lot} of functions in @theglibc{} and it's not realistic to
+expect that you will be able to remember exactly @emph{how} to use each
+and every one of them.  It's more important to become generally familiar
+with the kinds of facilities that the library provides, so that when you
+are writing your programs you can recognize @emph{when} to make use of
+library functions, and @emph{where} in this manual you can find more
+specific information about them.
+
+
+@node Standards and Portability, Using the Library, Getting Started, Introduction
+@section Standards and Portability
+@cindex standards
+
+This section discusses the various standards and other sources that @theglibc{}
+is based upon.  These sources include the @w{ISO C} and
+POSIX standards, and the System V and Berkeley Unix implementations.
+
+The primary focus of this manual is to tell you how to make effective
+use of the @glibcadj{} facilities.  But if you are concerned about
+making your programs compatible with these standards, or portable to
+operating systems other than GNU, this can affect how you use the
+library.  This section gives you an overview of these standards, so that
+you will know what they are when they are mentioned in other parts of
+the manual.
+
+@xref{Library Summary}, for an alphabetical list of the functions and
+other symbols provided by the library.  This list also states which
+standards each function or symbol comes from.
+
+@menu
+* ISO C::                       The international standard for the C
+                                 programming language.
+* POSIX::                       The ISO/IEC 9945 (aka IEEE 1003) standards
+                                 for operating systems.
+* Berkeley Unix::               BSD and SunOS.
+* SVID::                        The System V Interface Description.
+* XPG::                         The X/Open Portability Guide.
+@end menu
+
+@node ISO C, POSIX,  , Standards and Portability
+@subsection ISO C
+@cindex ISO C
+
+@Theglibc{} is compatible with the C standard adopted by the
+American National Standards Institute (ANSI):
+@cite{American National Standard X3.159-1989---``ANSI C''} and later
+by the International Standardization Organization (ISO):
+@cite{ISO/IEC 9899:1990, ``Programming languages---C''}.
+We here refer to the standard as @w{ISO C} since this is the more
+general standard in respect of ratification.
+The header files and library facilities that make up @theglibc{} are
+a superset of those specified by the @w{ISO C} standard.@refill
+
+@pindex gcc
+If you are concerned about strict adherence to the @w{ISO C} standard, you
+should use the @samp{-ansi} option when you compile your programs with
+the GNU C compiler.  This tells the compiler to define @emph{only} ISO
+standard features from the library header files, unless you explicitly
+ask for additional features.  @xref{Feature Test Macros}, for
+information on how to do this.
+
+Being able to restrict the library to include only @w{ISO C} features is
+important because @w{ISO C} puts limitations on what names can be defined
+by the library implementation, and the GNU extensions don't fit these
+limitations.  @xref{Reserved Names}, for more information about these
+restrictions.
+
+This manual does not attempt to give you complete details on the
+differences between @w{ISO C} and older dialects.  It gives advice on how
+to write programs to work portably under multiple C dialects, but does
+not aim for completeness.
+
+
+@node POSIX, Berkeley Unix, ISO C, Standards and Portability
+@subsection POSIX (The Portable Operating System Interface)
+@cindex POSIX
+@cindex POSIX.1
+@cindex IEEE Std 1003.1
+@cindex ISO/IEC 9945-1
+@cindex POSIX.2
+@cindex IEEE Std 1003.2
+@cindex ISO/IEC 9945-2
+
+@Theglibc{} is also compatible with the ISO @dfn{POSIX} family of
+standards, known more formally as the @dfn{Portable Operating System
+Interface for Computer Environments} (ISO/IEC 9945).  They were also
+published as ANSI/IEEE Std 1003.  POSIX is derived mostly from various
+versions of the Unix operating system.
+
+The library facilities specified by the POSIX standards are a superset
+of those required by @w{ISO C}; POSIX specifies additional features for
+@w{ISO C} functions, as well as specifying new additional functions.  In
+general, the additional requirements and functionality defined by the
+POSIX standards are aimed at providing lower-level support for a
+particular kind of operating system environment, rather than general
+programming language support which can run in many diverse operating
+system environments.@refill
+
+@Theglibc{} implements all of the functions specified in
+@cite{ISO/IEC 9945-1:1996, the POSIX System Application Program
+Interface}, commonly referred to as POSIX.1.  The primary extensions to
+the @w{ISO C} facilities specified by this standard include file system
+interface primitives (@pxref{File System Interface}), device-specific
+terminal control functions (@pxref{Low-Level Terminal Interface}), and
+process control functions (@pxref{Processes}).
+
+Some facilities from @cite{ISO/IEC 9945-2:1993, the POSIX Shell and
+Utilities standard} (POSIX.2) are also implemented in @theglibc{}.
+These include utilities for dealing with regular expressions and other
+pattern matching facilities (@pxref{Pattern Matching}).
+
+@menu
+* POSIX Safety Concepts::       Safety concepts from POSIX.
+* Unsafe Features::             Features that make functions unsafe.
+* Conditionally Safe Features:: Features that make functions unsafe
+                                 in the absence of workarounds.
+* Other Safety Remarks::        Additional safety features and remarks.
+@end menu
+
+@comment Roland sez:
+@comment The GNU C library as it stands conforms to 1003.2 draft 11, which
+@comment specifies:
+@comment
+@comment Several new macros in <limits.h>.
+@comment popen, pclose
+@comment <regex.h> (which is not yet fully implemented--wait on this)
+@comment fnmatch
+@comment getopt
+@comment <glob.h>
+@comment <wordexp.h> (not yet implemented)
+@comment confstr
+
+@node POSIX Safety Concepts, Unsafe Features, , POSIX
+@subsubsection POSIX Safety Concepts
+@cindex POSIX Safety Concepts
+
+This manual documents various safety properties of @glibcadj{}
+functions, in lines that follow their prototypes and look like:
+
+@sampsafety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+The properties are assessed according to the criteria set forth in the
+POSIX standard for such safety contexts as Thread-, Async-Signal- and
+Async-Cancel- -Safety.  Intuitive definitions of these properties,
+attempting to capture the meaning of the standard definitions, follow.
+
+@itemize @bullet
+
+@item
+@cindex MT-Safe
+@cindex Thread-Safe
+@code{MT-Safe} or Thread-Safe functions are safe to call in the presence
+of other threads.  MT, in MT-Safe, stands for Multi Thread.
+
+Being MT-Safe does not imply a function is atomic, nor that it uses any
+of the memory synchronization mechanisms POSIX exposes to users.  It is
+even possible that calling MT-Safe functions in sequence does not yield
+an MT-Safe combination.  For example, having a thread call two MT-Safe
+functions one right after the other does not guarantee behavior
+equivalent to atomic execution of a combination of both functions, since
+concurrent calls in other threads may interfere in a destructive way.
+
+Whole-program optimizations that could inline functions across library
+interfaces may expose unsafe reordering, and so performing inlining
+across the @glibcadj{} interface is not recommended.  The documented
+MT-Safety status is not guaranteed under whole-program optimization.
+However, functions defined in user-visible headers are designed to be
+safe for inlining.
+
+
+@item
+@cindex AS-Safe
+@cindex Async-Signal-Safe
+@code{AS-Safe} or Async-Signal-Safe functions are safe to call from
+asynchronous signal handlers.  AS, in AS-Safe, stands for Asynchronous
+Signal.
+
+Many functions that are AS-Safe may set @code{errno}, or modify the
+floating-point environment, because their doing so does not make them
+unsuitable for use in signal handlers.  However, programs could
+misbehave should asynchronous signal handlers modify this thread-local
+state, and the signal handling machinery cannot be counted on to
+preserve it.  Therefore, signal handlers that call functions that may
+set @code{errno} or modify the floating-point environment @emph{must}
+save their original values, and restore them before returning.
+
+
+@item
+@cindex AC-Safe
+@cindex Async-Cancel-Safe
+@code{AC-Safe} or Async-Cancel-Safe functions are safe to call when
+asynchronous cancellation is enabled.  AC in AC-Safe stands for
+Asynchronous Cancellation.
+
+The POSIX standard defines only three functions to be AC-Safe, namely
+@code{pthread_cancel}, @code{pthread_setcancelstate}, and
+@code{pthread_setcanceltype}.  At present @theglibc{} provides no
+guarantees beyond these three functions, but does document which
+functions are presently AC-Safe.  This documentation is provided for use
+by @theglibc{} developers.
+
+Just like signal handlers, cancellation cleanup routines must configure
+the floating point environment they require.  The routines cannot assume
+a floating point environment, particularly when asynchronous
+cancellation is enabled.  If the configuration of the floating point
+environment cannot be performed atomically then it is also possible that
+the environment encountered is internally inconsistent.
+
+
+@item
+@cindex MT-Unsafe
+@cindex Thread-Unsafe
+@cindex AS-Unsafe
+@cindex Async-Signal-Unsafe
+@cindex AC-Unsafe
+@cindex Async-Cancel-Unsafe
+@code{MT-Unsafe}, @code{AS-Unsafe}, @code{AC-Unsafe} functions are not
+safe to call within the safety contexts described above.  Calling them
+within such contexts invokes undefined behavior.
+
+Functions not explicitly documented as safe in a safety context should
+be regarded as Unsafe.
+
+
+@item
+@cindex Preliminary
+@code{Preliminary} safety properties are documented, indicating these
+properties may @emph{not} be counted on in future releases of
+@theglibc{}.
+
+Such preliminary properties are the result of an assessment of the
+properties of our current implementation, rather than of what is
+mandated and permitted by current and future standards.
+
+Although we strive to abide by the standards, in some cases our
+implementation is safe even when the standard does not demand safety,
+and in other cases our implementation does not meet the standard safety
+requirements.  The latter are most likely bugs; the former, when marked
+as @code{Preliminary}, should not be counted on: future standards may
+require changes that are not compatible with the additional safety
+properties afforded by the current implementation.
+
+Furthermore, the POSIX standard does not offer a detailed definition of
+safety.  We assume that, by ``safe to call'', POSIX means that, as long
+as the program does not invoke undefined behavior, the ``safe to call''
+function behaves as specified, and does not cause other functions to
+deviate from their specified behavior.  We have chosen to use its loose
+definitions of safety, not because they are the best definitions to use,
+but because choosing them harmonizes this manual with POSIX.
+
+Please keep in mind that these are preliminary definitions and
+annotations, and certain aspects of the definitions are still under
+discussion and might be subject to clarification or change.
+
+Over time, we envision evolving the preliminary safety notes into stable
+commitments, as stable as those of our interfaces.  As we do, we will
+remove the @code{Preliminary} keyword from safety notes.  As long as the
+keyword remains, however, they are not to be regarded as a promise of
+future behavior.
+
+
+@end itemize
+
+Other keywords that appear in safety notes are defined in subsequent
+sections.
+
+
+@node Unsafe Features, Conditionally Safe Features, POSIX Safety Concepts, POSIX
+@subsubsection Unsafe Features
+@cindex Unsafe Features
+
+Functions that are unsafe to call in certain contexts are annotated with
+keywords that document their features that make them unsafe to call.
+AS-Unsafe features in this section indicate the functions are never safe
+to call when asynchronous signals are enabled.  AC-Unsafe features
+indicate they are never safe to call when asynchronous cancellation is
+enabled.  There are no MT-Unsafe marks in this section.
+
+@itemize @bullet
+
+@item @code{lock}
+@cindex lock
+
+Functions marked with @code{lock} as an AS-Unsafe feature may be
+interrupted by a signal while holding a non-recursive lock.  If the
+signal handler calls another such function that takes the same lock, the
+result is a deadlock.
+
+Functions annotated with @code{lock} as an AC-Unsafe feature may, if
+cancelled asynchronously, fail to release a lock that would have been
+released if their execution had not been interrupted by asynchronous
+thread cancellation.  Once a lock is left taken, attempts to take that
+lock will block indefinitely.
+
+
+@item @code{corrupt}
+@cindex corrupt
+
+Functions marked with @code{corrupt} as an AS-Unsafe feature may corrupt
+data structures and misbehave when they interrupt, or are interrupted
+by, another such function.  Unlike functions marked with @code{lock},
+these take recursive locks to avoid MT-Safety problems, but this is not
+enough to stop a signal handler from observing a partially-updated data
+structure.  Further corruption may arise from the interrupted function's
+failure to notice updates made by signal handlers.
+
+Functions marked with @code{corrupt} as an AC-Unsafe feature may leave
+data structures in a corrupt, partially updated state.  Subsequent uses
+of the data structure may misbehave.
+
+@c A special case, probably not worth documenting separately, involves
+@c reallocing, or even freeing pointers.  Any case involving free could
+@c be easily turned into an ac-safe leak by resetting the pointer before
+@c releasing it; I don't think we have any case that calls for this sort
+@c of fixing.  Fixing the realloc cases would require a new interface:
+@c instead of @code{ptr=realloc(ptr,size)} we'd have to introduce
+@c @code{acsafe_realloc(&ptr,size)} that would modify ptr before
+@c releasing the old memory.  The ac-unsafe realloc could be implemented
+@c in terms of an internal interface with this semantics (say
+@c __acsafe_realloc), but since realloc can be overridden, the function
+@c we call to implement realloc should not be this internal interface,
+@c but another internal interface that calls __acsafe_realloc if realloc
+@c was not overridden, and calls the overridden realloc with async
+@c cancel disabled.  --lxoliva
+
+
+@item @code{heap}
+@cindex heap
+
+Functions marked with @code{heap} may call heap memory management
+functions from the @code{malloc}/@code{free} family of functions and are
+only as safe as those functions.  This note is thus equivalent to:
+
+@sampsafety{@asunsafe{@asulock{}}@acunsafe{@aculock{} @acsfd{} @acsmem{}}}
+
+
+@c Check for cases that should have used plugin instead of or in
+@c addition to this.  Then, after rechecking gettext, adjust i18n if
+@c needed.
+@item @code{dlopen}
+@cindex dlopen
+
+Functions marked with @code{dlopen} use the dynamic loader to load
+shared libraries into the current execution image.  This involves
+opening files, mapping them into memory, allocating additional memory,
+resolving symbols, applying relocations and more, all of this while
+holding internal dynamic loader locks.
+
+The locks are enough for these functions to be AS- and AC-Unsafe, but
+other issues may arise.  At present this is a placeholder for all
+potential safety issues raised by @code{dlopen}.
+
+@c dlopen runs init and fini sections of the module; does this mean
+@c dlopen always implies plugin?
+
+
+@item @code{plugin}
+@cindex plugin
+
+Functions annotated with @code{plugin} may run code from plugins that
+may be external to @theglibc{}.  Such plugin functions are assumed to be
+MT-Safe, AS-Unsafe and AC-Unsafe.  Examples of such plugins are stack
+@cindex NSS
+unwinding libraries, name service switch (NSS) and character set
+@cindex iconv
+conversion (iconv) back-ends.
+
+Although the plugins mentioned as examples are all brought in by means
+of dlopen, the @code{plugin} keyword does not imply any direct
+involvement of the dynamic loader or the @code{libdl} interfaces, those
+are covered by @code{dlopen}.  For example, if one function loads a
+module and finds the addresses of some of its functions, while another
+just calls those already-resolved functions, the former will be marked
+with @code{dlopen}, whereas the latter will get the @code{plugin}.  When
+a single function takes all of these actions, then it gets both marks.
+
+
+@item @code{i18n}
+@cindex i18n
+
+Functions marked with @code{i18n} may call internationalization
+functions of the @code{gettext} family and will be only as safe as those
+functions.  This note is thus equivalent to:
+
+@sampsafety{@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @ascudlopen{}}@acunsafe{@acucorrupt{}}}
+
+
+@item @code{timer}
+@cindex timer
+
+Functions marked with @code{timer} use the @code{alarm} function or
+similar to set a time-out for a system call or a long-running operation.
+In a multi-threaded program, there is a risk that the time-out signal
+will be delivered to a different thread, thus failing to interrupt the
+intended thread.  Besides being MT-Unsafe, such functions are always
+AS-Unsafe, because calling them in signal handlers may interfere with
+timers set in the interrupted code, and AC-Unsafe, because there is no
+safe way to guarantee an earlier timer will be reset in case of
+asynchronous cancellation.
+
+@end itemize
+
+
+@node Conditionally Safe Features, Other Safety Remarks, Unsafe Features, POSIX
+@subsubsection Conditionally Safe Features
+@cindex Conditionally Safe Features
+
+For some features that make functions unsafe to call in certain
+contexts, there are known ways to avoid the safety problem other than
+refraining from calling the function altogether.  The keywords that
+follow refer to such features, and each of their definitions indicate
+how the whole program needs to be constrained in order to remove the
+safety problem indicated by the keyword.  Only when all the reasons that
+make a function unsafe are observed and addressed, by applying the
+documented constraints, does the function become safe to call in a
+context.
+
+@itemize @bullet
+
+@item @code{init}
+@cindex init
+
+Functions marked with @code{init} as an MT-Unsafe feature perform
+MT-Unsafe initialization when they are first called.
+
+Calling such a function at least once in single-threaded mode removes
+this specific cause for the function to be regarded as MT-Unsafe.  If no
+other cause for that remains, the function can then be safely called
+after other threads are started.
+
+Functions marked with @code{init} as an AS- or AC-Unsafe feature use the
+internal @code{libc_once} machinery or similar to initialize internal
+data structures.
+
+If a signal handler interrupts such an initializer, and calls any
+function that also performs @code{libc_once} initialization, it will
+deadlock if the thread library has been loaded.
+
+Furthermore, if an initializer is partially complete before it is
+canceled or interrupted by a signal whose handler requires the same
+initialization, some or all of the initialization may be performed more
+than once, leaking resources or even resulting in corrupt internal data.
+
+Applications that need to call functions marked with @code{init} as an
+AS- or AC-Unsafe feature should ensure the initialization is performed
+before configuring signal handlers or enabling cancellation, so that the
+AS- and AC-Safety issues related with @code{libc_once} do not arise.
+
+@c We may have to extend the annotations to cover conditions in which
+@c initialization may or may not occur, since an initial call in a safe
+@c context is no use if the initialization doesn't take place at that
+@c time: it doesn't remove the risk for later calls.
+
+
+@item @code{race}
+@cindex race
+
+Functions annotated with @code{race} as an MT-Safety issue operate on
+objects in ways that may cause data races or similar forms of
+destructive interference out of concurrent execution.  In some cases,
+the objects are passed to the functions by users; in others, they are
+used by the functions to return values to users; in others, they are not
+even exposed to users.
+
+We consider access to objects passed as (indirect) arguments to
+functions to be data race free.  The assurance of data race free objects
+is the caller's responsibility.  We will not mark a function as
+MT-Unsafe or AS-Unsafe if it misbehaves when users fail to take the
+measures required by POSIX to avoid data races when dealing with such
+objects.  As a general rule, if a function is documented as reading from
+an object passed (by reference) to it, or modifying it, users ought to
+use memory synchronization primitives to avoid data races just as they
+would should they perform the accesses themselves rather than by calling
+the library function.  @code{FILE} streams are the exception to the
+general rule, in that POSIX mandates the library to guard against data
+races in many functions that manipulate objects of this specific opaque
+type.  We regard this as a convenience provided to users, rather than as
+a general requirement whose expectations should extend to other types.
+
+In order to remind users that guarding certain arguments is their
+responsibility, we will annotate functions that take objects of certain
+types as arguments.  We draw the line for objects passed by users as
+follows: objects whose types are exposed to users, and that users are
+expected to access directly, such as memory buffers, strings, and
+various user-visible @code{struct} types, do @emph{not} give reason for
+functions to be annotated with @code{race}.  It would be noisy and
+redundant with the general requirement, and not many would be surprised
+by the library's lack of internal guards when accessing objects that can
+be accessed directly by users.
+
+As for objects that are opaque or opaque-like, in that they are to be
+manipulated only by passing them to library functions (e.g.,
+@code{FILE}, @code{DIR}, @code{obstack}, @code{iconv_t}), there might be
+additional expectations as to internal coordination of access by the
+library.  We will annotate, with @code{race} followed by a colon and the
+argument name, functions that take such objects but that do not take
+care of synchronizing access to them by default.  For example,
+@code{FILE} stream @code{unlocked} functions will be annotated, but
+those that perform implicit locking on @code{FILE} streams by default
+will not, even though the implicit locking may be disabled on a
+per-stream basis.
+
+In either case, we will not regard as MT-Unsafe functions that may
+access user-supplied objects in unsafe ways should users fail to ensure
+the accesses are well defined.  The notion prevails that users are
+expected to safeguard against data races any user-supplied objects that
+the library accesses on their behalf.
+
+@c The above describes @mtsrace; @mtasurace is described below.
+
+This user responsibility does not apply, however, to objects controlled
+by the library itself, such as internal objects and static buffers used
+to return values from certain calls.  When the library doesn't guard
+them against concurrent uses, these cases are regarded as MT-Unsafe and
+AS-Unsafe (although the @code{race} mark under AS-Unsafe will be omitted
+as redundant with the one under MT-Unsafe).  As in the case of
+user-exposed objects, the mark may be followed by a colon and an
+identifier.  The identifier groups all functions that operate on a
+certain unguarded object; users may avoid the MT-Safety issues related
+with unguarded concurrent access to such internal objects by creating a
+non-recursive mutex related with the identifier, and always holding the
+mutex when calling any function marked as racy on that identifier, as
+they would have to should the identifier be an object under user
+control.  The non-recursive mutex avoids the MT-Safety issue, but it
+trades one AS-Safety issue for another, so use in asynchronous signals
+remains undefined.
+
+When the identifier relates to a static buffer used to hold return
+values, the mutex must be held for as long as the buffer remains in use
+by the caller.  Many functions that return pointers to static buffers
+offer reentrant variants that store return values in caller-supplied
+buffers instead.  In some cases, such as @code{tmpname}, the variant is
+chosen not by calling an alternate entry point, but by passing a
+non-@code{NULL} pointer to the buffer in which the returned values are
+to be stored.  These variants are generally preferable in multi-threaded
+programs, although some of them are not MT-Safe because of other
+internal buffers, also documented with @code{race} notes.
+
+
+@item @code{const}
+@cindex const
+
+Functions marked with @code{const} as an MT-Safety issue non-atomically
+modify internal objects that are better regarded as constant, because a
+substantial portion of @theglibc{} accesses them without
+synchronization.  Unlike @code{race}, that causes both readers and
+writers of internal objects to be regarded as MT-Unsafe and AS-Unsafe,
+this mark is applied to writers only.  Writers remain equally MT- and
+AS-Unsafe to call, but the then-mandatory constness of objects they
+modify enables readers to be regarded as MT-Safe and AS-Safe (as long as
+no other reasons for them to be unsafe remain), since the lack of
+synchronization is not a problem when the objects are effectively
+constant.
+
+The identifier that follows the @code{const} mark will appear by itself
+as a safety note in readers.  Programs that wish to work around this
+safety issue, so as to call writers, may use a non-recursve
+@code{rwlock} associated with the identifier, and guard @emph{all} calls
+to functions marked with @code{const} followed by the identifier with a
+write lock, and @emph{all} calls to functions marked with the identifier
+by itself with a read lock.  The non-recursive locking removes the
+MT-Safety problem, but it trades one AS-Safety problem for another, so
+use in asynchronous signals remains undefined.
+
+@c But what if, instead of marking modifiers with const:id and readers
+@c with just id, we marked writers with race:id and readers with ro:id?
+@c Instead of having to define each instance of “id”, we'd have a
+@c general pattern governing all such “id”s, wherein race:id would
+@c suggest the need for an exclusive/write lock to make the function
+@c safe, whereas ro:id would indicate “id” is expected to be read-only,
+@c but if any modifiers are called (while holding an exclusive lock),
+@c then ro:id-marked functions ought to be guarded with a read lock for
+@c safe operation.  ro:env or ro:locale, for example, seems to convey
+@c more clearly the expectations and the meaning, than just env or
+@c locale.
+
+
+@item @code{sig}
+@cindex sig
+
+Functions marked with @code{sig} as a MT-Safety issue (that implies an
+identical AS-Safety issue, omitted for brevity) may temporarily install
+a signal handler for internal purposes, which may interfere with other
+uses of the signal, identified after a colon.
+
+This safety problem can be worked around by ensuring that no other uses
+of the signal will take place for the duration of the call.  Holding a
+non-recursive mutex while calling all functions that use the same
+temporary signal; blocking that signal before the call and resetting its
+handler afterwards is recommended.
+
+There is no safe way to guarantee the original signal handler is
+restored in case of asynchronous cancellation, therefore so-marked
+functions are also AC-Unsafe.
+
+@c fixme: at least deferred cancellation should get it right, and would
+@c obviate the restoring bit below, and the qualifier above.
+
+Besides the measures recommended to work around the MT- and AS-Safety
+problem, in order to avert the cancellation problem, disabling
+asynchronous cancellation @emph{and} installing a cleanup handler to
+restore the signal to the desired state and to release the mutex are
+recommended.
+
+
+@item @code{term}
+@cindex term
+
+Functions marked with @code{term} as an MT-Safety issue may change the
+terminal settings in the recommended way, namely: call @code{tcgetattr},
+modify some flags, and then call @code{tcsetattr}; this creates a window
+in which changes made by other threads are lost.  Thus, functions marked
+with @code{term} are MT-Unsafe.  The same window enables changes made by
+asynchronous signals to be lost.  These functions are also AS-Unsafe,
+but the corresponding mark is omitted as redundant.
+
+It is thus advisable for applications using the terminal to avoid
+concurrent and reentrant interactions with it, by not using it in signal
+handlers or blocking signals that might use it, and holding a lock while
+calling these functions and interacting with the terminal.  This lock
+should also be used for mutual exclusion with functions marked with
+@code{@mtasurace{:tcattr(fd)}}, where @var{fd} is a file descriptor for
+the controlling terminal.  The caller may use a single mutex for
+simplicity, or use one mutex per terminal, even if referenced by
+different file descriptors.
+
+Functions marked with @code{term} as an AC-Safety issue are supposed to
+restore terminal settings to their original state, after temporarily
+changing them, but they may fail to do so if cancelled.
+
+@c fixme: at least deferred cancellation should get it right, and would
+@c obviate the restoring bit below, and the qualifier above.
+
+Besides the measures recommended to work around the MT- and AS-Safety
+problem, in order to avert the cancellation problem, disabling
+asynchronous cancellation @emph{and} installing a cleanup handler to
+restore the terminal settings to the original state and to release the
+mutex are recommended.
+
+
+@end itemize
+
+
+@node Other Safety Remarks, , Conditionally Safe Features, POSIX
+@subsubsection Other Safety Remarks
+@cindex Other Safety Remarks
+
+Additional keywords may be attached to functions, indicating features
+that do not make a function unsafe to call, but that may need to be
+taken into account in certain classes of programs:
+
+@itemize @bullet
+
+@item @code{locale}
+@cindex locale
+
+Functions annotated with @code{locale} as an MT-Safety issue read from
+the locale object without any form of synchronization.  Functions
+annotated with @code{locale} called concurrently with locale changes may
+behave in ways that do not correspond to any of the locales active
+during their execution, but an unpredictable mix thereof.
+
+We do not mark these functions as MT- or AS-Unsafe, however, because
+functions that modify the locale object are marked with
+@code{const:locale} and regarded as unsafe.  Being unsafe, the latter
+are not to be called when multiple threads are running or asynchronous
+signals are enabled, and so the locale can be considered effectively
+constant in these contexts, which makes the former safe.
+
+@c Should the locking strategy suggested under @code{const} be used,
+@c failure to guard locale uses is not as fatal as data races in
+@c general: unguarded uses will @emph{not} follow dangling pointers or
+@c access uninitialized, unmapped or recycled memory.  Each access will
+@c read from a consistent locale object that is or was active at some
+@c point during its execution.  Without synchronization, however, it
+@c cannot even be assumed that, after a change in locale, earlier
+@c locales will no longer be used, even after the newly-chosen one is
+@c used in the thread.  Nevertheless, even though unguarded reads from
+@c the locale will not violate type safety, functions that access the
+@c locale multiple times may invoke all sorts of undefined behavior
+@c because of the unexpected locale changes.
+
+
+@item @code{env}
+@cindex env
+
+Functions marked with @code{env} as an MT-Safety issue access the
+environment with @code{getenv} or similar, without any guards to ensure
+safety in the presence of concurrent modifications.
+
+We do not mark these functions as MT- or AS-Unsafe, however, because
+functions that modify the environment are all marked with
+@code{const:env} and regarded as unsafe.  Being unsafe, the latter are
+not to be called when multiple threads are running or asynchronous
+signals are enabled, and so the environment can be considered
+effectively constant in these contexts, which makes the former safe.
+
+
+@item @code{hostid}
+@cindex hostid
+
+The function marked with @code{hostid} as an MT-Safety issue reads from
+the system-wide data structures that hold the ``host ID'' of the
+machine.  These data structures cannot generally be modified atomically.
+Since it is expected that the ``host ID'' will not normally change, the
+function that reads from it (@code{gethostid}) is regarded as safe,
+whereas the function that modifies it (@code{sethostid}) is marked with
+@code{@mtasuconst{:@mtshostid{}}}, indicating it may require special
+care if it is to be called.  In this specific case, the special care
+amounts to system-wide (not merely intra-process) coordination.
+
+
+@item @code{sigintr}
+@cindex sigintr
+
+Functions marked with @code{sigintr} as an MT-Safety issue access the
+@code{_sigintr} internal data structure without any guards to ensure
+safety in the presence of concurrent modifications.
+
+We do not mark these functions as MT- or AS-Unsafe, however, because
+functions that modify the this data structure are all marked with
+@code{const:sigintr} and regarded as unsafe.  Being unsafe, the latter
+are not to be called when multiple threads are running or asynchronous
+signals are enabled, and so the data structure can be considered
+effectively constant in these contexts, which makes the former safe.
+
+
+@item @code{fd}
+@cindex fd
+
+Functions annotated with @code{fd} as an AC-Safety issue may leak file
+descriptors if asynchronous thread cancellation interrupts their
+execution.
+
+Functions that allocate or deallocate file descriptors will generally be
+marked as such.  Even if they attempted to protect the file descriptor
+allocation and deallocation with cleanup regions, allocating a new
+descriptor and storing its number where the cleanup region could release
+it cannot be performed as a single atomic operation.  Similarly,
+releasing the descriptor and taking it out of the data structure
+normally responsible for releasing it cannot be performed atomically.
+There will always be a window in which the descriptor cannot be released
+because it was not stored in the cleanup handler argument yet, or it was
+already taken out before releasing it.  It cannot be taken out after
+release: an open descriptor could mean either that the descriptor still
+has to be closed, or that it already did so but the descriptor was
+reallocated by another thread or signal handler.
+
+Such leaks could be internally avoided, with some performance penalty,
+by temporarily disabling asynchronous thread cancellation.  However,
+since callers of allocation or deallocation functions would have to do
+this themselves, to avoid the same sort of leak in their own layer, it
+makes more sense for the library to assume they are taking care of it
+than to impose a performance penalty that is redundant when the problem
+is solved in upper layers, and insufficient when it is not.
+
+This remark by itself does not cause a function to be regarded as
+AC-Unsafe.  However, cumulative effects of such leaks may pose a
+problem for some programs.  If this is the case, suspending asynchronous
+cancellation for the duration of calls to such functions is recommended.
+
+
+@item @code{mem}
+@cindex mem
+
+Functions annotated with @code{mem} as an AC-Safety issue may leak
+memory if asynchronous thread cancellation interrupts their execution.
+
+The problem is similar to that of file descriptors: there is no atomic
+interface to allocate memory and store its address in the argument to a
+cleanup handler, or to release it and remove its address from that
+argument, without at least temporarily disabling asynchronous
+cancellation, which these functions do not do.
+
+This remark does not by itself cause a function to be regarded as
+generally AC-Unsafe.  However, cumulative effects of such leaks may be
+severe enough for some programs that disabling asynchronous cancellation
+for the duration of calls to such functions may be required.
+
+
+@item @code{cwd}
+@cindex cwd
+
+Functions marked with @code{cwd} as an MT-Safety issue may temporarily
+change the current working directory during their execution, which may
+cause relative pathnames to be resolved in unexpected ways in other
+threads or within asynchronous signal or cancellation handlers.
+
+This is not enough of a reason to mark so-marked functions as MT- or
+AS-Unsafe, but when this behavior is optional (e.g., @code{nftw} with
+@code{FTW_CHDIR}), avoiding the option may be a good alternative to
+using full pathnames or file descriptor-relative (e.g. @code{openat})
+system calls.
+
+
+@item @code{!posix}
+@cindex !posix
+
+This remark, as an MT-, AS- or AC-Safety note to a function, indicates
+the safety status of the function is known to differ from the specified
+status in the POSIX standard.  For example, POSIX does not require a
+function to be Safe, but our implementation is, or vice-versa.
+
+For the time being, the absence of this remark does not imply the safety
+properties we documented are identical to those mandated by POSIX for
+the corresponding functions.
+
+
+@item @code{:identifier}
+@cindex :identifier
+
+Annotations may sometimes be followed by identifiers, intended to group
+several functions that e.g. access the data structures in an unsafe way,
+as in @code{race} and @code{const}, or to provide more specific
+information, such as naming a signal in a function marked with
+@code{sig}.  It is envisioned that it may be applied to @code{lock} and
+@code{corrupt} as well in the future.
+
+In most cases, the identifier will name a set of functions, but it may
+name global objects or function arguments, or identifiable properties or
+logical components associated with them, with a notation such as
+e.g. @code{:buf(arg)} to denote a buffer associated with the argument
+@var{arg}, or @code{:tcattr(fd)} to denote the terminal attributes of a
+file descriptor @var{fd}.
+
+The most common use for identifiers is to provide logical groups of
+functions and arguments that need to be protected by the same
+synchronization primitive in order to ensure safe operation in a given
+context.
+
+
+@item @code{/condition}
+@cindex /condition
+
+Some safety annotations may be conditional, in that they only apply if a
+boolean expression involving arguments, global variables or even the
+underlying kernel evaluates to true.  Such conditions as
+@code{/hurd} or @code{/!linux!bsd} indicate the preceding marker only
+applies when the underlying kernel is the HURD, or when it is neither
+Linux nor a BSD kernel, respectively.  @code{/!ps} and
+@code{/one_per_line} indicate the preceding marker only applies when
+argument @var{ps} is NULL, or global variable @var{one_per_line} is
+nonzero.
+
+When all marks that render a function unsafe are adorned with such
+conditions, and none of the named conditions hold, then the function can
+be regarded as safe.
+
+
+@end itemize
+
+
+@node Berkeley Unix, SVID, POSIX, Standards and Portability
+@subsection Berkeley Unix
+@cindex BSD Unix
+@cindex 4.@var{n} BSD Unix
+@cindex Berkeley Unix
+@cindex SunOS
+@cindex Unix, Berkeley
+
+@Theglibc{} defines facilities from some versions of Unix which
+are not formally standardized, specifically from the 4.2 BSD, 4.3 BSD,
+and 4.4 BSD Unix systems (also known as @dfn{Berkeley Unix}) and from
+@dfn{SunOS} (a popular 4.2 BSD derivative that includes some Unix System
+V functionality).  These systems support most of the @w{ISO C} and POSIX
+facilities, and 4.4 BSD and newer releases of SunOS in fact support them all.
+
+The BSD facilities include symbolic links (@pxref{Symbolic Links}), the
+@code{select} function (@pxref{Waiting for I/O}), the BSD signal
+functions (@pxref{BSD Signal Handling}), and sockets (@pxref{Sockets}).
+
+@node SVID, XPG, Berkeley Unix, Standards and Portability
+@subsection SVID (The System V Interface Description)
+@cindex SVID
+@cindex System V Unix
+@cindex Unix, System V
+
+The @dfn{System V Interface Description} (SVID) is a document describing
+the AT&T Unix System V operating system.  It is to some extent a
+superset of the POSIX standard (@pxref{POSIX}).
+
+@Theglibc{} defines most of the facilities required by the SVID
+that are not also required by the @w{ISO C} or POSIX standards, for
+compatibility with  System V Unix and other Unix systems (such as
+SunOS) which include these facilities.  However, many of the more
+obscure and less generally useful facilities required by the SVID are
+not included.  (In fact, Unix System V itself does not provide them all.)
+
+The supported facilities from System V include the methods for
+inter-process communication and shared memory, the @code{hsearch} and
+@code{drand48} families of functions, @code{fmtmsg} and several of the
+mathematical functions.
+
+@node XPG, , SVID, Standards and Portability
+@subsection XPG (The X/Open Portability Guide)
+
+The X/Open Portability Guide, published by the X/Open Company, Ltd., is
+a more general standard than POSIX.  X/Open owns the Unix copyright and
+the XPG specifies the requirements for systems which are intended to be
+a Unix system.
+
+@Theglibc{} complies to the X/Open Portability Guide, Issue 4.2,
+with all extensions common to XSI (X/Open System Interface)
+compliant systems and also all X/Open UNIX extensions.
+
+The additions on top of POSIX are mainly derived from functionality
+available in @w{System V} and BSD systems.  Some of the really bad
+mistakes in @w{System V} systems were corrected, though.  Since
+fulfilling the XPG standard with the Unix extensions is a
+precondition for getting the Unix brand chances are good that the
+functionality is available on commercial systems.
+
+
+@node Using the Library, Roadmap to the Manual, Standards and Portability, Introduction
+@section Using the Library
+
+This section describes some of the practical issues involved in using
+@theglibc{}.
+
+@menu
+* Header Files::                How to include the header files in your
+                                 programs.
+* Macro Definitions::           Some functions in the library may really
+                                 be implemented as macros.
+* Reserved Names::              The C standard reserves some names for
+                                 the library, and some for users.
+* Feature Test Macros::         How to control what names are defined.
+@end menu
+
+@node Header Files, Macro Definitions,  , Using the Library
+@subsection Header Files
+@cindex header files
+
+Libraries for use by C programs really consist of two parts: @dfn{header
+files} that define types and macros and declare variables and
+functions; and the actual library or @dfn{archive} that contains the
+definitions of the variables and functions.
+
+(Recall that in C, a @dfn{declaration} merely provides information that
+a function or variable exists and gives its type.  For a function
+declaration, information about the types of its arguments might be
+provided as well.  The purpose of declarations is to allow the compiler
+to correctly process references to the declared variables and functions.
+A @dfn{definition}, on the other hand, actually allocates storage for a
+variable or says what a function does.)
+@cindex definition (compared to declaration)
+@cindex declaration (compared to definition)
+
+In order to use the facilities in @theglibc{}, you should be sure
+that your program source files include the appropriate header files.
+This is so that the compiler has declarations of these facilities
+available and can correctly process references to them.  Once your
+program has been compiled, the linker resolves these references to
+the actual definitions provided in the archive file.
+
+Header files are included into a program source file by the
+@samp{#include} preprocessor directive.  The C language supports two
+forms of this directive; the first,
+
+@smallexample
+#include "@var{header}"
+@end smallexample
+
+@noindent
+is typically used to include a header file @var{header} that you write
+yourself; this would contain definitions and declarations describing the
+interfaces between the different parts of your particular application.
+By contrast,
+
+@smallexample
+#include <file.h>
+@end smallexample
+
+@noindent
+is typically used to include a header file @file{file.h} that contains
+definitions and declarations for a standard library.  This file would
+normally be installed in a standard place by your system administrator.
+You should use this second form for the C library header files.
+
+Typically, @samp{#include} directives are placed at the top of the C
+source file, before any other code.  If you begin your source files with
+some comments explaining what the code in the file does (a good idea),
+put the @samp{#include} directives immediately afterwards, following the
+feature test macro definition (@pxref{Feature Test Macros}).
+
+For more information about the use of header files and @samp{#include}
+directives, @pxref{Header Files,,, cpp.info, The GNU C Preprocessor
+Manual}.@refill
+
+@Theglibc{} provides several header files, each of which contains
+the type and macro definitions and variable and function declarations
+for a group of related facilities.  This means that your programs may
+need to include several header files, depending on exactly which
+facilities you are using.
+
+Some library header files include other library header files
+automatically.  However, as a matter of programming style, you should
+not rely on this; it is better to explicitly include all the header
+files required for the library facilities you are using.  The @glibcadj{}
+header files have been written in such a way that it doesn't
+matter if a header file is accidentally included more than once;
+including a header file a second time has no effect.  Likewise, if your
+program needs to include multiple header files, the order in which they
+are included doesn't matter.
+
+@strong{Compatibility Note:} Inclusion of standard header files in any
+order and any number of times works in any @w{ISO C} implementation.
+However, this has traditionally not been the case in many older C
+implementations.
+
+Strictly speaking, you don't @emph{have to} include a header file to use
+a function it declares; you could declare the function explicitly
+yourself, according to the specifications in this manual.  But it is
+usually better to include the header file because it may define types
+and macros that are not otherwise available and because it may define
+more efficient macro replacements for some functions.  It is also a sure
+way to have the correct declaration.
+
+@node Macro Definitions, Reserved Names, Header Files, Using the Library
+@subsection Macro Definitions of Functions
+@cindex shadowing functions with macros
+@cindex removing macros that shadow functions
+@cindex undefining macros that shadow functions
+
+If we describe something as a function in this manual, it may have a
+macro definition as well.  This normally has no effect on how your
+program runs---the macro definition does the same thing as the function
+would.  In particular, macro equivalents for library functions evaluate
+arguments exactly once, in the same way that a function call would.  The
+main reason for these macro definitions is that sometimes they can
+produce an inline expansion that is considerably faster than an actual
+function call.
+
+Taking the address of a library function works even if it is also
+defined as a macro.  This is because, in this context, the name of the
+function isn't followed by the left parenthesis that is syntactically
+necessary to recognize a macro call.
+
+You might occasionally want to avoid using the macro definition of a
+function---perhaps to make your program easier to debug.  There are
+two ways you can do this:
+
+@itemize @bullet
+@item
+You can avoid a macro definition in a specific use by enclosing the name
+of the function in parentheses.  This works because the name of the
+function doesn't appear in a syntactic context where it is recognizable
+as a macro call.
+
+@item
+You can suppress any macro definition for a whole source file by using
+the @samp{#undef} preprocessor directive, unless otherwise stated
+explicitly in the description of that facility.
+@end itemize
+
+For example, suppose the header file @file{stdlib.h} declares a function
+named @code{abs} with
+
+@smallexample
+extern int abs (int);
+@end smallexample
+
+@noindent
+and also provides a macro definition for @code{abs}.  Then, in:
+
+@smallexample
+#include <stdlib.h>
+int f (int *i) @{ return abs (++*i); @}
+@end smallexample
+
+@noindent
+the reference to @code{abs} might refer to either a macro or a function.
+On the other hand, in each of the following examples the reference is
+to a function and not a macro.
+
+@smallexample
+#include <stdlib.h>
+int g (int *i) @{ return (abs) (++*i); @}
+
+#undef abs
+int h (int *i) @{ return abs (++*i); @}
+@end smallexample
+
+Since macro definitions that double for a function behave in
+exactly the same way as the actual function version, there is usually no
+need for any of these methods.  In fact, removing macro definitions usually
+just makes your program slower.
+
+
+@node Reserved Names, Feature Test Macros, Macro Definitions, Using the Library
+@subsection Reserved Names
+@cindex reserved names
+@cindex name space
+
+The names of all library types, macros, variables and functions that
+come from the @w{ISO C} standard are reserved unconditionally; your program
+@strong{may not} redefine these names.  All other library names are
+reserved if your program explicitly includes the header file that
+defines or declares them.  There are several reasons for these
+restrictions:
+
+@itemize @bullet
+@item
+Other people reading your code could get very confused if you were using
+a function named @code{exit} to do something completely different from
+what the standard @code{exit} function does, for example.  Preventing
+this situation helps to make your programs easier to understand and
+contributes to modularity and maintainability.
+
+@item
+It avoids the possibility of a user accidentally redefining a library
+function that is called by other library functions.  If redefinition
+were allowed, those other functions would not work properly.
+
+@item
+It allows the compiler to do whatever special optimizations it pleases
+on calls to these functions, without the possibility that they may have
+been redefined by the user.  Some library facilities, such as those for
+dealing with variadic arguments (@pxref{Variadic Functions})
+and non-local exits (@pxref{Non-Local Exits}), actually require a
+considerable amount of cooperation on the part of the C compiler, and
+with respect to the implementation, it might be easier for the compiler
+to treat these as built-in parts of the language.
+@end itemize
+
+In addition to the names documented in this manual, reserved names
+include all external identifiers (global functions and variables) that
+begin with an underscore (@samp{_}) and all identifiers regardless of
+use that begin with either two underscores or an underscore followed by
+a capital letter are reserved names.  This is so that the library and
+header files can define functions, variables, and macros for internal
+purposes without risk of conflict with names in user programs.
+
+Some additional classes of identifier names are reserved for future
+extensions to the C language or the POSIX.1 environment.  While using these
+names for your own purposes right now might not cause a problem, they do
+raise the possibility of conflict with future versions of the C
+or POSIX standards, so you should avoid these names.
+
+@itemize @bullet
+@item
+Names beginning with a capital @samp{E} followed a digit or uppercase
+letter may be used for additional error code names.  @xref{Error
+Reporting}.
+
+@item
+Names that begin with either @samp{is} or @samp{to} followed by a
+lowercase letter may be used for additional character testing and
+conversion functions.  @xref{Character Handling}.
+
+@item
+Names that begin with @samp{LC_} followed by an uppercase letter may be
+used for additional macros specifying locale attributes.
+@xref{Locales}.
+
+@item
+Names of all existing mathematics functions (@pxref{Mathematics})
+suffixed with @samp{f} or @samp{l} are reserved for corresponding
+functions that operate on @code{float} and @code{long double} arguments,
+respectively.
+
+@item
+Names that begin with @samp{SIG} followed by an uppercase letter are
+reserved for additional signal names.  @xref{Standard Signals}.
+
+@item
+Names that begin with @samp{SIG_} followed by an uppercase letter are
+reserved for additional signal actions.  @xref{Basic Signal Handling}.
+
+@item
+Names beginning with @samp{str}, @samp{mem}, or @samp{wcs} followed by a
+lowercase letter are reserved for additional string and array functions.
+@xref{String and Array Utilities}.
+
+@item
+Names that end with @samp{_t} are reserved for additional type names.
+@end itemize
+
+In addition, some individual header files reserve names beyond
+those that they actually define.  You only need to worry about these
+restrictions if your program includes that particular header file.
+
+@itemize @bullet
+@item
+The header file @file{dirent.h} reserves names prefixed with
+@samp{d_}.
+@pindex dirent.h
+
+@item
+The header file @file{fcntl.h} reserves names prefixed with
+@samp{l_}, @samp{F_}, @samp{O_}, and @samp{S_}.
+@pindex fcntl.h
+
+@item
+The header file @file{grp.h} reserves names prefixed with @samp{gr_}.
+@pindex grp.h
+
+@item
+The header file @file{limits.h} reserves names suffixed with @samp{_MAX}.
+@pindex limits.h
+
+@item
+The header file @file{pwd.h} reserves names prefixed with @samp{pw_}.
+@pindex pwd.h
+
+@item
+The header file @file{signal.h} reserves names prefixed with @samp{sa_}
+and @samp{SA_}.
+@pindex signal.h
+
+@item
+The header file @file{sys/stat.h} reserves names prefixed with @samp{st_}
+and @samp{S_}.
+@pindex sys/stat.h
+
+@item
+The header file @file{sys/times.h} reserves names prefixed with @samp{tms_}.
+@pindex sys/times.h
+
+@item
+The header file @file{termios.h} reserves names prefixed with @samp{c_},
+@samp{V}, @samp{I}, @samp{O}, and @samp{TC}; and names prefixed with
+@samp{B} followed by a digit.
+@pindex termios.h
+@end itemize
+
+@comment Include the section on Creature Nest Macros.
+@include creature.texi
+
+@node Roadmap to the Manual,  , Using the Library, Introduction
+@section Roadmap to the Manual
+
+Here is an overview of the contents of the remaining chapters of
+this manual.
+
+@c The chapter overview ordering is:
+@c Error Reporting (2)
+@c Virtual Memory Allocation and Paging (3)
+@c Character Handling (4)
+@c Strings and Array Utilities (5)
+@c Character Set Handling (6)
+@c Locales and Internationalization (7)
+@c Searching and Sorting (9)
+@c Pattern Matching (10)
+@c Input/Output Overview (11)
+@c Input/Output on Streams (12)
+@c Low-level Input/Ooutput (13)
+@c File System Interface (14)
+@c Pipes and FIFOs (15)
+@c Sockets (16)
+@c Low-Level Terminal Interface (17)
+@c Syslog (18)
+@c Mathematics (19)
+@c Aritmetic Functions (20)
+@c Date and Time (21)
+@c Non-Local Exist (23)
+@c Signal Handling (24)
+@c The Basic Program/System Interface (25)
+@c Processes (26)
+@c Job Control (28)
+@c System Databases and Name Service Switch (29)
+@c Users and Groups (30) -- References `User Database' and `Group Database'
+@c System Management (31)
+@c System Configuration Parameters (32)
+@c C Language Facilities in the Library (AA)
+@c Summary of Library Facilities (AB)
+@c Installing (AC)
+@c Library Maintenance (AD)
+
+@c The following chapters need overview text to be added:
+@c Message Translation (8)
+@c Resource Usage And Limitations (22)
+@c Inter-Process Communication (27)
+@c Debugging support (34)
+@c POSIX Threads (35)
+@c Internal Probes (36)
+@c Platform-specific facilities (AE)
+@c Contributors to (AF)
+@c Free Software Needs Free Documentation (AG)
+@c GNU Lesser General Public License (AH)
+@c GNU Free Documentation License (AI)
+
+@itemize @bullet
+@item
+@ref{Error Reporting}, describes how errors detected by the library
+are reported.
+
+
+@item
+@ref{Memory}, describes @theglibc{}'s facilities for managing and
+using virtual and real memory, including dynamic allocation of virtual
+memory.  If you do not know in advance how much memory your program
+needs, you can allocate it dynamically instead, and manipulate it via
+pointers.
+
+@item
+@ref{Character Handling}, contains information about character
+classification functions (such as @code{isspace}) and functions for
+performing case conversion.
+
+@item
+@ref{String and Array Utilities}, has descriptions of functions for
+manipulating strings (null-terminated character arrays) and general
+byte arrays, including operations such as copying and comparison.
+
+@item
+@ref{Character Set Handling}, contains information about manipulating
+characters and strings using character sets larger than will fit in
+the usual @code{char} data type.
+
+@item
+@ref{Locales}, describes how selecting a particular country
+or language affects the behavior of the library.  For example, the locale
+affects collation sequences for strings and how monetary values are
+formatted.
+
+@item
+@ref{Searching and Sorting}, contains information about functions
+for searching and sorting arrays.  You can use these functions on any
+kind of array by providing an appropriate comparison function.
+
+@item
+@ref{Pattern Matching}, presents functions for matching regular expressions
+and shell file name patterns, and for expanding words as the shell does.
+
+@item
+@ref{I/O Overview}, gives an overall look at the input and output
+facilities in the library, and contains information about basic concepts
+such as file names.
+
+@item
+@ref{I/O on Streams}, describes I/O operations involving streams (or
+@w{@code{FILE *}} objects).  These are the normal C library functions
+from @file{stdio.h}.
+
+@item
+@ref{Low-Level I/O}, contains information about I/O operations
+on file descriptors.  File descriptors are a lower-level mechanism
+specific to the Unix family of operating systems.
+
+@item
+@ref{File System Interface}, has descriptions of operations on entire
+files, such as functions for deleting and renaming them and for creating
+new directories.  This chapter also contains information about how you
+can access the attributes of a file, such as its owner and file protection
+modes.
+
+@item
+@ref{Pipes and FIFOs}, contains information about simple interprocess
+communication mechanisms.  Pipes allow communication between two related
+processes (such as between a parent and child), while FIFOs allow
+communication between processes sharing a common file system on the same
+machine.
+
+@item
+@ref{Sockets}, describes a more complicated interprocess communication
+mechanism that allows processes running on different machines to
+communicate over a network.  This chapter also contains information about
+Internet host addressing and how to use the system network databases.
+
+@item
+@ref{Low-Level Terminal Interface}, describes how you can change the
+attributes of a terminal device.  If you want to disable echo of
+characters typed by the user, for example, read this chapter.
+
+@item
+@ref{Mathematics}, contains information about the math library
+functions.  These include things like random-number generators and
+remainder functions on integers as well as the usual trigonometric and
+exponential functions on floating-point numbers.
+
+@item
+@ref{Arithmetic,, Low-Level Arithmetic Functions}, describes functions
+for simple arithmetic, analysis of floating-point values, and reading
+numbers from strings.
+
+@item
+@ref{Date and Time}, describes functions for measuring both calendar time
+and CPU time, as well as functions for setting alarms and timers.
+
+@item
+@ref{Non-Local Exits}, contains descriptions of the @code{setjmp} and
+@code{longjmp} functions.  These functions provide a facility for
+@code{goto}-like jumps which can jump from one function to another.
+
+@item
+@ref{Signal Handling}, tells you all about signals---what they are,
+how to establish a handler that is called when a particular kind of
+signal is delivered, and how to prevent signals from arriving during
+critical sections of your program.
+
+@item
+@ref{Program Basics}, tells how your programs can access their
+command-line arguments and environment variables.
+
+@item
+@ref{Processes}, contains information about how to start new processes
+and run programs.
+
+@item
+@ref{Job Control}, describes functions for manipulating process groups
+and the controlling terminal.  This material is probably only of
+interest if you are writing a shell or other program which handles job
+control specially.
+
+@item
+@ref{Name Service Switch}, describes the services which are available
+for looking up names in the system databases, how to determine which
+service is used for which database, and how these services are
+implemented so that contributors can design their own services.
+
+@item
+@ref{User Database}, and @ref{Group Database}, tell you how to access
+the system user and group databases.
+
+@item
+@ref{System Management}, describes functions for controlling and getting
+information about the hardware and software configuration your program
+is executing under.
+
+@item
+@ref{System Configuration}, tells you how you can get information about
+various operating system limits.  Most of these parameters are provided for
+compatibility with POSIX.
+
+@item
+@ref{Language Features}, contains information about library support for
+standard parts of the C language, including things like the @code{sizeof}
+operator and the symbolic constant @code{NULL}, how to write functions
+accepting variable numbers of arguments, and constants describing the
+ranges and other properties of the numerical types.  There is also a simple
+debugging mechanism which allows you to put assertions in your code, and
+have diagnostic messages printed if the tests fail.
+
+@item
+@ref{Library Summary}, gives a summary of all the functions, variables, and
+macros in the library, with complete data types and function prototypes,
+and says what standard or system each is derived from.
+
+@item
+@ref{Installation}, explains how to build and install @theglibc{} on
+your system, and how to report any bugs you might find.
+
+@item
+@ref{Maintenance}, explains how to add new functions or port the
+library to a new system.
+@end itemize
+
+If you already know the name of the facility you are interested in, you
+can look it up in @ref{Library Summary}.  This gives you a summary of
+its syntax and a pointer to where you can find a more detailed
+description.  This appendix is particularly useful if you just want to
+verify the order and type of arguments to a function, for example.  It
+also tells you what standard or system each function, variable, or macro
+is derived from.

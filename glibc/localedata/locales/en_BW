@@ -1,0 +1,116 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% English language locale for Botswana
+% Source: RAP
+% Email: Schalk W. Cronje <schalkc@ntaba.co.za>
+% Tel: +27 83  2797047
+% Fax: +27 838 2797047
+% Language: en
+% Territory: BW
+% Revision: 1.0
+% Date: 1999-12-23
+% Users: general
+
+LC_IDENTIFICATION
+title      "English locale for Botswana"
+source     "RAP"
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "English"
+territory  "Botswana"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "en_ZA"
+END LC_CTYPE
+
+LC_COLLATE
+copy "en_ZA"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "BWP "
+currency_symbol         "P"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          0
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_ZA"
+END LC_NUMERIC
+
+LC_TIME
+copy "en_ZA"
+END LC_TIME
+
+LC_MESSAGES
+copy "en_ZA"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "267"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Botswana"
+country_ab2 "BW"
+country_ab3 "BWA"
+country_num 072
+country_car "BW"
+lang_name     "English"
+lang_ab      "en"
+lang_term    "eng"
+lang_lib    "eng"
+END LC_ADDRESS

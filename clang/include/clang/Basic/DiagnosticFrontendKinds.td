@@ -349,6 +349,9 @@ def warn_alias_with_section : Warning<
   "as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 
+def warn_deprecated_ns_mark
+    : Warning<"'%0' NextSilicon function mark is deprecated, use '%1' instead">;
+
 let CategoryName = "Instrumentation Issue" in {
 def warn_profile_data_out_of_date : Warning<
   "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"

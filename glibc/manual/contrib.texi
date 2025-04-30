@@ -1,0 +1,568 @@
+@node Contributors, Free Manuals, Platform, Top
+@c %MENU% Who wrote what parts of the GNU C Library
+@appendix Contributors to @theglibc{}
+
+@Theglibc{} project would like to thank its many contributors.
+Without them the project would not have been nearly as successful as
+it has been.  Any omissions in this list are accidental.  Feel free to
+file a bug in bugzilla if you have been left out or some of your
+contributions are not listed.  Please keep this list in alphabetical
+order.
+
+@itemize @bullet
+
+@item
+Nick Alcock for contributing fixes to allow @theglibc{} to be built with the
+stack smashing protector enabled.
+
+@item
+John David Anglin for various fixes to the hppa port.
+
+@item
+Albert ARIBAUD for Y2038 related fixes.
+
+@item
+Ryan S. Arnold for his improvements for Linux on PowerPC and his direction
+as FSF Project Steward for @theglibc{}.
+
+@item
+Miles Bader for writing the @code{argp} argument-parsing package, and the
+@code{argz}/@code{envz} interfaces.
+
+@item
+Ralf B@"achle for contributing @file{fpu_control.h},
+@file{regdef.h}, @file{sgidefs.h}, @file{sys/asm.h}, and @file{sys/regdef.h}
+under the @file{sysdeps/mips} directory.
+
+@item
+Jeff Bailey for his maintainership of the HPPA architecture.
+
+@item
+Petr Baudis for bug fixes and testing.
+
+@item
+Anton Blanchard for various fixes.
+
+@item
+Stephen R. van den Berg for contributing a highly-optimized
+@code{strstr} function.
+
+@item
+Ond@v{r}ej B@'ilka for contributing optimized string routines for x64 and various
+fixes.
+
+@item
+Eric Blake for adding O(n) implementations of @code{memmem},
+@code{strstr} and @code{strcasestr}.
+
+@item
+Philip Blundell for the ports to Linux/ARM
+(@code{arm-@var{ANYTHING}-linuxaout}) and ARM standalone
+(@code{arm-@var{ANYTHING}-none}), as well as for parts of the IPv6
+support code.
+
+@item
+Per Bothner for the implementation of the @code{libio} library which
+is used to implement @code{stdio} functions.
+
+@item
+Mark Brown for his direction as part of @theglibc{} steering
+committee.
+
+@item
+Thomas Bushnell for his contributions to Hurd.
+
+@item
+Rogerio Alves Cardoso for various fixes to PowerPC.
+
+@item
+Paul Clarke for optimized functions on PowerPC.
+
+@item
+Mike Crowe for various fixes.
+
+@item
+Palmer Dabbelt for contributing the port to Linux/RISC-V.
+
+@item
+DJ Delorie for maintenance of Linux/RISC-V, and various fixes.
+
+@item
+Wilco Dijkstra for various fixes.
+
+@item
+Liubov Dmitrieva for optimized string and math functions on x86-64 and
+x86.
+
+@item
+Ulrich Drepper for his many contributions in almost all parts of
+@theglibc{}, including:
+@itemize @bullet
+@item writing most of the POSIX Threads Library originally.
+@item internationalization support, including the @code{locale} and
+@code{localedef} utilities.
+@item Linux i386/ELF support
+@item the @code{hsearch} and @code{drand48} families of functions,
+reentrant @samp{@dots{}@code{_r}} versions of the @code{random}
+family; System V shared memory and IPC support code
+@item several highly-optimized string functions for i@var{x}86
+processors
+@item many math functions
+@item the character conversion functions (@code{iconv})
+@item the @code{ftw} and @code{nftw} functions
+@item the floating-point printing function used by @code{printf} and friends
+and the floating-point reading function used by @code{scanf},
+@code{strtod} and friends
+@item the @code{catgets} support and the entire suite of multi-byte
+and wide-character support functions (@file{wctype.h}, @file{wchar.h}, etc.).
+@item versioning of objects on the symbol level
+@end itemize
+
+@item
+Richard Earnshaw for continued support and fixes to the various ARM
+machine files.
+
+@item
+Paul Eggert for the @code{mktime} function and for his direction as
+part of @theglibc{} steering committee.
+
+@item
+Steve Ellcey for various fixes.
+
+@item
+Mike FABIAN for automating Unicode updates, for updating the locale data
+for ISO 14651, for updating the library Unicode support, and for various
+locale updates and fixes.
+
+@item
+Tulio Magno Quites Machado Filho for adding a new class of installed
+headers for low-level platform-specific functionality and one such for
+PowerPC and various fixes.
+
+@item
+Olaf Flebbe and Ralf B@"achle for contributing
+@file{sysdeps/mips/fpu_control.h}.
+
+@item
+Alistair Francis for Y2038 related fixes.
+
+@item
+Mike Frysinger for his maintaining of the IA64 architecture and for
+testing and bug fixing.
+
+@item
+Martin Galvan for contributing gdb pretty printer support to glibc and adding
+an initial set of pretty printers for structures in the POSIX Threads library.
+
+@item
+Michael Glad for the passphrase-hashing function @code{crypt} and related
+functions.
+
+@item
+Wolfram Gloger for contributing the memory allocation functions
+functions @code{malloc}, @code{realloc} and @code{free} and related
+code.
+
+@item
+Gabriel F. T. Gomes for his improvements for Linux on PowerPC and for
+implementing the IEEE 128-bit floating point type for PowerPC.
+
+@item
+Torbj@"orn Granlund for fast implementations of many of the string
+functions (@code{memcpy}, @code{strlen}, etc.).
+
+@item
+Michael J. Haertel for writing the merge sort function @code{qsort}
+and malloc checking functions like @code{mcheck}.
+
+@item
+Bruno Haible for his improvements to the @code{iconv} and locale
+implementations.
+
+@item
+Mao Han for the C-SKY port.
+
+@item
+Richard Henderson for the port to Linux on Alpha
+(@code{alpha-@var{anything}-linux}) and software floating-point support.
+
+@item
+David Holsgrove for the port to Linux on MicroBlaze.
+
+@item
+Leonhard Holz for various fixes.
+
+@item
+Daniel Jacobowitz for various fixes and enhancements.
+
+@item
+Andreas Jaeger for the port to Linux on x86-64
+(@code{x86_64-@var{anything}-linux} and his work on Linux for MIPS
+(@code{mips-@var{anything}-linux}), implementing the @file{ldconfig}
+program, providing a test suite for the math library and for his
+direction as part of @theglibc{} steering committee.
+
+@item
+Aurelien Jarno for various fixes.
+
+@item
+Rical Jasan for contributing various fixes in @theglibc{} manual.
+
+@item
+Jakub Jelinek for implementing a number of checking functions,
+software floating-point support and for
+his direction as part of @theglibc{} steering committee.
+
+@item
+Simon Josefsson for the @code{libidn} add-on.
+
+@item
+Geoffrey Keating for the port to Linux on PowerPC
+(@code{powerpc-@var{anything}-linux}).
+
+@item
+Brendan Kehoe for contributing the port to the MIPS DECStation running
+Ultrix 4 (@code{mips-dec-ultrix4}) and the port to the DEC Alpha
+running OSF/1 (@code{alpha-dec-osf1}).
+
+@item
+Mark Kettenis for implementing the @code{utmpx} interface and a utmp
+daemon, and for a Hesiod NSS module.
+
+@item
+Andi Kleen for implementing pthreads lock elision with TSX.
+
+@item
+Kazumoto Kojima for the port of the Mach and Hurd code to the MIPS
+architecture (@code{mips-@var{anything}-gnu}) and for his work on the
+SH architecture.
+
+@item
+Maxim Kuvyrkov for various fixes.
+
+@item
+Andreas Krebbel for his work on Linux for s390 and s390x.
+
+@item
+Thorsten Kukuk for providing an implementation for NIS (YP) and NIS+,
+securelevel 0, 1 and 2 and for the implementation for a caching daemon
+for NSS (@file{nscd}).
+
+@item
+Akhilesh Kumar for various fixes to locales.
+
+@item
+Jeff Law for various fixes.
+
+@item
+Doug Lea for contributing the memory allocation functions
+@code{malloc}, @code{realloc} and @code{free} and related
+code.
+
+@item
+Chris Leonard for various fixes and enhancements to localedata.
+
+@item
+Ilya Leoshkevich for various fixes.
+
+@item
+Dmitry V. Levin for various fixes.
+
+@item
+Stefan Liebler for various fixes.
+
+@item
+Hongjiu Lu for providing the support for a Linux 32-bit runtime
+environment under x86-64 (x32), for porting to Linux on IA64, for
+improved string functions, a framework for testing IFUNC
+implementations, for implementing Intel Control-Flow Enforcement
+Technology, and many bug fixes.
+
+@item
+Rafa@l{} Lu@dotaccent{z}y@'nski
+for contributing support for two grammatical forms of month
+names, and for various fixes to locales.
+
+@item
+Luis Machado for optimized functions on PowerPC.
+
+@item
+David J. MacKenzie for his contribution to the @code{getopt}
+function and writing the @file{tar.h} header.
+
+@item
+Lukasz Majewski for Y2038 related fixes.
+
+@item
+Greg McGary for adding runtime support for bounds checking.
+
+@item
+Roland McGrath for writing most of @theglibc{} originally, for his
+work on the Hurd port, his direction as part of @theglibc{} steering
+committee and as FSF Project Steward for @theglibc{}, and for many bug
+fixes and reviewing of contributions.
+
+@item
+Allan McRae for various fixes.
+
+@item
+Jason Merrill for the port to the Sequent Symmetry running Dynix
+version 3 (@code{i386-sequent-bsd}).
+
+@item
+Chris Metcalf for the port to Linux/Tile
+(@code{tilegx-@var{anything}-linux} and
+@code{tilepro-@var{anything}-linux}) and support for the generic Linux
+kernel syscall interface used by several newer ports.
+
+@item
+Jim Meyering for various fixes.
+
+@item
+David Miller for contributing the port to Linux/Sparc
+(@code{sparc*-@var{anything}-linux}).
+
+@item
+Alan Modra for his improvements for Linux on PowerPC.
+
+@item
+David Mosberger-Tang for contributing the port to Linux/Alpha
+(@code{alpha-@var{anything}-linux}).
+
+@item
+Wainer dos Santos Moschetta for various fixes to powerpc.
+
+@item
+Stephen Moshier for implementing some 128-bit long double format math
+functions.
+
+@item
+Stephen Munroe for his port to Linux on PowerPC64
+(@code{powerpc64-@var{anything}-linux}) and for adding optimized
+implementations for PowerPC.
+
+@item
+Paul E. Murphy for various fixes on PowerPC and for implementing the IEEE
+128-bit floating point type for PowerPC.
+
+@item
+Joseph S. Myers for numerous bug fixes for the libm functions, for
+his maintainership of the ARM and MIPS architectures and the math
+component, improving cross-compilation and cross-testing of
+@theglibc{}, expanded coverage of conformtest, merging the ports/
+subdirectory into the @glibcadj{} main repository and his direction as
+FSF Project Steward for @theglibc{}.
+
+@item
+Marko Myllynen for various fixes.
+
+@item
+Szabolcs Nagy for various fixes.
+
+@item
+Will Newton for contributing some optimized string functions and pointer
+encryption support for ARM and various fixes.
+
+@item
+Carlos O'Donell for his maintainership of the HPPA architecture, for
+maintaining @theglibc{} web pages and wiki, for his direction as FSF
+Project Steward for @theglibc{} and various bug fixes.
+
+@item
+Alexandre Oliva for adding TLS descriptors for LD and GD on x86 and
+x86-64, for the am33 port, for completing the MIPS n64/n32/o32 multilib
+port, for thread-safety, async-signal safety and async-cancellation
+safety documentation in the manual, for his direction as FSF Project
+Maintainer and for various fixes.
+
+@item
+Paul Pluzhnikov for various fixes.
+
+@item
+Marek Polacek for various fixes.
+
+@item
+Siddhesh Poyarekar for various fixes, an implementation of a framework for
+performance benchmarking of functions and implementing the tunables
+infrastructure.
+
+@item
+Tom Quinn for contributing the startup code to support SunOS shared
+libraries and the port to SGI machines running Irix 4
+(@code{mips-sgi-irix4}).
+
+@item
+Torvald Riegel for the implementation of new algorithms for semaphores,
+pthread_rwlock and condition variables.
+
+@item
+Maciej W. Rozycki for MIPS fixes, support for ABSOLUTE symbols,
+and various fixes.
+
+@item
+Leonardo Sandoval for various fixes.
+
+@item
+Pravin Satpute for writing sorting rules for some Indian languages.
+
+@item
+Douglas C. Schmidt for writing the quick sort function used as a
+fallback by @code{qsort}.
+
+@item
+Will Schmidt for optimized string functions on PowerPC.
+
+@item
+Andreas Schwab for the port to Linux/m68k
+(@code{m68k-@var{anything}-linux}), for his direction as part of
+@theglibc{} steering committee, and for various bug fixes.
+
+@item
+Martin Schwidefsky for porting to Linux on s390
+(@code{s390-@var{anything}-linux}) and s390x
+(@code{s390x-@var{anything}-linux}).
+
+@item
+Thomas Schwinge for his contribution to Hurd and the SH architecture.
+
+@item
+Martin Sebor for various fixes.
+
+@item
+Andrew Senkevich for contributing vector math function implementations for x86.
+
+@item
+Carlos Eduardo Seo for optimized functions on PowerPC.
+
+@item
+Arjun Shankar for testing and bug fixing.
+
+@item
+Marcus Shawcroft for contributing the AArch64 port.
+
+@item
+TAMUKI Shoichi for various fixes.
+
+@item
+Franz Sirl for various fixes.
+
+@item
+Jes Sorensen for porting to Linux on IA64 (@code{ia64-@var{anything}-linux}).
+
+@item
+Rajalakshmi Srinivasaraghavan for various fixes and optimizations on PowerPC
+and for implementing the IEEE 128-bit floating point type for PowerPC.
+
+@item
+Richard Stallman for his contribution to the @code{getopt} function.
+
+@item
+Alfred M. Szmidt for various fixes.
+
+@item
+Chung-Lin Tang for contributing the Nios II port.
+
+@item
+Ian Lance Taylor for contributing the port to the MIPS DECStation
+running Ultrix 4 (@code{mips-dec-ultrix4}).
+
+@item
+Samuel Thibault for improving the Hurd port.
+
+@item
+Pino Toscano for various fixes.
+
+@item
+Matt Turner for various fixes to the Alpha port.
+
+@item
+Tim Waugh for the implementation of the POSIX.2 @code{wordexp}
+function family.
+
+@item
+Ulrich Weigand for various fixes to the PowerPC64 and Arm ports.
+
+@item
+Florian Weimer for his maintainership of the network component, for handling
+of security issues, and for various fixes.
+
+@item
+Zack Weinberg for the @code{explicit_bzero} implementation and for various
+fixes.
+
+@item
+Mark Wielaard for various fixes.
+
+@item
+Eric Youngdale for implementing versioning of objects on the symbol level.
+
+@item
+Adhemerval Zanella for optimized functions on PowerPC, ISO C threads support
+and various fixes.
+
+@item
+Xuelei Zhang for optimized functions on AArch64.
+
+@end itemize
+
+Some code in @theglibc{} comes from other projects and might be under
+a different license:
+
+@itemize @bullet
+@item
+The timezone support code is derived from the public-domain timezone
+package by Arthur David Olson and his many contributors.
+
+@item
+Some of the support code for Mach is taken from Mach 3.0 by CMU;
+the file @file{if_ppp.h} is also copyright by CMU, but under a different license;
+see the file @file{LICENSES} for the text of the licenses.
+
+@item
+The random number generation functions @code{random}, @code{srandom},
+@code{setstate} and @code{initstate}, which are also the basis for the
+@code{rand} and @code{srand} functions, were written by Earl T. Cohen
+for the University of California at Berkeley and are copyrighted by the
+Regents of the University of California.  They have undergone minor
+changes to fit into @theglibc{} and to fit the @w{ISO C} standard,
+but the functional code is Berkeley's.@refill
+
+@item
+The Internet-related code (most of the @file{inet} subdirectory) and
+several other miscellaneous functions and header files have been
+included from 4.4 BSD with little or no modification.  The copying
+permission notice for this code can be found in the file @file{LICENSES}
+in the source distribution.
+
+@item
+The @code{getaddrinfo} and @code{getnameinfo} functions and supporting
+code were written by Craig Metz; see the file @file{LICENSES} for
+details on their licensing.
+
+@item
+The DNS resolver code is taken directly from BIND 8.2.3-T5B, which
+includes copyrighted code from UC Berkeley and from Digital Equipment
+Corporation.  See the file @file{LICENSES} for the text of the DEC license.
+
+@item
+The code to support Sun RPC is taken verbatim from Sun's
+@w{@sc{rpcsrc-4.0}} distribution; see the file @file{LICENSES} for the
+text of the license.
+
+@item
+The math functions are taken from @code{fdlibm-5.1} by Sun
+Microsystems, as modified by J.T. Conklin, Ian Lance Taylor,
+Ulrich Drepper, Andreas Schwab, and Roland McGrath.
+
+@item
+Many of the IEEE 64-bit double precision math functions
+(in the @file{sysdeps/ieee754/dbl-64} subdirectory) come
+from the IBM Accurate Mathematical Library, contributed by IBM.
+
+@item
+Many of the IA64 math functions are taken from a collection of
+``Highly Optimized Mathematical Functions for Itanium'' that Intel
+makes available under a free license; see the file @file{LICENSES} for
+details.
+
+@end itemize

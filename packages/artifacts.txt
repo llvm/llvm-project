@@ -1,0 +1,11 @@
+# destination option is implemented
+# default dest path begins with /opt/nextsilicon
+# usage: <path_to_file>:<path_to_folder>
+# example: bin/:bin/ will perform cp /opt/nextsilicon/bin <package_path/opt/nextsilicon>/bin
+
+bin/:bin/
+include/:include/
+lib/:lib/
+llvm/:llvm/
+riscv/:riscv/
+sysroot/:sysroot/

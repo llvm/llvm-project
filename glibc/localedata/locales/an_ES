@@ -1,0 +1,132 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title      "Aragonese locale for Spain"
+source     "Softaragones"
+address    ""
+contact    "Jordi Mallach P<U00E9>rez, Juan Pablo Mart<U00ED>nez"
+email      "bug-glibc-locales@gnu.org, softaragones@softaragones.org"
+tel        ""
+fax        ""
+language   "Aragonese"
+territory  "Spain"
+revision   "1.2"
+date       "2018-02-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "es_ES"
+END LC_COLLATE
+
+LC_CTYPE
+copy "es_ES"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1sSyY]"
+noexpr  "^[-0nN]"
+% sí
+yesstr  "s<U00ED>"
+nostr   "no"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "es_ES"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "es_ES"
+END LC_NUMERIC
+
+LC_TIME
+abday   "dom";"lun";/
+        "mar";"mie";/
+        "chu";"vie";/
+        "sab"
+day     "domingo";/
+        "luns";/
+        "martes";/
+        "mierques";/
+        "chueves";/
+        "viernes";/
+        "sabado"
+abmon   "chi";"feb";/
+        "mar";"abr";/
+        "may";"chn";/
+        "chl";"ago";/
+        "set";"oct";/
+        "nov";"avi"
+mon     "chinero";/
+        "febrero";/
+        "marzo";/
+        "abril";/
+        "mayo";/
+        "chunyo";/
+        "chuliol";/
+        "agosto";/
+        "setiembre";/
+        "octubre";/
+        "noviembre";/
+        "aviento"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d//%m//%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "es_ES"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "es_ES"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "es_ES"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "es_ES"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%a%N%f%N%d%N%b%N%s %h %e %r%N%z %T, %S%N%c%N"
+country_name  "Espanya"
+country_post  "E"
+country_ab2   "ES"
+country_ab3   "ESP"
+country_num   724
+country_isbn  "978-84"
+lang_ab       "an"
+lang_term     "arg"
+lang_lib      "arg"
+country_car   "E"
+% aragonés
+lang_name    "aragon<U00E9>s"
+END LC_ADDRESS

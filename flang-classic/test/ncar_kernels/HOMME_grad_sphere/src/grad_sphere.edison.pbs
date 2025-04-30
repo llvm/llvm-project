@@ -1,0 +1,14 @@
+#PBS -q debug
+#PBS -l mppwidth=1
+#PBS -l walltime=00:10:00
+#PBS -N my_job
+#PBS -e my_job.$PBS_JOBID.err
+#PBS -o my_job.$PBS_JOBID.out
+#PBS -V
+
+cd $PBS_O_WORKDIR
+#export KMP_AFFINITY=balanced
+#export I_MPI_PIN_MODE=mpd
+#get_micfile
+aprun -n 1 ./kernel_gradient_sphere.exe
+

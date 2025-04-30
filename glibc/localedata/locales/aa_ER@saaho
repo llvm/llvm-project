@@ -1,0 +1,195 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Afar language locale for Eritrea (Saaho Dialect).
+%
+% Afar terms provided by Mohamed Obakar <loubak@6sens.com> of the
+% Afar Civilization Researcher, Melka Werer Research Center.
+% Prepared and contributed to glibc by Daniel Yacob <locales@geez.org>.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f UTF-8 -i aa_ER-Saaho aa_ER-Saaho
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Afar language locale for Eritrea (Saaho Dialect)."
+source     "Ge'ez Frontier Foundation"
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Afar"
+territory  "Eritrea"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopic Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "aa_ER"
+END LC_COLLATE
+
+LC_CTYPE
+copy "aa_ER"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Eritrea Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "aa_ER"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "aa_ER"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "aa_ER"
+END LC_NUMERIC
+
+LC_PAPER
+copy "aa_ER"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "aa_ER"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Afar-Saaho/ER Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+copy "aa_ER"
+END LC_ADDRESS
+
+
+LC_MESSAGES
+copy "aa_ET"
+END LC_MESSAGES
+
+
+LC_NAME
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_NAME category.
+%
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    ""
+name_mr     "Saqal"
+name_mrs    "Numa"
+name_miss   "Qunxa Awka"
+name_ms     ""
+%
+END LC_NAME
+
+
+LC_TIME
+%
+% Abbreviated weekday names (%a)
+%
+abday    "Nab";"San";"Sal";"Rab";"Cam";"Jum";"Qun"
+%
+% Full weekday names (%A)
+%
+day      "Naba Sambat";/
+         "Sani";/
+         "Salus";/
+         "Rabuq";/
+         "Camus";/
+         "Jumqata";/
+         "Qunxa Sambat"
+%
+% Abbreviated month names (%b)
+%
+abmon    "Qun";/
+         "Nah";/
+         "Cig";/
+         "Agd";/
+         "Cax";/
+         "Qas";/
+         "Qad";/
+         "Leq";/
+         "Way";/
+         "Dit";/
+         "Xim";/
+         "Kax"
+%
+% Full month names (%B)
+%
+mon      "Qunxa Garablu";/
+         "Naharsi Kudo";/
+         "Ciggilta Kudo";/
+         "Agda Baxis";/
+         "Caxah Alsa";/
+         "Qasa Dirri";/
+         "Qado Dirri";/
+         "Liiqen";/
+         "Waysu";/
+         "Diteli";/
+         "Ximoli";/
+         "Kaxxa Garablu"
+%
+% Equivalent of AM PM
+%
+am_pm    "saaku";"carra"
+%
+% Appropriate date representation (%x)
+d_fmt   "%d//%m//%Y"
+%
+% Appropriate time representation (%X)
+t_fmt "%l:%M:%S %p"
+%
+% Appropriate AM/PM time representation (%r)
+t_fmt_ampm "%l:%M:%S %p"
+%
+% Appropriate date and time representation (%c)
+d_t_fmt    "%A, %B %e, %Y %r %Z"
+%
+% Appropriate date representation (date(1))
+date_fmt    "%A, %B %e, %r %Z %Y"
+%
+week 7;19971130;1
+first_weekday 2
+END LC_TIME

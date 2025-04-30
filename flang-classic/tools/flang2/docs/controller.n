@@ -1,0 +1,246 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 2 "Program Controller"
+The Program Controller (main routine) controls invocation of the initialization
+routines, the other major compiler modules, and the finish routine.
+.lp
+Initialization is performed by the routine 
+.i init
+at the
+very beginning of execution.
+.sh 2 "Program Controller"
+Each subprogram is completely processed and output before the
+next subprogram is processed. Conceptually, it is as if each subprogram
+were in a separate file.
+For Fortran 90 contained subprograms, some information must be preserved
+from the host subprogram to the contained subprograms, particularly any
+stack or BSS addresses assigned to host subprogram variables.
+.lp
+The same source file is used to generate the program controller
+for both the compiler and the extractor, since they share so much code.
+The differences in the source code appear as tests of the preprocessor
+variable
+.cw EXTRACTOR,
+which is defined only for the extractor controller.
+.lp
+See figure 2-1 for a pseudo-code description of the Program Controller processing
+for the compiler.
+See figure 2-2 for a pseudo-code description of the Program Controller 
+for the extractor.
+.(z
+.hl
+.CS
+init();
+
+for (each subprogram) {
+   reinit();   /* init for subprogram */
+   upper();    /* import ILMs from F90 front end */
+   extractor();/* optionally extract subprograms for future inlining */
+   expand();   /* expand ILMs into shared ILI */
+   upper_save_syminfo();       /* save host subprogram info */
+   xref();     /* optionally generate cross reference */
+}
+
+finish();
+
+.CE
+
+.sp
+.ce
+Figure 2-1 Program Controller Operation for Compiler
+.hl
+.)z
+.(z
+.hl
+.CS
+init();
+
+for (each subprogram) {
+    reinit();	/* init for subprogram */
+    upper();    /* import ILMs from F90 front end */
+    extractor();/* extract subprograms for future inlining */
+}
+
+finish();
+
+.CE
+.sp
+.ce
+Figure 2-2 Program Controller Operation for Extractor
+.hl
+.)z
+.sh 2 Init
+The
+.cw init
+module performs the following five major tasks:
+.np
+Processes command line and sets values of internal variables
+depending on the flags specified by the user.
+.np
+Opens input and output files.
+.np
+If a listing file is being generated, writes the Listing
+Header.
+.np
+Initializes the Error message module, Symbol table module,
+Scanner, Directive processing, and other modules
+by calling the appropriate init routine for each.
+.sh 3 "Adding Compiler Flags"
+The command line processor searches the structure
+.cw "swtchtab[]"
+(defined in
+.cw main.c )
+to
+find valid flags or flag prefixes.  
+To add a flag, add the new flag (without
+the preceeding
+.q "\(mi" )
+to
+.cw swtchtab[] 's
+initialization, keeping the flags in lexicographic order.  
+Also add a case constant to the initialization.
+Switch case constants are
+.cw #define 'd
+constants of the form
+.cw "SW_<flag name in caps>" ,
+and appear
+above the definition
+of
+.cw swtchtab .
+The case constant must be unique but numerical order is not necessary.   
+(i.e., you don't have to change existing constants, just use the next
+biggest unused integer.)
+.lp
+Add the case label
+.cw "SW_<flag name in caps>:"
+to
+.cw init()
+(also defined in
+.cw main.c ).
+Also, add code to process flag and any values that follow the flag.
+See existing code in
+.cw init()
+for examples.
+.sh 2 Finish
+.cw finish
+is called at the end of compiler execution to
+close files, write a compilation summary line to the
+user's terminal, and exit.
+.sh 2 Debugging
+The development compiler supports debug output in the 
+compile process; these are mostly
+disabled when the preprocessor variable DEBUG is zero,
+as is done for a release.
+Most debug output is enabled with a
+.cw -q
+or 
+.cw -qq
+switch.
+Each of these takes two arguments;
+the
+.cw "-q 45 8"
+sets bit mask 
+.cw 8
+in
+.cw "flg.dbg[45]" .
+This is tested in the compiler source code with
+.CS
+    #if DEBUG
+       if( DBGBIT(45,8) ) fprintf( gbl.dbgfil, "debug output\\n" );
+    #endif
+.CE
+The
+.cw "#if DEBUG"
+test disables this code for a release.
+The
+.cw "DBGBIT(45,8)"
+macro is shorthand for
+.cw "(flg.dbg[45]&8)" .
+.lp
+Debug output is normally written to 
+.cw "gbl.dbgfil" ,
+which is normally be opened to the file
+.cw filename.qdbg
+by
+.i init
+unless 
+.cw "-q 0 1"
+is specified, which says to open
+.cw "gbl.dbgfil"
+to standard output.
+Using the compiler driver, debug switches can be set using
+.CS
+    -Mq,45,8
+    -Mq,66,7
+.CE
+where the latter sets bits 1, 2, and 4.
+.lp
+The controller can also generate dumps during
+compile process.
+At various points in the controller will appear a line like:
+.CS
+    DUMP( "expand" );
+.CE
+This is a preprocessor macro that calls a generic debug dump routine.
+To enable a dump, you can pass a
+.cw -qq
+switch to the compiler like
+.CS
+    -qq expand blocks
+.CE
+which will invoke the
+.cw blocks
+dump after the 
+.cw expand
+phase.
+Multiple phases and multiple dumps can be specified at once, like
+.CS
+    -qq expand+optimize blocks
+    -qq unroll printblocks+sym
+.CE
+which will invoke the
+.cw blocks
+dump after both the
+.cw expand
+and
+.cw optimize
+phases, and will invoke both the
+.cw printblocks
+and 
+.cw sym
+dumps after the
+.cw unroll
+phase.
+Using the driver, these would appear as
+.CS
+    -Mqq,expand+optimize,blocks
+    -Mqq,unroll,printblocks+sym
+.CE
+Specifying
+.cw all
+as the phase name will invoke those dump routines after all phases.
+The list of available phases is available by looking at the source code
+for the 
+.CS
+    DUMP( "phase" )
+.CE
+lines, or by looking at the
+.cw "filename.qdbg"
+file for lines something like
+.CS
+    {pgf90-linux86-64 after expand
+    {pgf90-linux86-64 after upper
+.CE
+The dump controller prints out these lines before every active phase, and will
+generate any dumps after each of these lines.
+New dump points can be inserted anywhere in the source of the program controller.
+The list of available dumps is only available by looking at the source code
+of the program controller; look for the variable
+.cw dumpnames .
+New dump names can be added here, and the appropriate dump code added
+in the switch statement in routine
+.cw do_debug .

@@ -1,0 +1,257 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Sinhala language locale for Sri Lanka.
+% Contributed by Anuradha Ratnaweera <anuradha at gnu org>
+% and Himira Ratnatilake <himira at linux lk>
+
+LC_IDENTIFICATION
+title      "Sinhala language locale for Sri Lanka"
+source     "Lanka Linux User Group (LKLUG) www.lug.lk, sinhala.linux.lk"
+address    ""
+contact    ""
+email      "libc-locales@sourceware.org"
+tel        ""
+fax        ""
+language   "Sinhala"
+territory  "Sri Lanka"
+revision   "0.9"
+date       "2004.10.01"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+% CLDR collation rules for Sinhala:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/si.xml)
+%
+% <collation type="standard" references="Sri Lanka standard 1134 Part 1 - 2007 edition - Sri Lanka Standards Institution">
+% 	<cr><![CDATA[
+% 		[normalization on]
+% 		[reorder Sinh Deva Beng Guru Gujr Orya Taml Telu Knda Mlym]
+% 		&ඖ<ං<ඃ
+% 		&ඥ<ඤ
+% 	]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/si.xml)
+%
+% <exemplarCharacters type="index">[අ ආ ඇ ඈ ඉ ඊ උ ඌ ඍ එ ඒ ඓ ඔ ඕ ඖ ක ඛ ග ඝ ඞ ඟ ච ඡ ජ ඣ ඥ ඤ ට ඨ ඩ ඪ ණ ඬ ත ථ ද ධ න ඳ ප ඵ බ භ ම ඹ ය ර ල ව ශ ෂ ස හ ළ ෆ]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <sinhala-sign-anusvaraya>
+collating-symbol <sinhala-sign-visargaya>
+collating-symbol <sinhala-letter-taaluja-naasikyaya>
+
+% &ඖ<ං<ඃ
+reorder-after <S0D96> % ඖ U+0D96 SINHALA LETTER AUYANNA
+<sinhala-sign-anusvaraya>
+<sinhala-sign-visargaya>
+
+% &ඥ<ඤ
+reorder-after <S0DA5> % ඥ U+0DA5 SINHALA LETTER TAALUJA SANYOOGA NAAKSIKYAYA
+<sinhala-letter-taaluja-naasikyaya>
+
+% &ඖ<ං<ඃ
+<U0D82> <sinhala-sign-anusvaraya>;<ANUSVARA>;<MIN>;<U0D82> % SINHALA SIGN ANUSVARAYA
+<U0D83> <sinhala-sign-visargaya>;<VISARGA>;<MIN>;<U0D83> % SINHALA SIGN VISARGAYA
+
+% &ඥ<ඤ
+<U0DA4> <sinhala-letter-taaluja-naasikyaya>;<BASE>;<MIN>;<U0DA4> % SINHALA LETTER TAALUJA NAASIKYAYA
+
+reorder-end
+
+END LC_COLLATE
+
+
+LC_MONETARY
+% This is the POSIX Locale definition the LC_MONETARY category
+%
+int_curr_symbol       "LKR "
+currency_symbol       "<U0DBB><U0DD4>"
+mon_decimal_point     "."
+mon_thousands_sep     ","
+mon_grouping          3
+positive_sign         ""
+negative_sign         "-"
+int_frac_digits       2
+frac_digits           2
+p_cs_precedes         1
+p_sep_by_space        1
+n_cs_precedes         1
+n_sep_by_space        1
+p_sign_posn           1
+n_sign_posn           1
+%
+END LC_MONETARY
+
+
+LC_NUMERIC
+% This is the POSIX Locale definition for the LC_NUMERIC  category.
+%
+decimal_point          "."
+thousands_sep          ","
+grouping               3
+%
+END LC_NUMERIC
+
+
+LC_TIME
+% This is the POSIX Locale definition for the LC_TIME  category.
+%
+% Abbreviated weekday names (%a)
+abday       "<U0D89>";"<U0DC3>";/
+	    "<U0D85>";"<U0DB6>";/
+	    "<U0DB6><U0DCA><U200D><U0DBB>";"<U0DC3><U0DD2>";/
+	    "<U0DC3><U0DD9>"
+%
+% Full weekday names (%A)
+day         "<U0D89><U0DBB><U0DD2><U0DAF><U0DCF>";/
+	    "<U0DC3><U0DB3><U0DD4><U0DAF><U0DCF>";/
+	    "<U0D85><U0D9F><U0DC4><U0DBB><U0DD4><U0DC0><U0DCF><U0DAF><U0DCF>";/
+	    "<U0DB6><U0DAF><U0DCF><U0DAF><U0DCF>";/
+	    "<U0DB6><U0DCA><U200D><U0DBB><U0DC4><U0DC3><U0DCA><U0DB4><U0DAD><U0DD2><U0DB1><U0DCA><U0DAF><U0DCF>";/
+	    "<U0DC3><U0DD2><U0D9A><U0DD4><U0DBB><U0DCF><U0DAF><U0DCF>";/
+	    "<U0DC3><U0DD9><U0DB1><U0DC3><U0DD4><U0DBB><U0DCF><U0DAF><U0DCF>"
+%
+% Abbreviated month names (%b)
+abmon       "<U0DA2><U0DB1>";/
+	    "<U0DB4><U0DD9><U0DB6>";/
+	    "<U0DB8><U0DCF><U0DBB><U0DCA>";/
+	    "<U0D85><U0DB4><U0DCA><U200D><U0DBB><U0DD2>";/
+	    "<U0DB8><U0DD0><U0DBA><U0DD2>";/
+	    "<U0DA2><U0DD6><U0DB1><U0DD2>";/
+	    "<U0DA2><U0DD6><U0DBD><U0DD2>";/
+	    "<U0D85><U0D9C><U0DDD>";/
+	    "<U0DC3><U0DD0><U0DB4><U0DCA>";/
+	    "<U0D94><U0D9A><U0DCA>";/
+	    "<U0DB1><U0DD9><U0DC0><U0DD0>";/
+	    "<U0DAF><U0DD9><U0DC3><U0DD0>"
+%
+% Full month names (%B)
+mon         "<U0DA2><U0DB1><U0DC0><U0DCF><U0DBB><U0DD2>";/
+	    "<U0DB4><U0DD9><U0DB6><U0DBB><U0DC0><U0DCF><U0DBB><U0DD2>";/
+	    "<U0DB8><U0DCF><U0DBB><U0DCA><U0DAD><U0DD4>";/
+	    "<U0D85><U0DB4><U0DCA><U200D><U0DBB><U0DDA><U0DBD><U0DCA>";/
+	    "<U0DB8><U0DD0><U0DBA><U0DD2>";/
+	    "<U0DA2><U0DD6><U0DB1><U0DD2>";/
+	    "<U0DA2><U0DD6><U0DBD><U0DD2>";/
+	    "<U0D85><U0D9C><U0DDD><U0DC3><U0DCA><U0DAD><U0DD4>";/
+	    "<U0DC3><U0DD0><U0DB4><U0DCA><U0DAD><U0DD0><U0DB8><U0DCA><U0DB6><U0DBB><U0DCA>";/
+	    "<U0D94><U0D9A><U0DCA><U0DAD><U0DDD><U0DB6><U0DBB><U0DCA>";/
+	    "<U0DB1><U0DDC><U0DC0><U0DD0><U0DB8><U0DCA><U0DB6><U0DBB><U0DCA>";/
+	    "<U0DAF><U0DD9><U0DC3><U0DD0><U0DB8><U0DCA><U0DB6><U0DBB><U0DCA>"
+%
+% Equivalent of AM PM
+am_pm       "<U0DB4><U0DD9>.<U0DC0>.";"<U0DB4>.<U0DC0>."
+%
+% Appropriate date and time representation (use the same as ISO)
+d_t_fmt     "%Y-%m-%d %H:%M:%S %z"
+%
+% Appropriate date representation (use the same as ISO)
+d_fmt "%Y-%m-%d"
+%
+% Appropriate time representation
+t_fmt       "%H:%M:%S"
+%
+% Appropriate 12 h time representation
+t_fmt_ampm  "%p %I:%M:%S"
+%
+% Appropriate date and time (date(1))
+date_fmt     "%Y %B %e <U0DC0><U0DD0><U0DB1><U0DD2> %A %H:%M:%S %z"
+%
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0D94>]"
+noexpr  "^[-0nN<U0DB1>]"
+yesstr  "<U0D94><U0DC0><U0DCA>"
+nostr   "<U0DB1><U0DD0><U0DAD>"
+END LC_MESSAGES
+
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the LC_NAME category
+%
+name_fmt    "%g%t%m%t%f%t%s"
+name_gen    ""
+name_mr     "<U0DB8><U0DBA><U0DCF>"
+name_mrs    "<U0DB8><U0DD2><U0DBA>"
+name_miss   "<U0DB8><U0DD2><U0DBA>"
+name_ms     "<U0DB8><U0DD2><U0DBA>"
+
+END LC_NAME
+
+
+LC_ADDRESS
+
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U0DC1><U0DCA><U200D><U0DBB><U0DD3> <U0DBD><U0D82><U0D9A><U0DCF><U0DC0>"
+country_ab2 "LK"
+country_ab3 "LKA"
+country_num 144
+country_car  "CL"
+% සිංහල
+lang_name    "<U0DC3><U0DD2><U0D82><U0DC4><U0DBD>"
+lang_ab      "si"
+lang_term    "sin"
+lang_lib    "sin"
+END LC_ADDRESS
+
+
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the LC_TELEPHONE
+%
+tel_int_fmt    "+%c (%a)/
+ %l"
+tel_dom_fmt    "(%a) %l"
+int_select     "00"
+int_prefix     "94"
+
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

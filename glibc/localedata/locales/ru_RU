@@ -1,0 +1,208 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Russian Language Locale for Russia
+% Source: RAP
+% Address: Sankt Jo//rgens Alle 8
+%    DK-1615 Ko//benhavn V, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 31226543
+% Fax: +45 - 33256543
+% Language: ru
+% Territory: RU
+% Revision: 4.3
+% Date: 1996-10-15
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Russian locale for Russia"
+source     "RAP"
+address    "Sankt Jorgens Alle 8, DK-1615 Kobenhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Russian"
+territory  "Russia"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% CLDR collation rules for Russian:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/ru.xml)
+%
+% <collation type="standard">
+% 	<cr><![CDATA[
+% 		[reorder Cyrl]
+% 		# The root collation already sorts й/Й as a base letter.
+% 	]]></cr>
+% </collation>
+%
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0414><U0434>]"
+noexpr  "^[-0nN<U041D><U043D>]"
+yesstr  "<U0434><U0430>"
+nostr   "<U043D><U0435><U0442>"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "RUB "
+currency_symbol           "<U20BD>"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "<U202F>"
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+day     "<U0412><U043E><U0441><U043A><U0440><U0435><U0441><U0435><U043D><U044C><U0435>";/
+        "<U041F><U043E><U043D><U0435><U0434><U0435><U043B><U044C><U043D><U0438><U043A>";/
+        "<U0412><U0442><U043E><U0440><U043D><U0438><U043A>";/
+        "<U0421><U0440><U0435><U0434><U0430>";/
+        "<U0427><U0435><U0442><U0432><U0435><U0440><U0433>";/
+        "<U041F><U044F><U0442><U043D><U0438><U0446><U0430>";/
+        "<U0421><U0443><U0431><U0431><U043E><U0442><U0430>"
+abday   "<U0412><U0441>";/
+        "<U041F><U043D>";/
+        "<U0412><U0442>";/
+        "<U0421><U0440>";/
+        "<U0427><U0442>";/
+        "<U041F><U0442>";/
+        "<U0421><U0431>"
+alt_mon "<U042F><U043D><U0432><U0430><U0440><U044C>";/
+        "<U0424><U0435><U0432><U0440><U0430><U043B><U044C>";/
+        "<U041C><U0430><U0440><U0442>";/
+        "<U0410><U043F><U0440><U0435><U043B><U044C>";/
+        "<U041C><U0430><U0439>";/
+        "<U0418><U044E><U043D><U044C>";/
+        "<U0418><U044E><U043B><U044C>";/
+        "<U0410><U0432><U0433><U0443><U0441><U0442>";/
+        "<U0421><U0435><U043D><U0442><U044F><U0431><U0440><U044C>";/
+        "<U041E><U043A><U0442><U044F><U0431><U0440><U044C>";/
+        "<U041D><U043E><U044F><U0431><U0440><U044C>";/
+        "<U0414><U0435><U043A><U0430><U0431><U0440><U044C>"
+mon     "<U044F><U043D><U0432><U0430><U0440><U044F>";/
+        "<U0444><U0435><U0432><U0440><U0430><U043B><U044F>";/
+        "<U043C><U0430><U0440><U0442><U0430>";/
+        "<U0430><U043F><U0440><U0435><U043B><U044F>";/
+        "<U043C><U0430><U044F>";/
+        "<U0438><U044E><U043D><U044F>";/
+        "<U0438><U044E><U043B><U044F>";/
+        "<U0430><U0432><U0433><U0443><U0441><U0442><U0430>";/
+        "<U0441><U0435><U043D><U0442><U044F><U0431><U0440><U044F>";/
+        "<U043E><U043A><U0442><U044F><U0431><U0440><U044F>";/
+        "<U043D><U043E><U044F><U0431><U0440><U044F>";/
+        "<U0434><U0435><U043A><U0430><U0431><U0440><U044F>"
+ab_alt_mon "<U044F><U043D><U0432>";/
+        "<U0444><U0435><U0432>";/
+        "<U043C><U0430><U0440>";/
+        "<U0430><U043F><U0440>";/
+        "<U043C><U0430><U0439>";/
+        "<U0438><U044E><U043D>";/
+        "<U0438><U044E><U043B>";/
+        "<U0430><U0432><U0433>";/
+        "<U0441><U0435><U043D>";/
+        "<U043E><U043A><U0442>";/
+        "<U043D><U043E><U044F>";/
+        "<U0434><U0435><U043A>"
+abmon   "<U044F><U043D><U0432>";/
+        "<U0444><U0435><U0432>";/
+        "<U043C><U0430><U0440>";/
+        "<U0430><U043F><U0440>";/
+        "<U043C><U0430><U044F>";/
+        "<U0438><U044E><U043D>";/
+        "<U0438><U044E><U043B>";/
+        "<U0430><U0432><U0433>";/
+        "<U0441><U0435><U043D>";/
+        "<U043E><U043A><U0442>";/
+        "<U043D><U043E><U044F>";/
+        "<U0434><U0435><U043A>"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "7"
+int_select     "0~10"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U0420><U043E><U0441><U0441><U0438><U044F>"
+country_ab2 "RU"
+country_ab3 "RUS"
+country_num 643
+country_car    "RUS"
+lang_name   "<U0440><U0443><U0441><U0441><U043A><U0438><U0439>"
+lang_ab      "ru"
+lang_term    "rus"
+lang_lib    "rus"
+END LC_ADDRESS

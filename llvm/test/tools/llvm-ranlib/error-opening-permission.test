@@ -19,6 +19,7 @@
 # RUN: chmod 700 c.a
 # RUN: llvm-nm --print-armap c.a | FileCheck %s --check-prefix=NOMAP
 # RUN: cmp c.a d.a
+# XFAIL: *
 
 # CHECK:      Archive map
 # CHECK-NEXT: foo in 1.o

@@ -2396,9 +2396,33 @@ bool AttributeFuncs::areOutlineCompatible(const Function &A,
   return hasCompatibleFnAttrs(A, B);
 }
 
+namespace {
+void forgetFnAttr(const Function &F, const char *AttrName) {
+  if (F.hasFnAttribute(AttrName))
+    errs() << "#pragma ns: attr " << AttrName << " was dropped\n";
+}
+
+void mergeFnAttrMax(Function &Caller, const Function &Callee,
+                    const char *AttrName) {
+  if (!Callee.hasFnAttribute(AttrName))
+    return;
+  if (Caller.hasFnAttribute(AttrName)) {
+    auto Val1 = Caller.getFnAttributeAsParsedInteger(AttrName, UINT64_MAX);
+    auto Val2 = Callee.getFnAttributeAsParsedInteger(AttrName, UINT64_MAX);
+    Caller.addFnAttr(AttrName, llvm::utostr(std::max(Val1, Val2)));
+  } else {
+    Caller.addFnAttr(Callee.getFnAttribute(AttrName));
+  }
+}
+} // anonymous namespace
+
 void AttributeFuncs::mergeAttributesForInlining(Function &Caller,
                                                 const Function &Callee) {
   mergeFnAttrs(Caller, Callee);
+
+  forgetFnAttr(Callee, "ns-mark");
+  forgetFnAttr(Callee, "ns-location");
+  mergeFnAttrMax(Caller, Callee, "ns-import-recursion");
 }
 
 void AttributeFuncs::mergeAttributesForOutlining(Function &Base,

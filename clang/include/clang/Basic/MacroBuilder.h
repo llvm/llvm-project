@@ -24,9 +24,10 @@ class MacroBuilder {
   raw_ostream &Out;
 public:
   MacroBuilder(raw_ostream &Output) : Out(Output) {}
+  virtual ~MacroBuilder() {}
 
   /// Append a \#define line for macro of the form "\#define Name Value\n".
-  void defineMacro(const Twine &Name, const Twine &Value = "1") {
+  virtual void defineMacro(const Twine &Name, const Twine &Value = "1") {
     Out << "#define " << Name << ' ' << Value << '\n';
   }
 

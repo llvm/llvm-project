@@ -1,0 +1,170 @@
+<code_set_name> IBM275
+<comment_char> %
+<escape_char> /
+% version: 1.0
+%  source: IBM NLS RM Vol2 SE09-8002-01, March 1990
+
+% alias EBCDIC-BR
+% alias CP275
+CHARMAP
+<U0000>     /x00         NULL (NUL)
+<U0001>     /x01         START OF HEADING (SOH)
+<U0002>     /x02         START OF TEXT (STX)
+<U0003>     /x03         END OF TEXT (ETX)
+<U009C>     /x04         STRING TERMINATOR (ST)
+<U0009>     /x05         CHARACTER TABULATION (HT)
+<U0086>     /x06         START OF SELECTED AREA (SSA)
+<U007F>     /x07         DELETE (DEL)
+<U0097>     /x08         END OF GUARDED AREA (EPA)
+<U008D>     /x09         REVERSE LINE FEED (RI)
+<U008E>     /x0a         SINGLE-SHIFT TWO (SS2)
+<U000B>     /x0b         LINE TABULATION (VT)
+<U000C>     /x0c         FORM FEED (FF)
+<U000D>     /x0d         CARRIAGE RETURN (CR)
+<U000E>     /x0e         SHIFT OUT (SO)
+<U000F>     /x0f         SHIFT IN (SI)
+<U0010>     /x10         DATALINK ESCAPE (DLE)
+<U0011>     /x11         DEVICE CONTROL ONE (DC1)
+<U0012>     /x12         DEVICE CONTROL TWO (DC2)
+<U0013>     /x13         DEVICE CONTROL THREE (DC3)
+<U009D>     /x14         OPERATING SYSTEM COMMAND (OSC)
+<U0085>     /x15         NEXT LINE (NEL)
+<U0008>     /x16         BACKSPACE (BS)
+<U0087>     /x17         END OF SELECTED AREA (ESA)
+<U0018>     /x18         CANCEL (CAN)
+<U0019>     /x19         END OF MEDIUM (EM)
+<U0092>     /x1a         PRIVATE USE TWO (PU2)
+<U008F>     /x1b         SINGLE-SHIFT THREE (SS3)
+<U001C>     /x1c         FILE SEPARATOR (IS4)
+<U001D>     /x1d         GROUP SEPARATOR (IS3)
+<U001E>     /x1e         RECORD SEPARATOR (IS2)
+<U001F>     /x1f         UNIT SEPARATOR (IS1)
+<U0080>     /x20         PADDING CHARACTER (PAD)
+<U0081>     /x21         HIGH OCTET PRESET (HOP)
+<U0082>     /x22         BREAK PERMITTED HERE (BPH)
+<U0083>     /x23         NO BREAK HERE (NBH)
+<U0084>     /x24         INDEX (IND)
+<U000A>     /x25         LINE FEED (LF)
+<U0017>     /x26         END OF TRANSMISSION BLOCK (ETB)
+<U001B>     /x27         ESCAPE (ESC)
+<U0088>     /x28         CHARACTER TABULATION SET (HTS)
+<U0089>     /x29         CHARACTER TABULATION WITH JUSTIFICATION (HTJ)
+<U008A>     /x2a         LINE TABULATION SET (VTS)
+<U008B>     /x2b         PARTIAL LINE FORWARD (PLD)
+<U008C>     /x2c         PARTIAL LINE BACKWARD (PLU)
+<U0005>     /x2d         ENQUIRY (ENQ)
+<U0006>     /x2e         ACKNOWLEDGE (ACK)
+<U0007>     /x2f         BELL (BEL)
+<U0090>     /x30         DEVICE CONTROL STRING (DCS)
+<U0091>     /x31         PRIVATE USE ONE (PU1)
+<U0016>     /x32         SYNCHRONOUS IDLE (SYN)
+<U0093>     /x33         SET TRANSMIT STATE (STS)
+<U0094>     /x34         CANCEL CHARACTER (CCH)
+<U0095>     /x35         MESSAGE WAITING (MW)
+<U0096>     /x36         START OF GUARDED AREA (SPA)
+<U0004>     /x37         END OF TRANSMISSION (EOT)
+<U0098>     /x38         START OF STRING (SOS)
+<U0099>     /x39         SINGLE GRAPHIC CHARACTER INTRODUCER (SGCI)
+<U009A>     /x3a         SINGLE CHARACTER INTRODUCER (SCI)
+<U009B>     /x3b         CONTROL SEQUENCE INTRODUCER (CSI)
+<U0014>     /x3c         DEVICE CONTROL FOUR (DC4)
+<U0015>     /x3d         NEGATIVE ACKNOWLEDGE (NAK)
+<U009E>     /x3e         PRIVACY MESSAGE (PM)
+<U001A>     /x3f         SUBSTITUTE (SUB)
+<U0020>     /x40         SPACE
+<U00C9>     /x4a         LATIN CAPITAL LETTER E WITH ACUTE
+<U002E>     /x4b         FULL STOP
+<U003C>     /x4c         LESS-THAN SIGN
+<U0028>     /x4d         LEFT PARENTHESIS
+<U002B>     /x4e         PLUS SIGN
+<U0021>     /x4f         EXCLAMATION MARK
+<U0026>     /x50         AMPERSAND
+<U0024>     /x5a         DOLLAR SIGN
+<U00C7>     /x5b         LATIN CAPITAL LETTER C WITH CEDILLA
+<U002A>     /x5c         ASTERISK
+<U0029>     /x5d         RIGHT PARENTHESIS
+<U003B>     /x5e         SEMICOLON
+<U005E>     /x5f         CIRCUMFLEX ACCENT
+<U002D>     /x60         HYPHEN-MINUS
+<U002F>     /x61         SOLIDUS
+<U00E7>     /x6a         LATIN SMALL LETTER C WITH CEDILLA
+<U002C>     /x6b         COMMA
+<U0025>     /x6c         PERCENT SIGN
+<U005F>     /x6d         LOW LINE
+<U003E>     /x6e         GREATER-THAN SIGN
+<U003F>     /x6f         QUESTION MARK
+<U00E3>     /x79         LATIN SMALL LETTER A WITH TILDE
+<U003A>     /x7a         COLON
+<U00D5>     /x7b         LATIN CAPITAL LETTER O WITH TILDE
+<U00C3>     /x7c         LATIN CAPITAL LETTER A WITH TILDE
+<U0027>     /x7d         APOSTROPHE
+<U003D>     /x7e         EQUALS SIGN
+<U0022>     /x7f         QUOTATION MARK
+<U0061>     /x81         LATIN SMALL LETTER A
+<U0062>     /x82         LATIN SMALL LETTER B
+<U0063>     /x83         LATIN SMALL LETTER C
+<U0064>     /x84         LATIN SMALL LETTER D
+<U0065>     /x85         LATIN SMALL LETTER E
+<U0066>     /x86         LATIN SMALL LETTER F
+<U0067>     /x87         LATIN SMALL LETTER G
+<U0068>     /x88         LATIN SMALL LETTER H
+<U0069>     /x89         LATIN SMALL LETTER I
+<U006A>     /x91         LATIN SMALL LETTER J
+<U006B>     /x92         LATIN SMALL LETTER K
+<U006C>     /x93         LATIN SMALL LETTER L
+<U006D>     /x94         LATIN SMALL LETTER M
+<U006E>     /x95         LATIN SMALL LETTER N
+<U006F>     /x96         LATIN SMALL LETTER O
+<U0070>     /x97         LATIN SMALL LETTER P
+<U0071>     /x98         LATIN SMALL LETTER Q
+<U0072>     /x99         LATIN SMALL LETTER R
+<U007E>     /xa1         TILDE
+<U0073>     /xa2         LATIN SMALL LETTER S
+<U0074>     /xa3         LATIN SMALL LETTER T
+<U0075>     /xa4         LATIN SMALL LETTER U
+<U0076>     /xa5         LATIN SMALL LETTER V
+<U0077>     /xa6         LATIN SMALL LETTER W
+<U0078>     /xa7         LATIN SMALL LETTER X
+<U0079>     /xa8         LATIN SMALL LETTER Y
+<U007A>     /xa9         LATIN SMALL LETTER Z
+<U00F5>     /xc0         LATIN SMALL LETTER O WITH TILDE
+<U0041>     /xc1         LATIN CAPITAL LETTER A
+<U0042>     /xc2         LATIN CAPITAL LETTER B
+<U0043>     /xc3         LATIN CAPITAL LETTER C
+<U0044>     /xc4         LATIN CAPITAL LETTER D
+<U0045>     /xc5         LATIN CAPITAL LETTER E
+<U0046>     /xc6         LATIN CAPITAL LETTER F
+<U0047>     /xc7         LATIN CAPITAL LETTER G
+<U0048>     /xc8         LATIN CAPITAL LETTER H
+<U0049>     /xc9         LATIN CAPITAL LETTER I
+<U00E9>     /xd0         LATIN SMALL LETTER E WITH ACUTE
+<U004A>     /xd1         LATIN CAPITAL LETTER J
+<U004B>     /xd2         LATIN CAPITAL LETTER K
+<U004C>     /xd3         LATIN CAPITAL LETTER L
+<U004D>     /xd4         LATIN CAPITAL LETTER M
+<U004E>     /xd5         LATIN CAPITAL LETTER N
+<U004F>     /xd6         LATIN CAPITAL LETTER O
+<U0050>     /xd7         LATIN CAPITAL LETTER P
+<U0051>     /xd8         LATIN CAPITAL LETTER Q
+<U0052>     /xd9         LATIN CAPITAL LETTER R
+<U005C>     /xe0         REVERSE SOLIDUS
+<U0053>     /xe2         LATIN CAPITAL LETTER S
+<U0054>     /xe3         LATIN CAPITAL LETTER T
+<U0055>     /xe4         LATIN CAPITAL LETTER U
+<U0056>     /xe5         LATIN CAPITAL LETTER V
+<U0057>     /xe6         LATIN CAPITAL LETTER W
+<U0058>     /xe7         LATIN CAPITAL LETTER X
+<U0059>     /xe8         LATIN CAPITAL LETTER Y
+<U005A>     /xe9         LATIN CAPITAL LETTER Z
+<U0030>     /xf0         DIGIT ZERO
+<U0031>     /xf1         DIGIT ONE
+<U0032>     /xf2         DIGIT TWO
+<U0033>     /xf3         DIGIT THREE
+<U0034>     /xf4         DIGIT FOUR
+<U0035>     /xf5         DIGIT FIVE
+<U0036>     /xf6         DIGIT SIX
+<U0037>     /xf7         DIGIT SEVEN
+<U0038>     /xf8         DIGIT EIGHT
+<U0039>     /xf9         DIGIT NINE
+<U009F>     /xff         APPLICATION PROGRAM COMMAND (APC)
+END CHARMAP

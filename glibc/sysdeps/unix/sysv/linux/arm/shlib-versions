@@ -1,0 +1,9 @@
+DEFAULT			GLIBC_2.4
+
+%ifdef HAVE_ARM_PCS_VFP
+# The EABI-derived hard-float ABI uses a new dynamic linker.
+ld=ld-linux-armhf.so.3
+%else
+# The EABI-derived soft-float ABI continues to use ld-linux.so.3.
+ld=ld-linux.so.3
+%endif

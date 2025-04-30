@@ -1,0 +1,15 @@
+name: 'Close stale issues and PRs'
+on:
+  schedule:
+    - cron: '30 1 * * *'
+
+jobs:
+  stale:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/stale@v4
+        with:
+          stale-issue-message: 'This issue is stale because it has been open 30 days with no activity.'
+          days-before-stale: 30
+          days-before-close: -1
+

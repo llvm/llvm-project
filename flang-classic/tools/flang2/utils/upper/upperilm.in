@@ -1,0 +1,796 @@
+/*
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ */
+ABS	ilm
+ACON	sym
+ACOS	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QACOS   ilm
+#endif
+ACOSD	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QACOSD  ilm
+#endif
+ADJARR	sym	sym	sym
+AGOTO	num	ilm	syms
+AINT	ilm
+ALLOCA	ilm	ilm	sym	num
+AMOD	ilm	ilm
+AND	ilm	ilm
+AND64	ilm	ilm
+ANINT	ilm
+ARET	ilm
+ASIN	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QASIN   ilm
+#endif
+ASIND	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QASIND  ilm
+#endif
+AST	ilm	ilm
+ATAN	ilm
+ATAN2	ilm	ilm
+ATAN2D	ilm	ilm
+ATAND	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QATAND  ilm
+#endif
+ERF	ilm
+DERF	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QERF    ilm
+#endif
+ERFC	ilm
+ERFC_SCALED	ilm
+DERFC	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QERFC   ilm
+#endif
+DERFC_SCALED	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QERFC_SCALED    ilm
+#endif
+GAMMA	ilm
+DGAMMA	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QGAMMA  ilm
+#endif
+LOG_GAMMA	ilm
+LSECTION	ilm	sym	sym
+DLOG_GAMMA	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QLOG_GAMMA  ilm
+#endif
+HYPOT	ilm	ilm
+DHYPOT	ilm	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QHYPOT  ilm     ilm
+#endif
+ACOSH	ilm
+DACOSH	ilm
+ASINH	ilm
+DASINH	ilm
+ATANH	ilm
+DATANH	ilm
+BESSEL_J0	ilm
+DBESSEL_J0	ilm
+BESSEL_J1	ilm
+DBESSEL_J1	ilm
+BESSEL_JN	ilm	ilm
+DBESSEL_JN	ilm	ilm
+BESSEL_Y0	ilm
+DBESSEL_Y0	ilm
+BESSEL_Y1	ilm
+DBESSEL_Y1	ilm
+BESSEL_YN	ilm	ilm
+DBESSEL_YN	ilm	ilm
+BARRIER
+BASE	sym
+BCOPYIN
+BCOPYPRIVATE  ilm
+BEGINATOMIC
+BEGINATOMICCAPTURE
+BEGINATOMICREAD
+BEGINATOMICWRITE
+BLEADZ	ilm
+BCS
+BMPSCOPE	sym
+BOS	line	num    num
+BPAR	ilm
+BPARA	ilm     ilm    num	num
+BPARN	ilm	ilm
+BPDO
+BPOPCNT	ilm
+BPOPPAR	ilm
+BR	sym
+BRF	ilm	sym
+BRT	ilm	sym
+BDISTRIBUTE
+BSECTIONS	sym
+BTASK	sym	num	ilm	ilm
+BTASKDUP
+BTASKLOOP	sym	num	ilm	ilm	ilm 	ilm
+BTEAMS	
+BTEAMSN ilm	ilm
+BTARGET	ilm	num
+BTARGETDATA	ilm
+BTEST	ilm	ilm
+BTRAILZ ilm
+BYVAL	ilm	dtype
+CABS	ilm
+CACOS	ilm
+CANCEL	sym	num	ilm
+CANCELPOINT	sym	num
+CASIN	ilm
+CATAN	ilm
+CCOSH	ilm
+CSINH	ilm
+CTANH	ilm
+CTAN	ilm
+CADD	ilm	ilm
+CALL	num	sym	ilms
+CALLA	num	num	ilm	ilms
+PCALLA	num	num	sym	ilm	ilms	
+VCALLA	num	num	sym	ilm	sym	ilms
+CCMP	ilm	ilm
+CCON	sym
+CCOS	ilm
+CDABS	ilm
+CDACOS	ilm
+CDASIN	ilm
+CDATAN	ilm
+CDCOSH   ilm
+CDSINH   ilm
+CDTANH   ilm
+CDTAN    ilm
+CDADD	ilm	ilm
+CDCMP	ilm	ilm
+CDCON	sym
+CDCOS	ilm
+CDDIV	ilm	ilm
+CDEXP	ilm
+CDFUNC	num	sym	ilms
+CDFUNCA	num	num	ilm	ilms
+PCDFUNCA	num	num	sym	ilm	ilms
+CDVFUNCA	num	num	sym	ilm	sym	ilms
+CDIV	ilm	ilm
+CDLD	ilm
+CDLOG	ilm
+CDMERGE	ilm	ilm	ilm
+CDMUL	ilm	ilm
+CDNEG	ilm
+CDSIN	ilm
+CDSQRT	ilm
+CDST	ilm	ilm
+CDSUB	ilm	ilm
+CDTOCD	ilm	ilm
+CDTOI	ilm	ilm
+CDTOK	ilm	ilm
+CDTOUDI	ilm
+CDUFUNC/CDFUNC	num	sym	args
+CDUFUNCA/CDFUNCA	num	num	ilm	args
+PCDUFUNCA/PCDFUNCA	num	num	sym	ilm	args
+CDUVFUNCA/CDVFUNCA	num	num	sym	ilm	sym	args
+CEXP	ilm
+CFUNC	num	sym	ilms
+CFUNCA	num	num	ilm	ilms
+PCFUNCA	num	num	sym	ilm	ilms
+CVFUNCA	num	num	sym	sym	ilm	sym	ilms
+CGOTO	ilm	num
+CHAR	ilm
+CHFUNC	num	sym	ilm	ilms
+CHFUNCA	num	num	ilm	ilm	ilms
+PCHFUNCA	num	num	sym	ilm	ilm	ilms
+CHVFUNCA	num	num	sym	ilm	ilm	sym	ilms
+CHLD	ilm
+CHST	ilm	ilm
+CHUFUNC/CHFUNC	num	sym	args
+CHUFUNCA/CHFUNCA	num	num	ilm	args
+PCHUFUNCA/PCHFUNCA	num	num	sym	ilm	args
+CHUVFUNCA/CHVFUNCA	num	num	sym	ilm	sym	args
+CLD	ilm
+CLOG	ilm
+CMPLX	ilm	ilm
+CMERGE	ilm	ilm	ilm
+CMUL	ilm	ilm
+CNEG	ilm
+CONJG	ilm
+COPYIN	sym
+COPYIN_A	sym	ilm
+COPYPRIVATE	ilm	sym
+COPYPRIVATE_P	ilm	ilm
+COPYPRIVATE_PA	ilm	ilm	ilm
+COS	ilm
+COSD	ilm
+COSH	ilm
+CSIN	ilm
+CSQRT	ilm
+CST	ilm	ilm
+CSUB	ilm	ilm
+CTOC	ilm	ilm
+CTOI	ilm	ilm
+CTOK	ilm	ilm
+CTOUDI	ilm
+CUFUNC/CFUNC	num	sym	args
+CUFUNCA/CFUNCA	num	num	ilm	args
+PCUFUNCA/PCFUNCA	num	num	sym	ilm	args
+CUVFUNCA/CVFUNCA	num	num	sym 	ilm	sym	args
+D2K	ilm
+DABS	ilm
+DACOS	ilm
+DACOSD	ilm
+DADD	ilm	ilm
+DAIF	ilm	sym	sym	sym
+DASIN	ilm
+DASIND	ilm
+DATAN	ilm
+DATAN2	ilm	ilm
+DATAN2D	ilm	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QATAN2  ilm     ilm
+QATAN2D ilm     ilm
+#endif
+DATAND	ilm
+DBLE	ilm
+DCEIL	ilm
+DCMP	ilm	ilm
+DCMPLX	ilm	ilm
+DCON	sym
+DCONJG	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QCONJG	ilm
+#endif
+DCOS	ilm
+DCOSD	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QCOSD   ilm
+#endif
+DCOSH	ilm
+DDIM	ilm	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QDIM    ilm     ilm
+#endif
+DDIV	ilm	ilm
+DEALLOCA	ilm	sym	sym	num
+DEXP	ilm
+DFIX	ilm
+DFLOAT	ilm
+DFLOATK	ilm
+DFLOOR	ilm
+DFUNC	num	sym	ilms
+DFUNCA	num	num	ilm	ilms
+PDFUNCA	num	num	sym	ilm	ilms
+DVFUNCA	num	num	sym	ilm	sym	ilms
+DIM	ilm	ilm
+DIMAG	ilm
+DINT	ilm
+DISNAN	ilm
+DLD	ilm
+DLOG	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QLOG    ilm
+#endif
+DLOG10	ilm
+DMAX	ilm	ilm
+DMERGE	ilm	ilm	ilm
+DMIN	ilm	ilm
+DMOD	ilm	ilm
+DMUL	ilm	ilm
+DNEG	ilm
+DNINT	ilm
+DOBEG	ilm	sym	sym
+DOBEGNZ	ilm	sym	sym	ilm	
+DOEND	sym	sym
+DOENDNZ	sym	sym
+DPNULL
+DPREF	ilm
+DPROD	ilm	ilm
+DPSCON	num
+DPVAL	ilm
+DREAL	ilm
+DSIGN	ilm	ilm
+DSIN	ilm
+DSIND	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QSIND   ilm
+#endif
+DSINH	ilm
+DSQRT	ilm
+DST	ilm	ilm
+DSUB	ilm	ilm
+DTAN	ilm
+DTAND	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QTAND   ilm
+#endif
+DTANH	ilm
+DTOD	ilm	ilm
+DTOI	ilm	ilm
+DTOK	ilm	ilm
+DTOUDI	ilm
+DTOUI	ilm
+DUFUNC/DFUNC	num	sym	args
+DUFUNCA/DFUNCA	num	num	ilm	args
+PDUFUNCA/PDFUNCA	num	num	sym	ilm	args
+DUVFUNCA/DVFUNCA	num	num	sym	ilm	sym	args
+ECOPYIN
+ECOPYPRIVATE	ilm
+ECS
+ELEMENT	num	ilm	dtype	ilms
+EMASTER	sym
+EMPSCOPE
+END
+ENDATOMIC
+ENDATOMICCAPTURE
+ENDATOMICREAD
+ENDATOMICWRITE
+ENDF	ilm
+ENLAB
+ENTRY	sym
+EPAR
+EPARN
+EPDO
+EQ	ilm
+EQ8	ilm
+EQV	ilm	ilm
+EDISTRIBUTE
+ESECTIONS	sym
+ESINGLE	sym
+ETARGET	
+ETARGETDATA
+ETASK	sym
+ETASKDUP
+ETASKGROUP
+ETASKLOOP	sym
+ETASKLOOPREG
+ETASKREG
+ETEAMS
+EXP	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QEXP    ilm
+#endif
+FARG	ilm	dtype
+FARGF	ilm	dtype   num
+FILE	num	num	num
+FIX	ilm
+FLOAT	ilm
+FLOATK	ilm
+FLUSH
+GE	ilm
+GE8	ilm
+GT	ilm
+GT8	ilm
+I1SHFTC	ilm	ilm	ilm
+I2K	ilm
+I8TOI	ilm
+IABS	ilm
+IADD	ilm	ilm
+IAIF	ilm	sym	sym	sym
+IBCLR	ilm	ilm
+IBITS	ilm	ilm	ilm
+IBSET	ilm	ilm
+ICHAR	ilm
+ICMP	ilm	ilm
+ICON	sym
+IDIM	ilm	ilm
+IDIV	ilm	ilm
+IDNINT	ilm
+IISHFT 	ilm	ilm
+IISHFTC	ilm	ilm	ilm
+IFUNC	num	sym	ilms
+IFUNCA	num	num	ilm	ilms
+PIFUNCA	num	num	sym	ilm	ilms
+IVFUNCA	num	num	sym	ilm	sym	ilms
+ILD	ilm
+ILEADZ	ilm
+IMAG	ilm
+IMAX	ilm	ilm
+IMERGE	ilm	ilm	ilm
+IMIN	ilm	ilm
+IMUL	ilm	ilm
+INCHAR	ilm
+INDEX	ilm	ilm
+INEG	ilm
+IPOPCNT	ilm
+IPOPPAR	ilm
+ISHFTC	ilm	ilm	ilm
+ISIGN	ilm	ilm
+IST	ilm	ilm
+ISUB	ilm	ilm
+ITOI	ilm	ilm
+ITOI8	ilm
+ITOS	ilm
+ITOSC	ilm
+ITOUDI	ilm
+ITOUI	ilm
+ITRAILZ ilm
+IUFUNC/IFUNC	num	sym	args
+IUFUNCA/IFUNCA	num	num	ilm	args
+PIUFUNCA/PIFUNCA	num	num	sym	ilm	args
+IUVFUNCA/IVFUNCA	num	num	sym	ilm	sym	args
+JISHFT	ilm	ilm
+K2D	ilm
+K2I	ilm
+K2R	ilm
+KABS	ilm
+KADD	ilm	ilm
+KAIF	ilm	sym	sym	sym
+KAND	ilm	ilm
+KAST	ilm	ilm
+KBCLR	ilm	ilm
+KBITS	ilm	ilm	ilm
+KBSET	ilm	ilm
+KBTEST	ilm	ilm
+KCMP	ilm	ilm
+KCON	sym
+KDFIX	ilm
+KDIM	ilm	ilm
+KDIV	ilm	ilm
+KDNINT	ilm
+KEQV	ilm	ilm
+KFIX	ilm
+KFUNC	num	sym	ilms
+KFUNCA	num	num	ilm	ilms
+PKFUNCA	num	num	sym	ilm	ilms
+KVFUNCA	num	num	sym	ilm	sym	ilms
+KINDEX	ilm	ilm
+KISHFT	ilm	ilm
+KLD	ilm
+KLEADZ	ilm
+KLEN	ilm
+KLLD	ilm
+KLST	ilm	ilm
+KMAX	ilm	ilm
+KMIN	ilm	ilm
+KMERGE	ilm	ilm	ilm
+KMOD	ilm	ilm
+KMUL	ilm	ilm
+KNEG	ilm
+KNINT	ilm
+KNOT	ilm
+KOR	ilm	ilm
+KPOPCNT	ilm
+KPOPPAR	ilm
+KSHFTC	ilm	ilm	ilm
+KSHIFT/KISHFT	ilm	ilm
+KSIGN	ilm	ilm
+KST	ilm	ilm
+KSUB	ilm	ilm
+KTOI	ilm	ilm
+KTOK	ilm	ilm
+KTRAILZ ilm
+KUFUNC/KFUNC	num	sym	args
+KUFUNCA/KFUNCA	num	num	ilm	args
+PKUFUNCA/PKFUNCA	num	num	sym	ilm	args
+KUVFUNCA/KVFUNCA	num	num	sym	ilm	sym	args
+KULSHIFT	ilm	ilm
+KURSHIFT	ilm	ilm
+KXNOR/KEQV	ilm	ilm
+KXOR	ilm	ilm
+LABEL	sym
+LAND	ilm	ilm
+LAND8	ilm	ilm
+LCON	sym
+LCPU2
+LE	ilm
+LE8	ilm
+LEN	ilm
+LEQV	ilm	ilm
+LEQV8	ilm	ilm
+LFUNC	num	sym	ilms
+LFUNCA	num	num	ilm	ilms
+PLFUNCA	num	num	sym	ilm	ilms
+LVFUNCA	num	num	sym	ilm	sym	ilms
+LLD	ilm
+LNEQV	ilm	ilm
+LNEQV8	ilm	ilm
+LNOP	ilm
+LNOP8	ilm
+LNOT	ilm
+LNOT8	ilm
+LOC	ilm
+LOG/ALOG	ilm
+LOG10/ALOG10	ilm
+LOR	ilm	ilm
+LOR8	ilm	ilm
+LST	ilm	ilm
+LT	ilm
+LT8	ilm
+LUFUNC/LFUNC	num	sym	args
+LUFUNCA/LFUNCA	num	num	ilm	args
+PLUFUNCA/PLFUNCA	num	num	sym	ilm	args
+LUVFUNCA/LVFUNCA	num	num	sym	ilm	sym	args
+MASTER	sym
+MEMBER	ilm	sym
+MOD	ilm	ilm
+MPBORDERED
+MPEORDERED
+MPDISTLOOP	sym	sym	sym	sym	sym	sym	dtype	num
+MPLOOP	sym	sym	sym	sym	sym	dtype	num
+MPLOOPFINI	dtype	num
+MPSCHED	sym	sym	sym	sym	dtype
+MPTASKLOOP	sym	sym	sym	sym	dtype
+MP_ATOMIC
+MP_ATOMICCAPTURE	ilm	ilm	num	num	num
+MP_ATOMICREAD	ilm	num
+MP_ATOMICUPDATE	ilm	ilm	num	num
+MP_ATOMICWRITE	ilm	ilm	num
+MP_ENDATOMIC
+NCHAR	ilm
+NCHFUNC	num	sym	ilm	ilms
+NCHFUNCA	num	num	ilm	ilm	ilms
+PNCHFUNCA	num	num	sym	ilm	ilm	ilms
+NCHVFUNCA	num	num	sym	ilm	ilm	sym	ilms
+NCHUFUNC/NCHFUNC	num	sym	args
+NCHUFUNCA/NCHFUNCA	num	num	ilm	args
+PNCHUFUNCA/PNCHFUNCA	num	num	sym	ilm	args
+NCHUVFUNCA/NCHVFUNCA	num	num	sym	ilm	sym	args
+NCPUS2
+NE	ilm
+NE8	ilm
+NINDEX	ilm	ilm
+NINT	ilm
+NLEN	ilm
+NOP
+NOT	ilm
+NOT64	ilm
+NSCAT	ilm	ilm
+NSCMP	ilm	ilm
+NSST	ilm	ilm
+NSUBS	ilm	ilm	ilm
+OR	ilm	ilm
+OR64	ilm	ilm
+P	sym
+PARG	ilm	ilm
+PCMP	ilm	ilm
+PDO	sym	num
+PFUNC	num	sym	ilms
+PFUNCA	num	num	ilm	ilms
+PPFUNCA	num	num	sym	ilm	ilms
+PVFUNCA	num	num	sym	ilm	sym	ilms
+PLD	ilm	sym
+PRAGMADPSELIST	num	num	num	ilm	num	ilms
+PRAGMAEXPR	num	num	num	ilm	nums
+PRAGMAGEN	num	num	num	nums
+PRAGMASELIST	num	num	num	ilm	ilms
+PRAGMASLIST	num	num	num	ilms
+PRAGMASYM	num	num	num	syms
+PRAGMASYMEXPR   num     num     num     sym     ilms
+PREFETCH	ilm	num
+PRE_TLS_COPY sym
+PST	ilm	ilm
+PUFUNC/PFUNC	num	sym	args
+PUFUNCA/PFUNCA	num	num	ilm	args
+PPUFUNCA/PPFUNCA	num	num	sym	ilm	args
+PUVFUNCA/PVFUNCA	num	num	sym	ilm	sym	args
+R2K	ilm
+RADD	ilm	ilm
+RAIF	ilm	sym	sym	sym
+RCEIL	ilm
+RCMP	ilm	ilm
+RCON	sym
+RDIV	ilm	ilm
+REAL	ilm
+RET
+RFLOOR	ilm
+RFUNC	num	sym	ilms
+RFUNCA	num	num	ilm	ilms
+RISNAN	ilm
+PRFUNCA	num	num	sym	ilm	ilms
+RVFUNCA	num	num	sym	ilm	sym	ilms
+RLD	ilm
+RMAX	ilm	ilm
+RMERGE	ilm	ilm	ilm
+RMIN	ilm	ilm
+RMUL	ilm	ilm
+RNEG	ilm
+RST	ilm	ilm
+RSUB	ilm	ilm
+RTOI	ilm	ilm
+RTOK	ilm	ilm
+RTOR	ilm	ilm
+RTOUDI	ilm
+RTOUI	ilm
+RUFUNC/RFUNC	num	sym	args
+RUFUNCA/RFUNCA	num	num	ilm	args
+PRUFUNCA/PRFUNCA	num	num	sym	ilm	args
+RUVFUNCA/RVFUNCA	num	num	sym	ilm	sym	args
+SCAT	ilm	ilm
+SCMP	ilm	ilm
+SCTOI	ilm
+SCTOUDI	ilm
+SCTOUI	ilm
+SECTION	ilm	sym	sym
+SFUNC	num	sym	args
+SHAPE	num	ilm
+SHD	ilm	ilm	ilm
+SHIFT	ilm	ilm
+SHIFT64	ilm	ilm
+SIGN	ilm	ilm
+SILD	ilm
+SIN	ilm
+SIND	ilm
+SINGLE	ilm	sym
+SINH	ilm
+SIST	ilm	ilm
+SLEADZ	ilm
+SLLD	ilm
+SLST	ilm	ilm
+SMOVE	ilm	ilm	dtype
+SNGL	ilm
+SPOPCNT	ilm
+SPOPPAR	ilm
+SQRT	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QSQRT   ilm
+#endif
+SST	ilm	ilm
+STOI	ilm
+STOUDI	ilm
+STOUI	ilm
+STRAILZ ilm
+SUBS	ilm	ilm	ilm
+TAN	ilm
+#ifdef TARGET_SUPPORTS_QUADFP
+QTAN    ilm
+#endif
+TAND	ilm
+TANH	ilm
+TARGETENTERDATA	ilm	num
+TARGETEXITDATA	ilm	num
+BTARGETUPDATE	ilm	num
+TASKFIRSTPRIV	sym	sym
+TASKGROUP
+TASKLOOPREG	ilm	ilm	ilm
+TASKLOOPVARS
+TASKREG
+TASKWAIT
+TASKYIELD
+UCALL/CALL	num	sym	args
+UCALLA/CALLA	num	num	ilm	args
+UPCALLA/PCALLA  num     num     sym     ilm	args
+UVCALLA/VCALLA	num	num	sym	ilm	sym	args
+UDITOD	ilm
+UDITOI	ilm
+UDITOR	ilm
+UDITOS	ilm
+UDITOSC	ilm
+UDITOUI	ilm
+UI2K	ilm
+UICMP	ilm	ilm
+UITOD	ilm
+UITOI	ilm
+UITOR	ilm
+UITOS	ilm
+UITOSC	ilm
+UITOUDI	ilm
+ULSHIFT	ilm	ilm
+URSHIFT	ilm	ilm
+V	sym
+XNOR/EQV	ilm	ilm
+XNOR64	ilm	ilm
+XOR	ilm	ilm
+XOR64	ilm	ilm
+XOR8/KXOR	ilm	ilm
+MP_MAP ilm num
+MP_TARGETLOOPTRIPCOUNT sym
+MP_EMAP
+MP_BREDUCTION
+MP_EREDUCTION
+MP_REDUCTIONITEM sym sym num
+MP_TARGETMODE num ilm ilm ilm
+HFLD	ilm
+HFST	ilm	ilm
+HFCON	sym
+HFADD	ilm	ilm
+HFMUL	ilm	ilm
+HFSUB	ilm	ilm
+HFDIV	ilm	ilm
+HFNEG	ilm
+HFCMP	ilm	ilm
+R2HF	ilm
+D2HF	ilm
+HF2R	ilm
+HFFUNC	num	sym	ilms
+HFUFUNC/HFFUNC	num	sym	args
+HFMIN  ilm ilm
+HFMAX  ilm ilm
+UXLNEQV    ilm ilm
+UXLEQV ilm ilm
+UXLAND ilm ilm
+UXLNOT ilm
+UXLNEQV8   ilm ilm
+UXLEQV8    ilm ilm
+UXLAND8    ilm ilm
+UXLNOT8    ilm
+MP_BEGIN_DIR
+MP_END_DIR
+#ifdef TARGET_SUPPORTS_QUADFP
+CQCON	sym
+CQST	ilm	ilm
+CQLD	ilm
+CQNEG	ilm
+CQADD	ilm	ilm
+CQSUB	ilm	ilm
+CQMUL	ilm	ilm
+CQDIV	ilm	ilm
+CQCMP	ilm	ilm
+QCMPLX	ilm	ilm
+QREAL	ilm
+QIMAG	ilm
+CQTOCQ	ilm	ilm
+CQTOI	ilm	ilm
+CQTOK	ilm	ilm
+CQSIN	ilm
+CQABS   ilm
+
+QFLD	ilm
+QFST	ilm	ilm
+QADD	ilm	ilm
+QSUB	ilm	ilm
+QMUL	ilm	ilm
+QNEG	ilm
+QDIV	ilm	ilm
+QCMP	ilm	ilm
+QMAX	ilm	ilm
+QMIN	ilm	ilm
+QFLOAT	ilm
+QFLOATK	ilm
+QAIF	ilm	sym	sym	sym
+RQUAD	ilm
+DQUAD	ilm
+QCON	sym
+UITOQ	ilm
+K2Q	ilm
+SNGQ	ilm
+DBLEQ	ilm
+QFIX	ilm
+KQFIX	ilm
+QTOUI	ilm
+Q2K	ilm
+QTOI    ilm     ilm
+QTOK    ilm     ilm
+QTOQ    ilm     ilm
+QATAN   ilm
+QSIN    ilm
+QCOS    ilm
+
+QFUNC	num	sym	ilms
+QFUNCA	num	num	ilm	ilms
+PQFUNCA	num	num	sym	ilm	ilms
+QVFUNCA	num	num	sym	ilm	sym	ilms
+QUFUNC/QFUNC	num	sym	args
+QUFUNCA/QFUNCA	num	num	ilm	args
+PQUFUNCA/PQFUNCA	num	num	sym	ilm	args
+QUVFUNCA/QVFUNCA	num	num	sym	ilm	sym	args
+CQFUNC	num	sym	ilms
+CQFUNCA	num	num	ilm	ilms
+PCQFUNCA	num	num	sym	ilm	ilms
+CQVFUNCA	num	num	sym	ilm	sym	ilms
+CQUFUNC/CQFUNC	num	sym	args
+CQUFUNCA/CQFUNCA	num	num	ilm	args
+PCQUFUNCA/PCQFUNCA	num	num	sym	ilm	args
+CQUVFUNCA/CQVFUNCA	num	num	sym	ilm	sym	args
+
+QABS    ilm
+QFLOOR  ilm
+QCEIL   ilm
+IQNINT	ilm
+KQNINT	ilm
+QINT    ilm
+QQANINT ilm
+DQANINT ilm
+AQANINT ilm
+QMOD    ilm ilm
+QSIGN   ilm ilm
+QASINH  ilm
+QACOSH  ilm
+QATANH  ilm
+QSINH   ilm
+QCOSH   ilm
+QTANH   ilm
+QLOG10  ilm
+#endif

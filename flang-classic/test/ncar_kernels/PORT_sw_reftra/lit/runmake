@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+test_name=${TEST_SRC##*/}  # Strip path.
+test_name=${test_name%.*}  # Strip extension.
+
+temp_dir="$test_name"
+rm -rf $temp_dir
+
+MAKE_FILE=$MAKE_FILE_DIR/makefile
+
+mkdir $temp_dir
+if [[ ! $KEEP_FILES ]]; then
+  # If keep files is not specified, remove these files at the end.
+  trap "rm -rf $(pwd)/$temp_dir" EXIT
+fi
+cd $temp_dir
+export PATH=$PATH:$(pwd)
+
+make -f $MAKE_FILE HOMEQA=$MAKE_FILE_DIR TEST=$test_name OPT="$FLAGS" build 2>&1
+make -f $MAKE_FILE HOMEQA=$MAKE_FILE_DIR TEST=$test_name OPT="$FLAGS" run 2>&1
+make -f $MAKE_FILE HOMEQA=$MAKE_FILE_DIR TEST=$test_name OPT="$FLAGS" verify 2>&1
+# CHECK: {{([1-9][0-9]* tests PASSED\. 0 tests failed|[[:space:]]*PASS(ED)?[[:space:]]*$)}}

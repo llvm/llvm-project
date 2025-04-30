@@ -57,6 +57,8 @@ CodeGenFileType getFileType();
 
 FramePointerKind getFramePointerUsage();
 
+bool getEnableMovssCombine();
+
 bool getEnableUnsafeFPMath();
 
 bool getEnableNoInfsFPMath();

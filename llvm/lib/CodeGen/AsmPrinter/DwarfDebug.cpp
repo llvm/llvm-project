@@ -876,7 +876,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                             const MachineFunction &MF) {
   // Add a call site-related attribute (DWARF5, Sec. 3.3.1.3). Do this only if
   // the subprogram is required to have one.
-  if (!SP.areAllCallsDescribed() || !SP.isDefinition())
+  if (!SP.areAllCallsDescribed() || !SP.isDefinition() || getDwarfVersion() < 5)
     return;
 
   // Use DW_AT_call_all_calls to express that call site entries are present

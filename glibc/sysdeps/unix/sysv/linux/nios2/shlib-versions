@@ -1,0 +1,2 @@
+DEFAULT                 GLIBC_2.21
+ld=ld-linux-nios2.so.1

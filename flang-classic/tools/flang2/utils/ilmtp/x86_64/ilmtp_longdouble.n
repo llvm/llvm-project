@@ -1,0 +1,109 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+
+.CH X87CON cons sym
+x87 80-bit extended precision constant.
+.OP X87CON r v1
+.CH X87LD load lnk
+x87 80-bit extended precision load.
+.AT spec
+.CH X87ST store lnk lnk
+x87 80-bit extended precision store.
+.AT spec trm
+.CH X87FROM arth lnk stc
+Convert the DT_xxx type encoded by 'stc' to x87 80-bit extended precision.
+.AT spec
+.CH X87TO arth lnk stc
+Convert x87 80-bit extended precision to the DT_xxx type encoded by 'stc'.
+.AT spec
+.CH X87NEG arth lnk
+x87 80-bit extended precision negation.
+.OP X87CHS r p1
+.CH X87ADD arth lnk lnk
+x87 80-bit extended precision addition.
+.OP X87ADD r p1 p2
+.CH X87SUB arth lnk lnk
+x87 80-bit extended precision subtraction.
+.OP X87SUB r p1 p2
+.CH X87MUL arth lnk lnk
+x87 80-bit extended precision multiplication.
+.OP X87MUL r p1 p2
+.CH X87DIV arth lnk lnk
+x87 80-bit extended precision division.
+.OP X87DIV r p1 p2
+.CH X87CMP arth lnk lnk
+x87 80-bit extended precision comparison.
+.AT spec
+.CH X87FUNC proc n lnk lnk*
+Call long double function returning x87 80-bit extended precision.
+.AT spec
+.CH X87CMPLX arth lnk lnk
+.AT spec
+.CH X87REAL arth lnk
+.AT spec
+.CH X87IMAG arth lnk
+.AT spec
+.CH CX87CON cons sym
+x87 80-bit extended precision complex constant.
+.AT spec x87cmplx
+.CH CX87LD load lnk
+x87 80-bit extended precision complex load.
+.AT spec x87cmplx
+.CH CX87ST store lnk lnk
+x87 80-bit extended precision complex store.
+.AT spec trm x87cmplx
+.CH CX87STR store lnk lnk
+Store the real part of a long double complex
+.AT spec trm
+.CH CX87STI store lnk lnk
+Store the imaginary part of a long double complex
+.AT spec trm
+.CH CX87NEG arth lnk
+x87 80-bit extended precision complex negation.
+.AT x87cmplx
+.OP X87CHS rr rp1
+.OP X87CHS ir ip1
+.CH CX87ADD arth lnk lnk
+x87 80-bit extended precision complex addition.
+.AT x87cmplx
+.OP X87ADD rr rp1 rp2
+.OP X87ADD ir ip1 ip2
+.CH CX87SUB arth lnk lnk
+x87 80-bit extended precision complex subtraction.
+.AT x87cmplx
+.OP X87SUB rr rp1 rp2
+.OP X87SUB ir ip1 ip2
+.CH CX87MUL arth lnk lnk
+x87 80-bit extended precision complex multiplication.
+.AT x87cmplx
+.OP X87MUL t1 rp1 rp2
+.OP X87MUL t2 ip1 ip2
+.OP X87SUB rr t1 t2
+.OP X87MUL t1 ip1 rp2
+.OP X87MUL t2 ip2 rp1
+.OP X87ADD ir t2 t1
+.CH CX87DIV arth lnk lnk
+x87 80-bit extended precision complex division.
+.AT x87cmplx
+.OP X87MUL t1 rp2 rp2
+.OP X87MUL t2 ip2 ip2
+.OP X87ADD t1 t1 t2
+.OP X87MUL t2 rp1 rp2
+.OP X87MUL t3 ip1 ip2
+.OP X87ADD t2 t2 t3
+.OP X87DIV rr t2 t1
+.OP X87MUL t2 ip1 rp2
+.OP X87MUL t3 rp1 ip2
+.OP X87SUB t2 t2 t3
+.OP X87DIV ir t2 t1
+.CH CX87CMP arth lnk lnk
+x87 80-bit extended precision complex comparison.
+.AT spec x87cmplx
+.CH CX87FUNC proc n lnk lnk*
+Call long double complex function returning x87 80-bit extended precision
+complex.
+.AT spec x87cmplx

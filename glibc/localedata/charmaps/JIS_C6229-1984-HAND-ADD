@@ -1,0 +1,129 @@
+<code_set_name> JIS_C6229-1984-HAND-ADD
+<comment_char> %
+<escape_char> /
+% version: 1.0
+% repertoiremap: mnemonic,ds
+%  source: ECMA registry
+
+% alias ISO-IR-95
+% alias JP-OCR-HAND-ADD
+CHARMAP
+<NU>                   /x00   <U0000> NULL (NUL)
+<SH>                   /x01   <U0001> START OF HEADING (SOH)
+<SX>                   /x02   <U0002> START OF TEXT (STX)
+<EX>                   /x03   <U0003> END OF TEXT (ETX)
+<ET>                   /x04   <U0004> END OF TRANSMISSION (EOT)
+<EQ>                   /x05   <U0005> ENQUIRY (ENQ)
+<AK>                   /x06   <U0006> ACKNOWLEDGE (ACK)
+<BL>                   /x07   <U0007> BELL (BEL)
+<BS>                   /x08   <U0008> BACKSPACE (BS)
+<HT>                   /x09   <U0009> CHARACTER TABULATION (HT)
+<LF>                   /x0A   <U000A> LINE FEED (LF)
+<VT>                   /x0B   <U000B> LINE TABULATION (VT)
+<FF>                   /x0C   <U000C> FORM FEED (FF)
+<CR>                   /x0D   <U000D> CARRIAGE RETURN (CR)
+<SO>                   /x0E   <U000E> SHIFT OUT (SO)
+<SI>                   /x0F   <U000F> SHIFT IN (SI)
+<DL>                   /x10   <U0010> DATALINK ESCAPE (DLE)
+<D1>                   /x11   <U0011> DEVICE CONTROL ONE (DC1)
+<D2>                   /x12   <U0012> DEVICE CONTROL TWO (DC2)
+<D3>                   /x13   <U0013> DEVICE CONTROL THREE (DC3)
+<D4>                   /x14   <U0014> DEVICE CONTROL FOUR (DC4)
+<NK>                   /x15   <U0015> NEGATIVE ACKNOWLEDGE (NAK)
+<SY>                   /x16   <U0016> SYNCHRONOUS IDLE (SYN)
+<EB>                   /x17   <U0017> END OF TRANSMISSION BLOCK (ETB)
+<CN>                   /x18   <U0018> CANCEL (CAN)
+<EM>                   /x19   <U0019> END OF MEDIUM (EM)
+<SB>                   /x1A   <U001A> SUBSTITUTE (SUB)
+<EC>                   /x1B   <U001B> ESCAPE (ESC)
+<FS>                   /x1C   <U001C> FILE SEPARATOR (IS4)
+<GS>                   /x1D   <U001D> GROUP SEPARATOR (IS3)
+<RS>                   /x1E   <U001E> RECORD SEPARATOR (IS2)
+<US>                   /x1F   <U001F> UNIT SEPARATOR (IS1)
+<SP>                   /x20   <U0020> SPACE
+<////>                 /x25   <U005C> REVERSE SOLIDUS
+<DT>                   /x7F   <U007F> DELETE (DEL)
+<NUL>                  /x00   <U0000> NUL
+<SOH>                  /x01   <U0001> START OF HEADING (SOH)
+<STX>                  /x02   <U0002> START OF TEXT (STX)
+<ETX>                  /x03   <U0003> END OF TEXT (ETX)
+<EOT>                  /x04   <U0004> END OF TRANSMISSION (EOT)
+<ENQ>                  /x05   <U0005> ENQUIRY (ENQ)
+<ACK>                  /x06   <U0006> ACKNOWLEDGE (ACK)
+<alert>                /x07   <U0007> BELL (BEL)
+<BEL>                  /x07   <U0007> BELL (BEL)
+<backspace>            /x08   <U0008> BACKSPACE (BS)
+<tab>                  /x09   <U0009> CHARACTER TABULATION (HT)
+<newline>              /x0A   <U000A> LINE FEED (LF)
+<vertical-tab>         /x0B   <U000B> LINE TABULATION (VT)
+<form-feed>            /x0C   <U000C> FORM FEED (FF)
+<carriage-return>      /x0D   <U000D> CARRIAGE RETURN (CR)
+<DLE>                  /x10   <U0010> DATALINK ESCAPE (DLE)
+<DC1>                  /x11   <U0011> DEVICE CONTROL ONE (DC1)
+<DC2>                  /x12   <U0012> DEVICE CONTROL TWO (DC2)
+<DC3>                  /x13   <U0013> DEVICE CONTROL THREE (DC3)
+<DC4>                  /x14   <U0014> DEVICE CONTROL FOUR (DC4)
+<NAK>                  /x15   <U0015> NEGATIVE ACKNOWLEDGE (NAK)
+<SYN>                  /x16   <U0016> SYNCHRONOUS IDLE (SYN)
+<ETB>                  /x17   <U0017> END OF TRANSMISSION BLOCK (ETB)
+<CAN>                  /x18   <U0018> CANCEL (CAN)
+<SUB>                  /x1A   <U001A> SUBSTITUTE (SUB)
+<ESC>                  /x1B   <U001B> ESCAPE (ESC)
+<IS4>                  /x1C   <U001C> FILE SEPARATOR (IS4)
+<IS3>                  /x1D   <U001D> GROUP SEPARATOR (IS3)
+<intro>                /x1D   <U001D> GROUP SEPARATOR (IS3)
+<IS2>                  /x1E   <U001E> RECORD SEPARATOR (IS2)
+<IS1>                  /x1F   <U001F> UNIT SEPARATOR (IS1)
+<DEL>                  /x7F   <U007F> DELETE (DEL)
+<space>                /x20   <U0020> SPACE
+<exclamation-mark>     /x00   <U0021> EXCLAMATION MARK
+<quotation-mark>       /x00   <U0022> QUOTATION MARK
+<number-sign>          /x00   <U0023> NUMBER SIGN
+<dollar-sign>          /x00   <U0024> DOLLAR SIGN
+<percent-sign>         /x00   <U0025> PERCENT SIGN
+<ampersand>            /x00   <U0026> AMPERSAND
+<apostrophe>           /x00   <U0027> APOSTROPHE
+<left-parenthesis>     /x00   <U0028> LEFT PARENTHESIS
+<right-parenthesis>    /x00   <U0029> RIGHT PARENTHESIS
+<asterisk>             /x00   <U002A> ASTERISK
+<plus-sign>            /x00   <U002B> PLUS SIGN
+<comma>                /x00   <U002C> COMMA
+<hyphen>               /x00   <U002D> HYPHEN-MINUS
+<hyphen-minus>         /x00   <U002D> HYPHEN-MINUS
+<period>               /x00   <U002E> FULL STOP
+<full-stop>            /x00   <U002E> FULL STOP
+<slash>                /x00   <U002F> SOLIDUS
+<solidus>              /x00   <U002F> SOLIDUS
+<zero>                 /x00   <U0030> DIGIT ZERO
+<one>                  /x00   <U0031> DIGIT ONE
+<two>                  /x00   <U0032> DIGIT TWO
+<three>                /x00   <U0033> DIGIT THREE
+<four>                 /x00   <U0034> DIGIT FOUR
+<five>                 /x00   <U0035> DIGIT FIVE
+<six>                  /x00   <U0036> DIGIT SIX
+<seven>                /x00   <U0037> DIGIT SEVEN
+<eight>                /x00   <U0038> DIGIT EIGHT
+<nine>                 /x00   <U0039> DIGIT NINE
+<colon>                /x00   <U003A> COLON
+<semicolon>            /x00   <U003B> SEMICOLON
+<less-than-sign>       /x00   <U003C> LESS-THAN SIGN
+<equals-sign>          /x00   <U003D> EQUALS SIGN
+<greater-than-sign>    /x00   <U003E> GREATER-THAN SIGN
+<question-mark>        /x00   <U003F> QUESTION MARK
+<commercial-at>        /x00   <U0040> COMMERCIAL AT
+<left-square-bracket>  /x00   <U005B> LEFT SQUARE BRACKET
+<backslash>            /x25   <U005C> REVERSE SOLIDUS
+<reverse-solidus>      /x25   <U005C> REVERSE SOLIDUS
+<right-square-bracket> /x00   <U005D> RIGHT SQUARE BRACKET
+<circumflex>           /x00   <U005E> CIRCUMFLEX ACCENT
+<circumflex-accent>    /x00   <U005E> CIRCUMFLEX ACCENT
+<underscore>           /x00   <U005F> LOW LINE
+<low-line>             /x00   <U005F> LOW LINE
+<grave-accent>         /x00   <U0060> GRAVE ACCENT
+<left-brace>           /x00   <U007B> LEFT CURLY BRACKET
+<left-curly-bracket>   /x00   <U007B> LEFT CURLY BRACKET
+<vertical-line>        /x00   <U007C> VERTICAL LINE
+<right-brace>          /x00   <U007D> RIGHT CURLY BRACKET
+<right-curly-bracket>  /x00   <U007D> RIGHT CURLY BRACKET
+<tilde>                /x00   <U007E> TILDE
+END CHARMAP

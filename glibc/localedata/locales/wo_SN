@@ -1,0 +1,169 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Wolof locale for Senegal
+% Source: The Debian Project
+% Contact: Christian Perrier/Samba Ndao Diop
+% Email: bubulle@debian.org/samba.ndao.diop@tiscali.fr
+% Tel: +33 - 130699222
+% Language: wo
+% Territory: SN
+% Revision: 1.0
+% Date: 2004-09-15
+% Users: general
+
+LC_IDENTIFICATION
+title      "Wolof locale for Senegal"
+source     "The Debian Project"
+address    ""
+contact    "Christian Perrier"
+email      "bubulle@debian.org"
+tel        ""
+fax        ""
+language   "Wolof"
+territory  "Senegal"
+revision   "1.0"
+date       "2004-09-08"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+
+% Accents are simply omitted if they cannot be represented.
+include "translit_combining";""
+
+translit_end
+
+END LC_CTYPE
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1wWyY]"
+noexpr  "^[-0dDnN]"
+yesstr  "waaw"
+nostr   "d<U00E9>edet"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "XOF "
+currency_symbol           "CFA"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             ""
+grouping                  0;0
+END LC_NUMERIC
+
+LC_TIME
+abday   "dib";"alt";/
+        "tal";"all";/
+        "alx";"ajj";/
+        "gaa"
+day     "dib'eer";/
+        "altine";/
+        "talaata";/
+        "allarba";/
+        "alxames";/
+        "ajjuma";/
+        "gaawu"
+abmon   "san";"fee";/
+        "mar";"awr";/
+        "me ";"suw";/
+        "sul";"uut";/
+        "sep";"okt";/
+        "now";"des"
+mon     "sanwiy'e";/
+        "feebriy'e";/
+        "mars";/
+        "awril";/
+        "me";/
+        "suwen";/
+        "sulet";/
+        "uut";/
+        "septaambar";/
+        "oktoobar";/
+        "nowaambar";/
+        "desaambar"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "%a %l"
+int_prefix     "221"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+% %f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% https://wo.wikipedia.org/wiki/Senegaal
+country_name "Senegaal"
+country_ab2 "SN"
+country_ab3 "SEN"
+country_num 686
+country_car "SN"
+lang_name    "Wolof"
+lang_ab      "wo"
+lang_term    "wol"
+lang_lib    "wol"
+END LC_ADDRESS

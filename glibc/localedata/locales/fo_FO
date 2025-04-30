@@ -1,0 +1,147 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Faroese language locale for Faroe Islands
+% Source: Danish Standards Association
+% Address: Kollegievej 6
+%    DK-2920 Charlottenlund, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 39966101
+% Fax: +45 - 39966102
+% Language: fo
+% Territory: FO
+% Revision: 4.3
+% Date: 1996-10-15
+% Users: general
+%
+% Only LC_TIME and LC_MESSAGES are
+% specified here, else use the da_DK locale
+
+LC_IDENTIFICATION
+title      "Faroese locale for Faroe Islands"
+source     "Danish Standards Association"
+address    "Kollegievej 6, DK-2920 Charlottenlund, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Faroese"
+territory  "Faroe Islands"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "da_DK"
+END LC_CTYPE
+
+LC_COLLATE
+copy "da_DK"
+END LC_COLLATE
+
+LC_MONETARY
+copy "da_DK"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "da_DK"
+END LC_NUMERIC
+
+LC_TIME
+abday   "sun";"m<U00E1>n";/
+        "t<U00FD>s";"mik";/
+        "h<U00F3>s";"fr<U00ED>";/
+        "ley"
+day     "sunnudagur";/
+        "m<U00E1>nadagur";/
+        "t<U00FD>sdagur";/
+        "mikudagur";/
+        "h<U00F3>sdagur";/
+        "fr<U00ED>ggjadagur";/
+        "leygardagur"
+abmon   "jan";"feb";/
+        "mar";"apr";/
+        "mai";"jun";/
+        "jul";"aug";/
+        "sep";"okt";/
+        "nov";"des"
+mon     "januar";/
+        "februar";/
+        "mars";/
+        "apr<U00ED>l";/
+        "mai";/
+        "juni";/
+        "juli";/
+        "august";/
+        "september";/
+        "oktober";/
+        "november";/
+        "desember"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d//%m-%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm  ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1JjYy]"
+noexpr  "^[-0Nn]"
+yesstr  "j<U00E1>"
+nostr   "nei"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "298"
+int_select  "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "F<U00F8>royar"
+country_ab2 "FO"
+country_ab3 "FRO"
+country_num 234
+country_car  "FO"
+% føroyskt
+lang_name    "f<U00F8>royskt"
+lang_ab      "fo"
+lang_term    "fao"
+END LC_ADDRESS

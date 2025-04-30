@@ -1,0 +1,315 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+.NS 24 "Target Machine" "Appendix III - "
+.de DN
+.nf
+    \\*(cf\\$1\\*(rf
+.fi
+..
+.de DA
+.nf
+	    \\*(cf\\$1\\*(rf
+.fi
+..
+.sh 2 Introduction
+This appendix defines the idiosyncracies of the target machine
+architecture: presence of divide instructions, byte ordering, size
+requirements of data types, how shifts are
+done, etc.  The target machine characteristics are defined using C macros and
+structures.  These are included by the compiler so that it can test for the
+presence of a characteristic or determine how an action is to be performed on
+the target machine for constant folding.  Those machine characteristics that
+cannot be implemented with C macros are implemented in code.
+.lp
+There are two classes of macros that can be defined; characteristic macros and
+action macros.  Characteristic macros are used as simple boolean flags that
+indicate the presence or absence of a particular machine capability.  For
+example, there would be a characteristic macro defined for the integer divide
+capability.  If the target machine did not have that capability then a
+characteristic macro would not be defined for that capability.
+.lp
+Action macros communicate to the compiler a value or how an operation
+is to be performed for constant folding.
+An example of a value is the threshold for breaking blocks.
+An example of an operation is the shift operation.
+The compiler needs to know what code \fIit\fP must execute when constant
+folding a shift operation.
+.lp
+The following table lists the possible characteristic macros.  Those
+characteristics that are present for this target machine are indicated in
+the activated column.
+.lp
+.TS
+tab (%) center;
+cp12w(1n) sp12 sp12
+lw(1n) l l c.
+Characteristic Macros
+%Macro Name%Description%Activated
+=
+.T&
+lw(1n) lfCW | l | c.
+%TM_BIG_ENDIAN%big endian byte order%no
+%TM_UIDIV%unsigned integer divide instruction%yes
+%TM_IDIV%integer divide instruction%yes
+%TM_UIMOD%unsigned integer divide instruction%yes
+%TM_IMOD%integer divide instruction%yes
+%TM_IDIV2%divide by power of 2 instruction%no
+%TM_FDIV%single precision divide instruction%yes
+%TM_DDIV%double precision divide instruction%yes
+%TM_UICMP%unsigned integer compare instruction%yes
+%TM_SQRT%square root instruction%yes
+%TM_FIELD_INST%bit field support instructions%no
+%TM_64BIT%64 bit stack, pointer, long%no
+%TM_LPCNT%loop counter instruction%no
+%TM_LPCMP%loop compare & branch instructions%no
+%TM_LPSIGN%loop counter is a signed quantity%yes
+%TM_PREFER_SIGNED%signed byte/halfwd loads vs. unsigned%no
+%TM_AUTOINC_IR%auto increment when addressing ints/pointers%no
+%TM_AUTOINC_FP%auto increment when addressing single/double%no
+%TM_FCMPZ%single precision compare with zero%no
+%TM_DCMPZ%double precision compare with zero%no
+%TM_QCMPZ%quad precision compare with zero%no
+%TM_FCJMPZ%single precision compare with zero and jump%yes
+%TM_DCJMPZ%double precision compare with zero and jump%yes
+%TM_QCJMPZ%quad precision compare with zero and jump%yes
+%TM_I8%integer*8 (long long)%yes
+.TE
+.lp
+The list of code macros used by this compiler and machine architecture are:
+.np
+For certain targets, it's advantageous for both compile
+and execution time to limit the size of the
+.cw ILI
+blocks produced by the front-end.
+Block breaking is performed by limiting the number of consecutive
+.cw ILM
+blocks which can be used to produce a single
+.cw ILI
+block.
+The threshold is simply the number of
+.cw ILM
+words seen in the
+.cw ILM
+block(s) from which the
+.cw ILI where generated.
+If block breaking is not needed, this value should be a large
+32-bit integer where the expression value + value/2 does not
+overflow.
+.DN TM_ILM_THRESH
+.DA "0x10000000"
+.np
+Constant fold shift per target machine; operand which is shifted is a
+signed quantity.
+.DN LSHIFT(x,y) 
+.DA "( (x) << (y) )"
+.DN RSHIFT(x,y) 
+.DA "( (x) >> (y) )"
+.np
+Constant fold shift per target machine; operand which is shifted is an
+unsigned quantity.
+.DN ULSHIFT(x,y) 
+.DA "( (x) << (y) )"
+.DN URSHIFT(x,y) 
+.DA "((unsigned int) (x) >> (y) )"
+.np
+Arithmetic right shift.
+.DN ARSHIFT(x,y) 
+.DA "( (x) & 0x80000000 ?"
+.DA "( (unsigned)(x) >> (y) ) | ( (~0u) << (32-(y)) ) :"
+.DA "(x) >> (y) )"
+.np
+Test validity of shift amount for this machine.
+.DN SHIFTOK(x) 
+.DA "((x) >= 0 && (x) <= 31 ? true : false)"
+.np
+Correct shift count if it fails SHIFTOK.
+.DN SHIFT_FIX(x)
+.DA "((x)&31)"
+.lp
+Also, specific to a particular machine architecture is the size and alignment
+requirements of the various data types in the language.  The structure  
+\*(cfdtypeinfo\*(rf is indexed by the data type to determine the size 
+and alignment requirements for that data type.
+.lp
+The data types, their sizes, and alignment requirements for this compiler and
+target machaine are listed in the following table.
+.(b
+.TS
+tab (%) center;
+cw(1n)p12 sp12 sp12 sp12 sp12 sp12 sp12
+lw(1n) l l l l l l l.
+Data Type Information
+%Data Type%Size%Align%Bits%Scale%Fval
+=
+.T&
+lw(1n) lfCW | l | l | l | l | l | l.
+%TY_WORD%4%3%32%0%reg0%Unsigned Integer
+%TY_DWORD%8%7%32%0%reg3%Unsigned Integer
+%TY_BINT%1%0%8%0%reg0%Byte Integer
+%TY_SINT%2%1%16%0%reg0%Short Integer
+%TY_INT%4%3%32%0%reg0%Integer
+%TY_HALF%2%1%16%0%reg1%Half Precision Real
+%TY_REAL%4%3%32%0%reg1%Floating Point Real
+%TY_DBLE%8%7%64%0%reg2%Double Precision Real
+%TY_QUAD%16%15%128%0%reg2%Quad Precision Real
+%TY_HCMPLX%4%1%32%0%mem0%half precision complex
+%TY_CMPLX%8%3%64%0%mem0%Complex
+%TY_DCMPLX%16%7%128%0%mem1%Double Precision Complex
+%TY_QCMPLX%32%15%256%0%mem1%Quad Precision Complex
+%TY_BLOG%1%0%8%0%reg0%Byte Logical
+%TY_SLOG%2%1%16%0%reg0%Short Logical
+%TY_LOG%4%3%32%0%reg0%Logical
+%TY_CHAR%1%0%8%0%mem2%Character
+%TY_INT8%8%7%64%0%reg3%Integer*8
+%TY_LOG8%8%7%64%0%reg3%Logical*8
+%TY_128%16%15%128%0%reg%128-bit
+%TY_PTR%8%7%64%0%reg0%Address of 
+%TY_NCHAR%2%1%16%0%mem2%Kanji Character String
+%TY_256%32%31%256%0%reg%256-bit
+%TY_512%64%63%512%0%reg%512-bit
+%TY_INT128%16%15%128%0%reg%integer*16
+%TY_LOG128%16%15%128%0%reg%Logical*16
+%TY_FLOAT128%16%15%128%0%reg%real*16
+%TY_CMPLX128%32%15%128%0%reg%complex*32
+%TY_UBINT%1%0%8%0%reg0%Unsigned Byte Integer
+%TY_USINT%2%1%16%0%reg0%Unsigned Short Integer
+%TY_UINT%4%3%32%0%reg0%Unsigned Integer
+%TY_UINT8%8%7%64%0%reg3%Unsigned Integer*8
+%TY_UINT128%16%15%128%0%reg%uinteger*16 
+.TE
+.)b
+.sh 2 "Target Machine Characteristics Utility (MACHAR)"
+MACHAR reads the nroff source for this appendix and extracts information to
+build the C include files containing the macro definitions for the target
+machine characteristics, actions, and data type information.
+MACHAR also reads \*(ffsymtab.h\*(rf for a specific compiler to determine what the
+list of data types are.  If either of the input files change then MACHAR must
+be rerun.
+.sh 3 Inputs
+MACHAR reads two input files:
+.np
+.i machar.n
+\(em Target machine characteristics file.  Defines the target machine
+characteristics.  This file contains the nroff source for this appendix 
+so that this appendix as well as the C macro files can be generated 
+from the same source file.  It contains nroff macros and tbl commands that are
+also recognized as directives to MACHAR.  The following kinds of directive lines
+are used:
+.ba +5
+.ip "(a)"
+Define action name lines of the form:
+.nr bi 0
+.(b
+.CS
+\&.DN actionname
+.CE
+.)b
+.ba +5
+.ip "\*(cfactionname\*(rf" 13
+the name of the action to define such as \*(cfLSHIFT\*(rf.
+.ba -5
+.ip "(b)"
+Define action lines of the form:
+.(b
+.CS 
+\&.DA "action"
+.CE
+.)b
+.ba +5
+.ip "\*(cfaction\*(rf" 9
+the C macro code the compiler uses to perform the action given by actionname.
+Action must be enclosed in double quotes.
+One or more \*(cf.DA\*(rf lines must be specified for a macro 
+containing macro code.  The \*(cf.DA\*(rf line(s) are associated 
+with the most recently encountered actionname.  More than one 
+\&\*(cf.DA\*(rf line may be required to express very large macro 
+definitions.  C continuation characters are not required on multiple action
+lines.
+.ba -5
+.ip "(c)"
+Define characteristic lines:
+.(b
+.CS
+\&%TM_char%description%present
+.CE
+.)b
+.ba +5
+.ip "\*(crTM_char\*(rf" 12
+the target machine characteristic to define.  For example, \*(cfTM_UIDIV\*(rf.
+.ip "\*(crdescription\*(rf" 12
+a short description of what the characteristic is.
+.ip "\*(crpresent\*(rf" 12
+a value of yes or no indicating whether this macro is defined for this
+architecture.
+.ba -5
+.ip "(d)"
+Define data type size and alignment lines:
+.(b
+.CS
+\&%TY_type%size%align%bits%scale%fval%description
+.CE
+.)b
+.ba +5
+.ip "\*(cfTY_type\*(rf" 12
+the data type to be specified.  For example, \*(cfTY_DBLE\*(rf.
+The possible values for type are listed above.
+.ip "\*(crsize\*(rf" 12
+the number of bytes required for datatype.
+.ip "\*(cralign\*(rf" 12
+the number of bytes required to align datatype properly.
+This value is added to the current byte address to ensure that
+the desired data type starts on an address consistent with its alignment
+requirements.  For example, byte integers' value would be zero since 
+they need only start on byte boundaries.  Data types requiring alignment on
+2-byte boundaries would use a value of one.
+.ip "\*(crbits\*(rf" 12
+the number of bits required for datatype.
+.ip "\*(crscale\*(rf" 12
+the scaling factor allowed for datatype.
+An architecture may allow an index (subscript)
+to be scaled when involved in an effective address calculation.
+This value indicates the scaling factor which can be applied to a
+subscript instead of multiplying the subscript by the datatype's
+size.
+This value is the number of bits the subscript is scaled (shifted left).
+For example, a double could have a scaling factor of
+3 (the subscript is shifted left 3 positions).
+Note that a value of 0 implies either a byte datatype or that
+the architecture does not allow scaling of subscripts.
+.ip "\*(crfval\*(rf" 12
+indicates how the value of a function of this type is returned and
+also indicates the return group to which the function belongs (i.e.,
+certain function return types are returned in the same register).
+The possible values are 'reg<d>' (value is returned in a
+register), 'mem<d>' (value is returned in a temporary and its address
+is an implicit argument to the function), and 'na' (not applicable).
+\*(cf<d>\*(rf is a digit (0, 1, 2, etc.) indicating the group.
+These values are stored in the \*(cfdtypeinfo\*(rf array.
+A value of -1 indicates 'na'.
+Otherwise, the value is divided
+into two fields:  the rightmost 2 bits indicate 'reg' or 'mem' (0, 1,
+respectively).  The remaining bits represent the group value (0, 1, etc.).
+.ip "description" 12
+a textual description of the data type.
+.ba -10
+.np
+.i symtab.h
+\(em the output file produced by the SYMINI utility.  This file is scanned for
+data type definitions, for example \*(cfTY_INT\*(rf to determine their 
+numeric value.  This is done to guarantee that the \*(cfdtypeinfo\*(rf 
+array is initialized in the correct order.
+.EP
+.sh 3 Outputs
+MACHAR produces two output files.
+.nr ii 5
+.np
+.i machar.h
+\(em contains the C macro definitions for characteristics and actions.
+.np
+.i machardf.h
+\(em contains the \*(cfdtypeinfo\*(rf array containing data type size 
+and alignment information.

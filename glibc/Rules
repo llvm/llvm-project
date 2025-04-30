@@ -1,0 +1,388 @@
+# Copyright (C) 1991-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+#
+#	Rules for making a subdirectory in the GNU C library.
+#	Each subdirectory Makefile defines some variables and includes this.
+#
+ifneq (,)
+This makefile requires GNU Make.
+endif
+
+all: # Don't let the default goal come from Makeconfig.
+
+include $(firstword $(..) ../)Makeconfig
+
+ifndef	subdir
+Each subdirectory makefile must define the `subdir' variable.
+endif
+# This ` unconfuses emacs.
+# This is benign and useless in GNU make before 3.63.
+export subdir := $(subdir)
+
+# This is the default target; it makes the library and auxiliary programs.
+.PHONY: all
+all: objs lib others
+
+ifeq ($(build-programs),yes)
+others: $(addprefix $(objpfx),$(extra-objs) \
+			      $(install-lib) \
+			      $(install-bin) $(install-bin-script) \
+			      $(install-rootsbin) $(install-sbin))
+else
+others: $(addprefix $(objpfx),$(extra-objs) \
+			      $(install-lib))
+endif
+
+ifneq	"$(findstring env,$(origin headers))" ""
+headers :=
+endif
+
+ifneq	"$(findstring env,$(origin generated))" ""
+generated :=
+endif
+
+ifneq	"$(findstring env,$(origin common-generated))" ""
+common-generated :=
+endif
+
+# See below.  This must be set before Makerules processes it.
+before-compile += $(common-objpfx)bits/stdio_lim.h
+
+include $(..)Makerules
+
+.PHONY: subdir_lib
+subdir_lib: lib-noranlib
+
+# Some subdirs need to install a dummy library.
+# They can use "$(objpfx)libfnord.a: $(dep-dummy-lib); $(make-dummy-lib)".
+dep-dummy-lib = $(common-objpfx)dummy.o
+define make-dummy-lib
+$(AR) cr$(verbose) $@ $<
+endef
+
+$(common-objpfx)dummy.c:
+	rm -f $@
+	(echo 'extern void __dummy__ (void);'; \
+	 echo 'void __dummy__ (void) { }') > $@
+common-generated += dummy.o dummy.c
+
+ifneq "$(headers)" ""
+# Test that all of the headers installed by this directory can be compiled
+# in isolation.
+tests-special += $(objpfx)check-installed-headers-c.out
+libof-check-installed-headers-c := testsuite
+$(objpfx)check-installed-headers-c.out: \
+    $(..)scripts/check-installed-headers.sh $(headers)
+	$(SHELL) $(..)scripts/check-installed-headers.sh c \
+	  "$(CC) $(filter-out -std=%,$(CFLAGS)) -D_ISOMAC $(+includes)" \
+	  $(headers) > $@; \
+	$(evaluate-test)
+
+ifneq "$(CXX)" ""
+# If a C++ compiler is available, also test that they can be compiled
+# in isolation as C++.
+tests-special += $(objpfx)check-installed-headers-cxx.out
+libof-check-installed-headers-cxx := testsuite
+$(objpfx)check-installed-headers-cxx.out: \
+    $(..)scripts/check-installed-headers.sh $(headers)
+	$(SHELL) $(..)scripts/check-installed-headers.sh c++ \
+	  "$(CXX) $(filter-out -std=%,$(CXXFLAGS)) -D_ISOMAC $(+includes)" \
+	  $(headers) > $@; \
+	$(evaluate-test)
+endif # $(CXX)
+
+# Test that a wrapper header exists in include/ for each non-sysdeps header.
+# This script does not need $(py-env).
+tests-special += $(objpfx)check-wrapper-headers.out
+$(objpfx)check-wrapper-headers.out: \
+  $(..)scripts/check-wrapper-headers.py $(headers)
+	$(PYTHON) $< --root=$(..) --subdir=$(subdir) $(headers) > $@; \
+	  $(evaluate-test)
+
+# Test that none of the headers installed by this directory use certain
+# obsolete constructs (e.g. legacy BSD typedefs superseded by stdint.h).
+# This script does not need $(py-env).
+tests-special += $(objpfx)check-obsolete-constructs.out
+libof-check-obsolete-constructs := testsuite
+$(objpfx)check-obsolete-constructs.out: \
+    $(..)scripts/check-obsolete-constructs.py $(headers)
+	$(PYTHON) $^ > $@ 2>&1; \
+	$(evaluate-test)
+
+endif # $(headers)
+
+# This makes all the auxiliary and test programs.
+
+.PHONY: others tests bench bench-build
+
+# Test programs for the pretty printers.
+tests-printers-programs := $(addprefix $(objpfx),$(tests-printers))
+
+# .out files with the output of running the pretty printer tests.
+tests-printers-out := $(patsubst %,$(objpfx)%.out,$(tests-printers))
+
+ifeq ($(build-programs),yes)
+others: $(addprefix $(objpfx),$(others) $(sysdep-others) $(extra-objs))
+else
+others: $(addprefix $(objpfx),$(extra-objs))
+endif
+
+# Generate constant files for Python pretty printers if required.
+others: $(py-const)
+
+ifeq ($(run-built-tests),no)
+tests: $(addprefix $(objpfx),$(filter-out $(tests-unsupported), \
+                                          $(tests) $(tests-internal) \
+					  $(tests-container)) \
+			     $(test-srcs)) $(tests-special) \
+			     $(tests-printers-programs)
+xtests: tests $(xtests-special)
+else
+tests: $(tests:%=$(objpfx)%.out) $(tests-internal:%=$(objpfx)%.out) \
+       $(tests-container:%=$(objpfx)%.out) \
+       $(tests-mcheck:%=$(objpfx)%-mcheck.out) \
+       $(tests-malloc-check:%=$(objpfx)%-malloc-check.out) \
+       $(tests-special) $(tests-printers-out)
+xtests: tests $(xtests:%=$(objpfx)%.out) $(xtests-special)
+endif
+
+tests-special-notdir = $(patsubst $(objpfx)%, %, $(tests-special))
+xtests-special-notdir = $(patsubst $(objpfx)%, %, $(xtests-special))
+ifeq ($(run-built-tests),no)
+tests-expected =
+else
+tests-expected = $(tests) $(tests-internal) $(tests-printers) \
+	$(tests-container) $(tests-malloc-check:%=%-malloc-check) \
+	$(tests-mcheck:%=%-mcheck)
+endif
+tests:
+	$(..)scripts/merge-test-results.sh -s $(objpfx) $(subdir) \
+	  $(sort $(tests-expected) $(tests-special-notdir:.out=)) \
+	  > $(objpfx)subdir-tests.sum
+xtests:
+	$(..)scripts/merge-test-results.sh -s $(objpfx) $(subdir) \
+	  $(sort $(xtests) $(xtests-special-notdir:.out=)) \
+	  > $(objpfx)subdir-xtests.sum
+
+ifeq ($(build-programs),yes)
+binaries-all-notests = $(others) $(sysdep-others)
+binaries-all-tests = $(tests) $(tests-internal) $(xtests) $(test-srcs) \
+		     $(tests-container)
+binaries-all = $(binaries-all-notests) $(binaries-all-tests)
+binaries-static-notests = $(others-static)
+binaries-static-tests = $(tests-static) $(xtests-static)
+binaries-static = $(binaries-static-notests) $(binaries-static-tests)
+ifeq (yesyes,$(have-fpie)$(build-shared))
+binaries-pie-tests = $(tests-pie) $(xtests-pie)
+binaries-pie-notests = $(others-pie)
+else
+binaries-pie-tests =
+binaries-pie-notests =
+endif
+binaries-mcheck-tests = $(tests-mcheck:%=%-mcheck)
+binaries-malloc-check-tests = $(tests-malloc-check:%=%-malloc-check)
+else
+binaries-all-notests =
+binaries-all-tests = $(tests) $(tests-internal) $(xtests) $(test-srcs)
+binaries-all = $(binaries-all-tests)
+binaries-static-notests =
+binaries-static-tests =
+binaries-static =
+binaries-pie-tests =
+binaries-pie-notests =
+binaries-mcheck-tests =
+binaries-malloc-check-tests =
+endif
+
+binaries-pie = $(binaries-pie-tests) $(binaries-pie-notests)
+binaries-shared-tests = $(filter-out $(binaries-pie) $(binaries-static), \
+				     $(binaries-all-tests))
+binaries-shared-notests = $(filter-out $(binaries-pie) $(binaries-static), \
+				       $(binaries-all-notests))
+
+ifneq "$(strip $(binaries-shared-notests))" ""
+$(addprefix $(objpfx),$(binaries-shared-notests)): %: %.o \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link)
+endif
+
+ifneq "$(strip $(binaries-shared-tests))" ""
+$(addprefix $(objpfx),$(binaries-shared-tests)): %: %.o \
+  $(link-extra-libs-tests) \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-tests)
+endif
+
+ifneq "$(strip $(binaries-mcheck-tests))" ""
+$(addprefix $(objpfx),$(binaries-mcheck-tests)): %-mcheck: %.o \
+  $(link-extra-libs-tests) \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc))) \
+  $(common-objpfx)malloc/libmcheck.a \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-tests)
+endif
+
+ifneq "$(strip $(binaries-malloc-check-tests))" ""
+$(addprefix $(objpfx),$(binaries-malloc-check-tests)): %-malloc-check: %.o \
+  $(link-extra-libs-tests) \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-tests)
+endif
+
+ifneq "$(strip $(binaries-pie-tests))" ""
+$(addprefix $(objpfx),$(binaries-pie-tests)): %: %.o \
+  $(link-extra-libs-tests) \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-pie-tests)
+endif
+
+ifneq "$(strip $(binaries-pie-notests))" ""
+$(addprefix $(objpfx),$(binaries-pie-notests)): %: %.o \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-pie)
+endif
+
+ifneq "$(strip $(binaries-static-notests))" ""
+$(addprefix $(objpfx),$(binaries-static-notests)): %: %.o \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc-static))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-static)
+endif
+
+ifneq "$(strip $(binaries-static-tests))" ""
+$(addprefix $(objpfx),$(binaries-static-tests)): %: %.o \
+  $(link-extra-libs-tests) \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc-static-tests))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-static-tests)
+endif
+
+# All malloc-check tests will be run with MALLOC_CHECK_=3
+define malloc-check-ENVS
+$(1)-malloc-check-ENV = MALLOC_CHECK_=3 \
+			LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
+endef
+$(foreach t,$(tests-malloc-check),$(eval $(call malloc-check-ENVS,$(t))))
+
+# mcheck tests need the debug DSO to support -lmcheck.
+define mcheck-ENVS
+$(1)-mcheck-ENV = LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
+endef
+$(foreach t,$(tests-mcheck),$(eval $(call mcheck-ENVS,$(t))))
+
+ifneq "$(strip $(tests) $(tests-internal) $(xtests) $(test-srcs))" ""
+# These are the implicit rules for making test outputs
+# from the test programs and whatever input files are present.
+
+define make-test-out
+$(if $($*-ENV-only),$(test-wrapper-env-only) $($*-ENV-only),\
+     $(test-wrapper-env) $(run-program-env) $($*-ENV)) \
+$(host-test-program-cmd) $($*-ARGS)
+endef
+$(objpfx)%.out: %.input $(objpfx)%
+	$(make-test-out) > $@ < $(word 1,$^); \
+	$(evaluate-test)
+$(objpfx)%.out: /dev/null $(objpfx)%	# Make it 2nd arg for canned sequence.
+	$(make-test-out) > $@; \
+	$(evaluate-test)
+
+
+# Any tests that require an isolated container (filesystem, network
+# and pid namespaces) in which to run, should be added to
+# tests-container.
+$(tests-container:%=$(objpfx)%.out): $(objpfx)%.out : $(if $(wildcard $(objpfx)%.files),$(objpfx)%.files,/dev/null) $(objpfx)%
+	$(test-wrapper-env) $(run-program-env) $(run-via-rtld-prefix) \
+	  $(common-objpfx)support/test-container env $(run-program-env) $($*-ENV) \
+	  $(host-test-program-cmd) $($*-ARGS) > $@; \
+	$(evaluate-test)
+
+
+# tests-unsupported lists tests that we will not try to build at all in
+# this configuration.  Note this runs every time because it does not
+# actually create its target.  The dependency on Makefile is meant to
+# ensure that it runs after a Makefile change to add a test to the list
+# when it previously ran and produced a .out file (probably for a failure).
+ifneq "$(strip $(tests-unsupported))" ""
+$(tests-unsupported:%=$(objpfx)%.out): $(objpfx)%.out: Makefile
+	@rm -f $@
+	$(..)scripts/evaluate-test.sh $(patsubst $(common-objpfx)%.out,%,$@) \
+				      77 false false > $(@:.out=.test-result)
+endif
+
+endif	# tests
+
+ifneq "$(strip $(tests-printers))" ""
+
+# Static pattern rule for building the test programs for the pretty printers.
+$(tests-printers-programs): %: %.o $(tests-printers-libs) \
+  $(sort $(filter $(common-objpfx)lib%,$(link-libc-static-tests))) \
+  $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
+	$(+link-printers-tests)
+
+# Add the paths to the generated constants file and test_common_printers.py
+# to PYTHONPATH so the test scripts can find them.
+py-env := PYTHONPATH=$(py-const-dir):$(..)scripts:$${PYTHONPATH}
+
+# Static pattern rule that matches the test-* targets to their .c and .py
+# prerequisites.  It'll run the corresponding test script for each test program
+# we compiled and place its output in the corresponding .out file.
+# The pretty printer files and test_common_printers.py must be present for all.
+$(tests-printers-out): $(objpfx)%.out: $(objpfx)% %.py %.c $(pretty-printers) \
+		       $(..)scripts/test_printers_common.py
+	$(test-wrapper-env) $(py-env) \
+	    $(PYTHON) $*.py $*.c $(objpfx)$* $(pretty-printers) > $@; \
+	$(evaluate-test)
+endif
+
+
+.PHONY: distclean realclean subdir_distclean subdir_realclean \
+	subdir_clean subdir_mostlyclean subdir_testclean
+subdir_mostlyclean: mostlyclean
+subdir_clean: clean
+subdir_distclean: distclean
+subdir_realclean: realclean
+subdir_testclean: do-tests-clean
+realclean: distclean
+distclean: clean
+
+# We want to install everything except the library itself, but update all
+# our portions of the library because the parent make will install it later
+# (likewise the stubs file).
+.PHONY: subdir_install
+subdir_install: install-no-libc.a lib-noranlib stubs
+
+.PHONY: subdir_objs subdir_stubs
+subdir_objs: objs
+subdir_stubs: stubs
+
+# Target required by the Hurd to ensure that all the MiG-generated
+# headers are in place before building a subdirectory.
+.PHONY: before-compile
+before-compile: $(before-compile)
+
+$(common-objpfx)dummy.o: $(common-objpfx)dummy.c $(before-compile);
+	$(compile-command.c)
+
+# Local Variables:
+# mode: makefile
+# End:

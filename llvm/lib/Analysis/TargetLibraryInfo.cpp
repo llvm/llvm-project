@@ -40,7 +40,9 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::ArmPL, "ArmPL",
                           "Arm Performance Libraries"),
                clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
-                          "AMD vector math library")));
+                          "AMD vector math library"),
+               clEnumValN(TargetLibraryInfoImpl::PGMATH, "PGMATH",
+                          "PGI math library")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
@@ -900,17 +902,17 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   initializeLibCalls(TLI, T, StandardNames);
 }
 
-TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
+TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) : T(T) {
   // Default to nothing being available.
   memset(AvailableArray, 0, sizeof(AvailableArray));
-  initializeBase(*this, Triple());
+  initializeBase(*this, T);
 }
 
-TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
+TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
-  initialize(*this, T, StandardNames);
+  initialize(*this, Triple(), StandardNames);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
@@ -918,7 +920,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), T(TLI.T) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
@@ -930,7 +932,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), T(TLI.T) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -944,6 +946,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  T = TLI.T;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
 }
@@ -955,6 +958,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  T = TLI.T;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   return *this;
@@ -1321,6 +1325,27 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   }
   case AMDLIBM: {
     addVectorizableFunctions(VecFuncs_AMDLIBM);
+    break;
+  }
+  // NOTE: All routines listed here are not available on all the architectures.
+  // Based on the size of vector registers available and the size of data, the
+  // vector width should be chosen correctly.
+  case PGMATH: {
+    if (T.getArch() == Triple::aarch64) {
+      const VecDesc VecFuncs[] = {
+      #define TLI_DEFINE_PGMATH_AARCH64_VECFUNCS
+      #include "llvm/Analysis/VecFuncs.def"
+      #undef TLI_DEFINE_PGMATH_AARCH64_VECFUNCS
+      };
+      addVectorizableFunctions(VecFuncs);
+    } else if (T.getArch() == Triple::x86_64) {
+      const VecDesc VecFuncs[] = {
+      #define TLI_DEFINE_PGMATH_X86_VECFUNCS
+      #include "llvm/Analysis/VecFuncs.def"
+      #undef TLI_DEFINE_PGMATH_X86_VECFUNCS
+      };
+      addVectorizableFunctions(VecFuncs);
+    }
     break;
   }
   case NoLibrary:

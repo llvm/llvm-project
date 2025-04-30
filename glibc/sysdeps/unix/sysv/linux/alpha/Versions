@@ -1,0 +1,105 @@
+libc {
+  GLIBC_2.0 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+
+    # Unfortunately in wider use.
+    _inb; _inw; _inl; _outb; _outw; _outl; _bus_base; _bus_base_sparse;
+    _hae_shift;
+
+    # Exception handling support functions from libgcc
+    __register_frame; __register_frame_table; __deregister_frame;
+    __frame_state_for; __register_frame_info_table;
+
+    # b*
+    bus_base; bus_base_sparse;
+
+    # h*
+    hae_shift;
+
+    # i*
+    inb; inl; inw; ioperm; iopl;
+
+    # o*
+    outb; outl; outw;
+
+    # p*
+    pciconfig_read; pciconfig_write; sethae;
+  }
+  GLIBC_2.1 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+
+    # Linux/Alpha 64-bit timeval functions.
+    __select; select;
+    adjtime; adjtimex; __adjtimex;
+    __gettimeofday;
+
+    # glob interface change
+    glob; globfree;
+
+    # limit type change
+    getrusage;
+
+    # time type change
+    gettimeofday; getitimer;
+
+    # i*
+    ieee_get_fp_control; ieee_set_fp_control;
+
+    # s*
+    setitimer; settimeofday;
+
+    # u*
+    utimes;
+
+    # w*
+    wait4;
+  }
+  GLIBC_2.1.4 {
+    pciconfig_iobase;
+  }
+  GLIBC_2.2.2 {
+    # w*
+    wordexp;
+  }
+  GLIBC_2.3 {
+    _sys_errlist;
+    _sys_nerr;
+    aio_cancel64;
+    aio_cancel;
+    sys_errlist;
+    sys_nerr;
+  }
+  GLIBC_2.3.3 {
+    # Changed PTHREAD_STACK_MIN.
+    pthread_attr_setstack;
+    pthread_attr_setstacksize;
+  }
+  GLIBC_2.4 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.12 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.16 {
+    _sys_errlist; sys_errlist; _sys_nerr; sys_nerr;
+  }
+  GLIBC_2.27 {
+    getrlimit; setrlimit; getrlimit64; setrlimit64;
+  }
+  GLIBC_2.34 {
+    aio_cancel64;
+  }
+  GLIBC_PRIVATE {
+    __libc_alpha_cache_shape;
+  }
+}
+ld {
+  GLIBC_PRIVATE {
+    __libc_alpha_cache_shape;
+  }
+}
+librt {
+  GLIBC_2.3 {
+    __librt_version_placeholder;
+  }
+}

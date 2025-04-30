@@ -1,0 +1,192 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Catalan Language Locale for Spain
+% Source: RAP
+% Contact: Jordi Mallach
+% Email: jordi@gnu.org
+% Tel:
+% Fax:
+% Language: ca
+% Territory: ES
+% Revision: 0.1
+% Date: 1999-08-11
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Catalan locale for Spain"
+source     "RAP"
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Catalan"
+territory  "Spain"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "es_ES"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1sSyY]"
+noexpr  "^[-0nN]"
+yesstr  "s<U00ED>"
+nostr   "no"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol      "EUR "
+currency_symbol      "<U20AC>"
+mon_decimal_point    ","
+mon_thousands_sep    "."
+mon_grouping         3;3
+positive_sign        ""
+negative_sign        "-"
+int_frac_digits      2
+frac_digits          2
+p_cs_precedes        0
+p_sep_by_space       1
+n_cs_precedes        0
+n_sep_by_space       1
+p_sign_posn          1
+n_sign_posn          1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point        ","
+thousands_sep        "."
+grouping             3;3
+END LC_NUMERIC
+
+LC_TIME
+abday      "dg.";"dl.";"dt.";"dc.";"dj.";"dv.";"ds."
+day        "diumenge";/
+           "dilluns";/
+           "dimarts";/
+           "dimecres";/
+           "dijous";/
+           "divendres";/
+           "dissabte"
+ab_alt_mon "gen.";/
+           "febr.";/
+           "mar<U00E7>";/
+           "abr.";/
+           "maig";/
+           "juny";/
+           "jul.";/
+           "ag.";/
+           "set.";/
+           "oct.";/
+           "nov.";/
+           "des."
+abmon      "de gen.";/
+           "de febr.";/
+           "de mar<U00E7>";/
+           "d<U2019>abr.";/
+           "de maig";/
+           "de juny";/
+           "de jul.";/
+           "d<U2019>ag.";/
+           "de set.";/
+           "d<U2019>oct.";/
+           "de nov.";/
+           "de des."
+alt_mon    "gener";/
+           "febrer";/
+           "mar<U00E7>";/
+           "abril";/
+           "maig";/
+           "juny";/
+           "juliol";/
+           "agost";/
+           "setembre";/
+           "octubre";/
+           "novembre";/
+           "desembre"
+mon        "de gener";/
+           "de febrer";/
+           "de mar<U00E7>";/
+           "d<U2019>abril";/
+           "de maig";/
+           "de juny";/
+           "de juliol";/
+           "d<U2019>agost";/
+           "de setembre";/
+           "d<U2019>octubre";/
+           "de novembre";/
+           "de desembre"
+d_t_fmt    "%A, %-d %B de %Y, %T"
+date_fmt   "%A, %-d %B de %Y, %T %Z"
+d_fmt      "%-d//%-m//%y"
+t_fmt      "%T"
+am_pm      "a. m.";/
+           "p. m."
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt  "+%c %a %l"
+int_prefix   "34"
+int_select   "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt     "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Espanya"
+country_ab2  "ES"
+country_ab3  "ESP"
+country_num  724
+country_car  "E"
+% català
+lang_name    "catal<U00E0>"
+lang_ab      "ca"
+lang_term    "cat"
+lang_lib     "cat"
+END LC_ADDRESS

@@ -63,6 +63,41 @@ def compress : Flag<["--"], "compress">,
 def compression_level_eq : Joined<["--"], "compression-level=">,
   Flags<[WrapperOnlyOption]>, HelpText<"Specify the compression level (integer)">;
 
+// NextSilicon LTO flags
+def lto_next_silicon_ir_fixup
+    : Flag<["--"], "device-lto-next-silicon-ir-fixup">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"IR manipulations for NextSilicon enriched binaries">;
+def lto_next_silicon_ir_builtins
+    : Flag<["--"], "device-lto-next-silicon-ir-builtins">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Convert unsupported instructions to IR builtin libcalls">;
+def lto_next_silicon_import_recursion
+    : Flag<["--"], "device-lto-next-silicon-import-recursion">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Infer ns-import-recursion metadata from ns location marks">;
+def lto_next_silicon_relocate_variadic
+    : Flag<["--"], "device-lto-next-silicon-relocate-variadic">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Relocate variadic function calls to thunks">;
+def lto_next_silicon_atomic_fixup
+    : Flag<["--"], "device-lto-next-silicon-atomic-fixup">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"IR manipulations for NextSilicon atomic operations">;
+def lto_next_silicon_split_call_sites
+    : Flag<["--"], "device-lto-next-silicon-split-call-sites">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Split blocks with multiple call sites">;
+def lto_embed_symbol_trackers
+    : Flag<["--"], "device-lto-embed-symbol-trackers">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Embed symbol trackers after LTO optimization pipeline">;
+def lto_next_silicon_warn_unsupported_omp
+    : Flag<["--"], "device-lto-next-silicon-warn-unsupported-omp">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Warn about calls to OMP functions unsupported on NextSilicon "
+               "device">;
+
 def wrapper_time_trace_eq : Joined<["--"], "wrapper-time-trace=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<file>">,
   HelpText<"Enable time-trace and write the output to <file>">;

@@ -1,0 +1,29 @@
+name: "Pull Request Labeler"
+on:
+  pull_request
+
+jobs:
+  triage:
+    runs-on: self-hosted
+    steps:
+    - uses: actions/labeler@v3
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  remove-labels:
+    runs-on: self-hosted
+    steps:
+      - name: remove labels
+        uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ startsWith(github.base_ref,'next_release') }} || ${{ startsWith(github.base_ref,'llvm_main') }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: stacked PR
+  add-labels:
+    runs-on: self-hosted
+    steps:
+      - name: add labels
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+

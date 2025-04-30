@@ -36,6 +36,7 @@
 #include "ToolChains/MipsLinux.h"
 #include "ToolChains/NaCl.h"
 #include "ToolChains/NetBSD.h"
+#include "ToolChains/Next32ELF.h"
 #include "ToolChains/OHOS.h"
 #include "ToolChains/OpenBSD.h"
 #include "ToolChains/PPCFreeBSD.h"
@@ -360,11 +361,15 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_fmodule_header,
                                         options::OPT_fmodule_header_EQ))) {
     FinalPhase = phases::Precompile;
+
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
+#ifdef ENABLE_CLASSIC_FLANG
+             (PhaseArg = DAL.getLastArg(options::OPT_emit_flang_llvm)) ||
+#endif
              (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
@@ -2003,7 +2008,11 @@ void Driver::PrintHelp(bool ShowHidden) const {
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   if (IsFlangMode()) {
+#ifdef ENABLE_CLASSIC_FLANG
+    OS << getClangToolFullVersion("flang") << '\n';
+#else
     OS << getClangToolFullVersion("flang-new") << '\n';
+#endif
   } else {
     // FIXME: The following handlers should use a callback mechanism, we don't
     // know what the client would like to do.
@@ -2689,7 +2698,15 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
         // stdin must be handled specially.
         if (memcmp(Value, "-", 2) == 0) {
           if (IsFlangMode()) {
+#ifdef ENABLE_CLASSIC_FLANG
+            // If running with -E, treat as needing preprocessing
+            if (!Args.hasArgNoClaim(options::OPT_E))
+              Ty = types::TY_PP_F_FreeForm;
+            else
+              Ty = types::TY_F_FreeForm;
+#else
             Ty = types::TY_Fortran;
+#endif
           } else if (IsDXCMode()) {
             Ty = types::TY_HLSL;
           } else {
@@ -2713,6 +2730,16 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           // idea of what .s is.
           if (const char *Ext = strrchr(Value, '.'))
             Ty = TC.LookupTypeForExtension(Ext + 1);
+#ifdef ENABLE_CLASSIC_FLANG
+          // If called with -E, treat the inputs as needing preprocessing
+          // regardless of extension
+          if (IsFlangMode() && Args.hasArgNoClaim(options::OPT_E)) {
+            if (Ty == types::TY_PP_F_FreeForm)
+              Ty = types::TY_F_FreeForm;
+            else if (Ty == types::TY_PP_F_FixedForm)
+              Ty = types::TY_F_FixedForm;
+          }
+#endif
 
           if (Ty == types::TY_INVALID) {
             if (IsCLMode() && (Args.hasArgNoClaim(options::OPT_E) || CCGenDiagnostics))
@@ -4050,6 +4077,14 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
       if (InputArg->isClaimed())
         continue;
 
+#ifdef ENABLE_CLASSIC_FLANG
+      // If the input is detected as already preprocessed (e.g. has the .f95
+      // extension), and the user specifies -E, preprocess the file anyway.
+      if (IsFlangMode() && InitialPhase == phases::Compile &&
+          FinalPhase == phases::Preprocess)
+        continue;
+#endif
+
       // Claim here to avoid the more general unused warning.
       InputArg->claim();
 
@@ -4845,6 +4880,10 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
+#ifdef ENABLE_CLASSIC_FLANG
+    if (IsFlangMode())
+      return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_IR);
+#endif
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
@@ -5310,6 +5349,12 @@ class ToolSelector final {
     bool OutputIsLLVM = types::isLLVMIR(ActionInfo[0].JA->getType());
     if (!T->hasIntegratedBackend() && !(OutputIsLLVM && T->canEmitIR()))
       return nullptr;
+
+#ifdef ENABLE_CLASSIC_FLANG
+    // Classic Flang is not integrated with the backend.
+    if (C.getDriver().IsFlangMode() && !T->hasIntegratedAssembler())
+      return nullptr;
+#endif
 
     if (T->canEmitIR() && ((SaveTemps && !InputIsBitcode) || EmbedBitcode))
       return nullptr;
@@ -6397,6 +6442,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::VEToolChain>(*this, Target, Args);
       else if (Target.isOHOSFamily())
         TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
+      else if (Target.getArch() == llvm::Triple::next32)
+        TC = std::make_unique<toolchains::Next32LLVMToolChain>(*this, Target,
+                                                               Args);
       else
         TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
       break;
@@ -6587,8 +6635,11 @@ bool Driver::ShouldUseFlangCompiler(const JobAction &JA) const {
     return false;
 
   // And say "no" if this is not a kind of action flang understands.
-  if (!isa<PreprocessJobAction>(JA) && !isa<CompileJobAction>(JA) &&
-      !isa<BackendJobAction>(JA))
+  if (!isa<PreprocessJobAction>(JA) && !isa<CompileJobAction>(JA)
+#ifndef ENABLE_CLASSIC_FLANG
+      && !isa<BackendJobAction>(JA)
+#endif
+  )
     return false;
 
   return true;

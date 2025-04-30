@@ -1,0 +1,51 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+
+$as_echo "#define NO_RTLD_HIDDEN 1" >>confdefs.h
+
+
+if test -n "$sysheaders"; then
+  OLD_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$CPPFLAGS $SYSINCLUDES"
+fi
+
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Hurd header version" >&5
+$as_echo_n "checking Hurd header version... " >&6; }
+if ${libc_cv_hurd_version+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <hurd/version.h>
+int
+main ()
+{
+
+#define NEED_VERSION 20020609
+#if HURD_INTERFACE_VERSION < NEED_VERSION
+# error Hurd version too old: HURD_INTERFACE_VERSION < NEED_VERSION
+#endif
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_cpp "$LINENO"; then :
+  libc_cv_hurd_version=ok
+else
+  libc_cv_hurd_version=bad
+fi
+rm -f conftest.err conftest.i conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_hurd_version" >&5
+$as_echo "$libc_cv_hurd_version" >&6; }
+if test "x$libc_cv_hurd_version" != xok; then
+  as_fn_error $? "Hurd headers not installed or too old" "$LINENO" 5
+fi
+
+if test -n "$sysheaders"; then
+  CPPFLAGS=$OLD_CPPFLAGS
+fi
+
+# Hurd has libpthread as a separate library.
+pthread_in_libc=no

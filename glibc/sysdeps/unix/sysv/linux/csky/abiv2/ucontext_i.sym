@@ -1,0 +1,32 @@
+#include <inttypes.h>
+#include <signal.h>
+#include <stddef.h>
+#include <sys/ucontext.h>
+
+SIG_BLOCK
+SIG_SETMASK
+
+-- Offsets of the fields in the ucontext_t structure.
+#define ucontext(member)	offsetof (ucontext_t, member)
+#define mcontext(member)	ucontext (uc_mcontext.member)
+#define greg(member)		mcontext (__gregs.member)
+#define fpreg(member)		mcontext (__fpregs.member)
+
+UCONTEXT_FLAGS			ucontext (__uc_flags)
+UCONTEXT_LINK			ucontext (uc_link)
+UCONTEXT_STACK			ucontext (uc_stack)
+UCONTEXT_MCONTEXT		ucontext (uc_mcontext)
+UCONTEXT_SIGMASK		ucontext (uc_sigmask)
+
+MCONTEXT_CSKY_PC		greg (__pc)
+MCONTEXT_CSKY_SP		greg (__usp)
+MCONTEXT_CSKY_LR		greg (__lr)
+MCONTEXT_CSKY_A0		greg (__a0)
+MCONTEXT_CSKY_R8		greg (__regs[2])
+MCONTEXT_CSKY_R16		greg (__exregs[0])
+MCONTEXT_CSKY_HI		greg (__rhi)
+MCONTEXT_CSKY_LO		greg (__rlo)
+MCONTEXT_CSKY_R4		greg (__regs[0])
+MCONTEXT_CSKY_FESR		fpreg (__fesr)
+MCONTEXT_CSKY_FCR		fpreg (__fcr)
+MCONTEXT_CSKY_FR0		fpreg (__vr[0])

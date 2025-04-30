@@ -1,0 +1,222 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Inupiaq language locale for Canada
+% Source:
+% Contact: Pablo Saratxaga
+% Email: pablo@mandriva.com
+% Language: ik
+% Territory: CA
+% Revision: 0.2
+% Date: 2004-08-01
+% Users: general
+
+LC_IDENTIFICATION
+title      "Inupiaq locale for Canada"
+source     ""
+address    ""
+contact    ""
+email      "pablo@mandriva.com"
+tel        ""
+fax        ""
+language   "Inupiaq"
+territory  "Canada"
+revision   "0.2"
+date       "2004-08-01"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% Inupiaq uses the following extra letters:
+% gdotabove, ldotbelow, lbarred, lbarreddotbelow (not in unicode,
+% has to be composed as lbarred+composingdotbelow), eng, ntilde
+%
+% sorting order from
+% http://www.nsbsd.org/anep/public/index.cfm/17,459,html (not available anymore).
+% But now Wikipedia has something:
+% https://en.wikipedia.org/wiki/Inupiaq_language#Writing_systems
+%
+% However I'm not
+% sure if all letters are to be considered as separate items for
+% sorting purposes...
+%
+% order:
+% a [b] [c] ch [d] [e] [f] g ġ h i [j] k l ḷ ł ł̣ m n ñ ŋ [o] p q r s sr t u v [w] [x] y [z]
+%
+% There is no collation information for Inupiaq in CLDR.
+%
+% We implement the following rules:
+
+copy "iso14651_t1"
+
+collating-symbol  <ch-digraph>
+collating-element <CH> from "CH"
+collating-element <ch> from "ch"
+collating-element <Ch> from "Ch"
+collating-element <cH> from "cH"
+collating-symbol  <g-dot-above>
+collating-symbol  <l-stroke>
+collating-symbol  <l-dot-below>
+collating-symbol  <l-dot-below-macron>
+collating-symbol  <n-tilde>
+collating-symbol  <eng>
+collating-symbol  <sr-digraph>
+collating-element <SR> from "SR"
+collating-element <sr> from "sr"
+collating-element <Sr> from "Sr"
+collating-element <sR> from "sR"
+collating-element <L-combining-dot-below> from "L<U0323>" % Ḷ
+collating-element <l-combining-dot-below> from "l<U0323>" % ḷ
+collating-element <L-stroke-combining-dot-below> from "<U0141><U0323>" % Ł̣
+collating-element <l-stroke-combining-dot-below> from "<U0142><U0323>" % ł̣
+
+reorder-after <AFTER-C>
+<ch-digraph>
+reorder-after <AFTER-G>
+<g-dot-above>
+reorder-after <AFTER-L>
+<l-dot-below>
+<l-stroke>
+<l-stroke-dot-below>
+reorder-after <AFTER-N>
+<n-tilde>
+<eng>
+reorder-after <AFTER-S>
+<sr-digraph>
+
+<ch>                           <ch-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<cH>                           <ch-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ch>                           <ch-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<CH>                           <ch-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<U0121>                        <g-dot-above>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ġ
+<U0120>                        <g-dot-above>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ġ
+<U0142>                        <l-stroke>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ł
+<U0141>                        <l-stroke>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ł
+<U1E37>                        <l-dot-below>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ḷ
+<l-combining-dot-below>        <l-dot-below>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE
+<U1E36>                        <l-dot-below>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ḷ
+<L-combining-dot-below>        <l-dot-below>;"<BASE><VRNT1>";"<CAP><CAP>";IGNORE
+<l-stroke-combining-dot-below> <l-stroke-dot-below>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<L-stroke-combining-dot-below> <l-stroke-dot-below>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<U00F1>                        <n-tilde>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ñ
+<U00D1>                        <n-tilde>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ñ
+<U014B>                        <eng>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ŋ
+<U014A>                        <eng>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ŋ
+<sr>                           <sr-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<sR>                           <sr-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Sr>                           <sr-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<SR>                           <sr-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_CA"
+END LC_CTYPE
+
+LC_MONETARY
+copy "en_CA"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_CA"
+END LC_NUMERIC
+
+LC_TELEPHONE
+copy "en_CA"
+END LC_TELEPHONE
+
+LC_TIME
+abday       "Min";"Sav";/
+            "Ila";"Qit";/
+            "Sis";"Tal";/
+            "Maq"
+day         "Min<U0121>uiqsioiq";/
+            "Sava<U0142><U0142>iq";/
+            "Ilaqtchiioiq";/
+            "Qitchiioiq";/
+            "Sisamiioiq";/
+            "Tallimmiioiq";/
+            "Maqin<U0121>uoiq"
+abmon       "S<U00F1>t";"S<U00F1>s";/
+            "Pan";"Qil";/
+            "Sup";"I<U0121><U00F1>";/
+            "Itc";"Ti<U00F1>";/
+            "Ami";"Sik";/
+            "Nip";"Siq"
+mon         "Siqi<U00F1><U00F1>aatchiaq";/
+            "Siqi<U00F1><U00F1>aasrugruk";/
+            "Paniqsiqsiivik";/
+            "Qil<U0121>ich Tatqiat";/
+            "Suppivik";/
+            "I<U0121><U00F1>ivik";/
+            "Itchavik";/
+            "Ti<U00F1><U00F1>ivik";/
+            "Ami<U0121>aiqsivik";/
+            "Sikkuvik";/
+            "Nippivik";/
+            "Siqi<U00F1><U0121>i<U1E37>aq"
+d_t_fmt     "%a %d %b %Y %r"
+date_fmt    "%a %d %b %Y %r %Z"
+d_fmt       "%d//%m//%y"
+t_fmt       "%r"
+am_pm       "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yYiIaA]"
+noexpr  "^[-0nNqQ]"
+yesstr  "aa"
+nostr   "qa<U00F1>aa"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_CA"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "en_CA"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_CA"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% https://ik.wikipedia.org/wiki/Kanada
+country_name "Kanada"
+country_ab2 "CA"
+country_ab3 "CAN"
+country_num 124
+country_car    "CDN"
+% Iñupiatun
+lang_name    "I<U00F1>upiatun"
+lang_ab      "ik"
+lang_term    "ipk"
+lang_lib    "ipk"
+END LC_ADDRESS

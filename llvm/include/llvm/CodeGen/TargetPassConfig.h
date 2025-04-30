@@ -297,6 +297,9 @@ public:
   /// Fully developed targets will not generally override this.
   virtual void addMachinePasses();
 
+  /// Check whether Loop Strength Reduction pass is disabled.
+  virtual bool disableLSRPass() { return false; }
+
   /// Create an instance of ScheduleDAGInstrs to be run within the standard
   /// MachineScheduler pass for this function and target at the current
   /// optimization level.

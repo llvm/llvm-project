@@ -1,0 +1,30 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+#ifdef POSIX
+# define gid_t __gid_t
+#endif
+
+type {struct group}
+element {struct group} {char*} gr_name
+element {struct group} gid_t gr_gid
+element {struct group} {char**} gr_mem
+
+# ifndef POSIX
+type gid_t
+# endif
+# if defined XOPEN2K8 || defined POSIX2008
+type size_t
+# endif
+
+function {struct group*} getgrgid (gid_t)
+function {struct group*} getgrnam (const char*)
+function int getgrgid_r (gid_t, struct group*, char *, size_t, struct group**)
+function int getgrnam_r (const char *, struct group *, char *, size_t, struct group**)
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function {struct group*} getgrent (void)
+function void endgrent (void)
+function void setgrent (void)
+# endif
+
+allow gr_*
+allow *_t
+#endif

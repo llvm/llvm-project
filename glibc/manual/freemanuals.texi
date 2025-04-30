@@ -1,0 +1,93 @@
+@c freemanuals.texi - blurb for free documentation.
+@c This file is intended to be included within another document,
+@c hence no sectioning command or @node.
+
+@cindex free documentation
+
+The biggest deficiency in the free software community today is not in
+the software---it is the lack of good free documentation that we can
+include with the free software.  Many of our most important
+programs do not come with free reference manuals and free introductory
+texts.  Documentation is an essential part of any software package;
+when an important free software package does not come with a free
+manual and a free tutorial, that is a major gap.  We have many such
+gaps today.
+
+Consider Perl, for instance.  The tutorial manuals that people
+normally use are non-free.  How did this come about?  Because the
+authors of those manuals published them with restrictive terms---no
+copying, no modification, source files not available---which exclude
+them from the free software world.
+
+That wasn't the first time this sort of thing happened, and it was far
+from the last.  Many times we have heard a GNU user eagerly describe a
+manual that he is writing, his intended contribution to the community,
+only to learn that he had ruined everything by signing a publication
+contract to make it non-free.
+
+Free documentation, like free software, is a matter of freedom, not
+price.  The problem with the non-free manual is not that publishers
+charge a price for printed copies---that in itself is fine.  (The Free
+Software Foundation sells printed copies of manuals, too.)  The
+problem is the restrictions on the use of the manual.  Free manuals
+are available in source code form, and give you permission to copy and
+modify.  Non-free manuals do not allow this.
+
+The criteria of freedom for a free manual are roughly the same as for
+free software.  Redistribution (including the normal kinds of
+commercial redistribution) must be permitted, so that the manual can
+accompany every copy of the program, both on-line and on paper.
+
+Permission for modification of the technical content is crucial too.
+When people modify the software, adding or changing features, if they
+are conscientious they will change the manual too---so they can
+provide accurate and clear documentation for the modified program.  A
+manual that leaves you no choice but to write a new manual to document
+a changed version of the program is not really available to our
+community.
+
+Some kinds of limits on the way modification is handled are
+acceptable.  For example, requirements to preserve the original
+author's copyright notice, the distribution terms, or the list of
+authors, are ok.  It is also no problem to require modified versions
+to include notice that they were modified.  Even entire sections that
+may not be deleted or changed are acceptable, as long as they deal
+with nontechnical topics (like this one).  These kinds of restrictions
+are acceptable because they don't obstruct the community's normal use
+of the manual.
+
+However, it must be possible to modify all the @emph{technical}
+content of the manual, and then distribute the result in all the usual
+media, through all the usual channels.  Otherwise, the restrictions
+obstruct the use of the manual, it is not free, and we need another
+manual to replace it.
+
+Please spread the word about this issue.  Our community continues to
+lose manuals to proprietary publishing.  If we spread the word that
+free software needs free reference manuals and free tutorials, perhaps
+the next person who wants to contribute by writing documentation will
+realize, before it is too late, that only free manuals contribute to
+the free software community.
+
+If you are writing documentation, please insist on publishing it under
+the GNU Free Documentation License or another free documentation
+license.  Remember that this decision requires your approval---you
+don't have to let the publisher decide.  Some commercial publishers
+will use a free license if you insist, but they will not propose the
+option; it is up to you to raise the issue and say firmly that this is
+what you want.  If the publisher you are dealing with refuses, please
+try other publishers.  If you're not sure whether a proposed license
+is free, write to @email{licensing@@gnu.org}.
+
+You can encourage commercial publishers to sell more free, copylefted
+manuals and tutorials by buying them, and particularly by buying
+copies from the publishers that paid for their writing or for major
+improvements.  Meanwhile, try to avoid buying non-free documentation
+at all.  Check the distribution terms of a manual before you buy it,
+and insist that whoever seeks your business must respect your freedom.
+Check the history of the book, and try reward the publishers that have
+paid or pay the authors to work on it.
+
+The Free Software Foundation maintains a list of free documentation
+published by other publishers, at
+@url{https://www.fsf.org/doc/other-free-books.html}.

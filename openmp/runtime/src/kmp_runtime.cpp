@@ -29,6 +29,8 @@
 #include "kmp_dispatch_hier.h"
 #endif
 
+#include "kmp_ns.h"
+
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
 #endif
@@ -7736,6 +7738,20 @@ int __kmp_invoke_task_func(int gtid) {
   KMP_SET_THREAD_STATE(IMPLICIT_TASK);
 #endif
 
+  KA_TRACE(10, ("invoking task: func(%p), ,gtid(%d), tid(%d), argc=%d\n",
+                team->t.t_pkfn, gtid, tid, team->t.t_argc));
+
+#if LIBOMP_NEXTSILICON
+  auto gtid_save = gtid;
+
+  gtid =
+      __kmp_ns_gtid_encode_from_gtid_tid_and_size(gtid, tid, team->t.t_nproc);
+  if (gtid < 0) {
+    KA_TRACE(50, ("negative gtid: func(%p), ,gtid(0x%lx), tid(%d), argc=%d\n",
+                  team->t.t_pkfn, gtid, tid, team->t.t_argc));
+  }
+#endif
+
   rc = __kmp_invoke_microtask((microtask_t)TCR_SYNC_PTR(team->t.t_pkfn), gtid,
                               tid, (int)team->t.t_argc, (void **)team->t.t_argv
 #if OMPT_SUPPORT
@@ -7743,6 +7759,11 @@ int __kmp_invoke_task_func(int gtid) {
                               exit_frame_p
 #endif
   );
+
+#if LIBOMP_NEXTSILICON
+  gtid = gtid_save;
+#endif
+
 #if OMPT_SUPPORT
   *exit_frame_p = NULL;
   this_thr->th.ompt_thread_info.parallel_flags = ompt_parallel_team;
@@ -8948,7 +8969,7 @@ __kmp_determine_reduction_method(
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM || KMP_ARCH_NEXT32
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||        \

@@ -1,0 +1,14 @@
+## args: int:size_t:size_t
+## init: thread_create_init
+## includes: pthread.h
+## include-sources: thread_create-source.c
+
+## name: stack=1024,guard=1
+32, 1024, 1
+## name: stack=1024,guard=2
+32, 1024, 2
+
+## name: stack=2048,guard=1
+32, 2048, 1
+## name: stack=2048,guard=2
+32, 2048, 2

@@ -1,0 +1,20 @@
+#include <stddef.h>
+#include <signal.h>
+#include <sys/ucontext.h>
+
+--
+
+SIG_SETMASK
+
+#define ucontext(member)	offsetof (ucontext_t, member)
+#define mcontext(member)	ucontext (uc_mcontext.member)
+
+oLINK		ucontext (uc_link)
+oSS_SP		ucontext (uc_stack.ss_sp)
+oSS_SIZE	ucontext (uc_stack.ss_size)
+oGREGS		mcontext (gregs)
+oSP		mcontext (gregs[R_SP])
+oPC		mcontext (gregs[R_PC])
+oFPREGS		mcontext (fpregs)
+oFP2		mcontext (fpregs.f_fpregs[2])
+oSIGMASK	ucontext (uc_sigmask)

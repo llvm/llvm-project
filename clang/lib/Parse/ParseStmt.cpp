@@ -528,6 +528,21 @@ Retry:
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return StmtEmpty();
+
+  case tok::annot_pragma_ns_mark:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    return ParsePragmaNSMark(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
+
+  case tok::annot_pragma_ns_location:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    return ParsePragmaNSLocation(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
+
+  case tok::annot_pragma_ns_vectorize:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    return ParsePragmaNSVectorize(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
   }
 
   // If we reached this code, the statement must end in a semicolon.

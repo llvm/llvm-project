@@ -1,0 +1,107 @@
+This file describes changes to the shared files of the ports/ add-on
+directory.  The ports/ directory is no longer used and the files
+described here are all gone.
+
+
+
+2014-04-29  Carlos O'Donell  <carlos@redhat.com>
+
+	* README: Removed. The ports repository is no longer used.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* README: Change references to preconfigure.in to
+	preconfigure.ac.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* README: Update copyright dates in example.
+
+2012-12-06  Joseph Myers  <joseph@codesourcery.com>
+
+	* README: Use sourceware.org in Bugzilla URL.
+
+2012-12-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* README: Don't refer to ports as a separate repository.  Don't
+	refer to scripts/data/.
+
+2012-07-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* .gitignore: Remove file.
+	* Banner: Likewise.
+	* Makefile: Likewise.
+
+2012-06-21  Carlos O'Donell  <carlos_odonell@mentor.com>
+
+	* .gitignore: New file.
+
+2012-02-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* README: Update.
+
+2012-02-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* README: Document use of ranges in copyright notices.
+
+2011-11-29  Joseph Myers  <joseph@codesourcery.com>
+
+	* bare, sysdeps/am29k, sysdeps/i860, sysdeps/i960, sysdeps/m88k,
+	sysdeps/mach, sysdeps/rs6000, sysdeps/standalone, sysdeps/tahoe,
+	sysdeps/unix/bsd, sysdeps/unix/sysv/hpux, sysdeps/unix/sysv/i386,
+	sysdeps/unix/sysv/irix4, sysdeps/unix/sysv/isc2.2,
+	sysdeps/unix/sysv/minix, sysdeps/unix/sysv/sco3.2,
+	sysdeps/unix/sysv/sco3.2.4, sysdeps/unix/sysv/sysv4, sysdeps/vax,
+	sysdeps/z8000: Remove.
+
+2010-04-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* libc-abis: Remove.
+
+2010-04-06  Joseph Myers  <joseph@codesourcery.com>
+
+	* libc-abis: New.
+
+2006-03-06  Roland McGrath  <roland@redhat.com>
+
+	* Makefile (%.bz2, %.gz): New pattern rules.
+
+2006-02-28  Roland McGrath  <roland@redhat.com>
+
+	* Makefile (glibc-port-%-$(dist-version).tar): Don't include top-level
+	stuff.
+
+	* README: Update for new add-on scheme.
+
+2006-02-27  Roland McGrath  <roland@redhat.com>
+
+	* Makefile: Remove libc boilerplate.
+	* Makeconfig: File removed.
+	* configure.in: File removed.
+	* configure: File removed.
+
+2005-03-22  Roland McGrath  <roland@redhat.com>
+
+	* Makefile ($(distname).tar): Fail if sysdeps/.../configure files are
+	not all up to date.  Touch configure files after cvs export.
+	(glibc-port-%-$(dist-version).tar): Likewise.
+
+2004-10-22  Roland McGrath  <roland@frob.com>
+
+	* Makefile (dist, dist-ports): New target.
+	(dist-port-%): New pattern rule.
+	* Makeconfig [!subdir] (ports/%): New pattern rule.
+
+	* configure.in: Cope if there are no sysdeps/*/preconfigure files.
+	* configure: Regenerated.
+
+2004-08-16  Roland McGrath  <roland@frob.com>
+
+	* Makefile: New file.
+
+2004-08-04  Roland McGrath  <roland@frob.com>
+
+	New directory implementing glibc add-on infrastructure for
+	ports maintained separate from the core glibc source tree.
+	* README, configure.in, Makeconfig, Banner, ChangeLog: New files.
+	* configure: New generated file.

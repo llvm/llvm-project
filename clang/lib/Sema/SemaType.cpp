@@ -8592,6 +8592,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
     case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
     case ParsedAttr::AT_AddressSpace:
+    case ParsedAttr::AT_Next32Tls:
+    case ParsedAttr::AT_Next32Global:
+    case ParsedAttr::AT_Next32Constant:
+    case ParsedAttr::AT_Next32Local:
       HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;

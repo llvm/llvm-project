@@ -1,0 +1,2670 @@
+Thu Sep  3 17:31:13 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/setgroups.S: New file.  How did this manage not
+	to exist already??
+
+	* Version 1.04.
+
+	* sysdeps/generic/memmem.c (memmem): Fixed loop condition not to
+	use nonexistent variable.
+
+	* string/string.h (memmem): Put const qualifier on args.
+
+	* sysdeps/stub/sigaltstack.c (sigaltstack): Fix arg type.
+
+	* setjmp/sigsetjmp.c: #undef sigsetjmp before defining the function.
+
+Wed Sep  2 16:43:58 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* misc/Makefile (headers): Add syscall.h.
+	* sysdeps/unix/Makefile: Only generate syscall.h if it would
+	otherwise come from stub.
+	* sysdeps/stub/syscall.h: New file.
+
+	* time/Makefile (routines): Add stime.
+
+	* io/Makefile (routines): Add fchdir.
+
+	* signal/Makefile (routines): Add sigaltstack.
+
+	* string/Makefile (routines): Add memmem.
+
+	* setjmp/Makefile (routines): Add sigsetjmp, _setjmp.
+
+	* misc/Makefile (routines): Add getpass.
+
+	* Makefile (distribute): Add NEWS.
+
+	* Makerules (ar-it) [! objdir]: Pass `ru' instead of `u' to ar.
+	Use $(..)libc.a instead of $(libc.a).
+
+	* sysdeps/unix/sysv/i386/linux/sysdep.h (PSEUDO): Call numbers are
+	SYS_*, not __NR_*.
+
+	* sysdeps/unix/sysv/i386/linux/__wait.S: Prepend extra _ to
+	`__waitpid' for jmp.
+
+	* Makerules (check): New rule; alias for `tests'.
+
+	* sysdeps/stub/__setregid.c: Args are gid_t, not int.
+
+	* sysdeps/posix/readv.c: #include <string.h>.
+
+	* sysdeps/generic/printf_fp.c: If LDBL_DIG or LDBL_MAX_10_EXP is
+	defined by float.h, #define each to DBL_*.
+
+Tue Sep  1 16:29:07 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/unix/Makefile (syscall.h): Add missing backslashes.
+
+	* Makeconfig [!objdir && !..] (common-objpfx): Define as
+	`sysdeps/..'; The Almighty KludgeMeister 2000 wins again.
+
+	* Makerules (sysdep-Makefile): Rename to sysd-Makefile.
+
+	* Makeconfig (CC): Don't use -pipe by default.
+
+	* configure (switches): Put quotes around os-release and
+	os-version values.
+
+Mon Aug 31 19:33:15 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/stub/cbrt.c: New file.
+
+	* sysdeps/generic/cabs.c: New file.
+
+	* sysdeps/generic/ceil.c: New file, split from floor.c.
+	* sysdeps/generic/__rint.c: Replaced with code split from floor.c.
+	* sysdeps/generic/Makefile (routines): Don't remove ceil, __rint.
+
+Thu Aug 27 15:58:13 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* malloc/malloc.h [! __STDC__] (ptrdiff_t): #define.
+
+Wed Aug 26 18:15:47 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* malloc/free.c (__free): Rename to _free_internal.
+	(free), malloc/malloc.c (morecore): Change callers.
+	* malloc/malloc.h: Change decl.
+
+Tue Aug 18 17:38:13 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/generic/__copysign.c: New file.
+
+	* sysdeps/unix/sysv/sysdep.h: #include <syscall.h>, not
+	<sys/syscall.h>.  Don't #define _SYS_SYS_S; should no longer be
+	necessary.
+
+	* sysdeps/unix/Makefile (syscall.h): Replaced simple code to just
+	find the file in any of several places, with hairier code to find
+	it and massage it.
+
+	* malloc/Makefile (obstack.%): Remove rule.
+	(gpl2lgpl): Define this instead.
+	* posix/Makefile (gpl2lgpl): Define to include getopt source files.
+	* Makerules ($(gpl2lgpl)): New rule to snarf code and frob its
+	copying notices.
+
+Fri Aug 14 13:28:39 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* Makeconfig (common-objdir, common-objpfx): Define new vars.
+	(libc.a): Define in terms of $(common-objpfx).
+	Find config.make with $(common-objpfx), not $(objpfx).
+	* Makerules (common-objdir-compile): Define canned sequence.
+	(native-compile): Use $(@D)/$(@F) instead of stripping off $(objpfx).
+	* sysdeps/unix/Makefile, sysdeps/unix/bsd/Makefile,
+	sysdeps/generic/Makefile: Use it.
+	Use $(common-objpfx) for generated things not specific to one subdir.
+
+	* sysdeps/unix/Makefile (sysdep_headers): Add
+	$(sys/param.h-includes) to this instead of to headers.
+
+Thu Aug 13 18:30:58 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* posix/glob.c: Always #include <sys/types.h>.
+	[! USG]: Don't do it here.
+	[STDC_HEADERS]: Test this instead of __STDC__ for size_t.
+	[HAVE_STRCOLL]: Test this instead of ANSI_STRING for strcoll.
+
+	* posix/glob/Makefile.in (Makefile): Remove rule.
+
+Wed Aug 12 16:12:52 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/sparc/jmp_buf.h: Deansideclized.
+
+	* sysdeps/generic/make_siglist.c: #undef HAVE_SYS_SIGLIST, not
+	SYS_SIGLIST_MISSING.
+	* sysdeps/generic/signame.[ch]: Re-symlinked from /gd/gnu/lib.
+	Who's been removing random things from my source tree??
+
+Tue Aug 11 15:01:50 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* posix/getconf.c (main): Cast printf field with arg to int.
+
+	* Makefile (distribute): Remove ansidecl, ansidecl.m4.
+
+	* posix/glob.c [_AIX]: Don't declare alloca.
+
+Mon Aug 10 17:09:40 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/m68k/fpu/__math.h (__expm1): Define just like expm1.
+
+	* sysdeps/unix/ioctls-tmpl.c [SMIOSTATS, SMIOGETREBOOT0,
+	ZIOCBCMD]: Include headers for these.
+
+Fri Aug  7 16:01:43 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* string/tester.c (main): Use sys_nerr and sys_errlist, not _sys_*.
+
+	* stdio/stdio.h [__USE_GNU] (_sys_nerr, _sys_errlist): Declare.
+
+	* string/strerror.c, stdio/perror.c
+	[HAVE_GNU_LD] (_sys_errlist, _sys_nerr): Remove decls.
+
+	* stdio/memstream.c (enlarge_buffer): Notice when target is -1 and
+	don't treat it as a huge value.
+
+	* stdio/tst-printf.c: #if 0 code that tickles printf_fp bugs.
+
+	* grp/testgrp.c: Don't bomb if uid not in passwd file.
+
+	* stdlib/tst-strtol.c (tests): C-t on LONG_MIN and LONG_MIN-1 elts.
+
+	* stdlib/strtol.c: Use int flag NEGATIVE instead of char 1/-1 SIGN.
+	Fixed checking for overflow of long int that fits in unsigned long
+	int--must cast LONG_MIN before negating!
+
+Thu Aug  6 18:46:24 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* stdio/bug3.c (main): Define ansideclifily.
+
+	* sysdeps/unix/bsd/sun/sparc/__pipe.S: Define __pipe, not ___pipe.
+
+	* math/test-math.c (main): Remove unused vars.
+
+	* io/flock.c: #include <sys/file.h>, and not fcntl.h or sys/types.h.
+
+	* sysdeps/m68k/fpu/__math.h (__rint): Define just like rint.
+
+	* math/math.h (__rint): Declare.
+
+	* configure (esix*): base_os=unix/sysv.
+
+	* dirent/getdents.c: #include <dirent.h>.
+
+	* Rules (subdir): Avoid TAB before # at end of defn.
+
+	* sysdeps/unix/bsd/bsd4.4/__wait3.c: Last arg type is struct rusage *.
+
+Tue Aug  4 18:19:43 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/ieee754/Makefile: Removed.
+
+	* math/math.h: Declare __expm1.
+
+Mon Aug  3 13:02:05 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/ieee754/cabs.c (cabs, z_abs): Members of structure have __.
+
+	* sysdeps/unix/bsd/seq386: Remove directory.
+
+Thu Jul 30 15:42:01 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/sun/sparc/sigcontext.h: Deansideclized.
+
+	* sysdeps/unix/bsd/sun/sunos4/__wait4.c: Make last arg struct rusage
+	instead of PTR.
+
+	* sysdeps/unix/morecore.c (__default_morecore): Make arg ptrdiff_t.
+
+	* sysdeps/ieee754/cabs.c (cabs, z_abs): Use `struct __complex' for arg.
+
+	* sysdeps/generic/pow.c: #include <limits.h>.
+
+	* sysdeps/generic/mathimpl.c: #include <math.h> before frobnication.
+
+	* misc/getusersh.c (okshells): Make const.
+	(initshells): Properly declare static.
+
+	* sysdeps/unix/bsd/__tcgetatr.c: Cast sg_[io]speed to (unsigned char)
+	to avoid gcc warnings.
+
+	* math/bsd/common/atan2.c, math/bsd/common/tan.c,
+	math/bsd/common/sincos.c, math/bsd/common/trig.h,
+	math/bsd/common_source/__expm1.c, math/bsd/common_source/fmod.c,
+	math/bsd/common_source/acosh.c, math/bsd/common_source/log.c,
+	math/bsd/common_source/asincos.c, math/bsd/common_source/asinh.c,
+	math/bsd/common_source/log1p.c, math/bsd/common_source/atan.c,
+	math/bsd/common_source/log__L.c, math/bsd/common_source/atanh.c,
+	math/bsd/common_source/mathimpl.h, math/bsd/common_source/cosh.c,
+	math/bsd/common_source/exp.c, math/bsd/common_source/sinh.c,
+	math/bsd/common_source/exp__E.c, math/bsd/common_source/tanh.c,
+	math/bsd/common_source/floor.c: Moved to sysdeps/generic.
+	* math/bsd/ieee/{cabs,cbrt,support}.c: Moved to sysdeps/ieee754.
+	* All above + sysdeps/generic/mathimpl.h, sysdeps/generic/pow.c: New
+	code from 4.4/net2.
+
+	* sysdeps/generic/ffs.c: #include <string.h>, not <bstring.h>.
+
+	* posix/glob/Makefile.in (Makefile): Depend on config.status; invoke
+	it directly instead of using $(SHELL).
+
+	* posix/glob.c [! USG]: #include <sys/types.h> before <sys/dir.h>.
+
+Tue Jul 28 17:54:23 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/ultrix42: Renamed to ultrix4.
+
+	* sysdeps/unix/sysv/isc2.2/__rename.S: New.
+	* configure (isc*): base_os=unix/sysv.
+
+	* Makefile, Makerules, Rules, math/Makefile, ctype/Makefile: Use
+	"export foo := $(foo)" instead of ifdef have_export_directive.
+	* Makeconfig (have_export_directive): Remove; move .NOEXPORT down.
+
+Mon Jul 27 18:01:30 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* configure: Remove redundant test to set os_used.
+
+Sun Jul 26 17:03:31 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* README.template: Don't mention Q+A.
+	* Makefile (distribute): Remove Q+A.
+
+	* Makefile, Makerules, Rules, math/Makefile, ctype/Makefile: Put
+	"ifdef have_export_directive" around uses of `export' directive.
+	They are only needed for dist and tags anyway.
+	* Makeconfig (have_export_directive): Add commented-out defn, and
+	comment to explain.
+	(.NOEXPORT): Add special target for old versions of GNU make.
+
+	* posix/glob.c [_AIX]: #pragma alloca first thing.
+	[ANSI_STRING]: Remove #define's for index et al.
+
+Thu Jul 23 21:49:53 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* misc/getpass.c: New.
+	* posix/unistd.h (getpass): Declare.
+
+	* posix/unistd.h (getusershell, setusershell, endusershell): Declare.
+	* misc/Makefile (routines): Add getusersh.
+	* misc/getusersh.c: New.
+
+Tue Jul 14 20:03:57 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* stdlib/Makefile (tests): Add testdiv.
+	* stdlib/testdiv.c: New.
+
+	* sysdeps/unix/sysv/i386/linux/{rename,__mkdir,__rmdir,__dup2,
+	getpgrp,__setpgrp,setsid}.S: New files.
+
+	* sysdeps/unix/__getppid.S: If SYS_getppid is defined, use it rather
+	than alternate value of getpid.
+	* __gete[ug]id.S: Similar.
+
+	* sysdeps/unix/sysv/i386/linux/__waitpid.S: New file.
+	* sysdeps/unix/sysv/i386/linux/__wait.S: New file.
+	* sysdeps/posix/__wait3.c: New file.
+
+	* sysdeps/unix/sysv/i386/linux/socket.S: New file.
+	* bind.S, connect.S, listen.S, accept.S, getsockname.S,
+	getpeername.S, socketpair.S: Also new (and trivial).
+
+Mon Jul 13 17:41:46 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/unix/sysv/i386/linux/sysdep.[hS]: New files.
+
+	* configure (linux*): base_os=unix/sysv
+	(gnu*, linux*): Always set --with-gnu-ld and --with-gnu-as.
+
+	* stdio/obstream.c: #include <string.h>
+	(obstack_vprintf): Use bzero rather than memset.
+
+	* stdio/glue.c (unix_FILE.glue): Add two members, which will overlap
+	get_limit and put_limit in GNU stdio.
+	(_iob): Initialize them to same as `streamp'.
+
+Thu Jul  9 21:27:39 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* stdio/stdio.h (open_obstack_stream, obstack_printf,
+	obstack_vprintf): Declare.
+
+	* posix/glob.c [STDC_STRINGS]: Don't test this.
+	[! ANSI_STRING]: Put memcpy, strrchr, memset defns here instead.
+
+	* posix/glob/Makefile.in (glob.o, fnmatch.o): / after $(srcdir).
+
+Tue Jul  7 03:11:23 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* stdio/Makefile (routines): Add obstream.
+
+	* Makerules (%.o: %.S, %.o: %.c): If using gcc, put the file name
+	before the options on the command line.
+
+	* malloc/Makefile (dist-routines): Define with routines for malloc.tar.
+	(routines): Define with that plus the rest.
+	(nodist): Remove.
+	(routines): Add obstack.
+	(headers): Add obstack.h.
+	(obstack.%): New rule.
+
+	* stdio/glue.c: Add comments.
+
+	* stdio/printf.h (struct printf_info.spec): Make unsigned char.
+
+	* stdio/stdio.h (__validfp): Fixed glued-stream snarfing.
+
+Mon Jul  6 20:00:47 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/i386/jmp_buf.h: Deansideclized.
+
+	* sysdeps/posix/Makefile (objdir-CPPFLAGS): Define; if in parent
+	dir, add ..s to -Is.
+	(mk-stdiolim): Use it in place of $(CPPFLAGS).
+
+Sat Jul  4 20:44:42 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* posix/glob/Makefile.in (glob.o, fnmatch.o): Put $(srcdir) on deps.
+
+Wed Jul  1 00:13:40 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/generic/strstr.c: If NEEDLE is "", return end of HAYSTACK.
+
+	* string/tester.c (main): Remove decls of sys_nerr and sys_errlist.
+
+	* configure: Accept --prefix=*, --exec_prefix=* options.
+	Set values in config.make and config.status.
+
+	* io/umask.c: Fixed return type in fn alias.
+
+	* posix/glob.c [! ANSI_STRING]: #define strcoll to strcmp.
+	Remove extra decls of free, qsort, malloc, and realloc.
+
+	* dirent/alphasort.c: #include <string.h>, and not <stdlib.h>.
+
+	* sysdeps/unix/bsd/i386/__wait3.S: Load SYS_wait into %eax before
+	trapping.  Use literal .byte instead of lcall to avoid gas bug.
+	Use 0(REG), not (REG), for register-indirect addressing.
+
+	* configure: Make config.status executable.
+
+Tue Jun 30 21:14:53 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* configure: Add --os-release=* and --os-version=* options.  Record
+	settings (which might be automagically guessed) in config.status.
+
+	* misc/mknod.c: Use __mode_t for arg in fn alias.
+
+	* posix/unistd.h (setregid): Declare to take __gid_t args.
+
+	* sysdeps/unix/bsd/i386/__wait3.S: Don't use lcall insn gas barfs on.
+
+	* posix/vfork.c: Move to sysdeps/generic/.
+
+	* Rules (others, tests): Export them.
+
+	* io/umask.c, io/mkdir.c, io/chmod.c: Use mode_t not int in arg decls.
+
+	* sysdeps/i386/ffs.c: #include <string.h>, not <bstring.h>.
+
+	* stdio/vfscanf.c: Use function_alias.
+
+	* stdio/vsscanf.c: Use va_list, not PTR, in arg decl in fn alias.
+
+	* sysdeps/unix/i386/sysdep.h (PSEUDO): Enough backslashes and
+	semicolons.
+
+	* stdio/stdio.h: For __gnuc_va_list, #test __GNUC_VA_LIST, not
+	__va_list_defined.
+
+	* stdio/fmemopen.c: Use memchr to find NUL for append mode.
+
+	* stdio/memstream.c (enlarge_buffer): Double the buffer size, rather
+	than adding 100.  Don't clobber *INFO->bufsize when called with the
+	put limit reset.  If the target has been set, extend and zero-fill
+	the buffer.
+	(seek): New function.
+	(open_memstream): Use it for seek io fn.  Call fmemopen with "w+" mode.
+
+Sun Jun 28 19:01:01 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* stdio/fseek.c: Fail with EINVAL for a negative file pos.
+
+Fri Jun 26 00:07:53 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Makeconfig (stdarg.h): New variable.
+	* Makefile (headers): Add $(stdarg.h).
+
+	* stdio/stdio.h: Change __va_list to __gnuc_va_list in decls.
+
+	* sysdeps/unix/morecore.c: Include malloc.h #ifndef _MALLOC_INTERNAL.
+	Don't include <stdio.h>.
+	(NULL): Define to 0 if not defined.
+
+	* sysdeps/i386/bzero.c: Include string.h, not bstring.h.
+
+Thu Jun 25 21:01:40 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* stdio/perror.c, string/strerror.c (_sys_errlist, _sys_nerr): Don't
+	declare #ifndef HAVE_GNU_LD.
+
+	* stdio/fwrite.c: Cast arg to write io func to const char * (from uns).
+
+	* sysdeps/unix/Makefile: If syscall.h doesn't exist in
+	$(sysincludedir), look for sys/syscall.h and create $(objpfx)syscall.h
+	to #include it.
+
+	* sysdeps/unix/morecore.c (__default_morecore): Deansideclized.
+	* malloc/*.c: Only #include <malloc.h> #ifndef _MALLOC_INTERNAL.
+
+Wed Jun 24 19:09:04 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/unix/snarf-ioctls: Avoid looking at a few particular
+	headers which tend to mislead us.
+
+	* Makefile (distribute): Add COPYING.
+
+	* configure (Makefile): When invoking make in srcdir, set ARCH
+	rather than objdir on the cmd line.
+
+	* posix/glob.c [DIRENT] (direct): Don't define to dirent.
+	[! DIRENT] (direct): Define to dirent.
+
+	* Make-dist [!subdir] (+tsrcs): Don't include $(distribute).  It was
+	already included above.
+
+Mon Jun 22 16:58:34 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Makerules (sysdep_routines): Export it.
+
+Wed Jun 17 17:58:05 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* posix/glob.c (my_realloc): Test only __GNU_LIBRARY__.  Can't trust
+	STDC_HEADERS.
+
+Tue Jun 16 20:20:01 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* resource/sys/resource.h (enum __rlimit_resource): Added MEMLOCK,
+	NPROC, OFILE.
+
+	* posix/Makefile (glob.tar): Include Makefile.in & configure, and not
+	Makefile.
+	(glob/configure): New rule.
+
+	* posix/glob/Makefile: Moved to posix/glob/Makefile.in.
+	(VPATH, srcdir, CPPFLAGS): Define to be replaced by autoconf.
+
+	* posix/glob.c: Rearranged conditionals for use with autoconf.
+
+Thu Jun 11 15:47:43 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/sun/sparc/start.c: Added alias for start -> __start.
+
+Tue Jun  9 20:15:12 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/posix/rename.c: Return failure and don't remove the old
+	link if the link failed with other than EEXIST.
+
+	* posix/glob/Makefile: Fixed copyright notice.
+	(realclean): Don't remove ~ backup files.
+
+Thu Jun  4 16:41:56 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* time/Makefile (install-data): Don't include zoneinfo/.
+	Makerules already makes sure the necessary directories exist.
+
+	* setjmp/setjmp.h (sigsetjmp) [__GNUC__]: Use typeof hackery to
+	construct the type of the temporary var for the arg.
+	(_setjmp) [__FAVOR_BSD]: Make same as setjmp.
+
+	* malloc/malloc.h (mtrace): Declare.
+
+	* malloc/malloc.h, malloc/calloc.c, malloc/free.c, malloc/malloc.c,
+	malloc/mcheck.c, malloc/memalign.c, malloc/mstats.c,
+	malloc/mtrace.c, malloc/realloc.c, malloc/valloc.c: Deansideclized;
+	changed copyright notices to be independent of libc.
+	* malloc/Makefile (glob/%.c, glob/%.h): Don't need to ansideclificate.
+
+	* io/ftw.h, io/ftw.c: New.
+	* io/Makefile (headers): Added ftw.h.
+	(routines): Added ftw.
+
+Tue Jun  2 21:49:22 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/signum.h (SIG_ERR, SIG_DFL, SIG_IGN): Use
+	__sighandler_t.
+
+	* posix/glob.c (__ptr_t): Define.
+
+Thu May 28 06:57:14 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/m68k/jmp_buf.h: Don't use PTR.
+
+Wed May 27 18:09:40 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* posix/{glob,fnmatch}.[ch]: Deansideclized; changed copyright
+	notice to be independent of libc.
+	* posix/Makefile (glob/%.c, glob/%.h): Don't need to ansideclificate.
+
+	* posix/unistd.h (_SC_2_FORT_RUN, _SC_2_LOCALDEF): Define.
+
+	* posix/unistd.h: Define _POSIX2_* without #ifdef __USE_POSIX2.
+
+	* posix/unistd.h (_POSIX2_FORT_DEV): Removed.
+
+	* posix/fnmatch.h (FNM_FILE_NAME): Alias for FNM_PATHNAME.
+
+Tue May 26 00:39:39 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* time/Makefile (install-data): Include zoneinfo/, so the directory
+	gets made.
+
+	* Makeconfig (+gcc-nowarn): Define to -w if using gcc.
+	* time/Makefile (tz-cc): Use it to suppress warnings for grody code.
+
+	* posix/Makefile (libposix.a), math/Makefile (libm.a): Make archive
+	containing /dev/null instead of nothing; ar won't create an empty
+	archive.
+
+	* Makerules (%/): Added generic mkdir rule.
+
+	* posix/Makefile (install-lib): Define to libposix.a.
+	(libposix.a): Create empty archive.
+
+	* posix/Makefile (distribute): Added utsnamelen.h.
+
+	* ctype/ctype.c (tolower, toupper): If the arg doesn't fit in a
+	char, return it unchanged.
+	* ctype/ctype.h (tolower, toupper): Don't define as macros.
+	[__GNUC__]: Define as extern inline functions.
+
+	* sysdeps/unix/bsd/sun/sunos4/utsnamelen.h,
+	sysdeps/unix/bsd/sun/sunos4/uname.S: New.
+
+	* configure: Only do hacking to snarf uname info if the config uses
+	the generic uname implementation.
+
+	* Makeconfig (+defines): Define to include $(gnu_ld), rather than
+	-DHAVE_GNU_LD.
+	* configure: Write config.make with gnu_ld/gnu_as defns.
+
+	* sysdeps/unix/bsd/sun/sunos411: Renamed back to .../sunos4.
+	* sysdeps/unix/bsd/bsd44: Renamed to .../bsd4.4.
+
+	* Makeconfig: include $(objpfx)configparms instead of
+	$(objdir)/Makeconfig.
+	Define objpfx as soon as objdir is defined, so we can use it.
+
+	* sysdeps/generic/uname.c: Use UNAME_* from config-name.h.
+
+Mon May 25 19:33:07 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* configure: Accept all standard GNU configure options.
+	Expect to be run in object directory, and find source directory
+	elsewhere.
+	Write config.status as a shell script that can be run to recreate
+	the configuration.
+	Grok os names containing dots by trying each successively
+	less-precise substring.
+	Write Sysnames and config-name.h in current directory.
+	Write #define's for uname sysname, release, version, and machine
+	elts in config-name.h.  Hackery to intuit release and version info.
+
+	* stdio/vsnprintf.c, stdio/vsprintf.c, stdio/vasprintf.c,
+	stdio/vdprintf.c, stdio/vfscanf.c, stdio/vscanf.c,
+	stdio/__vsscanf.c: Take arg list as va_list, not PTR.
+
+	* stdio/stdio.h: Replaced #include <stdarg.h> with magic.
+	Properly use __va_list in prototypes.
+
+	* Makeconfig (exec_prefix): Define.
+	(libdir, includedir, bindir): Use it.
+
+	* sysdeps/unix/sysv/Makefile [subdir==io] (sysdep-routines): Removed
+	__utssys.
+	* sysdeps/unix/sysv/Dist: Removed __utssys.S.
+	* sysdeps/unix/sysv/__utssys.S, sysdeps/unix/sysv/uname.c: Removed.
+	* sysdeps/unix/sysv/uname.S, sysdeps/unix/sysv/utsnamelen.h: New.
+
+	* posix/sys/utsname.h (_UTSNAME_LENGTH): Don't define; instead,
+	#include <utsnamelen.h> to define it.
+	* sysdeps/generic/utsnamelen.h: New.
+
+Sun May 24 00:07:45 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/generic/inet-cvt.h: Deansideclized.
+
+	* string/string.h (memfrob): First arg is __ptr_t, not char *.
+
+	* misc/sys/cdefs.h (__ptr_t): Made #define rather than a typedef.
+
+Fri May 22 01:52:04 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Makefile, Rules, Makerules: Remove all rules for ansideclificating
+	headers.
+
+	* posix/glob.h, posix/fnmatch.h: Use explicit cruft for C++.
+	Define __P and const for C++/ANSI vs old C ourselves, to avoid
+	dependence on <sys/cdefs.h>.
+
+	* inet/Makefile: Remove cruft to snarf things from bsd/.
+	* inet/bsd/*.c: Moved to inet/.
+
+	* Makerules: Install headers from source directories into
+	$(includedir), rather than ansidecl madness.
+	* Makeconfig (ansi-incldir, trad-incldir): Removed.
+	(includedir): Define instead.
+
+	* assert/assert.h, ctype/ctype.h, dirent/dirent.h, grp/grp.h,
+	  locale/locale.h, locale/localeinfo.h, math/math.h,
+	  misc/sys/file.h, misc/sys/ioctl.h, misc/sys/ptrace.h,
+	  misc/sys/uio.h, misc/sgtty.h, misc/nlist.h, posix/gnu/types.h,
+	  posix/sys/wait.h, posix/sys/types.h, posix/sys/times.h,
+	  posix/sys/utsname.h, posix/unistd.h, posix/tar.h, posix/utime.h,
+	  posix/wordexp.h, posix/glob.h, posix/fnmatch.h, pwd/pwd.h,
+	  resource/sys/resource.h, resource/sys/vlimit.h,
+	  resource/sys/vtimes.h, setjmp/setjmp.h, signal/signal.h,
+	  signal/gnu/signal.h, socket/sys/socket.h, stdio/stdio.h,
+	  stdio/printf.h, stdlib/alloca.h, stdlib/stdlib.h, string/string.h,
+	  termios/termios.h, time/sys/time.h, time/time.h, io/sys/stat.h,
+	  io/fcntl.h, errno.h, stddef.h, malloc/malloc.h:
+	Deansideclized.  Use <sys/cdefs.h> macros instead of ansidecl and
+	C++ cruft.
+	* features.h: #include <sys/cdefs.h>.
+
+	* string/string.h (strfry, memfrob): Declare.
+	* string/Makefile (routines): Added strfry and memfrob.
+	* string/strfry.c, string/memfrob.c: New.
+
+	* locale/C-ctype_ct.c: Made BS be isspace.
+
+	* sysdeps/generic/strstr.c: Return HAYSTACK, not its end, if NEEDLE
+	is the empty string.
+
+	* sysdeps/generic/strncase.c: Fixed for case of empty string.
+
+Wed May 20 02:36:09 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* io/sys/stat.h (fchmod): Declare, rather than two __fchmod decls.
+
+	* configure (sysv, bsd): Don't make base_os=unix; unix/{sysv,bsd}
+	instead.
+	Set os_used if base_os is used.
+
+Tue May 19 21:00:11 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* crypt/*: New files from glad.
+
+	* stdio/stdio.h (sys_nerr, sys_errlist): Don't declare const.
+
+Sun May 17 15:50:00 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* io/Makefile (headers): Remove gnu/stat.h; add sys/stat.h.
+
+	* posix/glob.c (glob): Don't let us fall off the end without returning.
+
+	* sysdeps/stub/setenv.c, sysdeps/posix/setenv.c: New.
+	* stdlib/stdlib.h [__USE_BSD] (setenv): Declare.
+	* stdlib/Makefile (routines): Add setenv.
+
+	* malloc/mtrace.c (old_{free,malloc,realloc}_hook): Renamed to tr_&
+	to not conflict with mcheck.c when combined into gmalloc.c.
+
+Fri May 15 19:07:54 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* socket/sys/socket.h (PF_NBS, AF_NBS): Removed.
+	(PF_ISO, PF_OSI, PF_APPLETALK, PF_ROUTE, PF_LINK): Define.
+	(PF_MAX): Increase accordingly.
+
+	* inet/bsd/*.c: Snarfed latest code from 4.4.
+
+	* misc/sys/cdefs.h (__BEGIN_DECLS, __END_DECLS): Define cruft for C++.
+
+Thu May 14 01:45:12 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* posix/glob.h (GLOB_MAGCHAR): Check user feature-test macros,
+	rather than __USE_BSD, so we don't depend on features.h.
+
+	* sysdeps/stub/__wait4.c: Last arg is struct rusage *, not PTR.
+
+	* math/bsd/common_source/mathimpl.h: Don't #define const.
+	#include <sys/cdefs.h> instead.
+
+	* Makefile (+other_dirs): Add crypt, but only if it exists at run time.
+	* crypt/GNUmakefile: New file.
+	* sysdeps/sparc/Makefile, sysdeps/m68k/Makefile (crypt):
+	Define to use machine-dependent assembly code in crypt/crypt.*.S.
+	* crypt: New directory.
+
+	* find-sysdirs: Don't lose if there are no sysnames.
+
+	* termios/Makefile (headers): Added sys/termios.h.
+	* termios/sys/termios.h: New file; just #include <termios.h>.
+
+	* stdlib/qsort.c: Define _quicksort rather than qsort.
+	* stdlib/msort.c: New file; defines qsort function that does merge
+	sort.  Falls back to _quicksort if it fails to allocate a temp array.
+	* stdlib/Makefile (routines): Added msort.
+
+	* string/string.h (memccpy, strdup): Also declare #ifdef __USE_BSD.
+	[__USE_BSD] (index, rindex, bcmp, bzero, ffs): Declare.
+	* string/strings.h: Just #include <string.h>.
+	* string/Makefile (headers): Removed bstring.h.
+
+	* misc/Makefile (routines): Removed swab.
+	* string/Makefile (routines): Put it here instead.
+	* misc/swab.c: Moved to string/swab.c.
+
+	* stdio/stdio.h [__USE_BSD] (sys_nerr, sys_errlist): Declare.
+
+	* grp/grp.h (setgrent, endgrent, getgrent): Also do #ifdef __USE_BSD.
+
+	* posix/glob.h [__USE_BSD] (GLOB_MAGCHAR): Declare.
+	(glob_t): Added member `gl_flags'.
+	* posix/glob.c (glob, glob_in_dir): Set gl_flags member to FLAGS;
+	or in GLOB_MAGCHAR if any metachars are seen.
+
+	* sysdeps/unix/bsd/bsd44/readdir.c: New.
+
+	* sysdeps/unix/bsd/sun/readdir.c: Don't need to declare
+	__getdirentries here.  Use off_t and ssize_t.
+
+	* misc/Makefile (routines): Removed getdents and __getdents.
+	* dirent/Makefile (routines): Put them here instead.
+	* misc/getdents.c: Moved to dirent/getdents.c.
+	* dirent/dirent.h [__USE_BSD] (__getdirentries, getdirentries):
+	Declare.
+
+	* dirent/Makefile (routines): Added scandir and alphasort.
+	* dirent/scandir.c, dirent/alphasort.c: New.
+	* dirent/dirent.h [__USE_BSD] (scandir, alphasort): Declare.
+
+	* sysdeps/unix/bsd/nice.c, sysdeps/unix/sysv/nice.S,
+	sysdeps/stub/nice.c: New.
+	* resource/Makefile (routines): Added nice.
+
+	* misc/sys/cdefs.h [__USE_BSD] (const, signed, volatile): #define to
+	__ versions, for the sake of 4.4 header files.
+
+Wed May 13 00:35:12 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* stdlib/tst-strtol.c: Fixed typo in test table.
+
+	* stdlib/strtol.c: Fixed checking for overflow of long int that fits
+	in unsigned long int.
+
+	* misc/Makefile (headers): Added ttyent.h.
+	(routines): Added getttyent.
+	* misc/ttyent.h, misc/getttyent.h: New; snarfed from 4.4.
+
+	* posix/sys/wait.h [__USE_BSD]: Added forward decl for struct rusage.
+	(__wait4, __wait3): Declare arg as struct rusage, not PTR.
+
+	* inet/arpa/*.h, inet/protocols/*.h, inet/netdb.h, inet/resolv.h:
+	New files from 4.4.
+	* inet/Makefile (headers): Snarf *.h from arpa/ and protocols/.
+
+	* sysdeps/m68k/fpu/__math.h, assert/assert.h: #include <sys/cdefs.h>
+	and use its macros rather than rolling our own.
+
+	* misc/sys/cdefs.h: New file.
+	* misc/Makefile (headers): Add it.
+
+	* Makerules: Moved check for headers coming from env to Rules.
+
+Tue May 12 01:04:10 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* sysdeps/generic/strsep.c: New.
+	* string/string.h [__USE_BSD] (strsep): Declare.
+	* string/Makefile (routines): Added strsep.
+
+	* sysdeps/unix/sysv/__settod.c, sysdeps/unix/sysv/stime.S,
+	sysdeps/unix/bsd/stime.c, sysdeps/stub/stime.c: New.
+	* time/time.h [__USE_SVID] (stime): Declare it.
+
+	* sysdeps/unix/bsd/bsd44/__getdents.S: New.
+
+	* posix/wordexp.h, posix/utime.h, posix/unistd.h, time/time.h,
+	termios/termios.h, posix/tar.h, string/strings.h, string/string.h,
+	stdlib/stdlib.h, signal/signal.h, stdio/stdio.h, misc/sgtty.h,
+	setjmp/setjmp.h, inet/resolv.h, pwd/pwd.h, stdio/printf.h,
+	misc/nlist.h, inet/netdb.h, math/math.h, malloc/malloc.h,
+	locale/locale.h, grp/grp.h, posix/glob.h, posix/getopt.h,
+	posix/fnmatch.h, io/fcntl.h, errno.h, dirent/dirent.h,
+	ctype/ctype.h, string/bstring.h, assert/assert.h, stdlib/alloca.h,
+	misc/a.out.h [__cplusplus]: Added stupid cruft for losing C++.
+
+Mon May 11 01:40:49 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* math/Makefile (headers): Added huge_val.h and nan.h.
+
+	* io/Makefile (headers): Changed gnu/stat.h to statbuf.h.
+
+	* time/Makefile (install-data): Include $(localtime-file) and
+	$(posixrules-file) if they are relative.
+	(install-others): Include them if absolute.
+	($(posixrules-file), $(localtime-file)): Define rules to install if
+	absolute file names.
+	* Makerules (+install): Include $(install-others) verbatim.
+	* Makeconfig (localtime-file): Made default /etc/localtime.
+
+	* sysdeps/generic/Makefile (endian.h): Only generate if would
+	otherwise use stub version.
+	* sysdeps/stub/endian.h, sysdeps/i386/endian.h: New.
+
+	* Rules, Makefile: Export distribute and dont_distribute.
+	* Make-dist: Export sysdep_dirs.  Unexport things rather than
+	clobbering their values.
+
+	* misc/sys/ptrace.h: Fixed typo.
+
+	* stdio/stdio.h (__io_read, __io_write, __io_seek, __io_close):
+	Added comments.
+
+	* stdio/internals.c (flushbuf): If in append mode, don't do aligned
+	writing, seek to the target, or update the offset.
+
+	* posix/unistd.h (lseek): Doc fix.
+
+	* misc/swab.c: New.
+	* misc/Makefile (routines): Added swab.
+
+Wed May  6 12:32:18 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* math/Makefile, inet/Makefile (source_dirs): Export it.
+	* MakeTAGS (all-dirs): Include $(source_dirs).
+
+	* Makefile (TAGS): Removed dep on subdir_TAGS.
+	(+subdir_targets): Removed subdir_TAGS.
+	* MakeTAGS [! subdir] (TAGS): Depend on subdir_TAGS.
+	[! subdir] (subdir_TAGS): Recurse on subdirectories.
+
+	* Makerules (headers): Don't take value from the environment.
+
+	* Makerules (sysdirs, sysdep_dir): Export them.
+
+	* MakeTAGS: New makefile.
+	* Makefile (distribute): Include it.
+	* Makefile (TAGS), Rules (TAGS): Removed rules.
+	* Makerules (TAGS): New rule that uses MakeTAGS.
+	* Makefile (TAGS): Depend on subdir_TAGS.
+
+	* Makerules (install, install-lib, install-data, routines, aux):
+	Don't bother removing these if they come from the environment, since
+	they won't with make >= 3.62.8.
+	* Rules (distribute, headers): Ditto.
+	(subdir): Export it.
+	* Makerules (sources, headers): Export these.
+	* Makefile (subdirs): Export it.
+
+	* Rules (+tags_sources): Removed.
+	* Makerules (tags-sources): Define here.
+	* ctype/Makefile (tags-sources): Redefine to give headers precedence
+	over sources.
+	* Rules (TAGS), Makefile (TAGS): Rewrote rules.
+	* Makeconfig (+ctags): Removed.
+	(ETAGS): Define.
+
+	* sysdeps/posix/getcwd.c: Don't closedir twice.
+
+	* sysdeps/unix/bsd/hp/m68k/__wait3.S: Define __wait3, not ___wait3.
+
+	* posix/sys/types.h [__USE_BSD] (fsid_t): Define.
+	* posix/gnu/types.h (__fsid_t): Define.
+
+	* io/fcntl.h (F_GETLK): Define.
+
+Tue May  5 18:36:46 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* misc/Makefile (routines): Added seteuid and setegid.
+	* sysdeps/stub/sete[ug]id.c, sysdeps/unix/bsd/bsd44/sete[ug]id.S: New.
+	* posix/unistd.h [__USE_BSD] (seteuid, setegid): Declare.
+
+	* sysdeps/unix/bsd/tcsendbrk.c: #include <sys/types.h>
+
+	* Makerules: Strip whitespace from $(headers) so ifdef wins.
+
+	* sysdeps/unix/bsd/bsdtty.h: #undef a bunch more things.
+
+	* sysdeps/unix/bsd/bsd44/errnos.h: New, hacked from 4.4 <sys/errno.h>.
+
+	* sysdeps/unix/Makefile (ioctls.h, errnos.h): Only generate if
+	the files that would be used otherwise are the stub versions.
+
+	* sysdeps/unix/bsd/tcflow.c: Don't write VSTOP or VSTART if it is
+	_POSIX_VDISABLE.
+
+	* sysdeps/unix/bsd/tcflush.c: Use FREAD|FWRITE for TCIOFLUSH.
+
+	* sysdeps/unix/bsd/usleep.c: Use select rather than itimers to wait.
+
+	* sysdeps/unix/bsd/tcsendbrk.c: Use select rather than itimers to wait.
+
+	* termios/cfmakeraw.c: New.
+	* termios/Makefile (routines): Added cfmakeraw.
+
+	* sysdeps/unix/bsd/bsd44/ioctls.h: New file, hacked from 4.4
+	<sys/ioctl.h>.
+	* sysdeps/unix/bsd/bsd44/__tcgetatr.c: New.
+	* sysdeps/unix/bsd/bsd44/tcsetattr.c: New.
+	* sysdeps/unix/bsd/bsd44/tcdrain.c: New.
+
+	* termios/sys/ttydefaults.h: New, snarfed from 4.4.
+	* termios/Makefile (headers): Define.
+	* termios/termios.h [__USE_BSD]: #include <sys/ttydefaults.h>
+
+	* sysdeps/posix/getcwd.c: Removed unused variable.
+
+	* time/__tzset.c: Cast string literal to (char *).
+
+	* setjmp/sigjmp_save.c: Declare properly to return void.
+
+	* sysdeps/ieee754/nan.h: Created; somehow it disappeared.
+
+Mon May  4 18:30:52 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/bsd44/__wait4.S: New.
+
+	* sysdeps/unix/bsd/4.4: Renamed to sysdeps/unix/bsd/bsd44.
+
+	* signal/gnu/signal.h (__SA_DISABLE, __SA_NOCLDSTOP): Use same bits
+	4.4 uses.
+
+Sun May  3 13:57:25 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* stdio/fwrite.c: Use unsigned char to avoid sign extension.
+
+	* stdlib/__random.c (randtbl): Replaced default constants so they
+	match the state produced by "srandom (1)".
+
+	* stdlib/mbtowc.c: Test for S == "" before testing for no mbchars.
+
+	* stdlib/Makefile (tests): Added testrand.
+	* stdlib/testrand.c: New test for rand.
+
+	* stdlib/testmb.c: Added 2 mblen tests.
+
+	* stdlib/wcstombs.c: Don't do anything strange for EOF.
+	Copy non-MB characters as they are.
+	Properly increment S after writing.
+
+	* stdlib/testmb.c: Added test case for wcstombs.
+
+	* signal/signal.h (SA_DISABLE): Define.
+	* signal/gnu/signal.h (__SA_DISABLE): Define.
+
+	* signal/signal.h (struct sigaltstack): Define new type.
+	(sigaltstack): Declare new fn.
+	* sysdeps/stub/sigaltstack.c: New.
+	* sysdeps/unix/bsd/4.4/sigaltstack.S: New.
+
+	* misc/Makefile (routines): Added reboot.
+	* posix/unistd.h (reboot): Declare.
+	* sysdeps/stub/reboot.c: New.
+
+	* sysdeps/unix/bsd/ulimit.c [! HAVE_GNU_LD]: #define _etext -> etext.
+
+	* sysdeps/unix/bsd/sun/sparc/sethostid.S: #define _ERRNO_H before
+	#include <errnos.h>.
+
+	* configure (newos*): base_os=unix/bsd.
+
+Fri May  1 12:21:47 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* io/gnu/stat.h: Moved to sysdeps/unix/bsd/statbuf.h.
+	* sysdeps/unix/bsd/statbuf.h: Define struct stat, not struct __stat.
+	* io/stat.c: Use struct stat, not struct __stat.
+	* sysdeps/stub/statbuf.h: New.
+	* io/sys/stat.h: #include <statbuf.h> instead of gnu/stat.h.
+	(stat, fstat, lstat, chmod, fchmod, umask, mkdir, mknod): Don't
+	#define; declare as fns instead.
+	* sysdeps/unix/sysv/stat.h: New.
+	* sysdeps/unix/sysv/sysv_stat.h, sysdeps/unix/sysv/sys_stat.S,
+	sysdeps/unix/sysv/sys_fstat.S: Removed.
+	* sysdeps/unix/sysv/Makefile (sysdep_routines): Removed sys_stat,
+	sys_fstat.
+	* sysdeps/unix/sysv/Dist: Removed sys_stat.S, sys_fstat.S.
+	* sysdeps/unix/bsd/__stat.S, sysdeps/unix/bsd/__fstat.S: Moved to
+	sysdeps/unix.
+
+	* sysdeps/m68k/fpu/switch/Makefile: Refer to dirs fpu and
+	fpu/switch, not 68881 and 68881-switch.
+
+	* sysdeps/m68k/fpu/switch/switch.c: #include <68881-sw.h>, not
+	  68881-switch.h.
+
+	* sysdeps/m68k/fpu/__expm1.c, sysdeps/m68k/fpu/__rint.c,
+	sysdeps/m68k/fpu/asin.c, sysdeps/m68k/fpu/atan.c,
+	sysdeps/m68k/fpu/atanh.c, sysdeps/m68k/fpu/ceil.c,
+	sysdeps/m68k/fpu/cos.c, sysdeps/m68k/fpu/cosh.c,
+	sysdeps/m68k/fpu/exp.c, sysdeps/m68k/fpu/fabs.c,
+	sysdeps/m68k/fpu/floor.c, sysdeps/m68k/fpu/log.c,
+	sysdeps/m68k/fpu/log10.c, sysdeps/m68k/fpu/log1p.c,
+	sysdeps/m68k/fpu/sin.c, sysdeps/m68k/fpu/sinh.c,
+	sysdeps/m68k/fpu/sqrt.c, sysdeps/m68k/fpu/tan.c,
+	sysdeps/m68k/fpu/tanh.c: #include <acos.c> without explicit path
+	(which has changed).
+
+	* sysdeps/unix/bsd/sun/sparc/start.c: #include <syscall.h>.
+	(syscall): Removed C function; define all inside asm instead.
+	(init_shlib): Cast return value of syscall to right types.
+
+Thu Apr 30 01:15:33 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/sun/sparc/start.c: Added code to use dynamic
+	linker from trq@dionysos.thphys.ox.ac.uk.
+
+	* sysdeps/unix/bsd/sun/sunos4: Renamed to sunos411.
+
+	* setjmp/setjmp.h (sigsetjmp): Don't declare as a function.
+	Define as a macro instead.
+	(__sigjmp_save): Declare; internal fn used by sigsetjmp macro.
+	(_setjmp), [__FAVOR_BSD] (setjmp): Always define as a macro.
+	* setjmp/sigjmp_save.c: New file.
+	* setjmp/_setjmp.c, setjmp/sigsetjmp.c: Removed.
+	* Makefile (routines): Removed _setjmp, sigsetjmp; added sigjmp_save.
+	* misc/bsd-compat.c (setjmp): Don't define.
+
+	* configure (sysv, bsd): base_os=unix
+
+	* configure: Fatal error if the machine or os did not generate any
+	sysdep dirs.
+
+	* configure: No error message after config.sub fails.
+
+	* sysdeps/mips, sysdeps/unix/bsd/ultrix42: New port from
+	brendan@cs.widener.edu.
+
+	* Reorganized sysdeps:
+	  unix/bsd/
+	      hp9k3bsd -> hp/m68k
+	      news -> sony/m68k
+	      sun/
+	          sun3/os3 -> sunos3/m68k
+	          sun3 -> m68k
+	          sun4 -> sparc
+	  unix/sysv/
+	      r4 -> sysv4
+	  m68k/
+	      68881 -> fpu
+	      68881/68881-switch -> fpu/switch
+	* sysdeps/unix/bsd/sony/m68k/start.c: Changed #include.
+	* configure: Use config.sub to canonicalize name.
+	Then use combinations of machine, vendor, and os (with special
+	hacks for os flavors) for sysdep dirs to try.
+	* Makefile (distribute): Added config.sub.
+
+Wed Apr 29 23:06:06 1992  Brendan Kehoe  (brendan@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/hp9k3bsd/sysdep.h,
+	sysdeps/unix/bsd/sun/sun3/sysdep.h, sysdeps/unix/bsd/sun/sun4/sysdep.h,
+	sysdeps/unix/bsd/vax/sysdep.h,sysdeps/unix/i386/sysdep.h,
+	sysdeps/mach/i386/sysdep.h: Change all definitions of movl/mov to
+	MOVE(s, d), for insn sets with d,s instead of s,d move insns.
+	* sysdeps/unix/__getegid.S, sysdeps/unix/__geteuid.S,
+	sysdeps/unix/__getppid.S: Use that in each of these.
+
+Wed Apr 29 17:58:21 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* io/getwd.c: Default PATH_MAX if not defined.
+
+	* sysdeps/unix/getlogin.c, sysdeps/posix/ttyname.c: Make buffers
+	only as big as needed, avoiding PATH_MAX.
+
+	* sysdeps/posix/getcwd.c: Dynamically extend the buffer as we go,
+	not afterwards; default PATH_MAX if not defined.
+
+	* posix/execvp.c: Dynamically allocate an array on the stack for the
+	path name, rather than using a fixed-size array.
+
+	* pwd/putpwent.c: Print pw_dir field.
+
+	* sysdeps/posix/mktemp.c: If the pid has changed, update OLDPID.
+
+Tue Apr 28 19:25:21 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* malloc/valloc.c [emacs]: #include "config.h"
+
+Thu Apr 23 13:55:34 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* sysdeps/m68k/68881/__drem.c: Define __drem, not drem.
+	Call ____drem, not __drem.
+
+	* malloc/realloc.c, malloc/malloc.c: Don't #define memcpy or memset
+	if already #define'd.
+
+Tue Apr 21 04:16:56 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* malloc/Makefile: Moved include ../Rules after malloc.tar rules.
+	They need $(routines), which Rules clears.
+
+	* malloc/realloc.c (MIN): Renamed to min.  Conflicted with HPUX
+	system header files.
+
+	* Makefile (sysdep-subdirs): Is not called +sysdep-subdirs.
+
+	* configure: Don't try to create config.status if . is not writable.
+
+	* sysdeps/generic/printf_fp.c: Fixed padding loop condition for zero
+	case.
+
+	* math/math.h: Don't #include <float.h> for HUGE_VAL.
+	Instead, #include <huge_val.h>.
+	* stdlib/stdlib.h: Ditto.
+	* math/math.h [__USE_GNU]: #include <nan.h> to get NAN value.
+	* float.h: Removed.
+	* Makefile (headers): Removed float.h and fl.h.
+	* sysdeps/ieee754/huge_val.h, sysdeps/ieee754/nan.h,
+	sysdeps/stub/huge_val.h, sysdeps/stub/nan.h, sysdeps/vax/huge_val.h:
+	Created (from old fl.h files).
+
+	* math/bsd/common_source/pow.c (pow_p): When checking if Y is an
+	integer, don't let it overflow a `long int'.
+	(pow): Check for NaN with __isnan, not (X != X).
+
+Tue Apr 21 02:26:19 1992  Brendan Kehoe  (brendan@cs.widener.edu)
+
+	* sysdeps/unix/bsd/sun/sun4/__pipe.S,
+	sysdeps/unix/bsd/vax/__wait3.S, sysdeps/unix/bsd/hp9k3bsd/__wait3.S:
+	Use the ENTRY macro for each beginning
+
+	* sysdeps/unix/sysdep.h, sysdeps/unix/bsd/hp9k3bsd/sysdep.h,
+	sysdeps/unix/bsd/sun/sun3/sysdep.h,
+	sysdeps/unix/bsd/sun/sun4/sysdep.h, sysdeps/unix/bsd/vax/sysdep.h,
+	sysdeps/unix/i386/sysdep.h, sysdeps/unix/sysdep.h,
+	sysdeps/unix/sysv/sysdep.h [SYSCALL, SYSCALL__, PSEUDO]: Modify to
+	also receive the number of args the syscall takes; added for future
+	ports that will require this information.
+
+	* sysdeps/unix/i386/__pipe.S, sysdeps/unix/bsd/vax/__pipe.S,
+	sysdeps/unix/bsd/sun/sun4/__pipe.S,
+	sysdeps/unix/bsd/hp9k3bsd/__pipe.S, sysdeps/unix/i386/__brk.S,
+	sysdeps/unix/bsd/sun/__getdents.S, sysdeps/unix/i386/__fork.S,
+	sysdeps/unix/bsd/vax/__fork.S, sysdeps/unix/bsd/sun/sun4/__fork.S,
+	sysdeps/unix/__setgid.S, sysdeps/unix/__setuid.S,
+	sysdeps/unix/bsd/sun/sun3/__vfork.S,
+	sysdeps/unix/bsd/sun/sun4/__vfork.S,
+	sysdeps/unix/bsd/vax/__wait.S, sysdeps/unix/bsd/hp9k3bsd/__wait.S,
+	sysdeps/unix/i386/__wait.S,
+	sysdeps/unix/bsd/sun/sunos4/sys_wait4.S,
+	sysdeps/unix/bsd/sun/sun3/sethostid.S,
+	sysdeps/unix/bsd/sun/sun4/sethostid.S,
+	sysdeps/unix/bsd/__sigvec.S, sysdeps/unix/bsd/sun/sun4/__sigvec.S,
+	sysdeps/unix/sysv/i386/__sigret.S, sysdeps/unix/__getppid.S,
+	sysdeps/unix/bsd/__access.S, sysdeps/unix/sysv/signal.S,
+	sysdeps/unix/__getegid.S, sysdeps/unix/__geteuid.S,
+	sysdeps/unix/bsd/bsd_getgrp.S, sysdeps/unix/bsd/__dup2.S,
+	sysdeps/unix/bsd/__fchmod.S, sysdeps/unix/bsd/__fchown.S,
+	sysdeps/unix/bsd/__flock.S, sysdeps/unix/bsd/__fstat.S,
+	sysdeps/unix/bsd/__lstat.S, sysdeps/unix/bsd/__mkdir.S,
+	sysdeps/unix/bsd/__readlink.S, sysdeps/unix/bsd/__rmdir.S,
+	sysdeps/unix/bsd/__stat.S, sysdeps/unix/bsd/__symlink.S,
+	sysdeps/unix/bsd/4.4/chflags.S, sysdeps/unix/bsd/4.4/fchflags.S,
+	sysdeps/unix/bsd/4.4/sstk.S, sysdeps/unix/bsd/4.4/setlogin.S,
+	sysdeps/unix/bsd/__getdtsz.S, sysdeps/unix/bsd/__getpgsz.S,
+	sysdeps/unix/bsd/__setregid.S, sysdeps/unix/bsd/__setreuid.S,
+	sysdeps/unix/bsd/__utimes.S, sysdeps/unix/bsd/ftruncate.S,
+	sysdeps/unix/bsd/readv.S, sysdeps/unix/bsd/truncate.S,
+	sysdeps/unix/bsd/vhangup.S, sysdeps/unix/bsd/writev.S,
+	sysdeps/unix/bsd/__getpgrp.S, sysdeps/unix/bsd/__setpgrp.S,
+	sysdeps/unix/bsd/__getrusag.S, sysdeps/unix/bsd/getprio.S,
+	sysdeps/unix/bsd/getrlimit.S, sysdeps/unix/bsd/setprio.S,
+	sysdeps/unix/bsd/__sigblock.S,
+	sysdeps/unix/bsd/__sigpause.S, sysdeps/unix/bsd/__sigstmsk.S,
+	sysdeps/unix/bsd/killpg.S, sysdeps/unix/bsd/sigstack.S,
+	sysdeps/unix/bsd/rename.S, sysdeps/unix/bsd/__adjtime.S,
+	sysdeps/unix/bsd/__setitmr.S, sysdeps/unix/bsd/__settod.S,
+	sysdeps/unix/sysv/sys_stat.S, sysdeps/unix/sysv/sys_fstat.S,
+	sysdeps/unix/sysv/__utssys.S, sysdeps/unix/sysv/utime.S,
+	sysdeps/unix/sysv/__times.S, sysdeps/unix/sysv/i386/time.S,
+	sysdeps/unix/sysv/alarm.S, sysdeps/unix/sysv/pause.S,
+	sysdeps/unix/sysv/ulimit.S, sysdeps/unix/__chdir.S,
+	sysdeps/unix/__chmod.S, sysdeps/unix/__chown.S,
+	sysdeps/unix/__close.S, sysdeps/unix/__dup.S,
+	sysdeps/unix/__fcntl.S, sysdeps/unix/__link.S,
+	sysdeps/unix/__lseek.S, sysdeps/unix/__open.S,
+	sysdeps/unix/__read.S, sysdeps/unix/__umask.S,
+	sysdeps/unix/__unlink.S, sysdeps/unix/__write.S,
+	sysdeps/unix/__ioctl.S, sysdeps/unix/__mknod.S,
+	sysdeps/unix/acct.S, sysdeps/unix/chroot.S, sysdeps/unix/fsync.S,
+	sysdeps/unix/ptrace.S, sysdeps/unix/swapon.S, sysdeps/unix/sync.S,
+	sysdeps/unix/__execve.S, sysdeps/unix/__getgid.S,
+	sysdeps/unix/__getpid.S, sysdeps/unix/__getuid.S,
+	sysdeps/unix/_exit.S, sysdeps/unix/__kill.S,
+	sysdeps/unix/inet/__gethstnm.S, sysdeps/unix/inet/__select.S,
+	sysdeps/unix/inet/gethostid.S, sysdeps/unix/inet/sethostid.S,
+	sysdeps/unix/inet/sethostnam.S, sysdeps/unix/inet/accept.S,
+	sysdeps/unix/inet/bind.S, sysdeps/unix/inet/connect.S,
+	sysdeps/unix/inet/getpeernam.S, sysdeps/unix/inet/getsocknam.S,
+	sysdeps/unix/inet/getsockopt.S, sysdeps/unix/inet/listen.S,
+	sysdeps/unix/inet/recv.S, sysdeps/unix/inet/recvfrom.S,
+	sysdeps/unix/inet/recvmsg.S, sysdeps/unix/inet/send.S,
+	sysdeps/unix/inet/sendmsg.S, sysdeps/unix/inet/sendto.S,
+	sysdeps/unix/bsd/vax/__wait3.S, sysdeps/unix/bsd/hp9k3bsd/__wait3.S,
+	sysdeps/unix/inet/setsockopt.S, sysdeps/unix/inet/shutdown.S,
+	sysdeps/unix/inet/socket.S, sysdeps/unix/inet/socketpair.S: Added the
+	argument count to every use of SYSCALL, SYSCALL__ or PSEUDO.
+
+Tue Apr 21 00:06:52 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* limits.h [__GNUC__ >= 2]: Use #include_next to get GCC's <limits.h>.
+
+	* sysdeps/posix/sysd-stdio.c (__stdio_read, __stdio_write,
+	__stdio_errmsg) [EINTR && EINTR_REPEAT]: Do EINTR looping.
+	* sysdeps/unix/sysv/sysd-stdio.c: New.
+	#define EINTR_REPEAT and #include posix/sysd-stdio.c.
+
+	* stdlib/mbstowcs.c: Copy non-MB chars verbatim, instead of error.
+
+	* sysdeps/generic/printf_fp.c: Note sign of exponent and take its
+	absolute value for arithmetic.
+
+	* stdlib/testmb.c: New.
+	* stdlib/Makefile (tests): Added testmb.
+
+	* sysdeps/generic/frexp.c [NAN]: If VALUE is infinite, return NAN.
+	If VALUE is NAN, set errno to EDOM and return VALUE.
+	If VALUE is zero, return it.  In all special cases, clear *EXP.
+
+	* stdio/test-fseek.c: New.
+	* stdio/Makefile (tests): Added test-fseek.
+
+	* stdio/fseek.c: Position returned from io_funcs.seek is absolute,
+	not EOF-relative when using SEEK_END.
+
+	* sysdeps/posix/sysd-stdio.c (__stdio_gen_tempname): Set errno to
+	EEXIST when we run out.
+
+	* sysdeps/posix/sysd-stdio.c (exists): Use stat rather than open, so
+	we don't need read access.
+
+	* sysdeps/posix/mk-stdiolim.c (TMP_NAM): is 62 ** 3.
+
+Mon Apr 20 23:08:02 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/posix/sysd-stdio.c (__stdio_gen_tempname): Don't return
+	the same name twice when the file doesn't exist.
+
+	* stdio/vfprintf.c (%c format): Tests of LEFT for padding were
+	reversed.
+
+	* sysdeps/generic/printf_fp.c: If we have written some fractional
+	digits, write zeros up to the precision.
+
+	* sysdeps/unix/bsd/sun/sun4/start.c: Don't clear the FP until just
+	before calling main.
+
+Wed Apr 15 01:43:38 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* Makerules (libc.a): Don't depend on libc.a(...); only on lib.
+	(lib-noranlib): Depend on libobjs.
+	(+libobjs): New var.
+	(libobjs): Depend on $(+libobjs).
+	* Rules (others, tests): Don't depend on lib; on libc.a instead.
+
+	* locale/C-numeric.c: grouping is "".
+
+	* locale/localeconv.c: Set int_frac_digits.
+
+	* locale/setlocale.c: Accept "" to mean "C".
+
+	* sysdeps/unix/sysv/r4/bsddir.h: Protect against multiple inclusion.
+
+	* sysdeps/unix/sysv/r4/Dist: Created; includes bsddir.h and
+	sys_getdents.S.
+
+	* sysdeps/unix/i386/sysdep.h [! HAVE_SYSCALLS]: Don't #inlcude
+	unix/sysdep.h.
+	* sysdeps/unix/sysv/sysdep.h, sysdeps/unix/sysdep.h
+	(HAVE_SYSCALLS): #define.
+	* sysdeps/unix/sysv/i386/sysdep.h: #include unix/sysv/sysdep.h, then
+	unix/i386/sysdep.h.
+
+	* sysdeps/unix/sysv/Makefile: Fixed typos.
+
+	* sysdeps/unix/sysv/Dist: Add utmp.h.
+
+	* sysdeps/posix/Makefile (mk-stdiolim): Explicit commands, to
+	compile it without normal gcc flags.
+
+	* configure (i386-sysv): unix/i386/sysv -> unix/sysv/i386.
+	(i386-sysvr4): New configuration.
+
+Tue Apr 14 16:47:47 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* setjmp/setjmp.h: Put sigjmp_buf before typedef for jmp_buf, which
+	needs sigjmp_buf #ifdef __FAVOR_BSD.
+
+	* posix/unistd.h (getgroups): Don't #define.
+
+	* sysdeps/stub/ptrace.c: #include <stdarg.h>; declare AP in fn.
+	Avoid "PTR a, b".
+
+	* sysdeps/posix/sigintr.c: New; sets global sigset_t `_sigintr'.
+	* sysdeps/posix/signal.c: Use SA_RESTART unless SIG is in _sigintr.
+	* signal/sigintr.c: Removed.
+	* sysdeps/stub/sigintr.c: New.
+
+	* sysdeps/posix/sysd-stdio.c (__stdio_read, __stdio_write,
+	__stdio_errmsg): Don't treat EINTR specially.
+
+	* sysdeps/unix/Makefile (sys/param.h): Touch the target after mv'ing
+	from the tmp file, so the file is newer than the directory.
+
+	* sysdeps/generic/strcasecmp.c: Simplified loop; fixed returning
+	wrong value on equal comparison.
+
+	* stdlib/bsearch.c: Don't lose if NMEMB is zero.
+
+	* sysdeps/unix/bsd/__times.c (timeval_to_clock_t): Microseconds are
+	not milliseconds.
+
+Mon Apr 13 18:25:17 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/generic/strncase.c: New.
+	* string/Makefile (routines): Add strncase.
+	* string/string.h [__USE_GNU]: Declare strncasecmp.
+
+	* time/__tzset.c: Correctly default DST offset to one hour later
+	than standard offset.
+
+	* time/__tzset.c (tz_rule): Made `name' not be const.
+
+	* string/tester.c [! HAVE_GNU_LD]: #define _sys_nerr and
+	_sys_errlist to sys_nerr and sys_errlist.
+
+	* stdio/test_rdwr.c: Fixed printf call missing arg.
+
+	* posix/getgrps.c: #undef getgroups first.
+
+	* misc/brk.c: Declare __brk.
+	* misc/sbrk.c: Declare __sbrk.
+	* misc/setreuid.c, misc/setregid.c: #include <unistd.h>.
+	Fixed types in DEFUN in fn alias.
+	* misc/getpgsz.c, misc/getdtsz.c, misc/gethstnm.c: #include <unistd.h>.
+	* misc/getdents.c: Declare __getdirentries.
+	* misc/mknod.c: #include <sys/stat.h>.
+	* posix/unistd.h: Declare many __ versions of things.
+	[__OPTIMIZE__]: Many #define foo(...) -> __foo(...).
+
+	* io/fcntl.c: #include <sys/file.h>.
+
+	* sysdeps/unix/Makefile: New hair to install other headers the
+	system sys/param.h #includes.
+
+	* time/__tzset.c (__tzfile_default): Declare.
+
+	* time/sys/time.h (timezone): #define to __timezone.
+
+	* sysdeps/ieee754/printf_fp.c: #undef outchar before #including
+	generic/printf_fp.c.
+
+	* stdio/__vfscanf.c: For %c, don't lose the first char.
+	For %s, properly consume the last char when we hit max width.
+
+	* posix/gnu/types.h (__dev_t, __mode_t): Made int rather than short.
+	* io/gnu/stat.h (struct stat): Made st_dev, st_rdev, and st_mode use
+	{,unsigned} short int instead of __dev_t/__mode_t.
+
+Fri Apr 10 13:55:07 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* setjmp/setjmp.h: Rearranged so that jmp_buf is defined before any
+	prototypes are used.
+	(longjmp): Declare with jmp_buf, not __jmp_buf, to win in BSD mode.
+	(_longjmp): #define as __longjmp, not longjmp.
+	(_longjmp, _setjmp): Take jmp_buf args, not __jmp_buf.
+	Call sig{set,long}jmp with SAVEMASK==0, rather than __{set,long}jmp.
+	* _longjmp.c, _setjmp.c: #define _BSD_SOURCE before all else.
+	(_setjmp): Call sigsetjmp, not __setjmp.
+
+	* io/sys/stat.h (__fchmod, __mknod): Fixed arg types.
+
+	* io/fchmod.c: Fixed typo.
+
+	* time/Makefile (\n): Renamed to nl.
+
+	* Makerules (native-compile): New variable.
+	* sysdeps/generic/Makefile, sysdeps/unix/Makefile,
+	sysdeps/unix/bsd/Makefile: Use it in cmds for generator progs.
+
+	* sysdeps/unix/sysv/sysv_termio.h (_SYSV_TAB3): New; same as XTABS.
+
+	* sysdeps/unix/sysv/setrlimit.c: Removed extern decl of etext (unused).
+
+	* sysdeps/unix/sysv/__tcgetatr.c, sysdeps/unix/sysv/tcdrain.c,
+	sysdeps/unix/sysv/tcflow.c, sysdeps/unix/sysv/tcflush.c,
+	sysdeps/unix/sysv/tcgetpgrp.c, sysdeps/unix/sysv/tcsendbrk.c,
+	sysdeps/unix/sysv/tcsetattr.c, sysdeps/unix/sysv/tcsetpgrp.c:
+	#include <sys/ioctl.h>
+
+	* sysdeps/unix/sysv/__rmdir.c, sysdeps/unix/sysv/__mkdir.c,
+	sysdeps/posix/writev.c: #include <string.h>.
+
+	* sysdeps/posix/clock.c: Removed unused variable.
+
+Thu Apr  9 01:49:39 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Version 1.03.
+
+	* grp/testgrp.c: Print members correctly.
+
+	* stdio/test-popen.c: Pipe to cat rather than more, and then check
+	output file.  Better error checking.
+
+	* setjmp/tst-setjmp.c: Notice if we didn't jump the right number of
+	times.
+
+	* signal/tst-signal.c, string/testcopy.c, stdio/bug[12345].c: Print
+	msgs that more clearly say whether we won or lost.  Better error
+	checking.
+
+	* sysdeps/generic/printf_fp.c: Completely rewritten from scratch.
+	Now uses Steele & White's "Dragon4" algorithm to do things right.
+
+Wed Apr  8 01:08:41 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/i386/__longjmp.c: Test for VAL==0 before clobbering regs.
+	Wire V to AX, rather than DX.  Use "a" constraint on unused operand
+	in jmp asm, rather than global reg var, to force value into AX.
+
+Tue Apr  7 17:51:25 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* posix/Makefile (headers): Added tar.h.
+	* posix/tar.h: New file, from djm.
+
+Mon Apr  6 01:39:07 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* time/tzfile.c (struct ttinfo): Made `isstd' member be unsigned
+	char instead of 1-bit bitfield.
+
+	* time/tzfile.c (__tzfile_default): New function.
+	* time/__tzset.c: Call it when no rule is given.
+	* time/Makefile: Install posixrules just like localtime.
+	* time/Makeconfig (posixrules, posixrules-file): New config vars.
+
+	* time/time.h (struct tm): Add `tz_gmtoff', `tz_zone'.
+	* time/localtime.c: Set those members.
+
+	* sysdeps/ieee754/__drem.c: XOR the signs of X and the result,
+	rather than setting the sign of the result to that of X.
+
+	* sysdeps/unix/bsd/make-local_lim.c: Don't do MAXUPRC or MAXLINK if
+	<sys/param.h> didn't define them.
+
+	* sysdeps/posix/__sigvec.c: Fixed braino: SA_ONSTACK should be
+	SA_RESTART.
+
+	* pwd/getpw.c, pwd/putpwent.c: Use %u fmt for uid and gid (which are
+	unsigned).
+
+	* time/time.h (tzname, daylight, timezone): Don't #define to __.
+	* time/tzfile.c, time/__tzset.c, time/localtime.c, time/strftime.c
+	[! HAVE_GNU_LD]: #define __ to plain for above three vars.
+
+Thu Apr  2 03:39:04 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* locale/Makefile (routines): Add localeconv.
+
+	* sysdeps/i386/jmp_buf.h: Removed `__dx' elt; replaced with `__pc'.
+	__bp and __sp are PTRs.
+	* sysdeps/i386/setjmp.c: Rewritten.  Use global reg vars to save regs.
+	Use arithmetic on address of arg to get caller's PC, BP, and SP.
+	* sysdeps/i386/__longjmp.c: Rewritten.  Use global reg vars to
+	restore regs.
+
+Wed Apr  1 23:13:57 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Moved sysdeps/unix/i386/{bsd,sysv} to
+	sysdeps/unix/{bsd,sysv}/i386, and updated Implies files.
+	Implied dirs come before parents, and we want unix/i386 before
+	unix/{sysv,bsd}.
+
+	* io/chown.c: Fixed types in fn alias.
+
+Wed Apr  1 14:18:58 1992  Torbjorn Granlund  (tege@mole.gnu.ai.mit.edu)
+
+	* sysdeps/generic/memcmp.c
+	(memcmp_common_alignment, memcmp_not_common_alignment):
+	Move back do0 label to its original position, after the loop.
+	Add comment before do0 labels.
+	* sysdeps/generic/wordcopy.c (_wordcopy_fwd_aligned): Indentation.
+	Add comment before do0 labels.
+
+Wed Apr  1 02:16:19 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/unix/sysv/Makefile [subdir==misc]: Generate sysdep header
+	termio.h from sysv_termio.h.
+
+	* sysdeps/generic/make_siglist.c: New file.
+	* sysdeps/generic/signame.[ch]: Symlink'd from /gd/gnu/lib.
+	* sysdeps/generic/Makefile: Generate siglist.c with above.
+	* sysdeps/generic/Dist: Add make_siglist.c, signame.[ch].
+
+	* sysdeps/unix/bsd/Makefile (before-compile): Define properly as a
+	variable.
+
+	* sysdeps/unix/bsd/make_siglist.c: Generate #define _sys_siglist
+	sys_siglist #ifndef HAVE_GNU_LD.
+	* stdio/psignal.h, string/strsignal.h [! HAVE_GNU_LD]:
+	#define _sys_siglist sys_siglist.
+
+	* sysdeps/unix/sysv/signum.h (SIGCHLD): Changed #.
+	(SIGUSR1, SIGUSR2, SIGPWR): Added.
+	(_NSIG): Updated.
+
+	* sysdeps/unix/sysv/utmp.h: New.
+
+	* sysdeps/unix/bsd/getlogin.c: Moved to sysdeps/unix/getlogin.c.
+
+	* sysdeps/unix/sysv/r4/bsddir.h, sysdeps/unix/sysv/r4/readdir.c,
+	sysdeps/unix/sysv/r4/closedir.c, sysdeps/unix/sysv/r4/rewinddir.c,
+	sysdeps/unix/sysv/r4/opendir.c, sysdeps/unix/sysv/r4/sys_getdents.S,
+	sysdeps/unix/sysv/r4/Makefile: New.
+
+	* sysdeps/unix/sysv/tcflow.c: New.
+
+	* sysdeps/unix/sysv/sysv_termio.h: Add lots of bits; VMIN and VTIME
+	elts of c_cc.
+	* sysdeps/unix/sysv/__tcgetatr.c, sysdeps/unix/sysv/tcsetattr.c: Use
+	VMIN and VTIME elts from sysv termio struct.
+
+	* sysdeps/unix/sysv/__gethstnm.c: New.
+
+	* sysdeps/unix/sysv/local_lim.h (NGROUPS_MAX): Define as 0.
+
+	* sysdeps/unix/sysv/fcntlbits.h (struct __flock): Changed l_pid to
+	short; added l_sysid.
+
+	* sysdeps/unix/sysv/__sigact.c: New.
+
+	* sysdeps/unix/sysv/r4/__access.S: New; just #include bsd/__access.S.
+
+	* sysdeps/unix/sysv/Makefile: Fixed typo: sysdep-routines =>
+	sysdep_routines.
+
+	* sysdeps/unix/i386/sysv/__sigret.S,
+	sysdeps/unix/i386/sysv/signal.S: New.
+
+	* signal/Makefile (routines): Added sigret, __sigret.
+	* signal/sigret.c: New; fn alias to __sigreturn.
+	* sysdeps/stub/__sigret.c: New.
+
+	* sysdeps/unix/i386/sysdep.h (PSEUDO): Use hard-coded numbers for
+	lcalls insn--GAS bug.
+
+	* sysdeps/unix/bsd/readdir.c (D_NAMLEN): New macro; define if not
+	already defined, to return length of a direct elt.
+
+	* sysdeps/stub/__getgrps.c: #include <limits.h>; if NGROUPS_MAX is
+	defined as 0, always return 0, and no stub warning.
+
+	* sysdeps/posix/system.c: Don't fail if sigprocmask fails with ENOSYS.
+
+	* sysdeps/posix/sysd-stdio.c, sysdeps/stub/sysd-stdio.c: Doc fix.
+
+	* sysdeps/posix/__gettod.c: Use CONST where appropriate and not
+	where not.
+
+	* sysdeps/i386/memchr.c, sysdeps/i386/strlen.c: Changed `repnz' to
+	`repne'.
+
+	* stdio/fgets.c: Notice returned char from __fillbf in length calc.
+
+	* misc/sys/ioctl.h: Always define `struct sgttyb'.
+
+	* stdlib/alloca.h: #undef __alloca, too.
+	Always #define alloca == __alloca.
+
+	* signal/signal.h (__kill): Fixed type in decl.
+	* posix/unistd.h (setgid): Fixed type in decl.
+	* posix/setpgid.c, posix/setgid.c, signal/kill.c, posix/fork.c,
+	  posix/vfork.c, posix/getpid.c, posix/getppid.c, posix/setsid.c:
+	Fixed DEFUNs in fn aliases.
+	* pwd/getpw.c: Fixed type in defn.
+
+Mon Mar 30 17:06:54 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/generic/printf_fp.c: In %f, decrement PREC for each
+	leading zero in the fractional part.
+
+	* sysdeps/ieee754/ieee754.h: Made all elts unsigned.
+	* sysdeps/ieee754/__drem.c: Return NAN if Y is zero.
+	* sysdeps/ieee754/ldexp.c: Rewritten.
+	* sysdeps/ieee754/__logb.c: Handle denormalized numbers.
+
+	* posix/sys/wait.h: #include <endian.h>
+
+	* sysdeps/ieee754/fl.h: Fixed NAN and HUGE_VAL bit patterns; added
+	code for little endian.
+
+	* sysdeps/generic/frexp.c: Add one to exponent to give the result a
+	digit before the point.  Use negative exponent rather than division.
+
+	* math/__finite.c: Return zero for NaN.
+	* math/math.h: Doc fix for same.
+
+	* stdio/__getdelim.c: Correctly notice when the buffer is full.
+
+	* sysdeps/unix/bsd/opendir.c: Pass arg to fcntl F_SETFD by value,
+	not by reference.
+
+	* time/__tzset.c: Correct default rule: M4.1.0,M10.5.0.
+
+	* time/__tzset.c: Move ptr past Mfoobar syntax after parsing it.
+
+	* time/__tzset.c: Properly parse the DST offset (or its absence).
+
+	* sysdeps/unix/make_errlist.c: Write an #ifdef HAVE_GNU_LD, rather
+	than testing it when compiling make_errlist.
+
+	* time/tzfile.c (__tzfile_read): Convert transitions to host byte
+	order.
+
+	* Makeconfig (localtime-file): New config var.
+	* time/Makefile (tzfile.o, zic.o): Use it for TZDEFAULT.
+
+	* stdio/Makefile (tests): Added tstgetline.
+	* stdio/tstgetline.c: New; test for getline.
+
+	* Makeconfig (sysincludedir): Define and document.
+	* sysdeps/unix/snarf-ioctls, sysdeps/unix/Makefile: Use
+	${sysincludedirs} in place of hard-coded /usr/include.
+
+Fri Mar 27 13:33:37 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* string/Makefile (headers): Added endian.h.
+
+	* sysdeps/ieee754/__drem.c: Fixed typo which made X and Y be the
+	same location.
+
+	* sysdeps/generic/__lstat.c: #include <gnu-stabs.h>
+
+	* stdio/internals.c (flushbuf): Increment target as well as offset
+	when we write out the single char.
+
+	* grp/Makefile (tests): Add testgrp (formerly bug1).
+
+Thu Mar 26 14:59:45 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* stdio/fread.c: Don't read directly when we need to seek first.
+
+Wed Mar 25 02:34:49 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/alarm.c: There are 1000000 usecs in a sec.
+
+	* sysdeps/unix/bsd/sun/ptrace.c: Removed.
+
+	* stdio/fgets.c: For unbuffered stream, don't return EOF after
+	reading some data.
+	Added missing parens.
+
+Tue Mar 24 18:31:07 1992  Torbjorn Granlund  (tege@hal)
+
+	* sysdeps/i386/memset.c: Move code that puts C in all four nibbles of
+	X inside `if' statement.  Include sysdeps/i386/memset.c (not bzero).
+	* sysdeps/i386/memchr.c: Rewrite to be faster.  Include
+	sysdeps/generic/memchr.c (not bzero).
+
+Tue Mar 24 01:21:32 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* io/Makefile (routines): Add getdirname.
+	* posix/unistd.h [__USE_GNU]: Declare getdirname.
+	* io/getdirname.c: New.
+
+	* Makeconfig (stddef.h): Define and document.
+	* Makefile (headers): Use $(stddef.h) for stddef.h.
+
+Mon Mar 23 18:04:56 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* sysdeps/posix/mktemp.c: Do PID % 100000 for 5 digits.
+
+	* time/Makefile (tzfiles): Remove pacificnew; it won't compile.
+	(distribute): Put it here instead.
+
+	* stdio/printf-prs.c [HAVE_LONGLONG]: Fixed missed var name change
+	from code snarf.
+
+	* stdio/fgets.c: Return NULL when we get EOF.
+
+	* posix/execvp.c, sysdeps/posix/putenv.c [! HAVE_GNU_LD]: Define
+	__environ as environ.
+
+	* sysdeps/unix/bsd/Makefile, sysdeps/unix/Makefile: In rules to
+	compile generator programs, cd into $(objdir) first to avoid
+	braindead cc clobbering foo.o in cwdir.
+
+	* sysdeps/m68k/setjmp.c: Deref fpregs array in asm.
+
+	* time/Makefile (zones-%): Fixed generated rules.
+
+	* math/Makefile (libm.a): Use r cmd to ar.
+
+	* time/Makefile (zones-%): In echo commands, put \\\\n outside of
+	quotes instead of \\n inside single quotes.  SysV echo is braindead.
+
+	* io/fchown.c, io/fchmod.c, misc/bsd-compat.c: Fixed DEFUNs in fn
+	aliases.
+
+	* time/Makefile (echo-zonenames): New target; tell user what all
+	timezones defined in all zone files are.
+	* Makeconfig (localtime): Comment about using above.
+
+Sun Mar 22 18:34:02 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* time/australasia (NZ): Updated rules.
+
+Sat Mar 21 01:00:49 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* stdio/printf-prs.c [__GNUC__]: Define HAVE_LONGLONG.
+
+Fri Mar 20 00:35:36 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Version 1.02.
+
+	* stdio/Makefile (routines): Add __getdelim, __getline.
+
+	* sysdeps/unix/i386/start.c: No ../ in #include file name.
+
+	* sysdeps/posix/sysd-stdio.c, sysdeps/stub/sysd-stdio.c
+	(__stdio_seek): Doc fix.
+
+	* sysdeps/posix/mk-stdiolim.c: Add one to L_tmpnam, for the null
+	terminator.
+
+	* sysdeps/posix/__dup2.c: Use an extra fcntl call to check that the
+	first fd is valid.  Close the second fd before doing the dup.
+
+	* pwd/pwdread.c, grp/grpread.c: Use __getline.  Ignore lines
+	beginning with #.
+
+	* Makeconfig (objdir): If $(ARCH) starts with a slash, don't prepend
+	$(..).
+
+Thu Mar 19 21:36:57 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Makefile (install-lib): Add Mcrt1.o.
+	(Mcrt1.o): Create empty file.
+
+Wed Mar 18 16:00:18 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Makeconfig (+link): Use $(libdir) for gnulib.
+
+Tue Mar 17 20:12:35 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* math/bsd/common_source/mathimpl.h: Include <endian.h>.
+	[__LITTLE_ENDIAN]: #define national.
+
+	* stdio/__vfscanf.c: EOF at end of string is not
+	an error.
+
+	* stdio/tstscanf.c: Added new sscanf test.
+
+	* stdio/vfprintf.c: For %#x, print 0x after padding 0s, not before.
+
+	* stdio/fputs.c: Reverse size args to fwrite and test for returning
+	LEN, rather than 1, so 0-length wins.
+
+	* io/gnu/fcntl.h: Moved to sysdeps/unix/bsd/fcntlbits.h.
+	* io/Makefile (headers), io/fcntl.h: gnu/fcntl.h -> fcntlbits.h.
+	* sysdeps/stub/fcntlbits.h, sysdeps/unix/sysv/fcntlbits.h: New.
+
+	* stdio/fopen.c (__getmode): Don't fall through in switch after 'a'
+	case.
+
+	* locale/C-ctype_ct.c (__ctype_b_C): Use symbolic constants.
+	9..12 are not _NOgraph.
+
+Tue Mar 17 19:04:01 1992  Torbjorn Granlund  (tege@hal.gnu.ai.mit.edu)
+
+	* string/testcopy.c: Fix typo in comment.
+
+Tue Mar 17 19:57:49 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/generic/strstr.c, string/string.h, string/tester.c
+	(strstr): Arguments were reversed.
+
+Tue Mar 17 18:52:39 1992  Torbjorn Granlund  (tege@hal.gnu.ai.mit.edu)
+
+	* sysdeps/i386/memcopy.h (WORD_COPY_BWD): Divide nbytes by 4.
+	* sysdeps/i386/memchr.c: Rewrite.  Handle zero length correctly.
+	Don't ask gcc to allocate eax to two regs.
+
+Tue Mar 17 17:31:06 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* posix/unistd.h (getpagesize): Declare as size_t.
+
+	* Makeconfig (CC): Define unless origin is default.
+
+	* stdio/__getdelim.c: Be sure to leave room for the terminating null.
+
+	* string/testcopy.c: New version from tege.
+
+	* malloc/dist-README: Changed mailing list addr to bug-glibc.
+
+	* sysdeps/unix/bsd/__sigproc.c: Use right mask for SIG_UNBLOCK.
+
+	* Makefile, Rules (clean, mostlyclean): Put - before rm commands.
+
+Tue Mar 17 11:14:40 1992  Torbjorn Granlund  (tege@hal.gnu.ai.mit.edu)
+
+	* sysdeps/rs6000/memcopy.h (BYTE_COPY_BWD): Assign __nbytes.
+	* sysdeps/m68k/memcopy.h (WORD_COPY_BWD): Copy memory, not just
+	pointers.  Clean up switch expression.
+
+Mon Mar 16 05:09:23 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* posix/wordexp.c: New.
+
+	* time/tzfile.c (__tzfile_read): Don't die if some of the sections
+	of the datafile are empty.
+
+	* stdio/getline.c, stdio/getdelim.c: Moved to
+	__getline.c/__getdelim.c.
+	New files with fn aliases.
+	* stdio/stdio.h (__getline, __getdelim): Declare.
+
+	* time/Makefile (zonenames): Hair to find the names of zones
+	described by $(tzfiles).
+	(install-data): Install zoneinfo/$(zonenames).
+	Rules to make zones from tzfiles.
+	[localtime] (zoneinfo/localtime): Make from zoneinfo/$(localtime).
+	* Makeconfig (localtime): New user-frobbable variable.
+
+Sun Mar 15 00:01:05 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* Makerules (sysdep-Makefile): Do if ... else true to avoid bogus
+	nonzero status.
+
+	* Makefile: Denewlinify +sysdep-subdirs after including sysd-dirs.
+
+	* sysdeps/vax/__infnan.c [!__GNUC__]: Error.
+
+	* zic.c, scheck.c, emkdir.c, ialloc.c, private.h, tzfile.h: Snarfed
+	from localtime3 dist.
+	* time/Makefile (others): Added zic.
+	(distribute): Added private.h, emkdir.c, ialloc.c, scheck.c.
+	(install): Defined: zic, zdump.
+
+	* Makeconfig (bindir): Define.
+	* Makerules: Add rule to install $(install) in $(bindir).
+	(+install): Include $(install) in $(bindir).
+
+	* sysdeps/unix/Makefile: Moved siglist.c rules to unix/bsd/Makefile.
+	* sysdeps/unix/make_siglist.c: Moved to bsd/.
+	* sysdeps/unix/Dist: Remove it.
+	* sysdeps/unix/bsd/Dist: Add it.
+
+	* malloc/Makefile (malloc/gmalloc.c): Depend on headers and sources.
+
+	* sysdeps/unix/bsd/sun/sun4/__sigvec.S: Doc fix.
+
+	* sysdeps/stub/stty.c, sysdeps/stub/gtty.c: Include <stddef.h>.
+
+	* sysdeps/unix/sysv/__fstat.c: Include sysv_stat.h.
+
+	* misc/bsd-compat.c: Define _BSD_SOURCE rather than __FAVOR_BSD.
+	(longjmp): Use function_alias_void.
+
+	* time/Makefile (tzfile.o): Compile with
+	-DTZDIR='"$(datadir)/zoneinfo"'.d
+
+Sat Mar 14 23:26:46 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* Makeconfig (INSTALL_DATA, INSTALL_PROGRAM, INSTALL): Don't define
+	if already defined.
+
+	* setjmp/longjmp.c: Use function_alias_void.
+
+	* gnu-stabs.h (function_alias_void): New macro.
+
+	* gnu-stabs.h [!HAVE_GNU_LD] (function_alias): Fixed not to loop.
+
+Fri Mar 13 17:20:19 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* sysdeps/posix/sysd-stdio.c (__stdio_gen_tempname): Include null
+	terminator in length calculation.
+
+	* stdio/fgets.c: Be sure to return NULL on error/eof for unbuffered
+	stream.  If N==1, don't write the first char if !seen.
+	When the buffer is empty, notice the effect of __fillbf after
+	calling it, avoiding a (costly) no-op iteration.
+	Don't return NULL for reading no chars; only for EOF or error.
+	Don't write terminator at beginning of S if eof on first char.
+
+	* malloc/Makefile (libmcheck.a), Makefile (crt0.o): Remove target
+	first; don't use -f to ln.
+
+	* posix/execl.c, posix/execv.c, sysdeps/posix/getenv.c,
+	sysdeps/posix/system.c [HAVE_GNU_LD]: #define __environ environ
+
+	* posix/unistd.h [__OPTIMIZE__] (execv): Removed defn.  Can't know
+	whether to use __environ or environ.
+
+	* io/fchown.c, io/chown.c, io/open.c, misc/select.c,
+	signal/sigvec.c, time/adjtime.c: Fixed DEFUNs in fn aliases.
+
+	* time/__tzset.c: Don't dereference NULL if getenv returns it.
+
+Thu Mar 12 16:01:33 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/ieee754/sqrt.c: Replaced undefined var ref `k' with constant.
+
+	* sysdeps/i386/__longjmp.c: #include <stdlib.h>.
+
+	* time/tzfile.c (__tzfile_compute): Use types[0] if TIMER falls
+	between transitions[0] and transitions[1].
+	Always set __tzname[INFO->isdst] to the name for INFO.
+
+	* sysdeps/i386/__longjmp.c: Changed register names for gcc; eax/%eax
+	-> ax.
+
+	* sysdeps/unix/snarf-ioctls: Avoid infinite recursion.
+
+Wed Mar 11 00:16:18 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* Version 1.01.
+
+	* Makefile (munch-init.c): Made $(objpfx)munch-init.c.
+
+	* signal/sigvec.c, signal/sigaction.c, stdio/vsscanf.c: Fixed DEFUNs
+	in fn aliases.
+
+	* sysdeps/m68k/68881/68881-switch/switch.c: Merged vars have_fpu and
+	test_fpu into one.
+
+	* sysdeps/mach/i386/start.c, sysdeps/vax/setjmp.c,
+	sysdeps/vax/__longjmp.c, sysdeps/vax/__infnan.c,
+	sysdeps/unix/start.c, sysdeps/unix/bsd/sun/sun4/sigtramp.c,
+	sysdeps/unix/bsd/sun/sun4/start.c,
+	sysdeps/unix/bsd/hp9k3bsd/start.c, sysdeps/sparc/sqrt.c,
+	sysdeps/rs6000/ffs.c, sysdeps/m88k/ffs.c, sysdeps/m68k/setjmp.c,
+	sysdeps/m68k/__longjmp.c, sysdeps/m68k/68881/printf_fp.c,
+	sysdeps/m68k/68881/atan2.c, sysdeps/m68k/68881/__logb.c,
+	sysdeps/m68k/68881/68881-switch/switch.c, sysdeps/m68k/ffs.c,
+	sysdeps/i386/memset.c, sysdeps/i386/memchr.c, sysdeps/i386/ffs.c,
+	sysdeps/i386/bzero.c, sysdeps/i386/__longjmp.c, sysdeps/am29k/ffs.c
+	[! __GNUC__]: Either include the generic (or in some cases, ieee754)
+	version, or do a #error.
+
+	* Rules: Null out `objects' at end to shrink environment some.
+	(+objs): Define with := from $(objects).
+	(clean): Use that instead of $(objects).
+
+	* sysdeps/i386/setjmp.c: Doubled % where it wanted to be literal.
+
+	* posix/getgrps.c, io/flock.c, io/mkdir.c, io/read.c, io/write.c,
+	io/stat.c, misc/getdents.c, misc/mknod.c, misc/utimes.c: Fixed
+	DEFUNs in fn aliases.
+
+	* sysdeps/unix/bsd/hp9k3bsd/sysdep.S: Use # instead of kludge cookie.
+
+	* posix/getegid.c: Fixed type in DEFUN.
+
+	* time/tzfile.c (__tzfile_compute): If TIMER is before any
+	transition in the file, use the first non-DST type, rather than the
+	type of the first transition in the file.
+
+Tue Mar 10 20:01:55 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* configure: Take optional -nfp arg.
+	(news, sun3, hp300): Prepend m68k/68881 unless -nfp is given.
+	* sysdeps/unix/bsd/hp9k3bsd/Implies: Don't specify 68881.
+
+	* stdio/getdelim.c: When the buffer is empty, notice the effect of
+	__fillbf after calling it, avoiding a (costly) no-op iteration.
+
+	* sysdeps/vax/__memccpy.c: Fixed comments.
+
+	* stdio/fmemopen.c: Set all fns and seen bit before we might call
+	something that would care (fclose).
+
+	* configure (sun3, sun-3): Mean sun3os4, not sun3os3.
+	(sun3os3): Use just unix/bsd/sun/sun3/os3.
+	* sysdeps/unix/bsd/sun/sun3/os3: New directory.
+	(sysdeps/unix/bsd/sun/sunos3/__wait.S): Moved to there.
+	* sysdeps/unix/bsd/sun/sun3/sysdep.h: Fixed; took hp9k3bsd/sysdep.h
+	and changed movel foo, d0 to pea foo for syscall no.
+	* sysdeps/unix/bsd/sun/sun3/__brk.S: Fixed pea addr mode.
+	* sysdeps/unix/bsd/sun/sun3/sethostid.S: errnos.h, not gnu/errno.h.
+	Use .stabs directly, not gnu-stabs.h (which uses `asm').
+	* sysdeps/m68k/setjmp.c: Changed asm for first moveml, so it works
+	on sun3.
+	* sysdeps/unix/bsd/sun/sun3/start.c: Removed ../ from #include path.
+
+Sun Mar  8 16:33:33 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* misc/makefile (headers): Added stab.h, stab.def.
+	* Many files: Changed __GNU_STAB__ to HAVE_GNU_LD.
+
+Sat Mar  7 21:21:10 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* time/mktime.c: Normalize the struct values before checking for out
+	of range values.
+
+Fri Mar  6 11:43:35 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/ieee754/ldexp.c: New.
+
+	* stdio/internals.c (flushbuf): When priming the stream for writing,
+	advance the target pos to account for chars gotten from the buffer.
+
+	* sysdeps/generic/Makefile: For math routines, don't filter out
+	__finite.
+
+	* sysdeps/posix/sysd-stdio.c (__stdio_gen_tempname): Fixed bugs.
+
+	* misc/Makefile (routines): Remove flock.
+
+	* stdlib/strtod.c: Fixed typo in checking for exponent overflow.
+	Do set *ENDPTR on overflow or underflow.
+
+	* sysdeps/sparc/fl.h: Removed.  Should use ieee754 version.
+
+	* sysdeps/generic/Makefile: For math routines, don't filter out
+	__copysign, __scalb, __drem and __logb; and don't add support.
+
+	* sysdeps/ieee754/__drem.c: New.
+	* sysdeps/ieee754/sqrt.c: New.
+	* sysdeps/stub/__drem.c: New.
+	* sysdeps/stub/sqrt.c: New.
+	* sysdeps/stub/__logb.c: New.
+	* sysdeps/ieee754/__logb.c: New.
+
+	* sysdeps/ieee754/__infnan.c: Include <float.h> and use NAN macro
+	rather than cooking one up by hand.
+
+	* sysdeps/unix/bsd/getlogin.c: Open /dev/tty, rather than using stdin.
+	Make sure the name is always null-terminated.
+
+Thu Mar  5 17:11:46 1992  Roland McGrath  (roland@geech.gnu.ai.mit.edu)
+
+	* sysdeps/m68k/68881/__scalb.c: Removed.
+	* sysdeps/m68k/68881/__math.h: Removed defn of __scalb.
+	* math/math.h [__OPTIMIZE__]: Define __scalb to be ldexp.
+	* math/__scalb.c: New; fn alias for ldexp.
+
+	* stdio/Makefile (tests): Added bug4 and bug5.
+	* stdio/bug4.c, stdio/bug5.c: Test cases from reported bugs just fixed.
+
+	* stdio/internals.c (flushbuf): If nothing was written by the user,
+	but there is previously gotten data, don't write anything out.
+
+	* stdio/internals.c (seek_to_target): Call __stdio_check_offset first.
+
+	* sysdeps/unix/sysv/sysv_termio.h: New file.
+	* sysdeps/unix/sysv/Dist: Include it.
+	* sysdeps/unix/sysv/tcsetattr.c, sysdeps/unix/sysv/tcsetpgrp.c,
+	sysdeps/unix/sysv/tcsendbrk.c, sysdeps/unix/sysv/tcgetpgrp.c,
+	sysdeps/unix/sysv/tcflush.c, sysdeps/unix/sysv/tcdrain.c,
+	sysdeps/unix/sysv/__tcgetatr.c: New files.
+
+	* stdio/internals.c (fillbuf): Don't set the put_limit on writable
+	streams.  Wait for first write attempt to prime them, so we don't
+	flush the unchanged data unnecessarily.
+
+	* stdlib/exit.c: Look for NULL terminator on ld set, rather than
+	using length word.
+
+	* Makefile (headers): Remove stdarg.h and varargs.h.
+	Users will get them from GCC.
+	* stdio/printf.h: Include <stdarg.h> to use va_list.
+	* stdio/stdio.h: Don't include <stdarg.h> with magic.
+	Use PTR in place of __va_list in prototypes.
+	* stdio/__vsscanf.c, stdio/vscanf.c, stdio/vfscanf.c,
+	stdio/__vfscanf.c, stdio/vdprintf.c, stdio/vasprintf.c,
+	stdio/vsprintf.c, stdio/vsnprintf.c, stdio/vprintf.c,
+	stdio/vfprintf.c: Fixed DEFUNs.
+
+	* sysdeps/ieee754/ieee754.h: New file; declares union ieee754_double.
+	* sysdeps/ieee754/Dist: Add it.
+	* sysdeps/ieee754/__copysign.c, sysdeps/ieee754/__infnan.c,
+	sysdeps/ieee754/__isinf.c, sysdeps/ieee754/__isnan.c,
+	sysdeps/ieee754/__printf_fp.c: Use it.
+
+	* sysdeps/unix/sysv/uname.c: New.
+	* sysdeps/unix/sysv/__utssys.S: New.
+	* sysdeps/unix/sysv/Makefile (routines): Add __utssys.
+	* sysdeps/unix/sysv/Dist: Add __utssys.S.
+
+	* sysdeps/unix/sysv/__rmdir.c: New; runs `rmdir' shell command.
+
+	* sysdeps/unix/sysv/__mkdir.c: New; runs `mkdir' shell command.
+
+	* sysdeps/generic/__lstat.c: New; fn alias for __stat.
+
+	* sysdeps/unix/sysv/__gethostname.c: New; uses uname.
+
+	* sysdeps/unix/Makefile (sys/params.h): Protect with
+	_GNU_SYS_PARAM_H, in case the system's file uses _SYS_PARAM_H itself.
+
+	* stdio/internals.c (__stdio_check_offset): Call init_stream to make
+	sure we have fns.
+
+	* stdio/fread.c: Don't call __fillbf if the put_limit is past the
+	beginning of the buffer; only if !seen, no buffer, or pushed back.
+
+	* stdio/fopen.c (__getmode): Set create bit for "a" mode.
+
+	* io/mkdir.c: #undef mkdir before fn alias.
+
+	* time/tzfile.c (__tzfile_compute): Don't decrement I if it's zero.
+
+	* Makefile (crt0.o): Use ln -f.
+
+	* math/Makefile (install): Install libm.a.
+	(libm.a): Make an empty archive.
+
+Wed Mar  4 19:54:50 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* README.template: Added note about long filenames in dist.
+
+	* io/Makefile (routines): flock -> __flock
+	* flock.c: New file, fn alias.
+	* sysdeps/unix/bsd/flock.S: Renamed to sysdeps/unix/bsd/__flock.S;
+	made __flock.
+	* sysdeps/mach/hurd/flock.c: Renamed to sysdeps/mach/hurd/__flock.c;
+	made __flock.
+	* sysdeps/stub/flock.c: Renamed to sysdeps/stub/__flock.c; made
+	__flock.
+
+	* time/time.h (__isleap): Fixed; every 400th year is not a leap
+	year, not every 1000th.
+
+	* stdio/internals.c (flushbuf): Increment the target position the
+	amount the user wrote into the buffer, not the amount we wrote out
+	to the file (which is greater if we read a block and modified it
+	in the middle).
+
+	* stdio/internals.c (flushbuf): Set get_limit to the beginning of
+	the buffer for all streams, except when we have just read in a block.
+
+Sat Feb 29 15:56:22 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* posix/Makefile (others): Removed logname, id.
+	* time/Makefile (others): Removed date.
+
+	* sysdeps/unix/bsd/sun/sun4/start.c: Make an alias called `start'
+	(no leading underscore, so it can't conflict with C symbols) for
+	`_start'.
+
+Thu Feb 27 14:32:20 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* set-init.c: Look for NULL terminator on set.  ld is broken and
+	doesn't set the length word correctly.
+
+	* setjmp/_longjmp.c, signal/sigaction.c, signal/sigvec.c,
+	signal/ssignal.c, string/bcmp.c, time/setitmr.c, posix/execve.c,
+	posix/getegid.c, posix/geteuid.c, posix/getgid.c, posix/getuid.c,
+	posix/getgrps.c, posix/setuid.c, posix/wait3.c, posix/wait4.c,
+	posix/waitpid.c, io/lseek.c, io/open.c, io/read.c, io/write.c,
+	resource/getrusage.c, misc/getpgsz.c, misc/gethstnm.c,
+	misc/select.c: Fixed DEFUNs in fn aliases.
+
+Wed Feb 26 00:20:25 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* sysdeps/generic/Makefile (routines): Add asincos.
+
+	* time/tzfile.c (__tzfile_compute): Set __tzname properly, so isdst
+	is the right index into it.
+
+Tue Feb 25 01:42:16 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* sysdeps/unix/bsd/sun/sun4/sysdep.h (ENTRY): .align 2, not .align 4.
+	This one is powers of two.
+
+	* time/__tzset.c: If TZ is :FILE, try FILE and if __tzfile_read
+	fails, then use defaults.
+
+	* sysdeps/generic/Makefile (routines): Add sincos.
+
+	* sysdeps/posix/cuserid.c: Set the result to the empty string on
+	failure.
+
+	* string/string.h, string/strings.h, sysdeps/i386/memchr.c: Fixed
+	spelling in comment.
+
+	* string/makefile (tests): Include (uncomment) testcopy.  We do have
+	papers for it from tege.
+
+	* malloc/dist-README: Fixed mailing list addr.
+
+	* resource/sys/vtimes.h (struct vtimes): Renamed vm_outblk to
+	vm_oublk; fixed comment.
+	* sysdeps/generic/vtimes.c: Renamed here too.
+
+	* Make-dist (README): Depend on version.c.
+
+Tue Feb 18 18:14:50 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* Version 1.00.
+
+	* time/tzfile.c (__tzfile_compute): Fixed transition comparison.
+
+	* sysdeps/unix/bsd/sun/sun3/Makefile: Fixed typo.
+
+Mon Feb 17 05:04:00 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* Version 0.6.
+
+	* Makefile (distribute): Add Q+A.
+	* Q+A: New doc file from rich@cygnus.com.
+
+	* malloc/Makefile (distribute): Add mcheck-init.c.
+
+Mon Feb 17 00:39:38 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* sysdeps/unix/sysv/utime.c: Removed.
+	* sysdeps/unix/sysv/utime.S: New file.
+
+	* sysdeps/unix/sysv/signum.h: New file.
+
+	* sysdeps/unix/sysv/local_lim.h: New file.
+
+	* sysdeps/unix/sysv/sysv_stat.h: New file.
+	* sysdeps/unix/sysv/__stat.c, sysdeps/unix/sysv/__fstat.c: New files.
+	* sysdeps/unix/sysv/Makefile: New file.
+	(+sysdep-routines): Define to sys_stat and sys_fstat.
+	* sysdeps/unix/sysv/sys_stat.S, sysdeps/unix/sysv/sys_fstat.S: New
+	files.
+	* sysdeps/unix/sysv/Dist: Created to include sysv_stat.h,
+	sys_stat.S, and sys_fstat.S.
+
+	* sysdeps/stub/__setreuid.c: Include <sys/types.h>.
+
+	* sysdeps/posix/__sigblock.c: Fixed typo.
+
+	* stdio/internals.c (__flshfp): Don't return EOF if at EOF; only
+	for errors.
+
+	* signal/gnu/signal.h: Move #include <signum.h> outside repeat #ifdef.
+
+	* sysdeps/unix/sysv/filebits.h: Created.
+
+	* misc/Makefile (distribute): Define to bsd-compat.c.
+
+	* misc/Makefile (headers): Remove filebits.h.
+	* io/Makefile (headers): Put it here.
+
+	* Makefile (+posix_dirs): Add io.
+	* io/Makefile: New file for new subdir.
+	Contains many headers and routines moved from posix.
+	* posix/Makefile: Remove many headers and routines now in io.
+	* Moved many files from posix to io.
+
+	* stdlib/alloca.h: Get size_t from stddef.h.
+
+	* misc/bsd-compat.c (getgroups): Removed.  Not needed, because gid_t
+	is now the same size as int.
+
+	* Makefile (distribute): Include NOTES.
+	* NOTES: New file, infoized node from intro.texinfo about the
+	feature-test macros.
+	* README.template: Mention NOTES.
+
+	* sysdeps/unix/bsd/sun/sun3/Makefile: include hp9k3bsd version.
+
+	* Makeconfig: Use $(..) for config.status.
+
+	* configure (i386-sysv): unix/i386/sysv, not unix/sysv/i386.
+	* unix/i386/sysv/Implies: unix/sysv, not unix/i386.
+
+Sun Feb 16 00:42:53 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* Version 0.5.
+
+	* posix/Makefile (headers): Remove confstr.h.
+	(distribute): Define this instead to contain it.
+
+	* ansidecl: Added copyright notice.
+
+	* stdio/getdelim.c: New file.
+	* stdio/getline.c (getsome): Renamed to getdelim and moved there.
+	* stdio/Makefile (routines): Add getdelim.
+	* stdio/stdio.h: Declare getdelim.
+
+	* misc/gnu/file.h: Moved to sysdeps/unix/bsd/filebits.h.
+	* sysdeps/stub/filebits.h: New file.
+	* misc/Makefile: gnu/file.h is now filebits.h.
+	* posix/fcntl.h: Changed #include.
+
+	* stdio/getline.c (getsome): If MAX_CANON isn't defined, use a default.
+	Don't leak old *LINEPTR storage if *N < 2.
+	Don't bang *LINEPTR to NULL if realloc fails.
+
+	* Makerules: Don't use override when nulling out sources, routines,
+	and aux if they came from the environment.  Better not make with -e.
+
+	* Makefile (sysdirs, Sysnames): Put outside of ifndef sysdirs.
+
+	* string/Makefile (tests): No testcopy, pending papers.
+
+	* Makefile (headers): No sysdep.h.
+	(distribute): Here instead.
+	(no-install): No longer needed.
+
+Sat Feb 15 17:10:38 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* Makefile (distribute): Add INSTALL.
+	* Make-dist (INSTALL): Make from manual/maint.texinfo.
+	(README): Make from README.template.
+
+	* Makefile (+other-dirs): Removed inet.
+	* sysdeps/unix/inet/Subdirs: Created, adding inet.
+
+	* sysdeps/unix/sysv/setrlimit.c: Include stddef and errno.h.
+
+	* math/drem.c, setjmp/longjmp.c, malloc/cfree.c, string/bcmp.c,
+	time/getitmr.c, misc/ioctl.c: Fixed defuns in function_alias.
+
+	* Makefile (headers): Put sysdep.h back.
+	(no-install): And define this to it.
+	* Makerules (+install): Filter out $(no-install) from the list.
+
+	* string/testcopy.c: New test program for bcopy from tege.
+	* string/Makefile (tests): Add it.
+
+	* Makefile (sysdep-subdirs): Renamed to sysd-dirs.
+
+	* Make-dist (tardir): Omit the release name; it made names too long.
+
+Sat Feb 15 12:53:02 1992  Torbjorn Granlund  (tege at mole.gnu.ai.mit.edu)
+
+	* sysdeps/rs6000/memcopy.h (WORD_COPY_FWD, WORD_COPY_BWD):
+	Use CTR register for looping (speed enhancement).  Don't emit
+	labels, jump relative from `$' instead (makes multiple expansions
+	possible).  Clean up indentation of asm code (were different in each
+	macro).
+	* sysdeps/rs6000/memcopy.h (WORD_COPY_BWD):
+	Add asm output specs (were missing completely).
+
+	* sysdeps/generic/{memcpy.c,memmove.c}: Make DSTP and SRCP unsigned
+	(safer with non-ANSI compilers).
+
+Fri Feb 14 01:52:12 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* Version 0.4.1.
+
+	* Makefile, Rules: Changed clean and clobber targets into
+	mostlyclean, clean, and realclean.
+
+	* Makeconfig: Added comments describing objdir/Makeconfig and
+	editting Makeconfig.
+	(prefix, libdir, INSTALL, INSTALL_DATA): New variables for installing.
+	* Makerules (install): New target.
+	* Makefile (+subdir_targets): Add subdir_install.
+	(install): Depend on subdir_install.
+	(install-lib): Define variable to install libc.a and crt0.o.
+	* misc/Makefile (install-lib): Install bsd-compat.
+	* malloc/Makefile (install-lib): Install mcheck-init.
+
+	* Version 0.4.
+
+Thu Feb 13 21:39:31 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* sysdeps/unix/glue-ctype.c: Moved to unix/bsd.
+	* sysdeps/unix/Makefile: Moved glue-ctype stuff to unix/bsd/Makefile.
+	* sysdeps/unix/Dist: No glue-ctype.
+	* sysdeps/unix/bsd/Dist: Here instead.
+
+	* sysdeps/sparc/divrem.m4: Don't use insn aliases Sun as doesn't grok.
+
+Wed Feb 12 12:12:12 1992  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* sysdeps/m68k/setjmp.c: Use m, rather than g, constraint when
+	saving fp regs.
+
+	* Renamed oodles of files, changed all the relevant Makefiles (I
+	think).  File names now fit in 14 chars for losing System V.  Gag me
+	with a death star.
+	See =longnames for translations, and =shorten.el for method.
+
+	* grp/initgroups.c: Removed redundant test.
+
+	* malloc/mtrace.c: Use %p fmt for pointers.
+
+Tue Feb 11 02:04:39 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* stdlib/alloca.h: New file.
+	* stdlib/stdlib.h: Moved alloca decls there; #include <alloca.h>
+	instead.
+	* stdlib/Makefile (headers): Added alloca.h.
+
+	* stdio/getline.c (getsome): Fixed bugs.
+
+	* math/bsd/common_source/mathimpl.h: #define expm1 __expm1.
+	* math/bsd/common_source/expm1.c: Renamed to __expm1.c
+	* math/bsd/mc68881/expm1.s: Renamed to __expm1.s; renamed fn too.
+	* math/expm1.c: New file, fn alias expm1 -> __expm1.
+
+	* math/Makefile (routines): Add __rint.
+	* math/rint.c: New file, fn alias rint -> __rint.
+	* math/bsd/common_source/floor.c (rint): Renamed to __rint.
+	* sysdeps/generic/Makefile: Remove __rint, not rint.
+
+	* math/Makefile (BSDmath-files): Always include it, and don't depend
+	on undependable things.
+
+	* Makerules (sysdep-Makefile): Always include it, and make it
+	without depending on make vars that might not be right yet.
+
+Mon Feb 10 00:55:58 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* stdlib/stdlib.h: #undef alloca before declaring it.
+
+	* sysdeps/sparc/__longjmp.S: Use be instead of bz.
+
+	* sysdeps/unix/bsd/Dist: Add bsdtty.h.
+
+	* tzfile.c (__tzfile_read): Don't allocate space for 0 leaps.
+	Don't loop infinitely.
+
+	* sysdeps/unix/Makefile (make-errnos.c): Use tr to eat newlines in
+	errnos file.
+
+	* sysdeps/unix/bsd/sun/sun4/__brk.S: Fix andn arg order.
+
+	* posix/Makefile: Don't get getopt by vpath.  Turns out to be too
+	much hassle for dist.  Just made symlinks in posix/ instead.
+
+	* manual/Makefile: Renamed summary.out to summary.texinfo.
+
+	* manual/summary.awk: New file, to make summary.out.
+	Replaces `process-definitions.el'.
+	* manual/Makefile (summary.out): Create using summary.awk.
+
+	* manual/Makefile: Created.
+	* Makefile, Make-dist: Use it to format and distribute the manual.
+
+Mon Feb 10 00:32:17 1992  Jim Meyering  (meyering@churchy.gnu.ai.mit.edu)
+
+	* All Makefiles:
+	Whenever using shell redirection to create a target,
+	do not create the target directly like this
+
+	    foo: bar
+		    process $< > $@
+
+	That loses when `process' fails (interrupt, disk full, ...)
+	and bar exists and looks up-to-date, but isn't.
+	This sort of failure is particularly insidious when
+	the initial error message is obscured by lots of subsequent
+	output (echoed commands etc).
+
+	Instead use rules like this
+
+	    foo: bar
+		    process $< > $@-tmp
+		    mv $@-tmp $@
+
+	Using this paradigm, as long as process returns non-zero
+	whenever it fails, the target won't be touched.
+
+Sun Feb  9 22:58:51 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* posix/unistd.h (getopt): Fixed prototype.
+	* sysdeps/generic/memset.c, stdio/vdprintf.c: Fixed DEFUNs.
+
+	* Makerules (lib): Use $(RANLIB) for ranlib.
+	* Makeconfig: Define it.
+
+	* configure: Create config.status to set ARCH, if successful.
+	* Makeconfig: include config.status ifndef ARCH.
+
+Thu Feb  6 20:57:10 1992  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* ansidecl.h (INCLUDE, STARTCOMMENT, ENDCOMMENT): New magic words.
+	* sysdeps/m68k/68881/fl.h: Use new magic to snarf ieee754/fl.h during
+	ansideclification.
+
+	* sysdeps/ieee754/fl.h: New file, taken mostly from the old
+	68881 file.  HUGE_VAL redone to be machine independent.
+	(NAN): New macro for an IEEE NaN, done like HUGE_VAL.
+	* sysdeps/m68k/68881/fl.h: Now #includes ieee754/fl.h, and overrides
+	FLT_ROUNDS for 68881 magic.  NB: the #include is a prob. for install.
+
+Wed Jan 29 17:11:25 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* sysdeps/posix/getcwd.c: Don't use chdir; use a long ../../../...
+	path name instead.
+
+Fri Jan 17 02:51:10 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* posix/Makefile (headers): Added getopt.h.
+	(routines): Added getopt1.
+	Get getopt* from /home/gd/gnu/lib by vpath.
+
+	* Makerules (+ansideclificate): Don't assume . is in PATH.
+
+Thu Jan 16 18:43:05 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* posix/glob.c [sgi]: No alloca.h, after all.
+
+Wed Jan 15 14:17:37 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* termios/termios.h: Reworked to be compatible with 4.4BSD.
+	* termios/speed.c, sysdeps/unix/bsd/{__tcgetattr,tcsetattr}.c: Store
+	speeds as their own values (B9600==9600, etc.) and translate to BSD
+	values only for ioctl.
+	* termios/cfsetpseed.c: New fn to set both speeds at once (from 4.4).
+
+Tue Jan 14 21:18:10 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* sysdeps/unix/i386/__brk.S: __end, not ___end.
+	Get the arg off the stack correctly.
+
+	* sysdeps/unix/Makefile: Allow errnos like EL3HLT.
+
+	* sysdeps/posix/{readv,writev}.c: Typos.
+
+	* sysdeps/posix/__sigpause.c: Rewritten to know that sigset_t is a
+	mask, and to pass a (sigset_t *) instead of sigset_t to sigsuspend.
+
+	* sysdeps/i386/memset.c: Include <memcopy.h>.
+
+	* sysdeps/generic/uname.c (uname): Save and restore errno if
+	gethostname gets ENOSYS.
+
+	* stdio/perror.c (perror): Check correctly for S == "".
+	Check correctly for ERRNUM being in range.
+
+	* find-sysdirs: Don't use fgrep -s, since USG apparently doesn't
+	have that flag.  Just >/dev/null instead.
+
+Mon Jan 13 17:00:15 1992  Torbjorn Granlund  (tege at mole.gnu.ai.mit.edu)
+
+	* sysdeps/generic/wordcopy.c (all four functions): Move do0 label to
+	the ultimate store statement at the end of each function.  (Used to
+	be in the loop.)
+
+Tue Jan  7 18:40:18 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* resource/sys/resource.h (struct rusage): Change `ru_outblock' to
+	`ru_oublock'.
+
+	* sysdeps/generic/stpcpy.c: Fixed off-by-one bug.
+
+Thu Jan  2 15:19:01 1992  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* sysdeps/sparc/Dist: Add umul.S and mul.S.
+
+Tue Dec 31 15:33:39 1991  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* signal/signal.h [__USE_GNU]: Add user-visible `sighandler_t' ==
+	__sighandler_t.
+
+	* termios/speed.c (speedtab): Made const.
+
+	* posix/Makefile (routines): Add flock.
+
+Tue Dec 31 03:38:30 1991  Richard Stallman  (rms at mole.gnu.ai.mit.edu)
+
+	* termios/speed.c: Accept and return speeds as actual baud rates.
+	* termios/termios.h (B110, etc.): Define B110 as 110, etc.
+	Likewise for _B110, etc.
+
+Thu Oct 24 16:19:49 1991  Roland McGrath  (roland@wookumz.gnu.ai.mit.edu)
+
+	* ansidecl: Put `M4OPTS=+quiet' in the environment make GNU m4 quiet.
+
+Sun Oct 20 19:31:28 1991  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* Make-dist (tardir): Define as `libc-RELEASE-VERSION', strings
+	snarfed from version.c.
+	($(..)$(tardir)): Add rule to make as symlink to . (parent dir).
+	[subdir] (dist), [parent] (dist.tar): Depend on that.
+	[subdir] (tarsources), [parent] (+tsrcs): Add $(tardir)/ to files.
+
+	* sysdeps/sparc/Makefile (distribute): Move data into Dist file.
+
+Fri Oct 18 15:27:58 1991  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* Makefile (subdirs): Add $(sysdep-subdirs), so sysdep makefiles can
+	add subdirs.
+
+	* posix/glob.c [sgi]: Use <sys/dir.h>.
+
+	* stdio/fopen.c: If not appending, initialize the offset to 0.
+
+	* sysdeps/generic/strcasecmp.c: Fixed losing braindead code.
+
+Tue Oct  8 15:27:54 1991  Roland McGrath  (roland@albert.gnu.ai.mit.edu)
+
+	* Version 0.1.
+	* This ChangeLog is lacking much information.
+	* After this release, I hope to maintain the log well.
+
+Fri Jul 26 18:02:57 1991  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* stdio/Makefile (routines): Remove _cleanup.
+
+Thu Jul 25 23:12:45 1991  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* stdio/memstream.c (close_memstream): Removed.
+	(trim_buffer): New fn to be io_funcs->__close for memstreams.
+	(open_memstream): Take arg char **BUFLOC.  Stuff it in
+	stream->__fd, and store the location of the initial buffer in
+	*BUFLOC.
+	(enlarge_buffer): Keep *(char **) stream->__fd updated to be the
+	location of the buffer.
+
+Tue Jul 23 14:11:29 1991  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* posix/glob.c: Don't #include <stddef.h> #ifdef sun.
+	Is there anyone on the face of the planet other than me capable of
+	implementing the ANSI C standard to spec????
+
+	* posix/glob.c [DIRENT]: #include <sys/types.h> before <dirent.h>
+	#ifdef USG.
+
+Mon Jul 22 17:06:24 1991  Roland McGrath  (roland@churchy.gnu.ai.mit.edu)
+
+	* sysdeps/posix/make-stdio_limits.c: #include <posix1_limits.h>,
+	not <posix_limits.h>.
+
+	* README: Refer to COPYING.LIB, not COPYING.
+
+	* config.libc: Renamed to `configure'.
+
+Local Variables:
+mode: change-log
+End:

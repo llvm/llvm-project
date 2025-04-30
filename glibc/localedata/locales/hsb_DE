@@ -1,0 +1,241 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Upper Sorbian Language Locale for Germany
+% by Andrzej Krzysztofowicz <ankry at mif pg gda pl>
+% Source: information from Michael Wolf <milupo at sorbzilla de>
+
+LC_IDENTIFICATION
+title      "Upper Sorbian locale for Germany"
+source     "Information from Michael Wolf"
+address    ""
+contact    "Andrzej Krzysztofowicz"
+email      "ankry@mif.pg.gda.pl"
+tel        ""
+fax        ""
+language   "Upper Sorbian"
+territory  "Germany"
+revision   "0.1"
+date       "2004-09-09"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% CLDR collation rules for Upper Sorbian:
+% (see:https://unicode.org/cldr/trac/browser/trunk/common/collation/hsb.xml)
+%
+% &C<č<<<Č<ć<<<Ć
+% &E<ě<<<Ě
+% &H<ch<<<cH<<<Ch<<<CH
+% &[before 1] L<ł<<<Ł
+% &R<ř<<<Ř
+% &S<š<<<Š
+% &Z<ž<<<Ž<ź<<<Ź
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/hsb.xml)
+%
+% <exemplarCharacters type="index">[A B C Č Ć D {DŹ} E F G H {CH} I J K Ł L M N O P Q R S Š T U V W X Y Z Ž]</exemplarCharacters>
+%
+% There is some inconsistency here, in the index DŹ is a separate character but
+% in the sorting rules it is not. Also, the sorting rules treat Ě, Ř and Ź as a separate
+% characters but the index does not.
+%
+% The following treats all of the above as separate characters:
+
+collating-element <d-z'> from "<U0064><U017A>"
+collating-element <d-Z'> from "<U0064><U0179>"
+collating-element <D-z'> from "<U0044><U017A>"
+collating-element <D-Z'> from "<U0044><U0179>"
+collating-element <c-h> from "<U0063><U0068>"
+collating-element <c-H> from "<U0063><U0048>"
+collating-element <C-h> from "<U0043><U0068>"
+collating-element <C-H> from "<U0043><U0048>"
+
+collating-symbol <c-caron>
+collating-symbol <c-acute>
+collating-symbol <d-z-acute-digraph>
+collating-symbol <e-caron>
+collating-symbol <c-h-digraph>
+collating-symbol <l-stroke>
+collating-symbol <r-caron>
+collating-symbol <s-caron>
+collating-symbol <z-caron>
+collating-symbol <z-acute>
+
+reorder-after <AFTER-C>
+<c-caron>
+<c-acute>
+reorder-after <AFTER-D>
+<d-z-acute-digraph>
+reorder-after <AFTER-E>
+<e-caron>
+reorder-after <AFTER-H>
+<c-h-digraph>
+reorder-after <AFTER-K>
+<l-stroke>
+reorder-after <AFTER-R>
+<r-caron>
+reorder-after <AFTER-S>
+<s-caron>
+reorder-after <AFTER-Z>
+<z-caron>
+<z-acute>
+
+<U010D> <c-caron>;<BASE>;<MIN>;IGNORE % č
+<U010C> <c-caron>;<BASE>;<CAP>;IGNORE % Č
+<U0107> <c-acute>;<BASE>;<MIN>;IGNORE % ć
+<U0106> <c-acute>;<BASE>;<CAP>;IGNORE % Ć
+<d-z'> <d-z-acute-digraph>;<BASE>;"<MIN><MIN>";IGNORE % dź
+<d-Z'> <d-z-acute-digraph>;<BASE>;"<MIN><CAP>";IGNORE % dŹ
+<D-z'> <d-z-acute-digraph>;<BASE>;"<CAP><MIN>";IGNORE % Dź
+<D-Z'> <d-z-acute-digraph>;<BASE>;"<CAP><CAP>";IGNORE % DŹ
+<U011B> <e-caron>;<BASE>;<MIN>;IGNORE % ě
+<U011A> <e-caron>;<BASE>;<CAP>;IGNORE % Ě
+<c-h> <c-h-digraph>;<BASE>;"<MIN><MIN>";IGNORE % ch
+<c-H> <c-h-digraph>;<BASE>;"<MIN><CAP>";IGNORE % cH
+<C-h> <c-h-digraph>;<BASE>;"<CAP><MIN>";IGNORE % Ch
+<C-H> <c-h-digraph>;<BASE>;"<CAP><CAP>";IGNORE % CH
+<U0142> <l-stroke>;<BASE>;<MIN>;IGNORE % ł
+<U0141> <l-stroke>;<BASE>;<CAP>;IGNORE % Ł
+<U0159> <r-caron>;<BASE>;<MIN>;IGNORE % ř
+<U0158> <r-caron>;<BASE>;<CAP>;IGNORE % Ř
+<U0161> <s-caron>;<BASE>;<MIN>;IGNORE % š
+<U0160> <s-caron>;<BASE>;<CAP>;IGNORE % Š
+<U017E> <z-caron>;<BASE>;<MIN>;IGNORE % ž
+<U017D> <z-caron>;<BASE>;<CAP>;IGNORE % Ž
+<U017A> <z-acute>;<BASE>;<MIN>;IGNORE % ź
+<U0179> <z-acute>;<BASE>;<CAP>;IGNORE % Ź
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1hHyY]"
+noexpr  "^[-0nN]"
+yesstr  "haj"
+nostr   "n<U011B>"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "de_DE"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "de_DE"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Nj";"P<U00F3>";/
+	"Wu";"Sr";/
+	"<U0160>t";"Pj";/
+	"So"
+day     "Njed<U017A>ela";/
+	"P<U00F3>nd<U017A>ela";/
+	"Wutora";/
+	"Srjeda";/
+	"<U0160>tv<U00F3>rtk";/
+	"Pjatk";/
+	"Sobota"
+abmon	"Jan";"Feb";/
+	"M<U011B>r";"Apr";/
+	"Mej";"Jun";/
+	"Jul";"Awg";/
+	"Sep";"Okt";/
+	"Now";"Dec"
+alt_mon	"Januar";/
+	"Februar";/
+	"M<U011B>rc";/
+	"Apryl";/
+	"Meja";/
+	"Junij";/
+	"Julij";/
+	"Awgust";/
+	"September";/
+	"Oktober";/
+	"Nowember";/
+	"December"
+mon	"januara";/
+	"februara";/
+	"m<U011B>rca";/
+	"apryla";/
+	"meje";/
+	"junija";/
+	"julija";/
+	"awgusta";/
+	"septembra";/
+	"oktobra";/
+	"nowembra";/
+	"decembra"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "de_DE"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "de_DE"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "de_DE"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "knje<U017E>na"
+name_mr     "knjez"
+name_mrs    "knjeni"
+%name_ms     ""
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name  "N<U011B>mska"
+country_post  "D"
+country_ab2   "DE"
+country_ab3   "DEU"
+country_num   276
+country_car   "D"
+country_isbn  3
+lang_name     "hornjoserb<U0161><U0107>ina"
+lang_ab      ""
+lang_term    "hsb"
+lang_lib     "hsb"
+END LC_ADDRESS

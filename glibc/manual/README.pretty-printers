@@ -1,0 +1,175 @@
+README for the glibc Python pretty printers
+===========================================
+
+Pretty printers are gdb extensions that allow it to print useful, human-readable
+information about a program's variables.  For example, for a pthread_mutex_t
+gdb would usually output something like this:
+
+(gdb) print mutex
+$1 = {
+  __data = {
+    __lock = 22020096,
+    __count = 0,
+    __owner = 0,
+    __nusers = 0,
+    __kind = 576,
+    __spins = 0,
+    __elision = 0,
+    __list = {
+      __prev = 0x0,
+      __next = 0x0
+    }
+  },
+  __size = "\000\000P\001", '\000' <repeats 12 times>, "@\002", '\000' <repeats 21 times>,
+  __align = 22020096
+}
+
+However, with a pretty printer gdb will output something like this:
+
+(gdb) print mutex
+$1 = pthread_mutex_t = {
+  Type = Normal,
+  Status = Not acquired,
+  Robust = No,
+  Shared = No,
+  Protocol = Priority protect,
+  Priority ceiling = 42
+}
+
+Before printing a value, gdb will first check if there's a pretty printer
+registered for it.  If there is, it'll use it, otherwise it'll print the value
+as usual.  Pretty printers can be registered in various ways; for our purposes
+we register them for the current objfile by calling
+gdb.printing.register_pretty_printer().
+
+Currently our printers are based on gdb.RegexpCollectionPrettyPrinter, which
+means they'll be triggered if the type of the variable we're printing matches
+a given regular expression.  For example, MutexPrinter will be triggered if
+our variable's type matches the regexp '^pthread_mutex_t$'.
+
+Besides the printers themselves, each module may have a constants file which the
+printers will import.  These constants are generated from C headers during the
+build process, and need to be in the Python search path when loading the
+printers.
+
+
+Installing and loading
+----------------------
+
+The pretty printers and their constant files may be installed in different paths
+for each distro, though gdb should be able to automatically load them by itself.
+When in doubt, you can use the 'info pretty-printer' gdb command to list the
+loaded pretty printers.
+
+If the printers aren't automatically loaded for some reason, you should add the
+following to your .gdbinit:
+
+python
+import sys
+sys.path.insert(0, '/path/to/constants/file/directory')
+end
+
+source /path/to/printers.py
+
+If you're building glibc manually, '/path/to/constants/file/directory' should be
+'/path/to/glibc-build/submodule', where 'submodule' is e.g. nptl.
+
+
+Testing
+-------
+
+The pretty printers come with a small test suite based on PExpect, which is a
+Python module with Expect-like features for spawning and controlling interactive
+programs.  Each printer has a corresponding C program and a Python script
+that uses PExpect to drive gdb through the program and compare its output to
+the expected printer's.
+
+The tests run on the glibc host, which is assumed to have both gdb and PExpect;
+if any of those is absent the tests will fail with code 77 (UNSUPPORTED).
+Native builds can be tested simply by doing 'make check'; cross builds must use
+cross-test-ssh.sh as test-wrapper, like this:
+
+make test-wrapper='/path/to/scripts/cross-test-ssh.sh user@host' check
+
+(Remember to share the build system's filesystem with the glibc host's through
+NFS or something similar).
+
+Running 'make check' on a cross build will only compile the test programs,
+without running the scripts.
+
+
+Adding new pretty printers
+--------------------------
+
+Adding new pretty printers to glibc requires following these steps:
+
+1. Identify which constants must be generated from C headers, and write the
+corresponding .pysym file.  See scripts/gen-as-const.py for more information
+on how this works.  The name of the .pysym file must be added to the
+'gen-py-const-headers' variable in your submodule's Makefile (without the .pysym
+extension).
+
+2. Write the pretty printer code itself.  For this you can follow the gdb
+Python API documentation, and use the existing printers as examples.  The printer
+code must import the generated constants file (which will have the same name
+as your .pysym file).  The names of the pretty printer files must be added
+to the 'pretty-printers' variable in your submodule's Makefile (without the .py
+extension).
+
+3. Write the unit tests for your pretty printers.  The build system calls each
+test script passing it the paths to the test program source, the test program
+binary, and the printer files you added to 'pretty-printers' in the previous
+step.  The test scripts, in turn, must import scripts/test_printers_common
+and call the init_test function passing it, among other things, the name of the
+set of pretty printers to enable (as seen by running 'info pretty-printer').
+You can use the existing unit tests as examples.
+
+4. Add the names of the pretty printer tests to the 'tests-printers' variable
+in your submodule's Makefile (without extensions).  In addition, for each test
+program you must define a corresponding CFLAGS-* and CPPFLAGS-* variable and
+set it to $(CFLAGS-printers-tests) to ensure they're compiled correctly.  For
+example, test-foo-printer.c requires the following:
+
+CFLAGS-test-foo-printer.c := $(CFLAGS-printers-tests)
+CPPFLAGS-test-foo-printer.c := $(CFLAGS-printers-tests)
+
+Finally, if your programs need to be linked with a specific library, you can add
+its name to the 'tests-printers-libs' variable in your submodule's Makefile.
+
+
+Known issues
+------------
+
+* Pretty printers are inherently coupled to the code they're targetting, thus
+any changes to the target code must also update the corresponding printers.
+On the plus side, the printer code itself may serve as a kind of documentation
+for the target code.
+
+* There's no guarantee that the information the pretty printers provide is
+complete, i.e. some details might be left off.  For example, the pthread_mutex_t
+printers won't report whether a thread is spin-waiting in an attempt to acquire
+the mutex.
+
+* Older versions of the gdb Python API have a bug where
+gdb.RegexpCollectionPrettyPrinter would not be able to get a value's real type
+if it was typedef'd.  This would cause gdb to ignore the pretty printers for
+types like pthread_mutex_t, which is defined as:
+
+typedef union
+{
+  ...
+} pthread_mutex_t;
+
+This was fixed in commit 1b588015839caafc608a6944a78aea170f5fb2f6, and released
+as part of gdb 7.8.  However, typedef'ing an already typedef'd type may cause
+a similar issue, e.g.:
+
+typedef pthread_mutex_t mutex;
+mutex a_mutex;
+
+Here, trying to print a_mutex won't trigger the pthread_mutex_t printer.
+
+* The test programs must be compiled without optimizations.  This is necessary
+because the test scripts rely on the C code structure being preserved when
+stepping through the programs.  Things like aggressive instruction reordering
+or optimizing variables out may make this kind of testing impossible.

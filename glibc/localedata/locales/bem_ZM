@@ -1,0 +1,167 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Authors:
+% 2011-04-18, Anthony Musaluke <goof2092@gmail.com>
+% 2011-04-18, info@2xlibre.net
+
+LC_IDENTIFICATION
+title     "Bemba locale for Zambia"
+source	  "ANLoc"
+contact   "Martin Benjamin"
+email     "locales@africanlocalization.net"
+language  "Bemba"
+territory "Zambia"
+revision  "1.0"
+date      "2011-04-18"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+mon  "Januari";/
+     "Februari";/
+     "Machi";/
+     "Epreo";/
+     "Mei";/
+     "Juni";/
+     "Julai";/
+     "Ogasti";/
+     "Septemba";/
+     "Oktoba";/
+     "Novemba";/
+     "Disemba"
+abmon  "Jan";/
+       "Feb";/
+       "Mac";/
+       "Epr";/
+       "Mei";/
+       "Jun";/
+       "Jul";/
+       "Oga";/
+       "Sep";/
+       "Okt";/
+       "Nov";/
+       "Dis"
+day  "Pa Mulungu";/
+     "Palichimo";/
+     "Palichibuli";/
+     "Palichitatu";/
+     "Palichine";/
+     "Palichisano";/
+     "Pachibelushi"
+abday  "Sun";/
+       "Mon";/
+       "Tue";/
+       "Wed";/
+       "Thu";/
+       "Fri";/
+       "Sat"
+week 7;19971130;1
+first_weekday 2
+d_t_fmt  "%a %d %b %Y %R"
+date_fmt "%a %d %b %Y %R %Z"
+d_fmt  "%m//%d//%Y"
+% %T (HH:MM:SS)
+t_fmt  "%T"
+am_pm  "uluchelo";"akasuba"
+t_fmt_ampm  "%I:%M:%S %p"
+END LC_TIME
+
+LC_NUMERIC
+decimal_point  "."
+thousands_sep  ","
+grouping  3
+END LC_NUMERIC
+
+LC_MONETARY
+currency_symbol  "K"
+int_curr_symbol  "ZMW "
+mon_decimal_point  "."
+mon_thousands_sep  ","
+mon_grouping  3
+positive_sign  ""
+negative_sign  "-"
+frac_digits      2
+int_frac_digits  2
+p_cs_precedes   1
+p_sep_by_space  0
+n_cs_precedes   1
+n_sep_by_space  0
+p_sign_posn     1
+n_sign_posn     1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1yYeE]"
+noexpr  "^[-0nNaA]"
+yesstr  "Ee"
+nostr   "Awe"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt  "%p%t%d1%g%t%M%f"
+name_gen  "Ba"
+name_miss "Ba"
+name_mr   "Ba"
+name_mrs  "Bana"
+name_ms   "Ba"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt  "%a%N%f%N%e %h%N%b %s%N%z%N%T%N%c%N"
+country_name  "Zambia"
+country_post  "ZM"
+country_ab2   "ZM"
+country_ab3   "ZMB"
+country_num   894
+country_car   "Z"
+lang_name     "Ichibemba"
+lang_term    "bem"
+lang_lib    "bem"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt  "+%c %A %l"
+tel_dom_fmt  "%A %l"
+int_select  "00"
+int_prefix  "260"
+END LC_TELEPHONE

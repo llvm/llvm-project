@@ -1,0 +1,43 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+
+.IL DOUBLEDOUBLECON sym
+.AT cons null doubledouble cse
+.IL DOUBLEDOUBLELD arlnk nme stc
+.AT load null doubledouble
+.IL DOUBLEDOUBLEST doubledoublelnk arlnk nme stc
+.AT store null trm
+.IL DOUBLEDOUBLEABS doubledoublelnk
+.AT arth null doubledouble cse
+.IL DOUBLEDOUBLECHS doubledoublelnk
+.AT arth null doubledouble cse
+.IL DOUBLEDOUBLERNDINT doubledoublelnk
+.AT arth null doubledouble cse
+.IL DOUBLEDOUBLEFROM dplnk
+.AT arth null doubledouble cse
+.IL DOUBLEDOUBLETO doubledoublelnk
+.AT arth null dp cse
+.IL DOUBLEDOUBLEADD doubledoublelnk doubledoublelnk
+.AT arth comm doubledouble cse
+.IL DOUBLEDOUBLESUB doubledoublelnk doubledoublelnk
+.AT arth null doubledouble cse
+.IL DOUBLEDOUBLEMUL doubledoublelnk doubledoublelnk
+.AT arth comm doubledouble cse
+.IL DOUBLEDOUBLEDIV doubledoublelnk doubledoublelnk
+.AT arth null doubledouble cse
+.IL DOUBLEDOUBLECMP doubledoublelnk doubledoublelnk stc
+.AT arth null ir cse
+.IL DOUBLEDOUBLEARG doubledoublelnk lnk
+.AT define null lnk
+.IL DOUBLEDOUBLERETURN doubledoublelnk
+.AT define null trm
+.IL DOUBLEDOUBLERESULT lnk
+.AT define null doubledouble dom
+.IL DOUBLEDOUBLEFREE doubledoublelnk
+.AT other null trm
+.IL DOUBLEDOUBLECSE doubledoublelnk
+.AT arth null doubledouble

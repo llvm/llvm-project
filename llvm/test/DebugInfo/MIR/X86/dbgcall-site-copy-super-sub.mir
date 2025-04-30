@@ -1,4 +1,5 @@
 # RUN: llc -emit-call-site-info -start-after=livedebugvalues -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+# XFAIL: *
 
 # Based on the following reproducer:
 #

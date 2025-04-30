@@ -1,0 +1,4 @@
+# ia64 does not provide crtbeginT.o, so use crtbegin.o.
++prectorT = $(+prector)
+
+float64x-alias-fcts = yes

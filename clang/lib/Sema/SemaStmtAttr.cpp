@@ -617,6 +617,100 @@ static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   }
   return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
 }
+static Attr *handleNextSiliconMark(Sema &S, Stmt *St, const ParsedAttr &A,
+                                   SourceRange Range) {
+  // Expecting at least one argument - a string literal of the mark.
+  if (A.getNumArgs() < 1) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
+    return nullptr;
+  }
+  // Expecting at most two argument.
+  if (A.getNumArgs() > 2) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A << 2;
+    return nullptr;
+  }
+
+  auto *E = dyn_cast<clang::StringLiteral>(A.getArgAsExpr(0));
+  if (!E)
+    return nullptr;
+
+  Expr *ValueExpr = A.getArgAsExpr(1);
+
+  // If the mark is a loop mark, validate it's indeed preceding a loop statement
+  if (E->getString().str() != "bb" && St->getStmtClass() != Stmt::DoStmtClass &&
+      St->getStmtClass() != Stmt::ForStmtClass &&
+      St->getStmtClass() != Stmt::CXXForRangeStmtClass &&
+      St->getStmtClass() != Stmt::WhileStmtClass) {
+    S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop)
+        << "#pragma ns mark";
+    return nullptr;
+  }
+
+  return NextSiliconLoopMarkAttr::CreateImplicit(S.Context, E->getString(),
+                                                 ValueExpr);
+}
+
+static Attr *handleNextSiliconLocation(Sema &S, Stmt *St, const ParsedAttr &A,
+                                       SourceRange Range) {
+  // Expecting at least one argument - a string literal of the location.
+  if (A.getNumArgs() < 1) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
+    return nullptr;
+  }
+  // Expecting at most two argument.
+  if (A.getNumArgs() > 2) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A << 2;
+    return nullptr;
+  }
+
+  auto *E = dyn_cast<clang::StringLiteral>(A.getArgAsExpr(0));
+  if (!E)
+    return nullptr;
+
+  // If the mark is a loop mark, validate it's indeed preceding a loop statement
+  if (St->getStmtClass() != Stmt::DoStmtClass &&
+      St->getStmtClass() != Stmt::ForStmtClass &&
+      St->getStmtClass() != Stmt::CXXForRangeStmtClass &&
+      St->getStmtClass() != Stmt::WhileStmtClass) {
+    S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop)
+        << "#pragma ns location";
+    return nullptr;
+  }
+
+  return NextSiliconLoopLocationAttr::CreateImplicit(S.Context, E->getString());
+}
+
+static Attr *handleNextSiliconVectorize(Sema &S, Stmt *St, const ParsedAttr &A,
+                                        SourceRange Range) {
+  // Expecting at least one argument - a string literal of the vectorization
+  // type.
+  if (A.getNumArgs() < 1) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
+    return nullptr;
+  }
+  // Expecting at most two argument.
+  if (A.getNumArgs() > 2) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A << 2;
+    return nullptr;
+  }
+
+  auto *E = dyn_cast<clang::StringLiteral>(A.getArgAsExpr(0));
+  if (!E)
+    return nullptr;
+
+  // If the mark is a loop mark, validate it's indeed preceding a loop statement
+  if (St->getStmtClass() != Stmt::DoStmtClass &&
+      St->getStmtClass() != Stmt::ForStmtClass &&
+      St->getStmtClass() != Stmt::CXXForRangeStmtClass &&
+      St->getStmtClass() != Stmt::WhileStmtClass) {
+    S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop)
+        << "#pragma ns vectorize";
+    return nullptr;
+  }
+
+  return NextSiliconLoopVectorizeAttr::CreateImplicit(S.Context,
+                                                      E->getString());
+}
 
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
@@ -656,6 +750,12 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleHLSLLoopHintAttr(S, St, A, Range);
   case ParsedAttr::AT_OpenCLUnrollHint:
     return handleOpenCLUnrollHint(S, St, A, Range);
+  case ParsedAttr::AT_PragmaNextSiliconMark:
+    return handleNextSiliconMark(S, St, A, Range);
+  case ParsedAttr::AT_PragmaNextSiliconLocation:
+    return handleNextSiliconLocation(S, St, A, Range);
+  case ParsedAttr::AT_PragmaNextSiliconVectorize:
+    return handleNextSiliconVectorize(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
     return handleSuppressAttr(S, St, A, Range);
   case ParsedAttr::AT_NoMerge:

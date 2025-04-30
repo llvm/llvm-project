@@ -1,0 +1,38 @@
+/*
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ */
+
+#include "define.h"
+
+#define TARGET "@ARCHNAME@"
+#define VHOST "@OSNAME@"
+
+/* FIXME:
+ *  - filtered for pop
+ *  - true for all arch/arch
+ */
+#define BIGOBJ 1
+#define LONG_IS_64 1
+#define NOLZ 1
+#cmakedefine X86_64 1
+
+#define HOST_@ARCH@ 1
+#define HOST_@ARCH@@WRDSZ@ 1
+#define HOST_@OS@ 1
+#define HOST_@OS@_@ARCH@ 1
+#define HOST_@OS@_@ARCH@@WRDSZ@ 1
+
+#define TARGET_@ARCH@ 1
+#define TARGET_@ARCH@@WRDSZ@ 1
+#define TARGET_LLVM 1
+#define TARGET_LLVM_64 1
+#define TARGET_LLVM_@ARCH@ 1
+#define TARGET_LLVM_@ARCH@@WRDSZ@ 1
+#define TARGET_@OS@ 1
+#define TARGET_@OS@_@ARCH@ 1
+#define TARGET_@OS@_@ARCH@@WRDSZ@ 1
+
+#cmakedefine FLANG_LLVM_EXTENSIONS 1

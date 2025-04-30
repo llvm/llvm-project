@@ -1,0 +1,126 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tamil language locale for Sri Lanka
+% Language: ta
+% Territory: LK
+% Revision: 1.0
+% Date: 2011,August,11
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Tamil language locale for Sri Lanka"
+source     "J.Yogaraj"
+address    "30//36Q -2//1,Charles Apartments, De Silva Cross Rd, Kalubowila, Dehiwela, SriLanka."
+contact    "94-777-315206"
+email      "yogaraj.ubuntu@gmail.com"
+tel        ""
+fax        ""
+language   "Tamil"
+territory  "Sri Lanka"
+revision   "1.0"
+date       "2011,August,11"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "ta_IN"
+END LC_COLLATE
+
+LC_CTYPE
+copy "ta_IN"
+END LC_CTYPE
+
+LC_MESSAGES
+copy "ta_IN"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "si_LK"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ta_IN"
+END LC_NUMERIC
+
+LC_TIME
+abday       "<U0B9E><U0BBE>";"<U0BA4><U0BBF>";/
+            "<U0B9A><U0BC6>";"<U0BAA><U0BC1>";/
+            "<U0BB5><U0BBF>";"<U0BB5><U0BC6>";/
+            "<U0B9A>"
+day         "<U0B9E><U0BBE><U0BAF><U0BBF><U0BB1><U0BC1>";"<U0BA4><U0BBF><U0B99><U0BCD><U0B95><U0BB3><U0BCD>";/
+            "<U0B9A><U0BC6><U0BB5><U0BCD><U0BB5><U0BBE><U0BAF><U0BCD>";"<U0BAA><U0BC1><U0BA4><U0BA9><U0BCD>";/
+            "<U0BB5><U0BBF><U0BAF><U0BBE><U0BB4><U0BA9><U0BCD>";"<U0BB5><U0BC6><U0BB3><U0BCD><U0BB3><U0BBF>";/
+            "<U0B9A><U0BA9><U0BBF>"
+abmon       "<U0B9C><U0BA9>";"<U0BAA><U0BBF><U0BAA><U0BCD>";/
+            "<U0BAE><U0BBE><U0BB0><U0BCD>";"<U0B8F><U0BAA><U0BCD>";/
+            "<U0BAE><U0BC7>";"<U0B9C><U0BC2><U0BA9><U0BCD>";/
+            "<U0B9C><U0BC2><U0BB2><U0BC8>";"<U0B86><U0B95>";/
+            "<U0B9A><U0BC6><U0BAA><U0BCD>";"<U0B85><U0B95><U0BCD>";/
+            "<U0BA8><U0BB5>";"<U0B9F><U0BBF><U0B9A>"
+mon         "<U0B9C><U0BA9><U0BB5><U0BB0><U0BBF>";"<U0BAA><U0BBF><U0BAA><U0BCD><U0BB0><U0BB5><U0BB0><U0BBF>";/
+            "<U0BAE><U0BBE><U0BB0><U0BCD><U0B9A><U0BCD>";"<U0B8F><U0BAA><U0BCD><U0BB0><U0BB2><U0BCD>";/
+            "<U0BAE><U0BC7>";"<U0B9C><U0BC2><U0BA9><U0BCD>";/
+            "<U0B9C><U0BC2><U0BB2><U0BC8>";"<U0B86><U0B95><U0BB8><U0BCD><U0B9F><U0BCD>";/
+            "<U0B9A><U0BC6><U0BAA><U0BCD><U0B9F><U0BAE><U0BCD><U0BAA><U0BB0><U0BCD>";"<U0B85><U0B95><U0BCD><U0B9F><U0BCB><U0BAA><U0BB0><U0BCD>";/
+            "<U0BA8><U0BB5><U0BAE><U0BCD><U0BAA><U0BB0><U0BCD>";"<U0B9F><U0BBF><U0B9A><U0BAE><U0BCD><U0BAA><U0BB0><U0BCD>"
+am_pm       "<U0B95><U0BBE><U0BB2><U0BC8>";"<U0BAE><U0BBE><U0BB2><U0BC8>"
+d_t_fmt     "%A %d %B %Y %H:%M:%S"
+date_fmt    "%A %d %B %Y %H:%M:%S %Z"
+d_fmt       "%-d//%-m//%y"
+t_fmt       "%H:%M:%S %Z"
+t_fmt_ampm  ""
+
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "si_LK"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "si_LK"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "si_LK"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "ta_IN"
+END LC_NAME
+
+LC_ADDRESS
+
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U0B87><U0BB2><U0B99><U0BCD><U0B95><U0BC8>"
+country_ab2 "LK"
+country_ab3 "LKA"
+country_num 144
+country_car "CL"
+lang_name   "<U0BA4><U0BAE><U0BBF><U0BB4><U0BCD>"
+lang_ab      "ta"
+lang_term    "tam"
+lang_lib    "tam"
+END LC_ADDRESS

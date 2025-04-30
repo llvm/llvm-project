@@ -1,0 +1,186 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Awajún / Aguaruna (agr) language locale for Peru
+%
+% Prepared and contributed to glibc by Chris Leonard <cjl@sugarlabs.org> and
+% Sebastian Silva <sebastian@fuentelibre.org>
+%
+% This locale data has been developed in collaboration between:
+% Sugar Labs,  http://www.sugarlabs.org/
+% One Laptop Per Child, http://one.laptop.org/
+% Somos Azúcar. http://somosazucar.org/
+%
+% Los autores desean agradecer a los desafíos de la clasificación de las lenguas andinas
+% con los códigos ISO-639 disponibles en la actualidad y su disposición a trabajar con
+% todos los interesados en mejorar la representación de todas las lenguas andinas.
+%
+% build with: localedef -f UTF-8 -i agr_PE agr_PE
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title        "Awaj<U00FA>n (agr) locale for Peru"
+source       "somosazucar.org"
+address      ""
+contact      ""
+email        "libc-alpha@sourceware.org"
+tel          ""
+fax          ""
+language     "Aguaruna"
+territory    "Peru"
+revision     "1.0"
+date         "2016-08-20"
+%
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "es_ES"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+mon  "Petsatin";/
+     "Kupitin";/
+     "Uyaitin";/
+     "Tayutin";/
+     "Kegketin";/
+     "Tegmatin";/
+     "Kuntutin";/
+     "Yagkujutin";/
+     "Daiktatin";/
+     "Ipamtatin";/
+     "Shinutin";/
+     "Sakamtin"
+abmon  "Pet";/
+       "Kup";/
+       "Uya";/
+       "Tay";/
+       "Keg";/
+       "Teg";/
+       "Kun";/
+       "Yag";/
+       "Dait";/
+       "Ipam";/
+       "Shin";/
+       "Sak"
+day  "Tuntuamtin";/
+     "Achutin";/
+     "Kugkuktin";/
+     "Saketin";/
+     "Shimpitin";/
+     "Imaptin";/
+     "Bataetin"
+abday  "Tun";"Ach";"Kug";"Sak";"Shim";"Im";"Bat"
+% Abbreviated date and time representation to be referenced by the "%c" field descriptor -
+%
+% "%a" (short weekday name),
+% "%d" (day of month as a decimal number),
+% "%b" (short month name),
+% "%Y" (year with century as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+d_t_fmt       "%a %d %b %Y %T %Z"
+
+% Date representation to be referenced by the "%x" field descriptor -
+% "%d/%m/%Y", day/month/year as decimal numbers (01/01/2000).
+d_fmt         "%d//%m//%y"
+
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+t_fmt       "%T"
+
+% Define representation of ante meridian and post maritime strings -
+% The "" mean 'default to "AM" and "PM".
+am_pm       "VM";"NM"
+
+t_fmt_ampm    "%I:%M:%S %p"
+
+% Date representation not described in ISO/IEC 14652. Comes out as -
+% "%a %b %e %H:%M:%S %Z %Y" which is default "date" command output
+%
+% %a - abbreviated weekday name,
+% %b - abbreviated month name,
+% %e - day of month as a decimal number with leading space (1 to 31),
+% %H - hour (24-hour clock) as a decimal number (00 to 23),
+% %M - minute as a decimal number (00 to 59),
+% %S - seconds as a decimal number (00 to 59),
+% %Z - time-zone name,
+% %Y - year with century as a decimal number,e.g. 2001.
+date_fmt    "%a %b %e %H:%M:%S %Z %Y"
+week    7;19971130;7
+first_weekday 1
+first_workday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "es_PE"
+END LC_NUMERIC
+
+LC_MONETARY
+copy "es_PE"
+END LC_MONETARY
+
+LC_PAPER
+copy "es_PE"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "es_PE"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1eEsSyY]"
+noexpr  "^[-0aAnN]"
+yesstr  "ehe"
+nostr   "atsa"
+END LC_MESSAGES
+
+LC_NAME
+copy "es_PE"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name  "Per<U00FA>"
+country_ab2   "PE"
+country_ab3   "PER"
+country_num   604
+country_car   "PE"
+% Awajún
+lang_name     "Awaj<U00FA>n"
+% ISO-639-1
+lang_ab      ""
+% ISO-639-2
+lang_term    ""
+% ISO-639-3
+lang_lib    "agr"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "es_PE"
+END LC_TELEPHONE

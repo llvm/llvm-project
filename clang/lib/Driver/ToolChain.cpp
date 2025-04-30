@@ -10,6 +10,7 @@
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Clang.h"
+#include "ToolChains/ClassicFlang.h"
 #include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
 #include "ToolChains/InterfaceStubs.h"
@@ -465,7 +466,11 @@ Tool *ToolChain::getClang() const {
 
 Tool *ToolChain::getFlang() const {
   if (!Flang)
+#ifdef ENABLE_CLASSIC_FLANG
+    Flang.reset(new tools::ClassicFlang(*this));
+#else
     Flang.reset(new tools::Flang(*this));
+#endif
   return Flang.get();
 }
 
@@ -956,13 +961,13 @@ std::string ToolChain::GetStaticLibToolPath() const {
 
 types::ID ToolChain::LookupTypeForExtension(StringRef Ext) const {
   types::ID id = types::lookupTypeForExtension(Ext);
-
+#ifndef ENABLE_CLASSIC_FLANG
   // Flang always runs the preprocessor and has no notion of "preprocessed
   // fortran". Here, TY_PP_Fortran is coerced to TY_Fortran to avoid treating
   // them differently.
   if (D.IsFlangMode() && id == types::TY_PP_Fortran)
     id = types::TY_Fortran;
-
+#endif
   return id;
 }
 
@@ -1315,6 +1320,31 @@ void ToolChain::AddCCKextLibArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-lcc_kext");
 }
+
+#ifdef ENABLE_CLASSIC_FLANG
+void ToolChain::AddFortranStdlibLibArgs(const ArgList &Args,
+                                        ArgStringList &CmdArgs) const {
+  bool StaticFlangLibs = false;
+  if (Args.hasArg(options::OPT_staticFlangLibs)) {
+    StaticFlangLibs = true;
+    Args.ClaimAllArgs(options::OPT_staticFlangLibs);
+  }
+
+  if (StaticFlangLibs && !Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-Bstatic");
+  CmdArgs.push_back("-lflang");
+  CmdArgs.push_back("-lflangrti");
+  CmdArgs.push_back("-lpgmath");
+  if (StaticFlangLibs && !Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-Bdynamic");
+
+  // Always link Fortran executables with pthreads.
+  CmdArgs.push_back("-lpthread");
+
+  if (!Triple.isOSDarwin())
+    CmdArgs.push_back("-lrt");
+}
+#endif
 
 bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
                                            std::string &Path) const {

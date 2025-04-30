@@ -1,0 +1,231 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+
+% FOR ALL KURDISH DIALECTS USING ARABIC ALPHABETS
+% Central Kurdish language locale for Iraq (using Arabic letters):
+% Contributed by Aras Noori <aras.noori@gmail.com>
+% Filename: ckb_iq
+% Locale name: ckb_iq.UTF-8
+% Language: Central Kurdish (Sorani)
+% Language abbreviation: KU-AR (Kurdish - Arabic letters)
+% Charset: UTF-8
+% Creation Date: 2009-11-03
+% History:
+% January 2009: Defining CKB locale
+% March 2009: Adding rule for CKB
+% October 2009: bug fixing and redefine
+% April 2010 fixing "not found category" problems
+% March 2011 fixing all bugs
+% September 2014: fixing alphabet and Unicode bugs
+% October 2014: fixing address and fmt_name issues
+
+LC_IDENTIFICATION
+title	   "Central Kurdish language locale for Iraq"
+source	   "Aras Noori, Jwtiyar Nariman"
+address    "see e-mail"
+contact    "Aras Noori, Jwtiyar Nariman"
+email	   "aras.noori@gmail.com, Jwtiyar@gmail.com"
+tel	   ""
+fax	   ""
+language   "Central Kurdish"
+territory  "Iraq"
+revision   "0.9"
+date	   "2020-01-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+LC_COLLATE
+% The Kurdish Sorani, Bahdini, and others dialects is mainly written
+% using a modified (Arabic-based alphabet) with 33 letters.  Unlike
+% the regular Arabic alphabet, which is an abjad, Kurdish is an
+% alphabet in which vowels are mandatory, making the script easy to
+% read.
+%
+% The Kurdish alphabet order is:
+% in Latin:
+% a, b, c, ç, d, e, ê, f, g, h, i, î, j, k, l, ll, m, n, o, p, q,
+% r, rr, s, sh, t, u, uu, v, w, x, y, z
+% vowels:
+% A, E, I, O, U, UU
+%
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+reorder-after <S0631> % ر
+<S0695> % ڕ
+
+reorder-after <S0646> % ن
+<S0648> % و
+<S06C6> % ۆ
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol       "IQD "
+currency_symbol       "<U062F><U002E><U0639>"
+mon_decimal_point     "."
+mon_thousands_sep     ","
+mon_grouping	      3
+positive_sign	      "+"
+negative_sign	      "-"
+int_frac_digits       3
+frac_digits	      3
+p_cs_precedes	      1
+p_sep_by_space	      1
+n_cs_precedes	      1
+n_sep_by_space	      1
+p_sign_posn	      1
+n_sign_posn	      2
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point	       "."
+thousands_sep	       ","
+grouping	       3
+END LC_NUMERIC
+
+LC_TIME
+% Abbreviated weekday names
+abday "<U0634><U06D5><U0645>";/
+      "<U06CC><U06D5><U06A9><U0634>";/
+      "<U062F><U0648><U0648><U0634>";/
+      "<U0633><U06CE><U0634>";/
+      "<U0686><U0648><U0627><U0634>";/
+      "<U067E><U06CE><U0646><U0634>";/
+      "<U0647><U06D5><U06CC><U0646>"
+%
+% Full weekday names
+day "<U06CC><U06D5><U0643><U0634><U06D5><U0645><U0645><U06D5>";/
+    "<U062F><U0648><U0648><U0634><U06D5><U0645><U0645><U06D5>";/
+    "<U0633><U06CE><U0634><U06D5><U0645><U0645><U06D5>";/
+    "<U0686><U0648><U0627><U0631><U0634><U06D5><U0645><U0645><U06D5>";/
+    "<U067E><U06CE><U0646><U062C><U0634><U06D5><U0645><U0645><U06D5>";/
+    "<U0647><U06D5><U06CC><U0646><U06CC>";/
+    "<U0634><U06D5><U0645><U0645><U06D5>"
+%
+% Abbreviated month names
+abmon "<U06A9><U0627><U0662>";/
+      "<U0634><U0648><U0628>";/
+      "<U0626><U0627><U0632>";/
+      "<U0646><U06CC><U0633>";/
+      "<U0626><U0627><U06CC>";/
+      "<U062D><U0648><U0632>";/
+      "<U062A><U06D5><U0645>";/
+      "<U0626><U0627><U0628>";/
+      "<U0626><U06D5><U06CC>";/
+      "<U062A><U0634><U0661>";/
+      "<U062A><U0634><U0662>";/
+      "<U06A9><U0627><U0661>"
+%
+% Full month names
+mon "<U06A9><U0627><U0646><U0648><U0646><U06CC><U0020><U062F><U0648><U0648><U06D5><U0645>";/
+    "<U0634><U0648><U0628><U0627><U062A>";/
+    "<U0626><U0627><U0632><U0627><U0631>";/
+    "<U0646><U06CC><U0633><U0627><U0646>";/
+    "<U0626><U0627><U06CC><U0627><U0631>";/
+    "<U062D><U0648><U0632><U06D5><U06CC><U0631><U0627><U0646>";/
+    "<U062A><U06D5><U0645><U0648><U0632>";/
+    "<U0626><U0627><U0628>";/
+    "<U0626><U06D5><U06CC><U0644><U0648><U0648><U0644>";/
+    "<U062A><U0634><U0631><U06CC><U0646><U06CC><U0020><U06CC><U06D5><U06A9><U06D5><U0645>";/
+    "<U062A><U0634><U0631><U06CC><U0646><U06CC><U0020><U062F><U0648><U0648><U06D5><U0645>";/
+    "<U06A9><U0627><U0646><U0648><U0646><U06CC><U0020><U06CC><U06D5><U06A9><U06D5><U0645>"
+%
+% Equivalent of AM PM
+am_pm	    "<U067E><U0646>";"<U062F><U0646>"
+%
+% Appropriate date and time representation
+d_t_fmt     "%A %d %b %Y, %I:%M:%S %p"
+%
+% Appropriate date representation(%x)
+d_fmt	 "%A %d %b %Y"
+%
+% Appropriate time representation
+t_fmt	 "%Z %I:%M:%S %p"
+%
+% Appropriate 12 h time representation
+t_fmt_ampm  "%I:%M:%S %p"
+%
+% Appropriate date representation
+date_fmt	"%A %d %B %Y, %Z %I:%M:%S %p"
+
+week 7;19971130;1
+first_weekday 7
+first_workday	2
+cal_direction	3
+END LC_TIME
+
+LC_MESSAGES
+yesexpr  "^[+1yY<U0628>]"
+noexpr   "^[-0nN<U0646>]"
+yesstr   "<U0628><U06D5><U06B5><U06CE>"
+nostr    "<U0646><U06D5><U062E><U06CE><U0631>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "ar_IQ"
+END LC_PAPER
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    "<U0628><U06D5><U0695><U06CE><U0632>"
+name_miss   "<U062E><U0627><U062A><U0648>"
+name_ms     "<U062E><U0627><U062A><U0648>"
+name_mrs    "<U062E><U0627><U062A><U0648>"
+name_mr     "<U0643><U0627><U0643>"
+END LC_NAME
+%
+LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U0639><U06CE><U0631><U0627><U0642>"
+country_ab2 "IQ"
+country_ab3 "IRQ"
+country_post "IRQ"
+country_num 368
+country_car "IQ"
+lang_name   "<U06A9><U0648><U0631><U062F><U06CC><U06CC> <U0646><U0627><U0648><U06D5><U0646><U062F><U06CC>"
+lang_term   "ckb"
+lang_lib    "ckb"
+%
+END LC_ADDRESS
+
+LC_TELEPHONE
+%
+tel_int_fmt "+%c %a%t%l"
+int_select  "00"
+int_prefix  "964"
+
+END LC_TELEPHONE
+
+
+LC_MEASUREMENT
+copy "ar_IQ"
+END LC_MEASUREMENT

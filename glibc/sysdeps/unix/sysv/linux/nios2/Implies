@@ -1,0 +1,3 @@
+nios2/nptl
+unix/sysv/linux/generic/wordsize-32
+unix/sysv/linux/generic

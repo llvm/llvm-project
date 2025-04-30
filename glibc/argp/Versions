@@ -1,0 +1,11 @@
+libc {
+  GLIBC_2.1 {
+    # variables in normal name space
+    argp_err_exit_status; argp_program_bug_address; argp_program_version;
+    argp_program_version_hook;
+
+    # a*
+    argp_error; argp_failure; argp_help; argp_parse; argp_state_help;
+    argp_usage;
+  }
+}

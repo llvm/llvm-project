@@ -1,0 +1,35 @@
+This subdirectory contains infrastructure which is not put into
+installed libraries, but may be linked into programs (installed or
+not) and tests.
+
+# Error-checking wrappers
+
+These wrappers test for error return codes an terminate the process on
+error.  They are declared in these header files:
+
+* support.h
+* xsignal.h
+* xthread.h
+* xtime.h
+
+In general, new wrappers should be added to support.h if possible.
+However, support.h must remain fully compatible with C90 and therefore
+cannot include headers which use identifers not reserved in C90.  If
+the wrappers need additional types, additional headers such as
+signal.h need to be introduced.
+
+# Test framework
+
+The test framework provides a main program for tests, including a
+timeout for hanging tests.  See README-testing.c for a minimal
+example, and test-driver.c for details how to use it.  The following
+header files provide related declarations:
+
+* check.h
+* temp_file.h
+* test-driver.h
+
+For tests that make use of struct timespec, the following header files
+contain additional macros and helper functions:
+
+* timespec.h

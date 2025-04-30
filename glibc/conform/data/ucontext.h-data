@@ -1,0 +1,24 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined POSIX2008 && !defined XOPEN2K8
+type mcontext_t
+
+type ucontext_t
+
+element ucontext_t {ucontext_t*} uc_link
+// Bug 21634: uc_sigmask has wrong type.
+xfail[ia64-linux]-element ucontext_t sigset_t uc_sigmask
+element ucontext_t stack_t uc_stack
+// Bug 21635: uc_mcontext has wrong type.
+xfail[powerpc32-linux]-element ucontext_t mcontext_t uc_mcontext
+
+type sigset_t
+type stack_t
+
+function int getcontext (ucontext_t*)
+function int setcontext (const ucontext_t*)
+function void makecontext (ucontext_t*, void(*)(void), int, ...)
+function int swapcontext (ucontext_t*, const ucontext_t*)
+
+allow uc_*
+allow ss_*
+allow *_t
+#endif

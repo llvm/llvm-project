@@ -1,0 +1,11 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+# C syscall macros cannot be used because this syscall has a 64-bit
+# return value.
+lseek64		-	lseek		i:iii	__lseek64	__libc_lseek64 lseek64@@GLIBC_2.2 llseek@GLIBC_2.0:GLIBC_2.28
+
+prlimit64	EXTRA	prlimit64	i:iipp	prlimit64
+
+fanotify_mark	EXTRA	fanotify_mark	i:iiiis	fanotify_mark
+
+personality	EXTRA	personality	Ei:i	__personality	personality

@@ -1,0 +1,180 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+type cc_t
+type speed_t
+type tcflag_t
+
+type {struct termios}
+
+#if defined XOPEN2K8 || defined POSIX2008
+type pid_t
+#endif
+
+element {struct termios} tcflag_t c_iflag
+element {struct termios} tcflag_t c_oflag
+element {struct termios} tcflag_t c_cflag
+element {struct termios} tcflag_t c_lflag
+element {struct termios} cc_t c_cc [NCCS]
+
+constant NCCS
+
+constant VEOF
+constant VEOL
+constant VERASE
+constant VINTR
+constant VKILL
+constant VMIN
+constant VQUIT
+constant VSTART
+constant VSTOP
+constant VSUSP
+constant VTIME
+
+constant BRKINT
+constant ICRNL
+constant IGNBRK
+constant IGNCR
+constant IGNPAR
+constant INLCR
+constant INPCK
+constant ISTRIP
+# if !defined POSIX && !defined XOPEN2K && !defined XOPEN2K8 && !defined POSIX2008
+constant IUCLC
+# endif
+# ifndef POSIX
+constant IXANY
+# endif
+constant IXOFF
+constant IXON
+constant PARMRK
+
+constant OPOST
+# if !defined POSIX && !defined XOPEN2K && !defined XOPEN2K8 && !defined POSIX2008
+constant OLCUC
+# endif
+# if !defined POSIX && !defined POSIX2008
+constant ONLCR
+constant OCRNL
+constant ONOCR
+constant ONLRET
+constant OFDEL
+constant OFILL
+constant NLDLY
+constant NL0
+constant NL1
+constant CRDLY
+constant CR0
+constant CR1
+constant CR2
+constant CR3
+constant TABDLY
+constant TAB0
+constant TAB1
+constant TAB2
+constant TAB3
+constant BSDLY
+constant BS0
+constant BS1
+constant VTDLY
+constant VT0
+constant VT1
+constant FFDLY
+constant FF0
+constant FF1
+# endif
+
+constant B0
+constant B50
+constant B75
+constant B110
+constant B134
+constant B150
+constant B200
+constant B300
+constant B600
+constant B1200
+constant B1800
+constant B2400
+constant B4800
+constant B9600
+constant B19200
+constant B38400
+
+constant CSIZE
+constant CS5
+constant CS6
+constant CS7
+constant CS8
+constant CSTOPB
+constant CREAD
+constant PARENB
+constant PARODD
+constant HUPCL
+constant CLOCAL
+
+constant ECHO
+constant ECHOE
+constant ECHOK
+constant ECHONL
+constant ICANON
+constant IEXTEN
+constant ISIG
+constant NOFLSH
+constant TOSTOP
+# if !defined POSIX && !defined XOPEN2K && !defined XOPEN2K8 && !defined POSIX2008
+constant XCASE
+# endif
+
+constant TCSANOW
+constant TCSADRAIN
+constant TCSAFLUSH
+
+constant TCIFLUSH
+constant TCIOFLUSH
+
+constant TCIOFF
+constant TCION
+constant TCOOFF
+constant TCOON
+
+function speed_t cfgetispeed (const struct termios*)
+function speed_t cfgetospeed (const struct termios*)
+function int cfsetispeed (struct termios*, speed_t)
+function int cfsetospeed (struct termios*, speed_t)
+function int tcdrain (int)
+function int tcflow (int, int)
+function int tcflush (int, int)
+function int tcgetattr (int, struct termios*)
+#if !defined POSIX && !defined XPG4
+function pid_t tcgetsid (int)
+#endif
+function int tcsendbreak (int, int)
+function int tcsetattr (int, int, const struct termios*)
+
+#if !defined POSIX && !defined POSIX2008
+allow CBAUD
+allow DEFECHO
+allow ECHOCTL
+allow ECHOKE
+allow ECHOPRT
+allow EXTA
+allow EXTB
+allow FLUSHO
+allow LOBLK
+allow PENDIN
+allow SWTCH
+allow VDISCARD
+allow VDSUSP
+allow VLNEXT
+allow VREPRINT
+allow VSTATUS
+allow VWERASE
+#endif
+
+allow c_*
+allow V*
+allow I*
+allow O*
+allow TC*
+allow B[0123456789]*
+allow *_t
+#endif

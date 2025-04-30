@@ -588,6 +588,14 @@ public:
       return LangAS::opencl_private;
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
       return LangAS::opencl_generic;
+    case ParsedAttr::AT_Next32Tls:
+      return LangAS::next32_tls;
+    case ParsedAttr::AT_Next32Global:
+      return LangAS::next32_global;
+    case ParsedAttr::AT_Next32Constant:
+      return LangAS::next32_constant;
+    case ParsedAttr::AT_Next32Local:
+      return LangAS::next32_local;
     default:
       return LangAS::Default;
     }

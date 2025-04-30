@@ -1,0 +1,198 @@
+This file describes changes to the machine while it was in the ports
+add-on directory.  This port is no longer part of an add-on and so
+future changes to it should be listed in the top-level ChangeLog file,
+not here.
+
+
+
+2014-02-17  David Holsgrove <david.holsgrove@xilinx.com>
+
+	* sysdeps/microblaze: Move directory to ../sysdeps/microblaze.
+	* sysdeps/unix/sysv/linux/microblaze: Move directory to
+	  ../sysdeps/unix/sysv/linux/microblaze.
+
+2014-02-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/microblaze/msgctl.c: Include
+	sysdeps/unix/sysv/linux/arm/msgctl.c instead of
+	sysdeps/unix/sysv/linux/alpha/msgctl.c.
+	* sysdeps/unix/sysv/linux/microblaze/semctl.c: Include
+	sysdeps/unix/sysv/linux/arm/semctl.c instead of
+	sysdeps/unix/sysv/linux/alpha/semctl.c.
+	* sysdeps/unix/sysv/linux/microblaze/shmctl.c: Include
+	sysdeps/unix/sysv/linux/arm/shmctl.c instead of
+	sysdeps/unix/sysv/linux/alpha/shmctl.c.
+
+2014-02-04  David Holsgrove <david.holsgrove@xilinx.com>
+
+	* sysdeps/microblaze/libm-test-ulps: Update.
+	* sysdeps/microblaze/libm-test-ulps_new: Delete redundant file.
+
+2014-02-04  David Holsgrove <david.holsgrove@xilinx.com>
+
+	* sysdeps/microblaze/fegetround.c: Delete redundant file.
+	* sysdeps/microblaze/fesetround.c: Likewise.
+
+2013-11-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/microblaze/fegetround.c (fegetround): Use
+	libm_hidden_def.
+
+2013-11-26  Ondřej Bílka  <neleai@seznam.cz>
+	* sysdeps/unix/sysv/linux/microblaze/bits/stat.h: Use __glibc_reserved instead __unused.
+	* sysdeps/unix/sysv/linux/microblaze/kernel_stat.h: Likewise.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/microblaze/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/microblaze/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/microblaze/configure: Regenerated.
+
+2013-06-15  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libpthread.abilist:
+	Update.
+
+2013-06-14  David Holsgrove <david.holsgrove@xilinx.com>
+
+	* sysdeps/unix/sysv/linux/microblaze/nptl/lowlevellock.h: Correct
+	return from macros.
+
+2013-06-05  Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/microblaze/bits/atomic.h: Remove executable mode.
+	* sysdeps/unix/sysv/linux/microblaze/sysdep.h: Likewise.
+
+2013-05-31  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/microblaze/Makefile ($(objpfx)libm.so): Remove
+	dependency on ld.so.
+	($(objpfx)libcrypt.so): Likewise.
+	($(objpfx)libresolv.so): Likewise.
+	($(objpfx)libnss_dns.so): Likewise.
+	($(objpfx)libnss_files.so): Likewise.
+	($(objpfx)libnss_db.so): Likewise.
+	($(objpfx)libnss_nis.so): Likewise.
+	($(objpfx)libnss_nisplus.so): Likewise.
+	($(objpfx)libnss_hesiod.so): Likewise.
+	($(objpfx)libnss_compat.so): Likewise.
+	($(objpfx)libanl.so): Likewise.
+	($(objpfx)libnsl.so): Likewise.
+	($(objpfx)libcidn.so): Likewise.
+	($(objpfx)libutil.so): Likewise.
+
+2013-05-29  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	[BZ #15465]
+	* sysdeps/microblaze/dl-machine.h (elf_machine_rela): Use
+	RTLD_PROGNAME.
+
+2013-05-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/microblaze/libm-test-ulps: Update test names.
+
+2013-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/microblaze/libm-test-ulps: Update names of sincos tests.
+
+2013-03-28  David Holsgrove  <david.holsgrove@xilinx.com>
+
+	* sysdeps/microblaze/Implies: New file.
+	* sysdeps/microblaze/Makefile: New file.
+	* sysdeps/microblaze/__longjmp.S: New file.
+	* sysdeps/microblaze/_mcount.S: New file.
+	* sysdeps/microblaze/abort-instr.h: New file.
+	* sysdeps/microblaze/asm-syntax.h: New file.
+	* sysdeps/microblaze/backtrace.c: New file.
+	* sysdeps/microblaze/backtrace_linux.c: New file.
+	* sysdeps/microblaze/bits/atomic.h: New file.
+	* sysdeps/microblaze/bits/endian.h: New file.
+	* sysdeps/microblaze/bits/fenv.h: New file.
+	* sysdeps/microblaze/bits/link.h: New file.
+	* sysdeps/microblaze/bits/setjmp.h: New file.
+	* sysdeps/microblaze/bsd-_setjmp.S: New file.
+	* sysdeps/microblaze/bsd-setjmp.S: New file.
+	* sysdeps/microblaze/crti.S: New file.
+	* sysdeps/microblaze/crtn.S: New file.
+	* sysdeps/microblaze/dl-machine.h: New file.
+	* sysdeps/microblaze/dl-tls.h: New file.
+	* sysdeps/microblaze/dl-trampoline.S: New file.
+	* sysdeps/microblaze/fegetround.c: New file.
+	* sysdeps/microblaze/fesetround.c: New file.
+	* sysdeps/microblaze/gccframe.h: New file.
+	* sysdeps/microblaze/jmpbuf-unwind.h: New file.
+	* sysdeps/microblaze/ldsodefs.h: New file.
+	* sysdeps/microblaze/libc-tls.c: New file.
+	* sysdeps/microblaze/libm-test-ulps: New file.
+	* sysdeps/microblaze/machine-gmon.h: New file.
+	* sysdeps/microblaze/math_private.h: New file.
+	* sysdeps/microblaze/memusage.h: New file.
+	* sysdeps/microblaze/nptl/Makefile: New file.
+	* sysdeps/microblaze/nptl/pthread_spin_lock.c: New file.
+	* sysdeps/microblaze/nptl/pthreaddef.h: New file.
+	* sysdeps/microblaze/nptl/tcb-offsets.sym: New file.
+	* sysdeps/microblaze/nptl/tls.h: New file.
+	* sysdeps/microblaze/preconfigure: New file.
+	* sysdeps/microblaze/setjmp.S: New file.
+	* sysdeps/microblaze/shlib-versions: New file.
+	* sysdeps/microblaze/sotruss-lib.c: New file.
+	* sysdeps/microblaze/stackinfo.h: New file.
+	* sysdeps/microblaze/start.S: New file.
+	* sysdeps/microblaze/sysdep.h: New file.
+	* sysdeps/microblaze/tls-macros.h: New file.
+	* sysdeps/microblaze/tst-audit.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/Makefile: New file.
+	* sysdeps/unix/sysv/linux/microblaze/Versions: New file.
+	* sysdeps/unix/sysv/linux/microblaze/____longjmp_chk.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/bits/fcntl.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/bits/mman.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/bits/stat.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/brk.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/clone.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/configure: New file.
+	* sysdeps/unix/sysv/linux/microblaze/configure.in: New file.
+	* sysdeps/unix/sysv/linux/microblaze/fcntl.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/fxstat.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/fxstatat.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/getsysstats.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/kernel-features.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/kernel_stat.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/lxstat.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/mmap.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/msgctl.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/bits/pthreadtypes.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/bits/semaphore.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/c++-types.data: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/createthread.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/fork.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/ld.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libBrokenLocale.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libanl.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libc.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libcrypt.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libdl.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libm.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libnsl.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libpthread.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libresolv.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/librt.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libthread_db.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/libutil.abilist: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/localplt.data: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/lowlevellock.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/pt-vfork.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/pthread_once.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/nptl/vfork.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/profil-counter.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/semctl.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/shmctl.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/setgroups.c: New file.
+	* sysdeps/unix/sysv/linux/microblaze/sigcontextinfo.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/socket.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/sys/procfs.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/sys/user.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/syscall.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/syscalls.list: New file.
+	* sysdeps/unix/sysv/linux/microblaze/sysdep.S: New file.
+	* sysdeps/unix/sysv/linux/microblaze/sysdep.h: New file.
+	* sysdeps/unix/sysv/linux/microblaze/xstat.c: New file.

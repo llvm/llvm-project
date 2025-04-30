@@ -1,0 +1,12 @@
+DEFAULT			GLIBC_2.2.6
+
+libm=6
+
+# libmachuser.so.1 corresponds to mach/*.defs as of Utah's UK22 release.
+libmachuser=1
+
+# libhurduser.so.0.3 corresponds to hurd/*.defs as of 11 June 2002.
+libhurduser=0.3
+
+# libc.so.0.3 is the first Hurd libc using libio.
+libc=0.3

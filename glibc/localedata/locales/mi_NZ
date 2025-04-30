@@ -1,0 +1,169 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Maori language locale for New Zealand
+% Source: James Gasson
+% Contact: James Gasson, Pablo Saratxaga
+% Email: <james.gasson@clear.net.nz>, <pablo@mandrakesoft.com>
+% Language: mi
+% Territory: NZ
+% Revision: 0.3
+% Date: 2001-01-28
+% Users: general
+
+LC_IDENTIFICATION
+title "Maori language locale for New Zealand"
+source "James Gasson"
+address ""
+contact "James Gasson, Pablo Saratxaga"
+email "james.gasson@clear.net.nz, pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Maori"
+territory "New Zealand"
+revision "0.3"
+date "2001-01-28"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "en_DK"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+
+%% a b c d e f g h i j k l m n ng o p q r s t u v w wh x y z
+
+collating-symbol  <ng-digraph>
+collating-element <N-G> from "<U004E><U0047>"
+collating-element <n-g> from "<U006E><U0067>"
+collating-element <N-g> from "<U004E><U0067>"
+collating-element <n-G> from "<U006E><U0047>"
+collating-symbol  <wh-digraph>
+collating-element <W-H> from "<U0057><U0048>"
+collating-element <w-h> from "<U0077><U0068>"
+collating-element <W-h> from "<U0057><U0068>"
+collating-element <w-H> from "<U0077><U0048>"
+
+reorder-after <AFTER-N>
+<ng-digraph>
+reorder-after <AFTER-W>
+<wh-digraph>
+
+<n-g>	<ng-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<n-G>	<ng-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<N-g>	<ng-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<N-G>	<ng-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<w-h>	<wh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<w-H>	<wh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<W-h>	<wh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<W-H>	<wh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+copy "en_NZ"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_NZ"
+END LC_NUMERIC
+
+LC_TIME
+abday    "Ta";"Ma";/
+         "T<U016B>";"We";/
+         "T<U0101>i";"Pa";/
+         "H<U0101>"
+day      "R<U0101>tapu";/
+         "Mane";/
+         "T<U016B>rei";/
+         "Wenerei";/
+         "T<U0101>ite";/
+         "Paraire";/
+         "H<U0101>tarei"
+abmon    "Kohi";"Hui";/
+         "Pou";"Pae";/
+         "Hara";"Pipi";/
+         "H<U014D>ngoi";"Here";/
+         "Mahu";"Whi-nu";/
+         "Whi-ra";"Haki"
+mon      "Kohi-t<U0101>tea";/
+         "Hui-tanguru";/
+         "Pout<U016B>-te-rangi";/
+         "Paenga-wh<U0101>wh<U0101>";/
+         "Haratua";/
+         "Pipiri";/
+         "H<U014D>ngoingoi";/
+         "Here-turi-k<U014D>k<U0101>";/
+         "Mahuru";/
+         "Whiringa-<U0101>-nuku";/
+         "Whiringa-<U0101>-rangi";/
+         "Hakihea"
+d_t_fmt     "Te %A, te %d o %B, %Y %T"
+date_fmt    "Te %A, te %d o %B, %Y %T %Z"
+d_fmt       "%d//%m//%y"
+t_fmt       "%T"
+am_pm       "";""
+t_fmt_ampm  ""
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0101><U0100><U00E4><U00C4>aA]"
+noexpr  "^[-0nNkK]"
+yesstr  "<U0101>e"
+nostr   "k<U0101>ore"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_NZ"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "en_NZ"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+copy "en_NZ"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+% https://mi.wikipedia.org/wiki/Aotearoa
+country_name  "Aotearoa"
+country_ab2   "NZ"
+country_ab3   "NZL"
+country_num   554
+country_car   "NZ"
+lang_name    "M<U0101>ori"
+lang_ab      "mi"
+lang_term    "mri"
+lang_lib    "mao"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "en_NZ"
+END LC_TELEPHONE

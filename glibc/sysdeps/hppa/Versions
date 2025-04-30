@@ -1,0 +1,12 @@
+ld {
+  GLIBC_PRIVATE {
+    # hppa specific functions in the dynamic linker, but used by libc.so.
+    _dl_symbol_address; _dl_lookup_address;
+    _dl_function_address;
+  }
+}
+libc {
+  GLIBC_2.2 {
+    __clz_tab;
+  }
+}

@@ -32,6 +32,8 @@
 #include "kmp_dispatch_hier.h"
 #endif
 
+#include "kmp_ns.h"
+
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
 #endif
@@ -971,6 +973,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   dispatch_private_info_template<T> *pr;
   dispatch_shared_info_template<T> volatile *sh;
 
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   KMP_BUILD_ASSERT(sizeof(dispatch_private_info_template<T>) ==
                    sizeof(dispatch_private_info));
   KMP_BUILD_ASSERT(sizeof(dispatch_shared_info_template<UT>) ==
@@ -2195,6 +2198,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
   KMP_TIME_PARTITIONED_BLOCK(OMP_loop_dynamic_scheduling);
 
   int status;
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   dispatch_private_info_template<T> *pr;
   __kmp_assert_valid_gtid(gtid);
   kmp_info_t *th = __kmp_threads[gtid];

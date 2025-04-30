@@ -1,0 +1,586 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 17 "Maintenance Info"
+.sh 2 "Getitem Areas"
+The functions
+.cw getitem
+and
+.cw freearea
+(in
+.i salloc.c )
+are used to allocate
+small pieces of dynamic memory and free them in a single operation.
+There are
+.cw ANUM
+(see definition of \f(CWANUM\fP in salloc.c)
+.q "areas" ,
+numbered 0 thru \f(CWANUM-1\fP, which can be used.
+They are used within the compilers as follows:
+.(b L
+.TS
+tab(%) allbox expand;
+C C C
+N LfCW L.
+Area%Names%Use/Lifetime
+0%none%T{
+item lists (FTN). Semantic analyzer. Freed during semant (FTN).
+T}
+1%none%DOINFO records (FTN).  Freed at end of semant.
+\^%none%T{
+Entry/exit argument processing by the expander (FTN).
+Freed at end of expand.
+T}
+\^%none%T{
+Predecessor lists.  Scheduler.  Freed after each block.
+T}
+2%none%reserved
+3%none%T{
+Statement function, variable format expression, and adjustable array
+info (FTN); freed at end of semant.
+Statement function, [NO]SEQUENCE info, and access info (Fortran);
+freed at end of semant.
+T}
+4%none%T{
+Constant tree saved until end of program unit (FTN). 
+Semantic Analyzer.
+T}
+5%none%T{
+Constant tree saved and freed at end of semant (FTN). 
+Semantic Analyzer.
+T}
+6%none%T{
+Equivalence group lists (FTN). Freed at end of semant.
+T}
+7%none%reserved
+8%none%T{
+Temporary filenames and pathnames space. Freed at end of compilation.
+T}
+\^%PERM_AREA%Permanent area, freed at the end of compilation.
+9%none%reserved
+10%TRANS_AREA%Area used by the Fortran transformer.
+11%USE_AREA%T{
+Fortran USE statement processing; lifetime is during processing of a block
+of USE statements (semant); freed by semant after immediately after all
+USE statements have been processed.
+T}
+\^%FORALL_AREA%T{
+For converting foralls to do's during
+the comm and outconv Fortran passes.
+T}
+12%none%T{
+pragma/directives
+T}
+13%none%T{
+pragma/directives
+T}
+14%none%reserved
+15%none%T{
+Fortran
+Constant trees and initializer variable lists for dinits,
+based common variables, equivalence group lists, and do loop variables,
+Created during semant and 
+saved until end of program unit.
+T}
+16%DEBUG_MODULE_AREA%T{
+F90 backend only, module debug info
+T}
+16%none%reserved
+17%none%reserved
+18%MOD_AREA%T{
+Fortran export/import processing: used to collect symbols, etc. to be
+written to the interface file or read from the interface;
+lifetime is an invocation of export() or import().
+T}
+19%APPEND_AREA%T{
+Fortran semantic processing of a module contained subprogram; used to collect
+the information associated with a contained subprogram which is to be appended
+to the module file; lifetime is during between mod_add_subprogram() and
+mod_end_subprogram().
+T}
+20%DWF_CU_AREA%T{
+Area needed to store dwarf information for an entire compilation unit.
+T}
+21%DWF_FUNC_AREA%T{
+Area needed to store dwarf information for a function.
+T}
+22%none%reserved
+23%none%reserved
+24%CCFFAREA%T{
+Area to store CCFF messages before outputting to .CCFF section.
+T}
+25%LLVM_LONGTERM_AREA%T{
+Area for LLVM code generation. Remains active across compilation 
+of all routines.
+T}
+26%none%reserved
+27%none%reserved
+28-29%currently unused%
+.TE
+.)b
+.bp
+.sh 2 "Compiler Created Symbols"
+Compiler created symbols are generally allocated by calling
+the function
+.cw getccsym
+(in
+.i symtab.c ) and
+.cw getccsym_sc
+(in
+.i symtab.c ).
+It forms a name of the form
+.cw '.<letter><4 digits>'
+and calls
+.cw getsym
+to enter the symbol. Below are the prototypes for the
+.cw getccsym
+and
+.cw getccsym_sc
+functions:
+
+.br
+.br
+.cw "int getccsym(int letter, int n, int stype);"
+.br
+.cw "int getccsym_sc(int letter, int n, int stype, int sc);"
+
+.br
+.br
+The following describes the function arguments:
+
+.br
+.br
+.cw letter
+- the character specifying the prefix letter of temporary name
+
+.br
+.br
+.cw n
+- The number (represented as 4 digits) appended onto the temporary name
+
+.br
+.br
+.cw stype
+- the symbol table type (ST type) to assign to the temporary
+
+.br
+.br
+.cw sc
+- (for 
+.cw getccsym_sc() 
+only) the storage class to assign to the temporary
+
+.br
+.br
+The following table shows the letters used within the compilers
+for compiler created symbols:
+.(b L
+.TS
+tab(%) expand box;
+C | C | C | C
+C | C | C | L.
+Letter%Language%Index%Use
+_
+A%ftn,fe90%counter%array bounds temp
+B%all%stb.lbavail%compiler created label
+C%fe90%counter%scalar temporary
+D%fe90%counter%descriptor actual argument for intrinsics (semfunc).
+E%%reserved
+F%%reserved
+G%%reserved
+H%%reserved
+I%%reserved
+J%f90%expb.swtcnt%switch array (exputil)
+K%%reserved
+L%%reserved
+M%%reserved
+N%%reserved
+O%fe90%counter%type descriptor dummy arguments (semfin)
+P%%reserved
+Q%C,ftn,f90%expb.gentmps%Expander miscellaneous temps
+R%C,ftn,f90%expb.retcnt%return label
+S%C%stack_no%terminal stack
+S%f90%gbl.currsub%display temporary
+T%ftn,f90%expb.chartmps%char temp
+U%ftn,f90%expb.chardtmps%char desc or char length for CHARACTER*(*) dummy
+U%ftn,f90%arg%char desc or char length for host CHARACTER*(*) dummy
+V%%reserved
+W%%reserved
+X%%reserved
+Y%%reserved
+Z%ftn,fe90%sptr%associated pointer variable for non-POINTER allocatable array
+.TE
+.)b
+.(b L
+.TS
+tab(%) expand box;
+C | C | C | C
+C | C | C | L.
+Letter%Language%Index%Use
+_
+a%C,ftn,f90%expb.arglcnt.next%array temp for an argument list
+b%C,fe90%sem.blksymnum%un-named block name
+c%C,ftn,f90%sptr%temp representing address of an argument
+d%fe90%sem.dtemps%various misc. temporaries
+e%%reserved
+f%%reserved
+g%%reserved
+h%%reserved
+i%C,ftn,fe90%sem.itemps%semant compiler temporary (not shared across statements)
+j%%%not used
+k%%reserved
+l%%reserved
+m%%reserved
+n%%reserved
+o%%reserved
+p%%%not used
+q%%reserved
+r%%reserved
+s%%reserved
+t%%reserved
+u%%reserved
+v%%reserved
+w%%reserved
+x%%reserved
+y%%reserved
+z%ftn,f90%sptr%base of allocatable common
+.TE
+.)b
+.bp
+Compiler created symbols may also be created by calling
+.cw getccssym
+(in
+.i symtab.c )
+which uses a string instead of a letter as a prefix.
+.cw getccssym
+forms a name of the form
+.cw '.<prefix><4 digits>'
+and calls
+.cw getsym
+to enter the symbol.
+.br
+.br
+Below is the prototype for the
+.cw getccssym
+function:
+.br
+.cw "int getccssym(char *pfx, int n, int stype);"
+.br
+The following describes the arguments:
+.br
+.br
+.cw pfx
+- the prefix string for the temporary
+.br
+.br
+.cw n
+- the number (integer represented with 4 digits) added after the prefix string
+.br
+.br
+.cw stype
+- the symbol table type (ST type) to assign to the temporary.
+.br
+.br
+The following table shows the prefixes used within the compilers:
+.(b L
+.TS
+tab(%) expand box;
+C | C | C
+C | C | L.
+Prefix%Language%Use
+_
+dX%f90%do index temp
+dY%f90%do end temp
+de%f90%OpenMP doend temp
+di%f90%do increment temp
+dr%f90%OpenMP runtime-scheduler temp
+ds%f90%do step temp for OpenMP block-cyclic loops
+dy%f90%do end temp for OpenMP block-cyclic loops
+sr%all%scalar temp for scalar replacement
+wi%all%wider (int) temp for replacing narrow int scalars
+.TE
+.)b
+.lp
+For the Fortran compiler, compiler-created temporaries which are user-visible
+are allocate by calling the functions
+.cw getcctmp
+(in
+.i symtab.c ).
+and
+.cw getcctmp_sc
+(in
+.i symtab.c ).
+It forms a name of the form
+.cw 'z_<letter>_<digits>'
+and calls
+.cw getsym
+to enter the symbol.
+The number represented by \f(CW<digits>\fP ranges from 0 to 9999.
+Only lower case letters are allowed.
+.br
+Below are the prototypes for the
+.cw getcctmp
+and
+.cw getcctmp_sc
+functions:
+.br
+.br
+.cw "int getcctmp(int letter, int n, int stype, int dtype);"
+.br
+.cw "int getcctmp_sc(int letter, int n, int stype, int dtype, int sc);"
+.br
+The following describes the function arguments:
+
+.br
+.br
+.cw letter
+- the character specifying the prefix letter of temporary name
+
+.br
+.br
+.cw n
+- The number (an integer) appended onto the temporary name
+
+.br
+.br
+.cw stype
+- the symbol table type (ST type) to assign to the temporary
+
+.br
+.br
+.cw sc
+- (for 
+.cw getcctmp_sc() 
+only) the storage class to assign to the temporary
+Note: for 
+.cw getcctmp()
+, the storage class of the temporary is
+.cw SC_LOCAL
+.br
+.br
+The following table shows the letters used within the compilers
+for compiler created temporaries:
+.(b L
+.TS
+tab(%) expand box;
+C | C | C
+C | C | L.
+Letter%Language%Use
+_
+a%Fortran%array temporaries
+b%Fortran%array bounds temporaries
+c%Fortran%array constant temporaries
+d%Fortran%bound of the shape of the dim specified in an intrinsic; misc. temporaries
+e%Fortran%T{
+shared array bounds temporaries; sharing is based on the
+value (ast) of the bounds expression.
+T}
+f%Fortran%array-valued function
+g%reserved
+h%not used
+i%Fortran%scalar non-character temps for semant
+j%not used
+k%not used
+l%Fortran%label variable temporaries
+m%not used
+n%not used
+o%not used
+p%not used
+q%quad temps
+r%Fortran%redundss shared temps base on the ast value
+s%Fortran%scalar character temps for semant
+t%Fortran%T{
+scalar character temps for semant created for a character contstant
+which is substring
+T}
+u%not used
+v%not used
+w%not used
+x%not used
+y%not used
+z%not used
+.TE
+.)b
+.bp
+.sh 2 "SYMTAB\ Utility"
+.lp
+The SYMTAB utility reads a specially formatted troff document, a
+symbol table include file, and a symbol table initialization file.
+It writes
+another troff document that will become the symbol table chapter in the
+maintenance document,
+the include file for the symbol table in the compiler source, and
+a file of data definitions for the compiler source.
+.sh 3 "Troff\ Document"
+The symbol table troff document consists of text interspersed with macros.
+The symbol table macros have the following meanings:
+.nr ii 1.0i
+.ip ".OC\ B\ width"
+Begin overloading class definitions.
+.i width
+is the width of the widest overloading class name plus a little (for
+\&.ip).
+.ip ".OC\ name"
+Name of an overloading class.  Should be followed by descriptive text.
+.ip ".SF\ B\ width"
+Begin shared field definitions.
+.i width
+is the width of the hanging tag.
+.ip ".SF\ name\ [where]"
+Name of a shared field.
+.i where
+is the location of the field in the form
+.i wordspec[:fieldspec]
+where
+.i wordspec
+is w\fIn\fP meaning word
+.i n ,
+and
+.i fieldspec
+is h\fIn\fP meaning halfword
+.i n ,
+b\fIn\fP meaning byte
+.i n ,
+or b\fIn-m\fP meaning bytes
+.i m-n
+(used for flags only).
+Halfwords and
+bytes are numbered left to right starting with 1.
+.ip
+The field name
+.q flags
+is special.  It is the field that contains the flag values (single bits).
+For this field alone,
+a range of bytes or halfwords can be specified using \(mi.  The
+\&.FL macro specifies values for this field.
+.ip ".ST\ B\ width"
+Begin symbol type definitions.
+.ip ".ST\ E"
+End symbol type definitions.
+.ip ".ST\ name"
+Specify a symbol type definition.
+.i name
+is the symbol type name.
+.ip ".Sc\ B\ width"
+Begin storage class definitions.
+.ip ".Sc\ E"
+End storage class definitions.
+.ip ".Sc\ name"
+Specify a storage class definition.
+.i name
+is the storage class name.
+.ip ".SM\ stype\ [stype\ ...]"
+Specify a symbol definition for the given
+.i stype .
+The symbol has all shared fields unless they are overridden by a
+\&.SE for this symbol.  The macro generates a new page and a section header
+for the symbol.  The picture goes immediately after the section header.
+Note that the picture is generated automatically from the following
+\&.SE lines.
+.ip ".SM\ E"
+End of symbol definitions.
+.ip ".SE\ name\ [where]"
+Specify a symbol element (field) for the current symbol type.
+.i name
+is the name of the field.
+.i where
+only needs to be specified if a field of this name has not yet been
+defined; it gives the location and size of the field as defined above
+for .SF.
+.ip ".SI\ oclass\ sname\ [sname\ ...]"
+Specify symbol information for the current symbol type.
+.i oclass
+is the overloading class for this symbol type.
+.i sname
+is the textual name (e.g., pointer, label) corresponding to the symbol
+type specified on the .SM line.  This macro generates no output in the
+troff document, only in the utility output.
+.ip ".FL\ name\ [where]"
+Specify a flag.
+.i name
+is the name of the flag.
+.i where
+is the flag number in the form f\fIn\fP, where
+.i is the bit number in the
+.i flags
+field.  Bits are numbered left to right starting at 1.
+All flags must have different bits assigned to them.
+.ip ".TY\ B\ width"
+Begin the type word definitions.
+.i width
+is the width of the hanging tag.
+.ip ".TY\ E"
+End the type word definitions.
+.ip ".TY\ name\ attr\ [attr\ ...]"
+Specify a type word.
+.i name
+is the name of the type word.
+.i attr
+is an attribute of the type (e.g., INT, SCALAR)
+used to define the DT_ISxxx macros.
+.ip ".DT\ name\ [name\ ...]"
+Specify a data type record.
+The picture goes right after this macro.
+.i name
+should be the type word in the first word of the record
+(e.g., TY_ENUM).
+This is used for complex data types.
+The elements of the record are specified using .DE macros.
+.ip ".DE\ name"
+Define the next element of the current data type record.  This should
+be followed by descriptive text.
+.ip ".PD\ B\ width"
+Begin the predefined data type definitions.
+.i width
+is the width of the hanging tag.
+.ip ".PD\ E"
+End the predefined data type definitions.
+.ip ".PD\ name\ sname\ def\ [def\ ...]"
+Define a predefined data type record.
+.i name
+is the index in the data type area used to access the record
+(e.g., DT_INT).
+.i sname
+is a descriptive textual name (e.g., int, char *).
+.i def
+defines the record.  Each
+.i def
+defines one word of the record.
+.sh 3 "Include\ File"
+.lp
+The symbol table include template is a C header file containing
+predefined header information interspersed with macro lines.  The macro
+lines begin with a period and are replaced with the appropriate information
+as follows:
+.(b
+.ip .ST
+Symbol types
+.ip .TY
+Data type words (TY_)
+.ip .TA
+Type attributes (DT_ISINT, etc.)
+.ip .Sc
+Storage classes
+.ip .OC
+Overloading classes
+.ip .SE
+Symbol field access macros
+.)b
+.sh 3 "Data\ File\ and\ Symbol\ Init"
+.lp
+The data initialization file is written from information gathered from the
+symtab document and the symbol initialization file.  Symbol initialization
+file:
+.(b
+.ip .ST
+field[=value] [field[=value] ...]
+.ip .SM
+name [value ...]
+.)b
+\&.ST defines a template for following .SM up to end or next .ST.  Fields
+that are initialized with =value are duplicated for each .SM; other fields
+are set with values taken from macro line in same order as specified in
+template line.  Other fields are set to zero.

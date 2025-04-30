@@ -1,0 +1,365 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Uzbek (latin) language locale for Uzbekistan
+% Source: Bobir Ismailov
+% Contact: Bobir Ismailov, Pablo Saratxaga, Mashrab Kuvatov
+% Email: bobir_is@yahoo.com, pablo@mandrakesoft.com, kmashrab@uni-bremen.de
+% Tel:
+% Fax:
+% Language: uz
+% Territory: UZ
+% Revision: 0.5
+% Date: 2003-06-27
+% Users: general
+% Charset: UTF-8
+% History:
+% 2002-09-09 Mashrab Kuvatov <kmashrab@uni-bremen.de>
+% LC_TIME-day: Changed the first letter of all day names to upper case.
+% LC_TIME-mon: Changed the first letter of all month names to upper case.
+%              Fixed a typo. September is not Senyabr, but Sentyabr.
+% LC_TIME-abmon: Corrected "Yav" (Yanvar) to "Yan".
+%
+% 2003-02-24 Mashrab Kuvatov <kmashrab@uni-bremen.de>
+% Changed charset to UTF-8
+%
+% ?????????? Pablo Saratxaga <pablo@mandrakesoft.com>
+% LC_CTYPE: Added transliteration from cyrillic to latin.
+% LC_COLLATE: Added reodering definition.
+
+LC_IDENTIFICATION
+title      "Uzbek (latin) locale for Uzbekistan"
+source     "Bobir Ismailov"
+address    ""
+contact    "Bobir Ismailov, Pablo Saratxaga, Mashrab Kuvatov"
+email      "bobir_is@yahoo.com, pablo@mandrakesoft.com, kmashrab@uni-bremen.de"
+tel        ""
+fax        ""
+language   "Uzbek"
+territory  "Uzbekistan"
+revision   "0.5"
+date       "2003-06-27"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+
+% cyrillic -> latin
+% lower case letters
+
+<U0430> "<U0061>" % a= -> a
+<U0431> "<U0062>" % b= -> b
+<U0432> "<U0076>" % v= -> v
+<U0433> "<U0067>" % g= -> g
+<U0434> "<U0064>" % d= -> d
+<U0435> "<U0065>" % e= -> e (ye also, but context dependent)
+<U0451> "<U0079><U006F>" % io -> yo
+<U0436> "<U006A>" % z% -> j
+<U0437> "<U007A>" % z= -> z
+<U0438> "<U0069>" % i= -> i
+<U0439> "<U0079>" % j= -> y
+<U043A> "<U006B>" % k= -> k
+<U043B> "<U006C>" % l= -> l
+<U043C> "<U006D>" % m= -> m
+<U043D> "<U006E>" % n= -> n
+<U043E> "<U006F>" % o= -> o
+<U043F> "<U0070>" % p= -> p
+<U0440> "<U0072>" % r= -> r
+<U0441> "<U0073>" % s= -> s
+<U0442> "<U0074>" % t= -> t
+<U0443> "<U0075>" % u= -> u
+<U0444> "<U0066>" % f= -> f
+<U0445> "<U0078>" % h= -> x
+<U0446> "<U0074><U0073>" % c= -> ts
+<U0447> "<U0063><U0068>" % c% -> ch
+<U0448> "<U0073><U0068>" % s% -> sh
+<U0449> "<U0073><U0068>" % shcha -> sh
+<U044A> "<U0027>"        % hard sign= -> '
+<U044B> "<U0069>"        % yeru -> 1
+<U044C> ""               % soft sign omitted. not in latin-uzbek alphabet. stupid, but it is a fact.
+<U044D> "<U0065>"        % je= -> e
+<U044E> "<U0079><U0075>" % ju -> yu
+<U044F> "<U0079><U0061>" % ja -> ya
+<U045E> "<U006F><U0027>" % v% -> o'
+<U049B> "<U0071>"        % k,= -> q
+<U0493> "<U0067><U0027>" % g-= -> g'
+<U04B3> "<U0068>"        % h,= -> h
+
+% upper case letters
+
+<U0410> "<U0041>" % a= -> a
+<U0411> "<U0042>" % b= -> b
+<U0412> "<U0056>" % v= -> v
+<U0413> "<U0047>" % g= -> g
+<U0414> "<U0044>" % d= -> d
+<U0415> "<U0045>" % e= -> e (ye also, but context dependent)
+<U0401> "<U0059><U006F>" % io -> yo
+<U0416> "<U004A>" % z% -> j
+<U0417> "<U005A>" % z= -> z
+<U0418> "<U0049>" % i= -> i
+<U0419> "<U0059>" % j= -> y
+<U041A> "<U004B>" % k= -> k
+<U041B> "<U004C>" % l= -> l
+<U041C> "<U004D>" % m= -> m
+<U041D> "<U004E>" % n= -> n
+<U041E> "<U004F>" % o= -> o
+<U041F> "<U0050>" % p= -> p
+<U0420> "<U0052>" % r= -> r
+<U0421> "<U0053>" % s= -> s
+<U0422> "<U0054>" % t= -> t
+<U0423> "<U0055>" % u= -> u
+<U0424> "<U0046>" % f= -> f
+<U0425> "<U0058>" % h= -> x
+<U0426> "<U0054><U0073>" % c= -> ts
+<U0427> "<U0043><U0068>" % c% -> ch
+<U0428> "<U0053><U0068>" % s% -> sh
+<U0429> "<U0053><U0068>" % shcha -> sh
+<U042A> "<U0027>"        % hard sign= -> '
+<U042B> "<U0049>"        % yeru -> i
+<U042C> ""               % soft sign omitted. not in latin-uzbek alphabet. stupid, but it is a fact.
+<U042D> "<U0045>"        % je -> e
+<U042E> "<U0059><U0075>" % ju -> yu
+<U042F> "<U0059><U0061>" % ja -> ya
+<U040E> "<U004F><U0027>" % v% -> o'
+<U049A> "<U0051>"        % k,= -> q
+<U0492> "<U0047><U0027>" % g-= -> g'
+<U04B2> "<U0048>"        % h,= -> h
+
+% various punctuation
+<U02BB> "<U0027>" % ‘ -> '
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+% CLDR collation rules for Uzbek:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/uz.xml)
+%
+% 	<collations>
+% 		<collation type="standard"><cr><![CDATA[
+% # The following letters sort after z, see
+% # https://en.wikipedia.org/wiki/Uzbek_alphabet#Alphabetical_order
+% # Native speaker+linguists say that
+% # the digraph ⟨ng⟩ and the symbol ⟨ʼ⟩ are not considered separate letters.
+% #
+% # Reset between the last z-like letter and ezh.
+% #
+% # U+02BB ʻ MODIFIER LETTER TURNED COMMA is hard to type, so make
+% # equivalent contractions with U+2018 ‘ LEFT SINGLE QUOTATION MARK
+% # and U+0027 APOSTROPHE.
+% # (https://en.wikipedia.org/wiki/Uzbek_alphabet#Distinct_characters)
+% # Remember that a pair of apostrophes encodes just one of them.
+% &[before 1]ʒ<oʻ=o‘=o''<<<Oʻ=O‘=O''
+% <gʻ=g‘=g''<<<Gʻ=G‘=G''
+% <sh<<<Sh<<<SH
+% <ch<<<Ch<<<CH
+% 		]]></cr></collation>
+% 	</collations>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/uz.xml)
+%
+% <exemplarCharacters type="index">[A B D E F G H I J K L M N O P Q R S T U V X Y Z {Oʻ} {Gʻ} {Sh} {Ch}]</exemplarCharacters>
+%
+
+collating-symbol  <g'-digraph>
+collating-symbol  <o'-digraph>
+collating-element <g-turned-comma> from "g<U02BB>"
+collating-element <G-turned-comma> from "G<U02BB>"
+collating-element <o-turned-comma> from "o<U02BB>"
+collating-element <O-turned-comma> from "O<U02BB>"
+% Unfortunately we cannot use “left single quotation mark” because
+% it fails when creating the uz_UZ.iso88591 locale. In UTF-8 it works
+% but in ISO-8859-1 one gets error messages that it uses the same
+% encoding as “turned comma”
+% collating-element <g-left-single-quotation-mark> from "g<U2018>"
+% collating-element <G-left-single-quotation-mark> from "G<U2018>"
+% collating-element <o-left-single-quotation-mark> from "o<U2018>"
+% collating-element <O-left-single-quotation-mark> from "O<U2018>"
+collating-element <g-double-apostrophe> from "g''"
+collating-element <G-double-apostrophe> from "G''"
+collating-element <o-double-apostrophe> from "o''"
+collating-element <O-double-apostrophe> from "O''"
+collating-symbol <sh-digraph>
+collating-element <sh> from "sh"
+collating-element <sH> from "sH"
+collating-element <Sh> from "Sh"
+collating-element <SH> from "SH"
+collating-symbol <ch-digraph>
+collating-element <ch> from "ch"
+collating-element <cH> from "cH"
+collating-element <Ch> from "Ch"
+collating-element <CH> from "CH"
+
+reorder-after <AFTER-Z>
+<o'-digraph>
+<g'-digraph>
+<sh-digraph>
+<ch-digraph>
+
+<o-turned-comma>               <o'-digraph>;"<BASE><BASE>";"<MIN><MIN>";<VRNT1>
+<O-turned-comma>               <o'-digraph>;"<BASE><BASE>";"<CAP><MIN>";<VRNT1>
+% <o-left-single-quotation-mark> <o'-digraph>;"<BASE><BASE>";"<MIN><MIN>";<VRNT2>
+% <O-left-single-quotation-mark> <o'-digraph>;"<BASE><BASE>";"<CAP><MIN>";<VRNT2>
+<o-double-apostrophe>          <o'-digraph>;"<BASE><BASE>";"<MIN><MIN>";<VRNT3>
+<O-double-apostrophe>          <o'-digraph>;"<BASE><BASE>";"<CAP><MIN>";<VRNT3>
+<g-turned-comma>               <g'-digraph>;"<BASE><BASE>";"<MIN><MIN>";<VRNT1>
+<G-turned-comma>               <g'-digraph>;"<BASE><BASE>";"<CAP><MIN>";<VRNT1>
+% <g-left-single-quotation-mark> <g'-digraph>;"<BASE><BASE>";"<MIN><MIN>";<VRNT2>
+% <G-left-single-quotation-mark> <g'-digraph>;"<BASE><BASE>";"<CAP><MIN>";<VRNT2>
+<g-double-apostrophe>          <g'-digraph>;"<BASE><BASE>";"<MIN><MIN>";<VRNT3>
+<G-double-apostrophe>          <g'-digraph>;"<BASE><BASE>";"<CAP><MIN>";<VRNT3>
+<sh>                           <sh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<sH>                           <sh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Sh>                           <sh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<SH>                           <sh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ch>                           <ch-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<cH>                           <ch-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ch>                           <ch-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<CH>                           <ch-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "UZS "
+currency_symbol         "so<U02BB>m"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          0
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+abday       "Yak";"Du";/
+            "Se";"Cho";/
+            "Pay";"Ju";/
+            "Sha"
+day         "Yakshanba";/
+            "Dushanba";/
+            "Seshanba";/
+            "Chorshanba";/
+            "Payshanba";/
+            "Juma";/
+            "Shanba"
+abmon       "Yan";"Fev";/
+            "Mar";"Apr";/
+            "May";"Iyn";/
+            "Iyl";"Avg";/
+            "Sen";"Okt";/
+            "Noy";"Dek"
+mon         "Yanvar";/
+            "Fevral";/
+            "Mart";/
+            "Aprel";/
+            "May";/
+            "Iyun";/
+            "Iyul";/
+            "Avgust";/
+            "Sentabr";/
+            "Oktabr";/
+            "Noyabr";/
+            "Dekabr"
+d_t_fmt  "%T, %d %B, %Y yil, %A"
+d_fmt       "%d//%m//%y"
+t_fmt       "%T"
+am_pm       "";""
+t_fmt_ampm  ""
+date_fmt    "%d %B, %Y yil, %A"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+% Note: "No" is "yo‘q" which conflicts with English "yes".
+% This is why "jo‘q" & "jJ" is also accepted as "no".
+yesexpr "^[+1hH<U04B2><U04B3>]"
+noexpr  "^[-0nNyYjJ<U0419><U0439>]"
+yesstr  "ha"
+nostr   "yo<U2018>q"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+% FIXME: todo
+tel_int_fmt    "+%c %a %l"
+int_prefix     "998"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%f%t%g%t%m"
+name_gen    "Hurmatli"
+name_mr     "Janob"
+name_mrs    "Xonim"
+% FIXME: what is miss ?
+name_miss   ""
+% FIXME: what is ms ?
+name_ms     ""
+END LC_NAME
+
+LC_ADDRESS
+% format: %C%N%S%N%T%N%s %h%N%f%N%b%N%d%N%e %r%N%a%N%z
+% but %S seems not recognized yet ? so %C%N%T%N%s %h%N%f%N%b%N%d%N%e %r%N%a%N%z
+% is used.
+postal_fmt    "%C%N%T%N%s %h%N%f%N%b%N%d%N%e %r%N%a%N%z"
+country_name "O<U02BB>zbekiston"
+country_post "UZ" % ??
+country_ab2  "UZ"
+country_ab3  "UZB"
+country_num  860
+% FIXME: ISBN number?
+%country_isbn ""
+country_car   "UZ"
+lang_name   "o<U2018>zbek"
+lang_ab      "uz"
+lang_term    "uzb"
+lang_lib     "uzb"
+END LC_ADDRESS

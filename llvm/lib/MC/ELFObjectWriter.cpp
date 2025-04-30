@@ -1260,7 +1260,7 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   // Keep symbol type for a local ifunc because it may result in an IRELATIVE
   // reloc that the dynamic loader will use to resolve the address at startup
   // time.
-  if (Sym->getType() == ELF::STT_GNU_IFUNC)
+  if (isIFunc(Sym))
     return true;
 
   // If a relocation points to a mergeable section, we have to be careful.
@@ -1440,8 +1440,7 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   const auto &SymA = cast<MCSymbolELF>(SA);
   if (IsPCRel) {
     assert(!InSet);
-    if (SymA.getBinding() != ELF::STB_LOCAL ||
-        SymA.getType() == ELF::STT_GNU_IFUNC)
+    if (SymA.getBinding() != ELF::STB_LOCAL || isIFunc(&SymA))
       return false;
   }
   return &SymA.getSection() == FB.getParent();

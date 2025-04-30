@@ -1,0 +1,320 @@
+macro-constant SIG_DFL {void(*)(int)}
+macro-constant SIG_ERR {void(*)(int)}
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+macro-constant SIG_HOLD {void(*)(int)}
+#endif
+macro-constant SIG_IGN {void(*)(int)}
+
+type sig_atomic_t
+#if !defined ISO && !defined ISO99 && !defined ISO11
+type sigset_t
+#endif
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+type pid_t
+#elif defined POSIX
+# define pid_t __pid_t
+# define uid_t __uid_t
+#endif
+#if defined XOPEN2K8 || defined POSIX2008
+type size_t
+type pthread_t
+type uid_t
+
+type mcontext_t
+
+type ucontext_t
+element ucontext_t {ucontext_t*} uc_link
+// Bug 21634: uc_sigmask has wrong type.
+xfail[ia64-linux]-element ucontext_t sigset_t uc_sigmask
+element ucontext_t stack_t uc_stack
+// Bug 21635: uc_mcontext has wrong type.
+xfail[powerpc32-linux]-element ucontext_t mcontext_t uc_mcontext
+
+type {struct timespec}
+element {struct timespec} __time_t tv_sec
+// Bug 16437: tv_nsec has wrong type.
+xfail[x86_64-x32-linux]-element {struct timespec} long tv_nsec
+#endif
+
+#if defined POSIX || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+element {union sigval} int sival_int
+element {union sigval} {void*} sival_ptr
+
+type {struct sigevent}
+
+// Test the elements of the sigevent_t structure.
+element {struct sigevent} int sigev_notify
+element {struct sigevent} int sigev_signo
+element {struct sigevent} {union sigval} sigev_value
+element {struct sigevent} {void(*} sigev_notify_function )(union sigval)
+element {struct sigevent} {pthread_attr_t*} sigev_notify_attributes
+
+constant SIGEV_NONE
+constant SIGEV_SIGNAL
+constant SIGEV_THREAD
+
+type {union sigval}
+
+macro SIGRTMIN
+macro SIGRTMAX
+#endif
+
+macro-int-constant SIGABRT {int} > 0
+macro-int-constant SIGFPE {int} > 0
+macro-int-constant SIGILL {int} > 0
+macro-int-constant SIGINT {int} > 0
+macro-int-constant SIGSEGV {int} > 0
+macro-int-constant SIGTERM {int} > 0
+
+function void (*signal (int, void(*)(int)))(int)
+function int raise (int)
+
+#if !defined ISO && !defined ISO99 && !defined ISO11
+macro-int-constant SIGALRM {int} > 0
+macro-int-constant SIGHUP {int} > 0
+macro-int-constant SIGKILL {int} > 0
+macro-int-constant SIGPIPE {int} > 0
+macro-int-constant SIGQUIT {int} > 0
+macro-int-constant SIGUSR1 {int} > 0
+macro-int-constant SIGUSR2 {int} > 0
+macro-int-constant SIGCHLD {int} > 0
+macro-int-constant SIGCONT {int} > 0
+macro-int-constant SIGSTOP {int} > 0
+macro-int-constant SIGTSTP {int} > 0
+macro-int-constant SIGTTIN {int} > 0
+macro-int-constant SIGTTOU {int} > 0
+# ifndef XPG4
+macro-int-constant SIGBUS {int} > 0
+# endif
+# if !defined POSIX && !defined XPG4
+macro-int-constant SIGPOLL {int} > 0
+macro-int-constant SIGPROF {int} > 0
+macro-int-constant SIGSYS {int} > 0
+# endif
+# if !defined POSIX && !defined XPG4 && !defined POSIX2008
+macro-int-constant SIGTRAP {int} > 0
+# endif
+# if !defined POSIX && !defined XPG4
+macro-int-constant SIGURG {int} > 0
+macro-int-constant SIGVTALRM {int} > 0
+macro-int-constant SIGXCPU {int} > 0
+macro-int-constant SIGXFSZ {int} > 0
+# endif
+
+type {struct sigaction}
+
+element {struct sigaction} {void(*} sa_handler )(int)
+element {struct sigaction} sigset_t sa_mask
+element {struct sigaction} int sa_flags
+# ifndef XPG4
+element {struct sigaction} {void(*} sa_sigaction )(int, siginfo_t*, void*)
+# endif
+
+constant SA_NOCLDSTOP
+# ifndef XPG4
+// Bug 23089: hurd: missing siginfo support.
+xfail[i386-gnu]-constant SA_SIGINFO
+# endif
+constant SIG_BLOCK
+constant SIG_UNBLOCK
+constant SIG_SETMASK
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+constant SA_ONSTACK
+# endif
+# if !defined XPG4 && !defined POSIX
+constant SA_RESETHAND
+constant SA_RESTART
+// Bug 23090: hurd: missing SA_NOCLDWAIT support.
+xfail[i386-gnu]-constant SA_NOCLDWAIT
+constant SA_NODEFER
+# endif
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+constant SS_ONSTACK
+constant SS_DISABLE
+constant MINSIGSTKSZ
+constant SIGSTKSZ
+# endif
+
+# if !defined XPG4 && !defined POSIX
+type ucontext_t
+
+element ucontext_t {ucontext_t*} uc_link
+// Bug 21634: uc_sigmask has wrong type.
+xfail[ia64-linux]-element ucontext_t sigset_t uc_sigmask
+element ucontext_t stack_t uc_stack
+// Bug 21635: uc_mcontext has wrong type.
+xfail[powerpc32-linux]-element ucontext_t mcontext_t uc_mcontext
+
+type stack_t
+
+element stack_t {void*} ss_sp
+element stack_t size_t ss_size
+element stack_t int ss_flags
+
+#  if !defined XOPEN2K8 && !defined POSIX2008
+type {struct sigstack}
+
+element {struct sigstack} int ss_onstack
+element {struct sigstack} {void*} ss_sp
+#  endif
+# endif
+
+# ifndef XPG4
+type siginfo_t
+
+element siginfo_t int si_signo
+#  if !defined POSIX && !defined POSIX2008
+element siginfo_t int si_errno
+#  endif
+element siginfo_t int si_code
+#  ifndef POSIX
+element siginfo_t pid_t si_pid
+element siginfo_t uid_t si_uid
+element siginfo_t {void*} si_addr
+element siginfo_t int si_status
+// Bug 23821: si_band has type int on sparc64.
+xfail[sparc64-linux]-element siginfo_t long si_band
+#  endif
+#  ifndef XPG42
+element siginfo_t {union sigval} si_value
+#  endif
+# endif
+
+# if !defined POSIX && !defined XPG4
+constant ILL_ILLOPC
+constant ILL_ILLOPN
+constant ILL_ILLADR
+constant ILL_ILLTRP
+constant ILL_PRVOPC
+constant ILL_PRVREG
+constant ILL_COPROC
+constant ILL_BADSTK
+constant FPE_INTDIV
+constant FPE_INTOVF
+constant FPE_FLTDIV
+constant FPE_FLTOVF
+constant FPE_FLTUND
+constant FPE_FLTRES
+constant FPE_FLTINV
+constant FPE_FLTSUB
+constant SEGV_MAPERR
+constant SEGV_ACCERR
+constant BUS_ADRALN
+constant BUS_ADRERR
+constant BUS_OBJERR
+constant CLD_EXITED
+constant CLD_KILLED
+constant CLD_DUMPED
+constant CLD_TRAPPED
+constant CLD_STOPPED
+constant CLD_CONTINUED
+constant POLL_IN
+constant POLL_OUT
+constant POLL_MSG
+constant POLL_ERR
+constant POLL_PRI
+constant POLL_HUP
+# endif
+# if !defined POSIX && !defined XPG4 && !defined POSIX2008
+constant TRAP_BRKPT
+constant TRAP_TRACE
+# endif
+# if !defined XPG4 && !defined XPG42
+constant SI_USER
+constant SI_QUEUE
+constant SI_TIMER
+constant SI_ASYNCIO
+constant SI_MESGQ
+# endif
+
+# if !defined XPG4 && !defined XOPEN2K8 && !defined POSIX && !defined POSIX2008
+function void (*bsd_signal (int, void(*)(int)))(int)
+# endif
+function int kill (pid_t, int)
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int killpg (pid_t, int)
+# endif
+# if !defined XPG4 && !defined XPG42
+function int pthread_kill (pthread_t, int)
+function int pthread_sigmask (int, const sigset_t*, sigset_t*)
+# endif
+function int sigaction (int, const struct sigaction*, struct sigaction*)
+function int sigaddset (sigset_t*, int)
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int sigaltstack (const stack_t*, stack_t*)
+# endif
+function int sigdelset (sigset_t*, int)
+function int sigemptyset (sigset_t*)
+function int sigfillset (sigset_t*)
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int sighold (int)
+function int sigignore (int)
+function int siginterrupt (int, int)
+# endif
+function int sigismember (const sigset_t*, int)
+#if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int sigpause (int)
+# endif
+function int sigpending (sigset_t*)
+function int sigprocmask (int, const sigset_t*, sigset_t*)
+# if !defined XPG4 && !defined XPG42
+function int sigqueue (pid_t, int, const union sigval)
+# endif
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+function int sigrelse (int)
+function void (*sigset (int, void(*)(int)))(int)
+# endif
+# if defined XPG42 || defined UNIX98
+function int sigstack (struct sigstack*, struct sigstack*)
+# endif
+function int sigsuspend (const sigset_t*)
+# if !defined XPG4 && !defined XPG42
+function int sigtimedwait (const sigset_t*, siginfo_t*, const struct timespec*)
+# endif
+# if !defined XPG4 && !defined XPG42
+function int sigwait (const sigset_t*, int*)
+function int sigwaitinfo (const sigset_t*, siginfo_t*)
+# endif
+# if defined XOPEN2K8 || defined POSIX2008
+function void psiginfo (const siginfo_t*, const char*)
+function void psignal (int, const char*)
+# endif
+
+// The following expressions are not entirely correct but the current
+// poorfnmatch implementation doesn't grok the right form.
+allow sa_*
+allow SA_*
+# ifndef XPG4
+allow si_*
+allow SI_*
+# endif
+# if !defined XPG4 && !defined XPG42
+allow sigev_*
+allow SIGEV_*
+allow sival_*
+# endif
+# if !defined POSIX && !defined XPG4 && !defined XPG42
+allow uc_*
+# endif
+# if !defined POSIX && !defined XPG4
+allow BUS_*
+allow CLD_*
+allow FPE_*
+allow ILL_*
+allow POLL_*
+allow SEGV_*
+# endif
+# if !defined POSIX && !defined XPG4 && !defined POSIX2008
+allow SS_*
+allow SV_*
+allow TRAP_*
+allow ss_*
+allow sv_*
+# endif
+allow *_t
+
+allow-header time.h
+#endif
+
+allow SIG[ABCDEFGHIJKLMNOPQRSTUVWXYZ]*
+allow SIG_*

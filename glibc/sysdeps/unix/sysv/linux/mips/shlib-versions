@@ -1,0 +1,27 @@
+libm=6			GLIBC_2.0 GLIBC_2.2
+
+# Working mips versions were never released between 2.0 and 2.2.
+libc=6			GLIBC_2.0 GLIBC_2.2
+
+%ifdef HAVE_MIPS_NAN2008
+ld=ld-linux-mipsn8.so.1	GLIBC_2.0 GLIBC_2.2
+%else
+ld=ld.so.1		GLIBC_2.0 GLIBC_2.2
+%endif
+libdl=2			GLIBC_2.0 GLIBC_2.2
+
+libresolv=2		GLIBC_2.0 GLIBC_2.2
+
+libnss_files=2		GLIBC_2.0 GLIBC_2.2
+libnss_dns=2		GLIBC_2.0 GLIBC_2.2
+libnss_compat=2		GLIBC_2.0 GLIBC_2.2
+libnss_ldap=2		GLIBC_2.0 GLIBC_2.2
+libnss_hesiod=2		GLIBC_2.0 GLIBC_2.2
+
+libnsl=1		GLIBC_2.0 GLIBC_2.2
+
+librt=1			GLIBC_2.0 GLIBC_2.2
+
+libpthread=0		GLIBC_2.0 GLIBC_2.2
+
+libc_malloc_debug=0	GLIBC_2.0 GLIBC_2.2

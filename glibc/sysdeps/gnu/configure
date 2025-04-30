@@ -1,0 +1,37 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+
+# Local configure fragment for sysdeps/gnu.
+
+# The Filesystem Hierarchy Standard prescribes where to place "essential"
+# files.  I.e., when the installation prefix is "/usr" we have to place
+# shared library objects and the configuration files on the root partition
+# in /lib and /etc.
+test -n "$libc_cv_slibdir" ||
+case "$prefix" in
+/usr | /usr/)
+  libc_cv_slibdir='/lib'
+  libc_cv_rtlddir='/lib'
+  if test "$libdir" = '${exec_prefix}/lib'; then
+    libdir='${exec_prefix}/lib';
+    # Locale data can be shared between 32-bit and 64-bit libraries.
+    libc_cv_complocaledir='${exec_prefix}/lib/locale'
+  fi
+  ;;
+esac
+case "$prefix" in
+/usr | /usr/)
+  # Allow the user to override the path with --sysconfdir.
+  if test "$sysconfdir" = '${prefix}/etc'; then
+    libc_cv_sysconfdir=/etc
+  else
+    libc_cv_sysconfdir=$sysconfdir
+   fi
+  # Allow the user to override the path with --localstatedir.
+  if test "$localstatedir" = '${prefix}/var'; then
+    libc_cv_localstatedir=/var
+  else
+    libc_cv_localstatedir=$localstatedir
+   fi
+  libc_cv_rootsbindir=/sbin
+  ;;
+esac

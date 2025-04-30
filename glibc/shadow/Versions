@@ -1,0 +1,31 @@
+libc {
+  GLIBC_2.0 {
+    # e*
+    endspent;
+
+    # f*
+    fgetspent; fgetspent_r;
+
+    # g*
+    getspent; getspent_r; getspnam; getspnam_r;
+
+    # l*
+    lckpwdf;
+
+    # p*
+    putspent;
+
+    # s*
+    setspent;
+
+    # s*
+    sgetspent; sgetspent_r;
+
+    # u*
+    ulckpwdf;
+  }
+  GLIBC_2.1.2 {
+    # g*
+    getspent_r; getspnam_r;
+  }
+}

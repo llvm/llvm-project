@@ -1,0 +1,113 @@
+<tab>                  <U0009> HORIZONTAL TABULATION
+<newline>              <U000A> LINE FEED
+<vertical-tab>         <U000B> VERTICAL TABULATION
+<form-feed>            <U000C> FORM FEED
+<carriage-return>      <U000D> CARRIAGE RETURN
+<SP>                   <U0020> SPACE
+<space>                <U0020> SPACE
+<!>                    <U0021> EXCLAMATION MARK
+<">                    <U0022> QUOTATION MARK
+<Nb>                   <U0023> NUMBER SIGN
+<DO>                   <U0024> DOLLAR SIGN
+<!S>                   <U0024> DOLLAR SIGN
+<%>                    <U0025> PERCENT SIGN
+<&>                    <U0026> AMPERSAND
+<'>                    <U0027> APOSTROPHE
+<(>                    <U0028> LEFT PARENTHESIS
+<)>                    <U0029> RIGHT PARENTHESIS
+<*>                    <U002A> ASTERISK
+<+>                    <U002B> PLUS SIGN
+<,>                    <U002C> COMMA
+<->                    <U002D> HYPHEN-MINUS
+<.>                    <U002E> FULL STOP
+</>                    <U002F> SOLIDUS
+<0>                    <U0030> DIGIT ZERO
+<1>                    <U0031> DIGIT ONE
+<2>                    <U0032> DIGIT TWO
+<3>                    <U0033> DIGIT THREE
+<4>                    <U0034> DIGIT FOUR
+<5>                    <U0035> DIGIT FIVE
+<6>                    <U0036> DIGIT SIX
+<7>                    <U0037> DIGIT SEVEN
+<8>                    <U0038> DIGIT EIGHT
+<9>                    <U0039> DIGIT NINE
+<:>                    <U003A> COLON
+<;>                    <U003B> SEMICOLON
+<<>                    <U003C> LESS-THAN SIGN
+<=>                    <U003D> EQUALS SIGN
+<\>>                   <U003E> GREATER-THAN SIGN
+<?>                    <U003F> QUESTION MARK
+<@>                    <U0040> COMMERCIAL AT
+<A>                    <U0041> LATIN CAPITAL LETTER A
+<B>                    <U0042> LATIN CAPITAL LETTER B
+<C>                    <U0043> LATIN CAPITAL LETTER C
+<D>                    <U0044> LATIN CAPITAL LETTER D
+<E>                    <U0045> LATIN CAPITAL LETTER E
+<F>                    <U0046> LATIN CAPITAL LETTER F
+<G>                    <U0047> LATIN CAPITAL LETTER G
+<H>                    <U0048> LATIN CAPITAL LETTER H
+<I>                    <U0049> LATIN CAPITAL LETTER I
+<J>                    <U004A> LATIN CAPITAL LETTER J
+<K>                    <U004B> LATIN CAPITAL LETTER K
+<L>                    <U004C> LATIN CAPITAL LETTER L
+<M>                    <U004D> LATIN CAPITAL LETTER M
+<N>                    <U004E> LATIN CAPITAL LETTER N
+<O>                    <U004F> LATIN CAPITAL LETTER O
+<P>                    <U0050> LATIN CAPITAL LETTER P
+<Q>                    <U0051> LATIN CAPITAL LETTER Q
+<R>                    <U0052> LATIN CAPITAL LETTER R
+<S>                    <U0053> LATIN CAPITAL LETTER S
+<T>                    <U0054> LATIN CAPITAL LETTER T
+<U>                    <U0055> LATIN CAPITAL LETTER U
+<V>                    <U0056> LATIN CAPITAL LETTER V
+<W>                    <U0057> LATIN CAPITAL LETTER W
+<X>                    <U0058> LATIN CAPITAL LETTER X
+<Y>                    <U0059> LATIN CAPITAL LETTER Y
+<Z>                    <U005A> LATIN CAPITAL LETTER Z
+<<(>                   <U005B> LEFT SQUARE BRACKET
+<left-square-bracket>  <U005B> LEFT SQUARE BRACKET
+<//>                 <U005C> REVERSE SOLIDUS
+<backslash>            <U005C> REVERSE SOLIDUS
+<reverse-solidus>      <U005C> REVERSE SOLIDUS
+<)\>>                  <U005D> RIGHT SQUARE BRACKET
+<right-square-bracket> <U005D> RIGHT SQUARE BRACKET
+<'\>>                  <U005E> CIRCUMFLEX ACCENT
+<circumflex>           <U005E> CIRCUMFLEX ACCENT
+<circumflex-accent>    <U005E> CIRCUMFLEX ACCENT
+<_>                    <U005F> LOW LINE
+<low-line>             <U005F> LOW LINE
+<underscore>           <U005F> LOW LINE
+<'!>                   <U0060> GRAVE ACCENT
+<grave-accent>         <U0060> GRAVE ACCENT
+<a>                    <U0061> LATIN SMALL LETTER A
+<b>                    <U0062> LATIN SMALL LETTER B
+<c>                    <U0063> LATIN SMALL LETTER C
+<d>                    <U0064> LATIN SMALL LETTER D
+<e>                    <U0065> LATIN SMALL LETTER E
+<f>                    <U0066> LATIN SMALL LETTER F
+<g>                    <U0067> LATIN SMALL LETTER G
+<h>                    <U0068> LATIN SMALL LETTER H
+<i>                    <U0069> LATIN SMALL LETTER I
+<j>                    <U006A> LATIN SMALL LETTER J
+<k>                    <U006B> LATIN SMALL LETTER K
+<l>                    <U006C> LATIN SMALL LETTER L
+<m>                    <U006D> LATIN SMALL LETTER M
+<n>                    <U006E> LATIN SMALL LETTER N
+<o>                    <U006F> LATIN SMALL LETTER O
+<p>                    <U0070> LATIN SMALL LETTER P
+<q>                    <U0071> LATIN SMALL LETTER Q
+<r>                    <U0072> LATIN SMALL LETTER R
+<s>                    <U0073> LATIN SMALL LETTER S
+<t>                    <U0074> LATIN SMALL LETTER T
+<u>                    <U0075> LATIN SMALL LETTER U
+<v>                    <U0076> LATIN SMALL LETTER V
+<w>                    <U0077> LATIN SMALL LETTER W
+<x>                    <U0078> LATIN SMALL LETTER X
+<y>                    <U0079> LATIN SMALL LETTER Y
+<z>                    <U007A> LATIN SMALL LETTER Z
+<(!>                   <U007B> LEFT CURLY BRACKET
+<!!>                   <U007C> VERTICAL LINE
+<vertical-line>        <U007C> VERTICAL LINE
+<!)>                   <U007D> RIGHT CURLY BRACKET
+<'?>                   <U007E> TILDE
+<DT>                   <U007F> DELETE

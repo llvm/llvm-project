@@ -1,0 +1,34 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined POSIX2008
+type ENTRY
+type {struct entry}
+element {struct entry} {char*} key
+element {struct entry} {void*} data
+
+type ACTION
+constant FIND
+constant ENTER
+
+type VISIT
+constant preorder
+constant postorder
+constant endorder
+constant leaf
+
+function int hcreate (size_t)
+function void hdestroy (void)
+function {ENTRY*} hsearch (ENTRY, ACTION)
+#ifndef XPG4
+function void insque (void*, void*)
+#endif
+function {void*} lfind (const void*, const void*, size_t*, size_t, int (*)(const void*, const void*))
+function {void*} lsearch (const void*, void*, size_t*, size_t, int (*)(const void*, const void*))
+#ifndef XPG4
+function void remque (void*)
+#endif
+function {void*} tdelete (const void*, void**, int(*)(const void*, const void*))
+function {void*} tfind (const void*, void*const*, int(*)(const void*, const void*))
+function {void*} tsearch (const void*, void**, int(*)(const void*, const void*))
+function void twalk (const void*, void (*) (const void*, VISIT, int))
+
+allow *_t
+#endif

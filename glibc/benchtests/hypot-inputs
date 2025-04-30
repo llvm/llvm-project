@@ -1,0 +1,16 @@
+## includes: math.h
+## args: double:double
+## ret: double
+
+## name: overflow
+0x3.ffffffffffffcp-1024, 0x8p-152
+## name: higher_two500
+0x1.000002027941dp+500,  0x1.0000000000001p+500
+## name: subnormal
+0x0.fffffffffffffp-1022, 0x0.fffffffffffffp-1022
+## name: less_two500
+0x1.fffffffffffffp-501,  0x1.fffffffffffffp-501
+
+## name: default
+3.0                   , 4.0
+5.0                   , 4.0

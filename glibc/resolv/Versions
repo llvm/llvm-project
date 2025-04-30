@@ -1,0 +1,243 @@
+libc {
+  GLIBC_2.0 {
+    __dn_comp;
+    __dn_skipname;
+    __h_errno_location;
+    __res_dnok;
+    __res_hnok;
+    __res_mailok;
+    __res_nsend;
+    __res_ownok;
+    __res_randomid;
+    __res_send;
+    _res;
+    dn_expand;
+    h_errlist;
+    h_nerr;
+    herror;
+    hstrerror;
+    res_init;
+    res_mkquery;
+    res_query;
+    res_querydomain;
+    res_search;
+  }
+  GLIBC_2.2 {
+    __dn_expand;
+    __res_init;
+    __res_mkquery;
+    __res_nclose;
+    __res_ninit;
+    __res_nmkquery;
+    __res_nquery;
+    __res_nquerydomain;
+    __res_nsearch;
+    __res_nsend;
+    __res_query;
+    __res_querydomain;
+    __res_search;
+    __res_state;
+    _res_hconf;
+  }
+  GLIBC_2.2.3 {
+%if PTHREAD_IN_LIBC
+    gai_cancel;
+    gai_error;
+    gai_suspend;
+    getaddrinfo_a;
+%endif
+  }
+  GLIBC_2.9 {
+    ns_name_compress;
+    ns_name_ntop;
+    ns_name_pack;
+    ns_name_pton;
+    ns_name_skip;
+    ns_name_uncompress;
+    ns_name_unpack;
+  }
+  GLIBC_2.34 {
+%if PTHREAD_IN_LIBC
+    gai_cancel;
+    gai_error;
+    gai_suspend;
+    getaddrinfo_a;
+%endif
+    dn_comp;
+    dn_expand;
+    dn_skipname;
+    ns_name_compress;
+    ns_name_ntop;
+    ns_name_pack;
+    ns_name_pton;
+    ns_name_skip;
+    ns_name_uncompress;
+    ns_name_unpack;
+    res_dnok;
+    res_hnok;
+    res_mailok;
+    res_mkquery;
+    res_nmkquery;
+    res_nquery;
+    res_nquerydomain;
+    res_nsearch;
+    res_nsend;
+    res_ownok;
+    res_query;
+    res_querydomain;
+    res_search;
+    res_send;
+  }
+  GLIBC_PRIVATE {
+%if !PTHREAD_IN_LIBC
+    __gai_sigqueue;
+%endif
+    __h_errno;
+    __inet_aton_exact;
+    __inet_pton_length;
+    __libc_dn_expand;
+    __libc_dn_skipname;
+    __libc_ns_makecanon;
+    __libc_ns_samename;
+    __libc_res_dnok;
+    __libc_res_hnok;
+    __libc_res_nameinquery;
+    __libc_res_queriesmatch;
+    __ns_name_compress;
+    __ns_name_ntop;
+    __ns_name_pack;
+    __ns_name_pton;
+    __ns_name_skip;
+    __ns_name_uncompress;
+    __ns_name_unpack;
+    __res_context_hostalias;
+    __res_context_mkquery;
+    __res_context_query;
+    __res_context_search;
+    __res_context_send;
+    __res_get_nsaddr;
+    __res_iclose;
+    __res_nopt;
+    __resolv_context_get;
+    __resolv_context_get_override;
+    __resolv_context_get_preinit;
+    __resolv_context_put;
+    __resp;
+    _nss_dns_getcanonname_r;
+    _nss_dns_gethostbyaddr2_r;
+    _nss_dns_gethostbyaddr_r;
+    _nss_dns_gethostbyname2_r;
+    _nss_dns_gethostbyname3_r;
+    _nss_dns_gethostbyname4_r;
+    _nss_dns_gethostbyname_r;
+    _nss_dns_getnetbyaddr_r;
+    _nss_dns_getnetbyname_r;
+  }
+}
+
+libresolv {
+  GLIBC_2.0 {
+    __b64_ntop;
+    __b64_pton;
+    __dn_count_labels;
+    __fp_nquery;
+    __fp_query;
+    __fp_resstat;
+    __hostalias;
+    __loc_aton;
+    __loc_ntoa;
+    __p_cdname;
+    __p_cdnname;
+    __p_class;
+    __p_class_syms;
+    __p_fqname;
+    __p_fqnname;
+    __p_option;
+    __p_query;
+    __p_rr;
+    __p_secstodate;
+    __p_time;
+    __p_type;
+    __p_type_syms;
+    __putlong;
+    __putshort;
+    __res_close;
+    __res_isourserver;
+    __res_nameinquery;
+    __res_queriesmatch;
+    __sym_ntop;
+    __sym_ntos;
+    __sym_ston;
+    _gethtbyaddr;
+    _gethtbyname2;
+    _gethtbyname;
+    _gethtent;
+    _getlong;
+    _getshort;
+    _res_opcodes;
+    _res_resultcodes;
+    _sethtent;
+    inet_net_ntop;
+    inet_net_pton;
+    inet_neta;
+    res_gethostbyaddr;
+    res_gethostbyname2;
+    res_gethostbyname;
+    res_send_setqhook;
+    res_send_setrhook;
+  }
+  GLIBC_2.2 {
+    __res_hostalias;
+  }
+  GLIBC_2.3.2 {
+    __p_rcode;
+  }
+  GLIBC_2.9 {
+    ns_datetosecs;
+    ns_format_ttl;
+    ns_get16;
+    ns_get32;
+    ns_initparse;
+    ns_makecanon;
+    ns_msg_getflag;
+    ns_name_ntol;
+    ns_name_pton;
+    ns_name_rollback;
+    ns_name_skip;
+    ns_parse_ttl;
+    ns_parserr;
+    ns_put16;
+    ns_put32;
+    ns_samedomain;
+    ns_samename;
+    ns_skiprr;
+    ns_sprintrr;
+    ns_sprintrrf;
+    ns_subdomain;
+  }
+  GLIBC_PRIVATE {
+    __ns_get16;
+    __ns_get32;
+  }
+}
+
+libnss_dns {
+  GLIBC_PRIVATE {
+    # Keep a version node (with a synthesized local: * directive) so that
+    # __bss_* symbols are hidden on targets that need it.
+    __libnss_dns_version_placeholder;
+  }
+}
+
+libanl {
+  GLIBC_2.2.3 {
+%if PTHREAD_IN_LIBC
+    __libanl_version_placeholder;
+%else
+    gai_cancel;
+    gai_error;
+    gai_suspend;
+    getaddrinfo_a;
+%endif
+  }
+}

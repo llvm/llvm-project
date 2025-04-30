@@ -1,0 +1,347 @@
+This file describes changes to the nptl_db/ subdirectory prior to 2014-03-03.
+Later nptl_db/ changes go into the top-level ChangeLog file, not here.
+
+
+
+2014-02-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* Makefile: Include Makeconfig immediately after defining subdir.
+
+2014-02-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* Makefile ($(objpfx)db-symbols.out): Use
+	$(evaluate-test).
+
+2013-05-31  Joseph Myers  <joseph@codesourcery.com>
+
+	* Makefile ($(objpfx)libthread_db.so): Remove dependencies on
+	libc.
+
+2013-05-16  Ryan S. Arnold  <rsa@linux.vnet.ibm.com>
+
+	* db_info.c: Add missing #include <stdint.h> due to uint64_t or
+	uint32_t usage.
+	* fetch-value.c: Likewise.
+	* td_ta_clear_event.c: Likewise.
+	* td_ta_set_event.c: Likewise.
+	* td_ta_tsd_iter.c: Likewise.
+	* td_thr_clear_event.c: Likewise.
+	* td_thr_get_info.c: Likewise.
+	* td_thr_set_event.c: Likewise.
+	* td_thr_tsd.c: Likewise.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2013-01-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* td_ta_thr_iter.c: Reformat copyright notice.
+	* td_thr_validate.c: Likewise.
+
+2012-11-23  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile ($(objpfx)db-symbols.out): Change readelf to $(READELF).
+
+2012-10-08  Jonathan Nieder  <jrnieder@gmail.com>
+
+	[BZ #14661]
+	* Makefile ($(objpfx)db-symbols.out): Force C locale when running
+	readelf -s.
+
+2012-03-07  Ulrich Drepper  <drepper@gmail.com>
+
+	* Makefile (distribute): Remove variable.
+
+2011-09-15  Andreas Schwab  <schwab@redhat.com>
+
+	* thread_dbP.h: Include <list.h>
+
+2009-08-23  Roland McGrath  <roland@redhat.com>
+
+	* td_ta_map_lwp2thr.c (__td_ta_lookup_th_unique): Move ta_ok check
+	and LOG call back to ...
+	(td_ta_map_lwp2thr): ... here.
+	Reported by Maciej W. Rozycki <macro@codesourcery.com>.
+
+2009-05-25  Aurelien Jarno  <aurelien@aurel32.net>
+
+	[BZ #10200]
+	* db-symbols.awk: Use the last field for the symbol name instead
+	of the 8th one.
+
+2009-03-19  Roland McGrath  <roland@redhat.com>
+
+	* td_symbol_list.c (DB_LOOKUP_NAME, DB_LOOKUP_NAME_TH_UNIQUE):
+	Use STRINGIFY macro in place of #argument.
+
+2009-02-27  Roland McGrath  <roland@redhat.com>
+
+	* td_symbol_list.c (symbol_list_arr): Move initializer guts to ...
+	* db-symbols.h: ... here, new file.
+	* db-symbols.awk: New file.
+	* Makefile (distribute): Add them.
+	($(objpfx)db-symbols.out): New target.
+	(tests): Depend on it.
+	($(objpfx)db-symbols.v.i): New dependent rule.
+
+2009-02-06  Ulrich Drepper  <drepper@redhat.com>
+
+	* td_thr_get_info.c (td_thr_get_info): Initialize schedpolicy in
+	the special case [Coverity CID 251].
+
+2008-03-25  Roland McGrath  <roland@redhat.com>
+
+	[BZ #5983]
+	* structs.def: Add pid field of struct pthread.
+	* td_ta_thr_iter.c (iterate_thread_list): Take new arg MATCH_PID.
+	If a thread's pid does not match nor is < 0 while its tid matches
+	nor is < 0 and equal to -MATCH_PID, ignore it.
+	* td_thr_validate.c (td_thr_validate): Validate thread's pid/tid.
+
+2007-05-16  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_get_info.c: Fake the results for TH->th_unique == 0.
+	* td_thr_validate.c: Likewise.
+	* td_thr_setgregs.c: Likewise.
+	* td_thr_setfpregs.c: Likewise.
+	* td_thr_getgregs.c: Likewise.
+	* td_thr_getfpregs.c: Likewise.
+	* td_thr_tlsbase.c: Likewise.
+
+	* structs.def: Add DB_VARIABLE (__nptl_initial_report_events).
+	* db_info.c: Add necessary declaration.
+	* td_thr_event_enable.c: Set __nptl_initial_report_events too.
+
+	* td_ta_thr_iter.c (iterate_thread_list): Make FAKE_EMPTY bool.
+	Use th_unique=0 in fake descriptor before initialization.
+
+	* td_ta_map_lwp2thr.c (__td_ta_lookup_th_unique): New function, broken
+	out of ...
+	(td_ta_map_lwp2thr): ... here, call it.  But don't before __stack_user
+	is initialized, then fake a handle with th_unique=0.
+	* thread_dbP.h: Declare it.
+
+2006-10-26  Pete Eberlein  <eberlein@us.ibm.com>
+
+	* nptl_db/db_info.c [TLS_DTV_AT_TP]: Fixed size init for dtvp
+	to sizeof a pointer, instead of sizeof the union.
+
+2006-10-27  Ulrich Drepper  <drepper@redhat.com>
+
+	* structs.def: USE_TLS support is now default.
+
+2006-02-03  Roland McGrath  <roland@redhat.com>
+
+	* structs.def: Add a descriptor for pointer.val field of dtv_t.
+	* td_thr_tlsbase.c (td_thr_tlsbase): Extract pointer.val field from
+	DTV slot.
+
+2004-09-09  Roland McGrath  <roland@redhat.com>
+
+	* td_ta_map_lwp2thr.c (td_ta_map_lwp2thr): Don't abort if inferior's
+	descriptor is bogus.
+
+2004-05-27  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_validate.c: When we find no threads and the inferior appears
+	uninitialized, validate the main thread as a special case.
+
+2004-05-01  Jakub Jelinek  <jakub@redhat.com>
+
+	* thread_dbP.h (LOG): Use write instead of __libc_write.
+
+2004-04-03  Ulrich Drepper  <drepper@redhat.com>
+
+	* td_ta_set_event.c (td_ta_set_event): Initialize copy to avoid
+	warnings.
+
+	* td_ta_thr_iter.c (td_ta_thr_iter): Initialize list to avoid warning.
+	* td_ta_clear_event.c (td_ta_clear_event): Initialize eventmask to
+	avoid warning.
+	* td_ta_set_event.c (td_ta_set_event): Likewise.
+
+2004-03-24  Roland McGrath  <roland@redhat.com>
+
+	* fetch-value.c (_td_locate_field): Cast DB_DESC_OFFSET to int32_t.
+	* thread_dbP.h (DB_DESC_OFFSET): Remove cast from definition.
+
+2004-03-13  Jakub Jelinek  <jakub@redhat.com>
+
+	* db_info.c: Don't use TLS_TP_OFFSET in the #if, but
+	TLS_TCB_SIZE == 0 ?: in the DESC macro.
+
+2004-03-12  Roland McGrath  <roland@redhat.com>
+
+	* db_info.c [TLS_DTV_AT_TP && TLS_TP_OFFSET > 0]
+	(_thread_db_pthread_dtvp): Define differently for this case (PowerPC).
+
+2003-12-11  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* db_info.c (REGISTER): Add bit size of thread register as second
+	parameter to REGISTER macro.
+
+2003-12-02  Roland McGrath  <roland@redhat.com>
+
+	* thread_dbP.h (DB_FUNCTION): New macro.
+	* structs.def: Use it for __nptl_create_event and __nptl_death_event.
+	* db_info.c (DB_FUNCTION): New macro.
+	* td_symbol_list.c (DB_FUNCTION): New macro, prepend "." to symbol
+	name under [HAVE_ASM_GLOBAL_DOT_NAME].
+	(td_lookup) [HAVE_ASM_GLOBAL_DOT_NAME]: If lookup fails with PS_NOSYM
+	and name starts with a dot, try it without the dot.
+
+2003-09-08  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_get_info.c (td_thr_get_info): Cast th_unique to thread_t.
+
+2003-08-22  Roland McGrath  <roland@redhat.com>
+
+	* fetch-value.c (_td_check_sizeof, _td_locate_field): Return
+	TD_NOCAPAB for PS_NOSYM, instead of vanilla TD_ERR.
+	* td_thr_tls_get_addr.c (td_thr_tls_get_addr): Return TD_NOAPLIC when
+	DB_GET_FIELD returns TD_NOCAPAB.
+
+	* thread_db.h (td_thr_tls_get_addr): Use psaddr_t in signature.
+	* structs.def [USE_TLS]: Add DB_STRUCT_FIELD (link_map, l_tls_modid).
+	* db_info.c (link_map): Typedef it.
+	* td_thr_tls_get_addr.c (td_thr_tls_get_addr): Rewritten.
+
+2003-08-14  Roland McGrath  <roland@redhat.com>
+
+	* thread_dbP.h: Mostly rewritten with many new macros and decls.
+	* td_ta_new.c (td_ta_new): Don't cache a lot of symbol values.
+	* structs.def: New file.
+	* db_info.c: New file.
+	* td_symbol_list.c (symbol_list_arr): Define with structs.def macros.
+	* td_ta_clear_event.c: Rewritten.
+	* td_ta_event_addr.c: Rewritten.
+	* td_ta_event_getmsg.c: Rewritten.
+	* td_ta_get_nthreads.c: Rewritten.
+	* td_ta_map_lwp2thr.c: New file.
+	* td_ta_set_event.c: Rewritten.
+	* td_ta_thr_iter.c: Rewritten.
+	* td_ta_tsd_iter.c: Rewritten.
+	* td_thr_clear_event.c: Rewritten.
+	* td_thr_event_enable.c: Rewritten.
+	* td_thr_event_getmsg.c: Rewritten.
+	* td_thr_get_info.c: Rewritten.
+	* td_thr_getfpregs.c: Rewritten.
+	* td_thr_getgregs.c: Rewritten.
+	* td_thr_set_event.c: Rewritten.
+	* td_thr_setfpregs.c: Rewritten.
+	* td_thr_setgregs.c: Rewritten.
+	* td_thr_tlsbase.c: Rewritten.
+	* td_thr_tsd.c: Rewritten.
+	* td_thr_validate.c: Rewritten.
+	* Makefile (distribute): Add them.
+	* fetch-value.c: New file.
+	* Makefile (libthread_db-routines): Add it.
+
+	* thread_db.h (td_err_e): Comment fix.
+
+2003-08-05  Roland McGrath  <roland@redhat.com>
+
+	* thread_dbP.h (td_lookup): Add attribute_hidden to decl.
+
+2003-08-04  Roland McGrath  <roland@redhat.com>
+
+	* td_ta_clear_event.c (td_ta_clear_event): Fix sizes in ps_* calls.
+
+2003-06-23  Roland McGrath  <roland@redhat.com>
+
+	* proc_service.h: Cosmetic and comment fixes.
+
+2003-06-19  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_event_enable.c (td_thr_event_enable): Use proper type `bool'
+	for value written into inferior's `report_events'.
+
+2003-03-18  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_event_getmsg.c (td_thr_event_getmsg): Splice the thread out
+	of the ->nextevent linkage.
+
+	* td_ta_event_getmsg.c (td_ta_event_getmsg): Runtime error instead of
+	assert for reading TD_EVENT_NONE.  Clear the event buffer after
+	reading it.  Add a sanity check for foo->nextevent = foo.
+
+2003-03-15  Roland McGrath  <roland@redhat.com>
+
+	* thread_db.h (td_err_e): Add TD_NOTLS and TD_TLSDEFER.
+	(td_thr_tlsbase): Declare it.
+	* td_thr_tlsbase.c: New file.
+	* Makefile (libthread_db-routines): Add it.
+	* Versions (libthread_db: GLIBC_2.3.3): New set, add td_thr_tlsbase.
+	* td_thr_tls_get_addr.c (td_thr_tls_get_addr): Use td_thr_tlsbase.
+
+2003-03-14  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_tls_get_addr.c (td_thr_tls_get_addr): Use `header.' prefix.
+
+2003-03-10  Roland McGrath  <roland@redhat.com>
+
+	* td_ta_thr_iter.c (iterate_thread_list): Don't use `header.data.'
+	prefix for `struct pthread' members.
+	* td_thr_validate.c (check_thread_list): Likewise.
+	* td_thr_tls_get_addr.c (td_thr_tls_get_addr): Likewise.
+
+2003-03-03  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_tls_get_addr.c (td_thr_tls_get_addr): Handle TLS_DTV_AT_TP.
+
+2003-02-15  Ulrich Drepper  <drepper@redhat.com>
+
+	* td_symbol_list.c: New symbol name for SYM_PTHREAD_NTHREADS.
+
+2003-01-07  Jakub Jelinek  <jakub@redhat.com>
+
+	* td_ta_event_getmsg.c: Include assert.h.
+
+-2003-01-05  Ulrich Drepper  <drepper@redhat.com>
+
+	* Makefile (libthread_db.so-no-z-defs): Define.
+
+2003-01-03  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_setgregs.c (td_thr_setgregs): *_BIT -> *_BITMASK
+	* td_thr_setfpregs.c (td_thr_setfpregs): Likewise.
+	* td_thr_get_info.c (td_thr_get_info): Likewise.
+	* td_thr_getgregs.c (td_thr_getgregs): Likewise.
+	* td_thr_getfpregs.c (td_thr_getfpregs): Likewise.
+	* td_ta_thr_iter.c (iterate_thread_list): Likewise.
+
+2002-12-12  Roland McGrath  <roland@redhat.com>
+
+	* td_ta_thr_iter.c (iterate_thread_list): Handle special case of
+	uninitialized __stack_user (zeros), hard-wire just the main thread.
+
+	* td_thr_get_info.c (td_thr_get_info): Fix ti_lid initialization.
+
+2002-12-06  Roland McGrath  <roland@redhat.com>
+
+	* td_ta_event_getmsg.c (td_ta_event_getmsg): Write the NEXT pointer
+	into the inferior's __pthread_last_event variable, not a word from
+	an inferior address used in the parent.  Pass the address of a
+	null word to ps_pdwrite, not a null pointer.
+
+2002-12-04  Roland McGrath  <roland@redhat.com>
+
+	* td_thr_get_info.c (td_thr_get_info): ti_tid is pthread_t, not a PID.
+
+	* thread_db.h (td_thrinfo_t): Comment fix.
+
+	* td_ta_map_lwp2thr.c: Moved to ../nptl/sysdeps/i386/.
+
+2002-12-04  Ulrich Drepper  <drepper@redhat.com>
+
+	* td_ta_thr_iter.c (iterate_thread_list): At end of iteration read
+	pointer to the next element from inferior.
+
+2002-12-02  Roland McGrath  <roland@redhat.com>
+
+	* td_symbol_list.c (symbol_list_arr): pthread_keys -> __pthread_keys
+
+	* td_ta_map_lwp2thr.c (td_ta_map_lwp2thr): Fetch inferior registers to
+	see its %gs value, not our own.

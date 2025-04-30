@@ -48,6 +48,12 @@ static cl::opt<bool> LVIInlineAsmHardening(
     cl::desc("Harden inline assembly code that may be vulnerable to Load Value"
              " Injection (LVI). This feature is experimental."), cl::Hidden);
 
+static cl::opt<bool> NextSilionAtomicError(
+    "next-silicon-atomic-asm-err", cl::init(false),
+    cl::desc("Option that provides choice if we want to emit an error when we "
+             "run into atomics within inline ASM or ASM for NextSilicon"),
+    cl::Hidden);
+
 static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
   if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
     ErrMsg = "scale factor in address must be 1, 2, 4 or 8";
@@ -3189,6 +3195,17 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   InstInfo = &Info;
+
+  if (NextSilionAtomicError) {
+    auto isAtomicOp = [](StringRef N) {
+      return StringSwitch<bool>(N)
+          .Cases("lock", "cmpxchg8b", "cmpxchg", "xadd", "xchg", true)
+          .Default(false);
+    };
+    if (isAtomicOp(Name)) {
+      return Error(NameLoc, "Using atomics in asm/inline asm is not allowed!");
+    }
+  }
 
   // Reset the forced VEX encoding.
   ForcedOpcodePrefix = OpcodePrefix_Default;

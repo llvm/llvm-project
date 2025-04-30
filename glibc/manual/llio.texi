@@ -1,0 +1,4625 @@
+@node Low-Level I/O, File System Interface, I/O on Streams, Top
+@c %MENU% Low-level, less portable I/O
+@chapter Low-Level Input/Output
+
+This chapter describes functions for performing low-level input/output
+operations on file descriptors.  These functions include the primitives
+for the higher-level I/O functions described in @ref{I/O on Streams}, as
+well as functions for performing low-level control operations for which
+there are no equivalents on streams.
+
+Stream-level I/O is more flexible and usually more convenient;
+therefore, programmers generally use the descriptor-level functions only
+when necessary.  These are some of the usual reasons:
+
+@itemize @bullet
+@item
+For reading binary files in large chunks.
+
+@item
+For reading an entire file into core before parsing it.
+
+@item
+To perform operations other than data transfer, which can only be done
+with a descriptor.  (You can use @code{fileno} to get the descriptor
+corresponding to a stream.)
+
+@item
+To pass descriptors to a child process.  (The child can create its own
+stream to use a descriptor that it inherits, but cannot inherit a stream
+directly.)
+@end itemize
+
+@menu
+* Opening and Closing Files::           How to open and close file
+                                         descriptors.
+* I/O Primitives::                      Reading and writing data.
+* File Position Primitive::             Setting a descriptor's file
+                                         position.
+* Descriptors and Streams::             Converting descriptor to stream
+                                         or vice-versa.
+* Stream/Descriptor Precautions::       Precautions needed if you use both
+                                         descriptors and streams.
+* Scatter-Gather::                      Fast I/O to discontinuous buffers.
+* Copying File Data::                   Copying data between files.
+* Memory-mapped I/O::                   Using files like memory.
+* Waiting for I/O::                     How to check for input or output
+					 on multiple file descriptors.
+* Synchronizing I/O::                   Making sure all I/O actions completed.
+* Asynchronous I/O::                    Perform I/O in parallel.
+* Control Operations::                  Various other operations on file
+					 descriptors.
+* Duplicating Descriptors::             Fcntl commands for duplicating
+                                         file descriptors.
+* Descriptor Flags::                    Fcntl commands for manipulating
+                                         flags associated with file
+                                         descriptors.
+* File Status Flags::                   Fcntl commands for manipulating
+                                         flags associated with open files.
+* File Locks::                          Fcntl commands for implementing
+                                         file locking.
+* Open File Description Locks::         Fcntl commands for implementing
+                                         open file description locking.
+* Open File Description Locks Example:: An example of open file description lock
+                                         usage
+* Interrupt Input::                     Getting an asynchronous signal when
+                                         input arrives.
+* IOCTLs::                              Generic I/O Control operations.
+@end menu
+
+
+@node Opening and Closing Files
+@section Opening and Closing Files
+
+@cindex opening a file descriptor
+@cindex closing a file descriptor
+This section describes the primitives for opening and closing files
+using file descriptors.  The @code{open} and @code{creat} functions are
+declared in the header file @file{fcntl.h}, while @code{close} is
+declared in @file{unistd.h}.
+@pindex unistd.h
+@pindex fcntl.h
+
+@deftypefun int open (const char *@var{filename}, int @var{flags}[, mode_t @var{mode}])
+@standards{POSIX.1, fcntl.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+The @code{open} function creates and returns a new file descriptor for
+the file named by @var{filename}.  Initially, the file position
+indicator for the file is at the beginning of the file.  The argument
+@var{mode} (@pxref{Permission Bits}) is used only when a file is
+created, but it doesn't hurt to supply the argument in any case.
+
+The @var{flags} argument controls how the file is to be opened.  This is
+a bit mask; you create the value by the bitwise OR of the appropriate
+parameters (using the @samp{|} operator in C).
+@xref{File Status Flags}, for the parameters available.
+
+The normal return value from @code{open} is a non-negative integer file
+descriptor.  In the case of an error, a value of @math{-1} is returned
+instead.  In addition to the usual file name errors (@pxref{File
+Name Errors}), the following @code{errno} error conditions are defined
+for this function:
+
+@table @code
+@item EACCES
+The file exists but is not readable/writable as requested by the @var{flags}
+argument, or the file does not exist and the directory is unwritable so
+it cannot be created.
+
+@item EEXIST
+Both @code{O_CREAT} and @code{O_EXCL} are set, and the named file already
+exists.
+
+@item EINTR
+The @code{open} operation was interrupted by a signal.
+@xref{Interrupted Primitives}.
+
+@item EISDIR
+The @var{flags} argument specified write access, and the file is a directory.
+
+@item EMFILE
+The process has too many files open.
+The maximum number of file descriptors is controlled by the
+@code{RLIMIT_NOFILE} resource limit; @pxref{Limits on Resources}.
+
+@item ENFILE
+The entire system, or perhaps the file system which contains the
+directory, cannot support any additional open files at the moment.
+(This problem cannot happen on @gnuhurdsystems{}.)
+
+@item ENOENT
+The named file does not exist, and @code{O_CREAT} is not specified.
+
+@item ENOSPC
+The directory or file system that would contain the new file cannot be
+extended, because there is no disk space left.
+
+@item ENXIO
+@code{O_NONBLOCK} and @code{O_WRONLY} are both set in the @var{flags}
+argument, the file named by @var{filename} is a FIFO (@pxref{Pipes and
+FIFOs}), and no process has the file open for reading.
+
+@item EROFS
+The file resides on a read-only file system and any of @w{@code{O_WRONLY}},
+@code{O_RDWR}, and @code{O_TRUNC} are set in the @var{flags} argument,
+or @code{O_CREAT} is set and the file does not already exist.
+@end table
+
+@c !!! umask
+
+If on a 32 bit machine the sources are translated with
+@code{_FILE_OFFSET_BITS == 64} the function @code{open} returns a file
+descriptor opened in the large file mode which enables the file handling
+functions to use files up to @twoexp{63} bytes in size and offset from
+@minus{}@twoexp{63} to @twoexp{63}.  This happens transparently for the user
+since all of the low-level file handling functions are equally replaced.
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{open} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this calls to @code{open} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The @code{open} function is the underlying primitive for the @code{fopen}
+and @code{freopen} functions, that create streams.
+@end deftypefun
+
+@deftypefun int open64 (const char *@var{filename}, int @var{flags}[, mode_t @var{mode}])
+@standards{Unix98, fcntl.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+This function is similar to @code{open}.  It returns a file descriptor
+which can be used to access the file named by @var{filename}.  The only
+difference is that on 32 bit systems the file is opened in the
+large file mode.  I.e., file length and file offsets can exceed 31 bits.
+
+When the sources are translated with @code{_FILE_OFFSET_BITS == 64} this
+function is actually available under the name @code{open}.  I.e., the
+new, extended API using 64 bit file sizes and offsets transparently
+replaces the old API.
+@end deftypefun
+
+@deftypefn {Obsolete function} int creat (const char *@var{filename}, mode_t @var{mode})
+@standards{POSIX.1, fcntl.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+This function is obsolete.  The call:
+
+@smallexample
+creat (@var{filename}, @var{mode})
+@end smallexample
+
+@noindent
+is equivalent to:
+
+@smallexample
+open (@var{filename}, O_WRONLY | O_CREAT | O_TRUNC, @var{mode})
+@end smallexample
+
+If on a 32 bit machine the sources are translated with
+@code{_FILE_OFFSET_BITS == 64} the function @code{creat} returns a file
+descriptor opened in the large file mode which enables the file handling
+functions to use files up to @twoexp{63} in size and offset from
+@minus{}@twoexp{63} to @twoexp{63}.  This happens transparently for the user
+since all of the low-level file handling functions are equally replaced.
+@end deftypefn
+
+@deftypefn {Obsolete function} int creat64 (const char *@var{filename}, mode_t @var{mode})
+@standards{Unix98, fcntl.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+This function is similar to @code{creat}.  It returns a file descriptor
+which can be used to access the file named by @var{filename}.  The only
+difference is that on 32 bit systems the file is opened in the
+large file mode.  I.e., file length and file offsets can exceed 31 bits.
+
+To use this file descriptor one must not use the normal operations but
+instead the counterparts named @code{*64}, e.g., @code{read64}.
+
+When the sources are translated with @code{_FILE_OFFSET_BITS == 64} this
+function is actually available under the name @code{open}.  I.e., the
+new, extended API using 64 bit file sizes and offsets transparently
+replaces the old API.
+@end deftypefn
+
+@deftypefun int close (int @var{filedes})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+The function @code{close} closes the file descriptor @var{filedes}.
+Closing a file has the following consequences:
+
+@itemize @bullet
+@item
+The file descriptor is deallocated.
+
+@item
+Any record locks owned by the process on the file are unlocked.
+
+@item
+When all file descriptors associated with a pipe or FIFO have been closed,
+any unread data is discarded.
+@end itemize
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{close} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this, calls to @code{close} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The normal return value from @code{close} is @math{0}; a value of @math{-1}
+is returned in case of failure.  The following @code{errno} error
+conditions are defined for this function:
+
+@table @code
+@item EBADF
+The @var{filedes} argument is not a valid file descriptor.
+
+@item EINTR
+The @code{close} call was interrupted by a signal.
+@xref{Interrupted Primitives}.
+Here is an example of how to handle @code{EINTR} properly:
+
+@smallexample
+TEMP_FAILURE_RETRY (close (desc));
+@end smallexample
+
+@item ENOSPC
+@itemx EIO
+@itemx EDQUOT
+When the file is accessed by NFS, these errors from @code{write} can sometimes
+not be detected until @code{close}.  @xref{I/O Primitives}, for details
+on their meaning.
+@end table
+
+Please note that there is @emph{no} separate @code{close64} function.
+This is not necessary since this function does not determine nor depend
+on the mode of the file.  The kernel which performs the @code{close}
+operation knows which mode the descriptor is used for and can handle
+this situation.
+@end deftypefun
+
+To close a stream, call @code{fclose} (@pxref{Closing Streams}) instead
+of trying to close its underlying file descriptor with @code{close}.
+This flushes any buffered output and updates the stream object to
+indicate that it is closed.
+
+@deftypefun int close_range (unsigned int @var{lowfd}, unsigned int @var{maxfd}, int @var{flags})
+@standards{Linux, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+@c This is a syscall for Linux v5.9.  There is no fallback emulation for
+@c older kernels.
+
+The function @code{close_range} closes the file descriptor from @var{lowfd}
+to @var{maxfd} (inclusive).  This function is similar to call @code{close} in
+specified file descriptor range depending on the @var{flags}.
+
+This is function is only supported on recent Linux versions and @theglibc{}
+does not provide any fallback (the application will need to handle possible
+@code{ENOSYS}).
+
+The @var{flags} add options on how the files are closes.  Linux currently
+supports:
+
+@vtable @code
+@item CLOSE_RANGE_UNSHARE
+Unshare the file descriptor table before closing file descriptors.
+
+@item CLOSE_RANGE_CLOEXEC
+Set the @code{FD_CLOEXEC} bit instead of closing the file descriptor.
+@end vtable
+
+The normal return value from @code{close_range} is @math{0}; a value
+of @math{-1} is returned in case of failure.  The following @code{errno} error
+conditions are defined for this function:
+
+@table @code
+@item EINVAL
+The @var{lowfd} value is larger than @var{maxfd} or an unsupported @var{flags}
+is used.
+
+@item ENOMEM
+Either there is not enough memory for the operation, or the process is
+out of address space.  It can only happnes when @code{CLOSE_RANGE_UNSHARED}
+flag is used.
+
+@item EMFILE
+The process has too many files open and it can only happens when
+@code{CLOSE_RANGE_UNSHARED} flag is used.
+The maximum number of file descriptors is controlled by the
+@code{RLIMIT_NOFILE} resource limit; @pxref{Limits on Resources}.
+
+@item ENOSYS
+The kernel does not implement the required functionality.
+@end table
+@end deftypefun
+
+@deftypefun void closefrom (int @var{lowfd})
+@standards{GNU, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+
+The function @code{closefrom} closes all file descriptors larger than or equal
+to @var{lowfd} then @var{lowfd}.  This function is similar to calling
+@code{close} for all open file descriptors not less than @var{lowfd}.
+
+Already closed file descriptors are ignored.
+@end deftypefun
+
+@node I/O Primitives
+@section Input and Output Primitives
+
+This section describes the functions for performing primitive input and
+output operations on file descriptors: @code{read}, @code{write}, and
+@code{lseek}.  These functions are declared in the header file
+@file{unistd.h}.
+@pindex unistd.h
+
+@deftp {Data Type} ssize_t
+@standards{POSIX.1, unistd.h}
+This data type is used to represent the sizes of blocks that can be
+read or written in a single operation.  It is similar to @code{size_t},
+but must be a signed type.
+@end deftp
+
+@cindex reading from a file descriptor
+@deftypefun ssize_t read (int @var{filedes}, void *@var{buffer}, size_t @var{size})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{read} function reads up to @var{size} bytes from the file
+with descriptor @var{filedes}, storing the results in the @var{buffer}.
+(This is not necessarily a character string, and no terminating null
+character is added.)
+
+@cindex end-of-file, on a file descriptor
+The return value is the number of bytes actually read.  This might be
+less than @var{size}; for example, if there aren't that many bytes left
+in the file or if there aren't that many bytes immediately available.
+The exact behavior depends on what kind of file it is.  Note that
+reading less than @var{size} bytes is not an error.
+
+A value of zero indicates end-of-file (except if the value of the
+@var{size} argument is also zero).  This is not considered an error.
+If you keep calling @code{read} while at end-of-file, it will keep
+returning zero and doing nothing else.
+
+If @code{read} returns at least one character, there is no way you can
+tell whether end-of-file was reached.  But if you did reach the end, the
+next read will return zero.
+
+In case of an error, @code{read} returns @math{-1}.  The following
+@code{errno} error conditions are defined for this function:
+
+@table @code
+@item EAGAIN
+Normally, when no input is immediately available, @code{read} waits for
+some input.  But if the @code{O_NONBLOCK} flag is set for the file
+(@pxref{File Status Flags}), @code{read} returns immediately without
+reading any data, and reports this error.
+
+@strong{Compatibility Note:} Most versions of BSD Unix use a different
+error code for this: @code{EWOULDBLOCK}.  In @theglibc{},
+@code{EWOULDBLOCK} is an alias for @code{EAGAIN}, so it doesn't matter
+which name you use.
+
+On some systems, reading a large amount of data from a character special
+file can also fail with @code{EAGAIN} if the kernel cannot find enough
+physical memory to lock down the user's pages.  This is limited to
+devices that transfer with direct memory access into the user's memory,
+which means it does not include terminals, since they always use
+separate buffers inside the kernel.  This problem never happens on
+@gnuhurdsystems{}.
+
+Any condition that could result in @code{EAGAIN} can instead result in a
+successful @code{read} which returns fewer bytes than requested.
+Calling @code{read} again immediately would result in @code{EAGAIN}.
+
+@item EBADF
+The @var{filedes} argument is not a valid file descriptor,
+or is not open for reading.
+
+@item EINTR
+@code{read} was interrupted by a signal while it was waiting for input.
+@xref{Interrupted Primitives}.  A signal will not necessarily cause
+@code{read} to return @code{EINTR}; it may instead result in a
+successful @code{read} which returns fewer bytes than requested.
+
+@item EIO
+For many devices, and for disk files, this error code indicates
+a hardware error.
+
+@code{EIO} also occurs when a background process tries to read from the
+controlling terminal, and the normal action of stopping the process by
+sending it a @code{SIGTTIN} signal isn't working.  This might happen if
+the signal is being blocked or ignored, or because the process group is
+orphaned.  @xref{Job Control}, for more information about job control,
+and @ref{Signal Handling}, for information about signals.
+
+@item EINVAL
+In some systems, when reading from a character or block device, position
+and size offsets must be aligned to a particular block size.  This error
+indicates that the offsets were not properly aligned.
+@end table
+
+Please note that there is no function named @code{read64}.  This is not
+necessary since this function does not directly modify or handle the
+possibly wide file offset.  Since the kernel handles this state
+internally, the @code{read} function can be used for all cases.
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{read} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this, calls to @code{read} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The @code{read} function is the underlying primitive for all of the
+functions that read from streams, such as @code{fgetc}.
+@end deftypefun
+
+@deftypefun ssize_t pread (int @var{filedes}, void *@var{buffer}, size_t @var{size}, off_t @var{offset})
+@standards{Unix98, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is usually a safe syscall.  The sysdeps/posix fallback emulation
+@c is not MT-Safe because it uses lseek, read and lseek back, but is it
+@c used anywhere?
+The @code{pread} function is similar to the @code{read} function.  The
+first three arguments are identical, and the return values and error
+codes also correspond.
+
+The difference is the fourth argument and its handling.  The data block
+is not read from the current position of the file descriptor
+@code{filedes}.  Instead the data is read from the file starting at
+position @var{offset}.  The position of the file descriptor itself is
+not affected by the operation.  The value is the same as before the call.
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@code{pread} function is in fact @code{pread64} and the type
+@code{off_t} has 64 bits, which makes it possible to handle files up to
+@twoexp{63} bytes in length.
+
+The return value of @code{pread} describes the number of bytes read.
+In the error case it returns @math{-1} like @code{read} does and the
+error codes are also the same, with these additions:
+
+@table @code
+@item EINVAL
+The value given for @var{offset} is negative and therefore illegal.
+
+@item ESPIPE
+The file descriptor @var{filedes} is associated with a pipe or a FIFO and
+this device does not allow positioning of the file pointer.
+@end table
+
+The function is an extension defined in the Unix Single Specification
+version 2.
+@end deftypefun
+
+@deftypefun ssize_t pread64 (int @var{filedes}, void *@var{buffer}, size_t @var{size}, off64_t @var{offset})
+@standards{Unix98, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is usually a safe syscall.  The sysdeps/posix fallback emulation
+@c is not MT-Safe because it uses lseek64, read and lseek64 back, but is
+@c it used anywhere?
+This function is similar to the @code{pread} function.  The difference
+is that the @var{offset} parameter is of type @code{off64_t} instead of
+@code{off_t} which makes it possible on 32 bit machines to address
+files larger than @twoexp{31} bytes and up to @twoexp{63} bytes.  The
+file descriptor @code{filedes} must be opened using @code{open64} since
+otherwise the large offsets possible with @code{off64_t} will lead to
+errors with a descriptor in small file mode.
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine this function is actually available under the name
+@code{pread} and so transparently replaces the 32 bit interface.
+@end deftypefun
+
+@cindex writing to a file descriptor
+@deftypefun ssize_t write (int @var{filedes}, const void *@var{buffer}, size_t @var{size})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Some say write is thread-unsafe on Linux without O_APPEND.  In the VFS layer
+@c the vfs_write() does no locking around the acquisition of a file offset and
+@c therefore multiple threads / kernel tasks may race and get the same offset
+@c resulting in data loss.
+@c
+@c See:
+@c http://thread.gmane.org/gmane.linux.kernel/397980
+@c http://lwn.net/Articles/180387/
+@c
+@c The counter argument is that POSIX only says that the write starts at the
+@c file position and that the file position is updated *before* the function
+@c returns.  What that really means is that any expectation of atomic writes is
+@c strictly an invention of the interpretation of the reader.  Data loss could
+@c happen if two threads start the write at the same time.  Only writes that
+@c come after the return of another write are guaranteed to follow the other
+@c write.
+@c
+@c The other side of the coin is that POSIX goes on further to say in
+@c "2.9.7 Thread Interactions with Regular File Operations" that threads
+@c should never see interleaving sets of file operations, but it is insane
+@c to do anything like that because it kills performance, so you don't get
+@c those guarantees in Linux.
+@c
+@c So we mark it thread safe, it doesn't blow up, but you might loose
+@c data, and we don't strictly meet the POSIX requirements.
+@c
+@c The fix for file offsets racing was merged in 3.14, the commits were:
+@c 9c225f2655e36a470c4f58dbbc99244c5fc7f2d4, and
+@c d7a15f8d0777955986a2ab00ab181795cab14b01.  Therefore after Linux 3.14 you
+@c should get mostly MT-safe writes.
+The @code{write} function writes up to @var{size} bytes from
+@var{buffer} to the file with descriptor @var{filedes}.  The data in
+@var{buffer} is not necessarily a character string and a null character is
+output like any other character.
+
+The return value is the number of bytes actually written.  This may be
+@var{size}, but can always be smaller.  Your program should always call
+@code{write} in a loop, iterating until all the data is written.
+
+Once @code{write} returns, the data is enqueued to be written and can be
+read back right away, but it is not necessarily written out to permanent
+storage immediately.  You can use @code{fsync} when you need to be sure
+your data has been permanently stored before continuing.  (It is more
+efficient for the system to batch up consecutive writes and do them all
+at once when convenient.  Normally they will always be written to disk
+within a minute or less.)  Modern systems provide another function
+@code{fdatasync} which guarantees integrity only for the file data and
+is therefore faster.
+@c !!! xref fsync, fdatasync
+You can use the @code{O_FSYNC} open mode to make @code{write} always
+store the data to disk before returning; @pxref{Operating Modes}.
+
+In the case of an error, @code{write} returns @math{-1}.  The following
+@code{errno} error conditions are defined for this function:
+
+@table @code
+@item EAGAIN
+Normally, @code{write} blocks until the write operation is complete.
+But if the @code{O_NONBLOCK} flag is set for the file (@pxref{Control
+Operations}), it returns immediately without writing any data and
+reports this error.  An example of a situation that might cause the
+process to block on output is writing to a terminal device that supports
+flow control, where output has been suspended by receipt of a STOP
+character.
+
+@strong{Compatibility Note:} Most versions of BSD Unix use a different
+error code for this: @code{EWOULDBLOCK}.  In @theglibc{},
+@code{EWOULDBLOCK} is an alias for @code{EAGAIN}, so it doesn't matter
+which name you use.
+
+On some systems, writing a large amount of data from a character special
+file can also fail with @code{EAGAIN} if the kernel cannot find enough
+physical memory to lock down the user's pages.  This is limited to
+devices that transfer with direct memory access into the user's memory,
+which means it does not include terminals, since they always use
+separate buffers inside the kernel.  This problem does not arise on
+@gnuhurdsystems{}.
+
+@item EBADF
+The @var{filedes} argument is not a valid file descriptor,
+or is not open for writing.
+
+@item EFBIG
+The size of the file would become larger than the implementation can support.
+
+@item EINTR
+The @code{write} operation was interrupted by a signal while it was
+blocked waiting for completion.  A signal will not necessarily cause
+@code{write} to return @code{EINTR}; it may instead result in a
+successful @code{write} which writes fewer bytes than requested.
+@xref{Interrupted Primitives}.
+
+@item EIO
+For many devices, and for disk files, this error code indicates
+a hardware error.
+
+@item ENOSPC
+The device containing the file is full.
+
+@item EPIPE
+This error is returned when you try to write to a pipe or FIFO that
+isn't open for reading by any process.  When this happens, a @code{SIGPIPE}
+signal is also sent to the process; see @ref{Signal Handling}.
+
+@item EINVAL
+In some systems, when writing to a character or block device, position
+and size offsets must be aligned to a particular block size.  This error
+indicates that the offsets were not properly aligned.
+@end table
+
+Unless you have arranged to prevent @code{EINTR} failures, you should
+check @code{errno} after each failing call to @code{write}, and if the
+error was @code{EINTR}, you should simply repeat the call.
+@xref{Interrupted Primitives}.  The easy way to do this is with the
+macro @code{TEMP_FAILURE_RETRY}, as follows:
+
+@smallexample
+nbytes = TEMP_FAILURE_RETRY (write (desc, buffer, count));
+@end smallexample
+
+Please note that there is no function named @code{write64}.  This is not
+necessary since this function does not directly modify or handle the
+possibly wide file offset.  Since the kernel handles this state
+internally the @code{write} function can be used for all cases.
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{write} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this, calls to @code{write} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The @code{write} function is the underlying primitive for all of the
+functions that write to streams, such as @code{fputc}.
+@end deftypefun
+
+@deftypefun ssize_t pwrite (int @var{filedes}, const void *@var{buffer}, size_t @var{size}, off_t @var{offset})
+@standards{Unix98, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is usually a safe syscall.  The sysdeps/posix fallback emulation
+@c is not MT-Safe because it uses lseek, write and lseek back, but is it
+@c used anywhere?
+The @code{pwrite} function is similar to the @code{write} function.  The
+first three arguments are identical, and the return values and error codes
+also correspond.
+
+The difference is the fourth argument and its handling.  The data block
+is not written to the current position of the file descriptor
+@code{filedes}.  Instead the data is written to the file starting at
+position @var{offset}.  The position of the file descriptor itself is
+not affected by the operation.  The value is the same as before the call.
+
+However, on Linux, if a file is opened with @code{O_APPEND},  @code{pwrite}
+appends data to the end of the file, regardless of the value of
+@code{offset}.
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@code{pwrite} function is in fact @code{pwrite64} and the type
+@code{off_t} has 64 bits, which makes it possible to handle files up to
+@twoexp{63} bytes in length.
+
+The return value of @code{pwrite} describes the number of written bytes.
+In the error case it returns @math{-1} like @code{write} does and the
+error codes are also the same, with these additions:
+
+@table @code
+@item EINVAL
+The value given for @var{offset} is negative and therefore illegal.
+
+@item ESPIPE
+The file descriptor @var{filedes} is associated with a pipe or a FIFO and
+this device does not allow positioning of the file pointer.
+@end table
+
+The function is an extension defined in the Unix Single Specification
+version 2.
+@end deftypefun
+
+@deftypefun ssize_t pwrite64 (int @var{filedes}, const void *@var{buffer}, size_t @var{size}, off64_t @var{offset})
+@standards{Unix98, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is usually a safe syscall.  The sysdeps/posix fallback emulation
+@c is not MT-Safe because it uses lseek64, write and lseek64 back, but
+@c is it used anywhere?
+This function is similar to the @code{pwrite} function.  The difference
+is that the @var{offset} parameter is of type @code{off64_t} instead of
+@code{off_t} which makes it possible on 32 bit machines to address
+files larger than @twoexp{31} bytes and up to @twoexp{63} bytes.  The
+file descriptor @code{filedes} must be opened using @code{open64} since
+otherwise the large offsets possible with @code{off64_t} will lead to
+errors with a descriptor in small file mode.
+
+When the source file is compiled using @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine this function is actually available under the name
+@code{pwrite} and so transparently replaces the 32 bit interface.
+@end deftypefun
+
+@node File Position Primitive
+@section Setting the File Position of a Descriptor
+
+Just as you can set the file position of a stream with @code{fseek}, you
+can set the file position of a descriptor with @code{lseek}.  This
+specifies the position in the file for the next @code{read} or
+@code{write} operation.  @xref{File Positioning}, for more information
+on the file position and what it means.
+
+To read the current file position value from a descriptor, use
+@code{lseek (@var{desc}, 0, SEEK_CUR)}.
+
+@cindex file positioning on a file descriptor
+@cindex positioning a file descriptor
+@cindex seeking on a file descriptor
+@deftypefun off_t lseek (int @var{filedes}, off_t @var{offset}, int @var{whence})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{lseek} function is used to change the file position of the
+file with descriptor @var{filedes}.
+
+The @var{whence} argument specifies how the @var{offset} should be
+interpreted, in the same way as for the @code{fseek} function, and it must
+be one of the symbolic constants @code{SEEK_SET}, @code{SEEK_CUR}, or
+@code{SEEK_END}.
+
+@vtable @code
+@item SEEK_SET
+Specifies that @var{offset} is a count of characters from the beginning
+of the file.
+
+@item SEEK_CUR
+Specifies that @var{offset} is a count of characters from the current
+file position.  This count may be positive or negative.
+
+@item SEEK_END
+Specifies that @var{offset} is a count of characters from the end of
+the file.  A negative count specifies a position within the current
+extent of the file; a positive count specifies a position past the
+current end.  If you set the position past the current end, and
+actually write data, you will extend the file with zeros up to that
+position.
+@end vtable
+
+The return value from @code{lseek} is normally the resulting file
+position, measured in bytes from the beginning of the file.
+You can use this feature together with @code{SEEK_CUR} to read the
+current file position.
+
+If you want to append to the file, setting the file position to the
+current end of file with @code{SEEK_END} is not sufficient.  Another
+process may write more data after you seek but before you write,
+extending the file so the position you write onto clobbers their data.
+Instead, use the @code{O_APPEND} operating mode; @pxref{Operating Modes}.
+
+You can set the file position past the current end of the file.  This
+does not by itself make the file longer; @code{lseek} never changes the
+file.  But subsequent output at that position will extend the file.
+Characters between the previous end of file and the new position are
+filled with zeros.  Extending the file in this way can create a
+``hole'': the blocks of zeros are not actually allocated on disk, so the
+file takes up less space than it appears to; it is then called a
+``sparse file''.
+@cindex sparse files
+@cindex holes in files
+
+If the file position cannot be changed, or the operation is in some way
+invalid, @code{lseek} returns a value of @math{-1}.  The following
+@code{errno} error conditions are defined for this function:
+
+@table @code
+@item EBADF
+The @var{filedes} is not a valid file descriptor.
+
+@item EINVAL
+The @var{whence} argument value is not valid, or the resulting
+file offset is not valid.  A file offset is invalid.
+
+@item ESPIPE
+The @var{filedes} corresponds to an object that cannot be positioned,
+such as a pipe, FIFO or terminal device.  (POSIX.1 specifies this error
+only for pipes and FIFOs, but on @gnusystems{}, you always get
+@code{ESPIPE} if the object is not seekable.)
+@end table
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@code{lseek} function is in fact @code{lseek64} and the type
+@code{off_t} has 64 bits which makes it possible to handle files up to
+@twoexp{63} bytes in length.
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{lseek} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this calls to @code{lseek} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The @code{lseek} function is the underlying primitive for the
+@code{fseek}, @code{fseeko}, @code{ftell}, @code{ftello} and
+@code{rewind} functions, which operate on streams instead of file
+descriptors.
+@end deftypefun
+
+@deftypefun off64_t lseek64 (int @var{filedes}, off64_t @var{offset}, int @var{whence})
+@standards{Unix98, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function is similar to the @code{lseek} function.  The difference
+is that the @var{offset} parameter is of type @code{off64_t} instead of
+@code{off_t} which makes it possible on 32 bit machines to address
+files larger than @twoexp{31} bytes and up to @twoexp{63} bytes.  The
+file descriptor @code{filedes} must be opened using @code{open64} since
+otherwise the large offsets possible with @code{off64_t} will lead to
+errors with a descriptor in small file mode.
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} on a
+32 bits machine this function is actually available under the name
+@code{lseek} and so transparently replaces the 32 bit interface.
+@end deftypefun
+
+You can have multiple descriptors for the same file if you open the file
+more than once, or if you duplicate a descriptor with @code{dup}.
+Descriptors that come from separate calls to @code{open} have independent
+file positions; using @code{lseek} on one descriptor has no effect on the
+other.  For example,
+
+@smallexample
+@group
+@{
+  int d1, d2;
+  char buf[4];
+  d1 = open ("foo", O_RDONLY);
+  d2 = open ("foo", O_RDONLY);
+  lseek (d1, 1024, SEEK_SET);
+  read (d2, buf, 4);
+@}
+@end group
+@end smallexample
+
+@noindent
+will read the first four characters of the file @file{foo}.  (The
+error-checking code necessary for a real program has been omitted here
+for brevity.)
+
+By contrast, descriptors made by duplication share a common file
+position with the original descriptor that was duplicated.  Anything
+which alters the file position of one of the duplicates, including
+reading or writing data, affects all of them alike.  Thus, for example,
+
+@smallexample
+@{
+  int d1, d2, d3;
+  char buf1[4], buf2[4];
+  d1 = open ("foo", O_RDONLY);
+  d2 = dup (d1);
+  d3 = dup (d2);
+  lseek (d3, 1024, SEEK_SET);
+  read (d1, buf1, 4);
+  read (d2, buf2, 4);
+@}
+@end smallexample
+
+@noindent
+will read four characters starting with the 1024'th character of
+@file{foo}, and then four more characters starting with the 1028'th
+character.
+
+@deftp {Data Type} off_t
+@standards{POSIX.1, sys/types.h}
+This is a signed integer type used to represent file sizes.  In
+@theglibc{}, this type is no narrower than @code{int}.
+
+If the source is compiled with @code{_FILE_OFFSET_BITS == 64} this type
+is transparently replaced by @code{off64_t}.
+@end deftp
+
+@deftp {Data Type} off64_t
+@standards{Unix98, sys/types.h}
+This type is used similar to @code{off_t}.  The difference is that even
+on 32 bit machines, where the @code{off_t} type would have 32 bits,
+@code{off64_t} has 64 bits and so is able to address files up to
+@twoexp{63} bytes in length.
+
+When compiling with @code{_FILE_OFFSET_BITS == 64} this type is
+available under the name @code{off_t}.
+@end deftp
+
+These aliases for the @samp{SEEK_@dots{}} constants exist for the sake
+of compatibility with older BSD systems.  They are defined in two
+different header files: @file{fcntl.h} and @file{sys/file.h}.
+
+@vtable @code
+@item L_SET
+An alias for @code{SEEK_SET}.
+
+@item L_INCR
+An alias for @code{SEEK_CUR}.
+
+@item L_XTND
+An alias for @code{SEEK_END}.
+@end vtable
+
+@node Descriptors and Streams
+@section Descriptors and Streams
+@cindex streams, and file descriptors
+@cindex converting file descriptor to stream
+@cindex extracting file descriptor from stream
+
+Given an open file descriptor, you can create a stream for it with the
+@code{fdopen} function.  You can get the underlying file descriptor for
+an existing stream with the @code{fileno} function.  These functions are
+declared in the header file @file{stdio.h}.
+@pindex stdio.h
+
+@deftypefun {FILE *} fdopen (int @var{filedes}, const char *@var{opentype})
+@standards{POSIX.1, stdio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{} @asulock{}}@acunsafe{@acsmem{} @aculock{}}}
+The @code{fdopen} function returns a new stream for the file descriptor
+@var{filedes}.
+
+The @var{opentype} argument is interpreted in the same way as for the
+@code{fopen} function (@pxref{Opening Streams}), except that
+the @samp{b} option is not permitted; this is because @gnusystems{} make no
+distinction between text and binary files.  Also, @code{"w"} and
+@code{"w+"} do not cause truncation of the file; these have an effect only
+when opening a file, and in this case the file has already been opened.
+You must make sure that the @var{opentype} argument matches the actual
+mode of the open file descriptor.
+
+The return value is the new stream.  If the stream cannot be created
+(for example, if the modes for the file indicated by the file descriptor
+do not permit the access specified by the @var{opentype} argument), a
+null pointer is returned instead.
+
+In some other systems, @code{fdopen} may fail to detect that the modes
+for file descriptors do not permit the access specified by
+@code{opentype}.  @Theglibc{} always checks for this.
+@end deftypefun
+
+For an example showing the use of the @code{fdopen} function,
+see @ref{Creating a Pipe}.
+
+@deftypefun int fileno (FILE *@var{stream})
+@standards{POSIX.1, stdio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function returns the file descriptor associated with the stream
+@var{stream}.  If an error is detected (for example, if the @var{stream}
+is not valid) or if @var{stream} does not do I/O to a file,
+@code{fileno} returns @math{-1}.
+@end deftypefun
+
+@deftypefun int fileno_unlocked (FILE *@var{stream})
+@standards{GNU, stdio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{fileno_unlocked} function is equivalent to the @code{fileno}
+function except that it does not implicitly lock the stream if the state
+is @code{FSETLOCKING_INTERNAL}.
+
+This function is a GNU extension.
+@end deftypefun
+
+@cindex standard file descriptors
+@cindex file descriptors, standard
+There are also symbolic constants defined in @file{unistd.h} for the
+file descriptors belonging to the standard streams @code{stdin},
+@code{stdout}, and @code{stderr}; see @ref{Standard Streams}.
+@pindex unistd.h
+
+@vtable @code
+@item STDIN_FILENO
+@standards{POSIX.1, unistd.h}
+This macro has value @code{0}, which is the file descriptor for
+standard input.
+@cindex standard input file descriptor
+
+@item STDOUT_FILENO
+@standards{POSIX.1, unistd.h}
+This macro has value @code{1}, which is the file descriptor for
+standard output.
+@cindex standard output file descriptor
+
+@item STDERR_FILENO
+@standards{POSIX.1, unistd.h}
+This macro has value @code{2}, which is the file descriptor for
+standard error output.
+@end vtable
+@cindex standard error file descriptor
+
+@node Stream/Descriptor Precautions
+@section Dangers of Mixing Streams and Descriptors
+@cindex channels
+@cindex streams and descriptors
+@cindex descriptors and streams
+@cindex mixing descriptors and streams
+
+You can have multiple file descriptors and streams (let's call both
+streams and descriptors ``channels'' for short) connected to the same
+file, but you must take care to avoid confusion between channels.  There
+are two cases to consider: @dfn{linked} channels that share a single
+file position value, and @dfn{independent} channels that have their own
+file positions.
+
+It's best to use just one channel in your program for actual data
+transfer to any given file, except when all the access is for input.
+For example, if you open a pipe (something you can only do at the file
+descriptor level), either do all I/O with the descriptor, or construct a
+stream from the descriptor with @code{fdopen} and then do all I/O with
+the stream.
+
+@menu
+* Linked Channels::	   Dealing with channels sharing a file position.
+* Independent Channels::   Dealing with separately opened, unlinked channels.
+* Cleaning Streams::	   Cleaning a stream makes it safe to use
+                            another channel.
+@end menu
+
+@node Linked Channels
+@subsection Linked Channels
+@cindex linked channels
+
+Channels that come from a single opening share the same file position;
+we call them @dfn{linked} channels.  Linked channels result when you
+make a stream from a descriptor using @code{fdopen}, when you get a
+descriptor from a stream with @code{fileno}, when you copy a descriptor
+with @code{dup} or @code{dup2}, and when descriptors are inherited
+during @code{fork}.  For files that don't support random access, such as
+terminals and pipes, @emph{all} channels are effectively linked.  On
+random-access files, all append-type output streams are effectively
+linked to each other.
+
+@cindex cleaning up a stream
+If you have been using a stream for I/O (or have just opened the stream),
+and you want to do I/O using
+another channel (either a stream or a descriptor) that is linked to it,
+you must first @dfn{clean up} the stream that you have been using.
+@xref{Cleaning Streams}.
+
+Terminating a process, or executing a new program in the process,
+destroys all the streams in the process.  If descriptors linked to these
+streams persist in other processes, their file positions become
+undefined as a result.  To prevent this, you must clean up the streams
+before destroying them.
+
+@node Independent Channels
+@subsection Independent Channels
+@cindex independent channels
+
+When you open channels (streams or descriptors) separately on a seekable
+file, each channel has its own file position.  These are called
+@dfn{independent channels}.
+
+The system handles each channel independently.  Most of the time, this
+is quite predictable and natural (especially for input): each channel
+can read or write sequentially at its own place in the file.  However,
+if some of the channels are streams, you must take these precautions:
+
+@itemize @bullet
+@item
+You should clean an output stream after use, before doing anything else
+that might read or write from the same part of the file.
+
+@item
+You should clean an input stream before reading data that may have been
+modified using an independent channel.  Otherwise, you might read
+obsolete data that had been in the stream's buffer.
+@end itemize
+
+If you do output to one channel at the end of the file, this will
+certainly leave the other independent channels positioned somewhere
+before the new end.  You cannot reliably set their file positions to the
+new end of file before writing, because the file can always be extended
+by another process between when you set the file position and when you
+write the data.  Instead, use an append-type descriptor or stream; they
+always output at the current end of the file.  In order to make the
+end-of-file position accurate, you must clean the output channel you
+were using, if it is a stream.
+
+It's impossible for two channels to have separate file pointers for a
+file that doesn't support random access.  Thus, channels for reading or
+writing such files are always linked, never independent.  Append-type
+channels are also always linked.  For these channels, follow the rules
+for linked channels; see @ref{Linked Channels}.
+
+@node Cleaning Streams
+@subsection Cleaning Streams
+
+You can use @code{fflush} to clean a stream in most
+cases.
+
+You can skip the @code{fflush} if you know the stream
+is already clean.  A stream is clean whenever its buffer is empty.  For
+example, an unbuffered stream is always clean.  An input stream that is
+at end-of-file is clean.  A line-buffered stream is clean when the last
+character output was a newline.  However, a just-opened input stream
+might not be clean, as its input buffer might not be empty.
+
+There is one case in which cleaning a stream is impossible on most
+systems.  This is when the stream is doing input from a file that is not
+random-access.  Such streams typically read ahead, and when the file is
+not random access, there is no way to give back the excess data already
+read.  When an input stream reads from a random-access file,
+@code{fflush} does clean the stream, but leaves the file pointer at an
+unpredictable place; you must set the file pointer before doing any
+further I/O.
+
+Closing an output-only stream also does @code{fflush}, so this is a
+valid way of cleaning an output stream.
+
+You need not clean a stream before using its descriptor for control
+operations such as setting terminal modes; these operations don't affect
+the file position and are not affected by it.  You can use any
+descriptor for these operations, and all channels are affected
+simultaneously.  However, text already ``output'' to a stream but still
+buffered by the stream will be subject to the new terminal modes when
+subsequently flushed.  To make sure ``past'' output is covered by the
+terminal settings that were in effect at the time, flush the output
+streams for that terminal before setting the modes.  @xref{Terminal
+Modes}.
+
+@node Scatter-Gather
+@section Fast Scatter-Gather I/O
+@cindex scatter-gather
+
+Some applications may need to read or write data to multiple buffers,
+which are separated in memory.  Although this can be done easily enough
+with multiple calls to @code{read} and @code{write}, it is inefficient
+because there is overhead associated with each kernel call.
+
+Instead, many platforms provide special high-speed primitives to perform
+these @dfn{scatter-gather} operations in a single kernel call.  @Theglibc{}
+will provide an emulation on any system that lacks these
+primitives, so they are not a portability threat.  They are defined in
+@code{sys/uio.h}.
+
+These functions are controlled with arrays of @code{iovec} structures,
+which describe the location and size of each buffer.
+
+@deftp {Data Type} {struct iovec}
+@standards{BSD, sys/uio.h}
+
+The @code{iovec} structure describes a buffer.  It contains two fields:
+
+@table @code
+
+@item void *iov_base
+Contains the address of a buffer.
+
+@item size_t iov_len
+Contains the length of the buffer.
+
+@end table
+@end deftp
+
+@deftypefun ssize_t readv (int @var{filedes}, const struct iovec *@var{vector}, int @var{count})
+@standards{BSD, sys/uio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c The fallback sysdeps/posix implementation, used even on GNU/Linux
+@c with old kernels that lack a full readv/writev implementation, may
+@c malloc the buffer into which data is read, if the total read size is
+@c too large for alloca.
+
+The @code{readv} function reads data from @var{filedes} and scatters it
+into the buffers described in @var{vector}, which is taken to be
+@var{count} structures long.  As each buffer is filled, data is sent to the
+next.
+
+Note that @code{readv} is not guaranteed to fill all the buffers.
+It may stop at any point, for the same reasons @code{read} would.
+
+The return value is a count of bytes (@emph{not} buffers) read, @math{0}
+indicating end-of-file, or @math{-1} indicating an error.  The possible
+errors are the same as in @code{read}.
+
+@end deftypefun
+
+@deftypefun ssize_t writev (int @var{filedes}, const struct iovec *@var{vector}, int @var{count})
+@standards{BSD, sys/uio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c The fallback sysdeps/posix implementation, used even on GNU/Linux
+@c with old kernels that lack a full readv/writev implementation, may
+@c malloc the buffer from which data is written, if the total write size
+@c is too large for alloca.
+
+The @code{writev} function gathers data from the buffers described in
+@var{vector}, which is taken to be @var{count} structures long, and writes
+them to @code{filedes}.  As each buffer is written, it moves on to the
+next.
+
+Like @code{readv}, @code{writev} may stop midstream under the same
+conditions @code{write} would.
+
+The return value is a count of bytes written, or @math{-1} indicating an
+error.  The possible errors are the same as in @code{write}.
+
+@end deftypefun
+
+@deftypefun ssize_t preadv (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off_t @var{offset})
+@standards{BSD, sys/uio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux 3.2 for all architectures but microblaze
+@c (which was added on 3.15).  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls pread, and it is now a syscall on all
+@c targets.
+
+This function is similar to the @code{readv} function, with the difference
+it adds an extra @var{offset} parameter of type @code{off_t} similar to
+@code{pread}.  The data is read from the file starting at position
+@var{offset}.  The position of the file descriptor itself is not affected
+by the operation.  The value is the same as before the call.
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@code{preadv} function is in fact @code{preadv64} and the type
+@code{off_t} has 64 bits, which makes it possible to handle files up to
+@twoexp{63} bytes in length.
+
+The return value is a count of bytes (@emph{not} buffers) read, @math{0}
+indicating end-of-file, or @math{-1} indicating an error.  The possible
+errors are the same as in @code{readv} and @code{pread}.
+@end deftypefun
+
+@deftypefun ssize_t preadv64 (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off64_t @var{offset})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux 3.2 for all architectures but microblaze
+@c (which was added on 3.15).  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls pread64, and it is now a syscall on all
+@c targets.
+
+This function is similar to the @code{preadv} function with the difference
+is that the @var{offset} parameter is of type @code{off64_t} instead of
+@code{off_t}.  It makes it possible on 32 bit machines to address
+files larger than @twoexp{31} bytes and up to @twoexp{63} bytes.  The
+file descriptor @code{filedes} must be opened using @code{open64} since
+otherwise the large offsets possible with @code{off64_t} will lead to
+errors with a descriptor in small file mode.
+
+When the source file is compiled using @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine this function is actually available under the name
+@code{preadv} and so transparently replaces the 32 bit interface.
+@end deftypefun
+
+@deftypefun ssize_t pwritev (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off_t @var{offset})
+@standards{BSD, sys/uio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux 3.2 for all architectures but microblaze
+@c (which was added on 3.15).  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls pwrite, and it is now a syscall on all
+@c targets.
+
+This function is similar to the @code{writev} function, with the difference
+it adds an extra @var{offset} parameter of type @code{off_t} similar to
+@code{pwrite}.  The data is written to the file starting at position
+@var{offset}.  The position of the file descriptor itself is not affected
+by the operation.  The value is the same as before the call.
+
+However, on Linux, if a file is opened with @code{O_APPEND},  @code{pwrite}
+appends data to the end of the file, regardless of the value of
+@code{offset}.
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@code{pwritev} function is in fact @code{pwritev64} and the type
+@code{off_t} has 64 bits, which makes it possible to handle files up to
+@twoexp{63} bytes in length.
+
+The return value is a count of bytes (@emph{not} buffers) written, @math{0}
+indicating end-of-file, or @math{-1} indicating an error.  The possible
+errors are the same as in @code{writev} and @code{pwrite}.
+@end deftypefun
+
+@deftypefun ssize_t pwritev64 (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off64_t @var{offset})
+@standards{BSD, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux 3.2 for all architectures but microblaze
+@c (which was added on 3.15).  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls pwrite64, and it is now a syscall on all
+@c targets.
+
+This function is similar to the @code{pwritev} function with the difference
+is that the @var{offset} parameter is of type @code{off64_t} instead of
+@code{off_t}.  It makes it possible on 32 bit machines to address
+files larger than @twoexp{31} bytes and up to @twoexp{63} bytes.  The
+file descriptor @code{filedes} must be opened using @code{open64} since
+otherwise the large offsets possible with @code{off64_t} will lead to
+errors with a descriptor in small file mode.
+
+When the source file is compiled using @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine this function is actually available under the name
+@code{pwritev} and so transparently replaces the 32 bit interface.
+@end deftypefun
+
+@deftypefun ssize_t preadv2 (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off_t @var{offset}, int @var{flags})
+@standards{GNU, sys/uio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux v4.6.  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls preadv.
+
+This function is similar to the @code{preadv} function, with the
+difference it adds an extra @var{flags} parameter of type @code{int}.
+Additionally, if @var{offset} is @math{-1}, the current file position
+is used and updated (like the @code{readv} function).
+
+The supported @var{flags} are dependent of the underlying system.  For
+Linux it supports:
+
+@vtable @code
+@item RWF_HIPRI
+High priority request.  This adds a flag that tells the file system that
+this is a high priority request for which it is worth to poll the hardware.
+The flag is purely advisory and can be ignored if not supported.  The
+@var{fd} must be opened using @code{O_DIRECT}.
+
+@item RWF_DSYNC
+Per-IO synchronization as if the file was opened with @code{O_DSYNC} flag.
+
+@item RWF_SYNC
+Per-IO synchronization as if the file was opened with @code{O_SYNC} flag.
+
+@item RWF_NOWAIT
+Use nonblocking mode for this operation; that is, this call to @code{preadv2}
+will fail and set @code{errno} to @code{EAGAIN} if the operation would block.
+
+@item RWF_APPEND
+Per-IO synchronization as if the file was opened with @code{O_APPEND} flag.
+@end vtable
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@code{preadv2} function is in fact @code{preadv64v2} and the type
+@code{off_t} has 64 bits, which makes it possible to handle files up to
+@twoexp{63} bytes in length.
+
+The return value is a count of bytes (@emph{not} buffers) read, @math{0}
+indicating end-of-file, or @math{-1} indicating an error.  The possible
+errors are the same as in @code{preadv} with the addition of:
+
+@table @code
+
+@item EOPNOTSUPP
+
+@c The default sysdeps/posix code will return it for any flags value
+@c different than 0.
+An unsupported @var{flags} was used.
+
+@end table
+
+@end deftypefun
+
+@deftypefun ssize_t preadv64v2 (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off64_t @var{offset}, int @var{flags})
+@standards{GNU, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux v4.6.  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls preadv.
+
+This function is similar to the @code{preadv2} function with the difference
+is that the @var{offset} parameter is of type @code{off64_t} instead of
+@code{off_t}.  It makes it possible on 32 bit machines to address
+files larger than @twoexp{31} bytes and up to @twoexp{63} bytes.  The
+file descriptor @code{filedes} must be opened using @code{open64} since
+otherwise the large offsets possible with @code{off64_t} will lead to
+errors with a descriptor in small file mode.
+
+When the source file is compiled using @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine this function is actually available under the name
+@code{preadv2} and so transparently replaces the 32 bit interface.
+@end deftypefun
+
+
+@deftypefun ssize_t pwritev2 (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off_t @var{offset}, int @var{flags})
+@standards{GNU, sys/uio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux v4.6.  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls pwritev.
+
+This function is similar to the @code{pwritev} function, with the
+difference it adds an extra @var{flags} parameter of type @code{int}.
+Additionally, if @var{offset} is @math{-1}, the current file position
+should is used and updated (like the @code{writev} function).
+
+The supported @var{flags} are dependent of the underlying system.  For
+Linux, the supported flags are the same as those for @code{preadv2}.
+
+When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@code{pwritev2} function is in fact @code{pwritev64v2} and the type
+@code{off_t} has 64 bits, which makes it possible to handle files up to
+@twoexp{63} bytes in length.
+
+The return value is a count of bytes (@emph{not} buffers) write, @math{0}
+indicating end-of-file, or @math{-1} indicating an error.  The possible
+errors are the same as in @code{preadv2}.
+@end deftypefun
+
+@deftypefun ssize_t pwritev64v2 (int @var{fd}, const struct iovec *@var{iov}, int @var{iovcnt}, off64_t @var{offset}, int @var{flags})
+@standards{GNU, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c This is a syscall for Linux v4.6.  The sysdeps/posix fallback emulation
+@c is also MT-Safe since it calls pwritev.
+
+This function is similar to the @code{pwritev2} function with the difference
+is that the @var{offset} parameter is of type @code{off64_t} instead of
+@code{off_t}.  It makes it possible on 32 bit machines to address
+files larger than @twoexp{31} bytes and up to @twoexp{63} bytes.  The
+file descriptor @code{filedes} must be opened using @code{open64} since
+otherwise the large offsets possible with @code{off64_t} will lead to
+errors with a descriptor in small file mode.
+
+When the source file is compiled using @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine this function is actually available under the name
+@code{pwritev2} and so transparently replaces the 32 bit interface.
+@end deftypefun
+
+@node Copying File Data
+@section Copying data between two files
+@cindex copying files
+@cindex file copy
+
+A special function is provided to copy data between two files on the
+same file system.  The system can optimize such copy operations.  This
+is particularly important on network file systems, where the data would
+otherwise have to be transferred twice over the network.
+
+Note that this function only copies file data, but not metadata such as
+file permissions or extended attributes.
+
+@deftypefun ssize_t copy_file_range (int @var{inputfd}, off64_t *@var{inputpos}, int @var{outputfd}, off64_t *@var{outputpos}, ssize_t @var{length}, unsigned int @var{flags})
+@standards{GNU, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+This function copies up to @var{length} bytes from the file descriptor
+@var{inputfd} to the file descriptor @var{outputfd}.
+
+The function can operate on both the current file position (like
+@code{read} and @code{write}) and an explicit offset (like @code{pread}
+and @code{pwrite}).  If the @var{inputpos} pointer is null, the file
+position of @var{inputfd} is used as the starting point of the copy
+operation, and the file position is advanced during it.  If
+@var{inputpos} is not null, then @code{*@var{inputpos}} is used as the
+starting point of the copy operation, and @code{*@var{inputpos}} is
+incremented by the number of copied bytes, but the file position remains
+unchanged.  Similar rules apply to @var{outputfd} and @var{outputpos}
+for the output file position.
+
+The @var{flags} argument is currently reserved and must be zero.
+
+The @code{copy_file_range} function returns the number of bytes copied.
+This can be less than the specified @var{length} in case the input file
+contains fewer remaining bytes than @var{length}, or if a read or write
+failure occurs.  The return value is zero if the end of the input file
+is encountered immediately.
+
+If no bytes can be copied, to report an error, @code{copy_file_range}
+returns the value @math{-1} and sets @code{errno}.  The table below
+lists some of the error conditions for this function.
+
+@table @code
+@item ENOSYS
+The kernel does not implement the required functionality.
+
+@item EISDIR
+At least one of the descriptors @var{inputfd} or @var{outputfd} refers
+to a directory.
+
+@item EINVAL
+At least one of the descriptors @var{inputfd} or @var{outputfd} refers
+to a non-regular, non-directory file (such as a socket or a FIFO).
+
+The input or output positions before are after the copy operations are
+outside of an implementation-defined limit.
+
+The @var{flags} argument is not zero.
+
+@item EFBIG
+The new file size would exceed the process file size limit.
+@xref{Limits on Resources}.
+
+The input or output positions before are after the copy operations are
+outside of an implementation-defined limit.  This can happen if the file
+was not opened with large file support (LFS) on 32-bit machines, and the
+copy operation would create a file which is larger than what
+@code{off_t} could represent.
+
+@item EBADF
+The argument @var{inputfd} is not a valid file descriptor open for
+reading.
+
+The argument @var{outputfd} is not a valid file descriptor open for
+writing, or @var{outputfd} has been opened with @code{O_APPEND}.
+@end table
+
+In addition, @code{copy_file_range} can fail with the error codes
+which are used by @code{read}, @code{pread}, @code{write}, and
+@code{pwrite}.
+
+The @code{copy_file_range} function is a cancellation point.  In case of
+cancellation, the input location (the file position or the value at
+@code{*@var{inputpos}}) is indeterminate.
+@end deftypefun
+
+@node Memory-mapped I/O
+@section Memory-mapped I/O
+
+On modern operating systems, it is possible to @dfn{mmap} (pronounced
+``em-map'') a file to a region of memory.  When this is done, the file can
+be accessed just like an array in the program.
+
+This is more efficient than @code{read} or @code{write}, as only the regions
+of the file that a program actually accesses are loaded.  Accesses to
+not-yet-loaded parts of the mmapped region are handled in the same way as
+swapped out pages.
+
+Since mmapped pages can be stored back to their file when physical
+memory is low, it is possible to mmap files orders of magnitude larger
+than both the physical memory @emph{and} swap space.  The only limit is
+address space.  The theoretical limit is 4GB on a 32-bit machine -
+however, the actual limit will be smaller since some areas will be
+reserved for other purposes.  If the LFS interface is used the file size
+on 32-bit systems is not limited to 2GB (offsets are signed which
+reduces the addressable area of 4GB by half); the full 64-bit are
+available.
+
+Memory mapping only works on entire pages of memory.  Thus, addresses
+for mapping must be page-aligned, and length values will be rounded up.
+To determine the default size of a page the machine uses one should use:
+
+@vindex _SC_PAGESIZE
+@smallexample
+size_t page_size = (size_t) sysconf (_SC_PAGESIZE);
+@end smallexample
+
+On some systems, mappings can use larger page sizes
+for certain files, and applications can request larger page sizes for
+anonymous mappings as well (see the @code{MAP_HUGETLB} flag below).
+
+The following functions are declared in @file{sys/mman.h}:
+
+@deftypefun {void *} mmap (void *@var{address}, size_t @var{length}, int @var{protect}, int @var{flags}, int @var{filedes}, off_t @var{offset})
+@standards{POSIX, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+The @code{mmap} function creates a new mapping, connected to bytes
+(@var{offset}) to (@var{offset} + @var{length} - 1) in the file open on
+@var{filedes}.  A new reference for the file specified by @var{filedes}
+is created, which is not removed by closing the file.
+
+@var{address} gives a preferred starting address for the mapping.
+@code{NULL} expresses no preference.  Any previous mapping at that
+address is automatically removed.  The address you give may still be
+changed, unless you use the @code{MAP_FIXED} flag.
+
+@var{protect} contains flags that control what kind of access is
+permitted.  They include @code{PROT_READ}, @code{PROT_WRITE}, and
+@code{PROT_EXEC}.  The special flag @code{PROT_NONE} reserves a region
+of address space for future use.  The @code{mprotect} function can be
+used to change the protection flags.  @xref{Memory Protection}.
+
+@var{flags} contains flags that control the nature of the map.
+One of @code{MAP_SHARED} or @code{MAP_PRIVATE} must be specified.
+
+They include:
+
+@vtable @code
+@item MAP_PRIVATE
+This specifies that writes to the region should never be written back
+to the attached file.  Instead, a copy is made for the process, and the
+region will be swapped normally if memory runs low.  No other process will
+see the changes.
+
+Since private mappings effectively revert to ordinary memory
+when written to, you must have enough virtual memory for a copy of
+the entire mmapped region if you use this mode with @code{PROT_WRITE}.
+
+@item MAP_SHARED
+This specifies that writes to the region will be written back to the
+file.  Changes made will be shared immediately with other processes
+mmaping the same file.
+
+Note that actual writing may take place at any time.  You need to use
+@code{msync}, described below, if it is important that other processes
+using conventional I/O get a consistent view of the file.
+
+@item MAP_FIXED
+This forces the system to use the exact mapping address specified in
+@var{address} and fail if it can't.
+
+@c One of these is official - the other is obviously an obsolete synonym
+@c Which is which?
+@item MAP_ANONYMOUS
+@itemx MAP_ANON
+This flag tells the system to create an anonymous mapping, not connected
+to a file.  @var{filedes} and @var{offset} are ignored, and the region is
+initialized with zeros.
+
+Anonymous maps are used as the basic primitive to extend the heap on some
+systems.  They are also useful to share data between multiple tasks
+without creating a file.
+
+On some systems using private anonymous mmaps is more efficient than using
+@code{malloc} for large blocks.  This is not an issue with @theglibc{},
+as the included @code{malloc} automatically uses @code{mmap} where appropriate.
+
+@item MAP_HUGETLB
+@standards{Linux, sys/mman.h}
+This requests that the system uses an alternative page size which is
+larger than the default page size for the mapping.  For some workloads,
+increasing the page size for large mappings improves performance because
+the system needs to handle far fewer pages.  For other workloads which
+require frequent transfer of pages between storage or different nodes,
+the decreased page granularity may cause performance problems due to the
+increased page size and larger transfers.
+
+In order to create the mapping, the system needs physically contiguous
+memory of the size of the increased page size.  As a result,
+@code{MAP_HUGETLB} mappings are affected by memory fragmentation, and
+their creation can fail even if plenty of memory is available in the
+system.
+
+Not all file systems support mappings with an increased page size.
+
+The @code{MAP_HUGETLB} flag is specific to Linux.
+
+@c There is a mechanism to select different hugepage sizes; see
+@c include/uapi/asm-generic/hugetlb_encode.h in the kernel sources.
+
+@c Linux has some other MAP_ options, which I have not discussed here.
+@c MAP_DENYWRITE, MAP_EXECUTABLE and MAP_GROWSDOWN don't seem applicable to
+@c user programs (and I don't understand the last two).  MAP_LOCKED does
+@c not appear to be implemented.
+
+@end vtable
+
+@code{mmap} returns the address of the new mapping, or
+@code{MAP_FAILED} for an error.
+
+Possible errors include:
+
+@table @code
+
+@item EINVAL
+
+Either @var{address} was unusable (because it is not a multiple of the
+applicable page size), or inconsistent @var{flags} were given.
+
+If @code{MAP_HUGETLB} was specified, the file or system does not support
+large page sizes.
+
+@item EACCES
+
+@var{filedes} was not open for the type of access specified in @var{protect}.
+
+@item ENOMEM
+
+Either there is not enough memory for the operation, or the process is
+out of address space.
+
+@item ENODEV
+
+This file is of a type that doesn't support mapping.
+
+@item ENOEXEC
+
+The file is on a filesystem that doesn't support mapping.
+
+@c On Linux, EAGAIN will appear if the file has a conflicting mandatory lock.
+@c However mandatory locks are not discussed in this manual.
+@c
+@c Similarly, ETXTBSY will occur if the MAP_DENYWRITE flag (not documented
+@c here) is used and the file is already open for writing.
+
+@end table
+
+@end deftypefun
+
+@deftypefun {void *} mmap64 (void *@var{address}, size_t @var{length}, int @var{protect}, int @var{flags}, int @var{filedes}, off64_t @var{offset})
+@standards{LFS, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c The page_shift auto detection when MMAP2_PAGE_SHIFT is -1 (it never
+@c is) would be thread-unsafe.
+The @code{mmap64} function is equivalent to the @code{mmap} function but
+the @var{offset} parameter is of type @code{off64_t}.  On 32-bit systems
+this allows the file associated with the @var{filedes} descriptor to be
+larger than 2GB.  @var{filedes} must be a descriptor returned from a
+call to @code{open64} or @code{fopen64} and @code{freopen64} where the
+descriptor is retrieved with @code{fileno}.
+
+When the sources are translated with @code{_FILE_OFFSET_BITS == 64} this
+function is actually available under the name @code{mmap}.  I.e., the
+new, extended API using 64 bit file sizes and offsets transparently
+replaces the old API.
+@end deftypefun
+
+@deftypefun int munmap (void *@var{addr}, size_t @var{length})
+@standards{POSIX, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+@code{munmap} removes any memory maps from (@var{addr}) to (@var{addr} +
+@var{length}).  @var{length} should be the length of the mapping.
+
+It is safe to unmap multiple mappings in one command, or include unmapped
+space in the range.  It is also possible to unmap only part of an existing
+mapping.  However, only entire pages can be removed.  If @var{length} is not
+an even number of pages, it will be rounded up.
+
+It returns @math{0} for success and @math{-1} for an error.
+
+One error is possible:
+
+@table @code
+
+@item EINVAL
+The memory range given was outside the user mmap range or wasn't page
+aligned.
+
+@end table
+
+@end deftypefun
+
+@deftypefun int msync (void *@var{address}, size_t @var{length}, int @var{flags})
+@standards{POSIX, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+When using shared mappings, the kernel can write the file at any time
+before the mapping is removed.  To be certain data has actually been
+written to the file and will be accessible to non-memory-mapped I/O, it
+is necessary to use this function.
+
+It operates on the region @var{address} to (@var{address} + @var{length}).
+It may be used on part of a mapping or multiple mappings, however the
+region given should not contain any unmapped space.
+
+@var{flags} can contain some options:
+
+@vtable @code
+
+@item MS_SYNC
+
+This flag makes sure the data is actually written @emph{to disk}.
+Normally @code{msync} only makes sure that accesses to a file with
+conventional I/O reflect the recent changes.
+
+@item MS_ASYNC
+
+This tells @code{msync} to begin the synchronization, but not to wait for
+it to complete.
+
+@c Linux also has MS_INVALIDATE, which I don't understand.
+
+@end vtable
+
+@code{msync} returns @math{0} for success and @math{-1} for
+error.  Errors include:
+
+@table @code
+
+@item EINVAL
+An invalid region was given, or the @var{flags} were invalid.
+
+@item EFAULT
+There is no existing mapping in at least part of the given region.
+
+@end table
+
+@end deftypefun
+
+@deftypefun {void *} mremap (void *@var{address}, size_t @var{length}, size_t @var{new_length}, int @var{flag})
+@standards{GNU, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+This function can be used to change the size of an existing memory
+area. @var{address} and @var{length} must cover a region entirely mapped
+in the same @code{mmap} statement.  A new mapping with the same
+characteristics will be returned with the length @var{new_length}.
+
+One option is possible, @code{MREMAP_MAYMOVE}.  If it is given in
+@var{flags}, the system may remove the existing mapping and create a new
+one of the desired length in another location.
+
+The address of the resulting mapping is returned, or @math{-1}.  Possible
+error codes include:
+
+@table @code
+
+@item EFAULT
+There is no existing mapping in at least part of the original region, or
+the region covers two or more distinct mappings.
+
+@item EINVAL
+The address given is misaligned or inappropriate.
+
+@item EAGAIN
+The region has pages locked, and if extended it would exceed the
+process's resource limit for locked pages.  @xref{Limits on Resources}.
+
+@item ENOMEM
+The region is private writable, and insufficient virtual memory is
+available to extend it.  Also, this error will occur if
+@code{MREMAP_MAYMOVE} is not given and the extension would collide with
+another mapped region.
+
+@end table
+@end deftypefun
+
+This function is only available on a few systems.  Except for performing
+optional optimizations one should not rely on this function.
+
+Not all file descriptors may be mapped.  Sockets, pipes, and most devices
+only allow sequential access and do not fit into the mapping abstraction.
+In addition, some regular files may not be mmapable, and older kernels may
+not support mapping at all.  Thus, programs using @code{mmap} should
+have a fallback method to use should it fail. @xref{Mmap,,,standards,GNU
+Coding Standards}.
+
+@deftypefun int madvise (void *@var{addr}, size_t @var{length}, int @var{advice})
+@standards{POSIX, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+This function can be used to provide the system with @var{advice} about
+the intended usage patterns of the memory region starting at @var{addr}
+and extending @var{length} bytes.
+
+The valid BSD values for @var{advice} are:
+
+@vtable @code
+
+@item MADV_NORMAL
+The region should receive no further special treatment.
+
+@item MADV_RANDOM
+The region will be accessed via random page references.  The kernel
+should page-in the minimal number of pages for each page fault.
+
+@item MADV_SEQUENTIAL
+The region will be accessed via sequential page references.  This
+may cause the kernel to aggressively read-ahead, expecting further
+sequential references after any page fault within this region.
+
+@item MADV_WILLNEED
+The region will be needed.  The pages within this region may
+be pre-faulted in by the kernel.
+
+@item MADV_DONTNEED
+The region is no longer needed.  The kernel may free these pages,
+causing any changes to the pages to be lost, as well as swapped
+out pages to be discarded.
+
+@item MADV_HUGEPAGE
+@standards{Linux, sys/mman.h}
+Indicate that it is beneficial to increase the page size for this
+mapping.  This can improve performance for larger mappings because the
+system needs to handle far fewer pages.  However, if parts of the
+mapping are frequently transferred between storage or different nodes,
+performance may suffer because individual transfers can become
+substantially larger due to the increased page size.
+
+This flag is specific to Linux.
+
+@item MADV_NOHUGEPAGE
+Undo the effect of a previous @code{MADV_HUGEPAGE} advice.  This flag
+is specific to Linux.
+
+@end vtable
+
+The POSIX names are slightly different, but with the same meanings:
+
+@vtable @code
+
+@item POSIX_MADV_NORMAL
+This corresponds with BSD's @code{MADV_NORMAL}.
+
+@item POSIX_MADV_RANDOM
+This corresponds with BSD's @code{MADV_RANDOM}.
+
+@item POSIX_MADV_SEQUENTIAL
+This corresponds with BSD's @code{MADV_SEQUENTIAL}.
+
+@item POSIX_MADV_WILLNEED
+This corresponds with BSD's @code{MADV_WILLNEED}.
+
+@item POSIX_MADV_DONTNEED
+This corresponds with BSD's @code{MADV_DONTNEED}.
+
+@end vtable
+
+@code{madvise} returns @math{0} for success and @math{-1} for
+error.  Errors include:
+@table @code
+
+@item EINVAL
+An invalid region was given, or the @var{advice} was invalid.
+
+@item EFAULT
+There is no existing mapping in at least part of the given region.
+
+@end table
+@end deftypefun
+
+@deftypefn Function int shm_open (const char *@var{name}, int @var{oflag}, mode_t @var{mode})
+@standards{POSIX, sys/mman.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asuinit{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c shm_open @mtslocale @asuinit @ascuheap @asulock @aculock @acsmem @acsfd
+@c  libc_once(where_is_shmfs) @mtslocale @asuinit @ascuheap @asulock @aculock @acsmem @acsfd
+@c   where_is_shmfs @mtslocale @ascuheap @asulock @aculock @acsmem @acsfd
+@c    statfs dup ok
+@c    setmntent dup @ascuheap @asulock @acsmem @acsfd @aculock
+@c    getmntent_r dup @mtslocale @ascuheap @aculock @acsmem [no @asucorrupt @acucorrupt; exclusive stream]
+@c    strcmp dup ok
+@c    strlen dup ok
+@c    malloc dup @ascuheap @acsmem
+@c    mempcpy dup ok
+@c    endmntent dup @ascuheap @asulock @aculock @acsmem @acsfd
+@c  strlen dup ok
+@c  strchr dup ok
+@c  mempcpy dup ok
+@c  open dup @acsfd
+@c  fcntl dup ok
+@c  close dup @acsfd
+
+This function returns a file descriptor that can be used to allocate shared
+memory via mmap.  Unrelated processes can use same @var{name} to create or
+open existing shared memory objects.
+
+A @var{name} argument specifies the shared memory object to be opened.
+In @theglibc{} it must be a string smaller than @code{NAME_MAX} bytes starting
+with an optional slash but containing no other slashes.
+
+The semantics of @var{oflag} and @var{mode} arguments is same as in @code{open}.
+
+@code{shm_open} returns the file descriptor on success or @math{-1} on error.
+On failure @code{errno} is set.
+@end deftypefn
+
+@deftypefn Function int shm_unlink (const char *@var{name})
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asuinit{} @ascuheap{} @asulock{}}@acunsafe{@aculock{} @acsmem{} @acsfd{}}}
+@c shm_unlink @mtslocale @asuinit @ascuheap @asulock @aculock @acsmem @acsfd
+@c  libc_once(where_is_shmfs) dup @mtslocale @asuinit @ascuheap @asulock @aculock @acsmem @acsfd
+@c  strlen dup ok
+@c  strchr dup ok
+@c  mempcpy dup ok
+@c  unlink dup ok
+
+This function is the inverse of @code{shm_open} and removes the object with
+the given @var{name} previously created by @code{shm_open}.
+
+@code{shm_unlink} returns @math{0} on success or @math{-1} on error.
+On failure @code{errno} is set.
+@end deftypefn
+
+@deftypefun int memfd_create (const char *@var{name}, unsigned int @var{flags})
+@standards{Linux, sys/mman.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{@acsfd{}}}
+The @code{memfd_create} function returns a file descriptor which can be
+used to create memory mappings using the @code{mmap} function.  It is
+similar to the @code{shm_open} function in the sense that these mappings
+are not backed by actual files.  However, the descriptor returned by
+@code{memfd_create} does not correspond to a named object; the
+@var{name} argument is used for debugging purposes only (e.g., will
+appear in @file{/proc}), and separate invocations of @code{memfd_create}
+with the same @var{name} will not return descriptors for the same region
+of memory.  The descriptor can also be used to create alias mappings
+within the same process.
+
+The descriptor initially refers to a zero-length file.  Before mappings
+can be created which are backed by memory, the file size needs to be
+increased with the @code{ftruncate} function.  @xref{File Size}.
+
+The @var{flags} argument can be a combination of the following flags:
+
+@vtable @code
+@item MFD_CLOEXEC
+@standards{Linux, sys/mman.h}
+The descriptor is created with the @code{O_CLOEXEC} flag.
+
+@item MFD_ALLOW_SEALING
+@standards{Linux, sys/mman.h}
+The descriptor supports the addition of seals using the @code{fcntl}
+function.
+
+@item MFD_HUGETLB
+@standards{Linux, sys/mman.h}
+This requests that mappings created using the returned file descriptor
+use a larger page size.  See @code{MAP_HUGETLB} above for details.
+
+This flag is incompatible with @code{MFD_ALLOW_SEALING}.
+@end vtable
+
+@code{memfd_create} returns a file descriptor on success, and @math{-1}
+on failure.
+
+The following @code{errno} error conditions are defined for this
+function:
+
+@table @code
+@item EINVAL
+An invalid combination is specified in @var{flags}, or @var{name} is
+too long.
+
+@item EFAULT
+The @var{name} argument does not point to a string.
+
+@item EMFILE
+The operation would exceed the file descriptor limit for this process.
+
+@item ENFILE
+The operation would exceed the system-wide file descriptor limit.
+
+@item ENOMEM
+There is not enough memory for the operation.
+@end table
+@end deftypefun
+
+@node Waiting for I/O
+@section Waiting for Input or Output
+@cindex waiting for input or output
+@cindex multiplexing input
+@cindex input from multiple files
+
+Sometimes a program needs to accept input on multiple input channels
+whenever input arrives.  For example, some workstations may have devices
+such as a digitizing tablet, function button box, or dial box that are
+connected via normal asynchronous serial interfaces; good user interface
+style requires responding immediately to input on any device.  Another
+example is a program that acts as a server to several other processes
+via pipes or sockets.
+
+You cannot normally use @code{read} for this purpose, because this
+blocks the program until input is available on one particular file
+descriptor; input on other channels won't wake it up.  You could set
+nonblocking mode and poll each file descriptor in turn, but this is very
+inefficient.
+
+A better solution is to use the @code{select} function.  This blocks the
+program until input or output is ready on a specified set of file
+descriptors, or until a timer expires, whichever comes first.  This
+facility is declared in the header file @file{sys/types.h}.
+@pindex sys/types.h
+
+In the case of a server socket (@pxref{Listening}), we say that
+``input'' is available when there are pending connections that could be
+accepted (@pxref{Accepting Connections}).  @code{accept} for server
+sockets blocks and interacts with @code{select} just as @code{read} does
+for normal input.
+
+@cindex file descriptor sets, for @code{select}
+The file descriptor sets for the @code{select} function are specified
+as @code{fd_set} objects.  Here is the description of the data type
+and some macros for manipulating these objects.
+
+@deftp {Data Type} fd_set
+@standards{BSD, sys/types.h}
+The @code{fd_set} data type represents file descriptor sets for the
+@code{select} function.  It is actually a bit array.
+@end deftp
+
+@deftypevr Macro int FD_SETSIZE
+@standards{BSD, sys/types.h}
+The value of this macro is the maximum number of file descriptors that a
+@code{fd_set} object can hold information about.  On systems with a
+fixed maximum number, @code{FD_SETSIZE} is at least that number.  On
+some systems, including GNU, there is no absolute limit on the number of
+descriptors open, but this macro still has a constant value which
+controls the number of bits in an @code{fd_set}; if you get a file
+descriptor with a value as high as @code{FD_SETSIZE}, you cannot put
+that descriptor into an @code{fd_set}.
+@end deftypevr
+
+@deftypefn Macro void FD_ZERO (fd_set *@var{set})
+@standards{BSD, sys/types.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:set}}@assafe{}@acsafe{}}
+This macro initializes the file descriptor set @var{set} to be the
+empty set.
+@end deftypefn
+
+@deftypefn Macro void FD_SET (int @var{filedes}, fd_set *@var{set})
+@standards{BSD, sys/types.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:set}}@assafe{}@acsafe{}}
+@c Setting a bit isn't necessarily atomic, so there's a potential race
+@c here if set is not used exclusively.
+This macro adds @var{filedes} to the file descriptor set @var{set}.
+
+The @var{filedes} parameter must not have side effects since it is
+evaluated more than once.
+@end deftypefn
+
+@deftypefn Macro void FD_CLR (int @var{filedes}, fd_set *@var{set})
+@standards{BSD, sys/types.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:set}}@assafe{}@acsafe{}}
+@c Setting a bit isn't necessarily atomic, so there's a potential race
+@c here if set is not used exclusively.
+This macro removes @var{filedes} from the file descriptor set @var{set}.
+
+The @var{filedes} parameter must not have side effects since it is
+evaluated more than once.
+@end deftypefn
+
+@deftypefn Macro int FD_ISSET (int @var{filedes}, const fd_set *@var{set})
+@standards{BSD, sys/types.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:set}}@assafe{}@acsafe{}}
+This macro returns a nonzero value (true) if @var{filedes} is a member
+of the file descriptor set @var{set}, and zero (false) otherwise.
+
+The @var{filedes} parameter must not have side effects since it is
+evaluated more than once.
+@end deftypefn
+
+Next, here is the description of the @code{select} function itself.
+
+@deftypefun int select (int @var{nfds}, fd_set *@var{read-fds}, fd_set *@var{write-fds}, fd_set *@var{except-fds}, struct timeval *@var{timeout})
+@standards{BSD, sys/types.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:read-fds} @mtsrace{:write-fds} @mtsrace{:except-fds}}@assafe{}@acsafe{}}
+@c The select syscall is preferred, but pselect6 may be used instead,
+@c which requires converting timeout to a timespec and back.  The
+@c conversions are not atomic.
+The @code{select} function blocks the calling process until there is
+activity on any of the specified sets of file descriptors, or until the
+timeout period has expired.
+
+The file descriptors specified by the @var{read-fds} argument are
+checked to see if they are ready for reading; the @var{write-fds} file
+descriptors are checked to see if they are ready for writing; and the
+@var{except-fds} file descriptors are checked for exceptional
+conditions.  You can pass a null pointer for any of these arguments if
+you are not interested in checking for that kind of condition.
+
+A file descriptor is considered ready for reading if a @code{read}
+call will not block.  This usually includes the read offset being at
+the end of the file or there is an error to report.  A server socket
+is considered ready for reading if there is a pending connection which
+can be accepted with @code{accept}; @pxref{Accepting Connections}.  A
+client socket is ready for writing when its connection is fully
+established; @pxref{Connecting}.
+
+``Exceptional conditions'' does not mean errors---errors are reported
+immediately when an erroneous system call is executed, and do not
+constitute a state of the descriptor.  Rather, they include conditions
+such as the presence of an urgent message on a socket.  (@xref{Sockets},
+for information on urgent messages.)
+
+The @code{select} function checks only the first @var{nfds} file
+descriptors.  The usual thing is to pass @code{FD_SETSIZE} as the value
+of this argument.
+
+The @var{timeout} specifies the maximum time to wait.  If you pass a
+null pointer for this argument, it means to block indefinitely until
+one of the file descriptors is ready.  Otherwise, you should provide
+the time in @code{struct timeval} format; see @ref{Time Types}.
+Specify zero as the time (a @code{struct timeval} containing all
+zeros) if you want to find out which descriptors are ready without
+waiting if none are ready.
+
+The normal return value from @code{select} is the total number of ready file
+descriptors in all of the sets.  Each of the argument sets is overwritten
+with information about the descriptors that are ready for the corresponding
+operation.  Thus, to see if a particular descriptor @var{desc} has input,
+use @code{FD_ISSET (@var{desc}, @var{read-fds})} after @code{select} returns.
+
+If @code{select} returns because the timeout period expires, it returns
+a value of zero.
+
+Any signal will cause @code{select} to return immediately.  So if your
+program uses signals, you can't rely on @code{select} to keep waiting
+for the full time specified.  If you want to be sure of waiting for a
+particular amount of time, you must check for @code{EINTR} and repeat
+the @code{select} with a newly calculated timeout based on the current
+time.  See the example below.  See also @ref{Interrupted Primitives}.
+
+If an error occurs, @code{select} returns @code{-1} and does not modify
+the argument file descriptor sets.  The following @code{errno} error
+conditions are defined for this function:
+
+@table @code
+@item EBADF
+One of the file descriptor sets specified an invalid file descriptor.
+
+@item EINTR
+The operation was interrupted by a signal.  @xref{Interrupted Primitives}.
+
+@item EINVAL
+The @var{timeout} argument is invalid; one of the components is negative
+or too large.
+@end table
+@end deftypefun
+
+@strong{Portability Note:}  The @code{select} function is a BSD Unix
+feature.
+
+Here is an example showing how you can use @code{select} to establish a
+timeout period for reading from a file descriptor.  The @code{input_timeout}
+function blocks the calling process until input is available on the
+file descriptor, or until the timeout period expires.
+
+@smallexample
+@include select.c.texi
+@end smallexample
+
+There is another example showing the use of @code{select} to multiplex
+input from multiple sockets in @ref{Server Example}.
+
+
+@node Synchronizing I/O
+@section Synchronizing I/O operations
+
+@cindex synchronizing
+In most modern operating systems, the normal I/O operations are not
+executed synchronously.  I.e., even if a @code{write} system call
+returns, this does not mean the data is actually written to the media,
+e.g., the disk.
+
+In situations where synchronization points are necessary, you can use
+special functions which ensure that all operations finish before
+they return.
+
+@deftypefun void sync (void)
+@standards{X/Open, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+A call to this function will not return as long as there is data which
+has not been written to the device.  All dirty buffers in the kernel will
+be written and so an overall consistent system can be achieved (if no
+other process in parallel writes data).
+
+A prototype for @code{sync} can be found in @file{unistd.h}.
+@end deftypefun
+
+Programs more often want to ensure that data written to a given file is
+committed, rather than all data in the system.  For this, @code{sync} is overkill.
+
+
+@deftypefun int fsync (int @var{fildes})
+@standards{POSIX, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{fsync} function can be used to make sure all data associated with
+the open file @var{fildes} is written to the device associated with the
+descriptor.  The function call does not return unless all actions have
+finished.
+
+A prototype for @code{fsync} can be found in @file{unistd.h}.
+
+This function is a cancellation point in multi-threaded programs.  This
+is a problem if the thread allocates some resources (like memory, file
+descriptors, semaphores or whatever) at the time @code{fsync} is
+called.  If the thread gets canceled these resources stay allocated
+until the program ends.  To avoid this, calls to @code{fsync} should be
+protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+
+The return value of the function is zero if no error occurred.  Otherwise
+it is @math{-1} and the global variable @code{errno} is set to the
+following values:
+@table @code
+@item EBADF
+The descriptor @var{fildes} is not valid.
+
+@item EINVAL
+No synchronization is possible since the system does not implement this.
+@end table
+@end deftypefun
+
+Sometimes it is not even necessary to write all data associated with a
+file descriptor.  E.g., in database files which do not change in size it
+is enough to write all the file content data to the device.
+Meta-information, like the modification time etc., are not that important
+and leaving such information uncommitted does not prevent a successful
+recovery of the file in case of a problem.
+
+@deftypefun int fdatasync (int @var{fildes})
+@standards{POSIX, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+When a call to the @code{fdatasync} function returns, it is ensured
+that all of the file data is written to the device.  For all pending I/O
+operations, the parts guaranteeing data integrity finished.
+
+Not all systems implement the @code{fdatasync} operation.  On systems
+missing this functionality @code{fdatasync} is emulated by a call to
+@code{fsync} since the performed actions are a superset of those
+required by @code{fdatasync}.
+
+The prototype for @code{fdatasync} is in @file{unistd.h}.
+
+The return value of the function is zero if no error occurred.  Otherwise
+it is @math{-1} and the global variable @code{errno} is set to the
+following values:
+@table @code
+@item EBADF
+The descriptor @var{fildes} is not valid.
+
+@item EINVAL
+No synchronization is possible since the system does not implement this.
+@end table
+@end deftypefun
+
+
+@node Asynchronous I/O
+@section Perform I/O Operations in Parallel
+
+The POSIX.1b standard defines a new set of I/O operations which can
+significantly reduce the time an application spends waiting for I/O.  The
+new functions allow a program to initiate one or more I/O operations and
+then immediately resume normal work while the I/O operations are
+executed in parallel.  This functionality is available if the
+@file{unistd.h} file defines the symbol @code{_POSIX_ASYNCHRONOUS_IO}.
+
+These functions are part of the library with realtime functions named
+@file{librt}.  They are not actually part of the @file{libc} binary.
+The implementation of these functions can be done using support in the
+kernel (if available) or using an implementation based on threads at
+userlevel.  In the latter case it might be necessary to link applications
+with the thread library @file{libpthread} in addition to @file{librt}.
+
+All AIO operations operate on files which were opened previously.  There
+might be arbitrarily many operations running for one file.  The
+asynchronous I/O operations are controlled using a data structure named
+@code{struct aiocb} (@dfn{AIO control block}).  It is defined in
+@file{aio.h} as follows.
+
+@deftp {Data Type} {struct aiocb}
+@standards{POSIX.1b, aio.h}
+The POSIX.1b standard mandates that the @code{struct aiocb} structure
+contains at least the members described in the following table.  There
+might be more elements which are used by the implementation, but
+depending upon these elements is not portable and is highly deprecated.
+
+@table @code
+@item int aio_fildes
+This element specifies the file descriptor to be used for the
+operation.  It must be a legal descriptor, otherwise the operation will
+fail.
+
+The device on which the file is opened must allow the seek operation.
+I.e., it is not possible to use any of the AIO operations on devices
+like terminals where an @code{lseek} call would lead to an error.
+
+@item off_t aio_offset
+This element specifies the offset in the file at which the operation (input
+or output) is performed.  Since the operations are carried out in arbitrary
+order and more than one operation for one file descriptor can be
+started, one cannot expect a current read/write position of the file
+descriptor.
+
+@item volatile void *aio_buf
+This is a pointer to the buffer with the data to be written or the place
+where the read data is stored.
+
+@item size_t aio_nbytes
+This element specifies the length of the buffer pointed to by @code{aio_buf}.
+
+@item int aio_reqprio
+If the platform has defined @code{_POSIX_PRIORITIZED_IO} and
+@code{_POSIX_PRIORITY_SCHEDULING}, the AIO requests are
+processed based on the current scheduling priority.  The
+@code{aio_reqprio} element can then be used to lower the priority of the
+AIO operation.
+
+@item struct sigevent aio_sigevent
+This element specifies how the calling process is notified once the
+operation terminates.  If the @code{sigev_notify} element is
+@code{SIGEV_NONE}, no notification is sent.  If it is @code{SIGEV_SIGNAL},
+the signal determined by @code{sigev_signo} is sent.  Otherwise,
+@code{sigev_notify} must be @code{SIGEV_THREAD}.  In this case, a thread
+is created which starts executing the function pointed to by
+@code{sigev_notify_function}.
+
+@item int aio_lio_opcode
+This element is only used by the @code{lio_listio} and
+@code{lio_listio64} functions.  Since these functions allow an
+arbitrary number of operations to start at once, and each operation can be
+input or output (or nothing), the information must be stored in the
+control block.  The possible values are:
+
+@vtable @code
+@item LIO_READ
+Start a read operation.  Read from the file at position
+@code{aio_offset} and store the next @code{aio_nbytes} bytes in the
+buffer pointed to by @code{aio_buf}.
+
+@item LIO_WRITE
+Start a write operation.  Write @code{aio_nbytes} bytes starting at
+@code{aio_buf} into the file starting at position @code{aio_offset}.
+
+@item LIO_NOP
+Do nothing for this control block.  This value is useful sometimes when
+an array of @code{struct aiocb} values contains holes, i.e., some of the
+values must not be handled although the whole array is presented to the
+@code{lio_listio} function.
+@end vtable
+@end table
+
+When the sources are compiled using @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine, this type is in fact @code{struct aiocb64}, since the LFS
+interface transparently replaces the @code{struct aiocb} definition.
+@end deftp
+
+For use with the AIO functions defined in the LFS, there is a similar type
+defined which replaces the types of the appropriate members with larger
+types but otherwise is equivalent to @code{struct aiocb}.  Particularly,
+all member names are the same.
+
+@deftp {Data Type} {struct aiocb64}
+@standards{POSIX.1b, aio.h}
+@table @code
+@item int aio_fildes
+This element specifies the file descriptor which is used for the
+operation.  It must be a legal descriptor since otherwise the operation
+fails for obvious reasons.
+
+The device on which the file is opened must allow the seek operation.
+I.e., it is not possible to use any of the AIO operations on devices
+like terminals where an @code{lseek} call would lead to an error.
+
+@item off64_t aio_offset
+This element specifies at which offset in the file the operation (input
+or output) is performed.  Since the operation are carried in arbitrary
+order and more than one operation for one file descriptor can be
+started, one cannot expect a current read/write position of the file
+descriptor.
+
+@item volatile void *aio_buf
+This is a pointer to the buffer with the data to be written or the place
+where the read data is stored.
+
+@item size_t aio_nbytes
+This element specifies the length of the buffer pointed to by @code{aio_buf}.
+
+@item int aio_reqprio
+If for the platform @code{_POSIX_PRIORITIZED_IO} and
+@code{_POSIX_PRIORITY_SCHEDULING} are defined the AIO requests are
+processed based on the current scheduling priority.  The
+@code{aio_reqprio} element can then be used to lower the priority of the
+AIO operation.
+
+@item struct sigevent aio_sigevent
+This element specifies how the calling process is notified once the
+operation terminates.  If the @code{sigev_notify} element is
+@code{SIGEV_NONE} no notification is sent.  If it is @code{SIGEV_SIGNAL},
+the signal determined by @code{sigev_signo} is sent.  Otherwise,
+@code{sigev_notify} must be @code{SIGEV_THREAD} in which case a thread
+is created which starts executing the function pointed to by
+@code{sigev_notify_function}.
+
+@item int aio_lio_opcode
+This element is only used by the @code{lio_listio} and
+@code{lio_listio64} functions.  Since these functions allow an
+arbitrary number of operations to start at once, and since each operation can be
+input or output (or nothing), the information must be stored in the
+control block.  See the description of @code{struct aiocb} for a description
+of the possible values.
+@end table
+
+When the sources are compiled using @code{_FILE_OFFSET_BITS == 64} on a
+32 bit machine, this type is available under the name @code{struct
+aiocb64}, since the LFS transparently replaces the old interface.
+@end deftp
+
+@menu
+* Asynchronous Reads/Writes::    Asynchronous Read and Write Operations.
+* Status of AIO Operations::     Getting the Status of AIO Operations.
+* Synchronizing AIO Operations:: Getting into a consistent state.
+* Cancel AIO Operations::        Cancellation of AIO Operations.
+* Configuration of AIO::         How to optimize the AIO implementation.
+@end menu
+
+@node Asynchronous Reads/Writes
+@subsection Asynchronous Read and Write Operations
+
+@deftypefun int aio_read (struct aiocb *@var{aiocbp})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+@c Calls aio_enqueue_request.
+@c aio_enqueue_request @asulock @ascuheap @aculock @acsmem
+@c  pthread_self ok
+@c  pthread_getschedparam @asulock @aculock
+@c   lll_lock (pthread descriptor's lock) @asulock @aculock
+@c   sched_getparam ok
+@c   sched_getscheduler ok
+@c   lll_unlock @aculock
+@c  pthread_mutex_lock (aio_requests_mutex) @asulock @aculock
+@c  get_elem @ascuheap @acsmem [@asucorrupt @acucorrupt]
+@c   realloc @ascuheap @acsmem
+@c   calloc @ascuheap @acsmem
+@c  aio_create_helper_thread @asulock @ascuheap @aculock @acsmem
+@c   pthread_attr_init ok
+@c   pthread_attr_setdetachstate ok
+@c   pthread_get_minstack ok
+@c   pthread_attr_setstacksize ok
+@c   sigfillset ok
+@c    memset ok
+@c    sigdelset ok
+@c   SYSCALL rt_sigprocmask ok
+@c   pthread_create @asulock @ascuheap @aculock @acsmem
+@c    lll_lock (default_pthread_attr_lock) @asulock @aculock
+@c    alloca/malloc @ascuheap @acsmem
+@c    lll_unlock @aculock
+@c    allocate_stack @asulock @ascuheap @aculock @acsmem
+@c     getpagesize dup
+@c     lll_lock (default_pthread_attr_lock) @asulock @aculock
+@c     lll_unlock @aculock
+@c     _dl_allocate_tls @ascuheap @acsmem
+@c      _dl_allocate_tls_storage @ascuheap @acsmem
+@c       memalign @ascuheap @acsmem
+@c       memset ok
+@c       allocate_dtv dup
+@c       free @ascuheap @acsmem
+@c      allocate_dtv @ascuheap @acsmem
+@c       calloc @ascuheap @acsmem
+@c       INSTALL_DTV ok
+@c     list_add dup
+@c     get_cached_stack
+@c      lll_lock (stack_cache_lock) @asulock @aculock
+@c      list_for_each ok
+@c      list_entry dup
+@c      FREE_P dup
+@c      stack_list_del dup
+@c      stack_list_add dup
+@c      lll_unlock @aculock
+@c      _dl_allocate_tls_init ok
+@c       GET_DTV ok
+@c     mmap ok
+@c     atomic_increment_val ok
+@c     munmap ok
+@c     change_stack_perm ok
+@c      mprotect ok
+@c     mprotect ok
+@c     stack_list_del dup
+@c     _dl_deallocate_tls dup
+@c     munmap ok
+@c    THREAD_COPY_STACK_GUARD ok
+@c    THREAD_COPY_POINTER_GUARD ok
+@c    atomic_exchange_acq ok
+@c    lll_futex_wake ok
+@c    deallocate_stack @asulock @ascuheap @aculock @acsmem
+@c     lll_lock (state_cache_lock) @asulock @aculock
+@c     stack_list_del ok
+@c      atomic_write_barrier ok
+@c      list_del ok
+@c      atomic_write_barrier ok
+@c     queue_stack @ascuheap @acsmem
+@c      stack_list_add ok
+@c       atomic_write_barrier ok
+@c       list_add ok
+@c       atomic_write_barrier ok
+@c      free_stacks @ascuheap @acsmem
+@c       list_for_each_prev_safe ok
+@c       list_entry ok
+@c       FREE_P ok
+@c       stack_list_del dup
+@c       _dl_deallocate_tls dup
+@c       munmap ok
+@c     _dl_deallocate_tls @ascuheap @acsmem
+@c      free @ascuheap @acsmem
+@c     lll_unlock @aculock
+@c    create_thread @asulock @ascuheap @aculock @acsmem
+@c     td_eventword
+@c     td_eventmask
+@c     do_clone @asulock @ascuheap @aculock @acsmem
+@c      PREPARE_CREATE ok
+@c      lll_lock (pd->lock) @asulock @aculock
+@c      atomic_increment ok
+@c      clone ok
+@c      atomic_decrement ok
+@c      atomic_exchange_acq ok
+@c      lll_futex_wake ok
+@c      deallocate_stack dup
+@c      sched_setaffinity ok
+@c      tgkill ok
+@c      sched_setscheduler ok
+@c     atomic_compare_and_exchange_bool_acq ok
+@c     nptl_create_event ok
+@c     lll_unlock (pd->lock) @aculock
+@c    free @ascuheap @acsmem
+@c   pthread_attr_destroy ok (cpuset won't be set, so free isn't called)
+@c  add_request_to_runlist ok
+@c  pthread_cond_signal ok
+@c  aio_free_request ok
+@c  pthread_mutex_unlock @aculock
+
+@c (in the new thread, initiated with clone)
+@c    start_thread ok
+@c     HP_TIMING_NOW ok
+@c     ctype_init @mtslocale
+@c     atomic_exchange_acq ok
+@c     lll_futex_wake ok
+@c     sigemptyset ok
+@c     sigaddset ok
+@c     setjmp ok
+@c     LIBC_CANCEL_ASYNC -> __pthread_enable_asynccancel ok
+@c      do_cancel ok
+@c       pthread_unwind ok
+@c        Unwind_ForcedUnwind or longjmp ok [@ascuheap @acsmem?]
+@c     lll_lock @asulock @aculock
+@c     lll_unlock @asulock @aculock
+@c     LIBC_CANCEL_RESET -> __pthread_disable_asynccancel ok
+@c      lll_futex_wait ok
+@c     ->start_routine ok -----
+@c     call_tls_dtors @asulock @ascuheap @aculock @acsmem
+@c      user-supplied dtor
+@c      rtld_lock_lock_recursive (dl_load_lock) @asulock @aculock
+@c      rtld_lock_unlock_recursive @aculock
+@c      free @ascuheap @acsmem
+@c     nptl_deallocate_tsd @ascuheap @acsmem
+@c      tsd user-supplied dtors ok
+@c      free @ascuheap @acsmem
+@c     libc_thread_freeres
+@c      libc_thread_subfreeres ok
+@c     atomic_decrement_and_test ok
+@c     td_eventword ok
+@c     td_eventmask ok
+@c     atomic_compare_exchange_bool_acq ok
+@c     nptl_death_event ok
+@c     lll_robust_dead ok
+@c     getpagesize ok
+@c     madvise ok
+@c     free_tcb @asulock @ascuheap @aculock @acsmem
+@c      free @ascuheap @acsmem
+@c      deallocate_stack @asulock @ascuheap @aculock @acsmem
+@c     lll_futex_wait ok
+@c     exit_thread_inline ok
+@c      syscall(exit) ok
+
+This function initiates an asynchronous read operation.  It
+immediately returns after the operation was enqueued or when an
+error was encountered.
+
+The first @code{aiocbp->aio_nbytes} bytes of the file for which
+@code{aiocbp->aio_fildes} is a descriptor are written to the buffer
+starting at @code{aiocbp->aio_buf}.  Reading starts at the absolute
+position @code{aiocbp->aio_offset} in the file.
+
+If prioritized I/O is supported by the platform the
+@code{aiocbp->aio_reqprio} value is used to adjust the priority before
+the request is actually enqueued.
+
+The calling process is notified about the termination of the read
+request according to the @code{aiocbp->aio_sigevent} value.
+
+When @code{aio_read} returns, the return value is zero if no error
+occurred that can be found before the process is enqueued.  If such an
+early error is found, the function returns @math{-1} and sets
+@code{errno} to one of the following values:
+
+@table @code
+@item EAGAIN
+The request was not enqueued due to (temporarily) exceeded resource
+limitations.
+@item ENOSYS
+The @code{aio_read} function is not implemented.
+@item EBADF
+The @code{aiocbp->aio_fildes} descriptor is not valid.  This condition
+need not be recognized before enqueueing the request and so this error
+might also be signaled asynchronously.
+@item EINVAL
+The @code{aiocbp->aio_offset} or @code{aiocbp->aio_reqpiro} value is
+invalid.  This condition need not be recognized before enqueueing the
+request and so this error might also be signaled asynchronously.
+@end table
+
+If @code{aio_read} returns zero, the current status of the request
+can be queried using @code{aio_error} and @code{aio_return} functions.
+As long as the value returned by @code{aio_error} is @code{EINPROGRESS}
+the operation has not yet completed.  If @code{aio_error} returns zero,
+the operation successfully terminated, otherwise the value is to be
+interpreted as an error code.  If the function terminated, the result of
+the operation can be obtained using a call to @code{aio_return}.  The
+returned value is the same as an equivalent call to @code{read} would
+have returned.  Possible error codes returned by @code{aio_error} are:
+
+@table @code
+@item EBADF
+The @code{aiocbp->aio_fildes} descriptor is not valid.
+@item ECANCELED
+The operation was canceled before the operation was finished
+(@pxref{Cancel AIO Operations})
+@item EINVAL
+The @code{aiocbp->aio_offset} value is invalid.
+@end table
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is in fact @code{aio_read64} since the LFS interface transparently
+replaces the normal implementation.
+@end deftypefun
+
+@deftypefun int aio_read64 (struct aiocb64 *@var{aiocbp})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+This function is similar to the @code{aio_read} function.  The only
+difference is that on @w{32 bit} machines, the file descriptor should
+be opened in the large file mode.  Internally, @code{aio_read64} uses
+functionality equivalent to @code{lseek64} (@pxref{File Position
+Primitive}) to position the file descriptor correctly for the reading,
+as opposed to the @code{lseek} functionality used in @code{aio_read}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64}, this
+function is available under the name @code{aio_read} and so transparently
+replaces the interface for small files on 32 bit machines.
+@end deftypefun
+
+To write data asynchronously to a file, there exists an equivalent pair
+of functions with a very similar interface.
+
+@deftypefun int aio_write (struct aiocb *@var{aiocbp})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+This function initiates an asynchronous write operation.  The function
+call immediately returns after the operation was enqueued or if before
+this happens an error was encountered.
+
+The first @code{aiocbp->aio_nbytes} bytes from the buffer starting at
+@code{aiocbp->aio_buf} are written to the file for which
+@code{aiocbp->aio_fildes} is a descriptor, starting at the absolute
+position @code{aiocbp->aio_offset} in the file.
+
+If prioritized I/O is supported by the platform, the
+@code{aiocbp->aio_reqprio} value is used to adjust the priority before
+the request is actually enqueued.
+
+The calling process is notified about the termination of the read
+request according to the @code{aiocbp->aio_sigevent} value.
+
+When @code{aio_write} returns, the return value is zero if no error
+occurred that can be found before the process is enqueued.  If such an
+early error is found the function returns @math{-1} and sets
+@code{errno} to one of the following values.
+
+@table @code
+@item EAGAIN
+The request was not enqueued due to (temporarily) exceeded resource
+limitations.
+@item ENOSYS
+The @code{aio_write} function is not implemented.
+@item EBADF
+The @code{aiocbp->aio_fildes} descriptor is not valid.  This condition
+may not be recognized before enqueueing the request, and so this error
+might also be signaled asynchronously.
+@item EINVAL
+The @code{aiocbp->aio_offset} or @code{aiocbp->aio_reqprio} value is
+invalid.  This condition may not be recognized before enqueueing the
+request and so this error might also be signaled asynchronously.
+@end table
+
+In the case @code{aio_write} returns zero, the current status of the
+request can be queried using the @code{aio_error} and @code{aio_return}
+functions.  As long as the value returned by @code{aio_error} is
+@code{EINPROGRESS} the operation has not yet completed.  If
+@code{aio_error} returns zero, the operation successfully terminated,
+otherwise the value is to be interpreted as an error code.  If the
+function terminated, the result of the operation can be obtained using a call
+to @code{aio_return}.  The returned value is the same as an equivalent
+call to @code{read} would have returned.  Possible error codes returned
+by @code{aio_error} are:
+
+@table @code
+@item EBADF
+The @code{aiocbp->aio_fildes} descriptor is not valid.
+@item ECANCELED
+The operation was canceled before the operation was finished.
+(@pxref{Cancel AIO Operations})
+@item EINVAL
+The @code{aiocbp->aio_offset} value is invalid.
+@end table
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64}, this
+function is in fact @code{aio_write64} since the LFS interface transparently
+replaces the normal implementation.
+@end deftypefun
+
+@deftypefun int aio_write64 (struct aiocb64 *@var{aiocbp})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+This function is similar to the @code{aio_write} function.  The only
+difference is that on @w{32 bit} machines the file descriptor should
+be opened in the large file mode.  Internally @code{aio_write64} uses
+functionality equivalent to @code{lseek64} (@pxref{File Position
+Primitive}) to position the file descriptor correctly for the writing,
+as opposed to the @code{lseek} functionality used in @code{aio_write}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64}, this
+function is available under the name @code{aio_write} and so transparently
+replaces the interface for small files on 32 bit machines.
+@end deftypefun
+
+Besides these functions with the more or less traditional interface,
+POSIX.1b also defines a function which can initiate more than one
+operation at a time, and which can handle freely mixed read and write
+operations.  It is therefore similar to a combination of @code{readv} and
+@code{writev}.
+
+@deftypefun int lio_listio (int @var{mode}, struct aiocb *const @var{list}[], int @var{nent}, struct sigevent *@var{sig})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+@c Call lio_listio_internal, that takes the aio_requests_mutex lock and
+@c enqueues each request.  Then, it waits for notification or prepares
+@c for it before releasing the lock.  Even though it performs memory
+@c allocation and locking of its own, it doesn't add any classes of
+@c safety issues that aren't already covered by aio_enqueue_request.
+The @code{lio_listio} function can be used to enqueue an arbitrary
+number of read and write requests at one time.  The requests can all be
+meant for the same file, all for different files or every solution in
+between.
+
+@code{lio_listio} gets the @var{nent} requests from the array pointed to
+by @var{list}.  The operation to be performed is determined by the
+@code{aio_lio_opcode} member in each element of @var{list}.  If this
+field is @code{LIO_READ} a read operation is enqueued, similar to a call
+of @code{aio_read} for this element of the array (except that the way
+the termination is signalled is different, as we will see below).  If
+the @code{aio_lio_opcode} member is @code{LIO_WRITE} a write operation
+is enqueued.  Otherwise the @code{aio_lio_opcode} must be @code{LIO_NOP}
+in which case this element of @var{list} is simply ignored.  This
+``operation'' is useful in situations where one has a fixed array of
+@code{struct aiocb} elements from which only a few need to be handled at
+a time.  Another situation is where the @code{lio_listio} call was
+canceled before all requests are processed (@pxref{Cancel AIO
+Operations}) and the remaining requests have to be reissued.
+
+The other members of each element of the array pointed to by
+@code{list} must have values suitable for the operation as described in
+the documentation for @code{aio_read} and @code{aio_write} above.
+
+The @var{mode} argument determines how @code{lio_listio} behaves after
+having enqueued all the requests.  If @var{mode} is @code{LIO_WAIT} it
+waits until all requests terminated.  Otherwise @var{mode} must be
+@code{LIO_NOWAIT} and in this case the function returns immediately after
+having enqueued all the requests.  In this case the caller gets a
+notification of the termination of all requests according to the
+@var{sig} parameter.  If @var{sig} is @code{NULL} no notification is
+sent.  Otherwise a signal is sent or a thread is started, just as
+described in the description for @code{aio_read} or @code{aio_write}.
+
+If @var{mode} is @code{LIO_WAIT}, the return value of @code{lio_listio}
+is @math{0} when all requests completed successfully.  Otherwise the
+function returns @math{-1} and @code{errno} is set accordingly.  To find
+out which request or requests failed one has to use the @code{aio_error}
+function on all the elements of the array @var{list}.
+
+In case @var{mode} is @code{LIO_NOWAIT}, the function returns @math{0} if
+all requests were enqueued correctly.  The current state of the requests
+can be found using @code{aio_error} and @code{aio_return} as described
+above.  If @code{lio_listio} returns @math{-1} in this mode, the
+global variable @code{errno} is set accordingly.  If a request did not
+yet terminate, a call to @code{aio_error} returns @code{EINPROGRESS}.  If
+the value is different, the request is finished and the error value (or
+@math{0}) is returned and the result of the operation can be retrieved
+using @code{aio_return}.
+
+Possible values for @code{errno} are:
+
+@table @code
+@item EAGAIN
+The resources necessary to queue all the requests are not available at
+the moment.  The error status for each element of @var{list} must be
+checked to determine which request failed.
+
+Another reason could be that the system wide limit of AIO requests is
+exceeded.  This cannot be the case for the implementation on @gnusystems{}
+since no arbitrary limits exist.
+@item EINVAL
+The @var{mode} parameter is invalid or @var{nent} is larger than
+@code{AIO_LISTIO_MAX}.
+@item EIO
+One or more of the request's I/O operations failed.  The error status of
+each request should be checked to determine which one failed.
+@item ENOSYS
+The @code{lio_listio} function is not supported.
+@end table
+
+If the @var{mode} parameter is @code{LIO_NOWAIT} and the caller cancels
+a request, the error status for this request returned by
+@code{aio_error} is @code{ECANCELED}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64}, this
+function is in fact @code{lio_listio64} since the LFS interface
+transparently replaces the normal implementation.
+@end deftypefun
+
+@deftypefun int lio_listio64 (int @var{mode}, struct aiocb64 *const @var{list}[], int @var{nent}, struct sigevent *@var{sig})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+This function is similar to the @code{lio_listio} function.  The only
+difference is that on @w{32 bit} machines, the file descriptor should
+be opened in the large file mode.  Internally, @code{lio_listio64} uses
+functionality equivalent to @code{lseek64} (@pxref{File Position
+Primitive}) to position the file descriptor correctly for the reading or
+writing, as opposed to the @code{lseek} functionality used in
+@code{lio_listio}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64}, this
+function is available under the name @code{lio_listio} and so
+transparently replaces the interface for small files on 32 bit
+machines.
+@end deftypefun
+
+@node Status of AIO Operations
+@subsection Getting the Status of AIO Operations
+
+As already described in the documentation of the functions in the last
+section, it must be possible to get information about the status of an I/O
+request.  When the operation is performed truly asynchronously (as with
+@code{aio_read} and @code{aio_write} and with @code{lio_listio} when the
+mode is @code{LIO_NOWAIT}), one sometimes needs to know whether a
+specific request already terminated and if so, what the result was.
+The following two functions allow you to get this kind of information.
+
+@deftypefun int aio_error (const struct aiocb *@var{aiocbp})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function determines the error state of the request described by the
+@code{struct aiocb} variable pointed to by @var{aiocbp}.  If the
+request has not yet terminated the value returned is always
+@code{EINPROGRESS}.  Once the request has terminated the value
+@code{aio_error} returns is either @math{0} if the request completed
+successfully or it returns the value which would be stored in the
+@code{errno} variable if the request would have been done using
+@code{read}, @code{write}, or @code{fsync}.
+
+The function can return @code{ENOSYS} if it is not implemented.  It
+could also return @code{EINVAL} if the @var{aiocbp} parameter does not
+refer to an asynchronous operation whose return status is not yet known.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is in fact @code{aio_error64} since the LFS interface
+transparently replaces the normal implementation.
+@end deftypefun
+
+@deftypefun int aio_error64 (const struct aiocb64 *@var{aiocbp})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function is similar to @code{aio_error} with the only difference
+that the argument is a reference to a variable of type @code{struct
+aiocb64}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is available under the name @code{aio_error} and so
+transparently replaces the interface for small files on 32 bit
+machines.
+@end deftypefun
+
+@deftypefun ssize_t aio_return (struct aiocb *@var{aiocbp})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function can be used to retrieve the return status of the operation
+carried out by the request described in the variable pointed to by
+@var{aiocbp}.  As long as the error status of this request as returned
+by @code{aio_error} is @code{EINPROGRESS} the return value of this function is
+undefined.
+
+Once the request is finished this function can be used exactly once to
+retrieve the return value.  Following calls might lead to undefined
+behavior.  The return value itself is the value which would have been
+returned by the @code{read}, @code{write}, or @code{fsync} call.
+
+The function can return @code{ENOSYS} if it is not implemented.  It
+could also return @code{EINVAL} if the @var{aiocbp} parameter does not
+refer to an asynchronous operation whose return status is not yet known.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is in fact @code{aio_return64} since the LFS interface
+transparently replaces the normal implementation.
+@end deftypefun
+
+@deftypefun ssize_t aio_return64 (struct aiocb64 *@var{aiocbp})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function is similar to @code{aio_return} with the only difference
+that the argument is a reference to a variable of type @code{struct
+aiocb64}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is available under the name @code{aio_return} and so
+transparently replaces the interface for small files on 32 bit
+machines.
+@end deftypefun
+
+@node Synchronizing AIO Operations
+@subsection Getting into a Consistent State
+
+When dealing with asynchronous operations it is sometimes necessary to
+get into a consistent state.  This would mean for AIO that one wants to
+know whether a certain request or a group of requests were processed.
+This could be done by waiting for the notification sent by the system
+after the operation terminated, but this sometimes would mean wasting
+resources (mainly computation time).  Instead POSIX.1b defines two
+functions which will help with most kinds of consistency.
+
+The @code{aio_fsync} and @code{aio_fsync64} functions are only available
+if the symbol @code{_POSIX_SYNCHRONIZED_IO} is defined in @file{unistd.h}.
+
+@cindex synchronizing
+@deftypefun int aio_fsync (int @var{op}, struct aiocb *@var{aiocbp})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+@c After fcntl to check that the FD is open, it calls
+@c aio_enqueue_request.
+Calling this function forces all I/O operations queued at the
+time of the function call operating on the file descriptor
+@code{aiocbp->aio_fildes} into the synchronized I/O completion state
+(@pxref{Synchronizing I/O}).  The @code{aio_fsync} function returns
+immediately but the notification through the method described in
+@code{aiocbp->aio_sigevent} will happen only after all requests for this
+file descriptor have terminated and the file is synchronized.  This also
+means that requests for this very same file descriptor which are queued
+after the synchronization request are not affected.
+
+If @var{op} is @code{O_DSYNC} the synchronization happens as with a call
+to @code{fdatasync}.  Otherwise @var{op} should be @code{O_SYNC} and
+the synchronization happens as with @code{fsync}.
+
+As long as the synchronization has not happened, a call to
+@code{aio_error} with the reference to the object pointed to by
+@var{aiocbp} returns @code{EINPROGRESS}.  Once the synchronization is
+done @code{aio_error} return @math{0} if the synchronization was not
+successful.  Otherwise the value returned is the value to which the
+@code{fsync} or @code{fdatasync} function would have set the
+@code{errno} variable.  In this case nothing can be assumed about the
+consistency of the data written to this file descriptor.
+
+The return value of this function is @math{0} if the request was
+successfully enqueued.  Otherwise the return value is @math{-1} and
+@code{errno} is set to one of the following values:
+
+@table @code
+@item EAGAIN
+The request could not be enqueued due to temporary lack of resources.
+@item EBADF
+The file descriptor @code{@var{aiocbp}->aio_fildes} is not valid.
+@item EINVAL
+The implementation does not support I/O synchronization or the @var{op}
+parameter is other than @code{O_DSYNC} and @code{O_SYNC}.
+@item ENOSYS
+This function is not implemented.
+@end table
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is in fact @code{aio_fsync64} since the LFS interface
+transparently replaces the normal implementation.
+@end deftypefun
+
+@deftypefun int aio_fsync64 (int @var{op}, struct aiocb64 *@var{aiocbp})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+This function is similar to @code{aio_fsync} with the only difference
+that the argument is a reference to a variable of type @code{struct
+aiocb64}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is available under the name @code{aio_fsync} and so
+transparently replaces the interface for small files on 32 bit
+machines.
+@end deftypefun
+
+Another method of synchronization is to wait until one or more requests of a
+specific set terminated.  This could be achieved by the @code{aio_*}
+functions to notify the initiating process about the termination but in
+some situations this is not the ideal solution.  In a program which
+constantly updates clients somehow connected to the server it is not
+always the best solution to go round robin since some connections might
+be slow.  On the other hand letting the @code{aio_*} functions notify the
+caller might also be not the best solution since whenever the process
+works on preparing data for a client it makes no sense to be
+interrupted by a notification since the new client will not be handled
+before the current client is served.  For situations like this
+@code{aio_suspend} should be used.
+
+@deftypefun int aio_suspend (const struct aiocb *const @var{list}[], int @var{nent}, const struct timespec *@var{timeout})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+@c Take aio_requests_mutex, set up waitlist and requestlist, wait
+@c for completion or timeout, and release the mutex.
+When calling this function, the calling thread is suspended until at
+least one of the requests pointed to by the @var{nent} elements of the
+array @var{list} has completed.  If any of the requests has already
+completed at the time @code{aio_suspend} is called, the function returns
+immediately.  Whether a request has terminated or not is determined by
+comparing the error status of the request with @code{EINPROGRESS}.  If
+an element of @var{list} is @code{NULL}, the entry is simply ignored.
+
+If no request has finished, the calling process is suspended.  If
+@var{timeout} is @code{NULL}, the process is not woken until a request
+has finished.  If @var{timeout} is not @code{NULL}, the process remains
+suspended at least as long as specified in @var{timeout}.  In this case,
+@code{aio_suspend} returns with an error.
+
+The return value of the function is @math{0} if one or more requests
+from the @var{list} have terminated.  Otherwise the function returns
+@math{-1} and @code{errno} is set to one of the following values:
+
+@table @code
+@item EAGAIN
+None of the requests from the @var{list} completed in the time specified
+by @var{timeout}.
+@item EINTR
+A signal interrupted the @code{aio_suspend} function.  This signal might
+also be sent by the AIO implementation while signalling the termination
+of one of the requests.
+@item ENOSYS
+The @code{aio_suspend} function is not implemented.
+@end table
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is in fact @code{aio_suspend64} since the LFS interface
+transparently replaces the normal implementation.
+@end deftypefun
+
+@deftypefun int aio_suspend64 (const struct aiocb64 *const @var{list}[], int @var{nent}, const struct timespec *@var{timeout})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+This function is similar to @code{aio_suspend} with the only difference
+that the argument is a reference to a variable of type @code{struct
+aiocb64}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64} this
+function is available under the name @code{aio_suspend} and so
+transparently replaces the interface for small files on 32 bit
+machines.
+@end deftypefun
+
+@node Cancel AIO Operations
+@subsection Cancellation of AIO Operations
+
+When one or more requests are asynchronously processed, it might be
+useful in some situations to cancel a selected operation, e.g., if it
+becomes obvious that the written data is no longer accurate and would
+have to be overwritten soon.  As an example, assume an application, which
+writes data in files in a situation where new incoming data would have
+to be written in a file which will be updated by an enqueued request.
+The POSIX AIO implementation provides such a function, but this function
+is not capable of forcing the cancellation of the request.  It is up to the
+implementation to decide whether it is possible to cancel the operation
+or not.  Therefore using this function is merely a hint.
+
+@deftypefun int aio_cancel (int @var{fildes}, struct aiocb *@var{aiocbp})
+@standards{POSIX.1b, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+@c After fcntl to check the fd is open, hold aio_requests_mutex, call
+@c aio_find_req_fd, aio_remove_request, then aio_notify and
+@c aio_free_request each request before releasing the lock.
+@c aio_notify calls aio_notify_only and free, besides cond signal or
+@c similar.  aio_notify_only calls pthread_attr_init,
+@c pthread_attr_setdetachstate, malloc, pthread_create,
+@c notify_func_wrapper, aio_sigqueue, getpid, raise.
+@c notify_func_wraper calls aio_start_notify_thread, free and then the
+@c notifier function.
+The @code{aio_cancel} function can be used to cancel one or more
+outstanding requests.  If the @var{aiocbp} parameter is @code{NULL}, the
+function tries to cancel all of the outstanding requests which would process
+the file descriptor @var{fildes} (i.e., whose @code{aio_fildes} member
+is @var{fildes}).  If @var{aiocbp} is not @code{NULL}, @code{aio_cancel}
+attempts to cancel the specific request pointed to by @var{aiocbp}.
+
+For requests which were successfully canceled, the normal notification
+about the termination of the request should take place.  I.e., depending
+on the @code{struct sigevent} object which controls this, nothing
+happens, a signal is sent or a thread is started.  If the request cannot
+be canceled, it terminates the usual way after performing the operation.
+
+After a request is successfully canceled, a call to @code{aio_error} with
+a reference to this request as the parameter will return
+@code{ECANCELED} and a call to @code{aio_return} will return @math{-1}.
+If the request wasn't canceled and is still running the error status is
+still @code{EINPROGRESS}.
+
+The return value of the function is @code{AIO_CANCELED} if there were
+requests which haven't terminated and which were successfully canceled.
+If there is one or more requests left which couldn't be canceled, the
+return value is @code{AIO_NOTCANCELED}.  In this case @code{aio_error}
+must be used to find out which of the, perhaps multiple, requests (if
+@var{aiocbp} is @code{NULL}) weren't successfully canceled.  If all
+requests already terminated at the time @code{aio_cancel} is called the
+return value is @code{AIO_ALLDONE}.
+
+If an error occurred during the execution of @code{aio_cancel} the
+function returns @math{-1} and sets @code{errno} to one of the following
+values.
+
+@table @code
+@item EBADF
+The file descriptor @var{fildes} is not valid.
+@item ENOSYS
+@code{aio_cancel} is not implemented.
+@end table
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64}, this
+function is in fact @code{aio_cancel64} since the LFS interface
+transparently replaces the normal implementation.
+@end deftypefun
+
+@deftypefun int aio_cancel64 (int @var{fildes}, struct aiocb64 *@var{aiocbp})
+@standards{Unix98, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{} @ascuheap{}}@acunsafe{@aculock{} @acsmem{}}}
+This function is similar to @code{aio_cancel} with the only difference
+that the argument is a reference to a variable of type @code{struct
+aiocb64}.
+
+When the sources are compiled with @code{_FILE_OFFSET_BITS == 64}, this
+function is available under the name @code{aio_cancel} and so
+transparently replaces the interface for small files on 32 bit
+machines.
+@end deftypefun
+
+@node Configuration of AIO
+@subsection How to optimize the AIO implementation
+
+The POSIX standard does not specify how the AIO functions are
+implemented.  They could be system calls, but it is also possible to
+emulate them at userlevel.
+
+At the time of writing, the available implementation is a user-level
+implementation which uses threads for handling the enqueued requests.
+While this implementation requires making some decisions about
+limitations, hard limitations are something best avoided
+in @theglibc{}.  Therefore, @theglibc{} provides a means
+for tuning the AIO implementation according to the individual use.
+
+@deftp {Data Type} {struct aioinit}
+@standards{GNU, aio.h}
+This data type is used to pass the configuration or tunable parameters
+to the implementation.  The program has to initialize the members of
+this struct and pass it to the implementation using the @code{aio_init}
+function.
+
+@table @code
+@item int aio_threads
+This member specifies the maximal number of threads which may be used
+at any one time.
+@item int aio_num
+This number provides an estimate on the maximal number of simultaneously
+enqueued requests.
+@item int aio_locks
+Unused.
+@item int aio_usedba
+Unused.
+@item int aio_debug
+Unused.
+@item int aio_numusers
+Unused.
+@item int aio_reserved[2]
+Unused.
+@end table
+@end deftp
+
+@deftypefun void aio_init (const struct aioinit *@var{init})
+@standards{GNU, aio.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+@c All changes to global objects are guarded by aio_requests_mutex.
+This function must be called before any other AIO function.  Calling it
+is completely voluntary, as it is only meant to help the AIO
+implementation perform better.
+
+Before calling @code{aio_init}, the members of a variable of
+type @code{struct aioinit} must be initialized.  Then a reference to
+this variable is passed as the parameter to @code{aio_init} which itself
+may or may not pay attention to the hints.
+
+The function has no return value and no error cases are defined.  It is
+an extension which follows a proposal from the SGI implementation in
+@w{Irix 6}.  It is not covered by POSIX.1b or Unix98.
+@end deftypefun
+
+@node Control Operations
+@section Control Operations on Files
+
+@cindex control operations on files
+@cindex @code{fcntl} function
+This section describes how you can perform various other operations on
+file descriptors, such as inquiring about or setting flags describing
+the status of the file descriptor, manipulating record locks, and the
+like.  All of these operations are performed by the function @code{fcntl}.
+
+The second argument to the @code{fcntl} function is a command that
+specifies which operation to perform.  The function and macros that name
+various flags that are used with it are declared in the header file
+@file{fcntl.h}.  Many of these flags are also used by the @code{open}
+function; see @ref{Opening and Closing Files}.
+@pindex fcntl.h
+
+@deftypefun int fcntl (int @var{filedes}, int @var{command}, @dots{})
+@standards{POSIX.1, fcntl.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{fcntl} function performs the operation specified by
+@var{command} on the file descriptor @var{filedes}.  Some commands
+require additional arguments to be supplied.  These additional arguments
+and the return value and error conditions are given in the detailed
+descriptions of the individual commands.
+
+Briefly, here is a list of what the various commands are.
+
+@vtable @code
+@item F_DUPFD
+Duplicate the file descriptor (return another file descriptor pointing
+to the same open file).  @xref{Duplicating Descriptors}.
+
+@item F_GETFD
+Get flags associated with the file descriptor.  @xref{Descriptor Flags}.
+
+@item F_SETFD
+Set flags associated with the file descriptor.  @xref{Descriptor Flags}.
+
+@item F_GETFL
+Get flags associated with the open file.  @xref{File Status Flags}.
+
+@item F_SETFL
+Set flags associated with the open file.  @xref{File Status Flags}.
+
+@item F_GETLK
+Test a file lock.  @xref{File Locks}.
+
+@item F_SETLK
+Set or clear a file lock.  @xref{File Locks}.
+
+@item F_SETLKW
+Like @code{F_SETLK}, but wait for completion.  @xref{File Locks}.
+
+@item F_OFD_GETLK
+Test an open file description lock.  @xref{Open File Description Locks}.
+Specific to Linux.
+
+@item F_OFD_SETLK
+Set or clear an open file description lock.  @xref{Open File Description Locks}.
+Specific to Linux.
+
+@item F_OFD_SETLKW
+Like @code{F_OFD_SETLK}, but block until lock is acquired.
+@xref{Open File Description Locks}.  Specific to Linux.
+
+@item F_GETOWN
+Get process or process group ID to receive @code{SIGIO} signals.
+@xref{Interrupt Input}.
+
+@item F_SETOWN
+Set process or process group ID to receive @code{SIGIO} signals.
+@xref{Interrupt Input}.
+@end vtable
+
+This function is a cancellation point in multi-threaded programs for the
+commands @code{F_SETLKW} (and the LFS analogous @code{F_SETLKW64}) and
+@code{F_OFD_SETLKW}.  This is a problem if the thread allocates some
+resources (like memory, file descriptors, semaphores or whatever) at the time
+@code{fcntl} is called.  If the thread gets canceled these resources stay
+allocated until the program ends.  To avoid this calls to @code{fcntl} should
+be protected using cancellation handlers.
+@c ref pthread_cleanup_push / pthread_cleanup_pop
+@end deftypefun
+
+
+@node Duplicating Descriptors
+@section Duplicating Descriptors
+
+@cindex duplicating file descriptors
+@cindex redirecting input and output
+
+You can @dfn{duplicate} a file descriptor, or allocate another file
+descriptor that refers to the same open file as the original.  Duplicate
+descriptors share one file position and one set of file status flags
+(@pxref{File Status Flags}), but each has its own set of file descriptor
+flags (@pxref{Descriptor Flags}).
+
+The major use of duplicating a file descriptor is to implement
+@dfn{redirection} of input or output:  that is, to change the
+file or pipe that a particular file descriptor corresponds to.
+
+You can perform this operation using the @code{fcntl} function with the
+@code{F_DUPFD} command, but there are also convenient functions
+@code{dup} and @code{dup2} for duplicating descriptors.
+
+@pindex unistd.h
+@pindex fcntl.h
+The @code{fcntl} function and flags are declared in @file{fcntl.h},
+while prototypes for @code{dup} and @code{dup2} are in the header file
+@file{unistd.h}.
+
+@deftypefun int dup (int @var{old})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function copies descriptor @var{old} to the first available
+descriptor number (the first number not currently open).  It is
+equivalent to @code{fcntl (@var{old}, F_DUPFD, 0)}.
+@end deftypefun
+
+@deftypefun int dup2 (int @var{old}, int @var{new})
+@standards{POSIX.1, unistd.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+This function copies the descriptor @var{old} to descriptor number
+@var{new}.
+
+If @var{old} is an invalid descriptor, then @code{dup2} does nothing; it
+does not close @var{new}.  Otherwise, the new duplicate of @var{old}
+replaces any previous meaning of descriptor @var{new}, as if @var{new}
+were closed first.
+
+If @var{old} and @var{new} are different numbers, and @var{old} is a
+valid descriptor number, then @code{dup2} is equivalent to:
+
+@smallexample
+close (@var{new});
+fcntl (@var{old}, F_DUPFD, @var{new})
+@end smallexample
+
+However, @code{dup2} does this atomically; there is no instant in the
+middle of calling @code{dup2} at which @var{new} is closed and not yet a
+duplicate of @var{old}.
+@end deftypefun
+
+@deftypevr Macro int F_DUPFD
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+copy the file descriptor given as the first argument.
+
+The form of the call in this case is:
+
+@smallexample
+fcntl (@var{old}, F_DUPFD, @var{next-filedes})
+@end smallexample
+
+The @var{next-filedes} argument is of type @code{int} and specifies that
+the file descriptor returned should be the next available one greater
+than or equal to this value.
+
+The return value from @code{fcntl} with this command is normally the value
+of the new file descriptor.  A return value of @math{-1} indicates an
+error.  The following @code{errno} error conditions are defined for
+this command:
+
+@table @code
+@item EBADF
+The @var{old} argument is invalid.
+
+@item EINVAL
+The @var{next-filedes} argument is invalid.
+
+@item EMFILE
+There are no more file descriptors available---your program is already
+using the maximum.  In BSD and GNU, the maximum is controlled by a
+resource limit that can be changed; @pxref{Limits on Resources}, for
+more information about the @code{RLIMIT_NOFILE} limit.
+@end table
+
+@code{ENFILE} is not a possible error code for @code{dup2} because
+@code{dup2} does not create a new opening of a file; duplicate
+descriptors do not count toward the limit which @code{ENFILE}
+indicates.  @code{EMFILE} is possible because it refers to the limit on
+distinct descriptor numbers in use in one process.
+@end deftypevr
+
+Here is an example showing how to use @code{dup2} to do redirection.
+Typically, redirection of the standard streams (like @code{stdin}) is
+done by a shell or shell-like program before calling one of the
+@code{exec} functions (@pxref{Executing a File}) to execute a new
+program in a child process.  When the new program is executed, it
+creates and initializes the standard streams to point to the
+corresponding file descriptors, before its @code{main} function is
+invoked.
+
+So, to redirect standard input to a file, the shell could do something
+like:
+
+@smallexample
+pid = fork ();
+if (pid == 0)
+  @{
+    char *filename;
+    char *program;
+    int file;
+    @dots{}
+    file = TEMP_FAILURE_RETRY (open (filename, O_RDONLY));
+    dup2 (file, STDIN_FILENO);
+    TEMP_FAILURE_RETRY (close (file));
+    execv (program, NULL);
+  @}
+@end smallexample
+
+There is also a more detailed example showing how to implement redirection
+in the context of a pipeline of processes in @ref{Launching Jobs}.
+
+
+@node Descriptor Flags
+@section File Descriptor Flags
+@cindex file descriptor flags
+
+@dfn{File descriptor flags} are miscellaneous attributes of a file
+descriptor.  These flags are associated with particular file
+descriptors, so that if you have created duplicate file descriptors
+from a single opening of a file, each descriptor has its own set of flags.
+
+Currently there is just one file descriptor flag: @code{FD_CLOEXEC},
+which causes the descriptor to be closed if you use any of the
+@code{exec@dots{}} functions (@pxref{Executing a File}).
+
+The symbols in this section are defined in the header file
+@file{fcntl.h}.
+@pindex fcntl.h
+
+@deftypevr Macro int F_GETFD
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should return the file descriptor flags associated
+with the @var{filedes} argument.
+
+The normal return value from @code{fcntl} with this command is a
+nonnegative number which can be interpreted as the bitwise OR of the
+individual flags (except that currently there is only one flag to use).
+
+In case of an error, @code{fcntl} returns @math{-1}.  The following
+@code{errno} error conditions are defined for this command:
+
+@table @code
+@item EBADF
+The @var{filedes} argument is invalid.
+@end table
+@end deftypevr
+
+
+@deftypevr Macro int F_SETFD
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should set the file descriptor flags associated with the
+@var{filedes} argument.  This requires a third @code{int} argument to
+specify the new flags, so the form of the call is:
+
+@smallexample
+fcntl (@var{filedes}, F_SETFD, @var{new-flags})
+@end smallexample
+
+The normal return value from @code{fcntl} with this command is an
+unspecified value other than @math{-1}, which indicates an error.
+The flags and error conditions are the same as for the @code{F_GETFD}
+command.
+@end deftypevr
+
+The following macro is defined for use as a file descriptor flag with
+the @code{fcntl} function.  The value is an integer constant usable
+as a bit mask value.
+
+@deftypevr Macro int FD_CLOEXEC
+@standards{POSIX.1, fcntl.h}
+@cindex close-on-exec (file descriptor flag)
+This flag specifies that the file descriptor should be closed when
+an @code{exec} function is invoked; see @ref{Executing a File}.  When
+a file descriptor is allocated (as with @code{open} or @code{dup}),
+this bit is initially cleared on the new file descriptor, meaning that
+descriptor will survive into the new program after @code{exec}.
+@end deftypevr
+
+If you want to modify the file descriptor flags, you should get the
+current flags with @code{F_GETFD} and modify the value.  Don't assume
+that the flags listed here are the only ones that are implemented; your
+program may be run years from now and more flags may exist then.  For
+example, here is a function to set or clear the flag @code{FD_CLOEXEC}
+without altering any other flags:
+
+@smallexample
+/* @r{Set the @code{FD_CLOEXEC} flag of @var{desc} if @var{value} is nonzero,}
+   @r{or clear the flag if @var{value} is 0.}
+   @r{Return 0 on success, or -1 on error with @code{errno} set.} */
+
+int
+set_cloexec_flag (int desc, int value)
+@{
+  int oldflags = fcntl (desc, F_GETFD, 0);
+  /* @r{If reading the flags failed, return error indication now.} */
+  if (oldflags < 0)
+    return oldflags;
+  /* @r{Set just the flag we want to set.} */
+  if (value != 0)
+    oldflags |= FD_CLOEXEC;
+  else
+    oldflags &= ~FD_CLOEXEC;
+  /* @r{Store modified flag word in the descriptor.} */
+  return fcntl (desc, F_SETFD, oldflags);
+@}
+@end smallexample
+
+@node File Status Flags
+@section File Status Flags
+@cindex file status flags
+
+@dfn{File status flags} are used to specify attributes of the opening of a
+file.  Unlike the file descriptor flags discussed in @ref{Descriptor
+Flags}, the file status flags are shared by duplicated file descriptors
+resulting from a single opening of the file.  The file status flags are
+specified with the @var{flags} argument to @code{open};
+@pxref{Opening and Closing Files}.
+
+File status flags fall into three categories, which are described in the
+following sections.
+
+@itemize @bullet
+@item
+@ref{Access Modes}, specify what type of access is allowed to the
+file: reading, writing, or both.  They are set by @code{open} and are
+returned by @code{fcntl}, but cannot be changed.
+
+@item
+@ref{Open-time Flags}, control details of what @code{open} will do.
+These flags are not preserved after the @code{open} call.
+
+@item
+@ref{Operating Modes}, affect how operations such as @code{read} and
+@code{write} are done.  They are set by @code{open}, and can be fetched or
+changed with @code{fcntl}.
+@end itemize
+
+The symbols in this section are defined in the header file
+@file{fcntl.h}.
+@pindex fcntl.h
+
+@menu
+* Access Modes::                Whether the descriptor can read or write.
+* Open-time Flags::             Details of @code{open}.
+* Operating Modes::             Special modes to control I/O operations.
+* Getting File Status Flags::   Fetching and changing these flags.
+@end menu
+
+@node Access Modes
+@subsection File Access Modes
+
+The file access mode allows a file descriptor to be used for reading,
+writing, both, or neither.  The access mode is determined when the file
+is opened, and never change.
+
+@deftypevr Macro int O_RDONLY
+@standards{POSIX.1, fcntl.h}
+Open the file for read access.
+@end deftypevr
+
+@deftypevr Macro int O_WRONLY
+@standards{POSIX.1, fcntl.h}
+Open the file for write access.
+@end deftypevr
+
+@deftypevr Macro int O_RDWR
+@standards{POSIX.1, fcntl.h}
+Open the file for both reading and writing.
+@end deftypevr
+
+@deftypevr Macro int O_PATH
+@standards{Linux, fcntl.h}
+Obtain a file descriptor for the file, but do not open the file for
+reading or writing.  Permission checks for the file itself are skipped
+when the file is opened (but permission to access the directory that
+contains it is still needed), and permissions are checked when the
+descriptor is used later on.
+
+For example, such descriptors can be used with the @code{fexecve}
+function (@pxref{Executing a File}).
+
+This access mode is specific to Linux.  On @gnuhurdsystems{}, it is
+possible to use @code{O_EXEC} explicitly, or specify no access modes
+at all (see below).
+@end deftypevr
+
+The portable file access modes @code{O_RDONLY}, @code{O_WRONLY}, and
+@code{O_RDWR} may not correspond to individual bits.  To determine the
+file access mode with @code{fcntl}, you must extract the access mode
+bits from the retrieved file status flags, using the @code{O_ACCMODE}
+mask.
+
+@deftypevr Macro int O_ACCMODE
+@standards{POSIX.1, fcntl.h}
+
+This macro is a mask that can be bitwise-ANDed with the file status flag
+value to recover the file access mode, assuming that a standard file
+access mode is in use.
+@end deftypevr
+
+If a non-standard file access mode is used (such as @code{O_PATH} or
+@code{O_EXEC}), masking with @code{O_ACCMODE} may give incorrect
+results.  These non-standard access modes are identified by individual
+bits and have to be checked directly (without masking with
+@code{O_ACCMODE} first).
+
+On @gnuhurdsystems{} (but not on other systems), @code{O_RDONLY} and
+@code{O_WRONLY} are independent bits that can be bitwise-ORed together,
+and it is valid for either bit to be set or clear.  This means that
+@code{O_RDWR} is the same as @code{O_RDONLY|O_WRONLY}.  A file access
+mode of zero is permissible; it allows no operations that do input or
+output to the file, but does allow other operations such as
+@code{fchmod}.  On @gnuhurdsystems{}, since ``read-only'' or ``write-only''
+is a misnomer, @file{fcntl.h} defines additional names for the file
+access modes.
+
+@deftypevr Macro int O_READ
+@standards{GNU, fcntl.h (optional)}
+Open the file for reading.  Same as @code{O_RDONLY}; only defined on GNU/Hurd.
+@end deftypevr
+
+@deftypevr Macro int O_WRITE
+@standards{GNU, fcntl.h (optional)}
+Open the file for writing.  Same as @code{O_WRONLY}; only defined on GNU/Hurd.
+@end deftypevr
+
+@deftypevr Macro int O_EXEC
+@standards{GNU, fcntl.h (optional)}
+Open the file for executing.  Only defined on GNU/Hurd.
+@end deftypevr
+
+@node Open-time Flags
+@subsection Open-time Flags
+
+The open-time flags specify options affecting how @code{open} will behave.
+These options are not preserved once the file is open.  The exception to
+this is @code{O_NONBLOCK}, which is also an I/O operating mode and so it
+@emph{is} saved.  @xref{Opening and Closing Files}, for how to call
+@code{open}.
+
+There are two sorts of options specified by open-time flags.
+
+@itemize @bullet
+@item
+@dfn{File name translation flags} affect how @code{open} looks up the
+file name to locate the file, and whether the file can be created.
+@cindex file name translation flags
+@cindex flags, file name translation
+
+@item
+@dfn{Open-time action flags} specify extra operations that @code{open} will
+perform on the file once it is open.
+@cindex open-time action flags
+@cindex flags, open-time action
+@end itemize
+
+Here are the file name translation flags.
+
+@deftypevr Macro int O_CREAT
+@standards{POSIX.1, fcntl.h}
+If set, the file will be created if it doesn't already exist.
+@c !!! mode arg, umask
+@cindex create on open (file status flag)
+@end deftypevr
+
+@deftypevr Macro int O_EXCL
+@standards{POSIX.1, fcntl.h}
+If both @code{O_CREAT} and @code{O_EXCL} are set, then @code{open} fails
+if the specified file already exists.  This is guaranteed to never
+clobber an existing file.
+
+The @code{O_EXCL} flag has a special meaning in combination with
+@code{O_TMPFILE}; see below.
+@end deftypevr
+
+@deftypevr Macro int O_DIRECTORY
+@standards{POSIX.1, fcntl.h}
+If set, the open operation fails if the given name is not the name of
+a directory.  The @code{errno} variable is set to @code{ENOTDIR} for
+this error condition.
+@end deftypevr
+
+@deftypevr Macro int O_NOFOLLOW
+@standards{POSIX.1, fcntl.h}
+If set, the open operation fails if the final component of the file name
+refers to a symbolic link.  The @code{errno} variable is set to
+@code{ELOOP} for this error condition.
+@end deftypevr
+
+@deftypevr Macro int O_TMPFILE
+@standards{GNU, fcntl.h}
+If this flag is specified, functions in the @code{open} family create an
+unnamed temporary file.  In this case, the pathname argument to the
+@code{open} family of functions (@pxref{Opening and Closing Files}) is
+interpreted as the directory in which the temporary file is created
+(thus determining the file system which provides the storage for the
+file).  The @code{O_TMPFILE} flag must be combined with @code{O_WRONLY}
+or @code{O_RDWR}, and the @var{mode} argument is required.
+
+The temporary file can later be given a name using @code{linkat},
+turning it into a regular file.  This allows the atomic creation of a
+file with the specific file attributes (mode and extended attributes)
+and file contents.  If, for security reasons, it is not desirable that a
+name can be given to the file, the @code{O_EXCL} flag can be specified
+along with @code{O_TMPFILE}.
+
+Not all kernels support this open flag.  If this flag is unsupported, an
+attempt to create an unnamed temporary file fails with an error of
+@code{EINVAL}.  If the underlying file system does not support the
+@code{O_TMPFILE} flag, an @code{EOPNOTSUPP} error is the result.
+
+The @code{O_TMPFILE} flag is a GNU extension.
+@end deftypevr
+
+@deftypevr Macro int O_NONBLOCK
+@standards{POSIX.1, fcntl.h}
+@cindex non-blocking open
+This prevents @code{open} from blocking for a ``long time'' to open the
+file.  This is only meaningful for some kinds of files, usually devices
+such as serial ports; when it is not meaningful, it is harmless and
+ignored.  Often, opening a port to a modem blocks until the modem reports
+carrier detection; if @code{O_NONBLOCK} is specified, @code{open} will
+return immediately without a carrier.
+
+Note that the @code{O_NONBLOCK} flag is overloaded as both an I/O operating
+mode and a file name translation flag.  This means that specifying
+@code{O_NONBLOCK} in @code{open} also sets nonblocking I/O mode;
+@pxref{Operating Modes}.  To open the file without blocking but do normal
+I/O that blocks, you must call @code{open} with @code{O_NONBLOCK} set and
+then call @code{fcntl} to turn the bit off.
+@end deftypevr
+
+@deftypevr Macro int O_NOCTTY
+@standards{POSIX.1, fcntl.h}
+If the named file is a terminal device, don't make it the controlling
+terminal for the process.  @xref{Job Control}, for information about
+what it means to be the controlling terminal.
+
+On @gnuhurdsystems{} and 4.4 BSD, opening a file never makes it the
+controlling terminal and @code{O_NOCTTY} is zero.  However, @gnulinuxsystems{}
+and some other systems use a nonzero value for @code{O_NOCTTY} and set the
+controlling terminal when you open a file that is a terminal device; so
+to be portable, use @code{O_NOCTTY} when it is important to avoid this.
+@cindex controlling terminal, setting
+@end deftypevr
+
+The following three file name translation flags exist only on
+@gnuhurdsystems{}.
+
+@deftypevr Macro int O_IGNORE_CTTY
+@standards{GNU, fcntl.h (optional)}
+Do not recognize the named file as the controlling terminal, even if it
+refers to the process's existing controlling terminal device.  Operations
+on the new file descriptor will never induce job control signals.
+@xref{Job Control}.
+@end deftypevr
+
+@deftypevr Macro int O_NOLINK
+@standards{GNU, fcntl.h (optional)}
+If the named file is a symbolic link, open the link itself instead of
+the file it refers to.  (@code{fstat} on the new file descriptor will
+return the information returned by @code{lstat} on the link's name.)
+@cindex symbolic link, opening
+@end deftypevr
+
+@deftypevr Macro int O_NOTRANS
+@standards{GNU, fcntl.h (optional)}
+If the named file is specially translated, do not invoke the translator.
+Open the bare file the translator itself sees.
+@end deftypevr
+
+
+The open-time action flags tell @code{open} to do additional operations
+which are not really related to opening the file.  The reason to do them
+as part of @code{open} instead of in separate calls is that @code{open}
+can do them @i{atomically}.
+
+@deftypevr Macro int O_TRUNC
+@standards{POSIX.1, fcntl.h}
+Truncate the file to zero length.  This option is only useful for
+regular files, not special files such as directories or FIFOs.  POSIX.1
+requires that you open the file for writing to use @code{O_TRUNC}.  In
+BSD and GNU you must have permission to write the file to truncate it,
+but you need not open for write access.
+
+This is the only open-time action flag specified by POSIX.1.  There is
+no good reason for truncation to be done by @code{open}, instead of by
+calling @code{ftruncate} afterwards.  The @code{O_TRUNC} flag existed in
+Unix before @code{ftruncate} was invented, and is retained for backward
+compatibility.
+@end deftypevr
+
+The remaining operating modes are BSD extensions.  They exist only
+on some systems.  On other systems, these macros are not defined.
+
+@deftypevr Macro int O_SHLOCK
+@standards{BSD, fcntl.h (optional)}
+Acquire a shared lock on the file, as with @code{flock}.
+@xref{File Locks}.
+
+If @code{O_CREAT} is specified, the locking is done atomically when
+creating the file.  You are guaranteed that no other process will get
+the lock on the new file first.
+@end deftypevr
+
+@deftypevr Macro int O_EXLOCK
+@standards{BSD, fcntl.h (optional)}
+Acquire an exclusive lock on the file, as with @code{flock}.
+@xref{File Locks}.  This is atomic like @code{O_SHLOCK}.
+@end deftypevr
+
+@node Operating Modes
+@subsection I/O Operating Modes
+
+The operating modes affect how input and output operations using a file
+descriptor work.  These flags are set by @code{open} and can be fetched
+and changed with @code{fcntl}.
+
+@deftypevr Macro int O_APPEND
+@standards{POSIX.1, fcntl.h}
+The bit that enables append mode for the file.  If set, then all
+@code{write} operations write the data at the end of the file, extending
+it, regardless of the current file position.  This is the only reliable
+way to append to a file.  In append mode, you are guaranteed that the
+data you write will always go to the current end of the file, regardless
+of other processes writing to the file.  Conversely, if you simply set
+the file position to the end of file and write, then another process can
+extend the file after you set the file position but before you write,
+resulting in your data appearing someplace before the real end of file.
+@end deftypevr
+
+@deftypevr Macro int O_NONBLOCK
+@standards{POSIX.1, fcntl.h}
+The bit that enables nonblocking mode for the file.  If this bit is set,
+@code{read} requests on the file can return immediately with a failure
+status if there is no input immediately available, instead of blocking.
+Likewise, @code{write} requests can also return immediately with a
+failure status if the output can't be written immediately.
+
+Note that the @code{O_NONBLOCK} flag is overloaded as both an I/O
+operating mode and a file name translation flag; @pxref{Open-time Flags}.
+@end deftypevr
+
+@deftypevr Macro int O_NDELAY
+@standards{BSD, fcntl.h}
+This is an obsolete name for @code{O_NONBLOCK}, provided for
+compatibility with BSD.  It is not defined by the POSIX.1 standard.
+@end deftypevr
+
+The remaining operating modes are BSD and GNU extensions.  They exist only
+on some systems.  On other systems, these macros are not defined.
+
+@deftypevr Macro int O_ASYNC
+@standards{BSD, fcntl.h}
+The bit that enables asynchronous input mode.  If set, then @code{SIGIO}
+signals will be generated when input is available.  @xref{Interrupt Input}.
+
+Asynchronous input mode is a BSD feature.
+@end deftypevr
+
+@deftypevr Macro int O_FSYNC
+@standards{BSD, fcntl.h}
+The bit that enables synchronous writing for the file.  If set, each
+@code{write} call will make sure the data is reliably stored on disk before
+returning. @c !!! xref fsync
+
+Synchronous writing is a BSD feature.
+@end deftypevr
+
+@deftypevr Macro int O_SYNC
+@standards{BSD, fcntl.h}
+This is another name for @code{O_FSYNC}.  They have the same value.
+@end deftypevr
+
+@deftypevr Macro int O_NOATIME
+@standards{GNU, fcntl.h}
+If this bit is set, @code{read} will not update the access time of the
+file.  @xref{File Times}.  This is used by programs that do backups, so
+that backing a file up does not count as reading it.
+Only the owner of the file or the superuser may use this bit.
+
+This is a GNU extension.
+@end deftypevr
+
+@node Getting File Status Flags
+@subsection Getting and Setting File Status Flags
+
+The @code{fcntl} function can fetch or change file status flags.
+
+@deftypevr Macro int F_GETFL
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+read the file status flags for the open file with descriptor
+@var{filedes}.
+
+The normal return value from @code{fcntl} with this command is a
+nonnegative number which can be interpreted as the bitwise OR of the
+individual flags.  Since the file access modes are not single-bit values,
+you can mask off other bits in the returned flags with @code{O_ACCMODE}
+to compare them.
+
+In case of an error, @code{fcntl} returns @math{-1}.  The following
+@code{errno} error conditions are defined for this command:
+
+@table @code
+@item EBADF
+The @var{filedes} argument is invalid.
+@end table
+@end deftypevr
+
+@deftypevr Macro int F_SETFL
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to set
+the file status flags for the open file corresponding to the
+@var{filedes} argument.  This command requires a third @code{int}
+argument to specify the new flags, so the call looks like this:
+
+@smallexample
+fcntl (@var{filedes}, F_SETFL, @var{new-flags})
+@end smallexample
+
+You can't change the access mode for the file in this way; that is,
+whether the file descriptor was opened for reading or writing.
+
+The normal return value from @code{fcntl} with this command is an
+unspecified value other than @math{-1}, which indicates an error.  The
+error conditions are the same as for the @code{F_GETFL} command.
+@end deftypevr
+
+If you want to modify the file status flags, you should get the current
+flags with @code{F_GETFL} and modify the value.  Don't assume that the
+flags listed here are the only ones that are implemented; your program
+may be run years from now and more flags may exist then.  For example,
+here is a function to set or clear the flag @code{O_NONBLOCK} without
+altering any other flags:
+
+@smallexample
+@group
+/* @r{Set the @code{O_NONBLOCK} flag of @var{desc} if @var{value} is nonzero,}
+   @r{or clear the flag if @var{value} is 0.}
+   @r{Return 0 on success, or -1 on error with @code{errno} set.} */
+
+int
+set_nonblock_flag (int desc, int value)
+@{
+  int oldflags = fcntl (desc, F_GETFL, 0);
+  /* @r{If reading the flags failed, return error indication now.} */
+  if (oldflags == -1)
+    return -1;
+  /* @r{Set just the flag we want to set.} */
+  if (value != 0)
+    oldflags |= O_NONBLOCK;
+  else
+    oldflags &= ~O_NONBLOCK;
+  /* @r{Store modified flag word in the descriptor.} */
+  return fcntl (desc, F_SETFL, oldflags);
+@}
+@end group
+@end smallexample
+
+@node File Locks
+@section File Locks
+
+@cindex file locks
+@cindex record locking
+This section describes record locks that are associated with the process.
+There is also a different type of record lock that is associated with the
+open file description instead of the process.  @xref{Open File Description Locks}.
+
+The remaining @code{fcntl} commands are used to support @dfn{record
+locking}, which permits multiple cooperating programs to prevent each
+other from simultaneously accessing parts of a file in error-prone
+ways.
+
+@cindex exclusive lock
+@cindex write lock
+An @dfn{exclusive} or @dfn{write} lock gives a process exclusive access
+for writing to the specified part of the file.  While a write lock is in
+place, no other process can lock that part of the file.
+
+@cindex shared lock
+@cindex read lock
+A @dfn{shared} or @dfn{read} lock prohibits any other process from
+requesting a write lock on the specified part of the file.  However,
+other processes can request read locks.
+
+The @code{read} and @code{write} functions do not actually check to see
+whether there are any locks in place.  If you want to implement a
+locking protocol for a file shared by multiple processes, your application
+must do explicit @code{fcntl} calls to request and clear locks at the
+appropriate points.
+
+Locks are associated with processes.  A process can only have one kind
+of lock set for each byte of a given file.  When any file descriptor for
+that file is closed by the process, all of the locks that process holds
+on that file are released, even if the locks were made using other
+descriptors that remain open.  Likewise, locks are released when a
+process exits, and are not inherited by child processes created using
+@code{fork} (@pxref{Creating a Process}).
+
+When making a lock, use a @code{struct flock} to specify what kind of
+lock and where.  This data type and the associated macros for the
+@code{fcntl} function are declared in the header file @file{fcntl.h}.
+@pindex fcntl.h
+
+@deftp {Data Type} {struct flock}
+@standards{POSIX.1, fcntl.h}
+This structure is used with the @code{fcntl} function to describe a file
+lock.  It has these members:
+
+@table @code
+@item short int l_type
+Specifies the type of the lock; one of @code{F_RDLCK}, @code{F_WRLCK}, or
+@code{F_UNLCK}.
+
+@item short int l_whence
+This corresponds to the @var{whence} argument to @code{fseek} or
+@code{lseek}, and specifies what the offset is relative to.  Its value
+can be one of @code{SEEK_SET}, @code{SEEK_CUR}, or @code{SEEK_END}.
+
+@item off_t l_start
+This specifies the offset of the start of the region to which the lock
+applies, and is given in bytes relative to the point specified by the
+@code{l_whence} member.
+
+@item off_t l_len
+This specifies the length of the region to be locked.  A value of
+@code{0} is treated specially; it means the region extends to the end of
+the file.
+
+@item pid_t l_pid
+This field is the process ID (@pxref{Process Creation Concepts}) of the
+process holding the lock.  It is filled in by calling @code{fcntl} with
+the @code{F_GETLK} command, but is ignored when making a lock.  If the
+conflicting lock is an open file description lock
+(@pxref{Open File Description Locks}), then this field will be set to
+@math{-1}.
+@end table
+@end deftp
+
+@deftypevr Macro int F_GETLK
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should get information about a lock.  This command
+requires a third argument of type @w{@code{struct flock *}} to be passed
+to @code{fcntl}, so that the form of the call is:
+
+@smallexample
+fcntl (@var{filedes}, F_GETLK, @var{lockp})
+@end smallexample
+
+If there is a lock already in place that would block the lock described
+by the @var{lockp} argument, information about that lock overwrites
+@code{*@var{lockp}}.  Existing locks are not reported if they are
+compatible with making a new lock as specified.  Thus, you should
+specify a lock type of @code{F_WRLCK} if you want to find out about both
+read and write locks, or @code{F_RDLCK} if you want to find out about
+write locks only.
+
+There might be more than one lock affecting the region specified by the
+@var{lockp} argument, but @code{fcntl} only returns information about
+one of them.  The @code{l_whence} member of the @var{lockp} structure is
+set to @code{SEEK_SET} and the @code{l_start} and @code{l_len} fields
+set to identify the locked region.
+
+If no lock applies, the only change to the @var{lockp} structure is to
+update the @code{l_type} to a value of @code{F_UNLCK}.
+
+The normal return value from @code{fcntl} with this command is an
+unspecified value other than @math{-1}, which is reserved to indicate an
+error.  The following @code{errno} error conditions are defined for
+this command:
+
+@table @code
+@item EBADF
+The @var{filedes} argument is invalid.
+
+@item EINVAL
+Either the @var{lockp} argument doesn't specify valid lock information,
+or the file associated with @var{filedes} doesn't support locks.
+@end table
+@end deftypevr
+
+@deftypevr Macro int F_SETLK
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should set or clear a lock.  This command requires a
+third argument of type @w{@code{struct flock *}} to be passed to
+@code{fcntl}, so that the form of the call is:
+
+@smallexample
+fcntl (@var{filedes}, F_SETLK, @var{lockp})
+@end smallexample
+
+If the process already has a lock on any part of the region, the old lock
+on that part is replaced with the new lock.  You can remove a lock
+by specifying a lock type of @code{F_UNLCK}.
+
+If the lock cannot be set, @code{fcntl} returns immediately with a value
+of @math{-1}.  This function does not block while waiting for other processes
+to release locks.  If @code{fcntl} succeeds, it returns a value other
+than @math{-1}.
+
+The following @code{errno} error conditions are defined for this
+function:
+
+@table @code
+@item EAGAIN
+@itemx EACCES
+The lock cannot be set because it is blocked by an existing lock on the
+file.  Some systems use @code{EAGAIN} in this case, and other systems
+use @code{EACCES}; your program should treat them alike, after
+@code{F_SETLK}.  (@gnulinuxhurdsystems{} always use @code{EAGAIN}.)
+
+@item EBADF
+Either: the @var{filedes} argument is invalid; you requested a read lock
+but the @var{filedes} is not open for read access; or, you requested a
+write lock but the @var{filedes} is not open for write access.
+
+@item EINVAL
+Either the @var{lockp} argument doesn't specify valid lock information,
+or the file associated with @var{filedes} doesn't support locks.
+
+@item ENOLCK
+The system has run out of file lock resources; there are already too
+many file locks in place.
+
+Well-designed file systems never report this error, because they have no
+limitation on the number of locks.  However, you must still take account
+of the possibility of this error, as it could result from network access
+to a file system on another machine.
+@end table
+@end deftypevr
+
+@deftypevr Macro int F_SETLKW
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should set or clear a lock.  It is just like the
+@code{F_SETLK} command, but causes the process to block (or wait)
+until the request can be specified.
+
+This command requires a third argument of type @code{struct flock *}, as
+for the @code{F_SETLK} command.
+
+The @code{fcntl} return values and errors are the same as for the
+@code{F_SETLK} command, but these additional @code{errno} error conditions
+are defined for this command:
+
+@table @code
+@item EINTR
+The function was interrupted by a signal while it was waiting.
+@xref{Interrupted Primitives}.
+
+@item EDEADLK
+The specified region is being locked by another process.  But that
+process is waiting to lock a region which the current process has
+locked, so waiting for the lock would result in deadlock.  The system
+does not guarantee that it will detect all such conditions, but it lets
+you know if it notices one.
+@end table
+@end deftypevr
+
+
+The following macros are defined for use as values for the @code{l_type}
+member of the @code{flock} structure.  The values are integer constants.
+
+@vtable @code
+@item F_RDLCK
+@standards{POSIX.1, fcntl.h}
+This macro is used to specify a read (or shared) lock.
+
+@item F_WRLCK
+@standards{POSIX.1, fcntl.h}
+This macro is used to specify a write (or exclusive) lock.
+
+@item F_UNLCK
+@standards{POSIX.1, fcntl.h}
+This macro is used to specify that the region is unlocked.
+@end vtable
+
+As an example of a situation where file locking is useful, consider a
+program that can be run simultaneously by several different users, that
+logs status information to a common file.  One example of such a program
+might be a game that uses a file to keep track of high scores.  Another
+example might be a program that records usage or accounting information
+for billing purposes.
+
+Having multiple copies of the program simultaneously writing to the
+file could cause the contents of the file to become mixed up.  But
+you can prevent this kind of problem by setting a write lock on the
+file before actually writing to the file.
+
+If the program also needs to read the file and wants to make sure that
+the contents of the file are in a consistent state, then it can also use
+a read lock.  While the read lock is set, no other process can lock
+that part of the file for writing.
+
+@c ??? This section could use an example program.
+
+Remember that file locks are only an @emph{advisory} protocol for
+controlling access to a file.  There is still potential for access to
+the file by programs that don't use the lock protocol.
+
+@node Open File Description Locks
+@section Open File Description Locks
+
+In contrast to process-associated record locks (@pxref{File Locks}),
+open file description record locks are associated with an open file
+description rather than a process.
+
+Using @code{fcntl} to apply an open file description lock on a region that
+already has an existing open file description lock that was created via the
+same file descriptor will never cause a lock conflict.
+
+Open file description locks are also inherited by child processes across
+@code{fork}, or @code{clone} with @code{CLONE_FILES} set
+(@pxref{Creating a Process}), along with the file descriptor.
+
+It is important to distinguish between the open file @emph{description} (an
+instance of an open file, usually created by a call to @code{open}) and
+an open file @emph{descriptor}, which is a numeric value that refers to the
+open file description.  The locks described here are associated with the
+open file @emph{description} and not the open file @emph{descriptor}.
+
+Using @code{dup} (@pxref{Duplicating Descriptors}) to copy a file
+descriptor does not give you a new open file description, but rather copies a
+reference to an existing open file description and assigns it to a new
+file descriptor.  Thus, open file description locks set on a file
+descriptor cloned by @code{dup} will never conflict with open file
+description locks set on the original descriptor since they refer to the
+same open file description.  Depending on the range and type of lock
+involved, the original lock may be modified by a @code{F_OFD_SETLK} or
+@code{F_OFD_SETLKW} command in this situation however.
+
+Open file description locks always conflict with process-associated locks,
+even if acquired by the same process or on the same open file
+descriptor.
+
+Open file description locks use the same @code{struct flock} as
+process-associated locks as an argument (@pxref{File Locks}) and the
+macros for the @code{command} values are also declared in the header file
+@file{fcntl.h}. To use them, the macro @code{_GNU_SOURCE} must be
+defined prior to including any header file.
+
+In contrast to process-associated locks, any @code{struct flock} used as
+an argument to open file description lock commands must have the @code{l_pid}
+value set to @math{0}.  Also, when returning information about an
+open file description lock in a @code{F_GETLK} or @code{F_OFD_GETLK} request,
+the @code{l_pid} field in @code{struct flock} will be set to @math{-1}
+to indicate that the lock is not associated with a process.
+
+When the same @code{struct flock} is reused as an argument to a
+@code{F_OFD_SETLK} or @code{F_OFD_SETLKW} request after being used for an
+@code{F_OFD_GETLK} request, it is necessary to inspect and reset the
+@code{l_pid} field to @math{0}.
+
+@pindex fcntl.h.
+
+@deftypevr Macro int F_OFD_GETLK
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should get information about a lock.  This command
+requires a third argument of type @w{@code{struct flock *}} to be passed
+to @code{fcntl}, so that the form of the call is:
+
+@smallexample
+fcntl (@var{filedes}, F_OFD_GETLK, @var{lockp})
+@end smallexample
+
+If there is a lock already in place that would block the lock described
+by the @var{lockp} argument, information about that lock is written to
+@code{*@var{lockp}}.  Existing locks are not reported if they are
+compatible with making a new lock as specified.  Thus, you should
+specify a lock type of @code{F_WRLCK} if you want to find out about both
+read and write locks, or @code{F_RDLCK} if you want to find out about
+write locks only.
+
+There might be more than one lock affecting the region specified by the
+@var{lockp} argument, but @code{fcntl} only returns information about
+one of them. Which lock is returned in this situation is undefined.
+
+The @code{l_whence} member of the @var{lockp} structure are set to
+@code{SEEK_SET} and the @code{l_start} and @code{l_len} fields are set
+to identify the locked region.
+
+If no conflicting lock exists, the only change to the @var{lockp} structure
+is to update the @code{l_type} field to the value @code{F_UNLCK}.
+
+The normal return value from @code{fcntl} with this command is either @math{0}
+on success or @math{-1}, which indicates an error. The following @code{errno}
+error conditions are defined for this command:
+
+@table @code
+@item EBADF
+The @var{filedes} argument is invalid.
+
+@item EINVAL
+Either the @var{lockp} argument doesn't specify valid lock information,
+the operating system kernel doesn't support open file description locks, or the file
+associated with @var{filedes} doesn't support locks.
+@end table
+@end deftypevr
+
+@deftypevr Macro int F_OFD_SETLK
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should set or clear a lock.  This command requires a
+third argument of type @w{@code{struct flock *}} to be passed to
+@code{fcntl}, so that the form of the call is:
+
+@smallexample
+fcntl (@var{filedes}, F_OFD_SETLK, @var{lockp})
+@end smallexample
+
+If the open file already has a lock on any part of the
+region, the old lock on that part is replaced with the new lock.  You
+can remove a lock by specifying a lock type of @code{F_UNLCK}.
+
+If the lock cannot be set, @code{fcntl} returns immediately with a value
+of @math{-1}.  This command does not wait for other tasks
+to release locks.  If @code{fcntl} succeeds, it returns @math{0}.
+
+The following @code{errno} error conditions are defined for this
+command:
+
+@table @code
+@item EAGAIN
+The lock cannot be set because it is blocked by an existing lock on the
+file.
+
+@item EBADF
+Either: the @var{filedes} argument is invalid; you requested a read lock
+but the @var{filedes} is not open for read access; or, you requested a
+write lock but the @var{filedes} is not open for write access.
+
+@item EINVAL
+Either the @var{lockp} argument doesn't specify valid lock information,
+the operating system kernel doesn't support open file description locks, or the
+file associated with @var{filedes} doesn't support locks.
+
+@item ENOLCK
+The system has run out of file lock resources; there are already too
+many file locks in place.
+
+Well-designed file systems never report this error, because they have no
+limitation on the number of locks.  However, you must still take account
+of the possibility of this error, as it could result from network access
+to a file system on another machine.
+@end table
+@end deftypevr
+
+@deftypevr Macro int F_OFD_SETLKW
+@standards{POSIX.1, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should set or clear a lock.  It is just like the
+@code{F_OFD_SETLK} command, but causes the process to wait until the request
+can be completed.
+
+This command requires a third argument of type @code{struct flock *}, as
+for the @code{F_OFD_SETLK} command.
+
+The @code{fcntl} return values and errors are the same as for the
+@code{F_OFD_SETLK} command, but these additional @code{errno} error conditions
+are defined for this command:
+
+@table @code
+@item EINTR
+The function was interrupted by a signal while it was waiting.
+@xref{Interrupted Primitives}.
+
+@end table
+@end deftypevr
+
+Open file description locks are useful in the same sorts of situations as
+process-associated locks. They can also be used to synchronize file
+access between threads within the same process by having each thread perform
+its own @code{open} of the file, to obtain its own open file description.
+
+Because open file description locks are automatically freed only upon
+closing the last file descriptor that refers to the open file
+description, this locking mechanism avoids the possibility that locks
+are inadvertently released due to a library routine opening and closing
+a file without the application being aware.
+
+As with process-associated locks, open file description locks are advisory.
+
+@node Open File Description Locks Example
+@section Open File Description Locks Example
+
+Here is an example of using open file description locks in a threaded
+program. If this program used process-associated locks, then it would be
+subject to data corruption because process-associated locks are shared
+by the threads inside a process, and thus cannot be used by one thread
+to lock out another thread in the same process.
+
+Proper error handling has been omitted in the following program for
+brevity.
+
+@smallexample
+@include ofdlocks.c.texi
+@end smallexample
+
+This example creates three threads each of which loops five times,
+appending to the file.  Access to the file is serialized via open file
+description locks. If we compile and run the above program, we'll end up
+with /tmp/foo that has 15 lines in it.
+
+If we, however, were to replace the @code{F_OFD_SETLK} and
+@code{F_OFD_SETLKW} commands with their process-associated lock
+equivalents, the locking essentially becomes a noop since it is all done
+within the context of the same process. That leads to data corruption
+(typically manifested as missing lines) as some threads race in and
+overwrite the data written by others.
+
+@node Interrupt Input
+@section Interrupt-Driven Input
+
+@cindex interrupt-driven input
+If you set the @code{O_ASYNC} status flag on a file descriptor
+(@pxref{File Status Flags}), a @code{SIGIO} signal is sent whenever
+input or output becomes possible on that file descriptor.  The process
+or process group to receive the signal can be selected by using the
+@code{F_SETOWN} command to the @code{fcntl} function.  If the file
+descriptor is a socket, this also selects the recipient of @code{SIGURG}
+signals that are delivered when out-of-band data arrives on that socket;
+see @ref{Out-of-Band Data}.  (@code{SIGURG} is sent in any situation
+where @code{select} would report the socket as having an ``exceptional
+condition''.  @xref{Waiting for I/O}.)
+
+If the file descriptor corresponds to a terminal device, then @code{SIGIO}
+signals are sent to the foreground process group of the terminal.
+@xref{Job Control}.
+
+@pindex fcntl.h
+The symbols in this section are defined in the header file
+@file{fcntl.h}.
+
+@deftypevr Macro int F_GETOWN
+@standards{BSD, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should get information about the process or process
+group to which @code{SIGIO} signals are sent.  (For a terminal, this is
+actually the foreground process group ID, which you can get using
+@code{tcgetpgrp}; see @ref{Terminal Access Functions}.)
+
+The return value is interpreted as a process ID; if negative, its
+absolute value is the process group ID.
+
+The following @code{errno} error condition is defined for this command:
+
+@table @code
+@item EBADF
+The @var{filedes} argument is invalid.
+@end table
+@end deftypevr
+
+@deftypevr Macro int F_SETOWN
+@standards{BSD, fcntl.h}
+This macro is used as the @var{command} argument to @code{fcntl}, to
+specify that it should set the process or process group to which
+@code{SIGIO} signals are sent.  This command requires a third argument
+of type @code{pid_t} to be passed to @code{fcntl}, so that the form of
+the call is:
+
+@smallexample
+fcntl (@var{filedes}, F_SETOWN, @var{pid})
+@end smallexample
+
+The @var{pid} argument should be a process ID.  You can also pass a
+negative number whose absolute value is a process group ID.
+
+The return value from @code{fcntl} with this command is @math{-1}
+in case of error and some other value if successful.  The following
+@code{errno} error conditions are defined for this command:
+
+@table @code
+@item EBADF
+The @var{filedes} argument is invalid.
+
+@item ESRCH
+There is no process or process group corresponding to @var{pid}.
+@end table
+@end deftypevr
+
+@c ??? This section could use an example program.
+
+@node IOCTLs
+@section Generic I/O Control operations
+@cindex generic i/o control operations
+@cindex IOCTLs
+
+@gnusystems{} can handle most input/output operations on many different
+devices and objects in terms of a few file primitives - @code{read},
+@code{write} and @code{lseek}.  However, most devices also have a few
+peculiar operations which do not fit into this model.  Such as:
+
+@itemize @bullet
+
+@item
+Changing the character font used on a terminal.
+
+@item
+Telling a magnetic tape system to rewind or fast forward.  (Since they
+cannot move in byte increments, @code{lseek} is inapplicable).
+
+@item
+Ejecting a disk from a drive.
+
+@item
+Playing an audio track from a CD-ROM drive.
+
+@item
+Maintaining routing tables for a network.
+
+@end itemize
+
+Although some such objects such as sockets and terminals
+@footnote{Actually, the terminal-specific functions are implemented with
+IOCTLs on many platforms.} have special functions of their own, it would
+not be practical to create functions for all these cases.
+
+Instead these minor operations, known as @dfn{IOCTL}s, are assigned code
+numbers and multiplexed through the @code{ioctl} function, defined in
+@code{sys/ioctl.h}.  The code numbers themselves are defined in many
+different headers.
+
+@deftypefun int ioctl (int @var{filedes}, int @var{command}, @dots{})
+@standards{BSD, sys/ioctl.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+
+The @code{ioctl} function performs the generic I/O operation
+@var{command} on @var{filedes}.
+
+A third argument is usually present, either a single number or a pointer
+to a structure.  The meaning of this argument, the returned value, and
+any error codes depends upon the command used.  Often @math{-1} is
+returned for a failure.
+
+@end deftypefun
+
+On some systems, IOCTLs used by different devices share the same numbers.
+Thus, although use of an inappropriate IOCTL @emph{usually} only produces
+an error, you should not attempt to use device-specific IOCTLs on an
+unknown device.
+
+Most IOCTLs are OS-specific and/or only used in special system utilities,
+and are thus beyond the scope of this document.  For an example of the use
+of an IOCTL, see @ref{Out-of-Band Data}.
+
+@c FIXME this is undocumented:
+@c dup3

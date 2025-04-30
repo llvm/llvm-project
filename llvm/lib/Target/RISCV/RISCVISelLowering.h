@@ -130,7 +130,8 @@ enum NodeType : unsigned {
   FCLASS,
 
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
-  FMAX, FMIN,
+  FMAX,
+  FMIN,
 
   // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
   // It takes a chain operand and another two target constant operands (the
@@ -474,6 +475,9 @@ enum NodeType : unsigned {
   TH_LDD,
   TH_SWD,
   TH_SDD,
+  // NS 128-bit load and store
+  NS_LOAD,
+  NS_STORE,
 };
 // clang-format on
 } // namespace RISCVISD

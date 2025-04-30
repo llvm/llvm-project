@@ -1,0 +1,2 @@
+#define TYPE PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP
+#include "tst-rwlock2.c"

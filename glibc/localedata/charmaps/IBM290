@@ -1,0 +1,205 @@
+<code_set_name> IBM290
+<comment_char> %
+<escape_char> /
+% version: 1.0
+%  source: IBM 3174 Character Set Ref, GA27-3831-02, March 1990
+
+% alias CP290
+% alias EBCDIC-JP-KANA
+CHARMAP
+<U0000>     /x00         NULL (NUL)
+<U0001>     /x01         START OF HEADING (SOH)
+<U0002>     /x02         START OF TEXT (STX)
+<U0003>     /x03         END OF TEXT (ETX)
+<U009C>     /x04         STRING TERMINATOR (ST)
+<U0009>     /x05         CHARACTER TABULATION (HT)
+<U0086>     /x06         START OF SELECTED AREA (SSA)
+<U007F>     /x07         DELETE (DEL)
+<U0097>     /x08         END OF GUARDED AREA (EPA)
+<U008D>     /x09         REVERSE LINE FEED (RI)
+<U008E>     /x0a         SINGLE-SHIFT TWO (SS2)
+<U000B>     /x0b         LINE TABULATION (VT)
+<U000C>     /x0c         FORM FEED (FF)
+<U000D>     /x0d         CARRIAGE RETURN (CR)
+<U000E>     /x0e         SHIFT OUT (SO)
+<U000F>     /x0f         SHIFT IN (SI)
+<U0010>     /x10         DATALINK ESCAPE (DLE)
+<U0011>     /x11         DEVICE CONTROL ONE (DC1)
+<U0012>     /x12         DEVICE CONTROL TWO (DC2)
+<U0013>     /x13         DEVICE CONTROL THREE (DC3)
+<U009D>     /x14         OPERATING SYSTEM COMMAND (OSC)
+<U0085>     /x15         NEXT LINE (NEL)
+<U0008>     /x16         BACKSPACE (BS)
+<U0087>     /x17         END OF SELECTED AREA (ESA)
+<U0018>     /x18         CANCEL (CAN)
+<U0019>     /x19         END OF MEDIUM (EM)
+<U0092>     /x1a         PRIVATE USE TWO (PU2)
+<U008F>     /x1b         SINGLE-SHIFT THREE (SS3)
+<U001C>     /x1c         FILE SEPARATOR (IS4)
+<U001D>     /x1d         GROUP SEPARATOR (IS3)
+<U001E>     /x1e         RECORD SEPARATOR (IS2)
+<U001F>     /x1f         UNIT SEPARATOR (IS1)
+<U0080>     /x20         PADDING CHARACTER (PAD)
+<U0081>     /x21         HIGH OCTET PRESET (HOP)
+<U0082>     /x22         BREAK PERMITTED HERE (BPH)
+<U0083>     /x23         NO BREAK HERE (NBH)
+<U0084>     /x24         INDEX (IND)
+<U000A>     /x25         LINE FEED (LF)
+<U0017>     /x26         END OF TRANSMISSION BLOCK (ETB)
+<U001B>     /x27         ESCAPE (ESC)
+<U0088>     /x28         CHARACTER TABULATION SET (HTS)
+<U0089>     /x29         CHARACTER TABULATION WITH JUSTIFICATION (HTJ)
+<U008A>     /x2a         LINE TABULATION SET (VTS)
+<U008B>     /x2b         PARTIAL LINE FORWARD (PLD)
+<U008C>     /x2c         PARTIAL LINE BACKWARD (PLU)
+<U0005>     /x2d         ENQUIRY (ENQ)
+<U0006>     /x2e         ACKNOWLEDGE (ACK)
+<U0007>     /x2f         BELL (BEL)
+<U0090>     /x30         DEVICE CONTROL STRING (DCS)
+<U0091>     /x31         PRIVATE USE ONE (PU1)
+<U0016>     /x32         SYNCHRONOUS IDLE (SYN)
+<U0093>     /x33         SET TRANSMIT STATE (STS)
+<U0094>     /x34         CANCEL CHARACTER (CCH)
+<U0095>     /x35         MESSAGE WAITING (MW)
+<U0096>     /x36         START OF GUARDED AREA (SPA)
+<U0004>     /x37         END OF TRANSMISSION (EOT)
+<U0098>     /x38         START OF STRING (SOS)
+<U0099>     /x39         SINGLE GRAPHIC CHARACTER INTRODUCER (SGCI)
+<U009A>     /x3a         SINGLE CHARACTER INTRODUCER (SCI)
+<U009B>     /x3b         CONTROL SEQUENCE INTRODUCER (CSI)
+<U0014>     /x3c         DEVICE CONTROL FOUR (DC4)
+<U0015>     /x3d         NEGATIVE ACKNOWLEDGE (NAK)
+<U009E>     /x3e         PRIVACY MESSAGE (PM)
+<U001A>     /x3f         SUBSTITUTE (SUB)
+<U0020>     /x40         SPACE
+<U3002>     /x41         IDEOGRAPHIC FULL STOP
+<U300C>     /x42         LEFT CORNER BRACKET
+<U300D>     /x43         RIGHT CORNER BRACKET
+<U3001>     /x44         IDEOGRAPHIC COMMA
+<U30FB>     /x45         KATAKANA MIDDLE DOT
+<U30F2>     /x46         KATAKANA LETTER WO
+<U30A1>     /x47         KATAKANA LETTER SMALL A
+<U30A3>     /x48         KATAKANA LETTER SMALL I
+<U30A5>     /x49         KATAKANA LETTER SMALL U
+<U00A3>     /x4a         POUND SIGN
+<U002E>     /x4b         FULL STOP
+<U003C>     /x4c         LESS-THAN SIGN
+<U0028>     /x4d         LEFT PARENTHESIS
+<U002B>     /x4e         PLUS SIGN
+<U007C>     /x4f         VERTICAL LINE
+<U0026>     /x50         AMPERSAND
+<U30A7>     /x51         KATAKANA LETTER SMALL E
+<U30A9>     /x52         KATAKANA LETTER SMALL O
+<U30E3>     /x53         KATAKANA LETTER SMALL YA
+<U30E5>     /x54         KATAKANA LETTER SMALL YU
+<U30E7>     /x55         KATAKANA LETTER SMALL YO
+<U30C3>     /x56         KATAKANA LETTER SMALL TU
+<U30FC>     /x58         KATAKANA-HIRAGANA PROLONGED SOUND MARK
+<U0021>     /x5a         EXCLAMATION MARK
+<U00A5>     /x5b         YEN SIGN
+<U002A>     /x5c         ASTERISK
+<U0029>     /x5d         RIGHT PARENTHESIS
+<U003B>     /x5e         SEMICOLON
+<U00AC>     /x5f         NOT SIGN
+<U002D>     /x60         HYPHEN-MINUS
+<U002F>     /x61         SOLIDUS
+<U00A6>     /x6a         BROKEN BAR
+<U002C>     /x6b         COMMA
+<U0025>     /x6c         PERCENT SIGN
+<U005F>     /x6d         LOW LINE
+<U003E>     /x6e         GREATER-THAN SIGN
+<U003F>     /x6f         QUESTION MARK
+<U0060>     /x79         GRAVE ACCENT
+<U003A>     /x7a         COLON
+<U0023>     /x7b         NUMBER SIGN
+<U0040>     /x7c         COMMERCIAL AT
+<U0027>     /x7d         APOSTROPHE
+<U003D>     /x7e         EQUALS SIGN
+<U0022>     /x7f         QUOTATION MARK
+<U30A2>     /x81         KATAKANA LETTER A
+<U30A4>     /x82         KATAKANA LETTER I
+<U30A6>     /x83         KATAKANA LETTER U
+<U30A8>     /x84         KATAKANA LETTER E
+<U30AA>     /x85         KATAKANA LETTER O
+<U30AB>     /x86         KATAKANA LETTER KA
+<U30AD>     /x87         KATAKANA LETTER KI
+<U30AF>     /x88         KATAKANA LETTER KU
+<U30B1>     /x89         KATAKANA LETTER KE
+<U30B3>     /x8a         KATAKANA LETTER KO
+<U30B5>     /x8c         KATAKANA LETTER SA
+<U30B7>     /x8d         KATAKANA LETTER SI
+<U30B9>     /x8e         KATAKANA LETTER SU
+<U30BB>     /x8f         KATAKANA LETTER SE
+<U30BD>     /x90         KATAKANA LETTER SO
+<U30BF>     /x91         KATAKANA LETTER TA
+<U30C1>     /x92         KATAKANA LETTER TI
+<U30C4>     /x93         KATAKANA LETTER TU
+<U30C6>     /x94         KATAKANA LETTER TE
+<U30C8>     /x95         KATAKANA LETTER TO
+<U30CA>     /x96         KATAKANA LETTER NA
+<U30CB>     /x97         KATAKANA LETTER NI
+<U30CC>     /x98         KATAKANA LETTER NU
+<U30CD>     /x99         KATAKANA LETTER NE
+<U30CE>     /x9a         KATAKANA LETTER NO
+<U30CF>     /x9d         KATAKANA LETTER HA
+<U30D2>     /x9e         KATAKANA LETTER HI
+<U30D5>     /x9f         KATAKANA LETTER HU
+<U203E>     /xa1         OVERLINE
+<U30D8>     /xa2         KATAKANA LETTER HE
+<U30DB>     /xa3         KATAKANA LETTER HO
+<U30DE>     /xa4         KATAKANA LETTER MA
+<U30DF>     /xa5         KATAKANA LETTER MI
+<U30E0>     /xa6         KATAKANA LETTER MU
+<U30E1>     /xa7         KATAKANA LETTER ME
+<U30E2>     /xa8         KATAKANA LETTER MO
+<U30E4>     /xa9         KATAKANA LETTER YA
+<U30E6>     /xaa         KATAKANA LETTER YU
+<U30E8>     /xac         KATAKANA LETTER YO
+<U30E9>     /xad         KATAKANA LETTER RA
+<U30EA>     /xae         KATAKANA LETTER RI
+<U30EB>     /xaf         KATAKANA LETTER RU
+<U30EC>     /xba         KATAKANA LETTER RE
+<U30ED>     /xbb         KATAKANA LETTER RO
+<U30EF>     /xbc         KATAKANA LETTER WA
+<U30F3>     /xbd         KATAKANA LETTER N
+<U309B>     /xbe         KATAKANA-HIRAGANA VOICED SOUND MARK
+<U309C>     /xbf         KATAKANA-HIRAGANA SEMI-VOICED SOUND MARK
+<U0041>     /xc1         LATIN CAPITAL LETTER A
+<U0042>     /xc2         LATIN CAPITAL LETTER B
+<U0043>     /xc3         LATIN CAPITAL LETTER C
+<U0044>     /xc4         LATIN CAPITAL LETTER D
+<U0045>     /xc5         LATIN CAPITAL LETTER E
+<U0046>     /xc6         LATIN CAPITAL LETTER F
+<U0047>     /xc7         LATIN CAPITAL LETTER G
+<U0048>     /xc8         LATIN CAPITAL LETTER H
+<U0049>     /xc9         LATIN CAPITAL LETTER I
+<U004A>     /xd1         LATIN CAPITAL LETTER J
+<U004B>     /xd2         LATIN CAPITAL LETTER K
+<U004C>     /xd3         LATIN CAPITAL LETTER L
+<U004D>     /xd4         LATIN CAPITAL LETTER M
+<U004E>     /xd5         LATIN CAPITAL LETTER N
+<U004F>     /xd6         LATIN CAPITAL LETTER O
+<U0050>     /xd7         LATIN CAPITAL LETTER P
+<U0051>     /xd8         LATIN CAPITAL LETTER Q
+<U0052>     /xd9         LATIN CAPITAL LETTER R
+<U0024>     /xe0         DOLLAR SIGN
+<U0053>     /xe2         LATIN CAPITAL LETTER S
+<U0054>     /xe3         LATIN CAPITAL LETTER T
+<U0055>     /xe4         LATIN CAPITAL LETTER U
+<U0056>     /xe5         LATIN CAPITAL LETTER V
+<U0057>     /xe6         LATIN CAPITAL LETTER W
+<U0058>     /xe7         LATIN CAPITAL LETTER X
+<U0059>     /xe8         LATIN CAPITAL LETTER Y
+<U005A>     /xe9         LATIN CAPITAL LETTER Z
+<U0030>     /xf0         DIGIT ZERO
+<U0031>     /xf1         DIGIT ONE
+<U0032>     /xf2         DIGIT TWO
+<U0033>     /xf3         DIGIT THREE
+<U0034>     /xf4         DIGIT FOUR
+<U0035>     /xf5         DIGIT FIVE
+<U0036>     /xf6         DIGIT SIX
+<U0037>     /xf7         DIGIT SEVEN
+<U0038>     /xf8         DIGIT EIGHT
+<U0039>     /xf9         DIGIT NINE
+<U009F>     /xff         APPLICATION PROGRAM COMMAND (APC)
+END CHARMAP

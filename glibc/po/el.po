@@ -1,0 +1,3207 @@
+# Greek(Hellenic) messages for the GNU libc.
+# Copyright (C) 1998, 1999, 2000, 2001 Free Software Foundation, Inc.
+# Nikos Mavroyanopoulos <nmav@hellug.gr>, 1999, 2000.
+# Simos Xenitellis <S.Xenitellis@rhbnc.ac.uk>, 1999, 2000, 2001.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: libc 2.2.3\n"
+"POT-Creation-Date: 2021-07-28 22:02-0400\n"
+"PO-Revision-Date: 2001-05-21 19:20:31+0000\n"
+"Last-Translator: Nikos Mavroyanopoulos <nmav@hellug.gr>\n"
+"Language-Team: Greek <nls@tux.hellug.gr>\n"
+"Language: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Bugs: Report translation errors to the Language-Team address.\n"
+
+#: argp/argp-help.c:229
+#, c-format
+msgid "%.*s: ARGP_HELP_FMT parameter requires a value"
+msgstr "%.*s: η παράμετρος ARGP_HELP_FMT απαιτεί τιμή"
+
+#: argp/argp-help.c:239
+#, c-format
+msgid "%.*s: Unknown ARGP_HELP_FMT parameter"
+msgstr "%.*s: Άγνωστη παράμετρος ARGP_HELP_FMT"
+
+#: argp/argp-help.c:252
+#, c-format
+msgid "Garbage in ARGP_HELP_FMT: %s"
+msgstr "Σκουπίδια στο ARGP_HELP_FMT: %s"
+
+#: argp/argp-help.c:1350
+msgid "Mandatory or optional arguments to long options are also mandatory or optional for any corresponding short options."
+msgstr "Υποχρεωτικά ή προαιρετικά ορίσματα σε μακρές επιλογές είναι επίσης υποχρεωτικά ή προαιρετικά σε κάθε αντίστοιχες σύντομες επιλογές."
+
+#: argp/argp-help.c:1713
+msgid "Usage:"
+msgstr "Χρήση:"
+
+#: argp/argp-help.c:1717
+msgid "  or: "
+msgstr "   ή:"
+
+#: argp/argp-help.c:1729
+msgid " [OPTION...]"
+msgstr " [ΕΠΙΛΟΓΗ...]"
+
+#: argp/argp-help.c:1756
+#, c-format
+msgid "Try `%s --help' or `%s --usage' for more information.\n"
+msgstr "Δοκιμάστε `%s --help' ή `%s --usage' για περισσότερες πληροφορίες.\n"
+
+#: argp/argp-help.c:1784
+#, c-format
+msgid "Report bugs to %s.\n"
+msgstr "Αναφέρατε σφάλματα στο %s.\n"
+
+#: argp/argp-parse.c:101
+msgid "Give this help list"
+msgstr "Να δοθεί αυτή η λίστα βοήθειας"
+
+#: argp/argp-parse.c:102
+msgid "Give a short usage message"
+msgstr "Να δωθεί σύντομο μήνυμα χρήσης"
+
+#: argp/argp-parse.c:103 catgets/gencat.c:109 catgets/gencat.c:113
+#: iconv/iconv_prog.c:61 iconv/iconv_prog.c:62 nscd/nscd.c:107 nscd/nscd.c:111
+#: nss/makedb.c:121
+msgid "NAME"
+msgstr "ΟΝΟΜΑ"
+
+#: argp/argp-parse.c:104
+msgid "Set the program name"
+msgstr "Ορισμός ονόματος προγράμματος"
+
+#: argp/argp-parse.c:106
+msgid "Hang for SECS seconds (default 3600)"
+msgstr "Αναμονή για ΔΕΥΤ. δευτερόλεπτα (εξ ορισμού 3600)"
+
+#: argp/argp-parse.c:167
+msgid "Print program version"
+msgstr "Εμφάνιση έκδοσης προγράμματος"
+
+#: argp/argp-parse.c:183
+msgid "(PROGRAM ERROR) No version known!?"
+msgstr "(ΣΦΑΛΜΑ ΠΡΟΓΡΑΜΜΑΤΟΣ) Δεν είναι γνωστή η έκδοση!;"
+
+#: argp/argp-parse.c:623
+#, c-format
+msgid "%s: Too many arguments\n"
+msgstr "%s: Πάρα πολλά ορίσματα\n"
+
+#: argp/argp-parse.c:766
+msgid "(PROGRAM ERROR) Option should have been recognized!?"
+msgstr "(ΣΦΑΛΜΑ ΠΡΟΓΡΑΜΜΑΤΟΣ) Η επιλογή θα έπρεπε να είχε αναγνωριστεί!;"
+
+#: catgets/gencat.c:110
+msgid "Create C header file NAME containing symbol definitions"
+msgstr "Δημιουργία ΟΝΟΜΑΤΟΣ αρχείου κεφαλίδας C με ορισμούς συμβόλων"
+
+#: catgets/gencat.c:112
+msgid "Do not use existing catalog, force new output file"
+msgstr "Να μη χρησιμοποιηθεί ο υπάρχον κατάλογος, προκάλεσε νέο αρχείο εξόδου"
+
+#: catgets/gencat.c:113 nss/makedb.c:121
+msgid "Write output to file NAME"
+msgstr "Εγγραφή εξόδου στο αρχείο ΟΝΟΜΑ"
+
+#: catgets/gencat.c:123
+msgid ""
+"-o OUTPUT-FILE [INPUT-FILE]...\n"
+"[OUTPUT-FILE [INPUT-FILE]...]"
+msgstr ""
+"-o ΑΡΧΕΙΟ-ΕΞΟΔΟΥ [ΑΡΧΕΙΟ-ΕΙΣΟΔΟΥ]...\n"
+"[ΑΡΧΕΙΟ-ΕΞΟΔΟΥ [ΑΡΧΕΙΟ-ΕΙΣΟΔΟΥ]...]"
+
+#: catgets/gencat.c:245 debug/pcprofiledump.c:225 debug/xtrace.sh:64
+#: elf/ldconfig.c:328 elf/ldd.bash.in:38 elf/pldd.c:263 elf/sotruss.sh:75
+#: elf/sprof.c:389 iconv/iconv_prog.c:405 iconv/iconvconfig.c:398
+#: locale/programs/locale.c:293 locale/programs/localedef.c:460
+#: login/programs/pt_chown.c:63 malloc/memusage.sh:71 malloc/memusagestat.c:581
+#: nscd/nscd.c:522 nss/getent.c:88 nss/makedb.c:386 posix/getconf.c:485
+#: sysdeps/unix/sysv/linux/lddlibc4.c:68
+#, c-format
+msgid ""
+"Copyright (C) %s Free Software Foundation, Inc.\n"
+"This is free software; see the source for copying conditions.  There is NO\n"
+"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+msgstr ""
+"Copyright (C) %s Free Software Foundation, Inc.\n"
+"Αυτό είναι ελεύθερο λογισμικό, δείτε τον πηγαίο κώδικα για όρους αντιγραφής.\n"
+"ΔΕΝ υπάρχει εγγύηση ούτε ακόμη για ΛΕΙΤΟΥΡΓIΚΟΤΗΤΑΣ ή ΚΑΤΑΛΛΗΛΟΤΗΤΑ ΓΙΑ\n"
+"ΚΑΠΟΙΟ ΣΥΓΚΕΚΡΙΜΕΝΟ ΣΚΟΠΟ.\n"
+
+#: catgets/gencat.c:250 debug/pcprofiledump.c:230 debug/xtrace.sh:68
+#: elf/ldconfig.c:333 elf/pldd.c:268 elf/sprof.c:395 iconv/iconv_prog.c:410
+#: iconv/iconvconfig.c:403 locale/programs/locale.c:298
+#: locale/programs/localedef.c:465 malloc/memusage.sh:75
+#: malloc/memusagestat.c:586 nscd/nscd.c:527 nss/getent.c:93 nss/makedb.c:391
+#: posix/getconf.c:490
+#, c-format
+msgid "Written by %s.\n"
+msgstr "Εγγράφηκε από %s.\n"
+
+#: catgets/gencat.c:281
+msgid "*standard input*"
+msgstr "*κανονική είσοδος*"
+
+#: catgets/gencat.c:287 iconv/iconv_charmap.c:173 iconv/iconv_prog.c:273
+#: nss/makedb.c:247
+#, c-format
+msgid "cannot open input file `%s'"
+msgstr "αδυναμία ανοίγματος αρχείου εισόδου `%s'"
+
+#: catgets/gencat.c:416 catgets/gencat.c:491
+msgid "illegal set number"
+msgstr "μη έγκυρος αριθμός σετ"
+
+#: catgets/gencat.c:443
+msgid "duplicate set definition"
+msgstr "διπλός ορισμός συνόλου"
+
+#: catgets/gencat.c:445 catgets/gencat.c:617 catgets/gencat.c:669
+msgid "this is the first definition"
+msgstr "αυτός είναι ο πρώτος ορισμός"
+
+#: catgets/gencat.c:516
+#, c-format
+msgid "unknown set `%s'"
+msgstr "άγνωστο σετ `%s'"
+
+#: catgets/gencat.c:570
+#, c-format
+msgid "unknown directive `%s': line ignored"
+msgstr "άγνωστo λεκτικό `%s': γραμμή αγνοήθηκε"
+
+#: catgets/gencat.c:615
+msgid "duplicated message number"
+msgstr "διπλός αριθμός μηνύματος"
+
+#: catgets/gencat.c:666
+msgid "duplicated message identifier"
+msgstr "διπλός προσδιοριστής μηνύματος"
+
+#: catgets/gencat.c:820
+msgid "malformed line ignored"
+msgstr "κακοδιαμορφωμένη γραμμή αγνοήθηκε"
+
+#: catgets/gencat.c:984 catgets/gencat.c:1025
+#, c-format
+msgid "cannot open output file `%s'"
+msgstr "αδυναμία ανοίγματος αρχείου εξόδου `%s'"
+
+#: catgets/gencat.c:1211
+msgid "unterminated message"
+msgstr "μη τερματιζόμενο μήνυμα"
+
+#: catgets/gencat.c:1235
+#, c-format
+msgid "while opening old catalog file"
+msgstr "κατά το άνοιγμα παλιού αρχείου καταλόγου"
+
+#: elf/dl-open.c:814
+msgid "invalid mode for dlopen()"
+msgstr "μη έγκυρη κατάσταση για την dlopen()"
+
+#: elf/dl-sym.c:138
+msgid "RTLD_NEXT used in code not dynamically loaded"
+msgstr "Το RTLD_NEXT που χρησιμοποιείται στον κώδικα δεν φορτώθηκε δυναμικά"
+
+#: elf/ldconfig.c:607
+#, c-format
+msgid "%s is not a symbolic link\n"
+msgstr "το %s δεν είναι συμβολικός σύνδεσμος\n"
+
+#: elf/ldconfig.c:638
+msgid " (changed)\n"
+msgstr " (άλλαξε)\n"
+
+#: elf/ldconfig.c:1308 locale/programs/xasprintf.c:31
+#: locale/programs/xmalloc.c:63 malloc/obstack.c:416 malloc/obstack.c:418
+#: posix/getconf.c:458 posix/getconf.c:697
+#, c-format
+msgid "memory exhausted"
+msgstr "η μνήμη εξαντλήθηκε"
+
+#. TRANS This is a ``file doesn't exist'' error
+#. TRANS for ordinary files that are referenced in contexts where they are
+#. TRANS expected to already exist.
+#: elf/ldd.bash.in:147 sysdeps/gnu/errlist.h:13
+msgid "No such file or directory"
+msgstr "Δεν υπάρχει τέτοιο αρχείο ή κατάλογος"
+
+#: elf/ldd.bash.in:150 inet/rcmd.c:481
+msgid "not regular file"
+msgstr "δεν είναι κανονικό αρχείο"
+
+#: elf/readlib.c:131
+#, c-format
+msgid "Cannot mmap file %s.\n"
+msgstr "Αδυναμία μεταφοράς στη μνήμη (mmap) του αρχείου %s.\n"
+
+#: elf/sprof.c:77
+msgid "Output selection:"
+msgstr "Επιλογή εξόδου:"
+
+#: elf/sprof.c:79
+msgid "print list of count paths and their number of use"
+msgstr "εμφάνιση λίστα με μετρητές μονοπατιών και τον αριθμό χρήσης τους"
+
+#: elf/sprof.c:81
+msgid "generate flat profile with counts and ticks"
+msgstr "δημιουργία γενικού προφίλ με μετρήσεις"
+
+#: elf/sprof.c:82
+msgid "generate call graph"
+msgstr "δημιουργία γράφου κλήσεων"
+
+#: elf/sprof.c:94
+msgid "SHOBJ [PROFDATA]"
+msgstr "SHOBJ [PROFDATA]"
+
+#: elf/sprof.c:433
+#, c-format
+msgid "failed to load shared object `%s'"
+msgstr "αποτυχία φόρτωσης διαμοιραζομένου αντικειμένου `%s'"
+
+#: elf/sprof.c:442 elf/sprof.c:825 elf/sprof.c:923
+#, c-format
+msgid "cannot create internal descriptor"
+msgstr "αδυναμία δημιουργίας εσωτερικού περιγραφέα"
+
+#: elf/sprof.c:554
+#, c-format
+msgid "Reopening shared object `%s' failed"
+msgstr "Αποτυχία ανοίγματος ξανά του διαμοιραζομένου αντικειμένου `%s'"
+
+#: elf/sprof.c:685
+#, c-format
+msgid "*** The file `%s' is stripped: no detailed analysis possible\n"
+msgstr "*** Το αρχείο `%s' είναι απογυμνωμένο: δεν είναι δυνατή λεπτομερής ανάλυση\n"
+
+#: elf/sprof.c:715
+#, c-format
+msgid "failed to load symbol data"
+msgstr "αποτυχία φόρτωσης δεδομένων συμβόλων"
+
+#: elf/sprof.c:780
+#, c-format
+msgid "cannot load profiling data"
+msgstr "αδύνατη η φόρτωση δεδομένων προφίλ"
+
+#: elf/sprof.c:789
+#, c-format
+msgid "while stat'ing profiling data file"
+msgstr "κατά την προσπέλαση (stat) του αρχείου δεδομένων προφίλ"
+
+#: elf/sprof.c:797
+#, c-format
+msgid "profiling data file `%s' does not match shared object `%s'"
+msgstr "το αρχείο δεδομένων προφίλ `%s' δεν ταιριάζει με το διαμοιραζόμενο αντικείμενο `%s'"
+
+#: elf/sprof.c:808
+#, c-format
+msgid "failed to mmap the profiling data file"
+msgstr "αποτυχία στη λειτουργία mmap για το αρχείο δεδομένων προφίλ"
+
+#: elf/sprof.c:816
+#, c-format
+msgid "error while closing the profiling data file"
+msgstr "σφάλμα κατά το κλείσιμο του αρχείου δεδομένων προφίλ"
+
+#: elf/sprof.c:899
+#, c-format
+msgid "`%s' is no correct profile data file for `%s'"
+msgstr "Το `%s' δεν είναι το σωστό αρχείο δεδομένων προφίλ για το `%s'"
+
+#: elf/sprof.c:1080 elf/sprof.c:1138
+#, c-format
+msgid "cannot allocate symbol data"
+msgstr "αδυναμία δέσμευσης δεδομένων συμβόλων"
+
+#: iconv/iconv_charmap.c:147 iconv/iconv_prog.c:428
+#, c-format
+msgid "cannot open output file"
+msgstr "αδυναμία ανοίγματος αρχείου εξόδου"
+
+#: iconv/iconv_charmap.c:193 iconv/iconv_prog.c:291
+#, c-format
+msgid "error while closing input `%s'"
+msgstr "σφάλμα κατά το κλείσιμο της εισόδου `%s'"
+
+#: iconv/iconv_charmap.c:461 iconv/iconv_prog.c:519
+#, c-format
+msgid "incomplete character or shift sequence at end of buffer"
+msgstr "μη πλήρης χαρακτήρας ή μετατόπιση ακολουθίας στο τέλος του ενταμιευτή"
+
+#: iconv/iconv_charmap.c:506 iconv/iconv_charmap.c:542 iconv/iconv_prog.c:562
+#: iconv/iconv_prog.c:598
+#, c-format
+msgid "error while reading the input"
+msgstr "σφάλμα κατά την ανάγνωση της εισόδου"
+
+#: iconv/iconv_charmap.c:524 iconv/iconv_prog.c:580
+#, c-format
+msgid "unable to allocate buffer for input"
+msgstr "αδύνατη η εκχώρηση ενταμιευτή για την είσοδο"
+
+#: iconv/iconv_prog.c:60
+msgid "Input/Output format specification:"
+msgstr "Καθορισμός μορφής Εισόδου/Εξόδου:"
+
+#: iconv/iconv_prog.c:61
+msgid "encoding of original text"
+msgstr "κωδικοποίηση για το αρχικό κείμενο"
+
+#: iconv/iconv_prog.c:62
+msgid "encoding for output"
+msgstr "κωδικοποίηση για έξοδο"
+
+#: iconv/iconv_prog.c:63
+msgid "Information:"
+msgstr "Πληροφορία:"
+
+#: iconv/iconv_prog.c:64
+msgid "list all known coded character sets"
+msgstr "λίστα με όλα τα γνωστά σύνολα χαρακτήρων"
+
+#: iconv/iconv_prog.c:65 locale/programs/localedef.c:124
+msgid "Output control:"
+msgstr "Έλεγχος εξόδου:"
+
+#: iconv/iconv_prog.c:67
+msgid "output file"
+msgstr "αρχείο εξόδου"
+
+#: iconv/iconv_prog.c:69
+msgid "print progress information"
+msgstr "εμφάνιση πληροφοριών προόδου"
+
+#: iconv/iconv_prog.c:74
+msgid "Convert encoding of given files from one encoding to another."
+msgstr "Μετατροπή της κωδικοποίησης δοθέντων αρχείων από μια κωδικοποίηση σε άλλη."
+
+#: iconv/iconv_prog.c:78
+msgid "[FILE...]"
+msgstr "[ΑΡΧΕΙΟ...]"
+
+#: iconv/iconv_prog.c:177 iconv/iconv_prog.c:239
+#, c-format
+msgid "failed to start conversion processing"
+msgstr "αποτυχία στην έναρξη της επεξεργασίας μετατροπής"
+
+#: iconv/iconv_prog.c:337
+#, c-format
+msgid "error while closing output file"
+msgstr "σφάλμα κατά το κλείσιμο του αρχείου εξόδου"
+
+#: iconv/iconv_prog.c:438
+#, c-format
+msgid "conversion stopped due to problem in writing the output"
+msgstr "η μετατροπή διακόπηκε λόγω προβλήματος στην εγγραφή της εξόδου"
+
+#: iconv/iconv_prog.c:515
+#, c-format
+msgid "illegal input sequence at position %ld"
+msgstr "μη έγκυρη ακολουθία εισόδου στη θέση %ld"
+
+#: iconv/iconv_prog.c:523
+#, c-format
+msgid "internal error (illegal descriptor)"
+msgstr "εσωτερικό σφάλμα (ακατάλληλος περιγραφέας)"
+
+#: iconv/iconv_prog.c:526
+#, c-format
+msgid "unknown iconv() error %d"
+msgstr "άγνωστο σφάλμα iconv() %d"
+
+#: inet/rcmd.c:175
+msgid "rcmd: socket: All ports in use\n"
+msgstr "rcmd: socket: Όλες οι θύρες σε χρήση\n"
+
+#: inet/rcmd.c:203
+#, c-format
+msgid "connect to address %s: "
+msgstr "σύνδεση στη διεύθυνση %s: "
+
+#: inet/rcmd.c:216
+#, c-format
+msgid "Trying %s...\n"
+msgstr "Δοκιμάζεται %s...\n"
+
+#: inet/rcmd.c:252
+#, c-format
+msgid "rcmd: write (setting up stderr): %m\n"
+msgstr "rcmd: write (στήσιμο του stderr): %m\n"
+
+#: inet/rcmd.c:268
+#, c-format
+msgid "rcmd: poll (setting up stderr): %m\n"
+msgstr "rcmd: poll (στήσιμο του stderr): %m\n"
+
+#: inet/rcmd.c:271
+msgid "poll: protocol failure in circuit setup\n"
+msgstr "poll: αποτυχία πρωτοκόλου στο στήσιμο κυκλώματος\n"
+
+#: inet/rcmd.c:303
+msgid "socket: protocol failure in circuit setup\n"
+msgstr "socket: αποτυχία πρωτοκόλου στο στήσιμο κυκλώματος\n"
+
+#: inet/rcmd.c:479
+msgid "lstat failed"
+msgstr "το lstat απέτυχε"
+
+#: inet/rcmd.c:486
+msgid "cannot open"
+msgstr "αδυναμία ανοίγματος"
+
+#: inet/rcmd.c:488
+msgid "fstat failed"
+msgstr "το fstat απέτυχε"
+
+#: inet/rcmd.c:490
+msgid "bad owner"
+msgstr "κακός ιδιοκτήτης"
+
+#: inet/rcmd.c:492
+msgid "writeable by other than owner"
+msgstr "το αρχείο είναι εγγράψιμο και από άλλους εκτός του ιδιοκτήτη"
+
+#: inet/rcmd.c:494
+msgid "hard linked somewhere"
+msgstr "σθεναρά συνδεδεμένο κάπου"
+
+#: inet/ruserpass.c:179
+msgid "Error: .netrc file is readable by others."
+msgstr "Σφάλμα: Το .netrc αρχείο είναι αναγνώσιμο από άλλους."
+
+#: inet/ruserpass.c:199
+#, c-format
+msgid "Unknown .netrc keyword %s"
+msgstr "Αγνωστο .netrc λεκτικό %s"
+
+#: locale/programs/charmap-dir.c:56
+#, c-format
+msgid "cannot read character map directory `%s'"
+msgstr "αδυναμία ανάγνωσης καταλόγου του χάρτη χαρακτήρων `%s'"
+
+#: locale/programs/charmap.c:138
+#, c-format
+msgid "character map file `%s' not found"
+msgstr "το αρχείο χάρτη χαρακτήρων `%s' δεν βρέθηκε"
+
+#: locale/programs/charmap.c:196
+#, c-format
+msgid "default character map file `%s' not found"
+msgstr "Το προκαθορισμένο αρχείο χάρτη χαρακτήρων `%s' δεν βρέθηκε"
+
+#: locale/programs/charmap.c:343
+#, c-format
+msgid "%s: <mb_cur_max> must be greater than <mb_cur_min>\n"
+msgstr "%s: <mb_cur_max> πρέπει να είναι μεγαλύτερο του <mb_cur_min>\n"
+
+#: locale/programs/charmap.c:363 locale/programs/charmap.c:380
+#: locale/programs/repertoire.c:173
+#, c-format
+msgid "syntax error in prolog: %s"
+msgstr "συντακτικό σφάλμα στον πρόλογο: %s"
+
+#: locale/programs/charmap.c:381 locale/programs/locfile.c:131
+#: locale/programs/locfile.c:158 locale/programs/repertoire.c:174
+msgid "bad argument"
+msgstr "κακό όρισμα"
+
+#: locale/programs/charmap.c:427
+#, c-format
+msgid "value of <%s> must be greater or equal than the value of <%s>"
+msgstr "η τιμή του <%s> πρέπει να είναι ίση ή μεγαλύτερη της τιμής <%s>"
+
+#: locale/programs/charmap.c:450 locale/programs/repertoire.c:182
+#, c-format
+msgid "argument to <%s> must be a single character"
+msgstr "Η παράμετρος στο <%s> πρέπει να είναι ένας απλός χαρακτήρας"
+
+#: locale/programs/charmap.c:503 locale/programs/charmap.c:557
+#: locale/programs/charmap.c:589 locale/programs/charmap.c:683
+#: locale/programs/charmap.c:739 locale/programs/charmap.c:780
+#: locale/programs/charmap.c:821
+#, c-format
+msgid "syntax error in %s definition: %s"
+msgstr "συντακτικό σφάλμα στο ορισμό του %s: %s"
+
+#: locale/programs/charmap.c:504 locale/programs/charmap.c:684
+#: locale/programs/charmap.c:781 locale/programs/repertoire.c:229
+msgid "no symbolic name given"
+msgstr "δεν δώθηκε συμβολικό όνομα"
+
+#: locale/programs/charmap.c:567
+msgid "too few bytes in character encoding"
+msgstr "πολύ λίγα bytes στην κωδικοποίηση χαρακτήρα"
+
+#: locale/programs/charmap.c:569
+msgid "too many bytes in character encoding"
+msgstr "υπερβολικά πολλά bytes στην κωδικοποίηση χαρακτήρα"
+
+#: locale/programs/charmap.c:591 locale/programs/charmap.c:740
+#: locale/programs/charmap.c:823 locale/programs/repertoire.c:295
+msgid "no symbolic name given for end of range"
+msgstr "δεν δώθηκε συμβολικό όνομα για το τέλος πεδίου"
+
+#: locale/programs/charmap.c:615 locale/programs/ld-address.c:524
+#: locale/programs/ld-collate.c:2619 locale/programs/ld-collate.c:3777
+#: locale/programs/ld-ctype.c:2118 locale/programs/ld-ctype.c:2830
+#: locale/programs/ld-identification.c:397 locale/programs/ld-measurement.c:213
+#: locale/programs/ld-messages.c:295 locale/programs/ld-monetary.c:748
+#: locale/programs/ld-name.c:262 locale/programs/ld-numeric.c:325
+#: locale/programs/ld-paper.c:212 locale/programs/ld-telephone.c:276
+#: locale/programs/ld-time.c:959 locale/programs/repertoire.c:312
+#, c-format
+msgid "%1$s: definition does not end with `END %1$s'"
+msgstr "%1$s: ο ορισμός δεν τελειώνει με `END %1$s'"
+
+#: locale/programs/charmap.c:648
+msgid "only WIDTH definitions are allowed to follow the CHARMAP definition"
+msgstr "μόνο ορισμοί WIDTH επιτρέπονται να ακολουθούν τον CHARMAP ορισμό"
+
+#: locale/programs/charmap.c:656 locale/programs/charmap.c:720
+#, c-format
+msgid "value for %s must be an integer"
+msgstr "η τιμή για το %s πρέπει να είναι ακέραιος"
+
+#: locale/programs/charmap.c:848
+#, c-format
+msgid "%s: error in state machine"
+msgstr "%s: Σφάλμα στο μηχανισμό κατάστασης"
+
+#: locale/programs/charmap.c:856 locale/programs/ld-address.c:540
+#: locale/programs/ld-collate.c:2616 locale/programs/ld-collate.c:3970
+#: locale/programs/ld-ctype.c:2115 locale/programs/ld-ctype.c:2847
+#: locale/programs/ld-identification.c:413 locale/programs/ld-measurement.c:229
+#: locale/programs/ld-messages.c:311 locale/programs/ld-monetary.c:764
+#: locale/programs/ld-name.c:278 locale/programs/ld-numeric.c:341
+#: locale/programs/ld-paper.c:228 locale/programs/ld-telephone.c:292
+#: locale/programs/ld-time.c:990 locale/programs/locfile.c:1010
+#: locale/programs/repertoire.c:323
+#, c-format
+msgid "%s: premature end of file"
+msgstr "%s: πρόωρο τέλος αρχείου"
+
+#: locale/programs/charmap.c:875 locale/programs/charmap.c:886
+#, c-format
+msgid "unknown character `%s'"
+msgstr "άγνωστος χαρακτήρας `%s'"
+
+#: locale/programs/ld-collate.c:479 locale/programs/ld-collate.c:505
+#, c-format
+msgid "%s: `forward' and `backward' are mutually excluding each other"
+msgstr "%s: οι κατευθύνσεις ταξινόμησης `forward' και `backward' είναι αμοιβαία αποκλειώμενες"
+
+#: locale/programs/ld-collate.c:1386
+#, c-format
+msgid "%s: `%s' must be a character"
+msgstr "%s: το `%s' πρέπει να είναι ένας απλός χαρακτήρας"
+
+#: locale/programs/ld-ctype.c:504 locale/programs/ld-ctype.c:560
+#, c-format
+msgid "internal error in %s, line %u"
+msgstr "εσωτερικό σφάλμα στο %s, γραμμή %u"
+
+#: locale/programs/ld-ctype.c:532
+#, c-format
+msgid "character '%s' in class `%s' must be in class `%s'"
+msgstr "ο χαρακτήρας '%s' στην κλάση `%s' πρέπει να είναι στην κλάση `%s'"
+
+#: locale/programs/ld-ctype.c:547
+#, c-format
+msgid "character '%s' in class `%s' must not be in class `%s'"
+msgstr "ο χαρακτήρας '%s' στην κλάση `%s' δεν πρέπει να είναι στην κλάση `%s'"
+
+#: locale/programs/ld-ctype.c:576 locale/programs/ld-ctype.c:611
+#, c-format
+msgid "<SP> character not in class `%s'"
+msgstr "Ο <SP> χαρακτήρας δεν είναι στην κλάση `%s'"
+
+#: locale/programs/ld-ctype.c:587 locale/programs/ld-ctype.c:621
+#, c-format
+msgid "<SP> character must not be in class `%s'"
+msgstr "Ο <SP> χαρακτήρας δεν πρέπει να είναι στην κλάση `%s'"
+
+#: locale/programs/ld-ctype.c:601
+msgid "character <SP> not defined in character map"
+msgstr "ο χαρακτήρας <SP> δεν ορίστηκε στον χάρτη χαρακτήρων"
+
+#: locale/programs/ld-ctype.c:1131
+#, c-format
+msgid "character class `%s' already defined"
+msgstr "η κλάση χαρακτήρων `%s' ορίστηκε ήδη"
+
+#: locale/programs/ld-ctype.c:1163
+#, c-format
+msgid "character map `%s' already defined"
+msgstr "ο χάρτης χαρακτήρων `%s' ορίστηκε ήδη"
+
+#: locale/programs/ld-ctype.c:1169
+#, c-format
+msgid "implementation limit: no more than %d character maps allowed"
+msgstr "όριο υλοποίησης: δεν επιτρέπονται πάνω από %d χάρτες χαρακτήρων"
+
+#: locale/programs/ld-ctype.c:2734
+#, c-format
+msgid "%s: duplicate `default_missing' definition"
+msgstr "%s: διπλός ορισμός `default_missing'"
+
+#: locale/programs/ld-identification.c:380
+#, c-format
+msgid "%s: duplicate category version definition"
+msgstr "%s: διπλός ορισμός έκδοσης κατηγορίας"
+
+#: locale/programs/ld-messages.c:119 locale/programs/ld-messages.c:152
+#: locale/programs/ld-monetary.c:264 locale/programs/ld-numeric.c:117
+#, c-format
+msgid "%s: value for field `%s' must not be an empty string"
+msgstr "%s: η τιμή για το πεδίο `%s' δεν πρέπει να είναι ένα κενό αλφαριθμητικό"
+
+#: locale/programs/ld-monetary.c:228
+#, c-format
+msgid "%s: value of field `int_curr_symbol' has wrong length"
+msgstr "%s: η τιμή του πεδίου `int_curr_symbol' έχει λάθος μήκος"
+
+#: locale/programs/ld-monetary.c:646 locale/programs/ld-numeric.c:272
+#, c-format
+msgid "%s: `-1' must be last entry in `%s' field"
+msgstr "%s: το `-1' πρέπει να είναι η τελευταία καταχώριση στο πεδίο `%s'"
+
+#: locale/programs/ld-monetary.c:668 locale/programs/ld-numeric.c:289
+#, c-format
+msgid "%s: values for field `%s' must be smaller than 127"
+msgstr "%s: οι τιμές για το πεδίο `%s' πρέπει να είναι μικρότερες από 127"
+
+#: locale/programs/ld-time.c:251
+#, c-format
+msgid "%s: direction flag in string %Zd in `era' field is not '+' nor '-'"
+msgstr "%s: η κατευθυντήρια σημαία στο αλφαριθμιτικό %Zd στο πεδίο `era' δεν είναι '+' ούτε '-'"
+
+#: locale/programs/ld-time.c:261
+#, c-format
+msgid "%s: direction flag in string %Zd in `era' field is not a single character"
+msgstr "%s: η κατευθυντήρια σημαία στο αλφαριθμιτικό %Zd στο πεδίο `era' δεν είναι ένας μόνος χαρακτήρας"
+
+#: locale/programs/ld-time.c:273
+#, c-format
+msgid "%s: invalid number for offset in string %Zd in `era' field"
+msgstr "%s: μη έγκυρος αριθμός για αντιστάθμιση στo αλφαριθμιτικό %Zd στο πεδίο `era' "
+
+#: locale/programs/ld-time.c:330
+#, c-format
+msgid "%s: invalid starting date in string %Zd in `era' field"
+msgstr "%s: μη έγκυρη ημερομηνία έναρξης στο αλφαριθμιτικό %Zd στο πεδίο `era'"
+
+#: locale/programs/ld-time.c:356
+#, c-format
+msgid "%s: starting date is invalid in string %Zd in `era' field"
+msgstr "%s: η ημερομηνία έναρξης δεν είναι έγκυρη στο αλφαριθμιτικό %Zd στο πεδίο `era'"
+
+#: locale/programs/ld-time.c:404 locale/programs/ld-time.c:430
+#, c-format
+msgid "%s: invalid stopping date in string %Zd in `era' field"
+msgstr "%s: μη έγκυρη ημερομηνία τερματισμού στο αλφαριθμιτικό %Zd στο πεδίο `era'"
+
+#: locale/programs/ld-time.c:438
+#, c-format
+msgid "%s: missing era name in string %Zd in `era' field"
+msgstr "%s: λείπει το όνομα της εποχής στο αλφαριθμιτικό %Zd στο πεδίο `era'"
+
+#: locale/programs/ld-time.c:449
+#, c-format
+msgid "%s: missing era format in string %Zd in `era' field"
+msgstr "%s: λείπει η διαμόρφωση εποχής στο αλφαριθμιτικό %Zd στο πεδίο `era'"
+
+#: locale/programs/ld-time.c:502 locale/programs/ld-time.c:510
+#: locale/programs/ld-time.c:518
+#, c-format
+msgid "%s: values for field `%s' must not be larger than %d"
+msgstr "%s: οι τιμές για το πεδίο `%s' δεν πρέπει να είναι μεγαλύτερες από %d"
+
+#: locale/programs/linereader.c:130
+msgid "trailing garbage at end of line"
+msgstr "ακολουθούν σκουπίδια στο τέλος της γραμμής"
+
+#: locale/programs/linereader.c:298
+msgid "garbage at end of number"
+msgstr "σκουπίδια στο τέλος του αριθμού"
+
+#: locale/programs/linereader.c:410
+msgid "garbage at end of character code specification"
+msgstr "σκουπίδια στο τέλος των χαρακτηριστικών του κώδικα χαρακτήρων"
+
+#: locale/programs/linereader.c:496
+msgid "unterminated symbolic name"
+msgstr "μη τερματιζόμενο συμβολικό όνομα"
+
+#: locale/programs/linereader.c:623
+msgid "illegal escape sequence at end of string"
+msgstr "μη έγκυρη διαδικασία διαφυγής στο τέλος του αλφαριθμιτικού"
+
+#: locale/programs/linereader.c:627 locale/programs/linereader.c:847
+msgid "unterminated string"
+msgstr "μη τερματιζόμενo αλφαριθμητικό"
+
+#: locale/programs/locale.c:70
+msgid "System information:"
+msgstr "Πληροφορίες συστήματος:"
+
+#: locale/programs/locale.c:72
+msgid "Write names of available locales"
+msgstr "Εγγραφή ονομάτων των διαθέσιμων τοπικών ρυθμίσεων"
+
+#: locale/programs/locale.c:74
+msgid "Write names of available charmaps"
+msgstr "Εγγραφή ονομάτων στους διαθέσιμους πίνακες χαρακτήρων"
+
+#: locale/programs/locale.c:75
+msgid "Modify output format:"
+msgstr "Μορφή εξόδου τροποποίησης:"
+
+#: locale/programs/locale.c:76
+msgid "Write names of selected categories"
+msgstr "Εγγραφή ονομάτων των επιλεγμένων κατηγοριών"
+
+#: locale/programs/locale.c:77
+msgid "Write names of selected keywords"
+msgstr "Εγγραφή ονομάτων των επιλεγμένων λέξεων-κλειδιών"
+
+#: locale/programs/locale.c:83
+msgid "Get locale-specific information."
+msgstr "Λήψη πληροφοριών τοπικών ρυθμίσεων."
+
+#: locale/programs/locale.c:86
+msgid ""
+"NAME\n"
+"[-a|-m]"
+msgstr ""
+"ΟΝΟΜΑ\n"
+"[-a|-m]"
+
+#: locale/programs/locale.c:522
+#, c-format
+msgid "while preparing output"
+msgstr "κατά την προετοιμασία εξόδου"
+
+#: locale/programs/localedef.c:116
+msgid "Input Files:"
+msgstr "Αρχεία Εισόδου:"
+
+#: locale/programs/localedef.c:118
+msgid "Symbolic character names defined in FILE"
+msgstr "Τα συμβολικά ονόματα χαρακτήρων δηλώθηκαν στο ΑΡΧΕΙΟ"
+
+#: locale/programs/localedef.c:120
+msgid "Source definitions are found in FILE"
+msgstr "Οι ορισμοί πηγή βρίσκονται στο ΑΡΧΕΙΟ"
+
+#: locale/programs/localedef.c:122
+msgid "FILE contains mapping from symbolic names to UCS4 values"
+msgstr "Το ΑΡΧΕΙΟ περιέχει αντιστοιχίσεις από συμβολικά ονόματα σε τιμές UCS4"
+
+#: locale/programs/localedef.c:126
+msgid "Create output even if warning messages were issued"
+msgstr "Δημιουργία εξόδου ακόμα και αν εκδόθηκαν προειδοποιήσεις"
+
+#: locale/programs/localedef.c:132
+msgid "Suppress warnings and information messages"
+msgstr "Αποσιώπηση προηδοποιήσεων και μηνυμάτων πληροφόρησης"
+
+#: locale/programs/localedef.c:133
+msgid "Print more messages"
+msgstr "Εμφάνιση περισσότερων μηνυμάτων"
+
+#: locale/programs/localedef.c:160
+msgid "Compile locale specification"
+msgstr "Μεταγλωττισμός προδιαγραφών τοπικών ρυθμίσεων"
+
+#: locale/programs/localedef.c:250
+msgid "FATAL: system does not define `_POSIX2_LOCALEDEF'"
+msgstr "ΜΟΙΡΑΙΟ: το σύστημα δεν ορίζει το `_POSIX2_LOCALEDEF'"
+
+#: locale/programs/localedef.c:264 locale/programs/localedef.c:280
+#: locale/programs/localedef.c:678 locale/programs/localedef.c:698
+#, c-format
+msgid "cannot open locale definition file `%s'"
+msgstr "αδυναμία ανοίγματος αρχείου ορισμού locale `%s'"
+
+#: locale/programs/localedef.c:304
+#, c-format
+msgid "cannot write output files to `%s'"
+msgstr "αδυναμία εγγραφής αρχείων εξόδου στο `%s'"
+
+#: locale/programs/locfile.c:137
+#, c-format
+msgid "argument to `%s' must be a single character"
+msgstr "Η παράμετρος στο `%s' πρέπει να είναι ένας απλός χαρακτήρας"
+
+#: locale/programs/locfile.c:257
+msgid "syntax error: not inside a locale definition section"
+msgstr "συντακτικό σφάλμα: δεν είναι μέσα σε τμήμα locale ορισμού"
+
+#: locale/programs/locfile.c:799
+#, c-format
+msgid "cannot open output file `%s' for category `%s'"
+msgstr "αδυναμία ανοίγματος αρχείου εξόδο `%s' για την κατηγορία `%s'"
+
+#: locale/programs/locfile.c:822
+#, c-format
+msgid "failure while writing data for category `%s'"
+msgstr "αποτυχία κατά την εγγραφή δεδομένων για την κατηγορία `%s'"
+
+#: locale/programs/locfile.c:989
+msgid "no other keyword shall be specified when `copy' is used"
+msgstr "καμιά άλλη λέξη κλειδί δεν θα πρέπει να καθορίζεται όταν χρησιμοποιείται το `copy'"
+
+#: locale/programs/locfile.c:1003
+#, c-format
+msgid "`%1$s' definition does not end with `END %1$s'"
+msgstr "Ο ορισμός `%1$s' δεν τελειώνει με `END %1$s'"
+
+#: locale/programs/repertoire.c:228 locale/programs/repertoire.c:269
+#: locale/programs/repertoire.c:294
+#, c-format
+msgid "syntax error in repertoire map definition: %s"
+msgstr "συντακτικό σφάλμα στον ορισμό του πίνακα ρεπερτορίου: %s"
+
+#: locale/programs/repertoire.c:270
+msgid "no <Uxxxx> or <Uxxxxxxxx> value given"
+msgstr "δε δόθηκε τιμή <Uxxxx> ή <Uxxxxxxxx>"
+
+#: locale/programs/repertoire.c:341
+#, c-format
+msgid "repertoire map file `%s' not found"
+msgstr "το αρχείο πίνακα ρεπορτορίου `%s' δε βρέθηκε"
+
+#: malloc/mcheck-impl.c:355
+msgid "memory is consistent, library is buggy\n"
+msgstr "η μνήμη είναι συνεπής, η βιβλιοθήκη έχει πρόβλημα\n"
+
+#: malloc/mcheck-impl.c:358
+msgid "memory clobbered before allocated block\n"
+msgstr "η μνήμη πειράχτηκε πριν από το δεσμευμένο μπλοκ\n"
+
+#: malloc/mcheck-impl.c:361
+msgid "memory clobbered past end of allocated block\n"
+msgstr "η μνήμη πειράχτηκε μετά το τέλος του δεσμευμένου μπλοκ\n"
+
+#: malloc/mcheck-impl.c:364
+msgid "block freed twice\n"
+msgstr "το μπλόκ ελευθερώθηκε δύο φορές\n"
+
+#: malloc/mcheck-impl.c:367
+msgid "bogus mcheck_status, library is buggy\n"
+msgstr "Περίεργο mcheck_status, η βιβλιοθήκη είναι προβληματική\n"
+
+#: misc/error.c:192
+msgid "Unknown system error"
+msgstr "Άγνωστο σφάλμα συστήματος"
+
+#: nis/nis_callback.c:188
+msgid "unable to free arguments"
+msgstr "αδύνατη η απελευθέρωση παραμέτρων"
+
+#: nis/nis_error.h:1 nis/ypclnt.c:833 nis/ypclnt.c:922 posix/regcomp.c:135
+#: sysdeps/gnu/errlist.h:1
+msgid "Success"
+msgstr "Επιτυχία"
+
+#: nis/nis_error.h:2
+msgid "Probable success"
+msgstr "Πιθανή επιτυχία"
+
+#: nis/nis_error.h:3
+msgid "Not found"
+msgstr "Δε βρέθηκε"
+
+#: nis/nis_error.h:4
+msgid "Probably not found"
+msgstr "Πιθανόν δε βρέθηκε"
+
+#: nis/nis_error.h:5
+msgid "Cache expired"
+msgstr "Τα περιεχόμενα της λανθάνουσας μνήμης έληξαν"
+
+#: nis/nis_error.h:6
+msgid "NIS+ servers unreachable"
+msgstr "Οι εξυπηρετητές NIS+ δεν είναι προσπελάσιμοι"
+
+#: nis/nis_error.h:7
+msgid "Unknown object"
+msgstr "Άγνωστο αντικείμενο"
+
+#: nis/nis_error.h:8
+msgid "Server busy, try again"
+msgstr "Ο εξυπηρετητής είναι απασχολημένος, δοκιμάστε ξανά"
+
+#: nis/nis_error.h:9
+msgid "Generic system error"
+msgstr "Γενικό σφάλμα συστήματος"
+
+#: nis/nis_error.h:10
+msgid "First/next chain broken"
+msgstr "Η πρώτη/επόμενη αλυσίδα έσπασε"
+
+#. TRANS The file permissions do not allow the attempted operation.
+#: nis/nis_error.h:11 nis/ypclnt.c:878 sysdeps/gnu/errlist.h:90
+msgid "Permission denied"
+msgstr "Άρνηση πρόσβασης"
+
+#: nis/nis_error.h:12
+msgid "Not owner"
+msgstr "Δεν είναι ιδιοκτήτης"
+
+#: nis/nis_error.h:13
+msgid "Name not served by this server"
+msgstr "Το όνομα αυτό δε προσφέρεται από αυτόν το εξυπηρετητή"
+
+#: nis/nis_error.h:14
+msgid "Server out of memory"
+msgstr "Η μνήμη του εξυπηρετητή εξαντλήθηκε"
+
+#: nis/nis_error.h:15
+msgid "Object with same name exists"
+msgstr "Υπάρχει αντικείμενο με το ίδιο όνομα"
+
+#: nis/nis_error.h:16
+msgid "Not master server for this domain"
+msgstr "Δεν υπάρχει κύριος εξυπηρετητής για αυτόν τον τομέα"
+
+#: nis/nis_error.h:17
+msgid "Invalid object for operation"
+msgstr "Μη έγκυρο αντικείμενο για λειτουργία"
+
+#: nis/nis_error.h:18
+msgid "Malformed name, or illegal name"
+msgstr "Κακοδιαμορφωμένο όνομα ή ακατάλληλο όνομα"
+
+#: nis/nis_error.h:19
+msgid "Unable to create callback"
+msgstr "Αδύνατη η δημιουργία διαδικασίας ανάδρασης"
+
+#: nis/nis_error.h:20
+msgid "Results sent to callback proc"
+msgstr "Τα αποτελέσματα στάλθηκαν στη διαδικασία ανάδρασης"
+
+#: nis/nis_error.h:21
+msgid "Not found, no such name"
+msgstr "Δε βρέθηκε, κανένα τέτοιο όνομα"
+
+#: nis/nis_error.h:22
+msgid "Name/entry isn't unique"
+msgstr "Όνομα/καταχώρηση δεν είναι μοναδική"
+
+#: nis/nis_error.h:23
+msgid "Modification failed"
+msgstr "Η τροποποίηση απέτυχε"
+
+#: nis/nis_error.h:24
+msgid "Database for table does not exist"
+msgstr "Η βάση δεδομένων για το πίνακα δεν υπάρχει"
+
+#: nis/nis_error.h:25
+msgid "Entry/table type mismatch"
+msgstr "Κακοσυνταίριασμα τύπων καταχώρησης/πίνακα"
+
+#: nis/nis_error.h:26
+msgid "Link points to illegal name"
+msgstr "Σύνδεση σημείων σε μη αποδεκτό όνομα"
+
+#: nis/nis_error.h:27
+msgid "Partial success"
+msgstr "Μερική επιτυχία"
+
+#: nis/nis_error.h:28
+msgid "Too many attributes"
+msgstr "Υπερβολικά πολλές ιδιότητες"
+
+#: nis/nis_error.h:29
+msgid "Error in RPC subsystem"
+msgstr "Σφάλμα στο υποσύστημα RPC"
+
+#: nis/nis_error.h:30
+msgid "Missing or malformed attribute"
+msgstr "Ελλιπής ή κακοσχηματισμένη ιδιότητα"
+
+#: nis/nis_error.h:31
+msgid "Named object is not searchable"
+msgstr "Το επώνυμο αντικείμενο δεν είναι αναζητήσιμο"
+
+#: nis/nis_error.h:32
+msgid "Error while talking to callback proc"
+msgstr "Σφάλμα στην επικοινωνία με διαδικασία ανάδρασης"
+
+#: nis/nis_error.h:33
+msgid "Non NIS+ namespace encountered"
+msgstr "Δε βρέθηκαν χώροι ονομάτων NIS+"
+
+#: nis/nis_error.h:34
+msgid "Illegal object type for operation"
+msgstr "Ακατάλληλο είδος αντικειμένου για τη λειτουργία"
+
+#: nis/nis_error.h:35
+msgid "Passed object is not the same object on server"
+msgstr "Το περασμένο αντικείμενο δεν είναι το ίδιο αντικείμενο στον εξυπηρετητή"
+
+#: nis/nis_error.h:36
+msgid "Modify operation failed"
+msgstr "Η λειτουργία τροποποίησης απέτυχε"
+
+#: nis/nis_error.h:37
+msgid "Query illegal for named table"
+msgstr "Μη αποδεκτή αναζήτηση για το δοθέντα πίνακα"
+
+#: nis/nis_error.h:38
+msgid "Attempt to remove a non-empty table"
+msgstr "Προσπάθεια διαγραφής μη-κενού πίνακα"
+
+#: nis/nis_error.h:39
+msgid "Error in accessing NIS+ cold start file.  Is NIS+ installed?"
+msgstr "Σφάλμα στην προσπέλαση αρχείου ψυχρής εκκίνησης του NIS+. Είναι το NIS+ εγκατεστημένο;"
+
+#: nis/nis_error.h:40
+msgid "Full resync required for directory"
+msgstr "Απαιτήται πλήρης επανασυνχρονισμός για το κατάλογο"
+
+#: nis/nis_error.h:41
+msgid "NIS+ operation failed"
+msgstr "Η λειτουργία NIS+ απέτυχε"
+
+#: nis/nis_error.h:42
+msgid "NIS+ service is unavailable or not installed"
+msgstr "Η υπηρεσία NIS+ δεν είναι διαθέσιμη ή δεν έχει εγκατασταθεί"
+
+#: nis/nis_error.h:43
+msgid "Yes, 42 is the meaning of life"
+msgstr "Ναι, ο σκοπός της ζωής είναι 42."
+
+#: nis/nis_error.h:44
+msgid "Unable to authenticate NIS+ server"
+msgstr "Αδύνατη η αυθεντικοποίηση του εξυπηρετητή NIS+"
+
+#: nis/nis_error.h:45
+msgid "Unable to authenticate NIS+ client"
+msgstr "Αδύνατη η αυθεντικοποίηση του πελάτη NIS+"
+
+#: nis/nis_error.h:46
+msgid "No file space on server"
+msgstr "Δεν υπάρχει ελεύθερος χώρος στον εξυπηρετητή"
+
+#: nis/nis_error.h:47
+msgid "Unable to create process on server"
+msgstr "Αδύνατη η δημιουργία διεργασίας στον εξυπηρετητή"
+
+#: nis/nis_error.h:48
+msgid "Master server busy, full dump rescheduled."
+msgstr "Ο κύριος εξυπηρετητής είναι απασχολημένος, η πλήρης αποτύπωση θα επαναδρομολογηθεί."
+
+#: nis/nis_local_names.c:123
+#, c-format
+msgid "LOCAL entry for UID %d in directory %s not unique\n"
+msgstr "Η ΤΟΠΙΚΗ καταχώρηση για την ΤΑΥΤ. %d στο κατάλογο %s δεν είναι μοναδική\n"
+
+#: nis/nis_print.c:52
+msgid "UNKNOWN"
+msgstr "ΑΓΝΩΣΤΟ"
+
+#: nis/nis_print.c:110
+msgid "BOGUS OBJECT\n"
+msgstr "ΠΛΑΣΤΟ ΑΝΤΙΚΕΙΜΕΝΟ\n"
+
+#: nis/nis_print.c:113
+msgid "NO OBJECT\n"
+msgstr "ΚΑΝΕΝΑ ΑΝΤΙΚΕΙΜΕΝΟ\n"
+
+#: nis/nis_print.c:116
+msgid "DIRECTORY\n"
+msgstr "ΚΑΤΑΛΟΓΟΣ\n"
+
+#: nis/nis_print.c:119
+msgid "GROUP\n"
+msgstr "ΟΜΑΔΑ\n"
+
+#: nis/nis_print.c:122
+msgid "TABLE\n"
+msgstr "ΠΙΝΑΚΑΣ\n"
+
+#: nis/nis_print.c:125
+msgid "ENTRY\n"
+msgstr "ΚΑΤΑΧΩΡΗΣΗ\n"
+
+#: nis/nis_print.c:128
+msgid "LINK\n"
+msgstr "ΣΥΝΔΕΣΜΟΣ\n"
+
+#: nis/nis_print.c:131
+msgid "PRIVATE\n"
+msgstr "ΙΔΙΩΤΙΚΟ\n"
+
+#: nis/nis_print.c:134
+msgid "(Unknown object)\n"
+msgstr "(Άγνωστο αντικείμενο)\n"
+
+#: nis/nis_print.c:168
+#, c-format
+msgid "Name : `%s'\n"
+msgstr "Όνομα : `%s'\n"
+
+#: nis/nis_print.c:169
+#, c-format
+msgid "Type : %s\n"
+msgstr "Τύπος: %s\n"
+
+#: nis/nis_print.c:174
+msgid "Master Server :\n"
+msgstr "Κύριος Εξυπηρετητής :\n"
+
+#: nis/nis_print.c:176
+msgid "Replicate :\n"
+msgstr "Αναπαραγωγή :\n"
+
+#: nis/nis_print.c:177
+#, c-format
+msgid "\tName       : %s\n"
+msgstr "\tΌνομα                 : %s\n"
+
+#: nis/nis_print.c:178
+msgid "\tPublic Key : "
+msgstr "\tΔημόσιο Κλειδί        :"
+
+#: nis/nis_print.c:182
+msgid "None.\n"
+msgstr "Κανένα.\n"
+
+#: nis/nis_print.c:185
+#, c-format
+msgid "Diffie-Hellmann (%d bits)\n"
+msgstr "Diffie-Hellmann (%d bit)\n"
+
+#: nis/nis_print.c:190
+#, c-format
+msgid "RSA (%d bits)\n"
+msgstr "RSA (%d bit)\n"
+
+#: nis/nis_print.c:193
+msgid "Kerberos.\n"
+msgstr "Κέρβερος.\n"
+
+#: nis/nis_print.c:196
+#, c-format
+msgid "Unknown (type = %d, bits = %d)\n"
+msgstr "Άγνωστο (είδος = %d, bit = %d)\n"
+
+#: nis/nis_print.c:207
+#, c-format
+msgid "\tUniversal addresses (%u)\n"
+msgstr "\tΚαθολική διεύθυνση (%u)\n"
+
+#: nis/nis_print.c:229
+msgid "Time to live : "
+msgstr "Χρόνος ζωής : "
+
+#: nis/nis_print.c:231
+msgid "Default Access rights :\n"
+msgstr "Εξ ορισμού δικαιώματα Προσπέλασης :\n"
+
+#: nis/nis_print.c:240
+#, c-format
+msgid "\tType         : %s\n"
+msgstr "\tΤύπος                 : %s\n"
+
+#: nis/nis_print.c:241
+msgid "\tAccess rights: "
+msgstr "\tΔικαιώματα προσπέλασης: "
+
+#: nis/nis_print.c:255
+msgid "Group Flags :"
+msgstr "Σημαίες Ομάδας :"
+
+#: nis/nis_print.c:258
+msgid ""
+"\n"
+"Group Members :\n"
+msgstr ""
+"\n"
+"Μέλη Ομάδας  :\n"
+
+#: nis/nis_print.c:270
+#, c-format
+msgid "Table Type          : %s\n"
+msgstr "Τύπος Πίνακα        : %s\n"
+
+#: nis/nis_print.c:271
+#, c-format
+msgid "Number of Columns   : %d\n"
+msgstr "Αριθμός Στηλών      :%d\n"
+
+#: nis/nis_print.c:272
+#, c-format
+msgid "Character Separator : %c\n"
+msgstr "Διαχωριστής Χαρακτήρων : %c\n"
+
+#: nis/nis_print.c:273
+#, c-format
+msgid "Search Path         : %s\n"
+msgstr "Μονοπάτι Αναζήτησης: %s\n"
+
+#: nis/nis_print.c:274
+msgid "Columns             :\n"
+msgstr "Στήλες              :\n"
+
+#: nis/nis_print.c:277
+#, c-format
+msgid "\t[%d]\tName          : %s\n"
+msgstr "\t[%d]\tΌνομα         : %s\n"
+
+#: nis/nis_print.c:279
+msgid "\t\tAttributes    : "
+msgstr "\t\tΙδιότητες     : "
+
+#: nis/nis_print.c:281
+msgid "\t\tAccess Rights : "
+msgstr "\t\tΔικαιώματα Προσπέλασης : "
+
+#: nis/nis_print.c:291
+msgid "Linked Object Type : "
+msgstr "Τύπος Συνδεδεμένου Αντικειμένου : "
+
+#: nis/nis_print.c:293
+#, c-format
+msgid "Linked to : %s\n"
+msgstr "Συνδεδεμένο με : %s\n"
+
+#: nis/nis_print.c:303
+#, c-format
+msgid "\tEntry data of type %s\n"
+msgstr "\tΔεδομένα εισαγωγής του τύπου %s\n"
+
+#: nis/nis_print.c:306
+#, c-format
+msgid "\t[%u] - [%u bytes] "
+msgstr "\t[%u] - [%u byte]"
+
+#: nis/nis_print.c:309
+msgid "Encrypted data\n"
+msgstr "Κρυπτογραφημένα δεδομένα\n"
+
+#: nis/nis_print.c:311
+msgid "Binary data\n"
+msgstr "Δυαδικά δεδομένα\n"
+
+#: nis/nis_print.c:327
+#, c-format
+msgid "Object Name   : %s\n"
+msgstr "Όνομα Αντικειμένου : %s\n"
+
+#: nis/nis_print.c:328
+#, c-format
+msgid "Directory     : %s\n"
+msgstr "Κατάλογος     : %s\n"
+
+#: nis/nis_print.c:329
+#, c-format
+msgid "Owner         : %s\n"
+msgstr "Ιδιοκτήτης   : %s\n"
+
+#: nis/nis_print.c:330
+#, c-format
+msgid "Group         : %s\n"
+msgstr "Ομάδα         : %s\n"
+
+#: nis/nis_print.c:331
+msgid "Access Rights : "
+msgstr "Δικαιώματα Προσπέλασης :"
+
+#: nis/nis_print.c:333
+#, c-format
+msgid ""
+"\n"
+"Time to Live  : "
+msgstr ""
+"\n"
+"Χρόνος Ζωής  : "
+
+#: nis/nis_print.c:336
+#, c-format
+msgid "Creation Time : %s"
+msgstr "Χρόνος Δημιουργίας : %s"
+
+#: nis/nis_print.c:338
+#, c-format
+msgid "Mod. Time     : %s"
+msgstr "Χρόνος Τροπ. : %s"
+
+#: nis/nis_print.c:339
+msgid "Object Type   : "
+msgstr "Τύπος Αντικειμένου :"
+
+#: nis/nis_print.c:359
+#, c-format
+msgid "    Data Length = %u\n"
+msgstr "    Μήκος Δεδομένων = %u\n"
+
+#: nis/nis_print.c:373
+#, c-format
+msgid "Status            : %s\n"
+msgstr "Κατάσταση         : %s\n"
+
+#: nis/nis_print.c:374
+#, c-format
+msgid "Number of objects : %u\n"
+msgstr "Αριθμός αντικειμένων: %u\n"
+
+#: nis/nis_print.c:378
+#, c-format
+msgid "Object #%d:\n"
+msgstr "Αντικείμενο #%d:\n"
+
+#: nis/nis_print_group_entry.c:117
+#, c-format
+msgid "Group entry for \"%s.%s\" group:\n"
+msgstr "Καταχώρηση ομάδας για την ομάδα \"%s.%s\":\n"
+
+#: nis/nis_print_group_entry.c:125
+msgid "    Explicit members:\n"
+msgstr "    Ρητά μέλη:\n"
+
+#: nis/nis_print_group_entry.c:130
+msgid "    No explicit members\n"
+msgstr "    Άρρητα μέλη\n"
+
+#: nis/nis_print_group_entry.c:133
+msgid "    Implicit members:\n"
+msgstr "    Αυτονόητα μέλη:\n"
+
+#: nis/nis_print_group_entry.c:138
+msgid "    No implicit members\n"
+msgstr "    Κανένα αυτονόητο μέλος\n"
+
+#: nis/nis_print_group_entry.c:141
+msgid "    Recursive members:\n"
+msgstr "    Αναδρομικά μέλη:\n"
+
+#: nis/nis_print_group_entry.c:146
+msgid "    No recursive members\n"
+msgstr "    Κανένα αναδρομικό μέλος\n"
+
+#: nis/nis_print_group_entry.c:149
+msgid "    Explicit nonmembers:\n"
+msgstr "    Ρητά μη-μέλη:\n"
+
+#: nis/nis_print_group_entry.c:154
+msgid "    No explicit nonmembers\n"
+msgstr "    Κανένα ρητό μη-μέλος\n"
+
+#: nis/nis_print_group_entry.c:157
+msgid "    Implicit nonmembers:\n"
+msgstr "    Αυτονόητα μη-μέλη:\n"
+
+#: nis/nis_print_group_entry.c:162
+msgid "    No implicit nonmembers\n"
+msgstr "    Κανένα αυτονόητο μη-μέλος\n"
+
+#: nis/nis_print_group_entry.c:170
+msgid "    No recursive nonmembers\n"
+msgstr "    Κανένα αναδρομικό μη-μέλος\n"
+
+#: nis/ypclnt.c:836
+msgid "Request arguments bad"
+msgstr "Κακή αίτηση παραμέτρων"
+
+#: nis/ypclnt.c:839
+msgid "RPC failure on NIS operation"
+msgstr "Αποτυχία RPC σε λειτουργία του NIS"
+
+#: nis/ypclnt.c:842
+msgid "Can't bind to server which serves this domain"
+msgstr "Δεν είναι δυνατή η δέσμευση με τον διακομιστή που εξυπηρετεί αυτόν τον τομέα"
+
+#: nis/ypclnt.c:845
+msgid "No such map in server's domain"
+msgstr "Δεν υπάρχει τέτοιος χάρτης στον τομέα του διακομιστή"
+
+#: nis/ypclnt.c:848
+msgid "No such key in map"
+msgstr "Δεν υπάρχει τέτοιο κλειδί στο χάρτη"
+
+#: nis/ypclnt.c:851
+msgid "Internal NIS error"
+msgstr "Εσωτερικό σφάλμα NIS"
+
+#: nis/ypclnt.c:854
+msgid "Local resource allocation failure"
+msgstr "Αποτυχία δέσμευσης τοπικών πόρων"
+
+#: nis/ypclnt.c:857
+msgid "No more records in map database"
+msgstr "Δεν υπάρχουν άλλες καταχωρίσεις στο χάρτη της βάσης δεδομένων"
+
+#: nis/ypclnt.c:860
+msgid "Can't communicate with portmapper"
+msgstr "Δεν είναι δυνατή η επικοινωνία με το portmapper"
+
+#: nis/ypclnt.c:863
+msgid "Can't communicate with ypbind"
+msgstr "Δεν είναι δυνατή η επικοινωνία με το ypbind"
+
+#: nis/ypclnt.c:866
+msgid "Can't communicate with ypserv"
+msgstr "Δεν είναι δυνατή η επικοινωνία με το ypserv"
+
+#: nis/ypclnt.c:869
+msgid "Local domain name not set"
+msgstr "Δεν έχει οριστεί το όνομα τοπικού τομέα"
+
+#: nis/ypclnt.c:872
+msgid "NIS map database is bad"
+msgstr "Η βάση δεδομένων χάρτη NIS είναι ακατάλληλη"
+
+#: nis/ypclnt.c:875
+msgid "NIS client/server version mismatch - can't supply service"
+msgstr ""
+"Αναντιστοιχία έκδοσης εξυπηρέτη/εξυπηρετούμενου NIS - δεν παρέχεται\n"
+"η υπηρεσία"
+
+#: nis/ypclnt.c:881
+msgid "Database is busy"
+msgstr "Η βάση δεδομένων είναι απασχολημένη"
+
+#: nis/ypclnt.c:884
+msgid "Unknown NIS error code"
+msgstr "Άγνωστος κώδικας σφάλματος NIS"
+
+#: nis/ypclnt.c:925
+msgid "Internal ypbind error"
+msgstr "Εσωτερικό σφάλμα ypbind"
+
+#: nis/ypclnt.c:928
+msgid "Domain not bound"
+msgstr "Ο τομέας δεν βρέθηκε"
+
+#: nis/ypclnt.c:931
+msgid "System resource allocation failure"
+msgstr "Αποτυχία δέσμευσης πόρων συστήματος"
+
+#: nis/ypclnt.c:934
+msgid "Unknown ypbind error"
+msgstr "Άγνωστο σφάλμα ypbind"
+
+#: nis/ypclnt.c:975
+msgid "yp_update: cannot convert host to netname\n"
+msgstr "yp_update: αδυναμία μετατροπής ονόματος συστήματος σε όνομα δικτύου\n"
+
+#: nis/ypclnt.c:993
+msgid "yp_update: cannot get server address\n"
+msgstr "yp_update: αδυναμία λήψης διεύθυνσης διακομιστή\n"
+
+#: nscd/aicache.c:69 nscd/hstcache.c:452
+#, c-format
+msgid "Haven't found \"%s\" in hosts cache!"
+msgstr "Δε βρέθηκε το \"%s\" στην λανθάνουσα μνήμη συστημάτων!"
+
+#: nscd/connections.c:785
+#, c-format
+msgid "cannot open socket: %s"
+msgstr "αδυναμία ανοίγματος υποδοχής: %s"
+
+#: nscd/connections.c:804
+#, c-format
+msgid "cannot enable socket to accept connections: %s"
+msgstr "αδύνατη η ενεργοποίηση υποδοχής για αποδοχή συνδέσεων: %s"
+
+#: nscd/connections.c:1051
+#, c-format
+msgid "cannot handle old request version %d; current version is %d"
+msgstr "δε μπορεί να εξυπηρετηθεί η αίτηση παλαιάς έκδοσης %d, η τρέχουσα έκδοση είναι %d"
+
+#: nscd/connections.c:1122 nscd/connections.c:1148
+#, c-format
+msgid "cannot write result: %s"
+msgstr "αδυναμία εγγραφής αποτελέσματος: %s"
+
+#: nscd/connections.c:1637
+#, c-format
+msgid "short read while reading request: %s"
+msgstr "σύντομη ανάγνωση κατά την αίτηση ανάγνωσης: %s"
+
+#: nscd/connections.c:1683
+#, c-format
+msgid "short read while reading request key: %s"
+msgstr "σύντομη ανάγνωση κατά την ανάγνωση του κλειδιού αίτησης: %s"
+
+#: nscd/connections.c:1698
+#, c-format
+msgid "handle_request: request received (Version = %d)"
+msgstr "handle_request: λήψη αίτησης (Έκδοση = %d)"
+
+#: nscd/grpcache.c:385 nscd/hstcache.c:402 nscd/initgrcache.c:378
+#: nscd/pwdcache.c:363 nscd/servicescache.c:310
+#, c-format
+msgid "short write in %s: %s"
+msgstr "σύντομη ανάγνωση στο %s: %s"
+
+#: nscd/grpcache.c:430 nscd/initgrcache.c:75
+#, c-format
+msgid "Haven't found \"%s\" in group cache!"
+msgstr "Δε βρέθηκε το \"%s\" στην λανθάνουσα μνήμη ομάδας!"
+
+#: nscd/nscd.c:108
+msgid "Read configuration data from NAME"
+msgstr "Ανάγνωση δεδομένων ρύθμισης από το ΟΝΟΜΑ"
+
+#: nscd/nscd.c:110
+msgid "Do not fork and display messages on the current tty"
+msgstr "Να μη γίνει δικράνωση και εμφάνιση μηνυμάτων στο τρέχον tty"
+
+#: nscd/nscd.c:115
+msgid "NUMBER"
+msgstr "ΑΡΙΘΜΟΣ"
+
+#: nscd/nscd.c:115
+msgid "Start NUMBER threads"
+msgstr "Έναρξη ΑΡΙΘΜΟΣ νημάτων"
+
+#: nscd/nscd.c:116
+msgid "Shut the server down"
+msgstr "Διακοπή της λειτουργίας του εξυπηρετητή"
+
+#: nscd/nscd.c:118
+msgid "TABLE"
+msgstr "ΠΙΝΑΚΑΣ"
+
+#: nscd/nscd.c:119
+msgid "Invalidate the specified cache"
+msgstr "Ακύρωση των περιεχομένων της συγκεκριμένης λανθάνουσας μνήμης"
+
+#: nscd/nscd.c:120
+msgid "TABLE,yes"
+msgstr "ΠΙΝΑΚΑΣ,ναι"
+
+#: nscd/nscd.c:121
+msgid "Use separate cache for each user"
+msgstr "Χρήση ξεχωριστής λανθάνουσας μνήμης για κάθε χρήστη"
+
+#: nscd/nscd.c:126
+msgid "Name Service Cache Daemon."
+msgstr "Λανθάνουσα Υπηρεσία Εξυπηρέτησης Αντιστοιχιών Ονομάτων."
+
+#: nscd/nscd.c:159 nss/getent.c:987 nss/makedb.c:207
+#, c-format
+msgid "wrong number of arguments"
+msgstr "λάθος αριθμός παραμέτρων"
+
+#: nscd/nscd.c:183
+#, c-format
+msgid "already running"
+msgstr "εκτελείτε ήδη"
+
+#: nscd/nscd.c:364 nscd/nscd_stat.c:209
+#, c-format
+msgid "write incomplete"
+msgstr "μη πλήρης εγγραφή"
+
+#: nscd/nscd.c:430 nscd/nscd.c:455 nscd/nscd_stat.c:190
+#, c-format
+msgid "Only root is allowed to use this option!"
+msgstr "Μόνο ο διαχειριστής επιτρέπετε να χρησιμοποιήσει αυτήν την επιλογή!"
+
+#: nscd/nscd_conf.c:105
+#, c-format
+msgid "Parse error: %s"
+msgstr "Σφάλμα επεξεργασίας: %s"
+
+#: nscd/nscd_conf.c:273
+#, c-format
+msgid "Unknown option: %s %s %s"
+msgstr "Άγνωστη επιλογή: %s %s %s"
+
+#: nscd/nscd_stat.c:159
+#, c-format
+msgid "cannot write statistics: %s"
+msgstr "αδυναμία εγγραφής στατιστικών: %s"
+
+#: nscd/nscd_stat.c:197
+#, c-format
+msgid "nscd not running!\n"
+msgstr "το nscd δεν εκτελείτε!\n"
+
+#: nscd/nscd_stat.c:221
+#, c-format
+msgid "cannot read statistics data"
+msgstr "αδύνατη η ανάγνωση δεδομένων στατιστικών"
+
+#: nscd/nscd_stat.c:224
+#, c-format
+msgid ""
+"nscd configuration:\n"
+"\n"
+"%15d  server debug level\n"
+msgstr ""
+"ρύθμιση nscd:\n"
+"\n"
+"%15d  επίπεδο εκσφαλμάτωσης εξυπηρετητή\n"
+
+#: nss/getent.c:55
+msgid "database [key ...]"
+msgstr "βάση_δεδομένων [κλειδί ...]"
+
+#: nss/getent.c:997
+#, c-format
+msgid "Unknown database: %s\n"
+msgstr "Άγνωστη βάση δεδομένων: %s\n"
+
+#: nss/makedb.c:120
+msgid "Convert key to lower case"
+msgstr "Μετατροπή κλειδιού σε πεζά"
+
+#: nss/makedb.c:123
+msgid "Do not print messages while building database"
+msgstr "Να μη εμφανίζονται μηνύματα κατά την κατασκευή της βάσης δεδομένων"
+
+#: nss/makedb.c:125
+msgid "Print content of database file, one entry a line"
+msgstr "Εμφάνιση του περιεχομένου του αρχείου βάσης, μια καταχώρηση τη φορά"
+
+#: nss/makedb.c:135
+msgid ""
+"INPUT-FILE OUTPUT-FILE\n"
+"-o OUTPUT-FILE INPUT-FILE\n"
+"-u INPUT-FILE"
+msgstr ""
+"ΑΡΧΕΙΟ-ΕΙΣΟΔΟΥ ΑΡΧΕΙΟ-ΕΞΟΔΟΥ\n"
+"-o ΑΡΧΕΙΟ-ΕΞΟΔΟΥ ΑΡΧΕΙΟ-ΕΙΣΟΔΟΥ\n"
+"-u ΑΡΧΕΙΟ-ΕΙΣΟΔΟΥ"
+
+#: nss/makedb.c:557
+msgid "duplicate key"
+msgstr "διπλό κλειδί"
+
+#: nss/makedb.c:569
+#, c-format
+msgid "problems while reading `%s'"
+msgstr "προβλήματα κατά την ανάγνωση του `%s'"
+
+#: posix/getconf.c:669 posix/getconf.c:685
+msgid "undefined"
+msgstr "αόριστο"
+
+#: posix/getconf.c:707
+#, c-format
+msgid "Unrecognized variable `%s'"
+msgstr "Μη αναγνωρίσιμη μεταβλητή `%s'"
+
+#: posix/regcomp.c:138
+msgid "No match"
+msgstr "Κανένα ταίριασμα"
+
+#: posix/regcomp.c:141
+msgid "Invalid regular expression"
+msgstr "Μη έγκυρη κανονική έκφραση"
+
+#: posix/regcomp.c:144
+msgid "Invalid collation character"
+msgstr "Μη έγκυρος χαρακτήρας παραβολής"
+
+#: posix/regcomp.c:147
+msgid "Invalid character class name"
+msgstr "Μη έγκυρος χαρακτήρας ονόματος κλάσης"
+
+#: posix/regcomp.c:150
+msgid "Trailing backslash"
+msgstr "Ακολουθεί ανάστροφη κάθετος"
+
+#: posix/regcomp.c:153
+msgid "Invalid back reference"
+msgstr "Μη έγκυρη πισω-παραπομπή"
+
+#: posix/regcomp.c:159
+msgid "Unmatched ( or \\("
+msgstr "Αταίριαστο ( ή \\("
+
+#: posix/regcomp.c:162
+msgid "Unmatched \\{"
+msgstr "Αταίριαστο \\{"
+
+#: posix/regcomp.c:165
+msgid "Invalid content of \\{\\}"
+msgstr "Μη έγκυρο περιεχόμενο των \\{\\}"
+
+#: posix/regcomp.c:168
+msgid "Invalid range end"
+msgstr "Μη έγκυρο τέλος πεδίου"
+
+#: posix/regcomp.c:171
+msgid "Memory exhausted"
+msgstr "Η μνήμη εξαντλήθηκε"
+
+#: posix/regcomp.c:174
+msgid "Invalid preceding regular expression"
+msgstr "Μη έγκυρη προπορευόμενη κανονική έκφραση"
+
+#: posix/regcomp.c:177
+msgid "Premature end of regular expression"
+msgstr "Πρόωρο τέλος της κανονικής έκφρασης"
+
+#: posix/regcomp.c:180
+msgid "Regular expression too big"
+msgstr "Πολύ μεγάλη κανονική έκφραση"
+
+#: posix/regcomp.c:183
+msgid "Unmatched ) or \\)"
+msgstr "Αταίριαστο ) ή \\)"
+
+#: posix/regcomp.c:676
+msgid "No previous regular expression"
+msgstr "Δεν υπάρχει προηγούμενη κανονική έκφραση"
+
+#: resolv/herror.c:63
+msgid "Resolver Error 0 (no error)"
+msgstr "Σφάλμα αναλυτή διευθύνσεων 0 (κανένα σφάλμα)"
+
+#: resolv/herror.c:64
+msgid "Unknown host"
+msgstr "Άγνωστο όνομα συστήματος"
+
+#: resolv/herror.c:65
+msgid "Host name lookup failure"
+msgstr "Αποτυχία αναζήτησης ονόματος συστήματος"
+
+#: resolv/herror.c:66
+msgid "Unknown server error"
+msgstr "Άγνωστο σφάλμα διακομιστή"
+
+#: resolv/herror.c:67
+msgid "No address associated with name"
+msgstr "Καμιά διεύθυνση δεν συνδέεται με το όνομα"
+
+#: resolv/herror.c:102
+msgid "Resolver internal error"
+msgstr "Εσωτερικό σφάλμα του αναλυτή διευθύνσεων"
+
+#: resolv/herror.c:105
+msgid "Unknown resolver error"
+msgstr "Άγνωστο σφάλμα αναλύτη διευθύνσεων"
+
+#: stdio-common/psiginfo-data.h:46 timezone/zdump.c:375 timezone/zic.c:564
+msgid "I/O error"
+msgstr "Σφάλμα εισόδου/εξόδου"
+
+#: stdio-common/psignal.c:43
+#, c-format
+msgid "%s%sUnknown signal %d\n"
+msgstr "%s%sΆγνωστο σήμα %d\n"
+
+#: string/_strerror.c:30 sysdeps/mach/_strerror.c:55
+msgid "Unknown error "
+msgstr "Άγνωστο σφάλμα "
+
+#: string/strsignal.c:39
+#, c-format
+msgid "Real-time signal %d"
+msgstr "Σήμα πραγματικού-χρόνου %d"
+
+#: string/strsignal.c:43
+#, c-format
+msgid "Unknown signal %d"
+msgstr "Άγνωστο σήμα %d"
+
+#: sunrpc/clnt_perr.c:150
+msgid "RPC: Success"
+msgstr "RPC: Επιτυχία"
+
+#: sunrpc/clnt_perr.c:153
+msgid "RPC: Can't encode arguments"
+msgstr "RPC: Δεν είναι δυνατόν να κωδικοποιηθούν οι παράμετροι"
+
+#: sunrpc/clnt_perr.c:157
+msgid "RPC: Can't decode result"
+msgstr "RPC: Δεν είναι δυνατόν να αποκωδικοποιηθεί το αποτέλεσμα"
+
+#: sunrpc/clnt_perr.c:161
+msgid "RPC: Unable to send"
+msgstr "RPC: Αδυναμία αποστολής"
+
+#: sunrpc/clnt_perr.c:165
+msgid "RPC: Unable to receive"
+msgstr "RPC: Αδυναμία λήψης"
+
+#: sunrpc/clnt_perr.c:169
+msgid "RPC: Timed out"
+msgstr "RPC: Λήξη χρόνου"
+
+#: sunrpc/clnt_perr.c:173
+msgid "RPC: Incompatible versions of RPC"
+msgstr "RPC: Μη συμβατές εκδόσεις του RPC"
+
+#: sunrpc/clnt_perr.c:177
+msgid "RPC: Authentication error"
+msgstr "RPC: Σφάλμα πιστοποίησης"
+
+#: sunrpc/clnt_perr.c:181
+msgid "RPC: Program unavailable"
+msgstr "RPC: Μη διαθέσιμο πρόγραμμα"
+
+#: sunrpc/clnt_perr.c:185
+msgid "RPC: Program/version mismatch"
+msgstr "RPC: Αναντιστοιχεία πρόγραμματος/έκδοσης"
+
+#: sunrpc/clnt_perr.c:189
+msgid "RPC: Procedure unavailable"
+msgstr "RPC: Μη διαθέσιμη διαδικασία"
+
+#: sunrpc/clnt_perr.c:193
+msgid "RPC: Server can't decode arguments"
+msgstr "RPC: Ο διακομιστής δεν μπορεί να αποκωδικοποιήσει τις παραμέτρους"
+
+#: sunrpc/clnt_perr.c:197
+msgid "RPC: Remote system error"
+msgstr "RPC: Σφάλμα απομακρυνσμένου συστήματος"
+
+#: sunrpc/clnt_perr.c:201
+msgid "RPC: Unknown host"
+msgstr "RPC: Άγνωστο όνομα συστήματος"
+
+#: sunrpc/clnt_perr.c:205
+msgid "RPC: Unknown protocol"
+msgstr "RPC: Άγνωστο πρωτόκολο"
+
+#: sunrpc/clnt_perr.c:209
+msgid "RPC: Port mapper failure"
+msgstr "RPC: Αποτυχία αντιστοιχέα θυρών"
+
+#: sunrpc/clnt_perr.c:213
+msgid "RPC: Program not registered"
+msgstr "RPC: Το πρόγραμμα δεν έχει καταχωρηθεί"
+
+#: sunrpc/clnt_perr.c:217
+msgid "RPC: Failed (unspecified error)"
+msgstr "RPC: Αποτυχία (μη καθορισμένο σφάλμα)"
+
+#: sunrpc/clnt_perr.c:258
+msgid "RPC: (unknown error code)"
+msgstr "RPC: (άγνωστος κωδικός σφάλματος)"
+
+#: sunrpc/clnt_perr.c:334
+msgid "Authentication OK"
+msgstr "Πιστοποίηση εντάξει"
+
+#: sunrpc/clnt_perr.c:337
+msgid "Invalid client credential"
+msgstr "Μη έγκυρο διαπιστευτήριο εξυπηρετούμενου"
+
+#: sunrpc/clnt_perr.c:341
+msgid "Server rejected credential"
+msgstr "Ο διακομιστής απέρριψε διαπιστευτήριο"
+
+#: sunrpc/clnt_perr.c:345
+msgid "Invalid client verifier"
+msgstr "Μη έγκυρος εξακριβωτής(verifier) εξυπηρετούμενου"
+
+#: sunrpc/clnt_perr.c:349
+msgid "Server rejected verifier"
+msgstr "Ο διακομιστής απέρριψε εξακριβωτή"
+
+#: sunrpc/clnt_perr.c:353
+msgid "Client credential too weak"
+msgstr "Τα διαπιστευτήρια του εξυπηρετούμενου είναι πολύ αδύναμα"
+
+#: sunrpc/clnt_perr.c:357
+msgid "Invalid server verifier"
+msgstr "Μη έγκυρος εξακριβωτής(verifier) διακομιστή"
+
+#: sunrpc/clnt_perr.c:361
+msgid "Failed (unspecified error)"
+msgstr "Αποτυχία (μη καθορισμένο σφάλμα)"
+
+#: sunrpc/pmap_clnt.c:128
+msgid "Cannot register service"
+msgstr "Δεν είναι δυνατή η καταχώρηση της υπηρεσίας"
+
+#: sunrpc/pmap_rmt.c:244
+msgid "Cannot create socket for broadcast rpc"
+msgstr "Δεν είναι δυνατή η δημιουργία υποδοχής για εκπομπή rpc"
+
+#: sunrpc/pmap_rmt.c:251
+msgid "Cannot set socket option SO_BROADCAST"
+msgstr "Δεν είναι δυνατή η θέτηση της επιλογής υποδοχής SO_BROADCAST"
+
+#: sunrpc/pmap_rmt.c:303
+msgid "Cannot send broadcast packet"
+msgstr "Δεν είναι δυνατή η αποστολή πακέτου εκπομπής"
+
+#: sunrpc/pmap_rmt.c:328
+msgid "Broadcast poll problem"
+msgstr "Πρόβλημα στην εκλογή εκπομπής"
+
+#: sunrpc/pmap_rmt.c:341
+msgid "Cannot receive reply to broadcast"
+msgstr "Δεν είναι δυνατή η λήψη απαντήσεων στην εκπομπή"
+
+#: sunrpc/svc_simple.c:82
+msgid "couldn't create an rpc server\n"
+msgstr "αδυναμία δημιουργίας rpc διακομιστή\n"
+
+#: sunrpc/svc_simple.c:98
+msgid "registerrpc: out of memory\n"
+msgstr "registerrpc: η μνήμη εξαντλήθηκε\n"
+
+#: sunrpc/svc_simple.c:161
+#, c-format
+msgid "trouble replying to prog %d\n"
+msgstr "πρόβλημα κατά την απάντηση στο πρόγραμμα %d\n"
+
+#: sunrpc/svc_simple.c:170
+#, c-format
+msgid "never registered prog %d\n"
+msgstr "ποτέ δεν δηλώθηκε το πρόγραμμα %d\n"
+
+#: sunrpc/svc_tcp.c:165
+msgid "svc_tcp.c - tcp socket creation problem"
+msgstr "svc_tcp.c - πρόβλημα δημιουργίας υποδοχής tcp"
+
+#: sunrpc/svc_tcp.c:180
+msgid "svc_tcp.c - cannot getsockname or listen"
+msgstr "svc_tcp.c - αδυναμία getsockname ή listen"
+
+#: sunrpc/svc_udp.c:136
+msgid "svcudp_create: socket creation problem"
+msgstr "svcudp_create - πρόβλημα δημιουργίας υποδοχής"
+
+#: sunrpc/svc_udp.c:150
+msgid "svcudp_create - cannot getsockname"
+msgstr "svcudp_create -  αδυναμία getsockname"
+
+#: sunrpc/svc_udp.c:481
+msgid "enablecache: cache already enabled"
+msgstr "enablecache: η λανθάνουσα μνήμη είναι ήδη ενεργοποιημένη"
+
+#: sunrpc/svc_udp.c:487
+msgid "enablecache: could not allocate cache"
+msgstr "enablecache: αδυναμία δέσμευσης λανθάνουσας μνήμης"
+
+#: sunrpc/svc_udp.c:496
+msgid "enablecache: could not allocate cache data"
+msgstr "enablecache: αδυναμία δέσμευσης δεδομένων λανθάνουσας μνήμης"
+
+#: sunrpc/svc_udp.c:504
+msgid "enablecache: could not allocate cache fifo"
+msgstr "enablecache: αδυναμία δέσμευσης fifo λανθάνουσας μνήμης"
+
+#: sunrpc/svc_udp.c:540
+msgid "cache_set: victim not found"
+msgstr "cache_set: το θύμα δεν βρέθηκε"
+
+#: sunrpc/svc_udp.c:551
+msgid "cache_set: victim alloc failed"
+msgstr "cache_set: η εκχώρηση θύματος απέτυχε"
+
+#: sunrpc/svc_udp.c:558
+msgid "cache_set: could not allocate new rpc_buffer"
+msgstr "cache_set: αδυναμία δέσμευσης νέου rpc_buffer"
+
+#: sunrpc/svc_unix.c:163
+msgid "svc_unix.c - AF_UNIX socket creation problem"
+msgstr "svc_unix.c - πρόβλημα δημιουργίας υποδοχής AF_UNIX"
+
+#: sunrpc/svc_unix.c:179
+msgid "svc_unix.c - cannot getsockname or listen"
+msgstr "svc_unix.c - αδυναμία getsockname ή listen"
+
+#: sysdeps/generic/siglist.h:29
+msgid "Hangup"
+msgstr "Κλείσιμο"
+
+#: sysdeps/generic/siglist.h:30
+msgid "Interrupt"
+msgstr "Διακοπή"
+
+#: sysdeps/generic/siglist.h:31
+msgid "Quit"
+msgstr "Έξοδος"
+
+#: sysdeps/generic/siglist.h:32
+msgid "Illegal instruction"
+msgstr "Ακατάλληλη εντολή"
+
+#: sysdeps/generic/siglist.h:33
+msgid "Trace/breakpoint trap"
+msgstr "Παγίδα Trace/breakpoint"
+
+#: sysdeps/generic/siglist.h:34
+msgid "Aborted"
+msgstr "Ακυρώθηκε"
+
+#: sysdeps/generic/siglist.h:35
+msgid "Floating point exception"
+msgstr "Εξαίρεση κινητής υποδιαστολής"
+
+#: sysdeps/generic/siglist.h:36
+msgid "Killed"
+msgstr "Σκοτώθηκε"
+
+#: sysdeps/generic/siglist.h:37
+msgid "Bus error"
+msgstr "Σφάλμα στον δίαυλο(bus)"
+
+#: sysdeps/generic/siglist.h:38
+msgid "Bad system call"
+msgstr "Εσφαλμένη κλήση συστήματος"
+
+#: sysdeps/generic/siglist.h:39
+msgid "Segmentation fault"
+msgstr "Σφάλμα κατάτμησης (segmentation fault)"
+
+#. TRANS There is no process reading from the other end of a pipe.
+#. TRANS Every library function that returns this error code also generates a
+#. TRANS @code{SIGPIPE} signal; this signal terminates the program if not handled
+#. TRANS or blocked.  Thus, your program will never actually see @code{EPIPE}
+#. TRANS unless it has handled or blocked @code{SIGPIPE}.
+#: sysdeps/generic/siglist.h:40 sysdeps/gnu/errlist.h:216
+msgid "Broken pipe"
+msgstr "Διακοπείσα σωλήνωση"
+
+#: sysdeps/generic/siglist.h:41
+msgid "Alarm clock"
+msgstr "Ξυπνητήρι"
+
+#: sysdeps/generic/siglist.h:42
+msgid "Terminated"
+msgstr "Τερματίστηκε"
+
+#: sysdeps/generic/siglist.h:43
+msgid "Urgent I/O condition"
+msgstr "Επείγουσα κατάσταση εισόδου/εξόδου"
+
+#: sysdeps/generic/siglist.h:44
+msgid "Stopped (signal)"
+msgstr "Σταμάτησε (σήμα)"
+
+#: sysdeps/generic/siglist.h:45
+msgid "Stopped"
+msgstr "Σταμάτησε"
+
+#: sysdeps/generic/siglist.h:46
+msgid "Continued"
+msgstr "Συνεχίζεται"
+
+#: sysdeps/generic/siglist.h:47
+msgid "Child exited"
+msgstr "Η θυγατρική διεργασία τερματίστηκε"
+
+#: sysdeps/generic/siglist.h:48
+msgid "Stopped (tty input)"
+msgstr "Σταμάτησε (είσοδος tty)"
+
+#: sysdeps/generic/siglist.h:49
+msgid "Stopped (tty output)"
+msgstr "Σταμάτησε (έξοδος tty)"
+
+#: sysdeps/generic/siglist.h:50
+msgid "I/O possible"
+msgstr "Δυνατή η είσοδος/έξοδος"
+
+#: sysdeps/generic/siglist.h:51
+msgid "CPU time limit exceeded"
+msgstr "Ξεπεράστηκε το όριο χρόνου της CPU"
+
+#: sysdeps/generic/siglist.h:52
+msgid "File size limit exceeded"
+msgstr "Ξεπεράστηκε το όριο μεγέθους αρχείου"
+
+#: sysdeps/generic/siglist.h:53
+msgid "Virtual timer expired"
+msgstr "Ο εικονικός χρονομετρητής έληξε"
+
+#: sysdeps/generic/siglist.h:54
+msgid "Profiling timer expired"
+msgstr "Ο χρονομετρητής βελτιστοποίησης έληξε"
+
+#: sysdeps/generic/siglist.h:55
+msgid "User defined signal 1"
+msgstr "Καθοριζόμενο από τον χρήστη σήμα 1"
+
+#: sysdeps/generic/siglist.h:56
+msgid "User defined signal 2"
+msgstr "Καθοριζόμενο από τον χρήστη σήμα 2"
+
+#: sysdeps/generic/siglist.h:57
+msgid "Window changed"
+msgstr "Το παράθυρο άλλαξε"
+
+#: sysdeps/generic/siglist.h:61
+msgid "EMT trap"
+msgstr "EMT παγίδα"
+
+#: sysdeps/generic/siglist.h:64
+msgid "Stack fault"
+msgstr "Σφάλμα στοίβας"
+
+#: sysdeps/generic/siglist.h:67
+msgid "Power failure"
+msgstr "Αποτυχία τροφοδοσίας"
+
+#: sysdeps/generic/siglist.h:70
+msgid "Information request"
+msgstr "Αίτηση πληροφορίας"
+
+#: sysdeps/generic/siglist.h:73
+msgid "Resource lost"
+msgstr "Ο πόρος χάθηκε"
+
+#. TRANS Only the owner of the file (or other resource)
+#. TRANS or processes with special privileges can perform the operation.
+#: sysdeps/gnu/errlist.h:6
+msgid "Operation not permitted"
+msgstr "Η λειτουργία δεν επιτρέπεται"
+
+#. TRANS No process matches the specified process ID.
+#: sysdeps/gnu/errlist.h:18
+msgid "No such process"
+msgstr "Δεν υπάρχει τέτοια διεργασία"
+
+#. TRANS An asynchronous signal occurred and prevented
+#. TRANS completion of the call.  When this happens, you should try the call
+#. TRANS again.
+#. TRANS
+#. TRANS You can choose to have functions resume after a signal that is handled,
+#. TRANS rather than failing with @code{EINTR}; see @ref{Interrupted
+#. TRANS Primitives}.
+#: sysdeps/gnu/errlist.h:29
+msgid "Interrupted system call"
+msgstr "Διακοπείσα κλήση συστήματος"
+
+#. TRANS Usually used for physical read or write errors.
+#: sysdeps/gnu/errlist.h:34
+msgid "Input/output error"
+msgstr "Σφάλμα εισόδου/εξόδου"
+
+#. TRANS The system tried to use the device
+#. TRANS represented by a file you specified, and it couldn't find the device.
+#. TRANS This can mean that the device file was installed incorrectly, or that
+#. TRANS the physical device is missing or not correctly attached to the
+#. TRANS computer.
+#: sysdeps/gnu/errlist.h:43
+msgid "No such device or address"
+msgstr "Δεν υπάρχει τέτοια συσκευή ή διεύθυνση"
+
+#. TRANS Used when the arguments passed to a new program
+#. TRANS being executed with one of the @code{exec} functions (@pxref{Executing a
+#. TRANS File}) occupy too much memory space.  This condition never arises on
+#. TRANS @gnuhurdsystems{}.
+#: sysdeps/gnu/errlist.h:51
+msgid "Argument list too long"
+msgstr "Ο κατάλογος των παραμέτρων είναι πολύ μακρύς"
+
+#. TRANS Invalid executable file format.  This condition is detected by the
+#. TRANS @code{exec} functions; see @ref{Executing a File}.
+#: sysdeps/gnu/errlist.h:57
+msgid "Exec format error"
+msgstr "Σφάλμα στη διαμόρφωση του εκτελέσιμου"
+
+#. TRANS For example, I/O on a descriptor that has been
+#. TRANS closed or reading from a descriptor open only for writing (or vice
+#. TRANS versa).
+#: sysdeps/gnu/errlist.h:64
+msgid "Bad file descriptor"
+msgstr "Εσφαλμένος περιγραφέας αρχείου"
+
+#. TRANS This error happens on operations that are
+#. TRANS supposed to manipulate child processes, when there aren't any processes
+#. TRANS to manipulate.
+#: sysdeps/gnu/errlist.h:71
+msgid "No child processes"
+msgstr "Καμιά θυγατρική διεργασία"
+
+#. TRANS Allocating a system resource would have resulted in a
+#. TRANS deadlock situation.  The system does not guarantee that it will notice
+#. TRANS all such situations.  This error means you got lucky and the system
+#. TRANS noticed; it might just hang.  @xref{File Locks}, for an example.
+#: sysdeps/gnu/errlist.h:79
+msgid "Resource deadlock avoided"
+msgstr "Αποφεύχθηκε αδιέξοδο σφάλμα πόρων"
+
+#. TRANS The system cannot allocate more virtual memory
+#. TRANS because its capacity is full.
+#: sysdeps/gnu/errlist.h:85
+msgid "Cannot allocate memory"
+msgstr "Δεν είναι δυνατό να δεσμευτεί μνήμη"
+
+#. TRANS An invalid pointer was detected.
+#. TRANS On @gnuhurdsystems{}, this error never happens; you get a signal instead.
+#: sysdeps/gnu/errlist.h:96
+msgid "Bad address"
+msgstr "Εσφαλμένη διεύθυνση"
+
+#. TRANS A file that isn't a block special file was given in a situation that
+#. TRANS requires one.  For example, trying to mount an ordinary file as a file
+#. TRANS system in Unix gives this error.
+#: sysdeps/gnu/errlist.h:103
+msgid "Block device required"
+msgstr "Απαιτείται συσκευή μπλοκ"
+
+#. TRANS A system resource that can't be shared is already in use.
+#. TRANS For example, if you try to delete a file that is the root of a currently
+#. TRANS mounted filesystem, you get this error.
+#: sysdeps/gnu/errlist.h:110
+msgid "Device or resource busy"
+msgstr "Συσκευή ή πόροι είναι απασχολημένοι"
+
+#. TRANS An existing file was specified in a context where it only
+#. TRANS makes sense to specify a new file.
+#: sysdeps/gnu/errlist.h:116
+msgid "File exists"
+msgstr "Το αρχείο υπάρχει"
+
+#. TRANS An attempt to make an improper link across file systems was detected.
+#. TRANS This happens not only when you use @code{link} (@pxref{Hard Links}) but
+#. TRANS also when you rename a file with @code{rename} (@pxref{Renaming Files}).
+#: sysdeps/gnu/errlist.h:123
+msgid "Invalid cross-device link"
+msgstr "Μη έγκυρος σύνδεσμος μεταξύ συσκευών"
+
+#. TRANS The wrong type of device was given to a function that expects a
+#. TRANS particular sort of device.
+#: sysdeps/gnu/errlist.h:129
+msgid "No such device"
+msgstr "Δεν υπάρχει τέτοια συσκευή"
+
+#. TRANS A file that isn't a directory was specified when a directory is required.
+#: sysdeps/gnu/errlist.h:134
+msgid "Not a directory"
+msgstr "Δεν είναι κατάλογος"
+
+#. TRANS You cannot open a directory for writing,
+#. TRANS or create or remove hard links to it.
+#: sysdeps/gnu/errlist.h:140
+msgid "Is a directory"
+msgstr "Είναι κατάλογος"
+
+#. TRANS This is used to indicate various kinds of problems
+#. TRANS with passing the wrong argument to a library function.
+#: sysdeps/gnu/errlist.h:146
+msgid "Invalid argument"
+msgstr "Μη έγκυρη παράμετρος"
+
+#. TRANS The current process has too many files open and can't open any more.
+#. TRANS Duplicate descriptors do count toward this limit.
+#. TRANS
+#. TRANS In BSD and GNU, the number of open files is controlled by a resource
+#. TRANS limit that can usually be increased.  If you get this error, you might
+#. TRANS want to increase the @code{RLIMIT_NOFILE} limit or make it unlimited;
+#. TRANS @pxref{Limits on Resources}.
+#: sysdeps/gnu/errlist.h:157
+msgid "Too many open files"
+msgstr "Υπερβολικά πολλά ανοικτά αρχεία"
+
+#. TRANS There are too many distinct file openings in the entire system.  Note
+#. TRANS that any number of linked channels count as just one file opening; see
+#. TRANS @ref{Linked Channels}.  This error never occurs on @gnuhurdsystems{}.
+#: sysdeps/gnu/errlist.h:164
+msgid "Too many open files in system"
+msgstr "Υπερβολικα πολλά ανοικτά αρχεία στο σύστημα"
+
+#. TRANS Inappropriate I/O control operation, such as trying to set terminal
+#. TRANS modes on an ordinary file.
+#: sysdeps/gnu/errlist.h:170
+msgid "Inappropriate ioctl for device"
+msgstr "Ακατάλληλο ioctl για συσκευή"
+
+#. TRANS An attempt to execute a file that is currently open for writing, or
+#. TRANS write to a file that is currently being executed.  Often using a
+#. TRANS debugger to run a program is considered having it open for writing and
+#. TRANS will cause this error.  (The name stands for ``text file busy''.)  This
+#. TRANS is not an error on @gnuhurdsystems{}; the text is copied as necessary.
+#: sysdeps/gnu/errlist.h:179
+msgid "Text file busy"
+msgstr "Αρχείο κειμένου σε χρήση"
+
+#. TRANS The size of a file would be larger than allowed by the system.
+#: sysdeps/gnu/errlist.h:184
+msgid "File too large"
+msgstr "Πολύ μεγάλο αρχείο"
+
+#. TRANS Write operation on a file failed because the
+#. TRANS disk is full.
+#: sysdeps/gnu/errlist.h:190
+msgid "No space left on device"
+msgstr "Δεν έμεινε καθόλου χώρος στη συσκευή"
+
+#. TRANS Invalid seek operation (such as on a pipe).
+#: sysdeps/gnu/errlist.h:195
+msgid "Illegal seek"
+msgstr "Παράνομη αναζήτηση"
+
+#. TRANS An attempt was made to modify something on a read-only file system.
+#: sysdeps/gnu/errlist.h:200
+msgid "Read-only file system"
+msgstr "Αναγνώσιμο-μόνο σύστημα αρχείων"
+
+#. TRANS The link count of a single file would become too large.
+#. TRANS @code{rename} can cause this error if the file being renamed already has
+#. TRANS as many links as it can take (@pxref{Renaming Files}).
+#: sysdeps/gnu/errlist.h:207
+msgid "Too many links"
+msgstr "Υπερβολικά πολλοί σύνδεσμοι"
+
+#. TRANS Used by mathematical functions when an argument value does
+#. TRANS not fall into the domain over which the function is defined.
+#: sysdeps/gnu/errlist.h:222
+msgid "Numerical argument out of domain"
+msgstr "Αριθμητική παράμετρος έξω από τον τομέα"
+
+#. TRANS Used by mathematical functions when the result value is
+#. TRANS not representable because of overflow or underflow.
+#: sysdeps/gnu/errlist.h:228
+msgid "Numerical result out of range"
+msgstr "Το αριθμητικό αποτέλεσμα είναι έξω από το πεδίο"
+
+#. TRANS The call might work if you try again
+#. TRANS later.  The macro @code{EWOULDBLOCK} is another name for @code{EAGAIN};
+#. TRANS they are always the same in @theglibc{}.
+#. TRANS
+#. TRANS This error can happen in a few different situations:
+#. TRANS
+#. TRANS @itemize @bullet
+#. TRANS @item
+#. TRANS An operation that would block was attempted on an object that has
+#. TRANS non-blocking mode selected.  Trying the same operation again will block
+#. TRANS until some external condition makes it possible to read, write, or
+#. TRANS connect (whatever the operation).  You can use @code{select} to find out
+#. TRANS when the operation will be possible; @pxref{Waiting for I/O}.
+#. TRANS
+#. TRANS @strong{Portability Note:} In many older Unix systems, this condition
+#. TRANS was indicated by @code{EWOULDBLOCK}, which was a distinct error code
+#. TRANS different from @code{EAGAIN}.  To make your program portable, you should
+#. TRANS check for both codes and treat them the same.
+#. TRANS
+#. TRANS @item
+#. TRANS A temporary resource shortage made an operation impossible.  @code{fork}
+#. TRANS can return this error.  It indicates that the shortage is expected to
+#. TRANS pass, so your program can try the call again later and it may succeed.
+#. TRANS It is probably a good idea to delay for a few seconds before trying it
+#. TRANS again, to allow time for other processes to release scarce resources.
+#. TRANS Such shortages are usually fairly serious and affect the whole system,
+#. TRANS so usually an interactive program should report the error to the user
+#. TRANS and return to its command loop.
+#. TRANS @end itemize
+#: sysdeps/gnu/errlist.h:261
+msgid "Resource temporarily unavailable"
+msgstr "Ο πόρος είναι προσωρινά μη διαθέσιμος"
+
+#. TRANS An operation that cannot complete immediately was initiated on an object
+#. TRANS that has non-blocking mode selected.  Some functions that must always
+#. TRANS block (such as @code{connect}; @pxref{Connecting}) never return
+#. TRANS @code{EAGAIN}.  Instead, they return @code{EINPROGRESS} to indicate that
+#. TRANS the operation has begun and will take some time.  Attempts to manipulate
+#. TRANS the object before the call completes return @code{EALREADY}.  You can
+#. TRANS use the @code{select} function to find out when the pending operation
+#. TRANS has completed; @pxref{Waiting for I/O}.
+#: sysdeps/gnu/errlist.h:273
+msgid "Operation now in progress"
+msgstr "Η λειτουργία βρίσκεται τώρα σε εκτέλεση"
+
+#. TRANS An operation is already in progress on an object that has non-blocking
+#. TRANS mode selected.
+#: sysdeps/gnu/errlist.h:279
+msgid "Operation already in progress"
+msgstr "Η λειτουργία εκτελείται ήδη"
+
+#. TRANS A file that isn't a socket was specified when a socket is required.
+#: sysdeps/gnu/errlist.h:284
+msgid "Socket operation on non-socket"
+msgstr "Λειτουργία υποδοχής σε μη-υποδοχή"
+
+#. TRANS The size of a message sent on a socket was larger than the supported
+#. TRANS maximum size.
+#: sysdeps/gnu/errlist.h:290
+msgid "Message too long"
+msgstr "Υπερβολικά μεγάλο μήνυμα"
+
+#. TRANS The socket type does not support the requested communications protocol.
+#: sysdeps/gnu/errlist.h:295
+msgid "Protocol wrong type for socket"
+msgstr "Λάθος τύπος πρωτοκόλου για την υποδοχή(socket)"
+
+#. TRANS You specified a socket option that doesn't make sense for the
+#. TRANS particular protocol being used by the socket.  @xref{Socket Options}.
+#: sysdeps/gnu/errlist.h:301
+msgid "Protocol not available"
+msgstr "Δεν είναι διαθέσιμο το πρωτόκολλο"
+
+#. TRANS The socket domain does not support the requested communications protocol
+#. TRANS (perhaps because the requested protocol is completely invalid).
+#. TRANS @xref{Creating a Socket}.
+#: sysdeps/gnu/errlist.h:308
+msgid "Protocol not supported"
+msgstr "Το πρωτόκολλο δεν υποστηρίζεται"
+
+#. TRANS The socket type is not supported.
+#: sysdeps/gnu/errlist.h:313
+msgid "Socket type not supported"
+msgstr "Ο τύπος της υποδοχής δεν υποστηρίζεται"
+
+#. TRANS The operation you requested is not supported.  Some socket functions
+#. TRANS don't make sense for all types of sockets, and others may not be
+#. TRANS implemented for all communications protocols.  On @gnuhurdsystems{}, this
+#. TRANS error can happen for many calls when the object does not support the
+#. TRANS particular operation; it is a generic indication that the server knows
+#. TRANS nothing to do for that call.
+#: sysdeps/gnu/errlist.h:323
+msgid "Operation not supported"
+msgstr "Η λειτουργία δεν υποστηρίζεται"
+
+#. TRANS The socket communications protocol family you requested is not supported.
+#: sysdeps/gnu/errlist.h:328
+msgid "Protocol family not supported"
+msgstr "Η οικογένεια πρωτοκόλλου δεν υποστηρίζεται"
+
+#. TRANS The address family specified for a socket is not supported; it is
+#. TRANS inconsistent with the protocol being used on the socket.  @xref{Sockets}.
+#: sysdeps/gnu/errlist.h:334
+msgid "Address family not supported by protocol"
+msgstr "Δεν υποστηρίζετε από το πρωτόκολλο η οικογένεια διευθύνσεων"
+
+#. TRANS The requested socket address is already in use.  @xref{Socket Addresses}.
+#: sysdeps/gnu/errlist.h:339
+msgid "Address already in use"
+msgstr "Η διεύθυνση υποδοχής είναι ήδη σε χρήση"
+
+#. TRANS The requested socket address is not available; for example, you tried
+#. TRANS to give a socket a name that doesn't match the local host name.
+#. TRANS @xref{Socket Addresses}.
+#: sysdeps/gnu/errlist.h:346
+msgid "Cannot assign requested address"
+msgstr "Δεν είναι δυνατή η εκχώρηση της ζητηθήσας διεύθυνσης"
+
+#. TRANS A socket operation failed because the network was down.
+#: sysdeps/gnu/errlist.h:351
+msgid "Network is down"
+msgstr "Το δίκτυο δε λειτουργεί"
+
+#. TRANS A socket operation failed because the subnet containing the remote host
+#. TRANS was unreachable.
+#: sysdeps/gnu/errlist.h:357
+msgid "Network is unreachable"
+msgstr "Το δίκτυο δεν είναι προσπελάσιμο"
+
+#. TRANS A network connection was reset because the remote host crashed.
+#: sysdeps/gnu/errlist.h:362
+msgid "Network dropped connection on reset"
+msgstr "Το δίκτυο έριξε την σύνδεση κατά την επαναφορά"
+
+#. TRANS A network connection was aborted locally.
+#: sysdeps/gnu/errlist.h:367
+msgid "Software caused connection abort"
+msgstr "Το λογισμικό προκάλεσε ακύρωση σύνδεσης"
+
+#. TRANS A network connection was closed for reasons outside the control of the
+#. TRANS local host, such as by the remote machine rebooting or an unrecoverable
+#. TRANS protocol violation.
+#: sysdeps/gnu/errlist.h:374
+msgid "Connection reset by peer"
+msgstr "Η σύνδεση έκλεισε από το ταίρι"
+
+#. TRANS The kernel's buffers for I/O operations are all in use.  In GNU, this
+#. TRANS error is always synonymous with @code{ENOMEM}; you may get one or the
+#. TRANS other from network operations.
+#: sysdeps/gnu/errlist.h:381
+msgid "No buffer space available"
+msgstr "Δεν υπάρχει διαθέσιμος χώρος ενταμίευσης"
+
+#. TRANS You tried to connect a socket that is already connected.
+#. TRANS @xref{Connecting}.
+#: sysdeps/gnu/errlist.h:387
+msgid "Transport endpoint is already connected"
+msgstr "Η άκρη μεταφοράς είναι ήδη συνδεδεμένη"
+
+#. TRANS The socket is not connected to anything.  You get this error when you
+#. TRANS try to transmit data over a socket, without first specifying a
+#. TRANS destination for the data.  For a connectionless socket (for datagram
+#. TRANS protocols, such as UDP), you get @code{EDESTADDRREQ} instead.
+#: sysdeps/gnu/errlist.h:395
+msgid "Transport endpoint is not connected"
+msgstr "Η άκρη μεταφοράς δεν είναι συνδεδεμένη"
+
+#. TRANS No default destination address was set for the socket.  You get this
+#. TRANS error when you try to transmit data over a connectionless socket,
+#. TRANS without first specifying a destination for the data with @code{connect}.
+#: sysdeps/gnu/errlist.h:402
+msgid "Destination address required"
+msgstr "Απαιτείται διεύθυνση προορισμού"
+
+#. TRANS The socket has already been shut down.
+#: sysdeps/gnu/errlist.h:407
+msgid "Cannot send after transport endpoint shutdown"
+msgstr "Δεν είναι δυνατή η αποστολή μετά το κλείσιμο της μιας άκρης επικοινωνίας"
+
+#: sysdeps/gnu/errlist.h:410
+msgid "Too many references: cannot splice"
+msgstr "Υπερβολικά πολλοί παραπομπείς: αδυναμία ματίσματος"
+
+#. TRANS A socket operation with a specified timeout received no response during
+#. TRANS the timeout period.
+#: sysdeps/gnu/errlist.h:416
+msgid "Connection timed out"
+msgstr "Λήξη σύνδεσης"
+
+#. TRANS A remote host refused to allow the network connection (typically because
+#. TRANS it is not running the requested service).
+#: sysdeps/gnu/errlist.h:422
+msgid "Connection refused"
+msgstr "Απόρριψη σύνδεσης"
+
+#. TRANS Too many levels of symbolic links were encountered in looking up a file name.
+#. TRANS This often indicates a cycle of symbolic links.
+#: sysdeps/gnu/errlist.h:428
+msgid "Too many levels of symbolic links"
+msgstr "Υπερβολικά πολλά επίπεδα συμβολικών συνδέσμων"
+
+#. TRANS Filename too long (longer than @code{PATH_MAX}; @pxref{Limits for
+#. TRANS Files}) or host name too long (in @code{gethostname} or
+#. TRANS @code{sethostname}; @pxref{Host Identification}).
+#: sysdeps/gnu/errlist.h:435
+msgid "File name too long"
+msgstr "Πολύ μεγάλο όνομα αρχείου"
+
+#. TRANS The remote host for a requested network connection is down.
+#: sysdeps/gnu/errlist.h:440
+msgid "Host is down"
+msgstr "Το σύστημα δε λειτουργεί"
+
+#: sysdeps/gnu/errlist.h:445
+msgid "No route to host"
+msgstr "Δεν υπάρχει διαδρομή στο σύστημα"
+
+#. TRANS Directory not empty, where an empty directory was expected.  Typically,
+#. TRANS this error occurs when you are trying to delete a directory.
+#: sysdeps/gnu/errlist.h:451
+msgid "Directory not empty"
+msgstr "Ο κατάλογος δεν είναι κενός"
+
+#. TRANS The file quota system is confused because there are too many users.
+#. TRANS @c This can probably happen in a GNU system when using NFS.
+#: sysdeps/gnu/errlist.h:457
+msgid "Too many users"
+msgstr "Υπερβολικά πολλοί χρήστες"
+
+#. TRANS The user's disk quota was exceeded.
+#: sysdeps/gnu/errlist.h:462
+msgid "Disk quota exceeded"
+msgstr "Ξεπεράστηκε το όριο χρήσης δίσκου"
+
+#. TRANS An attempt was made to NFS-mount a remote file system with a file name that
+#. TRANS already specifies an NFS-mounted file.
+#. TRANS (This is an error on some operating systems, but we expect it to work
+#. TRANS properly on @gnuhurdsystems{}, making this error code impossible.)
+#: sysdeps/gnu/errlist.h:479
+msgid "Object is remote"
+msgstr "Το αντικείμενο είναι απομακρυσμένο"
+
+#. TRANS This is used by the file locking facilities; see
+#. TRANS @ref{File Locks}.  This error is never generated by @gnuhurdsystems{}, but
+#. TRANS it can result from an operation to an NFS server running another
+#. TRANS operating system.
+#: sysdeps/gnu/errlist.h:487
+msgid "No locks available"
+msgstr "Δεν υπάρχουν διαθέσιμα κλειδώματα"
+
+#. TRANS This indicates that the function called is
+#. TRANS not implemented at all, either in the C library itself or in the
+#. TRANS operating system.  When you get this error, you can be sure that this
+#. TRANS particular function will always fail with @code{ENOSYS} unless you
+#. TRANS install a new version of the C library or the operating system.
+#: sysdeps/gnu/errlist.h:496
+msgid "Function not implemented"
+msgstr "Η λειτουργία δεν έχει υλοποιηθεί"
+
+#. TRANS While decoding a multibyte character the function came along an invalid
+#. TRANS or an incomplete sequence of bytes or the given wide character is invalid.
+#: sysdeps/gnu/errlist.h:502
+msgid "Invalid or incomplete multibyte or wide character"
+msgstr "Μη έγκυρο ή ασυμπλήρωτο multibyte ή πλατύς χαρακτήρας"
+
+#: sysdeps/gnu/errlist.h:505
+msgid "Bad message"
+msgstr "Εσφαλμένο μήνυμα"
+
+#: sysdeps/gnu/errlist.h:508
+msgid "Identifier removed"
+msgstr "Προσδιοριστής αφαιρέθηκε"
+
+#: sysdeps/gnu/errlist.h:511
+msgid "Multihop attempted"
+msgstr "Προσπάθεια multihop"
+
+#: sysdeps/gnu/errlist.h:514
+msgid "No data available"
+msgstr "Δεν υπάρχουν διαθέσιμα δεδομένα"
+
+#: sysdeps/gnu/errlist.h:517
+msgid "Link has been severed"
+msgstr "Ο σύνδεσμος έσπασε"
+
+#: sysdeps/gnu/errlist.h:520
+msgid "No message of desired type"
+msgstr "Κανένα μήνυμα επιθυμητού τύπου"
+
+#: sysdeps/gnu/errlist.h:523
+msgid "Out of streams resources"
+msgstr "Δεν απομείναν πόροι ροής(streams)"
+
+#: sysdeps/gnu/errlist.h:526
+msgid "Device not a stream"
+msgstr "Η συσκευή δεν είναι ροής"
+
+#: sysdeps/gnu/errlist.h:529
+msgid "Value too large for defined data type"
+msgstr "Η τιμή είναι πολύ μεγάλη για καθορισμένο τύπο δεδομένων"
+
+#: sysdeps/gnu/errlist.h:532
+msgid "Protocol error"
+msgstr "Σφάλμα πρωτοκόλλου"
+
+#: sysdeps/gnu/errlist.h:535
+msgid "Timer expired"
+msgstr "Ο χρονομετρητής έληξε"
+
+#. TRANS An asynchronous operation was canceled before it
+#. TRANS completed.  @xref{Asynchronous I/O}.  When you call @code{aio_cancel},
+#. TRANS the normal result is for the operations affected to complete with this
+#. TRANS error; @pxref{Cancel AIO Operations}.
+#: sysdeps/gnu/errlist.h:543
+msgid "Operation canceled"
+msgstr "Η λειτουργία ακυρώθηκε"
+
+#: sysdeps/gnu/errlist.h:552
+msgid "Interrupted system call should be restarted"
+msgstr "Η διακοπείσα κλήση συστήματος θα πρέπει να επανακινηθεί"
+
+#: sysdeps/gnu/errlist.h:555
+msgid "Channel number out of range"
+msgstr "Ο αριθμός των καναλιών είναι έξω από τα όρια"
+
+#: sysdeps/gnu/errlist.h:558
+msgid "Level 2 not synchronized"
+msgstr "Επίπεδο 2 δεν συγχρονίστηκε"
+
+#: sysdeps/gnu/errlist.h:561
+msgid "Level 3 halted"
+msgstr "Επίπεδο 3 σταμάτησε"
+
+#: sysdeps/gnu/errlist.h:564
+msgid "Level 3 reset"
+msgstr "Επίπεδο 3 επαναφέρθηκε"
+
+#: sysdeps/gnu/errlist.h:567
+msgid "Link number out of range"
+msgstr "Ο αριθμός σύνδεσμου είναι έξω από το όριο"
+
+#: sysdeps/gnu/errlist.h:570
+msgid "Protocol driver not attached"
+msgstr "Ο οδηγός πρωτοκόλλου δεν έχει προσκολληθεί"
+
+#: sysdeps/gnu/errlist.h:573
+msgid "No CSI structure available"
+msgstr "Δεν είναι διαθέσιμη η CSI δομή(structure)"
+
+#: sysdeps/gnu/errlist.h:576
+msgid "Level 2 halted"
+msgstr "Επίπεδο 2 σταμάτησε"
+
+#: sysdeps/gnu/errlist.h:579
+msgid "Invalid exchange"
+msgstr "Μη έγκυρη ανταλλαγή"
+
+#: sysdeps/gnu/errlist.h:582
+msgid "Invalid request descriptor"
+msgstr "Μη έγκυρος περιγραφέας αίτησης"
+
+#: sysdeps/gnu/errlist.h:585
+msgid "Exchange full"
+msgstr "Ανταλλαγή πλήρης"
+
+#: sysdeps/gnu/errlist.h:588
+msgid "No anode"
+msgstr "Κανένα anode"
+
+#: sysdeps/gnu/errlist.h:591
+msgid "Invalid request code"
+msgstr "Μη έγκυρος κώδικας αίτησης"
+
+#: sysdeps/gnu/errlist.h:594
+msgid "Invalid slot"
+msgstr "Μη έγκυρη οπή"
+
+#: sysdeps/gnu/errlist.h:597
+msgid "Bad font file format"
+msgstr "Εσφαλμένη διαμόρφωση αρχείου γραμματοσειράς"
+
+#: sysdeps/gnu/errlist.h:600
+msgid "Machine is not on the network"
+msgstr "Το μηχάνημα δεν είναι στο δίκτυο"
+
+#: sysdeps/gnu/errlist.h:603
+msgid "Package not installed"
+msgstr "Το πακέτο δεν εγκαταστάθηκε"
+
+#: sysdeps/gnu/errlist.h:606
+msgid "Advertise error"
+msgstr "Σφάλμα διαφήμισης"
+
+#: sysdeps/gnu/errlist.h:609
+msgid "Srmount error"
+msgstr "Σφάλμα srmount"
+
+#: sysdeps/gnu/errlist.h:612
+msgid "Communication error on send"
+msgstr "Σφάλμα επικοινωνίας κατά την αποστολή"
+
+#: sysdeps/gnu/errlist.h:615
+msgid "RFS specific error"
+msgstr "Συγκεκριμένο με RFS σφάλμα"
+
+#: sysdeps/gnu/errlist.h:618
+msgid "Name not unique on network"
+msgstr "Το όνομα δεν είναι μοναδικό στο δίκτυο"
+
+#: sysdeps/gnu/errlist.h:621
+msgid "File descriptor in bad state"
+msgstr "Ο περιγραφέας αρχείου σε κακή κατάσταση"
+
+#: sysdeps/gnu/errlist.h:624
+msgid "Remote address changed"
+msgstr "Η απομακρυσμένη διεύθυνση άλλαξε"
+
+#: sysdeps/gnu/errlist.h:627
+msgid "Can not access a needed shared library"
+msgstr "Δεν είναι δυνατή η προσπέλαση μιας αναγκαίας διαμοιραζόμενης βιβλιοθήκης"
+
+#: sysdeps/gnu/errlist.h:630
+msgid "Accessing a corrupted shared library"
+msgstr "Προσπελαύνεται μια κατεστραμμένη διαμοιραζόμενη βιβλιοθήκη"
+
+#: sysdeps/gnu/errlist.h:633
+msgid ".lib section in a.out corrupted"
+msgstr "Το τμήμα .lib στο a.out είναι κατεστραμμένο"
+
+#: sysdeps/gnu/errlist.h:636
+msgid "Attempting to link in too many shared libraries"
+msgstr "Προσπάθεια σύνδεσης σε πάρα πολλές διαμοιραζόμενες βιβλιοθήκες"
+
+#: sysdeps/gnu/errlist.h:639
+msgid "Cannot exec a shared library directly"
+msgstr "Δεν είναι δυνατή η άμεση εκτέλεση διαμοιραζόμενης βιβλιοθήκης"
+
+#: sysdeps/gnu/errlist.h:642
+msgid "Streams pipe error"
+msgstr "Σφάλμα σωλήνωσης ροής"
+
+#: sysdeps/gnu/errlist.h:645
+msgid "Structure needs cleaning"
+msgstr "Η δομή χρειάζεται καθάρισμα"
+
+#: sysdeps/gnu/errlist.h:648
+msgid "Not a XENIX named type file"
+msgstr "Δεν είναι XENIX τύπος επώνυμου αρχείου"
+
+#: sysdeps/gnu/errlist.h:651
+msgid "No XENIX semaphores available"
+msgstr "Δεν είναι διαθέσιμοι οι XENIX σημαφόροι"
+
+#: sysdeps/gnu/errlist.h:654
+msgid "Is a named type file"
+msgstr "Είναι ένα επώνυμο είδος αρχείου"
+
+#: sysdeps/gnu/errlist.h:657
+msgid "Remote I/O error"
+msgstr "Απομακρυσμένο σφάλμα εισόδου/εξόδου"
+
+#: sysdeps/gnu/errlist.h:660
+msgid "No medium found"
+msgstr "Δεν βρέθηκε μέσο"
+
+#: sysdeps/gnu/errlist.h:663
+msgid "Wrong medium type"
+msgstr "Εσφαλμένο είδος μέσου"
+
+#: sysdeps/gnu/errlist.h:684
+msgid "RPC struct is bad"
+msgstr "Η RPC δομή δεν είναι σωστή"
+
+#. TRANS The file was the wrong type for the
+#. TRANS operation, or a data file had the wrong format.
+#. TRANS
+#. TRANS On some systems @code{chmod} returns this error if you try to set the
+#. TRANS sticky bit on a non-directory file; @pxref{Setting Permissions}.
+#: sysdeps/gnu/errlist.h:693
+msgid "Inappropriate file type or format"
+msgstr "Ακατάλληλο είδος αρχείου ή διαμόρφωσης"
+
+#: sysdeps/gnu/errlist.h:696
+msgid "RPC bad procedure for program"
+msgstr "RPC κακή διαδικασία για πρόγραμμα"
+
+#: sysdeps/gnu/errlist.h:699
+msgid "Authentication error"
+msgstr "Σφάλμα πιστοποίησης"
+
+#. TRANS On @gnuhurdsystems{}, opening a file returns this error when the file is
+#. TRANS translated by a program and the translator program dies while starting
+#. TRANS up, before it has connected to the file.
+#: sysdeps/gnu/errlist.h:706
+msgid "Translator died"
+msgstr "Ο μεταφραστής πέθανε"
+
+#: sysdeps/gnu/errlist.h:709
+msgid "RPC version wrong"
+msgstr "Η έκδοση του RPC δεν είναι σωστή"
+
+#. TRANS You did @strong{what}?
+#: sysdeps/gnu/errlist.h:714
+msgid "You really blew it this time"
+msgstr "Πραγματικά την έκανες αυτή τη φορά"
+
+#. TRANS This means that the per-user limit on new process would be exceeded by
+#. TRANS an attempted @code{fork}.  @xref{Limits on Resources}, for details on
+#. TRANS the @code{RLIMIT_NPROC} limit.
+#: sysdeps/gnu/errlist.h:721
+msgid "Too many processes"
+msgstr "Υπερβολικά πολλές διεργασίες"
+
+#. TRANS This error code has no purpose.
+#: sysdeps/gnu/errlist.h:726
+msgid "Gratuitous error"
+msgstr "Αδικαιολόγητο λάθος"
+
+#. TRANS A function returns this error when certain parameter
+#. TRANS values are valid, but the functionality they request is not available.
+#. TRANS This can mean that the function does not implement a particular command
+#. TRANS or option value or flag bit at all.  For functions that operate on some
+#. TRANS object given in a parameter, such as a file descriptor or a port, it
+#. TRANS might instead mean that only @emph{that specific object} (file
+#. TRANS descriptor, port, etc.) is unable to support the other parameters given;
+#. TRANS different file descriptors might support different ranges of parameter
+#. TRANS values.
+#. TRANS
+#. TRANS If the entire function is not available at all in the implementation,
+#. TRANS it returns @code{ENOSYS} instead.
+#: sysdeps/gnu/errlist.h:742
+msgid "Not supported"
+msgstr "Δεν υποστηρίζεται"
+
+#: sysdeps/gnu/errlist.h:745
+msgid "RPC program version wrong"
+msgstr "Η έκδοση του RPC προγράμματος δεν είναι σωστή"
+
+#. TRANS On @gnuhurdsystems{}, servers supporting the @code{term} protocol return
+#. TRANS this error for certain operations when the caller is not in the
+#. TRANS foreground process group of the terminal.  Users do not usually see this
+#. TRANS error because functions such as @code{read} and @code{write} translate
+#. TRANS it into a @code{SIGTTIN} or @code{SIGTTOU} signal.  @xref{Job Control},
+#. TRANS for information on process groups and these signals.
+#: sysdeps/gnu/errlist.h:755
+msgid "Inappropriate operation for background process"
+msgstr "Ακατάλληλη λειτουργία για διεργασία παρασκηνίου"
+
+#. TRANS Go home and have a glass of warm, dairy-fresh milk.
+#. TRANS @c Okay.  Since you are dying to know, I'll tell you.
+#. TRANS @c This is a joke, obviously.  There is a children's song which begins,
+#. TRANS @c "Old McDonald had a farm, e-i-e-i-o."  Every time I see the (real)
+#. TRANS @c errno macro EIO, I think about that song.  Probably most of my
+#. TRANS @c compatriots who program on Unix do, too.  One of them must have stayed
+#. TRANS @c up a little too late one night and decided to add it to Hurd or Glibc.
+#. TRANS @c Whoever did it should be castigated, but it made me laugh.
+#. TRANS @c  --jtobey@channel1.com
+#. TRANS @c
+#. TRANS @c "bought the farm" means "died".  -jtobey
+#. TRANS @c
+#. TRANS @c Translators, please do not translate this litteraly, translate it into
+#. TRANS @c an idiomatic funny way of saying that the computer died.
+#: sysdeps/gnu/errlist.h:773
+msgid "Computer bought the farm"
+msgstr "Ο υπολογιστής πήγε για βρούβες"
+
+#. TRANS In @theglibc{}, this is another name for @code{EAGAIN} (above).
+#. TRANS The values are always the same, on every operating system.
+#. TRANS
+#. TRANS C libraries in many older Unix systems have @code{EWOULDBLOCK} as a
+#. TRANS separate error code.
+#: sysdeps/gnu/errlist.h:782
+msgid "Operation would block"
+msgstr "Η λειτουργία θα έπρεπε να φράξει(block)"
+
+#: sysdeps/gnu/errlist.h:785
+msgid "Need authenticator"
+msgstr "Χρειάζεται πιστοποιητής"
+
+#. TRANS The experienced user will know what is wrong.
+#. TRANS @c This error code is a joke.  Its perror text is part of the joke.
+#. TRANS @c Don't change it.
+#: sysdeps/gnu/errlist.h:792
+msgid "?"
+msgstr "?"
+
+#: sysdeps/gnu/errlist.h:795
+msgid "RPC program not available"
+msgstr "Το πρόγραμμα RPC δεν είναι διαθέσιμο"
+
+#: sysdeps/mach/_strerror.c:43
+msgid "Error in unknown error system: "
+msgstr "Σφάλμα σε άγνωστο σύστημα σφαλμάτων: "
+
+#: sysdeps/posix/gai_strerror-strs.h:1
+msgid "Address family for hostname not supported"
+msgstr "Δεν υποστηρίζεται οικογένεια διευθύνσεων για σύστημα"
+
+#: sysdeps/posix/gai_strerror-strs.h:2
+msgid "Temporary failure in name resolution"
+msgstr "Προσωρινή αποτυχία κατά την ανάλυση ονόματος"
+
+#: sysdeps/posix/gai_strerror-strs.h:3
+msgid "Bad value for ai_flags"
+msgstr "Ακατάλληλη τιμή στο ai_flags"
+
+#: sysdeps/posix/gai_strerror-strs.h:4
+msgid "Non-recoverable failure in name resolution"
+msgstr "Μη-αποκαταστήσιμο σφάλμα κατά την ανάλυση ονόματος"
+
+#: sysdeps/posix/gai_strerror-strs.h:5
+msgid "ai_family not supported"
+msgstr "Το ai_family δεν υποστηρίζεται"
+
+#: sysdeps/posix/gai_strerror-strs.h:6
+msgid "Memory allocation failure"
+msgstr "Αποτυχία δέσμευσης μνήμης"
+
+#: sysdeps/posix/gai_strerror-strs.h:7
+msgid "No address associated with hostname"
+msgstr "Καμιά διεύθυνση δε συνδέεται με το όνομα συστήματος"
+
+#: sysdeps/posix/gai_strerror-strs.h:8
+msgid "Name or service not known"
+msgstr "Το όνομα ή η υπηρεσία δεν είναι γνωστά"
+
+#: sysdeps/posix/gai_strerror-strs.h:9
+msgid "Servname not supported for ai_socktype"
+msgstr "Το servname δεν υποστηρίζεται από το ai_socktype"
+
+#: sysdeps/posix/gai_strerror-strs.h:10
+msgid "ai_socktype not supported"
+msgstr "Το ai_socktype δεν υποστηρίζεται"
+
+#: sysdeps/posix/gai_strerror-strs.h:11
+msgid "System error"
+msgstr "Σφάλμα συστήματος"
+
+#: sysdeps/unix/sysv/linux/lddlibc4.c:81
+#, c-format
+msgid "cannot open `%s'"
+msgstr "αδυναμία ανοίγματος του `%s'"
+
+#: sysdeps/unix/sysv/linux/lddlibc4.c:85
+#, c-format
+msgid "cannot read header from `%s'"
+msgstr "αδυναμία ανάγνωσης κεφαλίδας από το `%s'"
+
+#: sysdeps/unix/sysv/linux/x86/readelflib.c:66
+#, c-format
+msgid "%s is for unknown machine %d.\n"
+msgstr "το %s είναι για το άγνωστο σύστημά %d.\n"
+
+#: timezone/zic.c:432
+#, c-format
+msgid "%s: Memory exhausted: %s\n"
+msgstr "%s: Η μνήμη εξαντλήθηκε: %s\n"
+
+#: timezone/zic.c:554
+#, c-format
+msgid "warning: "
+msgstr "προειδοποίηση: "
+
+#: timezone/zic.c:730
+#, c-format
+msgid "%s: More than one -d option specified\n"
+msgstr "%s: Περισσότερες από μία -d επιλογές καθορίστηκαν\n"
+
+#: timezone/zic.c:740
+#, c-format
+msgid "%s: More than one -l option specified\n"
+msgstr "%s: Περισσότερες από μία -l επιλογές καθορίστηκαν\n"
+
+#: timezone/zic.c:750
+#, c-format
+msgid "%s: More than one -p option specified\n"
+msgstr "%s: Περισσότερες από μία -p επιλογές καθορίστηκαν\n"
+
+#: timezone/zic.c:771
+#, c-format
+msgid "%s: More than one -y option specified\n"
+msgstr "%s: Περισσότερες από μία -y επιλογές καθορίστηκαν\n"
+
+#: timezone/zic.c:781
+#, c-format
+msgid "%s: More than one -L option specified\n"
+msgstr "%s: Περισσότερες από μία -L επιλογές καθορίστηκαν\n"
+
+#: timezone/zic.c:1122 timezone/zic.c:1124
+msgid "same rule name in multiple files"
+msgstr "ο ίδιος κανόνας σε πολλαπλά αρχεία"
+
+#: timezone/zic.c:1171
+#, c-format
+msgid "%s in ruleless zone"
+msgstr "%s σε ακανόνιστη ζώνη"
+
+#: timezone/zic.c:1191
+msgid "standard input"
+msgstr "κανονική είσοδος"
+
+#: timezone/zic.c:1196
+#, c-format
+msgid "%s: Can't open %s: %s\n"
+msgstr "%s: Δεν είναι δυνατόν να ανοιχτεί το %s: %s\n"
+
+#: timezone/zic.c:1207
+msgid "line too long"
+msgstr "πολύ μεγάλη γραμμή"
+
+#: timezone/zic.c:1230
+msgid "input line of unknown type"
+msgstr "γραμμή εισαγωγής αγνώστου τύπου"
+
+#: timezone/zic.c:1253 timezone/zic.c:1699 timezone/zic.c:1721
+#, c-format
+msgid "%s: panic: Invalid l_value %d\n"
+msgstr "%s: πανικός: Μη έγκυρη l_value %d\n"
+
+#: timezone/zic.c:1262
+msgid "expected continuation line not found"
+msgstr "αναμενόταν γραμμή παράτασης και δεν βρέθηκε"
+
+#: timezone/zic.c:1316 timezone/zic.c:3282
+msgid "time overflow"
+msgstr "υπερχείλιση ώρας"
+
+#: timezone/zic.c:1340
+msgid "invalid saved time"
+msgstr "μη έγκυρη σωσμένη ώρα"
+
+#: timezone/zic.c:1351
+msgid "wrong number of fields on Rule line"
+msgstr "λάθος αριθμός πεδίων στη γραμμή Rule"
+
+#: timezone/zic.c:1382
+msgid "wrong number of fields on Zone line"
+msgstr "λάθος αριθμός πεδίων στη γραμμή Zone"
+
+#: timezone/zic.c:1387
+#, c-format
+msgid "\"Zone %s\" line and -l option are mutually exclusive"
+msgstr "\"Ζώνη %s\" γραμμή και επιλογή -l είναι αμοιβαίως αποκλειόμενα"
+
+#: timezone/zic.c:1393
+#, c-format
+msgid "\"Zone %s\" line and -p option are mutually exclusive"
+msgstr "\"Ζώνη %s\" γραμμή και επιλογή -p είναι αμοιβαίως αποκλειόμενα"
+
+#: timezone/zic.c:1414
+msgid "wrong number of fields on Zone continuation line"
+msgstr "λάθος αριθμός πεδίων στη γραμμή παράτασης Zone"
+
+#: timezone/zic.c:1458
+msgid "invalid abbreviation format"
+msgstr "μη έγκυρη διαμόρφωση συντόμευσης"
+
+#: timezone/zic.c:1494
+msgid "Zone continuation line end time is not after end time of previous line"
+msgstr "Ο χρόνος τέλους της γραμμής συνέχισης της ζώνης δεν είναι μετά από το χρόνο τέλους της προηγούμενης γραμμής"
+
+#: timezone/zic.c:1526
+msgid "invalid leaping year"
+msgstr "μη έγκυρος χρόνος αναπήδης"
+
+#: timezone/zic.c:1548 timezone/zic.c:1653
+msgid "invalid month name"
+msgstr "μη έγκυρο όνομα μήνα"
+
+#: timezone/zic.c:1561 timezone/zic.c:1769 timezone/zic.c:1783
+msgid "invalid day of month"
+msgstr "μη έγκυρη μέρα του μήνα"
+
+#: timezone/zic.c:1574 timezone/zic.c:1682
+msgid "invalid time of day"
+msgstr "μη έγκυρη ώρα της μέρας"
+
+#: timezone/zic.c:1585
+msgid "wrong number of fields on Leap line"
+msgstr "λάθος αριθμός πεδίων στη γραμμή Leap"
+
+#: timezone/zic.c:1624
+msgid "wrong number of fields on Link line"
+msgstr "λάθος αριθμός πεδίων στη γραμμή Link"
+
+#: timezone/zic.c:1628
+msgid "blank FROM field on Link line"
+msgstr "Λευκό πεδίο FROM σε γραμμή Link"
+
+#: timezone/zic.c:1703
+msgid "invalid starting year"
+msgstr "μη έγκυρος χρόνος έναρξης"
+
+#: timezone/zic.c:1725
+msgid "invalid ending year"
+msgstr "μη έγκυρος χρόνος λήξης"
+
+#: timezone/zic.c:1729
+msgid "starting year greater than ending year"
+msgstr "το έτος έναρξης είναι μεγαλύτερος το έτος τερματισμού"
+
+#: timezone/zic.c:1736
+msgid "typed single year"
+msgstr "τυπώθηκε απλός χρόνος"
+
+#: timezone/zic.c:1774
+msgid "invalid weekday name"
+msgstr "μη έγκυρο όνομα εβδομάδας"
+
+#: timezone/zic.c:2889
+msgid "can't determine time zone abbreviation to use just after until time"
+msgstr ""
+"δεν είναι δυνατόν να καθοριστεί η συντόμευση της ζώνης ώρας για\n"
+"να χρησιμοποιηθεί αμέσως μετά το 'until time'"
+
+#: timezone/zic.c:2987
+msgid "too many local time types"
+msgstr "υπορβολικά πολλοί τύποι τοπικής ώρας"
+
+#: timezone/zic.c:3005
+msgid "too many leap seconds"
+msgstr "υπερβολικά πολλά δευτερόλεπτα αναπήδησης"
+
+#: timezone/zic.c:3095
+msgid "Wild result from command execution"
+msgstr "Αγριο αποτέλεσμα από την εκτέλεση της εντολής"
+
+#: timezone/zic.c:3096
+#, c-format
+msgid "%s: command was '%s', result was %d\n"
+msgstr "%s: η εντολή ήταν '%s', το αποτέλεσμα ήταν %d\n"
+
+#: timezone/zic.c:3267
+msgid "Odd number of quotation marks"
+msgstr "Περιττός αριθμός εισαγωγικών"
+
+#: timezone/zic.c:3361
+msgid "use of 2/29 in non leap-year"
+msgstr "χρήση του 2/29 σε χρόνο μη δίσεκτο"
+
+#: timezone/zic.c:3433
+msgid "too many, or too long, time zone abbreviations"
+msgstr "υπερβολικά πολλές, ή πολύ μακρές, συντομεύσεις ζώνης ώρας"

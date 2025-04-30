@@ -1,0 +1,273 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tatar Language Locale for Russia
+% Source:
+% Contact: Pablo Saratxaga, Rinat Norkin
+% Email: <pablo@mandrakesoft.com>, <rinat@taif.ru>
+% Language: tt
+% Territory: RU
+% Revision: 0.4
+% Date: 2001-01-28
+% Application: general
+% Users: general
+
+%
+% TODO: check LC_COLLATE
+%
+% needed extra chars: <U04D9>, <U04E9>, <U0497>, <U04BB>, <U04A3>
+%
+% Note: Tatarstan adopted latin alphabet in 2000, it should gradually
+% replace cyrillic alphabet
+
+LC_IDENTIFICATION
+title "Tatar language locale for Russia"
+source "Rinat Norkin"
+address ""
+contact "Pablo Saratxaga, Rinat Norkin"
+email "pablo@mandrakesoft.com, rinat@taif.ru"
+tel ""
+fax ""
+language "Tatar"
+territory "Russia"
+revision "0.4"
+date "2001-01-28"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+
+% There is no collation information for Tatar in CLDR.
+%
+% Therefore, I use this:
+%
+% https://en.wikipedia.org/wiki/Tatar_language#Writing_system
+%
+% Tatar Cyrillic alphabet (letter order adopted in 1997):
+%
+% А а  Ә ә  Б б  В в  Г г  Д д  Е е  Ё ё
+% Ж ж  Җ җ  З з  И и  Й й  К к  Л л  М м
+% Н н  Ң ң  О о  Ө ө  П п  Р р  С с  Т т
+% У у  Ү ү  Ф ф  Х х  Һ һ  Ц ц  Ч ч  Ш ш
+% Щ щ  Ъ ъ  Ы ы  Ь ь  Э э  Ю ю  Я я
+%
+% 1999 Tatar Latin alphabet, made official by a law adopted by
+% Tatarstani authorities but annulled by the Tatar Supreme Court in 2004:[16]
+%
+% A a  Ə ə  B b  C c  Ç ç  D d  E e  F f
+% G g  Ğ ğ  H h  I ı  İ i  J j  K k  Q q
+% L l  M m  N n  Ꞑ ꞑ  O o  Ɵ ɵ  P p  R r
+% S s  Ş ş  T t  U u  Ü ü  V v  W w  X x
+% Y y  Z z  ’
+%
+% However, a commonly used alphabet in internet uses ä, ö and ñ
+% for respectively ə, ɵ and ŋ
+
+copy "iso14651_t1"
+
+collating-symbol <latin-schwa>
+collating-symbol <latin-c-cedilla>
+collating-symbol <latin-g-breve>
+collating-symbol <latin-i-dotless>
+collating-symbol <latin-i-dot>
+collating-symbol <latin-n-descender>
+collating-symbol <latin-o-barred>
+collating-symbol <latin-s-cedilla>
+collating-symbol <latin-u-diaeresis>
+collating-symbol <right-single-quotation-mark>
+collating-symbol <cyrillic-small-io>
+
+reorder-after <AFTER-A>
+<latin-schwa>
+reorder-after <AFTER-C>
+<latin-c-cedilla>
+reorder-after <AFTER-G>
+<latin-g-breve>
+reorder-after <AFTER-H>
+<latin-i-dotless>
+<latin-i-dot>
+reorder-after <AFTER-K>
+<S0071> % LATIN SMALL LETTER Q
+reorder-after <AFTER-N>
+<latin-n-descender>
+reorder-after <AFTER-O>
+<latin-o-barred>
+reorder-after <AFTER-S>
+<latin-s-cedilla>
+reorder-after <AFTER-U>
+<latin-u-diaeresis>
+reorder-after <AFTER-Z>
+<right-single-quotation-mark>
+
+reorder-after <S0435> % CYRILLIC SMALL LETTER IE
+<cyrillic-small-io>
+
+<U0259>                 <latin-schwa>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ə
+<U018F>                 <latin-schwa>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ə
+<U00E4>                 <latin-schwa>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE % ä
+<U00C4>                 <latin-schwa>;"<BASE><VRNT1>";"<CAP><MIN>";IGNORE % Ä
+<U00E7>             <latin-c-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ç
+<U00C7>             <latin-c-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ç
+<U011F>               <latin-g-breve>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ğ
+<U011E>               <latin-g-breve>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ğ
+<U0131>             <latin-i-dotless>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ı
+<U0049>             <latin-i-dotless>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % I
+<U0069>                 <latin-i-dot>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % i
+<U0130>                 <latin-i-dot>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % İ
+<UA791>           <latin-n-descender>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ꞑ
+<UA790>           <latin-n-descender>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ꞑ
+<U00F1>           <latin-n-descender>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE % ñ
+<U00D1>           <latin-n-descender>;"<BASE><VRNT1>";"<CAP><MIN>";IGNORE % Ñ
+<U014B>           <latin-n-descender>;"<BASE><VRNT2>";"<MIN><MIN>";IGNORE % ŋ
+<U014A>           <latin-n-descender>;"<BASE><VRNT2>";"<CAP><MIN>";IGNORE % Ŋ
+<U0275>              <latin-o-barred>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ɵ
+<U019F>              <latin-o-barred>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ɵ
+<U00F6>              <latin-o-barred>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE % ö
+<U00D6>              <latin-o-barred>;"<BASE><VRNT1>";"<CAP><MIN>";IGNORE % Ö
+<U015F>             <latin-s-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ş
+<U015E>             <latin-s-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ş
+<U00FC>           <latin-u-diaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ü
+<U00DC>           <latin-u-diaeresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ü
+<U2019> <right-single-quotation-mark>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ’
+<U0451>           <cyrillic-small-io>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ё
+<U0401>           <cyrillic-small-io>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ё
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1yY<U04D9><U04D8>]"
+noexpr  "^[-0nN<U044E><U042E>]"
+yesstr  "<U04D9><U0439><U0435>"
+nostr   "<U044E><U043A>"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "RUB "
+currency_symbol           "<U20BD>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ru_RU"
+END LC_NUMERIC
+
+LC_TIME
+day     "<U044F><U043A><U0448><U04D9><U043C><U0431><U0435>";/
+        "<U0434><U04AF><U0448><U04D9><U043C><U0431><U0435>";/
+        "<U0441><U0438><U0448><U04D9><U043C><U0431><U0435>";/
+        "<U0447><U04D9><U0440><U0448><U04D9><U043C><U0431><U0435>";/
+        "<U043F><U04D9><U043D><U0497><U0435><U0448><U04D9><U043C><U0431><U0435>";/
+        "<U0497><U043E><U043C><U0433><U0430>";/
+        "<U0448><U0438><U043C><U0431><U04D9>"
+abday   "<U044F><U043A><U0448>";/
+        "<U0434><U04AF><U0448>";/
+        "<U0441><U0438><U0448>";/
+        "<U0447><U04D9><U0440>";/
+        "<U043F><U04D9><U043D><U0497>";/
+        "<U0497><U043E><U043C>";/
+        "<U0448><U0438><U043C>"
+mon     "<U0433><U044B><U0439><U043D><U0432><U0430><U0440>";/
+        "<U0444><U0435><U0432><U0440><U0430><U043B><U044C>";/
+        "<U043C><U0430><U0440><U0442>";/
+        "<U0430><U043F><U0440><U0435><U043B><U044C>";/
+        "<U043C><U0430><U0439>";/
+        "<U0438><U044E><U043D><U044C>";/
+        "<U0438><U044E><U043B><U044C>";/
+        "<U0430><U0432><U0433><U0443><U0441><U0442>";/
+        "<U0441><U0435><U043D><U0442><U044F><U0431><U0440><U044C>";/
+        "<U043E><U043A><U0442><U044F><U0431><U0440><U044C>";/
+        "<U043D><U043E><U044F><U0431><U0440><U044C>";/
+        "<U0434><U0435><U043A><U0430><U0431><U0440><U044C>"
+abmon   "<U0433><U044B><U0439><U043D>";/
+        "<U0444><U0435><U0432>";/
+        "<U043C><U0430><U0440>";/
+        "<U0430><U043F><U0440>";/
+        "<U043C><U0430><U0439>";/
+        "<U0438><U044E><U043D><U044C>";/
+        "<U0438><U044E><U043B><U044C>";/
+        "<U0430><U0432><U0433>";/
+        "<U0441><U0435><U043D><U0442>";/
+        "<U043E><U043A><U0442>";/
+        "<U043D><U043E><U044F><U0431>";/
+        "<U0434><U0435><U043A>"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "ru_RU"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "ru_RU"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+name_fmt "???"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+postal_fmt "???"
+% https://tt.wikipedia.org/wiki/%D0%A0%D1%83%D1%81%D0%B8%D1%8F : Русия
+country_name "<U0420><U0443><U0441><U0438><U044F>"
+country_ab2 "RU"
+country_ab3 "RUS"
+country_num 643
+country_car    "RUS"
+lang_name    "<U0442><U0430><U0442><U0430><U0440>"
+lang_ab      "tt"
+lang_term    "tat"
+lang_lib    "tat"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "ru_RU"
+END LC_TELEPHONE

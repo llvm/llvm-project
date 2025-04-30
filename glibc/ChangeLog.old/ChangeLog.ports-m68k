@@ -1,0 +1,1451 @@
+This file describes changes to the M68K port while it was in the ports
+add-on directory.  This port is no longer part of an add-on and so
+future changes to it should be listed in the top-level ChangeLog file,
+not here.
+
+
+
+2014-02-10  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k: Move directory to ../sysdeps/m68k.
+	* sysdeps/unix/sysv/linux/m68k: Move directory to
+	../sysdeps/unix/sysv/linux/m68k.
+
+2014-01-27  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Regenerate.
+
+2013-12-10  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/s_nextafterl.c (__nextafterl): Use
+	math_force_eval.
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/lowlevellock.h
+	(FUTEX_WAIT_REQEUE_PI, FUTEX_CMP_REQEUE_PI)
+	(lll_futex_wait_requeue_pi, lll_futex_timed_wait_requeue_pi)
+	(lll_futex_cmp_requeue_pi): Define.
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_REQUEUE_PI, __ASSUME_SET_ROBUST_LIST): Undefine before
+	3.10.
+
+2013-11-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/fpu/fegetround.c (fegetround): Use libm_hidden_def.
+
+2013-11-26  Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/stat.h: Use __glibc_reserved
+	instead of __unused.
+
+2013-10-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sysdeps/unix/sysv/linux/m68k/configure.in: Moved to ...
+	* sysdeps/unix/sysv/linux/m68k/configure.ac: ... here.
+	* sysdeps/unix/sysv/linux/m68k/configure: Regenerated.
+
+2013-10-08  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/m68k/start.S [SHARED]: Use PIC.
+
+2013-09-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/ffs.c (__ffs): Define as hidden.
+
+2013-09-04  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/mmap64.c: New file.
+
+2013-08-21   Ondřej Bílka  <neleai@seznam.cz>
+
+	* sysdeps/m68k/m680x0/fpu/fraiseexcpt.c: Fix typos.
+
+2013-07-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/dl-static.c: New file.
+	* sysdeps/unix/sysv/linux/m68k/ldsodefs.h: New file.
+	* sysdeps/unix/sysv/linux/m68k/Makefile (sysdep-dl-routines)
+	(sysdep_routines, sysdep-rtld-routines) [$(subdir) = elf]: Add
+	dl-static.
+	* sysdeps/unix/sysv/linux/m68k/Versions (ld: GLIBC_PRIVATE): Add
+	_dl_var_init.
+
+2013-07-03  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2013-06-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/dl-trampoline.S (FMOVE): Define conditional on
+	[__mcoldfire__] and [__mcffpu__].
+	(FPSPACE): Likewise.
+	(_dl_runtime_profile): Save and restore %fp0 with FMOVE, only if
+	[FMOVE].  Use FPSPACE in stack offsets.
+
+2013-06-28  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/fpu_control.h: Fix preprocessor indentation.
+
+2013-06-28  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* sysdeps/m68k/fpu_control.h [__mcoldfire__ && !__mcffpu__]
+	(_FPU_RESERVED): Provide alternative definition.
+	[__mcoldfire__ && !__mcffpu__] (_FPU_DEFAULT): Likewise.
+	[__mcoldfire__ && !__mcffpu__] (_FPU_GETCW): Likewise.
+	[__mcoldfire__ && !__mcffpu__] (_FPU_SETCW): Likewise.
+	[!(__mcoldfire__ && !__mcffpu__)]: Make existing macro definitions
+	conditional.
+
+2013-06-25  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/sysdep.h (CALL_MCOUNT) [PROF]: Use %a6 instead of
+	%fp in cfi insns.
+
+2013-06-15  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libpthread.abilist:
+	Update.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libpthread.abilist:
+	Likewise.
+
+2013-06-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/getpagesize.c (__getpagesize): Use
+	(void) in function definition.
+
+2013-06-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/socket.S: Remove trailing
+	whitespace.
+
+2013-05-29  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	[BZ #15465]
+	* sysdeps/m68k/dl-machine.h (elf_machine_rela): Use
+	RTLD_PROGNAME.
+
+2013-05-22  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/coldfire/fpu/libm-test-ulps: Update test names.
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Likewise.
+
+2013-05-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/coldfire/fpu/libm-test-ulps: Update names of sincos
+	tests.
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Likewise.
+
+2013-04-11  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update
+
+2013-03-11  Andreas Schwab  <schwab@suse.de>
+
+	[BZ #15234]
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libpthread.abilist
+	(GLIBC_2.4): Remove pthread_atfork.
+
+2013-03-06  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/mman.h: Remove all defines
+	provided by bits/mman-linux.h and include <bits/mman-linux.h>.
+
+2013-02-18  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libc.abilist: Add
+	__cxa_thread_atexit_impl.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libc.abilist:
+	Likewise.
+
+2013-02-08  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_O_CLOEXEC): Define for 2.6.23 or later.
+	(__ASSUME_SOCK_CLOEXEC, __ASSUME_IN_NONBLOCK, __ASSUME_PIPE2)
+	(__ASSUME_EVENTFD2, __ASSUME_SIGNALFD4, __ASSUME_DUP3): Define for
+	2.6.27 or later.
+	(__ASSUME_ACCEPT4): Define for 2.6.28 or later.
+
+2013-02-04  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #13550]
+	* sysdeps/m68k/memchr.S [!__BOUNDED_POINTERS__] (__ubp_memchr):
+	Remove alias.
+
+2013-01-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+	* sysdeps/m68k/Makefile (CFLAGS-backtrace.c): Add -funwind-tables.
+
+2013-01-19  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/backtrace.c: New file.
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/not-cancel.h: New file.
+	* sysdeps/unix/sysv/linux/m68k/syscalls.list: Add waitpid.
+
+2013-01-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/bits/byteswap.h (__bswap_64): Use __extension__
+	with long long.
+
+2013-01-04  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2013-01-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/m680x0/fpu/mathimpl.h: Fix copyright notice
+	formatting.
+
+	* All files with FSF copyright notices: Update copyright dates
+	using scripts/update-copyrights.
+
+2012-11-30  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-11-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/dl-trampoline.S (_dl_runtime_profile)
+	[__mcoldfire__]: Fix copying loop.
+
+	* sysdeps/m68k/sotruss-lib.c: New file.
+
+2012-11-21  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/lowlevellock.h
+	(lll_futex_timed_wait_bitset): Remove use of
+	INTERNAL_SYSCALL_ERROR_P.
+
+2012-11-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/s_atan.c (weak_aliasx): Remove
+	macro and use weak_alias directly.
+	* sysdeps/m68k/m680x0/fpu/s_ccosh.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_cexp.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_csin.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_csinh.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_expm1.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_frexp.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_lrint.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_modf.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_isinf.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_remquo.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_scalbn.c (strong_aliasx, weak_aliasx):
+	Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_sin.c (weak_aliasx): Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_sincos.c (weak_aliasx): Likewise.
+
+2012-11-18  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/sysdep-cancel.h (_DOCARGS_5)
+	(UNDOCARGS_5): Save %d5 on stack instead of in %a1.
+
+2012-11-15  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/dl-machine.h (ELF_MACHINE_RUNTIME_FIXUP_PARAMS):
+	Define.
+
+2012-11-06  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/lowlevellock.h
+	(lll_futex_timed_wait_bitset): Define.
+
+2012-11-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/fpu/fclrexcpt.c (feclearexcept): Add
+	libm_hidden_ver.
+
+	[BZ #3439]
+	* sysdeps/m68k/fpu/bits/fenv.h (FE_INEXACT): Define macro to
+	integer constant usable in #if and use that to give value to enum
+	constant.
+	(FE_DIVBYZERO): Likewise.
+	(FE_UNDERFLOW): Likewise.
+	(FE_OVERFLOW): Likewise.
+	(FE_INVALID): Likewise.
+	(FE_TONEAREST): Likewise.
+	(FE_TOWARDZERO): Likewise.
+	(FE_DOWNWARD): Likewise.
+	(FE_UPWARD): Likewise.
+
+2012-10-25  Andreas Jaeger  <aj@suse.de>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Remove all
+	definitions and declarations that are provided by
+	<bits/fcntl-linux.h> and include <bits/fcntl-linux.h>.
+
+2012-10-19  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libc.abilist:
+	(GLIBC_2.17): Add clock_* symbols.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libc.abilist: Likewise.
+
+2012-10-02  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/lowlevellock.h: Fix clone
+	flag name in comment to CLONE_CHILD_CLEARTID.
+
+2012-09-28  Roland McGrath  <roland@hack.frob.com>
+
+	* sysdeps/unix/sysv/linux/m68k/init-first.c: Include main file from
+	csu/ rather than sysdeps/unix/sysv/linux/.
+
+2012-08-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_STAT64_SYSCALL): Remove.
+
+2012-08-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_FADVISE64_64_SYSCALL): Remove.
+
+2012-08-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_MMAP2_SYSCALL): Remove.
+
+2012-08-15  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* sysdeps/m68k/nptl/pthread_spin_lock.c: Use generic code.
+	* sysdeps/m68k/nptl/pthread_spin_trylock.c: Remove, use generic version.
+
+2012-08-10  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/ldsodefs.h (m68k_gnu_pltenter): Remove const on
+	fifth parameter.
+
+2012-08-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_TGKILL): Remove.
+
+2012-08-08  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/coldfire/fpu/bits/mathinline.h: New file.
+
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/bits/atomic.h
+	(atomic_compare_and_exchange_val_acq) [!SHARED]: Add cast to avoid
+	warning.
+
+2012-08-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/configure.in (arch_minimum_kernel):
+	Remove.
+	* sysdeps/unix/sysv/linux/m68k/configure: Regenerated.
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_TGKILL): Define unconditionally.
+	(__ASSUME_UTIMES): Likewise.
+	(__ASSUME_FADVISE64_64_SYSCALL): Likewise.
+
+2012-08-03  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/sysdep.h (ALIGNARG, ASM_TYPE_DIRECTIVE)
+	(ASM_SIZE_DIRECTIVE): Remove.
+	(ENTRY, END): Use .p2align.  Use .type and .size instead of
+	ASM_TYPE_DIRECTIVE and ASM_SIZE_DIRECTIVE.
+	* sysdeps/m68k/asm-syntax.h (ALIGNARG, PROLOG, EPILOG, ALIGN)
+	(GLOBL): Remove unused macros.
+
+2012-08-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_FCNTL64): Remove.
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_VFORK_SYSCALL): Remove.
+	* sysdeps/unix/sysv/linux/m68k/vfork.S (__vfork) [__NR_vfork]:
+	Make code unconditional.
+	(__vfork) [__ASSUME_VFORK_SYSCALL]: Likewise.
+	(__vfork) [!__ASSUME_VFORK_SYSCALL]: Remove conditional code.
+
+2012-08-01  Roland McGrath  <roland@hack.frob.com>
+
+	[BZ #14138]
+	* sysdeps/unix/sysv/linux/m68k/getrlimit.c: File removed.
+
+2012-08-01  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-07-26  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-07-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_MMAP2_SYSCALL): Define unconditionally.
+	(__ASSUME_STAT64_SYSCALL): Likewise.
+	(__ASSUME_FCNTL64): Likewise.
+	(__ASSUME_VFORK_SYSCALL): Likewise.
+
+2012-07-25  Florian Weimer  <fweimer@redhat.com>
+
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libc.abilist:
+	Add secure_getenv.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libc.abilist:
+	Likewise.
+
+2012-07-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* data/localplt-m68k-linux-gnu.data: Move to ...
+	* sysdeps/unix/sysv/linux/m68k/nptl/localplt.data: ... here.
+
+2012-07-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* data/c++-types-m68k-linux-gnu.data: Move to ...
+	* sysdeps/unix/sysv/linux/m68k/nptl/c++-types.data: ... here.
+
+2012-07-16  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/m680x0/Makefile: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/getcontext.S: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/makecontext.S: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/setcontext.S: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/swapcontext.S: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/ucontext_i.sym: New file.
+
+2012-07-09  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-05-30  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_TRUNCATE64_SYSCALL): Remove.
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/pthread_once.c: Use
+	hidden_def instead of adding _internal alias.
+
+2012-05-26  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_NEW_GETRLIMIT_SYSCALL): Remove.
+
+	* sysdeps/unix/sysv/linux/m68k/syscalls.list: Add chown.
+	* sysdeps/unix/sysv/linux/m68k/chown.c: Remove file.
+
+2012-05-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/mman.h (MADV_DONTDUMP)
+	(MADV_DODUMP): Define.
+
+2012-05-21  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/s_logbl.c: New file.
+
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libc.abilist: Update.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libc.abilist: Update.
+
+2012-05-14  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/configure.in (arch_minimum_kernel)
+	[$machine != m68k/coldfire]: Don't set.
+
+2012-05-10  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-04-28  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/ld.abilist: New file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libBrokenLocale.abilist:
+	New file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libanl.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libc.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libcrypt.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libdl.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libm.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libnsl.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libpthread.abilist:
+	New file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libresolv.abilist:
+	New file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/librt.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libthread_db.abilist:
+	New file.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/libutil.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/ld.abilist: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libBrokenLocale.abilist:
+	New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libanl.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libc.abilist: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libcrypt.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libdl.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libm.abilist: New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libnsl.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libpthread.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libresolv.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/librt.abilist: New
+	file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libthread_db.abilist:
+	New file.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/nptl/libutil.abilist: New
+	file.
+
+2012-04-26  Siddhesh Poyarekar  <siddhesh@redhat.com>
+
+	* sysdeps/m68k/libgcc_s.h: Remove.
+	* sysdeps/m68k/shlib-versions: Add libgcc_s.
+
+2012-04-18  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-04-17  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/e_ilogb.c: Renamed from s_ilogb.c.
+	Define __ieee754_ilogb instead of __ilogb.
+	* sysdeps/m68k/m680x0/fpu/e_ilogbf.c: Renamed from s_ilogbf.c and
+	adjusted.
+	* sysdeps/m68k/m680x0/fpu/e_ilogbl.c: Renamed from s_ilogbl.c and
+	adjusted.
+
+2012-03-28  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/mman.h (MAP_STACK)
+	(MAP_HUGETLB): Define.
+
+2012-03-27  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/elf/start.S: Move to ...
+	* sysdeps/m68k/start.S: ... here.
+
+2012-03-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+	* sysdeps/m68k/m680x0/fpu/s_cexp.c: Avoid undue overflow.
+
+	* sysdeps/m68k/m680x0/fpu/bits/mathinline.h (__inline_mathop1):
+	Mark asm as volatile.
+	(__scalbn): Likewise.
+	(__lrint): Likewise.
+	(__sincos): Likewise.
+
+2012-03-22  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-03-21  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/register-dump.h: Include <_itoa.h>
+	instead of <stdio-common/_itoa.h>.
+
+2012-03-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-03-15  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-03-13  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h
+	(__ASSUME_NEW_GETRLIMIT_SYSCALL, __ASSUME_VFORK_SYSCALL): Define
+	for 2.4.12 or later.
+	(__ASSUME_PSELECT, __ASSUME_PPOLL): Only undefine before 3.0.
+
+2012-03-09  Richard Henderson  <rth@twiddle.net>
+
+	* sysdeps/m68k/m680x0/fpu/math_private.h: Use include_next to
+	chain math_private.h.
+
+	* m68k/m680x0/fpu/e_acos.c: Use <> to include math_private.h.
+	* m68k/m680x0/fpu/e_atan2.c, m68k/m680x0/fpu/e_fmod.c: Likewise.
+	* m68k/m680x0/fpu/e_pow.c, m68k/m680x0/fpu/e_scalb.c: Likewise.
+	* m68k/m680x0/fpu/s_fpclassifyl.c, m68k/m680x0/fpu/s_llrint.c: Likewise.
+	* m68k/m680x0/fpu/s_llrintf.c, m68k/m680x0/fpu/s_llrintl.c: Likewise.
+	* m68k/m680x0/fpu/s_nextafterl.c: Likewise.
+
+2012-03-09  Paul Eggert  <eggert@cs.ucla.edu>
+
+	[BZ #13673]
+	Replace FSF snail mail address with URLs, as per GNU coding standards.
+
+2012-03-05  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update.
+
+2012-03-02  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update ULPs.
+
+2012-02-27  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/bits/pthreadtypes.h
+	(pthread_attr_t): Fix name of union.  Only define if not already
+	defined.
+
+2012-02-26  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/bits/pthreadtypes.h: Name
+	pthread_attr_t union.
+
+	* sysdeps/m68k/m680x0/fpu/Makefile: Remove.
+	* sysdeps/m68k/m680x0/fpu/switch: Remove directory.
+
+	* sysdeps/m68k/m680x0/fpu/k_sinl.c: Replace by empty file.
+	* sysdeps/m68k/m680x0/fpu/k_cosl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/k_tanf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/k_tanl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/k_sin.c: Remove.
+	* sysdeps/m68k/m680x0/fpu/k_sinf.c: Remove.
+	* sysdeps/m68k/m680x0/fpu/k_cos.c: Remove.
+	* sysdeps/m68k/m680x0/fpu/k_cosf.c: Remove.
+	* sysdeps/m68k/m680x0/fpu/k_tan.c: Remove.
+
+2012-02-25  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/s_ccosh.c: Avoid raising invalid
+	exception for NaN+iNaN.
+
+2012-02-24  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/libm-test-ulps: Update ULPs.
+
+	* sysdeps/m68k/m680x0/fpu/s_expm1.c: Set errno to ERANGE if
+	argument causes overflow.
+	* sysdeps/m68k/m680x0/fpu/s_expm1f.c: Include <s_expm1.c>.
+	(float_type, o_threshold): Define.
+	* sysdeps/m68k/m680x0/fpu/s_expm1l.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/bits/mathinline.h [__OPTIMIZE__]: Don't
+	define expm1 as inline.
+
+	* sysdeps/m68k/m680x0/fpu/s_sin.c: Set errno to EDOM if argument
+	is infinite.
+	* sysdeps/m68k/m680x0/fpu/s_cos.c: Include <s_sin.c>.
+	* sysdeps/m68k/m680x0/fpu/s_tan.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/s_cosf.c: Include <s_sinf.c>.
+	* sysdeps/m68k/m680x0/fpu/s_cosl.c: Include <s_sinl.c>.
+	* sysdeps/m68k/m680x0/fpu/s_sinf.c: Include <s_sin.c>.
+	(FUNC): Don't define if already defined.
+	(float_type): Define.
+	* sysdeps/m68k/m680x0/fpu/s_sinl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/bits/mathinline.h [__OPTIMIZE__]: Don't
+	define sin, cos, tan as inlines.
+
+2012-02-08  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/crti.S: New file.
+	* sysdeps/m68k/crtn.S: New file.
+
+	* sysdeps/m68k/m680x0/sysdep.h (LOAD_GOT): Define.
+	* sysdeps/m68k/coldfire/sysdep.h (LOAD_GOT): Define.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/m68k-helper.S: Remove.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/m68k-helper.S: Remove.
+	* sysdeps/unix/sysv/linux/m68k/m68k-helper.S: New file.
+
+	* sysdeps/unix/sysv/linux/m68k/configure.in
+	(libc_cv_gcc_unwind_find_fde): Don't set on coldfire.
+
+2012-01-29  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/asm-syntax.h: Remove __STDC__ conditionals.
+	* sysdeps/m68k/m680x0/fpu/s_nextafterl.c: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h: Likewise.
+
+2012-01-08  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/fpu/bits/fenv.h (FE_DFL_ENV, FE_NOMASK_ENV): Use
+	const intead of __const.
+
+	* sysdeps/m68k/asm-syntax.h: Remove non-ELF support.
+	* sysdeps/m68k/sysdep.h: Likewise.
+	(NO_UNDERSCORES): Don't define.
+
+2012-01-07  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/configure.in: Set
+	arch_minimum_kernel, libc_cv_gcc_unwind_find_fde and
+	ldd_rewrite_script.
+
+2012-01-05  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/dl-trampoline.S: Add cfi directives.
+	* sysdeps/m68k/memchr.S: Likewise.
+	* sysdeps/m68k/rawmemchr.S: Likewise.
+	* sysdeps/m68k/strchr.S: Likewise.
+	* sysdeps/m68k/strchrnul.S: Likewise.
+	* sysdeps/m68k/m680x0/add_n.S: Likewise.
+	* sysdeps/m68k/m680x0/lshift.S: Likewise.
+	* sysdeps/m68k/m680x0/rshift.S: Likewise.
+	* sysdeps/m68k/m680x0/sub_n.S: Likewise.
+	* sysdeps/m68k/m680x0/m68020/addmul_1.S: Likewise.
+	* sysdeps/m68k/m680x0/m68020/mul_1.S: Likewise.
+	* sysdeps/m68k/m680x0/m68020/submul_1.S: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/clone.S: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/semtimedop.S: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/socket.S: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/sysdep.S: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/vfork.S: Likewise.
+	* sysdeps/m68k/sysdep.h (CALL_MCOUNT): Likewise.
+	(ENTRY): Add cfi_startproc.
+	(END): Add cfi_endproc.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/m68k-helpers.S: Remove
+	cfi_startproc/cfi_endproc.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/m68k-helpers.S: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/nptl/sysdep-cancel.h (PSEUDO):
+	Likewise.
+
+2011-12-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/bits/byteswap.h (__bswap_constant_64): Protect long
+	long constant with __extension__.
+
+2011-12-04  Thorsten Glaser  <tg@mirbsd.de>
+
+	* sysdeps/unix/sysv/linux/m68k/syscall.S: Allow six arguments.
+
+2011-11-01  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/stackinfo.h (stackinfo_get_sp, stackinfo_sub_sp):
+	Define.
+
+2011-10-26  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/math_private.h: New file.
+
+	* sysdeps/m68k/m680x0/fpu/sincostab.c: New file.
+
+2011-10-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/coldfire/fpu/e_sqrt.c: Add __sqrt_finite alias.
+	* sysdeps/m68k/coldfire/fpu/e_sqrtf.c: Add __sqrtf_finite alias.
+
+	* sysdeps/m68k/m680x0/fpu/e_exp.c (FUNC_FINITE): Define.
+	* sysdeps/m68k/m680x0/fpu/e_expf.c (FUNC_FINITE): Define.
+	* sysdeps/m68k/m680x0/fpu/e_expl.c (FUNC_FINITE): Define.
+
+2011-10-22  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/s_ccos.c: Remove.
+	* sysdeps/m68k/m680x0/fpu/s_ccosf.c: Remove.
+	* sysdeps/m68k/m680x0/fpu/s_ccosl.c: Remove.
+
+2011-10-13  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/e_acos.c: Add __*_finite alias.
+	* sysdeps/m68k/m680x0/fpu/e_acosf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_acosl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_asin.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_asinl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_asinf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_atan2.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_atanh.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_atanhf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_atanhl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_cosh.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_coshf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_coshl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_exp10.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_exp10f.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_exp10l.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_exp2.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_exp2l.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_exp2f.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_fmod.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_fmodf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_fmodl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_log.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_logl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_logf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_log10.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_log10f.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_log10l.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_log2.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_log2f.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_log2l.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_pow.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_remainder.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_remainderl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_remainderf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_scalb.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_sinh.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_sinhf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_sinhl.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_sqrt.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_sqrtf.c: Likewise.
+	* sysdeps/m68k/m680x0/fpu/e_sqrtl.c: Likewise.
+
+2011-10-09  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/s_isinfl.c: Remove.
+	* sysdeps/m68k/m680x0/s_isnanl.c: Remove.
+
+2011-10-05  Andreas Schwab  <schwab@redhat.com>
+
+	* sysdeps/m68k/dl-machine.h (elf_machine_rela)
+	(elf_machine_lazy_rel): Add parameter skip_ifunc.
+
+2011-09-11  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/nptl/tls.h: Don't define USE_TLS.
+	* sysdeps/m68k/dl-machine.h: Remove use of USE_TLS.
+	* sysdeps/m68k/libc-tls.c: Likewise.
+
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h: Remove use of
+	USE___THREAD.
+
+2011-06-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/dl-trampoline.S (_dl_runtime_profile)
+	[__mcoldfire__]: Fix typo saving %fp0.
+
+2011-04-11  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/dl-tls.h (TLS_DTV_UNALLOCATED): Define.
+
+2011-04-03  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Update comments.
+	(O_PATH): Define.
+	(struct file_handle, MAX_HANDLE_SZ): Define.
+	(name_to_handle_at, open_by_handle_at): Declare.
+
+2011-03-06  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/bits/byteswap.h (__bswap_16, __bswap_32)
+	(__bswap_64): Implement as inline functions.
+
+2011-01-18  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/mman.h (MADV_HUGEPAGE)
+	(MADV_NOHUGEPAGE): Define.
+
+2011-01-10  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/bits/semaphore.h (sem_t):
+	Force alignment.
+
+2010-12-26  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/stackinfo.h (DEFAULT_STACK_PERMS): Define.
+
+2010-11-05  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/fchownat.c: Include
+	i386/fchownat.c.
+
+2010-10-11  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/bits/mathinline.h: Remove fma inlines.
+
+	* sysdeps/m68k/fpu/feupdateenv.c (feupdateenv): Add
+	libm_hidden_ver.
+	* sysdeps/m68k/fpu/ftestexcept.c (feupdateenv): Add
+	libm_hidden_def.
+
+2010-08-25  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/coldfire/sysdep.h
+	(SYSCALL_ERROR_LOAD_GOT): Use & instead of #.
+
+2010-08-17  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/syscalls.list: Remove
+	fanotify_init.
+
+2010-08-14  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/syscalls.list: Add prlimit64,
+	fanotify_init, fanotify_mask.
+
+2010-08-02  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/coldfire/sysdep.h: New file.
+	(PCREL_OP): Define.
+	* sysdeps/m68k/m680x0/sysdep.h: New file.
+	(PCREL_OP): Define.
+	* sysdeps/m68k/sysdep.h (PCREL_OP): Don't define here.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/sysdep.h: New file.
+	(SYSCALL_ERROR_LOAD_GOT): Define.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/sysdep.h: New file.
+	(SYSCALL_ERROR_LOAD_GOT): Define.
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h: Don't include subordinate
+	sysdep files.
+	(SYSCALL_ERROR_HANDLER) [PIC && USE___THREAD]: Use
+	SYSCALL_ERROR_LOAD_GOT.
+
+2010-06-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h (F_SETPIPE_SZ,
+	F_GETPIPE_SZ): Define.
+
+2010-06-13  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/bits/mathinline.h: Mark all functions as
+	non-throwing.
+
+	* sysdeps/unix/sysv/linux/m68k/sys/user.h (NBPG, UPAGES)
+	(HOST_TEXT_START_ADDR, HOST_STACK_END_ADDR): Define.
+
+2010-06-11  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/bits/pthreadtypes.h: Force
+	alignment of futex variables.
+
+2010-05-22  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* data/c++-types-m68k-linux-gnu.data: New file.
+	* data/localplt-m68k-linux-gnu.data: New file.
+
+2010-03-13  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/m680x0/fpu/s_ccosh.c: Use signbit macro.
+	* sysdeps/m68k/m680x0/fpu/s_ccos.c: Likewise.
+
+	* sysdeps/m68k/m680x0/fpu/bits/mathinline.h (__signbit)
+	(__signbitf, __signbitl): Always define as inline.
+
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h (SYSCALL_ERROR_HANDLER):
+	Add variant for USE__THREAD.
+
+2010-03-12  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/nptl/lowlevellock.h: Don't include
+	<sysdep.h>.
+
+	* sysdeps/unix/sysv/linux/m68k/m68k-helpers.S: Renamed ...
+	* sysdeps/unix/sysv/linux/m68k/coldfire/m68k-helpers.S: ... to
+	this.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/m68k-helpers.S: New file.
+
+2010-03-09  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	NPTL support for m68k/ColdFire
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h (tls.h): Include.
+	(INTERNAL_SYSCALL): Convert to INTERNAL_SYSCALL_NCS.
+	(PTR_MANGLE, PTR_DEMANGLE): Define.
+	(NEED_STATIC_SYSINFO_DSO): Define.
+	* sysdeps/unix/sysv/linux/m68k/clone.S: Support RESET_PID.
+	* sysdeps/unix/sysv/linux/m68k/m68k-helpers.S: New.
+	* sysdeps/unix/sysv/linux/m68k/Makefile: Add new files to lists.
+	* sysdeps/unix/sysv/linux/m68k/vfork.S: Add SAVE_PID/RESTORE_PID.
+	* sysdeps/unix/sysv/linux/m68k/m68k-vdso.c: New.
+	* sysdeps/unix/sysv/linux/m68k/libc-m68k-vdso.c: New.
+	* sysdeps/unix/sysv/linux/m68k/bits/m68k-vdso.h: New.
+	* sysdeps/unix/sysv/linux/m68k/coldfire/nptl/bits/atomic.h: New.
+	* sysdeps/unix/sysv/linux/m68k/Versions: Add symbols for NPTL support.
+	* sysdeps/unix/sysv/linux/m68k/init-first.c: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/sysdep-cancel.h: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/bits/pthreadtypes.h: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/bits/semaphore.h: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/clone.S: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/fork.c: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/lowlevellock.h: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/vfork.S: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/pt-vfork.S: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/createthread.c: New.
+	* sysdeps/unix/sysv/linux/m68k/nptl/pthread_once.c: New.
+	* sysdeps/unix/sysv/linux/m68k/socket.S: Update cancelation code.
+	* sysdeps/m68k/dl-tls.h: New.
+	* sysdeps/m68k/libc-tls.c: New.
+	* sysdeps/m68k/tls-macros.h: New.
+	* sysdeps/m68k/dl-machine.h (RTLD_START): Terminate stack frame to
+	generate better backtraces.
+	(elf_machine_type_class, elf_machine_rela): Handle TLS relocations.
+	* sysdeps/m68k/dl-machine.h: Handle TLS relocations.
+	* sysdeps/m68k/nptl/tcb-offsets.sym: New.
+	* sysdeps/m68k/nptl/pthread_spin_trylock.c: New.
+	* sysdeps/m68k/nptl/tls.h: New.
+	* sysdeps/m68k/nptl/pthread_spin_lock.c: New.
+	* sysdeps/m68k/nptl/pthreaddef.h: New.
+	* sysdeps/m68k/nptl/Makefile: New.
+
+	* sysdeps/unix/sysv/linux/m68k/bits/sigcontext.h: Remove.
+	* sysdeps/unix/sysv/linux/m68k/register-dump.h: Update.
+
+	* sysdeps/unix/sysv/linux/m68k/bits/siginfo.h: Remove.
+
+	* sysdeps/m68k/jmpbuf-unwind.h (_JMPBUF_CFA_UNWINDS_ADJ)
+	(_jmpbuf_sp, _JMPBUF_UNWINDS_ADJ, __libc_unwind_longjmp): Define.
+
+2010-02-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/fpu/fegetenv.c: Add hidden alias.
+
+2010-01-11  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/stat.h: Fix double-inclusion
+	problem.
+
+2010-01-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Define O_DIRECTORY,
+	O_NOFOLLOW, O_CLOEXEC, F_DUPFD_CLOEXEC, F_SETOWN, and F_GETOWN for
+	XPG7.
+	* sysdeps/unix/sysv/linux/m68k/bits/stat.h: Enable using from
+	fcntl.h.
+
+2009-12-16  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #11093]
+	* sysdeps/unix/sysv/linux/m68k/bits/poll.h: Define POLLRDNORM,
+	POLLRDBAND, POLLWRNORM, and POLLWRBAND also for POSIX 2008.
+
+2009-12-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Redefine O_SYNC and
+	O_DSYNC to match 2.6.33+ kernels.
+
+2009-11-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/stat.h: Use struct timespec
+	for timestamps also if __USE_XOPEN2K8.
+
+2009-11-19  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Introduce new symbol
+	F_OWNER_PGRP and mark F_OWNER_GID obsolete.
+
+2009-11-18  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Change misleading
+	names of parameters of sync_file_range.
+
+2009-11-17  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #10972]
+	* sysdeps/unix/sysv/linux/m68k/bits/mman.h: Add new MADV_*
+	constants from recent kernels.
+
+2009-11-15  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/m68k/libgcc_s.h: New file.
+
+2009-11-14  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h (F_SETOWN_EX)
+	(F_GETOWN_EX, F_OWNER_TID, F_OWNER_PID, F_OWNER_GID, f_owner_ex):
+	Define.
+
+2009-11-07  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h (fallocate): Fix types
+	of last two arguments when -D_FILE_OFFSET_BITS=64.
+
+2009-10-30  Joseph Myers  <joseph@codesourcery.com>
+
+	[BZ #10609]
+	* sysdeps/unix/sysv/linux/m68k/fchownat.c (fchownat): Fix handling
+	of empty parameters for file names.
+
+2009-09-06  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/____longjmp_chk.c: New file.
+
+	* sysdeps/m68k/__longjmp.c (__longjmp): Call CHECK_SP if defined.
+
+2009-05-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/Versions (libc): Add
+	fallocate64@@GLIBC_2.11.
+
+2009-04-25  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h: Revert last
+	change, the syscalls have been added to 2.6.30-rc4.
+
+2009-04-18  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h (__ASSUME_PREADV,
+	__ASSUME_PWRITEV): Undefine.
+
+2009-03-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/getsysstats.c (GET_NPROCS_PARSER):
+	Change parameters and use next_line.
+
+2009-03-15  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/bits/link.h: Uglify function parameter names.
+
+2009-03-04  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Declare
+	fallocate{,64}.
+
+2009-02-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/stat.h: Protect UTIME_NOW and
+	UTIME_OMIT only with __USE_ATFILE.
+
+2008-08-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* sysdeps/m68k/bits/byteswap.h: Allow inclusion from <endian.h>.
+	(__bswap_constant_16): Define.
+	(__bswap_16): Allow arguments with side effects.
+	(__bswap_constant_32): Ensure result is unsigned.
+	(__bswap_32): Define as inline function in fallback case.
+	(__bswap_constant_64): Define.
+	(__bswap_64): Use it for constant arguments.
+	* sysdeps/m68k/bits/setjmp.h (__jmp_buf): Give name to structure
+	type.
+	* sysdeps/m68k/m680x0/fpu/bits/mathinline.h: Only allow inclusion
+	from <math.h>.  Do not use extern inline directly.
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Include <bits/uio.h>.
+	(O_CLOEXEC, SYNC_FILE_RANGE_WAIT_BEFORE, SYNC_FILE_RANGE_WRITE,
+	SYNC_FILE_RANGE_WAIT_AFTER, SPLICE_F_MOVE, SPLICE_F_NONBLOCK,
+	SPLICE_F_MORE, SPLICE_F_GIFT): Define.
+	(sync_file_range, vmsplice, splice, tee): Declare.
+	* sysdeps/unix/sysv/linux/m68k/bits/mman.h (MADV_REMOVE): Define.
+	* sysdeps/unix/sysv/linux/m68k/bits/poll.h (POLLMSG, POLLREMOVE,
+	POLLRDHUP): Define.
+	* sysdeps/unix/sysv/linux/m68k/bits/stat.h (UTIME_NOW,
+	UTIME_OMIT): Define.
+	* sysdeps/unix/sysv/linux/m68k/kernel-features.h: New.
+	* sysdeps/unix/sysv/linux/m68k/sys/user.h: New.
+
+2008-03-28  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	Explicitly get address of _DYNAMIC.
+	* sysdeps/m68k/dl-machine.h (elf_machine_dynamic): Retrieve _DYNAMIC
+	from GOT instead of assuming value at GOT pointer.
+
+2007-10-22  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h (F_DUPFD_CLOEXEC): Define.
+
+2007-07-10  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* sysdeps/unix/sysv/linux/m68k/bits/fcntl.h: Comment fix.
+
+2006-11-28  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h (DOARGS_6, _DOARGS_6)
+	(UNDOARGS_6): Define for 6-argument syscall stubs.
+
+2006-10-03  Andreas Schwab  <schwab@suse.de>
+
+	* sysdeps/m68k/setjmp.c: Use __builtin_return_address and
+	__builtin_frame_address.  Don't call __sigjmp_save in ld.so.
+
+	* sysdeps/unix/sysv/linux/m68k/mremap.S: Accept fifth parameter.
+
+2006-10-03  Richard Sandiford  <richard@codesourcery.com>
+
+	* sysdeps/m68k/bits/mathdef.h: Moved from sysdeps/m68k to
+	sysdeps/m68k/m680x0.
+	* sysdeps/m68k/m68020/submul_1.S: Likewise.
+	* sysdeps/m68k/m68020/Makefile: Likewise.
+	* sysdeps/m68k/m68020/mul_1.S: Likewise.
+	* sysdeps/m68k/m68020/wordcopy.S: Likewise.
+	* sysdeps/m68k/m68020/addmul_1.S: Likewise.
+	* sysdeps/m68k/m68020/bits/string.h: Likewise.
+	* sysdeps/m68k/m68020/bits/atomic.h: Likewise.
+	* sysdeps/m68k/sub_n.S: Likewise.
+	* sysdeps/m68k/add_n.S: Likewise.
+	* sysdeps/m68k/s_isnanl.c: Likewise.
+	* sysdeps/m68k/fpu/s_log1p.c: Likewise.
+	* sysdeps/m68k/fpu/e_asinf.c: Likewise.
+	* sysdeps/m68k/fpu/s_cosl.c: Likewise.
+	* sysdeps/m68k/fpu/s_isinff.c: Likewise.
+	* sysdeps/m68k/fpu/k_rem_pio2.c: Likewise.
+	* sysdeps/m68k/fpu/s_ccos.c: Likewise.
+	* sysdeps/m68k/fpu/s_expm1.c: Likewise.
+	* sysdeps/m68k/fpu/slowexp.c: Likewise.
+	* sysdeps/m68k/fpu/k_rem_pio2l.c: Likewise.
+	* sysdeps/m68k/fpu/s_ccoshf.c: Likewise.
+	* sysdeps/m68k/fpu/s_ilogbl.c: Likewise.
+	* sysdeps/m68k/fpu/Makefile: Likewise.
+	* sysdeps/m68k/fpu/s_expm1f.c: Likewise.
+	* sysdeps/m68k/fpu/s_significandf.c: Likewise.
+	* sysdeps/m68k/fpu/e_pow.c: Likewise.
+	* sysdeps/m68k/fpu/s_csinh.c: Likewise.
+	* sysdeps/m68k/fpu/e_exp.c: Likewise.
+	* sysdeps/m68k/fpu/s_remquof.c: Likewise.
+	* sysdeps/m68k/fpu/s_ilogbf.c: Likewise.
+	* sysdeps/m68k/fpu/s_truncl.c: Likewise.
+	* sysdeps/m68k/fpu/s_frexpf.c: Likewise.
+	* sysdeps/m68k/fpu/s_cos.c: Likewise.
+	* sysdeps/m68k/fpu/fraiseexcpt.c: Likewise.
+	* sysdeps/m68k/fpu/branred.c: Likewise.
+	* sysdeps/m68k/fpu/s_frexpl.c: Likewise.
+	* sysdeps/m68k/fpu/s_atan.c: Likewise.
+	* sysdeps/m68k/fpu/e_rem_pio2f.c: Likewise.
+	* sysdeps/m68k/fpu/e_scalbl.c: Likewise.
+	* sysdeps/m68k/fpu/e_exp2.c: Likewise.
+	* sysdeps/m68k/fpu/s_cexpf.c: Likewise.
+	* sysdeps/m68k/fpu/mplog.c: Likewise.
+	* sysdeps/m68k/fpu/s_rintf.c: Likewise.
+	* sysdeps/m68k/fpu/s_tanh.c: Likewise.
+	* sysdeps/m68k/fpu/e_scalbf.c: Likewise.
+	* sysdeps/m68k/fpu/s_csinhl.c: Likewise.
+	* sysdeps/m68k/fpu/s_floorl.c: Likewise.
+	* sysdeps/m68k/fpu/k_tanf.c: Likewise.
+	* sysdeps/m68k/fpu/k_tanl.c: Likewise.
+	* sysdeps/m68k/fpu/e_fmodf.c: Likewise.
+	* sysdeps/m68k/fpu/e_atanhf.c: Likewise.
+	* sysdeps/m68k/fpu/s_isnanf.c: Likewise.
+	* sysdeps/m68k/fpu/s_fpclassifyl.c: Likewise.
+	* sysdeps/m68k/fpu/s_modf.c: Likewise.
+	* sysdeps/m68k/fpu/e_log2.c: Likewise.
+	* sysdeps/m68k/fpu/e_acosf.c: Likewise.
+	* sysdeps/m68k/fpu/s_log1pl.c: Likewise.
+	* sysdeps/m68k/fpu/e_log2f.c: Likewise.
+	* sysdeps/m68k/fpu/mpa.c: Likewise.
+	* sysdeps/m68k/fpu/t_exp.c: Likewise.
+	* sysdeps/m68k/fpu/e_acos.c: Likewise.
+	* sysdeps/m68k/fpu/s_expm1l.c: Likewise.
+	* sysdeps/m68k/fpu/s_ccoshl.c: Likewise.
+	* sysdeps/m68k/fpu/s_sinf.c: Likewise.
+	* sysdeps/m68k/fpu/k_tan.c: Likewise.
+	* sysdeps/m68k/fpu/k_cosl.c: Likewise.
+	* sysdeps/m68k/fpu/e_remainder.c: Likewise.
+	* sysdeps/m68k/fpu/s_trunc.c: Likewise.
+	* sysdeps/m68k/fpu/s_sincos.c: Likewise.
+	* sysdeps/m68k/fpu/s_scalbnl.c: Likewise.
+	* sysdeps/m68k/fpu/s_finitef.c: Likewise.
+	* sysdeps/m68k/fpu/s_tanhl.c: Likewise.
+	* sysdeps/m68k/fpu/s_lrintl.c: Likewise.
+	* sysdeps/m68k/fpu/slowpow.c: Likewise.
+	* sysdeps/m68k/fpu/mpexp.c: Likewise.
+	* sysdeps/m68k/fpu/s_isnanl.c: Likewise.
+	* sysdeps/m68k/fpu/e_expf.c: Likewise.
+	* sysdeps/m68k/fpu/s_significand.c: Likewise.
+	* sysdeps/m68k/fpu/e_sinhf.c: Likewise.
+	* sysdeps/m68k/fpu/s_tanl.c: Likewise.
+	* sysdeps/m68k/fpu/s_tanhf.c: Likewise.
+	* sysdeps/m68k/fpu/s_cexp.c: Likewise.
+	* sysdeps/m68k/fpu/e_sqrtf.c: Likewise.
+	* sysdeps/m68k/fpu/s_isinf.c: Likewise.
+	* sysdeps/m68k/fpu/s_nearbyint.c: Likewise.
+	* sysdeps/m68k/fpu/e_fmod.c: Likewise.
+	* sysdeps/m68k/fpu/sincos32.c: Likewise.
+	* sysdeps/m68k/fpu/e_sqrtl.c: Likewise.
+	* sysdeps/m68k/fpu/s_sincosl.c: Likewise.
+	* sysdeps/m68k/fpu/e_atan2f.c: Likewise.
+	* sysdeps/m68k/fpu/s_nearbyintf.c: Likewise.
+	* sysdeps/m68k/fpu/e_fmodl.c: Likewise.
+	* sysdeps/m68k/fpu/e_coshf.c: Likewise.
+	* sysdeps/m68k/fpu/s_csinf.c: Likewise.
+	* sysdeps/m68k/fpu/s_ccosl.c: Likewise.
+	* sysdeps/m68k/fpu/e_sqrt.c: Likewise.
+	* sysdeps/m68k/fpu/s_sin.c: Likewise.
+	* sysdeps/m68k/fpu/e_asin.c: Likewise.
+	* sysdeps/m68k/fpu/mptan.c: Likewise.
+	* sysdeps/m68k/fpu/e_exp10f.c: Likewise.
+	* sysdeps/m68k/fpu/e_scalb.c: Likewise.
+	* sysdeps/m68k/fpu/s_finitel.c: Likewise.
+	* sysdeps/m68k/fpu/e_log10.c: Likewise.
+	* sysdeps/m68k/fpu/k_sinl.c: Likewise.
+	* sysdeps/m68k/fpu/e_remainderl.c: Likewise.
+	* sysdeps/m68k/fpu/s_remquol.c: Likewise.
+	* sysdeps/m68k/fpu/s_scalblnf.c: Likewise.
+	* sysdeps/m68k/fpu/s_llrint.c: Likewise.
+	* sysdeps/m68k/fpu/e_rem_pio2.c: Likewise.
+	* sysdeps/m68k/fpu/e_asinl.c: Likewise.
+	* sysdeps/m68k/fpu/e_logl.c: Likewise.
+	* sysdeps/m68k/fpu/s_cosf.c: Likewise.
+	* sysdeps/m68k/fpu/s_rint.c: Likewise.
+	* sysdeps/m68k/fpu/s_ceill.c: Likewise.
+	* sysdeps/m68k/fpu/s_modfl.c: Likewise.
+	* sysdeps/m68k/fpu/s_csinl.c: Likewise.
+	* sysdeps/m68k/fpu/s_tan.c: Likewise.
+	* sysdeps/m68k/fpu/s_sincosf.c: Likewise.
+	* sysdeps/m68k/fpu/dosincos.c: Likewise.
+	* sysdeps/m68k/fpu/e_powl.c: Likewise.
+	* sysdeps/m68k/fpu/s_ilogb.c: Likewise.
+	* sysdeps/m68k/fpu/s_llrintl.c: Likewise.
+	* sysdeps/m68k/fpu/e_expl.c: Likewise.
+	* sysdeps/m68k/fpu/libm-test-ulps: Likewise.
+	* sysdeps/m68k/fpu/s_tanf.c: Likewise.
+	* sysdeps/m68k/fpu/mpsqrt.c: Likewise.
+	* sysdeps/m68k/fpu/s_sinl.c: Likewise.
+	* sysdeps/m68k/fpu/mathimpl.h: Likewise.
+	* sysdeps/m68k/fpu/e_acosl.c: Likewise.
+	* sysdeps/m68k/fpu/e_cosh.c: Likewise.
+	* sysdeps/m68k/fpu/s_cexpl.c: Likewise.
+	* sysdeps/m68k/fpu/s_fabsl.c: Likewise.
+	* sysdeps/m68k/fpu/halfulp.c: Likewise.
+	* sysdeps/m68k/fpu/s_modff.c: Likewise.
+	* sysdeps/m68k/fpu/s_isnan.c: Likewise.
+	* sysdeps/m68k/fpu/e_atan2.c: Likewise.
+	* sysdeps/m68k/fpu/s_fabs.c: Likewise.
+	* sysdeps/m68k/fpu/e_log10f.c: Likewise.
+	* sysdeps/m68k/fpu/k_cosf.c: Likewise.
+	* sysdeps/m68k/fpu/e_sinh.c: Likewise.
+	* sysdeps/m68k/fpu/s_truncf.c: Likewise.
+	* sysdeps/m68k/fpu/s_ceil.c: Likewise.
+	* sysdeps/m68k/fpu/s_log1pf.c: Likewise.
+	* sysdeps/m68k/fpu/e_logf.c: Likewise.
+	* sysdeps/m68k/fpu/mpatan.c: Likewise.
+	* sysdeps/m68k/fpu/s_csin.c: Likewise.
+	* sysdeps/m68k/fpu/e_exp2l.c: Likewise.
+	* sysdeps/m68k/fpu/e_sinhl.c: Likewise.
+	* sysdeps/m68k/fpu/e_atan2l.c: Likewise.
+	* sysdeps/m68k/fpu/s_scalbn.c: Likewise.
+	* sysdeps/m68k/fpu/s_floorf.c: Likewise.
+	* sysdeps/m68k/fpu/e_log2l.c: Likewise.
+	* sysdeps/m68k/fpu/s_atanl.c: Likewise.
+	* sysdeps/m68k/fpu/s_llrintf.c: Likewise.
+	* sysdeps/m68k/fpu/k_sinf.c: Likewise.
+	* sysdeps/m68k/fpu/s_csinhf.c: Likewise.
+	* sysdeps/m68k/fpu/s_frexp.c: Likewise.
+	* sysdeps/m68k/fpu/s_atanf.c: Likewise.
+	* sysdeps/m68k/fpu/s_floor.c: Likewise.
+	* sysdeps/m68k/fpu/e_exp10l.c: Likewise.
+	* sysdeps/m68k/fpu/doasin.c: Likewise.
+	* sysdeps/m68k/fpu/s_rintl.c: Likewise.
+	* sysdeps/m68k/fpu/e_atanhl.c: Likewise.
+	* sysdeps/m68k/fpu/e_remainderf.c: Likewise.
+	* sysdeps/m68k/fpu/s_scalbln.c: Likewise.
+	* sysdeps/m68k/fpu/e_rem_pio2l.c: Likewise.
+	* sysdeps/m68k/fpu/e_exp10.c: Likewise.
+	* sysdeps/m68k/fpu/s_lrintf.c: Likewise.
+	* sysdeps/m68k/fpu/k_cos.c: Likewise.
+	* sysdeps/m68k/fpu/s_lrint.c: Likewise.
+	* sysdeps/m68k/fpu/s_ccosf.c: Likewise.
+	* sysdeps/m68k/fpu/s_scalblnl.c: Likewise.
+	* sysdeps/m68k/fpu/switch/Makefile: Likewise.
+	* sysdeps/m68k/fpu/switch/switch.c: Likewise.
+	* sysdeps/m68k/fpu/switch/68881-sw.h: Likewise.
+	* sysdeps/m68k/fpu/switch/bits/mathinline.h: Likewise.
+	* sysdeps/m68k/fpu/e_log.c: Likewise.
+	* sysdeps/m68k/fpu/s_nextafterl.c: Likewise.
+	* sysdeps/m68k/fpu/s_nearbyintl.c: Likewise.
+	* sysdeps/m68k/fpu/mpatan2.c: Likewise.
+	* sysdeps/m68k/fpu/k_sin.c: Likewise.
+	* sysdeps/m68k/fpu/e_atanh.c: Likewise.
+	* sysdeps/m68k/fpu/s_remquo.c: Likewise.
+	* sysdeps/m68k/fpu/e_log10l.c: Likewise.
+	* sysdeps/m68k/fpu/s_ceilf.c: Likewise.
+	* sysdeps/m68k/fpu/s_fabsf.c: Likewise.
+	* sysdeps/m68k/fpu/s_significandl.c: Likewise.
+	* sysdeps/m68k/fpu/s_ccosh.c: Likewise.
+	* sysdeps/m68k/fpu/e_coshl.c: Likewise.
+	* sysdeps/m68k/fpu/s_scalbnf.c: Likewise.
+	* sysdeps/m68k/fpu/s_finite.c: Likewise.
+	* sysdeps/m68k/fpu/e_exp2f.c: Likewise.
+	* sysdeps/m68k/fpu/k_rem_pio2f.c: Likewise.
+	* sysdeps/m68k/fpu/s_isinfl.c: Likewise.
+	* sysdeps/m68k/fpu/bits/mathinline.h: Likewise.
+	* sysdeps/m68k/fpu/e_powf.c: Likewise.
+	* sysdeps/m68k/rshift.S: Likewise.
+	* sysdeps/m68k/lshift.S: Likewise.
+	* sysdeps/m68k/strtold_l.c: Likewise.
+	* sysdeps/m68k/printf_fphex.c: Likewise.
+	* sysdeps/m68k/s_isinfl.c: Likewise.
+	* sysdeps/m68k/bits/huge_vall.h: Likewise.
+
+	* sysdeps/m68k/asm-syntax.h (andw, andl, subqw, tstw, tstl): New.
+	* sysdeps/m68k/bits/byteswap.h (__bswap32): Don't define for
+	Coldfire targets.
+	* sysdeps/m68k/bits/setjmp.h (__jmp_buf): Add a 64-byte
+	__fpregs field for Coldfire FPUs.
+	* sysdeps/m68k/dl-machine.h: Include sysdep.h.
+	(elf_machine_load_address): Use PCREL_OP.
+	(_dl_start_user): Likewise.
+	* sysdeps/m68k/dl-trampoline.S (_dl_runtime_resolve): Avoid jmp (%dN)
+	on Coldfire; push the target address and use rts instead.
+	(_dl_runtime_profile): Likewise.  Round up the frame size to longword
+	rather than word alignment.  Avoid dbra on Coldfire.  Avoid using
+	jsr (%d0) on Coldfire; push the return address and target address
+	and use rts instead.  Use fmovem.l rather than fmovem.x on Coldfire.
+	Add missing initialization of lrv_a0 and restore a0 from it after
+	calling _dl_call_pltexit.  Adjust the stack offsets of later data
+	accordingly, fixing a previously incorrect offset for the inregs
+	parameter.
+	* sysdeps/m68k/fpu/fegetenv.c (__fegetenv): Save the control
+	registers individually on Coldfire targets.
+	* sysdeps/m68k/fpu/feholdexcpt.c (feholdexcept): Likewise.
+	Add missing libm_hidden_def.
+	* sysdeps/m68k/fpu/fesetenv.c (__fesetenv): Save and restore the
+	control registers individually on Coldfire targets.
+	* sysdeps/m68k/fpu/fesetround.c (fesetround): Add missing
+	libm_hidden_def.
+	* sysdeps/m68k/fpu_control.h: Add the Coldfire bit assignments to
+	the main comment.
+	(_FPU_DOUBLE): Define to 0 for Coldfire.
+	(_FPU_EXTENDED): Don't define for Coldfire.
+	(_FPU_RESERVED): Include bit 15 for Coldfire.
+	* sysdeps/m68k/Implies: Remove ieee754/ldbl-96.
+	* sysdeps/m68k/m680x0/Implies: Add it to this new file instead.
+	* sysdeps/m68k/ldsodefs.h: New file.
+	* sysdeps/m68k/__longjmp.c (__longjmp): Restore the floating-point
+	registers when using a Coldfire FPU.
+	* sysdeps/m68k/Makefile (long-double-fcts): Delete.
+	* sysdeps/m68k/m680x0/Makefile: Add it to this new file instead.
+	* sysdeps/m68k/memchr.S (__memchr): Add Coldfire code.  Avoid
+	unnecessary moves.
+	* sysdeps/m68k/preconfigure (m680?0): Add "m680x0" to $machine.
+	(m68k): Use the compiler to decide whether $machine should be
+	set to m68k/coldfire or m68k/m680x0/m68020.
+	* sysdeps/m68k/rawmemchr.S (__rawmemchr): Add Coldfire code.  Avoid
+	unnecessary moves.
+	* sysdeps/m68k/setjmp.c (__sigsetjmp): Save the floating-point
+	registers when using a Coldfire FPU.  Use libc_hidden_def rather
+	than hidden_def.
+	* sysdeps/m68k/strchrnul.S (__strchrnul): Add Coldfire code.  Avoid
+	unnecessary moves.
+	* sysdeps/m68k/strchr.S (strchr): Likewise.
+	* sysdeps/m68k/sysdep.h (PCREL_OP): Define.
+	* sysdeps/m68k/tst-audit.h: New file.
+	* sysdeps/m68k/wcpcpy.c: Likewise.
+	* sysdeps/m68k/wcpcpy_chk.c: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/configure.in: New file.
+	* sysdeps/unix/sysv/linux/m68k/configure: Likewise.
+	* sysdeps/unix/sysv/linux/m68k/clone.S (__clone): Add Coldfire code.
+	* sysdeps/unix/sysv/linux/m68k/register-dump.h (real_catch_segfault):
+	Do not define on Coldfire.
+	(catch_segfault): Likewise.
+	(register_dump): Use the Coldfire-specific sigcontext fields to
+	display call-saved data and address registers (rather than the
+	data stored in sc_fpstate by real_catch_segfault).  Display 8-byte
+	floating-point registers on Coldfire.
+	* sysdeps/unix/sysv/linux/m68k/socket.S (__socket): Pass a temporary
+	register to SINGLE_THREAD_P.
+	* sysdeps/unix/sysv/linux/m68k/sys/reg.h (PT_FP0): Redefine for
+	Coldfire.
+	(PT_FP1, PT_FP2, PT_FP3, PT_FP4, PT_FP5, PT_FP6, PT_FP7): Likewise.
+	* sysdeps/unix/sysv/linux/m68k/sys/ucontext.h (fpregset): Sync field
+	order with linux.  Make f_fpregs an 8*2 array on Coldfire.
+	(ucontext): Sync field order with linux.
+	* sysdeps/unix/sysv/linux/m68k/sysdep.h: Guard against multiple
+	inclusion.
+	(SYSCALL_ERROR_HANDLER): Use PCREL_OP.
+	* sysdeps/unix/sysv/linux/m68k/syscalls.list (oldgetrlimit): Delete.
+	(oldsetrlimit): Likewise.
+	* sysdeps/unix/sysv/linux/m68k/m680x0/syscalls.list: New file.
+	List oldgetrlimit and oldsetrlimit here instead.
+	* sysdeps/unix/sysv/linux/m68k/bits/sigcontext.h: New file.
+	* sysdeps/unix/sysv/linux/m68k/bits/siginfo.h: Likewise.
+	* sysdeps/m68k/coldfire/bits/atomic.h: Likewise.
+	* sysdeps/m68k/coldfire/fpu/e_sqrt.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/e_sqrtf.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/fraiseexcpt.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/libm-test-ulps: Likewise.
+	* sysdeps/m68k/coldfire/fpu/s_fabs.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/s_fabsf.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/s_lrint.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/s_lrintf.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/s_rint.c: Likewise.
+	* sysdeps/m68k/coldfire/fpu/s_rintf.c: Likewise.
+	* sysdeps/m68k/coldfire/shlib-versions: Likewise.
+
+2006-02-28  Roland McGrath  <roland@redhat.com>
+
+	* sysdeps/m68k/preconfigure: New file.

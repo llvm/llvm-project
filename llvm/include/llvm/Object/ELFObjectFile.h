@@ -1319,6 +1319,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf32-loongarch";
     case ELF::EM_XTENSA:
       return "elf32-xtensa";
+    case ELF::EM_NEXT32:
+      report_fatal_error("Next32 doesn't support ELF32");
     default:
       return "elf32-unknown";
     }
@@ -1348,6 +1350,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf64-ve";
     case ELF::EM_LOONGARCH:
       return "elf64-loongarch";
+    case ELF::EM_NEXT32:
+      return (IsLittleEndian ? "elf64-next32-little" : "elf64-next32-big");
     default:
       return "elf64-unknown";
     }
@@ -1452,6 +1456,8 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_XTENSA:
     return Triple::xtensa;
 
+  case ELF::EM_NEXT32:
+    return Triple::next32;
   default:
     return Triple::UnknownArch;
   }

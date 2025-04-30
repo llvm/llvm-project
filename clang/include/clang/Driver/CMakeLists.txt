@@ -1,3 +1,7 @@
 set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
+if(LLVM_ENABLE_CLASSIC_FLANG)
+  tablegen(LLVM Options.inc -DENABLE_CLASSIC_FLANG -gen-opt-parser-defs)
+else()
+  tablegen(LLVM Options.inc -gen-opt-parser-defs)
+endif()
 add_public_tablegen_target(ClangDriverOptions)

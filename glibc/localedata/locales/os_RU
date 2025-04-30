@@ -1,0 +1,181 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Ossetian Language Locale for Russia
+% Language: os
+% Territory: RU
+% Revision: 1.0
+% Date: 2011-05-06
+% Application: general
+% Users: general
+%
+% Based on ru_RU, cv_RU, da_DK
+% Modifed by:
+%    Soslan Khubulov <soslanx@gmail.com>
+%
+
+LC_IDENTIFICATION
+title      "Ossetian locale for Russia"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Ossetic"
+territory  "Russia"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% There is no collation information for Ossetian in CLDR.
+% I just adapt the collation rules which I found here to the
+% updated iso14651_t1_common file.
+copy "iso14651_t1"
+
+collating-symbol <ae>
+
+reorder-after <S0430> % CYRILLIC SMALL LETTER A
+<ae>
+
+<U04D5> <ae>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ӕ CYRILLIC SMALL LIGATURE A IE
+<U04D4> <ae>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ӕ CYRILLIC CAPITAL LIGATURE A IE
+<U00E6> <ae>;"<BASE><VRNT1>";"<MIN><MIN>";IGNORE % æ LATIN SMALL LETTER AE
+<U00C6> <ae>;"<BASE><VRNT1>";"<CAP><CAP>";IGNORE % Æ LATIN CAPITAL LETTER AE
+reorder-end
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0443><U0423>]"
+noexpr  "^[-0nN<U043D><U041D>]"
+yesstr  "<U0443><U043E><U0439><U044B>"
+nostr   "<U043D><U04D5><U0439><U044B>"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "ru_RU"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "ru_RU"
+END LC_NUMERIC
+
+LC_TIME
+abday "<U0425><U0446><U0431>";"<U041A><U0440><U0441>";/
+      "<U0414><U0446><U0433>";"<U00C6><U0440><U0442>";/
+      "<U0426><U043F><U0440>";"<U041C><U0440><U0431>";/
+      "<U0421><U0431><U0442>"
+day "<U0425><U0443><U044B><U0446><U0430><U0443><U0431><U043E><U043D>";/
+    "<U041A><U044A><U0443><U044B><U0440><U0438><U0441><U00E6><U0440>";/
+    "<U0414><U044B><U0446><U0446><U00E6><U0433>";/
+    "<U00C6><U0440><U0442><U044B><U0446><U0446><U00E6><U0433>";/
+    "<U0426><U044B><U043F><U043F><U00E6><U0440><U00E6><U043C>";/
+    "<U041C><U0430><U0439><U0440><U00E6><U043C><U0431><U043E><U043D>";/
+    "<U0421><U0430><U0431><U0430><U0442>"
+
+abmon   "<U042F><U043D><U0432>";/
+"<U0424><U0435><U0432>";/
+"<U041C><U0430><U0440>";/
+"<U0410><U043F><U0440>";/
+"<U041C><U0430><U0439>";/
+"<U0418><U044E><U043D>";/
+"<U0418><U044E><U043B>";/
+"<U0410><U0432><U0433>";/
+"<U0421><U0435><U043D>";/
+"<U041E><U043A><U0442>";/
+"<U041D><U043E><U044F>";/
+"<U0414><U0435><U043A>"
+
+alt_mon "<U042F><U043D><U0432><U0430><U0440><U044C>";/
+"<U0424><U0435><U0432><U0440><U0430><U043B><U044C>";/
+"<U041C><U0430><U0440><U0442><U044A><U0438>";/
+"<U0410><U043F><U0440><U0435><U043B><U044C>";/
+"<U041C><U0430><U0439>";/
+"<U0418><U044E><U043D><U044C>";/
+"<U0418><U044E><U043B><U044C>";/
+"<U0410><U0432><U0433><U0443><U0441><U0442>";/
+"<U0421><U0435><U043D><U0442><U044F><U0431><U0440><U044C>";/
+"<U041E><U043A><U0442><U044F><U0431><U0440><U044C>";/
+"<U041D><U043E><U044F><U0431><U0440><U044C>";/
+"<U0414><U0435><U043A><U0430><U0431><U0440><U044C>"
+
+mon     "<U044F><U043D><U0432><U0430><U0440><U044B>";/
+"<U0444><U0435><U0432><U0440><U0430><U043B><U044B>";/
+"<U043C><U0430><U0440><U0442><U044A><U0438><U0439><U044B>";/
+"<U0430><U043F><U0440><U0435><U043B><U044B>";/
+"<U043C><U0430><U0439><U044B>";/
+"<U0438><U044E><U043D><U044B>";/
+"<U0438><U044E><U043B><U044B>";/
+"<U0430><U0432><U0433><U0443><U0441><U0442><U044B>";/
+"<U0441><U0435><U043D><U0442><U044F><U0431><U0440><U044B>";/
+"<U043E><U043A><U0442><U044F><U0431><U0440><U044B>";/
+"<U043D><U043E><U044F><U0431><U0440><U044B>";/
+"<U0434><U0435><U043A><U0430><U0431><U0440><U044B>"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "";""
+t_fmt_ampm ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "ru_RU"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "ru_RU"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "ru_RU"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "ru_RU"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U0423><U04D5><U0440><U04D5><U0441><U0435>"
+country_ab2 "RU"
+country_ab3 "RUS"
+country_num 643
+country_car "RUS"
+lang_name   "<U0438><U0440><U043E><U043D>"
+lang_ab      "os"
+lang_term    "oss"
+lang_lib    "oss"
+END LC_ADDRESS

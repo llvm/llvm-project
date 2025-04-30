@@ -1,0 +1,6 @@
+libc {
+  GLIBC_PRIVATE {
+    __mips16_syscall0; __mips16_syscall1; __mips16_syscall2; __mips16_syscall3;
+    __mips16_syscall4;
+  }
+}

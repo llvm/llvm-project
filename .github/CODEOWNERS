@@ -150,3 +150,8 @@ clang/test/AST/Interp/ @tbaederr
 /llvm/**/DWARFLinker/ @JDevlieghere
 /llvm/**/dsymutil/ @JDevlieghere
 /llvm/**/llvm-dwarfutil/ @JDevlieghere
+
+.github/CODEOWNERS @eilamgeless-ns
+
+# NS-API headers
+/nextsilicon/nsapi/include/nsapi/* @eilamgeless-ns @ilan-t

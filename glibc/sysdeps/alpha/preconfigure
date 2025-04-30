@@ -1,0 +1,3 @@
+case "$machine" in
+alpha*)		base_machine=alpha machine=alpha/$machine
+esac

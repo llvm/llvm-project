@@ -1,0 +1,119 @@
+#if !defined ISO && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+// The requirements for some types and corresponding macros are from POSIX.
+type int8_t
+type int16_t
+type int32_t
+type int64_t
+type uint8_t
+type uint16_t
+type uint32_t
+type uint64_t
+
+type int_least8_t
+type int_least16_t
+type int_least32_t
+type int_least64_t
+type uint_least8_t
+type uint_least16_t
+type uint_least32_t
+type uint_least64_t
+
+type int_fast8_t
+type int_fast16_t
+type int_fast32_t
+type int_fast64_t
+type uint_fast8_t
+type uint_fast16_t
+type uint_fast32_t
+type uint_fast64_t
+
+type intptr_t
+type uintptr_t
+
+type intmax_t
+type uintmax_t
+
+macro-int-constant INT8_MIN {promoted:int8_t} == -128
+macro-int-constant INT8_MAX {promoted:int8_t} == 127
+macro-int-constant INT16_MIN {promoted:int16_t} == -32768
+macro-int-constant INT16_MAX {promoted:int16_t} == 32767
+macro-int-constant INT32_MIN {promoted:int32_t} == -2147483647-1
+macro-int-constant INT32_MAX {promoted:int32_t} == 2147483647
+macro-int-constant INT64_MIN {promoted:int64_t} == -9223372036854775807LL-1
+macro-int-constant INT64_MAX {promoted:int64_t} == 9223372036854775807LL
+
+macro-int-constant UINT8_MAX {promoted:uint8_t} == 255
+macro-int-constant UINT16_MAX {promoted:uint16_t} == 65535
+macro-int-constant UINT32_MAX {promoted:uint32_t} == 4294967295U
+macro-int-constant UINT64_MAX {promoted:uint64_t} == 18446744073709551615ULL
+
+macro-int-constant INT_LEAST8_MIN {promoted:int_least8_t} <= -128
+macro-int-constant INT_LEAST8_MAX {promoted:int_least8_t} >= 127
+macro-int-constant INT_LEAST16_MIN {promoted:int_least16_t} <= -32768
+macro-int-constant INT_LEAST16_MAX {promoted:int_least16_t} >= 32767
+macro-int-constant INT_LEAST32_MIN {promoted:int_least32_t} <= -2147483647-1
+macro-int-constant INT_LEAST32_MAX {promoted:int_least32_t} >= 2147483647
+macro-int-constant INT_LEAST64_MIN {promoted:int_least64_t} <= -9223372036854775807LL-1
+macro-int-constant INT_LEAST64_MAX {promoted:int_least64_t} >= 9223372036854775807LL
+
+macro-int-constant UINT_LEAST8_MAX {promoted:uint_least8_t} >= 255
+macro-int-constant UINT_LEAST16_MAX {promoted:uint_least16_t} >= 65535
+macro-int-constant UINT_LEAST32_MAX {promoted:uint_least32_t} >= 4294967295U
+macro-int-constant UINT_LEAST64_MAX {promoted:uint_least64_t} >= 18446744073709551615ULL
+
+macro-int-constant INT_FAST8_MIN {promoted:int_fast8_t} <= -128
+macro-int-constant INT_FAST8_MAX {promoted:int_fast8_t} >= 127
+macro-int-constant INT_FAST16_MIN {promoted:int_fast16_t} <= -32768
+macro-int-constant INT_FAST16_MAX {promoted:int_fast16_t} >= 32767
+macro-int-constant INT_FAST32_MIN {promoted:int_fast32_t} <= -2147483647-1
+macro-int-constant INT_FAST32_MAX {promoted:int_fast32_t} >= 2147483647
+macro-int-constant INT_FAST64_MIN {promoted:int_fast64_t} <= -9223372036854775807LL-1
+macro-int-constant INT_FAST64_MAX {promoted:int_fast64_t} >= 9223372036854775807LL
+
+macro-int-constant UINT_FAST8_MAX {promoted:uint_fast8_t} >= 255
+macro-int-constant UINT_FAST16_MAX {promoted:uint_fast16_t} >= 65535
+macro-int-constant UINT_FAST32_MAX {promoted:uint_fast32_t} >= 4294967295U
+macro-int-constant UINT_FAST64_MAX {promoted:uint_fast64_t} >= 18446744073709551615ULL
+
+macro-int-constant INTPTR_MIN {promoted:intptr_t} <= -32768
+macro-int-constant INTPTR_MAX {promoted:intptr_t} >= 32767
+
+macro-int-constant UINTPTR_MAX {promoted:uintptr_t} >= 65535
+
+macro-int-constant INTMAX_MIN {promoted:intmax_t} <= -9223372036854775807LL-1
+macro-int-constant INTMAX_MAX {promoted:intmax_t} >= 9223372036854775807LL
+
+macro-int-constant UINTMAX_MAX {promoted:uintmax_t} >= 18446744073709551615ULL
+
+macro-int-constant PTRDIFF_MIN {promoted:__PTRDIFF_TYPE__} <= -65535
+macro-int-constant PTRDIFF_MAX {promoted:__PTRDIFF_TYPE__} >= 65535
+
+macro-int-constant SIG_ATOMIC_MIN {promoted:__SIG_ATOMIC_TYPE__}
+macro-int-constant SIG_ATOMIC_MAX {promoted:__SIG_ATOMIC_TYPE__} >= 127
+
+macro-int-constant SIZE_MAX {promoted:__SIZE_TYPE__} >= 65535
+
+macro-int-constant WCHAR_MIN {promoted:__WCHAR_TYPE__}
+macro-int-constant WCHAR_MAX {promoted:__WCHAR_TYPE__} >= 127
+
+macro-int-constant WINT_MIN {promoted:__WINT_TYPE__}
+macro-int-constant WINT_MAX {promoted:__WINT_TYPE__} >= 127
+
+macro INT8_C
+macro INT16_C
+macro INT32_C
+macro INT64_C
+macro UINT8_C
+macro UINT16_C
+macro UINT32_C
+macro UINT64_C
+macro INTMAX_C
+macro UINTMAX_C
+
+// The following expressions are not entirely correct but the current
+// poorfnmatch implementation doesn't grok the right forms (INT*_MAX,
+// INT*_MIN, INT*_C, UINT*_MAX, UINT*_MIN, UINT*_C, int*_t, uint*_t).
+allow INT*
+allow UINT*
+allow *_t
+#endif

@@ -1,0 +1,38 @@
+#include "link.h"
+#include <stddef.h>
+
+--
+VECTOR_SIZE		sizeof (La_x86_64_vector)
+XMM_SIZE		sizeof (La_x86_64_xmm)
+YMM_SIZE		sizeof (La_x86_64_ymm)
+ZMM_SIZE		sizeof (La_x86_64_zmm)
+BND_SIZE		sizeof (__int128_t)
+
+LR_SIZE			sizeof (struct La_x86_64_regs)
+LR_RDX_OFFSET		offsetof (struct La_x86_64_regs, lr_rdx)
+LR_R8_OFFSET		offsetof (struct La_x86_64_regs, lr_r8)
+LR_R9_OFFSET		offsetof (struct La_x86_64_regs, lr_r9)
+LR_RCX_OFFSET		offsetof (struct La_x86_64_regs, lr_rcx)
+LR_RSI_OFFSET		offsetof (struct La_x86_64_regs, lr_rsi)
+LR_RDI_OFFSET		offsetof (struct La_x86_64_regs, lr_rdi)
+LR_RBP_OFFSET		offsetof (struct La_x86_64_regs, lr_rbp)
+LR_RSP_OFFSET		offsetof (struct La_x86_64_regs, lr_rsp)
+LR_XMM_OFFSET		offsetof (struct La_x86_64_regs, lr_xmm)
+LR_VECTOR_OFFSET	offsetof (struct La_x86_64_regs, lr_vector)
+#ifndef __ILP32__
+LR_BND_OFFSET		offsetof (struct La_x86_64_regs, lr_bnd)
+#endif
+
+LRV_SIZE		sizeof (struct La_x86_64_retval)
+LRV_RAX_OFFSET		offsetof (struct La_x86_64_retval, lrv_rax)
+LRV_RDX_OFFSET		offsetof (struct La_x86_64_retval, lrv_rdx)
+LRV_XMM0_OFFSET		offsetof (struct La_x86_64_retval, lrv_xmm0)
+LRV_XMM1_OFFSET		offsetof (struct La_x86_64_retval, lrv_xmm1)
+LRV_ST0_OFFSET		offsetof (struct La_x86_64_retval, lrv_st0)
+LRV_ST1_OFFSET		offsetof (struct La_x86_64_retval, lrv_st1)
+LRV_VECTOR0_OFFSET	offsetof (struct La_x86_64_retval, lrv_vector0)
+LRV_VECTOR1_OFFSET	offsetof (struct La_x86_64_retval, lrv_vector1)
+#ifndef __ILP32__
+LRV_BND0_OFFSET		offsetof (struct La_x86_64_retval, lrv_bnd0)
+LRV_BND1_OFFSET		offsetof (struct La_x86_64_retval, lrv_bnd1)
+#endif

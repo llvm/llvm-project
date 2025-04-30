@@ -1,0 +1,223 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Kashubian Language Locale for Poland
+% Source: csb_PL locale
+% Contact: Michal Ostrowski
+% Email: ostrowski.michal@gmail.com
+% Tel: +48586717262
+% Fax: none
+% Language: csb
+% Territory: PL
+% Revision: 1.0
+% Date: 2006-07-25
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Kashubian locale for Poland"
+source     "csb_PL locale"
+address    ""
+contact    "Michal Ostrowski"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Kashubian"
+territory  "Poland"
+revision   "1.0"
+date       "2006-07-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "pl_PL"
+END LC_CTYPE
+
+LC_COLLATE
+% There is no collation information for Kashubian in CLDR.
+%
+% https://en.wikipedia.org/wiki/Kashubian_language#Kashubian_alphabet
+%
+% A Ą Ã B C D E É Ë F G H I J K L Ł M N Ń O Ò Ó Ô P R S T U Ù W Y Z Ż
+
+copy "iso14651_t1"
+
+collating-symbol <aogonek>
+collating-symbol <atilde>
+collating-symbol <eacute>
+collating-symbol <ediaeresis>
+collating-symbol <lstroke>
+collating-symbol <nacute>
+collating-symbol <ograve>
+collating-symbol <oacute>
+collating-symbol <ocircumflex>
+collating-symbol <ugrave>
+collating-symbol <zdot>
+
+reorder-after <AFTER-A>
+<aogonek>
+<atilde>
+reorder-after <AFTER-E>
+<eacute>
+<ediaeresis>
+reorder-after <AFTER-L>
+<lstroke>
+reorder-after <AFTER-N>
+<nacute>
+reorder-after <AFTER-O>
+<ograve>
+<oacute>
+<ocircumflex>
+reorder-after <AFTER-U>
+<ugrave>
+reorder-after <AFTER-Z>
+<zdot>
+
+<U0105> <aogonek>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ą
+<U0104> <aogonek>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ą
+<U00E3> <atilde>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ã
+<U00C3> <atilde>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ã
+<U00E9> <eacute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % é
+<U00C9> <eacute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % É
+<U00EB> <ediaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ë
+<U00CB> <ediaeresis>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ë
+<U0142> <lstroke>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ł
+<U0141> <lstroke>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ł
+<U0144> <nacute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ń
+<U0143> <nacute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ń
+<U00F2> <ograve>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ò
+<U00D2> <ograve>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ò
+<U00F3> <oacute>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ó
+<U00D3> <oacute>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ó
+<U00F4> <ocircumflex>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ô
+<U00D4> <ocircumflex>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ô
+<U00F9> <ugrave>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ù
+<U00D9> <ugrave>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ù
+<U017C> <zdot>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ż
+<U017B> <zdot>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ż
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1JjTtYy]"
+noexpr  "^[-0nN]"
+yesstr  "jo"
+nostr   "ni<U00E9>"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "pl_PL"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "pl_PL"
+END LC_NUMERIC
+
+LC_TIME
+abday   "nie"; "p<U00F2>n";/
+        "wt<U00F3>"; "str";/
+        "czw"; "pi<U0105>";/
+        "sob"
+
+day    "niedzela";/
+        "p<U00F2>niedz<U00F4><U0142>k";/
+        "wt<U00F3>rk";/
+        "strzoda";/
+        "czwi<U00F4>rtk";/
+        "pi<U0105>tk";/
+        "sob<U00F2>ta"
+ab_alt_mon "st<U00EB>"; "gro";/
+        "str"; "<U0142><U017C><U00EB>";/
+        "m<U00F4>j"; "cze";/
+        "l<U00EB>p"; "z<U00E9>l";/
+        "s<U00E9>w"; "ruj";/
+        "l<U00EB>s"; "g<U00F2>d"
+abmon   "st<U00EB>"; "gro";/
+        "str"; "<U0142><U017C><U00EB>";/
+        "maj"; "cze";/
+        "l<U00EB>p"; "z<U00E9>l";/
+        "s<U00E9>w"; "ruj";/
+        "l<U00EB>s"; "g<U00F2>d"
+alt_mon "st<U00EB>cznik";/
+        "gromicznik";/
+        "str<U00EB>miannik";/
+        "<U0142><U017C><U00EB>kwiat";/
+        "m<U00F4>j";/
+        "czerwi<U0144>c";/
+        "l<U00EB>pi<U0144>c";/
+        "z<U00E9>lnik";/
+        "s<U00E9>wnik";/
+        "rujan";/
+        "l<U00EB>stopadnik";/
+        "g<U00F2>dnik"
+mon     "st<U00EB>cznika";/
+        "gromicznika";/
+        "str<U00EB>miannika";/
+        "<U0142><U017C><U00EB>kwiata";/
+        "maja";/
+        "czerwi<U0144>ca";/
+        "l<U00EB>pi<U0144>ca";/
+        "z<U00E9>lnika";/
+        "s<U00E9>wnika";/
+        "rujana";/
+        "l<U00EB>stopadnika";/
+        "g<U00F2>dnika"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%Y-%m-%d"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "pl_PL"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "pl_PL"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "pl_PL"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "pl_PL"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "P<U00F2>lsk<U00F4>"
+country_ab2 "PL"
+country_ab3 "POL"
+country_num 616
+country_car    "PL"
+% kaszëbsczi jãzëk
+lang_name    "kasz<U00EB>bsczi j<U00E3>z<U00EB>k"
+lang_term    "csb"
+lang_lib    "csb"
+END LC_ADDRESS

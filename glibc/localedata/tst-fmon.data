@@ -1,0 +1,353 @@
+# Test data for test-strfmon, which checks it's implementation in glibc
+# Copyright (C) 1996-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+# Contributed by Jochen Hein <jochen.hein@delphi.central.de>, 1997.
+#
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+# The format of this file is pretty simple: Each line contains a test
+# for strfmon.  Fields are separated by TABs.  Lines that start with a
+# '#' are comments and are ignored.
+#
+# Field Description
+# #1    locale which is to be checked
+# #2    format string which is fed into strfmon
+# #3    double value that is used for formatting
+# #4    the expected result (may contain trailing spaces!)
+#       This field might be enclosed with "" to make it easier to see
+#       the white space
+#
+# First the implementation without any locale-dependent data
+# - no currency symbol is printed, formatting is somewhat standard
+C			%n	1.23		1.23
+C			%n	-1.23		-1.23
+C			%n	0		0.00
+C			%%	0		%
+C			*%n*	1.23		*1.23*
+C			%9n	1.23		     1.23
+C			%9n	-1.23		    -1.23
+C			%#9n	1.23		         1.23
+C			%#9n	-1.23		-        1.23
+C			%=*#9n	1.23		 ********1.23
+C			%=*#9n	-1.23		-********1.23
+C			%-14#5.4n	1.23	"     1.2300   "
+C			%-14#5.4n	-1.23	"-    1.2300   "
+C			%-14#5.4n	123.45	"   123.4500   "
+C			%-14#5.4n	123456	" 123456.0000  "
+#
+# check both the german locale and strfmon with that data
+#
+de_DE.ISO-8859-1	%n	1.23		1,23 EUR
+de_DE.ISO-8859-1	%n	-1.23		-1,23 EUR
+de_DE.ISO-8859-1	%n	1234.56		1.234,56 EUR
+de_DE.ISO-8859-1	%12n	123.45		  123,45 EUR
+de_DE.ISO-8859-1	%12n	-123.45		 -123,45 EUR
+de_DE.ISO-8859-1	%12n	3456.781	3.456,78 EUR
+de_DE.ISO-8859-1	%^n	1234.56		1234,56 EUR
+de_DE.ISO-8859-1	%+n	1234.56		1.234,56 EUR
+de_DE.ISO-8859-1	%+n	-1234.56	-1.234,56 EUR
+de_DE.ISO-8859-1	%(n	1234.56		1.234,56 EUR
+de_DE.ISO-8859-1	%(n	-1234.56	(1.234,56 EUR)
+de_DE.ISO-8859-1	%^n	1234.56		1234,56 EUR
+de_DE.ISO-8859-1	%i	1.23		1,23 EUR
+de_DE.ISO-8859-1	%i	-1.23		-1,23 EUR
+de_DE.ISO-8859-1	%i	1234.56		1.234,56 EUR
+de_DE.ISO-8859-1	%^i	1234.56		1234,56 EUR
+de_DE.ISO-8859-1	%+i	1234.56		1.234,56 EUR
+de_DE.ISO-8859-1	%+i	-1234.56	-1.234,56 EUR
+de_DE.ISO-8859-1	%(i	1234.56		1.234,56 EUR
+de_DE.ISO-8859-1	%(i	-1234.56	(1.234,56 EUR)
+de_DE.ISO-8859-1	%^i	1234.56		1234,56 EUR
+de_DE.ISO-8859-1	%#5n	123.45		    123,45 EUR
+de_DE.ISO-8859-1	%#5n	-123.45		-   123,45 EUR
+de_DE.ISO-8859-1	%#5n	3456.781	  3.456,78 EUR
+de_DE.ISO-8859-1	%=*#5n	123.45		 ***123,45 EUR
+de_DE.ISO-8859-1	%=*#5n	-123.45		-***123,45 EUR
+de_DE.ISO-8859-1	%=*#5n	3456.781	 *3.456,78 EUR
+de_DE.ISO-8859-1	%=0#5n	123.45		 000123,45 EUR
+de_DE.ISO-8859-1	%=0#5n	-123.45		-000123,45 EUR
+de_DE.ISO-8859-1	%=0#5n	3456.781	 03.456,78 EUR
+de_DE.ISO-8859-1	%^#5n	123.45		   123,45 EUR
+de_DE.ISO-8859-1	%^#5n	-123.45		-  123,45 EUR
+de_DE.ISO-8859-1	%^#5n	3456.781	  3456,78 EUR
+de_DE.ISO-8859-1	%^#5.0n	123.45		   123 EUR
+de_DE.ISO-8859-1	%^#5.0n	-123.45		-  123 EUR
+de_DE.ISO-8859-1	%^#5.0n	3456.781	  3457 EUR
+de_DE.ISO-8859-1	%^#5.4n	123.45		   123,4500 EUR
+de_DE.ISO-8859-1	%^#5.4n	-123.45		-  123,4500 EUR
+de_DE.ISO-8859-1	%^#5.4n	3456.781	  3456,7810 EUR
+de_DE.ISO-8859-1	%(#5n	123.45		    123,45 EUR
+de_DE.ISO-8859-1	%(#5n	-123.45		(   123,45 EUR)
+de_DE.ISO-8859-1	%(#5n	3456.781	  3.456,78 EUR
+de_DE.ISO-8859-1	%!(#5n	123.45		    123,45
+de_DE.ISO-8859-1	%!(#5n	-123.45		(   123,45)
+de_DE.ISO-8859-1	%!(#5n	3456.781	  3.456,78
+#
+# check both the en_US locale and strfmon with that data
+# a lot of this checks are created from a strfmon(3) man-page.
+#
+en_US.ISO-8859-1	%n	123.45		$123.45
+en_US.ISO-8859-1	%n	-123.45		-$123.45
+en_US.ISO-8859-1	%n	3456.781	$3,456.78
+en_US.ISO-8859-1	%i	123.45		USD 123.45
+en_US.ISO-8859-1	%i	-123.45		-USD 123.45
+en_US.ISO-8859-1	%i	3456.781	USD 3,456.78
+en_US.ISO-8859-1	%11n	123.45		    $123.45
+en_US.ISO-8859-1	%11n	-123.45		   -$123.45
+en_US.ISO-8859-1	%11n	3456.781	  $3,456.78
+en_US.ISO-8859-1	%=*#5n	123.45		 $***123.45
+en_US.ISO-8859-1	%=*#5n	-123.45		-$***123.45
+en_US.ISO-8859-1	%=*#5n	3456.781	 $*3,456.78
+en_US.ISO-8859-1	%=0#5n	123.45		 $000123.45
+en_US.ISO-8859-1	%=0#5n	-123.45		-$000123.45
+en_US.ISO-8859-1	%=0#5n	3456.781	 $03,456.78
+en_US.ISO-8859-1	%^#5n	123.45		 $  123.45
+en_US.ISO-8859-1	%^#5n	-123.45		-$  123.45
+en_US.ISO-8859-1	%^#5n	3456.781	 $ 3456.78
+en_US.ISO-8859-1	%^#5.0n	123.45		 $  123
+en_US.ISO-8859-1	%^#5.0n	-123.45		-$  123
+en_US.ISO-8859-1	%^#5.0n	3456.781	 $ 3457
+en_US.ISO-8859-1	%^#5.4n	123.45		 $  123.4500
+en_US.ISO-8859-1	%^#5.4n	-123.45		-$  123.4500
+en_US.ISO-8859-1	%^#5.4n	3456.781	 $ 3456.7810
+en_US.ISO-8859-1	%(#5n	123.45		 $   123.45
+en_US.ISO-8859-1	%(#5n	-123.45		($   123.45)
+en_US.ISO-8859-1	%(#5n	3456.781	 $ 3,456.78
+en_US.ISO-8859-1	%!(#5n	123.45		    123.45
+en_US.ISO-8859-1	%!(#5n	-123.45		(   123.45)
+en_US.ISO-8859-1	%!(#5n	3456.781	  3,456.78
+en_US.ISO-8859-1	%#5n	123.45		 $   123.45
+en_US.ISO-8859-1	%#5n	-123.45		-$   123.45
+en_US.ISO-8859-1	%#5n	3456.781	 $ 3,456.78
+#
+# check all cs_precedes/sign_posn/sep_by_space combinations using
+# special test locales.  The six characters after the "_" indicate
+# these three values for positive and then negative quantities.
+#
+tstfmon_n01y12		%n	123.45		123.45 $
+tstfmon_n01y12		%n	-123.45		- $123.45
+tstfmon_n01y12		%11n	123.45		   123.45 $
+tstfmon_n01y12		%11n	-123.45		  - $123.45
+tstfmon_n01y12		%^=*#5n	123.45		   **123.45 $
+tstfmon_n01y12		%^=*#5n	-123.45		- $**123.45
+#
+tstfmon_n02n40		%n	123.45		123.45$
+tstfmon_n02n40		%n	-123.45		123.45$-
+tstfmon_n02n40		%11n	123.45		    123.45$
+tstfmon_n02n40		%11n	-123.45		   123.45$-
+tstfmon_n02n40		%^=*#5n	123.45		**123.45$
+tstfmon_n02n40		%^=*#5n	-123.45		**123.45$-
+#
+tstfmon_n10y31		%n	123.45		+123.45$
+tstfmon_n10y31		%n	-123.45		-$ 123.45
+tstfmon_n10y31		%11n	123.45		   +123.45$
+tstfmon_n10y31		%11n	-123.45		  -$ 123.45
+tstfmon_n10y31		%^=*#5n	123.45		  +**123.45$
+tstfmon_n10y31		%^=*#5n	-123.45		-$ **123.45
+#
+tstfmon_n11y41		%n	123.45		+123.45 $
+tstfmon_n11y41		%n	-123.45		$- 123.45
+tstfmon_n11y41		%11n	123.45		  +123.45 $
+tstfmon_n11y41		%11n	-123.45		  $- 123.45
+tstfmon_n11y41		%^=*#5n	123.45		  +**123.45 $
+tstfmon_n11y41		%^=*#5n	-123.45		$- **123.45
+#
+tstfmon_n12y11		%n	123.45		+123.45$
+tstfmon_n12y11		%n	-123.45		-$ 123.45
+tstfmon_n12y11		%11n	123.45		   +123.45$
+tstfmon_n12y11		%11n	-123.45		  -$ 123.45
+tstfmon_n12y11		%^=*#5n	123.45		  +**123.45$
+tstfmon_n12y11		%^=*#5n	-123.45		-$ **123.45
+#
+tstfmon_n20n32		%n	123.45		123.45$+
+tstfmon_n20n32		%n	-123.45		123.45- $
+tstfmon_n20n32		%11n	123.45		   123.45$+
+tstfmon_n20n32		%11n	-123.45		  123.45- $
+tstfmon_n20n32		%^=*#5n	123.45		**123.45$+
+tstfmon_n20n32		%^=*#5n	-123.45		**123.45- $
+#
+tstfmon_n30y20		%n	123.45		123.45+$
+tstfmon_n30y20		%n	-123.45		$123.45-
+tstfmon_n30y20		%11n	123.45		   123.45+$
+tstfmon_n30y20		%11n	-123.45		   $123.45-
+tstfmon_n30y20		%^=*#5n	123.45		 **123.45+$
+tstfmon_n30y20		%^=*#5n	-123.45		$**123.45-
+#
+tstfmon_n41n00		%n	123.45		123.45 $+
+tstfmon_n41n00		%n	-123.45		(123.45$)
+tstfmon_n41n00		%11n	123.45		  123.45 $+
+tstfmon_n41n00		%11n	-123.45		  (123.45$)
+tstfmon_n41n00		%^=*#5n	123.45		 **123.45 $+
+tstfmon_n41n00		%^=*#5n	-123.45		(**123.45$)
+#
+tstfmon_y01y10		%n	123.45		$ 123.45
+tstfmon_y01y10		%n	-123.45		-$123.45
+tstfmon_y01y10		%11n	123.45		   $ 123.45
+tstfmon_y01y10		%11n	-123.45		   -$123.45
+tstfmon_y01y10		%^=*#5n	123.45		$ **123.45
+tstfmon_y01y10		%^=*#5n	-123.45		-$**123.45
+#
+tstfmon_y02n22		%n	123.45		$123.45
+tstfmon_y02n22		%n	-123.45		123.45$ O/D
+tstfmon_y02n22		%12n	123.45		     $123.45
+tstfmon_y02n22		%12n	-123.45		 123.45$ O/D
+tstfmon_y02n22		%^=*#5n	123.45		$**123.45
+tstfmon_y02n22		%^=*#5n	-123.45		 **123.45$ O/D
+#
+tstfmon_y22n42		%n	123.45		$123.45+
+tstfmon_y22n42		%n	-123.45		123.45$ -
+tstfmon_y22n42		%11n	123.45		   $123.45+
+tstfmon_y22n42		%11n	-123.45		  123.45$ -
+tstfmon_y22n42		%^=*#5n	123.45		$**123.45+
+tstfmon_y22n42		%^=*#5n	-123.45		 **123.45$ -
+#
+tstfmon_y30y21		%n	123.45		+$123.45
+tstfmon_y30y21		%n	-123.45		$ 123.45-
+tstfmon_y30y21		%11n	123.45		   +$123.45
+tstfmon_y30y21		%11n	-123.45		  $ 123.45-
+tstfmon_y30y21		%^=*#5n	123.45		+$**123.45
+tstfmon_y30y21		%^=*#5n	-123.45		$ **123.45-
+#
+tstfmon_y32n31		%n	123.45		+ $123.45
+tstfmon_y32n31		%n	-123.45		123.45 -$
+tstfmon_y32n31		%11n	123.45		  + $123.45
+tstfmon_y32n31		%11n	-123.45		  123.45 -$
+tstfmon_y32n31		%^=*#5n	123.45		+ $**123.45
+tstfmon_y32n31		%^=*#5n	-123.45		   **123.45 -$
+#
+tstfmon_y40y00		%n	123.45		$+123.45
+tstfmon_y40y00		%n	-123.45		($123.45)
+tstfmon_y40y00		%11n	123.45		   $+123.45
+tstfmon_y40y00		%11n	-123.45		  ($123.45)
+tstfmon_y40y00		%^=*#5n	123.45		$+**123.45
+tstfmon_y40y00		%^=*#5n	-123.45		($**123.45)
+#
+tstfmon_y42n21		%n	123.45		$ +123.45
+tstfmon_y42n21		%n	-123.45		123.45 $-
+tstfmon_y42n21		%11n	123.45		  $ +123.45
+tstfmon_y42n21		%11n	-123.45		  123.45 $-
+tstfmon_y42n21		%^=*#5n	123.45		$ +**123.45
+tstfmon_y42n21		%^=*#5n	-123.45		   **123.45 $-
+#
+# check all int_cs_precedes/int_sign_posn/int_sep_by_space
+# combinations using special test locales.  The six characters after
+# the "_" indicate these three values for positive and then negative
+# quantities.
+#
+tstfmon_n01y12		%i	123.45		"123.45 USC"
+tstfmon_n01y12		%i	-123.45		"- USC123.45"
+tstfmon_n01y12		%13i	123.45		"   123.45 USC"
+tstfmon_n01y12		%13i	-123.45		"  - USC123.45"
+tstfmon_n01y12		%^=*#5i	123.45		"     **123.45 USC"
+tstfmon_n01y12		%^=*#5i	-123.45		"- USC**123.45"
+#
+tstfmon_n02n40		%i	123.45		"123.45USC"
+tstfmon_n02n40		%i	-123.45		"123.45USC-"
+tstfmon_n02n40		%13i	123.45		"    123.45USC"
+tstfmon_n02n40		%13i	-123.45		"   123.45USC-"
+tstfmon_n02n40		%^=*#5i	123.45		"**123.45USC"
+tstfmon_n02n40		%^=*#5i	-123.45		"**123.45USC-"
+#
+tstfmon_n10y31		%i	123.45		"+123.45USC"
+tstfmon_n10y31		%i	-123.45		"-USC 123.45"
+tstfmon_n10y31		%13i	123.45		"   +123.45USC"
+tstfmon_n10y31		%13i	-123.45		"  -USC 123.45"
+tstfmon_n10y31		%^=*#5i	123.45		"    +**123.45USC"
+tstfmon_n10y31		%^=*#5i	-123.45		"-USC **123.45"
+#
+tstfmon_n11y41		%i	123.45		"+123.45 USC"
+tstfmon_n11y41		%i	-123.45		"USC- 123.45"
+tstfmon_n11y41		%13i	123.45		"  +123.45 USC"
+tstfmon_n11y41		%13i	-123.45		"  USC- 123.45"
+tstfmon_n11y41		%^=*#5i	123.45		"    +**123.45 USC"
+tstfmon_n11y41		%^=*#5i	-123.45		"USC- **123.45"
+#
+tstfmon_n12y11		%i	123.45		"+123.45USC"
+tstfmon_n12y11		%i	-123.45		"-USC 123.45"
+tstfmon_n12y11		%13i	123.45		"   +123.45USC"
+tstfmon_n12y11		%13i	-123.45		"  -USC 123.45"
+tstfmon_n12y11		%^=*#5i	123.45		"    +**123.45USC"
+tstfmon_n12y11		%^=*#5i	-123.45		"-USC **123.45"
+#
+tstfmon_n20n32		%i	123.45		"123.45USC+"
+tstfmon_n20n32		%i	-123.45		"123.45- USC"
+tstfmon_n20n32		%13i	123.45		"   123.45USC+"
+tstfmon_n20n32		%13i	-123.45		"  123.45- USC"
+tstfmon_n20n32		%^=*#5i	123.45		"**123.45USC+"
+tstfmon_n20n32		%^=*#5i	-123.45		"**123.45- USC"
+#
+tstfmon_n30y20		%i	123.45		"123.45+USC"
+tstfmon_n30y20		%i	-123.45		"USC123.45-"
+tstfmon_n30y20		%13i	123.45		"   123.45+USC"
+tstfmon_n30y20		%13i	-123.45		"   USC123.45-"
+tstfmon_n30y20		%^=*#5i	123.45		"   **123.45+USC"
+tstfmon_n30y20		%^=*#5i	-123.45		"USC**123.45-"
+#
+tstfmon_n41n00		%i	123.45		"123.45 USC+"
+tstfmon_n41n00		%i	-123.45		"(123.45USC)"
+tstfmon_n41n00		%13i	123.45		"  123.45 USC+"
+tstfmon_n41n00		%13i	-123.45		"  (123.45USC)"
+tstfmon_n41n00		%^=*#5i	123.45		" **123.45 USC+"
+tstfmon_n41n00		%^=*#5i	-123.45		"(**123.45USC)"
+#
+tstfmon_y01y10		%i	123.45		"USC 123.45"
+tstfmon_y01y10		%i	-123.45		"-USC123.45"
+tstfmon_y01y10		%13i	123.45		"   USC 123.45"
+tstfmon_y01y10		%13i	-123.45		"   -USC123.45"
+tstfmon_y01y10		%^=*#5i	123.45		"USC **123.45"
+tstfmon_y01y10		%^=*#5i	-123.45		"-USC**123.45"
+#
+tstfmon_y02n22		%i	123.45		"USC123.45"
+tstfmon_y02n22		%i	-123.45		"123.45USC O/D"
+tstfmon_y02n22		%12i	123.45		"   USC123.45"
+tstfmon_y02n22		%12i	-123.45		"123.45USC O/D"
+tstfmon_y02n22		%^=*#5i	123.45		"USC**123.45"
+tstfmon_y02n22		%^=*#5i	-123.45		"   **123.45USC O/D"
+#
+tstfmon_y22n42		%i	123.45		"USC123.45+"
+tstfmon_y22n42		%i	-123.45		"123.45USC -"
+tstfmon_y22n42		%13i	123.45		"   USC123.45+"
+tstfmon_y22n42		%13i	-123.45		"  123.45USC -"
+tstfmon_y22n42		%^=*#5i	123.45		"USC**123.45+"
+tstfmon_y22n42		%^=*#5i	-123.45		"   **123.45USC -"
+#
+tstfmon_y30y21		%i	123.45		"+USC123.45"
+tstfmon_y30y21		%i	-123.45		"USC 123.45-"
+tstfmon_y30y21		%13i	123.45		"   +USC123.45"
+tstfmon_y30y21		%13i	-123.45		"  USC 123.45-"
+tstfmon_y30y21		%^=*#5i	123.45		"+USC**123.45"
+tstfmon_y30y21		%^=*#5i	-123.45		"USC **123.45-"
+#
+tstfmon_y32n31		%i	123.45		"+ USC123.45"
+tstfmon_y32n31		%i	-123.45		"123.45 -USC"
+tstfmon_y32n31		%13i	123.45		"  + USC123.45"
+tstfmon_y32n31		%13i	-123.45		"  123.45 -USC"
+tstfmon_y32n31		%^=*#5i	123.45		"+ USC**123.45"
+tstfmon_y32n31		%^=*#5i	-123.45		"     **123.45 -USC"
+#
+tstfmon_y40y00		%i	123.45		"USC+123.45"
+tstfmon_y40y00		%i	-123.45		"(USC123.45)"
+tstfmon_y40y00		%13i	123.45		"   USC+123.45"
+tstfmon_y40y00		%13i	-123.45		"  (USC123.45)"
+tstfmon_y40y00		%^=*#5i	123.45		"USC+**123.45"
+tstfmon_y40y00		%^=*#5i	-123.45		"(USC**123.45)"
+#
+tstfmon_y42n21		%i	123.45		"USC +123.45"
+tstfmon_y42n21		%i	-123.45		"123.45 USC-"
+tstfmon_y42n21		%13i	123.45		"  USC +123.45"
+tstfmon_y42n21		%13i	-123.45		"  123.45 USC-"
+tstfmon_y42n21		%^=*#5i	123.45		"USC +**123.45"
+tstfmon_y42n21		%^=*#5i	-123.45		"     **123.45 USC-"

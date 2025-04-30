@@ -1,0 +1,184 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/powerpc/powerpc64le.
+
+OLD_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $libc_cv_cc_submachine"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if the target machine is at least POWER8" >&5
+$as_echo_n "checking if the target machine is at least POWER8... " >&6; }
+if ${libc_cv_target_power8_ok+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifndef _ARCH_PWR8
+#error invalid target architecture
+#endif
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_target_power8_ok=yes
+else
+  libc_cv_target_power8_ok=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_target_power8_ok" >&5
+$as_echo "$libc_cv_target_power8_ok" >&6; }
+if test "$libc_cv_target_power8_ok" != "yes"; then :
+  critic_missing="$critic_missing POWER8 or newer is required on powerpc64le."
+fi
+CFLAGS="$OLD_CFLAGS"
+
+OLD_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -mno-gnu-attribute"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if the compiler supports -mno-gnu-attribute" >&5
+$as_echo_n "checking if the compiler supports -mno-gnu-attribute... " >&6; }
+if ${libc_cv_no_gnu_attr_ok+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_no_gnu_attr_ok=yes
+else
+  libc_cv_no_gnu_attr_ok=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_no_gnu_attr_ok" >&5
+$as_echo "$libc_cv_no_gnu_attr_ok" >&6; }
+if test "$libc_cv_no_gnu_attr_ok" != "yes"; then :
+  critic_missing="$critic_missing A compiler with -mno-gnu-attribute is required on powerpc64le."
+fi
+CFLAGS="$OLD_CFLAGS"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC compiles signbit with 128-bit floating point type" >&5
+$as_echo_n "checking if $CC compiles signbit with 128-bit floating point type... " >&6; }
+if ${libc_cv_compiler_powerpc64le_ice+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -mabi=ieeelongdouble -Wno-psabi"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int sbr (long double a) { return __builtin_signbit (a); }
+int sbm (long double *a) { return __builtin_signbit (*a); }
+int sbo (long double *a) { return __builtin_signbit (a[4]); }
+int sbi (long double *a, unsigned long n) { return __builtin_signbit (a[n]); }
+void sbs (int *p, long double a) { *p = __builtin_signbit (a); }
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_compiler_powerpc64le_ice=yes
+else
+  libc_cv_compiler_powerpc64le_ice=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+CFLAGS="$save_CFLAGS"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_compiler_powerpc64le_ice" >&5
+$as_echo "$libc_cv_compiler_powerpc64le_ice" >&6; }
+if test "$libc_cv_compiler_powerpc64le_ice" != "yes"; then :
+  critic_missing="$critic_missing __builtin_signbit is broken.  GCC 7.4 or newer is required to resolve (PR83862)."
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC compiles with -mabi=ieeelongdouble and -mlong-double-128" >&5
+$as_echo_n "checking if $CC compiles with -mabi=ieeelongdouble and -mlong-double-128... " >&6; }
+if ${libc_cv_compiler_powerpc64le_ldbl128_mabi+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -mabi=ieeelongdouble -mlong-double-128"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+long double x;
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  libc_cv_compiler_powerpc64le_ldbl128_mabi=yes
+else
+  libc_cv_compiler_powerpc64le_ldbl128_mabi=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+CFLAGS="$save_CFLAGS"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_compiler_powerpc64le_ldbl128_mabi" >&5
+$as_echo "$libc_cv_compiler_powerpc64le_ldbl128_mabi" >&6; }
+if test "$libc_cv_compiler_powerpc64le_ldbl128_mabi" == "no"; then :
+  critic_missing="$critic_missing The compiler must support -mabi=ieeelongdouble and -mlong-double-128 simultaneously."
+fi
+
+for ac_prog in $OBJCOPY
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_OBJCOPY+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$OBJCOPY"; then
+  ac_cv_prog_OBJCOPY="$OBJCOPY" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_OBJCOPY="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+OBJCOPY=$ac_cv_prog_OBJCOPY
+if test -n "$OBJCOPY"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OBJCOPY" >&5
+$as_echo "$OBJCOPY" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$OBJCOPY" && break
+done
+
+if test -z "$OBJCOPY"; then
+  ac_verc_fail=yes
+else
+  # Found it, now check the version.
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking version of $OBJCOPY" >&5
+$as_echo_n "checking version of $OBJCOPY... " >&6; }
+  ac_prog_version=`$OBJCOPY --version 2>&1 | sed -n 's/^.*GNU objcopy.* \([0-9]*\.[0-9.]*\).*$/\1/p'`
+  case $ac_prog_version in
+    '') ac_prog_version="v. ?.??, bad"; ac_verc_fail=yes;;
+    2.1[0-9][0-9]*|2.2[6-9]*|2.[3-9][0-9]*|[3-9].*|[1-9][0-9]*)
+       ac_prog_version="$ac_prog_version, ok"; ac_verc_fail=no;;
+    *) ac_prog_version="$ac_prog_version, bad"; ac_verc_fail=yes;;
+
+  esac
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_prog_version" >&5
+$as_echo "$ac_prog_version" >&6; }
+fi
+if test $ac_verc_fail = yes; then
+  AS=: critic_missing="$critic_missing objcopy >= 2.26 is required on powerpc64le"
+fi
+
+
+test -n "$critic_missing" && as_fn_error $? "*** $critic_missing" "$LINENO" 5

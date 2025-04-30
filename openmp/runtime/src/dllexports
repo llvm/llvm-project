@@ -189,6 +189,10 @@
     __kmp_wait_64
     __kmp_release_64
 
+    # NextSilicon helper functions for OpenMP microtask
+    __kmp_ns_get_tid
+    __kmp_ns_get_gtid
+
 #    VT_getthid                              1
 #    vtgthid                                 2
 

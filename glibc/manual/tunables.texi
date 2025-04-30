@@ -1,0 +1,573 @@
+@node Tunables
+@c @node Tunables, , Internal Probes, Top
+@c %MENU% Tunable switches to alter libc internal behavior
+@chapter Tunables
+@cindex tunables
+
+@dfn{Tunables} are a feature in @theglibc{} that allows application authors and
+distribution maintainers to alter the runtime library behavior to match
+their workload. These are implemented as a set of switches that may be
+modified in different ways. The current default method to do this is via
+the @env{GLIBC_TUNABLES} environment variable by setting it to a string
+of colon-separated @var{name}=@var{value} pairs.  For example, the following
+example enables @code{malloc} checking and sets the @code{malloc}
+trim threshold to 128
+bytes:
+
+@example
+GLIBC_TUNABLES=glibc.malloc.trim_threshold=128:glibc.malloc.check=3
+export GLIBC_TUNABLES
+@end example
+
+Tunables are not part of the @glibcadj{} stable ABI, and they are
+subject to change or removal across releases.  Additionally, the method to
+modify tunable values may change between releases and across distributions.
+It is possible to implement multiple `frontends' for the tunables allowing
+distributions to choose their preferred method at build time.
+
+Finally, the set of tunables available may vary between distributions as
+the tunables feature allows distributions to add their own tunables under
+their own namespace.
+
+Passing @option{--list-tunables} to the dynamic loader to print all
+tunables with minimum and maximum values:
+
+@example
+$ /lib64/ld-linux-x86-64.so.2 --list-tunables
+glibc.rtld.nns: 0x4 (min: 0x1, max: 0x10)
+glibc.elision.skip_lock_after_retries: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.trim_threshold: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.perturb: 0 (min: 0, max: 255)
+glibc.cpu.x86_shared_cache_size: 0x100000 (min: 0x0, max: 0xffffffffffffffff)
+glibc.mem.tagging: 0 (min: 0, max: 255)
+glibc.elision.tries: 3 (min: -2147483648, max: 2147483647)
+glibc.elision.enable: 0 (min: 0, max: 1)
+glibc.cpu.x86_rep_movsb_threshold: 0x1000 (min: 0x100, max: 0xffffffffffffffff)
+glibc.malloc.mxfast: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.elision.skip_lock_busy: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.top_pad: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_rep_stosb_threshold: 0x800 (min: 0x1, max: 0xffffffffffffffff)
+glibc.cpu.x86_non_temporal_threshold: 0xc0000 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_shstk:
+glibc.cpu.hwcap_mask: 0x6 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.mmap_max: 0 (min: -2147483648, max: 2147483647)
+glibc.elision.skip_trylock_internal_abort: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.tcache_unsorted_limit: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_ibt:
+glibc.cpu.hwcaps:
+glibc.elision.skip_lock_internal_abort: 3 (min: -2147483648, max: 2147483647)
+glibc.malloc.arena_max: 0x0 (min: 0x1, max: 0xffffffffffffffff)
+glibc.malloc.mmap_threshold: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.cpu.x86_data_cache_size: 0x8000 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.tcache_count: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.arena_test: 0x0 (min: 0x1, max: 0xffffffffffffffff)
+glibc.pthread.mutex_spin_count: 100 (min: 0, max: 32767)
+glibc.rtld.optional_static_tls: 0x200 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.tcache_max: 0x0 (min: 0x0, max: 0xffffffffffffffff)
+glibc.malloc.check: 0 (min: 0, max: 3)
+@end example
+
+@menu
+* Tunable names::  The structure of a tunable name
+* Memory Allocation Tunables::  Tunables in the memory allocation subsystem
+* Dynamic Linking Tunables:: Tunables in the dynamic linking subsystem
+* Elision Tunables::  Tunables in elision subsystem
+* POSIX Thread Tunables:: Tunables in the POSIX thread subsystem
+* Hardware Capability Tunables::  Tunables that modify the hardware
+				  capabilities seen by @theglibc{}
+* Memory Related Tunables::  Tunables that control the use of memory by
+			     @theglibc{}.
+@end menu
+
+@node Tunable names
+@section Tunable names
+@cindex Tunable names
+@cindex Tunable namespaces
+
+A tunable name is split into three components, a top namespace, a tunable
+namespace and the tunable name. The top namespace for tunables implemented in
+@theglibc{} is @code{glibc}. Distributions that choose to add custom tunables
+in their maintained versions of @theglibc{} may choose to do so under their own
+top namespace.
+
+The tunable namespace is a logical grouping of tunables in a single
+module. This currently holds no special significance, although that may
+change in the future.
+
+The tunable name is the actual name of the tunable. It is possible that
+different tunable namespaces may have tunables within them that have the
+same name, likewise for top namespaces. Hence, we only support
+identification of tunables by their full name, i.e. with the top
+namespace, tunable namespace and tunable name, separated by periods.
+
+@node Memory Allocation Tunables
+@section Memory Allocation Tunables
+@cindex memory allocation tunables
+@cindex malloc tunables
+@cindex tunables, malloc
+
+@deftp {Tunable namespace} glibc.malloc
+Memory allocation behavior can be modified by setting any of the
+following tunables in the @code{malloc} namespace:
+@end deftp
+
+@deftp Tunable glibc.malloc.check
+This tunable supersedes the @env{MALLOC_CHECK_} environment variable and is
+identical in features. This tunable has no effect by default and needs the
+debug library @file{libc_malloc_debug} to be preloaded using the
+@code{LD_PRELOAD} environment variable.
+
+Setting this tunable to a non-zero value less than 4 enables a special (less
+efficient) memory allocator for the @code{malloc} family of functions that is
+designed to be tolerant against simple errors such as double calls of
+free with the same argument, or overruns of a single byte (off-by-one
+bugs). Not all such errors can be protected against, however, and memory
+leaks can result.  Any detected heap corruption results in immediate
+termination of the process.
+
+Like @env{MALLOC_CHECK_}, @code{glibc.malloc.check} has a problem in that it
+diverges from normal program behavior by writing to @code{stderr}, which could
+by exploited in SUID and SGID binaries.  Therefore, @code{glibc.malloc.check}
+is disabled by default for SUID and SGID binaries.  This can be enabled again
+by the system administrator by adding a file @file{/etc/suid-debug}; the
+content of the file could be anything or even empty.
+@end deftp
+
+@deftp Tunable glibc.malloc.top_pad
+This tunable supersedes the @env{MALLOC_TOP_PAD_} environment variable and is
+identical in features.
+
+This tunable determines the amount of extra memory in bytes to obtain from the
+system when any of the arenas need to be extended.  It also specifies the
+number of bytes to retain when shrinking any of the arenas.  This provides the
+necessary hysteresis in heap size such that excessive amounts of system calls
+can be avoided.
+
+The default value of this tunable is @samp{0}.
+@end deftp
+
+@deftp Tunable glibc.malloc.perturb
+This tunable supersedes the @env{MALLOC_PERTURB_} environment variable and is
+identical in features.
+
+If set to a non-zero value, memory blocks are initialized with values depending
+on some low order bits of this tunable when they are allocated (except when
+allocated by @code{calloc}) and freed.  This can be used to debug the use of
+uninitialized or freed heap memory. Note that this option does not guarantee
+that the freed block will have any specific values. It only guarantees that the
+content the block had before it was freed will be overwritten.
+
+The default value of this tunable is @samp{0}.
+@end deftp
+
+@deftp Tunable glibc.malloc.mmap_threshold
+This tunable supersedes the @env{MALLOC_MMAP_THRESHOLD_} environment variable
+and is identical in features.
+
+When this tunable is set, all chunks larger than this value in bytes are
+allocated outside the normal heap, using the @code{mmap} system call. This way
+it is guaranteed that the memory for these chunks can be returned to the system
+on @code{free}. Note that requests smaller than this threshold might still be
+allocated via @code{mmap}.
+
+If this tunable is not set, the default value is set to @samp{131072} bytes and
+the threshold is adjusted dynamically to suit the allocation patterns of the
+program.  If the tunable is set, the dynamic adjustment is disabled and the
+value is set as static.
+@end deftp
+
+@deftp Tunable glibc.malloc.trim_threshold
+This tunable supersedes the @env{MALLOC_TRIM_THRESHOLD_} environment variable
+and is identical in features.
+
+The value of this tunable is the minimum size (in bytes) of the top-most,
+releasable chunk in an arena that will trigger a system call in order to return
+memory to the system from that arena.
+
+If this tunable is not set, the default value is set as 128 KB and the
+threshold is adjusted dynamically to suit the allocation patterns of the
+program.  If the tunable is set, the dynamic adjustment is disabled and the
+value is set as static.
+@end deftp
+
+@deftp Tunable glibc.malloc.mmap_max
+This tunable supersedes the @env{MALLOC_MMAP_MAX_} environment variable and is
+identical in features.
+
+The value of this tunable is maximum number of chunks to allocate with
+@code{mmap}.  Setting this to zero disables all use of @code{mmap}.
+
+The default value of this tunable is @samp{65536}.
+@end deftp
+
+@deftp Tunable glibc.malloc.arena_test
+This tunable supersedes the @env{MALLOC_ARENA_TEST} environment variable and is
+identical in features.
+
+The @code{glibc.malloc.arena_test} tunable specifies the number of arenas that
+can be created before the test on the limit to the number of arenas is
+conducted.  The value is ignored if @code{glibc.malloc.arena_max} is set.
+
+The default value of this tunable is 2 for 32-bit systems and 8 for 64-bit
+systems.
+@end deftp
+
+@deftp Tunable glibc.malloc.arena_max
+This tunable supersedes the @env{MALLOC_ARENA_MAX} environment variable and is
+identical in features.
+
+This tunable sets the number of arenas to use in a process regardless of the
+number of cores in the system.
+
+The default value of this tunable is @code{0}, meaning that the limit on the
+number of arenas is determined by the number of CPU cores online.  For 32-bit
+systems the limit is twice the number of cores online and on 64-bit systems, it
+is 8 times the number of cores online.
+@end deftp
+
+@deftp Tunable glibc.malloc.tcache_max
+The maximum size of a request (in bytes) which may be met via the
+per-thread cache.  The default (and maximum) value is 1032 bytes on
+64-bit systems and 516 bytes on 32-bit systems.
+@end deftp
+
+@deftp Tunable glibc.malloc.tcache_count
+The maximum number of chunks of each size to cache. The default is 7.
+The upper limit is 65535.  If set to zero, the per-thread cache is effectively
+disabled.
+
+The approximate maximum overhead of the per-thread cache is thus equal
+to the number of bins times the chunk count in each bin times the size
+of each chunk.  With defaults, the approximate maximum overhead of the
+per-thread cache is approximately 236 KB on 64-bit systems and 118 KB
+on 32-bit systems.
+@end deftp
+
+@deftp Tunable glibc.malloc.tcache_unsorted_limit
+When the user requests memory and the request cannot be met via the
+per-thread cache, the arenas are used to meet the request.  At this
+time, additional chunks will be moved from existing arena lists to
+pre-fill the corresponding cache.  While copies from the fastbins,
+smallbins, and regular bins are bounded and predictable due to the bin
+sizes, copies from the unsorted bin are not bounded, and incur
+additional time penalties as they need to be sorted as they're
+scanned.  To make scanning the unsorted list more predictable and
+bounded, the user may set this tunable to limit the number of chunks
+that are scanned from the unsorted list while searching for chunks to
+pre-fill the per-thread cache with.  The default, or when set to zero,
+is no limit.
+@end deftp
+
+@deftp Tunable glibc.malloc.mxfast
+One of the optimizations @code{malloc} uses is to maintain a series of ``fast
+bins'' that hold chunks up to a specific size.  The default and
+maximum size which may be held this way is 80 bytes on 32-bit systems
+or 160 bytes on 64-bit systems.  Applications which value size over
+speed may choose to reduce the size of requests which are serviced
+from fast bins with this tunable.  Note that the value specified
+includes @code{malloc}'s internal overhead, which is normally the size of one
+pointer, so add 4 on 32-bit systems or 8 on 64-bit systems to the size
+passed to @code{malloc} for the largest bin size to enable.
+@end deftp
+
+@node Dynamic Linking Tunables
+@section Dynamic Linking Tunables
+@cindex dynamic linking tunables
+@cindex rtld tunables
+
+@deftp {Tunable namespace} glibc.rtld
+Dynamic linker behavior can be modified by setting the
+following tunables in the @code{rtld} namespace:
+@end deftp
+
+@deftp Tunable glibc.rtld.nns
+Sets the number of supported dynamic link namespaces (see @code{dlmopen}).
+Currently this limit can be set between 1 and 16 inclusive, the default is 4.
+Each link namespace consumes some memory in all thread, and thus raising the
+limit will increase the amount of memory each thread uses. Raising the limit
+is useful when your application uses more than 4 dynamic link namespaces as
+created by @code{dlmopen} with an lmid argument of @code{LM_ID_NEWLM}.
+Dynamic linker audit modules are loaded in their own dynamic link namespaces,
+but they are not accounted for in @code{glibc.rtld.nns}.  They implicitly
+increase the per-thread memory usage as necessary, so this tunable does
+not need to be changed to allow many audit modules e.g. via @env{LD_AUDIT}.
+@end deftp
+
+@deftp Tunable glibc.rtld.optional_static_tls
+Sets the amount of surplus static TLS in bytes to allocate at program
+startup.  Every thread created allocates this amount of specified surplus
+static TLS. This is a minimum value and additional space may be allocated
+for internal purposes including alignment.  Optional static TLS is used for
+optimizing dynamic TLS access for platforms that support such optimizations
+e.g. TLS descriptors or optimized TLS access for POWER (@code{DT_PPC64_OPT}
+and @code{DT_PPC_OPT}).  In order to make the best use of such optimizations
+the value should be as many bytes as would be required to hold all TLS
+variables in all dynamic loaded shared libraries.  The value cannot be known
+by the dynamic loader because it doesn't know the expected set of shared
+libraries which will be loaded.  The existing static TLS space cannot be
+changed once allocated at process startup.  The default allocation of
+optional static TLS is 512 bytes and is allocated in every thread.
+@end deftp
+
+
+@node Elision Tunables
+@section Elision Tunables
+@cindex elision tunables
+@cindex tunables, elision
+
+@deftp {Tunable namespace} glibc.elision
+Contended locks are usually slow and can lead to performance and scalability
+issues in multithread code. Lock elision will use memory transactions to under
+certain conditions, to elide locks and improve performance.
+Elision behavior can be modified by setting the following tunables in
+the @code{elision} namespace:
+@end deftp
+
+@deftp Tunable glibc.elision.enable
+The @code{glibc.elision.enable} tunable enables lock elision if the feature is
+supported by the hardware.  If elision is not supported by the hardware this
+tunable has no effect.
+
+Elision tunables are supported for 64-bit Intel, IBM POWER, and z System
+architectures.
+@end deftp
+
+@deftp Tunable glibc.elision.skip_lock_busy
+The @code{glibc.elision.skip_lock_busy} tunable sets how many times to use a
+non-transactional lock after a transactional failure has occurred because the
+lock is already acquired.  Expressed in number of lock acquisition attempts.
+
+The default value of this tunable is @samp{3}.
+@end deftp
+
+@deftp Tunable glibc.elision.skip_lock_internal_abort
+The @code{glibc.elision.skip_lock_internal_abort} tunable sets how many times
+the thread should avoid using elision if a transaction aborted for any reason
+other than a different thread's memory accesses.  Expressed in number of lock
+acquisition attempts.
+
+The default value of this tunable is @samp{3}.
+@end deftp
+
+@deftp Tunable glibc.elision.skip_lock_after_retries
+The @code{glibc.elision.skip_lock_after_retries} tunable sets how many times
+to try to elide a lock with transactions, that only failed due to a different
+thread's memory accesses, before falling back to regular lock.
+Expressed in number of lock elision attempts.
+
+This tunable is supported only on IBM POWER, and z System architectures.
+
+The default value of this tunable is @samp{3}.
+@end deftp
+
+@deftp Tunable glibc.elision.tries
+The @code{glibc.elision.tries} sets how many times to retry elision if there is
+chance for the transaction to finish execution e.g., it wasn't
+aborted due to the lock being already acquired.  If elision is not supported
+by the hardware this tunable is set to @samp{0} to avoid retries.
+
+The default value of this tunable is @samp{3}.
+@end deftp
+
+@deftp Tunable glibc.elision.skip_trylock_internal_abort
+The @code{glibc.elision.skip_trylock_internal_abort} tunable sets how many
+times the thread should avoid trying the lock if a transaction aborted due to
+reasons other than a different thread's memory accesses.  Expressed in number
+of try lock attempts.
+
+The default value of this tunable is @samp{3}.
+@end deftp
+
+@node POSIX Thread Tunables
+@section POSIX Thread Tunables
+@cindex pthread mutex tunables
+@cindex thread mutex tunables
+@cindex mutex tunables
+@cindex tunables thread mutex
+
+@deftp {Tunable namespace} glibc.pthread
+The behavior of POSIX threads can be tuned to gain performance improvements
+according to specific hardware capabilities and workload characteristics by
+setting the following tunables in the @code{pthread} namespace:
+@end deftp
+
+@deftp Tunable glibc.pthread.mutex_spin_count
+The @code{glibc.pthread.mutex_spin_count} tunable sets the maximum number of times
+a thread should spin on the lock before calling into the kernel to block.
+Adaptive spin is used for mutexes initialized with the
+@code{PTHREAD_MUTEX_ADAPTIVE_NP} GNU extension.  It affects both
+@code{pthread_mutex_lock} and @code{pthread_mutex_timedlock}.
+
+The thread spins until either the maximum spin count is reached or the lock
+is acquired.
+
+The default value of this tunable is @samp{100}.
+@end deftp
+
+@deftp Tunable glibc.pthread.stack_cache_size
+This tunable configures the maximum size of the stack cache.  Once the
+stack cache exceeds this size, unused thread stacks are returned to
+the kernel, to bring the cache size below this limit.
+
+The value is measured in bytes.  The default is @samp{41943040}
+(fourty mibibytes).
+@end deftp
+
+@node Hardware Capability Tunables
+@section Hardware Capability Tunables
+@cindex hardware capability tunables
+@cindex hwcap tunables
+@cindex tunables, hwcap
+@cindex hwcaps tunables
+@cindex tunables, hwcaps
+@cindex data_cache_size tunables
+@cindex tunables, data_cache_size
+@cindex shared_cache_size tunables
+@cindex tunables, shared_cache_size
+@cindex non_temporal_threshold tunables
+@cindex tunables, non_temporal_threshold
+
+@deftp {Tunable namespace} glibc.cpu
+Behavior of @theglibc{} can be tuned to assume specific hardware capabilities
+by setting the following tunables in the @code{cpu} namespace:
+@end deftp
+
+@deftp Tunable glibc.cpu.hwcap_mask
+This tunable supersedes the @env{LD_HWCAP_MASK} environment variable and is
+identical in features.
+
+The @code{AT_HWCAP} key in the Auxiliary Vector specifies instruction set
+extensions available in the processor at runtime for some architectures.  The
+@code{glibc.cpu.hwcap_mask} tunable allows the user to mask out those
+capabilities at runtime, thus disabling use of those extensions.
+@end deftp
+
+@deftp Tunable glibc.cpu.hwcaps
+The @code{glibc.cpu.hwcaps=-xxx,yyy,-zzz...} tunable allows the user to
+enable CPU/ARCH feature @code{yyy}, disable CPU/ARCH feature @code{xxx}
+and @code{zzz} where the feature name is case-sensitive and has to match
+the ones in @code{sysdeps/x86/cpu-features.h}.
+
+This tunable is specific to i386 and x86-64.
+@end deftp
+
+@deftp Tunable glibc.cpu.cached_memopt
+The @code{glibc.cpu.cached_memopt=[0|1]} tunable allows the user to
+enable optimizations recommended for cacheable memory.  If set to
+@code{1}, @theglibc{} assumes that the process memory image consists
+of cacheable (non-device) memory only.  The default, @code{0},
+indicates that the process may use device memory.
+
+This tunable is specific to powerpc, powerpc64 and powerpc64le.
+@end deftp
+
+@deftp Tunable glibc.cpu.name
+The @code{glibc.cpu.name=xxx} tunable allows the user to tell @theglibc{} to
+assume that the CPU is @code{xxx} where xxx may have one of these values:
+@code{generic}, @code{falkor}, @code{thunderxt88}, @code{thunderx2t99},
+@code{thunderx2t99p1}, @code{ares}, @code{emag}, @code{kunpeng},
+@code{a64fx}.
+
+This tunable is specific to aarch64.
+@end deftp
+
+@deftp Tunable glibc.cpu.x86_data_cache_size
+The @code{glibc.cpu.x86_data_cache_size} tunable allows the user to set
+data cache size in bytes for use in memory and string routines.
+
+This tunable is specific to i386 and x86-64.
+@end deftp
+
+@deftp Tunable glibc.cpu.x86_shared_cache_size
+The @code{glibc.cpu.x86_shared_cache_size} tunable allows the user to
+set shared cache size in bytes for use in memory and string routines.
+@end deftp
+
+@deftp Tunable glibc.cpu.x86_non_temporal_threshold
+The @code{glibc.cpu.x86_non_temporal_threshold} tunable allows the user
+to set threshold in bytes for non temporal store. Non temporal stores
+give a hint to the hardware to move data directly to memory without
+displacing other data from the cache. This tunable is used by some
+platforms to determine when to use non temporal stores in operations
+like memmove and memcpy.
+
+This tunable is specific to i386 and x86-64.
+@end deftp
+
+@deftp Tunable glibc.cpu.x86_rep_movsb_threshold
+The @code{glibc.cpu.x86_rep_movsb_threshold} tunable allows the user to
+set threshold in bytes to start using "rep movsb".  The value must be
+greater than zero, and currently defaults to 2048 bytes.
+
+This tunable is specific to i386 and x86-64.
+@end deftp
+
+@deftp Tunable glibc.cpu.x86_rep_stosb_threshold
+The @code{glibc.cpu.x86_rep_stosb_threshold} tunable allows the user to
+set threshold in bytes to start using "rep stosb".  The value must be
+greater than zero, and currently defaults to 2048 bytes.
+
+This tunable is specific to i386 and x86-64.
+@end deftp
+
+@deftp Tunable glibc.cpu.x86_ibt
+The @code{glibc.cpu.x86_ibt} tunable allows the user to control how
+indirect branch tracking (IBT) should be enabled.  Accepted values are
+@code{on}, @code{off}, and @code{permissive}.  @code{on} always turns
+on IBT regardless of whether IBT is enabled in the executable and its
+dependent shared libraries.  @code{off} always turns off IBT regardless
+of whether IBT is enabled in the executable and its dependent shared
+libraries.  @code{permissive} is the same as the default which disables
+IBT on non-CET executables and shared libraries.
+
+This tunable is specific to i386 and x86-64.
+@end deftp
+
+@deftp Tunable glibc.cpu.x86_shstk
+The @code{glibc.cpu.x86_shstk} tunable allows the user to control how
+the shadow stack (SHSTK) should be enabled.  Accepted values are
+@code{on}, @code{off}, and @code{permissive}.  @code{on} always turns on
+SHSTK regardless of whether SHSTK is enabled in the executable and its
+dependent shared libraries.  @code{off} always turns off SHSTK regardless
+of whether SHSTK is enabled in the executable and its dependent shared
+libraries.  @code{permissive} changes how dlopen works on non-CET shared
+libraries.  By default, when SHSTK is enabled, dlopening a non-CET shared
+library returns an error.  With @code{permissive}, it turns off SHSTK
+instead.
+
+This tunable is specific to i386 and x86-64.
+@end deftp
+
+@node Memory Related Tunables
+@section Memory Related Tunables
+@cindex memory related tunables
+
+@deftp {Tunable namespace} glibc.mem
+This tunable namespace supports operations that affect the way @theglibc{}
+and the process manage memory.
+@end deftp
+
+@deftp Tunable glibc.mem.tagging
+If the hardware supports memory tagging, this tunable can be used to
+control the way @theglibc{} uses this feature.  At present this is only
+supported on AArch64 systems with the MTE extention; it is ignored for
+all other systems.
+
+This tunable takes a value between 0 and 255 and acts as a bitmask
+that enables various capabilities.
+
+Bit 0 (the least significant bit) causes the @code{malloc}
+subsystem to allocate
+tagged memory, with each allocation being assigned a random tag.
+
+Bit 1 enables precise faulting mode for tag violations on systems that
+support deferred tag violation reporting.  This may cause programs
+to run more slowly.
+
+Other bits are currently reserved.
+
+@Theglibc{} startup code will automatically enable memory tagging
+support in the kernel if this tunable has any non-zero value.
+
+The default value is @samp{0}, which disables all memory tagging.
+@end deftp

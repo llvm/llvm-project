@@ -1,0 +1,260 @@
+<code_set_name> ARMSCII-8
+<comment_char> %
+<escape_char> /
+
+CHARMAP
+<U0000>     /x00         <control>
+<U0001>     /x01         <control>
+<U0002>     /x02         <control>
+<U0003>     /x03         <control>
+<U0004>     /x04         <control>
+<U0005>     /x05         <control>
+<U0006>     /x06         <control>
+<U0007>     /x07         <control>
+<U0008>     /x08         <control>
+<U0009>     /x09         <control>
+<U000A>     /x0a         <control>
+<U000B>     /x0b         <control>
+<U000C>     /x0c         <control>
+<U000D>     /x0d         <control>
+<U000E>     /x0e         <control>
+<U000F>     /x0f         <control>
+<U0010>     /x10         <control>
+<U0011>     /x11         <control>
+<U0012>     /x12         <control>
+<U0013>     /x13         <control>
+<U0014>     /x14         <control>
+<U0015>     /x15         <control>
+<U0016>     /x16         <control>
+<U0017>     /x17         <control>
+<U0018>     /x18         <control>
+<U0019>     /x19         <control>
+<U001A>     /x1a         <control>
+<U001B>     /x1b         <control>
+<U001C>     /x1c         <control>
+<U001D>     /x1d         <control>
+<U001E>     /x1e         <control>
+<U001F>     /x1f         <control>
+<U0020>     /x20         SPACE
+<U0021>     /x21         EXCLAMATION MARK
+<U0022>     /x22         QUOTATION MARK
+<U0023>     /x23         NUMBER SIGN
+<U0024>     /x24         DOLLAR SIGN
+<U0025>     /x25         PERCENT SIGN
+<U0026>     /x26         AMPERSAND
+<U0027>     /x27         APOSTROPHE
+<U0028>     /x28         LEFT PARENTHESIS
+<U0029>     /x29         RIGHT PARENTHESIS
+<U002A>     /x2a         ASTERISK
+<U002B>     /x2b         PLUS SIGN
+<U002C>     /x2c         COMMA
+<U002D>     /x2d         HYPHEN-MINUS
+<U002E>     /x2e         FULL STOP
+<U002F>     /x2f         SOLIDUS
+<U0030>     /x30         DIGIT ZERO
+<U0031>     /x31         DIGIT ONE
+<U0032>     /x32         DIGIT TWO
+<U0033>     /x33         DIGIT THREE
+<U0034>     /x34         DIGIT FOUR
+<U0035>     /x35         DIGIT FIVE
+<U0036>     /x36         DIGIT SIX
+<U0037>     /x37         DIGIT SEVEN
+<U0038>     /x38         DIGIT EIGHT
+<U0039>     /x39         DIGIT NINE
+<U003A>     /x3a         COLON
+<U003B>     /x3b         SEMICOLON
+<U003C>     /x3c         LESS-THAN SIGN
+<U003D>     /x3d         EQUALS SIGN
+<U003E>     /x3e         GREATER-THAN SIGN
+<U003F>     /x3f         QUESTION MARK
+<U0040>     /x40         COMMERCIAL AT
+<U0041>     /x41         LATIN CAPITAL LETTER A
+<U0042>     /x42         LATIN CAPITAL LETTER B
+<U0043>     /x43         LATIN CAPITAL LETTER C
+<U0044>     /x44         LATIN CAPITAL LETTER D
+<U0045>     /x45         LATIN CAPITAL LETTER E
+<U0046>     /x46         LATIN CAPITAL LETTER F
+<U0047>     /x47         LATIN CAPITAL LETTER G
+<U0048>     /x48         LATIN CAPITAL LETTER H
+<U0049>     /x49         LATIN CAPITAL LETTER I
+<U004A>     /x4a         LATIN CAPITAL LETTER J
+<U004B>     /x4b         LATIN CAPITAL LETTER K
+<U004C>     /x4c         LATIN CAPITAL LETTER L
+<U004D>     /x4d         LATIN CAPITAL LETTER M
+<U004E>     /x4e         LATIN CAPITAL LETTER N
+<U004F>     /x4f         LATIN CAPITAL LETTER O
+<U0050>     /x50         LATIN CAPITAL LETTER P
+<U0051>     /x51         LATIN CAPITAL LETTER Q
+<U0052>     /x52         LATIN CAPITAL LETTER R
+<U0053>     /x53         LATIN CAPITAL LETTER S
+<U0054>     /x54         LATIN CAPITAL LETTER T
+<U0055>     /x55         LATIN CAPITAL LETTER U
+<U0056>     /x56         LATIN CAPITAL LETTER V
+<U0057>     /x57         LATIN CAPITAL LETTER W
+<U0058>     /x58         LATIN CAPITAL LETTER X
+<U0059>     /x59         LATIN CAPITAL LETTER Y
+<U005A>     /x5a         LATIN CAPITAL LETTER Z
+<U005B>     /x5b         LEFT SQUARE BRACKET
+<U005C>     /x5c         REVERSE SOLIDUS
+<U005D>     /x5d         RIGHT SQUARE BRACKET
+<U005E>     /x5e         CIRCUMFLEX ACCENT
+<U005F>     /x5f         LOW LINE
+<U0060>     /x60         GRAVE ACCENT
+<U0061>     /x61         LATIN SMALL LETTER A
+<U0062>     /x62         LATIN SMALL LETTER B
+<U0063>     /x63         LATIN SMALL LETTER C
+<U0064>     /x64         LATIN SMALL LETTER D
+<U0065>     /x65         LATIN SMALL LETTER E
+<U0066>     /x66         LATIN SMALL LETTER F
+<U0067>     /x67         LATIN SMALL LETTER G
+<U0068>     /x68         LATIN SMALL LETTER H
+<U0069>     /x69         LATIN SMALL LETTER I
+<U006A>     /x6a         LATIN SMALL LETTER J
+<U006B>     /x6b         LATIN SMALL LETTER K
+<U006C>     /x6c         LATIN SMALL LETTER L
+<U006D>     /x6d         LATIN SMALL LETTER M
+<U006E>     /x6e         LATIN SMALL LETTER N
+<U006F>     /x6f         LATIN SMALL LETTER O
+<U0070>     /x70         LATIN SMALL LETTER P
+<U0071>     /x71         LATIN SMALL LETTER Q
+<U0072>     /x72         LATIN SMALL LETTER R
+<U0073>     /x73         LATIN SMALL LETTER S
+<U0074>     /x74         LATIN SMALL LETTER T
+<U0075>     /x75         LATIN SMALL LETTER U
+<U0076>     /x76         LATIN SMALL LETTER V
+<U0077>     /x77         LATIN SMALL LETTER W
+<U0078>     /x78         LATIN SMALL LETTER X
+<U0079>     /x79         LATIN SMALL LETTER Y
+<U007A>     /x7a         LATIN SMALL LETTER Z
+<U007B>     /x7b         LEFT CURLY BRACKET
+<U007C>     /x7c         VERTICAL LINE
+<U007D>     /x7d         RIGHT CURLY BRACKET
+<U007E>     /x7e         TILDE
+<U007F>     /x7f         <control>
+<U0080>     /x80         <control>
+<U0081>     /x81         <control>
+<U0082>     /x82         <control>
+<U0083>     /x83         <control>
+<U0084>     /x84         <control>
+<U0085>     /x85         <control>
+<U0086>     /x86         <control>
+<U0087>     /x87         <control>
+<U0088>     /x88         <control>
+<U0089>     /x89         <control>
+<U008A>     /x8a         <control>
+<U008B>     /x8b         <control>
+<U008C>     /x8c         <control>
+<U008D>     /x8d         <control>
+<U008E>     /x8e         <control>
+<U008F>     /x8f         <control>
+<U0090>     /x90         <control>
+<U0091>     /x91         <control>
+<U0092>     /x92         <control>
+<U0093>     /x93         <control>
+<U0094>     /x94         <control>
+<U0095>     /x95         <control>
+<U0096>     /x96         <control>
+<U0097>     /x97         <control>
+<U0098>     /x98         <control>
+<U0099>     /x99         <control>
+<U009A>     /x9a         <control>
+<U009B>     /x9b         <control>
+<U009C>     /x9c         <control>
+<U009D>     /x9d         <control>
+<U009E>     /x9e         <control>
+<U009F>     /x9f         <control>
+<U00A0>     /xa0         NO-BREAK SPACE
+<U0587>     /xa2         ARMENIAN SMALL LIGATURE ECH YIWN
+<U0589>     /xa3         ARMENIAN FULL STOP
+<U0029>     /xa4         RIGHT PARENTHESIS
+<U0028>     /xa5         LEFT PARENTHESIS
+<U00BB>     /xa6         RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
+<U00AB>     /xa7         LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+<U2014>     /xa8         EM DASH
+<U002E>     /xa9         FULL STOP
+<U055D>     /xaa         ARMENIAN COMMA
+<U002C>     /xab         COMMA
+<U002D>     /xac         HYPHEN-MINUS
+<U058A>     /xad         ARMENIAN HYPHEN
+<U2026>     /xae         HORIZONTAL ELLIPSIS
+<U055C>     /xaf         ARMENIAN EXCLAMATION MARK
+<U055B>     /xb0         ARMENIAN EMPHASIS MARK
+<U055E>     /xb1         ARMENIAN QUESTION MARK
+<U0531>     /xb2         ARMENIAN CAPITAL LETTER AYB
+<U0561>     /xb3         ARMENIAN SMALL LETTER AYB
+<U0532>     /xb4         ARMENIAN CAPITAL LETTER BEN
+<U0562>     /xb5         ARMENIAN SMALL LETTER BEN
+<U0533>     /xb6         ARMENIAN CAPITAL LETTER GIM
+<U0563>     /xb7         ARMENIAN SMALL LETTER GIM
+<U0534>     /xb8         ARMENIAN CAPITAL LETTER DA
+<U0564>     /xb9         ARMENIAN SMALL LETTER DA
+<U0535>     /xba         ARMENIAN CAPITAL LETTER ECH
+<U0565>     /xbb         ARMENIAN SMALL LETTER ECH
+<U0536>     /xbc         ARMENIAN CAPITAL LETTER ZA
+<U0566>     /xbd         ARMENIAN SMALL LETTER ZA
+<U0537>     /xbe         ARMENIAN CAPITAL LETTER EH
+<U0567>     /xbf         ARMENIAN SMALL LETTER EH
+<U0538>     /xc0         ARMENIAN CAPITAL LETTER ET
+<U0568>     /xc1         ARMENIAN SMALL LETTER ET
+<U0539>     /xc2         ARMENIAN CAPITAL LETTER TO
+<U0569>     /xc3         ARMENIAN SMALL LETTER TO
+<U053A>     /xc4         ARMENIAN CAPITAL LETTER ZHE
+<U056A>     /xc5         ARMENIAN SMALL LETTER ZHE
+<U053B>     /xc6         ARMENIAN CAPITAL LETTER INI
+<U056B>     /xc7         ARMENIAN SMALL LETTER INI
+<U053C>     /xc8         ARMENIAN CAPITAL LETTER LIWN
+<U056C>     /xc9         ARMENIAN SMALL LETTER LIWN
+<U053D>     /xca         ARMENIAN CAPITAL LETTER XEH
+<U056D>     /xcb         ARMENIAN SMALL LETTER XEH
+<U053E>     /xcc         ARMENIAN CAPITAL LETTER CA
+<U056E>     /xcd         ARMENIAN SMALL LETTER CA
+<U053F>     /xce         ARMENIAN CAPITAL LETTER KEN
+<U056F>     /xcf         ARMENIAN SMALL LETTER KEN
+<U0540>     /xd0         ARMENIAN CAPITAL LETTER HO
+<U0570>     /xd1         ARMENIAN SMALL LETTER HO
+<U0541>     /xd2         ARMENIAN CAPITAL LETTER JA
+<U0571>     /xd3         ARMENIAN SMALL LETTER JA
+<U0542>     /xd4         ARMENIAN CAPITAL LETTER GHAD
+<U0572>     /xd5         ARMENIAN SMALL LETTER GHAD
+<U0543>     /xd6         ARMENIAN CAPITAL LETTER CHEH
+<U0573>     /xd7         ARMENIAN SMALL LETTER CHEH
+<U0544>     /xd8         ARMENIAN CAPITAL LETTER MEN
+<U0574>     /xd9         ARMENIAN SMALL LETTER MEN
+<U0545>     /xda         ARMENIAN CAPITAL LETTER YI
+<U0575>     /xdb         ARMENIAN SMALL LETTER YI
+<U0546>     /xdc         ARMENIAN CAPITAL LETTER NOW
+<U0576>     /xdd         ARMENIAN SMALL LETTER NOW
+<U0547>     /xde         ARMENIAN CAPITAL LETTER SHA
+<U0577>     /xdf         ARMENIAN SMALL LETTER SHA
+<U0548>     /xe0         ARMENIAN CAPITAL LETTER VO
+<U0578>     /xe1         ARMENIAN SMALL LETTER VO
+<U0549>     /xe2         ARMENIAN CAPITAL LETTER CHA
+<U0579>     /xe3         ARMENIAN SMALL LETTER CHA
+<U054A>     /xe4         ARMENIAN CAPITAL LETTER PEH
+<U057A>     /xe5         ARMENIAN SMALL LETTER PEH
+<U054B>     /xe6         ARMENIAN CAPITAL LETTER JHEH
+<U057B>     /xe7         ARMENIAN SMALL LETTER JHEH
+<U054C>     /xe8         ARMENIAN CAPITAL LETTER RA
+<U057C>     /xe9         ARMENIAN SMALL LETTER RA
+<U054D>     /xea         ARMENIAN CAPITAL LETTER SEH
+<U057D>     /xeb         ARMENIAN SMALL LETTER SEH
+<U054E>     /xec         ARMENIAN CAPITAL LETTER VEW
+<U057E>     /xed         ARMENIAN SMALL LETTER VEW
+<U054F>     /xee         ARMENIAN CAPITAL LETTER TIWN
+<U057F>     /xef         ARMENIAN SMALL LETTER TIWN
+<U0550>     /xf0         ARMENIAN CAPITAL LETTER REH
+<U0580>     /xf1         ARMENIAN SMALL LETTER REH
+<U0551>     /xf2         ARMENIAN CAPITAL LETTER CO
+<U0581>     /xf3         ARMENIAN SMALL LETTER CO
+<U0552>     /xf4         ARMENIAN CAPITAL LETTER YIWN
+<U0582>     /xf5         ARMENIAN SMALL LETTER YIWN
+<U0553>     /xf6         ARMENIAN CAPITAL LETTER PIWR
+<U0583>     /xf7         ARMENIAN SMALL LETTER PIWR
+<U0554>     /xf8         ARMENIAN CAPITAL LETTER KEH
+<U0584>     /xf9         ARMENIAN SMALL LETTER KEH
+<U0555>     /xfa         ARMENIAN CAPITAL LETTER OH
+<U0585>     /xfb         ARMENIAN SMALL LETTER OH
+<U0556>     /xfc         ARMENIAN CAPITAL LETTER FEH
+<U0586>     /xfd         ARMENIAN SMALL LETTER FEH
+<U055A>     /xfe         ARMENIAN APOSTROPHE
+END CHARMAP

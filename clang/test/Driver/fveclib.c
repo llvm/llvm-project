@@ -1,3 +1,5 @@
+// This test is expected to fail when targeting Next32.
+// XFAIL: *
 // RUN: %clang -### -c -fveclib=none %s 2>&1 | FileCheck --check-prefix=CHECK-NOLIB %s
 // RUN: %clang -### -c -fveclib=Accelerate %s 2>&1 | FileCheck --check-prefix=CHECK-ACCELERATE %s
 // RUN: %clang -### -c -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-libmvec %s

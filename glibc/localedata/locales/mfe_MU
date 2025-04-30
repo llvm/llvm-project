@@ -1,0 +1,183 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Locale for Morisyen locale in the Mauritius
+% Contributed by Akhilesh Kumar <akhilesh.k@samsung.com>
+
+LC_IDENTIFICATION
+title      "Morisyen locale for Mauritius"
+source     "Samsung Electronics Co., Ltd."
+address    ""
+contact    ""
+email      "akhilesh.k@samsung.com"
+tel        ""
+fax        ""
+language   "Morisyen"
+territory  "Mauritius"
+revision   "1.0"
+date       "2017-08-18"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+% http://demo.icu-project.org/icu-bin/locexp?d_=en&_=mfe
+LC_TIME
+% Abbreviated weekday names
+abday	"dim";/
+	"lin";/
+	"mar";/
+	"mer";/
+	"ze";/
+	"van";/
+	"sam"
+%
+% Full weekday names
+day     "dimans";/
+	"lindi";/
+	"mardi";/
+	"merkredi";/
+	"zedi";/
+	"vandredi";/
+	"samdi"
+% Abbreviated month names
+abmon  "zan";/
+	"fev";/
+	"mar";/
+	"avr";/
+	"me";/
+	"zin";/
+	"zil";/
+	"out";/
+	"sep";/
+	"okt";/
+	"nov";/
+	"des"
+%
+% Full month names
+mon     "zanvie";/
+	"fevriye";/
+	"mars";/
+	"avril";/
+	"me";/
+	"zin";/
+	"zilye";/
+	"out";/
+	"septam";/
+	"oktob";/
+	"novam";/
+	"desam"
+%
+d_t_fmt     "%a %d %b %Y %T %Z"
+d_fmt       "%d//%m//%y"
+t_fmt       "%T"
+am_pm       "AM";"PM"
+t_fmt_ampm  "%l:%M:%S %P %Z"
+date_fmt    "%a %e %b %H:%M:%S %Z %Y"
+END LC_TIME
+
+% http://wikitravel.org/en/User:LiangHH/Mauritian_Creole_phrasebook
+LC_MESSAGES
+yesexpr "^[+1yYwW]"
+noexpr  "^[-0nN]"
+yesstr  "Wi"
+nostr   "Non"
+END LC_MESSAGES
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+% https://en.wikipedia.org/wiki/Mauritian_rupee
+int_curr_symbol     "MUR "
+currency_symbol     "<U20A8>"
+mon_decimal_point   "."
+mon_thousands_sep   "<U202F>"
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       1
+int_p_sep_by_space  1
+p_sep_by_space      1
+n_cs_precedes       1
+int_n_sep_by_space  1
+n_sep_by_space      1
+p_sign_posn         1
+n_sign_posn         1
+%
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point          "."
+thousands_sep          "<U202F>"
+grouping               3
+END LC_NUMERIC
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+% https://www.howtocallabroad.com/mauritius/
+tel_int_fmt "+%c %l"
+% 00 Africa: all countries except Kenya, Nigeria, Tanzania and Uganda
+int_select     "00"
+int_prefix     "230"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "Miss."
+name_mr     "Mr."
+name_mrs    "Mrs."
+name_ms     "Ms."
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt   "%f%N%h%s%N%T"
+country_name "Moris"
+country_ab2  "MU"
+country_ab3  "MUS"
+country_num  480
+% https://en.wikipedia.org/wiki/List_of_international_vehicle_registration_codes
+country_car  "MS"
+country_isbn "978-613,978-620,978-99903,978-99949"
+lang_name    "kreol morisien"
+lang_term    "mfe"
+lang_lib     "mfe"
+END LC_ADDRESS

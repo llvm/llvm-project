@@ -51,6 +51,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -2713,6 +2714,17 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
       if (auto *SA = D->getAttr<PragmaClangTextSectionAttr>())
         if (!D->getAttr<SectionAttr>())
           F->setSection(SA->getName());
+
+      if (auto *NSM = D->getAttr<PragmaNextSiliconMarkAttr>()) {
+        if (NSM->getMark() == "import")
+          Diags.Report(D->getLocation(), diag::warn_deprecated_ns_mark)
+              << NSM->getMark() << "import_[single|recursive]";
+
+        F->addFnAttr("ns-mark", NSM->getMark());
+      }
+
+      if (auto *NSL = D->getAttr<PragmaNextSiliconLocationAttr>())
+        F->addFnAttr("ns-location", NSL->getLocation());
 
       llvm::AttrBuilder Attrs(F->getContext());
       if (GetCPUAndFeaturesAttributes(GD, Attrs)) {

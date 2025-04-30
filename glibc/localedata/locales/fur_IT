@@ -1,0 +1,145 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Furlan Language Locale for Italy
+% Language: fur
+% Territory: IT
+% Revision: 0.3
+% Date: 2004-04-26
+% Users: general
+
+LC_IDENTIFICATION
+title      "Furlan locale for Italy"
+source     ""
+address    ""
+contact    "Pablo Saratxaga"
+email      "pablo@mandrakesoft.com"
+tel        ""
+fax        ""
+language   "Friulian"
+territory  "Italy"
+revision   "0.3"
+date       "2004-04-26"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "it_IT"
+END LC_CTYPE
+
+LC_COLLATE
+% There is no collation information for Furlan in CLDR.
+%
+% We implement only this rule here: &C<ç<<<Ç
+copy "iso14651_t1"
+
+collating-symbol <c-cedilla>
+
+reorder-after <AFTER-C>
+<c-cedilla>
+
+<U00E7> <c-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ç
+<U00C7> <c-cedilla>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % Ç
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1sSjJoOyY]"
+noexpr  "^[-0nN]"
+yesstr  "s<U00EC>"
+nostr   "no"
+END LC_MESSAGES
+
+LC_MONETARY
+copy  "it_IT"
+END LC_MONETARY
+
+LC_NUMERIC
+copy  "it_IT"
+END LC_NUMERIC
+
+LC_TIME
+abday   "Dom";"Lun";"Mar";"Mie";"Joi";"Vin";"Sab"
+day     "Domenie";/
+        "Lunis";/
+        "Martars";/
+        "Miercus";/
+        "Joibe";/
+        "Vinars";/
+        "Sabide"
+abmon   "Zen";"Fev";/
+        "Mar";"Avr";/
+        "Mai";"Jug";/
+        "Lui";"Avo";/
+        "Set";"Otu";/
+        "Nov";"Dic"
+mon     "Zen<U00E2>r";/
+        "Fevr<U00E2>r";/
+        "Mar<U00E7>";/
+        "Avr<U00EE>l";/
+        "Mai";/
+        "Jugn";/
+        "Lui";/
+        "Avost";/
+        "Setembar";/
+        "Otubar";/
+        "Novembar";/
+        "Dicembar"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d. %m. %y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+week			7;19971130;4
+first_weekday		2
+END LC_TIME
+
+LC_PAPER
+copy  "it_IT"
+END LC_PAPER
+
+LC_TELEPHONE
+copy  "it_IT"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "it_IT"
+END LC_MEASUREMENT
+
+LC_NAME
+copy  "it_IT"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Italie"
+country_ab2 "IT"
+country_ab3 "ITA"
+country_num 380
+country_isbn "978-88,979-12"
+country_car "I"
+lang_name    "furlan"
+lang_term    "fur"
+END LC_ADDRESS

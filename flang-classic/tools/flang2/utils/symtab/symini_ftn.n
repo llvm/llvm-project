@@ -1,0 +1,499 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+.NS 28 "Intrinsics & Generics" "Appendix VII - "
+.de IN
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\$1\t\\$2\t\\$3\t\\$4\t\\$5\t\\$6\t\\$7
+.ft R
+.nr NN +1
+.br
+.fi
+.ad
+.in 6
+.if '\\$5'tc' Type conversion intrinsic.
+..
+.de GN    \"    Generic definition macro
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\$1\t\\$2\t\\$3\t\\$4\t\\$5\t\\$6\t\\$7\t\\$8
+.ft R
+.nr NN +1
+.br
+.fi
+.ad
+.in 6
+..
+.de PD
+.sp
+.ne 3
+.br
+.in 0
+.nf
+.ft CW
+\\n(NN\t\\n(ND\t\\$1\t\\$2\t\\$3
+.ft R
+.nr NN +1
+.nr ND +1
+.br
+.fi
+.ad
+.in 6
+..   
+.nr NN 1
+.nr ND 1
+
+.sh 2 "Intrinsic Functions"
+.lp
+If a specific intrinsic is related to the \f(CWinteger*8\fP
+data type, its name in the \f(CW.IN\fP line is prefixed with
+an \f(CW=\fP (equals sign).
+The utility determines whether on not to include this intrinsic
+in the predefined portion of the symbol table.
+.lp
+.sz 8
+.ta 0.5i +1.25i +0.5i +0.5i +0.5i +1.0i +1.0i +0.75i 
+
+.sp
+.ul
+sptr	name	pcnt	atyp	dtype	ILM	pname	
+.IN .SQRT 1 R R SQRT ftn_sqrt
+.IN DSQRT 1 D D DSQRT ftn_dsqrt
+.IN CSQRT 1 C C CSQRT ftn_csqrt
+.IN CDSQRT 1 CD CD CDSQRT ftn_cdsqrt
+.IN QSQRT 1 Q Q QSQRT ftn_qsqrt
+.IN ALOG 1 R R ALOG ftn_alog 
+.IN DLOG 1 D D DLOG ftn_dlog 
+.IN CLOG 1 C C CLOG ftn_clog 
+.IN CDLOG 1 CD CD CDLOG ftn_cdlog 
+.IN QLOG 1 Q Q QLOG ftn_qlog
+.IN ALOG10 1 R R ALOG10 ftn_alog10 
+.IN DLOG10 1 D D DLOG10 ftn_dlog10 
+.IN .EXP 1 R R EXP ftn_exp 
+.IN DEXP 1 D D DEXP ftn_dexp 
+.IN CEXP 1 C C CEXP ftn_cexp 
+.IN CDEXP 1 CD CD CDEXP ftn_cdexp 
+.IN QEXP 1 Q Q QEXP ftn_qexp
+.IN .SIN 1 R R SIN ftn_sin 
+.IN DSIN 1 D D DSIN ftn_dsin 
+.IN CSIN 1 C C CSIN ftn_csin 
+.IN CDSIN 1 CD CD CDSIN ftn_cdsin 
+.IN CQSIN 1 CQ CQ CQSIN ftn_cqsin
+.IN QSIN 1 Q Q QSIN ftn_qsin
+.IN .SIND 1 R R SIND ftn_sind
+.IN DSIND 1 D D DSIND ftn_dsind
+.IN QSIND 1 Q Q QSIND ftn_qsind
+.IN .COS 1 R R COS ftn_cos
+.IN DCOS 1 D D DCOS ftn_dcos
+.IN CCOS 1 C C CCOS ftn_ccos
+.IN QCOS 1 Q Q QCOS ftn_qcos
+.IN CDCOS 1 CD CD CDCOS ftn_cdcos
+.IN .COSD 1 R R COSD ftn_cosd
+.IN DCOSD 1 D D DCOSD ftn_dcosd
+.IN QCOSD 1 Q Q QCOSD ftn_qcosd
+.IN .TAN 1 R R TAN ftn_tan 
+.IN DTAN 1 D D DTAN ftn_dtan
+.IN QTAN 1 Q Q QTAN ftn_qtan
+.IN .TAND 1 R R TAND ftn_tand
+.IN DTAND 1 D D DTAND ftn_dtand
+.IN QTAND 1 Q Q QTAND ftn_qtand
+.IN .ASIN 1 R R ASIN ftn_asin
+.IN DASIN 1 D D DASIN ftn_dasin
+.IN QASIN 1 Q Q QASIN ftn_qasin
+.IN .ASIND 1 R R ASIND ftn_asind
+.IN DASIND 1 D D DASIND ftn_dasind
+.IN QASIND 1 Q Q QASIND ftn_qasind
+.IN .ACOS 1 R R ACOS ftn_acos
+.IN DACOS 1 D D DACOS ftn_dacos
+.IN QACOS 1 Q Q QACOS ftn_qacos
+.IN .ACOSD 1 R R ACOSD ftn_acosd
+.IN DACOSD 1 D D DACOSD ftn_dacosd
+.IN QACOSD 1 Q Q QACOSD ftn_qacosd
+.IN .ATAN 1 R R ATAN ftn_atan
+.IN DATAN 1 D D DATAN ftn_datan
+.IN QATAN 1 Q Q QATAN ftn_qatan
+.IN .ATAND 1 R R ATAND ftn_atand
+.IN DATAND 1 D D DATAND ftn_datand
+.IN QATAND 1 Q Q QATAND ftn_qatand
+.IN .ATAN2 2 R R ATAN2 ftn_atan2
+.IN DATAN2 2 D D DATAN2 ftn_datan2
+.IN QATAN2 2 Q Q QATAN2 ftn_qatan2
+.IN .ATAN2D 2 R R ATAN2D ftn_atan2d
+.IN DATAN2D 2 D D DATAN2D ftn_datan2d
+.IN QATAN2D 2 Q Q QATAN2D ftn_qatan2d
+.IN .SINH 1 R R SINH ftn_sinh
+.IN DSINH 1 D D DSINH ftn_dsinh
+.IN .COSH 1 R R COSH ftn_cosh
+.IN DCOSH 1 D D DCOSH ftn_dcosh
+.IN .TANH 1 R R TANH ftn_tanh
+.IN DTANH 1 D D DTANH ftn_dtanh
+.IN IABS 1 I I IABS ftn_iabs
+.IN IIABS 1 SI SI IABS ftn_iiabs
+.IN JIABS 1 I I IABS ftn_iabs
+.IN =KIABS 1 I8 I8 KABS ftn_kabs
+.IN .ABS 1 R R ABS ftn_abs
+.IN DABS 1 D D DABS ftn_dabs
+.IN QABS 1 Q Q QABS ftn_qabs
+.IN CABS 1 C R CABS ftn_cabs
+.IN CDABS 1 CD D CDABS ftn_cdabs
+.IN .INT 1 R I tc
+.IN IFIX 1 R I tc
+Same as the INT intrinsic.
+.IN IIFIX 1 R SI tc
+.IN JIFIX 1 R I tc
+.IN =KIFIX 1 R I8 tc
+.IN IDINT 1 D I tc
+.IN .IINT 1 R SI tc
+Conversion to short integer.
+.IN IIDINT 1 D SI tc
+Conversion to short integer.
+.IN .JINT 1 R I tc
+.IN JIDINT 1 D I tc
+.IN =.INT8 1 R I8 tc
+Conversion to integer*8.
+.IN =.IDINT8 1 D I8 tc
+Conversion to integer*8.
+.IN .2I 1 N I tc
+Converts any numeric data type to integer.
+.IN .2SI 1 N SI tc
+Converts any numeric data type to short integer.
+.IN =.2KI 1 N I8 tc
+Converts any numeric data type to integer*8.
+.IN .AINT 1 R R AINT ftn_aint
+.IN DINT 1 D D DINT ftn_dint
+.IN QINT 1 Q Q QINT ftn_qint
+.IN .ANINT 1 R R ANINT ftn_anint
+.IN QQANINT 1 Q Q QQANINT ftn_qanint
+.IN DQANINT 1 D Q DQANINT ftn_dqanint
+.IN AQANINT 1 R Q AQANINT ftn_aqanint
+.IN DNINT 1 D D DNINT ftn_dnint
+.IN .ININT 1 R SI NINT ftn_inint
+.IN .NINT 1 R I NINT ftn_nint
+.IN IDNINT 1 D I IDNINT ftn_idnint
+.IN IQNINT 1 Q I IQNINT ftn_iqnint
+.IN IIDNNT 1 D SI IDNINT ftn_iidnnt
+.IN .JNINT 1 R I NINT ftn_inint
+.IN JIDNNT 1 D I IDNINT ftn_idnint
+.IN =.KNINT 1 R I8 KNINT ftn_knint
+.IN =KIDNNT 1 D I8 KDNINT ftn_kidnnt
+.IN =KIQNNT 1 Q I8 KQNINT ftn_kiqnnt
+.IN FLOATI 1 SI R tc
+Converts integer*2 to real.
+.IN FLOATJ 1 I R tc
+.IN =.FLOATK 1 I8 R tc
+Converts integer*8 to real.
+.IN .REAL 1 I R tc
+Converts integer to real.
+.IN FLOAT 1 I R tc
+Same as REAL intrinsic.
+.IN SNGL 1 D R tc
+.IN .2R 1 N R tc
+Converts any numeric data type to real.
+.IN DFLOTI 1 SI D tc
+Converts integer*2 to double.
+.IN DFLOAT 1 I D tc
+Extension to Fortran-77.
+.IN DFLOTJ 1 I D tc
+.IN =.DFLOTK 1 I8 D tc
+Converts integer*8 to double.
+.IN DREAL 1 CD D tc
+Converts complex*16 to double.
+.IN .2D 1 N D tc
+Convert any numeric data type to double precision.
+.IN .2C 11 N C tc
+Convert any numeric data type to complex.
+.IN .2CD 11 N CD tc
+Convert any numeric data type to double complex.
+.IN .AIMAG 1 C R IMAG ftn_aimag
+.IN DIMAG 1 CD D DIMAG ftn_dimag
+.IN .CONJG 1 C C CONJG ftn_conjg
+.IN DCONJG 1 CD CD DCONJG ftn_dconjg
+.IN QCONJG 1 CQ CQ QCONJG ftn_qconjg
+.IN DPROD 2 R D DPROD ftn_dprod
+.IN IMAX0 12 SI SI IMAX -
+.IN MAX0 12 I I IMAX -
+.IN =.KMAX0 12 I8 I8 KMAX - 
+.IN AMAX1 12 R R RMAX - 
+.IN DMAX1 12 D D DMAX - 
+.IN JMAX0 12 I I IMAX - IMAX
+.IN AIMAX0 13 SI R IMAX -
+.IN AMAX0 13 I R IMAX -
+.IN =AKMAX0 13 I8 R KMAX - 
+.IN MAX1 13 R I RMAX - 
+.IN IMAX1 13 R SI RMAX - 
+.IN JMAX1 13 R I RMAX - 
+.IN =KMAX1 13 R I8 RMAX - 
+.IN AJMAX0 13 I R IMAX - 
+.IN MIN0 12 I I IMIN - 
+.IN IMIN0 12 SI SI IMIN - 
+.IN =.KMIN0 12 I8 I8 KMIN - 
+.IN AMIN1 12 R R RMIN - 
+.IN DMIN1 12 D D DMIN - 
+.IN JMIN0 12 I I IMIN - 
+.IN AMIN0 13 I R IMIN - 
+.IN AIMIN0 13 SI R IMIN - 
+.IN =AKMIN0 13 I8 R KMIN - 
+.IN MIN1 13 R I RMIN - 
+.IN IMIN1 13 R SI RMIN - 
+.IN JMIN1 13 R I RMIN - 
+.IN =KMIN1 13 R I8 RMIN - 
+.IN AJMIN0 13 I R IMIN - 
+.IN IIDIM 2 SI SI IDIM ftn_iidim 
+.IN JIDIM 2 I I IDIM ftn_idim 
+.IN =KIDIM 2 I8 I8 KDIM ftn_kidim 
+.IN IDIM 2 I I IDIM ftn_idim 
+.IN .DIM 2 R R DIM ftn_dim 
+.IN DDIM 2 D D DDIM ftn_ddim 
+.IN QDIM 2 Q Q QDIM ftn_qdim
+.IN IMOD 2 SI SI MOD ftn_imod 
+.IN JMOD 2 I I MOD ftn_mod 
+.IN =KMOD 2 I8 I8 KMOD ftn_kmod 
+.IN .MOD 2 I I MOD ftn_mod 
+.IN AMOD 2 R R AMOD ftn_amod 
+.IN DMOD 2 D D DMOD ftn_dmod 
+.IN IISIGN 2 SI SI ISIGN ftn_iisign 
+.IN JISIGN 2 I I ISIGN ftn_isign 
+.IN =KISIGN 2 I8 I8 KSIGN ftn_kisign 
+.IN ISIGN 2 I I ISIGN ftn_isign
+.IN .SIGN 2 R R SIGN ftn_sign 
+.IN DSIGN 2 D D DSIGN ftn_dsign 
+.IN QSIGN 2 Q Q QSIGN ftn_qsign
+.IN IIAND 2 SI SI AND - 
+.IN JIAND 2 I I AND - 
+.IN =.KIAND 2 I8 I8 KAND - 
+.IN IIOR 2 SI SI OR - 
+.IN JIOR 2 I I OR - 
+.IN =.KIOR 2 I8 I8 KOR - 
+.IN IIEOR 2 SI SI XOR - 
+.IN JIEOR 2 I I XOR - 
+.IN =.KIEOR 2 I8 I8 KXOR - 
+.IN INOT 1 SI SI NOT - 
+.IN JNOT 1 I I NOT - 
+.IN =.KNOT 1 I8 I8 KNOT - 
+.IN IISHFT 2 SI SI IISHFT ftn_iishft 
+.IN JISHFT 2 I I JISHFT ftn_jishft 
+.IN =KISHFT 2 I8 I8 KISHFT ftn_kishft 
+.IN ICHAR 1 H I ICHAR 
+.IN LEN 1 H I LEN ftn_str_len
+.IN =KLEN 1 H I8 KLEN ftn_str_klen
+.IN INDEX 2 H I INDEX ftn_index
+.IN =KINDEX 2 H I8 KINDEX ftn_kindex
+.IN LGE 2 H L GE 
+.IN LGT 2 H L GT 
+.IN LLE 2 H L LE 
+.IN LLT 2 H L LT 
+.IN LOC 1 A PI LOC 
+.IN IIBITS 3 SI SI IBITS ftn_iibits
+.IN JIBITS 3 I I IBITS ftn_jibits
+.IN =KIBITS 3 I8 I8 KBITS ftn_kibits
+.IN IIBSET 2 SI SI IBSET ftn_iibset
+.IN JIBSET 2 I I IBSET ftn_jibset
+.IN =KIBSET 2 I8 I8 KBSET ftn_kibset
+.IN BITEST 2 SI SL BTEST ftn_bitest
+.IN BJTEST 2 I L BTEST ftn_bjtest
+.IN =BKTEST 2 I8 L8 KBTEST ftn_bktest
+.IN IIBCLR 2 SI SI IBCLR ftn_iibclr
+.IN JIBCLR 2 I I IBCLR ftn_jibclr
+.IN =KIBCLR 2 I8 I8 KBCLR ftn_kibclr
+.IN IISHFTC 3 SI SI IISHFTC ftn_iishftc
+.IN JISHFTC 3 I I ISHFTC ftn_jishftc
+.IN =KISHFTC 3 I8 I8 KSHFTC ftn_kishftc
+.IN .ILSHIFT 2 SI SI ULSHIFT 
+.IN .JLSHIFT 2 I I ULSHIFT 
+.IN =.KLSHIFT 2 I8 I8 KULSHIFT 
+.IN .IRSHIFT 2 SI SI URSHIFT 
+.IN .JRSHIFT 2 I I URSHIFT 
+.IN =.KRSHIFT 2 I8 I8 KURSHIFT 
+.IN .2SCH 1 SI H CHAR 
+.IN .CHAR 1 I H CHAR 
+.IN =.2KCH 1 I8 H CHAR 
+.IN NCHAR 1 I K NCHAR 
+Convert integer to Kanji string of length 1.
+.IN NLEN 1 K I NLEN 
+Compute length of Kanji string.
+.IN NINDEX 2 K I NINDEX 
+.IN =.LGE8 2 H L8 GE8 
+.IN =.LGT8 2 H L8 GT8 
+.IN =.LLE8 2 H L8 LE8 
+.IN =.LLT8 2 H L8 LT8 
+.sp 2
+
+.bp
+.sh 2 "Generic Names"
+.lp
+If a generic intrinsic is related to the \f(CWinteger*8\fP
+data type, its name in the \f(CW.GN\fP line is prefixed with
+an \f(CW=\fP (equals sign).
+The utility determines whether on not to include this intrinsic
+in the predefined portion of the symbol table.
+Also, the utility may choose to ignore the entries in the \f(CWi8name\fP
+fields.
+.lp
+.sz 8
+.ta 0.5i +0.75i +0.625i +0.625i +0.625i +0.625i +0.625i +0.625i +0.625i +0.625i
+.sp
+
+.ul
+sptr	name	siname	iname	rname	dname	cname	cdname	i8name	qname   cqname
+.GN IAND IIAND JIAND - - - - .KIAND 
+.GN IOR IIOR JIOR - - - - .KIOR 
+.GN IEOR IIEOR JIEOR - - - - .KIEOR 
+.GN XOR IIEOR JIEOR - - - - .KIEOR
+.GN NOT INOT JNOT - - - - .KNOT 
+.GN ISHFT IISHFT JISHFT - - - - KISHFT 
+.GN IINT .2SI .2SI .IINT IIDINT .2SI .2SI .2SI 
+.GN INT .2I .2I .INT IDINT .2I .2I .2I 
+.GN JINT .2I .2I .JINT JIDINT .2I .2I .2I 
+.GN =INT8 .2KI .2KI .INT8 .IDINT8 .2KI .2KI .2KI 
+.GN REAL FLOATI .REAL .2R SNGL .2R .2R .FLOATK 
+.GN DBLE DFLOTI DFLOAT .2D .2D .2D DREAL .DFLOTK 
+.GN CMPLX .2C .2C .2C .2C .2C .2C .2C 
+.GN DCMPLX .2CD .2CD .2CD .2CD .2CD .2CD .2CD 
+.GN AIMAG - - - - .AIMAG DIMAG - 
+.GN CONJG - - - - .CONJG DCONJG QCONJG -
+.GN AINT - - .AINT DINT - - - QINT
+.GN ANINT - - .ANINT DNINT - - - QANINT
+.GN ININT - - .ININT IIDNNT - - -
+.GN JNINT - - .JNINT JIDNNT - - -
+.GN NINT - - .NINT IDNINT - - - IQNINT
+.GN =KNINT - - .KNINT KIDNNT - - - KIQNNT
+.GN ABS IIABS IABS .ABS DABS CABS CDABS KIABS QABS -
+.GN MOD IMOD .MOD AMOD DMOD - - KMOD 
+.GN SIGN IISIGN ISIGN .SIGN DSIGN - - KISIGN QSIGN -
+.GN DIM IIDIM IDIM .DIM DDIM - - KIDIM QDIM -
+.GN MAX IMAX0 MAX0 AMAX1 DMAX1 - - .KMAX0 
+.GN MIN IMIN0 MIN0 AMIN1 DMIN1 - - .KMIN0 
+.GN SQRT - - .SQRT DSQRT CSQRT CDSQRT - QSQRT -
+.GN EXP - - .EXP DEXP CEXP CDEXP - QEXP -
+.GN LOG - - ALOG DLOG CLOG CDLOG - QLOG -
+.GN LOG10 - - ALOG10 DLOG10 - - -
+.GN SIN - - .SIN DSIN CSIN CDSIN - QSIN CQSIN
+.GN SIND - - .SIND DSIND - - - QSIND -
+.GN COS - - .COS DCOS CCOS CDCOS - QCOS -
+.GN COSD - - .COSD DCOSD - - - QCOSD -
+.GN TAN - - .TAN DTAN - - -
+.GN TAND - - .TAND DTAND - - - QTAND -
+.GN ASIN - - .ASIN DASIN - - -
+.GN ASIND - - .ASIND DASIND - - - QASIND -
+.GN ACOS - - .ACOS DACOS - - - QACOS -
+.GN ACOSD - - .ACOSD DACOSD - - - QACOSD -
+.GN ATAN - - .ATAN DATAN - - - QATAN - 
+.GN ATAND - - .ATAND DATAND - - - QATAND -
+.GN ATAN2 - - .ATAN2 DATAN2 - - - QATAN2 -
+.GN ATAN2D - - .ATAN2D DATAN2D - - - QATAN2D -
+.GN SINH - - .SINH DSINH - - -
+.GN COSH - - .COSH DCOSH - - -
+.GN TANH - - .TANH DTANH - - -
+.GN IBITS IIBITS JIBITS - - - - KIBITS 
+.GN IBSET IIBSET JIBSET - - - - KIBSET 
+.GN BTEST BITEST BJTEST - - - - BKTEST 
+.GN IBCLR IIBCLR JIBCLR - - - - KIBCLR 
+.GN ISHFTC IISHFTC JISHFTC - - - - KISHFTC 
+.GN LSHIFT .ILSHIFT .JLSHIFT - - - - .KLSHIFT 
+.GN RSHIFT .IRSHIFT .JRSHIFT - - - - .KRSHIFT 
+.GN CHAR .2SCH .CHAR - - - - .2KCH 
+.bp
+.sh 2 "Predeclared\ Names"
+.sz 8
+.ta 0.5i +0.5i +1.25i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i +0.75i
+.\" .PD name call type
+.\" call is subroutine, generic, specific
+.ul
+sptr	pd	name	call	type
+.\" -----------------------
+.\" Predeclared Subroutines
+.\" -----------------------
+.PD DATE subroutine -
+.nf
+.cw "    CALL DATE( buf )"
+
+.fi
+Returns the current date in \*(cfbuf\*(rf, which is
+a 9-byte variable, array, array element, or character substring.
+The date is returned as a 9-byte ASCII character string in
+the form \*(cfdd-mmm-yy\*(rf.
+.PD EXIT subroutine -
+The CALL EXIT statement; optional argument is type integer.
+.PD IDATE subroutine -
+.nf
+.cw "    CALL IDATE( i, j, k )"
+
+.fi
+Returns three integer values representing the current month,
+day, and year in \*(cfi\*(rf, \*(cfj\*(rf, and \*(cfk\*(rf,
+respectively.
+All arguments must be integer*2 variables or array elements or
+integer*4 variables or array elements.
+.PD TIME subroutine -
+.nf
+.cw "    CALL TIME( buf )"
+
+.fi
+Returns the current system time in \*(cfbuf\*(rf, which is an
+8-byte variable, array, array element, or character
+substring.
+The time is returned as an 8-byte ASCII character string of
+the form \*(cfhh:mm:ss\*(rf.
+.PD MVBITS subroutine -
+.nf
+.cw "    CALL MVBITS(a1, a2, a3, a4, a5)"
+
+.fi
+Transfers \*(cfa3\*(rf bits beginning at bit \*(cfa2\*(rf of
+\*(cfa1\*(rf to \*(cfa4\*(rf beginning at bit \*(cfa5\*(rf.
+All arguments are either integer*2 or integer*4;
+\*(cfa4\*(rf must be a variable or array element.
+Translates to a call to either \*(cfftn_imvbits\*(rf or
+\*(cfftn_jmvbits\*(rf.
+.\" ---------------------
+.\" Predeclared Functions
+.\" ---------------------
+.PD ZEXT generic scalar
+The ZEXT intrinsic; result is integer*4, arg is any logical or integer.
+.PD IZEXT specific scalar
+The IZEXT intrinsic; result is integer*2, arg is a logical*1, logical*2,
+or integer*2.
+.PD JZEXT specific scalar
+The JZEXT intrinsic; result is integer*4, arg is any logical or integer.
+.\".PD ALL generic array
+.PD AND generic scalar
+.\".PD ANY generic array
+.PD COMPL generic scalar
+.\".PD COUNT generic array
+.\".PD DOTPRODUCT generic reduction
+.PD EQV generic scalar
+.\".PD MATMUL generic array
+.\".PD MAXLOC generic array
+.\".PD MAXVAL generic arrray
+.\".PD MINLOC generic array
+.\".PD MINVAL generic arrray
+.\".PD MERGE generic elemental
+.PD NEQV generic scalar
+.PD OR generic scalar
+.\".PD PACK generic array
+.\".PD PRODUCT generic reduction
+.PD RAN specific scalar
+The \*(cfRAN\*(rf function is a general random number generator
+which requires a single argument which is either an integer*4 variable
+or array element.
+.PD SECNDS specific scalar
+The \*(cfSECNDS\*(rf function returns the system time in seconds
+as a single-precision (double-precision) value minus the value
+of its single-precision (double-precision) argument.
+.PD SHIFT specific scalar
+.\".PD SUM generic reduction
+.\".PD SPREAD generic array
+.\".PD TRANSPOSE generic array
+.\".PD UNPACK generic array

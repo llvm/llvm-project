@@ -1,0 +1,334 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/aarch64.
+
+# Static and hidden objects are accessed without dynamic relocations.
+# The exception is -mcmodel=large which is unsupported with PIC/PIE.
+$as_echo "#define PI_STATIC_AND_HIDDEN 1" >>confdefs.h
+
+
+# Static PIE is supported.
+$as_echo "#define SUPPORT_STATIC_PIE 1" >>confdefs.h
+
+
+# We check to see if the compiler and flags are
+# selecting the big endian ABI and if they are then
+# we set libc_cv_aarch64_be to yes which causes
+# HAVE_AARCH64_BE to be defined in config.h and
+# in include/libc-symbols.h and thus available to
+# shlib-versions to select the appropriate name for
+# the dynamic linker via %ifdef.
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for grep that handles long lines and -e" >&5
+$as_echo_n "checking for grep that handles long lines and -e... " >&6; }
+if ${ac_cv_path_GREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -z "$GREP"; then
+  ac_path_GREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in grep ggrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_GREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_GREP" || continue
+# Check for GNU ac_path_GREP and select it if it is found.
+  # Check for GNU $ac_path_GREP
+case `"$ac_path_GREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_GREP="$ac_path_GREP" ac_path_GREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'GREP' >> "conftest.nl"
+    "$ac_path_GREP" -e 'GREP$' -e '-(cannot match)-' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_GREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_GREP="$ac_path_GREP"
+      ac_path_GREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_GREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_GREP"; then
+    as_fn_error $? "no acceptable grep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_GREP=$GREP
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_GREP" >&5
+$as_echo "$ac_cv_path_GREP" >&6; }
+ GREP="$ac_cv_path_GREP"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for egrep" >&5
+$as_echo_n "checking for egrep... " >&6; }
+if ${ac_cv_path_EGREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if echo a | $GREP -E '(a|b)' >/dev/null 2>&1
+   then ac_cv_path_EGREP="$GREP -E"
+   else
+     if test -z "$EGREP"; then
+  ac_path_EGREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in egrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_EGREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_EGREP" || continue
+# Check for GNU ac_path_EGREP and select it if it is found.
+  # Check for GNU $ac_path_EGREP
+case `"$ac_path_EGREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_EGREP="$ac_path_EGREP" ac_path_EGREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'EGREP' >> "conftest.nl"
+    "$ac_path_EGREP" 'EGREP$' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_EGREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_EGREP="$ac_path_EGREP"
+      ac_path_EGREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_EGREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_EGREP"; then
+    as_fn_error $? "no acceptable egrep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_EGREP=$EGREP
+fi
+
+   fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_EGREP" >&5
+$as_echo "$ac_cv_path_EGREP" >&6; }
+ EGREP="$ac_cv_path_EGREP"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for big endian" >&5
+$as_echo_n "checking for big endian... " >&6; }
+if ${libc_cv_aarch64_be+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifdef __AARCH64EB__
+                      yes
+                     #endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "yes" >/dev/null 2>&1; then :
+  libc_cv_aarch64_be=yes
+else
+  libc_cv_aarch64_be=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_aarch64_be" >&5
+$as_echo "$libc_cv_aarch64_be" >&6; }
+if test $libc_cv_aarch64_be = yes; then
+  $as_echo "#define HAVE_AARCH64_BE 1" >>confdefs.h
+
+  config_vars="$config_vars
+default-abi = lp64_be"
+else
+  config_vars="$config_vars
+default-abi = lp64"
+fi
+
+# Only consider BTI supported if -mbranch-protection=bti is
+# on by default in the compiler and the linker produces
+# binaries with GNU property notes in PT_GNU_PROPERTY segment.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BTI support" >&5
+$as_echo_n "checking for BTI support... " >&6; }
+if ${libc_cv_aarch64_bti+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+    cat > conftest.c <<EOF
+void foo (void) { }
+EOF
+  libc_cv_aarch64_bti=no
+  if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS -nostdlib -nostartfiles $no_ssp -shared -fPIC -o conftest.so conftest.c'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; } \
+     && { ac_try='$READELF -lW conftest.so | grep -q GNU_PROPERTY'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; } \
+     && { ac_try='$READELF -nW conftest.so | grep -q "NT_GNU_PROPERTY_TYPE_0.*AArch64 feature:.* BTI"'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+  then
+    libc_cv_aarch64_bti=yes
+  fi
+  rm -rf conftest.*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_aarch64_bti" >&5
+$as_echo "$libc_cv_aarch64_bti" >&6; }
+config_vars="$config_vars
+aarch64-bti = $libc_cv_aarch64_bti"
+if test $libc_cv_aarch64_bti = yes; then
+  $as_echo "#define HAVE_AARCH64_BTI 1" >>confdefs.h
+
+fi
+
+# Check if glibc is built with return address signing, i.e.
+# if -mbranch-protection=pac-ret is on. We need this because
+# pac-ret relies on unwinder support so it's not safe to use
+# it in assembly code unconditionally, but there is no
+# feature test macro for it in gcc.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if pac-ret is enabled" >&5
+$as_echo_n "checking if pac-ret is enabled... " >&6; }
+if ${libc_cv_aarch64_pac_ret+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+    cat > conftest.c <<EOF
+int bar (void);
+int foo (void) { return bar () + 1; }
+EOF
+  libc_cv_aarch64_pac_ret=no
+  if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS -S -o conftest.s conftest.c'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; } \
+     && { ac_try='grep -q -E '\''(hint( |	)+25|paciasp)'\'' conftest.s'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+  then
+    libc_cv_aarch64_pac_ret=yes
+  fi
+  rm -rf conftest.*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_aarch64_pac_ret" >&5
+$as_echo "$libc_cv_aarch64_pac_ret" >&6; }
+if test $libc_cv_aarch64_pac_ret = yes; then
+  $as_echo "#define HAVE_AARCH64_PAC_RET 1" >>confdefs.h
+
+fi
+
+# Check if binutils supports variant PCS symbols.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for variant PCS support" >&5
+$as_echo_n "checking for variant PCS support... " >&6; }
+if ${libc_cv_aarch64_variant_pcs+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+    cat > conftest.S <<EOF
+.global foo
+.type foo, %function
+.variant_pcs foo
+foo:
+	ret
+.global bar
+.type bar, %function
+bar:
+	b foo
+EOF
+  libc_cv_aarch64_variant_pcs=no
+  if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS -nostdlib -nostartfiles $no_ssp -shared -fPIC -o conftest.so conftest.S'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; } \
+     && { ac_try='$READELF -dW conftest.so | grep -q AARCH64_VARIANT_PCS'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+  then
+    libc_cv_aarch64_variant_pcs=yes
+  fi
+  rm -rf conftest.*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_aarch64_variant_pcs" >&5
+$as_echo "$libc_cv_aarch64_variant_pcs" >&6; }
+config_vars="$config_vars
+aarch64-variant-pcs = $libc_cv_aarch64_variant_pcs"
+
+# Check if asm support armv8.2-a+sve
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SVE support in assembler" >&5
+$as_echo_n "checking for SVE support in assembler... " >&6; }
+if ${libc_cv_asm_sve+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.s <<\EOF
+        ptrue p0.b
+EOF
+if { ac_try='${CC-cc} -c -march=armv8.2-a+sve conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  libc_cv_aarch64_sve_asm=yes
+else
+  libc_cv_aarch64_sve_asm=no
+fi
+rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_asm_sve" >&5
+$as_echo "$libc_cv_asm_sve" >&6; }
+if test $libc_cv_aarch64_sve_asm = yes; then
+  $as_echo "#define HAVE_AARCH64_SVE_ASM 1" >>confdefs.h
+
+fi

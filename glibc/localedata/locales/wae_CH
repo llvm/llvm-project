@@ -1,0 +1,230 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ChangeLog
+%	0.1		2010-10-25 Kevin Bortis <bortis@translate-wae.ch>
+%				- First version of wae_CH locale file
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title      "Walser locale for Switzerland"
+source     ""
+address    ""
+contact    "Walser Translation Team"
+email      "ml@translate-wae.ch"
+tel        ""
+fax        ""
+language   "Walser"
+territory  "Switzerland"
+revision   "0.1"
+date       "2010-10-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+% Using same characters as in German language (Switzerland)
+copy "de_CH"
+END LC_CTYPE
+
+LC_COLLATE
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+% abday - The abbreviations for the week days:
+% - Sun, Män, Zis, Mit, Fro, Fri, Sam
+abday	"Sun";/
+	"M<U00E4>n";/
+	"Zis";/
+	"Mit";/
+	"Fro";/
+	"Fri";/
+	"Sam"
+
+% day - The full names of the week days:
+% - Suntag, Mäntag, Zischtag, Mittwuch, Frontag, Fritag, Samschtag
+day         "Suntag";/
+            "M<U00E4>ntag";/
+            "Zischtag";/
+            "Mittwuch";/
+            "Frontag";/
+            "Fritag";/
+            "Samschtag"
+
+% abmon - The abbreviations for the months
+% - Jen, Hor, Mär, Abr, Mei, Brá, Hei, Öig, Her, Wím, Win, Chr
+abmon       	"Jen";/
+		"Hor";/
+		"M<U00E4>r";/
+		"Abr";/
+		"Mei";/
+		"Br<U00E1>";/
+		"Hei";/
+		"<U00D6>ig";/
+		"Her";/
+		"W<U00ED>m";/
+		"Win";/
+		"Chr"
+
+% mon - The full names of the months -
+% - Jenner, Hornig, Märze, Abrille, Meije, Bráčet, Heiwet,
+%    Öigšte, Herbštmánet, Wímánet, Wintermánet, Chrištmánet
+mon         	"Jenner";/
+		"Hornig";/
+		"M<U00E4>rze";/
+		"Abrille";/
+		"Meije";/
+		"Br<U00E1><U010D>et";/
+		"Heiwet";/
+		"<U00D6>ig<U0161>te";/
+		"Herb<U0161>tm<U00E1>net";/
+		"W<U00ED>m<U00E1>net";/
+		"Winterm<U00E1>net";/
+		"Chri<U0161>tm<U00E1>net"
+
+% Abreviated date and time representation to be referenced by the "%c" field descriptor -
+d_t_fmt "%a %d. %b %Y %T %Z"
+%
+% "%a" (short weekday name),
+% "%d" (day of month as a decimal number),
+% "%b" (short month name),
+% "%Y" (year with century as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+
+% Date representation to be referenced by the "%x" field descriptor -
+% "%Y-%m-%d", year.month.day as decimal numbers (2000-12-01).
+d_fmt   "%Y-%m-%d"
+
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+t_fmt   "%T"
+
+% Define representation of ante meridiem and post meridiem strings -
+% The ""s mean default to "AM" and "PM".
+am_pm       "";""
+
+% Define time representation in 12-hour format with "am_pm", to be referenced by the "%r"
+% field descriptor -
+% The "" means that this format is not supported.
+t_fmt_ampm  ""
+
+% Date representation not described in ISO/IEC 14652. Comes out as -
+date_fmt	"%a %-d %b %H:%M:%S %Z %Y"
+% which is
+% %a - abbreviated weekday name,
+% %b - abreviated month name,
+% %e - day of month as a decimal number with leading space (1 to 31),
+% %H - hour (24-hour clock) as a decimal number (00 to 23),
+% %M - minute as a decimal number (00 to 59),
+% %S - seconds as a decimal number (00 to 59),
+% %Z - time-zone name,
+% %Y - year with century as a decimal number,e.g. 2001.
+
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MONETARY
+copy "de_CH"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "de_CH"
+END LC_NUMERIC
+
+LC_MESSAGES
+yesexpr "^[+1jJyY]"
+noexpr  "^[-0nN]"
+yesstr  "ja"
+nostr   "nei"
+END LC_MESSAGES
+
+LC_PAPER
+copy "de_CH"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "de_CH"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "de_CH"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+% Format for addressing a person.
+% "Salutation",
+% "Empty string, or <Space>",
+% "First given name",
+% "Empty string, or <Space>",
+% "Middle names",
+% "Empty string, or <Space>",
+% "Clan names"
+%
+name_miss   "Fr<U00F6>lein"
+% Salutation for unmarried females - "Frölein"
+%
+name_mr     "Herr"
+% Salutation for males - "Herr"
+%
+name_mrs    "Fr<U00F6>iw"
+% Salutation for married females - "Fröiw"
+%
+name_ms     "Fr<U00F6>iw"
+% Salutation valid for all females - "Fröiw"
+END LC_NAME
+
+LC_ADDRESS
+country_name "Schwiz"
+% Country name "Switzerland"
+%
+country_post "DH"
+% Abbreviated country postal name - "CH"
+%
+lang_name "Walser"
+% Language name - "Walser"
+
+% UN Geneve 1949:68 Distinguishing signs of vehicles in international traffic
+country_car "CH"
+
+% ISO 639 two and three letter language names
+% see http://www.loc.gov/standards/iso639-2/englangn.html
+% "", "wae", "wae"
+lang_ab       ""
+lang_term     "wae"
+lang_lib      "wae"
+
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+
+% ISO 3166 country number and 2 and 3 letter abreviations
+% http://www.unicode.org/onlinedat/countries.html
+% "CH", "CHE"
+country_ab2   "CH"
+country_ab3   "CHE"
+country_num   756
+country_isbn  3
+
+END LC_ADDRESS

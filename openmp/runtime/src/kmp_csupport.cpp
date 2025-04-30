@@ -21,6 +21,8 @@
 #include "kmp_utils.h"
 #include "ompt-specific.h"
 
+#include "kmp_ns.h"
+
 #define MAX_MESSAGE 512
 
 // flags will be used in future, e.g. to implement openmp_strict library
@@ -97,6 +99,13 @@ will be a unique thread identifier among all the threads created by
 the OpenMP runtime (but the value cannot be defined in terms of
 OpenMP thread ids returned by omp_get_thread_num()).
 */
+#if LIBOMP_NEXTSILICON
+// Skip the importing of this function for NextSilicon because call-sites to it
+// are missing debug information which results in broken a IR module when this
+// function is present as a definition.
+// Additionally, this function is already overlaid by a hypercall.
+#pragma ns mark noimport
+#endif // LIBOMP_NEXTSILICON
 kmp_int32 __kmpc_global_thread_num(ident_t *loc) {
   kmp_int32 gtid = __kmp_entry_gtid();
 
@@ -231,6 +240,7 @@ This call is only required if the parallel construct has a `num_threads` clause.
 */
 void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
                              kmp_int32 num_threads) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KA_TRACE(20, ("__kmpc_push_num_threads: enter T#%d num_threads=%d\n",
                 global_tid, num_threads));
   __kmp_assert_valid_gtid(global_tid);
@@ -288,6 +298,7 @@ void __kmpc_pop_num_threads(ident_t *loc, kmp_int32 global_tid) {
 
 void __kmpc_push_proc_bind(ident_t *loc, kmp_int32 global_tid,
                            kmp_int32 proc_bind) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KA_TRACE(20, ("__kmpc_push_proc_bind: enter T#%d proc_bind=%d\n", global_tid,
                 proc_bind));
   __kmp_assert_valid_gtid(global_tid);
@@ -437,6 +448,7 @@ or a `thread_limit` clause (or both).
 */
 void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
                            kmp_int32 num_teams, kmp_int32 num_threads) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KA_TRACE(20,
            ("__kmpc_push_num_teams: enter T#%d num_teams=%d num_threads=%d\n",
             global_tid, num_teams, num_threads));
@@ -601,6 +613,7 @@ conditional parallel region, like this,
 when the condition is false.
 */
 void __kmpc_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   // The implementation is now in kmp_runtime.cpp so that it can share static
   // functions with kmp_fork_call since the tasks to be done are similar in
   // each case.
@@ -623,6 +636,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   kmp_info_t *this_thr;
   kmp_team_t *serial_team;
 
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KC_TRACE(10,
            ("__kmpc_end_serialized_parallel: called by T#%d\n", global_tid));
 
@@ -810,6 +824,8 @@ void __kmpc_flush(ident_t *loc) {
 Execute a barrier.
 */
 void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
+
   KMP_COUNT_BLOCK(OMP_BARRIER);
   KC_TRACE(10, ("__kmpc_barrier: called T#%d\n", global_tid));
   __kmp_assert_valid_gtid(global_tid);
@@ -860,6 +876,7 @@ void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid) {
 */
 kmp_int32 __kmpc_master(ident_t *loc, kmp_int32 global_tid) {
   int status = 0;
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
 
   KC_TRACE(10, ("__kmpc_master: called T#%d\n", global_tid));
   __kmp_assert_valid_gtid(global_tid);
@@ -916,6 +933,7 @@ Mark the end of a <tt>master</tt> region. This should only be called by the
 thread that executes the <tt>master</tt> region.
 */
 void __kmpc_end_master(ident_t *loc, kmp_int32 global_tid) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KC_TRACE(10, ("__kmpc_end_master: called T#%d\n", global_tid));
   __kmp_assert_valid_gtid(global_tid);
   KMP_DEBUG_ASSERT(KMP_MASTER_GTID(global_tid));
@@ -1033,6 +1051,7 @@ void __kmpc_end_masked(ident_t *loc, kmp_int32 global_tid) {
 Start execution of an <tt>ordered</tt> construct.
 */
 void __kmpc_ordered(ident_t *loc, kmp_int32 gtid) {
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   int cid = 0;
   kmp_info_t *th;
   KMP_DEBUG_ASSERT(__kmp_init_serial);
@@ -1106,6 +1125,7 @@ void __kmpc_ordered(ident_t *loc, kmp_int32 gtid) {
 End execution of an <tt>ordered</tt> construct.
 */
 void __kmpc_end_ordered(ident_t *loc, kmp_int32 gtid) {
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   int cid = 0;
   kmp_info_t *th;
 
@@ -1141,6 +1161,7 @@ void __kmpc_end_ordered(ident_t *loc, kmp_int32 gtid) {
 static __forceinline void
 __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
                           kmp_int32 gtid, kmp_indirect_locktag_t tag) {
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   // Pointer to the allocated indirect lock is written to crit, while indexing
   // is ignored.
   void *idx;
@@ -1342,6 +1363,8 @@ This function blocks until the executing thread can enter the critical section.
 */
 void __kmpc_critical(ident_t *loc, kmp_int32 global_tid,
                      kmp_critical_name *crit) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
+
 #if KMP_USE_DYNAMIC_LOCK
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   OMPT_STORE_RETURN_ADDRESS(global_tid);
@@ -1569,6 +1592,7 @@ speculative execution and the hardware supports it.
 */
 void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
                                kmp_critical_name *crit, uint32_t hint) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KMP_COUNT_BLOCK(OMP_CRITICAL);
   kmp_user_lock_p lck;
 #if OMPT_SUPPORT && OMPT_OPTIONAL
@@ -1702,6 +1726,8 @@ Leave a critical section, releasing any lock that was held during its execution.
 */
 void __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid,
                          kmp_critical_name *crit) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
+
   kmp_user_lock_p lck;
 
   KC_TRACE(10, ("__kmpc_end_critical: called T#%d\n", global_tid));
@@ -1799,6 +1825,7 @@ this function.
 */
 kmp_int32 __kmpc_barrier_master(ident_t *loc, kmp_int32 global_tid) {
   int status;
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KC_TRACE(10, ("__kmpc_barrier_master: called T#%d\n", global_tid));
   __kmp_assert_valid_gtid(global_tid);
 
@@ -1842,6 +1869,7 @@ only be called at the completion of the <tt>master</tt> code. Other threads will
 still be waiting at the barrier and this call releases them.
 */
 void __kmpc_end_barrier_master(ident_t *loc, kmp_int32 global_tid) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KC_TRACE(10, ("__kmpc_end_barrier_master: called T#%d\n", global_tid));
   __kmp_assert_valid_gtid(global_tid);
   __kmp_end_split_barrier(bs_plain_barrier, global_tid);
@@ -1859,6 +1887,7 @@ There is no equivalent "end" function, since the
 */
 kmp_int32 __kmpc_barrier_master_nowait(ident_t *loc, kmp_int32 global_tid) {
   kmp_int32 ret;
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KC_TRACE(10, ("__kmpc_barrier_master_nowait: called T#%d\n", global_tid));
   __kmp_assert_valid_gtid(global_tid);
 
@@ -1921,6 +1950,7 @@ should introduce an explicit barrier if it is required.
 */
 
 kmp_int32 __kmpc_single(ident_t *loc, kmp_int32 global_tid) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   __kmp_assert_valid_gtid(global_tid);
   kmp_int32 rc = __kmp_enter_single(global_tid, loc, TRUE);
 
@@ -1974,6 +2004,7 @@ only be called by the thread that executed the block of code protected
 by the `single` construct.
 */
 void __kmpc_end_single(ident_t *loc, kmp_int32 global_tid) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   __kmp_assert_valid_gtid(global_tid);
   __kmp_exit_single(global_tid);
   KMP_POP_PARTITIONED_TIMER();
@@ -1993,6 +2024,7 @@ void __kmpc_end_single(ident_t *loc, kmp_int32 global_tid) {
 #endif
 }
 
+#if !LIBOMP_NEXTSILICON_DEVICE_BUILD
 /*!
 @ingroup WORK_SHARING
 @param loc Source location
@@ -2000,7 +2032,16 @@ void __kmpc_end_single(ident_t *loc, kmp_int32 global_tid) {
 
 Mark the end of a statically scheduled loop.
 */
-void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
+#if LIBOMP_NEXTSILICON
+// This function could be part of a recursive import. Because we are not
+// interested in its contents anyway and for the sake of the import performance,
+// skip its definition.
+#pragma ns mark noimport
+__attribute__((noinline)) static
+#endif
+    void
+    __kmpc_for_static_fini_impl(ident_t *loc, kmp_int32 global_tid) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   KMP_POP_PARTITIONED_TIMER();
   KE_TRACE(10, ("__kmpc_for_static_fini called T#%d\n", global_tid));
 
@@ -2030,6 +2071,19 @@ void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
 #endif
   if (__kmp_env_consistency_check)
     __kmp_pop_workshare(global_tid, ct_pdo, loc);
+}
+#endif // !LIBOMP_NEXTSILICON_DEVICE_BUILD
+
+void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
+#if LIBOMP_NEXTSILICON_DEVICE_BUILD
+  return;
+#else
+#if LIBOMP_NEXTSILICON
+  if (__nsapi_is_on_cg())
+    return;
+#endif
+  __kmpc_for_static_fini_impl(loc, global_tid);
+#endif // LIBOMP_NEXTSILICON_DEVICE_BUILD
 }
 
 // User routines which take C-style arguments (call by value)
@@ -3473,7 +3527,7 @@ int __kmpc_test_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 static __forceinline void
 __kmp_enter_critical_section_reduce_block(ident_t *loc, kmp_int32 global_tid,
                                           kmp_critical_name *crit) {
-
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
   // this lock was visible to a customer and to the threading profile tool as a
   // serial overhead span (although it's used for an internal purpose only)
   //            why was it visible in previous implementation?
@@ -3539,6 +3593,8 @@ __kmp_end_critical_section_reduce_block(ident_t *loc, kmp_int32 global_tid,
                                         kmp_critical_name *crit) {
 
   kmp_user_lock_p lck;
+
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
 
 #if KMP_USE_DYNAMIC_LOCK
 
@@ -3631,6 +3687,7 @@ __kmpc_reduce_nowait(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
                      size_t reduce_size, void *reduce_data,
                      void (*reduce_func)(void *lhs_data, void *rhs_data),
                      kmp_critical_name *lck) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
 
   KMP_COUNT_BLOCK(REDUCE_nowait);
   int retval = 0;
@@ -3790,6 +3847,8 @@ Finish the execution of a reduce nowait.
 void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
                               kmp_critical_name *lck) {
 
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
+
   PACKED_REDUCTION_METHOD_T packed_reduction_method;
 
   KA_TRACE(10, ("__kmpc_end_reduce_nowait() enter: called T#%d\n", global_tid));
@@ -3860,6 +3919,8 @@ kmp_int32 __kmpc_reduce(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
                         size_t reduce_size, void *reduce_data,
                         void (*reduce_func)(void *lhs_data, void *rhs_data),
                         kmp_critical_name *lck) {
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
+
   KMP_COUNT_BLOCK(REDUCE_wait);
   int retval = 0;
   PACKED_REDUCTION_METHOD_T packed_reduction_method;
@@ -3980,6 +4041,8 @@ start function.
 */
 void __kmpc_end_reduce(ident_t *loc, kmp_int32 global_tid,
                        kmp_critical_name *lck) {
+
+  global_tid = __kmp_ns_gtid_restore_if_risc(global_tid);
 
   PACKED_REDUCTION_METHOD_T packed_reduction_method;
   kmp_info_t *th;
@@ -4144,6 +4207,7 @@ e.g. for(i=2;i<9;i+=2) lo=2, up=8, st=2.
 */
 void __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims,
                           const struct kmp_dim *dims) {
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   __kmp_assert_valid_gtid(gtid);
   int j, idx;
   kmp_int64 last, trace_count;
@@ -4265,6 +4329,7 @@ void __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims,
 }
 
 void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   __kmp_assert_valid_gtid(gtid);
   kmp_int64 shft;
   size_t num_dims, i;
@@ -4377,6 +4442,7 @@ void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
 }
 
 void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   __kmp_assert_valid_gtid(gtid);
   kmp_int64 shft;
   size_t num_dims, i;
@@ -4450,6 +4516,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
 }
 
 void __kmpc_doacross_fini(ident_t *loc, int gtid) {
+  gtid = __kmp_ns_gtid_restore_if_risc(gtid);
   __kmp_assert_valid_gtid(gtid);
   kmp_int32 num_done;
   kmp_info_t *th = __kmp_threads[gtid];

@@ -1,0 +1,9 @@
+# Need root to write to $complocaledir when running localedef.
+su
+
+# The container install ensures we have uncompressed charmaps so we don't
+# need gzip, and we don't need to copy in the uncompressed charmap from
+# the source tree.
+
+# The container install ensures we have the compiled locale dirctory
+# present for localedef to write to by default.

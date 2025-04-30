@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -572,7 +573,26 @@ void ScheduleDAGSDNodes::RegDefIter::InitNodeNumDefs() {
     NodeNumDefs = 0;
     return;
   }
-  unsigned NRegDefs = SchedDAG->TII->get(Node->getMachineOpcode()).getNumDefs();
+
+  // NEXT32
+  // The scheduler assumes that "variadicOpsAreDefs" marked instructions have
+  // zero defs (because that's what the descriptor says), so in order not to
+  // make the scheduling worse, we calculate the actual number of results for
+  // variadic instructions. Next32 backend uses this to model the
+  // "CALL_TERMINATOR_RESULTS" machine instruction.
+  unsigned NumResults = [&]() {
+    unsigned N = Node->getNumValues();
+    // Skip over chain and glue results.
+    while (N && Node->getValueType(N - 1) == MVT::Glue)
+      --N;
+    if (N && Node->getValueType(N - 1) == MVT::Other)
+      --N;
+    return N;
+  }();
+  const MCInstrDesc &II = SchedDAG->TII->get(Node->getMachineOpcode());
+  bool HasVRegVariadicDefs = SchedDAG->TM.usesVRegsForVariadicDefs() &&
+                             II.isVariadic() && II.variadicOpsAreDefs();
+  unsigned NRegDefs = HasVRegVariadicDefs ? NumResults : II.getNumDefs();
   // Some instructions define regs that are not represented in the selection DAG
   // (e.g. unused flags). See tMOVi8. Make sure we don't access past NumValues.
   NodeNumDefs = std::min(Node->getNumValues(), NRegDefs);

@@ -1,0 +1,15 @@
+#ifndef _XOPEN_EXTENDED
+# define _XOPEN_EXTENDED
+#endif
+
+#include <stddef.h>
+#include <signal.h>
+
+--
+
+#define sigaltstack(member)	offsetof (stack_t, member)
+
+sizeSS				sizeof (stack_t)
+oSS_SP				sigaltstack (ss_sp)
+oSS_SIZE			sigaltstack (ss_size)
+oSS_FLAGS			sigaltstack (ss_flags)

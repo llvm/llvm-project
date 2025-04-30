@@ -1,0 +1,36 @@
+/* Bits in the PREFERRED_FEATURE_INDEX_1 bitfield of <cpu-features.h>.
+   Copyright (C) 2020-2021 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <https://www.gnu.org/licenses/>.  */
+
+BIT (Fast_Rep_String)
+BIT (Fast_Copy_Backward)
+BIT (Slow_BSF)
+BIT (Fast_Unaligned_Load)
+BIT (Prefer_PMINUB_for_stringop)
+BIT (Fast_Unaligned_Copy)
+BIT (I586)
+BIT (I686)
+BIT (Slow_SSE4_2)
+BIT (AVX_Fast_Unaligned_Load)
+BIT (Prefer_MAP_32BIT_EXEC)
+BIT (Prefer_No_VZEROUPPER)
+BIT (Prefer_ERMS)
+BIT (Prefer_No_AVX512)
+BIT (MathVec_Prefer_No_AVX512)
+BIT (Prefer_FSRM)
+BIT (Prefer_AVX2_STRCMP)
+BIT (Avoid_Short_Distance_REP_MOVSB)

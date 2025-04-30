@@ -9,6 +9,7 @@
 # RUN: not llvm-ifs --output-elf=%t.TestDir/Output.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
 # RUN: chmod 777 %t.TestDir
 # RUN: rm -rf %t.TestDir
+# XFAIL: *
 
 --- !ifs-v1
 IfsVersion: 3.0

@@ -1,0 +1,64 @@
+libnsl {
+  GLIBC_2.0 {
+    # Many programs expect this, but every user program should
+    # have it's own version, since the interface is different on
+    # various platforms.
+    xdr_domainname;       xdr_keydat;          xdr_mapname;
+    xdr_peername;         xdr_valdat;          xdr_yp_buf;
+    xdr_ypbind_binding;   xdr_ypbind_resp;     xdr_ypbind_resptype;
+    xdr_ypbind_setdom;    xdr_ypdelete_args;   xdr_ypmap_parms;
+    xdr_ypmaplist;        xdr_yppush_status;   xdr_yppushresp_xfr;
+    xdr_ypreq_key;        xdr_ypreq_nokey;     xdr_ypreq_xfr;
+    xdr_ypresp_all;       xdr_ypresp_key_val;  xdr_ypresp_maplist;
+    xdr_ypresp_master;    xdr_ypresp_order;    xdr_ypresp_val;
+    xdr_ypresp_xfr;       xdr_ypstat;          xdr_ypupdate_args;
+    xdr_ypxfrstat;
+
+    __yp_check;
+    yp_all;               yp_bind;             yp_first;
+    yp_get_default_domain; yp_maplist;         yp_master;
+    yp_match;             yp_next;             yp_order;
+    yp_unbind;            yp_update;           ypbinderr_string;
+    yperr_string;         ypprot_err;
+  }
+  GLIBC_2.1 {
+    nis_add;              nis_add_entry;       nis_addmember;
+    nis_checkpoint;       nis_clone_directory; nis_clone_object;
+    nis_clone_result;     nis_creategroup;     nis_destroy_object;
+    nis_destroygroup;     nis_dir_cmp;         nis_domain_of;
+    nis_domain_of_r;      nis_first_entry;     nis_free_directory;
+    nis_free_object;      nis_free_request;    nis_freenames;
+    nis_freeresult;       nis_freeservlist;    nis_freetags;
+    nis_getnames;         nis_getservlist;     nis_ismember;
+    nis_leaf_of;          nis_leaf_of_r;       nis_lerror;
+    nis_list;             nis_local_directory; nis_local_group;
+    nis_local_host;       nis_local_principal; nis_lookup;
+    nis_mkdir;            nis_modify;          nis_modify_entry;
+    nis_name_of;          nis_name_of_r;       nis_next_entry;
+    nis_perror;           nis_ping;            nis_print_directory;
+    nis_print_entry;      nis_print_group;     nis_print_group_entry;
+    nis_print_link;       nis_print_object;    nis_print_result;
+    nis_print_rights;     nis_print_table;     nis_read_obj;
+    nis_remove;           nis_remove_entry;    nis_removemember;
+    nis_rmdir;            nis_servstate;       nis_sperrno;
+    nis_sperror;          nis_sperror_r;       nis_stats;
+    nis_verifygroup;      nis_write_obj;
+
+    xdr_cback_data;       xdr_obj_p;
+
+    # This functions are needed by the NIS+ tools and rpc.nisd,
+    # they should never be used in a normal user program !
+    __free_fdresult;      __nis_default_access; __nis_default_group;
+    __nis_default_owner;  __nis_default_ttl;   __nis_finddirectory;
+    __nis_hash;           __nisbind_connect;   __nisbind_create;
+    __nisbind_destroy;    __nisbind_next;
+    readColdStartFile;    writeColdStartFile;
+  }
+  GLIBC_2.2 {
+    xdr_ypall;
+  }
+  GLIBC_PRIVATE {
+    __prepare_niscall; __follow_path; __do_niscall3;
+    __create_ib_request; _xdr_ib_request; _xdr_nis_result;
+  }
+}

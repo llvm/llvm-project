@@ -293,6 +293,14 @@ public:
   bool prefersVectorizedAddressing() const;
   bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();
+  // NEXT32
+  // Target hooks which allow us to control the vectorizer behavior during
+  // the Next32 compilation pipeline.
+  TailFoldingStyle
+  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const;
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
+  bool preferEpilogueVectorization(Loop *L) const;
+  bool enableMaskedInterleavedAccessVectorization() const;
 
   InstructionCost getBranchMispredictPenalty() const;
 

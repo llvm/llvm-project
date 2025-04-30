@@ -1,0 +1,336 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Odia locale for India.
+% Contributed by Masahide Washizawa <washi at jp ibm com>
+
+%%%%%%%%%%%%%
+LC_IDENTIFICATION
+title       "Odia language locale for India"
+source      "IBM AP Linux Technology Center, Yamato Software Laboratory"
+address     "1623-14, Shimotsuruma, Yamato-shi, Kanagawa-ken, 242-8502, Japan"
+contact     ""
+email       "bug-glibc@gnu.org"
+tel         ""
+fax         ""
+language    "Odia"
+territory   "India"
+revision    "1.0"
+date        "2006-05-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+%%%%%%%%%%%%%
+LC_CTYPE
+copy "i18n"
+
+% Odia uses the alternate digits U+0B66..U+0B6F
+outdigit <U0B66>..<U0B6F>
+
+% This is used in the scanf family of functions to read Odia numbers
+% using "%Id" and such.
+map to_inpunct; /
+  (<U0030>,<U0B66>); /
+  (<U0031>,<U0B67>); /
+  (<U0032>,<U0B68>); /
+  (<U0033>,<U0B69>); /
+  (<U0034>,<U0B6A>); /
+  (<U0035>,<U0B6B>); /
+  (<U0036>,<U0B6C>); /
+  (<U0037>,<U0B6D>); /
+  (<U0038>,<U0B6E>); /
+  (<U0039>,<U0B6F>);
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+%%%%%%%%%%%%%
+LC_COLLATE
+
+% CLDR collation rules for Odia:
+% (see: https://github.com/unicode-org/cldr/blob/master/common/collation/or.xml)
+%
+%  #	The following tailoring is an adjustment of the
+%  #	DUCET collation order for CANDRABINDU, ANUSVARA,
+%  #	and VISARGA. Instead of being sorted with secondary
+%  #	weights, they are collated on primary level between
+%  #	the independent vowels and the consonants.
+%  #
+%  	&ଔ<ଁ<ଂ<ଃ
+%  # KSSA is sorted after HA.
+%  	&ହ<କ୍ଷ
+%  # YYA is secondary different from YA.
+%  	&ଯ<<ୟ
+%
+% The following rules implement the same order for glibc.
+
+copy "iso14651_t1"
+
+collating-symbol <anusvara>
+collating-symbol <candrabindu>
+collating-symbol <visarga>
+
+collating-element <ka_virama_ssa> from "<U0B15><U0B4D><U0B37>" % କ ୍ ଷ = କ୍ଷ
+collating-element <dda_nukta> from "<U0B21><U0B3C>" % ଡ ଼ = ଡ଼
+collating-element <ddha_nukta> from "<U0B22><U0B3C>" % ଢ ଼ = ଢ଼
+
+collating-symbol <cs_ka_virama_ssa>
+
+% &ଔ<ଁ<ଂ<ଃ
+reorder-after <S0B14> % ORIYA LETTER AU
+<candrabindu>
+<anusvara>
+<visarga>
+
+<U0B01> <candrabindu>;<CANDRABINDU>;<MIN>;<U0B01> % ORIYA SIGN CANDRABINDU
+<U0B02> <anusvara>;<ANUSVARA>;<MIN>;<U0B02> % ORIYA SIGN ANUSVARA
+<U0B03> <visarga>;<VISARGA>;<MIN>;<U0B03> % ORIYA SIGN VISARGA
+
+% &ହ<କ୍ଷ
+reorder-after <S0B39> % ORIYA LETTER HA
+<cs_ka_virama_ssa>
+
+<ka_virama_ssa> <cs_ka_virama_ssa>;<BASE>;<MIN>;"<U0B15><U0B4D><U0B37>" % କ ୍ ଷ = କ୍ଷ
+
+% &ଯ<<ୟ
+<U0B5F> <S0B2F>;"<BASE><VRNT1>";<MIN>;<U0B5F> % ORIYA LETTER YYA
+
+reorder-end
+
+END LC_COLLATE
+
+%%%%%%%%%%%%%
+LC_NUMERIC
+decimal_point     "."
+thousands_sep     ","
+grouping          3;2
+END LC_NUMERIC
+
+%%%%%%%%%%%%%
+LC_MONETARY
+copy "hi_IN"
+END LC_MONETARY
+
+%%%%%%%%%%%%%
+LC_TIME
+abday   "<U0B30><U0B2C><U0B3F>";/
+        "<U0B38><U0B4B><U0B2E>";/
+        "<U0B2E><U0B19><U0B4D><U0B17><U0B33>";/
+        "<U0B2C><U0B41><U0B27>";/
+        "<U0B17><U0B41><U0B30><U0B41>";/
+        "<U0B36><U0B41><U0B15><U0B4D><U0B30>";/
+        "<U0B36><U0B28><U0B3F>"
+day     "<U0B30><U0B2C><U0B3F><U0B2C><U0B3E><U0B30>";/
+        "<U0B38><U0B4B><U0B2E><U0B2C><U0B3E><U0B30>";/
+        "<U0B2E><U0B19><U0B4D><U0B17><U0B33><U0B2C><U0B3E><U0B30>";/
+        "<U0B2C><U0B41><U0B27><U0B2C><U0B3E><U0B30>";/
+        "<U0B17><U0B41><U0B30><U0B41><U0B2C><U0B3E><U0B30>";/
+        "<U0B36><U0B41><U0B15><U0B4D><U0B30><U0B2C><U0B3E><U0B30>";/
+        "<U0B36><U0B28><U0B3F><U0B2C><U0B3E><U0B30>"
+abmon   "<U0B1C><U0B3E><U0B28><U0B41><U0B06><U0B30><U0B40>";/
+        "<U0B2B><U0B47><U0B2C><U0B43><U0B06><U0B30><U0B40>";/
+        "<U0B2E><U0B3E><U0B30><U0B4D><U0B1A><U0B4D><U0B1A>";/
+        "<U0B05><U0B2A><U0B4D><U0B30><U0B47><U0B32>";/
+        "<U0B2E><U0B07>";/
+        "<U0B1C><U0B41><U0B28>";/
+        "<U0B1C><U0B41><U0B32><U0B3E><U0B07>";/
+        "<U0B05><U0B17><U0B37><U0B4D><U0B1F>";/
+        "<U0B38><U0B47><U0B2A><U0B4D><U0B1F><U0B47><U0B2E><U0B4D><U0B2C><U0B30>";/
+        "<U0B05><U0B15><U0B4D><U0B1F><U0B4B><U0B2C><U0B30>";/
+        "<U0B28><U0B2D><U0B47><U0B2E><U0B4D><U0B2C><U0B30>";/
+        "<U0B21><U0B3F><U0B38><U0B47><U0B2E><U0B4D><U0B2C><U0B30>"
+mon     "<U0B1C><U0B3E><U0B28><U0B41><U0B06><U0B30><U0B40>";/
+	"<U0B2B><U0B47><U0B2C><U0B43><U0B06><U0B30><U0B40>";/
+        "<U0B2E><U0B3E><U0B30><U0B4D><U0B1A><U0B4D><U0B1A>";/
+        "<U0B05><U0B2A><U0B4D><U0B30><U0B47><U0B32>";/
+        "<U0B2E><U0B07>";/
+        "<U0B1C><U0B41><U0B28>";/
+        "<U0B1C><U0B41><U0B32><U0B3E><U0B07>";/
+        "<U0B05><U0B17><U0B37><U0B4D><U0B1F>";/
+        "<U0B38><U0B47><U0B2A><U0B4D><U0B1F><U0B47><U0B2E><U0B4D><U0B2C><U0B30>";/
+        "<U0B05><U0B15><U0B4D><U0B1F><U0B4B><U0B2C><U0B30>";/
+        "<U0B28><U0B2D><U0B47><U0B2E><U0B4D><U0B2C><U0B30>";/
+        "<U0B21><U0B3F><U0B38><U0B47><U0B2E><U0B4D><U0B2C><U0B30>"
+d_fmt     "%Od-%Om-%Oy"
+t_fmt     "%OI:%OM:%OS %p"
+d_t_fmt   "%Oe %B %Oy %OI:%OM:%OS %p"
+date_fmt  "%Oe %B %Oy %OI:%OM:%OS %p %Z"
+am_pm     "AM";"PM"
+t_fmt_ampm "%OI:%OM:%OS %p"
+alt_digits "<U0B66>";/
+           "<U0B67>";/
+           "<U0B68>";/
+           "<U0B69>";/
+           "<U0B6A>";/
+           "<U0B6B>";/
+           "<U0B6C>";/
+           "<U0B6D>";/
+           "<U0B6E>";/
+           "<U0B6F>";/
+           "<U0B67><U0B66>";/
+           "<U0B67><U0B67>";/
+           "<U0B67><U0B68>";/
+           "<U0B67><U0B69>";/
+           "<U0B67><U0B6A>";/
+           "<U0B67><U0B6B>";/
+           "<U0B67><U0B6C>";/
+           "<U0B67><U0B6D>";/
+           "<U0B67><U0B6E>";/
+           "<U0B67><U0B6F>";/
+           "<U0B68><U0B66>";/
+           "<U0B68><U0B67>";/
+           "<U0B68><U0B68>";/
+           "<U0B68><U0B69>";/
+           "<U0B68><U0B6A>";/
+           "<U0B68><U0B6B>";/
+           "<U0B68><U0B6C>";/
+           "<U0B68><U0B6D>";/
+           "<U0B68><U0B6E>";/
+           "<U0B68><U0B6F>";/
+           "<U0B69><U0B66>";/
+           "<U0B69><U0B67>";/
+           "<U0B69><U0B68>";/
+           "<U0B69><U0B69>";/
+           "<U0B69><U0B6A>";/
+           "<U0B69><U0B6B>";/
+           "<U0B69><U0B6C>";/
+           "<U0B69><U0B6D>";/
+           "<U0B69><U0B6E>";/
+           "<U0B69><U0B6F>";/
+           "<U0B6A><U0B66>";/
+           "<U0B6A><U0B67>";/
+           "<U0B6A><U0B68>";/
+           "<U0B6A><U0B69>";/
+           "<U0B6A><U0B6A>";/
+           "<U0B6A><U0B6B>";/
+           "<U0B6A><U0B6C>";/
+           "<U0B6A><U0B6D>";/
+           "<U0B6A><U0B6E>";/
+           "<U0B6A><U0B6F>";/
+           "<U0B6B><U0B66>";/
+           "<U0B6B><U0B67>";/
+           "<U0B6B><U0B68>";/
+           "<U0B6B><U0B69>";/
+           "<U0B6B><U0B6A>";/
+           "<U0B6B><U0B6B>";/
+           "<U0B6B><U0B6C>";/
+           "<U0B6B><U0B6D>";/
+           "<U0B6B><U0B6E>";/
+           "<U0B6B><U0B6F>";/
+           "<U0B6C><U0B66>";/
+           "<U0B6C><U0B67>";/
+           "<U0B6C><U0B68>";/
+           "<U0B6C><U0B69>";/
+           "<U0B6C><U0B6A>";/
+           "<U0B6C><U0B6B>";/
+           "<U0B6C><U0B6C>";/
+           "<U0B6C><U0B6D>";/
+           "<U0B6C><U0B6E>";/
+           "<U0B6C><U0B6F>";/
+           "<U0B6D><U0B66>";/
+           "<U0B6D><U0B67>";/
+           "<U0B6D><U0B68>";/
+           "<U0B6D><U0B69>";/
+           "<U0B6D><U0B6A>";/
+           "<U0B6D><U0B6B>";/
+           "<U0B6D><U0B6C>";/
+           "<U0B6D><U0B6D>";/
+           "<U0B6D><U0B6E>";/
+           "<U0B6D><U0B6F>";/
+           "<U0B6E><U0B66>";/
+           "<U0B6E><U0B67>";/
+           "<U0B6E><U0B68>";/
+           "<U0B6E><U0B69>";/
+           "<U0B6E><U0B6A>";/
+           "<U0B6E><U0B6B>";/
+           "<U0B6E><U0B6C>";/
+           "<U0B6E><U0B6D>";/
+           "<U0B6E><U0B6E>";/
+           "<U0B6E><U0B6F>";/
+           "<U0B6F><U0B66>";/
+           "<U0B6F><U0B67>";/
+           "<U0B6F><U0B68>";/
+           "<U0B6F><U0B69>";/
+           "<U0B6F><U0B6A>";/
+           "<U0B6F><U0B6B>";/
+           "<U0B6F><U0B6C>";/
+           "<U0B6F><U0B6D>";/
+           "<U0B6F><U0B6E>";/
+           "<U0B6F><U0B6F>"
+week 7;19971130;1
+END LC_TIME
+
+%%%%%%%%%%%%%
+LC_MESSAGES
+yesexpr "^[+1yY<U0B39>]"
+noexpr  "^[-0nN<U0B28>]"
+yesstr  "<U0B39><U0B01>"
+nostr   "<U0B28><U0B3E>"
+END LC_MESSAGES
+
+%%%%%%%%%%%%%
+LC_PAPER
+copy "hi_IN"
+END LC_PAPER
+
+%%%%%%%%%%%%%
+LC_NAME
+% This is the ISO_IEC TR14652 Locale definition for the
+% LC_NAME category.
+%
+name_fmt    "%p%t%f%t%g"
+name_gen    ""
+name_mr     "Mr."
+name_mrs    "Mrs."
+name_miss   "Miss."
+name_ms     "Ms."
+END LC_NAME
+
+%%%%%%%%%%%%%
+LC_ADDRESS
+postal_fmt  "%z%c%T%s%b%e%r"
+country_name "<U0B2D><U0B3E><U0B30><U0B24>"
+country_ab2 "IN"
+country_ab3 "IND"
+country_num 356
+country_car    "IND"
+% ଓଡ଼ିଆ
+lang_name    "<U0B13><U0B21><U0B3C><U0B3F><U0B06>"
+lang_ab      "or"
+lang_term    "ori"
+lang_lib    "ori"
+END LC_ADDRESS
+
+%%%%%%%%%%%%%
+LC_TELEPHONE
+% This is the ISO_IEC TR14652 Locale definition for the
+tel_int_fmt "+%c ;%a ;%l"
+int_prefix  "91"
+int_select  "00"
+END LC_TELEPHONE
+
+%%%%%%%%%%%%%
+LC_MEASUREMENT
+copy "hi_IN"
+END LC_MEASUREMENT

@@ -1,0 +1,137 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title "Inuktitut language locale for Nunavut, Canada"
+source ""
+address ""
+contact "Pablo Saratxaga"
+email "pablo@mandriva.com"
+tel ""
+fax ""
+language "Inuktitut"
+territory "Canada"
+revision "0.1"
+date "2001-05-04"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+END LC_IDENTIFICATION
+
+LC_ADDRESS
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T %z%N%c%N"
+% "Canada" in Inuktitut: ᑲᓇᑕ (https://iu.wikipedia.org/wiki/%E1%91%B2%E1%93%87%E1%91%95)
+country_name "<U1472><U14C7><U1455>"
+country_post "CA"
+country_ab2 "CA"
+country_ab3 "CAN"
+country_num 124
+country_car    "CDN"
+% FIXME country_isbn for Canada/inuktitut ?
+lang_name "<U1403><U14C4><U1483><U144E><U1450><U1466>"
+lang_ab      "iu"
+lang_term    "iku"
+lang_lib     "iku"
+END LC_ADDRESS
+
+%%%%%%%%%%%%%
+%
+% TODO: LC_COLLATE, LC_TIME, LC_MESSAGES
+%
+%%%%%%%%%%%%
+
+
+LC_COLLATE
+% FIXME: is that order correct ?
+copy "en_CA"
+END LC_COLLATE
+
+LC_CTYPE
+copy "en_CA"
+END LC_CTYPE
+
+LC_MONETARY
+copy "en_CA"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_CA"
+END LC_NUMERIC
+
+LC_TELEPHONE
+copy "en_CA"
+END LC_TELEPHONE
+
+LC_TIME
+abday       "<U14C8>";"<U14C7>";/
+            "<U14D5>";"<U1431>";/
+            "<U157F>";"<U1405>";/
+            "<U14EF>"
+day         "<U14C8><U1466><U144E><U1591><U152D><U1550><U1555><U1483>";/
+            "<U14C7><U14A1><U1490><U153E><U152D><U1405>";/
+            "<U14C7><U14A1><U1490><U153E><U152D><U1405><U14D5><U1585><U146D><U1466>";/
+            "<U1431><U1593><U14F2><U14D5><U1585><U14EF><U1405><U1466>";/
+            "<U157F><U144E><U1585><U1470><U1466>";/
+            "<U1405><U14EA><U14D7><U1548><U14D8><U1450><U1403><U14C7><U1585>";/
+            "<U14EF><U1559><U1456><U1555><U1483>"
+abmon       "<U152E><U14C4>";"<U1555><U1557>";/
+            "<U14AA><U1505>";"<U1403><U1433>";/
+            "<U14AA><U1403>";"<U152A><U14C2>";/
+            "<U152A><U14DA>";"<U140A><U148B>";/
+            "<U14EF><U144E>";"<U140A><U1466>";/
+            "<U14C4><U1555>";"<U144E><U14EF>"
+mon         "<U152E><U14C4><U140A><U14D5>";/
+            "<U1555><U1557><U140A><U14D5>";/
+            "<U14AA><U1505><U14EF>";/
+            "<U1403><U1433><U14D7>";/
+            "<U14AA><U1403>";/
+       	    "<U152A><U14C2>";/
+            "<U152A><U14DA><U1403>";/
+            "<U140A><U148B><U14EF>";/
+            "<U14EF><U144E><U1559>";/
+            "<U140A><U1466><U1450><U1559>";/
+            "<U14C4><U1555><U1559>";/
+            "<U144E><U14EF><U155D><U1559>"
+d_t_fmt     "%a %d %b %Y %r"
+date_fmt    "%a %d %b %Y %r %Z"
+d_fmt       "%m//%d//%y"
+t_fmt       "%r"
+am_pm       "AM";"PM"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yYsS]"
+noexpr  "^[-0nN]"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_CA"
+END LC_PAPER
+
+% FIXME
+LC_NAME
+copy "en_CA"
+END LC_NAME
+
+LC_MEASUREMENT
+copy "en_CA"
+END LC_MEASUREMENT

@@ -1,0 +1,176 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Minnan Language Locale for Taiwan
+% Source:
+% Contact: Arne Goetje
+% Email: arne@ubuntu.com
+% Language: nan
+% Territory: TW
+% Revision: 0.1
+% Date: 2008-06-16
+% Users: general
+
+LC_IDENTIFICATION
+title "Minnan language locale for Taiwan"
+source ""
+address ""
+contact "Arne Goetje"
+email "arne@canonical.com"
+tel ""
+fax ""
+language "Min Nan Chinese"
+territory "Taiwan"
+revision "0.1"
+date "2008-06-16"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+
+% accents are simply omitted if they cannot be represented.
+include "translit_combining";""
+
+translit_end
+
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+
+%% a b c d e f g h i j k l m n o o͘ p q r s t u v w x y z ⁿ
+
+collating-element <o-combining-dot-above> from "<U006F><U0358>"
+collating-element <O-combining-dot-above> from "<U004F><U0358>"
+collating-symbol <o-dot-above>
+collating-symbol <superscript-n>
+
+reorder-after <AFTER-N>
+<o-dot-above>
+reorder-after <AFTER-Z>
+<superscript-n>
+
+<o-combining-dot-above> <o-dot-above>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % o͘
+<O-combining-dot-above> <o-dot-above>;"<BASE><BASE>";"<CAP><MIN>";IGNORE % O͘
+<U207F>                 <superscript-n>;"<BASE>";"<MNN>";IGNORE % ⁿ
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+copy "zh_TW"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "zh_TW"
+END LC_NUMERIC
+
+LC_TIME
+abday   "lp";"p1";"p2";"p3";"p4";"p5";"p6"
+day     "l<U00E9>-p<U00E0>i-ji<U030D>t";/
+        "p<U00E0>i-it";/
+        "p<U00E0>i-j<U012B>";/
+        "p<U00E0>i-sa<U207F>";/
+        "p<U00E0>i-s<U00EC>";/
+        "p<U00E0>i-g<U014D><U0358>";/
+        "p<U00E0>i-la<U030D>k"
+abmon   "1g";/
+	"2g";/
+	"3g";/
+	"4g";/
+	"5g";/
+	"6g";/
+	"7g";/
+	"8g";/
+	"9g";/
+	"10g";/
+	"11g";/
+	"12g"
+mon     "1goe<U030D>h";/
+	"2goe<U030D>h";/
+	"3goe<U030D>h";/
+	"4goe<U030D>h";/
+	"5goe<U030D>h";/
+	"6goe<U030D>h";/
+	"7goe<U030D>h";/
+	"8goe<U030D>h";/
+	"9goe<U030D>h";/
+	"10goe<U030D>h";/
+	"11goe<U030D>h";/
+	"12goe<U030D>h"
+%
+d_t_fmt    "%Y %b %d (%a) %H:%M:%S %Z"
+d_fmt       "%F"
+t_fmt       "%r"
+am_pm       "t<U00E9>ng-po<U0358>";"<U0113>-po<U0358>"
+t_fmt_ampm  "%I:%M:%S %p"
+date_fmt    "%Y %b %d (%a) %H:%M:%S %Z"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yYsS]"
+noexpr  "^[-0nNmM]"
+yesstr  "S<U012B>"
+nostr   "M<U0304>-S<U012B>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "nan_TW"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "nan_TW"
+END LC_MEASUREMENT
+
+LC_NAME
+%FIXME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "ko<U0358>-ni<U00FB>"
+name_mr     "sian-si<U207F>"
+name_mrs    "l<U00FA>-s<U016B>"
+name_ms     "si<U00F3>-chi<U00E1>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%r %e %h %s%N%z %T%N%c%N"
+% Reference:	http://www.un.org/Depts/unsd/methods/m49alpha.htm
+%		http://www.isbn.spk-berlin.de/html/prefix.htm
+country_name	"T<U00E2>i-o<U00E2>n"
+country_post	"TW"
+country_ab2	"TW"
+country_ab3	"TWN"
+country_num	158
+country_car "RC"
+country_isbn	957
+%lang_name "Bân-lâm-gú"
+lang_name "B<U00E2>n-l<U00E2>m-g<U00FA>"
+lang_term "nan"
+lang_lib "nan"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "zh_TW"
+END LC_TELEPHONE

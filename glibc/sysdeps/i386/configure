@@ -1,0 +1,122 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/i386.
+
+# We no longer support i386 since it lacks the atomic instructions
+# required to implement NPTL threading.
+if test "$config_machine" = i386; then
+  as_fn_error $? "
+*** ERROR: Support for i386 is deprecated.
+*** Please use host i786, i686, i585 or i486.
+*** For example: /src/glibc/configure --host=i686-pc-linux-gnu ...\"" "$LINENO" 5
+fi
+
+# The GNU C Library can't be built for i386.  There are several reasons for
+# this restriction.  The primary reason is that i386 lacks the atomic
+# operations required to support the current NPTL implementation.  While it is
+# possible that such atomic operations could be emulated in the kernel to date
+# no such work has been done to enable this.  Even with NPTL disabled you still
+# have no atomic.h implementation.  Given the declining use of i386 we disable
+# support for building with `-march=i386' or `-mcpu=i386.' We don't explicitly
+# check for i386, instead we make sure the compiler has support for inlining
+# the builtin __sync_val_compare_and_swap. If it does then we should have no
+# problem building for i386.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for compiler support of inlined builtin function __sync_val_compare_and_swap" >&5
+$as_echo_n "checking for compiler support of inlined builtin function __sync_val_compare_and_swap... " >&6; }
+libc_compiler_builtin_inlined=no
+cat > conftest.c <<EOF
+int _start (void) { int a, b, c; __sync_val_compare_and_swap (&a, b, c); return 0; }
+EOF
+if ! { ac_try='${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS $no_ssp
+		     -O0 -nostdlib -nostartfiles
+		     -S conftest.c -o - | fgrep "__sync_val_compare_and_swap"
+		     1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+then
+  libc_compiler_builtin_inlined=yes
+fi
+rm -f conftest*
+if test $libc_compiler_builtin_inlined = yes; then
+  libc_cv_unsupported_i386=no
+else
+  as_fn_error $? "
+*** Building with -march=i386/-mcpu=i386 is not supported.
+*** Please use host i786, i686, i586, or i486.
+*** For example: /source/glibc/configure CFLAGS='-O2 -march=i686' ..." "$LINENO" 5
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_compiler_builtin_inlined" >&5
+$as_echo "$libc_compiler_builtin_inlined" >&6; }
+
+if test "$static_pie" = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for linker static PIE support" >&5
+$as_echo_n "checking for linker static PIE support... " >&6; }
+if ${libc_cv_ld_static_pie+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.s <<\EOF
+	.text
+	.global _start
+_start:
+	movl	_start@GOT(%ebx), %eax
+EOF
+  libc_cv_pie_option="-Wl,-pie"
+  libc_cv_ld_static_pie=no
+  if { ac_try='${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS -nostartfiles -nostdlib $no_ssp $libc_cv_pie_option -o conftest conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+    if $READELF -r conftest | grep 'There are no relocations in this file.' > /dev/null; then
+      libc_cv_ld_static_pie=yes
+    fi
+  fi
+rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_ld_static_pie" >&5
+$as_echo "$libc_cv_ld_static_pie" >&6; }
+  if test "$libc_cv_ld_static_pie" != yes; then
+    as_fn_error $? "linker support for static PIE needed" "$LINENO" 5
+  fi
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Intel MPX support" >&5
+$as_echo_n "checking for Intel MPX support... " >&6; }
+if ${libc_cv_asm_mpx+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.s <<\EOF
+        bndmov %bnd0,(%esp)
+EOF
+if { ac_try='${CC-cc} -c $ASFLAGS conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  libc_cv_asm_mpx=yes
+else
+  libc_cv_asm_mpx=no
+fi
+rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_asm_mpx" >&5
+$as_echo "$libc_cv_asm_mpx" >&6; }
+if test $libc_cv_asm_mpx = yes; then
+  $as_echo "#define HAVE_MPX_SUPPORT 1" >>confdefs.h
+
+fi
+
+$as_echo "#define PI_STATIC_AND_HIDDEN 1" >>confdefs.h
+
+
+if test x"$multi_arch" != xno; then
+  $as_echo "#define NO_HIDDEN_EXTERN_FUNC_IN_PIE 1" >>confdefs.h
+
+fi
+
+$as_echo "#define SUPPORT_STATIC_PIE 1" >>confdefs.h
+

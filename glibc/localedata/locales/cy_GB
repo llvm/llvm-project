@@ -1,0 +1,252 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title "Welsh language locale for Great Britain"
+source "thanks to Dafydd Tomos (dafydd@imaginet.co.uk)"
+address ""
+contact "Pablo Saratxaga"
+email "pablo@mandrakesoft.com"
+tel ""
+fax ""
+language "Welsh"
+territory "United Kingdom"
+revision "0.9"
+date "2004-09-27"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_MONETARY
+END LC_IDENTIFICATION
+
+LC_ADDRESS
+postal_fmt "%d%N%f%N%d%N%b%N%s %h 5e %r%N%C%z %T%N%c%N"
+country_name "Y Deyrnas Unedig"
+country_post    "GB"
+country_ab2 "GB"
+country_ab3 "GBR"
+country_num 826
+country_isbn 0
+country_car "GB"
+lang_name "Cymraeg"
+lang_ab "cy"
+lang_term "cym"
+lang_lib "wel"
+END LC_ADDRESS
+
+LC_PAPER
+copy "en_GB"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "en_GB"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "en_GB"
+END LC_MEASUREMENT
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% CLDR collation rules for Welsh:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/cy.xml)
+%
+% <collation type="standard" references="http://www.evertype.com/alphabets/welsh.pdf">
+%   <cr><![CDATA[
+%     &C<ch<<<Ch<<<CH
+%     &D<dd<<<Dd<<<DD
+%     &F<ff<<<Ff<<<FF
+%     &G<ng<<<Ng<<<NG
+%     &L<ll<<<Ll<<<LL
+%     &P<ph<<<Ph<<<PH
+%     &R<rh<<<Rh<<<RH
+%     &T<th<<<Th<<<TH
+%   ]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/cy.xml)
+%
+%
+%
+% The following rules implement the same order for glibc.
+
+copy "iso14651_t1"
+
+% Welsh sorting order is:
+%   a b c ch d dd e f ff g ng h i l ll m n o p ph r rh s t th u w y
+
+collating-symbol  <ch-digraph>
+collating-element <ch> from "ch"
+collating-element <cH> from "cH"
+collating-element <Ch> from "Ch"
+collating-element <CH> from "CH"
+collating-symbol  <dd-digraph>
+collating-element <dd> from "dd"
+collating-element <dD> from "dD"
+collating-element <Dd> from "Dd"
+collating-element <DD> from "DD"
+collating-symbol  <ff-digraph>
+collating-element <ff> from "ff"
+collating-element <fF> from "fF"
+collating-element <Ff> from "Ff"
+collating-element <FF> from "FF"
+collating-symbol  <ng-digraph>
+collating-element <ng> from "ng"
+collating-element <nG> from "nG"
+collating-element <Ng> from "Ng"
+collating-element <NG> from "NG"
+collating-symbol  <ll-digraph>
+collating-element <ll> from "ll"
+collating-element <lL> from "lL"
+collating-element <Ll> from "Ll"
+collating-element <LL> from "LL"
+collating-symbol  <ph-digraph>
+collating-element <ph> from "ph"
+collating-element <pH> from "pH"
+collating-element <Ph> from "Ph"
+collating-element <PH> from "PH"
+collating-symbol  <rh-digraph>
+collating-element <rh> from "rh"
+collating-element <rH> from "rH"
+collating-element <Rh> from "Rh"
+collating-element <RH> from "RH"
+collating-symbol  <th-digraph>
+collating-element <th> from "th"
+collating-element <tH> from "tH"
+collating-element <Th> from "Th"
+collating-element <TH> from "TH"
+
+reorder-after <AFTER-C>
+<ch-digraph>
+reorder-after <AFTER-D>
+<dd-digraph>
+reorder-after <AFTER-F>
+<ff-digraph>
+reorder-after <AFTER-G>
+<ng-digraph>
+reorder-after <AFTER-L>
+<ll-digraph>
+reorder-after <AFTER-P>
+<ph-digraph>
+reorder-after <AFTER-R>
+<rh-digraph>
+reorder-after <AFTER-T>
+<th-digraph>
+
+<ch> <ch-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<cH> <ch-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ch> <ch-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<CH> <ch-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<dd> <dd-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<dD> <dd-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Dd> <dd-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<DD> <dd-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ff> <ff-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<fF> <ff-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ff> <ff-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<FF> <ff-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ng> <ng-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<nG> <ng-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ng> <ng-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<NG> <ng-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ll> <ll-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<lL> <ll-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ll> <ll-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<LL> <ll-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<ph> <ph-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<pH> <ph-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Ph> <ph-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<PH> <ph-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<rh> <rh-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<rH> <rh-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Rh> <rh-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<RH> <rh-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<th> <th-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<tH> <th-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<Th> <th-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<TH> <th-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+copy "en_GB"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_GB"
+END LC_NUMERIC
+
+
+LC_TIME
+abday       "Sul";"Llu";"Maw";"Mer";"Iau";"Gwe";"Sad"
+day         "Sul";/
+            "Llun";/
+            "Mawrth";/
+            "Mercher";/
+            "Iau";/
+            "Gwener";/
+            "Sadwrn"
+abmon       "Ion";"Chw";/
+            "Maw";"Ebr";/
+            "Mai";"Meh";/
+            "Gor";"Aws";/
+            "Med";"Hyd";/
+            "Tach";"Rha"
+mon         "Ionawr";/
+            "Chwefror";/
+            "Mawrth";/
+            "Ebrill";/
+            "Mai";/
+            "Mehefin";/
+            "Gorffennaf";/
+            "Awst";/
+            "Medi";/
+            "Hydref";/
+            "Tachwedd";/
+            "Rhagfyr"
+d_t_fmt     "Dydd %A %d mis %B %Y %T %Z"
+d_fmt       "%d.%m.%y"
+t_fmt       "%T"
+am_pm       "am";"pm"
+t_fmt_ampm  "%l:%M:%S %P %Z"
+date_fmt    "%a %e %b %H:%M:%S %Z %Y"
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1iItTyY]"
+noexpr  "^[-0nN]"
+yesstr  "ie"
+nostr   "na"
+END LC_MESSAGES
+
+LC_NAME
+% FIXME
+copy "en_GB"
+END LC_NAME

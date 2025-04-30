@@ -1,0 +1,11 @@
+## args: float
+## ret: int
+## includes: math.h
+
+## name: subnormal
+0x1p-149
+0x1.fffff8p-128
+
+## name: normal
+1.0
+1024.0

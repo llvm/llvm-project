@@ -1,0 +1,87 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Spanish Language Locale for Spain with Euro
+% Language: es
+% Territory: ES
+% Option: euro
+% Date: 2000-08-20
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Spanish locale for Spain with Euro"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Spanish"
+territory  "Spain"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "es_ES"
+END LC_COLLATE
+
+LC_CTYPE
+copy "es_ES"
+END LC_CTYPE
+
+LC_MESSAGES
+copy "es_ES"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "es_ES"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "es_ES"
+END LC_NUMERIC
+
+LC_TIME
+copy "es_ES"
+END LC_TIME
+
+LC_PAPER
+copy "es_ES"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "es_ES"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "es_ES"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "es_ES"
+END LC_NAME
+
+LC_ADDRESS
+copy "es_ES"
+END LC_ADDRESS

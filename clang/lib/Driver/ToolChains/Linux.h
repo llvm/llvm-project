@@ -27,6 +27,11 @@ public:
                                  const llvm::Triple &TargetTriple,
                                  StringRef SysRoot) const override;
 
+#ifdef ENABLE_CLASSIC_FLANG
+  void AddFlangSystemIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &Flang1Args) const override;
+#endif
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;

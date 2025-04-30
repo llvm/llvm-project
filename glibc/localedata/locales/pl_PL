@@ -1,0 +1,255 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Polish Language Locale for Poland
+% Source: RAP
+% Address: Sankt Jo/rgens Alle 8
+%    DK-1615 Ko/benhavn V, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 31226543
+% Fax: +45 - 31226543
+% Language: pl
+% Territory: PL
+% Revision: 4.4
+% Date: 1997-03-18
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Polish locale for Poland"
+source     "RAP"
+address    "Sankt Jo//rgens Alle 8, DK-1615 Ko//benhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Polish"
+territory  "Poland"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+
+copy "iso14651_t1"
+
+% CLDR collation rules for Polish:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/pl.xml)
+%
+% &A<ą<<<Ą
+% &C<ć<<<Ć
+% &E<ę<<<Ę
+% &L<ł<<<Ł
+% &N<ń<<<Ń
+% &O<ó<<<Ó
+% &S<ś<<<Ś
+% &Z<ź<<<Ź<ż<<<Ż
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <space>
+collating-symbol <a-ogonek>
+collating-symbol <c-acute>
+collating-symbol <e-ogonek>
+collating-symbol <l-stroke>
+collating-symbol <n-acute>
+collating-symbol <o-acute>
+collating-symbol <s-acute>
+collating-symbol <z-acute>
+collating-symbol <z-dot-above>
+
+reorder-after <RES-1>
+<space>
+
+reorder-after <AFTER-A>
+<a-ogonek>
+reorder-after <AFTER-C>
+<c-acute>
+reorder-after <AFTER-E>
+<e-ogonek>
+reorder-after <AFTER-L>
+<l-stroke>
+reorder-after <AFTER-N>
+<n-acute>
+reorder-after <AFTER-O>
+<o-acute>
+reorder-after <AFTER-S>
+<s-acute>
+reorder-after <AFTER-Z>
+<z-acute>
+<z-dot-above>
+
+<U0020> <space>;IGNORE;IGNORE;<U0020>
+<U00A0> <space>;IGNORE;IGNORE;<U00A0>
+<U0105> <a-ogonek>;<BASE>;<MIN>;IGNORE % ą
+<U0104> <a-ogonek>;<BASE>;<CAP>;IGNORE % Ą
+<U0107> <c-acute>;<BASE>;<MIN>;IGNORE % ć
+<U0106> <c-acute>;<BASE>;<CAP>;IGNORE % Ć
+<U0119> <e-ogonek>;<BASE>;<MIN>;IGNORE % ę
+<U0118> <e-ogonek>;<BASE>;<CAP>;IGNORE % Ę
+<U0142> <l-stroke>;<BASE>;<MIN>;IGNORE % ł
+<U0141> <l-stroke>;<BASE>;<CAP>;IGNORE % Ł
+<U0144> <n-acute>;<BASE>;<MIN>;IGNORE % ń
+<U0143> <n-acute>;<BASE>;<CAP>;IGNORE % Ń
+<U00F3> <o-acute>;<BASE>;<MIN>;IGNORE % ó
+<U00D3> <o-acute>;<BASE>;<CAP>;IGNORE % Ó
+<U015B> <s-acute>;<BASE>;<MIN>;IGNORE % ś
+<U015A> <s-acute>;<BASE>;<CAP>;IGNORE % Ś
+<U017A> <z-acute>;<BASE>;<MIN>;IGNORE % ź
+<U0179> <z-acute>;<BASE>;<CAP>;IGNORE % Ź
+<U017C> <z-dot-above>;<BASE>;<MIN>;IGNORE % ż
+<U017B> <z-dot-above>;<BASE>;<CAP>;IGNORE % Ż
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1TtYy]"
+noexpr  "^[-0nN]"
+yesstr  "tak"
+nostr   "nie"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "PLN "
+currency_symbol           "z<U0142>"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "<U202F>"
+grouping                  3
+END LC_NUMERIC
+
+LC_TIME
+% The abday, abmon, and d_fmt information has been changed (back) to match
+% the preference expressed in the poll organized to get some concensus.
+% The results were not entirely clear on all easpects but the choices
+% here seem to have the most support.  For more details:
+%
+%   https://bugzilla.redhat.com/show_bug.cgi?id=242296
+%
+abday   "nie";"pon";/
+        "wto";"<U015B>ro";/
+        "czw";"pi<U0105>";/
+        "sob"
+day     "niedziela";/
+        "poniedzia<U0142>ek";/
+        "wtorek";/
+        "<U015B>roda";/
+        "czwartek";/
+        "pi<U0105>tek";/
+        "sobota"
+abmon   "sty";"lut";/
+        "mar";"kwi";/
+        "maj";"cze";/
+        "lip";"sie";/
+        "wrz";"pa<U017A>";/
+        "lis";"gru"
+alt_mon "stycze<U0144>";/
+        "luty";/
+        "marzec";/
+        "kwiecie<U0144>";/
+        "maj";/
+        "czerwiec";/
+        "lipiec";/
+        "sierpie<U0144>";/
+        "wrzesie<U0144>";/
+        "pa<U017A>dziernik";/
+        "listopad";/
+        "grudzie<U0144>"
+mon     "stycznia";/
+        "lutego";/
+        "marca";/
+        "kwietnia";/
+        "maja";/
+        "czerwca";/
+        "lipca";/
+        "sierpnia";/
+        "wrze<U015B>nia";/
+        "pa<U017A>dziernika";/
+        "listopada";/
+        "grudnia"
+d_t_fmt "%a, %-d %b %Y, %T"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt "%a, %-d %b %Y, %T %Z"
+week	7;19971130;4
+first_weekday	2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "48"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Polska"
+country_ab2 "PL"
+country_ab3 "POL"
+country_num 616
+country_car    "PL"
+lang_name    "polski"
+lang_ab      "pl"
+lang_term    "pol"
+lang_lib    "pol"
+END LC_ADDRESS

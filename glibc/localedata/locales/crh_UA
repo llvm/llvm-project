@@ -1,0 +1,216 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Crimean Tatar (Crimean Turkish) Language Locale for Ukraine (latin)
+% Source:	Re<U015F>at SABIQ
+% Contact:	Re<U015F>at SABIQ
+% Email:	<tilde.birlik@gmail.com>
+% Language:	crh
+% Territory:	UA
+% Revision:	0.4
+% Date:		2009-08-16
+% Application:	general
+% Users:	general
+
+LC_IDENTIFICATION
+title		"Crimean Tatar (Crimean Turkish) language locale for Ukraine"
+source		""
+address		""
+contact		"Re<U015F>at SABIQ"
+email		"tilde.birlik@gmail.com"
+tel		""
+fax		""
+language	"Crimean Tatar"
+territory	"Ukraine"
+revision	"0.4"
+date		"2009-08-16"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+END LC_IDENTIFICATION
+
+LC_COLLATE
+% There is no collation information in CLDR for Crimean Tatar
+%
+% The new Crimean Tatar alphabet (Latin) is:
+%
+% a b c ç d e f g ğ h ı i j k l m n ñ o ö p q r s ş t u ü v y z
+
+copy "iso14651_t1"
+
+collating-symbol <c-cedilla>
+collating-symbol <g-breve>
+collating-symbol <i-dotless>
+collating-symbol <i-dot>
+collating-symbol <n-tilde>
+collating-symbol <o-diaeresis>
+collating-symbol <s-cedilla>
+collating-symbol <u-diaeresis>
+
+reorder-after <AFTER-C>
+<c-cedilla>
+reorder-after <AFTER-G>
+<g-breve>
+reorder-after <AFTER-H>
+<i-dotless>
+<i-dot>
+reorder-after <AFTER-N>
+<n-tilde>
+reorder-after <AFTER-O>
+<o-diaeresis>
+reorder-after <AFTER-S>
+<s-cedilla>
+reorder-after <AFTER-U>
+<u-diaeresis>
+
+<U00E7> <c-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ç
+<U00C7> <c-cedilla>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ç
+<U011F> <g-breve>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ğ
+<U011E> <g-breve>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ğ
+<U0131> <i-dotless>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ı
+<U0049> <i-dotless>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % I
+<U0069> <i-dot>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % i
+<U0130> <i-dot>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % İ
+<U00F1> <n-tilde>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ñ
+<U00D1> <n-tilde>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ñ
+<U00F6> <o-diaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ö
+<U00D6> <o-diaeresis>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ö
+<U015F> <s-cedilla>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ş
+<U015E> <s-cedilla>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ş
+<U00FC> <u-diaeresis>;"<BASE><BASE>";"<MIN><MIN>";IGNORE % ü
+<U00DC> <u-diaeresis>;"<BASE><BASE>";"<CAP><CAP>";IGNORE % Ü
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "tr_TR"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1yYeE]"
+noexpr  "^[-0nNhH]"
+yesstr  "ebet"
+nostr   "hay<U0131>r"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "UAH "
+currency_symbol           "<U20B4>"
+mon_decimal_point         "."
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+day     "Bazar";/
+        "Bazarertesi";/
+        "Sal<U0131>";/
+        "<U00C7>ar<U015F>embe";/
+        "Cumaaq<U015F>am<U0131>";/
+        "Cuma";/
+        "Cumaertesi"
+abday   "Baz";/
+        "Ber";/
+        "Sal";/
+        "<U00C7>ar";/
+        "Caq";/
+        "Cum";/
+        "Cer"
+mon     "Yanvar";/
+        "Fevral";/
+        "Mart";/
+        "Aprel";/
+        "May<U0131>s";/
+        "<U0130>yun";/
+        "<U0130>yul";/
+        "Avgust";/
+        "Sent<U00E2>br";/
+        "Okt<U00E2>br";/
+        "Noyabr";/
+        "Dekabr"
+abmon   "Yan";/
+        "Fev";/
+        "Mar";/
+        "Apr";/
+        "May";/
+        "<U0130>yn";/
+        "<U0130>yl";/
+        "Avg";/
+        "Sen";/
+        "Okt";/
+        "Noy";/
+        "Dek"
+d_t_fmt   "%a %d %b %Y %T"
+date_fmt  "%a %d %b %Y %T %Z"
+d_fmt     "%d.%m.%Y"
+t_fmt     "%T"
+am_pm     "<U00DC>E";"<U00DC>S"
+t_fmt_ampm "%I:%M:%S %p"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_ab2 "UA"
+country_ab3 "UKR"
+country_num 804
+country_car  "UA"
+% qırımtatar tili
+lang_name    "q<U0131>r<U0131>mtatar tili"
+lang_term    "crh"
+lang_lib    "crh"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "380"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME

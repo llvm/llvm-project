@@ -1,0 +1,9 @@
+#define SHARED 1
+
+#include <ldsodefs.h>
+
+#define rtld_global_ro_offsetof(mem) offsetof (struct rtld_global_ro, mem)
+
+RTLD_GLOBAL_RO_DL_HWCAP_OFFSET	rtld_global_ro_offsetof (_dl_hwcap)
+RTLD_GLOBAL_RO_DL_HWCAP2_OFFSET	rtld_global_ro_offsetof (_dl_hwcap2)
+RTLD_GLOBAL_RO_DL_CACHE_LINE_SIZE_OFFSET	rtld_global_ro_offsetof (_dl_cache_line_size)

@@ -1,0 +1,15 @@
+libc {
+  GLIBC_2.2 {
+    # XXX
+    __vm_deallocate; __mach_port_insert_right; __mach_reply_port;
+    __mig_init; __vm_allocate; __mach_port_allocate;
+
+    # functions used in inline functions or macros
+    __pthread_spin_destroy; __pthread_spin_init; __pthread_spin_lock;
+    _pthread_spin_lock; __pthread_spin_trylock; __pthread_spin_unlock;
+
+    # p*
+    pthread_spin_destroy; pthread_spin_init; pthread_spin_lock;
+    pthread_spin_trylock; pthread_spin_unlock;
+  }
+}

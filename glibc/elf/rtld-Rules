@@ -1,0 +1,149 @@
+# Subroutine makefile for compiling libc modules linked into dynamic linker.
+
+# Copyright (C) 2002-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+# This makefile is never used by itself, but only from the rtld-libc.a
+# rule in Makefile, which does make -f librtld.mk -f rtld-Rules.
+# librtld.mk is the generated file containing variable definitions for
+# `rtld-subdirs', a subset of the top-level $(subdirs) list; and for each
+# SUBDIR in $(rtld-subdirs), `rtld-SUBDIR' listing `module.os' file names.
+
+.PHONY: rtld-all
+rtld-all:
+
+# When run from the elf/Makefile to build rtld-libc.a, $(subdir) is elf.
+ifneq ($(subdir),elf)
+ifndef rtld-modules
+$(error rtld-modules not set)
+endif
+endif
+
+ifndef rtld-modules
+# Running to build rtld-libc.a, driving runs of $(rtld-subdir-make), below.
+
+ifndef rtld-subdirs
+$(error This makefile is a subroutine of elf/Makefile not to be used directly)
+endif
+
+include ../Makeconfig
+
+rtld-all: $(objpfx)rtld-libc.a
+
+$(objpfx)rtld-libc.a: $(foreach dir,$(rtld-subdirs),\
+				$(addprefix $(common-objpfx)$(dir)/rtld-,\
+					    $(rtld-$(dir))))
+	@-rm -f $@T
+	$(AR) cq$(verbose) $@T $^
+	mv -f $@T $@
+
+# Use the verbose option of ar and tar when not running silently.
+ifeq	"$(findstring s,$(MAKEFLAGS))" ""	# if not -s
+verbose := v
+else						# -s
+verbose	:=
+endif						# not -s
+
+
+# For each subdirectory, define a pattern rule that makes all of that
+# subdirectory's modules at once with one recursive make command.
+object-suffixes-left := $(rtld-subdirs)
+define o-iterator-doit
+$(foreach obj,$(rtld-$o),$(common-objpfx)%/rtld-$(obj)): FORCE ; \
+	+$$(rtld-subdir-make)
+endef
+include $(patsubst %,../o-iterator.mk,$(object-suffixes-left))
+
+# This is how we descend into each subdirectory.  See below.
+define rtld-subdir-make
+$(MAKE) $(subdir-args) objdir=$(objdir) \
+	-f Makefile -f ../elf/rtld-Rules rtld-all \
+	rtld-modules='$(addprefix rtld-,$(rtld-$*))'
+endef
+
+# See subdir-target-args in ../Makefile for the model.
+subdir-args = subdir=$*$(if $($*-srcdir),\
+			    -C $($*-srcdir) ..=`pwd`/,\
+			    -C $(..)$* ..=../)
+
+FORCE:
+
+else
+
+# In this case we are being run by $(rtld-subdir-make), above.
+# Some other subdir's Makefile has provided all its normal rules,
+# and we just provide some additional definitions.
+
+rtld-compile-command.S = $(compile-command.S) $(rtld-CPPFLAGS)
+rtld-compile-command.s = $(compile-command.s) $(rtld-CPPFLAGS)
+rtld-compile-command.c = $(compile-command.c) $(rtld-CPPFLAGS) $(rtld-CFLAGS)
+
+# These are the basic compilation rules corresponding to the Makerules ones.
+# The sysd-rules generated makefile already defines pattern rules for rtld-%
+# targets built from sysdeps source files.
+$(objpfx)rtld-%.os: rtld-%.S $(before-compile)
+	$(rtld-compile-command.S)
+$(objpfx)rtld-%.os: rtld-%.s $(before-compile)
+	$(rtld-compile-command.s)
+$(objpfx)rtld-%.os: rtld-%.c $(before-compile)
+	$(rtld-compile-command.c)
+$(objpfx)rtld-%.os: %.S $(before-compile)
+	$(rtld-compile-command.S)
+$(objpfx)rtld-%.os: %.s $(before-compile)
+	$(rtld-compile-command.s)
+$(objpfx)rtld-%.os: %.c $(before-compile)
+	$(rtld-compile-command.c)
+
+# The rules for generated source files.
+$(objpfx)rtld-%.os: $(objpfx)rtld-%.S $(before-compile)
+	$(rtld-compile-command.S)
+$(objpfx)rtld-%.os: $(objpfx)rtld-%.s $(before-compile)
+	$(rtld-compile-command.s)
+$(objpfx)rtld-%.os: $(objpfx)rtld-%.c $(before-compile)
+	$(rtld-compile-command.c)
+$(objpfx)rtld-%.os: $(objpfx)%.S $(before-compile)
+	$(rtld-compile-command.S)
+$(objpfx)rtld-%.os: $(objpfx)%.s $(before-compile)
+	$(rtld-compile-command.s)
+$(objpfx)rtld-%.os: $(objpfx)%.c $(before-compile)
+	$(rtld-compile-command.c)
+
+# The command line setting of rtld-modules (see above) tells us
+# what we need to build, and that tells us what dependency files we need.
+rtld-all: $(addprefix $(objpfx),$(rtld-modules))
+
+# Figure out the dependency files we need.  After respecting the $(omit-deps)
+# list as applied to the names without the `rtld-', there may be none left.
+rtld-depfiles := $(patsubst %,$(objpfx)rtld-%.os.d,\
+			    $(filter-out $(omit-deps),\
+					 $(rtld-modules:rtld-%.os=%)))
+rtld-depfiles := $(strip $(wildcard $(rtld-depfiles)) \
+			 $(patsubst %.dt,%.d,\
+				    $(wildcard $(rtld-depfiles:.d=.dt))))
+ifdef rtld-depfiles
+-include $(rtld-depfiles)
+endif
+
+# This here is the whole point of all the shenanigans.
+# Set libof-* for each routine.
+cpp-srcs-left := $(rtld-modules:%.os=%)
+lib := rtld
+include $(patsubst %,$(..)libof-iterator.mk,$(cpp-srcs-left))
+
+rtld-CFLAGS += $(no-stack-protector)
+
+endif

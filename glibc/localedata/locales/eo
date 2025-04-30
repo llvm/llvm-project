@@ -1,0 +1,213 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Esperanto Language Locale
+% Source: debian.org
+% Address:
+% Contact: Eduardo Trapani
+% Email: eduardo@esperanto.org.uy
+% Tel:
+% Fax:
+% Language: eo
+% Territory:
+% Revision: 1.1
+% Date: 2016-06-10
+% Application: general
+% Users: general
+% License: Public Domain
+
+LC_IDENTIFICATION
+title      "Esperanto language locale"
+source     ""
+address    ""
+contact    ""
+email      "debian-esperanto@lists.debian.org"
+tel        ""
+fax        ""
+language   "Esperanto"
+territory  ""
+revision   "draft"
+date       "2016-06-10"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+END LC_CTYPE
+
+LC_COLLATE
+% CLDR collation rules for Esperanto:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/eo.xml)
+%
+% <collation type="standard" >
+%   <cr><![CDATA[
+%     &C<ĉ<<<Ĉ
+%     &G<ĝ<<<Ĝ
+%     &H<ĥ<<<Ĥ
+%     &J<ĵ<<<Ĵ
+%     &S<ŝ<<<Ŝ
+%     &U<ŭ<<<Ŭ
+%   ]]></cr>
+% </collation  >
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/eo.xml)
+%
+% <exemplarCharacters type="index">[A B C Ĉ D E F G Ĝ H Ĥ I J Ĵ K L M N O P R S Ŝ T U Ŭ V Z]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+copy "iso14651_t1"
+
+collating-symbol <ccirc>
+collating-symbol <gcirc>
+collating-symbol <hcirc>
+collating-symbol <jcirc>
+collating-symbol <scirc>
+collating-symbol <ubreve>
+
+reorder-after <AFTER-C>
+<ccirc>
+reorder-after <AFTER-G>
+<gcirc>
+reorder-after <AFTER-H>
+<hcirc>
+reorder-after <AFTER-J>
+<jcirc>
+reorder-after <AFTER-S>
+<scirc>
+reorder-after <AFTER-U>
+<ubreve>
+
+<U0108> <ccirc>;<BASE>;<CAP>;IGNORE
+<U0109> <ccirc>;<BASE>;<MIN>;IGNORE
+<U011C> <gcirc>;<BASE>;<CAP>;IGNORE
+<U011D> <gcirc>;<BASE>;<MIN>;IGNORE
+<U0124> <hcirc>;<BASE>;<CAP>;IGNORE
+<U0125> <hcirc>;<BASE>;<MIN>;IGNORE
+<U0134> <jcirc>;<BASE>;<CAP>;IGNORE
+<U0135> <jcirc>;<BASE>;<MIN>;IGNORE
+<U015C> <scirc>;<BASE>;<CAP>;IGNORE
+<U015D> <scirc>;<BASE>;<MIN>;IGNORE
+<U016C> <ubreve>;<BASE>;<CAP>;IGNORE
+<U016D> <ubreve>;<BASE>;<MIN>;IGNORE
+
+reorder-end
+
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol     "XDR "
+currency_symbol     "<U00A4>"
+mon_decimal_point   ","
+mon_thousands_sep   "<U202F>"
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       1
+p_sep_by_space      1
+n_cs_precedes       1
+n_sep_by_space      1
+p_sign_posn         1
+n_sign_posn         1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point ","
+thousands_sep ""
+grouping      0;0
+END LC_NUMERIC
+
+LC_TIME
+abday	"dim";"lun";/
+	"mar";"mer";/
+	"<U0135>a<U016D>";"ven";/
+	"sab"
+day	"diman<U0109>o";/
+	"lundo";/
+	"mardo";/
+	"merkredo";/
+	"<U0135>a<U016D>do";/
+	"vendredo";/
+	"sabato"
+abmon	"Jan";"Feb";/
+	"Mar";"Apr";/
+	"Maj";"Jun";/
+	"Jul";"A<U016D>g";/
+	"Sep";"Okt";/
+	"Nov";"Dec"
+mon	"Januaro";/
+	"Februaro";/
+	"Marto";/
+	"Aprilo";/
+	"Majo";/
+	"Junio";/
+	"Julio";/
+	"A<U016D>gusto";/
+	"Septembro";/
+	"Oktobro";/
+	"Novembro";/
+	"Decembro"
+am_pm "";""
+t_fmt_ampm ""
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %z"
+d_fmt   "%Y-%m-%d"
+t_fmt   "%T"
+week 7;19971130;1
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1JjYy]"
+noexpr  "^[-0nN]"
+yesstr  "Jes"
+nostr   "Ne"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a%t%l"
+int_select  "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_mr     "s-ro"
+name_mrs    "s-ino"
+name_ms     "s-ino"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%%z %T%N%c%N"
+lang_name    "esperanto"
+lang_ab      "eo"
+lang_term    "epo"
+END LC_ADDRESS

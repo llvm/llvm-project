@@ -1,0 +1,12 @@
+preq_hydrostatic kernel
+-----------------
+
+* how to use the kernel
+run "make" in this folder will initiate building and running the kernel.
+
+* entry of program execution
+"kernel_driver.f90" has a Fortran Program statement for execution entry
+
+Questions:
+Youngsung Kim
+youngsun@ucar.edu

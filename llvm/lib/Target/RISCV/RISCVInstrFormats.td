@@ -330,6 +330,24 @@ class RVInstRFrm<bits<7> funct7, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{6-0} = opcode.Value;
 }
 
+class RVInstR4NSMem128<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode,
+                       dag outs, dag ins, string opcodestr, string argstr,
+                       list<dag> pattern>
+    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatR4> {
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31 - 27} = rs3;
+  let Inst{26 - 25} = funct2;
+  let Inst{24 - 20} = rs2;
+  let Inst{19 - 15} = rs1;
+  let Inst{14 - 12} = funct3;
+  let Inst{11 - 7} = rd;
+  let Inst{6 - 0} = opcode.Value;
+}
+
 class RVInstR4<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode, dag outs,
                dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR4> {
@@ -474,7 +492,7 @@ class RVInstJ<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
 //===----------------------------------------------------------------------===//
 
 class DirectiveInsnR<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatR> {
+    : RVInst<outs, ins, "", "", [], InstFormatR> {
   bits<7> opcode;
   bits<7> funct7;
   bits<3> funct3;
@@ -494,7 +512,7 @@ class DirectiveInsnR<dag outs, dag ins, string argstr>
 }
 
 class DirectiveInsnR4<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatR4> {
+    : RVInst<outs, ins, "", "", [], InstFormatR4> {
   bits<7> opcode;
   bits<2> funct2;
   bits<3> funct3;
@@ -516,7 +534,7 @@ class DirectiveInsnR4<dag outs, dag ins, string argstr>
 }
 
 class DirectiveInsnI<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatI> {
+    : RVInst<outs, ins, "", "", [], InstFormatI> {
   bits<7> opcode;
   bits<3> funct3;
 
@@ -534,7 +552,7 @@ class DirectiveInsnI<dag outs, dag ins, string argstr>
 }
 
 class DirectiveInsnS<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatS> {
+    : RVInst<outs, ins, "", "", [], InstFormatS> {
   bits<7> opcode;
   bits<3> funct3;
 
@@ -553,7 +571,7 @@ class DirectiveInsnS<dag outs, dag ins, string argstr>
 }
 
 class DirectiveInsnB<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatB> {
+    : RVInst<outs, ins, "", "", [], InstFormatB> {
   bits<7> opcode;
   bits<3> funct3;
 
@@ -574,7 +592,7 @@ class DirectiveInsnB<dag outs, dag ins, string argstr>
 }
 
 class DirectiveInsnU<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatU> {
+    : RVInst<outs, ins, "", "", [], InstFormatU> {
   bits<7> opcode;
 
   bits<20> imm20;
@@ -588,7 +606,7 @@ class DirectiveInsnU<dag outs, dag ins, string argstr>
 }
 
 class DirectiveInsnJ<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatJ> {
+    : RVInst<outs, ins, "", "", [], InstFormatJ> {
   bits<7> opcode;
 
   bits<20> imm20;

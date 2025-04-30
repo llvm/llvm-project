@@ -1,0 +1,4 @@
+wordsize-32
+# 68k uses IEEE 754 floating point.
+ieee754/dbl-64
+ieee754/flt-32

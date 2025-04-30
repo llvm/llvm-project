@@ -1,0 +1,404 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title                 ""
+source                ""
+address               ""
+contact               ""
+email                 ""
+tel                   ""
+fax                   ""
+language              ""
+territory             ""
+revision              ""
+date                  "2017-06-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+
+copy "i18n_ctype"
+
+translit_start
+
+include "translit_neutral";""
+
+default_missing <U003F>
+
+translit_end
+
+END LC_CTYPE
+
+LC_COLLATE
+
+% Case collating symbols
+collating-symbol <RES-1>
+collating-symbol <BLK>
+collating-symbol <MIN>     % SMALL
+collating-symbol <WIDE>    % WIDE
+collating-symbol <COMPAT>
+collating-symbol <FONT>
+collating-symbol <CIRCLE>
+collating-symbol <RES-2>
+collating-symbol <CAP>     % CAPITAL
+collating-symbol <WIDECAP>
+collating-symbol <COMPATCAP>
+collating-symbol <FONTCAP>
+collating-symbol <CIRCLECAP>
+collating-symbol <HIRA-SMALL>
+collating-symbol <HIRA>
+collating-symbol <SMALL>
+collating-symbol <SMALL-NARROW>
+collating-symbol <KATA>
+collating-symbol <NARROW>
+collating-symbol <CIRCLE-KATA>
+collating-symbol <MNN>
+collating-symbol <MNS>
+collating-symbol <VERTICAL>
+% Arabic forms
+collating-symbol <AINI>
+collating-symbol <AMED>
+collating-symbol <AFIN>
+collating-symbol <AISO>
+%
+collating-symbol <NOBREAK>
+collating-symbol <SQUARED>
+collating-symbol <SQUAREDCAP>
+collating-symbol <FRACTION>
+collating-symbol <BLANK>
+collating-symbol <CAPITAL-SMALL>
+collating-symbol <SMALL-CAPITAL>
+collating-symbol <BOTH>
+% accents
+collating-symbol <LOWLINE>  % LOW LINE
+collating-symbol <MACRO>  % MACRON
+collating-symbol <OBLIK>  % STROKE
+collating-symbol <AIGUT>  % ACUTE ACCENT
+collating-symbol <GRAVE>  % GRAVE ACCENT
+collating-symbol <BREVE>  % BREVE
+collating-symbol <CIRCF>  % CIRCUMFLEX ACCENT
+collating-symbol <CARON>  % CARON
+collating-symbol <CRCLE>  % RING ABOVE
+collating-symbol <TREMA>  % DIAERESIS
+collating-symbol <2AIGU>  % DOUBLE ACUTE ACCENT
+collating-symbol <TILDE>  % TILDE
+collating-symbol <POINT>  % DOT ABOVE
+collating-symbol <CEDIL>  % CEDILLA
+collating-symbol <OGONK>  % OGONEK
+collating-symbol <OVERLINE>  % OVERLINE
+collating-symbol <CROOK>  % HOOK ABOVE
+collating-symbol <TONOS>  % VERTICAL LINE ABOVE
+collating-symbol <D030E>  % DOUBLE VERTICAL LINE ABOVE
+collating-symbol <2GRAV>  % DOUBLE GRAVE ACCENT
+collating-symbol <D0310>  % CANDRABINDU
+collating-symbol <BREVR>  % INVERTED BREVE
+collating-symbol <D0312>  % TURNED COMMA ABOVE
+collating-symbol <PSILI>  % COMMA ABOVE
+collating-symbol <DASIA>  % REVERSED COMMA ABOVE
+collating-symbol <D0315>  % COMMA ABOVE RIGHT
+collating-symbol <D0316>  % GRAVE ACCENT BELOW
+collating-symbol <D0317>  % ACUTE ACCENT BELOW
+collating-symbol <D0318>  % LEFT TACK BELOW
+collating-symbol <D0319>  % RIGHT TACK BELOW
+collating-symbol <D031A>  % LEFT ANGLE ABOVE
+collating-symbol <HORNU>  % HORN
+collating-symbol <D031C>  % LEFT HALF RING BELOW
+collating-symbol <D031D>  % UP TACK BELOW
+collating-symbol <D031E>  % DOWN TACK BELOW
+collating-symbol <D031F>  % PLUS SIGN BELOW
+collating-symbol <D0320>  % MINUS SIGN BELOW
+collating-symbol <PALCR>  % PALATALIZED HOOK BELOW
+collating-symbol <RETCR>  % RETROFLEX HOOK BELOW
+collating-symbol <POINS>  % DOT BELOW
+collating-symbol <TREMS>  % DIAERESIS BELOW
+collating-symbol <CRCLS>  % RING BELOW
+collating-symbol <COMMS>  % COMMA BELOW
+collating-symbol <D0329>  % VERTICAL LINE BELOW
+collating-symbol <D032A>  % BRIDGE BELOW
+collating-symbol <D032B>  % INVERTED DOUBLE ARCH BELOW
+collating-symbol <D032C>  % CARON BELOW
+collating-symbol <CIRCS>  % CIRCUMFLEX ACCENT BELOW
+collating-symbol <BREVS>  % BREVE BELOW
+collating-symbol <D032F>  % INVERTED BREVE BELOW
+collating-symbol <TILDS>  % TILDE BELOW
+collating-symbol <MACRS>  % MACRON BELOW
+collating-symbol <D0333>  % DOUBLE LOW LINE
+collating-symbol <TILDX>  % TILDE OVERLAY
+collating-symbol <BARRE>  % SHORT STROKE OVERLAY
+collating-symbol <D0336>  % LONG STROKE OVERLAY
+collating-symbol <D0337>  % SHORT SOLIDUS OVERLAY
+collating-symbol <CRCL2>  % RIGHT HALF RING BELOW
+collating-symbol <D033A>  % INVERTED BRIDGE BELOW
+collating-symbol <D033B>  % SQUARE BELOW
+collating-symbol <D033C>  % SEAGULL BELOW
+collating-symbol <D033D>  % X ABOVE
+collating-symbol <D033E>  % VERTICAL TILDE
+collating-symbol <D033F>  % DOUBLE OVERLINE
+collating-symbol <PERIS>  % GREEK PERISPOMENI
+collating-symbol <YPOGE>  % GREEK YPOGEGRAMMENI
+collating-symbol <D0360>  % DOUBLE TILDE
+collating-symbol <D0361>  % DOUBLE INVERTED BREVE
+collating-symbol <DFE20>  % LIGATURE LEFT HALF
+collating-symbol <DFE21>  % LIGATURE RIGHT HALF
+collating-symbol <DFE22>  % DOUBLE TILDE LEFT HALF
+collating-symbol <DFE23>  % DOUBLE TILDE RIGHT HALF
+collating-symbol <D0483>  % CYRILLIC TITLO
+collating-symbol <D0484>  % CYRILLIC PALATALIZATION
+collating-symbol <D0485>  % CYRILLIC DASIA PNEUMATA
+collating-symbol <D0486>  % CYRILLIC PSILI PNEUMATA
+collating-symbol <SHEVA>  % HEBREW POINT SHEVA
+collating-symbol <HTFSG>  % HEBREW POINT HATAF SEGOL
+collating-symbol <HTFPT>  % HEBREW POINT HATAF PATAH
+collating-symbol <HTFQM>  % HEBREW POINT HATAF QAMATS
+collating-symbol <HIRIQ>  % HEBREW POINT HIRIQ
+collating-symbol <TSERE>  % HEBREW POINT TSERE
+collating-symbol <SEGOL>  % HEBREW POINT SEGOL
+collating-symbol <PATAH>  % HEBREW POINT PATAH
+collating-symbol <QAMAT>  % HEBREW POINT QAMATS
+collating-symbol <HOLAM>  % HEBREW POINT HOLAM
+collating-symbol <QUBUT>  % HEBREW POINT QUBUTS
+collating-symbol <DAGES>  % HEBREW POINT DAGESH OR MAPIQ
+collating-symbol <RAPHE>  % HEBREW POINT RAFE
+collating-symbol <SHINP>  % HEBREW POINT SHIN DOT
+collating-symbol <SINPT>  % HEBREW POINT SIN DOT
+collating-symbol <VARIKA>  % HEBREW POINT JUDEO-SPANISH VARIKA
+collating-symbol <FATHATAN>  % ARABIC FATHATAN
+collating-symbol <DAMMATAN>  % ARABIC DAMMATAN
+collating-symbol <KASRATAN>  % ARABIC KASRATAN
+collating-symbol <FATHA>  % ARABIC FATHA
+collating-symbol <DAMMA>  % ARABIC DAMMA
+collating-symbol <KASRA>  % ARABIC KASRA
+collating-symbol <SHADDA>  % ARABIC SHADDA
+collating-symbol <SUKUN>  % ARABIC SUKUN
+collating-symbol <SUPERALEF>  % ARABIC LETTER SUPERSCRIPT ALEF
+collating-symbol <D06D6> % ARABIC SMALL HIGH LIGATURE SAD WITH LAM WITH ALEF MAKSURA
+collating-symbol <D06D7> % ARABIC SMALL HIGH LIGATURE QAF WITH LAM WITH ALEF MAKSURA
+collating-symbol <D06D8>  % ARABIC SMALL HIGH MEEM INITIAL FORM
+collating-symbol <D06D9>  % ARABIC SMALL HIGH LAM ALEF
+collating-symbol <D06DA>  % ARABIC SMALL HIGH JEEM
+collating-symbol <D06DB>  % ARABIC SMALL HIGH THREE DOTS
+collating-symbol <D06DC>  % ARABIC SMALL HIGH SEEN
+collating-symbol <D06E1>  % ARABIC SMALL HIGH DOTLESS HEAD OF KHAH
+collating-symbol <D06E2>  % ARABIC SMALL HIGH MEEM ISOLATED FORM
+collating-symbol <D06E3>  % ARABIC SMALL LOW SEEN
+collating-symbol <AMADD>  % ARABIC SMALL HIGH MADDA
+collating-symbol <D06E7>  % ARABIC SMALL HIGH YEH
+collating-symbol <D06E8>  % ARABIC SMALL HIGH NOON
+collating-symbol <D06ED>  % ARABIC SMALL LOW MEEM
+collating-symbol <D093C>  % DEVANAGARI SIGN NUKTA
+collating-symbol <D0951>  % DEVANAGARI STRESS SIGN UDATTA
+collating-symbol <D0952>  % DEVANAGARI STRESS SIGN ANUDATTA
+collating-symbol <D0953>  % DEVANAGARI GRAVE ACCENT
+collating-symbol <D0954>  % DEVANAGARI ACUTE ACCENT
+collating-symbol <D09BC>  % BENGALI SIGN NUKTA
+collating-symbol <D0A3C>  % GURMUKHI SIGN NUKTA
+collating-symbol <D0ABC>  % GUJARATI SIGN NUKTA
+collating-symbol <D0B3C>  % ORIYA SIGN NUKTA
+collating-symbol <D0E48>  % THAI CHARACTER MAI EK
+collating-symbol <D0E49>  % THAI CHARACTER MAI THO
+collating-symbol <D0E4A>  % THAI CHARACTER MAI TRI
+collating-symbol <D0E4B>  % THAI CHARACTER MAI CHATTAWA
+collating-symbol <D0EC8>  % LAO TONE MAI EK
+collating-symbol <D0EC9>  % LAO TONE MAI THO
+collating-symbol <D0ECA>  % LAO TONE MAI TI
+collating-symbol <D0ECB>  % LAO TONE MAI CATAWA
+collating-symbol <D0F39>  % TIBETAN MARK TSA -PHRU
+collating-symbol <D0F3E>  % TIBETAN SIGN YAR TSHES
+collating-symbol <D0F3F>  % TIBETAN SIGN MAR TSHES
+collating-symbol <D302A>  % IDEOGRAPHIC LEVEL TONE MARK
+collating-symbol <D302B>  % IDEOGRAPHIC RISING TONE MARK
+collating-symbol <D302C>  % IDEOGRAPHIC DEPARTING TONE MARK
+collating-symbol <D302D>  % IDEOGRAPHIC ENTERING TONE MARK
+collating-symbol <D302E>  % HANGUL SINGLE DOT TONE MARK
+collating-symbol <D302F>  % HANGUL DOUBLE DOT TONE MARK
+collating-symbol <KNVCE>  % KATAKANA-HIRAGANA VOICED SOUND MARK
+collating-symbol <KNSMV>  % KATAKANA-HIRAGANA SEMI-VOICED SOUND MARK
+collating-symbol <D20D0>  % LEFT HARPOON ABOVE
+collating-symbol <D20D1>  % RIGHT HARPOON ABOVE
+collating-symbol <D20D2>  % LONG VERTICAL LINE OVERLAY
+collating-symbol <D20D3>  % SHORT VERTICAL LINE OVERLAY
+collating-symbol <D20D4>  % ANTICLOCKWISE ARROW ABOVE
+collating-symbol <D20D5>  % CLOCKWISE ARROW ABOVE
+collating-symbol <D20D6>  % LEFT ARROW ABOVE
+collating-symbol <D20D7>  % RIGHT ARROW ABOVE
+collating-symbol <D20D8>  % RING OVERLAY
+collating-symbol <D20D9>  % CLOCKWISE RING OVERLAY
+collating-symbol <D20DA>  % ANTICLOCKWISE RING OVERLAY
+collating-symbol <D20DB>  % THREE DOTS ABOVE
+collating-symbol <D20DC>  % FOUR DOTS ABOVE
+collating-symbol <D20DD>  % ENCLOSING CIRCLE
+collating-symbol <D20DE>  % ENCLOSING SQUARE
+collating-symbol <D20DF>  % ENCLOSING DIAMOND
+collating-symbol <D20E0>  % ENCLOSING CIRCLE BACKSLASH
+collating-symbol <D20E1>  % LEFT RIGHT ARROW ABOVE
+collating-symbol <NEGATIVE>
+collating-symbol <SANSSERIF>
+collating-symbol <NEGSANSSERIF>
+collating-symbol <ARABIC>
+collating-symbol <EXTARABIC>
+collating-symbol <NAGAR>
+collating-symbol <BENGL>
+collating-symbol <BENGALINUMERATOR>
+collating-symbol <GURMU>
+collating-symbol <GUJAR>
+collating-symbol <ORIYA>
+collating-symbol <TAMIL>
+collating-symbol <TELGU>
+collating-symbol <KNNDA>
+collating-symbol <MALAY>
+collating-symbol <SINHALA>
+collating-symbol <THAII>
+collating-symbol <LAAOO>
+collating-symbol <BODKA>
+collating-symbol <CJKVS>
+collating-symbol <S0200>..<S1100> % 0x0200..0x1100
+
+collating-symbol <S4E00>..<S9FA5> % Symbols for Han
+
+collating-symbol <SAC00>..<SD7A3> % Symbols for Hangul
+
+collating-symbol <SFA0E>..<SFA29> % Symbols for Compatibility Han
+
+% equivalences
+symbol-equivalence <NONE>              <BLANK>
+symbol-equivalence <CAPITAL>           <CAP>
+symbol-equivalence <MACRON>            <MACRO>
+symbol-equivalence <STROKE>            <OBLIK>
+symbol-equivalence <ACUTE>             <AIGUT>
+symbol-equivalence <CIRCUMFLEX>        <CIRCF>
+symbol-equivalence <RING>              <CRCLE>
+symbol-equivalence <DIAERESIS>         <TREMA>
+symbol-equivalence <DOT>               <POINT>
+symbol-equivalence <CEDILLA>           <CEDIL>
+symbol-equivalence <OGONEK>            <OGONK>
+symbol-equivalence <HOOK>              <CROOK>
+symbol-equivalence <HORN>              <HORNU>
+symbol-equivalence <DOT-BELOW>         <POINS>
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+% This is the 14652 i18n fdcc-set definition for
+% the LC_MONETARY category.
+%
+int_curr_symbol     "XDR "
+currency_symbol     "<U00A4>"
+mon_decimal_point   ","
+mon_thousands_sep   ""
+mon_grouping        -1
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     -1
+frac_digits         -1
+p_cs_precedes       -1
+p_sep_by_space      -1
+n_cs_precedes       -1
+n_sep_by_space      -1
+p_sign_posn         -1
+n_sign_posn         -1
+%
+END LC_MONETARY
+
+LC_NUMERIC
+% This is the 14652 i18n fdcc-set definition for
+% the LC_NUMERIC category.
+%
+decimal_point   ","
+thousands_sep   ""
+grouping        -1
+%
+END LC_NUMERIC
+
+LC_TIME
+% This is the ISO/IEC 14652 "i18n" definition for
+% the LC_TIME category.
+%
+% Weekday and week numbering according to ISO 8601
+abday   "1";"2";"3";"4";"5";"6";"7"
+day     "1";"2";"3";"4";"5";"6";"7"
+week    7;19971201;4
+first_weekday	1
+first_workday	1
+abmon   "01";"02";"03";"04";"05";"06";"07";"08";"09";"10";"11";"12"
+mon     "01";"02";"03";"04";"05";"06";"07";"08";"09";"10";"11";"12"
+am_pm   "";""
+% Date formats following ISO 8601
+% Appropriate date and time representation (%c)
+d_t_fmt "%F %T"
+%
+% Appropriate date representation (%x)
+d_fmt   "%F"
+%
+% Appropriate time representation (%X)
+t_fmt   "%T"
+t_fmt_ampm ""
+%
+% Appropriate date representation (date(1))
+date_fmt       "%a %b %e %H:%M:%S %Z %Y"
+END LC_TIME
+
+LC_MESSAGES
+% This is the ISO/IEC 14652 "i18n" definition for
+% the LC_MESSAGES category.
+%
+yesexpr "^[+1]"
+noexpr  "^[-0]"
+END LC_MESSAGES
+
+LC_PAPER
+% This is the ISO/IEC 14652 "i18n" definition for
+% the LC_PAPER category.
+%
+height   297
+width    210
+END LC_PAPER
+
+LC_NAME
+% This is the ISO/IEC 14652 "i18n" definition for
+% the LC_NAME category.
+%
+name_fmt    "%p%t%g%t%m%t%f"
+END LC_NAME
+
+
+LC_ADDRESS
+% This is the ISO/IEC 14652 "i18n" definition for
+% the LC_ADDRESS category.
+%
+postal_fmt    "%a%N%f%N%d%N%b%N%s %h %e %r%N%C-%z %T%N%c%N"
+END LC_ADDRESS
+
+LC_TELEPHONE
+% This is the ISO/IEC 14652 "i18n" definition for
+% the LC_TELEPHONE category.
+%
+tel_int_fmt    "+%c %a%t%l"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+% This is the ISO/IEC 14652 "i18n" definition for
+% the LC_MEASUREMENT category.  It indicates metric.
+measurement 1
+END LC_MEASUREMENT

@@ -1,0 +1,2 @@
+# We must list this here to move it ahead of the ldbl-opt code.
+sparc/sparc32/fpu

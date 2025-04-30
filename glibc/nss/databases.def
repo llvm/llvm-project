@@ -1,0 +1,45 @@
+/* List of all databases defined for the NSS in GNU C Library.
+   Copyright (C) 1996-2021 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+   Contributed by Ulrich Drepper <drepper@cygnus.com>, 1996.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <https://www.gnu.org/licenses/>.  */
+
+/* This list must be kept sorted!!!  If any long name is added the
+   field size for it must be increases.  */
+
+DEFINE_DATABASE (aliases)
+DEFINE_DATABASE (ethers)
+DEFINE_DATABASE (group)
+DEFINE_DATABASE (group_compat)
+DEFINE_DATABASE (gshadow)
+DEFINE_DATABASE (hosts)
+DEFINE_DATABASE (initgroups)
+DEFINE_DATABASE (netgroup)
+DEFINE_DATABASE (networks)
+DEFINE_DATABASE (passwd)
+DEFINE_DATABASE (passwd_compat)
+DEFINE_DATABASE (protocols)
+DEFINE_DATABASE (publickey)
+DEFINE_DATABASE (rpc)
+DEFINE_DATABASE (services)
+DEFINE_DATABASE (shadow)
+DEFINE_DATABASE (shadow_compat)
+
+/*
+   Local Variables:
+    mode:C
+   End:
+ */

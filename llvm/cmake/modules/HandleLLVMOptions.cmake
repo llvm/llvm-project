@@ -150,6 +150,14 @@ if(LLVM_RUNTIMES_GPU_BUILD)
   return()
 endif()
 
+option(LLVM_ENABLE_CLASSIC_FLANG "Build support for classic Flang instead of the new built-in Flang" OFF)
+if(LLVM_ENABLE_CLASSIC_FLANG)
+  set(LLVM_ENABLE_CLASSIC_FLANG 1)
+  add_definitions( -DENABLE_CLASSIC_FLANG )
+else()
+  set(LLVM_ENABLE_CLASSIC_FLANG 0)
+endif()
+
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
   # using assert(). An explicit check is performed here.

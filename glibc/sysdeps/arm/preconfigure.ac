@@ -1,0 +1,56 @@
+GLIBC_PROVIDES dnl See aclocal.m4 in the top level source directory.
+# Local preconfigure fragment for sysdeps/arm
+
+case "$machine" in
+arm*)
+  # If the compiler enables unwind tables by default, this causes
+  # problems with undefined symbols in -nostdlib link tests.  To
+  # avoid this, add -fno-unwind-tables here and remove it in
+  # sysdeps/arm/configure.ac after those tests have been run.
+  if test "${CFLAGS+set}" != "set"; then
+    CFLAGS="-g -O2"
+  fi
+  CFLAGS="$CFLAGS -fno-unwind-tables"
+
+  base_machine=arm
+  # Lets ask the compiler which ARM family we've got
+  # Unfortunately it doesn't define any flags for implementations
+  # that you might pass to -mcpu or -mtune
+  # Note if you add patterns here you must ensure that
+  # an appropriate directory exists in sysdeps/arm
+  archcppflag=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null |
+    sed -n 's/^#define \(__ARM_ARCH_[0-9].*__\) .*$/\1/p'`
+
+  case "x$archcppflag" in
+  x__ARM_ARCH_[89]*__)
+    machine=armv7
+    AC_MSG_NOTICE([Found compiler is configured for something newer than v7 - using v7])
+    ;;
+
+  x__ARM_ARCH_7A__)
+    machine=armv7
+    AC_MSG_NOTICE([Found compiler is configured for $machine])
+    ;;
+
+  x__ARM_ARCH_6T2__)
+    machine=armv6t2
+    AC_MSG_NOTICE([Found compiler is configured for $machine])
+    ;;
+  x__ARM_ARCH_6*__)
+    machine=armv6
+    AC_MSG_NOTICE([Found compiler is configured for $machine])
+    ;;
+  *)
+    machine=arm
+    AC_MSG_WARN([arm/preconfigure: Did not find ARM architecture type; using default])
+    ;;
+  esac
+
+  AC_EGREP_CPP(yes,[#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+                     yes
+                    #endif
+                   ], endianness=le, endianness=be)
+
+  machine=arm/$endianness/$machine
+  with_fp_cond="!defined __SOFTFP__"
+esac

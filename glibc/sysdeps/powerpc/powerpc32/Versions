@@ -1,0 +1,40 @@
+libc {
+  GLIBC_2.0 {
+    # Functions from libgcc.
+    __divdi3; __moddi3; __udivdi3; __umoddi3;
+    __cmpdi2; __ucmpdi2;
+    __ashldi3; __ashrdi3; __lshrdi3;
+    __fixdfdi; __fixunsdfdi;
+    __fixsfdi; __fixunssfdi;
+    __floatdidf; __floatdisf;
+  }
+  GLIBC_2.16 {
+    __mcount_internal;
+  }
+  GLIBC_PRIVATE {
+    __mcount_internal;
+  }
+}
+
+libm {
+  GLIBC_2.2 {
+    # Special functions to save and restore registers used by the
+    # runtime libraries.
+    _restgpr0_13; _restgpr0_14; _restgpr0_15; _restgpr0_16; _restgpr0_17;
+    _restgpr0_18; _restgpr0_19; _restgpr0_20; _restgpr0_21; _restgpr0_22;
+    _restgpr0_22; _restgpr0_23; _restgpr0_24; _restgpr0_25; _restgpr0_26;
+    _restgpr0_27; _restgpr0_28; _restgpr0_29; _restgpr0_30; _restgpr0_31;
+    _savegpr0_13; _savegpr0_14; _savegpr0_15; _savegpr0_16; _savegpr0_17;
+    _savegpr0_18; _savegpr0_19; _savegpr0_20; _savegpr0_21; _savegpr0_22;
+    _savegpr0_22; _savegpr0_23; _savegpr0_24; _savegpr0_25; _savegpr0_26;
+    _savegpr0_27; _savegpr0_28; _savegpr0_29; _savegpr0_30; _savegpr0_31;
+    _restgpr1_13; _restgpr1_14; _restgpr1_15; _restgpr1_16; _restgpr1_17;
+    _restgpr1_18; _restgpr1_19; _restgpr1_20; _restgpr1_21; _restgpr1_22;
+    _restgpr1_22; _restgpr1_23; _restgpr1_24; _restgpr1_25; _restgpr1_26;
+    _restgpr1_27; _restgpr1_28; _restgpr1_29; _restgpr1_30; _restgpr1_31;
+    _savegpr1_13; _savegpr1_14; _savegpr1_15; _savegpr1_16; _savegpr1_17;
+    _savegpr1_18; _savegpr1_19; _savegpr1_20; _savegpr1_21; _savegpr1_22;
+    _savegpr1_22; _savegpr1_23; _savegpr1_24; _savegpr1_25; _savegpr1_26;
+    _savegpr1_27; _savegpr1_28; _savegpr1_29; _savegpr1_30; _savegpr1_31;
+  }
+}

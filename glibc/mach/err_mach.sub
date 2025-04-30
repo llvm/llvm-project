@@ -1,0 +1,130 @@
+/*
+ * Mach Operating System
+ * Copyright (c) 1991,1990,1989 Carnegie Mellon University
+ * All Rights Reserved.
+ *
+ * Permission to use, copy, modify and distribute this software and its
+ * documentation is hereby granted, provided that both the copyright
+ * notice and this permission notice appear in all copies of the
+ * software, derivative works or modified versions, and any portions
+ * thereof, and that both notices appear in supporting documentation.
+ *
+ * CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS
+ * CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND FOR
+ * ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ *
+ * Carnegie Mellon requests users of this software to return to
+ *
+ *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+ *  School of Computer Science
+ *  Carnegie Mellon University
+ *  Pittsburgh PA 15213-3890
+ *
+ * any improvements or extensions that they make and grant Carnegie the
+ * rights to redistribute these changes.
+ */
+/*
+ * HISTORY
+ * $Log$
+ * Revision 1.1  1992/10/06 18:29:52  roland
+ * entered into RCS
+ *
+ * Revision 2.3  92/04/01  19:38:05  rpd
+ * 	Added MIG_DESTROY_REQUEST.
+ * 	[92/03/09            rpd]
+ *
+ * Revision 2.2  92/01/16  00:09:05  rpd
+ * 	Moved from user collection to mk collection.
+ *
+ * Revision 2.3  91/08/29  15:51:30  rpd
+ * 	Added MIG_SERVER_DIED.
+ * 	[91/08/21            rpd]
+ *
+ * Revision 2.2  91/03/27  16:05:37  mrt
+ * 	First checkin
+ *
+ * Revision 2.2  91/03/18  17:39:03  rpd
+ * 	Created.
+ * 	[91/03/18            rpd]
+ *
+ */
+/*
+ *	File:	err_mach_ipc.sub
+ *	Author:	Richard Draves, Carnegie Mellon University
+ *	Date:	Jan, 1990
+ *
+ *	Error string definitions for the new Mach IPC
+ */
+
+static char * err_codes_mach_send[] = {
+	/* 0 */	"(ipc/send) no error",
+	/* 1 */	"(ipc/send) send in progress",
+	/* 2 */	"(ipc/send) invalid data",
+	/* 3 */	"(ipc/send) invalid destination port",
+	/* 4 */	"(ipc/send) timed out",
+	/* 5 */	"(ipc/send) will notify",
+	/* 6 */	"(ipc/send) notify in progress",
+	/* 7 */	"(ipc/send) interrupted",
+	/* 8 */	"(ipc/send) msg too small",
+	/* 9 */	"(ipc/send) invalid reply port",
+       /* 10 */	"(ipc/send) invalid port right",
+       /* 11 */	"(ipc/send) invalid notify port",
+       /* 12 */	"(ipc/send) invalid memory",
+       /* 13 */	"(ipc/send) no msg buffer",
+       /* 14 */	"(ipc/send) no notify possible",
+       /* 15 */	"(ipc/send) invalid msg-type",
+       /* 16 */	"(ipc/send) invalid msg-header",
+};
+
+static char * err_codes_mach_rcv[] = {
+	/* 0 */	"(ipc/rcv) no error",
+	/* 1 */	"(ipc/rcv) receive in progress",
+	/* 2 */	"(ipc/rcv) invalid name",
+	/* 3 */	"(ipc/rcv) timed out",
+	/* 4 */	"(ipc/rcv) msg too large",
+	/* 5 */	"(ipc/rcv) interrupted",
+	/* 6 */	"(ipc/rcv) port changed",
+	/* 7 */	"(ipc/rcv) invalid notify port",
+	/* 8 */	"(ipc/rcv) invalid data",
+	/* 9 */	"(ipc/rcv) port died",
+       /* 10 */	"(ipc/rcv) port in set",
+       /* 11 */	"(ipc/rcv) header error",
+       /* 12 */	"(ipc/rcv) body error",
+};
+
+static char 	* err_codes_mach_mig[] = {
+	/* 0 */	"(ipc/mig) client type check failure",
+	/* 1 */	"(ipc/mig) wrong reply message ID",
+	/* 2 */	"(ipc/mig) server detected error",
+	/* 3 */	"(ipc/mig) bad request message ID",
+	/* 4 */	"(ipc/mig) server type check failure",
+	/* 5 */	"(ipc/mig) no reply should be sent",
+	/* 6 */	"(ipc/mig) server raised exception",
+	/* 7 */	"(ipc/mig) array not large enough",
+	/* 8 */	"(ipc/mig) server died",
+	/* 9 */ "(ipc/mig) destroy request with no reply",
+};
+
+/*	err_mach_ipc subsystems      	*/
+static struct error_subsystem err_mach_ipc_sub[] = {
+	/* ipc/0; */
+	{
+		"(ipc/send)",
+		errlib_count(err_codes_mach_send),
+		err_codes_mach_send,
+	},
+	/* ipc/1; */
+	{
+		"(ipc/rcv)",
+		errlib_count(err_codes_mach_rcv),
+		err_codes_mach_rcv,
+
+	},
+	/* ipc/2 */
+	{
+		"(ipc/mig)",
+		errlib_count(err_codes_mach_mig),
+		err_codes_mach_mig,
+	},
+
+};

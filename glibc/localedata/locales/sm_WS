@@ -1,0 +1,189 @@
+comment_char %
+escape_char /
+
+% Samoan language locale for Samoa.
+% Contributed by Akhilesh Kumar <akhilesh.k@samsung.com>.
+% Words translated from  https://glosbe.com/sm/en/asu
+
+LC_IDENTIFICATION
+title       "Samoan language locale for Samoa"
+source      "Samsung Electronics Co., Ltd."
+address     ""
+contact     ""
+email       "akhilesh.k@samsung.com"
+tel         ""
+fax         ""
+language    "Samoan"
+territory   "Samoa"
+revision    "0.1"
+date        "2017-03-21"
+
+category  "i18n:2012";LC_IDENTIFICATION
+category  "i18n:2012";LC_CTYPE
+category  "i18n:2012";LC_COLLATE
+category  "i18n:2012";LC_TIME
+category  "i18n:2012";LC_NUMERIC
+category  "i18n:2012";LC_MONETARY
+category  "i18n:2012";LC_PAPER
+category  "i18n:2012";LC_MEASUREMENT
+category  "i18n:2012";LC_MESSAGES
+category  "i18n:2012";LC_NAME
+category  "i18n:2012";LC_ADDRESS
+category  "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% Copy the template from ISO/IEC 3166
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+% Full month names
+% http://samoan.manuatele.net/times.html
+mon	"Ianuari";/
+	"Fepuari";/
+	"Mati";/
+	"Aperila";/
+	"Me";/
+	"Iuni";/
+	"Iulai";/
+	"Auguso";/
+	"Setema";/
+	"Oketopa";/
+	"Novema";/
+	"Tesema"
+
+% Abbreviated month names
+abmon	"Ian";/
+        "Fep";/
+        "Mat";/
+        "Ape";/
+        "Me";/
+        "Iun";/
+        "Iul";/
+        "Aug";/
+        "Set";/
+        "Oke";/
+        "Nov";/
+        "Tes"
+%
+% Full Weekday names
+% http://samoan.manuatele.net/times.html
+day	"Aso Sa";/
+	"Aso Gafua";/
+	"Aso Lua";/
+	"Aso Lulu";/
+	"Aso Tofi";/
+	"Aso Farail";/
+	"Aso To'ana'i"
+%
+% Abbreviated Weekday names
+abday	"Aso Sa";/
+        "Aso Gaf";/
+        "Aso Lua";/
+        "Aso Lul";/
+        "Aso Tof";/
+        "Aso Far";/
+        "Aso To'"
+%
+% Appropriate date and time representation
+d_t_fmt	"%a %d %b %Y %T"
+%
+% Appropriate date and time representation for date(1)
+date_fmt	"%a %d %b %Y %T %Z"
+%
+% Appropriate date representation
+% https://en.wikipedia.org/wiki/Date_and_time_notation_in_Australia
+d_fmt	"%d//%m//%Y"
+%
+% Appropriate time representation
+t_fmt	"%r"
+%
+% am_pm and t_fmt_ampm - should be empty if using 24 hour time
+am_pm	"";""
+t_fmt_ampm    ""
+END LC_TIME
+%
+LC_NUMERIC
+decimal_point "."
+thousands_sep ","
+grouping      3
+END LC_NUMERIC
+
+LC_MONETARY
+% https://en.wikipedia.org/wiki/ISO_4217
+int_curr_symbol	"WST "
+% https://en.wikipedia.org/wiki/Samoan_t%C4%81l%C4%81
+currency_symbol		"WS$"
+mon_decimal_point	"."
+mon_thousands_sep	","
+mon_grouping		3
+positive_sign		""
+negative_sign		"-"
+int_frac_digits		2
+frac_digits		2
+p_cs_precedes		1
+int_p_sep_by_space	1
+p_sep_by_space		1
+n_cs_precedes		1
+int_n_sep_by_space	1
+n_sep_by_space		1
+p_sign_posn		1
+n_sign_posn		1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1iIyY]"
+noexpr  "^[-0lLnN]"
+% https://glosbe.com/en/sm/no
+yesstr "ioe"
+nostr "leai"
+END LC_MESSAGES
+
+LC_NAME
+copy "en_US"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%a%N%f%N%d%N%b%N%h %s %e %r%N%T, %S %z%N%c%N"
+country_name "S<U0101>moa"
+country_post "%a %N   %f %N   %d %N   %b %N   %h %s %e %/
+r %N   %T, %c  %N"
+% http://laendercode.net/en/2-letter-list.html
+country_ab2  "WS"
+% http://laendercode.net/en/countries.html
+country_ab3  "WSM"
+% locale/iso-3166.def
+country_num 882
+% http://www.nationsonline.org/oneworld/international-calling-codes.htm
+% Gagana faʻa Sāmoa
+lang_name    "Gagana fa<U02BB>a S<U0101>moa"
+% https://en.wikipedia.org/wiki/Samoan_language
+% ISO 639-1 sm, ISO 639-2 smo, ISO 639-3 smo
+lang_ab      "sm"
+lang_term    "smo"
+lang_lib     "smo"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a %l"
+int_select  "0"
+% https://en.wikipedia.org/wiki/Samoa
+int_prefix  "685"
+END LC_TELEPHONE

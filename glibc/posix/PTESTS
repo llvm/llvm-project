@@ -1,0 +1,341 @@
+# 2.8.2  Regular Expression General Requirement
+2¦4¦bb*¦abbbc¦
+2¦2¦bb*¦ababbbc¦
+7¦9¦A#*::¦A:A#:qA::qA#::qA##::q¦
+1¦5¦A#*::¦A##::A#::qA::qA#:q¦
+# 2.8.3.1.2  BRE Special Characters
+# GA108
+2¦2¦\.¦a.c¦
+2¦2¦\[¦a[c¦
+2¦2¦\\¦a\c¦
+2¦2¦\*¦a*c¦
+2¦2¦\^¦a^c¦
+2¦2¦\$¦a$c¦
+7¦11¦X\*Y\*8¦Y*8X*8X*Y*8¦
+# GA109
+2¦2¦[.]¦a.c¦
+2¦2¦[[]¦a[c¦
+-1¦-1¦[[]¦ac¦
+2¦2¦[\]¦a\c¦
+1¦1¦[\a]¦abc¦
+2¦2¦[\.]¦a\.c¦
+2¦2¦[\.]¦a.\c¦
+2¦2¦[*]¦a*c¦
+2¦2¦[$]¦a$c¦
+2¦2¦[X*Y8]¦7*8YX¦
+# GA110
+2¦2¦*¦a*c¦
+3¦4¦*a¦*b*a*c¦
+1¦5¦**9=¦***9=9¦
+# GA111
+1¦1¦^*¦*bc¦
+-1¦-1¦^*¦a*c¦
+-1¦-1¦^*¦^*ab¦
+1¦5¦^**9=¦***9=¦
+-1¦-1¦^*5<*9¦5<9*5<*9¦
+# GA112
+2¦3¦\(*b\)¦a*b¦
+-1¦-1¦\(*b\)¦ac¦
+1¦6¦A\(**9\)=¦A***9=79¦
+# GA113(1)
+1¦3¦\(^*ab\)¦*ab¦
+-1¦-1¦\(^*ab\)¦^*ab¦
+-1¦-1¦\(^*b\)¦a*b¦
+-1¦-1¦\(^*b\)¦^*b¦
+### GA113(2)			GNU regex implements GA113(1)
+##-1¦-1¦\(^*ab\)¦*ab¦
+##-1¦-1¦\(^*ab\)¦^*ab¦
+##1¦1¦\(^*b\)¦b¦
+##1¦3¦\(^*b\)¦^^b¦
+# GA114
+1¦3¦a^b¦a^b¦
+1¦3¦a\^b¦a^b¦
+1¦1¦^^¦^bc¦
+2¦2¦\^¦a^c¦
+1¦1¦[c^b]¦^abc¦
+1¦1¦[\^ab]¦^ab¦
+2¦2¦[\^ab]¦c\d¦
+-1¦-1¦[^^]¦^¦
+1¦3¦\(a^b\)¦a^b¦
+1¦3¦\(a\^b\)¦a^b¦
+2¦2¦\(\^\)¦a^b¦
+# GA115
+3¦3¦$$¦ab$¦
+-1¦-1¦$$¦$ab¦
+2¦3¦$c¦a$c¦
+2¦2¦[$]¦a$c¦
+1¦2¦\$a¦$a¦
+3¦3¦\$$¦ab$¦
+2¦6¦A\([34]$[34]\)B¦XA4$3BY¦
+# 2.8.3.1.3  Periods in BREs
+# GA116
+1¦1¦.¦abc¦
+-1¦-1¦.ab¦abc¦
+1¦3¦ab.¦abc¦
+1¦3¦a.b¦a,b¦
+-1¦-1¦.......¦PqRs6¦
+1¦7¦.......¦PqRs6T8¦
+# 2.8.3.2  RE Bracket Expression
+# GA118
+2¦2¦[abc]¦xbyz¦
+-1¦-1¦[abc]¦xyz¦
+2¦2¦[abc]¦xbay¦
+# GA119
+2¦2¦[^a]¦abc¦
+4¦4¦[^]cd]¦cd]ef¦
+2¦2¦[^abc]¦axyz¦
+-1¦-1¦[^abc]¦abc¦
+3¦3¦[^[.a.]b]¦abc¦
+3¦3¦[^[=a=]b]¦abc¦
+2¦2¦[^-ac]¦abcde-¦
+2¦2¦[^ac-]¦abcde-¦
+3¦3¦[^a-b]¦abcde¦
+3¦3¦[^a-bd-e]¦dec¦
+2¦2¦[^---]¦-ab¦
+16¦16¦[^a-zA-Z0-9]¦pqrstVWXYZ23579#¦
+# GA120(1)
+3¦3¦[]a]¦cd]ef¦
+1¦1¦[]-a]¦a_b¦
+3¦3¦[][.-.]-0]¦ab0-]¦
+1¦1¦[]^a-z]¦string¦
+# GA120(2)
+4¦4¦[^]cd]¦cd]ef¦
+0¦0¦[^]]*¦]]]]]]]]X¦
+0¦0¦[^]]*¦]]]]]]]]¦
+9¦9¦[^]]\{1,\}¦]]]]]]]]X¦
+-1¦-1¦[^]]\{1,\}¦]]]]]]]]¦
+# GA120(3)
+3¦3¦[c[.].]d]¦ab]cd¦
+2¦8¦[a-z]*[[.].]][A-Z]*¦Abcd]DEFg¦
+# GA121
+2¦2¦[[.a.]b]¦Abc¦
+1¦1¦[[.a.]b]¦aBc¦
+-1¦-1¦[[.a.]b]¦ABc¦
+3¦3¦[^[.a.]b]¦abc¦
+3¦3¦[][.-.]-0]¦ab0-]¦
+3¦3¦[A-[.].]c]¦ab]!¦
+# GA122
+-2¦-2¦[[.ch.]]¦abc¦
+-2¦-2¦[[.ab.][.CD.][.EF.]]¦yZabCDEFQ9¦
+# GA125
+2¦2¦[[=a=]b]¦Abc¦
+1¦1¦[[=a=]b]¦aBc¦
+-1¦-1¦[[=a=]b]¦ABc¦
+3¦3¦[^[=a=]b]¦abc¦
+# GA126
+#W the expected result for [[:alnum:]]* is 2-7 which is wrong
+0¦0¦[[:alnum:]]*¦ aB28gH¦
+2¦7¦[[:alnum:]][[:alnum:]]*¦ aB28gH¦
+#W the expected result for [^[:alnum:]]* is 2-5 which is wrong
+0¦0¦[^[:alnum:]]*¦2 	,a¦
+2¦5¦[^[:alnum:]][^[:alnum:]]*¦2 	,a¦
+#W the expected result for [[:alpha:]]* is 2-5 which is wrong
+0¦0¦[[:alpha:]]*¦ aBgH2¦
+2¦5¦[[:alpha:]][[:alpha:]]*¦ aBgH2¦
+1¦6¦[^[:alpha:]]*¦2 	8,a¦
+1¦2¦[[:blank:]]*¦ 	¦
+1¦8¦[^[:blank:]]*¦aB28gH, ¦
+1¦2¦[[:cntrl:]]*¦	 ¦
+1¦8¦[^[:cntrl:]]*¦aB2 8gh,¦
+#W the expected result for [[:digit:]]* is 2-3 which is wrong
+0¦0¦[[:digit:]]*¦a28¦
+2¦3¦[[:digit:]][[:digit:]]*¦a28¦
+1¦8¦[^[:digit:]]*¦aB 	gH,¦
+1¦7¦[[:graph:]]*¦aB28gH, ¦
+1¦3¦[^[:graph:]]*¦ 	,¦
+1¦2¦[[:lower:]]*¦agB¦
+1¦8¦[^[:lower:]]*¦B2 	8H,a¦
+1¦8¦[[:print:]]*¦aB2 8gH,	¦
+1¦2¦[^[:print:]]*¦	 ¦
+#W the expected result for [[:punct:]]* is 2-2 which is wrong
+0¦0¦[[:punct:]]*¦a,2¦
+2¦3¦[[:punct:]][[:punct:]]*¦a,,2¦
+1¦9¦[^[:punct:]]*¦aB2 	8gH¦
+1¦3¦[[:space:]]*¦ 	¦
+#W the expected result for [^[:space:]]* is 2-9 which is wrong
+0¦0¦[^[:space:]]*¦ aB28gH,	¦
+2¦9¦[^[:space:]][^[:space:]]*¦ aB28gH,	¦
+#W the expected result for [[:upper:]]* is 2-3 which is wrong
+0¦0¦[[:upper:]]*¦aBH2¦
+2¦3¦[[:upper:]][[:upper:]]*¦aBH2¦
+1¦8¦[^[:upper:]]*¦a2 	8g,B¦
+#W the expected result for [[:xdigit:]]* is 2-5 which is wrong
+0¦0¦[[:xdigit:]]*¦gaB28h¦
+2¦5¦[[:xdigit:]][[:xdigit:]]*¦gaB28h¦
+#W the expected result for [^[:xdigit:]]* is 2-7 which is wrong
+2¦7¦[^[:xdigit:]][^[:xdigit:]]*¦a 	gH,2¦
+# GA127
+-2¦-2¦[b-a]¦abc¦
+1¦1¦[a-c]¦bbccde¦
+2¦2¦[a-b]¦-bc¦
+3¦3¦[a-z0-9]¦AB0¦
+3¦3¦[^a-b]¦abcde¦
+3¦3¦[^a-bd-e]¦dec¦
+1¦1¦[]-a]¦a_b¦
+2¦2¦[+--]¦a,b¦
+2¦2¦[--/]¦a.b¦
+2¦2¦[^---]¦-ab¦
+3¦3¦[][.-.]-0]¦ab0-]¦
+3¦3¦[A-[.].]c]¦ab]!¦
+2¦6¦bc[d-w]xy¦abchxyz¦
+# GA129
+1¦1¦[a-cd-f]¦dbccde¦
+-1¦-1¦[a-ce-f]¦dBCCdE¦
+2¦4¦b[n-zA-M]Y¦absY9Z¦
+2¦4¦b[n-zA-M]Y¦abGY9Z¦
+# GA130
+3¦3¦[-xy]¦ac-¦
+2¦4¦c[-xy]D¦ac-D+¦
+2¦2¦[--/]¦a.b¦
+2¦4¦c[--/]D¦ac.D+b¦
+2¦2¦[^-ac]¦abcde-¦
+1¦3¦a[^-ac]c¦abcde-¦
+3¦3¦[xy-]¦zc-¦
+2¦4¦c[xy-]7¦zc-786¦
+2¦2¦[^ac-]¦abcde-¦
+2¦4¦a[^ac-]c¦5abcde-¦
+2¦2¦[+--]¦a,b¦
+2¦4¦a[+--]B¦Xa,By¦
+2¦2¦[^---]¦-ab¦
+4¦6¦X[^---]Y¦X-YXaYXbY¦
+# 2.8.3.3  BREs Matching Multiple Characters
+# GA131
+3¦4¦cd¦abcdeabcde¦
+1¦2¦ag*b¦abcde¦
+-1¦-1¦[a-c][e-f]¦abcdef¦
+3¦4¦[a-c][e-f]¦acbedf¦
+4¦8¦abc*XYZ¦890abXYZ#*¦
+4¦9¦abc*XYZ¦890abcXYZ#*¦
+4¦15¦abc*XYZ¦890abcccccccXYZ#*¦
+-1¦-1¦abc*XYZ¦890abc*XYZ#*¦
+# GA132
+2¦4¦\(*bc\)¦a*bc¦
+1¦2¦\(ab\)¦abcde¦
+1¦10¦\(a\(b\(c\(d\(e\(f\(g\)h\(i\(j\)\)\)\)\)\)\)\)¦abcdefghijk¦
+3¦8¦43\(2\(6\)*0\)AB¦654320ABCD¦
+3¦9¦43\(2\(7\)*0\)AB¦6543270ABCD¦
+3¦12¦43\(2\(7\)*0\)AB¦6543277770ABCD¦
+# GA133
+1¦10¦\(a\(b\(c\(d\(e\(f\(g\)h\(i\(j\)\)\)\)\)\)\)\)¦abcdefghijk¦
+-1¦-1¦\(a\(b\(c\(d\(e\(f\(g\)h\(i\(k\)\)\)\)\)\)\)\)¦abcdefghijk¦
+# GA134
+2¦4¦\(bb*\)¦abbbc¦
+2¦2¦\(bb*\)¦ababbbc¦
+1¦6¦a\(.*b\)¦ababbbc¦
+1¦2¦a\(b*\)¦ababbbc¦
+1¦20¦a\(.*b\)c¦axcaxbbbcsxbbbbbbbbc¦
+# GA135
+1¦7¦\(a\(b\(c\(d\(e\)\)\)\)\)\4¦abcdededede¦
+#W POSIX does not really specify whether a\(b\)*c\1 matches acb.
+#W back references are supposed to expand to the last match, but what
+#W if there never was a match as in this case?
+-1¦-1¦a\(b\)*c\1¦acb¦
+1¦11¦\(a\(b\(c\(d\(e\(f\(g\)h\(i\(j\)\)\)\)\)\)\)\)\9¦abcdefghijjk¦
+# GA136
+#W These two tests have the same problem as the test in GA135.  No match
+#W of a subexpression, why should the back reference be usable?
+#W 1 2 a\(b\)*c\1 acb
+#W 4 7 a\(b\(c\(d\(f\)*\)\)\)\4¦xYzabcdePQRST
+-1¦-1¦a\(b\)*c\1¦acb¦
+-1¦-1¦a\(b\(c\(d\(f\)*\)\)\)\4¦xYzabcdePQRST¦
+# GA137
+-2¦-2¦\(a\(b\)\)\3¦foo¦
+-2¦-2¦\(a\(b\)\)\(a\(b\)\)\5¦foo¦
+# GA138
+1¦2¦ag*b¦abcde¦
+1¦10¦a.*b¦abababvbabc¦
+2¦5¦b*c¦abbbcdeabbbbbbcde¦
+2¦5¦bbb*c¦abbbcdeabbbbbbcde¦
+1¦5¦a\(b\)*c\1¦abbcbbb¦
+-1¦-1¦a\(b\)*c\1¦abbdbd¦
+0¦0¦\([a-c]*\)\1¦abcacdef¦
+1¦6¦\([a-c]*\)\1¦abcabcabcd¦
+1¦2¦a^*b¦ab¦
+1¦5¦a^*b¦a^^^b¦
+# GA139
+1¦2¦a\{2\}¦aaaa¦
+1¦7¦\([a-c]*\)\{0,\}¦aabcaab¦
+1¦2¦\(a\)\1\{1,2\}¦aabc¦
+1¦3¦\(a\)\1\{1,2\}¦aaaabc¦
+#W the expression \(\(a\)\1\)\{1,2\} is ill-formed, using \2
+1¦4¦\(\(a\)\2\)\{1,2\}¦aaaabc¦
+# GA140
+1¦2¦a\{2\}¦aaaa¦
+-1¦-1¦a\{2\}¦abcd¦
+0¦0¦a\{0\}¦aaaa¦
+1¦64¦a\{64\}¦aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa¦
+# GA141
+1¦7¦\([a-c]*\)\{0,\}¦aabcaab¦
+#W the expected result for \([a-c]*\)\{2,\} is failure which isn't correct
+1¦3¦\([a-c]*\)\{2,\}¦abcdefg¦
+1¦3¦\([a-c]*\)\{1,\}¦abcdefg¦
+-1¦-1¦a\{64,\}¦aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa¦
+# GA142
+1¦3¦a\{2,3\}¦aaaa¦
+-1¦-1¦a\{2,3\}¦abcd¦
+0¦0¦\([a-c]*\)\{0,0\}¦foo¦
+1¦63¦a\{1,63\}¦aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa¦
+# 2.8.3.4  BRE Precedence
+# GA143
+#W There are numerous bugs in the original version.
+2¦19¦\^\[[[.].]]\\(\\1\\)\*\\{1,2\\}\$¦a^[]\(\1\)*\{1,2\}$b¦
+1¦6¦[[=*=]][[=\=]][[=]=]][[===]][[...]][[:punct:]]¦*\]=.;¦
+1¦6¦[$\(*\)^]*¦$\()*^¦
+1¦1¦[\1]¦1¦
+1¦1¦[\{1,2\}]¦{¦
+#W the expected result for \(*\)*\1* is 2-2 which isn't correct
+0¦0¦\(*\)*\1*¦a*b*11¦
+2¦3¦\(*\)*\1*b¦a*b*11¦
+#W the expected result for \(a\(b\{1,2\}\)\{1,2\}\) is 1-5 which isn't correct
+1¦3¦\(a\(b\{1,2\}\)\{1,2\}\)¦abbab¦
+1¦5¦\(a\(b\{1,2\}\)\)\{1,2\}¦abbab¦
+1¦1¦^\(^\(^a$\)$\)$¦a¦
+1¦2¦\(a\)\1$¦aa¦
+1¦3¦ab*¦abb¦
+1¦4¦ab\{2,4\}¦abbbc¦
+# 2.8.3.5  BRE Expression Anchoring
+# GA144
+1¦1¦^a¦abc¦
+-1¦-1¦^b¦abc¦
+-1¦-1¦^[a-zA-Z]¦99Nine¦
+1¦4¦^[a-zA-Z]*¦Nine99¦
+# GA145(1)
+1¦2¦\(^a\)\1¦aabc¦
+-1¦-1¦\(^a\)\1¦^a^abc¦
+1¦2¦\(^^a\)¦^a¦
+1¦1¦\(^^\)¦^^¦
+1¦3¦\(^abc\)¦abcdef¦
+-1¦-1¦\(^def\)¦abcdef¦
+### GA145(2)			GNU regex implements GA145(1)
+##-1¦-1¦\(^a\)\1¦aabc¦
+##1¦4¦\(^a\)\1¦^a^abc¦
+##-1¦-1¦\(^^a\)¦^a¦
+##1¦2¦\(^^\)¦^^¦
+# GA146
+3¦3¦a$¦cba¦
+-1¦-1¦a$¦abc¦
+5¦7¦[a-z]*$¦99ZZxyz¦
+#W the expected result for [a-z]*$ is failure which isn't correct
+10¦9¦[a-z]*$¦99ZZxyz99¦
+3¦3¦$$¦ab$¦
+-1¦-1¦$$¦$ab¦
+3¦3¦\$$¦ab$¦
+# GA147(1)
+-1¦-1¦\(a$\)\1¦bcaa¦
+-1¦-1¦\(a$\)\1¦ba$¦
+-1¦-1¦\(ab$\)¦ab$¦
+1¦2¦\(ab$\)¦ab¦
+4¦6¦\(def$\)¦abcdef¦
+-1¦-1¦\(abc$\)¦abcdef¦
+### GA147(2)			GNU regex implements GA147(1)
+##-1¦-1¦\(a$\)\1¦bcaa¦
+##2¦5¦\(a$\)\1¦ba$a$¦
+##-1¦-1¦\(ab$\)¦ab¦
+##1¦3¦\(ab$\)¦ab$¦
+# GA148
+0¦0¦^$¦¦
+1¦3¦^abc$¦abc¦
+-1¦-1¦^xyz$¦^xyz^¦
+-1¦-1¦^234$¦^234$¦
+1¦9¦^[a-zA-Z0-9]*$¦2aA3bB9zZ¦
+-1¦-1¦^[a-z0-9]*$¦2aA3b#B9zZ¦

@@ -15,10 +15,12 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -31,6 +33,12 @@
 #include <utility>
 #include <vector>
 
+namespace llvm {
+
+class StringRef;
+
+} // namespace llvm
+
 namespace clang {
 
 class ASTReader;
@@ -39,6 +47,7 @@ class CompilerInvocation;
 class DiagnosticsEngine;
 class ExternalSemaSource;
 class FrontendOptions;
+class MacroBuilder;
 class PCHContainerReader;
 class Preprocessor;
 class PreprocessorOptions;
@@ -55,6 +64,28 @@ void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
 /// DoPrintPreprocessedInput - Implement -E mode.
 void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
                               const PreprocessorOutputOptions &Opts);
+
+/// DefineTypeSize - Emit a macro to the predefines buffer that declares a macro
+/// named MacroName with the max value for a type with width 'TypeWidth' a
+/// signedness of 'isSigned' and with a value suffix of 'ValSuffix' (e.g. LL).
+template <typename T>
+static void DefineTypeSize(const Twine &MacroName, unsigned TypeWidth,
+                           StringRef ValSuffix, bool isSigned, T &Builder) {
+  static_assert(std::is_base_of<MacroBuilder, T>::value, "Illegal T value");
+  llvm::APInt MaxVal = isSigned ? llvm::APInt::getSignedMaxValue(TypeWidth)
+                                : llvm::APInt::getMaxValue(TypeWidth);
+  Builder.defineMacro(MacroName, toString(MaxVal, 10, isSigned) + ValSuffix);
+}
+
+/// DefineTypeSize - An overloaded helper that uses TargetInfo to determine
+/// the width, suffix, and signedness of the given type
+template <typename T>
+static void DefineTypeSize(const Twine &MacroName, TargetInfo::IntType Ty,
+                           const TargetInfo &TI, T &Builder) {
+  static_assert(std::is_base_of<MacroBuilder, T>::value, "Illegal T value");
+  DefineTypeSize(MacroName, TI.getTypeWidth(Ty), TI.getTypeConstantSuffix(Ty),
+                 TI.isTypeSigned(Ty), Builder);
+}
 
 /// An interface for collecting the dependencies of a compilation. Users should
 /// use \c attachToPreprocessor and \c attachToASTReader to get all of the

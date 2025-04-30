@@ -1,0 +1,163 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Macedonian language locale for Macedonia
+% Damjan Georgievski { gdamjan %% gmail.com }
+% Revision: 2.2 (2006-09-12)
+
+LC_IDENTIFICATION
+title      "Macedonian locale for Macedonia"
+source     ""
+address    ""
+contact    "Damjan Georgievski"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Macedonian"
+territory  "Macedonia"
+revision   "2.2"
+date       "2006-09-12"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include  "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_TIME
+abday "<U043D><U0435><U0434>";"<U043F><U043E><U043D>";/
+"<U0432><U0442><U043E>";"<U0441><U0440><U0435>";/
+"<U0447><U0435><U0442>";"<U043F><U0435><U0442>";/
+"<U0441><U0430><U0431>"
+day "<U043D><U0435><U0434><U0435><U043B><U0430>";/
+"<U043F><U043E><U043D><U0435><U0434><U0435><U043B><U043D><U0438><U043A>";/
+"<U0432><U0442><U043E><U0440><U043D><U0438><U043A>";/
+"<U0441><U0440><U0435><U0434><U0430>";/
+"<U0447><U0435><U0442><U0432><U0440><U0442><U043E><U043A>";/
+"<U043F><U0435><U0442><U043E><U043A>";/
+"<U0441><U0430><U0431><U043E><U0442><U0430>"
+abmon "<U0458><U0430><U043D>";"<U0444><U0435><U0432>";/
+"<U043C><U0430><U0440>";"<U0430><U043F><U0440>";/
+"<U043C><U0430><U0458>";"<U0458><U0443><U043D>";/
+"<U0458><U0443><U043B>";"<U0430><U0432><U0433>";/
+"<U0441><U0435><U043F>";"<U043E><U043A><U0442>";/
+"<U043D><U043E><U0435>";"<U0434><U0435><U043A>"
+mon "<U0458><U0430><U043D><U0443><U0430><U0440><U0438>";/
+"<U0444><U0435><U0432><U0440><U0443><U0430><U0440><U0438>";/
+"<U043C><U0430><U0440><U0442>";/
+"<U0430><U043F><U0440><U0438><U043B>";/
+"<U043C><U0430><U0458>";/
+"<U0458><U0443><U043D><U0438>";/
+"<U0458><U0443><U043B><U0438>";/
+"<U0430><U0432><U0433><U0443><U0441><U0442>";/
+"<U0441><U0435><U043F><U0442><U0435><U043C><U0432><U0440><U0438>";/
+"<U043E><U043A><U0442><U043E><U043C><U0432><U0440><U0438>";/
+"<U043D><U043E><U0435><U043C><U0432><U0440><U0438>";/
+"<U0434><U0435><U043A><U0435><U043C><U0432><U0440><U0438>"
+d_t_fmt "%a, %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt "%a, %d %b %H:%M:%S %Z %Y"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MONETARY
+int_curr_symbol           "MKD "
+currency_symbol           "<U0434><U0435><U043D>"
+mon_decimal_point         ","
+mon_thousands_sep         "<U202F>"
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "<U202F>"
+grouping                  3;3
+END LC_NUMERIC
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0414><U0434>dD]"
+noexpr  "^[-0nN<U041D><U043D>]"
+yesstr  "<U0434><U0430>"
+nostr   "<U043D><U0435>"
+END LC_MESSAGES
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt     "%A %l"
+int_prefix      "389"
+int_select      "00"
+END LC_TELEPHONE
+
+LC_NAME
+name_fmt  "%g%t%f"
+name_mr   "<U0433>-<U0434><U0438><U043D>"
+name_mrs  "<U0433>-<U0453><U0430>"
+name_miss "<U0433>-<U0453><U0438><U0446><U0430>"
+name_ms   "<U0433>-<U0453><U0430>"
+name_gen  "<U043f><U043e><U0447><U0438><U0442><U0443><U0432><U0430><U043d>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U041C><U0430><U043A><U0435><U0434><U043E><U043D><U0438><U0458><U0430>"
+country_post  "MK"
+country_ab2 "MK"
+country_ab3 "MKD"
+country_car "MK"
+country_num 807
+country_isbn "9989"
+% македонски јазик
+lang_name    "<U043C><U0430><U043A><U0435><U0434><U043E><U043D><U0441><U043A><U0438>"
+lang_ab "mk"
+lang_term "mkd"
+lang_lib "mac"
+END LC_ADDRESS
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

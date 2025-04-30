@@ -1,0 +1,6 @@
+#define SHARED
+#include <ldsodefs.h>
+
+--
+
+GL_TLS_GENERATION_OFFSET        offsetof (struct rtld_global, _dl_tls_generation)

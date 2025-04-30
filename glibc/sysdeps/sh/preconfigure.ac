@@ -1,0 +1,18 @@
+GLIBC_PROVIDES dnl See aclocal.m4 in the top level source directory.
+# Local preconfigure fragment for sysdeps/sh
+
+AC_EGREP_CPP(yes,[#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+                   yes
+                  #endif
+                  ], endianness=le, endianness=be)
+
+case "$machine" in
+sh3*)           base_machine=sh
+                machine=sh/$endianness/sh3
+                with_fp_cond="defined __SH_FPU_ANY__"
+                ;;
+sh4*)           base_machine=sh
+                machine=sh/$endianness/sh4
+                with_fp_cond="defined __SH_FPU_ANY__"
+                ;;
+esac

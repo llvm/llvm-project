@@ -28,6 +28,8 @@
 #include "ompt-specific.h"
 #endif
 
+#include "kmp_ns.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -340,22 +342,64 @@ int FTN_STDCALL FTN_GET_AFFINITY_MASK_PROC(int KMP_DEREF proc, void **mask) {
 
 /* ------------------------------------------------------------------------ */
 
+#if LIBOMP_NEXTSILICON
+
+static inline __next32_process_info *_ns_get_current_process_info() {
+  uint32_t nspid = __nsapi_process_index();
+
+  return &__nsapi_get_process_table()[nspid];
+}
+
+static inline __next32_thread_info *_ns_get_current_thread_info() {
+  uint32_t nstid = __nsapi_thread_index();
+
+  return &__nsapi_get_thread_table()[nstid];
+}
+
+#endif /* LIBOMP_NEXTSILICON */
+
 /* sets the requested number of threads for the next parallel region */
 void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_NUM_THREADS)(int KMP_DEREF arg) {
 #ifdef KMP_STUB
 // Nothing.
 #else
+
+#if LIBOMP_NEXTSILICON_DEVICE_BUILD
+  _ns_get_current_process_info()->team_size = KMP_DEREF arg;
+#else
+#if LIBOMP_NEXTSILICON
+  /* If we're already on CG, access table directly (without RPC) */
+  if (__nsapi_is_on_cg())
+    _ns_get_current_process_info()->team_size = KMP_DEREF arg;
+  else
+    nsapi_omp_set_num_threads(KMP_DEREF arg);
+
+#endif // LIBOMP_NEXTSILICON
+
   __kmp_set_num_threads(KMP_DEREF arg, __kmp_entry_gtid());
+#endif // LIBOMP_NEXTSILICON_DEVICE_BUILD
 #endif
 }
 
 /* returns the number of threads in current team */
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_THREADS)(void) {
+
+#if LIBOMP_NEXTSILICON_DEVICE_BUILD
+  return _ns_get_current_process_info()->team_size;
+#else
+
+#if LIBOMP_NEXTSILICON
+  if (__nsapi_is_on_cg()) {
+    return _ns_get_current_process_info()->team_size;
+  }
+#endif // LIBOMP_NEXTSILICON
+
 #ifdef KMP_STUB
   return 1;
 #else
   // __kmpc_bound_num_threads initializes the library if needed
   return __kmpc_bound_num_threads(NULL);
+#endif // LIBOMP_NEXTSILICON_DEVICE_BUILD
 #endif
 }
 
@@ -582,7 +626,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
   int gtid;
 
 #if KMP_OS_DARWIN || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||    \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
+    KMP_OS_HURD || KMP_OS_OPENBSD
   gtid = __kmp_entry_gtid();
 #elif KMP_OS_WINDOWS
   if (!__kmp_init_parallel ||
@@ -593,7 +637,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
     return 0;
   }
   --gtid; // We keep (gtid+1) in TLS
-#elif KMP_OS_LINUX || KMP_OS_WASI
+#elif KMP_OS_LINUX
 #ifdef KMP_TDATA_GTID
   if (__kmp_gtid_mode >= 3) {
     if ((gtid = __kmp_gtid) == KMP_GTID_DNE) {
@@ -602,8 +646,8 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
   } else {
 #endif
     if (!__kmp_init_parallel ||
-        (gtid = (int)((kmp_intptr_t)(
-             pthread_getspecific(__kmp_gtid_threadprivate_key)))) == 0) {
+        (gtid = (int)((kmp_intptr_t)(pthread_getspecific(
+             __kmp_gtid_threadprivate_key)))) == 0) {
       return 0;
     }
     --gtid;
@@ -684,6 +728,19 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DYNAMIC)(int KMP_DEREF flag) {
 #ifdef KMP_STUB
   __kmps_set_dynamic(KMP_DEREF flag ? TRUE : FALSE);
 #else
+
+#if LIBOMP_NEXTSILICON_DEVICE_BUILD
+  _ns_get_current_process_info()->dynamic = KMP_DEREF flag;
+#else
+#if LIBOMP_NEXTSILICON
+  if (__nsapi_is_on_cg())
+    _ns_get_current_process_info()->dynamic = KMP_DEREF flag;
+  else
+    nsapi_omp_set_dynamic(KMP_DEREF flag);
+
+#endif // LIBOMP_NEXTSILICON
+#endif // LIBOMP_NEXTSILICON_DEVICE_BUILD
+
   kmp_info_t *thread;
   /* For the thread-private implementation of the internal controls */
   thread = __kmp_entry_thread();
@@ -697,9 +754,21 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DYNAMIC)(void) {
 #ifdef KMP_STUB
   return __kmps_get_dynamic();
 #else
+
+#if LIBOMP_NEXTSILICON_DEVICE_BUILD
+  return _ns_get_current_process_info()->dynamic;
+#else
+
+#if LIBOMP_NEXTSILICON
+  if (__nsapi_is_on_cg())
+    return _ns_get_current_process_info()->dynamic;
+
+#endif // LIBOMP_NEXTSILICON
+
   kmp_info_t *thread;
   thread = __kmp_entry_thread();
   return get__dynamic(thread);
+#endif // LIBOMP_NEXTSILICON_DEVICE_BUILD
 #endif
 }
 

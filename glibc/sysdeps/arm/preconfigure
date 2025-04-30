@@ -1,0 +1,204 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local preconfigure fragment for sysdeps/arm
+
+case "$machine" in
+arm*)
+  # If the compiler enables unwind tables by default, this causes
+  # problems with undefined symbols in -nostdlib link tests.  To
+  # avoid this, add -fno-unwind-tables here and remove it in
+  # sysdeps/arm/configure.ac after those tests have been run.
+  if test "${CFLAGS+set}" != "set"; then
+    CFLAGS="-g -O2"
+  fi
+  CFLAGS="$CFLAGS -fno-unwind-tables"
+
+  base_machine=arm
+  # Lets ask the compiler which ARM family we've got
+  # Unfortunately it doesn't define any flags for implementations
+  # that you might pass to -mcpu or -mtune
+  # Note if you add patterns here you must ensure that
+  # an appropriate directory exists in sysdeps/arm
+  archcppflag=`$CC $CFLAGS $CPPFLAGS -E -dM -xc /dev/null |
+    sed -n 's/^#define \(__ARM_ARCH_[0-9].*__\) .*$/\1/p'`
+
+  case "x$archcppflag" in
+  x__ARM_ARCH_89*__)
+    machine=armv7
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Found compiler is configured for something newer than v7 - using v7" >&5
+$as_echo "$as_me: Found compiler is configured for something newer than v7 - using v7" >&6;}
+    ;;
+
+  x__ARM_ARCH_7A__)
+    machine=armv7
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Found compiler is configured for $machine" >&5
+$as_echo "$as_me: Found compiler is configured for $machine" >&6;}
+    ;;
+
+  x__ARM_ARCH_6T2__)
+    machine=armv6t2
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Found compiler is configured for $machine" >&5
+$as_echo "$as_me: Found compiler is configured for $machine" >&6;}
+    ;;
+  x__ARM_ARCH_6*__)
+    machine=armv6
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Found compiler is configured for $machine" >&5
+$as_echo "$as_me: Found compiler is configured for $machine" >&6;}
+    ;;
+  *)
+    machine=arm
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: arm/preconfigure: Did not find ARM architecture type; using default" >&5
+$as_echo "$as_me: WARNING: arm/preconfigure: Did not find ARM architecture type; using default" >&2;}
+    ;;
+  esac
+
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for grep that handles long lines and -e" >&5
+$as_echo_n "checking for grep that handles long lines and -e... " >&6; }
+if ${ac_cv_path_GREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -z "$GREP"; then
+  ac_path_GREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in grep ggrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_GREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_GREP" || continue
+# Check for GNU ac_path_GREP and select it if it is found.
+  # Check for GNU $ac_path_GREP
+case `"$ac_path_GREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_GREP="$ac_path_GREP" ac_path_GREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'GREP' >> "conftest.nl"
+    "$ac_path_GREP" -e 'GREP$' -e '-(cannot match)-' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_GREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_GREP="$ac_path_GREP"
+      ac_path_GREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_GREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_GREP"; then
+    as_fn_error $? "no acceptable grep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_GREP=$GREP
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_GREP" >&5
+$as_echo "$ac_cv_path_GREP" >&6; }
+ GREP="$ac_cv_path_GREP"
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for egrep" >&5
+$as_echo_n "checking for egrep... " >&6; }
+if ${ac_cv_path_EGREP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if echo a | $GREP -E '(a|b)' >/dev/null 2>&1
+   then ac_cv_path_EGREP="$GREP -E"
+   else
+     if test -z "$EGREP"; then
+  ac_path_EGREP_found=false
+  # Loop through the user's path and test for each of PROGNAME-LIST
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/usr/xpg4/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_prog in egrep; do
+    for ac_exec_ext in '' $ac_executable_extensions; do
+      ac_path_EGREP="$as_dir/$ac_prog$ac_exec_ext"
+      as_fn_executable_p "$ac_path_EGREP" || continue
+# Check for GNU ac_path_EGREP and select it if it is found.
+  # Check for GNU $ac_path_EGREP
+case `"$ac_path_EGREP" --version 2>&1` in
+*GNU*)
+  ac_cv_path_EGREP="$ac_path_EGREP" ac_path_EGREP_found=:;;
+*)
+  ac_count=0
+  $as_echo_n 0123456789 >"conftest.in"
+  while :
+  do
+    cat "conftest.in" "conftest.in" >"conftest.tmp"
+    mv "conftest.tmp" "conftest.in"
+    cp "conftest.in" "conftest.nl"
+    $as_echo 'EGREP' >> "conftest.nl"
+    "$ac_path_EGREP" 'EGREP$' < "conftest.nl" >"conftest.out" 2>/dev/null || break
+    diff "conftest.out" "conftest.nl" >/dev/null 2>&1 || break
+    as_fn_arith $ac_count + 1 && ac_count=$as_val
+    if test $ac_count -gt ${ac_path_EGREP_max-0}; then
+      # Best one so far, save it but keep looking for a better one
+      ac_cv_path_EGREP="$ac_path_EGREP"
+      ac_path_EGREP_max=$ac_count
+    fi
+    # 10*(2^10) chars as input seems more than enough
+    test $ac_count -gt 10 && break
+  done
+  rm -f conftest.in conftest.tmp conftest.nl conftest.out;;
+esac
+
+      $ac_path_EGREP_found && break 3
+    done
+  done
+  done
+IFS=$as_save_IFS
+  if test -z "$ac_cv_path_EGREP"; then
+    as_fn_error $? "no acceptable egrep could be found in $PATH$PATH_SEPARATOR/usr/xpg4/bin" "$LINENO" 5
+  fi
+else
+  ac_cv_path_EGREP=$EGREP
+fi
+
+   fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_path_EGREP" >&5
+$as_echo "$ac_cv_path_EGREP" >&6; }
+ EGREP="$ac_cv_path_EGREP"
+
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+                     yes
+                    #endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "yes" >/dev/null 2>&1; then :
+  endianness=le
+else
+  endianness=be
+fi
+rm -f conftest*
+
+
+  machine=arm/$endianness/$machine
+  with_fp_cond="!defined __SOFTFP__"
+esac

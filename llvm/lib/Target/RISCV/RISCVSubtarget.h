@@ -61,6 +61,8 @@ public:
   // clang-format off
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
+    NextSiliconGen1Ecore,
+    NextSiliconGen2Ecore,
     SiFive7,
     VentanaVeyron,
   };
@@ -88,6 +90,12 @@ private:
   RISCVTargetLowering TLInfo;
   SelectionDAGTargetInfo TSInfo;
 
+  /// Specify maximum number of store instruction per memset/memcpy/memmove
+  /// call.
+  unsigned MaxStoresPerMemset;
+  unsigned MaxStoresPerMemcpy;
+  unsigned MaxStoresPerMemmove;
+
   /// Initializes using the passed in CPU and feature strings so that we can
   /// use initializer lists for subtarget initialization.
   RISCVSubtarget &initializeSubtargetDependencies(const Triple &TT,
@@ -95,6 +103,9 @@ private:
                                                   StringRef TuneCPU,
                                                   StringRef FS,
                                                   StringRef ABIName);
+
+  /// Initialize properties based on the selected processor family.
+  void initializeProperties();
 
 public:
   // Initializes the data members to match that of the specified triple.
@@ -242,6 +253,10 @@ public:
       return 2;
     return 1;
   }
+
+  unsigned getMaxStoresPerMemset() const { return MaxStoresPerMemset; }
+  unsigned getMaxStoresPerMemcpy() const { return MaxStoresPerMemcpy; }
+  unsigned getMaxStoresPerMemmove() const { return MaxStoresPerMemmove; }
 
 protected:
   // GlobalISel related APIs.

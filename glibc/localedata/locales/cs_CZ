@@ -1,0 +1,414 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Czech Language Locale for Czech
+% Source:
+% Address: 	U školy 292		Without diactitical chars:	U skoly 292
+%		783 72 Velký Týnec					782 72 Velky Tynec
+% Contact: Vladimir Michl
+% Email: Vladimir.Michl@upol.cz
+% Tel: +420/68/5391545
+% Fax:
+% Language: cs
+% Territory: CZ
+% Revision: 1.20
+% Date: 1999-02-07
+% Application: general
+% Users: general
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+% Soubor cs_CZ je primárním souborem, cs_CZ@-ch je vytvořen z něj odebráním
+% definic ch a jeho řazení.
+%
+% File cs_CZ is primary file. File cs_CZ@-ch is created from cs_CZ by script.
+% File cs_CZ@-ch is without definition of character Ch and its collation.
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+%Changes:
+% 2000-06-28: Jakub Jelinek <jakub@redhat.com>
+%	Adapted to new glibc 2.2 style locale format
+% 1997-08-20: Michael Mráka <michael@fi.muni.cz>
+%	Změny zejména v sekci LC_TIME. (Changes especially in LC_TIME section.)
+% 1997-10-16: Michael Mráka <michael@fi.muni.cz>
+%	Změny v abecedním řazení (sekce LC_COLLATE).
+%	(Alphabetical order changes (LC_LC_COLLATE section).)
+% xx: Doplněno na unicode. Snaha o co největší soulad s ČSN 97 6030
+%	Added Unicode. Czech collation acording to czech standard CSN 97 6030.
+% 1999-02-07: Vladimir Michl
+%	Changed abbreviations of months
+%	Changed collation of characters
+
+% Zdroje informací:
+%	ČSN 97 6030
+%	Nádvorník a kol.: Pravidla jmeného katalogu (čl. 201 - 210)
+
+% Odlišnosti od normy:
+% 3.1:
+% Porovnávané výrazy jsou porovnány celé, jako jeden celek. Při porovnávání
+% jsou vynechány všechny speciální znaky, které nejsou písmena, nebo číslice
+% (kromě nerozdělitelné mezery).
+% K těmto znakům se přihlíží pouze při jinak zcela shodných výrazech.
+% V cs_CZ je spojení písmen c a h následujících po sobě je vždy považováno
+% jako písmeno ch.
+% V cs_CZ@-ch je spojení písmen c a h považováno jako dvě písmena c a h, tj.
+% písmeno ch je zařazeno pod písmeno c.
+% 3.2:
+% Mezera se řadí před první písmeno abecedy, ale každý znak mezery je
+% uvažován samostatně. Toto pravidlo je uplatněno na hesla, která jsou si
+% jinak rovna (v prvních třech průchodech).
+% 3.6:
+% Není dodržen celý.
+% 3.7:
+% Pokud jsou hesla stejná při primárním řazení (podle std. čes. abecedy)
+% a zároveň stejná i při sekundárním řazení (porovnávání diakritických
+% znamének), pak mají velká písmena přednost před malými.
+% 3.8:
+% Tento bod je dodržen pouze pro několik písmen (německé ostré Beta (ss))
+% Zde předpokládám splnění podmínek bodu 3.9 (tj. při větším výskytu
+% písmen z cicích abeced je povoleno je nerozepisovat a řadit až za lat.
+% abecedu a číslice)
+% 3.10:
+% Čísla nejsou řazena podle číselné hodnoty, ale podle hodnoty jednotlivých
+% číslic.
+% 3.12:
+% Pokud jsou hesla shodná v prvních třech průchodech, pak jsou srovnána tak
+% jak jsou, i s nepísmenými a nečíselnými značkami. Algoritmus jakým je
+% seřazen příklad uvedený v normě mi není zcela jasný a podle mě odporuje
+% dříve popsaným pravidlům řazení.
+% Příklad seřazení:
+%   Dle normy			Dle mé definice
+%	a				a
+%	a-				a-
+%	a-b				á
+%	a-b-				â
+%	a-c				a-b
+%	á				a-b-
+%	â				a-c
+% 3.13:
+% Tento bod jsem se snažil dodržet, bohužel seřadit znaménka je dost náročné.
+
+% zpracování (compilation):
+%%    localedef -i cs_CZ -f "ISO-8859-2" 'cs_CZ.ISO-8859-2'
+% or
+%%    localedef -i cs_CZ@-ch -f "ISO-8859-2" 'cs_CZ.ISO-8859-2'
+
+%% pro úspěšné přeložení je třeba mít kolekci národních prostředí WG15collection
+%% nebo nainstalovánu knihovnu glibc-2.* s lokalizačními soubory.
+%% Tyto soubory musí být v adresáři /usr/share/i18n/locales a
+%% /usr/share/i18n/charmaps.
+%% Definice národních prostředí se pak budou tvořit v adresáři /usr/share/locale
+
+%% V souboru /usr/share/locale/locale.alias je třeba mít řádek
+%% czech cs_CZ.ISO88592
+
+LC_IDENTIFICATION
+title      "Czech locale for the Czech Republic"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Czech"
+territory  "Czech Republic"
+revision   "1.0"
+date       "2000-06-28"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+%% Pořadí znaků
+%% ----------------------------------------------------------
+
+LC_COLLATE
+
+copy "iso14651_t1"
+
+% CLDR collation rules for Czech:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/cs.xml)
+%
+% &C<č<<<Č
+% &H<ch<<<cH<<<Ch<<<CH
+% &R<ř<<<Ř
+% &S<š<<<Š
+% &Z<ž<<<Ž
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <c-caron>
+collating-symbol <ch-digraph>
+collating-symbol <r-caron>
+collating-symbol <s-caron>
+collating-symbol <z-caron>
+
+collating-element <c-h> from "ch"
+collating-element <c-H> from "cH"
+collating-element <C-h> from "Ch"
+collating-element <C-H> from "CH"
+
+reorder-after <AFTER-C>
+<c-caron>
+reorder-after <AFTER-H>
+<ch-digraph>
+reorder-after <AFTER-R>
+<r-caron>
+reorder-after <AFTER-S>
+<s-caron>
+reorder-after <AFTER-Z>
+<z-caron>
+
+% CLDR has 2 sort orders for Czech, "standard" which sorts the digits
+% before the letters and "digits-after" which sorts the digits after
+% the letters. The cs_CZ locale in glibc always sorted the digits after
+% the letters, so we keep that behaviour here:
+reorder-after <AFTER-EZH>
+<S0030>
+<S0031>
+<S0032>
+<S0033>
+<S0034>
+<S0035>
+<S0036>
+<S0037>
+<S0038>
+<S0039>
+
+<U010D> <c-caron>;<BASE>;<MIN>;IGNORE % č
+<U010C> <c-caron>;<BASE>;<CAP>;IGNORE % Č
+<c-h> <ch-digraph>;"<BASE><BASE>";"<MIN><MIN>";IGNORE
+<c-H> <ch-digraph>;"<BASE><BASE>";"<MIN><CAP>";IGNORE
+<C-h> <ch-digraph>;"<BASE><BASE>";"<CAP><MIN>";IGNORE
+<C-H> <ch-digraph>;"<BASE><BASE>";"<CAP><CAP>";IGNORE
+<U0159> <r-caron>;<BASE>;<MIN>;IGNORE % ř
+<U0158> <r-caron>;<BASE>;<CAP>;IGNORE % Ř
+<U0161> <s-caron>;<BASE>;<MIN>;IGNORE % š
+<U0160> <s-caron>;<BASE>;<CAP>;IGNORE % Š
+<U017E> <z-caron>;<BASE>;<MIN>;IGNORE % ž
+<U017D> <z-caron>;<BASE>;<CAP>;IGNORE % Ž
+
+reorder-end
+
+END LC_COLLATE
+
+% Definice typů znaků
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+%% LC_MESSAGES
+%% ekvivalenty yes/no
+%% -------------------------
+
+LC_MESSAGES
+yesexpr "^[+1aAyY]"
+noexpr  "^[-0nN]"
+yesstr  "ano"
+nostr   "ne"
+END LC_MESSAGES
+
+%% LC_MONETARY -- jde jen o peníze
+%% -------------------------------------------------
+
+LC_MONETARY
+
+int_curr_symbol		"CZK "
+currency_symbol		"K<U010D>"
+mon_decimal_point	","
+mon_thousands_sep	"<U202F>"
+mon_grouping      	3;3
+positive_sign		""
+negative_sign		"-"
+int_frac_digits		2
+frac_digits		2
+p_cs_precedes		0
+p_sep_by_space		1
+n_cs_precedes		0
+n_sep_by_space		1
+p_sign_posn		1
+n_sign_posn		1
+
+END LC_MONETARY
+
+%% O číslech
+%% --------------
+
+LC_NUMERIC
+
+decimal_point		","
+thousands_sep		"<U202F>"
+grouping		3;3
+
+END LC_NUMERIC
+
+%% Čas
+
+LC_TIME
+
+abday		"Ne";/
+		"Po";/
+		"<U00DA>t";/
+		"St";/
+		"<U010C>t";/
+		"P<U00E1>";/
+		"So"
+
+day		"Ned<U011B>le";/
+		"Pond<U011B>l<U00ED>";/
+		"<U00DA>ter<U00FD>";/
+		"St<U0159>eda";/
+		"<U010C>tvrtek";/
+		"P<U00E1>tek";/
+		"Sobota"
+
+alt_mon		"leden";/
+		"<U00FA>nor";/
+		"b<U0159>ezen";/
+		"duben";/
+		"kv<U011B>ten";/
+		"<U010D>erven";/
+		"<U010D>ervenec";/
+		"srpen";/
+		"z<U00E1><U0159><U00ED>";/
+		"<U0159><U00ED>jen";/
+		"listopad";/
+		"prosinec"
+
+% Obávám se, že čeština žádné zkratky pro měsíce nezná :-)
+% Zkratky vytvořené podle pravidel zkracování, docela neobvyklé
+%abmon		"len";/
+%		"<U00FA>or";/
+%		"ben";/
+%		"den";/
+%		"ken";/
+%		"<U010D>en";/
+%		"<U010D>ec";/
+%		"sen";/
+%		"z<U0159><U00ED>";/
+%		"<U0159>en";/
+%		"lad";/
+%		"pec"
+
+% Asi trochu srozumitelnější. Algoritmus je jednoduchý.
+% vždy první tři písmena z názvu měsíce. Výjimka červen a červenec, kdy
+% se vezmou první dvě písmena a poslední (nebo také první písmeno
+% a dvě koncová).
+abmon		"led";/
+		"<U00FA>no";/
+		"b<U0159>e";/
+		"dub";/
+		"kv<U011B>";/
+		"<U010D>en";/
+		"<U010D>ec";/
+		"srp";/
+		"z<U00E1><U0159>";/
+		"<U0159><U00ED>j";/
+		"lis";/
+		"pro"
+
+% Zde jsou zkratky doporučené poradnou Ústavu pro Jazyk Český.
+% Ano, vidíte správně, jsou to anglické zkratky. Myslím si, že nejsou
+% až tak zažité, aby se používaly. Pokud člověk nezná celé názvy měsíců,
+% těžko tyto zkratky odvozuje.
+%abmon		"Jan";/
+%		"Feb";/
+%		"Mar";/
+%		"Apr";/
+%		"May";/
+%		"Jun";/
+%		"Jul";/
+%		"Aug";/
+%		"Sep";/
+%		"Oct";/
+%		"Nov";/
+%		"Dec"
+
+mon		"ledna";/
+		"<U00FA>nora";/
+		"b<U0159>ezna";/
+		"dubna";/
+		"kv<U011B>tna";/
+		"<U010D>ervna";/
+		"<U010D>ervence";/
+		"srpna";/
+		"z<U00E1><U0159><U00ED>";/
+		"<U0159><U00ED>jna";/
+		"listopadu";/
+		"prosince"
+
+week		7;19971130;4
+first_weekday	2
+
+d_t_fmt		"%a<U00A0>%-d.<U00A0>%B<U00A0>%Y,<U00A0>%H:%M:%S"
+date_fmt	"%a<U00A0>%-d.<U00A0>%B<U00A0>%Y,<U00A0>%H:%M:%S<U00A0>%Z"
+
+d_fmt 		"%-d.%-m.%Y"
+
+t_fmt		"%H:%M:%S"
+
+t_fmt_ampm	""
+
+am_pm   	"";""
+
+
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "(0%a) %l"
+int_select     "00"
+int_prefix     "420"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_miss   "Sle<U010D>na"
+name_mr     "Pan"
+name_mrs    "Pan<U00ED>"
+name_ms     "Pan<U00ED>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name  "<U010C>esk<U00E1> republika"
+country_post  "CZ"
+country_ab2   "CZ"
+country_ab3   "CZE"
+country_num   203
+country_car   "CZ"
+%country_isbn  ???
+lang_name     "<U010D>e<U0161>tina"
+lang_ab       "cs"
+lang_term     "ces"
+lang_lib      "cze"
+END LC_ADDRESS

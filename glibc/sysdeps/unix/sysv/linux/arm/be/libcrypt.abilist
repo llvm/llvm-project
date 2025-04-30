@@ -1,0 +1,7 @@
+GLIBC_2.4 crypt F
+GLIBC_2.4 crypt_r F
+GLIBC_2.4 encrypt F
+GLIBC_2.4 encrypt_r F
+GLIBC_2.4 fcrypt F
+GLIBC_2.4 setkey F
+GLIBC_2.4 setkey_r F

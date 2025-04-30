@@ -1,0 +1,14 @@
+CESM Kernel License
+
+The Community Earth System Model (CESM) was developed in cooperation with the National Science Foundation, the Department of Energy, the National Aeronautics and Space Administration, and the University Corporation for Atmospheric Research National Center for Atmospheric Research.
+
+THIS SOFTWARE IS PROVIDED BY UCAR AND ANY CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL UCAR OR ANY CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Except for the segregable components listed in the table below, CESM is public domain software. The following components are copyrighted and may only be used, modified, or redistributed under the terms indicated below.
+
+Code	Institution	Copyright	Terms of Use/Disclaimer
+POP	University of Illinois/NCSA	Copyright 2002-2009, University of Illinois/NCSA Open Source License	University of Illinois/NCSA Open Source License  (http://opensource.org/licenses/NCSA)
+AER RRTMG	Los Alamos National Laboratory	Copyright 2013 Los Alamos National Security, LLC	Los Alamos National Security, LLC  (http://oceans11.lanl.gov/trac/CICE/wiki/CopyRight)
+MCT	LANL/U. Bristol/U. Edinburgh/U. Montana/U. Swansea)	Copyright 2014, GNU Lesser General Public License	GNU Lesser General Public License
+
+This is a copy of the text of the license file from https://github.com/NCAR/kernelOptimization/blob/master/all/CAM5_mg2_pgi/CESM_Kernel_License_091118.docx

@@ -1,0 +1,192 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title      "Lingala locale for Democratic Republic of the Congo"
+source     "Ubuntu"
+address    "Ubuntu DR Congo Team"
+contact    "Ren<U00E9> Manass<U00E9> GALEKWA"
+email      "renemanasse@gmail.com"
+tel        ""
+fax        ""
+language   "Lingala"
+territory  "Democratic Republic of the Congo"
+revision   "1.1"
+date       "2016-03-03"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+% CLDR collation rules for Lingala:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/ln.xml)
+%
+% <collation type="standard">
+% 	<cr><![CDATA[
+% 		&E<ɛ<<<Ɛ
+% 		&O<<ɔ<<<Ɔ
+% 	]]></cr>
+% </collation>
+%
+% And CLDR also lists the following
+% index characters:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/main/ln.xml)
+%
+%  <exemplarCharacters type="index">[A B C D E Ɛ F G {Gb} H I K L M {Mb} {Mp} N {Nd} {Ng} {Nk} {Ns} {Nt} {Ny} {Nz} O Ɔ P R S T U V W Y Z]</exemplarCharacters>
+%
+% The following rules implement the same order for glibc.
+copy "iso14651_t1"
+
+collating-symbol <open-e>
+collating-symbol <open-o>
+
+reorder-after <AFTER-E>
+<open-e>
+reorder-after <AFTER-O>
+<open-o>
+
+<U025B> <open-e>;"<BASE>";"<MIN>";IGNORE % ɛ
+<U0190> <open-e>;"<BASE>";"<CAP>";IGNORE % Ɛ
+<U0254> <open-o>;"<BASE>";"<MIN>";IGNORE % ɔ
+<U0186> <open-o>;"<BASE>";"<CAP>";IGNORE % Ɔ
+
+reorder-end
+END LC_COLLATE
+
+LC_TIME
+abday   "m1.";"m2.";"m3.";"m4.";"m5.";"m6.";"m7."
+day     "Lom<U00ED>ngo";/
+        "Mos<U00E1>l<U00E1> m<U0254><U030C>k<U0254><U0301>";/
+        "Mis<U00E1>l<U00E1> m<U00ED>bal<U00E9>";/
+        "Mis<U00E1>l<U00E1> m<U00ED>s<U00E1>to";/
+        "Mis<U00E1>l<U00E1> m<U00ED>nei";/
+        "Mis<U00E1>l<U00E1> m<U00ED>t<U00E1>no";/
+        "Mp<U0254><U0301>s<U0254>"
+abmon   "yan";/
+        "fbl";/
+        "msi";/
+        "apl";/
+        "mai";/
+        "yun";/
+        "yul";/
+        "agt";/
+        "stb";/
+        "<U0254>tb";/
+        "nvb";/
+        "dsb"
+mon     "s<U00E1>nz<U00E1> ya yambo";/
+        "s<U00E1>nz<U00E1> ya m<U00ED>bal<U00E9>";/
+        "s<U00E1>nz<U00E1> ya m<U00ED>s<U00E1>to";/
+        "s<U00E1>nz<U00E1> ya m<U00ED>nei";/
+        "s<U00E1>nz<U00E1> ya m<U00ED>t<U00E1>no";/
+        "s<U00E1>nz<U00E1> ya mot<U00F3>b<U00E1>";/
+        "s<U00E1>nz<U00E1> ya nsambo";/
+        "s<U00E1>nz<U00E1> ya mwambe";/
+        "s<U00E1>nz<U00E1> ya libwa";/
+        "s<U00E1>nz<U00E1> ya z<U00F3>mi";/
+        "s<U00E1>nz<U00E1> ya z<U00F3>mi na m<U0254><U030C>k<U0254><U0301>";/
+        "s<U00E1>nz<U00E1> ya z<U00F3>mi na m<U00ED>bal<U00E9>"
+d_t_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d//%m//%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+date_fmt "%A %-e %B %Y, %H:%M:%S (UTC%z)"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+decimal_point ","
+thousands_sep ""
+grouping      3
+END LC_NUMERIC
+
+LC_MONETARY
+currency_symbol    "FC"
+int_curr_symbol    "CDF "
+mon_decimal_point  ","
+mon_thousands_sep  "."
+mon_grouping       3
+positive_sign      ""
+negative_sign      "-"
+frac_digits        2
+int_frac_digits    2
+p_cs_precedes      0
+p_sep_by_space     1
+n_cs_precedes      0
+n_sep_by_space     1
+p_sign_posn        1
+n_sign_posn        1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[yYiI<U00ED><U00CD>]"
+noexpr  "^[nNtT]"
+yesstr  "<U00CD>yo"
+nostr   "T<U025B><U0302>"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt  "%d%t%g%t%m%t%f%m"
+name_gen  "Mb<U0254><U0301>t<U025B>"
+name_miss "Mam<U00E1>"
+name_mr   "Tat<U00E1>"
+name_mrs  "Mam<U00E1>"
+name_ms   "Mam<U00E1>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Repibiki demokratiki ya Kong<U00F3>"
+country_post "CD"
+country_ab2  "CD"
+country_ab3  "COD"
+country_num  180
+country_car  "CGO"
+country_isbn 2
+lang_name    "ling<U00E1>la"
+lang_ab      "ln"
+lang_term    "lin"
+lang_lib     "lin"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c %a%t%l"
+tel_dom_fmt "%a %l"
+int_select  "00"
+int_prefix  "243"
+END LC_TELEPHONE

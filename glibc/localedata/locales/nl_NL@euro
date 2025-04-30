@@ -1,0 +1,87 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Dutch Language Locale for the Netherlands with Euro
+% Language: nl
+% Territory: NL
+% Option: euro
+% Date: 2000-08-20
+% Users: general
+
+LC_IDENTIFICATION
+title      "Dutch locale for the Netherlands with Euro"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Dutch"
+territory  "Netherlands"
+revision   "1.0"
+date       "2000-08-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "nl_NL"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MESSAGES
+copy "nl_NL"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "nl_NL"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "nl_NL"
+END LC_NUMERIC
+
+LC_TIME
+copy "nl_NL"
+END LC_TIME
+
+LC_PAPER
+copy "nl_NL"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "nl_NL"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "nl_NL"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "nl_NL"
+END LC_NAME
+
+LC_ADDRESS
+copy "nl_NL"
+END LC_ADDRESS

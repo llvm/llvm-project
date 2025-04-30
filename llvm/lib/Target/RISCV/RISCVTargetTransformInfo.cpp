@@ -1818,6 +1818,20 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
   return Cost;
 }
 
+// Customize unrolling preferences for the "nextsilicon-gen2-ecore" CPU.
+void NextSiliconGen2EcoreUnrollingProperties(TTI::UnrollingPreferences &UP,
+                                             InstructionCost Cost) {
+  UP.Partial = true;
+  UP.Runtime = true;
+  UP.UnrollRemainder = true;
+  UP.UnrollAndJam = true;
+  UP.UnrollAndJamInnerLoopThreshold = 300;
+  UP.DefaultUnrollRuntimeCount = 4;
+
+  if (Cost < 128)
+    UP.Force = true;
+}
+
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                            TTI::UnrollingPreferences &UP,
                                            OptimizationRemarkEmitter *ORE) {
@@ -1883,6 +1897,11 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 
   LLVM_DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
+
+  if (ST->getProcFamily() == RISCVSubtarget::NextSiliconGen2Ecore) {
+    NextSiliconGen2EcoreUnrollingProperties(UP, Cost);
+    return;
+  }
 
   UP.Partial = true;
   UP.Runtime = true;

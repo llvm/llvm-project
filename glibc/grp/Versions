@@ -1,0 +1,34 @@
+libc {
+  GLIBC_2.0 {
+    # e*
+    endgrent;
+
+    # f*
+    fgetgrent; fgetgrent_r;
+
+    # g*
+    getgrent; getgrent_r; getgrgid; getgrgid_r; getgrnam; getgrnam_r;
+    getgroups;
+
+    # i*
+    initgroups;
+
+    # s*
+    setgrent; setgroups;
+  }
+  GLIBC_2.1 {
+    # p*
+    putgrent;
+  }
+  GLIBC_2.1.2 {
+    # g*
+    getgrent_r; getgrgid_r; getgrnam_r;
+  }
+  GLIBC_2.2.4 {
+    # g*
+    getgrouplist;
+  }
+  GLIBC_PRIVATE {
+    __merge_grp; __copy_grp;
+  }
+}

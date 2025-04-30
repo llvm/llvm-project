@@ -1,0 +1,426 @@
+    /* Integer inputs within range of uintmax_t.  */
+i 1:1
+i -1:1
+i 2:2
+i -2:2
+i 3:2
+i -3:3
+i 4:3
+i -4:3
+i 5:3
+i -5:4
+i 6:3
+i -6:4
+i 7:3
+i -7:4
+i 8:4
+i -8:4
+i 9:4
+i -9:5
+i 15:4
+i -15:5
+i 16:5
+i -16:5
+i 17:5
+i -17:6
+i 0x3fffff:22
+i -0x3fffff:23
+i 0x400000:23
+i -0x400000:23
+i 0x400001:23
+i -0x400001:24
+i 0x7fffff:23
+i -0x7fffff:24
+i 0x800000:24
+i -0x800000:24
+i 0x800001:24
+i -0x800001:25
+i 0xffffff:24
+i -0xffffff:25
+i 0x1000000:25
+i -0x1000000:25
+#if MANT_DIG >= 53
+i 0x1000001:25
+i -0x1000001:26
+i 0x7ffffffffffffLL:51
+i -0x7ffffffffffffLL:52
+#endif
+i 0x8000000000000LL:52
+i -0x8000000000000LL:52
+#if MANT_DIG >= 53
+i 0x8000000000001LL:52
+i -0x8000000000001LL:53
+i 0xfffffffffffffLL:52
+i -0xfffffffffffffLL:53
+#endif
+i 0x10000000000000LL:53
+i -0x10000000000000LL:53
+#if MANT_DIG >= 53
+i 0x10000000000001LL:53
+i -0x10000000000001LL:54
+i 0x1fffffffffffffLL:53
+i -0x1fffffffffffffLL:54
+#endif
+i 0x20000000000000LL:54
+i -0x20000000000000LL:54
+#if MANT_DIG >= 64
+i 0x20000000000001LL:54
+i -0x20000000000001LL:55
+i 0x3fffffffffffffffLL:62
+i -0x3fffffffffffffffLL:63
+#endif
+i 0x4000000000000000LL:63
+i -0x4000000000000000LL:63
+#if MANT_DIG >= 64
+i 0x4000000000000001LL:63
+i -0x4000000000000001LL:64
+i 0x7fffffffffffffffLL:63
+i -0x7fffffffffffffffLL:64
+#endif
+i 0x8000000000000000ULL:64
+i -INT64_MAX-1:64
+#if MANT_DIG >= 64
+i 0x8000000000000001ULL:64
+i 0xffffffffffffffffULL:64
+#endif
+i 0x7fffff8000000000LL:63
+i -0x7fffff8000000000LL:64
+i 0x8000010000000000ULL:64
+i 0xffffff0000000000ULL:64
+#if MANT_DIG >= 53
+i 0x7ffffffffffffc00LL:63
+i -0x7ffffffffffffc00LL:64
+i 0x8000000000000800ULL:64
+i 0xfffffffffffff800ULL:64
+#endif
+
+    /* Inputs with absolute value between 0 and 1.  */
+t min_subnorm_value a 0:1 1:1
+t -min_subnorm_value a 0:1 -1:1
+t min_value a 0:1 1:1
+t -min_value a 0:1 -1:1
+t 0.1 a 0:1 1:1
+t -0.1 a 0:1 -1:1
+t 0.25 a 0:1 1:1
+t -0.25 a 0:1 -1:1
+t 0.499 a 0:1 1:1
+t -0.499 a 0:1 -1:1
+t 0x0.ffffffp-1 a 0:1 1:1
+t -0x0.ffffffp-1 a 0:1 -1:1
+#if MANT_DIG >= 53
+t 0x0.fffffffffffff8p-1 a 0:1 1:1
+t -0x0.fffffffffffff8p-1 a 0:1 -1:1
+#endif
+#if MANT_DIG >= 64
+t 0x0.ffffffffffffffffp-1 a 0:1 1:1
+t -0x0.ffffffffffffffffp-1 a 0:1 -1:1
+#endif
+#if MANT_DIG >= 106
+t 0x0.ffffffffffffffffffffffffffcp-1 a 0:1 1:1
+t -0x0.ffffffffffffffffffffffffffcp-1 a 0:1 -1:1
+#endif
+#if MANT_DIG >= 113
+t 0x0.ffffffffffffffffffffffffffff8p-1 a 0:1 1:1
+t -0x0.ffffffffffffffffffffffffffff8p-1 a 0:1 -1:1
+#endif
+t 0.5 be 0:1 1:1
+t -0.5 be 0:1 -1:1
+t 0x1.000002p-1 c 0:1 1:1
+t -0x1.000002p-1 c 0:1 -1:1
+#if MANT_DIG >= 53
+t 0x1.0000000000001p-1 c 0:1 1:1
+t -0x1.0000000000001p-1 c 0:1 -1:1
+#endif
+#if MANT_DIG >= 64
+t 0x1.0000000000000002p-1 c 0:1 1:1
+t -0x1.0000000000000002p-1 c 0:1 -1:1
+#endif
+#if MANT_DIG >= 106
+t 0x1.000000000000000000000000008p-1 c 0:1 1:1
+t -0x1.000000000000000000000000008p-1 c 0:1 -1:1
+#endif
+#if MANT_DIG >= 113
+t 0x1.0000000000000000000000000001p-1 c 0:1 1:1
+t -0x1.0000000000000000000000000001p-1 c 0:1 -1:1
+#endif
+t 0.501 c 0:1 1:1
+t -0.501 c 0:1 -1:1
+t 0.75 c 0:1 1:1
+t -0.75 c 0:1 -1:1
+t 0.9 c 0:1 1:1
+t -0.9 c 0:1 -1:1
+t 0x0.ffffffp0 c 0:1 1:1
+t -0x0.ffffffp0 c 0:1 -1:1
+#if MANT_DIG >= 53
+t 0x0.fffffffffffff8p0 c 0:1 1:1
+t -0x0.fffffffffffff8p0 c 0:1 -1:1
+#endif
+#if MANT_DIG >= 64
+t 0x0.ffffffffffffffffp0 c 0:1 1:1
+t -0x0.ffffffffffffffffp0 c 0:1 -1:1
+#endif
+#if MANT_DIG >= 106
+t 0x0.ffffffffffffffffffffffffffcp0 c 0:1 1:1
+t -0x0.ffffffffffffffffffffffffffcp0 c 0:1 -1:1
+#endif
+#if MANT_DIG >= 113
+t 0x0.ffffffffffffffffffffffffffff8p0 c 0:1 1:1
+t -0x0.ffffffffffffffffffffffffffff8p0 c 0:1 -1:1
+#endif
+
+    /* Various non-integer inputs.  */
+t 1.25 a 1:1 2:2
+t -1.25 a -1:1 -2:2
+t 1.5 bo 1:1 2:2
+t -1.5 bo -1:1 -2:2
+t 1.75 c 1:1 2:2
+t -1.75 c -1:1 -2:2
+t 2.25 a 2:2 3:2
+t -2.25 a -2:2 -3:3
+t 2.5 be 2:2 3:2
+t -2.5 be -2:2 -3:3
+t 2.75 c 2:2 3:2
+t -2.75 c -2:2 -3:3
+t 3.25 a 3:2 4:3
+t -3.25 a -3:3 -4:3
+t 3.5 bo 3:2 4:3
+t -3.5 bo -3:3 -4:3
+t 3.75 c 3:2 4:3
+t -3.75 c -3:3 -4:3
+t 4.25 a 4:3 5:3
+t -4.25 a -4:3 -5:4
+t 4.5 be 4:3 5:3
+t -4.5 be -4:3 -5:4
+t 4.75 c 4:3 5:3
+t -4.75 c -4:3 -5:4
+t 5.25 a 5:3 6:3
+t -5.25 a -5:4 -6:4
+t 5.5 bo 5:3 6:3
+t -5.5 bo -5:4 -6:4
+t 5.75 c 5:3 6:3
+t -5.75 c -5:4 -6:4
+
+    /* 1, 1.5, 2, 2.5, 3, 3.5 +/- 1ulp.  */
+t 0x1.000002p0 a 1:1 2:2
+t -0x1.000002p0 a -1:1 -2:2
+t 0x2.fffffcp-1 a 1:1 2:2
+t -0x2.fffffcp-1 a -1:1 -2:2
+t 0x3.000004p-1 c 1:1 2:2
+t -0x3.000004p-1 c -1:1 -2:2
+t 0x0.ffffffp1 c 1:1 2:2
+t -0x0.ffffffp1 c -1:1 -2:2
+t 0x1.000002p1 a 2:2 3:2
+t -0x1.000002p1 a -2:2 -3:3
+t 0x4.fffff8p-1 a 2:2 3:2
+t -0x4.fffff8p-1 a -2:2 -3:3
+t 0x5.000008p-1 c 2:2 3:2
+t -0x5.000008p-1 c -2:2 -3:3
+t 0x2.fffffcp0 c 2:2 3:2
+t -0x2.fffffcp0 c -2:2 -3:3
+t 0x3.000004p0 a 3:2 4:3
+t -0x3.000004p0 a -3:3 -4:3
+t 0x6.fffff8p-1 a 3:2 4:3
+t -0x6.fffff8p-1 a -3:3 -4:3
+t 0x7.000008p-1 c 3:2 4:3
+t -0x7.000008p-1 c -3:3 -4:3
+#if MANT_DIG >= 53
+t 0x1.0000000000001p0 a 1:1 2:2
+t -0x1.0000000000001p0 a -1:1 -2:2
+t 0x2.ffffffffffffep-1 a 1:1 2:2
+t -0x2.ffffffffffffep-1 a -1:1 -2:2
+t 0x3.0000000000002p-1 c 1:1 2:2
+t -0x3.0000000000002p-1 c -1:1 -2:2
+t 0x0.fffffffffffff8p1 c 1:1 2:2
+t -0x0.fffffffffffff8p1 c -1:1 -2:2
+t 0x1.0000000000001p1 a 2:2 3:2
+t -0x1.0000000000001p1 a -2:2 -3:3
+t 0x4.ffffffffffffcp-1 a 2:2 3:2
+t -0x4.ffffffffffffcp-1 a -2:2 -3:3
+t 0x5.0000000000004p-1 c 2:2 3:2
+t -0x5.0000000000004p-1 c -2:2 -3:3
+t 0x2.ffffffffffffep0 c 2:2 3:2
+t -0x2.ffffffffffffep0 c -2:2 -3:3
+t 0x3.0000000000002p0 a 3:2 4:3
+t -0x3.0000000000002p0 a -3:3 -4:3
+t 0x6.ffffffffffffcp-1 a 3:2 4:3
+t -0x6.ffffffffffffcp-1 a -3:3 -4:3
+t 0x7.0000000000004p-1 c 3:2 4:3
+t -0x7.0000000000004p-1 c -3:3 -4:3
+#endif
+#if MANT_DIG >= 64
+t 0x1.0000000000000002p0 a 1:1 2:2
+t -0x1.0000000000000002p0 a -1:1 -2:2
+t 0x2.fffffffffffffffcp-1 a 1:1 2:2
+t -0x2.fffffffffffffffcp-1 a -1:1 -2:2
+t 0x3.0000000000000004p-1 c 1:1 2:2
+t -0x3.0000000000000004p-1 c -1:1 -2:2
+t 0x0.ffffffffffffffffp1 c 1:1 2:2
+t -0x0.ffffffffffffffffp1 c -1:1 -2:2
+t 0x1.0000000000000002p1 a 2:2 3:2
+t -0x1.0000000000000002p1 a -2:2 -3:3
+t 0x4.fffffffffffffff8p-1 a 2:2 3:2
+t -0x4.fffffffffffffff8p-1 a -2:2 -3:3
+t 0x5.0000000000000008p-1 c 2:2 3:2
+t -0x5.0000000000000008p-1 c -2:2 -3:3
+t 0x2.fffffffffffffffcp0 c 2:2 3:2
+t -0x2.fffffffffffffffcp0 c -2:2 -3:3
+t 0x3.0000000000000004p0 a 3:2 4:3
+t -0x3.0000000000000004p0 a -3:3 -4:3
+t 0x6.fffffffffffffff8p-1 a 3:2 4:3
+t -0x6.fffffffffffffff8p-1 a -3:3 -4:3
+t 0x7.0000000000000008p-1 c 3:2 4:3
+t -0x7.0000000000000008p-1 c -3:3 -4:3
+#endif
+#if MANT_DIG >= 106
+t 0x1.000000000000000000000000008p0 a 1:1 2:2
+t -0x1.000000000000000000000000008p0 a -1:1 -2:2
+t 0x2.ffffffffffffffffffffffffffp-1 a 1:1 2:2
+t -0x2.ffffffffffffffffffffffffffp-1 a -1:1 -2:2
+t 0x3.00000000000000000000000001p-1 c 1:1 2:2
+t -0x3.00000000000000000000000001p-1 c -1:1 -2:2
+t 0x0.ffffffffffffffffffffffffffcp1 c 1:1 2:2
+t -0x0.ffffffffffffffffffffffffffcp1 c -1:1 -2:2
+t 0x1.000000000000000000000000008p1 a 2:2 3:2
+t -0x1.000000000000000000000000008p1 a -2:2 -3:3
+t 0x4.fffffffffffffffffffffffffep-1 a 2:2 3:2
+t -0x4.fffffffffffffffffffffffffep-1 a -2:2 -3:3
+t 0x5.00000000000000000000000002p-1 c 2:2 3:2
+t -0x5.00000000000000000000000002p-1 c -2:2 -3:3
+t 0x2.ffffffffffffffffffffffffffp0 c 2:2 3:2
+t -0x2.ffffffffffffffffffffffffffp0 c -2:2 -3:3
+t 0x3.00000000000000000000000001p0 a 3:2 4:3
+t -0x3.00000000000000000000000001p0 a -3:3 -4:3
+t 0x6.fffffffffffffffffffffffffep-1 a 3:2 4:3
+t -0x6.fffffffffffffffffffffffffep-1 a -3:3 -4:3
+t 0x7.00000000000000000000000002p-1 c 3:2 4:3
+t -0x7.00000000000000000000000002p-1 c -3:3 -4:3
+#endif
+#if MANT_DIG >= 113
+t 0x1.0000000000000000000000000001p0 a 1:1 2:2
+t -0x1.0000000000000000000000000001p0 a -1:1 -2:2
+t 0x2.fffffffffffffffffffffffffffep-1 a 1:1 2:2
+t -0x2.fffffffffffffffffffffffffffep-1 a -1:1 -2:2
+t 0x3.0000000000000000000000000002p-1 c 1:1 2:2
+t -0x3.0000000000000000000000000002p-1 c -1:1 -2:2
+t 0x0.ffffffffffffffffffffffffffff8p1 c 1:1 2:2
+t -0x0.ffffffffffffffffffffffffffff8p1 c -1:1 -2:2
+t 0x1.0000000000000000000000000001p1 a 2:2 3:2
+t -0x1.0000000000000000000000000001p1 a -2:2 -3:3
+t 0x4.fffffffffffffffffffffffffffcp-1 a 2:2 3:2
+t -0x4.fffffffffffffffffffffffffffcp-1 a -2:2 -3:3
+t 0x5.0000000000000000000000000004p-1 c 2:2 3:2
+t -0x5.0000000000000000000000000004p-1 c -2:2 -3:3
+t 0x2.fffffffffffffffffffffffffffep0 c 2:2 3:2
+t -0x2.fffffffffffffffffffffffffffep0 c -2:2 -3:3
+t 0x3.0000000000000000000000000002p0 a 3:2 4:3
+t -0x3.0000000000000000000000000002p0 a -3:3 -4:3
+t 0x6.fffffffffffffffffffffffffffcp-1 a 3:2 4:3
+t -0x6.fffffffffffffffffffffffffffcp-1 a -3:3 -4:3
+t 0x7.0000000000000000000000000004p-1 c 3:2 4:3
+t -0x7.0000000000000000000000000004p-1 c -3:3 -4:3
+#endif
+
+    /* 31, 32, 33 fractional bits.  */
+#if MANT_DIG >= 53
+t 0x200000.7ffffffep0 a 0x200000:22 0x200001:22
+t -0x200000.7ffffffep0 a -0x200000:22 -0x200001:23
+t 0x200000.8p0 be 0x200000:22 0x200001:22
+t -0x200000.8p0 be -0x200000:22 -0x200001:23
+t 0x200000.80000002p0 c 0x200000:22 0x200001:22
+t -0x200000.80000002p0 c -0x200000:22 -0x200001:23
+t 0x200001.7ffffffep0 a 0x200001:22 0x200002:22
+t -0x200001.7ffffffep0 a -0x200001:23 -0x200002:23
+t 0x200001.8p0 bo 0x200001:22 0x200002:22
+t -0x200001.8p0 bo -0x200001:23 -0x200002:23
+t 0x200001.80000002p0 c 0x200001:22 0x200002:22
+t -0x200001.80000002p0 c -0x200001:23 -0x200002:23
+t 0x3fffff.fffffffep0 c 0x3fffff:22 0x400000:23
+t -0x3fffff.fffffffep0 c -0x3fffff:23 -0x400000:23
+t 0x100000.7fffffffp0 a 0x100000:21 0x100001:21
+t -0x100000.7fffffffp0 a -0x100000:21 -0x100001:22
+t 0x100000.8p0 be 0x100000:21 0x100001:21
+t -0x100000.8p0 be -0x100000:21 -0x100001:22
+t 0x100000.80000001p0 c 0x100000:21 0x100001:21
+t -0x100000.80000001p0 c -0x100000:21 -0x100001:22
+t 0x100001.7fffffffp0 a 0x100001:21 0x100002:21
+t -0x100001.7fffffffp0 a -0x100001:22 -0x100002:22
+t 0x100001.8p0 bo 0x100001:21 0x100002:21
+t -0x100001.8p0 bo -0x100001:22 -0x100002:22
+t 0x100001.80000001p0 c 0x100001:21 0x100002:21
+t -0x100001.80000001p0 c -0x100001:22 -0x100002:22
+t 0x1fffff.ffffffffp0 c 0x1fffff:21 0x200000:22
+t -0x1fffff.ffffffffp0 c -0x1fffff:22 -0x200000:22
+t 0x80000.7fffffff8p0 a 0x80000:20 0x80001:20
+t -0x80000.7fffffff8p0 a -0x80000:20 -0x80001:21
+t 0x80000.8p0 be 0x80000:20 0x80001:20
+t -0x80000.8p0 be -0x80000:20 -0x80001:21
+t 0x80000.800000008p0 c 0x80000:20 0x80001:20
+t -0x80000.800000008p0 c -0x80000:20 -0x80001:21
+t 0x80001.7fffffff8p0 a 0x80001:20 0x80002:20
+t -0x80001.7fffffff8p0 a -0x80001:21 -0x80002:21
+t 0x80001.8p0 bo 0x80001:20 0x80002:20
+t -0x80001.8p0 bo -0x80001:21 -0x80002:21
+t 0x80001.800000008p0 c 0x80001:20 0x80002:20
+t -0x80001.800000008p0 c -0x80001:21 -0x80002:21
+t 0xfffff.ffffffff8p0 c 0xfffff:20 0x100000:21
+t -0xfffff.ffffffff8p0 c -0xfffff:21 -0x100000:21
+#endif
+#if MANT_DIG >= 64
+t 0x100000000.7ffffffep0 a 0x100000000LL:33 0x100000001LL:33
+t -0x100000000.7ffffffep0 a -0x100000000LL:33 -0x100000001LL:34
+t 0x100000000.8p0 be 0x100000000LL:33 0x100000001LL:33
+t -0x100000000.8p0 be -0x100000000LL:33 -0x100000001LL:34
+t 0x100000000.80000002p0 c 0x100000000LL:33 0x100000001LL:33
+t -0x100000000.80000002p0 c -0x100000000LL:33 -0x100000001LL:34
+t 0x100000001.7ffffffep0 a 0x100000001LL:33 0x100000002LL:33
+t -0x100000001.7ffffffep0 a -0x100000001LL:34 -0x100000002LL:34
+t 0x100000001.8p0 bo 0x100000001LL:33 0x100000002LL:33
+t -0x100000001.8p0 bo -0x100000001LL:34 -0x100000002LL:34
+t 0x100000001.80000002p0 c 0x100000001LL:33 0x100000002LL:33
+t -0x100000001.80000002p0 c -0x100000001LL:34 -0x100000002LL:34
+t 0x1ffffffff.fffffffep0 c 0x1ffffffffLL:33 0x200000000LL:34
+t -0x1ffffffff.fffffffep0 c -0x1ffffffffLL:34 -0x200000000LL:34
+t 0x80000000.7fffffffp0 a 0x80000000LL:32 0x80000001LL:32
+t -0x80000000.7fffffffp0 a -0x80000000LL:32 -0x80000001LL:33
+t 0x80000000.8p0 be 0x80000000LL:32 0x80000001LL:32
+t -0x80000000.8p0 be -0x80000000LL:32 -0x80000001LL:33
+t 0x80000000.80000001p0 c 0x80000000LL:32 0x80000001LL:32
+t -0x80000000.80000001p0 c -0x80000000LL:32 -0x80000001LL:33
+t 0x80000001.7fffffffp0 a 0x80000001LL:32 0x80000002LL:32
+t -0x80000001.7fffffffp0 a -0x80000001LL:33 -0x80000002LL:33
+t 0x80000001.8p0 bo 0x80000001LL:32 0x80000002LL:32
+t -0x80000001.8p0 bo -0x80000001LL:33 -0x80000002LL:33
+t 0x80000001.80000001p0 c 0x80000001LL:32 0x80000002LL:32
+t -0x80000001.80000001p0 c -0x80000001LL:33 -0x80000002LL:33
+t 0xffffffff.ffffffffp0 c 0xffffffffLL:32 0x100000000LL:33
+t -0xffffffff.ffffffffp0 c -0xffffffffLL:33 -0x100000000LL:33
+t 0x40000000.7fffffff8p0 a 0x40000000LL:31 0x40000001LL:31
+t -0x40000000.7fffffff8p0 a -0x40000000LL:31 -0x40000001LL:32
+t 0x40000000.8p0 be 0x40000000LL:31 0x40000001LL:31
+t -0x40000000.8p0 be -0x40000000LL:31 -0x40000001LL:32
+t 0x40000000.800000008p0 c 0x40000000LL:31 0x40000001LL:31
+t -0x40000000.800000008p0 c -0x40000000LL:31 -0x40000001LL:32
+t 0x40000001.7fffffff8p0 a 0x40000001LL:31 0x40000002LL:31
+t -0x40000001.7fffffff8p0 a -0x40000001LL:32 -0x40000002LL:32
+t 0x40000001.8p0 bo 0x40000001LL:31 0x40000002LL:31
+t -0x40000001.8p0 bo -0x40000001LL:32 -0x40000002LL:32
+t 0x40000001.800000008p0 c 0x40000001LL:31 0x40000002LL:31
+t -0x40000001.800000008p0 c -0x40000001LL:32 -0x40000002LL:32
+t 0x7fffffff.ffffffff8p0 c 0x7fffffffLL:31 0x80000000LL:32
+t -0x7fffffff.ffffffff8p0 c -0x7fffffffLL:32 -0x80000000LL:32
+#endif
+
+    /* Tests where overflow depends on the rounding mode.  */
+#if MANT_DIG >= 64
+t 0x7fffffffffffffff.8p0 bo 0x7fffffffffffffffLL:63 0x8000000000000000ULL:64
+#endif
+#if MANT_DIG >= 72
+t 0x7fffffffffffffff.7fp0 a 0x7fffffffffffffffLL:63 0x8000000000000000ULL:64
+t 0x7fffffffffffffff.81p0 c 0x7fffffffffffffffLL:63 0x8000000000000000ULL:64
+t 0xffffffffffffffff.7fp0 a 0xffffffffffffffffULL:64 0x10000000000000000ULL:65
+t 0xffffffffffffffff.8p0 bo 0xffffffffffffffffULL:64 0x10000000000000000ULL:65
+t 0xffffffffffffffff.81p0 c 0xffffffffffffffffULL:64 0x10000000000000000ULL:65
+t -0x8000000000000000.7fp0 a -INT64_MAX-1:64 -0x8000000000000001LL:65
+t -0x8000000000000000.8p0 be -INT64_MAX-1:64 -0x8000000000000001LL:65
+t -0x8000000000000000.81p0 c -INT64_MAX-1:64 -0x8000000000000001LL:65
+#endif

@@ -1,0 +1,23 @@
+libc {
+  GLIBC_2.0 {
+    # functions with special/multiple interfaces
+    __divqu; __remqu; __divqs; __remqs; __divlu; __remlu; __divls;
+    __remls; __divl; __reml; __divq; __remq; __divqu; __remqu;
+  }
+  GLIBC_2.3.4 {
+    _OtsAddX; _OtsSubX; _OtsMulX; _OtsDivX;
+    _OtsEqlX; _OtsNeqX; _OtsLssX; _OtsLeqX; _OtsGtrX; _OtsGeqX;
+    _OtsCvtQX; _OtsCvtQUX; _OtsCvtXQ; _OtsNintXQ;
+    _OtsConvertFloatTX; _OtsConvertFloatXT;
+  }
+}
+libm {
+  GLIBC_2.0 {
+    # used in inline functions.
+    __atan2;
+  }
+  GLIBC_2.18 {
+    # forgotten when the symbols were added to glibc 2.15 for other targets
+    __sqrt_finite; __sqrtf_finite; __sqrtl_finite;
+  }
+}

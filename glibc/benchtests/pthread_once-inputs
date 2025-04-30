@@ -1,0 +1,9 @@
+# This tests the common-case scenario for pthread_once.
+# We have a single thread that runs a no-op initialization once and then
+# repeatedly runs checks of the initialization (i.e., an acquire load and
+# conditional jump) in a tight loop.
+# scripts/bench.py doesn't handle function pointers, so we just use void *:
+## args: pthread_once_t *:void *
+## includes: pthread.h
+## include-sources: pthread_once-source.c
+&once, once_handler

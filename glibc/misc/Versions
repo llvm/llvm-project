@@ -1,0 +1,178 @@
+libc {
+  GLIBC_2.0 {
+    # global variables
+    ___brk_addr; __curbrk; __progname; __progname_full;
+
+    # interface of malloc functions
+    __sbrk; __getpagesize;
+
+    # functions used in other libraries
+    __select;
+
+    # variables in normal name space
+    error_message_count; error_one_per_line; error_print_progname;
+
+    # variables in normal name space
+    loc1; loc2; locs;
+    program_invocation_name; program_invocation_short_name;
+
+    # a*
+    acct; addmntent; advance;
+
+    # b*
+    brk;
+
+    # c*
+    chflags; chroot; closelog;
+
+    # d*
+    daemon; dirname;
+
+    # e*
+    ecvt; ecvt_r; endfsent; endmntent; endttyent; endusershell;
+
+    # e*
+    err; error; error_at_line; errx;
+
+    # f*
+    fchflags; fcvt; fcvt_r; fdatasync; fsync; ftruncate;
+
+    # g*
+    gcvt; get_avphys_pages; get_nprocs; get_nprocs_conf; get_phys_pages;
+    getfsent; getfsfile; getfsspec; gethostid; gethostname; getmntent;
+    getmntent_r; getpagesize; getpass; getttyent; getttynam; getusershell;
+    gtty;
+
+    # h*
+    hasmntopt; hcreate; hcreate_r; hdestroy; hdestroy_r; hsearch; hsearch_r;
+
+    # i*
+    insque; ioctl;
+
+    # j*
+    jrand48; jrand48_r; lfind; lsearch;
+
+    # m*
+    madvise; mkstemp; mktemp; mlock; mlockall; mmap; mount; mprotect; msync;
+    munlock; munlockall; munmap;
+
+    # o*
+    openlog;
+
+    # p*
+    ptrace;
+
+    # q*
+    qecvt; qecvt_r; qfcvt; qfcvt_r; qgcvt;
+
+    # r*
+    readv; reboot; remque; revoke;
+
+    # s*
+    sbrk; select; setdomainname; setfsent; sethostent; sethostid; sethostname;
+    setlogmask; setmntent; setregid; setreuid; setttyent; setusershell; sstk;
+    stty; sync; syscall; syslog;
+
+    # t*
+    tdelete; tfind; truncate; tsearch; ttyslot; twalk;
+
+    # u*
+    ualarm; usleep; ustat; utimes;
+
+    # v*
+    verr; verrx; vhangup; vsyslog; vwarn; vwarnx;
+
+    # w*
+    warn; warnx;
+
+    # w*
+    writev;
+  }
+  GLIBC_2.1 {
+    # f*
+    ftruncate64;
+
+    # m*
+    mmap64;
+
+    # t*
+    tdestroy; truncate64;
+  }
+  GLIBC_2.2 {
+    # g*
+    getloadavg;
+
+    # m*
+    mincore; mkdtemp; mkstemp64;
+
+    # p*
+    posix_madvise;
+  }
+  GLIBC_2.3 {
+    # f*
+    fgetxattr; flistxattr; fremovexattr; fsetxattr;
+    futimes;
+
+    # g*
+    getxattr;
+
+    # l*
+    listxattr;
+    lgetxattr; llistxattr; lremovexattr; lsetxattr;
+    lutimes;
+
+    # r*
+    removexattr;
+
+    # s*
+    setxattr;
+  }
+  GLIBC_2.3.3 {
+    remap_file_pages;
+  }
+  GLIBC_2.4 {
+    futimesat;
+    __syslog_chk; __vsyslog_chk;
+  }
+  GLIBC_2.7 {
+    mkostemp; mkostemp64;
+  }
+  GLIBC_2.10 {
+    preadv; preadv64; pwritev; pwritev64;
+  }
+  GLIBC_2.11 {
+    mkstemps; mkstemps64; mkostemps; mkostemps64;
+  }
+  GLIBC_2.14 {
+    syncfs;
+  }
+  GLIBC_2.16 {
+    __getauxval; getauxval;
+  }
+  GLIBC_2.23 {
+    # SHLIB_COMPAT(GLIBC_2_0, GLIBC_2_23) used in regexp.c
+  }
+  GLIBC_2.25 {
+    gnu_dev_major; gnu_dev_minor; gnu_dev_makedev;
+  }
+  GLIBC_2.26 {
+    preadv2; preadv64v2; pwritev2; pwritev64v2;
+  }
+  GLIBC_2.30 {
+    twalk_r;
+  }
+  GLIBC_2.32 {
+    __libc_single_threaded;
+  }
+  GLIBC_PRIVATE {
+    __madvise;
+    __mktemp;
+    __libc_ifunc_impl_list;
+    __tdelete; __tfind; __tsearch; __twalk; __twalk_r;
+    __mmap; __munmap; __mprotect;
+    __mmap_nextsilicon; __munmap_nextsilicon; __madvise_nextsilicon; __mprotect_nextsilicon;
+    __sched_get_priority_min; __sched_get_priority_max;
+    __libc_allocate_once_slow;
+    __libc_unwind_link_get;
+  }
+}

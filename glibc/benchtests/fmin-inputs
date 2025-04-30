@@ -1,0 +1,23 @@
+## includes: math.h
+## args: double:double
+## ret: double
+78.5, -78.5
+-78.5, 78.5
+0,     78.5
+78.5,  0
+0,     -78.5
+-78.5, 0
+__builtin_inf (), 78.5
+__builtin_inf (), -78.5
+78.5, __builtin_inf ()
+-78.5, __builtin_inf ()
+## name: qNaN
+__builtin_nan (""), 78.5
+__builtin_nan (""), -78.5
+78.5, __builtin_nan ("")
+-78.5, __builtin_nan ("")
+## name: sNaN
+__builtin_nans (""), 78.5
+__builtin_nans (""), -78.5
+78.5, __builtin_nans ("")
+-78.5, __builtin_nans ("")

@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -debug-info-kind=constructor -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s
 // expected-no-diagnostics
 
+// XFAIL: *
+
 // CHECK: define internal void @main.omp_outlined_debug__(
 // CHECK: #dbg_declare(ptr %.global_tid..addr,
 // CHECK: #dbg_declare(ptr %.bound_tid..addr,

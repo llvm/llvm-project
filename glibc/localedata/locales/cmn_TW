@@ -1,0 +1,212 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Mandarin Chinese locale for the Republic of China
+%
+% Prepared and contributed to glibc by Wei-Lun Chao <bluebat@member.fsf.org>
+%
+% build with: localedef -f UTF-8 -i cmn_TW cmn_TW
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_IDENTIFICATION
+title        "Mandarin Chinese locale for the Republic of China"
+source       ""
+address      ""
+contact      ""
+email        "bug-glibc-locales@gnu.org"
+tel          ""
+fax          ""
+language     "Mandarin Chinese"
+territory    "Taiwan"
+revision     "0.2"
+date         "2017-07-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+translit_end
+
+class	"hanzi"; /
+<U3007>;/
+<U3400>..<U4DBF>;/
+<U4E00>..<U9FA5>;/
+<UF900>..<UFA6A>;/
+<U00020000>..<U0002FA1D>
+END LC_CTYPE
+
+LC_COLLATE
+copy "cns11643_stroke"
+END LC_COLLATE
+
+LC_TIME
+% 一月, 二月, 三月, 四月, 五月, 六月, 七月, 八月, 九月, 十月, 十一月, 十二月
+mon           "<U4E00><U6708>";/
+     "<U4E8C><U6708>";/
+     "<U4E09><U6708>";/
+     "<U56DB><U6708>";/
+     "<U4E94><U6708>";/
+     "<U516D><U6708>";/
+     "<U4E03><U6708>";/
+     "<U516B><U6708>";/
+     "<U4E5D><U6708>";/
+     "<U5341><U6708>";/
+     "<U5341><U4E00><U6708>";/
+     "<U5341><U4E8C><U6708>"
+%  1月,  2月,  3月,  4月,  5月,  6月,  7月,  8月,  9月, 10月, 11月, 12月
+abmon         " 1<U6708>";/
+       " 2<U6708>";/
+       " 3<U6708>";/
+       " 4<U6708>";/
+       " 5<U6708>";/
+       " 6<U6708>";/
+       " 7<U6708>";/
+       " 8<U6708>";/
+       " 9<U6708>";/
+       "10<U6708>";/
+       "11<U6708>";/
+       "12<U6708>"
+% 星期日, 星期一, 星期二, 星期三, 星期四, 星期五, 星期六
+day           "<U661F><U671F><U65E5>";/
+     "<U661F><U671F><U4E00>";/
+     "<U661F><U671F><U4E8C>";/
+     "<U661F><U671F><U4E09>";/
+     "<U661F><U671F><U56DB>";/
+     "<U661F><U671F><U4E94>";/
+     "<U661F><U671F><U516D>"
+% 日, 一, 二, 三, 四, 五, 六
+abday         "<U65E5>";/
+       "<U4E00>";/
+       "<U4E8C>";/
+       "<U4E09>";/
+       "<U56DB>";/
+       "<U4E94>";/
+       "<U516D>"
+% %Y年%m月%d號 (%A) %H點%M分%S秒
+d_t_fmt       "%Y<U5E74>%m<U6708>%d<U865F> (%A) %H<U9EDE>%M<U5206>%S<U79D2>"
+% %Y年%m月%d號
+d_fmt         "%Y<U5E74>%m<U6708>%d<U865F>"
+% %H點%M分%S秒
+t_fmt         "%H<U9EDE>%M<U5206>%S<U79D2>"
+% 上午, 下午
+am_pm         "<U4E0A><U5348>";/
+       "<U4E0B><U5348>"
+% %p %I點%M分%S秒
+t_fmt_ampm    "%p %I<U9EDE>%M<U5206>%S<U79D2>"
+% %Y年 %b %-d號 %A %H:%M:%S %Z
+date_fmt      "%Y<U5E74> %b %-d<U865F> %A %H:%M:%S %Z"
+
+era "+:2:1913//01//01:+*:<U6C11><U570B>:%EC%Ey<U5E74>";/
+    "+:1:1912//01//01:1912//12//31:<U6C11><U570B>:%EC<U5143><U5E74>";/
+    "+:1:1911//12//31:-*:<U6C11><U524D>:%EC%Ey<U5E74>"
+END LC_TIME
+
+LC_NUMERIC
+decimal_point "."
+thousands_sep ","
+grouping      4
+END LC_NUMERIC
+
+LC_MONETARY
+currency_symbol    "NT$"
+int_curr_symbol    "TWD "
+mon_decimal_point  "."
+mon_thousands_sep  ","
+mon_grouping       4
+positive_sign      ""
+negative_sign      "-"
+frac_digits        2
+int_frac_digits    2
+p_cs_precedes      1
+p_sep_by_space     0
+n_cs_precedes      1
+n_sep_by_space     0
+p_sign_posn        1
+n_sign_posn        1
+int_p_cs_precedes  1
+int_p_sep_by_space 0
+int_n_cs_precedes  1
+int_n_sep_by_space 0
+int_p_sign_posn    1
+int_n_sign_posn    1
+END LC_MONETARY
+
+LC_PAPER
+height 297
+width  210
+END LC_PAPER
+
+LC_MEASUREMENT
+% metric
+measurement 1
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1yY<UFF59><UFF39><U662F>]"
+noexpr  "^[-0nN<UFF4E><UFF2E><U4E0D><U5426>]"
+% 是
+yesstr  "<U662F>"
+% 不是
+nostr   "<U4E0D><U662F>"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt  "%f%t%g%t%d"
+% 君
+name_gen  "<U541B>"
+% 小姐
+name_miss "<U5C0F><U59D0>"
+% 先生
+name_mr   "<U5148><U751F>"
+% 夫人
+name_mrs  "<U592B><U4EBA>"
+% 女士
+name_ms   "<U5973><U58EB>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%c%N%T%N%s %h %e %r%N%b%N%d%N%f%N%a%N"
+% 中華民國
+country_name "<U4E2D><U83EF><U6C11><U570B>"
+country_post "TW"
+country_ab2  "TW"
+country_ab3  "TWN"
+country_num  158
+country_car "RC"
+country_isbn 957
+% 漢語官話
+lang_name    "<U6F22><U8A9E><U5B98><U8A71>"
+lang_term    "cmn"
+lang_lib     "cmn"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt "+%c-%a-%l"
+tel_dom_fmt "%A-%l"
+int_select  "00"
+int_prefix  "886"
+END LC_TELEPHONE

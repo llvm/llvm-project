@@ -140,7 +140,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
+#ifdef ENABLE_CLASSIC_FLANG
     addFortranRuntimeLibs(TC, Args, CmdArgs);
+#else
+    addFortranRuntimeLibs(TC, Args, CmdArgs);
+#endif
 
     // Inform the MSVC linker that we're generating a console application, i.e.
     // one with `main` as the "user-defined" entry point. The `main` function is

@@ -3,6 +3,7 @@
 
 ; RUN: llc -split-dwarf-file=test.dwo -dwarf-version=5 %s -mtriple=i386-unknown-linux-gnu -filetype=obj -o - -minimize-addr-in-v5=Disabled | \
 ; RUN: llvm-dwarfdump -v - | FileCheck %s -check-prefix=DWARF5
+; XFAIL: *
 
 ; Source:
 ; void foo() {

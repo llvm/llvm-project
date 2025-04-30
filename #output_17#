@@ -1,0 +1,339 @@
+d
+
+`````q; ModuleID = '/space2/users/svetozarj/sw/next-llvm-project/llvm/test/Transforms/InstCombine/float-shrink-compare.ll'
+source_filename = "/space2/users/svetozarj/sw/next-llvm-project/llvm/test/Transforms/InstCombine/float-shrink-compare.ll"
+target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
+target triple = "x86_64-apple-macosx10.8.0"
+
+define i1 @test1(float %x, float %y) {
+  %1 = call float @llvm.ceil.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test1_intrin(float %x, float %y) {
+  %1 = call float @llvm.ceil.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test2(float %x, float %y) {
+  %1 = call float @llvm.fabs.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test2_intrin(float %x, float %y) {
+  %1 = call float @llvm.fabs.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @fmf_test2(float %x, float %y) {
+  %1 = call nnan float @llvm.fabs.f32(float %x)
+  %2 = fcmp oeq float %1, %y
+  ret i1 %2
+}
+
+define i1 @test3(float %x, float %y) {
+  %1 = call float @llvm.floor.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test3_intrin(float %x, float %y) {
+  %1 = call float @llvm.floor.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test4(float %x, float %y) {
+  %1 = call float @llvm.nearbyint.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @shrink_nearbyint_intrin(float %x, float %y) {
+  %1 = call float @llvm.nearbyint.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test5(float %x, float %y) {
+  %1 = call float @llvm.rint.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test6(float %x, float %y) {
+  %1 = call float @llvm.round.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test6_intrin(float %x, float %y) {
+  %1 = call float @llvm.round.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test6a(float %x, float %y) {
+  %1 = call float @llvm.roundeven.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test6a_intrin(float %x, float %y) {
+  %1 = call float @llvm.roundeven.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test7(float %x, float %y) {
+  %1 = call float @llvm.trunc.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test7_intrin(float %x, float %y) {
+  %1 = call float @llvm.trunc.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test8(float %x, float %y) {
+  %1 = call float @llvm.ceil.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test8_intrin(float %x, float %y) {
+  %1 = call float @llvm.ceil.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test9(float %x, float %y) {
+  %1 = call float @llvm.fabs.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test9_intrin(float %x, float %y) {
+  %1 = call float @llvm.fabs.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test10(float %x, float %y) {
+  %1 = call float @llvm.floor.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test10_intrin(float %x, float %y) {
+  %1 = call float @llvm.floor.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test11(float %x, float %y) {
+  %1 = call float @llvm.nearbyint.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test11_intrin(float %x, float %y) {
+  %1 = call float @llvm.nearbyint.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test12(float %x, float %y) {
+  %1 = call float @llvm.rint.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test13(float %x, float %y) {
+  %1 = call float @llvm.round.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test13_intrin(float %x, float %y) {
+  %1 = call float @llvm.round.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test13a(float %x, float %y) {
+  %1 = call float @llvm.roundeven.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test13a_intrin(float %x, float %y) {
+  %1 = call float @llvm.roundeven.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test14(float %x, float %y) {
+  %1 = call float @llvm.trunc.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test14_intrin(float %x, float %y) {
+  %1 = call float @llvm.trunc.f32(float %x)
+  %cmp = fcmp oeq float %1, %y
+  ret i1 %cmp
+}
+
+define i1 @test15(float %x, float %y, float %z) {
+  %fminf = call nsz float @llvm.minnum.f32(float %x, float %y)
+  %1 = fcmp oeq float %fminf, %z
+  ret i1 %1
+}
+
+define i1 @test16(float %x, float %y, float %z) {
+  %fminf = call nsz float @llvm.minnum.f32(float %x, float %y)
+  %1 = fcmp oeq float %fminf, %z
+  ret i1 %1
+}
+
+define i1 @test17(float %x, float %y, float %z) {
+  %fmaxf = call nsz float @llvm.maxnum.f32(float %x, float %y)
+  %1 = fcmp oeq float %fmaxf, %z
+  ret i1 %1
+}
+
+define i1 @test18(float %x, float %y, float %z) {
+  %fmaxf = call nsz float @llvm.maxnum.f32(float %x, float %y)
+  %1 = fcmp oeq float %fmaxf, %z
+  ret i1 %1
+}
+
+define i1 @test19(float %x, float %y, float %z) {
+  %copysignf = call float @copysignf(float %x, float %y) #0
+  %1 = fcmp oeq float %copysignf, %z
+  ret i1 %1
+}
+
+define i1 @test20(float %x, float %y) {
+  %fminf = call nsz float @llvm.minnum.f32(float %x, float 1.000000e+00)
+  %1 = fcmp oeq float %fminf, %y
+  ret i1 %1
+}
+
+define i1 @test21(float %x, float %y) {
+  %1 = fpext float %y to double
+  %2 = fpext float %x to double
+  %3 = call nsz double @llvm.minnum.f64(double %2, double 1.300000e+00)
+  %4 = fcmp oeq double %3, %1
+  ret i1 %4
+}
+
+; Function Attrs: nounwind memory(none)
+declare double @fabs(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @ceil(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @copysign(double, double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @floor(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @nearbyint(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @rint(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @round(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @roundeven(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @trunc(double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @fmin(double, double) #0
+
+; Function Attrs: nounwind memory(none)
+declare double @fmax(double, double) #0
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.fabs.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.ceil.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.floor.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.nearbyint.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.round.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.roundeven.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.trunc.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.ceil.f32(float) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.fabs.f32(float) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.floor.f32(float) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.nearbyint.f32(float) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.rint.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.rint.f32(float) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.round.f32(float) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.roundeven.f32(float) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.trunc.f32(float) #1
+
+; Function Attrs: nofree nounwind willreturn memory(write)
+declare float @fminf(float, float) #2
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.minnum.f32(float, float) #1
+
+; Function Attrs: nofree nounwind willreturn memory(write)
+declare float @fmaxf(float, float) #2
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare float @llvm.maxnum.f32(float, float) #1
+
+; Function Attrs: nofree nounwind willreturn memory(write)
+declare float @copysignf(float, float) #2
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.minnum.f64(double, double) #1
+
+attributes #0 = { nounwind memory(none) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nofree nounwind willreturn memory(write) }

@@ -28,6 +28,10 @@
 
 # Nested build directory
 /build*
+/Release
+/Release-Asserts
+/Debug
+/RelWithDebInfo
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).

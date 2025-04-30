@@ -1,0 +1,23 @@
+## includes: math.h
+## args: float:float
+## ret: float
+78.5f, -78.5f
+-78.5f, 78.5f
+0.0f,   78.5f
+78.5f,  0.0f
+0.0f,   -78.5f
+-78.5, 0.0f
+__builtin_inff (), 78.5f
+__builtin_inff (), -78.5f
+78.5f, __builtin_inff ()
+-78.5f, __builtin_inff ()
+## name: qNaN
+__builtin_nanf (""), 78.5f
+__builtin_nanf (""), -78.5f
+78.5f, __builtin_nanf ("")
+-78.5f, __builtin_nanf ("")
+## name: sNaN
+__builtin_nansf (""), 78.5f
+__builtin_nansf (""), -78.5f
+78.5f, __builtin_nansf ("")
+-78.5f, __builtin_nansf ("")

@@ -1,0 +1,47 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4 && !defined XPG42
+// should test for not an array type.
+type mqd_t
+
+type {struct sigevent}
+element {struct sigevent} int sigev_notify
+element {struct sigevent} int sigev_signo
+element {struct sigevent} {union sigval} sigev_value
+element {struct sigevent} {void(*} sigev_notify_function )(union sigval)
+element {struct sigevent} {pthread_attr_t*} sigev_notify_attributes
+
+type {struct mq_attr}
+// Bug 21279: mq_attr elements have wrong type.
+xfail[x86_64-x32-linux]-element {struct mq_attr} long mq_flags
+xfail[x86_64-x32-linux]-element {struct mq_attr} long mq_maxmsg
+xfail[x86_64-x32-linux]-element {struct mq_attr} long mq_msgsize
+xfail[x86_64-x32-linux]-element {struct mq_attr} long mq_curmsgs
+
+function int mq_close (mqd_t)
+function int mq_getattr (mqd_t, struct mq_attr*)
+function int mq_notify (mqd_t, const struct sigevent*)
+function mqd_t mq_open (const char*, int, ...)
+function ssize_t mq_receive (mqd_t, char*, size_t, unsigned int*)
+function int mq_send (mqd_t, const char*, size_t, unsigned int)
+function int mq_setattr (mqd_t, const struct mq_attr*, struct mq_attr*)
+function int mq_unlink (const char*)
+#if defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+optional-function ssize_t mq_timedreceive (mqd_t, char*, size_t, unsigned int*, const struct timespec*)
+optional-function int mq_timedsend (mqd_t, const char*, size_t, unsigned int, const struct timespec*)
+#endif
+
+#if defined XOPEN2K8 || defined POSIX2008
+type pthread_attr_t
+type size_t
+type ssize_t
+type {struct timespec}
+#endif
+
+allow-header fcntl.h
+allow-header signal.h
+allow-header sys/types.h
+allow-header time.h
+
+allow mq_*
+allow MQ_*
+allow *_t
+#endif

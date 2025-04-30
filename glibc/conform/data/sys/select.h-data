@@ -1,0 +1,36 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+type time_t
+type suseconds_t
+
+type {struct timeval}
+element {struct timeval} time_t tv_sec
+element {struct timeval} suseconds_t tv_usec
+
+type sigset_t
+
+type {struct timespec}
+element {struct timespec} time_t tv_sec
+// Bug 16437: tv_nsec has wrong type.
+xfail[x86_64-x32-linux]-element {struct timespec} long tv_nsec
+
+type fd_set
+#if defined XPG4 || defined XPG42 || defined UNIX98
+element fd_set long fds_bits []
+#endif
+
+macro FD_CLR
+macro FD_ISSET
+macro FD_SET
+macro FD_ZERO
+
+macro FD_SETSIZE
+
+#if defined XOPEN2K || defined POSIX2008 || defined XOPEN2K8
+function int pselect (int, fd_set*, fd_set*, fd_set*, const struct timespec*, const sigset_t*)
+#endif
+function int select (int, fd_set*, fd_set*, fd_set*, struct timeval*)
+
+allow-header signal.h
+allow-header sys/time.h
+allow-header time.h
+#endif

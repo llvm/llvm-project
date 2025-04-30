@@ -910,6 +910,8 @@ CreateFileHandler(MemoryBuffer &FirstInput,
     return std::make_unique<TextFileHandler>(/*Comment=*/"#");
   if (FilesType == "ll")
     return std::make_unique<TextFileHandler>(/*Comment=*/";");
+  if (FilesType == "f95")
+    return std::make_unique<TextFileHandler>(/*Comment=*/"!");
   if (FilesType == "bc")
     return std::make_unique<BinaryFileHandler>(BundlerConfig);
   if (FilesType == "s")

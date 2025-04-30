@@ -1,0 +1,7 @@
+inet
+resolv
+hesiod
+sunrpc
+nis
+nscd
+nss

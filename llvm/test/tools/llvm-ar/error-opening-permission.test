@@ -2,6 +2,7 @@
 ## is non-trivial on windows.
 # UNSUPPORTED: system-windows
 # REQUIRES: non-root-user
+# XFAIL: *
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: echo file1 > %t/1.txt

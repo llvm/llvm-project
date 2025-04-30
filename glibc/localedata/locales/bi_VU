@@ -1,0 +1,188 @@
+comment_char %
+escape_char /
+
+% Bislama language locale for Vanuatu.
+% Contributed by Akhilesh Kumar <akhilesh.k@samsung.com>, Maninder Singh <maninder1.s@samsung.com>.
+% Words translated from http://bislama.org/dbquery2.php
+% http://www.bislama.org/translate
+% http://wikitravel.org/en/Bislama_phrasebook
+
+LC_IDENTIFICATION
+title		"Bislama language locale for Vanuatu"
+source		"Samsung Electronics Co., Ltd."
+address	""
+contact	""
+email		"akhilesh.k@samsung.com & maninder1.s@samsung.com"
+tel		""
+fax		""
+language	"Bislama"
+territory	"Vanuatu"
+revision	"0.1"
+date		"2017-07-13"
+
+category  "i18n:2012";LC_IDENTIFICATION
+category  "i18n:2012";LC_CTYPE
+category  "i18n:2012";LC_COLLATE
+category  "i18n:2012";LC_TIME
+category  "i18n:2012";LC_NUMERIC
+category  "i18n:2012";LC_MONETARY
+category  "i18n:2012";LC_PAPER
+category  "i18n:2012";LC_MEASUREMENT
+category  "i18n:2012";LC_MESSAGES
+category  "i18n:2012";LC_NAME
+category  "i18n:2012";LC_ADDRESS
+category  "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+
+% Full month names (%B)
+mon   "Jenuware";/
+      "Febwari";/
+      "Maj";/
+      "Epril";/
+      "Mei";/
+      "Jun";/
+      "Julae";/
+      "Ogis";/
+      "Septemba";/
+      "Oktoba";/
+      "Novemba";/
+      "Disemba"
+%
+% Abbreviated month names
+abmon	"Jan";/
+	"Feb";/
+	"Maj";/
+	"Epr";/
+	"Mei";/
+	"Jun";/
+	"Jul";/
+	"Ogs";/
+	"Sep";/
+	"Okt";/
+	"Nov";/
+	"Dis"
+%
+% Full Weekday names
+day	"Sande";/
+	"Mande";/
+	"Tusde";/
+	"Wenesde";/
+	"Tosde";/
+	"Fraede";/
+	"Sarere"
+%
+% Abbreviated Weekday names
+abday	"San";/
+	"Man";/
+	"Tus";/
+	"Wen";/
+	"Tas";/
+	"Fra";/
+	"Sar"
+%
+% Appropriate date and time representation
+d_t_fmt     "%A %d %b %Y %I:%M:%S %p"
+%
+% Appropriate date and time representation for date(1)
+date_fmt    "%A %d %b %Y %I:%M:%S %p %Z"
+%
+% Appropriate date representation
+d_fmt       "%A %d %b %Y"
+%
+% Appropriate time representation
+t_fmt       "%I:%M:%S %p %Z"
+% Equivalent of AM PM
+am_pm	"AM";"PM"
+%
+% Appropriate 12 h time representation (%r)
+t_fmt_ampm "%I:%M:%S %p %Z"
+END LC_TIME
+%
+LC_NUMERIC
+decimal_point "."
+thousands_sep ","
+grouping      3
+END LC_NUMERIC
+
+LC_MONETARY
+
+currency_symbol		"VT"
+int_curr_symbol		"VUV "
+mon_decimal_point	"."
+mon_thousands_sep	","
+mon_grouping		3
+positive_sign		""
+negative_sign		"-"
+int_frac_digits		2
+frac_digits			2
+p_cs_precedes		1
+int_p_sep_by_space	1
+p_sep_by_space		0
+n_cs_precedes		1
+int_n_sep_by_space	1
+n_sep_by_space		0
+p_sign_posn			1
+n_sign_posn			1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+
+yesexpr "^[+1yY]"
+noexpr  "^[-0nN]"
+% http://www.pentecostisland.net/languages/bislama/englishtobislama.pdf
+yesstr "Yes"
+nostr  "No"
+END LC_MESSAGES
+
+
+LC_NAME
+copy "en_US"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%a%b%s%c"
+country_name "Vanuatu"
+% No code
+% https://en.wikipedia.org/wiki/Bislama
+country_ab2  "VU"
+country_ab3  "VUT"
+country_car  "VU"
+% https://en.wikipedia.org/wiki/ISO_3166-1_numeric
+country_num  548
+lang_name    "Bislama"
+% iso-639-1
+lang_ab      "bi"
+% iso-639-3
+lang_term    "bis"
+% iso-639-2
+lang_lib     "bis"
+END LC_ADDRESS
+
+LC_TELEPHONE
+% https://www.howtocallabroad.com/vanuatu/
+tel_int_fmt "+%c %l"
+int_select  "00"
+int_prefix  "678"
+END LC_TELEPHONE

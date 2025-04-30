@@ -1,0 +1,117 @@
+# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
+ # Local configure fragment for sysdeps/x86_64.
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for AVX512DQ support in assembler" >&5
+$as_echo_n "checking for AVX512DQ support in assembler... " >&6; }
+if ${libc_cv_asm_avx512dq+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.s <<\EOF
+        vandpd (%rax), %zmm6, %zmm1
+EOF
+if { ac_try='${CC-cc} -c $ASFLAGS conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  libc_cv_asm_avx512dq=yes
+else
+  libc_cv_asm_avx512dq=no
+fi
+rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_asm_avx512dq" >&5
+$as_echo "$libc_cv_asm_avx512dq" >&6; }
+if test $libc_cv_asm_avx512dq = yes; then
+  $as_echo "#define HAVE_AVX512DQ_ASM_SUPPORT 1" >>confdefs.h
+
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for AVX512 support" >&5
+$as_echo_n "checking for AVX512 support... " >&6; }
+if ${libc_cv_cc_avx512+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if { ac_try='${CC-cc} -mavx512f -xc /dev/null -S -o /dev/null'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then :
+  libc_cv_cc_avx512=$libc_cv_asm_avx512dq
+else
+  libc_cv_cc_avx512=no
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_cc_avx512" >&5
+$as_echo "$libc_cv_cc_avx512" >&6; }
+if test $libc_cv_cc_avx512 = yes; then
+  $as_echo "#define HAVE_AVX512_SUPPORT 1" >>confdefs.h
+
+fi
+config_vars="$config_vars
+config-cflags-avx512 = $libc_cv_cc_avx512"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking -mprefer-vector-width=128" >&5
+$as_echo_n "checking -mprefer-vector-width=128... " >&6; }
+if ${libc_cv_cc_mprefer_vector_width+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if { ac_try='${CC-cc} -mprefer-vector-width=128 -xc /dev/null -S -o /dev/null'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then :
+  libc_cv_cc_mprefer_vector_width=yes
+else
+  libc_cv_cc_mprefer_vector_width=no
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_cc_mprefer_vector_width" >&5
+$as_echo "$libc_cv_cc_mprefer_vector_width" >&6; }
+config_vars="$config_vars
+config-cflags-mprefer-vector-width = $libc_cv_cc_mprefer_vector_width"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Intel MPX support" >&5
+$as_echo_n "checking for Intel MPX support... " >&6; }
+if ${libc_cv_asm_mpx+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest.s <<\EOF
+        bndmov %bnd0,(%rsp)
+EOF
+if { ac_try='${CC-cc} -c $ASFLAGS conftest.s 1>&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+  libc_cv_asm_mpx=yes
+else
+  libc_cv_asm_mpx=no
+fi
+rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_asm_mpx" >&5
+$as_echo "$libc_cv_asm_mpx" >&6; }
+if test $libc_cv_asm_mpx = yes; then
+  $as_echo "#define HAVE_MPX_SUPPORT 1" >>confdefs.h
+
+fi
+
+if test x"$build_mathvec" = xnotset; then
+  build_mathvec=yes
+fi
+
+$as_echo "#define PI_STATIC_AND_HIDDEN 1" >>confdefs.h
+
+
+$as_echo "#define SUPPORT_STATIC_PIE 1" >>confdefs.h
+
+
+test -n "$critic_missing" && as_fn_error $? "
+*** $critic_missing" "$LINENO" 5

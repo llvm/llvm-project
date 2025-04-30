@@ -1,0 +1,25 @@
+#include <stddef.h>
+#include <signal.h>
+#include <sys/ucontext.h>
+
+--
+
+SIG_BLOCK
+SIG_UNBLOCK
+SIG_SETMASK
+
+_NSIG8          (_NSIG / 8)
+
+#define ucontext(member)	offsetof (ucontext_t, member)
+#define mcontext(member)	ucontext (uc_mcontext.member)
+
+SC_FLGS		ucontext (uc_flags)
+SC_LINK		ucontext (uc_link)
+SC_STCK		ucontext (uc_stack.ss_sp)
+SC_STSZ		ucontext (uc_stack.ss_size)
+SC_PSW		mcontext (psw)
+SC_GPRS		mcontext (gregs)
+SC_ACRS		mcontext (aregs)
+SC_FPC		mcontext (fpregs.fpc)
+SC_FPRS		mcontext (fpregs.fprs)
+SC_MASK		ucontext (uc_sigmask)

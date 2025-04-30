@@ -1,0 +1,2 @@
+cp $B/nss/libnss_test1.so $L/libnss_test1.so.2
+cp $B/nss/libnss_test2.so $L/libnss_test2.so.2

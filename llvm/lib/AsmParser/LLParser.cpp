@@ -483,6 +483,11 @@ bool LLParser::validateEndOfIndex() {
                  "use of undefined summary '^" +
                      Twine(ForwardRefAliasees.begin()->first) + "'");
 
+  if (!ForwardRefResolvers.empty())
+    return error(ForwardRefResolvers.begin()->second.front().second,
+                 "use of undefined summary '^" +
+                     Twine(ForwardRefResolvers.begin()->first) + "'");
+
   if (!ForwardRefTypeIds.empty())
     return error(ForwardRefTypeIds.begin()->second.front().second,
                  "use of undefined type id summary '^" +
@@ -5769,6 +5774,22 @@ bool LLParser::parseDITemplateValueParameter(MDNode *&Result, bool IsDistinct) {
 ///                         isDefinition: true, templateParams: !3,
 ///                         declaration: !4, align: 8)
 bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
+#ifdef ENABLE_CLASSIC_FLANG
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(name, MDStringField, (/* AllowEmpty */ true));                      \
+  OPTIONAL(scope, MDField, );                                                  \
+  OPTIONAL(linkageName, MDStringField, );                                      \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(type, MDField, );                                                   \
+  OPTIONAL(isLocal, MDBoolField, );                                            \
+  OPTIONAL(isDefinition, MDBoolField, (true));                                 \
+  OPTIONAL(templateParams, MDField, );                                         \
+  OPTIONAL(declaration, MDField, );                                            \
+  OPTIONAL(flags, DIFlagField, );                                              \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(annotations, MDField, );
+#else
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(name, MDStringField, (/* AllowEmpty */ false));                     \
   OPTIONAL(scope, MDField, );                                                  \
@@ -5780,17 +5801,18 @@ bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(isDefinition, MDBoolField, (true));                                 \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
+  OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(annotations, MDField, );
+#endif
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result =
-      GET_OR_DISTINCT(DIGlobalVariable,
-                      (Context, scope.Val, name.Val, linkageName.Val, file.Val,
-                       line.Val, type.Val, isLocal.Val, isDefinition.Val,
-                       declaration.Val, templateParams.Val, align.Val,
-                       annotations.Val));
+  Result = GET_OR_DISTINCT(
+      DIGlobalVariable,
+      (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
+       type.Val, isLocal.Val, isDefinition.Val, declaration.Val,
+       templateParams.Val, flags.Val, align.Val, annotations.Val));
   return false;
 }
 
@@ -9241,6 +9263,18 @@ bool LLParser::addGlobalValueToIndex(
     ForwardRefAliasees.erase(FwdRefAliasees);
   }
 
+  // Resolve forward references from ifuncs
+  auto FwdRefResolvers = ForwardRefResolvers.find(ID);
+  if (FwdRefResolvers != ForwardRefResolvers.end()) {
+    for (auto ResolverRef : FwdRefResolvers->second) {
+      assert(!ResolverRef.first->hasResolver() &&
+             "Forward referencing ifunc already has resolver");
+      assert(Summary && "Resolver must be a definition");
+      ResolverRef.first->setResolver(VI, Summary.get());
+    }
+    ForwardRefResolvers.erase(FwdRefResolvers);
+  }
+
   // Add the summary if one was provided.
   if (Summary)
     Index->addGlobalValueSummary(VI, std::move(Summary));
@@ -9353,6 +9387,10 @@ bool LLParser::parseGVEntry(unsigned ID) {
       break;
     case lltok::kw_alias:
       if (parseAliasSummary(Name, GUID, ID))
+        return true;
+      break;
+    case lltok::kw_ifunc:
+      if (parseIfuncSummary(Name, GUID, ID))
         return true;
       break;
     default:
@@ -9564,6 +9602,57 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
   return addGlobalValueToIndex(Name, GUID,
                                (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
                                std::move(AS), Loc);
+}
+
+/// IfuncSummary
+///   ::= 'ifunc' ':' '(' 'module' ':' ModuleReference ',' GVFlags ','
+///         'resolver' ':' GVReference ')'
+bool LLParser::parseIfuncSummary(std::string Name, GlobalValue::GUID GUID,
+                                 unsigned ID) {
+  assert(Lex.getKind() == lltok::kw_ifunc);
+  LocTy Loc = Lex.getLoc();
+  Lex.Lex();
+
+  StringRef ModulePath;
+  GlobalValueSummary::GVFlags GVFlags(
+      GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
+      /*NotEligibleToImport=*/false,
+      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
+      GlobalValueSummary::Definition);
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here") ||
+      parseModuleReference(ModulePath) ||
+      parseToken(lltok::comma, "expected ',' here") || parseGVFlags(GVFlags) ||
+      parseToken(lltok::comma, "expected ',' here") ||
+      parseToken(lltok::kw_resolver, "expected 'resolver' here") ||
+      parseToken(lltok::colon, "expected ':' here"))
+    return true;
+
+  ValueInfo ResolverVI;
+  unsigned GVId;
+  if (parseGVReference(ResolverVI, GVId))
+    return true;
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  auto IF = std::make_unique<IfuncSummary>(GVFlags);
+
+  IF->setModulePath(ModulePath);
+
+  // Record forward reference if the resolver is not parsed yet.
+  if (ResolverVI.getRef() == FwdVIRef) {
+    ForwardRefResolvers[GVId].emplace_back(IF.get(), Loc);
+  } else {
+    auto Summary = Index->findSummaryInModule(ResolverVI, ModulePath);
+    assert(Summary && "Resolver must be a definition");
+    IF->setResolver(ResolverVI, Summary);
+  }
+
+  addGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
+                        ID, std::move(IF), Loc);
+
+  return false;
 }
 
 /// Flag

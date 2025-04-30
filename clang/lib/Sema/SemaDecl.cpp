@@ -8532,6 +8532,21 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     return;
   }
 
+  auto AddrSpace = T.getAddressSpace();
+  if (AddrSpace == LangAS::next32_tls &&
+      (NewVD->getTSCSpec() != TSCS___thread &&
+       NewVD->getTSCSpec() != TSCS_thread_local &&
+       NewVD->getTSCSpec() != TSCS__Thread_local)) {
+    Diag(NewVD->getLocation(), diag::next32_err_addr_space_tls);
+  } else if ((AddrSpace == LangAS::next32_global ||
+              AddrSpace == LangAS::next32_constant ||
+              AddrSpace == LangAS::next32_local) &&
+             (NewVD->getTSCSpec() == TSCS___thread ||
+              NewVD->getTSCSpec() == TSCS_thread_local ||
+              NewVD->getTSCSpec() == TSCS__Thread_local)) {
+    Diag(NewVD->getLocation(), diag::next32_err_addr_space_non_tls);
+  }
+
   // OpenCL v1.2 s6.8 - The static qualifier is valid only in program
   // scope.
   if (getLangOpts().OpenCLVersion == 120 &&
@@ -10280,6 +10295,20 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                                                  D.isFunctionDefinition())) {
       NewFD->addAttr(SAttr);
     }
+  }
+
+  if (!NSMark.Mark.empty()) {
+    NewFD->addAttr(PragmaNextSiliconMarkAttr::CreateImplicit(
+        Context, NSMark.Mark, NSMark.Location));
+    // reset the mark (until another pragma is read)
+    NSMark.Mark = llvm::StringRef();
+  }
+
+  if (!NSLocation.NSLocation.empty()) {
+    NewFD->addAttr(PragmaNextSiliconLocationAttr::CreateImplicit(
+        Context, NSLocation.NSLocation, NSLocation.PragmaLoc));
+    // reset the location (until another pragma is read)
+    NSLocation.NSLocation = llvm::StringRef();
   }
 
   // Handle attributes.

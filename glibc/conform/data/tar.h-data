@@ -1,0 +1,33 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+macro-str TMAGIC "ustar"
+macro-int-constant TMAGLEN {int} == 6
+macro-str TVERSION "00"
+macro-int-constant TVERSLEN {int} == 2
+
+macro-int-constant REGTYPE {int} == '0'
+macro-int-constant AREGTYPE {int} == '\0'
+macro-int-constant LNKTYPE {int} == '1'
+macro-int-constant SYMTYPE {int} == '2'
+macro-int-constant CHRTYPE {int} == '3'
+macro-int-constant BLKTYPE {int} == '4'
+macro-int-constant DIRTYPE {int} == '5'
+macro-int-constant FIFOTYPE {int} == '6'
+macro-int-constant CONTTYPE {int} == '7'
+
+macro-int-constant TSUID {int} == 04000
+macro-int-constant TSGID {int} == 02000
+# if !defined POSIX2008
+macro-int-constant TSVTX {int} == 01000
+# endif
+macro-int-constant TUREAD {int} == 00400
+macro-int-constant TUWRITE {int} == 00200
+macro-int-constant TUEXEC {int} == 00100
+macro-int-constant TGREAD {int} == 00040
+macro-int-constant TGWRITE {int} == 00020
+macro-int-constant TGEXEC {int} == 00010
+macro-int-constant TOREAD {int} == 00004
+macro-int-constant TOWRITE {int} == 00002
+macro-int-constant TOEXEC {int} == 00001
+
+allow *_t
+#endif

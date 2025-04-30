@@ -1,0 +1,57 @@
+#if defined ISO11
+
+macro ONCE_FLAG_INIT
+macro thread_local
+macro-int-constant TSS_DTOR_ITERATIONS
+
+constant thrd_success
+constant thrd_busy
+constant thrd_error
+constant thrd_nomem
+constant thrd_timedout
+
+constant mtx_plain
+constant mtx_recursive
+constant mtx_timed
+
+type thrd_t
+type thrd_start_t
+type mtx_t
+type once_flag
+type cnd_t
+type tss_t
+type tss_dtor_t
+
+function int thrd_create (thrd_t*, thrd_start_t, void*)
+function int thrd_equal (thrd_t, thrd_t)
+function thrd_t thrd_current (void)
+function int thrd_sleep (const struct timespec*, struct timespec*)
+function void thrd_exit (int)
+function int thrd_detach (thrd_t)
+function int thrd_join (thrd_t, int*)
+function void thrd_yield (void)
+
+function int mtx_init (mtx_t*, int)
+function int mtx_lock (mtx_t*)
+function int mtx_timedlock (mtx_t*, const struct timespec*)
+function int mtx_trylock (mtx_t*)
+function int mtx_unlock (mtx_t*)
+function void mtx_destroy (mtx_t*)
+
+function void call_once (once_flag*, void (*)(void))
+
+function int cnd_init (cnd_t*)
+function int cnd_signal (cnd_t*)
+function int cnd_broadcast (cnd_t*)
+function int cnd_wait (cnd_t*, mtx_t*)
+function int cnd_timedwait (cnd_t*, mtx_t*, const struct timespec*)
+function void cnd_destroy (cnd_t*)
+
+function int tss_create (tss_t*, tss_dtor_t)
+function {void*} tss_get (tss_t)
+function int tss_set (tss_t, void*)
+function void tss_delete (tss_t)
+
+#include "time.h-data"
+
+#endif

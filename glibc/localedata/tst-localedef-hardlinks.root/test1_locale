@@ -1,0 +1,3 @@
+comment_char %
+escape_char /
+% Empty test locale.  Must be identical to the other test locale.

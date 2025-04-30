@@ -1,0 +1,146 @@
+libc {
+  GLIBC_2.0 {
+    # global variables
+    _obstack;
+
+    # interface of malloc functions
+    __libc_calloc; __libc_free; __libc_mallinfo; __libc_malloc;
+    __libc_mallopt; __libc_memalign; __libc_pvalloc; __libc_realloc;
+    __libc_valloc;
+    __malloc_initialize_hook; __free_hook; __malloc_hook; __realloc_hook;
+    __memalign_hook; __after_morecore_hook;
+    __default_morecore; __morecore;
+
+    # functions used in inline functions or macros
+    _obstack_allocated_p; _obstack_begin; _obstack_begin_1;
+    _obstack_free; _obstack_memory_used; _obstack_newchunk;
+
+    # variables in normal name space
+    mallwatch; obstack_alloc_failed_handler; obstack_exit_failure;
+
+    # c*
+    calloc; cfree;
+
+    # f*
+    free;
+
+    # m*
+    mallinfo; malloc; malloc_stats;
+    malloc_trim; malloc_usable_size; mallopt; mcheck; memalign; mprobe; mtrace;
+    muntrace;
+
+    # o*
+    obstack_free;
+
+    # p*
+    pvalloc;
+
+    # r*
+    realloc;
+
+    # t*
+    tr_break;
+
+    # v*
+    valloc;
+  }
+  GLIBC_2.1 {
+    # Special functions.
+    __libc_freeres;
+  }
+  GLIBC_2.2 {
+    # m*
+    mcheck_check_all; mcheck_pedantic;
+
+    # p*
+    posix_memalign;
+  }
+  GLIBC_2.10 {
+    malloc_info;
+  }
+  GLIBC_2.16 {
+    aligned_alloc;
+  }
+  GLIBC_2.26 {
+    reallocarray;
+  }
+  GLIBC_2.33 {
+    mallinfo2;
+  }
+  GLIBC_PRIVATE {
+    # Internal startup hook for libpthread.
+    __libc_malloc_pthread_startup;
+
+    # Internal destructor hook for libpthread.
+    __libc_thread_freeres;
+
+    # struct scratch_buffer support
+    __libc_scratch_buffer_dupfree;
+    __libc_scratch_buffer_grow;
+    __libc_scratch_buffer_grow_preserve;
+    __libc_scratch_buffer_set_array_size;
+
+    # Internal name for reallocarray
+    __libc_reallocarray;
+
+    # dynarray support
+    __libc_dynarray_at_failure;
+    __libc_dynarray_emplace_enlarge;
+    __libc_dynarray_finalize;
+    __libc_dynarray_resize;
+    __libc_dynarray_resize_clear;
+
+    # struct alloc_buffer support
+    __libc_alloc_buffer_alloc_array;
+    __libc_alloc_buffer_allocate;
+    __libc_alloc_buffer_copy_bytes;
+    __libc_alloc_buffer_copy_string;
+    __libc_alloc_buffer_create_failure;
+    __register_malloc_interceptor_nextsilicon;
+  }
+}
+
+# Keep in sync with symbols in libc.
+libc_malloc_debug {
+  GLIBC_2.0 {
+    calloc;
+    free;
+    malloc;
+    memalign;
+    pvalloc;
+    realloc;
+    valloc;
+
+    __free_hook;
+    __malloc_hook;
+    __memalign_hook;
+    __realloc_hook;
+
+    mcheck;
+    mprobe;
+    mtrace;
+    muntrace;
+
+    mallinfo;
+    malloc_get_state;
+    malloc_set_state;
+    malloc_stats;
+    malloc_trim;
+    malloc_usable_size;
+    mallopt;
+  }
+  GLIBC_2.2 {
+    mcheck_check_all;
+    mcheck_pedantic;
+    posix_memalign;
+  }
+  GLIBC_2.10 {
+    malloc_info;
+  }
+  GLIBC_2.16 {
+    aligned_alloc;
+  }
+  GLIBC_2.33 {
+    mallinfo2;
+  }
+}

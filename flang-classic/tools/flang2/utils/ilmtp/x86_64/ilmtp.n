@@ -1,0 +1,3789 @@
+\"/*
+\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+\" * See https://llvm.org/LICENSE.txt for license information.
+\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+\" *
+\" */
+.NS 25 "ILM Definitions" "Appendix IV - "
+.sh 2 "ILM Definitions"
+.ft CW
+.sz 6
+
+.nr IN 0 1
+.de IL
+.nr IN +1
+.sp
+.in 0
+.ne 4
+.nf
+.ta 0.5i 4.5i
+\\n(IN. \\$1 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9\t Type: \\$2
+.in 0.5i
+.fi
+.ad
+..
+.de AT
+.br
+Attributes:   \\$1   \\$2   \\$3   \\$4   \\$5   \\$6   \\$7
+.br
+.sp
+..
+.de OP
+.br
+.in 0.5i
+.nf
+.ta 1.0i +0.5i +0.5i +0.5i +0.5i +0.5i +0.5i +0.5i +0.5i +0.5i +0.5i +0.5i
+OP: \\$1\t\\$2\t\\$3\t\\$4\t\\$5\t\\$6\t\\$7\t\\$8
+..
+.IL BOS misc stc1 stc2 stc3
+Always (and only) appears as the first ILM of an ILM block.
+(roughly corresponds to the beginning of a source statement.)
+.nf
+
+stc1 - source statement line number (negated for insert files?).
+If more than one ILM block is written for a given
+statement, all but the first have 0 specified for the
+line number.
+For typical statements, this is actually the line
+number of the terminating ';'.
+stc2 - current file index, default is 1.
+stc3 - number of words for this ILM block (including the BOS).
+.fi
+.AT spec trm
+.IL RISNAN arth lnk
+.AT spec trm
+.IL DISNAN arth lnk
+.AT spec trm
+.IL FLOAT arth lnk
+Convert integer to real number (REAL and FLOAT intrinsics).
+.OP FLOAT r p1
+.IL DFLOAT arth lnk
+Convert integer to double precision (DFLOAT intrinsic).
+.OP DFLOAT r p1
+.CL CTOI arth lnk
+Convert unsigned character to signed integer.
+.OP MVIR r p1 iv-1
+.FL CTOI arth lnk lnk
+.AT spec
+.IL SCTOI arth lnk
+Convert unsigned character to signed integer.
+.OP MVIR r p1 iv-1
+.IL STOI arth lnk
+Convert short to signed integer.
+.OP MVIR r p1 iv-1
+.IL USTOI arth lnk
+Convert unsigned short to signed integer.
+.OP MVIR r p1 iv-1
+.IL CTOUI arth lnk
+Convert unsigned character to unsigned integer.
+.OP MVIR r p1 iv-1
+.IL SCTOUI arth lnk
+Convert signed character to unsigned integer.
+.OP MVIR r p1 iv-1
+.IL ITOUI arth lnk
+Convert signed integer to unsigned integer.
+.OP MVIR r p1 iv-1
+.IL UITOI arth lnk
+Convert unsigned integer to signed integer.
+.OP MVIR r p1 iv-1
+.IL STOUI arth lnk
+Convert short to unsigned integer.
+.OP MVIR r p1 iv-1
+.IL USTOUI arth lnk
+Convert unsigned short to unsigned integer.
+.OP MVIR r p1 iv-1
+.IL CDTOUDI arth lnk
+.AT i8
+.OP DP2KR r rp1
+.IL CTOUDI arth lnk
+.AT i8
+.OP SP2IR t1 rp1
+.OP UIKMV r t1
+.IL DTOUDI arth lnk
+.AT i8
+.OP DP2KR r rp1
+.IL DTOUI arth lnk
+.OP DP2KR t1 p1
+.OP KIMV r t1
+.IL UDCON arth sym
+.AT i8
+.OP KCON r v1
+.IL UDITOD arth lnk
+.OP KR2DP r p1
+.IL UDITOR arth lnk
+.OP KIMV t1 p1
+.OP IR2SP r t1
+.IL UDITOS arth lnk
+.OP KIMV r p1
+.IL UDITOSC arth lnk
+.OP KIMV r p1
+.IL UDITOUI arth lnk
+.OP KIMV r p1
+.IL UITOD arth lnk
+.OP UIKMV t1 p1
+.OP KR2DP r t1
+.IL UITOR arth lnk
+.OP IR2SP r p1
+.IL UITOS arth lnk
+.OP MVIR r p1 iv-1
+.IL UITOSC arth lnk
+.OP MVIR r p1 iv-1
+.IL UITOUDI arth lnk
+.OP UIKMV r p1
+.IL ITOUDI arth lnk
+Cast a 32-bit integer to a 64-bit unsigned integer (dword).
+.OP UIKMV r p1
+.IL SCTOUDI arth lnk
+Cast a 8 bit integer quantity to a 64-bit unsigned integer (dword).
+.OP UIKMV r p1
+.IL STOUDI arth lnk
+Cast a 16 bit integer quantity to a 64-bit quantity.
+.OP UIKMV r p1
+.IL UDITOI arth lnk
+Cast an unsigned double integer (dword) to a 32-bit signed integer.
+.OP KIMV r p1
+.IL RTOUI arth lnk
+Cast a real to a 32-bit unsigned integer (word).
+.OP SP2IR r p1
+.IL RTOUDI arth lnk
+Cast a real to a 64-bit unsigned integer (dword).
+.AT i8
+.OP SP2IR t1 p1
+.OP UIKMV r t1
+.IL CRTOI arth lnk lnk
+Cast a complex to integer (C)
+.AT spec
+.IL CDTOI arth lnk lnk
+.AT spec dcmplx
+.IL UITOC arth lnk
+Convert unsigned integer to unsigned character.
+.OP ICON t1 =i'255
+.OP AND r t1 p1
+.IL ITOSC arth lnk
+Convert signed integer to signed character.
+.AT spec
+.IL ITOS arth lnk
+Convert integer to short.
+.AT spec
+.IL UITOUS arth lnk
+Convert unsigned integer to unsigned short.
+.OP ICON t1 =i'65535
+.OP AND r t1 p1
+.IL FLOATU arth lnk
+Convert unsigned integer to real.
+.OP UIKMV t1 p1
+.OP FLOATK r t1
+.IL DFLOATU arth lnk
+Convert unsigned to double.
+.OP UIKMV t1 p1
+.OP DFLOATK r t1
+.IL RTOR arth lnk lnk
+.OP FPOWF r p1 p2
+.IL VRTOR arth lnk lnk
+.IL DTOD arth lnk lnk
+.OP DPOWD r p1 p2
+.IL CTOC arth lnk lnk
+.AT spec
+.IL CDTOCD arth lnk lnk
+.AT spec dcmplx
+.IL FIX arth lnk
+Convert real number to integer (INT and IFIX intrinsics).
+.OP FIX r p1
+.IL FIXU arth lnk
+Convert real number to unsigned.
+.OP FIXK t1 p1
+.OP KIMV r t1
+.IL DBLE arth lnk
+Convert single precision floating point value to double precision.
+.OP DBLE r p1
+.IL DFIX arth lnk
+Convert double precision floating point number to integer.
+.OP DFIX r p1
+.IL DFIXU arth lnk
+Convert double precision floating point number to
+unsigned integer.
+.OP DFIXK t1 p1
+.OP KIMV r t1
+.IL REAL arth lnk
+Returns real part of complex number (single precision).
+.AT spec
+.OP MVSP r rp1 iv-1
+.IL DREAL arth lnk
+Returns double precision real part of a double complex value.
+.AT spec
+.OP MVDP r rp1 iv-1
+.IL IMAG arth lnk
+Returns imaginary part of complex value (single precision)
+(AIMAG intrinsic).
+.AT spec
+.OP MVSP r ip1 iv-1
+.IL DIMAG arth lnk
+Returns double precision imaginary part of a double complex value
+(DIMAG intrinsic).
+.AT spec
+.OP MVDP r ip1 iv-1
+.IL CMPLX arth lnk lnk
+Form complex number out of two single precision real values.
+.AT spec
+.IL DCMPLX arth lnk lnk
+Form double complex number out of two double precision real values.
+.AT spec dcmplx
+.IL ICHAR fstr lnk
+Converts single character to integer.
+.AT spec
+.IL INCHAR fstr lnk
+Converts single ncharacter to integer.
+.AT spec
+.IL CHAR fstr lnk
+Converts integer to character string of length 1.
+.AT spec
+.IL NCHAR fstr lnk
+Converts integer to ncharacter string of length 1.
+.AT spec
+.IL AINT arth lnk
+AINT intrinsic (converts real to real).
+.OP AINT r p1
+.IL DINT arth lnk
+DINT intrinsic (converts double to double).
+.OP DINT r p1
+.IL ANINT arth lnk
+ANINT intrinsic (converts real to real).
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_anint t1
+.OP DFRSP r t2 spret
+.IL DNINT arth lnk
+DNINT intrinsic (converts double to double).
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dnint t1
+.OP DFRDP r t2 dpret
+.IL NINT arth lnk
+NINT intrinsic (converts real to integer).
+\".OP NULL t1 iv0
+\".OP DASP t1 p1 sp(0) t1
+\".OP QJSR t2 =e'%i%__mth_i_nint t1
+\".OP DFRIR r t2 drret
+.OP NINT r p1
+.IL IDNINT arth lnk
+IDNINT intrinsic (converts double to integer).
+\".OP NULL t1 iv0
+\".OP DADP t1 p1 dp(0) t1
+\".OP QJSR t2 =e'%i%__mth_i_idnint t1
+\".OP DFRIR r t2 drret
+.OP IDNINT r p1
+.IL ZEXTB arth lnk
+Zero extend byte (ZEXT intrinsic).
+.OP ICON t1 =i'255
+.OP AND r t1 p1
+.IL ZEXTS arth lnk
+Zero extend short (ZEXT intrinsic).
+.OP ICON t1 =i'65535
+.OP AND r t1 p1
+.IL IABS arth lnk
+.OP IABS r p1
+.IL ABS arth lnk
+Absolute value of single precision real number.
+.OP FABS r p1
+.IL DABS arth lnk
+.OP DABS r p1
+.IL CABS arth lnk
+.AT spec
+.OP DBLE t1 rp1
+.OP DBLE t2 ip1
+.OP DMUL t1 t1 t1
+.OP DMUL t2 t2 t2
+.OP DADD t3 t1 t2
+.OP DSQRT t3 t3
+.OP SNGL r t3
+.IL CDABS arth lnk
+.AT spec
+.OP NULL t1 iv0
+.OP DADP t1 ip1 dp(0) t1
+.OP DADP t2 rp1 dp(1) t1
+.OP QJSR t3 =e'%d%__mth_i_cdabs t2
+.OP DFRDP r t3 dpret
+.IL LEN fstr lnk
+Length of a character expression.  This ILM contains a link to
+one character expression.
+The result returned is the sum of the lengths of its operands.
+.AT spec
+.IL NLEN fstr lnk
+Length of ncharacter expr.
+.AT spec
+.IL CONJG arth lnk
+Conjugate of a single precision complex number.
+.AT spec
+.OP MVSP rr rp1 iv-1
+.OP FNEG ir ip1
+.IL DCONJG arth lnk
+Conjugate of a double complex number.
+.AT spec dcmplx
+.OP MVDP rr rp1 iv-1
+.OP DNEG ir ip1
+.IL SQRT arth lnk
+Square root of a single precision real number (SQRT intrinsic).
+.OP FSQRT r p1
+.IL DSQRT arth lnk
+.OP DSQRT r p1
+.IL CSQRT arth lnk
+.AT spec
+.IL CDSQRT arth lnk
+.AT spec dcmplx
+.IL EXP arth lnk
+EXP intrinsic for single precision floating point values.
+.OP FEXP r p1
+.IL DEXP arth lnk
+.OP DEXP r p1
+.IL CEXP arth lnk
+.AT spec
+.IL CDEXP arth lnk
+.AT spec dcmplx
+.IL CACOS arth lnk
+.AT spec
+.IL CDACOS arth lnk
+.AT spec dcmplx
+.IL CASIN arth lnk
+.AT spec
+.IL CDASIN arth lnk
+.AT spec dcmplx
+.IL CATAN arth lnk
+.AT spec
+.IL CDATAN arth lnk
+.AT spec dcmplx
+.IL CCOSH arth lnk
+.AT spec
+.IL CDCOSH arth lnk
+.AT spec dcmplx
+.IL CSINH arth lnk
+.AT spec
+.IL CDSINH arth lnk
+.AT spec dcmplx
+.IL CTANH arth lnk
+.AT spec
+.IL CDTANH arth lnk
+.AT spec dcmplx
+.IL CTAN arth lnk
+.AT spec
+.IL CDTAN arth lnk
+.AT spec dcmplx
+.IL ALOG arth lnk
+.OP FLOG r p1
+.IL DLOG arth lnk
+.OP DLOG r p1
+.IL CLOG arth lnk
+.AT spec
+.IL CDLOG arth lnk
+.AT spec dcmplx
+.IL ALOG10 arth lnk
+.OP FLOG10 r p1
+.IL DLOG10 arth lnk
+.OP DLOG10 r p1
+.IL SIN arth lnk
+Sine of a single precision value
+.OP FSIN r p1
+\".OP NULL t1 iv0
+\".OP DASP t1 p1 sp(0) t1
+\".OP QJSR t2 =e'%s%__mth_i_sin t1
+\".OP DFRSP r t2 spret
+.IL DSIN arth lnk
+.OP DSIN r p1
+\".OP NULL t1 iv0
+\".OP DADP t1 p1 dp(0) t1
+\".OP QJSR t2 =e'%d%__mth_i_dsin t1
+\".OP DFRDP r t2 dpret
+.IL CSIN arth lnk
+.AT spec
+.IL CDSIN arth lnk
+.AT spec dcmplx
+.IL COS arth lnk
+Cosine of a single precision number
+.OP FCOS r p1
+\".OP NULL t1 iv0
+\".OP DASP t1 p1 sp(0) t1
+\".OP QJSR t2 =e'%s%__mth_i_cos t1
+\".OP DFRSP r t2 spret
+.IL DCOS arth lnk
+.OP DCOS r p1
+\".OP NULL t1 iv0
+\".OP DADP t1 p1 dp(0) t1
+\".OP QJSR t2 =e'%d%__mth_i_dcos t1
+\".OP DFRDP r t2 dpret
+.IL CCOS arth lnk
+.AT spec
+.IL CDCOS arth lnk
+.AT spec dcmplx
+.IL TAN arth lnk
+Tangent of a single precision value
+.OP FTAN r p1
+\".OP NULL t1 iv0
+\".OP DASP t1 p1 sp(0) t1
+\".OP QJSR t2 =e'%s%__mth_i_tan t1
+\".OP DFRSP r t2 spret
+.IL DTAN arth lnk
+.OP DTAN r p1
+\".OP NULL t1 iv0
+\".OP DADP t1 p1 dp(0) t1
+\".OP QJSR t2 =e'%d%__mth_i_dtan t1
+\".OP DFRDP r t2 dpret
+.IL ASIN arth lnk
+.OP FASIN r p1
+.IL DASIN arth lnk
+.OP DASIN r p1
+.IL ACOS arth lnk
+.OP FACOS r p1
+.IL DACOS arth lnk
+.OP DACOS r p1
+.IL ATAN arth lnk
+.OP FATAN r p1
+.IL DATAN arth lnk
+.OP DATAN r p1
+.IL ATAN2 arth lnk lnk
+.OP FATAN2 r p1 p2
+.IL DATAN2 arth lnk lnk
+.OP DATAN2 r p1 p2
+.IL SIND arth lnk
+SIN in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_sind t1
+.OP DFRSP r t2 spret
+.IL DSIND arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dsind t1
+.OP DFRDP r t2 dpret
+.IL COSD arth lnk
+COS in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_cosd t1
+.OP DFRSP r t2 spret
+.IL DCOSD arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dcosd t1
+.OP DFRDP r t2 dpret
+.IL TAND arth lnk
+TAN in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_tand t1
+.OP DFRSP r t2 spret
+.IL DTAND arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dtand t1
+.OP DFRDP r t2 dpret
+.IL ASIND arth lnk
+ASIN in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_asind t1
+.OP DFRSP r t2 spret
+.IL DASIND arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dasind t1
+.OP DFRDP r t2 dpret
+.IL ACOSD arth lnk
+ACOS in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_acosd t1
+.OP DFRSP r t2 spret
+.IL DACOSD arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dacosd t1
+.OP DFRDP r t2 dpret
+.IL ATAND arth lnk
+ATAN in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_atand t1
+.OP DFRSP r t2 spret
+.IL DATAND arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_datand t1
+.OP DFRDP r t2 dpret
+.IL ATAN2D arth lnk lnk
+ATAN2 in degrees.
+.OP NULL t1 iv0
+.OP DASP t1 p2 sp(1) t1
+.OP DASP t2 p1 sp(0) t1
+.OP QJSR t3 =e'%s%__mth_i_atan2d t2
+.OP DFRSP r t3 spret
+.IL DATAN2D arth lnk lnk
+.OP NULL t1 iv0
+.OP DADP t1 p2 dp(1) t1
+.OP DADP t2 p1 dp(0) t1
+.OP QJSR t3 =e'%d%__mth_i_datan2d t2
+.OP DFRDP r t3 dpret
+.IL SINH arth lnk
+.OP FSINH r p1
+\".OP NULL t1 iv0
+\".OP DASP t1 p1 sp(0) t1
+\".OP QJSR t2 =e'%s%__mth_i_sinh t1
+\".OP DFRSP r t2 spret
+.IL DSINH arth lnk
+.OP DSINH r p1
+\".OP NULL t1 iv0
+\".OP DADP t1 p1 dp(0) t1
+\".OP QJSR t2 =e'%d%__mth_i_dsinh t1
+\".OP DFRDP r t2 dpret
+.IL COSH arth lnk
+.OP FCOSH r p1
+.IL DCOSH arth lnk
+.OP DCOSH r p1
+.IL TANH arth lnk
+.OP FTANH r p1
+.IL DTANH arth lnk
+.OP DTANH r p1
+.IL ERF arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_erf t1
+.OP DFRSP r t2 spret
+.IL DERF arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_derf t1
+.OP DFRDP r t2 dpret
+.IL ERFC arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_erfc t1
+.OP DFRSP r t2 spret
+.IL DERFC arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_derfc t1
+.OP DFRDP r t2 dpret
+.IL ERFC_SCALED arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_erfc_scaled t1
+.OP DFRSP r t2 spret
+.IL DERFC_SCALED arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_derfc_scaled t1
+.OP DFRDP r t2 dpret
+.IL GAMMA arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_gamma t1
+.OP DFRSP r t2 spret
+.IL DGAMMA arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dgamma t1
+.OP DFRDP r t2 dpret
+.IL LOG_GAMMA arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_log_gamma t1
+.OP DFRSP r t2 spret
+.IL DLOG_GAMMA arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dlog_gamma t1
+.OP DFRDP r t2 dpret
+.IL HYPOT arth lnk lnk
+.OP NULL t1 iv0
+.OP DASP t1 p2 sp(1) t1
+.OP DASP t2 p1 sp(0) t1
+.OP QJSR t3 =e'%s%__mth_i_hypot t2
+.OP DFRSP r t3 spret
+.IL DHYPOT arth lnk lnk
+.OP NULL t1 iv0
+.OP DADP t1 p2 dp(1) t1
+.OP DADP t2 p1 dp(0) t1
+.OP QJSR t3 =e'%d%__mth_i_dhypot t2
+.OP DFRDP r t3 dpret
+.IL ACOSH arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_acosh t1
+.OP DFRSP r t2 spret
+.IL DACOSH arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dacosh t1
+.OP DFRDP r t2 dpret
+.IL ASINH arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_asinh t1
+.OP DFRSP r t2 spret
+.IL DASINH arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dasinh t1
+.OP DFRDP r t2 dpret
+.IL ATANH arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_atanh t1
+.OP DFRSP r t2 spret
+.IL DATANH arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_datanh t1
+.OP DFRDP r t2 dpret
+.IL BESSEL_J0 arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_bessel_j0 t1
+.OP DFRSP r t2 spret
+.IL DBESSEL_J0 arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dbessel_j0 t1
+.OP DFRDP r t2 dpret
+.IL BESSEL_J1 arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_bessel_j1 t1
+.OP DFRSP r t2 spret
+.IL DBESSEL_J1 arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dbessel_j1 t1
+.OP DFRDP r t2 dpret
+.IL BESSEL_JN arth lnk lnk
+.OP NULL t1 iv0
+.OP DASP t1 p2 sp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%s%__mth_i_bessel_jn t2
+.OP DFRSP r t3 spret
+.IL DBESSEL_JN arth lnk lnk
+.OP NULL t1 iv0
+.OP DADP t1 p2 dp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%d%__mth_i_dbessel_jn t2
+.OP DFRDP r t3 dpret
+.IL BESSEL_Y0 arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_bessel_y0 t1
+.OP DFRSP r t2 spret
+.IL DBESSEL_Y0 arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dbessel_y0 t1
+.OP DFRDP r t2 dpret
+.IL BESSEL_Y1 arth lnk
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%s%__mth_i_bessel_y1 t1
+.OP DFRSP r t2 spret
+.IL DBESSEL_Y1 arth lnk
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%d%__mth_i_dbessel_y1 t1
+.OP DFRDP r t2 dpret
+.IL BESSEL_YN arth lnk lnk
+.OP NULL t1 iv0
+.OP DASP t1 p2 sp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%s%__mth_i_bessel_yn t2
+.OP DFRSP r t3 spret
+.IL DBESSEL_YN arth lnk lnk
+.OP NULL t1 iv0
+.OP DADP t1 p2 dp(0) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%d%__mth_i_dbessel_yn t2
+.OP DFRDP r t3 dpret
+.IL SNGL arth lnk
+Convert double precision number to single precision (SNGL intrinsic).
+.OP SNGL r p1
+.IL IPTR arth lnk
+Converts integral value to pointer.
+The ili created is:
+IAMV r p1
+.AT spec
+.IL KPTR arth lnk
+Converts long (64-bit) value to pointer.
+The ili created is:
+KAMV r p1
+.AT spec
+.IL PTRI arth lnk
+Converts pointer to an integral value
+The ili created is:
+AIMV r p1
+.AT spec
+.IL PTRK arth lnk
+Converts pointer to a long (64-bit) value
+The ili created is:
+AKMV r p1
+.AT spec
+.IL INEG arth lnk
+Integer negation.
+.OP INEG r p1
+.IL UINEG arth lnk
+.OP INEG r p1
+.IL RNEG arth lnk
+.OP FNEG r p1
+.IL DNEG arth lnk
+.OP DNEG r p1
+.IL CNEG arth lnk
+.AT spec
+.OP FNEG rr rp1
+.OP FNEG ir ip1
+.IL CDNEG arth lnk
+Double complex negation.
+.AT spec dcmplx
+.OP DNEG rr rp1
+.OP DNEG ir ip1
+.IL NOT64 arth lnk
+Bitwise negation of 64 bit value (NOT intrinsic).
+.AT i8
+\".OP NOT64 r p1
+.OP KNOT r p1
+.IL NOT arth lnk
+Bitwise negation of 32 bit signed value (NOT intrinsic).
+.OP NOT r p1
+.IL UNOT arth lnk
+Bitwise negation of 32 bit unsigned value.
+.OP UNOT r p1
+.CL LNOT arth lnk
+Logical negation.  The link must be to an expression of type
+integer, float, or pointer.
+The value is 1 if link is zero (0.0, or NULL); otherwise, the value is 0.
+.OP ICMPZ r p1 eq
+.FL LNOT arth lnk
+Logical negation.  The link must be to an expression of type
+LOGICAL; depends on internal representation of logical values (VAX or
+UNIX)
+.AT spec
+.IL DLNOT arth lnk
+Logical negation, where the link is an expression of type double.
+The value is 1 if link is zero; otherwise, it is 0.
+.OP DCMPZ r p1 eq
+.CL LNOP arth lnk
+Logical no-op.  Used by semant when space must be reserved
+for a potential LNOT ILM.
+Returns 1 if its operand is non-zero, else 0.
+.OP ICMPZ r p1 ne
+.FL LNOP arth lnk
+Logical noop.  Used by semant when space must be reserved
+for a potential LNOT ILM.  'lnk' points to a logical
+expression.
+.OP MVIR r p1 iv-1
+.IL IMERGE arth lnk lnk lnk
+Integer valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP ISELECT r t1 p2 p1
+.IL KMERGE arth lnk lnk lnk
+Integer*8 valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP KSELECT r t1 p2 p1
+.IL RMERGE arth lnk lnk lnk
+Real valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP FSELECT r t1 p2 p1
+.IL DMERGE arth lnk lnk lnk
+Real*8 valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP DSELECT r t1 p2 p1
+.IL CMERGE arth lnk lnk lnk
+Real*4 complex valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP CSSELECT r t1 p2 p1
+.IL CDMERGE arth lnk lnk lnk
+Real*8 complex valued f90 merge intrinsic.
+.nf
+p1 - tsource
+p2 - fsource
+p3 - mask
+.fi
+.OP ICMPZ t1 p3 ne
+.OP CDSELECT r t1 p2 p1
+.IL IADD arth lnk lnk
+.OP IADD r p1 p2
+.IL UIADD arth lnk lnk
+.OP UIADD r p1 p2
+.IL RADD arth lnk lnk
+.OP FADD r p1 p2
+.IL DADD arth lnk lnk
+.OP DADD r p1 p2
+.IL CADD arth lnk lnk
+.AT spec
+.OP FADD rr rp1 rp2
+.OP FADD ir ip1 ip2
+.IL CDADD arth lnk lnk
+.AT spec dcmplx
+.OP DADD rr rp1 rp2
+.OP DADD ir ip1 ip2
+.IL PIADD arth lnk1 lnk2 stc
+Add pointer (lnk1) to integer (lnk2) creating a new pointer value.
+'stc' locates a data type item describing the type which
+the pointer (lnk1) points to.
+.AT spec
+.OP ICON t1 scz3
+.OP IMUL t2 t1 p2
+.OP IAMV t3 t2
+.OP AADD r p1 t3 scf3
+.IL PKADD arth lnk1 lnk2 stc
+Add pointer (lnk1) to long (lnk2) creating a new pointer value.
+'stc' locates a data type item describing the type which
+the pointer (lnk1) points to.
+.AT spec
+.OP ICON t1 scz3
+.OP IKMV t1 t1
+.OP KMUL t2 t1 p2
+.OP KAMV t3 t2
+.OP AADD r p1 t3 scf3
+.IL ISUB arth lnk lnk
+.OP ISUB r p1 p2
+.IL UISUB arth lnk lnk
+.OP UISUB r p1 p2
+.IL RSUB arth lnk lnk
+.OP FSUB r p1 p2
+.IL DSUB arth lnk lnk
+.OP DSUB r p1 p2
+.IL CSUB arth lnk lnk
+.AT spec
+.OP FSUB rr rp1 rp2
+.OP FSUB ir ip1 ip2
+.IL CDSUB arth lnk lnk
+.AT spec dcmplx
+.OP DSUB rr rp1 rp2
+.OP DSUB ir ip1 ip2
+.IL PSUB arth lnk lnk stc
+Subtract two pointers (of the same type).
+'stc' locates a data type item describing the type which
+the pointer (lnk1) points to.
+The result of this operation is an
+integer.
+.OP ASUB t1 p1 p2 iv0
+.OP AKMV t2 t1
+.OP ICON t1 sz3
+.OP IKMV t1 t1
+.OP KDIVZR r t2 t1
+.IL PISUB arth lnk1 lnk2 stc
+Substract integer (lnk2) from a pointer (lnk1) creating a new
+pointer value.
+'stc' locates a data type item describing the type which
+the pointer (lnk1) points to.
+.AT spec
+.OP ICON t1 scz3
+.OP IMUL t2 t1 p2
+.OP IAMV t3 t2
+.OP ASUB r p1 t3 scf3
+.IL PKSUB arth lnk1 lnk2 stc
+Substract long (lnk2) from a pointer (lnk1) creating a new
+pointer value.
+'stc' locates a data type item describing the type which
+the pointer (lnk1) points to.
+.AT spec
+.OP ICON t1 scz3
+.OP IKMV t1 t1
+.OP KMUL t2 t1 p2
+.OP KAMV t3 t2
+.OP ASUB r p1 t3 scf3
+.IL IMUL arth lnk lnk
+.OP IMUL r p1 p2
+.IL UIMUL arth lnk lnk
+.OP IMUL r p1 p2
+.IL RMUL arth lnk lnk
+.OP FMUL r p1 p2
+.IL DMUL arth lnk lnk
+.OP DMUL r p1 p2
+.IL CMUL arth lnk lnk
+.AT spec
+.OP FMUL t1 rp1 rp2
+.OP FMUL t2 ip1 ip2
+.OP FMUL t3 ip1 rp2
+.OP FMUL t4 ip2 rp1
+.OP FSUB rr t1 t2
+.OP FADD ir t3 t4
+.IL CDMUL arth lnk lnk
+.AT spec dcmplx
+.OP DMUL t1 rp1 rp2
+.OP DMUL t2 ip1 ip2
+.OP DSUB rr t1 t2
+.OP DMUL t1 ip1 rp2
+.OP DMUL t2 ip2 rp1
+.OP DADD ir t2 t1
+.IL IDIV arth lnk lnk
+.OP IDIV r p1 p2
+.IL UIDIV arth lnk lnk
+.OP UIDIV r p1 p2
+.IL RDIV arth lnk lnk
+.OP FDIV r p1 p2
+.IL DDIV arth lnk lnk
+.OP DDIV r p1 p2
+.IL CDIV arth lnk lnk
+.AT spec
+.IL CDIVR arth lnk lnk
+.AT spec
+.OP FDIV rr rp1 p2
+.OP FDIV ir ip1 p2
+.IL CDDIV arth lnk lnk
+.AT spec dcmplx
+.IL CDDIVD arth lnk lnk
+.AT spec dcmplx
+.OP DDIV rr rp1 p2
+.OP DDIV ir ip1 p2
+.IL ITOI arth lnk lnk
+Exponentiation - integer to an integer power.
+.OP IPOWI r p1 p2
+.IL RTOI arth lnk lnk
+.OP FPOWI r p1 p2
+.IL DTOI arth lnk lnk
+.OP DPOWI r p1 p2
+.CL MOD arth lnk lnk
+Integer remainder
+.OP MOD r p1 p2
+.FL MOD arth lnk lnk
+Integer remainder (MOD intrinsic).
+.OP MOD r p1 p2
+.IL UIMOD arth lnk lnk
+.OP UIMOD r p1 p2
+.IL AMOD arth lnk lnk
+.OP FMOD r p1 p2
+.IL DMOD arth lnk lnk
+.OP DMOD r p1 p2
+.IL ISIGN arth lnk lnk
+.OP ICMPZ t1 p2 lt
+.OP IABS t2 p1
+.OP INEG t3 t2
+.OP ISELECT r t1 t2 t3
+.IL SIGN arth lnk lnk
+Real valued SIGN intrinsic.
+.OP FCMPZ t1 p2 lt
+.OP FABS t2 p1
+.OP FNEG t3 t2
+.OP FSELECT r t1 t2 t3
+.IL DSIGN arth lnk lnk
+.OP DCMPZ t1 p2 lt
+.OP DABS t2 p1
+.OP DNEG t3 t2
+.OP DSELECT r t1 t2 t3
+.IL IDIM arth lnk lnk
+.OP NULL t1 iv0
+.OP DAIR t1 p2 dr(1) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t3 =e'%i%ftn_i_idim t2
+.OP DFRIR r t3 drret
+.IL DIM arth lnk lnk
+Real valued DIM intrinsic.
+.OP NULL t1 iv0
+.OP DASP t1 p2 sp(1) t1
+.OP DASP t2 p1 sp(0) t1
+.OP QJSR t3 =e'%s%ftn_i_dim t2
+.OP DFRSP r t3 spret
+.IL DDIM arth lnk lnk
+.OP NULL t1 iv0
+.OP DADP t1 p2 dp(1) t1
+.OP DADP t2 p1 sp(0) t1
+.OP QJSR t3 =e'%d%ftn_i_ddim t2
+.OP DFRDP r t3 dpret
+.IL DPROD arth lnk lnk
+Multiply two single precision real values and return double
+precision value. (DPROD intrinsic).
+.OP DBLE t1 p1
+.OP DBLE t2 p2
+.OP DMUL r t1 t2
+.IL IMAX arth lnk lnk
+.OP IMAX r p1 p2
+.IL UIMAX arth lnk lnk
+.OP UIMAX r p1 p2
+.IL RMAX arth lnk lnk
+.OP FMAX r p1 p2
+.IL DMAX arth lnk lnk
+.OP DMAX p p1 p2
+.IL IMIN arth lnk lnk
+.OP IMIN r p1 p2
+.IL UIMIN arth lnk lnk
+.OP UIMIN r p1 p2
+.IL RMIN arth lnk lnk
+.OP FMIN r p1 p2
+.IL DMIN arth lnk lnk
+.OP DMIN r p1 p2
+.IL INDEX fstr lnk lnk
+INDEX intrinsic (inputs are two character strings and result is an integer).
+.AT spec
+.OP QJSR t1 =e'%i%ftn_index iv0
+.OP DFRIR r t1 drret
+.IL NINDEX fstr lnk lnk
+Same as INDEX except for ncharacter strings.
+.AT spec
+.OP QJSR t1 =e'%i%ftn_nindex iv0
+.OP DFRIR r t1 drret
+.IL AND64 arth lnk lnk
+Bitwise logical and of two 64 bit values (AND intrinsic).
+\".OP AND64 r p1 p2
+.AT i8
+.OP KAND r p1 p2
+.IL AND arth lnk lnk
+Bitwise logical and of two 32 bit values (AND intrinsic).
+.OP AND r p1 p2
+.IL OR64 arth lnk lnk
+Bitwise logical or of two 64-bit values (OR instrinsic).
+.AT i8
+\".OP OR64 r p1 p2
+.OP KOR r p1 p2
+.IL OR arth lnk lnk
+Bitwise logical or of two 32 bit values (OR intrinsic).
+.OP OR r p1 p2
+.IL XOR64 arth lnk lnk
+Bitwise exclusive or of two 64 bit values (NEQV intrinsic)
+\".OP XOR64 r p1 p2
+.AT i8
+.OP KXOR r p1 p2
+.IL XOR arth lnk lnk
+Bitwise exclusive or of two 32 bit values (^ operator / EOR intrinsic).
+.OP XOR r p1 p2
+.IL XNOR64 arth lnk lnk
+Bitwise exclusive nor of two 64 bit values (EQV intrinsic)
+\".OP XNOR64 r p1 p2
+.AT i8
+.OP KXOR t1 p1 p2
+.OP KNOT r t1
+.IL EQV arth lnk lnk
+Bitwise complement of the exclusive or of two 32 bit values
+.OP XOR t1 p1 p2
+.OP NOT r t1
+.CL LSHIFT arth lnk lnk
+Left shift operator (<<) - first operand is 32 bit signed integer
+value and second is a positive integer.
+.OP LSHIFT r p1 p2
+.CL RSHIFT arth lnk lnk
+Right shift operator (>>).  First operand is 32 bit signed integer
+value and second is assumed to be a positive integer.
+.OP RSHIFT r p1 p2
+.IL KRSHIFT arth lnk lnk
+.AT i8
+.OP KARSHIFT r p1 p2
+.IL ULSHIFT arth lnk lnk
+Left shift operator (<<) - first operand is 32 bit unsigned integer
+value and second is a positive integer.
+.OP ULSHIFT r p1 p2
+.IL URSHIFT arth lnk lnk
+Right shift operator (>>).  First operand is 32 bit unsigned integer
+value and second is assumed to be a positive integer.
+.OP URSHIFT r p1 p2
+.IL SHIFT64 arth lnk lnk
+SHIFT intrinsic - first operand is 64 bit value and second is a positive
+or negative integer shift count.
+.AT i8
+\".OP SHIFT64 r p1 p2
+.OP NULL t1 iv0
+.OP DAIR t1 p2 dr(1) t1
+.OP DAKR t1 p1 dr(0) t1
+.OP QJSR t2 =e'%l%ftn_i_kishft t1
+.OP DFRKR r t2 krret
+.FL SHIFT arth lnk lnk
+SHIFT intrinsic - first operand is 32 bit value and second is positive or
+negative integer shift count (not constants).
+When the second operand is a constant, ULSHIFT or URSHIFT is used.
+\".OP SHIFT r p1 p2
+.OP NULL t1 iv0
+.OP DAIR t1 p2 dr(1) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t2 =e'%i%ftn_i_shift t2
+.OP DFRIR r t2 drret
+.IL I1SHFT intr lnk lnk
+ISHFT intrinsic - first operand is 8 bit value and second is positive or
+negative integer shift count. If the shift count <= -8 or >=8, the
+result is 0.
+.OP NULL t1 iv0
+.OP DAIR t1 p2 dr(1) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t2 =e'%i%ftn_i_i1shft t2
+.OP DFRIR r t2 drret
+.IL IISHFT intr lnk lnk
+ISHFT intrinsic - first operand is 16 bit value and second is positive or
+negative integer shift count. If the shift count <= -16 or >=16, the
+result is 0.
+.OP NULL t1 iv0
+.OP DAIR t1 p2 dr(1) t1
+.OP DAIR t2 p1 dr(0) t1
+.OP QJSR t2 =e'%i%ftn_i_iishft t2
+.OP DFRIR r t2 drret
+.IL JISHFT intr lnk lnk
+ISHFT intrinsic - first operand is 32 bit value and second is positive or
+negative integer shift count. If the shift count <= -32 or >=32, the
+result is 0.  Expand will convert JISHFT ili to a ULSHIFT, URSHIFT, or
+a call.
+.OP JISHFT r p1 p2
+.IL LAND arth lnk lnk
+Logical .AND. operation.
+.OP AND r p1 p2
+.IL VSLAND arth lnk lnk
+Vector 16-bit logical and
+.CL LOR arth lnk lnk
+Logical or.
+This opcode is for use within the Semantic Analyzer only, and should
+never appear in the ILM's sent to the Expander.
+.FL LOR arth lnk lnk
+Logical .OR. operation.
+.OP OR r p1 p2
+.IL LEQV arth lnk lnk
+Logical .EQV. operation.
+\".OP XOR t1 p1 p2
+\".OP NOT r t1
+.AT spec
+.OP ICMP r p1 p2 eq
+.IL LNEQV arth lnk lnk
+Logical .NEQV. operation.
+.OP XOR r p1 p2
+.IL I1SHFTC arth lnk lnk lnk
+ISHFTC(p1, p2, p3) - circularly shift the rightmost p3 bits of p1
+by p2, where p1 is a 8-bit interger
+.OP NULL t1 iv0
+.OP DAIR t1 p3 dr(2) t1
+.OP DAIR t2 p2 dr(1) t1
+.OP DAIR t3 p1 dr(0) t2
+.OP QJSR  t1 =e'%i%ftn_i_i1shftc t3
+.OP DFRIR r t1 drret
+.IL IISHFTC arth lnk lnk lnk
+ISHFTC(p1, p2, p3) - circularly shift the rightmost p3 bits of p1
+by p2, where p1 is a 16-bit interger
+.OP NULL t1 iv0
+.OP DAIR t1 p3 dr(2) t1
+.OP DAIR t2 p2 dr(1) t1
+.OP DAIR t3 p1 dr(0) t2
+.OP QJSR  t1 =e'%i%ftn_i_iishftc t3
+.OP DFRIR r t1 drret
+.IL ISHFTC arth lnk lnk lnk
+ISHFTC(p1, p2, p3) - circularly shift the rightmost p3 bits of p1
+by p2.
+.OP NULL t1 iv0
+.OP DAIR t1 p3 dr(2) t1
+.OP DAIR t2 p2 dr(1) t1
+.OP DAIR t3 p1 dr(0) t2
+.OP QJSR  t1 =e'%i%ftn_ishftc t3
+.OP DFRIR r t1 drret
+.IL IBITS arth lnk lnk lnk
+IBITS(p1, p2, p3) - extract p3 bits beginning at p2 from p1.
+.nf
+r = p3 != 0 ? (p1 >> p2) & (-1 >> (32 - p3)) : 0
+.fi
+.OP RSHIFT t1 p1 p2
+.OP ICON t2 =i'-1
+.OP ICON t3 =i'32
+.OP ISUB t4 t3 p3
+.OP URSHIFT t5 t2 t4
+.OP AND t6 t1 t5
+.OP ICMPZ t7 p3 eq
+.OP ISELECT r t7 t6 p3
+.IL IBSET arth lnk lnk
+IBSET(p1, p2) - set bit p2 of p1 to 1.
+.nf
+r = p1 | (1 << p2)
+.fi
+.OP ICON t1 =i'1
+.OP LSHIFT t2 t1 p2
+.OP OR r p1 t2
+.IL BTEST arth lnk lnk
+BTEST(p1, p2) - .TRUE. if bit p2 of p1 is 1.
+.nf
+r = (p1 & (1 << p2)) != 0
+.fi
+.OP ICON t1 =i'1
+.OP LSHIFT t2 t1 p2
+.OP AND t3 p1 t2
+.OP ICMPZ r t3 ne
+.IL IBCLR arth lnk lnk
+IBLCR(p1, p2) - clear bit p2 of p1.
+.nf
+r = p1 & ~(1 << p2)
+.fi
+.OP ICON t1 =i'1
+.OP LSHIFT t2 t1 p2
+.OP NOT t3 t2
+.OP AND r p1 t3
+.IL RFLOOR arth lnk
+FLOOR of real to real
+.OP FFLOOR r p1
+.IL DFLOOR arth lnk
+FLOOR of double to double
+.OP DFLOOR r p1
+.IL RCEIL arth lnk
+CELING of real to real
+.OP FCEIL r p1
+.IL DCEIL arth lnk
+CELING of double to double
+.OP DCEIL r p1
+.IL ICMP arth lnk lnk
+Integer comparision of two integer numbers.
+The compare ILMs are used only in the context of a relational expression
+and do not by themselves generate code.
+A compare ILM passes up the opcode of the compare ILI which reflects the
+data type of the operands to the relational ILM.
+When the relational ILM using the compare ILM is processed,
+the appropriate code is generated.
+.AT spec
+.IL RCMP arth lnk lnk
+Compare two single precision floating point numbers.
+.AT spec
+.IL DCMP arth lnk lnk
+Compare two double precision floating point numbers.
+.AT spec
+.IL UICMP arth lnk lnk
+Unsigned integer comparison.
+.AT spec
+.IL UDICMP arth lnk lnk
+Unsigned double integer comparison.
+.AT spec
+.CL PCMP arth lnk lnk
+Pointer comparison.
+.AT spec
+.IL CCMP arth lnk lnk
+Compare two complex numbers.
+The value computed is 0 if equal and -1 or 1 if not equal.
+.AT spec
+.IL CDCMP arth lnk lnk
+Compare two double complex numbers.
+The value computed is the same as for the ICMP ILM.
+.AT spec
+.IL SCMP fstr lnk lnk
+Compare two strings.
+The value computed is the same as for the ICMP ILM.  SCMP has no
+corresponding vector ILM.
+.AT spec
+.IL NSCMP fstr lnk lnk
+Same as SCMP for ncharacter strings.
+.AT spec
+.IL EQ arth lnk
+Generate true if compare is equal (lnk locates a compare ILM)
+.AT spec
+.IL NE arth lnk
+Generate true if compare is not equal
+.AT spec
+.IL LT arth lnk
+Generate true if compare is less than
+.AT spec
+.IL GE arth lnk
+Generate true if compare is greater than or equal to
+.AT spec
+.IL LE arth lnk
+Generate true if compare is less than or equal to
+.AT spec
+.IL GT arth lnk
+Generate true if compare is greater than
+.AT spec
+.IL SCAT fstr lnk lnk
+Character string concatenation of 2 character expressions
+(none of which are themselves concatenations).
+.AT spec
+.OP QJSR r =e'%v%ftn_str_copy iv0
+.IL NSCAT fstr lnk lnk
+Concatenate ncharacter strings.
+.AT spec
+.OP QJSR r =e'%v%ftn_str_copy iv0
+.IL LOC arth lnk
+Returns the address represented by a BASE, ELEMENT, or
+a MEMBER ILM, or substring reference.
+Used for the '&' operator.
+.AT spec
+.IL BASE ref sym
+Represents base address of a variable, array, struct, or union.
+.AT spec
+.CL ELEMENT ref lnk lnk stc
+Address of an array element reference:
+lnk1 - subscripted lvalue
+lnk2 - subscript expression
+stc  - data type of each element
+.AT spec
+.FL ELEMENT ref n lnk1 stc lnk+
+Address of an array element reference:
+lnk1 - subscripted lvalue
+stc  - data type of each element
+lnk+ - subscript expressions (<= 7)
+.AT spec
+.IL INLELEM ref n lnk1 stc lnk+
+Address of an array element reference.  Generated by function inlining.
+lnk1 - subscripted lvalue
+stc  - data type of each element
+lnk+ - subscript expressions (<= 7)
+.AT spec
+.IL MEMBER ref lnk sym
+Address of a structure member or field reference.
+lnk  - base address of the structure.
+sym  - pointer to a struct member ST item.
+.AT spec
+.IL SHAPE misc n lnk+
+Shape ILM.  Links point to SHD ILMs.  One link for each dimension.
+.AT spec
+.IL SHD misc lnk lnk lnk
+Shape descriptor for a dimension.
+lnk1 - lower bound
+lnk2 - upper bound
+lnk3 - stride
+.AT spec
+.IL UCON arth sym
+.OP ICON r v1
+.IL ICON cons sym
+.OP ICON r v1
+.IL RCON cons sym
+.OP FCON r v1
+.IL DCON cons sym
+.OP DCON r v1
+.IL CCON cons sym
+.AT spec
+.OP FCON rr iv0
+.OP FCON ir iv0
+.IL CDCON cons sym
+.AT spec dcmplx
+.OP DCON rr iv0
+.OP DCON ir iv0
+.CL ACON cons sym
+Address constant ILM. sym is a symbol table pointer to
+an address constant.
+The template is: ACON r v1
+.AT spec
+.FL ACON cons sym
+Address constant. 'sym' must be a symbol table pointer to
+an address constant for a label.
+This ILM is generated when an ASSIGN statement is processed.
+.AT spec
+.OP ACON r v1
+.IL LCON cons sym
+Logical constant.
+.OP ICON r v1
+.IL BR branch sym
+Branch to label indicated by 'sym'.
+.AT spec trm
+.OP JMP null v1
+.CL BRT branch lnk sym
+Branch on logical condition true by comparing for zero/nonzero (PGC).
+'lnk' may point to a constant ILM, in which case it will always
+be an ICON 0 or 1.
+.AT spec trm
+.OP ICJMPZ null p1 ne v2
+.CL BRF branch lnk sym
+.AT spec trm
+.OP ICJMPZ null p1 eq v2
+.FL BRT branch lnk sym
+Branch on logical condition true by testing the low bit (PGFTN).
+'lnk' may point to a constant ILM.
+.AT spec trm
+.OP LCJMPZ null p1 ne v2
+.FL BRF branch lnk sym
+.AT spec trm
+.OP LCJMPZ null p1 eq v2
+.IL SWITCH branch lnk stc
+Switch determinator, where
+lnk - switch expression
+stc - relative pointer to switch table, consisting of linked list of case value/label pairs.
+.AT spec trm
+.IL SWTCHLL branch lnk stc
+Switch determinator, where
+lnk - switch expression
+stc - relative pointer to switch table, consisting of linked list of case value/label pairs.
+.AT spec trm
+
+.IL IAIF branch lnk sym1 sym2 sym3
+Arithmetic IF branch on integer expression.
+\'sym's are symbol table pointers to labels.
+.AT spec trm
+.OP ICJMPZ null p1 le v2
+.OP ICJMPZ null p1 eq v3
+.OP ICJMPZ null p1 gt v4
+.IL RAIF branch lnk sym1 sym2 sym3
+Arithmetic if branch on real expression.
+.AT spec trm
+.OP FCJMPZ null p1 le v2
+.OP FCJMPZ null p1 eq v3
+.OP FCJMPZ null p1 gt v4
+.IL DAIF branch lnk sym1 sym2 sym3
+.AT spec trm
+.OP DCJMPZ null p1 le v2
+.OP DCJMPZ null p1 eq v3
+.OP DCJMPZ null p1 gt v4
+.IL QAIF branch lnk sym1 sym2 sym3
+.AT spec trm
+.OP QCJMPZ null p1 le v2
+.OP QCJMPZ null p1 eq v3
+.OP QCJMPZ null p1 gt v4
+.IL AGOTO branch n lnk sym*
+Assigned GOTO.
+'lnk' is to an ILD ILM.
+\'sym's are symbol table pointers
+to labels specified on the assigned GOTO statement, if any.
+.AT spec trm
+.OP JMPA null t1
+.IL CGOTO branch lnk stc
+Computed goto.
+lnk - ILM of the computed goto index
+stc - relative pointer to goto/switch table, consisting of linked list of index value/label pairs.
+.AT spec trm
+.IL CHLD load lnk
+Load signed char (byte)
+.AT spec
+.IL UCHLD load lnk
+Load unsigned char (byte)
+.AT spec
+.IL ILD load lnk
+Load long integer
+.AT spec
+.IL UILD load lnk
+Load unsigned long integer
+.AT spec
+.IL UDILD load lnk
+Load unsigned double integer
+.AT spec
+.IL SILD load lnk
+Load short signed integer
+.AT spec
+.IL USILD load lnk
+Load short unsigned integer
+.AT spec
+.IL RLD load lnk
+Load real
+.AT spec
+.IL DLD load lnk
+Load double
+.AT spec
+.IL QLD load lnk
+Load m128
+.AT spec
+.IL M256LD load lnk
+Load m256
+.AT spec
+.IL CLD load lnk
+.AT spec
+.IL CDLD load lnk
+.AT spec dcmplx
+.IL LLD load lnk
+Load logical value.
+.AT spec
+.IL SLLD load lnk
+Load logical value - LOGICAL*2
+.AT spec
+.IL PLD load lnk sym
+Load pointer.  For fortran, 'sym' field is used for PLD's
+generated by inlining array arguments, and points to actual array
+For C & Fortran, the 'sym' field locates the based object
+for which the PLD is generated; the 'sym' field is 0 for
+loads of normal C pointers.
+.AT spec
+.IL FLD load lnk
+Load field.  Always points to a MEMBER ilm.
+.AT spec
+.IL SFLD load lnk
+Load signed field.  Always points to a MEMBER ilm.
+.AT spec
+.IL SUBS fstr lnk1 lnk2 lnk3
+Character substring.  Lnk1 must point to a BASE, MEMBER, or ELEMENT ILM.
+Lnk2 and lnk3 must point to the integer expressions for the lower
+and upper bounds respectively.
+.AT spec
+.IL NSUBS fstr lnk1 lnk2 lnk3
+Substring of ncharacter string.
+.AT spec
+.IL NCSELD load lnk
+Non-cse load.  lnk points to a load ilm.  Used for
+volatile types.  Expands to ILI that forces scheduler to do the load rather
+then optimizing it away.
+.AT spec
+.IL VLD load stc
+Fake vector load ILM for vector expander.  stc is really
+index into vector table.
+.AT spec
+.IL CHST store lnk1 lnk2
+Store signed char, lnk1 = lnk2 (??)
+.AT spec trm
+.IL UCHST store lnk1 lnk2
+Store unsigned char, lnk1 = lnk2 (??)
+.AT spec trm
+.IL IST store lnk lnk
+Store into integer variable.
+.AT spec trm
+.IL UIST store lnk lnk
+Store into unsigned long integer
+.AT spec trm
+.IL SIST store lnk lnk
+Store short signed integer
+.AT spec trm
+.IL USIST store lnk lnk
+Store short unsigned integer
+.AT spec trm
+.IL RST store lnk lnk
+Store float
+.AT spec trm
+.IL DST store lnk lnk
+Store double
+.AT spec trm
+.IL QST store lnk lnk
+Store m128
+.AT spec trm
+.IL M256ST store lnk lnk
+Store m256
+.AT spec trm
+.IL CST store lnk lnk
+.AT spec trm
+.IL CSTR store lnk lnk
+Store the real part of a single complex
+.AT spec trm
+.IL CSTI store lnk lnk
+Store the imaginary part of a single complex
+.AT spec trm
+.IL CDST store lnk lnk
+.AT spec trm dcmplx
+.IL CDSTR store lnk lnk
+Store the real part of a double complex
+.AT spec trm
+.IL CDSTI store lnk lnk
+Store the imaginary part of a double complex
+.AT spec trm
+.IL LST store lnk lnk
+.AT spec trm
+.IL SLST store lnk lnk
+.AT spec trm
+.IL AST store lnk lnk
+Store address scalar.
+This ILM is used for an ASSIGN statement.
+'lnk' points to an ACON ILM.
+.AT spec trm
+.IL SST fstr lnk1 lnk2
+Store character expression into character variable, array element,
+or substring.
+Lnk1 and lnk2 point to character expressions.
+Lnk1 is the destination - cannot be a concatenation.
+.AT spec trm
+.OP QJSR null =e'%v%ftn_str_copy iv0
+.IL NSST fstr lnk1 lnk2
+Store ncharacter expression.
+.AT spec trm
+.OP QJSR null =e'%v%ftn_str_copy iv0
+.IL PST store lnk lnk
+Store pointer
+.AT spec trm
+.IL PSTRG1 store lnk stc
+Store pointer to argument register number stc : used in g++ style thunks
+to store the adjusted value bask to rdi/rsi etc before jumping through to the function.
+.AT spec trm
+.IL FST store lnk lnk
+Store into field.
+.AT spec trm
+.IL SMOVE store lnk1 lnk2 stc
+Store from one structure into another (of same type).
+lnk1 - base address of receiving structure (to).
+lnk2 - base address of stored structure (from).
+stc is a data type pointer which describes the structures.
+The expansion of this ILM can generate ILI for a sequence of
+loads and stores or a call (JSR) to one of:
+"c_bcopy"  copy bytes
+"c_hcopy"  copy half-words
+"c_wcopy"  copy words
+"c_dcopy"  copy double words
+.AT spec trm
+.IL SZERO store lnk1 lnk2 stc
+Zero memory locations.
+lnk1 - base address to zero
+lnk2 - number of units to zero
+stc  - data type of units to zero: char, short, int, dble
+The expansion of this ILM can generate ILI for a sequence of
+stores or a JSR to one of
+"c_bzero"  zero bytes
+"c_hzero"  zero halfwords
+"c_wzero"  zero words
+"c_dzero"  zero double words
+.AT spec trm
+.IL PSEUDOST store stc lnk
+Pseudo store.
+This ILM is used to mark an expression whose value may be required
+later in the ILM block (e.g., for i++, the orginal value of i may be
+needed as the result of this expression.  The expander will expand
+this ILM to one of the ILIs (FREEIR, FREEAR, or FREEIR) depending on
+the type of the register defined by the ILI which lnk locates.
+stc is just a dummy field (0) so that the ILM requires a total of
+3 words.
+.AT spec trm
+.IL SPSEUDOST fstr stc lnk
+Character pseudo store.  lnk points to a character expression.
+stc is the length of the destination.
+This ILM is used to mark a character expression whose value is
+restricted by length;  this occurs when a character expression
+is used as an argument to a statement function and when the result
+of a character statement function is referenced.
+.AT spec trm
+.IL NSPSEUDOST fstr stc lnk
+Same as SPSEUDOST but for ncharacter type.
+.AT spec trm
+.IL NCSEST store lnk
+Non-cse store.  lnk points to a store ilm.  Used for
+volatile types.  Expands to ILI that forces scheduler to do the store rather
+then optimizing it away.
+.AT spec trm
+.IL FAPPLY proc n stc lnk lnk*
+Call function, where stc is the dtype for the function signature.
+'n' is the number of actual arguments.
+'lnk1' is the lvalue of the procedure
+The other links point to the arguments in the same order they appeared
+in the actual argument list.
+If the type of the argument is struct,
+the lnk will point to
+an ILM for the address of the struct.
+For other types of arguments the lnk will just point to
+the ILM's for the expression.
+.AT spec
+.IL VAPPLY proc n stc lnk lnk*
+Like FAPPLY, but has trm attribute.
+The result is discarded if there is one, i.e. if the function signature
+has a return type other than DT_VOID.
+.AT spec trm
+.IL FINVOKE proc n sym stc lnk lnk*
+Like FAPPLY, but has label argument indicating where control-flow
+jumps if the function throws an exception.
+.AT spec
+.IL VINVOKE proc n sym stc lnk lnk*
+Like VAPPLY, but has label argument similar to FINVOKE.
+.AT spec trm
+.IL VFUNC proc n lnk lnk*
+Call void function, where
+'n' is the number of actual arguments.
+'lnk1' is the lvalue of the procedure
+The links point to the arguments in the same order they appeared
+in the actual argument list.
+If the type of the argument is struct,
+the lnk will point to
+an ILM for the address of the struct.
+For other types of arguments the lnk will just point to
+the ILM's for the expression.
+.AT spec trm
+.CL IFUNC proc n lnk lnk*
+Call integer function.
+.AT spec
+.FL IFUNC proc n sym lnk*
+Call integer function.
+.AT spec
+.IL IFUNCA proc n stc lnk lnk*
+Call integer function.
+.AT spec
+.IL PIFUNCA proc n stc sym lnk lnk*
+Call integer function through procedure pointer
+.AT spec
+.IL IVFUNCA proc n stc sym lnk sym lnk*
+Call integer function.
+.AT spec
+.IL UIFUNC proc n lnk lnk*
+Call unsigned function
+.AT spec
+.CL RFUNC proc n lnk lnk*
+Call float function.  This ILM is only
+when the compiler is asked to not convert ALL instances
+of float to double.
+.AT spec
+.FL RFUNC proc n sym lnk*
+Call real function.
+.AT spec
+.IL RFUNCA proc n stc lnk lnk*
+Call real function.
+.AT spec
+.IL PRFUNCA proc n stc sym lnk lnk*
+Call real function through procedure pointer
+.AT spec
+.IL RVFUNCA proc n stc sym lnk sym lnk*
+Call real function.
+.AT spec
+.CL DFUNC proc n lnk lnk*
+Call double function
+.AT spec
+.FL DFUNC proc n sym lnk*
+Call double function
+.AT spec
+.IL DFUNCA proc n stc lnk lnk*
+Call double function
+.AT spec
+.IL PDFUNCA proc n stc sym lnk lnk*
+Call double function through procedure pointer
+.AT spec
+.IL DVFUNCA proc n stc sym lnk sym lnk*
+Call double function
+.AT spec
+.CL QFUNC proc n lnk lnk*
+Call m128 function
+.AT spec
+.FL QFUNC proc n sym lnk*
+Call m128 function
+.AT spec
+.IL QFUNCA proc n stc lnk lnk*
+Call m128 function
+.AT spec
+.CL M256FUNC proc n lnk lnk*
+Call m256 function
+.AT spec
+.FL M256FUNC proc n sym lnk*
+Call m256 function
+.AT spec
+.IL M256FUNCA proc n stc lnk lnk*
+Call m256 function
+.AT spec
+.IL M256VFUNC proc n sym lnk sym lnk*
+Call m256 function
+.AT spec
+.IL M256VFUNCA proc n stc sym lnk sym lnk*
+Call m256 function
+.AT spec
+.IL QVFUNCA proc n stc sym lnk sym lnk*
+Call m128 function
+.AT spec
+.IL CALL proc n sym lnk*
+Call external subprogram.
+'n' is the number of actual arguments.
+\'sym' is symbol table pointer to the external subprogram.
+The links point to the arguments in the same order they appeared
+in the CALL statement.
+.AT spec trm
+.IL CALLA proc n stc lnk lnk*
+Call external subprogram.
+'n' is the number of actual arguments.
+'lnk1' is address of the subprogram
+The links point to the arguments in the same order they appeared
+in the CALL statement.
+.AT spec trm
+.IL PCALLA proc n stc sym lnk lnk*
+Call subprogram through procedure pointer
+\'n' is the number of actual arguments.
+\'sym' is the pointer's descriptor
+\'lnk1' is address of the subprogram
+The links point to the arguments in the same order they appeared
+in the CALL statement.
+.AT spec trm
+.IL VCALLA proc n stc sym lnk sym lnk*
+Call external subprogram.
+'n' is the number of actual arguments.
+\'sym1' is symbol table pointer to the external subprogram.
+'lnk' ilm of invoking object
+\'sym2' address of invoking object desc
+The links point to the arguments in the same order they appeared
+in the CALL statement.
+.AT spec trm
+.CL CFUNC proc n lnk lnk*
+.AT spec
+.CL CDFUNC proc n lnk lnk*
+.AT spec dcmplx
+.FL CFUNC proc n sym lnk*
+.AT spec
+.IL CFUNCA proc n stc lnk lnk*
+.AT spec
+.IL PCFUNCA proc n stc sym lnk lnk*
+Call complex function through procedure pointer.
+.AT spec
+.IL CVFUNCA proc n stc sym lnk sym lnk*
+.AT spec
+.FL CDFUNC proc n sym lnk*
+.AT spec dcmplx
+.IL CDFUNCA proc n stc lnk lnk*
+.AT spec dcmplx
+.IL PCDFUNCA proc n stc sym lnk lnk*
+Call double complex function through procedure pointer.
+.AT spec dcmplx
+.IL CDVFUNCA proc n stc sym lnk sym lnk*
+.AT spec dcmplx
+.IL LFUNC proc n sym lnk*
+.AT spec
+.IL LFUNCA proc n stc lnk lnk*
+.AT spec
+.IL PLFUNCA proc n stc sym lnk lnk*
+Call logical function through procedure pointer.
+.AT spec
+.IL LVFUNCA proc n stc sym lnk sym lnk*
+.AT spec
+.FL PFUNC proc n sym lnk*
+Call function which returns a pointer.
+.AT spec
+.IL PFUNCA proc n stc lnk lnk*
+Call function which returns a pointer.
+.AT spec
+.IL PPFUNCA proc n stc sym lnk lnk*
+Call function which returns a pointer through a procedure pointer.
+.AT spec
+.IL PVFUNCA proc n stc sym lnk sym lnk*
+Call function which returns a pointer.
+.AT spec
+.CL PFUNC proc n lnk lnk*
+Call function which returns a pointer.
+.AT spec
+.CL SFUNC proc n lnk lnk*
+Call function which returns a structure/union.
+The second link is the address (a LOC ilm) of the
+temporary which is used to return the result of the function.
+.AT spec
+.FL SFUNC proc n sym lnk*
+Call function that has the bind(C) attribute and returns a structure/union.
+The first link is the address (a LOC ilm) of the
+temporary which is used to return the result of the function.
+.AT spec
+.IL CHFUNC proc n sym lnk lnk*
+Call function which returns Fortran character.
+The first link is the address (a BASE ilm) of the
+temporary which is used to return the result of the function.
+.AT spec trm
+.IL CHFUNCA proc n stc lnk lnk lnk*
+Call function which returns Fortran character.
+The first link is the address (a BASE ilm) of the
+temporary which is used to return the result of the function.
+.AT spec trm
+.IL PCHFUNCA proc n stc sym lnk lnk lnk*
+Call function which returns Fortran character through a procedure pointer.
+The first link is the address (a BASE ilm) of the
+temporary which is used to return the result of the function.
+.AT spec trm
+.IL CHVFUNCA proc n stc sym lnk sym lnk lnk*
+Call function which returns Fortran character.
+The first link is the address (a BASE ilm) of the
+temporary which is used to return the result of the function.
+.AT spec trm
+.IL NCHFUNC proc n sym lnk lnk*
+Call function which returns ncharacter.
+.AT spec trm
+.IL NCHFUNCA proc n stc lnk lnk lnk*
+Call function which returns ncharacter.
+.AT spec trm
+.IL PNCHFUNCA proc n stc lnk lnk lnk*
+Call function which returns ncharacter through a procedure pointer.
+.AT spec trm
+.IL NCHVFUNCA proc n stc sym lnk sym lnk lnk*
+Call function which returns ncharacter.
+.AT spec trm
+.IL ARG misc lnk lnk stc stc
+Special purpose ilm for arguments which require special processing.
+For example, an argument which is a structure or union would
+use this ilm (the function ilm locates the ARG ilm).
+.nf
+lnk1 - BASE ilm of temporary (if needed)
+lnk2 - ilm of argument
+stc  - dtype of dummy argument
+stc  - dtype of actual argument
+.fi
+.AT spec
+.IL FARG misc lnk stc
+Special purpose ilm for argument passing, to keep the
+data type of the actual argument around
+.nf
+lnk - ilm of argument
+stc - dtype of actual argument
+.fi
+.AT spec
+.IL PARG misc lnk lnk
+Special purpose ilm for passing arguments with the F90 pointer attribute.
+.nf
+lnk1 - ilm representing the address of the argument's pointer
+lnk2 - BASE ilm of the object with the pointer attribute.
+.fi
+.AT spec
+.IL FARGF misc lnk stc stc
+Same as FARG with the addition of a flag denoting certain context.
+.nf
+lnk  - ilm of argument
+stc1 - dtype of actual argument
+stc2 - a bit vector:
+0x0 - no special case (therefore, same as FARG)
+0x1 - corresponding formal is CLASS(#)
+.fi
+.AT spec
+.IL FATTR misc lnk stc stc
+ILM which passes up the address of the called procedure and specifies
+certain attributes, such as stdcall, about the call.
+.nf
+lnk1 - address of the procedure
+stc1 - attributes (bit vector):
+0x0001 - stdcall
+stc2 - dtype record (TY_PFUNC/TY_FUNC) of the procedure
+.fi
+.AT spec
+.IL ENTRY misc sym
+This ILM is put out as the entry point for each
+entry point defined in this file is processed (except for the
+main entry in Fortran).
+\'sym' is a symbol table
+pointer to the function name.
+.AT spec trm
+.IL LABEL misc sym
+Marks the position of a user defined or compiler created
+label within the current ILM block.  'sym' is a symbol table
+pointer to a label.
+.AT spec trm
+.IL ESTMT misc lnk
+Expression statement -- generated when the value of an
+expression (other than an assignment or VFUNC) is not
+referenced (i.e., the value may be discarded).
+However, the functions appearing in the expression must
+still be evaluated (because of side effects).
+.AT spec trm
+.IL RET misc
+Written for a RETURN statement which does not return a value.
+.AT spec trm
+.IL RETV misc lnk
+Return value from function.
+.AT spec trm
+.IL ARET misc lnk
+Alternate return.  'lnk' points to expression defining the
+alternate return number.
+.AT spec trm
+.IL RETAUTO misc sym
+Return from function after freeing automatic objects.
+\'sym' is the symbol of the block containing the return.
+.AT spec trm
+.IL RETVAUTO misc lnk sym
+Return value from function after freeing automatic objects.
+\'sym' is the symbol of the block containing the return.
+.AT spec trm
+.IL NOP misc
+.AT spec trm
+.IL ASM misc sym
+asm ( <string> );  'sym' is the symbol table pointer of the
+ST_STRING representing <string>.
+.AT spec trm
+.IL GASM misc sym lnk lnk lnk
+asm ( <string> : <outputs> : <inputs> : <clobbers> );
+\'sym' is the symbol table pointer of the
+ST_STRING representing <string>.
+'lnk1' is GASMLNK of list of outputs
+'lnk2' is GASMLNK of list of inputs
+'lnk3' is GASMLNK of list of clobber descriptors
+.AT spec trm
+.IL GASMLNK misc sym1 lnk lnk sym2 stc3
+\'sym1' is the symbol table pointer of the ST_STRING representing the
+descriptor ('=r' for outputs, 'r' for inputs, 'r2' for clobbers)
+'lnk1' is the link to the output or input expression
+'lnk2' is the link to the next GASMLNK
+\'sym2' is the symbol table pointer of the identifier representing the constraint
+name for an input or output item. It is 0 if no constraint name applies to this
+item.
+'stc3' is the dtype of the item.
+.AT spec trm
+.CL END misc
+End of function -- written when the final '}' is processed.
+.AT spec trm
+.FL END misc
+End of subroutine or main program - last ILM in ilm file seen by Expander.
+.AT spec trm
+.IL ENDF misc lnk
+End of function subprogram - lnk points to load of the
+compiler created variable for the function return value.
+.AT spec trm
+.IL DOBEG misc lnk sym1 sym2
+DO-loop begin.  May be used, as an optimization, for certain
+for loops.
+ILM's to store the initial DO value into the DO index
+variable must precede the DOBEG ILM,
+and a LABEL ILM for the loop-top label must follow it.
+.nf
+
+lnk - link to expression computing the loop count:
+
+INT((e2 - e1 + e3) / e3)
+
+sym1 - symbol table pointer to zero trip label.
+sym2 - symbol table pointer to DO count temporary.
+.fi
+.AT spec trm
+.IL DOBEGNZ misc lnk sym1 sym2 lnk
+DO-loop begin.  Used as an optimization, for certain
+for array assignment compiler generated forall loops.
+ILM's to store the initial DO value into the DO index
+variable must precede the DOBEGNZ ILM,
+and a LABEL ILM for the loop-top label must follow it.
+.nf
+
+lnk - link to expression computing the loop count:
+
+INT((e2 - e1 + e3) / e3)
+
+sym1 - symbol table pointer to zero trip label.
+sym2 - symbol table pointer to DO count temporary.
+lnk -  link to expression to check if array is zero-size
+.fi
+
+.AT spec trm
+.IL DOENDNZ misc sym1 sym2
+DO-loop end.
+Always matches a DOBEGNZ ILM.
+.nf
+
+sym1 - symbol table pointer to loop top label.
+sym2 - symbol table pointer to DO count variable.
+This item generates the following for the loop end condtion:
+v2 <-- v2 - 1
+if ( v2 > 0 ) goto v1
+.fi
+
+.AT spec trm
+
+.IL DOEND misc sym1 sym2
+DO-loop end.
+Always matches a DOBEG ILM.
+.nf
+
+sym1 - symbol table pointer to loop top label.
+sym2 - symbol table pointer to DO count variable.
+This item generates the following for the loop end condtion:
+v2 <-- v2 - 1
+if ( v2 > 0 ) goto v1
+.fi
+.AT spec trm
+.IL BYVAL misc lnk stc
+General ILM to support passing arguments by value.
+.nf
+lnk  - link to argument being passed by value
+stc  - its data type
+.fi
+.AT spec
+.IL DPVAL misc lnk
+This ILM is generated when the %VAL operator is used.
+'lnk' is a pointer to a 32-bit valued expression.
+.AT spec
+.IL DPREF misc lnk
+This ILM is generated when the %REF operator is used.
+.AT spec
+.IL DPSCON misc stc
+Define parameter which is a short integer constant passed
+by value.  This ILM is included for the convenience of semant
+when generating code for io statements.
+.AT spec
+.IL DPNULL misc
+Define a parameter which is a 'null pointer', i.e. the value 0 is
+to be passed, and an additional argument for the character length
+(which equals 0) is to be added to the end of the argument list.
+.AT spec
+.IL CMSIZE misc sym
+Get the size of the common block (sym1).
+.AT spec
+.IL MAD24 arth lnk lnk lnk
+.AT spec
+.OP IMUL t1 p1 p2
+.OP IADD r t1 p3
+.IL UMAD24 arth lnk lnk lnk
+.AT spec
+.OP IMUL t1 p1 p2
+.OP UIADD r t1 p3
+.IL MUL24 arth lnk lnk
+.AT spec
+.OP IMUL r p1 p2
+.IL UMUL24 arth lnk lnk
+.AT spec
+.OP IMUL r p1 p2
+.IL HADD arth lnk lnk
+hadd(x,y), where x and y are char or short, and
+computed as (x+y) >> 1
+.OP ICON t1 =i'1
+.OP IADD t2 p1 p2
+.OP RSHIFT r t2 t1
+.IL UHADD arth lnk lnk
+hadd(x,y), where x and y are unsigned char or unsigned short, and
+computed as (x+y) >> 1
+.OP ICON t1 =i'1
+.OP UIADD t2 p1 p2
+.OP URSHIFT r t2 t1
+.IL IHADD arth lnk lnk
+hadd(x,y), where x and y are int, and
+computed as (x>>1) + (y>>1) + (x&y)&1
+.OP ICON t1 =i'1
+.OP ARSHIFT t2 p1 t1
+.OP ARSHIFT t3 p2 t1
+.OP AND t4 p1 p2
+.OP AND t4 t4 t1
+.OP IADD t5 t2 t3
+.OP IADD r t5 t4
+.IL UIHADD arth lnk lnk
+hadd(x,y), where x and y are unsigned, and
+computed as (x>>1) + (y>>1) + (x&y)&1
+.OP ICON t1 =i'1
+.OP URSHIFT t2 p1 t1
+.OP URSHIFT t3 p2 t1
+.OP AND t4 p1 p2
+.OP AND t4 t4 t1
+.OP UIADD t5 t2 t3
+.OP UIADD r t5 t4
+.IL KHADD arth lnk lnk
+hadd(x,y), where x and y are long, and
+computed as (x>>1) + (y>>1) + (x&y)&1
+.OP ICON t1 =i'1
+.OP KARSHIFT t2 p1 t1
+.OP KARSHIFT t3 p2 t1
+.OP IKMV t1 t1
+.OP KAND t4 p1 p2
+.OP KAND t4 t4 t1
+.OP KADD t5 t2 t3
+.OP KADD r t5 t4
+.IL UKHADD arth lnk lnk
+hadd(x,y), where x and y are unsigned long, and
+computed as (x>>1) + (y>>1) + (x&y)&1
+.OP ICON t1 =i'1
+.OP KURSHIFT t2 p1 t1
+.OP KURSHIFT t3 p2 t1
+.OP IKMV t1 t1
+.OP KAND t4 p1 p2
+.OP KAND t4 t4 t1
+.OP UKADD t5 t2 t3
+.OP UKADD r t5 t4
+.IL RHADD arth lnk lnk
+rhadd(x,y), where x and y are char or short, and
+computed as (x+y+1) >> 1
+.OP ICON t1 =i'1
+.OP IADD t2 p1 p2
+.OP IADD t2 t2 t1
+.OP RSHIFT r t2 t1
+.IL URHADD arth lnk lnk
+rhadd(x,y), where x and y are unsigned char or unsigned short, and
+computed as (x+y+1) >> 1
+.OP ICON t1 =i'1
+.OP UIADD t2 p1 p2
+.OP UIADD t2 t2 t1
+.OP URSHIFT r t2 t1
+.IL IRHADD arth lnk lnk
+rhadd(x,y), where x and y are int, and
+computed as (x>>1) + (y>>1) + (x|y)&1
+.OP ICON t1 =i'1
+.OP ARSHIFT t2 p1 t1
+.OP ARSHIFT t3 p2 t1
+.OP OR t4 p1 p2
+.OP AND t4 t4 t1
+.OP IADD t5 t2 t3
+.OP IADD r t5 t4
+.IL UIRHADD arth lnk lnk
+rhadd(x,y), where x and y are unsigned, and
+computed as (x>>1) + (y>>1) + (x|y)&1
+.OP ICON t1 =i'1
+.OP URSHIFT t2 p1 t1
+.OP URSHIFT t3 p2 t1
+.OP OR t4 p1 p2
+.OP AND t4 t4 t1
+.OP UIADD t5 t2 t3
+.OP UIADD r t5 t4
+.IL KRHADD arth lnk lnk
+rhadd(x,y), where x and y are long, and
+computed as (x>>1) + (y>>1) + (x|y)&1
+.OP ICON t1 =i'1
+.OP KARSHIFT t2 p1 t1
+.OP KARSHIFT t3 p2 t1
+.OP IKMV t1 t1
+.OP KOR t4 p1 p2
+.OP KAND t4 t4 t1
+.OP KADD t5 t2 t3
+.OP KADD r t5 t4
+.IL UKRHADD arth lnk lnk
+rhadd(x,y), where x and y are unsigned long, and
+computed as (x>>1) + (y>>1) + (x|y)&1
+.OP ICON t1 =i'1
+.OP KURSHIFT t2 p1 t1
+.OP KURSHIFT t3 p2 t1
+.OP IKMV t1 t1
+.OP KOR t4 p1 p2
+.OP KAND t4 t4 t1
+.OP UKADD t5 t2 t3
+.OP UKADD r t5 t4
+.IL VECTFUNC proc n lnk stc lnk*
+Call function which returns a vector
+n    - the number of arguments.
+lnk1 - address of the function being called
+stc  - the function's vector data type.
+lnk2 - address (a LOC ilm) of the temporary which is used to return the result of the function.
+lnk3 ... - user arguments
+.AT spec
+.IL VSCALAR ref lnk stc2 stc3
+Represents the address of a scalar component of a vector
+lnk  - base address of vector
+stc2 - which component [0, n-1], where n is the number of components in the vector
+stc3 - element dtype
+.AT spec
+.IL VSEL ref lnk sym stc
+Represents the address of selecting multiple components from a vector
+lnk  - base address of vector
+sym  - component mask (int vector constant)
+stc  - result vector data type of the components
+.AT spec
+.IL VCON cons sym
+.OP VCON r v1
+.OL VLD load lnk stc
+Vector load.
+.nf
+lnk  - its address
+stc  - its vector data type
+.fi
+.AT spec
+.IL VLDU load lnk stc
+Vector load (unaligned)
+.nf
+lnk  - its address
+stc  - its vector data type
+.fi
+.AT spec
+.IL VNEG arth lnk stc
+.OP VNEG r p1 v2
+.IL VADD arth lnk lnk stc
+.OP VADD r p1 p2 v3
+.IL VSUB arth lnk lnk stc
+.OP VSUB r p1 p2 v3
+.IL VMUL arth lnk lnk stc
+.OP VMUL r p1 p2 v3
+.IL VDIV arth lnk lnk stc
+.OP VDIV r p1 p2 v3
+.IL VDIVZ arth lnk lnk stc
+Vector divide where divide by zero does not fault.
+.OP VDIVZ r p1 p2 v3
+.IL VMOD arth lnk lnk stc
+.OP VMOD r p1 p2 v3
+.IL VMODZ arth lnk lnk stc
+Vector remainder where divide by zero does not fault.
+.OP VMODZ r p1 p2 v3
+.IL VCVTV arth lnk stc stc
+Vector convert from vector
+.OP VCVTV r p1 v2 v3
+.IL VCVTS arth lnk stc
+Vector convert from scalar
+.OP VCVTS r p1 v2
+.IL VNOT arth lnk stc
+.OP VNOT r p1 v2
+.IL VAND arth lnk lnk stc
+.OP VAND r p1 p2 v3
+.IL VOR arth lnk lnk stc
+.OP VOR r p1 p2 v3
+.IL VXOR arth lnk lnk stc
+.OP VXOR r p1 p2 v3
+.IL VLSHIFTV arth lnk lnk stc
+Vector >> by scalar
+.OP VLSHIFTV r p1 p2 v3
+.IL VRSHIFTV arth lnk lnk stc
+Vector >> by vector
+.OP VRSHIFTV r p1 p2 v3
+.IL VLSHIFTS arth lnk lnk stc
+Vector << by scalar
+.OP VLSHIFTS r p1 p2 v3
+.IL VRSHIFTS arth lnk lnk stc
+Vector >> by scalar
+.OP VRSHIFTS r p1 p2 v3
+.IL VCMP arth lnk lnk stc
+.AT spec
+.IL VST store lnk lnk stc
+Vector store.
+lnk1 - destination
+lnk2 - source
+stc  - its vector data type
+.AT spec trm
+.IL VSTU store lnk lnk stc
+Vector store (unaligned)
+lnk1 - destination
+lnk2 - source
+stc  - its vector data type
+.AT spec trm
+.IL ADJARR misc sym sym sym
+This ILM is emitted after every "entry" if the entry has
+adjustable array arguments. This ILM is used control any additional
+setup necessary for the array bounds information of the entry's
+adjustable arrays. This ILM will do nothing if the this is for
+the primary entry and code has already been emitted for its adjustable
+arrays.
+\'sym1' entry symbol
+\'sym2' label of the additional code
+\'sym3' label to which the code branches (returns)
+.AT spec trm
+.IL VFENTER misc sym
+Enter a "function" which computes the value of an expression in a
+variable format item (<expr>).  This ILM is "closed" by a VFRET.
+.AT spec trm
+.IL VFRET misc lnk
+Return the value of an expression in a variable format item (<expr>).
+.AT spec trm
+.IL PRAGMA misc stc1 stc2 stc3
+pragma/directive ILM
+.IL FLOATK arth lnk
+Convert long long to real number (REAL and FLOAT intrinsics).
+.AT i8
+.OP FLOATK r p1
+.IL FLOATUK arth lnk
+Convert unsigned long long to real
+.AT spec i8
+.OP FLOATK r t1
+.IL DFLOATK arth lnk
+Convert long long to double precision (DFLOAT intrinsic).
+.AT i8
+.OP DFLOATK r p1
+.IL DFLOATUK arth lnk
+Convert unsigned long long integer to double precision (DFLOAT intrinsic).
+.AT spec i8
+.OP DFLOATUK r p1
+.IL KNEG arth lnk
+Integer negation.
+.AT i8
+.OP KNEG r p1
+.IL UKNEG arth lnk
+Integer negation.
+.AT i8
+.OP UKNEG r p1
+.IL KADD arth lnk lnk
+.AT i8
+.OP KADD r p1 p2
+.IL UKADD arth lnk lnk
+.AT i8
+.OP UKADD kr p1 p2
+.IL KSUB arth lnk lnk
+.AT i8
+.OP KSUB r p1 p2
+.IL UKSUB arth lnk lnk
+.AT i8
+.OP UKSUB kr p1 p2
+.IL KMUL arth lnk lnk
+.AT i8
+.OP KMUL r p1 p2
+.IL UKMUL arth lnk lnk
+.AT i8
+.OP UKMUL kr p1 p2
+.IL KDIV arth lnk lnk
+.AT i8
+.OP KDIV r p1 p2
+.IL UKDIV arth lnk lnk
+.AT i8
+.OP UKDIV kr p1 p2
+.IL IDIVZ arth lnk lnk
+Signed integer divide where divide by zero does not fault.
+.OP IDIVZ r p1 p2
+.IL UIDIVZ arth lnk lnk
+Unsigned integer divide where divide by zero does not fault.
+.OP UIDIVZ r p1 p2
+.IL KDIVZ arth lnk lnk
+Signed integer64 divide where divide by zero does not fault.
+.AT i8
+.OP KDIVZ r p1 p2
+.IL UKDIVZ arth lnk lnk
+Unsigned integer64 divide where divide by zero does not fault.
+.AT i8
+.OP UKDIVZ kr p1 p2
+.IL KTOI intr lnk lnk
+Exponentiation - integer to an integer power.
+.AT i8
+.OP KPOWI r p1 p2
+.IL KTOK intr lnk lnk
+Exponentiation - integer to an integer power.
+.AT i8
+.OP KPOWK r p1 p2
+.IL RTOK intr lnk lnk
+.OP FPOWK r p1 p2
+.IL DTOK intr lnk lnk
+.OP DPOWK r p1 p2
+.IL CTOK intr lnk lnk
+.AT spec
+.IL CDTOK intr lnk lnk
+.AT spec dcmplx
+.IL KCMP arth lnk lnk
+.AT spec
+.IL UKCMP arth lnk lnk
+.AT spec i8
+.IL KABS arth lnk
+.AT i8
+.OP KABS r p1
+.IL KFIX arth lnk
+Convert real number to integer*8 (INT and IFIX intrinsics).
+.AT i8
+.OP FIXK r p1
+.IL UKFIX arth lnk
+Convert real number to integer*8 (INT and IFIX intrinsics).
+.AT spec i8
+.OP FIXUK r p1
+.IL KDFIX arth lnk
+Convert double precision floating point number to integer*8.
+.AT i8
+.OP DFIXK r p1
+.IL UKDFIX arth lnk
+Convert double precision floating point number to integer*8.
+.AT spec i8
+.OP DFIXUK r p1
+.IL ITOI8 arth lnk
+Convert int to long (long long)
+Convert integer to integer*8
+.AT i8
+.OP IKMV kr p1
+.IL ITOUI8 arth lnk
+Convert long to unsigned long (unsigned long long)
+.AT i8
+.OP IKMV kr p1
+.IL UITOI8 arth lnk
+Convert unsigned int to long (long long)
+.AT i8
+.OP UIKMV kr p1
+.IL UITOUI8 arth lnk
+Convert unsigned int to unsigned long (unsigned long long)
+.AT i8
+.OP UIKMV kr p1
+.IL I8TOI arth lnk
+Convert long long to long
+Convert integer*8 to integer*4
+.OP KIMV r p1
+.IL I8TOUI arth lnk
+Convert long long to long
+.OP KIMV r p1
+.IL UI8TOI arth lnk
+Convert long long to long
+.OP KIMV r p1
+.IL UI8TOUI arth lnk
+Convert long long to long
+.OP KIMV r p1
+.IL KNINT intr lnk
+NINT intrinsic (converts real to integer*8).
+.AT i8
+.OP NULL t1 iv0
+.OP DASP t1 p1 sp(0) t1
+.OP QJSR t2 =e'%l%__mth_i_knint t1
+.OP DFRKR r t2 krret
+.IL KDNINT intr lnk
+KIDNINT intrinsic (converts double to integer).
+.AT i8
+.OP NULL t1 iv0
+.OP DADP t1 p1 dp(0) t1
+.OP QJSR t2 =e'%l%__mth_i_kidnnt t1
+.OP DFRKR r t2 krret
+.IL KMAX arth lnk lnk
+.AT i8
+.OP KMAX r p1 p2
+.IL UKMAX arth lnk lnk
+.AT i8
+.OP UKMAX r p1 p2
+.IL KMIN arth lnk lnk
+.AT i8
+.OP KMIN r p1 p2
+.IL UKMIN arth lnk lnk
+.AT i8
+.OP UKMIN r p1 p2
+.IL KDIM intr lnk lnk
+.AT i8
+.OP NULL t1 iv0
+.OP DAKR t1 p2 dr(1) t1
+.OP DAKR t2 p1 dr(0) t1
+.OP QJSR t2 =e'ftn_i_kidim t2
+.OP DFRKR r t2 krret
+.IL KMOD arth lnk lnk
+Integer remainder (MOD intrinsic).
+.AT i8
+.OP KMOD r p1 p2
+.IL UKMOD arth lnk lnk
+Integer remainder (MOD intrinsic).
+.AT i8
+.OP KUMOD r p1 p2
+.IL MODZ arth lnk lnk
+Integer remainder where divide by zero does not fault.
+.OP MODZ r p1 p2
+Integer remainder (MODZ intrinsic).
+.OP MODZ r p1 p2
+.IL UIMODZ arth lnk lnk
+Unsigned integer mod where divide by zero does not fault.
+.OP UIMODZ r p1 p2
+.IL KMODZ arth lnk lnk
+Integer64 remainder where divide by zero does not fault.
+.AT i8
+.OP KMODZ r p1 p2
+.IL UKMODZ arth lnk lnk
+Unsigned integer64 remainder where divide by zero does not fault.
+.AT i8
+.OP KUMODZ r p1 p2
+.IL KSIGN arth lnk lnk
+.AT i8
+.OP KCMPZ t1 p2 lt
+.OP KABS t2 p1
+.OP KNEG t3 t2
+.OP KSELECT r t1 t2 t3
+.IL KAND arth lnk lnk
+Bitwise logical and of two 64 bit values (AND intrinsic).
+.AT i8
+.OP KAND r p1 p2
+.IL KOR arth lnk lnk
+Bitwise logical or of two 64 bit values (OR intrinsic).
+.AT i8
+.OP KOR r p1 p2
+.IL KXOR arth lnk lnk
+Bitwise exclusive or of two 64 bit values (^ operator / EOR intrinsic).
+.AT i8
+.OP KXOR r p1 p2
+.IL KNOT arth lnk
+Bitwise negation of 64 bit signed value (NOT intrinsic).
+.AT i8
+.OP KNOT r p1
+.IL UKNOT arth lnk
+Bitwise negation of 64 bit signed value (NOT intrinsic).
+.AT i8
+.OP UKNOT r p1
+.IL KBITS arth lnk lnk lnk
+IBITS(p1, p2, p3) - extract p3 bits beginning at p2 from p1.
+.nf
+r = p3 != 0 ? (p1 >> p2) & (-1 >> (64 - p3)) : 0
+.fi
+.AT i8
+.OP KIMV t1 p2
+.OP KARSHIFT t1 p1 t1
+.OP KCON t2 =ll'-1
+.OP KIMV t3 p3
+.OP ICON t4 =i'64
+.OP ISUB t4 t4 t3
+.OP KURSHIFT t5 t2 t4
+.OP KAND t6 t1 t5
+.OP KCMPZ t7 p3 eq
+.OP KSELECT r t7 t6 p3
+.IL KBSET arth lnk lnk
+IBSET(p1, p2) - set bit p2 of p1 to 1.
+.nf
+r = p1 | (1 << p2)
+.fi
+.AT i8
+.OP KCON t1 =ll'1
+.OP KIMV t2 p2
+.OP KLSHIFT t2 t1 t2
+.OP KOR r p1 t2
+.IL KBTEST arth lnk lnk
+BTEST(p1, p2) - .TRUE. if bit p2 of p1 is 1.
+.nf
+r = (p1 & (1 << p2)) != 0
+.fi
+.AT i8
+.OP KCON t1 =ll'1
+.OP KIMV t2 p2
+.OP KLSHIFT t2 t1 t2
+.OP KAND t3 p1 t2
+.OP KCMPZ t4 t3 ne
+.OP IKMV r t4
+.IL KBCLR arth lnk lnk
+IBLCR(p1, p2) - clear bit p2 of p1.
+.nf
+r = p1 & ~(1 << p2)
+.fi
+.AT i8
+.OP KCON t1 =ll'1
+.OP KIMV t2 p2
+.OP KLSHIFT t2 t1 t2
+.OP KNOT t3 t2
+.OP KAND r p1 t3
+.IL KSHFTC intr lnk lnk lnk
+ISHFTC(p1, p2, p3) - circularly shift the rightmost p3 bits of p1
+by p2.
+.AT i8
+.OP NULL t1 iv0
+.OP KIMV t2 p3
+.OP DAIR t1 t2 dr(2) t1
+.OP KIMV t2 p2
+.OP DAIR t2 t2 dr(1) t1
+.OP DAKR t3 p1 dr(0) t2
+.OP QJSR  t1 =e'%l%ftn_i_kishftc t3
+.OP DFRKR r t1 krret
+.FL KULSHIFT arth lnk lnk
+Left shift operator (<<) - first operand is 64 bit unsigned integer
+value and second is a positive 64-bit integer.
+.AT i8
+.OP KIMV t1 p2
+.OP KLSHIFT r p1 t1
+.CL KULSHIFT arth lnk lnk
+Left shift operator (<<) - first operand is 64 bit unsigned integer
+value and second is a 32-bit positive integer.
+.AT i8
+.OP KLSHIFT r p1 p2
+.FL KURSHIFT arth lnk lnk
+Right shift operator (>>).  First operand is 64 bit unsigned integer
+value and second is assumed to be a positive 64-bit integer.
+.AT i8
+.OP KIMV t1 p2
+.OP KURSHIFT r p1 t1
+.CL KURSHIFT arth lnk lnk
+Right shift operator (>>).  First operand is 64 bit unsigned integer
+value and second is assumed to be a positive 32-bit integer.
+.AT i8
+.OP KURSHIFT r p1 p2
+.IL KAIF branch lnk sym1 sym2 sym3
+.AT spec trm
+.OP ICJMPZ null p1 le v2
+.OP ICJMPZ null p1 eq v3
+.OP ICJMPZ null p1 gt v4
+.IL KLD load lnk
+.AT spec i8
+.IL KLLD load lnk
+Load logical value.
+.AT spec i8
+.IL KST store lnk lnk
+.AT spec trm
+.IL KLST store lnk lnk
+.AT spec trm
+.FL KFUNC proc n sym lnk*
+.AT spec trm i8
+.IL KFUNCA proc n stc lnk lnk*
+.AT spec trm i8
+.IL PKFUNCA proc n stc sym lnk lnk*
+Call a function which returns an integer*8 through a procedure pointer.
+.AT spec trm i8
+.IL KVFUNCA proc n stc sym lnk sym lnk*
+.AT spec trm i8
+.CL KFUNC proc n lnk lnk*
+.AT spec i8
+.IL KCON cons sym
+.AT spec i8
+.IL KISHFT intr lnk lnk
+ISHFT intrinsic - first operand is 64 bit value and second is positive or
+negative integer shift count. If the shift count <= -64 or >=64, the
+result is 0.
+.AT i8
+.OP KISHFT r p1 p2
+.IL DPREF8 misc lnk
+This ILM is generated when integer*8/logical*8 arguments
+are passed in certains contexts and where the address needs
+to be adjusted by expand.
+.AT spec
+.IL LNOT8 arth lnk
+Logical negation.  The link must be to an expression of type
+LOGICAL; depends on internal representation of logical values (VAX or
+UNIX)
+.AT spec i8
+.IL LNOP8 arth lnk
+Logical noop.  Used by semant when space must be reserved
+for a potential LNOT ILM.  'lnk' points to a logical
+expression.
+.AT i8 spec
+.OP MVIR r p1 iv-1
+.IL LAND8 arth lnk lnk
+Logical .AND. operation.
+.AT i8
+.OP KAND r p1 p2
+.IL LOR8 arth lnk lnk
+Logical .OR. operation.
+.AT i8
+.OP KOR r p1 p2
+.IL LEQV8 arth lnk lnk
+Logical .EQV. operation.
+.AT i8
+.OP KCMP t1 p1 p2 eq
+.OP IKMV r t1
+.IL LNEQV8 arth lnk lnk
+Logical .NEQV. operation.
+.AT i8
+.OP KXOR r p1 p2
+.IL EQ8 arth lnk
+Generate true if compare is equal (lnk locates a compare FLM)
+.AT spec i8
+.IL NE8 arth lnk
+Generate true if compare is not equal
+.AT spec i8
+.IL LT8 arth lnk
+Generate true if compare is less than
+.AT spec i8
+.IL GE8 arth lnk
+Generate true if compare is greater than or equal to
+.AT spec i8
+.IL LE8 arth lnk
+Generate true if compare is less than or equal to
+.AT spec i8
+.IL GT8 arth lnk
+Generate true if compare is greater than
+.AT spec i8
+.IL K2D arth lnk
+Cast a 64-bit integer to a 64-bit unsigned integer (dword).
+.OP MVKR r p1 iv-1
+.IL K2R arth lnk
+Cast a 64-bit integer to a single precision real.
+.OP KR2SP r p1
+.IL K2I arth lnk
+Cast an integer to a 64-bit integer.
+.OP KIMV r p1
+.IL D2K arth lnk
+Cast a 64-bit unsigned integer (dword) to a 64-bit integer.
+.AT i8
+.OP MVKR r p1 iv-1
+.IL R2K arth lnk
+Cast a single precision real to a 64-bit integer.
+.AT i8
+.OP SP2IR r rp1
+.IL I2K arth lnk
+Cast an integer to a 64-bit integer.
+.AT i8
+.OP UIKMV r p1
+.IL KEQV arth lnk lnk
+.AT i8
+Bitwise complement of the exclusive or of two 32 bit values
+.OP KXOR t1 p1 p2
+.OP KNOT r t1
+.IL UKLD load lnk
+Load unsigned double integer
+.AT spec i8
+.IL UKST store lnk lnk
+.AT spec i8 trm
+.IL KAST store lnk lnk
+Store address scalar.
+This ILM is used for an ASSIGN statement where varref is integer*8
+'lnk' points to an ACON ILM.
+.AT spec trm
+.IL KLEN fstr lnk
+Length of a character expression, returned as integer*8.
+.AT spec i8
+.IL KINDEX fstr lnk lnk
+KINDEX intrinsic (inputs are two character strings and result is an integer*8).
+.AT spec i8
+.IL UI2K arth lnk
+Cast an unsigned integer to a 64-bit integer.
+.AT i8
+.OP UIKMV r p1
+.IL BLEADZ intr lnk
+8-bit integer LEADZ intrinsic
+.OP ILEADZI r p1 iv0
+.IL SLEADZ intr lnk
+16-bit integer LEADZ intrinsic
+.OP ILEADZI r p1 iv1
+.IL ILEADZ intr lnk
+32-bit integer LEADZ intrinsic
+.OP ILEADZ r p1
+.IL KLEADZ intr lnk
+64-bit integer LEADZ intrinsic
+.AT i8
+.OP KLEADZ r p1
+.IL BTRAILZ intr lnk
+8-bit integer TRAILZ intrinsic
+.OP ITRAILZI r p1 iv0
+.IL STRAILZ intr lnk
+16-bit integer TRAILZ intrinsic
+.OP ITRAILZI r p1 iv1
+.IL ITRAILZ intr lnk
+32-bit integer TRAILZ intrinsic
+.OP ITRAILZ r p1
+.IL KTRAILZ intr lnk
+64-bit integer TRAILZ intrinsic
+.AT i8
+.OP KTRAILZ r p1
+.IL BPOPCNT intr lnk
+8-bit integer POPCNT intrinsic
+.OP IPOPCNTI r p1 iv0
+.IL SPOPCNT intr lnk
+16-bit integer POPCNT intrinsic
+.OP IPOPCNTI r p1 iv1
+.IL IPOPCNT intr lnk
+32-bit integer POPCNT intrinsic
+.OP IPOPCNT r p1
+.IL KPOPCNT intr lnk
+64-bit integer POPCNT intrinsic
+.AT i8
+.OP KPOPCNT r p1
+.IL BPOPPAR intr lnk
+8-bit integer POPPAR intrinsic
+.OP IPOPPARI r p1 iv0
+.IL SPOPPAR intr lnk
+16-bit integer POPPAR intrinsic
+.OP IPOPPARI r p1 iv1
+.IL IPOPPAR intr lnk
+32-bit integer POPPAR intrinsic
+.OP IPOPPAR r p1
+.IL KPOPPAR intr lnk
+64-bit integer POPPAR intrinsic
+.AT i8
+.OP KPOPPAR r p1
+.IL ENLAB misc
+Marks the position of the first executable statement within
+a function: Compiler generated
+.AT spec trm
+.IL BMPSCOPE SMP sym
+Begin scope parallel/clause region.
+.nf
+sym - symbol table entry to scope ST_BLOCK for this region
+.fi
+.AT spec trm
+.IL EMPSCOPE SMP
+End scope for parallel/clause region.
+Always matches a BMPSCOPE ilm.
+.AT spec trm
+.IL BPAR SMP lnk
+Begin parallel region.
+.nf
+lnk - link to logical expression (inhibit parallel flag):
+0       -- parallel execution
+nonzero -- serial execution
+.fi
+.AT spec trm
+.IL BPARD SMP lnk
+Begin nested parallel region.
+.nf
+lnk - link to logical expression (inhibit parallel flag):
+0       -- parallel execution
+nonzero -- serial execution
+.fi
+.AT spec trm
+.IL EPARD SMP
+End nested parallel region.
+Always matches a BPARD ilm.
+.AT spec trm
+.IL EPAR SMP
+End parallel region.
+Always matches a BPAR ilm.
+.AT spec trm
+.IL BCS SMP
+Begin critical section.
+.AT spec trm
+.IL ECS SMP
+End critical section.
+Always matches a BCS ilm.
+.AT spec trm
+.IL BARRIER SMP
+Barrier; thread synchronization point.
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_barrier2 t1
+.IL PDO SMP sym stc
+Marks the block associated with label as a parallel loop.
+\'sym' - symbol table pointer to the label.
+'stc' - encoded schedule information: stc&0xff          (stc>>8)&Oxff
+0 static	  0 chunk not specified
+0 static	  1 chunk is 1
+0 static	  1 chunk is 'n'
+1 dynamic         NA
+2 guided          NA
+3 interleaved     NA
+4 runtime         NA
+.AT spec trm
+.IL BSECTIONS SMP sym
+Begin SECTIONS directive.
+.nf
+
+The BSECTIONS, SECTION, and ESECTIONS ILMs define a sections
+control structure.  The sequence of ILMs and generated code
+appear as:
+BSECTIONS L1
+if (_mp_lcpu2() .ne. 0) goto L1
+<section 0>
+SECTION   1 L2 L1
+L1:
+if (_mp_lcpu2() .ne. mod(1, _mp_ncpus2()) goto L2
+<section 1>
+SECTION   2 L3 L2
+L2:
+if (_mp_lcpu2() .ne. mod(2, _mp_ncpus2()) goto L3
+<section 2>
+...
+SECTION   n LL Ln
+Ln:
+if (_mp_lcpu2() .ne. mod(n, _mp_ncpus2()) goto LL
+<section n>
+ESECTIONS LL
+LL:
+...
+
+sym - symbol table pointer of the label of the next lexical section
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP JSR t2 =e'_mp_lcpu2 t1
+.OP DFRIR t2 t2 drret
+.OP ICJMPZ null t2 ne v1
+.IL SECTION SMP lnk sym1 sym2
+SECTION directive.
+.nf
+lnk  - ILM representing the current section number.
+sym1 - symbol table pointer of the label of the next lexical section
+sym2 - symbol table pointer of the label which labels this section.
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP JSR t2 =e'_mp_lcpu2 t1
+.OP DFRIR t2 t2 drret
+.OP JSR t3 =e'_mp_ncpus2 t1
+.OP DFRIR t3 t3 drret
+.OP MOD t3 p1 t3
+.OP ICJMP null t3 t2 ne v2
+.IL LSECTION SMP lnk sym1 sym2
+LSECTION represent the end of last section for llvm target.
+.nf
+lnk  - ILM representing the current section number.
+sym1 - symbol table pointer of the label of the next lexical section
+sym2 - symbol table pointer of the label which labels this section.
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP JSR t2 =e'_mp_lcpu2 t1
+.OP DFRIR t2 t2 drret
+.OP JSR t3 =e'_mp_ncpus2 t1
+.OP DFRIR t3 t3 drret
+.OP MOD t3 p1 t3
+.OP ICJMP null t3 t2 ne v2
+.IL ESECTIONS SMP sym
+End SECTIONS directive; always matches a BSECTIONS.
+.nf
+sym - symbol table pointer of the label of the end of the
+sections/endsections control structure.
+.fi
+.AT spec trm
+.IL MASTER SMP sym
+Begin master section.
+.nf
+sym - symbol table pointer to the end of section label.
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP JSR t2 =e'_mp_lcpu2 t1
+.OP DFRIR t2 t2 drret
+.OP ICJMPZ null t2 ne v1
+.IL EMASTER SMP sym
+End master section.
+Always matches a MASTER ilm.
+.nf
+sym - symbol table pointer to the end of section label.
+.fi
+.AT spec trm
+.IL SINGLE SMP lnk sym
+Single directive.
+.nf
+lnk - ILM representing the current single section number.
+sym - symbol table pointer to the end of section label.
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP JSR t2 =e'_mp_lcpu2 t1
+.OP DFRIR t2 t2 drret
+.OP JSR t3 =e'_mp_ncpus2 t1
+.OP DFRIR t3 t3 drret
+.OP MOD t3 p1 t3
+.OP ICJMP null t3 t2 ne v2
+.IL ESINGLE SMP sym
+End single section.
+Always matches a SINGLE ilm.
+.nf
+sym - symbol table pointer to the end of section label.
+.fi
+.AT spec trm
+.IL LCPU SMP
+Intrinsic for computing the cpu/thread number - only works
+within the context of BPAR/EPAR.
+.AT spec
+.OP NULL t1 iv0
+.OP JSR t2 =e'_mp_lcpu t1
+.OP DFRIR r t2 drret
+.IL LCPU2 SMP
+.AT spec
+Intrinsic for computing the cpu/thread number - more general
+version of LCPU.
+.IL LCPU3 SMP
+.AT spec
+Intrinsic for computing the cpu/thread number to be used as the subscript
+of a threadprivate's vector.
+.IL NCPUS SMP
+.AT spec
+Intrinsic for computing the number of cpus/threads - only works
+within the context of BPAR/EPAR.
+.OP NULL t1 iv0
+.OP JSR t2 =e'_mp_ncpus t1
+.OP DFRIR r t2 drret
+.IL NCPUS2 SMP
+.AT spec
+Intrinsic for computing the number of cpus/threads - more general
+version of NCPUS.
+.IL PRE_TLS_COPY SMP sym
+Prepare the copyin for threadprivate in TLS. Thread that comes upon the
+parallel  region must save tls-threaprivate address.
+.nf
+sym - symbol of the tls-threadprivate that is to be copied.
+.fi
+.AT spec trm
+.IL BCOPYIN SMP
+Begin a copyin block.
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_copyin_init t1
+.IL COPYIN SMP sym
+Copyin a threadprivate common block or member
+.nf
+sym - symbol table entry of the object to be copied in; if it's
+ST_CMBLK, the whole common block is copied in.
+.fi
+.AT spec trm
+.IL COPYIN_A SMP sym lnk
+Copyin a threadprivate allocatable
+.nf
+sym - symbol table entry of the allocatable object to be copied in.
+lnk - size of the allocatable
+.fi
+.AT spec trm
+.IL COPYIN_CL SMP sym1 sym2
+Copyin a threadprivate common block or member
+.nf
+sym1 - symbol table entry of the object to be copied in; if it's
+ST_CMBLK, the whole common block is copied in.
+sym2 -  symbol table entry of the assignment operator routine
+.fi
+.AT spec trm
+.IL ECOPYIN SMP
+End a copyin block.
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_copyin_term t1
+.IL BCOPYPRIVATE SMP  lnk
+Begin a copyprivate block.
+.nf
+lnk - thread number of the thread from which the value(s) are to be copied
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_copypriv_init t1
+.IL COPYPRIVATE_P SMP lnk1 lnk2
+Copyprivate (out) a private variables
+.nf
+lnk1 - thread number of the thread from which the value(s) are to be copied
+lnk2 - link to the data item that is the object of the COPYPRIVATE
+.fi
+.AT spec trm
+.IL COPYPRIVATE_PA SMP lnk1 lnk2 lnk3
+Copyprivate (out) a private allocatable variable
+.nf
+lnk1 - thread number of the thread from which the value(s) are to be copied
+lnk2 - link to the data item that is the object of the COPYPRIVATE
+lnk3 - size of the allocatable
+.fi
+.AT spec trm
+.IL COPYPRIVATE_CL_P SMP lnk1 lnk2 sym
+Copyprivate (out) a C++ private variable of type class
+.nf
+lnk1 - thread number of the thread from which the value(s) are to be copied
+lnk2 - link to the data item that is the object of the COPYPRIVATE
+sym - symbol table enttry of the assignment operator routine
+.fi
+.AT spec trm
+.IL COPYPRIVATE SMP lnk sym
+Copyprivate (out) a threadprivate common block, common block member, or variable
+.nf
+lnk - thread number of the thread from which the value(s) are to be copied
+sym - symbol table entry of the object to be copied out; if it's
+ST_CMBLK, the whole common block is copied out.
+.fi
+.AT spec trm
+.IL COPYPRIVATE_CL SMP lnk1 sym1 sym2
+Copyprivate (out) a threadprivate C++ variable of type class
+.nf
+lnk1 - thread number of the thread from which the value(s) are to be copied
+sym1 - symbol table entry of the class object to be copied out
+sym2 - link to the ilms loading the assignment operator routine
+.fi
+.AT spec trm
+.IL ECOPYPRIVATE SMP lnk
+End a copyprivate block.
+.nf
+lnk - thread number of the thread from which the value(s) are to be copied
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_copypriv_term t1
+.IL FLUSH SMP
+Flush to memory
+.AT spec trm
+.IL P SMP sym
+P(semaphore) - begin a critical section.
+.nf
+sym - symbol table entry of a semaphore variable
+.fi
+.AT spec trm
+.IL V SMP sym
+V(semaphore) - end a critical section.
+.nf
+sym - symbol table entry of a semaphore variable
+.fi
+.AT spec trm
+.IL PREFETCH misc lnk stc
+Cache prefetch.
+.nf
+lnk1 - ILM link to an address
+stc2 - prefetch flag (for future use).
+.fi
+.AT spec trm
+.OP PREFETCH null p1
+.IL BBND misc sym stc
+BBND begins the ILMs of the assignments of the bounds
+of an adjustable array when it's unknown by
+semant that the array is dummy or allocatable
+at the time the array is declared.
+This could occur when an adjustable array is declared
+before its appearance in an ENTRY statement.
+If the array is a dummy argument,
+the expander will skip the ensuing bounds assignments.
+.nf
+sym - symbol table entry of an array with adjustable bounds
+stc - number of words in the ensuing block of ILMs
+representing the adjustable bounds.
+.fi
+.AT spec trm
+.IL FILE misc stc stc stc
+FILE gives file information when inlining a file.
+First operand is the line number.
+Second operand is the FIH index of the current file (source or include file).
+Third operand is the global ILM index.
+.AT spec trm
+.IL ALLOC arth lnk
+Allocate memory for a C or C++ variable length array.
+.OP ALLOC r p1
+.IL DEALLOC misc lnk
+Deallocate memory that was allocated by ALLOC.
+.AT spec trm
+.IL ALLOCA arth lnk lnk sym stc
+Use the alloca builtin to create stack space.
+.nf
+lnk - number of elements
+lnk - size (units of bytes) of the base type
+sym - symbol table entry of the automatic array
+stc - flags: 0 - function level; 1 - from inliner
+.fi
+.AT spec
+.IL DEALLOCA misc lnk sym1 sym2 stc
+Deallocate memory that was allocated by ALLOCA.
+Generally, this is a no-op, but if IM_ALLOCA reverts to using
+the heap, need to explicitly free.
+lnk  - load of array's pointer variable
+sym1 - symbol table entry of the automatic array
+sym2 - symbol table entry of the deallocation routine
+stc - flags: 0 - function level; 1 - from inliner
+.AT spec trm
+.IL BPARN SMP lnk lnk
+Begin parallel region with num_threads.
+.nf
+lnk1 - link to logical expression (inhibit parallel flag):
+0       -- parallel execution
+nonzero -- serial execution
+lnk2 - link to the num_threads values
+.fi
+.AT spec trm
+.IL BPARA SMP lnk lnk stc1 stc2
+Begin parallel region with num_threads and proc_bind.
+.nf
+lnk1 - link to logical expression (inhibit parallel flag):
+0       -- parallel execution
+nonzero -- serial execution
+lnk2 - link to the num_threads values
+stc1 - bit vector:
+0x01 - proc_bind is present
+0x02 - num_thread is presetnt
+0x04 - if is present
+stc2: 
+0x0  - proc_bind - false
+0x02 - proc_bind - master
+0x03 - proc_bind - close
+0x04 - proc_bind - spread
+.fi
+.AT spec trm
+.IL EPARN SMP
+End parallel region.
+Always matches a BPARN ilm.
+.AT spec trm
+.IL BLOCK misc sym
+Beginning of a lexical block; sym is the symbol table pointer to the
+block symbol.
+.AT spec trm
+.FL PCMP arth lnk lnk
+Pointer comparison for Fortran.
+.AT spec
+.IL PRAGMASYM misc n stc stc sym*
+Handles a pragma with a list of symbols.
+First stc is the pragma identifier, 2nd stc is the scope.
+.AT spec trm
+.IL PRAGMAEXPR misc n stc stc lnk stc*
+Handles a pragma with an expression argument
+First stc is the pragma identifier, 2nd stc is the scope.
+Link is the expression.
+List of stc gives any other arguments.
+.AT spec trm
+.IL PRAGMASYMEXPR misc n stc stc sym lnk*
+Handles a pragma with a symbol and a number of expression arguments.
+First stc is the pragma identifier, 2nd stc is the scope.
+Sym is the symbol.
+Links point to the arguments.
+.AT spec trm
+.IL PRAGMAGEN misc n stc stc stc*
+Handles a pragma with no expression and no symbol arguments.
+First stc is the pragma identifier, 2nd stc is the scope.
+List of stc gives any other arguments.
+.AT spec trm
+.IL MPLOOP SMP sym sym sym sym sym stc stc
+Begin parallel do/loop
+sym - lower bound
+sym - upper bound
+sym - stride
+sym - chunk
+sym - plast
+stc -  dtype of loop bound type
+stc -  schedule type
+.AT spec trm
+.IL MPDISTLOOP SMP sym sym sym sym sym sym stc stc
+Begin parallel do/loop
+sym - lower bound
+sym - upper bound
+sym - stride
+sym - chunk
+sym - plast
+sym - upperD
+stc -  dtype of loop bound type
+stc -  schedule type
+.AT spec trm
+.IL BTASKDUP SMP
+Begin taskdup routine
+.AT spec trm
+.IL ETASKDUP SMP
+End taskdup routine
+.AT spec trm
+.IL MPTASKLOOP SMP sym sym sym sym stc
+Begin taskloop
+sym - lower bound
+sym - upper bound
+sym - stride
+sym - last iteration
+stc -  dtype of loop bound type
+.AT spec trm
+.IL TASKLASTPRIV SMP sym
+taskloop lastprivate offset on task structure
+sym - offset constant
+.AT spec trm
+.IL MPLOOPFINI SMP stc stc
+Begin parallel do/loop
+stc - dtype of loop bound type
+stc - schedule type
+.AT spec trm
+.IL MPSCHED SMP sym sym sym sym stc
+Begin parallel do/loop schedule
+sym - lower bound
+sym - upper bound
+sym - stride
+sym - plast
+stc - dtype of loop bound type
+.AT spec trm
+.IL MPBORDERED SMP
+Begin KMPC ordered region
+.AT spec trm
+.IL MPEORDERED SMP
+End KMPC ordered region
+.AT spec trm
+.IL BPDO SMP
+Begin parallel do/loop
+.AT spec trm
+.IL EPDO SMP
+End parallel do/loop
+Always matches a BPDO ilm.
+.AT spec trm
+.IL CANCEL SMP sym stc lnk
+Cancel construct
+.nf
+sym - symbol table pointer to the end of construct label.
+stc - bit vector:
+0x01 - parallel
+0x02 - loop
+0x03 - sections
+0x04 - taskgroup
+lnk - link to the logical expression in the if clause; if the clause
+is absent, this field is 1 - always call cancel.
+.fi
+.AT spec trm
+.IL CANCELPOINT SMP sym stc
+Cancellation construct
+.nf
+sym - symbol table pointer to the end of construct label.
+stc - bit vector:
+0x01 - parallel
+0x02 - loop
+0x03 - sections
+0x04 - taskgroup
+.fi
+.AT spec trm
+.IL TASKFIRSTPRIV SMP sym sym
+Task firstprivate
+sym - symbol table pointer to the shared variable.
+sym - symbol table pointer to the private copy.
+.AT spec trm
+.IL BTASK SMP sym stc lnk lnk
+Begin task
+Always matches a ETASK ilm
+.nf
+sym - symbol table pointer to the end of task label.
+If this is llvm and C, this will actually be a symbol
+table pointer to the flags variable that should already be initialized.
+stc - bit vector:
+0x01 - untied clause is present
+0x02 - if clause is present
+lnk1 - link to the logical expression in the if clause; if the clause
+is absent, this field is 'null' (BOS_SIZE)
+lnk2 - link to the logical expression in the final clause; if the clause
+is absent, this field is 'null'
+.fi
+.AT spec trm
+.IL BTASKLOOP SMP sym stc lnk lnk lnk lnk
+Begin taskloop
+Always matches a ETASKLOOP ilm
+.nf
+sym - symbol table pointer to the end of taskloop label.
+If this is llvm and C, this will actually be a symbol
+table pointer to the flags variable that should already be initialized.
+stc - bit vector:
+0x01 - untied clause is present
+0x02 - if clause is present
+0x20 - if final is present
+0x80 - if mergeable is present
+0x1000 - nogroup clause is present
+0x2000 - grainsize clause is present
+0x4000 - num_tasks clause is present
+lnk1 - link to the logical expression in the if clause; if the clause
+is absent, this field is 'null' (BOS_SIZE)
+lnk2 - link to the logical expression in the final clause; if the clause
+is absent, this field is 'null'
+lnk3 - link to priority expression, if clause is absent, this file is 0
+lnk4 - link to grainsize or num_tasks, if clause is abssent, this field 
+.fi
+.AT spec trm
+.IL ETASKGROUP SMP
+Begin Task group.
+.AT spec trm
+.IL TASKGROUP SMP
+End of Task group.
+.AT spec trm
+.IL ETEAMS SMP
+End of Teams register.
+.AT spec trm
+.IL BTEAMS SMP
+Teams register
+.AT spec trm
+.IL BTEAMSN SMP lnk lnk
+Teams register
+lnk1 - link to num_teams expression.
+lnk2 - link to thread limit expression.
+.AT spec trm
+.IL ETARGETDATA SMP
+End of target data
+.AT spec trm
+.IL BTARGETDATA SMP lnk
+Begin target data
+.nf
+lnk - link to logical expression (inhibit target data flag):
+0       -- target data execution on host(device is host)
+nonzero -- target data execution on device
+.fi
+.AT spec trm
+.IL BTARGETUPDATE SMP lnk stc
+Begin target update
+.nf
+lnk - link to logical expression (inhibit target update flag):
+0       -- nop
+nonzero -- target update execution
+stc - flag for target [inout|out|in|nowait|if]
+.fi
+.AT spec trm
+.IL TARGETUPDATE SMP n stc lnk lnk*
+Handles a to/from clause from target update with a link to a symbol and a number of expression arguments.
+.nf
+n - number of extra args
+stc - map type
+lnk - symbol to be mapped
+.fi
+.AT spec trm
+.IL ETARGETUPDATE SMP
+End target update
+.AT spec trm
+.IL TARGETENTERDATA SMP lnk stc
+Begin target enter data
+.nf
+lnk - link to logical expression (inhibit target enter data flag):
+0       -- target enter data execution on host(device is host)
+nonzero -- target enter execution on device
+stc - flag for target [inout|out|in|nowait|if]
+.fi
+.AT spec trm
+.IL TARGETEXITDATA SMP lnk stc
+Begin target exit data
+.nf
+lnk - link to logical expression (inhibit target exit data flag):
+0       -- target exit data execution on host(device is host)
+nonzero -- target exit data execution on device
+stc - flag for target [inout|out|in|nowait|if]
+.fi
+.AT spec trm
+.IL ETARGET SMP
+End of Target register.
+.AT spec trm
+.IL BTARGET SMP lnk stc
+Target register
+.nf
+lnk - link to logical expression (inhibit target exit data flag):
+0       -- target exit data execution on host(device is host)
+nonzero -- target exit data execution on device
+stc - flag for target [inout|out|in|nowait|if]
+.fi
+.AT spec trm
+.IL EDISTRIBUTE SMP
+End of Distribute register.
+.AT spec trm
+.IL BDISTRIBUTE SMP
+Distribute register
+.AT spec trm
+.IL ETASKREG SMP
+End of Task register used in llvm target to mark the end of task region.
+.AT spec trm
+.IL TASKREG SMP
+Task register
+.AT spec trm
+.IL ETASKLOOPREG SMP
+End of Taskloop register used in llvm target to mark the end of task region.
+.AT spec trm
+.IL TASKLOOPVARS SMP
+Begin set up taskloop variables
+.AT spec trm
+.IL TASKLOOPREG SMP lnk lnk lnk
+Begin taskloop register
+.nf
+stc - bit vector
+lnk1 -  lowerbound
+lnk2 -  upperbound
+lnk3 -  stride
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_task_begin t1
+.IL ETASK SMP sym
+End task
+Always matches a BTASK ilm
+.nf
+sym - symbol table pointer to the end of task label.
+.fi
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_task_end t1
+.IL ETASKLOOP SMP sym
+End taskloop
+Always matches a BTASKLOOP ilm
+.nf
+sym - symbol table pointer to the end of task label.
+.fi
+.AT spec trm
+.IL TASKWAIT SMP
+Taskwait
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_task_wait t1
+.IL TASKYIELD SMP
+Taskyield
+.AT spec trm
+.OP NULL t1 iv0
+.OP QJSR null =e'_mp_task_yield t1
+.IL BMPPG SMP
+Mark the block representing possible prologue of an mp region for
+the parallel, parallel do, parallel section, & task directives.
+.AT spec trm
+.IL EMPPG SMP
+End the mp region to which the prologue applies.
+Always matches a BMPPG ilm.
+.AT spec trm
+.IL BAMPPG SMP
+Add the ensuing code to the prologue
+.AT spec trm
+.IL EAMPPG SMP
+End adding to the prologue.
+Always matches a BAMPPG ilm.
+.AT spec trm
+.IL INLINE_START misc sym
+INLINE_START is put out at the beginning of an lined function to tell zc_eh
+processing to process a possible region
+.AT spec trm
+.IL INLINE_END misc sym
+INLINE_END is put out at the end of an lined function to tell zc_eh
+processing to process a possible region
+.AT spec trm
+.IL BEGIN_CATCH misc
+Mark the beginning of a user's C++ catch region for GSCOPE purposes
+.AT spec trm
+.IL END_CATCH misc
+Mark the end of a user's C++ catch region for GSCOPE purposes
+.AT spec trm
+.IL EHREG_ST misc sym sym
+Store catch_clause, caught_object to registers
+.AT spec trm
+.IL EHRESUME misc sym sym
+Resume propagation of an existing in-flight exception whose unwinding was 
+interrupted to run some cleanup code.
+.AT spec trm
+.IL PRAGMASLIST misc n stc stc lnk*
+Handles a pragma with a list of links to symbols.
+First stc is the pragma identifier, 2nd stc is the scope.
+.AT spec trm
+.IL PRAGMASELIST misc n stc stc lnk lnk*
+Handles a pragma with a link to a symbol and a number of expression arguments.
+First stc is the pragma identifier, 2nd stc is the scope.
+Sym is the symbol link.
+Links point to the arguments.
+.AT spec trm
+.IL SCOPEBEGIN misc sym sym
+Start a new lexical scope; first symbol is the block symbol, second symbol
+is the label for the beginning of the scope.
+.IL SCOPEEND misc sym sym
+End an existing lexical scope; first symbol is the block symbol, second symbol
+is the label for the end of the scope.
+.IL X87CON cons sym
+x87 80-bit extended precision constant.
+.OP X87CON r v1
+.IL X87LD load lnk
+x87 80-bit extended precision load.
+.AT spec
+.IL X87ST store lnk lnk
+x87 80-bit extended precision store.
+.AT spec trm
+.IL X87FROM arth lnk stc
+Convert the DT_xxx type encoded by 'stc' to x87 80-bit extended precision.
+.AT spec
+.IL X87TO arth lnk stc
+Convert x87 80-bit extended precision to the DT_xxx type encoded by 'stc'.
+.AT spec
+.IL X87NEG arth lnk
+x87 80-bit extended precision negation.
+.OP X87CHS r p1
+.IL X87ADD arth lnk lnk
+x87 80-bit extended precision addition.
+.OP X87ADD r p1 p2
+.IL X87SUB arth lnk lnk
+x87 80-bit extended precision subtraction.
+.OP X87SUB r p1 p2
+.IL X87MUL arth lnk lnk
+x87 80-bit extended precision multiplication.
+.OP X87MUL r p1 p2
+.IL X87DIV arth lnk lnk
+x87 80-bit extended precision division.
+.OP X87DIV r p1 p2
+.IL X87CMP arth lnk lnk
+x87 80-bit extended precision comparison.
+.AT spec
+.IL X87FUNC proc n lnk lnk*
+Call long double function returning x87 80-bit extended precision.
+.AT spec
+.IL X87CMPLX arth lnk lnk
+.AT spec
+.IL X87REAL arth lnk
+.AT spec
+.IL X87IMAG arth lnk
+.AT spec
+.IL CX87CON cons sym
+x87 80-bit extended precision complex constant.
+.AT spec x87cmplx
+.IL CX87LD load lnk
+x87 80-bit extended precision complex load.
+.AT spec x87cmplx
+.IL CX87ST store lnk lnk
+x87 80-bit extended precision complex store.
+.AT spec trm x87cmplx
+.IL CX87STR store lnk lnk
+Store the real part of a long double complex
+.AT spec trm
+.IL CX87STI store lnk lnk
+Store the imaginary part of a long double complex
+.AT spec trm
+.IL CX87NEG arth lnk
+x87 80-bit extended precision complex negation.
+.AT x87cmplx
+.OP X87CHS rr rp1
+.OP X87CHS ir ip1
+.IL CX87ADD arth lnk lnk
+x87 80-bit extended precision complex addition.
+.AT x87cmplx
+.OP X87ADD rr rp1 rp2
+.OP X87ADD ir ip1 ip2
+.IL CX87SUB arth lnk lnk
+x87 80-bit extended precision complex subtraction.
+.AT x87cmplx
+.OP X87SUB rr rp1 rp2
+.OP X87SUB ir ip1 ip2
+.IL CX87MUL arth lnk lnk
+x87 80-bit extended precision complex multiplication.
+.AT x87cmplx
+.OP X87MUL t1 rp1 rp2
+.OP X87MUL t2 ip1 ip2
+.OP X87SUB rr t1 t2
+.OP X87MUL t1 ip1 rp2
+.OP X87MUL t2 ip2 rp1
+.OP X87ADD ir t2 t1
+.IL CX87DIV arth lnk lnk
+x87 80-bit extended precision complex division.
+.AT x87cmplx
+.OP X87MUL t1 rp2 rp2
+.OP X87MUL t2 ip2 ip2
+.OP X87ADD t1 t1 t2
+.OP X87MUL t2 rp1 rp2
+.OP X87MUL t3 ip1 ip2
+.OP X87ADD t2 t2 t3
+.OP X87DIV rr t2 t1
+.OP X87MUL t2 ip1 rp2
+.OP X87MUL t3 rp1 ip2
+.OP X87SUB t2 t2 t3
+.OP X87DIV ir t2 t1
+.IL CX87CMP arth lnk lnk
+x87 80-bit extended precision complex comparison.
+.AT spec x87cmplx
+.IL CX87FUNC proc n lnk lnk*
+Call long double complex function returning x87 80-bit extended precision
+complex.
+.AT spec x87cmplx
+.so ilmtp_atomic.n
+.IL PRAGMADPSELIST misc n stc stc lnk stc lnk*
+Handles a pragma with a link to a symbol and a number of expression arguments.
+n is number of subscripts defined by this pragma
+First stc is the pragma identifier, 2nd stc is the scope, 3rd stc is the policy id.
+First link is the symbol link.
+Links point to the arguments.
+.AT spec trm
+.IL MP_TARGETMODE SMP stc lnk lnk lnk
+End of Target register.
+.nf
+stc Combined costruct mode
+lnk link to num_teams clause if exists
+lnk link to thread_limit clause if exists
+lnk link to num_threads clause if exists
+.AT spec trm
+.IL MP_TARGETLOOPTRIPCOUNT SMP sym
+loop trip count for target region
+.nf
+sym - trip count
+.AT spec trm
+.IL MP_MAP SMP lnk stc
+map with to map type
+.nf
+lnk - symbol to be mapped
+stc - map type
+.fi
+.AT spec trm
+.IL MP_REDUCTIONITEM SMP sym sym stc
+Begin of reduction clause.
+.nf
+sym - reduction shared symbol
+sym - reduction private symbol
+stc - reduction operation
+.fi
+.AT spec trm
+.IL MP_BREDUCTION SMP
+Begin of reduction clause.
+.AT spec trm
+.IL MP_EREDUCTION SMP
+End of reduction clause.
+.AT spec trm
+.IL MP_EMAP SMP
+End of map clause.
+.AT spec trm
+.IL MP_BEGIN_DIR SMP
+Begin directive
+.AT spec trm
+.IL MP_END_DIR SMP
+End directive
+.AT spec trm
+.IL HFLD load lnk
+Load half precision
+.AT spec
+.IL HFST store lnk lnk
+Store half precision
+.AT spec trm
+.IL HFCON cons sym
+Half precision constant
+.OP HFCON r v1
+.IL HFADD arth lnk lnk
+Add half precision
+.OP HFADD r p1 p2
+.IL HFMUL arth lnk lnk
+Multiply half precision
+.OP HFMUL r p1 p2
+.IL HFSUB arth lnk lnk
+Subtract half precision
+.OP HFSUB r p1 p2
+.IL HFDIV arth lnk lnk
+Divide half precision
+.OP HFDIV r p1 p2
+.IL HFNEG arth lnk
+Negate half precision
+.OP HFNEG r p1
+.IL R2HF arth lnk
+Convert single precision to half precision
+.OP SP2HP r p1
+.IL D2HF arth lnk
+Convert double precision to half precision
+.OP DP2HP r p1
+.IL HF2R arth lnk
+Convert half precision to single precision
+.OP HP2SP r p1
+.CL HFFUNC proc n lnk lnk*
+Call half precision function
+.AT spec
+.FL HFFUNC proc n sym lnk*
+Call half precision function
+.AT spec
+.IL HFCMP arth lnk lnk
+Compare half precision
+.AT spec
+.FL HFAIF branch lnk sym1 sym2 sym3
+.AT spec trm
+.OP HFCJMPZ null p1 le v2
+.OP HFCJMPZ null p1 eq v3
+.OP HFCJMPZ null p1 gt v4
+.IL HFMAX arth lnk lnk
+.OP HFMAX r p1 p2
+.IL HFMIN arth lnk lnk
+.OP HFMIN r p1 p2
+.IL UXLNEQV arth lnk lnk
+Logical .LNEQV. operation for unixlogical
+.OP ICMPZ t1 p1 eq
+.OP ICMPZ t2 p2 eq
+.OP ICMP r t1 t2 ne
+.IL UXLEQV arth lnk lnk
+Logical .LEQV. operation for unixlogical
+.OP ICMPZ t1 p1 eq
+.OP ICMPZ t2 p2 eq
+.OP ICMP r t1 t2 eq
+.IL UXLAND arth lnk lnk
+Logical .LAND. operation for unixlogical
+.OP ICMPZ t1 p1 eq
+.OP ICMPZ t2 p2 eq
+.OP IADD t3 t1 t2
+.OP ICMPZ r t3 eq
+.IL UXLNOT arth lnk
+Logical .LNOT. operation for unixlogical
+.OP ICMPZ r p1 eq
+.IL UXLNEQV8 arth lnk lnk
+Logical .LNEQV8. operation for unixlogical
+.AT i8
+.OP KCMPZ t1 p1 eq
+.OP KCMPZ t2 p2 eq
+.OP IKMV t1 t1
+.OP IKMV t2 t2
+.OP KCMP kr t1 t2 ne
+.IL UXLEQV8 arth lnk lnk
+Logical .LEQV8. operation for unixlogical
+.AT i8
+.OP KCMPZ t1 p1 eq
+.OP KCMPZ t2 p2 eq
+.OP IKMV t1 t1
+.OP IKMV t2 t2
+.OP KCMP kr t1 t2 eq
+.IL UXLAND8 arth lnk lnk
+Logical .LAND8. operation for unixlogical
+.AT i8
+.OP KCMPZ t1 p1 eq
+.OP KCMPZ t2 p2 eq
+.OP KADD t3 t1 t2
+.OP KCMPZ kr t3 eq
+.IL UXLNOT8 arth lnk
+Logical .LNOT8. operation for unixlogical
+.AT i8
+.OP KCMPZ kr p1 eq
+
+.IL QFLD load lnk
+Load quad precision
+.AT spec
+.IL QFST store lnk lnk
+Store quad precision
+.AT spec trm
+.IL QADD arth lnk lnk
+Add quad precision
+.OP QADD r p1 p2

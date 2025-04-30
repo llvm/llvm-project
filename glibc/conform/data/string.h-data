@@ -1,0 +1,73 @@
+macro-constant NULL == 0
+
+type size_t
+#if defined XOPEN2K8 || defined POSIX2008
+type locale_t
+#endif
+
+#if !defined ISO && !defined ISO99 & !defined ISO11 && !defined POSIX && !defined POSIX2008
+function {void*} memccpy (void*, const void*, int, size_t)
+#endif
+function {void*} memchr (const void*, int, size_t)
+function int memcmp (const void*, const void*, size_t)
+function {void*} memcpy (void*, const void*, size_t)
+function {void*} memmove (void*, const void*, size_t)
+function {void*} memset (void*, int, size_t)
+#if defined XOPEN2K8 || defined POSIX2008
+function {char*} stpcpy (char*, const char*)
+function {char*} stpncpy (char*, const char*, size_t)
+
+#endif
+function {char*} strcat (char*, const char*)
+function {char*} strchr (const char*, int)
+function int strcmp (const char*, const char*)
+function int strcoll (const char*, const char*)
+#if defined XOPEN2K8 || defined POSIX2008
+function int strcoll_l (const char*, const char*, locale_t)
+#endif
+function {char*} strcpy (char*, const char*)
+function size_t strcspn (const char*, const char*)
+#if !defined ISO && !defined ISO99 & !defined ISO11 && !defined XPG4 && !defined POSIX && !defined POSIX2008
+function {char*} strdup (const char*)
+#endif
+function {char*} strerror (int)
+#if defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function int strerror_r (int, char*, size_t)
+#endif
+#if defined XOPEN2K8 || defined POSIX2008
+function {char*} strerror_l (int, locale_t)
+#endif
+function size_t strlen (const char*)
+function {char*} strncat (char*, const char*, size_t)
+function int strncmp (const char*, const char*, size_t)
+function {char*} strncpy (char*, const char*, size_t)
+#if defined XOPEN2K8 || defined POSIX2008
+function {char*} strndup (const char*, size_t)
+function size_t strnlen (const char*, size_t)
+#endif
+function {char*} strpbrk (const char*, const char*)
+function {char*} strrchr (const char*, int)
+#if defined XOPEN2K8 || defined POSIX2008
+function {char*} strsignal (int)
+#endif
+function size_t strspn (const char*, const char*)
+function {char*} strstr (const char*, const char*)
+function {char*} strtok (char*, const char*)
+#if defined POSIX || defined UNIX98 || defined XOPEN2K || defined XOPEN2K8 || defined POSIX2008
+function {char*} strtok_r (char*, const char*, char**)
+#endif
+function size_t strxfrm (char*, const char*, size_t)
+#if defined XOPEN2K8 || defined POSIX2008
+function size_t strxfrm_l (char*, const char*, size_t, locale_t)
+#endif
+
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+allow-header stddef.h
+#endif
+
+allow str[abcdefghijklmnopqrstuvwxyz]*
+allow mem[abcdefghijklmnopqrstuvwxyz]*
+allow wcs[abcdefghijklmnopqrstuvwxyz]*
+#if !defined ISO && !defined ISO99 && !defined ISO11
+allow *_t
+#endif

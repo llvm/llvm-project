@@ -27,6 +27,7 @@ namespace {
 class X86_64 : public TargetInfo {
 public:
   X86_64();
+  uint32_t calcEFlags() const override;
   int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -89,6 +90,14 @@ X86_64::X86_64() {
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   defaultImageBase = 0x200000;
+}
+
+uint32_t X86_64::calcEFlags() const {
+  if (!config->setBinfmtMagicNumber || config->relocatable || config->shared)
+    return 0;
+
+  // Return magic number that will be used by binfmt.
+  return EF_NEXT32_BINFMT_MAGIC_NUMBER;
 }
 
 int X86_64::getTlsGdRelaxSkip(RelType type) const {

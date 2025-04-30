@@ -2755,8 +2755,10 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   Lo = Hi = SDValue();
 
   // See if the target wants to custom expand this node.
-  if (CustomLowerNode(N, N->getValueType(ResNo), true))
+  if (!TLI.forceExpandNode(N) &&
+      CustomLowerNode(N, N->getValueType(ResNo), true)) {
     return;
+  }
 
   switch (N->getOpcode()) {
   default:
@@ -5247,8 +5249,10 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Expand integer operand: "; N->dump(&DAG));
   SDValue Res = SDValue();
 
-  if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false))
+  if (!TLI.forceExpandNode(N) &&
+      CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
     return false;
+  }
 
   switch (N->getOpcode()) {
   default:

@@ -1,0 +1,12 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX
+type iconv_t
+# if defined XOPEN2K8 || defined POSIX2008
+type size_t
+# endif
+
+function iconv_t iconv_open (const char*, const char*)
+function size_t iconv (iconv_t, char**, size_t*, char**, size_t*)
+function int iconv_close (iconv_t)
+
+allow *_t
+#endif

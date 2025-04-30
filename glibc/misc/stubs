@@ -1,0 +1,7 @@
+__compat_bdflush
+chflags
+fchflags
+gtty
+revoke
+sstk
+stty

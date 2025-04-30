@@ -1,0 +1,288 @@
+comment_char %
+escape_char /
+
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+LC_IDENTIFICATION
+title        "Mon language locale for Myanmar"
+source       "Mon Localization Team https:////facebook.com//groups//monlocalization"
+address      "Mawlamyine, Mon State, Myanmar"
+contact      "Talachan Mon"
+email        "talachanmon@gmail.com"
+tel          ""
+fax          ""
+language     "Mon"
+territory    "Myanmar"
+revision     "1"
+date         "2019-10-27"
+
+category  "i18n:2012";LC_IDENTIFICATION
+category  "i18n:2012";LC_CTYPE
+category  "i18n:2012";LC_COLLATE
+category  "i18n:2012";LC_TIME
+category  "i18n:2012";LC_NUMERIC
+category  "i18n:2012";LC_MONETARY
+category  "i18n:2012";LC_PAPER
+category  "i18n:2012";LC_MEASUREMENT
+category  "i18n:2012";LC_MESSAGES
+category  "i18n:2012";LC_NAME
+category  "i18n:2012";LC_ADDRESS
+category  "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+outdigit <U1040>..<U1049>
+map to_inpunct; /
+(<U0030>,<U1040>); /
+(<U0031>,<U1041>); /
+(<U0032>,<U1042>); /
+(<U0033>,<U1043>); /
+(<U0034>,<U1044>); /
+(<U0035>,<U1045>); /
+(<U0036>,<U1046>); /
+(<U0037>,<U1047>); /
+(<U0038>,<U1048>); /
+(<U0039>,<U1049>);
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+% ဂျာန်နျူအာရဳ, ဝှေဝ်ဗြူအာရဳ, မာတ်ချ်, အေပြေယ်လ်, မေ, ဂျုန်, ဂျူလာၚ်, အဝ်ဂါတ်, သိပ်တီဗာ, အံက်တဝ်ဗာ, နဝ်ဝါမ်ဗာ, ဒဳသီဗာ
+mon           "<U1002><U103B><U102C><U1014><U103A><U1014><U103B><U1030><U1021><U102C><U101B><U1033>";/
+     "<U101D><U103E><U1031><U101D><U103A><U1017><U103C><U1030><U1021><U102C><U101B><U1033>";/
+     "<U1019><U102C><U1010><U103A><U1001><U103B><U103A>";/
+     "<U1021><U1031><U1015><U103C><U1031><U101A><U103A><U101C><U103A>";/
+     "<U1019><U1031>";/
+     "<U1002><U103B><U102F><U1014><U103A>";/
+     "<U1002><U103B><U1030><U101C><U102C><U105A><U103A>";/
+     "<U1021><U101D><U103A><U1002><U102B><U1010><U103A>";/
+     "<U101E><U102D><U1015><U103A><U1010><U102E><U1017><U102C>";/
+     "<U1021><U1036><U1000><U103A><U1010><U101D><U103A><U1017><U102C>";/
+     "<U1014><U101D><U103A><U101D><U102B><U1019><U103A><U1017><U102C>";/
+     "<U1012><U1033><U101E><U102E><U1017><U102C>"
+% ဂျာန်, ဝှေဝ်, မာတ်, အေ, မေ, ဂျုန်, ဂျူ, အဝ်, သိပ်, အံက်, နဝ်, ဒဳ
+abmon  "<U1002><U103B><U102C><U1014><U103A>";/
+       "<U101D><U103E><U1031><U101D><U103A>";/
+       "<U1019><U102C><U1010><U103A>";/
+       "<U1021><U1031>";/
+       "<U1019><U1031>";/
+       "<U1002><U103B><U102F><U1014><U103A>";/
+       "<U1002><U103B><U1030>";/
+       "<U1021><U101D><U103A>";/
+       "<U101E><U102D><U1015><U103A>";/
+       "<U1021><U1036><U1000><U103A>";/
+       "<U1014><U101D><U103A>";/
+       "<U1012><U1033>"
+% အဒိုတ်, စန်, အၚာ, ဗုဒ္ဓဝါ, ဗြဴဗ္တိ, သိုက်, သ္ၚိသဝ်
+day  "<U1021><U1012><U102D><U102F><U1010><U103A>";/
+     "<U1005><U1014><U103A>";/
+     "<U1021><U105A><U102C>";/
+     "<U1017><U102F><U1012><U1039><U1013><U101D><U102B>";/
+     "<U1017><U103C><U1034><U1017><U1039><U1010><U102D>";/
+     "<U101E><U102D><U102F><U1000><U103A>";/
+     "<U101E><U1039><U105A><U102D><U101E><U101D><U103A>"
+% ဒိုတ်, စန်, ၚာ, ဝါ, တိ, သိုက်, သဝ်
+abday  "<U1012><U102D><U102F><U1010><U103A>";/
+       "<U1005><U1014><U103A>";/
+       "<U105A><U102C>";/
+       "<U101D><U102B>";/
+       "<U1010><U102D>";/
+       "<U101E><U102D><U102F><U1000><U103A>";/
+       "<U101E><U101D><U103A>"
+week          7;19971130;1
+d_t_fmt       "%OC%Oy %b %Od %A %OI:%OM:%OS %p"
+date_fmt      "%OC%Oy %b %Od %A %OI:%OM:%OS %p %Z"
+d_fmt         "%OC%Oy %b %Od %A"
+t_fmt         "%OI:%OM:%OS %p"
+% ဂယး, တ္ၚဲစေၚ်
+am_pm         "<U1002><U101A><U1038>";"<U1010><U1039><U105A><U1032><U1005><U1031><U105A><U103A>"
+t_fmt_ampm    "%OI:%OM:%OS %p"
+% ၀၀, ၀၁, ၀၂, ၀၃, ၀၄, ၀၅, ၀၆, ၀၇, ၀၈, ၀၉, ၁၀, ၁၁, ၁၂, ၁၃, ၁၄, ၁၅, ၁၆, ၁၇, ၁၈, ၁၉, ၂၀, ၂၁, ၂၂, ၂၃, ၂၄, ၂၅, ၂၆, ၂၇, ၂၈, ၂၉, ၃၀, ၃၁, ၃၂, ၃၃, ၃၄, ၃၅, ၃၆, ၃၇, ၃၈, ၃၉, ၄၀, ၄၁, ၄၂, ၄၃, ၄၄, ၄၅, ၄၆, ၄၇, ၄၈, ၄၉, ၅၀, ၅၁, ၅၂, ၅၃, ၅၄, ၅၅, ၅၆, ၅၇, ၅၈, ၅၉, ၆၀, ၆၁, ၆၂, ၆၃, ၆၄, ၆၅, ၆၆, ၆၇, ၆၈, ၆၉, ၇၀, ၇၁, ၇၂, ၇၃, ၇၄, ၇၅, ၇၆, ၇၇, ၇၈, ၇၉, ၈၀, ၈၁, ၈၂, ၈၃, ၈၄, ၈၅, ၈၆, ၈၇, ၈၈, ၈၉, ၉၀, ၉၁, ၉၂, ၉၃, ၉၄, ၉၅, ၉၆, ၉၇, ၉၈, ၉၉
+alt_digits  "<U1040><U1040>";/
+            "<U1040><U1041>";/
+            "<U1040><U1042>";/
+            "<U1040><U1043>";/
+            "<U1040><U1044>";/
+            "<U1040><U1045>";/
+            "<U1040><U1046>";/
+            "<U1040><U1047>";/
+            "<U1040><U1048>";/
+            "<U1040><U1049>";/
+            "<U1041><U1040>";/
+            "<U1041><U1041>";/
+            "<U1041><U1042>";/
+            "<U1041><U1043>";/
+            "<U1041><U1044>";/
+            "<U1041><U1045>";/
+            "<U1041><U1046>";/
+            "<U1041><U1047>";/
+            "<U1041><U1048>";/
+            "<U1041><U1049>";/
+            "<U1042><U1040>";/
+            "<U1042><U1041>";/
+            "<U1042><U1042>";/
+            "<U1042><U1043>";/
+            "<U1042><U1044>";/
+            "<U1042><U1045>";/
+            "<U1042><U1046>";/
+            "<U1042><U1047>";/
+            "<U1042><U1048>";/
+            "<U1042><U1049>";/
+            "<U1043><U1040>";/
+            "<U1043><U1041>";/
+            "<U1043><U1042>";/
+            "<U1043><U1043>";/
+            "<U1043><U1044>";/
+            "<U1043><U1045>";/
+            "<U1043><U1046>";/
+            "<U1043><U1047>";/
+            "<U1043><U1048>";/
+            "<U1043><U1049>";/
+            "<U1044><U1040>";/
+            "<U1044><U1041>";/
+            "<U1044><U1042>";/
+            "<U1044><U1043>";/
+            "<U1044><U1044>";/
+            "<U1044><U1045>";/
+            "<U1044><U1046>";/
+            "<U1044><U1047>";/
+            "<U1044><U1048>";/
+            "<U1044><U1049>";/
+            "<U1045><U1040>";/
+            "<U1045><U1041>";/
+            "<U1045><U1042>";/
+            "<U1045><U1043>";/
+            "<U1045><U1044>";/
+            "<U1045><U1045>";/
+            "<U1045><U1046>";/
+            "<U1045><U1047>";/
+            "<U1045><U1048>";/
+            "<U1045><U1049>";/
+            "<U1046><U1040>";/
+            "<U1046><U1041>";/
+            "<U1046><U1042>";/
+            "<U1046><U1043>";/
+            "<U1046><U1044>";/
+            "<U1046><U1045>";/
+            "<U1046><U1046>";/
+            "<U1046><U1047>";/
+            "<U1046><U1048>";/
+            "<U1046><U1049>";/
+            "<U1047><U1040>";/
+            "<U1047><U1041>";/
+            "<U1047><U1042>";/
+            "<U1047><U1043>";/
+            "<U1047><U1044>";/
+            "<U1047><U1045>";/
+            "<U1047><U1046>";/
+            "<U1047><U1047>";/
+            "<U1047><U1048>";/
+            "<U1047><U1049>";/
+            "<U1048><U1040>";/
+            "<U1048><U1041>";/
+            "<U1048><U1042>";/
+            "<U1048><U1043>";/
+            "<U1048><U1044>";/
+            "<U1048><U1045>";/
+            "<U1048><U1046>";/
+            "<U1048><U1047>";/
+            "<U1048><U1048>";/
+            "<U1048><U1049>";/
+            "<U1049><U1040>";/
+            "<U1049><U1041>";/
+            "<U1049><U1042>";/
+            "<U1049><U1043>";/
+            "<U1049><U1044>";/
+            "<U1049><U1045>";/
+            "<U1049><U1046>";/
+            "<U1049><U1047>";/
+            "<U1049><U1048>";/
+            "<U1049><U1049>"
+END LC_TIME
+
+LC_NUMERIC
+decimal_point "."
+thousands_sep ","
+grouping      3
+END LC_NUMERIC
+
+LC_MONETARY
+currency_symbol    "K"
+int_curr_symbol    "MMK "
+positive_sign      ""
+negative_sign      "-"
+mon_decimal_point  "."
+mon_thousands_sep  ","
+mon_grouping       3
+frac_digits        2
+int_frac_digits    2
+p_cs_precedes      0
+p_sep_by_space     0
+n_cs_precedes      0
+n_sep_by_space     0
+p_sign_posn        1
+n_sign_posn        1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+% ^[+1yYယ]
+yesexpr "^[+1yY<U101A>]"
+% ^[-0nNဟ]
+noexpr  "^[-0nN<U101F>]"
+% ယွံ
+yesstr  "<U101A><U103D><U1036>"
+% ဟွံ
+nostr   "<U101F><U103D><U1036>"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt  "%p%t%g%t%m%t%f"
+name_gen  ""
+% မိ
+name_miss "<U1019><U102D>"
+% နာဲ
+name_mr   "<U1014><U102C><U1032>"
+% မိ
+name_mrs  "<U1019><U102D>"
+% မိ
+name_ms   "<U1019><U102D>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%a%N%d%N%f%N%b%N%h%t%r%t%e%t%s%N%T%t%z%N%c%N"
+% ဗၟာ
+country_name "<U1017><U105F><U102C>"
+country_post "Myanmar"
+country_ab2  "MM"
+country_ab3  "MMR"
+country_num  104
+country_car  "MYA"
+country_isbn  99971
+% မန်
+lang_name    "<U1019><U1014><U103A>"
+lang_ab      ""
+lang_term    "mnw"
+lang_lib     "mnw"
+END LC_ADDRESS
+
+LC_TELEPHONE
+copy "my_MM"
+END LC_TELEPHONE

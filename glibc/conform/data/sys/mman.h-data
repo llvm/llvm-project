@@ -1,0 +1,64 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined XPG4
+constant PROT_READ
+constant PROT_WRITE
+constant PROT_EXEC
+constant PROT_NONE
+
+constant MAP_SHARED
+constant MAP_PRIVATE
+constant MAP_FIXED
+
+constant MS_ASYNC
+constant MS_SYNC
+constant MS_INVALIDATE
+
+constant MCL_CURRENT
+constant MCL_FUTURE
+
+constant MAP_FAILED
+
+# if !defined POSIX && !defined XPG4 && !defined XPG42 && !defined UNIX98
+constant POSIX_MADV_NORMAL
+constant POSIX_MADV_SEQUENTIAL
+constant POSIX_MADV_RANDOM
+constant POSIX_MADV_WILLNEED
+constant POSIX_MADV_DONTNEED
+
+optional-constant POSIX_TYPED_MEM_ALLOCATE
+optional-constant POSIX_TYPED_MEM_ALLOCATE_CONTIG
+optional-constant POSIX_TYPED_MEM_MAP_ALLOCATABLE
+
+type mode_t
+
+optional-type {struct posix_typedmem_info}
+optional-element {struct posix_typedmem_info} size_t posix_tmi_length
+
+function int posix_madvise (void*, size_t, int)
+optional-function int posix_mem_offset (const void*, size_t, off_t*, size_t*, int*)
+optional-function int posix_typed_mem_get_info (int, struct posix_typed_mem_info*)
+optional-function int posix_typed_mem_open (const char*, int, int)
+# endif
+
+# ifndef POSIX
+type size_t
+type off_t
+# endif
+
+function int mlock (const void*, size_t)
+function int mlockall (int)
+function {void*} mmap (void*, size_t, int, int, int, off_t)
+function int mprotect (void*, size_t, int)
+function int msync (void*, size_t, int)
+function int munlock (const void*, size_t)
+function int munlockall (void)
+function int munmap (void*, size_t)
+function int shm_open (const char*, int, mode_t)
+function int shm_unlink (const char*)
+
+allow shm_*
+allow MAP_*
+allow MCL_*
+allow MS_*
+allow PROT_*
+allow *_t
+#endif

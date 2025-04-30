@@ -1,0 +1,5 @@
+/* This file is processed by mig with -prefix _hurdsig_fault_
+   to create the special exception server used for signal thread
+   fault recovery.  */
+
+#include <mach/exc.defs>

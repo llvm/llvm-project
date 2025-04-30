@@ -1,0 +1,596 @@
+%include <float128-abi.h>
+libc {
+  GLIBC_2.0 {
+    # functions used in inline functions or macros
+    __isnan; __isnanf; __isnanl; __finite; __finitef; __finitel;
+    __isinf; __isinff; __isinfl;
+
+    # global variables
+    __fpu_control;
+
+    # c*
+    copysign; copysignf; copysignl;
+
+    # f*
+    finite; finitef; finitel; frexp; frexpf; frexpl;
+
+    # i*
+    isinf; isinff; isinfl; isnan; isnanf; isnanl; ldexp; ldexpf; ldexpl;
+
+    # m*
+    modf; modff; modfl;
+
+    # s*
+    scalbn; scalbnf; scalbnl;
+  }
+  GLIBC_2.1 {
+    # functions used in inline functions or macros
+    __signbit; __signbitf; __signbitl;
+
+    # s*
+    scalbln; scalblnf; scalblnl;
+  }
+  GLIBC_2.20 {
+  }
+}
+
+libm {
+  GLIBC_2.0 {
+    # mathematical functions
+    acos; acosf; acosl;
+    acosh; acoshf; acoshl;
+    asin; asinf; asinl;
+    asinh; asinhf; asinhl;
+    atan2; atan2f; atan2l;
+    atan; atanf; atanl;
+    atanh; atanhf; atanhl;
+    cbrt; cbrtf; cbrtl;
+    ceil; ceilf; ceill;
+    copysign; copysignf; copysignl;
+    cos; cosf; cosl;
+    coshf; cosh; coshl;
+    drem; dremf; dreml;
+    erf; erff; erfl;
+    erfc; erfcf; erfcl;
+    exp; expf; expl;
+    expm1; expm1f; expm1l;
+    fabs; fabsf; fabsl;
+    finite; finitef; finitel;
+    floor; floorf; floorl;
+    fmod; fmodf; fmodl;
+    frexp; frexpf; frexpl;
+    gamma; gammaf; gammal;
+    gamma_r; gammaf_r; gammal_r;
+    hypot; hypotf; hypotl;
+    ilogb; ilogbf; ilogbl;
+    j0; j0f; j0l;
+    j1; j1f; j1l;
+    jn; jnf; jnl;
+    ldexp; ldexpf; ldexpl;
+    lgamma; lgammaf; lgammal;
+    lgamma_r; lgammaf_r; lgammal_r;
+    log10; log10f; log10l;
+    log1p; log1pf; log1pl;
+    log; logf; logl;
+    logb; logbf; logbl;
+    matherr;
+    modf; modff; modfl;
+    nextafter; nextafterf; nextafterl;
+    pow; powf; powl;
+    remainder; remainderf; remainderl;
+    rint; rintf; rintl;
+    scalb; scalbf; scalbl;
+    scalbn; scalbnf; scalbnl;
+    significand; significandf; significandl;
+    sin; sinf; sinl;
+    sinh; sinhf; sinhl;
+    sqrt; sqrtf; sqrtl;
+    tan; tanf; tanl;
+    tanh; tanhf; tanhl;
+    y0; y0f; y0l;
+    y1; y1f; y1l;
+    yn; ynf; ynl;
+
+
+    # global variables
+    _LIB_VERSION; signgam;
+  }
+  GLIBC_2.1 {
+    # mathematical functions
+    exp2; exp2f; # exp2l; -- bug omitted this until GLIBC_2.4 (below)
+    exp10; exp10f; exp10l;
+    fdim; fdimf; fdiml;
+    fma; fmaf; fmal;
+    fmax; fmaxf; fmaxl;
+    fmin; fminf; fminl;
+    log2; log2f; log2l;
+    nan; nanf; nanl;
+    nearbyint; nearbyintf; nearbyintl;
+    nexttoward; nexttowardf; nexttowardl;
+    pow10; pow10f; pow10l;
+    remquo; remquof; remquol;
+    lrint; lrintf; lrintl;
+    llrint; llrintf; llrintl;
+    round; roundf; roundl;
+    lround; lroundf; lroundl;
+    llround; llroundf; llroundl;
+    scalbln; scalblnf; scalblnl;
+    sincos; sincosf; sincosl;
+    trunc; truncf; truncl;
+    tgamma; tgammaf; tgammal;
+
+    # complex functions
+    cabs; cabsf; cabsl;
+    cacos; cacosf; cacosl;
+    cacosh; cacoshf; cacoshl;
+    carg; cargf; cargl;
+    casin; casinf; casinl;
+    casinh; casinhf; casinhl;
+    catan; catanf; catanl;
+    catanh; catanhf; catanhl;
+    ccos; ccosf; ccosl;
+    ccosh; ccoshf; ccoshl;
+    cexp; cexpf; cexpl;
+    cimag; cimagf; cimagl;
+    clog; clogf; clogl;
+    clog10; clog10f; clog10l;
+    __clog10; __clog10f; __clog10l;
+    conj; conjf; conjl;
+    cpow; cpowf; cpowl;
+    cproj; cprojf; cprojl;
+    creal; crealf; creall;
+    csin; csinf; csinl;
+    csinh; csinhf; csinhl;
+    csqrt; csqrtf; csqrtl;
+    ctan; ctanf; ctanl;
+    ctanh; ctanhf; ctanhl;
+
+    # fp environment functions
+    feclearexcept; fegetenv; fegetexceptflag;
+    fegetround; feholdexcept; feraiseexcept;
+    fesetenv; fesetexceptflag; fesetround;
+    fetestexcept; feupdateenv;
+
+    # functions used in inline functions or macros
+    __finite; __finitef; __finitel;
+    __fpclassify; __fpclassifyf; __fpclassifyl;
+    __signbit; __signbitf; __signbitl;
+  }
+  GLIBC_2.2 {
+    # fp environment functions changes from ISO C99 TR1
+    feclearexcept; fegetenv; fegetexceptflag; feraiseexcept;
+    fesetenv; fesetexceptflag; feupdateenv;
+
+    # fp environment function
+    feenableexcept; fedisableexcept; fegetexcept;
+  }
+  GLIBC_2.4 {
+    # A bug in sysdeps/generic/w_exp2.c kept this from appearing
+    # in GLIBC_2.1 as it should have on platforms using that
+    # implementation file.  On others, sysdeps/CPU/Versions now
+    # puts exp2l in GLIBC_2.1, which will override this entry.
+    exp2l;
+  }
+  GLIBC_2.15 {
+    # Optimized -ffinite-math-only entry points
+    __acos_finite; __acosf_finite; __acosl_finite;
+    __acosh_finite; __acoshf_finite; __acoshl_finite;
+    __asin_finite; __asinf_finite; __asinl_finite;
+    __atan2_finite; __atan2f_finite; __atan2l_finite;
+    __atanh_finite; __atanhf_finite; __atanhl_finite;
+    __cosh_finite; __coshf_finite; __coshl_finite;
+    __exp10_finite; __exp10f_finite; __exp10l_finite;
+    __exp2_finite; __exp2f_finite; __exp2l_finite;
+    __fmod_finite; __fmodf_finite; __fmodl_finite;
+    __hypot_finite; __hypotf_finite; __hypotl_finite;
+    __j0_finite; __j0f_finite; __j0l_finite;
+    __y0_finite; __y0f_finite; __y0l_finite;
+    __j1_finite; __j1f_finite; __j1l_finite;
+    __y1_finite; __y1f_finite; __y1l_finite;
+    __jn_finite; __jnf_finite; __jnl_finite;
+    __yn_finite; __ynf_finite; __ynl_finite;
+    __lgamma_r_finite; __lgammaf_r_finite; __lgammal_r_finite;
+    __log_finite; __logf_finite; __logl_finite;
+    __log10_finite; __log10f_finite; __log10l_finite;
+    __log2_finite; __log2f_finite; __log2l_finite;
+    __pow_finite; __powf_finite; __powl_finite;
+    __remainder_finite; __remainderf_finite; __remainderl_finite;
+    __scalb_finite; __scalbf_finite; __scalbl_finite;
+    __sinh_finite; __sinhf_finite; __sinhl_finite;
+    __sqrt_finite; __sqrtf_finite; __sqrtl_finite;
+    __gamma_r_finite; __gammaf_r_finite; __gammal_r_finite;
+    __exp_finite; __expf_finite; __expl_finite;
+  }
+  GLIBC_2.18 {
+    __issignaling; __issignalingf; __issignalingl;
+  }
+  GLIBC_2.23 {
+    # The __signgam name must be exported for the signgam weak alias
+    # to work.  New symbol versions of lgamma* that set __signgam are
+    # needed to preserve compatibility with old binaries that have a
+    # dynamic symbol for signgam but not __signgam.
+    lgamma; lgammaf; lgammal; __signgam;
+  }
+  GLIBC_2.24 {
+    nextup; nextupf; nextupl;
+    nextdown; nextdownf; nextdownl;
+  }
+  GLIBC_2.25 {
+    fesetexcept; fetestexceptflag; fegetmode; fesetmode;
+    __iscanonicall; __iseqsigf; __iseqsig; __iseqsigl;
+    totalorder; totalorderf; totalorderl;
+    totalordermag; totalordermagf; totalordermagl;
+    getpayload; getpayloadf; getpayloadl;
+    canonicalize; canonicalizef; canonicalizel;
+    setpayload; setpayloadf; setpayloadl;
+    setpayloadsig; setpayloadsigf; setpayloadsigl;
+    llogb; llogbf; llogbl;
+    fmaxmag; fmaxmagf; fmaxmagl; fminmag; fminmagf; fminmagl;
+    roundeven; roundevenf; roundevenl;
+    fromfp; fromfpf; fromfpl; ufromfp; ufromfpf; ufromfpl;
+    fromfpx; fromfpxf; fromfpxl; ufromfpx; ufromfpxf; ufromfpxl;
+  }
+%ifdef FLOAT128_VERSION
+  FLOAT128_VERSION {
+    acosf128;
+    acoshf128;
+    asinf128;
+    asinhf128;
+    atan2f128;
+    atanf128;
+    atanhf128;
+    cabsf128;
+    cacosf128;
+    cacoshf128;
+    canonicalizef128;
+    cargf128;
+    casinf128;
+    casinhf128;
+    catanf128;
+    catanhf128;
+    cbrtf128;
+    ccosf128;
+    ccoshf128;
+    ceilf128;
+    cexpf128;
+    cimagf128;
+    clog10f128;
+    clogf128;
+    conjf128;
+    copysignf128;
+    cosf128;
+    coshf128;
+    cpowf128;
+    cprojf128;
+    crealf128;
+    csinf128;
+    csinhf128;
+    csqrtf128;
+    ctanf128;
+    ctanhf128;
+    erfcf128;
+    erff128;
+    exp10f128;
+    exp2f128;
+    expf128;
+    expm1f128;
+    fabsf128;
+    fdimf128;
+    floorf128;
+    fmaf128;
+    fmaxf128;
+    fmaxmagf128;
+    fminf128;
+    fminmagf128;
+    fmodf128;
+    frexpf128;
+    fromfpf128;
+    fromfpxf128;
+    getpayloadf128;
+    hypotf128;
+    ilogbf128;
+    j0f128;
+    j1f128;
+    jnf128;
+    ldexpf128;
+    lgammaf128;
+    lgammaf128_r;
+    llogbf128;
+    llrintf128;
+    llroundf128;
+    log10f128;
+    log1pf128;
+    log2f128;
+    logbf128;
+    logf128;
+    lrintf128;
+    lroundf128;
+    modff128;
+    nanf128;
+    nearbyintf128;
+    nextafterf128;
+    nextdownf128;
+    nextupf128;
+    powf128;
+    remainderf128;
+    remquof128;
+    rintf128;
+    roundevenf128;
+    roundf128;
+    scalblnf128;
+    scalbnf128;
+    setpayloadf128;
+    setpayloadsigf128;
+    sincosf128;
+    sinf128;
+    sinhf128;
+    sqrtf128;
+    tanf128;
+    tanhf128;
+    tgammaf128;
+    totalorderf128;
+    totalordermagf128;
+    truncf128;
+    ufromfpf128;
+    ufromfpxf128;
+    y0f128;
+    y1f128;
+    ynf128;
+  }
+%endif
+  GLIBC_2.27 {
+    expf; exp2f; logf; log2f; powf;
+    # _Float64x functions, only present for some configurations.
+    acosf64x;
+    acoshf64x;
+    asinf64x;
+    asinhf64x;
+    atan2f64x;
+    atanf64x;
+    atanhf64x;
+    cabsf64x;
+    cacosf64x;
+    cacoshf64x;
+    canonicalizef64x;
+    cargf64x;
+    casinf64x;
+    casinhf64x;
+    catanf64x;
+    catanhf64x;
+    cbrtf64x;
+    ccosf64x;
+    ccoshf64x;
+    ceilf64x;
+    cexpf64x;
+    cimagf64x;
+    clog10f64x;
+    clogf64x;
+    conjf64x;
+    copysignf64x;
+    cosf64x;
+    coshf64x;
+    cpowf64x;
+    cprojf64x;
+    crealf64x;
+    csinf64x;
+    csinhf64x;
+    csqrtf64x;
+    ctanf64x;
+    ctanhf64x;
+    erfcf64x;
+    erff64x;
+    exp10f64x;
+    exp2f64x;
+    expf64x;
+    expm1f64x;
+    fabsf64x;
+    fdimf64x;
+    floorf64x;
+    fmaf64x;
+    fmaxf64x;
+    fmaxmagf64x;
+    fminf64x;
+    fminmagf64x;
+    fmodf64x;
+    frexpf64x;
+    fromfpf64x;
+    fromfpxf64x;
+    getpayloadf64x;
+    hypotf64x;
+    ilogbf64x;
+    j0f64x;
+    j1f64x;
+    jnf64x;
+    ldexpf64x;
+    lgammaf64x;
+    lgammaf64x_r;
+    llogbf64x;
+    llrintf64x;
+    llroundf64x;
+    log10f64x;
+    log1pf64x;
+    log2f64x;
+    logbf64x;
+    logf64x;
+    lrintf64x;
+    lroundf64x;
+    modff64x;
+    nanf64x;
+    nearbyintf64x;
+    nextafterf64x;
+    nextdownf64x;
+    nextupf64x;
+    powf64x;
+    remainderf64x;
+    remquof64x;
+    rintf64x;
+    roundevenf64x;
+    roundf64x;
+    scalblnf64x;
+    scalbnf64x;
+    setpayloadf64x;
+    setpayloadsigf64x;
+    sincosf64x;
+    sinf64x;
+    sinhf64x;
+    sqrtf64x;
+    tanf64x;
+    tanhf64x;
+    tgammaf64x;
+    totalorderf64x;
+    totalordermagf64x;
+    truncf64x;
+    ufromfpf64x;
+    ufromfpxf64x;
+    y0f64x;
+    y1f64x;
+    ynf64x;
+    # _Float32, _Float64 and _Float32x functions, for all configurations.
+    acosf32; acosf64; acosf32x;
+    acoshf32; acoshf64; acoshf32x;
+    asinf32; asinf64; asinf32x;
+    asinhf32; asinhf64; asinhf32x;
+    atan2f32; atan2f64; atan2f32x;
+    atanf32; atanf64; atanf32x;
+    atanhf32; atanhf64; atanhf32x;
+    cabsf32; cabsf64; cabsf32x;
+    cacosf32; cacosf64; cacosf32x;
+    cacoshf32; cacoshf64; cacoshf32x;
+    canonicalizef32; canonicalizef64; canonicalizef32x;
+    cargf32; cargf64; cargf32x;
+    casinf32; casinf64; casinf32x;
+    casinhf32; casinhf64; casinhf32x;
+    catanf32; catanf64; catanf32x;
+    catanhf32; catanhf64; catanhf32x;
+    cbrtf32; cbrtf64; cbrtf32x;
+    ccosf32; ccosf64; ccosf32x;
+    ccoshf32; ccoshf64; ccoshf32x;
+    ceilf32; ceilf64; ceilf32x;
+    cexpf32; cexpf64; cexpf32x;
+    cimagf32; cimagf64; cimagf32x;
+    clog10f32; clog10f64; clog10f32x;
+    clogf32; clogf64; clogf32x;
+    conjf32; conjf64; conjf32x;
+    copysignf32; copysignf64; copysignf32x;
+    cosf32; cosf64; cosf32x;
+    coshf32; coshf64; coshf32x;
+    cpowf32; cpowf64; cpowf32x;
+    cprojf32; cprojf64; cprojf32x;
+    crealf32; crealf64; crealf32x;
+    csinf32; csinf64; csinf32x;
+    csinhf32; csinhf64; csinhf32x;
+    csqrtf32; csqrtf64; csqrtf32x;
+    ctanf32; ctanf64; ctanf32x;
+    ctanhf32; ctanhf64; ctanhf32x;
+    erfcf32; erfcf64; erfcf32x;
+    erff32; erff64; erff32x;
+    exp10f32; exp10f64; exp10f32x;
+    exp2f32; exp2f64; exp2f32x;
+    expf32; expf64; expf32x;
+    expm1f32; expm1f64; expm1f32x;
+    fabsf32; fabsf64; fabsf32x;
+    fdimf32; fdimf64; fdimf32x;
+    floorf32; floorf64; floorf32x;
+    fmaf32; fmaf64; fmaf32x;
+    fmaxf32; fmaxf64; fmaxf32x;
+    fmaxmagf32; fmaxmagf64; fmaxmagf32x;
+    fminf32; fminf64; fminf32x;
+    fminmagf32; fminmagf64; fminmagf32x;
+    fmodf32; fmodf64; fmodf32x;
+    frexpf32; frexpf64; frexpf32x;
+    fromfpf32; fromfpf64; fromfpf32x;
+    fromfpxf32; fromfpxf64; fromfpxf32x;
+    getpayloadf32; getpayloadf64; getpayloadf32x;
+    hypotf32; hypotf64; hypotf32x;
+    ilogbf32; ilogbf64; ilogbf32x;
+    j0f32; j0f64; j0f32x;
+    j1f32; j1f64; j1f32x;
+    jnf32; jnf64; jnf32x;
+    ldexpf32; ldexpf64; ldexpf32x;
+    lgammaf32; lgammaf64; lgammaf32x;
+    lgammaf32_r; lgammaf64_r; lgammaf32x_r;
+    llogbf32; llogbf64; llogbf32x;
+    llrintf32; llrintf64; llrintf32x;
+    llroundf32; llroundf64; llroundf32x;
+    log10f32; log10f64; log10f32x;
+    log1pf32; log1pf64; log1pf32x;
+    log2f32; log2f64; log2f32x;
+    logbf32; logbf64; logbf32x;
+    logf32; logf64; logf32x;
+    lrintf32; lrintf64; lrintf32x;
+    lroundf32; lroundf64; lroundf32x;
+    modff32; modff64; modff32x;
+    nanf32; nanf64; nanf32x;
+    nearbyintf32; nearbyintf64; nearbyintf32x;
+    nextafterf32; nextafterf64; nextafterf32x;
+    nextdownf32; nextdownf64; nextdownf32x;
+    nextupf32; nextupf64; nextupf32x;
+    powf32; powf64; powf32x;
+    remainderf32; remainderf64; remainderf32x;
+    remquof32; remquof64; remquof32x;
+    rintf32; rintf64; rintf32x;
+    roundevenf32; roundevenf64; roundevenf32x;
+    roundf32; roundf64; roundf32x;
+    scalblnf32; scalblnf64; scalblnf32x;
+    scalbnf32; scalbnf64; scalbnf32x;
+    setpayloadf32; setpayloadf64; setpayloadf32x;
+    setpayloadsigf32; setpayloadsigf64; setpayloadsigf32x;
+    sincosf32; sincosf64; sincosf32x;
+    sinf32; sinf64; sinf32x;
+    sinhf32; sinhf64; sinhf32x;
+    sqrtf32; sqrtf64; sqrtf32x;
+    tanf32; tanf64; tanf32x;
+    tanhf32; tanhf64; tanhf32x;
+    tgammaf32; tgammaf64; tgammaf32x;
+    totalorderf32; totalorderf64; totalorderf32x;
+    totalordermagf32; totalordermagf64; totalordermagf32x;
+    truncf32; truncf64; truncf32x;
+    ufromfpf32; ufromfpf64; ufromfpf32x;
+    ufromfpxf32; ufromfpxf64; ufromfpxf32x;
+    y0f32; y0f64; y0f32x;
+    y1f32; y1f64; y1f32x;
+    ynf32; ynf64; ynf32x;
+  }
+  GLIBC_2.28 {
+    # Functions not involving _Float64x or _Float128, for all configurations.
+    fadd; faddl; daddl;
+    f32addf32x; f32addf64; f32xaddf64;
+    fdiv; fdivl; ddivl;
+    f32divf32x; f32divf64; f32xdivf64;
+    fmul; fmull; dmull;
+    f32mulf32x; f32mulf64; f32xmulf64;
+    fsub; fsubl; dsubl;
+    f32subf32x; f32subf64; f32xsubf64;
+    # Functions involving _Float64x or _Float128, for some configurations.
+    f32addf64x; f32addf128;
+    f32xaddf64x; f32xaddf128; f64addf64x; f64addf128;
+    f64xaddf128;
+    f32divf64x; f32divf128;
+    f32xdivf64x; f32xdivf128; f64divf64x; f64divf128;
+    f64xdivf128;
+    f32mulf64x; f32mulf128;
+    f32xmulf64x; f32xmulf128; f64mulf64x; f64mulf128;
+    f64xmulf128;
+    f32subf64x; f32subf128;
+    f32xsubf64x; f32xsubf128; f64subf64x; f64subf128;
+    f64xsubf128;
+  }
+  GLIBC_2.29 {
+    # No SVID compatible error handling.
+    exp; exp2; log; log2; pow;
+  }
+  GLIBC_2.31 {
+    # totalorder changed to take pointer arguments.
+    totalorder; totalorderf; totalorderl;
+    totalordermag; totalordermagf; totalordermagl;
+    totalorderf32; totalorderf64; totalorderf32x;
+    totalordermagf32; totalordermagf64; totalordermagf32x;
+    totalorderf64x;
+    totalordermagf64x;
+    totalorderf128;
+    totalordermagf128;
+  }
+  GLIBC_2.32 {
+    exp10f;
+  }
+}

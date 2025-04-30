@@ -28,10 +28,17 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Support/CommandLine.h"
 #include <optional>
 
 using namespace clang;
 using namespace llvm::omp;
+
+static llvm::cl::opt<bool> DisallowUnsupportedNSFeatures(
+    "ns-disallow-unsupported-omp-features",
+    llvm::cl::desc(
+        "Disallow OpenMP features not supported by the NextSilicon system."),
+    llvm::cl::init(false));
 
 //===----------------------------------------------------------------------===//
 // OpenMP declarative directives.
@@ -2644,6 +2651,43 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     return Directive;
   }
 
+  if (DisallowUnsupportedNSFeatures) {
+    // The following directives are currently not supported by the NextSilicon
+    // system.
+    switch (DKind) {
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_parallel_sections:
+    case OMPD_cancellation_point:
+    case OMPD_cancel:
+    case OMPD_teams:
+    case OMPD_teams_loop:
+    case OMPD_target_teams_loop:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_target_teams:
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_taskyield:
+    case OMPD_taskwait:
+    case OMPD_task:
+    case OMPD_taskgroup:
+      Diag(Tok, diag::err_omp_nextsilicon_unsupported_directive)
+          << getOpenMPDirectiveName(DKind);
+      ConsumeToken();
+      skipUntilPragmaOpenMPEnd(DKind);
+      if (Tok.is(tok::annot_pragma_openmp_end))
+        ConsumeAnnotationToken();
+      return StmtError();
+    default:
+      break;
+    }
+  }
+
   switch (DKind) {
   case OMPD_nothing:
     ConsumeToken();
@@ -3089,6 +3133,24 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
         << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
     ErrorFound = true;
     WrongDirective = true;
+  }
+
+  if (DisallowUnsupportedNSFeatures) {
+    // The following clauses are currently not supported by the NextSilicon
+    // system.
+    switch (CKind) {
+    case OMPC_proc_bind:
+    case OMPC_depend:
+    case OMPC_priority:
+    case OMPC_device:
+      Diag(Tok, diag::err_omp_nextsilicon_unsupported_clause)
+          << getOpenMPClauseName(CKind);
+      ErrorFound = true;
+      Clause = ParseOpenMPSimpleClause(CKind, WrongDirective);
+      return nullptr;
+    default:
+      break;
+    }
   }
 
   switch (CKind) {

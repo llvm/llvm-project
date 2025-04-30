@@ -169,6 +169,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
           .Case("Accelerate", VectorLibrary::Accelerate)
           .Case("LIBMVEC", VectorLibrary::LIBMVEC)
           .Case("MASSV", VectorLibrary::MASSV)
+          .Case("PGMATH", VectorLibrary::PGMATH)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
           .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)

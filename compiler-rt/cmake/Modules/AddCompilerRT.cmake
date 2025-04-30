@@ -168,6 +168,9 @@ function(add_compiler_rt_runtime name type)
             "type argument must be OBJECT, STATIC, SHARED or MODULE")
     return()
   endif()
+  if(type STREQUAL "SHARED" AND NOT ${COMPILER_RT_ENABLE_SHARED})
+    return()
+  endif()
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"

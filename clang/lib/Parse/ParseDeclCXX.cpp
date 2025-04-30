@@ -3620,6 +3620,14 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
   case tok::annot_pragma_openacc:
     return ParseOpenACCDirectiveDecl();
 
+  case tok::annot_pragma_ns_mark:
+    HandlePragmaNSMark();
+    return nullptr;
+
+  case tok::annot_pragma_ns_location:
+    HandlePragmaNSLocation();
+    return nullptr;
+
   default:
     if (tok::isPragmaAnnotation(Tok.getKind())) {
       Diag(Tok.getLocation(), diag::err_pragma_misplaced_in_decl)

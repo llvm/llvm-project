@@ -1,0 +1,17 @@
+libc {
+  GLIBC_2.19 {
+    setjmp; _setjmp; __sigsetjmp;
+    longjmp; _longjmp; siglongjmp;
+  }
+}
+
+ld {
+  GLIBC_2.3 {
+    # runtime interface to TLS
+    __tls_get_offset;
+  }
+  GLIBC_PRIVATE {
+    # Exported by ld used by libc.
+    __tls_get_addr_internal;
+  }
+}

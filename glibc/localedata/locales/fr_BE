@@ -1,0 +1,158 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% French Language Locale for Belgium
+% Source: RAP
+% Address: Sankt Jo//rgens Alle 8
+%    DK-1615 Ko//benhavn V, Danmark
+% Contact: Keld Simonsen
+% Email: Keld.Simonsen@dkuug.dk
+% Tel: +45 - 31226543
+% Fax: +45 - 33256543
+% Language: fr
+% Territory: BE
+% Revision: 4.4
+% Date: 1997-03-18
+% Users: general
+
+LC_IDENTIFICATION
+title      "French locale for Belgium"
+source     "RAP"
+address    "Sankt J<U00F8>rgens Alle 8, DK-1615 K<U00F8>benhavn V, Danmark"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "French"
+territory  "Belgium"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "fr_FR"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MESSAGES
+yesexpr "^[+1oOjJyY]"
+noexpr  "^[-0nN]"
+yesstr  "oui"
+nostr   "non"
+END LC_MESSAGES
+
+LC_MONETARY
+int_curr_symbol           "EUR "
+currency_symbol           "<U20AC>"
+mon_decimal_point         ","
+mon_thousands_sep         "."
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             "."
+grouping                  3;3
+END LC_NUMERIC
+
+LC_TIME
+abday   "dim";"lun";"mar";"mer";"jeu";"ven";"sam"
+day     "dimanche";/
+	"lundi";/
+	"mardi";/
+	"mercredi";/
+	"jeudi";/
+	"vendredi";/
+	"samedi"
+abmon   "jan";"f<U00E9>v";/
+	"mar";"avr";/
+	"mai";"jun";/
+	"jui";"ao<U00FB>";/
+	"sep";"oct";/
+	"nov";"d<U00E9>c"
+mon     "janvier";/
+	"f<U00E9>vrier";/
+	"mars";/
+	"avril";/
+	"mai";/
+	"juin";/
+	"juillet";/
+	"ao<U00FB>t";/
+	"septembre";/
+	"octobre";/
+	"novembre";/
+	"d<U00E9>cembre"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d//%m//%y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm ""
+
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "32"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Belgique"
+country_ab2 "BE"
+country_ab3 "BEL"
+country_num 056
+country_car "B"
+lang_name "fran<U00E7>ais"
+lang_ab      "fr"
+lang_term    "fra"
+lang_lib  "fre"
+END LC_ADDRESS

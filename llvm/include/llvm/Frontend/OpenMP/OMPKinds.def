@@ -597,6 +597,11 @@ __OMP_ATTRS_SET(AllocAttrs,
                                    EnumAttr(WillReturn))
                     : AttributeSet(EnumAttr(NoUnwind)))
 
+__OMP_ATTRS_SET(ForkCallAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoMerge))
+                    : AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoMerge)))
+
 __OMP_ATTRS_SET(ForkAttrs, OptimisticAttributes
                                ? AttributeSet(EnumAttr(NoUnwind))
                                : AttributeSet(EnumAttr(NoUnwind)))
@@ -691,7 +696,7 @@ __OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterArgReadAttrs, SExt,
                 ParamAttrs(ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_get_hardware_thread_id_in_block, GetterAttrs, ZExt,
                 ParamAttrs())
-__OMP_RTL_ATTRS(__kmpc_fork_call, ForkAttrs, AttributeSet(),
+__OMP_RTL_ATTRS(__kmpc_fork_call, ForkCallAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_fork_call_if, AttributeSet(), AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, ReadOnlyPtrAttrs, SExt))

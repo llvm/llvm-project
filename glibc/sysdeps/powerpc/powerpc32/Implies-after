@@ -1,0 +1,5 @@
+# On PowerPC we use the IBM extended long double format.
+ieee754/ldbl-128ibm
+ieee754/ldbl-opt
+ieee754/dbl-64
+ieee754/flt-32

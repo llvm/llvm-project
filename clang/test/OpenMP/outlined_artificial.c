@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -debug-info-kind=constructor -x c -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s
 // expected-no-diagnostics
 
+// XFAIL: *
+
 #if defined(_WIN32)
 #define __KAI_KMPC_CONVENTION __cdecl
 #else

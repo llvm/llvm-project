@@ -1,0 +1,106 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" *
+.\" */
+.NS 15 "Error Reporting Utils"
+.sh 2 Overview
+The Error Reporting Utilities are a set of routines
+used throughout \*(SC to format and write error messages and
+error summary messages to the user's terminal (\c
+.cw stderr )
+and to the Listing File.
+.lp
+The text of error messages is stored in a data structure
+which is initialized by C code created by the utility program
+ERRMSG, which uses the error message definition file as input.
+.lp
+Appendix II of this document lists the \*(SC error messages
+and describes them.
+This appendix was created from the error message definition file.
+.sh 2 "Program Units"
+The following routines belong to the source code module
+.i error.c .
+.ip "\*(cfVOID errini()\fP"
+.br
+This routine called at the beginning of processing of each user
+subprogram unit to initialize various error counts associated
+with the subprogram to zero.
+.ip "\*(cfVOID error(ecode, sev, eline, op1, op2)\fP"
+Writes error message (subject to
+.cw -inform
+flag) to user's terminal
+and Listing File.  Aborts compilation if fatal message issued.
+Maintains error statistics.
+.nr ii 1.0i
+.ip "\*(cfint\ ecode;\fP"
+Error message number (see Appendix II).
+.ip "\*(cfint\ sev;\fP"
+Error severity.  Allowed values are:
+.(l
+1 \(em informational
+2 \(em warning
+3 \(em severe
+4 \(em fatal
+.)l
+.ip "\*(cfint\ eline;\fP"
+Source file line number associated with the error, possibly 0.
+.ip "\*(cfchar\ *op1;\fP"
+Specifies text string to be incorporated into the message in place of
+.q "$" .
+If
+.cw NULL ,
+no text need be inserted.
+.ip "\*(cfchar\ *op2;\fP"
+Same as
+.cw op1
+for second string, if any.
+.nr ii 5n
+.ne 10
+.ip "\*(cfVOID interr(txt, val, sev)\fP"
+Issue internal compiler error.
+.nr ii 1.0i
+.ip "\*(cfchar\ *txt;\fP"
+Text string which will be incorporated into the error message.
+To make it easier to track down the problem, the name of the function
+issuing the internal error should appear at the beginning of the string,
+followed by
+.q : .
+.ip "\*(cfint\ val;\fP"
+Integer value to be included in the error message to assist debugging.
+.ip "\*(cfint\ sev;\fP"
+Severity of message, in range 1 to 4.
+.nr ii 5n
+.ip "\*(cfVOID summary()\fP"
+Write compilation summary message
+to
+.cw stderr.
+.sh 2 "ERRMSG Utility"
+This utility creates C code which initializes the error message
+text structure.
+It must be run whenever a message is deleted, added, or modified.
+Once run, the module
+.i error.c
+must be recompiled.
+.lp
+Note that the severity level of each message is specified in this
+file, but is ignored by ERRMSG.
+.sh 3 Inputs
+The single input to ERRMSG is the error message definition file
+(\c
+.i errmsg.n ).
+For the proper format of messages added to this file, just
+refer to the existing file as an example.
+.lp
+Note that an informal description of each message, its causes
+and proper interpretation, is included in this file (see Appendix II).
+Care should be taken to keep this information up to date.
+Messages should be deleted when they are no longer used.
+.sh 3 Outputs
+The ERRMSG output is the file
+.i errmsgdf.h
+which is
+included into the module
+.i error.c
+to initialize the error message text.

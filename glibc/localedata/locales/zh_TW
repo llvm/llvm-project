@@ -1,0 +1,190 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Chinese language locale for Taiwan R.O.C.
+%
+% Original Author:
+%    Ming-Che Chuang
+% 	PPE of NTU, Taiwan, ROC
+%
+% Currently Maintained by:
+%    Yuan-Chung Cheng
+%	platin@ms31.hinet.net
+%    Tung-Han Hsieh
+%	thhsieh@linux.org.tw
+%
+% Reference:	http://wwwold.dkuug.dk/JTC1/SC22/WG20/docs/n690.pdf
+
+LC_IDENTIFICATION
+title      "Chinese locale for Taiwan R.O.C."
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Chinese"
+territory  "Taiwan"
+revision   "0.2"
+date       "2000-08-02"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "zh_CN"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol         "TWD "
+currency_symbol         "NT$"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          0
+int_p_cs_precedes       1
+int_p_sep_by_space      0
+int_n_cs_precedes       1
+int_n_sep_by_space      0
+p_sign_posn             1
+n_sign_posn             1
+int_p_sign_posn         1
+int_n_sign_posn         1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3
+END LC_NUMERIC
+
+LC_TIME
+% day: Sun, Mon, Tue, Wed, Thr, Fri, Sat
+abday	"<U65E5>";"<U4E00>";"<U4E8C>";"<U4E09>";/
+	"<U56DB>";"<U4E94>";"<U516D>"
+
+day	"<U9031><U65E5>";/
+	"<U9031><U4E00>";/
+	"<U9031><U4E8C>";/
+	"<U9031><U4E09>";/
+	"<U9031><U56DB>";/
+	"<U9031><U4E94>";/
+	"<U9031><U516D>"
+
+% month: Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec.
+abmon	" 1<U6708>";" 2<U6708>";/
+	" 3<U6708>";" 4<U6708>";/
+	" 5<U6708>";" 6<U6708>";/
+	" 7<U6708>";" 8<U6708>";/
+	" 9<U6708>";"10<U6708>";/
+	"11<U6708>";"12<U6708>"
+
+mon	"<U4E00><U6708>";"<U4E8C><U6708>";"<U4E09><U6708>";/
+	"<U56DB><U6708>";"<U4E94><U6708>";"<U516D><U6708>";/
+	"<U4E03><U6708>";"<U516B><U6708>";"<U4E5D><U6708>";/
+	"<U5341><U6708>";"<U5341><U4E00><U6708>";"<U5341><U4E8C><U6708>"
+
+% d_t_fmt: "%Y<y>%m<m>%d<d> (%A) %H<hr>%M<m>%S<s>"
+d_t_fmt "<U897F><U5143>%Y<U5E74>%m<U6708>%d<U65E5> (%A) %H<U6642>/
+%M<U5206>%S<U79D2>"
+
+date_fmt "<U897F><U5143>%Y<U5E74>%m<U6708>%d<U65E5> (%A) %H<U6642>/
+%M<U5206>%S<U79D2> %Z"
+
+d_fmt	"<U897F><U5143>%Y<U5E74>%m<U6708>%d<U65E5>"
+
+t_fmt	"%H<U6642>%M<U5206>%S<U79D2>"
+
+am_pm	"<U4E0A><U5348>";"<U4E0B><U5348>"
+
+% t_fmt_ampm: "%p %I<h>%M<m>%S<s>"
+t_fmt_ampm  "%p %I<U6642>%M<U5206>%S<U79D2>"
+week 7;19971130;1
+
+era "+:2:1913//01//01:+*:<U6C11><U570B>:%EC%Ey<U5E74>";/
+    "+:1:1912//01//01:1912//12//31:<U6C11><U570B>:%EC<U5143><U5E74>";/
+    "+:1:1911//12//31:-*:<U6C11><U524D>:%EC%Ey<U5E74>"
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<UFF59><UFF39><U662F>]"
+noexpr  "^[-0nN<UFF4E><UFF2E><U4E0D><U5426>]"
+% 是
+yesstr  "<U662F>"
+% 不是
+nostr   "<U4E0D><U662F>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt	"+%c-%a-%l"
+tel_dom_fmt	"%A-%l"
+int_select	"00"
+int_prefix	"886"
+END LC_TELEPHONE
+
+LC_NAME
+name_fmt	"%f%t%g%t%d"
+
+name_gen	""
+name_miss	"<U5C0F><U59D0>"
+name_mr		"<U5148><U751F>"
+name_mrs	"<U592A><U592A>"
+name_ms		"<U5973><U58EB>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt	"%c%N%T%N%s %h %e %r%N%b%N%d%N%f%N%a%N"
+
+% Reference:	http://www.un.org/Depts/unsd/methods/m49alpha.htm
+%		http://www.isbn.spk-berlin.de/html/prefix.htm
+country_name	"<U4E2D><U83EF><U6C11><U570B>"
+country_post	"TW"
+country_ab2	"TW"
+country_ab3	"TWN"
+country_num	158
+country_car "RC"
+country_isbn	957
+
+% Reference:	http://lcweb.loc.gov/standards/iso639-2/langhome.html
+lang_name	"<U4E2D><U6587>"
+lang_ab		"zh"
+lang_term	"zho"
+lang_lib	"chi"
+END LC_ADDRESS
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

@@ -1,0 +1,261 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Serbian Language Locale for Serbia
+% Source: sr_YU, sr_CS locales
+% Address:
+%
+% Contact: Danilo Segan
+% Email: danilo@gnome.org
+% Tel: +381 63 323456
+% Fax: none
+% Language: sr
+% Territory: RS
+% Revision: 1.3
+% Date: 2006-10-09
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Serbian locale for Serbia"
+source     "sr_YU, sr_CS locale"
+address    ""
+contact    "Danilo Segan"
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Serbian"
+territory  "Serbia"
+revision   "1.3"
+date       "2006-10-09"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+translit_start
+include "translit_combining";""
+
+% cyrillic -> latin
+<U0452> "<U0111>";"<U0064><U006A>" % d-
+<U0453> "<U0067><U006A>" % gj
+<U0455> "<U0064><U007A>" % dz
+<U0458> "<U006A>" % j
+<U0459> "<U006C><U006A>" % lj
+<U045A> "<U006E><U006A>" % nj
+<U045B> "<U0107>";"<U0063>" % c'
+<U045C> "<U006B><U006A>" % kj
+<U045F> "<U0064><U017E>";"<U0064><U007A>" % dz<
+
+<U0402> "<U0110>";"<U0044><U006A>" % D-
+<U0403> "<U0047><U006A>" % Gj
+<U0405> "<U0044><U007A>" % Dz
+<U0408> "<U004A>" % J
+<U0409> "<U004C><U006A>" % Lj
+<U040A> "<U004E><U006A>" % Nj
+<U040B> "<U0106>";"<U0043>" % C'
+<U040C> "<U004B><U006A>" % Kj
+<U040F> "<U0044><U017E>";"<U0064><U007A>" % Dz<
+
+<U0430> "<U0061>"
+<U0431> "<U0062>"
+<U0446> "<U0063>"
+<U0434> "<U0064>"
+<U0435> "<U0065>"
+<U0444> "<U0066>"
+<U0433> "<U0067>"
+<U0445> "<U0068>"
+<U0438> "<U0069>"
+<U043A> "<U006B>"
+<U043B> "<U006C>"
+<U043C> "<U006D>"
+<U043D> "<U006E>"
+<U043E> "<U006F>"
+<U043F> "<U0070>"
+<U0440> "<U0072>"
+<U0441> "<U0073>"
+<U0442> "<U0074>"
+<U0443> "<U0075>"
+<U0432> "<U0076>"
+<U0437> "<U007A>"
+<U0436> "<U017E>";"<U007A>" % z<
+<U0448> "<U0161>";"<U0073>" % s<
+<U0447> "<U010D>";"<U0063>" % c<
+
+<U0410> "<U0041>"
+<U0411> "<U0042>"
+<U0426> "<U0043>"
+<U0414> "<U0044>"
+<U0415> "<U0045>"
+<U0424> "<U0046>"
+<U0413> "<U0047>"
+<U0425> "<U0048>"
+<U0418> "<U0049>"
+<U041A> "<U004B>"
+<U041B> "<U004C>"
+<U041C> "<U004D>"
+<U041D> "<U004E>"
+<U041E> "<U004F>"
+<U041F> "<U0050>"
+<U0420> "<U0052>"
+<U0421> "<U0053>"
+<U0422> "<U0054>"
+<U0423> "<U0055>"
+<U0412> "<U0056>"
+<U0417> "<U005A>"
+<U0416> "<U017D>";"<U005A>" % z<
+<U0428> "<U0160>";"<U0053>" % s<
+<U0427> "<U010C>";"<U0063>" % c<
+
+translit_end
+END LC_CTYPE
+
+
+LC_COLLATE
+% According to CLDR, collation rules
+% for Bosnian are the same as for Serbian, see:
+%
+% https://unicode.org/cldr/trac/browser/trunk/common/collation/sr_Latn.xml
+%
+% it contains only
+%
+% “[import hr]”
+%
+% and the cyrillic version of the Serbian locale has no special collation
+% rules at all in CLDR:
+%
+% https://unicode.org/cldr/trac/browser/trunk/common/collation/sr.xml
+copy "hr_HR"
+END LC_COLLATE
+
+LC_MONETARY
+int_curr_symbol           "RSD "
+currency_symbol           "<U0434><U0438><U043D>"
+mon_decimal_point         ","
+mon_thousands_sep         "."
+mon_grouping              3;3
+positive_sign             ""
+negative_sign             "-"
+int_frac_digits           2
+frac_digits               2
+p_cs_precedes             0
+p_sep_by_space            1
+n_cs_precedes             0
+n_sep_by_space            1
+p_sign_posn               1
+n_sign_posn               1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point             ","
+thousands_sep             ""
+grouping                  0;0
+END LC_NUMERIC
+
+LC_TIME
+
+abday   "<U043D><U0435><U0434>";"<U043F><U043E><U043D>";/
+        "<U0443><U0442><U043E>";"<U0441><U0440><U0435>";/
+        "<U0447><U0435><U0442>";"<U043F><U0435><U0442>";/
+        "<U0441><U0443><U0431>"
+day     "<U043D><U0435><U0434><U0435><U0459><U0430>";/
+        "<U043F><U043E><U043D><U0435><U0434><U0435><U0459><U0430><U043A>";/
+        "<U0443><U0442><U043E><U0440><U0430><U043A>";/
+        "<U0441><U0440><U0435><U0434><U0430>";/
+        "<U0447><U0435><U0442><U0432><U0440><U0442><U0430><U043A>";/
+        "<U043F><U0435><U0442><U0430><U043A>";/
+        "<U0441><U0443><U0431><U043E><U0442><U0430>"
+abmon   "<U0458><U0430><U043D>";"<U0444><U0435><U0431>";/
+        "<U043C><U0430><U0440>";"<U0430><U043F><U0440>";/
+        "<U043C><U0430><U0458>";"<U0458><U0443><U043D>";/
+        "<U0458><U0443><U043B>";"<U0430><U0432><U0433>";/
+        "<U0441><U0435><U043F>";"<U043E><U043A><U0442>";/
+        "<U043D><U043E><U0432>";"<U0434><U0435><U0446>"
+mon     "<U0458><U0430><U043D><U0443><U0430><U0440>";/
+        "<U0444><U0435><U0431><U0440><U0443><U0430><U0440>";/
+        "<U043C><U0430><U0440><U0442>";/
+        "<U0430><U043F><U0440><U0438><U043B>";/
+        "<U043C><U0430><U0458>";/
+        "<U0458><U0443><U043D>";/
+        "<U0458><U0443><U043B>";/
+        "<U0430><U0432><U0433><U0443><U0441><U0442>";/
+        "<U0441><U0435><U043F><U0442><U0435><U043C><U0431><U0430><U0440>";/
+        "<U043E><U043A><U0442><U043E><U0431><U0430><U0440>";/
+        "<U043D><U043E><U0432><U0435><U043C><U0431><U0430><U0440>";/
+        "<U0434><U0435><U0446><U0435><U043C><U0431><U0430><U0440>"
+
+d_t_fmt "%A, %d. %B %Y. %T %Z"
+d_fmt   "%d.%m.%Y."
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm "%T"
+date_fmt  "%a, %e. %b %Y.  %H:%M:%S %Z"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yYdD<U0414><U0434>]"
+noexpr  "^[-0nN<U041D><U043D>]"
+yesstr  "<U0434><U0430>"
+nostr   "<U043D><U0435>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+name_gen    ""
+name_mr     "<U0433>-<U0434><U0438><U043D>"
+name_mrs    "<U0433>-<U0452><U0430>"
+name_miss   "<U0433>-<U0452><U0438><U0446><U0430>"
+name_ms     "<U0433>-<U0452><U0430>"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_ab2   "RS"
+country_ab3   "SRB"
+country_post  "RS"
+country_name  "<U0421><U0440><U0431><U0438><U0458><U0430>"
+country_num   688
+country_car   "SRB"
+% FIXME: ISBN code is what? "86" that preceedes all the numbers?
+country_isbn  86
+lang_name     "<U0441><U0440><U043F><U0441><U043A><U0438>"
+lang_term     "srp"
+lang_lib      "srp"
+lang_ab	      "sr"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+tel_dom_fmt    "%A %l"
+int_prefix     "381"
+int_select     "99"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT

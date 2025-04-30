@@ -1,0 +1,217 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Somali language locale for Kenya.
+%
+% Somali terms provided by Mohamed Diriye Abdullahi <diriyeam@magellan.umontreal.ca>
+% Department of Linguistics and Translation, Université de Montréal, Montreal.
+% Prepared and contributed to glibc by Daniel Yacob <locales@geez.org>.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f ISO-8859-1 -i so_KE so_KE
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Somali language locale for Kenya"
+source     "Ge'ez Frontier Foundation"
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Somali"
+territory  "Kenya"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Latin Character Set Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "so_SO"
+END LC_COLLATE
+
+LC_CTYPE
+copy "so_SO"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Kenya Specific and Shared Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "om_KE"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "om_KE"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "om_KE"
+END LC_NUMERIC
+
+LC_PAPER
+copy "om_KE"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "om_KE"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Somali Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_NAME
+copy "so_SO"
+END LC_NAME
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Somali/ET Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+%
+% This is the ISO_IEC TR14652 Locale definition for the LC_ADDRESS category.
+%
+postal_fmt    "%z%c%T%s%b%e%r"
+country_name  "Kiiniya"
+country_post  "KEN"
+country_ab2   "KE"
+country_ab3   "KEN"
+country_num   404
+country_car   "EAK"
+% country_isbn  unknown, Need ISO 2108
+lang_name     "Soomaali"
+lang_ab       "so"
+lang_term     "som"
+lang_lib      "som"
+%
+END LC_ADDRESS
+
+
+LC_MESSAGES
+copy "so_SO"
+END LC_MESSAGES
+
+
+LC_TIME
+%
+% Abbreviated weekday names (%a)
+%
+abday    "Axd";/
+         "Isn";/
+         "Sal";/
+         "Arb";/
+         "Kha";/
+         "Jim";/
+         "Sab"
+%
+% Full weekday names (%A)
+%
+day      "Axad";/
+         "Isniin";/
+         "Salaaso";/
+         "Arbaco";/
+         "Khamiis";/
+         "Jimco";/
+         "Sabti"
+%
+% Abbreviated month names (%b)
+%
+abmon    "Kob";/
+         "Lab";/
+         "Sad";/
+         "Afr";/
+         "Sha";/
+         "Lix";/
+         "Tod";/
+         "Sid";/
+         "Sag";/
+         "Tob";/
+         "KIT";/
+         "LIT"
+%
+% Full month names (%B)
+%
+mon      "Bisha Koobaad";/
+         "Bisha Labaad";/
+         "Bisha Saddexaad";/
+         "Bisha Afraad";/
+         "Bisha Shanaad";/
+         "Bisha Lixaad";/
+         "Bisha Todobaad";/
+         "Bisha Sideedaad";/
+         "Bisha Sagaalaad";/
+         "Bisha Tobnaad";/
+         "Bisha Kow iyo Tobnaad";/
+         "Bisha Laba iyo Tobnaad"
+%
+% Equivalent of AM PM
+%
+am_pm    "subaxnimo";"galabnimo"
+%
+% Appropriate date representation (%x)
+%
+d_fmt   "%d//%m//%Y"
+%
+% Appropriate time representation (%X)
+%
+t_fmt "%T"
+%
+% Appropriate AM/PM time representation (%r)
+%
+t_fmt_ampm ""
+%
+% Appropriate date and time representation (%c)
+%
+d_t_fmt    "%A, %B %e, %Y %X %Z"
+%
+% Appropriate date representation (date(1))
+%
+date_fmt    "%A, %B %e, %X %Z %Y"
+%
+week 7;19971130;1
+END LC_TIME

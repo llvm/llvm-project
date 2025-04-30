@@ -1,0 +1,83 @@
+#!/bin/sh
+# Update copyright year lists.
+# Copyright (C) 2012-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+# Run this script with the first argument being the location of
+# gnulib's update-copyright script.  Any other arguments are ignored.
+# FSF copyright notices in the glibc source directory containing this
+# script will be updated; glibc must then be built to update generated
+# files.  Copyright dates in --version copyright notices are not
+# updated.
+
+set -e
+
+export LC_ALL=C
+export UPDATE_COPYRIGHT_FORCE=1
+export UPDATE_COPYRIGHT_USE_INTERVALS=2
+export UPDATE_COPYRIGHT_MAX_LINE_LENGTH=79
+
+update_script=$1
+
+if ! [ -f "$update_script" ]; then
+  echo "error: first argument must point to gnulib update-copyright script" >&2
+  exit 1
+fi
+
+cd "$(dirname "$0")/.."
+
+files=$(find . -type f | sed 's|^\./||' | grep -v '^\.git/')
+
+for f in $files; do
+  case $f in
+    COPYING | COPYING.LIB | manual/fdl-1.3.texi | manual/lgpl-2.1.texi)
+      # Licenses imported verbatim from FSF sources.
+      ;;
+    manual/texinfo.tex | scripts/config.guess | scripts/config.sub \
+      | scripts/install-sh | scripts/mkinstalldirs | scripts/move-if-change)
+      # Other files imported verbatim from other GNU repositories.
+      ;;
+    po/*.po)
+      # Files imported verbatim from the Translation Project.
+      ;;
+    INSTALL \
+      | locale/programs/charmap-kw.h | locale/programs/locfile-kw.h \
+      | po/libc.pot | sysdeps/gnu/errlist.c)
+      # Generated files.
+      ;;
+    configure | */configure | preconfigure | */preconfigure)
+      # Possibly generated files.
+      if ! [ -f "$f.ac" ]; then
+	"$update_script" "$f"
+      fi
+      ;;
+    grp/initgroups.c | misc/bits/stab.def | posix/regex.h \
+      | sysdeps/wordsize-32/divdi3.c)
+      # Pre-1991 gaps in copyright years, so cannot use a single range.
+      UPDATE_COPYRIGHT_USE_INTERVALS=1 "$update_script" "$f"
+      ;;
+    csu/version.c | elf/dl-usage.c)
+      # Update the copyright string in the output message.
+      year="$(date +%Y)"
+      sed -i 's/^Copyright (C) [0-9]\{4\} /Copyright (C) '"$year"' /' $f
+      "$update_script" "$f"
+      ;;
+    *)
+      "$update_script" "$f"
+      ;;
+  esac
+done

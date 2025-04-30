@@ -1,0 +1,45 @@
+! Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+! See https://llvm.org/LICENSE.txt for license information.
+! SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+!       
+
+module shape_mod
+
+type shape
+        integer :: color
+        logical :: filled
+        integer :: x
+        integer :: y
+end type shape
+
+type, EXTENDS ( shape ) :: rectangle
+        integer :: the_length
+        integer :: the_width
+end type rectangle
+
+type, extends (rectangle) :: square
+end type square
+
+end module shape_mod
+
+program p
+USE CHECK_MOD
+use shape_mod
+integer results(4)
+integer expect(4)
+data expect /.true.,.false.,.true.,.true./
+data results /.false.,.true.,.false.,.false./
+type(square) :: s
+type(rectangle) :: r
+type(square) :: s1
+
+results(1) = EXTENDS_TYPE_OF(s,r)
+results(2) = EXTENDS_TYPE_OF(r,s)
+results(3) = SAME_TYPE_AS(s,s1)
+results(4) = SAME_TYPE_AS(s1,s)
+
+call check(expect,results,4)
+
+end
+
+

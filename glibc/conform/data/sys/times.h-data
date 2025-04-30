@@ -1,0 +1,15 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+type {struct tms}
+
+element {struct tms} clock_t tms_utime
+element {struct tms} clock_t tms_stime
+element {struct tms} clock_t tms_cutime
+element {struct tms} clock_t tms_cstime
+
+type clock_t
+
+function clock_t times (struct tms*)
+
+allow tms_*
+allow *_t
+#endif

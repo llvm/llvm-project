@@ -1,0 +1,2237 @@
+@node Pattern Matching, I/O Overview, Searching and Sorting, Top
+@c %MENU% Matching shell ``globs'' and regular expressions
+@chapter Pattern Matching
+
+@Theglibc{} provides pattern matching facilities for two kinds of
+patterns: regular expressions and file-name wildcards.  The library also
+provides a facility for expanding variable and command references and
+parsing text into words in the way the shell does.
+
+@menu
+* Wildcard Matching::    Matching a wildcard pattern against a single string.
+* Globbing::             Finding the files that match a wildcard pattern.
+* Regular Expressions::  Matching regular expressions against strings.
+* Word Expansion::       Expanding shell variables, nested commands,
+			    arithmetic, and wildcards.
+			    This is what the shell does with shell commands.
+@end menu
+
+@node Wildcard Matching
+@section Wildcard Matching
+
+@pindex fnmatch.h
+This section describes how to match a wildcard pattern against a
+particular string.  The result is a yes or no answer: does the
+string fit the pattern or not.  The symbols described here are all
+declared in @file{fnmatch.h}.
+
+@deftypefun int fnmatch (const char *@var{pattern}, const char *@var{string}, int @var{flags})
+@standards{POSIX.2, fnmatch.h}
+@safety{@prelim{}@mtsafe{@mtsenv{} @mtslocale{}}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c fnmatch @mtsenv @mtslocale @ascuheap @acsmem
+@c  strnlen dup ok
+@c  mbsrtowcs
+@c  memset dup ok
+@c  malloc dup @ascuheap @acsmem
+@c  mbsinit dup ok
+@c  free dup @ascuheap @acsmem
+@c  FCT = internal_fnwmatch @mtsenv @mtslocale @ascuheap @acsmem
+@c   FOLD @mtslocale
+@c    towlower @mtslocale
+@c   EXT @mtsenv @mtslocale @ascuheap @acsmem
+@c    STRLEN = wcslen dup ok
+@c    getenv @mtsenv
+@c    malloc dup @ascuheap @acsmem
+@c    MEMPCPY = wmempcpy dup ok
+@c    FCT dup @mtsenv @mtslocale @ascuheap @acsmem
+@c    STRCAT = wcscat dup ok
+@c    free dup @ascuheap @acsmem
+@c   END @mtsenv
+@c    getenv @mtsenv
+@c   MEMCHR = wmemchr dup ok
+@c   getenv @mtsenv
+@c   IS_CHAR_CLASS = is_char_class @mtslocale
+@c    wctype @mtslocale
+@c   BTOWC ok
+@c   ISWCTYPE ok
+@c   auto findidx dup ok
+@c   elem_hash dup ok
+@c   memcmp dup ok
+@c   collseq_table_lookup dup ok
+@c   NO_LEADING_PERIOD ok
+This function tests whether the string @var{string} matches the pattern
+@var{pattern}.  It returns @code{0} if they do match; otherwise, it
+returns the nonzero value @code{FNM_NOMATCH}.  The arguments
+@var{pattern} and @var{string} are both strings.
+
+The argument @var{flags} is a combination of flag bits that alter the
+details of matching.  See below for a list of the defined flags.
+
+In @theglibc{}, @code{fnmatch} might sometimes report ``errors'' by
+returning nonzero values that are not equal to @code{FNM_NOMATCH}.
+@end deftypefun
+
+These are the available flags for the @var{flags} argument:
+
+@vtable @code
+@item FNM_FILE_NAME
+@standards{GNU, fnmatch.h}
+Treat the @samp{/} character specially, for matching file names.  If
+this flag is set, wildcard constructs in @var{pattern} cannot match
+@samp{/} in @var{string}.  Thus, the only way to match @samp{/} is with
+an explicit @samp{/} in @var{pattern}.
+
+@item FNM_PATHNAME
+@standards{POSIX.2, fnmatch.h}
+This is an alias for @code{FNM_FILE_NAME}; it comes from POSIX.2.  We
+don't recommend this name because we don't use the term ``pathname'' for
+file names.
+
+@item FNM_PERIOD
+@standards{POSIX.2, fnmatch.h}
+Treat the @samp{.} character specially if it appears at the beginning of
+@var{string}.  If this flag is set, wildcard constructs in @var{pattern}
+cannot match @samp{.} as the first character of @var{string}.
+
+If you set both @code{FNM_PERIOD} and @code{FNM_FILE_NAME}, then the
+special treatment applies to @samp{.} following @samp{/} as well as to
+@samp{.} at the beginning of @var{string}.  (The shell uses the
+@code{FNM_PERIOD} and @code{FNM_FILE_NAME} flags together for matching
+file names.)
+
+@item FNM_NOESCAPE
+@standards{POSIX.2, fnmatch.h}
+Don't treat the @samp{\} character specially in patterns.  Normally,
+@samp{\} quotes the following character, turning off its special meaning
+(if any) so that it matches only itself.  When quoting is enabled, the
+pattern @samp{\?} matches only the string @samp{?}, because the question
+mark in the pattern acts like an ordinary character.
+
+If you use @code{FNM_NOESCAPE}, then @samp{\} is an ordinary character.
+
+@item FNM_LEADING_DIR
+@standards{GNU, fnmatch.h}
+Ignore a trailing sequence of characters starting with a @samp{/} in
+@var{string}; that is to say, test whether @var{string} starts with a
+directory name that @var{pattern} matches.
+
+If this flag is set, either @samp{foo*} or @samp{foobar} as a pattern
+would match the string @samp{foobar/frobozz}.
+
+@item FNM_CASEFOLD
+@standards{GNU, fnmatch.h}
+Ignore case in comparing @var{string} to @var{pattern}.
+
+@item FNM_EXTMATCH
+@standards{GNU, fnmatch.h}
+@cindex Korn Shell
+@pindex ksh
+Besides the normal patterns, also recognize the extended patterns
+introduced in @file{ksh}.  The patterns are written in the form
+explained in the following table where @var{pattern-list} is a @code{|}
+separated list of patterns.
+
+@table @code
+@item ?(@var{pattern-list})
+The pattern matches if zero or one occurrences of any of the patterns
+in the @var{pattern-list} allow matching the input string.
+
+@item *(@var{pattern-list})
+The pattern matches if zero or more occurrences of any of the patterns
+in the @var{pattern-list} allow matching the input string.
+
+@item +(@var{pattern-list})
+The pattern matches if one or more occurrences of any of the patterns
+in the @var{pattern-list} allow matching the input string.
+
+@item @@(@var{pattern-list})
+The pattern matches if exactly one occurrence of any of the patterns in
+the @var{pattern-list} allows matching the input string.
+
+@item !(@var{pattern-list})
+The pattern matches if the input string cannot be matched with any of
+the patterns in the @var{pattern-list}.
+@end table
+@end vtable
+
+@node Globbing
+@section Globbing
+
+@cindex globbing
+The archetypal use of wildcards is for matching against the files in a
+directory, and making a list of all the matches.  This is called
+@dfn{globbing}.
+
+You could do this using @code{fnmatch}, by reading the directory entries
+one by one and testing each one with @code{fnmatch}.  But that would be
+slow (and complex, since you would have to handle subdirectories by
+hand).
+
+The library provides a function @code{glob} to make this particular use
+of wildcards convenient.  @code{glob} and the other symbols in this
+section are declared in @file{glob.h}.
+
+@menu
+* Calling Glob::             Basic use of @code{glob}.
+* Flags for Globbing::       Flags that enable various options in @code{glob}.
+* More Flags for Globbing::  GNU specific extensions to @code{glob}.
+@end menu
+
+@node Calling Glob
+@subsection Calling @code{glob}
+
+The result of globbing is a vector of file names (strings).  To return
+this vector, @code{glob} uses a special data type, @code{glob_t}, which
+is a structure.  You pass @code{glob} the address of the structure, and
+it fills in the structure's fields to tell you about the results.
+
+@deftp {Data Type} glob_t
+@standards{POSIX.2, glob.h}
+This data type holds a pointer to a word vector.  More precisely, it
+records both the address of the word vector and its size.  The GNU
+implementation contains some more fields which are non-standard
+extensions.
+
+@table @code
+@item gl_pathc
+The number of elements in the vector, excluding the initial null entries
+if the GLOB_DOOFFS flag is used (see gl_offs below).
+
+@item gl_pathv
+The address of the vector.  This field has type @w{@code{char **}}.
+
+@item gl_offs
+The offset of the first real element of the vector, from its nominal
+address in the @code{gl_pathv} field.  Unlike the other fields, this
+is always an input to @code{glob}, rather than an output from it.
+
+If you use a nonzero offset, then that many elements at the beginning of
+the vector are left empty.  (The @code{glob} function fills them with
+null pointers.)
+
+The @code{gl_offs} field is meaningful only if you use the
+@code{GLOB_DOOFFS} flag.  Otherwise, the offset is always zero
+regardless of what is in this field, and the first real element comes at
+the beginning of the vector.
+
+@item gl_closedir
+The address of an alternative implementation of the @code{closedir}
+function.  It is used if the @code{GLOB_ALTDIRFUNC} bit is set in
+the flag parameter.  The type of this field is
+@w{@code{void (*) (void *)}}.
+
+This is a GNU extension.
+
+@item gl_readdir
+The address of an alternative implementation of the @code{readdir}
+function used to read the contents of a directory.  It is used if the
+@code{GLOB_ALTDIRFUNC} bit is set in the flag parameter.  The type of
+this field is @w{@code{struct dirent *(*) (void *)}}.
+
+An implementation of @code{gl_readdir} needs to initialize the following
+members of the @code{struct dirent} object:
+
+@table @code
+@item d_type
+This member should be set to the file type of the entry if it is known.
+Otherwise, the value @code{DT_UNKNOWN} can be used.  The @code{glob}
+function may use the specified file type to avoid callbacks in cases
+where the file type indicates that the data is not required.
+
+@item d_ino
+This member needs to be non-zero, otherwise @code{glob} may skip the
+current entry and call the @code{gl_readdir} callback function again to
+retrieve another entry.
+
+@item d_name
+This member must be set to the name of the entry.  It must be
+null-terminated.
+@end table
+
+The example below shows how to allocate a @code{struct dirent} object
+containing a given name.
+
+@smallexample
+@include mkdirent.c.texi
+@end smallexample
+
+The @code{glob} function reads the @code{struct dirent} members listed
+above and makes a copy of the file name in the @code{d_name} member
+immediately after the @code{gl_readdir} callback function returns.
+Future invocations of any of the callback functions may dealloacte or
+reuse the buffer.  It is the responsibility of the caller of the
+@code{glob} function to allocate and deallocate the buffer, around the
+call to @code{glob} or using the callback functions.  For example, an
+application could allocate the buffer in the @code{gl_readdir} callback
+function, and deallocate it in the @code{gl_closedir} callback function.
+
+The @code{gl_readdir} member is a GNU extension.
+
+@item gl_opendir
+The address of an alternative implementation of the @code{opendir}
+function.  It is used if the @code{GLOB_ALTDIRFUNC} bit is set in
+the flag parameter.  The type of this field is
+@w{@code{void *(*) (const char *)}}.
+
+This is a GNU extension.
+
+@item gl_stat
+The address of an alternative implementation of the @code{stat} function
+to get information about an object in the filesystem.  It is used if the
+@code{GLOB_ALTDIRFUNC} bit is set in the flag parameter.  The type of
+this field is @w{@code{int (*) (const char *, struct stat *)}}.
+
+This is a GNU extension.
+
+@item gl_lstat
+The address of an alternative implementation of the @code{lstat}
+function to get information about an object in the filesystems, not
+following symbolic links.  It is used if the @code{GLOB_ALTDIRFUNC} bit
+is set in the flag parameter.  The type of this field is @code{@w{int
+(*) (const char *,} @w{struct stat *)}}.
+
+This is a GNU extension.
+
+@item gl_flags
+The flags used when @code{glob} was called.  In addition, @code{GLOB_MAGCHAR}
+might be set.  See @ref{Flags for Globbing} for more details.
+
+This is a GNU extension.
+@end table
+@end deftp
+
+For use in the @code{glob64} function @file{glob.h} contains another
+definition for a very similar type.  @code{glob64_t} differs from
+@code{glob_t} only in the types of the members @code{gl_readdir},
+@code{gl_stat}, and @code{gl_lstat}.
+
+@deftp {Data Type} glob64_t
+@standards{GNU, glob.h}
+This data type holds a pointer to a word vector.  More precisely, it
+records both the address of the word vector and its size.  The GNU
+implementation contains some more fields which are non-standard
+extensions.
+
+@table @code
+@item gl_pathc
+The number of elements in the vector, excluding the initial null entries
+if the GLOB_DOOFFS flag is used (see gl_offs below).
+
+@item gl_pathv
+The address of the vector.  This field has type @w{@code{char **}}.
+
+@item gl_offs
+The offset of the first real element of the vector, from its nominal
+address in the @code{gl_pathv} field.  Unlike the other fields, this
+is always an input to @code{glob}, rather than an output from it.
+
+If you use a nonzero offset, then that many elements at the beginning of
+the vector are left empty.  (The @code{glob} function fills them with
+null pointers.)
+
+The @code{gl_offs} field is meaningful only if you use the
+@code{GLOB_DOOFFS} flag.  Otherwise, the offset is always zero
+regardless of what is in this field, and the first real element comes at
+the beginning of the vector.
+
+@item gl_closedir
+The address of an alternative implementation of the @code{closedir}
+function.  It is used if the @code{GLOB_ALTDIRFUNC} bit is set in
+the flag parameter.  The type of this field is
+@w{@code{void (*) (void *)}}.
+
+This is a GNU extension.
+
+@item gl_readdir
+The address of an alternative implementation of the @code{readdir64}
+function used to read the contents of a directory.  It is used if the
+@code{GLOB_ALTDIRFUNC} bit is set in the flag parameter.  The type of
+this field is @w{@code{struct dirent64 *(*) (void *)}}.
+
+This is a GNU extension.
+
+@item gl_opendir
+The address of an alternative implementation of the @code{opendir}
+function.  It is used if the @code{GLOB_ALTDIRFUNC} bit is set in
+the flag parameter.  The type of this field is
+@w{@code{void *(*) (const char *)}}.
+
+This is a GNU extension.
+
+@item gl_stat
+The address of an alternative implementation of the @code{stat64} function
+to get information about an object in the filesystem.  It is used if the
+@code{GLOB_ALTDIRFUNC} bit is set in the flag parameter.  The type of
+this field is @w{@code{int (*) (const char *, struct stat64 *)}}.
+
+This is a GNU extension.
+
+@item gl_lstat
+The address of an alternative implementation of the @code{lstat64}
+function to get information about an object in the filesystems, not
+following symbolic links.  It is used if the @code{GLOB_ALTDIRFUNC} bit
+is set in the flag parameter.  The type of this field is @code{@w{int
+(*) (const char *,} @w{struct stat64 *)}}.
+
+This is a GNU extension.
+
+@item gl_flags
+The flags used when @code{glob} was called.  In addition, @code{GLOB_MAGCHAR}
+might be set.  See @ref{Flags for Globbing} for more details.
+
+This is a GNU extension.
+@end table
+@end deftp
+
+@deftypefun int glob (const char *@var{pattern}, int @var{flags}, int (*@var{errfunc}) (const char *@var{filename}, int @var{error-code}), glob_t *@var{vector-ptr})
+@standards{POSIX.2, glob.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:utent} @mtsenv{} @mtascusig{:ALRM} @mtascutimer{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c glob @mtasurace:utent @mtsenv @mtascusig:ALRM @mtascutimer @mtslocale @ascudlopen @ascuplugin @asucorrupt @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  strlen dup ok
+@c  strchr dup ok
+@c  malloc dup @ascuheap @acsmem
+@c  mempcpy dup ok
+@c  next_brace_sub ok
+@c  free dup @ascuheap @acsmem
+@c  globfree dup @asucorrupt @ascuheap @acucorrupt @acsmem
+@c  glob_pattern_p ok
+@c   glob_pattern_type dup ok
+@c  getenv dup @mtsenv
+@c  GET_LOGIN_NAME_MAX ok
+@c  getlogin_r dup @mtasurace:utent @mtascusig:ALRM @mtascutimer @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  GETPW_R_SIZE_MAX ok
+@c  getpwnam_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  realloc dup @ascuheap @acsmem
+@c  memcpy dup ok
+@c  memchr dup ok
+@c  *pglob->gl_stat user-supplied
+@c  stat64 dup ok
+@c  S_ISDIR dup ok
+@c  strdup dup @ascuheap @acsmem
+@c  glob_pattern_type ok
+@c  glob_in_dir @mtsenv @mtslocale @asucorrupt @ascuheap @acucorrupt @acsfd @acsmem
+@c   strlen dup ok
+@c   glob_pattern_type dup ok
+@c   malloc dup @ascuheap @acsmem
+@c   mempcpy dup ok
+@c   *pglob->gl_stat user-supplied
+@c   stat64 dup ok
+@c   free dup @ascuheap @acsmem
+@c   *pglob->gl_opendir user-supplied
+@c   opendir dup @ascuheap @acsmem @acsfd
+@c   dirfd dup ok
+@c   *pglob->gl_readdir user-supplied
+@c   CONVERT_DIRENT_DIRENT64 ok
+@c   readdir64 ok [protected by exclusive use of the stream]
+@c   REAL_DIR_ENTRY ok
+@c   DIRENT_MIGHT_BE_DIR ok
+@c   fnmatch dup @mtsenv @mtslocale @ascuheap @acsmem
+@c   DIRENT_MIGHT_BE_SYMLINK ok
+@c   link_exists_p ok
+@c    link_exists2_p ok
+@c     strlen dup ok
+@c     mempcpy dup ok
+@c     *pglob->gl_stat user-supplied
+@c    fxstatat64 dup ok
+@c   realloc dup @ascuheap @acsmem
+@c   pglob->gl_closedir user-supplied
+@c   closedir @ascuheap @acsmem @acsfd
+@c  prefix_array dup @asucorrupt @ascuheap @acucorrupt @acsmem
+@c   strlen dup ok
+@c   malloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c   mempcpy dup ok
+@c  strcpy dup ok
+The function @code{glob} does globbing using the pattern @var{pattern}
+in the current directory.  It puts the result in a newly allocated
+vector, and stores the size and address of this vector into
+@code{*@var{vector-ptr}}.  The argument @var{flags} is a combination of
+bit flags; see @ref{Flags for Globbing}, for details of the flags.
+
+The result of globbing is a sequence of file names.  The function
+@code{glob} allocates a string for each resulting word, then
+allocates a vector of type @code{char **} to store the addresses of
+these strings.  The last element of the vector is a null pointer.
+This vector is called the @dfn{word vector}.
+
+To return this vector, @code{glob} stores both its address and its
+length (number of elements, not counting the terminating null pointer)
+into @code{*@var{vector-ptr}}.
+
+Normally, @code{glob} sorts the file names alphabetically before
+returning them.  You can turn this off with the flag @code{GLOB_NOSORT}
+if you want to get the information as fast as possible.  Usually it's
+a good idea to let @code{glob} sort them---if you process the files in
+alphabetical order, the users will have a feel for the rate of progress
+that your application is making.
+
+If @code{glob} succeeds, it returns 0.  Otherwise, it returns one
+of these error codes:
+
+@vtable @code
+@item GLOB_ABORTED
+@standards{POSIX.2, glob.h}
+There was an error opening a directory, and you used the flag
+@code{GLOB_ERR} or your specified @var{errfunc} returned a nonzero
+value.
+@iftex
+See below
+@end iftex
+@ifinfo
+@xref{Flags for Globbing},
+@end ifinfo
+for an explanation of the @code{GLOB_ERR} flag and @var{errfunc}.
+
+@item GLOB_NOMATCH
+@standards{POSIX.2, glob.h}
+The pattern didn't match any existing files.  If you use the
+@code{GLOB_NOCHECK} flag, then you never get this error code, because
+that flag tells @code{glob} to @emph{pretend} that the pattern matched
+at least one file.
+
+@item GLOB_NOSPACE
+@standards{POSIX.2, glob.h}
+It was impossible to allocate memory to hold the result.
+@end vtable
+
+In the event of an error, @code{glob} stores information in
+@code{*@var{vector-ptr}} about all the matches it has found so far.
+
+It is important to notice that the @code{glob} function will not fail if
+it encounters directories or files which cannot be handled without the
+LFS interfaces.  The implementation of @code{glob} is supposed to use
+these functions internally.  This at least is the assumption made by
+the Unix standard.  The GNU extension of allowing the user to provide their
+own directory handling and @code{stat} functions complicates things a
+bit.  If these callback functions are used and a large file or directory
+is encountered @code{glob} @emph{can} fail.
+@end deftypefun
+
+@deftypefun int glob64 (const char *@var{pattern}, int @var{flags}, int (*@var{errfunc}) (const char *@var{filename}, int @var{error-code}), glob64_t *@var{vector-ptr})
+@standards{GNU, glob.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:utent} @mtsenv{} @mtascusig{:ALRM} @mtascutimer{} @mtslocale{}}@asunsafe{@ascudlopen{} @asucorrupt{} @ascuheap{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c Same code as glob, but with glob64_t #defined as glob_t.
+The @code{glob64} function was added as part of the Large File Summit
+extensions but is not part of the original LFS proposal.  The reason for
+this is simple: it is not necessary.  The necessity for a @code{glob64}
+function is added by the extensions of the GNU @code{glob}
+implementation which allows the user to provide their own directory handling
+and @code{stat} functions.  The @code{readdir} and @code{stat} functions
+do depend on the choice of @code{_FILE_OFFSET_BITS} since the definition
+of the types @code{struct dirent} and @code{struct stat} will change
+depending on the choice.
+
+Besides this difference, @code{glob64} works just like @code{glob} in
+all aspects.
+
+This function is a GNU extension.
+@end deftypefun
+
+@node Flags for Globbing
+@subsection Flags for Globbing
+
+This section describes the standard flags that you can specify in the
+@var{flags} argument to @code{glob}.  Choose the flags you want,
+and combine them with the C bitwise OR operator @code{|}.
+
+Note that there are @ref{More Flags for Globbing} available as GNU extensions.
+
+@vtable @code
+@item GLOB_APPEND
+@standards{POSIX.2, glob.h}
+Append the words from this expansion to the vector of words produced by
+previous calls to @code{glob}.  This way you can effectively expand
+several words as if they were concatenated with spaces between them.
+
+In order for appending to work, you must not modify the contents of the
+word vector structure between calls to @code{glob}.  And, if you set
+@code{GLOB_DOOFFS} in the first call to @code{glob}, you must also
+set it when you append to the results.
+
+Note that the pointer stored in @code{gl_pathv} may no longer be valid
+after you call @code{glob} the second time, because @code{glob} might
+have relocated the vector.  So always fetch @code{gl_pathv} from the
+@code{glob_t} structure after each @code{glob} call; @strong{never} save
+the pointer across calls.
+
+@item GLOB_DOOFFS
+@standards{POSIX.2, glob.h}
+Leave blank slots at the beginning of the vector of words.
+The @code{gl_offs} field says how many slots to leave.
+The blank slots contain null pointers.
+
+@item GLOB_ERR
+@standards{POSIX.2, glob.h}
+Give up right away and report an error if there is any difficulty
+reading the directories that must be read in order to expand @var{pattern}
+fully.  Such difficulties might include a directory in which you don't
+have the requisite access.  Normally, @code{glob} tries its best to keep
+on going despite any errors, reading whatever directories it can.
+
+You can exercise even more control than this by specifying an
+error-handler function @var{errfunc} when you call @code{glob}.  If
+@var{errfunc} is not a null pointer, then @code{glob} doesn't give up
+right away when it can't read a directory; instead, it calls
+@var{errfunc} with two arguments, like this:
+
+@smallexample
+(*@var{errfunc}) (@var{filename}, @var{error-code})
+@end smallexample
+
+@noindent
+The argument @var{filename} is the name of the directory that
+@code{glob} couldn't open or couldn't read, and @var{error-code} is the
+@code{errno} value that was reported to @code{glob}.
+
+If the error handler function returns nonzero, then @code{glob} gives up
+right away.  Otherwise, it continues.
+
+@item GLOB_MARK
+@standards{POSIX.2, glob.h}
+If the pattern matches the name of a directory, append @samp{/} to the
+directory's name when returning it.
+
+@item GLOB_NOCHECK
+@standards{POSIX.2, glob.h}
+If the pattern doesn't match any file names, return the pattern itself
+as if it were a file name that had been matched.  (Normally, when the
+pattern doesn't match anything, @code{glob} returns that there were no
+matches.)
+
+@item GLOB_NOESCAPE
+@standards{POSIX.2, glob.h}
+Don't treat the @samp{\} character specially in patterns.  Normally,
+@samp{\} quotes the following character, turning off its special meaning
+(if any) so that it matches only itself.  When quoting is enabled, the
+pattern @samp{\?} matches only the string @samp{?}, because the question
+mark in the pattern acts like an ordinary character.
+
+If you use @code{GLOB_NOESCAPE}, then @samp{\} is an ordinary character.
+
+@code{glob} does its work by calling the function @code{fnmatch}
+repeatedly.  It handles the flag @code{GLOB_NOESCAPE} by turning on the
+@code{FNM_NOESCAPE} flag in calls to @code{fnmatch}.
+
+@item GLOB_NOSORT
+@standards{POSIX.2, glob.h}
+Don't sort the file names; return them in no particular order.
+(In practice, the order will depend on the order of the entries in
+the directory.)  The only reason @emph{not} to sort is to save time.
+@end vtable
+
+@node More Flags for Globbing
+@subsection More Flags for Globbing
+
+Beside the flags described in the last section, the GNU implementation of
+@code{glob} allows a few more flags which are also defined in the
+@file{glob.h} file.  Some of the extensions implement functionality
+which is available in modern shell implementations.
+
+@vtable @code
+@item GLOB_PERIOD
+@standards{GNU, glob.h}
+The @code{.} character (period) is treated special.  It cannot be
+matched by wildcards.  @xref{Wildcard Matching}, @code{FNM_PERIOD}.
+
+@item GLOB_MAGCHAR
+@standards{GNU, glob.h}
+The @code{GLOB_MAGCHAR} value is not to be given to @code{glob} in the
+@var{flags} parameter.  Instead, @code{glob} sets this bit in the
+@var{gl_flags} element of the @var{glob_t} structure provided as the
+result if the pattern used for matching contains any wildcard character.
+
+@item GLOB_ALTDIRFUNC
+@standards{GNU, glob.h}
+Instead of using the normal functions for accessing the
+filesystem the @code{glob} implementation uses the user-supplied
+functions specified in the structure pointed to by @var{pglob}
+parameter.  For more information about the functions refer to the
+sections about directory handling see @ref{Accessing Directories}, and
+@ref{Reading Attributes}.
+
+@item GLOB_BRACE
+@standards{GNU, glob.h}
+If this flag is given, the handling of braces in the pattern is changed.
+It is now required that braces appear correctly grouped.  I.e., for each
+opening brace there must be a closing one.  Braces can be used
+recursively.  So it is possible to define one brace expression in
+another one.  It is important to note that the range of each brace
+expression is completely contained in the outer brace expression (if
+there is one).
+
+The string between the matching braces is separated into single
+expressions by splitting at @code{,} (comma) characters.  The commas
+themselves are discarded.  Please note what we said above about recursive
+brace expressions.  The commas used to separate the subexpressions must
+be at the same level.  Commas in brace subexpressions are not matched.
+They are used during expansion of the brace expression of the deeper
+level.  The example below shows this
+
+@smallexample
+glob ("@{foo/@{,bar,biz@},baz@}", GLOB_BRACE, NULL, &result)
+@end smallexample
+
+@noindent
+is equivalent to the sequence
+
+@smallexample
+glob ("foo/", GLOB_BRACE, NULL, &result)
+glob ("foo/bar", GLOB_BRACE|GLOB_APPEND, NULL, &result)
+glob ("foo/biz", GLOB_BRACE|GLOB_APPEND, NULL, &result)
+glob ("baz", GLOB_BRACE|GLOB_APPEND, NULL, &result)
+@end smallexample
+
+@noindent
+if we leave aside error handling.
+
+@item GLOB_NOMAGIC
+@standards{GNU, glob.h}
+If the pattern contains no wildcard constructs (it is a literal file name),
+return it as the sole ``matching'' word, even if no file exists by that name.
+
+@item GLOB_TILDE
+@standards{GNU, glob.h}
+If this flag is used the character @code{~} (tilde) is handled specially
+if it appears at the beginning of the pattern.  Instead of being taken
+verbatim it is used to represent the home directory of a known user.
+
+If @code{~} is the only character in pattern or it is followed by a
+@code{/} (slash), the home directory of the process owner is
+substituted.  Using @code{getlogin} and @code{getpwnam} the information
+is read from the system databases.  As an example take user @code{bart}
+with his home directory at @file{/home/bart}.  For him a call like
+
+@smallexample
+glob ("~/bin/*", GLOB_TILDE, NULL, &result)
+@end smallexample
+
+@noindent
+would return the contents of the directory @file{/home/bart/bin}.
+Instead of referring to the own home directory it is also possible to
+name the home directory of other users.  To do so one has to append the
+user name after the tilde character.  So the contents of user
+@code{homer}'s @file{bin} directory can be retrieved by
+
+@smallexample
+glob ("~homer/bin/*", GLOB_TILDE, NULL, &result)
+@end smallexample
+
+If the user name is not valid or the home directory cannot be determined
+for some reason the pattern is left untouched and itself used as the
+result.  I.e., if in the last example @code{home} is not available the
+tilde expansion yields to @code{"~homer/bin/*"} and @code{glob} is not
+looking for a directory named @code{~homer}.
+
+This functionality is equivalent to what is available in C-shells if the
+@code{nonomatch} flag is set.
+
+@item GLOB_TILDE_CHECK
+@standards{GNU, glob.h}
+If this flag is used @code{glob} behaves as if @code{GLOB_TILDE} is
+given.  The only difference is that if the user name is not available or
+the home directory cannot be determined for other reasons this leads to
+an error.  @code{glob} will return @code{GLOB_NOMATCH} instead of using
+the pattern itself as the name.
+
+This functionality is equivalent to what is available in C-shells if
+the @code{nonomatch} flag is not set.
+
+@item GLOB_ONLYDIR
+@standards{GNU, glob.h}
+If this flag is used the globbing function takes this as a
+@strong{hint} that the caller is only interested in directories
+matching the pattern.  If the information about the type of the file
+is easily available non-directories will be rejected but no extra
+work will be done to determine the information for each file.  I.e.,
+the caller must still be able to filter directories out.
+
+This functionality is only available with the GNU @code{glob}
+implementation.  It is mainly used internally to increase the
+performance but might be useful for a user as well and therefore is
+documented here.
+@end vtable
+
+Calling @code{glob} will in most cases allocate resources which are used
+to represent the result of the function call.  If the same object of
+type @code{glob_t} is used in multiple call to @code{glob} the resources
+are freed or reused so that no leaks appear.  But this does not include
+the time when all @code{glob} calls are done.
+
+@deftypefun void globfree (glob_t *@var{pglob})
+@standards{POSIX.2, glob.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c globfree dup @asucorrupt @ascuheap @acucorrupt @acsmem
+@c  free dup @ascuheap @acsmem
+The @code{globfree} function frees all resources allocated by previous
+calls to @code{glob} associated with the object pointed to by
+@var{pglob}.  This function should be called whenever the currently used
+@code{glob_t} typed object isn't used anymore.
+@end deftypefun
+
+@deftypefun void globfree64 (glob64_t *@var{pglob})
+@standards{GNU, glob.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asucorrupt{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+This function is equivalent to @code{globfree} but it frees records of
+type @code{glob64_t} which were allocated by @code{glob64}.
+@end deftypefun
+
+
+@node Regular Expressions
+@section Regular Expression Matching
+
+@Theglibc{} supports two interfaces for matching regular
+expressions.  One is the standard POSIX.2 interface, and the other is
+what @theglibc{} has had for many years.
+
+Both interfaces are declared in the header file @file{regex.h}.
+If you define @w{@code{_POSIX_C_SOURCE}}, then only the POSIX.2
+functions, structures, and constants are declared.
+@c !!! we only document the POSIX.2 interface here!!
+
+@menu
+* POSIX Regexp Compilation::    Using @code{regcomp} to prepare to match.
+* Flags for POSIX Regexps::     Syntax variations for @code{regcomp}.
+* Matching POSIX Regexps::      Using @code{regexec} to match the compiled
+				   pattern that you get from @code{regcomp}.
+* Regexp Subexpressions::       Finding which parts of the string were matched.
+* Subexpression Complications:: Find points of which parts were matched.
+* Regexp Cleanup::		Freeing storage; reporting errors.
+@end menu
+
+@node POSIX Regexp Compilation
+@subsection POSIX Regular Expression Compilation
+
+Before you can actually match a regular expression, you must
+@dfn{compile} it.  This is not true compilation---it produces a special
+data structure, not machine instructions.  But it is like ordinary
+compilation in that its purpose is to enable you to ``execute'' the
+pattern fast.  (@xref{Matching POSIX Regexps}, for how to use the
+compiled regular expression for matching.)
+
+There is a special data type for compiled regular expressions:
+
+@deftp {Data Type} regex_t
+@standards{POSIX.2, regex.h}
+This type of object holds a compiled regular expression.
+It is actually a structure.  It has just one field that your programs
+should look at:
+
+@table @code
+@item re_nsub
+This field holds the number of parenthetical subexpressions in the
+regular expression that was compiled.
+@end table
+
+There are several other fields, but we don't describe them here, because
+only the functions in the library should use them.
+@end deftp
+
+After you create a @code{regex_t} object, you can compile a regular
+expression into it by calling @code{regcomp}.
+
+@deftypefun int regcomp (regex_t *restrict @var{compiled}, const char *restrict @var{pattern}, int @var{cflags})
+@standards{POSIX.2, regex.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c All of the issues have to do with memory allocation and multi-byte
+@c character handling present in the input string, or implied by ranges
+@c or inverted character classes.
+@c (re_)malloc @ascuheap @acsmem
+@c re_compile_internal @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  (re_)realloc @ascuheap @acsmem [no @asucorrupt @acucorrupt for we zero the buffer]
+@c  init_dfa @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   (re_)malloc @ascuheap @acsmem
+@c   calloc @ascuheap @acsmem
+@c   _NL_CURRENT ok
+@c   _NL_CURRENT_WORD ok
+@c   btowc @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  libc_lock_init ok
+@c  re_string_construct @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   re_string_construct_common ok
+@c   re_string_realloc_buffers @ascuheap @acsmem
+@c    (re_)realloc dup @ascuheap @acsmem
+@c   build_wcs_upper_buffer @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    isascii ok
+@c    mbsinit ok
+@c    toupper ok
+@c    mbrtowc dup @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    iswlower @mtslocale
+@c    towupper @mtslocale
+@c    wcrtomb dup @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    (re_)malloc dup @ascuheap @acsmem
+@c   build_upper_buffer ok (@mtslocale but optimized)
+@c    islower ok
+@c    toupper ok
+@c   build_wcs_buffer @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    mbrtowc dup @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   re_string_translate_buffer ok
+@c  parse @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   fetch_token @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    peek_token @mtslocale
+@c     re_string_eoi ok
+@c     re_string_peek_byte ok
+@c     re_string_cur_idx ok
+@c     re_string_length ok
+@c     re_string_peek_byte_case @mtslocale
+@c      re_string_peek_byte dup ok
+@c      re_string_is_single_byte_char ok
+@c      isascii ok
+@c      re_string_peek_byte dup ok
+@c     re_string_wchar_at ok
+@c     re_string_skip_bytes ok
+@c    re_string_skip_bytes dup ok
+@c   parse_reg_exp @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    parse_branch @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     parse_expression @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c      create_token_tree dup @ascuheap @acsmem
+@c      re_string_eoi dup ok
+@c      re_string_first_byte ok
+@c      fetch_token dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c      create_tree dup @ascuheap @acsmem
+@c      parse_sub_exp @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       fetch_token dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       parse_reg_exp dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       postorder() @ascuheap @acsmem
+@c        free_tree @ascuheap @acsmem
+@c         free_token dup @ascuheap @acsmem
+@c       create_tree dup @ascuheap @acsmem
+@c      parse_bracket_exp @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       _NL_CURRENT dup ok
+@c       _NL_CURRENT_WORD dup ok
+@c       calloc dup @ascuheap @acsmem
+@c       (re_)free dup @ascuheap @acsmem
+@c       peek_token_bracket ok
+@c        re_string_eoi dup ok
+@c        re_string_peek_byte dup ok
+@c        re_string_first_byte dup ok
+@c        re_string_cur_idx dup ok
+@c        re_string_length dup ok
+@c        re_string_skip_bytes dup ok
+@c       bitset_set ok
+@c       re_string_skip_bytes ok
+@c       parse_bracket_element @mtslocale
+@c        re_string_char_size_at ok
+@c        re_string_wchar_at dup ok
+@c        re_string_skip_bytes dup ok
+@c        parse_bracket_symbol @mtslocale
+@c         re_string_eoi dup ok
+@c         re_string_fetch_byte_case @mtslocale
+@c          re_string_fetch_byte ok
+@c          re_string_first_byte dup ok
+@c          isascii ok
+@c          re_string_char_size_at dup ok
+@c          re_string_skip_bytes dup ok
+@c         re_string_fetch_byte dup ok
+@c         re_string_peek_byte dup ok
+@c         re_string_skip_bytes dup ok
+@c        peek_token_bracket dup ok
+@c       auto build_range_exp @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c        auto lookup_collation_sequence_value @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c         btowc dup @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c         collseq_table_lookup ok
+@c         auto seek_collating_symbol_entry dup ok
+@c        (re_)realloc dup @ascuheap @acsmem
+@c        collseq_table_lookup dup ok
+@c       bitset_set dup ok
+@c       (re_)realloc dup @ascuheap @acsmem
+@c       build_equiv_class @mtslocale @ascuheap @acsmem
+@c        _NL_CURRENT ok
+@c        auto findidx ok
+@c        bitset_set dup ok
+@c        (re_)realloc dup @ascuheap @acsmem
+@c       auto build_collating_symbol @ascuheap @acsmem
+@c        auto seek_collating_symbol_entry ok
+@c        bitset_set dup ok
+@c        (re_)realloc dup @ascuheap @acsmem
+@c       build_charclass @mtslocale @ascuheap @acsmem
+@c        (re_)realloc dup @ascuheap @acsmem
+@c        bitset_set dup ok
+@c        isalnum ok
+@c        iscntrl ok
+@c        isspace ok
+@c        isalpha ok
+@c        isdigit ok
+@c        isprint ok
+@c        isupper ok
+@c        isblank ok
+@c        isgraph ok
+@c        ispunct ok
+@c        isxdigit ok
+@c       bitset_not ok
+@c       bitset_mask ok
+@c       create_token_tree dup @ascuheap @acsmem
+@c       create_tree dup @ascuheap @acsmem
+@c       free_charset dup @ascuheap @acsmem
+@c      init_word_char @mtslocale
+@c       isalnum ok
+@c      build_charclass_op @mtslocale @ascuheap @acsmem
+@c       calloc dup @ascuheap @acsmem
+@c       build_charclass dup @mtslocale @ascuheap @acsmem
+@c       (re_)free dup @ascuheap @acsmem
+@c       free_charset dup @ascuheap @acsmem
+@c       bitset_set dup ok
+@c       bitset_not dup ok
+@c       bitset_mask dup ok
+@c       create_token_tree dup @ascuheap @acsmem
+@c       create_tree dup @ascuheap @acsmem
+@c      parse_dup_op @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       re_string_cur_idx dup ok
+@c       fetch_number @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c        fetch_token dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       re_string_set_index ok
+@c       postorder() @ascuheap @acsmem
+@c        free_tree dup @ascuheap @acsmem
+@c        mark_opt_subexp ok
+@c       duplicate_tree @ascuheap @acsmem
+@c        create_token_tree dup @ascuheap @acsmem
+@c       create_tree dup @ascuheap @acsmem
+@c     postorder() @ascuheap @acsmem
+@c      free_tree dup @ascuheap @acsmem
+@c    fetch_token dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    parse_branch dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    create_tree dup @ascuheap @acsmem
+@c   create_tree @ascuheap @acsmem
+@c    create_token_tree @ascuheap @acsmem
+@c     (re_)malloc dup @ascuheap @acsmem
+@c  analyze @ascuheap @acsmem
+@c   (re_)malloc dup @ascuheap @acsmem
+@c   preorder() @ascuheap @acsmem
+@c    optimize_subexps ok
+@c    calc_next ok
+@c    link_nfa_nodes @ascuheap @acsmem
+@c     re_node_set_init_1 @ascuheap @acsmem
+@c      (re_)malloc dup @ascuheap @acsmem
+@c     re_node_set_init_2 @ascuheap @acsmem
+@c      (re_)malloc dup @ascuheap @acsmem
+@c   postorder() @ascuheap @acsmem
+@c    lower_subexps @ascuheap @acsmem
+@c     lower_subexp @ascuheap @acsmem
+@c      create_tree dup @ascuheap @acsmem
+@c    calc_first @ascuheap @acsmem
+@c     re_dfa_add_node @ascuheap @acsmem
+@c      (re_)realloc dup @ascuheap @acsmem
+@c      re_node_set_init_empty ok
+@c   calc_eclosure @ascuheap @acsmem
+@c    calc_eclosure_iter @ascuheap @acsmem
+@c     re_node_set_alloc @ascuheap @acsmem
+@c      (re_)malloc dup @ascuheap @acsmem
+@c     duplicate_node_closure @ascuheap @acsmem
+@c      re_node_set_empty ok
+@c      duplicate_node @ascuheap @acsmem
+@c       re_dfa_add_node dup @ascuheap @acsmem
+@c      re_node_set_insert @ascuheap @acsmem
+@c       (re_)realloc dup @ascuheap @acsmem
+@c      search_duplicated_node ok
+@c     re_node_set_merge @ascuheap @acsmem
+@c      (re_)realloc dup @ascuheap @acsmem
+@c     re_node_set_free @ascuheap @acsmem
+@c      (re_)free dup @ascuheap @acsmem
+@c     re_node_set_insert dup @ascuheap @acsmem
+@c    re_node_set_free dup @ascuheap @acsmem
+@c   calc_inveclosure @ascuheap @acsmem
+@c    re_node_set_init_empty dup ok
+@c    re_node_set_insert_last @ascuheap @acsmem
+@c     (re_)realloc dup @ascuheap @acsmem
+@c  optimize_utf8 ok
+@c  create_initial_state @ascuheap @acsmem
+@c   re_node_set_init_copy @ascuheap @acsmem
+@c    (re_)malloc dup @ascuheap @acsmem
+@c    re_node_set_init_empty dup ok
+@c   re_node_set_contains ok
+@c   re_node_set_merge dup @ascuheap @acsmem
+@c   re_acquire_state_context @ascuheap @acsmem
+@c    calc_state_hash ok
+@c    re_node_set_compare ok
+@c    create_cd_newstate @ascuheap @acsmem
+@c     calloc dup @ascuheap @acsmem
+@c     re_node_set_init_copy dup @ascuheap @acsmem
+@c     (re_)free dup @ascuheap @acsmem
+@c     free_state @ascuheap @acsmem
+@c      re_node_set_free dup @ascuheap @acsmem
+@c      (re_)free dup @ascuheap @acsmem
+@c     NOT_SATISFY_PREV_CONSTRAINT ok
+@c     re_node_set_remove_at ok
+@c     register_state @ascuheap @acsmem
+@c      re_node_set_alloc dup @ascuheap @acsmem
+@c      re_node_set_insert_last dup @ascuheap @acsmem
+@c      (re_)realloc dup @ascuheap @acsmem
+@c   re_node_set_free dup @ascuheap @acsmem
+@c  free_workarea_compile @ascuheap @acsmem
+@c   (re_)free dup @ascuheap @acsmem
+@c  re_string_destruct @ascuheap @acsmem
+@c   (re_)free dup @ascuheap @acsmem
+@c  free_dfa_content @ascuheap @acsmem
+@c   free_token @ascuheap @acsmem
+@c    free_charset @ascuheap @acsmem
+@c     (re_)free dup @ascuheap @acsmem
+@c    (re_)free dup @ascuheap @acsmem
+@c   (re_)free dup @ascuheap @acsmem
+@c   re_node_set_free dup @ascuheap @acsmem
+@c re_compile_fastmap @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  re_compile_fastmap_iter @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   re_set_fastmap ok
+@c    tolower ok
+@c   mbrtowc dup @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   wcrtomb dup @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   towlower @mtslocale
+@c   _NL_CURRENT ok
+@c (re_)free @ascuheap @acsmem
+The function @code{regcomp} ``compiles'' a regular expression into a
+data structure that you can use with @code{regexec} to match against a
+string.  The compiled regular expression format is designed for
+efficient matching.  @code{regcomp} stores it into @code{*@var{compiled}}.
+
+It's up to you to allocate an object of type @code{regex_t} and pass its
+address to @code{regcomp}.
+
+The argument @var{cflags} lets you specify various options that control
+the syntax and semantics of regular expressions.  @xref{Flags for POSIX
+Regexps}.
+
+If you use the flag @code{REG_NOSUB}, then @code{regcomp} omits from
+the compiled regular expression the information necessary to record
+how subexpressions actually match.  In this case, you might as well
+pass @code{0} for the @var{matchptr} and @var{nmatch} arguments when
+you call @code{regexec}.
+
+If you don't use @code{REG_NOSUB}, then the compiled regular expression
+does have the capacity to record how subexpressions match.  Also,
+@code{regcomp} tells you how many subexpressions @var{pattern} has, by
+storing the number in @code{@var{compiled}->re_nsub}.  You can use that
+value to decide how long an array to allocate to hold information about
+subexpression matches.
+
+@code{regcomp} returns @code{0} if it succeeds in compiling the regular
+expression; otherwise, it returns a nonzero error code (see the table
+below).  You can use @code{regerror} to produce an error message string
+describing the reason for a nonzero value; see @ref{Regexp Cleanup}.
+
+@end deftypefun
+
+Here are the possible nonzero values that @code{regcomp} can return:
+
+@vtable @code
+@item REG_BADBR
+@standards{POSIX.2, regex.h}
+There was an invalid @samp{\@{@dots{}\@}} construct in the regular
+expression.  A valid @samp{\@{@dots{}\@}} construct must contain either
+a single number, or two numbers in increasing order separated by a
+comma.
+
+@item REG_BADPAT
+@standards{POSIX.2, regex.h}
+There was a syntax error in the regular expression.
+
+@item REG_BADRPT
+@standards{POSIX.2, regex.h}
+A repetition operator such as @samp{?} or @samp{*} appeared in a bad
+position (with no preceding subexpression to act on).
+
+@item REG_ECOLLATE
+@standards{POSIX.2, regex.h}
+The regular expression referred to an invalid collating element (one not
+defined in the current locale for string collation).  @xref{Locale
+Categories}.
+
+@item REG_ECTYPE
+@standards{POSIX.2, regex.h}
+The regular expression referred to an invalid character class name.
+
+@item REG_EESCAPE
+@standards{POSIX.2, regex.h}
+The regular expression ended with @samp{\}.
+
+@item REG_ESUBREG
+@standards{POSIX.2, regex.h}
+There was an invalid number in the @samp{\@var{digit}} construct.
+
+@item REG_EBRACK
+@standards{POSIX.2, regex.h}
+There were unbalanced square brackets in the regular expression.
+
+@item REG_EPAREN
+@standards{POSIX.2, regex.h}
+An extended regular expression had unbalanced parentheses,
+or a basic regular expression had unbalanced @samp{\(} and @samp{\)}.
+
+@item REG_EBRACE
+@standards{POSIX.2, regex.h}
+The regular expression had unbalanced @samp{\@{} and @samp{\@}}.
+
+@item REG_ERANGE
+@standards{POSIX.2, regex.h}
+One of the endpoints in a range expression was invalid.
+
+@item REG_ESPACE
+@standards{POSIX.2, regex.h}
+@code{regcomp} ran out of memory.
+@end vtable
+
+@node Flags for POSIX Regexps
+@subsection Flags for POSIX Regular Expressions
+
+These are the bit flags that you can use in the @var{cflags} operand when
+compiling a regular expression with @code{regcomp}.
+
+@vtable @code
+@item REG_EXTENDED
+@standards{POSIX.2, regex.h}
+Treat the pattern as an extended regular expression, rather than as a
+basic regular expression.
+
+@item REG_ICASE
+@standards{POSIX.2, regex.h}
+Ignore case when matching letters.
+
+@item REG_NOSUB
+@standards{POSIX.2, regex.h}
+Don't bother storing the contents of the @var{matchptr} array.
+
+@item REG_NEWLINE
+@standards{POSIX.2, regex.h}
+Treat a newline in @var{string} as dividing @var{string} into multiple
+lines, so that @samp{$} can match before the newline and @samp{^} can
+match after.  Also, don't permit @samp{.} to match a newline, and don't
+permit @samp{[^@dots{}]} to match a newline.
+
+Otherwise, newline acts like any other ordinary character.
+@end vtable
+
+@node Matching POSIX Regexps
+@subsection Matching a Compiled POSIX Regular Expression
+
+Once you have compiled a regular expression, as described in @ref{POSIX
+Regexp Compilation}, you can match it against strings using
+@code{regexec}.  A match anywhere inside the string counts as success,
+unless the regular expression contains anchor characters (@samp{^} or
+@samp{$}).
+
+@deftypefun int regexec (const regex_t *restrict @var{compiled}, const char *restrict @var{string}, size_t @var{nmatch}, regmatch_t @var{matchptr}[restrict], int @var{eflags})
+@standards{POSIX.2, regex.h}
+@safety{@prelim{}@mtsafe{@mtslocale{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsmem{} @acsfd{}}}
+@c libc_lock_lock @asulock @aculock
+@c re_search_internal @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  re_string_allocate @ascuheap @acsmem
+@c   re_string_construct_common dup ok
+@c   re_string_realloc_buffers dup @ascuheap @acsmem
+@c  match_ctx_init @ascuheap @acsmem
+@c   (re_)malloc dup @ascuheap @acsmem
+@c  re_string_byte_at ok
+@c  re_string_first_byte dup ok
+@c  check_matching @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   re_string_cur_idx dup ok
+@c   acquire_init_state_context dup @ascuheap @acsmem
+@c    re_string_context_at ok
+@c     re_string_byte_at dup ok
+@c     bitset_contain ok
+@c    re_acquire_state_context dup @ascuheap @acsmem
+@c   check_subexp_matching_top @ascuheap @acsmem
+@c    match_ctx_add_subtop @ascuheap @acsmem
+@c     (re_)realloc dup @ascuheap @acsmem
+@c     calloc dup @ascuheap @acsmem
+@c   transit_state_bkref @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    re_string_cur_idx dup ok
+@c    re_string_context_at dup ok
+@c    NOT_SATISFY_NEXT_CONSTRAINT ok
+@c    get_subexp @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     re_string_get_buffer ok
+@c     search_cur_bkref_entry ok
+@c     clean_state_log_if_needed @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c      extend_buffers @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       re_string_realloc_buffers dup @ascuheap @acsmem
+@c       (re_)realloc dup @ascuheap @acsmem
+@c       build_wcs_upper_buffer dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       build_upper_buffer dup ok (@mtslocale but optimized)
+@c       build_wcs_buffer dup @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       re_string_translate_buffer dup ok
+@c     get_subexp_sub @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c      check_arrival @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c       (re_)realloc dup @ascuheap @acsmem
+@c       re_string_context_at dup ok
+@c       re_node_set_init_1 dup @ascuheap @acsmem
+@c       check_arrival_expand_ecl @ascuheap @acsmem
+@c        re_node_set_alloc dup @ascuheap @acsmem
+@c        find_subexp_node ok
+@c        re_node_set_merge dup @ascuheap @acsmem
+@c        re_node_set_free dup @ascuheap @acsmem
+@c        check_arrival_expand_ecl_sub @ascuheap @acsmem
+@c         re_node_set_contains dup ok
+@c         re_node_set_insert dup @ascuheap @acsmem
+@c       re_node_set_free dup @ascuheap @acsmem
+@c       re_node_set_init_copy dup @ascuheap @acsmem
+@c       re_node_set_init_empty dup ok
+@c       expand_bkref_cache @ascuheap @acsmem
+@c        search_cur_bkref_entry dup ok
+@c        re_node_set_contains dup ok
+@c        re_node_set_init_1 dup @ascuheap @acsmem
+@c        check_arrival_expand_ecl dup @ascuheap @acsmem
+@c        re_node_set_merge dup @ascuheap @acsmem
+@c        re_node_set_init_copy dup @ascuheap @acsmem
+@c        re_node_set_insert dup @ascuheap @acsmem
+@c        re_node_set_free dup @ascuheap @acsmem
+@c        re_acquire_state @ascuheap @acsmem
+@c         calc_state_hash dup ok
+@c         re_node_set_compare dup ok
+@c         create_ci_newstate @ascuheap @acsmem
+@c          calloc dup @ascuheap @acsmem
+@c          re_node_set_init_copy dup @ascuheap @acsmem
+@c          (re_)free dup @ascuheap @acsmem
+@c          register_state dup @ascuheap @acsmem
+@c          free_state dup @ascuheap @acsmem
+@c       re_acquire_state_context dup @ascuheap @acsmem
+@c       re_node_set_merge dup @ascuheap @acsmem
+@c       check_arrival_add_next_nodes @mtslocale @ascuheap @acsmem
+@c        re_node_set_init_empty dup ok
+@c        check_node_accept_bytes @mtslocale @ascuheap @acsmem
+@c         re_string_byte_at dup ok
+@c         re_string_char_size_at dup ok
+@c         re_string_elem_size_at @mtslocale
+@c          _NL_CURRENT_WORD dup ok
+@c          _NL_CURRENT dup ok
+@c          auto findidx dup ok
+@c         _NL_CURRENT_WORD dup ok
+@c         _NL_CURRENT dup ok
+@c         collseq_table_lookup dup ok
+@c         find_collation_sequence_value @mtslocale
+@c          _NL_CURRENT_WORD dup ok
+@c          _NL_CURRENT dup ok
+@c         auto findidx dup ok
+@c         wcscoll @mtslocale @ascuheap @acsmem
+@c        re_node_set_empty dup ok
+@c        re_node_set_merge dup @ascuheap @acsmem
+@c        re_node_set_free dup @ascuheap @acsmem
+@c        re_node_set_insert dup @ascuheap @acsmem
+@c        re_acquire_state dup @ascuheap @acsmem
+@c        check_node_accept ok
+@c         re_string_byte_at dup ok
+@c         bitset_contain dup ok
+@c         re_string_context_at dup ok
+@c         NOT_SATISFY_NEXT_CONSTRAINT dup ok
+@c      match_ctx_add_entry @ascuheap @acsmem
+@c       (re_)realloc dup @ascuheap @acsmem
+@c       (re_)free dup @ascuheap @acsmem
+@c      clean_state_log_if_needed dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     extend_buffers dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     find_subexp_node dup ok
+@c     calloc dup @ascuheap @acsmem
+@c     check_arrival dup ***
+@c     match_ctx_add_sublast @ascuheap @acsmem
+@c      (re_)realloc dup @ascuheap @acsmem
+@c    re_acquire_state_context dup @ascuheap @acsmem
+@c    re_node_set_init_union @ascuheap @acsmem
+@c     (re_)malloc dup @ascuheap @acsmem
+@c     re_node_set_init_copy dup @ascuheap @acsmem
+@c     re_node_set_init_empty dup ok
+@c    re_node_set_free dup @ascuheap @acsmem
+@c    check_subexp_matching_top dup @ascuheap @acsmem
+@c   check_halt_state_context ok
+@c    re_string_context_at dup ok
+@c    check_halt_node_context ok
+@c     NOT_SATISFY_NEXT_CONSTRAINT dup ok
+@c   re_string_eoi dup ok
+@c   extend_buffers dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   transit_state @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    transit_state_mb @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     re_string_context_at dup ok
+@c     NOT_SATISFY_NEXT_CONSTRAINT dup ok
+@c     check_node_accept_bytes dup @mtslocale @ascuheap @acsmem
+@c     re_string_cur_idx dup ok
+@c     clean_state_log_if_needed @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c     re_node_set_init_union dup @ascuheap @acsmem
+@c     re_acquire_state_context dup @ascuheap @acsmem
+@c    re_string_fetch_byte dup ok
+@c    re_string_context_at dup ok
+@c    build_trtable @ascuheap @acsmem
+@c     (re_)malloc dup @ascuheap @acsmem
+@c     group_nodes_into_DFAstates @ascuheap @acsmem
+@c      bitset_empty dup ok
+@c      bitset_set dup ok
+@c      bitset_merge dup ok
+@c      bitset_set_all ok
+@c      bitset_clear ok
+@c      bitset_contain dup ok
+@c      bitset_copy ok
+@c      re_node_set_init_copy dup @ascuheap @acsmem
+@c      re_node_set_insert dup @ascuheap @acsmem
+@c      re_node_set_init_1 dup @ascuheap @acsmem
+@c      re_node_set_free dup @ascuheap @acsmem
+@c     re_node_set_alloc dup @ascuheap @acsmem
+@c     malloc dup @ascuheap @acsmem
+@c     free dup @ascuheap @acsmem
+@c     re_node_set_free dup @ascuheap @acsmem
+@c     bitset_empty ok
+@c     re_node_set_empty dup ok
+@c     re_node_set_merge dup @ascuheap @acsmem
+@c     re_acquire_state_context dup @ascuheap @acsmem
+@c     bitset_merge ok
+@c     calloc dup @ascuheap @acsmem
+@c     bitset_contain dup ok
+@c   merge_state_with_log @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c    re_string_cur_idx dup ok
+@c    re_node_set_init_union dup @ascuheap @acsmem
+@c    re_string_context_at dup ok
+@c    re_node_set_free dup @ascuheap @acsmem
+@c    check_subexp_matching_top @ascuheap @acsmem
+@c     match_ctx_add_subtop dup @ascuheap @acsmem
+@c    transit_state_bkref dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c   find_recover_state
+@c    re_string_cur_idx dup ok
+@c    re_string_skip_bytes dup ok
+@c    merge_state_with_log dup @mtslocale @asucorrupt @ascuheap @asulock @ascudlopen @acucorrupt @aculock @acsmem @acsfd
+@c  check_halt_state_context dup ok
+@c  prune_impossible_nodes @mtslocale @ascuheap @acsmem
+@c   (re_)malloc dup @ascuheap @acsmem
+@c   sift_ctx_init ok
+@c    re_node_set_init_empty dup ok
+@c   sift_states_backward @mtslocale @ascuheap @acsmem
+@c    re_node_set_init_1 dup @ascuheap @acsmem
+@c    update_cur_sifted_state @mtslocale @ascuheap @acsmem
+@c     add_epsilon_src_nodes @ascuheap @acsmem
+@c      re_acquire_state dup @ascuheap @acsmem
+@c      re_node_set_alloc dup @ascuheap @acsmem
+@c      re_node_set_merge dup @ascuheap @acsmem
+@c      re_node_set_add_intersect @ascuheap @acsmem
+@c       (re_)realloc dup @ascuheap @acsmem
+@c     check_subexp_limits @ascuheap @acsmem
+@c      sub_epsilon_src_nodes @ascuheap @acsmem
+@c       re_node_set_init_empty dup ok
+@c       re_node_set_contains dup ok
+@c       re_node_set_add_intersect dup @ascuheap @acsmem
+@c       re_node_set_free dup @ascuheap @acsmem
+@c       re_node_set_remove_at dup ok
+@c      re_node_set_contains dup ok
+@c     re_acquire_state dup @ascuheap @acsmem
+@c     sift_states_bkref @mtslocale @ascuheap @acsmem
+@c      search_cur_bkref_entry dup ok
+@c      check_dst_limits ok
+@c       search_cur_bkref_entry dup ok
+@c       check_dst_limits_calc_pos ok
+@c        check_dst_limits_calc_pos_1 ok
+@c      re_node_set_init_copy dup @ascuheap @acsmem
+@c      re_node_set_insert dup @ascuheap @acsmem
+@c      sift_states_backward dup @mtslocale @ascuheap @acsmem
+@c      merge_state_array dup @ascuheap @acsmem
+@c      re_node_set_remove ok
+@c       re_node_set_contains dup ok
+@c       re_node_set_remove_at dup ok
+@c      re_node_set_free dup @ascuheap @acsmem
+@c    re_node_set_free dup @ascuheap @acsmem
+@c    re_node_set_empty dup ok
+@c    build_sifted_states @mtslocale @ascuheap @acsmem
+@c     sift_states_iter_mb @mtslocale @ascuheap @acsmem
+@c      check_node_accept_bytes dup @mtslocale @ascuheap @acsmem
+@c     check_node_accept dup ok
+@c     check_dst_limits dup ok
+@c     re_node_set_insert dup @ascuheap @acsmem
+@c   re_node_set_free dup @ascuheap @acsmem
+@c   check_halt_state_context dup ok
+@c   merge_state_array @ascuheap @acsmem
+@c    re_node_set_init_union dup @ascuheap @acsmem
+@c    re_acquire_state dup @ascuheap @acsmem
+@c    re_node_set_free dup @ascuheap @acsmem
+@c   (re_)free dup @ascuheap @acsmem
+@c  set_regs @ascuheap @acsmem
+@c   (re_)malloc dup @ascuheap @acsmem
+@c   re_node_set_init_empty dup ok
+@c   free_fail_stack_return @ascuheap @acsmem
+@c    re_node_set_free dup @ascuheap @acsmem
+@c    (re_)free dup @ascuheap @acsmem
+@c   update_regs ok
+@c   re_node_set_free dup @ascuheap @acsmem
+@c   pop_fail_stack @ascuheap @acsmem
+@c    re_node_set_free dup @ascuheap @acsmem
+@c    (re_)free dup @ascuheap @acsmem
+@c   (re_)free dup @ascuheap @acsmem
+@c  (re_)free dup @ascuheap @acsmem
+@c  match_ctx_free @ascuheap @acsmem
+@c   match_ctx_clean @ascuheap @acsmem
+@c    (re_)free dup @ascuheap @acsmem
+@c   (re_)free dup @ascuheap @acsmem
+@c  re_string_destruct dup @ascuheap @acsmem
+@c libc_lock_unlock @aculock
+This function tries to match the compiled regular expression
+@code{*@var{compiled}} against @var{string}.
+
+@code{regexec} returns @code{0} if the regular expression matches;
+otherwise, it returns a nonzero value.  See the table below for
+what nonzero values mean.  You can use @code{regerror} to produce an
+error message string describing the reason for a nonzero value;
+see @ref{Regexp Cleanup}.
+
+The argument @var{eflags} is a word of bit flags that enable various
+options.
+
+If you want to get information about what part of @var{string} actually
+matched the regular expression or its subexpressions, use the arguments
+@var{matchptr} and @var{nmatch}.  Otherwise, pass @code{0} for
+@var{nmatch}, and @code{NULL} for @var{matchptr}.  @xref{Regexp
+Subexpressions}.
+@end deftypefun
+
+You must match the regular expression with the same set of current
+locales that were in effect when you compiled the regular expression.
+
+The function @code{regexec} accepts the following flags in the
+@var{eflags} argument:
+
+@vtable @code
+@item REG_NOTBOL
+@standards{POSIX.2, regex.h}
+Do not regard the beginning of the specified string as the beginning of
+a line; more generally, don't make any assumptions about what text might
+precede it.
+
+@item REG_NOTEOL
+@standards{POSIX.2, regex.h}
+Do not regard the end of the specified string as the end of a line; more
+generally, don't make any assumptions about what text might follow it.
+@end vtable
+
+Here are the possible nonzero values that @code{regexec} can return:
+
+@vtable @code
+@item REG_NOMATCH
+@standards{POSIX.2, regex.h}
+The pattern didn't match the string.  This isn't really an error.
+
+@item REG_ESPACE
+@standards{POSIX.2, regex.h}
+@code{regexec} ran out of memory.
+@end vtable
+
+@node Regexp Subexpressions
+@subsection Match Results with Subexpressions
+
+When @code{regexec} matches parenthetical subexpressions of
+@var{pattern}, it records which parts of @var{string} they match.  It
+returns that information by storing the offsets into an array whose
+elements are structures of type @code{regmatch_t}.  The first element of
+the array (index @code{0}) records the part of the string that matched
+the entire regular expression.  Each other element of the array records
+the beginning and end of the part that matched a single parenthetical
+subexpression.
+
+@deftp {Data Type} regmatch_t
+@standards{POSIX.2, regex.h}
+This is the data type of the @var{matchptr} array that you pass to
+@code{regexec}.  It contains two structure fields, as follows:
+
+@table @code
+@item rm_so
+The offset in @var{string} of the beginning of a substring.  Add this
+value to @var{string} to get the address of that part.
+
+@item rm_eo
+The offset in @var{string} of the end of the substring.
+@end table
+@end deftp
+
+@deftp {Data Type} regoff_t
+@standards{POSIX.2, regex.h}
+@code{regoff_t} is an alias for another signed integer type.
+The fields of @code{regmatch_t} have type @code{regoff_t}.
+@end deftp
+
+The @code{regmatch_t} elements correspond to subexpressions
+positionally; the first element (index @code{1}) records where the first
+subexpression matched, the second element records the second
+subexpression, and so on.  The order of the subexpressions is the order
+in which they begin.
+
+When you call @code{regexec}, you specify how long the @var{matchptr}
+array is, with the @var{nmatch} argument.  This tells @code{regexec} how
+many elements to store.  If the actual regular expression has more than
+@var{nmatch} subexpressions, then you won't get offset information about
+the rest of them.  But this doesn't alter whether the pattern matches a
+particular string or not.
+
+If you don't want @code{regexec} to return any information about where
+the subexpressions matched, you can either supply @code{0} for
+@var{nmatch}, or use the flag @code{REG_NOSUB} when you compile the
+pattern with @code{regcomp}.
+
+@node Subexpression Complications
+@subsection Complications in Subexpression Matching
+
+Sometimes a subexpression matches a substring of no characters.  This
+happens when @samp{f\(o*\)} matches the string @samp{fum}.  (It really
+matches just the @samp{f}.)  In this case, both of the offsets identify
+the point in the string where the null substring was found.  In this
+example, the offsets are both @code{1}.
+
+Sometimes the entire regular expression can match without using some of
+its subexpressions at all---for example, when @samp{ba\(na\)*} matches the
+string @samp{ba}, the parenthetical subexpression is not used.  When
+this happens, @code{regexec} stores @code{-1} in both fields of the
+element for that subexpression.
+
+Sometimes matching the entire regular expression can match a particular
+subexpression more than once---for example, when @samp{ba\(na\)*}
+matches the string @samp{bananana}, the parenthetical subexpression
+matches three times.  When this happens, @code{regexec} usually stores
+the offsets of the last part of the string that matched the
+subexpression.  In the case of @samp{bananana}, these offsets are
+@code{6} and @code{8}.
+
+But the last match is not always the one that is chosen.  It's more
+accurate to say that the last @emph{opportunity} to match is the one
+that takes precedence.  What this means is that when one subexpression
+appears within another, then the results reported for the inner
+subexpression reflect whatever happened on the last match of the outer
+subexpression.  For an example, consider @samp{\(ba\(na\)*s \)*} matching
+the string @samp{bananas bas }.  The last time the inner expression
+actually matches is near the end of the first word.  But it is
+@emph{considered} again in the second word, and fails to match there.
+@code{regexec} reports nonuse of the ``na'' subexpression.
+
+Another place where this rule applies is when the regular expression
+@smallexample
+\(ba\(na\)*s \|nefer\(ti\)* \)*
+@end smallexample
+@noindent
+matches @samp{bananas nefertiti}.  The ``na'' subexpression does match
+in the first word, but it doesn't match in the second word because the
+other alternative is used there.  Once again, the second repetition of
+the outer subexpression overrides the first, and within that second
+repetition, the ``na'' subexpression is not used.  So @code{regexec}
+reports nonuse of the ``na'' subexpression.
+
+@node Regexp Cleanup
+@subsection POSIX Regexp Matching Cleanup
+
+When you are finished using a compiled regular expression, you can
+free the storage it uses by calling @code{regfree}.
+
+@deftypefun void regfree (regex_t *@var{compiled})
+@standards{POSIX.2, regex.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+@c (re_)free dup @ascuheap @acsmem
+@c free_dfa_content dup @ascuheap @acsmem
+Calling @code{regfree} frees all the storage that @code{*@var{compiled}}
+points to.  This includes various internal fields of the @code{regex_t}
+structure that aren't documented in this manual.
+
+@code{regfree} does not free the object @code{*@var{compiled}} itself.
+@end deftypefun
+
+You should always free the space in a @code{regex_t} structure with
+@code{regfree} before using the structure to compile another regular
+expression.
+
+When @code{regcomp} or @code{regexec} reports an error, you can use
+the function @code{regerror} to turn it into an error message string.
+
+@deftypefun size_t regerror (int @var{errcode}, const regex_t *restrict @var{compiled}, char *restrict @var{buffer}, size_t @var{length})
+@standards{POSIX.2, regex.h}
+@safety{@prelim{}@mtsafe{@mtsenv{}}@asunsafe{@asucorrupt{} @ascuheap{} @asulock{} @ascudlopen{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c regerror calls gettext, strcmp and mempcpy or memcpy.
+This function produces an error message string for the error code
+@var{errcode}, and stores the string in @var{length} bytes of memory
+starting at @var{buffer}.  For the @var{compiled} argument, supply the
+same compiled regular expression structure that @code{regcomp} or
+@code{regexec} was working with when it got the error.  Alternatively,
+you can supply @code{NULL} for @var{compiled}; you will still get a
+meaningful error message, but it might not be as detailed.
+
+If the error message can't fit in @var{length} bytes (including a
+terminating null character), then @code{regerror} truncates it.
+The string that @code{regerror} stores is always null-terminated
+even if it has been truncated.
+
+The return value of @code{regerror} is the minimum length needed to
+store the entire error message.  If this is less than @var{length}, then
+the error message was not truncated, and you can use it.  Otherwise, you
+should call @code{regerror} again with a larger buffer.
+
+Here is a function which uses @code{regerror}, but always dynamically
+allocates a buffer for the error message:
+
+@smallexample
+char *get_regerror (int errcode, regex_t *compiled)
+@{
+  size_t length = regerror (errcode, compiled, NULL, 0);
+  char *buffer = xmalloc (length);
+  (void) regerror (errcode, compiled, buffer, length);
+  return buffer;
+@}
+@end smallexample
+@end deftypefun
+
+@node Word Expansion
+@section Shell-Style Word Expansion
+@cindex word expansion
+@cindex expansion of shell words
+
+@dfn{Word expansion} means the process of splitting a string into
+@dfn{words} and substituting for variables, commands, and wildcards
+just as the shell does.
+
+For example, when you write @samp{ls -l foo.c}, this string is split
+into three separate words---@samp{ls}, @samp{-l} and @samp{foo.c}.
+This is the most basic function of word expansion.
+
+When you write @samp{ls *.c}, this can become many words, because
+the word @samp{*.c} can be replaced with any number of file names.
+This is called @dfn{wildcard expansion}, and it is also a part of
+word expansion.
+
+When you use @samp{echo $PATH} to print your path, you are taking
+advantage of @dfn{variable substitution}, which is also part of word
+expansion.
+
+Ordinary programs can perform word expansion just like the shell by
+calling the library function @code{wordexp}.
+
+@menu
+* Expansion Stages::            What word expansion does to a string.
+* Calling Wordexp::             How to call @code{wordexp}.
+* Flags for Wordexp::           Options you can enable in @code{wordexp}.
+* Wordexp Example::             A sample program that does word expansion.
+* Tilde Expansion::             Details of how tilde expansion works.
+* Variable Substitution::       Different types of variable substitution.
+@end menu
+
+@node Expansion Stages
+@subsection The Stages of Word Expansion
+
+When word expansion is applied to a sequence of words, it performs the
+following transformations in the order shown here:
+
+@enumerate
+@item
+@cindex tilde expansion
+@dfn{Tilde expansion}: Replacement of @samp{~foo} with the name of
+the home directory of @samp{foo}.
+
+@item
+Next, three different transformations are applied in the same step,
+from left to right:
+
+@itemize @bullet
+@item
+@cindex variable substitution
+@cindex substitution of variables and commands
+@dfn{Variable substitution}: Environment variables are substituted for
+references such as @samp{$foo}.
+
+@item
+@cindex command substitution
+@dfn{Command substitution}: Constructs such as @w{@samp{`cat foo`}} and
+the equivalent @w{@samp{$(cat foo)}} are replaced with the output from
+the inner command.
+
+@item
+@cindex arithmetic expansion
+@dfn{Arithmetic expansion}: Constructs such as @samp{$(($x-1))} are
+replaced with the result of the arithmetic computation.
+@end itemize
+
+@item
+@cindex field splitting
+@dfn{Field splitting}: subdivision of the text into @dfn{words}.
+
+@item
+@cindex wildcard expansion
+@dfn{Wildcard expansion}: The replacement of a construct such as @samp{*.c}
+with a list of @samp{.c} file names.  Wildcard expansion applies to an
+entire word at a time, and replaces that word with 0 or more file names
+that are themselves words.
+
+@item
+@cindex quote removal
+@cindex removal of quotes
+@dfn{Quote removal}: The deletion of string-quotes, now that they have
+done their job by inhibiting the above transformations when appropriate.
+@end enumerate
+
+For the details of these transformations, and how to write the constructs
+that use them, see @w{@cite{The BASH Manual}} (to appear).
+
+@node Calling Wordexp
+@subsection Calling @code{wordexp}
+
+All the functions, constants and data types for word expansion are
+declared in the header file @file{wordexp.h}.
+
+Word expansion produces a vector of words (strings).  To return this
+vector, @code{wordexp} uses a special data type, @code{wordexp_t}, which
+is a structure.  You pass @code{wordexp} the address of the structure,
+and it fills in the structure's fields to tell you about the results.
+
+@deftp {Data Type} {wordexp_t}
+@standards{POSIX.2, wordexp.h}
+This data type holds a pointer to a word vector.  More precisely, it
+records both the address of the word vector and its size.
+
+@table @code
+@item we_wordc
+The number of elements in the vector.
+
+@item we_wordv
+The address of the vector.  This field has type @w{@code{char **}}.
+
+@item we_offs
+The offset of the first real element of the vector, from its nominal
+address in the @code{we_wordv} field.  Unlike the other fields, this
+is always an input to @code{wordexp}, rather than an output from it.
+
+If you use a nonzero offset, then that many elements at the beginning of
+the vector are left empty.  (The @code{wordexp} function fills them with
+null pointers.)
+
+The @code{we_offs} field is meaningful only if you use the
+@code{WRDE_DOOFFS} flag.  Otherwise, the offset is always zero
+regardless of what is in this field, and the first real element comes at
+the beginning of the vector.
+@end table
+@end deftp
+
+@deftypefun int wordexp (const char *@var{words}, wordexp_t *@var{word-vector-ptr}, int @var{flags})
+@standards{POSIX.2, wordexp.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:utent} @mtasuconst{:@mtsenv{}} @mtsenv{} @mtascusig{:ALRM} @mtascutimer{} @mtslocale{}}@asunsafe{@ascudlopen{} @ascuplugin{} @ascuintl{} @ascuheap{} @asucorrupt{} @asulock{}}@acunsafe{@acucorrupt{} @aculock{} @acsfd{} @acsmem{}}}
+@c wordexp @mtasurace:utent @mtasuconst:@mtsenv @mtsenv @mtascusig:ALRM @mtascutimer @mtslocale @ascudlopen @ascuplugin @ascuintl @ascuheap @asucorrupt @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  w_newword ok
+@c  wordfree dup @asucorrupt @ascuheap @acucorrupt @acsmem
+@c  calloc dup @ascuheap @acsmem
+@c  getenv dup @mtsenv
+@c  strcpy dup ok
+@c  parse_backslash @ascuheap @acsmem
+@c   w_addchar dup @ascuheap @acsmem
+@c  parse_dollars @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   w_addchar dup @ascuheap @acsmem
+@c   parse_arith @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    w_newword dup ok
+@c    parse_dollars dup @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    parse_backtick dup @ascuplugin @ascuheap @aculock @acsfd @acsmem
+@c    parse_qtd_backslash dup @ascuheap @acsmem
+@c    eval_expr @mtslocale
+@c     eval_expr_multidiv @mtslocale
+@c      eval_expr_val @mtslocale
+@c       isspace dup @mtslocale
+@c       eval_expr dup @mtslocale
+@c      isspace dup @mtslocale
+@c     isspace dup @mtslocale
+@c    free dup @ascuheap @acsmem
+@c    w_addchar dup @ascuheap @acsmem
+@c    w_addstr dup @ascuheap @acsmem
+@c    itoa_word dup ok
+@c   parse_comm @ascuplugin @ascuheap @aculock @acsfd @acsmem
+@c    w_newword dup ok
+@c    pthread_setcancelstate @ascuplugin @ascuheap @acsmem
+@c      (disable cancellation around exec_comm; it may do_cancel the
+@c       second time, if async cancel is enabled)
+@c     THREAD_ATOMIC_CMPXCHG_VAL dup ok
+@c     do_cancel @ascuplugin @ascuheap @acsmem
+@c      THREAD_ATOMIC_BIT_SET dup ok
+@c      pthread_unwind @ascuplugin @ascuheap @acsmem
+@c       Unwind_ForcedUnwind if available @ascuplugin @ascuheap @acsmem
+@c       libc_unwind_longjmp otherwise
+@c       cleanups
+@c    exec_comm @ascuplugin @ascuheap @aculock @acsfd @acsmem
+@c     pipe2 dup ok
+@c     pipe dup ok
+@c     fork dup @ascuplugin @aculock
+@c     close dup @acsfd
+@c     on child: exec_comm_child -> exec or abort
+@c     waitpid dup ok
+@c     read dup ok
+@c     w_addmem dup @ascuheap @acsmem
+@c     strchr dup ok
+@c     w_addword dup @ascuheap @acsmem
+@c     w_newword dup ok
+@c     w_addchar dup @ascuheap @acsmem
+@c     free dup @ascuheap @acsmem
+@c     kill dup ok
+@c    free dup @ascuheap @acsmem
+@c   parse_param @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c     reads from __libc_argc and __libc_argv without guards
+@c    w_newword dup ok
+@c    isalpha dup @mtslocale^^
+@c    w_addchar dup @ascuheap @acsmem
+@c    isalnum dup @mtslocale^^
+@c    isdigit dup @mtslocale^^
+@c    strchr dup ok
+@c    itoa_word dup ok
+@c    atoi dup @mtslocale
+@c    getpid dup ok
+@c    w_addstr dup @ascuheap @acsmem
+@c    free dup @ascuheap @acsmem
+@c    strlen dup ok
+@c    malloc dup @ascuheap @acsmem
+@c    stpcpy dup ok
+@c    w_addword dup @ascuheap @acsmem
+@c    strdup dup @ascuheap @acsmem
+@c    getenv dup @mtsenv
+@c    parse_dollars dup @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    parse_tilde dup @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c    fnmatch dup @mtsenv @mtslocale @ascuheap @acsmem
+@c    mempcpy dup ok
+@c    _ dup @ascuintl
+@c    fxprintf dup @aculock
+@c    setenv dup @mtasuconst:@mtsenv @ascuheap @asulock @acucorrupt @aculock @acsmem
+@c    strspn dup ok
+@c    strcspn dup ok
+@c  parse_backtick @ascuplugin @ascuheap @aculock @acsfd @acsmem
+@c   w_newword dup ok
+@c   exec_comm dup @ascuplugin @ascuheap @aculock @acsfd @acsmem
+@c   free dup @ascuheap @acsmem
+@c   parse_qtd_backslash dup @ascuheap @acsmem
+@c   parse_backslash dup @ascuheap @acsmem
+@c   w_addchar dup @ascuheap @acsmem
+@c  parse_dquote @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   parse_dollars dup @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   parse_backtick dup @ascuplugin @ascuheap @aculock @acsfd @acsmem
+@c   parse_qtd_backslash dup @ascuheap @acsmem
+@c   w_addchar dup @ascuheap @acsmem
+@c  w_addword dup @ascuheap @acsmem
+@c   strdup dup @ascuheap @acsmem
+@c   realloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c  parse_squote dup @ascuheap @acsmem
+@c   w_addchar dup @ascuheap @acsmem
+@c  parse_tilde @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   strchr dup ok
+@c   w_addchar dup @ascuheap @acsmem
+@c   getenv dup @mtsenv
+@c   w_addstr dup @ascuheap @acsmem
+@c    strlen dup ok
+@c    w_addmem dup @ascuheap @acsmem
+@c     realloc dup @ascuheap @acsmem
+@c     free dup @ascuheap @acsmem
+@c     mempcpy dup ok
+@c   getuid dup ok
+@c   getpwuid_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   getpwnam_r dup @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c  parse_glob @mtasurace:utent @mtasuconst:@mtsenv @mtsenv @mtascusig:ALRM @mtascutimer @mtslocale @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   strchr dup ok
+@c   parse_dollars dup @mtasuconst:@mtsenv @mtslocale @mtsenv @ascudlopen @ascuplugin @ascuintl @ascuheap @asulock @acucorrupt @aculock @acsfd @acsmem
+@c   parse_qtd_backslash @ascuheap @acsmem
+@c    w_addchar dup @ascuheap @acsmem
+@c   parse_backslash dup @ascuheap @acsmem
+@c   w_addchar dup @ascuheap @acsmem
+@c   w_addword dup @ascuheap @acsmem
+@c   w_newword dup ok
+@c   do_parse_glob @mtasurace:utent @mtsenv @mtascusig:ALRM @mtascutimer @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @aculock @acsfd @acsmem
+@c    glob dup @mtasurace:utent @mtsenv @mtascusig:ALRM @mtascutimer @mtslocale @ascudlopen @ascuplugin @ascuheap @asulock @aculock @acsfd @acsmem [auto glob_t avoids @asucorrupt @acucorrupt]
+@c    w_addstr dup @ascuheap @acsmem
+@c    w_addchar dup @ascuheap @acsmem
+@c    globfree dup @ascuheap @acsmem [auto glob_t avoids @asucorrupt @acucorrupt]
+@c    free dup @ascuheap @acsmem
+@c    w_newword dup ok
+@c    strdup dup @ascuheap @acsmem
+@c    w_addword dup @ascuheap @acsmem
+@c   wordfree dup @asucorrupt @ascuheap @acucorrupt @acsmem
+@c  strchr dup ok
+@c  w_addchar dup @ascuheap @acsmem
+@c   realloc dup @ascuheap @acsmem
+@c   free dup @ascuheap @acsmem
+@c  free dup @ascuheap @acsmem
+Perform word expansion on the string @var{words}, putting the result in
+a newly allocated vector, and store the size and address of this vector
+into @code{*@var{word-vector-ptr}}.  The argument @var{flags} is a
+combination of bit flags; see @ref{Flags for Wordexp}, for details of
+the flags.
+
+You shouldn't use any of the characters @samp{|&;<>} in the string
+@var{words} unless they are quoted; likewise for newline.  If you use
+these characters unquoted, you will get the @code{WRDE_BADCHAR} error
+code.  Don't use parentheses or braces unless they are quoted or part of
+a word expansion construct.  If you use quotation characters @samp{'"`},
+they should come in pairs that balance.
+
+The results of word expansion are a sequence of words.  The function
+@code{wordexp} allocates a string for each resulting word, then
+allocates a vector of type @code{char **} to store the addresses of
+these strings.  The last element of the vector is a null pointer.
+This vector is called the @dfn{word vector}.
+
+To return this vector, @code{wordexp} stores both its address and its
+length (number of elements, not counting the terminating null pointer)
+into @code{*@var{word-vector-ptr}}.
+
+If @code{wordexp} succeeds, it returns 0.  Otherwise, it returns one
+of these error codes:
+
+@vtable @code
+@item WRDE_BADCHAR
+@standards{POSIX.2, wordexp.h}
+The input string @var{words} contains an unquoted invalid character such
+as @samp{|}.
+
+@item WRDE_BADVAL
+@standards{POSIX.2, wordexp.h}
+The input string refers to an undefined shell variable, and you used the flag
+@code{WRDE_UNDEF} to forbid such references.
+
+@item WRDE_CMDSUB
+@standards{POSIX.2, wordexp.h}
+The input string uses command substitution, and you used the flag
+@code{WRDE_NOCMD} to forbid command substitution.
+
+@item WRDE_NOSPACE
+@standards{POSIX.2, wordexp.h}
+It was impossible to allocate memory to hold the result.  In this case,
+@code{wordexp} can store part of the results---as much as it could
+allocate room for.
+
+@item WRDE_SYNTAX
+@standards{POSIX.2, wordexp.h}
+There was a syntax error in the input string.  For example, an unmatched
+quoting character is a syntax error.  This error code is also used to
+signal division by zero and overflow in arithmetic expansion.
+@end vtable
+@end deftypefun
+
+@deftypefun void wordfree (wordexp_t *@var{word-vector-ptr})
+@standards{POSIX.2, wordexp.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@asucorrupt{} @ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c wordfree dup @asucorrupt @ascuheap @acucorrupt @acsmem
+@c  free dup @ascuheap @acsmem
+Free the storage used for the word-strings and vector that
+@code{*@var{word-vector-ptr}} points to.  This does not free the
+structure @code{*@var{word-vector-ptr}} itself---only the other
+data it points to.
+@end deftypefun
+
+@node Flags for Wordexp
+@subsection Flags for Word Expansion
+
+This section describes the flags that you can specify in the
+@var{flags} argument to @code{wordexp}.  Choose the flags you want,
+and combine them with the C operator @code{|}.
+
+@vtable @code
+@item WRDE_APPEND
+@standards{POSIX.2, wordexp.h}
+Append the words from this expansion to the vector of words produced by
+previous calls to @code{wordexp}.  This way you can effectively expand
+several words as if they were concatenated with spaces between them.
+
+In order for appending to work, you must not modify the contents of the
+word vector structure between calls to @code{wordexp}.  And, if you set
+@code{WRDE_DOOFFS} in the first call to @code{wordexp}, you must also
+set it when you append to the results.
+
+@item WRDE_DOOFFS
+@standards{POSIX.2, wordexp.h}
+Leave blank slots at the beginning of the vector of words.
+The @code{we_offs} field says how many slots to leave.
+The blank slots contain null pointers.
+
+@item WRDE_NOCMD
+@standards{POSIX.2, wordexp.h}
+Don't do command substitution; if the input requests command substitution,
+report an error.
+
+@item WRDE_REUSE
+@standards{POSIX.2, wordexp.h}
+Reuse a word vector made by a previous call to @code{wordexp}.
+Instead of allocating a new vector of words, this call to @code{wordexp}
+will use the vector that already exists (making it larger if necessary).
+
+Note that the vector may move, so it is not safe to save an old pointer
+and use it again after calling @code{wordexp}.  You must fetch
+@code{we_pathv} anew after each call.
+
+@item WRDE_SHOWERR
+@standards{POSIX.2, wordexp.h}
+Do show any error messages printed by commands run by command substitution.
+More precisely, allow these commands to inherit the standard error output
+stream of the current process.  By default, @code{wordexp} gives these
+commands a standard error stream that discards all output.
+
+@item WRDE_UNDEF
+@standards{POSIX.2, wordexp.h}
+If the input refers to a shell variable that is not defined, report an
+error.
+@end vtable
+
+@node Wordexp Example
+@subsection @code{wordexp} Example
+
+Here is an example of using @code{wordexp} to expand several strings
+and use the results to run a shell command.  It also shows the use of
+@code{WRDE_APPEND} to concatenate the expansions and of @code{wordfree}
+to free the space allocated by @code{wordexp}.
+
+@smallexample
+int
+expand_and_execute (const char *program, const char **options)
+@{
+  wordexp_t result;
+  pid_t pid
+  int status, i;
+
+  /* @r{Expand the string for the program to run.}  */
+  switch (wordexp (program, &result, 0))
+    @{
+    case 0:			/* @r{Successful}.  */
+      break;
+    case WRDE_NOSPACE:
+      /* @r{If the error was @code{WRDE_NOSPACE},}
+         @r{then perhaps part of the result was allocated.}  */
+      wordfree (&result);
+    default:                    /* @r{Some other error.}  */
+      return -1;
+    @}
+
+  /* @r{Expand the strings specified for the arguments.}  */
+  for (i = 0; options[i] != NULL; i++)
+    @{
+      if (wordexp (options[i], &result, WRDE_APPEND))
+        @{
+          wordfree (&result);
+          return -1;
+        @}
+    @}
+
+  pid = fork ();
+  if (pid == 0)
+    @{
+      /* @r{This is the child process.  Execute the command.} */
+      execv (result.we_wordv[0], result.we_wordv);
+      exit (EXIT_FAILURE);
+    @}
+  else if (pid < 0)
+    /* @r{The fork failed.  Report failure.}  */
+    status = -1;
+  else
+    /* @r{This is the parent process.  Wait for the child to complete.}  */
+    if (waitpid (pid, &status, 0) != pid)
+      status = -1;
+
+  wordfree (&result);
+  return status;
+@}
+@end smallexample
+
+@node Tilde Expansion
+@subsection Details of Tilde Expansion
+
+It's a standard part of shell syntax that you can use @samp{~} at the
+beginning of a file name to stand for your own home directory.  You
+can use @samp{~@var{user}} to stand for @var{user}'s home directory.
+
+@dfn{Tilde expansion} is the process of converting these abbreviations
+to the directory names that they stand for.
+
+Tilde expansion applies to the @samp{~} plus all following characters up
+to whitespace or a slash.  It takes place only at the beginning of a
+word, and only if none of the characters to be transformed is quoted in
+any way.
+
+Plain @samp{~} uses the value of the environment variable @code{HOME}
+as the proper home directory name.  @samp{~} followed by a user name
+uses @code{getpwname} to look up that user in the user database, and
+uses whatever directory is recorded there.  Thus, @samp{~} followed
+by your own name can give different results from plain @samp{~}, if
+the value of @code{HOME} is not really your home directory.
+
+@node Variable Substitution
+@subsection Details of Variable Substitution
+
+Part of ordinary shell syntax is the use of @samp{$@var{variable}} to
+substitute the value of a shell variable into a command.  This is called
+@dfn{variable substitution}, and it is one part of doing word expansion.
+
+There are two basic ways you can write a variable reference for
+substitution:
+
+@table @code
+@item $@{@var{variable}@}
+If you write braces around the variable name, then it is completely
+unambiguous where the variable name ends.  You can concatenate
+additional letters onto the end of the variable value by writing them
+immediately after the close brace.  For example, @samp{$@{foo@}s}
+expands into @samp{tractors}.
+
+@item $@var{variable}
+If you do not put braces around the variable name, then the variable
+name consists of all the alphanumeric characters and underscores that
+follow the @samp{$}.  The next punctuation character ends the variable
+name.  Thus, @samp{$foo-bar} refers to the variable @code{foo} and expands
+into @samp{tractor-bar}.
+@end table
+
+When you use braces, you can also use various constructs to modify the
+value that is substituted, or test it in various ways.
+
+@table @code
+@item $@{@var{variable}:-@var{default}@}
+Substitute the value of @var{variable}, but if that is empty or
+undefined, use @var{default} instead.
+
+@item $@{@var{variable}:=@var{default}@}
+Substitute the value of @var{variable}, but if that is empty or
+undefined, use @var{default} instead and set the variable to
+@var{default}.
+
+@item $@{@var{variable}:?@var{message}@}
+If @var{variable} is defined and not empty, substitute its value.
+
+Otherwise, print @var{message} as an error message on the standard error
+stream, and consider word expansion a failure.
+
+@c ??? How does wordexp report such an error?
+@c WRDE_BADVAL is returned.
+
+@item $@{@var{variable}:+@var{replacement}@}
+Substitute @var{replacement}, but only if @var{variable} is defined and
+nonempty.  Otherwise, substitute nothing for this construct.
+@end table
+
+@table @code
+@item $@{#@var{variable}@}
+Substitute a numeral which expresses in base ten the number of
+characters in the value of @var{variable}.  @samp{$@{#foo@}} stands for
+@samp{7}, because @samp{tractor} is seven characters.
+@end table
+
+These variants of variable substitution let you remove part of the
+variable's value before substituting it.  The @var{prefix} and
+@var{suffix} are not mere strings; they are wildcard patterns, just
+like the patterns that you use to match multiple file names.  But
+in this context, they match against parts of the variable value
+rather than against file names.
+
+@table @code
+@item $@{@var{variable}%%@var{suffix}@}
+Substitute the value of @var{variable}, but first discard from that
+variable any portion at the end that matches the pattern @var{suffix}.
+
+If there is more than one alternative for how to match against
+@var{suffix}, this construct uses the longest possible match.
+
+Thus, @samp{$@{foo%%r*@}} substitutes @samp{t}, because the largest
+match for @samp{r*} at the end of @samp{tractor} is @samp{ractor}.
+
+@item $@{@var{variable}%@var{suffix}@}
+Substitute the value of @var{variable}, but first discard from that
+variable any portion at the end that matches the pattern @var{suffix}.
+
+If there is more than one alternative for how to match against
+@var{suffix}, this construct uses the shortest possible alternative.
+
+Thus, @samp{$@{foo%r*@}} substitutes @samp{tracto}, because the shortest
+match for @samp{r*} at the end of @samp{tractor} is just @samp{r}.
+
+@item $@{@var{variable}##@var{prefix}@}
+Substitute the value of @var{variable}, but first discard from that
+variable any portion at the beginning that matches the pattern @var{prefix}.
+
+If there is more than one alternative for how to match against
+@var{prefix}, this construct uses the longest possible match.
+
+Thus, @samp{$@{foo##*t@}} substitutes @samp{or}, because the largest
+match for @samp{*t} at the beginning of @samp{tractor} is @samp{tract}.
+
+@item $@{@var{variable}#@var{prefix}@}
+Substitute the value of @var{variable}, but first discard from that
+variable any portion at the beginning that matches the pattern @var{prefix}.
+
+If there is more than one alternative for how to match against
+@var{prefix}, this construct uses the shortest possible alternative.
+
+Thus, @samp{$@{foo#*t@}} substitutes @samp{ractor}, because the shortest
+match for @samp{*t} at the beginning of @samp{tractor} is just @samp{t}.
+
+@end table

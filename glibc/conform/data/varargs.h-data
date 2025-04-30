@@ -1,0 +1,10 @@
+#if defined XPG4 || defined XPG42 || defined UNIX98
+macro va_alist
+macro va_dcl
+type va_list
+macro va_start
+macro va_arg
+macro va_end
+
+allow *_t
+#endif

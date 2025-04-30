@@ -1,0 +1,158 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Chechen locale for RUSSIAN FEDERATION.
+% Contributed by Kentaroh Noji  Arslanbek Astemirov <s-o-f-t AT mail DOT ru>
+LC_IDENTIFICATION
+title      "Chechen locale for RUSSIAN FEDERATION"
+source       "ANCHR"
+address      "364024, ChR, Grozny, pr-kt of M. Esambayev, 13"
+language  "Chechen"
+territory "Russia"
+revision  "1.0"
+date      "2014-08-25"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+% Январь, Февраль, Март, Апрель, Май, Июнь, Июль, Август, Сентябрь, Октябрь, Ноябрь, Декабрь
+mon           "<U042F><U043D><U0432><U0430><U0440><U044C>";/
+     "<U0424><U0435><U0432><U0440><U0430><U043B><U044C>";/
+     "<U041C><U0430><U0440><U0442>";/
+     "<U0410><U043F><U0440><U0435><U043B><U044C>";/
+     "<U041C><U0430><U0439>";/
+     "<U0418><U044E><U043D><U044C>";/
+     "<U0418><U044E><U043B><U044C>";/
+     "<U0410><U0432><U0433><U0443><U0441><U0442>";/
+     "<U0421><U0435><U043D><U0442><U044F><U0431><U0440><U044C>";/
+     "<U041E><U043A><U0442><U044F><U0431><U0440><U044C>";/
+     "<U041D><U043E><U044F><U0431><U0440><U044C>";/
+     "<U0414><U0435><U043A><U0430><U0431><U0440><U044C>"
+% янв, фев, мар, апр, май, июн, июл, авг, сен, окт, ноя, дек
+abmon         "<U044F><U043D><U0432>";/
+       "<U0444><U0435><U0432>";/
+       "<U043C><U0430><U0440>";/
+       "<U0430><U043F><U0440>";/
+       "<U043C><U0430><U0439>";/
+       "<U0438><U044E><U043D>";/
+       "<U0438><U044E><U043B>";/
+       "<U0430><U0432><U0433>";/
+       "<U0441><U0435><U043D>";/
+       "<U043E><U043A><U0442>";/
+       "<U043D><U043E><U044F>";/
+       "<U0434><U0435><U043A>"
+% КӀиранан де, Оршотан де, Шинарин де, Кхаарин де, Еарин де, ПӀераскан де, Шот де
+day           "<U041A><U04C0><U0438><U0440><U0430><U043D><U0430><U043D> <U0434><U0435>";/
+     "<U041E><U0440><U0448><U043E><U0442><U0430><U043D> <U0434><U0435>";/
+     "<U0428><U0438><U043D><U0430><U0440><U0438><U043D> <U0434><U0435>";/
+     "<U041A><U0445><U0430><U0430><U0440><U0438><U043D> <U0434><U0435>";/
+     "<U0415><U0430><U0440><U0438><U043D> <U0434><U0435>";/
+     "<U041F><U04C0><U0435><U0440><U0430><U0441><U043A><U0430><U043D> <U0434><U0435>";/
+     "<U0428><U043E><U0442> <U0434><U0435>"
+% КӀ, Ор, Ши, Кх, Еа, ПӀ, Шо
+abday         "<U041A><U04C0>";/
+       "<U041E><U0440>";/
+       "<U0428><U0438>";/
+       "<U041A><U0445>";/
+       "<U0415><U0430>";/
+       "<U041F><U04C0>";/
+       "<U0428><U043E>"
+d_t_fmt       "%Y %d %b %a %T"
+date_fmt      "%Y %d %b %a %T %Z"
+d_fmt         "%Y.%d.%m"
+t_fmt         "%T"
+%
+am_pm         "";""
+t_fmt_ampm    ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "ru_RU"
+END LC_NUMERIC
+
+LC_MONETARY
+int_curr_symbol    "RUB "
+currency_symbol    "<U20BD>"
+mon_decimal_point  "."
+mon_thousands_sep  "<U202F>"
+mon_grouping       3;3
+positive_sign      ""
+negative_sign      "-"
+frac_digits        2
+int_frac_digits    2
+p_cs_precedes      0
+p_sep_by_space     1
+n_cs_precedes      0
+n_sep_by_space     1
+p_sign_posn        1
+n_sign_posn        1
+END LC_MONETARY
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0414><U0434>]"
+noexpr  "^[-0nN<U041C><U043C>]"
+END LC_MESSAGES
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt   "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "<U0420><U043E><U0441><U0441><U0438>"
+country_ab2  "RU"
+country_ab3  "RUS"
+country_num  643
+country_car  "RUS"
+% нохчийн мотт
+lang_name    "<U043D><U043E><U0445><U0447><U0438><U0439><U043D>"
+lang_ab      "ce"
+lang_term    "che"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_select  "0~10"
+int_prefix  "7"
+END LC_TELEPHONE

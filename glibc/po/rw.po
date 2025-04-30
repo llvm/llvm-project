@@ -1,0 +1,84 @@
+# Kinyarwanda translations for libc package.
+# Copyright (C) 2005 Free Software Foundation, Inc.
+# Steve Murphy <murf@e-tools.com>, 2005.
+# Steve performed initial rough translation from compendium built from translations provided by the following translators:
+# Philibert Ndandali  <ndandali@yahoo.fr>, 2005.
+# Viateur MUGENZI <muvia1@yahoo.fr>, 2005.
+# Noëlla Mupole <s24211045@tuks.co.za>, 2005.
+# Carole Karema <karemacarole@hotmail.com>, 2005.
+# JEAN BAPTISTE NGENDAHAYO <ngenda_denis@yahoo.co.uk>, 2005.
+# Augustin KIBERWA  <akiberwa@yahoo.co.uk>, 2005.
+# Donatien NSENGIYUMVA <ndonatienuk@yahoo.co.uk>, 2005.
+# Antoine Bigirimana <antoine@e-tools.com>, 2005.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: libc 2.3\n"
+"POT-Creation-Date: 2021-07-28 22:02-0400\n"
+"PO-Revision-Date: 2005-04-04 10:55-0700\n"
+"Last-Translator: Steven Michael Murphy <murf@e-tools.com>\n"
+"Language-Team: Kinyarwanda <translation-team-rw@lists.sourceforge.net>\n"
+"Language: rw\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Bugs: Report translation errors to the Language-Team address.\n"
+
+#: argp/argp-help.c:1713
+msgid "Usage:"
+msgstr "Ikoresha:"
+
+#: elf/cache.c:180
+msgid "unknown"
+msgstr "itazwi"
+
+#: iconv/iconv_prog.c:63
+msgid "Information:"
+msgstr "Ibisobanuro:"
+
+#: inet/ruserpass.c:165 inet/ruserpass.c:188
+msgid "out of memory"
+msgstr "Ububiko bwarenzwe"
+
+#: locale/programs/ld-ctype.c:1963 locale/programs/ld-ctype.c:2014
+#: locale/programs/ld-ctype.c:2056
+msgid "syntax error"
+msgstr "Ikosa mu myandikire"
+
+#: nis/nis_error.h:1 nis/ypclnt.c:833 nis/ypclnt.c:922 posix/regcomp.c:135
+#: sysdeps/gnu/errlist.h:1
+msgid "Success"
+msgstr "Ibyatunganye"
+
+#: posix/getconf.c:669 posix/getconf.c:685
+msgid "undefined"
+msgstr "kidasobanuye"
+
+#: sysdeps/generic/siglist.h:30
+msgid "Interrupt"
+msgstr "Hagarikira aho"
+
+#: sysdeps/generic/siglist.h:31
+msgid "Quit"
+msgstr "Kuvamo"
+
+#: sysdeps/generic/siglist.h:45
+msgid "Stopped"
+msgstr "Kyahagariswe"
+
+#. TRANS This is used to indicate various kinds of problems
+#. TRANS with passing the wrong argument to a library function.
+#: sysdeps/gnu/errlist.h:146
+msgid "Invalid argument"
+msgstr "Inkoresha siyo"
+
+#: sysdeps/gnu/errlist.h:532
+msgid "Protocol error"
+msgstr "Ikosa rya Protocol"
+
+#. TRANS The experienced user will know what is wrong.
+#. TRANS @c This error code is a joke.  Its perror text is part of the joke.
+#. TRANS @c Don't change it.
+#: sysdeps/gnu/errlist.h:792
+msgid "?"
+msgstr "?"

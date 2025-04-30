@@ -19,6 +19,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -448,6 +449,7 @@ struct FunctionOptions {
         RegisterCastedArgsOnly(UIntPtrCastRequired && RegisterCastedArgsOnly),
         FunctionName(FunctionName), Loc(Loc) {}
 };
+
 } // namespace
 
 static llvm::Function *emitOutlinedFunctionPrologue(
@@ -643,7 +645,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   const CapturedDecl *CD = S.getCapturedDecl();
   // Build the argument list.
   bool NeedWrapperFunction =
-      getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo();
+      false && getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo();
   FunctionArgList Args;
   llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
   llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
@@ -670,6 +672,11 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   (void)LocalScope.ForceCleanup();
   FinishFunction(CD->getBodyRBrace());
+
+  // NextSilicon: Add an attribute to the outlined function that serves as a
+  // marker for subsequent passes in the compilation pipeline.
+  F->addFnAttr("ns-omp-microtask");
+
   if (!NeedWrapperFunction)
     return F;
 
@@ -1571,6 +1578,9 @@ static void emitCommonOMPParallelDirective(
       CGF.CGM.getOpenMPRuntime().emitParallelOutlinedFunction(
           CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
           CodeGen);
+#if CLANG_OPENMP_NEXTSILICON
+  OutlinedFn->addFnAttr("ns-mark", "peripheral");
+#endif
   if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>()) {
     CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
     NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),

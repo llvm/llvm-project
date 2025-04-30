@@ -1,0 +1,16 @@
+{"excludeFile": [
+  "CMakeLists.txt",
+  ".*[.]cmake",
+  "flang-classic",
+  "I8_sources",
+  "arg_parser.cpp",
+  "ccffinfo.cpp",
+  "debug_action.cpp",
+  "llmputil.cpp",
+  "mall.cpp",
+  "miscutil.cpp",
+  "nmeutil.cpp",
+  "pragma.cpp",
+  "glibc",
+  ".*/3rd-party/.*"
+]}

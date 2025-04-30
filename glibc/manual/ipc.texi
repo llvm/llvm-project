@@ -1,0 +1,116 @@
+@node Inter-Process Communication, Job Control, Processes, Top
+@c %MENU% All about inter-process communication
+@chapter Inter-Process Communication
+@cindex ipc
+
+This chapter describes the @glibcadj{} inter-process communication primitives.
+
+@menu
+* Semaphores::	Support for creating and managing semaphores
+@end menu
+
+@node Semaphores
+@section Semaphores
+
+@Theglibc{} implements the semaphore APIs as defined in POSIX and
+System V.  Semaphores can be used by multiple processes to coordinate shared
+resources.  The following is a complete list of the semaphore functions provided
+by @theglibc{}.
+
+@c Need descriptions for all of these functions.
+
+@subsection System V Semaphores
+@deftypefun int semctl (int @var{semid}, int @var{semnum}, int @var{cmd});
+@safety{@prelim{}@mtsafe{}@assafe{}@acunsafe{@acucorrupt{/linux}}}
+@c syscall(ipc) ok
+@c
+@c AC-unsafe because we need to translate the new kernel
+@c semid_ds buf into the userspace layout.  Cancellation
+@c at that point results in an inconsistent userspace
+@c semid_ds.
+@end deftypefun
+
+@deftypefun int semget (key_t @var{key}, int @var{nsems}, int @var{semflg});
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c syscall(ipc) ok
+@end deftypefun
+
+@deftypefun int semop (int @var{semid}, struct sembuf *@var{sops}, size_t @var{nsops});
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c syscall(ipc) ok
+@end deftypefun
+
+@deftypefun int semtimedop (int @var{semid}, struct sembuf *@var{sops}, size_t @var{nsops}, const struct timespec *@var{timeout});
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c syscall(ipc) ok
+@end deftypefun
+
+@subsection POSIX Semaphores
+
+@deftypefun int sem_init (sem_t *@var{sem}, int @var{pshared}, unsigned int @var{value});
+@safety{@prelim{}@mtsafe{}@assafe{}@acunsafe{@acucorrupt{}}}
+@c Does not atomically update sem_t therefore AC-unsafe
+@c because it can leave sem_t partially initialized.
+@end deftypefun
+
+@deftypefun int sem_destroy (sem_t *@var{sem});
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Function does nothing and is therefore always safe.
+@end deftypefun
+
+@deftypefun sem_t *sem_open (const char *@var{name}, int @var{oflag}, ...);
+@safety{@prelim{}@mtsafe{}@asunsafe{@asuinit{}}@acunsafe{@acuinit{}}}
+@c pthread_once asuinit
+@c
+@c We are AC-Unsafe becuase we use pthread_once to initialize
+@c a global variable that holds the location of the mounted
+@c shmfs on Linux.
+@end deftypefun
+
+@deftypefun int sem_close (sem_t *@var{sem});
+@safety{@prelim{}@mtsafe{}@asunsafe{@asulock{}}@acunsafe{@aculock{}}}
+@c lll_lock asulock aculock
+@c twalk mtsrace{:root}
+@c
+@c We are AS-unsafe because we take a non-recursive lock.
+@c We are AC-unsafe because several internal data structures
+@c are not updated atomically.
+@end deftypefun
+
+@deftypefun int sem_unlink (const char *@var{name});
+@safety{@prelim{}@mtsafe{}@asunsafe{@asuinit{}}@acunsafe{@acucorrupt{}}}
+@c pthread_once asuinit acucorrupt aculock
+@c mempcpy acucorrupt
+@end deftypefun
+
+@deftypefun int sem_wait (sem_t *@var{sem});
+@safety{@prelim{}@mtsafe{}@assafe{}@acunsafe{@acucorrupt{}}}
+@c atomic_increment (nwaiters) acucorrupt
+@c
+@c Given the use atomic operations this function seems
+@c to be AS-safe.  It is AC-unsafe because there is still
+@c a window between atomic_decrement and the pthread_push
+@c of the handler that undoes that operation.  A cancellation
+@c at that point would fail to remove the process from the
+@c waiters count.
+@end deftypefun
+
+@deftypefun int sem_timedwait (sem_t *@var{sem}, const struct timespec *@var{abstime});
+@safety{@prelim{}@mtsafe{}@assafe{}@acunsafe{@acucorrupt{}}}
+@c Same safety issues as sem_wait.
+@end deftypefun
+
+@deftypefun int sem_trywait (sem_t *@var{sem});
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c All atomic operations are safe in all contexts.
+@end deftypefun
+
+@deftypefun int sem_post (sem_t *@var{sem});
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Same safety as sem_trywait.
+@end deftypefun
+
+@deftypefun int sem_getvalue (sem_t *@var{sem}, int *@var{sval});
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c Atomic write of a value is safe in all contexts.
+@end deftypefun

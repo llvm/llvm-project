@@ -1,0 +1,3 @@
+# MIPS does not use PLTs in shared libraries, and implicit GOT
+# relocation means this test cannot check for GOT relocations as an
+# alternative.

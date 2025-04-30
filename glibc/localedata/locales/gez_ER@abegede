@@ -1,0 +1,484 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Ge'ez language locale for Eritrea with Abegede collation.
+%
+% Prepared and contributed to glibc by Daniel Yacob <locales@geez.org>.
+%
+% This locale data has been developed under the Yeha Project:
+%      http://yeha.sourceforge.net/
+%
+% build with: localedef -f UTF-8 -i gez_ER-Abegede gez_ER-Abegede
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+LC_IDENTIFICATION
+%
+title      "Ge'ez language locale for Eritrea With Abegede Collation."
+source     "Ge'ez Frontier Foundation"
+address    "7802 Solomon Seal Dr., Springfield, VA 22152, USA"
+contact    ""
+email      "locales@geez.org"
+tel        ""
+fax        ""
+language   "Geez"
+territory  "Eritrea"
+revision   "0.20"
+date       "2003-07-05"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_TIME
+END LC_IDENTIFICATION
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ethiopic Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_COLLATE
+copy "ti_ER"
+reorder-after <BEFORE-LATIN>
+<S12A0> % ETHIOPIC SYLLABLE GLOTTAL A old glibc collation-symbol: <ALEF>
+<S12A1> % ETHIOPIC SYLLABLE GLOTTAL U old glibc collation-symbol: <ALEF>
+<S12A2> % ETHIOPIC SYLLABLE GLOTTAL I old glibc collation-symbol: <ALEF>
+<S12A3> % ETHIOPIC SYLLABLE GLOTTAL AA old glibc collation-symbol: <ALEF>
+<S12A4> % ETHIOPIC SYLLABLE GLOTTAL EE old glibc collation-symbol: <ALEF>
+<S12A5> % ETHIOPIC SYLLABLE GLOTTAL E old glibc collation-symbol: <ALEF>
+<S12A6> % ETHIOPIC SYLLABLE GLOTTAL O old glibc collation-symbol: <ALEF>
+<S12A7> % ETHIOPIC SYLLABLE GLOTTAL WA old glibc collation-symbol: <ALEF>
+<S1260> % ETHIOPIC SYLLABLE BA old glibc collation-symbol: <BET>
+<S1261> % ETHIOPIC SYLLABLE BU old glibc collation-symbol: <BET>
+<S1262> % ETHIOPIC SYLLABLE BI old glibc collation-symbol: <BET>
+<S1263> % ETHIOPIC SYLLABLE BAA old glibc collation-symbol: <BET>
+<S1264> % ETHIOPIC SYLLABLE BEE old glibc collation-symbol: <BET>
+<S1265> % ETHIOPIC SYLLABLE BE old glibc collation-symbol: <BET>
+<S1266> % ETHIOPIC SYLLABLE BO old glibc collation-symbol: <BET>
+<S1267> % ETHIOPIC SYLLABLE BWA old glibc collation-symbol: <BET>
+<S1384> % ETHIOPIC SYLLABLE SEBATBEIT BWA old glibc collation-symbol: <BET>
+<S1385> % ETHIOPIC SYLLABLE BWI old glibc collation-symbol: <BET>
+<S1386> % ETHIOPIC SYLLABLE BWEE old glibc collation-symbol: <BET>
+<S1387> % ETHIOPIC SYLLABLE BWE old glibc collation-symbol: <BET>
+<S2D85> % ETHIOPIC SYLLABLE BOA old glibc collation-symbol: <BET>
+<S1268> % ETHIOPIC SYLLABLE VA old glibc collation-symbol: <VE-BET>
+<S1269> % ETHIOPIC SYLLABLE VU old glibc collation-symbol: <VE-BET>
+<S126A> % ETHIOPIC SYLLABLE VI old glibc collation-symbol: <VE-BET>
+<S126B> % ETHIOPIC SYLLABLE VAA old glibc collation-symbol: <VE-BET>
+<S126C> % ETHIOPIC SYLLABLE VEE old glibc collation-symbol: <VE-BET>
+<S126D> % ETHIOPIC SYLLABLE VE old glibc collation-symbol: <VE-BET>
+<S126E> % ETHIOPIC SYLLABLE VO old glibc collation-symbol: <VE-BET>
+<S126F> % ETHIOPIC SYLLABLE VWA old glibc collation-symbol: <VE-BET>
+<S1308> % ETHIOPIC SYLLABLE GA old glibc collation-symbol: <GEMEL>
+<S1309> % ETHIOPIC SYLLABLE GU old glibc collation-symbol: <GEMEL>
+<S130A> % ETHIOPIC SYLLABLE GI old glibc collation-symbol: <GEMEL>
+<S130B> % ETHIOPIC SYLLABLE GAA old glibc collation-symbol: <GEMEL>
+<S130C> % ETHIOPIC SYLLABLE GEE old glibc collation-symbol: <GEMEL>
+<S130D> % ETHIOPIC SYLLABLE GE old glibc collation-symbol: <GEMEL>
+<S130E> % ETHIOPIC SYLLABLE GO old glibc collation-symbol: <GEMEL>
+<S130F> % ETHIOPIC SYLLABLE GOA old glibc collation-symbol: <GEMEL>
+<S1310> % ETHIOPIC SYLLABLE GWA old glibc collation-symbol: <GEMEL>
+<S1312> % ETHIOPIC SYLLABLE GWI old glibc collation-symbol: <GEMEL>
+<S1313> % ETHIOPIC SYLLABLE GWAA old glibc collation-symbol: <GEMEL>
+<S1314> % ETHIOPIC SYLLABLE GWEE old glibc collation-symbol: <GEMEL>
+<S1315> % ETHIOPIC SYLLABLE GWE old glibc collation-symbol: <GEMEL>
+<S1318> % ETHIOPIC SYLLABLE GGA old glibc collation-symbol: <NGE-GEMEL>
+<S1319> % ETHIOPIC SYLLABLE GGU old glibc collation-symbol: <NGE-GEMEL>
+<S131A> % ETHIOPIC SYLLABLE GGI old glibc collation-symbol: <NGE-GEMEL>
+<S131B> % ETHIOPIC SYLLABLE GGAA old glibc collation-symbol: <NGE-GEMEL>
+<S131C> % ETHIOPIC SYLLABLE GGEE old glibc collation-symbol: <NGE-GEMEL>
+<S131D> % ETHIOPIC SYLLABLE GGE old glibc collation-symbol: <NGE-GEMEL>
+<S131E> % ETHIOPIC SYLLABLE GGO old glibc collation-symbol: <NGE-GEMEL>
+<S131F> % ETHIOPIC SYLLABLE GGWAA old glibc collation-symbol: <NGE-GEMEL>
+<S2D93> % ETHIOPIC SYLLABLE GGWA old glibc collation-symbol: <NGE-GEMEL>
+<S2D94> % ETHIOPIC SYLLABLE GGWI old glibc collation-symbol: <NGE-GEMEL>
+<S2D95> % ETHIOPIC SYLLABLE GGWEE old glibc collation-symbol: <NGE-GEMEL>
+<S2D96> % ETHIOPIC SYLLABLE GGWE old glibc collation-symbol: <NGE-GEMEL>
+<S12F0> % ETHIOPIC SYLLABLE DA old glibc collation-symbol: <DINT>
+<S12F1> % ETHIOPIC SYLLABLE DU old glibc collation-symbol: <DINT>
+<S12F2> % ETHIOPIC SYLLABLE DI old glibc collation-symbol: <DINT>
+<S12F3> % ETHIOPIC SYLLABLE DAA old glibc collation-symbol: <DINT>
+<S12F4> % ETHIOPIC SYLLABLE DEE old glibc collation-symbol: <DINT>
+<S12F5> % ETHIOPIC SYLLABLE DE old glibc collation-symbol: <DINT>
+<S12F6> % ETHIOPIC SYLLABLE DO old glibc collation-symbol: <DINT>
+<S12F7> % ETHIOPIC SYLLABLE DWA old glibc collation-symbol: <DINT>
+<S2D8C> % ETHIOPIC SYLLABLE DOA old glibc collation-symbol: <DINT>
+<SAB09> % ETHIOPIC SYLLABLE DDHU old glibc collation-symbol: <DHI-DINT>
+<SAB0A> % ETHIOPIC SYLLABLE DDHI old glibc collation-symbol: <DHI-DINT>
+<SAB0B> % ETHIOPIC SYLLABLE DDHAA old glibc collation-symbol: <DHI-DINT>
+<SAB0C> % ETHIOPIC SYLLABLE DDHEE old glibc collation-symbol: <DHI-DINT>
+<SAB0D> % ETHIOPIC SYLLABLE DDHE old glibc collation-symbol: <DHI-DINT>
+<SAB0E> % ETHIOPIC SYLLABLE DDHO old glibc collation-symbol: <DHI-DINT>
+<S12F8> % ETHIOPIC SYLLABLE DDA old glibc collation-symbol: <DHI-DINT>
+<S12F9> % ETHIOPIC SYLLABLE DDU old glibc collation-symbol: <DHI-DINT>
+<S12FA> % ETHIOPIC SYLLABLE DDI old glibc collation-symbol: <DHI-DINT>
+<S12FB> % ETHIOPIC SYLLABLE DDAA old glibc collation-symbol: <DHI-DINT>
+<S12FC> % ETHIOPIC SYLLABLE DDEE old glibc collation-symbol: <DHI-DINT>
+<S12FD> % ETHIOPIC SYLLABLE DDE old glibc collation-symbol: <DHI-DINT>
+<S12FE> % ETHIOPIC SYLLABLE DDO old glibc collation-symbol: <DHI-DINT>
+<S12FF> % ETHIOPIC SYLLABLE DDWA old glibc collation-symbol: <DHI-DINT>
+<S1300> % ETHIOPIC SYLLABLE JA old glibc collation-symbol: <JI-DINT>
+<S1301> % ETHIOPIC SYLLABLE JU old glibc collation-symbol: <JI-DINT>
+<S1302> % ETHIOPIC SYLLABLE JI old glibc collation-symbol: <JI-DINT>
+<S1303> % ETHIOPIC SYLLABLE JAA old glibc collation-symbol: <JI-DINT>
+<S1304> % ETHIOPIC SYLLABLE JEE old glibc collation-symbol: <JI-DINT>
+<S1305> % ETHIOPIC SYLLABLE JE old glibc collation-symbol: <JI-DINT>
+<S1306> % ETHIOPIC SYLLABLE JO old glibc collation-symbol: <JI-DINT>
+<S1307> % ETHIOPIC SYLLABLE JWA old glibc collation-symbol: <JI-DINT>
+<S2D8E> % ETHIOPIC SYLLABLE JOA old glibc collation-symbol: <JI-DINT>
+<S1200> % ETHIOPIC SYLLABLE HA old glibc collation-symbol: <HOY>
+<S1201> % ETHIOPIC SYLLABLE HU old glibc collation-symbol: <HOY>
+<S1202> % ETHIOPIC SYLLABLE HI old glibc collation-symbol: <HOY>
+<S1203> % ETHIOPIC SYLLABLE HAA old glibc collation-symbol: <HOY>
+<S1204> % ETHIOPIC SYLLABLE HEE old glibc collation-symbol: <HOY>
+<S1205> % ETHIOPIC SYLLABLE HE old glibc collation-symbol: <HOY>
+<S1206> % ETHIOPIC SYLLABLE HO old glibc collation-symbol: <HOY>
+<S1207> % ETHIOPIC SYLLABLE HOA old glibc collation-symbol: <HOY>
+<S12C8> % ETHIOPIC SYLLABLE WA old glibc collation-symbol: <WEWE>
+<S12C9> % ETHIOPIC SYLLABLE WU old glibc collation-symbol: <WEWE>
+<S12CA> % ETHIOPIC SYLLABLE WI old glibc collation-symbol: <WEWE>
+<S12CB> % ETHIOPIC SYLLABLE WAA old glibc collation-symbol: <WEWE>
+<S12CC> % ETHIOPIC SYLLABLE WEE old glibc collation-symbol: <WEWE>
+<S12CD> % ETHIOPIC SYLLABLE WE old glibc collation-symbol: <WEWE>
+<S12CE> % ETHIOPIC SYLLABLE WO old glibc collation-symbol: <WEWE>
+<S12CF> % ETHIOPIC SYLLABLE WOA old glibc collation-symbol: <WEWE>
+<S12D8> % ETHIOPIC SYLLABLE ZA old glibc collation-symbol: <ZEY>
+<S12D9> % ETHIOPIC SYLLABLE ZU old glibc collation-symbol: <ZEY>
+<S12DA> % ETHIOPIC SYLLABLE ZI old glibc collation-symbol: <ZEY>
+<S12DB> % ETHIOPIC SYLLABLE ZAA old glibc collation-symbol: <ZEY>
+<S12DC> % ETHIOPIC SYLLABLE ZEE old glibc collation-symbol: <ZEY>
+<S12DD> % ETHIOPIC SYLLABLE ZE old glibc collation-symbol: <ZEY>
+<S12DE> % ETHIOPIC SYLLABLE ZO old glibc collation-symbol: <ZEY>
+<S12DF> % ETHIOPIC SYLLABLE ZWA old glibc collation-symbol: <ZEY>
+<S2D8B> % ETHIOPIC SYLLABLE ZOA old glibc collation-symbol: <ZEY>
+<S12E0> % ETHIOPIC SYLLABLE ZHA old glibc collation-symbol: <ZHE-ZEY>
+<S12E1> % ETHIOPIC SYLLABLE ZHU old glibc collation-symbol: <ZHE-ZEY>
+<S12E2> % ETHIOPIC SYLLABLE ZHI old glibc collation-symbol: <ZHE-ZEY>
+<S12E3> % ETHIOPIC SYLLABLE ZHAA old glibc collation-symbol: <ZHE-ZEY>
+<S12E4> % ETHIOPIC SYLLABLE ZHEE old glibc collation-symbol: <ZHE-ZEY>
+<S12E5> % ETHIOPIC SYLLABLE ZHE old glibc collation-symbol: <ZHE-ZEY>
+<S12E6> % ETHIOPIC SYLLABLE ZHO old glibc collation-symbol: <ZHE-ZEY>
+<S12E7> % ETHIOPIC SYLLABLE ZHWA old glibc collation-symbol: <ZHE-ZEY>
+<S1210> % ETHIOPIC SYLLABLE HHA old glibc collation-symbol: <HAWT>
+<S1211> % ETHIOPIC SYLLABLE HHU old glibc collation-symbol: <HAWT>
+<S1212> % ETHIOPIC SYLLABLE HHI old glibc collation-symbol: <HAWT>
+<S1213> % ETHIOPIC SYLLABLE HHAA old glibc collation-symbol: <HAWT>
+<S1214> % ETHIOPIC SYLLABLE HHEE old glibc collation-symbol: <HAWT>
+<S1215> % ETHIOPIC SYLLABLE HHE old glibc collation-symbol: <HAWT>
+<S1216> % ETHIOPIC SYLLABLE HHO old glibc collation-symbol: <HAWT>
+<S1217> % ETHIOPIC SYLLABLE HHWA old glibc collation-symbol: <HAWT>
+<S1320> % ETHIOPIC SYLLABLE THA old glibc collation-symbol: <TEYT>
+<S1321> % ETHIOPIC SYLLABLE THU old glibc collation-symbol: <TEYT>
+<S1322> % ETHIOPIC SYLLABLE THI old glibc collation-symbol: <TEYT>
+<S1323> % ETHIOPIC SYLLABLE THAA old glibc collation-symbol: <TEYT>
+<S1324> % ETHIOPIC SYLLABLE THEE old glibc collation-symbol: <TEYT>
+<S1325> % ETHIOPIC SYLLABLE THE old glibc collation-symbol: <TEYT>
+<S1326> % ETHIOPIC SYLLABLE THO old glibc collation-symbol: <TEYT>
+<S1327> % ETHIOPIC SYLLABLE THWA old glibc collation-symbol: <TEYT>
+<S2D8F> % ETHIOPIC SYLLABLE THOA old glibc collation-symbol: <TEYT>
+<S1328> % ETHIOPIC SYLLABLE CHA old glibc collation-symbol: <CHE-TEYT>
+<S1329> % ETHIOPIC SYLLABLE CHU old glibc collation-symbol: <CHE-TEYT>
+<S132A> % ETHIOPIC SYLLABLE CHI old glibc collation-symbol: <CHE-TEYT>
+<S132B> % ETHIOPIC SYLLABLE CHAA old glibc collation-symbol: <CHE-TEYT>
+<S132C> % ETHIOPIC SYLLABLE CHEE old glibc collation-symbol: <CHE-TEYT>
+<S132D> % ETHIOPIC SYLLABLE CHE old glibc collation-symbol: <CHE-TEYT>
+<S132E> % ETHIOPIC SYLLABLE CHO old glibc collation-symbol: <CHE-TEYT>
+<S132F> % ETHIOPIC SYLLABLE CHWA old glibc collation-symbol: <CHE-TEYT>
+<S2D90> % ETHIOPIC SYLLABLE CHOA old glibc collation-symbol: <CHE-TEYT>
+<SAB20> % ETHIOPIC SYLLABLE CCHHA old glibc collation-symbol: <CHE-TEYT>
+<SAB21> % ETHIOPIC SYLLABLE CCHHU old glibc collation-symbol: <CHE-TEYT>
+<SAB22> % ETHIOPIC SYLLABLE CCHHI old glibc collation-symbol: <CHE-TEYT>
+<SAB23> % ETHIOPIC SYLLABLE CCHHAA old glibc collation-symbol: <CHE-TEYT>
+<SAB24> % ETHIOPIC SYLLABLE CCHHEE old glibc collation-symbol: <CHE-TEYT>
+<SAB25> % ETHIOPIC SYLLABLE CCHHE old glibc collation-symbol: <CHE-TEYT>
+<SAB26> % ETHIOPIC SYLLABLE CCHHO old glibc collation-symbol: <CHE-TEYT>
+<S12E8> % ETHIOPIC SYLLABLE YA old glibc collation-symbol: <YEMEN>
+<S12E9> % ETHIOPIC SYLLABLE YU old glibc collation-symbol: <YEMEN>
+<S12EA> % ETHIOPIC SYLLABLE YI old glibc collation-symbol: <YEMEN>
+<S12EB> % ETHIOPIC SYLLABLE YAA old glibc collation-symbol: <YEMEN>
+<S12EC> % ETHIOPIC SYLLABLE YEE old glibc collation-symbol: <YEMEN>
+<S12ED> % ETHIOPIC SYLLABLE YE old glibc collation-symbol: <YEMEN>
+<S12EE> % ETHIOPIC SYLLABLE YO old glibc collation-symbol: <YEMEN>
+<S12EF> % ETHIOPIC SYLLABLE YOA old glibc collation-symbol: <YEMEN>
+<S12A8> % ETHIOPIC SYLLABLE KA old glibc collation-symbol: <KAF>
+<S12A9> % ETHIOPIC SYLLABLE KU old glibc collation-symbol: <KAF>
+<S12AA> % ETHIOPIC SYLLABLE KI old glibc collation-symbol: <KAF>
+<S12AB> % ETHIOPIC SYLLABLE KAA old glibc collation-symbol: <KAF>
+<S12AC> % ETHIOPIC SYLLABLE KEE old glibc collation-symbol: <KAF>
+<S12AD> % ETHIOPIC SYLLABLE KE old glibc collation-symbol: <KAF>
+<S12AE> % ETHIOPIC SYLLABLE KO old glibc collation-symbol: <KAF>
+<S12AF> % ETHIOPIC SYLLABLE KOA old glibc collation-symbol: <KAF>
+<S12B0> % ETHIOPIC SYLLABLE KWA old glibc collation-symbol: <KAF>
+<S12B2> % ETHIOPIC SYLLABLE KWI old glibc collation-symbol: <KAF>
+<S12B3> % ETHIOPIC SYLLABLE KWAA old glibc collation-symbol: <KAF>
+<S12B4> % ETHIOPIC SYLLABLE KWEE old glibc collation-symbol: <KAF>
+<S12B5> % ETHIOPIC SYLLABLE KWE old glibc collation-symbol: <KAF>
+<S12B8> % ETHIOPIC SYLLABLE KXA old glibc collation-symbol: <KHA-KAF>
+<S12B9> % ETHIOPIC SYLLABLE KXU old glibc collation-symbol: <KHA-KAF>
+<S12BA> % ETHIOPIC SYLLABLE KXI old glibc collation-symbol: <KHA-KAF>
+<S12BB> % ETHIOPIC SYLLABLE KXAA old glibc collation-symbol: <KHA-KAF>
+<S12BC> % ETHIOPIC SYLLABLE KXEE old glibc collation-symbol: <KHA-KAF>
+<S12BD> % ETHIOPIC SYLLABLE KXE old glibc collation-symbol: <KHA-KAF>
+<S12BE> % ETHIOPIC SYLLABLE KXO old glibc collation-symbol: <KHA-KAF>
+<S12C0> % ETHIOPIC SYLLABLE KXWA old glibc collation-symbol: <KHA-KAF>
+<S12C2> % ETHIOPIC SYLLABLE KXWI old glibc collation-symbol: <KHA-KAF>
+<S12C3> % ETHIOPIC SYLLABLE KXWAA old glibc collation-symbol: <KHA-KAF>
+<S12C4> % ETHIOPIC SYLLABLE KXWEE old glibc collation-symbol: <KHA-KAF>
+<S12C5> % ETHIOPIC SYLLABLE KXWE old glibc collation-symbol: <KHA-KAF>
+<S1208> % ETHIOPIC SYLLABLE LA old glibc collation-symbol: <LAWI>
+<S1209> % ETHIOPIC SYLLABLE LU old glibc collation-symbol: <LAWI>
+<S120A> % ETHIOPIC SYLLABLE LI old glibc collation-symbol: <LAWI>
+<S120B> % ETHIOPIC SYLLABLE LAA old glibc collation-symbol: <LAWI>
+<S120C> % ETHIOPIC SYLLABLE LEE old glibc collation-symbol: <LAWI>
+<S120D> % ETHIOPIC SYLLABLE LE old glibc collation-symbol: <LAWI>
+<S120E> % ETHIOPIC SYLLABLE LO old glibc collation-symbol: <LAWI>
+<S120F> % ETHIOPIC SYLLABLE LWA old glibc collation-symbol: <LAWI>
+<S2D80> % ETHIOPIC SYLLABLE LOA old glibc collation-symbol: <LAWI>
+<S1218> % ETHIOPIC SYLLABLE MA old glibc collation-symbol: <MAY>
+<S1219> % ETHIOPIC SYLLABLE MU old glibc collation-symbol: <MAY>
+<S121A> % ETHIOPIC SYLLABLE MI old glibc collation-symbol: <MAY>
+<S121B> % ETHIOPIC SYLLABLE MAA old glibc collation-symbol: <MAY>
+<S121C> % ETHIOPIC SYLLABLE MEE old glibc collation-symbol: <MAY>
+<S121D> % ETHIOPIC SYLLABLE ME old glibc collation-symbol: <MAY>
+<S121E> % ETHIOPIC SYLLABLE MO old glibc collation-symbol: <MAY>
+<S121F> % ETHIOPIC SYLLABLE MWA old glibc collation-symbol: <MAY>
+<S1380> % ETHIOPIC SYLLABLE SEBATBEIT MWA old glibc collation-symbol: <MAY>
+<S1381> % ETHIOPIC SYLLABLE MWI old glibc collation-symbol: <MAY>
+<S1382> % ETHIOPIC SYLLABLE MWEE old glibc collation-symbol: <MAY>
+<S1383> % ETHIOPIC SYLLABLE MWE old glibc collation-symbol: <MAY>
+<S2D81> % ETHIOPIC SYLLABLE MOA old glibc collation-symbol: <MAY>
+<S1290> % ETHIOPIC SYLLABLE NA old glibc collation-symbol: <NEHAS>
+<S1291> % ETHIOPIC SYLLABLE NU old glibc collation-symbol: <NEHAS>
+<S1292> % ETHIOPIC SYLLABLE NI old glibc collation-symbol: <NEHAS>
+<S1293> % ETHIOPIC SYLLABLE NAA old glibc collation-symbol: <NEHAS>
+<S1294> % ETHIOPIC SYLLABLE NEE old glibc collation-symbol: <NEHAS>
+<S1295> % ETHIOPIC SYLLABLE NE old glibc collation-symbol: <NEHAS>
+<S1296> % ETHIOPIC SYLLABLE NO old glibc collation-symbol: <NEHAS>
+<S1297> % ETHIOPIC SYLLABLE NWA old glibc collation-symbol: <NEHAS>
+<S2D88> % ETHIOPIC SYLLABLE NOA old glibc collation-symbol: <NEHAS>
+<S1298> % ETHIOPIC SYLLABLE NYA old glibc collation-symbol: <NYE-NEHAS>
+<S1299> % ETHIOPIC SYLLABLE NYU old glibc collation-symbol: <NYE-NEHAS>
+<S129A> % ETHIOPIC SYLLABLE NYI old glibc collation-symbol: <NYE-NEHAS>
+<S129B> % ETHIOPIC SYLLABLE NYAA old glibc collation-symbol: <NYE-NEHAS>
+<S129C> % ETHIOPIC SYLLABLE NYEE old glibc collation-symbol: <NYE-NEHAS>
+<S129D> % ETHIOPIC SYLLABLE NYE old glibc collation-symbol: <NYE-NEHAS>
+<S129E> % ETHIOPIC SYLLABLE NYO old glibc collation-symbol: <NYE-NEHAS>
+<S129F> % ETHIOPIC SYLLABLE NYWA old glibc collation-symbol: <NYE-NEHAS>
+<S2D89> % ETHIOPIC SYLLABLE NYOA old glibc collation-symbol: <NYE-NEHAS>
+<S1220> % ETHIOPIC SYLLABLE SZA old glibc collation-symbol: <SEWT>
+<S1221> % ETHIOPIC SYLLABLE SZU old glibc collation-symbol: <SEWT>
+<S1222> % ETHIOPIC SYLLABLE SZI old glibc collation-symbol: <SEWT>
+<S1223> % ETHIOPIC SYLLABLE SZAA old glibc collation-symbol: <SEWT>
+<S1224> % ETHIOPIC SYLLABLE SZEE old glibc collation-symbol: <SEWT>
+<S1225> % ETHIOPIC SYLLABLE SZE old glibc collation-symbol: <SEWT>
+<S1226> % ETHIOPIC SYLLABLE SZO old glibc collation-symbol: <SEWT>
+<S1227> % ETHIOPIC SYLLABLE SZWA old glibc collation-symbol: <SEWT>
+<S12D0> % ETHIOPIC SYLLABLE PHARYNGEAL A old glibc collation-symbol: <AYIN>
+<S12D1> % ETHIOPIC SYLLABLE PHARYNGEAL U old glibc collation-symbol: <AYIN>
+<S12D2> % ETHIOPIC SYLLABLE PHARYNGEAL I old glibc collation-symbol: <AYIN>
+<S12D3> % ETHIOPIC SYLLABLE PHARYNGEAL AA old glibc collation-symbol: <AYIN>
+<S12D4> % ETHIOPIC SYLLABLE PHARYNGEAL EE old glibc collation-symbol: <AYIN>
+<S12D5> % ETHIOPIC SYLLABLE PHARYNGEAL E old glibc collation-symbol: <AYIN>
+<S12D6> % ETHIOPIC SYLLABLE PHARYNGEAL O old glibc collation-symbol: <AYIN>
+<S1348> % ETHIOPIC SYLLABLE FA old glibc collation-symbol: <AF>
+<S1349> % ETHIOPIC SYLLABLE FU old glibc collation-symbol: <AF>
+<S134A> % ETHIOPIC SYLLABLE FI old glibc collation-symbol: <AF>
+<S134B> % ETHIOPIC SYLLABLE FAA old glibc collation-symbol: <AF>
+<S134C> % ETHIOPIC SYLLABLE FEE old glibc collation-symbol: <AF>
+<S134D> % ETHIOPIC SYLLABLE FE old glibc collation-symbol: <AF>
+<S134E> % ETHIOPIC SYLLABLE FO old glibc collation-symbol: <AF>
+<S134F> % ETHIOPIC SYLLABLE FWA old glibc collation-symbol: <AF>
+<S1388> % ETHIOPIC SYLLABLE SEBATBEIT FWA old glibc collation-symbol: <AF>
+<S1389> % ETHIOPIC SYLLABLE FWI old glibc collation-symbol: <AF>
+<S138A> % ETHIOPIC SYLLABLE FWEE old glibc collation-symbol: <AF>
+<S138B> % ETHIOPIC SYLLABLE FWE old glibc collation-symbol: <AF>
+<S1338> % ETHIOPIC SYLLABLE TSA old glibc collation-symbol: <SEDEY>
+<S1339> % ETHIOPIC SYLLABLE TSU old glibc collation-symbol: <SEDEY>
+<S133A> % ETHIOPIC SYLLABLE TSI old glibc collation-symbol: <SEDEY>
+<S133B> % ETHIOPIC SYLLABLE TSAA old glibc collation-symbol: <SEDEY>
+<S133C> % ETHIOPIC SYLLABLE TSEE old glibc collation-symbol: <SEDEY>
+<S133D> % ETHIOPIC SYLLABLE TSE old glibc collation-symbol: <SEDEY>
+<S133E> % ETHIOPIC SYLLABLE TSO old glibc collation-symbol: <SEDEY>
+<S133F> % ETHIOPIC SYLLABLE TSWA old glibc collation-symbol: <SEDEY>
+<S1240> % ETHIOPIC SYLLABLE QA old glibc collation-symbol: <QAF>
+<S1241> % ETHIOPIC SYLLABLE QU old glibc collation-symbol: <QAF>
+<S1242> % ETHIOPIC SYLLABLE QI old glibc collation-symbol: <QAF>
+<S1243> % ETHIOPIC SYLLABLE QAA old glibc collation-symbol: <QAF>
+<S1244> % ETHIOPIC SYLLABLE QEE old glibc collation-symbol: <QAF>
+<S1245> % ETHIOPIC SYLLABLE QE old glibc collation-symbol: <QAF>
+<S1246> % ETHIOPIC SYLLABLE QO old glibc collation-symbol: <QAF>
+<S1247> % ETHIOPIC SYLLABLE QOA old glibc collation-symbol: <QAF>
+<S1248> % ETHIOPIC SYLLABLE QWA old glibc collation-symbol: <QAF>
+<S124A> % ETHIOPIC SYLLABLE QWI old glibc collation-symbol: <QAF>
+<S124B> % ETHIOPIC SYLLABLE QWAA old glibc collation-symbol: <QAF>
+<S124C> % ETHIOPIC SYLLABLE QWEE old glibc collation-symbol: <QAF>
+<S124D> % ETHIOPIC SYLLABLE QWE old glibc collation-symbol: <QAF>
+<S1250> % ETHIOPIC SYLLABLE QHA old glibc collation-symbol: <QHA-QAF>
+<S1251> % ETHIOPIC SYLLABLE QHU old glibc collation-symbol: <QHA-QAF>
+<S1252> % ETHIOPIC SYLLABLE QHI old glibc collation-symbol: <QHA-QAF>
+<S1253> % ETHIOPIC SYLLABLE QHAA old glibc collation-symbol: <QHA-QAF>
+<S1254> % ETHIOPIC SYLLABLE QHEE old glibc collation-symbol: <QHA-QAF>
+<S1255> % ETHIOPIC SYLLABLE QHE old glibc collation-symbol: <QHA-QAF>
+<S1256> % ETHIOPIC SYLLABLE QHO old glibc collation-symbol: <QHA-QAF>
+<S1258> % ETHIOPIC SYLLABLE QHWA old glibc collation-symbol: <QHA-QAF>
+<S125A> % ETHIOPIC SYLLABLE QHWI old glibc collation-symbol: <QHA-QAF>
+<S125B> % ETHIOPIC SYLLABLE QHWAA old glibc collation-symbol: <QHA-QAF>
+<S125C> % ETHIOPIC SYLLABLE QHWEE old glibc collation-symbol: <QHA-QAF>
+<S125D> % ETHIOPIC SYLLABLE QHWE old glibc collation-symbol: <QHA-QAF>
+<S1358> % ETHIOPIC SYLLABLE RYA old glibc collation-symbol: <RIS>
+<S1230> % ETHIOPIC SYLLABLE SA old glibc collation-symbol: <SAT>
+<S1231> % ETHIOPIC SYLLABLE SU old glibc collation-symbol: <SAT>
+<S1232> % ETHIOPIC SYLLABLE SI old glibc collation-symbol: <SAT>
+<S1233> % ETHIOPIC SYLLABLE SAA old glibc collation-symbol: <SAT>
+<S1234> % ETHIOPIC SYLLABLE SEE old glibc collation-symbol: <SAT>
+<S1235> % ETHIOPIC SYLLABLE SE old glibc collation-symbol: <SAT>
+<S1236> % ETHIOPIC SYLLABLE SO old glibc collation-symbol: <SAT>
+<S1237> % ETHIOPIC SYLLABLE SWA old glibc collation-symbol: <SAT>
+<S2D83> % ETHIOPIC SYLLABLE SOA old glibc collation-symbol: <SAT>
+<S1238> % ETHIOPIC SYLLABLE SHA old glibc collation-symbol: <SHA-SAT>
+<S1239> % ETHIOPIC SYLLABLE SHU old glibc collation-symbol: <SHA-SAT>
+<S123A> % ETHIOPIC SYLLABLE SHI old glibc collation-symbol: <SHA-SAT>
+<S123B> % ETHIOPIC SYLLABLE SHAA old glibc collation-symbol: <SHA-SAT>
+<S123C> % ETHIOPIC SYLLABLE SHEE old glibc collation-symbol: <SHA-SAT>
+<S123D> % ETHIOPIC SYLLABLE SHE old glibc collation-symbol: <SHA-SAT>
+<S123E> % ETHIOPIC SYLLABLE SHO old glibc collation-symbol: <SHA-SAT>
+<S123F> % ETHIOPIC SYLLABLE SHWA old glibc collation-symbol: <SHA-SAT>
+<S2D84> % ETHIOPIC SYLLABLE SHOA old glibc collation-symbol: <SHA-SAT>
+<S1270> % ETHIOPIC SYLLABLE TA old glibc collation-symbol: <TAW>
+<S1271> % ETHIOPIC SYLLABLE TU old glibc collation-symbol: <TAW>
+<S1272> % ETHIOPIC SYLLABLE TI old glibc collation-symbol: <TAW>
+<S1273> % ETHIOPIC SYLLABLE TAA old glibc collation-symbol: <TAW>
+<S1274> % ETHIOPIC SYLLABLE TEE old glibc collation-symbol: <TAW>
+<S1275> % ETHIOPIC SYLLABLE TE old glibc collation-symbol: <TAW>
+<S1276> % ETHIOPIC SYLLABLE TO old glibc collation-symbol: <TAW>
+<S1277> % ETHIOPIC SYLLABLE TWA old glibc collation-symbol: <TAW>
+<S2D86> % ETHIOPIC SYLLABLE TOA old glibc collation-symbol: <TAW>
+<S1278> % ETHIOPIC SYLLABLE CA old glibc collation-symbol: <CHA-TAW>
+<S1279> % ETHIOPIC SYLLABLE CU old glibc collation-symbol: <CHA-TAW>
+<S127A> % ETHIOPIC SYLLABLE CI old glibc collation-symbol: <CHA-TAW>
+<S127B> % ETHIOPIC SYLLABLE CAA old glibc collation-symbol: <CHA-TAW>
+<S127C> % ETHIOPIC SYLLABLE CEE old glibc collation-symbol: <CHA-TAW>
+<S127D> % ETHIOPIC SYLLABLE CE old glibc collation-symbol: <CHA-TAW>
+<S127E> % ETHIOPIC SYLLABLE CO old glibc collation-symbol: <CHA-TAW>
+<S127F> % ETHIOPIC SYLLABLE CWA old glibc collation-symbol: <CHA-TAW>
+<S2D87> % ETHIOPIC SYLLABLE COA old glibc collation-symbol: <CHA-TAW>
+<S1280> % ETHIOPIC SYLLABLE XA old glibc collation-symbol: <HARM>
+<S1281> % ETHIOPIC SYLLABLE XU old glibc collation-symbol: <HARM>
+<S1282> % ETHIOPIC SYLLABLE XI old glibc collation-symbol: <HARM>
+<S1283> % ETHIOPIC SYLLABLE XAA old glibc collation-symbol: <HARM>
+<S1284> % ETHIOPIC SYLLABLE XEE old glibc collation-symbol: <HARM>
+<S1285> % ETHIOPIC SYLLABLE XE old glibc collation-symbol: <HARM>
+<S1286> % ETHIOPIC SYLLABLE XO old glibc collation-symbol: <HARM>
+<S1287> % ETHIOPIC SYLLABLE XOA old glibc collation-symbol: <HARM>
+<S1288> % ETHIOPIC SYLLABLE XWA old glibc collation-symbol: <HARM>
+<S128A> % ETHIOPIC SYLLABLE XWI old glibc collation-symbol: <HARM>
+<S128B> % ETHIOPIC SYLLABLE XWAA old glibc collation-symbol: <HARM>
+<S128C> % ETHIOPIC SYLLABLE XWEE old glibc collation-symbol: <HARM>
+<S128D> % ETHIOPIC SYLLABLE XWE old glibc collation-symbol: <HARM>
+<S1340> % ETHIOPIC SYLLABLE TZA old glibc collation-symbol: <SEPA>
+<S1341> % ETHIOPIC SYLLABLE TZU old glibc collation-symbol: <SEPA>
+<S1342> % ETHIOPIC SYLLABLE TZI old glibc collation-symbol: <SEPA>
+<S1343> % ETHIOPIC SYLLABLE TZAA old glibc collation-symbol: <SEPA>
+<S1344> % ETHIOPIC SYLLABLE TZEE old glibc collation-symbol: <SEPA>
+<S1345> % ETHIOPIC SYLLABLE TZE old glibc collation-symbol: <SEPA>
+<S1346> % ETHIOPIC SYLLABLE TZO old glibc collation-symbol: <SEPA>
+<S1347> % ETHIOPIC SYLLABLE TZOA old glibc collation-symbol: <SEPA>
+<S1330> % ETHIOPIC SYLLABLE PHA old glibc collation-symbol: <PEYT>
+<S1331> % ETHIOPIC SYLLABLE PHU old glibc collation-symbol: <PEYT>
+<S1332> % ETHIOPIC SYLLABLE PHI old glibc collation-symbol: <PEYT>
+<S1333> % ETHIOPIC SYLLABLE PHAA old glibc collation-symbol: <PEYT>
+<S1334> % ETHIOPIC SYLLABLE PHEE old glibc collation-symbol: <PEYT>
+<S1335> % ETHIOPIC SYLLABLE PHE old glibc collation-symbol: <PEYT>
+<S1336> % ETHIOPIC SYLLABLE PHO old glibc collation-symbol: <PEYT>
+<S1337> % ETHIOPIC SYLLABLE PHWA old glibc collation-symbol: <PEYT>
+<S2D91> % ETHIOPIC SYLLABLE PHOA old glibc collation-symbol: <PEYT>
+<S1350> % ETHIOPIC SYLLABLE PA old glibc collation-symbol: <PSA>
+<S1351> % ETHIOPIC SYLLABLE PU old glibc collation-symbol: <PSA>
+<S1352> % ETHIOPIC SYLLABLE PI old glibc collation-symbol: <PSA>
+<S1353> % ETHIOPIC SYLLABLE PAA old glibc collation-symbol: <PSA>
+<S1354> % ETHIOPIC SYLLABLE PEE old glibc collation-symbol: <PSA>
+<S1355> % ETHIOPIC SYLLABLE PE old glibc collation-symbol: <PSA>
+<S1356> % ETHIOPIC SYLLABLE PO old glibc collation-symbol: <PSA>
+<S1357> % ETHIOPIC SYLLABLE PWA old glibc collation-symbol: <PSA>
+<S138C> % ETHIOPIC SYLLABLE SEBATBEIT PWA old glibc collation-symbol: <PSA>
+<S138D> % ETHIOPIC SYLLABLE PWI old glibc collation-symbol: <PSA>
+<S138E> % ETHIOPIC SYLLABLE PWEE old glibc collation-symbol: <PSA>
+<S138F> % ETHIOPIC SYLLABLE PWE old glibc collation-symbol: <PSA>
+<S2D92> % ETHIOPIC SYLLABLE POA old glibc collation-symbol: <PSA>
+reorder-end
+END LC_COLLATE
+
+
+LC_CTYPE
+copy "gez_ER"
+END LC_CTYPE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Eritrea Specifc Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_MEASUREMENT
+copy "gez_ER"
+END LC_MEASUREMENT
+
+LC_MONETARY
+copy "gez_ER"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "gez_ER"
+END LC_NUMERIC
+
+LC_PAPER
+copy "gez_ER"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "gez_ER"
+END LC_TELEPHONE
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Ge'ez/ER Specific Data:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+LC_ADDRESS
+copy "gez_ER"
+END LC_ADDRESS
+
+LC_MESSAGES
+copy "gez_ER"
+END LC_MESSAGES
+
+LC_NAME
+copy "gez_ER"
+END LC_NAME
+
+LC_TIME
+copy "gez_ER"
+END LC_TIME

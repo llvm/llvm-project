@@ -674,6 +674,11 @@ void ModuleSummaryIndex::exportToDot(
         continue;
       }
 
+      if (auto *IS = dyn_cast_or_null<IfuncSummary>(SummaryIt.second)) {
+        Draw(SummaryIt.first, IS->getResolverGUID(), -4);
+        continue;
+      }
+
       if (auto *FS = dyn_cast_or_null<FunctionSummary>(SummaryIt.second))
         for (auto &CGEdge : FS->calls())
           Draw(SummaryIt.first, CGEdge.first.getGUID(),

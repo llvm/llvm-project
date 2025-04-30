@@ -1,0 +1,50 @@
+libc {
+  GLIBC_2.0 {
+    # a*
+    alphasort;
+
+    # c*
+    closedir;
+
+    # d*
+    dirfd;
+
+    # g*
+    getdirentries;
+
+    # o*
+    opendir;
+
+    # r*
+    readdir; readdir_r; rewinddir;
+
+    # s*
+    scandir; seekdir;
+
+    # t*
+    telldir;
+  }
+  GLIBC_2.1 {
+    # a*
+    alphasort64;
+
+    # r*
+    readdir64; readdir64_r;
+
+    # s*
+    scandir64;
+
+    # v*
+    versionsort; versionsort64;
+  }
+  GLIBC_2.2 {
+    # g*
+    getdirentries64;
+  }
+  GLIBC_2.4 {
+    fdopendir;
+  }
+  GLIBC_2.15 {
+    scandirat; scandirat64;
+  }
+}

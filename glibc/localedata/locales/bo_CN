@@ -1,0 +1,183 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Tibetan language locale for P.R. of China
+%
+% Based on dz_BT by Pema Geyleg
+
+LC_IDENTIFICATION
+title      "Tibetan language locale for P.R. of China"
+source     ""
+address    ""
+contact    ""
+email      "bug-glibc@gnu.org"
+tel        ""
+fax        ""
+language   "Tibetan"
+territory  "China"
+revision   "0.1"
+date       "2007-11-06"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "dz_BT"
+END LC_COLLATE
+
+LC_MONETARY
+copy "zh_CN"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "zh_CN"
+END LC_NUMERIC
+
+LC_TIME
+abday   "<U0F49><U0F72><U0F0B>";/
+        "<U0F5F><U0FB3><U0F0B>";/
+        "<U0F58><U0F72><U0F62><U0F0B>";/
+        "<U0F63><U0FB7><U0F42><U0F0B>";/
+        "<U0F54><U0F74><U0F62><U0F0B>";/
+        "<U0F66><U0F44><U0F66><U0F0B>";/
+        "<U0F66><U0FA4><U0F7A><U0F53><U0F0B>"
+
+day     "<U0F42><U0F5F><U0F60><U0F0B><U0F49><U0F72><U0F0B><U0F58><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F5F><U0FB3><U0F0B><U0F56><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F58><U0F72><U0F42><U0F0B><U0F51><U0F58><U0F62><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F63><U0FB7><U0F42><U0F0B><U0F55><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F54><U0F74><U0F62><U0F0B><U0F56><U0F74><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F54><U0F0B><U0F66><U0F44><U0F66><U0F0B>";/
+        "<U0F42><U0F5F><U0F60><U0F0B><U0F66><U0FA4><U0F7A><U0F53><U0F0B><U0F55><U0F0B>"
+
+abmon   "<U0F5F><U0FB3><U0F0B><U0F21>";/
+	"<U0F5F><U0FB3><U0F0B><U0F22>";/
+	"<U0F5F><U0FB3><U0F0B><U0F23>";/
+	"<U0F5F><U0FB3><U0F0B><U0F24>";/
+	"<U0F5F><U0FB3><U0F0B><U0F25>";/
+	"<U0F5F><U0FB3><U0F0B><U0F26>";/
+	"<U0F5F><U0FB3><U0F0B><U0F27>";/
+	"<U0F5F><U0FB3><U0F0B><U0F28>";/
+	"<U0F5F><U0FB3><U0F0B><U0F29>";/
+	"<U0F5F><U0FB3><U0F0B><U0F21><U0F20>";/
+	"<U0F5F><U0FB3><U0F0B><U0F21><U0F21>";/
+	"<U0F5F><U0FB3><U0F0B><U0F21><U0F22>"
+
+mon      "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F51><U0F44><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F42><U0F49><U0F72><U0F66><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F42><U0F66><U0F74><U0F58><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F5E><U0F72><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F63><U0F94><U0F0B><U0F55><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F51><U0FB2><U0F74><U0F42><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F51><U0F74><U0F53><U0F54><U0F0B>";/
+    "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F62><U0F92><U0FB1><U0F51><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F51><U0F42><U0F74><U0F0B><U0F54><U0F0B>";/
+         "<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F45><U0F74><U0F0B><U0F54><U0F0B>";/
+"<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F45><U0F74><U0F0B><U0F42><U0F45><U0F72><U0F42><U0F0B><U0F54><U0F0B>";/
+"<U0F5F><U0FB3><U0F0B><U0F56><U0F0B><U0F56><U0F45><U0F74><U0F0B><U0F42><U0F49><U0F72><U0F66><U0F0B><U0F54><U0F0B>"
+
+
+
+
+% Appropriate date & time representation
+d_t_fmt      "<U0F54><U0F66><U0FB1><U0F72><U0F0B><U0F63><U0F7C>%y<U0F5F><U0F63>%m<U0F5A><U0F7A><U0F66>/
+%d<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>%H<U0F40><U0F66><U0F62><U0F0B><U0F58>/
+%M<U0F40><U0F66><U0F62><U0F0B><U0F46>%S"
+
+% Appropriate date & time representation for date(1)
+date_fmt     "<U0F54><U0F66><U0FB1><U0F72><U0F0B><U0F63><U0F7C>%y<U0F5F><U0F63>%m<U0F5A><U0F7A><U0F66>/
+%d<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>%H<U0F40><U0F66><U0F62><U0F0B><U0F58>/
+%M<U0F40><U0F66><U0F62><U0F0B><U0F46>%S"
+
+% Appropriate date representation
+d_fmt        "<U0F54><U0F66><U0FB1><U0F72><U0F0B><U0F63><U0F7C><U0025><U0079>/
+<U0F5F><U0F63><U0025><U006D><U0F5A><U0F7A><U0F66><U0025><U0064>"
+
+% Appropriate time representation  "%H:%M:%S"
+t_fmt        "<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>/
+<U0025><U0048><U0F40><U0F66><U0F62><U0F0B><U0F58>/
+<U0025><U004D><U0F40><U0F66><U0F62><U0F0B><U0F46><U0025><U0053>"
+
+% AM/PM signs
+am_pm   "<U0F44><U0F66><U0F0B><U0F46>";"<U0F55><U0FB1><U0F72><U0F0B><U0F46>"
+
+% Appropriate 12-hour clock representation  "%I:%M:%S %p"
+t_fmt_ampm        "<U0F46><U0F74><U0F0B><U0F5A><U0F7C><U0F51>/
+<U0025><U0049><U0F40><U0F66><U0F62><U0F0B><U0F58>/
+<U0025><U004D><U0F40><U0F66><U0F62><U0F0B><U0F46><U0025><U0053><U0020>/
+<U0025><U0070>"
+
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1yY<U0F68>]"
+noexpr  "^[-0nN<U0F58>]"
+yesstr  "<U0F61><U0F72><U0F53><U0F0D>"
+nostr   "<U0F58><U0F72><U0F53><U0F0D>"
+END LC_MESSAGES
+
+LC_TELEPHONE
+copy "zh_CN"
+END LC_TELEPHONE
+
+LC_PAPER
+copy "zh_CN"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "zh_CN"
+END LC_MEASUREMENT
+
+LC_NAME
+% FIXME
+
+name_fmt  " "
+% name_gen	"FIXME"
+% name_miss	"FIXME"
+% name_mr	"FIXME"
+% name_mrs	"FIXME"
+% name_ms	"FIXME"
+END LC_NAME
+
+LC_ADDRESS
+% FIXME
+
+postal_fmt   "%c%N%T%N%s %h %e %r%N%b%N%d%N%f%N%a%N"
+country_name "<U0F62><U0F92><U0FB1><U0F0B><U0F53><U0F42>"
+country_ab2	"CN"
+country_ab3	"CHN"
+country_num	156
+country_car "CHN"
+country_isbn	7
+lang_name     "<U0F56><U0F7C><U0F51><U0F0B><U0F66><U0F90><U0F51><U0F0B>"
+lang_ab       "bo"
+lang_term     "bod"
+lang_lib      "tib"
+END LC_ADDRESS

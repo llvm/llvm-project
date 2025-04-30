@@ -1,0 +1,4 @@
+v0 {
+global:
+    nextloader_trampoline;
+};

@@ -1126,6 +1126,8 @@ def err_pragma_loop_compatibility : Error<
   "%select{incompatible|duplicate}0 directives '%1' and '%2'">;
 def err_pragma_loop_precedes_nonloop : Error<
   "expected a for, while, or do-while loop to follow '%0'">;
+def err_pragma_ns_invalid_argument_type
+    : Error<"invalid argument of type %0; expected a string literal">;
 
 def err_pragma_attribute_matcher_subrule_contradicts_rule : Error<
   "redundant attribute subject matcher sub-rule '%0'; '%1' already matches "
@@ -3205,6 +3207,10 @@ def err_attribute_parameter_types : Error<
   "%0 attribute parameter types do not match: parameter %1 of function %2 has type %3, "
   "but parameter %4 of function %5 has type %6">;
 
+def warn_ns_attr_requires_def
+    : Warning<"%0: attribute can be applied only to function definitions, "
+              "not declaration">;
+
 def err_attribute_too_many_arguments : Error<
   "%0 attribute takes no more than %1 argument%s1">;
 def err_attribute_too_few_arguments : Error<
@@ -3409,6 +3415,12 @@ def err_compound_literal_with_vla_type : Error<
   "compound literal cannot be of variable-length array type">;
 def err_address_space_mismatch_templ_inst : Error<
   "conflicting address space qualifiers are provided between types %0 and %1">;
+def next32_err_addr_space_tls
+    : Error<"invalid usage of tls address space, this address space "
+            "must be used with __thread/_Thread_local/thread_local">;
+def next32_err_addr_space_non_tls
+    : Error<"invalid usage of address space, only tls address space "
+            "can be used with __thread/_Thread_local/thread_local">;
 def err_attr_objc_ownership_redundant : Error<
   "the type %0 is already explicitly ownership-qualified">;
 def err_invalid_nsnumber_type : Error<

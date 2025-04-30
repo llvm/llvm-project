@@ -1,0 +1,135 @@
+name: Pre-compile llvm
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'release_*x'
+
+jobs:
+  build:
+    name: Ubuntu Linux
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        target: [X86]
+        cc: [clang, gcc]
+        version: [10, 11]
+
+    steps:
+      - if: matrix.cc == 'clang'
+        run: |
+          echo "cpp=clang++" >> $GITHUB_ENV
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
+          sudo touch /etc/apt/sources.list.d/llvm.list
+          echo 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main' | sudo tee -a /etc/apt/sources.list.d/llvm.list
+          echo 'deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main'  | sudo tee -a /etc/apt/sources.list.d/llvm.list
+          wget -q -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+          sudo apt update
+          sudo apt install -f -y llvm-${{ matrix.version }} clang-${{ matrix.version}}
+
+      - if: matrix.cc == 'gcc' && matrix.version == '10'
+        run: |
+          echo "cpp=g++" >> $GITHUB_ENV
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
+          sudo apt install gcc-10 g++-10
+
+      - if: matrix.cc == 'gcc' && matrix.version == '11'
+        run: |
+          echo "cpp=g++" >> $GITHUB_ENV
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
+          sudo apt install gcc-11 g++-11
+
+      - name: Check tools
+        run: |
+          git --version
+          cmake --version
+          make --version
+          ${{ matrix.cc }}-${{ matrix.version }} --version
+          ${{env.cpp}}-${{ matrix.version }} --version
+
+      - name: Extract branch name
+        run: echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
+        id: extract_branch
+
+      - name: Build llvm
+        run: |
+          # exit the llvm dir, so the path is the same on subsequent projects
+          cd ../..
+          rm -rf classic-flang-llvm-project
+          # clone manually, because checkout does not allow exiting llvm dir
+          git clone --depth 1 --single-branch --branch ${{ steps.extract_branch.outputs.branch }} https://github.com/flang-compiler/classic-flang-llvm-project.git
+          cd classic-flang-llvm-project
+          # After build place the artifacts in classic-flang-llvm-project/classic-flang-llvm-project, so Upload can find them.
+          mkdir classic-flang-llvm-project
+          ./build-llvm-project.sh \
+            -t ${{ matrix.target }} \
+            -p /usr/local \
+            -a /usr/bin/${{ matrix.cc }}-${{ matrix.version }} \
+            -b /usr/bin/${{env.cpp}}-${{ matrix.version }} \
+            -n $(nproc) \
+            -v
+          # Archive the source + build directories for future installation
+          cd ..
+          tar -zcf llvm_build.tar.gz classic-flang-llvm-project
+          # Upload will only look in $GITHUB_WORKSPACE or its subdirs.
+          mv llvm_build.tar.gz classic-flang-llvm-project/classic-flang-llvm-project/.
+
+      - name: Upload llvm
+        uses: actions/upload-artifact@v2
+        with:
+          name: llvm_build_${{ matrix.target }}_${{ matrix.cc }}_${{ matrix.version }}_${{ steps.extract_branch.outputs.branch }}
+          path: llvm_build.tar.gz
+
+  build-win:
+    name: Windows build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            arch: amd64
+            target: X86
+          # Enable Windows on ARM build, when an official
+          # self-hosted machine is available.
+          # - os: self-hosted
+          #   arch: arm64
+          #   target: AArch64
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Windows
+        uses: llvm/actions/setup-windows@main
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Setup Ninja
+        uses: llvm/actions/install-ninja@main
+
+      - name: Check tools
+        run: |
+          git --version
+          cmake --version
+          clang --version
+          ninja --version
+          python --version
+
+      - name: Extract branch name
+        id: extract_branch
+        run: echo "branch=$(("${{ github.ref }}" -split "/")[-1])" >> $env:GITHUB_OUTPUT
+
+      - name: Build llvm
+        shell: powershell
+        run: |
+          $pcount = $($(Get-WmiObject -class Win32_ComputerSystem).numberoflogicalprocessors)
+          python .\scripts\build_llvm_project.py -d build -t ${{ matrix.target }} --cmake-param=-DLLVM_ENABLE_ASSERTIONS=ON -j $pcount -v
+          cd ..
+          7z a llvm_build.7z $pwd/classic-flang-llvm-project/
+          Copy-Item llvm_build.7z -Destination $pwd/classic-flang-llvm-project/
+
+      - name: Upload llvm
+        uses: actions/upload-artifact@v3
+        with:
+          name: llvm_build_win_${{ matrix.arch }}_clangcl_${{ steps.extract_branch.outputs.branch }}
+          path: ${{ github.workspace }}\llvm_build.7z

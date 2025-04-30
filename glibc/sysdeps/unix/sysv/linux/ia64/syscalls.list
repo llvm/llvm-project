@@ -1,0 +1,24 @@
+# File name	Caller	Syscall name	# args	Strong name	Weak names
+
+getpriority	-	getpriority	i:ii	__getpriority	getpriority
+
+# proper socket implementations:
+bind		-	bind		i:ipi	__bind		bind
+getpeername	-	getpeername	i:ipp	__getpeername	getpeername
+getsockname	-	getsockname	i:ipp	__getsockname	getsockname
+listen		-	listen		i:ii	__listen	listen
+shutdown	-	shutdown	i:ii	__shutdown	shutdown
+socket		-	socket		i:iii	__socket	socket
+socketpair	-	socketpair	i:iiif	__socketpair	socketpair
+
+# DIG-compliant access to PCI configuration space:
+pciconfig_read	EXTRA	pciconfig_read	5	pciconfig_read
+pciconfig_write	EXTRA	pciconfig_write	5	pciconfig_write
+
+ptrace		-	ptrace		4	__ptrace	ptrace
+
+
+# System calls with wrappers.
+
+# IA-64 specific
+getunwind	EXTRA	getunwind	i:pi	getunwind

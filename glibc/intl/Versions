@@ -1,0 +1,31 @@
+libc {
+  GLIBC_2.0 {
+    # global variables
+    _nl_msg_cat_cntr; _nl_default_dirname; _nl_domain_bindings;
+
+    # functions used in inline functions or macros
+    __dcgettext;
+
+    # functions used in other libraries
+    __dgettext;
+
+    # b*
+    bindtextdomain;
+
+    # d*
+    dcgettext; dgettext; gettext;
+
+    # t*
+    textdomain;
+  }
+  GLIBC_2.2 {
+    # b*
+    bind_textdomain_codeset;
+
+    # d*
+    dcngettext; dngettext;
+
+    # n*
+    ngettext;
+  }
+}

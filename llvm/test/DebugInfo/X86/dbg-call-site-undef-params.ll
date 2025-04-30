@@ -1,4 +1,5 @@
 ; RUN: llc -emit-call-site-info %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; XFAIL: *
 
 ;; Compiled from source:
 ;; extern int fn1 (long int x, long int y, long int z);

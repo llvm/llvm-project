@@ -1,0 +1,155 @@
+The GNU C library contains an NSS module for the Hesiod name service.
+Hesiod is a general name service for a variety of applications and is
+based on the Berkeley Internet Name Daemon (BIND).
+
+Introduction
+============
+
+The Hesiod NSS module implements access to all relevant standard
+Hesiod types, which means that Hesiod can be used for the `group',
+`passwd' and `services' databases.  There is however a restriction.
+In the same way that it is impossible to use `gethostent()' to iterate
+over all the data provided by DNS, it is not possible to scan the
+entire Hesiod database by means of `getgrent()', `getpwent()' and
+`getservent()'.  Besides, Hesiod only provides support for looking up
+services by name and not for looking them up by port.  In essence this
+means that the Hesiod name service is only consulted as a result of
+one of the following function calls:
+
+  * getgrname(), getgrgid()
+  * getpwname(), getpwuid()
+  * getservbyname()
+
+and their reentrant counterparts.
+
+
+Configuring your systems
+========================
+
+Configuring your systems to make use the Hesiod name service requires
+one or more of the following steps, depending on whether you are
+already running Hesiod in your network.
+
+Configuring NSS
+---------------
+
+First you should modify the file `/etc/nsswitch.conf' to tell
+NSS for which database you want to use the Hesiod name service.  If
+you want to use Hesiod for all databases it can handle your
+configuration file could look like this:
+
+  # /etc/nsswitch.conf
+  #
+  # Example configuration of GNU Name Service Switch functionality.
+  #
+
+  passwd:	  db files hesiod
+  group:	  db files hesiod
+  shadow:	  db files
+
+  hosts:	  files dns
+  networks:	  files dns
+
+  protocols:	  db files
+  services:	  db files hesiod
+  ethers:	  db files
+  rpc:		  db files
+
+For more information on NSS, please refer to the `The GNU C Library
+Reference Manual'.
+
+
+Configuring Hesiod
+------------------
+
+Next, you will have to configure Hesiod.  If you are already running
+Hesiod in your network, you probably already have a file named
+`hesiod.conf' on your machines (probably as `/etc/hesiod.conf' or
+`/usr/local/etc/hesiod.conf').  The Hesiod NSS module looks for
+`/etc/hesiod.conf' by default.  If there is no configuration file you
+will want to create your own.  It should look something like:
+
+  rhs=.your.domain
+  lhs=.ns
+  classes=in,hs
+
+The optional classes settings specifies which DNS classes Hesiod
+should do lookups in.  Possible values are IN (the preferred class)
+and  HS (the deprecated class, still used by some sites).
+You may specify both classes separated by a comma to try one class
+first and then the other if no entry is available in the first
+class.  The default value of the classes variable is `IN,HS'.
+
+The value of rhs can be overridden by the environment variable
+`HES_DOMAIN'.
+
+Configuring your name servers
+-----------------------------
+
+In addition, if you are not already running Hesiod in your network,
+you need to create Hesiod information on your central name servers.
+You need to run `named' from BIND 4.9 or higher on these servers, and
+make them authoritative for the domain `ns.your.domain' with a line in
+`/etc/named.boot' reading something like:
+
+  primary         ns.your.domain          named.hesiod
+
+or if you are using the new BIND 8.1 or higher add something to
+`/etc/named.conf' like:
+
+  zone "ns.your.domain" {
+          type master;
+          file "named.hesiod";
+  };
+
+Then in the BIND working directory (usually `/var/named') create the
+file `named.hesiod' containing data that looks something like:
+
+  ; SOA and NS records.
+  @       IN      SOA     server1.your.domain admin-address.your.domain (
+                  40000           ; serial - database version number
+                  1800            ; refresh - sec servers
+                  300             ; retry - for refresh
+                  3600000         ; expire - unrefreshed data
+                  7200 )          ; min
+                  NS      server1.your.domain
+                  NS      server2.your.domain
+
+  ; Actual Hesiod data.
+  libc.group      TXT     "libc:*:123:gnu,gnat"
+  123.gid         CNAME   libc.group
+  gnu.passwd      TXT     "gnu:*:4567:123:GNU:/home/gnu:/bin/bash"
+  456.uid         CNAME   mark.passwd
+  nss.service     TXT     "nss tcp 789 switch sw "
+  nss.service     TXT     "nss udp 789 switch sw"
+
+where `libc' is an example of a group, `gnu' an example of an user,
+and `nss' an example of a service.  Note that the format used to
+describe services differs from the format used in `/etc/services'.
+For more information on `named' refer to the `Name Server Operations
+Guide for BIND' that is included in the BIND distribution.
+
+
+Security
+========
+
+Note that the information stored in the Hesiod database in principle
+is publicly available.  Care should be taken with including vulnerable
+information like encrypted passwords in the Hesiod database.  There
+are some ways to improve security by using features provided by
+`named' (see the discussion about `secure zones' in the BIND
+documentation), but one should keep in mind that Hesiod was never
+intended to distribute passwords.  In the origional design
+authenticating users was the job of the Kerberos service.
+
+
+More information
+================
+
+For more information on the Hesiod name service take a look at some of
+the papers in ftp://athena-dist.mit.edu:/pub/ATHENA/usenix and the
+documentation that accompanies the source code for the Hesiod name
+service library in ftp://athena-dist.mit.edu:/pub/ATHENA/hesiod.
+
+There is a mailing list at MIT for Hesiod users, hesiod@mit.edu.  To
+get yourself on or off the list, send mail to hesiod-request@mit.edu.

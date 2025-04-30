@@ -1,0 +1,15 @@
+%if RISCV_ABI_XLEN == 64 && RISCV_ABI_FLEN == 64
+DEFAULT		GLIBC_2.27
+ld=ld-linux-riscv64-lp64d.so.1
+%elif RISCV_ABI_XLEN == 64 && RISCV_ABI_FLEN == 0
+DEFAULT		GLIBC_2.27
+ld=ld-linux-riscv64-lp64.so.1
+%elif RISCV_ABI_XLEN == 32 && RISCV_ABI_FLEN == 64
+DEFAULT		GLIBC_2.33
+ld=ld-linux-riscv32-ilp32d.so.1
+%elif RISCV_ABI_XLEN == 32 && RISCV_ABI_FLEN == 0
+DEFAULT		GLIBC_2.33
+ld=ld-linux-riscv32-ilp32.so.1
+%else
+%error cannot determine ABI
+%endif

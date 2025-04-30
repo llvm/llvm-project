@@ -1,0 +1,149 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Authors:
+% 2011-03-07, locales@kamusi.org
+% 2011-03-07, info@2xlibre.net
+
+LC_IDENTIFICATION
+title      "Swahili locale for Tanzania"
+source     "Kamusi Project"
+contact    "Martin Benjamin"
+email      "locales@kamusi.org"
+tel        ""
+fax        ""
+language   "Swahili"
+territory  "Tanzania"
+revision   "1.0"
+date       "2011-03-07"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "sw_KE"
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_TIME
+mon  "Januari";/
+     "Februari";/
+     "Machi";/
+     "Aprili";/
+     "Mei";/
+     "Juni";/
+     "Julai";/
+     "Agosti";/
+     "Septemba";/
+     "Oktoba";/
+     "Novemba";/
+     "Desemba"
+abmon  "Jan";/
+       "Feb";/
+       "Mac";/
+       "Apr";/
+       "Mei";/
+       "Jun";/
+       "Jul";/
+       "Ago";/
+       "Sep";/
+       "Okt";/
+       "Nov";/
+       "Des"
+day  "Jumapili";/
+     "Jumatatu";/
+     "Jumanne";/
+     "Jumatano";/
+     "Alhamisi";/
+     "Ijumaa";/
+     "Jumamosi"
+abday  "J2";"J3";"J4";"J5";"Alh";"Ij";"J1"
+d_t_fmt  "%e %B %Y %I:%M:%S %p"
+date_fmt "%e %B %Y %I:%M:%S %p %Z"
+d_fmt  "%d//%m//%Y"
+t_fmt  "%I:%M:%S %p"
+am_pm  "asubuhi";"alasiri"
+t_fmt_ampm  "%I:%M:%S %p"
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_NUMERIC
+copy "sw_KE"
+END LC_NUMERIC
+
+LC_MONETARY
+currency_symbol  "TSh"
+int_curr_symbol  "TZS "
+mon_decimal_point  "."
+mon_thousands_sep  ","
+mon_grouping  3
+positive_sign  ""
+negative_sign  "-"
+frac_digits  2
+int_frac_digits  2
+p_cs_precedes  1
+p_sep_by_space  0
+n_cs_precedes  1
+n_sep_by_space  0
+p_sign_posn  1
+n_sign_posn  1
+END LC_MONETARY
+
+LC_PAPER
+copy "sw_KE"
+END LC_PAPER
+
+LC_MEASUREMENT
+copy "sw_KE"
+END LC_MEASUREMENT
+
+LC_MESSAGES
+copy "sw_KE"
+END LC_MESSAGES
+
+LC_NAME
+copy "sw_KE"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt  "%a%N%f%N%d%N%b%N%h %s %e %r%N%T, %S %z%N%c%N"
+country_name  "Tanzania"
+country_post  "TZ"
+country_ab2   "TZ"
+country_ab3   "TZA"
+country_num   834
+country_car  "EAT"
+lang_name     "Kiswahili"
+lang_ab      "sw"
+lang_term    "swa"
+lang_lib     "swa"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt  "%c %a %l"
+tel_dom_fmt  "%A %l"
+int_select   "000"
+int_prefix   "255"
+END LC_TELEPHONE

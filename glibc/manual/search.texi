@@ -1,0 +1,649 @@
+@node Searching and Sorting, Pattern Matching, Message Translation, Top
+@c %MENU% General searching and sorting functions
+@chapter Searching and Sorting
+
+This chapter describes functions for searching and sorting arrays of
+arbitrary objects.  You pass the appropriate comparison function to be
+applied as an argument, along with the size of the objects in the array
+and the total number of elements.
+
+@menu
+* Comparison Functions::        Defining how to compare two objects.
+				 Since the sort and search facilities
+                                 are general, you have to specify the
+                                 ordering.
+* Array Search Function::       The @code{bsearch} function.
+* Array Sort Function::         The @code{qsort} function.
+* Search/Sort Example::         An example program.
+* Hash Search Function::        The @code{hsearch} function.
+* Tree Search Function::        The @code{tsearch} function.
+@end menu
+
+@node Comparison Functions
+@section Defining the Comparison Function
+@cindex Comparison Function
+
+In order to use the sorted array library functions, you have to describe
+how to compare the elements of the array.
+
+To do this, you supply a comparison function to compare two elements of
+the array.  The library will call this function, passing as arguments
+pointers to two array elements to be compared.  Your comparison function
+should return a value the way @code{strcmp} (@pxref{String/Array
+Comparison}) does: negative if the first argument is ``less'' than the
+second, zero if they are ``equal'', and positive if the first argument
+is ``greater''.
+
+Here is an example of a comparison function which works with an array of
+numbers of type @code{double}:
+
+@smallexample
+int
+compare_doubles (const void *a, const void *b)
+@{
+  const double *da = (const double *) a;
+  const double *db = (const double *) b;
+
+  return (*da > *db) - (*da < *db);
+@}
+@end smallexample
+
+The header file @file{stdlib.h} defines a name for the data type of
+comparison functions.  This type is a GNU extension.
+
+@comment stdlib.h
+@comment GNU
+@tindex comparison_fn_t
+@smallexample
+int comparison_fn_t (const void *, const void *);
+@end smallexample
+
+@node Array Search Function
+@section Array Search Function
+@cindex search function (for arrays)
+@cindex binary search function (for arrays)
+@cindex array search function
+
+Generally searching for a specific element in an array means that
+potentially all elements must be checked.  @Theglibc{} contains
+functions to perform linear search.  The prototypes for the following
+two functions can be found in @file{search.h}.
+
+@deftypefun {void *} lfind (const void *@var{key}, const void *@var{base}, size_t *@var{nmemb}, size_t @var{size}, comparison_fn_t @var{compar})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{lfind} function searches in the array with @code{*@var{nmemb}}
+elements of @var{size} bytes pointed to by @var{base} for an element
+which matches the one pointed to by @var{key}.  The function pointed to
+by @var{compar} is used to decide whether two elements match.
+
+The return value is a pointer to the matching element in the array
+starting at @var{base} if it is found.  If no matching element is
+available @code{NULL} is returned.
+
+The mean runtime of this function is @code{*@var{nmemb}}/2.  This
+function should only be used if elements often get added to or deleted from
+the array in which case it might not be useful to sort the array before
+searching.
+@end deftypefun
+
+@deftypefun {void *} lsearch (const void *@var{key}, void *@var{base}, size_t *@var{nmemb}, size_t @var{size}, comparison_fn_t @var{compar})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+@c A signal handler that interrupted an insertion and performed an
+@c insertion itself would leave the array in a corrupt state (e.g. one
+@c new element initialized twice, with parts of both initializations
+@c prevailing, and another uninitialized element), but this is just a
+@c special case of races on user-controlled objects, that have to be
+@c avoided by users.
+
+@c In case of cancellation, we know the array won't be left in a corrupt
+@c state; the new element is initialized before the element count is
+@c incremented, and the compiler can't reorder these operations because
+@c it can't know that they don't alias.  So, we'll either cancel after
+@c the increment and the initialization are both complete, or the
+@c increment won't have taken place, and so how far the initialization
+@c got doesn't matter.
+The @code{lsearch} function is similar to the @code{lfind} function.  It
+searches the given array for an element and returns it if found.  The
+difference is that if no matching element is found the @code{lsearch}
+function adds the object pointed to by @var{key} (with a size of
+@var{size} bytes) at the end of the array and it increments the value of
+@code{*@var{nmemb}} to reflect this addition.
+
+This means for the caller that if it is not sure that the array contains
+the element one is searching for the memory allocated for the array
+starting at @var{base} must have room for at least @var{size} more
+bytes.  If one is sure the element is in the array it is better to use
+@code{lfind} so having more room in the array is always necessary when
+calling @code{lsearch}.
+@end deftypefun
+
+To search a sorted array for an element matching the key, use the
+@code{bsearch} function.  The prototype for this function is in
+the header file @file{stdlib.h}.
+@pindex stdlib.h
+
+@deftypefun {void *} bsearch (const void *@var{key}, const void *@var{array}, size_t @var{count}, size_t @var{size}, comparison_fn_t @var{compare})
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+The @code{bsearch} function searches the sorted array @var{array} for an object
+that is equivalent to @var{key}.  The array contains @var{count} elements,
+each of which is of size @var{size} bytes.
+
+The @var{compare} function is used to perform the comparison.  This
+function is called with two pointer arguments and should return an
+integer less than, equal to, or greater than zero corresponding to
+whether its first argument is considered less than, equal to, or greater
+than its second argument.  The elements of the @var{array} must already
+be sorted in ascending order according to this comparison function.
+
+The return value is a pointer to the matching array element, or a null
+pointer if no match is found.  If the array contains more than one element
+that matches, the one that is returned is unspecified.
+
+This function derives its name from the fact that it is implemented
+using the binary search algorithm.
+@end deftypefun
+
+@node Array Sort Function
+@section Array Sort Function
+@cindex sort function (for arrays)
+@cindex quick sort function (for arrays)
+@cindex array sort function
+
+To sort an array using an arbitrary comparison function, use the
+@code{qsort} function.  The prototype for this function is in
+@file{stdlib.h}.
+@pindex stdlib.h
+
+@deftypefun void qsort (void *@var{array}, size_t @var{count}, size_t @var{size}, comparison_fn_t @var{compare})
+@standards{ISO, stdlib.h}
+@safety{@prelim{}@mtsafe{}@assafe{}@acunsafe{@acucorrupt{}}}
+The @code{qsort} function sorts the array @var{array}.  The array
+contains @var{count} elements, each of which is of size @var{size}.
+
+The @var{compare} function is used to perform the comparison on the
+array elements.  This function is called with two pointer arguments and
+should return an integer less than, equal to, or greater than zero
+corresponding to whether its first argument is considered less than,
+equal to, or greater than its second argument.
+
+@cindex stable sorting
+@strong{Warning:} If two objects compare as equal, their order after
+sorting is unpredictable.  That is to say, the sorting is not stable.
+This can make a difference when the comparison considers only part of
+the elements.  Two elements with the same sort key may differ in other
+respects.
+
+Although the object addresses passed to the comparison function lie
+within the array, they need not correspond with the original locations
+of those objects because the sorting algorithm may swap around objects
+in the array before making some comparisons.  The only way to perform
+a stable sort with @code{qsort} is to first augment the objects with a
+monotonic counter of some kind.
+
+Here is a simple example of sorting an array of doubles in numerical
+order, using the comparison function defined above (@pxref{Comparison
+Functions}):
+
+@smallexample
+@{
+  double *array;
+  int size;
+  @dots{}
+  qsort (array, size, sizeof (double), compare_doubles);
+@}
+@end smallexample
+
+The @code{qsort} function derives its name from the fact that it was
+originally implemented using the ``quick sort'' algorithm.
+
+The implementation of @code{qsort} in this library might not be an
+in-place sort and might thereby use an extra amount of memory to store
+the array.
+@end deftypefun
+
+@node Search/Sort Example
+@section Searching and Sorting Example
+
+Here is an example showing the use of @code{qsort} and @code{bsearch}
+with an array of structures.  The objects in the array are sorted
+by comparing their @code{name} fields with the @code{strcmp} function.
+Then, we can look up individual objects based on their names.
+
+@comment This example is dedicated to the memory of Jim Henson.  RIP.
+@smallexample
+@include search.c.texi
+@end smallexample
+
+@cindex Kermit the frog
+The output from this program looks like:
+
+@smallexample
+Kermit, the frog
+Piggy, the pig
+Gonzo, the whatever
+Fozzie, the bear
+Sam, the eagle
+Robin, the frog
+Animal, the animal
+Camilla, the chicken
+Sweetums, the monster
+Dr. Strangepork, the pig
+Link Hogthrob, the pig
+Zoot, the human
+Dr. Bunsen Honeydew, the human
+Beaker, the human
+Swedish Chef, the human
+
+Animal, the animal
+Beaker, the human
+Camilla, the chicken
+Dr. Bunsen Honeydew, the human
+Dr. Strangepork, the pig
+Fozzie, the bear
+Gonzo, the whatever
+Kermit, the frog
+Link Hogthrob, the pig
+Piggy, the pig
+Robin, the frog
+Sam, the eagle
+Swedish Chef, the human
+Sweetums, the monster
+Zoot, the human
+
+Kermit, the frog
+Gonzo, the whatever
+Couldn't find Janice.
+@end smallexample
+
+
+@node Hash Search Function
+@section The @code{hsearch} function.
+
+The functions mentioned so far in this chapter are for searching in a sorted
+or unsorted array.  There are other methods to organize information
+which later should be searched.  The costs of insert, delete and search
+differ.  One possible implementation is using hashing tables.
+The following functions are declared in the header file @file{search.h}.
+
+@deftypefun int hcreate (size_t @var{nel})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hsearch}}@asunsafe{@ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c hcreate @mtasurace:hsearch @ascuheap @acucorrupt @acsmem
+@c  hcreate_r dup @mtsrace:htab @ascuheap @acucorrupt @acsmem
+The @code{hcreate} function creates a hashing table which can contain at
+least @var{nel} elements.  There is no possibility to grow this table so
+it is necessary to choose the value for @var{nel} wisely.  The method
+used to implement this function might make it necessary to make the
+number of elements in the hashing table larger than the expected maximal
+number of elements.  Hashing tables usually work inefficiently if they are
+filled 80% or more.  The constant access time guaranteed by hashing can
+only be achieved if few collisions exist.  See Knuth's ``The Art of
+Computer Programming, Part 3: Searching and Sorting'' for more
+information.
+
+The weakest aspect of this function is that there can be at most one
+hashing table used through the whole program.  The table is allocated
+in local memory out of control of the programmer.  As an extension @theglibc{}
+provides an additional set of functions with a reentrant
+interface which provides a similar interface but which allows keeping
+arbitrarily many hashing tables.
+
+It is possible to use more than one hashing table in the program run if
+the former table is first destroyed by a call to @code{hdestroy}.
+
+The function returns a non-zero value if successful.  If it returns zero,
+something went wrong.  This could either mean there is already a hashing
+table in use or the program ran out of memory.
+@end deftypefun
+
+@deftypefun void hdestroy (void)
+@standards{SVID, search.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hsearch}}@asunsafe{@ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c hdestroy @mtasurace:hsearch @ascuheap @acucorrupt @acsmem
+@c  hdestroy_r dup @mtsrace:htab @ascuheap @acucorrupt @acsmem
+The @code{hdestroy} function can be used to free all the resources
+allocated in a previous call of @code{hcreate}.  After a call to this
+function it is again possible to call @code{hcreate} and allocate a new
+table with possibly different size.
+
+It is important to remember that the elements contained in the hashing
+table at the time @code{hdestroy} is called are @emph{not} freed by this
+function.  It is the responsibility of the program code to free those
+strings (if necessary at all).  Freeing all the element memory is not
+possible without extra, separately kept information since there is no
+function to iterate through all available elements in the hashing table.
+If it is really necessary to free a table and all elements the
+programmer has to keep a list of all table elements and before calling
+@code{hdestroy} s/he has to free all element's data using this list.
+This is a very unpleasant mechanism and it also shows that this kind of
+hashing table is mainly meant for tables which are created once and
+used until the end of the program run.
+@end deftypefun
+
+Entries of the hashing table and keys for the search are defined using
+this type:
+
+@deftp {Data type} ENTRY
+@table @code
+@item char *key
+Pointer to a zero-terminated string of characters describing the key for
+the search or the element in the hashing table.
+
+This is a limiting restriction of the functionality of the
+@code{hsearch} functions: They can only be used for data sets which
+use the NUL character always and solely to terminate keys.  It is not
+possible to handle general binary data for keys.
+
+@item void *data
+Generic pointer for use by the application.  The hashing table
+implementation preserves this pointer in entries, but does not use it
+in any way otherwise.
+@end table
+@end deftp
+
+@deftp {Data type} {struct entry}
+The underlying type of @code{ENTRY}.
+@end deftp
+
+@deftypefun {ENTRY *} hsearch (ENTRY @var{item}, ACTION @var{action})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtunsafe{@mtasurace{:hsearch}}@asunsafe{}@acunsafe{@acucorrupt{/action==ENTER}}}
+@c hsearch @mtasurace:hsearch @acucorrupt/action==ENTER
+@c  hsearch_r dup @mtsrace:htab @acucorrupt/action==ENTER
+To search in a hashing table created using @code{hcreate} the
+@code{hsearch} function must be used.  This function can perform a simple
+search for an element (if @var{action} has the value @code{FIND}) or it can
+alternatively insert the key element into the hashing table.  Entries
+are never replaced.
+
+The key is denoted by a pointer to an object of type @code{ENTRY}.  For
+locating the corresponding position in the hashing table only the
+@code{key} element of the structure is used.
+
+If an entry with a matching key is found the @var{action} parameter is
+irrelevant.  The found entry is returned.  If no matching entry is found
+and the @var{action} parameter has the value @code{FIND} the function
+returns a @code{NULL} pointer.  If no entry is found and the
+@var{action} parameter has the value @code{ENTER} a new entry is added
+to the hashing table which is initialized with the parameter @var{item}.
+A pointer to the newly added entry is returned.
+@end deftypefun
+
+As mentioned before, the hashing table used by the functions described so
+far is global and there can be at any time at most one hashing table in
+the program.  A solution is to use the following functions which are a
+GNU extension.  All have in common that they operate on a hashing table
+which is described by the content of an object of the type @code{struct
+hsearch_data}.  This type should be treated as opaque, none of its
+members should be changed directly.
+
+@deftypefun int hcreate_r (size_t @var{nel}, struct hsearch_data *@var{htab})
+@standards{GNU, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:htab}}@asunsafe{@ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c Unlike the lsearch array, the htab is (at least in part) opaque, so
+@c let's make it absolutely clear that ensuring exclusive access is a
+@c caller responsibility.
+
+@c Cancellation is unlikely to leave the htab in a corrupt state: the
+@c last field to be initialized is the one that tells whether the entire
+@c data structure was initialized, and there's a function call (calloc)
+@c in between that will often ensure all other fields are written before
+@c the table.  However, should this call be inlined (say with LTO), this
+@c assumption may not hold.  The calloc call doesn't cross our library
+@c interface barrier, so let's consider this could happen and mark this
+@c with @acucorrupt.  It's no safety loss, since we already have
+@c @ascuheap anyway...
+
+@c hcreate_r @mtsrace:htab @ascuheap @acucorrupt @acsmem
+@c  isprime ok
+@c  calloc dup @ascuheap @acsmem
+The @code{hcreate_r} function initializes the object pointed to by
+@var{htab} to contain a hashing table with at least @var{nel} elements.
+So this function is equivalent to the @code{hcreate} function except
+that the initialized data structure is controlled by the user.
+
+This allows having more than one hashing table at one time.  The memory
+necessary for the @code{struct hsearch_data} object can be allocated
+dynamically.  It must be initialized with zero before calling this
+function.
+
+The return value is non-zero if the operation was successful.  If the
+return value is zero, something went wrong, which probably means the
+program ran out of memory.
+@end deftypefun
+
+@deftypefun void hdestroy_r (struct hsearch_data *@var{htab})
+@standards{GNU, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:htab}}@asunsafe{@ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c The table is released while the table pointer still points to it.
+@c Async cancellation is thus unsafe, but it already was because we call
+@c free().  Using the table in a handler while it's being released would
+@c also be dangerous, but calling free() already makes it unsafe, and
+@c the requirement on the caller to ensure exclusive access already
+@c guarantees this doesn't happen, so we don't get @asucorrupt.
+
+@c hdestroy_r @mtsrace:htab @ascuheap @acucorrupt @acsmem
+@c  free dup @ascuheap @acsmem
+The @code{hdestroy_r} function frees all resources allocated by the
+@code{hcreate_r} function for this very same object @var{htab}.  As for
+@code{hdestroy} it is the program's responsibility to free the strings
+for the elements of the table.
+@end deftypefun
+
+@deftypefun int hsearch_r (ENTRY @var{item}, ACTION @var{action}, ENTRY **@var{retval}, struct hsearch_data *@var{htab})
+@standards{GNU, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:htab}}@assafe{}@acunsafe{@acucorrupt{/action==ENTER}}}
+@c Callers have to ensure mutual exclusion; insertion, if cancelled,
+@c leaves the table in a corrupt state.
+
+@c hsearch_r @mtsrace:htab @acucorrupt/action==ENTER
+@c  strlen dup ok
+@c  strcmp dup ok
+The @code{hsearch_r} function is equivalent to @code{hsearch}.  The
+meaning of the first two arguments is identical.  But instead of
+operating on a single global hashing table the function works on the
+table described by the object pointed to by @var{htab} (which is
+initialized by a call to @code{hcreate_r}).
+
+Another difference to @code{hcreate} is that the pointer to the found
+entry in the table is not the return value of the function.  It is
+returned by storing it in a pointer variable pointed to by the
+@var{retval} parameter.  The return value of the function is an integer
+value indicating success if it is non-zero and failure if it is zero.
+In the latter case the global variable @code{errno} signals the reason for
+the failure.
+
+@table @code
+@item ENOMEM
+The table is filled and @code{hsearch_r} was called with a so far
+unknown key and @var{action} set to @code{ENTER}.
+@item ESRCH
+The @var{action} parameter is @code{FIND} and no corresponding element
+is found in the table.
+@end table
+@end deftypefun
+
+
+@node Tree Search Function
+@section The @code{tsearch} function.
+
+Another common form to organize data for efficient search is to use
+trees.  The @code{tsearch} function family provides a nice interface to
+functions to organize possibly large amounts of data by providing a mean
+access time proportional to the logarithm of the number of elements.
+@Theglibc{} implementation even guarantees that this bound is
+never exceeded even for input data which cause problems for simple
+binary tree implementations.
+
+The functions described in the chapter are all described in the @w{System
+V} and X/Open specifications and are therefore quite portable.
+
+In contrast to the @code{hsearch} functions the @code{tsearch} functions
+can be used with arbitrary data and not only zero-terminated strings.
+
+The @code{tsearch} functions have the advantage that no function to
+initialize data structures is necessary.  A simple pointer of type
+@code{void *} initialized to @code{NULL} is a valid tree and can be
+extended or searched.  The prototypes for these functions can be found
+in the header file @file{search.h}.
+
+@deftypefun {void *} tsearch (const void *@var{key}, void **@var{rootp}, comparison_fn_t @var{compar})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:rootp}}@asunsafe{@ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+@c The tree is not modified in a thread-safe manner, and rotations may
+@c leave the tree in an inconsistent state that could be observed in an
+@c asynchronous signal handler (except for the caller-synchronization
+@c requirement) or after asynchronous cancellation of the thread
+@c performing the rotation or the insertion.
+The @code{tsearch} function searches in the tree pointed to by
+@code{*@var{rootp}} for an element matching @var{key}.  The function
+pointed to by @var{compar} is used to determine whether two elements
+match.  @xref{Comparison Functions}, for a specification of the functions
+which can be used for the @var{compar} parameter.
+
+If the tree does not contain a matching entry the @var{key} value will
+be added to the tree.  @code{tsearch} does not make a copy of the object
+pointed to by @var{key} (how could it since the size is unknown).
+Instead it adds a reference to this object which means the object must
+be available as long as the tree data structure is used.
+
+The tree is represented by a pointer to a pointer since it is sometimes
+necessary to change the root node of the tree.  So it must not be
+assumed that the variable pointed to by @var{rootp} has the same value
+after the call.  This also shows that it is not safe to call the
+@code{tsearch} function more than once at the same time using the same
+tree.  It is no problem to run it more than once at a time on different
+trees.
+
+The return value is a pointer to the matching element in the tree.  If a
+new element was created the pointer points to the new data (which is in
+fact @var{key}).  If an entry had to be created and the program ran out
+of space @code{NULL} is returned.
+@end deftypefun
+
+@deftypefun {void *} tfind (const void *@var{key}, void *const *@var{rootp}, comparison_fn_t @var{compar})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:rootp}}@assafe{}@acsafe{}}
+The @code{tfind} function is similar to the @code{tsearch} function.  It
+locates an element matching the one pointed to by @var{key} and returns
+a pointer to this element.  But if no matching element is available no
+new element is entered (note that the @var{rootp} parameter points to a
+constant pointer).  Instead the function returns @code{NULL}.
+@end deftypefun
+
+Another advantage of the @code{tsearch} functions in contrast to the
+@code{hsearch} functions is that there is an easy way to remove
+elements.
+
+@deftypefun {void *} tdelete (const void *@var{key}, void **@var{rootp}, comparison_fn_t @var{compar})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:rootp}}@asunsafe{@ascuheap{}}@acunsafe{@acucorrupt{} @acsmem{}}}
+To remove a specific element matching @var{key} from the tree
+@code{tdelete} can be used.  It locates the matching element using the
+same method as @code{tfind}.  The corresponding element is then removed
+and a pointer to the parent of the deleted node is returned by the
+function.  If there is no matching entry in the tree nothing can be
+deleted and the function returns @code{NULL}.  If the root of the tree
+is deleted @code{tdelete} returns some unspecified value not equal to
+@code{NULL}.
+@end deftypefun
+
+@deftypefun void tdestroy (void *@var{vroot}, __free_fn_t @var{freefct})
+@standards{GNU, search.h}
+@safety{@prelim{}@mtsafe{}@asunsafe{@ascuheap{}}@acunsafe{@acsmem{}}}
+If the complete search tree has to be removed one can use
+@code{tdestroy}.  It frees all resources allocated by the @code{tsearch}
+functions to generate the tree pointed to by @var{vroot}.
+
+For the data in each tree node the function @var{freefct} is called.
+The pointer to the data is passed as the argument to the function.  If
+no such work is necessary @var{freefct} must point to a function doing
+nothing.  It is called in any case.
+
+This function is a GNU extension and not covered by the @w{System V} or
+X/Open specifications.
+@end deftypefun
+
+In addition to the functions to create and destroy the tree data
+structure, there is another function which allows you to apply a
+function to all elements of the tree.  The function must have this type:
+
+@smallexample
+void __action_fn_t (const void *nodep, VISIT value, int level);
+@end smallexample
+
+The @var{nodep} is the data value of the current node (once given as the
+@var{key} argument to @code{tsearch}).  @var{level} is a numeric value
+which corresponds to the depth of the current node in the tree.  The
+root node has the depth @math{0} and its children have a depth of
+@math{1} and so on.  The @code{VISIT} type is an enumeration type.
+
+@deftp {Data Type} VISIT
+The @code{VISIT} value indicates the status of the current node in the
+tree and how the function is called.  The status of a node is either
+`leaf' or `internal node'.  For each leaf node the function is called
+exactly once, for each internal node it is called three times: before
+the first child is processed, after the first child is processed and
+after both children are processed.  This makes it possible to handle all
+three methods of tree traversal (or even a combination of them).
+
+@vtable @code
+@item preorder
+The current node is an internal node and the function is called before
+the first child was processed.
+@item postorder
+The current node is an internal node and the function is called after
+the first child was processed.
+@item endorder
+The current node is an internal node and the function is called after
+the second child was processed.
+@item leaf
+The current node is a leaf.
+@end vtable
+@end deftp
+
+@deftypefun void twalk (const void *@var{root}, __action_fn_t @var{action})
+@standards{SVID, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:root}}@assafe{}@acsafe{}}
+For each node in the tree with a node pointed to by @var{root}, the
+@code{twalk} function calls the function provided by the parameter
+@var{action}.  For leaf nodes the function is called exactly once with
+@var{value} set to @code{leaf}.  For internal nodes the function is
+called three times, setting the @var{value} parameter or @var{action} to
+the appropriate value.  The @var{level} argument for the @var{action}
+function is computed while descending the tree by increasing the value
+by one for each descent to a child, starting with the value @math{0} for
+the root node.
+
+Since the functions used for the @var{action} parameter to @code{twalk}
+must not modify the tree data, it is safe to run @code{twalk} in more
+than one thread at the same time, working on the same tree.  It is also
+safe to call @code{tfind} in parallel.  Functions which modify the tree
+must not be used, otherwise the behavior is undefined.  However, it is
+difficult to pass data external to the tree to the callback function
+without resorting to global variables (and thread safety issues), so
+see the @code{twalk_r} function below.
+@end deftypefun
+
+@deftypefun void twalk_r (const void *@var{root}, void (*@var{action}) (const void *@var{key}, VISIT @var{which}, void *@var{closure}), void *@var{closure})
+@standards{GNU, search.h}
+@safety{@prelim{}@mtsafe{@mtsrace{:root}}@assafe{}@acsafe{}}
+For each node in the tree with a node pointed to by @var{root}, the
+@code{twalk_r} function calls the function provided by the parameter
+@var{action}.  For leaf nodes the function is called exactly once with
+@var{which} set to @code{leaf}.  For internal nodes the function is
+called three times, setting the @var{which} parameter of @var{action} to
+the appropriate value.  The @var{closure} parameter is passed down to
+each call of the @var{action} function, unmodified.
+
+It is possible to implement the @code{twalk} function on top of the
+@code{twalk_r} function, which is why there is no separate level
+parameter.
+
+@smallexample
+@include twalk.c.texi
+@end smallexample
+@end deftypefun

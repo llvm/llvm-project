@@ -267,7 +267,7 @@ std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-static bool isCompatible(InputFile *file) {
+static bool isCompatible(InputFile *file, bool &other_arch) {
   if (!file->isElf() && !isa<BitcodeFile>(file))
     return true;
 
@@ -276,6 +276,15 @@ static bool isCompatible(InputFile *file) {
       return true;
     if (isMipsN32Abi(file) == config->mipsN32Abi)
       return true;
+  } else {
+    if ((config->ehostMachine != llvm::ELF::EM_NONE) &&
+        (file->ekind == config->ehostKind) &&
+        (file->emachine == config->ehostMachine)) {
+      // Special case: the user has mandated another type of compatible
+      // architecture, so we checked for that
+      other_arch = true;
+      return true;
+    }
   }
 
   StringRef target =
@@ -300,18 +309,23 @@ static bool isCompatible(InputFile *file) {
 }
 
 template <class ELFT> static void doParseFile(InputFile *file) {
-  if (!isCompatible(file))
+  bool other_arch = false;
+  if (!isCompatible(file, other_arch))
     return;
 
-  // Lazy object file
-  if (file->lazy) {
-    if (auto *f = dyn_cast<BitcodeFile>(file)) {
-      ctx.lazyBitcodeFiles.push_back(f);
-      f->parseLazy();
-    } else {
-      cast<ObjFile<ELFT>>(file)->parseLazy();
+  // NextSilicon patch, not adding indentation to avoid rebase complications
+  if (!other_arch) {
+
+    // Lazy object file
+    if (file->lazy) {
+      if (auto *f = dyn_cast<BitcodeFile>(file)) {
+        ctx.lazyBitcodeFiles.push_back(f);
+        f->parseLazy();
+      } else {
+        cast<ObjFile<ELFT>>(file)->parseLazy();
+      }
+      return;
     }
-    return;
   }
 
   if (config->trace)
@@ -323,9 +337,16 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   } else if (auto *f = dyn_cast<SharedFile>(file)) {
     f->parse<ELFT>();
   } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
-    ctx.bitcodeFiles.push_back(f);
-    f->parse();
+    // NextSilicon patch, not adding indentation to avoid rebase complications
+    if (!other_arch) {
+      ctx.bitcodeFiles.push_back(f);
+      f->parse();
+    }
   } else {
+    if (other_arch) {
+      error(toString(file) + " is incompatible with " + config->emulation);
+      return;
+    }
     ctx.binaryFiles.push_back(cast<BinaryFile>(file));
     cast<BinaryFile>(file)->parse();
   }
@@ -912,7 +933,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // `nullptr` for the normal case. However, if -r or --emit-relocs is
       // specified, we need to copy them to the output. (Some post link analysis
       // tools specify --emit-relocs to obtain the information.)
-      if (config->copyRelocs) {
+      if (config->copyRelocs || getTarget()->forceEmitSectionRelocs(s)) {
         auto *isec = makeThreadLocal<InputSection>(
             *this, sec, check(obj.getSectionName(sec, shstrtab)));
         // If the relocated section is discarded (due to /DISCARD/ or
@@ -1678,6 +1699,8 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:
     return EM_X86_64;
+  case Triple::next32:
+    return EM_NEXT32;
   default:
     error(path + ": could not infer e_machine from bitcode target triple " +
           t.str());

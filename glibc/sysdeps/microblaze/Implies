@@ -1,0 +1,5 @@
+wordsize-32
+# MicroBlaze uses IEEE 754 floating point.
+ieee754/soft-fp
+ieee754/flt-32
+ieee754/dbl-64

@@ -1,0 +1,9 @@
+packages
+Jenkinsfile
+.git
+warnings_filter_rules.json
+.Jenkinsfile-merge
+.clang-format
+.clang-tidy
+.github
+.arcconfig

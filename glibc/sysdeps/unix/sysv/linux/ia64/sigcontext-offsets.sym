@@ -1,0 +1,16 @@
+#include <stddef.h>
+#include <sys/ucontext.h>
+
+--
+SC_NAT		offsetof (mcontext_t, sc_nat)
+SC_BSP		offsetof (mcontext_t, sc_ar_bsp)
+SC_RNAT		offsetof (mcontext_t, sc_ar_rnat)
+SC_UNAT		offsetof (mcontext_t, sc_ar_unat)
+SC_FPSR		offsetof (mcontext_t, sc_ar_fpsr)
+SC_PFS		offsetof (mcontext_t, sc_ar_pfs)
+SC_LC		offsetof (mcontext_t, sc_ar_lc)
+SC_PR		offsetof (mcontext_t, sc_pr)
+SC_BR		offsetof (mcontext_t, sc_br)
+SC_GR		offsetof (mcontext_t, sc_gr)
+SC_FR		offsetof (mcontext_t, sc_fr)
+SC_MASK		offsetof (mcontext_t, sc_mask)

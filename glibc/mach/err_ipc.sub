@@ -1,0 +1,109 @@
+/*
+ * Mach Operating System
+ * Copyright (c) 1991,1990,1989,1988,1987 Carnegie Mellon University
+ * All Rights Reserved.
+ *
+ * Permission to use, copy, modify and distribute this software and its
+ * documentation is hereby granted, provided that both the copyright
+ * notice and this permission notice appear in all copies of the
+ * software, derivative works or modified versions, and any portions
+ * thereof, and that both notices appear in supporting documentation.
+ *
+ * CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS
+ * CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND FOR
+ * ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ *
+ * Carnegie Mellon requests users of this software to return to
+ *
+ *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+ *  School of Computer Science
+ *  Carnegie Mellon University
+ *  Pittsburgh PA 15213-3890
+ *
+ * any improvements or extensions that they make and grant Carnegie the
+ * rights to redistribute these changes.
+ */
+/*
+ * HISTORY
+ * $Log$
+ * Revision 1.1  1992/10/06 18:29:52  roland
+ * entered into RCS
+ *
+ * Revision 2.2  92/01/16  00:08:40  rpd
+ * 	Moved from user collection to mk collection.
+ *
+ * Revision 2.2  91/03/27  16:05:16  mrt
+ * 	First checkin
+ *
+ *
+ */
+/*
+ *	File:	err_ipc.sub
+ *	Author:	Douglas Orr, Carnegie Mellon University
+ *	Date:	Mar, 1988
+ *
+ *	Definitions of error strings for original IPC
+ */
+
+static char * err_codes_send[] = {
+	"(ipc/send) unknown error",		/* -100 */
+	"(ipc/send) invalid memory",		/* -101 */
+	"(ipc/send) invalid port",		/* -102 */
+	"(ipc/send) timed out",			/* -103 */
+	"(ipc/send) unused error",		/* -104 */
+	"(ipc/send) will notify",		/* -105 */
+	"(ipc/send) notify in progress",	/* -106 */
+	"(ipc/send) kernel refused message",	/* -107 */
+	"(ipc/send) send interrupted",		/* -108 */
+	"(ipc/send) send message too large",	/* -109 */
+	"(ipc/send) send message too small",	/* -110 */
+	"(ipc/send) message size changed while being copied",	/* -111 */
+};
+
+static char * err_codes_rcv[] = {
+	"(ipc/rcv) unknown error",			/* -200 */
+	"(ipc/rcv) invalid memory",			/* -201 */
+	"(ipc/rcv) invalid port",			/* -202 */
+	"(ipc/rcv) receive timed out",			/* -203 */
+	"(ipc/rcv) message too large",			/* -204 */
+	"(ipc/rcv) no space for message data",		/* -205 */
+	"(ipc/rcv) only sender remaining",		/* -206 */
+	"(ipc/rcv) receive interrupted",		/* -207 */
+	"(ipc/rcv) port receiver changed or port became enabled", /* -208 */
+};
+
+static char 	* err_codes_mig[] = {
+	"(ipc/mig) type check failure in message interface",	/* 0 (-300) */
+	"(ipc/mig) wrong return message ID",			/* 1 */
+	"(ipc/mig) server detected error",			/* 2 */
+	"(ipc/mig) bad message ID",				/* 3 */
+	"(ipc/mig) server found wrong arguments",		/* 4 */
+	"(ipc/mig) no reply should be sent",			/* 5 */
+	"(ipc/mig) server raised exception",			/* 6 */
+	"(ipc/mig) user specified array not large enough for return info",	/* 7 */
+};
+
+/*	err_ipc subsystems      	*/
+static struct error_subsystem err_ipc_sub[] = {
+	/* ipc/0; */
+	{
+		"(ipc/send)",
+		errlib_count(err_codes_send),
+		err_codes_send,
+	},
+	/* ipc/1; */
+	{
+		"(ipc/rcv)",
+		errlib_count(err_codes_rcv),
+		err_codes_rcv,
+
+	},
+	/* ipc/2 */
+	{
+		"(ipc/mig)",
+		errlib_count(err_codes_mig),
+		err_codes_mig,
+	},
+
+};
+

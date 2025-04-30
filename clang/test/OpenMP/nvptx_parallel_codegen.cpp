@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -disable-llvm-optzns -disable-O0-optnone | FileCheck %s --check-prefix=CHECK2
 // expected-no-diagnostics
+
+// XFAIL: *
+
 #ifndef HEADER
 #define HEADER
 

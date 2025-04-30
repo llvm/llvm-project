@@ -295,6 +295,10 @@ void llvm::computeLTOCacheKey(
       // may reference.
       if (auto *AS = dyn_cast_or_null<AliasSummary>(S))
         AddUsedThings(AS->getBaseObject());
+      // If this is an ifunc, we also care about any types/etc. that the
+      // resolver may reference.
+      if (auto *IS = dyn_cast_or_null<IfuncSummary>(S))
+        AddUsedThings(IS->getBaseObject());
     }
 
   auto AddTypeIdSummary = [&](StringRef TId, const TypeIdSummary &S) {
@@ -360,7 +364,7 @@ void llvm::computeLTOCacheKey(
 
 static void thinLTOResolvePrevailingGUID(
     const Config &C, ValueInfo VI,
-    DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
+    DenseSet<GlobalValueSummary *> &GlobalInvolvedWithIndirectValue,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
@@ -403,9 +407,10 @@ static void thinLTOResolvePrevailingGUID(
       if (C.VisibilityScheme == Config::FromPrevailing)
         Visibility = S->getVisibility();
     }
-    // Alias and aliasee can't be turned into available_externally.
-    else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()))
+    // Alias and aliasee or ifunc and resolver can't be turned into
+    // available_externally.
+    else if (!isa<AliasSummary>(S.get()) && !isa<IfuncSummary>(S.get()) &&
+             !GlobalInvolvedWithIndirectValue.count(S.get()))
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
@@ -445,15 +450,19 @@ void llvm::thinLTOResolvePrevailingInIndex(
   // We won't optimize the globals that are referenced by an alias for now
   // Ideally we should turn the alias into a global and duplicate the definition
   // when needed.
-  DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
-  for (auto &I : Index)
-    for (auto &S : I.second.SummaryList)
+  DenseSet<GlobalValueSummary *> GlobalInvolvedWithIndirectValue;
+  for (auto &I : Index) {
+    for (auto &S : I.second.SummaryList) {
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
-        GlobalInvolvedWithAlias.insert(&AS->getAliasee());
+        GlobalInvolvedWithIndirectValue.insert(&AS->getAliasee());
+      if (auto IS = dyn_cast<IfuncSummary>(S.get()))
+        GlobalInvolvedWithIndirectValue.insert(&IS->getResolver());
+    }
+  }
 
   for (auto &I : Index)
     thinLTOResolvePrevailingGUID(C, Index.getValueInfo(I),
-                                 GlobalInvolvedWithAlias, isPrevailing,
+                                 GlobalInvolvedWithIndirectValue, isPrevailing,
                                  recordNewLinkage, GUIDPreservedSymbols);
 }
 

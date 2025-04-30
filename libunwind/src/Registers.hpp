@@ -25,6 +25,7 @@ namespace libunwind {
 struct v128 { uint32_t vec[4]; };
 
 enum {
+  REGISTERS_NEXT32,
   REGISTERS_X86,
   REGISTERS_X86_64,
   REGISTERS_PPC,
@@ -4776,6 +4777,39 @@ inline const char *Registers_ve::getRegisterName(int regNum) {
 }
 #endif // _LIBUNWIND_TARGET_VE
 
+#if defined(_LIBUNWIND_TARGET_NEXT)
+class _LIBUNWIND_HIDDEN Registers_NEXT {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
+public:
+  Registers_NEXT(){};
+  Registers_NEXT(const void *registers){};
+
+  bool validRegister(int num) const { return false; }
+  uint64_t getRegister(int num) const { return 0; }
+  void setRegister(int num, uint64_t value) { return; }
+  bool validFloatRegister(int) const { return false; }
+  double getFloatRegister(int num) const { return 0.0; }
+  void setFloatRegister(int num, double value) { return; }
+  bool validVectorRegister(int) const { return false; }
+  v128 getVectorRegister(int num) const { return {0}; }
+  void setVectorRegister(int num, v128 value) { return; }
+  static const char *getRegisterName(int num) { return ""; }
+  void jumpto() { return; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_NEXT;
+  }
+  static int getArch() { return REGISTERS_NEXT32; }
+
+  uint64_t getSP() const { return 0; }
+  void setSP(uint64_t value) { return; }
+  uint64_t getIP() const { return 0; }
+  void setIP(uint64_t value) { return; }
+#pragma GCC diagnostic pop
+};
+#endif // defined(_LIBUNWIND_TARGET_NEXT)
+
 #if defined(_LIBUNWIND_TARGET_S390X)
 /// Registers_s390x holds the register state of a thread in a
 /// 64-bit Linux on IBM zSystems process.
@@ -4816,7 +4850,7 @@ private:
   s390x_thread_state_t _registers;
 };
 
-inline Registers_s390x::Registers_s390x(const void *registers) {
+c {
   static_assert((check_fit<Registers_s390x, unw_context_t>::does_fit),
                 "s390x registers do not fit into unw_context_t");
   memcpy(&_registers, static_cast<const uint8_t *>(registers),

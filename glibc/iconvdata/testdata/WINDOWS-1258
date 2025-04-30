@@ -1,0 +1,4 @@
+// The last line of this file is missing the end-of-line terminator
+// on purpose, in order to test that the conversion empties the bit buffer
+// and shifts back to the initial state at the end of the conversion.
+Vietnamese (Tiêìng Viêòt)	Chào baòn

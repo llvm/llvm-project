@@ -1,0 +1,90 @@
+#!/bin/sh
+
+libm_dir=$1
+
+import() {
+	# $1 = name
+	# $2 = source file-name
+	# $3 = destination file-name
+	echo "$1 $libm_dir/$2 $3"
+}
+
+import_c() {
+	# $1 = name
+	# $2 = source file-name
+	# $3 = destination file-name
+	echo "$1 $libm_dir/$2 $3"
+}
+
+dummy_files="
+libm_cpu_defs.h
+libm_error_codes.h
+libm_support.h
+libm_error.c
+"
+
+for f in $dummy_files
+do
+  import_c DUMMY $f $f
+done
+
+import_c scalblnf scalblnf.c s_scalblnf.c
+
+for f in acos acosh asin atanh cosh exp2 exp10 fmod log2 pow remainder \
+	 scalb sinh sqrt; do
+ for t in "" f l; do
+  import $f$t $f$t.s e_$f$t.S
+ done
+done
+
+for f in atan2 exp; do
+ for t in "" f; do
+  import $f$t $f$t.s e_$f$t.S
+ done
+done
+import "atan" atan.s s_atan.S
+import "atanf" atanf.s s_atanf.S
+import "atan(2)?l" atanl.s s_atanl.S
+import "exp(m1)?l" expl_m1.s s_expm1l.S
+
+for t in "" f l; do
+  import "log(10)?$t" log$t.s e_log$t.S
+  import tgamma$t tgamma$t.s w_tgamma$t.S
+  import "(hypot|cabs)$t" hypot$t.s e_hypot$t.S
+done
+
+for f in asinh cbrt ceil erf erfc fabs floor \
+	 ilogb log1p logb modf nearbyint nextafter nexttoward \
+	 rint round significand fdim fma fmax tanh trunc; do
+ for t in "" f l; do
+  import $f$t $f$t.s s_$f$t.S
+ done
+done
+
+for t in "" f l; do
+  import "(tan|cot)$t" tancot$t.s s_tan$t.S
+done
+
+for t in "" f l; do
+  import "(sin|cos)$t" sincos$t.s s_cos$t.S
+  import_c frexp$t frexp$t.c s_frexp$t.c
+  import_c ldexp$t ldexp$t.c s_ldexp$t.c
+  import_c scalbn$t scalbn$t.c s_scalbn$t.c
+done
+
+import expm1 exp_m1.s s_expm1.S
+import expm1f expf_m1.s s_expm1f.S
+
+for f in frexp frexpf frexpl reduce; do
+  import __libm_$f libm_$f.s libm_$f.S
+done
+
+for t in "" f l; do
+  import __libm_ldexp$t libm_ldexp$t.s s_libm_ldexp$t.S
+  import "(__libm_)?(sincos|cis)$t" libm_sincos$t.s libm_sincos$t.S
+  import __libm_lgamma$t libm_lgamma$t.s libm_lgamma$t.S
+  import __libm_scalbn$t libm_scalbn$t.s s_libm_scalbn$t.S
+done
+import __libm_scalblnf libm_scalblnf.s libm_scalblnf.S
+import "__libm_(sin|cos|sincos)_large" libm_sincos_large.s \
+	libm_sincos_large.S

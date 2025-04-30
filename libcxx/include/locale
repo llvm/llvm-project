@@ -2447,6 +2447,11 @@ locale::id money_get<_CharT, _InputIterator>::id;
 
 _LIBCPP_EXPORTED_FROM_ABI void __do_nothing(void*);
 
+static inline void non_rpc_free(void *block)
+{
+	return free(block);
+}
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __double_or_nothing(unique_ptr<_Tp, void (*)(void*)>& __b, _Tp*& __n, _Tp*& __e) {
   bool __owns      = __b.get_deleter() != __do_nothing;
@@ -2460,7 +2465,7 @@ _LIBCPP_HIDE_FROM_ABI void __double_or_nothing(unique_ptr<_Tp, void (*)(void*)>&
     __throw_bad_alloc();
   if (__owns)
     __b.release();
-  __b = unique_ptr<_Tp, void (*)(void*)>(__t, free);
+  __b = unique_ptr<_Tp, void (*)(void*)>(__t, non_rpc_free);
   __new_cap /= sizeof(_Tp);
   __n = __b.get() + __n_off;
   __e = __b.get() + __new_cap;

@@ -1,0 +1,32 @@
+# This file defines the ABI tag value we will use in the ELF note included
+# in the startup code to be linked into every program.
+
+# The following lines list regexps matching canonical configurations, and
+# the associated ABI tag values.  The entire list is processed, with
+# earlier entries taking precedence over later entries.  So loose patterns
+# at the end of the list can give defaults.
+
+# The ABI tags we use are four 32-bit integers.  The first of these
+# is the operating-system number, the next three are the revision number
+# of the first compatible kernel.
+
+# After the configuration regexp, four integers in C syntax appear
+# surrounded by any whitespace or punctuation, one for each byte, MSB first.
+
+# Configuration		ABI OS	ABI version
+# -------------		------	-----------
+
+.*-.*-linux.*		0	2.0.0	# earliest compatible kernel version
+
+.*-.*-gnu-gnu.*		1	0.0.0
+
+.*-sun-solaris2.*	2	2.0.0	# just an arbitrary value
+
+.*-.*-freebsd.*-gnu.*	3	4.0.0	# earliest compatible kernel version
+
+.*-.*-knetbsd.*-gnu.*	4	1.6.0	# earliest compatible kernel version
+
+.*-.*-syllable.*	5	2.0.0	# just an arbitrary value
+
+# There is no catch-all default here because every supported OS that uses
+# ELF must have its own unique ABI tag.

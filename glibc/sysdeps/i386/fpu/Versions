@@ -1,0 +1,6 @@
+libm {
+  GLIBC_2.2 {
+    # functions used in inline functions or macros
+    __expl; __expm1l;
+  }
+}

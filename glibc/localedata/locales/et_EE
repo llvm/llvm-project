@@ -1,0 +1,227 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Estonian language locale for Estonia
+% according to EVS 8:1993
+% Source: Estonian Informatics Fund
+% Address: To-nisma:gi 8, Tallinn
+%     EE0100 Estonia
+% Tel: +372 - 2 - 681012
+% Fax: +372 - 2 - 681012
+% Contact: Tiit Tammiste
+% Email: tiit@eif.ee
+% Language: et
+% territory: EE
+% Revision: 4.3
+% Date: 1996-10-15
+% Application: general
+% Users: general
+
+LC_IDENTIFICATION
+title      "Estonian locale for Estonia"
+source     "Estonian Informatics Fund"
+address    "To-nisma:gi 8, Tallinn, EE0100 Estonia"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Estonian"
+territory  "Estonia"
+revision   "1.0"
+date       "2000-06-29"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+
+% CLDR collation rules for Estonian:
+% (see: https://unicode.org/cldr/trac/browser/trunk/common/collation/et.xml)
+%
+% &[before 1]T<š<<<Š<z<<<Z<ž<<<Ž
+% &[before 1]X<õ<<<Õ<ä<<<Ä<ö<<<Ö<ü<<<Ü
+%
+% The following rules implement the same order for glibc.
+
+collating-symbol <s-caron>
+collating-symbol <z>
+collating-symbol <z-caron>
+collating-symbol <o-tilde>
+collating-symbol <a-diaresis>
+collating-symbol <o-diaresis>
+collating-symbol <u-diaresis>
+
+% Uppercase first:
+% (This is not in the CLDR rules, but the old et_EE locale before I based
+% the collation on iso_41651_t1 did uppercase first. I don’t know whether
+% there is a good reason for this, but let’s keep it for the moment.
+% This reimplementation of the Estonian sorting just reproduces the same
+% order as before (except fixing some bugs,
+% see: https://sourceware.org/bugzilla/show_bug.cgi?id=22517#c1)).
+reorder-after <RES-1>
+<CAP>
+<MIN>
+
+reorder-after <BEFORE-T>
+<s-caron>
+<S007A>
+<z-caron>
+reorder-after <BEFORE-X>
+<o-tilde>
+<a-diaresis>
+<o-diaresis>
+<u-diaresis>
+
+<U0161> <s-caron>;<BASE>;<MIN>;IGNORE % š
+<U0160> <s-caron>;<BASE>;<CAP>;IGNORE % Š
+<U017E> <z-caron>;<BASE>;<MIN>;IGNORE % ž
+<U017D> <z-caron>;<BASE>;<CAP>;IGNORE % Ž
+<U00F5> <o-tilde>;<BASE>;<MIN>;IGNORE % õ
+<U00D5> <o-tilde>;<BASE>;<CAP>;IGNORE % Õ
+<U00E4> <a-diaresis>;<BASE>;<MIN>;IGNORE % ä
+<U00C4> <a-diaresis>;<BASE>;<CAP>;IGNORE % Ä
+<U00F6> <o-diaresis>;<BASE>;<MIN>;IGNORE % ö
+<U00D6> <o-diaresis>;<BASE>;<CAP>;IGNORE % Ö
+<U00FC> <u-diaresis>;<BASE>;<MIN>;IGNORE % ü
+<U00DC> <u-diaresis>;<BASE>;<CAP>;IGNORE % Ü
+
+reorder-end
+
+END LC_COLLATE
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_MONETARY
+int_curr_symbol     "EUR "
+currency_symbol     "<U20AC>"
+mon_decimal_point   ","
+mon_thousands_sep   "<U202F>"
+mon_grouping        3;3
+positive_sign       ""
+negative_sign       "-"
+int_frac_digits     2
+frac_digits         2
+p_cs_precedes       0
+p_sep_by_space      1
+n_cs_precedes       0
+n_sep_by_space      1
+p_sign_posn         1
+n_sign_posn         1
+END LC_MONETARY
+
+LC_NUMERIC
+decimal_point           ","
+thousands_sep           "<U202F>"
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+abday "P";"E";"T";"K";"N";"R";"L"
+day   "p<U00FC>hap<U00E4>ev";/
+      "esmasp<U00E4>ev";/
+      "teisip<U00E4>ev";/
+      "kolmap<U00E4>ev";/
+      "neljap<U00E4>ev";/
+      "reede";/
+      "laup<U00E4>ev"
+abmon "jaan ";/
+      "veebr";/
+      "m<U00E4>rts";/
+      "apr  ";/
+      "mai  ";/
+      "juuni";/
+      "juuli";/
+      "aug  ";/
+      "sept ";/
+      "okt  ";/
+      "nov  ";/
+      "dets "
+mon   "jaanuar";/
+      "veebruar";/
+      "m<U00E4>rts";/
+      "aprill";/
+      "mai";/
+      "juuni";/
+      "juuli";/
+      "august";/
+      "september";/
+      "oktoober";/
+      "november";/
+      "detsember"
+
+% Suggested date formats
+
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d.%m.%Y"
+t_fmt   "%T"
+am_pm   "";""
+t_fmt_ampm    ""
+week    7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "^[+1JjYy]"
+noexpr  "^[-0EeNn]"
+yesstr  "jah"
+nostr   "ei"
+END LC_MESSAGES
+
+LC_PAPER
+copy "i18n"
+END LC_PAPER
+
+LC_TELEPHONE
+tel_int_fmt    "+%c %a %l"
+int_prefix     "372"
+int_select     "00"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "i18n"
+END LC_MEASUREMENT
+
+LC_NAME
+name_fmt    "%d%t%g%t%m%t%f"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt      "%a%N%f%N%d%N%b%N%s%t%h%t%e%t%r%N%C-%z %T%N%c%N"
+country_name    "Eesti"
+country_post    "EE"
+country_ab2     "EE"
+country_ab3     "EST"
+country_num     233
+country_car     "EST"
+country_isbn    "978-9949,978-9985"
+lang_name       "eesti"
+lang_ab         "et"
+lang_term       "est"
+lang_lib        "est"
+END LC_ADDRESS

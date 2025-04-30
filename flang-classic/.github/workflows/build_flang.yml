@@ -1,0 +1,113 @@
+name: Flang build & test
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**/.github/workflows/build_flang_arm64.yml'
+      - '**/.github/workflows/build_flang_windows.yml'
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+      - '**/.github/workflows/build_flang_arm64.yml'
+      - '**/.github/workflows/build_flang_windows.yml'
+
+jobs:
+  build_flang:
+    runs-on: ubuntu-22.04
+    env:
+      install_prefix: /usr/local
+    strategy:
+      matrix:
+        target: [X86]
+        cc: [clang]
+        version: [14, 15]
+        llvm_branch: [release_16x, release_17x]
+        include:
+          - target: X86
+            cc: gcc
+            version: 12
+            llvm_branch: release_16x
+          - target: X86
+            cc: gcc
+            version: 12
+            llvm_branch: release_17x
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so the job can access it
+      - uses: actions/checkout@v2
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ${{ matrix.cc }}-${{ matrix.version }}
+
+      - name: Check tools
+        run: |
+          sudo apt update
+          sudo apt install python3-sphinx
+          git --version
+          cmake --version
+          make --version
+
+      # Download artifacts for the classic-flang-llvm-project-related builds (all toolchains)
+      - name: Download artifacts
+        run: |
+          cd ../..
+          # Search backwards in the workflow history for the specified branch
+          # for the first successful run that produced the desired artifact.
+          build_name="llvm_build_${{ matrix.target }}_${{ matrix.cc }}_${{ matrix.version }}_${{ matrix.llvm_branch }}"
+          curl -sL https://api.github.com/repos/flang-compiler/classic-flang-llvm-project/actions/workflows/pre-compile_llvm.yml/runs -o llvm_runs.json
+          urls=(`jq -r --arg b ${{ matrix.llvm_branch }} '.workflow_runs[] | select(.head_branch == $b) | select (.conclusion == "success") | .artifacts_url?' llvm_runs.json`)
+          for artifacts_url in "${urls[@]}"; do
+            curl -sL "$artifacts_url" -o llvm_artifacts.json
+            archive_url=`jq -r --arg b $build_name '.artifacts[] | select(.name == $b) | .archive_download_url' llvm_artifacts.json`
+            if [ -z "$archive_url" ]; then
+              echo "$artifacts_url did not contain a $build_name archive; too old?"
+              continue
+            fi
+            echo "Downloading $archive_url."
+            if curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" $archive_url -o llvm_build.zip; then
+              break
+            fi
+          done
+          if [ ! -f llvm_build.zip ]; then
+            echo "Could not download the correct prebuilt compiler; aborting."
+            exit 1
+          fi
+
+      - name: Install llvm
+        run: |
+          cd ../..
+          # Don't clone nor build - use the prepackaged sources and prebuilt build directory
+          unzip llvm_build.zip
+          tar xzf llvm_build.tar.gz
+          cd classic-flang-llvm-project/build
+          sudo make install/fast
+
+      - name: Build and install flang & libpgmath
+        run: |
+          ${{ env.install_prefix }}/bin/clang --version
+          ./build-flang.sh -t ${{ matrix.target }} -p ${{ env.install_prefix }} -n $(nproc) -c -s -v -l $(realpath ../../classic-flang-llvm-project/llvm)
+
+      - name: Copy llvm-lit
+        run: |
+          cp ../../classic-flang-llvm-project/build/bin/llvm-lit build/flang/bin/.
+
+      - name: Test flang
+        run: |
+          cd build/flang
+          make check-flang-long
+
+      # Archive documentation just once, for the fastest job.
+      - if: matrix.cc == 'clang' && matrix.version == '15'
+        run: |
+          cd build/flang/docs/web
+          cp -r html/ ../../.. # copy to a place where Upload can find it.
+
+      # Upload docs just once, for the fastest job.
+      - if: matrix.cc == 'clang' && matrix.version == '15'
+        uses: actions/upload-artifact@v2
+        with:
+          name: html_docs_flang
+          path: html

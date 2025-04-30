@@ -1,0 +1,30 @@
+#include <inttypes.h>
+#include <signal.h>
+#include <stddef.h>
+#include <sys/ucontext.h>
+
+SIG_BLOCK
+SIG_SETMASK
+
+-- Offsets of the fields in the ucontext_t structure.
+#define ucontext(member)	offsetof (ucontext_t, member)
+#define mcontext(member)	ucontext (uc_mcontext.member)
+
+UCONTEXT_FLAGS			ucontext (uc_flags)
+UCONTEXT_LINK			ucontext (uc_link)
+UCONTEXT_STACK			ucontext (uc_stack)
+UCONTEXT_MCONTEXT		ucontext (uc_mcontext)
+UCONTEXT_SIGMASK		ucontext (uc_sigmask)
+
+UCONTEXT_REGSPACE		ucontext (uc_regspace)
+
+MCONTEXT_TRAP_NO		mcontext (trap_no)
+MCONTEXT_ERROR_CODE		mcontext (error_code)
+MCONTEXT_OLDMASK		mcontext (oldmask)
+MCONTEXT_ARM_R0			mcontext (arm_r0)
+MCONTEXT_ARM_R4			mcontext (arm_r4)
+MCONTEXT_ARM_SP			mcontext (arm_sp)
+MCONTEXT_ARM_LR			mcontext (arm_lr)
+MCONTEXT_ARM_PC			mcontext (arm_pc)
+MCONTEXT_ARM_CPSR		mcontext (arm_cpsr)
+MCONTEXT_FAULT_ADDRESS		mcontext (fault_address)

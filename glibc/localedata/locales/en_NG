@@ -1,0 +1,247 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% English language locale for Nigeria
+% Language: en
+% Territory: NG
+% Revision: 0.2
+% Date: 2006-02-01
+% Users: general
+%
+% adapted from en_ZA; should be checked and verified
+
+LC_IDENTIFICATION
+title      "English locale for Nigeria"
+source     ""
+address    ""
+contact    ""
+email      ""
+tel        ""
+fax        ""
+language   "English"
+territory  "Nigeria"
+revision   "0.2"
+date       "2006-02-01"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_MEASUREMENT
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "i18n"
+
+translit_start
+include "translit_combining";""
+translit_end
+END LC_CTYPE
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+% FIXME
+LC_MONETARY
+int_curr_symbol         "NGN "
+% "₦"
+currency_symbol         "<U20A6>"
+mon_decimal_point       "."
+mon_thousands_sep       ","
+mon_grouping            3;3
+positive_sign           ""
+negative_sign           "-"
+int_frac_digits         2
+frac_digits             2
+p_cs_precedes           1
+p_sep_by_space          0
+n_cs_precedes           1
+n_sep_by_space          0
+p_sign_posn             1
+n_sign_posn             1
+END LC_MONETARY
+
+% FIXME
+LC_NUMERIC
+decimal_point           "."
+thousands_sep           ","
+grouping                3;3
+END LC_NUMERIC
+
+LC_TIME
+% abday - The abbreviations for the week days:
+abday       "Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"
+
+% day - The full names of the week days:
+day         "Sunday";/
+            "Monday";/
+            "Tuesday";/
+            "Wednesday";/
+            "Thursday";/
+            "Friday";/
+            "Saturday"
+
+% abmon - The abbreviations for the months
+abmon       "Jan";"Feb";/
+            "Mar";"Apr";/
+            "May";"Jun";/
+            "Jul";"Aug";/
+            "Sep";"Oct";/
+            "Nov";"Dec"
+
+% mon - The full names of the months -
+mon         "January";/
+            "February";/
+            "March";/
+            "April";/
+            "May";/
+            "June";/
+            "July";/
+            "August";/
+            "September";/
+            "October";/
+            "November";/
+            "December"
+
+% Abbreviated date and time representation to be referenced by the "%c" field descriptor -
+%
+% "%a" (short weekday name),
+% "%d" (day of month as a decimal number),
+% "%b" (short month name),
+% "%Y" (year with century as a decimal number),
+% "%T" (24-hour clock time in format HH:MM:SS),
+% "%Z" (Time zone name)
+d_t_fmt     "%a %d %b %Y %T"
+
+% Abbreviated date and time representation to be used by date(1)
+date_fmt    "%a %d %b %Y %T %Z"
+
+% Date representation to be referenced by the "%x" field descriptor -
+% "%d/%m/%Y", day/month/year as decimal numbers (01/01/2000).
+d_fmt       "%d//%m//%Y"
+
+% Time representation to be referenced by the "%X" field descriptor -
+% "%T" (24-hour clock time in format HH:MM:SS)
+t_fmt       "%T"
+
+% Define representation of ante meridiem and post meridiem strings -
+% The "" mean default to "AM" and "PM".
+am_pm       "";""
+
+% Define time representation in 12-hour format with "am_pm", to be referenced by the "%r"
+% The "" means that this format is not supported.
+t_fmt_ampm  ""
+week 7;19971130;1
+first_weekday 2
+END LC_TIME
+
+LC_MESSAGES
+copy "en_US"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_DK"
+END LC_PAPER
+
+% FIXME
+LC_TELEPHONE
+% Representation of telephone number for international use -
+% "+%c - country code",
+% "%a - area code without the prefix (often 0)",
+% "%l local number".
+tel_int_fmt    "+%c %a %l"
+
+% Represntation of telephone number for domestic use -
+% %A - area code with national prefix
+% %l - local number".
+tel_dom_fmt    "(%A) %l"
+
+% Prefix for making international calls
+int_select     "009"
+
+% International dialing code
+int_prefix     "234"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "en_DK"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "en_DK"
+END LC_NAME
+
+% FIXME
+LC_ADDRESS
+% Representation of postal addresses (minus the addressee's name) in South
+% Africa. (Ignored for now)
+% "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N", which gives -
+%
+% "firm name",
+% "end of line",
+% "C/O address",
+% "end of line",
+% "department name",
+% "Building name",
+% "end of line",
+% "street or block name",
+% "space",
+% "house number or designation",
+% "space",
+% "floor number",
+% "space",
+% "room number, door designation",
+% "end of line",
+% "postal code",
+% "space",
+% "town, city",
+% "end of line",
+% "country designation for the <country_post> keyword",
+% "end of line
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+
+country_name  "Nigeria"
+lang_name     "English"
+
+% CEPT MAILCODES are suggested
+% Alternatively use the code found on your countries postal item tracking number
+% "NG"?
+%country_post   "NG"
+
+% UN Geneve 1949:68 Distinguishing signs of vehicles in international traffic
+% http://www.unece.org/trans/conventn/Distsigns_Sept2003.pdf
+country_car   "WAN"
+
+% ISO 2108
+% http://www.isbn-international.org/
+country_isbn  978
+
+% ISO 639 language abbreviations:
+% 639-1 2 letter, 639-2 3 letter terminology
+% http://www.loc.gov/standards/iso639-2/englagn.html
+lang_ab      "en"
+lang_term    "eng"
+lang_lib    "eng"
+
+% ISO 3166 country number and 2 and 3 letter abreviations
+% http://www.unicode.org/onlinedat/countries.html
+country_ab2   "NG"
+country_ab3   "NGA"
+country_num   566
+
+END LC_ADDRESS

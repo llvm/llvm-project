@@ -1,0 +1,91 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+#ifdef  POSIX
+# define pid_t __pid_t
+#endif
+
+constant WNOHANG
+constant WUNTRACED
+
+macro WEXITSTATUS
+# if !defined XPG4 && !defined POSIX && !defined POSIX2008
+macro WIFCONTINUED
+# endif
+macro WIFEXITED
+macro WIFSIGNALED
+macro WIFSTOPPED
+macro WSTOPSIG
+macro WTERMSIG
+
+# if !defined XPG4 && !defined POSIX
+constant WEXITED
+constant WSTOPPED
+#  ifndef POSIX2008
+constant WCONTINUED
+#  endif
+constant WNOHANG
+constant WNOWAIT
+# endif
+
+#if !defined XPG4 && !defined POSIX
+type idtype_t
+
+constant P_ALL
+constant P_PID
+constant P_PGID
+
+type id_t
+
+type siginfo_t
+
+element siginfo_t int si_signo
+element siginfo_t int si_errno
+element siginfo_t int si_code
+element siginfo_t pid_t si_pid
+element siginfo_t uid_t si_uid
+element siginfo_t {void*} si_addr
+element siginfo_t int si_status
+// Bug 23821: si_band has type int on sparc64.
+xfail[sparc64-linux]-element siginfo_t long si_band
+# ifndef XPG42
+element siginfo_t {union sigval} si_value
+# endif
+#endif
+
+#if !defined POSIX && !defined XPG4 && !defined XOPEN2K8 && !defined POSIX2008
+type {struct rusage}
+
+element {struct rusage} {struct timeval} ru_utime
+element {struct rusage} {struct timeval} ru_stime
+#endif
+
+#if !defined POSIX
+type pid_t
+#endif
+
+function pid_t wait (int*)
+#if !defined XPG4 && !defined POSIX && !defined XOPEN2K && !defined XOPEN2K8 && !defined POSIX2008
+function pid_t wait3 (int*, int, struct rusage*)
+#endif
+#if !defined XPG4 && !defined POSIX
+function int waitid (idtype_t, id_t, siginfo_t*, int)
+#endif
+function pid_t waitpid (pid_t, int*, int)
+
+#if !defined XPG4 && !defined POSIX
+allow-header signal.h
+allow-header sys/resource.h
+
+allow si_*
+allow W*
+allow P_*
+allow BUS_
+allow CLD_
+allow FPE_
+allow ILL_
+allow POLL_
+allow SEGV_
+allow SI_
+allow TRAP_
+#endif
+allow *_t
+#endif

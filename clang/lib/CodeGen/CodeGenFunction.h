@@ -45,6 +45,8 @@
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
+#include <unordered_set>
+
 namespace llvm {
 class BasicBlock;
 class LLVMContext;
@@ -292,6 +294,10 @@ public:
   typedef std::pair<llvm::Value *, llvm::Value *> ComplexPairTy;
   LoopInfoStack LoopStack;
   CGBuilderTy Builder;
+  std::unordered_set<std::string> BBMetadata;
+  llvm::BasicBlock *lastBB = nullptr;
+
+  void updateBBMetadata(const std::unordered_set<std::string> &StmtBBMeta);
 
   // Stores variables for which we can't generate correct lifetime markers
   // because of jumps.
@@ -4696,6 +4702,7 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
+  llvm::Value *EmitNext32BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
@@ -4880,7 +4887,7 @@ public:
                                 llvm::GlobalVariable *GV);
 
   // Emit an @llvm.invariant.start call for the given memory region.
-  void EmitInvariantStart(llvm::Constant *Addr, CharUnits Size);
+  void EmitInvariantStart(llvm::Value *Addr, CharUnits Size);
 
   /// EmitCXXGlobalVarDeclInit - Create the initializer for a C++
   /// variable with global storage.
@@ -4929,10 +4936,9 @@ public:
 
   /// GenerateCXXGlobalInitFunc - Generates code for initializing global
   /// variables.
-  void
-  GenerateCXXGlobalInitFunc(llvm::Function *Fn,
-                            ArrayRef<llvm::Function *> CXXThreadLocals,
-                            ConstantAddress Guard = ConstantAddress::invalid());
+  void GenerateCXXGlobalInitFunc(
+      llvm::Function *Fn, ArrayRef<llvm::Function *> CXXThreadLocals,
+      ConstantAddress Guard = ConstantAddress::invalid(), bool IsTLS = false);
 
   /// GenerateCXXGlobalCleanUpFunc - Generates code for cleaning up global
   /// variables.

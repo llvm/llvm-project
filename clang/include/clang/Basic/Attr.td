@@ -450,6 +450,7 @@ def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
 def TargetLoongArch : TargetArch<["loongarch32", "loongarch64"]>;
+def TargetNext32 : TargetArch<["next32"]>;
 def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
@@ -4063,6 +4064,26 @@ def SPtr : TypeAttr {
   let Documentation = [SPtrDocs];
 }
 
+def Next32Tls : TypeAttr {
+  let Spellings = [Clang<"next32_tls">];
+  let Documentation = [Next32TlsDocs];
+}
+
+def Next32Global : TypeAttr {
+  let Spellings = [Clang<"next32_global">];
+  let Documentation = [Next32GlobalDocs];
+}
+
+def Next32Constant : TypeAttr {
+  let Spellings = [Clang<"next32_constant">];
+  let Documentation = [Next32ConstantDocs];
+}
+
+def Next32Local : TypeAttr {
+  let Spellings = [Clang<"next32_local">];
+  let Documentation = [Next32LocalDocs];
+}
+
 def UPtr : TypeAttr {
   let Spellings = [CustomKeyword<"__uptr">];
   let Documentation = [UPtrDocs];
@@ -4718,4 +4739,81 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ClspvLibclcBuiltinDoc];
   let SimpleHandler = 1;
+}
+
+def PragmaNextSiliconMark : DeclOrStmtAttr {
+  let Spellings = [Pragma<"ns", "mark">];
+  let Args = [StringArgument<"Mark">];
+  let Subjects =
+      SubjectList<[Function, Stmt], ErrorDiag, "functions and statements">;
+  let HasCustomParsing = 1;
+  let Documentation = [Undocumented];
+  let AdditionalMembers = [{
+  void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+    OS << " (" << getMark() << ')';
+}
+}];
+}
+
+def PragmaNextSiliconLocation : DeclOrStmtAttr {
+  let Spellings = [Pragma<"ns", "location">];
+  let Args = [StringArgument<"Location">];
+  let Subjects =
+      SubjectList<[Function, Stmt], ErrorDiag, "functions and statements">;
+  let HasCustomParsing = 1;
+  let Documentation = [Undocumented];
+  let AdditionalMembers = [{
+  void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+    OS << " (" << getLocation() << ')';
+}
+}];
+}
+
+def NextSiliconLoopMark : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Mark">, ExprArgument<"Value">];
+  let Documentation = [Undocumented];
+}
+
+def NextSiliconLoopLocation : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Location">];
+  let Documentation = [Undocumented];
+}
+
+def PragmaNextSiliconVectorize : StmtAttr {
+  let Spellings = [Pragma<"ns", "vectorize">];
+  let Args = [StringArgument<"Vectorize">];
+  let Subjects = SubjectList<[Stmt], ErrorDiag, "statements">;
+  let HasCustomParsing = 1;
+  let Documentation = [Undocumented];
+  let AdditionalMembers = [{
+  void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+    OS << " (" << getVectorize() << ')';
+}
+}];
+}
+
+def NextSiliconLoopVectorize : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Vectorize">];
+  let Documentation = [Undocumented];
+}
+
+def NextSiliconLocation : InheritableAttr {
+  let Spellings =
+      [Clang<"ns_location", 1, 202303>, CXX11<"", "ns_location", 202303>];
+  let Args = [StringArgument<"Location">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
+}
+
+def NextSiliconMark : InheritableAttr {
+  let Spellings = [Clang<"ns_mark", 1, 202303>, CXX11<"", "ns_mark", 202303>];
+  let Args = [StringArgument<"Mark">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
 }

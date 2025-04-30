@@ -82,9 +82,29 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
+  initializeProperties();
+
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
+}
+
+void RISCVSubtarget::initializeProperties() {
+  // Initialize CPU specific properties. We should add a tablegen feature for
+  // this in the future so we can specify it together with the subtarget
+  // features.
+  switch (RISCVProcFamily) {
+  default:
+    MaxStoresPerMemset = 8;
+    MaxStoresPerMemcpy = 8;
+    MaxStoresPerMemmove = 8;
+    break;
+  case NextSiliconGen2Ecore:
+    MaxStoresPerMemset = 8;
+    MaxStoresPerMemcpy = 16;
+    MaxStoresPerMemmove = 8;
+    break;
+  }
 }
 
 RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,

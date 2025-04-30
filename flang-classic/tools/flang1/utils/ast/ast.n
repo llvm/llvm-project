@@ -1,0 +1,4018 @@
+.\"/*
+.\" * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" * See https://llvm.org/LICENSE.txt for license information.
+.\" * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+.\" * 
+.\" */
+.NS 30 "Abstract Syntax Tree"
+.de SF		\"shared field
+.ie '\\$1'B' .nr ii \\$2u
+.el .ip "\\f(CW\\$1\\fP"
+..
+.de ST		\"ast type
+.ie '\\$1'B' \{\
+.	sp \\n(psu
+.	nr II \\n(ii
+.	ba +\\n(IIu
+.	nr ii \\$2u
+.	nr PS \\n(ps
+.	nr ps 0 \}
+.el .ie '\\$1'E' \{\
+.	nr ps \\n(PS
+.	nr ii \\n(II
+.	ba -\\n(IIu \}
+.el .ip "\\f(CWA_\\$1\\fP"
+..
+.de SM		\"ast
+.if !'\\$1'E' \{\
+.ne 22
+.\".if !\\n(Sx=0 .bp
+.if \\n(.$=1 .sh 4 "\\$1"
+.if \\n(.$=2 .sh 4 "\\$1,\\$2"
+.if \\n(.$=3 .sh 4 "\\$1,\\$2,\\$3"
+.if \\n(.$=4 .sh 4 "\\$1,\\$2,\\$3,\\$4"
+.if \\n(.$=5 .sh 4 "\\$1,\\$2,\\$3,\\$4,\\$5"
+.if \\n(.$=6 .sh 4 "\\$1,\\$2,\\$3,\\$4,\\$5,\\$6"
+.sp 1v
+.nr ii 1.0i \}
+..
+.de SI		\"ast information
+.br
+Name: "\\$1"
+.br
+Attributes: \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.br
+.sp
+..
+.de FL		\"flag
+.ip "\\f(CW\\$1\\fP"
+..
+.de SE		\"ast element
+.ip "\\f(CW\\$1\\fP"
+..
+.de OV		\"ast overloaded element
+.ip "\\f(CW\\$1 (\\$2)\\fP"
+..
+.nr ii 11n
+.sh 2 Overview
+.lp
+The Abstract Syntax Tree is used through out the front-end
+to represent the source file.
+.lp
+The Abstract Syntax Tree is maintained as a table 
+in dynamic storage space which is extended
+if necessary.
+Each AST node consists of 16 32-bit words which are divided into fields
+of various lengths.
+The layout of the AST structure is strict;
+overlaying fields with fields of other types is not allowed.
+AST pointers are integers (greater than zero) which are stored as ints
+and used as relative pointers from a base pointer.
+.lp
+AST nodes are added to the table using a set of access
+routines which are described later on in this section.
+.lp
+AST fields are accessed via a set of C macros.  These macros are
+upper case and consist of the name of the field followed by either
+.q P
+for the put macro or
+.q G
+for the get macro.  The put macros take two arguments,
+AST pointer and the value to be inserted.  The get macros take
+a single argument which is a AST pointer, and return the value
+of the field.
+All macros used to access AST nodes including the names of the
+node types are prefixed with A_.
+For example:
+.sp
+.CS
+    A_TYPEP(aptr, A_ID);     atype = A_TYPEG(aptr);
+.CE
+.lp
+The macro definitions and the necessary C data declaration statements
+required to access the AST are in the include file
+.i ast.h .
+.lp
+.br
+.sh 2 "AST Fields"
+.sh 3 "Shared Fields"
+Each type of AST entry (see TYPE below) has
+a different set of fields associated with it.
+This section describes those fields which are used by all or most
+of the AST types.
+.SF B \w'\f(CWPAREN\fP'+2n
+.SF TYPE w1:b1
+This field defines the type of an AST entry.
+C manifest constants are used to represent the \f(CWTYPE\fP values;
+the \f(CWTYPE\fP values are:
+.ST B \w'\f(CWA_ENDFORALL\fP'+2n
+.ST NULL
+\fInull\fP leaf node.
+.ST ID
+Identifier leaf node.
+.ST CNST
+Constant leaf node.
+.ST LABEL
+Label leaf node.
+.ST BINOP
+Binary operator.
+.ST UNOP
+Unary operator.
+.ST CMPLXC
+Complex constant constructor.
+.ST CONV
+Conversion operator.
+.ST PAREN
+Parenthesized expression.
+.ST MEM
+Member reference.
+.ST SUBSCR
+Subscript reference.
+.ST SUBSTR
+Substring reference.
+.ST TRIPLE
+Triplet expression.
+.ST FUNC
+Function call.
+.ST INTR
+Intrinsic function call.
+.ST INIT
+Data structure initialization.
+.ST ENTRY
+Entry statement.
+.ST ASN
+Assignment statement.
+.\" .ST STFUNC
+.\" Statement function.
+.ST IF
+if statement.
+.ST IFTHEN
+Block if statement.
+.ST ELSE
+else statement.
+.ST ELSEIF
+elseif statement.
+.ST ENDIF
+endif statement.
+.ST AIF
+Arithmetic if statement.
+.ST GOTO
+goto statement.
+.ST CGOTO
+Computed goto statement.
+.ST AGOTO
+Assigned goto statement.
+.ST ASNGOTO
+Assign statement.
+.ST DO
+do statement.
+.ST DOWHILE
+dowhile statement.
+.ST ENDDO
+enddo statement.
+.ST CONTINUE
+continue statement.
+.ST END
+end statement.
+.ST CALL
+Call statement.
+.ST ICALL
+Intrinsic statement.
+.ST STOP
+stop statement.
+.ST PAUSE
+pause statement.
+.ST RETURN
+return statement.
+.ST ALLOC
+allocate statement.
+.ST WHERE
+where statement.
+.ST ELSEWHERE
+elsewhere statement.
+.ST ENDWHERE
+endwhere statement.
+.ST FORALL
+forall statement.
+.ST ENDFORALL
+endforall statement.
+.ST ELSEFORALL
+elseforall statement.
+.ST REDIM
+redimension statement.
+.ST COMMENT
+AST to comment.
+.ST COMSTR
+Comment string.
+.ST E
+.SF flags w1:b2-2
+Flags per node.
+.SF hw2 w1:h2
+.SF HSHLK w2
+Hash link.
+This field is used to link together those nodes
+which hash to the same value, and is used only by the
+node look-up routines.
+Not all of the nodes are hashed.
+As a general rule, the nodes which may appear as an expression
+are hashed.
+If a node can be hashed, the inputs to the hash functions depend on the
+AST type.
+For statement ASTs, the \f(CWHSHLK\fP field is used to contain the pointer
+to the AST's \f(CWSTD\fP;
+the macros, \f(CWA_STDG\fP and \f(CWA_STDP\fP, are provided to
+access the \f(CWHSHLK\fP field as the \f(CWSTD\fP field.
+.SF hw21 w11:h1
+Always an unsigned halfword.
+Used when it's known (or there's a practical limit)
+that its value does not exceed 65335.
+.SF hw22 w11:h2
+Always an unsigned halfword.
+Used where it's known (or there's a practical limit)
+that its value does not exceed 65335.
+.SF OPT1 w13
+Optimizer-/vectorizer-/communication optimizer- dependent field.
+.SF OPT2 w14
+Optimizer-/vectorizer-/communication optimizer- dependent field.
+.SF REPL w15
+For a rewrite algorithm, this field contains the pointer to the ast
+which replaces the ast.
+.SF VISIT w16
+A traversal-temporary field, initially zero,
+to mark an AST during a traversal as
+.i visited .
+The value actually used to mark the field is dependent on the
+purpose of the traversal; it could be a non-zero value, a link field
+to created a threaded list of visted nodes, etc.
+Each traversal using this field must also clean up (reinitialize the field
+to zero).
+.SF SHAPE w17
+Shape descriptor.
+For those nodes which may have shape,
+this field is locates the shape descriptor
+(see \fIShape Descriptors\fP
+in the section \fIAuxiliary Data Structures\fP).
+This field is zero if the node represents a scalar value.
+.SE NDTYPE w19
+Used in the lower phase to insert ILM conversion operators.
+.bp
+.sh 3 "Expression AST Types"
+.lp
+Expression nodes are created when an expression is parsed and
+semantically analyzed.
+During semantic analysis, a node may be constant folded, and if so,
+a constant AST is created and associated with the expression node.
+If an expression can also be represented as a constant, its \f(CWALIAS\fP
+field locates a \f(CWCNST\fP AST; if it does not evaluate to a constant,
+this field is zero.
+.nr Sx 0
+.SM NULL
+.nr Sx 1
+.SI null
+This AST type represents the AST at location 0 in the AST table.
+Generally, the pointer (index) value of zero will not appear in
+a field of an AST which is represents a pointer to another AST.
+An AST pointer of zero may appear in the ARG table indicating that
+the corresponding argument was omitted (see the description
+of the ARG table in the section \fIAuxiliary Data Structures\fP).
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.lp
+.SM ID
+.SI ident LVAL EXPR
+This node is a leaf node in the AST and represents an
+identifer which is fully resolved (declared).
+.lp
+.ul
+Flags
+.FL CNG f1
+Change flag; \f(CWTRUE\fP if changes occurred.
+.FL IDSTR f6
+Used only the save and restore of CONTAIN'd functions.  The AST saved by
+restore_internal_subprograms contains the ID name rather than the SPTR.
+.FL CALLFG f5
+May be referenced, though is never set for an ID
+.FL PTRREF f4
+Set when this is a pointer actual argument that is passed by reference 
+(e.g., the dummy argument is a pointer to pointer argument such as char**). 
+This is currently used for the element argument in the RTE_poly_element_addr 
+runtime routines.
+.lp
+.ul
+Other Fields
+.SE DTYPE w3
+Data type of the identifier (see
+the DTYPE discussion in the SYMBOL TABLE chapter)
+.SE SPTR w4
+Symbol table pointer of the identifer (see the SYMBOL TABLE chapter).
+.SE ALIAS w8
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.SE NME w12
+Names information (see nme.h).
+.SE ORIG_EXPR w18
+When set, this represents the original expression of this ast. For example,
+we use this field when we replace a subscripted expression with a pointer. We
+may have to go back to the original expression if the subscripted expression is
+used in a type bound procedure call.  
+.lp
+.SM CNST
+.SI constant EXPR
+.lp
+Leaf node representing a constant.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced, though is never set for an CNST
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the constant.
+.SE SPTR
+Symbol table pointer of the constant
+.SE ALIAS
+This field locates itself.
+.lp
+.SM LABEL
+.SI label
+.lp
+Leaf node representing a label.
+Created when a label appears (e.g., \f(CWGOTO\fP statement).
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+may be accessed
+.SE SPTR
+Symbol table pointer of the label.
+.SE ALIAS
+May be accessed
+.lp
+.SM BINOP
+.SI binop EXPR
+.lp
+Binary Operator node.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if a function reference appears in the left and/or right operand.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the operation
+.SE LOP w4
+AST pointer to left (first) operand
+.OV OPTYPE hw21
+Type of operator (see OP_ macros in ast.h)
+.SE ROP w6
+AST pointer to right (second) operand
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.lp
+.SM UNOP
+.SI unaryop EXPR
+.lp
+Unary Operator node.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if the operand contains a reference to a function.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result.
+.SE LOP w4
+AST pointer to 
+.OV OPTYPE hw21
+Type of operator (see \f(CWOP_\fP macros in ast.h);
+may be \f(CWOP_ADD\fP,
+\f(CWOP_SUB\fP,
+\f(CWOP_LNOT\fP,
+\f(CWOP_LOC\fP,
+\f(CWOP_REF\fP, or
+\f(CWOP_VAL\fP.
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.lp
+.SM CMPLXC
+.SI formed-cmplx-constant EXPR
+.lp
+Formed complex constant node.
+Created when semant creates a complex constant by
+parsing \f(CW(<const expr>, <const expr>)\fP.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the complex constant
+.SE LOP
+AST pointer to real operand
+.SE ROP
+AST pointer to imaginary
+.SE ALIAS
+Since the node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.lp
+.SM CONV
+.SI convert EXPR
+.lp
+Conversion node.
+Created when implicit conversions are created during semantic analysis
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if operand contains a reference to a function.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the conversion.
+.SE LOP
+AST pointer to operand being converted.
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.lp
+.SM PAREN
+.SI parens EXPR
+.lp
+Parentheses node. Used when an expression is enclosed in
+parentheses.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if operand contains a reference to a function.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result.
+.SE LOP
+AST pointer to node enclosed in parentheses.
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.lp
+.SM MEM
+.SI member LVAL EXPR
+.lp
+Record member reference operator.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the reference.
+.SE PARENT w4
+AST pointer to node representing the record.
+.SE MEM w5
+AST pointer to node representing the member of the record.
+.SE NME
+Names information (see nme.h).
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.lp
+.SM SUBSCR
+.SI subscript LVAL EXPR
+.lp
+Subscript reference operator.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if a function reference appears in the array reference or in any of
+the subscript expressions.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the reference.
+.SE LOP
+AST pointer to node representing the array.
+.SE ASD w5
+Pointer (index) to array subscript auxiliary descriptor (ASD)
+representing the subscripts.
+.SE RFPTR w6
+Reference pointer (used by transformer).
+.SE ALIAS
+If this is determined to be constant
+.SE SECSHP w10
+If this subscript ast is created by the transformer while
+scalarizing array sections, this field is the SHAPE of
+the array section ast from which this ast was derived.
+.SE NME
+Names information (see nme.h).
+.lp
+.SM SUBSTR
+.SI substring LVAL EXPR
+.lp
+Character substring reference operator.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if a function reference appears in the character reference
+or substring expressions.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the substring.
+.SE LOP
+AST pointer to the  node representing a character reference.
+.SE LEFT w5
+AST pointer to node representing the index of the leftmost character
+of the substring (zero, if not specified).
+.SE RIGHT w6
+AST pointer to node representing the index of the rightmost character
+of the substring (zero, if not specified).
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.SE NME
+Names information (see nme.h).
+.lp
+.SM TRIPLE
+.SI triple
+.lp
+Array triple expression.
+This node is referenced by the array subscript descriptors (ASD)
+and the list items created for any forall-triplets.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if a function reference appears in any of the triple expressions.
+.lp
+.ul
+Other Fields
+.SE LBD w4
+AST pointer to node representing the lower bound (the first expression)
+of the triple expression (zero, if not specified).
+.SE UPBD w5
+AST pointer to node representing the upper bound (the second expression)
+of the triple expression (zero, if not specified).
+.SE STRIDE w6
+AST pointer to node representing the stride (the third expression)
+of the triple expression (zero, if not specified)
+.SE ALIAS
+will be zero
+.SE MASK w9
+Holds a mask containing which dimensions were left empty by the programmer.The compiler automatically adds bounds to empty dimensions. 
+.lp
+.SM FUNC
+.SI func-call EXPR
+.lp
+Function call reference.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set to 1.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the function.
+.SE LOP
+AST pointer to the node representing the function.
+.OV ARGCNT hw22
+Number of arguments passed to the function.
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.SE ARGS w12
+Pointer to the table of arguments for the function
+stored in the ARG Table (see the description
+of the ARG table in the section \fIAuxiliary Data Structures\fP).
+If there aren't any arguments, this field is zero.
+.SE INVOKING_DESC w10
+Used for a type bound procedure call. This is the invoking descriptor. It's
+usually set when the descriptor is a temporary variable. It's also used with type bound procedure calls with the NOPASS attribute and when the declared type of
+the invoking object is abstract.
+.lp
+.SM INTR
+.SI intr-func-call EXPR
+.lp
+Intrinsic function reference.
+.lp
+.ul
+Flags
+.FL CALLFG
+Set if a reference to a function appears in any of the arguments
+to the intrinisc.
+.lp
+.FL ISASSIGNLHS f7
+Set if this is a "allocated(x)" check generated for the LHS of an allocatable
+assignment in an OpenACC compute region or an OpenACC routine.
+.lp
+.FL ISASSIGNLHS2 f8
+Idential to ISASSIGNLHS except RHS is constant.
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the function.
+.SE LOP
+AST pointer to the node representing the function.
+.OV OPTYPE hw21
+Type of intrinsic (see \f(CW_<intrinsic name>\fP macros in ast.h).
+.SE ARGS
+Pointer to the table of arguments for the function
+stored in the ARG Table (see the description
+of the ARG table in the section \fIAuxiliary Data Structures\fP).
+If there aren't any arguments, this field is zero.
+.OV ARGCNT hw22
+Number of arguments passed to the function.
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.lp
+.SM INIT
+.SI initialization EXPR
+.lp
+Data structure initialization.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the initialization.
+.OV OPTYPE hw21
+Type of constructor (see OP_ macros: OP_SCALAR, OP_ARRAY, OP_DERIVED)
+.SE LEFT
+AST pointer to the initialization tree.
+.SE RIGHT
+AST pointer to the rightmost branch of the initialization tree
+.SE SPTR
+Symbol table pointer of the symbol being initialized
+.SE ARGS
+Pointer to a table of arguments for the constructor
+stored in the ARG Table (see the description
+of the ARG table in the section \fIAuxiliary Data Structures\fP).
+If there aren't any arguments, this field is zero, but this will only
+occur in case of an error.
+.OV ARGCNT hw22
+Number of arguments passed to the constructor.
+.lp
+.bp
+.sh 3 "Statement AST Types"
+.lp
+Statement AST nodes are created for those statements which
+represent the execution of a subprogram beginning with the
+first executable statement.
+Declarations including the subprogram statements \f(CWSUBROUTINE\fP,
+\f(CWFUNCTION\fP, \f(CWPROGRAM\fP, and \f(CWBLOCKDATA\fP,
+are not represented as ASTs.
+For generating the source of these statements, the symbol table is processed.
+ASTs are created for \f(CWENTRY\fP statements.
+.lp
+A statement AST does not contain explicit fields which represents information
+such as its previous and next statements, the presence of a label, and
+its line number.
+This information is contained in the statement's statement descriptor
+(\f(CWSTD\fP, see \fIStatement Lists\fP
+in the section \fIAuxiliary Data Structures\fP).
+Each \f(CWSTD\fP contains a pointer to the statement AST;
+also, each statement AST contains a pointer to its \f(CWSTD\fP.
+Since statement ASTs are not hashed,
+the \f(CWHSHLK\fP field is used to contain the pointer to the
+AST's \f(CWSTD\fP;
+the macros, \f(CWA_STDG\fP and \f(CWA_STDP\fP, are provided to access
+the \f(CWSTD\fP field.
+.nr Sx 0
+.SM ENTRY
+.nr Sx 1
+.SI entry
+AST node for an entry statement.
+An AST is not created
+for the program, subroutine, function, and blockdata statements;
+the symbol table is used for generate the source for these
+statements.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+Pointer to the statement's \f(CWSTD\fP.
+.SE SPTR
+Symbol table pointer of entry subprogram
+.lp
+.SM ASN
+.SI assign
+AST node for an assignment statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+Data type of the assignment.
+.SE DEST w5
+AST pointer of the left hand side of =.
+.SE SRC w6
+AST pointer of the right hand side of =.
+.lp
+.SM IF
+.SI if-stmt
+if (expr) stmt.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFSTMT w3
+AST pointer to the statement whose execution is controlled
+by the if expression.
+The \f(CWSTD\fP field of
+the statement located by \f(CWIFSTMT\fP has a value of zero.
+.SE IFEXPR w4
+AST pointer of the logical expression
+.lp
+.SM IFTHEN
+.SI if-then
+Block if statement.
+The next statement AST is the statement which begins the statement
+list of the then clause.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFEXPR
+AST pointer of the logical expression
+.lp
+.SM ELSE
+.SI else
+else AST of a A_IFTHEN or A_ELSEIF AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFEXPR
+AST pointer of the logical expression
+.lp
+.SM ELSEIF
+.SI elseif
+elseif AST of a A_IFTHEN or A_ELSEIF AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFEXPR
+AST pointer of the logical expression
+.lp
+.SM ENDIF
+.SI endif
+endif AST of a A_IFTHEN, A_ELSE, or A_ELSEIF AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM AIF
+.SI arithmetic-if
+Arithmetic if AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFEXPR
+AST pointer of the arithmetic if expression.
+The data type of this expression is one of the allowed data types
+which may appear in an arithmetic if.
+.SE L1 w5
+Label (AST pointer) of statement to be executed if the expression is negative.
+.SE L2 w6
+Label (AST pointer) of statement to be executed if the expression is zero.
+.SE L3 w7
+Label (AST pointer) of statement to be executed if the expression is positive.
+.lp
+.SM GOTO
+.SI goto
+goto AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE L1
+Label (AST pointer) of statement to be executed.
+.lp
+.SM CGOTO
+.SI computed-goto
+computed goto AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST of the computed-goto expression.
+.SE LIST w12
+Pointer to the list in the AST list area of the labels which
+appear in the statement (see the description
+of the AST list items in the section \fIAuxiliary Data Structures\fP).
+.lp
+.SM AGOTO
+.SI assigned-goto
+assigned goto AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST of the identifier of the GOTO variable.
+.SE LIST
+Pointer to the list in the AST list area of the labels which
+appear in the statement (see the description
+of the AST list items in the section \fIAuxiliary Data Structures\fP).
+If the list does not appear in the statement, this field is zero.
+.lp
+.SM ASNGOTO
+.SI goto-asn
+goto assignment
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DEST
+AST pointer of the variable being assigned a value.
+.SE SRC
+AST pointer of the assigned label.
+.lp
+.SM DO
+.SI do
+do statement: \f(CWdo [label] i = m1, m2, m3\fP.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DOLAB w3
+If label is present, this field is the AST pointer of the label.
+If zero, the do statement is terminated with an ENDDO.
+.SE DOVAR w10
+AST pointer to the do index variable.
+.SE M1 w5
+AST pointer to the initial expression
+.SE M2 w6
+AST pointer to the limit expression
+.SE M3 w7
+AST pointer to the skip expression; this field is zero if the
+skip is not present.
+.SE M4 w9
+AST pointer to the zero-size expression; this field is zero if it is
+not a transformed array assignment to do loop.
+.lp
+.SM DOWHILE
+.SI dowhile
+\f(CWdowhile [label] ( expr )\fP.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DOLAB
+If label is present, this field is the AST pointer of the label.
+If zero, the do statement is terminated with an ENDDO.
+.SE IFEXPR
+AST pointer of the logical expression
+.lp
+.SM ENDDO
+.SI enddo
+enddo AST: terminates a DO or DOWHILE.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM CONTINUE
+.SI continue
+continue AST.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM END
+.SI end
+END statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM CALL
+.SI subr-call
+.lp
+Subroutine call.
+.lp
+.ul
+Flags
+.FL CALLFG
+Usually set
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE ALIAS
+If node evaluates to a constant, this field locates
+the \f(CWCNST\fP node representing the value.
+.SE LOP
+AST pointer to the node representing the subroutine.
+.SE ARGS
+Pointer to the table of arguments for the subroutine
+stored in the ARG Table (see the description
+of the ARG table in the section \fIAuxiliary Data Structures\fP).
+If there aren't any arguments, this field is zero.
+.OV ARGCNT hw22
+Number of arguments passed to the subroutine.
+.lp
+.SM ICALL
+.SI intrinsic-call
+.lp
+Intrinsic or predeclared call.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the node representing the subroutine.
+.OV OPTYPE hw21
+Type of intrinsic/predeclared (see \f(CW_<intrinsic name>\fP macros in ast.h).
+.SE ARGS
+Pointer to the table of arguments for the subroutine
+stored in the ARG Table (see the description
+of the ARG table in the section \fIAuxiliary Data Structures\fP).
+If there aren't any arguments, this field is zero.
+.OV ARGCNT hw22
+Number of arguments passed to the subroutine.
+.SE DTYPE
+Data type of the icall.
+.SE ALIAS
+May be set
+.lp
+.SM STOP
+.SI stop
+.lp
+Stop statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the node representing the stop expression; zero
+if not present.
+.lp
+.SM PAUSE
+.SI pause
+.lp
+Pause statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the node representing the pause expression; zero
+if not present.
+.lp
+.SM RETURN
+.SI return
+.lp
+Return statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the node representing the return expression; zero
+if not present.
+.lp
+.SM ALLOC
+.SI allocate/deallocate
+.lp
+Allocate/deallocate statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.FL DALLOCMEM f4
+Set if the deallocate was generated by the compiler 
+to deallocate an allocatable derived type member.
+.lp
+.FL FIRSTALLOC f2
+Set if the ALLOC ast is the first generated for an
+allocate or deallocate statement.
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer of the \f(CWSTAT\fP specifier; if this specifier is not
+present, this field is zero.
+.OV TKN hw21
+Scanner token value (\f(CWTK_ALLOCATE\fP or \f(CWTK_DEALLOCATE\fP)
+indicating the type of statement.
+.SE SRC
+AST pointer of the object being (de-)allocated.
+If an allocatable (deferred shape) array is being allocated,
+the AST is a subscript ast
+whose subscripts are triple ASTs which describe the shape of the array.
+An \f(CWALLOCATE\fP or \f(CWDEALLOCATE\fP statement which contains
+multiple objects is transformed into a sequence of \f(CWALLOCATE\fP
+or \f(CWDEALLOCATE\fP statements, one for each object.
+.SE DEST
+AST pointer of the \f(CWPINNED\fP specifier; if this specifier is not
+present, this field is zero.
+.SE M3
+AST pointer of the \f(CWERRMSG\fP specifier; if this specifier is not
+present, this field is zero.
+.SE START w9
+AST pointer of the \f(CWSOURCE\fP specifier; if this specifier is not
+present, this field is zero.
+.SE DEVSRC w10
+If this is a device mirrored symbol being allocated or deallocated,
+the DEVSRC field will point to the variable to hold the device address
+for the mirrored copy.
+.SE ALIGN w8
+AST pointer of the \f(CWALIGN\fP specifier; if this specifier is not
+present, this field is zero.
+.lp
+.SM WHERE
+.SI where
+.lp
+Single statement where or where-construct (block where).
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFSTMT
+If non-zero, AST pointer of the assignment statement controlled
+by the mask expression.
+If zero, this node is the AST of a where-construct.
+.SE IFEXPR
+Ast of the mask expression
+.lp
+.SM ELSEWHERE
+.SI elsewhere
+.lp
+elsewhere statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM ENDWHERE
+.SI endwhere
+.lp
+Ends a where-construct (block where).
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM FORALL
+.SI forall
+.lp
+Single statement forall or forall-construct (block forall).
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.FL ARRASN f4
+If set, the forall was generated by the compiler from an
+array assignment.
+.FL CONSTBND f6
+If set, the forall was generated by the compiler from an
+array assignment and the loop bound is that from one of the
+rhs array that have constant bounds.
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFSTMT
+If non-zero, AST pointer of the assignment statement controlled
+by the forall.
+If zero, this node is the AST of a forall-construct.
+.SE IFEXPR
+Ast of the mask expression; zero if not present.
+.SE LIST
+Pointer to the list in the AST list area of the forall triplets
+(see the description of the AST list items in the
+section \fIAuxiliary Data Structures\fP).
+.OV NTRIPLE hw21
+Number of forall triplets.
+.SE SRC
+Locates the first STD which was generated due to parsing the FORALL
+header.
+Processing by the semantic analyzer of
+the FORALL triplets and mask expression
+may result in the creation of STDs before the FORALL AST
+is actually created.
+If an STD was not generated, this field is zero.
+.SE START w9
+Start of the AST table information (\f(CWFINFO\fP) created by the
+transformer.
+.OV NCOUNT hw22
+Number of entries in AST table information.
+.lp
+.SM ENDFORALL
+.SI endforall
+.lp
+Ends a forall-construct (block forall).
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM ELSEFORALL
+.SI elseforall
+.lp
+else of a forall-construct (block forall); for internal use only.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM REDIM
+.SI redimension
+.lp
+Redimension statement.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE SRC
+AST pointer to the array object to be redimensioned.
+Each object is an array; the AST describes the shape of the
+array (a subscript ast).
+.lp
+.lp
+.SM COMMENT
+.SI comment
+.lp
+Comment derived from an ast.
+Generally, the ast is a statement ast which was transformed (rewritten)
+into a sequence of one or more asts.
+A comment AST can be used to \fIcomment\fP a transformation.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST.
+.lp
+.SM COMSTR
+.SI commentstr
+.lp
+Comment derived from a string.
+Comments appearing in the original file are represented as
+\f(CWCOMSTR\fP ASTs.
+Also, during compilation, comment string ASTs may be added to
+the statement lists.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE COMPTR w8
+Pointer (index) into the comment strings area representing
+one or more comment lines.
+.lp
+.SM REALIGN
+.SI realign
+.lp
+Realign statement.
+For each
+.i alignee
+in the statement, one
+.cw A_REALIGN
+ast is generated.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+Pointer to the align target
+descriptor (see the section \fIAuxiliary Data Structures\fP of the
+SYMBOL TABLE chapter).
+.SE LOP
+Identifier ast of the
+.i alignee .
+.lp
+.SM REDISTRIBUTE
+.SI redistribute
+.lp
+Redistribute statement.
+For each
+.i distributee
+in the statement, one
+.cw A_REDISTRIBUTE
+ast is generated.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+Pointer to the distribution
+descriptor (see the section \fIAuxiliary Data Structures\fP of the
+SYMBOL TABLE chapter).
+.SE LOP
+Identifier ast of the
+.i distributee .
+.bp
+.sh 3 "HPF AST Types"
+.nr Sx 0
+.SM HALB
+.nr Sx 1
+.SI alb EXPR
+.lp
+Return the allocated lower bound of a distributed array in a particular
+dimension. Runtime call:
+.CS
+int pghpf_alb(section *c, int *dim)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the operation
+.SE LOP
+AST giving the distributed array.
+.SE ROP
+AST giving the dimension desired.
+.lp
+.SM HAUB
+.SI aub EXPR
+.lp
+Return the allocated upper bound of a distributed array in a particular
+dimension. Runtime call:
+.CS
+int pghpf_aub(section *c, int *dim)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the operation
+.SE LOP
+AST giving the distributed array.
+.SE ROP
+AST giving the dimension desired.
+.lp
+.SM HGLB
+.SI glb EXPR
+.lp
+Return the global lower bound of a distributed array in a particular
+dimension. Runtime call:
+.CS
+int pghpf_glb(section *c, int *dim)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the operation
+.SE LOP
+AST giving the distributed array.
+.SE ROP
+AST giving the dimension desired.
+.lp
+.SM HGUB
+.SI gub EXPR
+.lp
+Return the global upper bound of a distributed array in a particular
+dimension. Runtime call:
+.CS
+int pghpf_gub(section *c, int *dim)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the operation
+.SE LOP
+AST giving the distributed array.
+.SE ROP
+AST giving the dimension desired.
+.lp
+.SM HEXTENT
+.SI extent EXPR
+.lp
+Return the extent of an array section in a particular
+dimension. Runtime call:
+.CS
+int pghpf_extent(section *c, int *dim)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Data type of the result of the operation
+Should be DT_INT.
+.SE LOP
+AST giving the distributed array.
+.SE ROP
+AST giving the dimension desired.
+.lp
+.SM HALLOBNDS
+.SI allobnds
+.lp
+This is currently a subroutine call that is equivalent to A_HALB/A_HAUB
+in each dimension of the array. It is used in two contexts:
+.nf
+        1. For redimensioning of arguments
+        2. For allocation of allocated arrays
+.fi
+.lp
+In the first case, the call is immediately followed by a REDIMENSION;
+in the second case, the call is immediately followed by an ALLOCATE.
+It might be worthwhile to combine these two calls. Otherwise, this is
+difficult to represent as an AST.
+.CS
+void
+pghpf_allobnds(section *c, ... /* [alb,aub],... */)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+Subscript AST of an array with section descriptor
+.cw c
+and where each subscript is a triple representing
+.cw "alb:aub"
+for the respective dimension.
+.lp
+.SM HSECT
+.SI sect EXPR
+Create a section descriptor for an array section.
+Runtime call:
+.CS
+section *
+pghpf_sect_(section *c, ...)    /* ... = {lower, upper, stride,}* mask */
+.CE
+mask needs to be set to a bit mask indicating which dimensions are scalar.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+Subscript AST of an array with section descriptor
+.cw c
+and where each subscript is a triple representing
+.cw "lower:upper:stride"
+for the respective dimension.
+.SE BVECT w10
+AST of the bit mask indicating with dimensions are scalar.
+.lp
+.SM HARRAY
+.SI arraydesc EXPR
+.lp
+Create the array and section descriptor for an array.
+Runtime call:
+.CS
+section *
+pghpf_array(int *r, distr *d, _pghpf_type *kind, int *size, int *flags,
+        ...        /* [ glb, gub, no, po ], ... */
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+AST of the array.
+.lp
+.SM HDISTR
+.SI distdesc EXPR
+.lp
+Create the distribution descriptor for a template.
+Runtime call:
+.CS
+distr *
+pghpf_distr_(int *r, proc *p, ...)
+    /* ... = {axis, [stride, offset, tlb, shape, blocks,]}* */
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+AST of the template.
+.lp
+.SM HNEWPROC
+.SI newproc EXPR
+.lp
+Create the distribution descriptor for a processors arrangement. The call
+is:
+.CS
+proc *
+pghpf_newproc_(int *r, ...)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+AST of the processors.
+.lp
+.SM HLOCALIZEBNDS
+.SI localize_bounds
+This AST initializes the loop parameters for a loop over a block
+distribution. The call is:
+.CS
+void
+pghpf_localize_bounds(section *c, int *dim, int *l, int *u, int *s,
+                      int *nl, int *nu)
+.CE
+The return values are nl, and nu. The input values are c, dim, l, u, and s.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST of the array.
+.SE ITRIPLE w5
+AST for triple representing the input bounds l, u, s.
+.SE OTRIPLE w6
+AST for triple representing the output bounds nl and nu.
+.SE DIM w8
+Dimension AST.
+.lp
+.SM HBLOCKLOOP
+.SI blockloop
+.lp
+This AST initializes the inner loop parameters for a loop over a block-cyclic
+distribution. The call is:
+.CS
+void
+pghpf_block_loop_(section *c, int *dim, int *gl, int *gu, int *gs, int *ci,
+                  int *bl, int *bu)
+.CE
+The return values are bl, and bu. The input values are c, dim, gl, gu,
+gs, and ci.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+AST of the array.
+.SE CYCVAR w10
+AST for ci (which is the do variable for the loop over the cycles.
+.SE ITRIPLE w5
+AST for triple representing the input strides gl,gu,gs.
+.SE OLBD w6
+AST for lower bound output variable.
+.SE OUBD w7
+AST for upper bound output variable.
+.SE DIM w8
+Dimension AST.
+.lp
+.SM HCYCLICLP
+.SI cyclicloop
+.lp
+This AST initializes the outer loop parameters for a loop over a block-cyclic
+distribution. The call is:
+.CS
+void
+pghpf_cyclic_loop_(section *c, int *dim, int *l, int *u, int *s,
+                   int *cl, int *cu, int *cs, int *lof, int *los)
+.CE
+The return values are cl,cu,cs,lof, and los
+The input values are c, dim, l,u, and s.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.FL CBLK f3
+If set, distribution is cyclic block; otherwise, the distribution is
+just cyclic.
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+AST of the array.
+.SE ITRIPLE w5
+AST for triple representing the input bounds l, u, s.
+.SE OTRIPLE w6
+AST for triple representing the output bounds cl, cu, cs.
+.SE OTRIPLE1 w7
+AST for triple representing the output values lof and los.
+.SE DIM w8
+Dimension AST.
+.lp
+.SM HOFFSET
+.SI offset
+.lp
+This AST creates the ptr_offset call to adjust pointers when Cray pointers
+aren't being used.  The call is:
+.CS
+void
+pghpf_ptr_offset_(char **offset, char **ptr, char *base, __INT4_T *kind)
+.CE
+*ptr is the address of an array. offset is set to the value that will allow
+the array expression base(offset) to be the same as *ptr. This is the
+non-cray pointer translation that handles constructs like:
+.CS
+    real a(1)
+    pointer (p,a)
+    p = address
+    ... a(expr) ...
+.CE
+The code in the above case would be:
+.CS
+    real a(1)
+    integer p
+    call pghpf_ptr_offset(p, p, a, real_kind)
+    ... a(p+expr) ...
+.CE
+.lp
+If a is a \f(CWDYNAMIC\fP array, two integer variables are created, one for
+the pointer and one for the offset:
+.CS
+    real a(1)
+    integer o, p
+    call pghpf_ptr_offset(o, p, a, real_kind)
+    ... a(p+expr) ...
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+none
+.SE DEST
+AST of the offset variable (the first argument) for the array
+(a in the above example).
+This AST may be same as the AST in LOP.
+.SE LOP
+AST of the pointer-based array (a in the above example). The third
+and fourth arguments are derived from this.
+.SE ROP
+AST of the integer containing the true pointer (second argument).
+.lp
+.SM HCOPYIN
+.SI copyin EXPR
+.lp
+This AST creates the copyin call for
+a dummy array. The call is:
+.CS
+void *
+pghpf_copy_in_(void *sb, section *dc, section *sc,
+               _pghpf_intent intent)
+.CE
+The return values is the address of the local
+array. The section dc is the local section descriptor; the section sc is
+the passed section descriptor.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+AST of the dummy array. The intent and destination section should be derived
+from this.
+.SE ROP
+AST for the argument section descriptor.
+.lp
+.SM HCOPYOUT
+.SI copyout
+.lp
+This AST creates the copyout call for
+a dummy array. The call is:
+.CS
+void
+pghpf_copy_out_(void *db, void *sb, section *dc, section *sc,
+                _pghpf_intent intent)
+.CE
+The base db is the passed array base; the section dc is the passed section
+descriptor.
+The base sb is the local array base; the section sc is the local section
+descriptor.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DTYPE
+Should be INT (actually pointer).
+.SE LOP
+AST of the dummy array. The intent, source base, and
+and source section should be derived
+from this.
+.SE ROP
+AST for the argument section descriptor.
+.SE SBASE w7
+AST for the argument base address.
+.lp
+.SM HCOPYSCLR
+.SI copysclr
+.lp
+This AST copies a scalar from one processor to another.
+The call is:
+.CS
+void
+pghpf_copy_scalar_(void *tmp, section *lc, ...)
+        /* ... = {lhs_index, rb, rc, {rhs_index} */
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST for tmp, the copied scalar.
+.SE ROP
+AST for subscripted array reference for RHS, from which is derived rb,
+rc and rhs_index.
+.SE LHS w7
+AST for subscripted array reference for LHS.
+.lp
+.SM HGETSCLR
+.SI getsclr
+.lp
+This AST broadcasts a scalar from one processor to all processors.
+The call is:
+.CS
+void
+pghpf_get_scalar_(void *tmp, void *base, section *c, ...)
+        /* ... = index */
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DEST
+AST for tmp, the broadcast scalar.
+.SE SRC
+AST for subscripted array reference for RHS, from which is derived base,
+c, and index.
+.lp
+.SM HNPROCS
+.SI nprocs EXPR
+.lp
+This AST returns the number of processors available to the program.
+The call is:
+.CS
+int
+pghpf_nprocs()
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Should be INT.
+.lp
+.SM HFREE
+.SI free
+.lp
+This AST frees storage.
+The call is:
+.CS
+void
+pghpf_free(void **ptr)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST to free.
+.lp
+.SM HFREEN
+.SI freen
+.lp
+This AST frees multiple storage.
+The call is:
+.CS
+void
+pghpf_freen(int *cnt, ... /* = void *,... */)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE ARGS
+Pointer to the table of arguments for the function
+containing the ASTs to free.
+.OV ARGCNT hw22
+Number of ASTs to free.
+.lp
+.SM HISLOCAL
+.SI islocal EXPR
+.lp
+This AST determines if an index is local to the current processor. The
+call is:
+.CS
+int
+pghpf_islocal_(section *c, ... /* = index1,...indexN */)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Should be LOGICAL
+.SE LOP
+Subscript AST of array to check. Index must be all scalar.
+.lp
+.SM HLOCALOFFSET
+.SI local_offset EXPR
+This AST returns the local offset in elements of an array element on the
+current processor, or zero if it is not local. The call is:
+.CS
+int
+pghpf_local_offset_(section *c, ... /* = index1,...,indexN */)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+Should be INTEGER (pointer).
+.SE LOP
+AST of subscripted array whose local offset is to be determined.
+.lp
+.SM HCOPYSECT
+.SI copysection EXPR
+.lp
+This AST copies a regular section of one array to a regular section of another
+array. The call is:
+.CS
+CP *
+pghpf_copy_section_(void *db, void *sb, section *dc, section *sc)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+DT_INT (should be pointer).
+.SE DEST
+AST of the destination array
+.cw db .
+.SE SRC
+AST of the source array
+.cw sb .
+.SE DDESC w7
+AST of the destination section descriptor
+.cw dc .
+.SE SDESC w8
+AST of the source section descriptor
+.cw sc .
+.lp
+.SM HPERMUTESECT
+.SI permutesection EXPR
+.lp
+This AST copies a regular section of one array to a regular section of another
+array, permuting the dimensions according to a variable argument
+list. The call is:
+.CS
+CP *
+pghpf_permute_section(void *db, void *sb, section *dc, section *sc, ...)
+        /* ... = permutation of 1..rank */
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+DT_INT (should be pointer).
+.SE DEST
+AST of the destination array.
+.cw db .
+.SE SRC
+AST of the source array.
+.cw sb .
+.SE DDESC
+AST of the destination section descriptor.
+.cw dc .
+.SE SDESC
+AST of the source section descriptor.
+.cw sc .
+.SE BVECT
+AST of the bit mask representing the permutation of the dimensions.
+.lp
+.SM HOVLPSHIFT
+.SI overlapshift EXPR
+.lp
+This AST performs an overlap shift communication on an array with
+overlap areas.  The call is:
+.CS
+CP *
+pghpf_overlap_shift_(void *b, section *g, ...)
+        /* ... = negative and postive shift amts in each dim */
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+DT_INT (should be pointer).
+.SE SRC
+Subscript AST representing the array being shifted where each subscript
+is a triple AST whose LBD and UPBD fiels are the negative and positive
+shift amounts, respectively, for the corresponding dimension.
+.SE SDESC
+AST of the source section descriptor.
+.SE BVECT
+AST of the boundary argument.
+.lp
+.SM HGATHER
+.SI gather EXPR
+.lp
+This AST copies a array indexed by vector subscripts into a regular
+section of another array.
+.CS
+CP *
+pghpf_vsub_gather_(void *rb, section *rs, void *sb, section *ss,
+                   int flags, ...)
+ 
+   flags = bit 1<<(i-1) set if vector subscript in i'th dimension
+   (passed by value)
+ 
+   ... = { vb, vs, }* = base address and section descriptors for the
+   vector subscripts (only for dimensions where the corresponding flag
+   bit is set).
+
+CP *
+pghpf_vsub_gather_mask_(void *rb, section *rs, void *sb, section *ss,
+                        int *mb, section *ms, int flags, ...)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+DT_INT (should be pointer).
+.SE VSUB w4
+A subscript AST whose subscripts are the ASTs for the section descriptors
+for the corresponding dimension of the source.
+.SE DEST
+AST of the destination array.
+.SE SRC
+Subscript AST for the source array.
+.SE DDESC
+AST of the destination section descriptor.
+.SE SDESC
+AST of the source section descriptor.
+.SE BVECT
+AST of the bit mask indicating which dimensions contain a vector subscript.
+.SE MASK w9
+Subscripted expression of the mask arrray; if zero, a mask array is not
+present.
+.SE MDESC w12
+AST of the mask section descriptor.
+.lp
+.SM HSCATTER
+.SI scatter EXPR
+.lp
+This AST copies a regular section of an array
+into an array indexed by vector subscripts.
+.CS
+CP *
+pghpf_vsub_scatter(void *rb, section *rs, void *sb, section *ss,
+                   int flags, ...)
+void
+pghpf_vsub_scatter_mask(void *rb, section *rs, void *sb, section *ss,
+                   int flags, ...)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+DT_INT (should be pointer).
+.SE VSUB w4
+A subscript AST whose subscripts are the ASTs for the section descriptors
+for the corresponding dimension of the source.
+.SE DEST
+AST of the destination array.
+.SE SRC
+Subscript AST for the source array.
+.SE DDESC
+AST of the destination section descriptor.
+.SE SDESC
+AST of the source section descriptor.
+.SE BVECT
+AST of the bit mask indicating which dimensions contain a vector subscript.
+.SE MASK
+Subscripted expression of the mask arrray; if zero, a mask array is not
+present.
+.SE MDESC
+AST of the mask section descriptor.
+.lp
+.SM HCSTART
+.SI "comm start" EXPR
+.lp
+Start a communication schedule.
+Runtime call:
+.CS
+XFER *
+pghpf_comm_start(CP *cp, void *dest, void *src)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+DT_INT (should be pointer).
+.SE LOP
+AST of the channel pointer,
+.SE SRC
+AST of the source array.
+.SE DEST
+AST of the destination array.
+.lp
+.SM HCFINISH
+.SI "comm finish"
+.lp
+Finish a communication schedule.
+Runtime call:
+.CS
+void
+pghpf_comm_finish(CP *cp)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST of the channel pointer,
+.lp
+.SM HCFREE
+.SI "comm free"
+.lp
+Free a communication channel pointer.
+Runtime call:
+.CS
+void
+pghpf_comm_free(CP *cp)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE LOP
+AST of the channel pointer,
+.lp
+.SM HOWNERPROC
+.SI "owner's_processor"
+This AST returns the processor number and remote index of
+a subscript of an array element.
+Computation for this AST may be inlined. If not inlined,
+pghpf_localize_dim() will be called.
+Runtime call:
+.CS
+pghpf_localize_dim(secdesc *, int dim, int index, int *pcoord, int *rmtindex)
+.CE
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.SE DTYPE
+.SE LOP
+AST of subscripted array whose processor number and remote index
+is to be determined.
+.SE DIM
+Dimension of the array reference to compute processor number and
+remote index.
+.SE M1
+The scalar variable that will hold the processor number.
+Type of this variable will be DT_INT.
+.SE M2
+The scalar variable that will hold the remote index.
+Type of this variable will be DT_INT.
+.lp
+.SM MASTER
+.SI "master"
+.lp
+Begin a serial region.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_ENDMASTER\fP.
+.lp
+.SM ENDMASTER
+.SI "endmaster"
+.lp
+End a serial region.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MASTER\fP.
+.OV ARGCNT hw22
+Number of \f(CWCOPY\fP variables.
+.SE ARGS
+Pointer to an ARG table containing the \f(CWCOPY\fP variables.
+If the \f(CWCOPY\fP clause is not present, this field is 0.
+.lp
+.SM CRITICAL
+.SI "critical"
+.lp
+Begin a critical section.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE ISOMPREDUCTION w6
+set if it openmp's reduction
+.SE LOP
+AST pointer to the corresponding \f(CWA_ENDCRITICAL\fP.
+.lp
+.SM ENDCRITICAL
+.SI "endcritical"
+.lp
+End of a critical section.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_CRITICAL\fP.
+.SE ISOMPREDUCTION
+set if it openmp's reduction
+.lp
+.SM ATOMIC
+.SI "atomic update"
+.lp
+Begin an atomic region (the STDs created for an assignment statement
+immediately following the ATOMIC UPDATE directive).
+.lp
+.ul
+Flags
+.lp
+.SM ATOMICREAD
+.SI "atomic read"
+.lp
+Begin an atomic read region.
+.lp
+.ul
+Flags
+.lp
+.SM ATOMICWRITE
+.SI "atomic write"
+.lp
+Begin an atomic write region.
+.lp
+.ul
+Flags
+.lp
+.SM ATOMICCAPTURE
+.SI "atomic capture"
+.lp
+Begin an atomic capture region.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM ENDATOMIC
+.SI "end atomic update"
+.lp
+End an atomic region (the STDs created for an assignment statement
+immediately following the ATOMIC UPDATE directive).
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM BARRIER
+.SI "barrier"
+.lp
+Barrier directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM NOBARRIER
+.SI "barrier"
+.lp
+No barrier directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SM MP_BMPSCOPE
+.SI "bmpscope"
+.lp
+OpenMP begin scope.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE STBLK w3
+Ast of ST_BLOCK symbol which can be used to locate a set of shared variables
+in parallel region in auxiliary data structure; zero if not used.
+.lp
+.SM MP_EMPSCOPE
+.SI "empscope"
+.lp
+OpenMP end scope.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_PARALLEL
+.SI "parallel"
+.lp
+OpenMP parallel directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR w3
+Ast of the logical expression appearing in the if clause; zero if not present.
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDPARALLEL\fP.
+.SE NPAR w5
+Ast of the integer expression appearing in the num_threads clause; zero if
+not present.
+.SE PROCBIND w12
+If present, this field represent constant AST with value that reflects 
+.SE ENDLAB w18
+If present, this field represent AST pointer of label where cancel or
+cancellation point jump to normally at the end of parallel region.
+master, close, or spread.
+.lp
+.SM MP_ENDPARALLEL
+.SI "endparallel"
+.lp
+OpenMP endparallel directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_PARALLEL\fP.
+.lp
+.SM MP_CRITICAL
+.SI "critical"
+.lp
+OpenMP critical section directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDCRITICAL\fP.
+.lp
+.SM MP_ENDCRITICAL
+.SI "endcritical"
+.lp
+OpenMP end critical section directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_CRITICAL\fP.
+.lp
+.SM MP_MASTER
+.SI "master"
+.lp
+OpenMP master directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDMASTER\fP.
+.lp
+.SM MP_ENDMASTER
+.SI "endmaster"
+.lp
+OpenMP endmaster directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_MASTER\fP.
+.lp
+.SM MP_SINGLE
+.SI "single"
+.lp
+OpenMP single section directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDSINGLE\fP.
+.lp
+.SM MP_ENDSINGLE
+.SI "endsingle"
+.lp
+OpenMP end single section directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_SINGLE\fP.
+.lp
+.SM MP_ATOMIC
+.SI "atomic"
+.lp
+OpenMP atomic directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_ENDATOMIC
+.SI "end atomic"
+.lp
+OpenMP end atomic directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_ATOMICREAD
+.SI "atomicread"
+.lp
+OpenMP atomic read directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE SRC
+AST pointer to src.
+.OV MEM_ORDER hw22
+If present, this field represent constant AST represent memory order
+.lp
+.SM MP_ATOMICWRITE
+.SI "atomicwrite"
+.lp
+OpenMP atomic write directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to left hand side AST.
+.SE ROP
+AST pointer to right hand side AST.
+not present.
+.OV MEM_ORDER hw22
+If present, this field represent constant AST represent memory order
+.lp
+.SM MP_ATOMICUPDATE
+.SI "atomicupdate"
+.lp
+OpenMP atomic update directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to left hand side AST.
+.SE ROP
+AST pointer to right hand side AST.
+.OV OPTYPE hw21
+Type of operator 
+.OV MEM_ORDER hw22
+If present, this field represent constant AST represent memory order
+.SM MP_ATOMICCAPTURE
+.SI "atomiccapture"
+.lp
+OpenMP atomic capture directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE CAPTURETYPE w3
+AST pointer to constant AST represent capture type.
+.SE LOP w4
+AST pointer to left hand side AST.
+.SE ROP w5
+AST pointer to right hand side AST.
+.OV OPTYPE hw21
+Type of operator 
+.OV MEM_ORDER hw22
+If present, this field represent constant AST represent memory order
+.lp
+.SM MP_BARRIER
+.SI "barrier"
+.lp
+OpenMP barrier directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_PDO
+.SI "pdo"
+.lp
+OpenMP do directive.
+.lp
+.ul
+Flags
+.FL DISTRIBUTE f1
+If set,  it is distribute loop
+.FL DISTPARDO f2
+If set, it is distribute parallel loop
+.FL TASKLOOP f3
+If set, it is taskloop
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE DOLAB
+If label is present, this field is the AST pointer of the label.
+If zero, the do statement is terminated with an ENDDO.
+.SE DOVAR
+AST pointer to the do index variable.
+.SE M1
+AST pointer to the initial expression
+.SE M2
+AST pointer to the limit expression
+.SE M3
+AST pointer to the skip expression; this field is zero if the
+skip is not present.
+.SE LASTVAL w8
+AST pointer to the last value variable.
+.OV SCHED_TYPE hw21
+Schedule type (see DI_SCH macros in semant.h)
+.OV ORDERED hw22
+If nonzero, loop has the ORDERED attribute.
+.SE DISTCHUNK w9
+AST pointer to the disribute chunk size; this field is zero if the chunk clause
+is not present.
+.SE CHUNK w12
+AST pointer to the chunk size; this field is zero if the chunk clause
+is not present.
+.SE ENDLAB
+If present, this field represent AST pointer of label where cancel
+or cancellation point jump to normally at the end of the loop.
+.lp
+.SM MP_ENDPDO
+.SI "endpdo"
+.lp
+OpenMP enddo directive; terminates A_PDO
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_SECTIONS
+.SI "sections"
+.lp
+OpenMP sections directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.SE ENDLAB
+If present, this field represent AST pointer of label where cancel or
+cancellation point jump to normally at the end of task region.
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDSECTIONS\fP.
+.lp
+.SM MP_ENDSECTIONS
+.SI "endsections"
+.lp
+OpenMP endsections directive.
+.lp
+.SM MP_SECTION
+.SI "section"
+.lp
+OpenMP section directive.
+.SM MP_LSECTION
+.SI "lsection"
+.lp
+Represent OpenMP end of last section directive.
+.lp
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_SECTIONS\fP.
+.lp
+.SM MP_WORKSHARE
+.SI "workshare"
+.lp
+OpenMP workshare directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDWORKSHARE\fP.
+.lp
+.SM MP_ENDWORKSHARE
+.SI "endworkshare"
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_WORKSHARE\fP.
+
+.SM MP_PRE_TLS_COPY
+.SI "pretlscopy"
+.lp
+Prepare OpenMP copyin or copyprivate symbols copy when
+using TLS.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE SPTR
+Symbol table pointer of the object appearing in the COPYIN or
+COPYPRIVATE  clause.
+.SE ROP
+If the object has the allocatable attribute, this field is the
+AST pointer to its size; if the object is not allocatable, this
+field is just the AST pointer to the constant 0 (astb.i0).
+.lp
+.SM MP_BCOPYIN
+.SI "begincopyin"
+.lp
+Begin an OpenMP copyin block.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_COPYIN
+.SI "copyin"
+.lp
+OpenMP copyin.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE SPTR
+Symbol table pointer of the object appearing in the COPYIN clause.
+.SE ROP
+If the object has the allocatable attribute, this field is the
+AST pointer to its size; if the object is not allocatable, this
+field is just the AST pointer to the constant 0 (astb.i0).
+.lp
+.SM MP_ECOPYIN
+.SI "endcopyin"
+.lp
+End an OpenMP copyin block.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_BCOPYPRIVATE
+.SI "begincopyprivate"
+.lp
+Begin an OpenMP copyprivate block.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_COPYPRIVATE
+.SI "copyprivate"
+.lp
+OpenMP copyprivate.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE SPTR
+Symbol table pointer of the object appearing in the COPYPRIVATE clause.
+.SE ROP
+If the object has the allocatable attribute, this field is the
+AST pointer to its size; if the object is not allocatable, this
+field is just the AST pointer to the constant 0 (astb.i0).
+.lp
+.SM MP_ECOPYPRIVATE
+.SI "endcopyprivate"
+.lp
+End an OpenMP copyprivate block.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM PREFETCH
+.SI "prefetch"
+.lp
+Cache PREFETCH directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the object whose address is prefetched.,
+.OV OPTYPE hw21
+Type of prefetch (future expansion; currently 0).
+.lp
+.SM PRAGMA
+.SI "pragma"
+.lp
+Describes a pragma
+.lp
+.ul
+Other Fields
+.SE PRAGMATYPE w3
+Pragma type, from the pragma type enumartion.
+.SE PRAGMASCOPE w5
+Pragma scope (line, loop, routine, global, none).
+.SE PRAGMAVAL w7
+Some pragmas have a value instead of ROP
+.SE LOP
+If the pragma has an operand, it will appear here.
+.SE ROP
+Some pragmas have two operands.
+.SE PRAGMAARG w8
+Some pragmas have an arg.
+.lp
+.SM MP_BPDO
+.SI "begin_trace_pdo"
+.lp
+Begin OpenMP do directive; used for adding a trace call before the
+pdo.
+Currently, lower() generates the BPDO
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.lp
+.SM MP_EPDO
+.SI "end_trace_pdo"
+.lp
+End OpenMP do directive; used for adding a trace call after the endpdo.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.lp
+.SM MP_TASK
+.SI "task"
+.lp
+OpenMP task directive.
+.lp
+.ul
+Flags
+.FL EXEIMM f3
+If set, execute immediately
+.FL UNTIED f4
+If set, the untied clause was present.
+.FL MERGEABLE f2
+If set, the mergeable clause was present.
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR w3
+Ast of the logical expression appearing in the if clause; zero if not present.
+.SE FINALPAR w5
+Ast of the logical expression appearing in the final clause; zero if not present.
+.SE PRIORITY w6
+Ast of integer expression appearing in the priority clause; zero if not present.
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDTASK\fP.
+.lp
+.SM MP_TASKLOOP
+.SI "taskloop"
+.lp
+OpenMP taskloop directive.
+.lp
+.ul
+Flags
+.FL NOGROUP f3
+If set, nogroup
+.FL UNTIED f4
+If set, untied clause was present.
+.FL MERGEABLE f2
+If set, mergeable clause was present.
+.FL NUM_TASKS f5
+If set,  num_tasks clause was present.
+.FL GRAINSIZE f6
+If set, grainsize clause was present.
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR w3
+Ast of the logical expression appearing in the if clause; zero if not present.
+.SE FINALPAR w5
+Ast of the logical expression appearing in the final clause; zero if not present.
+.SE PRIORITY w6
+Ast of integer expression appearing in the priority clause; zero if not present.
+.lp
+.SM MP_TASKGROUP
+.SI "taskgroup"
+.lp
+OpenMP taskgroup.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_ETASKGROUP
+.SI "endtaskgroup"
+.lp
+OpenMP end taskgroup.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_TASKREG
+.SI "taskreg"
+.lp
+OpenMP task register.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE ENDLAB
+If present, this field represent AST pointer of label where cancel
+or cancellation point jump to normally at the end of task region.
+.lp
+.SM MP_TASKDUP
+.SI "taskdup"
+.lp
+OpenMP taskdup.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE ENDLAB
+If present, this field represent AST pointer of label where cancel
+or cancellation point jump to normally at the end of task region.
+.lp
+.SM MP_TASKLOOPREG
+.SI "taskloopreg"
+.lp
+OpenMP taskloop register.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE ENDLAB
+If present, this field represent AST pointer of label where cancel
+or cancellation point jump to normally at the end of task region.
+.lp
+.SM MP_ETASKDUP
+.SI "endtaskdup"
+.lp
+OpenMP end taskdup.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_ETASKLOOPREG
+.SI "endtaskloopreg"
+.lp
+OpenMP end taskloop register.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_ENDTASK
+.SI "endtask"
+.lp
+OpenMP endtask directive.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TASK\fP.
+.lp
+.SM MP_ETASKLOOP
+.SI "endtaskloop"
+.lp
+OpenMP endtaskloop directive.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_TASKWAIT
+.SI "taskwait"
+.lp
+OpenMP taskwait directive.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_TASKYIELD
+.SI "taskyield"
+.lp
+OpenMP task yield.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_TASKFIRSTPRIV
+.SI "taskfirstprivate"
+.lp
+OpenMP task firstprivate.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP w4
+AST pointer to the host routine variable
+.SE ROP w6
+AST pointer to the task private variable
+.lp
+.SM MP_ETASKFIRSTPRIV
+.SI "endtaskfirstprivate"
+.lp
+OpenMP end task firstprivate.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_BORDERED
+.SI "bordered"
+.lp
+OpenMP begin ordered clause.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_EORDERED
+.SI "eordered"
+.lp
+OpenMP end ordered clause.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_FLUSH
+.SI "flush"
+.lp
+OpenMP end flush construct.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.lp
+.SM MP_CANCEL
+.SI "cancel"
+.lp
+OpenMP cancel construct.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.OV CANCELKIND hw22
+Cancel kind
+.SE IFPAR
+AST of the logical expression appearing in the if clause; zero if not present.
+.SE LOP
+AST pointer to the corresponding cancel construct.
+.SE ENDLAB w18
+If present, this field represent AST pointer of label where cancel or
+cancellation point jump to normally at the end of parallel region.
+.lp
+.SM MP_CANCELLATIONPOINT
+.SI "cancellationpoint"
+.lp
+OpenMP cancellation point construct.
+Other Fields
+.OV STD HSHLK
+.OV CANCELKIND hw22
+Cancel kind
+.SE ENDLAB w18
+If present, this field represent AST pointer of label where cancel or
+cancellation point jump to normally at the end of parallel region.
+.lp
+.ul
+Flags
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding cancellation point construct.
+.lp
+.SM MP_TARGETEXITDATA
+.SI "targetexitdata"
+.lp
+OpenMP target exit data directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR
+AST of the logical expression appearing in the if clause; zero if not present.
+.lp
+.SM MP_TARGETENTERDATA
+.SI "targetenterdata"
+.lp
+OpenMP target enter data directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR
+AST of the logical expression appearing in the if clause; zero if not present.
+.lp
+.SM MP_TARGETUPDATE
+.SI "targetupdate"
+.lp
+OpenMP target update directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR
+AST of the logical expression appearing in the if clause; zero if not present.
+.lp
+.SM MP_TARGETDATA
+.SI "targetdata"
+.lp
+OpenMP target data directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR
+AST of the logical expression appearing in the if clause; zero if not present.
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDTARGETDATA\fP.
+.lp
+.SM MP_ENDTARGETDATA
+.SI "endtargetdata"
+.lp
+OpenMP end target data directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP 
+AST pointer to the corresponding \f(CWA_MP_TARGETDATA\fP.
+.lp
+.SM MP_TARGET
+.SI "target"
+.lp
+OpenMP target directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE IFPAR
+AST of the logical expression appearing in the if clause; zero if not present.
+.SE COMBINEDTYPE w6
+combined construct mode
+.SE LOOPTRIPCOUNT w7
+AST trip count
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_ENDTARGET\fP.
+.lp
+.SM MP_ENDTARGET
+.SI "endtarget"
+.lp
+OpenMP end target directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TARGET\fP.
+.lp
+.SM MP_TEAMS
+.SI "teams"
+.lp
+OpenMP teams directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE NTEAMS w3
+Ast of the num_teams expression; zero if not present.
+.SE LOP w4
+AST pointer to the corresponding \f(CWA_MP_ENDTEAMS\fP.
+.SE THRLIMIT w5
+Ast of the thread_limit expression; zero if not present.
+.lp
+.SM MP_ENDTEAMS
+.SI "endteams"
+.lp
+OpenMP end teams directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
+.lp
+.SM MP_BREDUCTION
+.SI "beginreduction"
+.lp
+OpenMP reduction begin.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
+.lp
+.SM MP_EREDUCTION
+.SI "endreduction"
+.lp
+OpenMP reduction end.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
+.lp
+.SM MP_EMAP
+.SI "endmap"
+.lp
+OpenMP map clause.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
+.lp
+.SM MP_TARGETLOOPTRIPCOUNT
+.SI "target loop trip count"
+.lp
+Trip count for distribute or for within target region
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
+.lp
+.SM MP_MAP
+.SI "map"
+.lp
+OpenMP map clause end.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP
+AST pointer to the corresponding \f(CWA_MP_TEAMS\fP.
+.lp
+.SM MP_REDUCTIONITEM
+.SI "reductionitem"
+.lp
+OpenMP reduction item.
+.lp
+.ul
+Other Fields
+.SE PRVSYM w3
+reduction private symbol
+.SE SHSYM w4
+reduction shared symbol
+.SE REDOPR w5
+reduction operator
+.lp
+.SM MP_DISTRIBUTE
+.SI "distribute"
+.lp
+OpenMP distribute directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP 
+AST pointer to the corresponding \f(CWA_MP_ENDDISTRIBUTE\fP.
+.lp
+.SM MP_ENDDISTRIBUTE
+.SI "enddistribute"
+.lp
+OpenMP end distribute directive.
+.lp
+.ul
+Flags
+.FL CALLFG
+May be referenced
+.lp
+.ul
+Other Fields
+.OV STD HSHLK
+.SE LOP w3
+AST pointer to the corresponding \f(CWA_MP_DISTRIBUTE\fP.
+.lp
+.SM E
+.bp
+.sh 2 "Auxiliary Data Structures"
+.rr Sx
+.rr II
+.rr PS
+.rm SF
+.rm ST
+.rm SM
+.rm SI
+.rm FL
+.rm SE
+.sh 3 "Shape Descriptors"
+.lp
+A shape descriptor (SHD) is provided to represent the shape of an
+expression AST.
+The descriptor is composed of \fIn+1\fP elements of the structure:
+.(b L
+.CS
+    struct {
+        int  lwb;    /* AST of lower bound */
+        int  upb;    /* AST of upper bound */
+        int  stride; /* AST of stride */
+    } 
+.CE
+.)b
+.lp
+The first element's \f(CWlwb\fP field is the rank (\fIn\fP) of the descriptor.
+The first element's \f(CWupb\fP field locates the \fInext\fP shape
+descriptor with the same rank.
+The ensuing \fIn\fP elements contain the values of the lower bound,
+upper bound, and stride for each dimension.
+.lp
+Macros used to access the fields of an SHD are:
+.nr ii \w'\f(CWSHD_STRIDE(i,s)\fP'+2n
+.ip \f(CWSHD_NDIM(i)\fP
+Number of dimensions for the SHD beginning at index \fIi\fP.
+.ip \f(CWSHD_NEXT(i)\fP
+Pointer (index) to the next SHD with the same number of dimensions.
+.ip \f(CWSHD_LWB(i,s)\fP
+AST pointer of the \fIsth\fP lower bound (zero relative);
+\f(CW0<=s<=ndim-1\fP.
+If the lower bound is not specified, this is the AST representing
+the integer value of 1.
+.ip \f(CWSHD_UPB(i,s)\fP
+AST pointer of the \fIsth\fP upper bound (zero relative);
+\f(CW0<=s<=ndim-1\fP.
+If the upper bound is not specified, this field is zero.
+.ip \f(CWSHD_STRIDE(i,s)\fP
+AST pointer of the \fIsth\fP stride (zero relative);
+\f(CW0<=s<=ndim-1\fP.
+If the stride is not specified, this is the AST representing
+the integer value of 1.
+.lp
+.sh 3 "AST List Item"
+.lp
+There are cases in the AST representation which require lists, such as
+a dimension list in a \f(CWDIMENSION\fP statement
+.lp
+A type (ASTLI) is provided to represent a list item for an AST.
+The structure of the item is:
+.(b L
+.CS
+    struct {
+        int  h1;     /* info word */
+        int  h2;     /* misc */
+        int  flags;
+        int  next;   /* next ASTLI, zero terminates list */
+    }
+.CE
+.)b
+.lp
+For all uses of the ASTLI, the macro \f(CWASTLI_NEXT(i)\fP returns
+the next ASTLI of the item \fIi\fP (0 indicates the end of the list).
+Fields \f(CWh1\fP and \f(CWh2\fP are overloaded and depend on the use
+of the list.
+The third word, \f(CWflags\fP, is used for providing 32 1-bit flags.
+The entire bit vector is accessed by the macro \f(CWASTLI_FLAGS(i)\fP.
+The flags and their meanings depend on the use of the list.
+.lp
+A list is created by calling routine \f(CWstart_astli()\fP which
+initializes for a new ast list.
+A list item is
+appended to the end of the list by calling \f(CWadd_astli()\fP,
+which returns the pointer (index) to the item just added.
+When the list is complete, the macro \f(CWASTLI_HEAD\fP is used
+to locate the head of the list.
+.lp
+.ul
+Label List
+.lp
+For a computed goto or assigned goto statement, a list representing the
+labels is created.
+.nr ii \w'\f(CWASTLI_SPTR(i)\fP'+2n
+.ip \f(CWASTLI_AST(i)\fP
+AST pointer of the label.
+.lp
+.ul
+Forall Triplet List
+.lp
+For forall statement, a list representing the
+forall triplets is created.
+.nr ii \w'\f(CWASTLI_TRIPLE(i)\fP'+2n
+.ip \f(CWASTLI_SPTR(i)\fP
+sym pointer of the forall variable.
+.ip \f(CWASTLI_TRIPLE(i)\fP
+Pointer to the TRIPLE AST which defines the forall variable's
+inital, limit, and step values.
+.lp
+.sh 3 "ARG Table Area"
+.lp
+The ASTs of arguments passed to a subroutine or function are organized
+as a table; along with the ASTs of the arguments passed to a given
+subprogram, the number of arguments is stored in the table.
+.lp
+For statement functions, the arguments when the statement function
+is defined and when it's referenced are represented as ARG tables.
+.lp
+Each ARG table is logically represented by the following structure:
+.(b L
+.CS
+    struct {
+        int  cnt;      /* number of arguments (greater than zero) */
+        int  arg[cnt]; /* one ast for each argument */
+    }
+.CE
+.)b
+.lp
+The \fIi\fP-th argument is represented by the AST stored at \f(CWarg[i-1]\fP.
+Macros used to access the fields are:
+.nr ii \w'\f(CWARGT_CNT(i)\fP'+2n
+.ip \f(CWARGT_CNT(i)\fP
+Number of arguments in the table.
+.ip \f(CWARGT_ARG(i,j)\fP
+AST pointer of the \fIj\fP-th argument (zero relative); \f(CW<=j<=cnt-1\fP.
+If the argument was omitted, this value is zero.
+.lp
+.sh 3 "Array Subscript Descriptor"
+.lp
+An array subscript descriptor (ASD) is created when each subscripted
+array reference is processed by the Semantic Analyzer.
+Each descriptor contains all of the subscripts for the array
+reference.
+Each subscript specified in an ASD is a pointer to an AST node
+representing the subscript.
+If the subscript expression is a triple expression
+(array section expression), the AST node is a node of type
+A_TRIPLE.
+.lp
+Each descriptor is organized as variable length data structure
+and is described by the following structure:
+.(b L
+.CS
+    struct {
+        int  ndim;       /* number of dimensions */
+        int  next;       /* used to link together ASD with the
+                          * same number of dimensions
+                          */
+        int  subs[ndim]; /* one ast for each dimension */
+    }
+.CE
+.)b
+.lp
+Macros used to access the fields of an ASD are:
+.nr ii \w'\f(CWASD_SUBS(i,s)\fP'+2n
+.ip \f(CWASD_NDIM(i)\fP
+Number of dimensions for the ASD beginning at index \fIi\fP.
+.ip \f(CWASD_NEXT(i)\fP
+Pointer (index) to the next ASD with the same number of dimensions.
+.ip \f(CWASD_SUBS(i,s)\fP
+AST pointer of the \fIsth\fP subscript (zero relative);
+\f(CW0<=s<=ndim-1\fP.
+.lp
+.sh 3 "Statement Lists"
+.lp
+A statement descriptor (STD) is created for each statement
+in the source file.
+The memory area for the STD is organized as a table, where the
+first legal STD pointer (index) is one.
+The 0th entry (an index of 0) is reserved to be the head of the list
+of STD which make up the statements in a program unit.
+Each STD contains a pointer to the abstract syntax tree
+for the statement.
+The STD are linked together to form a list of statements and
+contain next and previous links to aid insertion and deletion.
+The fields of an STD are:
+.nr ii \w'\f(CWnot_used\fP'+2n
+.ip \f(CWast\fP
+Pointer to the abstract syntax representing the statement.
+The node located by this field is the \fIroot\fP of the
+syntax tree and will be a statement node.
+.ip \f(CWnext\fP
+Pointer (index) to the next STD which follows this STD.
+For entry 0, the next field locates the STD for the first
+statement in the program unit; this field is initially 0.
+.ip \f(CWprev\fP
+Pointer (index) to the previous STD which precedes this STD.
+For entry 0, the prev field locates the STD for the last statement
+in the program unit; this field is initially 0.
+.ip \f(CWlabel\fP
+For STDs whose indices are non-zero, this field is the
+symbol table pointer (index) to the label which labels the
+statement; if no label is present, this
+field is zero.
+For the 0th entry; this field is filled by bblock() and
+is the symbol table pointer of the current subprogram.
+.ip \f(CWlineno\fP
+For STDs whose indices are non-zero, this field is the
+the line number of this statement.
+For the 0th entry, this field is filled in by bblock()and
+is the line number at which the
+current subprogram is defined (i.e., the \f(CWFUNCLINE\fP field).
+.ip \f(CWfindex\fP
+For STDs whose indices are non-zero, this field is the
+the findex of this statement.
+.ip \f(CWfg\fP
+Contains the index of the flowgraph node to which the STD
+belongs (only used by the communication postoptimizer).
+.ip \f(CWnot_used\fP
+Padding.
+.ip \f(CWflags\fP
+Miscellaneous flags (see ast.h).
+.lp
+Macros are provided to access the fields of an STD.
+The macros are formed by prepending \f(CWSTD_\fP
+to the uppercase name of the field.
+The argument to each of these macros is a \f(CWSTD\fP pointer.
+.\".lp
+.\".sh 3 "File Records"
+.\".lp
+.\"While the source file and any include files are read during lexical
+.\"analysis, the source lines are written to a file (\f(CWastb.astfil\fP)
+.\"in a form suitable
+.\"for matching up the abstract syntax tree and its corresponding source.
+.\"In addition to the source lines in their original form, line
+.\"numbers and from what file the source came are written to the file.
+.\".lp
+.\"Each record begins with a 4-byte value which indicates the type of
+.\"the record.
+.\"The type field may be followed a field consisting of textual
+.\"information terminated by the newline character (i.e., a line).
+.\"If a line is present, the
+.\"terminating newline also serves as the record separator.
+.\".lp
+.\"The types of records (whose possible values are listed
+.\"using the available manifest constants) and
+.\"the meanings of the textual information for the records are:
+.\".nr ii \w'\f(CWFR_E_INCL\fP'+2n
+.\".ip \f(CWFR_SRC\fP
+.\"The line contains the name of the source file as specified by the user
+.\"on the command line.
+.\".ip \f(CWFR_B_INCL\fP
+.\"Marks the beginning of a file which is included.
+.\"The line contains the name of the include file.
+.\"Note that include files may be nested.
+.\".ip \f(CWFR_E_INCL\fP
+.\"Marks the end of an include file.
+.\"No textual information, including a newline, occurs after this field.
+.\".ip \f(CWFR_END\fP
+.\"Marks the end of a program unit.
+.\"No textual information, including a newline, occurs after this field.
+.\".ip \f(CWother\fP
+.\"The value of \f(CWother\fP is non-negative.
+.\"If its value is greater than zero, the value is the line number of
+.\"the source line which follows this field.
+.\"If the value is zero, the line number of the source line which
+.\"follows this field is simply the previous line number plus one.
+.\".lp
+.\".sh 3 "Comment Blocks"
+.\"xxx
+.\".lp
+.\"yyy
+.sp
+.sh 2 "Program Units"
+The following routines make up the C module file, 'ast.c'.
+.lp
+.CS
+void ast_init()
+.CE
+.ip
+Initialize AST:
+allocate dynamic storage space, etc.
+.lp
+.CS
+int mk_id(sym)
+.CE
+.ip
+Create an identifer (A_ID) ast for a variable represented
+by its symbol table entry (sym).
+.lp
+.CS
+int mk_cnst(sym)
+.CE
+.ip
+Create a constant  ast for a constant represented
+by its symbol table entry (sym).
+.lp
+.CS
+int mk_cval(cval, dtype)
+.CE
+.ip
+Create a constant ast for a constant represented
+by a value and dtype.
+.lp
+.CS
+int mk_binop(optype, lop, rop, dtype)
+.CE
+.ip
+Create a binary operator ast whose operation type is optype,
+left and right operands are lop and rop, respectively, and whose
+result data type (and data type of the operands) is dtype.
+.lp
+.CS
+int mk_unop(optype, lop, dtype)
+.CE
+.ip
+Create a unary operator ast whose operation type is optype,
+operand is lop, and whose
+result data type (and data type of the operand) is dtype.
+.lp
+.CS
+void mk_alias(ast, a_cnst)
+.CE
+.ip
+Create an alias of ast if it isn't a constant AST;
+its alias field will be set to the ast 'a_cnst').
+.lp
+.CS
+int mk_label(lab)
+.CE
+.ip
+Create a label ast whose symbol table entry is lab.
+.sp
+.sh 2 "ASTUTIL Utility Program"
+.sh 3 "Overview"
+ASTUTIL is a utility program which reads the AST input files
+and writes C files which define the manifest constants, the access
+macros, and the data structures for the ASTs.
+The utility also reads the symbol table utility's \f(CWsymini_ftn.n\fP
+file to define the manifest constants representing the intrinsic
+functions.
+.sh 3 "Inputs"
+.sh 3 "Outputs"

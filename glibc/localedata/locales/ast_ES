@@ -1,0 +1,162 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Asturian Language Locale for Spain
+% Source:
+% Address:
+% Contact: Jordi Mallach
+% Email: jordi@gnu.org
+% Language: ast
+% Territory: ES
+% Revision: 1.0
+% Date: 2005-08-26
+% Application: general
+% Users: general
+%
+% This file is under the
+% GNU General Public License.
+% Based in the an_ES Locale
+
+LC_IDENTIFICATION
+title      "Asturian locale for Spain"
+source     ""
+address    ""
+contact    "Jordi Mallach"
+email      "jordi@gnu.org"
+tel        ""
+fax        ""
+language   "Asturian"
+territory  "Spain"
+revision   "1.0"
+date       "2005-08-26"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "es_ES"
+END LC_COLLATE
+
+LC_CTYPE
+copy "es_ES"
+END LC_CTYPE
+
+LC_MESSAGES
+yesexpr "^[+1sSyY]"
+noexpr  "^[-0nN]"
+yesstr  "s<U00ED>"
+nostr   "non"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "es_ES"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "es_ES"
+END LC_NUMERIC
+
+LC_TIME
+% Days of week in Asturian
+% llunes, martes, miércoles, xueves, vienres, sábadu, domingu
+% llu, mar, mié, xue, vie, sáb, dom
+abday   "dom";"llu";"mar";"mi<U00E9>";"xue";"vie";"s<U00E1>b"
+day     "domingu";/
+        "llunes";/
+        "martes";/
+        "mi<U00E9>rcoles";/
+        "xueves";/
+        "vienres";/
+        "s<U00E1>badu"
+% Month names in Asturian
+% xineru, febreru, marzu, abril, mayu, xunu, xunetu, agostu, setiembre,
+% ochobre, payares, avientu
+% Abbreviated form of xunetu is "xnt"
+abmon   "xin";"feb";/
+        "mar";"abr";/
+        "may";"xun";/
+        "xnt";"ago";/
+        "set";"och";/
+        "pay";"avi"
+alt_mon "xineru";/
+        "febreru";/
+        "marzu";/
+        "abril";/
+        "mayu";/
+        "xunu";/
+        "xunetu";/
+        "agostu";/
+        "setiembre";/
+        "ochobre";/
+        "payares";/
+        "avientu"
+d_t_fmt  "%a %d %b %Y %T"
+date_fmt "%a %d %b %Y %T %Z"
+d_fmt   "%d//%m//%y"
+t_fmt   "%T"
+% Month names in genitive form:
+% de xineru, de febreru, de marzu, d’abril, de mayu, de xunu,
+% de xunetu, d’agostu, de setiembre, d’ochobre, de payares, d’avientu
+mon     "de xineru";/
+        "de febreru";/
+        "de marzu";/
+        "d<U2019>abril";/
+        "de mayu";/
+        "de xunu";/
+        "de xunetu";/
+        "d<U2019>agostu";/
+        "de setiembre";/
+        "d<U2019>ochobre";/
+        "de payares";/
+        "d<U2019>avientu"
+am_pm   "";""
+t_fmt_ampm ""
+week 7;19971130;4
+first_weekday 2
+END LC_TIME
+
+LC_PAPER
+copy "es_ES"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "es_ES"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "es_ES"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "es_ES"
+END LC_NAME
+
+LC_ADDRESS
+postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+country_name "Espa<U00F1>a"
+country_ab2   "ES"
+country_ab3   "ESP"
+country_num   724
+country_car   "E"
+lang_name    "asturianu"
+lang_term    "ast"
+lang_lib    "ast"
+END LC_ADDRESS

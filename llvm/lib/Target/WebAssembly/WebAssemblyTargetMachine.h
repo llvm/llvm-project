@@ -55,6 +55,7 @@ public:
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   bool usesPhysRegsForValues() const override { return false; }
+  bool usesVRegsForVariadicDefs() const override { return true; }
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
   yaml::MachineFunctionInfo *

@@ -1,0 +1,66 @@
+IBM1112  Baltic Multilingual
+IBM921   Baltic 8bit
+IBM1122  Estonia
+IBM1006  Urdu 8bit
+IBM1025  Cyrillic Multilingual
+IBM1027  Japanese Latin Host Extended SBCS
+CP300    Japanese Host Double-Byte including 1880 UDC
+IBM1041  Japanese PC Data Extended SBCS
+IBM301   Japanese PC Data Double-Byte including 1880 UDC
+CP833    Korean Host SBCS
+CP834    Korean Host Double-Byte including 1880 UDC
+IBM1088  IBM KS Code - PC Data SBCS
+IBM951   IBM KS Code - PC Data Double-Byte including 1880 UDC
+CP835    Traditional Chinese Host Double-Byte including 6204 UDC
+IBM1043  Traditional Chinese PC Data Extended SBCS
+IBM927   Traditional Chinese Double-Byte including 6204 UDC
+CP836    Simplified Chinese Host Extended SBCS
+CP837    Simplified Chinese Host Double-Byte including 1880 UDC
+IBM1115  Simplified Chinese Single-Byte including 5 SAA SB characters
+IBM1380  Simplified Chinese DBCS PC including 1880 UDC and 31 IBM selected
+CP838    Thai Host Extended SBCS
+IBM839   Thai Host Double-Byte including 374 UDC
+IBM929   Thai PC Data Double-Byte including 374 UDC
+IBM276	 DP94-French; Canada
+IBM286   Alternate (3270); Austria and Germany
+IBM293   APL (USA)
+IBM1051  HP Emulation
+IBM1100  Multination Emulation
+IBM1276  Adobe Standard Encoding
+IBM1275  Apple Latin-1
+IBM1277  Adobe Latin-1
+IBM1009  ISO-7: IRV
+IBM1010  ISO-7: France
+IBM1011  ISO-7: Germany
+IBM1012  ISO-7: Italy
+IBM1013  ISO-7: United Kingdom
+IBM1014  ISO-7: Spain
+IBM1015  ISO-7: Portugal
+IBM1016  ISO-7: Norway
+IBM1017  ISO-7: Denmark
+IBM1018  ISO-7: Finland and Sweden
+IBM1019  ISO-7: Belgium and Netherlands
+IBM1020  ISO-7: Canadian (French) Variant
+IBM1021  ISO-7: Switzerland Variant
+IBM1022  ISO-7: Spain Variant
+IBM1101  ISO-7: British NRC Set
+IBM1102  ISO-7: Dutch NRC Set
+IBM1103  ISO-7: Finnish NRC Set
+IBM1104  ISO-7: French NRC Set
+IBM1105  ISO-7: Norwegian/Danish NRC Set
+IBM1106  ISO-7: Swedish NRC Set
+IBM1107  ISO-7: Norwegian NRC Alternate
+IBM1008  Arabic 8-bit ISO/ASCII
+IBM1123  Cyrillic Ukraine EBCDIC
+IBM1283  Apple Cyrillic
+IBM1282  Apple Central European (Latin-2)
+IBM1097  Farsi
+IBM1098  Farsi - Personal Computer
+IBM1280  Apple Greek
+IBM803   Hebrew Set A (old code)
+IBM421   Maghreb French
+IBM853   PC Data: Turkey (replaced by Latin 5)
+IBM1281  Apple Turkey
+IBM1279  Hitachi Japanese Katakana Host
+CP300    Japanese DBCS Host
+IBM897   Japanese PC Data Single-Byte

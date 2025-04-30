@@ -1,0 +1,30 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11
+type wordexp_t
+
+element wordexp_t size_t we_wordc
+element wordexp_t {char**} we_wordv
+element wordexp_t size_t we_offs
+
+constant WRDE_APPEND
+constant WRDE_DOOFFS
+constant WRDE_NOCMD
+constant WRDE_REUSE
+constant WRDE_SHOWERR
+constant WRDE_UNDEF
+
+constant WRDE_BADCHAR
+constant WRDE_BADVAL
+constant WRDE_CMDSUB
+constant WRDE_NOSPACE
+# if !defined POSIX && !defined XOPEN2K8 && !defined POSIX2008
+constant WRDE_NOSYS
+# endif
+constant WRDE_SYNTAX
+
+function int wordexp (const char*, wordexp_t*, int)
+function void wordfree (wordexp_t*)
+
+allow WRDE_*
+allow we_*
+allow *_t
+#endif

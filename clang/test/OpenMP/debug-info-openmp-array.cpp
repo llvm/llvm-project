@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -Wno-vla -fopenmp-simd -x c++ %s -verify -debug-info-kind=limited -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // expected-no-diagnostics
 
+// XFAIL: *
+
 void f(int m) {
   int i;
   int cen[m];

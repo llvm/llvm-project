@@ -1,0 +1,74 @@
+libBrokenLocale {
+  GLIBC_2.0 {
+    __ctype_get_mb_cur_max;
+  }
+}
+
+libc {
+  GLIBC_2.0 {
+    # global variables
+    _libc_intl_domainname;
+
+    # functions used in inline functions or macros
+    __ctype_get_mb_cur_max;
+
+    # l*
+    localeconv;
+
+    # n*
+    nl_langinfo;
+
+    # s*
+    setlocale;
+  }
+  GLIBC_2.1 {
+    # functions from the experimental locale implementation
+    __newlocale; __duplocale; __freelocale;
+    __isalnum_l; __isalpha_l; __isascii_l; __isblank_l; __iscntrl_l;
+    __isdigit_l; __isgraph_l; __islower_l; __isprint_l; __ispunct_l;
+    __isspace_l; __isupper_l; __iswalnum_l; __iswalpha_l; __iswblank_l;
+    __iswcntrl_l; __iswctype_l; __iswdigit_l; __iswgraph_l; __iswlower_l;
+    __iswprint_l; __iswpunct_l; __iswspace_l; __iswupper_l; __iswxdigit_l;
+    __isxdigit_l; __strcasecmp_l; __strcoll_l; __strfmon_l; __strncasecmp_l;
+    __strtod_l; __strtof_l; __strtol_l; __strtold_l; __strtoll_l; __strtoul_l;
+    __strtoull_l; __strxfrm_l; __toascii_l; __tolower_l; __toupper_l;
+    __towctrans_l; __towlower_l; __towupper_l; __wcscasecmp_l; __wcscoll_l;
+    __wcsncasecmp_l; __wcstod_l; __wcstof_l; __wcstol_l; __wcstold_l;
+    __wcstoll_l; __wcstoul_l; __wcstoull_l; __wcsxfrm_l; __wctype_l;
+  }
+  GLIBC_2.2 {
+    # The data structure changed.
+    localeconv;
+
+    # more functions from the experimental locale implementation
+    __wctrans_l;
+
+    # missing function from the experimental locale implementation
+    __nl_langinfo_l;
+  }
+  GLIBC_2.3 {
+    # the new "experimental" interface is now public
+    newlocale; duplocale; freelocale; uselocale;
+
+    # this name is used by libstdc++ as well as libpthread
+    __uselocale;
+
+    isalnum_l; isalpha_l; isascii_l; isblank_l; iscntrl_l;
+    isdigit_l; isgraph_l; islower_l; isprint_l; ispunct_l;
+    isspace_l; isupper_l; iswalnum_l; iswalpha_l; iswblank_l;
+    iswcntrl_l; iswctype_l; iswdigit_l; iswgraph_l; iswlower_l;
+    iswprint_l; iswpunct_l; iswspace_l; iswupper_l; iswxdigit_l;
+    isxdigit_l; strcasecmp_l; strcoll_l; strfmon_l; strncasecmp_l;
+    strtod_l; strtof_l; strtol_l; strtold_l; strtoul_l;
+    strxfrm_l; toascii_l; tolower_l; toupper_l;
+    towctrans_l; towlower_l; towupper_l; wcscasecmp_l; wcscoll_l;
+    wcsncasecmp_l; wcstod_l; wcstof_l; wcstol_l; wcstold_l;
+    wcstoll_l; wcstoul_l; wcstoull_l; wcsxfrm_l; wctype_l;
+    wctrans_l; nl_langinfo_l;
+  }
+  GLIBC_PRIVATE {
+    # global variables
+    __collate_element_hash; __collate_element_strings;
+    __collate_symbol_classes; __collate_symbol_hash; __collate_symbol_strings;
+  }
+}

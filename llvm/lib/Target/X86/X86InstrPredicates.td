@@ -211,6 +211,7 @@ def KernelCode   : Predicate<"TM.getCodeModel() == CodeModel::Kernel">;
 def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
                              "TM.getCodeModel() == CodeModel::Kernel">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
+def ShouldCombineMovss : Predicate<"TM.Options.EnableMovssCombine">;
 
 // We could compute these on a per-module basis but doing so requires accessing
 // the Function object through the <Target>Subtarget and objections were raised

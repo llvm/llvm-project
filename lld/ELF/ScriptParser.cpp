@@ -503,13 +503,18 @@ void ScriptParser::readOutputFormat() {
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
-  std::tie(config->ekind, config->emachine) = parseBfdName(s);
-  if (config->emachine == EM_NONE)
-    setError("unknown output format name: " + config->bfdname);
-  if (s == "elf32-ntradlittlemips" || s == "elf32-ntradbigmips")
-    config->mipsN32Abi = true;
-  if (config->emachine == EM_MSP430)
-    config->osabi = ELFOSABI_STANDALONE;
+  // NextSilicon patch: skip setting config if this looks like a host linker
+  // script. Not adding indentation to avoid rebase complications.
+  if (std::make_pair(config->ehostKind, config->ehostMachine) !=
+      parseBfdName(s)) {
+    std::tie(config->ekind, config->emachine) = parseBfdName(s);
+    if (config->emachine == EM_NONE)
+      setError("unknown output format name: " + config->bfdname);
+    if (s == "elf32-ntradlittlemips" || s == "elf32-ntradbigmips")
+      config->mipsN32Abi = true;
+    if (config->emachine == EM_MSP430)
+      config->osabi = ELFOSABI_STANDALONE;
+  }
 }
 
 void ScriptParser::readPhdrs() {

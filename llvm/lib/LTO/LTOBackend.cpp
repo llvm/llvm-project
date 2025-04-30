@@ -15,8 +15,13 @@
 
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -42,9 +47,21 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
+#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
+#include "llvm/Transforms/Utils/LowerSwitch.h"
+#include "llvm/Transforms/Utils/NextSiliconHostAtomicFixup.h"
+#include "llvm/Transforms/Utils/NextSiliconIRBuiltins.h"
+#include "llvm/Transforms/Utils/NextSiliconIRFixup.h"
+#include "llvm/Transforms/Utils/NextSiliconImportRecursion.h"
+#include "llvm/Transforms/Utils/NextSiliconRelocateVariadic.h"
+#include "llvm/Transforms/Utils/NextSiliconSplitCallSites.h"
+#include "llvm/Transforms/Utils/NextSiliconWarnUnsupportedOMP.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include "llvm/Transforms/Utils/SymbolTracker.h"
 #include <optional>
 
 using namespace llvm;
@@ -332,6 +349,34 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     MPM.addPass(PB.buildLTODefaultPipeline(OL, ExportSummary));
   }
 
+  /* Must add loop simplify pass to allow counter promotion */
+  if (Conf.NextInstrumentation) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(LowerSwitchPass()));
+    MPM.addPass(createModuleToFunctionPassAdaptor(LoopSimplifyPass()));
+  }
+
+  if (Conf.NextSiliconImportRecursion)
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(NextSiliconImportRecursionPass()));
+
+  if (Conf.NextSiliconWarnUnsupportedOMP)
+    MPM.addPass(NextSiliconWarnUnsupportedOMPPass());
+
+  if (Conf.NextSiliconRelocateVariadic)
+    MPM.addPass(NextSiliconRelocateVariadicPass());
+
+  if (Conf.NextSiliconIRBuiltins)
+    MPM.addPass(NextSiliconIRBuiltinsPass());
+
+  if (Conf.NextSiliconIRFixup)
+    MPM.addPass(NextSiliconIRFixupPass());
+
+  if (Conf.NextSiliconSplitCallSites)
+    MPM.addPass(NextSiliconSplitCallSitesPass());
+
+  if (Conf.EmbedSymbolTrackers)
+    MPM.addPass(EmbedSymbolTrackersPass());
+
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
@@ -365,6 +410,68 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
+static void AddNextInstrumentation(Module &Mod, const Config &Conf) {
+  if (!Conf.NextInstrumentation)
+    return;
+
+  ModulePassManager MPM;
+  FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
+
+  /* Required function analysis passes */
+  FAM.registerPass([&] { return BlockFrequencyAnalysis(); });
+  FAM.registerPass([&] { return BranchProbabilityAnalysis(); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+  FAM.registerPass([&] { return LoopAnalysis(); });
+  FAM.registerPass([&] { return DominatorTreeAnalysis(); });
+  FAM.registerPass([&] { return PostDominatorTreeAnalysis(); });
+  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([&] { return ScalarEvolutionAnalysis(); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+
+  /* Required module analysis passes */
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+
+  /* Combine all together */
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+
+  InstrProfOptions Options;
+  Options.DoCounterPromotion = Conf.NextDoPGOCounterPromotion;
+  MPM.addPass(PGOInstrumentationGen());
+  MPM.addPass(InstrProfilingLoweringPass(Options));
+
+  MPM.run(Mod, MAM);
+}
+
+static void AddNextSiliconHostAtomicFixup(Module &Mod, const Config &Conf,
+                                          TargetMachine *TM) {
+
+  if (!Conf.NextSiliconAtomicFixup)
+    return;
+
+  ModulePassManager MPM;
+  PassBuilder PB(TM);
+
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  // Register all the basic analyses with the managers.
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  /* Required module analysis passes */
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+
+  MPM.addPass(NextSiliconHostAtomicFixupPass());
+  MPM.run(Mod, MAM);
+}
+
 static void codegen(const Config &Conf, TargetMachine *TM,
                     AddStreamFn AddStream, unsigned Task, Module &Mod,
                     const ModuleSummaryIndex &CombinedIndex) {
@@ -376,6 +483,9 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                                /*EmbedBitcode*/ true,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
+
+  AddNextInstrumentation(Mod, Conf);
+  AddNextSiliconHostAtomicFixup(Mod, Conf, TM);
 
   std::unique_ptr<ToolOutputFile> DwoOut;
   SmallString<1024> DwoFile(Conf.SplitDwarfOutput);
@@ -531,7 +641,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
-  std::vector<GlobalValue*> DeadGVs;
+  std::vector<GlobalValue *> DeadGVs;
   for (auto &GV : Mod.global_values())
     if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
       if (!Index.isGlobalValueLive(GVS)) {

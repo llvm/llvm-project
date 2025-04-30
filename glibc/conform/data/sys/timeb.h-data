@@ -1,0 +1,14 @@
+#if !defined ISO && !defined ISO99 && !defined ISO11 && !defined POSIX && !defined XPG4 && !defined POSIX2008 && !defined XOPEN2K8
+type {struct timeb}
+
+element {struct timeb} time_t time
+element {struct timeb} {unsigned short} millitm
+element {struct timeb} short timezone
+element {struct timeb} short dstflag
+
+type time_t
+
+function int ftime (struct timeb*)
+
+allow *_t
+#endif

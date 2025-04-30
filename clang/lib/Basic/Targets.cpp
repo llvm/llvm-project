@@ -29,6 +29,7 @@
 #include "Targets/MSP430.h"
 #include "Targets/Mips.h"
 #include "Targets/NVPTX.h"
+#include "Targets/Next32.h"
 #include "Targets/OSTargets.h"
 #include "Targets/PNaCl.h"
 #include "Targets/PPC.h"
@@ -342,6 +343,14 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<NetBSDTargetInfo<M68kTargetInfo>>(Triple, Opts);
     default:
       return std::make_unique<M68kTargetInfo>(Triple, Opts);
+    }
+
+  case llvm::Triple::next32:
+    switch (os) {
+    case llvm::Triple::Linux:
+      return std::make_unique<LinuxTargetInfo<Next32TargetInfo>>(Triple, Opts);
+    default:
+      return std::make_unique<Next32TargetInfo>(Triple, Opts);
     }
 
   case llvm::Triple::le32:

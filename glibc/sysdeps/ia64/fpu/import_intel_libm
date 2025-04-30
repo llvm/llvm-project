@@ -1,0 +1,106 @@
+#!/bin/sh
+
+# Notes:
+
+#  We don't import copysign finite, fpclassify, isinf, isnan, and signbit
+#  since our own versions are nicer and just as correct and fast (except
+#  perhaps that they don't handle non-finite arguments well?).
+#
+#  Also, leave out cabs for now since it doesn't seem overridable in
+#  glibc.
+
+libm_dir=$1
+
+import_s() {
+	# $1 = name
+	# $2 = source file-name
+	# $3 = destination file-name
+	echo "Importing $1 from $2 -> $3"
+	rm -f $3
+	awk -f import_file.awk FUNC=$1 $2 > $3
+}
+
+import_c() {
+	# $1 = name
+	# $2 = source file-name
+	# $3 = destination file-name
+	echo "Importing $1 from $2 -> $3"
+	rm -f $3
+	awk -f import_file.awk LICENSE_ONLY=y $2 > $3
+}
+
+do_imports() {
+    while read func_pattern src_file dst_file; do
+        case $src_file in
+	*.[ch])
+	    import_c "$func_pattern" "$src_file" "$dst_file"
+	    ;;
+	*)
+	    import_s "$func_pattern" "$src_file" "$dst_file"
+	    ;;
+	esac
+    done
+}
+
+./gen_import_file_list $libm_dir > import_file_list
+
+do_imports < import_file_list
+
+emptyfiles="
+e_gamma_r.c
+e_gammaf_r.c
+e_gammal_r.c
+s_sincos.c
+s_sincosf.c
+s_sincosl.c
+t_exp.c
+w_acosh.c
+w_acoshf.c
+w_acoshl.c
+w_atanh.c
+w_atanhf.c
+w_atanhl.c
+w_exp10.c
+w_exp10f.c
+w_exp10l.c
+w_exp2.c
+w_exp2f.c
+w_exp2l.c
+w_expl.c
+w_lgamma_r.c
+w_lgammaf_r.c
+w_lgammal_r.c
+w_log2.c
+w_log2f.c
+w_log2l.c
+w_sinh.c
+w_sinhf.c
+w_sinhl.c
+"
+for f in $emptyfiles
+do
+  rm -f $f
+  echo "/* Not needed. */" > $f
+done
+
+removedfiles="
+libm_atan2_reg.S
+s_ldexp.S
+s_ldexpf.S
+s_ldexpl.S
+s_scalbn.S
+s_scalbnf.S
+s_scalbnl.S
+"
+
+rm -f $removedfiles
+
+for f in lgammaf_r.c lgammal_r.c lgamma_r.c
+do
+  import_c $f $libm_dir/$f e_$f
+done
+
+for f in lgamma.c lgammaf.c lgammal.c
+do
+  import_c $f $libm_dir/$f w_$f
+done

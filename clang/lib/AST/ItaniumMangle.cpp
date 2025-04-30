@@ -2800,6 +2800,16 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
       case LangAS::ptr64:
         ASString = "ptr64";
         break;
+      //  <NEXT32-addrspace> ::= "NS" [ "tls" | "global" | "constant" ]
+      case LangAS::next32_tls:
+        ASString = "NStls";
+        break;
+      case LangAS::next32_global:
+        ASString = "NSglobal";
+        break;
+      case LangAS::next32_constant:
+        ASString = "NSconstant";
+        break;
       }
     }
     if (!ASString.empty())

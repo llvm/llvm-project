@@ -824,7 +824,7 @@ void TargetPassConfig::addIRPasses() {
     addPass(createBasicAAWrapperPass());
 
     // Run loop strength reduction before anything else.
-    if (!DisableLSR) {
+    if (!DisableLSR && !disableLSRPass()) {
       addPass(createCanonicalizeFreezeInLoopsPass());
       addPass(createLoopStrengthReducePass());
       if (PrintLSR)

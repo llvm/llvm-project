@@ -1,0 +1,12 @@
+#if defined ISO11
+type mbstate_t
+type size_t
+type char16_t
+type char32_t
+
+function size_t mbrtoc16 (char16_t *, const char *, size_t, mbstate_t *)
+function size_t c16rtomb (char *, char16_t, mbstate_t *)
+function size_t mbrtoc32 (char32_t *, const char *, size_t, mbstate_t *)
+function size_t c32rtomb (char *, char32_t, mbstate_t *)
+
+#endif

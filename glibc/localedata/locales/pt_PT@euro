@@ -1,0 +1,87 @@
+comment_char %
+escape_char /
+
+% This file is part of the GNU C Library and contains locale data.
+% The Free Software Foundation does not claim any copyright interest
+% in the locale data contained in this file.  The foregoing does not
+% affect the license of the GNU C Library as a whole.  It does not
+% exempt you from the conditions of the license if your use would
+% otherwise be governed by that license.
+
+% Portuguese Language Locale for Portugal with Euro
+% Language: pt
+% Territory: PT
+% Option: euro
+% Date: 2000-08-20
+% Users: general
+
+LC_IDENTIFICATION
+title      "Portuguese locale for Portugal with Euro"
+source     "Free Software Foundation, Inc."
+address    "https:////www.gnu.org//software//libc//"
+contact    ""
+email      "bug-glibc-locales@gnu.org"
+tel        ""
+fax        ""
+language   "Portuguese"
+territory  "Portugal"
+revision   "1.0"
+date       "2000-08-20"
+
+category "i18n:2012";LC_IDENTIFICATION
+category "i18n:2012";LC_CTYPE
+category "i18n:2012";LC_COLLATE
+category "i18n:2012";LC_TIME
+category "i18n:2012";LC_NUMERIC
+category "i18n:2012";LC_MONETARY
+category "i18n:2012";LC_MESSAGES
+category "i18n:2012";LC_PAPER
+category "i18n:2012";LC_NAME
+category "i18n:2012";LC_ADDRESS
+category "i18n:2012";LC_TELEPHONE
+category "i18n:2012";LC_MEASUREMENT
+END LC_IDENTIFICATION
+
+LC_COLLATE
+copy "iso14651_t1"
+END LC_COLLATE
+
+LC_MESSAGES
+copy "pt_PT"
+END LC_MESSAGES
+
+LC_MONETARY
+copy "pt_PT"
+END LC_MONETARY
+
+LC_CTYPE
+copy "pt_PT"
+END LC_CTYPE
+
+LC_NUMERIC
+copy "pt_PT"
+END LC_NUMERIC
+
+LC_TIME
+copy "pt_PT"
+END LC_TIME
+
+LC_PAPER
+copy "pt_PT"
+END LC_PAPER
+
+LC_TELEPHONE
+copy "pt_PT"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+copy "pt_PT"
+END LC_MEASUREMENT
+
+LC_NAME
+copy "pt_PT"
+END LC_NAME
+
+LC_ADDRESS
+copy "pt_PT"
+END LC_ADDRESS

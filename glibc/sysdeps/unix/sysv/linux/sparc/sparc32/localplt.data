@@ -1,0 +1,25 @@
+libc.so: _Q_add ?
+libc.so: _Q_cmp ?
+libc.so: _Q_div ?
+libc.so: _Q_feq ?
+libc.so: _Q_fge ?
+libc.so: _Q_fgt ?
+libc.so: _Q_fle ?
+libc.so: _Q_flt ?
+libc.so: _Q_fne ?
+libc.so: _Q_itoq ?
+libc.so: _Q_lltoq ?
+libc.so: _Q_mul ?
+libc.so: _Q_sub ?
+libc.so: _Q_qtod ?
+libc.so: _Unwind_Find_FDE
+libc.so: calloc
+libc.so: free
+libc.so: malloc
+libc.so: realloc
+libm.so: matherr
+# The TLS-enabled version of these functions is interposed from libc.so.
+ld.so: _dl_signal_error
+ld.so: _dl_catch_error
+ld.so: _dl_signal_exception
+ld.so: _dl_catch_exception

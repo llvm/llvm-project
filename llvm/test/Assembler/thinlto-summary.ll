@@ -45,6 +45,13 @@
 ; Alias summary with backwards reference to aliasee.
 ^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1), aliasee: ^14)))
 
+; Test Ifunc summaries with forward reference to resolver:
+^19 = gv: (guid: 18, summaries: (ifunc: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), resolver: ^20)))
+^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), insts: 1, refs: (^21))))
+^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), insts: 1)))
+; Test Ifunc summaries with backwards reference to resolver:
+^22 = gv: (guid: 21, summaries: (ifunc: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), resolver: ^20)))
+
 ; Test all types of TypeIdInfo on function summaries.
 ^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 4, typeIdInfo: (typeTests: (^25, ^27)))))
 ^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^28, offset: 16))))))

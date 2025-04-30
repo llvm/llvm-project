@@ -1,0 +1,20 @@
+- setuid/setgid must effect process
+  + test syscalls (getuid) afterwards
+  + test core file content
+
+  + use UID/GID in access(2), chmod(2), chown(2), link(2)
+
+- nice level is process property
+
+- rlimit should be process-wide and SIGXCPU should be sent if all threads
+  together exceed the limit
+
+- getrusage() must return resource utilization for the process
+
+
+
+The following are possible optimizations and in no way required:
+
+
+- the scheduler should be thread group-aware, i.e., it has to give time to
+  the thread group not proportional to the number of threads.

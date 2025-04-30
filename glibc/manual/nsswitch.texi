@@ -1,0 +1,16 @@
+# /etc/nsswitch.conf
+#
+# Name Service Switch configuration file.
+#
+
+passwd:     db files
+shadow:     files
+group:      db files
+
+hosts:      files dns
+networks:   files
+
+ethers:     db files
+protocols:  db files
+rpc:        db files
+services:   db files
