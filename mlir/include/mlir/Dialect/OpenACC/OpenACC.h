@@ -58,7 +58,8 @@
 #define ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::LoopOp
 #define ACC_DATA_CONSTRUCT_STRUCTURED_OPS                                      \
-  mlir::acc::DataOp, mlir::acc::DeclareOp, mlir::acc::HostDataOp
+  mlir::acc::DataOp, mlir::acc::DeclareOp, mlir::acc::HostDataOp,              \
+      mlir::acc::DeclareEnterOp
 #define ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS                                    \
   mlir::acc::EnterDataOp, mlir::acc::ExitDataOp, mlir::acc::UpdateOp,          \
       mlir::acc::DeclareEnterOp, mlir::acc::DeclareExitOp

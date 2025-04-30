@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -70,8 +71,38 @@ static void replaceAllUsesInAccComputeRegionsWith(Value orig, Value replacement,
   }
 }
 
+// Helper function to process declare enter/exit pairs
+static void processDeclareEnterExit(
+    acc::DeclareEnterOp op, llvm::SmallVector<std::pair<Value, Value>> &values,
+    DominanceInfo &domInfo, PostDominanceInfo &postDomInfo) {
+  // For declare enter/exit pairs, verify there is exactly one exit op using the
+  // token
+  if (!op.getToken().hasOneUse())
+    op.emitError("declare enter token must have exactly one use");
+  Operation *user = *op.getToken().getUsers().begin();
+  auto declareExit = dyn_cast<acc::DeclareExitOp>(user);
+  if (!declareExit)
+    op.emitError("declare enter token must be used by declare exit op");
+
+  for (auto p : values) {
+    Value hostVal = std::get<0>(p);
+    Value deviceVal = std::get<1>(p);
+    for (auto &use : llvm::make_early_inc_range(hostVal.getUses())) {
+      Operation *owner = use.getOwner();
+      if (!domInfo.dominates(op.getOperation(), owner) ||
+          !postDomInfo.postDominates(declareExit.getOperation(), owner))
+        continue;
+      if (insideAccComputeRegion(owner))
+        use.set(deviceVal);
+    }
+  }
+}
+
 template <typename Op>
-static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
+static void
+collectAndReplaceInRegion(Op &op, bool hostToDevice,
+                          DominanceInfo *domInfo = nullptr,
+                          PostDominanceInfo *postDomInfo = nullptr) {
   llvm::SmallVector<std::pair<Value, Value>> values;
 
   if constexpr (std::is_same_v<Op, acc::LoopOp>) {
@@ -82,16 +113,24 @@ static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
     if constexpr (!std::is_same_v<Op, acc::KernelsOp> &&
                   !std::is_same_v<Op, acc::DataOp> &&
                   !std::is_same_v<Op, acc::DeclareOp> &&
-                  !std::is_same_v<Op, acc::HostDataOp>) {
+                  !std::is_same_v<Op, acc::HostDataOp> &&
+                  !std::is_same_v<Op, acc::DeclareEnterOp>) {
       collectVars(op.getReductionOperands(), values, hostToDevice);
       collectVars(op.getPrivateOperands(), values, hostToDevice);
       collectVars(op.getFirstprivateOperands(), values, hostToDevice);
     }
   }
 
-  for (auto p : values)
-    replaceAllUsesInAccComputeRegionsWith<Op>(std::get<0>(p), std::get<1>(p),
-                                              op.getRegion());
+  if constexpr (std::is_same_v<Op, acc::DeclareEnterOp>) {
+    assert(domInfo && postDomInfo &&
+           "Dominance info required for DeclareEnterOp");
+    processDeclareEnterExit(op, values, *domInfo, *postDomInfo);
+  } else {
+    for (auto p : values) {
+      replaceAllUsesInAccComputeRegionsWith<Op>(std::get<0>(p), std::get<1>(p),
+                                                op.getRegion());
+    }
+  }
 }
 
 class LegalizeDataValuesInRegion
@@ -104,6 +143,10 @@ public:
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     bool replaceHostVsDevice = this->hostToDevice.getValue();
+
+    // Get dominance info for the function
+    DominanceInfo domInfo(funcOp);
+    PostDominanceInfo postDomInfo(funcOp);
 
     funcOp.walk([&](Operation *op) {
       if (!isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(*op) &&
@@ -125,6 +168,9 @@ public:
         collectAndReplaceInRegion(declareOp, replaceHostVsDevice);
       } else if (auto hostDataOp = dyn_cast<acc::HostDataOp>(*op)) {
         collectAndReplaceInRegion(hostDataOp, replaceHostVsDevice);
+      } else if (auto declareEnterOp = dyn_cast<acc::DeclareEnterOp>(*op)) {
+        collectAndReplaceInRegion(declareEnterOp, replaceHostVsDevice, &domInfo,
+                                  &postDomInfo);
       } else {
         llvm_unreachable("unsupported acc region op");
       }
