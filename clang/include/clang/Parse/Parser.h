@@ -64,6 +64,14 @@ enum class AnnotatedNameKind {
   Success
 };
 
+/// The kind of extra semi diagnostic to emit.
+enum class ExtraSemiKind {
+  OutsideFunction = 0,
+  InsideStruct = 1,
+  InstanceVariableList = 2,
+  AfterMemberFunctionDefinition = 3
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -1119,14 +1127,6 @@ private:
   /// or, if there's just some closing-delimiter noise (e.g., ')' or ']') prior
   /// to the semicolon, consumes that extra token.
   bool ExpectAndConsumeSemi(unsigned DiagID , StringRef TokenUsed = "");
-
-  /// The kind of extra semi diagnostic to emit.
-  enum ExtraSemiKind {
-    OutsideFunction = 0,
-    InsideStruct = 1,
-    InstanceVariableList = 2,
-    AfterMemberFunctionDefinition = 3
-  };
 
   /// Consume any extra semi-colons until the end of the line.
   void ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST T = TST_unspecified);
