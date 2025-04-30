@@ -111,7 +111,36 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
       llvm_unreachable("invalid token kind");
     }
   }
-  return ParsePrimaryExpression();
+  return ParsePostfixExpression();
+}
+
+// Parse a postfix_expression.
+//
+//  postfix_expression:
+//    primary_expression
+//    postfix_expression "[" expression "]"
+//
+ASTNodeUP DILParser::ParsePostfixExpression() {
+  ASTNodeUP lhs = ParsePrimaryExpression();
+  while (CurToken().Is(Token::l_square)) {
+    uint32_t loc = CurToken().GetLocation();
+    Token token = CurToken();
+    switch (token.GetKind()) {
+    case Token::l_square: {
+      m_dil_lexer.Advance();
+      auto rhs = ParseExpression();
+      Expect(Token::r_square);
+      m_dil_lexer.Advance();
+      lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
+                                                 std::move(rhs));
+      break;
+    }
+    default:
+      llvm_unreachable("invalid token");
+    }
+  }
+
+  return lhs;
 }
 
 // Parse a primary_expression.
@@ -121,6 +150,8 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
+  if (CurToken().Is(Token::numeric_constant))
+    return ParseNumericLiteral();
   if (CurToken().IsOneOf({Token::coloncolon, Token::identifier})) {
     // Save the source location for the diagnostics message.
     uint32_t loc = CurToken().GetLocation();
@@ -278,6 +309,52 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
       llvm::make_error<DILDiagnosticError>(m_input_expr, error, loc, err_len);
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
+}
+
+// Parse a numeric_literal.
+//
+//  numeric_literal:
+//    ? Token::numeric_constant ?
+//
+ASTNodeUP DILParser::ParseNumericLiteral() {
+  Expect(Token::numeric_constant);
+  ASTNodeUP numeric_constant = ParseNumericConstant();
+  if (numeric_constant->GetKind() == NodeKind::eErrorNode) {
+    BailOut(llvm::formatv("Failed to parse token as numeric-constant: {0}",
+                          CurToken()),
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+    return std::make_unique<ErrorNode>();
+  }
+  m_dil_lexer.Advance();
+  return numeric_constant;
+}
+
+static constexpr std::pair<const char *, lldb::BasicType> type_suffixes[] = {
+    {"ull", lldb::eBasicTypeUnsignedLongLong},
+    {"ul", lldb::eBasicTypeUnsignedLong},
+    {"u", lldb::eBasicTypeUnsignedInt},
+    {"ll", lldb::eBasicTypeLongLong},
+    {"l", lldb::eBasicTypeLong},
+};
+
+ASTNodeUP DILParser::ParseNumericConstant() {
+  Token token = CurToken();
+  auto spelling = token.GetSpelling();
+  llvm::StringRef spelling_ref = spelling;
+  lldb::BasicType type = lldb::eBasicTypeInt;
+  for (auto [suffix, t] : type_suffixes) {
+    if (spelling_ref.consume_back_insensitive(suffix)) {
+      type = t;
+      break;
+    }
+  }
+  llvm::APInt raw_value;
+  if (!spelling_ref.getAsInteger(0, raw_value)) {
+    Scalar scalar_value(raw_value);
+    return std::make_unique<ScalarLiteralNode>(token.GetLocation(), type,
+                                               scalar_value);
+  }
+  return std::make_unique<ErrorNode>();
 }
 
 void DILParser::Expect(Token::Kind kind) {
