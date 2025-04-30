@@ -434,13 +434,6 @@ public:
   Run(const protocol::ScopesArguments &args) const override;
 };
 
-class ScopesRequestHandler2 : public LegacyRequestHandler {
-public:
-  using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral GetCommand() { return "scopesr"; }
-  void operator()(const llvm::json::Object &request) const override;
-};
-
 class SetVariableRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
