@@ -557,6 +557,25 @@ define void @gep_static_idx(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @gep_no_wrap_flags
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @gep_no_wrap_flags(ptr %ptr) {
+  ; CHECK: %[[IDX:.+]] = llvm.mlir.constant(7 : i32)
+  ; CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %1 = getelementptr inbounds float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nusw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %2 = getelementptr nusw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %3 = getelementptr nuw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nusw|nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %4 = getelementptr nusw nuw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr inbounds|nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %5 = getelementptr inbounds nuw float, ptr %ptr, i32 7
+  ret void
+}
+
+; // -----
+
 ; CHECK: @varargs(...)
 declare void @varargs(...)
 
