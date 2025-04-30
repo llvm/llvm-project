@@ -104,6 +104,9 @@ enum class ObjCTypeQual {
 /// TypeCastState - State whether an expression is or may be a type cast.
 enum class TypeCastState { NotTypeCast = 0, MaybeTypeCast, IsTypeCast };
 
+/// Control what ParseCastExpression will parse.
+enum class CastParseKind { AnyCastExpr = 0, UnaryExprOnly, PrimaryExprOnly };
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -1888,14 +1891,7 @@ private:
 
   ExprResult ParseExpressionWithLeadingExtension(SourceLocation ExtLoc);
 
-  ExprResult ParseRHSOfBinaryExpression(ExprResult LHS,
-                                        prec::Level MinPrec);
-  /// Control what ParseCastExpression will parse.
-  enum CastParseKind {
-    AnyCastExpr = 0,
-    UnaryExprOnly,
-    PrimaryExprOnly
-  };
+  ExprResult ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec);
 
   bool isRevertibleTypeTrait(const IdentifierInfo *Id,
                              clang::tok::TokenKind *Kind = nullptr);
