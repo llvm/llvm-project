@@ -928,8 +928,7 @@ public:
       assert(ActiveVLocIt != ActiveVLocs.end());
 
       // Update all instances of Src in the variable's tracked values to Dst.
-      std::replace(ActiveVLocIt->second.Ops.begin(),
-                   ActiveVLocIt->second.Ops.end(), SrcOp, DstOp);
+      llvm::replace(ActiveVLocIt->second.Ops, SrcOp, DstOp);
 
       auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
       MachineInstr *MI = MTracker->emitLoc(ActiveVLocIt->second.Ops, Var, DILoc,
@@ -4218,9 +4217,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   }
 
   // Sort PHIs to validate into RPO-order.
-  SmallVector<LDVSSAPhi *, 8> SortedPHIs;
-  for (auto &PHI : CreatedPHIs)
-    SortedPHIs.push_back(PHI);
+  SmallVector<LDVSSAPhi *, 8> SortedPHIs(CreatedPHIs);
 
   llvm::sort(SortedPHIs, [&](LDVSSAPhi *A, LDVSSAPhi *B) {
     return BBToOrder[&A->getParent()->BB] < BBToOrder[&B->getParent()->BB];

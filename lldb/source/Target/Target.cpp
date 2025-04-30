@@ -1578,7 +1578,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
       info->is_start_entry = true;
     });
 
-    helper.DispatchOnExit([&](telemetry::ExecutableModuleInfo *info) {
+    helper.DispatchOnExit([&, pid](telemetry::ExecutableModuleInfo *info) {
       info->exec_mod = executable_sp;
       info->uuid = executable_sp->GetUUID();
       info->pid = pid;
@@ -2641,9 +2641,8 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
   }
 
   std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
-  scratch_type_systems.erase(
-      std::unique(scratch_type_systems.begin(), scratch_type_systems.end()),
-      scratch_type_systems.end());
+  scratch_type_systems.erase(llvm::unique(scratch_type_systems),
+                             scratch_type_systems.end());
   return scratch_type_systems;
 }
 
@@ -3094,7 +3093,6 @@ bool Target::RunStopHooks() {
 
   bool print_hook_header = (m_stop_hooks.size() != 1);
   bool print_thread_header = (num_exe_ctx != 1);
-  bool auto_continue = false;
   bool should_stop = false;
   bool requested_continue = false;
 
@@ -3107,10 +3105,6 @@ bool Target::RunStopHooks() {
     for (auto exc_ctx : exc_ctx_with_reasons) {
       if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
         continue;
-
-      // We only consult the auto-continue for a stop hook if it matched the
-      // specifier.
-      auto_continue |= cur_hook_sp->GetAutoContinue();
 
       if (print_hook_header && !any_thread_matched) {
         StreamString s;
@@ -3130,7 +3124,10 @@ bool Target::RunStopHooks() {
       auto result = cur_hook_sp->HandleStop(exc_ctx, output_sp);
       switch (result) {
       case StopHook::StopHookResult::KeepStopped:
-        should_stop = true;
+        if (cur_hook_sp->GetAutoContinue())
+          requested_continue = true;
+        else
+          should_stop = true;
         break;
       case StopHook::StopHookResult::RequestContinue:
         requested_continue = true;
@@ -3155,10 +3152,9 @@ bool Target::RunStopHooks() {
     }
   }
 
-  // Resume iff:
-  // 1) At least one hook requested to continue and no hook asked to stop, or
-  // 2) at least one hook had auto continue on.
-  if ((requested_continue && !should_stop) || auto_continue) {
+  // Resume iff at least one hook requested to continue and no hook asked to
+  // stop.
+  if (requested_continue && !should_stop) {
     Log *log = GetLog(LLDBLog::Process);
     Status error = m_process_sp->PrivateResume();
     if (error.Success()) {
@@ -4486,6 +4482,12 @@ llvm::StringRef TargetProperties::GetLaunchWorkingDirectory() const {
   const uint32_t idx = ePropertyLaunchWorkingDir;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_target_properties[idx].default_cstr_value);
+}
+
+bool TargetProperties::GetParallelModuleLoad() const {
+  const uint32_t idx = ePropertyParallelModuleLoad;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 const char *TargetProperties::GetDisassemblyFlavor() const {

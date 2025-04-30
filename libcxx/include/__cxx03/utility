@@ -257,36 +257,16 @@ template <class T>
 #include <__cxx03/__utility/swap.h>
 
 #if _LIBCPP_STD_VER >= 14
-#  include <__cxx03/__utility/exchange.h>
 #  include <__cxx03/__utility/integer_sequence.h>
 #endif
 
-#if _LIBCPP_STD_VER >= 17
-#  include <__cxx03/__utility/as_const.h>
-#  include <__cxx03/__utility/in_place.h>
-#endif
-
-#if _LIBCPP_STD_VER >= 20
-#  include <__cxx03/__utility/cmp.h>
-#endif
-
 #if _LIBCPP_STD_VER >= 23
-#  include <__cxx03/__utility/forward_like.h>
-#  include <__cxx03/__utility/to_underlying.h>
 #  include <__cxx03/__utility/unreachable.h>
 #endif
 
 #include <__cxx03/version>
 
 // standard-mandated includes
-
-// [utility.syn]
-#include <__cxx03/compare>
-#include <__cxx03/initializer_list>
-
-// [tuple.creation]
-
-#include <__cxx03/__tuple/ignore.h>
 
 // [tuple.helper]
 #include <__cxx03/__tuple/tuple_element.h>

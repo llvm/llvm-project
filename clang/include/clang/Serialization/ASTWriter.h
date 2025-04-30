@@ -75,6 +75,10 @@ class StoredDeclsList;
 class SwitchCase;
 class Token;
 
+namespace serialization {
+enum class DeclUpdateKind;
+} // namespace serialization
+
 namespace SrcMgr {
 class FileInfo;
 } // namespace SrcMgr
@@ -370,12 +374,11 @@ private:
   ///
   /// Only meaningful for standard C++ named modules. See the comments in
   /// createSignatureForNamedModule() for details.
-  llvm::DenseSet<Module *> TouchedTopLevelModules;
+  llvm::SetVector<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
-    /// A DeclUpdateKind.
-    unsigned Kind;
+    serialization::DeclUpdateKind Kind;
     union {
       const Decl *Dcl;
       void *Type;
@@ -386,18 +389,21 @@ private:
     };
 
   public:
-    DeclUpdate(unsigned Kind) : Kind(Kind), Dcl(nullptr) {}
-    DeclUpdate(unsigned Kind, const Decl *Dcl) : Kind(Kind), Dcl(Dcl) {}
-    DeclUpdate(unsigned Kind, QualType Type)
+    DeclUpdate(serialization::DeclUpdateKind Kind) : Kind(Kind), Dcl(nullptr) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, const Decl *Dcl)
+        : Kind(Kind), Dcl(Dcl) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, QualType Type)
         : Kind(Kind), Type(Type.getAsOpaquePtr()) {}
-    DeclUpdate(unsigned Kind, SourceLocation Loc)
+    DeclUpdate(serialization::DeclUpdateKind Kind, SourceLocation Loc)
         : Kind(Kind), Loc(Loc.getRawEncoding()) {}
-    DeclUpdate(unsigned Kind, unsigned Val) : Kind(Kind), Val(Val) {}
-    DeclUpdate(unsigned Kind, Module *M) : Kind(Kind), Mod(M) {}
-    DeclUpdate(unsigned Kind, const Attr *Attribute)
-          : Kind(Kind), Attribute(Attribute) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, unsigned Val)
+        : Kind(Kind), Val(Val) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, Module *M)
+        : Kind(Kind), Mod(M) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, const Attr *Attribute)
+        : Kind(Kind), Attribute(Attribute) {}
 
-    unsigned getKind() const { return Kind; }
+    serialization::DeclUpdateKind getKind() const { return Kind; }
     const Decl *getDecl() const { return Dcl; }
     QualType getType() const { return QualType::getFromOpaquePtr(Type); }
 

@@ -332,17 +332,10 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  for (const auto &[SC, Loc] : SC->getSuperClasses()) {
-    if (CurRec->isSubClassOf(SC))
-      return Error(SubClass.RefRange.Start,
-                   "Already subclass of '" + SC->getName() + "'!\n");
-    CurRec->addSuperClass(SC, Loc);
-  }
-
   if (CurRec->isSubClassOf(SC))
     return Error(SubClass.RefRange.Start,
                  "Already subclass of '" + SC->getName() + "'!\n");
-  CurRec->addSuperClass(SC, SubClass.RefRange);
+  CurRec->addDirectSuperClass(SC, SubClass.RefRange);
   return false;
 }
 
@@ -1453,6 +1446,49 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     }
 
     return (ExistsOpInit::get(Type, Expr))->Fold(CurRec);
+  }
+
+  case tgtok::XInstances: {
+    // Value ::= !instances '<' Type '>' '(' Regex? ')'
+    Lex.Lex(); // eat the operation.
+
+    const RecTy *Type = ParseOperatorType();
+    if (!Type)
+      return nullptr;
+
+    if (!consume(tgtok::l_paren)) {
+      TokError("expected '(' after type of !instances");
+      return nullptr;
+    }
+
+    // The Regex can be optional.
+    const Init *Regex;
+    if (Lex.getCode() != tgtok::r_paren) {
+      SMLoc RegexLoc = Lex.getLoc();
+      Regex = ParseValue(CurRec);
+
+      const auto *RegexType = dyn_cast<TypedInit>(Regex);
+      if (!RegexType) {
+        Error(RegexLoc, "expected string type argument in !instances operator");
+        return nullptr;
+      }
+
+      const auto *SType = dyn_cast<StringRecTy>(RegexType->getType());
+      if (!SType) {
+        Error(RegexLoc, "expected string type argument in !instances operator");
+        return nullptr;
+      }
+    } else {
+      // Use wildcard when Regex is not specified.
+      Regex = StringInit::get(Records, ".*");
+    }
+
+    if (!consume(tgtok::r_paren)) {
+      TokError("expected ')' in !instances");
+      return nullptr;
+    }
+
+    return InstancesOpInit::get(Type, Regex)->Fold(CurRec);
   }
 
   case tgtok::XConcat:
@@ -4013,7 +4049,7 @@ bool TGParser::ParseClass() {
   if (CurRec) {
     // If the body was previously defined, this is an error.
     if (!CurRec->getValues().empty() ||
-        !CurRec->getSuperClasses().empty() ||
+        !CurRec->getDirectSuperClasses().empty() ||
         !CurRec->getTemplateArgs().empty())
       return TokError("Class '" + CurRec->getNameInitAsString() +
                       "' already defined");

@@ -12,6 +12,7 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include <cerrno>
 #include <cstdlib>
 #include <limits>
 
@@ -19,6 +20,7 @@
 #include "flang/Common/windows-include.h"
 #include <direct.h>
 #define getcwd _getcwd
+#define unlink _unlink
 #define PATH_MAX MAX_PATH
 
 #ifdef _MSC_VER
@@ -27,7 +29,7 @@
 inline pid_t getpid() { return GetCurrentProcessId(); }
 #endif
 #else
-#include <unistd.h> //getpid()
+#include <unistd.h> //getpid() unlink()
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -302,6 +304,71 @@ std::int32_t RTNAME(Hostnm)(
 
     // Note: if the result string is too short, then we'll return partial
     // host name with "too short" error status.
+  }
+
+  return status;
+}
+
+std::int32_t RTNAME(PutEnv)(
+    const char *str, size_t str_length, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  RUNTIME_CHECK(terminator, str && str_length);
+
+  // Note: don't trim the input string, because the user should be able
+  // to set the value to all spaces if necessary.
+
+  // While Fortran's putenv() extended intrinsic sementics loosly follow
+  // Linux C library putenv(), don't actually use putenv() on Linux, because
+  // it takes the passed string pointer and incorporates it into the
+  // environment without copy. To make this safe, one would have to copy
+  // the passed string into some allocated memory, but then there's no good
+  // way to deallocate it. Instead, use the implementation from
+  // ExecutionEnvironment, which does the right thing for both Windows and
+  // Linux.
+
+  std::int32_t status{0};
+
+  // Split the input string into name and value substrings. Note:
+  // if input string is in "name=value" form, then we set variable "name" with
+  // value "value". If the input string is in "name=" form, then we delete
+  // the variable "name".
+
+  const char *str_end = str + str_length;
+  const char *str_sep = std::find(str, str_end, '=');
+  if (str_sep == str_end) {
+    // No separator, invalid input string
+    status = EINVAL;
+  } else if ((str_sep + 1) == str_end) {
+    // "name=" form, which means we need to delete this variable
+    status = executionEnvironment.UnsetEnv(str, str_sep - str, terminator);
+  } else {
+    // Example: consider str "abc=defg", str_length = 8
+    //
+    // addr:     05 06 07 08 09 10 11 12 13
+    // str@addr:  a  b  c  =  d  e  f  g ??
+    //
+    // str = 5, str_end = 13, str_sep = 8, name length: str_sep - str = 3
+    // value ptr: str_sep + 1 = 9, value length: 4
+    //
+    status = executionEnvironment.SetEnv(
+        str, str_sep - str, str_sep + 1, str_end - str_sep - 1, terminator);
+  }
+
+  return status;
+}
+
+std::int32_t RTNAME(Unlink)(
+    const char *str, size_t strLength, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  auto pathLength = TrimTrailingSpaces(str, strLength);
+  auto path = SaveDefaultCharacter(str, pathLength, terminator);
+
+  std::int32_t status{0};
+
+  if (unlink(path.get()) != 0) {
+    status = errno;
   }
 
   return status;

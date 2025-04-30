@@ -12,7 +12,7 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
 #include "sanitizer_common.h"
 #include "sanitizer_stacktrace.h"
 
@@ -171,4 +171,4 @@ void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||
-        // SANITIZER_SOLARIS
+        // SANITIZER_SOLARIS || SANITIZER_HAIKU

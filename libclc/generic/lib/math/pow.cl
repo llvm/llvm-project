@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_pow.h>
 
-#include <math/clc_pow.h>
-
-#define __CLC_FUNC pow
-#define __CLC_BODY <clc_sw_binary.inc>
+#define FUNCTION pow
+#define __CLC_BODY <clc/shared/binary_def.inc>
 #include <clc/math/gentype.inc>

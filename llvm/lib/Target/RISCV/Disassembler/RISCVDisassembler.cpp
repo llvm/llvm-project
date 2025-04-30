@@ -197,6 +197,16 @@ DecodeGPRNoX0X2RegisterClass(MCInst &Inst, uint64_t RegNo, uint32_t Address,
   return DecodeGPRNoX0RegisterClass(Inst, RegNo, Address, Decoder);
 }
 
+static DecodeStatus DecodeGPRNoX31RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo == 31) {
+    return MCDisassembler::Fail;
+  }
+
+  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
 static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
@@ -437,15 +447,15 @@ static DecodeStatus decodeSImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
   return decodeSImmOperand<N>(Inst, Imm, Address, Decoder);
 }
 
-template <unsigned N>
-static DecodeStatus decodeSImmOperandAndLsl1(MCInst &Inst, uint32_t Imm,
+template <unsigned T, unsigned N>
+static DecodeStatus decodeSImmOperandAndLslN(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
                                              const MCDisassembler *Decoder) {
-  assert(isUInt<N>(Imm) && "Invalid immediate");
-  // Sign-extend the number in the bottom N bits of Imm after accounting for
-  // the fact that the N bit immediate is stored in N-1 bits (the LSB is
+  assert(isUInt<T - N + 1>(Imm) && "Invalid immediate");
+  // Sign-extend the number in the bottom T bits of Imm after accounting for
+  // the fact that the T bit immediate is stored in T-N bits (the LSB is
   // always zero)
-  Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm << 1)));
+  Inst.addOperand(MCOperand::createImm(SignExtend64<T>(Imm << N)));
   return MCDisassembler::Success;
 }
 
@@ -453,9 +463,9 @@ static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint32_t Imm,
                                          int64_t Address,
                                          const MCDisassembler *Decoder) {
   assert(isUInt<6>(Imm) && "Invalid immediate");
-  if (Imm > 31) {
-    Imm = (SignExtend64<6>(Imm) & 0xfffff);
-  }
+  if (Imm == 0)
+    return MCDisassembler::Fail;
+  Imm = SignExtend64<6>(Imm) & 0xfffff;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -484,13 +494,18 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
 
-static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
+static DecodeStatus decodeRVCInstrRdSImm6(MCInst &Inst, uint32_t Insn,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder);
 
-static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, uint32_t Insn,
+static DecodeStatus decodeRVCInstrRdCLUIImm(MCInst &Inst, uint32_t Insn,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder);
+
+static DecodeStatus
+decodeRVCInstrRdRs1UImmLog2XLenNonZero(MCInst &Inst, uint32_t Insn,
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder);
 
 static DecodeStatus decodeRVCInstrRdRs2(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
@@ -505,13 +520,12 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
                                         const MCDisassembler *Decoder);
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder);
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder);
 
-static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-
-static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder);
+static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder);
 
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
@@ -522,13 +536,13 @@ static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
-  [[maybe_unused]] DecodeStatus Result =
-      DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder);
-  assert(Result == MCDisassembler::Success && "Invalid register");
+  if (!Check(S, DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
   Inst.addOperand(Inst.getOperand(0));
   Inst.addOperand(MCOperand::createImm(0));
-  return MCDisassembler::Success;
+  return S;
 }
 
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
@@ -541,62 +555,80 @@ static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder) {
+static DecodeStatus decodeRVCInstrRdSImm6(MCInst &Inst, uint32_t Insn,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(RISCV::X0));
-  uint32_t SImm6 =
+  uint32_t Imm =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
   [[maybe_unused]] DecodeStatus Result =
-      decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
+      decodeSImmOperand<6>(Inst, Imm, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, uint32_t Insn,
+static DecodeStatus decodeRVCInstrRdCLUIImm(MCInst &Inst, uint32_t Insn,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(RISCV::X0));
+  uint32_t Imm =
+      fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
+  return decodeCLUIImmOperand(Inst, Imm, Address, Decoder);
+}
+
+static DecodeStatus
+decodeRVCInstrRdRs1UImmLog2XLenNonZero(MCInst &Inst, uint32_t Insn,
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(RISCV::X0));
   Inst.addOperand(Inst.getOperand(0));
+
   uint32_t UImm6 =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
-  [[maybe_unused]] DecodeStatus Result =
-      decodeUImmOperand<6>(Inst, UImm6, Address, Decoder);
-  assert(Result == MCDisassembler::Success && "Invalid immediate");
-  return MCDisassembler::Success;
+  return decodeUImmLog2XLenNonZeroOperand(Inst, UImm6, Address, Decoder);
 }
 
 static DecodeStatus decodeRVCInstrRdRs2(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
   uint32_t Rs2 = fieldFromInstruction(Insn, 2, 5);
-  DecodeGPRRegisterClass(Inst, Rd, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
-  return MCDisassembler::Success;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  return S;
 }
 
 static DecodeStatus decodeRVCInstrRdRs1Rs2(MCInst &Inst, uint32_t Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
   uint32_t Rs2 = fieldFromInstruction(Insn, 2, 5);
-  DecodeGPRRegisterClass(Inst, Rd, Address, Decoder);
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
   Inst.addOperand(Inst.getOperand(0));
-  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
-  return MCDisassembler::Success;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  return S;
 }
 
 static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd1 = fieldFromInstruction(Insn, 7, 5);
   uint32_t Rs1 = fieldFromInstruction(Insn, 15, 5);
   uint32_t Rd2 = fieldFromInstruction(Insn, 20, 5);
   uint32_t UImm2 = fieldFromInstruction(Insn, 25, 2);
-  DecodeGPRRegisterClass(Inst, Rd1, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rd2, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd1, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder)))
+    return MCDisassembler::Fail;
   [[maybe_unused]] DecodeStatus Result =
       decodeUImmOperand<2>(Inst, UImm2, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
@@ -610,30 +642,25 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
   else
     Inst.addOperand(MCOperand::createImm(4));
 
-  return MCDisassembler::Success;
+  return S;
 }
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder) {
-  if (Imm <= 3)
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder) {
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (Imm < RISCVZC::RA || (IsRVE && Imm >= RISCVZC::RA_S0_S2))
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder) {
-  uint32_t Rs1 = fieldFromInstruction(Insn, 0, 5);
-  uint32_t Rs2 = fieldFromInstruction(Insn, 5, 5);
-  DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder) {
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
+static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder) {
+  if (Imm < RISCVZC::RA_S0)
+    return MCDisassembler::Fail;
+  return decodeZcmpRlist(Inst, Imm, Address, Decoder);
 }
 
 // Add implied SP operand for C.*SP compressed instructions. The SP operand
@@ -672,15 +699,15 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 };
 
 static constexpr FeatureBitset XqciFeatureGroup = {
-    RISCV::FeatureVendorXqcia,    RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcibi,   RISCV::FeatureVendorXqcibm,
-    RISCV::FeatureVendorXqcicli,  RISCV::FeatureVendorXqcicm,
-    RISCV::FeatureVendorXqcics,   RISCV::FeatureVendorXqcicsr,
-    RISCV::FeatureVendorXqciint,  RISCV::FeatureVendorXqcilb,
-    RISCV::FeatureVendorXqcili,   RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,   RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisim,  RISCV::FeatureVendorXqcisls,
-    RISCV::FeatureVendorXqcisync,
+    RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
+    RISCV::FeatureVendorXqcibi,  RISCV::FeatureVendorXqcibm,
+    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqciio,
+    RISCV::FeatureVendorXqcilb,  RISCV::FeatureVendorXqcili,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisim,
+    RISCV::FeatureVendorXqcisls, RISCV::FeatureVendorXqcisync,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
@@ -700,6 +727,8 @@ static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadMemPair, RISCV::FeatureVendorXTHeadSync,
     RISCV::FeatureVendorXTHeadVdot};
 
+static constexpr FeatureBitset XAndesGroup = {RISCV::FeatureVendorXAndesPerf};
+
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXVentana32,
@@ -710,9 +739,10 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
     {DecoderTableXSfcease32, {RISCV::FeatureVendorXSfcease}, "SiFive sf.cease"},
     {DecoderTableXmipslsp32, {RISCV::FeatureVendorXMIPSLSP}, "MIPS mips.lsp"},
-    {DecoderTableXmipscmove32,
-     {RISCV::FeatureVendorXMIPSCMove},
+    {DecoderTableXmipscmov32,
+     {RISCV::FeatureVendorXMIPSCMov},
      "MIPS mips.ccmov"},
+    {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     // Standard Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
@@ -785,7 +815,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
     if (Result == MCDisassembler::Fail)
@@ -821,7 +851,7 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
     if (Result == MCDisassembler::Fail)

@@ -17,30 +17,12 @@
 #include <clc/math/tables.h>
 #include <clc/shared/clc_max.h>
 
-#define bytealign(src0, src1, src2)                                            \
-  ((uint)(((((long)(src0)) << 32) | (long)(src1)) >> (((src2) & 3) * 8)))
-
-_CLC_DEF float __clc_tanf_piby4(float x, int regn) {
-  // Core Remez [1,2] approximation to tan(x) on the interval [0,pi/4].
-  float r = x * x;
-
-  float a =
-      __clc_mad(r, -0.0172032480471481694693109f, 0.385296071263995406715129f);
-
-  float b = __clc_mad(
-      r,
-      __clc_mad(r, 0.01844239256901656082986661f, -0.51396505478854532132342f),
-      1.15588821434688393452299f);
-
-  float t = __clc_mad(x * r, native_divide(a, b), x);
-  float tr = -MATH_RECIP(t);
-
-  return regn & 1 ? tr : t;
-}
-
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
+#define bytealign(src0, src1, src2)                                            \
+  ((uint)(((((long)(src0)) << 32) | (long)(src1)) >> (((src2) & 3) * 8)))
 
 // Reduction for medium sized arguments
 _CLC_DEF void __clc_remainder_piby2_medium(double x, private double *r,

@@ -9,8 +9,6 @@
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
-_CLC_DECL float __clc_tanf_piby4(float x, int y);
-
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable

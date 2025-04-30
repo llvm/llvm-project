@@ -150,7 +150,7 @@ public:
   mlir::Block *getAllocaBlock();
 
   /// Safely create a reference type to the type `eleTy`.
-  mlir::Type getRefType(mlir::Type eleTy);
+  mlir::Type getRefType(mlir::Type eleTy, bool isVolatile = false);
 
   /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
@@ -268,6 +268,40 @@ public:
                       mlir::ValueRange lenParams = {},
                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
+  /// Sample genDeclare callback for createArrayTemp() below.
+  /// It creates fir.declare operation using the given operands.
+  /// \p memref is the base of the allocated temporary,
+  /// which may be !fir.ref<!fir.array<>> or !fir.ref<!fir.box/class<>>.
+  static mlir::Value genTempDeclareOp(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Value memref,
+                                      llvm::StringRef name, mlir::Value shape,
+                                      llvm::ArrayRef<mlir::Value> typeParams,
+                                      fir::FortranVariableFlagsAttr attrs);
+
+  /// Create a temporary array with the given \p arrayType,
+  /// \p shape, \p extents and \p typeParams. An optional
+  /// \p polymorphicMold specifies the entity which dynamic type
+  /// has to be used for the allocation.
+  /// \p genDeclare callback generates a declare operation
+  /// for the created temporary. FIR passes may use genTempDeclareOp()
+  /// function above that creates fir.declare.
+  /// HLFIR passes may provide their own callback that generates
+  /// hlfir.declare. Some passes may provide a callback that
+  /// just passes through the base of the temporary.
+  /// If \p useStack is true, the function will try to do the allocation
+  /// in stack memory (which is not always possible currently).
+  /// The first return value is the base of the temporary object,
+  /// which may be !fir.ref<!fir.array<>> or !fir.ref<!fir.box/class<>>.
+  /// The second return value is true, if the actual allocation
+  /// was done in heap memory.
+  std::pair<mlir::Value, bool>
+  createArrayTemp(mlir::Location loc, fir::SequenceType arrayType,
+                  mlir::Value shape, llvm::ArrayRef<mlir::Value> extents,
+                  llvm::ArrayRef<mlir::Value> typeParams,
+                  const std::function<decltype(genTempDeclareOp)> &genDeclare,
+                  mlir::Value polymorphicMold, bool useStack = false,
+                  llvm::StringRef tmpName = ".tmp.array");
+
   /// Create an LLVM stack save intrinsic op. Returns the saved stack pointer.
   /// The stack address space is fetched from the data layout of the current
   /// module.
@@ -362,6 +396,15 @@ public:
   /// Lazy creation of fir.convert op.
   mlir::Value createConvert(mlir::Location loc, mlir::Type toTy,
                             mlir::Value val);
+
+  /// Create a fir.convert op with a volatile cast if the source value's type
+  /// does not match the target type's volatility.
+  mlir::Value createConvertWithVolatileCast(mlir::Location loc, mlir::Type toTy,
+                                            mlir::Value val);
+
+  /// Cast \p value to have \p isVolatile volatility.
+  mlir::Value createVolatileCast(mlir::Location loc, bool isVolatile,
+                                 mlir::Value value);
 
   /// Create a fir.store of \p val into \p addr. A lazy conversion
   /// of \p val to the element type of \p addr is created if needed.
@@ -594,6 +637,15 @@ public:
     if (resultType.isUnsignedInteger())
       result = createConvert(loc, resultType, result);
     return result;
+  }
+
+  /// Compare two pointer-like values using the given predicate.
+  mlir::Value genPtrCompare(mlir::Location loc,
+                            mlir::arith::CmpIPredicate predicate,
+                            mlir::Value ptr1, mlir::Value ptr2) {
+    ptr1 = createConvert(loc, getIndexType(), ptr1);
+    ptr2 = createConvert(loc, getIndexType(), ptr2);
+    return create<mlir::arith::CmpIOp>(loc, predicate, ptr1, ptr2);
   }
 
 private:
@@ -850,6 +902,17 @@ llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
 ///   %result1 = arith.select %p4, %c0, %e1 : index
 llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
+
+/// Given \p box of type fir::BaseBoxType representing an array,
+/// the function generates code to fetch the lower bounds,
+/// the extents and the strides from the box. The values are returned via
+/// \p lbounds, \p extents and \p strides.
+void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value box,
+                       llvm::SmallVectorImpl<mlir::Value> *lbounds,
+                       llvm::SmallVectorImpl<mlir::Value> *extents,
+                       llvm::SmallVectorImpl<mlir::Value> *strides);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

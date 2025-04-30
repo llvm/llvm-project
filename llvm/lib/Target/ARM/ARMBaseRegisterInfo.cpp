@@ -80,6 +80,25 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                        ? CSR_ATPCS_SplitPush_SwiftTail_SaveList
                                        : CSR_AAPCS_SwiftTail_SaveList);
   } else if (F.hasFnAttribute("interrupt")) {
+
+    // Don't save the floating point registers if target does not have floating
+    // point registers.
+    if (STI.hasFPRegs() && F.hasFnAttribute("save-fp")) {
+      bool HasNEON = STI.hasNEON();
+
+      if (STI.isMClass()) {
+        assert(!HasNEON && "NEON is only for Cortex-R/A");
+        return PushPopSplit == ARMSubtarget::SplitR7
+                   ? CSR_ATPCS_SplitPush_FP_SaveList
+                   : CSR_AAPCS_FP_SaveList;
+      }
+      if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
+        return HasNEON ? CSR_FIQ_FP_NEON_SaveList : CSR_FIQ_FP_SaveList;
+      }
+      return HasNEON ? CSR_GenericInt_FP_NEON_SaveList
+                     : CSR_GenericInt_FP_SaveList;
+    }
+
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.

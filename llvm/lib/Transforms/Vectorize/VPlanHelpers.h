@@ -202,7 +202,7 @@ public:
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
+  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
                    Loop *CurrentParentLoop, Type *CanonicalIVTy);
@@ -289,13 +289,6 @@ struct VPTransformState {
   /// inserted memchecks.  Use this for instructions that are *cloned* into the
   /// vector loop.
   void addNewMetadata(Instruction *To, const Instruction *Orig);
-
-  /// Add metadata from one instruction to another.
-  ///
-  /// This includes both the original MDs from \p From and additional ones (\see
-  /// addNewMetadata).  Use this for *newly created* instructions in the vector
-  /// loop.
-  void addMetadata(Value *To, Instruction *From);
 
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);

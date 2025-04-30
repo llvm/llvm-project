@@ -78,8 +78,7 @@ void IRInstructionData::initializeInstruction() {
   // We capture the incoming BasicBlocks as values as well as the incoming
   // Values in order to check for structural similarity.
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
-    for (BasicBlock *BB : PN->blocks())
-      OperVals.push_back(BB);
+    llvm::append_range(OperVals, PN->blocks());
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
@@ -1473,10 +1472,7 @@ INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
                 "ir-similarity-identifier", false, true)
 
 IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
-    : ModulePass(ID) {
-  initializeIRSimilarityIdentifierWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,

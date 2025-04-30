@@ -92,7 +92,7 @@ namespace test3 {
 
   template <class T> class Outer::A<T, typename T::nature> {
   public:
-    static void foo(); // expected-note {{'Outer::A<B, Green>::foo' declared here}}
+    static void foo(); // expected-note {{'Outer::A<test3::B, test3::Green>::foo' declared here}}
   };
 
   class B {
@@ -102,7 +102,7 @@ namespace test3 {
 
   void test() {
     Outer::A<B, Green>::foo();
-    Outer::A<B, Blue>::foo(); // expected-error {{no member named 'foo' in 'test3::Outer::A<test3::B, test3::Blue>'; did you mean 'Outer::A<B, Green>::foo'?}}
+    Outer::A<B, Blue>::foo(); // expected-error {{no member named 'foo' in 'test3::Outer::A<test3::B, test3::Blue>'; did you mean 'Outer::A<test3::B, test3::Green>::foo'?}}
   }
 }
 

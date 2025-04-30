@@ -187,7 +187,7 @@ entry:
 define <8 x i8> @ld1r_8b_int_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_8b_int_shuff'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %tmp = load i8, ptr %x, align 2
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %tmp1 = insertelement <8 x i8> undef, i8 %tmp, i8 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %tmp1 = insertelement <8 x i8> undef, i8 %tmp, i8 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lane = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %lane
 ;
@@ -201,7 +201,7 @@ entry:
 define <16 x i8> @ld1r_16b_int_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_16b_int_shuff'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %tmp = load i8, ptr %x, align 2
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %tmp1 = insertelement <16 x i8> undef, i8 %tmp, i8 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %tmp1 = insertelement <16 x i8> undef, i8 %tmp, i8 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lane = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %lane
 ;
@@ -215,7 +215,7 @@ entry:
 define <4 x i16> @ld1r_4h_int_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_4h_int_shuff'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %tmp = load i16, ptr %x, align 2
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %tmp1 = insertelement <4 x i16> undef, i16 %tmp, i16 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %tmp1 = insertelement <4 x i16> undef, i16 %tmp, i16 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lane = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %lane
 ;
@@ -229,7 +229,7 @@ entry:
 define <8 x i16> @ld1r_8h_int_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_8h_int_shuff'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %tmp = load i16, ptr %x, align 2
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %tmp1 = insertelement <8 x i16> undef, i16 %tmp, i16 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %tmp1 = insertelement <8 x i16> undef, i16 %tmp, i16 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lane = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %lane
 ;
@@ -243,7 +243,7 @@ entry:
 define <2 x i32> @ld1r_2s_int_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_2s_int_shuff'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %tmp = load i32, ptr %x, align 4
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %tmp1 = insertelement <2 x i32> undef, i32 %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %tmp1 = insertelement <2 x i32> undef, i32 %tmp, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lane = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i32> %lane
 ;
@@ -257,7 +257,7 @@ entry:
 define <4 x i32> @ld1r_4s_int_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_4s_int_shuff'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %tmp = load i32, ptr %x, align 4
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %tmp1 = insertelement <4 x i32> undef, i32 %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %tmp1 = insertelement <4 x i32> undef, i32 %tmp, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lane = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %lane
 ;
@@ -271,7 +271,7 @@ entry:
 define <2 x i64> @ld1r_2d_int_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_2d_int_shuff'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %tmp = load i64, ptr %x, align 8
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %tmp1 = insertelement <2 x i64> undef, i64 %tmp, i32 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %tmp1 = insertelement <2 x i64> undef, i64 %tmp, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lane = shufflevector <2 x i64> %tmp1, <2 x i64> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %lane
 ;

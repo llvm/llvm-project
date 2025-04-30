@@ -209,6 +209,10 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
    * - ``SPV_INTEL_fp_max_error``
      - Adds the ability to specify the maximum error for floating-point operations.
+   * - ``SPV_INTEL_ternary_bitwise_function``
+     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
+   * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
+     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
@@ -243,19 +247,20 @@ using target extension types and are represented as follows:
 
   .. table:: SPIR-V Opaque Types
 
-     ================== ====================== ===========================================================================================
-     SPIR-V Type        LLVM type name         LLVM type arguments
-     ================== ====================== ===========================================================================================
-     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
-     OpTypeSampler      ``spirv.Sampler``      (none)
-     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
-     OpTypeEvent        ``spirv.Event``        (none)
-     OpTypeDeviceEvent  ``spirv.DeviceEvent``  (none)
-     OpTypeReserveId    ``spirv.ReserveId``    (none)
-     OpTypeQueue        ``spirv.Queue``        (none)
-     OpTypePipe         ``spirv.Pipe``         access qualifier
-     OpTypePipeStorage  ``spirv.PipeStorage``  (none)
-     ================== ====================== ===========================================================================================
+     ================== ======================= ===========================================================================================
+     SPIR-V Type        LLVM type name          LLVM type arguments
+     ================== ======================= ===========================================================================================
+     OpTypeImage        ``spirv.Image``         sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
+     OpTypeSampler      ``spirv.Sampler``       (none)
+     OpTypeSampledImage ``spirv.SampledImage``  sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
+     OpTypeEvent        ``spirv.Event``         (none)
+     OpTypeDeviceEvent  ``spirv.DeviceEvent``   (none)
+     OpTypeReserveId    ``spirv.ReserveId``     (none)
+     OpTypeQueue        ``spirv.Queue``         (none)
+     OpTypePipe         ``spirv.Pipe``          access qualifier
+     OpTypePipeStorage  ``spirv.PipeStorage``   (none)
+     NA                 ``spirv.VulkanBuffer``  ElementType, StorageClass, IsWriteable
+     ================== ======================= ===========================================================================================
 
 All integer arguments take the same value as they do in their `corresponding
 SPIR-V instruction <https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_type_declaration_instructions>`_.
@@ -265,6 +270,9 @@ dimensionality parameter as ``1`` meaning 2D. Sampled image types include the
 parameters of its underlying image type, so that a sampled image for the
 previous type has the representation
 ``target("spirv.SampledImage, void, 1, 1, 0, 0, 0, 0, 0)``.
+
+See `wg-hlsl proposal 0018 <https://github.com/llvm/wg-hlsl/blob/main/proposals/0018-spirv-resource-representation.md>`_
+for details on ``spirv.VulkanBuffer``.
 
 .. _inline-spirv-types:
 

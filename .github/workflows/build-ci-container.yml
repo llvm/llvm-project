@@ -44,7 +44,7 @@ jobs:
         id: vars
         run: |
           tag=$(git rev-parse --short=12 HEAD)
-          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/${{ matrix.arch }}/ci-ubuntu-22.04"
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/${{ matrix.arch }}/ci-ubuntu-24.04"
           echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-agent=$container_name-agent" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT

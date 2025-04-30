@@ -13,7 +13,6 @@
 #include <__cxx03/__algorithm/comp_ref_type.h>
 #include <__cxx03/__algorithm/max_element.h>
 #include <__cxx03/__config>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

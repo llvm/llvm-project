@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
-
+#include "PerfTest.h"
 #include "src/math/fmodf.h"
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_PERF(float, float, LIBC_NAMESPACE::fmodf, ::fmodf,
-                             "fmodf_perf.log")
+int main() {
+  BINARY_INPUT_SINGLE_OUTPUT_PERF(float, float, LIBC_NAMESPACE::fmodf, ::fmodf,
+                                  "fmodf_perf.log")
+  return 0;
+}

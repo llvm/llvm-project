@@ -9,6 +9,7 @@
 #include <clc/clc.h>
 #include <clc/math/clc_rint.h>
 
-#undef __CLC_FUNCTION
-#define __CLC_FUNCTION rint
-#include <clc/math/unary_builtin.inc>
+#define FUNCTION rint
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
+#include <clc/math/gentype.inc>

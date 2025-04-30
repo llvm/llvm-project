@@ -612,26 +612,12 @@ public:
 
   /// Returns a range of all of the operands that correspond to a debug use of
   /// \p Reg.
-  template <typename Operand, typename Instruction>
-  static iterator_range<
-      filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
-  getDebugOperandsForReg(Instruction *MI, Register Reg) {
-    std::function<bool(Operand & Op)> OpUsesReg(
-        [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
-    return make_filter_range(MI->debug_operands(), OpUsesReg);
-  }
   iterator_range<filter_iterator<const MachineOperand *,
                                  std::function<bool(const MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) const {
-    return MachineInstr::getDebugOperandsForReg<const MachineOperand,
-                                                const MachineInstr>(this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg) const;
   iterator_range<filter_iterator<MachineOperand *,
                                  std::function<bool(MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) {
-    return MachineInstr::getDebugOperandsForReg<MachineOperand, MachineInstr>(
-        this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg);
 
   bool isDebugOperand(const MachineOperand *Op) const {
     return Op >= adl_begin(debug_operands()) && Op <= adl_end(debug_operands());
@@ -994,17 +980,8 @@ public:
 
   /// Return true if this is an indirect branch, such as a
   /// branch through a register.
-  bool isIndirectBranch(QueryType Type = AnyInBundle,
-                        bool IncludeJumpTable = true) const {
-    return hasProperty(MCID::IndirectBranch, Type) &&
-           (IncludeJumpTable || !llvm::any_of(operands(), [](const auto &Op) {
-              return Op.isJTI();
-            }));
-  }
-
-  bool isComputedGoto(QueryType Type = AnyInBundle) const {
-    // Jump tables are not considered computed gotos.
-    return isIndirectBranch(Type, /*IncludeJumpTable=*/false);
+  bool isIndirectBranch(QueryType Type = AnyInBundle) const {
+    return hasProperty(MCID::IndirectBranch, Type);
   }
 
   /// Return true if this is a branch which may fall

@@ -1438,10 +1438,10 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
   if (!patterns)
     return success();
 
-  GreedyRewriteConfig config;
-  config.listener = this;
-  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  return applyOpPatternsGreedily(ops, patterns.value(), config);
+  return applyOpPatternsGreedily(
+      ops, patterns.value(),
+      GreedyRewriteConfig().setListener(this).setStrictness(
+          GreedyRewriteStrictness::ExistingAndNewOps));
 }
 
 void SliceTrackingListener::notifyOperationInserted(
@@ -1542,8 +1542,7 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
 
   if (failed(tilingResult))
     return rewriter.notifyMatchFailure(consumer, "failed to tile consumer");
-  for (auto *tiledOp : tilingResult->tiledOps)
-    tiledAndFusedOps.insert(tiledOp);
+  tiledAndFusedOps.insert_range(tilingResult->tiledOps);
 
   DenseMap<Value, Value> replacements;
   for (auto [origVal, replacement] : llvm::zip_equal(
