@@ -1329,28 +1329,26 @@ namespace {
 
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       OS << "tempInst" << getUpperName() << ", "
-         << "A->" << getLowerName() << "_size()";
+         << "numTempInst" << getUpperName();
     }
 
     void writeTemplateInstantiation(raw_ostream &OS) const override {
-      OS << "      auto *tempInst" << getUpperName()
-         << " = new (C, 16) " << getType()
-         << "[A->" << getLowerName() << "_size()];\n";
+      OS << "      size_t numTempInst" << getUpperName() << ";\n";
+      OS << "      " << getType() << "*tempInst" << getUpperName() << ";\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
          << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
-      OS << "        " << getType() << " *TI = tempInst" << getUpperName()
-         << ";\n";
-      OS << "        " << getType() << " *I = A->" << getLowerName()
-         << "_begin();\n";
-      OS << "        " << getType() << " *E = A->" << getLowerName()
-         << "_end();\n";
-      OS << "        for (; I != E; ++I, ++TI) {\n";
-      OS << "          ExprResult Result = S.SubstExpr(*I, TemplateArgs);\n";
-      OS << "          if (Result.isInvalid())\n";
-      OS << "            return nullptr;\n";
-      OS << "          *TI = Result.get();\n";
-      OS << "        }\n";
+      OS << "        ArrayRef<" << getType() << "> ArgsToInstantiate(A->"
+         << getLowerName() << "_begin(), A->" << getLowerName() << "_end());\n";
+      OS << "        SmallVector<" << getType() << ", 4> InstArgs;\n";
+      OS << "        if (S.SubstExprs(ArgsToInstantiate, /*IsCall=*/false, "
+            "TemplateArgs, InstArgs))\n";
+      OS << "          return nullptr;\n";
+      OS << "        numTempInst" << getUpperName() << " = InstArgs.size();\n";
+      OS << "        tempInst" << getUpperName() << " = new (C, 16) "
+         << getType() << "[numTempInst" << getUpperName() << "];\n";
+      OS << "        std::copy(InstArgs.begin(), InstArgs.end(), tempInst"
+         << getUpperName() << ");\n";
       OS << "      }\n";
     }
 
