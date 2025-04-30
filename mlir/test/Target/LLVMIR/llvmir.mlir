@@ -2567,6 +2567,24 @@ llvm.func @convergent() attributes { convergent } {
 
 // -----
 
+// CHECK-LABEL: define void @function_entry_instrument_test()
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @function_entry_instrument_test() attributes {instrument_function_entry = "__cyg_profile_func_enter"}  {
+  llvm.return
+}
+// CHECK: attributes #[[ATTRS]] = { "instrument-function-entry"="__cyg_profile_func_enter" }
+
+// -----
+
+// CHECK-LABEL: define void @function_exit_instrument_test()
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @function_exit_instrument_test() attributes {instrument_function_exit = "__cyg_profile_func_exit"}  {
+  llvm.return
+}
+// CHECK: attributes #[[ATTRS]] = { "instrument-function-exit"="__cyg_profile_func_exit" }
+
+// -----
+
 // CHECK-LABEL: @nounwind
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @nounwind() attributes { no_unwind } {
