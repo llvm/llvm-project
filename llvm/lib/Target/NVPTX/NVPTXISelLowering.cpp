@@ -606,8 +606,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::v4i8, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::i32, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::i64, &NVPTX::Int64RegsRegClass);
-  addRegisterClass(MVT::f32, &NVPTX::Float32RegsRegClass);
-  addRegisterClass(MVT::f64, &NVPTX::Float64RegsRegClass);
+  addRegisterClass(MVT::f32, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::f64, &NVPTX::Int64RegsRegClass);
   addRegisterClass(MVT::f16, &NVPTX::Int16RegsRegClass);
   addRegisterClass(MVT::v2f16, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::bf16, &NVPTX::Int16RegsRegClass);
@@ -4992,13 +4992,14 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'b':
       return std::make_pair(0U, &NVPTX::Int1RegsRegClass);
     case 'c':
-      return std::make_pair(0U, &NVPTX::Int16RegsRegClass);
     case 'h':
       return std::make_pair(0U, &NVPTX::Int16RegsRegClass);
     case 'r':
+    case 'f':
       return std::make_pair(0U, &NVPTX::Int32RegsRegClass);
     case 'l':
     case 'N':
+    case 'd':
       return std::make_pair(0U, &NVPTX::Int64RegsRegClass);
     case 'q': {
       if (STI.getSmVersion() < 70)
@@ -5006,10 +5007,6 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                            "supported for sm_70 and higher!");
       return std::make_pair(0U, &NVPTX::Int128RegsRegClass);
     }
-    case 'f':
-      return std::make_pair(0U, &NVPTX::Float32RegsRegClass);
-    case 'd':
-      return std::make_pair(0U, &NVPTX::Float64RegsRegClass);
     }
   }
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);

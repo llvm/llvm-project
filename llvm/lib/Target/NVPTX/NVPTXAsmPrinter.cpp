@@ -223,10 +223,6 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
       Ret = (3 << 28);
     } else if (RC == &NVPTX::Int64RegsRegClass) {
       Ret = (4 << 28);
-    } else if (RC == &NVPTX::Float32RegsRegClass) {
-      Ret = (5 << 28);
-    } else if (RC == &NVPTX::Float64RegsRegClass) {
-      Ret = (6 << 28);
     } else if (RC == &NVPTX::Int128RegsRegClass) {
       Ret = (7 << 28);
     } else {
