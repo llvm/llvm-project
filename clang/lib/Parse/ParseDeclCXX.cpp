@@ -5314,10 +5314,11 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
 }
 
 void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
-  assert(Tok.is(tok::identifier) && "Not a Microsoft attribute list");
+  assert(Tok.is(tok::identifier) &&
+         "Expected an identifier to denote which MS attribute to consider");
   IdentifierInfo *RootSignatureIdent = Tok.getIdentifierInfo();
   assert(RootSignatureIdent->getName() == "RootSignature" &&
-         "Not a Microsoft attribute list");
+         "Expected RootSignature identifier for root signature attribute");
 
   SourceLocation RootSignatureLoc = Tok.getLocation();
   ConsumeToken();
