@@ -44,11 +44,23 @@ class StepScriptedTestCase(TestBase):
         stop_desc = thread.GetStopDescription(1000)
         self.assertIn("Stepping out from", stop_desc, "Got right description")
 
-    def test_step_single_instruction(self):
+    def run_until_branch_instruction(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "Break on foo call", self.main_source_file
+            self, "Break on branch instruction", self.main_source_file
         )
+
+        # Check that we landed in a call instruction
+        frame = thread.GetFrameAtIndex(0)
+        current_instruction = target.ReadInstructions(frame.GetPCAddress(), 1)[0]
+        self.assertEqual(
+            lldb.eInstructionControlFlowKindCall,
+            current_instruction.GetControlFlowKind(target),
+        )
+        return (target, process, thread, bkpt)
+
+    def test_step_single_instruction(self):
+        (target, process, thread, bkpt) = self.run_until_branch_instruction()
 
         err = thread.StepUsingScriptedThreadPlan("Steps.StepSingleInstruction")
         self.assertSuccess(err)
@@ -58,10 +70,11 @@ class StepScriptedTestCase(TestBase):
         self.assertEqual("foo", frame.GetFunctionName())
 
     def test_step_single_instruction_with_step_over(self):
-        self.build()
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "Break on foo call", self.main_source_file
-        )
+        (target, process, thread, bkpt) = self.run_until_branch_instruction()
+
+        frame = thread.GetFrameAtIndex(0)
+        next_instruction = target.ReadInstructions(frame.GetPCAddress(), 2)[1]
+        next_instruction_address = next_instruction.GetAddress()
 
         err = thread.StepUsingScriptedThreadPlan(
             "Steps.StepSingleInstructionWithStepOver"
@@ -71,6 +84,7 @@ class StepScriptedTestCase(TestBase):
         # Verify that stepping over an instruction doesn't step into `foo`
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("main", frame.GetFunctionName())
+        self.assertEqual(next_instruction_address, frame.GetPCAddress())
 
     def test_misspelled_plan_name(self):
         """Test that we get a useful error if we misspell the plan class name"""
