@@ -397,7 +397,7 @@ static json::Value extractValue(const RecordInfo &I,
 
   maybeInsertLocation(I.DefLoc, CDCtx, RecordValue);
 
-  StringRef BasePath = I.getRelativeFilePath("");
+  SmallString<64> BasePath = I.getRelativeFilePath("");
   extractScopeChildren(I.Children, RecordValue, BasePath, CDCtx);
   json::Value PublicMembers = Array();
   json::Array &PubMemberRef = *PublicMembers.getAsArray();
@@ -431,8 +431,28 @@ static json::Value extractValue(const RecordInfo &I,
 
 static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V,
                                 Info *I) {
-  return createStringError(inconvertibleErrorCode(),
-                           "setupTemplateValue is unimplemented");
+  V.getAsObject()->insert({"ProjectName", CDCtx.ProjectName});
+  json::Value StylesheetArr = Array();
+  auto InfoPath = I->getRelativeFilePath("");
+  SmallString<128> RelativePath = computeRelativePath("", InfoPath);
+  sys::path::native(RelativePath, sys::path::Style::posix);
+  for (const auto &FilePath : CDCtx.UserStylesheets) {
+    SmallString<128> StylesheetPath = RelativePath;
+    sys::path::append(StylesheetPath, sys::path::Style::posix,
+                      sys::path::filename(FilePath));
+    StylesheetArr.getAsArray()->emplace_back(StylesheetPath);
+  }
+  V.getAsObject()->insert({"Stylesheets", StylesheetArr});
+
+  json::Value ScriptArr = Array();
+  for (auto Script : CDCtx.JsScripts) {
+    SmallString<128> JsPath = RelativePath;
+    sys::path::append(JsPath, sys::path::Style::posix,
+                      sys::path::filename(Script));
+    ScriptArr.getAsArray()->emplace_back(JsPath);
+  }
+  V.getAsObject()->insert({"Scripts", ScriptArr});
+  return Error::success();
 }
 
 Error MustacheHTMLGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
@@ -443,6 +463,7 @@ Error MustacheHTMLGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
         extractValue(*static_cast<clang::doc::NamespaceInfo *>(I), CDCtx);
     if (auto Err = setupTemplateValue(CDCtx, V, I))
       return Err;
+    assert(NamespaceTemplate && "NamespaceTemplate is nullptr.");
     NamespaceTemplate->render(V, OS);
     break;
   }
