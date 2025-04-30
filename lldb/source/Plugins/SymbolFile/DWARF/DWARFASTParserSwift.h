@@ -49,9 +49,9 @@ public:
                          const DWARFDIE &die,
                          lldb_private::AddressRanges ranges) override;
 
-  bool
-  CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type *type,
-                        lldb_private::CompilerType &compiler_type) override {
+  bool CompleteTypeFromDWARF(
+      const DWARFDIE &die, lldb_private::Type *type,
+      const lldb_private::CompilerType &compiler_type) override {
     return false;
   }
 
