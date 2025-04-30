@@ -565,7 +565,6 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
                                                  bool buildingTopLevelCase) {
   cir::CaseOpKind kind;
   mlir::ArrayAttr value;
-  assert(!cir::MissingFeatures::foldCaseStmt());
   const CaseStmt *caseStmt = foldCaseStmt(s, condType, value, kind);
   return emitCaseDefaultCascade(caseStmt, condType, value, kind,
                                 buildingTopLevelCase);
