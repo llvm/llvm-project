@@ -607,23 +607,23 @@ Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement,
     return ConditionOrInitStatement::Expression;
 }
 
-  /// Determine whether the next set of tokens contains a type-id.
-  ///
-  /// The context parameter states what context we're parsing right
-  /// now, which affects how this routine copes with the token
-  /// following the type-id. If the context is TypeIdInParens, we have
-  /// already parsed the '(' and we will cease lookahead when we hit
-  /// the corresponding ')'. If the context is
-  /// TypeIdAsTemplateArgument, we've already parsed the '<' or ','
-  /// before this template argument, and will cease lookahead when we
-  /// hit a '>', '>>' (in C++0x), or ','; or, in C++0x, an ellipsis immediately
-  /// preceding such. Returns true for a type-id and false for an expression.
-  /// If during the disambiguation process a parsing error is encountered,
-  /// the function returns true to let the declaration parsing code handle it.
-  ///
-  /// type-id:
-  ///   type-specifier-seq abstract-declarator[opt]
-  ///
+/// Determine whether the next set of tokens contains a type-id.
+///
+/// The context parameter states what context we're parsing right
+/// now, which affects how this routine copes with the token
+/// following the type-id. If the context is
+/// TentativeCXXTypeIdContext::InParens, we have already parsed the '(' and we
+/// will cease lookahead when we hit the corresponding ')'. If the context is
+/// TentativeCXXTypeIdContext::AsTemplateArgument, we've already parsed the '<'
+/// or ',' before this template argument, and will cease lookahead when we hit a
+/// '>', '>>' (in C++0x), or ','; or, in C++0x, an ellipsis immediately
+/// preceding such. Returns true for a type-id and false for an expression.
+/// If during the disambiguation process a parsing error is encountered,
+/// the function returns true to let the declaration parsing code handle it.
+///
+/// type-id:
+///   type-specifier-seq abstract-declarator[opt]
+///
 bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 
   isAmbiguous = false;
@@ -665,20 +665,23 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
   if (TPR == TPResult::Ambiguous) {
     // We are supposed to be inside parens, so if after the abstract declarator
     // we encounter a ')' this is a type-id, otherwise it's an expression.
-    if (Context == TypeIdInParens && Tok.is(tok::r_paren)) {
+    if (Context == TentativeCXXTypeIdContext::InParens &&
+        Tok.is(tok::r_paren)) {
       TPR = TPResult::True;
       isAmbiguous = true;
     // We are supposed to be inside the first operand to a _Generic selection
     // expression, so if we find a comma after the declarator, we've found a
     // type and not an expression.
-    } else if (Context == TypeIdAsGenericSelectionArgument && Tok.is(tok::comma)) {
+    } else if (Context ==
+                   TentativeCXXTypeIdContext::AsGenericSelectionArgument &&
+               Tok.is(tok::comma)) {
       TPR = TPResult::True;
       isAmbiguous = true;
     // We are supposed to be inside a template argument, so if after
     // the abstract declarator we encounter a '>', '>>' (in C++0x), or
     // ','; or, in C++0x, an ellipsis immediately preceding such, this
     // is a type-id. Otherwise, it's an expression.
-    } else if (Context == TypeIdAsTemplateArgument &&
+    } else if (Context == TentativeCXXTypeIdContext::AsTemplateArgument &&
                (Tok.isOneOf(tok::greater, tok::comma) ||
                 (getLangOpts().CPlusPlus11 &&
                  (Tok.isOneOf(tok::greatergreater,
@@ -690,7 +693,7 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
       TPR = TPResult::True;
       isAmbiguous = true;
 
-    } else if (Context == TypeIdInTrailingReturnType) {
+    } else if (Context == TentativeCXXTypeIdContext::InTrailingReturnType) {
       TPR = TPResult::True;
       isAmbiguous = true;
     } else
@@ -2246,7 +2249,7 @@ Parser::TryParseFunctionDeclarator(bool MayHaveTrailingReturnType) {
     if (Tok.is(tok::identifier) && NameAfterArrowIsNonType()) {
       return TPResult::False;
     }
-    if (isCXXTypeId(TentativeCXXTypeIdContext::TypeIdInTrailingReturnType))
+    if (isCXXTypeId(TentativeCXXTypeIdContext::InTrailingReturnType))
       return TPResult::True;
   }
 
