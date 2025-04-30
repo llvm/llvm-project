@@ -249,6 +249,8 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
   return false;
 }
 
+// Return the corresponded deinterleaved mask, or nullptr if there is no valid
+// mask.
 static Value *getMask(Value *WideMask, unsigned Factor,
                       ElementCount LeafValueEC);
 
@@ -726,8 +728,6 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
   return true;
 }
 
-// Return the corresponded deinterleaved mask, or nullptr if there is no valid
-// mask.
 static Value *getMask(Value *WideMask, unsigned Factor,
                       ElementCount LeafValueEC) {
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
