@@ -360,24 +360,28 @@ def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 // Patterns
 
 let Predicates = [HasVendorXAndesPerf] in {
-class NDS_LEAPat<int shamt, RVInstR Inst>
-    : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, (XLenVT shamt))),
-          (Inst GPR:$rs1, GPR:$rs2)>;
 
-def : NDS_LEAPat<1, NDS_LEA_H>;
-def : NDS_LEAPat<2, NDS_LEA_W>;
-def : NDS_LEAPat<3, NDS_LEA_D>;
+defm : ShxAddPat<1, NDS_LEA_H>;
+defm : ShxAddPat<2, NDS_LEA_W>;
+defm : ShxAddPat<3, NDS_LEA_D>;
+
+def : CSImm12MulBy4Pat<NDS_LEA_W>;
+def : CSImm12MulBy8Pat<NDS_LEA_D>;
 } // Predicates = [HasVendorXAndesPerf]
 
 let Predicates = [HasVendorXAndesPerf, IsRV64] in {
-def : Pat<(add (XLenVT GPR:$rs1), (zexti32 (i64 GPR:$rs2))),
-          (NDS_LEA_B_ZE GPR:$rs1, GPR:$rs2)>;
 
-class NDS_LEA_ZEPat<int shamt, RVInstR Inst>
-    : Pat<(add GPR:$rs1, (shl (zexti32 (XLenVT GPR:$rs2)), (XLenVT shamt))),
-          (Inst GPR:$rs1, GPR:$rs2)>;
+defm : ADD_UWPat<NDS_LEA_B_ZE>;
 
-def : NDS_LEA_ZEPat<1, NDS_LEA_H_ZE>;
-def : NDS_LEA_ZEPat<2, NDS_LEA_W_ZE>;
-def : NDS_LEA_ZEPat<3, NDS_LEA_D_ZE>;
+defm : ShxAdd_UWPat<1, NDS_LEA_H_ZE>;
+defm : ShxAdd_UWPat<2, NDS_LEA_W_ZE>;
+defm : ShxAdd_UWPat<3, NDS_LEA_D_ZE>;
+
+defm : Sh1Add_UWPat<NDS_LEA_H_ZE>;
+defm : Sh2Add_UWPat<NDS_LEA_W_ZE>;
+defm : Sh3Add_UWPat<NDS_LEA_D_ZE>;
+
+def : Sh1AddPat<NDS_LEA_H_ZE>;
+def : Sh2AddPat<NDS_LEA_W_ZE>;
+def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
