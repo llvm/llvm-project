@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   }
 
   fprintf(stderr, "DONE\n");
-  int error = (var != 2);
+  int error = 1;
   return error;
 }
 
