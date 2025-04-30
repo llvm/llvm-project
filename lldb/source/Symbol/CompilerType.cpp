@@ -897,14 +897,14 @@ llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
     ExecutionContext *exe_ctx, std::string &child_name,
     uint32_t &child_byte_size, int32_t &child_byte_offset,
     uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-    bool &child_is_base_class, ValueObject *valobj, uint64_t &language_flags,
-    bool &type_valid) const {
+    bool &child_is_base_class, ValueObject *valobj,
+    uint64_t &language_flags) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetDereferencedType(
           m_type, exe_ctx, child_name, child_byte_size, child_byte_offset,
           child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, valobj, language_flags, type_valid);
+          child_is_base_class, valobj, language_flags);
   return CompilerType();
 }
 

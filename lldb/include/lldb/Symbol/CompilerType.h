@@ -439,7 +439,7 @@ public:
                       uint32_t &child_bitfield_bit_size,
                       uint32_t &child_bitfield_bit_offset,
                       bool &child_is_base_class, ValueObject *valobj,
-                      uint64_t &language_flags, bool &type_valid) const;
+                      uint64_t &language_flags) const;
 
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,

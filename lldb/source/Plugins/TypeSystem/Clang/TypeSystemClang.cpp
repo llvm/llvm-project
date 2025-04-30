@@ -6189,9 +6189,9 @@ llvm::Expected<CompilerType> TypeSystemClang::GetDereferencedType(
     std::string &child_name, uint32_t &child_byte_size,
     int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
     uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-    ValueObject *valobj, uint64_t &language_flags, bool &type_valid) {
-  type_valid = IsPointerOrReferenceType(type, nullptr) ||
-               IsArrayType(type, nullptr, nullptr, nullptr);
+    ValueObject *valobj, uint64_t &language_flags) {
+  bool type_valid = IsPointerOrReferenceType(type, nullptr) ||
+                    IsArrayType(type, nullptr, nullptr, nullptr);
   if (!type_valid)
     return llvm::createStringError("not a pointer, reference or array type");
   bool child_is_deref_of_parent;

@@ -2802,7 +2802,6 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
   bool child_is_base_class = false;
   CompilerType compiler_type = GetCompilerType();
   uint64_t language_flags = 0;
-  bool is_valid_dereference_type = false;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
@@ -2810,21 +2809,11 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
   auto child_compiler_type_or_err = compiler_type.GetDereferencedType(
       &exe_ctx, child_name_str, child_byte_size, child_byte_offset,
       child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
-      this, language_flags, is_valid_dereference_type);
+      this, language_flags);
 
   std::string deref_error;
-  if (!child_compiler_type_or_err) {
-    auto err = child_compiler_type_or_err.takeError();
-    if (err.isA<llvm::StringError>()) {
-      deref_error = llvm::toString(std::move(err));
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
-                     llvm::createStringError(deref_error),
-                     "could not find child: {0}");
-    }
-  } else
+  if (child_compiler_type_or_err) {
     child_compiler_type = *child_compiler_type_or_err;
-
-  if (is_valid_dereference_type) {
     if (child_compiler_type && child_byte_size) {
       ConstString child_name;
       if (!child_name_str.empty())
@@ -2858,8 +2847,17 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
         }
       }
     }
-  } else if (IsSynthetic()) {
-    m_deref_valobj = GetChildMemberWithName("$$dereference$$").get();
+  } else {
+    auto err = child_compiler_type_or_err.takeError();
+    if (err.isA<llvm::StringError>()) {
+      deref_error = llvm::toString(std::move(err));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                     llvm::createStringError(deref_error),
+                     "could not find child: {0}");
+    }
+    if (IsSynthetic()) {
+      m_deref_valobj = GetChildMemberWithName("$$dereference$$").get();
+    }
   }
 
   if (m_deref_valobj) {
