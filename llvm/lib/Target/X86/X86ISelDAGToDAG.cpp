@@ -906,16 +906,18 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
   while (true) {
     if (!Chain.getNumOperands())
       return false;
-    // Since we are not checking for AA here, conservatively abort if the chain
-    // writes to memory. It's not safe to move the callee (a load) across a
-    // store.
-    if (isa<MemSDNode>(Chain.getNode()) &&
-        cast<MemSDNode>(Chain.getNode())->writeMem())
-      return false;
-    // Moving across inline asm is not safe: it could do anything.
-    if (Chain.getNode()->getOpcode() == ISD::INLINEASM ||
-        Chain.getNode()->getOpcode() == ISD::INLINEASM_BR)
-      return false;
+
+    // It's not safe to move the callee (a load) across e.g. a store.
+    // Conservatively abort if the chain contains a node other than the ones
+    // below.
+    switch (Chain.getNode()->getOpcode()) {
+      case ISD::CALLSEQ_START:
+      case ISD::CopyToReg:
+      case ISD::LOAD:
+        break;
+      default:
+        return false;
+    }
 
     if (Chain.getOperand(0).getNode() == Callee.getNode())
       return true;
