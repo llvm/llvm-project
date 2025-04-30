@@ -266,7 +266,7 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
     ConsumeAndStoreUntil(tok::r_brace, Toks, /*StopAtSemi=*/true);
   } else {
     // Consume everything up to (but excluding) the comma or semicolon.
-    ConsumeAndStoreInitializer(Toks, CIK_DefaultInitializer);
+    ConsumeAndStoreInitializer(Toks, CachedInitKind::DefaultInitializer);
   }
 
   // Store an artificial EOF token to ensure that we don't run off the end of
@@ -1238,7 +1238,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
         TPResult Result = TPResult::Error;
         ConsumeToken();
         switch (CIK) {
-        case CIK_DefaultInitializer:
+        case CachedInitKind::DefaultInitializer:
           Result = TryParseInitDeclaratorList();
           // If we parsed a complete, ambiguous init-declarator-list, this
           // is only syntactically-valid if it's followed by a semicolon.
@@ -1246,7 +1246,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
             Result = TPResult::False;
           break;
 
-        case CIK_DefaultArgument:
+        case CachedInitKind::DefaultArgument:
           bool InvalidAsDeclaration = false;
           Result = TryParseParameterDeclarationClause(
               &InvalidAsDeclaration, /*VersusTemplateArg=*/true);
@@ -1372,7 +1372,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
     // and return it.  Otherwise, this is a spurious RHS token, which we
     // consume and pass on to downstream code to diagnose.
     case tok::r_paren:
-      if (CIK == CIK_DefaultArgument)
+      if (CIK == CachedInitKind::DefaultArgument)
         return true; // End of the default argument.
       if (ParenCount && !IsFirstToken)
         return false;
@@ -1406,7 +1406,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
       ConsumeStringToken();
       break;
     case tok::semi:
-      if (CIK == CIK_DefaultInitializer)
+      if (CIK == CachedInitKind::DefaultInitializer)
         return true; // End of the default initializer.
       [[fallthrough]];
     default:
