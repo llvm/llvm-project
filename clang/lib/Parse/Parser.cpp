@@ -512,16 +512,24 @@ void Parser::Initialize() {
   // Initialization for Objective-C context sensitive keywords recognition.
   // Referenced in Parser::ParseObjCTypeQualifierList.
   if (getLangOpts().ObjC) {
-    ObjCTypeQuals[objc_in] = &PP.getIdentifierTable().get("in");
-    ObjCTypeQuals[objc_out] = &PP.getIdentifierTable().get("out");
-    ObjCTypeQuals[objc_inout] = &PP.getIdentifierTable().get("inout");
-    ObjCTypeQuals[objc_oneway] = &PP.getIdentifierTable().get("oneway");
-    ObjCTypeQuals[objc_bycopy] = &PP.getIdentifierTable().get("bycopy");
-    ObjCTypeQuals[objc_byref] = &PP.getIdentifierTable().get("byref");
-    ObjCTypeQuals[objc_nonnull] = &PP.getIdentifierTable().get("nonnull");
-    ObjCTypeQuals[objc_nullable] = &PP.getIdentifierTable().get("nullable");
-    ObjCTypeQuals[objc_null_unspecified]
-      = &PP.getIdentifierTable().get("null_unspecified");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::in)] =
+        &PP.getIdentifierTable().get("in");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::out)] =
+        &PP.getIdentifierTable().get("out");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::inout)] =
+        &PP.getIdentifierTable().get("inout");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::oneway)] =
+        &PP.getIdentifierTable().get("oneway");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::bycopy)] =
+        &PP.getIdentifierTable().get("bycopy");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::byref)] =
+        &PP.getIdentifierTable().get("byref");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::nonnull)] =
+        &PP.getIdentifierTable().get("nonnull");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::nullable)] =
+        &PP.getIdentifierTable().get("nullable");
+    ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::null_unspecified)] =
+        &PP.getIdentifierTable().get("null_unspecified");
   }
 
   Ident_instancetype = nullptr;

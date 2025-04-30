@@ -21,6 +21,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -85,6 +86,20 @@ enum class ParsedTemplateKind {
 };
 
 enum class CachedInitKind { DefaultArgument, DefaultInitializer };
+
+// Definitions for Objective-c context sensitive keywords recognition.
+enum class ObjCTypeQual {
+  in = 0,
+  out,
+  inout,
+  oneway,
+  bycopy,
+  byref,
+  nonnull,
+  nullable,
+  null_unspecified,
+  NumQuals
+};
 
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
@@ -1818,13 +1833,8 @@ private:
   Decl *ParseObjCPropertyDynamic(SourceLocation atLoc);
 
   IdentifierInfo *ParseObjCSelectorPiece(SourceLocation &MethodLocation);
-  // Definitions for Objective-c context sensitive keywords recognition.
-  enum ObjCTypeQual {
-    objc_in=0, objc_out, objc_inout, objc_oneway, objc_bycopy, objc_byref,
-    objc_nonnull, objc_nullable, objc_null_unspecified,
-    objc_NumQuals
-  };
-  IdentifierInfo *ObjCTypeQuals[objc_NumQuals];
+
+  IdentifierInfo *ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::NumQuals)];
 
   bool isTokIdentifier_in() const;
 
