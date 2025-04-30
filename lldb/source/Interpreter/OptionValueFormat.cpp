@@ -26,7 +26,8 @@ void OptionValueFormat::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-llvm::json::Value OptionValueFormat::ToJSON(const ExecutionContext *exe_ctx) {
+llvm::json::Value
+OptionValueFormat::ToJSON(const ExecutionContext *exe_ctx) const {
   return FormatManager::GetFormatAsCString(m_current_value);
 }
 

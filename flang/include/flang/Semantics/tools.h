@@ -47,10 +47,6 @@ const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
 
-const Symbol *FindPointerComponent(const Scope &);
-const Symbol *FindPointerComponent(const DerivedTypeSpec &);
-const Symbol *FindPointerComponent(const DeclTypeSpec &);
-const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
 const Symbol *FindOverriddenBinding(
@@ -216,6 +212,16 @@ inline bool IsCUDADeviceContext(const Scope *scope) {
 inline bool HasCUDAAttr(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
     if (details->cudaDataAttr()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool IsCUDAShared(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
       return true;
     }
   }
@@ -633,6 +639,8 @@ PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
 PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
     const DerivedTypeSpec &);
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(

@@ -142,8 +142,8 @@ struct foo {
 
 void f() {
   foo fooable; // #cwg2628-fooable
-  // since-cxx20-error@#cwg2628-fooable {{call to deleted}} 
-  //   since-cxx20-note@#cwg2628-ctor {{marked deleted here}} 
+  // since-cxx20-error@#cwg2628-fooable {{call to deleted}}
+  //   since-cxx20-note@#cwg2628-ctor {{marked deleted here}}
 }
 #endif
 } // namespace cwg2628
@@ -336,7 +336,7 @@ struct S{
 
 void test() {
     (&S::f)(1);
-    // since-cxx23-error@-1 {{called object type 'void (cwg2687::S::*)(int)' is not a function or function pointer}}
+    // since-cxx23-error@-1 {{called object type 'void (S::*)(int)' is not a function or function pointer}}
     (&S::g)(1);
     (&S::h)(S(), 1);
 }

@@ -102,18 +102,7 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
-/// Load bitcode directly into RemoveDIs format (use debug records instead
-/// of debug intrinsics). UNSET is treated as FALSE, so the default action
-/// is to do nothing. Individual tools can override this to incrementally add
-/// support for the RemoveDIs format.
-cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
-    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
-    cl::desc("Load bitcode directly into the new debug info format (regardless "
-             "of input format)"));
 extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 namespace {
 
@@ -3339,10 +3328,8 @@ Error BitcodeReader::parseConstants() {
       if (Record.empty())
         return error("Invalid aggregate record");
 
-      unsigned Size = Record.size();
       SmallVector<unsigned, 16> Elts;
-      for (unsigned i = 0; i != Size; ++i)
-        Elts.push_back(Record[i]);
+      llvm::append_range(Elts, Record);
 
       if (isa<StructType>(CurTy)) {
         V = BitcodeConstant::create(
@@ -3965,11 +3952,7 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    // If PreserveInputDbgFormat=true, then we don't know whether we want
-    // intrinsics or records, and we won't perform any conversions in either
-    // case, so don't upgrade intrinsics to records.
-    if (UpgradeIntrinsicFunction(
-            &F, NewFn, PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE))
+    if (UpgradeIntrinsicFunction(&F, NewFn))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4494,14 +4477,9 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInfoFormat
-  // has been set to true and we aren't attempting to preserve the existing
-  // format in the bitcode (default action: load into the old debug format).
-  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
-    TheModule->IsNewDbgInfoFormat =
-        UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
-  }
+  // In preparation for the deletion of debug-intrinsics, don't allow module
+  // loading to escape intrinsics being autoupgraded to debug records.
+  TheModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -4530,12 +4508,12 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
     // Auto-upgrade the layout string
     TentativeDataLayoutStr = llvm::UpgradeDataLayoutString(
-        TentativeDataLayoutStr, TheModule->getTargetTriple());
+        TentativeDataLayoutStr, TheModule->getTargetTriple().str());
 
     // Apply override
     if (Callbacks.DataLayout) {
       if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple(), TentativeDataLayoutStr))
+              TheModule->getTargetTriple().str(), TentativeDataLayoutStr))
         TentativeDataLayoutStr = *LayoutOverride;
     }
 
@@ -4719,7 +4697,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setTargetTriple(S);
+      TheModule->setTargetTriple(Triple(S));
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
@@ -7019,39 +6997,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   F->setIsMaterializable(false);
 
   // All parsed Functions should load into the debug info format dictated by the
-  // Module, unless we're attempting to preserve the input debug info format.
+  // Module.
   if (SeenDebugIntrinsic && SeenDebugRecord)
     return error("Mixed debug intrinsics and debug records in bitcode module!");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    bool SeenAnyDebugInfo = SeenDebugIntrinsic || SeenDebugRecord;
-    bool NewDbgInfoFormatDesired =
-        SeenAnyDebugInfo ? SeenDebugRecord : F->getParent()->IsNewDbgInfoFormat;
-    if (SeenAnyDebugInfo) {
-      UseNewDbgInfoFormat = SeenDebugRecord;
-      WriteNewDbgInfoFormatToBitcode = SeenDebugRecord;
-      WriteNewDbgInfoFormat = SeenDebugRecord;
-    }
-    // If the module's debug info format doesn't match the observed input
-    // format, then set its format now; we don't need to call the conversion
-    // function because there must be no existing intrinsics to convert.
-    // Otherwise, just set the format on this function now.
-    if (NewDbgInfoFormatDesired != F->getParent()->IsNewDbgInfoFormat)
-      F->getParent()->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
-    else
-      F->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
-  } else {
-    // If we aren't preserving formats, we use the Module flag to get our
-    // desired format instead of reading flags, in case we are lazy-loading and
-    // the format of the module has been changed since it was set by the flags.
-    // We only need to convert debug info here if we have debug records but
-    // desire the intrinsic format; everything else is a no-op or handled by the
-    // autoupgrader.
-    bool ModuleIsNewDbgInfoFormat = F->getParent()->IsNewDbgInfoFormat;
-    if (ModuleIsNewDbgInfoFormat || !SeenDebugRecord)
-      F->setNewDbgInfoFormatFlag(ModuleIsNewDbgInfoFormat);
-    else
-      F->setIsNewDbgInfoFormat(ModuleIsNewDbgInfoFormat);
-  }
 
   if (StripDebugInfo)
     stripDebugInfo(*F);
@@ -7218,10 +7166,10 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
     StringRef SourceFileName) {
   std::string GlobalId =
       GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUID(GlobalId);
+  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
-    OriginalNameID = GlobalValue::getGUID(ValueName);
+    OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
   if (PrintSummaryGUIDs)
     dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is "
            << ValueName << "\n";
@@ -8075,20 +8023,18 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string, std::less<>> &CfiFunctionDefs =
-          TheIndex.cfiFunctionDefs();
+      auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
+                                static_cast<size_t>(Record[I + 1]));
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string, std::less<>> &CfiFunctionDecls =
-          TheIndex.cfiFunctionDecls();
+      auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
+                                 static_cast<size_t>(Record[I + 1]));
       break;
     }
 
@@ -8133,9 +8079,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
-      for (auto R = Record.begin() + 1; R != Record.end(); R++) {
-        assert(*R < StackIds.size());
-        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[*R]));
+      for (uint64_t R : drop_begin(Record)) {
+        assert(R < StackIds.size());
+        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[R]));
       }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));

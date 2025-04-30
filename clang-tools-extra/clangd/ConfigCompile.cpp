@@ -290,6 +290,18 @@ struct FragmentCompiler {
       });
     }
 
+    if (F.BuiltinHeaders) {
+      if (auto Val =
+              compileEnum<Config::BuiltinHeaderPolicy>("BuiltinHeaders",
+                                                       *F.BuiltinHeaders)
+                  .map("Clangd", Config::BuiltinHeaderPolicy::Clangd)
+                  .map("QueryDriver", Config::BuiltinHeaderPolicy::QueryDriver)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.CompileFlags.BuiltinHeaders = *Val;
+        });
+    }
+
     if (F.CompilationDatabase) {
       std::optional<Config::CDBSearchSpec> Spec;
       if (**F.CompilationDatabase == "Ancestors") {
@@ -427,8 +439,7 @@ struct FragmentCompiler {
           [Normalized(std::move(Normalized))](const Params &, Config &C) {
             if (C.Diagnostics.SuppressAll)
               return;
-            for (llvm::StringRef N : Normalized)
-              C.Diagnostics.Suppress.insert(N);
+            C.Diagnostics.Suppress.insert_range(Normalized);
           });
 
     if (F.UnusedIncludes) {
@@ -524,7 +535,7 @@ struct FragmentCompiler {
     }
     if (Filters->empty())
       return std::nullopt;
-    auto Filter = [Filters](llvm::StringRef Path) {
+    auto Filter = [Filters = std::move(Filters)](llvm::StringRef Path) {
       for (auto &Regex : *Filters)
         if (Regex.match(Path))
           return true;
@@ -683,6 +694,17 @@ struct FragmentCompiler {
                   .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Completion.ArgumentLists = *Val;
+        });
+    }
+    if (F.HeaderInsertion) {
+      if (auto Val =
+              compileEnum<Config::HeaderInsertionPolicy>("HeaderInsertion",
+                                                         *F.HeaderInsertion)
+                  .map("IWYU", Config::HeaderInsertionPolicy::IWYU)
+                  .map("Never", Config::HeaderInsertionPolicy::NeverInsert)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.HeaderInsertion = *Val;
         });
     }
   }

@@ -101,22 +101,25 @@ DataLayoutImporter::tryToParsePointerAlignment(StringRef token) const {
   FailureOr<SmallVector<uint64_t>> alignment = tryToParseIntList(token);
   if (failed(alignment))
     return failure();
-  if (alignment->size() < 2 || alignment->size() > 4)
+  if (alignment->size() < 2 || alignment->size() > 5)
     return failure();
 
   // Pointer alignment specifications (such as 64:32:64:32 or 32:32) are of
-  // the form <size>:<abi>[:<pref>][:<idx>], where size is the pointer size, abi
-  // specifies the minimal alignment, pref the optional preferred alignment, and
-  // idx the optional index computation bit width. The preferred alignment is
-  // set to the minimal alignment if not available and the index computation
-  // width is set to the pointer size if not available.
+  // the form <size>:<abi>[:<pref>][:<idx>][:<addr>], where size is the pointer
+  // size, abi specifies the minimal alignment, pref the optional preferred
+  // alignment, and idx the optional index computation bit width, addr is the
+  // width of an integer address in this address space.
+  // The preferred alignment is set to the minimal alignment if not available
+  // and the index computation width is set to the pointer size if not
+  // available. The address size defaults to the index size.
   uint64_t size = (*alignment)[0];
   uint64_t minimal = (*alignment)[1];
   uint64_t preferred = alignment->size() < 3 ? minimal : (*alignment)[2];
   uint64_t idx = alignment->size() < 4 ? size : (*alignment)[3];
+  uint64_t addr = alignment->size() < 5 ? idx : (*alignment)[4];
   return DenseIntElementsAttr::get<uint64_t>(
-      VectorType::get({4}, IntegerType::get(context, 64)),
-      {size, minimal, preferred, idx});
+      VectorType::get({5}, IntegerType::get(context, 64)),
+      {size, minimal, preferred, idx, addr});
 }
 
 LogicalResult DataLayoutImporter::tryToEmplaceAlignmentEntry(Type type,
@@ -160,6 +163,21 @@ DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
 
   keyEntries.try_emplace(
       key, DataLayoutEntryAttr::get(key, StringAttr::get(context, endianness)));
+  return success();
+}
+
+LogicalResult DataLayoutImporter::tryToEmplaceManglingModeEntry(
+    StringRef token, llvm::StringLiteral manglingKey) {
+  auto key = StringAttr::get(context, manglingKey);
+  if (keyEntries.count(key))
+    return success();
+
+  token.consume_front(":");
+  if (token.empty())
+    return failure();
+
+  keyEntries.try_emplace(
+      key, DataLayoutEntryAttr::get(key, StringAttr::get(context, token)));
   return success();
 }
 
@@ -251,6 +269,13 @@ void DataLayoutImporter::translateDataLayout(
     if (*prefix == "P") {
       if (failed(tryToEmplaceAddrSpaceEntry(
               token, DLTIDialect::kDataLayoutProgramMemorySpaceKey)))
+        return;
+      continue;
+    }
+    // Parse the mangling mode.
+    if (*prefix == "m") {
+      if (failed(tryToEmplaceManglingModeEntry(
+              token, DLTIDialect::kDataLayoutManglingModeKey)))
         return;
       continue;
     }

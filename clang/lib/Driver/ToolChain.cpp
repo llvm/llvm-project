@@ -210,7 +210,9 @@ static void getAArch64MultilibFlags(const Driver &D,
                                           const llvm::opt::ArgList &Args,
                                           Multilib::flags_list &Result) {
   std::vector<StringRef> Features;
-  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features, false);
+  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features,
+                                           /*ForAS=*/false,
+                                           /*ForMultilib=*/true);
   const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
   llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
                                        UnifiedFeatures.end());
@@ -237,13 +239,10 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  if (Arg *AlignArg = Args.getLastArg(
-          options::OPT_mstrict_align, options::OPT_mno_strict_align,
-          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
-    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
-        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
-      Result.push_back(AlignArg->getAsString(Args));
-  }
+  if (FeatureSet.contains("+strict-align"))
+    Result.push_back("-mno-unaligned-access");
+  else
+    Result.push_back("-munaligned-access");
 
   if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
                                     options::OPT_mlittle_endian)) {
@@ -311,13 +310,10 @@ static void getARMMultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  if (Arg *AlignArg = Args.getLastArg(
-          options::OPT_mstrict_align, options::OPT_mno_strict_align,
-          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
-    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
-        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
-      Result.push_back(AlignArg->getAsString(Args));
-  }
+  if (FeatureSet.contains("+strict-align"))
+    Result.push_back("-mno-unaligned-access");
+  else
+    Result.push_back("-munaligned-access");
 
   if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
                                     options::OPT_mlittle_endian)) {
@@ -382,7 +378,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
-  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+  Result.erase(llvm::unique(Result), Result.end());
   return Result;
 }
 
@@ -639,6 +635,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::DsymutilJobClass:
   case Action::VerifyDebugInfoJobClass:
   case Action::BinaryAnalyzeJobClass:
+  case Action::BinaryTranslatorJobClass:
     llvm_unreachable("Invalid tool kind.");
 
   case Action::CompileJobClass:
@@ -730,8 +727,8 @@ std::string ToolChain::getCompilerRTBasename(const ArgList &Args,
 
 std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
                                                StringRef Component,
-                                               FileType Type,
-                                               bool AddArch) const {
+                                               FileType Type, bool AddArch,
+                                               bool IsFortran) const {
   const llvm::Triple &TT = getTriple();
   bool IsITANMSVCWindows =
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
@@ -747,9 +744,12 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     Suffix = IsITANMSVCWindows ? ".lib" : ".a";
     break;
   case ToolChain::FT_Shared:
-    Suffix = TT.isOSWindows()
-                 ? (TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib")
-                 : ".so";
+    if (TT.isOSWindows())
+      Suffix = TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib";
+    else if (TT.isOSAIX())
+      Suffix = ".a";
+    else
+      Suffix = ".so";
     break;
   }
 
@@ -759,14 +759,16 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     const char *Env = TT.isAndroid() ? "-android" : "";
     ArchAndEnv = ("-" + Arch + Env).str();
   }
-  return (Prefix + Twine("clang_rt.") + Component + ArchAndEnv + Suffix).str();
+
+  std::string LibName = IsFortran ? "flang_rt." : "clang_rt.";
+  return (Prefix + Twine(LibName) + Component + ArchAndEnv + Suffix).str();
 }
 
 std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
-                                     FileType Type) const {
+                                     FileType Type, bool IsFortran) const {
   // Check for runtime files in the new layout without the architecture first.
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  std::string CRTBasename = buildCompilerRTBasename(
+      Args, Component, Type, /*AddArch=*/false, IsFortran);
   SmallString<128> Path;
   for (const auto &LibPath : getLibraryPaths()) {
     SmallString<128> P(LibPath);
@@ -776,12 +778,10 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     if (Path.empty())
       Path = P;
   }
-  if (getTriple().isOSAIX())
-    Path.clear();
 
   // Check the filename for the old layout if the new one does not exist.
-  CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
+  CRTBasename = buildCompilerRTBasename(Args, Component, Type,
+                                        /*AddArch=*/!IsFortran, IsFortran);
   SmallString<128> OldPath(getCompilerRTPath());
   llvm::sys::path::append(OldPath, CRTBasename);
   if (Path.empty() || getVFS().exists(OldPath))
@@ -795,8 +795,75 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
 
 const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
                                               StringRef Component,
-                                              FileType Type) const {
-  return Args.MakeArgString(getCompilerRT(Args, Component, Type));
+                                              FileType Type,
+                                              bool isFortran) const {
+  return Args.MakeArgString(getCompilerRT(Args, Component, Type, isFortran));
+}
+
+/// Add Fortran runtime libs
+void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
+                                      llvm::opt::ArgStringList &CmdArgs) const {
+  // Link flang_rt.runtime
+  // These are handled earlier on Windows by telling the frontend driver to
+  // add the correct libraries to link against as dependents in the object
+  // file.
+  if (!getTriple().isKnownWindowsMSVCEnvironment()) {
+    StringRef F128LibName = getDriver().getFlangF128MathLibrary();
+    F128LibName.consume_front_insensitive("lib");
+    if (!F128LibName.empty()) {
+      bool AsNeeded = !getTriple().isOSAIX();
+      CmdArgs.push_back("-lflang_rt.quadmath");
+      if (AsNeeded)
+        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/true);
+      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
+      if (AsNeeded)
+        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
+    }
+    addFlangRTLibPath(Args, CmdArgs);
+
+    // needs libexecinfo for backtrace functions
+    if (getTriple().isOSFreeBSD() || getTriple().isOSNetBSD() ||
+        getTriple().isOSOpenBSD() || getTriple().isOSDragonFly())
+      CmdArgs.push_back("-lexecinfo");
+  }
+
+  // libomp needs libatomic for atomic operations if using libgcc
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false)) {
+    Driver::OpenMPRuntimeKind OMPRuntime = getDriver().getOpenMPRuntime(Args);
+    ToolChain::RuntimeLibType RuntimeLib = GetRuntimeLibType(Args);
+    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
+      CmdArgs.push_back("-latomic");
+  }
+}
+
+void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
+                                             ArgStringList &CmdArgs) const {
+  // Default to the <driver-path>/../lib directory. This works fine on the
+  // platforms that we have tested so far. We will probably have to re-fine
+  // this in the future. In particular, on some platforms, we may need to use
+  // lib64 instead of lib.
+  SmallString<256> DefaultLibPath =
+      llvm::sys::path::parent_path(getDriver().Dir);
+  llvm::sys::path::append(DefaultLibPath, "lib");
+  if (getTriple().isKnownWindowsMSVCEnvironment())
+    CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
+  else
+    CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
+}
+
+void ToolChain::addFlangRTLibPath(const ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const {
+  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so.
+  // On AIX, default to static flang-rt.
+  if (Args.hasFlag(options::OPT_static_libflangrt,
+                   options::OPT_shared_libflangrt, getTriple().isOSAIX()))
+    CmdArgs.push_back(
+        getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
+  else {
+    CmdArgs.push_back("-lflang_rt.runtime");
+    addArchSpecificRPath(*this, Args, CmdArgs);
+  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
@@ -843,6 +910,16 @@ ToolChain::getFallbackAndroidTargetPath(StringRef BaseDir) const {
   return std::string(P);
 }
 
+llvm::Triple ToolChain::getTripleWithoutOSVersion() const {
+  return (Triple.hasEnvironment()
+              ? llvm::Triple(Triple.getArchName(), Triple.getVendorName(),
+                             llvm::Triple::getOSTypeName(Triple.getOS()),
+                             llvm::Triple::getEnvironmentTypeName(
+                                 Triple.getEnvironment()))
+              : llvm::Triple(Triple.getArchName(), Triple.getVendorName(),
+                             llvm::Triple::getOSTypeName(Triple.getOS())));
+}
+
 std::optional<std::string>
 ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   auto getPathForTriple =
@@ -861,14 +938,7 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
     // Build the triple without version information
-    const llvm::Triple &TripleWithoutVersion =
-        (T.hasEnvironment()
-             ? llvm::Triple(
-                   T.getArchName(), T.getVendorName(),
-                   llvm::Triple::getOSTypeName(T.getOS()),
-                   llvm::Triple::getEnvironmentTypeName(T.getEnvironment()))
-             : llvm::Triple(T.getArchName(), T.getVendorName(),
-                            llvm::Triple::getOSTypeName(T.getOS())));
+    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
     if (auto Path = getPathForTriple(TripleWithoutVersion))
       return *Path;
   }
@@ -906,9 +976,18 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   llvm::sys::path::append(P, "lib");
   if (auto Ret = getTargetSubDirPath(P))
     return Ret;
-  // Darwin and AIX does not use per-target runtime directory.
-  if (Triple.isOSDarwin() || Triple.isOSAIX())
+  // Darwin does not use per-target runtime directory.
+  if (Triple.isOSDarwin())
     return {};
+
+  // For AIX, get the triple without the OS version.
+  if (Triple.isOSAIX()) {
+    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
+    llvm::sys::path::append(P, TripleWithoutVersion.str());
+    if (getVFS().exists(P))
+      return std::string(P);
+    return {};
+  }
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
 }
@@ -952,7 +1031,6 @@ bool ToolChain::needsProfileRT(const ArgList &Args) {
          Args.hasArg(options::OPT_fprofile_instr_generate) ||
          Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
          Args.hasArg(options::OPT_fcreate_profile) ||
-         Args.hasArg(options::OPT_forder_file_instrumentation) ||
          Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage) ||
          Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage_EQ);
 }

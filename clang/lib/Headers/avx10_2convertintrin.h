@@ -178,8 +178,7 @@ _mm_maskz_cvtx2ps_ph(__mmask8 __U, __m128 __A, __m128 __B) {
 static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvtx2ps_ph(__m256 __A,
                                                                   __m256 __B) {
   return (__m256h)__builtin_ia32_vcvt2ps2phx256_mask(
-      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)(-1),
-      _MM_FROUND_CUR_DIRECTION);
+      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)(-1));
 }
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed
@@ -223,8 +222,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvtx2ps_ph(__m256 __A,
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtx2ps_ph(__m256h __W, __mmask16 __U, __m256 __A, __m256 __B) {
   return (__m256h)__builtin_ia32_vcvt2ps2phx256_mask(
-      (__v8sf)__A, (__v8sf)__B, (__v16hf)__W, (__mmask16)__U,
-      _MM_FROUND_CUR_DIRECTION);
+      (__v8sf)__A, (__v8sf)__B, (__v16hf)__W, (__mmask16)__U);
 }
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed
@@ -266,141 +264,8 @@ _mm256_mask_cvtx2ps_ph(__m256h __W, __mmask16 __U, __m256 __A, __m256 __B) {
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtx2ps_ph(__mmask16 __U, __m256 __A, __m256 __B) {
   return (__m256h)__builtin_ia32_vcvt2ps2phx256_mask(
-      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)__U,
-      _MM_FROUND_CUR_DIRECTION);
+      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)__U);
 }
-
-/// Convert two 256-bit vectors, \a __A and \a __B, containing packed
-///    single-precision (32-bit) floating-point elements to a 256-bit vector
-///    containing FP16 elements. Rounding mode \a __R needs to be provided.
-///   
-/// \code{.operation}
-/// FOR i := 0 to 15 
-/// 	IF i < 8
-/// 		dst.fp16[i] := convert_fp32_to_fp16(__B.fp32[i])
-/// 	ELSE
-/// 		dst.fp16[i] := convert_fp32_to_fp16(__A.fp32[i - 8])
-/// 	FI
-/// ENDFOR
-///
-/// dst[MAX:256] := 0
-/// \endcode
-///
-/// \headerfile <immintrin.h>
-///
-/// This intrinsic corresponds to the \c VCVT2PS2PHX instruction.
-///
-/// \param __A
-///    A 256-bit vector of [8 x float].
-/// \param __B
-///    A 256-bit vector of [8 x float].
-/// \param __R
-///    Rounding mode. Valid inputs are: _MM_FROUND_CUR_DIRECTION or
-///    result of bitwise or of _MM_FROUND_NO_EXC with at most one of the following:
-///    _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_TO_NEG_INF, _MM_FROUND_TO_POS_INF,
-///    _MM_FROUND_TO_ZERO.
-/// \returns
-///    A 256-bit vector of [16 x fp16]. Lower elements correspond to the
-///    (converted) elements from \a __B; higher order elements correspond to the
-///    (converted) elements from \a __A.
-#define _mm256_cvtx_round2ps_ph(__A, __B, __R)                                       \
-  ((__m256h)__builtin_ia32_vcvt2ps2phx256_mask(                                \
-      (__v8sf)(__A), (__v8sf)(__B), (__v16hf)_mm256_undefined_ph(),                \
-      (__mmask16)(-1), (const int)(__R)))
-
-/// Convert two 256-bit vectors, \a __A and \a __B, containing packed
-///    single-precision (32-bit) floating-point elements to a 256-bit vector
-///    containing FP16 elements. Merging mask \a __U is used to determine if given
-///    element should be taken from \a __W instead. Rounding mode \a __R needs to
-///    be provided.
-///
-/// \code{.operation}
-/// FOR i := 0 to 15
-/// 	IF __U[i]
-/// 		IF i < 8
-/// 			dst.fp16[i] := convert_fp32_to_fp16(__B.fp32[i])
-/// 		ELSE
-/// 			dst.fp16[i] := convert_fp32_to_fp16(__A.fp32[i - 8])
-/// 		FI
-/// 	ELSE
-/// 		dst.fp16[i] := __W.fp16[i]
-/// 	FI
-/// ENDFOR
-///
-/// dst[MAX:256] := 0
-/// \endcode
-///
-/// \headerfile <immintrin.h>
-///
-/// This intrinsic corresponds to the \c VCVT2PS2PHX instruction.
-///
-/// \param __W
-///    A 256-bit vector of [16 x fp16].
-/// \param __U
-///    A 16-bit merging mask.
-/// \param __A
-///    A 256-bit vector of [8 x float].
-/// \param __B
-///    A 256-bit vector of [8 x float].
-/// \param __R
-///    Rounding mode. Valid inputs are: _MM_FROUND_CUR_DIRECTION or
-///    result of bitwise or of _MM_FROUND_NO_EXC with at most one of the following:
-///    _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_TO_NEG_INF, _MM_FROUND_TO_POS_INF,
-///    _MM_FROUND_TO_ZERO.
-/// \returns
-///    A 256-bit vector of [16 x fp16]. Lower elements correspond to the
-///    (converted) elements from \a __B; higher order elements correspond to the
-///    (converted) elements from \a __A. If corresponding mask bit is not set, then
-///    element from \a __W is taken instead.
-#define _mm256_mask_cvtx_round2ps_ph(__W, __U, __A, __B, __R)                            \
-  ((__m256h)__builtin_ia32_vcvt2ps2phx256_mask(                                \
-      (__v8sf)(__A), (__v8sf)(__B), (__v16hf)(__W), (__mmask16)(__U), (const int)(__R)))
-
-/// Convert two 256-bit vectors, \a __A and \a __B, containing packed
-///    single-precision (32-bit) floating-point elements to a 256-bit vector
-///    containing FP16 elements. Zeroing mask \a __U is used to determine if given
-///    element should be zeroed instead. Rounding mode \a __R needs to be provided.
-///
-/// \code{.operation}
-/// FOR i := 0 to 15 
-/// 	IF __U[i]
-/// 		IF i < 8
-/// 			dst.fp16[i] := convert_fp32_to_fp16(__B.fp32[i])
-/// 		ELSE
-/// 			dst.fp16[i] := convert_fp32_to_fp16(__A.fp32[i - 8])
-/// 		FI
-/// 	ELSE
-/// 		dst.fp16[i] := 0
-/// 	FI
-/// ENDFOR
-///
-/// dst[MAX:256] := 0
-/// \endcode
-///
-/// \headerfile <immintrin.h>
-///
-/// This intrinsic corresponds to the \c VCVT2PS2PHX instruction.
-///
-/// \param __U
-///    A 16-bit zeroing mask.
-/// \param __A
-///    A 256-bit vector of [8 x float].
-/// \param __B
-///    A 256-bit vector of [8 x float].
-/// \param __R
-///    Rounding mode. Valid inputs are: _MM_FROUND_CUR_DIRECTION or
-///    result of bitwise or of _MM_FROUND_NO_EXC with at most one of the following:
-///    _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_TO_NEG_INF, _MM_FROUND_TO_POS_INF,
-///    _MM_FROUND_TO_ZERO.
-/// \returns
-///    A 256-bit vector of [16 x fp16]. Lower elements correspond to the
-///    (converted) elements from \a __B; higher order elements correspond to the
-///    (converted) elements from \a __A. If corresponding mask bit is not set,
-///    then zero is taken instead.
-#define _mm256_maskz_cvtx_round2ps_ph(__U, __A, __B, __R)                              \
-  ((__m256h)__builtin_ia32_vcvt2ps2phx256_mask(                                \
-      (__v8sf)(__A), (__v8sf)(__B), (__v16hf)(_mm256_setzero_ph()),                \
-      (__mmask16)(__U), (const int)(__R)))
 
 /// Convert 128-bit vector \a __B containing packed FP16 floating-point elements
 ///    to FP8 E5M2 numbers, using conversion biases stored in lower 8 bits of each
@@ -643,7 +508,7 @@ _mm256_maskz_cvtbiasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///    converted elements from \a __B using biases from \a __A; higher order
 ///    elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
+_mm_cvts_biasph_bf8(__m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
@@ -682,7 +547,7 @@ _mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
 ///    converted elements from \a __B, using biases from \a __A; higher order
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    from \a __W is taken instead.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtbiassph_bf8(__m128i
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvts_biasph_bf8(__m128i
 		__W, __mmask8 __U, __m128i __A, __m128h __B) { return
 	(__m128i)__builtin_ia32_vcvtbiasph2bf8s_128_mask( (__v16qi)__A,
 			(__v8hf)__B, (__v16qi)(__m128i)__W, (__mmask8)__U); }
@@ -720,7 +585,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtbiassph_bf8(__m128i
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtbiassph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
+_mm_maskz_cvts_biasph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask8)__U);
@@ -751,7 +616,7 @@ _mm_maskz_cvtbiassph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///    A 128-bit vector of [16 x bf8]. Elements correspond to the
 ///    converted elements from \a __B using biases from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
+_mm256_cvts_biasph_bf8(__m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_undefined_si128(),
       (__mmask16)-1);
@@ -790,7 +655,7 @@ _mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
 ///    A 128-bit vector of [16 x bf8]. Elements correspond to the converted
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element from \a __W is taken instead.
-static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_bf8(
+static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasph_bf8(
     __m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)__W, (__mmask16)__U);
@@ -828,7 +693,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_bf8(
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtbiassph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
+_mm256_maskz_cvts_biasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask16)__U);
@@ -1075,7 +940,7 @@ _mm256_maskz_cvtbiasph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///    converted elements from \a __B using biases from \a __A; higher order
 ///    elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
+_mm_cvts_biasph_hf8(__m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
@@ -1115,7 +980,7 @@ _mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvtbiassph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
+_mm_mask_cvts_biasph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)__W, (__mmask8)__U);
 }
@@ -1153,7 +1018,7 @@ _mm_mask_cvtbiassph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtbiassph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
+_mm_maskz_cvts_biasph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask8)__U);
@@ -1183,7 +1048,7 @@ _mm_maskz_cvtbiassph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///    A 128-bit vector of [16 x hf8]. Elements correspond to the
 ///    converted elements from \a __B using biases from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
+_mm256_cvts_biasph_hf8(__m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_undefined_si128(),
       (__mmask16)-1);
@@ -1222,7 +1087,7 @@ _mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
 ///    A 128-bit vector of [16 x hf8]. Elements correspond to the converted
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element from \a __W is taken instead.
-static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_hf8(
+static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasph_hf8(
     __m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)__W, (__mmask16)__U);
@@ -1260,7 +1125,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_hf8(
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtbiassph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
+_mm256_maskz_cvts_biasph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask16)__U);
@@ -1535,7 +1400,7 @@ _mm256_maskz_cvt2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvts2ph_bf8(__m128h __A, __m128h __B) {
+_mm_cvts_2ph_bf8(__m128h __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvt2ph2bf8s_128((__v8hf)(__A),
                                                     (__v8hf)(__B));
 }
@@ -1579,9 +1444,9 @@ _mm_cvts2ph_bf8(__m128h __A, __m128h __B) {
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvts2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
+_mm_mask_cvts_2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
   return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts2ph_bf8(__A, __B), (__v16qi)__W);
+      (__mmask16)__U, (__v16qi)_mm_cvts_2ph_bf8(__A, __B), (__v16qi)__W);
 }
 
 /// Convert two 128-bit vectors, \a __A and \a __B, containing packed FP16
@@ -1621,9 +1486,9 @@ _mm_mask_cvts2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    zero is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvts2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
+_mm_maskz_cvts_2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
   return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts2ph_bf8(__A, __B),
+      (__mmask16)__U, (__v16qi)_mm_cvts_2ph_bf8(__A, __B),
       (__v16qi)(__m128i)_mm_setzero_si128());
 }
 
@@ -1656,7 +1521,7 @@ _mm_maskz_cvts2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvts2ph_bf8(__m256h __A, __m256h __B) {
+_mm256_cvts_2ph_bf8(__m256h __A, __m256h __B) {
   return (__m256i)__builtin_ia32_vcvt2ph2bf8s_256((__v16hf)(__A),
                                                     (__v16hf)(__B));
 }
@@ -1699,10 +1564,10 @@ _mm256_cvts2ph_bf8(__m256h __A, __m256h __B) {
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_bf8(
+static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_2ph_bf8(
     __m256i __W, __mmask32 __U, __m256h __A, __m256h __B) {
   return (__m256i)__builtin_ia32_selectb_256(
-      (__mmask32)__U, (__v32qi)_mm256_cvts2ph_bf8(__A, __B), (__v32qi)__W);
+      (__mmask32)__U, (__v32qi)_mm256_cvts_2ph_bf8(__A, __B), (__v32qi)__W);
 }
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed FP16
@@ -1742,9 +1607,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_bf8(
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    zero is taken instead.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvts2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
+_mm256_maskz_cvts_2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
   return (__m256i)__builtin_ia32_selectb_256(
-      (__mmask32)__U, (__v32qi)_mm256_cvts2ph_bf8(__A, __B),
+      (__mmask32)__U, (__v32qi)_mm256_cvts_2ph_bf8(__A, __B),
       (__v32qi)(__m256i)_mm256_setzero_si256());
 }
 
@@ -2017,7 +1882,7 @@ _mm256_maskz_cvt2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvts2ph_hf8(__m128h __A, __m128h __B) {
+_mm_cvts_2ph_hf8(__m128h __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvt2ph2hf8s_128((__v8hf)(__A),
                                                     (__v8hf)(__B));
 }
@@ -2061,9 +1926,9 @@ _mm_cvts2ph_hf8(__m128h __A, __m128h __B) {
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvts2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
+_mm_mask_cvts_2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
   return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts2ph_hf8(__A, __B), (__v16qi)__W);
+      (__mmask16)__U, (__v16qi)_mm_cvts_2ph_hf8(__A, __B), (__v16qi)__W);
 }
 
 /// Convert two 128-bit vectors, \a __A and \a __B, containing packed FP16
@@ -2103,9 +1968,9 @@ _mm_mask_cvts2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    zero is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvts2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
+_mm_maskz_cvts_2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
   return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts2ph_hf8(__A, __B),
+      (__mmask16)__U, (__v16qi)_mm_cvts_2ph_hf8(__A, __B),
       (__v16qi)(__m128i)_mm_setzero_si128());
 }
 
@@ -2138,7 +2003,7 @@ _mm_maskz_cvts2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvts2ph_hf8(__m256h __A, __m256h __B) {
+_mm256_cvts_2ph_hf8(__m256h __A, __m256h __B) {
   return (__m256i)__builtin_ia32_vcvt2ph2hf8s_256((__v16hf)(__A),
                                                     (__v16hf)(__B));
 }
@@ -2181,10 +2046,10 @@ _mm256_cvts2ph_hf8(__m256h __A, __m256h __B) {
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_hf8(
+static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_2ph_hf8(
     __m256i __W, __mmask32 __U, __m256h __A, __m256h __B) {
   return (__m256i)__builtin_ia32_selectb_256(
-      (__mmask32)__U, (__v32qi)_mm256_cvts2ph_hf8(__A, __B), (__v32qi)__W);
+      (__mmask32)__U, (__v32qi)_mm256_cvts_2ph_hf8(__A, __B), (__v32qi)__W);
 }
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed FP16
@@ -2224,9 +2089,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_hf8(
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    zero is taken instead.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvts2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
+_mm256_maskz_cvts_2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
   return (__m256i)__builtin_ia32_selectb_256(
-      (__mmask32)__U, (__v32qi)_mm256_cvts2ph_hf8(__A, __B),
+      (__mmask32)__U, (__v32qi)_mm256_cvts_2ph_hf8(__A, __B),
       (__v32qi)(__m256i)_mm256_setzero_si256());
 }
 
@@ -2639,7 +2504,7 @@ _mm256_maskz_cvtph_bf8(__mmask16 __U, __m256h __A) {
 /// \returns
 ///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the (converted)
 ///    elements from \a __A; upper elements are zeroed. 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_bf8(__m128h __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ph_bf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask8)-1);
 }
@@ -2676,7 +2541,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_bf8(__m128h __A) {
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvtsph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
+_mm_mask_cvts_ph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)__W, (__mmask8)__U);
 }
@@ -2711,7 +2576,7 @@ _mm_mask_cvtsph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtsph_bf8(__mmask8 __U, __m128h __A) {
+_mm_maskz_cvts_ph_bf8(__mmask8 __U, __m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_setzero_si128(), (__mmask8)__U);
 }
@@ -2737,7 +2602,7 @@ _mm_maskz_cvtsph_bf8(__mmask8 __U, __m128h __A) {
 ///    A 128-bit vector of [16 x bf8]. Resulting elements correspond to the (converted)
 ///    elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtsph_bf8(__m256h __A) {
+_mm256_cvts_ph_bf8(__m256h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_256_mask(
       (__v16hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask16)-1);
 }
@@ -2774,7 +2639,7 @@ _mm256_cvtsph_bf8(__m256h __A) {
 ///    (converted) elements from \a __A. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtsph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
+_mm256_mask_cvts_ph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_256_mask(
       (__v16hf)__A, (__v16qi)(__m128i)__W, (__mmask16)__U);
 }
@@ -2809,7 +2674,7 @@ _mm256_mask_cvtsph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    then element is zeroed instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtsph_bf8(__mmask16 __U, __m256h __A) {
+_mm256_maskz_cvts_ph_bf8(__mmask16 __U, __m256h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_256_mask(
       (__v16hf)__A, (__v16qi)(__m128i)_mm_setzero_si128(), (__mmask16)__U);
 }
@@ -3029,7 +2894,7 @@ _mm256_maskz_cvtph_hf8(__mmask16 __U, __m256h __A) {
 /// \returns
 ///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the (converted)
 ///    elements from \a __A; upper elements are zeroed. 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_hf8(__m128h __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ph_hf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask8)-1);
 }
@@ -3066,7 +2931,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_hf8(__m128h __A) {
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvtsph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
+_mm_mask_cvts_ph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)__W, (__mmask8)__U);
 }
@@ -3101,7 +2966,7 @@ _mm_mask_cvtsph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtsph_hf8(__mmask8 __U, __m128h __A) {
+_mm_maskz_cvts_ph_hf8(__mmask8 __U, __m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_setzero_si128(), (__mmask8)__U);
 }
@@ -3127,7 +2992,7 @@ _mm_maskz_cvtsph_hf8(__mmask8 __U, __m128h __A) {
 ///    A 128-bit vector of [16 x hf8]. Resulting elements correspond to the (converted)
 ///    elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtsph_hf8(__m256h __A) {
+_mm256_cvts_ph_hf8(__m256h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_256_mask(
       (__v16hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask16)-1);
 }
@@ -3164,7 +3029,7 @@ _mm256_cvtsph_hf8(__m256h __A) {
 ///    (converted) elements from \a __A. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtsph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
+_mm256_mask_cvts_ph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_256_mask(
       (__v16hf)__A, (__v16qi)(__m128i)__W, (__mmask16)__U);
 }
@@ -3199,7 +3064,7 @@ _mm256_mask_cvtsph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    then element is zeroed instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtsph_hf8(__mmask16 __U, __m256h __A) {
+_mm256_maskz_cvts_ph_hf8(__mmask16 __U, __m256h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_256_mask(
       (__v16hf)__A, (__v16qi)(__m128i)_mm_setzero_si128(), (__mmask16)__U);
 }

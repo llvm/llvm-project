@@ -66,7 +66,6 @@ namespace LLVM {
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type, "llvm.ppc_fp128");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
@@ -112,10 +111,6 @@ bool isCompatibleFloatingPointType(Type type);
 /// dialect pointers and LLVM dialect scalable vector types.
 bool isCompatibleVectorType(Type type);
 
-/// Returns the element type of any vector type compatible with the LLVM
-/// dialect.
-Type getVectorElementType(Type type);
-
 /// Returns the element count of any LLVM-compatible vector type.
 llvm::ElementCount getVectorNumElements(Type type);
 
@@ -131,14 +126,6 @@ Type getVectorType(Type elementType, unsigned numElements,
 /// and length.
 Type getVectorType(Type elementType, const llvm::ElementCount &numElements);
 
-/// Creates an LLVM dialect-compatible type with the given element type and
-/// length.
-Type getFixedVectorType(Type elementType, unsigned numElements);
-
-/// Creates an LLVM dialect-compatible type with the given element type and
-/// length.
-Type getScalableVectorType(Type elementType, unsigned numElements);
-
 /// Returns the size of the given primitive LLVM dialect-compatible type
 /// (including vectors) in bits, for example, the size of i16 is 16 and
 /// the size of vector<4xi16> is 64. Returns 0 for non-primitive
@@ -146,7 +133,7 @@ Type getScalableVectorType(Type elementType, unsigned numElements);
 llvm::TypeSize getPrimitiveTypeSizeInBits(Type type);
 
 /// The positions of different values in the data layout entry for pointers.
-enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
+enum class PtrDLEntryPos { Size = 0, Abi, Preferred, Index, Addr };
 
 /// Returns the value that corresponds to named position `pos` from the
 /// data layout entry `attr` assuming it's a dense integer elements attribute.

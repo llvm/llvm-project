@@ -11,7 +11,8 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a0
 ; CHECK-NEXT:    move $a0, $a1
-; CHECK-NEXT:    bl %plt(__fixsfdi)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__fixsfdi)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    add.d $a0, $fp, $a0
 ; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -29,7 +30,8 @@ define i64 @caller_float_in_regs() nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    lu12i.w $a1, 262144
 ; CHECK-NEXT:    ori $a0, $zero, 1
-; CHECK-NEXT:    bl %plt(callee_float_in_regs)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_float_in_regs)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -64,7 +66,8 @@ define i64 @caller_float_on_stack() nounwind {
 ; CHECK-NEXT:    move $a3, $zero
 ; CHECK-NEXT:    move $a5, $zero
 ; CHECK-NEXT:    move $a7, $zero
-; CHECK-NEXT:    bl %plt(callee_float_on_stack)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_float_on_stack)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -85,7 +88,8 @@ define i64 @caller_tiny_scalar_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(callee_tiny_scalar_ret)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_tiny_scalar_ret)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
