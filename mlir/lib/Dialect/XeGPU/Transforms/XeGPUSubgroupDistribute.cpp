@@ -1459,7 +1459,10 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     RewritePatternSet patterns(&getContext());
     patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
 
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
+      return;
+    }
   }
   // Finally, do the SIMD to SIMT distribution.
   RewritePatternSet patterns(&getContext());
@@ -1470,5 +1473,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
                       int64_t warpSz) { return Value(); };
   vector::populatePropagateWarpVectorDistributionPatterns(
       patterns, distributionFn, shuffleFn);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+    signalPassFailure();
+    return;
+  }
 }
