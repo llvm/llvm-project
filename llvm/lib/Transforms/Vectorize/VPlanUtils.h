@@ -39,38 +39,43 @@ const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 
 /// Returns true if \p VPV is uniform after vectorization.
 inline bool isUniformAfterVectorization(const VPValue *VPV) {
-  auto IsKnownUniformOpcode = [](auto *R) -> bool {
-    return Instruction::isBinaryOp(R->getOpcode()) ||
-           Instruction::isCast(R->getOpcode()) ||
-           R->getOpcode() == Instruction::GetElementPtr ||
-           R->getOpcode() == Instruction::ICmp ||
-           R->getOpcode() == Instruction::FCmp;
+  auto PreservesUniformity = [](unsigned Opcode) -> bool {
+    if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+      return true;
+    switch (Opcode) {
+    case Instruction::GetElementPtr:
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+    case VPInstruction::Broadcast:
+    case VPInstruction::PtrAdd:
+      return true;
+    default:
+      return false;
+    }
   };
 
-  // A value defined outside the vector region must be uniform after
-  // vectorization inside a vector region.
+  // A live-in must be uniform across the scope of VPlan.
   if (VPV->isLiveIn())
     return true;
+
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
-    const VPRegionBlock *ParentR = Rep->getParent()->getParent();
+    const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
+    if (RegionOfR && RegionOfR->isReplicator())
+      return false;
     return Rep->isUniform() ||
-           (IsKnownUniformOpcode(Rep) &&
-            (!ParentR || !ParentR->isReplicator()) &&
+           (PreservesUniformity(Rep->getOpcode()) &&
             all_of(Rep->operands(), isUniformAfterVectorization));
   }
-
   if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(),
                   isUniformAfterVectorization);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return IsKnownUniformOpcode(WidenR) &&
+    return PreservesUniformity(WidenR->getOpcode()) &&
            all_of(WidenR->operands(), isUniformAfterVectorization);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           ((IsKnownUniformOpcode(VPI) ||
-             VPI->getOpcode() == VPInstruction::Broadcast ||
-             VPI->getOpcode() == VPInstruction::PtrAdd) &&
+           (PreservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isUniformAfterVectorization));
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
