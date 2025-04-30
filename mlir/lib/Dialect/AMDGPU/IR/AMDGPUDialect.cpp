@@ -507,35 +507,14 @@ LogicalResult GatherToLDSOp::verify() {
 }
 
 LogicalResult ScaledMFMAOp::verify() {
-  unsigned opselA = getOpselA() >> 8;
-  unsigned opselB = getOpselB() >> 8;
+  unsigned scalesIdxA = getScalesIdxA();
+  unsigned scalesIdxB = getScalesIdxB();
 
-  if (opselA != 0)
-    return emitOpError("Opsel A must be a zero extended 8 bit value");
+  if (scalesIdxA > 3)
+    return emitOpError("scales idx A must be a value from 0 to 3 inclusive");
 
-  if (opselB != 0)
-    return emitOpError("Opsel B must be a zero extended 8 bit value");
-
-  auto isValidType =
-      llvm::IsaPred<Float8E4M3FNType, Float8E5M2Type, Float6E2M3FNType,
-                    Float6E3M2FNType, Float4E2M1FNType>;
-
-  Type aType = getSourceA().getType();
-  Type bType = getSourceB().getType();
-  aType = getElementTypeOrSelf(aType);
-  bType = getElementTypeOrSelf(bType);
-  if (!isValidType(aType))
-    return emitOpError("Source A must be of element type fp4, fp6 or fp8");
-  if (!isValidType(bType))
-    return emitOpError("Source B must be of element type fp4, fp6 or fp8");
-
-  unsigned m = getM();
-  unsigned n = getN();
-  unsigned k = getK();
-  bool tileConfig1 = (m == n && n == 32 && k == 64);
-  bool tileConfig2 = (m == n && n == 16 && k == 128);
-  if (!tileConfig1 && !tileConfig2)
-    return emitOpError("Invalid tile size for scaled mfma");
+  if (scalesIdxB > 3)
+    return emitOpError("scales idx B must be a value from 0 to 3 inclusive");
 
   return success();
 }

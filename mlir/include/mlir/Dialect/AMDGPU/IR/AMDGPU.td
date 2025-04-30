@@ -687,6 +687,11 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
+// scaled_mfma
+def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ]>,
+                             VectorOfLengthAndType<[8, 32], [F8E5M2, F8E4M3FN]>,
+                             VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
+def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16, 32], [F32]>]>;
 // wmma
 def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
                              [4, 8, 16],
@@ -837,14 +842,14 @@ def AMDGPU_ScaledMFMAOp :
                    I32Attr:$m,
                    I32Attr:$n,
                    I32Attr:$k,
-                   MFMAInTypes:$sourceA,
-                   MFMAInTypes:$sourceB,
-                   MFMAOutTypes:$destC,
-                   I32Attr:$scaleA,
-                   I32Attr:$scaleB,
-                   I32Attr:$opselA,
-                   I32Attr:$opselB)>,
-    Results<(outs MFMAOutTypes: $destD)> {
+                   ScaledMFMAInTypes:$sourceA,
+                   ScaledMFMAInTypes:$sourceB,
+                   ScaledMFMAOutTypes:$destC,
+                   AnyTypeOf<[I8, FixedVectorOfLengthAndType<[4], [I8]>]>:$scalesA,
+                   AnyTypeOf<[I8, FixedVectorOfLengthAndType<[4], [I8]>]>:$scalesB,
+                   I32Attr:$scalesIdxA,
+                   I32Attr:$scalesIdxB)>,
+    Results<(outs ScaledMFMAOutTypes: $destD)> {
   let summary = "MLIR wrapper for CDNA scaled mfma instructions";
   let description = [{
     The `amdgpu.scaled_mfma` op is an MLIR wrapper around intrinsics
@@ -872,9 +877,9 @@ def AMDGPU_ScaledMFMAOp :
     double-precision operations on gfx94x and so are not included here. 
   }];
   let assemblyFormat = [{
-    $sourceA `*` $sourceB `+` $destC
+    `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
     attr-dict
-    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+    `:` type($sourceA) `,` type($scalesA) `,` type($sourceB) `,` type($scalesB) `,` type($destC)
   }];
   let hasVerifier = 1;
 }

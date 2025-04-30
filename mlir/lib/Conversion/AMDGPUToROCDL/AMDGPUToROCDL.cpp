@@ -974,19 +974,15 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
   matchAndRewrite(ScaledMFMAOp op, ScaledMFMAOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    Type outType = typeConverter->convertType(op.getDestD().getType());
-    Type intrinsicOutType = outType;
-    if (auto outVecType = dyn_cast<VectorType>(outType))
-      if (outVecType.getElementType().isBF16())
-        intrinsicOutType = outVecType.clone(rewriter.getI16Type());
+    Type intrinsicOutType = typeConverter->convertType(op.getDestD().getType());
 
-    if (chipset.majorVersion != 9 || chipset < kGfx908)
-      return op->emitOpError("Scaled MFMA only supported on gfx908+");
+    if (chipset.majorVersion != 9 || chipset < kGfx950)
+      return op->emitOpError("scaled MFMA only supported on gfx908+");
     std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
         maybeScaledIntrinsic = mfmaOpToScaledIntrinsic(op, chipset);
     if (!maybeScaledIntrinsic.has_value())
       return op.emitOpError(
-          "no intrinsic matching Scaled MFMA size on given chipset");
+          "no intrinsic matching scaled MFMA size on given chipset");
 
     auto [intrinsicName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
     OperationState loweredOp(loc, intrinsicName);
@@ -995,17 +991,18 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
         {convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceA()),
          convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC()});
-    Value scaleA = createI32Constant(rewriter, loc, adaptor.getScaleA());
-    Value scaleB = createI32Constant(rewriter, loc, adaptor.getScaleB());
-    Value opselA = createI32Constant(rewriter, loc, adaptor.getOpselA());
-    Value opselB = createI32Constant(rewriter, loc, adaptor.getOpselB());
-    loweredOp.addOperands({createI32Constant(rewriter, loc, aTypeCode),
-                           createI32Constant(rewriter, loc, bTypeCode),
-                           /*scale A byte=*/opselA, /*scale A=*/scaleA,
-                           /*scale B byte=*/opselB, /*scale B=*/scaleB});
+    Value scalesIdxA = createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
+    Value scalesIdxB = createI32Constant(rewriter, loc, adaptor.getScalesIdxB());
+    loweredOp.addOperands(
+        {createI32Constant(rewriter, loc, aTypeCode),
+         createI32Constant(rewriter, loc, bTypeCode),
+         /*scales A*/
+         convertMFMAVectorOperand(rewriter, loc, adaptor.getScalesA()),
+         /*scales B*/
+         convertMFMAVectorOperand(rewriter, loc, adaptor.getScalesB()),
+         /*scales idx A=*/scalesIdxA,
+         /*scales idx B=*/scalesIdxB});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
-    if (outType != intrinsicOutType)
-      lowered = rewriter.create<LLVM::BitcastOp>(loc, outType, lowered);
     rewriter.replaceOp(op, lowered);
     return success();
   }
