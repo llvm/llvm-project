@@ -73,11 +73,6 @@ protected:
   std::optional<SmallVector<Type>>
   convertType(ShapedType type, llvm::ArrayRef<int64_t> blockSize) const {
     auto elemTy = type.getElementType();
-    auto maybeGrids = computeGrids(type.getShape(), blockSize);
-
-    if (!maybeGrids)
-      return std::nullopt;
-
     Type newTy;
     // TensorDescType needs to drop the inst_data field in the layout attribute
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
@@ -90,7 +85,9 @@ protected:
       newTy = type.clone(blockSize, elemTy);
     }
 
-    return llvm::SmallVector<Type>(computeProduct(*maybeGrids), newTy);
+    auto ratio = computeShapeRatio(type.getShape(), blockSize);
+    assert(ratio && "Expecting the ratio to be valid.");
+    return llvm::SmallVector<Type>(computeProduct(*ratio), newTy);
   }
 
   // emulate the the unpack behavior using insert_strided_slice for VectorType
@@ -114,16 +111,15 @@ protected:
         }
       }
       return result;
+    }
 
-    } else if (isa<xegpu::TensorDescType>(destTy)) {
+    if (isa<xegpu::TensorDescType>(destTy)) {
       auto attr = NamedAttribute(rewriter.getStringAttr(unpackAttrName),
                                  rewriter.getUnitAttr());
-      auto innerBlkAttr =
-          NamedAttribute(rewriter.getStringAttr(blockAttrName),
-                         rewriter.getDenseI64ArrayAttr(blockSize));
+      auto blkAttr = NamedAttribute(rewriter.getStringAttr(blockAttrName),
+                                    rewriter.getDenseI64ArrayAttr(blockSize));
       auto castOp = rewriter.create<UnrealizedConversionCastOp>(
-          loc, destTy, srcs,
-          llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
+          loc, destTy, srcs, llvm::ArrayRef<NamedAttribute>({attr, blkAttr}));
       return castOp.getResult(0);
     }
 
@@ -150,15 +146,15 @@ protected:
         }
       }
       return results;
-    } else if (isa<xegpu::TensorDescType>(src.getType())) {
+    }
+
+    if (isa<xegpu::TensorDescType>(src.getType())) {
       auto attr = NamedAttribute(rewriter.getStringAttr(packAttrName),
                                  rewriter.getUnitAttr());
-      auto innerBlkAttr =
-          NamedAttribute(rewriter.getStringAttr(blockAttrName),
-                         rewriter.getDenseI64ArrayAttr(blockSize));
+      auto blkAttr = NamedAttribute(rewriter.getStringAttr(blockAttrName),
+                                    rewriter.getDenseI64ArrayAttr(blockSize));
       auto castOp = rewriter.create<UnrealizedConversionCastOp>(
-          loc, destTypes, src,
-          llvm::ArrayRef<NamedAttribute>({attr, innerBlkAttr}));
+          loc, destTypes, src, llvm::ArrayRef<NamedAttribute>({attr, blkAttr}));
       return castOp.getResults();
     }
 
@@ -242,11 +238,70 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
   }
 };
 
+struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
+  using UnrollPattern<xegpu::UpdateNdOffsetOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::UpdateNdOffsetOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto tdesc = op.getTensorDesc();
+    auto tdescTy = tdesc.getType();
+    auto shape = tdescTy.getShape();
+
+    auto maybeTargetShape = getTargetShape(op);
+    if (!maybeTargetShape)
+      return failure();
+    auto targetShape = *maybeTargetShape;
+
+    auto maybeGrids = computeGrids(shape, targetShape);
+    if (!maybeGrids)
+      return failure();
+    auto grids = *maybeGrids;
+
+    auto convertedTdescTypes = convertType(tdescTy, targetShape);
+    auto convertedTdesc =
+        pack(tdesc, *convertedTdescTypes, targetShape, loc, rewriter);
+
+    llvm::SmallVector<Value> newOps;
+    for (auto t : convertedTdesc) {
+      auto newOp = rewriter.create<xegpu::UpdateNdOffsetOp>(
+          loc, t.getType(), t, op.getOffsets(), op.getConstOffsets());
+      newOps.push_back(newOp);
+    }
+    auto castOp = unpack(newOps, op.getType(), targetShape, loc, rewriter);
+    rewriter.replaceOp(op, castOp);
+    return success();
+  }
+};
+
 struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
   using UnrollPattern<xegpu::PrefetchNdOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::PrefetchNdOp op,
                                 PatternRewriter &rewriter) const override {
-    return failure();
+    auto loc = op.getLoc();
+    auto tdesc = op.getTensorDesc();
+    auto tdescTy = tdesc.getType();
+    auto shape = tdescTy.getShape();
+
+    auto maybeTargetShape = getTargetShape(op);
+    if (!maybeTargetShape)
+      return failure();
+    auto targetShape = *maybeTargetShape;
+
+    auto maybeGrids = computeGrids(shape, targetShape);
+    if (!maybeGrids)
+      return failure();
+    auto grids = *maybeGrids;
+
+    auto convertedTdescTypes = convertType(tdescTy, targetShape);
+    auto convertedTdesc =
+        pack(tdesc, *convertedTdescTypes, targetShape, loc, rewriter);
+
+    for (auto t : convertedTdesc) {
+      rewriter.create<xegpu::PrefetchNdOp>(loc, TypeRange(), t, op->getAttrs());
+    }
+
+    rewriter.eraseOp(op);
+    return success();
   }
 };
 
@@ -330,54 +385,6 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     }
     rewriter.eraseOp(op);
     return success();
-  }
-};
-
-struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
-  using UnrollPattern<xegpu::UpdateNdOffsetOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::UpdateNdOffsetOp op,
-                                PatternRewriter &rewriter) const override {
-    return failure();
-  }
-};
-
-struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
-  using UnrollPattern<xegpu::CreateDescOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::CreateDescOp op,
-                                PatternRewriter &rewriter) const override {
-    return failure();
-  }
-};
-
-struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
-  using UnrollPattern<xegpu::PrefetchOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::PrefetchOp op,
-                                PatternRewriter &rewriter) const override {
-    return failure();
-  }
-};
-
-struct UnrollLoadOp : public UnrollPattern<xegpu::LoadGatherOp> {
-  using UnrollPattern<xegpu::LoadGatherOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::LoadGatherOp op,
-                                PatternRewriter &rewriter) const override {
-    return failure();
-  }
-};
-
-struct UnrollStoreOp : public UnrollPattern<xegpu::StoreScatterOp> {
-  using UnrollPattern<xegpu::StoreScatterOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::StoreScatterOp op,
-                                PatternRewriter &rewriter) const override {
-    return failure();
-  }
-};
-
-struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
-  using UnrollPattern<xegpu::UpdateOffsetOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::UpdateOffsetOp op,
-                                PatternRewriter &rewriter) const override {
-    return failure();
   }
 };
 
@@ -468,18 +475,12 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
   }
 };
 
-struct UnrollAtomicRMWOp : public UnrollPattern<xegpu::AtomicRMWOp> {
-  using UnrollPattern<xegpu::AtomicRMWOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::AtomicRMWOp op,
-                                PatternRewriter &rewriter) const override {
-    return failure();
-  }
-};
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns,
     const mlir::vector::UnrollVectorOptions &options) {
-  patterns.add<UnrollCreateNdOp, UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp>(
+  patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
+               UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp>(
       patterns.getContext(), options);
 }

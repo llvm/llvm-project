@@ -46,10 +46,15 @@ struct TestXeGPUUnrollingPatterns
     vector::UnrollVectorOptions options;
     options.setNativeShapeFn([&](Operation *op)
                                  -> std::optional<SmallVector<int64_t>> {
-      if (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::StoreNdOp>(op)) {
+      if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,
+              xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp>(op)) {
         xegpu::TensorDescType tdescTy;
         if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
           tdescTy = createNdOp.getType();
+        } else if (auto updateNdOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op)) {
+          tdescTy = updateNdOp.getTensorDescType();
+        } else if (auto prefetchNdOp = dyn_cast<xegpu::PrefetchNdOp>(op)) {
+          tdescTy = prefetchNdOp.getTensorDescType();
         } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
           tdescTy = loadNdOp.getTensorDescType();
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
