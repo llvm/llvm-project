@@ -554,9 +554,9 @@ define <2 x half> @v_minimum_v2f16(<2 x half> %src0, <2 x half> %src1) {
 ; GFX8-LABEL: v_minimum_v2f16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_min_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mov_b32_e32 v3, 0x7e00
-; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_cndmask_b32_sdwa v2, v3, v2, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_min_f16_e32 v4, v0, v1
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
@@ -685,9 +685,9 @@ define <2 x half> @v_minimum_v2f16__nsz(<2 x half> %src0, <2 x half> %src1) {
 ; GFX8-LABEL: v_minimum_v2f16__nsz:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_min_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mov_b32_e32 v3, 0x7e00
-; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_cndmask_b32_sdwa v2, v3, v2, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_min_f16_e32 v4, v0, v1
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
@@ -819,14 +819,14 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX8-NEXT:    s_lshr_b32 s4, s17, 16
 ; GFX8-NEXT:    s_lshr_b32 s5, s16, 16
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-NEXT:    v_min_f16_e32 v1, s5, v0
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, s5, v0
-; GFX8-NEXT:    v_cndmask_b32_sdwa v0, v2, v1, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-NEXT:    v_mov_b32_e32 v1, s17
-; GFX8-NEXT:    v_min_f16_e32 v3, s16, v1
-; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, s16, v1
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
+; GFX8-NEXT:    v_min_f16_e32 v0, s5, v0
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x7e00
+; GFX8-NEXT:    v_mov_b32_e32 v2, s17
+; GFX8-NEXT:    v_cndmask_b32_sdwa v0, v1, v0, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-NEXT:    v_min_f16_e32 v3, s16, v2
+; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, s16, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v0
@@ -946,9 +946,9 @@ define <3 x half> @v_minimum_v3f16(<3 x half> %src0, <3 x half> %src1) {
 ; GFX8-LABEL: v_minimum_v3f16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v2 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_min_f16_sdwa v4, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0x7e00
-; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v2 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_cndmask_b32_sdwa v4, v5, v4, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_min_f16_e32 v6, v1, v3
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v1, v3
@@ -1102,9 +1102,9 @@ define <3 x half> @v_minimum_v3f16__nsz(<3 x half> %src0, <3 x half> %src1) {
 ; GFX8-LABEL: v_minimum_v3f16__nsz:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v2 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_min_f16_sdwa v4, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0x7e00
-; GFX8-NEXT:    v_cmp_o_f16 vcc, v0, v2 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_cndmask_b32_sdwa v4, v5, v4, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_min_f16_e32 v6, v1, v3
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v1, v3
@@ -1258,9 +1258,9 @@ define <4 x half> @v_minimum_v4f16(<4 x half> %src0, <4 x half> %src1) {
 ; GFX8-LABEL: v_minimum_v4f16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_o_f16 vcc, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_min_f16_sdwa v4, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0x7e00
-; GFX8-NEXT:    v_cmp_o_f16 vcc, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
 ; GFX8-NEXT:    v_cndmask_b32_sdwa v4, v5, v4, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -1438,9 +1438,9 @@ define <4 x half> @v_minimum_v4f16__nsz(<4 x half> %src0, <4 x half> %src1) {
 ; GFX8-LABEL: v_minimum_v4f16__nsz:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_o_f16 vcc, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_min_f16_sdwa v4, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0x7e00
-; GFX8-NEXT:    v_cmp_o_f16 vcc, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
 ; GFX8-NEXT:    v_cndmask_b32_sdwa v4, v5, v4, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD

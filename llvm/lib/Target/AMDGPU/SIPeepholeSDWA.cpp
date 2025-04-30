@@ -1113,10 +1113,9 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
   MachineInstr &CarryDef = *MRI->getVRegDef(CarryReg);
 
   if (CarryDef.isCompare() && TII->isVOP3(CarryDef) &&
-      MRI->hasOneUse(CarryIn.getReg())) {
+      MRI->hasOneUse(CarryIn.getReg()))
     CarryDef.substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
-    CarryDef.moveBefore(&MI);
-  } else {
+  else {
     // Add write: VCC[lanedId] <- (CarryIn[laneId] == 1)
     const TargetRegisterClass *Class =
         TRI->getRegClassForOperandReg(*MRI, CarryIn);
