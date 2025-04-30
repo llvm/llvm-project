@@ -5864,6 +5864,7 @@ struct OffsetResult {
     case OffsetKind::Select:
       return Builder.CreateSelect(V0, V1, V2);
     }
+    llvm_unreachable("Unknown OffsetKind enum");
   }
 };
 
