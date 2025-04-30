@@ -25,9 +25,7 @@ entry:
   %u64 = alloca i64, align 8
 ; CHECK-DAG: .reg .b64 %rd<
   %f32 = alloca float, align 4
-; CHECK-DAG: .reg .b32 %f<
   %f64 = alloca double, align 8
-; CHECK-DAG: .reg .b64 %fd<
 
 ; Verify that we use correct register types.
   store i8 1, ptr %s8, align 1
@@ -61,9 +59,9 @@ entry:
   store double 1.000000e+01, ptr %f64, align 8
 ; Instead, we force a load into a register and then verify register type.
   %f32v = load volatile float, ptr %f32, align 4
-; CHECK: ld.volatile.b32         %f{{[0-9]+}}
+; CHECK: ld.volatile.b32         %r{{[0-9]+}}
   %f64v = load volatile double, ptr %f64, align 8
-; CHECK: ld.volatile.b64         %fd{{[0-9]+}}
+; CHECK: ld.volatile.b64         %rd{{[0-9]+}}
   ret void
 ; CHECK: ret;
 ; NO8BIT: ret;

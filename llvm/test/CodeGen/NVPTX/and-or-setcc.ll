@@ -8,15 +8,14 @@ define i1 @and_ord(float %a, float %b) {
 ; CHECK-LABEL: and_ord(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [and_ord_param_0];
-; CHECK-NEXT:    ld.param.b32 %f2, [and_ord_param_1];
-; CHECK-NEXT:    setp.num.f32 %p1, %f1, %f2;
-; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param.b32 %r1, [and_ord_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [and_ord_param_1];
+; CHECK-NEXT:    setp.num.f32 %p1, %r1, %r2;
+; CHECK-NEXT:    selp.b32 %r3, 1, 0, %p1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %c = fcmp ord float %a, 0.0
   %d = fcmp ord float %b, 0.0
@@ -28,15 +27,14 @@ define i1 @or_uno(float %a, float %b) {
 ; CHECK-LABEL: or_uno(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [or_uno_param_0];
-; CHECK-NEXT:    ld.param.b32 %f2, [or_uno_param_1];
-; CHECK-NEXT:    setp.nan.f32 %p1, %f1, %f2;
-; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param.b32 %r1, [or_uno_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [or_uno_param_1];
+; CHECK-NEXT:    setp.nan.f32 %p1, %r1, %r2;
+; CHECK-NEXT:    selp.b32 %r3, 1, 0, %p1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %c = fcmp uno float %a, 0.0
   %d = fcmp uno float %b, 0.0

@@ -9,13 +9,13 @@ target triple = "nvptx64-nvidia-cuda"
 define double @test1(double %in) {
 ; CHECK-LABEL: test1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %fd1, [test1_param_0];
-; CHECK-NEXT:    rcp.rn.f64 %fd2, %fd1;
-; CHECK-NEXT:    neg.f64 %fd3, %fd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %fd3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test1_param_0];
+; CHECK-NEXT:    rcp.rn.f64 %rd2, %rd1;
+; CHECK-NEXT:    neg.f64 %rd3, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %div = fdiv double 1.000000e+00, %in
   %neg = fsub double -0.000000e+00, %div
@@ -27,13 +27,13 @@ define double @test1(double %in) {
 define double @test2(double %in) {
 ; CHECK-LABEL: test2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %fd1, [test2_param_0];
-; CHECK-NEXT:    rcp.rn.f64 %fd2, %fd1;
-; CHECK-NEXT:    neg.f64 %fd3, %fd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %fd3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test2_param_0];
+; CHECK-NEXT:    rcp.rn.f64 %rd2, %rd1;
+; CHECK-NEXT:    neg.f64 %rd3, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %div = fdiv double -1.000000e+00, %in
   ret double %div
@@ -44,13 +44,13 @@ define double @test2(double %in) {
 define double @test3(double %in) {
 ; CHECK-LABEL: test3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %fd1, [test3_param_0];
-; CHECK-NEXT:    rcp.rn.f64 %fd2, %fd1;
-; CHECK-NEXT:    neg.f64 %fd3, %fd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %fd3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test3_param_0];
+; CHECK-NEXT:    rcp.rn.f64 %rd2, %rd1;
+; CHECK-NEXT:    neg.f64 %rd3, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %neg = fsub double -0.000000e+00, %in
   %div = fdiv double 1.000000e+00, %neg
