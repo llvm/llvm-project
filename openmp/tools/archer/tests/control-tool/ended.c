@@ -1,5 +1,5 @@
 /*
- * skipped-access.c -- Archer testcase
+ * ended.c -- Archer testcase
  */
 
 //===----------------------------------------------------------------------===//
@@ -19,6 +19,9 @@
 int main(int argc, char *argv[]) {
   int var = 0;
 
+#pragma omp parallel
+  { omp_control_tool(omp_control_tool_end, 0, NULL); }
+
 #pragma omp parallel num_threads(2) shared(var)
   {
     if (omp_get_thread_num() == 0) {
@@ -26,11 +29,9 @@ int main(int argc, char *argv[]) {
     }
 
     /* We miss the race due to Archer being paused */
-    omp_control_tool(omp_control_tool_pause, 0, NULL);
     if (omp_get_thread_num() == 1) {
       var++;
     }
-    omp_control_tool(omp_control_tool_start, 0, NULL);
   }
 
   fprintf(stderr, "DONE\n");

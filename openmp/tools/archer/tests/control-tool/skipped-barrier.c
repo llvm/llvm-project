@@ -1,5 +1,5 @@
 /*
- * barrier.c -- Archer testcase
+ * skipped-barrier.c -- Archer testcase
  */
 
 //===----------------------------------------------------------------------===//
@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
       var++;
     }
 
+    /* TSan detects a race as Archer does not see the barrier */
     omp_control_tool(omp_control_tool_pause, 0, NULL);
 #pragma omp barrier
     omp_control_tool(omp_control_tool_start, 0, NULL);

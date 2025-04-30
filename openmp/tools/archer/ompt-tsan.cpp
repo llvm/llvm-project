@@ -175,18 +175,18 @@ DECLARE_TSAN_FUNCTION(__tsan_func_exit)
 // This marker is used to define a happens-before arc. The race detector will
 // infer an arc from the begin to the end when they share the same pointer
 // argument.
-#define TsanHappensBefore(cv) \
-do { \ 
-  if (archer_state ==ACTIVE) \
-      AnnotateHappensBefore(__FILE__, __LINE__, cv); \
-} while(0)
+#define TsanHappensBefore(cv)                                                  \
+  do {                                                                         \
+    if (archer_state == ACTIVE)                                                \
+      AnnotateHappensBefore(__FILE__, __LINE__, cv);                           \
+  } while (0)
 
 // This marker defines the destination of a happens-before arc.
-#define TsanHappensAfter(cv) \
-do { \ 
-  if (archer_state ==ACTIVE) \
-      AnnotateHappensAfter(__FILE__, __LINE__, cv); \
-} while(0)
+#define TsanHappensAfter(cv)                                                   \
+  do {                                                                         \
+    if (archer_state == ACTIVE)                                                \
+      AnnotateHappensAfter(__FILE__, __LINE__, cv);                            \
+  } while (0)
 
 // Ignore any races on writes between here and the next TsanIgnoreWritesEnd.
 #define TsanIgnoreWritesBegin() AnnotateIgnoreWritesBegin(__FILE__, __LINE__)
@@ -1272,8 +1272,6 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
 static void ompt_tsan_finalize(ompt_data_t *tool_data) {
   if (archer_flags->ignore_serial)
     TsanIgnoreWritesEnd();
-//  if (archer_state == PAUSED || archer_state == ENDED)
-//    TsanIgnoreWritesEnd();
   if (archer_flags->print_max_rss) {
     struct rusage end;
     getrusage(RUSAGE_SELF, &end);
