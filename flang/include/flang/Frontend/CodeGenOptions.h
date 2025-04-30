@@ -148,24 +148,12 @@ public:
   /// OpenMP is enabled.
   using DoConcurrentMappingKind = flangomp::DoConcurrentMappingKind;
 
-  enum ProfileInstrKind {
-    ProfileNone,       // Profile instrumentation is turned off.
-    ProfileClangInstr, // Clang instrumentation to generate execution counts
-                       // to use with PGO.
-    ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
-    ProfileCSIRInstr, // IR level PGO context sensitive instrumentation in LLVM.
-  };
-
   /// Name of the profile file to use as output for -fprofile-instr-generate,
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
 
   /// Name of the profile file to use as input for -fmemory-profile-use.
   std::string MemoryProfileUsePath;
-
-  unsigned int DebugInfoForProfiling;
-
-  unsigned int AtomicProfileUpdate;
 
   /// Name of the profile file to use as input for -fprofile-instr-use
   std::string ProfileInstrumentUsePath;
@@ -176,23 +164,27 @@ public:
 
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
-    return getProfileInstr() == ProfileClangInstr;
+    return getProfileInstr() == llvm::driver::ProfileClangInstr;
   }
 
   /// Check if IR level profile instrumentation is on.
-  bool hasProfileIRInstr() const { return getProfileInstr() == ProfileIRInstr; }
+  bool hasProfileIRInstr() const {
+    return getProfileInstr() == llvm::driver::ProfileIRInstr;
+  }
 
   /// Check if CS IR level profile instrumentation is on.
   bool hasProfileCSIRInstr() const {
-    return getProfileInstr() == ProfileCSIRInstr;
+    return getProfileInstr() == llvm::driver::ProfileCSIRInstr;
   }
   /// Check if IR level profile use is on.
   bool hasProfileIRUse() const {
-    return getProfileUse() == ProfileIRInstr ||
-           getProfileUse() == ProfileCSIRInstr;
+    return getProfileUse() == llvm::driver::ProfileIRInstr ||
+           getProfileUse() == llvm::driver::ProfileCSIRInstr;
   }
   /// Check if CSIR profile use is on.
-  bool hasProfileCSIRUse() const { return getProfileUse() == ProfileCSIRInstr; }
+  bool hasProfileCSIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileCSIRInstr;
+  }
 
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

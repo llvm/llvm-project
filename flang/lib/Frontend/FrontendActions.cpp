@@ -133,21 +133,6 @@ static bool saveMLIRTempFile(const CompilerInvocation &ci,
 // Custom BeginSourceFileAction
 //===----------------------------------------------------------------------===//
 
-static llvm::cl::opt<llvm::PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
-    "pgo-cold-func-opt", llvm::cl::init(llvm::PGOOptions::ColdFuncOpt::Default),
-    llvm::cl::Hidden,
-    llvm::cl::desc(
-        "Function attribute to apply to cold functions as determined by PGO"),
-    llvm::cl::values(clEnumValN(llvm::PGOOptions::ColdFuncOpt::Default,
-                                "default", "Default (no attribute)"),
-                     clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptSize,
-                                "optsize", "Mark cold functions with optsize."),
-                     clEnumValN(llvm::PGOOptions::ColdFuncOpt::MinSize,
-                                "minsize", "Mark cold functions with minsize."),
-                     clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptNone,
-                                "optnone",
-                                "Mark cold functions with optnone.")));
-
 bool PrescanAction::beginSourceFileAction() { return runPrescan(); }
 
 bool PrescanAndParseAction::beginSourceFileAction() {
@@ -910,19 +895,6 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   delete tlii;
 }
 
-// Default filename used for profile generation.
-namespace llvm {
-extern llvm::cl::opt<bool> DebugInfoCorrelate;
-extern llvm::cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
-
-std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate ||
-                 ProfileCorrelate != llvm::InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
-}
-} // namespace llvm
-
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   CompilerInstance &ci = getInstance();
   const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
@@ -943,13 +915,14 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (opts.hasProfileIRInstr()) {
     // -fprofile-generate.
-    pgoOpt = llvm::PGOOptions(
-        opts.InstrProfileOutput.empty() ? llvm::getDefaultProfileGenName()
-                                        : opts.InstrProfileOutput,
-        "", "", opts.MemoryProfileUsePath, nullptr, llvm::PGOOptions::IRInstr,
-        llvm::PGOOptions::NoCSAction, ClPGOColdFuncAttr,
-        opts.DebugInfoForProfiling,
-        /*PseudoProbeForProfiling=*/false, opts.AtomicProfileUpdate);
+    pgoOpt = llvm::PGOOptions(opts.InstrProfileOutput.empty()
+                                  ? llvm::driver::getDefaultProfileGenName()
+                                  : opts.InstrProfileOutput,
+                              "", "", opts.MemoryProfileUsePath, nullptr,
+                              llvm::PGOOptions::IRInstr,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default, false,
+                              /*PseudoProbeForProfiling=*/false, false);
   } else if (opts.hasProfileIRUse()) {
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::vfs::getRealFileSystem();
@@ -959,7 +932,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     pgoOpt = llvm::PGOOptions(
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, VFS, llvm::PGOOptions::IRUse, CSAction,
-        ClPGOColdFuncAttr, opts.DebugInfoForProfiling);
+        llvm::PGOOptions::ColdFuncOpt::Default, false);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
