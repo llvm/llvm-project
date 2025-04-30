@@ -333,7 +333,7 @@ bool RISCVTargetInfo::initFeatureMap(
 std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts,
                                 bool IsArmStreamingFunction,
-                                llvm::Function *F) const {
+                                llvm::StringMap<bool> *FeatureMap) const {
   // RISCV::RVVBitsPerBlock is 64.
   unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
