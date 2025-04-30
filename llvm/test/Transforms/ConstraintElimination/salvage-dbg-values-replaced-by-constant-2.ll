@@ -3,7 +3,7 @@
 ; Check that checkAndReplaceCondition() salvages the debug value information after replacing
 ; the conditions (`%c.1` and `%t.2` in this test) with the speculated constants (GitHub Issue
 ; #135736).
-; In particular, the debug value record uses should not be replaced if they comes before the
+; In particular, the debug value record uses should not be replaced if they come before the
 ; context instrtuction (e.g., `%t.2` in this example).
 
 declare void @llvm.assume(i1 noundef) #0

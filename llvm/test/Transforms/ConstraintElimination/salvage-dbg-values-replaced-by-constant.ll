@@ -2,8 +2,7 @@
 
 ; Check that checkAndReplaceCondition() salvages the debug value information after replacing
 ; the conditions (`%t.1` in this test) with the speculated constants (GitHub Issue #135736).
-; In particular, the debug value record uses are replaced if their `DFSNumIn`s and `DFSNumOut`s
-; on `DominatorTree` satisfy the contraint.
+; In particular, debug uses are replaced if the debug record is dominated by the condition fact.
 
 define i1 @test_and_ule(i4 %x, i4 %y, i4 %z) !dbg !5 {
 ; CHECK-LABEL: define i1 @test_and_ule(
