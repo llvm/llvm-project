@@ -76,7 +76,7 @@ std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
     if (!verifyZeroFlag()) {
-      getDiags().Report(CurToken.TokLoc, diag::err_expected) << "'0'";
+      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
   } else {
@@ -538,7 +538,7 @@ RootSignatureParser::parseDescriptorRangeFlags() {
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
     if (!verifyZeroFlag()) {
-      getDiags().Report(CurToken.TokLoc, diag::err_expected) << "'0'";
+      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
     return DescriptorRangeFlags::None;

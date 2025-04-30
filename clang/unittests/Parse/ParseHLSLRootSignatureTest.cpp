@@ -616,7 +616,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_expected);
+  Consumer->setExpected(diag::err_hlsl_rootsig_non_zero_flag);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
