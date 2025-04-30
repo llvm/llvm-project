@@ -291,25 +291,25 @@ static_assert(
     "should be able to construct ArrayRef from iterator_range over pointers");
 
 TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
-  std::array<int, 5> A1{{42, -5, 0, 1000000, -1000000}};
-  ArrayRef<int> A2 = make_range(A1.begin(), A1.end());
+  int A1[] = {42, -5, 0, 1000000, -1000000, 0};
+  ArrayRef<int> A2 = make_range(&A1[0], &A1[5]);
 
-  EXPECT_EQ(A1.size(), A2.size());
-  for (std::size_t i = 0; i < A1.size(); ++i)
+  EXPECT_EQ(5ull, A2.size());
+  for (std::size_t i = 0; i < A2.size(); ++i)
     EXPECT_EQ(A1[i], A2[i]);
 
-  ArrayRef<const int> A3 = make_range(A1.begin(), A1.end());
-  EXPECT_EQ(A1.size(), A3.size());
-  for (std::size_t i = 0; i < A1.size(); ++i)
+  ArrayRef<const int> A3 = make_range(&A1[0], &A1[5]);
+  EXPECT_EQ(5ull, A3.size());
+  for (std::size_t i = 0; i < A3.size(); ++i)
     EXPECT_EQ(A1[i], A3[i]);
 }
 
 TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
-  std::array<const int, 5> A1{{42, -5, 0, 1000000, -1000000}};
-  ArrayRef<const int> A2 = make_range(A1.begin(), A1.end());
+  const int A1[] = {42, -5, 0, 1000000, -1000000, 0};
+  ArrayRef<const int> A2 = make_range(&A1[0], &A1[5]);
 
-  EXPECT_EQ(A1.size(), A2.size());
-  for (std::size_t i = 0; i < A1.size(); ++i)
+  EXPECT_EQ(5ull, A2.size());
+  for (std::size_t i = 0; i < A2.size(); ++i)
     EXPECT_EQ(A1[i], A2[i]);
 }
 
