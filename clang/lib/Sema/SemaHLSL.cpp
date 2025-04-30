@@ -32,6 +32,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2395,6 +2396,29 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
+    if (SemaRef.checkArgCount(TheCall, 1) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0))
+      return true;
+    // use the type of the handle (arg0) as a return type
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 5) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
+      return true;
+    // use the type of the handle (arg0) as a return type
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_and:
   case Builtin::BI__builtin_hlsl_or: {
     if (SemaRef.checkArgCount(TheCall, 2))
@@ -3216,6 +3240,68 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   }
 
   deduceAddressSpace(VD);
+}
+
+static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
+                                MutableArrayRef<Expr *> Args) {
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
+  InitializationKind Kind = InitializationKind::CreateDirect(
+      VD->getLocation(), SourceLocation(), SourceLocation());
+
+  InitializationSequence InitSeq(S, Entity, Kind, Args);
+  ExprResult Init = InitSeq.Perform(S, Entity, Kind, Args);
+
+  if (!Init.get())
+    return false;
+
+  VD->setInit(S.MaybeCreateExprWithCleanups(Init.get()));
+  VD->setInitStyle(VarDecl::CallInit);
+  S.CheckCompleteVariableDeclaration(VD);
+  return true;
+}
+
+static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
+  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+  if (!RBA)
+    // FIXME: add support for implicit binding (llvm/llvm-project#110722)
+    return false;
+
+  ASTContext &AST = S.getASTContext();
+  uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
+  uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
+  Expr *Args[] = {
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, RBA->getSlotNumber()),
+                             AST.UnsignedIntTy, SourceLocation()),
+      IntegerLiteral::Create(AST,
+                             llvm::APInt(UIntTySize, RBA->getSpaceNumber()),
+                             AST.UnsignedIntTy, SourceLocation()),
+      IntegerLiteral::Create(AST, llvm::APInt(IntTySize, 1), AST.IntTy,
+                             SourceLocation()),
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy,
+                             SourceLocation())};
+
+  return initVarDeclWithCtor(S, VD, Args);
+}
+
+// Returns true if the initialization has been handled.
+// Returns false to use default initialization.
+bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
+  // Objects in the hlsl_constant address space are initialized
+  // externally, so don't synthesize an implicit initializer.
+  if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
+    return true;
+
+  // Initialize resources
+  if (!isResourceRecordTypeOrArrayOf(VD))
+    return false;
+
+  // FIXME: We currectly support only simple resources - no arrays of resources
+  // or resources in user defined structs.
+  // (llvm/llvm-project#133835, llvm/llvm-project#133837)
+  if (VD->getType()->isHLSLResourceRecord())
+    return initGlobalResourceDecl(SemaRef, VD);
+
+  return false;
 }
 
 // Walks though the global variable declaration, collects all resource binding
