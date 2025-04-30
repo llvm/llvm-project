@@ -5,8 +5,8 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-unknown-elf"
 
-define i32 @dotp_z_s(ptr %a, ptr %b) #0 {
-; CHECK-LABEL: define i32 @dotp_z_s(
+define i32 @sudot(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define i32 @sudot(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -56,7 +56,7 @@ define i32 @dotp_z_s(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ;
-; CHECK-NOI8MM-LABEL: define i32 @dotp_z_s(
+; CHECK-NOI8MM-LABEL: define i32 @sudot(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -128,8 +128,8 @@ for.exit:                        ; preds = %for.body
   ret i32 %add
 }
 
-define i32 @dotp_s_z(ptr %a, ptr %b) #0 {
-; CHECK-LABEL: define i32 @dotp_s_z(
+define i32 @usdot(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define i32 @usdot(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -179,7 +179,7 @@ define i32 @dotp_s_z(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ;
-; CHECK-NOI8MM-LABEL: define i32 @dotp_s_z(
+; CHECK-NOI8MM-LABEL: define i32 @usdot(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -251,8 +251,8 @@ for.exit:                        ; preds = %for.body
   ret i32 %add
 }
 
-define i32 @dotp_z_s_neon(ptr %a, ptr %b) #1 {
-; CHECK-LABEL: define i32 @dotp_z_s_neon(
+define i32 @sudot_neon(ptr %a, ptr %b) #1 {
+; CHECK-LABEL: define i32 @sudot_neon(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -289,7 +289,7 @@ define i32 @dotp_z_s_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ;
-; CHECK-NOI8MM-LABEL: define i32 @dotp_z_s_neon(
+; CHECK-NOI8MM-LABEL: define i32 @sudot_neon(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -348,8 +348,8 @@ for.exit:                        ; preds = %for.body
   ret i32 %add
 }
 
-define i32 @dotp_s_z_neon(ptr %a, ptr %b) #1 {
-; CHECK-LABEL: define i32 @dotp_s_z_neon(
+define i32 @usdot_neon(ptr %a, ptr %b) #1 {
+; CHECK-LABEL: define i32 @usdot_neon(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -386,7 +386,7 @@ define i32 @dotp_s_z_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ;
-; CHECK-NOI8MM-LABEL: define i32 @dotp_s_z_neon(
+; CHECK-NOI8MM-LABEL: define i32 @usdot_neon(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
