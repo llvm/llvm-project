@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -15,6 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SetOperations.h"
@@ -300,17 +302,52 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
 
 /// Pack a genericOp and return it.
 static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                               Value dest, AffineMap packedOutIndexingMap,
+                               Value packedOutOperand, AffineMap packedOutIndexingMap,
                                const PackInfo &packInfo) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
   SmallVector<AffineMap> indexingMaps;
+
+  bool isGenericUnary = isaElemwiseSingleUnaryOpInterface(genericOp);
+  bool usePackedOperand = false;
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
-    inputOperands.push_back(packedOperand);
+
+    Value unpack = inputOperand->get();
+    auto unpackOp = unpack.getDefiningOp<linalg::UnPackOp>();
+    // If the GenericOp fits the elementwise unary op interface then we can skip
+    // using a redundant pack op as the operand and instead just use the source
+    // of the unpack op.
+    if (isGenericUnary && unpackOp) {
+      inputOperands.push_back(unpackOp.getSource());
+    } else {
+      inputOperands.push_back(packedOperand);
+      usePackedOperand = true;
+    }
     indexingMaps.push_back(packedIndexingMap);
   }
+
+  Value dest = packedOutOperand;
+  auto initTensor = genericOp.getDpsInitOperand(0)
+                            ->get()
+                            .getDefiningOp<tensor::EmptyOp>();
+  // If the dps init operand of the generic is a tensor.empty, or if The
+  // original operand of the generic op is used, then do not pack the result.
+  // Forward the new tensor.empty as a destination.
+  if (initTensor || !usePackedOperand) {
+    auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
+    dest = destPack.getDest();
+  } 
+  //else if (!usePackedOperand && !inputOperands.empty()) {
+  //  // Get the type of the input operand.
+  //  auto inputType = inputOperands[0].getType();
+  //  if (auto rankedTensorType = dyn_cast<RankedTensorType>(inputType)){
+  //    auto emptyOp = rewriter.create<tensor::EmptyOp>(
+  //        loc, rankedTensorType.getShape(), cast<RankedTensorType>(dest.getType()).getElementType());
+  //    dest = emptyOp.getResult();
+  //  }
+  //}
 
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
   SmallVector<utils::IteratorType> iterTypes =
@@ -438,16 +475,7 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
   auto [packedOutOperand, packedOutIndexingMap] =
       getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
                                      genericOp, opOperand);
-
-  // If the dps init operand of the generic is a tensor.empty forward the pack
-  // op destination.
-  Value dest = packedOutOperand;
-  if (auto initTensor = genericOp.getDpsInitOperand(0)
-                            ->get()
-                            .getDefiningOp<tensor::EmptyOp>()) {
-    dest = packOpDest;
-  }
-  return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
+  return packGenericOp(rewriter, genericOp, packedOutOperand, packedOutIndexingMap,
                        *packInfo);
 }
 
@@ -1073,25 +1101,14 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   auto [packedOutOperand, packedOutIndexingMap] =
       getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
                                      genericOp, genericOp.getDpsInitOperand(0));
-  auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
-
-  // If the dps init operand of the generic is a tensor.empty, do not pack it
-  // and forward the new tensor.empty as a destination.
-  Value dest = packedOutOperand;
-  if (auto initTensor = genericOp.getDpsInitOperand(0)
-                            ->get()
-                            .getDefiningOp<tensor::EmptyOp>()) {
-    if (destPack)
-      dest = destPack.getDest();
-  }
-
   // Pack the genericOp.
   GenericOp newGenericOp =
-      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo);
+      packGenericOp(rewriter, genericOp, packedOutOperand, packedOutIndexingMap, *packInfo);
   Value newResult =
       newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0));
 
   // If the output is unaffected, no need to unpack.
+  auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
   if (!destPack)
     return std::make_tuple(newGenericOp, newResult);
 
