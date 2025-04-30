@@ -2104,37 +2104,75 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // selection/loop. If so, they will be recorded within blockMergeInfo.
     // We need to update the pointers there to the newly remapped ones so we can
     // continue structurizing them later.
+    //
+    // We need to walk each block as constructBlocks do not include blocks
+    // internal to ops already structured within those blocks. It is not
+    // fully clear to me why the mergeInfo of blocks (yet to be structured)
+    // inside already structured selections/loops get invalidated and needs
+    // updating, however the following example code can cause a crash (depending
+    // on the structuring order), when the most inner selection is being
+    // structured after the outer selection and loop have been already
+    // structured:
+    //
+    //  spirv.mlir.for {
+    //    // ...
+    //    spirv.mlir.selection {
+    //      // ..
+    //      // A selection region that hasn't been yet structured!
+    //      // ..
+    //    }
+    //    // ...
+    //  }
+    //
+    // If the loop gets structured after the outer selection, but before the
+    // inner selection. Moving the already structured selection inside the loop
+    // will invalidate the mergeInfo of the region that is not yet structured.
+    // Just going over constructBlocks will not check and updated header blocks
+    // inside the already structured selection region. Walking block fixes that.
+    //
+    // TODO: If structuring was done in a fixed order starting with inner
+    // most constructs this most likely not be an issue and the whole code
+    // section could be removed. However, with the current non-deterministic
+    // order this is not possible.
+    //
     // TODO: The asserts in the following assumes input SPIR-V blob forms
     // correctly nested selection/loop constructs. We should relax this and
     // support error cases better.
-    auto it = blockMergeInfo.find(block);
-    if (it != blockMergeInfo.end()) {
-      // Use the original location for nested selection/loop ops.
-      Location loc = it->second.loc;
+    auto updateMergeInfo = [&](Block *block) -> WalkResult {
+      auto it = blockMergeInfo.find(block);
+      if (it != blockMergeInfo.end()) {
+        // Use the original location for nested selection/loop ops.
+        Location loc = it->second.loc;
 
-      Block *newHeader = mapper.lookupOrNull(block);
-      if (!newHeader)
-        return emitError(loc, "failed control flow structurization: nested "
-                              "loop header block should be remapped!");
-
-      Block *newContinue = it->second.continueBlock;
-      if (newContinue) {
-        newContinue = mapper.lookupOrNull(newContinue);
-        if (!newContinue)
+        Block *newHeader = mapper.lookupOrNull(block);
+        if (!newHeader)
           return emitError(loc, "failed control flow structurization: nested "
-                                "loop continue block should be remapped!");
+                                "loop header block should be remapped!");
+
+        Block *newContinue = it->second.continueBlock;
+        if (newContinue) {
+          newContinue = mapper.lookupOrNull(newContinue);
+          if (!newContinue)
+            return emitError(loc, "failed control flow structurization: nested "
+                                  "loop continue block should be remapped!");
+        }
+
+        Block *newMerge = it->second.mergeBlock;
+        if (Block *mappedTo = mapper.lookupOrNull(newMerge))
+          newMerge = mappedTo;
+
+        // The iterator should be erased before adding a new entry into
+        // blockMergeInfo to avoid iterator invalidation.
+        blockMergeInfo.erase(it);
+        blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
+                                   newContinue);
       }
 
-      Block *newMerge = it->second.mergeBlock;
-      if (Block *mappedTo = mapper.lookupOrNull(newMerge))
-        newMerge = mappedTo;
+      return WalkResult::advance();
+    };
 
-      // The iterator should be erased before adding a new entry into
-      // blockMergeInfo to avoid iterator invalidation.
-      blockMergeInfo.erase(it);
-      blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
-                                 newContinue);
-    }
+    if (block->walk(updateMergeInfo).wasInterrupted())
+      return failure();
 
     // The structured selection/loop's entry block does not have arguments.
     // If the function's header block is also part of the structured control
