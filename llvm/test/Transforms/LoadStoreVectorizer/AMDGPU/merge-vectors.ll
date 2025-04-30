@@ -1,8 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -mattr=+relaxed-buffer-oob-mode -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-RELAXED %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-STRICT %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-ni:7"
-
 ; CHECK-LABEL: @merge_v2i32_v2i32(
 ; CHECK: load <4 x i32>
 ; CHECK: store <4 x i32> zeroinitializer
