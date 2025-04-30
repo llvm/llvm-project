@@ -215,6 +215,7 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
   void appendECImportTables();
@@ -1566,6 +1567,30 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  StringRef toName = p.second;
+  if (p.first == toName)
+    return;
+  StringSet<> names;
+  while (true) {
+    if (!names.insert(toName).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
+    auto i = ctx.config.merge.find(toName);
+    if (i == ctx.config.merge.end())
+      break;
+    toName = i->second;
+  }
+  OutputSection *from = findSection(p.first);
+  OutputSection *to = findSection(toName);
+  if (!from)
+    return;
+  if (!to) {
+    from->name = toName;
+    return;
+  }
+  to->merge(from);
+}
+
 void Writer::mergeSections() {
   llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
@@ -1594,28 +1619,16 @@ void Writer::mergeSections() {
   }
 
   for (auto &p : ctx.config.merge) {
-    StringRef toName = p.second;
-    if (p.first == toName)
-      continue;
-    StringSet<> names;
-    while (true) {
-      if (!names.insert(toName).second)
-        Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-      auto i = ctx.config.merge.find(toName);
-      if (i == ctx.config.merge.end())
-        break;
-      toName = i->second;
-    }
-    OutputSection *from = findSection(p.first);
-    OutputSection *to = findSection(toName);
-    if (!from)
-      continue;
-    if (!to) {
-      from->name = toName;
-      continue;
-    }
-    to->merge(from);
+    if (p.first != ".bss")
+      mergeSection(p);
   }
+
+  // Because .bss contains all zeros, it should be merged at the end of
+  // whatever section it is being merged into (usually .data) so that the image
+  // need not actually contain all of the zeros.
+  auto it = ctx.config.merge.find(".bss");
+  if (it != ctx.config.merge.end())
+    mergeSection(*it);
 }
 
 // EC targets may have chunks of various architectures mixed together at this
