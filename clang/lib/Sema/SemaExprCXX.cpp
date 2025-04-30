@@ -6147,9 +6147,8 @@ static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
       S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
       return APValue();
     }
-    llvm::APSInt V =
-        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
-    return APValue{V};
+    return APValue(
+        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType()));
     break;
   }
   default:
@@ -9683,16 +9682,16 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
   R.suppressDiagnostics();
 
   switch (R.getResultKind()) {
-  case LookupResult::Found:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Found:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
+  case LookupResultKind::Ambiguous:
     return IER_Exists;
 
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     return IER_DoesNotExist;
 
-  case LookupResult::NotFoundInCurrentInstantiation:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
     return IER_Dependent;
   }
 
