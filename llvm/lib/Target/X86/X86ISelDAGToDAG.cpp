@@ -1380,17 +1380,20 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
            !getTargetMachine().isPositionIndependent())))) {
 
       if (N->getOpcode() == X86ISD::TC_RETURN) {
-        // There needs to be enough non-callee-saved GPRs available to compute
-        // the load address if folded into the tailcall. See how the
+        // There needs to be two non-callee-saved GPRs available to compute the
+        // callee address if the load is folded into the tailcall. See how the
         // X86tcret_6regs and X86tcret_1reg classes are used and defined.
-        unsigned NumRegs = 0;
+        const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
+        unsigned UsedGPRs = 0;
+        // X86tcret args: (*chain, ptr, imm, regs..., glue)
         for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
-          if (isa<RegisterSDNode>(N->getOperand(I)))
-            ++NumRegs;
+          if (const auto *RN = dyn_cast<RegisterSDNode>(N->getOperand(I))) {
+            if (RI->isGeneralPurposeRegister(*MF, RN->getReg()))
+              ++UsedGPRs;
+          }
         }
-        if (!Subtarget->is64Bit() && NumRegs > 1)
-          continue;
-        if (NumRegs > 6)
+        unsigned NumTailCallGPRs = RI->getGPRsForTailCall(*MF)->getNumRegs();
+        if (UsedGPRs + 2 > NumTailCallGPRs)
           continue;
       }
 
