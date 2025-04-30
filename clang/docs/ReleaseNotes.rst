@@ -188,6 +188,9 @@ C Language Changes
   ``-Wunterminated-string-initialization``. However, this diagnostic is not
   silenced by the ``nonstring`` attribute as these initializations are always
   incompatible with C++.
+- Added the existing ``-Wduplicate-decl-specifier`` diagnostic, which is on by
+  default, to ``-Wc++-compat`` because duplicated declaration specifiers are
+  not valid in C++.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
