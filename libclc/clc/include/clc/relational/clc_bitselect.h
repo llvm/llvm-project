@@ -14,5 +14,4 @@
 #define __CLC_BODY <clc/relational/clc_bitselect.inc>
 #include <clc/integer/gentype.inc>
 
-
 #endif // __CLC_RELATIONAL_CLC_BITSELECT_H__
