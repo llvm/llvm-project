@@ -27,7 +27,7 @@ cbuffer CB : register(b0) {
   float2 y : packoffset(c5);
 }
 
-// CHECK: define internal void @_init_resource_CB.cb()
+// CHECK: define internal void @_init_buffer_CB.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_176_16_168_88tt(i32 3, i32 1, i32 1, i32 0, i1 false)
@@ -39,7 +39,7 @@ float foo() {
 }
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer_with_packoffset.hlsl()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_init_resource_CB.cb()
+// CHECK-NEXT: call void @_init_buffer_CB.cb()
 
 [numthreads(4,1,1)]
 void main() {

@@ -4801,6 +4801,18 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
