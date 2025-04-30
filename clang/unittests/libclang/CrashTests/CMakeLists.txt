@@ -1,4 +1,4 @@
-add_clang_unittest(libclangCrashTests
+add_distinct_clang_unittest(libclangCrashTests
   LibclangCrashTest.cpp
   LINK_LIBS
   libclang

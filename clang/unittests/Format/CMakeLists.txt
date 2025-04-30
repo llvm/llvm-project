@@ -1,4 +1,4 @@
-add_clang_unittest(FormatTests
+add_distinct_clang_unittest(FormatTests
   BracesInserterTest.cpp
   BracesRemoverTest.cpp
   CleanupTest.cpp

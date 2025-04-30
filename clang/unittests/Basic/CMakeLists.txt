@@ -1,4 +1,4 @@
-add_clang_unittest(BasicTests
+add_distinct_clang_unittest(BasicTests
   CharInfoTest.cpp
   DarwinSDKInfoTest.cpp
   DiagnosticTest.cpp
