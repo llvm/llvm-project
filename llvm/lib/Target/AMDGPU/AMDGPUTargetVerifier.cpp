@@ -107,12 +107,82 @@ bool AMDGPUTargetVerify::run(Function &F) {
     }
   }
 
-  //dbgs() << MessagesStr.str();
+  dbgs() << MessagesStr.str();
   if (!MessagesStr.str().empty()) {
-    //IsValid = false;
+    IsValid = false;
     return false;
   }
   return true;
 }
 
+PreservedAnalyses AMDGPUTargetVerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto *Mod = F.getParent();
+
+  auto UA = &AM.getResult<UniformityInfoAnalysis>(F);
+  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  auto *PDT = &AM.getResult<PostDominatorTreeAnalysis>(F);
+
+  AMDGPUTargetVerify TV(Mod, DT, PDT, UA);
+  TV.run(F);
+
+  dbgs() << TV.MessagesStr.str();
+  if (!TV.MessagesStr.str().empty()) {
+    TV.IsValid = false;
+    return PreservedAnalyses::none();
+  }
+  return PreservedAnalyses::all();
+}
+
+/*
+struct AMDGPUTargetVerifierLegacyPass : public FunctionPass {
+  static char ID;
+
+  std::unique_ptr<AMDGPUTargetVerify> TV;
+  bool FatalErrors = false;
+
+  AMDGPUTargetVerifierLegacyPass(bool FatalErrors) : FunctionPass(ID),
+    FatalErrors(FatalErrors) {
+    initializeAMDGPUTargetVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool doInitialization(Module &M) override {
+    TV = std::make_unique<AMDGPUTargetVerify>(&M);
+    return false;
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (!TV->run(F)) {
+      errs() << "in function " << F.getName() << '\n';
+      if (FatalErrors)
+        report_fatal_error("broken function found, compilation aborted!");
+      else
+        errs() << "broken function found, compilation aborted!\n";
+    }
+    return false;
+  }
+
+  bool doFinalization(Module &M) override {
+    bool IsValid = true;
+    for (Function &F : M)
+      if (F.isDeclaration())
+        IsValid &= TV->run(F);
+
+    if (!IsValid) {
+      if (FatalErrors)
+        report_fatal_error("broken module found, compilation aborted!");
+      else
+        errs() << "broken module found, compilation aborted!\n";
+    }
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
+char AMDGPUTargetVerifierLegacyPass::ID = 0;
+FunctionPass *createAMDGPUTargetVerifierLegacyPass(bool FatalErrors) {
+  return new AMDGPUTargetVerifierLegacyPass(FatalErrors);
+}*/
 } // namespace llvm
+//INITIALIZE_PASS(AMDGPUTargetVerifierLegacyPass, "amdgpu-tgtverifier", "AMDGPU Target Verifier", false, false)

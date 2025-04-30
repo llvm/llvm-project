@@ -30,7 +30,7 @@ class Function;
 
 class TargetVerifierPass : public PassInfoMixin<TargetVerifierPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  virtual PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) = 0;
 };
 
 class TargetVerify {
@@ -76,7 +76,7 @@ public:
       : Mod(Mod), TT(Mod->getTargetTriple()),
         MessagesStr(Messages) {}
 
-  virtual bool run(Function &F);
+  virtual bool run(Function &F) = 0;
 };
 
 } // namespace llvm

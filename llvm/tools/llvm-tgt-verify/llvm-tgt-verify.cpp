@@ -158,8 +158,6 @@ int main(int argc, char **argv) {
   if (TT.isAMDGPU())
     FPM.addPass(AMDGPUTargetVerifierPass());
   else if (false) {} // ...
-  else
-    FPM.addPass(TargetVerifierPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
   auto PA = MPM.run(*M, MAM);

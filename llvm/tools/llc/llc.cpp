@@ -660,8 +660,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
-  if (VerifyTarget)
-    PM.add(createTargetVerifierLegacyPass(false));
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   {

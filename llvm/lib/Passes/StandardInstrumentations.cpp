@@ -40,7 +40,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
-#include "llvm/Target/TargetVerifier.h"
+//#include "llvm/Target/TargetVerifier.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -1474,12 +1474,12 @@ void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
                                        P));
 
           if (VerifyTargetEach && FAM) {
-            TargetVerify TV(const_cast<Module*>(F->getParent()));
-            TV.run(*const_cast<Function*>(F), *FAM);
-	    if (!TV.IsValid)
+            //TargetVerify TV(const_cast<Module*>(F->getParent()));
+            //TV.run(*const_cast<Function*>(F), *FAM);
+	    /*if (!TV.IsValid)
               report_fatal_error(formatv("Broken function found after pass "
                                          "\"{0}\", compilation aborted!",
-                                         P));
+                                         P));*/
           }
         } else {
           const auto *M = unwrapIR<Module>(IR);
