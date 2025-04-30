@@ -18,6 +18,9 @@
 #ifndef PR_PAC_GET_ENABLED_KEYS
 #define PR_PAC_GET_ENABLED_KEYS 61
 #endif
+#ifndef PR_PAC_APIAKEY
+#define PR_PAC_APIAKEY (1UL << 0)
+#endif
 #endif
 
 #define GET_AVAILABLE_OPCODE_CHECKER

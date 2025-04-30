@@ -30,7 +30,6 @@ else:
     config.openmp_module_dir = None
 config.flang_runtime_f128_math_lib = "@FLANG_RUNTIME_F128_MATH_LIB@"
 config.have_ldbl_mant_dig_113 = "@HAVE_LDBL_MANT_DIG_113@"
-config.flang_include_runtime = lit.util.pythonize_bool("@FLANG_INCLUDE_RUNTIME@")
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
