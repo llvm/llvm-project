@@ -64,12 +64,11 @@ static cl::opt<bool> ClOutlineInstrumentation(
              "ELF size"),
     cl::Hidden, cl::init(false));
 
-
 static cl::opt<bool> ClVerifyOutlinedInstrumentation(
-  "tysan-verify-outlined-instrumentation",
-  cl::desc("Check types twice with both inlined instrumentation and "
-            "function calls. This verifies that they behave the same."),
-  cl::Hidden, cl::init(false));
+    "tysan-verify-outlined-instrumentation",
+    cl::desc("Check types twice with both inlined instrumentation and "
+             "function calls. This verifies that they behave the same."),
+    cl::Hidden, cl::init(false));
 
 STATISTIC(NumInstrumentedAccesses, "Number of instrumented accesses");
 
