@@ -2003,7 +2003,13 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // block inside the selection (`body.back()`). Values produced by block
   // arguments will be yielded by the selection region. We do not update uses or
   // erase original block arguments yet. It will be done later in the code.
-  // We do not currently support block arguments in loop merge blocks.
+  //
+  // Code below is not executed for loops as it would interfere with the logic
+  // above. Currently block arguments in the merge block are not supported, but
+  // instead, the code above copies those arguments from the header block into
+  // the merge block. As such, running the code would yield those copied arguments
+  // that is most likely not a desired behaviour. This may need to be revisited
+  // in the future.
   if (!isLoop)
     for (BlockArgument blockArg : mergeBlock->getArguments()) {
       // Create new block arguments in the last block ("merge block") of the
