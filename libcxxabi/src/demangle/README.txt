@@ -52,7 +52,7 @@ shared demangler library.
 Testing
 -------
 
-The main ItaniumDemangle test-siute lives in llvm/unittests/Demangle/.
+The main ItaniumDemangle test-suite lives in llvm/unittests/Demangle/.
 The libcxxabi/test/{unit,}test_demangle.cpp test tests basic functionality
 of __cxa_demangle.
 
