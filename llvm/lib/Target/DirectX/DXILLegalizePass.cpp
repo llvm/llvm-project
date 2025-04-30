@@ -251,7 +251,7 @@ void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
                          ConstantInt *SizeCI,
                          DenseMap<Value *, Value *> &ReplacedValues) {
   LLVMContext &Ctx = Builder.getContext();
-  [[maybe_unused]] DataLayout DL =
+  [[maybe_unused]] const DataLayout &DL =
       Builder.GetInsertBlock()->getModule()->getDataLayout();
   [[maybe_unused]] uint64_t OrigSize = SizeCI->getZExtValue();
 
@@ -276,16 +276,18 @@ void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
   Value *TypedVal = Val;
 
   if (Val->getType() != ElemTy) {
-    // Note for i8 replacements if we know them we should use them.
-    // Further if this is a constant ReplacedValues will return null
-    // so we will stick to TypedVal = Val
-    if (ReplacedValues[Val])
+    if (ReplacedValues[Val]) {
+      // Note for i8 replacements if we know them we should use them.
+      // Further if this is a constant ReplacedValues will return null
+      // so we will stick to TypedVal = Val
       TypedVal = ReplacedValues[Val];
-    // This case Val is a ConstantInt so the cast folds away.
-    // However if we don't do the cast the store below ends up being
-    // an i8.
-    else
+
+    } else {
+      // This case Val is a ConstantInt so the cast folds away.
+      // However if we don't do the cast the store below ends up being
+      // an i8.
       TypedVal = Builder.CreateIntCast(Val, ElemTy, false);
+    }
   }
 
   for (uint64_t I = 0; I < Size; ++I) {
@@ -298,19 +300,22 @@ void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
 static void removeMemSet(Instruction &I,
                          SmallVectorImpl<Instruction *> &ToRemove,
                          DenseMap<Value *, Value *> &ReplacedValues) {
-  if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-    Intrinsic::ID ID = CI->getIntrinsicID();
-    if (ID == Intrinsic::memset) {
-      IRBuilder<> Builder(&I);
-      Value *Dst = CI->getArgOperand(0);
-      Value *Val = CI->getArgOperand(1);
-      [[maybe_unused]] ConstantInt *Size =
-          dyn_cast<ConstantInt>(CI->getArgOperand(2));
-      assert(Size && "Expected Size to be a ConstantInt");
-      emitMemsetExpansion(Builder, Dst, Val, Size, ReplacedValues);
-      ToRemove.push_back(CI);
-    }
-  }
+
+  CallInst *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return;
+
+  Intrinsic::ID ID = CI->getIntrinsicID();
+  if (ID != Intrinsic::memset)
+    return;
+
+  IRBuilder<> Builder(&I);
+  Value *Dst = CI->getArgOperand(0);
+  Value *Val = CI->getArgOperand(1);
+  ConstantInt *Size = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  assert(Size && "Expected Size to be a ConstantInt");
+  emitMemsetExpansion(Builder, Dst, Val, Size, ReplacedValues);
+  ToRemove.push_back(CI);
 }
 
 namespace {
