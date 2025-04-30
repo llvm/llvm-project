@@ -734,6 +734,18 @@ func.func @loop(%count : i32) -> () {
 }
 ```
 
+Similarly to selection, loops can also yield values using `spirv.mlir.merge`. This
+mechanism allows values defined within the loop region to be used outside of it.
+
+For example
+
+```mlir
+%yielded = spirv.mlir.loop -> i32 {
+  // ...
+  spirv.mlir.merge %to_yield : i32
+}
+```
+
 ### Block argument for Phi
 
 There are no direct Phi operations in the SPIR-V dialect; SPIR-V `OpPhi`

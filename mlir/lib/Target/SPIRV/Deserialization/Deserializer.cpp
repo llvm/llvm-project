@@ -2003,7 +2003,14 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // block inside the selection (`body.back()`). Values produced by block
   // arguments will be yielded by the selection region. We do not update uses or
   // erase original block arguments yet. It will be done later in the code.
-  if (!isLoop) {
+  //
+  // Code below is not executed for loops as it would interfere with the logic
+  // above. Currently block arguments in the merge block are not supported, but
+  // instead, the code above copies those arguments from the header block into
+  // the merge block. As such, running the code would yield those copied
+  // arguments that is most likely not a desired behaviour. This may need to be
+  // revisited in the future.
+  if (!isLoop)
     for (BlockArgument blockArg : mergeBlock->getArguments()) {
       // Create new block arguments in the last block ("merge block") of the
       // selection region. We create one argument for each argument in
@@ -2013,7 +2020,6 @@ LogicalResult ControlFlowStructurizer::structurize() {
       valuesToYield.push_back(body.back().getArguments().back());
       outsideUses.push_back(blockArg);
     }
-  }
 
   // All the blocks cloned into the SelectionOp/LoopOp's region can now be
   // cleaned up.
@@ -2025,32 +2031,30 @@ LogicalResult ControlFlowStructurizer::structurize() {
 
   // All internal uses should be removed from original blocks by now, so
   // whatever is left is an outside use and will need to be yielded from
-  // the newly created selection region.
-  if (!isLoop) {
-    for (Block *block : constructBlocks) {
-      for (Operation &op : *block) {
-        if (!op.use_empty())
-          for (Value result : op.getResults()) {
-            valuesToYield.push_back(mapper.lookupOrNull(result));
-            outsideUses.push_back(result);
-          }
-      }
-      for (BlockArgument &arg : block->getArguments()) {
-        if (!arg.use_empty()) {
-          valuesToYield.push_back(mapper.lookupOrNull(arg));
-          outsideUses.push_back(arg);
+  // the newly created selection / loop region.
+  for (Block *block : constructBlocks) {
+    for (Operation &op : *block) {
+      if (!op.use_empty())
+        for (Value result : op.getResults()) {
+          valuesToYield.push_back(mapper.lookupOrNull(result));
+          outsideUses.push_back(result);
         }
+    }
+    for (BlockArgument &arg : block->getArguments()) {
+      if (!arg.use_empty()) {
+        valuesToYield.push_back(mapper.lookupOrNull(arg));
+        outsideUses.push_back(arg);
       }
     }
   }
 
   assert(valuesToYield.size() == outsideUses.size());
 
-  // If we need to yield any values from the selection region we will take
-  // care of it here.
-  if (!isLoop && !valuesToYield.empty()) {
+  // If we need to yield any values from the selection / loop region we will
+  // take care of it here.
+  if (!valuesToYield.empty()) {
     LLVM_DEBUG(logger.startLine()
-               << "[cf] yielding values from the selection region\n");
+               << "[cf] yielding values from the selection / loop region\n");
 
     // Update `mlir.merge` with values to be yield.
     auto mergeOps = body.back().getOps<spirv::MergeOp>();
@@ -2059,25 +2063,40 @@ LogicalResult ControlFlowStructurizer::structurize() {
     merge->setOperands(valuesToYield);
 
     // MLIR does not allow changing the number of results of an operation, so
-    // we create a new SelectionOp with required list of results and move
-    // the region from the initial SelectionOp. The initial operation is then
-    // removed. Since we move the region to the new op all links between blocks
-    // and remapping we have previously done should be preserved.
+    // we create a new SelectionOp / LoopOp with required list of results and
+    // move the region from the initial SelectionOp / LoopOp. The initial
+    // operation is then removed. Since we move the region to the new op all
+    // links between blocks and remapping we have previously done should be
+    // preserved.
     builder.setInsertionPoint(&mergeBlock->front());
-    auto selectionOp = builder.create<spirv::SelectionOp>(
-        location, TypeRange(ValueRange(outsideUses)),
-        static_cast<spirv::SelectionControl>(control));
-    selectionOp->getRegion(0).takeBody(body);
+
+    Operation *newOp = nullptr;
+
+    if (isLoop)
+      newOp = builder.create<spirv::LoopOp>(
+          location, TypeRange(ValueRange(outsideUses)),
+          static_cast<spirv::LoopControl>(control));
+    else
+      newOp = builder.create<spirv::SelectionOp>(
+          location, TypeRange(ValueRange(outsideUses)),
+          static_cast<spirv::SelectionControl>(control));
+
+    newOp->getRegion(0).takeBody(body);
 
     // Remove initial op and swap the pointer to the newly created one.
     op->erase();
-    op = selectionOp;
+    op = newOp;
 
-    // Update all outside uses to use results of the SelectionOp and remove
-    // block arguments from the original merge block.
+    // Update all outside uses to use results of the SelectionOp / LoopOp and
+    // remove block arguments from the original merge block.
     for (unsigned i = 0, e = outsideUses.size(); i != e; ++i)
-      outsideUses[i].replaceAllUsesWith(selectionOp.getResult(i));
-    mergeBlock->eraseArguments(0, mergeBlock->getNumArguments());
+      outsideUses[i].replaceAllUsesWith(op->getResult(i));
+
+    // We do not support block arguments in loop merge block. Also running this
+    // function with loop would break some of the loop specific code above
+    // dealing with block arguments.
+    if (!isLoop)
+      mergeBlock->eraseArguments(0, mergeBlock->getNumArguments());
   }
 
   // Check that whether some op in the to-be-erased blocks still has uses. Those
