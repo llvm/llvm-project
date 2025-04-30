@@ -605,6 +605,7 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
   EXPECT_EQ(get_part(OB.NameInfo.BasenameRange), basename);
   EXPECT_EQ(get_part(OB.NameInfo.ScopeRange), scope);
   EXPECT_EQ(get_part(OB.NameInfo.QualifiersRange), qualifiers);
+  std::free(OB.getBuffer());
 }
 
 INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
