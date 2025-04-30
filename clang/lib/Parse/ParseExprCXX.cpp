@@ -4132,11 +4132,10 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
       // If it is not a cast-expression, NotCastExpr will be true and no token
       // will be consumed.
       ColonProt.restore();
-      Result = ParseCastExpression(AnyCastExpr,
-                                   false/*isAddressofOperand*/,
+      Result = ParseCastExpression(AnyCastExpr, false /*isAddressofOperand*/,
                                    NotCastExpr,
                                    // type-id has priority.
-                                   IsTypeCast);
+                                   TypeCastState::IsTypeCast);
     }
 
     // If we parsed a cast-expression, it's really a type-id, otherwise it's

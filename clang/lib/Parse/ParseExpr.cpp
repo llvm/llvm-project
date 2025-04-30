@@ -196,7 +196,7 @@ ExprResult Parser::ParseConditionalExpression() {
   }
 
   ExprResult LHS = ParseCastExpression(
-      AnyCastExpr, /*isAddressOfOperand=*/false, NotTypeCast);
+      AnyCastExpr, /*isAddressOfOperand=*/false, TypeCastState::NotTypeCast);
   return ParseRHSOfBinaryExpression(LHS, prec::Conditional);
 }
 
@@ -239,7 +239,7 @@ ExprResult Parser::ParseConstantExpression() {
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-  return ParseConstantExpressionInExprEvalContext(NotTypeCast);
+  return ParseConstantExpressionInExprEvalContext(TypeCastState::NotTypeCast);
 }
 
 ExprResult Parser::ParseArrayBoundExpression() {
@@ -267,13 +267,14 @@ ExprResult Parser::ParseArrayBoundExpression() {
       break;
     Iter->InConditionallyConstantEvaluateContext = true;
   }
-  return ParseConstantExpressionInExprEvalContext(NotTypeCast);
+  return ParseConstantExpressionInExprEvalContext(TypeCastState::NotTypeCast);
 }
 
 ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-  ExprResult LHS(ParseCastExpression(AnyCastExpr, false, NotTypeCast));
+  ExprResult LHS(
+      ParseCastExpression(AnyCastExpr, false, TypeCastState::NotTypeCast));
   ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
   return Actions.ActOnCaseExpr(CaseLoc, Res);
 }
@@ -310,12 +311,12 @@ Parser::ParseConstraintLogicalAndExpression(bool IsTrailingRequiresClause) {
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
   bool NotPrimaryExpression = false;
-  auto ParsePrimary = [&] () {
-    ExprResult E = ParseCastExpression(PrimaryExprOnly,
-                                       /*isAddressOfOperand=*/false,
-                                       /*isTypeCast=*/NotTypeCast,
-                                       /*isVectorLiteral=*/false,
-                                       &NotPrimaryExpression);
+  auto ParsePrimary = [&]() {
+    ExprResult E =
+        ParseCastExpression(PrimaryExprOnly,
+                            /*isAddressOfOperand=*/false,
+                            /*isTypeCast=*/TypeCastState::NotTypeCast,
+                            /*isVectorLiteral=*/false, &NotPrimaryExpression);
     if (E.isInvalid())
       return ExprError();
     auto RecoverFromNonPrimary = [&] (ExprResult E, bool Note) {
@@ -1107,8 +1108,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     }
     ParsedType CastTy;
     SourceLocation RParenLoc;
-    Res = ParseParenExpression(ParenExprType, false/*stopIfCastExr*/,
-                               isTypeCast == IsTypeCast, CastTy, RParenLoc);
+    Res = ParseParenExpression(ParenExprType, false /*stopIfCastExr*/,
+                               isTypeCast == TypeCastState::IsTypeCast, CastTy,
+                               RParenLoc);
 
     // FIXME: What should we do if a vector literal is followed by a
     // postfix-expression suffix? Usually postfix operators are permitted on
@@ -1347,8 +1349,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Token Replacement;
     CastExpressionIdValidator Validator(
         /*Next=*/Tok,
-        /*AllowTypes=*/isTypeCast != NotTypeCast,
-        /*AllowNonTypes=*/isTypeCast != IsTypeCast);
+        /*AllowTypes=*/isTypeCast != TypeCastState::NotTypeCast,
+        /*AllowNonTypes=*/isTypeCast != TypeCastState::IsTypeCast);
     Validator.IsAddressOfOperand = isAddressOfOperand;
     if (Tok.isOneOf(tok::periodstar, tok::arrowstar)) {
       Validator.WantExpressionKeywords = false;
@@ -1449,10 +1451,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     // One special case is implicitly handled here: if the preceding tokens are
     // an ambiguous cast expression, such as "(T())++", then we recurse to
     // determine whether the '++' is prefix or postfix.
-    Res = ParseCastExpression(getLangOpts().CPlusPlus ?
-                                  UnaryExprOnly : AnyCastExpr,
-                              /*isAddressOfOperand*/false, NotCastExpr,
-                              NotTypeCast);
+    Res = ParseCastExpression(
+        getLangOpts().CPlusPlus ? UnaryExprOnly : AnyCastExpr,
+        /*isAddressOfOperand*/ false, NotCastExpr, TypeCastState::NotTypeCast);
     if (NotCastExpr) {
       // If we return with NotCastExpr = true, we must not consume any tokens,
       // so put the token back where we found it.
@@ -3258,10 +3259,11 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
             // Parse the cast-expression that follows it next.
             // isVectorLiteral = true will make sure we don't parse any
             // Postfix expression yet
-            Result = ParseCastExpression(/*isUnaryExpression=*/AnyCastExpr,
-                                         /*isAddressOfOperand=*/false,
-                                         /*isTypeCast=*/IsTypeCast,
-                                         /*isVectorLiteral=*/true);
+            Result =
+                ParseCastExpression(/*isUnaryExpression=*/AnyCastExpr,
+                                    /*isAddressOfOperand=*/false,
+                                    /*isTypeCast=*/TypeCastState::IsTypeCast,
+                                    /*isVectorLiteral=*/true);
 
             if (!Result.isInvalid()) {
               Result = Actions.ActOnCastExpr(getCurScope(), OpenLoc,
@@ -3312,7 +3314,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
         // TODO: For cast expression with CastTy.
         Result = ParseCastExpression(/*isUnaryExpression=*/AnyCastExpr,
                                      /*isAddressOfOperand=*/false,
-                                     /*isTypeCast=*/IsTypeCast);
+                                     /*isTypeCast=*/TypeCastState::IsTypeCast);
         if (!Result.isInvalid()) {
           Result = Actions.ActOnCastExpr(getCurScope(), OpenLoc,
                                          DeclaratorInfo, CastTy,
@@ -3381,7 +3383,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
   } else {
     InMessageExpressionRAIIObject InMessage(*this, false);
 
-    Result = ParseExpression(MaybeTypeCast);
+    Result = ParseExpression(TypeCastState::MaybeTypeCast);
     if (!getLangOpts().CPlusPlus && Result.isUsable()) {
       // Correct typos in non-C++ code earlier so that implicit-cast-like
       // expressions are parsed correctly.
