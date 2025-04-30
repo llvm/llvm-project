@@ -84,7 +84,7 @@ void RewriteInsertsPass::runOnOperation() {
 LogicalResult RewriteInsertsPass::collectInsertionChain(
     spirv::CompositeInsertOp op,
     SmallVectorImpl<spirv::CompositeInsertOp> &insertions) {
-  if (llvm::isa<spirv::CooperativeMatrixType>(op.getComposite().getType()))
+  if (isa<spirv::CooperativeMatrixType>(op.getComposite().getType()))
     return failure();
 
   auto indicesArrayAttr = cast<ArrayAttr>(op.getIndices());
