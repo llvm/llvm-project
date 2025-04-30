@@ -5365,8 +5365,10 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   // Check if we have already found a decl of the same name, if we haven't
   // then parse the root signature string and construct the in-memory elements
   if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
+    SourceLocation SignatureLoc =
+      StrLiteral.value()->getExprLoc().getLocWithOffset(1); // offset 1 for '"'
     // Invoke the root signature parser to construct the in-memory constructs
-    hlsl::RootSignatureLexer Lexer(Signature, RootSignatureLoc);
+    hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
     SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
     hlsl::RootSignatureParser Parser(Elements, Lexer, PP);
     if (Parser.parse()) {

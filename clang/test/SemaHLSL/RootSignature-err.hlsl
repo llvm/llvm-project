@@ -15,3 +15,6 @@ void bad_root_signature_2() {}
 
 [RootSignature(""), RootSignature("")] // expected-warning {{attribute 'RootSignature' is already applied}}
 void bad_root_signature_3() {}
+
+[RootSignature("DescriptorTable(), invalid")] // expected-error {{expected end of stream to denote end of parameters, or, another valid parameter of RootSignature}}
+void bad_root_signature_4() {}
