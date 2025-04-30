@@ -278,23 +278,5 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   return 0;
 }
 
-unsigned char is_dst(struct tm *tm) {
-  unsigned int dst;
-
-  dst = 0;
-
-  if (tm->tm_mon < 3 || tm->tm_mon > 11) {
-    dst = 0;
-  } else if (tm->tm_mon > 3 && tm->tm_mon < 11) {
-    dst = 1;
-  } else if (tm->tm_mon == 3) {
-    dst = (tm->tm_mday - tm->tm_wday) >= 8;
-  } else {
-    dst = (tm->tm_mday - tm->tm_wday) <= 0;
-  }
-
-  return static_cast<unsigned char>(dst);
-}
-
 } // namespace time_utils
 } // namespace LIBC_NAMESPACE_DECL
