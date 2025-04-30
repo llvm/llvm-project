@@ -57,7 +57,7 @@ good_sign_auted_checked_brk:
         autda   x0, x2
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc472
 1:
         pacda   x0, x1
         ret
@@ -351,7 +351,7 @@ good_sign_auted_checked_brk_multi_bb:
 1:
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 2f
-        brk     0x1234
+        brk     0xc472
 2:
         cbz     x4, 3f
         nop
@@ -705,7 +705,7 @@ good_resign_with_increment_brk:
         add     x0, x0, #8
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc472
 1:
         mov     x2, x0
         pacda   x2, x1

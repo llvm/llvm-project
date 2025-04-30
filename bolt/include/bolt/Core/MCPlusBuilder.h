@@ -718,6 +718,20 @@ public:
     return false;
   }
 
+  /// Returns true if Inst is a trap instruction.
+  ///
+  /// Tests if Inst is an instruction that immediately causes an abnormal
+  /// program termination, for example when a security violation is detected
+  /// by a compiler-inserted check.
+  ///
+  /// @note An implementation of this method should likely return false for
+  /// calls to library functions like abort(), as it is possible that the
+  /// execution state is partially attacker-controlled at this point.
+  virtual bool isTrap(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isBreakpoint(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
