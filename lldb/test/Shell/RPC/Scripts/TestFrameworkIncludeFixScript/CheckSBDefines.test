@@ -1,0 +1,18 @@
+// Copy SBDefines.h from source.
+# RUN: mkdir -p %t/input
+# RUN: mkdir -p %t/output
+# RUN: cp %p/../../../../../include/lldb/API/SBDefines.h %t/input
+
+// Run the convert script on it, then run the framework include fix on it. The framework include fix script
+// expects that all lldb references have been renamed to lldb-rpc in order for it to modify the includes
+// to go into the framework.
+# RUN: %python %p/../../../../../scripts/convert-lldb-header-to-rpc-header.py %t/input/SBDefines.h %t/output/SBDefines.h
+# RUN: %python %p/../../../../../scripts/framework-header-include-fix.py %t/output/SBDefines.h %t/output/SBDefines.h
+
+// Check the output
+# RUN: cat %t/output/SBDefines.h | FileCheck %s
+
+// Local includes for LLDB RPC headers must be changed for the framework.
+# CHECK: #include <LLDBRPC/lldb-rpc-defines.h>
+# CHECK: #include <LLDBRPC/lldb-rpc-enumerations.h>
+# CHECK: #include <LLDBRPC/lldb-rpc-types.h>
