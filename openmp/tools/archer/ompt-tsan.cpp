@@ -53,6 +53,9 @@
 
 static int hasReductionCallback;
 
+enum ArcherState { ACTIVE = 0, PAUSED, ENDED };
+static thread_local ArcherState archer_state{ACTIVE};
+
 namespace {
 class ArcherFlags {
 public:
@@ -172,10 +175,18 @@ DECLARE_TSAN_FUNCTION(__tsan_func_exit)
 // This marker is used to define a happens-before arc. The race detector will
 // infer an arc from the begin to the end when they share the same pointer
 // argument.
-#define TsanHappensBefore(cv) AnnotateHappensBefore(__FILE__, __LINE__, cv)
+#define TsanHappensBefore(cv) \
+do { \ 
+  if (archer_state ==ACTIVE) \
+      AnnotateHappensBefore(__FILE__, __LINE__, cv); \
+} while(0)
 
 // This marker defines the destination of a happens-before arc.
-#define TsanHappensAfter(cv) AnnotateHappensAfter(__FILE__, __LINE__, cv)
+#define TsanHappensAfter(cv) \
+do { \ 
+  if (archer_state ==ACTIVE) \
+      AnnotateHappensAfter(__FILE__, __LINE__, cv); \
+} while(0)
 
 // Ignore any races on writes between here and the next TsanIgnoreWritesEnd.
 #define TsanIgnoreWritesBegin() AnnotateIgnoreWritesBegin(__FILE__, __LINE__)
@@ -601,9 +612,6 @@ static inline TaskData *ToTaskData(ompt_data_t *task_data) {
 /// Store a mutex for each wait_id to resolve race condition with callbacks.
 static std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
 static std::mutex LocksMutex;
-
-enum ArcherState { ACTIVE = 0, PAUSED, ENDED };
-static thread_local ArcherState archer_state{ACTIVE};
 
 static int ompt_tsan_control_tool(uint64_t command, uint64_t modifier,
                                   void *arg, const void *codeptr_ra) {
