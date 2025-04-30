@@ -689,7 +689,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     the maps if specified.
 
     Example Transpose:
-    ```
+    ```mlir
     linalg.matmul
         indexing_maps = [affine_map<(m, n, k) -> (k, m)>, // transpose
                          affine_map<(m, n, k) -> (k, n)>,
@@ -699,7 +699,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
      ```
 
     Example Broadcast:
-     ```
+     ```mlir
     linalg.matmul
         indexing_maps = [affine_map<(m, n, k) -> (k)>,     // broadcast
                          affine_map<(m, n, k) -> (k, n)>,
@@ -709,7 +709,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     ```
 
     Example Broadcast and transpose:
-    ```
+    ```mlir
     linalg.matmul
         indexing_maps = [affine_map<(m, n, k) -> (k, m)>, // transpose
                          affine_map<(m, n, k) -> (k)>,    // broadcast
@@ -951,7 +951,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     arguments if specified.
 
     Example Transpose:
-    ```
+    ```mlir
     linalg.batch_matmul
         indexing_maps = [affine_map<(batch, m, n, k) -> (batch, k, m)>, // transpose
                          affine_map<(batch, m, n, k) -> (batch, k, n)>,
@@ -961,7 +961,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     ```
 
     Example Broadcast:
-    ```
+    ```mlir
     linalg.batch_matmul
         indexing_maps = [affine_map<(batch, m, n, k) -> (k)>,           // broadcast
                          affine_map<(batch, m, n, k) -> (batch, k, n)>,
@@ -971,7 +971,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     ```
 
     Example Broadcast and Transpose:
-    ```
+    ```mlir
     linalg.batch_matmul
         indexing_maps = [affine_map<(batch, m, n, k) -> (m, k)>,        // broadcast
                          affine_map<(batch, m, n, k) -> (batch, n, k)>, // transpose
@@ -1079,7 +1079,7 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
     arguments if specified.
 
     Example Transpose:
-    ```
+    ```mlir
     linalg.batch_reduce_matmul
         indexing_maps = [affine_map<(batch, m, n, k) -> (batch, k, m)>, // transpose
                          affine_map<(batch, m, n, k) -> (batch, k, n)>,
@@ -1089,7 +1089,7 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
     ```
 
     Example Broadcast:
-    ```
+    ```mlir
     linalg.batch_reduce_matmul
         indexing_maps = [affine_map<(batch, m, n, k) -> (k)>,         // broadcast
                          affine_map<(batch, m, n, k) -> (batch, k, n)>,
@@ -1099,7 +1099,7 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
     ```
 
     Example Broadcast and Transpose:
-    ```
+    ```mlir
     linalg.batch_reduce_matmul
         indexing_maps = [affine_map<(batch, m, n, k) -> (m, k)>,        // broadcast
                          affine_map<(batch, m, n, k) -> (batch, n, k)>, // transpose
