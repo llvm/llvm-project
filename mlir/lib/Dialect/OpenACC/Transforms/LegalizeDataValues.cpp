@@ -164,9 +164,10 @@ public:
     func::FuncOp funcOp = getOperation();
     bool replaceHostVsDevice = this->hostToDevice.getValue();
 
-    // Get dominance info for the function
+    // Initialize dominance info
     DominanceInfo domInfo(funcOp);
     PostDominanceInfo postDomInfo(funcOp);
+    bool computedDomInfo = false;
 
     funcOp.walk([&](Operation *op) {
       if (!isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(*op) &&
@@ -190,9 +191,19 @@ public:
       } else if (auto hostDataOp = dyn_cast<acc::HostDataOp>(*op)) {
         collectAndReplaceInRegion(hostDataOp, replaceHostVsDevice);
       } else if (auto declareEnterOp = dyn_cast<acc::DeclareEnterOp>(*op)) {
+        if (!computedDomInfo) {
+          domInfo = DominanceInfo(funcOp);
+          postDomInfo = PostDominanceInfo(funcOp);
+          computedDomInfo = true;
+        }
         collectAndReplaceInRegion(declareEnterOp, replaceHostVsDevice, &domInfo,
                                   &postDomInfo);
       } else if (auto enterDataOp = dyn_cast<acc::EnterDataOp>(*op)) {
+        if (!computedDomInfo) {
+          domInfo = DominanceInfo(funcOp);
+          postDomInfo = PostDominanceInfo(funcOp);
+          computedDomInfo = true;
+        }
         collectAndReplaceInRegion(enterDataOp, replaceHostVsDevice, &domInfo,
                                   &postDomInfo);
       } else {
