@@ -1613,3 +1613,1249 @@ define dso_local double @atomicrmw_fmin_double_unaligned_seq_cst(ptr %ptr, doubl
     %r = atomicrmw fmin ptr %ptr, double %value seq_cst, align 1
     ret double %r
 }
+
+define dso_local half @atomicrmw_fmaximum_half_aligned_monotonic(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fmaximum_half_aligned_monotonic:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_half_aligned_monotonic:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stxrh w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, half %value monotonic, align 2
+    ret half %r
+}
+
+define dso_local void @atomicrmw_fmaximum_half_aligned_monotonic_unused(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fmaximum_half_aligned_monotonic_unused:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_half_aligned_monotonic_unused:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stxrh w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, half %value monotonic, align 2
+    ret void
+}
+
+define dso_local half @atomicrmw_fmaximum_half_aligned_acquire(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fmaximum_half_aligned_acquire:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_half_aligned_acquire:
+; -O1:    ldaxrh w8, [x0]
+; -O1:    stxrh w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, half %value acquire, align 2
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fmaximum_half_aligned_release(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fmaximum_half_aligned_release:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_half_aligned_release:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, half %value release, align 2
+    ret half %r
+}
+
+define dso_local void @atomicrmw_fmaximum_half_aligned_release_unused(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fmaximum_half_aligned_release_unused:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_half_aligned_release_unused:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, half %value release, align 2
+    ret void
+}
+
+define dso_local half @atomicrmw_fmaximum_half_aligned_acq_rel(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fmaximum_half_aligned_acq_rel:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_half_aligned_acq_rel:
+; -O1:    ldaxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, half %value acq_rel, align 2
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fmaximum_half_aligned_seq_cst(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fmaximum_half_aligned_seq_cst:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_half_aligned_seq_cst:
+; -O1:    ldaxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, half %value seq_cst, align 2
+    ret half %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_aligned_monotonic(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_aligned_monotonic:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_aligned_monotonic:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stxrh w10, w9, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value monotonic, align 2
+    ret bfloat %r
+}
+
+define dso_local void @atomicrmw_fmaximum_bfloat_aligned_monotonic_unused(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_aligned_monotonic_unused:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_aligned_monotonic_unused:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stxrh w10, w9, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value monotonic, align 2
+    ret void
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_aligned_acquire(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_aligned_acquire:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_aligned_acquire:
+; -O1:    ldaxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stxrh w10, w9, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value acquire, align 2
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_aligned_release(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_aligned_release:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_aligned_release:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value release, align 2
+    ret bfloat %r
+}
+
+define dso_local void @atomicrmw_fmaximum_bfloat_aligned_release_unused(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_aligned_release_unused:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_aligned_release_unused:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value release, align 2
+    ret void
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_aligned_acq_rel(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_aligned_acq_rel:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_aligned_acq_rel:
+; -O1:    ldaxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value acq_rel, align 2
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_aligned_seq_cst(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_aligned_seq_cst:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_aligned_seq_cst:
+; -O1:    ldaxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value seq_cst, align 2
+    ret bfloat %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_aligned_monotonic(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fmaximum_float_aligned_monotonic:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_float_aligned_monotonic:
+; -O1:    ldxr w8, [x0]
+; -O1:    stxr w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, float %value monotonic, align 4
+    ret float %r
+}
+
+define dso_local void @atomicrmw_fmaximum_float_aligned_monotonic_unused(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fmaximum_float_aligned_monotonic_unused:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_float_aligned_monotonic_unused:
+; -O1:    ldxr w8, [x0]
+; -O1:    stxr w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, float %value monotonic, align 4
+    ret void
+}
+
+define dso_local float @atomicrmw_fmaximum_float_aligned_acquire(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fmaximum_float_aligned_acquire:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_float_aligned_acquire:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stxr w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, float %value acquire, align 4
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_aligned_release(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fmaximum_float_aligned_release:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_float_aligned_release:
+; -O1:    ldxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, float %value release, align 4
+    ret float %r
+}
+
+define dso_local void @atomicrmw_fmaximum_float_aligned_release_unused(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fmaximum_float_aligned_release_unused:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_float_aligned_release_unused:
+; -O1:    ldxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, float %value release, align 4
+    ret void
+}
+
+define dso_local float @atomicrmw_fmaximum_float_aligned_acq_rel(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fmaximum_float_aligned_acq_rel:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_float_aligned_acq_rel:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, float %value acq_rel, align 4
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_aligned_seq_cst(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fmaximum_float_aligned_seq_cst:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_float_aligned_seq_cst:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, float %value seq_cst, align 4
+    ret float %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_aligned_monotonic(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fmaximum_double_aligned_monotonic:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_double_aligned_monotonic:
+; -O1:    ldxr x8, [x0]
+; -O1:    stxr w9, x8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, double %value monotonic, align 8
+    ret double %r
+}
+
+define dso_local void @atomicrmw_fmaximum_double_aligned_monotonic_unused(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fmaximum_double_aligned_monotonic_unused:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_double_aligned_monotonic_unused:
+; -O1:    ldxr x8, [x0]
+; -O1:    stxr w9, x8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, double %value monotonic, align 8
+    ret void
+}
+
+define dso_local double @atomicrmw_fmaximum_double_aligned_acquire(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fmaximum_double_aligned_acquire:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_double_aligned_acquire:
+; -O1:    ldaxr x8, [x0]
+; -O1:    stxr w9, x8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, double %value acquire, align 8
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_aligned_release(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fmaximum_double_aligned_release:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_double_aligned_release:
+; -O1:    ldxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, double %value release, align 8
+    ret double %r
+}
+
+define dso_local void @atomicrmw_fmaximum_double_aligned_release_unused(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fmaximum_double_aligned_release_unused:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_double_aligned_release_unused:
+; -O1:    ldxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, double %value release, align 8
+    ret void
+}
+
+define dso_local double @atomicrmw_fmaximum_double_aligned_acq_rel(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fmaximum_double_aligned_acq_rel:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_double_aligned_acq_rel:
+; -O1:    ldaxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, double %value acq_rel, align 8
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_aligned_seq_cst(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fmaximum_double_aligned_seq_cst:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fmaximum_double_aligned_seq_cst:
+; -O1:    ldaxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fmaximum ptr %ptr, double %value seq_cst, align 8
+    ret double %r
+}
+
+define dso_local half @atomicrmw_fmaximum_half_unaligned_monotonic(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_half_unaligned_monotonic:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, half %value monotonic, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fmaximum_half_unaligned_acquire(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_half_unaligned_acquire:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, half %value acquire, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fmaximum_half_unaligned_release(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_half_unaligned_release:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, half %value release, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fmaximum_half_unaligned_acq_rel(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_half_unaligned_acq_rel:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, half %value acq_rel, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fmaximum_half_unaligned_seq_cst(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_half_unaligned_seq_cst:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, half %value seq_cst, align 1
+    ret half %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_monotonic(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_unaligned_monotonic:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_monotonic:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value monotonic, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_acquire(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_unaligned_acquire:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_acquire:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value acquire, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_release(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_unaligned_release:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_release:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value release, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_acq_rel(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_unaligned_acq_rel:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_acq_rel:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value acq_rel, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_seq_cst(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fmaximum_bfloat_unaligned_seq_cst:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_seq_cst:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, bfloat %value seq_cst, align 1
+    ret bfloat %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_unaligned_monotonic(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_float_unaligned_monotonic:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, float %value monotonic, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_unaligned_acquire(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_float_unaligned_acquire:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, float %value acquire, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_unaligned_release(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_float_unaligned_release:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, float %value release, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_unaligned_acq_rel(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_float_unaligned_acq_rel:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, float %value acq_rel, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fmaximum_float_unaligned_seq_cst(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_float_unaligned_seq_cst:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, float %value seq_cst, align 1
+    ret float %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_unaligned_monotonic(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_double_unaligned_monotonic:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, double %value monotonic, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_unaligned_acquire(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_double_unaligned_acquire:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, double %value acquire, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_unaligned_release(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_double_unaligned_release:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, double %value release, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_unaligned_acq_rel(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_double_unaligned_acq_rel:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, double %value acq_rel, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fmaximum_double_unaligned_seq_cst(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fmaximum_double_unaligned_seq_cst:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fmaximum ptr %ptr, double %value seq_cst, align 1
+    ret double %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_aligned_monotonic(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fminimum_half_aligned_monotonic:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_half_aligned_monotonic:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stxrh w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, half %value monotonic, align 2
+    ret half %r
+}
+
+define dso_local void @atomicrmw_fminimum_half_aligned_monotonic_unused(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fminimum_half_aligned_monotonic_unused:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_half_aligned_monotonic_unused:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stxrh w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, half %value monotonic, align 2
+    ret void
+}
+
+define dso_local half @atomicrmw_fminimum_half_aligned_acquire(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fminimum_half_aligned_acquire:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_half_aligned_acquire:
+; -O1:    ldaxrh w8, [x0]
+; -O1:    stxrh w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, half %value acquire, align 2
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_aligned_release(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fminimum_half_aligned_release:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_half_aligned_release:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, half %value release, align 2
+    ret half %r
+}
+
+define dso_local void @atomicrmw_fminimum_half_aligned_release_unused(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fminimum_half_aligned_release_unused:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_half_aligned_release_unused:
+; -O1:    ldxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, half %value release, align 2
+    ret void
+}
+
+define dso_local half @atomicrmw_fminimum_half_aligned_acq_rel(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fminimum_half_aligned_acq_rel:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_half_aligned_acq_rel:
+; -O1:    ldaxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, half %value acq_rel, align 2
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_aligned_seq_cst(ptr %ptr, half %value) {
+; -O0-LABEL: atomicrmw_fminimum_half_aligned_seq_cst:
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_half_aligned_seq_cst:
+; -O1:    ldaxrh w8, [x0]
+; -O1:    stlxrh w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, half %value seq_cst, align 2
+    ret half %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_aligned_monotonic(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_aligned_monotonic:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_aligned_monotonic:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stxrh w10, w9, [x0]
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value monotonic, align 2
+    ret bfloat %r
+}
+
+define dso_local void @atomicrmw_fminimum_bfloat_aligned_monotonic_unused(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_aligned_monotonic_unused:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_aligned_monotonic_unused:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stxrh w10, w9, [x0]
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value monotonic, align 2
+    ret void
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_aligned_acquire(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_aligned_acquire:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_aligned_acquire:
+; -O1:    ldaxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stxrh w10, w9, [x0]
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value acquire, align 2
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_aligned_release(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_aligned_release:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_aligned_release:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value release, align 2
+    ret bfloat %r
+}
+
+define dso_local void @atomicrmw_fminimum_bfloat_aligned_release_unused(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_aligned_release_unused:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_aligned_release_unused:
+; -O1:    ldxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value release, align 2
+    ret void
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_aligned_acq_rel(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_aligned_acq_rel:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_aligned_acq_rel:
+; -O1:    ldaxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value acq_rel, align 2
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_aligned_seq_cst(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_aligned_seq_cst:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    ldaxrh w9, [x11]
+; -O0:    cmp w9, w8, uxth
+; -O0:    stlxrh w10, w12, [x11]
+; -O0:    subs w8, w9, w8, uxth
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_aligned_seq_cst:
+; -O1:    ldaxrh w9, [x0]
+; -O1:    add w9, w9, w8
+; -O1:    add w9, w10, w9
+; -O1:    stlxrh w10, w9, [x0]
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value seq_cst, align 2
+    ret bfloat %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_aligned_monotonic(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fminimum_float_aligned_monotonic:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_float_aligned_monotonic:
+; -O1:    ldxr w8, [x0]
+; -O1:    stxr w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, float %value monotonic, align 4
+    ret float %r
+}
+
+define dso_local void @atomicrmw_fminimum_float_aligned_monotonic_unused(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fminimum_float_aligned_monotonic_unused:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_float_aligned_monotonic_unused:
+; -O1:    ldxr w8, [x0]
+; -O1:    stxr w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, float %value monotonic, align 4
+    ret void
+}
+
+define dso_local float @atomicrmw_fminimum_float_aligned_acquire(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fminimum_float_aligned_acquire:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_float_aligned_acquire:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stxr w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, float %value acquire, align 4
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_aligned_release(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fminimum_float_aligned_release:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_float_aligned_release:
+; -O1:    ldxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, float %value release, align 4
+    ret float %r
+}
+
+define dso_local void @atomicrmw_fminimum_float_aligned_release_unused(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fminimum_float_aligned_release_unused:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_float_aligned_release_unused:
+; -O1:    ldxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, float %value release, align 4
+    ret void
+}
+
+define dso_local float @atomicrmw_fminimum_float_aligned_acq_rel(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fminimum_float_aligned_acq_rel:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_float_aligned_acq_rel:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, float %value acq_rel, align 4
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_aligned_seq_cst(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fminimum_float_aligned_seq_cst:
+; -O0:    ldaxr w9, [x11]
+; -O0:    cmp w9, w8
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w8, w9, w8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_float_aligned_seq_cst:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, float %value seq_cst, align 4
+    ret float %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_aligned_monotonic(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fminimum_double_aligned_monotonic:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_double_aligned_monotonic:
+; -O1:    ldxr x8, [x0]
+; -O1:    stxr w9, x8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, double %value monotonic, align 8
+    ret double %r
+}
+
+define dso_local void @atomicrmw_fminimum_double_aligned_monotonic_unused(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fminimum_double_aligned_monotonic_unused:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_double_aligned_monotonic_unused:
+; -O1:    ldxr x8, [x0]
+; -O1:    stxr w9, x8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, double %value monotonic, align 8
+    ret void
+}
+
+define dso_local double @atomicrmw_fminimum_double_aligned_acquire(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fminimum_double_aligned_acquire:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_double_aligned_acquire:
+; -O1:    ldaxr x8, [x0]
+; -O1:    stxr w9, x8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, double %value acquire, align 8
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_aligned_release(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fminimum_double_aligned_release:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_double_aligned_release:
+; -O1:    ldxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, double %value release, align 8
+    ret double %r
+}
+
+define dso_local void @atomicrmw_fminimum_double_aligned_release_unused(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fminimum_double_aligned_release_unused:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_double_aligned_release_unused:
+; -O1:    ldxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, double %value release, align 8
+    ret void
+}
+
+define dso_local double @atomicrmw_fminimum_double_aligned_acq_rel(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fminimum_double_aligned_acq_rel:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_double_aligned_acq_rel:
+; -O1:    ldaxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, double %value acq_rel, align 8
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_aligned_seq_cst(ptr %ptr, double %value) {
+; -O0-LABEL: atomicrmw_fminimum_double_aligned_seq_cst:
+; -O0:    ldaxr x9, [x11]
+; -O0:    cmp x9, x8
+; -O0:    stlxr w10, x12, [x11]
+; -O0:    subs x8, x9, x8
+; -O0:    subs w8, w8, #1
+;
+; -O1-LABEL: atomicrmw_fminimum_double_aligned_seq_cst:
+; -O1:    ldaxr x8, [x0]
+; -O1:    stlxr w9, x8, [x0]
+    %r = atomicrmw fminimum ptr %ptr, double %value seq_cst, align 8
+    ret double %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_unaligned_monotonic(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fminimum_half_unaligned_monotonic:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, half %value monotonic, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_unaligned_acquire(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fminimum_half_unaligned_acquire:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, half %value acquire, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_unaligned_release(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fminimum_half_unaligned_release:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, half %value release, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_unaligned_acq_rel(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fminimum_half_unaligned_acq_rel:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, half %value acq_rel, align 1
+    ret half %r
+}
+
+define dso_local half @atomicrmw_fminimum_half_unaligned_seq_cst(ptr %ptr, half %value) {
+; CHECK-LABEL: atomicrmw_fminimum_half_unaligned_seq_cst:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, half %value seq_cst, align 1
+    ret half %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_monotonic(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_unaligned_monotonic:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_monotonic:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value monotonic, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_acquire(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_unaligned_acquire:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_acquire:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value acquire, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_release(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_unaligned_release:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_release:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value release, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_acq_rel(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_unaligned_acq_rel:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_acq_rel:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value acq_rel, align 1
+    ret bfloat %r
+}
+
+define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_seq_cst(ptr %ptr, bfloat %value) {
+; -O0-LABEL: atomicrmw_fminimum_bfloat_unaligned_seq_cst:
+; -O0:    add w8, w8, w9
+; -O0:    add w8, w8, w9
+; -O0:    bl __atomic_compare_exchange
+;
+; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_seq_cst:
+; -O1:    add w8, w8, w20
+; -O1:    add w8, w9, w8
+; -O1:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, bfloat %value seq_cst, align 1
+    ret bfloat %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_unaligned_monotonic(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fminimum_float_unaligned_monotonic:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, float %value monotonic, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_unaligned_acquire(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fminimum_float_unaligned_acquire:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, float %value acquire, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_unaligned_release(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fminimum_float_unaligned_release:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, float %value release, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_unaligned_acq_rel(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fminimum_float_unaligned_acq_rel:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, float %value acq_rel, align 1
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fminimum_float_unaligned_seq_cst(ptr %ptr, float %value) {
+; CHECK-LABEL: atomicrmw_fminimum_float_unaligned_seq_cst:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, float %value seq_cst, align 1
+    ret float %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_unaligned_monotonic(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fminimum_double_unaligned_monotonic:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, double %value monotonic, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_unaligned_acquire(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fminimum_double_unaligned_acquire:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, double %value acquire, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_unaligned_release(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fminimum_double_unaligned_release:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, double %value release, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_unaligned_acq_rel(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fminimum_double_unaligned_acq_rel:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, double %value acq_rel, align 1
+    ret double %r
+}
+
+define dso_local double @atomicrmw_fminimum_double_unaligned_seq_cst(ptr %ptr, double %value) {
+; CHECK-LABEL: atomicrmw_fminimum_double_unaligned_seq_cst:
+; CHECK:    bl __atomic_compare_exchange
+    %r = atomicrmw fminimum ptr %ptr, double %value seq_cst, align 1
+    ret double %r
+}
