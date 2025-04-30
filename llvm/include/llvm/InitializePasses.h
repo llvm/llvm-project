@@ -319,7 +319,7 @@ void initializeUnreachableBlockElimLegacyPassPass(PassRegistry &);
 void initializeUnreachableMachineBlockElimLegacyPass(PassRegistry &);
 void initializeVerifierLegacyPassPass(PassRegistry &);
 void initializeVirtRegMapWrapperLegacyPass(PassRegistry &);
-void initializeVirtRegRewriterPass(PassRegistry &);
+void initializeVirtRegRewriterLegacyPass(PassRegistry &);
 void initializeWasmEHPreparePass(PassRegistry &);
 void initializeWinEHPreparePass(PassRegistry &);
 void initializeWriteBitcodePassPass(PassRegistry &);
