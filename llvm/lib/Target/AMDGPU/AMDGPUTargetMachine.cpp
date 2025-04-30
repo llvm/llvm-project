@@ -1267,13 +1267,13 @@ void AMDGPUPassConfig::addIRPasses() {
   }
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
-        // Add SROA after inlining but before infer address spaces pass to
-        // unlock address space inference for smart pointers (pointers
-        // encapsulated in structs).
-        addPass(createSROAPass(true));
-        // Add infer address spaces pass to the opt pipeline after inlining
-        // but before another SROA round to increase SROA opportunities.
-        addPass(createInferAddressSpacesPass());
+    // Add SROA after inlining but before infer address spaces pass to
+    // unlock address space inference for smart pointers (pointers
+    // encapsulated in structs).
+    addPass(createSROAPass(true));
+    // Add infer address spaces pass to the opt pipeline after inlining
+    // but before another SROA round to increase SROA opportunities.
+    addPass(createInferAddressSpacesPass());
   }
 
   // Run atomic optimizer before Atomic Expand
@@ -2015,13 +2015,13 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
     addPass(AMDGPULowerModuleLDSPass(TM));
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
-        // Add SROA after inlining but before infer address spaces pass to
-        // unlock address space inference for smart pointers (pointers
-        // encapsulated in structs).
-        addPass(SROAPass(SROAOptions::PreserveCFG));
-        // Add infer address spaces pass to the opt pipeline after inlining
-        // but before another SROA round to increase SROA opportunities.
-        addPass(InferAddressSpacesPass());
+    // Add SROA after inlining but before infer address spaces pass to
+    // unlock address space inference for smart pointers (pointers
+    // encapsulated in structs).
+    addPass(SROAPass(SROAOptions::PreserveCFG));
+    // Add infer address spaces pass to the opt pipeline after inlining
+    // but before another SROA round to increase SROA opportunities.
+    addPass(InferAddressSpacesPass());
   }
 
   // Run atomic optimizer before Atomic Expand
