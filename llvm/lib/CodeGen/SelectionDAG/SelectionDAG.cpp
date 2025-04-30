@@ -5832,15 +5832,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
         return false;
     return true;
   }
-  case ISD::AssertNoFPClass: {
-    FPClassTest NoFPClass =
-        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
-    if ((NoFPClass & fcNan) == fcNan)
-      return true;
-    if (SNaN && (NoFPClass & fcSNan) == fcSNan)
-      return true;
-    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
-  }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
@@ -7495,17 +7486,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
-  case ISD::AssertNoFPClass: {
-    assert(N1.getValueType().isFloatingPoint() &&
-           "AssertNoFPClass is used for a non-floating type");
-    assert(isa<ConstantSDNode>(N2) && "NoFPClass is not Constant");
-    [[maybe_unused]] FPClassTest NoFPClass =
-           static_cast<FPClassTest>(N2->getAsZExtVal());
-    assert(llvm::to_underlying(NoFPClass) <=
-               BitmaskEnumDetail::Mask<FPClassTest>() &&
-           "FPClassTest value too large");
-    break;
-  }
   case ISD::AssertSext:
   case ISD::AssertZext: {
     EVT EVT = cast<VTSDNode>(N2)->getVT();

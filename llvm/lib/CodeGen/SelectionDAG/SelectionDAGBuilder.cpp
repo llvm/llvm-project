@@ -11829,18 +11829,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        SDValue OutVal =
-            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
-                             NewRoot, F.getCallingConv(), AssertOp);
-
-        FPClassTest NoFPClass = Arg.getNoFPClass();
-        if (NoFPClass != fcNone) {
-          SDValue SDNoFPClass = DAG.getTargetConstant(
-              static_cast<uint64_t>(NoFPClass), dl, MVT::i32);
-          OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
-                               OutVal, SDNoFPClass);
-        }
-        ArgValues.push_back(OutVal);
+        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
+                                             PartVT, VT, nullptr, NewRoot,
+                                             F.getCallingConv(), AssertOp));
       }
 
       i += NumParts;

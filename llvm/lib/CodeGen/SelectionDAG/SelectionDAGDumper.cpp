@@ -122,7 +122,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::TokenFactor:                return "TokenFactor";
   case ISD::AssertSext:                 return "AssertSext";
   case ISD::AssertZext:                 return "AssertZext";
-  case ISD::AssertNoFPClass:            return "AssertNoFPClass";
   case ISD::AssertAlign:                return "AssertAlign";
 
   case ISD::BasicBlock:                 return "BasicBlock";
