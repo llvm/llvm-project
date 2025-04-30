@@ -442,7 +442,8 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
         sys::path::append(GCPath, CorruptPrefix + std::to_string(Attempt) +
                                       "." + DBDir);
         EC = sys::fs::rename(PathBuf, GCPath);
-        if (EC != errc::directory_not_empty)
+        // Darwin uses ENOTEMPTY. Linux may return either ENOTEMPTY or EEXIST.
+        if (EC != errc::directory_not_empty && EC != errc::file_exists)
           break;
       }
       if (Attempt == MaxAttempts)
@@ -451,7 +452,7 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
                     " failed: too many CAS directories awaiting pruning");
       if (EC)
         return createStringError(EC, "rename " + PathBuf + " to " + GCPath +
-                                         " failed");
+                                         " failed: " + EC.message());
     }
     Recovered = true;
   }
