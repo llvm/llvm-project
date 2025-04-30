@@ -500,9 +500,8 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class CancelRequestHandler
-    : public RequestHandler<protocol::CancelArguments,
-                            protocol::CancelResponse> {
+class CancelRequestHandler : public RequestHandler<protocol::CancelArguments,
+                                                   protocol::CancelResponse> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "cancel"; }
