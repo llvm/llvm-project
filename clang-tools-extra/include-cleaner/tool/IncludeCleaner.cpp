@@ -198,14 +198,16 @@ private:
 
     if (!Insert) {
       llvm::errs()
-          << "warning: '-insert=0' is deprecated in favor of '-disable-insert'. "
+          << "warning: '-insert=0' is deprecated in favor of "
+             "'-disable-insert'. "
              "The old flag was confusing since it suggested that inserts "
              "were disabled by default, when they were actually enabled.\n";
     }
 
     if (!Remove) {
       llvm::errs()
-          << "warning: '-remove=0' is deprecated in favor of '-disable-remove'. "
+          << "warning: '-remove=0' is deprecated in favor of "
+             "'-disable-remove'. "
              "The old flag was confusing since it suggested that removes "
              "were disabled by default, when they were actually enabled.\n";
     }
