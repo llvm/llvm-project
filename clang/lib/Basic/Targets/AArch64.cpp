@@ -1626,6 +1626,9 @@ void AArch64leTargetInfo::setDataLayout() {
       resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
                       "n32:64-S128-Fn32",
                       "_");
+  } else if (getTriple().isUEFI() && getTriple().isOSBinFormatCOFF()) {
+    resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
+                    "i64:64-i128:128-n32:64-S128-Fn32");
   } else
     resetDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
                     "i64:64-i128:128-n32:64-S128-Fn32");

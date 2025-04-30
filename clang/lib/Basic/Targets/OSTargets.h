@@ -13,6 +13,7 @@
 #define LLVM_CLANG_LIB_BASIC_TARGETS_OSTARGETS_H
 
 #include "Targets.h"
+#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 namespace targets {
@@ -799,6 +800,8 @@ public:
 // UEFI target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
+  llvm::Triple Triple;
+
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
@@ -807,10 +810,18 @@ protected:
 
 public:
   UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
+      : OSTargetInfo<Target>(Triple, Opts), Triple(Triple) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedShort;
     this->UseMicrosoftManglingForC = true;
+  }
+
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override {
+    if (Triple.getArch() == llvm::Triple::x86_64)
+      return TargetInfo::CallingConvKind::CCK_MicrosoftWin64;
+
+    return Target::getCallingConvKind(ClangABICompat4);
   }
 };
 

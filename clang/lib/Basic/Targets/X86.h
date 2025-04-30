@@ -724,8 +724,8 @@ public:
   X86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86TargetInfo(Triple, Opts) {
     const bool IsX32 = getTriple().isX32();
-    bool IsWinCOFF =
-        getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
+    bool IsWinCOFF = (getTriple().isOSWindows() || getTriple().isUEFI()) &&
+                     getTriple().isOSBinFormatCOFF();
     LongWidth = LongAlign = PointerWidth = PointerAlign = IsX32 ? 32 : 64;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
@@ -828,38 +828,6 @@ public:
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
     return llvm::IntegerType::MAX_INT_BITS;
-  }
-};
-
-// x86-64 UEFI target
-class LLVM_LIBRARY_VISIBILITY UEFIX86_64TargetInfo
-    : public UEFITargetInfo<X86_64TargetInfo> {
-public:
-  UEFIX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : UEFITargetInfo<X86_64TargetInfo>(Triple, Opts) {
-    this->TheCXXABI.set(TargetCXXABI::Microsoft);
-    this->MaxTLSAlign = 8192u * this->getCharWidth();
-    this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
-                          "i64:64-i128:128-f80:128-n8:16:32:64-S128");
-  }
-
-  BuiltinVaListKind getBuiltinVaListKind() const override {
-    return TargetInfo::CharPtrBuiltinVaList;
-  }
-
-  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_C:
-    case CC_Win64:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
-  }
-
-  TargetInfo::CallingConvKind
-  getCallingConvKind(bool ClangABICompat4) const override {
-    return CCK_MicrosoftWin64;
   }
 };
 

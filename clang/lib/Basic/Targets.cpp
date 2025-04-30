@@ -170,6 +170,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::OpenBSD:
       return std::make_unique<OpenBSDTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                       Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFITargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                   Opts);
+
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::GNU:
@@ -631,7 +635,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<SolarisTargetInfo<X86_64TargetInfo>>(Triple,
                                                                    Opts);
     case llvm::Triple::UEFI:
-      return std::make_unique<UEFIX86_64TargetInfo>(Triple, Opts);
+      return std::make_unique<UEFITargetInfo<X86_64TargetInfo>>(Triple, Opts);
 
     case llvm::Triple::Win32: {
       switch (Triple.getEnvironment()) {
