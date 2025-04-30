@@ -3569,8 +3569,13 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
     } else {
       mlir::LLVM::StoreOp storeOp =
           rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref);
+
       if (isVolatile)
         storeOp.setVolatile_(true);
+
+      if (store.getNontemporal())
+        storeOp.setNontemporal(true);
+
       newOp = storeOp;
     }
     if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
