@@ -141,7 +141,7 @@ bool fromJSON(const llvm::json::Value &value, GPUSectionInfo &data,
   ObjectMapper o(value, path);
   return o && 
          o.map("name", data.name) &&
-         o.mapOptional("load_address", data.load_address),
+         o.mapOptional("load_address", data.load_address) &&
          o.map("children", data.children);
 }
 
@@ -162,18 +162,20 @@ bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderLibraryInfo &data,
   ObjectMapper o(value, path);
   return o && 
          o.map("pathname", data.pathname) &&
+         o.mapOptional("uuid", data.uuid_str) &&
          o.map("load", data.load) &&
-         o.mapOptional("load_address", data.load_address),
-         o.mapOptional("native_memory_address", data.native_memory_address),
-         o.mapOptional("native_memory_size", data.native_memory_size),
-         o.mapOptional("file_offset", data.file_offset),
-         o.mapOptional("file_size", data.file_size),
+         o.mapOptional("load_address", data.load_address) &&
+         o.mapOptional("native_memory_address", data.native_memory_address) &&
+         o.mapOptional("native_memory_size", data.native_memory_size) &&
+         o.mapOptional("file_offset", data.file_offset) &&
+         o.mapOptional("file_size", data.file_size) &&
          o.map("loaded_sections", data.loaded_sections);
 }
 
 llvm::json::Value toJSON(const GPUDynamicLoaderLibraryInfo &data) {
 return json::Value(
 Object{{"pathname", data.pathname}, 
+       {"uuid", data.uuid_str},
        {"load", data.load},
        {"native_memory_address", data.native_memory_address},
        {"native_memory_size", data.native_memory_size},

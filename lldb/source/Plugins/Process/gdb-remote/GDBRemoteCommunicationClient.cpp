@@ -418,6 +418,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_memory_tagging = eLazyBoolYes;
       else if (x == "qSaveCore+")
         m_supports_qSaveCore = eLazyBoolYes;
+      else if (x == "jGPUPluginGetDynamicLoaderLibraryInfo+")
+        m_supports_jGPUPluginGetDynamicLoaderLibraryInfo = eLazyBoolYes;
       else if (x == "native-signals+")
         m_uses_native_signals = eLazyBoolYes;
       else if (x == "binary-upload+")

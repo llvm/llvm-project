@@ -138,6 +138,7 @@ ProcessMockGPU::GetGPUDynamicLoaderLibraryInfos(const GPUDynamicLoaderArgs &args
   // for ELF files.
   GPUDynamicLoaderLibraryInfo lib1;
   lib1.pathname = "/usr/lib/lib1.so";
+  lib1.uuid_str = "A5D69E75-92DE-3FAB-BD95-5171EAE860CC";
   lib1.load_address = 0x20000;
   response.library_infos.push_back(lib1);
   // Second example of a shared library. This is for cases where there is an
@@ -146,6 +147,7 @@ ProcessMockGPU::GetGPUDynamicLoaderLibraryInfos(const GPUDynamicLoaderArgs &args
   // by the same amount.
   GPUDynamicLoaderLibraryInfo lib2;
   lib2.pathname = "/tmp/a.out";
+  lib1.uuid_str = "9F6F8018-B2D8-3946-8F38-38B0B890CC31";
   lib2.load_address = 0x30000;
   lib2.file_offset = 0x1000;
   lib2.file_size = 0x500;
