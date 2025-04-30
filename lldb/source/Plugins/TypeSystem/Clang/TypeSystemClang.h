@@ -900,9 +900,10 @@ public:
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   llvm::StringRef name,
-                                   bool omit_empty_base_classes) override;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                          llvm::StringRef name,
+                          bool omit_empty_base_classes) override;
 
   // Lookup a child member given a name. This function will match member names
   // only and will descend into "clang_type" children in search for the first
