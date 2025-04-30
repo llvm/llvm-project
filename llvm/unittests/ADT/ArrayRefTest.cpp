@@ -264,13 +264,30 @@ static_assert(!std::is_constructible_v<
               "cannot construct from iterator range with non-pointer iterator");
 static_assert(!std::is_constructible_v<ArrayRef<int>, iterator_range<int>>,
               "cannot construct from iterator range with non-pointer iterator");
+
+class TestBase {};
+
+class TestDerived : public TestBase {};
+
+static_assert(
+    !std::is_constructible_v<ArrayRef<TestDerived>, iterator_range<TestBase *>>,
+    "cannot construct ArrayRef with derived type");
+static_assert(
+    !std::is_constructible_v<ArrayRef<TestBase>, iterator_range<TestDerived *>>,
+    "cannot construct ArrayRef base type");
+static_assert(!std::is_constructible_v<ArrayRef<TestBase *>,
+                                       iterator_range<TestDerived **>>,
+              "cannot construct ArrayRef pointer of base type");
+
 static_assert(
     !std::is_constructible_v<ArrayRef<int>, iterator_range<const int *>>,
     "cannot construct ArrayRef with non-const elements from const iterator "
     "range");
-
 static_assert(
     std::is_constructible_v<ArrayRef<char *>, iterator_range<char **>>,
+    "should be able to construct ArrayRef from iterator_range over pointers");
+static_assert(
+    !std::is_constructible_v<ArrayRef<char *>, iterator_range<char *const *>>,
     "should be able to construct ArrayRef from iterator_range over pointers");
 
 TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
