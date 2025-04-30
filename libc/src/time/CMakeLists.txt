@@ -68,8 +68,6 @@ add_entrypoint_object(
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
-    .${LIBC_TARGET_OS}.localtime_utils
-    .${LIBC_TARGET_OS}.timezone
 )
 
 add_entrypoint_object(
@@ -83,9 +81,6 @@ add_entrypoint_object(
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
-    libc.src.stdio.fopen
-    .${LIBC_TARGET_OS}.localtime_utils
-    .${LIBC_TARGET_OS}.timezone
 )
 
 add_entrypoint_object(
