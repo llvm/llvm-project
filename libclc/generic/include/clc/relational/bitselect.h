@@ -11,4 +11,3 @@
 #define __CLC_BODY <clc/relational/bitselect.inc>
 #include <clc/integer/gentype.inc>
 
-#undef __CLC_BODY
