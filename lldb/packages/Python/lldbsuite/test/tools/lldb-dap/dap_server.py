@@ -343,25 +343,21 @@ class DebugCommunication(object):
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "runInTerminal",
                             "body": {},
                         },
-                        set_sequence=False,
                     )
                 elif response_or_request["command"] == "startDebugging":
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "startDebugging",
                             "body": {},
                         },
-                        set_sequence=False,
                     )
                 else:
                     desc = 'unknown reverse request "%s"' % (
@@ -649,6 +645,10 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             self.configuration_done_sent = True
+            # Client requests the baseline of currently existing threads after
+            # a successful launch or attach.
+            # Kick off the threads request that follows
+            self.request_threads()
         return response
 
     def _process_stopped(self):
@@ -1046,7 +1046,7 @@ class DebugCommunication(object):
         return self.send_recv({"command": "modules", "type": "request"})
 
     def request_stackTrace(
-        self, threadId=None, startFrame=None, levels=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
         if threadId is None:
             threadId = self.get_thread_id()
@@ -1055,6 +1055,8 @@ class DebugCommunication(object):
             args_dict["startFrame"] = startFrame
         if levels is not None:
             args_dict["levels"] = levels
+        if format is not None:
+            args_dict["format"] = format
         command_dict = {
             "command": "stackTrace",
             "type": "request",

@@ -754,9 +754,7 @@ public:
   /// Erase \p Inst from both ShapeMap (if an entry exists) and erase \p Inst
   /// itself.
   void eraseFromParentAndRemoveFromShapeMap(Instruction *Inst) {
-    auto Iter = ShapeMap.find(Inst);
-    if (Iter != ShapeMap.end())
-      ShapeMap.erase(Iter);
+    ShapeMap.erase(Inst);
     Inst->eraseFromParent();
   }
 
@@ -804,9 +802,10 @@ public:
                        m_Value(TA), m_ConstantInt(R), m_ConstantInt(C))))
       return nullptr;
 
-    // Transpose of a transpose is a nop
+    // Transpose of a transpose is a nop when the shapes match.
     Value *TATA;
-    if (match(TA, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(TATA)))) {
+    if (match(TA, m_Intrinsic<Intrinsic::matrix_transpose>(
+                      m_Value(TATA), m_Specific(C), m_Specific(R)))) {
       updateShapeAndReplaceAllUsesWith(I, TATA);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);

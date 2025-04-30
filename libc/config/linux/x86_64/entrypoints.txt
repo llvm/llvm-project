@@ -368,6 +368,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -658,6 +662,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     # math.h C23 _Float16 entrypoints
     libc.src.math.acosf16
     libc.src.math.acoshf16
+    libc.src.math.acospif16
     libc.src.math.asinf16
     libc.src.math.asinhf16
     libc.src.math.canonicalizef16

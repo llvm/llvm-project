@@ -165,8 +165,10 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::STRICT_UINT_TO_FP:
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:  R = SoftenFloatRes_XINT_TO_FP(N); break;
+    case ISD::POISON:
     case ISD::UNDEF:       R = SoftenFloatRes_UNDEF(N); break;
     case ISD::VAARG:       R = SoftenFloatRes_VAARG(N); break;
+    case ISD::AssertNoFPClass:       R = GetSoftenedFloat(N->getOperand(0)); break;
     case ISD::VECREDUCE_FADD:
     case ISD::VECREDUCE_FMUL:
     case ISD::VECREDUCE_FMIN:
@@ -1501,6 +1503,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to expand the result of this "
                        "operator!");
     // clang-format off
+  case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
@@ -2574,6 +2577,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
       R = PromoteFloatOp_FAKE_USE(N, OpNo);
       break;
     case ISD::FCOPYSIGN:  R = PromoteFloatOp_FCOPYSIGN(N, OpNo); break;
+    case ISD::AssertNoFPClass:
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:
     case ISD::LROUND:
@@ -2801,6 +2805,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FTRUNC:
     case ISD::FTAN:
     case ISD::FTANH:
+    case ISD::AssertNoFPClass:
     case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
 
     // Binary FP Operations
@@ -3319,6 +3324,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:  R = SoftPromoteHalfRes_XINT_TO_FP(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:       R = SoftPromoteHalfRes_UNDEF(N); break;
   case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
   case ISD::VECREDUCE_FADD:

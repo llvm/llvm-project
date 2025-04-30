@@ -1533,7 +1533,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // All of the below are only true if the loaded pointer is produced
   // by the dependent instruction.
   if (LoadPtr != lookupOperandLeader(DepInst) &&
-      !AA->isMustAlias(LoadPtr, DepInst))
+      DepInst->getType()->isPointerTy() && !AA->isMustAlias(LoadPtr, DepInst))
     return nullptr;
   // If this load really doesn't depend on anything, then we must be loading an
   // undef value.  This can happen when loading for a fresh allocation with no
@@ -3195,8 +3195,7 @@ bool NewGVN::singleReachablePHIPath(
   };
   auto FilteredPhiArgs =
       make_filter_range(MP->operands(), ReachableOperandPred);
-  SmallVector<const Value *, 32> OperandList;
-  llvm::copy(FilteredPhiArgs, std::back_inserter(OperandList));
+  SmallVector<const Value *, 32> OperandList(FilteredPhiArgs);
   bool Okay = all_equal(OperandList);
   if (Okay)
     return singleReachablePHIPath(Visited, cast<MemoryAccess>(OperandList[0]),

@@ -40,34 +40,61 @@ public:
 private:
   DiagnosticsEngine &getDiags() { return PP.getDiagnostics(); }
 
-  // All private Parse.* methods follow a similar pattern:
+  // All private parse.* methods follow a similar pattern:
   //   - Each method will start with an assert to denote what the CurToken is
   // expected to be and will parse from that token forward
   //
   //   - Therefore, it is the callers responsibility to ensure that you are
   // at the correct CurToken. This should be done with the pattern of:
   //
-  //  if (TryConsumeExpectedToken(RootSignatureToken::Kind))
-  //    if (Parse.*())
-  //      return true;
+  //  if (tryConsumeExpectedToken(RootSignatureToken::Kind)) {
+  //    auto ParsedObject = parse.*();
+  //    if (!ParsedObject.has_value())
+  //      return std::nullopt;
+  //    ...
+  // }
   //
   // or,
   //
-  //  if (ConsumeExpectedToken(RootSignatureToken::Kind, ...))
-  //    return true;
-  //  if (Parse.*())
-  //    return true;
+  //  if (consumeExpectedToken(RootSignatureToken::Kind, ...))
+  //    return std::nullopt;
+  //  auto ParsedObject = parse.*();
+  //  if (!ParsedObject.has_value())
+  //    return std::nullopt;
+  //  ...
   //
-  //   - All methods return true if a parsing error is encountered. It is the
-  // callers responsibility to propogate this error up, or deal with it
+  //   - All methods return std::nullopt if a parsing error is encountered. It
+  // is the callers responsibility to propogate this error up, or deal with it
   // otherwise
   //
   //   - An error will be raised if the proceeding tokens are not what is
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
-  bool parseDescriptorTable();
-  bool parseDescriptorTableClause();
+  std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
+  std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
+  parseDescriptorTableClause();
+
+  /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
+  /// order and only exactly once. `ParsedClauseParams` denotes the current
+  /// state of parsed params
+  struct ParsedClauseParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> Space;
+  };
+  std::optional<ParsedClauseParams>
+  parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
+
+  // Common parsing methods
+  std::optional<uint32_t> parseUIntParam();
+  std::optional<llvm::hlsl::rootsig::Register> parseRegister();
+
+  /// Parsing methods of various enums
+  std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
+  /// 32-bit integer
+  std::optional<uint32_t> handleUIntLiteral();
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void consumeNextToken() { CurToken = Lexer.consumeToken(); }

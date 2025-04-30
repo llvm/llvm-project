@@ -61,7 +61,7 @@ char LiveVariablesWrapperPass::ID = 0;
 char &llvm::LiveVariablesID = LiveVariablesWrapperPass::ID;
 INITIALIZE_PASS_BEGIN(LiveVariablesWrapperPass, "livevars",
                       "Live Variable Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(UnreachableMachineBlockElim)
+INITIALIZE_PASS_DEPENDENCY(UnreachableMachineBlockElimLegacy)
 INITIALIZE_PASS_END(LiveVariablesWrapperPass, "livevars",
                     "Live Variable Analysis", false, false)
 
