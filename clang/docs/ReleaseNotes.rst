@@ -140,6 +140,37 @@ C Language Changes
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
+- Clang now diagnoses ``const``-qualified object definitions without an
+  initializer. If the object is zero-initialized, it will be diagnosed under
+  the new warning ``-Wdefault-const-init`` (which is grouped under
+  ``-Wc++-compat`` because this construct is not compatible with C++). If the
+  object is left uninitialized, it will be diagnosed unsed the new warning
+  ``-Wdefault-const-init-unsafe`` (which is grouped under
+  ``-Wdefault-const-init``). #GH19297
+- Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
+  diagnoses implicit conversion from ``void *`` to another pointer type as
+  being incompatible with C++. (#GH17792)
+- Added ``-Wc++-hidden-decl``, grouped under ``-Wc++-compat``, which diagnoses
+  use of tag types which are visible in C but not visible in C++ due to scoping
+  rules. e.g.,
+
+  .. code-block:: c
+
+    struct S {
+      struct T {
+        int x;
+      } t;
+    };
+    struct T t; // Invalid C++, valid C, now diagnosed
+- Added ``-Wimplicit-int-enum-cast``, grouped under ``-Wc++-compat``, which
+  diagnoses implicit conversion from integer types to an enumeration type in C,
+  which is not compatible with C++. #GH37027
+- Split "implicit conversion from enum type to different enum type" diagnostic
+  from ``-Wenum-conversion`` into its own diagnostic group,
+  ``-Wimplicit-enum-enum-cast``, which is grouped under both
+  ``-Wenum-conversion`` and ``-Wimplicit-int-enum-cast``. This conversion is an
+  int-to-enum conversion because the enumeration on the right-hand side is
+  promoted to ``int`` before the assignment.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -201,6 +232,8 @@ Non-comprehensive list of changes in this release
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 - Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
+- No longer crashing on invalid Objective-C categories and extensions when
+  dumping the AST as JSON. (#GH137320)
 
 New Compiler Flags
 ------------------
@@ -226,10 +259,6 @@ Modified Compiler Flags
 - `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
-
-- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
-  reducing performance slightly while reducing the number of optimized-out
-  variables.
 
 Removed Compiler Flags
 -------------------------
@@ -300,6 +329,9 @@ related warnings within the method body.
   ``[no_]fine_grained_memory``, and ``[no_]ignore_denormal_mode``. These are
   particularly relevant for AMDGPU targets, where they map to corresponding IR
   metadata.
+
+- Clang now disallows the use of attributes applied before an
+  ``extern template`` declaration (#GH79893).
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -395,6 +427,22 @@ Improvements to Clang's diagnostics
   constructors to initialize their non-modifiable members. The diagnostic is
   not new; being controlled via a warning group is what's new. Fixes #GH41104
 
+- Analysis-based diagnostics (like ``-Wconsumed`` or ``-Wunreachable-code``)
+  can now be correctly controlled by ``#pragma clang diagnostic``. #GH42199
+
+- Improved Clang's error recovery for invalid function calls.
+
+- Improved bit-field diagnostics to consider the type specified by the
+  ``preferred_type`` attribute. These diagnostics are controlled by the flags
+  ``-Wpreferred-type-bitfield-enum-conversion`` and
+  ``-Wpreferred-type-bitfield-width``. These warnings are on by default as they
+  they're only triggered if the authors are already making the choice to use
+  ``preferred_type`` attribute.
+
+- ``-Winitializer-overrides`` and ``-Wreorder-init-list`` are now grouped under
+  the ``-Wc99-designator`` diagnostic group, as they also are about the
+  behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -445,6 +493,7 @@ Bug Fixes in This Version
 - Fixed a crash when ``#embed`` appears as a part of a failed constant
   evaluation. The crashes were happening during diagnostics emission due to
   unimplemented statement printer. (#GH132641)
+- Fixed visibility calculation for template functions. (#GH103477)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -582,6 +631,8 @@ Arm and AArch64 Support
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
   also now printed when the ``--print-supported-extensions`` option is used.
+- When a feature that depends on NEON (``simd``) is used, NEON is now automatically enabled.
+- When NEON is disabled (``+nosimd``), all features that depend on NEON will now be disabled.
 
 -  Support for __ptrauth type qualifier has been added.
 
@@ -609,11 +660,19 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - Add support for `-mtune=generic-ooo` (a generic out-of-order model).
+- Adds support for `__attribute__((interrupt("SiFive-CLIC-preemptible")))` and
+  `__attribute__((interrupt("SiFive-CLIC-stack-swap")))`. The former
+  automatically saves some interrupt CSRs before re-enabling interrupts in the
+  function prolog, the latter swaps `sp` with the value in a CSR before it is
+  used or modified. These two can also be combined, and can be combined with
+  `interrupt("machine")`.
 
 - Adds support for `__attribute__((interrupt("qci-nest")))` and
   `__attribute__((interrupt("qci-nonest")))`. These use instructions from
   Qualcomm's `Xqciint` extension to save and restore some GPRs in interrupt
   service routines.
+
+- `Zicsr` / `Zifencei` are allowed to be duplicated in the presence of `g` in `-march`.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -661,9 +720,12 @@ clang-format
   top of the file.
 - Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
   ``enum`` enumerator lists.
+- Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 
 libclang
 --------
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+  in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
 - Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as
@@ -677,6 +739,8 @@ Code Completion
 
 Static Analyzer
 ---------------
+- Fixed a crash when C++20 parenthesized initializer lists are used. This issue
+  was causing a crash in clang-tidy. (#GH136041)
 
 New features
 ^^^^^^^^^^^^
@@ -724,6 +788,7 @@ Python Binding Changes
   allows visiting the methods of a class.
 - Added ``Type.get_fully_qualified_name``, which provides fully qualified type names as
   instructed by a PrintingPolicy.
+- Add equality comparison operators for ``File`` type
 
 OpenMP Support
 --------------

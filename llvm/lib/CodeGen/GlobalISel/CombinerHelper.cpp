@@ -2112,6 +2112,8 @@ bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
     MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
     MI.getOperand(2).setReg(NegCst.getReg(0));
     MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+    if (Imm.isMinSignedValue())
+      MI.clearFlags(MachineInstr::MIFlag::NoSWrap);
     Observer.changedInstr(MI);
   };
   return true;

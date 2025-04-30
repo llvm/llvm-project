@@ -82,6 +82,11 @@ struct GPULaunchKernelConversion
   mlir::LogicalResult
   matchAndRewrite(mlir::gpu::LaunchFuncOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    // Only convert gpu.launch_func for CUDA Fortran.
+    if (!op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+            cuf::getProcAttrName()))
+      return mlir::failure();
+
     mlir::Location loc = op.getLoc();
     auto *ctx = rewriter.getContext();
     mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
@@ -142,14 +147,15 @@ struct GPULaunchKernelConversion
         stream = adaptor.getAsyncDependencies().front();
       }
 
-      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-          op, funcTy, cufLaunchClusterKernel,
+      rewriter.create<mlir::LLVM::CallOp>(
+          loc, funcTy, cufLaunchClusterKernel,
           mlir::ValueRange{kernelPtr, adaptor.getClusterSizeX(),
                            adaptor.getClusterSizeY(), adaptor.getClusterSizeZ(),
                            adaptor.getGridSizeX(), adaptor.getGridSizeY(),
                            adaptor.getGridSizeZ(), adaptor.getBlockSizeX(),
                            adaptor.getBlockSizeY(), adaptor.getBlockSizeZ(),
                            stream, dynamicMemorySize, kernelArgs, nullPtr});
+      rewriter.eraseOp(op);
     } else {
       auto procAttr =
           op->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
@@ -184,13 +190,14 @@ struct GPULaunchKernelConversion
         stream = adaptor.getAsyncDependencies().front();
       }
 
-      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-          op, funcTy, cufLaunchKernel,
+      rewriter.create<mlir::LLVM::CallOp>(
+          loc, funcTy, cufLaunchKernel,
           mlir::ValueRange{kernelPtr, adaptor.getGridSizeX(),
                            adaptor.getGridSizeY(), adaptor.getGridSizeZ(),
                            adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
                            adaptor.getBlockSizeZ(), stream, dynamicMemorySize,
                            kernelArgs, nullPtr});
+      rewriter.eraseOp(op);
     }
 
     return mlir::success();
@@ -293,7 +300,15 @@ public:
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     cuf::populateCUFGPUToLLVMConversionPatterns(typeConverter, patterns);
-    target.addIllegalOp<mlir::gpu::LaunchFuncOp>();
+
+    target.addDynamicallyLegalOp<mlir::gpu::LaunchFuncOp>(
+        [&](mlir::gpu::LaunchFuncOp op) {
+          if (op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                  cuf::getProcAttrName()))
+            return false;
+          return true;
+        });
+
     target.addIllegalOp<cuf::SharedMemoryOp>();
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
