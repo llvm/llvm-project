@@ -1758,8 +1758,10 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "processor trace";
   case eStopReasonInterrupt:
     return "async interrupt";
-  case eStopReasonHistoryBoundary:
+    case eStopReasonHistoryBoundary:
     return "history boundary";
+  case eStopReasonDynammicLoader:
+    return "dynamic loader";
   }
 
   return "StopReason = " + std::to_string(reason);

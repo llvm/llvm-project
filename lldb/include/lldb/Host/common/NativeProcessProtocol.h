@@ -17,6 +17,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private-forward.h"
@@ -255,6 +256,11 @@ public:
   virtual Status GetFileLoadAddress(const llvm::StringRef &file_name,
                                     lldb::addr_t &load_addr) = 0;
 
+  virtual std::optional<GPUDynamicLoaderResponse> 
+  GetGPUDynamicLoaderLibraryInfos(const GPUDynamicLoaderArgs &args) {
+    return std::nullopt;
+  }
+
   /// Extension flag constants, returned by Manager::GetSupportedExtensions()
   /// and passed to SetEnabledExtension()
   enum class Extension {
@@ -267,8 +273,9 @@ public:
     memory_tagging = (1u << 6),
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
+    json_dynamic_loader = (1u << 9),
 
-    LLVM_MARK_AS_BITMASK_ENUM(siginfo_read)
+    LLVM_MARK_AS_BITMASK_ENUM(json_dynamic_loader)
   };
 
   class Manager {

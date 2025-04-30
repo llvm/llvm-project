@@ -636,7 +636,7 @@ GDBRemoteCommunicationClient::GetGPUInitializeActions() {
 
 std::optional<GPUPluginBreakpointHitResponse> 
 GDBRemoteCommunicationClient::GPUBreakpointHit(
-  const GPUPluginBreakpointHitArgs &args) {
+    const GPUPluginBreakpointHitArgs &args) {
   StreamGDBRemote packet;
   packet.PutCString("jGPUPluginBreakpointHit:");
   packet.PutAsJSON(args, /*hex_ascii=*/false);
@@ -647,6 +647,28 @@ GDBRemoteCommunicationClient::GPUBreakpointHit(
       if (llvm::Expected<GPUPluginBreakpointHitResponse> info = 
           llvm::json::parse<GPUPluginBreakpointHitResponse>(response.Peek(), 
               "GPUPluginBreakpointHitResponse")) {
+        return *info;
+      } else {
+        llvm::consumeError(info.takeError());
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<GPUDynamicLoaderResponse> 
+GDBRemoteCommunicationClient::GetGPUDynamicLoaderLibraryInfos(
+    const GPUDynamicLoaderArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jGPUPluginGetDynamicLoaderLibraryInfo:");
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
+      PacketResult::Success) {
+    if (!response.Empty()) {
+      if (llvm::Expected<GPUDynamicLoaderResponse> info = 
+          llvm::json::parse<GPUDynamicLoaderResponse>(response.Peek(), 
+              "GPUDynamicLoaderResponse")) {
         return *info;
       } else {
         llvm::consumeError(info.takeError());

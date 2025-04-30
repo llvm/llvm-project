@@ -2091,6 +2091,21 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
+        } else if (reason == "dyld") {
+          Log *log(GetLog(GDBRLog::Process));
+          LLDB_LOG(log, "got dyld stop reason");
+          GPUDynamicLoaderArgs args;
+          args.full = true;
+          std::optional<GPUDynamicLoaderResponse> infos = 
+              m_gdb_comm.GetGPUDynamicLoaderLibraryInfos(args);
+          if (infos) {
+            for (const GPUDynamicLoaderLibraryInfo &info : (*infos).library_infos) {
+              LLDB_LOG(log, "library: %s", info.pathname.c_str());
+            }
+          }
+          // TODO: create dyld stop reason
+          thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
+          handled = true;
         }
       }
 
