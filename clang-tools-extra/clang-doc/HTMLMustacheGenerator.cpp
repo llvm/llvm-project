@@ -74,7 +74,41 @@ static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
 static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
 
+static Error
+setupTemplate(std::unique_ptr<MustacheTemplateFile> &Template,
+              StringRef TemplatePath,
+              std::vector<std::pair<StringRef, StringRef>> Partials) {
+  auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
+  if (Error Err = T.takeError())
+    return Err;
+  Template = std::move(T.get());
+  for (const auto [Name, FileName] : Partials) {
+    if (auto Err = Template->registerPartialFile(Name, FileName))
+      return Err;
+  }
+  return Error::success();
+}
+
 static Error setupTemplateFiles(const clang::doc::ClangDocContext &CDCtx) {
+  std::string NamespaceFilePath =
+      CDCtx.MustacheTemplates.lookup("namespace-template");
+  std::string ClassFilePath = CDCtx.MustacheTemplates.lookup("class-template");
+  std::string CommentFilePath =
+      CDCtx.MustacheTemplates.lookup("comments-template");
+  std::string FunctionFilePath =
+      CDCtx.MustacheTemplates.lookup("function-template");
+  std::string EnumFilePath = CDCtx.MustacheTemplates.lookup("enum-template");
+  std::vector<std::pair<StringRef, StringRef>> Partials = {
+      {"Comments", CommentFilePath},
+      {"FunctionPartial", FunctionFilePath},
+      {"EnumPartial", EnumFilePath}};
+
+  if (Error Err = setupTemplate(NamespaceTemplate, NamespaceFilePath, Partials))
+    return Err;
+
+  if (Error Err = setupTemplate(RecordTemplate, ClassFilePath, Partials))
+    return Err;
+
   return Error::success();
 }
 
