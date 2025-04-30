@@ -8,7 +8,10 @@
 
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
@@ -78,26 +81,6 @@ LogicalResult mlir::affine::mergeOffsetsSizesAndStrides(
       combinedOffsets, combinedSizes, combinedStrides);
 }
 
-static AffineMap bindSymbolsOrDims(
-    MLIRContext *ctx, llvm::ArrayRef<OpFoldResult> operands,
-    function_ref<AffineExpr(llvm::SmallVectorImpl<AffineExpr> &)> makeExpr) {
-  SmallVector<AffineExpr, 4> affineExprs(operands.size());
-  unsigned symbolCount = 0;
-  unsigned dimCount = 0;
-  for (auto [e, value] : llvm::zip_equal(affineExprs, operands)) {
-    auto asValue = llvm::dyn_cast_or_null<Value>(value);
-    if (asValue && !affine::isValidSymbol(asValue) &&
-        affine::isValidDim(asValue)) {
-      e = getAffineDimExpr(dimCount++, ctx);
-    } else {
-      // This is also done if it is not a valid symbol but
-      // we don't care, we need a fallback.
-      e = getAffineSymbolExpr(symbolCount++, ctx);
-    }
-  }
-  return AffineMap::get(dimCount, symbolCount, makeExpr(affineExprs));
-}
-
 void mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
     RewriterBase &rewriter, Location loc,
     ArrayRef<OpFoldResult> mixedSourceOffsets,
@@ -120,12 +103,23 @@ void mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
   resolvedIndices.clear();
   for (auto [offset, index, stride] :
        llvm::zip_equal(mixedSourceOffsets, indices, mixedSourceStrides)) {
-    auto affineMap =
-        bindSymbolsOrDims(rewriter.getContext(), {offset, index, stride},
-                          [](auto &e) { return e[0] + e[1] * e[2]; });
+    AffineMap map;
+    SmallVector<OpFoldResult> mapArgs;
+    auto *ctx = rewriter.getContext();
+    if (failed(affine::convertValuesToAffineMapAndArgs(
+            ctx, {offset, index, stride}, map, mapArgs))) {
+      // todo
+      resolvedIndices.push_back(Value{});
+      continue;
+    }
+    AffineExpr off, ix, str;
+    bindDims(ctx, off, ix, str);
+    auto nextMap = AffineMap::get(3, 0, off + ix * str);
+    auto composedMap = nextMap.compose(map);
 
-    OpFoldResult ofr = makeComposedFoldedAffineApply(rewriter, loc, affineMap,
-                                                     {offset, index, stride});
+    OpFoldResult ofr =
+        makeComposedFoldedAffineApply(rewriter, loc, composedMap, mapArgs);
+
     resolvedIndices.push_back(
         getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
   }

@@ -17,6 +17,8 @@
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/LogicalResult.h"
 #include <optional>
 
 namespace mlir {
@@ -105,7 +107,7 @@ struct VectorizationStrategy {
 /// Replace affine store and load accesses by scalars by forwarding stores to
 /// loads and eliminate invariant affine loads; consequently, eliminate dead
 /// allocs.
-void affineScalarReplace(Operation* parentOp, DominanceInfo &domInfo,
+void affineScalarReplace(Operation *parentOp, DominanceInfo &domInfo,
                          PostDominanceInfo &postDomInfo,
                          AliasAnalysis &analysis);
 
@@ -337,6 +339,20 @@ OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
 OpFoldResult linearizeIndex(OpBuilder &builder, Location loc,
                             ArrayRef<OpFoldResult> multiIndex,
                             ArrayRef<OpFoldResult> basis);
+
+/// Given a set of indices into a memref which may be computed using
+/// arith ops, try to compute each value to an affine expr. This is
+/// only possible if the indices are an expression of valid dims and
+/// args. If this succeeds, the affine map is populated, along with
+/// the map arguments (concrete bindings for dims and symbols).
+LogicalResult
+convertValuesToAffineMapAndArgs(MLIRContext *ctx, ValueRange indices,
+                                AffineMap &map,
+                                llvm::SmallVectorImpl<Value> &mapArgs);
+LogicalResult
+convertValuesToAffineMapAndArgs(MLIRContext *ctx,
+                                ArrayRef<OpFoldResult> indices, AffineMap &map,
+                                llvm::SmallVectorImpl<OpFoldResult> &mapArgs);
 
 /// Ensure that all operations that could be executed after `start`
 /// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path
