@@ -12323,7 +12323,7 @@ SDValue PPCTargetLowering::LowerADDSUBO_CARRY(SDValue Op,
   Opc = IsAdd ? PPCISD::ADDE : PPCISD::SUBE;
   if (!IsAdd)
     CarryOp = DAG.getNode(ISD::XOR, DL, CarryOp.getValueType(), CarryOp,
-                          DAG.getAllOnesConstant(DL, CarryOp.getValueType()));
+                          DAG.getConstant(1UL, DL, CarryOp.getValueType()));
   CarryOp = ConvertCarryValueToCarryFlag(VT, CarryOp, DAG, Subtarget);
   SDValue Sum = DAG.getNode(Opc, DL, DAG.getVTList(VT, MVT::i32),
                             Op.getOperand(0), Op.getOperand(1), CarryOp);
