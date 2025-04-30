@@ -399,3 +399,113 @@ func.func @test_vector_bitcast(%arg0: vector<[4]x2xf32>) -> vector<[4]x4xf16> {
   %1 = vector.bitcast %arg0 : vector<[4]x2xf32> to vector<[4]x4xf16>
   return %1 : vector<[4]x4xf16>
 }
+
+// -----
+// ALL-LABEL: linearize_vector_load
+// ALL-SAME: (%[[ARG_0:.*]]: memref<4x4xf16>)
+func.func @linearize_2D_vector_load(%arg0: memref<4x4xf16>) -> vector<4x4xf16> {
+  // DEFAULT: %[[C1:.*]] = arith.constant 1 : index
+  // DEFAULT: %[[C2:.*]] = arith.constant 2 : index
+  // DEFAULT: %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<16xf16>
+  // DEFAULT: %[[LOAD0:.*]] = vector.load %[[ARG_0]][%[[C1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: %[[SHUFFLE0:.*]] = vector.shuffle %[[CST]], %[[LOAD0]] [16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<16xf16>, vector<4xf16>
+  // DEFAULT: %[[C1_0:.*]] = arith.constant 1 : index
+  // DEFAULT: %[[ADD0:.*]] = arith.addi %[[C1]], %[[C1_0]] : index
+  // DEFAULT: %[[LOAD1:.*]] = vector.load %[[ARG_0]][%[[ADD0]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: %[[SHUFFLE1:.*]] = vector.shuffle %[[SHUFFLE0]], %[[LOAD1]] [0, 1, 2, 3, 16, 17, 18, 19, 8, 9, 10, 11, 12, 13, 14, 15] : vector<16xf16>, vector<4xf16>
+  // DEFAULT: %[[C2_1:.*]] = arith.constant 2 : index
+  // DEFAULT: %[[ADD1:.*]] = arith.addi %[[C1]], %[[C2_1]] : index
+  // DEFAULT: %[[LOAD2:.*]] = vector.load %[[ARG_0]][%[[ADD1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: %[[SHUFFLE2:.*]] = vector.shuffle %[[SHUFFLE1]], %[[LOAD2]] [0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 12, 13, 14, 15] : vector<16xf16>, vector<4xf16>
+  // DEFAULT: %[[C3:.*]] = arith.constant 3 : index
+  // DEFAULT: %[[ADD2:.*]] = arith.addi %[[C1]], %[[C3]] : index
+  // DEFAULT: %[[LOAD3:.*]] = vector.load %[[ARG_0]][%[[ADD2]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: %[[SHUFFLE3:.*]] = vector.shuffle %[[SHUFFLE2]], %[[LOAD3]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 18, 19] : vector<16xf16>, vector<4xf16>
+  // DEFAULT: %[[CAST:.*]] = vector.shape_cast %[[SHUFFLE3]] : vector<16xf16> to vector<4x4xf16>
+  // DEFAULT: return %[[CAST]] : vector<4x4xf16>
+
+  // BW-128: %[[C1:.*]] = arith.constant 1 : index
+  // BW-128: %[[C2:.*]] = arith.constant 2 : index
+  // BW-128: %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<16xf16>
+  // BW-128: %[[LOAD0:.*]] = vector.load %[[ARG_0]][%[[C1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: %[[SHUFFLE0:.*]] = vector.shuffle %[[CST]], %[[LOAD0]] [16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<16xf16>, vector<4xf16>
+  // BW-128: %[[C1_0:.*]] = arith.constant 1 : index
+  // BW-128: %[[ADD0:.*]] = arith.addi %[[C1]], %[[C1_0]] : index
+  // BW-128: %[[LOAD1:.*]] = vector.load %[[ARG_0]][%[[ADD0]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: %[[SHUFFLE1:.*]] = vector.shuffle %[[SHUFFLE0]], %[[LOAD1]] [0, 1, 2, 3, 16, 17, 18, 19, 8, 9, 10, 11, 12, 13, 14, 15] : vector<16xf16>, vector<4xf16>
+  // BW-128: %[[C2_1:.*]] = arith.constant 2 : index
+  // BW-128: %[[ADD1:.*]] = arith.addi %[[C1]], %[[C2_1]] : index
+  // BW-128: %[[LOAD2:.*]] = vector.load %[[ARG_0]][%[[ADD1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: %[[SHUFFLE2:.*]] = vector.shuffle %[[SHUFFLE1]], %[[LOAD2]] [0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 12, 13, 14, 15] : vector<16xf16>, vector<4xf16>
+  // BW-128: %[[C3:.*]] = arith.constant 3 : index
+  // BW-128: %[[ADD2:.*]] = arith.addi %[[C1]], %[[C3]] : index
+  // BW-128: %[[LOAD3:.*]] = vector.load %[[ARG_0]][%[[ADD2]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: %[[SHUFFLE3:.*]] = vector.shuffle %[[SHUFFLE2]], %[[LOAD3]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 18, 19] : vector<16xf16>, vector<4xf16>
+  // BW-128: %[[CAST:.*]] = vector.shape_cast %[[SHUFFLE3]] : vector<16xf16> to vector<4x4xf16>
+  // BW-128: return %[[CAST]] : vector<4x4xf16>
+
+  // BW-0: %[[C1:.*]] = arith.constant 1 : index
+  // BW-0: %[[C2:.*]] = arith.constant 2 : index
+  // BW-0: %[[LOAD:.*]] = vector.load %[[ARG_0]][%[[C1]], %[[C2]]] : memref<4x4xf16>, vector<4x4xf16>
+  // BW-0: return %[[LOAD]] : vector<4x4xf16>
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %0 = vector.load %arg0[%c1, %c2] : memref<4x4xf16>, vector<4x4xf16>
+  return %0 : vector<4x4xf16>
+}
+
+// -----
+// ALL-LABEL: linearize_vector_store
+// ALL-SAME: (%[[ARG_0:.*]]: memref<4x4xf16>, %[[ARG_1:.*]]: vector<4x4xf16>) {
+func.func @linearize_2D_vector_store(%arg0: memref<4x4xf16>, %arg1: vector<4x4xf16>) {
+  // DEFAULT: %[[CAST0:.*]] = vector.shape_cast %[[ARG_1]] : vector<4x4xf16> to vector<16xf16>
+  // DEFAULT: %[[C1:.*]] = arith.constant 1 : index
+  // DEFAULT: %[[C2:.*]] = arith.constant 2 : index
+  // DEFAULT: %[[CAST1:.*]] = vector.shape_cast %[[CAST0]] : vector<16xf16> to vector<4x4xf16>
+  // DEFAULT: %[[CAST2:.*]] = vector.shape_cast %[[CAST1]] : vector<4x4xf16> to vector<16xf16>
+  // DEFAULT: %[[SHUFFLE0:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [0, 1, 2, 3] : vector<16xf16>, vector<16xf16>
+  // DEFAULT: vector.store %[[SHUFFLE0]], %[[ARG_0]][%[[C1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: %[[SHUFFLE1:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [4, 5, 6, 7] : vector<16xf16>, vector<16xf16>
+  // DEFAULT: %[[C1_0:.*]] = arith.constant 1 : index
+  // DEFAULT: %[[ADD0:.*]] = arith.addi %[[C1]], %[[C1_0]] : index
+  // DEFAULT: vector.store %[[SHUFFLE1]], %[[ARG_0]][%[[ADD0]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: %[[SHUFFLE2:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [8, 9, 10, 11] : vector<16xf16>, vector<16xf16>
+  // DEFAULT: %[[C2_1:.*]] = arith.constant 2 : index
+  // DEFAULT: %[[ADD1:.*]] = arith.addi %[[C1]], %[[C2_1]] : index
+  // DEFAULT: vector.store %[[SHUFFLE2]], %[[ARG_0]][%[[ADD1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: %[[SHUFFLE3:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [12, 13, 14, 15] : vector<16xf16>, vector<16xf16>
+  // DEFAULT: %[[C3:.*]] = arith.constant 3 : index
+  // DEFAULT: %[[ADD2:.*]] = arith.addi %[[C1]], %[[C3]] : index
+  // DEFAULT: vector.store %[[SHUFFLE3]], %[[ARG_0]][%[[ADD2]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // DEFAULT: return
+
+  // BW-128: %[[CAST0:.*]] = vector.shape_cast %[[ARG_1]] : vector<4x4xf16> to vector<16xf16>
+  // BW-128: %[[C1:.*]] = arith.constant 1 : index
+  // BW-128: %[[C2:.*]] = arith.constant 2 : index
+  // BW-128: %[[CAST1:.*]] = vector.shape_cast %[[CAST0]] : vector<16xf16> to vector<4x4xf16>
+  // BW-128: %[[CAST2:.*]] = vector.shape_cast %[[CAST1]] : vector<4x4xf16> to vector<16xf16>
+  // BW-128: %[[SHUFFLE0:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [0, 1, 2, 3] : vector<16xf16>, vector<16xf16>
+  // BW-128: vector.store %[[SHUFFLE0]], %[[ARG_0]][%[[C1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: %[[SHUFFLE1:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [4, 5, 6, 7] : vector<16xf16>, vector<16xf16>
+  // BW-128: %[[C1_0:.*]] = arith.constant 1 : index
+  // BW-128: %[[ADD0:.*]] = arith.addi %[[C1]], %[[C1_0]] : index
+  // BW-128: vector.store %[[SHUFFLE1]], %[[ARG_0]][%[[ADD0]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: %[[SHUFFLE2:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [8, 9, 10, 11] : vector<16xf16>, vector<16xf16>
+  // BW-128: %[[C2_1:.*]] = arith.constant 2 : index
+  // BW-128: %[[ADD1:.*]] = arith.addi %[[C1]], %[[C2_1]] : index
+  // BW-128: vector.store %[[SHUFFLE2]], %[[ARG_0]][%[[ADD1]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: %[[SHUFFLE3:.*]] = vector.shuffle %[[CAST2]], %[[CAST2]] [12, 13, 14, 15] : vector<16xf16>, vector<16xf16>
+  // BW-128: %[[C3:.*]] = arith.constant 3 : index
+  // BW-128: %[[ADD2:.*]] = arith.addi %[[C1]], %[[C3]] : index
+  // BW-128: vector.store %[[SHUFFLE3]], %[[ARG_0]][%[[ADD2]], %[[C2]]] : memref<4x4xf16>, vector<4xf16>
+  // BW-128: return
+
+  // BW-0: %[[C1:.*]] = arith.constant 1 : index
+  // BW-0: %[[C2:.*]] = arith.constant 2 : index
+  // BW-0: vector.store %[[ARG_1]], %[[ARG_0]][%[[C1]], %[[C2]]] : memref<4x4xf16>, vector<4x4xf16>
+  // BW-0: return
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  vector.store %arg1, %arg0[%c1, %c2] : memref<4x4xf16>, vector<4x4xf16>
+  return
+}
