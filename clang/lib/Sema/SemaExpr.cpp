@@ -12325,7 +12325,6 @@ bool Sema::isCompatibleBoundsUnsafeAssignment(
   case IncompatibleFunctionPointer:
   case IncompatibleFunctionPointerStrict:
   case IncompatiblePointerSign:
-  case CompatiblePointerDiscardsQualifiers:
   case IncompatiblePointerDiscardsQualifiers:
   case IncompatibleNestedPointerAddressSpaceMismatch:
   case IncompatibleNestedPointerQualifiers:
@@ -12334,6 +12333,8 @@ bool Sema::isCompatibleBoundsUnsafeAssignment(
   case Incompatible:
   // Not errors
   case CompatibleSingleToExplicitIndexablePointer:
+  case CompatiblePointerDiscardsQualifiers:
+  case CompatibleVoidPtrToNonVoidPtr:
   case Compatible:
     return false;
   }
