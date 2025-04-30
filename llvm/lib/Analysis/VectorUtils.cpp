@@ -149,8 +149,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
 
-  // Vector predication intrinsics only demand the the first lane the last
-  // operand (the EVL operand).
+  // Vector predication intrinsics have the EVL as the last operand.
   if (VPIntrinsic::getVectorLengthParamPos(ID) == ScalarOpdIdx)
     return true;
 

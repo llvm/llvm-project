@@ -2,9 +2,9 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 ; Check that we don't unnecessarily broadcast %pow
-define void @powi(ptr noalias %p, i32 %pow) {
-; CHECK-LABEL: define void @powi(
-; CHECK-SAME: ptr noalias [[P:%.*]], i32 [[POW:%.*]]) {
+define void @powi_only_first_lane_used_of_second_arg(ptr %p, i32 %pow) {
+; CHECK-LABEL: define void @powi_only_first_lane_used_of_second_arg(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[POW:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -14,11 +14,11 @@ define void @powi(ptr noalias %p, i32 %pow) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[WIDE_LOAD]], i32 [[POW]])
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[WIDE_LOAD]], i32 [[POW]])
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

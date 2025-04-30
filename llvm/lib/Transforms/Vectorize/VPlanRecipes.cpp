@@ -1364,7 +1364,7 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
 
 bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  return all_of(enumerate(operands()), [this, &Op](auto &&X) {
+  return all_of(enumerate(operands()), [this, &Op](const auto &X) {
     auto [Idx, V] = X;
     return V != Op || isVectorIntrinsicWithScalarOpAtArg(getVectorIntrinsicID(),
                                                          Idx, nullptr);
