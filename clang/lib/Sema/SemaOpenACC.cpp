@@ -1275,11 +1275,8 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForCond(const Stmt *CondStmt,
          CondVar->getCanonicalDecl() != InitVar->getCanonicalDecl() &&
          CE->getNumArgs() > 1))
       CondVar = getDeclFromExpr(CE->getArg(1));
-  } else if (const auto *ME = dyn_cast<CXXMemberCallExpr>(CondStmt)) {
-    // Here there isn't much we can do besides hope it is the right variable.
-    // Codegen might have to just give up on figuring out trip count in this
-    // case?
-    CondVar = getDeclFromExpr(ME->getImplicitObjectArgument());
+  } else {
+    return DiagCondVar();
   }
 
   if (!CondVar)
@@ -1292,6 +1289,59 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForCond(const Stmt *CondStmt,
 
   return false;
 }
+
+namespace {
+// Helper to check the RHS of an assignment during for's step. We can allow
+// InitVar = InitVar + N, InitVar = N + InitVar, and Initvar = Initvar - N,
+// where N is an integer.
+bool isValidForIncRHSAssign(const ValueDecl *InitVar, const Expr *RHS) {
+
+  auto isValid = [](const ValueDecl *InitVar, const Expr *InnerLHS,
+                    const Expr *InnerRHS, bool IsAddition) {
+    // ONE of the sides has to be an integer type.
+    if (!InnerLHS->getType()->isIntegerType() &&
+        !InnerRHS->getType()->isIntegerType())
+      return false;
+
+    // If the init var is already an error, don't bother trying to check for
+    // it.
+    if (!InitVar)
+      return true;
+
+    const ValueDecl *LHSDecl = getDeclFromExpr(InnerLHS);
+    const ValueDecl *RHSDecl = getDeclFromExpr(InnerRHS);
+    // If we can't get a declaration, this is probably an error, so give up.
+    if (!LHSDecl || !RHSDecl)
+      return true;
+
+    // If the LHS is the InitVar, the other must be int, so this is valid.
+    if (LHSDecl->getCanonicalDecl() ==
+        InitVar->getCanonicalDecl())
+      return true;
+
+    // Subtraction doesn't allow the RHS to be init var, so this is invalid.
+    if (!IsAddition)
+      return false;
+
+    return RHSDecl->getCanonicalDecl() ==
+           InitVar->getCanonicalDecl();
+  };
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(RHS)) {
+    BinaryOperatorKind OpC = BO->getOpcode();
+    if (OpC != BO_Add && OpC != BO_Sub)
+      return false;
+    return isValid(InitVar, BO->getLHS(), BO->getRHS(), OpC == BO_Add);
+  } else if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(RHS)) {
+    OverloadedOperatorKind Op = CE->getOperator();
+    if (Op != OO_Plus && Op != OO_Minus)
+      return false;
+    return isValid(InitVar, CE->getArg(0), CE->getArg(1), Op == OO_Plus);
+  }
+
+  return false;
+}
+} // namespace
 
 bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
                                                    const ValueDecl *InitVar,
@@ -1335,14 +1385,12 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
       return DiagIncVar();
     case BO_AddAssign:
     case BO_SubAssign:
-    case BO_MulAssign:
-    case BO_DivAssign:
+      break;
     case BO_Assign:
-      // += -= *= /= should all be fine here, this should be all of the
-      // 'monotonical' compound-assign ops.
-      // Assignment we just give up on, we could do better, and ensure that it
-      // is a binary/operator expr doing more work, but that seems like a lot
-      // of work for an error prone check.
+      // For assignment we also allow InitVar = InitVar + N, InitVar = N +
+      // InitVar, and InitVar = InitVar - N;  BUT only if 'N' is integral.
+      if (!isValidForIncRHSAssign(InitVar, BO->getRHS()))
+        return DiagIncVar();
       break;
     }
     IncVar = getDeclFromExpr(BO->getLHS());
@@ -1354,23 +1402,18 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
     case OO_MinusMinus:
     case OO_PlusEqual:
     case OO_MinusEqual:
-    case OO_StarEqual:
-    case OO_SlashEqual:
+      break;
     case OO_Equal:
-      // += -= *= /= should all be fine here, this should be all of the
-      // 'monotonical' compound-assign ops.
-      // Assignment we just give up on, we could do better, and ensure that it
-      // is a binary/operator expr doing more work, but that seems like a
-      // lot of work for an error prone check.
+      // For assignment we also allow InitVar = InitVar + N, InitVar = N +
+      // InitVar, and InitVar = InitVar - N;  BUT only if 'N' is integral.
+      if (!isValidForIncRHSAssign(InitVar, CE->getArg(1)))
+        return DiagIncVar();
       break;
     }
 
     IncVar = getDeclFromExpr(CE->getArg(0));
-
-  } else if (const auto *ME = dyn_cast<CXXMemberCallExpr>(IncStmt)) {
-    IncVar = getDeclFromExpr(ME->getImplicitObjectArgument());
-    // We can't really do much for member expressions, other than hope they are
-    // doing the right thing, so give up here.
+  } else {
+    return DiagIncVar();
   }
 
   if (!IncVar)
