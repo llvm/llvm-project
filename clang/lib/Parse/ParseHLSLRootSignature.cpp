@@ -42,12 +42,9 @@ bool RootSignatureParser::parse() {
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
-  if (consumeExpectedToken(TokenKind::end_of_stream,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootSignature))
-    return true;
-
-  return false;
+  return consumeExpectedToken(TokenKind::end_of_stream,
+                              diag::err_hlsl_unexpected_end_of_params,
+                              /*param of=*/TokenKind::kw_RootSignature));
 }
 
 std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
