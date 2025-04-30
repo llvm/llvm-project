@@ -14,6 +14,8 @@ Class `ApplyAtomGroup` - This is a scoped helper similar to `ApplyDebugLocation`
 
 `CodeGenFunction::addInstToNewSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup)` adds an instruction (and a backup instruction if non-null) to a new "atom group". Currently mostly used in loop handling code.
 
+There are a couple of other helpers, including `addRetToOverrideOrNewSourceAtom` used for `rets` which is covered in the examples below.
+
 ## Examples
 
 A simple example walk through:
@@ -37,9 +39,9 @@ entry:
 }
 ```
 
-The store is the key instruction for the assignment (`atomGroup` 1). The instruction corresponding to the final (and in this case only) RHS value, the load from `%a.addr`, is a good backup location for is_stmt if the store gets optimized away. It's part of the same source atom, but has lower is_stmt precedence, so it gets a higher `atomRank`.
+The store is the key instruction for the assignment (`atomGroup` 1). The instruction corresponding to the final (and in this case only) RHS value, the load from `%a.addr`, is a good backup location for `is_stmt` if the store gets optimized away. It's part of the same source atom, but has lower `is_stmt` precedence, so it gets a higher `atomRank`.
 
-The atom group is set here:
+This is all handled during CodeGen. The atom group is set here:
 ```
 >  clang::CodeGen::ApplyAtomGroup::ApplyAtomGroup(clang::CodeGen::CGDebugInfo * DI) Line 187
    clang::CodeGen::CodeGenFunction::EmitAutoVarInit(const clang::CodeGen::CodeGenFunction::AutoVarEmission & emission) Line 1961
