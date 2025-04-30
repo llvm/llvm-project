@@ -3770,9 +3770,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     assert(firstOp && "Should have created an atomic operation");
     atomicAt = getInsertionPointAfter(firstOp);
 
-    mlir::Operation *secondOp = genAtomicOperation(
-        converter, loc, stmtCtx, analysis.op1.what, atomAddr, atom,
-        *get(analysis.op1.expr), hint, memOrder, atomicAt, prepareAt);
+    mlir::Operation *secondOp = nullptr;
+    if (analysis.op1.what != analysis.None) {
+      secondOp = genAtomicOperation(converter, loc, stmtCtx, analysis.op1.what,
+                                    atomAddr, atom, *get(analysis.op1.expr),
+                                    hint, memOrder, atomicAt, prepareAt);
+    }
 
     if (secondOp) {
       builder.setInsertionPointAfter(secondOp);
