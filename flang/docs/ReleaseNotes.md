@@ -24,7 +24,7 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
-* Initial support for VOLATILE has been added.
+* Initial support for VOLATILE variables and procedure interface arguments has been added.
 
 ## Bug Fixes
 
