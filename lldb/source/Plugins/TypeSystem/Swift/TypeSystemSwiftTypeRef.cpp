@@ -1637,24 +1637,6 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
   return GetNodeForPrintingImpl(dem, node, flavor, resolve_objc_module);
 }
 
-static bool ProtocolCompositionContainsSingleObjcProtocol(
-  swift::Demangle::NodePointer node) {
-// Kind=ProtocolList
-// Kind=TypeList
-//   Kind=Type
-//     Kind=Protocol
-//       Kind=Module, text="__C"
-//       Kind=Identifier, text="SomeIdentifier"
-if (node->getKind() != Node::Kind::ProtocolList)
-  return false;
-NodePointer type_list = node->getFirstChild();
-if (type_list->getKind() != Node::Kind::TypeList ||
-    type_list->getNumChildren() != 1)
-  return false;
-NodePointer type = type_list->getFirstChild();
-return Contains(type, Node::Kind::Module, swift::MANGLING_MODULE_OBJC);
-}
-
 /// Determine wether this demangle tree contains a node of kind \c kind and with
 /// text \c text (if provided).
 static bool Contains(swift::Demangle::NodePointer node,
