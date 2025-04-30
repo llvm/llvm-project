@@ -20,24 +20,19 @@ using namespace llvm;
 using Definition = FormatEntity::Entry::Definition;
 using Entry = FormatEntity::Entry;
 
-namespace {
-class FormatEntityTest : public ::testing::Test {
-public:
-  Expected<std::string> Format(StringRef format_str) {
-    StreamString stream;
-    FormatEntity::Entry format;
-    Status status = FormatEntity::Parse(format_str, format);
-    if (status.Fail())
-      return status.ToError();
+static Expected<std::string> Format(StringRef format_str) {
+  StreamString stream;
+  FormatEntity::Entry format;
+  Status status = FormatEntity::Parse(format_str, format);
+  if (status.Fail())
+    return status.ToError();
 
-    FormatEntity::Format(format, stream, nullptr, nullptr, nullptr, nullptr,
-                         false, false);
-    return stream.GetString().str();
-  }
-};
-} // namespace
+  FormatEntity::Format(format, stream, nullptr, nullptr, nullptr, nullptr,
+                       false, false);
+  return stream.GetString().str();
+}
 
-TEST_F(FormatEntityTest, DefinitionConstructionNameAndType) {
+TEST(FormatEntityTest, DefinitionConstructionNameAndType) {
   Definition d("foo", FormatEntity::Entry::Type::Invalid);
 
   EXPECT_STREQ(d.name, "foo");
@@ -49,7 +44,7 @@ TEST_F(FormatEntityTest, DefinitionConstructionNameAndType) {
   EXPECT_FALSE(d.keep_separator);
 }
 
-TEST_F(FormatEntityTest, DefinitionConstructionNameAndString) {
+TEST(FormatEntityTest, DefinitionConstructionNameAndString) {
   Definition d("foo", "string");
 
   EXPECT_STREQ(d.name, "foo");
@@ -61,7 +56,7 @@ TEST_F(FormatEntityTest, DefinitionConstructionNameAndString) {
   EXPECT_FALSE(d.keep_separator);
 }
 
-TEST_F(FormatEntityTest, DefinitionConstructionNameTypeData) {
+TEST(FormatEntityTest, DefinitionConstructionNameTypeData) {
   Definition d("foo", FormatEntity::Entry::Type::Invalid, 33);
 
   EXPECT_STREQ(d.name, "foo");
@@ -73,7 +68,7 @@ TEST_F(FormatEntityTest, DefinitionConstructionNameTypeData) {
   EXPECT_FALSE(d.keep_separator);
 }
 
-TEST_F(FormatEntityTest, DefinitionConstructionNameTypeChildren) {
+TEST(FormatEntityTest, DefinitionConstructionNameTypeChildren) {
   Definition d("foo", FormatEntity::Entry::Type::Invalid, 33);
   Definition parent("parent", FormatEntity::Entry::Type::Invalid, 1, &d);
   EXPECT_STREQ(parent.name, "parent");
@@ -173,7 +168,7 @@ constexpr llvm::StringRef lookupStrings[] = {
     "${target.file.fullpath}",
     "${var.dummy-var-to-test-wildcard}"};
 
-TEST_F(FormatEntityTest, LookupAllEntriesInTree) {
+TEST(FormatEntityTest, LookupAllEntriesInTree) {
   for (const llvm::StringRef testString : lookupStrings) {
     Entry e;
     EXPECT_TRUE(FormatEntity::Parse(testString, e).Success())
@@ -181,7 +176,7 @@ TEST_F(FormatEntityTest, LookupAllEntriesInTree) {
   }
 }
 
-TEST_F(FormatEntityTest, Scope) {
+TEST(FormatEntityTest, Scope) {
   // Scope with  one alternative.
   EXPECT_THAT_EXPECTED(Format("{${frame.pc}|foo}"), HasValue("foo"));
 
