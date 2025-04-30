@@ -7,7 +7,7 @@
 # be deleted when it is clear that it is not actually testing anything useful.
 
 ---
-# CHECK-LABEL: MachineUniformityInfo for function: hidden_diverge
+# CHECK-LABEL: MachineUniformityInfo for function:  @hidden_diverge
 # CHECK-LABEL: BLOCK bb.0
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vgpr_32(s32) = COPY $vgpr0
 # CHECK-LABEL: BLOCK bb.2

@@ -236,8 +236,9 @@ bool MachineUniformityAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
 
 void MachineUniformityAnalysisPass::print(raw_ostream &OS,
                                           const Module *) const {
-  OS << "MachineUniformityInfo for function: " << UI.getFunction().getName()
-     << "\n";
+  OS << "MachineUniformityInfo for function: ";
+  UI.getFunction().getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
   UI.print(OS);
 }
 

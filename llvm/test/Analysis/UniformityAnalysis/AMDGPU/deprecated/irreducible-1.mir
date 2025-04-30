@@ -6,7 +6,7 @@
 # the purpose of catching in any crash when invoking MachineUA. The test should
 # be deleted when it is clear that it is not actually testing anything useful.
 
-# CHECK-LABEL: MachineUniformityInfo for function: irreducible
+# CHECK-LABEL: MachineUniformityInfo for function:  @irreducible
 
 ---
 name:            irreducible

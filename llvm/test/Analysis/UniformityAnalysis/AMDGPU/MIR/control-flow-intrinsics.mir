@@ -4,7 +4,7 @@
 ---
 name:            f1
 body:             |
-  ; CHECK-LABEL: MachineUniformityInfo for function: f1
+  ; CHECK-LABEL: MachineUniformityInfo for function:  @f1
   bb.0:
     successors: %bb.1, %bb.2
 
@@ -24,7 +24,7 @@ body:             |
 ---
 name:            f2
 body:             |
-  ; CHECK-LABEL: MachineUniformityInfo for function: f2
+  ; CHECK-LABEL: MachineUniformityInfo for function:  @f2
   bb.0:
     successors: %bb.1, %bb.2
 

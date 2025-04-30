@@ -6,7 +6,7 @@
 #     bb1 <-> bb2
 #              |
 #             bb3
-# CHECK-LABEL: MachineUniformityInfo for function: cycle_diverge_enter
+# CHECK-LABEL: MachineUniformityInfo for function:  @cycle_diverge_enter
 # CHECK-NEXT: CYCLES ASSSUMED DIVERGENT:
 # CHECK-NEXT: depth=1: entries(bb.2 bb.1)
 # CHECK-NEXT: CYCLES WITH DIVERGENT EXIT:
@@ -47,7 +47,7 @@ body:             |
 ...
 
 
-# CHECK-LABEL: MachineUniformityInfo for function: cycle_diverge_exit
+# CHECK-LABEL: MachineUniformityInfo for function:  @cycle_diverge_exit
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32), %{{[0-9]*}}:_(s1) = G_UADDO %8:_, %{{[0-9]*}}:_
 #        bb0
 #       /    \
