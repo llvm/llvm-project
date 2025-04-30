@@ -12,11 +12,6 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-#ifdef LIBC_TARGET_OS_IS_LINUX
-#include "src/time/linux/localtime_utils.h"
-#include "src/time/linux/timezone.h"
-#endif
-
 TEST(LlvmLibcCtime, nullptr) {
   char *result;
   result = LIBC_NAMESPACE::ctime(nullptr);

@@ -13,11 +13,6 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-#ifdef LIBC_TARGET_OS_IS_LINUX
-#include "src/time/linux/localtime_utils.h"
-#include "src/time/linux/timezone.h"
-#endif
-
 using namespace LIBC_NAMESPACE::time_constants;
 
 TEST(LlvmLibcCtimeR, Nullptr) {
