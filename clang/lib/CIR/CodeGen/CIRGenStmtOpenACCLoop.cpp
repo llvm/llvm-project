@@ -65,7 +65,7 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   //
   // HOWEVER: What ACC dialect REALLY cares about is the tripcount, which you
   // cannot get (in the case of `RandomAccessIterator`) from JUST 'upperbound'
-  // and 'lowerbound'. We will likely have to provide a 'recipe' equivilent to
+  // and 'lowerbound'. We will likely have to provide a 'recipe' equivalent to
   // `std::distance` instead.  In the case of integer/pointers, it is fairly
   // simple to find: it is just the mathematical subtraction. Howver, in the
   // case of `RandomAccessIterator`, we have to enable the use of `operator-`.
@@ -74,11 +74,11 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   // that loops through, like we would for a forward/etc iterator.
   //
   // 'step': Sema is currently allowing builtin ++,--, +=, -=, *=, /=, and =
-  // operators. Additionally, it allows the equivilent for the operator-call, as
+  // operators. Additionally, it allows the equivalent for the operator-call, as
   // well as member-call.
   //
   // For builtin operators, we perhaps should refine the assignment here. It
-  // doesn't reallly help us know the 'step' count at all, but we could perhaps
+  // doesn't really help us know the 'step' count at all, but we could perhaps
   // do one more step of analysis in Sema to allow something like Var = Var + 1.
   // For the others, this should get us the step reasonably well.
   //
