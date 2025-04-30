@@ -72,6 +72,18 @@ enum class ExtraSemiKind {
   AfterMemberFunctionDefinition = 3
 };
 
+/// The kind of template we are parsing.
+enum class ParsedTemplateKind {
+  /// We are not parsing a template at all.
+  NonTemplate = 0,
+  /// We are parsing a template declaration.
+  Template,
+  /// We are parsing an explicit specialization.
+  ExplicitSpecialization,
+  /// We are parsing an explicit instantiation.
+  ExplicitInstantiation
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -1585,32 +1597,22 @@ private:
   /// information that has been parsed prior to parsing declaration
   /// specifiers.
   struct ParsedTemplateInfo {
-    ParsedTemplateInfo() : Kind(NonTemplate), TemplateParams(nullptr) {}
+    ParsedTemplateInfo() : Kind(ParsedTemplateKind::NonTemplate), TemplateParams(nullptr) {}
 
     ParsedTemplateInfo(TemplateParameterLists *TemplateParams,
                        bool isSpecialization,
                        bool lastParameterListWasEmpty = false)
-      : Kind(isSpecialization? ExplicitSpecialization : Template),
+      : Kind(isSpecialization? ParsedTemplateKind::ExplicitSpecialization : ParsedTemplateKind::Template),
         TemplateParams(TemplateParams),
         LastParameterListWasEmpty(lastParameterListWasEmpty) { }
 
     explicit ParsedTemplateInfo(SourceLocation ExternLoc,
                                 SourceLocation TemplateLoc)
-      : Kind(ExplicitInstantiation), TemplateParams(nullptr),
+      : Kind(ParsedTemplateKind::ExplicitInstantiation), TemplateParams(nullptr),
         ExternLoc(ExternLoc), TemplateLoc(TemplateLoc),
         LastParameterListWasEmpty(false){ }
 
-    /// The kind of template we are parsing.
-    enum {
-      /// We are not parsing a template at all.
-      NonTemplate = 0,
-      /// We are parsing a template declaration.
-      Template,
-      /// We are parsing an explicit specialization.
-      ExplicitSpecialization,
-      /// We are parsing an explicit instantiation.
-      ExplicitInstantiation
-    } Kind;
+    ParsedTemplateKind Kind;
 
     /// The template parameter lists, for template declarations
     /// and explicit specializations.

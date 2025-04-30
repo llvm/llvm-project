@@ -160,8 +160,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       !(FnD && FnD->getAsFunction() &&
         FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
       ((Actions.CurContext->isDependentContext() ||
-        (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
-         TemplateInfo.Kind != ParsedTemplateInfo::ExplicitSpecialization)) &&
+        (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
+         TemplateInfo.Kind != ParsedTemplateKind::ExplicitSpecialization)) &&
        !Actions.IsInsideALocalClassWithinATemplateFunction())) {
 
     CachedTokens Toks;
