@@ -1,3 +1,5 @@
+# Format tests have few LLVM and Clang dependencies, so linking it as a
+# distinct target enables faster iteration times at low cost.
 add_distinct_clang_unittest(FormatTests
   BracesInserterTest.cpp
   BracesRemoverTest.cpp
