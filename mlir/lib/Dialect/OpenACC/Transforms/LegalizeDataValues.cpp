@@ -71,26 +71,43 @@ static void replaceAllUsesInAccComputeRegionsWith(Value orig, Value replacement,
   }
 }
 
-// Helper function to process declare enter/exit pairs
-static void processDeclareEnterExit(
-    acc::DeclareEnterOp op, llvm::SmallVector<std::pair<Value, Value>> &values,
+template <typename Op>
+static void replaceAllUsesInUnstructuredComputeRegionWith(
+    Op &op, llvm::SmallVector<std::pair<Value, Value>> &values,
     DominanceInfo &domInfo, PostDominanceInfo &postDomInfo) {
-  // For declare enter/exit pairs, verify there is exactly one exit op using the
-  // token
-  if (!op.getToken().hasOneUse())
-    op.emitError("declare enter token must have exactly one use");
-  Operation *user = *op.getToken().getUsers().begin();
-  auto declareExit = dyn_cast<acc::DeclareExitOp>(user);
-  if (!declareExit)
-    op.emitError("declare enter token must be used by declare exit op");
+
+  Operation *exitOp = op.getOperation();
+  if constexpr (std::is_same_v<Op, acc::DeclareEnterOp>) {
+    // For declare enter/exit pairs, verify there is exactly one exit op using
+    // the token
+    if (!op.getToken().hasOneUse())
+      op.emitError("declare enter token must have exactly one use");
+    Operation *user = *op.getToken().getUsers().begin();
+    auto declareExit = dyn_cast<acc::DeclareExitOp>(user);
+    if (!declareExit)
+      op.emitError("declare enter token must be used by declare exit op");
+    exitOp = declareExit;
+  } else if constexpr (std::is_same_v<Op, acc::EnterDataOp>) {
+    // For enter/exit data pairs, find the corresponding exit_data op
+    Operation *nextOp = op.getOperation()->getNextNode();
+    while (nextOp && !isa<acc::ExitDataOp>(nextOp))
+      nextOp = nextOp->getNextNode();
+    if (!nextOp)
+      op.emitError("enter data must have a corresponding exit data op");
+    exitOp = nextOp;
+  }
 
   for (auto p : values) {
     Value hostVal = std::get<0>(p);
     Value deviceVal = std::get<1>(p);
     for (auto &use : llvm::make_early_inc_range(hostVal.getUses())) {
       Operation *owner = use.getOwner();
+      // Check that:
+      // It's the case that the acc entry operation dominates the use.
+      // It's the case that one of the acc exit operations consuming the token
+      // post-dominates the use
       if (!domInfo.dominates(op.getOperation(), owner) ||
-          !postDomInfo.postDominates(declareExit.getOperation(), owner))
+          !postDomInfo.postDominates(exitOp, owner))
         continue;
       if (insideAccComputeRegion(owner))
         use.set(deviceVal);
@@ -114,17 +131,20 @@ collectAndReplaceInRegion(Op &op, bool hostToDevice,
                   !std::is_same_v<Op, acc::DataOp> &&
                   !std::is_same_v<Op, acc::DeclareOp> &&
                   !std::is_same_v<Op, acc::HostDataOp> &&
-                  !std::is_same_v<Op, acc::DeclareEnterOp>) {
+                  !std::is_same_v<Op, acc::DeclareEnterOp> &&
+                  !std::is_same_v<Op, acc::EnterDataOp>) {
       collectVars(op.getReductionOperands(), values, hostToDevice);
       collectVars(op.getPrivateOperands(), values, hostToDevice);
       collectVars(op.getFirstprivateOperands(), values, hostToDevice);
     }
   }
 
-  if constexpr (std::is_same_v<Op, acc::DeclareEnterOp>) {
+  if constexpr (std::is_same_v<Op, acc::DeclareEnterOp> ||
+                std::is_same_v<Op, acc::EnterDataOp>) {
     assert(domInfo && postDomInfo &&
            "Dominance info required for DeclareEnterOp");
-    processDeclareEnterExit(op, values, *domInfo, *postDomInfo);
+    replaceAllUsesInUnstructuredComputeRegionWith<Op>(op, values, *domInfo,
+                                                      *postDomInfo);
   } else {
     for (auto p : values) {
       replaceAllUsesInAccComputeRegionsWith<Op>(std::get<0>(p), std::get<1>(p),
@@ -151,7 +171,8 @@ public:
     funcOp.walk([&](Operation *op) {
       if (!isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(*op) &&
           !(isa<ACC_DATA_CONSTRUCT_STRUCTURED_OPS>(*op) &&
-            applyToAccDataConstruct))
+            applyToAccDataConstruct) &&
+          !isa<acc::DeclareEnterOp>(*op) && !isa<acc::EnterDataOp>(*op))
         return;
 
       if (auto parallelOp = dyn_cast<acc::ParallelOp>(*op)) {
@@ -170,6 +191,9 @@ public:
         collectAndReplaceInRegion(hostDataOp, replaceHostVsDevice);
       } else if (auto declareEnterOp = dyn_cast<acc::DeclareEnterOp>(*op)) {
         collectAndReplaceInRegion(declareEnterOp, replaceHostVsDevice, &domInfo,
+                                  &postDomInfo);
+      } else if (auto enterDataOp = dyn_cast<acc::EnterDataOp>(*op)) {
+        collectAndReplaceInRegion(enterDataOp, replaceHostVsDevice, &domInfo,
                                   &postDomInfo);
       } else {
         llvm_unreachable("unsupported acc region op");
