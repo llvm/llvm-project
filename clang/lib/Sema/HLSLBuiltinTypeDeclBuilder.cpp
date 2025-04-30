@@ -662,8 +662,8 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
       .addParam("spaceNo", AST.UnsignedIntTy)
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_resource_handlefrombinding",
-                   HandleType, PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3)
+      .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
+                   PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3)
       .assign(PH::Handle, PH::LastStmt)
       .finalize();
 }
