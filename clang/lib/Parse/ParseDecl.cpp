@@ -32,6 +32,7 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -2335,8 +2336,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     D.setTemplateParameterLists(*TemplateInfo.TemplateParams);
 
   bool IsTemplateSpecOrInst =
-      (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
-       TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+      (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation ||
+       TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
   SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
   ParseDeclarator(D);
@@ -2427,7 +2428,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
           }
           Decl *TheDecl = nullptr;
 
-          if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+          if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation) {
             if (D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) {
               // If the declarator-id is not a template-id, issue a diagnostic
               // and recover by ignoring the 'template' keyword.
@@ -2574,10 +2575,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     //   In a template-declaration, explicit specialization, or explicit
     //   instantiation the init-declarator-list in the declaration shall
     //   contain at most one declarator.
-    if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+    if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
         D.isFirstDeclarator()) {
       Diag(CommaLoc, diag::err_multiple_template_declarators)
-          << TemplateInfo.Kind;
+          << llvm::to_underlying(TemplateInfo.Kind);
     }
 
     // Parse the next declarator.
@@ -2740,12 +2741,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   Decl *ThisDecl = nullptr;
   Decl *OuterDecl = nullptr;
   switch (TemplateInfo.Kind) {
-  case ParsedTemplateInfo::NonTemplate:
+  case ParsedTemplateKind::NonTemplate:
     ThisDecl = Actions.ActOnDeclarator(getCurScope(), D);
     break;
 
-  case ParsedTemplateInfo::Template:
-  case ParsedTemplateInfo::ExplicitSpecialization: {
+  case ParsedTemplateKind::Template:
+  case ParsedTemplateKind::ExplicitSpecialization: {
     ThisDecl = Actions.ActOnTemplateDeclarator(getCurScope(),
                                                *TemplateInfo.TemplateParams,
                                                D);
@@ -2757,7 +2758,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
     break;
   }
-  case ParsedTemplateInfo::ExplicitInstantiation: {
+  case ParsedTemplateKind::ExplicitInstantiation: {
     if (Tok.is(tok::semi)) {
       DeclResult ThisRes = Actions.ActOnExplicitInstantiation(
           getCurScope(), TemplateInfo.ExternLoc, TemplateInfo.TemplateLoc, D);
@@ -3711,8 +3712,8 @@ void Parser::ParseDeclarationSpecifiers(
     // Turn off usual access checking for template specializations and
     // instantiations.
     bool IsTemplateSpecOrInst =
-        (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
-         TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+        (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation ||
+         TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
 
     switch (Tok.getKind()) {
     default:
@@ -3817,7 +3818,7 @@ void Parser::ParseDeclarationSpecifiers(
       }
 
       // Class context can appear inside a function/block, so prioritise that.
-      if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate)
+      if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate)
         CCC = DSContext == DeclSpecContext::DSC_class
                   ? SemaCodeCompletion::PCC_MemberTemplate
                   : SemaCodeCompletion::PCC_Template;
@@ -5369,8 +5370,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   // we don't suppress if this turns out to be an elaborated type
   // specifier.
   bool shouldDelayDiagsInTag =
-    (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
-     TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+    (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation ||
+     TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
   SuppressAccessChecks diagsFromTag(*this, shouldDelayDiagsInTag);
 
   // Determine whether this declaration is permitted to have an enum-base.
@@ -5567,7 +5568,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   }
 
   MultiTemplateParamsArg TParams;
-  if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+  if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
       TUK != TagUseKind::Reference) {
     if (!getLangOpts().CPlusPlus11 || !SS.isSet()) {
       // Skip the rest of this declarator, up until the comma or semicolon.
@@ -5576,7 +5577,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       return;
     }
 
-    if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+    if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation) {
       // Enumerations can't be explicitly instantiated.
       DS.SetTypeSpecError();
       Diag(StartLoc, diag::err_explicit_instantiation_enum);
