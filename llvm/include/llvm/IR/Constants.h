@@ -925,7 +925,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  BasicBlock *getBasicBlock() const { return (BasicBlock *)Op<0>().get(); }
+  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
   Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
