@@ -137,10 +137,6 @@ Changes in existing checks
 - New unsafe functions checks :doc:`bugprone-unsafe-functions-check`
   <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp> were added to clang-tidy.
 
-- Improved :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>`, by adding ``ctime`` and
-  ``localtime`` to unsafe functions list.
-
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
@@ -159,8 +155,8 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
-  additional C++ member functions to match and adding ``ctime`` and
-  ``localtime`` functions.
+  additional C++ member functions to match and by adding ``ctime`` and
+  ``localtime`` to unsafe functions list.
 
 - Improved :doc:`cert-err33-c
   <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
