@@ -255,7 +255,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   const llvm::StringLiteral Source = R"cc(
     RootConstants(num32BitConstants = 1, b0),
-    RootConstants(b42, num32BitConstants = 4294967295)
+    RootConstants(b42, space = 3, num32BitConstants = 4294967295,
+      visibility = SHADER_VISIBILITY_HULL
+    )
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -278,12 +280,16 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   ASSERT_EQ(std::get<RootConstants>(Elem).Num32BitConstants, 1u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::All);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootConstants>(Elem));
   ASSERT_EQ(std::get<RootConstants>(Elem).Num32BitConstants, 4294967295u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 42u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Space, 3u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::Hull);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
