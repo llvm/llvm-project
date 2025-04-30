@@ -9,9 +9,6 @@
 // RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG=0 -D VAL_ARG=g -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=FLOAT-NOADDROF-VAL %s
 // RUN: %clang_cc1 -D ARG_TYPE=float -D PTR_ARG=0 -D VAL_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=FLOAT-NOADDROF-NOVAL %s
 
-// FIXME: Duplicate DIFiles are generated, and include absolute paths, breaking the test
-// XFAIL: *
-
 static const ARG_TYPE g = 1;
 void callee(const ARG_TYPE *, ARG_TYPE);
 // INT-ADDROF-VAL-LABEL: define dso_local void @caller(
@@ -67,104 +64,104 @@ void caller() {
 }
 //.
 // INT-ADDROF-VAL: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// INT-ADDROF-VAL: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
+// INT-ADDROF-VAL: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // INT-ADDROF-VAL: [[META2]] = !{[[META3:![0-9]+]]}
 // INT-ADDROF-VAL: [[META3]] = !DIGlobalVariableExpression(var: [[META4:![0-9]+]], expr: !DIExpression(DIOpConstant(i32 1)))
-// INT-ADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 49, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
-// INT-ADDROF-VAL: [[META5]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// INT-ADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 12, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
+// INT-ADDROF-VAL: [[META5]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // INT-ADDROF-VAL: [[META6]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META7:![0-9]+]])
 // INT-ADDROF-VAL: [[META7]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-// INT-ADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 51, type: [[META12:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META0]])
+// INT-ADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 62, type: [[META12:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META0]])
 // INT-ADDROF-VAL: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
 // INT-ADDROF-VAL: [[META13]] = !{null}
-// INT-ADDROF-VAL: [[DBG14]] = !DILocation(line: 52, column: 3, scope: [[DBG11]])
-// INT-ADDROF-VAL: [[DBG15]] = !DILocation(line: 53, column: 1, scope: [[DBG11]])
+// INT-ADDROF-VAL: [[DBG14]] = !DILocation(line: 63, column: 3, scope: [[DBG11]])
+// INT-ADDROF-VAL: [[DBG15]] = !DILocation(line: 64, column: 1, scope: [[DBG11]])
 //.
 // INT-ADDROF-NOVAL: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32)))
-// INT-ADDROF-NOVAL: [[META1]] = distinct !DIGlobalVariable(name: "g", scope: [[META2:![0-9]+]], file: [[META5:![0-9]+]], line: 49, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
+// INT-ADDROF-NOVAL: [[META1]] = distinct !DIGlobalVariable(name: "g", scope: [[META2:![0-9]+]], file: [[META5:![0-9]+]], line: 12, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
 // INT-ADDROF-NOVAL: [[META2]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// INT-ADDROF-NOVAL: [[META3]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
+// INT-ADDROF-NOVAL: [[META3]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // INT-ADDROF-NOVAL: [[META4]] = !{[[META0]]}
-// INT-ADDROF-NOVAL: [[META5]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// INT-ADDROF-NOVAL: [[META5]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // INT-ADDROF-NOVAL: [[META6]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META7:![0-9]+]])
 // INT-ADDROF-NOVAL: [[META7]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-// INT-ADDROF-NOVAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 51, type: [[META12:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META2]])
+// INT-ADDROF-NOVAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 62, type: [[META12:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META2]])
 // INT-ADDROF-NOVAL: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
 // INT-ADDROF-NOVAL: [[META13]] = !{null}
-// INT-ADDROF-NOVAL: [[DBG14]] = !DILocation(line: 52, column: 3, scope: [[DBG11]])
-// INT-ADDROF-NOVAL: [[DBG15]] = !DILocation(line: 53, column: 1, scope: [[DBG11]])
+// INT-ADDROF-NOVAL: [[DBG14]] = !DILocation(line: 63, column: 3, scope: [[DBG11]])
+// INT-ADDROF-NOVAL: [[DBG15]] = !DILocation(line: 64, column: 1, scope: [[DBG11]])
 //.
 // INT-NOADDROF-VAL: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// INT-NOADDROF-VAL: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
+// INT-NOADDROF-VAL: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // INT-NOADDROF-VAL: [[META2]] = !{[[META3:![0-9]+]]}
 // INT-NOADDROF-VAL: [[META3]] = !DIGlobalVariableExpression(var: [[META4:![0-9]+]], expr: !DIExpression(DIOpConstant(i32 1)))
-// INT-NOADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 49, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
-// INT-NOADDROF-VAL: [[META5]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// INT-NOADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 12, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
+// INT-NOADDROF-VAL: [[META5]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // INT-NOADDROF-VAL: [[META6]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META7:![0-9]+]])
 // INT-NOADDROF-VAL: [[META7]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-// INT-NOADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 51, type: [[META12:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META0]])
+// INT-NOADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 62, type: [[META12:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META0]])
 // INT-NOADDROF-VAL: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
 // INT-NOADDROF-VAL: [[META13]] = !{null}
-// INT-NOADDROF-VAL: [[DBG14]] = !DILocation(line: 52, column: 3, scope: [[DBG11]])
-// INT-NOADDROF-VAL: [[DBG15]] = !DILocation(line: 53, column: 1, scope: [[DBG11]])
+// INT-NOADDROF-VAL: [[DBG14]] = !DILocation(line: 63, column: 3, scope: [[DBG11]])
+// INT-NOADDROF-VAL: [[DBG15]] = !DILocation(line: 64, column: 1, scope: [[DBG11]])
 //.
 // INT-NOADDROF-NOVAL: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// INT-NOADDROF-NOVAL: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
-// INT-NOADDROF-NOVAL: [[DBG5]] = distinct !DISubprogram(name: "caller", scope: [[META6:![0-9]+]], file: [[META6]], line: 51, type: [[META7:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META0]])
-// INT-NOADDROF-NOVAL: [[META6]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// INT-NOADDROF-NOVAL: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// INT-NOADDROF-NOVAL: [[DBG5]] = distinct !DISubprogram(name: "caller", scope: [[META6:![0-9]+]], file: [[META6]], line: 62, type: [[META7:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META0]])
+// INT-NOADDROF-NOVAL: [[META6]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // INT-NOADDROF-NOVAL: [[META7]] = !DISubroutineType(types: [[META8:![0-9]+]])
 // INT-NOADDROF-NOVAL: [[META8]] = !{null}
-// INT-NOADDROF-NOVAL: [[DBG9]] = !DILocation(line: 52, column: 3, scope: [[DBG5]])
-// INT-NOADDROF-NOVAL: [[DBG10]] = !DILocation(line: 53, column: 1, scope: [[DBG5]])
+// INT-NOADDROF-NOVAL: [[DBG9]] = !DILocation(line: 63, column: 3, scope: [[DBG5]])
+// INT-NOADDROF-NOVAL: [[DBG10]] = !DILocation(line: 64, column: 1, scope: [[DBG5]])
 //.
 // FLOAT-ADDROF-VAL: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// FLOAT-ADDROF-VAL: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
+// FLOAT-ADDROF-VAL: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // FLOAT-ADDROF-VAL: [[META2]] = !{[[META3:![0-9]+]]}
 // FLOAT-ADDROF-VAL: [[META3]] = !DIGlobalVariableExpression(var: [[META4:![0-9]+]], expr: !DIExpression(DIOpConstant(float 1.000000e+00)))
-// FLOAT-ADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 49, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
-// FLOAT-ADDROF-VAL: [[META5]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// FLOAT-ADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 12, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
+// FLOAT-ADDROF-VAL: [[META5]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // FLOAT-ADDROF-VAL: [[META6]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META7:![0-9]+]])
 // FLOAT-ADDROF-VAL: [[META7]] = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
-// FLOAT-ADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 51, type: [[META12:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META0]])
+// FLOAT-ADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 62, type: [[META12:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META0]])
 // FLOAT-ADDROF-VAL: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
 // FLOAT-ADDROF-VAL: [[META13]] = !{null}
-// FLOAT-ADDROF-VAL: [[DBG14]] = !DILocation(line: 52, column: 3, scope: [[DBG11]])
-// FLOAT-ADDROF-VAL: [[DBG15]] = !DILocation(line: 53, column: 1, scope: [[DBG11]])
+// FLOAT-ADDROF-VAL: [[DBG14]] = !DILocation(line: 63, column: 3, scope: [[DBG11]])
+// FLOAT-ADDROF-VAL: [[DBG15]] = !DILocation(line: 64, column: 1, scope: [[DBG11]])
 //.
 // FLOAT-ADDROF-NOVAL: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr), DIOpDeref(float)))
-// FLOAT-ADDROF-NOVAL: [[META1]] = distinct !DIGlobalVariable(name: "g", scope: [[META2:![0-9]+]], file: [[META5:![0-9]+]], line: 49, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
+// FLOAT-ADDROF-NOVAL: [[META1]] = distinct !DIGlobalVariable(name: "g", scope: [[META2:![0-9]+]], file: [[META5:![0-9]+]], line: 12, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
 // FLOAT-ADDROF-NOVAL: [[META2]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// FLOAT-ADDROF-NOVAL: [[META3]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
+// FLOAT-ADDROF-NOVAL: [[META3]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // FLOAT-ADDROF-NOVAL: [[META4]] = !{[[META0]]}
-// FLOAT-ADDROF-NOVAL: [[META5]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// FLOAT-ADDROF-NOVAL: [[META5]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // FLOAT-ADDROF-NOVAL: [[META6]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META7:![0-9]+]])
 // FLOAT-ADDROF-NOVAL: [[META7]] = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
-// FLOAT-ADDROF-NOVAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 51, type: [[META12:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META2]])
+// FLOAT-ADDROF-NOVAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 62, type: [[META12:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META2]])
 // FLOAT-ADDROF-NOVAL: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
 // FLOAT-ADDROF-NOVAL: [[META13]] = !{null}
-// FLOAT-ADDROF-NOVAL: [[DBG14]] = !DILocation(line: 52, column: 3, scope: [[DBG11]])
-// FLOAT-ADDROF-NOVAL: [[DBG15]] = !DILocation(line: 53, column: 1, scope: [[DBG11]])
+// FLOAT-ADDROF-NOVAL: [[DBG14]] = !DILocation(line: 63, column: 3, scope: [[DBG11]])
+// FLOAT-ADDROF-NOVAL: [[DBG15]] = !DILocation(line: 64, column: 1, scope: [[DBG11]])
 //.
 // FLOAT-NOADDROF-VAL: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// FLOAT-NOADDROF-VAL: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
+// FLOAT-NOADDROF-VAL: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // FLOAT-NOADDROF-VAL: [[META2]] = !{[[META3:![0-9]+]]}
 // FLOAT-NOADDROF-VAL: [[META3]] = !DIGlobalVariableExpression(var: [[META4:![0-9]+]], expr: !DIExpression(DIOpConstant(float 1.000000e+00)))
-// FLOAT-NOADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 49, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
-// FLOAT-NOADDROF-VAL: [[META5]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// FLOAT-NOADDROF-VAL: [[META4]] = distinct !DIGlobalVariable(name: "g", scope: [[META0]], file: [[META5:![0-9]+]], line: 12, type: [[META6:![0-9]+]], isLocal: true, isDefinition: true)
+// FLOAT-NOADDROF-VAL: [[META5]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // FLOAT-NOADDROF-VAL: [[META6]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META7:![0-9]+]])
 // FLOAT-NOADDROF-VAL: [[META7]] = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
-// FLOAT-NOADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 51, type: [[META12:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META0]])
+// FLOAT-NOADDROF-VAL: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META5]], file: [[META5]], line: 62, type: [[META12:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META0]])
 // FLOAT-NOADDROF-VAL: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
 // FLOAT-NOADDROF-VAL: [[META13]] = !{null}
-// FLOAT-NOADDROF-VAL: [[DBG14]] = !DILocation(line: 52, column: 3, scope: [[DBG11]])
-// FLOAT-NOADDROF-VAL: [[DBG15]] = !DILocation(line: 53, column: 1, scope: [[DBG11]])
+// FLOAT-NOADDROF-VAL: [[DBG14]] = !DILocation(line: 63, column: 3, scope: [[DBG11]])
+// FLOAT-NOADDROF-VAL: [[DBG15]] = !DILocation(line: 64, column: 1, scope: [[DBG11]])
 //.
 // FLOAT-NOADDROF-NOVAL: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// FLOAT-NOADDROF-NOVAL: [[META1]] = !DIFile(filename: "clang/test/CodeGen/<stdin>", directory: {{.*}})
-// FLOAT-NOADDROF-NOVAL: [[DBG5]] = distinct !DISubprogram(name: "caller", scope: [[META6:![0-9]+]], file: [[META6]], line: 51, type: [[META7:![0-9]+]], scopeLine: 51, spFlags: DISPFlagDefinition, unit: [[META0]])
-// FLOAT-NOADDROF-NOVAL: [[META6]] = !DIFile(filename: "clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
+// FLOAT-NOADDROF-NOVAL: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// FLOAT-NOADDROF-NOVAL: [[DBG5]] = distinct !DISubprogram(name: "caller", scope: [[META6:![0-9]+]], file: [[META6]], line: 62, type: [[META7:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META0]])
+// FLOAT-NOADDROF-NOVAL: [[META6]] = !DIFile(filename: "{{.*}}debug-info-global-constant-heterogeneous-dwarf.c", directory: {{.*}})
 // FLOAT-NOADDROF-NOVAL: [[META7]] = !DISubroutineType(types: [[META8:![0-9]+]])
 // FLOAT-NOADDROF-NOVAL: [[META8]] = !{null}
-// FLOAT-NOADDROF-NOVAL: [[DBG9]] = !DILocation(line: 52, column: 3, scope: [[DBG5]])
-// FLOAT-NOADDROF-NOVAL: [[DBG10]] = !DILocation(line: 53, column: 1, scope: [[DBG5]])
+// FLOAT-NOADDROF-NOVAL: [[DBG9]] = !DILocation(line: 63, column: 3, scope: [[DBG5]])
+// FLOAT-NOADDROF-NOVAL: [[DBG10]] = !DILocation(line: 64, column: 1, scope: [[DBG5]])
 //.
