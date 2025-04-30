@@ -4122,6 +4122,30 @@ except :ref:`label <t_label>` and :ref:`metadata <t_metadata>`.
 | ``{i32, i32} (i32)``            | A function taking an ``i32``, returning a :ref:`structure <t_struct>` containing two ``i32`` values                                                                 |
 +---------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
+.. _t_opaque:
+
+Opaque Structure Types
+----------------------
+
+:Overview:
+
+Opaque structure types are used to represent structure types that
+do not have a body specified. This corresponds (for example) to the C
+notion of a forward declared structure. They can be named (``%X``) or
+unnamed (``%52``).
+
+It is not possible to create SSA values with an opaque structure type. In
+practice, this largely limits their use to the value type of external globals.
+
+:Syntax:
+
+::
+
+      %X = type opaque
+      %52 = type opaque
+
+      @g = external global %X
+
 .. _t_firstclass:
 
 First Class Types
@@ -4561,31 +4585,6 @@ opaqued and are never uniqued. Identified types must not be recursive.
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``<{ i8, i32 }>``            | A packed struct known to be 5 bytes in size.                                                                                                                                          |
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-.. _t_opaque:
-
-Opaque Structure Types
-""""""""""""""""""""""
-
-:Overview:
-
-Opaque structure types are used to represent structure types that
-do not have a body specified. This corresponds (for example) to the C
-notion of a forward declared structure. They can be named (``%X``) or
-unnamed (``%52``).
-
-:Syntax:
-
-::
-
-      %X = type opaque
-      %52 = type opaque
-
-:Examples:
-
-+--------------+-------------------+
-| ``opaque``   | An opaque type.   |
-+--------------+-------------------+
 
 .. _constants:
 
