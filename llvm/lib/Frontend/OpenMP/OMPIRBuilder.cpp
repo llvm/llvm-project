@@ -788,8 +788,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         Instruction &I = *It;
         It++;
 
-        if (I.isTerminator())
+        if (I.isTerminator()) {
+          // Absorb any debug value that terminator may have
+          if (OI.EntryBB->getTerminator())
+            OI.EntryBB->getTerminator()->adoptDbgRecords(
+                &ArtificialEntry, I.getIterator(), false);
           continue;
+        }
 
         I.moveBeforePreserving(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
       }
