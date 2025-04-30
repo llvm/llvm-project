@@ -941,6 +941,7 @@ public:
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
                                            TTI::TargetCostKind CostKind,
+                                           bool ForPoisonSrc = true,
                                            ArrayRef<Value *> VL = {}) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
