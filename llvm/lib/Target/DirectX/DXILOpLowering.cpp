@@ -769,8 +769,8 @@ public:
         llvm_unreachable("Unsupported FPClassTest for DXILOpLowering");
       }
 
-      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          OpCode, Args, CI->getName(), RetTy);
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode, Args, CI->getName(), RetTy);
       if (Error E = OpCall.takeError())
         return E;
 
