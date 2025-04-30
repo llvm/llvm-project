@@ -14,6 +14,10 @@
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
+#define __CLC_GENTYPE char3
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
 #define __CLC_GENTYPE char4
 #include __CLC_BODY
 #undef __CLC_GENTYPE
@@ -31,6 +35,10 @@
 #undef __CLC_GENTYPE
 
 #define __CLC_GENTYPE uchar2
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE uchar3
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
@@ -54,6 +62,10 @@
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
+#define __CLC_GENTYPE short3
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
 #define __CLC_GENTYPE short4
 #include __CLC_BODY
 #undef __CLC_GENTYPE
@@ -71,6 +83,10 @@
 #undef __CLC_GENTYPE
 
 #define __CLC_GENTYPE ushort2
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE ushort3
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
@@ -94,6 +110,10 @@
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
+#define __CLC_GENTYPE int3
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
 #define __CLC_GENTYPE int4
 #include __CLC_BODY
 #undef __CLC_GENTYPE
@@ -111,6 +131,10 @@
 #undef __CLC_GENTYPE
 
 #define __CLC_GENTYPE uint2
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE uint3
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
@@ -134,6 +158,10 @@
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
+#define __CLC_GENTYPE float3
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
 #define __CLC_GENTYPE float4
 #include __CLC_BODY
 #undef __CLC_GENTYPE
@@ -154,6 +182,10 @@
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
+#define __CLC_GENTYPE long3
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
 #define __CLC_GENTYPE long4
 #include __CLC_BODY
 #undef __CLC_GENTYPE
@@ -171,6 +203,10 @@
 #undef __CLC_GENTYPE
 
 #define __CLC_GENTYPE ulong2
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE ulong3
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
@@ -197,6 +233,10 @@
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
+#define __CLC_GENTYPE double3
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
 #define __CLC_GENTYPE double4
 #include __CLC_BODY
 #undef __CLC_GENTYPE
@@ -219,6 +259,10 @@
 #undef __CLC_GENTYPE
 
 #define __CLC_GENTYPE half2
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE half3
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 
