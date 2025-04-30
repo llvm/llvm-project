@@ -1467,8 +1467,15 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // Finally, do the SIMD to SIMT distribution.
   RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  // TODO: These are not used at this point.
-  auto distributionFn = [](Value val) { return AffineMap(); };
+  // TODO: distributionFn and shuffleFn are not used at this point.
+  auto distributionFn = [](Value val) {
+    VectorType vecType = dyn_cast<VectorType>(val.getType());
+    int64_t vecRank = vecType ? vecType.getRank() : 0;
+    OpBuilder builder(val.getContext());
+    if (vecRank == 0)
+      return AffineMap::get(val.getContext());
+    return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
+  };
   auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
                       int64_t warpSz) { return Value(); };
   vector::populatePropagateWarpVectorDistributionPatterns(
