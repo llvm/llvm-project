@@ -1069,8 +1069,8 @@ void SIFoldOperandsImpl::foldOperand(
       return;
 
     // Fold if the destination register class of the MOV instruction (ResRC)
-    // is a superclass of (or equal to) the destination register class of the COPY (DestRC).
-    // If this condition fails, folding would be illegal.
+    // is a superclass of (or equal to) the destination register class of the
+    // COPY (DestRC). If this condition fails, folding would be illegal.
     const MCInstrDesc &MovDesc = TII->get(MovOp);
     assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
     const TargetRegisterClass *ResRC =
