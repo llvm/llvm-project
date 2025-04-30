@@ -138,8 +138,8 @@ Changes in existing checks
   <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp> were added to clang-tidy.
 
 - Improved :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
-  to unsafe functions list.
+  <clang-tidy/checks/bugprone/unsafe-functions>`, by adding ``ctime`` and
+  ``localtime`` to unsafe functions list.
 
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
