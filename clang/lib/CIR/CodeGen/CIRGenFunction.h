@@ -560,6 +560,11 @@ public:
   /// returning the rvalue.
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
+  Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
+                              LValueBaseInfo *pointeeBaseInfo);
+  LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
+                                   QualType refTy, AlignmentSource source);
+
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.  The l-value must be a simple
@@ -586,6 +591,9 @@ public:
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
                                    LValueBaseInfo *baseInfo);
+
+  /// Emits a reference binding to the passed in expression.
+  RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 

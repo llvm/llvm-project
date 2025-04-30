@@ -381,6 +381,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::LValueReference:
+  case Type::RValueReference: {
+    const ReferenceType *refTy = cast<ReferenceType>(ty);
+    QualType elemTy = refTy->getPointeeType();
+    auto pointeeType = convertTypeForMem(elemTy);
+    resultType = builder.getPointerTo(pointeeType);
+    assert(resultType && "Cannot get pointer type?");
+    break;
+  }
+
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();

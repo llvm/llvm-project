@@ -384,8 +384,10 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   } else if (cast<FunctionDecl>(curGD.getDecl())
                  ->getReturnType()
                  ->isReferenceType()) {
-    getCIRGenModule().errorNYI(s.getSourceRange(),
-                               "function return type that is a reference");
+    // If this function returns a reference, take the address of the
+    // expression rather than the value.
+    RValue result = emitReferenceBindingToExpr(rv);
+    builder.createStore(loc, result.getScalarVal(), *fnRetAlloca);
   } else {
     mlir::Value value = nullptr;
     switch (CIRGenFunction::getEvaluationKind(rv->getType())) {

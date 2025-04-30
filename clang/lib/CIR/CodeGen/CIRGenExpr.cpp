@@ -439,7 +439,13 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
       cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: static local");
     }
 
-    return makeAddrLValue(addr, ty, AlignmentSource::Type);
+    // Drill into reference types.
+    LValue lv =
+        vd->getType()->isReferenceType()
+            ? emitLoadOfReferenceLValue(addr, getLoc(e->getSourceRange()),
+                                        vd->getType(), AlignmentSource::Decl)
+            : makeAddrLValue(addr, ty, AlignmentSource::Decl);
+    return lv;
   }
 
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
@@ -1063,6 +1069,45 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
+}
+
+RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
+  // Emit the expression as an lvalue.
+  LValue lv = emitLValue(e);
+  assert(lv.isSimple());
+  mlir::Value value = lv.getPointer();
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  return RValue::get(value);
+}
+
+Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
+                                            LValueBaseInfo *pointeeBaseInfo) {
+  if (refLVal.isVolatile())
+    cgm.errorNYI(loc, "load of volatile reference");
+
+  cir::LoadOp load =
+      builder.create<cir::LoadOp>(loc, refLVal.getAddress().getElementType(),
+                                  refLVal.getAddress().getPointer());
+
+  assert(!cir::MissingFeatures::opTBAA());
+
+  QualType pointeeType = refLVal.getType()->getPointeeType();
+  CharUnits align = cgm.getNaturalTypeAlignment(pointeeType, pointeeBaseInfo);
+  return Address(load, convertTypeForMem(pointeeType), align);
+}
+
+LValue CIRGenFunction::emitLoadOfReferenceLValue(Address refAddr,
+                                                 mlir::Location loc,
+                                                 QualType refTy,
+                                                 AlignmentSource source) {
+  LValue refLVal = makeAddrLValue(refAddr, refTy, LValueBaseInfo(source));
+  LValueBaseInfo pointeeBaseInfo;
+  assert(!cir::MissingFeatures::opTBAA());
+  Address pointeeAddr = emitLoadOfReference(refLVal, loc, &pointeeBaseInfo);
+  return makeAddrLValue(pointeeAddr, refLVal.getType()->getPointeeType(),
+                        pointeeBaseInfo);
 }
 
 mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
