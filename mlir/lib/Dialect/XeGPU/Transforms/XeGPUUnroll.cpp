@@ -70,8 +70,8 @@ protected:
         layout.getOrder());
   };
 
-  std::optional<SmallVector<Type>>
-  convertType(ShapedType type, llvm::ArrayRef<int64_t> blockSize) const {
+  SmallVector<Type> convertType(ShapedType type,
+                                ArrayRef<int64_t> blockSize) const {
     auto elemTy = type.getElementType();
     Type newTy;
     // TensorDescType needs to drop the inst_data field in the layout attribute
@@ -259,7 +259,7 @@ struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
 
     auto convertedTdescTypes = convertType(tdescTy, targetShape);
     auto convertedTdesc =
-        pack(tdesc, *convertedTdescTypes, targetShape, loc, rewriter);
+        pack(tdesc, convertedTdescTypes, targetShape, loc, rewriter);
 
     llvm::SmallVector<Value> newOps;
     for (auto t : convertedTdesc) {
@@ -294,7 +294,7 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
 
     auto convertedTdescTypes = convertType(tdescTy, targetShape);
     auto convertedTdesc =
-        pack(tdesc, *convertedTdescTypes, targetShape, loc, rewriter);
+        pack(tdesc, convertedTdescTypes, targetShape, loc, rewriter);
 
     for (auto t : convertedTdesc) {
       rewriter.create<xegpu::PrefetchNdOp>(loc, TypeRange(), t, op->getAttrs());
@@ -332,7 +332,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     auto newValueTy = valueTy.cloneWith(targetShape, elemTy);
 
     auto convertedTdescTypes = convertType(tdescTy, targetShape);
-    auto convertedTdescs = pack(op.getTensorDesc(), *convertedTdescTypes,
+    auto convertedTdescs = pack(op.getTensorDesc(), convertedTdescTypes,
                                 targetShape, loc, rewriter);
 
     llvm::SmallVector<Value> newOps;
@@ -375,8 +375,8 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     auto convertedTdescTypes = convertType(tdescTy, targetShape);
 
     auto convertedValues =
-        pack(op.getValue(), *convertedValTypes, targetShape, loc, rewriter);
-    auto convertedTdescs = pack(op.getTensorDesc(), *convertedTdescTypes,
+        pack(op.getValue(), convertedValTypes, targetShape, loc, rewriter);
+    auto convertedTdescs = pack(op.getTensorDesc(), convertedTdescTypes,
                                 targetShape, loc, rewriter);
 
     for (auto [v, t] : llvm::zip(convertedValues, convertedTdescs)) {
