@@ -204,6 +204,7 @@ private:
         !partInfo.resultShape)
       partInfo.resultShape =
           hlfir::genShape(getLoc(), getBuilder(), *partInfo.base);
+
     // Dynamic type of polymorphic base must be kept if the designator is
     // polymorphic.
     if (isPolymorphic(designatorNode))
@@ -215,7 +216,25 @@ private:
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
 
     // When volatile is enabled, enable volatility on the designatory type.
-    const bool isVolatile = false;
+    bool isVolatile = false;
+
+    // Check if this should be a volatile reference
+    if constexpr (std::is_same_v<std::decay_t<T>,
+                                 Fortran::evaluate::SymbolRef>) {
+      if (designatorNode.get().GetUltimate().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                        Fortran::evaluate::ArrayRef>) {
+      if (designatorNode.base().GetLastSymbol().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                        Fortran::evaluate::Component>) {
+      if (designatorNode.GetLastSymbol().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    }
 
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
@@ -229,6 +248,12 @@ private:
             designatorNode, getConverter().getFoldingContext(),
             /*namedConstantSectionsAreAlwaysContiguous=*/false))
       return fir::BoxType::get(resultValueType, isVolatile);
+
+    // Check if the base type is volatile
+    if (partInfo.base.has_value()) {
+      mlir::Type baseType = partInfo.base.value().getType();
+      isVolatile = fir::isa_volatile_type(baseType);
+    }
 
     // Other designators can be handled as raw addresses.
     return fir::ReferenceType::get(resultValueType, isVolatile);
@@ -441,7 +466,10 @@ private:
     // hlfir.designate result will be a pointer/allocatable.
     PartInfo partInfo;
     mlir::Type componentType = visitComponentImpl(component, partInfo).second;
-    mlir::Type designatorType = fir::ReferenceType::get(componentType);
+    const auto isVolatile =
+        fir::isa_volatile_type(partInfo.base.value().getBase().getType());
+    mlir::Type designatorType =
+        fir::ReferenceType::get(componentType, isVolatile);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(getBuilder().getContext(),
                                                   component.GetLastSymbol());
