@@ -560,13 +560,14 @@ LABEL3:{} // #GOTOLBL3
 void IndirectGoto3_Loop() {
   void* ptr;
 #pragma acc parallel loop// #GOTOPAR_LOOP3
-  for (unsigned i = 0; i < 5; ++i) {
+  for (unsigned i = 0; i < 5; ++i) { // #INIT
 LABEL3:{} // #GOTOLBL3_2
     ptr = &&LABEL3;
   }
-// expected-error@+3{{cannot jump from this indirect goto statement to one of its possible targets}}
+// expected-error@+4{{cannot jump from this indirect goto statement to one of its possible targets}}
 // expected-note@#GOTOLBL3_2{{possible target of indirect goto statement}}
 // expected-note@#GOTOPAR_LOOP3{{invalid branch into OpenACC Compute/Combined Construct}}
+// expected-note@#INIT {{jump bypasses variable initialization}}
   goto *ptr;
 }
 
