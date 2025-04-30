@@ -165,8 +165,8 @@ public:
     bool replaceHostVsDevice = this->hostToDevice.getValue();
 
     // Initialize dominance info
-    DominanceInfo domInfo(funcOp);
-    PostDominanceInfo postDomInfo(funcOp);
+    DominanceInfo domInfo;
+    PostDominanceInfo postDomInfo;
     bool computedDomInfo = false;
 
     funcOp.walk([&](Operation *op) {
