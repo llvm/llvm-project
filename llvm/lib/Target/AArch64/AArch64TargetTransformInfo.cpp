@@ -5347,7 +5347,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   // AArch64 supports lowering mixed fixed-width extensions to a usdot but only
   // if the i8mm feature is available.
   if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None ||
-      (OpAExtend != OpBExtend && VF.isFixed() && !ST->hasMatMulInt8()))
+      (OpAExtend != OpBExtend && !ST->hasMatMulInt8()))
     return Invalid;
 
   if (!BinOp || *BinOp != Instruction::Mul)
