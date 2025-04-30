@@ -119,12 +119,13 @@ void test() {
     }
   }
 
-
   // Test nodiscard
   {
-    const std::expected<int, int> f1(std::unexpected<int>(1));
-    
-    f1.or_else([](int&){ return 1; }); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::expected<void, int> e(std::unexpected<int>(1));
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    e.or_else([](const int&) -> std::expected<void, int> { return std::unexpected(1); });
+
   }
 }
 // clang-format on
