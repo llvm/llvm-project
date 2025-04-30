@@ -249,195 +249,9 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
   return false;
 }
 
-// For an (de)interleave tree like this:
-//
-//   A   C B   D
-//   |___| |___|
-//     |_____|
-//        |
-//     A B C D
-//
-//  We will get ABCD at the end while the leaf operands/results
-//  are ACBD, which are also what we initially collected in
-//  getVectorInterleaveFactor / getVectorDeinterleaveFactor. But TLI
-//  hooks (e.g. lowerDeinterleaveIntrinsicToLoad) expect ABCD, so we need
-//  to reorder them by interleaving these values.
-static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
-  unsigned NumLeaves = SubLeaves.size();
-  if (NumLeaves == 2)
-    return;
-
-  assert(isPowerOf2_32(NumLeaves) && NumLeaves > 1);
-
-  const unsigned HalfLeaves = NumLeaves / 2;
-  // Visit the sub-trees.
-  interleaveLeafValues(SubLeaves.take_front(HalfLeaves));
-  interleaveLeafValues(SubLeaves.drop_front(HalfLeaves));
-
-  SmallVector<Value *, 8> Buffer;
-  //    a0 a1 a2 a3 b0 b1 b2 b3
-  // -> a0 b0 a1 b1 a2 b2 a3 b3
-  for (unsigned i = 0U; i < NumLeaves; ++i)
-    Buffer.push_back(SubLeaves[i / 2 + (i % 2 ? HalfLeaves : 0)]);
-
-  llvm::copy(Buffer, SubLeaves.begin());
-}
-
-static bool
-getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
-                          SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(II->getIntrinsicID() == Intrinsic::vector_interleave2);
-
-  // Visit with BFS
-  SmallVector<IntrinsicInst *, 8> Queue;
-  Queue.push_back(II);
-  while (!Queue.empty()) {
-    IntrinsicInst *Current = Queue.front();
-    Queue.erase(Queue.begin());
-
-    // All the intermediate intrinsics will be deleted.
-    DeadInsts.push_back(Current);
-
-    for (unsigned I = 0; I < 2; ++I) {
-      Value *Op = Current->getOperand(I);
-      if (auto *OpII = dyn_cast<IntrinsicInst>(Op))
-        if (OpII->getIntrinsicID() == Intrinsic::vector_interleave2) {
-          Queue.push_back(OpII);
-          continue;
-        }
-
-      // If this is not a perfectly balanced tree, the leaf
-      // result types would be different.
-      if (!Operands.empty() && Op->getType() != Operands.back()->getType())
-        return false;
-
-      Operands.push_back(Op);
-    }
-  }
-
-  const unsigned Factor = Operands.size();
-  // Currently we only recognize power-of-two factors.
-  // FIXME: should we assert here instead?
-  if (Factor <= 1 || !isPowerOf2_32(Factor))
-    return false;
-
-  interleaveLeafValues(Operands);
-  return true;
-}
-
-static bool
-getVectorDeinterleaveFactor(IntrinsicInst *II,
-                            SmallVectorImpl<Value *> &Results,
-                            SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(II->getIntrinsicID() == Intrinsic::vector_deinterleave2);
-  using namespace PatternMatch;
-  if (!II->hasNUses(2))
-    return false;
-
-  // Visit with BFS
-  SmallVector<IntrinsicInst *, 8> Queue;
-  Queue.push_back(II);
-  while (!Queue.empty()) {
-    IntrinsicInst *Current = Queue.front();
-    Queue.erase(Queue.begin());
-    assert(Current->hasNUses(2));
-
-    // All the intermediate intrinsics will be deleted from the bottom-up.
-    DeadInsts.insert(DeadInsts.begin(), Current);
-
-    ExtractValueInst *LHS = nullptr, *RHS = nullptr;
-    for (User *Usr : Current->users()) {
-      if (!isa<ExtractValueInst>(Usr))
-        return 0;
-
-      auto *EV = cast<ExtractValueInst>(Usr);
-      // Intermediate ExtractValue instructions will also be deleted.
-      DeadInsts.insert(DeadInsts.begin(), EV);
-      ArrayRef<unsigned> Indices = EV->getIndices();
-      if (Indices.size() != 1)
-        return false;
-
-      if (Indices[0] == 0 && !LHS)
-        LHS = EV;
-      else if (Indices[0] == 1 && !RHS)
-        RHS = EV;
-      else
-        return false;
-    }
-
-    // We have legal indices. At this point we're either going
-    // to continue the traversal or push the leaf values into Results.
-    for (ExtractValueInst *EV : {LHS, RHS}) {
-      // Continue the traversal. We're playing safe here and matching only the
-      // expression consisting of a perfectly balanced binary tree in which all
-      // intermediate values are only used once.
-      if (EV->hasOneUse() &&
-          match(EV->user_back(),
-                m_Intrinsic<Intrinsic::vector_deinterleave2>()) &&
-          EV->user_back()->hasNUses(2)) {
-        auto *EVUsr = cast<IntrinsicInst>(EV->user_back());
-        Queue.push_back(EVUsr);
-        continue;
-      }
-
-      // If this is not a perfectly balanced tree, the leaf
-      // result types would be different.
-      if (!Results.empty() && EV->getType() != Results.back()->getType())
-        return false;
-
-      // Save the leaf value.
-      Results.push_back(EV);
-    }
-  }
-
-  const unsigned Factor = Results.size();
-  // Currently we only recognize power-of-two factors.
-  // FIXME: should we assert here instead?
-  if (Factor <= 1 || !isPowerOf2_32(Factor))
-    return 0;
-
-  interleaveLeafValues(Results);
-  return true;
-}
-
-// Return the corresponded deinterleaved mask, or nullptr if there is no valid
-// mask.
 static Value *getMask(Value *WideMask, unsigned Factor,
-                      ElementCount LeafValueEC) {
-  using namespace llvm::PatternMatch;
-  if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
-    SmallVector<Value *, 8> Operands;
-    SmallVector<Instruction *, 8> DeadInsts;
-    if (getVectorInterleaveFactor(IMI, Operands, DeadInsts)) {
-      assert(!Operands.empty());
-      if (Operands.size() == Factor && llvm::all_equal(Operands))
-        return Operands[0];
-    }
-  }
+                      ElementCount LeafValueEC);
 
-  if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
-    if (auto *Splat = ConstMask->getSplatValue()) {
-      // All-ones or all-zeros mask.
-      return ConstantVector::getSplat(LeafValueEC, Splat);
-    } else if (LeafValueEC.isFixed()) {
-      unsigned LeafMaskLen = LeafValueEC.getFixedValue();
-      SmallVector<Constant *, 8> LeafMask(LeafMaskLen, nullptr);
-      // If this is a fixed-length constant mask, each lane / leaf has to
-      // use the same mask. This is done by checking if every group with Factor
-      // number of elements in the interleaved mask has homogeneous values.
-      for (unsigned Idx = 0U, N = LeafMaskLen * Factor; Idx < N; ++Idx) {
-        Constant *Ref = ConstMask->getAggregateElement(alignDown(Idx, Factor));
-        if (Ref != ConstMask->getAggregateElement(Idx))
-          return nullptr;
-        LeafMask[Idx / Factor] = Ref;
-      }
-
-      return ConstantVector::get(LeafMask);
-    }
-  }
-
-  return nullptr;
-}
 static Value *getMask(Value *WideMask, unsigned Factor,
                       VectorType *LeafValueTy) {
   return getMask(WideMask, Factor, LeafValueTy->getElementCount());
@@ -759,6 +573,195 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   DeadInsts.insert(StoreOp);
   DeadInsts.insert(SVI);
   return true;
+}
+
+// For an (de)interleave tree like this:
+//
+//   A   C B   D
+//   |___| |___|
+//     |_____|
+//        |
+//     A B C D
+//
+//  We will get ABCD at the end while the leaf operands/results
+//  are ACBD, which are also what we initially collected in
+//  getVectorInterleaveFactor / getVectorDeinterleaveFactor. But TLI
+//  hooks (e.g. lowerDeinterleaveIntrinsicToLoad) expect ABCD, so we need
+//  to reorder them by interleaving these values.
+static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
+  unsigned NumLeaves = SubLeaves.size();
+  if (NumLeaves == 2)
+    return;
+
+  assert(isPowerOf2_32(NumLeaves) && NumLeaves > 1);
+
+  const unsigned HalfLeaves = NumLeaves / 2;
+  // Visit the sub-trees.
+  interleaveLeafValues(SubLeaves.take_front(HalfLeaves));
+  interleaveLeafValues(SubLeaves.drop_front(HalfLeaves));
+
+  SmallVector<Value *, 8> Buffer;
+  //    a0 a1 a2 a3 b0 b1 b2 b3
+  // -> a0 b0 a1 b1 a2 b2 a3 b3
+  for (unsigned i = 0U; i < NumLeaves; ++i)
+    Buffer.push_back(SubLeaves[i / 2 + (i % 2 ? HalfLeaves : 0)]);
+
+  llvm::copy(Buffer, SubLeaves.begin());
+}
+
+static bool
+getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
+                          SmallVectorImpl<Instruction *> &DeadInsts) {
+  assert(II->getIntrinsicID() == Intrinsic::vector_interleave2);
+
+  // Visit with BFS
+  SmallVector<IntrinsicInst *, 8> Queue;
+  Queue.push_back(II);
+  while (!Queue.empty()) {
+    IntrinsicInst *Current = Queue.front();
+    Queue.erase(Queue.begin());
+
+    // All the intermediate intrinsics will be deleted.
+    DeadInsts.push_back(Current);
+
+    for (unsigned I = 0; I < 2; ++I) {
+      Value *Op = Current->getOperand(I);
+      if (auto *OpII = dyn_cast<IntrinsicInst>(Op))
+        if (OpII->getIntrinsicID() == Intrinsic::vector_interleave2) {
+          Queue.push_back(OpII);
+          continue;
+        }
+
+      // If this is not a perfectly balanced tree, the leaf
+      // result types would be different.
+      if (!Operands.empty() && Op->getType() != Operands.back()->getType())
+        return false;
+
+      Operands.push_back(Op);
+    }
+  }
+
+  const unsigned Factor = Operands.size();
+  // Currently we only recognize power-of-two factors.
+  // FIXME: should we assert here instead?
+  if (Factor <= 1 || !isPowerOf2_32(Factor))
+    return false;
+
+  interleaveLeafValues(Operands);
+  return true;
+}
+
+static bool
+getVectorDeinterleaveFactor(IntrinsicInst *II,
+                            SmallVectorImpl<Value *> &Results,
+                            SmallVectorImpl<Instruction *> &DeadInsts) {
+  assert(II->getIntrinsicID() == Intrinsic::vector_deinterleave2);
+  using namespace PatternMatch;
+  if (!II->hasNUses(2))
+    return false;
+
+  // Visit with BFS
+  SmallVector<IntrinsicInst *, 8> Queue;
+  Queue.push_back(II);
+  while (!Queue.empty()) {
+    IntrinsicInst *Current = Queue.front();
+    Queue.erase(Queue.begin());
+    assert(Current->hasNUses(2));
+
+    // All the intermediate intrinsics will be deleted from the bottom-up.
+    DeadInsts.insert(DeadInsts.begin(), Current);
+
+    ExtractValueInst *LHS = nullptr, *RHS = nullptr;
+    for (User *Usr : Current->users()) {
+      if (!isa<ExtractValueInst>(Usr))
+        return 0;
+
+      auto *EV = cast<ExtractValueInst>(Usr);
+      // Intermediate ExtractValue instructions will also be deleted.
+      DeadInsts.insert(DeadInsts.begin(), EV);
+      ArrayRef<unsigned> Indices = EV->getIndices();
+      if (Indices.size() != 1)
+        return false;
+
+      if (Indices[0] == 0 && !LHS)
+        LHS = EV;
+      else if (Indices[0] == 1 && !RHS)
+        RHS = EV;
+      else
+        return false;
+    }
+
+    // We have legal indices. At this point we're either going
+    // to continue the traversal or push the leaf values into Results.
+    for (ExtractValueInst *EV : {LHS, RHS}) {
+      // Continue the traversal. We're playing safe here and matching only the
+      // expression consisting of a perfectly balanced binary tree in which all
+      // intermediate values are only used once.
+      if (EV->hasOneUse() &&
+          match(EV->user_back(),
+                m_Intrinsic<Intrinsic::vector_deinterleave2>()) &&
+          EV->user_back()->hasNUses(2)) {
+        auto *EVUsr = cast<IntrinsicInst>(EV->user_back());
+        Queue.push_back(EVUsr);
+        continue;
+      }
+
+      // If this is not a perfectly balanced tree, the leaf
+      // result types would be different.
+      if (!Results.empty() && EV->getType() != Results.back()->getType())
+        return false;
+
+      // Save the leaf value.
+      Results.push_back(EV);
+    }
+  }
+
+  const unsigned Factor = Results.size();
+  // Currently we only recognize power-of-two factors.
+  // FIXME: should we assert here instead?
+  if (Factor <= 1 || !isPowerOf2_32(Factor))
+    return 0;
+
+  interleaveLeafValues(Results);
+  return true;
+}
+
+// Return the corresponded deinterleaved mask, or nullptr if there is no valid
+// mask.
+static Value *getMask(Value *WideMask, unsigned Factor,
+                      ElementCount LeafValueEC) {
+  if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
+    SmallVector<Value *, 8> Operands;
+    SmallVector<Instruction *, 8> DeadInsts;
+    if (getVectorInterleaveFactor(IMI, Operands, DeadInsts)) {
+      assert(!Operands.empty());
+      if (Operands.size() == Factor && llvm::all_equal(Operands))
+        return Operands[0];
+    }
+  }
+
+  if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
+    if (auto *Splat = ConstMask->getSplatValue()) {
+      // All-ones or all-zeros mask.
+      return ConstantVector::getSplat(LeafValueEC, Splat);
+    } else if (LeafValueEC.isFixed()) {
+      unsigned LeafMaskLen = LeafValueEC.getFixedValue();
+      SmallVector<Constant *, 8> LeafMask(LeafMaskLen, nullptr);
+      // If this is a fixed-length constant mask, each lane / leaf has to
+      // use the same mask. This is done by checking if every group with Factor
+      // number of elements in the interleaved mask has homogeneous values.
+      for (unsigned Idx = 0U; Idx < LeafMaskLen * Factor; ++Idx) {
+        Constant *Ref = ConstMask->getAggregateElement(alignDown(Idx, Factor));
+        if (Ref != ConstMask->getAggregateElement(Idx))
+          return nullptr;
+        LeafMask[Idx / Factor] = Ref;
+      }
+
+      return ConstantVector::get(LeafMask);
+    }
+  }
+
+  return nullptr;
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
