@@ -995,6 +995,59 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
   }
 }
 
+// returns false if binding could not be found in given space
+bool DXILResourceBindingInfo::findAvailableBinding(dxil::ResourceClass RC,
+                                                   uint32_t Space, int32_t Size,
+                                                   uint32_t *RegSlot) {
+  BindingSpaces &BS = getBindingSpaces(RC);
+  RegisterSpace &RS = BS.getOrInsertSpace(Space);
+  return RS.findAvailableBinding(Size, RegSlot);
+}
+
+DXILResourceBindingInfo::RegisterSpace &
+DXILResourceBindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
+  for (auto *I = Spaces.begin(); I != Spaces.end(); ++I) {
+    if (I->Space == Space)
+      return *I;
+    if (I->Space < Space)
+      continue;
+    return *Spaces.insert(I, Space);
+  }
+  return Spaces.emplace_back(Space);
+}
+
+bool DXILResourceBindingInfo::RegisterSpace::findAvailableBinding(
+    int32_t Size, uint32_t *RegSlot) {
+  assert((Size == -1 || Size > 0) && "invalid size");
+
+  if (FreeRanges.empty())
+    return false;
+
+  // unbounded array
+  if (Size == -1) {
+    BindingRange &Last = FreeRanges.back();
+    if (Last.UpperBound != UINT32_MAX)
+      // this space is already occupied by an unbounded array
+      return false;
+    *RegSlot = Last.LowerBound;
+    FreeRanges.pop_back();
+    return true;
+  }
+
+  // single resource or fixed-size array
+  for (BindingRange &R : FreeRanges) {
+    if (R.UpperBound - R.LowerBound + 1 < (uint32_t)Size)
+      continue;
+    *RegSlot = R.LowerBound;
+    // This might create a range where (LowerBound == UpperBound + 1), but
+    // that's ok.
+    R.LowerBound += Size;
+    return true;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 
 AnalysisKey DXILResourceTypeAnalysis::Key;

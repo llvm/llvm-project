@@ -632,12 +632,15 @@ public:
     RegisterSpace(uint32_t Space) : Space(Space) {
       FreeRanges.emplace_back(0, UINT32_MAX);
     }
+    // Size == -1 means unbounded array
+    bool findAvailableBinding(int32_t Size, uint32_t *RegSlot);
   };
 
   struct BindingSpaces {
     dxil::ResourceClass ResClass;
     llvm::SmallVector<RegisterSpace> Spaces;
     BindingSpaces(dxil::ResourceClass ResClass) : ResClass(ResClass) {}
+    RegisterSpace &getOrInsertSpace(uint32_t Space);
   };
 
 private:
@@ -658,6 +661,7 @@ public:
         OverlappingBinding(false) {}
 
   bool hasImplicitBinding() const { return ImplicitBinding; }
+  void setHasImplicitBinding(bool Value) { ImplicitBinding = Value; }
   bool hasOverlappingBinding() const { return OverlappingBinding; }
 
   BindingSpaces &getBindingSpaces(dxil::ResourceClass RC) {
@@ -672,6 +676,10 @@ public:
       return SamplerSpaces;
     }
   }
+
+  // Size == -1 means unbounded array
+  bool findAvailableBinding(dxil::ResourceClass RC, uint32_t Space,
+                            int32_t Size, uint32_t *RegSlot);
 
   friend class DXILResourceBindingAnalysis;
   friend class DXILResourceBindingWrapperPass;

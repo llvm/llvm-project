@@ -78,6 +78,12 @@ void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 /// Pass to update resource accesses to use load/store directly.
 FunctionPass *createDXILResourceAccessLegacyPass();
 
+/// Initializer for DXILResourceImplicitBindingLegacyPass
+void initializeDXILResourceImplicitBindingLegacyPass(PassRegistry &);
+
+/// Pass to assign register slots to resources without binding.
+ModulePass *createDXILResourceImplicitBindingLegacyPass();
+
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 
