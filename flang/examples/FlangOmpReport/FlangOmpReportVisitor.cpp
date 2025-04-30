@@ -151,8 +151,9 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
             return normalize_construct_name(source.ToString());
           },
           [&](const OpenMPAtomicConstruct &c) -> std::string {
-            const CharBlock &source{c.source};
-            return normalize_construct_name(source.ToString());
+            auto &dirSpec = std::get<OmpDirectiveSpecification>(c.t);
+            auto &dirName = std::get<OmpDirectiveName>(dirSpec.t);
+            return normalize_construct_name(dirName.source.ToString());
           },
           [&](const OpenMPUtilityConstruct &c) -> std::string {
             const CharBlock &source{c.source};
