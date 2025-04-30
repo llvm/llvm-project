@@ -2,13 +2,12 @@
 ; RUN: FileCheck --check-prefixes=RESULT --input-file=%t %s
 
 ; Make sure we don't crash on blockaddress
-; TODO: Should be able to replace the blockaddresses with null too
 
 ; INTERESTING: @blockaddr.table
 ; INTERESTING: @blockaddr.table.addrspacecast
 
-; RESULT: @blockaddr.table = private unnamed_addr constant [2 x ptr] [ptr blockaddress(@foo, %L1), ptr blockaddress(@foo, %L2)]
-; RESULT: @blockaddr.table.addrspacecast = private unnamed_addr constant [2 x ptr addrspace(1)] [ptr addrspace(1) addrspacecast (ptr blockaddress(@foo_addrspacecast, %L1) to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr blockaddress(@foo_addrspacecast, %L2) to ptr addrspace(1))]
+; RESULT: @blockaddr.table = private unnamed_addr constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
+; RESULT: @blockaddr.table.addrspacecast = private unnamed_addr constant [2 x ptr addrspace(1)] [ptr addrspace(1) addrspacecast (ptr inttoptr (i32 1 to ptr) to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr inttoptr (i32 1 to ptr) to ptr addrspace(1))]
 
 @blockaddr.table = private unnamed_addr constant [2 x ptr] [ptr blockaddress(@foo, %L1), ptr blockaddress(@foo, %L2)]
 
@@ -17,7 +16,7 @@
   ptr addrspace(1) addrspacecast (ptr blockaddress(@foo_addrspacecast, %L2) to ptr addrspace(1))
 ]
 
-; RESULT: define i32 @foo(
+; RESULT-NOT: define i32 @foo(
 define i32 @foo(i64 %arg0) {
 entry:
   %gep = getelementptr inbounds [2 x ptr], ptr @blockaddr.table, i64 0, i64 %arg0
@@ -32,7 +31,7 @@ L2:
   br label %L1
 }
 
-; RESULT: define i32 @foo_addrspacecast(
+; RESULT-NOT: define i32 @foo_addrspacecast(
 define i32 @foo_addrspacecast(i64 %arg0) {
 entry:
   %gep = getelementptr inbounds [2 x ptr addrspace(1)], ptr @blockaddr.table.addrspacecast, i64 0, i64 %arg0

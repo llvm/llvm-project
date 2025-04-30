@@ -1649,7 +1649,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
               FwdBBs[BBID] = BasicBlock::Create(Context);
             BB = FwdBBs[BBID];
           }
-          C = BlockAddress::get(Fn, BB);
+          C = BlockAddress::get(Fn->getType(), BB);
           break;
         }
         case BitcodeConstant::ConstantStructOpcode: {
