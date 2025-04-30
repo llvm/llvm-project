@@ -81,6 +81,7 @@ public:
   /// Options to add to the linker for the object file
   std::vector<std::string> DependentLibs;
 
+  /// Indicates whether -finstrument-functions is passed
   bool InstrumentFunctions{false};
 
   // The RemarkKind enum class and OptRemark struct are identical to what Clang
