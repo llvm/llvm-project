@@ -1451,7 +1451,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   // lambda declarator and applies them to the corresponding function operator
   // or operator template declaration. We accept this as a conforming extension
   // in all language modes that support lambdas.
-  if (isCXX11AttributeSpecifier()) {
+  if (isCXX11AttributeSpecifier() !=
+      CXX11AttributeKind::NotAttributeSpecifier) {
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda)
