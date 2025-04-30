@@ -46,6 +46,18 @@ body: |
     PseudoRET implicit $x10
 ...
 ---
+---
+name: xor3
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: xor3
+    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    renamable $x11 = COPY $x12
+    renamable $x10 = XOR renamable $x11, renamable $x11
+    PseudoRET implicit $x10
+...
+---
 name: addw1
 body: |
   bb.0:
@@ -76,28 +88,6 @@ body: |
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SUB renamable $x11, $x0
-    PseudoRET implicit $x10
-...
----
-name: pack
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: pack
-    ; CHECK: renamable $x10 = ADDI $x12, 0
-    ; CHECK-NEXT: PseudoRET implicit $x10
-    renamable $x11 = COPY $x12
-    renamable $x10 = PACK renamable $x11, $x0
-    PseudoRET implicit $x10
-...
----
-name: packw
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: packw
-    ; CHECK: renamable $x10 = ADDI $x12, 0
-    ; CHECK-NEXT: PseudoRET implicit $x10
-    renamable $x11 = COPY $x12
-    renamable $x10 = PACKW renamable $x11, $x0
     PseudoRET implicit $x10
 ...
 ---
@@ -523,7 +513,7 @@ name: add.uw2
 body: |
   bb.0:
     ; CHECK-LABEL: name: add.uw2
-    ; CHECK: renamable $x10 = ADD_UW $x12, $x0
+    ; CHECK: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = ADD_UW $x0, renamable $x11
