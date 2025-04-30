@@ -69,6 +69,10 @@ static cl::opt<bool>
 static cl::opt<bool> UseTBAA("use-tbaa-in-sched-mi", cl::Hidden,
     cl::init(true), cl::desc("Enable use of TBAA during MI DAG construction"));
 
+static cl::opt<bool> DisableSchedModel(
+    "disable-schedmodel-in-sched-mi", cl::Hidden, cl::init(false),
+    cl::desc("Enable use of TBAA during MI DAG construction"));
+
 // Note: the two options below might be used in tuning compile time vs
 // output quality. Setting HugeRegion so large that it will never be
 // reached means best-effort, but may be slow.
@@ -121,7 +125,7 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
-  SchedModel.init(&ST);
+  SchedModel.init(&ST, DisableSchedModel);
 }
 
 /// If this machine instr has memory reference information and it can be

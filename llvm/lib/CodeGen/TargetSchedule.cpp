@@ -40,18 +40,22 @@ static cl::opt<bool> ForceEnableIntervals(
     cl::desc("Force the use of resource intervals in the schedule model"));
 
 bool TargetSchedModel::hasInstrSchedModel() const {
-  return EnableSchedModel && SchedModel.hasInstrSchedModel();
+  return EnableSchedModel && SchedModel.hasInstrSchedModel() &&
+         !DisableItinerariesAndSchedModel;
 }
 
 bool TargetSchedModel::hasInstrItineraries() const {
-  return EnableSchedItins && !InstrItins.isEmpty();
+  return EnableSchedItins && !InstrItins.isEmpty() &&
+         !DisableItinerariesAndSchedModel;
 }
 
-void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
+void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo, bool Disable) {
   STI = TSInfo;
   SchedModel = TSInfo->getSchedModel();
   TII = TSInfo->getInstrInfo();
   STI->initInstrItins(InstrItins);
+
+  DisableItinerariesAndSchedModel = Disable;
 
   unsigned NumRes = SchedModel.getNumProcResourceKinds();
   ResourceFactors.resize(NumRes);

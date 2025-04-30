@@ -45,6 +45,8 @@ class TargetSchedModel {
 
   unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
+  bool DisableItinerariesAndSchedModel = false;
+
 public:
   TargetSchedModel() : SchedModel(MCSchedModel::Default) {}
 
@@ -53,7 +55,8 @@ public:
   /// The machine model API keeps a copy of the top-level MCSchedModel table
   /// indices and may query TargetSubtargetInfo and TargetInstrInfo to resolve
   /// dynamic properties.
-  void init(const TargetSubtargetInfo *TSInfo);
+  void init(const TargetSubtargetInfo *TSInfo,
+            bool DisableItinerariesAndSchedModel = false);
 
   /// Return the MCSchedClassDesc for this instruction.
   const MCSchedClassDesc *resolveSchedClass(const MachineInstr *MI) const;
