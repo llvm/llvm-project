@@ -824,9 +824,9 @@ func.func @int_opaque_conversion(%arg0: i80, %arg1: i80, %arg2: i1) {
   // CHECK: [[LT:[^ ]*]] = emitc.cmp lt, [[arg1_cast]], [[Bitwidth]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> i1
   // CHECK: [[Poison:[^ ]*]] = "emitc.constant"() <{value = #emitc.opaque<"opaque_shift_poison">}> : () -> !emitc.opaque<"i80">
   // CHECK: [[Exp:[^ ]*]] = emitc.expression : !emitc.opaque<"i80"> {
-  // CHECK: [[LShift:[^ ]*]] = emitc.bitwise_left_shift [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> !emitc.opaque<"i80">
-  // CHECK: emitc.conditional [[LT]], [[LShift]], [[Poison]] : !emitc.opaque<"i80">
-  // CHECK: emitc.yield {{.*}} : !emitc.opaque<"i80">
+  // CHECK: [[LShift:[^ ]*]] = bitwise_left_shift [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> !emitc.opaque<"i80">
+  // CHECK: conditional [[LT]], [[LShift]], [[Poison]] : !emitc.opaque<"i80">
+  // CHECK: yield {{.*}} : !emitc.opaque<"i80">
   // CHECK: }
   %12 = arith.shli %arg0, %arg1 : i80
   // CHECK: emitc.cmp eq, [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> i1
