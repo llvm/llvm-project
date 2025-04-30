@@ -3603,6 +3603,9 @@ public:
 
   NestedNameSpecifier *getQualifier() const { return Qualifier; }
   CXXRecordDecl *getCXXRecordDecl() const;
+  /// Note: this can trigger extra deserialization when external AST sources are
+  /// used. Prefer `getCXXRecordDecl()` unless you really need the most recent
+  /// decl.
   CXXRecordDecl *getMostRecentCXXRecordDecl() const;
 
   bool isSugared() const;
