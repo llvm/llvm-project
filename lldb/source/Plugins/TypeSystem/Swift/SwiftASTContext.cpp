@@ -4871,7 +4871,7 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl) {
       swift::TypeAliasDecl *alias_decl =
           swift::cast<swift::TypeAliasDecl>(decl);
       swift::Type swift_type = swift::TypeAliasType::get(
-          alias_decl, swift::Type(), swift::SubstitutionMap(),
+          alias_decl, swift::Type(), llvm::ArrayRef<swift::Type>(),
           alias_decl->getUnderlyingType());
       return ToCompilerType({swift_type.getPointer()});
     }
@@ -4930,7 +4930,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::Decl *decl) {
       swift::TypeAliasDecl *alias_decl =
           swift::cast<swift::TypeAliasDecl>(decl);
       swift::Type swift_type = swift::TypeAliasType::get(
-          alias_decl, swift::Type(), swift::SubstitutionMap(),
+          alias_decl, swift::Type(), llvm::ArrayRef<swift::Type>(),
           alias_decl->getUnderlyingType());
       return ToCompilerType(swift_type.getPointer());
     }
