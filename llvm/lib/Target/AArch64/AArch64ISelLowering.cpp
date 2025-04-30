@@ -15905,10 +15905,11 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   if (LHS.getValueType().getVectorElementType().isInteger())
     return Op;
 
-  assert((!Subtarget->hasFullFP16() &&
-          LHS.getValueType().getVectorElementType() != MVT::f16) ||
-         LHS.getValueType().getVectorElementType() != MVT::bf16 ||
-         LHS.getValueType().getVectorElementType() != MVT::f128);
+  assert(((!Subtarget->hasFullFP16() &&
+           LHS.getValueType().getVectorElementType() != MVT::f16) ||
+          LHS.getValueType().getVectorElementType() != MVT::bf16 ||
+          LHS.getValueType().getVectorElementType() != MVT::f128) &&
+         "Unexpected type!");
 
   // Lower isnan(x) | isnan(never-nan) to x != x.
   // Lower !isnan(x) & !isnan(never-nan) to x == x.
