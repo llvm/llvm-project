@@ -768,11 +768,6 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
       CriticalEdgeSplittingOptions(DT, LI, MSSAU).setPreserveLCSSA();
 
   if ((isCriticalEdge(LatchTerm, SuccNum, Options.MergeIdenticalEdges))) {
-    // If it is a critical edge, and the succesor is an exception block, handle
-    // the split edge logic in this specific function
-    if (Succ->isEHPad())
-      return ehAwareSplitEdge(BB, Succ, nullptr, nullptr, Options, BBName);
-
     // If this is a critical edge, let SplitKnownCriticalEdge do it.
     return SplitKnownCriticalEdge(LatchTerm, SuccNum, Options, BBName);
   }
