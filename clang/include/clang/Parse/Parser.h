@@ -107,6 +107,15 @@ enum class TypeCastState { NotTypeCast = 0, MaybeTypeCast, IsTypeCast };
 /// Control what ParseCastExpression will parse.
 enum class CastParseKind { AnyCastExpr = 0, UnaryExprOnly, PrimaryExprOnly };
 
+/// ParenParseOption - Control what ParseParenExpression will parse.
+enum class ParenParseOption {
+  SimpleExpr,      // Only parse '(' expression ')'
+  FoldExpr,        // Also allow fold-expression <anything>
+  CompoundStmt,    // Also allow '(' compound-statement ')'
+  CompoundLiteral, // Also allow '(' type-name ')' '{' ... '}'
+  CastExpr         // Also allow '(' type-name ')' <anything>
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -1951,14 +1960,6 @@ private:
   /// used for misc language extensions.
   bool ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs);
 
-  /// ParenParseOption - Control what ParseParenExpression will parse.
-  enum ParenParseOption {
-    SimpleExpr,      // Only parse '(' expression ')'
-    FoldExpr,        // Also allow fold-expression <anything>
-    CompoundStmt,    // Also allow '(' compound-statement ')'
-    CompoundLiteral, // Also allow '(' type-name ')' '{' ... '}'
-    CastExpr         // Also allow '(' type-name ')' <anything>
-  };
   ExprResult ParseParenExpression(ParenParseOption &ExprType,
                                         bool stopIfCastExpr,
                                         bool isTypeCast,
