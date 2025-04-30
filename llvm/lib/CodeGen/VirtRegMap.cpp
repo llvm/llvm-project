@@ -222,7 +222,6 @@ class VirtRegRewriter {
       MCRegister PhysReg, const MachineInstr &MI) const;
 
 public:
-  static char ID;
   VirtRegRewriter(bool ClearVirtRegs, SlotIndexes *Indexes, LiveIntervals *LIS,
                   LiveRegMatrix *LRM, VirtRegMap *VRM,
                   LiveDebugVariables *DebugVars)
