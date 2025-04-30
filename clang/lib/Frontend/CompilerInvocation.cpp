@@ -1609,6 +1609,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   else if (!Opts.DirectAccessExternalData && LangOpts->PICLevel == 0)
     GenerateArg(Consumer, OPT_fno_direct_access_external_data);
 
+  if (Opts.ObjCEmitNilCheckThunk)
+    GenerateArg(Consumer, OPT_fobjc_emit_nil_check_thunk);
+
   std::optional<StringRef> DebugInfoVal;
   switch (Opts.DebugInfo) {
   case llvm::codegenoptions::DebugLineTablesOnly:
@@ -1941,6 +1944,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         Opts.getDebugInfo() == llvm::codegenoptions::DebugInfoConstructor)
       Opts.setDebugInfo(llvm::codegenoptions::LimitedDebugInfo);
   }
+
+  Opts.ObjCEmitNilCheckThunk = Args.hasArg(OPT_fobjc_emit_nil_check_thunk);
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
@@ -4199,6 +4204,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   Opts.ZOSExt =
       Args.hasFlag(OPT_fzos_extensions, OPT_fno_zos_extensions, T.isOSzOS());
+
+  Opts.ObjCEmitNilCheckThunk = Args.hasArg(OPT_fobjc_emit_nil_check_thunk);
 
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
