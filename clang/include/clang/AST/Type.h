@@ -3602,6 +3602,7 @@ public:
   }
 
   NestedNameSpecifier *getQualifier() const { return Qualifier; }
+  CXXRecordDecl *getCXXRecordDecl() const;
   CXXRecordDecl *getMostRecentCXXRecordDecl() const;
 
   bool isSugared() const;
@@ -3610,7 +3611,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType(), getQualifier(), getMostRecentCXXRecordDecl());
+    Profile(ID, getPointeeType(), getQualifier(), getCXXRecordDecl());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
