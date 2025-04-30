@@ -24,6 +24,7 @@ class LangOptions;
 class FunctionDecl;
 class VarDecl;
 class APValue;
+class BlockExpr;
 
 namespace interp {
 class Function;
@@ -77,11 +78,8 @@ public:
   /// Classifies an expression.
   std::optional<PrimType> classify(const Expr *E) const {
     assert(E);
-    if (E->isGLValue()) {
-      if (E->getType()->isFunctionType())
-        return PT_FnPtr;
+    if (E->isGLValue())
       return PT_Ptr;
-    }
 
     return classify(E->getType());
   }
@@ -91,7 +89,8 @@ public:
                         const CXXRecordDecl *StaticDecl,
                         const CXXMethodDecl *InitialFunction) const;
 
-  const Function *getOrCreateFunction(const FunctionDecl *FD);
+  const Function *getOrCreateFunction(const FunctionDecl *FuncDecl);
+  const Function *getOrCreateObjCBlock(const BlockExpr *E);
 
   /// Returns whether we should create a global variable for the
   /// given ValueDecl.
@@ -111,6 +110,13 @@ public:
   const Record *getRecord(const RecordDecl *D) const;
 
   unsigned getEvalID() const { return EvalID; }
+
+  /// Unevaluated builtins don't get their arguments put on the stack
+  /// automatically. They instead operate on the AST of their Call
+  /// Expression.
+  /// Similar information is available via ASTContext::BuiltinInfo,
+  /// but that is not correct for our use cases.
+  static bool isUnevaluatedBuiltin(unsigned ID);
 
 private:
   /// Runs a function.

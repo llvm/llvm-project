@@ -144,6 +144,17 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
+// Add an OpDecorate instruction for the given Reg.
+void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm = "");
+void buildOpMemberDecorate(Register Reg, MachineInstr &I,
+                           const SPIRVInstrInfo &TII,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm = "");
+
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
@@ -155,6 +166,19 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
 // Return a valid position for the instruction at the end of the block before
 // terminators and debug instructions.
 MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB);
+
+// Returns true if a pointer to the storage class can be casted to/from a
+// pointer to the Generic storage class.
+constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::Workgroup:
+  case SPIRV::StorageClass::CrossWorkgroup:
+  case SPIRV::StorageClass::Function:
+    return true;
+  default:
+    return false;
+  }
+}
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
@@ -184,6 +208,8 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 9;
   case SPIRV::StorageClass::Private:
     return 10;
+  case SPIRV::StorageClass::StorageBuffer:
+    return 11;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -454,10 +480,26 @@ inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   return It == Mapping.end() ? FPDecorationId::NONE : It->second;
 }
 
-void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
-                                 unsigned MinWC, unsigned ContinuedOpcode,
-                                 ArrayRef<Register> Args,
-                                 Register ReturnRegister, Register TypeID);
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID);
+
+// Instruction selection directed by type folding.
+const std::set<unsigned> &getTypeFoldingSupportedOpcodes();
+bool isTypeFoldingSupported(unsigned Opcode);
+
+// Get loop controls from llvm.loop. metadata.
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L);
+
+// Traversing [g]MIR accounting for pseudo-instructions.
+MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI);
+MachineInstr *getDef(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
+                                const MachineInstr *ResType);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

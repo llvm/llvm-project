@@ -69,9 +69,16 @@ elif config.android:
   else:
     set_default("target_suffix", "-%s-android" % config.target_arch)
 else:
-  set_default("target_suffix", "-%s" % config.target_arch)
+  if config.target_arch.startswith("arm"):
+    if config.target_arch.endswith("hf"):
+      set_default("target_suffix", "-armhf")
+    else:
+      set_default("target_suffix", "-arm")
+  else:
+    set_default("target_suffix", "-%s" % config.target_arch)
 
 set_default("have_internal_symbolizer", @COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER_PYBOOL@)
+set_default("have_disable_symbolizer_path_search", @SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH_PYBOOL@)
 set_default("have_zlib", @ZLIB_FOUND_PYBOOL@)
 set_default("zlib_include_dir", "@ZLIB_INCLUDE_DIR@")
 set_default("zlib_library", "@ZLIB_LIBRARY@")

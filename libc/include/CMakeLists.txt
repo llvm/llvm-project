@@ -168,6 +168,16 @@ add_header_macro(
     .llvm-libc-types.stdfix-types
 )
 
+
+add_header_macro(
+  sysexits
+  ../libc/include/sysexits.yaml
+  sysexits.h
+  DEPENDS
+    .llvm-libc-macros.sysexits_macros
+)
+
+
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 
@@ -230,12 +240,13 @@ add_header_macro(
   ../libc/include/search.yaml
   search.h
   DEPENDS
-    .llvm_libc_common_h
     .llvm-libc-types.ACTION
     .llvm-libc-types.ENTRY
-    .llvm-libc-types.struct_hsearch_data
+    .llvm-libc-types.VISIT
+    .llvm-libc-types.__search_compare_t
     .llvm-libc-types.size_t
-    .llvm-libc-types.__lsearchcompare_t
+    .llvm-libc-types.struct_hsearch_data
+    .llvm_libc_common_h
 )
 
 add_header_macro(
@@ -332,17 +343,17 @@ add_header_macro(
   ../libc/include/stdlib.yaml
   stdlib.h
   DEPENDS
-    .llvm_libc_common_h
     .llvm-libc-macros.stdlib_macros
+    .llvm-libc-types.__atexithandler_t
+    .llvm-libc-types.__qsortcompare_t
+    .llvm-libc-types.__qsortrcompare_t
+    .llvm-libc-types.__search_compare_t
     .llvm-libc-types.div_t
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
-    .llvm-libc-types.size_t
-    .llvm-libc-types.__bsearchcompare_t
-    .llvm-libc-types.__qsortcompare_t
-    .llvm-libc-types.__qsortrcompare_t
-    .llvm-libc-types.__atexithandler_t
     .llvm-libc-types.locale_t
+    .llvm-libc-types.size_t
+    .llvm_libc_common_h
 )
 
 add_header_macro(
@@ -421,6 +432,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.link_macros
+    .llvm-libc-types.struct_dl_phdr_info
+    .llvm-libc-types.__dl_iterate_phdr_callback_t
 )
 
 add_header_macro(

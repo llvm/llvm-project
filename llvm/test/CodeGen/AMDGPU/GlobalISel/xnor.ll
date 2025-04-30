@@ -90,7 +90,7 @@ entry:
   %xor = xor i32 %a, %b
   %r0.val = xor i32 %xor, -1
   %r1.val = add i32 %xor, %a
-  %ins0 = insertelement <2 x i32> undef, i32 %r0.val, i32 0
+  %ins0 = insertelement <2 x i32> poison, i32 %r0.val, i32 0
   %ins1 = insertelement <2 x i32> %ins0, i32 %r1.val, i32 1
   ret <2 x i32> %ins1
 }
@@ -196,7 +196,7 @@ define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) 
   %xor = xor i64 %a, %b
   %r0.val = xor i64 %xor, -1
   %r1.val = add i64 %xor, %a
-  %ins0 = insertelement <2 x i64> undef, i64 %r0.val, i32 0
+  %ins0 = insertelement <2 x i64> poison, i64 %r0.val, i32 0
   %ins1 = insertelement <2 x i64> %ins0, i64 %r1.val, i32 1
   ret <2 x i64> %ins1
 }

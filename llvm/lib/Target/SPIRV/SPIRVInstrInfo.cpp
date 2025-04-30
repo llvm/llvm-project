@@ -97,6 +97,17 @@ bool SPIRVInstrInfo::isDecorationInstr(const MachineInstr &MI) const {
   }
 }
 
+bool SPIRVInstrInfo::isAliasingInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpAliasDomainDeclINTEL:
+  case SPIRV::OpAliasScopeDeclINTEL:
+  case SPIRV::OpAliasScopeListDeclINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case SPIRV::OpCapability:
@@ -115,7 +126,8 @@ bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   case SPIRV::OpModuleProcessed:
     return true;
   default:
-    return isTypeDeclInstr(MI) || isConstantInstr(MI) || isDecorationInstr(MI);
+    return isTypeDeclInstr(MI) || isConstantInstr(MI) ||
+           isDecorationInstr(MI) || isAliasingInstr(MI);
   }
 }
 
@@ -273,16 +285,4 @@ void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
          "Register operands are expected in COPY");
   auto &MRI = I->getMF()->getRegInfo();
   MRI.replaceRegWith(DstOp.getReg(), SrcOp.getReg());
-}
-
-bool SPIRVInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() == SPIRV::GET_ID || MI.getOpcode() == SPIRV::GET_fID ||
-      MI.getOpcode() == SPIRV::GET_pID || MI.getOpcode() == SPIRV::GET_vfID ||
-      MI.getOpcode() == SPIRV::GET_vID || MI.getOpcode() == SPIRV::GET_vpID) {
-    auto &MRI = MI.getMF()->getRegInfo();
-    MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
-    MI.eraseFromParent();
-    return true;
-  }
-  return false;
 }

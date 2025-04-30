@@ -2,6 +2,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
+
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
@@ -35,22 +38,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.isxdigit_l
     libc.src.ctype.tolower_l
     libc.src.ctype.toupper_l
-
-    # stdlib.h entrypoints
-    libc.src.stdlib.strtod_l
-    libc.src.stdlib.strtof_l
-    libc.src.stdlib.strtol_l
-    libc.src.stdlib.strtold_l
-    libc.src.stdlib.strtoll_l
-    libc.src.stdlib.strtoul_l
-    libc.src.stdlib.strtoull_l
-
-    # string.h entrypoints
-    libc.src.string.strcoll_l
-    libc.src.string.strxfrm_l
-
-    # compiler entrypoints (no corresponding header)
-    libc.src.compiler.__stack_chk_fail
 
     # errno.h entrypoints
     libc.src.errno.errno
@@ -89,6 +76,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcoll
     libc.src.string.strcpy
     libc.src.string.strcspn
+    libc.src.string.strdup
     libc.src.string.strerror
     libc.src.string.strerror_r
     libc.src.string.strlcat
@@ -97,6 +85,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
+    libc.src.string.strndup
     libc.src.string.strnlen
     libc.src.string.strpbrk
     libc.src.string.strrchr
@@ -107,14 +96,25 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok_r
     libc.src.string.strxfrm
 
+    # string.h entrypoints
+    libc.src.string.strcoll_l
+    libc.src.string.strxfrm_l
+
     # strings.h entrypoints
     libc.src.strings.bcmp
     libc.src.strings.bcopy
     libc.src.strings.bzero
+    libc.src.strings.ffs
+    libc.src.strings.ffsl
+    libc.src.strings.ffsll
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp
     libc.src.strings.strncasecmp
+
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -123,18 +123,22 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
 
     # stdio.h entrypoints
+    libc.src.stdio.asprintf
     libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.remove
+    libc.src.stdio.scanf
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
-    libc.src.stdio.asprintf
+    libc.src.stdio.sscanf
+    libc.src.stdio.vasprintf
     libc.src.stdio.vprintf
+    libc.src.stdio.vscanf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
-    libc.src.stdio.vasprintf
+    libc.src.stdio.vsscanf
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
@@ -210,6 +214,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
+    libc.src.stdlib.a64l
     libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.aligned_alloc
@@ -222,15 +227,21 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.div
     libc.src.stdlib.exit
     libc.src.stdlib.free
+    libc.src.stdlib.l64a
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.malloc
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
+    libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
     libc.src.stdlib.realloc
     libc.src.stdlib.srand
+    # libc.src.stdlib.strfromd
+    # libc.src.stdlib.strfromf
+    # libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
@@ -238,6 +249,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # stdlib.h entrypoints
+    libc.src.stdlib.strtod_l
+    libc.src.stdlib.strtof_l
+    libc.src.stdlib.strtol_l
+    libc.src.stdlib.strtold_l
+    libc.src.stdlib.strtoll_l
+    libc.src.stdlib.strtoul_l
+    libc.src.stdlib.strtoull_l
 
     # time.h entrypoints
     libc.src.time.asctime
@@ -252,12 +272,31 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.strftime_l
     libc.src.time.timespec_get
 
+    # wchar.h entrypoints
+    libc.src.wchar.btowc
+    libc.src.wchar.wcslen
+    libc.src.wchar.wctob
+
     # internal entrypoints
     libc.startup.baremetal.init
     libc.startup.baremetal.fini
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # complex.h entrypoints
+    libc.src.complex.creal
+    libc.src.complex.crealf
+    libc.src.complex.creall
+    libc.src.complex.cimag
+    libc.src.complex.cimagf
+    libc.src.complex.cimagl
+    libc.src.complex.conj
+    libc.src.complex.conjf
+    libc.src.complex.conjl
+    libc.src.complex.cproj
+    libc.src.complex.cprojf
+    libc.src.complex.cprojl
+
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept
@@ -283,6 +322,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    # libc.src.math.atan2l
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -299,10 +340,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.cospif
+    libc.src.math.dfmal
+    libc.src.math.dmull
+    libc.src.math.dsqrtl
+    libc.src.math.daddl
+    libc.src.math.ddivl
+    libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
     libc.src.math.exp10f
+    libc.src.math.exp10m1f
     libc.src.math.exp2
     libc.src.math.exp2f
     libc.src.math.exp2m1f
@@ -312,9 +361,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd
+    libc.src.math.faddl
+    libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
+    libc.src.math.fdiv
+    libc.src.math.fdivl
+    libc.src.math.ffma
+    libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.floorl
@@ -354,6 +410,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodf
     libc.src.math.fmodl
     libc.src.math.fmul
+    libc.src.math.fmull
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -363,14 +420,27 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.fsqrt
+    libc.src.math.fsqrtl
+    libc.src.math.fsub
+    libc.src.math.fsubl
+    libc.src.math.getpayload
+    libc.src.math.getpayloadf
+    libc.src.math.getpayloadl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.iscanonical
+    libc.src.math.iscanonicalf
+    libc.src.math.iscanonicall
     libc.src.math.isnan
     libc.src.math.isnanf
     libc.src.math.isnanl
+    libc.src.math.issignaling
+    libc.src.math.issignalingf
+    libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -444,17 +514,30 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.setpayload
+    libc.src.math.setpayloadf
+    libc.src.math.setpayloadl
+    libc.src.math.setpayloadsig
+    libc.src.math.setpayloadsigf
+    libc.src.math.setpayloadsigl
     libc.src.math.sin
     libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sinhf
+    libc.src.math.sinpif
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
+    libc.src.math.totalorderl
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
@@ -465,6 +548,210 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxf
     libc.src.math.ufromfpxl
 )
+
+if(LIBC_TYPES_HAS_CFLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # complex.h C23 _Complex _Float16 entrypoints
+    libc.src.complex.crealf16
+    libc.src.complex.cimagf16
+    libc.src.complex.conjf16
+    libc.src.complex.cprojf16
+  )
+endif()
+
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.acosf16
+    libc.src.math.acoshf16
+    libc.src.math.asinf16
+    libc.src.math.asinhf16
+    libc.src.math.canonicalizef16
+    libc.src.math.ceilf16
+    libc.src.math.copysignf16
+    libc.src.math.cosf16
+    libc.src.math.coshf16
+    libc.src.math.cospif16
+    libc.src.math.exp10f16
+    libc.src.math.exp10m1f16
+    libc.src.math.exp2f16
+    libc.src.math.exp2m1f16
+    libc.src.math.expf16
+    libc.src.math.expm1f16
+    libc.src.math.f16add
+    libc.src.math.f16addf
+    libc.src.math.f16addl
+    libc.src.math.f16div
+    libc.src.math.f16divf
+    libc.src.math.f16divl
+    libc.src.math.f16fma
+    libc.src.math.f16fmaf
+    libc.src.math.f16fmal
+    libc.src.math.f16mul
+    libc.src.math.f16mulf
+    libc.src.math.f16mull
+    libc.src.math.f16sqrt
+    libc.src.math.f16sqrtf
+    libc.src.math.f16sqrtl
+    libc.src.math.f16sub
+    libc.src.math.f16subf
+    libc.src.math.f16subl
+    libc.src.math.fabsf16
+    libc.src.math.fdimf16
+    libc.src.math.floorf16
+    libc.src.math.fmaf16
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximum_mag_numf16
+    libc.src.math.fmaximum_magf16
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fmaximumf16
+    libc.src.math.fminf16
+    libc.src.math.fminimum_mag_numf16
+    libc.src.math.fminimum_magf16
+    libc.src.math.fminimum_numf16
+    libc.src.math.fminimumf16
+    libc.src.math.fmodf16
+    libc.src.math.frexpf16
+    libc.src.math.fromfpf16
+    libc.src.math.fromfpxf16
+    libc.src.math.getpayloadf16
+    libc.src.math.hypotf16
+    libc.src.math.ilogbf16
+    libc.src.math.iscanonicalf16
+    libc.src.math.issignalingf16
+    libc.src.math.ldexpf16
+    libc.src.math.llogbf16
+    libc.src.math.llrintf16
+    libc.src.math.llroundf16
+    libc.src.math.log10f16
+    libc.src.math.log2f16
+    libc.src.math.logbf16
+    libc.src.math.logf16
+    libc.src.math.lrintf16
+    libc.src.math.lroundf16
+    libc.src.math.modff16
+    libc.src.math.nanf16
+    libc.src.math.nearbyintf16
+    libc.src.math.nextafterf16
+    libc.src.math.nextdownf16
+    libc.src.math.nexttowardf16
+    libc.src.math.nextupf16
+    libc.src.math.remainderf16
+    libc.src.math.remquof16
+    libc.src.math.rintf16
+    libc.src.math.roundevenf16
+    libc.src.math.roundf16
+    libc.src.math.scalblnf16
+    libc.src.math.scalbnf16
+    libc.src.math.setpayloadf16
+    libc.src.math.setpayloadsigf16
+    libc.src.math.sinf16
+    libc.src.math.sinhf16
+    libc.src.math.sinpif16
+    libc.src.math.sqrtf16
+    libc.src.math.tanf16
+    libc.src.math.tanhf16
+    libc.src.math.tanpif16
+    libc.src.math.totalorderf16
+    libc.src.math.totalordermagf16
+    libc.src.math.truncf16
+    libc.src.math.ufromfpf16
+    libc.src.math.ufromfpxf16
+  )
+
+  if(LIBC_TYPES_HAS_FLOAT128)
+    list(APPEND TARGET_LIBM_ENTRYPOINTS
+      # math.h C23 mixed _Float16 and _Float128 entrypoints
+      libc.src.math.f16addf128
+      libc.src.math.f16divf128
+      libc.src.math.f16fmaf128
+      libc.src.math.f16mulf128
+      libc.src.math.f16sqrtf128
+      libc.src.math.f16subf128
+    )
+  endif()
+endif()
+
+if(LIBC_TYPES_HAS_CFLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # complex.h C23 _Complex _Float128 entrypoints
+    libc.src.complex.crealf128
+    libc.src.complex.cimagf128
+    libc.src.complex.conjf128
+    libc.src.complex.cprojf128
+  )
+endif()
+
+if(LIBC_TYPES_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float128 entrypoints
+    libc.src.math.atan2f128
+    libc.src.math.canonicalizef128
+    libc.src.math.ceilf128
+    libc.src.math.copysignf128
+    libc.src.math.daddf128
+    libc.src.math.ddivf128
+    libc.src.math.dfmaf128
+    libc.src.math.dmulf128
+    libc.src.math.dsqrtf128
+    libc.src.math.dsubf128
+    libc.src.math.fabsf128
+    libc.src.math.faddf128
+    libc.src.math.fdimf128
+    libc.src.math.fdivf128
+    libc.src.math.ffmaf128
+    libc.src.math.floorf128
+    libc.src.math.fmaxf128
+    libc.src.math.fmaximum_mag_numf128
+    libc.src.math.fmaximum_magf128
+    libc.src.math.fmaximum_numf128
+    libc.src.math.fmaximumf128
+    libc.src.math.fminf128
+    libc.src.math.fminimum_mag_numf128
+    libc.src.math.fminimum_magf128
+    libc.src.math.fminimum_numf128
+    libc.src.math.fminimumf128
+    libc.src.math.fmodf128
+    libc.src.math.fmulf128
+    libc.src.math.frexpf128
+    libc.src.math.fromfpf128
+    libc.src.math.fromfpxf128
+    libc.src.math.fsqrtf128
+    libc.src.math.fsubf128
+    libc.src.math.getpayloadf128
+    libc.src.math.ilogbf128
+    libc.src.math.iscanonicalf128
+    libc.src.math.issignalingf128
+    libc.src.math.ldexpf128
+    libc.src.math.llogbf128
+    libc.src.math.llrintf128
+    libc.src.math.llroundf128
+    libc.src.math.logbf128
+    libc.src.math.lrintf128
+    libc.src.math.lroundf128
+    libc.src.math.modff128
+    libc.src.math.nanf128
+    libc.src.math.nearbyintf128
+    libc.src.math.nextafterf128
+    libc.src.math.nextdownf128
+    libc.src.math.nextupf128
+    libc.src.math.remainderf128
+    libc.src.math.remquof128
+    libc.src.math.rintf128
+    libc.src.math.roundevenf128
+    libc.src.math.roundf128
+    libc.src.math.scalblnf128
+    libc.src.math.scalbnf128
+    libc.src.math.setpayloadf128
+    libc.src.math.setpayloadsigf128
+    libc.src.math.sqrtf128
+    libc.src.math.totalorderf128
+    libc.src.math.totalordermagf128
+    libc.src.math.truncf128
+    libc.src.math.ufromfpf128
+    libc.src.math.ufromfpxf128
+  )
+endif()
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
@@ -509,6 +796,30 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.ukbits
     libc.src.stdfix.lkbits
     libc.src.stdfix.ulkbits
+    libc.src.stdfix.bitshr
+    libc.src.stdfix.bitsr
+    libc.src.stdfix.bitslr
+    libc.src.stdfix.bitshk
+    libc.src.stdfix.bitsk
+    libc.src.stdfix.bitslk
+    libc.src.stdfix.bitsuhr
+    libc.src.stdfix.bitsur
+    libc.src.stdfix.bitsulr
+    libc.src.stdfix.bitsuhk
+    libc.src.stdfix.bitsuk
+    libc.src.stdfix.bitsulk
+    libc.src.stdfix.countlshr
+    libc.src.stdfix.countlsr
+    libc.src.stdfix.countlslr
+    libc.src.stdfix.countlshk
+    libc.src.stdfix.countlsk
+    libc.src.stdfix.countlslk
+    libc.src.stdfix.countlsuhr
+    libc.src.stdfix.countlsur
+    libc.src.stdfix.countlsulr
+    libc.src.stdfix.countlsuhk
+    libc.src.stdfix.countlsuk
+    libc.src.stdfix.countlsulk
   )
 endif()
 

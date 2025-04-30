@@ -133,7 +133,8 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // that's imported, its optimizations will, thus, differ, and be specialized
   // for this contextual information. Eliding it in favor of the original would
   // undo these optimizations.
-  if (!eliminateAvailableExternally(M, /*Convert=*/(CtxProf && !!(*CtxProf))))
+  if (!eliminateAvailableExternally(
+          M, /*Convert=*/(CtxProf && CtxProf->isInSpecializedModule())))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

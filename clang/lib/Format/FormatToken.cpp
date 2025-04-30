@@ -44,7 +44,7 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
 bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
   if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
     return true;
-  return (LangOpts.CXXOperatorNames || LangOpts.C17) && is(tok::identifier) &&
+  return (LangOpts.CXXOperatorNames || LangOpts.C11) && is(tok::identifier) &&
          std::binary_search(CppNonKeywordTypes.begin(),
                             CppNonKeywordTypes.end(), TokenText);
 }

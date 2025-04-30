@@ -65,6 +65,11 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
   if (LHSValue == RHSValue && LHSValue)
     return Env.getBoolLiteralValue(true);
 
+  // Special case: `NullPtrLiteralExpr == itself`. When both sides are untyped
+  // nullptr, they do not have an assigned Value, but they compare equal.
+  if (LHS.getType()->isNullPtrType() && RHS.getType()->isNullPtrType())
+    return Env.getBoolLiteralValue(true);
+
   if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
     if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
       return Env.makeIff(*LHSBool, *RHSBool);
@@ -798,14 +803,6 @@ public:
 
   void VisitIntegerLiteral(const IntegerLiteral *S) {
     Env.setValue(*S, Env.getIntLiteralValue(S->getValue()));
-  }
-
-  // Untyped nullptr's aren't handled by NullToPointer casts, so they need to be
-  // handled separately.
-  void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *S) {
-    auto &NullPointerVal =
-        Env.getOrCreateNullPointerValue(S->getType()->getPointeeType());
-    Env.setValue(*S, NullPointerVal);
   }
 
   void VisitParenExpr(const ParenExpr *S) {

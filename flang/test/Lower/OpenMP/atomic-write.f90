@@ -12,11 +12,11 @@
 !CHECK:    %[[Z_REF:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}
 !CHECK:    %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {uniq_name = "_QFEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C44:.*]] = arith.constant 44 : i32
-!CHECK:    omp.atomic.write %[[X_DECL:.*]]#1 = %[[C44]]   hint(uncontended) memory_order(seq_cst) : !fir.ref<i32>, i32
+!CHECK:    omp.atomic.write %[[X_DECL:.*]]#0 = %[[C44]]   hint(uncontended) memory_order(seq_cst) : !fir.ref<i32>, i32
 !CHECK:    %[[C7:.*]] = arith.constant 7 : i32
 !CHECK:    %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
 !CHECK:    %[[SEVEN_Y_VAL:.*]] = arith.muli %[[C7]], %[[Y_VAL]] : i32
-!CHECK:    omp.atomic.write %[[X_DECL]]#1 = %[[SEVEN_Y_VAL]]   memory_order(relaxed) : !fir.ref<i32>, i32
+!CHECK:    omp.atomic.write %[[X_DECL]]#0 = %[[SEVEN_Y_VAL]]   memory_order(relaxed) : !fir.ref<i32>, i32
 !CHECK:    %[[C10:.*]] = arith.constant 10 : i32
 !CHECK:    %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK:    %[[TEN_X:.*]] = arith.muli %[[C10]], %[[X_VAL]] : i32
@@ -24,7 +24,7 @@
 !CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 !CHECK:    %[[Z_DIV_2:.*]] = arith.divsi %[[Z_VAL]], %[[C2]] : i32
 !CHECK:    %[[ADD_RES:.*]] = arith.addi %[[TEN_X]], %[[Z_DIV_2]] : i32
-!CHECK:    omp.atomic.write %[[Y_DECL]]#1 = %[[ADD_RES]]   hint(speculative) memory_order(release) : !fir.ref<i32>, i32
+!CHECK:    omp.atomic.write %[[Y_DECL]]#0 = %[[ADD_RES]]   hint(speculative) memory_order(release) : !fir.ref<i32>, i32
 
 program OmpAtomicWrite
     use omp_lib
@@ -66,7 +66,7 @@ end
 !CHECK:    %[[R2_REF:.*]] = fir.alloca f32 {bindc_name = "r2", uniq_name = "_QFatomic_write_typed_assignEr2"}
 !CHECK:    %[[R2_DECL:.*]]:2 = hlfir.declare %[[R2_REF]] {uniq_name = "_QFatomic_write_typed_assignEr2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:    %[[C0:.*]] = arith.constant 0.000000e+00 : f32
-!CHECK:    omp.atomic.write %[[R2_DECL]]#1 = %[[C0]]   : !fir.ref<f32>, f32
+!CHECK:    omp.atomic.write %[[R2_DECL]]#0 = %[[C0]]   : !fir.ref<f32>, f32
 
 subroutine atomic_write_typed_assign
   real :: r2
@@ -79,7 +79,7 @@ end subroutine
 !CHECK:    %[[L_DECL:.*]]:2 = hlfir.declare %[[L_REF]] {uniq_name = "_QFatomic_write_logicalEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 !CHECK:    %true = arith.constant true
 !CHECK:    %[[CVT:.*]] = fir.convert %true : (i1) -> !fir.logical<4>
-!CHECK:    omp.atomic.write %[[L_DECL]]#1 = %[[CVT]] : !fir.ref<!fir.logical<4>>, !fir.logical<4>
+!CHECK:    omp.atomic.write %[[L_DECL]]#0 = %[[CVT]] : !fir.ref<!fir.logical<4>>, !fir.logical<4>
 
 subroutine atomic_write_logical
   logical :: l

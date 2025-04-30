@@ -328,8 +328,8 @@ void TableSection::addTable(InputTable *table) {
   // Some inputs require that the indirect function table be assigned to table
   // number 0.
   if (ctx.legacyFunctionTable &&
-      isa<DefinedTable>(WasmSym::indirectFunctionTable) &&
-      cast<DefinedTable>(WasmSym::indirectFunctionTable)->table == table) {
+      isa<DefinedTable>(ctx.sym.indirectFunctionTable) &&
+      cast<DefinedTable>(ctx.sym.indirectFunctionTable)->table == table) {
     if (out.importSec->getNumImportedTables()) {
       // Alack!  Some other input imported a table, meaning that we are unable
       // to assign table number 0 to the indirect function table.
@@ -369,10 +369,14 @@ void MemorySection::writeBody() {
     flags |= WASM_LIMITS_FLAG_IS_SHARED;
   if (ctx.arg.is64.value_or(false))
     flags |= WASM_LIMITS_FLAG_IS_64;
+  if (ctx.arg.pageSize != WasmDefaultPageSize)
+    flags |= WASM_LIMITS_FLAG_HAS_PAGE_SIZE;
   writeUleb128(os, flags, "memory limits flags");
   writeUleb128(os, numMemoryPages, "initial pages");
   if (hasMax)
     writeUleb128(os, maxMemoryPages, "max pages");
+  if (ctx.arg.pageSize != WasmDefaultPageSize)
+    writeUleb128(os, llvm::Log2_64(ctx.arg.pageSize), "page size");
 }
 
 void TagSection::writeBody() {
@@ -404,8 +408,8 @@ void GlobalSection::assignIndexes() {
 }
 
 static void ensureIndirectFunctionTable() {
-  if (!WasmSym::indirectFunctionTable)
-    WasmSym::indirectFunctionTable =
+  if (!ctx.sym.indirectFunctionTable)
+    ctx.sym.indirectFunctionTable =
         symtab->resolveIndirectFunctionTable(/*required =*/true);
 }
 
@@ -439,10 +443,9 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
       // Get __memory_base
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (sym->isTLS())
-        writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "__tls_base");
+        writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
       else
-        writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
-                     "__memory_base");
+        writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "__memory_base");
 
       // Add the virtual address of the data symbol
       writeU8(os, opcode_ptr_const, "CONST");
@@ -452,7 +455,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
         continue;
       // Get __table_base
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-      writeUleb128(os, WasmSym::tableBase->getGlobalIndex(), "__table_base");
+      writeUleb128(os, ctx.sym.tableBase->getGlobalIndex(), "__table_base");
 
       // Add the table index to __table_base
       writeU8(os, opcode_ptr_const, "CONST");
@@ -499,13 +502,13 @@ void GlobalSection::writeBody() {
     if (ctx.arg.extendedConst && ctx.isPic) {
       if (auto *d = dyn_cast<DefinedData>(sym)) {
         if (!sym->isTLS()) {
-          globalIdx = WasmSym::memoryBase->getGlobalIndex();
+          globalIdx = ctx.sym.memoryBase->getGlobalIndex();
           offset = d->getVA();
           useExtendedConst = true;
         }
       } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
         if (!sym->isStub) {
-          globalIdx = WasmSym::tableBase->getGlobalIndex();
+          globalIdx = ctx.sym.tableBase->getGlobalIndex();
           offset = f->getTableIndex();
           useExtendedConst = true;
         }
@@ -559,14 +562,11 @@ void ExportSection::writeBody() {
     writeExport(os, export_);
 }
 
-bool StartSection::isNeeded() const {
-  return WasmSym::startFunction != nullptr;
-}
+bool StartSection::isNeeded() const { return ctx.sym.startFunction != nullptr; }
 
 void StartSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
-  writeUleb128(os, WasmSym::startFunction->getFunctionIndex(),
-               "function index");
+  writeUleb128(os, ctx.sym.startFunction->getFunctionIndex(), "function index");
 }
 
 void ElemSection::addEntry(FunctionSymbol *sym) {
@@ -582,9 +582,9 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
 void ElemSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
-  assert(WasmSym::indirectFunctionTable);
+  assert(ctx.sym.indirectFunctionTable);
   writeUleb128(os, 1, "segment count");
-  uint32_t tableNumber = WasmSym::indirectFunctionTable->getTableNumber();
+  uint32_t tableNumber = ctx.sym.indirectFunctionTable->getTableNumber();
   uint32_t flags = 0;
   if (tableNumber)
     flags |= WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER;
@@ -596,7 +596,7 @@ void ElemSection::writeBody() {
   initExpr.Extended = false;
   if (ctx.isPic) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Inst.Value.Global = WasmSym::tableBase->getGlobalIndex();
+    initExpr.Inst.Value.Global = ctx.sym.tableBase->getGlobalIndex();
   } else {
     bool is64 = ctx.arg.is64.value_or(false);
     initExpr = intConst(ctx.arg.tableBase, is64);

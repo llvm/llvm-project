@@ -75,6 +75,12 @@ private:
   unsigned RVPushStackSize = 0;
   unsigned RVPushRegs = 0;
 
+  /// Size of any opaque stack adjustment due to QCI Interrupt instructions.
+  unsigned QCIInterruptStackSize = 0;
+
+  /// Store Frame Indexes for Interrupt-Related CSR Spills.
+  SmallVector<int, 2> InterruptCSRFrameIndexes;
+
   int64_t StackProbeSize = 0;
 
   /// Does it probe the stack for a dynamic allocation?
@@ -109,7 +115,7 @@ public:
   }
 
   unsigned getReservedSpillsSize() const {
-    return LibCallStackSize + RVPushStackSize;
+    return LibCallStackSize + RVPushStackSize + QCIInterruptStackSize;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
@@ -136,13 +142,12 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
+  enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
+
+  PushPopKind getPushPopKind(const MachineFunction &MF) const;
+
   bool isPushable(const MachineFunction &MF) const {
-    // We cannot use fixed locations for the callee saved spill slots if the
-    // function uses a varargs save area.
-    // TODO: Use a separate placement for vararg registers to enable Zcmp.
-    return MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
-           !MF.getTarget().Options.DisableFramePointerElim(MF) &&
-           VarArgsSaveSize == 0;
+    return getPushPopKind(MF) != PushPopKind::None;
   }
 
   unsigned getRVPushRegs() const { return RVPushRegs; }
@@ -150,6 +155,58 @@ public:
 
   unsigned getRVPushStackSize() const { return RVPushStackSize; }
   void setRVPushStackSize(unsigned Size) { RVPushStackSize = Size; }
+
+  enum class InterruptStackKind {
+    None = 0,
+    QCINest,
+    QCINoNest,
+    SiFiveCLICPreemptible,
+    SiFiveCLICStackSwap,
+    SiFiveCLICPreemptibleStackSwap
+  };
+
+  InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;
+
+  bool useQCIInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::QCINest ||
+           Kind == InterruptStackKind::QCINoNest;
+  }
+
+  unsigned getQCIInterruptStackSize() const { return QCIInterruptStackSize; }
+  void setQCIInterruptStackSize(unsigned Size) { QCIInterruptStackSize = Size; }
+
+  bool useSiFiveInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
+           Kind == InterruptStackKind::SiFiveCLICStackSwap ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  bool isSiFivePreemptibleInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  bool isSiFiveStackSwapInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICStackSwap ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  void pushInterruptCSRFrameIndex(int FI) {
+    InterruptCSRFrameIndexes.push_back(FI);
+  }
+  int getInterruptCSRFrameIndex(size_t Idx) const {
+    return InterruptCSRFrameIndexes[Idx];
+  }
+
+  // Some Stack Management Variants automatically update FP in a frame-pointer
+  // convention compatible way - which means we don't need to manually update
+  // the FP, but we still need to emit the correct CFI information for
+  // calculating the CFA based on FP.
+  bool hasImplicitFPUpdates(const MachineFunction &MF) const;
 
   void initializeBaseYamlFields(const yaml::RISCVMachineFunctionInfo &YamlMFI);
 
