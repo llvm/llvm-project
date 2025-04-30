@@ -250,6 +250,27 @@ public:
     }
   }
 
+  bool isPSignOnLR(const MCInst &Inst) const override {
+    MCPhysReg SignReg = getSignedReg(Inst);
+    return SignReg != getNoRegister() && SignReg == AArch64::LR;
+  }
+
+  bool isPAuthOnLR(const MCInst &Inst) const override {
+    ErrorOr<MCPhysReg> AutReg = getAuthenticatedReg(Inst);
+    if (AutReg && *AutReg != getNoRegister() && *AutReg == AArch64::LR)
+      return true;
+    return false;
+  }
+
+  bool isPAuthAndRet(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::RETAA ||
+           Inst.getOpcode() == AArch64::RETAB ||
+           Inst.getOpcode() == AArch64::RETAASPPCi ||
+           Inst.getOpcode() == AArch64::RETABSPPCi ||
+           Inst.getOpcode() == AArch64::RETAASPPCr ||
+           Inst.getOpcode() == AArch64::RETABSPPCr;
+  }
+
   bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
     if (Reg == getNoRegister())
       return false;
@@ -903,30 +924,6 @@ public:
         return true;
     }
     return false;
-  }
-  bool isPAuth(MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::AUTIA ||
-           Inst.getOpcode() == AArch64::AUTIB ||
-           Inst.getOpcode() == AArch64::AUTIA1716 ||
-           Inst.getOpcode() == AArch64::AUTIB1716 ||
-           Inst.getOpcode() == AArch64::AUTIASP ||
-           Inst.getOpcode() == AArch64::AUTIBSP ||
-           Inst.getOpcode() == AArch64::AUTIAZ ||
-           Inst.getOpcode() == AArch64::AUTIBZ ||
-           Inst.getOpcode() == AArch64::AUTIZA ||
-           Inst.getOpcode() == AArch64::AUTIZB;
-  }
-  bool isPSign(MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::PACIA ||
-           Inst.getOpcode() == AArch64::PACIB ||
-           Inst.getOpcode() == AArch64::PACIA1716 ||
-           Inst.getOpcode() == AArch64::PACIB1716 ||
-           Inst.getOpcode() == AArch64::PACIASP ||
-           Inst.getOpcode() == AArch64::PACIBSP ||
-           Inst.getOpcode() == AArch64::PACIAZ ||
-           Inst.getOpcode() == AArch64::PACIBZ ||
-           Inst.getOpcode() == AArch64::PACIZA ||
-           Inst.getOpcode() == AArch64::PACIZB;
   }
 
   bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,

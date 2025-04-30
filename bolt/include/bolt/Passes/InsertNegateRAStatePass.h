@@ -30,7 +30,9 @@ public:
 
 private:
   /// Loops over all instructions and adds OpNegateRAState CFI
-  /// after any pointer signing or authenticating instructions.
+  /// after any pointer signing or authenticating instructions,
+  /// which operate on the LR, except fused ptrauth + ret instructions
+  /// (such as RETAA).
   /// Returns true, if any OpNegateRAState CFIs were added.
   bool addNegateRAStateAfterPacOrAuth(BinaryFunction &BF);
   /// Because states are tracked as MCAnnotations on individual instructions,
