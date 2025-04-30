@@ -7087,7 +7087,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
 
-uint32_t TypeSystemClang::GetIndexOfChildWithName(
+llvm::Expected<uint32_t> TypeSystemClang::GetIndexOfChildWithName(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     ExecutionContext *exe_ctx, bool omit_empty_base_classes) {
   if (type && !name.empty()) {
@@ -7276,7 +7276,8 @@ uint32_t TypeSystemClang::GetIndexOfChildWithName(
       break;
     }
   }
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 CompilerType
