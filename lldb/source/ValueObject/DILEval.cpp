@@ -18,6 +18,22 @@
 
 namespace lldb_private::dil {
 
+static lldb::ValueObjectSP
+ArrayToPointerConversion(lldb::ValueObjectSP valobj,
+                         std::shared_ptr<ExecutionContextScope> ctx) {
+  assert(valobj->IsArrayType() &&
+         "an argument to array-to-pointer conversion must be an array");
+
+  uint64_t addr = valobj->GetLoadAddress();
+  llvm::StringRef name = "result";
+  ExecutionContext exe_ctx;
+  ctx->CalculateExecutionContext(exe_ctx);
+  return ValueObject::CreateValueObjectFromAddress(
+      name, addr, exe_ctx,
+      valobj->GetCompilerType().GetArrayElementType(ctx.get()).GetPointerType(),
+      /* do_deref */ false);
+}
+
 static lldb::ValueObjectSP LookupStaticIdentifier(
     VariableList &variable_list, std::shared_ptr<StackFrame> exe_scope,
     llvm::StringRef name_ref, llvm::StringRef unqualified_name) {
@@ -214,6 +230,45 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
   return value_or_error;
 }
 
+static CompilerType GetBasicType(std::shared_ptr<ExecutionContextScope> ctx,
+                                 lldb::BasicType basic_type) {
+  static std::unordered_map<lldb::BasicType, CompilerType> basic_types;
+  auto type = basic_types.find(basic_type);
+  if (type != basic_types.end()) {
+    std::string type_name((type->second).GetTypeName().AsCString());
+    // Only return the found type if it's valid.
+    if (type_name != "<invalid>")
+      return type->second;
+  }
+
+  lldb::TargetSP target_sp = ctx->CalculateTarget();
+  if (target_sp) {
+    for (auto type_system_sp : target_sp->GetScratchTypeSystems())
+      if (auto compiler_type =
+              type_system_sp->GetBasicTypeFromAST(basic_type)) {
+        basic_types.insert({basic_type, compiler_type});
+        return compiler_type;
+      }
+  }
+  CompilerType empty_type;
+  return empty_type;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ScalarLiteralNode *node) {
+  CompilerType result_type = GetBasicType(m_exe_ctx_scope, node->GetType());
+  Scalar value = node->GetValue();
+
+  if (result_type.IsInteger() || result_type.IsNullPtrType() ||
+      result_type.IsPointerType()) {
+    llvm::APInt val = value.GetAPSInt();
+    return ValueObject::CreateValueObjectFromAPInt(m_target, val, result_type,
+                                                   "result");
+  }
+
+  return lldb::ValueObjectSP();
+}
+
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IdentifierNode *node) {
   lldb::DynamicValueType use_dynamic = m_default_dynamic;
@@ -270,6 +325,110 @@ Interpreter::Visit(const UnaryOpNode *node) {
   // Unsupported/invalid operation.
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
+}
+
+lldb::ValueObjectSP Interpreter::PointerAdd(lldb::ValueObjectSP lhs,
+                                            int64_t offset) {
+  uint64_t byte_size = 0;
+  if (auto temp = lhs->GetCompilerType().GetPointeeType().GetByteSize(
+          lhs->GetTargetSP().get()))
+    byte_size = *temp;
+  uintptr_t addr = lhs->GetValueAsUnsigned(0) + offset * byte_size;
+
+  llvm::StringRef name = "result";
+  ExecutionContext exe_ctx(m_target.get(), false);
+  return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                   lhs->GetCompilerType(),
+                                                   /* do_deref */ false);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ArraySubscriptNode *node) {
+  auto lhs_or_err = Evaluate(node->lhs());
+  if (!lhs_or_err) {
+    return lhs_or_err;
+  }
+  lldb::ValueObjectSP base = *lhs_or_err;
+  auto rhs_or_err = Evaluate(node->rhs());
+  if (!rhs_or_err) {
+    return rhs_or_err;
+  }
+  lldb::ValueObjectSP index = *rhs_or_err;
+
+  Status error;
+  if (base->GetCompilerType().IsReferenceType()) {
+    base = base->Dereference(error);
+    if (error.Fail())
+      return error.ToError();
+  }
+  if (index->GetCompilerType().IsReferenceType()) {
+    index = index->Dereference(error);
+    if (error.Fail())
+      return error.ToError();
+  }
+
+  auto index_type = index->GetCompilerType();
+  if (!index_type.IsIntegerOrUnscopedEnumerationType())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "array subscript is not an integer", node->GetLocation());
+
+  // Check to see if 'base' has a synthetic value; if so, try using that.
+  if (base->HasSyntheticValue()) {
+    lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
+    if (synthetic && synthetic != base) {
+      uint32_t num_children = synthetic->GetNumChildrenIgnoringErrors();
+      // Verify that the 'index' is not out-of-range for the declared type.
+      if (index->GetValueAsSigned(0) >= num_children) {
+        auto message =
+            llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
+                          index->GetValueAsSigned(0),
+                          base->GetTypeName().AsCString("<invalid type>"),
+                          base->GetName().AsCString());
+        return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                    node->GetLocation());
+      }
+
+      uint64_t child_idx = index->GetValueAsUnsigned(0);
+      if (static_cast<uint32_t>(child_idx) <
+          synthetic->GetNumChildrenIgnoringErrors()) {
+        lldb::ValueObjectSP child_valobj_sp =
+            synthetic->GetChildAtIndex(child_idx);
+        if (child_valobj_sp) {
+          return child_valobj_sp;
+        }
+      }
+    }
+  }
+
+  auto base_type = base->GetCompilerType();
+  if (!base_type.IsPointerType() && !base_type.IsArrayType())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "subscripted value is not an array or pointer",
+        node->GetLocation());
+  if (base_type.IsPointerToVoid())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "subscript of pointer to incomplete type 'void'",
+        node->GetLocation());
+
+  if (base_type.IsArrayType())
+    base = ArrayToPointerConversion(base, m_exe_ctx_scope);
+
+  CompilerType item_type = base->GetCompilerType().GetPointeeType();
+  lldb::addr_t base_addr = base->GetValueAsUnsigned(0);
+
+  llvm::StringRef name = "result";
+  ExecutionContext exe_ctx(m_target.get(), false);
+  // Create a pointer and add the index, i.e. "base + index".
+  lldb::ValueObjectSP value =
+      PointerAdd(ValueObject::CreateValueObjectFromAddress(
+                     name, base_addr, exe_ctx, item_type.GetPointerType(),
+                     /*do_deref=*/false),
+                 index->GetValueAsSigned(0));
+
+  lldb::ValueObjectSP val2 = value->Dereference(error);
+  if (error.Fail())
+    return error.ToError();
+  return val2;
 }
 
 } // namespace lldb_private::dil

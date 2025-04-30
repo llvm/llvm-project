@@ -84,12 +84,15 @@ private:
 
   ASTNodeUP ParseExpression();
   ASTNodeUP ParseUnaryExpression();
+  ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
+  ASTNodeUP ParseNumericLiteral();
+  ASTNodeUP ParseNumericConstant();
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 

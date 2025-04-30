@@ -18,8 +18,10 @@ namespace lldb_private::dil {
 
 /// The various types DIL AST nodes (used by the DIL parser).
 enum class NodeKind {
+  eArraySubscriptNode,
   eErrorNode,
   eIdentifierNode,
+  eScalarLiteralNode,
   eUnaryOpNode,
 };
 
@@ -71,6 +73,26 @@ public:
   }
 };
 
+class ScalarLiteralNode : public ASTNode {
+public:
+  ScalarLiteralNode(uint32_t location, lldb::BasicType type, Scalar value)
+      : ASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
+        m_value(value) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  lldb::BasicType GetType() const { return m_type; }
+  Scalar GetValue() const & { return m_value; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eScalarLiteralNode;
+  }
+
+private:
+  lldb::BasicType m_type;
+  Scalar m_value;
+};
+
 class IdentifierNode : public ASTNode {
 public:
   IdentifierNode(uint32_t location, std::string name)
@@ -108,6 +130,26 @@ private:
   ASTNodeUP m_operand;
 };
 
+class ArraySubscriptNode : public ASTNode {
+public:
+  ArraySubscriptNode(uint32_t location, ASTNodeUP lhs, ASTNodeUP rhs)
+      : ASTNode(location, NodeKind::eArraySubscriptNode), m_lhs(std::move(lhs)),
+        m_rhs(std::move(rhs)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode *lhs() const { return m_lhs.get(); }
+  ASTNode *rhs() const { return m_rhs.get(); }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eArraySubscriptNode;
+  }
+
+private:
+  ASTNodeUP m_lhs;
+  ASTNodeUP m_rhs;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -116,9 +158,13 @@ class Visitor {
 public:
   virtual ~Visitor() = default;
   virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ScalarLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const UnaryOpNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ArraySubscriptNode *node) = 0;
 };
 
 } // namespace lldb_private::dil
