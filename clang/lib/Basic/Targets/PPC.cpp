@@ -524,8 +524,8 @@ bool PPCTargetInfo::initFeatureMap(
       llvm::PPC::getPPCDefaultTargetFeatures(TheTriple,
                                              llvm::PPC::normalizeCPUName(CPU));
   if (FeaturesOpt.has_value())
-      Features = FeaturesOpt.value();
-  
+    Features = FeaturesOpt.value();
+
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))
     return false;
 

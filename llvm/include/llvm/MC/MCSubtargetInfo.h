@@ -48,12 +48,12 @@ struct BasicSubtargetFeatureKV {
     return StringRef(Key) < StringRef(Other.Key);
   }
   BasicSubtargetFeatureKV(const char *Key, unsigned Value,
-                         FeatureBitArray Implies)
+                          FeatureBitArray Implies)
       : Key(Key), Value(Value), Implies(Implies) {}
 };
 
 struct SubtargetFeatureKV : BasicSubtargetFeatureKV {
-  const char *Desc;                    ///< Help descriptor
+  const char *Desc; ///< Help descriptor
   SubtargetFeatureKV(const char *Key, const char *Desc, unsigned Value,
                      FeatureBitArray Implies)
       : BasicSubtargetFeatureKV(Key, Value, Implies), Desc(Desc) {}
@@ -63,8 +63,8 @@ struct SubtargetFeatureKV : BasicSubtargetFeatureKV {
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct BasicSubtargetSubTypeKV {
-  const char *Key;                      ///< K-V key string
-  FeatureBitArray Implies;              ///< K-V bit mask
+  const char *Key;         ///< K-V key string
+  FeatureBitArray Implies; ///< K-V bit mask
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const {
