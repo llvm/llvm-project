@@ -1068,18 +1068,14 @@ void SIFoldOperandsImpl::foldOperand(
     if (MovOp == AMDGPU::COPY)
       return;
 
-    // Check for common register subclass between destination (DestRC) and MOV
-    // result (ResRC). If exists, verify this common subclass is a superclass of
-    // (or equal to) the destination register class, otherwise folding is
-    // illegal.
-
+    // Fold if the destination register class of the MOV instruction (ResRC)
+    // is a superclass of (or equal to) the destination register class of the COPY (DestRC).
+    // If this condition fails, folding would be illegal.
     const MCInstrDesc &MovDesc = TII->get(MovOp);
     assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
     const TargetRegisterClass *ResRC =
         TRI->getRegClass(MovDesc.operands()[0].RegClass);
-    const TargetRegisterClass *CommonRC = TRI->getCommonSubClass(DestRC, ResRC);
-
-    if (!CommonRC || !DestRC->hasSuperClassEq(CommonRC))
+    if (!DestRC->hasSuperClassEq(ResRC))
       return;
 
     MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
