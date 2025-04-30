@@ -1749,6 +1749,16 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
                          "buffer resources and should've been expanded away");
       break;
     }
+    case AtomicRMWInst::FMaximum: {
+      report_fatal_error("atomic floating point fmaximum not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMinimum: {
+      report_fatal_error("atomic floating point fminimum not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
     case AtomicRMWInst::Nand:
       report_fatal_error("atomic nand not supported for buffer resources and "
                          "should've been expanded away");
