@@ -118,7 +118,7 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 std::string lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     GetDescription() {
   StreamString sstr;
-  sstr.Printf("`%s `%s%s%s%s%s%s%s", "Swift OptionSet summary provider",
+  sstr.Printf("`%s `%s%s%s%s%s%s%s", GetName().c_str(),
               Cascades() ? "" : " (not cascading)", " (may show children)",
               !DoesPrintValue(nullptr) ? " (hide value)" : "",
               IsOneLiner() ? " (one-line printout)" : "",
@@ -126,6 +126,11 @@ std::string lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "");
   return sstr.GetString().str();
+}
+
+std::string
+lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::GetName() {
+  return "Swift OptionSet summary provider";
 }
 
 bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::

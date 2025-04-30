@@ -28,7 +28,7 @@ using namespace lldb_private::formatters::swift;
 std::string lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
     GetDescription() {
   StreamString sstr;
-  sstr.Printf("`%s `%s%s%s%s%s%s%s", "Swift.Optional summary provider",
+  sstr.Printf("`%s `%s%s%s%s%s%s%s", GetName().c_str(),
               Cascades() ? "" : " (not cascading)", " (may show children)",
               !DoesPrintValue(nullptr) ? " (hide value)" : "",
               IsOneLiner() ? " (one-line printout)" : "",
@@ -36,6 +36,11 @@ std::string lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "");
   return sstr.GetString().str();
+}
+
+std::string
+lldb_private::formatters::swift::SwiftOptionalSummaryProvider::GetName() {
+  return "Swift.Optional summary provider";
 }
 
 /// If this ValueObject is an Optional<T> with the Some(T) case selected,
