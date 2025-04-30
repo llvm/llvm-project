@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/File/file.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/ctime.h"
 #include "test/UnitTest/Test.h"
