@@ -198,7 +198,7 @@ private:
 
     if (!Insert) {
       llvm::errs()
-          << "[WARNING] -insert is deprecated in favor of `-disable-insert`. "
+          << "warning: `-insert=0` is deprecated in favor of `-disable-insert`. "
              "The old flag was confusing since it suggested that inserts "
              "were disabled by default, when they were actually enabled. "
              "See https://github.com/llvm/llvm-project/issues/132983\n";
@@ -206,7 +206,7 @@ private:
 
     if (!Remove) {
       llvm::errs()
-          << "[WARNING] -remove is deprecated in favor of `-disable-remove`. "
+          << "warning: `-remove=0` is deprecated in favor of `-disable-remove`. "
              "The old flag was confusing since it suggested that removes "
              "were disabled by default, when they were actually enabled. "
              "See https://github.com/llvm/llvm-project/issues/132983\n";
