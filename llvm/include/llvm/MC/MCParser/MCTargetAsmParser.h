@@ -508,8 +508,10 @@ public:
   virtual bool equalIsAsmAssignment() { return true; };
   // Return whether this start of statement identifier is a label
   virtual bool isLabel(AsmToken &Token) { return true; };
-  // Return whether this parser accept star as start of statement
-  virtual bool starIsStartOfStatement() { return false; };
+  // Return whether this parser accepts the given token as start of statement.
+  virtual bool tokenIsStartOfStatement(AsmToken::TokenKind Token) {
+    return false;
+  }
 
   virtual const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
                                        MCContext &Ctx) {

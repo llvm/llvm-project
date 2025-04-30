@@ -49,7 +49,9 @@ class BPFAsmParser : public MCTargetAsmParser {
   bool equalIsAsmAssignment() override { return false; }
   // "*" is used for dereferencing memory that it will be the start of
   // statement.
-  bool starIsStartOfStatement() override { return true; }
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override {
+    return Token == AsmToken::Star;
+  }
 
 #define GET_ASSEMBLER_HEADER
 #include "BPFGenAsmMatcher.inc"
