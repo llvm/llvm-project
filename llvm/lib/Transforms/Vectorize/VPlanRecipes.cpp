@@ -1364,13 +1364,11 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
 
 bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  for (auto [Idx, V] : enumerate(operands())) {
-    if (V != Op)
-      continue;
-    if (!isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, Idx, nullptr))
-      return false;
-  }
-  return true;
+  return all_of(enumerate(operands()), [this, &Op](auto &&X) {
+    auto [Idx, V] = X;
+    return V != Op || isVectorIntrinsicWithScalarOpAtArg(getVectorIntrinsicID(),
+                                                         Idx, nullptr);
+  });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
