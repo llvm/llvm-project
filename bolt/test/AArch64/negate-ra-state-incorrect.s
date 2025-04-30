@@ -5,10 +5,14 @@
 # CHECK: BOLT-INFO: inconsistent RAStates in function foo
 
 # check that foo got Ignored, so it's not in the new .text section
-# llvm-objdump %t.exe -d -j .text > %t.exe.dump
+# RUN: llvm-objdump %t.exe.bolt -d -j .text > %t.exe.dump
 # RUN: not grep "<foo>:" %t.exe.dump
 
 
+# Why is this test incorrect?
+#   There is an extra .cfi_negate_ra_state in line ...
+#   Because of this, we will get to the autiasp (hint #29)
+#   in a (seemingly) unsigned state. That is incorrect.
   .text
   .globl  foo
   .p2align        2
@@ -37,5 +41,3 @@ foo:
   .type _start, %function
 _start:
   b foo
-
-.reloc 0, R_AARCH64_NONE
