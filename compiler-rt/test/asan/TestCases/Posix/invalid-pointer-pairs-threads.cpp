@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     char *parent_pointer = &local;
 
     // B: ERROR: AddressSanitizer: invalid-pointer-pair
-    // B: #{{[0-9]+ .*}} in {{main|.main}} {{.*}}invalid-pointer-pairs-threads.cpp:[[@LINE+1]]
+    // B: #{{[0-9]+ .*}} in {{\.?main}} {{.*}}invalid-pointer-pairs-threads.cpp:[[@LINE+1]]
     unsigned r = parent_pointer - pointers[0];
   }
 

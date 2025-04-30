@@ -50,7 +50,7 @@ static void LargeFunction(int *x, int zero) {
 int main(int argc, char **argv) {
   int *x = new int[100];
   LargeFunction(x, argc - 1);
-  // CHECK: {{    #[1-2] 0x.* in (main|.main) .*large_func_test.cpp:}}[[@LINE-1]]
+  // CHECK: {{    #[1-2] 0x.* in \.?main .*large_func_test.cpp:}}[[@LINE-1]]
   // CHECK: {{0x.* is located 12 bytes after 400-byte region}}
   // CHECK: {{allocated by thread T0 here:}}
   // CHECK-Linux:  {{    #0 0x.* in operator new}}
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   // AIX currently have some issue while symbolizing operator new.
   // FIXME: fix this symbolizer issue on aix.
   // CHECK-AIX:    {{    #0 0x.* }}
-  // CHECK-NEXT:   {{    #1 0x.* in (main|.main) .*large_func_test.cpp:}}[[@LINE-13]]
+  // CHECK-NEXT:   {{    #1 0x.* in \.main? .*large_func_test.cpp:}}[[@LINE-13]]
   int y = x[argc];
   delete[] x;
   return y;

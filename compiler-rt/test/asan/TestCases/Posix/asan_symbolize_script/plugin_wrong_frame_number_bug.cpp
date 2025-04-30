@@ -50,5 +50,5 @@ int main(int argc, char** argv) {
 // CHECK: AddressSanitizer: heap-use-after-free
 // CHECK-NEXT: WRITE of size
 // CHECK-NEXT: #0 0x{{[0-9a-fA-F]+}}
-// CHECK-NEXT: #1 0x{{[0-9a-fA-F]+}} in {{do_access|.do_access}}
-// CHECK-NEXT: #2 0x{{[0-9a-fA-F]+}} in {{main|.main}}
+// CHECK-NEXT: #1 0x{{[0-9a-fA-F]+}} in do_access
+// CHECK-NEXT: #2 0x{{[0-9a-fA-F]+}} in main

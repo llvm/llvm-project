@@ -24,6 +24,6 @@ int main() {
 
   // TWO: previously allocated by thread T{{.*}} here:
   // TWO-NEXT: #0 0x{{.*}}
-  // TWO-NEXT: #1 0x{{.*}} in {{main|.main}} {{.*}}malloc_context_size.cpp
+  // TWO-NEXT: #1 0x{{.*}} in {{\.?main}} {{.*}}malloc_context_size.cpp
   // TWO: SUMMARY: AddressSanitizer: heap-use-after-free
 }

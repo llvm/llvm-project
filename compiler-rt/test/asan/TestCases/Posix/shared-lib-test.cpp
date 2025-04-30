@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
   // CHECK: {{.*ERROR: AddressSanitizer: global-buffer-overflow}}
   // CHECK: {{READ of size 4 at 0x.* thread T0}}
   // CHECK: {{    #0 0x.*}}
-  // CHECK: {{    #1 0x.* in (main|.main) .*shared-lib-test.cpp:}}[[@LINE-4]]
+  // CHECK: {{    #1 0x.* in \.?main .*shared-lib-test.cpp:}}[[@LINE-4]]
   return 0;
 }
 #else  // SHARED_LIB

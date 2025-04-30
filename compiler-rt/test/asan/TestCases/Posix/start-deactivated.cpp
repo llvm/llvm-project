@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
   // CHECK: READ of size 1
   // CHECK: {{#0 .* in do_another_bad_thing}}
   // CHECK: is located 5 bytes after 100-byte region
-  // CHECK: in {{do_another_bad_thing|.do_another_bad_thing}}
+  // CHECK: in do_another_bad_thing
 
   return 0;
 }

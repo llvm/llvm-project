@@ -9,10 +9,10 @@
 #  include <ptrauth.h>
 #endif
 
-+ // AIX reports illegal instruction error instead of SEGV while accesses address 0x4.
-    + // UNSUPPORTED: aix
+// AIX reports illegal instruction error instead of SEGV while accesses address 0x4.
+// UNSUPPORTED: aix
 
-    typedef void void_f();
+typedef void void_f();
 int main() {
   void_f *func = (void_f *)0x4;
 #if __has_feature(ptrauth_calls)
