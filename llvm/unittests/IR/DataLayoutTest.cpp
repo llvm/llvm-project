@@ -555,7 +555,7 @@ TEST(DataLayout, GetAddressSizeInBits) {
       {"p:16:32", 16, 16, 16},
       {"p0:32:64", 32, 32, 32},
       {"p1:16:32:32:10", 64, 10, 64},
-      {"p1:31:32:64:10:20-p2:17:16:16:16:15", 64, 20, 15},
+      {"p1:31:32:64:10:20-p2:17:16:16:15:15", 64, 20, 15},
   };
   for (auto [Layout, V0, V1, V2] : Cases) {
     DataLayout DL = cantFail(DataLayout::parse(Layout));
@@ -571,8 +571,8 @@ TEST(DataLayout, GetAddressSize) {
       {"", 8, 8, 8},
       {"p:16:32", 2, 2, 2},
       {"p0:27:64", 4, 4, 4},
-      {"p1:19:32:64:19:5", 8, 1, 8},
-      {"p1:33:32:64:33:23-p2:21:8:16:21:13", 8, 3, 2},
+      {"p1:19:32:64:2:5", 8, 1, 8},
+      {"p1:33:32:64:10:23-p2:21:8:16:10:13", 8, 3, 2},
   };
   for (auto [Layout, V0, V1, V2] : Cases) {
     DataLayout DL = cantFail(DataLayout::parse(Layout));
