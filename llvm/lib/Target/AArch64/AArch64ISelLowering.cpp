@@ -1001,6 +1001,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f64, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::bf16, LibCall);
   }
 
   if (Subtarget->hasLSE128()) {
@@ -27991,7 +28001,9 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // If LSFE available, use atomic FP instructions in preference to expansion
   if (Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
                                AI->getOperation() == AtomicRMWInst::FMax ||
-                               AI->getOperation() == AtomicRMWInst::FMin))
+                               AI->getOperation() == AtomicRMWInst::FMin ||
+                               AI->getOperation() == AtomicRMWInst::FMaximum ||
+                               AI->getOperation() == AtomicRMWInst::FMinimum))
     return AtomicExpansionKind::None;
 
   // Nand is not supported in LSE.
