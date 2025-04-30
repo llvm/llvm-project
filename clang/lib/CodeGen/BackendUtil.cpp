@@ -103,6 +103,21 @@ static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
     cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
+// Experiment to mark cold functions as optsize/minsize/optnone.
+// TODO: remove once this is exposed as a proper driver flag.
+static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
+  "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
+  cl::desc(
+      "Function attribute to apply to cold functions as determined by PGO"),
+  cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
+                        "Default (no attribute)"),
+             clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
+                        "Mark cold functions with optsize."),
+             clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
+                        "Mark cold functions with minsize."),
+             clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
+                        "Mark cold functions with optnone.")));
+
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 namespace clang {
