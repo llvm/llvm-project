@@ -171,12 +171,14 @@ define { <2 x half>, <2 x half> } @add_select_multi_use_lhs_fabs_fabs_v2f16(<2 x
 ; VI-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; VI-NEXT:    v_cndmask_b32_sdwa v1, v3, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v6, vcc
 ; VI-NEXT:    v_add_f16_sdwa v1, v1, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    v_add_f16_e32 v0, v0, v5
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-NEXT:    v_add_f16_sdwa v1, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_add_f16_sdwa v1, v6, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    v_add_f16_e32 v2, v2, v4
 ; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -442,12 +444,14 @@ define { <2 x half>, <2 x half> } @add_select_multi_use_rhs_fabs_fabs_v2f16(<2 x
 ; VI-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; VI-NEXT:    v_cndmask_b32_sdwa v1, v3, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_cndmask_b32_e32 v1, v6, v2, vcc
 ; VI-NEXT:    v_add_f16_sdwa v1, v1, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    v_add_f16_e32 v0, v0, v4
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-NEXT:    v_add_f16_sdwa v1, v3, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_add_f16_sdwa v1, v6, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    v_add_f16_e32 v2, v3, v5
 ; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]

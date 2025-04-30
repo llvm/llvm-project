@@ -350,38 +350,38 @@ define amdgpu_kernel void @half8_inselt(ptr addrspace(1) %out, <8 x half> %vec, 
 ; GCN-NEXT:    v_mov_b32_e32 v2, s3
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    s_lshr_b32 s3, s2, 16
-; GCN-NEXT:    s_cmp_lg_u32 s8, 5
-; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc
-; GCN-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[6:7]
+; GCN-NEXT:    s_cmp_lg_u32 s8, 5
 ; GCN-NEXT:    v_or_b32_sdwa v3, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    s_cmp_lg_u32 s8, 4
-; GCN-NEXT:    v_cndmask_b32_sdwa v1, v0, v1, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
-; GCN-NEXT:    s_lshr_b32 s6, s1, 16
-; GCN-NEXT:    s_cmp_lg_u32 s8, 3
+; GCN-NEXT:    s_cmp_lg_u32 s8, 4
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_lshr_b32 s2, s1, 16
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc
-; GCN-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[2:3]
+; GCN-NEXT:    s_cmp_lg_u32 s8, 3
 ; GCN-NEXT:    v_or_b32_sdwa v2, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s8, 2
-; GCN-NEXT:    v_cndmask_b32_sdwa v1, v0, v1, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v4, s1
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    s_lshr_b32 s1, s0, 16
-; GCN-NEXT:    s_cmp_lg_u32 s8, 1
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
-; GCN-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[2:3]
+; GCN-NEXT:    s_cmp_lg_u32 s8, 1
 ; GCN-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GCN-NEXT:    v_mov_b32_e32 v4, s1
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s8, 0
-; GCN-NEXT:    v_cndmask_b32_sdwa v4, v0, v4, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v5, s0
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; GCN-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GCN-NEXT:    v_mov_b32_e32 v4, s4

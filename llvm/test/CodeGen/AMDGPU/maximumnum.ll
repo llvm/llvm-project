@@ -211,7 +211,8 @@ define bfloat @v_maximumnum_bf16(bfloat %x, bfloat %y) {
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
 ; GFX8-NEXT:    v_cmp_gt_f32_e32 vcc, v3, v2
-; GFX8-NEXT:    v_cndmask_b32_sdwa v2, v1, v0, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v1, v0, vcc
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX8-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; GFX8-NEXT:    v_bfe_u32 v3, v2, 16, 1
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, v3, v2
@@ -242,7 +243,8 @@ define bfloat @v_maximumnum_bf16(bfloat %x, bfloat %y) {
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
 ; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, v2, v3
-; GFX9-NEXT:    v_cndmask_b32_sdwa v2, v1, v0, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v1, v0, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX9-NEXT:    v_bfe_u32 v3, v2, 16, 1
 ; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
