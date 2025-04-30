@@ -2,8 +2,6 @@
 
 ; REQUIRES: asserts
 
-target datalayout = "A5"
-
 ; Verify we are properly adding cost of the -amdgpu-inline-arg-alloca-cost to the threshold.
 
 define void @local_access_only(ptr addrspace(5) %p, i32 %idx) {

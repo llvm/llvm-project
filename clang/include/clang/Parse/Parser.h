@@ -104,6 +104,51 @@ enum class ObjCTypeQual {
 /// TypeCastState - State whether an expression is or may be a type cast.
 enum class TypeCastState { NotTypeCast = 0, MaybeTypeCast, IsTypeCast };
 
+/// Control what ParseCastExpression will parse.
+enum class CastParseKind { AnyCastExpr = 0, UnaryExprOnly, PrimaryExprOnly };
+
+/// ParenParseOption - Control what ParseParenExpression will parse.
+enum class ParenParseOption {
+  SimpleExpr,      // Only parse '(' expression ')'
+  FoldExpr,        // Also allow fold-expression <anything>
+  CompoundStmt,    // Also allow '(' compound-statement ')'
+  CompoundLiteral, // Also allow '(' type-name ')' '{' ... '}'
+  CastExpr         // Also allow '(' type-name ')' <anything>
+};
+
+/// Describes the behavior that should be taken for an __if_exists
+/// block.
+enum class IfExistsBehavior {
+  /// Parse the block; this code is always used.
+  Parse,
+  /// Skip the block entirely; this code is never used.
+  Skip,
+  /// Parse the block as a dependent block, which may be used in
+  /// some template instantiations but not others.
+  Dependent
+};
+
+/// Specifies the context in which type-id/expression
+/// disambiguation will occur.
+enum class TentativeCXXTypeIdContext {
+  InParens,
+  Unambiguous,
+  AsTemplateArgument,
+  InTrailingReturnType,
+  AsGenericSelectionArgument,
+};
+
+/// The kind of attribute specifier we have found.
+enum class CXX11AttributeKind {
+  /// This is not an attribute specifier.
+  NotAttributeSpecifier,
+  /// This should be treated as an attribute-specifier.
+  AttributeSpecifier,
+  /// The next tokens are '[[', but this is not an attribute-specifier. This
+  /// is ill-formed by C++11 [dcl.attr.grammar]p6.
+  InvalidAttributeSpecifier
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -1888,14 +1933,7 @@ private:
 
   ExprResult ParseExpressionWithLeadingExtension(SourceLocation ExtLoc);
 
-  ExprResult ParseRHSOfBinaryExpression(ExprResult LHS,
-                                        prec::Level MinPrec);
-  /// Control what ParseCastExpression will parse.
-  enum CastParseKind {
-    AnyCastExpr = 0,
-    UnaryExprOnly,
-    PrimaryExprOnly
-  };
+  ExprResult ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec);
 
   bool isRevertibleTypeTrait(const IdentifierInfo *Id,
                              clang::tok::TokenKind *Kind = nullptr);
@@ -1955,14 +1993,6 @@ private:
   /// used for misc language extensions.
   bool ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs);
 
-  /// ParenParseOption - Control what ParseParenExpression will parse.
-  enum ParenParseOption {
-    SimpleExpr,      // Only parse '(' expression ')'
-    FoldExpr,        // Also allow fold-expression <anything>
-    CompoundStmt,    // Also allow '(' compound-statement ')'
-    CompoundLiteral, // Also allow '(' type-name ')' '{' ... '}'
-    CastExpr         // Also allow '(' type-name ')' <anything>
-  };
   ExprResult ParseParenExpression(ParenParseOption &ExprType,
                                         bool stopIfCastExpr,
                                         bool isTypeCast,
@@ -2227,18 +2257,6 @@ private:
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs);
-
-  /// Describes the behavior that should be taken for an __if_exists
-  /// block.
-  enum IfExistsBehavior {
-    /// Parse the block; this code is always used.
-    IEB_Parse,
-    /// Skip the block entirely; this code is never used.
-    IEB_Skip,
-    /// Parse the block as a dependent block, which may be used in
-    /// some template instantiations but not others.
-    IEB_Dependent
-  };
 
   /// Describes the condition of a Microsoft __if_exists or
   /// __if_not_exists block.
@@ -2631,22 +2649,12 @@ private:
       DeclSpec::FriendSpecified IsFriend = DeclSpec::FriendSpecified::No,
       const ParsedTemplateInfo *TemplateInfo = nullptr);
 
-  /// Specifies the context in which type-id/expression
-  /// disambiguation will occur.
-  enum TentativeCXXTypeIdContext {
-    TypeIdInParens,
-    TypeIdUnambiguous,
-    TypeIdAsTemplateArgument,
-    TypeIdInTrailingReturnType,
-    TypeIdAsGenericSelectionArgument,
-  };
-
   /// isTypeIdInParens - Assumes that a '(' was parsed and now we want to know
   /// whether the parens contain an expression or a type-id.
   /// Returns true for a type-id and false for an expression.
   bool isTypeIdInParens(bool &isAmbiguous) {
     if (getLangOpts().CPlusPlus)
-      return isCXXTypeId(TypeIdInParens, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::InParens, isAmbiguous);
     isAmbiguous = false;
     return isTypeSpecifierQualifier();
   }
@@ -2665,7 +2673,8 @@ private:
   bool isTypeIdForGenericSelection() {
     if (getLangOpts().CPlusPlus) {
       bool isAmbiguous;
-      return isCXXTypeId(TypeIdAsGenericSelectionArgument, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::AsGenericSelectionArgument,
+                         isAmbiguous);
     }
     return isTypeSpecifierQualifier();
   }
@@ -2676,7 +2685,7 @@ private:
   bool isTypeIdUnambiguously() {
     if (getLangOpts().CPlusPlus) {
       bool isAmbiguous;
-      return isCXXTypeId(TypeIdUnambiguous, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous, isAmbiguous);
     }
     return isTypeSpecifierQualifier();
   }
@@ -2823,7 +2832,8 @@ private:
   bool isAllowedCXX11AttributeSpecifier(bool Disambiguate = false,
                                         bool OuterMightBeMessageSend = false) {
     return (Tok.isRegularKeywordAttribute() ||
-            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend));
+            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend) !=
+                CXX11AttributeKind::NotAttributeSpecifier);
   }
 
   // Check for the start of an attribute-specifier-seq in a context where an
@@ -3282,16 +3292,6 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ 7: Declarations [dcl.dcl]
 
-  /// The kind of attribute specifier we have found.
-  enum CXX11AttributeKind {
-    /// This is not an attribute specifier.
-    CAK_NotAttributeSpecifier,
-    /// This should be treated as an attribute-specifier.
-    CAK_AttributeSpecifier,
-    /// The next tokens are '[[', but this is not an attribute-specifier. This
-    /// is ill-formed by C++11 [dcl.attr.grammar]p6.
-    CAK_InvalidAttributeSpecifier
-  };
   CXX11AttributeKind
   isCXX11AttributeSpecifier(bool Disambiguate = false,
                             bool OuterMightBeMessageSend = false);

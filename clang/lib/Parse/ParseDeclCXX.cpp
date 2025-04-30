@@ -5097,7 +5097,7 @@ void Parser::DiagnoseAndSkipCXX11Attributes() {
 SourceLocation Parser::SkipCXX11Attributes() {
   SourceLocation EndLoc;
 
-  if (!isCXX11AttributeSpecifier())
+  if (isCXX11AttributeSpecifier() == CXX11AttributeKind::NotAttributeSpecifier)
     return EndLoc;
 
   do {
@@ -5119,7 +5119,8 @@ SourceLocation Parser::SkipCXX11Attributes() {
         T.skipToEnd();
       EndLoc = T.getCloseLocation();
     }
-  } while (isCXX11AttributeSpecifier());
+  } while (isCXX11AttributeSpecifier() !=
+           CXX11AttributeKind::NotAttributeSpecifier);
 
   return EndLoc;
 }
@@ -5289,17 +5290,17 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the declarations below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
         << Result.IsIfExists;
     // Fall through to skip.
     [[fallthrough]];
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }
