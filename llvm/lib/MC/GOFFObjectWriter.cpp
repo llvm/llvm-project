@@ -258,7 +258,7 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-    const GOFF::EDAttr &EDAttr, const GOFF::PRAttr &Attr)
+             const GOFF::EDAttr &EDAttr, const GOFF::PRAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
