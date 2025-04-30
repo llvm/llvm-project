@@ -55,6 +55,7 @@
 TOK(invalid, "invalid identifier")
 TOK(end_of_stream, "end of stream")
 TOK(int_literal, "integer literal")
+TOK(float_literal, "float literal")
 
 // Register Tokens:
 TOK(bReg, "b register")
