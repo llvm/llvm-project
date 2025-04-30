@@ -3,6 +3,10 @@
 // RUN:     -ftime-report %s -o /dev/null 2>&1 | \
 // RUN:     FileCheck %s --check-prefixes=TIME,NPM
 // RUN: %clang_cc1 -emit-obj -O1 \
+// RUN:     -ftime-report %s -o /dev/null \
+// RUN:     -mllvm -info-output-file=%t
+// RUN: cat %t | FileCheck %s --check-prefixes=TIME,NPM
+// RUN: %clang_cc1 -emit-obj -O1 \
 // RUN:     -ftime-report=per-pass %s -o /dev/null 2>&1 | \
 // RUN:     FileCheck %s --check-prefixes=TIME,NPM
 // RUN: %clang_cc1 -emit-obj -O1 \
@@ -11,6 +15,10 @@
 // RUN: %clang_cc1 -emit-obj -O1 \
 // RUN:     -ftime-report-json %s -o /dev/null 2>&1 | \
 // RUN:     FileCheck %s --check-prefixes=JSON
+// RUN: %clang_cc1 -emit-obj -O1 \
+// RUN:     -ftime-report-json %s -o /dev/null \
+// RUN:     -mllvm -info-output-file=%t
+// RUN: cat %t | FileCheck %s --check-prefixes=JSON
 
 // TIME: Pass execution timing report
 // TIME: Total Execution Time:
