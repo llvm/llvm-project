@@ -5381,7 +5381,7 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
       // Create the Root Signature
       auto *SignatureDecl = HLSLRootSignatureDecl::Create(
-          Actions.getASTContext(), /*FIXME?*/ Actions.CurContext,
+          Actions.getASTContext(), /*DeclContext=*/Actions.CurContext,
           RootSignatureLoc, DeclIdent, RootElements);
       SignatureDecl->setImplicit();
       Actions.PushOnScopeChains(SignatureDecl, getCurScope());
