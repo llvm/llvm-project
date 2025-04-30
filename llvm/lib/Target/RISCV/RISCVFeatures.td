@@ -1431,7 +1431,7 @@ def HasVendorXqciio
 def FeatureVendorXqcilb
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Long Branch Extension",
                                  [FeatureStdExtZca]>;
-def HasVendorXqcilb 
+def HasVendorXqcilb
     : Predicate<"Subtarget->hasVendorXqcilb()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilb),
                          "'Xqcilb' (Qualcomm uC Long Branch Extension)">;

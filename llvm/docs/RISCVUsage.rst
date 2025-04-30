@@ -440,7 +440,7 @@ The current vendor extensions supported are:
   LLVM implements `version 0.1 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.1.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
 ``experimental-Xqcia``
-  LLVM implements `version 0.7 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.10.0>`__ by Qualcomm. These instructions are only available for riscv32.
+  LLVM implements `version 0.6 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.10.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
 ``experimental-Xqciac``
   LLVM implements `version 0.3 of the Qualcomm uC Load-Store Address Calculation extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.10.0>`__ by Qualcomm. These instructions are only available for riscv32.

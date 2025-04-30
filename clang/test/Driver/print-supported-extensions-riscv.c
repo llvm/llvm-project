@@ -200,7 +200,7 @@
 // CHECK-NEXT:     ssctr                1.0       'Ssctr' (Control Transfer Records Supervisor Level)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-NEXT:     xqccmp               0.1       'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)
-// CHECK-NEXT:     xqcia                0.7       'Xqcia' (Qualcomm uC Arithmetic Extension)
+// CHECK-NEXT:     xqcia                0.6       'Xqcia' (Qualcomm uC Arithmetic Extension)
 // CHECK-NEXT:     xqciac               0.3       'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
 // CHECK-NEXT:     xqcibi               0.2       'Xqcibi' (Qualcomm uC Branch Immediate Extension)
 // CHECK-NEXT:     xqcibm               0.7       'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
