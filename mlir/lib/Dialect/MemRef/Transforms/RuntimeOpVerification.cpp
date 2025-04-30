@@ -426,10 +426,13 @@ void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     AssumeAlignmentOp::attachInterface<AssumeAlignmentOpInterface>(*ctx);
+    AtomicRMWOp::attachInterface<LoadStoreOpInterface<AtomicRMWOp>>(*ctx);
     CastOp::attachInterface<CastOpInterface>(*ctx);
     CopyOp::attachInterface<CopyOpInterface>(*ctx);
     DimOp::attachInterface<DimOpInterface>(*ctx);
     ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
+    GenericAtomicRMWOp::attachInterface<
+        LoadStoreOpInterface<GenericAtomicRMWOp>>(*ctx);
     LoadOp::attachInterface<LoadStoreOpInterface<LoadOp>>(*ctx);
     ReinterpretCastOp::attachInterface<ReinterpretCastOpInterface>(*ctx);
     StoreOp::attachInterface<LoadStoreOpInterface<StoreOp>>(*ctx);
