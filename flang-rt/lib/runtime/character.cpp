@@ -299,9 +299,8 @@ inline RT_API_ATTRS std::size_t Index(const CHAR *x, std::size_t xLen,
     // We can use simple forward search.
     CHAR ch{want[0]};
     if constexpr (std::is_same_v<CHAR, char>) {
-      auto pos{reinterpret_cast<const CHAR *>(
-          Fortran::runtime::memchr(x, ch, xLen))};
-      if (pos) {
+      if (auto pos{reinterpret_cast<const CHAR *>(
+              Fortran::runtime::memchr(x, ch, xLen))}) {
         return pos - x + 1;
       }
     } else {
