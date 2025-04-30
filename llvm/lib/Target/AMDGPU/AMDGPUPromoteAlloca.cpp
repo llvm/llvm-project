@@ -200,7 +200,12 @@ unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
     return 128;
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  unsigned MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
+  // Temporaily check both the attribute and the subtarget feature, until the
+  // latter is removed.
+  bool IsDynamicVGPR = AMDGPU::hasDynamicVGPR(F) || ST.isDynamicVGPREnabled();
+
+  unsigned MaxVGPRs =
+      ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first, IsDynamicVGPR);
 
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
