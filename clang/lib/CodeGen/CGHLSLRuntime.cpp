@@ -623,6 +623,17 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   }
 }
 
+void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
+                                              llvm::GlobalVariable *GV) {
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>()) {
+    LLVMContext &Ctx = GV->getContext();
+    IRBuilder<> B(GV->getContext());
+    MDNode *Val = MDNode::get(
+        Ctx, {ConstantAsMetadata::get(B.getInt32(Attr->getBuiltIn()))});
+    GV->addMetadata("spv.builtin", *Val);
+  }
+}
+
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
   if (!CGM.shouldEmitConvergenceTokens())
     return nullptr;
