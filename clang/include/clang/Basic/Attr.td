@@ -5024,3 +5024,9 @@ def OpenACCRoutineDecl :InheritableAttr {
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
   }];
 }
+
+def NonString : InheritableAttr {
+  let Spellings = [GCC<"nonstring">];
+  let Subjects = SubjectList<[Var, Field]>;
+  let Documentation = [NonStringDocs];
+}

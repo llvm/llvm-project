@@ -171,6 +171,23 @@ C Language Changes
   ``-Wenum-conversion`` and ``-Wimplicit-int-enum-cast``. This conversion is an
   int-to-enum conversion because the enumeration on the right-hand side is
   promoted to ``int`` before the assignment.
+- Added ``-Wunterminated-string-initialization``, grouped under ``-Wextra``,
+  which diagnoses an initialization from a string literal where only the null
+  terminator cannot be stored. e.g.,
+
+  .. code-block:: c
+
+
+    char buf1[3] = "foo"; // -Wunterminated-string-initialization
+    char buf2[3] = "flarp"; // -Wexcess-initializers
+
+  This diagnostic can be suppressed by adding the new ``nonstring`` attribute
+  to the field or variable being initialized. #GH137705
+- Added ``-Wc++-unterminated-string-initialization``, grouped under
+  ``-Wc++-compat``, which also diagnoses the same cases as
+  ``-Wunterminated-string-initialization``. However, this diagnostic is not
+  silenced by the ``nonstring`` attribute as these initializations are always
+  incompatible with C++.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
