@@ -10,8 +10,6 @@
 
 #define __CLC_BODY <async_work_group_strided_copy.inc>
 #include <clc/integer/gentype.inc>
-#undef __CLC_BODY
 
 #define __CLC_BODY <async_work_group_strided_copy.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_BODY
