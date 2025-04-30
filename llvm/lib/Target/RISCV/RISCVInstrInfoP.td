@@ -18,12 +18,6 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def RVPGPRPairRV32 : RegisterOperand<GPRPair> {
-  let ParserMatchClass = GPRPairRV32Operand;
-  let EncoderMethod = "getRVPGPRPair";
-  let DecoderMethod = "decodeRVPGPRPair";
-}
-
 def simm10 : RISCVSImmLeafOp<10>;
 
 //===----------------------------------------------------------------------===//
@@ -38,20 +32,6 @@ class RVPUnaryImm9<bits<7> funct7, string opcodestr>
 
   let Inst{31-25} = funct7;
   let Inst{24-15} = simm10;
-}
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm9Rdp<bits<7> funct7, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs RVPGPRPairRV32:$rdp),
-                  (ins simm10:$simm10),
-                  opcodestr, "$rdp, $simm10"> {
-  bits<10> simm10;
-  bits<4> rdp;
-
-  let Inst{31-25} = funct7;
-  let Inst{24-15} = simm10;
-  let Inst{11-8}  = rdp;
-  let Inst{7}     = 0b0;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
