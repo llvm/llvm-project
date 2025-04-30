@@ -5977,7 +5977,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // We turn strict aliasing off by default if we're Windows MSVC since MSVC
   // doesn't do any TBAA.
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
-                    options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
+                    options::OPT_fno_strict_aliasing,
+                    !IsWindowsMSVC && !IsUEFI))
     CmdArgs.push_back("-relaxed-aliasing");
   if (Args.hasFlag(options::OPT_fno_pointer_tbaa, options::OPT_fpointer_tbaa,
                    false))

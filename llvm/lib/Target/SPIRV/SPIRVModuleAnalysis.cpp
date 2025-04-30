@@ -2019,9 +2019,7 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
     if (!MF)
       continue;
     for (auto &MBB : *MF) {
-      for (MachineInstr &MI : MBB) {
-        if (MI.getOpcode() != TargetOpcode::PHI)
-          continue;
+      for (MachineInstr &MI : MBB.phis()) {
         MI.setDesc(TII.get(SPIRV::OpPhi));
         Register ResTypeReg = GR->getSPIRVTypeID(
             GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF));

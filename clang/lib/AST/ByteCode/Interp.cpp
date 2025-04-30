@@ -1375,6 +1375,9 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
 }
 
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
+    return false;
+
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
     const SourceInfo &E = S.Current->getSource(OpPC);

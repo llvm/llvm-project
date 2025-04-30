@@ -449,6 +449,35 @@ private:
     return true;
   }
 
+  // Recursively perform a bottom-up search to determine the maximum nesting
+  // depth, starting from a specific operation and continuing up to the function
+  // or module scope. Tosa nesting_depth starts at 0 and increments by one each
+  // time a new nested `region` is encountered.
+  static void getMaxNestedDepth(Operation *op, int32_t &depth) {
+    if (isa<mlir::func::FuncOp>(op) || isa<ModuleOp>(op))
+      return;
+
+    op = op->getParentOp();
+    if (!op)
+      return;
+
+    depth++;
+    getMaxNestedDepth(op, depth);
+    return;
+  }
+
+  bool levelCheckMaxNesting(Operation *op) {
+    int32_t maxNestedDepth = 0;
+    getMaxNestedDepth(op, maxNestedDepth);
+
+    if (maxNestedDepth >= tosaLevel.MAX_NESTING) {
+      op->emitOpError() << "failed level check: " << maxNestedDepth
+                        << " >= MAX_NESTING";
+      return false;
+    }
+    return true;
+  }
+
   bool levelCheckListSize(Operation *op) {
     if (auto concat = dyn_cast<tosa::ConcatOp>(op)) {
       return levelCheckListSize(op, concat.getInput1().size(), "input1");
@@ -748,6 +777,12 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
   // level check MAX_TENSOR_LIST_SIZE
   if (!levelCheckListSize(op)) {
     return failure();
+  }
+
+  if (isa<tosa::IfOp>(op) || isa<tosa::WhileOp>(op)) {
+    if (!levelCheckMaxNesting(op)) {
+      return failure();
+    }
   }
 
   return success();

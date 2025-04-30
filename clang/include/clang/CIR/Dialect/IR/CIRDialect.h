@@ -59,6 +59,8 @@ public:
 
 using BuilderCallbackRef =
     llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
+using BuilderOpStateCallbackRef = llvm::function_ref<void(
+    mlir::OpBuilder &, mlir::Location, mlir::OperationState &)>;
 
 namespace cir {
 void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);

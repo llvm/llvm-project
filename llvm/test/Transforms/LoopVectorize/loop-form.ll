@@ -1079,8 +1079,7 @@ define void @scalar_predication(ptr %addr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[ADDR:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oeq <2 x float> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp une <2 x float> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:

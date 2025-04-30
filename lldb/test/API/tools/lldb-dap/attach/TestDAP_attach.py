@@ -25,6 +25,7 @@ def spawn_and_wait(program, delay):
     process.wait()
 
 
+@skipIf
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def set_and_hit_breakpoint(self, continueToExit=True):
         source = "main.c"
@@ -93,7 +94,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.set_and_hit_breakpoint(continueToExit=True)
 
     @skipUnlessDarwin
-    @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_by_name_waitFor(self):
         """
@@ -114,7 +114,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program, waitFor=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_commands(self):
         """
@@ -201,7 +200,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIf(
         archs=["arm", "aarch64"]

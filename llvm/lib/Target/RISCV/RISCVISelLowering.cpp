@@ -15321,6 +15321,40 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
+static SDValue reduceANDOfAtomicLoad(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  if (N->getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::ATOMIC_LOAD)
+    return SDValue();
+  if (!N0.hasOneUse())
+    return SDValue();
+
+  AtomicSDNode *ALoad = cast<AtomicSDNode>(N0.getNode());
+  if (isStrongerThanMonotonic(ALoad->getSuccessOrdering()))
+    return SDValue();
+
+  EVT LoadedVT = ALoad->getMemoryVT();
+  ConstantSDNode *MaskConst = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!MaskConst)
+    return SDValue();
+  uint64_t Mask = MaskConst->getZExtValue();
+  uint64_t ExpectedMask = maskTrailingOnes<uint64_t>(LoadedVT.getSizeInBits());
+  if (Mask != ExpectedMask)
+    return SDValue();
+
+  SDValue ZextLoad = DAG.getAtomicLoad(
+      ISD::ZEXTLOAD, SDLoc(N), ALoad->getMemoryVT(), N->getValueType(0),
+      ALoad->getChain(), ALoad->getBasePtr(), ALoad->getMemOperand());
+  DCI.CombineTo(N, ZextLoad);
+  DAG.ReplaceAllUsesOfValueWith(SDValue(N0.getNode(), 1), ZextLoad.getValue(1));
+  DCI.recursivelyDeleteUnusedNodes(N0.getNode());
+  return SDValue(N, 0);
+}
+
 // Combines two comparison operation and logic operation to one selection
 // operation(min, max) and logic operation. Returns new constructed Node if
 // conditions for optimization are satisfied.
@@ -15354,6 +15388,8 @@ static SDValue performANDCombine(SDNode *N,
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = reduceANDOfAtomicLoad(N, DCI))
     return V;
 
   if (DCI.isAfterLegalizeDAG())
@@ -20538,23 +20574,6 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   return BB;
 }
 
-static bool isSelectPseudo(MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case RISCV::Select_GPR_Using_CC_GPR:
-  case RISCV::Select_GPR_Using_CC_Imm:
-  case RISCV::Select_FPR16_Using_CC_GPR:
-  case RISCV::Select_FPR16INX_Using_CC_GPR:
-  case RISCV::Select_FPR32_Using_CC_GPR:
-  case RISCV::Select_FPR32INX_Using_CC_GPR:
-  case RISCV::Select_FPR64_Using_CC_GPR:
-  case RISCV::Select_FPR64INX_Using_CC_GPR:
-  case RISCV::Select_FPR64IN32X_Using_CC_GPR:
-    return true;
-  }
-}
-
 static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
                                         unsigned RelOpcode, unsigned EqOpcode,
                                         const RISCVSubtarget &Subtarget) {
@@ -20750,7 +20769,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
        SequenceMBBI != E; ++SequenceMBBI) {
     if (SequenceMBBI->isDebugInstr())
       continue;
-    if (isSelectPseudo(*SequenceMBBI)) {
+    if (RISCVInstrInfo::isSelectPseudo(*SequenceMBBI)) {
       if (SequenceMBBI->getOperand(1).getReg() != LHS ||
           !SequenceMBBI->getOperand(2).isReg() ||
           SequenceMBBI->getOperand(2).getReg() != RHS ||
@@ -20827,7 +20846,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   auto InsertionPoint = TailMBB->begin();
   while (SelectMBBI != SelectEnd) {
     auto Next = std::next(SelectMBBI);
-    if (isSelectPseudo(*SelectMBBI)) {
+    if (RISCVInstrInfo::isSelectPseudo(*SelectMBBI)) {
       // %Result = phi [ %TrueValue, HeadMBB ], [ %FalseValue, IfFalseMBB ]
       BuildMI(*TailMBB, InsertionPoint, SelectMBBI->getDebugLoc(),
               TII.get(RISCV::PHI), SelectMBBI->getOperand(0).getReg())
@@ -22496,7 +22515,10 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       break;
     case 'R':
-      return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
+      if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+          (VT == MVT::i128 && Subtarget.is64Bit()))
+        return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
+      break;
     default:
       break;
     }
@@ -22538,7 +22560,9 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
   } else if (Constraint == "cR") {
-    return std::make_pair(0U, &RISCV::GPRPairCRegClass);
+    if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+        (VT == MVT::i128 && Subtarget.is64Bit()))
+      return std::make_pair(0U, &RISCV::GPRPairCRegClass);
   } else if (Constraint == "cf") {
     if (VT == MVT::f16) {
       if (Subtarget.hasStdExtZfhmin())

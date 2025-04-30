@@ -110,7 +110,7 @@ void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 bool CompilerInstance::createTarget() {
   // Create the target instance.
   setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
-                                         getInvocation().TargetOpts));
+                                         getInvocation().getTargetOpts()));
   if (!hasTarget())
     return false;
 
@@ -119,14 +119,14 @@ bool CompilerInstance::createTarget() {
   if (!getAuxTarget() &&
       (getLangOpts().CUDA || getLangOpts().isTargetDevice()) &&
       !getFrontendOpts().AuxTriple.empty()) {
-    auto TO = std::make_shared<TargetOptions>();
+    auto &TO = AuxTargetOpts = std::make_unique<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
     if (getFrontendOpts().AuxTargetCPU)
       TO->CPU = *getFrontendOpts().AuxTargetCPU;
     if (getFrontendOpts().AuxTargetFeatures)
       TO->FeaturesAsWritten = *getFrontendOpts().AuxTargetFeatures;
     TO->HostTriple = getTarget().getTriple().str();
-    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
+    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), *TO));
   }
 
   if (!getTarget().hasStrictFP() && !getLangOpts().ExpStrictFP) {
@@ -1257,10 +1257,14 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     Instance.GetDependencyDirectives =
         GetDependencyDirectives->cloneFor(Instance.getFileManager());
 
-  // If we're collecting module dependencies, we need to share a collector
-  // between all of the module CompilerInstances. Other than that, we don't
-  // want to produce any dependency output from the module build.
-  Instance.setModuleDepCollector(getModuleDepCollector());
+  if (ThreadSafeConfig) {
+    Instance.setModuleDepCollector(ThreadSafeConfig->getModuleDepCollector());
+  } else {
+    // If we're collecting module dependencies, we need to share a collector
+    // between all of the module CompilerInstances. Other than that, we don't
+    // want to produce any dependency output from the module build.
+    Instance.setModuleDepCollector(getModuleDepCollector());
+  }
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   return InstancePtr;

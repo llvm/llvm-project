@@ -5384,7 +5384,7 @@ class acquiring_load<PatFrags base>
 
 def atomic_load_azext_acquire_8  : acquiring_load<atomic_load_azext_8>;
 def atomic_load_azext_acquire_16 : acquiring_load<atomic_load_azext_16>;
-def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
+def atomic_load_nonext_acquire_32 : acquiring_load<atomic_load_nonext_32>;
 
 class releasing_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr), [{
@@ -5399,7 +5399,7 @@ def atomic_store_release_32 : releasing_store<atomic_store_32>;
 let AddedComplexity = 8 in {
   def : ARMPat<(atomic_load_azext_acquire_8 addr_offset_none:$addr),  (LDAB addr_offset_none:$addr)>;
   def : ARMPat<(atomic_load_azext_acquire_16 addr_offset_none:$addr), (LDAH addr_offset_none:$addr)>;
-  def : ARMPat<(atomic_load_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_nonext_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_8 addr_offset_none:$addr, GPR:$val),  (STLB GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_16 addr_offset_none:$addr, GPR:$val), (STLH GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_32 addr_offset_none:$addr, GPR:$val), (STL  GPR:$val, addr_offset_none:$addr)>;
@@ -6220,9 +6220,9 @@ def : ARMPat<(atomic_load_azext_8 addrmode_imm12:$src),
              (LDRBi12 addrmode_imm12:$src)>;
 def : ARMPat<(atomic_load_azext_16 addrmode3:$src),
              (LDRH addrmode3:$src)>;
-def : ARMPat<(atomic_load_32 ldst_so_reg:$src),
+def : ARMPat<(atomic_load_nonext_32 ldst_so_reg:$src),
              (LDRrs ldst_so_reg:$src)>;
-def : ARMPat<(atomic_load_32 addrmode_imm12:$src),
+def : ARMPat<(atomic_load_nonext_32 addrmode_imm12:$src),
              (LDRi12 addrmode_imm12:$src)>;
 def : ARMPat<(atomic_store_8 GPR:$val, ldst_so_reg:$ptr),
              (STRBrs GPR:$val, ldst_so_reg:$ptr)>;

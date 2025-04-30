@@ -311,7 +311,7 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   assert(!cir::MissingFeatures::opTBAA());
 
   Address addr = base.getAddress();
-  if (auto *classDef = dyn_cast<CXXRecordDecl>(rec)) {
+  if (isa<CXXRecordDecl>(rec)) {
     cgm.errorNYI(field->getSourceRange(), "emitLValueForField: C++ class");
     return LValue();
   }
@@ -701,7 +701,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 }
 
 LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
-  if (auto *vd = dyn_cast<VarDecl>(e->getMemberDecl())) {
+  if (isa<VarDecl>(e->getMemberDecl())) {
     cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: VarDecl");
     return LValue();
   }
@@ -734,7 +734,7 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
     return lv;
   }
 
-  if (const auto *fd = dyn_cast<FunctionDecl>(nd)) {
+  if (isa<FunctionDecl>(nd)) {
     cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: FunctionDecl");
     return LValue();
   }

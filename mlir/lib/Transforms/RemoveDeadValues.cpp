@@ -698,8 +698,11 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
 
   // 3. Functions
   for (auto &f : list.functions) {
-    f.funcOp.eraseArguments(f.nonLiveArgs);
-    f.funcOp.eraseResults(f.nonLiveRets);
+    // Some functions may not allow erasing arguments or results. These calls
+    // return failure in such cases without modifying the function, so it's okay
+    // to proceed.
+    (void)f.funcOp.eraseArguments(f.nonLiveArgs);
+    (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
   // 4. Operands

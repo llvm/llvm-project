@@ -305,7 +305,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
-                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
                   OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
@@ -337,9 +337,8 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
     `%p`, is undefined or null.
   }];
 
-  let arguments = (ins AnyType:$value,
-                   AnyReferenceLike:$memref,
-                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+  let arguments = (ins AnyType:$value, AnyReferenceLike:$memref,
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
 
@@ -2756,7 +2755,7 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [NoMemoryEffect]> {
+def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise

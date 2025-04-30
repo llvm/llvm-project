@@ -103,6 +103,9 @@ Improvements to clang-tidy
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
 
+- Fixed bug in :program:`run_clang_tidy.py` where the program would not
+  correctly display the checks enabled by the top-level `.clang-tidy` file.
+
 New checks
 ^^^^^^^^^^
 
@@ -181,6 +184,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
   ``constexpr`` and ``static``` values on member initialization and by detecting
   explicit casting of built-in types within member list initialization.
+
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check by avoiding
+  diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 

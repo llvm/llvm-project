@@ -1686,25 +1686,19 @@ static void printDeviceTypeOperandsWithKeywordOnly(
 static ParseResult
 parseCombinedConstructsLoop(mlir::OpAsmParser &parser,
                             mlir::acc::CombinedConstructsTypeAttr &attr) {
-  if (succeeded(parser.parseOptionalKeyword("combined"))) {
-    if (parser.parseLParen())
-      return failure();
-    if (succeeded(parser.parseOptionalKeyword("kernels"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
-    } else {
-      parser.emitError(parser.getCurrentLocation(),
-                       "expected compute construct name");
-      return failure();
-    }
-    if (parser.parseRParen())
-      return failure();
+  if (succeeded(parser.parseOptionalKeyword("kernels"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
+  } else {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected compute construct name");
+    return failure();
   }
   return success();
 }
@@ -1715,13 +1709,13 @@ printCombinedConstructsLoop(mlir::OpAsmPrinter &p, mlir::Operation *op,
   if (attr) {
     switch (attr.getValue()) {
     case mlir::acc::CombinedConstructsType::KernelsLoop:
-      p << "combined(kernels)";
+      p << "kernels";
       break;
     case mlir::acc::CombinedConstructsType::ParallelLoop:
-      p << "combined(parallel)";
+      p << "parallel";
       break;
     case mlir::acc::CombinedConstructsType::SerialLoop:
-      p << "combined(serial)";
+      p << "serial";
       break;
     };
   }
@@ -2905,37 +2899,13 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
     mlir::Value var{getVar(operand.getDefiningOp())};
     assert(var && "declare operands can only be data entry operations which "
                   "must have var");
+    (void)var;
     std::optional<mlir::acc::DataClause> dataClauseOptional{
         getDataClause(operand.getDefiningOp())};
     assert(dataClauseOptional.has_value() &&
            "declare operands can only be data entry operations which must have "
            "dataClause");
-
-    // If varPtr has no defining op - there is nothing to check further.
-    if (!var.getDefiningOp())
-      continue;
-
-    // Check that the varPtr has a declare attribute.
-    auto declareAttribute{
-        var.getDefiningOp()->getAttr(mlir::acc::getDeclareAttrName())};
-    if (!declareAttribute)
-      return op.emitError(
-          "expect declare attribute on variable in declare operation");
-
-    auto declAttr = mlir::cast<mlir::acc::DeclareAttr>(declareAttribute);
-    if (declAttr.getDataClause().getValue() != dataClauseOptional.value())
-      return op.emitError(
-          "expect matching declare attribute on variable in declare operation");
-
-    // If the variable is marked with implicit attribute, the matching declare
-    // data action must also be marked implicit. The reverse is not checked
-    // since implicit data action may be inserted to do actions like updating
-    // device copy, in which case the variable is not necessarily implicitly
-    // declare'd.
-    if (declAttr.getImplicit() &&
-        declAttr.getImplicit() != acc::getImplicitFlag(operand.getDefiningOp()))
-      return op.emitError(
-          "implicitness must match between declare op and flag on variable");
+    (void)dataClauseOptional;
   }
 
   return success();

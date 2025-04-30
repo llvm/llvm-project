@@ -1370,9 +1370,11 @@ def ModuleFlagCGProfileEntryAttr
           ]>]
     ```
   }];
-  let parameters = (ins "FlatSymbolRefAttr":$from,
-                        "FlatSymbolRefAttr":$to,
-                        "uint64_t":$count);
+  let parameters = (
+    ins OptionalParameter<"FlatSymbolRefAttr">:$from,
+        OptionalParameter<"FlatSymbolRefAttr">:$to,
+        "uint64_t":$count);
+
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
