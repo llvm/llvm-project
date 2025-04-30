@@ -44,7 +44,7 @@ bool RootSignatureParser::parse() {
 
   return consumeExpectedToken(TokenKind::end_of_stream,
                               diag::err_hlsl_unexpected_end_of_params,
-                              /*param of=*/TokenKind::kw_RootSignature));
+                              /*param of=*/TokenKind::kw_RootSignature);
 }
 
 std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
