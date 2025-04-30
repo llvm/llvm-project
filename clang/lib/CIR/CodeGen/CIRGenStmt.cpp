@@ -429,7 +429,6 @@ mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {
   return mlir::success();
 }
 
-
 const CaseStmt *CIRGenFunction::foldCaseStmt(const clang::CaseStmt &s,
                                              mlir::Type condType,
                                              mlir::ArrayAttr &value,
@@ -570,10 +569,9 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
                                 buildingTopLevelCase);
 }
 
-
-  mlir::LogicalResult CIRGenFunction::emitDefaultStmt(const clang::DefaultStmt &s,
-                                      mlir::Type condType,
-                                      bool buildingTopLevelCase) {
+mlir::LogicalResult CIRGenFunction::emitDefaultStmt(const clang::DefaultStmt &s,
+                                                    mlir::Type condType,
+                                                    bool buildingTopLevelCase) {
   return emitCaseDefaultCascade(&s, condType, builder.getArrayAttr({}),
                                 cir::CaseOpKind::Default, buildingTopLevelCase);
 }
