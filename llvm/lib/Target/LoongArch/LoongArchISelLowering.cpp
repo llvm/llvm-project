@@ -1059,13 +1059,13 @@ static SDValue lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
   // Calculate the immediate. Replace any remaining undefs with zero
   APInt Imm(64, 0);
   for (int i = SubVecSize - 1; i >= 0; --i) {
-    int Idx = SubMask[i];
+    int M = SubMask[i];
 
-    if (Idx == -1)
-      Idx = 0;
+    if (M == -1)
+      M = 0;
 
     Imm <<= 2;
-    Imm |= Idx & 0x3;
+    Imm |= M & 0x3;
   }
 
   // Return vshuf4i.d and xvshuf4i.d
