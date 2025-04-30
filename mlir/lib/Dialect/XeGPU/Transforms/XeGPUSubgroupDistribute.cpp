@@ -258,7 +258,7 @@ static LayoutInfo getLayoutInfoForDPASOperand(VectorType vectorTy,
 }
 
 //===----------------------------------------------------------------------===//
-// LayoutInfoPropagatio
+// LayoutInfoPropagation
 //===----------------------------------------------------------------------===//
 
 /// Backward data flow analysis to propagate the lane_layout and lane_data of
@@ -595,7 +595,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
 namespace {
 
 //===----------------------------------------------------------------------===//
-// RunLayoutInfoPropagatio
+// RunLayoutInfoPropagation
 //===----------------------------------------------------------------------===//
 
 /// Driver class for running the LayoutInfoPropagation analysis.
@@ -682,7 +682,7 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
 namespace {
 
 //===----------------------------------------------------------------------===//
-// LayoutAttrAssignmen
+// LayoutAttrAssignment
 //===----------------------------------------------------------------------===//
 
 /// This class is responsible for assigning the layout attributes to the ops and
