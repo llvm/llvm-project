@@ -618,6 +618,7 @@ namespace {
     bool onlyUsesZeroFlag(SDValue Flags) const;
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
+    bool checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const;
   };
 
   class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -1379,23 +1380,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
 
-      if (N->getOpcode() == X86ISD::TC_RETURN) {
-        // There needs to be two non-callee-saved GPRs available to compute the
-        // callee address if the load is folded into the tailcall. See how the
-        // X86tcret_6regs and X86tcret_1reg classes are used and defined.
-        const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
-        unsigned UsedGPRs = 0;
-        // X86tcret args: (*chain, ptr, imm, regs..., glue)
-        for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
-          if (const auto *RN = dyn_cast<RegisterSDNode>(N->getOperand(I))) {
-            if (RI->isGeneralPurposeRegister(*MF, RN->getReg()))
-              ++UsedGPRs;
-          }
-        }
-        unsigned NumTailCallGPRs = RI->getGPRsForTailCall(*MF)->getNumRegs();
-        if (UsedGPRs + 2 > NumTailCallGPRs)
-          continue;
-      }
+      if (N->getOpcode() == X86ISD::TC_RETURN &&
+          !checkTCRetRegUsage(N, nullptr))
+        continue;
 
       /// Also try moving call address load from outside callseq_start to just
       /// before the call to allow it to be folded.
@@ -3532,6 +3519,48 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
   }
   return true;
 }
+
+bool X86DAGToDAGISel::checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const {
+  const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
+  const TargetRegisterClass *TailCallGPRs = RI->getGPRsForTailCall(*MF);
+  unsigned MaxGPRs = TailCallGPRs->getNumRegs();
+  if (Subtarget->is64Bit()) {
+    assert(TailCallGPRs->contains(X86::RSP));
+    assert(TailCallGPRs->contains(X86::RIP));
+    MaxGPRs -= 2; // Can't use RSP or RIP for the address in general.
+  } else {
+    assert(TailCallGPRs->contains(X86::ESP));
+    MaxGPRs -= 1; // Can't use ESP for the address in general.
+  }
+
+  // The load's base and index potentially need two registers.
+  unsigned LoadGPRs = 2;
+
+  if (Load) {
+    // But not if it's loading from a frame slot or global.
+    // XXX: Couldn't we be indexing off of the global though?
+    const SDValue& BasePtr = Load->getBasePtr();
+    if (isa<FrameIndexSDNode>(BasePtr)) {
+      LoadGPRs = 0;
+    } else if (BasePtr->getNumOperands() &&
+        isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
+      LoadGPRs = 0;
+  }
+
+  unsigned TCGPRs = 0;
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+  for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
+    if (const auto *RN = dyn_cast<RegisterSDNode>(N->getOperand(I))) {
+      if (!RI->isGeneralPurposeRegister(*MF, RN->getReg()))
+        continue;
+      if (++TCGPRs + LoadGPRs > MaxGPRs)
+        return false;
+    }
+  }
+
+  return true;
+}
+
 
 /// Check whether or not the chain ending in StoreNode is suitable for doing
 /// the {load; op; store} to modify transformation.
