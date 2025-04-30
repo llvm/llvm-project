@@ -511,11 +511,8 @@ std::string LLVMSymbolizer::lookUpGsymFile(const std::string &Path) {
   };
 
   // First, look beside the binary file
-  {
-    const auto GsymPath = Path + ".gsym";
-    if (CheckGsymFile(GsymPath))
-      return GsymPath;
-  }
+  if (const auto GsymPath = Path + ".gsym"; CheckGsymFile(GsymPath))
+    return GsymPath;
 
   // Then, look in the directories specified by GsymFileDirectory
 
