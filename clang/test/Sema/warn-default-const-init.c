@@ -1,4 +1,3 @@
-
 // RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field -Wdefault-const-init-unsafe %s
 
 struct A { int i; };
