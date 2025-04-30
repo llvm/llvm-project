@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/File/file.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
@@ -13,10 +14,8 @@
 #include "test/src/time/TmHelper.h"
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
-
 #include "src/time/linux/localtime_utils.h"
 #include "src/time/linux/timezone.h"
-
 #endif
 
 using namespace LIBC_NAMESPACE::time_constants;
