@@ -2924,21 +2924,23 @@ tryToCreateAbstractPartialReductionRecipe(VPPartialReductionRecipe *PRed) {
   if (PRed->getOpcode() != Instruction::Add)
     return;
 
-  VPRecipeBase *BinOpR = PRed->getBinOp()->getDefiningRecipe();
-  auto *BinOp = dyn_cast<VPWidenRecipe>(BinOpR);
-  if (!BinOp || BinOp->getOpcode() != Instruction::Mul)
+  using namespace llvm::VPlanPatternMatch;
+  auto *BinOp = PRed->getBinOp();
+  if (!match(BinOp,
+             m_Mul(m_ZExtOrSExt(m_VPValue()), m_ZExtOrSExt(m_VPValue()))))
     return;
 
-  auto *Ext0 = dyn_cast<VPWidenCastRecipe>(BinOp->getOperand(0));
-  auto *Ext1 = dyn_cast<VPWidenCastRecipe>(BinOp->getOperand(1));
+  auto *BinOpR = cast<VPWidenRecipe>(BinOp->getDefiningRecipe());
+  VPWidenCastRecipe *Ext0R = dyn_cast<VPWidenCastRecipe>(BinOpR->getOperand(0));
+  VPWidenCastRecipe *Ext1R = dyn_cast<VPWidenCastRecipe>(BinOpR->getOperand(1));
+
   // TODO: Make work with extends of different signedness
-  if (!Ext0 || Ext0->hasMoreThanOneUniqueUser() || !Ext1 ||
-      Ext1->hasMoreThanOneUniqueUser() ||
-      Ext0->getOpcode() != Ext1->getOpcode())
+  if (Ext0R->hasMoreThanOneUniqueUser() || Ext1R->hasMoreThanOneUniqueUser() ||
+      Ext0R->getOpcode() != Ext1R->getOpcode())
     return;
 
-  auto *AbstractR = new VPMulAccumulateReductionRecipe(PRed, BinOp, Ext0, Ext1,
-                                                       Ext0->getResultType());
+  auto *AbstractR = new VPMulAccumulateReductionRecipe(
+      PRed, BinOpR, Ext0R, Ext1R, Ext0R->getResultType());
   AbstractR->insertBefore(PRed);
   PRed->replaceAllUsesWith(AbstractR);
 }
