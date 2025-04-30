@@ -138,6 +138,17 @@ enum class TentativeCXXTypeIdContext {
   AsGenericSelectionArgument,
 };
 
+/// The kind of attribute specifier we have found.
+enum class CXX11AttributeKind {
+  /// This is not an attribute specifier.
+  NotAttributeSpecifier,
+  /// This should be treated as an attribute-specifier.
+  AttributeSpecifier,
+  /// The next tokens are '[[', but this is not an attribute-specifier. This
+  /// is ill-formed by C++11 [dcl.attr.grammar]p6.
+  InvalidAttributeSpecifier
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -2821,7 +2832,8 @@ private:
   bool isAllowedCXX11AttributeSpecifier(bool Disambiguate = false,
                                         bool OuterMightBeMessageSend = false) {
     return (Tok.isRegularKeywordAttribute() ||
-            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend));
+            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend) !=
+                CXX11AttributeKind::NotAttributeSpecifier);
   }
 
   // Check for the start of an attribute-specifier-seq in a context where an
@@ -3280,16 +3292,6 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ 7: Declarations [dcl.dcl]
 
-  /// The kind of attribute specifier we have found.
-  enum CXX11AttributeKind {
-    /// This is not an attribute specifier.
-    CAK_NotAttributeSpecifier,
-    /// This should be treated as an attribute-specifier.
-    CAK_AttributeSpecifier,
-    /// The next tokens are '[[', but this is not an attribute-specifier. This
-    /// is ill-formed by C++11 [dcl.attr.grammar]p6.
-    CAK_InvalidAttributeSpecifier
-  };
   CXX11AttributeKind
   isCXX11AttributeSpecifier(bool Disambiguate = false,
                             bool OuterMightBeMessageSend = false);
