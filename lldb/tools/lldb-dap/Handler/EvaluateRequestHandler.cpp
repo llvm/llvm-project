@@ -144,7 +144,10 @@ void EvaluateRequestHandler::operator()(
   FillResponse(request, response);
   llvm::json::Object body;
   const auto *arguments = request.getObject("arguments");
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
+
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+  lldb::SBFrame frame = dap.GetLLDBFrame(frame_id);
   std::string expression =
       GetString(arguments, "expression").value_or("").str();
   const llvm::StringRef context = GetString(arguments, "context").value_or("");

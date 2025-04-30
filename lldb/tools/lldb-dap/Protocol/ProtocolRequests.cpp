@@ -267,11 +267,12 @@ bool fromJSON(const llvm::json::Value &Params, ScopesArguments &SCA,
 }
 
 llvm::json::Value toJSON(const ScopesResponseBody &SCR) {
-  llvm::json::Array body;
+  llvm::json::Array scopes;
   for (const Scope &scope : SCR.scopes) {
-    body.emplace_back(toJSON(scope));
+    scopes.emplace_back(toJSON(scope));
   }
-  return body;
+
+  return llvm::json::Object{{"scopes", std::move(scopes)}};
 }
 
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {

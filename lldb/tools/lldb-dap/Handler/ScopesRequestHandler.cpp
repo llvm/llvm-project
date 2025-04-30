@@ -65,17 +65,85 @@ namespace lldb_dap {
 //   }]
 // }
 
+protocol::Scope CreateScope2(const llvm::StringRef name,
+                             int64_t variablesReference, int64_t namedVariables,
+                             bool expensive) {
+  protocol::Scope scope;
+
+  scope.name = name;
+
+  // TODO: Support "arguments" scope. At the moment lldb-dap includes the
+  // arguments into the "locals" scope.
+  // add presentation hint;
+  if (variablesReference == VARREF_LOCALS)
+    scope.presentationHint = protocol::Scope::ePresentationHintLocals;
+  else if (variablesReference == VARREF_REGS)
+    scope.presentationHint = protocol::Scope::ePresentationHintRegisters;
+
+  scope.variablesReference = variablesReference;
+  scope.namedVariables = namedVariables;
+  scope.expensive = expensive;
+
+  return scope;
+}
+
+static std::vector<protocol::Scope> CreateTopLevelScopes(DAP &dap) {
+  std::vector<protocol::Scope> scopes;
+  scopes.reserve(3);
+  scopes.emplace_back(CreateScope2("Locals", VARREF_LOCALS,
+                                   dap.variables.locals.GetSize(), false));
+  scopes.emplace_back(CreateScope2("Globals", VARREF_GLOBALS,
+                                   dap.variables.globals.GetSize(), false));
+  scopes.emplace_back(CreateScope2("Registers", VARREF_REGS,
+                                   dap.variables.registers.GetSize(), false));
+
+  return scopes;
+}
+
 llvm::Expected<protocol::ScopesResponseBody>
-ScopesRequestHandler2::Run(const protocol::ScopesArguments &args) const {
-  // lldb::SBFrame frame = dap.GetLLDBFrame()
-  return llvm::createStringError("something");
+ScopesRequestHandler::Run(const protocol::ScopesArguments &args) const {
+  lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
+
+  // As the user selects different stack frames in the GUI, a "scopes" request
+  // will be sent to the DAP. This is the only way we know that the user has
+  // selected a frame in a thread. There are no other notifications that are
+  // sent and VS code doesn't allow multiple frames to show variables
+  // concurrently. If we select the thread and frame as the "scopes" requests
+  // are sent, this allows users to type commands in the debugger console
+  // with a backtick character to run lldb commands and these lldb commands
+  // will now have the right context selected as they are run. If the user
+  // types "`bt" into the debugger console and we had another thread selected
+  // in the LLDB library, we would show the wrong thing to the user. If the
+  // users switches threads with a lldb command like "`thread select 14", the
+  // GUI will not update as there are no "event" notification packets that
+  // allow us to change the currently selected thread or frame in the GUI that
+  // I am aware of.
+  if (frame.IsValid()) {
+    frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
+    frame.GetThread().SetSelectedFrame(frame.GetFrameID());
+  }
+  dap.variables.locals = frame.GetVariables(/*arguments=*/true,
+                                            /*locals=*/true,
+                                            /*statics=*/false,
+                                            /*in_scope_only=*/true);
+  dap.variables.globals = frame.GetVariables(/*arguments=*/false,
+                                             /*locals=*/false,
+                                             /*statics=*/true,
+                                             /*in_scope_only=*/true);
+  dap.variables.registers = frame.GetRegisters();
+
+  return protocol::ScopesResponseBody{CreateTopLevelScopes(dap)};
 };
-void ScopesRequestHandler::operator()(const llvm::json::Object &request) const {
+void ScopesRequestHandler2::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
   const auto *arguments = request.getObject("arguments");
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
+
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+  lldb::SBFrame frame = dap.GetLLDBFrame(frame_id);
   // As the user selects different stack frames in the GUI, a "scopes" request
   // will be sent to the DAP. This is the only way we know that the user has
   // selected a frame in a thread. There are no other notifications that are

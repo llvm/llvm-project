@@ -275,7 +275,7 @@ struct DAP {
   lldb::SBThread GetLLDBThread(lldb::tid_t id);
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
-  lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
+  lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
 
   llvm::json::Value CreateTopLevelScopes();
 
