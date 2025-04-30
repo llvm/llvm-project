@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RunInTerminal.h"
@@ -138,7 +139,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   else
     return pid.takeError();
 
-  dap.debugger.SetAsync(false);
+  std::optional<ScopeSyncMode> scope_sync_mode(dap.debugger);
   lldb::SBError error;
   dap.target.Attach(attach_info, error);
 
@@ -162,7 +163,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   // Now that the actual target is just starting (i.e. exec was just invoked),
   // we return the debugger to its async state.
-  dap.debugger.SetAsync(true);
+  scope_sync_mode.reset();
 
   // If sending the notification failed, the launcher should be dead by now and
   // the async didAttach notification should have an error message, so we
@@ -244,9 +245,8 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     lldb::SBError error;
     // Disable async events so the launch will be successful when we return from
     // the launch call and the launch will happen synchronously
-    dap.debugger.SetAsync(false);
+    ScopeSyncMode scope_sync_mode(dap.debugger);
     dap.target.Launch(launch_info, error);
-    dap.debugger.SetAsync(true);
     if (error.Fail())
       return llvm::make_error<DAPError>(error.GetCString());
   } else {
