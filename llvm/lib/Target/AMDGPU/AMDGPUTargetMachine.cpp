@@ -105,6 +105,7 @@
 #include "llvm/Transforms/Scalar/NaryReassociate.h"
 #include "llvm/Transforms/Scalar/SeparateConstOffsetFromGEP.h"
 #include "llvm/Transforms/Scalar/Sink.h"
+#include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
 #include "llvm/Transforms/Utils.h"
@@ -861,8 +862,13 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             EnablePromoteKernelArguments)
           FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
 
+        // Add SROA after inlining but before infer address spaces pass to
+        // unlock address space inference for smart pointers (pointers
+        // encapsulated in structs).
+        FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+
         // Add infer address spaces pass to the opt pipeline after inlining
-        // but before SROA to increase SROA opportunities.
+        // but before another SROA round to increase SROA opportunities.
         FPM.addPass(InferAddressSpacesPass());
 
         // This should run after inlining to have any chance of doing
@@ -1260,8 +1266,15 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(createInferAddressSpacesPass());
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+        // Add SROA after inlining but before infer address spaces pass to
+        // unlock address space inference for smart pointers (pointers
+        // encapsulated in structs).
+        addPass(createSROAPass(true));
+        // Add infer address spaces pass to the opt pipeline after inlining
+        // but before another SROA round to increase SROA opportunities.
+        addPass(createInferAddressSpacesPass());
+  }
 
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().isAMDGCN()) &&
@@ -2001,8 +2014,15 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(InferAddressSpacesPass());
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+        // Add SROA after inlining but before infer address spaces pass to
+        // unlock address space inference for smart pointers (pointers
+        // encapsulated in structs).
+        addPass(SROAPass(SROAOptions::PreserveCFG));
+        // Add infer address spaces pass to the opt pipeline after inlining
+        // but before another SROA round to increase SROA opportunities.
+        addPass(InferAddressSpacesPass());
+  }
 
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
