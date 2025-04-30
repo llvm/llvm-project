@@ -7648,7 +7648,7 @@ bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
 
   switch (Arg1.getKind()) {
   case TemplateArgument::Null:
-    return true;
+    llvm_unreachable("Comparing NULL template argument");
 
   case TemplateArgument::Type:
     return hasSameType(Arg1.getAsType(), Arg2.getAsType());
@@ -7666,7 +7666,8 @@ bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
            getCanonicalTemplateName(Arg2.getAsTemplateOrTemplatePattern());
 
   case TemplateArgument::Integral:
-    return Arg1.getAsIntegral() == Arg2.getAsIntegral();
+    return llvm::APSInt::isSameValue(Arg1.getAsIntegral(),
+                                     Arg2.getAsIntegral());
 
   case TemplateArgument::StructuralValue:
     return Arg1.structurallyEquals(Arg2);
