@@ -90,8 +90,13 @@ void CIRGenFunction::emitAutoVarInit(
   // If this local has an initializer, emit it now.
   const Expr *init = d.getInit();
 
-  if (!type.isPODType(getContext())) {
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit: non-POD type");
+  // Initialize the variable here if it doesn't have a initializer and it is a
+  // C struct that is non-trivial to initialize or an array containing such a
+  // struct.
+  if (!init && type.isNonTrivialToPrimitiveDefaultInitialize() ==
+                   QualType::PDIK_Struct) {
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitAutoVarInit: non-trivial to default initialize");
     return;
   }
 
@@ -240,7 +245,10 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   QualType type = d->getType();
 
   if (type->isReferenceType()) {
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: reference type");
+    RValue rvalue = emitReferenceBindingToExpr(init);
+    if (capturedByInit)
+      cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: captured by init");
+    emitStoreThroughLValue(rvalue, lvalue);
     return;
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
