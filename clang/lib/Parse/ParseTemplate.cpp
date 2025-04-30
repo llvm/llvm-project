@@ -1506,7 +1506,7 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
     Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
     /*LambdaContextDecl=*/nullptr,
     /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
-  if (isCXXTypeId(TypeIdAsTemplateArgument)) {
+  if (isCXXTypeId(TentativeCXXTypeIdContext::AsTemplateArgument)) {
     TypeResult TypeArg = ParseTypeName(
         /*Range=*/nullptr, DeclaratorContext::TemplateArg);
     return Actions.ActOnTemplateTypeArgument(TypeArg);
