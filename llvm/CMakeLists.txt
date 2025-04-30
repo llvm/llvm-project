@@ -904,14 +904,26 @@ if(NOT MSVC OR LLVM_BUILD_LLVM_DYLIB_VIS)
   set(CAN_BUILD_LLVM_DYLIB ON)
 endif()
 
-cmake_dependent_option(LLVM_LINK_LLVM_DYLIB "Link tools against the libllvm dynamic library" OFF
+# Link the tools against the libllvm DSO by default.
+set(LLVM_LINK_LLVM_DYLIB_default ON)
+if (BUILD_SHARED_LIBS OR WIN32)
+  set(LLVM_LINK_LLVM_DYLIB_default OFF)
+endif()
+
+cmake_dependent_option(LLVM_LINK_LLVM_DYLIB "Link tools against the libllvm dynamic library"
+                       "${LLVM_LINK_LLVM_DYLIB_default}"
                        "CAN_BUILD_LLVM_DYLIB" OFF)
+
+message("LLVM_LINK_LLVM_DYLIB_default ${LLVM_LINK_LLVM_DYLIB_default}")
+message("BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS}")
+message("LLVM_LINK_LLVM_DYLIB ${LLVM_LINK_LLVM_DYLIB}")
 
 set(LLVM_BUILD_LLVM_DYLIB_default OFF)
 if(LLVM_LINK_LLVM_DYLIB OR LLVM_BUILD_LLVM_C_DYLIB)
   set(LLVM_BUILD_LLVM_DYLIB_default ON)
 endif()
-cmake_dependent_option(LLVM_BUILD_LLVM_DYLIB "Build libllvm dynamic library" ${LLVM_BUILD_LLVM_DYLIB_default}
+cmake_dependent_option(LLVM_BUILD_LLVM_DYLIB "Build libllvm dynamic library"
+                       "${LLVM_BUILD_LLVM_DYLIB_default}"
                        "CAN_BUILD_LLVM_DYLIB" OFF)
 
 cmake_dependent_option(LLVM_DYLIB_EXPORT_INLINES "Force inline members of classes to be DLL exported when

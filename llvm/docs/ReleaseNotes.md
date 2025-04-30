@@ -77,6 +77,11 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
+* On non-Windows platforms, LLVM now builds as a large shared library, libLLVM,
+  by default. To revert to the old behavior of producing and linking static
+  libraries, pass ``-DLLVM_LINK_LLVM_DYLIB=OFF`` to CMake when configuring your
+  build.
+
 Changes to TableGen
 -------------------
 
