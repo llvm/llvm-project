@@ -83,43 +83,8 @@ FormatTokenLexer::FormatTokenLexer(
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
   assert(Tokens.empty());
   assert(FirstInLineIndex == 0);
-  const llvm::Regex FormatOffRegex(Style.OneLineFormatOffRegex);
-  enum { FO_None, FO_CurrentLine, FO_NextLine } FormatOff = FO_None;
   do {
     Tokens.push_back(getNextToken());
-    auto &Tok = *Tokens.back();
-    const auto NewlinesBefore = Tok.NewlinesBefore;
-    switch (FormatOff) {
-    case FO_CurrentLine:
-      if (NewlinesBefore == 0)
-        Tok.Finalized = true;
-      else
-        FormatOff = FO_None;
-      break;
-    case FO_NextLine:
-      if (NewlinesBefore > 1) {
-        FormatOff = FO_None;
-      } else {
-        Tok.Finalized = true;
-        FormatOff = FO_CurrentLine;
-      }
-      break;
-    default:
-      if (!FormattingDisabled && FormatOffRegex.match(Tok.TokenText)) {
-        if (Tok.is(tok::comment) &&
-            (NewlinesBefore > 0 || &Tok == Tokens.front())) {
-          Tok.Finalized = true;
-          FormatOff = FO_NextLine;
-        } else {
-          for (auto *Token : reverse(Tokens)) {
-            Token->Finalized = true;
-            if (Token->NewlinesBefore > 0)
-              break;
-          }
-          FormatOff = FO_CurrentLine;
-        }
-      }
-    }
     if (Style.isJavaScript()) {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
