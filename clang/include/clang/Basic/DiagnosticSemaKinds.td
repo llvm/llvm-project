@@ -3804,6 +3804,9 @@ def err_attribute_weakref_without_alias : Error<
   "weakref declaration of %0 must also have an alias attribute">;
 def err_alias_not_supported_on_darwin : Error <
   "aliases are not supported on darwin">;
+def warn_attribute_non_character_array : Warning<
+  "%0%select{ attribute|}1 only applies to fields or variables of character "
+  "array type; type is %2">, InGroup<IgnoredAttributes>;
 def warn_attribute_wrong_decl_type_str : Warning<
   "%0%select{ attribute|}1 only applies to %2">, InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type_str : Error<
@@ -6404,6 +6407,15 @@ def err_initializer_string_for_char_array_too_long : Error<
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
   "initializer-string for char array is too long">,
   InGroup<ExcessInitializers>;
+def warn_initializer_string_for_char_array_too_long_no_nonstring : Warning<
+  "initializer-string for character array is too long, array size is %0 but "
+  "initializer has size %1 (including the null terminating character); did you "
+  "mean to use the 'nonstring' attribute?">,
+  InGroup<InitStringTooLongMissingNonString>, DefaultIgnore;
+def warn_initializer_string_for_char_array_too_long_for_cpp : Warning<
+  "initializer-string for character array is too long for C++, array size is "
+  "%0 but initializer has size %1 (including the null terminating character)">,
+  InGroup<InitStringTooLongForCpp>, DefaultIgnore;
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
