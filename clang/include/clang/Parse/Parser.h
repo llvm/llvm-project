@@ -116,6 +116,18 @@ enum class ParenParseOption {
   CastExpr         // Also allow '(' type-name ')' <anything>
 };
 
+/// Describes the behavior that should be taken for an __if_exists
+/// block.
+enum class IfExistsBehavior {
+  /// Parse the block; this code is always used.
+  Parse,
+  /// Skip the block entirely; this code is never used.
+  Skip,
+  /// Parse the block as a dependent block, which may be used in
+  /// some template instantiations but not others.
+  Dependent
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -2224,18 +2236,6 @@ private:
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs);
-
-  /// Describes the behavior that should be taken for an __if_exists
-  /// block.
-  enum IfExistsBehavior {
-    /// Parse the block; this code is always used.
-    IEB_Parse,
-    /// Skip the block entirely; this code is never used.
-    IEB_Skip,
-    /// Parse the block as a dependent block, which may be used in
-    /// some template instantiations but not others.
-    IEB_Dependent
-  };
 
   /// Describes the condition of a Microsoft __if_exists or
   /// __if_not_exists block.
