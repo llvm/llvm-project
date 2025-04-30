@@ -1411,6 +1411,7 @@ bool AMDGPUPassConfig::addGCPasses() {
 //===----------------------------------------------------------------------===//
 
 bool GCNPassConfig::addPreISel() {
+  addPass(createAMDGPUTargetVerifierLegacyPass(false));
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)

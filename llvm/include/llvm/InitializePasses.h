@@ -333,7 +333,6 @@ LLVM_ABI void initializeUnpackMachineBundlesPass(PassRegistry &);
 LLVM_ABI void initializeUnreachableBlockElimLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeUnreachableMachineBlockElimLegacyPass(PassRegistry &);
 LLVM_ABI void initializeVerifierLegacyPassPass(PassRegistry &);
-//LLVM_ABI void initializeAMDGPUTargetVerifierLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeVirtRegMapWrapperLegacyPass(PassRegistry &);
 LLVM_ABI void initializeVirtRegRewriterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeWasmEHPreparePass(PassRegistry &);
