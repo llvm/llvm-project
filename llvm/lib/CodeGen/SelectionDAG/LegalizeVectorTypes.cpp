@@ -129,7 +129,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:
   case ISD::ZERO_EXTEND:
   case ISD::FCANONICALIZE:
-  case ISD::AssertNoFPClass:
     R = ScalarizeVecRes_UnaryOp(N);
     break;
   case ISD::ADDRSPACECAST:
@@ -1277,7 +1276,6 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::FCANONICALIZE:
-  case ISD::AssertNoFPClass:
     SplitVecRes_UnaryOp(N, Lo, Hi);
     break;
   case ISD::ADDRSPACECAST:
@@ -4846,7 +4844,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
-  case ISD::AssertNoFPClass:
     Res = WidenVecRes_Unary(N);
     break;
   case ISD::FMA: case ISD::VP_FMA:
