@@ -1110,11 +1110,13 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
   // Change destination of compare instruction to VCC
   // or copy to VCC if carry-in is not a compare inst.
   Register CarryReg = CarryIn.getReg();
-  MachineInstr &CarryDef = *MRI->getVRegDef(CarryReg);
+  MachineInstr *CarryDef = MRI->getVRegDef(CarryReg);
+  if (!CarryDef)
+    return;
 
-  if (CarryDef.isCompare() && TII->isVOP3(CarryDef) &&
+  if (CarryDef->isCompare() && TII->isVOP3(*CarryDef) &&
       MRI->hasOneUse(CarryIn.getReg()))
-    CarryDef.substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
+    CarryDef->substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
   else {
     // Add write: VCC[lanedId] <- (CarryIn[laneId] == 1)
     const TargetRegisterClass *Class =
