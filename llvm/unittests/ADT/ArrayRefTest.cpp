@@ -255,6 +255,64 @@ TEST(ArrayRefTest, ArrayRefFromStdArray) {
   }
 }
 
+struct TestRandomAccessIterator {
+  using iterator_category = std::random_access_iterator_tag;
+};
+
+static_assert(!std::is_constructible_v<
+                  ArrayRef<int>, iterator_range<TestRandomAccessIterator>>,
+              "cannot construct from iterator range with non-pointer iterator");
+static_assert(!std::is_constructible_v<ArrayRef<int>, iterator_range<int>>,
+              "cannot construct from iterator range with non-pointer iterator");
+
+class TestBase {};
+
+class TestDerived : public TestBase {};
+
+static_assert(
+    !std::is_constructible_v<ArrayRef<TestDerived>, iterator_range<TestBase *>>,
+    "cannot construct ArrayRef with derived type");
+static_assert(
+    !std::is_constructible_v<ArrayRef<TestBase>, iterator_range<TestDerived *>>,
+    "cannot construct ArrayRef base type");
+static_assert(!std::is_constructible_v<ArrayRef<TestBase *>,
+                                       iterator_range<TestDerived **>>,
+              "cannot construct ArrayRef pointer of base type");
+
+static_assert(
+    !std::is_constructible_v<ArrayRef<int>, iterator_range<const int *>>,
+    "cannot construct ArrayRef with non-const elements from const iterator "
+    "range");
+static_assert(
+    std::is_constructible_v<ArrayRef<char *>, iterator_range<char **>>,
+    "should be able to construct ArrayRef from iterator_range over pointers");
+static_assert(
+    !std::is_constructible_v<ArrayRef<char *>, iterator_range<char *const *>>,
+    "should be able to construct ArrayRef from iterator_range over pointers");
+
+TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
+  int A1[] = {42, -5, 0, 1000000, -1000000, 0};
+  ArrayRef<int> A2 = make_range(&A1[0], &A1[5]);
+
+  EXPECT_EQ(5ull, A2.size());
+  for (std::size_t i = 0; i < A2.size(); ++i)
+    EXPECT_EQ(A1[i], A2[i]);
+
+  ArrayRef<const int> A3 = make_range(&A1[0], &A1[5]);
+  EXPECT_EQ(5ull, A3.size());
+  for (std::size_t i = 0; i < A3.size(); ++i)
+    EXPECT_EQ(A1[i], A3[i]);
+}
+
+TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
+  const int A1[] = {42, -5, 0, 1000000, -1000000, 0};
+  ArrayRef<const int> A2 = make_range(&A1[0], &A1[5]);
+
+  EXPECT_EQ(5ull, A2.size());
+  for (std::size_t i = 0; i < A2.size(); ++i)
+    EXPECT_EQ(A1[i], A2[i]);
+}
+
 static_assert(std::is_trivially_copyable_v<ArrayRef<int>>,
               "trivially copyable");
 

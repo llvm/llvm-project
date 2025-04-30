@@ -156,6 +156,10 @@ def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
+def InitStringTooLongMissingNonString :
+  DiagGroup<"unterminated-string-initialization">;
+def InitStringTooLongForCpp :
+  DiagGroup<"c++-unterminated-string-initialization">;
 def HiddenCppDecl : DiagGroup<"c++-hidden-decl">;
 def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe">;
 def DefaultConstInit : DiagGroup<"default-const-init", [DefaultConstInitUnsafe]>;
@@ -165,6 +169,7 @@ def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
 def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
                                         ImplicitIntToEnumCast, HiddenCppDecl,
+                                        InitStringTooLongForCpp,
                                         TentativeDefnCompat]>;
 
 def ExternCCompat : DiagGroup<"extern-c-compat">;
@@ -1145,6 +1150,7 @@ def Extra : DiagGroup<"extra", [
     StringConcatation,
     FUseLdPath,
     CastFunctionTypeMismatch,
+    InitStringTooLongMissingNonString,
   ]>;
 
 def Most : DiagGroup<"most", [
