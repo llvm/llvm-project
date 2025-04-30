@@ -912,12 +912,12 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     // Conservatively abort if the chain contains a node other than the ones
     // below.
     switch (Chain.getNode()->getOpcode()) {
-      case ISD::CALLSEQ_START:
-      case ISD::CopyToReg:
-      case ISD::LOAD:
-        break;
-      default:
-        return false;
+    case ISD::CALLSEQ_START:
+    case ISD::CopyToReg:
+    case ISD::LOAD:
+      break;
+    default:
+      return false;
     }
 
     if (Chain.getOperand(0).getNode() == Callee.getNode())
@@ -3539,11 +3539,11 @@ bool X86DAGToDAGISel::checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const {
   if (Load) {
     // But not if it's loading from a frame slot or global.
     // XXX: Couldn't we be indexing off of the global though?
-    const SDValue& BasePtr = Load->getBasePtr();
+    const SDValue &BasePtr = Load->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
       LoadGPRs = 0;
     } else if (BasePtr->getNumOperands() &&
-        isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
+               isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
       LoadGPRs = 0;
   }
 
@@ -3560,7 +3560,6 @@ bool X86DAGToDAGISel::checkTCRetRegUsage(SDNode *N, LoadSDNode *Load) const {
 
   return true;
 }
-
 
 /// Check whether or not the chain ending in StoreNode is suitable for doing
 /// the {load; op; store} to modify transformation.
