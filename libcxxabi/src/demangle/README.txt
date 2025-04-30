@@ -53,7 +53,7 @@ Testing
 -------
 
 The main ItaniumDemangle test-suite lives in llvm/unittests/Demangle/.
-The libcxxabi/test/{unit,}test_demangle.cpp test tests basic functionality
+The libcxxabi/test/{unit,}test_demangle.cpp suite tests basic functionality
 of __cxa_demangle.
 
 It is also a really good idea to run libFuzzer after non-trivial changes, see
