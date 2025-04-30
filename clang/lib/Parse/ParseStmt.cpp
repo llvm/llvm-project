@@ -216,7 +216,7 @@ Retry:
       // Try to limit which sets of keywords should be included in typo
       // correction based on what the next token is.
       StatementFilterCCC CCC(Next);
-      if (TryAnnotateName(&CCC) == ANK_Error) {
+      if (TryAnnotateName(&CCC) == AnnotatedNameKind::Error) {
         // Handle errors here by skipping up to the next semicolon or '}', and
         // eat the semicolon if that's what stopped us.
         SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
@@ -2154,7 +2154,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     } else {
       // In C++0x, "for (T NS:a" might not be a typo for ::
-      bool MightBeForRangeStmt = getLangOpts().CPlusPlus;
+      bool MightBeForRangeStmt = getLangOpts().CPlusPlus || getLangOpts().ObjC;
       ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       DG = ParseSimpleDeclaration(

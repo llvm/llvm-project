@@ -51,6 +51,27 @@ namespace clang {
   struct OMPTraitSet;
   class OMPTraitInfo;
 
+enum class AnnotatedNameKind {
+  /// Annotation has failed and emitted an error.
+  Error,
+  /// The identifier is a tentatively-declared name.
+  TentativeDecl,
+  /// The identifier is a template name. FIXME: Add an annotation for that.
+  TemplateName,
+  /// The identifier can't be resolved.
+  Unresolved,
+  /// Annotation was successful.
+  Success
+};
+
+/// The kind of extra semi diagnostic to emit.
+enum class ExtraSemiKind {
+  OutsideFunction = 0,
+  InsideStruct = 1,
+  InstanceVariableList = 2,
+  AfterMemberFunctionDefinition = 3
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -94,7 +115,7 @@ class Parser : public CodeCompletionHandler {
   StackExhaustionHandler StackHandler;
 
   /// ScopeCache - Cache scopes to reduce malloc traffic.
-  enum { ScopeCacheSize = 16 };
+  static constexpr int ScopeCacheSize = 16;
   unsigned NumCachedScopes;
   Scope *ScopeCache[ScopeCacheSize];
 
@@ -940,19 +961,6 @@ public:
   }
 
 private:
-  enum AnnotatedNameKind {
-    /// Annotation has failed and emitted an error.
-    ANK_Error,
-    /// The identifier is a tentatively-declared name.
-    ANK_TentativeDecl,
-    /// The identifier is a template name. FIXME: Add an annotation for that.
-    ANK_TemplateName,
-    /// The identifier can't be resolved.
-    ANK_Unresolved,
-    /// Annotation was successful.
-    ANK_Success
-  };
-
   AnnotatedNameKind
   TryAnnotateName(CorrectionCandidateCallback *CCC = nullptr,
                   ImplicitTypenameContext AllowImplicitTypename =
@@ -1119,14 +1127,6 @@ private:
   /// or, if there's just some closing-delimiter noise (e.g., ')' or ']') prior
   /// to the semicolon, consumes that extra token.
   bool ExpectAndConsumeSemi(unsigned DiagID , StringRef TokenUsed = "");
-
-  /// The kind of extra semi diagnostic to emit.
-  enum ExtraSemiKind {
-    OutsideFunction = 0,
-    InsideStruct = 1,
-    InstanceVariableList = 2,
-    AfterMemberFunctionDefinition = 3
-  };
 
   /// Consume any extra semi-colons until the end of the line.
   void ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST T = TST_unspecified);
