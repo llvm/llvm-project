@@ -296,7 +296,22 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   const llvm::StringLiteral Source = R"cc(
-    RootFlags()
+    RootFlags(),
+    RootFlags(0),
+    RootFlags(
+      deny_domain_shader_root_access |
+      deny_pixel_shader_root_access |
+      local_root_signature |
+      cbv_srv_uav_heap_directly_indexed |
+      deny_amplification_shader_root_access |
+      deny_geometry_shader_root_access |
+      deny_hull_shader_root_access |
+      deny_mesh_shader_root_access |
+      allow_stream_output |
+      sampler_heap_directly_indexed |
+      allow_input_assembler_input_layout |
+      deny_vertex_shader_root_access
+    )
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -312,11 +327,19 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 
   ASSERT_FALSE(Parser.parse());
 
-  ASSERT_EQ(Elements.size(), 1u);
+  ASSERT_EQ(Elements.size(), 3u);
 
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
   ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::ValidFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
