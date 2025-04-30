@@ -55,7 +55,7 @@ public:
   // from the only other place it can be: the template argument.
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start = nullptr; ///< First element of span. Held, not owned.
@@ -104,7 +104,8 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   // Get element size.
   llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
   if (!size_or_err)
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
+                    "{0}");
   else {
     m_element_size = *size_or_err;
 
@@ -127,11 +128,17 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eReuse;
 }
 
-size_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t> lldb_private::formatters::
+    LibcxxStdSpanSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

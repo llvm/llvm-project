@@ -2,7 +2,7 @@
 
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64 -target-feature +bf16 -target-feature +sme-mop4 -target-feature +sme-f16f16 -target-feature +sme-i16i64 -target-feature +sme-b16b16 -target-feature +sme-f64f64 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +bf16 -target-feature +sme-mop4 -target-feature +sme-f16f16 -target-feature +sme-i16i64 -target-feature +sme-b16b16 -target-feature +sme-f64f64 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -DSME_OVERLOADED_FORMS -triple aarch64 -target-feature +bf16 -target-feature +sme-mop4 -target-feature +sme-f16f16 -target-feature +sme-i16i64 -target-feature +sme-b16b16 -target-feature +sme-f64f64 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +bf16 -target-feature +sme-mop4 -target-feature +sme-f16f16 -target-feature +sme-i16i64 -target-feature +sme-b16b16 -target-feature +sme-f64f64 -target-feature +sme -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 

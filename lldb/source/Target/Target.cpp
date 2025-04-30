@@ -1578,7 +1578,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
       info->is_start_entry = true;
     });
 
-    helper.DispatchOnExit([&](telemetry::ExecutableModuleInfo *info) {
+    helper.DispatchOnExit([&, pid](telemetry::ExecutableModuleInfo *info) {
       info->exec_mod = executable_sp;
       info->uuid = executable_sp->GetUUID();
       info->pid = pid;
@@ -2641,9 +2641,8 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
   }
 
   std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
-  scratch_type_systems.erase(
-      std::unique(scratch_type_systems.begin(), scratch_type_systems.end()),
-      scratch_type_systems.end());
+  scratch_type_systems.erase(llvm::unique(scratch_type_systems),
+                             scratch_type_systems.end());
   return scratch_type_systems;
 }
 

@@ -10,18 +10,8 @@
 #ifndef _LIBCPP___CXX03___ITERATOR_ITERATOR_TRAITS_H
 #define _LIBCPP___CXX03___ITERATOR_ITERATOR_TRAITS_H
 
-#include <__cxx03/__concepts/arithmetic.h>
-#include <__cxx03/__concepts/constructible.h>
-#include <__cxx03/__concepts/convertible_to.h>
-#include <__cxx03/__concepts/copyable.h>
-#include <__cxx03/__concepts/equality_comparable.h>
-#include <__cxx03/__concepts/same_as.h>
-#include <__cxx03/__concepts/totally_ordered.h>
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/pair.h>
-#include <__cxx03/__iterator/incrementable_traits.h>
-#include <__cxx03/__iterator/readable_traits.h>
-#include <__cxx03/__type_traits/common_reference.h>
 #include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/disjunction.h>
 #include <__cxx03/__type_traits/is_convertible.h>

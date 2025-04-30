@@ -14,7 +14,7 @@ define void @foo() {
 ; CHECK-EMPTY:
 ; CHECK:    ld.global.u8 %rs1, [i1g];
 ; CHECK:    and.b16 %rs2, %rs1, 1;
-; CHECK:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK:    @%p1 bra $L__BB0_2;
 ; CHECK:    mov.b16 %rs3, 1;
 ; CHECK:    st.global.u8 [i1g], %rs3;

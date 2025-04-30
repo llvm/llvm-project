@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s google-build-explicit-make-pair %t
+// RUN: %check_clang_tidy --match-partial-fixes %s google-build-explicit-make-pair %t
 
 namespace std {
 template <class T1, class T2>

@@ -32,6 +32,15 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
                             llvm::DenseSet<fir::GlobalOp> &candidates,
                             bool recurseInGlobal) {
+
+  // Check if there is a real use of the global.
+  if (addrOfOp.getOperation()->hasOneUse()) {
+    mlir::OpOperand &addrUse = *addrOfOp.getOperation()->getUses().begin();
+    if (mlir::isa<fir::DeclareOp>(addrUse.getOwner()) &&
+        addrUse.getOwner()->use_empty())
+      return;
+  }
+
   if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been

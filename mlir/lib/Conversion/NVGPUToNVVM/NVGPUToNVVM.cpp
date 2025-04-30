@@ -61,13 +61,13 @@ static Value truncToI32(ImplicitLocOpBuilder &b, Value value) {
 static Type inferIntrinsicResultType(Type vectorResultType) {
   MLIRContext *ctx = vectorResultType.getContext();
   auto a = cast<LLVM::LLVMArrayType>(vectorResultType);
-  auto f16x2Ty = LLVM::getFixedVectorType(Float16Type::get(ctx), 2);
+  auto f16x2Ty = VectorType::get(2, Float16Type::get(ctx));
   auto i32Ty = IntegerType::get(ctx, 32);
-  auto i32x2Ty = LLVM::getFixedVectorType(i32Ty, 2);
+  auto i32x2Ty = VectorType::get(2, i32Ty);
   Type f64Ty = Float64Type::get(ctx);
-  Type f64x2Ty = LLVM::getFixedVectorType(f64Ty, 2);
+  Type f64x2Ty = VectorType::get(2, f64Ty);
   Type f32Ty = Float32Type::get(ctx);
-  Type f32x2Ty = LLVM::getFixedVectorType(f32Ty, 2);
+  Type f32x2Ty = VectorType::get(2, f32Ty);
   if (a.getElementType() == f16x2Ty) {
     return LLVM::LLVMStructType::getLiteral(
         ctx, SmallVector<Type>(a.getNumElements(), f16x2Ty));
@@ -85,7 +85,7 @@ static Type inferIntrinsicResultType(Type vectorResultType) {
         ctx,
         SmallVector<Type>(static_cast<size_t>(a.getNumElements()) * 2, f32Ty));
   }
-  if (a.getElementType() == LLVM::getFixedVectorType(f32Ty, 1)) {
+  if (a.getElementType() == VectorType::get(1, f32Ty)) {
     return LLVM::LLVMStructType::getLiteral(
         ctx, SmallVector<Type>(static_cast<size_t>(a.getNumElements()), f32Ty));
   }
@@ -106,11 +106,11 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
   Type i32Ty = rewriter.getI32Type();
   Type f32Ty = rewriter.getF32Type();
   Type f64Ty = rewriter.getF64Type();
-  Type f16x2Ty = LLVM::getFixedVectorType(rewriter.getF16Type(), 2);
-  Type i32x2Ty = LLVM::getFixedVectorType(i32Ty, 2);
-  Type f64x2Ty = LLVM::getFixedVectorType(f64Ty, 2);
-  Type f32x2Ty = LLVM::getFixedVectorType(f32Ty, 2);
-  Type f32x1Ty = LLVM::getFixedVectorType(f32Ty, 1);
+  Type f16x2Ty = VectorType::get(2, rewriter.getF16Type());
+  Type i32x2Ty = VectorType::get(2, i32Ty);
+  Type f64x2Ty = VectorType::get(2, f64Ty);
+  Type f32x2Ty = VectorType::get(2, f32Ty);
+  Type f32x1Ty = VectorType::get(1, f32Ty);
 
   auto makeConst = [&](int32_t index) -> Value {
     return rewriter.create<LLVM::ConstantOp>(loc, IntegerType::get(ctx, 32),
@@ -181,9 +181,9 @@ static SmallVector<Value> unpackOperandVector(ImplicitLocOpBuilder &b,
   Type f64Ty = b.getF64Type();
   Type f32Ty = b.getF32Type();
   Type i64Ty = b.getI64Type();
-  Type i8x4Ty = LLVM::getFixedVectorType(b.getI8Type(), 4);
-  Type i4x8Ty = LLVM::getFixedVectorType(b.getIntegerType(4), 8);
-  Type f32x1Ty = LLVM::getFixedVectorType(f32Ty, 1);
+  Type i8x4Ty = VectorType::get(4, b.getI8Type());
+  Type i4x8Ty = VectorType::get(8, b.getIntegerType(4));
+  Type f32x1Ty = VectorType::get(1, f32Ty);
   auto arrayTy = cast<LLVM::LLVMArrayType>(operand.getType());
 
   for (unsigned i = 0, e = arrayTy.getNumElements(); i < e; ++i) {
@@ -268,8 +268,8 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     if (!vectorResultType) {
       return failure();
     }
-    Type innerVectorType = LLVM::getFixedVectorType(
-        vectorResultType.getElementType(), vectorResultType.getDimSize(1));
+    Type innerVectorType = VectorType::get(vectorResultType.getDimSize(1),
+                                           vectorResultType.getElementType());
 
     int64_t num32BitRegs = vectorResultType.getDimSize(0);
 
@@ -627,8 +627,7 @@ struct NVGPUMmaSparseSyncLowering
 
     // Bitcast the sparse metadata from vector<2xf16> to an i32.
     Value sparseMetadata = adaptor.getSparseMetadata();
-    if (sparseMetadata.getType() !=
-        LLVM::getFixedVectorType(rewriter.getI16Type(), 2))
+    if (sparseMetadata.getType() != VectorType::get(2, rewriter.getI16Type()))
       return op->emitOpError() << "Expected metadata type to be LLVM "
                                   "VectorType of 2 i16 elements";
     sparseMetadata =

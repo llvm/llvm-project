@@ -16,9 +16,11 @@ define void @cmps() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf16 = fcmp oge half undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf32 = fcmp ogt float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf64 = fcmp ogt double undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cbf64 = fcmp ogt bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cfv816 = fcmp olt <8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cfv432 = fcmp oge <4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cfv264 = fcmp oge <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cbfv816 = fcmp olt <8 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %c8 = icmp slt i8 undef, undef
@@ -32,9 +34,11 @@ define void @cmps() {
   %cf16 = fcmp oge half undef, undef
   %cf32 = fcmp ogt float undef, undef
   %cf64 = fcmp ogt double undef, undef
+  %cbf64 = fcmp ogt bfloat undef, undef
   %cfv816 = fcmp olt <8 x half> undef, undef
   %cfv432 = fcmp oge <4 x float> undef, undef
   %cfv264 = fcmp oge <2 x double> undef, undef
+  %cbfv816 = fcmp olt <8 x bfloat> undef, undef
   ret void
 }
 

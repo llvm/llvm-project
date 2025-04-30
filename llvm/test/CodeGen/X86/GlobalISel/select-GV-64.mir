@@ -59,18 +59,16 @@ legalized:       true
 regBankSelected: true
 # X64ALL:              registers:
 # X64ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
-# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
+# X64ALL-NEXT:           - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
 #
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# X64:                     %1:gr64 = LEA64r $noreg, 1, $noreg, @g_int, $noreg
-# X64-NEXT:                %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from @g_int)
+# X64:                     %0:gr32 = MOV32rm $noreg, 1, $noreg, @g_int, $noreg :: (load (s32) from @g_int)
 # X64-NEXT:                $eax = COPY %0
 # X64-NEXT:                RET 0, implicit $eax
 #
-# X64_DARWIN_PIC:          %1:gr64 = LEA64r $rip, 1, $noreg, @g_int, $noreg
-# X64_DARWIN_PIC-NEXT:     %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from @g_int)
+# X64_DARWIN_PIC:          %0:gr32 = MOV32rm $rip, 1, $noreg, @g_int, $noreg :: (load (s32) from @g_int)
 # X64_DARWIN_PIC-NEXT:     $eax = COPY %0
 # X64_DARWIN_PIC-NEXT:     RET 0, implicit $eax
 #

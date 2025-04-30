@@ -661,8 +661,13 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
     auto TypeSize = DL.getTypeStoreSize(Ty);
     if (!TypeSize.isScalable() && Offset) {
       int64_t Size = TypeSize.getFixedValue();
-      return ConstantRange(APInt(64, *Offset, true),
-                           APInt(64, *Offset + Size, true));
+      APInt Low(64, *Offset, true);
+      bool Overflow;
+      APInt High = Low.sadd_ov(APInt(64, Size, true), Overflow);
+      // Bail if the range overflows signed 64-bit int.
+      if (Overflow)
+        return std::nullopt;
+      return ConstantRange(Low, High);
     }
     return std::nullopt;
   };
@@ -2089,41 +2094,6 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   ++NumNoRecurse;
   Changed.insert(F);
 }
-
-static bool instructionDoesNotReturn(Instruction &I) {
-  if (auto *CB = dyn_cast<CallBase>(&I))
-    return CB->hasFnAttr(Attribute::NoReturn);
-  return false;
-}
-
-// A basic block can only return if it terminates with a ReturnInst and does not
-// contain calls to noreturn functions.
-static bool basicBlockCanReturn(BasicBlock &BB) {
-  if (!isa<ReturnInst>(BB.getTerminator()))
-    return false;
-  return none_of(BB, instructionDoesNotReturn);
-}
-
-// FIXME: this doesn't handle recursion.
-static bool canReturn(Function &F) {
-  SmallVector<BasicBlock *, 16> Worklist;
-  SmallPtrSet<BasicBlock *, 16> Visited;
-
-  Visited.insert(&F.front());
-  Worklist.push_back(&F.front());
-
-  do {
-    BasicBlock *BB = Worklist.pop_back_val();
-    if (basicBlockCanReturn(*BB))
-      return true;
-    for (BasicBlock *Succ : successors(BB))
-      if (Visited.insert(Succ).second)
-        Worklist.push_back(Succ);
-  } while (!Worklist.empty());
-
-  return false;
-}
-
 
 // Set the noreturn function attribute if possible.
 static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,

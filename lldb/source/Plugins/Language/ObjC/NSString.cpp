@@ -63,12 +63,17 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   if (class_name.empty())
     return false;
 
-  bool is_tagged_ptr = class_name == "NSTaggedPointerString" &&
-                       descriptor->GetTaggedPointerInfo();
-  // for a tagged pointer, the descriptor has everything we need
-  if (is_tagged_ptr)
-    return NSTaggedString_SummaryProvider(valobj, descriptor, stream,
-                                          summary_options);
+  // For tagged pointers, the descriptor has everything needed.
+  bool is_tagged = descriptor->GetTaggedPointerInfo();
+  if (is_tagged) {
+    if (class_name == "NSTaggedPointerString")
+      return NSTaggedString_SummaryProvider(valobj, descriptor, stream,
+                                            summary_options);
+
+    if (class_name == "NSIndirectTaggedPointerString")
+      return NSIndirectTaggedString_SummaryProvider(valobj, descriptor, stream,
+                                                    summary_options);
+  }
 
   auto &additionals_map(NSString_Additionals::GetAdditionalSummaries());
   auto iter = additionals_map.find(class_name_cs), end = additionals_map.end();
@@ -367,4 +372,38 @@ bool lldb_private::formatters::NSTaggedString_SummaryProvider(
   stream.Printf("\"%s\"", &bytes[0]);
   stream << suffix;
   return true;
+}
+
+bool lldb_private::formatters::NSIndirectTaggedString_SummaryProvider(
+    ValueObject &valobj, ObjCLanguageRuntime::ClassDescriptorSP descriptor,
+    Stream &stream, const TypeSummaryOptions &summary_options) {
+  if (!descriptor)
+    return false;
+
+  uint64_t payload = 0;
+  if (!descriptor->GetTaggedPointerInfo(nullptr, nullptr, &payload))
+    return false;
+
+  // First 47 bits are the address of the contents.
+  addr_t ptr = payload & 0x7fffffffffffULL;
+  // Next 13 bits are the string's length.
+  size_t size = (payload >> 47) & 0x1fff;
+
+  Status status;
+  std::vector<char> buf(size);
+  if (auto process_sp = valobj.GetProcessSP())
+    if (process_sp->ReadMemory(ptr, buf.data(), size, status)) {
+      llvm::StringRef prefix, suffix;
+      if (auto *language = Language::FindPlugin(summary_options.GetLanguage()))
+        std::tie(prefix, suffix) =
+            language->GetFormatterPrefixSuffix("NSString");
+      stream << prefix << '"';
+      stream.PutCString({buf.data(), size});
+      stream << '"' << suffix;
+      return true;
+    }
+
+  if (status.Fail())
+    stream.Format("<{0}>", status);
+  return false;
 }

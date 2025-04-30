@@ -1220,3 +1220,30 @@ namespace test61 {
   // CHECK-LABEL: @_ZN6test611fINS_1XEEEvNT_1Y1aENS3_1bE
   template void f<X>(int, int);
 }
+
+namespace test62 {
+  template <class> struct integral_constant {
+    static const int value = true;
+  };
+  template <int> struct _OrImpl {};
+  template <class _Args> using _Or = _OrImpl<_Args::value>;
+  template <class _Up>
+  void f(_Or<integral_constant<_Up>>) {}
+  // CHECK-LABEL: @_ZN6test621fIiEEvNS_7_OrImplIXsr17integral_constantIT_EE5valueEEE
+  template void f<int>(_OrImpl<1>);
+} // namespace test62
+
+namespace test63 {
+  namespace {
+    template <class, class> struct integral_constant {
+      static const int value = true;
+    };
+    template <class, class> struct _And {};
+    template <int> struct _OrImpl {};
+    template <class _First> using _Or = _OrImpl<_First::value>;
+    template <class _Up>
+    void f(_And<integral_constant<int, void>, _Or<integral_constant<_Up, int>>>);
+  } // namespace
+  // CHECK-LABEL: @_ZN6test6312_GLOBAL__N_11fIiEEvNS0_4_AndINS0_17integral_constantIivEENS0_7_OrImplIXsr17integral_constantIT_iEE5valueEEEEE
+  void g() { f<int>({}); }
+} // namespace test63

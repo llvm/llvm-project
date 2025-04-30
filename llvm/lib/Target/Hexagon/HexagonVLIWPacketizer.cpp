@@ -77,13 +77,6 @@ static cl::opt<bool>
 
 extern cl::opt<bool> ScheduleInlineAsm;
 
-namespace llvm {
-
-FunctionPass *createHexagonPacketizer(bool Minimal);
-void initializeHexagonPacketizerPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonPacketizer : public MachineFunctionPass {

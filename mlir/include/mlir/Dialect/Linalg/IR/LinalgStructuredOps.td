@@ -242,7 +242,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     on the corresponding elements.
 
     Example:
-    ```
+    ```mlir
       %add = linalg.map
           ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
           outs(%init: tensor<64xf32>)
@@ -256,7 +256,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     non-yield operation inside the body.
 
     The example above will be printed as:
-    ```
+    ```mlir
       %add = linalg.map { arith.addf }
           ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
           outs(%init: tensor<64xf32>)
@@ -327,7 +327,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     dimensions in increasing order.
 
     Example:
-    ```
+    ```mlir
       %reduce = linalg.reduce
           ins(%input:tensor<16x32x64xf32>)
           outs(%init:tensor<16x64xf32>)
@@ -343,7 +343,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     takes `%out` as the first argument.
 
     The example above will be printed as:
-    ```
+    ```mlir
           %reduce = linalg.reduce { arith.addf }
           ins(%input:tensor<16x32x64xf32>)
           outs(%init:tensor<16x64xf32>)
@@ -408,7 +408,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     operation only that produces a transposed "view".
 
     Example:
-    ```
+    ```mlir
       %transpose = linalg.transpose
           ins(%input:tensor<16x64xf32>)
           outs(%init:tensor<64x16xf32>)
@@ -480,7 +480,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     Broadcast the input into the given shape by adding `dimensions`.
 
     Example:
-    ```
+    ```mlir
       %bcast = linalg.broadcast
           ins(%input:tensor<16xf32>)
           outs(%init:tensor<16x64xf32>)
@@ -565,18 +565,18 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 
     Example:
 
-    Defining a unary linalg.elemwise with default indexing-map:
+    Defining a unary linalg.elementwise with default indexing-map:
     ```mlir
-    %exp = linalg.elemwise
-        kind=#linalg.elemwise_kind<exp>
+    %exp = linalg.elementwise
+        kind=#linalg.elementwise_kind<exp>
         ins(%x : tensor<4x16x8xf32>)
         outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
     ```
 
-    Defining a binary linalg.elemwise with user-defined indexing-map:
+    Defining a binary linalg.elementwise with user-defined indexing-map:
     ```mlir
-    %add = linalg.elemwise
-        kind=#linalg.elemwise_kind<add>
+    %add = linalg.elementwise
+        kind=#linalg.elementwise_kind<add>
         indexing_maps = [#transpose, #broadcast, #identity]
         ins(%exp, %arg1 : tensor<4x16x8xf32>, tensor<4x16xf32>)
         outs(%arg2: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
@@ -689,7 +689,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     the maps if specified.
 
     Example Transpose:
-    ```
+    ```mlir
     linalg.matmul indexing_maps = [
                    affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
                    affine_map<(d0, d1, d2) -> (d2, d1)>,
@@ -700,7 +700,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
      ```
 
     Example Broadcast:
-     ```
+    ```mlir
     linalg.matmul indexing_maps = [
                    affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
                    affine_map<(d0, d1, d2) -> (d2, d1)>,
@@ -711,7 +711,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     ```
 
     Example Broadcast and transpose:
-    ```
+    ```mlir
     linalg.matmul indexing_maps = [
                       affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
                       affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
@@ -839,7 +839,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     `H = ⟨ b, m, n ⟩` (with `k` as a contracting reduction-dimension while `m`,
     `n` and `b` have parallel iteration-type) and gets represented as:
 
-    ```
+    ```mlir
     %D = linalg.contract
         indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
                          affine_map<(batch, m, n, k) -> (batch, k, n)>,
@@ -854,7 +854,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     For example, the following is a variant of batch-matmul with a transposition
     applied to `A` while `B`'s 2D-matrix gets broadcasted along the batch dim:
 
-    ```
+    ```mlir
     linalg.contract
         indexing_maps = [affine_map<(batch, m, n, k) -> (batch, k, m)>,
                          affine_map<(batch, m, n, k) -> (k, n)>,
@@ -953,7 +953,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     arguments if specified.
 
     Example Transpose:
-    ```
+    ```mlir
     linalg.batch_matmul indexing_maps = [
                    affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>, // transpose
                    affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
@@ -964,7 +964,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     ```
 
     Example Broadcast:
-    ```
+    ```mlir
     linalg.batch_matmul indexing_maps = [
                        affine_map<(d0, d1, d2, d3) -> (d3)>,         // broadcast
                        affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
@@ -975,7 +975,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     ```
 
     Example Broadcast and Transpose:
-    ```
+    ```mlir
     linalg.batch_matmul indexing_maps = [
                        affine_map<(d0, d1, d2, d3) -> (d1, d3)>,     // broadcast
                        affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>, // transpose

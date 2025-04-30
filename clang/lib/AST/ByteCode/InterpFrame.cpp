@@ -111,8 +111,6 @@ static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
 }
 
 static bool shouldSkipInBacktrace(const Function *F) {
-  if (F->isBuiltin())
-    return true;
   if (F->isLambdaStaticInvoker())
     return true;
 

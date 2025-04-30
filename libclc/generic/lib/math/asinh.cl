@@ -9,6 +9,7 @@
 #include <clc/clc.h>
 #include <clc/math/clc_asinh.h>
 
-#undef __CLC_FUNCTION
-#define __CLC_FUNCTION asinh
-#include <clc/math/unary_builtin.inc>
+#define FUNCTION asinh
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
+#include <clc/math/gentype.inc>

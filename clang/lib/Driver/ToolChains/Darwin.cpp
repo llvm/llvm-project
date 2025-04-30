@@ -1933,6 +1933,7 @@ private:
     case DarwinPlatformKind::XROS:
       return llvm::Triple::XROS;
     }
+    llvm_unreachable("Unknown DarwinPlatformKind enum");
   }
 
   SourceKind Kind;

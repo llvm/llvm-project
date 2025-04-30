@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/offsetof-macro.h"
+#include "hdr/offsetof_macros.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"

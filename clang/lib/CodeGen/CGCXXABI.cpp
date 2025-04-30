@@ -60,10 +60,9 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
   return CGCallee::forDirect(FnPtr, FPT);
 }
 
-llvm::Value *
-CGCXXABI::EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
-                                       Address Base, llvm::Value *MemPtr,
-                                       const MemberPointerType *MPT) {
+llvm::Value *CGCXXABI::EmitMemberDataPointerAddress(
+    CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
+    const MemberPointerType *MPT, bool IsInBounds) {
   ErrorUnsupportedABI(CGF, "loads of member pointers");
   llvm::Type *Ty =
       llvm::PointerType::get(CGF.getLLVMContext(), Base.getAddressSpace());
@@ -265,20 +264,6 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
     cookieSize = CharUnits::Zero();
     return;
   }
-
-  cookieSize = getArrayCookieSizeImpl(eltTy);
-  Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
-  allocPtr = allocAddr.emitRawPointer(CGF);
-  numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
-}
-
-void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
-                               QualType eltTy, llvm::Value *&numElements,
-                               llvm::Value *&allocPtr, CharUnits &cookieSize) {
-  assert(eltTy.isDestructedType());
-
-  // Derive a char* in the same address space as the pointer.
-  ptr = ptr.withElementType(CGF.Int8Ty);
 
   cookieSize = getArrayCookieSizeImpl(eltTy);
   Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);

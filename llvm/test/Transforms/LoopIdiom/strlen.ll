@@ -24,7 +24,7 @@ define i64 @valid_basic_strlen(ptr %str) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]]
 ; CHECK:       [[WHILE_END]]:
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[SCEVGEP]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
@@ -74,7 +74,7 @@ define i32 @valid_basic_strlen_rotated(ptr %str) {
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[STR_ADDR_0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = icmp eq i8 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL1_NOT]], label %[[DO_END:.*]], label %[[DO_BODY]]
+; CHECK-NEXT:    br i1 true, label %[[DO_END:.*]], label %[[DO_BODY]]
 ; CHECK:       [[DO_END]]:
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[SCEVGEP1]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
@@ -163,7 +163,7 @@ define dso_local void @valid_strlen_with_aux_indvar(ptr noundef %str, ptr nounde
 ; CHECK-NEXT:    [[INCDEC_PTR2]] = getelementptr inbounds nuw i8, ptr [[FOO_ADDR_011]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY]]
 ; CHECK:       [[WHILE_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[WHILE_END]]
 ; CHECK:       [[WHILE_END]]:
@@ -232,7 +232,7 @@ define i32 @valid_strlen_index(ptr %str) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]]
 ; CHECK:       [[WHILE_END]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[STRLEN]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
@@ -290,7 +290,7 @@ define dso_local void @valid_strlen_offset(ptr noundef %str) local_unnamed_addr 
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[TMP4]], 0
 ; CHECK-NEXT:    [[INCDEC_PTR14]] = getelementptr inbounds nuw i8, ptr [[STR_ADDR_0]], i64 1
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]]
 ; CHECK:       [[WHILE_END]]:
 ; CHECK-NEXT:    tail call void @use(ptr noundef nonnull [[SCEVGEP]])
 ; CHECK-NEXT:    br label %[[RETURN]]
@@ -377,7 +377,7 @@ define void @valid_nested_idiom(ptr %strs, i32 %n) {
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[COUNT_08]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY]]
 ; CHECK:       [[WHILE_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[WHILE_END]]
 ; CHECK:       [[WHILE_END]]:

@@ -757,18 +757,27 @@ void ReducerWorkItem::readBitcode(MemoryBufferRef Data, LLVMContext &Ctx,
     WithColor::error(errs(), ToolName) << IF.takeError();
     exit(1);
   }
+
   BitcodeModule BM = IF->Mods[0];
   Expected<BitcodeLTOInfo> LI = BM.getLTOInfo();
-  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
-  if (!LI || !MOrErr) {
-    WithColor::error(errs(), ToolName) << IF.takeError();
+  if (!LI) {
+    WithColor::error(errs(), ToolName) << LI.takeError();
     exit(1);
   }
+
+  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
+  if (!MOrErr) {
+    WithColor::error(errs(), ToolName) << MOrErr.takeError();
+    exit(1);
+  }
+
   LTOInfo = std::make_unique<BitcodeLTOInfo>(*LI);
   M = std::move(MOrErr.get());
 }
 
 void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
+  const bool ShouldPreserveUseListOrder = true;
+
   if (LTOInfo && LTOInfo->IsThinLTO && LTOInfo->EnableSplitLTOUnit) {
     PassBuilder PB;
     LoopAnalysisManager LAM;
@@ -781,7 +790,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
     PB.registerLoopAnalyses(LAM);
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
     ModulePassManager MPM;
-    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr));
+    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr,
+                                         ShouldPreserveUseListOrder));
     MPM.run(*M, MAM);
   } else {
     std::unique_ptr<ModuleSummaryIndex> Index;
@@ -790,8 +800,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream,
-                       /*ShouldPreserveUseListOrder=*/true, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream, ShouldPreserveUseListOrder,
+                       Index.get());
   }
 }
 

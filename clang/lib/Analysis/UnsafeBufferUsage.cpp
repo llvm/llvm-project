@@ -21,6 +21,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/LowLevelHelpers.h"
+#include "clang/Analysis/Support/FixitUtil.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -674,7 +675,7 @@ static bool isNullTermPointer(const Expr *Ptr) {
     const CXXMethodDecl *MD = MCE->getMethodDecl();
     const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
 
-    if (MD && RD && RD->isInStdNamespace())
+    if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
       if (MD->getName() == "c_str" && RD->getName() == "basic_string")
         return true;
   }
@@ -1162,6 +1163,8 @@ public:
   virtual void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                                      bool IsRelatedToDecl,
                                      ASTContext &Ctx) const = 0;
+
+  virtual SmallVector<const Expr *, 1> getUnsafePtrs() const = 0;
 };
 
 /// Fixable gadgets correspond to code patterns that aren't always unsafe but
@@ -1244,6 +1247,10 @@ public:
 
     return std::move(Uses);
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Op->getSubExpr()->IgnoreParenImpCasts()};
+  }
 };
 
 /// A decrement of a pointer-type value is unsafe as it may run the pointer
@@ -1286,6 +1293,10 @@ public:
     }
 
     return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Op->getSubExpr()->IgnoreParenImpCasts()};
   }
 };
 
@@ -1335,6 +1346,10 @@ public:
     }
 
     return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {ASE->getBase()->IgnoreParenImpCasts()};
   }
 };
 
@@ -1399,6 +1414,11 @@ public:
 
     return {};
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Ptr->IgnoreParenImpCasts()};
+  }
+
   // FIXME: pointer adding zero should be fine
   // FIXME: this gadge will need a fix-it
 };
@@ -1456,6 +1476,8 @@ public:
     }
     return {};
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 /// A pointer initialization expression of the form:
@@ -1688,6 +1710,8 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 /// A call of a constructor that performs unchecked buffer operations
@@ -1726,6 +1750,8 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 // Warning gadget for unsafe invocation of span::data method.
@@ -1792,6 +1818,8 @@ private:
       return true;
     return false;
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 class UnsafeLibcFunctionCallGadget : public WarningGadget {
@@ -1895,6 +1923,8 @@ public:
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 // Represents expressions of the form `DRE[*]` in the Unspecified Lvalue
@@ -2466,6 +2496,52 @@ template <typename NodeTy> struct CompareNode {
   }
 };
 
+std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
+  class MockReporter : public UnsafeBufferUsageHandler {
+  public:
+    MockReporter() {}
+    void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
+    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
+                              const Expr *UnsafeArg = nullptr) override {}
+    void handleUnsafeOperationInContainer(const Stmt *, bool,
+                                          ASTContext &) override {}
+    void handleUnsafeVariableGroup(const VarDecl *,
+                                   const VariableGroupsManager &, FixItList &&,
+                                   const Decl *,
+                                   const FixitStrategy &) override {}
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    std::string getUnsafeBufferUsageAttributeTextAt(
+        SourceLocation, StringRef WSSuffix = "") const override {
+      return "";
+    }
+  };
+
+  FixableGadgetList FixableGadgets;
+  WarningGadgetList WarningGadgets;
+  DeclUseTracker Tracker;
+  MockReporter IgnoreHandler;
+
+  findGadgets(FD->getBody(), FD->getASTContext(), IgnoreHandler, false,
+              FixableGadgets, WarningGadgets, Tracker);
+
+  std::set<const Expr *> Result;
+  for (auto &G : WarningGadgets) {
+    for (const Expr *E : G->getUnsafePtrs()) {
+      Result.insert(E);
+    }
+  }
+
+  return Result;
+}
+
 struct WarningGadgetSets {
   std::map<const VarDecl *, std::set<const WarningGadget *>,
            // To keep keys sorted by their locations in the map so that the
@@ -2719,67 +2795,6 @@ getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
   return std::nullopt;
 }
 
-// Return the source location just past the last character of the AST `Node`.
-template <typename NodeTy>
-static std::optional<SourceLocation> getPastLoc(const NodeTy *Node,
-                                                const SourceManager &SM,
-                                                const LangOptions &LangOpts) {
-  SourceLocation Loc =
-      Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
-  if (Loc.isValid())
-    return Loc;
-  return std::nullopt;
-}
-
-// Return text representation of an `Expr`.
-static std::optional<StringRef> getExprText(const Expr *E,
-                                            const SourceManager &SM,
-                                            const LangOptions &LangOpts) {
-  std::optional<SourceLocation> LastCharLoc = getPastLoc(E, SM, LangOpts);
-
-  if (LastCharLoc)
-    return Lexer::getSourceText(
-        CharSourceRange::getCharRange(E->getBeginLoc(), *LastCharLoc), SM,
-        LangOpts);
-
-  return std::nullopt;
-}
-
-// Returns the literal text in `SourceRange SR`, if `SR` is a valid range.
-static std::optional<StringRef> getRangeText(SourceRange SR,
-                                             const SourceManager &SM,
-                                             const LangOptions &LangOpts) {
-  bool Invalid = false;
-  CharSourceRange CSR = CharSourceRange::getCharRange(SR);
-  StringRef Text = Lexer::getSourceText(CSR, SM, LangOpts, &Invalid);
-
-  if (!Invalid)
-    return Text;
-  return std::nullopt;
-}
-
-// Returns the begin location of the identifier of the given variable
-// declaration.
-static SourceLocation getVarDeclIdentifierLoc(const VarDecl *VD) {
-  // According to the implementation of `VarDecl`, `VD->getLocation()` actually
-  // returns the begin location of the identifier of the declaration:
-  return VD->getLocation();
-}
-
-// Returns the literal text of the identifier of the given variable declaration.
-static std::optional<StringRef>
-getVarDeclIdentifierText(const VarDecl *VD, const SourceManager &SM,
-                         const LangOptions &LangOpts) {
-  SourceLocation ParmIdentBeginLoc = getVarDeclIdentifierLoc(VD);
-  SourceLocation ParmIdentEndLoc =
-      Lexer::getLocForEndOfToken(ParmIdentBeginLoc, 0, SM, LangOpts);
-
-  if (ParmIdentEndLoc.isMacroID() &&
-      !Lexer::isAtEndOfMacroExpansion(ParmIdentEndLoc, SM, LangOpts))
-    return std::nullopt;
-  return getRangeText({ParmIdentBeginLoc, ParmIdentEndLoc}, SM, LangOpts);
-}
-
 // We cannot fix a variable declaration if it has some other specifiers than the
 // type specifier.  Because the source ranges of those specifiers could overlap
 // with the source range that is being replaced using fix-its.  Especially when
@@ -2815,84 +2830,6 @@ static SourceRange getSourceRangeToTokenEnd(const Decl *D,
       Lexer::getLocForEndOfToken(D->getEndLoc(), 0, SM, LangOpts);
 
   return SourceRange(Begin, End);
-}
-
-// Returns the text of the pointee type of `T` from a `VarDecl` of a pointer
-// type. The text is obtained through from `TypeLoc`s.  Since `TypeLoc` does not
-// have source ranges of qualifiers ( The `QualifiedTypeLoc` looks hacky too me
-// :( ), `Qualifiers` of the pointee type is returned separately through the
-// output parameter `QualifiersToAppend`.
-static std::optional<std::string>
-getPointeeTypeText(const VarDecl *VD, const SourceManager &SM,
-                   const LangOptions &LangOpts,
-                   std::optional<Qualifiers> *QualifiersToAppend) {
-  QualType Ty = VD->getType();
-  QualType PteTy;
-
-  assert(Ty->isPointerType() && !Ty->isFunctionPointerType() &&
-         "Expecting a VarDecl of type of pointer to object type");
-  PteTy = Ty->getPointeeType();
-
-  TypeLoc TyLoc = VD->getTypeSourceInfo()->getTypeLoc().getUnqualifiedLoc();
-  TypeLoc PteTyLoc;
-
-  // We only deal with the cases that we know `TypeLoc::getNextTypeLoc` returns
-  // the `TypeLoc` of the pointee type:
-  switch (TyLoc.getTypeLocClass()) {
-  case TypeLoc::ConstantArray:
-  case TypeLoc::IncompleteArray:
-  case TypeLoc::VariableArray:
-  case TypeLoc::DependentSizedArray:
-  case TypeLoc::Decayed:
-    assert(isa<ParmVarDecl>(VD) && "An array type shall not be treated as a "
-                                   "pointer type unless it decays.");
-    PteTyLoc = TyLoc.getNextTypeLoc();
-    break;
-  case TypeLoc::Pointer:
-    PteTyLoc = TyLoc.castAs<PointerTypeLoc>().getPointeeLoc();
-    break;
-  default:
-    return std::nullopt;
-  }
-  if (PteTyLoc.isNull())
-    // Sometimes we cannot get a useful `TypeLoc` for the pointee type, e.g.,
-    // when the pointer type is `auto`.
-    return std::nullopt;
-
-  SourceLocation IdentLoc = getVarDeclIdentifierLoc(VD);
-
-  if (!(IdentLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
-    // We are expecting these locations to be valid. But in some cases, they are
-    // not all valid. It is a Clang bug to me and we are not responsible for
-    // fixing it.  So we will just give up for now when it happens.
-    return std::nullopt;
-  }
-
-  // Note that TypeLoc.getEndLoc() returns the begin location of the last token:
-  SourceLocation PteEndOfTokenLoc =
-      Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts);
-
-  if (!PteEndOfTokenLoc.isValid())
-    // Sometimes we cannot get the end location of the pointee type, e.g., when
-    // there are macros involved.
-    return std::nullopt;
-  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, IdentLoc)) {
-    // We only deal with the cases where the source text of the pointee type
-    // appears on the left-hand side of the variable identifier completely,
-    // including the following forms:
-    // `T ident`,
-    // `T ident[]`, where `T` is any type.
-    // Examples of excluded cases are `T (*ident)[]` or `T ident[][n]`.
-    return std::nullopt;
-  }
-  if (PteTy.hasQualifiers()) {
-    // TypeLoc does not provide source ranges for qualifiers (it says it's
-    // intentional but seems fishy to me), so we cannot get the full text
-    // `PteTy` via source ranges.
-    *QualifiersToAppend = PteTy.getQualifiers();
-  }
-  return getRangeText({PteTyLoc.getBeginLoc(), PteEndOfTokenLoc}, SM, LangOpts)
-      ->str();
 }
 
 // Returns the text of the name (with qualifiers) of a `FunctionDecl`.

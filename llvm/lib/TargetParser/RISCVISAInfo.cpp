@@ -45,9 +45,8 @@ struct RISCVProfile {
 
 } // end anonymous namespace
 
-static const char *RISCVGImplications[] = {
-  "i", "m", "a", "f", "d", "zicsr", "zifencei"
-};
+static const char *RISCVGImplications[] = {"i", "m", "a", "f", "d"};
+static const char *RISCVGImplicationsZi[] = {"zicsr", "zifencei"};
 
 #define GET_SUPPORTED_EXTENSIONS
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
@@ -643,7 +642,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     for (const char *Ext : RISCVGImplications) {
       auto Version = findDefaultVersion(Ext);
       assert(Version && "Default extension version not found?");
-      // Postpone AddExtension until end of this function
       ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
     }
     break;
@@ -718,6 +716,19 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     } while (!Ext.empty());
   }
 
+  // We add Zicsr/Zifenci as final to allow duplicated "zicsr"/"zifencei" like
+  // "rv64g_zicsr_zifencei".
+  if (Baseline == 'g') {
+    for (const char *Ext : RISCVGImplicationsZi) {
+      if (ISAInfo->Exts.count(Ext))
+        continue;
+
+      auto Version = findDefaultVersion(Ext);
+      assert(Version && "Default extension version not found?");
+      ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
+    }
+  }
+
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
 }
 
@@ -788,6 +799,9 @@ Error RISCVISAInfo::checkDependency() {
     if (Exts.count("zcf") != 0)
       return getIncompatibleError("zclsd", "zcf");
   }
+
+  if (XLen != 32 && Exts.count("zilsd") != 0)
+    return getError("'zilsd' is only supported for 'rv32'");
 
   for (auto Ext : XqciExts)
     if (Exts.count(Ext.str()) && (XLen != 32))
@@ -1048,41 +1062,21 @@ struct RISCVExtBit {
   uint8_t bitpos;
 };
 
-constexpr static RISCVExtBit RISCVBitPositions[] = {
-    {"a", 0, 0},          {"c", 0, 2},
-    {"d", 0, 3},          {"f", 0, 5},
-    {"i", 0, 8},          {"m", 0, 12},
-    {"v", 0, 21},         {"zacas", 0, 26},
-    {"zba", 0, 27},       {"zbb", 0, 28},
-    {"zbc", 0, 29},       {"zbkb", 0, 30},
-    {"zbkc", 0, 31},      {"zbkx", 0, 32},
-    {"zbs", 0, 33},       {"zfa", 0, 34},
-    {"zfh", 0, 35},       {"zfhmin", 0, 36},
-    {"zicboz", 0, 37},    {"zicond", 0, 38},
-    {"zihintntl", 0, 39}, {"zihintpause", 0, 40},
-    {"zknd", 0, 41},      {"zkne", 0, 42},
-    {"zknh", 0, 43},      {"zksed", 0, 44},
-    {"zksh", 0, 45},      {"zkt", 0, 46},
-    {"ztso", 0, 47},      {"zvbb", 0, 48},
-    {"zvbc", 0, 49},      {"zvfh", 0, 50},
-    {"zvfhmin", 0, 51},   {"zvkb", 0, 52},
-    {"zvkg", 0, 53},      {"zvkned", 0, 54},
-    {"zvknha", 0, 55},    {"zvknhb", 0, 56},
-    {"zvksed", 0, 57},    {"zvksh", 0, 58},
-    {"zvkt", 0, 59},      {"zve32x", 0, 60},
-    {"zve32f", 0, 61},    {"zve64x", 0, 62},
-    {"zve64f", 0, 63},    {"zve64d", 1, 0},
-    {"zimop", 1, 1},      {"zca", 1, 2},
-    {"zcb", 1, 3},        {"zcd", 1, 4},
-    {"zcf", 1, 5},        {"zcmop", 1, 6},
-    {"zawrs", 1, 7}};
+struct RISCVExtensionBitmask {
+  const char *Name;
+  unsigned GroupID;
+  unsigned BitPosition;
+};
+
+#define GET_RISCVExtensionBitmaskTable_IMPL
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
 std::pair<int, int> RISCVISAInfo::getRISCVFeaturesBitsInfo(StringRef Ext) {
   // Note that this code currently accepts mixed case extension names, but
   // does not handle extension versions at all.  That's probably fine because
   // there's only one extension version in the __riscv_feature_bits vector.
-  for (auto E : RISCVBitPositions)
-    if (E.ext.equals_insensitive(Ext))
-      return std::make_pair(E.groupid, E.bitpos);
+  for (auto E : ExtensionBitmask)
+    if (Ext.equals_insensitive(E.Name))
+      return std::make_pair(E.GroupID, E.BitPosition);
   return std::make_pair(-1, -1);
 }

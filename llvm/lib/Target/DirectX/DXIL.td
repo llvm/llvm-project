@@ -1078,8 +1078,7 @@ def RawBufferStore : DXILOp<140, rawBufferStore> {
 }
 
 def Dot2AddHalf : DXILOp<162, dot2AddHalf> {
-  let Doc = "dot product of 2 vectors of half having size = 2, returns "
-            "float";
+  let Doc = "2D half dot product with accumulate to float";
   let intrinsics = [IntrinSelect<int_dx_dot2add>];
   let arguments = [FloatTy, HalfTy, HalfTy, HalfTy, HalfTy];
   let result = FloatTy;

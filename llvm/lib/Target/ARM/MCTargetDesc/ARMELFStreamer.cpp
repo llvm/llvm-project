@@ -911,6 +911,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
 
   case ARM::ArchKind::ARMV8MBaseline:
   case ARM::ArchKind::ARMV8MMainline:
+  case ARM::ArchKind::ARMV8_1MMainline:
     S.setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false);
     S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
     break;

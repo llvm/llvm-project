@@ -165,9 +165,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
                           MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : BB->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
@@ -251,8 +249,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     assert(!DT && "cannot use both DT and DTU for updates");
     // To avoid processing the same predecessor more than once.
     SmallPtrSet<BasicBlock *, 8> SeenSuccs;
-    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(succ_begin(PredBB),
-                                               succ_end(PredBB));
+    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(llvm::from_range,
+                                               successors(PredBB));
     Updates.reserve(Updates.size() + 2 * succ_size(BB) + 1);
     // Add insert edges first. Experimentally, for the particular case of two
     // blocks that can be merged, with a single successor and single predecessor
@@ -770,11 +768,6 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
       CriticalEdgeSplittingOptions(DT, LI, MSSAU).setPreserveLCSSA();
 
   if ((isCriticalEdge(LatchTerm, SuccNum, Options.MergeIdenticalEdges))) {
-    // If it is a critical edge, and the succesor is an exception block, handle
-    // the split edge logic in this specific function
-    if (Succ->isEHPad())
-      return ehAwareSplitEdge(BB, Succ, nullptr, nullptr, Options, BBName);
-
     // If this is a critical edge, let SplitKnownCriticalEdge do it.
     return SplitKnownCriticalEdge(LatchTerm, SuccNum, Options, BBName);
   }
@@ -1915,16 +1908,4 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
       return false;
   }
   return true;
-}
-
-bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
-                                         const BasicBlock &Dest) {
-  assert(Src.getParent() == Dest.getParent());
-  if (!Src.getParent()->isPresplitCoroutine())
-    return false;
-  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
-    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
-      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
-             SW->getDefaultDest() == &Dest;
-  return false;
 }

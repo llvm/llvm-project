@@ -191,6 +191,77 @@ const inline float dot2add(half2 A, half2 B, float C) {
 }
 
 //===----------------------------------------------------------------------===//
+// dst builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn vector<T, 4> dst(vector<T, 4>, vector<T, 4>)
+/// \brief Calculates a distance vector.
+/// \param Src0 [in] Contains the squared distance
+/// \param Src1 [in] Contains the reciprocal distance
+///
+/// Return the computed distance vector
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half4 dst(half4 Src0, half4 Src1) {
+  return __detail::dst_impl(Src0, Src1);
+}
+
+const inline float4 dst(float4 Src0, float4 Src1) {
+  return __detail::dst_impl(Src0, Src1);
+}
+
+const inline double4 dst(double4 Src0, double4 Src1) {
+  return __detail::dst_impl(Src0, Src1);
+}
+
+//===----------------------------------------------------------------------===//
+// faceforward builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T faceforward(T N, T I, T Ng)
+/// \brief Flips the surface-normal (if needed) to face in a direction opposite
+/// to \a I. Returns the result in terms of \a N.
+/// \param N The resulting floating-point surface-normal vector.
+/// \param I A floating-point, incident vector that points from the view
+/// position to the shading position.
+/// \param Ng A floating-point surface-normal vector.
+///
+/// Return a floating-point, surface normal vector that is facing the view
+/// direction.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> faceforward(T N, T I, T Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+faceforward(T N, T I, T Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+template <int L>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, L> faceforward(
+    __detail::HLSL_FIXED_VECTOR<half, L> N,
+    __detail::HLSL_FIXED_VECTOR<half, L> I,
+    __detail::HLSL_FIXED_VECTOR<half, L> Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+template <int L>
+const inline __detail::HLSL_FIXED_VECTOR<float, L>
+faceforward(__detail::HLSL_FIXED_VECTOR<float, L> N,
+            __detail::HLSL_FIXED_VECTOR<float, L> I,
+            __detail::HLSL_FIXED_VECTOR<float, L> Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+//===----------------------------------------------------------------------===//
 // fmod builtins
 //===----------------------------------------------------------------------===//
 
@@ -266,6 +337,30 @@ const inline half length(__detail::HLSL_FIXED_VECTOR<half, N> X) {
 template <int N>
 const inline float length(__detail::HLSL_FIXED_VECTOR<float, N> X) {
   return __detail::length_vec_impl(X);
+}
+
+//===----------------------------------------------------------------------===//
+// lit builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn vector<T, 4> lit(T NDotL, T NDotH, T M)
+/// \brief Returns a lighting coefficient vector.
+/// \param NDotL The dot product of the normalized surface normal and the
+/// light vector.
+/// \param NDotH The dot product of the half-angle vector and the surface
+/// normal.
+/// \param M A specular exponent.
+///
+/// This function returns a lighting coefficient vector (ambient, diffuse,
+/// specular, 1).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half4 lit(half NDotL, half NDotH, half M) {
+  return __detail::lit_impl(NDotL, NDotH, M);
+}
+
+const inline float4 lit(float NDotL, float NDotH, float M) {
+  return __detail::lit_impl(NDotL, NDotH, M);
 }
 
 //===----------------------------------------------------------------------===//

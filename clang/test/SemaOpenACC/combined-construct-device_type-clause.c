@@ -6,22 +6,22 @@ void uses() {
   typedef struct S{} STy;
   STy SImpl;
 
-#pragma acc parallel loop device_type(I)
+#pragma acc parallel loop device_type(radeon)
   for(int i = 0; i < 5; ++i);
-#pragma acc serial loop device_type(S) dtype(STy)
+#pragma acc serial loop device_type(multicore) dtype(host)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop dtype(SImpl)
+#pragma acc kernels loop dtype(acc_device_nvidia)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop dtype(int) device_type(*)
+#pragma acc kernels loop dtype(default) device_type(*)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop dtype(true) device_type(false)
+#pragma acc kernels loop dtype(nvidia) device_type(radeon)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{expected identifier}}
-#pragma acc kernels loop dtype(int, *)
+#pragma acc kernels loop dtype(radeon, *)
   for(int i = 0; i < 5; ++i);
 
-#pragma acc parallel loop device_type(I, int)
+#pragma acc parallel loop device_type(host, multicore)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{expected ','}}
   // expected-error@+1{{expected identifier}}

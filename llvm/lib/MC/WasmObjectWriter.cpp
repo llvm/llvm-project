@@ -519,8 +519,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   }
 
   // We either rejected the fixup or folded B into C at this point.
-  const MCSymbolRefExpr *RefA = Target.getSymA();
-  const auto *SymA = cast<MCSymbolWasm>(&RefA->getSymbol());
+  const auto *SymA = cast<MCSymbolWasm>(Target.getAddSym());
 
   // The .init_array isn't translated as data, so don't do relocations in it.
   if (FixupSection.getName().starts_with(".init_array")) {
@@ -605,15 +604,6 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
                          "supported by wasm");
 
     SymA->setUsedInReloc();
-  }
-
-  switch (RefA->getKind()) {
-  case MCSymbolRefExpr::VK_GOT:
-  case MCSymbolRefExpr::VK_WASM_GOT_TLS:
-    SymA->setUsedInGOT();
-    break;
-  default:
-    break;
   }
 
   WasmRelocationEntry Rec(FixupOffset, SymA, C, Type, &FixupSection);

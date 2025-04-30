@@ -50,41 +50,42 @@ simple:
 // CHECK-NEXT:     <empty>
 // CHECK-NEXT: End of Function "simple"
 // CHECK-EMPTY:
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #25, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   stp     x29, x30, [sp, #-0x10]!, pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   b       [[BB1]], pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::Confluence(
-// CHECK-NEXT:    State 1: pacret-state<empty>
-// CHECK-NEXT:    State 2: pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:    merged state: pacret-state<SafeToDerefRegs: , Insts: >
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   autiza  x0, pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   blr     x0, pacret-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ldp     x29, x30, [sp], #0x10, pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #29, pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::Confluence(
-// CHECK-NEXT:    State 1: pacret-state<SafeToDerefRegs: , Insts: >
-// CHECK-NEXT:    State 2: pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:    merged state: pacret-state<SafeToDerefRegs: , Insts: >
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   autiza  x0, pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   blr     x0, pacret-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ldp     x29, x30, [sp], #0x10, pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #29, pacret-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:  After PacRetAnalysis:
+// CHECK-NEXT: Running src register safety analysis...
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   hint    #25, src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   stp     x29, x30, [sp, #-0x10]!, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   b       [[BB1]], src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::Confluence(
+// CHECK-NEXT:     State 1: src-state<empty>
+// CHECK-NEXT:     State 2: src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     merged state: src-state<SafeToDerefRegs: , Insts: >
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   autiza  x0, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   blr     x0, src-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ldp     x29, x30, [sp], #0x10, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   hint    #29, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ret     x30, src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::Confluence(
+// CHECK-NEXT:     State 1: src-state<SafeToDerefRegs: , Insts: >
+// CHECK-NEXT:     State 2: src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     merged state: src-state<SafeToDerefRegs: , Insts: >
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   autiza  x0, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   blr     x0, src-state<SafeToDerefRegs: W0 X0 W0_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ldp     x29, x30, [sp], #0x10, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   hint    #29, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ret     x30, src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT: After src register safety analysis:
 // CHECK-NEXT: Binary Function "simple"  {
 // CHECK-NEXT:   Number      : 1
 // CHECK-NEXT:   State       : CFG constructed
@@ -93,27 +94,27 @@ simple:
 // CHECK-NEXT: }
 // CHECK-NEXT: [[BB0]] (3 instructions, align : 1)
 // CHECK-NEXT:   Entry Point
-// CHECK-NEXT:     00000000:   paciasp # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000004:   stp     x29, x30, [sp, #-0x10]! # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000008:   b       [[BB1]] # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000000:   paciasp # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000004:   stp     x29, x30, [sp, #-0x10]! # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000008:   b       [[BB1]] # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:   Successors: [[BB1]]
 // CHECK-EMPTY:
 // CHECK-NEXT: [[BB1]] (5 instructions, align : 1)
 // CHECK-NEXT:   Predecessors: [[BB0]]
-// CHECK-NEXT:     0000000c:   autiza  x0 # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000010:   blr     x0 # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000014:   ldp     x29, x30, [sp], #0x10 # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000018:   autiasp # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     0000001c:   ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     0000000c:   autiza  x0 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000010:   blr     x0 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000014:   ldp     x29, x30, [sp], #0x10 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000018:   autiasp # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     0000001c:   ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-EMPTY:
 // CHECK-NEXT: DWARF CFI Instructions:
 // CHECK-NEXT:     <empty>
 // CHECK-NEXT: End of Function "simple"
 // CHECK-EMPTY:
-// PAUTH-NEXT:   Found call inst:     00000000:        blr     x0 # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// PAUTH-NEXT:   Found call inst:     00000000:        blr     x0 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // PAUTH-NEXT:     Call destination reg: X0
 // PAUTH-NEXT:     SafeToDerefRegs: W0 X0 W0_HI{{[ \t]*$}}
-// CHECK-NEXT:   Found RET inst:     00000000:         ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
 // CHECK-NEXT:     Authenticated reg: (none)
 // CHECK-NEXT:     SafeToDerefRegs: LR W30 W30_HI{{[ \t]*$}}
@@ -127,11 +128,12 @@ clobber:
 
 // CHECK-LABEL:Analyzing in function clobber, AllocatorId 1
 // ...
-// CHECK:       PacRetAnalysis::ComputeNext(   mov     w30, #0x0, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: >)
-// CHECK-NEXT:  After PacRetAnalysis:
+// CHECK:      Running src register safety analysis...
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   mov     w30, #0x0, src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ret     x30, src-state<SafeToDerefRegs: W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , Insts: >)
+// CHECK-NEXT: After src register safety analysis:
 // CHECK-NEXT: Binary Function "clobber"  {
 // ...
 // CHECK:      End of Function "clobber"
@@ -139,15 +141,17 @@ clobber:
 // The above output was printed after first run of analysis
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Found RET inst:     00000000:         ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
 // CHECK-NEXT:     Authenticated reg: (none)
 // CHECK-NEXT:     SafeToDerefRegs: W30_HI{{[ \t]*$}}
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   mov     w30, #0x0, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: [0]()>)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:  After detailed PacRetAnalysis:
+// CHECK-EMPTY:
+// CHECK-NEXT: Running detailed src register safety analysis...
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   mov     w30, #0x0, src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: [0]()>)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ret     x30, src-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
+// CHECK-NEXT: After detailed src register safety analysis:
 // CHECK-NEXT: Binary Function "clobber"  {
 // ...
 // CHECK:      End of Function "clobber"
@@ -156,7 +160,7 @@ clobber:
 // Iterating over the reports and attaching clobbering info:
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
+// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
 
 
 // CHECK-LABEL:Analyzing in function main, AllocatorId 1

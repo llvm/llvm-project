@@ -261,7 +261,7 @@ RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
   for (int j{0}; j + 1 < xRank; ++j) {
     result.GetDimension(j).SetBounds(1, resultExtent[j]);
   }
-  if (int stat{result.Allocate()}) {
+  if (int stat{result.Allocate(kNoAsyncId)}) {
     terminator.Crash(
         "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
   }

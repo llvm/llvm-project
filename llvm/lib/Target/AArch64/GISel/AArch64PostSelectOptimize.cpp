@@ -33,7 +33,7 @@ class AArch64PostSelectOptimize : public MachineFunctionPass {
 public:
   static char ID;
 
-  AArch64PostSelectOptimize();
+  AArch64PostSelectOptimize() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "AArch64 Post Select Optimizer";
@@ -57,11 +57,6 @@ void AArch64PostSelectOptimize::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
-}
-
-AArch64PostSelectOptimize::AArch64PostSelectOptimize()
-    : MachineFunctionPass(ID) {
-  initializeAArch64PostSelectOptimizePass(*PassRegistry::getPassRegistry());
 }
 
 unsigned getNonFlagSettingVariant(unsigned Opc) {

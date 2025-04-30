@@ -183,7 +183,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   }
 
   if (nonzeroLength == 0)
-    return cir::ZeroAttr::get(builder.getContext(), desiredType);
+    return cir::ZeroAttr::get(desiredType);
 
   const unsigned trailingZeroes = arrayBound - nonzeroLength;
 
@@ -206,8 +206,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
       eles.push_back(element);
 
     return cir::ConstArrayAttr::get(
-        cir::ArrayType::get(builder.getContext(), commonElementType,
-                            arrayBound),
+        cir::ArrayType::get(commonElementType, arrayBound),
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 

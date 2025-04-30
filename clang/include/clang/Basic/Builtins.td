@@ -1304,6 +1304,18 @@ def ElementwiseMin : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseMaxNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maxnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseMaximum : Builtin {
   let Spellings = ["__builtin_elementwise_maximum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -4789,6 +4801,18 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
@@ -4889,12 +4913,6 @@ def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
-}
-
-def HLSLDot2Add : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_dot2add"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "float(_ExtVector<2, _Float16>, _ExtVector<2, _Float16>, float)";
 }
 
 def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {

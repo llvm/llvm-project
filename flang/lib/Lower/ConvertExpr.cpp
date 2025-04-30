@@ -2705,7 +2705,7 @@ public:
                     mlir::isa<fir::BoxCharType>(funcTy.getResult(0))) {
                   auto boxTy =
                       mlir::cast<fir::BoxCharType>(funcTy.getResult(0));
-                  mlir::Value ref = builder.createConvert(
+                  mlir::Value ref = builder.createConvertWithVolatileCast(
                       loc, builder.getRefType(boxTy.getEleTy()), x.getAddr());
                   auto len = builder.create<fir::UndefOp>(
                       loc, builder.getCharacterLengthType());
@@ -6306,7 +6306,8 @@ private:
       mlir::Value buffi = computeCoordinate(buff, off);
       llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
           builder, loc, memcpyType(), buffi, v.getAddr(), byteSz);
-      createCallMemcpy(args, /*isVolatile=*/false);
+      const bool isVolatile = fir::isa_volatile_type(v.getAddr().getType());
+      createCallMemcpy(args, isVolatile);
 
       // Save the incremented buffer position.
       builder.create<fir::StoreOp>(loc, endOff, buffPos);
@@ -6356,7 +6357,9 @@ private:
             mlir::Value buffi = computeCoordinate(buff, off);
             llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
                 builder, loc, memcpyType(), buffi, v.getAddr(), eleSz);
-            createCallMemcpy(args, /*isVolatile=*/false);
+            const bool isVolatile =
+                fir::isa_volatile_type(v.getAddr().getType());
+            createCallMemcpy(args, isVolatile);
 
             builder.create<fir::StoreOp>(loc, plusOne, buffPos);
           }
@@ -7013,7 +7016,8 @@ private:
           components.resetExtendCoorRef();
           auto ptrEleTy = fir::PointerType::get(eleTy);
           auto ptrAddr = builder.createConvert(loc, ptrEleTy, addr);
-          auto boxTy = fir::BoxType::get(ptrEleTy);
+          auto boxTy = fir::BoxType::get(
+              ptrEleTy, fir::isa_volatile_type(addr.getType()));
           // FIXME: The typeparams to the load may be different than those of
           // the subobject.
           if (components.hasExtendCoorRef())

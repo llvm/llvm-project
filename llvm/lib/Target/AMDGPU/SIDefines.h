@@ -396,7 +396,7 @@ enum CPol {
   TH_NT = 1,     // non-temporal
   TH_HT = 2,     // high-temporal
   TH_LU = 3,     // last use
-  TH_RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_WB = 3,     // regular (CU, SE), high-temporal with write-back (MALL)
   TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
   TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
   TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
