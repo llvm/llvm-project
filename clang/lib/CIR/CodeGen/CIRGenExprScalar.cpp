@@ -1178,11 +1178,18 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
   mlir::Value index = op.rhs;
   Expr *indexOperand = expr->getRHS();
 
-  // In a subtraction, the LHS is always the pointer.
+  // In the case of subtraction, the FE has ensured that the LHS is always the
+  // pointer. However, addition can have the pointer on either side. We will
+  // always have a pointer operand and an integer operand, so if the LHS wasn't
+  // a pointer, we need to swap our values.
   if (!isSubtraction && !mlir::isa<cir::PointerType>(pointer.getType())) {
     std::swap(pointer, index);
     std::swap(pointerOperand, indexOperand);
   }
+  assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+         "Need a pointer operand");
+  assert(mlir::isa<cir::IntType>(index.getType()) &&
+         "Need an integer operand");
 
   // Some versions of glibc and gcc use idioms (particularly in their malloc
   // routines) that add a pointer-sized integer (known to be a pointer value)

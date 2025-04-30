@@ -28,6 +28,10 @@ void foo(int *iptr, char *cptr, unsigned ustride) {
   // CHECK: %[[#NEGSTRIDE:]] = cir.unary(minus, %[[#SIGNSTRIDE]]) : !s32i, !s32i
   // CHECK: cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#NEGSTRIDE]] : !s32i), !cir.ptr<!s32i>
 
+  4 + iptr;
+  // CHECK: %[[#STRIDE:]] = cir.const #cir.int<4> : !s32i
+  // CHECK: cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#STRIDE]] : !s32i), !cir.ptr<!s32i>
+
   iptr++;
   // CHECK: %[[#STRIDE:]] = cir.const #cir.int<1> : !s32i
   // CHECK: cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#STRIDE]] : !s32i), !cir.ptr<!s32i>
