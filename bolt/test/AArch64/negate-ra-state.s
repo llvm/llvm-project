@@ -3,15 +3,15 @@
 
 # RUN: llvm-objdump %t.exe -d > %t.exe.dump
 # RUN: llvm-objdump --dwarf=frames %t.exe -D > %t.exe.dump-dwarf
-# RUN: match-dwarf %t.exe.dump %t.exe.dump-dwarf foo > orig.txt
+# RUN: match-dwarf %t.exe.dump %t.exe.dump-dwarf foo > %t.match-dwarf.txt
 
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt
 
 # RUN: llvm-objdump %t.exe.bolt -d > %t.exe.bolt.dump
 # RUN: llvm-objdump --dwarf=frames %t.exe.bolt  > %t.exe.bolt.dump-dwarf
-# RUN: match-dwarf %t.exe.bolt.dump %t.exe.bolt.dump-dwarf foo > bolted.txt
+# RUN: match-dwarf %t.exe.bolt.dump %t.exe.bolt.dump-dwarf foo > %t.bolt.match-dwarf.txt
 
-# RUN: diff orig.txt bolted.txt
+# RUN: diff %t.match-dwarf.txt %t.bolt.match-dwarf.txt
 
 	.text
 	.globl	foo
