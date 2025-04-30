@@ -8628,6 +8628,14 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     Operation = AtomicRMWInst::FMin;
     IsFP = true;
     break;
+  case lltok::kw_fmaximum:
+    Operation = AtomicRMWInst::FMaximum;
+    IsFP = true;
+    break;
+  case lltok::kw_fminimum:
+    Operation = AtomicRMWInst::FMinimum;
+    IsFP = true;
+    break;
   }
   Lex.Lex();  // Eat the operation.
 
