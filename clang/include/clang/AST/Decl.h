@@ -5179,22 +5179,35 @@ public:
   friend class ASTDeclWriter;
 };
 
-class HLSLRootSignatureDecl final : public NamedDecl {
-  ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements;
+class HLSLRootSignatureDecl final
+    : public NamedDecl,
+      private llvm::TrailingObjects<HLSLRootSignatureDecl,
+                                    llvm::hlsl::rootsig::RootElement> {
+  friend TrailingObjects;
 
-  HLSLRootSignatureDecl(
-      DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
-      ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
+  unsigned NumElems;
+
+  llvm::hlsl::rootsig::RootElement *getElems() {
+    return getTrailingObjects<llvm::hlsl::rootsig::RootElement>();
+  }
+
+  const llvm::hlsl::rootsig::RootElement *getElems() const {
+    return getTrailingObjects<llvm::hlsl::rootsig::RootElement>();
+  }
+
+  HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+                        unsigned NumElems);
 
 public:
   static HLSLRootSignatureDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
          ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
+
   static HLSLRootSignatureDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
 
-  ArrayRef<llvm::hlsl::rootsig::RootElement> &getRootElements() {
-    return RootElements;
+  ArrayRef<llvm::hlsl::rootsig::RootElement> getRootElements() const {
+    return {getElems(), NumElems};
   }
 
   // Implement isa/cast/dyncast/etc.
