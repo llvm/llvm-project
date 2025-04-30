@@ -605,33 +605,29 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[1:4], v[1:2]
 ; VI-NEXT:    v_mov_b32_e32 v6, s1
-; VI-NEXT:    s_cmp_eq_u32 s4, 1
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, s0, v0
+; VI-NEXT:    s_cmp_eq_u32 s4, 1
 ; VI-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[0:1]
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v1, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 3
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[0:1]
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 4
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 5
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    s_cmp_eq_u32 s4, 6
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[0:1]
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    s_cmp_eq_u32 s4, 7
-; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    s_cmp_eq_u32 s4, 6
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[2:3]
-; VI-NEXT:    v_cndmask_b32_e64 v0, v0, v4, s[0:1]
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    s_cmp_eq_u32 s4, 7
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v4, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    flat_store_short v[5:6], v0
 ; VI-NEXT:    s_endpgm
@@ -863,31 +859,27 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v13, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 9
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[0:1]
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 10
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v5, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 11
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[0:1]
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 12
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v6, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 13
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    s_cmp_eq_u32 s4, 14
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[0:1]
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    s_cmp_eq_u32 s4, 15
-; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    s_cmp_eq_u32 s4, 14
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v7, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-NEXT:    v_cmp_eq_u64_e64 vcc, 1, s[2:3]
-; VI-NEXT:    v_cndmask_b32_e64 v0, v0, v8, s[0:1]
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    s_cmp_eq_u32 s4, 15
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v8, vcc
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v8, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    flat_store_short v[9:10], v0
 ; VI-NEXT:    s_endpgm

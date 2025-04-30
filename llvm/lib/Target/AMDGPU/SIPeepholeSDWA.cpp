@@ -1063,17 +1063,6 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
   MISucc.substituteRegister(CarryIn->getReg(), TRI->getVCC(), 0, *TRI);
 }
 
-static unsigned getVCmpEqOpcode(unsigned Bits) {
-  if (Bits == 64)
-    return AMDGPU::V_CMP_EQ_U64_e64;
-  if (Bits == 32)
-    return AMDGPU::V_CMP_EQ_U32_e64;
-  if (Bits == 16)
-    return AMDGPU::V_CMP_EQ_U16_e64;
-
-  llvm_unreachable("Unexpected register bit width.");
-};
-
 /// Try to convert an \p MI in VOP3 which takes an src2 carry-in
 /// operand into the corresponding VOP2 form which expects the
 /// argument in VCC. To this end, either try to change the definition
@@ -1107,26 +1096,21 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
     LLVM_DEBUG(dbgs() << "VCC not known to be dead before instruction.\n");
     return;
   }
-  // Change destination of compare instruction to VCC
-  // or copy to VCC if carry-in is not a compare inst.
+
   Register CarryReg = CarryIn.getReg();
   MachineInstr *CarryDef = MRI->getVRegDef(CarryReg);
   if (!CarryDef)
     return;
 
+  // Change destination of compare instruction to VCC
+  // or copy to VCC if carry-in is not a compare inst.
   if (CarryDef->isCompare() && TII->isVOP3(*CarryDef) &&
       MRI->hasOneUse(CarryIn.getReg()))
     CarryDef->substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
-  else {
-    // Add write: VCC[lanedId] <- (CarryIn[laneId] == 1)
-    const TargetRegisterClass *Class =
-        TRI->getRegClassForOperandReg(*MRI, CarryIn);
-    unsigned RegSize = Class->MC->getSizeInBits();
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(getVCmpEqOpcode(RegSize)))
+  else
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY))
         .addReg(Vcc, RegState::Define)
-        .addImm(1)
         .add(CarryIn);
-  }
 
   auto Converted = BuildMI(MBB, MI, MI.getDebugLoc(),
                            TII->get(AMDGPU::getVOPe32(MI.getOpcode())))
