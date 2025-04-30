@@ -24,6 +24,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
@@ -213,7 +214,7 @@ void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
 
   // C++11 allows extra semicolons at namespace scope, but not in any of the
   // other contexts.
-  if (Kind == OutsideFunction && getLangOpts().CPlusPlus) {
+  if (Kind == ExtraSemiKind::OutsideFunction && getLangOpts().CPlusPlus) {
     if (getLangOpts().CPlusPlus11)
       Diag(StartLoc, diag::warn_cxx98_compat_top_level_semi)
           << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
@@ -223,10 +224,11 @@ void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
     return;
   }
 
-  if (Kind != AfterMemberFunctionDefinition || HadMultipleSemis)
+  if (Kind != ExtraSemiKind::AfterMemberFunctionDefinition || HadMultipleSemis)
     Diag(StartLoc, diag::ext_extra_semi)
-        << Kind << DeclSpec::getSpecifierName(TST,
-                                    Actions.getASTContext().getPrintingPolicy())
+        << llvm::to_underlying(Kind)
+        << DeclSpec::getSpecifierName(
+               TST, Actions.getASTContext().getPrintingPolicy())
         << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
   else
     // A single semicolon is valid after a member function definition.
@@ -902,7 +904,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl =
         Actions.ActOnEmptyDeclaration(getCurScope(), Attrs, Tok.getLocation());
-    ConsumeExtraSemi(OutsideFunction);
+    ConsumeExtraSemi(ExtraSemiKind::OutsideFunction);
     break;
   case tok::r_brace:
     Diag(Tok, diag::err_extraneous_closing_brace);
@@ -1361,7 +1363,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // In delayed template parsing mode, for function template we consume the
   // tokens and store them for late parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing && Tok.isNot(tok::equal) &&
-      TemplateInfo.Kind == ParsedTemplateInfo::Template &&
+      TemplateInfo.Kind == ParsedTemplateKind::Template &&
       Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
@@ -1802,7 +1804,7 @@ void Parser::AnnotateScopeToken(CXXScopeSpec &SS, bool IsNewAnnotation) {
 /// \param AllowImplicitTypename Whether we are in a context where a dependent
 ///        nested-name-specifier without typename is treated as a type (e.g.
 ///        T::type).
-Parser::AnnotatedNameKind
+AnnotatedNameKind
 Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
                         ImplicitTypenameContext AllowImplicitTypename) {
   assert(Tok.is(tok::identifier) || Tok.is(tok::annot_cxxscope));
@@ -1815,13 +1817,13 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      EnteringContext))
-    return ANK_Error;
+    return AnnotatedNameKind::Error;
 
   if (Tok.isNot(tok::identifier) || SS.isInvalid()) {
     if (TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,
                                                   AllowImplicitTypename))
-      return ANK_Error;
-    return ANK_Unresolved;
+      return AnnotatedNameKind::Error;
+    return AnnotatedNameKind::Unresolved;
   }
 
   IdentifierInfo *Name = Tok.getIdentifierInfo();
@@ -1834,8 +1836,9 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     // an expression. Fall back to annotating it as a type.
     if (TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,
                                                   AllowImplicitTypename))
-      return ANK_Error;
-    return Tok.is(tok::annot_typename) ? ANK_Success : ANK_TentativeDecl;
+      return AnnotatedNameKind::Error;
+    return Tok.is(tok::annot_typename) ? AnnotatedNameKind::Success
+                                       : AnnotatedNameKind::TentativeDecl;
   }
 
   Token Next = NextToken();
@@ -1863,7 +1866,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
 
   switch (Classification.getKind()) {
   case Sema::NC_Error:
-    return ANK_Error;
+    return AnnotatedNameKind::Error;
 
   case Sema::NC_Keyword:
     // The identifier was typo-corrected to a keyword.
@@ -1873,7 +1876,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     if (SS.isNotEmpty())
       AnnotateScopeToken(SS, !WasScopeAnnotation);
     // We've "annotated" this as a keyword.
-    return ANK_Success;
+    return AnnotatedNameKind::Success;
 
   case Sema::NC_Unknown:
     // It's not something we know about. Leave it unannotated.
@@ -1905,7 +1908,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
       if (NewType.isUsable())
         Ty = NewType.get();
       else if (Tok.is(tok::eof)) // Nothing to do here, bail out...
-        return ANK_Error;
+        return AnnotatedNameKind::Error;
     }
 
     Tok.setKind(tok::annot_typename);
@@ -1913,7 +1916,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     Tok.setAnnotationEndLoc(Tok.getLocation());
     Tok.setLocation(BeginLoc);
     PP.AnnotateCachedTokens(Tok);
-    return ANK_Success;
+    return AnnotatedNameKind::Success;
   }
 
   case Sema::NC_OverloadSet:
@@ -1923,7 +1926,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     if (SS.isNotEmpty())
       Tok.setLocation(SS.getBeginLoc());
     PP.AnnotateCachedTokens(Tok);
-    return ANK_Success;
+    return AnnotatedNameKind::Success;
 
   case Sema::NC_NonType:
     if (TryAltiVecVectorToken())
@@ -1938,7 +1941,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     PP.AnnotateCachedTokens(Tok);
     if (SS.isNotEmpty())
       AnnotateScopeToken(SS, !WasScopeAnnotation);
-    return ANK_Success;
+    return AnnotatedNameKind::Success;
 
   case Sema::NC_UndeclaredNonType:
   case Sema::NC_DependentNonType:
@@ -1951,14 +1954,14 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     PP.AnnotateCachedTokens(Tok);
     if (SS.isNotEmpty())
       AnnotateScopeToken(SS, !WasScopeAnnotation);
-    return ANK_Success;
+    return AnnotatedNameKind::Success;
 
   case Sema::NC_TypeTemplate:
     if (Next.isNot(tok::less)) {
       // This may be a type template being used as a template template argument.
       if (SS.isNotEmpty())
         AnnotateScopeToken(SS, !WasScopeAnnotation);
-      return ANK_TemplateName;
+      return AnnotatedNameKind::TemplateName;
     }
     [[fallthrough]];
   case Sema::NC_Concept:
@@ -1977,17 +1980,17 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
             Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
             /*AllowTypeAnnotation=*/!IsConceptName,
             /*TypeConstraint=*/IsConceptName))
-      return ANK_Error;
+      return AnnotatedNameKind::Error;
     if (SS.isNotEmpty())
       AnnotateScopeToken(SS, !WasScopeAnnotation);
-    return ANK_Success;
+    return AnnotatedNameKind::Success;
   }
   }
 
   // Unable to classify the name, but maybe we can annotate a scope specifier.
   if (SS.isNotEmpty())
     AnnotateScopeToken(SS, !WasScopeAnnotation);
-  return ANK_Unresolved;
+  return AnnotatedNameKind::Unresolved;
 }
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
