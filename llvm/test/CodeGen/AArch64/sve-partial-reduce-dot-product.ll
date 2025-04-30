@@ -1168,23 +1168,7 @@ define <vscale x 4 x i64> @partial_reduce_only_split_acc(<vscale x 4 x i64> %acc
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-NEXT:    and z3.h, z3.h, #0xff
 ; CHECK-NEWLOWERING-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z5.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z6.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z7.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z24.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z25.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z7.d, z6.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z25.d, z24.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z5.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z2.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    udot z0.d, z2.h, z3.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 8 x i8> %a to <vscale x 8 x i64>

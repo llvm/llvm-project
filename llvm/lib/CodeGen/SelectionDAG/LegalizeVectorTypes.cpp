@@ -3230,7 +3230,7 @@ void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
 
   // If the input types don't need splitting, just accumulate into the
   // low part of the accumulator.
-  if (getTypeAction(Input1.getValueType()) == TargetLowering::TypeSplitVector) {
+  if (getTypeAction(Input1.getValueType()) != TargetLowering::TypeSplitVector) {
     Lo = DAG.getNode(Opcode, DL, AccLo.getValueType(), AccLo, Input1, Input2);
     Hi = AccHi;
     return;
