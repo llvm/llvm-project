@@ -35,7 +35,7 @@ define <4 x i32> @shufflevector_pack_ev_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @shufflevector_pack_ev_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: shufflevector_pack_ev_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpackev.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 8
 ; CHECK-NEXT:    ret
     %c = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 0, i32 2>
     ret <2 x i64> %c
@@ -55,7 +55,7 @@ define <4 x float> @shufflevector_pack_ev_v4f32(<4 x float> %a, <4 x float> %b) 
 define <2 x double> @shufflevector_pack_ev_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: shufflevector_pack_ev_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpackev.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 8
 ; CHECK-NEXT:    ret
     %c = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 0, i32 2>
     ret <2 x double> %c
@@ -95,7 +95,7 @@ define <4 x i32> @shufflevector_pack_od_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @shufflodector_pack_od_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: shufflodector_pack_od_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpackod.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 13
 ; CHECK-NEXT:    ret
     %c = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
     ret <2 x i64> %c
@@ -115,7 +115,7 @@ define <4 x float> @shufflodector_pack_od_v4f32(<4 x float> %a, <4 x float> %b) 
 define <2 x double> @shufflodector_pack_od_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: shufflodector_pack_od_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpackod.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 13
 ; CHECK-NEXT:    ret
     %c = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 1, i32 3>
     ret <2 x double> %c
