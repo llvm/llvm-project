@@ -283,11 +283,11 @@ end
 
 Optimizations assume that Cray pointers do not alias any other variables.
 In the above example, it is assumed that `handle` and `target` do not alias,
-and optimizations will treat them as seperate entities.
+and optimizations will treat them as separate entities.
 
-You may add the TARGET attribute to variables aliasing with a Cray pointer (the
-`target` variable in this example), and this will disable some optimizations
-that would otherwise assume there is no aliasing.
+In order to disable optimizations that assume that there is no aliasing between
+Cray pointer targets and entities they alias with, add the TARGET attribute to
+variables aliasing with a Cray pointer (the `target` variable in this example).
 
 ## Type considerations
 
