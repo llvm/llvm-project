@@ -142,7 +142,7 @@ struct CIRRecordLowering final {
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
-  llvm::DenseMap<const FieldDecl *, unsigned> fields;
+  llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   cir::CIRDataLayout dataLayout;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -208,7 +208,8 @@ void CIRRecordLowering::fillOutputFields() {
       fieldTypes.push_back(member.data);
     if (member.kind == MemberInfo::InfoKind::Field) {
       if (member.fieldDecl)
-        fields[member.fieldDecl->getCanonicalDecl()] = fieldTypes.size() - 1;
+        fieldIdxMap[member.fieldDecl->getCanonicalDecl()] =
+            fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
       assert(!cir::MissingFeatures::bitfields());
     }
@@ -310,7 +311,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(!cir::MissingFeatures::bitfields());
 
   // Add all the field numbers.
-  rl->fieldInfo.swap(lowering.fields);
+  rl->fieldIdxMap.swap(lowering.fieldIdxMap);
 
   // Dump the layout, if requested.
   if (getASTContext().getLangOpts().DumpRecordLayouts) {
@@ -327,10 +328,7 @@ void CIRRecordLowering::lowerUnion() {
   bool seenNamedMember = false;
 
   // Iterate through the fields setting bitFieldInfo and the Fields array. Also
-  // locate the "most appropriate" storage type.  The heuristic for finding the
-  // storage type isn't necessary, the first (non-0-length-bitfield) field's
-  // type would work fine and be simpler but would be different than what we've
-  // been doing and cause lit tests to change.
+  // locate the "most appropriate" storage type.
   for (const FieldDecl *field : recordDecl->fields()) {
     mlir::Type fieldType;
     if (field->isBitField())
@@ -339,12 +337,13 @@ void CIRRecordLowering::lowerUnion() {
     else
       fieldType = getStorageType(field);
 
-    fields[field->getCanonicalDecl()] = 0;
+    // This maps a field to its index. For unions, the index is always 0.
+    fieldIdxMap[field->getCanonicalDecl()] = 0;
 
     // Compute zero-initializable status.
     // This union might not be zero initialized: it may contain a pointer to
     // data member which might have some exotic initialization sequence.
-    // If this is the case, then we aught not to try and come up with a "better"
+    // If this is the case, then we ought not to try and come up with a "better"
     // type, it might not be very easy to come up with a Constant which
     // correctly initializes it.
     if (!seenNamedMember) {
@@ -380,9 +379,8 @@ void CIRRecordLowering::lowerUnion() {
 
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);
-
-  // NOTE(cir): Defer padding calculations to the lowering process.
-  appendPaddingBytes(layoutSize - getSize(storageType));
+  else
+    appendPaddingBytes(layoutSize - getSize(storageType));
 
   // Set packed if we need it.
   if (layoutSize % getAlignment(storageType))

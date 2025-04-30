@@ -235,25 +235,18 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 /// Recurses into union members never returning a union as the largest member.
 Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   assert(isUnion() && "Only call getLargestMember on unions");
-  Type largestMember;
-  unsigned largestMemberSize = 0;
-  unsigned numElements = getNumElements();
-  auto members = getMembers();
-  if (getPadded())
-    numElements -= 1; // The last element is padding.
-  for (unsigned i = 0; i < numElements; ++i) {
-    Type ty = members[i];
-    if (!largestMember ||
-        dataLayout.getTypeABIAlignment(ty) >
-            dataLayout.getTypeABIAlignment(largestMember) ||
-        (dataLayout.getTypeABIAlignment(ty) ==
-             dataLayout.getTypeABIAlignment(largestMember) &&
-         dataLayout.getTypeSize(ty) > largestMemberSize)) {
-      largestMember = ty;
-      largestMemberSize = dataLayout.getTypeSize(largestMember);
-    }
-  }
-  return largestMember;
+  llvm::ArrayRef<Type> members = getMembers();
+  // If the union is padded, we need to ignore the last member,
+  // which is the padding.
+  return *std::max_element(
+      members.begin(), getPadded() ? members.end() - 1 : members.end(),
+      [&](Type lhs, Type rhs) {
+        return dataLayout.getTypeABIAlignment(lhs) <
+                   dataLayout.getTypeABIAlignment(rhs) ||
+               (dataLayout.getTypeABIAlignment(lhs) ==
+                    dataLayout.getTypeABIAlignment(rhs) &&
+                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+      });
 }
 
 //===----------------------------------------------------------------------===//
