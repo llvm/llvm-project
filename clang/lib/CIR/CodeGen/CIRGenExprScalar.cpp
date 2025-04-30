@@ -1188,8 +1188,7 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
   }
   assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
          "Need a pointer operand");
-  assert(mlir::isa<cir::IntType>(index.getType()) &&
-         "Need an integer operand");
+  assert(mlir::isa<cir::IntType>(index.getType()) && "Need an integer operand");
 
   // Some versions of glibc and gcc use idioms (particularly in their malloc
   // routines) that add a pointer-sized integer (known to be a pointer value)
