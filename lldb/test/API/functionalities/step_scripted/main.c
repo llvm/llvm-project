@@ -8,6 +8,6 @@ void foo() {
 }
 
 int main() {
-  foo();
+  foo(); // Break on foo call.
   return 0;
 }
