@@ -150,7 +150,6 @@ public:
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
-  void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 

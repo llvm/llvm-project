@@ -14378,10 +14378,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->getType().getAddressSpace() == LangAS::opencl_local)
       return;
 
-    // In HLSL, objects in the hlsl_constant address space are initialized
-    // externally, so don't synthesize an implicit initializer.
-    if (getLangOpts().HLSL &&
-        Var->getType().getAddressSpace() == LangAS::hlsl_constant)
+    // Handle HLSL uninitialized decls
+    if (getLangOpts().HLSL && HLSL().ActOnUninitializedVarDecl(Var))
       return;
 
     // C++03 [dcl.init]p9:
