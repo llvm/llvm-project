@@ -59,19 +59,15 @@ int x = foo();
 //      EDIT3: #include "foo.h"
 //  EDIT3-NOT: {{^}}#include "foobar.h"{{$}}
 
-//       RUN: clang-include-cleaner -insert=false -print=changes %s -- -I%S/Inputs/ 2>&1 | \
-//       RUN: FileCheck --check-prefix=DEPRECATED-INSERT %s
-// DEPRECATED-INSERT: warning: '-insert' is deprecated in favor of '-disable-insert'
-// DEPRECATED-INSERT: The old flag was confusing since it suggested that inserts
-// DEPRECATED-INSERT: were disabled by default, when they were actually enabled
+//        RUN: clang-include-cleaner -insert=false -print=changes %s -- -I%S/Inputs/ 2>&1 | \
+//        RUN: FileCheck --check-prefix=DEPRECATED-INSERT %s
+// DEPRECATED-INSERT: warning: '-insert=0' is deprecated in favor of '-disable-insert'. The old flag was confusing since it suggested that inserts were disabled by default, when they were actually enabled.
 
 //       RUN: clang-include-cleaner -remove=false -print=changes %s -- -I%S/Inputs/ 2>&1 | \
 //       RUN: FileCheck --check-prefix=DEPRECATED-REMOVE %s
-// DEPRECATED-REMOVE: warning: `-remove` is deprecated in favor of `-disable-remove`
-// DEPRECATED-REMOVE: The old flag was confusing since it suggested that removes
-// DEPRECATED-REMOVE: were disabled by default, when they were actually enabled
+// DEPRECATED-REMOVE: warning: '-remove=0' is deprecated in favor of '-disable-remove'. The old flag was confusing since it suggested that removes were disabled by default, when they were actually enabled.
 
 //       RUN: clang-include-cleaner -insert=false -remove=false -print=changes %s -- -I%S/Inputs/ 2>&1 | \
 //       RUN: FileCheck --check-prefix=DEPRECATED-BOTH %s
-// DEPRECATED-BOTH: warning: -insert is deprecated in favor of '-disable-insert'
-// DEPRECATED-BOTH: warning: -remove is deprecated in favor of '-disable-remove'
+// DEPRECATED-BOTH: warning: '-insert=0' is deprecated in favor of '-disable-insert'. The old flag was confusing since it suggested that inserts were disabled by default, when they were actually enabled.
+// DEPRECATED-BOTH: warning: '-remove=0' is deprecated in favor of '-disable-remove'. The old flag was confusing since it suggested that removes were disabled by default, when they were actually enabled.
