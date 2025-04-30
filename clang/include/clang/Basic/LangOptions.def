@@ -348,14 +348,18 @@ COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating p
 BENIGN_LANGOPT(RoundingMath, 1, false, "Do not assume default floating-point rounding behavior")
 BENIGN_ENUM_LANGOPT(FPExceptionMode, FPExceptionModeKind, 2, FPE_Default, "FP Exception Behavior Mode type")
 
-#if defined(__clang__) && defined( __has_warning ) && __has_warning("-Wpreferred-type-bitfield-enum-conversion")
+#if defined(__clang__) && defined(__has_warning)
+#if __has_warning("-Wpreferred-type-bitfield-enum-conversion")
 // FIXME: Remove this once the warning is fixed, https://llvm.org/PR137600
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpreferred-type-bitfield-enum-conversion"
 #endif
+#endif
 BENIGN_ENUM_LANGOPT(FPEvalMethod, FPEvalMethodKind, 3, FEM_UnsetOnCommandLine, "FP type used for floating point arithmetic")
-#if defined(__clang__) && defined( __has_warning ) && __has_warning("-Wpreferred-type-bitfield-enum-conversion")
+#if defined(__clang__) && defined(__has_warning)
+#if __has_warning("-Wpreferred-type-bitfield-enum-conversion")
 #pragma clang diagnostic pop
+#endif
 #endif
 
 ENUM_LANGOPT(Float16ExcessPrecision, ExcessPrecisionKind, 2, FPP_Standard, "Intermediate truncation behavior for Float16 arithmetic")
