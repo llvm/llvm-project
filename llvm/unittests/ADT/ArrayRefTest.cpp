@@ -265,6 +265,11 @@ static_assert(!std::is_constructible_v<
 static_assert(!std::is_constructible_v<ArrayRef<int>, iterator_range<int>>,
               "cannot construct from iterator range with non-pointer iterator");
 static_assert(
+    !std::is_constructible_v<ArrayRef<int>, iterator_range<const int *>>,
+    "cannot construct ArrayRef with non-const elements from const iterator "
+    "range");
+
+static_assert(
     std::is_constructible_v<ArrayRef<char *>, iterator_range<char **>>,
     "should be able to construct ArrayRef from iterator_range over pointers");
 
