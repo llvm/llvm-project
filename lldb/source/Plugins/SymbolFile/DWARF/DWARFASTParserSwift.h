@@ -70,8 +70,7 @@ public:
       lldb_private::CompilerDeclContext decl_context) override {}
 
   // FIXME: What should this do?
-  std::string
-  GetDIEClassTemplateParams(const DWARFDIE &die) override {
+  std::string GetDIEClassTemplateParams(DWARFDIE die) override {
     assert(false && "DWARFASTParserSwift::GetDIEClassTemplateParams has not "
                     "yet been implemented");
     return {};
