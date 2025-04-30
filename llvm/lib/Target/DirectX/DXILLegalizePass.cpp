@@ -175,7 +175,6 @@ static void upcastI8AllocasAndUses(Instruction &I,
 
   Type *SmallestType = nullptr;
 
-  // Gather all cast targets
   for (User *U : AI->users()) {
     auto *Load = dyn_cast<LoadInst>(U);
     if (!Load)
@@ -247,9 +246,9 @@ downcastI64toI32InsertExtractElements(Instruction &I,
   }
 }
 
-void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
-                         ConstantInt *SizeCI,
-                         DenseMap<Value *, Value *> &ReplacedValues) {
+static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
+                                ConstantInt *SizeCI,
+                                DenseMap<Value *, Value *> &ReplacedValues) {
   LLVMContext &Ctx = Builder.getContext();
   [[maybe_unused]] const DataLayout &DL =
       Builder.GetInsertBlock()->getModule()->getDataLayout();
