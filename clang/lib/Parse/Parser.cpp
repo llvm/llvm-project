@@ -2458,15 +2458,17 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
                                                Result.IsIfExists, Result.SS,
                                                Result.Name)) {
   case Sema::IER_Exists:
-    Result.Behavior = Result.IsIfExists ? IEB_Parse : IEB_Skip;
+    Result.Behavior =
+        Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
   case Sema::IER_DoesNotExist:
-    Result.Behavior = !Result.IsIfExists ? IEB_Parse : IEB_Skip;
+    Result.Behavior =
+        !Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
   case Sema::IER_Dependent:
-    Result.Behavior = IEB_Dependent;
+    Result.Behavior = IfExistsBehavior::Dependent;
     break;
 
   case Sema::IER_Error:
@@ -2488,14 +2490,14 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse declarations below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Cannot have a dependent external declaration");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }
