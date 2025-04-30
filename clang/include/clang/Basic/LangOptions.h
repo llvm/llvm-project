@@ -78,14 +78,14 @@ public:
 
   LangOptionsBase() = default;
 
-#if defined(__clang__)
+#if defined(__clang__) && defined( __has_warning ) && __has_warning("-Wpreferred-type-bitfield-enum-conversion")
 // FIXME: Remove this once the warning is fixed, https://llvm.org/PR137600
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpreferred-type-bitfield-enum-conversion"
 #endif
   LangOptionsBase(const LangOptionsBase&) = default;
   LangOptionsBase& operator=(const LangOptionsBase&) = default;
-#if defined(__clang__)
+#if defined(__clang__) && defined( __has_warning ) && __has_warning("-Wpreferred-type-bitfield-enum-conversion")
 #pragma clang diagnostic pop
 #endif
 
