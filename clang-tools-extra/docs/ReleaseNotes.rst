@@ -134,7 +134,7 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- New unsafe functions checks :doc:`bugprone-unsafe-functions-check`
+- New unsafe functions checks :doc:`bugprone-unsafe-functions`
   <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp> were added to clang-tidy.
 
 - Improved :doc:`bugprone-optional-value-conversion
