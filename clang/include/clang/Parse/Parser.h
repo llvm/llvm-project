@@ -84,6 +84,8 @@ enum class ParsedTemplateKind {
   ExplicitInstantiation
 };
 
+enum class CachedInitKind { DefaultArgument, DefaultInitializer };
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -1647,11 +1649,6 @@ private:
   PushParsingClass(Decl *TagOrTemplate, bool TopLevelClass, bool IsInterface);
   void DeallocateParsedClasses(ParsingClass *Class);
   void PopParsingClass(Sema::ParsingClassState);
-
-  enum CachedInitKind {
-    CIK_DefaultArgument,
-    CIK_DefaultInitializer
-  };
 
   NamedDecl *ParseCXXInlineMethodDef(AccessSpecifier AS,
                                      const ParsedAttributesView &AccessAttrs,
