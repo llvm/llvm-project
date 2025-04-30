@@ -688,10 +688,9 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
 // scaled_mfma
-def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ]>,
-                             VectorOfLengthAndType<[8, 32], [F8E5M2, F8E4M3FN]>,
-                             VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
-def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16, 32], [F32]>]>;
+def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN]>,
+                                   VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
+def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16], [F32]>]>;
 // wmma
 def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
                              [4, 8, 16],
@@ -847,8 +846,9 @@ def AMDGPU_ScaledMFMAOp :
                    ScaledMFMAOutTypes:$destC,
                    AnyTypeOf<[I8, FixedVectorOfLengthAndType<[4], [I8]>]>:$scalesA,
                    AnyTypeOf<[I8, FixedVectorOfLengthAndType<[4], [I8]>]>:$scalesB,
-                   I32Attr:$scalesIdxA,
-                   I32Attr:$scalesIdxB)>,
+                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxA,
+                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxB
+                   )>,
     Results<(outs ScaledMFMAOutTypes: $destD)> {
   let summary = "MLIR wrapper for CDNA scaled mfma instructions";
   let description = [{
@@ -879,8 +879,7 @@ def AMDGPU_ScaledMFMAOp :
   let assemblyFormat = [{
     `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
     attr-dict
-    `:` type($sourceA) `,` type($scalesA) `,` type($sourceB) `,` type($scalesB) `,` type($destC)
+    `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
   }];
-  let hasVerifier = 1;
 }
 #endif // AMDGPU

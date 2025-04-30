@@ -506,19 +506,6 @@ LogicalResult GatherToLDSOp::verify() {
   return success();
 }
 
-LogicalResult ScaledMFMAOp::verify() {
-  unsigned scalesIdxA = getScalesIdxA();
-  unsigned scalesIdxB = getScalesIdxB();
-
-  if (scalesIdxA > 3)
-    return emitOpError("scales idx A must be a value from 0 to 3 inclusive");
-
-  if (scalesIdxB > 3)
-    return emitOpError("scales idx B must be a value from 0 to 3 inclusive");
-
-  return success();
-}
-
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES

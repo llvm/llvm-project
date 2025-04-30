@@ -529,6 +529,25 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
+/// Converts the scaled MFMA operands, `scalesA` and `scalesB`, from MLIR AMDGPU
+/// dialect convention to ROCDL and LLVM AMDGPU intrinsics convention.
+///
+/// Specifically:
+/// 1. If `input` is a i8 value, zero extend it to i32
+/// 2. If `input` is a vector of length 4 and type i8, cast it to i32
+///
+/// Note that the type of `input` has already been LLVM type converted:
+/// therefore 8-bit and smaller floats are represented as their corresponding
+/// `iN` integers.
+static Value castScaledMFMAVectorOperand(ConversionPatternRewriter &rewriter,
+                                         Location loc, Value input) {
+  Type inputType = input.getType();
+  Type outputType = rewriter.getI32Type();
+  if (auto intType = dyn_cast<IntegerType>(inputType))
+    return rewriter.create<LLVM::ZExtOp>(loc, outputType, input);
+  return rewriter.create<LLVM::BitcastOp>(loc, outputType, input);
+}
+
 /// Push an input operand. If it is a float type, nothing to do. If it is
 /// an integer type, then we need to also push its signdness (1 for signed, 0
 /// for unsigned) and we need to pack the input 16xi8 vector into a 4xi32
@@ -827,20 +846,19 @@ mfmaOpToScaledIntrinsic(Type aType, Type bType, Type destType, uint32_t m,
 }
 
 static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
-mfmaOpToScaledIntrinsic(Operation *op, Chipset chipset) {
-  if (auto mfma = llvm::dyn_cast_or_null<MFMAOp>(op)) {
-    return mfmaOpToScaledIntrinsic(
-        mfma.getSourceA().getType(), mfma.getSourceB().getType(),
-        mfma.getDestC().getType(), mfma.getM(), mfma.getN(), mfma.getK(),
-        mfma.getBlocks(), chipset);
-  }
-  if (auto smfma = llvm::dyn_cast_or_null<ScaledMFMAOp>(op)) {
-    return mfmaOpToScaledIntrinsic(smfma.getSourceA().getType(),
-                                   smfma.getSourceB().getType(),
-                                   smfma.getDestC().getType(), smfma.getM(),
-                                   smfma.getN(), smfma.getK(), 1u, chipset);
-  }
-  return std::nullopt;
+mfmaOpToScaledIntrinsic(MFMAOp mfma, Chipset chipset) {
+  return mfmaOpToScaledIntrinsic(
+      mfma.getSourceA().getType(), mfma.getSourceB().getType(),
+      mfma.getDestC().getType(), mfma.getM(), mfma.getN(), mfma.getK(),
+      mfma.getBlocks(), chipset);
+}
+
+static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
+mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, Chipset chipset) {
+  return mfmaOpToScaledIntrinsic(smfma.getSourceA().getType(),
+                                 smfma.getSourceB().getType(),
+                                 smfma.getDestC().getType(), smfma.getM(),
+                                 smfma.getN(), smfma.getK(), 1u, chipset);
 }
 
 /// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -991,17 +1009,19 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
         {convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceA()),
          convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC()});
-    Value scalesIdxA = createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
-    Value scalesIdxB = createI32Constant(rewriter, loc, adaptor.getScalesIdxB());
+    Value scalesIdxA =
+        createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
+    Value scalesIdxB =
+        createI32Constant(rewriter, loc, adaptor.getScalesIdxB());
     loweredOp.addOperands(
         {createI32Constant(rewriter, loc, aTypeCode),
          createI32Constant(rewriter, loc, bTypeCode),
-         /*scales A*/
-         convertMFMAVectorOperand(rewriter, loc, adaptor.getScalesA()),
-         /*scales B*/
-         convertMFMAVectorOperand(rewriter, loc, adaptor.getScalesB()),
          /*scales idx A=*/scalesIdxA,
-         /*scales idx B=*/scalesIdxB});
+         /*scales A*/
+         castScaledMFMAVectorOperand(rewriter, loc, adaptor.getScalesA()),
+         /*scales idx B=*/scalesIdxB,
+         /*scales B*/
+         castScaledMFMAVectorOperand(rewriter, loc, adaptor.getScalesB())});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
