@@ -310,8 +310,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
 
-  if (args.hasFlag(clang::driver::options::OPT_finstrument_functions,
-                   clang::driver::options::OPT_finstrument_functions, false))
+  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = true;
 
   // -flto=full/thin option.

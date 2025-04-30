@@ -103,8 +103,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
         mathOpts.getReciprocalMath() && NoSignedZerosFPMath &&
         ApproxFuncFPMath && mathOpts.getFPContractEnabled();
     if (opts.InstrumentFunctions) {
-      InstrumentFunctionsEntry = "__cyg_profile_func_enter";
-      InstrumentFunctionsExit = "__cyg_profile_func_exit";
+      InstrumentFunctionEntry = "__cyg_profile_func_enter";
+      InstrumentFunctionExit = "__cyg_profile_func_exit";
     }
   }
 
@@ -128,8 +128,12 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
-  std::string InstrumentFunctionsEntry = "";
-  std::string InstrumentFunctionsExit = "";
+  std::string InstrumentFunctionEntry =
+      ""; ///< Name of the instrument-function that is called on each
+          ///< function-entry
+  std::string InstrumentFunctionExit =
+      ""; ///< Name of the instrument-function that is called on each
+          ///< function-exit
 };
 
 struct OffloadModuleOpts {
