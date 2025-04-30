@@ -1812,3 +1812,16 @@ define <vscale x 4 x float> @scalable_splat_binop_constant_lhs(<vscale x 4 x flo
   %r = fadd <vscale x 4 x float> splat (float 42.0), %splatx
   ret <vscale x 4 x float> %r
 }
+
+; Negative test - shouldn't pull shuffle out as it udiv isn't safe to speculate.
+define <vscale x 4 x i32> @scalable_splat_binop_constant_ub(<vscale x 4 x i32> %x) {
+; CHECK-LABEL: @scalable_splat_binop_constant_ub(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <vscale x 4 x i32> [[X:%.*]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = udiv <vscale x 4 x i32> splat (i32 42), [[SPLATX]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+;
+
+  %splatx = shufflevector <vscale x 4 x i32> %x, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %r = udiv <vscale x 4 x i32> splat (i32 42), %splatx
+  ret <vscale x 4 x i32> %r
+}

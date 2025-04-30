@@ -2272,7 +2272,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   }
 
   // Similar to the combine above, but handles the case for scalable vectors
-  // where both V1 and C are splats.
+  // where both shuffle(V1, 0) and C are splats.
   //
   // Op(shuffle(V1, 0), (splat C)) -> shuffle(Op(V1, (splat C)), 0)
   if (isa<ScalableVectorType>(Inst.getType()) &&
