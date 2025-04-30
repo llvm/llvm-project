@@ -260,6 +260,11 @@ enum StopReason {
   // Indicates that execution stopped because the debugger backend relies
   // on recorded data and we reached the end of that data.
   eStopReasonHistoryBoundary,
+  /// Inicates that the program stopped for a dynamic loader plugin to do some
+  /// work. The process will auto continue after the plugin is done loading or
+  /// unloading some shared libraries unless the target setting named
+  /// "target.process.stop-on-sharedlibrary-events" it set to true.
+  eStopReasonDynammicLoader
 };
 
 /// Command Return Status Types.

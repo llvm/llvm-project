@@ -258,10 +258,13 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jGPUPluginInitialize,
       &GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize);
-      RegisterMemberFunctionHandler(
-        StringExtractorGDBRemote::eServerPacketType_jGPUPluginBreakpointHit,
-        &GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit);
-    }
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jGPUPluginBreakpointHit,
+      &GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jGPUPluginGetDynamicLoaderLibraryInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginGetDynamicLoaderLibraryInfo);
+  }
 
 void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(
     const ProcessLaunchInfo &info) {
@@ -728,6 +731,8 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "vforkdone";
   case eStopReasonInterrupt:
     return "async interrupt";
+  case eStopReasonDynammicLoader:
+    return "dyld";
   case eStopReasonHistoryBoundary:
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
@@ -3725,6 +3730,29 @@ GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit(
 
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginGetDynamicLoaderLibraryInfo(
+    StringExtractorGDBRemote &packet) {
+
+  packet.ConsumeFront("jGPUPluginGetDynamicLoaderLibraryInfo:");
+  Expected<GPUDynamicLoaderArgs> args =
+      json::parse<GPUDynamicLoaderArgs>(packet.Peek(), "GPUDynamicLoaderArgs");
+  if (!args)
+    return SendErrorResponse(args.takeError());
+
+
+  if (!m_current_process)
+    return SendErrorResponse(Status::FromErrorString("invalid process"));
+  std::optional<GPUDynamicLoaderResponse> libraries_response = 
+      m_current_process->GetGPUDynamicLoaderLibraryInfos(*args);
+  if (!libraries_response)
+    return SendErrorResponse(Status::FromErrorString(
+        "jGPUPluginGetDynamicLoaderLibraryInfo not supported"));
+  StreamGDBRemote response;
+  response.PutAsJSON(*libraries_response, /*hex_ascii=*/false);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo(
     StringExtractorGDBRemote &packet) {
   // Fail if we don't have a current process.
@@ -4310,6 +4338,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("memory-tagging+");
   if (bool(plugin_features & Extension::savecore))
     ret.push_back("qSaveCore+");
+  if (bool(plugin_features & Extension::json_dynamic_loader))
+    ret.push_back("qJsonDynamicLoader+");
 
   // check for client features
   m_extensions_supported = {};

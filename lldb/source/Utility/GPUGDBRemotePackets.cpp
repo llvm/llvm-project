@@ -132,4 +132,84 @@ llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data) {
           });
 }
 
+//------------------------------------------------------------------------------
+// GPUSectionInfo
+//------------------------------------------------------------------------------
+
+bool fromJSON(const llvm::json::Value &value, GPUSectionInfo &data,
+              llvm::json::Path path) {
+  ObjectMapper o(value, path);
+  return o && 
+         o.map("name", data.name) &&
+         o.mapOptional("load_address", data.load_address),
+         o.map("children", data.children);
+}
+
+llvm::json::Value toJSON(const GPUSectionInfo &data) {
+  return json::Value(
+    Object{{"name", data.name}, 
+           {"load_address", data.load_address},
+           {"children", data.children}
+          });
+}
+
+//------------------------------------------------------------------------------
+// GPUDynamicLoaderLibraryInfo
+//------------------------------------------------------------------------------
+
+bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderLibraryInfo &data,
+  llvm::json::Path path) {
+  ObjectMapper o(value, path);
+  return o && 
+         o.map("pathname", data.pathname) &&
+         o.map("load", data.load) &&
+         o.mapOptional("load_address", data.load_address),
+         o.mapOptional("native_memory_address", data.native_memory_address),
+         o.mapOptional("native_memory_size", data.native_memory_size),
+         o.mapOptional("file_offset", data.file_offset),
+         o.mapOptional("file_size", data.file_size),
+         o.map("loaded_sections", data.loaded_sections);
+}
+
+llvm::json::Value toJSON(const GPUDynamicLoaderLibraryInfo &data) {
+return json::Value(
+Object{{"pathname", data.pathname}, 
+       {"load", data.load},
+       {"native_memory_address", data.native_memory_address},
+       {"native_memory_size", data.native_memory_size},
+       {"file_offset", data.file_offset},
+       {"file_size", data.file_size},
+       {"loaded_sections", data.loaded_sections}
+      });
+}
+
+//------------------------------------------------------------------------------
+// GPUDynamicLoaderArgs
+//------------------------------------------------------------------------------
+
+bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderArgs &data,
+    llvm::json::Path path) {
+  ObjectMapper o(value, path);
+  return o && 
+         o.map("full", data.full);
+}
+
+llvm::json::Value toJSON(const GPUDynamicLoaderArgs &data) {
+  return json::Value(Object{{"full", data.full}});
+}
+
+//------------------------------------------------------------------------------
+// GPUDynamicLoaderResponse
+//------------------------------------------------------------------------------
+bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderResponse &data,
+              llvm::json::Path path) {
+  ObjectMapper o(value, path);
+  return o && 
+         o.map("library_infos", data.library_infos);
+}
+
+llvm::json::Value toJSON(const GPUDynamicLoaderResponse &data) {
+  return json::Value(Object{{"library_infos", data.library_infos}});
+}
+
 } // namespace lldb_private

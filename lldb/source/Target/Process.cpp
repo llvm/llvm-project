@@ -872,6 +872,7 @@ bool Process::HandleProcessStateChangedEvent(
             case eStopReasonInstrumentation:
             case eStopReasonProcessorTrace:
             case eStopReasonInterrupt:
+            case eStopReasonDynammicLoader:
               if (!other_thread)
                 other_thread = thread;
               break;

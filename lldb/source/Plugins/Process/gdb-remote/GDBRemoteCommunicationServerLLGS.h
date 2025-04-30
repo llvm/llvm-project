@@ -288,6 +288,9 @@ protected:
   
   PacketResult Handle_jGPUPluginBreakpointHit(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jGPUPluginGetDynamicLoaderLibraryInfo(
+      StringExtractorGDBRemote &packet);
+
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;

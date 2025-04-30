@@ -128,8 +128,87 @@ bool ProcessMockGPU::GetProcessInfo(ProcessInstanceInfo &proc_info) {
   return true;
 }
 
+std::optional<GPUDynamicLoaderResponse> 
+ProcessMockGPU::GetGPUDynamicLoaderLibraryInfos(const GPUDynamicLoaderArgs &args) {
+  GPUDynamicLoaderResponse response;
+  // First example of a shared library. This is for cases where there is a file
+  // on disk that contains an object file that can be loaded into the process
+  // and everything should be slid to the load address. All sections within this
+  // file will be loaded at their file address + 0x20000. This is very typical
+  // for ELF files.
+  GPUDynamicLoaderLibraryInfo lib1;
+  lib1.pathname = "/usr/lib/lib1.so";
+  lib1.load_address = 0x20000;
+  response.library_infos.push_back(lib1);
+  // Second example of a shared library. This is for cases where there is an
+  // object file contained within another object file at some file offset with
+  // a file size. This one is slid to 0x30000, and all sections will get slid
+  // by the same amount.
+  GPUDynamicLoaderLibraryInfo lib2;
+  lib2.pathname = "/tmp/a.out";
+  lib2.load_address = 0x30000;
+  lib2.file_offset = 0x1000;
+  lib2.file_size = 0x500;
+  response.library_infos.push_back(lib2);
+  /// Third example of a shared library. This is for cases where there the 
+  /// object file is loaded into the memory of the native process. LLDB will 
+  /// need create an in memory object file using the data in this info.
+  GPUDynamicLoaderLibraryInfo lib3;
+  lib3.pathname = "/usr/lib/lib3.so";
+  lib3.native_memory_address = 0x4500000;
+  lib3.native_memory_size = 0x2000;
+  response.library_infos.push_back(lib3);
+
+  /// Fourth example of a shared library where we load each of the top level
+  /// sections of an object file at different addresses. 
+  GPUDynamicLoaderLibraryInfo lib4;
+  lib4.pathname = "/usr/lib/lib4.so";
+  lib4.loaded_sections.push_back({"PT_LOAD[0]", 0x0e0000, {}});
+  lib4.loaded_sections.push_back({"PT_LOAD[1]", 0x100000, {}});
+  lib4.loaded_sections.push_back({"PT_LOAD[2]", 0x0f0000, {}});
+  lib4.loaded_sections.push_back({"PT_LOAD[3]", 0x020000, {}});
+  response.library_infos.push_back(lib4);
+
+  /// Fifth example of a shared library. This is for cases where there the 
+  /// object file is loaded individual sections are loaded at different 
+  /// addresses instead of having a single load address for the entire object 
+  /// file. This allows GPU plug-ins to load sections at different addresses 
+  /// as they are loaded by the GPU driver. Sections can be created for 
+  /// functions in the ObjectFileELF plug-in when parsing the GPU ELF file so
+  /// that individual functions can be loaded at different addresses as the 
+  /// driver loads them.
+  GPUDynamicLoaderLibraryInfo lib5;
+  lib5.pathname = "/usr/lib/lib5.so";
+  /// Here we are going to assume that the .text section has functions that 
+  /// create sections for each function in the object file. Then each function 
+  /// can be loaded at a different address as the driver loads them.
+
+  /// Create the same section hierarchy as found in the ELF file by creating
+  /// a "PT_LOAD[0]" section that contains a ".text" section. We don't give
+  /// either a load address. We will add sections for each function and set the
+  /// load addresses for each function section in the text.children array.
+  GPUSectionInfo PT_LOAD1;
+  PT_LOAD1.name = "PT_LOAD[1]";
+  GPUSectionInfo text_section;
+  text_section.name = ".text";
+  GPUSectionInfo func_foo_section;
+  func_foo_section.name = "foo";
+  func_foo_section.load_address = 0x80000;
+  text_section.children.push_back(func_foo_section); 
+
+  GPUSectionInfo func_bar_section;
+  func_bar_section.name = "bar";
+  func_bar_section.load_address = 0x80200;
+  text_section.children.push_back(func_bar_section); 
+  PT_LOAD1.children.push_back(text_section);
+  lib5.loaded_sections.push_back(PT_LOAD1);
+  response.library_infos.push_back(lib5);
+  return response;
+}
+
+
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-ProcessManagerMockGPU::Launch(
+ProcessMockGPU::Manager::Launch(
     ProcessLaunchInfo &launch_info,
     NativeProcessProtocol::NativeDelegate &native_delegate) {
   lldb::pid_t pid = 1234;
@@ -139,7 +218,13 @@ ProcessManagerMockGPU::Launch(
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-ProcessManagerMockGPU::Attach(
+ProcessMockGPU::Manager::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) {
   return llvm::createStringError("Unimplemented function");
+}
+
+
+ProcessMockGPU::Extension
+ProcessMockGPU::Manager::GetSupportedExtensions() const {
+  return Extension::json_dynamic_loader;
 }

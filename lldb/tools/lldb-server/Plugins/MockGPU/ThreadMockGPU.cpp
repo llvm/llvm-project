@@ -13,8 +13,7 @@ using namespace lldb_server;
 
 ThreadMockGPU::ThreadMockGPU(ProcessMockGPU &process, lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_reg_context(*this) {
-  m_stop_info.reason = lldb::eStopReasonSignal;
-  m_stop_info.signo = SIGTRAP;
+  m_stop_info.reason = lldb::eStopReasonDynammicLoader;
 }
 
 // NativeThreadProtocol Interface
