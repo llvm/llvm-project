@@ -1105,7 +1105,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         ParenExprType = ParenParseOption::CastExpr;
         break;
       case CastParseKind::PrimaryExprOnly:
-        ParenExprType = FoldExpr;
+        ParenExprType = ParenParseOption::FoldExpr;
         break;
     }
     ParsedType CastTy;
@@ -1121,17 +1121,19 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       return Res;
 
     switch (ParenExprType) {
-    case SimpleExpr:   break;    // Nothing else to do.
-    case CompoundStmt: break;  // Nothing else to do.
-    case CompoundLiteral:
+    case ParenParseOption::SimpleExpr:
+      break; // Nothing else to do.
+    case ParenParseOption::CompoundStmt:
+      break; // Nothing else to do.
+    case ParenParseOption::CompoundLiteral:
       // We parsed '(' type-name ')' '{' ... '}'.  If any suffixes of
       // postfix-expression exist, parse them now.
       break;
-    case CastExpr:
+    case ParenParseOption::CastExpr:
       // We have parsed the cast-expression and no postfix-expr pieces are
       // following.
       return Res;
-    case FoldExpr:
+    case ParenParseOption::FoldExpr:
       // We only parsed a fold-expression. There might be postfix-expr pieces
       // afterwards; parse them now.
       break;
@@ -2566,7 +2568,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // type-name, or it is a unary-expression that starts with a compound
     // literal, or starts with a primary-expression that is a parenthesized
     // expression.
-    ParenParseOption ExprType = CastExpr;
+    ParenParseOption ExprType = ParenParseOption::CastExpr;
     SourceLocation LParenLoc = Tok.getLocation(), RParenLoc;
 
     Operand = ParseParenExpression(ExprType, true/*stopIfCastExpr*/,
@@ -2575,7 +2577,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
 
     // If ParseParenExpression parsed a '(typename)' sequence only, then this is
     // a type.
-    if (ExprType == CastExpr) {
+    if (ExprType == ParenParseOption::CastExpr) {
       isCastExpr = true;
       return ExprEmpty();
     }
@@ -3133,7 +3135,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     cutOffParsing();
     Actions.CodeCompletion().CodeCompleteExpression(
         getCurScope(), PreferredType.get(Tok.getLocation()),
-        /*IsParenthesized=*/ExprType >= CompoundLiteral);
+        /*IsParenthesized=*/ExprType >= ParenParseOption::CompoundLiteral);
     return ExprError();
   }
 
@@ -3157,7 +3159,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
 
   // None of these cases should fall through with an invalid Result
   // unless they've already reported an error.
-  if (ExprType >= CompoundStmt && Tok.is(tok::l_brace)) {
+  if (ExprType >= ParenParseOption::CompoundStmt && Tok.is(tok::l_brace)) {
     Diag(Tok, OpenLoc.isMacroID() ? diag::ext_gnu_statement_expr_macro
                                   : diag::ext_gnu_statement_expr);
 
@@ -3180,7 +3182,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       Actions.ActOnStartStmtExpr();
 
       StmtResult Stmt(ParseCompoundStatement(true));
-      ExprType = CompoundStmt;
+      ExprType = ParenParseOption::CompoundStmt;
 
       // If the substmt parsed correctly, build the AST node.
       if (!Stmt.isInvalid()) {
@@ -3190,7 +3192,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
         Actions.ActOnStmtExprError();
       }
     }
-  } else if (ExprType >= CompoundLiteral && BridgeCast) {
+  } else if (ExprType >= ParenParseOption::CompoundLiteral && BridgeCast) {
     tok::TokenKind tokenKind = Tok.getKind();
     SourceLocation BridgeKeywordLoc = ConsumeToken();
 
@@ -3227,7 +3229,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     return Actions.ObjC().ActOnObjCBridgedCast(getCurScope(), OpenLoc, Kind,
                                                BridgeKeywordLoc, Ty.get(),
                                                RParenLoc, SubExpr.get());
-  } else if (ExprType >= CompoundLiteral &&
+  } else if (ExprType >= ParenParseOption::CompoundLiteral &&
              isTypeIdInParens(isAmbiguousTypeId)) {
 
     // Otherwise, this is a compound literal expression or cast expression.
@@ -3271,7 +3273,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       ColonProtection.restore();
       RParenLoc = T.getCloseLocation();
       if (Tok.is(tok::l_brace)) {
-        ExprType = CompoundLiteral;
+        ExprType = ParenParseOption::CompoundLiteral;
         TypeResult Ty;
         {
           InMessageExpressionRAIIObject InMessage(*this, false);
@@ -3323,7 +3325,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
         }
       }
 
-      if (ExprType == CastExpr) {
+      if (ExprType == ParenParseOption::CastExpr) {
         // We parsed '(' type-name ')' and the thing after it wasn't a '{'.
 
         if (DeclaratorInfo.isInvalidType())
@@ -3369,9 +3371,9 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       Diag(Tok, diag::err_expected_lbrace_in_compound_literal);
       return ExprError();
     }
-  } else if (ExprType >= FoldExpr && Tok.is(tok::ellipsis) &&
+  } else if (ExprType >= ParenParseOption::FoldExpr && Tok.is(tok::ellipsis) &&
              isFoldOperator(NextToken().getKind())) {
-    ExprType = FoldExpr;
+    ExprType = ParenParseOption::FoldExpr;
     return ParseFoldExpression(ExprResult(), T);
   } else if (isTypeCast) {
     // Parse the expression-list.
@@ -3381,18 +3383,18 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (!ParseSimpleExpressionList(ArgExprs)) {
       // FIXME: If we ever support comma expressions as operands to
       // fold-expressions, we'll need to allow multiple ArgExprs here.
-      if (ExprType >= FoldExpr && ArgExprs.size() == 1 &&
+      if (ExprType >= ParenParseOption::FoldExpr && ArgExprs.size() == 1 &&
           isFoldOperator(Tok.getKind()) && NextToken().is(tok::ellipsis)) {
-        ExprType = FoldExpr;
+        ExprType = ParenParseOption::FoldExpr;
         return ParseFoldExpression(ArgExprs[0], T);
       }
 
-      ExprType = SimpleExpr;
+      ExprType = ParenParseOption::SimpleExpr;
       Result = Actions.ActOnParenListExpr(OpenLoc, Tok.getLocation(),
                                           ArgExprs);
     }
   } else if (getLangOpts().OpenMP >= 50 && OpenMPDirectiveParsing &&
-             ExprType == CastExpr && Tok.is(tok::l_square) &&
+             ExprType == ParenParseOption::CastExpr && Tok.is(tok::l_square) &&
              tryParseOpenMPArrayShapingCastPart()) {
     bool ErrorFound = false;
     SmallVector<Expr *, 4> OMPDimensions;
@@ -3433,12 +3435,12 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       Result = Actions.CorrectDelayedTyposInExpr(Result);
     }
 
-    if (ExprType >= FoldExpr && isFoldOperator(Tok.getKind()) &&
-        NextToken().is(tok::ellipsis)) {
-      ExprType = FoldExpr;
+    if (ExprType >= ParenParseOption::FoldExpr &&
+        isFoldOperator(Tok.getKind()) && NextToken().is(tok::ellipsis)) {
+      ExprType = ParenParseOption::FoldExpr;
       return ParseFoldExpression(Result, T);
     }
-    ExprType = SimpleExpr;
+    ExprType = ParenParseOption::SimpleExpr;
 
     // Don't build a paren expression unless we actually match a ')'.
     if (!Result.isInvalid() && Tok.is(tok::r_paren))
