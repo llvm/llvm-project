@@ -5330,7 +5330,22 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     return;
   }
 
-  if (!isTokenStringLiteral()) {
+  auto ProcessStringLiteral = [this]() -> std::optional<StringLiteral *> {
+    if (!isTokenStringLiteral())
+      return std::nullopt;
+
+    ExprResult StringResult = ParseUnevaluatedStringLiteralExpression();
+    if (StringResult.isInvalid())
+      return std::nullopt;
+    
+    if (auto Lit = dyn_cast<StringLiteral>(StringResult.get()))
+      return Lit;
+
+    return std::nullopt;
+  };
+
+  auto StrLiteral = ProcessStringLiteral();
+  if (!StrLiteral.has_value()) {
     Diag(Tok, diag::err_expected_string_literal)
         << /*in attributes...*/ 4 << RootSignatureIdent->getName();
     SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
@@ -5338,60 +5353,50 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
       T.consumeClose();
     return;
   }
+  
+  // Construct our identifier
+  StringRef Signature = StrLiteral.value()->getString();
+  auto Hash = llvm::hash_value(Signature);
+  std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
+  IdentifierInfo *DeclIdent = &(Actions.getASTContext().Idents.get(IdStr));
 
-  ExprResult StringResult = ParseUnevaluatedStringLiteralExpression();
-  if (StringResult.isInvalid()) {
-    SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
-    if (Tok.is(tok::r_paren))
-      T.consumeClose();
-    return;
-  }
-
-  ArgsVector Args;
-  if (auto Lit = dyn_cast<StringLiteral>(StringResult.get())) {
-    // Construct our identifier
-    StringRef Signature = Lit->getString();
-    auto Hash = llvm::hash_value(Signature);
-    std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
-    IdentifierInfo *DeclIdent = &(Actions.getASTContext().Idents.get(IdStr));
-
-    LookupResult R(Actions, DeclIdent, SourceLocation(),
-                   Sema::LookupOrdinaryName);
-    // Check if we have already found a decl of the same name, if we haven't
-    // then parse the root signature string and construct the in-memory elements
-    if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
-      // Invoke the root signature parser to construct the in-memory constructs
-      hlsl::RootSignatureLexer Lexer(Signature, RootSignatureLoc);
-      SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
-      hlsl::RootSignatureParser Parser(Elements, Lexer, PP);
-      if (Parser.parse()) {
-        SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
-        if (Tok.is(tok::r_paren))
-          T.consumeClose();
-        return;
-      }
-
-      // Allocate the root elements onto ASTContext
-      unsigned N = Elements.size();
-      auto RootElements = MutableArrayRef<llvm::hlsl::rootsig::RootElement>(
-          ::new (Actions.getASTContext()) llvm::hlsl::rootsig::RootElement[N],
-          N);
-      for (unsigned I = 0; I < N; ++I)
-        RootElements[I] = Elements[I];
-
-      // Create the Root Signature
-      auto *SignatureDecl = HLSLRootSignatureDecl::Create(
-          Actions.getASTContext(), /*DeclContext=*/Actions.CurContext,
-          RootSignatureLoc, DeclIdent, RootElements);
-      SignatureDecl->setImplicit();
-      Actions.PushOnScopeChains(SignatureDecl, getCurScope());
+  LookupResult R(Actions, DeclIdent, SourceLocation(),
+                 Sema::LookupOrdinaryName);
+  // Check if we have already found a decl of the same name, if we haven't
+  // then parse the root signature string and construct the in-memory elements
+  if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
+    // Invoke the root signature parser to construct the in-memory constructs
+    hlsl::RootSignatureLexer Lexer(Signature, RootSignatureLoc);
+    SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
+    hlsl::RootSignatureParser Parser(Elements, Lexer, PP);
+    if (Parser.parse()) {
+      SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
+      if (Tok.is(tok::r_paren))
+        T.consumeClose();
+      return;
     }
 
-    // Create the arg for the ParsedAttr
-    IdentifierLoc *ILoc = ::new (Actions.getASTContext())
-        IdentifierLoc(RootSignatureLoc, DeclIdent);
-    Args.push_back(ILoc);
+    // Allocate the root elements onto ASTContext
+    unsigned N = Elements.size();
+    auto RootElements = MutableArrayRef<llvm::hlsl::rootsig::RootElement>(
+        ::new (Actions.getASTContext()) llvm::hlsl::rootsig::RootElement[N],
+        N);
+    for (unsigned I = 0; I < N; ++I)
+      RootElements[I] = Elements[I];
+
+    // Create the Root Signature
+    auto *SignatureDecl = HLSLRootSignatureDecl::Create(
+        Actions.getASTContext(), /*DeclContext=*/Actions.CurContext,
+        RootSignatureLoc, DeclIdent, RootElements);
+    SignatureDecl->setImplicit();
+    Actions.PushOnScopeChains(SignatureDecl, getCurScope());
   }
+
+  // Create the arg for the ParsedAttr
+  IdentifierLoc *ILoc = ::new (Actions.getASTContext())
+      IdentifierLoc(RootSignatureLoc, DeclIdent);
+
+  ArgsVector Args = { ILoc };
 
   if (!T.consumeClose())
     Attrs.addNew(RootSignatureIdent,
