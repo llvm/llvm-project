@@ -140,8 +140,7 @@ collectAndReplaceInRegion(Op &op, bool hostToDevice,
     }
   }
 
-  if constexpr (std::is_same_v<Op, acc::DeclareEnterOp> ||
-                std::is_same_v<Op, acc::EnterDataOp>) {
+  if constexpr (std::is_same_v<Op, acc::DeclareEnterOp>) {
     assert(domInfo && postDomInfo &&
            "Dominance info required for DeclareEnterOp");
     replaceAllUsesInUnstructuredComputeRegionWith<Op>(op, values, *domInfo,
