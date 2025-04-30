@@ -511,6 +511,9 @@ Bug Fixes in This Version
   evaluation. The crashes were happening during diagnostics emission due to
   unimplemented statement printer. (#GH132641)
 - Fixed visibility calculation for template functions. (#GH103477)
+- Fixed a bug where an attribute before a ``pragma clang attribute`` or
+  ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
+  the invalid attribute location appropriately.  (#GH137861)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
