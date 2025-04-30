@@ -874,7 +874,7 @@ static bool IsCXX98CompatWarning(Sema &S, unsigned InDiagNote) {
 
 /// Returns true if a particular note should be a C++ compatibility warning in
 /// C mode with -Wc++-compat.
-static bool IsCppCompatWarning(Sema& S, unsigned InDiagNote) {
+static bool IsCppCompatWarning(Sema &S, unsigned InDiagNote) {
   return !S.getLangOpts().CPlusPlus &&
          InDiagNote == diag::note_protected_by_variable_init;
 }
