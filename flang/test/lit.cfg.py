@@ -163,9 +163,6 @@ else:
         ToolSubst("%not_todo_abort_cmd", command=FindTool("not"), unresolved="fatal")
     )
 
-if config.flang_include_runtime:
-    config.available_features.add("flang-rt")
-
 # Add all the tools and their substitutions (if applicable). Use the search paths provided for
 # finding the tools.
 if config.flang_standalone_build:
