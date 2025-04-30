@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -print-after=finalize-isel -o /dev/null 2>&1 | FileCheck %s
 
 declare void @foo(i32)
 
@@ -12,15 +12,8 @@ entry:
   ;     foo(xyz);
   ;   }
   ;
-  ; Verify that debug info exists for "xyz" variable
-  ;
-  ; CHECK:       DW_TAG_variable
-  ; CHECK:      .b8 120     // DW_AT_name
-  ; CHECK-NEXT: .b8 121
-  ; CHECK-NEXT: .b8 122
-  ; CHECK-NEXT: .b8 0
-  ; CHECK-NEXT: .b8 1       // DW_AT_decl_file
-  ; CHECK-NEXT: .b8 6       // DW_AT_decl_line
+  ; CHECK-LABEL: Machine code for function test1
+  ; CHECK: DBG_VALUE %{{[0-9]+}}:int32regs, $noreg, !"xyz", !DIExpression(), debug-location !13; test.cu:2 line no:6
   ;
   %cmp = icmp eq i32 %gid, 0, !dbg !12
   %conv = zext i1 %cmp to i32, !dbg !12
@@ -41,15 +34,8 @@ entry:
   ;     foo(abc);
   ;   }
   ;
-  ; Verify that debug info exists for "abc" variable
-  ;
-  ; CHECK:       DW_TAG_variable
-  ; CHECK:      .b8 97      // DW_AT_name
-  ; CHECK-NEXT: .b8 98
-  ; CHECK-NEXT: .b8 99
-  ; CHECK-NEXT: .b8 0
-  ; CHECK-NEXT: .b8 1       // DW_AT_decl_file
-  ; CHECK-NEXT: .b8 11       // DW_AT_decl_line
+  ; CHECK-LABEL: Machine code for function test2
+  ; CHECK: DBG_VALUE %{{[0-9]+}}:int32regs, $noreg, !"abc", !DIExpression(), debug-location !18; test.cu:12 line no:11
   ;
   %cmp = icmp eq i32 %gid, 0, !dbg !17
   %conv = zext i1 %cmp to i32, !dbg !17
