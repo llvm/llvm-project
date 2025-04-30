@@ -1074,11 +1074,6 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
                                           const GCNSubtarget &ST) const {
   assert(MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64);
 
-  MCRegister Vcc = TRI->getVCC();
-  // FIXME Conversion introduces implicit vcc_hi use
-  if (Vcc == AMDGPU::VCC_LO)
-    return;
-
   LLVM_DEBUG(dbgs() << "Attempting VOP2 conversion: " << MI);
   if (!TII->canShrink(MI, *MRI)) {
     LLVM_DEBUG(dbgs() << "Cannot shrink instruction\n");
@@ -1090,6 +1085,7 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
 
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
+  MCRegister Vcc = TRI->getVCC();
   MachineBasicBlock::LivenessQueryResult Liveness =
       MBB.computeRegisterLiveness(TRI, Vcc, MI);
   if (Liveness != MachineBasicBlock::LQR_Dead) {
@@ -1328,7 +1324,9 @@ MachineInstr *SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
     SDWAInst->tieOperands(PreserveDstIdx, SDWAInst->getNumOperands() - 1);
   }
 
-  return SDWAInst.getInstr();
+  MachineInstr *Ret = SDWAInst.getInstr();
+  TII->fixImplicitOperands(*Ret);
+  return Ret;
 }
 
 bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,

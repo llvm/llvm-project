@@ -2794,10 +2794,10 @@ define bfloat @fmul_select_bf16_test1(bfloat %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x4000
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x3f80
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x3f80, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
@@ -2928,10 +2928,10 @@ define bfloat @fmul_select_bf16_test2(bfloat %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x3f00
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x3f80
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x3f80, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
@@ -3080,12 +3080,12 @@ define <2 x bfloat> @fmul_select_v2bf16_test3(<2 x bfloat> %x, <2 x i32> %bool.a
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v5, 0x4000
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v3
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0x3f80
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, v2, v4
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x3f80, v5, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v4
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX10-NEXT:    v_cndmask_b32_e32 v2, 0x3f80, v5, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v1, v5, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0x3f80, v5, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX10-NEXT:    v_or_b32_e32 v4, 0x400000, v1
@@ -3289,12 +3289,12 @@ define <2 x bfloat> @fmul_select_v2bf16_test4(<2 x bfloat> %x, <2 x i32> %bool.a
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v5, 0x3f00
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v3
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0x3f80
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, v2, v4
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x3f80, v5, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v4
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX10-NEXT:    v_cndmask_b32_e32 v2, 0x3f80, v5, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v1, v5, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0x3f80, v5, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX10-NEXT:    v_or_b32_e32 v4, 0x400000, v1
@@ -3481,10 +3481,10 @@ define bfloat @fmul_select_bf16_test5(bfloat %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x4000
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x4100
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x4100, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
@@ -3617,10 +3617,10 @@ define bfloat @fmul_select_bf16_test6(bfloat %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0xffffc100
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x4040
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x4040, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
@@ -3752,10 +3752,10 @@ define bfloat @fmul_select_bf16_test7(bfloat %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x4100
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0xffffc080
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0xffffc080, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
@@ -4016,10 +4016,10 @@ define bfloat @fmul_select_bf16_test9(bfloat %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0xffffc180
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0xffffc200
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0xffffc200, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
@@ -4152,10 +4152,10 @@ define bfloat @fmul_select_bf16_test10_sel_log2val_pos65_pos56(bfloat %x, i32 %b
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0xffffe000
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0xffffdb80
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0xffffdb80, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
@@ -4288,10 +4288,10 @@ define bfloat @fmul_select_bf16_test11_sel_log2val_neg22_pos25(bfloat %x, i32 %b
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x3480
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x4c00
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x4c00, v3, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v4, v3, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX10-NEXT:    v_or_b32_e32 v2, 0x400000, v0
