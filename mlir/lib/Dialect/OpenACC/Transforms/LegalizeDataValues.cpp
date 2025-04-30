@@ -76,25 +76,16 @@ static void replaceAllUsesInUnstructuredComputeRegionWith(
     Op &op, llvm::SmallVector<std::pair<Value, Value>> &values,
     DominanceInfo &domInfo, PostDominanceInfo &postDomInfo) {
 
-  Operation *exitOp = op.getOperation();
+  SmallVector<Operation *> exitOps;
   if constexpr (std::is_same_v<Op, acc::DeclareEnterOp>) {
-    // For declare enter/exit pairs, verify there is exactly one exit op using
-    // the token
-    if (!op.getToken().hasOneUse())
-      op.emitError("declare enter token must have exactly one use");
-    Operation *user = *op.getToken().getUsers().begin();
-    auto declareExit = dyn_cast<acc::DeclareExitOp>(user);
-    if (!declareExit)
-      op.emitError("declare enter token must be used by declare exit op");
-    exitOp = declareExit;
-  } else if constexpr (std::is_same_v<Op, acc::EnterDataOp>) {
-    // For enter/exit data pairs, find the corresponding exit_data op
-    Operation *nextOp = op.getOperation()->getNextNode();
-    while (nextOp && !isa<acc::ExitDataOp>(nextOp))
-      nextOp = nextOp->getNextNode();
-    if (!nextOp)
-      op.emitError("enter data must have a corresponding exit data op");
-    exitOp = nextOp;
+    // For declare enter/exit pairs, collect all exit ops
+    for (auto *user : op.getToken().getUsers()) {
+      if (auto declareExit = dyn_cast<acc::DeclareExitOp>(user))
+        exitOps.push_back(declareExit);
+    }
+    if (exitOps.empty())
+      op.emitError(
+          "declare enter token must be used by at least one declare exit op");
   }
 
   for (auto p : values) {
@@ -102,13 +93,24 @@ static void replaceAllUsesInUnstructuredComputeRegionWith(
     Value deviceVal = std::get<1>(p);
     for (auto &use : llvm::make_early_inc_range(hostVal.getUses())) {
       Operation *owner = use.getOwner();
-      // Check that:
-      // It's the case that the acc entry operation dominates the use.
-      // It's the case that one of the acc exit operations consuming the token
-      // post-dominates the use
-      if (!domInfo.dominates(op.getOperation(), owner) ||
-          !postDomInfo.postDominates(exitOp, owner))
+
+      // Check It's the case that the acc entry operation dominates the use.
+      if (!domInfo.dominates(op.getOperation(), owner))
         continue;
+
+      // Check It's the case that at least one of the acc exit operations
+      // post-dominates the use
+      bool hasPostDominatingExit = false;
+      for (auto *exit : exitOps) {
+        if (postDomInfo.postDominates(exit, owner)) {
+          hasPostDominatingExit = true;
+          break;
+        }
+      }
+
+      if (!hasPostDominatingExit)
+        continue;
+
       if (insideAccComputeRegion(owner))
         use.set(deviceVal);
     }
@@ -131,8 +133,7 @@ collectAndReplaceInRegion(Op &op, bool hostToDevice,
                   !std::is_same_v<Op, acc::DataOp> &&
                   !std::is_same_v<Op, acc::DeclareOp> &&
                   !std::is_same_v<Op, acc::HostDataOp> &&
-                  !std::is_same_v<Op, acc::DeclareEnterOp> &&
-                  !std::is_same_v<Op, acc::EnterDataOp>) {
+                  !std::is_same_v<Op, acc::DeclareEnterOp>) {
       collectVars(op.getReductionOperands(), values, hostToDevice);
       collectVars(op.getPrivateOperands(), values, hostToDevice);
       collectVars(op.getFirstprivateOperands(), values, hostToDevice);
@@ -173,7 +174,7 @@ public:
       if (!isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(*op) &&
           !(isa<ACC_DATA_CONSTRUCT_STRUCTURED_OPS>(*op) &&
             applyToAccDataConstruct) &&
-          !isa<acc::DeclareEnterOp>(*op) && !isa<acc::EnterDataOp>(*op))
+          !isa<acc::DeclareEnterOp>(*op))
         return;
 
       if (auto parallelOp = dyn_cast<acc::ParallelOp>(*op)) {
@@ -197,14 +198,6 @@ public:
           computedDomInfo = true;
         }
         collectAndReplaceInRegion(declareEnterOp, replaceHostVsDevice, &domInfo,
-                                  &postDomInfo);
-      } else if (auto enterDataOp = dyn_cast<acc::EnterDataOp>(*op)) {
-        if (!computedDomInfo) {
-          domInfo = DominanceInfo(funcOp);
-          postDomInfo = PostDominanceInfo(funcOp);
-          computedDomInfo = true;
-        }
-        collectAndReplaceInRegion(enterDataOp, replaceHostVsDevice, &domInfo,
                                   &postDomInfo);
       } else {
         llvm_unreachable("unsupported acc region op");
