@@ -1715,12 +1715,11 @@ static LogicalResult
 vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
                           ArrayRef<int64_t> inputVectorSizes,
                           SmallVectorImpl<Value> &newResults) {
-
   // TODO: Introduce a parent class that will handle the insertion point update.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unpackOp);
 
-  RankedTensorType unpackTensorType = unpackOp.getSourceType();
+  auto unpackTensorType = cast<RankedTensorType>(unpackOp.getSourceType());
 
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
@@ -1942,6 +1941,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!unpackOp.hasPureTensorSemantics())
+    return failure();
 
   if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
         return !getConstantIntValue(res).has_value();
@@ -2187,6 +2189,10 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   auto padValue = packOp.getPaddingValue();
   Attribute cstAttr;
   if (padValue && !matchPattern(padValue, m_Constant(&cstAttr))) {
