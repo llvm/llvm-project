@@ -828,7 +828,7 @@ TEST_F(PassManagerTest, FunctionPassCFGChecker) {
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
-  SI.registerCallbacks(PIC, &MAM, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
   MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
@@ -877,7 +877,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
-  SI.registerCallbacks(PIC, &MAM, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
@@ -945,7 +945,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
-  SI.registerCallbacks(PIC, &MAM, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });

@@ -423,7 +423,7 @@ bool llvm::runPassPipeline(
   PrintPassOpts.SkipAnalyses = DebugPM == DebugLogging::Quiet;
   StandardInstrumentations SI(M.getContext(), DebugPM != DebugLogging::None,
                               VK == VerifierKind::EachPass, PrintPassOpts);
-  SI.registerCallbacks(PIC, &MAM, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
   DebugifyEachInstrumentation Debugify;
   DebugifyStatsMap DIStatsMap;
   DebugInfoPerPass DebugInfoBeforePass;

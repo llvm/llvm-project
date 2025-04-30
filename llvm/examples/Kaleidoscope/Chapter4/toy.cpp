@@ -577,7 +577,7 @@ static void InitializeModuleAndManagers() {
   ThePIC = std::make_unique<PassInstrumentationCallbacks>();
   TheSI = std::make_unique<StandardInstrumentations>(*TheContext,
                                                      /*DebugLogging*/ true);
-  TheSI->registerCallbacks(*ThePIC, TheMAM.get(), TheFAM.get());
+  TheSI->registerCallbacks(*ThePIC, TheMAM.get());
 
   // Add transform passes.
   // Do simple "peephole" optimizations and bit-twiddling optzns.
