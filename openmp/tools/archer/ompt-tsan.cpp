@@ -620,7 +620,7 @@ static int ompt_tsan_control_tool(uint64_t command, uint64_t modifier,
   case omp_control_tool_pause:
     if (archer_flags->verbose)
       std::cout << "[Archer] Paused operation\n";
-    if (archer_state != ENDED) {
+    if (archer_state == ACTIVE) {
       TsanIgnoreWritesBegin();
       archer_state = PAUSED;
     }
@@ -628,11 +628,12 @@ static int ompt_tsan_control_tool(uint64_t command, uint64_t modifier,
   case omp_control_tool_flush:
     return omp_control_tool_ignored;
   case omp_control_tool_end:
-    archer_state = ENDED;
     if (archer_flags->verbose) {
       std::cout << "[Archer] Ended operation\n";
     }
-    TsanIgnoreWritesBegin();
+    if (archer_state == ACTIVE)
+      TsanIgnoreWritesBegin();
+    archer_state = ENDED;
     return omp_control_tool_success;
   default:
     return omp_control_tool_ignored;
@@ -664,6 +665,8 @@ static void ompt_tsan_thread_end(ompt_data_t *thread_data) {
   delete TaskDataPool::ThreadDataPool;
   delete DependencyDataPool::ThreadDataPool;
   TsanIgnoreWritesEnd();
+  if (archer_state != ACTIVE)
+    TsanIgnoreWritesEnd();
 }
 
 /// OMPT event callbacks for handling parallel regions.
@@ -1261,8 +1264,8 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
 static void ompt_tsan_finalize(ompt_data_t *tool_data) {
   if (archer_flags->ignore_serial)
     TsanIgnoreWritesEnd();
-  if (archer_state == PAUSED || archer_state == ENDED)
-    TsanIgnoreWritesEnd();
+//  if (archer_state == PAUSED || archer_state == ENDED)
+//    TsanIgnoreWritesEnd();
   if (archer_flags->print_max_rss) {
     struct rusage end;
     getrusage(RUSAGE_SELF, &end);
