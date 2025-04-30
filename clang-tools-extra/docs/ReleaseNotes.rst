@@ -134,8 +134,6 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-<<<<<<< HEAD
-||||||| parent of c62bbb1d2bf2 (moved release notes for `ctime` and `localtime`)
 - Improved :doc:`altera-id-dependent-backward-branch
   <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
   crashes from invalid code.
@@ -144,33 +142,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
   branch clones by now detecting duplicate inner and outer if statements.
 
-- Improved :doc:`bugprone-casting-through-void
-  <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
-  the offending code with ``reinterpret_cast``, to more clearly express intent.
+- Added `ctime` and `localtime` to clang-tidy.
 
-- Improved :doc:`bugprone-dangling-handle
-  <clang-tidy/checks/bugprone/dangling-handle>` check to treat `std::span` as a
-  handle class.
-
-- Improved :doc:`bugprone-exception-escape
-  <clang-tidy/checks/bugprone/exception-escape>` by fixing false positives
-  when a consteval function with throw statements.
-
-- Improved :doc:`bugprone-forwarding-reference-overload
-  <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
-  a crash when determining if an ``enable_if[_t]`` was found.
-
-=======
-- Improved :doc:`altera-id-dependent-backward-branch
-  <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
-  crashes from invalid code.
-
-- Improved :doc:`bugprone-branch-clone
-  <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
-  branch clones by now detecting duplicate inner and outer if statements.
-
-- New unsafe functions checks :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>` were added to clang-tidy.
+- New unsafe functions checks :doc:`bugprone-unsafe-functions-check`
+  <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp> were added to clang-tidy.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
@@ -192,7 +167,6 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
->>>>>>> c62bbb1d2bf2 (moved release notes for `ctime` and `localtime`)
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
