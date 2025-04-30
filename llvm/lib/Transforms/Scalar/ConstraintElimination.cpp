@@ -1700,48 +1700,19 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   }
 }
 
-static bool replaceAddOverflowUses(IntrinsicInst *II, Value *A, Value *B,
-                                   SmallVectorImpl<Instruction *> &ToRemove) {
+static bool
+replaceAddOrSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
+                            SmallVectorImpl<Instruction *> &ToRemove) {
+  bool IsAdd = II->getIntrinsicID() == Intrinsic::sadd_with_overflow ||
+               II->getIntrinsicID() == Intrinsic::uadd_with_overflow;
   bool Changed = false;
   IRBuilder<> Builder(II->getParent(), II->getIterator());
-  Value *Add = nullptr;
+  Value *AddOrSub = nullptr;
   for (User *U : make_early_inc_range(II->users())) {
     if (match(U, m_ExtractValue<0>(m_Value()))) {
-      if (!Add)
-        Add = Builder.CreateAdd(A, B);
-      U->replaceAllUsesWith(Add);
-      Changed = true;
-    } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-      U->replaceAllUsesWith(Builder.getFalse());
-      Changed = true;
-    } else
-      continue;
-
-    if (U->use_empty()) {
-      auto *I = cast<Instruction>(U);
-      ToRemove.push_back(I);
-      I->setOperand(0, PoisonValue::get(II->getType()));
-      Changed = true;
-    }
-  }
-
-  if (II->use_empty()) {
-    II->eraseFromParent();
-    Changed = true;
-  }
-  return Changed;
-}
-
-static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
-                                   SmallVectorImpl<Instruction *> &ToRemove) {
-  bool Changed = false;
-  IRBuilder<> Builder(II->getParent(), II->getIterator());
-  Value *Sub = nullptr;
-  for (User *U : make_early_inc_range(II->users())) {
-    if (match(U, m_ExtractValue<0>(m_Value()))) {
-      if (!Sub)
-        Sub = Builder.CreateSub(A, B);
-      U->replaceAllUsesWith(Sub);
+      if (!AddOrSub)
+        AddOrSub = IsAdd ? Builder.CreateAdd(A, B) : Builder.CreateSub(A, B);
+      U->replaceAllUsesWith(AddOrSub);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {
       U->replaceAllUsesWith(Builder.getFalse());
@@ -1787,15 +1758,13 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   default:
     llvm_unreachable("Unexpected intrinsic.");
   case Intrinsic::sadd_with_overflow: {
-    bool ASgeZero = DoesConditionHold(CmpInst::ICMP_SGE, A, Zero, Info);
-    bool BSgeZero = DoesConditionHold(CmpInst::ICMP_SGE, B, Zero, Info);
-    bool ASleZero = DoesConditionHold(CmpInst::ICMP_SLE, A, Zero, Info);
-    bool BSleZero = DoesConditionHold(CmpInst::ICMP_SLE, B, Zero, Info);
-
     // If A and B have different signs, sadd.with.overflow(a, b) should not
     // overflow.
-    if ((ASgeZero && BSleZero) || (ASleZero && BSgeZero)) {
-      Changed = replaceAddOverflowUses(II, A, B, ToRemove);
+    if ((DoesConditionHold(CmpInst::ICMP_SGE, A, Zero, Info) &&
+         DoesConditionHold(CmpInst::ICMP_SLE, B, Zero, Info)) ||
+        (DoesConditionHold(CmpInst::ICMP_SLE, A, Zero, Info) &&
+         DoesConditionHold(CmpInst::ICMP_SGE, B, Zero, Info))) {
+      Changed = replaceAddOrSubOverflowUses(II, A, B, ToRemove);
       break;
     }
     break;
@@ -1806,7 +1775,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
     if (!DoesConditionHold(CmpInst::ICMP_SGE, A, B, Info) ||
         !DoesConditionHold(CmpInst::ICMP_SGE, B, Zero, Info))
       return false;
-    Changed = replaceSubOverflowUses(II, A, B, ToRemove);
+    Changed = replaceAddOrSubOverflowUses(II, A, B, ToRemove);
     break;
   }
   }
