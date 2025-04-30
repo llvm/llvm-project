@@ -114,8 +114,8 @@ struct DescriptorTableClause {
 };
 
 // Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
-using RootElement =
-    std::variant<RootFlags, RootConstants, DescriptorTable, DescriptorTableClause>;
+using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
+                                 DescriptorTableClause>;
 
 } // namespace rootsig
 } // namespace hlsl

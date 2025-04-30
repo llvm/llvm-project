@@ -82,19 +82,18 @@ std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
   } else {
     // Otherwise, parse as many flags as possible
     TokenKind Expected[] = {
-  #define ROOT_FLAG_ENUM(NAME, LIT) TokenKind::en_##NAME,
-  #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+#define ROOT_FLAG_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
     };
 
     do {
       if (tryConsumeExpectedToken(Expected)) {
         switch (CurToken.TokKind) {
-  #define ROOT_FLAG_ENUM(NAME, LIT) \
-    case TokenKind::en_##NAME:                                                   \
-      Flags =                                                                    \
-          maybeOrFlag<RootFlags>(Flags, RootFlags::NAME);  \
-      break;
-  #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+#define ROOT_FLAG_ENUM(NAME, LIT)                                              \
+  case TokenKind::en_##NAME:                                                   \
+    Flags = maybeOrFlag<RootFlags>(Flags, RootFlags::NAME);                    \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
         default:
           llvm_unreachable("Switch for consumed enum token was not provided");
         }
