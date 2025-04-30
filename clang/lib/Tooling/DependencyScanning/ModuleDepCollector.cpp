@@ -391,8 +391,8 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
 llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
     ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const {
   llvm::DenseSet<const FileEntry *> ModuleMapFiles;
-  for (const auto &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID.ID);
+  for (const auto &Info : ClangModuleDeps) {
+    ModuleDeps *MD = ModuleDepsByID.lookup(Info.ID);
     assert(MD && "Inconsistent dependency info");
     // TODO: Track ClangModuleMapFile as `FileEntryRef`.
     auto FE = ScanInstance.getFileManager().getOptionalFileRef(
@@ -409,8 +409,8 @@ void ModuleDepCollector::addModuleMapFiles(
   if (Service.shouldEagerLoadModules())
     return; // Only pcm is needed for eager load.
 
-  for (const auto &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID.ID);
+  for (const auto &Info : ClangModuleDeps) {
+    ModuleDeps *MD = ModuleDepsByID.lookup(Info.ID);
     assert(MD && "Inconsistent dependency info");
     CI.getFrontendOpts().ModuleMapFiles.push_back(MD->ClangModuleMapFile);
   }
@@ -419,8 +419,8 @@ void ModuleDepCollector::addModuleMapFiles(
 void ModuleDepCollector::addModuleFiles(
     CompilerInvocation &CI,
     ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const {
-  for (const auto &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID.ID);
+  for (const auto &Info : ClangModuleDeps) {
+    ModuleDeps *MD = ModuleDepsByID.lookup(Info.ID);
     std::string PCMPath =
         Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
 
@@ -428,15 +428,15 @@ void ModuleDepCollector::addModuleFiles(
       CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
-          {MID.ID.ModuleName, std::move(PCMPath)});
+          {Info.ID.ModuleName, std::move(PCMPath)});
   }
 }
 
 void ModuleDepCollector::addModuleFiles(
     CowCompilerInvocation &CI,
     ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const {
-  for (const auto &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID.ID);
+  for (const auto &Info : ClangModuleDeps) {
+    ModuleDeps *MD = ModuleDepsByID.lookup(Info.ID);
     std::string PCMPath =
         Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
 
@@ -444,7 +444,7 @@ void ModuleDepCollector::addModuleFiles(
       CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getMutHeaderSearchOpts().PrebuiltModuleFiles.insert(
-          {MID.ID.ModuleName, std::move(PCMPath)});
+          {Info.ID.ModuleName, std::move(PCMPath)});
   }
 }
 
