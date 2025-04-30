@@ -3,8 +3,6 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes='amdgpu-attributor<closed-world>' %s | FileCheck --check-prefixes=CHECK,CW %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes='amdgpu-attributor<closed-world>' -amdgpu-indirect-call-specialization-threshold=0 %s | FileCheck --check-prefixes=CHECK,NO %s
 
-target datalayout = "A5"
-
 @G = global i32 0, align 4
 
 ;.
