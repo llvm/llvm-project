@@ -21,6 +21,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include <optional>
 
 using namespace llvm;
@@ -507,8 +508,10 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
     LaneID = II.getOperand(1);
     // Check LaneID is available at Op, otherwise we can't move the readlane
     // higher.
-    if (!IC.getDominatorTree().dominates(LaneID, Op))
-      return nullptr;
+    if (auto *LaneIDInst = dyn_cast<Instruction>(LaneID)) {
+      if (!isSafeToMoveBefore(*LaneIDInst, *Op, IC.getDominatorTree()))
+        return nullptr;
+    }
   }
 
   const auto DoIt = [&](unsigned OpIdx,
