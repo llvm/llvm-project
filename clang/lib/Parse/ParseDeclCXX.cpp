@@ -5348,9 +5348,8 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   if (!StrLiteral.has_value()) {
     Diag(Tok, diag::err_expected_string_literal)
         << /*in attributes...*/ 4 << RootSignatureIdent->getName();
-    SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
-    if (Tok.is(tok::r_paren))
-      T.consumeClose();
+    SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
+    T.consumeClose();
     return;
   }
 
@@ -5372,9 +5371,7 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
     hlsl::RootSignatureParser Parser(Elements, Lexer, PP);
     if (Parser.parse()) {
-      SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
-      if (Tok.is(tok::r_paren))
-        T.consumeClose();
+      T.consumeClose();
       return;
     }
 
