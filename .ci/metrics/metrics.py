@@ -21,7 +21,7 @@ SCRAPE_INTERVAL_SECONDS = 5 * 60
 # Lists the Github workflows we want to track. Maps the Github job name to
 # the metric name prefix in grafana.
 # This metric name is also used as a key in the job->name map.
-GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks"}
+GITHUB_WORKFLOW_TO_TRACK = {"LLVM CI Checks": "github_llvm_premerge_checks"}
 
 # Lists the Github jobs to track for a given workflow. The key is the stable
 # name (metric name) of the workflow (see GITHUB_WORKFLOW_TO_TRACK).
