@@ -227,6 +227,7 @@ if(LLDB_ENABLE_SWIFT_SUPPORT)
   else ()
     include_directories("${SWIFT_INCLUDE_DIRS}")
   endif()
+endif()
 
 if(LLDB_BUILT_STANDALONE)
   if (TARGET clang-resource-headers)
