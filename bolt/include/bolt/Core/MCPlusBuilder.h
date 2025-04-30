@@ -575,9 +575,28 @@ public:
     return {};
   }
 
+  virtual ErrorOr<MCPhysReg> getSignedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
   virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
+  }
+
+  virtual bool isPSignOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthAndRet(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   virtual bool isAuthenticationOfReg(const MCInst &Inst,
@@ -739,13 +758,6 @@ public:
   virtual bool isAArch64ExclusiveClear(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
-  }
-  virtual bool isPAuth(MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-  }
-
-  virtual bool isPSign(MCInst &Inst) const {
-    llvm_unreachable("not implemented");
   }
 
   virtual bool isCleanRegXOR(const MCInst &Inst) const {
