@@ -9,3 +9,9 @@ void bad_root_signature_0() {}
 // expected-note@+1 {{to match this '('}}
 [RootSignature("", "")]
 void bad_root_signature_1() {}
+
+[RootSignature(""), RootSignature("DescriptorTable()")] // expected-error {{attribute 'RootSignature' cannot appear more than once on a declaration}}
+void bad_root_signature_2() {}
+
+[RootSignature(""), RootSignature("")] // expected-warning {{attribute 'RootSignature' is already applied}}
+void bad_root_signature_3() {}
