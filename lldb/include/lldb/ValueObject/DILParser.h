@@ -43,14 +43,14 @@ public:
         m_detail(std::move(detail)) {}
 
   DILDiagnosticError(llvm::StringRef expr, const std::string &message,
-                     uint32_t loc, uint16_t err_len);
+                     uint32_t loc, uint16_t err_len = 1);
 
   std::unique_ptr<CloneableError> Clone() const override {
     return std::make_unique<DILDiagnosticError>(m_detail);
   }
 
   llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
-    return {m_detail};
+    return m_detail;
   }
 
   std::string message() const override { return m_detail.rendered; }
@@ -83,6 +83,7 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();
@@ -116,8 +117,6 @@ private:
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  bool m_fragile_ivar;
-  bool m_check_ptr_vs_member;
 }; // class DILParser
 
 } // namespace lldb_private::dil

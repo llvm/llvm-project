@@ -33,7 +33,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start = nullptr;
@@ -52,7 +52,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   CompilerType m_bool_type;
@@ -83,19 +83,30 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
 llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxStdVectorSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_start || !m_finish)
-    return 0;
+    return llvm::createStringError(
+        "Failed to determine start/end of vector data.");
+
   uint64_t start_val = m_start->GetValueAsUnsigned(0);
   uint64_t finish_val = m_finish->GetValueAsUnsigned(0);
 
-  if (start_val == 0 || finish_val == 0)
+  // A default-initialized empty vector.
+  if (start_val == 0 && finish_val == 0)
     return 0;
 
-  if (start_val >= finish_val)
-    return 0;
+  if (start_val == 0)
+    return llvm::createStringError("Invalid value for start of vector.");
+
+  if (finish_val == 0)
+    return llvm::createStringError("Invalid value for end of vector.");
+
+  if (start_val > finish_val)
+    return llvm::createStringError(
+        "Start of vector data begins after end pointer.");
 
   size_t num_children = (finish_val - start_val);
   if (num_children % m_element_size)
-    return 0;
+    return llvm::createStringError("Size not multiple of element size.");
+
   return num_children / m_element_size;
 }
 
@@ -139,7 +150,8 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   m_element_type = data_sp->GetCompilerType().GetPointeeType();
   llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
   if (!size_or_err)
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
+                    "{0}");
   else {
     m_element_size = *size_or_err;
 
@@ -152,11 +164,18 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start || !m_finish)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  size_t index = formatters::ExtractIndexFromString(name.GetCString());
+  if (index == UINT32_MAX) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return index;
 }
 
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
@@ -248,14 +267,18 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
+  if (idx == UINT32_MAX ||
+      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   return idx;
 }
 

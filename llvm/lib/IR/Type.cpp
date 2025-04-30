@@ -117,10 +117,6 @@ const fltSemantics &Type::getFltSemantics() const {
   }
 }
 
-bool Type::isIEEE() const {
-  return APFloat::getZero(getFltSemantics()).isIEEE();
-}
-
 bool Type::isScalableTargetExtTy() const {
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return isa<ScalableVectorType>(TT->getLayoutType());
@@ -394,7 +390,7 @@ bool FunctionType::isValidReturnType(Type *RetTy) {
 }
 
 bool FunctionType::isValidArgumentType(Type *ArgTy) {
-  return ArgTy->isFirstClassType();
+  return ArgTy->isFirstClassType() && !ArgTy->isLabelTy();
 }
 
 //===----------------------------------------------------------------------===//

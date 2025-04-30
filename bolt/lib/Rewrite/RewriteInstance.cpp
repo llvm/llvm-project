@@ -237,6 +237,12 @@ UseGnuStack("use-gnu-stack",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
+static cl::opt<uint64_t> CustomAllocationVMA(
+    "custom-allocation-vma",
+    cl::desc("use a custom address at which new code will be put, "
+             "bypassing BOLT's logic to detect where to put code"),
+    cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
   cl::desc("performs disassembly sequentially"),
@@ -592,13 +598,33 @@ Error RewriteInstance::discoverStorage() {
 
   FirstNonAllocatableOffset = NextAvailableOffset;
 
+  if (opts::CustomAllocationVMA) {
+    // If user specified a custom address where we should start writing new
+    // data, honor that.
+    NextAvailableAddress = opts::CustomAllocationVMA;
+    // Sanity check the user-supplied address and emit warnings if something
+    // seems off.
+    for (const ELF64LE::Phdr &Phdr : PHs) {
+      switch (Phdr.p_type) {
+      case ELF::PT_LOAD:
+        if (NextAvailableAddress >= Phdr.p_vaddr &&
+            NextAvailableAddress < Phdr.p_vaddr + Phdr.p_memsz) {
+          BC->errs() << "BOLT-WARNING: user-supplied allocation vma 0x"
+                     << Twine::utohexstr(NextAvailableAddress)
+                     << " conflicts with ELF segment at 0x"
+                     << Twine::utohexstr(Phdr.p_vaddr) << "\n";
+        }
+      }
+    }
+  }
   NextAvailableAddress = alignTo(NextAvailableAddress, BC->PageAlign);
   NextAvailableOffset = alignTo(NextAvailableOffset, BC->PageAlign);
 
   // Hugify: Additional huge page from left side due to
   // weird ASLR mapping addresses (4KB aligned)
-  if (opts::Hugify && !BC->HasFixedLoadAddress)
+  if (opts::Hugify && !BC->HasFixedLoadAddress) {
     NextAvailableAddress += BC->PageAlign;
+  }
 
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
@@ -1054,10 +1080,11 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
-    if (!Section->isText()) {
+    if (!Section->isText() || Section->isVirtual()) {
       assert(SymbolType != SymbolRef::ST_Function &&
              "unexpected function inside non-code section");
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: rejecting as symbol is not in code\n");
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: rejecting as symbol is not in code or "
+                           "is in nobits section\n");
       registerName(SymbolSize);
       continue;
     }
@@ -2603,7 +2630,9 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
 void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                        const RelocationRef &Rel) {
   const bool IsAArch64 = BC->isAArch64();
+  const bool IsX86 = BC->isX86();
   const bool IsFromCode = RelocatedSection.isText();
+  const bool IsWritable = BinarySection(*BC, RelocatedSection).isWritable();
 
   SmallString<16> TypeName;
   Rel.getTypeName(TypeName);
@@ -2612,7 +2641,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     return;
 
   // Adjust the relocation type as the linker might have skewed it.
-  if (BC->isX86() && (RType & ELF::R_X86_64_converted_reloc_bit)) {
+  if (IsX86 && (RType & ELF::R_X86_64_converted_reloc_bit)) {
     if (opts::Verbosity >= 1)
       dbgs() << "BOLT-WARNING: ignoring R_X86_64_converted_reloc_bit\n";
     RType &= ~ELF::R_X86_64_converted_reloc_bit;
@@ -2620,7 +2649,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   if (Relocation::isTLS(RType)) {
     // No special handling required for TLS relocations on X86.
-    if (BC->isX86())
+    if (IsX86)
       return;
 
     // The non-got related TLS relocations on AArch64 and RISC-V also could be
@@ -2659,6 +2688,29 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
              << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
     });
     return;
+  }
+
+  if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
+      Relocation::isPCRelative(RType)) {
+    BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
+    if (BD && (BD->nameStartsWith("_ZTV") ||   // vtable
+               BD->nameStartsWith("_ZTCN"))) { // construction vtable
+      BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
+          SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
+      if (BF) {
+        if (BF->getAddress() != SymbolAddress) {
+          BC->errs()
+              << "BOLT-ERROR: the virtual function table entry at offset 0x"
+              << Twine::utohexstr(Rel.getOffset())
+              << " points to the middle of a function @ 0x"
+              << Twine::utohexstr(BF->getAddress()) << "\n";
+          exit(1);
+        }
+        BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
+                          ExtractedValue);
+        return;
+      }
+    }
   }
 
   const uint64_t Address = SymbolAddress + Addend;
@@ -2724,7 +2776,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (BC->isX86() && Relocation::isPCRelative(RType)) {
+  if (IsX86 && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -2899,12 +2951,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
     if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
       // Note: this assertion is trying to check sanity of BinaryData objects
-      // but AArch64 has inferred and incomplete object locations coming from
-      // GOT/TLS or any other non-trivial relocation (that requires creation
-      // of sections and whose symbol address is not really what should be
-      // encoded in the instruction). So we essentially disabled this check
+      // but AArch64 and RISCV has inferred and incomplete object locations
+      // coming from GOT/TLS or any other non-trivial relocation (that requires
+      // creation of sections and whose symbol address is not really what should
+      // be encoded in the instruction). So we essentially disabled this check
       // for AArch64 and live with bogus names for objects.
-      assert((IsAArch64 || IsSectionRelocation ||
+      assert((IsAArch64 || BC->isRISCV() || IsSectionRelocation ||
               BD->nameStartsWith(SymbolName) ||
               BD->nameStartsWith("PG" + SymbolName) ||
               (BD->nameStartsWith("ANONYMOUS") &&
@@ -5859,17 +5911,28 @@ void RewriteInstance::rewriteFile() {
 
   // Write all allocatable sections - reloc-mode text is written here as well
   for (BinarySection &Section : BC->allocatableSections()) {
-    if (!Section.isFinalized() || !Section.getOutputData())
+    if (!Section.isFinalized() || !Section.getOutputData()) {
+      LLVM_DEBUG(if (opts::Verbosity > 1) {
+        dbgs() << "BOLT-INFO: new section is finalized or !getOutputData, skip "
+               << Section.getName() << '\n';
+      });
       continue;
-    if (Section.isLinkOnly())
+    }
+    if (Section.isLinkOnly()) {
+      LLVM_DEBUG(if (opts::Verbosity > 1) {
+        dbgs() << "BOLT-INFO: new section is link only, skip "
+               << Section.getName() << '\n';
+      });
       continue;
+    }
 
     if (opts::Verbosity >= 1)
       BC->outs() << "BOLT: writing new section " << Section.getName()
                  << "\n data at 0x"
                  << Twine::utohexstr(Section.getAllocAddress()) << "\n of size "
                  << Section.getOutputSize() << "\n at offset "
-                 << Section.getOutputFileOffset() << '\n';
+                 << Section.getOutputFileOffset() << " with content size "
+                 << Section.getOutputContents().size() << '\n';
     OS.seek(Section.getOutputFileOffset());
     Section.write(OS);
   }

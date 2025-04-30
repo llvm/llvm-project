@@ -60,7 +60,7 @@ LogicalResult mlir::LLVM::createPrintStrCall(
   Value gep =
       builder.create<LLVM::GEPOp>(loc, ptrTy, arrayTy, msgAddr, indices);
   FailureOr<LLVM::LLVMFuncOp> printer =
-      LLVM::lookupOrCreatePrintStringFn(moduleOp, runtimeFunctionName);
+      LLVM::lookupOrCreatePrintStringFn(builder, moduleOp, runtimeFunctionName);
   if (failed(printer))
     return failure();
   builder.create<LLVM::CallOp>(loc, TypeRange(),

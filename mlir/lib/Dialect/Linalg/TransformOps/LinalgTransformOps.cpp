@@ -985,8 +985,7 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
 
   // Helper function to find the next producer that should be fused. Take any
   // producer that has a use inside the containing op.
-  SetVector<Operation *> remainingProducers(producerOps.begin(),
-                                            producerOps.end());
+  SetVector<Operation *> remainingProducers(llvm::from_range, producerOps);
   auto getNextProducer = [&]() -> FailureOr<Operation *> {
     for (const auto &it : enumerate(remainingProducers)) {
       Operation *producerOp = it.value();
@@ -3587,9 +3586,9 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
-  GreedyRewriteConfig config;
-  config.listener = &listener;
-  if (failed(applyPatternsGreedily(target, std::move(patterns), config)))
+  if (failed(
+          applyPatternsGreedily(target, std::move(patterns),
+                                GreedyRewriteConfig().setListener(&listener))))
     return emitDefaultDefiniteFailure(target);
 
   results.push_back(target);

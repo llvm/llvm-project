@@ -80,11 +80,7 @@ class LocationSize {
 
   uint64_t Value;
 
-  // Hack to support implicit construction. This should disappear when the
-  // public LocationSize ctor goes away.
-  enum DirectConstruction { Direct };
-
-  constexpr LocationSize(uint64_t Raw, DirectConstruction) : Value(Raw) {}
+  constexpr LocationSize(uint64_t Raw) : Value(Raw) {}
   constexpr LocationSize(uint64_t Raw, bool Scalable)
       : Value(Raw > MaxValue ? AfterPointer
                              : Raw | (Scalable ? ScalableBit : uint64_t(0))) {}
@@ -96,14 +92,6 @@ class LocationSize {
   static_assert(~(MaxValue & ScalableBit), "Max value don't have bit 62 set");
 
 public:
-  // FIXME: Migrate all users to construct via either `precise` or `upperBound`,
-  // to make it more obvious at the callsite the kind of size that they're
-  // providing.
-  //
-  // Since the overwhelming majority of users of this provide precise values,
-  // this assumes the provided value is precise.
-  constexpr LocationSize(uint64_t Raw)
-      : Value(Raw > MaxValue ? AfterPointer : Raw) {}
   // Create non-scalable LocationSize
   static LocationSize precise(uint64_t Value) {
     return LocationSize(Value, false /*Scalable*/);
@@ -118,7 +106,7 @@ public:
       return precise(0);
     if (LLVM_UNLIKELY(Value > MaxValue))
       return afterPointer();
-    return LocationSize(Value | ImpreciseBit, Direct);
+    return LocationSize(Value | ImpreciseBit);
   }
   static LocationSize upperBound(TypeSize Value) {
     if (Value.isScalable())
@@ -129,21 +117,21 @@ public:
   /// Any location after the base pointer (but still within the underlying
   /// object).
   constexpr static LocationSize afterPointer() {
-    return LocationSize(AfterPointer, Direct);
+    return LocationSize(AfterPointer);
   }
 
   /// Any location before or after the base pointer (but still within the
   /// underlying object).
   constexpr static LocationSize beforeOrAfterPointer() {
-    return LocationSize(BeforeOrAfterPointer, Direct);
+    return LocationSize(BeforeOrAfterPointer);
   }
 
   // Sentinel values, generally used for maps.
   constexpr static LocationSize mapTombstone() {
-    return LocationSize(MapTombstone, Direct);
+    return LocationSize(MapTombstone);
   }
   constexpr static LocationSize mapEmpty() {
-    return LocationSize(MapEmpty, Direct);
+    return LocationSize(MapEmpty);
   }
 
   // Returns a LocationSize that can correctly represent either `*this` or
@@ -189,14 +177,16 @@ public:
   bool operator==(const LocationSize &Other) const {
     return Value == Other.Value;
   }
-
   bool operator==(const TypeSize &Other) const {
-    return hasValue() && getValue() == Other;
+    return (*this == LocationSize::precise(Other));
+  }
+  bool operator==(uint64_t Other) const {
+    return (*this == LocationSize::precise(Other));
   }
 
   bool operator!=(const LocationSize &Other) const { return !(*this == Other); }
-
   bool operator!=(const TypeSize &Other) const { return !(*this == Other); }
+  bool operator!=(uint64_t Other) const { return !(*this == Other); }
 
   // Ordering operators are not provided, since it's unclear if there's only one
   // reasonable way to compare:
@@ -301,6 +291,12 @@ public:
   explicit MemoryLocation(const Value *Ptr, LocationSize Size,
                           const AAMDNodes &AATags = AAMDNodes())
       : Ptr(Ptr), Size(Size), AATags(AATags) {}
+  explicit MemoryLocation(const Value *Ptr, TypeSize Size,
+                          const AAMDNodes &AATags = AAMDNodes())
+      : Ptr(Ptr), Size(LocationSize::precise(Size)), AATags(AATags) {}
+  explicit MemoryLocation(const Value *Ptr, uint64_t Size,
+                          const AAMDNodes &AATags = AAMDNodes())
+      : Ptr(Ptr), Size(LocationSize::precise(Size)), AATags(AATags) {}
 
   MemoryLocation getWithNewPtr(const Value *NewPtr) const {
     MemoryLocation Copy(*this);
@@ -312,6 +308,12 @@ public:
     MemoryLocation Copy(*this);
     Copy.Size = NewSize;
     return Copy;
+  }
+  MemoryLocation getWithNewSize(uint64_t NewSize) const {
+    return getWithNewSize(LocationSize::precise(NewSize));
+  }
+  MemoryLocation getWithNewSize(TypeSize NewSize) const {
+    return getWithNewSize(LocationSize::precise(NewSize));
   }
 
   MemoryLocation getWithoutAATags() const {

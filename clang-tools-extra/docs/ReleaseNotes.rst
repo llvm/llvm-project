@@ -91,11 +91,20 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Changed the :program:`check_clang_tidy.py` tool to use FileCheck's
+  ``--match-full-lines`` instead of ``strict-whitespace`` for ``CHECK-FIXES``
+  clauses. Added a ``--match-partial-fixes`` option to keep previous behavior on
+  specific tests. This may break tests for users with custom out-of-tree checks
+  who use :program:`check_clang_tidy.py` as-is.
+
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
+
+- Fixed bug in :program:`run_clang_tidy.py` where the program would not
+  correctly display the checks enabled by the top-level `.clang-tidy` file.
 
 New checks
 ^^^^^^^^^^
@@ -145,6 +154,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
 
+- Improved :doc:`cert-err33-c
+  <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
+  a function name is just prefixed with a targeted function name.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
@@ -171,6 +184,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
   ``constexpr`` and ``static``` values on member initialization and by detecting
   explicit casting of built-in types within member list initialization.
+
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check by avoiding
+  diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 

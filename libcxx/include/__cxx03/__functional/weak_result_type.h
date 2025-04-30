@@ -12,9 +12,9 @@
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/binary_function.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__functional/unary_function.h>
 #include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_same.h>
 #include <__cxx03/__utility/declval.h>
 

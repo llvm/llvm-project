@@ -1569,10 +1569,10 @@ StructuredData::ObjectSP
 ScriptInterpreterPythonImpl::CreateStructuredDataFromScriptObject(
     ScriptObject obj) {
   void *ptr = const_cast<void *>(obj.GetPointer());
+  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
   PythonObject py_obj(PyRefType::Borrowed, static_cast<PyObject *>(ptr));
   if (!py_obj.IsValid() || py_obj.IsNone())
     return {};
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
   return py_obj.CreateStructuredObject();
 }
 
@@ -2037,19 +2037,19 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
   return ret_val;
 }
 
-int ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
+llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'", child_name);
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
   if (!generic)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'", child_name);
   auto *implementor = static_cast<PyObject *>(generic->GetValue());
   if (!implementor)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'", child_name);
 
-  int ret_val = UINT32_MAX;
+  int ret_val = INT32_MAX;
 
   {
     Locker py_lock(this,
@@ -2058,6 +2058,8 @@ int ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
                                                                  child_name);
   }
 
+  if (ret_val == INT32_MAX)
+    return llvm::createStringError("Type has no child named '%s'", child_name);
   return ret_val;
 }
 

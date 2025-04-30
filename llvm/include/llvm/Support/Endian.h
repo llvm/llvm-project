@@ -277,6 +277,9 @@ public:
 
 } // end namespace detail
 
+using ulittle8_t =
+    detail::packed_endian_specific_integral<uint8_t, llvm::endianness::little,
+                                            unaligned>;
 using ulittle16_t =
     detail::packed_endian_specific_integral<uint16_t, llvm::endianness::little,
                                             unaligned>;

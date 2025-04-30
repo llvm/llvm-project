@@ -2383,10 +2383,10 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
   // The call to CheckTemplateArgument here produces the ImpCast.
   TemplateArgument SugaredConverted, CanonicalConverted;
   if (SemaRef
-          .CheckTemplateArgument(
-              E->getParameter(), SubstType, SubstReplacement.get(),
-              SugaredConverted, CanonicalConverted,
-              /*PartialOrderingTTP=*/false, Sema::CTAK_Specified)
+          .CheckTemplateArgument(E->getParameter(), SubstType,
+                                 SubstReplacement.get(), SugaredConverted,
+                                 CanonicalConverted,
+                                 /*StrictCheck=*/false, Sema::CTAK_Specified)
           .isInvalid())
     return true;
   return transformNonTypeTemplateParmRef(
@@ -4125,9 +4125,6 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
     if (auto *Function = dyn_cast<FunctionDecl>(D)) {
       if (FunctionDecl *Pattern =
               Function->getInstantiatedFromMemberFunction()) {
-
-        if (Function->isIneligibleOrNotSelected())
-          continue;
 
         if (Function->getTrailingRequiresClause()) {
           ConstraintSatisfaction Satisfaction;
