@@ -965,7 +965,7 @@ void ScheduleDAGMI::moveInstruction(
 
 bool ScheduleDAGMI::checkSchedLimit() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
-  if (NumInstrsScheduled == MISchedCutoff && MISchedCutoff != ~0U) {
+  if ((NumInstrsScheduled + 1) == MISchedCutoff && MISchedCutoff != ~0U) {
     CurrentTop = CurrentBottom;
     return false;
   }
