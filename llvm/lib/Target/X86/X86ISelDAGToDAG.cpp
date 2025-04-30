@@ -184,8 +184,6 @@ namespace {
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
       OptForMinSize = MF.getFunction().hasMinSize();
-      assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
-             "OptForMinSize implies OptForSize");
       return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
@@ -277,8 +275,23 @@ namespace {
 #define GET_ND_IF_ENABLED(OPC) (Subtarget->hasNDD() ? OPC##_ND : OPC)
       // Negate the index if needed.
       if (AM.NegateIndex) {
-        unsigned NegOpc = VT == MVT::i64 ? GET_ND_IF_ENABLED(X86::NEG64r)
-                                         : GET_ND_IF_ENABLED(X86::NEG32r);
+        unsigned NegOpc;
+        switch (VT.SimpleTy) {
+        default:
+          llvm_unreachable("Unsupported VT!");
+        case MVT::i64:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG64r);
+          break;
+        case MVT::i32:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG32r);
+          break;
+        case MVT::i16:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG16r);
+          break;
+        case MVT::i8:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG8r);
+          break;
+        }
         SDValue Neg = SDValue(CurDAG->getMachineNode(NegOpc, DL, VT, MVT::i32,
                                                      AM.IndexReg), 0);
         AM.IndexReg = Neg;
@@ -3289,7 +3302,7 @@ bool X86DAGToDAGISel::tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
 /// Output instructions required to initialize the global base register,
 /// if necessary.
 SDNode *X86DAGToDAGISel::getGlobalBaseReg() {
-  unsigned GlobalBaseReg = getInstrInfo()->getGlobalBaseReg(MF);
+  Register GlobalBaseReg = getInstrInfo()->getGlobalBaseReg(MF);
   auto &DL = MF->getDataLayout();
   return CurDAG->getRegister(GlobalBaseReg, TLI->getPointerTy(DL)).getNode();
 }

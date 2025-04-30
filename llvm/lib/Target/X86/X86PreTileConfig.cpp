@@ -293,29 +293,30 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<MachineBasicBlock *, 8> CfgLiveInBBs;
   for (auto &MBB : MF) {
     size_t Pos = 0;
+    auto &Info = BBVisitedInfo[&MBB];
     for (auto &MI : MBB) {
       ++Pos;
       if (isAMXInstruction(MI)) {
         // If there's call before the AMX, we need to reload tile config.
-        if (BBVisitedInfo[&MBB].LastCall)
-          CfgNeedInsert.insert(BBVisitedInfo[&MBB].LastCall);
+        if (Info.LastCall)
+          CfgNeedInsert.insert(Info.LastCall);
         else // Otherwise, we need tile config to live in this BB.
-          BBVisitedInfo[&MBB].NeedTileCfgLiveIn = true;
+          Info.NeedTileCfgLiveIn = true;
         // Always record the first AMX in case there's shape def after it.
-        if (!BBVisitedInfo[&MBB].FirstAMX)
-          BBVisitedInfo[&MBB].FirstAMX = MIRef(&MI, &MBB, Pos);
+        if (!Info.FirstAMX)
+          Info.FirstAMX = MIRef(&MI, &MBB, Pos);
       } else if (MI.isCall() && isDestructiveCall(MI, AMXRegs)) {
         // Record the call only if the callee clobbers all AMX registers.
-        BBVisitedInfo[&MBB].LastCall = MIRef(&MI, &MBB, Pos);
+        Info.LastCall = MIRef(&MI, &MBB, Pos);
       }
     }
-    if (BBVisitedInfo[&MBB].NeedTileCfgLiveIn) {
+    if (Info.NeedTileCfgLiveIn) {
       if (&MBB == &MF.front())
         CfgNeedInsert.insert(MIRef(&MBB));
       else
         CfgLiveInBBs.push_back(&MBB);
     }
-    if (BBVisitedInfo[&MBB].FirstAMX || BBVisitedInfo[&MBB].HasAMXRegLiveIn)
+    if (Info.FirstAMX || Info.HasAMXRegLiveIn)
       for (auto *Succ : MBB.successors())
         if (!isLoopBackEdge(Succ, &MBB))
           BBVisitedInfo[Succ].HasAMXRegLiveIn = true;
@@ -325,10 +326,11 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   while (!CfgLiveInBBs.empty()) {
     MachineBasicBlock *MBB = CfgLiveInBBs.pop_back_val();
     for (auto *Pred : MBB->predecessors()) {
-      if (BBVisitedInfo[Pred].LastCall) {
-        CfgNeedInsert.insert(BBVisitedInfo[Pred].LastCall);
-      } else if (!BBVisitedInfo[Pred].NeedTileCfgLiveIn) {
-        BBVisitedInfo[Pred].NeedTileCfgLiveIn = true;
+      auto &Info = BBVisitedInfo[Pred];
+      if (Info.LastCall) {
+        CfgNeedInsert.insert(Info.LastCall);
+      } else if (!Info.NeedTileCfgLiveIn) {
+        Info.NeedTileCfgLiveIn = true;
         if (Pred == &MF.front())
           CfgNeedInsert.insert(MIRef(Pred));
         else
@@ -344,16 +346,16 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   // Avoid to insert ldtilecfg before any shape defs.
   SmallVector<MachineBasicBlock *, 8> WorkList;
   for (auto &I : ShapeBBs) {
+    auto &Info = BBVisitedInfo[I.first];
     // TODO: We can hoist shapes across BBs here.
-    if (BBVisitedInfo[I.first].HasAMXRegLiveIn) {
+    if (Info.HasAMXRegLiveIn) {
       // We are not able to config tile registers since the shape to config
       // is not defined yet. Emit error message and continue. The function
       // would not config tile registers.
       emitErrorMsg(MF);
       return false;
     }
-    if (BBVisitedInfo[I.first].FirstAMX &&
-        BBVisitedInfo[I.first].FirstAMX < I.second.back() &&
+    if (Info.FirstAMX && Info.FirstAMX < I.second.back() &&
         !hoistShapesInBB(I.first, I.second)) {
       emitErrorMsg(MF);
       return false;
@@ -363,8 +365,9 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   while (!WorkList.empty()) {
     MachineBasicBlock *MBB = WorkList.pop_back_val();
     for (auto *Pred : MBB->predecessors()) {
-      if (!BBVisitedInfo[Pred].TileCfgForbidden && !isLoopBackEdge(MBB, Pred)) {
-        BBVisitedInfo[Pred].TileCfgForbidden = true;
+      auto &Info = BBVisitedInfo[Pred];
+      if (!Info.TileCfgForbidden && !isLoopBackEdge(MBB, Pred)) {
+        Info.TileCfgForbidden = true;
         WorkList.push_back(Pred);
       }
     }
@@ -400,8 +403,9 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
     // A given point might be forked due to shape conditions are not met.
     for (MIRef I : InsertPoints) {
       // Make sure we insert ldtilecfg after the last shape def in MBB.
-      if (ShapeBBs.count(I.MBB) && I < ShapeBBs[I.MBB].back())
-        I = ShapeBBs[I.MBB].back();
+      auto It = ShapeBBs.find(I.MBB);
+      if (It != ShapeBBs.end() && I < It->second.back())
+        I = It->second.back();
       // There're chances the MBB is sunk more than once. Record it to avoid
       // multi insert.
       if (VisitedOrInserted.insert(I).second) {

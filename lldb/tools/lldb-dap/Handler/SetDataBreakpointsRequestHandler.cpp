@@ -97,9 +97,9 @@ void SetDataBreakpointsRequestHandler::operator()(
   // backward.
   std::set<lldb::addr_t> addresses;
   for (auto iter = watchpoints.rbegin(); iter != watchpoints.rend(); ++iter) {
-    if (addresses.count(iter->addr) == 0) {
+    if (addresses.count(iter->GetAddress()) == 0) {
       iter->SetWatchpoint();
-      addresses.insert(iter->addr);
+      addresses.insert(iter->GetAddress());
     }
   }
   for (auto wp : watchpoints)

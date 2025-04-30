@@ -359,9 +359,9 @@ class LLVM_ABI MachineFunction {
   /// construct a table of valid longjmp targets for Windows Control Flow Guard.
   std::vector<MCSymbol *> LongjmpTargets;
 
-  /// List of basic blocks that are the target of catchrets. Used to construct
-  /// a table of valid targets for Windows EHCont Guard.
-  std::vector<MCSymbol *> CatchretTargets;
+  /// List of basic blocks that are the targets for Windows EH Continuation
+  /// Guard.
+  std::vector<MCSymbol *> EHContTargets;
 
   /// \name Exception Handling
   /// \{
@@ -383,7 +383,7 @@ class LLVM_ABI MachineFunction {
 
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
-  bool HasEHCatchret = false;
+  bool HasEHContTarget = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
   bool HasFakeUses = false;
@@ -1082,6 +1082,16 @@ public:
                                 BaseAlignment, AAInfo, Ranges, SSID, Ordering,
                                 FailureOrdering);
   }
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
+    return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
+                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                FailureOrdering);
+  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, adjusting by an offset and using the given size.
@@ -1102,6 +1112,10 @@ public:
                                           int64_t Offset, uint64_t Size) {
     return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          int64_t Offset, TypeSize Size) {
+    return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
+  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, replacing only the MachinePointerInfo and size.
@@ -1116,6 +1130,11 @@ public:
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
                                           uint64_t Size) {
+    return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
+  }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          const MachinePointerInfo &PtrInfo,
+                                          TypeSize Size) {
     return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
   }
 
@@ -1197,17 +1216,15 @@ public:
   /// Control Flow Guard.
   void addLongjmpTarget(MCSymbol *Target) { LongjmpTargets.push_back(Target); }
 
-  /// Returns a reference to a list of symbols that we have catchrets.
-  /// Used to construct the catchret target table used by Windows EHCont Guard.
-  const std::vector<MCSymbol *> &getCatchretTargets() const {
-    return CatchretTargets;
+  /// Returns a reference to a list of symbols that are targets for Windows
+  /// EH Continuation Guard.
+  const std::vector<MCSymbol *> &getEHContTargets() const {
+    return EHContTargets;
   }
 
-  /// Add the specified symbol to the list of valid catchret targets for Windows
-  /// EHCont Guard.
-  void addCatchretTarget(MCSymbol *Target) {
-    CatchretTargets.push_back(Target);
-  }
+  /// Add the specified symbol to the list of targets for Windows EH
+  /// Continuation Guard.
+  void addEHContTarget(MCSymbol *Target) { EHContTargets.push_back(Target); }
 
   /// Tries to get the global and target flags for a call site, if the
   /// instruction is a call to a global.
@@ -1236,8 +1253,8 @@ public:
   bool callsUnwindInit() const { return CallsUnwindInit; }
   void setCallsUnwindInit(bool b) { CallsUnwindInit = b; }
 
-  bool hasEHCatchret() const { return HasEHCatchret; }
-  void setHasEHCatchret(bool V) { HasEHCatchret = V; }
+  bool hasEHContTarget() const { return HasEHContTarget; }
+  void setHasEHContTarget(bool V) { HasEHContTarget = V; }
 
   bool hasEHScopes() const { return HasEHScopes; }
   void setHasEHScopes(bool V) { HasEHScopes = V; }

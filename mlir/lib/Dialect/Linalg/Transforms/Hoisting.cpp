@@ -371,7 +371,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       if (failed(maybeNewLoop))
         return WalkResult::interrupt();
 
-      transferWrite.getVectorMutable().assign(
+      transferWrite.getValueToStoreMutable().assign(
           maybeNewLoop->getOperation()->getResults().back());
       changed = true;
       // Need to interrupt and restart because erasing the loop messes up

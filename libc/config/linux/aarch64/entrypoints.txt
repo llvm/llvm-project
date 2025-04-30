@@ -93,6 +93,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.bcmp
     libc.src.strings.bcopy
     libc.src.strings.bzero
+    libc.src.strings.ffs
+    libc.src.strings.ffsl
+    libc.src.strings.ffsll
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp
@@ -188,6 +191,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -359,6 +363,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -404,10 +412,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -641,10 +651,12 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
+    # libc.src.math.acoshf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
-    libc.src.math.cospif16
+    #TODO: Aarch64 bug https://github.com/llvm/llvm-project/issues/134917
+    # libc.src.math.cospif16
     # TODO: aarch64 bug
     # Please see https://github.com/llvm/llvm-project/pull/100632#issuecomment-2258772681
     # libc.src.math.expf16
@@ -673,6 +685,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ffma
     libc.src.math.ffmal
     libc.src.math.floorf16
+    libc.src.math.fmaf16
     libc.src.math.fmaxf16
     libc.src.math.fmaximum_mag_numf16
     libc.src.math.fmaximum_magf16
@@ -717,7 +730,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
-    libc.src.math.sinpif16
+    #TODO: Aarch64 bug https://github.com/llvm/llvm-project/issues/134917
+    # libc.src.math.sinpif16
     libc.src.math.sqrtf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
@@ -752,6 +766,7 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.atan2f128
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
@@ -907,10 +922,19 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_getcpuisset
+
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr
@@ -992,6 +1016,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.insque
     libc.src.search.lfind
+    libc.src.search.lsearch
     libc.src.search.remque
 
     # threads.h entrypoints

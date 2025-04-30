@@ -248,7 +248,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       continue;
 
     // Add nodes on the Path into Candidates.
-    Candidates.insert(Path.begin(), Path.end());
+    Candidates.insert_range(Path);
   }
 
   // Sort the nodes in Candidates in top-down order and save the nodes
@@ -283,7 +283,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
           (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1))
         BBs.insert(Entry);
       else
-        BBs.insert(InsertPts.begin(), InsertPts.end());
+        BBs.insert_range(InsertPts);
       break;
     }
 
@@ -304,7 +304,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       ParentInsertPts.insert(Node);
       ParentPtsFreq += BFI.getBlockFreq(Node);
     } else {
-      ParentInsertPts.insert(InsertPts.begin(), InsertPts.end());
+      ParentInsertPts.insert_range(InsertPts);
       ParentPtsFreq += InsertPtsFreq;
     }
   }
@@ -386,7 +386,7 @@ void ConstantHoistingPass::collectConstantCandidates(
       ConstIntCandVec.push_back(ConstantCandidate(ConstInt));
       Itr->second = ConstIntCandVec.size() - 1;
     }
-    ConstIntCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
+    ConstIntCandVec[Itr->second].addUser(Inst, Idx, Cost.getValue());
     LLVM_DEBUG(if (isa<ConstantInt>(Inst->getOperand(Idx))) dbgs()
                    << "Collect constant " << *ConstInt << " from " << *Inst
                    << " with cost " << Cost << '\n';
@@ -446,7 +446,7 @@ void ConstantHoistingPass::collectConstantCandidates(
         ConstExpr));
     Itr->second = ExprCandVec.size() - 1;
   }
-  ExprCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
+  ExprCandVec[Itr->second].addUser(Inst, Idx, Cost.getValue());
 }
 
 /// Check the operand for instruction Inst at index Idx.

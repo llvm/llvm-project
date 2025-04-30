@@ -406,7 +406,7 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
     //  stored in pre-order (outer first, inner next), not post-order
     //  Add to map here.  Fix the CatchHigh after children are processed
     const Module *Mod = BB->getParent()->getParent();
-    bool IsPreOrder = Triple(Mod->getTargetTriple()).isArch64Bit();
+    bool IsPreOrder = Mod->getTargetTriple().isArch64Bit();
     if (IsPreOrder)
       addTryBlockMapEntry(FuncInfo, TryLow, TryHigh, CatchLow, Handlers);
     unsigned TBMEIdx = FuncInfo.TryBlockMap.size() - 1;
@@ -448,11 +448,12 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // It's possible for a cleanup to be visited twice: it might have multiple
     // cleanupret instructions.
-    if (FuncInfo.EHPadStateMap.count(CleanupPad))
+    auto [It, Inserted] = FuncInfo.EHPadStateMap.try_emplace(CleanupPad);
+    if (!Inserted)
       return;
 
     int CleanupState = addUnwindMapEntry(FuncInfo, ParentState, BB);
-    FuncInfo.EHPadStateMap[CleanupPad] = CleanupState;
+    It->second = CleanupState;
     LLVM_DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
                       << BB->getName() << '\n');
     for (const BasicBlock *PredBlock : predecessors(BB)) {
@@ -554,11 +555,12 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // It's possible for a cleanup to be visited twice: it might have multiple
     // cleanupret instructions.
-    if (FuncInfo.EHPadStateMap.count(CleanupPad))
+    auto [It, Inserted] = FuncInfo.EHPadStateMap.try_emplace(CleanupPad);
+    if (!Inserted)
       return;
 
     int CleanupState = addSEHFinally(FuncInfo, ParentState, BB);
-    FuncInfo.EHPadStateMap[CleanupPad] = CleanupState;
+    It->second = CleanupState;
     LLVM_DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
                       << BB->getName() << '\n');
     for (const BasicBlock *PredBlock : predecessors(BB))
@@ -866,15 +868,29 @@ void WinEHPrepareImpl::demotePHIsOnFunclets(Function &F,
   for (BasicBlock &BB : make_early_inc_range(F)) {
     if (!BB.isEHPad())
       continue;
-    if (DemoteCatchSwitchPHIOnly &&
-        !isa<CatchSwitchInst>(BB.getFirstNonPHIIt()))
-      continue;
 
     for (Instruction &I : make_early_inc_range(BB)) {
       auto *PN = dyn_cast<PHINode>(&I);
       // Stop at the first non-PHI.
       if (!PN)
         break;
+
+      // If DemoteCatchSwitchPHIOnly is true, we only demote a PHI when
+      // 1. The PHI is within a catchswitch BB
+      // 2. The PHI has a catchswitch BB has one of its incoming blocks
+      if (DemoteCatchSwitchPHIOnly) {
+        bool IsCatchSwitchBB = isa<CatchSwitchInst>(BB.getFirstNonPHIIt());
+        bool HasIncomingCatchSwitchBB = false;
+        for (unsigned I = 0, E = PN->getNumIncomingValues(); I < E; ++I) {
+          if (isa<CatchSwitchInst>(
+                  PN->getIncomingBlock(I)->getFirstNonPHIIt())) {
+            HasIncomingCatchSwitchBB = true;
+            break;
+          }
+        }
+        if (!IsCatchSwitchBB && !HasIncomingCatchSwitchBB)
+          break;
+      }
 
       AllocaInst *SpillSlot = insertPHILoads(PN, F);
       if (SpillSlot)

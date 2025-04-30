@@ -142,8 +142,7 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
 LTOCodeGenerator::~LTOCodeGenerator() = default;
 
 void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
-  for (const StringRef &Undef : Mod->getAsmUndefinedRefs())
-    AsmUndefinedRefs.insert(Undef);
+  AsmUndefinedRefs.insert_range(Mod->getAsmUndefinedRefs());
 }
 
 bool LTOCodeGenerator::addModule(LTOModule *Mod) {
@@ -383,12 +382,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  TripleStr = MergedModule->getTargetTriple();
+  TripleStr = MergedModule->getTargetTriple().str();
+  llvm::Triple Triple(TripleStr);
   if (TripleStr.empty()) {
     TripleStr = sys::getDefaultTargetTriple();
-    MergedModule->setTargetTriple(TripleStr);
+    MergedModule->setTargetTriple(Triple);
   }
-  llvm::Triple Triple(TripleStr);
 
   // create target machine from info for merged modules
   std::string ErrMsg;
@@ -420,8 +419,8 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      TripleStr, Config.CPU, FeatureStr, Config.Options, Config.RelocModel,
-      std::nullopt, Config.CGOptLevel));
+      Triple(TripleStr), Config.CPU, FeatureStr, Config.Options,
+      Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make

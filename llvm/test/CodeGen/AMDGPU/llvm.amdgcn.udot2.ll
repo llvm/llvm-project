@@ -58,7 +58,7 @@ entry:
   %b.val = load <2 x i16>, ptr addrspace(1) %b.gep
   %b.elt0 = extractelement <2 x i16> %b.val, i32 0
   %b.elt1 = extractelement <2 x i16> %b.val, i32 1
-  %b0 = insertelement <2 x i16> undef, i16 %b.elt1, i32 0
+  %b0 = insertelement <2 x i16> poison, i16 %b.elt1, i32 0
   %b1 = insertelement <2 x i16> %b0, i16 %b.elt0, i32 1
   %r.val = call i32 @llvm.amdgcn.udot2(<2 x i16> <i16 1, i16 1>, <2 x i16> %b1, i32 %c, i1 0)
   store i32 %r.val, ptr addrspace(1) %r

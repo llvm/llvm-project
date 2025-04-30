@@ -11,7 +11,7 @@ main_body:
   %data = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 0, i32 0)
   %data_glc = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 0, i32 1)
   %data_slc = call <4 x float> @llvm.amdgcn.struct.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 0, i32 2)
-  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %data, 0
+  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} poison, <4 x float> %data, 0
   %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %data_glc, 1
   %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %data_slc, 2
   ret {<4 x float>, <4 x float>, <4 x float>} %r2
@@ -138,7 +138,7 @@ main_body:
   %fdata = bitcast <4 x i32> %data to <4 x float>
   %fdata_glc = bitcast <2 x i32> %data_glc to <2 x float>
   %fdata_slc = bitcast i32 %data_slc to float
-  %r0 = insertvalue {<4 x float>, <2 x float>, float} undef, <4 x float> %fdata, 0
+  %r0 = insertvalue {<4 x float>, <2 x float>, float} poison, <4 x float> %fdata, 0
   %r1 = insertvalue {<4 x float>, <2 x float>, float} %r0, <2 x float> %fdata_glc, 1
   %r2 = insertvalue {<4 x float>, <2 x float>, float} %r1, float %fdata_slc, 2
   ret {<4 x float>, <2 x float>, float} %r2

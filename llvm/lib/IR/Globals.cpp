@@ -73,8 +73,9 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
     removeSanitizerMetadata();
 }
 
-GlobalValue::GUID GlobalValue::getGUID(StringRef GlobalName) {
-  return MD5Hash(GlobalName);
+GlobalValue::GUID
+GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
+  return MD5Hash(GlobalIdentifier);
 }
 
 void GlobalValue::removeFromParent() {
@@ -359,16 +360,14 @@ bool GlobalObject::canIncreaseAlignment() const {
   // alignment will be incorrect.
 
   // Conservatively assume ELF if there's no parent pointer.
-  bool isELF =
-      (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatELF());
+  bool isELF = (!Parent || Parent->getTargetTriple().isOSBinFormatELF());
   if (isELF && !isDSOLocal())
     return false;
 
   // GV with toc-data attribute is defined in a TOC entry. To mitigate TOC
   // overflow, the alignment of such symbol should not be increased. Otherwise,
   // padding is needed thus more TOC entries are wasted.
-  bool isXCOFF =
-      (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatXCOFF());
+  bool isXCOFF = (!Parent || Parent->getTargetTriple().isOSBinFormatXCOFF());
   if (isXCOFF)
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
       if (GV->hasAttribute("toc-data"))
@@ -557,6 +556,15 @@ void GlobalVariable::setCodeModel(CodeModel::Model CM) {
                      (CodeModelData << CodeModelShift);
   setGlobalValueSubClassData(NewData);
   assert(getCodeModel() == CM && "Code model representation error!");
+}
+
+void GlobalVariable::clearCodeModel() {
+  unsigned CodeModelData = 0;
+  unsigned OldData = getGlobalValueSubClassData();
+  unsigned NewData = (OldData & ~(CodeModelMask << CodeModelShift)) |
+                     (CodeModelData << CodeModelShift);
+  setGlobalValueSubClassData(NewData);
+  assert(getCodeModel() == std::nullopt && "Code model representation error!");
 }
 
 //===----------------------------------------------------------------------===//
