@@ -645,6 +645,10 @@ public:
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
       return false;
+
+    if (isPtrConversion(Callee))
+      return true;
+
     const auto &Name = safeGetName(Callee);
 
     if (Callee->isInStdNamespace() &&
@@ -658,7 +662,7 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || isTrivialBuiltinFunction(Callee))
+        isTrivialBuiltinFunction(Callee))
       return true;
 
     return IsFunctionTrivial(Callee);
