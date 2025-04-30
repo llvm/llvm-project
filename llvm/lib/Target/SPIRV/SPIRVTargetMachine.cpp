@@ -192,12 +192,10 @@ void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   if (TM.getSubtargetImpl()->isVulkanEnv()) {
-    // The frontend has a tendency to quickly addrspacecast pointers to the
-    // default address space, and relies on addrspacecast instructions at the
-    // boundaries. Vulkan does not allow such things, and we must keep the
-    // pointer address space stable.
-    // This pass will determine real address space of a pointer, and patch
-    // instructions removing Addrspacecasts.
+    // Vulkan does not allow address space casts. This pass is run to remove
+    // address space casts that can be removed.
+    // If an address space cast is not removed while targeting Vulkan, lowering
+    // will fail during MIR lowering.
     addPass(createInferAddressSpacesPass(/* AddressSpace= */ 0));
 
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
