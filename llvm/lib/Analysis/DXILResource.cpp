@@ -927,8 +927,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
       break;
     }
     case Intrinsic::dx_resource_handlefromimplicitbinding: {
-      if (!F.user_empty())
-        ImplicitBinding = true;
+      ImplicitBinding = true;
       break;
     }
     }
@@ -957,7 +956,8 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
       // move to the next resource class spaces
       BS = &getBindingSpaces(B.ResClass);
 
-    RegisterSpace *S = &BS->Spaces.back();
+    RegisterSpace *S = BS->Spaces.empty() ? &BS->Spaces.emplace_back(B.Space)
+                                          : &BS->Spaces.back();
     assert(S->Space <= B.Space && "bindings not sorted correctly?");
     if (B.Space != S->Space)
       // add new space
@@ -983,6 +983,8 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
       if (B.UpperBound < UINT32_MAX)
         S->FreeRanges.emplace_back(B.UpperBound + 1, UINT32_MAX);
     } else {
+      // FIXME: This only detects overlapping bindings that are not an exact
+      // match (llvm/llvm-project#110723)
       OverlappingBinding = true;
       if (B.UpperBound < UINT32_MAX)
         LastFreeRange.LowerBound =

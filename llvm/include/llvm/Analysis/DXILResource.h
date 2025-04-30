@@ -637,10 +637,7 @@ public:
   struct BindingSpaces {
     dxil::ResourceClass ResClass;
     llvm::SmallVector<RegisterSpace> Spaces;
-    BindingSpaces(dxil::ResourceClass ResClass) : ResClass(ResClass) {
-      // initialize space0
-      Spaces.emplace_back(0);
-    }
+    BindingSpaces(dxil::ResourceClass ResClass) : ResClass(ResClass) {}
   };
 
 private:
@@ -660,8 +657,8 @@ public:
         SamplerSpaces(dxil::ResourceClass::Sampler), ImplicitBinding(false),
         OverlappingBinding(false) {}
 
-  bool containsImplicitBinding() const { return ImplicitBinding; }
-  bool containsOverlappingBinding() const { return OverlappingBinding; }
+  bool hasImplicitBinding() const { return ImplicitBinding; }
+  bool hasOverlappingBinding() const { return OverlappingBinding; }
 
   BindingSpaces &getBindingSpaces(dxil::ResourceClass RC) {
     switch (RC) {

@@ -65,12 +65,8 @@ TEST_F(ResourceBindingAnalysisTest, TestTrivialCase) {
 define void @main() {
 entry:
   %handle = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
-  
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handle)
   ret void
 }
-
-declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
   auto M = parseAsm(Assembly);
@@ -78,8 +74,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
-  EXPECT_EQ(false, DRBI.containsImplicitBinding());
-  EXPECT_EQ(false, DRBI.containsOverlappingBinding());
+  EXPECT_EQ(false, DRBI.hasImplicitBinding());
+  EXPECT_EQ(false, DRBI.hasOverlappingBinding());
 
   // check that UAV has exactly one gap
   DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
@@ -94,8 +90,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
        {ResourceClass::SRV, ResourceClass::CBuffer, ResourceClass::Sampler}) {
     DXILResourceBindingInfo::BindingSpaces &Spaces = DRBI.getBindingSpaces(RC);
     EXPECT_EQ(Spaces.ResClass, RC);
-    EXPECT_EQ(Spaces.Spaces.size(), 1u);
-    checkExpectedSpaceAndFreeRanges(Spaces.Spaces[0], 0, {0, UINT32_MAX});
+    EXPECT_EQ(Spaces.Spaces.size(), 0u);
   }
 }
 
@@ -116,18 +111,8 @@ entry:
   %handleC = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
   %handleD = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 4, i1 false)
   %handleE = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 2, i32 0, i1 false)
-  
-  call void @a.func(target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) %handleCB)
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handleA)
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handleC)
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handleE)
-  call void @a.func(target("dx.RawBuffer", i32, 0, 0) %handleB)
-  call void @a.func(target("dx.RawBuffer", i32, 0, 0) %handleD)
-  
   ret void
 }
-
-declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
   auto M = parseAsm(Assembly);
@@ -135,8 +120,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
-  EXPECT_EQ(false, DRBI.containsImplicitBinding());
-  EXPECT_EQ(false, DRBI.containsOverlappingBinding());
+  EXPECT_EQ(false, DRBI.hasImplicitBinding());
+  EXPECT_EQ(false, DRBI.hasOverlappingBinding());
 
   DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
@@ -174,16 +159,8 @@ entry:
   %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 3, i32 0, i1 false)
   %handleC = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 0, i32 -1, i32 100, i1 false)
   %handleD = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, i1 false)
-  
-  call void @a.func(target("dx.RawBuffer", float, 0, 0) %handleA)
-  call void @a.func(target("dx.RawBuffer", float, 0, 0) %handleB)
-  call void @a.func(target("dx.RawBuffer", float, 0, 0) %handleC)
-  call void @a.func(target("dx.RawBuffer", float, 0, 0) %handleD)
-  
   ret void
 }
-
-declare void @a.func(target("dx.RawBuffer", float, 0, 0) %handle)
   )";
 
   auto M = parseAsm(Assembly);
@@ -191,8 +168,8 @@ declare void @a.func(target("dx.RawBuffer", float, 0, 0) %handle)
   DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
-  EXPECT_EQ(false, DRBI.containsImplicitBinding());
-  EXPECT_EQ(true, DRBI.containsOverlappingBinding());
+  EXPECT_EQ(false, DRBI.hasImplicitBinding());
+  EXPECT_EQ(true, DRBI.hasOverlappingBinding());
 
   DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
@@ -215,15 +192,8 @@ entry:
   %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 -1, i32 1, i32 0, i1 false)
   %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 -10, i32 10, i32 50, i1 false)
   %handleC = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 2147483647, i32 10, i32 100, i1 false)
-  
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handleA)
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handleB)
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handleC)
-  
   ret void
 }
-
-declare void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handle)
   )";
 
   auto M = parseAsm(Assembly);
@@ -231,8 +201,8 @@ declare void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handle)
   DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
-  EXPECT_EQ(false, DRBI.containsImplicitBinding());
-  EXPECT_EQ(false, DRBI.containsOverlappingBinding());
+  EXPECT_EQ(false, DRBI.hasImplicitBinding());
+  EXPECT_EQ(false, DRBI.hasOverlappingBinding());
 
   DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
@@ -246,23 +216,30 @@ declare void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handle)
 }
 
 TEST_F(ResourceBindingAnalysisTest, TestImplicitFlag) {
-  // RWBuffer<float> A;
+  // RWBuffer<float> A : register(u5, space100);
+  // RWBuffer<float> B;
   StringRef Assembly = R"(
-%__cblayout_CB = type <{ i32 }>
 define void @main() {
 entry:
-  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 0, i32 0, i32 1, i32 0)
-  call void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handleA)
+  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 100, i32 5, i32 1, i32 0, i1 false)
+  %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 0, i32 0, i32 1, i32 0, i1 false)
   ret void
 }
-declare void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handle)
   )";
 
   auto M = parseAsm(Assembly);
 
   DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
-  EXPECT_EQ(true, DRBI.containsImplicitBinding());
+  EXPECT_EQ(true, DRBI.hasImplicitBinding());
+  EXPECT_EQ(false, DRBI.hasOverlappingBinding());
+
+  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
+      DRBI.getBindingSpaces(ResourceClass::UAV);
+  EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
+  EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
+  checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 100,
+                                  {0, 4, 6, UINT32_MAX});
 }
 
 } // namespace
