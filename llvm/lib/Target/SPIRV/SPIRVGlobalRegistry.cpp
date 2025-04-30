@@ -1296,8 +1296,6 @@ bool SPIRVGlobalRegistry::isScalarOrVectorOfType(Register VReg,
 }
 
 bool SPIRVGlobalRegistry::isResourceType(SPIRVType *Type) const {
-  llvm::dbgs() << "isResourceType: Type=";
-  Type->dump();
   switch (Type->getOpcode()) {
   case SPIRV::OpTypeImage:
   case SPIRV::OpTypeSampler:
