@@ -91,14 +91,15 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Changed the :program:`check_clang_tidy.py` tool to use FileCheck's
+  ``--match-full-lines`` instead of ``strict-whitespace`` for ``CHECK-FIXES``
+  clauses. Added a ``--match-partial-fixes`` option to keep previous behavior on
+  specific tests. This may break tests for users with custom out-of-tree checks
+  who use :program:`check_clang_tidy.py` as-is.
+
 - Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
   the configuration options of the `Clang Static Analyzer Checks
   <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
-
-- Added `ctime` and `localtime` to clang-tidy.
-
-- Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
-  happening on certain platforms when interrupting the script.
 
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
@@ -134,38 +135,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`altera-id-dependent-backward-branch
-  <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
-  crashes from invalid code.
-
-- Improved :doc:`bugprone-branch-clone
-  <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
-  branch clones by now detecting duplicate inner and outer if statements.
-
-- Added `ctime` and `localtime` to clang-tidy.
-
 - New unsafe functions checks :doc:`bugprone-unsafe-functions-check`
   <clang-tidy/bugprone/UnsafeFunctionsCheck.cpp> were added to clang-tidy.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
   to unsafe functions check in clang-tidy.
-
-- Improved :doc:`bugprone-casting-through-void
-  <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
-  the offending code with ``reinterpret_cast``, to more clearly express intent.
-
-- Improved :doc:`bugprone-dangling-handle
-  <clang-tidy/checks/bugprone/dangling-handle>` check to treat `std::span` as a
-  handle class.
-
-- Improved :doc:`bugprone-exception-escape
-  <clang-tidy/checks/bugprone/exception-escape>` by fixing false positives
-  when a consteval function with throw statements.
-
-- Improved :doc:`bugprone-forwarding-reference-overload
-  <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
-  a crash when determining if an ``enable_if[_t]`` was found.
 
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
