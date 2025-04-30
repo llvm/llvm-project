@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK -DFNATTRS="noundef nofpclass(nan inf)" -DTARGET=dx
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTARGET=spv
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DFNATTRS="noundef nofpclass(nan inf)" -DTARGET=dx
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple  dxil-pc-shadermodel6.3-library %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF -DFNATTRS="noundef nofpclass(nan inf)" -DTARGET=dx
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTARGET=spv
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 
 // CHECK: define [[FNATTRS]] float @_Z16test_lerp_doubled(
 // CHECK:    [[CONV0:%.*]] = fptrunc {{.*}} double %{{.*}} to float
@@ -160,3 +162,20 @@ float3 test_lerp_uint64_t3(uint64_t3 p0) { return lerp(p0, p0, p0); }
 // CHECK:    [[LERP:%.*]] = call {{.*}} <4 x float> @llvm.[[TARGET]].lerp.v4f32(<4 x float> [[CONV0]], <4 x float> [[CONV1]], <4 x float> [[CONV2]])
 // CHECK:    ret <4 x float> [[LERP]]
 float4 test_lerp_uint64_t4(uint64_t4 p0) { return lerp(p0, p0, p0); }
+
+// NATIVE_HALF: define [[FNATTRS]] <3 x [[TY:half]]> @_Z21test_lerp_half_scalarDv3_DhS_Dh{{.*}}(
+// NO_HALF: define [[FNATTRS]] <3 x [[TY:float]]> @_Z21test_lerp_half_scalarDv3_DhS_Dh(
+// CHECK:    [[SPLATINSERT:%.*]] = insertelement <3 x [[TY]]> poison, [[TY]] %{{.*}}, i64 0
+// CHECK:    [[SPLAT:%.*]] = shufflevector <3 x [[TY]]> [[SPLATINSERT]], <3 x [[TY]]> poison, <3 x i32> zeroinitializer
+// CHECK:    [[LERP:%.*]] = call {{.*}} <3 x [[TY]]> @llvm.[[TARGET]].lerp.{{.*}}(<3 x [[TY]]> {{.*}}, <3 x [[TY]]> {{.*}}, <3 x [[TY]]> [[SPLAT]])
+// CHECK:    ret <3 x [[TY]]> [[LERP]]
+half3 test_lerp_half_scalar(half3 x, half3 y, half s) { return lerp(x, y, s); }
+
+// CHECK: define [[FNATTRS]] <3 x float> @_Z22test_lerp_float_scalarDv3_fS_f(
+// CHECK:    [[SPLATINSERT:%.*]] = insertelement <3 x float> poison, float %{{.*}}, i64 0
+// CHECK:    [[SPLAT:%.*]] = shufflevector <3 x float> [[SPLATINSERT]], <3 x float> poison, <3 x i32> zeroinitializer
+// CHECK:    [[LERP:%.*]] = call {{.*}} <3 x float> @llvm.[[TARGET]].lerp.v3f32(<3 x float> {{.*}}, <3 x float> {{.*}}, <3 x float> [[SPLAT]])
+// CHECK:    ret <3 x float> [[LERP]]
+float3 test_lerp_float_scalar(float3 x, float3 y, float s) {
+  return lerp(x, y, s);
+}
