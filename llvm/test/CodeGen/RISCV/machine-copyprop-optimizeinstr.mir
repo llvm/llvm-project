@@ -655,7 +655,7 @@ name: minu
 body: |
   bb.0:
     ; CHECK-LABEL: name: minu
-    ; CHECK: renamable $x10 = MINU $x12, $x12
+    ; CHECK: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MINU renamable $x11, renamable $x11
@@ -677,7 +677,7 @@ name: maxu
 body: |
   bb.0:
     ; CHECK-LABEL: name: maxu
-    ; CHECK: renamable $x10 = MAXU $x12, $x12
+    ; CHECK: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MAXU renamable $x11, renamable $x11
