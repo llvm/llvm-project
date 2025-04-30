@@ -1891,6 +1891,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-wavegroup-enable"                        GFX13+ only. Indicate that a kernel uses wavegroup launch. Requires
                                                      `!reqd_work_group_size` metadata on the kernel function.
 
+     "amdgpu-wavegroup-rank-function"                 GFX13+ only. Indicate it is a rank-specialized function for wavegroup.
      ================================================ ==========================================================
 
 Calling Conventions

@@ -93,9 +93,13 @@ class SOP1_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   "$sdst, $src0", pattern>;
 
 // only IDX_REG output allowed
-class SOP1_IDX_32 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs IDX_REG_32:$sdst), (ins SSrc_b32:$src0),
-  "$sdst, $src0", pattern>;
+class SOP1_IDX_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseudo <
+  opName, (outs IDX_REG_32:$sdst),
+  !if(tied_in, (ins SSrc_b32:$src0, IDX_REG_32:$sdst_in),
+               (ins SSrc_b32:$src0)),
+  "$sdst, $src0", pattern> {
+  let Constraints = !if(tied_in, "$sdst = $sdst_in", "");
+}
 
 // 32-bit input, no output.
 class SOP1_0_32 <string opName, list<dag> pattern = []> : SOP1_Pseudo <
@@ -558,8 +562,8 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 
 let SubtargetPredicate = isGFX13Plus in {
   let hasSideEffects = 1 in {
-    def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32">;
-    def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32">;
+    def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32", [], 0>;
+    def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32", [], 1>;
   }
 } // End SubtargetPredicate = isGFX13Plus
 

@@ -9735,7 +9735,15 @@ SIInstrInfo::getSerializableTargetIndices() const {
       {AMDGPU::TI_SCRATCH_RSRC_DWORD1, "amdgpu-scratch-rsrc-dword1"},
       {AMDGPU::TI_SCRATCH_RSRC_DWORD2, "amdgpu-scratch-rsrc-dword2"},
       {AMDGPU::TI_SCRATCH_RSRC_DWORD3, "amdgpu-scratch-rsrc-dword3"},
-      {AMDGPU::TI_NUM_VGPRS, "amdgpu-num-vgprs"}};
+      {AMDGPU::TI_NUM_VGPRS, "amdgpu-num-vgprs"},
+      {AMDGPU::TI_NUM_VGPRS_RANK0, "amdgpu-num-vgprs-rank0"},
+      {AMDGPU::TI_NUM_VGPRS_RANK1, "amdgpu-num-vgprs-rank1"},
+      {AMDGPU::TI_NUM_VGPRS_RANK2, "amdgpu-num-vgprs-rank2"},
+      {AMDGPU::TI_NUM_VGPRS_RANK3, "amdgpu-num-vgprs-rank3"},
+      {AMDGPU::TI_NUM_VGPRS_RANK4, "amdgpu-num-vgprs-rank4"},
+      {AMDGPU::TI_NUM_VGPRS_RANK5, "amdgpu-num-vgprs-rank5"},
+      {AMDGPU::TI_NUM_VGPRS_RANK6, "amdgpu-num-vgprs-rank6"},
+      {AMDGPU::TI_NUM_VGPRS_RANK7, "amdgpu-num-vgprs-rank7"}};
   return ArrayRef(TargetIndices);
 }
 

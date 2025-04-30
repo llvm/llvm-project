@@ -3675,6 +3675,15 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   case Intrinsic::amdgcn_ds_gws_sema_release_all:
     SelectDS_GWS(N, IntrID);
     return;
+  case Intrinsic::amdgcn_wavegroup_rank: {
+    auto Opcode = AMDGPU::WAVEGROUP_RANK_CALL;
+    SmallVector<SDValue> Ops;
+    for (unsigned i = 2, numop = N->getNumOperands(); i < numop; ++i)
+      Ops.push_back(N->getOperand(i));
+    Ops.push_back(N->getOperand(0));
+    CurDAG->SelectNodeTo(N, Opcode, N->getVTList(),  Ops);
+    return;
+  }
   default:
     break;
   }

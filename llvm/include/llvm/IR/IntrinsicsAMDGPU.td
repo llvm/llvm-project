@@ -3185,6 +3185,19 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
 // GFX13 Intrinsics
 //===----------------------------------------------------------------------===//
 
+// A uniform tail call to a function with the `amdgpu_kernel` calling convention
+// also marked as `amdgpu-wavegroup-enable` and `amdgpu-wavegroup-rank-function`.
+// It compares wave-id-in-wavegroup with the 1st argument and perform a jump to
+// the given function. This intrinsic should only be used in the special prologue
+// kernel for wavegroup.
+// void @llvm.amdgcn.wavegroup.rank <rank-id> <func-ptr>
+def int_amdgcn_wavegroup_rank:
+  Intrinsic<[],
+            [llvm_i32_ty,    // rank-id
+             llvm_anyptr_ty  // The function to jump to.
+            ],
+            [IntrConvergent, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
 // i32 @llvm.amdgcn.wavegroup.id()
 def int_amdgcn_wavegroup_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,

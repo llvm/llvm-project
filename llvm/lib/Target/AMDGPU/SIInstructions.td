@@ -689,6 +689,15 @@ def SI_CALL : SPseudoInstSI <
   let isConvergent = 1;
 }
 
+// Pseudo for the llvm.amdgcn.wavegroup.rank intrinsic
+def WAVEGROUP_RANK_CALL
+    : SPseudoInstSI<(outs), (ins i32imm:$rank, unknown:$callee), []> {
+  let isCall = 1;
+  let hasSideEffects = 1;
+  let usesCustomInserter = 1;
+  let isConvergent = 1;
+}
+
 class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
   (ins rc:$src0, unknown:$callee, i32imm:$fpdiff),
   [(sd i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
