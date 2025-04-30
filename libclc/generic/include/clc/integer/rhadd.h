@@ -11,5 +11,4 @@
 
 #include <clc/integer/gentype.inc>
 
-#undef __CLC_BODY
 #undef __CLC_FUNCTION
