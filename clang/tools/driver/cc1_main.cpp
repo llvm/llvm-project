@@ -296,12 +296,13 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
+  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
   if (Clang->getCodeGenOpts().TimePassesJson) {
-    llvm::errs() << "{\n";
-    llvm::TimerGroup::printAllJSONValues(llvm::errs(), "");
-    llvm::errs() << "\n}\n";
+    *IOFile << "{\n";
+    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+    *IOFile << "\n}\n";
   } else {
-    llvm::TimerGroup::printAll(llvm::errs());
+    llvm::TimerGroup::printAll(*IOFile);
   }
   llvm::TimerGroup::clearAll();
 
