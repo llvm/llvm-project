@@ -2007,9 +2007,9 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // Code below is not executed for loops as it would interfere with the logic
   // above. Currently block arguments in the merge block are not supported, but
   // instead, the code above copies those arguments from the header block into
-  // the merge block. As such, running the code would yield those copied arguments
-  // that is most likely not a desired behaviour. This may need to be revisited
-  // in the future.
+  // the merge block. As such, running the code would yield those copied
+  // arguments that is most likely not a desired behaviour. This may need to be
+  // revisited in the future.
   if (!isLoop)
     for (BlockArgument blockArg : mergeBlock->getArguments()) {
       // Create new block arguments in the last block ("merge block") of the
