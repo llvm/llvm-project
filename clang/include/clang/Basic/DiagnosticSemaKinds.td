@@ -496,6 +496,10 @@ def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
   "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
+def warn_decl_hidden_in_cpp : Warning<
+  "%select{struct|union|enum}0 defined within a struct or union is not visible "
+  "in C++">, InGroup<HiddenCppDecl>, DefaultIgnore;
+
 def warn_reserved_extern_symbol: Warning<
   "identifier %0 is reserved because %select{"
   "<ERROR>|" // ReservedIdentifierStatus::NotReserved
@@ -4310,7 +4314,10 @@ def warn_impcast_string_literal_to_bool : Warning<
   InGroup<StringConversion>, DefaultIgnore;
 def warn_impcast_different_enum_types : Warning<
   "implicit conversion from enumeration type %0 to different enumeration type "
-  "%1">, InGroup<EnumConversion>;
+  "%1">, InGroup<ImplicitEnumEnumCast>;
+def warn_impcast_int_to_enum : Warning<
+  "implicit conversion from %0 to enumeration type %1 is invalid in C++">,
+  InGroup<ImplicitIntToEnumCast>, DefaultIgnore;
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
     "expression">, InGroup<BoolConversion>;
