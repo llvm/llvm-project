@@ -139,8 +139,7 @@ std::string CallingConvEmitter::getQualifiedRegisterName(const Init *I) {
   if (const auto *DI = dyn_cast<DefInit>(I))
     return getQualifiedName(DI->getDef());
 
-  const auto *SI = dyn_cast<StringInit>(I);
-  assert(SI && "unexpected Init kind");
+  const auto *SI = cast<StringInit>(I);
   if (const CodeGenRegister *CGR = RegistersByDefName.lookup(SI->getValue()))
     return getQualifiedName(CGR->TheDef);
 
