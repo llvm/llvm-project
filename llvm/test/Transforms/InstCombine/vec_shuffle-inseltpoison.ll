@@ -1789,3 +1789,26 @@ define <4 x i32> @PR46872(<4 x i32> %x) {
   ret <4 x i32> %a
 }
 
+define <vscale x 4 x i32> @scalable_splat_binop_constant_rhs(<vscale x 4 x i32> %x) {
+; CHECK-LABEL: @scalable_splat_binop_constant_rhs(
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 4 x i32> [[TMP1:%.*]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R1:%.*]] = add <vscale x 4 x i32> [[R]], splat (i32 42)
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R1]]
+;
+
+  %splatx = shufflevector <vscale x 4 x i32> %x, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %r = add <vscale x 4 x i32> %splatx, splat (i32 42)
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 4 x float> @scalable_splat_binop_constant_lhs(<vscale x 4 x float> %x) {
+; CHECK-LABEL: @scalable_splat_binop_constant_lhs(
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 4 x float> [[TMP1:%.*]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R1:%.*]] = fadd <vscale x 4 x float> [[R]], splat (float 4.200000e+01)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[R1]]
+;
+
+  %splatx = shufflevector <vscale x 4 x float> %x, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %r = fadd <vscale x 4 x float> splat (float 42.0), %splatx
+  ret <vscale x 4 x float> %r
+}
