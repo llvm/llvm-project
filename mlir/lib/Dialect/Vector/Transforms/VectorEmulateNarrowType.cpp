@@ -621,12 +621,6 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             ? 0
             : getConstantIntValue(linearizedInfo.intraDataOffset);
 
-    if (!foldedNumFrontPadElems) {
-      return rewriter.notifyMatchFailure(
-          op, "subbyte store emulation: dynamic front padding size is "
-              "not yet implemented");
-    }
-
     auto memrefBase = cast<MemRefValue>(adaptor.getBase());
 
     // RMWs are not needed when:
@@ -722,6 +716,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     auto frontSubWidthStoreElem =
         (emulatedPerContainerElem - *foldedNumFrontPadElems) %
         emulatedPerContainerElem;
+
+    bool partiallyStoredFrontByte = false;
     if (frontSubWidthStoreElem > 0) {
       SmallVector<bool> frontMaskValues(emulatedPerContainerElem, false);
       if (*foldedNumFrontPadElems + origElements < emulatedPerContainerElem) {
@@ -742,6 +738,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
 
       storeFunc(rewriter, loc, memrefBase, currentDestIndex,
                 cast<VectorValue>(value), frontMask.getResult());
+      partiallyStoredFrontByte = true;
     }
 
     if (currentSourceIndex >= origElements) {
@@ -749,11 +746,13 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       return success();
     }
 
-    // Increment the destination index by 1 to align to the emulated width
-    // boundary.
-    auto constantOne = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    currentDestIndex = rewriter.create<arith::AddIOp>(
-        loc, rewriter.getIndexType(), currentDestIndex, constantOne);
+    if (partiallyStoredFrontByte) {
+      // Increment the destination index by 1 to align to the emulated width
+      // boundary, if the front byte was partially stored.
+      auto constantOne = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+      currentDestIndex = rewriter.create<arith::AddIOp>(
+          loc, rewriter.getIndexType(), currentDestIndex, constantOne);
+    }
 
     // 2. Full width store for the inner output bytes.
     // After the previous step, the store address is aligned to the emulated
