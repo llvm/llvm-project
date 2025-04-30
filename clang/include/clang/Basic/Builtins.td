@@ -4801,14 +4801,14 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLResourceCreatePoisonHandle : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_resource_createpoisonhandle"];
+def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }
 
-def HLSLResourceCreateHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_resource_createhandlefrombinding"];
+def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }

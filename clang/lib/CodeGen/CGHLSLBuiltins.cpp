@@ -280,18 +280,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
-    // TODO: Map to an hlsl_device address space.
-    llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
-
+    llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
   }
-  case Builtin::BI__builtin_hlsl_resource_createpoisonhandle: {
+  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
     return llvm::PoisonValue::get(HandleTy);
   }
-  case Builtin::BI__builtin_hlsl_resource_createhandlefrombinding: {
+  case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
     Value *RegisterOp = EmitScalarExpr(E->getArg(1));
     Value *SpaceOp = EmitScalarExpr(E->getArg(2));

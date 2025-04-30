@@ -9,7 +9,7 @@
 // https://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangling-special-ctor-dtor
 
 // Resource with explicit binding
-ByteAddressBuffer Buf1: register(t1, space2);
+ByteAddressBuffer Buf1 : register(t1, space2);
 
 // Resource with implicit binding
 RWByteAddressBuffer Buf2;

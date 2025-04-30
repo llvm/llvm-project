@@ -142,7 +142,7 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
 }
 
 InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
-    unsigned Opcode, Type *Ty, MaybeAlign Alignment, unsigned AddressSpace,
+    unsigned Opcode, Type *Ty, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,
     const Instruction *I) const {
   if (!ST->hasSIMD128() || !isa<FixedVectorType>(Ty)) {
