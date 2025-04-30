@@ -294,6 +294,33 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags()
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
 TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
   // This test will checks we can handling trailing commas ','
   const llvm::StringLiteral Source = R"cc(

@@ -23,6 +23,23 @@ namespace rootsig {
 
 // Definition of the various enumerations and flags
 
+enum class RootFlags : uint32_t {
+  None = 0,
+  AllowInputAssemblerInputLayout = 0x1,
+  DenyVertexShaderRootAccess = 0x2,
+  DenyHullShaderRootAccess = 0x4,
+  DenyDomainShaderRootAccess = 0x8,
+  DenyGeometryShaderRootAccess = 0x10,
+  DenyPixelShaderRootAccess = 0x20,
+  AllowStreamOutput = 0x40,
+  LocalRootSignature = 0x80,
+  DenyAmplificationShaderRootAccess = 0x100,
+  DenyMeshShaderRootAccess = 0x200,
+  CBVSRVUAVHeapDirectlyIndexed = 0x400,
+  SamplerHeapDirectlyIndexed = 0x800,
+  ValidFlags = 0x00000fff
+};
+
 enum class DescriptorRangeFlags : unsigned {
   None = 0,
   DescriptorsVolatile = 0x1,
@@ -98,7 +115,7 @@ struct DescriptorTableClause {
 
 // Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
 using RootElement =
-    std::variant<RootConstants, DescriptorTable, DescriptorTableClause>;
+    std::variant<RootFlags, RootConstants, DescriptorTable, DescriptorTableClause>;
 
 } // namespace rootsig
 } // namespace hlsl
