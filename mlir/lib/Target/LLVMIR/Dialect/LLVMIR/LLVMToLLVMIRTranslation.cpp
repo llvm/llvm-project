@@ -281,12 +281,19 @@ convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
 
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
     for (auto entry : arrayAttr.getAsRange<ModuleFlagCGProfileEntryAttr>()) {
-      llvm::Function *fromFn =
-          moduleTranslation.lookupFunction(entry.getFrom().getValue());
-      llvm::Function *toFn =
-          moduleTranslation.lookupFunction(entry.getTo().getValue());
+      llvm::Metadata *fromMetadata =
+          entry.getFrom()
+              ? llvm::ValueAsMetadata::get(moduleTranslation.lookupFunction(
+                    entry.getFrom().getValue()))
+              : nullptr;
+      llvm::Metadata *toMetadata =
+          entry.getTo()
+              ? llvm::ValueAsMetadata::get(
+                    moduleTranslation.lookupFunction(entry.getTo().getValue()))
+              : nullptr;
+
       llvm::Metadata *vals[] = {
-          llvm::ValueAsMetadata::get(fromFn), llvm::ValueAsMetadata::get(toFn),
+          fromMetadata, toMetadata,
           mdb.createConstant(llvm::ConstantInt::get(
               llvm::Type::getInt64Ty(context), entry.getCount()))};
       nodes.push_back(llvm::MDNode::get(context, vals));

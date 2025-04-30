@@ -318,10 +318,6 @@ void LinkerDriver::addFile(StringRef path) {
     if (inWholeArchive) {
       for (const auto &[m, offset] : members) {
         auto *object = createObjectFile(m, path, offset);
-        // Mark object as live; object members are normally not
-        // live by default but -whole-archive is designed to treat
-        // them as such.
-        object->markLive();
         files.push_back(object);
       }
 

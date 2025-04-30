@@ -89,7 +89,7 @@ protected:
   std::shared_ptr<PreprocessorOptions> PPOpts;
 
   /// Options controlling the static analyzer.
-  AnalyzerOptionsRef AnalyzerOpts;
+  std::shared_ptr<AnalyzerOptions> AnalyzerOpts;
 
   std::shared_ptr<MigratorOptions> MigratorOpts;
 
@@ -263,12 +263,6 @@ public:
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return *PreprocessorOutputOpts;
   }
-  /// @}
-
-  /// Base class internals.
-  /// @{
-  using CompilerInvocationBase::LangOpts;
-  std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
   /// @}
 
   /// Create a compiler invocation from a list of input options.

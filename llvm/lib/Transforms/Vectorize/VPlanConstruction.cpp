@@ -461,19 +461,23 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
     VPBlockUtils::connectBlocks(R, Succ);
 }
 
-void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
-                                        PredicatedScalarEvolution &PSE,
-                                        bool RequiresScalarEpilogueCheck,
-                                        bool TailFolded, Loop *TheLoop) {
+void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
+                                              PredicatedScalarEvolution &PSE,
+                                              bool RequiresScalarEpilogueCheck,
+                                              bool TailFolded, Loop *TheLoop) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
-  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
-    if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
-      createLoopRegion(Plan, HeaderVPB);
 
-  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
-  TopRegion->setName("vector loop");
-  TopRegion->getEntryBasicBlock()->setName("vector.body");
+  VPBlockBase *HeaderVPB = Plan.getEntry()->getSingleSuccessor();
+  canonicalHeaderAndLatch(HeaderVPB, VPDT);
+  VPBlockBase *LatchVPB = HeaderVPB->getPredecessors()[1];
+
+  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
+  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
+
+  VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
+  VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
+  LatchVPB->swapSuccessors();
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -486,11 +490,6 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
                                                        InductionTy, TheLoop);
   Plan.setTripCount(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
-
-  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
-  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
-  VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
@@ -516,10 +515,10 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
     return;
   }
 
+  // The connection order corresponds to the operands of the conditional branch.
   BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = Plan.getExitBlock(IRExitBlock);
-  // The connection order corresponds to the operands of the conditional branch.
-  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+  VPBlockUtils::connectBlocks(MiddleVPBB, VPExitBlock);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
@@ -537,4 +536,16 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
                                ScalarLatchTerm->getDebugLoc(), "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
                        ScalarLatchTerm->getDebugLoc());
+}
+
+void VPlanTransforms::createLoopRegions(VPlan &Plan) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
+    if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
+      createLoopRegion(Plan, HeaderVPB);
+
+  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  TopRegion->setName("vector loop");
+  TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
