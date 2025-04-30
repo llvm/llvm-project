@@ -128,6 +128,16 @@ enum class IfExistsBehavior {
   Dependent
 };
 
+/// Specifies the context in which type-id/expression
+/// disambiguation will occur.
+enum class TentativeCXXTypeIdContext {
+  InParens,
+  Unambiguous,
+  AsTemplateArgument,
+  InTrailingReturnType,
+  AsGenericSelectionArgument,
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -2668,22 +2678,12 @@ private:
       DeclSpec::FriendSpecified IsFriend = DeclSpec::FriendSpecified::No,
       const ParsedTemplateInfo *TemplateInfo = nullptr);
 
-  /// Specifies the context in which type-id/expression
-  /// disambiguation will occur.
-  enum TentativeCXXTypeIdContext {
-    TypeIdInParens,
-    TypeIdUnambiguous,
-    TypeIdAsTemplateArgument,
-    TypeIdInTrailingReturnType,
-    TypeIdAsGenericSelectionArgument,
-  };
-
   /// isTypeIdInParens - Assumes that a '(' was parsed and now we want to know
   /// whether the parens contain an expression or a type-id.
   /// Returns true for a type-id and false for an expression.
   bool isTypeIdInParens(bool &isAmbiguous) {
     if (getLangOpts().CPlusPlus)
-      return isCXXTypeId(TypeIdInParens, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::InParens, isAmbiguous);
     isAmbiguous = false;
     return isTypeSpecifierQualifier();
   }
@@ -2702,7 +2702,8 @@ private:
   bool isTypeIdForGenericSelection() {
     if (getLangOpts().CPlusPlus) {
       bool isAmbiguous;
-      return isCXXTypeId(TypeIdAsGenericSelectionArgument, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::AsGenericSelectionArgument,
+                         isAmbiguous);
     }
     return isTypeSpecifierQualifier();
   }
@@ -2713,7 +2714,7 @@ private:
   bool isTypeIdUnambiguously() {
     if (getLangOpts().CPlusPlus) {
       bool isAmbiguous;
-      return isCXXTypeId(TypeIdUnambiguous, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous, isAmbiguous);
     }
     return isTypeSpecifierQualifier();
   }
