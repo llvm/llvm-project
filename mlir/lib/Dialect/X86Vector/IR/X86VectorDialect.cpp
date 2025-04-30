@@ -100,14 +100,12 @@ SmallVector<Value> x86vector::BcstToPackedF32Op::getIntrinsicOperands(
   return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }
 
-SmallVector<Value>
-x86vector::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86vector::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
     RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
   return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }
 
-SmallVector<Value>
-x86vector::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86vector::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
     RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
   return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }
