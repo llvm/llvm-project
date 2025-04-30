@@ -1,0 +1,14 @@
+# RUN: mkdir -p %t/server
+# RUN: mkdir -p %t/lib
+# RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/CheckConstSBRef.h
+
+# RUN: cat %t/lib/CheckConstSBRef.cpp | FileCheck %s
+
+// Const references to SB classes should be encoded as usual without
+// needing to create a new object with its own connection. Here
+// we're checking to make sure that the given SB object ref will get
+// encoded immediately after the previous argument gets encoded without
+// anything happening in between.
+# CHECK: lldb_rpc::SBRPC_CHECKCONSTSBREF::CheckConstSBRef
+# CHECK: RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, *this);
+# CHECK: RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, debugger_ref)

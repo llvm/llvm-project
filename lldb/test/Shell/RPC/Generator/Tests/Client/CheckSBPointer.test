@@ -1,0 +1,15 @@
+# RUN: mkdir -p %t/server
+# RUN: mkdir -p %t/lib
+# RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/CheckSBPointer.h
+
+# RUN: cat %t/lib/CheckSBPointer.cpp | FileCheck %s
+
+// Pointers to SB objects must be checked to
+// see if they're null. If so, then a new object of the given
+// class must be created and encoded. Otherwise, the original
+// parameter will be encoded.
+# CHECK: lldb_rpc::SBRPC_CHECKSBPTR::CheckSBPtr
+# CHECK: if (debugger_ptr)
+# CHECK:   RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, *debugger_ptr);
+# CHECK: else
+# CHECK:    RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, rpc::ObjectRef(ObjectRefGetConnectionID(), eClass_lldb_SBDebugger, LLDB_RPC_INVALID_OBJECT_ID));

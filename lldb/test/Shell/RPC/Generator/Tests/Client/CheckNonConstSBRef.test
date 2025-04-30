@@ -1,0 +1,13 @@
+# RUN: mkdir -p %t/server
+# RUN: mkdir -p %t/lib
+# RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/CheckNonConstSBRef.h
+
+# RUN: cat %t/lib/CheckNonConstSBRef.cpp | FileCheck %s
+
+// Non-const references to SB classes will have new objects
+// of that class constructed with the connection as the first parameter
+// before being encoded if their existing connection is invalid.
+# CHECK: lldb_rpc::SBRPC_CHECKNONCONSTSBREF::CheckNonConstSBRef
+# CHECK: if (connection_sp && !debugger_ref.ObjectRefIsValid())
+# CHECK:     debugger_ref = lldb_rpc::SBDebugger(connection_sp);
+# CHECK:   RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, debugger_ref);

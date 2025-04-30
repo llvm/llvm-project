@@ -1,0 +1,11 @@
+# RUN: mkdir -p %t/server
+# RUN: mkdir -p %t/lib
+# RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/CheckArrayPointer.h
+
+# RUN: cat %t/lib/CheckArrayPointer.cpp | FileCheck %s
+
+// Pointers to arrays followed by length must use a
+// Bytes object constructed using that pointer and the sizeof()
+// the array object.
+# CHECK: lldb_rpc::SBRPC_CHECKARRAYPTR::CheckArrayPtr
+# CHECK: Bytes array_buffer(array, sizeof(uint64_t));
