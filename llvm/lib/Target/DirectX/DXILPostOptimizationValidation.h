@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// \file Pass for validating DXIL after lowering and optimizations are applied.
+// \file Pass for validating IR after optimizations are applied and before
+// lowering to DXIL.
 //
 //===----------------------------------------------------------------------===//
 

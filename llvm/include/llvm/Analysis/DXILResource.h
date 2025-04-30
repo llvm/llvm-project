@@ -458,6 +458,7 @@ class DXILResourceMap {
   unsigned FirstUAV = 0;
   unsigned FirstCBuffer = 0;
   unsigned FirstSampler = 0;
+  bool HasInvalidDirection = false;
 
   /// Populate all the resource instance data.
   void populate(Module &M, DXILResourceTypeMap &DRTM);
@@ -548,6 +549,8 @@ public:
   iterator_range<call_iterator> calls() {
     return make_range(call_begin(), call_end());
   }
+
+  bool hasInvalidCounterDirection() const { return HasInvalidDirection; }
 
   void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
              const DataLayout &DL) const;

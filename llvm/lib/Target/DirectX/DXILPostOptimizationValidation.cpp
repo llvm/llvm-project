@@ -7,28 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILPostOptimizationValidation.h"
-#include "DXILConstants.h"
-#include "DXILIntrinsicExpansion.h"
-#include "DXILOpBuilder.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <cstdio>
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -36,47 +23,42 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
-class DXILValidator {
-  Module &M;
-  DXILResourceMap &DRM;
 
-public:
-  DXILValidator(Module &M, DXILResourceMap &DRM) : M(M), DRM(DRM) {}
+static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
+  for (const auto &UAV : DRM.uavs()) {
+    if (UAV.CounterDirection != ResourceCounterDirection::Invalid)
+      continue;
 
-  void validate() {
-    for (const auto &UAV : DRM.uavs()) {
-      if (UAV.CounterDirection != ResourceCounterDirection::Invalid)
-        continue;
-
-      CallInst *ResourceHandle = nullptr;
-      for (CallInst *MaybeHandle : DRM.calls()) {
-        if (*DRM.find(MaybeHandle) == UAV) {
-          ResourceHandle = MaybeHandle;
-          break;
-        }
-      }
-
-      StringRef Message =
-          "RWStructuredBuffers may increment or decrement their "
-          "counters, but not both.";
-      for (const auto &U : ResourceHandle->users()) {
-        const CallInst *CI = dyn_cast<CallInst>(U);
-        if (!CI && CI->getIntrinsicID() != Intrinsic::dx_resource_updatecounter)
-          continue;
-
-        M.getContext().diagnose(DiagnosticInfoGenericWithLoc(
-            Message, *CI->getFunction(), CI->getDebugLoc()));
+    CallInst *ResourceHandle = nullptr;
+    for (CallInst *MaybeHandle : DRM.calls()) {
+      if (*DRM.find(MaybeHandle) == UAV) {
+        ResourceHandle = MaybeHandle;
+        break;
       }
     }
+
+    StringRef Message = "RWStructuredBuffers may increment or decrement their "
+                        "counters, but not both.";
+    for (const auto &U : ResourceHandle->users()) {
+      const CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI && CI->getIntrinsicID() != Intrinsic::dx_resource_updatecounter)
+        continue;
+
+      M.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+          Message, *CI->getFunction(), CI->getDebugLoc()));
+    }
   }
-};
+}
+
 } // namespace
 
 PreservedAnalyses
 DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
 
-  DXILValidator(M, DRM).validate();
+  if (DRM.hasInvalidCounterDirection())
+    reportInvalidDirection(M, DRM);
+
   return PreservedAnalyses::all();
 }
 
@@ -87,7 +69,8 @@ public:
     DXILResourceMap &DRM =
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
 
-    DXILValidator(M, DRM).validate();
+    if (DRM.hasInvalidCounterDirection())
+      reportInvalidDirection(M, DRM);
 
     return false;
   }
