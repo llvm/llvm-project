@@ -210,7 +210,8 @@ static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
                                                Sema &SemaRef, QualType &TT);
 
 static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
-                            Sema &S, bool CheckC23ConstexprInit = false) {
+                            Sema &S, const InitializedEntity &Entity,
+                            bool CheckC23ConstexprInit = false) {
   // Get the length of the string as parsed.
   auto *ConstantArrayTy =
       cast<ConstantArrayType>(Str->getType()->getAsArrayTypeUnsafe());
@@ -232,6 +233,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   }
 
   const ConstantArrayType *CAT = cast<ConstantArrayType>(AT);
+  uint64_t ArrayLen = CAT->getZExtSize();
 
   // We have an array of character type with known size.  However,
   // the size may be smaller or larger than the string we are initializing.
@@ -247,16 +249,31 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     }
 
     // [dcl.init.string]p2
-    if (StrLength > CAT->getZExtSize())
+    if (StrLength > ArrayLen)
       S.Diag(Str->getBeginLoc(),
              diag::err_initializer_string_for_char_array_too_long)
-          << CAT->getZExtSize() << StrLength << Str->getSourceRange();
+          << ArrayLen << StrLength << Str->getSourceRange();
   } else {
     // C99 6.7.8p14.
-    if (StrLength - 1 > CAT->getZExtSize())
+    if (StrLength - 1 > ArrayLen)
       S.Diag(Str->getBeginLoc(),
              diag::ext_initializer_string_for_char_array_too_long)
           << Str->getSourceRange();
+    else if (StrLength - 1 == ArrayLen) {
+      // If the entity being initialized has the nonstring attribute, then
+      // silence the "missing nonstring" diagnostic.
+      if (const ValueDecl *D = Entity.getDecl();
+          !D || !D->hasAttr<NonStringAttr>())
+        S.Diag(
+            Str->getBeginLoc(),
+            diag::warn_initializer_string_for_char_array_too_long_no_nonstring)
+            << ArrayLen << StrLength << Str->getSourceRange();
+
+      // Always emit the C++ compatibility diagnostic.
+      S.Diag(Str->getBeginLoc(),
+             diag::warn_initializer_string_for_char_array_too_long_for_cpp)
+          << ArrayLen << StrLength << Str->getSourceRange();
+    }
   }
 
   // Set the type to the actual size that we are initializing.  If we have
@@ -1579,7 +1596,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     if (IsStringInit(expr, arrayType, SemaRef.Context) == SIF_None) {
       // FIXME: Should we do this checking in verify-only mode?
       if (!VerifyOnly)
-        CheckStringInit(expr, ElemType, arrayType, SemaRef,
+        CheckStringInit(expr, ElemType, arrayType, SemaRef, Entity,
                         SemaRef.getLangOpts().C23 &&
                             initializingConstexprVariable(Entity));
       if (StructuredList)
@@ -2089,9 +2106,9 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       // constant for each string.
       // FIXME: Should we do these checks in verify-only mode too?
       if (!VerifyOnly)
-        CheckStringInit(IList->getInit(Index), DeclType, arrayType, SemaRef,
-                        SemaRef.getLangOpts().C23 &&
-                            initializingConstexprVariable(Entity));
+        CheckStringInit(
+            IList->getInit(Index), DeclType, arrayType, SemaRef, Entity,
+            SemaRef.getLangOpts().C23 && initializingConstexprVariable(Entity));
       if (StructuredList) {
         UpdateStructuredListElement(StructuredList, StructuredIndex,
                                     IList->getInit(Index));
@@ -8405,7 +8422,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       QualType Ty = Step->Type;
       bool UpdateType = ResultType && Entity.getType()->isIncompleteArrayType();
       CheckStringInit(CurInit.get(), UpdateType ? *ResultType : Ty,
-                      S.Context.getAsArrayType(Ty), S,
+                      S.Context.getAsArrayType(Ty), S, Entity,
                       S.getLangOpts().C23 &&
                           initializingConstexprVariable(Entity));
       break;

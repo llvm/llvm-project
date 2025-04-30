@@ -4907,6 +4907,20 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
   D->addAttr(::new (Context) ModeAttr(Context, CI, Name));
 }
 
+static void handleNonStringAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // This only applies to fields and variable declarations which have an array
+  // type.
+  QualType QT = cast<ValueDecl>(D)->getType();
+  if (!QT->isArrayType() ||
+      !QT->getBaseElementTypeUnsafe()->isAnyCharacterType()) {
+    S.Diag(D->getBeginLoc(), diag::warn_attribute_non_character_array)
+        << AL << AL.isRegularKeywordAttribute() << QT << AL.getRange();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NonStringAttr(S.Context, AL));
+}
+
 static void handleNoDebugAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) NoDebugAttr(S.Context, AL));
 }
@@ -7143,6 +7157,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Mode:
     handleModeAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NonString:
+    handleNonStringAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NonNull:
     if (auto *PVD = dyn_cast<ParmVarDecl>(D))
