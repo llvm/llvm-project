@@ -63,7 +63,8 @@ struct GCNRegPressure {
   /// and \p NumAGPRs AGPRS, for a target with a unified VGPR file.
   inline static unsigned getUnifiedVGPRNum(unsigned NumArchVGPRs,
                                            unsigned NumAGPRs) {
-    return alignTo(NumArchVGPRs, 4) + NumAGPRs;
+    return alignTo(NumArchVGPRs, AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
+           NumAGPRs;
   }
 
   /// \returns the ArchVGPR32 pressure

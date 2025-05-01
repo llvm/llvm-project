@@ -1714,9 +1714,6 @@ struct ExcessRP {
   /// Whether the subtarget has a unified RF.
   bool UnifiedRF;
 
-  /// ArchVGPR allocation granule for unified RFs with AGPR usage.
-  static const unsigned Granule = 4;
-
   /// Constructs the excess RP model; determines the excess pressure w.r.t. a
   /// maximum number of allowed VGPRs.
   ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP, unsigned MaxVGPRs);
@@ -1785,6 +1782,7 @@ ExcessRP::ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP,
 
   // Check overall VGPR usage against the limit; any excess above addressable
   // register limits has already been accounted for.
+  const unsigned Granule = AMDGPU::IsaInfo::getArchVGPRAllocGranule();
   unsigned NumVGPRs = GCNRegPressure::getUnifiedVGPRNum(NumArchVGPRs, NumAGPRs);
   if (NumVGPRs > MaxVGPRs) {
     VGPRs = NumVGPRs - MaxVGPRs;
@@ -1812,6 +1810,7 @@ bool ExcessRP::saveArchVGPRs(unsigned NumRegs, bool UseArchVGPRForAGPRSpill) {
     unsigned NumSavedRegs = 0;
 
     // Count the number of whole ArchVGPR allocation granules we can save.
+    const unsigned Granule = AMDGPU::IsaInfo::getArchVGPRAllocGranule();
     if (unsigned NumGranules = NumRegs / Granule; NumGranules) {
       NumSavedRegs = NumGranules * Granule;
       NumRegs -= NumSavedRegs;
