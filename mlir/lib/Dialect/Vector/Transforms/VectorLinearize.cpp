@@ -21,7 +21,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
-#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -232,7 +231,6 @@ struct LinearizeVectorShuffle final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorShuffle(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
 
@@ -292,7 +290,6 @@ struct LinearizeVectorExtract final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorExtract(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
@@ -341,7 +338,6 @@ struct LinearizeVectorInsert final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorInsert(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
@@ -410,7 +406,6 @@ struct LinearizeVectorBitCast final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorBitCast(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
