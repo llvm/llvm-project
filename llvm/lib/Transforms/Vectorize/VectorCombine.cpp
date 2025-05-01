@@ -1167,7 +1167,8 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   else if (isa<BinaryOperator>(I))
     NewVecC = Builder.CreateBinOp((Instruction::BinaryOps)Opcode, VecC0, VecC1);
   else if (auto *II = dyn_cast<IntrinsicInst>(&I))
-    NewVecC = Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), {VecC0, VecC1});
+    NewVecC =
+        Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), {VecC0, VecC1});
   else
     llvm_unreachable("Unexpected instruction type");
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
