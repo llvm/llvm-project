@@ -151,13 +151,17 @@ uint64_t SaveCoreOptions::GetCurrentSizeInBytes(Status &error) {
     return 0;
   }
 
+  error = EnsureValidConfiguration(m_process_sp);
+  if (error.Fail())
+    return 0;
+
   CoreFileMemoryRanges ranges;
   error = m_process_sp->CalculateCoreFileSaveRanges(*this, ranges);
   if (error.Fail())
     return 0;
 
   uint64_t total_in_bytes = 0;
-  for (auto& core_range : ranges)
+  for (auto &core_range : ranges)
     total_in_bytes += core_range.data.range.size();
 
   return total_in_bytes;

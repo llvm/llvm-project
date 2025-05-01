@@ -120,11 +120,11 @@ public:
   SBThreadCollection GetThreadsToSave() const;
 
   /// Get the current total number of bytes the core is expected to be but not
-  /// including the overhead of the core file format. Requires a Process and 
+  /// including the overhead of the core file format. Requires a Process and
   /// Style to be specified.
-  /// 
+  ///
   /// \note
-  ///   This can cause some modification of the underlying data store 
+  ///   This can cause some modification of the underlying data store
   ///   as regions with no permissions, or invalid permissions will be removed
   ///   and stacks will be minified up to their stack pointer + the redzone.
   ///
