@@ -6689,9 +6689,11 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
   }
 }
 
-// TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and then
-// add an intersect method on it, or MemoryRegionInfo.
-static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs, const Range<lldb::addr_t, lldb::addr_t> &rhs) {
+// TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and
+// then add an intersect method on it, or MemoryRegionInfo.
+static MemoryRegionInfo
+Intersect(const MemoryRegionInfo &lhs,
+          const Range<lldb::addr_t, lldb::addr_t> &rhs) {
   const lldb::addr_t lhs_base = lhs.GetRange().GetRangeBase();
   const lldb::addr_t rhs_base = rhs.GetRangeBase();
   const lldb::addr_t lhs_end = lhs.GetRange().GetRangeEnd();
@@ -6717,8 +6719,8 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
   for (const auto &range : regions) {
     auto *entry = option_ranges.FindEntryThatIntersects(range.GetRange());
     if (entry) {
-      if (entry->GetRangeBase() != range.GetRange().GetRangeBase() 
-      || entry->GetRangeEnd() != range.GetRange().GetRangeEnd()) {
+      if (entry->GetRangeBase() != range.GetRange().GetRangeBase() ||
+          entry->GetRangeEnd() != range.GetRange().GetRangeEnd()) {
         AddRegion(Intersect(range, *entry), true, ranges);
       } else {
         // If they match, add the range directly.
