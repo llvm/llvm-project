@@ -447,3 +447,36 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
   %0 = vector.splat %arg0 : vector<4x[2]xi32>
   return %0 : vector<4x[2]xi32>
 }
+
+// -----
+// ALL-LABEL: test_create_mask
+func.func @test_create_mask() -> vector<1x16xi1> {
+  // DEFAULT: %[[C0:.*]] = arith.constant 0 : index
+  // BW-128: %[[C0:.*]] = arith.constant 0 : index
+  // DEFAULT: %[[C20:.*]] = arith.constant 20 : index
+  // BW-128: %[[C20:.*]] = arith.constant 20 : index
+  // DEFAULT: %[[C0_0:.*]] = arith.constant 0 : index
+  // BW-128: %[[C0_0:.*]] = arith.constant 0 : index
+  // DEFAULT: %[[CMP:.*]] = arith.cmpi sle, %[[C0]], %[[C0_0]] : index
+  // BW-128: %[[CMP:.*]] = arith.cmpi sle, %[[C0]], %[[C0_0]] : index
+  // DEFAULT: %[[SPLAT:.*]] = vector.splat %[[CMP]] : vector<16xi1>
+  // BW-128: %[[SPLAT:.*]] = vector.splat %[[CMP]] : vector<16xi1>
+  // DEFAULT: %[[CST:.*]] = arith.constant dense<false> : vector<16xi1>
+  // BW-128: %[[CST:.*]] = arith.constant dense<false> : vector<16xi1>
+  // DEFAULT: %[[MASK_1D:.*]] = vector.create_mask %[[C20]] : vector<16xi1>
+  // BW-128: %[[MASK_1D:.*]] = vector.create_mask %[[C20]] : vector<16xi1>
+  // DEFAULT: %[[SELECT:.*]] = arith.select %[[SPLAT]], %[[CST]], %[[MASK_1D]] : vector<16xi1>, vector<16xi1>
+  // BW-128: %[[SELECT:.*]] = arith.select %[[SPLAT]], %[[CST]], %[[MASK_1D]] : vector<16xi1>
+  // DEFAULT: %[[CAST:.*]] = vector.shape_cast %[[SELECT]] : vector<16xi1> to vector<1x16xi1>
+  // BW-128: %[[CAST:.*]] = vector.shape_cast %[[SELECT]] : vector<16xi1> to vector<1x16xi1>
+  // DEFAULT: return %[[CAST]] : vector<1x16xi1>
+  // BW-128: return %[[CAST]] : vector<1x16xi1>
+
+  // BW-0: %[[C0:.*]] = arith.constant 0 : index
+  // BW-0: %[[C20:.*]] = arith.constant 20 : index
+  // BW-0: %[[MASK:.*]] = vector.create_mask %[[C0]], %[[C20]] : vector<1x16xi1>
+  %c0 = arith.constant 0 : index
+  %c20 = arith.constant 20 : index
+  %0 = vector.create_mask %c0, %c20 : vector<1x16xi1>
+  return %0 : vector<1x16xi1>
+}
