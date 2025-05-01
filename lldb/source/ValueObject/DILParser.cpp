@@ -79,15 +79,15 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    primary_expression
+//    unary_expression
 //
 ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
 
 // Parse an unary_expression.
 //
 //  unary_expression:
+//    postfix_expression
 //    unary_operator expression
-//    primary_expression
 //
 //  unary_operator:
 //    "&"
@@ -111,7 +111,28 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
       llvm_unreachable("invalid token kind");
     }
   }
-  return ParsePrimaryExpression();
+  return ParsePostfixExpression();
+}
+// Parse a postfix_expression.
+//
+//  postfix_expression:
+//    primary_expression
+//    postfix_expression "." id_expression
+//    postfix_expression "->" id_expression
+//
+ASTNodeUP DILParser::ParsePostfixExpression() {
+  ASTNodeUP lhs = ParsePrimaryExpression();
+  while (CurToken().IsOneOf({Token::period, Token::arrow})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    Token member_token = CurToken();
+    std::string member_id = ParseIdExpression();
+    lhs = std::make_unique<MemberOfNode>(member_token.GetLocation(),
+                                         std::move(lhs),
+                                         token.GetKind() == Token::arrow,
+                                         ConstString(member_id));
+  }
+  return lhs;
 }
 
 // Parse a primary_expression.
