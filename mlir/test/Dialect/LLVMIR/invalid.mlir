@@ -1807,6 +1807,20 @@ module {
 
 // -----
 
+// expected-error@below {{'ProfileFormat' must be 'SampleProfile', 'InstrProf' or 'CSInstrProf'}}
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+     #llvm.profile_summary<format = "YoloFmt", total_count = 263646, max_count = 86427,
+       max_internal_count = 86427, max_function_count = 4691,
+       num_counts = 3712, num_functions = 796,
+       is_partial_profile = 0 : i64,
+       partial_profile_ratio = 0.000000e+00 : f64,
+       detailed_summary = [
+         #llvm.profile_summary_detailed<cut_off = 10000, min_count = 86427, num_counts = 1>,
+         #llvm.profile_summary_detailed<cut_off = 100000, min_count = 86427, num_counts = 1>
+]>>]
+
+// -----
+
 llvm.func @t0() -> !llvm.ptr {
   %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
   llvm.blocktag <id = 1>
