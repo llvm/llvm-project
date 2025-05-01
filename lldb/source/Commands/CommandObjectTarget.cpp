@@ -2208,11 +2208,9 @@ protected:
       return;
     }
 
-    clang::CompilerInstance compiler;
-    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
-
     const char *clang_args[] = {"clang", pcm_path};
-    compiler.setInvocation(clang::createInvocation(clang_args));
+    clang::CompilerInstance compiler(clang::createInvocation(clang_args));
+    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
 
     // Pass empty deleter to not attempt to free memory that was allocated
     // outside of the current scope, possibly statically.
