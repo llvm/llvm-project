@@ -86,7 +86,7 @@ program openacc_data_validity
 
   !$acc exit data delete(aa) finalize
 
-  !ERROR: At most one FINALIZE clause can appear on the EXIT DATA directive
+  ! OK
   !$acc exit data delete(aa) finalize finalize
 
   !ERROR: Argument `cc` on the DETACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
@@ -185,6 +185,17 @@ program openacc_data_validity
   !$acc end data
 
   !$acc data copy(aa) device_type(default) wait
+  !$acc end data
+
+  !ERROR: At most one ASYNC clause can appear on the DATA directive or in group separated by the DEVICE_TYPE clause
+  !$acc data copy(aa) async(async1) async(2)
+  !$acc end data
+
+  !$acc data copy(aa) async(async1) device_type(multicore) async(2) ! ok
+  !$acc end data
+
+  !ERROR: At most one ASYNC clause can appear on the DATA directive or in group separated by the DEVICE_TYPE clause
+  !$acc data copy(aa) async(async1) device_type(multicore) async(2) async(3)
   !$acc end data
 
   do i = 1, 100

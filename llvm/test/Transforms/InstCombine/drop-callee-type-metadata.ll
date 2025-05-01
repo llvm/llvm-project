@@ -5,8 +5,10 @@
 
 define i32 @_Z3barv() local_unnamed_addr !type !3 {
 entry:
-  ; CHECK: %call = call i32 @_Z3fooc(i8 97)
-  ; CHECK-NOT: %call = call i32 @_Z3fooc(i8 97), !callee_type !1
+  ; CHECK-LABEL: define i32 @_Z3barv()
+  ; CHECK-NEXT: entry:
+  ; CHECK-NOT: !callee_type
+  ; CHECK-NEXT: %call = call i32 @_Z3fooc(i8 97)  
   %call = call i32 @_Z3fooc(i8 97), !callee_type !1
   ret i32 %call
 }

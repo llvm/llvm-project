@@ -339,7 +339,8 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
   ValueAsMetadata *MD = I->second;
   using UseTy =
       std::pair<void *, std::pair<MetadataTracking::OwnerTy, uint64_t>>;
-  // Copy out uses and update value of Constant used by debug info metadata with undef below
+  // Copy out uses and update value of Constant used by debug info metadata with
+  // poison below
   SmallVector<UseTy, 8> Uses(MD->UseMap.begin(), MD->UseMap.end());
 
   for (const auto &Pair : Uses) {
@@ -349,7 +350,7 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
     // Check for MetadataAsValue.
     if (isa<MetadataAsValue *>(Owner)) {
       cast<MetadataAsValue *>(Owner)->handleChangedMetadata(
-          ValueAsMetadata::get(UndefValue::get(C.getType())));
+          ValueAsMetadata::get(PoisonValue::get(C.getType())));
       continue;
     }
     if (!isa<Metadata *>(Owner))
@@ -359,7 +360,7 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
       continue;
     if (isa<DINode>(OwnerMD)) {
       OwnerMD->handleChangedOperand(
-          Pair.first, ValueAsMetadata::get(UndefValue::get(C.getType())));
+          Pair.first, ValueAsMetadata::get(PoisonValue::get(C.getType())));
     }
   }
 }
@@ -1222,6 +1223,26 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
 MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
                                       const Instruction *AInstr,
                                       const Instruction *BInstr) {
+  // Check that it is legal to merge prof metadata based on the opcode.
+  auto IsLegal = [](const Instruction &I) -> bool {
+    switch (I.getOpcode()) {
+    case Instruction::Invoke:
+    case Instruction::Br:
+    case Instruction::Switch:
+    case Instruction::Call:
+    case Instruction::IndirectBr:
+    case Instruction::Select:
+    case Instruction::CallBr:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (AInstr && !IsLegal(*AInstr))
+    return nullptr;
+  if (BInstr && !IsLegal(*BInstr))
+    return nullptr;
+
   if (!(A && B)) {
     return A ? A : B;
   }
@@ -1279,6 +1300,26 @@ static void addRange(SmallVectorImpl<ConstantInt *> &EndPoints,
 
   EndPoints.push_back(Low);
   EndPoints.push_back(High);
+}
+
+MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
+                                            MDNode *B) {
+  SmallVector<Metadata *, 8> AB;
+  SmallSet<Metadata *, 8> MergedCallees;
+  auto AddUniqueCallees = [&](llvm::MDNode *N) {
+    if (!N)
+      return;
+    for (const MDOperand &Op : N->operands()) {
+      Metadata *MD = Op.get();
+      if (!MergedCallees.contains(MD)) {
+        MergedCallees.insert(MD);
+        AB.push_back(MD);
+      }
+    }
+  };
+  AddUniqueCallees(A);
+  AddUniqueCallees(B);
+  return llvm::MDNode::get(Ctx, AB);
 }
 
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
@@ -1634,8 +1675,7 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  SmallSet<unsigned, 32> KnownSet;
-  KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
+  SmallSet<unsigned, 32> KnownSet(llvm::from_range, KnownIDs);
 
   // A DIAssignID attachment is debug metadata, don't drop it.
   KnownSet.insert(LLVMContext::MD_DIAssignID);

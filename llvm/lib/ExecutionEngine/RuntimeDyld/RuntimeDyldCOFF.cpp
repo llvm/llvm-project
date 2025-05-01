@@ -86,17 +86,17 @@ uint64_t RuntimeDyldCOFF::getDLLImportOffset(unsigned SectionID, StubMap &Stubs,
          "Not a DLLImport symbol?");
   RelocationValueRef Reloc;
   Reloc.SymbolName = Name.data();
-  auto I = Stubs.find(Reloc);
-  if (I != Stubs.end()) {
-    LLVM_DEBUG(dbgs() << format("{0:x8}", I->second) << "\n");
-    return I->second;
+  auto [It, Inserted] = Stubs.try_emplace(Reloc);
+  if (!Inserted) {
+    LLVM_DEBUG(dbgs() << format("{0:x8}", It->second) << "\n");
+    return It->second;
   }
 
   assert(SectionID < Sections.size() && "SectionID out of range");
   auto &Sec = Sections[SectionID];
   auto EntryOffset = alignTo(Sec.getStubOffset(), PointerSize);
   Sec.advanceStubOffset(EntryOffset + PointerSize - Sec.getStubOffset());
-  Stubs[Reloc] = EntryOffset;
+  It->second = EntryOffset;
 
   RelocationEntry RE(SectionID, EntryOffset, PointerReloc, 0, false,
                      Log2_64(PointerSize));

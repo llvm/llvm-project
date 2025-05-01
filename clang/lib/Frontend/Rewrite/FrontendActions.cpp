@@ -242,10 +242,9 @@ public:
     (*OS) << '\n';
 
     // Rewrite the contents of the module in a separate compiler instance.
-    CompilerInstance Instance(CI.getPCHContainerOperations(),
-                              &CI.getModuleCache());
-    Instance.setInvocation(
-        std::make_shared<CompilerInvocation>(CI.getInvocation()));
+    CompilerInstance Instance(
+        std::make_shared<CompilerInvocation>(CI.getInvocation()),
+        CI.getPCHContainerOperations(), &CI.getModuleCache());
     Instance.createDiagnostics(
         CI.getVirtualFileSystem(),
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),

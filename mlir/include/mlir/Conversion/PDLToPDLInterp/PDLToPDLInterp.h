@@ -13,6 +13,7 @@
 #ifndef MLIR_CONVERSION_PDLTOPDLINTERP_PDLTOPDLINTERP_H
 #define MLIR_CONVERSION_PDLTOPDLINTERP_PDLTOPDLINTERP_H
 
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
@@ -22,16 +23,13 @@ template <typename OpT>
 class OperationPass;
 class PDLPatternConfigSet;
 
-#define GEN_PASS_DECL_CONVERTPDLTOPDLINTERP
+#define GEN_PASS_DECL_CONVERTPDLTOPDLINTERPPASS
 #include "mlir/Conversion/Passes.h.inc"
-
-/// Creates and returns a pass to convert PDL ops to PDL interpreter ops.
-std::unique_ptr<OperationPass<ModuleOp>> createPDLToPDLInterpPass();
 
 /// Creates and returns a pass to convert PDL ops to PDL interpreter ops.
 /// `configMap` holds a map of the configurations for each pattern being
 /// compiled.
-std::unique_ptr<OperationPass<ModuleOp>> createPDLToPDLInterpPass(
+std::unique_ptr<OperationPass<ModuleOp>> createConvertPDLToPDLInterpPass(
     DenseMap<Operation *, PDLPatternConfigSet *> &configMap);
 
 } // namespace mlir

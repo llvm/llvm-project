@@ -216,6 +216,21 @@ public:
     return MaxSafeVectorWidthInBits;
   }
 
+  /// Return true if there are no store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return MaxStoreLoadForwardSafeDistanceInBits ==
+           std::numeric_limits<uint64_t>::max();
+  }
+
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding, multiplied by the size of the elements in bits.
+  uint64_t getStoreLoadForwardSafeDistanceInBits() const {
+    assert(!isSafeForAnyStoreLoadForwardDistances() &&
+           "Expected the distance, that prevent store-load forwarding, to be "
+           "set.");
+    return MaxStoreLoadForwardSafeDistanceInBits;
+  }
+
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
   bool shouldRetryWithRuntimeCheck() const {
@@ -304,6 +319,11 @@ private:
   /// restrictive.
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
+  /// Maximum power-of-2 number of elements, which do not prevent store-load
+  /// forwarding, multiplied by the size of the elements in bits.
+  uint64_t MaxStoreLoadForwardSafeDistanceInBits =
+      std::numeric_limits<uint64_t>::max();
+
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.
   bool FoundNonConstantDistanceDependence = false;
@@ -357,7 +377,8 @@ private:
   ///
   /// \return false if we shouldn't vectorize at all or avoid larger
   /// vectorization factors by limiting MinDepDistBytes.
-  bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize);
+  bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize,
+                                    unsigned CommonStride = 0);
 
   /// Updates the current safety status with \p S. We can go from Safe to
   /// either PossiblySafeWithRtChecks or Unsafe and from
@@ -367,15 +388,17 @@ private:
   struct DepDistanceStrideAndSizeInfo {
     const SCEV *Dist;
 
-    /// Strides could either be scaled (in bytes, taking the size of the
-    /// underlying type into account), or unscaled (in indexing units; unscaled
-    /// stride = scaled stride / size of underlying type). Here, strides are
-    /// unscaled.
+    /// Strides here are scaled; i.e. in bytes, taking the size of the
+    /// underlying type into account.
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
     bool ShouldRetryWithRuntimeCheck;
+
+    /// TypeByteSize is either the common store size of both accesses, or 0 when
+    /// store sizes mismatch.
     uint64_t TypeByteSize;
+
     bool AIsWrite;
     bool BIsWrite;
 
@@ -394,8 +417,9 @@ private:
   /// there's no dependence or the analysis fails. Outlined to lambda to limit
   /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
   /// others. Returns either the dependence result, if it could already be
-  /// determined, or a struct containing (Distance, Stride, TypeSize, AIsWrite,
-  /// BIsWrite).
+  /// determined, or a DepDistanceStrideAndSizeInfo struct, noting that
+  /// TypeByteSize could be 0 when store sizes mismatch, and this should be
+  /// checked in the caller.
   std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
@@ -497,6 +521,7 @@ public:
     Pointers.clear();
     Checks.clear();
     DiffChecks.clear();
+    CheckingGroups.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.

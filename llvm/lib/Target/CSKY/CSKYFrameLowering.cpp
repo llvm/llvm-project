@@ -135,7 +135,7 @@ void CSKYFrameLowering::emitPrologue(MachineFunction &MF,
   // directives.
   for (const auto &Entry : CSI) {
     int64_t Offset = MFI.getObjectOffset(Entry.getFrameIdx());
-    Register Reg = Entry.getReg();
+    MCRegister Reg = Entry.getReg();
 
     unsigned Num = TRI->getRegSizeInBits(Reg, MRI) / 32;
     for (unsigned i = 0; i < Num; i++) {
@@ -474,7 +474,7 @@ bool CSKYFrameLowering::spillCalleeSavedRegisters(
 
   for (auto &CS : CSI) {
     // Insert the spill to the stack frame.
-    Register Reg = CS.getReg();
+    MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII.storeRegToStackSlot(MBB, MI, Reg, true, CS.getFrameIdx(), RC, TRI,
                             Register());
@@ -496,7 +496,7 @@ bool CSKYFrameLowering::restoreCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   for (auto &CS : reverse(CSI)) {
-    Register Reg = CS.getReg();
+    MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
                              Register());

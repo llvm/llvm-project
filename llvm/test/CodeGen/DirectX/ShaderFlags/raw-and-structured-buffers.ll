@@ -9,7 +9,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: Shader Flags Value: 0x00000010
 
 ; CHECK: Note: shader requires additional functionality:
-; CHECK:       Raw and Structured buffers
+; CHECK:       Raw and structured buffers
 
 ; CHECK: Function rawbuf : 0x00000010
 define float @rawbuf() "hlsl.export" {

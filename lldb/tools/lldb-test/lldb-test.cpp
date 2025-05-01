@@ -1247,7 +1247,7 @@ int main(int argc, const char *argv[]) {
 
   SystemLifetimeManager DebuggerLifetime;
   if (auto e = DebuggerLifetime.Initialize(
-          std::make_unique<SystemInitializerTest>(), nullptr)) {
+          std::make_unique<SystemInitializerTest>())) {
     WithColor::error() << "initialization failed: " << toString(std::move(e))
                        << '\n';
     return 1;

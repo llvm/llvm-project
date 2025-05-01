@@ -18,6 +18,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -131,6 +133,12 @@ public:
   /// purpose of calculating its size (e.g. using the .size directive). By
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
+
+  /// Provides the profile information for constants.
+  const StaticDataProfileInfo *SDPI = nullptr;
+
+  /// The profile summary information.
+  const ProfileSummaryInfo *PSI = nullptr;
 
   /// Map a basic block section ID to the begin and end symbols of that section
   ///  which determine the section's range.
@@ -360,6 +368,10 @@ public:
     DwarfUsesRelocationsAcrossSections = Enable;
   }
 
+  /// Returns a section suffix (hot or unlikely) for the constant if profiles
+  /// are available. Returns empty string otherwise.
+  StringRef getConstantSectionSuffix(const Constant *C) const;
+
   /// Generate and emit labels for callees of the indirect callsites which will
   /// be used to populate the .callgraph section.
   void emitIndirectCalleeLabels(
@@ -536,7 +548,10 @@ public:
                      unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  virtual const MCExpr *lowerConstant(const Constant *CV);
+  /// When BaseCV is present, we are lowering the element at BaseCV plus Offset.
+  virtual const MCExpr *lowerConstant(const Constant *CV,
+                                      const Constant *BaseCV = nullptr,
+                                      uint64_t Offset = 0);
 
   /// Print a general LLVM constant to the .s file.
   /// On AIX, when an alias refers to a sub-element of a global variable, the
@@ -671,7 +686,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(const Twine &Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -932,11 +947,8 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                         ArrayRef<unsigned> JumpTableIndices,
-                         bool JTInDiffSection);
-  void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
-                          const MachineBasicBlock *MBB, unsigned uid) const;
+  virtual void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                 ArrayRef<unsigned> JumpTableIndices);
 
   void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                  const Function &F) const;
@@ -950,11 +962,13 @@ private:
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
-private:
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 
 protected:
+  virtual void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                                  const MachineBasicBlock *MBB,
+                                  unsigned uid) const;
   virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;

@@ -1,0 +1,7247 @@
+# This test verifies the disassembler's behavior for all C.LUI opcodes with the
+# exception of those assigned to C.ADDI16SP
+#
+# RUN: llvm-mc --disassemble -triple=riscv32 -mattr=+c -M no-aliases \
+# RUN:     --show-encoding < %s | FileCheck --check-prefixes=GOOD %s
+#
+# RUN: llvm-mc --disassemble -triple=riscv64 -mattr=+c -M no-aliases \
+# RUN:     --show-encoding < %s | FileCheck --check-prefixes=GOOD,GOOD64 %s
+#
+# RUN: llvm-mc --disassemble -triple=riscv32 -mattr=+c -M no-aliases \
+# RUN:     --show-encoding < %s 2>&1 | FileCheck --check-prefix=BAD32 %s
+#
+# RUN: llvm-mc --disassemble -triple=riscv32  -mattr=+c -mattr=+no-rvc-hints \
+# RUN:     -M no-aliases --show-encoding < %s 2>&1 | \
+# RUN:   FileCheck --check-prefix=NOHINTS %s
+
+# GOOD: c.slli64 zero
+# NOHINTS: invalid instruction encoding
+0x02 0x00
+
+# GOOD: c.slli zero, 1
+# NOHINTS: invalid instruction encoding
+0x06 0x00
+
+# GOOD: c.slli zero, 2
+# NOHINTS: invalid instruction encoding
+0x0A 0x00
+
+# GOOD: c.slli zero, 3
+# NOHINTS: invalid instruction encoding
+0x0E 0x00
+
+# GOOD: c.slli zero, 4
+# NOHINTS: invalid instruction encoding
+0x12 0x00
+
+# GOOD: c.slli zero, 5
+# NOHINTS: invalid instruction encoding
+0x16 0x00
+
+# GOOD: c.slli zero, 6
+# NOHINTS: invalid instruction encoding
+0x1A 0x00
+
+# GOOD: c.slli zero, 7
+# NOHINTS: invalid instruction encoding
+0x1E 0x00
+
+# GOOD: c.slli zero, 8
+# NOHINTS: invalid instruction encoding
+0x22 0x00
+
+# GOOD: c.slli zero, 9
+# NOHINTS: invalid instruction encoding
+0x26 0x00
+
+# GOOD: c.slli zero, 10
+# NOHINTS: invalid instruction encoding
+0x2A 0x00
+
+# GOOD: c.slli zero, 11
+# NOHINTS: invalid instruction encoding
+0x2E 0x00
+
+# GOOD: c.slli zero, 12
+# NOHINTS: invalid instruction encoding
+0x32 0x00
+
+# GOOD: c.slli zero, 13
+# NOHINTS: invalid instruction encoding
+0x36 0x00
+
+# GOOD: c.slli zero, 14
+# NOHINTS: invalid instruction encoding
+0x3A 0x00
+
+# GOOD: c.slli zero, 15
+# NOHINTS: invalid instruction encoding
+0x3E 0x00
+
+# GOOD: c.slli zero, 16
+# NOHINTS: invalid instruction encoding
+0x42 0x00
+
+# GOOD: c.slli zero, 17
+# NOHINTS: invalid instruction encoding
+0x46 0x00
+
+# GOOD: c.slli zero, 18
+# NOHINTS: invalid instruction encoding
+0x4A 0x00
+
+# GOOD: c.slli zero, 19
+# NOHINTS: invalid instruction encoding
+0x4E 0x00
+
+# GOOD: c.slli zero, 20
+# NOHINTS: invalid instruction encoding
+0x52 0x00
+
+# GOOD: c.slli zero, 21
+# NOHINTS: invalid instruction encoding
+0x56 0x00
+
+# GOOD: c.slli zero, 22
+# NOHINTS: invalid instruction encoding
+0x5A 0x00
+
+# GOOD: c.slli zero, 23
+# NOHINTS: invalid instruction encoding
+0x5E 0x00
+
+# GOOD: c.slli zero, 24
+# NOHINTS: invalid instruction encoding
+0x62 0x00
+
+# GOOD: c.slli zero, 25
+# NOHINTS: invalid instruction encoding
+0x66 0x00
+
+# GOOD: c.slli zero, 26
+# NOHINTS: invalid instruction encoding
+0x6A 0x00
+
+# GOOD: c.slli zero, 27
+# NOHINTS: invalid instruction encoding
+0x6E 0x00
+
+# GOOD: c.slli zero, 28
+# NOHINTS: invalid instruction encoding
+0x72 0x00
+
+# GOOD: c.slli zero, 29
+# NOHINTS: invalid instruction encoding
+0x76 0x00
+
+# GOOD: c.slli zero, 30
+# NOHINTS: invalid instruction encoding
+0x7A 0x00
+
+# GOOD: c.slli zero, 31
+# NOHINTS: invalid instruction encoding
+0x7E 0x00
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 32
+# NOHINTS: invalid instruction encoding
+0x02 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 33
+# NOHINTS: invalid instruction encoding
+0x06 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 34
+# NOHINTS: invalid instruction encoding
+0x0A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 35
+# NOHINTS: invalid instruction encoding
+0x0E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 36
+# NOHINTS: invalid instruction encoding
+0x12 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 37
+# NOHINTS: invalid instruction encoding
+0x16 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 38
+# NOHINTS: invalid instruction encoding
+0x1A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 39
+# NOHINTS: invalid instruction encoding
+0x1E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 40
+# NOHINTS: invalid instruction encoding
+0x22 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 41
+# NOHINTS: invalid instruction encoding
+0x26 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 42
+# NOHINTS: invalid instruction encoding
+0x2A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 43
+# NOHINTS: invalid instruction encoding
+0x2E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 44
+# NOHINTS: invalid instruction encoding
+0x32 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 45
+# NOHINTS: invalid instruction encoding
+0x36 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 46
+# NOHINTS: invalid instruction encoding
+0x3A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 47
+# NOHINTS: invalid instruction encoding
+0x3E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 48
+# NOHINTS: invalid instruction encoding
+0x42 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 49
+# NOHINTS: invalid instruction encoding
+0x46 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 50
+# NOHINTS: invalid instruction encoding
+0x4A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 51
+# NOHINTS: invalid instruction encoding
+0x4E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 52
+# NOHINTS: invalid instruction encoding
+0x52 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 53
+# NOHINTS: invalid instruction encoding
+0x56 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 54
+# NOHINTS: invalid instruction encoding
+0x5A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 55
+# NOHINTS: invalid instruction encoding
+0x5E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 56
+# NOHINTS: invalid instruction encoding
+0x62 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 57
+# NOHINTS: invalid instruction encoding
+0x66 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 58
+# NOHINTS: invalid instruction encoding
+0x6A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 59
+# NOHINTS: invalid instruction encoding
+0x6E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 60
+# NOHINTS: invalid instruction encoding
+0x72 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 61
+# NOHINTS: invalid instruction encoding
+0x76 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 62
+# NOHINTS: invalid instruction encoding
+0x7A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli zero, 63
+# NOHINTS: invalid instruction encoding
+0x7E 0x10
+
+# GOOD: c.slli64 ra
+0x82 0x00
+
+# GOOD: c.slli ra, 1
+0x86 0x00
+
+# GOOD: c.slli ra, 2
+0x8A 0x00
+
+# GOOD: c.slli ra, 3
+0x8E 0x00
+
+# GOOD: c.slli ra, 4
+0x92 0x00
+
+# GOOD: c.slli ra, 5
+0x96 0x00
+
+# GOOD: c.slli ra, 6
+0x9A 0x00
+
+# GOOD: c.slli ra, 7
+0x9E 0x00
+
+# GOOD: c.slli ra, 8
+0xA2 0x00
+
+# GOOD: c.slli ra, 9
+0xA6 0x00
+
+# GOOD: c.slli ra, 10
+0xAA 0x00
+
+# GOOD: c.slli ra, 11
+0xAE 0x00
+
+# GOOD: c.slli ra, 12
+0xB2 0x00
+
+# GOOD: c.slli ra, 13
+0xB6 0x00
+
+# GOOD: c.slli ra, 14
+0xBA 0x00
+
+# GOOD: c.slli ra, 15
+0xBE 0x00
+
+# GOOD: c.slli ra, 16
+0xC2 0x00
+
+# GOOD: c.slli ra, 17
+0xC6 0x00
+
+# GOOD: c.slli ra, 18
+0xCA 0x00
+
+# GOOD: c.slli ra, 19
+0xCE 0x00
+
+# GOOD: c.slli ra, 20
+0xD2 0x00
+
+# GOOD: c.slli ra, 21
+0xD6 0x00
+
+# GOOD: c.slli ra, 22
+0xDA 0x00
+
+# GOOD: c.slli ra, 23
+0xDE 0x00
+
+# GOOD: c.slli ra, 24
+0xE2 0x00
+
+# GOOD: c.slli ra, 25
+0xE6 0x00
+
+# GOOD: c.slli ra, 26
+0xEA 0x00
+
+# GOOD: c.slli ra, 27
+0xEE 0x00
+
+# GOOD: c.slli ra, 28
+0xF2 0x00
+
+# GOOD: c.slli ra, 29
+0xF6 0x00
+
+# GOOD: c.slli ra, 30
+0xFA 0x00
+
+# GOOD: c.slli ra, 31
+0xFE 0x00
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 32
+0x82 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 33
+0x86 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 34
+0x8A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 35
+0x8E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 36
+0x92 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 37
+0x96 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 38
+0x9A 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 39
+0x9E 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 40
+0xA2 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 41
+0xA6 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 42
+0xAA 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 43
+0xAE 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 44
+0xB2 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 45
+0xB6 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 46
+0xBA 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 47
+0xBE 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 48
+0xC2 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 49
+0xC6 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 50
+0xCA 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 51
+0xCE 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 52
+0xD2 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 53
+0xD6 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 54
+0xDA 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 55
+0xDE 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 56
+0xE2 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 57
+0xE6 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 58
+0xEA 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 59
+0xEE 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 60
+0xF2 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 61
+0xF6 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 62
+0xFA 0x10
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli ra, 63
+0xFE 0x10
+
+# GOOD: c.slli64 sp
+0x02 0x01
+
+# GOOD: c.slli sp, 1
+0x06 0x01
+
+# GOOD: c.slli sp, 2
+0x0A 0x01
+
+# GOOD: c.slli sp, 3
+0x0E 0x01
+
+# GOOD: c.slli sp, 4
+0x12 0x01
+
+# GOOD: c.slli sp, 5
+0x16 0x01
+
+# GOOD: c.slli sp, 6
+0x1A 0x01
+
+# GOOD: c.slli sp, 7
+0x1E 0x01
+
+# GOOD: c.slli sp, 8
+0x22 0x01
+
+# GOOD: c.slli sp, 9
+0x26 0x01
+
+# GOOD: c.slli sp, 10
+0x2A 0x01
+
+# GOOD: c.slli sp, 11
+0x2E 0x01
+
+# GOOD: c.slli sp, 12
+0x32 0x01
+
+# GOOD: c.slli sp, 13
+0x36 0x01
+
+# GOOD: c.slli sp, 14
+0x3A 0x01
+
+# GOOD: c.slli sp, 15
+0x3E 0x01
+
+# GOOD: c.slli sp, 16
+0x42 0x01
+
+# GOOD: c.slli sp, 17
+0x46 0x01
+
+# GOOD: c.slli sp, 18
+0x4A 0x01
+
+# GOOD: c.slli sp, 19
+0x4E 0x01
+
+# GOOD: c.slli sp, 20
+0x52 0x01
+
+# GOOD: c.slli sp, 21
+0x56 0x01
+
+# GOOD: c.slli sp, 22
+0x5A 0x01
+
+# GOOD: c.slli sp, 23
+0x5E 0x01
+
+# GOOD: c.slli sp, 24
+0x62 0x01
+
+# GOOD: c.slli sp, 25
+0x66 0x01
+
+# GOOD: c.slli sp, 26
+0x6A 0x01
+
+# GOOD: c.slli sp, 27
+0x6E 0x01
+
+# GOOD: c.slli sp, 28
+0x72 0x01
+
+# GOOD: c.slli sp, 29
+0x76 0x01
+
+# GOOD: c.slli sp, 30
+0x7A 0x01
+
+# GOOD: c.slli sp, 31
+0x7E 0x01
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 32
+0x02 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 33
+0x06 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 34
+0x0A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 35
+0x0E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 36
+0x12 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 37
+0x16 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 38
+0x1A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 39
+0x1E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 40
+0x22 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 41
+0x26 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 42
+0x2A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 43
+0x2E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 44
+0x32 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 45
+0x36 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 46
+0x3A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 47
+0x3E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 48
+0x42 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 49
+0x46 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 50
+0x4A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 51
+0x4E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 52
+0x52 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 53
+0x56 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 54
+0x5A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 55
+0x5E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 56
+0x62 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 57
+0x66 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 58
+0x6A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 59
+0x6E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 60
+0x72 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 61
+0x76 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 62
+0x7A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli sp, 63
+0x7E 0x11
+
+# GOOD: c.slli64 gp
+0x82 0x01
+
+# GOOD: c.slli gp, 1
+0x86 0x01
+
+# GOOD: c.slli gp, 2
+0x8A 0x01
+
+# GOOD: c.slli gp, 3
+0x8E 0x01
+
+# GOOD: c.slli gp, 4
+0x92 0x01
+
+# GOOD: c.slli gp, 5
+0x96 0x01
+
+# GOOD: c.slli gp, 6
+0x9A 0x01
+
+# GOOD: c.slli gp, 7
+0x9E 0x01
+
+# GOOD: c.slli gp, 8
+0xA2 0x01
+
+# GOOD: c.slli gp, 9
+0xA6 0x01
+
+# GOOD: c.slli gp, 10
+0xAA 0x01
+
+# GOOD: c.slli gp, 11
+0xAE 0x01
+
+# GOOD: c.slli gp, 12
+0xB2 0x01
+
+# GOOD: c.slli gp, 13
+0xB6 0x01
+
+# GOOD: c.slli gp, 14
+0xBA 0x01
+
+# GOOD: c.slli gp, 15
+0xBE 0x01
+
+# GOOD: c.slli gp, 16
+0xC2 0x01
+
+# GOOD: c.slli gp, 17
+0xC6 0x01
+
+# GOOD: c.slli gp, 18
+0xCA 0x01
+
+# GOOD: c.slli gp, 19
+0xCE 0x01
+
+# GOOD: c.slli gp, 20
+0xD2 0x01
+
+# GOOD: c.slli gp, 21
+0xD6 0x01
+
+# GOOD: c.slli gp, 22
+0xDA 0x01
+
+# GOOD: c.slli gp, 23
+0xDE 0x01
+
+# GOOD: c.slli gp, 24
+0xE2 0x01
+
+# GOOD: c.slli gp, 25
+0xE6 0x01
+
+# GOOD: c.slli gp, 26
+0xEA 0x01
+
+# GOOD: c.slli gp, 27
+0xEE 0x01
+
+# GOOD: c.slli gp, 28
+0xF2 0x01
+
+# GOOD: c.slli gp, 29
+0xF6 0x01
+
+# GOOD: c.slli gp, 30
+0xFA 0x01
+
+# GOOD: c.slli gp, 31
+0xFE 0x01
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 32
+0x82 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 33
+0x86 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 34
+0x8A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 35
+0x8E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 36
+0x92 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 37
+0x96 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 38
+0x9A 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 39
+0x9E 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 40
+0xA2 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 41
+0xA6 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 42
+0xAA 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 43
+0xAE 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 44
+0xB2 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 45
+0xB6 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 46
+0xBA 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 47
+0xBE 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 48
+0xC2 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 49
+0xC6 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 50
+0xCA 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 51
+0xCE 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 52
+0xD2 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 53
+0xD6 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 54
+0xDA 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 55
+0xDE 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 56
+0xE2 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 57
+0xE6 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 58
+0xEA 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 59
+0xEE 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 60
+0xF2 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 61
+0xF6 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 62
+0xFA 0x11
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli gp, 63
+0xFE 0x11
+
+# GOOD: c.slli64 tp
+0x02 0x02
+
+# GOOD: c.slli tp, 1
+0x06 0x02
+
+# GOOD: c.slli tp, 2
+0x0A 0x02
+
+# GOOD: c.slli tp, 3
+0x0E 0x02
+
+# GOOD: c.slli tp, 4
+0x12 0x02
+
+# GOOD: c.slli tp, 5
+0x16 0x02
+
+# GOOD: c.slli tp, 6
+0x1A 0x02
+
+# GOOD: c.slli tp, 7
+0x1E 0x02
+
+# GOOD: c.slli tp, 8
+0x22 0x02
+
+# GOOD: c.slli tp, 9
+0x26 0x02
+
+# GOOD: c.slli tp, 10
+0x2A 0x02
+
+# GOOD: c.slli tp, 11
+0x2E 0x02
+
+# GOOD: c.slli tp, 12
+0x32 0x02
+
+# GOOD: c.slli tp, 13
+0x36 0x02
+
+# GOOD: c.slli tp, 14
+0x3A 0x02
+
+# GOOD: c.slli tp, 15
+0x3E 0x02
+
+# GOOD: c.slli tp, 16
+0x42 0x02
+
+# GOOD: c.slli tp, 17
+0x46 0x02
+
+# GOOD: c.slli tp, 18
+0x4A 0x02
+
+# GOOD: c.slli tp, 19
+0x4E 0x02
+
+# GOOD: c.slli tp, 20
+0x52 0x02
+
+# GOOD: c.slli tp, 21
+0x56 0x02
+
+# GOOD: c.slli tp, 22
+0x5A 0x02
+
+# GOOD: c.slli tp, 23
+0x5E 0x02
+
+# GOOD: c.slli tp, 24
+0x62 0x02
+
+# GOOD: c.slli tp, 25
+0x66 0x02
+
+# GOOD: c.slli tp, 26
+0x6A 0x02
+
+# GOOD: c.slli tp, 27
+0x6E 0x02
+
+# GOOD: c.slli tp, 28
+0x72 0x02
+
+# GOOD: c.slli tp, 29
+0x76 0x02
+
+# GOOD: c.slli tp, 30
+0x7A 0x02
+
+# GOOD: c.slli tp, 31
+0x7E 0x02
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 32
+0x02 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 33
+0x06 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 34
+0x0A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 35
+0x0E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 36
+0x12 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 37
+0x16 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 38
+0x1A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 39
+0x1E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 40
+0x22 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 41
+0x26 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 42
+0x2A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 43
+0x2E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 44
+0x32 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 45
+0x36 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 46
+0x3A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 47
+0x3E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 48
+0x42 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 49
+0x46 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 50
+0x4A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 51
+0x4E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 52
+0x52 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 53
+0x56 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 54
+0x5A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 55
+0x5E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 56
+0x62 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 57
+0x66 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 58
+0x6A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 59
+0x6E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 60
+0x72 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 61
+0x76 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 62
+0x7A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli tp, 63
+0x7E 0x12
+
+# GOOD: c.slli64 t0
+0x82 0x02
+
+# GOOD: c.slli t0, 1
+0x86 0x02
+
+# GOOD: c.slli t0, 2
+0x8A 0x02
+
+# GOOD: c.slli t0, 3
+0x8E 0x02
+
+# GOOD: c.slli t0, 4
+0x92 0x02
+
+# GOOD: c.slli t0, 5
+0x96 0x02
+
+# GOOD: c.slli t0, 6
+0x9A 0x02
+
+# GOOD: c.slli t0, 7
+0x9E 0x02
+
+# GOOD: c.slli t0, 8
+0xA2 0x02
+
+# GOOD: c.slli t0, 9
+0xA6 0x02
+
+# GOOD: c.slli t0, 10
+0xAA 0x02
+
+# GOOD: c.slli t0, 11
+0xAE 0x02
+
+# GOOD: c.slli t0, 12
+0xB2 0x02
+
+# GOOD: c.slli t0, 13
+0xB6 0x02
+
+# GOOD: c.slli t0, 14
+0xBA 0x02
+
+# GOOD: c.slli t0, 15
+0xBE 0x02
+
+# GOOD: c.slli t0, 16
+0xC2 0x02
+
+# GOOD: c.slli t0, 17
+0xC6 0x02
+
+# GOOD: c.slli t0, 18
+0xCA 0x02
+
+# GOOD: c.slli t0, 19
+0xCE 0x02
+
+# GOOD: c.slli t0, 20
+0xD2 0x02
+
+# GOOD: c.slli t0, 21
+0xD6 0x02
+
+# GOOD: c.slli t0, 22
+0xDA 0x02
+
+# GOOD: c.slli t0, 23
+0xDE 0x02
+
+# GOOD: c.slli t0, 24
+0xE2 0x02
+
+# GOOD: c.slli t0, 25
+0xE6 0x02
+
+# GOOD: c.slli t0, 26
+0xEA 0x02
+
+# GOOD: c.slli t0, 27
+0xEE 0x02
+
+# GOOD: c.slli t0, 28
+0xF2 0x02
+
+# GOOD: c.slli t0, 29
+0xF6 0x02
+
+# GOOD: c.slli t0, 30
+0xFA 0x02
+
+# GOOD: c.slli t0, 31
+0xFE 0x02
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 32
+0x82 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 33
+0x86 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 34
+0x8A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 35
+0x8E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 36
+0x92 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 37
+0x96 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 38
+0x9A 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 39
+0x9E 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 40
+0xA2 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 41
+0xA6 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 42
+0xAA 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 43
+0xAE 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 44
+0xB2 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 45
+0xB6 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 46
+0xBA 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 47
+0xBE 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 48
+0xC2 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 49
+0xC6 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 50
+0xCA 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 51
+0xCE 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 52
+0xD2 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 53
+0xD6 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 54
+0xDA 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 55
+0xDE 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 56
+0xE2 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 57
+0xE6 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 58
+0xEA 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 59
+0xEE 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 60
+0xF2 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 61
+0xF6 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 62
+0xFA 0x12
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t0, 63
+0xFE 0x12
+
+# GOOD: c.slli64 t1
+0x02 0x03
+
+# GOOD: c.slli t1, 1
+0x06 0x03
+
+# GOOD: c.slli t1, 2
+0x0A 0x03
+
+# GOOD: c.slli t1, 3
+0x0E 0x03
+
+# GOOD: c.slli t1, 4
+0x12 0x03
+
+# GOOD: c.slli t1, 5
+0x16 0x03
+
+# GOOD: c.slli t1, 6
+0x1A 0x03
+
+# GOOD: c.slli t1, 7
+0x1E 0x03
+
+# GOOD: c.slli t1, 8
+0x22 0x03
+
+# GOOD: c.slli t1, 9
+0x26 0x03
+
+# GOOD: c.slli t1, 10
+0x2A 0x03
+
+# GOOD: c.slli t1, 11
+0x2E 0x03
+
+# GOOD: c.slli t1, 12
+0x32 0x03
+
+# GOOD: c.slli t1, 13
+0x36 0x03
+
+# GOOD: c.slli t1, 14
+0x3A 0x03
+
+# GOOD: c.slli t1, 15
+0x3E 0x03
+
+# GOOD: c.slli t1, 16
+0x42 0x03
+
+# GOOD: c.slli t1, 17
+0x46 0x03
+
+# GOOD: c.slli t1, 18
+0x4A 0x03
+
+# GOOD: c.slli t1, 19
+0x4E 0x03
+
+# GOOD: c.slli t1, 20
+0x52 0x03
+
+# GOOD: c.slli t1, 21
+0x56 0x03
+
+# GOOD: c.slli t1, 22
+0x5A 0x03
+
+# GOOD: c.slli t1, 23
+0x5E 0x03
+
+# GOOD: c.slli t1, 24
+0x62 0x03
+
+# GOOD: c.slli t1, 25
+0x66 0x03
+
+# GOOD: c.slli t1, 26
+0x6A 0x03
+
+# GOOD: c.slli t1, 27
+0x6E 0x03
+
+# GOOD: c.slli t1, 28
+0x72 0x03
+
+# GOOD: c.slli t1, 29
+0x76 0x03
+
+# GOOD: c.slli t1, 30
+0x7A 0x03
+
+# GOOD: c.slli t1, 31
+0x7E 0x03
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 32
+0x02 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 33
+0x06 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 34
+0x0A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 35
+0x0E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 36
+0x12 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 37
+0x16 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 38
+0x1A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 39
+0x1E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 40
+0x22 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 41
+0x26 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 42
+0x2A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 43
+0x2E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 44
+0x32 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 45
+0x36 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 46
+0x3A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 47
+0x3E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 48
+0x42 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 49
+0x46 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 50
+0x4A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 51
+0x4E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 52
+0x52 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 53
+0x56 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 54
+0x5A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 55
+0x5E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 56
+0x62 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 57
+0x66 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 58
+0x6A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 59
+0x6E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 60
+0x72 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 61
+0x76 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 62
+0x7A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t1, 63
+0x7E 0x13
+
+# GOOD: c.slli64 t2
+0x82 0x03
+
+# GOOD: c.slli t2, 1
+0x86 0x03
+
+# GOOD: c.slli t2, 2
+0x8A 0x03
+
+# GOOD: c.slli t2, 3
+0x8E 0x03
+
+# GOOD: c.slli t2, 4
+0x92 0x03
+
+# GOOD: c.slli t2, 5
+0x96 0x03
+
+# GOOD: c.slli t2, 6
+0x9A 0x03
+
+# GOOD: c.slli t2, 7
+0x9E 0x03
+
+# GOOD: c.slli t2, 8
+0xA2 0x03
+
+# GOOD: c.slli t2, 9
+0xA6 0x03
+
+# GOOD: c.slli t2, 10
+0xAA 0x03
+
+# GOOD: c.slli t2, 11
+0xAE 0x03
+
+# GOOD: c.slli t2, 12
+0xB2 0x03
+
+# GOOD: c.slli t2, 13
+0xB6 0x03
+
+# GOOD: c.slli t2, 14
+0xBA 0x03
+
+# GOOD: c.slli t2, 15
+0xBE 0x03
+
+# GOOD: c.slli t2, 16
+0xC2 0x03
+
+# GOOD: c.slli t2, 17
+0xC6 0x03
+
+# GOOD: c.slli t2, 18
+0xCA 0x03
+
+# GOOD: c.slli t2, 19
+0xCE 0x03
+
+# GOOD: c.slli t2, 20
+0xD2 0x03
+
+# GOOD: c.slli t2, 21
+0xD6 0x03
+
+# GOOD: c.slli t2, 22
+0xDA 0x03
+
+# GOOD: c.slli t2, 23
+0xDE 0x03
+
+# GOOD: c.slli t2, 24
+0xE2 0x03
+
+# GOOD: c.slli t2, 25
+0xE6 0x03
+
+# GOOD: c.slli t2, 26
+0xEA 0x03
+
+# GOOD: c.slli t2, 27
+0xEE 0x03
+
+# GOOD: c.slli t2, 28
+0xF2 0x03
+
+# GOOD: c.slli t2, 29
+0xF6 0x03
+
+# GOOD: c.slli t2, 30
+0xFA 0x03
+
+# GOOD: c.slli t2, 31
+0xFE 0x03
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 32
+0x82 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 33
+0x86 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 34
+0x8A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 35
+0x8E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 36
+0x92 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 37
+0x96 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 38
+0x9A 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 39
+0x9E 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 40
+0xA2 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 41
+0xA6 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 42
+0xAA 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 43
+0xAE 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 44
+0xB2 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 45
+0xB6 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 46
+0xBA 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 47
+0xBE 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 48
+0xC2 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 49
+0xC6 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 50
+0xCA 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 51
+0xCE 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 52
+0xD2 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 53
+0xD6 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 54
+0xDA 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 55
+0xDE 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 56
+0xE2 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 57
+0xE6 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 58
+0xEA 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 59
+0xEE 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 60
+0xF2 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 61
+0xF6 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 62
+0xFA 0x13
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t2, 63
+0xFE 0x13
+
+# GOOD: c.slli64 s0
+0x02 0x04
+
+# GOOD: c.slli s0, 1
+0x06 0x04
+
+# GOOD: c.slli s0, 2
+0x0A 0x04
+
+# GOOD: c.slli s0, 3
+0x0E 0x04
+
+# GOOD: c.slli s0, 4
+0x12 0x04
+
+# GOOD: c.slli s0, 5
+0x16 0x04
+
+# GOOD: c.slli s0, 6
+0x1A 0x04
+
+# GOOD: c.slli s0, 7
+0x1E 0x04
+
+# GOOD: c.slli s0, 8
+0x22 0x04
+
+# GOOD: c.slli s0, 9
+0x26 0x04
+
+# GOOD: c.slli s0, 10
+0x2A 0x04
+
+# GOOD: c.slli s0, 11
+0x2E 0x04
+
+# GOOD: c.slli s0, 12
+0x32 0x04
+
+# GOOD: c.slli s0, 13
+0x36 0x04
+
+# GOOD: c.slli s0, 14
+0x3A 0x04
+
+# GOOD: c.slli s0, 15
+0x3E 0x04
+
+# GOOD: c.slli s0, 16
+0x42 0x04
+
+# GOOD: c.slli s0, 17
+0x46 0x04
+
+# GOOD: c.slli s0, 18
+0x4A 0x04
+
+# GOOD: c.slli s0, 19
+0x4E 0x04
+
+# GOOD: c.slli s0, 20
+0x52 0x04
+
+# GOOD: c.slli s0, 21
+0x56 0x04
+
+# GOOD: c.slli s0, 22
+0x5A 0x04
+
+# GOOD: c.slli s0, 23
+0x5E 0x04
+
+# GOOD: c.slli s0, 24
+0x62 0x04
+
+# GOOD: c.slli s0, 25
+0x66 0x04
+
+# GOOD: c.slli s0, 26
+0x6A 0x04
+
+# GOOD: c.slli s0, 27
+0x6E 0x04
+
+# GOOD: c.slli s0, 28
+0x72 0x04
+
+# GOOD: c.slli s0, 29
+0x76 0x04
+
+# GOOD: c.slli s0, 30
+0x7A 0x04
+
+# GOOD: c.slli s0, 31
+0x7E 0x04
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 32
+0x02 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 33
+0x06 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 34
+0x0A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 35
+0x0E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 36
+0x12 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 37
+0x16 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 38
+0x1A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 39
+0x1E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 40
+0x22 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 41
+0x26 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 42
+0x2A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 43
+0x2E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 44
+0x32 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 45
+0x36 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 46
+0x3A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 47
+0x3E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 48
+0x42 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 49
+0x46 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 50
+0x4A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 51
+0x4E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 52
+0x52 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 53
+0x56 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 54
+0x5A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 55
+0x5E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 56
+0x62 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 57
+0x66 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 58
+0x6A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 59
+0x6E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 60
+0x72 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 61
+0x76 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 62
+0x7A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s0, 63
+0x7E 0x14
+
+# GOOD: c.slli64 s1
+0x82 0x04
+
+# GOOD: c.slli s1, 1
+0x86 0x04
+
+# GOOD: c.slli s1, 2
+0x8A 0x04
+
+# GOOD: c.slli s1, 3
+0x8E 0x04
+
+# GOOD: c.slli s1, 4
+0x92 0x04
+
+# GOOD: c.slli s1, 5
+0x96 0x04
+
+# GOOD: c.slli s1, 6
+0x9A 0x04
+
+# GOOD: c.slli s1, 7
+0x9E 0x04
+
+# GOOD: c.slli s1, 8
+0xA2 0x04
+
+# GOOD: c.slli s1, 9
+0xA6 0x04
+
+# GOOD: c.slli s1, 10
+0xAA 0x04
+
+# GOOD: c.slli s1, 11
+0xAE 0x04
+
+# GOOD: c.slli s1, 12
+0xB2 0x04
+
+# GOOD: c.slli s1, 13
+0xB6 0x04
+
+# GOOD: c.slli s1, 14
+0xBA 0x04
+
+# GOOD: c.slli s1, 15
+0xBE 0x04
+
+# GOOD: c.slli s1, 16
+0xC2 0x04
+
+# GOOD: c.slli s1, 17
+0xC6 0x04
+
+# GOOD: c.slli s1, 18
+0xCA 0x04
+
+# GOOD: c.slli s1, 19
+0xCE 0x04
+
+# GOOD: c.slli s1, 20
+0xD2 0x04
+
+# GOOD: c.slli s1, 21
+0xD6 0x04
+
+# GOOD: c.slli s1, 22
+0xDA 0x04
+
+# GOOD: c.slli s1, 23
+0xDE 0x04
+
+# GOOD: c.slli s1, 24
+0xE2 0x04
+
+# GOOD: c.slli s1, 25
+0xE6 0x04
+
+# GOOD: c.slli s1, 26
+0xEA 0x04
+
+# GOOD: c.slli s1, 27
+0xEE 0x04
+
+# GOOD: c.slli s1, 28
+0xF2 0x04
+
+# GOOD: c.slli s1, 29
+0xF6 0x04
+
+# GOOD: c.slli s1, 30
+0xFA 0x04
+
+# GOOD: c.slli s1, 31
+0xFE 0x04
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 32
+0x82 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 33
+0x86 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 34
+0x8A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 35
+0x8E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 36
+0x92 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 37
+0x96 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 38
+0x9A 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 39
+0x9E 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 40
+0xA2 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 41
+0xA6 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 42
+0xAA 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 43
+0xAE 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 44
+0xB2 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 45
+0xB6 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 46
+0xBA 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 47
+0xBE 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 48
+0xC2 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 49
+0xC6 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 50
+0xCA 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 51
+0xCE 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 52
+0xD2 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 53
+0xD6 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 54
+0xDA 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 55
+0xDE 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 56
+0xE2 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 57
+0xE6 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 58
+0xEA 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 59
+0xEE 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 60
+0xF2 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 61
+0xF6 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 62
+0xFA 0x14
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s1, 63
+0xFE 0x14
+
+# GOOD: c.slli64 a0
+0x02 0x05
+
+# GOOD: c.slli a0, 1
+0x06 0x05
+
+# GOOD: c.slli a0, 2
+0x0A 0x05
+
+# GOOD: c.slli a0, 3
+0x0E 0x05
+
+# GOOD: c.slli a0, 4
+0x12 0x05
+
+# GOOD: c.slli a0, 5
+0x16 0x05
+
+# GOOD: c.slli a0, 6
+0x1A 0x05
+
+# GOOD: c.slli a0, 7
+0x1E 0x05
+
+# GOOD: c.slli a0, 8
+0x22 0x05
+
+# GOOD: c.slli a0, 9
+0x26 0x05
+
+# GOOD: c.slli a0, 10
+0x2A 0x05
+
+# GOOD: c.slli a0, 11
+0x2E 0x05
+
+# GOOD: c.slli a0, 12
+0x32 0x05
+
+# GOOD: c.slli a0, 13
+0x36 0x05
+
+# GOOD: c.slli a0, 14
+0x3A 0x05
+
+# GOOD: c.slli a0, 15
+0x3E 0x05
+
+# GOOD: c.slli a0, 16
+0x42 0x05
+
+# GOOD: c.slli a0, 17
+0x46 0x05
+
+# GOOD: c.slli a0, 18
+0x4A 0x05
+
+# GOOD: c.slli a0, 19
+0x4E 0x05
+
+# GOOD: c.slli a0, 20
+0x52 0x05
+
+# GOOD: c.slli a0, 21
+0x56 0x05
+
+# GOOD: c.slli a0, 22
+0x5A 0x05
+
+# GOOD: c.slli a0, 23
+0x5E 0x05
+
+# GOOD: c.slli a0, 24
+0x62 0x05
+
+# GOOD: c.slli a0, 25
+0x66 0x05
+
+# GOOD: c.slli a0, 26
+0x6A 0x05
+
+# GOOD: c.slli a0, 27
+0x6E 0x05
+
+# GOOD: c.slli a0, 28
+0x72 0x05
+
+# GOOD: c.slli a0, 29
+0x76 0x05
+
+# GOOD: c.slli a0, 30
+0x7A 0x05
+
+# GOOD: c.slli a0, 31
+0x7E 0x05
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 32
+0x02 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 33
+0x06 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 34
+0x0A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 35
+0x0E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 36
+0x12 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 37
+0x16 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 38
+0x1A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 39
+0x1E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 40
+0x22 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 41
+0x26 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 42
+0x2A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 43
+0x2E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 44
+0x32 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 45
+0x36 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 46
+0x3A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 47
+0x3E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 48
+0x42 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 49
+0x46 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 50
+0x4A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 51
+0x4E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 52
+0x52 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 53
+0x56 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 54
+0x5A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 55
+0x5E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 56
+0x62 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 57
+0x66 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 58
+0x6A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 59
+0x6E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 60
+0x72 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 61
+0x76 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 62
+0x7A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a0, 63
+0x7E 0x15
+
+# GOOD: c.slli64 a1
+0x82 0x05
+
+# GOOD: c.slli a1, 1
+0x86 0x05
+
+# GOOD: c.slli a1, 2
+0x8A 0x05
+
+# GOOD: c.slli a1, 3
+0x8E 0x05
+
+# GOOD: c.slli a1, 4
+0x92 0x05
+
+# GOOD: c.slli a1, 5
+0x96 0x05
+
+# GOOD: c.slli a1, 6
+0x9A 0x05
+
+# GOOD: c.slli a1, 7
+0x9E 0x05
+
+# GOOD: c.slli a1, 8
+0xA2 0x05
+
+# GOOD: c.slli a1, 9
+0xA6 0x05
+
+# GOOD: c.slli a1, 10
+0xAA 0x05
+
+# GOOD: c.slli a1, 11
+0xAE 0x05
+
+# GOOD: c.slli a1, 12
+0xB2 0x05
+
+# GOOD: c.slli a1, 13
+0xB6 0x05
+
+# GOOD: c.slli a1, 14
+0xBA 0x05
+
+# GOOD: c.slli a1, 15
+0xBE 0x05
+
+# GOOD: c.slli a1, 16
+0xC2 0x05
+
+# GOOD: c.slli a1, 17
+0xC6 0x05
+
+# GOOD: c.slli a1, 18
+0xCA 0x05
+
+# GOOD: c.slli a1, 19
+0xCE 0x05
+
+# GOOD: c.slli a1, 20
+0xD2 0x05
+
+# GOOD: c.slli a1, 21
+0xD6 0x05
+
+# GOOD: c.slli a1, 22
+0xDA 0x05
+
+# GOOD: c.slli a1, 23
+0xDE 0x05
+
+# GOOD: c.slli a1, 24
+0xE2 0x05
+
+# GOOD: c.slli a1, 25
+0xE6 0x05
+
+# GOOD: c.slli a1, 26
+0xEA 0x05
+
+# GOOD: c.slli a1, 27
+0xEE 0x05
+
+# GOOD: c.slli a1, 28
+0xF2 0x05
+
+# GOOD: c.slli a1, 29
+0xF6 0x05
+
+# GOOD: c.slli a1, 30
+0xFA 0x05
+
+# GOOD: c.slli a1, 31
+0xFE 0x05
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 32
+0x82 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 33
+0x86 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 34
+0x8A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 35
+0x8E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 36
+0x92 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 37
+0x96 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 38
+0x9A 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 39
+0x9E 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 40
+0xA2 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 41
+0xA6 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 42
+0xAA 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 43
+0xAE 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 44
+0xB2 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 45
+0xB6 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 46
+0xBA 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 47
+0xBE 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 48
+0xC2 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 49
+0xC6 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 50
+0xCA 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 51
+0xCE 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 52
+0xD2 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 53
+0xD6 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 54
+0xDA 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 55
+0xDE 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 56
+0xE2 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 57
+0xE6 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 58
+0xEA 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 59
+0xEE 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 60
+0xF2 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 61
+0xF6 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 62
+0xFA 0x15
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a1, 63
+0xFE 0x15
+
+# GOOD: c.slli64 a2
+0x02 0x06
+
+# GOOD: c.slli a2, 1
+0x06 0x06
+
+# GOOD: c.slli a2, 2
+0x0A 0x06
+
+# GOOD: c.slli a2, 3
+0x0E 0x06
+
+# GOOD: c.slli a2, 4
+0x12 0x06
+
+# GOOD: c.slli a2, 5
+0x16 0x06
+
+# GOOD: c.slli a2, 6
+0x1A 0x06
+
+# GOOD: c.slli a2, 7
+0x1E 0x06
+
+# GOOD: c.slli a2, 8
+0x22 0x06
+
+# GOOD: c.slli a2, 9
+0x26 0x06
+
+# GOOD: c.slli a2, 10
+0x2A 0x06
+
+# GOOD: c.slli a2, 11
+0x2E 0x06
+
+# GOOD: c.slli a2, 12
+0x32 0x06
+
+# GOOD: c.slli a2, 13
+0x36 0x06
+
+# GOOD: c.slli a2, 14
+0x3A 0x06
+
+# GOOD: c.slli a2, 15
+0x3E 0x06
+
+# GOOD: c.slli a2, 16
+0x42 0x06
+
+# GOOD: c.slli a2, 17
+0x46 0x06
+
+# GOOD: c.slli a2, 18
+0x4A 0x06
+
+# GOOD: c.slli a2, 19
+0x4E 0x06
+
+# GOOD: c.slli a2, 20
+0x52 0x06
+
+# GOOD: c.slli a2, 21
+0x56 0x06
+
+# GOOD: c.slli a2, 22
+0x5A 0x06
+
+# GOOD: c.slli a2, 23
+0x5E 0x06
+
+# GOOD: c.slli a2, 24
+0x62 0x06
+
+# GOOD: c.slli a2, 25
+0x66 0x06
+
+# GOOD: c.slli a2, 26
+0x6A 0x06
+
+# GOOD: c.slli a2, 27
+0x6E 0x06
+
+# GOOD: c.slli a2, 28
+0x72 0x06
+
+# GOOD: c.slli a2, 29
+0x76 0x06
+
+# GOOD: c.slli a2, 30
+0x7A 0x06
+
+# GOOD: c.slli a2, 31
+0x7E 0x06
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 32
+0x02 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 33
+0x06 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 34
+0x0A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 35
+0x0E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 36
+0x12 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 37
+0x16 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 38
+0x1A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 39
+0x1E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 40
+0x22 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 41
+0x26 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 42
+0x2A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 43
+0x2E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 44
+0x32 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 45
+0x36 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 46
+0x3A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 47
+0x3E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 48
+0x42 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 49
+0x46 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 50
+0x4A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 51
+0x4E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 52
+0x52 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 53
+0x56 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 54
+0x5A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 55
+0x5E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 56
+0x62 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 57
+0x66 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 58
+0x6A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 59
+0x6E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 60
+0x72 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 61
+0x76 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 62
+0x7A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a2, 63
+0x7E 0x16
+
+# GOOD: c.slli64 a3
+0x82 0x06
+
+# GOOD: c.slli a3, 1
+0x86 0x06
+
+# GOOD: c.slli a3, 2
+0x8A 0x06
+
+# GOOD: c.slli a3, 3
+0x8E 0x06
+
+# GOOD: c.slli a3, 4
+0x92 0x06
+
+# GOOD: c.slli a3, 5
+0x96 0x06
+
+# GOOD: c.slli a3, 6
+0x9A 0x06
+
+# GOOD: c.slli a3, 7
+0x9E 0x06
+
+# GOOD: c.slli a3, 8
+0xA2 0x06
+
+# GOOD: c.slli a3, 9
+0xA6 0x06
+
+# GOOD: c.slli a3, 10
+0xAA 0x06
+
+# GOOD: c.slli a3, 11
+0xAE 0x06
+
+# GOOD: c.slli a3, 12
+0xB2 0x06
+
+# GOOD: c.slli a3, 13
+0xB6 0x06
+
+# GOOD: c.slli a3, 14
+0xBA 0x06
+
+# GOOD: c.slli a3, 15
+0xBE 0x06
+
+# GOOD: c.slli a3, 16
+0xC2 0x06
+
+# GOOD: c.slli a3, 17
+0xC6 0x06
+
+# GOOD: c.slli a3, 18
+0xCA 0x06
+
+# GOOD: c.slli a3, 19
+0xCE 0x06
+
+# GOOD: c.slli a3, 20
+0xD2 0x06
+
+# GOOD: c.slli a3, 21
+0xD6 0x06
+
+# GOOD: c.slli a3, 22
+0xDA 0x06
+
+# GOOD: c.slli a3, 23
+0xDE 0x06
+
+# GOOD: c.slli a3, 24
+0xE2 0x06
+
+# GOOD: c.slli a3, 25
+0xE6 0x06
+
+# GOOD: c.slli a3, 26
+0xEA 0x06
+
+# GOOD: c.slli a3, 27
+0xEE 0x06
+
+# GOOD: c.slli a3, 28
+0xF2 0x06
+
+# GOOD: c.slli a3, 29
+0xF6 0x06
+
+# GOOD: c.slli a3, 30
+0xFA 0x06
+
+# GOOD: c.slli a3, 31
+0xFE 0x06
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 32
+0x82 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 33
+0x86 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 34
+0x8A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 35
+0x8E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 36
+0x92 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 37
+0x96 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 38
+0x9A 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 39
+0x9E 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 40
+0xA2 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 41
+0xA6 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 42
+0xAA 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 43
+0xAE 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 44
+0xB2 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 45
+0xB6 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 46
+0xBA 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 47
+0xBE 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 48
+0xC2 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 49
+0xC6 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 50
+0xCA 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 51
+0xCE 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 52
+0xD2 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 53
+0xD6 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 54
+0xDA 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 55
+0xDE 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 56
+0xE2 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 57
+0xE6 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 58
+0xEA 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 59
+0xEE 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 60
+0xF2 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 61
+0xF6 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 62
+0xFA 0x16
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a3, 63
+0xFE 0x16
+
+# GOOD: c.slli64 a4
+0x02 0x07
+
+# GOOD: c.slli a4, 1
+0x06 0x07
+
+# GOOD: c.slli a4, 2
+0x0A 0x07
+
+# GOOD: c.slli a4, 3
+0x0E 0x07
+
+# GOOD: c.slli a4, 4
+0x12 0x07
+
+# GOOD: c.slli a4, 5
+0x16 0x07
+
+# GOOD: c.slli a4, 6
+0x1A 0x07
+
+# GOOD: c.slli a4, 7
+0x1E 0x07
+
+# GOOD: c.slli a4, 8
+0x22 0x07
+
+# GOOD: c.slli a4, 9
+0x26 0x07
+
+# GOOD: c.slli a4, 10
+0x2A 0x07
+
+# GOOD: c.slli a4, 11
+0x2E 0x07
+
+# GOOD: c.slli a4, 12
+0x32 0x07
+
+# GOOD: c.slli a4, 13
+0x36 0x07
+
+# GOOD: c.slli a4, 14
+0x3A 0x07
+
+# GOOD: c.slli a4, 15
+0x3E 0x07
+
+# GOOD: c.slli a4, 16
+0x42 0x07
+
+# GOOD: c.slli a4, 17
+0x46 0x07
+
+# GOOD: c.slli a4, 18
+0x4A 0x07
+
+# GOOD: c.slli a4, 19
+0x4E 0x07
+
+# GOOD: c.slli a4, 20
+0x52 0x07
+
+# GOOD: c.slli a4, 21
+0x56 0x07
+
+# GOOD: c.slli a4, 22
+0x5A 0x07
+
+# GOOD: c.slli a4, 23
+0x5E 0x07
+
+# GOOD: c.slli a4, 24
+0x62 0x07
+
+# GOOD: c.slli a4, 25
+0x66 0x07
+
+# GOOD: c.slli a4, 26
+0x6A 0x07
+
+# GOOD: c.slli a4, 27
+0x6E 0x07
+
+# GOOD: c.slli a4, 28
+0x72 0x07
+
+# GOOD: c.slli a4, 29
+0x76 0x07
+
+# GOOD: c.slli a4, 30
+0x7A 0x07
+
+# GOOD: c.slli a4, 31
+0x7E 0x07
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 32
+0x02 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 33
+0x06 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 34
+0x0A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 35
+0x0E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 36
+0x12 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 37
+0x16 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 38
+0x1A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 39
+0x1E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 40
+0x22 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 41
+0x26 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 42
+0x2A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 43
+0x2E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 44
+0x32 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 45
+0x36 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 46
+0x3A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 47
+0x3E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 48
+0x42 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 49
+0x46 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 50
+0x4A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 51
+0x4E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 52
+0x52 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 53
+0x56 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 54
+0x5A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 55
+0x5E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 56
+0x62 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 57
+0x66 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 58
+0x6A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 59
+0x6E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 60
+0x72 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 61
+0x76 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 62
+0x7A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a4, 63
+0x7E 0x17
+
+# GOOD: c.slli64 a5
+0x82 0x07
+
+# GOOD: c.slli a5, 1
+0x86 0x07
+
+# GOOD: c.slli a5, 2
+0x8A 0x07
+
+# GOOD: c.slli a5, 3
+0x8E 0x07
+
+# GOOD: c.slli a5, 4
+0x92 0x07
+
+# GOOD: c.slli a5, 5
+0x96 0x07
+
+# GOOD: c.slli a5, 6
+0x9A 0x07
+
+# GOOD: c.slli a5, 7
+0x9E 0x07
+
+# GOOD: c.slli a5, 8
+0xA2 0x07
+
+# GOOD: c.slli a5, 9
+0xA6 0x07
+
+# GOOD: c.slli a5, 10
+0xAA 0x07
+
+# GOOD: c.slli a5, 11
+0xAE 0x07
+
+# GOOD: c.slli a5, 12
+0xB2 0x07
+
+# GOOD: c.slli a5, 13
+0xB6 0x07
+
+# GOOD: c.slli a5, 14
+0xBA 0x07
+
+# GOOD: c.slli a5, 15
+0xBE 0x07
+
+# GOOD: c.slli a5, 16
+0xC2 0x07
+
+# GOOD: c.slli a5, 17
+0xC6 0x07
+
+# GOOD: c.slli a5, 18
+0xCA 0x07
+
+# GOOD: c.slli a5, 19
+0xCE 0x07
+
+# GOOD: c.slli a5, 20
+0xD2 0x07
+
+# GOOD: c.slli a5, 21
+0xD6 0x07
+
+# GOOD: c.slli a5, 22
+0xDA 0x07
+
+# GOOD: c.slli a5, 23
+0xDE 0x07
+
+# GOOD: c.slli a5, 24
+0xE2 0x07
+
+# GOOD: c.slli a5, 25
+0xE6 0x07
+
+# GOOD: c.slli a5, 26
+0xEA 0x07
+
+# GOOD: c.slli a5, 27
+0xEE 0x07
+
+# GOOD: c.slli a5, 28
+0xF2 0x07
+
+# GOOD: c.slli a5, 29
+0xF6 0x07
+
+# GOOD: c.slli a5, 30
+0xFA 0x07
+
+# GOOD: c.slli a5, 31
+0xFE 0x07
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 32
+0x82 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 33
+0x86 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 34
+0x8A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 35
+0x8E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 36
+0x92 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 37
+0x96 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 38
+0x9A 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 39
+0x9E 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 40
+0xA2 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 41
+0xA6 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 42
+0xAA 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 43
+0xAE 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 44
+0xB2 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 45
+0xB6 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 46
+0xBA 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 47
+0xBE 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 48
+0xC2 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 49
+0xC6 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 50
+0xCA 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 51
+0xCE 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 52
+0xD2 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 53
+0xD6 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 54
+0xDA 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 55
+0xDE 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 56
+0xE2 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 57
+0xE6 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 58
+0xEA 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 59
+0xEE 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 60
+0xF2 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 61
+0xF6 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 62
+0xFA 0x17
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a5, 63
+0xFE 0x17
+
+# GOOD: c.slli64 a6
+0x02 0x08
+
+# GOOD: c.slli a6, 1
+0x06 0x08
+
+# GOOD: c.slli a6, 2
+0x0A 0x08
+
+# GOOD: c.slli a6, 3
+0x0E 0x08
+
+# GOOD: c.slli a6, 4
+0x12 0x08
+
+# GOOD: c.slli a6, 5
+0x16 0x08
+
+# GOOD: c.slli a6, 6
+0x1A 0x08
+
+# GOOD: c.slli a6, 7
+0x1E 0x08
+
+# GOOD: c.slli a6, 8
+0x22 0x08
+
+# GOOD: c.slli a6, 9
+0x26 0x08
+
+# GOOD: c.slli a6, 10
+0x2A 0x08
+
+# GOOD: c.slli a6, 11
+0x2E 0x08
+
+# GOOD: c.slli a6, 12
+0x32 0x08
+
+# GOOD: c.slli a6, 13
+0x36 0x08
+
+# GOOD: c.slli a6, 14
+0x3A 0x08
+
+# GOOD: c.slli a6, 15
+0x3E 0x08
+
+# GOOD: c.slli a6, 16
+0x42 0x08
+
+# GOOD: c.slli a6, 17
+0x46 0x08
+
+# GOOD: c.slli a6, 18
+0x4A 0x08
+
+# GOOD: c.slli a6, 19
+0x4E 0x08
+
+# GOOD: c.slli a6, 20
+0x52 0x08
+
+# GOOD: c.slli a6, 21
+0x56 0x08
+
+# GOOD: c.slli a6, 22
+0x5A 0x08
+
+# GOOD: c.slli a6, 23
+0x5E 0x08
+
+# GOOD: c.slli a6, 24
+0x62 0x08
+
+# GOOD: c.slli a6, 25
+0x66 0x08
+
+# GOOD: c.slli a6, 26
+0x6A 0x08
+
+# GOOD: c.slli a6, 27
+0x6E 0x08
+
+# GOOD: c.slli a6, 28
+0x72 0x08
+
+# GOOD: c.slli a6, 29
+0x76 0x08
+
+# GOOD: c.slli a6, 30
+0x7A 0x08
+
+# GOOD: c.slli a6, 31
+0x7E 0x08
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 32
+0x02 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 33
+0x06 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 34
+0x0A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 35
+0x0E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 36
+0x12 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 37
+0x16 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 38
+0x1A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 39
+0x1E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 40
+0x22 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 41
+0x26 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 42
+0x2A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 43
+0x2E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 44
+0x32 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 45
+0x36 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 46
+0x3A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 47
+0x3E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 48
+0x42 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 49
+0x46 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 50
+0x4A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 51
+0x4E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 52
+0x52 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 53
+0x56 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 54
+0x5A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 55
+0x5E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 56
+0x62 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 57
+0x66 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 58
+0x6A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 59
+0x6E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 60
+0x72 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 61
+0x76 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 62
+0x7A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a6, 63
+0x7E 0x18
+
+# GOOD: c.slli64 a7
+0x82 0x08
+
+# GOOD: c.slli a7, 1
+0x86 0x08
+
+# GOOD: c.slli a7, 2
+0x8A 0x08
+
+# GOOD: c.slli a7, 3
+0x8E 0x08
+
+# GOOD: c.slli a7, 4
+0x92 0x08
+
+# GOOD: c.slli a7, 5
+0x96 0x08
+
+# GOOD: c.slli a7, 6
+0x9A 0x08
+
+# GOOD: c.slli a7, 7
+0x9E 0x08
+
+# GOOD: c.slli a7, 8
+0xA2 0x08
+
+# GOOD: c.slli a7, 9
+0xA6 0x08
+
+# GOOD: c.slli a7, 10
+0xAA 0x08
+
+# GOOD: c.slli a7, 11
+0xAE 0x08
+
+# GOOD: c.slli a7, 12
+0xB2 0x08
+
+# GOOD: c.slli a7, 13
+0xB6 0x08
+
+# GOOD: c.slli a7, 14
+0xBA 0x08
+
+# GOOD: c.slli a7, 15
+0xBE 0x08
+
+# GOOD: c.slli a7, 16
+0xC2 0x08
+
+# GOOD: c.slli a7, 17
+0xC6 0x08
+
+# GOOD: c.slli a7, 18
+0xCA 0x08
+
+# GOOD: c.slli a7, 19
+0xCE 0x08
+
+# GOOD: c.slli a7, 20
+0xD2 0x08
+
+# GOOD: c.slli a7, 21
+0xD6 0x08
+
+# GOOD: c.slli a7, 22
+0xDA 0x08
+
+# GOOD: c.slli a7, 23
+0xDE 0x08
+
+# GOOD: c.slli a7, 24
+0xE2 0x08
+
+# GOOD: c.slli a7, 25
+0xE6 0x08
+
+# GOOD: c.slli a7, 26
+0xEA 0x08
+
+# GOOD: c.slli a7, 27
+0xEE 0x08
+
+# GOOD: c.slli a7, 28
+0xF2 0x08
+
+# GOOD: c.slli a7, 29
+0xF6 0x08
+
+# GOOD: c.slli a7, 30
+0xFA 0x08
+
+# GOOD: c.slli a7, 31
+0xFE 0x08
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 32
+0x82 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 33
+0x86 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 34
+0x8A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 35
+0x8E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 36
+0x92 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 37
+0x96 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 38
+0x9A 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 39
+0x9E 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 40
+0xA2 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 41
+0xA6 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 42
+0xAA 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 43
+0xAE 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 44
+0xB2 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 45
+0xB6 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 46
+0xBA 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 47
+0xBE 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 48
+0xC2 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 49
+0xC6 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 50
+0xCA 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 51
+0xCE 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 52
+0xD2 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 53
+0xD6 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 54
+0xDA 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 55
+0xDE 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 56
+0xE2 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 57
+0xE6 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 58
+0xEA 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 59
+0xEE 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 60
+0xF2 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 61
+0xF6 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 62
+0xFA 0x18
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli a7, 63
+0xFE 0x18
+
+# GOOD: c.slli64 s2
+0x02 0x09
+
+# GOOD: c.slli s2, 1
+0x06 0x09
+
+# GOOD: c.slli s2, 2
+0x0A 0x09
+
+# GOOD: c.slli s2, 3
+0x0E 0x09
+
+# GOOD: c.slli s2, 4
+0x12 0x09
+
+# GOOD: c.slli s2, 5
+0x16 0x09
+
+# GOOD: c.slli s2, 6
+0x1A 0x09
+
+# GOOD: c.slli s2, 7
+0x1E 0x09
+
+# GOOD: c.slli s2, 8
+0x22 0x09
+
+# GOOD: c.slli s2, 9
+0x26 0x09
+
+# GOOD: c.slli s2, 10
+0x2A 0x09
+
+# GOOD: c.slli s2, 11
+0x2E 0x09
+
+# GOOD: c.slli s2, 12
+0x32 0x09
+
+# GOOD: c.slli s2, 13
+0x36 0x09
+
+# GOOD: c.slli s2, 14
+0x3A 0x09
+
+# GOOD: c.slli s2, 15
+0x3E 0x09
+
+# GOOD: c.slli s2, 16
+0x42 0x09
+
+# GOOD: c.slli s2, 17
+0x46 0x09
+
+# GOOD: c.slli s2, 18
+0x4A 0x09
+
+# GOOD: c.slli s2, 19
+0x4E 0x09
+
+# GOOD: c.slli s2, 20
+0x52 0x09
+
+# GOOD: c.slli s2, 21
+0x56 0x09
+
+# GOOD: c.slli s2, 22
+0x5A 0x09
+
+# GOOD: c.slli s2, 23
+0x5E 0x09
+
+# GOOD: c.slli s2, 24
+0x62 0x09
+
+# GOOD: c.slli s2, 25
+0x66 0x09
+
+# GOOD: c.slli s2, 26
+0x6A 0x09
+
+# GOOD: c.slli s2, 27
+0x6E 0x09
+
+# GOOD: c.slli s2, 28
+0x72 0x09
+
+# GOOD: c.slli s2, 29
+0x76 0x09
+
+# GOOD: c.slli s2, 30
+0x7A 0x09
+
+# GOOD: c.slli s2, 31
+0x7E 0x09
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 32
+0x02 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 33
+0x06 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 34
+0x0A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 35
+0x0E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 36
+0x12 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 37
+0x16 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 38
+0x1A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 39
+0x1E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 40
+0x22 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 41
+0x26 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 42
+0x2A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 43
+0x2E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 44
+0x32 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 45
+0x36 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 46
+0x3A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 47
+0x3E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 48
+0x42 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 49
+0x46 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 50
+0x4A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 51
+0x4E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 52
+0x52 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 53
+0x56 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 54
+0x5A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 55
+0x5E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 56
+0x62 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 57
+0x66 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 58
+0x6A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 59
+0x6E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 60
+0x72 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 61
+0x76 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 62
+0x7A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s2, 63
+0x7E 0x19
+
+# GOOD: c.slli64 s3
+0x82 0x09
+
+# GOOD: c.slli s3, 1
+0x86 0x09
+
+# GOOD: c.slli s3, 2
+0x8A 0x09
+
+# GOOD: c.slli s3, 3
+0x8E 0x09
+
+# GOOD: c.slli s3, 4
+0x92 0x09
+
+# GOOD: c.slli s3, 5
+0x96 0x09
+
+# GOOD: c.slli s3, 6
+0x9A 0x09
+
+# GOOD: c.slli s3, 7
+0x9E 0x09
+
+# GOOD: c.slli s3, 8
+0xA2 0x09
+
+# GOOD: c.slli s3, 9
+0xA6 0x09
+
+# GOOD: c.slli s3, 10
+0xAA 0x09
+
+# GOOD: c.slli s3, 11
+0xAE 0x09
+
+# GOOD: c.slli s3, 12
+0xB2 0x09
+
+# GOOD: c.slli s3, 13
+0xB6 0x09
+
+# GOOD: c.slli s3, 14
+0xBA 0x09
+
+# GOOD: c.slli s3, 15
+0xBE 0x09
+
+# GOOD: c.slli s3, 16
+0xC2 0x09
+
+# GOOD: c.slli s3, 17
+0xC6 0x09
+
+# GOOD: c.slli s3, 18
+0xCA 0x09
+
+# GOOD: c.slli s3, 19
+0xCE 0x09
+
+# GOOD: c.slli s3, 20
+0xD2 0x09
+
+# GOOD: c.slli s3, 21
+0xD6 0x09
+
+# GOOD: c.slli s3, 22
+0xDA 0x09
+
+# GOOD: c.slli s3, 23
+0xDE 0x09
+
+# GOOD: c.slli s3, 24
+0xE2 0x09
+
+# GOOD: c.slli s3, 25
+0xE6 0x09
+
+# GOOD: c.slli s3, 26
+0xEA 0x09
+
+# GOOD: c.slli s3, 27
+0xEE 0x09
+
+# GOOD: c.slli s3, 28
+0xF2 0x09
+
+# GOOD: c.slli s3, 29
+0xF6 0x09
+
+# GOOD: c.slli s3, 30
+0xFA 0x09
+
+# GOOD: c.slli s3, 31
+0xFE 0x09
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 32
+0x82 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 33
+0x86 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 34
+0x8A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 35
+0x8E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 36
+0x92 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 37
+0x96 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 38
+0x9A 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 39
+0x9E 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 40
+0xA2 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 41
+0xA6 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 42
+0xAA 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 43
+0xAE 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 44
+0xB2 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 45
+0xB6 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 46
+0xBA 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 47
+0xBE 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 48
+0xC2 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 49
+0xC6 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 50
+0xCA 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 51
+0xCE 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 52
+0xD2 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 53
+0xD6 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 54
+0xDA 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 55
+0xDE 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 56
+0xE2 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 57
+0xE6 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 58
+0xEA 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 59
+0xEE 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 60
+0xF2 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 61
+0xF6 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 62
+0xFA 0x19
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s3, 63
+0xFE 0x19
+
+# GOOD: c.slli64 s4
+0x02 0x0A
+
+# GOOD: c.slli s4, 1
+0x06 0x0A
+
+# GOOD: c.slli s4, 2
+0x0A 0x0A
+
+# GOOD: c.slli s4, 3
+0x0E 0x0A
+
+# GOOD: c.slli s4, 4
+0x12 0x0A
+
+# GOOD: c.slli s4, 5
+0x16 0x0A
+
+# GOOD: c.slli s4, 6
+0x1A 0x0A
+
+# GOOD: c.slli s4, 7
+0x1E 0x0A
+
+# GOOD: c.slli s4, 8
+0x22 0x0A
+
+# GOOD: c.slli s4, 9
+0x26 0x0A
+
+# GOOD: c.slli s4, 10
+0x2A 0x0A
+
+# GOOD: c.slli s4, 11
+0x2E 0x0A
+
+# GOOD: c.slli s4, 12
+0x32 0x0A
+
+# GOOD: c.slli s4, 13
+0x36 0x0A
+
+# GOOD: c.slli s4, 14
+0x3A 0x0A
+
+# GOOD: c.slli s4, 15
+0x3E 0x0A
+
+# GOOD: c.slli s4, 16
+0x42 0x0A
+
+# GOOD: c.slli s4, 17
+0x46 0x0A
+
+# GOOD: c.slli s4, 18
+0x4A 0x0A
+
+# GOOD: c.slli s4, 19
+0x4E 0x0A
+
+# GOOD: c.slli s4, 20
+0x52 0x0A
+
+# GOOD: c.slli s4, 21
+0x56 0x0A
+
+# GOOD: c.slli s4, 22
+0x5A 0x0A
+
+# GOOD: c.slli s4, 23
+0x5E 0x0A
+
+# GOOD: c.slli s4, 24
+0x62 0x0A
+
+# GOOD: c.slli s4, 25
+0x66 0x0A
+
+# GOOD: c.slli s4, 26
+0x6A 0x0A
+
+# GOOD: c.slli s4, 27
+0x6E 0x0A
+
+# GOOD: c.slli s4, 28
+0x72 0x0A
+
+# GOOD: c.slli s4, 29
+0x76 0x0A
+
+# GOOD: c.slli s4, 30
+0x7A 0x0A
+
+# GOOD: c.slli s4, 31
+0x7E 0x0A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 32
+0x02 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 33
+0x06 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 34
+0x0A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 35
+0x0E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 36
+0x12 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 37
+0x16 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 38
+0x1A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 39
+0x1E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 40
+0x22 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 41
+0x26 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 42
+0x2A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 43
+0x2E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 44
+0x32 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 45
+0x36 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 46
+0x3A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 47
+0x3E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 48
+0x42 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 49
+0x46 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 50
+0x4A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 51
+0x4E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 52
+0x52 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 53
+0x56 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 54
+0x5A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 55
+0x5E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 56
+0x62 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 57
+0x66 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 58
+0x6A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 59
+0x6E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 60
+0x72 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 61
+0x76 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 62
+0x7A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s4, 63
+0x7E 0x1A
+
+# GOOD: c.slli64 s5
+0x82 0x0A
+
+# GOOD: c.slli s5, 1
+0x86 0x0A
+
+# GOOD: c.slli s5, 2
+0x8A 0x0A
+
+# GOOD: c.slli s5, 3
+0x8E 0x0A
+
+# GOOD: c.slli s5, 4
+0x92 0x0A
+
+# GOOD: c.slli s5, 5
+0x96 0x0A
+
+# GOOD: c.slli s5, 6
+0x9A 0x0A
+
+# GOOD: c.slli s5, 7
+0x9E 0x0A
+
+# GOOD: c.slli s5, 8
+0xA2 0x0A
+
+# GOOD: c.slli s5, 9
+0xA6 0x0A
+
+# GOOD: c.slli s5, 10
+0xAA 0x0A
+
+# GOOD: c.slli s5, 11
+0xAE 0x0A
+
+# GOOD: c.slli s5, 12
+0xB2 0x0A
+
+# GOOD: c.slli s5, 13
+0xB6 0x0A
+
+# GOOD: c.slli s5, 14
+0xBA 0x0A
+
+# GOOD: c.slli s5, 15
+0xBE 0x0A
+
+# GOOD: c.slli s5, 16
+0xC2 0x0A
+
+# GOOD: c.slli s5, 17
+0xC6 0x0A
+
+# GOOD: c.slli s5, 18
+0xCA 0x0A
+
+# GOOD: c.slli s5, 19
+0xCE 0x0A
+
+# GOOD: c.slli s5, 20
+0xD2 0x0A
+
+# GOOD: c.slli s5, 21
+0xD6 0x0A
+
+# GOOD: c.slli s5, 22
+0xDA 0x0A
+
+# GOOD: c.slli s5, 23
+0xDE 0x0A
+
+# GOOD: c.slli s5, 24
+0xE2 0x0A
+
+# GOOD: c.slli s5, 25
+0xE6 0x0A
+
+# GOOD: c.slli s5, 26
+0xEA 0x0A
+
+# GOOD: c.slli s5, 27
+0xEE 0x0A
+
+# GOOD: c.slli s5, 28
+0xF2 0x0A
+
+# GOOD: c.slli s5, 29
+0xF6 0x0A
+
+# GOOD: c.slli s5, 30
+0xFA 0x0A
+
+# GOOD: c.slli s5, 31
+0xFE 0x0A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 32
+0x82 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 33
+0x86 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 34
+0x8A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 35
+0x8E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 36
+0x92 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 37
+0x96 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 38
+0x9A 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 39
+0x9E 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 40
+0xA2 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 41
+0xA6 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 42
+0xAA 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 43
+0xAE 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 44
+0xB2 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 45
+0xB6 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 46
+0xBA 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 47
+0xBE 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 48
+0xC2 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 49
+0xC6 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 50
+0xCA 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 51
+0xCE 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 52
+0xD2 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 53
+0xD6 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 54
+0xDA 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 55
+0xDE 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 56
+0xE2 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 57
+0xE6 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 58
+0xEA 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 59
+0xEE 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 60
+0xF2 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 61
+0xF6 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 62
+0xFA 0x1A
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s5, 63
+0xFE 0x1A
+
+# GOOD: c.slli64 s6
+0x02 0x0B
+
+# GOOD: c.slli s6, 1
+0x06 0x0B
+
+# GOOD: c.slli s6, 2
+0x0A 0x0B
+
+# GOOD: c.slli s6, 3
+0x0E 0x0B
+
+# GOOD: c.slli s6, 4
+0x12 0x0B
+
+# GOOD: c.slli s6, 5
+0x16 0x0B
+
+# GOOD: c.slli s6, 6
+0x1A 0x0B
+
+# GOOD: c.slli s6, 7
+0x1E 0x0B
+
+# GOOD: c.slli s6, 8
+0x22 0x0B
+
+# GOOD: c.slli s6, 9
+0x26 0x0B
+
+# GOOD: c.slli s6, 10
+0x2A 0x0B
+
+# GOOD: c.slli s6, 11
+0x2E 0x0B
+
+# GOOD: c.slli s6, 12
+0x32 0x0B
+
+# GOOD: c.slli s6, 13
+0x36 0x0B
+
+# GOOD: c.slli s6, 14
+0x3A 0x0B
+
+# GOOD: c.slli s6, 15
+0x3E 0x0B
+
+# GOOD: c.slli s6, 16
+0x42 0x0B
+
+# GOOD: c.slli s6, 17
+0x46 0x0B
+
+# GOOD: c.slli s6, 18
+0x4A 0x0B
+
+# GOOD: c.slli s6, 19
+0x4E 0x0B
+
+# GOOD: c.slli s6, 20
+0x52 0x0B
+
+# GOOD: c.slli s6, 21
+0x56 0x0B
+
+# GOOD: c.slli s6, 22
+0x5A 0x0B
+
+# GOOD: c.slli s6, 23
+0x5E 0x0B
+
+# GOOD: c.slli s6, 24
+0x62 0x0B
+
+# GOOD: c.slli s6, 25
+0x66 0x0B
+
+# GOOD: c.slli s6, 26
+0x6A 0x0B
+
+# GOOD: c.slli s6, 27
+0x6E 0x0B
+
+# GOOD: c.slli s6, 28
+0x72 0x0B
+
+# GOOD: c.slli s6, 29
+0x76 0x0B
+
+# GOOD: c.slli s6, 30
+0x7A 0x0B
+
+# GOOD: c.slli s6, 31
+0x7E 0x0B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 32
+0x02 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 33
+0x06 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 34
+0x0A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 35
+0x0E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 36
+0x12 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 37
+0x16 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 38
+0x1A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 39
+0x1E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 40
+0x22 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 41
+0x26 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 42
+0x2A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 43
+0x2E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 44
+0x32 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 45
+0x36 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 46
+0x3A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 47
+0x3E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 48
+0x42 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 49
+0x46 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 50
+0x4A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 51
+0x4E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 52
+0x52 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 53
+0x56 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 54
+0x5A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 55
+0x5E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 56
+0x62 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 57
+0x66 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 58
+0x6A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 59
+0x6E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 60
+0x72 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 61
+0x76 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 62
+0x7A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s6, 63
+0x7E 0x1B
+
+# GOOD: c.slli64 s7
+0x82 0x0B
+
+# GOOD: c.slli s7, 1
+0x86 0x0B
+
+# GOOD: c.slli s7, 2
+0x8A 0x0B
+
+# GOOD: c.slli s7, 3
+0x8E 0x0B
+
+# GOOD: c.slli s7, 4
+0x92 0x0B
+
+# GOOD: c.slli s7, 5
+0x96 0x0B
+
+# GOOD: c.slli s7, 6
+0x9A 0x0B
+
+# GOOD: c.slli s7, 7
+0x9E 0x0B
+
+# GOOD: c.slli s7, 8
+0xA2 0x0B
+
+# GOOD: c.slli s7, 9
+0xA6 0x0B
+
+# GOOD: c.slli s7, 10
+0xAA 0x0B
+
+# GOOD: c.slli s7, 11
+0xAE 0x0B
+
+# GOOD: c.slli s7, 12
+0xB2 0x0B
+
+# GOOD: c.slli s7, 13
+0xB6 0x0B
+
+# GOOD: c.slli s7, 14
+0xBA 0x0B
+
+# GOOD: c.slli s7, 15
+0xBE 0x0B
+
+# GOOD: c.slli s7, 16
+0xC2 0x0B
+
+# GOOD: c.slli s7, 17
+0xC6 0x0B
+
+# GOOD: c.slli s7, 18
+0xCA 0x0B
+
+# GOOD: c.slli s7, 19
+0xCE 0x0B
+
+# GOOD: c.slli s7, 20
+0xD2 0x0B
+
+# GOOD: c.slli s7, 21
+0xD6 0x0B
+
+# GOOD: c.slli s7, 22
+0xDA 0x0B
+
+# GOOD: c.slli s7, 23
+0xDE 0x0B
+
+# GOOD: c.slli s7, 24
+0xE2 0x0B
+
+# GOOD: c.slli s7, 25
+0xE6 0x0B
+
+# GOOD: c.slli s7, 26
+0xEA 0x0B
+
+# GOOD: c.slli s7, 27
+0xEE 0x0B
+
+# GOOD: c.slli s7, 28
+0xF2 0x0B
+
+# GOOD: c.slli s7, 29
+0xF6 0x0B
+
+# GOOD: c.slli s7, 30
+0xFA 0x0B
+
+# GOOD: c.slli s7, 31
+0xFE 0x0B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 32
+0x82 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 33
+0x86 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 34
+0x8A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 35
+0x8E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 36
+0x92 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 37
+0x96 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 38
+0x9A 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 39
+0x9E 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 40
+0xA2 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 41
+0xA6 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 42
+0xAA 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 43
+0xAE 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 44
+0xB2 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 45
+0xB6 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 46
+0xBA 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 47
+0xBE 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 48
+0xC2 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 49
+0xC6 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 50
+0xCA 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 51
+0xCE 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 52
+0xD2 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 53
+0xD6 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 54
+0xDA 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 55
+0xDE 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 56
+0xE2 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 57
+0xE6 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 58
+0xEA 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 59
+0xEE 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 60
+0xF2 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 61
+0xF6 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 62
+0xFA 0x1B
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s7, 63
+0xFE 0x1B
+
+# GOOD: c.slli64 s8
+0x02 0x0C
+
+# GOOD: c.slli s8, 1
+0x06 0x0C
+
+# GOOD: c.slli s8, 2
+0x0A 0x0C
+
+# GOOD: c.slli s8, 3
+0x0E 0x0C
+
+# GOOD: c.slli s8, 4
+0x12 0x0C
+
+# GOOD: c.slli s8, 5
+0x16 0x0C
+
+# GOOD: c.slli s8, 6
+0x1A 0x0C
+
+# GOOD: c.slli s8, 7
+0x1E 0x0C
+
+# GOOD: c.slli s8, 8
+0x22 0x0C
+
+# GOOD: c.slli s8, 9
+0x26 0x0C
+
+# GOOD: c.slli s8, 10
+0x2A 0x0C
+
+# GOOD: c.slli s8, 11
+0x2E 0x0C
+
+# GOOD: c.slli s8, 12
+0x32 0x0C
+
+# GOOD: c.slli s8, 13
+0x36 0x0C
+
+# GOOD: c.slli s8, 14
+0x3A 0x0C
+
+# GOOD: c.slli s8, 15
+0x3E 0x0C
+
+# GOOD: c.slli s8, 16
+0x42 0x0C
+
+# GOOD: c.slli s8, 17
+0x46 0x0C
+
+# GOOD: c.slli s8, 18
+0x4A 0x0C
+
+# GOOD: c.slli s8, 19
+0x4E 0x0C
+
+# GOOD: c.slli s8, 20
+0x52 0x0C
+
+# GOOD: c.slli s8, 21
+0x56 0x0C
+
+# GOOD: c.slli s8, 22
+0x5A 0x0C
+
+# GOOD: c.slli s8, 23
+0x5E 0x0C
+
+# GOOD: c.slli s8, 24
+0x62 0x0C
+
+# GOOD: c.slli s8, 25
+0x66 0x0C
+
+# GOOD: c.slli s8, 26
+0x6A 0x0C
+
+# GOOD: c.slli s8, 27
+0x6E 0x0C
+
+# GOOD: c.slli s8, 28
+0x72 0x0C
+
+# GOOD: c.slli s8, 29
+0x76 0x0C
+
+# GOOD: c.slli s8, 30
+0x7A 0x0C
+
+# GOOD: c.slli s8, 31
+0x7E 0x0C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 32
+0x02 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 33
+0x06 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 34
+0x0A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 35
+0x0E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 36
+0x12 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 37
+0x16 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 38
+0x1A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 39
+0x1E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 40
+0x22 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 41
+0x26 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 42
+0x2A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 43
+0x2E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 44
+0x32 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 45
+0x36 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 46
+0x3A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 47
+0x3E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 48
+0x42 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 49
+0x46 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 50
+0x4A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 51
+0x4E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 52
+0x52 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 53
+0x56 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 54
+0x5A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 55
+0x5E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 56
+0x62 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 57
+0x66 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 58
+0x6A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 59
+0x6E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 60
+0x72 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 61
+0x76 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 62
+0x7A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s8, 63
+0x7E 0x1C
+
+# GOOD: c.slli64 s9
+0x82 0x0C
+
+# GOOD: c.slli s9, 1
+0x86 0x0C
+
+# GOOD: c.slli s9, 2
+0x8A 0x0C
+
+# GOOD: c.slli s9, 3
+0x8E 0x0C
+
+# GOOD: c.slli s9, 4
+0x92 0x0C
+
+# GOOD: c.slli s9, 5
+0x96 0x0C
+
+# GOOD: c.slli s9, 6
+0x9A 0x0C
+
+# GOOD: c.slli s9, 7
+0x9E 0x0C
+
+# GOOD: c.slli s9, 8
+0xA2 0x0C
+
+# GOOD: c.slli s9, 9
+0xA6 0x0C
+
+# GOOD: c.slli s9, 10
+0xAA 0x0C
+
+# GOOD: c.slli s9, 11
+0xAE 0x0C
+
+# GOOD: c.slli s9, 12
+0xB2 0x0C
+
+# GOOD: c.slli s9, 13
+0xB6 0x0C
+
+# GOOD: c.slli s9, 14
+0xBA 0x0C
+
+# GOOD: c.slli s9, 15
+0xBE 0x0C
+
+# GOOD: c.slli s9, 16
+0xC2 0x0C
+
+# GOOD: c.slli s9, 17
+0xC6 0x0C
+
+# GOOD: c.slli s9, 18
+0xCA 0x0C
+
+# GOOD: c.slli s9, 19
+0xCE 0x0C
+
+# GOOD: c.slli s9, 20
+0xD2 0x0C
+
+# GOOD: c.slli s9, 21
+0xD6 0x0C
+
+# GOOD: c.slli s9, 22
+0xDA 0x0C
+
+# GOOD: c.slli s9, 23
+0xDE 0x0C
+
+# GOOD: c.slli s9, 24
+0xE2 0x0C
+
+# GOOD: c.slli s9, 25
+0xE6 0x0C
+
+# GOOD: c.slli s9, 26
+0xEA 0x0C
+
+# GOOD: c.slli s9, 27
+0xEE 0x0C
+
+# GOOD: c.slli s9, 28
+0xF2 0x0C
+
+# GOOD: c.slli s9, 29
+0xF6 0x0C
+
+# GOOD: c.slli s9, 30
+0xFA 0x0C
+
+# GOOD: c.slli s9, 31
+0xFE 0x0C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 32
+0x82 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 33
+0x86 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 34
+0x8A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 35
+0x8E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 36
+0x92 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 37
+0x96 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 38
+0x9A 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 39
+0x9E 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 40
+0xA2 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 41
+0xA6 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 42
+0xAA 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 43
+0xAE 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 44
+0xB2 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 45
+0xB6 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 46
+0xBA 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 47
+0xBE 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 48
+0xC2 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 49
+0xC6 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 50
+0xCA 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 51
+0xCE 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 52
+0xD2 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 53
+0xD6 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 54
+0xDA 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 55
+0xDE 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 56
+0xE2 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 57
+0xE6 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 58
+0xEA 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 59
+0xEE 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 60
+0xF2 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 61
+0xF6 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 62
+0xFA 0x1C
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s9, 63
+0xFE 0x1C
+
+# GOOD: c.slli64 s10
+0x02 0x0D
+
+# GOOD: c.slli s10, 1
+0x06 0x0D
+
+# GOOD: c.slli s10, 2
+0x0A 0x0D
+
+# GOOD: c.slli s10, 3
+0x0E 0x0D
+
+# GOOD: c.slli s10, 4
+0x12 0x0D
+
+# GOOD: c.slli s10, 5
+0x16 0x0D
+
+# GOOD: c.slli s10, 6
+0x1A 0x0D
+
+# GOOD: c.slli s10, 7
+0x1E 0x0D
+
+# GOOD: c.slli s10, 8
+0x22 0x0D
+
+# GOOD: c.slli s10, 9
+0x26 0x0D
+
+# GOOD: c.slli s10, 10
+0x2A 0x0D
+
+# GOOD: c.slli s10, 11
+0x2E 0x0D
+
+# GOOD: c.slli s10, 12
+0x32 0x0D
+
+# GOOD: c.slli s10, 13
+0x36 0x0D
+
+# GOOD: c.slli s10, 14
+0x3A 0x0D
+
+# GOOD: c.slli s10, 15
+0x3E 0x0D
+
+# GOOD: c.slli s10, 16
+0x42 0x0D
+
+# GOOD: c.slli s10, 17
+0x46 0x0D
+
+# GOOD: c.slli s10, 18
+0x4A 0x0D
+
+# GOOD: c.slli s10, 19
+0x4E 0x0D
+
+# GOOD: c.slli s10, 20
+0x52 0x0D
+
+# GOOD: c.slli s10, 21
+0x56 0x0D
+
+# GOOD: c.slli s10, 22
+0x5A 0x0D
+
+# GOOD: c.slli s10, 23
+0x5E 0x0D
+
+# GOOD: c.slli s10, 24
+0x62 0x0D
+
+# GOOD: c.slli s10, 25
+0x66 0x0D
+
+# GOOD: c.slli s10, 26
+0x6A 0x0D
+
+# GOOD: c.slli s10, 27
+0x6E 0x0D
+
+# GOOD: c.slli s10, 28
+0x72 0x0D
+
+# GOOD: c.slli s10, 29
+0x76 0x0D
+
+# GOOD: c.slli s10, 30
+0x7A 0x0D
+
+# GOOD: c.slli s10, 31
+0x7E 0x0D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 32
+0x02 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 33
+0x06 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 34
+0x0A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 35
+0x0E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 36
+0x12 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 37
+0x16 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 38
+0x1A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 39
+0x1E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 40
+0x22 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 41
+0x26 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 42
+0x2A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 43
+0x2E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 44
+0x32 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 45
+0x36 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 46
+0x3A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 47
+0x3E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 48
+0x42 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 49
+0x46 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 50
+0x4A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 51
+0x4E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 52
+0x52 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 53
+0x56 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 54
+0x5A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 55
+0x5E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 56
+0x62 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 57
+0x66 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 58
+0x6A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 59
+0x6E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 60
+0x72 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 61
+0x76 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 62
+0x7A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s10, 63
+0x7E 0x1D
+
+# GOOD: c.slli64 s11
+0x82 0x0D
+
+# GOOD: c.slli s11, 1
+0x86 0x0D
+
+# GOOD: c.slli s11, 2
+0x8A 0x0D
+
+# GOOD: c.slli s11, 3
+0x8E 0x0D
+
+# GOOD: c.slli s11, 4
+0x92 0x0D
+
+# GOOD: c.slli s11, 5
+0x96 0x0D
+
+# GOOD: c.slli s11, 6
+0x9A 0x0D
+
+# GOOD: c.slli s11, 7
+0x9E 0x0D
+
+# GOOD: c.slli s11, 8
+0xA2 0x0D
+
+# GOOD: c.slli s11, 9
+0xA6 0x0D
+
+# GOOD: c.slli s11, 10
+0xAA 0x0D
+
+# GOOD: c.slli s11, 11
+0xAE 0x0D
+
+# GOOD: c.slli s11, 12
+0xB2 0x0D
+
+# GOOD: c.slli s11, 13
+0xB6 0x0D
+
+# GOOD: c.slli s11, 14
+0xBA 0x0D
+
+# GOOD: c.slli s11, 15
+0xBE 0x0D
+
+# GOOD: c.slli s11, 16
+0xC2 0x0D
+
+# GOOD: c.slli s11, 17
+0xC6 0x0D
+
+# GOOD: c.slli s11, 18
+0xCA 0x0D
+
+# GOOD: c.slli s11, 19
+0xCE 0x0D
+
+# GOOD: c.slli s11, 20
+0xD2 0x0D
+
+# GOOD: c.slli s11, 21
+0xD6 0x0D
+
+# GOOD: c.slli s11, 22
+0xDA 0x0D
+
+# GOOD: c.slli s11, 23
+0xDE 0x0D
+
+# GOOD: c.slli s11, 24
+0xE2 0x0D
+
+# GOOD: c.slli s11, 25
+0xE6 0x0D
+
+# GOOD: c.slli s11, 26
+0xEA 0x0D
+
+# GOOD: c.slli s11, 27
+0xEE 0x0D
+
+# GOOD: c.slli s11, 28
+0xF2 0x0D
+
+# GOOD: c.slli s11, 29
+0xF6 0x0D
+
+# GOOD: c.slli s11, 30
+0xFA 0x0D
+
+# GOOD: c.slli s11, 31
+0xFE 0x0D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 32
+0x82 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 33
+0x86 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 34
+0x8A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 35
+0x8E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 36
+0x92 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 37
+0x96 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 38
+0x9A 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 39
+0x9E 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 40
+0xA2 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 41
+0xA6 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 42
+0xAA 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 43
+0xAE 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 44
+0xB2 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 45
+0xB6 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 46
+0xBA 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 47
+0xBE 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 48
+0xC2 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 49
+0xC6 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 50
+0xCA 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 51
+0xCE 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 52
+0xD2 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 53
+0xD6 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 54
+0xDA 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 55
+0xDE 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 56
+0xE2 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 57
+0xE6 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 58
+0xEA 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 59
+0xEE 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 60
+0xF2 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 61
+0xF6 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 62
+0xFA 0x1D
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli s11, 63
+0xFE 0x1D
+
+# GOOD: c.slli64 t3
+0x02 0x0E
+
+# GOOD: c.slli t3, 1
+0x06 0x0E
+
+# GOOD: c.slli t3, 2
+0x0A 0x0E
+
+# GOOD: c.slli t3, 3
+0x0E 0x0E
+
+# GOOD: c.slli t3, 4
+0x12 0x0E
+
+# GOOD: c.slli t3, 5
+0x16 0x0E
+
+# GOOD: c.slli t3, 6
+0x1A 0x0E
+
+# GOOD: c.slli t3, 7
+0x1E 0x0E
+
+# GOOD: c.slli t3, 8
+0x22 0x0E
+
+# GOOD: c.slli t3, 9
+0x26 0x0E
+
+# GOOD: c.slli t3, 10
+0x2A 0x0E
+
+# GOOD: c.slli t3, 11
+0x2E 0x0E
+
+# GOOD: c.slli t3, 12
+0x32 0x0E
+
+# GOOD: c.slli t3, 13
+0x36 0x0E
+
+# GOOD: c.slli t3, 14
+0x3A 0x0E
+
+# GOOD: c.slli t3, 15
+0x3E 0x0E
+
+# GOOD: c.slli t3, 16
+0x42 0x0E
+
+# GOOD: c.slli t3, 17
+0x46 0x0E
+
+# GOOD: c.slli t3, 18
+0x4A 0x0E
+
+# GOOD: c.slli t3, 19
+0x4E 0x0E
+
+# GOOD: c.slli t3, 20
+0x52 0x0E
+
+# GOOD: c.slli t3, 21
+0x56 0x0E
+
+# GOOD: c.slli t3, 22
+0x5A 0x0E
+
+# GOOD: c.slli t3, 23
+0x5E 0x0E
+
+# GOOD: c.slli t3, 24
+0x62 0x0E
+
+# GOOD: c.slli t3, 25
+0x66 0x0E
+
+# GOOD: c.slli t3, 26
+0x6A 0x0E
+
+# GOOD: c.slli t3, 27
+0x6E 0x0E
+
+# GOOD: c.slli t3, 28
+0x72 0x0E
+
+# GOOD: c.slli t3, 29
+0x76 0x0E
+
+# GOOD: c.slli t3, 30
+0x7A 0x0E
+
+# GOOD: c.slli t3, 31
+0x7E 0x0E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 32
+0x02 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 33
+0x06 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 34
+0x0A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 35
+0x0E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 36
+0x12 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 37
+0x16 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 38
+0x1A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 39
+0x1E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 40
+0x22 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 41
+0x26 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 42
+0x2A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 43
+0x2E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 44
+0x32 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 45
+0x36 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 46
+0x3A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 47
+0x3E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 48
+0x42 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 49
+0x46 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 50
+0x4A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 51
+0x4E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 52
+0x52 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 53
+0x56 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 54
+0x5A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 55
+0x5E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 56
+0x62 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 57
+0x66 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 58
+0x6A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 59
+0x6E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 60
+0x72 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 61
+0x76 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 62
+0x7A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t3, 63
+0x7E 0x1E
+
+# GOOD: c.slli64 t4
+0x82 0x0E
+
+# GOOD: c.slli t4, 1
+0x86 0x0E
+
+# GOOD: c.slli t4, 2
+0x8A 0x0E
+
+# GOOD: c.slli t4, 3
+0x8E 0x0E
+
+# GOOD: c.slli t4, 4
+0x92 0x0E
+
+# GOOD: c.slli t4, 5
+0x96 0x0E
+
+# GOOD: c.slli t4, 6
+0x9A 0x0E
+
+# GOOD: c.slli t4, 7
+0x9E 0x0E
+
+# GOOD: c.slli t4, 8
+0xA2 0x0E
+
+# GOOD: c.slli t4, 9
+0xA6 0x0E
+
+# GOOD: c.slli t4, 10
+0xAA 0x0E
+
+# GOOD: c.slli t4, 11
+0xAE 0x0E
+
+# GOOD: c.slli t4, 12
+0xB2 0x0E
+
+# GOOD: c.slli t4, 13
+0xB6 0x0E
+
+# GOOD: c.slli t4, 14
+0xBA 0x0E
+
+# GOOD: c.slli t4, 15
+0xBE 0x0E
+
+# GOOD: c.slli t4, 16
+0xC2 0x0E
+
+# GOOD: c.slli t4, 17
+0xC6 0x0E
+
+# GOOD: c.slli t4, 18
+0xCA 0x0E
+
+# GOOD: c.slli t4, 19
+0xCE 0x0E
+
+# GOOD: c.slli t4, 20
+0xD2 0x0E
+
+# GOOD: c.slli t4, 21
+0xD6 0x0E
+
+# GOOD: c.slli t4, 22
+0xDA 0x0E
+
+# GOOD: c.slli t4, 23
+0xDE 0x0E
+
+# GOOD: c.slli t4, 24
+0xE2 0x0E
+
+# GOOD: c.slli t4, 25
+0xE6 0x0E
+
+# GOOD: c.slli t4, 26
+0xEA 0x0E
+
+# GOOD: c.slli t4, 27
+0xEE 0x0E
+
+# GOOD: c.slli t4, 28
+0xF2 0x0E
+
+# GOOD: c.slli t4, 29
+0xF6 0x0E
+
+# GOOD: c.slli t4, 30
+0xFA 0x0E
+
+# GOOD: c.slli t4, 31
+0xFE 0x0E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 32
+0x82 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 33
+0x86 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 34
+0x8A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 35
+0x8E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 36
+0x92 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 37
+0x96 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 38
+0x9A 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 39
+0x9E 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 40
+0xA2 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 41
+0xA6 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 42
+0xAA 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 43
+0xAE 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 44
+0xB2 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 45
+0xB6 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 46
+0xBA 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 47
+0xBE 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 48
+0xC2 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 49
+0xC6 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 50
+0xCA 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 51
+0xCE 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 52
+0xD2 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 53
+0xD6 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 54
+0xDA 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 55
+0xDE 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 56
+0xE2 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 57
+0xE6 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 58
+0xEA 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 59
+0xEE 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 60
+0xF2 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 61
+0xF6 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 62
+0xFA 0x1E
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t4, 63
+0xFE 0x1E
+
+# GOOD: c.slli64 t5
+0x02 0x0F
+
+# GOOD: c.slli t5, 1
+0x06 0x0F
+
+# GOOD: c.slli t5, 2
+0x0A 0x0F
+
+# GOOD: c.slli t5, 3
+0x0E 0x0F
+
+# GOOD: c.slli t5, 4
+0x12 0x0F
+
+# GOOD: c.slli t5, 5
+0x16 0x0F
+
+# GOOD: c.slli t5, 6
+0x1A 0x0F
+
+# GOOD: c.slli t5, 7
+0x1E 0x0F
+
+# GOOD: c.slli t5, 8
+0x22 0x0F
+
+# GOOD: c.slli t5, 9
+0x26 0x0F
+
+# GOOD: c.slli t5, 10
+0x2A 0x0F
+
+# GOOD: c.slli t5, 11
+0x2E 0x0F
+
+# GOOD: c.slli t5, 12
+0x32 0x0F
+
+# GOOD: c.slli t5, 13
+0x36 0x0F
+
+# GOOD: c.slli t5, 14
+0x3A 0x0F
+
+# GOOD: c.slli t5, 15
+0x3E 0x0F
+
+# GOOD: c.slli t5, 16
+0x42 0x0F
+
+# GOOD: c.slli t5, 17
+0x46 0x0F
+
+# GOOD: c.slli t5, 18
+0x4A 0x0F
+
+# GOOD: c.slli t5, 19
+0x4E 0x0F
+
+# GOOD: c.slli t5, 20
+0x52 0x0F
+
+# GOOD: c.slli t5, 21
+0x56 0x0F
+
+# GOOD: c.slli t5, 22
+0x5A 0x0F
+
+# GOOD: c.slli t5, 23
+0x5E 0x0F
+
+# GOOD: c.slli t5, 24
+0x62 0x0F
+
+# GOOD: c.slli t5, 25
+0x66 0x0F
+
+# GOOD: c.slli t5, 26
+0x6A 0x0F
+
+# GOOD: c.slli t5, 27
+0x6E 0x0F
+
+# GOOD: c.slli t5, 28
+0x72 0x0F
+
+# GOOD: c.slli t5, 29
+0x76 0x0F
+
+# GOOD: c.slli t5, 30
+0x7A 0x0F
+
+# GOOD: c.slli t5, 31
+0x7E 0x0F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 32
+0x02 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 33
+0x06 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 34
+0x0A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 35
+0x0E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 36
+0x12 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 37
+0x16 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 38
+0x1A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 39
+0x1E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 40
+0x22 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 41
+0x26 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 42
+0x2A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 43
+0x2E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 44
+0x32 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 45
+0x36 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 46
+0x3A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 47
+0x3E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 48
+0x42 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 49
+0x46 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 50
+0x4A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 51
+0x4E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 52
+0x52 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 53
+0x56 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 54
+0x5A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 55
+0x5E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 56
+0x62 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 57
+0x66 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 58
+0x6A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 59
+0x6E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 60
+0x72 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 61
+0x76 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 62
+0x7A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t5, 63
+0x7E 0x1F
+
+# GOOD: c.slli64 t6
+0x82 0x0F
+
+# GOOD: c.slli t6, 1
+0x86 0x0F
+
+# GOOD: c.slli t6, 2
+0x8A 0x0F
+
+# GOOD: c.slli t6, 3
+0x8E 0x0F
+
+# GOOD: c.slli t6, 4
+0x92 0x0F
+
+# GOOD: c.slli t6, 5
+0x96 0x0F
+
+# GOOD: c.slli t6, 6
+0x9A 0x0F
+
+# GOOD: c.slli t6, 7
+0x9E 0x0F
+
+# GOOD: c.slli t6, 8
+0xA2 0x0F
+
+# GOOD: c.slli t6, 9
+0xA6 0x0F
+
+# GOOD: c.slli t6, 10
+0xAA 0x0F
+
+# GOOD: c.slli t6, 11
+0xAE 0x0F
+
+# GOOD: c.slli t6, 12
+0xB2 0x0F
+
+# GOOD: c.slli t6, 13
+0xB6 0x0F
+
+# GOOD: c.slli t6, 14
+0xBA 0x0F
+
+# GOOD: c.slli t6, 15
+0xBE 0x0F
+
+# GOOD: c.slli t6, 16
+0xC2 0x0F
+
+# GOOD: c.slli t6, 17
+0xC6 0x0F
+
+# GOOD: c.slli t6, 18
+0xCA 0x0F
+
+# GOOD: c.slli t6, 19
+0xCE 0x0F
+
+# GOOD: c.slli t6, 20
+0xD2 0x0F
+
+# GOOD: c.slli t6, 21
+0xD6 0x0F
+
+# GOOD: c.slli t6, 22
+0xDA 0x0F
+
+# GOOD: c.slli t6, 23
+0xDE 0x0F
+
+# GOOD: c.slli t6, 24
+0xE2 0x0F
+
+# GOOD: c.slli t6, 25
+0xE6 0x0F
+
+# GOOD: c.slli t6, 26
+0xEA 0x0F
+
+# GOOD: c.slli t6, 27
+0xEE 0x0F
+
+# GOOD: c.slli t6, 28
+0xF2 0x0F
+
+# GOOD: c.slli t6, 29
+0xF6 0x0F
+
+# GOOD: c.slli t6, 30
+0xFA 0x0F
+
+# GOOD: c.slli t6, 31
+0xFE 0x0F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 32
+0x82 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 33
+0x86 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 34
+0x8A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 35
+0x8E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 36
+0x92 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 37
+0x96 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 38
+0x9A 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 39
+0x9E 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 40
+0xA2 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 41
+0xA6 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 42
+0xAA 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 43
+0xAE 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 44
+0xB2 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 45
+0xB6 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 46
+0xBA 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 47
+0xBE 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 48
+0xC2 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 49
+0xC6 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 50
+0xCA 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 51
+0xCE 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 52
+0xD2 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 53
+0xD6 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 54
+0xDA 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 55
+0xDE 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 56
+0xE2 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 57
+0xE6 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 58
+0xEA 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 59
+0xEE 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 60
+0xF2 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 61
+0xF6 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 62
+0xFA 0x1F
+
+# BAD32: invalid instruction encoding
+# GOOD64: c.slli t6, 63
+0xFE 0x1F

@@ -24,11 +24,13 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   if (LIBC_UNLIKELY(x_abs >= 0x42b4'0000U || x_abs <= 0x3da0'0000U)) {
     // |x| <= 0.078125
     if (x_abs <= 0x3da0'0000U) {
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       // |x| = 0.0005589424981735646724700927734375
       if (LIBC_UNLIKELY(x_abs == 0x3a12'85ffU)) {
         if (fputil::fenv_is_round_to_nearest())
           return x;
       }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
       // |x| <= 2^-26
       if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
