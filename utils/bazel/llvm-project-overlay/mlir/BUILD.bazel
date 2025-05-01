@@ -9571,6 +9571,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":FuncDialect",
+        ":IR",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
