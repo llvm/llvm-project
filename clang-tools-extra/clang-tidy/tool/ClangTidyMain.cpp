@@ -639,14 +639,15 @@ int clangTidyMain(int argc, const char **argv) {
         std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>>
         RawOptions = OptionsProvider->getRawOptions(FilePath);
 
-    if (RawOptions) {
-      for (const std::string &Check : EnabledChecks) {
-        for (const auto &[Opts, Source] : llvm::reverse(*RawOptions)) {
-          if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
-            llvm::outs() << "'" << Check << "' is enabled in the " << Source
-                         << ".\n";
-            break;
-          }
+    if (!RawOptions)
+      return 1;
+
+    for (const std::string &Check : EnabledChecks) {
+      for (const auto &[Opts, Source] : llvm::reverse(*RawOptions)) {
+        if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
+          llvm::outs() << "'" << Check << "' is enabled in the " << Source
+                       << ".\n";
+          break;
         }
       }
     }
