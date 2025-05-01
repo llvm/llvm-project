@@ -5321,20 +5321,22 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
-///   isImplicitCode: true)
+///   isImplicitCode: true, atomGroup: 1, atomRank: 1)
 bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(column, ColumnField, );                                             \
   REQUIRED(scope, MDField, (/* AllowNull */ false));                           \
   OPTIONAL(inlinedAt, MDField, );                                              \
-  OPTIONAL(isImplicitCode, MDBoolField, (false));
+  OPTIONAL(isImplicitCode, MDBoolField, (false));                              \
+  OPTIONAL(atomGroup, MDUnsignedField, (0, UINT64_MAX));                       \
+  OPTIONAL(atomRank, MDUnsignedField, (0, UINT8_MAX));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result =
-      GET_OR_DISTINCT(DILocation, (Context, line.Val, column.Val, scope.Val,
-                                   inlinedAt.Val, isImplicitCode.Val));
+  Result = GET_OR_DISTINCT(
+      DILocation, (Context, line.Val, column.Val, scope.Val, inlinedAt.Val,
+                   isImplicitCode.Val, atomGroup.Val, atomRank.Val));
   return false;
 }
 
