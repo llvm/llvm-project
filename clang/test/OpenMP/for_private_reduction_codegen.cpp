@@ -49,6 +49,7 @@ void do_red(int n, int *v, int &sum_v)
          }
         return 0;
  }
+
 //.
 // CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 // CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
@@ -235,7 +236,7 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK-NEXT:    [[COERCE_DIVE12:%.*]] = getelementptr inbounds nuw [[CLASS_SUM]], ptr [[REF_TMP10]], i32 0, i32 0
 // CHECK-NEXT:    store i32 [[CALL11]], ptr [[COERCE_DIVE12]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RESULT]], ptr align 4 [[REF_TMP10]], i64 4, i1 false)
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 @.omp.reduction..internal_private_var, ptr align 16 [[RESULT]], i64 4, i1 true)
+// CHECK-NEXT:    store ptr [[RESULT]], ptr @.omp.reduction..internal_private_var, align 4
 // CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction_critical.var)
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP15:%.*]] = load [[CLASS_SUM]], ptr @.omp.reduction..internal_private_var, align 4
