@@ -7455,6 +7455,9 @@ def err_tentative_def_incomplete_type : Error<
 def warn_tentative_incomplete_array : Warning<
   "tentative array definition assumed to have one element">,
   InGroup<DiagGroup<"tentative-definition-array">>;
+def warn_cxx_compat_tentative_definition : Warning<
+  "duplicate declaration of %0 is invalid in C++">,
+  InGroup<TentativeDefnCompat>, DefaultIgnore;
 def err_typecheck_incomplete_array_needs_initializer : Error<
   "definition of variable with array type needs an explicit size "
   "or an initializer">;
