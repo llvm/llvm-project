@@ -635,10 +635,13 @@ public:
       m_synth_frontend_up->Update();
 
 #define COMPONENT(Name, PrettyName, ID)                                        \
-  m_##Name = m_synth_frontend_up                                               \
-                 ->GetChildAtIndex(                                            \
-                     m_synth_frontend_up->GetIndexOfChildWithName(g__##Name))  \
-                 .get();                                                       \
+  auto index_or_err = m_synth_frontend_up->GetIndexOfChildWithName(g__##Name); \
+  if (!index_or_err) {                                                         \
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(),  \
+                   "{0}");                                                     \
+    return ChildCacheState::eRefetch;                                          \
+  }                                                                            \
+  m_##Name = m_synth_frontend_up->GetChildAtIndex(*index_or_err).get();        \
   if (m_##Name)                                                                \
     m_##Name->SetName(GetNameFor##Name());
 #include "URLComponents.def"
@@ -650,12 +653,13 @@ public:
 
   bool MightHaveChildren() override { return true; }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
 #define COMPONENT(Name, PrettyName, ID)                                        \
   if (name == GetNameFor##Name())                                              \
     return ID;
 #include "URLComponents.def"
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
 private:

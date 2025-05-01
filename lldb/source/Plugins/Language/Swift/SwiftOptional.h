@@ -50,7 +50,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
   lldb::ValueObjectSP GetSyntheticValue() override;
 
 private:

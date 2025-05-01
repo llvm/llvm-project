@@ -116,12 +116,14 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(uint32_t idx) {
   return child_sp;
 }
 
-size_t ObjCRuntimeSyntheticProvider::FrontEnd::GetIndexOfChildWithName(
+llvm::Expected<size_t>
+ObjCRuntimeSyntheticProvider::FrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   for (size_t idx = 0; idx < CalculateNumChildrenIgnoringErrors(); idx++) {
     const auto &ivar_info(m_provider->GetIVarAtIndex(idx));
     if (name == ivar_info.m_name)
       return idx + GetNumBases();
   }
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }

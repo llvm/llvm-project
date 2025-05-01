@@ -508,14 +508,16 @@ bool lldb_private::formatters::swift::ArraySyntheticFrontEnd::
   return true;
 }
 
-size_t lldb_private::formatters::swift::ArraySyntheticFrontEnd::
+llvm::Expected<size_t> lldb_private::formatters::swift::ArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_array_buffer)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
+  if (idx == UINT32_MAX || idx >= CalculateNumChildrenIgnoringErrors())
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   return idx;
 }
 
