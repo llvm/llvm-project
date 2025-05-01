@@ -1366,6 +1366,7 @@ public:
   /// This function handles case when \p loBit <= \p hiBit.
   void setBits(unsigned loBit, unsigned hiBit) {
     assert(hiBit <= BitWidth && "hiBit out of range");
+    assert(loBit <= BitWidth && "loBit out of range");
     assert(loBit <= hiBit && "loBit greater than hiBit");
     if (loBit == hiBit)
       return;
