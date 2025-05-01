@@ -918,26 +918,34 @@ void JumpScopeChecker::DiagnoseIndirectOrAsmJump(Stmt *Jump, unsigned JumpScope,
       S.Diag(Scopes[I].Loc, Scopes[I].OutDiag);
     }
 
-  SmallVector<unsigned, 10> ToScopesCXX98Compat;
+  SmallVector<unsigned, 10> ToScopesCXX98Compat, ToScopesCppCompat;
 
   // Now walk into the scopes containing the label whose address was taken.
   for (unsigned I = TargetScope; I != Common; I = Scopes[I].ParentScope)
     if (IsCXX98CompatWarning(S, Scopes[I].InDiag))
       ToScopesCXX98Compat.push_back(I);
+    else if (IsCppCompatWarning(S, Scopes[I].InDiag))
+      ToScopesCppCompat.push_back(I);
     else if (Scopes[I].InDiag) {
       DiagnoseIndirectOrAsmJumpStmt(S, Jump, Target, Diagnosed);
       S.Diag(Scopes[I].Loc, Scopes[I].InDiag);
     }
 
-  // Diagnose this jump if it would be ill-formed in C++98.
-  if (!Diagnosed && !ToScopesCXX98Compat.empty()) {
+  // Diagnose this jump if it would be ill-formed in C++[98].
+  if (!Diagnosed) {
     bool IsAsmGoto = isa<GCCAsmStmt>(Jump);
-    S.Diag(Jump->getBeginLoc(),
-           diag::warn_cxx98_compat_indirect_goto_in_protected_scope)
-        << IsAsmGoto;
-    S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target)
-        << IsAsmGoto;
-    NoteJumpIntoScopes(ToScopesCXX98Compat);
+    auto Diag = [&](unsigned DiagId, const SmallVectorImpl<unsigned> &Notes) {
+      S.Diag(Jump->getBeginLoc(), DiagId) << IsAsmGoto;
+      S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target)
+          << IsAsmGoto;
+      NoteJumpIntoScopes(Notes);
+    };
+    if (!ToScopesCXX98Compat.empty())
+      Diag(diag::warn_cxx98_compat_indirect_goto_in_protected_scope,
+           ToScopesCXX98Compat);
+    else if (!ToScopesCppCompat.empty())
+      Diag(diag::warn_cpp_compat_indirect_goto_in_protected_scope,
+           ToScopesCppCompat);
   }
 }
 

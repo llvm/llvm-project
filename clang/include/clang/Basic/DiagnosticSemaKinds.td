@@ -6579,6 +6579,10 @@ def err_indirect_goto_in_protected_scope : Error<
 def warn_cxx98_compat_indirect_goto_in_protected_scope : Warning<
   "jump from this %select{indirect|asm}0 goto statement to one of its possible targets "
   "is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_indirect_goto_in_protected_scope : Warning<
+  "jump from this %select{indirect|asm}0 goto statement to one of its possible "
+  "targets is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
 def note_indirect_goto_target : Note<
   "possible target of %select{indirect|asm}0 goto statement">;
 def note_protected_by_variable_init : Note<
