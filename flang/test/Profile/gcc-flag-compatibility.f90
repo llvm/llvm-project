@@ -9,23 +9,16 @@
 ! PROFILE-GEN: @__profc_{{_?}}main = {{(private|internal)}} global [1 x i64] zeroinitializer, section
 ! PROFILE-GEN: @__profd_{{_?}}main =
 
-
-
 ! Check that -fprofile-use=some/path/file.prof reads some/path/file.prof
 ! This uses LLVM IR format profile.
 ! RUN: rm -rf %t.dir
 ! RUN: mkdir -p %t.dir/some/path
 ! RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility_IR.proftext -o %t.dir/some/path/file.prof
 ! RUN: %flang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof | FileCheck -check-prefix=PROFILE-USE-IR1 %s
-!
-
-
-
 ! RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility_IR_entry.proftext -o %t.dir/some/path/file.prof
 ! RUN: %flang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof | FileCheck -check-prefix=PROFILE-USE-IR2 %s
 ! PROFILE-USE-IR1: = !{!"branch_weights", i32 100, i32 1}
 ! PROFILE-USE-IR2: = !{!"branch_weights", i32 1, i32 100}
-
 
 program main
   implicit none
