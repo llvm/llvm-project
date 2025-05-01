@@ -66,7 +66,7 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
        ++char_ptr) {
     if (*char_ptr == '\0')
-      return char_ptr - src;
+      return static_cast<size_t>(char_ptr - src);
   }
   // Step 2: read blocks
   for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
@@ -77,7 +77,7 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   for (; *char_ptr != '\0'; ++char_ptr) {
     ;
   }
-  return char_ptr - src;
+  return static_cast<size_t>(char_ptr - src);
 }
 
 // Returns the length of a string, denoted by the first occurrence
@@ -169,7 +169,7 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
   for (; *src && !bitset.test(*reinterpret_cast<const unsigned char *>(src));
        ++src)
     ;
-  return src - initial;
+  return static_cast<size_t>(src - initial);
 }
 
 // Given the similarities between strtok and strtok_r, we can implement both
@@ -189,12 +189,14 @@ LIBC_INLINE char *string_token(char *__restrict src,
   if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
     return nullptr;
 
+  static_assert(sizeof(char) == sizeof(cpp::byte),
+                "bitset of 256 assumes char is 8 bits");
   cpp::bitset<256> delimiter_set;
   for (; *delimiter_string != '\0'; ++delimiter_string)
-    delimiter_set.set(*delimiter_string);
+    delimiter_set.set(static_cast<size_t>(*delimiter_string));
 
   if constexpr (SkipDelim)
-    for (; *src != '\0' && delimiter_set.test(*src); ++src)
+    for (; *src != '\0' && delimiter_set.test(static_cast<size_t>(*src)); ++src)
       ;
   if (*src == '\0') {
     *saveptr = src;
@@ -202,7 +204,7 @@ LIBC_INLINE char *string_token(char *__restrict src,
   }
   char *token = src;
   for (; *src != '\0'; ++src) {
-    if (delimiter_set.test(*src)) {
+    if (delimiter_set.test(static_cast<size_t>(*src))) {
       *src = '\0';
       ++src;
       break;

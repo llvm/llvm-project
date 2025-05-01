@@ -17,7 +17,7 @@ define dso_local double @loadd(ptr nocapture readonly %a) local_unnamed_addr #0 
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 2(r3)
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    addi r1, r1, 32
 ; P8-NEXT:    ld r0, 16(r1)
@@ -37,7 +37,7 @@ define dso_local double @loadd(ptr nocapture readonly %a) local_unnamed_addr #0 
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 2(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __extendsfdf2
 ; SOFT-NEXT:    nop
@@ -61,7 +61,7 @@ define dso_local float @loadf(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 2(r3)
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    addi r1, r1, 32
 ; P8-NEXT:    ld r0, 16(r1)
@@ -81,7 +81,7 @@ define dso_local float @loadf(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 2(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    addi r1, r1, 32
 ; SOFT-NEXT:    ld r0, 16(r1)
@@ -130,9 +130,9 @@ define dso_local void @stored(ptr nocapture %a, double %b) local_unnamed_addr #0
 ; SOFT-NEXT:    bl __truncdfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -156,7 +156,7 @@ define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr #0 
 ; P8-NEXT:    stdu r1, -48(r1)
 ; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r3
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    sth r3, 0(r30)
 ; P8-NEXT:    addi r1, r1, 48
@@ -179,12 +179,12 @@ define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr #0 
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    clrldi r3, r4, 32
 ; SOFT-NEXT:    std r0, 64(r1)
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -220,9 +220,9 @@ define void @test_load_store(ptr %in, ptr %out) #0 {
 ; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
 ; SOFT-NEXT:    lhz r3, 0(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -279,7 +279,7 @@ define float @test_extend32(ptr %addr) #0 {
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    addi r1, r1, 32
 ; P8-NEXT:    ld r0, 16(r1)
@@ -298,7 +298,7 @@ define float @test_extend32(ptr %addr) #0 {
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    addi r1, r1, 32
 ; SOFT-NEXT:    ld r0, 16(r1)
@@ -315,7 +315,7 @@ define double @test_extend64(ptr %addr) #0 {
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    addi r1, r1, 32
 ; P8-NEXT:    ld r0, 16(r1)
@@ -334,7 +334,7 @@ define double @test_extend64(ptr %addr) #0 {
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __extendsfdf2
 ; SOFT-NEXT:    nop
@@ -354,7 +354,7 @@ define void @test_trunc32(float %in, ptr %addr) #0 {
 ; P8-NEXT:    stdu r1, -48(r1)
 ; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    sth r3, 0(r30)
 ; P8-NEXT:    addi r1, r1, 48
@@ -377,12 +377,12 @@ define void @test_trunc32(float %in, ptr %addr) #0 {
 ; SOFT-NEXT:    clrldi r3, r3, 32
 ; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -427,9 +427,9 @@ define void @test_trunc64(double %in, ptr %addr) #0 {
 ; SOFT-NEXT:    bl __truncdfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -448,7 +448,7 @@ define i64 @test_fptosi_i64(ptr %p) #0 {
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xscvdpsxds f0, f1
 ; P8-NEXT:    mffprd r3, f0
@@ -472,7 +472,7 @@ define i64 @test_fptosi_i64(ptr %p) #0 {
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __fixsfdi
 ; SOFT-NEXT:    nop
@@ -494,7 +494,7 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    xscvsxdsp f1, f0
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    sth r3, 0(r30)
 ; P8-NEXT:    addi r1, r1, 48
@@ -522,12 +522,12 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; SOFT-NEXT:    bl __floatdisf
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 32
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -546,7 +546,7 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xscvdpuxds f0, f1
 ; P8-NEXT:    mffprd r3, f0
@@ -570,7 +570,7 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __fixunssfdi
 ; SOFT-NEXT:    nop
@@ -592,7 +592,7 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    xscvuxdsp f1, f0
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    sth r3, 0(r30)
 ; P8-NEXT:    addi r1, r1, 48
@@ -619,12 +619,12 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; SOFT-NEXT:    mr r30, r4
 ; SOFT-NEXT:    bl __floatundisf
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -651,19 +651,19 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; P8-NEXT:    stxvd2x vs62, r1, r4 # 16-byte Folded Spill
 ; P8-NEXT:    li r4, 80
 ; P8-NEXT:    stxvd2x vs63, r1, r4 # 16-byte Folded Spill
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    lhz r3, 2(r30)
 ; P8-NEXT:    xxlor vs63, f1, f1
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    lhz r3, 4(r30)
 ; P8-NEXT:    xxlor vs62, f1, f1
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    lhz r3, 0(r30)
 ; P8-NEXT:    xxlor vs61, f1, f1
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 80
 ; P8-NEXT:    xxmrghd vs0, vs61, vs1
@@ -714,19 +714,19 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; SOFT-NEXT:    std r0, 96(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    lhz r3, 0(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r29, r3
 ; SOFT-NEXT:    lhz r3, 2(r30)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r28, r3
 ; SOFT-NEXT:    lhz r3, 4(r30)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r27, r3
 ; SOFT-NEXT:    lhz r3, 6(r30)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r6, r3
 ; SOFT-NEXT:    mr r3, r29
@@ -759,19 +759,19 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; P8-NEXT:    stxvd2x vs62, r1, r4 # 16-byte Folded Spill
 ; P8-NEXT:    li r4, 80
 ; P8-NEXT:    stxvd2x vs63, r1, r4 # 16-byte Folded Spill
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    lhz r3, 4(r30)
 ; P8-NEXT:    xxlor vs63, f1, f1
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    lhz r3, 2(r30)
 ; P8-NEXT:    xxlor vs62, f1, f1
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    lhz r3, 0(r30)
 ; P8-NEXT:    xxlor vs61, f1, f1
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 80
 ; P8-NEXT:    xxmrghd vs35, vs63, vs62
@@ -816,25 +816,25 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; SOFT-NEXT:    std r0, 96(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    lhz r3, 0(r3)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __extendsfdf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r29, r3
 ; SOFT-NEXT:    lhz r3, 2(r30)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __extendsfdf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r28, r3
 ; SOFT-NEXT:    lhz r3, 4(r30)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __extendsfdf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r27, r3
 ; SOFT-NEXT:    lhz r3, 6(r30)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __extendsfdf2
 ; SOFT-NEXT:    nop
@@ -870,21 +870,21 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; P8-NEXT:    stxvd2x vs63, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    mr r30, r5
 ; P8-NEXT:    vmr v31, v2
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxswapd vs0, vs63
 ; P8-NEXT:    mr r29, r3
 ; P8-NEXT:    xscvspdpn f1, vs0
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxsldwi vs0, vs63, vs63, 1
 ; P8-NEXT:    mr r28, r3
 ; P8-NEXT:    xscvspdpn f1, vs0
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xscvspdpn f1, vs63
 ; P8-NEXT:    mr r27, r3
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    sth r3, 6(r30)
 ; P8-NEXT:    li r3, 48
@@ -939,48 +939,48 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; SOFT-NEXT:    mr r30, r7
 ; SOFT-NEXT:    mr r29, r5
 ; SOFT-NEXT:    mr r28, r4
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r26, r3
 ; SOFT-NEXT:    clrldi r3, r29, 32
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r29, r3
 ; SOFT-NEXT:    clrldi r3, r28, 32
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r28, r3
 ; SOFT-NEXT:    clrldi r3, r27, 32
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r27, r3
 ; SOFT-NEXT:    clrldi r3, r28, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r28, r3
 ; SOFT-NEXT:    clrldi r3, r29, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r29, r3
 ; SOFT-NEXT:    clrldi r3, r26, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 6(r30)
 ; SOFT-NEXT:    mr r3, r29
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 4(r30)
 ; SOFT-NEXT:    mr r3, r28
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 2(r30)
 ; SOFT-NEXT:    mr r3, r27
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 80
@@ -1093,33 +1093,33 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; SOFT-NEXT:    bl __truncdfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r27, r3
 ; SOFT-NEXT:    clrldi r3, r28, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r28, r3
 ; SOFT-NEXT:    clrldi r3, r29, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r29, r3
 ; SOFT-NEXT:    clrldi r3, r26, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 6(r30)
 ; SOFT-NEXT:    mr r3, r29
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 4(r30)
 ; SOFT-NEXT:    mr r3, r28
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 2(r30)
 ; SOFT-NEXT:    mr r3, r27
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 80
@@ -1145,15 +1145,15 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ; P8-NEXT:    std r0, 80(r1)
 ; P8-NEXT:    mr r30, r3
 ; P8-NEXT:    lhz r3, 0(r4)
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    mtfprwa f0, r30
 ; P8-NEXT:    fmr f31, f1
 ; P8-NEXT:    xscvsxdsp f1, f0
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    clrldi r3, r3, 48
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xsaddsp f1, f31, f1
 ; P8-NEXT:    addi r1, r1, 64
@@ -1187,17 +1187,17 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ; SOFT-NEXT:    std r0, 80(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    lhz r3, 0(r4)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r29, r3
 ; SOFT-NEXT:    extsw r3, r30
 ; SOFT-NEXT:    bl __floatsisf
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 32
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r4, r3
 ; SOFT-NEXT:    mr r3, r29
@@ -1221,10 +1221,10 @@ define half @PR40273(half) #0 {
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
-; P8-NEXT:    bl __gnu_f2h_ieee
+; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    clrldi r3, r3, 48
-; P8-NEXT:    bl __gnu_h2f_ieee
+; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    fmr f0, f1
 ; P8-NEXT:    xxlxor f1, f1, f1
@@ -1260,7 +1260,7 @@ define half @PR40273(half) #0 {
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    clrldi r3, r3, 48
 ; SOFT-NEXT:    std r0, 48(r1)
-; SOFT-NEXT:    bl __gnu_h2f_ieee
+; SOFT-NEXT:    bl __extendhfsf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    li r4, 0
 ; SOFT-NEXT:    bl __nesf2
@@ -1268,7 +1268,7 @@ define half @PR40273(half) #0 {
 ; SOFT-NEXT:    cmplwi r3, 0
 ; SOFT-NEXT:    lis r3, 16256
 ; SOFT-NEXT:    iseleq r3, 0, r3
-; SOFT-NEXT:    bl __gnu_f2h_ieee
+; SOFT-NEXT:    bl __truncsfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    addi r1, r1, 32
 ; SOFT-NEXT:    ld r0, 16(r1)

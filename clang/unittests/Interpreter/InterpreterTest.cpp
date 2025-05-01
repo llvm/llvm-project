@@ -43,7 +43,7 @@ static std::unique_ptr<Interpreter>
 createInterpreter(const Args &ExtraArgs = {},
                   DiagnosticConsumer *Client = nullptr) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
-  ClangArgs.insert(ClangArgs.end(), ExtraArgs.begin(), ExtraArgs.end());
+  llvm::append_range(ClangArgs, ExtraArgs);
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgs);
   auto CI = cantFail(CB.CreateCpp());
@@ -106,6 +106,13 @@ TEST_F(InterpreterTest, Errors) {
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 
   auto RecoverErr = Interp->Parse("int var1 = 42;");
+  EXPECT_TRUE(!!RecoverErr);
+
+  Err = Interp->Parse("try { throw 1; } catch { 0; }").takeError();
+  EXPECT_THAT(DiagnosticOutput, HasSubstr("error: expected '('"));
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  RecoverErr = Interp->Parse("var1 = 424;");
   EXPECT_TRUE(!!RecoverErr);
 }
 

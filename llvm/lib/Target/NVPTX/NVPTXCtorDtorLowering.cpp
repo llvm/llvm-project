@@ -50,38 +50,10 @@ static std::string getHash(StringRef Str) {
   return llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
 }
 
-static void addKernelMetadata(Module &M, Function *F) {
-  llvm::LLVMContext &Ctx = M.getContext();
-
-  // Get "nvvm.annotations" metadata node.
-  llvm::NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-
-  // This kernel is only to be called single-threaded.
-  llvm::Metadata *ThreadXMDVals[] = {
-      llvm::ConstantAsMetadata::get(F), llvm::MDString::get(Ctx, "maxntidx"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-  llvm::Metadata *ThreadYMDVals[] = {
-      llvm::ConstantAsMetadata::get(F), llvm::MDString::get(Ctx, "maxntidy"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-  llvm::Metadata *ThreadZMDVals[] = {
-      llvm::ConstantAsMetadata::get(F), llvm::MDString::get(Ctx, "maxntidz"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-
-  llvm::Metadata *BlockMDVals[] = {
-      llvm::ConstantAsMetadata::get(F),
-      llvm::MDString::get(Ctx, "maxclusterrank"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-
-  // Append metadata to nvvm.annotations.
+static void addKernelAttrs(Function *F) {
+  F->addFnAttr("nvvm.maxclusterrank", "1");
+  F->addFnAttr("nvvm.maxntid", "1");
   F->setCallingConv(CallingConv::PTX_Kernel);
-  MD->addOperand(llvm::MDNode::get(Ctx, ThreadXMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, ThreadYMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, ThreadZMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, BlockMDVals));
 }
 
 static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
@@ -93,7 +65,7 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
   Function *InitOrFiniKernel = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
       GlobalValue::WeakODRLinkage, 0, InitOrFiniKernelName, &M);
-  addKernelMetadata(M, InitOrFiniKernel);
+  addKernelAttrs(InitOrFiniKernel);
 
   return InitOrFiniKernel;
 }
@@ -284,7 +256,6 @@ PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
 }
 
 char NVPTXCtorDtorLoweringLegacy::ID = 0;
-char &llvm::NVPTXCtorDtorLoweringLegacyPassID = NVPTXCtorDtorLoweringLegacy::ID;
 INITIALIZE_PASS(NVPTXCtorDtorLoweringLegacy, DEBUG_TYPE,
                 "Lower ctors and dtors for NVPTX", false, false)
 

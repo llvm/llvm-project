@@ -45,4 +45,30 @@ subroutine unroll
   ! CHECK: !DIR$ UNROLL 2
   do i=1,10
   enddo
+  !dir$ nounroll
+  ! CHECK: !DIR$ NOUNROLL 
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine unroll_and_jam
+  !dir$ unroll_and_jam
+  ! CHECK: !DIR$ UNROLL_AND_JAM
+  do i=1,10
+  enddo
+  !dir$ unroll_and_jam 2
+  ! CHECK: !DIR$ UNROLL_AND_JAM 2
+  do i=1,10
+  enddo
+  !dir$ nounroll_and_jam
+  ! CHECK: !DIR$ NOUNROLL_AND_JAM 
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine no_vector
+  !dir$ novector
+  ! CHECK: !DIR$ NOVECTOR
+  do i=1,10
+  enddo
 end subroutine

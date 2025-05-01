@@ -53,8 +53,7 @@ define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK:       [[VECTOR_BODY4]]:
 ; CHECK-NEXT:    [[INDEX5:%.*]] = phi i64 [ 0, %[[VECTOR_PH3]] ], [ [[INDEX_NEXT8:%.*]], %[[VECTOR_BODY4]] ]
 ; CHECK-NEXT:    [[VEC_IND6:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH3]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VECTOR_BODY4]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX5]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[INDEX5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[VEC_IND6]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX5]], 4

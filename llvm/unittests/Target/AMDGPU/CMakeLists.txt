@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   GlobalISel
   MC
+  MIRParser
   Support
   TargetParser
   )
@@ -22,5 +23,6 @@ add_llvm_target_unittest(AMDGPUTests
   CSETest.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
+  LiveRegUnits.cpp
   PALMetadata.cpp
   )

@@ -826,13 +826,23 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
 std::error_code
 SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
                                        SampleProfileMap &Profiles) {
+  if (FuncsToUse.empty())
+    return sampleprof_error::success;
+
   Data = ProfileSecRange.first;
   End = ProfileSecRange.second;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
+  DenseSet<FunctionSamples *> ProfilesToReadMetadata;
+  for (auto FName : FuncsToUse) {
+    auto I = Profiles.find(FName);
+    if (I != Profiles.end())
+      ProfilesToReadMetadata.insert(&I->second);
+  }
 
-  if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, Profiles))
+  if (std::error_code EC =
+          readFuncMetadata(ProfileHasAttribute, ProfilesToReadMetadata))
     return EC;
   return sampleprof_error::success;
 }
@@ -898,7 +908,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     DenseSet<uint64_t> FuncGuidsToUse;
     if (useMD5()) {
       for (auto Name : FuncsToUse)
-        FuncGuidsToUse.insert(Function::getGUID(Name));
+        FuncGuidsToUse.insert(Function::getGUIDAssumingExternalLinkage(Name));
     }
 
     // For each function in current module, load all context profiles for
@@ -1300,14 +1310,12 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
   return sampleprof_error::success;
 }
 
-std::error_code
-SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
-                                                   SampleProfileMap &Profiles) {
+std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata(
+    bool ProfileHasAttribute, DenseSet<FunctionSamples *> &Profiles) {
   if (FuncMetadataIndex.empty())
     return sampleprof_error::success;
 
-  for (auto &I : Profiles) {
-    FunctionSamples *FProfile = &I.second;
+  for (auto *FProfile : Profiles) {
     auto R = FuncMetadataIndex.find(FProfile->getContext().getHashCode());
     if (R == FuncMetadataIndex.end())
       continue;

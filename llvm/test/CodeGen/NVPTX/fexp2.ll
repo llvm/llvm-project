@@ -13,7 +13,7 @@ target triple = "nvptx64-nvidia-cuda"
 define float @exp2_test(float %in) {
 ; CHECK-LABEL: exp2_test(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.f32 %f1, [exp2_test_param_0];
@@ -23,7 +23,7 @@ define float @exp2_test(float %in) {
 ;
 ; CHECK-FP16-LABEL: exp2_test(
 ; CHECK-FP16:       {
-; CHECK-FP16-NEXT:    .reg .f32 %f<3>;
+; CHECK-FP16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.f32 %f1, [exp2_test_param_0];
@@ -33,7 +33,7 @@ define float @exp2_test(float %in) {
 ;
 ; CHECK-BF16-LABEL: exp2_test(
 ; CHECK-BF16:       {
-; CHECK-BF16-NEXT:    .reg .f32 %f<3>;
+; CHECK-BF16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-BF16-EMPTY:
 ; CHECK-BF16-NEXT:  // %bb.0: // %entry
 ; CHECK-BF16-NEXT:    ld.param.f32 %f1, [exp2_test_param_0];
@@ -49,7 +49,7 @@ entry:
 define float @exp2_ftz_test(float %in) #0 {
 ; CHECK-LABEL: exp2_ftz_test(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.f32 %f1, [exp2_ftz_test_param_0];
@@ -59,7 +59,7 @@ define float @exp2_ftz_test(float %in) #0 {
 ;
 ; CHECK-FP16-LABEL: exp2_ftz_test(
 ; CHECK-FP16:       {
-; CHECK-FP16-NEXT:    .reg .f32 %f<3>;
+; CHECK-FP16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.f32 %f1, [exp2_ftz_test_param_0];
@@ -69,7 +69,7 @@ define float @exp2_ftz_test(float %in) #0 {
 ;
 ; CHECK-BF16-LABEL: exp2_ftz_test(
 ; CHECK-BF16:       {
-; CHECK-BF16-NEXT:    .reg .f32 %f<3>;
+; CHECK-BF16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-BF16-EMPTY:
 ; CHECK-BF16-NEXT:  // %bb.0: // %entry
 ; CHECK-BF16-NEXT:    ld.param.f32 %f1, [exp2_ftz_test_param_0];
@@ -85,7 +85,7 @@ entry:
 define <2 x float> @exp2_test_v(<2 x float> %in) {
 ; CHECK-LABEL: exp2_test_v(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.v2.f32 {%f1, %f2}, [exp2_test_v_param_0];
@@ -96,7 +96,7 @@ define <2 x float> @exp2_test_v(<2 x float> %in) {
 ;
 ; CHECK-FP16-LABEL: exp2_test_v(
 ; CHECK-FP16:       {
-; CHECK-FP16-NEXT:    .reg .f32 %f<5>;
+; CHECK-FP16-NEXT:    .reg .b32 %f<5>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.v2.f32 {%f1, %f2}, [exp2_test_v_param_0];
@@ -107,7 +107,7 @@ define <2 x float> @exp2_test_v(<2 x float> %in) {
 ;
 ; CHECK-BF16-LABEL: exp2_test_v(
 ; CHECK-BF16:       {
-; CHECK-BF16-NEXT:    .reg .f32 %f<5>;
+; CHECK-BF16-NEXT:    .reg .b32 %f<5>;
 ; CHECK-BF16-EMPTY:
 ; CHECK-BF16-NEXT:  // %bb.0: // %entry
 ; CHECK-BF16-NEXT:    ld.param.v2.f32 {%f1, %f2}, [exp2_test_v_param_0];
@@ -127,7 +127,7 @@ define half @exp2_f16_test(half %in) {
 ; CHECK-LABEL: exp2_f16_test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b16 %rs1, [exp2_f16_test_param_0];
@@ -167,7 +167,7 @@ define half @exp2_f16_ftz_test(half %in) #0 {
 ; CHECK-LABEL: exp2_f16_ftz_test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b16 %rs1, [exp2_f16_ftz_test_param_0];
@@ -207,7 +207,7 @@ define <2 x half> @exp2_f16_test_v(<2 x half> %in) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b32 %r1, [exp2_f16_test_v_param_0];
@@ -256,7 +256,7 @@ define bfloat @exp2_bf16_test(bfloat %in) {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<9>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.u16 %r1, [exp2_bf16_test_param_0];
@@ -279,7 +279,7 @@ define bfloat @exp2_bf16_test(bfloat %in) {
 ; CHECK-FP16-NEXT:    .reg .pred %p<2>;
 ; CHECK-FP16-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-FP16-NEXT:    .reg .b32 %r<9>;
-; CHECK-FP16-NEXT:    .reg .f32 %f<3>;
+; CHECK-FP16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.u16 %r1, [exp2_bf16_test_param_0];
@@ -318,7 +318,7 @@ define <2 x bfloat> @exp2_bf16_test_v(<2 x bfloat> %in) {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<19>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b32 %r1, [exp2_bf16_test_v_param_0];
@@ -354,7 +354,7 @@ define <2 x bfloat> @exp2_bf16_test_v(<2 x bfloat> %in) {
 ; CHECK-FP16-NEXT:    .reg .pred %p<3>;
 ; CHECK-FP16-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-FP16-NEXT:    .reg .b32 %r<19>;
-; CHECK-FP16-NEXT:    .reg .f32 %f<5>;
+; CHECK-FP16-NEXT:    .reg .b32 %f<5>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.b32 %r1, [exp2_bf16_test_v_param_0];

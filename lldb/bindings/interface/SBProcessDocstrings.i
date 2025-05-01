@@ -260,12 +260,12 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 ) lldb::SBProcess::DeallocateMemory;
 
 %feature("docstring", "
-    Get a list of all the memory regions associated with this process.
-    ```
+    Get a list of all the memory regions associated with this process. ::
+    
         readable_regions = []
         for region in process.GetMemoryRegions():
             if region.IsReadable():
                 readable_regions.append(region)
-    ```
+    
 "
 ) lldb::SBProcess::GetMemoryRegions;

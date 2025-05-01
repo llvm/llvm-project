@@ -837,9 +837,9 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
                                      const MCFragment *Fragment,
                                      const MCFixup &Fixup, MCValue Target,
                                      uint64_t &FixedValue) {
-  assert(Target.getSymA() && "Relocation must reference a symbol!");
+  assert(Target.getAddSym() && "Relocation must reference a symbol!");
 
-  const MCSymbol &A = Target.getSymA()->getSymbol();
+  const MCSymbol &A = *Target.getAddSym();
   if (!A.isRegistered()) {
     Asm.getContext().reportError(Fixup.getLoc(), Twine("symbol '") +
                                                      A.getName() +
@@ -860,10 +860,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
          "Section must already have been defined in executePostLayoutBinding!");
 
   COFFSection *Sec = SectionMap[MCSec];
-  const MCSymbolRefExpr *SymB = Target.getSymB();
-
-  if (SymB) {
-    const MCSymbol *B = &SymB->getSymbol();
+  if (const MCSymbol *B = Target.getSubSym()) {
     if (!B->getFragment()) {
       Asm.getContext().reportError(
           Fixup.getLoc(),
@@ -923,7 +920,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
 
   Reloc.Data.VirtualAddress += Fixup.getOffset();
   Reloc.Data.Type = OWriter.TargetObjectWriter->getRelocType(
-      Asm.getContext(), Target, Fixup, SymB, Asm.getBackend());
+      Asm.getContext(), Target, Fixup, Target.getSubSym(), Asm.getBackend());
 
   // The *_REL32 relocations are relative to the end of the relocation,
   // not to the start.

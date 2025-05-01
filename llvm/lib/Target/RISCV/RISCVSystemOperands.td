@@ -157,6 +157,8 @@ def : SysReg<"hideleg", 0x603>;
 def : SysReg<"hie", 0x604>;
 def : SysReg<"hcounteren", 0x606>;
 def : SysReg<"hgeie", 0x607>;
+let isRV32Only = 1 in
+def : SysReg<"hedelegh", 0x612>;
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Handling
@@ -233,8 +235,10 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
-let isRV32Only = 1 in
+let isRV32Only = 1 in {
 def : SysReg<"mstatush", 0x310>;
+def : SysReg<"medelegh", 0x312>;
+} // isRV32Only
 
 //===----------------------------------------------------------------------===//
 // Machine Trap Handling
@@ -297,8 +301,6 @@ foreach i = 3...31 in
 // Machine Counter Setup
 //===----------------------------------------------------------------------===//
 def : SysReg<"mcountinhibit", 0x320>;
-let isAltName = 1 in
-def : SysReg<"mucounteren", 0x320>;
 
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
 foreach i = 3...31 in
@@ -320,8 +322,20 @@ def : SysReg<"scountinhibit", 0x120>;
 //===----------------------------------------------------------------------===//
 def : SysReg<"tselect", 0x7A0>;
 def : SysReg<"tdata1", 0x7A1>;
+let isAltName = 1 in {
+def : SysReg<"mcontrol", 0x7A1>;
+def : SysReg<"mcontrol6", 0x7A1>;
+def : SysReg<"icount", 0x7A1>;
+def : SysReg<"itrigger", 0x7A1>;
+def : SysReg<"etrigger", 0x7A1>;
+def : SysReg<"tmexttrigger", 0x7A1>;
+}
 def : SysReg<"tdata2", 0x7A2>;
 def : SysReg<"tdata3", 0x7A3>;
+let isAltName = 1 in {
+def : SysReg<"textra32", 0x7A3>;
+def : SysReg<"textra64", 0x7A3>;
+}
 def : SysReg<"tinfo", 0x7A4>;
 def : SysReg<"tcontrol", 0x7A5>;
 def : SysReg<"mcontext", 0x7A8>;
@@ -467,3 +481,60 @@ def : SysReg<"sctrstatus", 0x14f>;
 def : SysReg<"sctrdepth", 0x15f>;
 def : SysReg<"vsctrctl", 0x24e>;
 def : SysReg<"mctrctl", 0x34e>;
+
+//===-----------------------------------------------
+// Cycle and Instret Privilege Mode Filtering (Smcntrpmf)
+//===-----------------------------------------------
+def : SysReg<"mcyclecfg", 0x321>;
+def : SysReg<"minstretcfg", 0x322>;
+let isRV32Only = 1 in {
+def : SysReg<"mcyclecfgh", 0x721>;
+def : SysReg<"minstretcfgh", 0x722>;
+} // isRV32Only
+
+//===-----------------------------------------------
+// Vendor CSRs
+//===-----------------------------------------------
+
+// XSfmclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfmclic} }] in {
+def : SysReg<"sf.mtvt", 0x307>;
+def : SysReg<"sf.mnxti", 0x345>;
+def : SysReg<"sf.mintstatus", 0x346>;
+def : SysReg<"sf.mscratchcsw", 0x348>;
+def : SysReg<"sf.mscratchcswl", 0x349>;
+}
+
+// XSfsclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfsclic} }] in {
+def : SysReg<"sf.stvt", 0x107>;
+def : SysReg<"sf.snxti", 0x145>;
+def : SysReg<"sf.sintstatus", 0x146>;
+def : SysReg<"sf.sscratchcsw", 0x148>;
+def : SysReg<"sf.sscratchcswl", 0x149>;
+}
+
+// Xqciint
+let FeaturesRequired = [{ {RISCV::FeatureVendorXqciint} }], isRV32Only = 1 in {
+def : SysReg<"qc.mmcr", 0x7C0>;
+def : SysReg<"qc.mntvec", 0x7C3>;
+def : SysReg<"qc.mstktopaddr", 0x7C4>;
+def : SysReg<"qc.mstkbottomaddr", 0x7C5>;
+def : SysReg<"qc.mthreadptr", 0x7C8>;
+def : SysReg<"qc.mcause", 0x7C9>;
+
+foreach i = 0 - 7 in {
+  def : SysReg<"qc.mclicip" # i, !add(0x7F0, i)>;
+  def : SysReg<"qc.mclicie" # i, !add(0x7F8, i)>;
+}
+
+foreach i = 0 - 31 in {
+  def : SysReg<"qc.mclicilvl" # !if(!lt(i, 10), "0", "") # i, 
+               !add(0xBC0, i)>;
+}
+
+foreach i = 0 - 3 in {
+  def : SysReg<"qc.mwpstartaddr" # i, !add(0x7D0, i)>;
+  def : SysReg<"qc.mwpendaddr" # i,   !add(0x7D4, i)>;
+}
+} // FeatureVendorXqciint, isRV32Only

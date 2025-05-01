@@ -13,7 +13,6 @@
 #include <__cxx03/__algorithm/min.h>
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/distance.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/next.h>
@@ -25,6 +24,7 @@
 #include <__cxx03/__memory/unique_ptr.h>
 #include <__cxx03/__type_traits/can_extract_key.h>
 #include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_const.h>
 #include <__cxx03/__type_traits/is_constructible.h>
 #include <__cxx03/__type_traits/is_nothrow_assignable.h>

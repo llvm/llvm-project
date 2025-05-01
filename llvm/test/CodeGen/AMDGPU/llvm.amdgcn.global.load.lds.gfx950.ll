@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950,GFX950-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950,GFX950-GISEL %s
 
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx940 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx940 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
+; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 
 ; ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.global.load.lds
 
@@ -17,20 +17,13 @@ declare void @llvm.amdgcn.global.load.lds(ptr addrspace(1) nocapture %gptr, ptr 
 ;---------------------------------------------------------------------
 
 define amdgpu_ps void @global_load_lds_dwordx3_vaddr(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr) {
-; GFX950-SDAG-LABEL: global_load_lds_dwordx3_vaddr:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX950-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    global_load_lds_dwordx3 v[0:1], off offset:16 sc0
-; GFX950-SDAG-NEXT:    s_endpgm
-;
-; GFX950-GISEL-LABEL: global_load_lds_dwordx3_vaddr:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 m0, v2
-; GFX950-GISEL-NEXT:    s_nop 4
-; GFX950-GISEL-NEXT:    global_load_lds_dwordx3 v[0:1], off offset:16 sc0
-; GFX950-GISEL-NEXT:    s_endpgm
+; GFX950-LABEL: global_load_lds_dwordx3_vaddr:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX950-NEXT:    s_mov_b32 m0, s0
+; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    global_load_lds_dwordx3 v[0:1], off offset:16 sc0
+; GFX950-NEXT:    s_endpgm
   call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 12, i32 16, i32 1)
   ret void
 }
@@ -47,9 +40,10 @@ define amdgpu_ps void @global_load_lds_dwordx3_saddr(ptr addrspace(1) nocapture 
 ;
 ; GFX950-GISEL-LABEL: global_load_lds_dwordx3_saddr:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 m0, v0
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-GISEL-NEXT:    s_nop 3
+; GFX950-GISEL-NEXT:    s_mov_b32 m0, s2
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    global_load_lds_dwordx3 v0, s[0:1] offset:32 nt
 ; GFX950-GISEL-NEXT:    s_endpgm
   call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 12, i32 32, i32 2)
@@ -57,20 +51,13 @@ define amdgpu_ps void @global_load_lds_dwordx3_saddr(ptr addrspace(1) nocapture 
 }
 
 define amdgpu_ps void @global_load_lds_dwordx3_saddr_and_vaddr(ptr addrspace(1) nocapture inreg %gptr, ptr addrspace(3) nocapture %lptr, i32 %voffset) {
-; GFX950-SDAG-LABEL: global_load_lds_dwordx3_saddr_and_vaddr:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX950-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    global_load_lds_dwordx3 v1, s[0:1] offset:48 sc1
-; GFX950-SDAG-NEXT:    s_endpgm
-;
-; GFX950-GISEL-LABEL: global_load_lds_dwordx3_saddr_and_vaddr:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 m0, v0
-; GFX950-GISEL-NEXT:    s_nop 4
-; GFX950-GISEL-NEXT:    global_load_lds_dwordx3 v1, s[0:1] offset:48 sc1
-; GFX950-GISEL-NEXT:    s_endpgm
+; GFX950-LABEL: global_load_lds_dwordx3_saddr_and_vaddr:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX950-NEXT:    s_mov_b32 m0, s2
+; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    global_load_lds_dwordx3 v1, s[0:1] offset:48 sc1
+; GFX950-NEXT:    s_endpgm
   %voffset.64 = zext i32 %voffset to i64
   %gep = getelementptr i8, ptr addrspace(1) %gptr, i64 %voffset.64
   call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gep, ptr addrspace(3) %lptr, i32 12, i32 48, i32 16)
@@ -82,20 +69,13 @@ define amdgpu_ps void @global_load_lds_dwordx3_saddr_and_vaddr(ptr addrspace(1) 
 ;---------------------------------------------------------------------
 
 define amdgpu_ps void @global_load_lds_dwordx4_vaddr(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr) {
-; GFX950-SDAG-LABEL: global_load_lds_dwordx4_vaddr:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX950-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    global_load_lds_dwordx4 v[0:1], off offset:16 sc0
-; GFX950-SDAG-NEXT:    s_endpgm
-;
-; GFX950-GISEL-LABEL: global_load_lds_dwordx4_vaddr:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 m0, v2
-; GFX950-GISEL-NEXT:    s_nop 4
-; GFX950-GISEL-NEXT:    global_load_lds_dwordx4 v[0:1], off offset:16 sc0
-; GFX950-GISEL-NEXT:    s_endpgm
+; GFX950-LABEL: global_load_lds_dwordx4_vaddr:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX950-NEXT:    s_mov_b32 m0, s0
+; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    global_load_lds_dwordx4 v[0:1], off offset:16 sc0
+; GFX950-NEXT:    s_endpgm
   call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 16, i32 16, i32 1)
   ret void
 }
@@ -112,9 +92,10 @@ define amdgpu_ps void @global_load_lds_dwordx4_saddr(ptr addrspace(1) nocapture 
 ;
 ; GFX950-GISEL-LABEL: global_load_lds_dwordx4_saddr:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 m0, v0
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-GISEL-NEXT:    s_nop 3
+; GFX950-GISEL-NEXT:    s_mov_b32 m0, s2
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    global_load_lds_dwordx4 v0, s[0:1] offset:32 nt
 ; GFX950-GISEL-NEXT:    s_endpgm
   call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 16, i32 32, i32 2)
@@ -122,24 +103,15 @@ define amdgpu_ps void @global_load_lds_dwordx4_saddr(ptr addrspace(1) nocapture 
 }
 
 define amdgpu_ps void @global_load_lds_dwordx4_saddr_and_vaddr(ptr addrspace(1) nocapture inreg %gptr, ptr addrspace(3) nocapture %lptr, i32 %voffset) {
-; GFX950-SDAG-LABEL: global_load_lds_dwordx4_saddr_and_vaddr:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX950-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    global_load_lds_dwordx4 v1, s[0:1] offset:48 sc1
-; GFX950-SDAG-NEXT:    s_endpgm
-;
-; GFX950-GISEL-LABEL: global_load_lds_dwordx4_saddr_and_vaddr:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 m0, v0
-; GFX950-GISEL-NEXT:    s_nop 4
-; GFX950-GISEL-NEXT:    global_load_lds_dwordx4 v1, s[0:1] offset:48 sc1
-; GFX950-GISEL-NEXT:    s_endpgm
+; GFX950-LABEL: global_load_lds_dwordx4_saddr_and_vaddr:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX950-NEXT:    s_mov_b32 m0, s2
+; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    global_load_lds_dwordx4 v1, s[0:1] offset:48 sc1
+; GFX950-NEXT:    s_endpgm
   %voffset.64 = zext i32 %voffset to i64
   %gep = getelementptr i8, ptr addrspace(1) %gptr, i64 %voffset.64
   call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gep, ptr addrspace(3) %lptr, i32 16, i32 48, i32 16)
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX950: {{.*}}

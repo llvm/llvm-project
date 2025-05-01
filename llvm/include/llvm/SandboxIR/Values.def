@@ -21,12 +21,15 @@
 
 DEF_CONST(Function, Function)
 DEF_VALUE(Argument, Argument)
+DEF_VALUE(OpaqueValue, OpaqueValue)
 
 DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
 DEF_CONST(Constant, Constant)
 DEF_CONST(ConstantInt, ConstantInt)
 DEF_CONST(ConstantFP, ConstantFP)
+DEF_CONST(ConstantDataArray, ConstantDataArray)
+DEF_CONST(ConstantDataVector, ConstantDataVector)
 DEF_CONST(ConstantArray, ConstantArray)
 DEF_CONST(ConstantStruct, ConstantStruct)
 DEF_CONST(ConstantVector, ConstantVector)

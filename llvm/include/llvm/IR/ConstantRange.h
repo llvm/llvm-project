@@ -92,6 +92,10 @@ public:
   /// unsigned domain.
   static ConstantRange fromKnownBits(const KnownBits &Known, bool IsSigned);
 
+  /// Split the ConstantRange into positive and negative components, ignoring
+  /// zero values.
+  std::pair<ConstantRange, ConstantRange> splitPosNeg() const;
+
   /// Produce the smallest range such that all values that may satisfy the given
   /// predicate with any value contained within Other is contained in the
   /// returned range.  Formally, this returns a superset of
