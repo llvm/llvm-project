@@ -2889,9 +2889,55 @@ static void genAtomicRead(lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  genAtomicCaptureStatement(converter, fromAddress, toAddress,
-                            leftHandClauseList, rightHandClauseList,
-                            elementType, loc);
+
+  if (fromAddress.getType() != toAddress.getType()) {
+    // Emit an implicit cast
+    mlir::Type toType = fir::unwrapRefType(toAddress.getType());
+    mlir::Type fromType = fir::unwrapRefType(fromAddress.getType());
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    auto oldIP = builder.saveInsertionPoint();
+    builder.setInsertionPointToStart(builder.getAllocaBlock());
+    mlir::Value alloca = builder.create<fir::AllocaOp>(loc, fromType);
+    builder.restoreInsertionPoint(oldIP);
+    genAtomicCaptureStatement(converter, fromAddress, alloca,
+                              leftHandClauseList, rightHandClauseList,
+                              elementType, loc);
+    auto load = builder.create<fir::LoadOp>(loc, alloca);
+    if (fir::isa_complex(fromType) && !fir::isa_complex(toType)) {
+      // Emit an additional `ExtractValueOp` if `fromAddress` is of complex
+      // type, but `toAddress` is not.
+
+      auto extract = builder.create<fir::ExtractValueOp>(
+          loc, mlir::cast<mlir::ComplexType>(fromType).getElementType(), load,
+          builder.getArrayAttr(
+              builder.getIntegerAttr(builder.getIndexType(), 0)));
+      auto cvt = builder.create<fir::ConvertOp>(loc, toType, extract);
+      builder.create<fir::StoreOp>(loc, cvt, toAddress);
+    } else if (!fir::isa_complex(fromType) && fir::isa_complex(toType)) {
+      // Emit an additional `InsertValueOp` if `toAddress` is of complex
+      // type, but `fromAddress` is not.
+      mlir::Value undef = builder.create<fir::UndefOp>(loc, toType);
+      mlir::Type complexEleTy =
+          mlir::cast<mlir::ComplexType>(toType).getElementType();
+      mlir::Value cvt = builder.create<fir::ConvertOp>(loc, complexEleTy, load);
+      mlir::Value zero = builder.createRealZeroConstant(loc, complexEleTy);
+      mlir::Value idx0 = builder.create<fir::InsertValueOp>(
+          loc, toType, undef, cvt,
+          builder.getArrayAttr(
+              builder.getIntegerAttr(builder.getIndexType(), 0)));
+      mlir::Value idx1 = builder.create<fir::InsertValueOp>(
+          loc, toType, idx0, zero,
+          builder.getArrayAttr(
+              builder.getIntegerAttr(builder.getIndexType(), 1)));
+      builder.create<fir::StoreOp>(loc, idx1, toAddress);
+    } else {
+      auto cvt = builder.create<fir::ConvertOp>(loc, toType, load);
+      builder.create<fir::StoreOp>(loc, cvt, toAddress);
+    }
+  } else
+    genAtomicCaptureStatement(converter, fromAddress, toAddress,
+                              leftHandClauseList, rightHandClauseList,
+                              elementType, loc);
 }
 
 /// Processes an atomic construct with update clause.
@@ -2975,6 +3021,10 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
       fir::getBase(converter.genExprValue(assign1.lhs, stmtCtx)).getType();
   mlir::Type stmt2VarType =
       fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
+
+  // Check if implicit type is needed
+  if (stmt1VarType != stmt2VarType)
+    TODO(loc, "atomic capture requiring implicit type casts");
 
   mlir::Operation *atomicCaptureOp = nullptr;
   mlir::IntegerAttr hint = nullptr;
