@@ -2267,18 +2267,21 @@ class DILocation : public MDNode {
                         getRawInlinedAt(), isImplicitCode(), getAtomGroup(),
                         getAtomRank());
   }
+
 public:
   uint64_t getAtomGroup() const {
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
     return AtomGroup;
-#endif
+#else
     return 0;
+#endif
   }
   uint8_t getAtomRank() const {
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
     return AtomRank;
-#endif
+#else
     return 0;
+#endif
   }
 
   // Disallow replacing operands.
