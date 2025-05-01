@@ -95,3 +95,16 @@ define <4 x i32> @non_trivially_vectorizable(i32 %x, i32 %y) {
   %v = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %x.insert, <8 x i32> %y.insert)
   ret <4 x i32> %v
 }
+
+; TODO: We should be able to scalarize this if we preserve the scalar argument.
+define <4 x float> @scalar_argument(float %x) {
+; CHECK-LABEL: define <4 x float> @scalar_argument(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x float> poison, float [[X]], i32 0
+; CHECK-NEXT:    [[V:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[X_INSERT]], i32 42)
+; CHECK-NEXT:    ret <4 x float> [[V]]
+;
+  %x.insert = insertelement <4 x float> poison, float %x, i32 0
+  %v = call <4 x float> @llvm.powi(<4 x float> %x.insert, i32 42)
+  ret <4 x float> %v
+}

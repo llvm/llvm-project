@@ -1027,7 +1027,11 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
       !match(&I, m_Cmp(Pred, m_Value(Ins0), m_Value(Ins1)))) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I);
         II && II->arg_size() == 2 &&
-        isTriviallyVectorizable(II->getIntrinsicID())) {
+        isTriviallyVectorizable(II->getIntrinsicID()) &&
+        none_of(index_range(0, II->arg_size()), [this, &II](size_t OpIdx) {
+          return isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), OpIdx,
+                                                    &TTI);
+        })) {
       Ins0 = II->getArgOperand(0);
       Ins1 = II->getArgOperand(1);
     } else {
