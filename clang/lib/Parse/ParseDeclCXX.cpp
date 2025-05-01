@@ -5365,7 +5365,8 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   // then parse the root signature string and construct the in-memory elements
   if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
     SourceLocation SignatureLoc =
-      StrLiteral.value()->getExprLoc().getLocWithOffset(1); // offset 1 for '"'
+        StrLiteral.value()->getExprLoc().getLocWithOffset(
+            1); // offset 1 for '"'
     // Invoke the root signature parser to construct the in-memory constructs
     hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
     SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
