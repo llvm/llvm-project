@@ -13075,6 +13075,9 @@ def err_acc_clause_routine_one_of_in_region
 def err_acc_clause_since_last_device_type
     : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
             "'device_type' region}2 on a '%1' directive">;
+def err_acc_clause_conflicts_prev_dev_type
+    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
+            "conflicts with previous clause">;
 
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
