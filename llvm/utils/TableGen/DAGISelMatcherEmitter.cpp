@@ -1149,11 +1149,11 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
 
   // Emit Node predicates.
   EmitNodePredicatesFunction(
-      NodePredicates, "CheckNodePredicate(SDNode *Node, unsigned PredNo) const",
+      NodePredicates, "CheckNodePredicate(SDValue Op, unsigned PredNo) const",
       OS);
   EmitNodePredicatesFunction(
       NodePredicatesWithOperands,
-      "CheckNodePredicateWithOperands(SDNode *Node, unsigned PredNo, "
+      "CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo, "
       "const SmallVectorImpl<SDValue> &Operands) const",
       OS);
 

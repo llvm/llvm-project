@@ -2098,3 +2098,19 @@ B:
   %t = icmp eq i64 0, %3
   br i1 %t, label %A, label %B
 }
+
+define i64 @pr137274(ptr %ptr) {
+; CHECK-LABEL: pr137274:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ldr w9, [x8, #8]!
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+  %l0 = load i64, ptr %ptr, align 8
+  %add = add i64 %l0, 8
+  %i1 = inttoptr i64 %add to ptr
+  %l2 = load i32, ptr %i1, align 4
+  %conv = zext i32 %l2 to i64
+  %mul = mul i64 %add, %conv
+  ret i64 %mul
+}
