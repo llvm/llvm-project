@@ -106,11 +106,11 @@ enum RemapFlags {
   /// to self.  Illegal if RF_IgnoreMissingLocals is also set.
   RF_NullMapMissingGlobalValues = 8,
 
-  /// Do not remap atom instances. Only safe if to do this if the cloned
+  /// Do not remap source location atoms. Only safe if to do this if the cloned
   /// instructions being remapped are inserted into a new function, or an
   /// existing function where the inlined-at fields are updated. If in doubt,
-  /// don't use this flag. It's used for compiler performance reasons rather
-  /// than correctness.
+  /// don't use this flag. It's used when remapping is known to be un-necessary
+  /// to save some compile-time.
   RF_DoNotRemapAtoms = 16,
 };
 
