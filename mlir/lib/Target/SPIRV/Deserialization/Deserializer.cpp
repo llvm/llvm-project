@@ -448,6 +448,17 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
       foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
       break;
     }
+
+    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                 spirv::Decoration::RelaxedPrecision))) {
+      if (foundDecorationAttr)
+        return emitError(unknownLoc, "already found a decoration for function "
+                                     "argument with result <id> ")
+               << argID;
+
+      foundDecorationAttr = spirv::DecorationAttr::get(
+          context, spirv::Decoration::RelaxedPrecision);
+    }
   }
 
   if (!foundDecorationAttr)
