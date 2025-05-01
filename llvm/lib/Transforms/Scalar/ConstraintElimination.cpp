@@ -1134,7 +1134,7 @@ void State::addPointerBoundInfo(Value *PtrOp, Value *IdxOp, DomTreeNode *DTN,
     // against.
     I.first->second =
         new LoadInst(IdxOp->getType(),
-                     UndefValue::get(PointerType::get(IdxOp->getType(), 0)),
+                     UndefValue::get(PointerType::get(IdxOp->getContext(), 0)),
                      "ub", false, Align(1));
     ExtraCmps.push_back(cast<Instruction>(I.first->second));
   }

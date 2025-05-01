@@ -1761,7 +1761,8 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
             unsigned AS = DestPointeeType->isFunctionTy()
                               ? CGF.CGM.getDataLayout().getProgramAddressSpace()
                               : CGF.getTypes().getTargetAddressSpace(ETy);
-            llvm::Type *DestTy = llvm::PointerType::get(DestPointeeType, AS);
+            llvm::Type *DestTy =
+                llvm::PointerType::get(CGF.getLLVMContext(), AS);
 
             auto RemoveBoundsSafetyAttrs = [&] (const QualType& QT) {
               if (auto PtrTy = QT->getAs<PointerType>()) {
