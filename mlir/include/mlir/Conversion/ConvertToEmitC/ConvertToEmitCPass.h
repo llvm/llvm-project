@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <memory>
+#include <string>
 
 namespace mlir {
 class Pass;
