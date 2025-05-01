@@ -1247,21 +1247,24 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
   unsigned VLimit = Status.TargetVLimit;
   unsigned SLimit = Status.TargetSLimit;
 
-  int RematSCnt = Status.MaxSPressure - SLimit;
-  // when agressive sgpr remat, reserve some for allocation lost.
-  if (EnableAggressive)
-    RematSCnt += NearTargetRegLimit;
+  // Early check for
+  {
+    int InitialRematSCnt = Status.MaxSPressure - SLimit;
+    // when agressive sgpr remat, reserve some for allocation lost.
+    if (EnableAggressive)
+      InitialRematSCnt += NearTargetRegLimit;
 
-  bool IsSGPRSpill = false;
-  if (RematSCnt > 0)
-    IsSGPRSpill = nearSgprSpill(Status.MaxSPressure, ST, MF);
+    bool InitialIsSGPRSpill = false;
+    if (InitialRematSCnt > 0)
+      InitialIsSGPRSpill = nearSgprSpill(Status.MaxSPressure, ST, MF);
 
-  const bool IsForceRematSgpr = IsSGPRSpill || Status.NotBalance;
+    const bool InitialIsForceRematSgpr = InitialIsSGPRSpill || Status.NotBalance;
 
-  // If bound by lds, skip.
-  if (Status.TargetOcc > ST->getOccupancyWithWorkGroupSizes(MF).second &&
-      !IsForceRematSgpr)
-    return false;
+    // If bound by lds, skip.
+    if (Status.TargetOcc > ST->getOccupancyWithWorkGroupSizes(MF).second &&
+      !InitialIsForceRematSgpr)
+      return false;
+  }
 
   MachineBasicBlock *EntryMBB = &MF.front();
 
@@ -1277,6 +1280,7 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
     MachineBasicBlock *MBB = *It;
     auto &RP = Status.MBBPressureMap[MBB];
     // ignore block not hot.
+
     if (RP.getVGPRNum(ST->hasGFX90AInsts()) < Status.TargetVLimit &&
         (RP.getMaxSGPR() + RegForVCC + Status.InputPhysicalSPressure) <
             Status.TargetSLimit)
