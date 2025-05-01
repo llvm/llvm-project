@@ -462,7 +462,7 @@ bool isPtrConversion(const FunctionDecl *F) {
   const auto FunctionName = safeGetName(F);
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
       FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
-      FunctionName == "checkedDowncast" ||
+      FunctionName == "checkedDowncast" || FunctionName == "bit_cast" ||
       FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast" ||
       FunctionName == "bridge_cast" || FunctionName == "bridge_id_cast" ||
       FunctionName == "dynamic_cf_cast" || FunctionName == "checked_cf_cast" ||
@@ -645,6 +645,10 @@ public:
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
       return false;
+
+    if (isPtrConversion(Callee))
+      return true;
+
     const auto &Name = safeGetName(Callee);
 
     if (Callee->isInStdNamespace() &&
@@ -658,7 +662,7 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || isTrivialBuiltinFunction(Callee))
+        isTrivialBuiltinFunction(Callee))
       return true;
 
     return IsFunctionTrivial(Callee);
