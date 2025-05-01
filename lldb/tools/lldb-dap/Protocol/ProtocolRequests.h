@@ -160,8 +160,8 @@ struct Configuration {
 
   /// If a variable is displayed using a synthetic children, also display the
   /// actual contents of the variable at the end under a [raw] entry. This is
-  /// useful when creating sythetic child plug-ins as it lets you see the actual
-  /// contents of the variable.
+  /// useful when creating synthetic child plug-ins as it lets you see the
+  /// actual contents of the variable.
   bool enableSyntheticChildDebugging = false;
 
   /// Enable language specific extended backtraces.
@@ -170,7 +170,7 @@ struct Configuration {
   /// Stop at the entry point of the program when launching or attaching.
   bool stopOnEntry = false;
 
-  /// Optional timeout when waiting for the program to `runInTermianl` or
+  /// Optional timeout when waiting for the program to `runInTerminal` or
   /// attach.
   std::chrono::seconds timeout = std::chrono::seconds(30);
 
@@ -187,10 +187,10 @@ struct Configuration {
   /// default frame names will be used. This might come with a performance cost
   /// because debug information might need to be processed to generate the
   /// description.
-  std::string customFrameFormat = "";
+  std::optional<std::string> customFrameFormat;
 
   /// Same as `customFrameFormat`, but for threads instead of stack frames.
-  std::string customThreadFormat = "";
+  std::optional<std::string> customThreadFormat;
 
   /// Specify a source path to remap "./" to allow full paths to be used when
   /// setting breakpoints in binaries that have relative source paths.
@@ -275,8 +275,8 @@ struct LaunchRequestArguments {
   /// with values or just "VAR" for environment variables with no values.
   llvm::StringMap<std::string> env;
 
-  /// If set, then the client stub should detach rather than killing the debugee
-  /// if it loses connection with lldb.
+  /// If set, then the client stub should detach rather than killing the
+  /// debuggee if it loses connection with lldb.
   bool detachOnError = false;
 
   /// Disable ASLR (Address Space Layout Randomization) when launching the

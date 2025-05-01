@@ -1215,10 +1215,10 @@ void DAP::SetConfiguration(const protocol::Configuration &config,
   stop_at_entry = config.stopOnEntry;
   this->is_attach = is_attach;
 
-  if (!configuration.customFrameFormat.empty())
-    SetFrameFormat(configuration.customFrameFormat);
-  if (!configuration.customThreadFormat.empty())
-    SetThreadFormat(configuration.customThreadFormat);
+  if (configuration.customFrameFormat)
+    SetFrameFormat(*configuration.customFrameFormat);
+  if (configuration.customThreadFormat)
+    SetThreadFormat(*configuration.customThreadFormat);
 }
 
 void DAP::SetFrameFormat(llvm::StringRef format) {
