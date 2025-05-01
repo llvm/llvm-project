@@ -357,6 +357,12 @@ void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
 /// the duplicated profile variables for Comdat functions.
 bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 
+/// \c NameStrings is a string composed of one of more possibly encoded
+/// sub-strings. The substrings are separated by 0 or more zero bytes. This
+/// method decodes the string and calls `NameCallback` for each substring.
+Error readAndDecodeStrings(StringRef NameStrings,
+                           std::function<Error(StringRef)> NameCallback);
+
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
   Unknown = 0x0,
@@ -493,6 +499,11 @@ class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
+  // Returns the canonial name of the given PGOName. In a canonical name, all
+  // suffixes that begins with "." except ".__uniq." are stripped.
+  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  static StringRef getCanonicalName(StringRef PGOName);
+
 private:
   using AddrIntervalMap =
       IntervalMap<uint64_t, uint64_t, 4, IntervalMapHalfOpenInfo<uint64_t>>;
@@ -527,11 +538,6 @@ private:
   bool Sorted = false;
 
   static StringRef getExternalSymbol() { return "** External Symbol **"; }
-
-  // Returns the canonial name of the given PGOName. In a canonical name, all
-  // suffixes that begins with "." except ".__uniq." are stripped.
-  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
-  static StringRef getCanonicalName(StringRef PGOName);
 
   // Add the function into the symbol table, by creating the following
   // map entries:
