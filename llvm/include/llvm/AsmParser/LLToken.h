@@ -276,6 +276,8 @@ enum Kind {
   kw_umin,
   kw_fmax,
   kw_fmin,
+  kw_fmaximum,
+  kw_fminimum,
   kw_uinc_wrap,
   kw_udec_wrap,
   kw_usub_cond,
