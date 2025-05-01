@@ -11,6 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "TargetImpl.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
@@ -82,6 +83,7 @@ public:
                 uint64_t val) const override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void applyBranchToBranchOpt() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -972,6 +974,63 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     }
     relocate(loc, rel, val);
   }
+}
+
+static std::optional<uint64_t> getControlTransferAddend(InputSection &is,
+                                                        Relocation &r) {
+  // Identify a control transfer relocation for the branch-to-branch
+  // optimization. A "control transfer relocation" means a B or BL
+  // target but it also includes relative vtable relocations for example.
+  //
+  // We require the relocation type to be JUMP26, CALL26 or PLT32. With a
+  // relocation type of PLT32 the value may be assumed to be used for branching
+  // directly to the symbol and the addend is only used to produce the relocated
+  // value (hence the effective addend is always 0). This is because if a PLT is
+  // needed the addend will be added to the address of the PLT, and it doesn't
+  // make sense to branch into the middle of a PLT. For example, relative vtable
+  // relocations use PLT32 and 0 or a positive value as the addend but still are
+  // used to branch to the symbol.
+  //
+  // With JUMP26 or CALL26 the only reasonable interpretation of a non-zero
+  // addend is that we are branching to symbol+addend so that becomes the
+  // effective addend.
+  if (r.type == R_AARCH64_PLT32)
+    return 0;
+  if (r.type == R_AARCH64_JUMP26 || r.type == R_AARCH64_CALL26)
+    return r.addend;
+  return std::nullopt;
+}
+
+static std::pair<Relocation *, uint64_t>
+getBranchInfoAtTarget(InputSection &is, uint64_t offset) {
+  auto *i =
+      std::partition_point(is.relocations.begin(), is.relocations.end(),
+                           [&](Relocation &r) { return r.offset < offset; });
+  if (i != is.relocations.end() && i->offset == offset &&
+      i->type == R_AARCH64_JUMP26) {
+    return {i, i->addend};
+  }
+  return {nullptr, 0};
+}
+
+static void redirectControlTransferRelocations(Relocation &r1,
+                                               const Relocation &r2) {
+  r1.expr = r2.expr;
+  r1.sym = r2.sym;
+  // With PLT32 we must respect the original addend as that affects the value's
+  // interpretation. With the other relocation types the original addend is
+  // irrelevant because it referred to an offset within the original target
+  // section so we overwrite it.
+  if (r1.type == R_AARCH64_PLT32)
+    r1.addend += r2.addend;
+  else
+    r1.addend = r2.addend;
+}
+
+void AArch64::applyBranchToBranchOpt() const {
+  applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
+                             getBranchInfoAtTarget,
+                             redirectControlTransferRelocations);
 }
 
 // AArch64 may use security features in variant PLT sequences. These are:
