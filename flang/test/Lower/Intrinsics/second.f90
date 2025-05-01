@@ -11,7 +11,7 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_subroutineEtime"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.call @_FortranACpuTime() fastmath<contract> : () -> f64
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (f64) -> f32
-! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]]#1 : !fir.ref<f32>
+! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]]#0 : !fir.ref<f32>
 ! CHECK:           return
 ! CHECK:         }
 

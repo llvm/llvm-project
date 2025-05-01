@@ -1620,10 +1620,12 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
       assert(P.getPointer() != RemInst &&
              "Already removed NonLocalPointerDeps info for RemInst");
 
-      NonLocalDepInfo &NLPDI = NonLocalPointerDeps[P].NonLocalDeps;
+      auto &NLPD = NonLocalPointerDeps[P];
+
+      NonLocalDepInfo &NLPDI = NLPD.NonLocalDeps;
 
       // The cache is not valid for any specific block anymore.
-      NonLocalPointerDeps[P].Pair = BBSkipFirstBlockPair();
+      NLPD.Pair = BBSkipFirstBlockPair();
 
       // Update any entries for RemInst to use the instruction after it.
       for (auto &Entry : NLPDI) {
@@ -1727,9 +1729,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(MemoryDependenceWrapperPass, "memdep",
                     "Memory Dependence Analysis", false, true)
 
-MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {
-  initializeMemoryDependenceWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {}
 
 MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() = default;
 

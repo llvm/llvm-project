@@ -485,23 +485,27 @@ def DISubprogramFlags : I32BitEnumAttr<
 // IntegerOverflowFlags
 //===----------------------------------------------------------------------===//
 
-def IOFnone : I32BitEnumAttrCaseNone<"none">;
-def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
-def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+def IOFnone : I32BitEnumCaseNone<"none">;
+def IOFnsw  : I32BitEnumCaseBit<"nsw", 0>;
+def IOFnuw  : I32BitEnumCaseBit<"nuw", 1>;
 
-def IntegerOverflowFlags : I32BitEnumAttr<
+def IntegerOverflowFlags : I32BitEnum<
     "IntegerOverflowFlags",
     "LLVM integer overflow flags",
     [IOFnone, IOFnsw, IOFnuw]> {
   let separator = ", ";
   let cppNamespace = "::mlir::LLVM";
-  let genSpecializedAttr = 0;
   let printBitEnumPrimaryGroups = 1;
 }
 
 def LLVM_IntegerOverflowFlagsAttr :
     EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
   let assemblyFormat = "`<` $value `>`";
+}
+
+def LLVM_IntegerOverflowFlagsProp :
+    NamedEnumPropWithAttrForm<IntegerOverflowFlags, "overflow", LLVM_IntegerOverflowFlagsAttr> {
+  let defaultValue = enum.cppType # "::" # "none";
 }
 
 //===----------------------------------------------------------------------===//
@@ -816,6 +820,88 @@ def FPExceptionBehaviorAttr : LLVM_EnumAttr<
     [FPExceptionBehaviorIgnore, FPExceptionBehaviorMayTrap,
      FPExceptionBehaviorStrict]> {
   let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// Module Flag Behavior
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::Module::ModFlagBehavior ones.
+// See llvm/include/llvm/IR/Module.h.
+def ModFlagBehaviorError
+    : LLVM_EnumAttrCase<"Error", "error", "Error", 1>;
+def ModFlagBehaviorWarning
+    : LLVM_EnumAttrCase<"Warning", "warning", "Warning", 2>;
+def ModFlagBehaviorRequire
+    : LLVM_EnumAttrCase<"Require", "require", "Require", 3>;
+def ModFlagBehaviorOverride
+    : LLVM_EnumAttrCase<"Override", "override", "Override", 4>;
+def ModFlagBehaviorAppend
+    : LLVM_EnumAttrCase<"Append", "append", "Append", 5>;
+def ModFlagBehaviorAppendUnique
+    : LLVM_EnumAttrCase<"AppendUnique", "append_unique", "AppendUnique", 6>;
+def ModFlagBehaviorMax
+    : LLVM_EnumAttrCase<"Max", "max", "Max", 7>;
+def ModFlagBehaviorMin
+    : LLVM_EnumAttrCase<"Min", "min", "Min", 8>;
+
+def ModFlagBehaviorAttr : LLVM_EnumAttr<
+    "ModFlagBehavior",
+    "::llvm::Module::ModFlagBehavior",
+    "LLVM Module Flag Behavior",
+    [ModFlagBehaviorError, ModFlagBehaviorWarning, ModFlagBehaviorRequire,
+     ModFlagBehaviorOverride, ModFlagBehaviorAppend,
+     ModFlagBehaviorAppendUnique, ModFlagBehaviorMax, ModFlagBehaviorMin]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// UWTableKind
+//===----------------------------------------------------------------------===//
+
+def UWTableKindNone
+    : LLVM_EnumAttrCase<"None", "none", "None", 0>;
+def UWTableKindSync
+    : LLVM_EnumAttrCase<"Sync", "sync", "Sync", 1>;
+def UWTableKindAsync
+    : LLVM_EnumAttrCase<"Async", "async", "Async", 2>;
+
+// UWTableKind::Default is unsupported as the llvm enum value is the same as async  
+// which the generated enum converters can't deal with.
+def UWTableKindEnum : LLVM_EnumAttr<
+    "UWTableKind",
+    "::llvm::UWTableKind",
+    "LLVM Unwind Behavior",
+    [UWTableKindNone, UWTableKindSync, UWTableKindAsync]> {
+  let cppNamespace = "::mlir::LLVM::uwtable";
+}
+
+//===----------------------------------------------------------------------===//
+// GEPNoWrapFlags
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::GEPNoWrapFlags ones.
+// See llvm/include/llvm/IR/GEPNoWrapFlags.h.
+// Since inbounds implies nusw, create an inboundsFlag that represents the
+// concept of raw inbounds with no nusw implication and the actual inbounds
+// literal will be captured as the combination of inboundsFlag and nusw.
+
+def GEPNone : I32BitEnumCaseNone<"none">;
+def GEPInboundsFlag : I32BitEnumCaseBit<"inboundsFlag", 0, "inbounds_flag">;
+def GEPNusw : I32BitEnumCaseBit<"nusw", 1>;
+def GEPNuw : I32BitEnumCaseBit<"nuw", 2>;
+def GEPInbounds : BitEnumCaseGroup<"inbounds", [GEPInboundsFlag, GEPNusw]>;
+
+def GEPNoWrapFlags : I32BitEnum<
+    "GEPNoWrapFlags",
+    "::mlir::LLVM::GEPNoWrapFlags",
+    [GEPNone, GEPInboundsFlag, GEPNusw, GEPNuw, GEPInbounds]> {
+  let cppNamespace = "::mlir::LLVM";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
+  let defaultValue = interfaceType # "::none";
 }
 
 #endif // LLVMIR_ENUMS

@@ -108,9 +108,7 @@ public:
 
   static char ID;
 
-  AArch64PromoteConstant() : ModulePass(ID) {
-    initializeAArch64PromoteConstantPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64PromoteConstant() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return "AArch64 Promote Constant"; }
 

@@ -5,7 +5,8 @@ import lldbdap_testcase
 from lldbsuite.test import lldbtest, lldbutil
 from lldbsuite.test.decorators import *
 
-
+# DAP tests are flakey, see https://github.com/llvm/llvm-project/issues/137660.
+@skip
 class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
     def test_command_directive_quiet_on_success(self):
         program = self.getBuildArtifact("a.out")
@@ -75,7 +76,7 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             "settings set target.show-hex-variable-values-with-leading-zeroes false"
         )
         command_abort_on_error = "settings set foo bar"
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         self.attach(
             program,
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],

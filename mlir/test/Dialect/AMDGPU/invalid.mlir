@@ -18,7 +18,7 @@ func.func @mixing_packed_stoch_round_types(%arg0: f32, %arg1: i32, %arg2: vector
 
 func.func @bad_source_types(%a: vector<2xf32>, %b: vector<4xf16>,
                                 %c: vector<32xf32>) -> vector<32xf32> {
-  // expected-error@+1 {{'amdgpu.mfma' op expected both non-f8 source operand types to match exactly}}
+  // expected-error@+1 {{'amdgpu.mfma' op expected both non-small-float source operand types to match exactly}}
   %d = amdgpu.mfma %a * %b + %c {
     m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
     abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<2xf32>, vector<4xf16>, vector<32xf32>
@@ -29,7 +29,7 @@ func.func @bad_source_types(%a: vector<2xf32>, %b: vector<4xf16>,
 
 func.func @bad_source_types_f8(%a: vector<8xf8E5M2FNUZ>, %b: vector<8xi8>,
                                 %c: vector<32xf32>) -> vector<32xf32> {
-  // expected-error@+1 {{'amdgpu.mfma' op expected both source operands to have f8 elements}}
+  // expected-error@+1 {{'amdgpu.mfma' op expected both source operands to have small-float elements if one does}}
   %d = amdgpu.mfma %a * %b + %c {
     m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
     abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<8xf8E5M2FNUZ>, vector<8xi8>, vector<32xf32>
@@ -124,4 +124,45 @@ func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xi32>) -> vector<8xi32> 
   // expected-error@+1 {{'amdgpu.wmma' op Expected int sources with int destination}}
   %0 = amdgpu.wmma %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xi32>
   func.return %0 : vector<8xi32>
+}
+
+// -----
+
+// Missinng `resetOffset`
+func.func @fat_raw_buffer_cast_stripped_offset(%m: memref<8xi32, strided<[1], offset: ?>, #gpu.address_space<global>>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  // expected-error@+1 {{'amdgpu.fat_raw_buffer_cast' op expected result type to be 'memref<8xi32, strided<[1], offset: ?>, #amdgpu.address_space<fat_raw_buffer>>' but got 'memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>'}}
+  %ret = amdgpu.fat_raw_buffer_cast %m : memref<8xi32, strided<[1], offset: ?>, #gpu.address_space<global>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// -----
+
+func.func @fat_raw_buffer_cast_wrong_as(%m: memref<8xi32>) -> memref<8xi32, #amdgpu.address_space<buffer_rsrc>> {
+  // expected-error@+1 {{'amdgpu.fat_raw_buffer_cast' op expected result type to be 'memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>' but got 'memref<8xi32, #amdgpu.address_space<buffer_rsrc>>'}}
+  %ret = amdgpu.fat_raw_buffer_cast %m : memref<8xi32> to memref<8xi32, #amdgpu.address_space<buffer_rsrc>>
+  return %ret : memref<8xi32, #amdgpu.address_space<buffer_rsrc>>
+}
+
+// -----
+
+func.func @fat_raw_buffer_cast_stripping_offset_affine_map(%m: memref<8xi32, affine_map<(d0)[s0] -> (d0 + s0)>>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  // expected-error@+1 {{'amdgpu.fat_raw_buffer_cast' op source type 'memref<8xi32, affine_map<(d0)[s0] -> (d0 + s0)>>' can't have its offset reset}}
+  %ret = amdgpu.fat_raw_buffer_cast %m resetOffset : memref<8xi32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// -----
+
+func.func @swizzle_invalid_type(%arg0 : si32) -> si32 {
+  // expected-error@+1 {{'amdgpu.swizzle_bitmode' op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1}}
+  %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : si32
+  func.return %0 : si32
+}
+
+// -----
+
+func.func @swizzle_scalable_vec(%arg0 : vector<[4]xf32>) -> vector<[4]xf32> {
+  // expected-error@+1 {{'amdgpu.swizzle_bitmode' op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1}}
+  %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : vector<[4]xf32>
+  func.return %0 : vector<[4]xf32>
 }

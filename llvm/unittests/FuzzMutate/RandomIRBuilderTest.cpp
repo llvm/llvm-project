@@ -597,10 +597,7 @@ TEST(RandomIRBuilderTest, SrcAndSinkWOrphanBlock) {
     std::unique_ptr<Module> M = parseAssembly(Source, Ctx);
     Function &F = *M->getFunction("test");
     for (BasicBlock &BB : F) {
-      SmallVector<Instruction *, 4> Insts;
-      for (Instruction &I : BB) {
-        Insts.push_back(&I);
-      }
+      SmallVector<Instruction *, 4> Insts(llvm::make_pointer_range(BB));
       for (int j = 0; j < 10; j++) {
         IB.findOrCreateSource(BB, Insts);
       }

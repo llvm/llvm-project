@@ -82,8 +82,7 @@ MachSymbolData::operator<(const MachSymbolData &RHS) const {
 }
 
 bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
-  const MCFixupKindInfo &FKI = Asm.getBackend().getFixupKindInfo(
-    (MCFixupKind) Kind);
+  MCFixupKindInfo FKI = Asm.getBackend().getFixupKindInfo((MCFixupKind)Kind);
 
   return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }
@@ -104,23 +103,23 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
       return C->getValue();
 
     MCValue Target;
-    if (!S.getVariableValue()->evaluateAsRelocatable(Target, &Asm, nullptr))
+    if (!S.getVariableValue()->evaluateAsRelocatable(Target, &Asm))
       report_fatal_error("unable to evaluate offset for variable '" +
                          S.getName() + "'");
 
     // Verify that any used symbols are defined.
-    if (Target.getSymA() && Target.getSymA()->getSymbol().isUndefined())
+    if (Target.getAddSym() && Target.getAddSym()->isUndefined())
       report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         Target.getSymA()->getSymbol().getName() + "'");
-    if (Target.getSymB() && Target.getSymB()->getSymbol().isUndefined())
+                         Target.getAddSym()->getName() + "'");
+    if (Target.getSubSym() && Target.getSubSym()->isUndefined())
       report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         Target.getSymB()->getSymbol().getName() + "'");
+                         Target.getSubSym()->getName() + "'");
 
     uint64_t Address = Target.getConstant();
-    if (Target.getSymA())
-      Address += getSymbolAddress(Target.getSymA()->getSymbol(), Asm);
-    if (Target.getSymB())
-      Address += getSymbolAddress(Target.getSymB()->getSymbol(), Asm);
+    if (Target.getAddSym())
+      Address += getSymbolAddress(*Target.getAddSym(), Asm);
+    if (Target.getSubSym())
+      Address -= getSymbolAddress(*Target.getSubSym(), Asm);
     return Address;
   }
 
@@ -507,7 +506,7 @@ void MachObjectWriter::writeLinkerOptionsLoadCommand(
 static bool isFixupTargetValid(const MCValue &Target) {
   // Target is (LHS - RHS + cst).
   // We don't support the form where LHS is null: -RHS + cst
-  if (!Target.getSymA() && Target.getSymB())
+  if (!Target.getAddSym() && Target.getSubSym())
     return false;
   return true;
 }

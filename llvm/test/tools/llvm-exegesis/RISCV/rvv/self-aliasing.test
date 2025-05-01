@@ -1,0 +1,6 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVXOR_VX_M4 --min-instructions=100 | \
+# RUN:    FileCheck %s
+
+# Make sure all def / use operands are the same in latency mode.
+# CHECK:      instructions:
+# CHECK-NEXT: PseudoVXOR_VX_M4 V[[REG:[0-9]+]]M4 V[[REG]]M4 V[[REG]]M4 X{{.*}}

@@ -272,7 +272,7 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
     return true;
   }
 
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
+  HeaderSearchOptions HSOpts;
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),

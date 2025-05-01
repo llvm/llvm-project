@@ -15,6 +15,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>
+#if __linux__
+#include <lldb/Host/linux/AbstractSocket.h>
+#endif
 
 using namespace lldb_private;
 
@@ -336,6 +339,55 @@ TEST_F(SocketTest, DomainGetConnectURI) {
             URI::Parse(uri));
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
+}
+
+TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
+  // Generate a name for the domain socket.
+  llvm::SmallString<64> name;
+  std::error_code EC = llvm::sys::fs::createUniqueDirectory(
+      "DomainSocketFromBoundNativeSocket", name);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(name, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (name.size() > 107u)
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
+
+  DomainSocket socket(true);
+  Status error = socket.Listen(name, /*backlog=*/10);
+  ASSERT_THAT_ERROR(error.takeError(), llvm::Succeeded());
+  NativeSocket native_socket = socket.GetNativeSocket();
+
+  llvm::Expected<std::unique_ptr<DomainSocket>> sock =
+      DomainSocket::FromBoundNativeSocket(native_socket,
+                                          /*should_close=*/false);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_EQ(Socket::ProtocolUnixDomain, sock->get()->GetSocketProtocol());
+}
+#endif
+
+#if __linux__
+TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
+  // Generate a name for the abstract socket.
+  llvm::SmallString<100> name;
+  llvm::sys::fs::createUniquePath("AbstractSocketFromBoundNativeSocket", name,
+                                  true);
+  llvm::sys::path::append(name, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (name.size() > 107u)
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
+
+  AbstractSocket socket;
+  Status error = socket.Listen(name, /*backlog=*/10);
+  ASSERT_THAT_ERROR(error.takeError(), llvm::Succeeded());
+  NativeSocket native_socket = socket.GetNativeSocket();
+
+  llvm::Expected<std::unique_ptr<DomainSocket>> sock =
+      DomainSocket::FromBoundNativeSocket(native_socket,
+                                          /*should_close=*/false);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_EQ(Socket::ProtocolUnixAbstract, sock->get()->GetSocketProtocol());
 }
 #endif
 
