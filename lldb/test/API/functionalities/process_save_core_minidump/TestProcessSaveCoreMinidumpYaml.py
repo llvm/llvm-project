@@ -33,7 +33,7 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         options.SetStyle(lldb.eSaveCoreCustomOnly)
 
         size = 8
-        begin = 0x7FFF12A84030
+        begin = 0x2000
         end = begin + size
         custom_range = lldb.SBMemoryRegionInfo("", begin, end, 3, True, False)
         options.AddMemoryRegionToSave(custom_range)
@@ -66,8 +66,8 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         options.SetPluginName("minidump")
         options.SetStyle(lldb.eSaveCoreCustomOnly)
 
-        size = 0x2FD0
-        begin = 0x7FFF12A84030
+        size = 0x100
+        begin = 0x1000
         end = begin + size
         custom_range = lldb.SBMemoryRegionInfo("", begin - 16, end + 16, 3, True, False)
         options.AddMemoryRegionToSave(custom_range)
@@ -94,8 +94,8 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         options.SetPluginName("minidump")
         options.SetStyle(lldb.eSaveCoreCustomOnly)
 
-        size = 1024
-        begin = 0x00007FFF12A8FFFF
+        size = 0x120
+        begin = 0x1000
         end = begin + size
         custom_range = lldb.SBMemoryRegionInfo("", begin, end, 3, True, False)
         options.AddMemoryRegionToSave(custom_range)
@@ -126,8 +126,8 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         options.SetPluginName("minidump")
         options.SetStyle(lldb.eSaveCoreCustomOnly)
 
-        size = 0x00000020
-        begin = 0x00007FFF12A8FFFF
+        size = 0x20
+        begin = 0x2000
         end = begin + size
         custom_range = lldb.SBMemoryRegionInfo("", begin - 16, end, 3, True, False)
         options.AddMemoryRegionToSave(custom_range)

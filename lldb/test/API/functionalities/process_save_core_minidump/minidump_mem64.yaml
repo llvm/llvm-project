@@ -20,16 +20,16 @@ Streams:
           Content:         ''
   - Type:            Memory64List
     Memory Ranges:
-      - Start of Memory Range: 0x7FFF12A84030
-        Data Size:       0x2FD0
+      - Start of Memory Range: 0x1000
+        Data Size:       0x100
         Content :        ''
-      - Start of Memory Range: 0x00007fff12a87000
-        Data Size:       0x00000018
+      - Start of Memory Range: 0x2000
+        Data Size:       0x20
         Content :        ''
-      - Start of Memory Range: 0x00007fff12a87018
-        Data Size:       0x00000400
+      - Start of Memory Range: 0x3000
+        Data Size:       0x4000
         Content :        ''
-      - Start of Memory Range: 0x00007fff12a8ffff
-        Data Size:       0x00000020
+      - Start of Memory Range: 0x5000
+        Data Size:       0x2000
         Content :        ''
 ...
