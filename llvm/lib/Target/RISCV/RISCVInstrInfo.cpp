@@ -3987,7 +3987,8 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
     // and rd, zero, rs => addi rd, zero, 0
     // mul* rd, rs, zero => addi rd, zero, 0
     // mul* rd, zero, rs => addi rd, zero, 0
-    if (MI.getOperand(1).getReg() == RISCV::X0 || MI.getOperand(2).getReg() == RISCV::X0) {
+    if (MI.getOperand(1).getReg() == RISCV::X0 ||
+        MI.getOperand(2).getReg() == RISCV::X0) {
       MI.getOperand(1).setReg(RISCV::X0);
       MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(RISCV::ADDI));
