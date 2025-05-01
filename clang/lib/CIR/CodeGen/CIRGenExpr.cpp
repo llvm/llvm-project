@@ -955,7 +955,7 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
 static std::optional<LValue> handleConditionalOperatorLValueSimpleCase(
     CIRGenFunction &cgf, const AbstractConditionalOperator *e) {
   const Expr *condExpr = e->getCond();
-  bool condExprBool;
+  bool condExprBool = false;
   if (cgf.constantFoldsToSimpleInteger(condExpr, condExprBool)) {
     const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
     if (!condExprBool)
