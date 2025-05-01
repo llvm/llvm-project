@@ -16,20 +16,20 @@ entry:
   %a.addr = alloca i32, align 4
   %x = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
-  %0 = load i32, ptr %a.addr, align 4, !dbg !18
-  %mul = mul nsw i32 %0, 2, !dbg !18
+  %0 = load i32, ptr %a.addr, align 4
+  %mul = mul nsw i32 %0, 2
   %add = add nsw i32 %mul, 1, !dbg !19
   store i32 %add, ptr %x, align 4, !dbg !20
-  ret void, !dbg !22
+  ret void
 }
 
 define hidden void @_Z1gi(i32 noundef %b) !dbg !23 {
 entry:
   %b.addr = alloca i32, align 4
   store i32 %b, ptr %b.addr, align 4
-  %0 = load i32, ptr %b.addr, align 4, !dbg !24
+  %0 = load i32, ptr %b.addr, align 4
   call void @_Z1fi(i32 noundef %0), !dbg !24
-  ret void, !dbg !25
+  ret void
 }
 
 !llvm.dbg.cu = !{!0}
@@ -44,10 +44,8 @@ entry:
 !11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !12 = !DISubroutineType(types: !13)
 !13 = !{}
-!18 = !DILocation(line: 2, scope: !11)
 !19 = !DILocation(line: 2, scope: !11, atomGroup: 1, atomRank: 2)
 !20 = !DILocation(line: 2, scope: !11, atomGroup: 1, atomRank: 1)
-!22 = !DILocation(line: 3, scope: !11, atomGroup: 2, atomRank: 1)
 !23 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 4, type: !12, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !24 = !DILocation(line: 5, scope: !23)
-!25 = !DILocation(line: 6, scope: !23, atomGroup: 1, atomRank: 1)
+
