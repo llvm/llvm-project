@@ -149,7 +149,8 @@ void mlir::bufferization::populateDynamicDimSizes(
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
-                                       const BufferizationOptions &options) {
+                                       const BufferizationOptions &options,
+                                       BufferizationState &state) {
   OpBuilder::InsertionGuard g(rewriter);
   Location loc = getLoc();
 
@@ -529,7 +530,8 @@ void CloneOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
-                                         const BufferizationOptions &options) {
+                                         const BufferizationOptions &options,
+                                         BufferizationState &state) {
   FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options);
   if (failed(buffer))
     return failure();
@@ -576,7 +578,8 @@ MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
 
 LogicalResult
 MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
-                                      const BufferizationOptions &options) {
+                                      const BufferizationOptions &options,
+                                      BufferizationState &state) {
   bool tensorDest = isa<TensorType>(getDest().getType());
   Value buffer;
   if (tensorDest) {
@@ -861,7 +864,8 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
-                                    const BufferizationOptions &options) {
+                                    const BufferizationOptions &options,
+                                    BufferizationState &state) {
   // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
   (void)foldToMemrefToTensorPair(rewriter, *this, options);
   // Note: The return value of `bufferize` indicates whether there was an error
