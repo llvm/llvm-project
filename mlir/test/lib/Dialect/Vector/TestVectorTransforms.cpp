@@ -837,7 +837,7 @@ struct TestVectorEmulateMaskedLoadStore final
   }
 };
 
-namespace bit_width_constrained_vector_linearize {
+namespace bit_width_constrained_linearization {
 
 /// Get the set of operand/result types to check for sufficiently
 /// small inner-most dimension size.
@@ -960,7 +960,7 @@ struct TestVectorBitWidthLinearize final
   }
 };
 
-} // namespace bit_width_constrained_vector_linearize
+} // namespace bit_width_constrained_linearization
 
 struct TestVectorLinearize final
     : public PassWrapper<TestVectorLinearize, OperationPass<>> {
@@ -989,7 +989,6 @@ struct TestVectorLinearize final
     vector::populateVectorLinearizeBasePatterns(converter, target, patterns);
     vector::populateVectorLinearizeShuffleLikeOpsPatterns(converter, target,
                                                           patterns);
-
     mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
         converter, patterns, target);
 
@@ -1073,7 +1072,7 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorLinearize>();
 
   PassRegistration<
-      bit_width_constrained_vector_linearize::TestVectorBitWidthLinearize>();
+      bit_width_constrained_linearization::TestVectorBitWidthLinearize>();
 
   PassRegistration<TestEliminateVectorMasks>();
 }

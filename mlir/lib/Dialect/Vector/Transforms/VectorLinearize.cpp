@@ -444,8 +444,9 @@ struct LinearizeVectorSplat final
 
 } // namespace
 
-/// Some operations currently cannot be linearized if they have scalable vector
-/// results. This function returns true if `op` is such an operation.
+/// Some operations currently will not be linearized if they have scalable
+/// vector results, although support should be added in the future. This
+/// function returns true if `op` is such an operation.
 static bool isNotLinearizableBecauseScalable(Operation *op) {
 
   bool unsupported =
@@ -469,15 +470,14 @@ static bool isNotLinearizableBecauseScalable(Operation *op) {
   return containsScalableResult;
 }
 
-/// This method defines a set of operations that are not linearizable,
-/// and hence considered legal for the conversion target. These ops are
-/// currently
+/// This method defines a set of operations that are not linearizable, and hence
+/// they are considered legal for the conversion target. These ops are
+/// currently,
 ///
-/// 1) Ops that are not in the vector dialect, are not ConstantLike, and are not
-///    Vectorizable.
+/// 1) ones that are not in the vector dialect, are not ConstantLike, and are
+///    not Vectorizable, or
 ///
-/// 2) Certain ops with scalable vector results, for which support has not yet
-///    been added.
+/// 2) have scalable vector results, for which support has not yet been added.
 static bool isNotLinearizable(Operation *op) {
 
   StringLiteral vectorDialect = vector::VectorDialect::getDialectNamespace();
@@ -486,6 +486,10 @@ static bool isNotLinearizable(Operation *op) {
                      !op->hasTrait<OpTrait::ConstantLike>() &&
                      !op->hasTrait<OpTrait::Vectorizable>();
   if (unsupported)
+    return true;
+
+  // vector.shape_cast cannot be linearized.
+  if (isa<vector::ShapeCastOp>(op))
     return true;
 
   // Some ops currently don't support scalable vectors.
