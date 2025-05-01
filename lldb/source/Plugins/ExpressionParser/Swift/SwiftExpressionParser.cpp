@@ -48,6 +48,7 @@
 
 #include "llvm-c/Analysis.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/IRBuilder.h"
@@ -62,7 +63,6 @@
 #include "llvm/TargetParser/Host.h"
 
 #include "clang/Basic/Module.h"
-#include "clang/Rewrite/Core/RewriteBuffer.h"
 
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/DiagnosticConsumer.h"
@@ -2344,7 +2344,7 @@ bool SwiftExpressionParser::RewriteExpression(
   if (num_diags == 0)
     return false;
 
-  clang::RewriteBuffer rewrite_buf;
+  llvm::RewriteBuffer rewrite_buf;
   llvm::StringRef text_ref(m_expr.Text());
   rewrite_buf.Initialize(text_ref);
 
