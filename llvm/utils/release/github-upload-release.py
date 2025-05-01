@@ -45,7 +45,8 @@ def create_release(repo, release, tag=None, name=None, message=None):
         # Note that these lines are not length limited because if we do so, GitHub
         # assumes that should be how it is laid out on the page. We want GitHub to
         # do the reflowing for us instead.
-        message = dedent("""\
+        message = dedent(
+            """\
 LLVM {} Release
 
 # Package Types
