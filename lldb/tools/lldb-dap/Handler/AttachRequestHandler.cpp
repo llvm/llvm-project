@@ -158,8 +158,15 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
         std::string connect_url =
             llvm::formatv("connect://{0}:", gdb_remote_hostname);
         connect_url += std::to_string(gdb_remote_port);
-        dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
-                                 error);
+        // Connect remote will generate a stopped event even in synchronous
+        // mode.
+        {
+          std::lock_guard<std::mutex> guard(dap.first_stop_mutex);
+          dap.first_stop_state = DAP::FirstStopState::PendingStopEvent;
+          dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                   error);
+        }
+        dap.first_stop_cv.notify_one();
       } else {
         // Attach by process name or id.
         dap.target.Attach(attach_info, error);
@@ -168,15 +175,21 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
       dap.target.LoadCore(core_file.data(), error);
     }
   } else {
-    // We have "attachCommands" that are a set of commands that are expected
-    // to execute the commands after which a process should be created. If there
-    // is no valid process after running these commands, we have failed.
-    if (llvm::Error err = dap.RunAttachCommands(attachCommands)) {
-      response["success"] = false;
-      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-      dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
+    {
+      std::lock_guard<std::mutex> guard(dap.first_stop_mutex);
+      dap.first_stop_state = DAP::FirstStopState::PendingStopEvent;
+      // We have "attachCommands" that are a set of commands that are expected
+      // to execute the commands after which a process should be created. If
+      // there is no valid process after running these commands, we have failed.
+      if (llvm::Error err = dap.RunAttachCommands(attachCommands)) {
+        response["success"] = false;
+        EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+        dap.SendJSON(llvm::json::Value(std::move(response)));
+        return;
+      }
     }
+    dap.first_stop_cv.notify_one();
+
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     dap.target = dap.debugger.GetSelectedTarget();

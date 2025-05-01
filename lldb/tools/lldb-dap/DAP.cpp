@@ -85,7 +85,9 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
       exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
       stop_at_entry(false), is_attach(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
-      configuration_done_sent(false), waiting_for_run_in_terminal(false),
+      configuration_done_sent(false),
+      first_stop_state(FirstStopState::NoStopEvent),
+      waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       reverse_request_seq(0), repl_mode(default_repl_mode) {

@@ -51,6 +51,24 @@ void ConfigurationDoneRequestHandler::operator()(
   FillResponse(request, response);
   dap.SendJSON(llvm::json::Value(std::move(response)));
   dap.configuration_done_sent = true;
+
+  {
+    // Temporary unlock the API mutex to avoid a deadlock between the API mutex
+    // and the first stop mutex.
+    lock.unlock();
+
+    // Block until we have either ignored the fist stop event or we didn't
+    // generate one because we attached or launched in synchronous mode.
+    std::unique_lock<std::mutex> stop_lock(dap.first_stop_mutex);
+    dap.first_stop_cv.wait(stop_lock, [&] {
+      return dap.first_stop_state == DAP::FirstStopState::NoStopEvent ||
+             dap.first_stop_state == DAP::FirstStopState::IgnoredStopEvent;
+    });
+
+    // Relock the API mutex.
+    lock.lock();
+  }
+
   if (dap.stop_at_entry)
     SendThreadStoppedEvent(dap);
   else {

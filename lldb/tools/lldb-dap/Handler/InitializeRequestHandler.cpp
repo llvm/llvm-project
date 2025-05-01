@@ -167,13 +167,22 @@ static void EventThreadFunction(DAP &dap) {
             // stop events which we do not want to send an event for. We will
             // manually send a stopped event in request_configurationDone(...)
             // so don't send any before then.
-            if (dap.configuration_done_sent) {
-              // Only report a stopped event if the process was not
-              // automatically restarted.
-              if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
-                SendStdOutStdErr(dap, process);
-                SendThreadStoppedEvent(dap);
+            {
+              std::unique_lock<std::mutex> lock(dap.first_stop_mutex);
+              if (dap.first_stop_state ==
+                  DAP::FirstStopState::PendingStopEvent) {
+                dap.first_stop_state = DAP::FirstStopState::IgnoredStopEvent;
+                lock.unlock();
+                dap.first_stop_cv.notify_one();
+                continue;
               }
+            }
+
+            // Only report a stopped event if the process was not
+            // automatically restarted.
+            if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
+              SendStdOutStdErr(dap, process);
+              SendThreadStoppedEvent(dap);
             }
             break;
           case lldb::eStateRunning:
