@@ -982,8 +982,6 @@ struct TestVectorLinearize final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    SmallVector<Operation *> ops;
-
     vector::populateForVectorLinearize(converter, target);
 
     vector::populateVectorLinearizeBasePatterns(converter, target, patterns);
