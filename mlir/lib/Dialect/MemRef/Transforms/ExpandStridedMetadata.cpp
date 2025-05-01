@@ -28,7 +28,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_EXPANDSTRIDEDMETADATA
+#define GEN_PASS_DEF_EXPANDSTRIDEDMETADATAPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -1213,7 +1213,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
 namespace {
 
 struct ExpandStridedMetadataPass final
-    : public memref::impl::ExpandStridedMetadataBase<
+    : public memref::impl::ExpandStridedMetadataPassBase<
           ExpandStridedMetadataPass> {
   void runOnOperation() override;
 };
@@ -1224,8 +1224,4 @@ void ExpandStridedMetadataPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateExpandStridedMetadataPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> memref::createExpandStridedMetadataPass() {
-  return std::make_unique<ExpandStridedMetadataPass>();
 }

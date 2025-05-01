@@ -188,6 +188,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -211,8 +212,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.realloc
 
     # stdio.h entrypoints
-    libc.src.stdio.fdopen
-    libc.src.stdio.fileno
     libc.src.stdio.fprintf
     libc.src.stdio.fscanf
     libc.src.stdio.vfscanf
@@ -326,6 +325,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
@@ -398,10 +398,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -639,6 +641,7 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.atan2f128
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
@@ -749,6 +752,38 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     # TODO: https://github.com/llvm/llvm-project/issues/115778
     libc.src.stdfix.lkbits
     libc.src.stdfix.ulkbits
+    libc.src.stdfix.bitshr
+    libc.src.stdfix.bitsr
+    libc.src.stdfix.bitslr
+    libc.src.stdfix.bitshk
+    libc.src.stdfix.bitsk
+    libc.src.stdfix.bitslk
+    libc.src.stdfix.bitsuhr
+    libc.src.stdfix.bitsur
+    libc.src.stdfix.bitsulr
+    libc.src.stdfix.bitsuhk
+    libc.src.stdfix.bitsuk
+    libc.src.stdfix.bitsulk
+    libc.src.stdfix.countlshr
+    libc.src.stdfix.countlsr
+    libc.src.stdfix.countlslr
+    libc.src.stdfix.countlshk
+    libc.src.stdfix.countlsk
+    libc.src.stdfix.countlslk
+    libc.src.stdfix.countlsuhr
+    libc.src.stdfix.countlsur
+    libc.src.stdfix.countlsulr
+    libc.src.stdfix.countlsuhk
+    libc.src.stdfix.countlsuk
+    libc.src.stdfix.countlsulk
+    libc.src.stdfix.idivr
+    libc.src.stdfix.idivlr
+    libc.src.stdfix.idivk
+    libc.src.stdfix.idivlk
+    libc.src.stdfix.idivur
+    libc.src.stdfix.idivulr
+    libc.src.stdfix.idivuk
+    libc.src.stdfix.idivulk
   )
 endif()
 
@@ -835,6 +870,9 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_getcpuisset
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
@@ -844,6 +882,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
     libc.src.stdio.fclose
+    libc.src.stdio.fdopen
     libc.src.stdio.feof
     libc.src.stdio.feof_unlocked
     libc.src.stdio.ferror
@@ -852,6 +891,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgetc
     libc.src.stdio.fgetc_unlocked
     libc.src.stdio.fgets
+    libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
     libc.src.stdio.fopencookie
@@ -918,6 +958,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.insque
     libc.src.search.lfind
+    libc.src.search.lsearch
     libc.src.search.remque
 
     # threads.h entrypoints

@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
 #define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
 
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/string>
 

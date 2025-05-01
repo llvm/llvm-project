@@ -562,7 +562,7 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
           m_clang.getASTContext(), spelling));
     }
     return m_clang.getASTContext().getMemberPointerType(
-        pointee_type, class_type.getTypePtr());
+        pointee_type, /*Qualifier=*/nullptr, class_type->getAsCXXRecordDecl());
   }
 
   clang::QualType pointer_type;

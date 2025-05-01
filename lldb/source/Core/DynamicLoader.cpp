@@ -243,14 +243,21 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // find an executable and symbol file.
     if (!module_sp) {
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      StatisticsMap symbol_locator_map;
       module_spec.GetSymbolFileSpec() =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths,
+                                                    symbol_locator_map);
       ModuleSpec objfile_module_spec =
-          PluginManager::LocateExecutableObjectFile(module_spec);
+          PluginManager::LocateExecutableObjectFile(module_spec,
+                                                    symbol_locator_map);
       module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
           FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
+      }
+
+      if (module_sp) {
+        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
       }
     }
 
@@ -263,7 +270,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
         module_sp = std::make_shared<Module>(module_spec);
       } else if (force_symbol_search && error.AsCString("") &&
                  error.AsCString("")[0] != '\0') {
-        target.GetDebugger().GetErrorStream() << error.AsCString();
+        *target.GetDebugger().GetAsyncErrorStream() << error.AsCString();
       }
     }
 
@@ -328,19 +335,19 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   } else {
     if (force_symbol_search) {
-      Stream &s = target.GetDebugger().GetErrorStream();
-      s.Printf("Unable to find file");
+      lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
+      s->Printf("Unable to find file");
       if (!name.empty())
-        s.Printf(" %s", name.str().c_str());
+        s->Printf(" %s", name.str().c_str());
       if (uuid.IsValid())
-        s.Printf(" with UUID %s", uuid.GetAsString().c_str());
+        s->Printf(" with UUID %s", uuid.GetAsString().c_str());
       if (value != LLDB_INVALID_ADDRESS) {
         if (value_is_offset)
-          s.Printf(" with slide 0x%" PRIx64, value);
+          s->Printf(" with slide 0x%" PRIx64, value);
         else
-          s.Printf(" at address 0x%" PRIx64, value);
+          s->Printf(" at address 0x%" PRIx64, value);
       }
-      s.Printf("\n");
+      s->Printf("\n");
     }
     LLDB_LOGF(log,
               "Unable to find binary %s with UUID %s and load it at "

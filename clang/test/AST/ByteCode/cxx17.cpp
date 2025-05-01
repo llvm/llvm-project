@@ -125,3 +125,14 @@ namespace constant {
   }
   static_assert(f());
 }
+
+
+template <int a> struct i; // both-note {{template is declared here}}
+template <> struct i<0> {};
+
+template <int x> constexpr auto c() {
+  i<x> g; // both-error {{implicit instantiation of undefined template 'i<1>'}}
+  return 0;
+}
+
+auto y = c<1>(); // both-note {{in instantiation of function template specialization 'c<1>' requested here}}

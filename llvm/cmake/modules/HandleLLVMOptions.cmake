@@ -199,11 +199,15 @@ endif()
 string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
 
 if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
-  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+  set( LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
 elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
   # The DISABLED setting is default and requires no additional defines.
 else()
   message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
+endif()
+
+if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
+  add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
 endif()
 
 if( LLVM_REVERSE_ITERATION )
@@ -688,7 +692,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
   # LLVM data structures like llvm::User and llvm::MDNode rely on
   # the value of object storage persisting beyond the lifetime of the
   # object (#24952).  This is not standard compliant and causes a runtime

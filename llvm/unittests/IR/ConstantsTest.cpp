@@ -64,7 +64,7 @@ TEST(ConstantsTest, Integer_i1) {
 
   // @n = constant i1 mul(i1 -1, i1 1)
   // @n = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getMul(NegOne, One));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::Mul, NegOne, One));
 
   // @o = constant i1 sdiv(i1 -1, i1 1) ; overflow
   // @o = constant i1 true
@@ -213,7 +213,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getAdd(P0, P0, true, true),
         "add nuw nsw i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getSub(P0, P0), "sub i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getMul(P0, P0), "mul i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getXor(P0, P0), "xor i32 " P0STR ", " P0STR);
 
   std::vector<Constant *> V;

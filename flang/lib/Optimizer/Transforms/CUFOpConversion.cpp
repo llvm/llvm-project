@@ -8,6 +8,7 @@
 
 #include "flang/Optimizer/Transforms/CUFOpConversion.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -541,7 +542,8 @@ static mlir::Value getShapeFromDecl(mlir::Value src) {
 
 static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
                             cuf::DataTransferOp op,
-                            const mlir::SymbolTable &symtab) {
+                            const mlir::SymbolTable &symtab,
+                            mlir::Type dstEleTy = nullptr) {
   auto mod = op->getParentOfType<mlir::ModuleOp>();
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, mod);
@@ -555,11 +557,21 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
       // from a LOGICAL constant. Store it as a fir.logical.
       srcTy = fir::LogicalType::get(rewriter.getContext(), 4);
       src = createConvertOp(rewriter, loc, srcTy, src);
+      addr = builder.createTemporary(loc, srcTy);
+      builder.create<fir::StoreOp>(loc, src, addr);
+    } else {
+      if (dstEleTy && fir::isa_trivial(dstEleTy) && srcTy != dstEleTy) {
+        // Use dstEleTy and convert to avoid assign mismatch.
+        addr = builder.createTemporary(loc, dstEleTy);
+        auto conv = builder.create<fir::ConvertOp>(loc, dstEleTy, src);
+        builder.create<fir::StoreOp>(loc, conv, addr);
+        srcTy = dstEleTy;
+      } else {
+        // Put constant in memory if it is not.
+        addr = builder.createTemporary(loc, srcTy);
+        builder.create<fir::StoreOp>(loc, src, addr);
+      }
     }
-    // Put constant in memory if it is not.
-    mlir::Value alloc = builder.createTemporary(loc, srcTy);
-    builder.create<fir::StoreOp>(loc, src, alloc);
-    addr = alloc;
   } else {
     addr = op.getSrc();
   }
@@ -729,7 +741,7 @@ struct CUFDataTransferOpConversion
     };
 
     // Conversion of data transfer involving at least one descriptor.
-    if (mlir::isa<fir::BaseBoxType>(dstTy)) {
+    if (auto dstBoxTy = mlir::dyn_cast<fir::BaseBoxType>(dstTy)) {
       // Transfer to a descriptor.
       mlir::func::FuncOp func =
           isDstGlobal(op)
@@ -740,7 +752,8 @@ struct CUFDataTransferOpConversion
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
       if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
-        src = emboxSrc(rewriter, op, symtab);
+        mlir::Type dstEleTy = fir::unwrapInnerType(dstBoxTy.getEleTy());
+        src = emboxSrc(rewriter, op, symtab, dstEleTy);
         if (fir::isa_trivial(srcTy))
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
               loc, builder);
@@ -797,7 +810,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     auto idxTy = mlir::IndexType::get(op.getContext());
-    auto zero = rewriter.create<mlir::arith::ConstantOp>(
+    mlir::Value zero = rewriter.create<mlir::arith::ConstantOp>(
         loc, rewriter.getIntegerType(32), rewriter.getI32IntegerAttr(0));
     auto gridSizeX =
         rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getGridX());
@@ -856,17 +869,30 @@ public:
       }
       args.push_back(arg);
     }
-
+    mlir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
     auto gpuLaunchOp = rewriter.create<mlir::gpu::LaunchFuncOp>(
         loc, kernelName, mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
-        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ}, zero, args);
+        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
+        dynamicShmemSize, args);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
     }
+    if (op.getStream()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(gpuLaunchOp);
+      mlir::Value stream =
+          rewriter.create<cuf::StreamCastOp>(loc, op.getStream());
+      gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
+    }
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
+    else
+      // Set default global attribute of the original was not found.
+      gpuLaunchOp->setAttr(cuf::getProcAttrName(),
+                           cuf::ProcAttributeAttr::get(
+                               op.getContext(), cuf::ProcAttribute::Global));
     rewriter.replaceOp(op, gpuLaunchOp);
     return mlir::success();
   }
@@ -892,16 +918,7 @@ struct CUFSyncDescriptorOpConversion
 
     auto hostAddr = builder.create<fir::AddrOfOp>(
         loc, fir::ReferenceType::get(globalOp.getType()), op.getGlobalName());
-    mlir::func::FuncOp callee =
-        fir::runtime::getRuntimeFunc<mkRTKey(CUFSyncGlobalDescriptor)>(loc,
-                                                                       builder);
-    auto fTy = callee.getFunctionType();
-    mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-    mlir::Value sourceLine =
-        fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-    llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-        builder, loc, fTy, hostAddr, sourceFile, sourceLine)};
-    builder.create<fir::CallOp>(loc, callee, args);
+    fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc, hostAddr);
     op.erase();
     return mlir::success();
   }
@@ -926,6 +943,7 @@ public:
                                          /*forceUnifiedTBAATree=*/false, *dl);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::gpu::GPUDialect>();
+    target.addLegalOp<cuf::StreamCastOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,

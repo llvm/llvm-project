@@ -33,8 +33,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 
   llvm.func @parallel_if(%arg0: !llvm.ptr {fir.bindc_name = "ifcond"}) {
     %0 = llvm.mlir.constant(1 : i64) : i64
-    %1 = llvm.alloca %0 x i32 {bindc_name = "d"} : (i64) -> !llvm.ptr
-    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
+    %1 = llvm.alloca %0 x i32 {bindc_name = "d"} : (i64) -> !llvm.ptr<5>
+    %cast = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+    %2 = omp.map.info var_ptr(%cast : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
     %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "ifcond"}
     omp.target map_entries(%2 -> %arg1, %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
       %4 = llvm.mlir.constant(10 : i32) : i32

@@ -46,8 +46,8 @@ class QuantizedTypeConverter : public TypeConverter {
 
   static Value materializeConversion(OpBuilder &builder, Type type,
                                      ValueRange inputs, Location loc) {
-    assert(inputs.size() == 1);
-    return builder.create<quant::StorageCastOp>(loc, type, inputs[0]);
+    return builder.create<quant::StorageCastOp>(loc, type,
+                                                llvm::getSingleElement(inputs));
   }
 
 public:
@@ -64,14 +64,6 @@ public:
 // Conversion pass
 class StripFuncQuantTypes
     : public impl::StripFuncQuantTypesBase<StripFuncQuantTypes> {
-
-  // Return whether a type is considered legal when occurring in the header of
-  // a function or as an operand to a 'return' op.
-  static bool isLegalType(Type type) {
-    if (auto tensorType = dyn_cast<TensorType>(type))
-      return isLegalType(tensorType.getElementType());
-    return !isa<quant::QuantizedType>(type);
-  }
 
 public:
   void runOnOperation() override {
