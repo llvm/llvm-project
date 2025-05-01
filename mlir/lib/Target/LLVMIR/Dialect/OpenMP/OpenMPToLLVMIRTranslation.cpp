@@ -2638,6 +2638,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrder());
+
   llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   std::optional<ArrayAttr> alignmentValues = simdOp.getAlignments();
   mlir::OperandRange operands = simdOp.getAlignedVars();

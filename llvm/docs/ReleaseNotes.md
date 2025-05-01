@@ -64,6 +64,7 @@ Changes to the LLVM IR
 
 * Updated semantics of `llvm.type.checked.load.relative` to match that of
   `llvm.load.relative`.
+* Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
 Changes to LLVM infrastructure
 ------------------------------

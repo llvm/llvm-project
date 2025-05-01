@@ -3094,6 +3094,8 @@ bool LLParser::parseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
     Value *V;
     if (parseType(ArgTy, ArgLoc))
       return true;
+    if (!FunctionType::isValidArgumentType(ArgTy))
+      return error(ArgLoc, "invalid type for function argument");
 
     AttrBuilder ArgAttrs(M->getContext());
 
@@ -3403,7 +3405,7 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
         CurValID = ArgID + 1;
       }
 
-      if (!ArgTy->isFirstClassType())
+      if (!FunctionType::isValidArgumentType(ArgTy))
         return error(TypeLoc, "invalid type for function argument");
 
       ArgList.emplace_back(TypeLoc, ArgTy,
