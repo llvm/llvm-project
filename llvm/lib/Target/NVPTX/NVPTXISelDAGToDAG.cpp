@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include <optional>
 
 using namespace llvm;
@@ -1141,6 +1142,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   else
     FromType = getLdStRegType(ScalarVT);
 
+  assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
+         FromTypeWidth <= 128 && "Invalid width for load");
+
   // Create the machine instruction DAG
   SDValue Offset, Base;
   SelectADDR(N->getOperand(1), Base, Offset);
@@ -1235,6 +1239,9 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
   }
+
+  assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
+         FromTypeWidth <= 128 && TotalWidth <= 128 && "Invalid width for load");
 
   SDValue Offset, Base;
   SelectADDR(N->getOperand(1), Base, Offset);
@@ -1453,6 +1460,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   // Create the machine instruction DAG
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
 
+  assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
+         "Invalid width for store");
+
   SDValue Offset, Base;
   SelectADDR(ST->getBasePtr(), Base, Offset);
 
@@ -1536,6 +1546,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
   }
+
+  assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
+         TotalWidth <= 128 && "Invalid width for store");
 
   SDValue Offset, Base;
   SelectADDR(N2, Base, Offset);
