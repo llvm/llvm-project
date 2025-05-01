@@ -2666,7 +2666,7 @@ void acc::LoopOp::addIndependent(
 void acc::LoopOp::addAuto(MLIRContext *context,
                           llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   setAuto_Attr(addDeviceTypeAffectedOperandHelper(context, getAuto_Attr(),
-                                                 effectiveDeviceTypes));
+                                                  effectiveDeviceTypes));
 }
 
 //===----------------------------------------------------------------------===//
