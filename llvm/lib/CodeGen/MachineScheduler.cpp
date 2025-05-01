@@ -965,7 +965,7 @@ void ScheduleDAGMI::moveInstruction(
 
 bool ScheduleDAGMI::checkSchedLimit() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
-  if ((NumInstrsScheduled + 1) == MISchedCutoff && MISchedCutoff != ~0U) {
+  if (NumInstrsScheduled == MISchedCutoff && MISchedCutoff != ~0U) {
     CurrentTop = CurrentBottom;
     return false;
   }
@@ -1003,13 +1003,14 @@ void ScheduleDAGMI::schedule() {
 
   bool IsTopNode = false;
   while (true) {
+    if (!checkSchedLimit())
+      break;
+
     LLVM_DEBUG(dbgs() << "** ScheduleDAGMI::schedule picking next node\n");
     SUnit *SU = SchedImpl->pickNode(IsTopNode);
     if (!SU) break;
 
     assert(!SU->isScheduled && "Node already scheduled");
-    if (!checkSchedLimit())
-      break;
 
     MachineInstr *MI = SU->getInstr();
     if (IsTopNode) {
@@ -1637,13 +1638,14 @@ void ScheduleDAGMILive::schedule() {
 
   bool IsTopNode = false;
   while (true) {
+    if (!checkSchedLimit())
+      break;
+
     LLVM_DEBUG(dbgs() << "** ScheduleDAGMILive::schedule picking next node\n");
     SUnit *SU = SchedImpl->pickNode(IsTopNode);
     if (!SU) break;
 
     assert(!SU->isScheduled && "Node already scheduled");
-    if (!checkSchedLimit())
-      break;
 
     scheduleMI(SU, IsTopNode);
 
