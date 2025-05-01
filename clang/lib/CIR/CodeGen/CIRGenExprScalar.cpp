@@ -1567,6 +1567,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return v;
   }
 
+  case CK_ArrayToPointerDecay:
+    return cgf.emitArrayToPointerDecay(subExpr).getPointer();
+
   case CK_NullToPointer: {
     if (mustVisitNullValue(subExpr))
       cgf.emitIgnoredExpr(subExpr);
