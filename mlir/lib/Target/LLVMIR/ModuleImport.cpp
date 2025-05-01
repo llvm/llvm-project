@@ -2147,6 +2147,8 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("instrument-function-entry"),
+    StringLiteral("instrument-function-exit"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
@@ -2301,6 +2303,16 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
       attr.isStringAttribute())
     funcOp.setApproxFuncFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
+      attr.isStringAttribute())
+    funcOp.setInstrumentFunctionEntry(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("instrument-function-exit");
+      attr.isStringAttribute())
+    funcOp.setInstrumentFunctionExit(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())

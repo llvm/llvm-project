@@ -30,6 +30,11 @@ struct SomeRAIterator {
   bool operator!=(SomeRAIterator&);
 };
 
+SomeRAIterator &operator+(const SomeRAIterator&, int);
+SomeRAIterator &operator+(int,const SomeRAIterator&);
+SomeRAIterator &operator-(const SomeRAIterator&, int);
+SomeRAIterator &operator-(int,const SomeRAIterator&);
+
 struct HasIteratorCollection {
   SomeIterator &begin();
   SomeIterator &end();
@@ -398,5 +403,39 @@ void inst() {
   SeqLoopRules<int, int*, float, SomeStruct, SomeIterator, SomeRAIterator>();
   // expected-note@+1{{in instantiation of function template specialization}}
   LoopRules<int, int*, float, SomeStruct, SomeIterator, SomeRAIterator>();
+}
+
+void allowTrivialAssignStep(int N) {
+#pragma acc loop
+  for(int i = 0; i !=5; i = i + N);
+#pragma acc loop
+  for(int i = 0; i !=5; i = i - N);
+#pragma acc loop
+  for(int i = 0; i !=5; i = N + i);
+
+  // expected-error@+3{{OpenACC 'loop' variable must monotonically increase or decrease}}
+  // expected-note@+1{{'loop' construct is here}}
+#pragma acc loop
+  for(int i = 0; i !=5; i = N - i);
+  // expected-error@+3{{OpenACC 'loop' variable must monotonically increase or decrease}}
+  // expected-note@+1{{'loop' construct is here}}
+#pragma acc loop
+  for(int i = 0; i !=5; i = N + N);
+
+  HasRAIteratorCollection Col;
+
+#pragma acc loop
+  for (auto Itr = Col.begin(); Itr != Col.end(); Itr = Itr + N);
+
+#pragma acc loop
+  for (auto Itr = Col.begin(); Itr != Col.end(); Itr = Itr - N);
+
+#pragma acc loop
+  for (auto Itr = Col.begin(); Itr != Col.end(); Itr = N + Itr);
+
+  // expected-error@+3{{OpenACC 'loop' variable must monotonically increase or decrease}}
+  // expected-note@+1{{'loop' construct is here}}
+#pragma acc loop
+  for (auto Itr = Col.begin(); Itr != Col.end(); Itr = N - Itr);
 }
 
