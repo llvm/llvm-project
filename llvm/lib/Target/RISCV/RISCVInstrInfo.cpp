@@ -3873,11 +3873,8 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::XOR:
       // Normalize:
       // [x]or rd, zero, rs => [x]or rd, rs, zero
-      if (MI.getOperand(1).getReg() == RISCV::X0) {
-        MachineOperand MO1 = MI.getOperand(1);
-        MI.removeOperand(1);
-        MI.addOperand(MO1);
-      }
+      if (MI.getOperand(1).getReg() == RISCV::X0)
+        commuteInstruction(MI);
       // [x]or rd, rs, zero => addi rd, rs, 0
       if (MI.getOperand(2).getReg() == RISCV::X0) {
         MI.getOperand(2).ChangeToImmediate(0);
@@ -3895,11 +3892,8 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::ADDW:
       // Normalize:
       // addw rd, zero, rs => addw rd, rs, zero
-      if (MI.getOperand(1).getReg() == RISCV::X0) {
-        MachineOperand MO1 = MI.getOperand(1);
-        MI.removeOperand(1);
-        MI.addOperand(MO1);
-      }
+      if (MI.getOperand(1).getReg() == RISCV::X0)
+        commuteInstruction(MI);
       // addw rd, rs, zero => addiw rd, rs, 0
       if (MI.getOperand(2).getReg() == RISCV::X0) {
         MI.getOperand(2).ChangeToImmediate(0);
