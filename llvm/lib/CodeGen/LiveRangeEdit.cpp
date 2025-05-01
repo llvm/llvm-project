@@ -156,7 +156,7 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
 }
 
 bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,
-                                       SlotIndex UseIdx, bool cheapAsAMove) {
+                                       SlotIndex UseIdx) {
   assert(ScannedRemattable && "Call anyRematerializable first");
 
   // Use scanRemattable info.
@@ -167,10 +167,6 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,
   SlotIndex DefIdx;
   assert(RM.OrigMI && "No defining instruction for remattable value");
   DefIdx = LIS.getInstructionIndex(*RM.OrigMI);
-
-  // If only cheap remats were requested, bail out early.
-  if (cheapAsAMove && !TII.isAsCheapAsAMove(*RM.OrigMI))
-    return false;
 
   // Verify that all used registers are available with the same values.
   if (!allUsesAvailableAt(RM.OrigMI, DefIdx, UseIdx))

@@ -1571,7 +1571,8 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
-      if (!BlockIndex.contains(SI))
+      auto BlockIndexIt = BlockIndex.find(SI);
+      if (BlockIndexIt == BlockIndex.end())
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)
@@ -1583,7 +1584,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
 
       auto EdgeProb =
           Scaled64::getFraction(EP.getNumerator(), EP.getDenominator());
-      size_t Dst = BlockIndex.find(SI)->second;
+      size_t Dst = BlockIndexIt->second;
       Succs[Src].push_back(std::make_pair(Dst, EdgeProb));
       SumProb[Src] += EdgeProb;
     }

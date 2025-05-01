@@ -77,7 +77,7 @@ private:
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
-
+  SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
@@ -135,8 +135,9 @@ private:
   //   ctx = ctx + reloc_offset
   //   ... (*(u8 *)(ctx + 1)) & 0x80 ...
   // which will be rejected by the verifier.
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override {
+  bool
+  shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                        std::optional<unsigned> ByteOffset) const override {
     return false;
   }
 

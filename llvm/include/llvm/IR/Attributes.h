@@ -42,6 +42,7 @@ class ConstantRangeList;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
+class Instruction;
 class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
@@ -1161,6 +1162,13 @@ public:
     return getRawIntAttr(Attribute::DereferenceableOrNull).value_or(0);
   }
 
+  /// Retrieve the bitmask for nofpclass, if the nofpclass attribute exists
+  /// (fcNone is returned otherwise).
+  FPClassTest getNoFPClass() const {
+    std::optional<uint64_t> Raw = getRawIntAttr(Attribute::NoFPClass);
+    return static_cast<FPClassTest>(Raw.value_or(0));
+  }
+
   /// Retrieve type for the given type attribute.
   Type *getTypeAttr(Attribute::AttrKind Kind) const;
 
@@ -1284,6 +1292,11 @@ public:
 
   /// Add initializes attribute.
   AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
+
+  /// Add 0 or more parameter attributes which are equivalent to metadata
+  /// attached to \p I. e.g. !align -> align. This assumes the argument type is
+  /// the same as the original instruction and the attribute is compatible.
+  AttrBuilder &addFromEquivalentMetadata(const Instruction &I);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 

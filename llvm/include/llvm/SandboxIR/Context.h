@@ -25,7 +25,9 @@ class Argument;
 class BBIterator;
 class Constant;
 class Module;
+class Region;
 class Value;
+class Use;
 
 class Context {
 public:
@@ -37,6 +39,8 @@ public:
   // destination BB and an iterator pointing to the insertion position.
   using MoveInstrCallback =
       std::function<void(Instruction *, const BBIterator &)>;
+  // A SetUseCallback receives the Use that is about to get its source set.
+  using SetUseCallback = std::function<void(const Use &, Value *)>;
 
   /// An ID for a registered callback. Used for deregistration. A dedicated type
   /// is employed so as to keep IDs opaque to the end user; only Context should
@@ -98,6 +102,9 @@ protected:
   /// Callbacks called when an IR instruction is about to get moved. Keys are
   /// used as IDs for deregistration.
   MapVector<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
+  /// Callbacks called when a Use gets its source set. Keys are used as IDs for
+  /// deregistration.
+  MapVector<CallbackID, SetUseCallback> SetUseCallbacks;
 
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
@@ -124,11 +131,16 @@ protected:
   }
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
   Constant *getOrCreateConstant(llvm::Constant *LLVMC);
+  friend class ConstantDataSequential; // For getOrCreateConstant().
   friend class Utils; // For getMemoryBase
 
   void runEraseInstrCallbacks(Instruction *I);
   void runCreateInstrCallbacks(Instruction *I);
   void runMoveInstrCallbacks(Instruction *I, const BBIterator &Where);
+  void runSetUseCallbacks(const Use &U, Value *NewSrc);
+
+  friend class User;  // For runSetUseCallbacks().
+  friend class Value; // For runSetUseCallbacks().
 
   // Friends for getOrCreateConstant().
 #define DEF_CONST(ID, CLASS) friend class CLASS;
@@ -281,7 +293,10 @@ public:
   CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
   void unregisterMoveInstrCallback(CallbackID ID);
 
-  // TODO: Add callbacks for instructions inserted/removed if needed.
+  /// Register a callback that gets called when a Use gets set.
+  /// \Returns a callback ID for later deregistration.
+  CallbackID registerSetUseCallback(SetUseCallback CB);
+  void unregisterSetUseCallback(CallbackID ID);
 };
 
 } // namespace sandboxir

@@ -9,7 +9,7 @@ define <vscale x 4 x half> @interleave2_nxv4f16(<vscale x 2 x half> %vec0, <vsca
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 4 x half> @llvm.vector.interleave2.nxv4f16(<vscale x 2 x half> %vec0, <vscale x 2 x half> %vec1)
-  ret  <vscale x 4 x half>   %retval
+  ret <vscale x 4 x half> %retval
 }
 
 define <vscale x 8 x half> @interleave2_nxv8f16(<vscale x 4 x half> %vec0, <vscale x 4 x half> %vec1) {
@@ -20,7 +20,7 @@ define <vscale x 8 x half> @interleave2_nxv8f16(<vscale x 4 x half> %vec0, <vsca
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 8 x half> @llvm.vector.interleave2.nxv8f16(<vscale x 4 x half> %vec0, <vscale x 4 x half> %vec1)
-  ret  <vscale x 8 x half>   %retval
+  ret <vscale x 8 x half> %retval
 }
 
 define <vscale x 16 x half> @interleave2_nxv16f16(<vscale x 8 x half> %vec0, <vscale x 8 x half> %vec1) {
@@ -31,7 +31,7 @@ define <vscale x 16 x half> @interleave2_nxv16f16(<vscale x 8 x half> %vec0, <vs
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 16 x half> @llvm.vector.interleave2.nxv16f16(<vscale x 8 x half> %vec0, <vscale x 8 x half> %vec1)
-  ret  <vscale x 16 x half>   %retval
+  ret <vscale x 16 x half> %retval
 }
 
 define <vscale x 4 x float> @interleave2_nxv4f32(<vscale x 2 x float> %vec0, <vscale x 2 x float> %vec1) {
@@ -42,7 +42,7 @@ define <vscale x 4 x float> @interleave2_nxv4f32(<vscale x 2 x float> %vec0, <vs
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 4 x float> @llvm.vector.interleave2.nxv4f32(<vscale x 2 x float> %vec0, <vscale x 2 x float> %vec1)
-  ret  <vscale x 4 x float>   %retval
+  ret <vscale x 4 x float> %retval
 }
 
 define <vscale x 8 x float> @interleave2_nxv8f32(<vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1) {
@@ -53,7 +53,7 @@ define <vscale x 8 x float> @interleave2_nxv8f32(<vscale x 4 x float> %vec0, <vs
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1)
-  ret  <vscale x 8 x float>   %retval
+  ret <vscale x 8 x float> %retval
 }
 
 define <vscale x 4 x double> @interleave2_nxv4f64(<vscale x 2 x double> %vec0, <vscale x 2 x double> %vec1) {
@@ -64,7 +64,40 @@ define <vscale x 4 x double> @interleave2_nxv4f64(<vscale x 2 x double> %vec0, <
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 4 x double>@llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %vec0, <vscale x 2 x double> %vec1)
-  ret  <vscale x 4 x double>   %retval
+  ret <vscale x 4 x double> %retval
+}
+
+define <vscale x 4 x bfloat> @interleave2_nxv4bf16(<vscale x 2 x bfloat> %vec0, <vscale x 2 x bfloat> %vec1) {
+; CHECK-LABEL: interleave2_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 4 x bfloat> @llvm.vector.interleave2.nxv4bf16(<vscale x 2 x bfloat> %vec0, <vscale x 2 x bfloat> %vec1)
+  ret <vscale x 4 x bfloat> %retval
+}
+
+define <vscale x 8 x bfloat> @interleave2_nxv8bf16(<vscale x 4 x bfloat> %vec0, <vscale x 4 x bfloat> %vec1) {
+; CHECK-LABEL: interleave2_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 z2.s, z0.s, z1.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 8 x bfloat> @llvm.vector.interleave2.nxv8bf16(<vscale x 4 x bfloat> %vec0, <vscale x 4 x bfloat> %vec1)
+  ret <vscale x 8 x bfloat> %retval
+}
+
+define <vscale x 16 x bfloat> @interleave2_nxv16bf16(<vscale x 8 x bfloat> %vec0, <vscale x 8 x bfloat> %vec1) {
+; CHECK-LABEL: interleave2_nxv16bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 z2.h, z0.h, z1.h
+; CHECK-NEXT:    zip2 z1.h, z0.h, z1.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 16 x bfloat> @llvm.vector.interleave2.nxv16bf16(<vscale x 8 x bfloat> %vec0, <vscale x 8 x bfloat> %vec1)
+  ret <vscale x 16 x bfloat> %retval
 }
 
 ; Integers
@@ -76,8 +109,8 @@ define <vscale x 32 x i8> @interleave2_nxv32i8(<vscale x 16 x i8> %vec0, <vscale
 ; CHECK-NEXT:    zip2 z1.b, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
-   %retval = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %vec0, <vscale x 16 x i8> %vec1)
-  ret  <vscale x 32 x i8>   %retval
+  %retval = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %vec0, <vscale x 16 x i8> %vec1)
+  ret <vscale x 32 x i8> %retval
 }
 
 define <vscale x 16 x i16> @interleave2_nxv16i16(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1) {
@@ -88,7 +121,7 @@ define <vscale x 16 x i16> @interleave2_nxv16i16(<vscale x 8 x i16> %vec0, <vsca
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 16 x i16> @llvm.vector.interleave2.nxv16i16(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1)
-  ret  <vscale x 16 x i16>   %retval
+  ret <vscale x 16 x i16> %retval
 }
 
 define <vscale x 8 x i32> @interleave2_nxv8i32(<vscale x 4 x i32> %vec0, <vscale x 4 x i32> %vec1) {
@@ -99,7 +132,7 @@ define <vscale x 8 x i32> @interleave2_nxv8i32(<vscale x 4 x i32> %vec0, <vscale
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %vec0, <vscale x 4 x i32> %vec1)
-  ret  <vscale x 8 x i32>   %retval
+  ret <vscale x 8 x i32> %retval
 }
 
 define <vscale x 4 x i64> @interleave2_nxv4i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1) {
@@ -110,7 +143,7 @@ define <vscale x 4 x i64> @interleave2_nxv4i64(<vscale x 2 x i64> %vec0, <vscale
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1)
-  ret  <vscale x 4 x i64>   %retval
+  ret <vscale x 4 x i64> %retval
 }
 
 ; Predicated
@@ -122,8 +155,8 @@ define <vscale x 32 x i1> @interleave2_nxv32i1(<vscale x 16 x i1> %vec0, <vscale
 ; CHECK-NEXT:    zip2 p1.b, p0.b, p1.b
 ; CHECK-NEXT:    mov p0.b, p2.b
 ; CHECK-NEXT:    ret
-   %retval = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %vec0, <vscale x 16 x i1> %vec1)
-  ret  <vscale x 32 x i1>   %retval
+  %retval = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %vec0, <vscale x 16 x i1> %vec1)
+  ret <vscale x 32 x i1> %retval
 }
 
 define <vscale x 16 x i1> @interleave2_nxv16i1(<vscale x 8 x i1> %vec0, <vscale x 8 x i1> %vec1) {
@@ -134,7 +167,7 @@ define <vscale x 16 x i1> @interleave2_nxv16i1(<vscale x 8 x i1> %vec0, <vscale 
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p2.b
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %vec0, <vscale x 8 x i1> %vec1)
-  ret  <vscale x 16 x i1>   %retval
+  ret <vscale x 16 x i1> %retval
 }
 
 define <vscale x 8 x i1> @interleave2_nxv8i1(<vscale x 4 x i1> %vec0, <vscale x 4 x i1> %vec1) {
@@ -145,7 +178,7 @@ define <vscale x 8 x i1> @interleave2_nxv8i1(<vscale x 4 x i1> %vec0, <vscale x 
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p2.h
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %vec0, <vscale x 4 x i1> %vec1)
-  ret  <vscale x 8 x i1>   %retval
+  ret <vscale x 8 x i1> %retval
 }
 
 define <vscale x 4 x i1> @interleave2_nxv4i1(<vscale x 2 x i1> %vec0, <vscale x 2 x i1> %vec1) {
@@ -156,7 +189,7 @@ define <vscale x 4 x i1> @interleave2_nxv4i1(<vscale x 2 x i1> %vec0, <vscale x 
 ; CHECK-NEXT:    uzp1 p0.s, p0.s, p2.s
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %vec0, <vscale x 2 x i1> %vec1)
-  ret  <vscale x 4 x i1>   %retval
+  ret <vscale x 4 x i1> %retval
 }
 
 ; Split illegal type size

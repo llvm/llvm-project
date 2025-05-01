@@ -10,6 +10,7 @@
 #define CTX_PROFILE_CTXINSTRPROFILING_H_
 
 #include "CtxInstrContextNode.h"
+#include "sanitizer_common/sanitizer_dense_map.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include <sanitizer/common_interface_defs.h>
 
@@ -73,14 +74,30 @@ static_assert(alignof(Arena) == ExpectedAlignment);
 // sure the inlined vectors are appropriately aligned.
 static_assert(alignof(ContextNode) == ExpectedAlignment);
 
-/// ContextRoots are allocated by LLVM for entrypoints. LLVM is only concerned
-/// with allocating and zero-initializing the global value (as in, GlobalValue)
-/// for it.
+/// ContextRoots hold memory and the start of the contextual profile tree for a
+/// root function.
 struct ContextRoot {
   ContextNode *FirstNode = nullptr;
   Arena *FirstMemBlock = nullptr;
   Arena *CurrentMem = nullptr;
-  // This is init-ed by the static zero initializer in LLVM.
+
+  // Count the number of entries - regardless if we could take the `Taken` mutex
+  ::__sanitizer::atomic_uint64_t TotalEntries = {};
+
+  // Profiles for functions we encounter when collecting a contexutal profile,
+  // that are not associated with a callsite. This is expected to happen for
+  // signal handlers, but it also - problematically - currently happens for
+  // call sites generated after profile instrumentation, primarily
+  // mem{memset|copy|move|set}.
+  // `Unhandled` serves 2 purposes:
+  //   1. identifying such cases (like the memops)
+  //   2. collecting a profile for them, which can be at least used as a flat
+  //   profile
+  ::__sanitizer::DenseMap<GUID, ContextNode *> Unhandled;
+  // Keep the unhandled contexts in a list, as we allocate them, as it makes it
+  // simpler to send to the writer when the profile is fetched.
+  ContextNode *FirstUnhandledCalleeNode = nullptr;
+
   // Taken is used to ensure only one thread traverses the contextual graph -
   // either to read it or to write it. On server side, the same entrypoint will
   // be entered by numerous threads, but over time, the profile aggregated by
@@ -105,18 +122,56 @@ struct ContextRoot {
   // or with more concurrent collections (==more memory) and less collection
   // time. Note that concurrent collection does happen for different
   // entrypoints, regardless.
-  ::__sanitizer::StaticSpinMutex Taken;
+  ::__sanitizer::SpinMutex Taken;
+};
+
+// This is allocated and zero-initialized by the compiler, the in-place
+// initialization serves mostly as self-documentation and for testing.
+// The design is influenced by the observation that typically (at least for
+// datacenter binaries, which is the motivating target of this profiler) less
+// than 10% of functions in a binary even appear in a profile (of any kind).
+//
+// 1) We could pre-allocate the flat profile storage in the compiler, just like
+// the flat instrumented profiling does. But that penalizes the static size of
+// the binary for little reason
+//
+// 2) We could do the above but zero-initialize the buffers (which should place
+// them in .bss), and dynamically populate them. This, though, would page-in
+// more memory upfront for the binary's runtime
+//
+// The current design trades off a bit of overhead at the first time a function
+// is encountered *for flat profiling* for avoiding size penalties.
+struct FunctionData {
+#define _PTRDECL(T, N) T *N = nullptr;
+#define _VOLATILE_PTRDECL(T, N) T *volatile N = nullptr;
+#define _MUTEXDECL(N) ::__sanitizer::SpinMutex N;
+#define _CONTEXT_PTR ContextRoot *CtxRoot = nullptr;
+  CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_PTR, _VOLATILE_PTRDECL, _MUTEXDECL)
+#undef _CONTEXT_PTR
+#undef _PTRDECL
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
+
+  // Constructor for test only - since this is expected to be
+  // initialized by the compiler.
+  FunctionData() = default;
+  ContextRoot *getOrAllocateContextRoot();
 
   // If (unlikely) StaticSpinMutex internals change, we need to modify the LLVM
   // instrumentation lowering side because it is responsible for allocating and
   // zero-initializing ContextRoots.
-  static_assert(sizeof(Taken) == 1);
+  static_assert(sizeof(Mutex) == 1);
 };
 
 /// This API is exposed for testing. See the APIs below about the contract with
 /// LLVM.
 inline bool isScratch(const void *Ctx) {
   return (reinterpret_cast<uint64_t>(Ctx) & 1);
+}
+
+// True if Ctx is either nullptr or not the 0x1 value.
+inline bool canBeRoot(const ContextRoot *Ctx) {
+  return reinterpret_cast<uintptr_t>(Ctx) != 1U;
 }
 
 } // namespace __ctx_profile
@@ -142,23 +197,24 @@ extern __thread __ctx_profile::ContextRoot
 
 /// called by LLVM in the entry BB of a "entry point" function. The returned
 /// pointer may be "tainted" - its LSB set to 1 - to indicate it's scratch.
-ContextNode *__llvm_ctx_profile_start_context(__ctx_profile::ContextRoot *Root,
-                                              GUID Guid, uint32_t Counters,
-                                              uint32_t Callsites);
+ContextNode *
+__llvm_ctx_profile_start_context(__ctx_profile::FunctionData *FData, GUID Guid,
+                                 uint32_t Counters, uint32_t Callsites);
 
 /// paired with __llvm_ctx_profile_start_context, and called at the exit of the
 /// entry point function.
-void __llvm_ctx_profile_release_context(__ctx_profile::ContextRoot *Root);
+void __llvm_ctx_profile_release_context(__ctx_profile::FunctionData *FData);
 
 /// called for any other function than entry points, in the entry BB of such
 /// function. Same consideration about LSB of returned value as .._start_context
-ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
+ContextNode *__llvm_ctx_profile_get_context(__ctx_profile::FunctionData *FData,
+                                            void *Callee, GUID Guid,
                                             uint32_t NumCounters,
                                             uint32_t NumCallsites);
 
 /// Prepares for collection. Currently this resets counter values but preserves
 /// internal context tree structure.
-void __llvm_ctx_profile_start_collection();
+void __llvm_ctx_profile_start_collection(unsigned AutodetectDuration = 0);
 
 /// Completely free allocated memory.
 void __llvm_ctx_profile_free();
@@ -169,7 +225,6 @@ void __llvm_ctx_profile_free();
 /// The Writer's first parameter plays the role of closure for Writer, and is
 /// what the caller of __llvm_ctx_profile_fetch passes as the Data parameter.
 /// The second parameter is the root of a context tree.
-bool __llvm_ctx_profile_fetch(void *Data,
-                              bool (*Writer)(void *, const ContextNode &));
+bool __llvm_ctx_profile_fetch(ProfileWriter &);
 }
 #endif // CTX_PROFILE_CTXINSTRPROFILING_H_

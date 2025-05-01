@@ -135,27 +135,28 @@ public:
   ProfiledCallGraphNode *getEntryNode() { return &Root; }
   
   void addProfiledFunction(FunctionId Name) {
-    if (!ProfiledFunctions.count(Name)) {
+    auto [It, Inserted] = ProfiledFunctions.try_emplace(Name);
+    if (Inserted) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
       // Store the pointer of the node because the map can be rehashed.
       auto &Node =
           ProfiledCallGraphNodeList.emplace_back(ProfiledCallGraphNode(Name));
-      ProfiledFunctions[Name] = &Node;
-      Root.Edges.emplace(&Root, ProfiledFunctions[Name], 0);
+      It->second = &Node;
+      Root.Edges.emplace(&Root, It->second, 0);
     }
   }
 
 private:
   void addProfiledCall(FunctionId CallerName, FunctionId CalleeName,
                        uint64_t Weight = 0) {
-    assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
       return;
-    ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName],
-                               CalleeIt->second, Weight);
-    auto &Edges = ProfiledFunctions[CallerName]->Edges;
+    auto CallerIt = ProfiledFunctions.find(CallerName);
+    assert(CallerIt != ProfiledFunctions.end());
+    ProfiledCallGraphEdge Edge(CallerIt->second, CalleeIt->second, Weight);
+    auto &Edges = CallerIt->second->Edges;
     auto [EdgeIt, Inserted] = Edges.insert(Edge);
     if (!Inserted) {
       // Accumulate weight to the existing edge.

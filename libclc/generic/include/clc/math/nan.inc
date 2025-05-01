@@ -1,18 +1,9 @@
-#ifdef __CLC_SCALAR
-#define __CLC_VECSIZE
-#endif
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
-#if __CLC_FPSIZE == 64
-#define __CLC_NATN __CLC_XCONCAT(ulong, __CLC_VECSIZE)
-#elif __CLC_FPSIZE == 32
-#define __CLC_NATN __CLC_XCONCAT(uint, __CLC_VECSIZE)
-#elif __CLC_FPSIZE == 16
-#define __CLC_NATN __CLC_XCONCAT(ushort, __CLC_VECSIZE)
-#endif
-
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE nan(__CLC_NATN code);
-
-#undef __CLC_NATN
-#ifdef __CLC_SCALAR
-#undef __CLC_VECSIZE
-#endif
+_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE nan(__CLC_U_GENTYPE code);
