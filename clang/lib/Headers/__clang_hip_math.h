@@ -392,7 +392,7 @@ __DEVICE__
 float erfinvf(float __x) { return __ocml_erfinv_f32(__x); }
 
 __DEVICE__
-float exp10f(float __x) { return __ocml_exp10_f32(__x); }
+float exp10f(float __x) { return __builtin_exp10f(__x); }
 
 __DEVICE__
 float exp2f(float __x) { return __builtin_exp2f(__x); }
@@ -495,13 +495,13 @@ __DEVICE__
 float log1pf(float __x) { return __ocml_log1p_f32(__x); }
 
 __DEVICE__
-float log2f(float __x) { return __FAST_OR_SLOW(__log2f, __ocml_log2_f32)(__x); }
+float log2f(float __x) { return __FAST_OR_SLOW(__log2f, __builtin_log2f)(__x); }
 
 __DEVICE__
 float logbf(float __x) { return __ocml_logb_f32(__x); }
 
 __DEVICE__
-float logf(float __x) { return __FAST_OR_SLOW(__logf, __ocml_log_f32)(__x); }
+float logf(float __x) { return __FAST_OR_SLOW(__logf, __builtin_logf)(__x); }
 
 __DEVICE__
 long int lrintf(float __x) { return __builtin_rintf(__x); }
@@ -639,8 +639,11 @@ float rsqrtf(float __x) { return __ocml_rsqrt_f32(__x); }
 
 __DEVICE__
 float scalblnf(float __x, long int __n) {
-  return (__n < INT_MAX) ? __builtin_amdgcn_ldexpf(__x, __n)
-                         : __ocml_scalb_f32(__x, __n);
+  if (__n > INT_MAX)
+    __n = INT_MAX;
+  else if (__n < INT_MIN)
+    __n = INT_MIN;
+  return __builtin_ldexpf(__x, (int)__n);
 }
 
 __DEVICE__
@@ -1044,8 +1047,11 @@ double rsqrt(double __x) { return __ocml_rsqrt_f64(__x); }
 
 __DEVICE__
 double scalbln(double __x, long int __n) {
-  return (__n < INT_MAX) ? __builtin_amdgcn_ldexp(__x, __n)
-                         : __ocml_scalb_f64(__x, __n);
+  if (__n > INT_MAX)
+    __n = INT_MAX;
+  else if (__n < INT_MIN)
+    __n = INT_MIN;
+  return __builtin_ldexp(__x, (int)__n);
 }
 __DEVICE__
 double scalbn(double __x, int __n) { return __builtin_amdgcn_ldexp(__x, __n); }
@@ -1305,15 +1311,89 @@ float min(float __x, float __y) { return __builtin_fminf(__x, __y); }
 __DEVICE__
 double min(double __x, double __y) { return __builtin_fmin(__x, __y); }
 
-#if !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
-__host__ inline static int min(int __arg1, int __arg2) {
-  return __arg1 < __arg2 ? __arg1 : __arg2;
+// Define host min/max functions.
+#if !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__) &&                  \
+    !defined(__HIP_NO_HOST_MIN_MAX_IN_GLOBAL_NAMESPACE__)
+
+// TODO: make this default to 1 after existing HIP apps adopting this change.
+#ifndef __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+#define __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__ 0
+#endif
+
+#ifndef __HIP_DEFINE_MIXED_HOST_MIN_MAX__
+#define __HIP_DEFINE_MIXED_HOST_MIN_MAX__ 0
+#endif
+
+#pragma push_macro("DEFINE_MIN_MAX_FUNCTIONS")
+#pragma push_macro("DEFINE_MIN_MAX_FUNCTIONS")
+#define DEFINE_MIN_MAX_FUNCTIONS(ret_type, type1, type2)                       \
+  inline ret_type min(const type1 __a, const type2 __b) {                      \
+    return (__a < __b) ? __a : __b;                                            \
+  }                                                                            \
+  inline ret_type max(const type1 __a, const type2 __b) {                      \
+    return (__a > __b) ? __a : __b;                                            \
+  }
+
+// Define min and max functions for same type comparisons
+DEFINE_MIN_MAX_FUNCTIONS(int, int, int)
+
+#if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+DEFINE_MIN_MAX_FUNCTIONS(unsigned int, unsigned int, unsigned int)
+DEFINE_MIN_MAX_FUNCTIONS(long, long, long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long, unsigned long, unsigned long)
+DEFINE_MIN_MAX_FUNCTIONS(long long, long long, long long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long long, unsigned long long,
+                         unsigned long long)
+#endif // if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+
+// The host min/max functions below accept mixed signed/unsigned integer
+// parameters and perform unsigned comparisons, which may produce unexpected
+// results if a signed integer was passed unintentionally. To avoid this
+// happening silently, these overloaded functions are not defined by default.
+// However, for compatibility with CUDA, they will be defined if users define
+// __HIP_DEFINE_MIXED_HOST_MIN_MAX__.
+#if __HIP_DEFINE_MIXED_HOST_MIN_MAX__
+DEFINE_MIN_MAX_FUNCTIONS(unsigned int, int, unsigned int)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned int, unsigned int, int)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long, long, unsigned long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long, unsigned long, long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long long, long long, unsigned long long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long long, unsigned long long, long long)
+#endif // if __HIP_DEFINE_MIXED_HOST_MIN_MAX__
+
+// Floating-point comparisons using built-in functions
+#if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+inline float min(float const __a, float const __b) {
+  return __builtin_fminf(__a, __b);
+}
+inline double min(double const __a, double const __b) {
+  return __builtin_fmin(__a, __b);
+}
+inline double min(float const __a, double const __b) {
+  return __builtin_fmin(__a, __b);
+}
+inline double min(double const __a, float const __b) {
+  return __builtin_fmin(__a, __b);
 }
 
-__host__ inline static int max(int __arg1, int __arg2) {
-  return __arg1 > __arg2 ? __arg1 : __arg2;
+inline float max(float const __a, float const __b) {
+  return __builtin_fmaxf(__a, __b);
 }
-#endif // !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
+inline double max(double const __a, double const __b) {
+  return __builtin_fmax(__a, __b);
+}
+inline double max(float const __a, double const __b) {
+  return __builtin_fmax(__a, __b);
+}
+inline double max(double const __a, float const __b) {
+  return __builtin_fmax(__a, __b);
+}
+#endif // if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+
+#pragma pop_macro("DEFINE_MIN_MAX_FUNCTIONS")
+
+#endif // !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__) &&
+       // !defined(__HIP_NO_HOST_MIN_MAX_IN_GLOBAL_NAMESPACE__)
 #endif
 
 #pragma pop_macro("__DEVICE__")

@@ -97,10 +97,13 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
   // the byte size.
   CompilerType index_type = index_sp->GetCompilerType();
 
-  std::optional<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
-  if (!index_type_bytes)
-    return LibcxxVariantIndexValidity::Invalid;
-
+  llvm::Expected<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
+  if (!index_type_bytes) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters),
+                    index_type_bytes.takeError(), "{0}");
+    if (!index_type_bytes)
+      return LibcxxVariantIndexValidity::Invalid;
+  }
   uint64_t npos_value = VariantNposValue(*index_type_bytes);
   uint64_t index_value = index_sp->GetValueAsUnsigned(0);
 
@@ -199,8 +202,12 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return formatters::ExtractIndexFromString(name.GetCString());
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    size_t index = formatters::ExtractIndexFromString(name.GetCString());
+    if (index == UINT32_MAX)
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
+    return index;
   }
 
   lldb::ChildCacheState Update() override;

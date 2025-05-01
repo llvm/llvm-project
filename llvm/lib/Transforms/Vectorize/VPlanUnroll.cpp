@@ -155,33 +155,13 @@ void UnrollState::unrollWidenInductionByUF(
   if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
     FMFs = ID.getInductionBinOp()->getFastMathFlags();
 
-  VPValue *VectorStep = &Plan.getVF();
-  VPBuilder Builder(PH);
-  if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
-    Instruction::CastOps CastOp =
-        IVTy->isFloatingPointTy() ? Instruction::UIToFP : Instruction::Trunc;
-    VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
-    ToSkip.insert(VectorStep->getDefiningRecipe());
-  }
-
   VPValue *ScalarStep = IV->getStepValue();
-  auto *ConstStep = ScalarStep->isLiveIn()
-                        ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
-                        : nullptr;
-  if (!ConstStep || ConstStep->getValue() != 1) {
-    if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
-      ScalarStep =
-          Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
-      ToSkip.insert(ScalarStep->getDefiningRecipe());
-    }
+  VPBuilder Builder(PH);
+  VPInstruction *VectorStep = Builder.createNaryOp(
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, FMFs,
+      IV->getDebugLoc());
 
-    unsigned MulOpc =
-        IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
-    VPInstruction *Mul = Builder.createNaryOp(MulOpc, {VectorStep, ScalarStep},
-                                              FMFs, IV->getDebugLoc());
-    VectorStep = Mul;
-    ToSkip.insert(Mul);
-  }
+  ToSkip.insert(VectorStep);
 
   // Now create recipes to compute the induction steps for part 1 .. UF. Part 0
   // remains the header phi. Parts > 0 are computed by adding Step to the
@@ -295,8 +275,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
-      auto *Phi = cast<VPReductionPHIRecipe>(R.getOperand(0));
-      if (Phi->isOrdered()) {
+      auto *Phi = dyn_cast<VPReductionPHIRecipe>(R.getOperand(0));
+      if (Phi && Phi->isOrdered()) {
         auto &Parts = VPV2Parts[Phi];
         if (Part == 1) {
           Parts.clear();
@@ -311,12 +291,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(Copy) ||
+            VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
         match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                         m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
-    if (isa<VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(R))
+    if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
@@ -348,23 +328,27 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // the parts to compute the final reduction value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
-                      m_VPValue(), m_VPValue(Op1)))) {
+                      m_VPValue(), m_VPValue(Op1))) ||
+        match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
+                      m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                      m_VPValue(Op0))) ||
+        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                      m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       if (Plan.hasScalarVFOnly()) {
-        // Extracting from end with VF = 1 implies retrieving the scalar part UF
-        // - Op1.
+        auto *I = cast<VPInstruction>(&R);
+        // Extracting from end with VF = 1 implies retrieving the last or
+        // penultimate scalar part (UF-1 or UF-2).
         unsigned Offset =
-            cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
-        R.getVPSingleValue()->replaceAllUsesWith(
-            getValueForPart(Op0, UF - Offset));
+            I->getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
+        I->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
         R.eraseFromParent();
       } else {
         // Otherwise we extract from the last part.

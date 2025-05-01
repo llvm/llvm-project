@@ -2297,7 +2297,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   SemaRef.LookupName(Result, S);
 
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     // Normal name lookup didn't find anything. If we're in an
     // Objective-C method, look for ivars. If we find one, we're done!
     // FIXME: This is a hack. Ivar lookup should be part of normal
@@ -2317,14 +2317,14 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     // Break out; we'll perform typo correction below.
     break;
 
-  case LookupResult::NotFoundInCurrentInstantiation:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
-  case LookupResult::Ambiguous:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
+  case LookupResultKind::Ambiguous:
     Result.suppressDiagnostics();
     return ObjCInstanceMessage;
 
-  case LookupResult::Found: {
+  case LookupResultKind::Found: {
     // If the identifier is a class or not, and there is a trailing dot,
     // it's an instance message.
     if (HasTrailingDot)

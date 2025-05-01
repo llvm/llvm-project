@@ -681,7 +681,7 @@ public:
   /// \param ByteAlignment - The alignment of the zerofill symbol.
   virtual void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                             uint64_t Size = 0, Align ByteAlignment = Align(1),
-                            SMLoc Loc = SMLoc()) = 0;
+                            SMLoc Loc = SMLoc());
 
   /// Emit a thread local bss (.tbss) symbol.
   ///
@@ -887,7 +887,8 @@ public:
   virtual void emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
                                      unsigned Isa, unsigned Discriminator,
-                                     StringRef FileName);
+                                     StringRef FileName,
+                                     StringRef Comment = {});
 
   /// This implements the '.loc_label Name' directive.
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);

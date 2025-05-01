@@ -240,7 +240,7 @@ protected:
 
     FunctionType *fun_ty = FunctionType::get(
         llvm::Type::getVoidTy(m_module.getContext()), params, true);
-    PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
+    PointerType *fun_ptr_ty = PointerType::getUnqual(m_module.getContext());
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
     return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
@@ -264,7 +264,7 @@ protected:
 
     FunctionType *fun_ty = FunctionType::get(
         llvm::Type::getVoidTy(m_module.getContext()), params, true);
-    PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
+    PointerType *fun_ptr_ty = PointerType::getUnqual(m_module.getContext());
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
     return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};

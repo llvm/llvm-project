@@ -113,7 +113,7 @@ static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
 /// an LLVM constant op.
 static Value getAsLLVMValue(OpBuilder &builder, Location loc,
                             OpFoldResult foldResult) {
-  if (auto attr = foldResult.dyn_cast<Attribute>()) {
+  if (auto attr = dyn_cast<Attribute>(foldResult)) {
     auto intAttr = cast<IntegerAttr>(attr);
     return builder.create<LLVM::ConstantOp>(loc, intAttr).getResult();
   }
@@ -263,55 +263,39 @@ public:
   LogicalResult
   matchAndRewrite(vector::GatherOp gather, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = gather->getLoc();
     MemRefType memRefType = dyn_cast<MemRefType>(gather.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
-      return failure();
+      return rewriter.notifyMatchFailure(gather, "memref type not supported");
 
-    auto loc = gather->getLoc();
+    VectorType vType = gather.getVectorType();
+    if (vType.getRank() > 1) {
+      return rewriter.notifyMatchFailure(
+          gather, "only 1-D vectors can be lowered to LLVM");
+    }
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
-      return failure();
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align))) {
+      return rewriter.notifyMatchFailure(gather,
+                                         "could not resolve memref alignment");
+    }
 
+    // Resolve address.
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
     Value base = adaptor.getBase();
+    Value ptrs =
+        getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
+                       base, ptr, adaptor.getIndexVec(), vType);
 
-    auto llvmNDVectorTy = adaptor.getIndexVec().getType();
-    // Handle the simple case of 1-D vector.
-    if (!isa<LLVM::LLVMArrayType>(llvmNDVectorTy)) {
-      auto vType = gather.getVectorType();
-      // Resolve address.
-      Value ptrs =
-          getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
-                         base, ptr, adaptor.getIndexVec(), vType);
-      // Replace with the gather intrinsic.
-      rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
-          gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
-          adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
-      return success();
-    }
-
-    const LLVMTypeConverter &typeConverter = *this->getTypeConverter();
-    auto callback = [align, memRefType, base, ptr, loc, &rewriter,
-                     &typeConverter](Type llvm1DVectorTy,
-                                     ValueRange vectorOperands) {
-      // Resolve address.
-      Value ptrs = getIndexedPtrs(
-          rewriter, loc, typeConverter, memRefType, base, ptr,
-          /*index=*/vectorOperands[0], cast<VectorType>(llvm1DVectorTy));
-      // Create the gather intrinsic.
-      return rewriter.create<LLVM::masked_gather>(
-          loc, llvm1DVectorTy, ptrs, /*mask=*/vectorOperands[1],
-          /*passThru=*/vectorOperands[2], rewriter.getI32IntegerAttr(align));
-    };
-    SmallVector<Value> vectorOperands = {
-        adaptor.getIndexVec(), adaptor.getMask(), adaptor.getPassThru()};
-    return LLVM::detail::handleMultidimensionalVectors(
-        gather, vectorOperands, *getTypeConverter(), callback, rewriter);
+    // Replace with the gather intrinsic.
+    rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
+        gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
+        adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
+    return success();
   }
 };
 
@@ -328,15 +312,22 @@ public:
     MemRefType memRefType = scatter.getMemRefType();
 
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
-      return failure();
+      return rewriter.notifyMatchFailure(scatter, "memref type not supported");
+
+    VectorType vType = scatter.getVectorType();
+    if (vType.getRank() > 1) {
+      return rewriter.notifyMatchFailure(
+          scatter, "only 1-D vectors can be lowered to LLVM");
+    }
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
-      return failure();
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align))) {
+      return rewriter.notifyMatchFailure(scatter,
+                                         "could not resolve memref alignment");
+    }
 
     // Resolve address.
-    VectorType vType = scatter.getVectorType();
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
     Value ptrs =
@@ -1266,7 +1257,7 @@ public:
     // We are going to mutate this 1D vector until it is either the final
     // result (in the non-aggregate case) or the value that needs to be
     // inserted into the aggregate result.
-    Value sourceAggregate = adaptor.getSource();
+    Value sourceAggregate = adaptor.getValueToStore();
     if (insertIntoInnermostDim) {
       // Scalar-into-1D-vector case, so we know we will have to create a
       // InsertElementOp. The question is into what destination.
@@ -1288,7 +1279,8 @@ public:
       }
       // Insert the scalar into the 1D vector.
       sourceAggregate = rewriter.create<LLVM::InsertElementOp>(
-          loc, sourceAggregate.getType(), sourceAggregate, adaptor.getSource(),
+          loc, sourceAggregate.getType(), sourceAggregate,
+          adaptor.getValueToStore(),
           getAsLLVMValue(rewriter, loc, positionOfScalarWithin1DVector));
     }
 
@@ -1314,7 +1306,7 @@ struct VectorScalableInsertOpLowering
   matchAndRewrite(vector::ScalableInsertOp insOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::vector_insert>(
-        insOp, adaptor.getDest(), adaptor.getSource(), adaptor.getPos());
+        insOp, adaptor.getDest(), adaptor.getValueToStore(), adaptor.getPos());
     return success();
   }
 };
@@ -1578,13 +1570,13 @@ public:
       FailureOr<LLVM::LLVMFuncOp> op = [&]() {
         switch (punct) {
         case PrintPunctuation::Close:
-          return LLVM::lookupOrCreatePrintCloseFn(parent);
+          return LLVM::lookupOrCreatePrintCloseFn(rewriter, parent);
         case PrintPunctuation::Open:
-          return LLVM::lookupOrCreatePrintOpenFn(parent);
+          return LLVM::lookupOrCreatePrintOpenFn(rewriter, parent);
         case PrintPunctuation::Comma:
-          return LLVM::lookupOrCreatePrintCommaFn(parent);
+          return LLVM::lookupOrCreatePrintCommaFn(rewriter, parent);
         case PrintPunctuation::NewLine:
-          return LLVM::lookupOrCreatePrintNewlineFn(parent);
+          return LLVM::lookupOrCreatePrintNewlineFn(rewriter, parent);
         default:
           llvm_unreachable("unexpected punctuation");
         }
@@ -1618,17 +1610,17 @@ private:
     PrintConversion conversion = PrintConversion::None;
     FailureOr<Operation *> printer;
     if (printType.isF32()) {
-      printer = LLVM::lookupOrCreatePrintF32Fn(parent);
+      printer = LLVM::lookupOrCreatePrintF32Fn(rewriter, parent);
     } else if (printType.isF64()) {
-      printer = LLVM::lookupOrCreatePrintF64Fn(parent);
+      printer = LLVM::lookupOrCreatePrintF64Fn(rewriter, parent);
     } else if (printType.isF16()) {
       conversion = PrintConversion::Bitcast16; // bits!
-      printer = LLVM::lookupOrCreatePrintF16Fn(parent);
+      printer = LLVM::lookupOrCreatePrintF16Fn(rewriter, parent);
     } else if (printType.isBF16()) {
       conversion = PrintConversion::Bitcast16; // bits!
-      printer = LLVM::lookupOrCreatePrintBF16Fn(parent);
+      printer = LLVM::lookupOrCreatePrintBF16Fn(rewriter, parent);
     } else if (printType.isIndex()) {
-      printer = LLVM::lookupOrCreatePrintU64Fn(parent);
+      printer = LLVM::lookupOrCreatePrintU64Fn(rewriter, parent);
     } else if (auto intTy = dyn_cast<IntegerType>(printType)) {
       // Integers need a zero or sign extension on the operand
       // (depending on the source type) as well as a signed or
@@ -1638,7 +1630,7 @@ private:
         if (width <= 64) {
           if (width < 64)
             conversion = PrintConversion::ZeroExt64;
-          printer = LLVM::lookupOrCreatePrintU64Fn(parent);
+          printer = LLVM::lookupOrCreatePrintU64Fn(rewriter, parent);
         } else {
           return failure();
         }
@@ -1651,7 +1643,7 @@ private:
             conversion = PrintConversion::ZeroExt64;
           else if (width < 64)
             conversion = PrintConversion::SignExt64;
-          printer = LLVM::lookupOrCreatePrintI64Fn(parent);
+          printer = LLVM::lookupOrCreatePrintI64Fn(rewriter, parent);
         } else {
           return failure();
         }

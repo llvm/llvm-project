@@ -152,7 +152,6 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
   return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
          IndexBitWidth == Other.IndexBitWidth &&
-         AddressBitWidth == Other.AddressBitWidth &&
          IsNonIntegral == Other.IsNonIntegral;
 }
 
@@ -209,7 +208,7 @@ constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
 // Default pointer type specifications.
 constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
     // p0:64:64:64:64
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, 64, false},
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false},
 };
 
 DataLayout::DataLayout()
@@ -415,9 +414,8 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
   assert(Spec.front() == 'p');
   Spec.drop_front().split(Components, ':');
 
-  if (Components.size() < 3 || Components.size() > 6)
-    return createSpecFormatError(
-        "p[<n>]:<size>:<abi>[:<pref>[:<idx>[:<addr>]]]");
+  if (Components.size() < 3 || Components.size() > 5)
+    return createSpecFormatError("p[<n>]:<size>:<abi>[:<pref>[:<idx>]]");
 
   // Address space. Optional, defaults to 0.
   unsigned AddrSpace = 0;
@@ -456,17 +454,8 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "index size cannot be larger than the pointer size");
 
-  unsigned AddressBitWidth = IndexBitWidth;
-  if (Components.size() > 5)
-    if (Error Err = parseSize(Components[5], AddressBitWidth, "address size"))
-      return Err;
-
-  if (AddressBitWidth > BitWidth)
-    return createStringError(
-        "address size cannot be larger than the pointer size");
-
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
-                 AddressBitWidth, false);
+                 false);
   return Error::success();
 }
 
@@ -642,7 +631,7 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
-                   PS.AddressBitWidth, true);
+                   true);
   }
 
   return Error::success();
@@ -690,19 +679,16 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
-                                uint32_t IndexBitWidth,
-                                uint32_t AddressBitWidth, bool IsNonIntegral) {
+                                uint32_t IndexBitWidth, bool IsNonIntegral) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
-                                       IndexBitWidth, AddressBitWidth,
-                                       IsNonIntegral});
+                                       IndexBitWidth, IsNonIntegral});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
     I->IndexBitWidth = IndexBitWidth;
-    I->AddressBitWidth = AddressBitWidth;
     I->IsNonIntegral = IsNonIntegral;
   }
 }
@@ -740,10 +726,6 @@ const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
   new (L) StructLayout(Ty, *this);
 
   return L;
-}
-
-unsigned DataLayout::getPointerAddressSize(unsigned AS) const {
-  return divideCeil(getPointerAddressSizeInBits(AS), 8);
 }
 
 Align DataLayout::getPointerABIAlignment(unsigned AS) const {

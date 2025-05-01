@@ -54,10 +54,29 @@ bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
   MCSymbol *ToSym = getContext().getOrCreateSymbol(To);
 
   getStreamer().emitCGProfileEntry(
-      MCSymbolRefExpr::create(FromSym, MCSymbolRefExpr::VK_None, getContext(),
-                              FromLoc),
-      MCSymbolRefExpr::create(ToSym, MCSymbolRefExpr::VK_None, getContext(),
-                              ToLoc),
-      Count);
+      MCSymbolRefExpr::create(FromSym, getContext(), FromLoc),
+      MCSymbolRefExpr::create(ToSym, getContext(), ToLoc), Count);
+  return false;
+}
+
+bool MCAsmParserExtension::maybeParseUniqueID(int64_t &UniqueID) {
+  MCAsmLexer &L = getLexer();
+  if (L.isNot(AsmToken::Comma))
+    return false;
+  Lex();
+  StringRef UniqueStr;
+  if (getParser().parseIdentifier(UniqueStr))
+    return TokError("expected identifier");
+  if (UniqueStr != "unique")
+    return TokError("expected 'unique'");
+  if (L.isNot(AsmToken::Comma))
+    return TokError("expected commma");
+  Lex();
+  if (getParser().parseAbsoluteExpression(UniqueID))
+    return true;
+  if (UniqueID < 0)
+    return TokError("unique id must be positive");
+  if (!isUInt<32>(UniqueID) || UniqueID == ~0U)
+    return TokError("unique id is too large");
   return false;
 }

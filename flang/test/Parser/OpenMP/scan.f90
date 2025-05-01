@@ -12,8 +12,8 @@ subroutine test_scan(n, a, b)
   !$omp parallel do simd reduction(inscan,+: x)
   do k = 1, n
     x = x + a(k)
-    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct
-    !PARSE-TREE-NEXT: OmpSimpleStandaloneDirective -> llvm::omp::Directive = scan
+    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
+    !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = scan
     !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Inclusive -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
     !CHECK: !$omp scan inclusive(x)
     !$omp scan inclusive(x)
@@ -24,8 +24,8 @@ subroutine test_scan(n, a, b)
   !$omp parallel do simd reduction(inscan,+: x)
   do k = 1, n
     b(k) = x
-    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct
-    !PARSE-TREE-NEXT: OmpSimpleStandaloneDirective -> llvm::omp::Directive = scan
+    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
+    !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = scan
     !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Exclusive -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
     !CHECK: !$omp scan exclusive(x)
     !$omp scan exclusive(x)
@@ -35,8 +35,8 @@ subroutine test_scan(n, a, b)
   !$omp parallel do simd reduction(inscan,+: x, y)
   do k = 1, n
     x = x + a(k)
-    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct
-    !PARSE-TREE-NEXT: OmpSimpleStandaloneDirective -> llvm::omp::Directive = scan
+    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
+    !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = scan
     !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Inclusive -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
     !PARSE-TREE-NEXT: OmpObject -> Designator -> DataRef -> Name = 'y'
     !CHECK: !$omp scan inclusive(x,y)
@@ -47,8 +47,8 @@ subroutine test_scan(n, a, b)
   !$omp parallel do simd reduction(inscan,+: x, y)
   do k = 1, n
     x = x + a(k)
-    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct
-    !PARSE-TREE-NEXT: OmpSimpleStandaloneDirective -> llvm::omp::Directive = scan
+    !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
+    !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = scan
     !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Exclusive -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
     !PARSE-TREE-NEXT: OmpObject -> Designator -> DataRef -> Name = 'y'
     !CHECK: !$omp scan exclusive(x,y)

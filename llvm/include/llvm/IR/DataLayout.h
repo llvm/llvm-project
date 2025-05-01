@@ -78,7 +78,6 @@ public:
     Align ABIAlign;
     Align PrefAlign;
     uint32_t IndexBitWidth;
-    uint32_t AddressBitWidth;
     /// Pointers in this address space don't have a well-defined bitwise
     /// representation (e.g. may be relocated by a copying garbage collector).
     /// Additionally, they may also be non-integral (i.e. containing additional
@@ -149,7 +148,7 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      uint32_t AddressBitWidth, bool IsNonIntegral);
+                      bool IsNonIntegral);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -325,25 +324,11 @@ public:
   /// the backends/clients are updated.
   Align getPointerPrefAlignment(unsigned AS = 0) const;
 
-  /// Layout pointer size in bytes, rounded up to a whole number of bytes. The
-  /// difference between this function and getPointerAddressSize() is this one
-  /// returns the size of the entire pointer type (this includes metadata bits
-  /// for fat pointers) and the latter only returns the number of address bits.
-  /// \sa DataLayout::getPointerAddressSizeInBits
+  /// Layout pointer size in bytes, rounded up to a whole
+  /// number of bytes.
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
-
-  /// Returns the integral size of a pointer in a given address space in bytes.
-  /// For targets that store bits in pointers that are not part of the address,
-  /// this returns the number of bits that can be manipulated using operations
-  /// that change the address (e.g. addition/subtraction).
-  /// For example, a 64-bit CHERI-enabled target has 128-bit pointers of which
-  /// only 64 are used to represent the address and the remaining ones are used
-  /// for metadata such as bounds and access permissions. In this case
-  /// getPointerSize() returns 16, but getPointerAddressSize() returns 8.
-  /// \sa DataLayout::getPointerSize
-  unsigned getPointerAddressSize(unsigned AS) const;
 
   // Index size in bytes used for address calculation,
   /// rounded up to a whole number of bytes.
@@ -378,14 +363,6 @@ public:
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
     return getPointerSpec(AS).BitWidth;
-  }
-
-  /// The size of an address in for the given AS. This is usually the same size
-  /// as the index width but in same cases (e.g. AMDGPU buffer fat pointers with
-  /// 48-bit addresses and 32-bit offsets), the address size can be larger than
-  /// the valid range of indexing.
-  unsigned getPointerAddressSizeInBits(unsigned AS) const {
-    return getPointerSpec(AS).AddressBitWidth;
   }
 
   /// Size in bits of index used for address calculation in getelementptr.

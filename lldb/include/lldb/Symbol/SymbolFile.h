@@ -144,7 +144,7 @@ public:
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) = 0;
 
-  virtual Symtab *GetSymtab() = 0;
+  virtual Symtab *GetSymtab(bool can_create = true) = 0;
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
@@ -212,13 +212,13 @@ public:
   struct ArrayInfo {
     int64_t first_index = 0;
 
-    ///< Each entry belongs to a distinct DW_TAG_subrange_type.
-    ///< For multi-dimensional DW_TAG_array_types we would have
-    ///< an entry for each dimension. An entry represents the
-    ///< optional element count of the subrange.
+    /// Each entry belongs to a distinct DW_TAG_subrange_type.
+    /// For multi-dimensional DW_TAG_array_types we would have
+    /// an entry for each dimension. An entry represents the
+    /// optional element count of the subrange.
     ///
-    ///< The order of entries follows the order of the DW_TAG_subrange_type
-    ///< children of this DW_TAG_array_type.
+    /// The order of entries follows the order of the DW_TAG_subrange_type
+    /// children of this DW_TAG_array_type.
     llvm::SmallVector<std::optional<uint64_t>, 1> element_orders;
     uint32_t byte_stride = 0;
     uint32_t bit_stride = 0;
@@ -491,6 +491,8 @@ public:
     return args;
   }
 
+  std::string GetObjectName() const;
+
 protected:
   void AssertModuleLock();
 
@@ -531,7 +533,7 @@ public:
     return m_abilities;
   }
 
-  Symtab *GetSymtab() override;
+  Symtab *GetSymtab(bool can_create = true) override;
 
   ObjectFile *GetObjectFile() override { return m_objfile_sp.get(); }
   const ObjectFile *GetObjectFile() const override {

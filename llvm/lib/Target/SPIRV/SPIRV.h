@@ -43,6 +43,11 @@ void initializeSPIRVPostLegalizerPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 void initializeSPIRVEmitNonSemanticDIPass(PassRegistry &);
+void initializeSPIRVLegalizePointerCastPass(PassRegistry &);
+void initializeSPIRVRegularizerPass(PassRegistry &);
+void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
+void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
+void initializeSPIRVStripConvergentIntrinsicsPass(PassRegistry &);
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRV_H

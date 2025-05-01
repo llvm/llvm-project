@@ -44,7 +44,7 @@ def testTraverseOpRegionBlockIterators():
     op = module.operation
     assert op.context is ctx
     # Get the block using iterators off of the named collections.
-    regions = list(op.regions)
+    regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
     # CHECK: MODULE REGIONS=1 BLOCKS=1
     print(f"MODULE REGIONS={len(regions)} BLOCKS={len(blocks)}")
@@ -86,8 +86,24 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
     # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
     print("   Region iter:", iter(op.regions))
-    print("    Block iter:", iter(op.regions[0]))
-    print("Operation iter:", iter(op.regions[0].blocks[0]))
+    print("    Block iter:", iter(op.regions[-1]))
+    print("Operation iter:", iter(op.regions[-1].blocks[-1]))
+
+    try:
+        op.regions[-42]
+    except IndexError as e:
+        # CHECK: Region OOB: index out of range
+        print("Region OOB:", e)
+    try:
+        op.regions[0].blocks[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds block
+        print(e)
+    try:
+        op.regions[0].blocks[0].operations[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds operation
+        print(e)
 
 
 # Verify index based traversal of the op/region/block hierarchy.
@@ -643,6 +659,8 @@ def testOperationPrint():
     # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
+    # CHECK: %nom = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(use_name_loc_as_prefix=True, use_local_scope=True)
 
     # Test printing using state.
     state = AsmState(module.operation)

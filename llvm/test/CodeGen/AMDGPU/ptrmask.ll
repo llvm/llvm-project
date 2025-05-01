@@ -145,8 +145,8 @@ define amdgpu_ps ptr addrspace(7) @s_ptrmask_buffer_fat_ptr_i32_neg8(ptr addrspa
   ret ptr addrspace(7) %masked
 }
 
-define ptr addrspace(8) @v_ptrmask_buffer_resource_variable_i128(ptr addrspace(8) %ptr, i128 %mask) {
-; GCN-LABEL: v_ptrmask_buffer_resource_variable_i128:
+define ptr addrspace(8) @v_ptrmask_buffer_resource_variable_i8(ptr addrspace(8) %ptr, i8 %mask) {
+; GCN-LABEL: v_ptrmask_buffer_resource_variable_i8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v1, v1, v5
@@ -155,7 +155,7 @@ define ptr addrspace(8) @v_ptrmask_buffer_resource_variable_i128(ptr addrspace(8
 ; GCN-NEXT:    v_and_b32_e32 v2, v2, v6
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_ptrmask_buffer_resource_variable_i128:
+; GFX10PLUS-LABEL: v_ptrmask_buffer_resource_variable_i8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v4
@@ -163,44 +163,46 @@ define ptr addrspace(8) @v_ptrmask_buffer_resource_variable_i128(ptr addrspace(8
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v2, v2, v6
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v3, v3, v7
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i128(ptr addrspace(8) %ptr, i128 %mask)
+  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i8(ptr addrspace(8) %ptr, i8 %mask)
   ret ptr addrspace(8) %masked
 }
 
-define ptr addrspace(8) @v_ptrmask_buffer_resource_variable_i128_neg8(ptr addrspace(8) %ptr) {
-; GCN-LABEL: v_ptrmask_buffer_resource_variable_i128_neg8:
+define ptr addrspace(8) @v_ptrmask_buffer_resource_variable_i8_neg8(ptr addrspace(8) %ptr) {
+; GCN-LABEL: v_ptrmask_buffer_resource_variable_i8_neg8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, -8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_ptrmask_buffer_resource_variable_i128_neg8:
+; GFX10PLUS-LABEL: v_ptrmask_buffer_resource_variable_i8_neg8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, -8, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i128(ptr addrspace(8) %ptr, i128 -8)
+  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i8(ptr addrspace(8) %ptr, i8 -8)
   ret ptr addrspace(8) %masked
 }
 
-define amdgpu_ps ptr addrspace(8) @s_ptrmask_buffer_resource_variable_i128(ptr addrspace(8) inreg %ptr, i128 inreg %mask) {
-; GCN-LABEL: s_ptrmask_buffer_resource_variable_i128:
+define amdgpu_ps ptr addrspace(8) @s_ptrmask_buffer_resource_variable_i8(ptr addrspace(8) inreg %ptr, i8 inreg %mask) {
+; GCN-LABEL: s_ptrmask_buffer_resource_variable_i8:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], s[8:9]
 ; GCN-NEXT:    s_and_b64 s[0:1], s[2:3], s[6:7]
-; GCN-NEXT:    s_and_b64 s[2:3], s[4:5], s[8:9]
+; GCN-NEXT:    s_mov_b32 s2, s4
+; GCN-NEXT:    s_mov_b32 s3, s5
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: s_ptrmask_buffer_resource_variable_i128:
+; GFX10PLUS-LABEL: s_ptrmask_buffer_resource_variable_i8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_and_b64 s[0:1], s[2:3], s[6:7]
 ; GFX10PLUS-NEXT:    s_and_b64 s[2:3], s[4:5], s[8:9]
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
-  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i128(ptr addrspace(8) %ptr, i128 %mask)
+  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i8(ptr addrspace(8) %ptr, i8 %mask)
   ret ptr addrspace(8) %masked
 }
 
-define amdgpu_ps ptr addrspace(8) @s_ptrmask_buffer_resource_variable_i128_neg8(ptr addrspace(8) inreg %ptr) {
-; GCN-LABEL: s_ptrmask_buffer_resource_variable_i128_neg8:
+define amdgpu_ps ptr addrspace(8) @s_ptrmask_buffer_resource_variable_i8_neg8(ptr addrspace(8) inreg %ptr) {
+; GCN-LABEL: s_ptrmask_buffer_resource_variable_i8_neg8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s1, s3
 ; GCN-NEXT:    s_and_b32 s0, s2, -8
@@ -208,14 +210,14 @@ define amdgpu_ps ptr addrspace(8) @s_ptrmask_buffer_resource_variable_i128_neg8(
 ; GCN-NEXT:    s_mov_b32 s3, s5
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: s_ptrmask_buffer_resource_variable_i128_neg8:
+; GFX10PLUS-LABEL: s_ptrmask_buffer_resource_variable_i8_neg8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
 ; GFX10PLUS-NEXT:    s_and_b32 s0, s2, -8
 ; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
 ; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
-  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i128(ptr addrspace(8) %ptr, i128 -8)
+  %masked = call ptr addrspace(8) @llvm.ptrmask.p8.i8(ptr addrspace(8) %ptr, i8 -8)
   ret ptr addrspace(8) %masked
 }
 
