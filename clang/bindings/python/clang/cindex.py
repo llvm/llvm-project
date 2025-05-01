@@ -2207,9 +2207,7 @@ class Cursor(Structure):
         return bool(conf.lib.clang_Cursor_hasAttrs(self))
 
     @staticmethod
-    def from_result(
-        res: Cursor, arg: Cursor | TranslationUnit | Type
-    ) -> Cursor | None:
+    def from_result(res: Cursor, arg: Cursor | TranslationUnit | Type) -> Cursor | None:
         assert isinstance(res, Cursor)
         # FIXME: There should just be an isNull method.
         if res == conf.lib.clang_getNullCursor():
