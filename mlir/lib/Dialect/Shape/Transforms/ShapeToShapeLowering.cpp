@@ -17,7 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_SHAPETOSHAPELOWERING
+#define GEN_PASS_DEF_SHAPETOSHAPELOWERINGPASS
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -59,7 +59,7 @@ NumElementsOpConverter::matchAndRewrite(NumElementsOp op,
 
 namespace {
 struct ShapeToShapeLowering
-    : public impl::ShapeToShapeLoweringBase<ShapeToShapeLowering> {
+    : public impl::ShapeToShapeLoweringPassBase<ShapeToShapeLowering> {
   void runOnOperation() override;
 };
 } // namespace
@@ -80,8 +80,4 @@ void ShapeToShapeLowering::runOnOperation() {
 
 void mlir::populateShapeRewritePatterns(RewritePatternSet &patterns) {
   patterns.add<NumElementsOpConverter>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createShapeToShapeLowering() {
-  return std::make_unique<ShapeToShapeLowering>();
 }

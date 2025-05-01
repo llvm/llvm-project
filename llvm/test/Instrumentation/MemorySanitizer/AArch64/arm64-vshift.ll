@@ -9405,17 +9405,19 @@ define void @sqshl_zero_shift_amount(<2 x i64> %a, <2 x i64> %b, ptr %dst) sanit
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[VPADDQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqshl.v2i64(<2 x i64> [[_MSPROP]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[VSHLQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqshl.v2i64(<2 x i64> [[VPADDQ_V2_I_I]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
@@ -9438,17 +9440,19 @@ define void @uqshl_zero_shift_amount(<2 x i64> %a, <2 x i64> %b, ptr %dst) sanit
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[VPADDQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.uqshl.v2i64(<2 x i64> [[_MSPROP]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[VSHLQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.uqshl.v2i64(<2 x i64> [[VPADDQ_V2_I_I]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
@@ -9471,17 +9475,19 @@ define void @srshl_zero_shift_amount(<2 x i64> %a, <2 x i64> %b, ptr %dst) sanit
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[VPADDQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.srshl.v2i64(<2 x i64> [[_MSPROP]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[VSHLQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.srshl.v2i64(<2 x i64> [[VPADDQ_V2_I_I]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
@@ -9504,17 +9510,19 @@ define void @urshl_zero_shift_amount(<2 x i64> %a, <2 x i64> %b, ptr %dst) sanit
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[VPADDQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.urshl.v2i64(<2 x i64> [[_MSPROP]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[VSHLQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.urshl.v2i64(<2 x i64> [[VPADDQ_V2_I_I]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
@@ -9537,17 +9545,19 @@ define void @sqshlu_zero_shift_amount(<2 x i64> %a, <2 x i64> %b, ptr %dst) sani
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[VPADDQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqshlu.v2i64(<2 x i64> [[_MSPROP]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[VSHLQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqshlu.v2i64(<2 x i64> [[VPADDQ_V2_I_I]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
@@ -9570,17 +9580,19 @@ define void @sshl_zero_shift_amount(<2 x i64> %a, <2 x i64> %b, ptr %dst) saniti
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[VPADDQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.sshl.v2i64(<2 x i64> [[_MSPROP]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[VSHLQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sshl.v2i64(<2 x i64> [[VPADDQ_V2_I_I]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
@@ -9603,17 +9615,19 @@ define void @ushl_zero_shift_amount(<2 x i64> %a, <2 x i64> %b, ptr %dst) saniti
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[VPADDQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.ushl.v2i64(<2 x i64> [[_MSPROP]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[VSHLQ_V2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.ushl.v2i64(<2 x i64> [[VPADDQ_V2_I_I]], <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       5:
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK:       9:
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr

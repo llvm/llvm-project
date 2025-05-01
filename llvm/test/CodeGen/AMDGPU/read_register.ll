@@ -9,7 +9,7 @@ declare i64 @llvm.read_register.i64(metadata) #0
 ; CHECK: v_mov_b32_e32 [[COPY:v[0-9]+]], m0
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[COPY]]
 define amdgpu_kernel void @test_read_m0(ptr addrspace(1) %out) #0 {
-  store volatile i32 0, ptr addrspace(3) undef
+  store volatile i32 0, ptr addrspace(3) poison
   %m0 = call i32 @llvm.read_register.i32(metadata !0)
   store i32 %m0, ptr addrspace(1) %out
   ret void

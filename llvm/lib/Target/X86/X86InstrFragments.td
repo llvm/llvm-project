@@ -354,14 +354,16 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
 // Define X86-specific addressing mode.
 let WantsParent = true in
 def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+def gi_addr   : GIComplexOperandMatcher<s32, "selectAddr">,
+                GIComplexPatternEquiv<addr>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
                                [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
-// In 64-bit mode 32-bit LEAs can use RIP-relative addressing.
-def lea64_32addr : ComplexPattern<i32, 5, "selectLEA64_32Addr",
-                                  [add, sub, mul, X86mul_imm, shl, or, xor,
-                                   frameindex, X86WrapperRIP],
-                                  []>;
+// In 64-bit mode 8/16/32-bit LEAs can use RIP-relative addressing.
+def lea64_iaddr : ComplexPattern<iAny, 5, "selectLEA64_Addr",
+                                 [add, sub, mul, X86mul_imm, shl, or, xor,
+                                  frameindex, X86WrapperRIP],
+                                 []>;
 
 def tls32addr : ComplexPattern<i32, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
@@ -444,7 +446,11 @@ def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
 //
 def imm_su : PatLeaf<(imm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
+}]> {
+  // TODO : introduce the same check as in SDAG
+  let GISelPredicateCode = [{ return true; }];
+}
+
 def i64immSExt32_su : PatLeaf<(i64immSExt32), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
@@ -500,7 +506,9 @@ def loadi8 : PatFrag<(ops node:$ptr), (i8 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   return ExtType == ISD::NON_EXTLOAD || ExtType == ISD::EXTLOAD ||
          ExtType == ISD::ZEXTLOAD;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isa<GLoad>(MI); }];
+}
 
 // It's always safe to treat a anyext i16 load as a i32 load if the i16 is
 // known to be 32-bit aligned or better. Ditto for i8 to i16.
@@ -512,7 +520,16 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlign() >= 2 && LD->isSimple();
   return false;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &Load = cast<GLoad>(MI);
+    LLT Ty = MRI.getType(Load.getDstReg());
+    // Non extending load has MMO and destination types of the same size
+    if (Load.getMemSizeInBits() == Ty.getSizeInBits())
+       return true;
+    return Load.getAlign() >= 2 && Load.isSimple();
+  }];
+}
 
 def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   LoadSDNode *LD = cast<LoadSDNode>(N);
@@ -522,7 +539,16 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlign() >= 4 && LD->isSimple();
   return false;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &Load = cast<GLoad>(MI);
+    LLT Ty = MRI.getType(Load.getDstReg());
+    // Non extending load has MMO and destination types of the same size
+    if (Load.getMemSizeInBits() == Ty.getSizeInBits())
+       return true;
+    return Load.getAlign() >= 4 && Load.isSimple();
+  }];
+}
 
 def loadi64  : PatFrag<(ops node:$ptr), (i64 (load node:$ptr))>;
 def loadf16  : PatFrag<(ops node:$ptr), (f16 (load node:$ptr))>;

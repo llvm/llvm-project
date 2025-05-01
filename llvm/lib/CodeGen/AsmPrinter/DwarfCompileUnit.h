@@ -82,6 +82,10 @@ class DwarfCompileUnit final : public DwarfUnit {
   // List of abstract local scopes (either DISubprogram or DILexicalBlock).
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
 
+  // List of inlined lexical block scopes that belong to subprograms within this
+  // CU.
+  DenseMap<const DILocalScope *, SmallVector<DIE *, 2>> InlinedLocalScopeDIEs;
+
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
@@ -299,6 +303,7 @@ public:
 
   void finishSubprogramDefinition(const DISubprogram *SP);
   void finishEntityDefinition(const DbgEntity *Entity);
+  void attachLexicalScopesAbstractOrigins();
 
   /// Find abstract variable associated with Var.
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;

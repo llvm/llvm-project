@@ -126,18 +126,15 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs);
   MaybeDestroyTemplateIds();
 
-  // Attributes that are left should all go on the statement, so concatenate the
-  // two lists.
-  ParsedAttributes Attrs(AttrFactory);
-  takeAndConcatenateAttrs(CXX11Attrs, GNUOrMSAttrs, Attrs);
+  takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUOrMSAttrs));
 
-  assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
+  assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
 
-  if (Attrs.empty() || Res.isInvalid())
+  if (CXX11Attrs.empty() || Res.isInvalid())
     return Res;
 
-  return Actions.ActOnAttributedStmt(Attrs, Res.get());
+  return Actions.ActOnAttributedStmt(CXX11Attrs, Res.get());
 }
 
 namespace {
@@ -207,11 +204,10 @@ Retry:
       // Both C++11 and GNU attributes preceding the label appertain to the
       // label, so put them in a single list to pass on to
       // ParseLabeledStatement().
-      ParsedAttributes Attrs(AttrFactory);
-      takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
+      takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUAttrs));
 
       // identifier ':' statement
-      return ParseLabeledStatement(Attrs, StmtCtx);
+      return ParseLabeledStatement(CXX11Attrs, StmtCtx);
     }
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
@@ -220,7 +216,7 @@ Retry:
       // Try to limit which sets of keywords should be included in typo
       // correction based on what the next token is.
       StatementFilterCCC CCC(Next);
-      if (TryAnnotateName(&CCC) == ANK_Error) {
+      if (TryAnnotateName(&CCC) == AnnotatedNameKind::Error) {
         // Handle errors here by skipping up to the next semicolon or '}', and
         // eat the semicolon if that's what stopped us.
         SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
@@ -302,9 +298,7 @@ Retry:
 
   case tok::kw_template: {
     SourceLocation DeclEnd;
-    ParsedAttributes Attrs(AttrFactory);
     ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
-                                             Attrs,
                                              getAccessSpecifierIfPresent());
     return StmtError();
   }
@@ -532,10 +526,14 @@ Retry:
     return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
 
   case tok::annot_pragma_dump:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaDump();
     return StmtEmpty();
 
   case tok::annot_pragma_attribute:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaAttribute();
     return StmtEmpty();
   }
@@ -1057,7 +1055,11 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr);
+  StmtResult R;
+  StackHandler.runWithSufficientStackSpace(Tok.getLocation(), [&, this]() {
+    R = ParseCompoundStatementBody(isStmtExpr);
+  });
+  return R;
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -1222,7 +1224,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   while (Tok.is(tok::kw___label__)) {
     SourceLocation LabelLoc = ConsumeToken();
 
-    SmallVector<Decl *, 8> DeclsInGroup;
+    SmallVector<Decl *, 4> DeclsInGroup;
     while (true) {
       if (Tok.isNot(tok::identifier)) {
         Diag(Tok, diag::err_expected) << tok::identifier;
@@ -1552,6 +1554,11 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                                           : diag::ext_consteval_if);
       IsConsteval = true;
       ConstevalLoc = ConsumeToken();
+    } else if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteKeywordAfterIf(
+          NotLocation.isValid());
+      return StmtError();
     }
   }
   if (!IsConsteval && (NotLocation.isValid() || Tok.isNot(tok::l_paren))) {
@@ -2139,13 +2146,19 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     }
     DeclGroupPtrTy DG;
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-    if (Tok.is(tok::kw_using)) {
+    if (!getLangOpts().CPlusPlus &&
+        Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
+      ProhibitAttributes(attrs);
+      Decl *D = ParseStaticAssertDeclaration(DeclEnd);
+      DG = Actions.ConvertDeclToDeclGroup(D);
+      FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
+    } else if (Tok.is(tok::kw_using)) {
       DG = ParseAliasDeclarationInInitStatement(DeclaratorContext::ForInit,
                                                 attrs);
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     } else {
       // In C++0x, "for (T NS:a" might not be a typo for ::
-      bool MightBeForRangeStmt = getLangOpts().CPlusPlus;
+      bool MightBeForRangeStmt = getLangOpts().CPlusPlus || getLangOpts().ObjC;
       ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       DG = ParseSimpleDeclaration(
@@ -2536,9 +2549,9 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc, Hint.StateLoc,
                             ArgsUnion(Hint.ValueExpr)};
-    TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
-                     Hint.PragmaNameLoc->Loc, ArgHints, 4,
-                     ParsedAttr::Form::Pragma());
+    TempAttrs.addNew(Hint.PragmaNameLoc->getIdentifierInfo(), Hint.Range,
+                     /*scopeName=*/nullptr, Hint.PragmaNameLoc->getLoc(),
+                     ArgHints, /*numArgs=*/4, ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.
@@ -2816,7 +2829,7 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   // This is not the same behavior as Visual C++, which don't treat this as a
   // compound statement, but for Clang's type checking we can't have anything
   // inside these braces escaping to the surrounding code.
-  if (Result.Behavior == IEB_Dependent) {
+  if (Result.Behavior == IfExistsBehavior::Dependent) {
     if (!Tok.is(tok::l_brace)) {
       Diag(Tok, diag::err_expected) << tok::l_brace;
       return;
@@ -2843,14 +2856,14 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the statements below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Dependent case handled above");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }

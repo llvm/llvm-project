@@ -9,6 +9,8 @@
 #define MLIR_CONVERSION_COMPLEXTOLLVM_COMPLEXTOLLVM_H_
 
 #include "mlir/Conversion/LLVMCommon/StructBuilder.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 class DialectRegistry;
@@ -39,8 +41,10 @@ public:
 };
 
 /// Populate the given list with patterns that convert from Complex to LLVM.
-void populateComplexToLLVMConversionPatterns(const LLVMTypeConverter &converter,
-                                             RewritePatternSet &patterns);
+void populateComplexToLLVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    mlir::complex::ComplexRangeFlags complexRange =
+        mlir::complex::ComplexRangeFlags::basic);
 
 void registerConvertComplexToLLVMInterface(DialectRegistry &registry);
 

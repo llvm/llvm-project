@@ -1,6 +1,7 @@
-// CHECK-FIXES: #include <QtCore/q20utility.h>
-// RUN: %check_clang_tidy -std=c++17 %s modernize-use-integer-sign-comparison %t -- \
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++17 %s modernize-use-integer-sign-comparison %t -- \
 // RUN: -config="{CheckOptions: {modernize-use-integer-sign-comparison.EnableQtSupport: true}}"
+
+// CHECK-FIXES: #include <QtCore/q20utility.h>
 
 // The code that triggers the check
 #define MAX_MACRO(a, b) (a < b) ? b : a

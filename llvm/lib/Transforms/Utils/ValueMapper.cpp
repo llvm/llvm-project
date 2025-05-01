@@ -120,12 +120,12 @@ class Mapper {
   SmallVector<WorklistEntry, 4> Worklist;
   SmallVector<DelayedBasicBlock, 1> DelayedBBs;
   SmallVector<Constant *, 16> AppendingInits;
-  const MetadataSetTy *IdentityMD;
+  const MetadataPredicate *IdentityMD;
 
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
          ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer,
-         const MetadataSetTy *IdentityMD)
+         const MetadataPredicate *IdentityMD)
       : Flags(Flags), TypeMapper(TypeMapper),
         MCs(1, MappingContext(VM, Materializer)), IdentityMD(IdentityMD) {}
 
@@ -525,6 +525,9 @@ Value *Mapper::mapValue(const Value *V) {
     return getVM()[V] = ConstantStruct::get(cast<StructType>(NewTy), Ops);
   if (isa<ConstantVector>(C))
     return getVM()[V] = ConstantVector::get(Ops);
+  if (isa<ConstantPtrAuth>(C))
+    return getVM()[V] = ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
+                                             cast<ConstantInt>(Ops[2]), Ops[3]);
   // If this is a no-operand constant, it must be because the type was remapped.
   if (isa<PoisonValue>(C))
     return getVM()[V] = PoisonValue::get(NewTy);
@@ -901,11 +904,10 @@ std::optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return wrapConstantAsMetadata(*CMD, mapValue(CMD->getValue()));
   }
 
-  // Map metadata from IdentityMD on first use. We need to add these nodes to
-  // the mapping as otherwise metadata nodes numbering gets messed up. This is
-  // still economical because the amount of data in IdentityMD may be a lot
-  // larger than what will actually get used.
-  if (IdentityMD && IdentityMD->contains(MD))
+  // Map metadata matching IdentityMD predicate on first use. We need to add
+  // these nodes to the mapping as otherwise metadata nodes numbering gets
+  // messed up.
+  if (IdentityMD && (*IdentityMD)(MD))
     return getVM().MD()[MD] = TrackingMDRef(const_cast<Metadata *>(MD));
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
@@ -1215,7 +1217,7 @@ public:
 ValueMapper::ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags,
                          ValueMapTypeRemapper *TypeMapper,
                          ValueMaterializer *Materializer,
-                         const MetadataSetTy *IdentityMD)
+                         const MetadataPredicate *IdentityMD)
     : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer, IdentityMD)) {}
 
 ValueMapper::~ValueMapper() { delete getAsMapper(pImpl); }
