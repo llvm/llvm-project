@@ -229,9 +229,8 @@ struct LinearizeVectorExtractStridedSlice final
 struct LinearizeVectorShuffle final
     : public OpConversionPattern<vector::ShuffleOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorShuffle(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      PatternBenefit benefit = 1)
+  LinearizeVectorShuffle(const TypeConverter &typeConverter,
+                         MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
 
   LogicalResult
@@ -288,9 +287,8 @@ struct LinearizeVectorShuffle final
 struct LinearizeVectorExtract final
     : public OpConversionPattern<vector::ExtractOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorExtract(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      PatternBenefit benefit = 1)
+  LinearizeVectorExtract(const TypeConverter &typeConverter,
+                         MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
@@ -336,9 +334,8 @@ struct LinearizeVectorExtract final
 struct LinearizeVectorInsert final
     : public OpConversionPattern<vector::InsertOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorInsert(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      PatternBenefit benefit = 1)
+  LinearizeVectorInsert(const TypeConverter &typeConverter,
+                        MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
@@ -404,9 +401,8 @@ struct LinearizeVectorInsert final
 struct LinearizeVectorBitCast final
     : public OpConversionPattern<vector::BitCastOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorBitCast(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      PatternBenefit benefit = 1)
+  LinearizeVectorBitCast(const TypeConverter &typeConverter,
+                         MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
   matchAndRewrite(vector::BitCastOp castOp, OpAdaptor adaptor,
