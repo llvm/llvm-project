@@ -26,9 +26,11 @@
 #include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
@@ -39,6 +41,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrefixMapper.h"
@@ -50,6 +53,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
 
 #if LLVM_ON_UNIX
@@ -630,8 +634,8 @@ namespace {
 struct ScanServer {
   const char *Argv0 = nullptr;
   SmallString<128> BasePath;
-  /// List of cas options.
-  ArrayRef<const char *> CASArgs;
+  CASOptions CASOpts;
+  bool ProduceIncludeTree = true;
   int PidFD = -1;
   int ListenSocket = -1;
   /// \p std::nullopt means it runs indefinitely.
@@ -640,7 +644,7 @@ struct ScanServer {
 
   ~ScanServer() { shutdown(); }
 
-  void start(bool Exclusive);
+  void start(bool Exclusive, ArrayRef<const char *> CASArgs);
   int listen();
 
   /// Tear down the socket and bind file immediately but wait till all existing
@@ -705,13 +709,13 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   // particular "build session", to shutdown, then have it stay alive until the
   // session is finished.
   bool LongRunning = false;
-
+  ArrayRef<const char *> CASArgs;
   for (const auto *A = Argv.begin() + 2; A != Argv.end(); ++A) {
     StringRef Arg(*A);
     if (Arg == "-long-running")
       LongRunning = true;
     else if (Arg == "-cas-args") {
-      Server.CASArgs = ArrayRef(A + 1, Argv.end());
+      CASArgs = ArrayRef(A + 1, Argv.end());
       break;
     }
   }
@@ -722,7 +726,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
     reportError(Twine("cannot create basedir: ") + EC.message());
 
   if (Command == "-serve") {
-    Server.start(/*Exclusive*/ true);
+    Server.start(/*Exclusive*/ true, CASArgs);
     return Server.listen();
 
   } else if (Command == "-execute") {
@@ -733,7 +737,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
     }
 
     // Make sure to start the server before executing the command.
-    Server.start(/*Exclusive*/ true);
+    Server.start(/*Exclusive*/ true, CASArgs);
     std::thread ServerThread([&Server]() { Server.listen(); });
 
     setenv("CLANG_CACHE_SCAN_DAEMON_SOCKET_PATH", Server.BasePath.c_str(),
@@ -784,11 +788,61 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   openAndReplaceFD(1, LogOutPath);
   openAndReplaceFD(2, LogErrPath);
 
-  Server.start(/*Exclusive*/ false);
+  Server.start(/*Exclusive*/ false, CASArgs);
   return Server.listen();
 }
 
-void ScanServer::start(bool Exclusive) {
+static std::optional<StringRef>
+findLLVMCasBinary(const char *Argv0, llvm::SmallVectorImpl<char> &Storage) {
+  using namespace llvm::sys;
+  std::string Path = fs::getMainExecutable(Argv0, (void *)cc1depscan_main);
+  Storage.assign(Path.begin(), Path.end());
+  path::remove_filename(Storage);
+  path::append(Storage, "llvm-cas");
+  StringRef PathStr(Storage.data(), Storage.size());
+  if (fs::exists(PathStr))
+    return PathStr;
+  // Look for a corresponding usr/local/bin/llvm-cas
+  PathStr = path::parent_path(PathStr);
+  if (path::filename(PathStr) != "bin")
+    return std::nullopt;
+  PathStr = path::parent_path(PathStr);
+  Storage.truncate(PathStr.size());
+  path::append(Storage, "local", "bin", "llvm-cas");
+  PathStr = StringRef{Storage.data(), Storage.size()};
+  if (fs::exists(PathStr))
+    return PathStr;
+  return std::nullopt;
+}
+
+void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
+  // Parse CAS options and validate if needed.
+  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
+
+  const OptTable &Opts = clang::driver::getDriverOptTable();
+  unsigned MissingArgIndex, MissingArgCount;
+  auto ParsedCASArgs =
+      Opts.ParseArgs(CASArgs, MissingArgIndex, MissingArgCount);
+  CompilerInvocation::ParseCASArgs(CASOpts, ParsedCASArgs, Diags);
+  CASOpts.ensurePersistentCAS();
+  ProduceIncludeTree =
+      ParsedCASArgs.hasArg(driver::options::OPT_fdepscan_include_tree);
+
+  static std::once_flag ValidateOnce;
+  std::call_once(ValidateOnce, [&] {
+    if (getenv("LLVM_CAS_DISABLE_VALIDATION"))
+      return;
+    if (CASOpts.CASPath.empty() || !CASOpts.PluginPath.empty())
+      return;
+    SmallString<64> LLVMCasStorage;
+    SmallString<64> CASPath;
+    CASOpts.getResolvedCASPath(CASPath);
+    ExitOnErr(llvm::cas::validateOnDiskUnifiedCASDatabasesIfNeeded(
+        CASPath, /*CheckHash=*/true,
+        /*AllowRecovery=*/true,
+        /*Force=*/false, findLLVMCasBinary(Argv0, LLVMCasStorage)));
+  });
+
   // Check the pidfile.
   SmallString<128> PidPath;
   (BasePath + ".pid").toVector(PidPath);
@@ -827,16 +881,6 @@ int ScanServer::listen() {
   llvm::DefaultThreadPool Pool;
 
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
-  CASOptions CASOpts;
-  const OptTable &Opts = clang::driver::getDriverOptTable();
-  unsigned MissingArgIndex, MissingArgCount;
-  auto ParsedCASArgs =
-      Opts.ParseArgs(CASArgs, MissingArgIndex, MissingArgCount);
-  CompilerInvocation::ParseCASArgs(CASOpts, ParsedCASArgs, Diags);
-  CASOpts.ensurePersistentCAS();
-  bool ProduceIncludeTree =
-      ParsedCASArgs.hasArg(driver::options::OPT_fdepscan_include_tree);
-
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   std::tie(CAS, Cache) = CASOpts.getOrCreateDatabases(Diags);

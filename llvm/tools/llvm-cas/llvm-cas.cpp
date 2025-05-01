@@ -13,6 +13,7 @@
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/CAS/Utils.h"
 #include "llvm/RemoteCachingService/RemoteCachingService.h"
 #include "llvm/Support/CommandLine.h"
@@ -65,8 +66,13 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
 static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
 static int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash);
+static int validateIfNeeded(StringRef Path, StringRef PluginPath,
+                            ArrayRef<std::string> PluginOpts, bool CheckHash,
+                            bool Force, bool AllowRecovery, bool InProcess,
+                            const char *Argv0);
 static int ingestCasIDFile(cas::ObjectStore &CAS, ArrayRef<std::string> CASIDs);
 static int checkLockFiles(StringRef CASPath);
+static int prune(cas::ObjectStore &CAS);
 
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
@@ -86,6 +92,11 @@ int main(int Argc, char **Argv) {
                                 cl::value_desc("path"));
   cl::opt<bool> CheckHash("check-hash",
                           cl::desc("check all hashes during validation"));
+  cl::opt<bool> AllowRecovery("allow-recovery",
+                              cl::desc("allow recovery of cas data"));
+  cl::opt<bool> Force("force",
+                      cl::desc("force validation even if unnecessary"));
+  cl::opt<bool> InProcess("in-process", cl::desc("validate in-process"));
 
   enum CommandKind {
     Invalid,
@@ -109,6 +120,8 @@ int main(int Argc, char **Argv) {
     CheckLockFiles,
     Validate,
     ValidateObject,
+    ValidateIfNeeded,
+    Prune,
   };
   cl::opt<CommandKind> Command(
       cl::desc("choose command action:"),
@@ -137,7 +150,10 @@ int main(int Argc, char **Argv) {
                      "Test file locking behaviour of on-disk CAS"),
           clEnumValN(Validate, "validate", "validate ObjectStore"),
           clEnumValN(ValidateObject, "validate-object",
-                     "validate the object for CASID")),
+                     "validate the object for CASID"),
+          clEnumValN(ValidateIfNeeded, "validate-if-needed",
+                     "validate cas contents if needed"),
+          clEnumValN(Prune, "prune", "prune local cas storage")),
       cl::init(CommandKind::Invalid));
 
   cl::ParseCommandLineOptions(Argc, Argv, "llvm-cas CAS tool\n");
@@ -154,6 +170,10 @@ int main(int Argc, char **Argv) {
 
   if (Command == CheckLockFiles)
     return checkLockFiles(CASPath);
+
+  if (Command == ValidateIfNeeded)
+    return validateIfNeeded(CASPath, CASPluginPath, CASPluginOpts, CheckHash,
+                            Force, AllowRecovery, InProcess, Argv[0]);
 
   std::shared_ptr<ObjectStore> CAS;
   std::shared_ptr<ActionCache> AC;
@@ -209,6 +229,9 @@ int main(int Argc, char **Argv) {
 
   if (Command == MergeTrees)
     return mergeTrees(*CAS, Inputs);
+
+  if (Command == Prune)
+    return prune(*CAS);
 
   if (Inputs.empty())
     ExitOnErr(createStringError(inconvertibleErrorCode(),
@@ -727,5 +750,44 @@ int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash) {
   ExitOnErr(CAS.validate(CheckHash));
   ExitOnErr(AC.validate());
   outs() << "validated successfully\n";
+  return 0;
+}
+
+int validateIfNeeded(StringRef Path, StringRef PluginPath,
+                     ArrayRef<std::string> PluginOpts, bool CheckHash,
+                     bool Force, bool AllowRecovery, bool InProcess,
+                     const char *Argv0) {
+  ExitOnError ExitOnErr("llvm-cas: validate-if-needed: ");
+  std::string ExecStorage;
+  std::optional<StringRef> Exec;
+  if (!InProcess) {
+    ExecStorage = sys::fs::getMainExecutable(Argv0, (void *)validateIfNeeded);
+    Exec = ExecStorage;
+  }
+  ValidationResult Result;
+  if (PluginPath.empty()) {
+    Result = ExitOnErr(validateOnDiskUnifiedCASDatabasesIfNeeded(
+        Path, CheckHash, AllowRecovery, Force, Exec));
+  } else {
+    // FIXME: add a hook for plugin validation
+    Result = ValidationResult::Skipped;
+  }
+  switch (Result) {
+  case ValidationResult::Valid:
+    outs() << "validated successfully\n";
+    break;
+  case ValidationResult::Recovered:
+    outs() << "recovered from invalid data\n";
+    break;
+  case ValidationResult::Skipped:
+    outs() << "validation skipped\n";
+    break;
+  }
+  return 0;
+}
+
+static int prune(cas::ObjectStore &CAS) {
+  ExitOnError ExitOnErr("llvm-cas: prune: ");
+  ExitOnErr(CAS.pruneStorageData());
   return 0;
 }

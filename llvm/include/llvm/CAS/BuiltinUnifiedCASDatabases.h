@@ -21,6 +21,39 @@ class ObjectStore;
 Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
 createOnDiskUnifiedCASDatabases(StringRef Path);
 
+/// Represents the result of validating the contents using
+/// \c validateOnDiskUnifiedCASDatabasesIfNeeded.
+///
+/// Note: invalid results are handled as an \c Error.
+enum class ValidationResult {
+  /// The data is already valid.
+  Valid,
+  /// The data was invalid, but was recovered.
+  Recovered,
+  /// Validation was skipped, as it was not needed.
+  Skipped,
+};
+
+/// Validate the data in \p Path, if needed to ensure correctness.
+///
+/// \param Path directory for the on-disk database.
+/// \param CheckHash Whether to validate hashes match the data.
+/// \param AllowRecovery Whether to automatically recover from invalid data by
+/// marking the files for garbage collection.
+/// \param ForceValidation Whether to force validation to occur even if it
+/// should not be necessary.
+/// \param LLVMCasBinary If provided, validation is performed out-of-process
+/// using the given \c llvm-cas executable which protects against crashes
+/// during validation. Otherwise validation is performed in-process.
+///
+/// \returns \c Valid if the data is already valid, \c Recovered if data
+/// was invalid but has been cleared, \c Skipped if validation is not needed,
+/// or an \c Error if validation cannot be performed or if the data is left
+/// in an invalid state because \p AllowRecovery is false.
+Expected<ValidationResult> validateOnDiskUnifiedCASDatabasesIfNeeded(
+    StringRef Path, bool CheckHash, bool AllowRecovery, bool ForceValidation,
+    std::optional<StringRef> LLVMCasBinary);
+
 } // namespace llvm::cas
 
 #endif // LLVM_CAS_BUILTINUNIFIEDCASDATABASES_H

@@ -117,6 +117,8 @@ public:
   /// default on-disk CAS, otherwise this is a noop.
   void ensurePersistentCAS();
 
+  void getResolvedCASPath(llvm::SmallVectorImpl<char> &Result) const;
+
 private:
   /// Initialize Cached CAS and ActionCache.
   llvm::Error initCache() const;

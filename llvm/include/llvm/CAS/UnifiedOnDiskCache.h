@@ -9,6 +9,7 @@
 #ifndef LLVM_CAS_UNIFIEDONDISKCACHE_H
 #define LLVM_CAS_UNIFIEDONDISKCACHE_H
 
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 
 namespace llvm::cas::ondisk {
@@ -81,6 +82,34 @@ public:
        unsigned HashByteSize,
        OnDiskGraphDB::FaultInPolicy FaultInPolicy =
            OnDiskGraphDB::FaultInPolicy::FullTree);
+
+  /// Validate the data in \p Path, if needed to ensure correctness.
+  ///
+  /// Note: if invalid data is detected and \p AllowRecovery is true, then
+  /// recovery requires exclusive access to the CAS and it is an error to
+  /// attempt recovery if there is concurrent use of the CAS.
+  ///
+  /// \param Path directory for the on-disk database.
+  /// \param HashName Identifier name for the hashing algorithm that is going to
+  /// be used.
+  /// \param HashByteSize Size for the object digest hash bytes.
+  /// \param CheckHash Whether to validate hashes match the data.
+  /// \param AllowRecovery Whether to automatically recover from invalid data by
+  /// marking the files for garbage collection.
+  /// \param ForceValidation Whether to force validation to occur even if it
+  /// should not be necessary.
+  /// \param LLVMCasBinary If provided, validation is performed out-of-process
+  /// using the given \c llvm-cas executable which protects against crashes
+  /// during validation. Otherwise validation is performed in-process.
+  ///
+  /// \returns \c Valid if the data is already valid, \c Recovered if data
+  /// was invalid but has been cleared, \c Skipped if validation is not needed,
+  /// or an \c Error if validation cannot be performed or if the data is left
+  /// in an invalid state because \p AllowRecovery is false.
+  static Expected<ValidationResult>
+  validateIfNeeded(StringRef Path, StringRef HashName, unsigned HashByteSize,
+                   bool CheckHash, bool AllowRecovery, bool ForceValidation,
+                   std::optional<StringRef> LLVMCasBinary);
 
   /// This is called implicitly at destruction time, so it is not required for a
   /// client to call this. After calling \p close the only method that is valid

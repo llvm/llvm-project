@@ -23,3 +23,16 @@ cas::createOnDiskUnifiedCASDatabases(StringRef Path) {
   auto AC = builtin::createActionCacheFromUnifiedOnDiskCache(std::move(UniDB));
   return std::make_pair(std::move(CAS), std::move(AC));
 }
+
+Expected<ValidationResult> cas::validateOnDiskUnifiedCASDatabasesIfNeeded(
+    StringRef Path, bool CheckHash, bool AllowRecovery, bool ForceValidation,
+    std::optional<StringRef> LLVMCasBinary) {
+#if LLVM_ENABLE_ONDISK_CAS
+  return ondisk::UnifiedOnDiskCache::validateIfNeeded(
+      Path, builtin::BuiltinCASContext::getHashName(),
+      sizeof(builtin::HashType), CheckHash, AllowRecovery, ForceValidation,
+      LLVMCasBinary);
+#else
+  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
+#endif
+}

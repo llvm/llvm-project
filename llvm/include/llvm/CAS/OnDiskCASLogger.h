@@ -62,6 +62,11 @@ public:
   void log_MappedFileRegionBumpPtr_allocate(void *Region, TrieOffset Off,
                                             size_t Size);
   void log_UnifiedOnDiskCache_collectGarbage(StringRef Path);
+  void log_UnifiedOnDiskCache_validateIfNeeded(
+      StringRef Path, uint64_t BootTime, uint64_t ValidationTime,
+      bool CheckHash, bool AllowRecovery, bool Force,
+      std::optional<StringRef> LLVMCas, StringRef ValidationError, bool Skipped,
+      bool Recovered);
   void log_TempFile_create(StringRef Name);
   void log_TempFile_keep(StringRef TmpName, StringRef Name, std::error_code EC);
   void log_TempFile_remove(StringRef TmpName, std::error_code EC);
