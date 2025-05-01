@@ -41,7 +41,8 @@ bool TargetSchedModel::hasInstrItineraries() const {
   return EnableSchedItins && !InstrItins.isEmpty();
 }
 
-void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo, bool EnableSModel, bool EnableSItins) {
+void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo,
+                            bool EnableSModel, bool EnableSItins) {
   STI = TSInfo;
   SchedModel = TSInfo->getSchedModel();
   TII = TSInfo->getInstrInfo();
