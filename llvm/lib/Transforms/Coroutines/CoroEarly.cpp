@@ -53,7 +53,7 @@ void Lowerer::lowerResumeOrDestroy(CallBase &CB,
 }
 
 void Lowerer::lowerCoroFrames(Function &F, Value *CoroBegin) {
-  // Lower with poison if we cannot func coro.begin
+  // Lower with poison if we cannot find coro.begin
   if (CoroBegin == nullptr)
     CoroBegin = PoisonValue::get(PointerType::get(F.getContext(), 0));
 
