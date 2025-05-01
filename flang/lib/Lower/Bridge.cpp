@@ -403,18 +403,21 @@ public:
               [&](Fortran::lower::pft::FunctionLikeUnit &f) {
                 if (f.isMainProgram())
                   hasMainProgram = true;
-                declareFunction(f);
+                createGlobalOutsideOfFunctionLowering(
+                    [&]() { declareFunction(f); });
                 if (!globalOmpRequiresSymbol)
                   globalOmpRequiresSymbol = f.getScope().symbol();
               },
               [&](Fortran::lower::pft::ModuleLikeUnit &m) {
                 lowerModuleDeclScope(m);
-                for (Fortran::lower::pft::ContainedUnit &unit :
-                     m.containedUnitList)
-                  if (auto *f =
-                          std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
-                              &unit))
-                    declareFunction(*f);
+                createGlobalOutsideOfFunctionLowering([&]() {
+                  for (Fortran::lower::pft::ContainedUnit &unit :
+                       m.containedUnitList)
+                    if (auto *f =
+                            std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
+                                &unit))
+                      declareFunction(*f);
+                });
               },
               [&](Fortran::lower::pft::BlockDataUnit &b) {
                 if (!globalOmpRequiresSymbol)
@@ -463,19 +466,7 @@ public:
 
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
-    // Since this is a recursive function, we only need to create a new builder
-    // for each top-level declaration. It would be simpler to have a single
-    // builder for the entire translation unit, but that requires a lot of
-    // changes to the code.
-    // FIXME: Once createGlobalOutsideOfFunctionLowering is fixed, we can
-    // remove this code and share the module builder.
-    bool newBuilder = false;
-    if (!builder) {
-      newBuilder = true;
-      builder = new fir::FirOpBuilder(bridge.getModule(), bridge.getKindMap(),
-                                      &mlirSymbolTable);
-    }
-    CHECK(builder && "FirOpBuilder did not instantiate");
+    CHECK(builder && "declareFunction called with uninitialized builder");
     setCurrentPosition(funit.getStartingSourceLoc());
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
@@ -503,11 +494,6 @@ public:
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         declareFunction(*f);
-
-    if (newBuilder) {
-      delete builder;
-      builder = nullptr;
-    }
   }
 
   /// Get the scope that is defining or using \p sym. The returned scope is not
@@ -5624,9 +5610,9 @@ private:
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";
                if (auto *sym = scope.symbol()) llvm::dbgs() << " " << *sym;
                llvm::dbgs() << "\n");
-    // I don't think setting the builder is necessary here, because callee
+    // Setting the builder is not necessary here, because callee
     // always looks up the FuncOp from the module. If there was a function that
-    // was not declared yet. This call to callee will cause an assertion
+    // was not declared yet, this call to callee will cause an assertion
     // failure.
     Fortran::lower::CalleeInterface callee(funit, *this);
     mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
