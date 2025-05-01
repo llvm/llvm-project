@@ -657,16 +657,15 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   };
 
   auto getOptIntValue = [&](const llvm::MDOperand &md, StringRef matchKey,
-                            IntegerAttr &attr) -> LogicalResult {
+                            std::optional<uint64_t> &val) -> LogicalResult {
     if (!getConstantMD(md, matchKey, /*optional=*/true))
       return success();
     if (checkOptionalPosition(md, matchKey).failed())
       return failure();
-    uint64_t val = 0;
-    if (!getInt64Value(md, matchKey, val))
+    uint64_t tmpVal = 0;
+    if (!getInt64Value(md, matchKey, tmpVal))
       return failure();
-    attr =
-        IntegerAttr::get(IntegerType::get(mlirModule->getContext(), 64), val);
+    val = tmpVal;
     return success();
   };
 
@@ -771,12 +770,12 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     return nullptr;
 
   // Handle optional keys.
-  IntegerAttr isPartialProfile;
+  std::optional<uint64_t> isPartialProfile;
   if (getOptIntValue(mdTuple->getOperand(summayIdx), "IsPartialProfile",
                      isPartialProfile)
           .failed())
     return nullptr;
-  if (isPartialProfile)
+  if (isPartialProfile.has_value())
     summayIdx++;
 
   FloatAttr partialProfileRatio;
@@ -795,8 +794,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   // Build the final profile summary attribute.
   return ModuleFlagProfileSummaryAttr::get(
       mlirModule->getContext(), format, totalCount, maxCount, maxInternalCount,
-      maxFunctionCount, numCounts, numFunctions,
-      isPartialProfile ? isPartialProfile : nullptr,
+      maxFunctionCount, numCounts, numFunctions, isPartialProfile,
       partialProfileRatio ? partialProfileRatio : nullptr, detailedSummary);
 }
 

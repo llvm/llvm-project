@@ -333,8 +333,8 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
   };
 
   if (summaryAttr.getIsPartialProfile())
-    vals.push_back(getIntTuple("IsPartialProfile",
-                               summaryAttr.getIsPartialProfile().getUInt()));
+    vals.push_back(
+        getIntTuple("IsPartialProfile", *summaryAttr.getIsPartialProfile()));
 
   if (summaryAttr.getPartialProfileRatio()) {
     SmallVector<llvm::Metadata *> tupleNodes{
