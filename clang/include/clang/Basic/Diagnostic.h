@@ -1429,16 +1429,19 @@ operator<<(const StreamingDiagnostic &DB, T *DC) {
   return DB;
 }
 
-// Convert scope enums to their underlying type, so that we don't have
+// Convert scoped enums to their underlying type, so that we don't have
 // clutter the emitting code with `llvm::to_underlying()`.
 // We also need to disable implicit conversion for the first argument,
 // because classes that derive from StreamingDiagnostic define their own
 // templated operator<< that accept a wide variety of types, leading
 // to ambiguity.
-template <typename T, typename U>
+template <typename T, typename U,
+          typename UnderlyingU = typename std::enable_if_t<
+              std::is_enum_v<std::remove_reference_t<U>>,
+              std::underlying_type<std::remove_reference_t<U>>>::type>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, StreamingDiagnostic> &&
-        llvm::is_scoped_enum_v<std::remove_reference_t<U>>,
+        !std::is_convertible_v<U, UnderlyingU>,
     const StreamingDiagnostic &>
 operator<<(const T &DB, U &&SE) {
   DB << llvm::to_underlying(SE);
