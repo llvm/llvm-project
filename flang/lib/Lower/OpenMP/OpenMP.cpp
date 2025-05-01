@@ -2891,32 +2891,34 @@ static void genAtomicRead(lower::AbstractConverter &converter,
       *semantics::GetExpr(assignmentStmtVariable), stmtCtx));
 
   if (fromAddress.getType() != toAddress.getType()) {
-    // Emit an implicit cast.
-    // Different yet compatible types on omp.atomic.read constitute valid
-    // Fortran. The OMPIRBuilder will emit atomic instructions (on primitive
-    // types) and
-    // __atomic_load libcall (on complex type) without explicitly converting
-    // between such compatible types, leading to execute issues. The
-    // OMPIRBuilder relies on the frontend to resolve such inconsistencies
-    // between omp.atomic.read operand types. Inconsistency between operand
-    // types in omp.atomic.write are resolved through implicit casting by use of
-    // typed assignment (i.e. `evaluate::Assignment`). However, use of typed
-    // assignment in omp.atomic.read (of form `v = x`) leads to an unsafe,
+    // Emit an implicit cast. Different yet compatible types on
+    // omp.atomic.read constitute valid Fortran. The OMPIRBuilder will
+    // emit atomic instructions (on primitive types) and `__atomic_load`
+    // libcall (on complex type) without explicitly converting
+    // between such compatible types. The OMPIRBuilder relies on the
+    // frontend to resolve such inconsistencies between `omp.atomic.read `
+    // operand types. Similar inconsistencies between operand types in
+    // `omp.atomic.write` are resolved through implicit casting by use of typed
+    // assignment (i.e. `evaluate::Assignment`). However, use of typed
+    // assignment in `omp.atomic.read` (of form `v = x`) leads to an unsafe,
     // non-atomic load of `x` into a temporary `alloca`, followed by an atomic
-    // read of form `v = alloca`. Hence, perform a custom implicit cast.
+    // read of form `v = alloca`. Hence, it is needed to perform a custom
+    // implicit cast.
 
-    // For an atomic read of form `v = x` that would (without implicit casting)
+    // An atomic read of form `v = x` would (without implicit casting)
     // lower to `omp.atomic.read %v = %x : !fir.ref<type1>, !fir.ref<typ2>,
-    // type2`, this implicit casting will generate the following FIR: 		%alloca =
-    // fir.alloca type2
-    //		omp.atomic.read %alloca = %x : !fir.ref<type2>, !fir.ref<type2>,
-    //type2 		%load = fir.load %alloca : !fir.ref<type2> 		%cvt = fir.convert %load
-    //: (type2) -> type1 		fir.store %cvt to %v : !fir.ref<type1>
+    // type2`. This implicit casting will rather generate the following FIR:
+    //
+    // 	 %alloca = fir.alloca type2
+    //	 omp.atomic.read %alloca = %x : !fir.ref<type2>, !fir.ref<type2>, type2
+    //	 %load = fir.load %alloca : !fir.ref<type2>
+    //	 %cvt = fir.convert %load: (type2) -> type1
+    //	 fir.store %cvt to %v : !fir.ref<type1>
 
     // These sequence of operations is thread-safe since each thread allocates
     // the `alloca` in its stack, and performs `%alloca = %x` atomically. Once
-    // safely read, each thread performs the implicit cast on the local alloca,
-    // and writes the final result to `%v`.
+    // safely read, each thread performs the implicit cast on the local
+    // `alloca`, and writes the final result to `%v`.
     mlir::Type toType = fir::unwrapRefType(toAddress.getType());
     mlir::Type fromType = fir::unwrapRefType(fromAddress.getType());
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -2932,7 +2934,6 @@ static void genAtomicRead(lower::AbstractConverter &converter,
     if (fir::isa_complex(fromType) && !fir::isa_complex(toType)) {
       // Emit an additional `ExtractValueOp` if `fromAddress` is of complex
       // type, but `toAddress` is not.
-
       auto extract = builder.create<fir::ExtractValueOp>(
           loc, mlir::cast<mlir::ComplexType>(fromType).getElementType(), load,
           builder.getArrayAttr(
