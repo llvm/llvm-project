@@ -12,7 +12,8 @@
 ; CHECK: *   Bit 1: 1 = Leaf function
 ; CHECK: *   Bit 2: 0 = Does not use alloca
 ; CHECK: L#func_end0:
-; CHECK: .section        ".ppa1"
+; CHECK: stdin#C CSECT
+; CHECK: C_CODE64 CATTR
 ; CHECK: L#PPA1_void_test_0:                     * PPA1
 ; CHECK:        .byte   2                               * Version
 ; CHECK:        .byte   206                             * LE Signature X'CE'
