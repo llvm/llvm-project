@@ -453,43 +453,38 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
+set(arm_EABI_RT_SOURCES
+  arm/aeabi_cdcmp.S
+  arm/aeabi_cdcmpeq_check_nan.c
+  arm/aeabi_cfcmp.S
+  arm/aeabi_cfcmpeq_check_nan.c
+  arm/aeabi_dcmp.S
+  arm/aeabi_div0.c
+  arm/aeabi_drsub.c
+  arm/aeabi_fcmp.S
+  arm/aeabi_frsub.c
+  arm/aeabi_idivmod.S
+  arm/aeabi_ldivmod.S
+  arm/aeabi_uidivmod.S
+  arm/aeabi_uldivmod.S
+)
+
+set(arm_EABI_CLIB_SOURCES
+  arm/aeabi_memcmp.S
+  arm/aeabi_memcpy.S
+  arm/aeabi_memmove.S
+  arm/aeabi_memset.S
+)
+
 if(NOT COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS)
   set(arm_EABI_SOURCES
-     arm/aeabi_cdcmp.S
-     arm/aeabi_cdcmpeq_check_nan.c
-     arm/aeabi_cfcmp.S
-     arm/aeabi_cfcmpeq_check_nan.c
-     arm/aeabi_dcmp.S
-     arm/aeabi_div0.c
-     arm/aeabi_drsub.c
-     arm/aeabi_fcmp.S
-     arm/aeabi_frsub.c
-     arm/aeabi_idivmod.S
-     arm/aeabi_ldivmod.S
-     arm/aeabi_memcmp.S
-     arm/aeabi_memcpy.S
-     arm/aeabi_memmove.S
-     arm/aeabi_memset.S
-     arm/aeabi_uidivmod.S
-     arm/aeabi_uldivmod.S
+    ${arm_EABI_RT_SOURCES}
+    ${arm_EABI_CLIB_SOURCES}
   )
 else()
-	message(STATUS "COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS is ON, so skipping __aeabi_memcpy, __aeabi_memmove and __aeabi_memset Sources")
+  message(STATUS "COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS is ON, so skipping __aeabi_memcmp, __aeabi_memcpy, __aeabi_memmove and __aeabi_memset Sources")
   set(arm_EABI_SOURCES
-     arm/aeabi_cdcmp.S
-     arm/aeabi_cdcmpeq_check_nan.c
-     arm/aeabi_cfcmp.S
-     arm/aeabi_cfcmpeq_check_nan.c
-     arm/aeabi_dcmp.S
-     arm/aeabi_div0.c
-     arm/aeabi_drsub.c
-     arm/aeabi_fcmp.S
-     arm/aeabi_frsub.c
-     arm/aeabi_idivmod.S
-     arm/aeabi_ldivmod.S
-     arm/aeabi_memcmp.S
-     arm/aeabi_uidivmod.S
-     arm/aeabi_uldivmod.S
+    ${arm_EABI_RT_SOURCES}
   )
 endif()
 
