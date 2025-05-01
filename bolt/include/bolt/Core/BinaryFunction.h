@@ -386,8 +386,8 @@ private:
   /// Profile match ratio.
   float ProfileMatchRatio{0.0f};
 
-  /// Raw branch count for this function in the profile.
-  uint64_t RawBranchCount{0};
+  /// Raw sample/branch count for this function in the profile.
+  uint64_t RawSampleCount{0};
 
   /// Dynamically executed function bytes, used for density computation.
   uint64_t SampleCountInBytes{0};
@@ -1880,13 +1880,12 @@ public:
   /// Return COUNT_NO_PROFILE if there's no profile info.
   uint64_t getExecutionCount() const { return ExecutionCount; }
 
-  /// Return the raw profile information about the number of branch
-  /// executions corresponding to this function.
-  uint64_t getRawBranchCount() const { return RawBranchCount; }
+  /// Return the raw profile information about the number of samples (basic
+  /// profile) or branch executions (branch profile) recorded in this function.
+  uint64_t getRawSampleCount() const { return RawSampleCount; }
 
-  /// Set the profile data about the number of branch executions corresponding
-  /// to this function.
-  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+  /// Set raw count of samples or branches recorded in this function.
+  void setRawSampleCount(uint64_t Count) { RawSampleCount = Count; }
 
   /// Return the number of dynamically executed bytes, from raw perf data.
   uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }

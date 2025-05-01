@@ -197,10 +197,6 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
-  /// Whether pre-aggregated profile needs to convert branch profile into call
-  /// to continuation fallthrough profile.
-  bool NeedsConvertRetProfileToCallCont{false};
-
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
@@ -285,8 +281,8 @@ private:
   /// everything
   bool hasData() const { return !ParsingBuf.empty(); }
 
-  /// Print heat map based on LBR samples.
-  std::error_code printLBRHeatMap();
+  /// Print heat map based on collected samples.
+  std::error_code printHeatMap();
 
   /// Parse a single perf sample containing a PID associated with a sequence of
   /// LBR entries. If the PID does not correspond to the binary we are looking

@@ -252,6 +252,9 @@ struct FuncSampleData {
   /// Get the number of samples recorded in [Start, End)
   uint64_t getSamples(uint64_t Start, uint64_t End) const;
 
+  /// Returns the total number of samples recorded in this function.
+  uint64_t getSamples() const;
+
   /// Aggregation helper
   DenseMap<uint64_t, size_t> Index;
 
