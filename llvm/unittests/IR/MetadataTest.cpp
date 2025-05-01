@@ -1598,8 +1598,8 @@ TEST_F(DILocationTest, KeyInstructions) {
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 1u);
   DILocation *A1 =
       DILocation::get(Context, 1, 0, getSubprogram(), nullptr, false, 1, 2);
-  // The group is only applied to the DILocation if the build has opted into
-  // the additional DILocation fields needed for the feature.
+  // The group is only applied to the DILocation if we've built LLVM with
+  // EXPERIMENTAL_KEY_INSTRUCTIONS.
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   EXPECT_EQ(A1->getAtomGroup(), 1u);
   EXPECT_EQ(A1->getAtomRank(), 2u);
