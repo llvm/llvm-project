@@ -21,7 +21,9 @@ func.func @test_result_bitwidth_64(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 
 // -----
 
-// Test that operations with vectors of index type are not linearized.
+// The size of the 'index' type is backend specific, so we cannot guarantee that
+// the inner-most dimension below (of size 2*nbBits(index)) is below any bitwidth
+// threshold. Test that operations with vectors of index type are not linearized.
 
 // ALL-LABEL: test_index_no_linearize
 func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xindex>) -> vector<2x2xindex> {
