@@ -43,7 +43,10 @@ enum NVVMMemorySpace {
   /// Tensor memory space identifier.
   /// Tensor memory is available only in arch-accelerated
   /// variants from sm100 onwards.
-  kTensorMemorySpace = 6
+  kTensorMemorySpace = 6,
+  /// Distributed shared memory space identifier.
+  /// Distributed shared memory is available only in sm90+.
+  kSharedClusterMemorySpace = 7,
 };
 
 /// Return the element type and number of elements associated with a wmma matrix

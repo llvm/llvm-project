@@ -190,18 +190,15 @@ OpenACCCollapseClause::OpenACCCollapseClause(SourceLocation BeginLoc,
                                              SourceLocation EndLoc)
     : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Collapse, BeginLoc,
                                      LParenLoc, LoopCount, EndLoc),
-      HasForce(HasForce) {
-  assert(LoopCount && "LoopCount required");
-}
+      HasForce(HasForce) {}
 
 OpenACCCollapseClause *
 OpenACCCollapseClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                               SourceLocation LParenLoc, bool HasForce,
                               Expr *LoopCount, SourceLocation EndLoc) {
-  assert(
-      LoopCount &&
-      (LoopCount->isInstantiationDependent() || isa<ConstantExpr>(LoopCount)) &&
-      "Loop count not constant expression");
+  assert((!LoopCount || (LoopCount->isInstantiationDependent() ||
+                         isa<ConstantExpr>(LoopCount))) &&
+         "Loop count not constant expression");
   void *Mem =
       C.Allocate(sizeof(OpenACCCollapseClause), alignof(OpenACCCollapseClause));
   return new (Mem)
@@ -868,7 +865,7 @@ void OpenACCClausePrinter::VisitReductionClause(
 
 void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
   OS << "wait";
-  if (!C.getLParenLoc().isInvalid()) {
+  if (C.hasExprs()) {
     OS << "(";
     if (C.hasDevNumExpr()) {
       OS << "devnum: ";

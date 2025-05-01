@@ -1113,6 +1113,53 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# SMT dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "SMTOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//mlir:SMTTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "SMTOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=smt",
+            ],
+            "mlir/dialects/_smt_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=smt",
+            ],
+            "mlir/dialects/_smt_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/SMTOps.td",
+    deps = [
+        ":SMTOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "SMTOpsPyFiles",
+    srcs = [
+        "mlir/dialects/smt.py",
+        ":SMTOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # SparseTensor dialect.
 ##---------------------------------------------------------------------------##
 

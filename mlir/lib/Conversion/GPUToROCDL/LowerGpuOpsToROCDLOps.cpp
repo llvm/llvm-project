@@ -52,6 +52,25 @@ namespace mlir {
 
 using namespace mlir;
 
+// Truncate or extend the result depending on the index bitwidth specified
+// by the LLVMTypeConverter options.
+static Value truncOrExtToLLVMType(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value value,
+                                  const LLVMTypeConverter &converter) {
+  int64_t intWidth = cast<IntegerType>(value.getType()).getWidth();
+  int64_t indexBitwidth = converter.getIndexTypeBitwidth();
+  auto indexBitwidthType =
+      IntegerType::get(rewriter.getContext(), converter.getIndexTypeBitwidth());
+  // TODO: use <=> in C++20.
+  if (indexBitwidth > intWidth) {
+    return rewriter.create<LLVM::SExtOp>(loc, indexBitwidthType, value);
+  }
+  if (indexBitwidth < intWidth) {
+    return rewriter.create<LLVM::TruncOp>(loc, indexBitwidthType, value);
+  }
+  return value;
+}
+
 /// Returns true if the given `gpu.func` can be safely called using the bare
 /// pointer calling convention.
 static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
@@ -62,8 +81,8 @@ static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
   return canBeBare;
 }
 
-Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
-                const unsigned indexBitwidth) {
+static Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
+                       const unsigned indexBitwidth) {
   auto int32Type = IntegerType::get(rewriter.getContext(), 32);
   Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
   Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
@@ -113,6 +132,35 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   }
 };
 
+struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  GPUSubgroupSizeOpToROCDL(const LLVMTypeConverter &converter,
+                           amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp>(converter),
+        chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    LLVM::ConstantRangeAttr bounds = nullptr;
+    bool isBeforeGfx10 = chipset.majorVersion < 10;
+    if (auto upperBoundAttr = op.getUpperBoundAttr()) {
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/isBeforeGfx10 ? 64 : 32,
+          /*upper=*/op.getUpperBoundAttr().getInt() + 1);
+    }
+    Value wavefrontOp = rewriter.create<ROCDL::WavefrontSizeOp>(
+        op.getLoc(), rewriter.getI32Type(), bounds);
+    wavefrontOp = truncOrExtToLLVMType(rewriter, op.getLoc(), wavefrontOp,
+                                       *getTypeConverter());
+    rewriter.replaceOp(op, {wavefrontOp});
+    return success();
+  }
+
+  const amdgpu::Chipset chipset;
+};
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -137,11 +185,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Value initShflValue = adaptor.getValue();
-    Type shflType = initShflValue.getType();
-    // TODO: Add support for non 32-bit shuffle values.
-    if (!shflType.isIntOrFloat() || shflType.getIntOrFloatBitWidth() != 32)
-      return rewriter.notifyMatchFailure(
-          op, "only 32-bit int/float types are supported");
 
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     Value srcLaneId = getLaneId(rewriter, loc, indexBitwidth);
@@ -154,10 +197,13 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value widthOrZeroIfOutside =
         rewriter.create<LLVM::AndOp>(loc, int32Type, add, negwidth);
     Value dstLane;
-    // TODO: Add support for gpu::ShuffleMode::UP and gpu::ShuffleMode::DOWN.
     // TODO: Use ds_swizzle for XOR when step/offsets are constants for better
     // perf.
     switch (op.getMode()) {
+    case gpu::ShuffleMode::UP:
+      dstLane = rewriter.create<LLVM::SubOp>(loc, int32Type, srcLaneId,
+                                             adaptor.getOffset());
+      break;
     case gpu::ShuffleMode::DOWN:
       dstLane = rewriter.create<LLVM::AddOp>(loc, int32Type, srcLaneId,
                                              adaptor.getOffset());
@@ -169,8 +215,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     case gpu::ShuffleMode::IDX:
       dstLane = adaptor.getOffset();
       break;
-    default:
-      return failure();
     }
     Value isActiveSrcLane = rewriter.create<LLVM::ICmpOp>(
         loc, LLVM::ICmpPredicate::slt, dstLane, widthOrZeroIfOutside);
@@ -179,15 +223,17 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value two = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 2);
     Value dwordAlignedDstLane =
         rewriter.create<LLVM::ShlOp>(loc, int32Type, selectDstLane, two);
-    if (shflType.isF32()) {
-      initShflValue =
-          rewriter.create<LLVM::BitcastOp>(loc, int32Type, initShflValue);
+
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type);
+    SmallVector<Value> swizzled;
+    for (Value v : decomposed) {
+      Value res = rewriter.create<ROCDL::DsBpermuteOp>(loc, int32Type,
+                                                       dwordAlignedDstLane, v);
+      swizzled.emplace_back(res);
     }
-    Value shflValue = rewriter.create<ROCDL::DsBpermuteOp>(
-        loc, int32Type, dwordAlignedDstLane, initShflValue);
-    if (shflType.isF32()) {
-      shflValue = rewriter.create<LLVM::BitcastOp>(loc, shflType, shflValue);
-    }
+    Value shflValue =
+        LLVM::composeValue(rewriter, loc, swizzled, initShflValue.getType());
     rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
     return success();
   }
@@ -322,7 +368,8 @@ struct LowerGpuOpsToROCDLOpsPass final
 
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
                                             *maybeChipset);
-    populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime);
+    populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime,
+                                         *maybeChipset);
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -370,7 +417,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
 
 void mlir::populateGpuToROCDLConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    mlir::gpu::amd::Runtime runtime) {
+    mlir::gpu::amd::Runtime runtime, amdgpu::Chipset chipset) {
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
   using mlir::gpu::amd::Runtime;
@@ -409,6 +456,7 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
+  patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
 }

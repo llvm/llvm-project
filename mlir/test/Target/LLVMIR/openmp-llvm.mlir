@@ -1481,6 +1481,49 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_write
+llvm.func @omp_atomic_write() {
+// CHECK: %[[ALLOCA0:.*]] = alloca { float, float }, align 8
+// CHECK: %[[ALLOCA1:.*]] = alloca { float, float }, align 8
+// CHECK: %[[X:.*]] = alloca float, i64 1, align 4
+// CHECK: %[[R1:.*]] = alloca float, i64 1, align 4
+// CHECK: %[[ALLOCA:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[LOAD:.*]] = load float, ptr %[[R1]], align 4
+// CHECK: %[[IDX1:.*]] = insertvalue { float, float } undef, float %[[LOAD]], 0
+// CHECK: %[[IDX2:.*]] = insertvalue { float, float } %[[IDX1]], float 0.000000e+00, 1
+// CHECK: br label %entry
+
+// CHECK: entry:
+// CHECK: store { float, float } %[[IDX2]], ptr %[[ALLOCA1]], align 4
+// CHECK: call void @__atomic_store(i64 8, ptr %[[ALLOCA]], ptr %[[ALLOCA1]], i32 0)
+// CHECK: store { float, float } { float 1.000000e+00, float 1.000000e+00 }, ptr %[[ALLOCA0]], align 4
+// CHECK: call void @__atomic_store(i64 8, ptr %[[ALLOCA]], ptr %[[ALLOCA0]], i32 0)
+
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x f32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x f32 {bindc_name = "r1"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(1 : i64) : i64
+    %5 = llvm.alloca %4 x !llvm.struct<(f32, f32)> {bindc_name = "c1"} : (i64) -> !llvm.ptr
+    %6 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %7 = llvm.mlir.constant(0.000000e+00 : f32) : f32
+    %8 = llvm.mlir.constant(1 : i64) : i64
+    %9 = llvm.mlir.constant(1 : i64) : i64
+    %10 = llvm.mlir.constant(1 : i64) : i64
+    %11 = llvm.load %3 : !llvm.ptr -> f32
+    %12 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %13 = llvm.insertvalue %11, %12[0] : !llvm.struct<(f32, f32)>
+    %14 = llvm.insertvalue %7, %13[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.write %5 = %14 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    %15 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %16 = llvm.insertvalue %6, %15[0] : !llvm.struct<(f32, f32)>
+    %17 = llvm.insertvalue %6, %16[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.write %5 = %17 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    llvm.return
+}
+
+// -----
+
 //CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 //CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
 //CHECK: {{.*}} = alloca { float, float }, i64 1, align 8

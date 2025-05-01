@@ -19,6 +19,7 @@
 #include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "TargetInfo.h"
@@ -44,6 +45,7 @@ class VarDecl;
 namespace CIRGen {
 
 class CIRGenFunction;
+class CIRGenCXXABI;
 
 enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 
@@ -58,7 +60,7 @@ public:
                const clang::CodeGenOptions &cgo,
                clang::DiagnosticsEngine &diags);
 
-  ~CIRGenModule() = default;
+  ~CIRGenModule();
 
 private:
   mutable std::unique_ptr<TargetCIRGenInfo> theTargetCIRGenInfo;
@@ -79,6 +81,8 @@ private:
 
   const clang::TargetInfo &target;
 
+  std::unique_ptr<CIRGenCXXABI> abi;
+
   CIRGenTypes genTypes;
 
   /// Per-function codegen information. Updated everytime emitCIR is called
@@ -93,7 +97,15 @@ public:
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
+
+  CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
+
+  const cir::CIRDataLayout getDataLayout() const {
+    // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
+    // attribute for the CIRModule class.
+    return cir::CIRDataLayout(theModule);
+  }
 
   /// -------
   /// Handling globals
@@ -158,9 +170,14 @@ public:
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
+  // C++ related functions.
+  void emitDeclContext(const DeclContext *dc);
+
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
+
+  llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
@@ -219,6 +236,11 @@ public:
                              const T &name) {
     return errorNYI(loc.getBegin(), feature, name) << loc;
   }
+
+private:
+  // An ordered map of canonical GlobalDecls to their mangled names.
+  llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
+  llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
 };
 } // namespace CIRGen
 

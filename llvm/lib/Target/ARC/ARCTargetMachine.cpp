@@ -103,5 +103,5 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
 
 TargetTransformInfo
 ARCTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(ARCTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<ARCTTIImpl>(this, F));
 }

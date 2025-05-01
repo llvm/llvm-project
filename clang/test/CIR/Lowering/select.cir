@@ -1,0 +1,48 @@
+// RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
+// RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @select_int(%arg0 : !cir.bool, %arg1 : !s32i, %arg2 : !s32i) -> !s32i {
+    %0 = cir.select if %arg0 then %arg1 else %arg2 : (!cir.bool, !s32i, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  //      LLVM: define i32 @select_int(i1 %[[#COND:]], i32 %[[#TV:]], i32 %[[#FV:]])
+  // LLVM-NEXT:   %[[#RES:]] = select i1 %[[#COND]], i32 %[[#TV]], i32 %[[#FV]]
+  // LLVM-NEXT:   ret i32 %[[#RES]]
+  // LLVM-NEXT: }
+
+  cir.func @select_bool(%arg0 : !cir.bool, %arg1 : !cir.bool, %arg2 : !cir.bool) -> !cir.bool {
+    %0 = cir.select if %arg0 then %arg1 else %arg2 : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+    cir.return %0 : !cir.bool
+  }
+
+  //      LLVM: define i1 @select_bool(i1 %[[#COND:]], i1 %[[#TV:]], i1 %[[#FV:]])
+  // LLVM-NEXT:   %[[#RES:]] = select i1 %[[#COND]], i1 %[[#TV]], i1 %[[#FV]]
+  // LLVM-NEXT:   ret i1 %[[#RES]]
+  // LLVM-NEXT: }
+
+  cir.func @logical_and(%arg0 : !cir.bool, %arg1 : !cir.bool) -> !cir.bool {
+    %0 = cir.const #cir.bool<false> : !cir.bool
+    %1 = cir.select if %arg0 then %arg1 else %0 : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+    cir.return %1 : !cir.bool
+  }
+
+  //      LLVM: define i1 @logical_and(i1 %[[#ARG0:]], i1 %[[#ARG1:]])
+  // LLVM-NEXT:   %[[#RES:]] = and i1 %[[#ARG0]], %[[#ARG1]]
+  // LLVM-NEXT:   ret i1 %[[#RES]]
+  // LLVM-NEXT: }
+
+  cir.func @logical_or(%arg0 : !cir.bool, %arg1 : !cir.bool) -> !cir.bool {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    %1 = cir.select if %arg0 then %0 else %arg1 : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+    cir.return %1 : !cir.bool
+  }
+
+  //      LLVM: define i1 @logical_or(i1 %[[#ARG0:]], i1 %[[#ARG1:]])
+  // LLVM-NEXT:   %[[#RES:]] = or i1 %[[#ARG0]], %[[#ARG1]]
+  // LLVM-NEXT:   ret i1 %[[#RES]]
+  // LLVM-NEXT: }
+}

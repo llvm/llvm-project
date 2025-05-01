@@ -292,11 +292,56 @@ def CIR_ArrayType : CIR_Type<"Array", "array",
     `CIR.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
+  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$elementType, "uint64_t":$size
+    ), [{
+        return $_get(elementType.getContext(), elementType, size);
+    }]>,
+  ];
 
   let assemblyFormat = [{
-    `<` $eltType `x` $size `>`
+    `<` $elementType `x` $size `>`
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// VectorType (fixed size)
+//===----------------------------------------------------------------------===//
+
+def CIR_VectorType : CIR_Type<"Vector", "vector",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR vector type";
+  let description = [{
+   `!cir.vector' represents fixed-size vector types, parameterized
+    by the element type and the number of elements.
+
+    Example:
+
+    ```mlir
+    !cir.vector<!u64i x 2>
+    !cir.vector<!cir.float x 4>
+    ```
+  }];
+
+  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+
+  let assemblyFormat = [{
+    `<` $size `x` $elementType `>`
+  }];
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$elementType, "uint64_t":$size
+    ), [{
+        return $_get(elementType.getContext(), elementType, size);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -486,6 +531,7 @@ def CIR_RecordType : CIR_Type<"Record", "record",
     bool isComplete() const { return !isIncomplete(); };
     bool isIncomplete() const;
 
+    mlir::Type getLargestMember(const mlir::DataLayout &dataLayout) const;
     size_t getNumElements() const { return getMembers().size(); };
     std::string getKindAsStr() {
       switch (getKind()) {
@@ -502,6 +548,14 @@ def CIR_RecordType : CIR_Type<"Record", "record",
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
                   bool isPadded);
+
+    uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
+              unsigned idx) const;
+
+  private:
+    unsigned computeStructSize(const mlir::DataLayout &dataLayout) const;
+    uint64_t computeStructAlignment(const mlir::DataLayout &dataLayout) const;
+  public:
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -517,8 +571,8 @@ def CIRRecordType : Type<
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat,
-  CIR_PointerType, CIR_FuncType, CIR_RecordType
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
+  CIR_AnyFloat, CIR_PointerType, CIR_FuncType, CIR_RecordType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

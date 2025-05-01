@@ -177,6 +177,12 @@ void RecordType::print(mlir::AsmPrinter &printer) const {
   // Type not yet printed: continue printing the entire record.
   printer << ' ';
 
+  if (getPacked())
+    printer << "packed ";
+
+  if (getPadded())
+    printer << "padded ";
+
   if (isIncomplete()) {
     printer << "incomplete";
   } else {
@@ -210,6 +216,10 @@ mlir::StringAttr RecordType::getName() const { return getImpl()->name; }
 
 bool RecordType::getIncomplete() const { return getImpl()->incomplete; }
 
+bool RecordType::getPacked() const { return getImpl()->packed; }
+
+bool RecordType::getPadded() const { return getImpl()->padded; }
+
 cir::RecordType::RecordKind RecordType::getKind() const {
   return getImpl()->kind;
 }
@@ -220,22 +230,126 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
     llvm_unreachable("failed to complete record");
 }
 
+/// Return the largest member of in the type.
+///
+/// Recurses into union members never returning a union as the largest member.
+Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
+  assert(isUnion() && "Only call getLargestMember on unions");
+  llvm::ArrayRef<Type> members = getMembers();
+  // If the union is padded, we need to ignore the last member,
+  // which is the padding.
+  return *std::max_element(
+      members.begin(), getPadded() ? members.end() - 1 : members.end(),
+      [&](Type lhs, Type rhs) {
+        return dataLayout.getTypeABIAlignment(lhs) <
+                   dataLayout.getTypeABIAlignment(rhs) ||
+               (dataLayout.getTypeABIAlignment(lhs) ==
+                    dataLayout.getTypeABIAlignment(rhs) &&
+                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+      });
+}
+
 //===----------------------------------------------------------------------===//
 // Data Layout information for types
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-RecordType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
-                              ::mlir::DataLayoutEntryListRef params) const {
-  assert(!cir::MissingFeatures::recordTypeLayoutInfo());
-  return llvm::TypeSize::getFixed(8);
+RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  if (isUnion())
+    return dataLayout.getTypeSize(getLargestMember(dataLayout));
+
+  unsigned recordSize = computeStructSize(dataLayout);
+  return llvm::TypeSize::getFixed(recordSize * 8);
 }
 
 uint64_t
 RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                             ::mlir::DataLayoutEntryListRef params) const {
-  assert(!cir::MissingFeatures::recordTypeLayoutInfo());
-  return 4;
+  if (isUnion())
+    return dataLayout.getTypeABIAlignment(getLargestMember(dataLayout));
+
+  // Packed structures always have an ABI alignment of 1.
+  if (getPacked())
+    return 1;
+  return computeStructAlignment(dataLayout);
+}
+
+unsigned
+RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // This is a similar algorithm to LLVM's StructLayout.
+  unsigned recordSize = 0;
+  uint64_t recordAlignment = 1;
+
+  for (mlir::Type ty : getMembers()) {
+    // This assumes that we're calculating size based on the ABI alignment, not
+    // the preferred alignment for each type.
+    const uint64_t tyAlign =
+        (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+
+    // Add padding to the struct size to align it to the abi alignment of the
+    // element type before than adding the size of the element.
+    recordSize = llvm::alignTo(recordSize, tyAlign);
+    recordSize += dataLayout.getTypeSize(ty);
+
+    // The alignment requirement of a struct is equal to the strictest alignment
+    // requirement of its elements.
+    recordAlignment = std::max(tyAlign, recordAlignment);
+  }
+
+  // At the end, add padding to the struct to satisfy its own alignment
+  // requirement. Otherwise structs inside of arrays would be misaligned.
+  recordSize = llvm::alignTo(recordSize, recordAlignment);
+  return recordSize;
+}
+
+// We also compute the alignment as part of computeStructSize, but this is more
+// efficient. Ideally, we'd like to compute both at once and cache the result,
+// but that's implemented yet.
+// TODO(CIR): Implement a way to cache the result.
+uint64_t
+RecordType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // This is a similar algorithm to LLVM's StructLayout.
+  uint64_t recordAlignment = 1;
+  for (mlir::Type ty : getMembers())
+    recordAlignment =
+        std::max(dataLayout.getTypeABIAlignment(ty), recordAlignment);
+
+  return recordAlignment;
+}
+
+uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
+                                      unsigned idx) const {
+  assert(idx < getMembers().size() && "access not valid");
+
+  // All union elements are at offset zero.
+  if (isUnion() || idx == 0)
+    return 0;
+
+  assert(isComplete() && "Cannot get layout of incomplete records");
+  assert(idx < getNumElements());
+  llvm::ArrayRef<mlir::Type> members = getMembers();
+
+  unsigned offset = 0;
+
+  for (mlir::Type ty :
+       llvm::make_range(members.begin(), std::next(members.begin(), idx))) {
+    // This matches LLVM since it uses the ABI instead of preferred alignment.
+    const llvm::Align tyAlign =
+        llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+
+    // Add padding if necessary to align the data element properly.
+    offset = llvm::alignTo(offset, tyAlign);
+
+    // Consume space for this data item
+    offset += dataLayout.getTypeSize(ty);
+  }
+
+  return offset;
 }
 
 //===----------------------------------------------------------------------===//
@@ -551,19 +665,54 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-//  Definitions
+//  ArrayType Definitions
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
-  return getSize() * dataLayout.getTypeSizeInBits(getEltType());
+  return getSize() * dataLayout.getTypeSizeInBits(getElementType());
 }
 
 uint64_t
 ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                            ::mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeABIAlignment(getEltType());
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
+
+//===----------------------------------------------------------------------===//
+// VectorType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize cir::VectorType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(
+      getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t
+cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::NextPowerOf2(dataLayout.getTypeSizeInBits(*this));
+}
+
+mlir::LogicalResult cir::VectorType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type elementType, uint64_t size) {
+  if (size == 0)
+    return emitError() << "the number of vector elements must be non-zero";
+
+  // Check if it a valid FixedVectorType
+  if (mlir::isa<cir::PointerType, cir::FP128Type>(elementType))
+    return success();
+
+  // Check if it a valid VectorType
+  if (mlir::isa<cir::IntType>(elementType) ||
+      isAnyFloatingPointType(elementType))
+    return success();
+
+  return emitError() << "unsupported element type for CIR vector";
 }
 
 //===----------------------------------------------------------------------===//

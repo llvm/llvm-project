@@ -26,13 +26,13 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
     %c1024_i32 = arith.constant 1024 : i32
     %c6_i32 = arith.constant 6 : i32
     %c1_i32 = arith.constant 1 : i32
-    // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c0{{.*}}
+    // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c0{{.*}} {cuf.proc_attr = #cuf.cuda_proc<global>}
     cuf.kernel_launch @cuda_device_mod::@_QPsub_device1<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32>>>()
 
-    // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c1024{{.*}}
+    // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c1024{{.*}} {cuf.proc_attr = #cuf.cuda_proc<global>}
     cuf.kernel_launch @cuda_device_mod::@_QPsub_device1<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1024_i32>>>()
 
-    // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c0{{.*}} args(%[[ALLOCA]] : !fir.ref<f32>)
+    // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c0{{.*}} args(%[[ALLOCA]] : !fir.ref<f32>) {cuf.proc_attr = #cuf.cuda_proc<global>}
     cuf.kernel_launch @cuda_device_mod::@_QPsub_device2<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32>>>(%0) : (!fir.ref<f32>)
     return
   }
@@ -64,7 +64,7 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 }
 
 // CHECK-LABEL: func.func @_QMmod1Phost_sub()
-// CHECK: gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 clusters in (%c2{{.*}}, %c2{{.*}}, %c1{{.*}})
+// CHECK: gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 clusters in (%c2{{.*}}, %c2{{.*}}, %c1{{.*}}) {cuf.proc_attr = #cuf.cuda_proc<global>}
 
 // -----
 
@@ -107,7 +107,7 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 // CHECK: %[[CONV_ADDR:.*]] = fir.convert %[[ADDROF]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[DEVADDR:.*]] = fir.call @_FortranACUFGetDeviceAddress(%[[CONV_ADDR]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK: %[[CONV_DEVADDR:.*]] = fir.convert %[[DEVADDR]] : (!fir.llvm_ptr<i8>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-// CHECK: gpu.launch_func  @cuda_device_mod::@_QMdevptrPtest blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %{{.*}} args(%[[CONV_DEVADDR]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+// CHECK: gpu.launch_func  @cuda_device_mod::@_QMdevptrPtest blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %{{.*}} args(%[[CONV_DEVADDR]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) {cuf.proc_attr = #cuf.cuda_proc<global>}
 
 // -----
 
@@ -154,5 +154,5 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 // CHECK-LABEL: func.func @_QQmain()
 // CHECK: %[[STREAM:.*]] = fir.alloca i64 {bindc_name = "stream", uniq_name = "_QMtest_callFhostEstream"}
 // CHECK: %[[DECL_STREAM:.*]]:2 = hlfir.declare %[[STREAM]] {uniq_name = "_QMtest_callFhostEstream"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-// CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[DECL_STREAM]]#0 : <i64>
+// CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[DECL_STREAM]]#0 : !fir.ref<i64>
 // CHECK: gpu.launch_func [%[[TOKEN]]] @cuda_device_mod::@_QMdevptrPtest

@@ -63,7 +63,7 @@ private:
 
   uint32_t ReadNumber(StringLexer &type);
 
-  std::string ReadQuotedString(StringLexer &type);
+  std::optional<std::string> ReadQuotedString(StringLexer &type);
 
   ObjCLanguageRuntime &m_runtime;
 };

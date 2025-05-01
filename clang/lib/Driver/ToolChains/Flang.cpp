@@ -159,7 +159,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   for (const auto &arg :
        Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))
-    if (arg.compare("whole") != 0 && arg.compare("innermost") != 0) {
+    if (arg != "whole" && arg != "innermost") {
       getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
           << "-frepack-arrays-contiguity=" << arg;
     }

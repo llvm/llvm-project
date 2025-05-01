@@ -31,7 +31,7 @@ private:
 
   /// Map from (non-bit-field) record field to the corresponding cir record type
   /// field no. This info is populated by the record builder.
-  llvm::DenseMap<const clang::FieldDecl *, unsigned> fieldInfo;
+  llvm::DenseMap<const clang::FieldDecl *, unsigned> fieldIdxMap;
 
 public:
   CIRGenRecordLayout(cir::RecordType completeObjectType)
@@ -42,10 +42,10 @@ public:
   cir::RecordType getCIRType() const { return completeObjectType; }
 
   /// Return cir::RecordType element number that corresponds to the field FD.
-  unsigned getCIRFieldNo(const clang::FieldDecl *FD) const {
-    FD = FD->getCanonicalDecl();
-    assert(fieldInfo.count(FD) && "Invalid field for record!");
-    return fieldInfo.lookup(FD);
+  unsigned getCIRFieldNo(const clang::FieldDecl *fd) const {
+    fd = fd->getCanonicalDecl();
+    assert(fieldIdxMap.count(fd) && "Invalid field for record!");
+    return fieldIdxMap.lookup(fd);
   }
 };
 

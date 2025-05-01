@@ -1,0 +1,30 @@
+# XFAIL: target-windows
+
+# Test the ${function.qualifiers} frame-format variable.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# RUN: %clang_host -O0 %t/main.cpp -o %t-nodebug.out
+# RUN: %lldb -x -b -s %t/commands.input %t-nodebug.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+struct Foo {
+    void foo() const volatile && {}
+    void bar() { Foo{}.foo(); }
+};
+
+int main() { Foo{}.bar(); }
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.qualifiers}'\n"
+break set -n foo
+
+run
+bt
+
+# CHECK: custom-frame ' const volatile &&'
+# CHECK: custom-frame ''

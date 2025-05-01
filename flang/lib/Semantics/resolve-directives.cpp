@@ -416,7 +416,7 @@ public:
 
     // Gather information from the clauses.
     Flags flags;
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder;
+    std::optional<common::OmpMemoryOrderType> memOrder;
     for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
       flags |= common::visit(
           common::visitors{
@@ -799,7 +799,7 @@ private:
   std::int64_t ordCollapseLevel{0};
 
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
-      std::optional<common::OmpAtomicDefaultMemOrderType>);
+      std::optional<common::OmpMemoryOrderType>);
   void IssueNonConformanceWarning(
       llvm::omp::Directive D, parser::CharBlock source);
 
@@ -2721,7 +2721,7 @@ void ResolveOmpTopLevelParts(
   // program units. Modules are skipped because their REQUIRES clauses should be
   // propagated via USE statements instead.
   WithOmpDeclarative::RequiresFlags combinedFlags;
-  std::optional<common::OmpAtomicDefaultMemOrderType> combinedMemOrder;
+  std::optional<common::OmpMemoryOrderType> combinedMemOrder;
 
   // Function to go through non-module top level program units and extract
   // REQUIRES information to be processed by a function-like argument.
@@ -2764,7 +2764,7 @@ void ResolveOmpTopLevelParts(
         flags{details.ompRequires()}) {
       combinedFlags |= *flags;
     }
-    if (const common::OmpAtomicDefaultMemOrderType *
+    if (const common::OmpMemoryOrderType *
         memOrder{details.ompAtomicDefaultMemOrder()}) {
       if (combinedMemOrder && *combinedMemOrder != *memOrder) {
         context.Say(symbol.scope()->sourceRange(),
@@ -2983,7 +2983,7 @@ void OmpAttributeVisitor::CheckNameInAllocateStmt(
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
     WithOmpDeclarative::RequiresFlags flags,
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder) {
+    std::optional<common::OmpMemoryOrderType> memOrder) {
   Scope *scopeIter = &scope;
   do {
     if (Symbol * symbol{scopeIter->symbol()}) {
