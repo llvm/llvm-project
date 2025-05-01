@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define <vscale x 2 x i64> @uxtb_m_64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @uxtb_m_64(
-; CHECK-SAME: <vscale x 2 x i64> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <vscale x 2 x i64> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> splat (i64 255))
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 ;
@@ -17,30 +17,26 @@ define <vscale x 2 x i64> @uxtb_m_64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %
 
 ; Test that we combine uxtb to and_u for undef (``unknown'') passthrough.
 
-define <vscale x 2 x i64> @uxtb_x_64(<vscale x 16 x i1> %0, <vscale x 2 x i64> %1) #0 {
+define <vscale x 2 x i64> @uxtb_x_64(<vscale x 2 x i1> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @uxtb_x_64(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> splat (i64 255))
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
+; CHECK-SAME: <vscale x 2 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64> splat (i64 255))
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 ;
-  %3 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %3, <vscale x 2 x i64> %1)
-  ret <vscale x 2 x i64> %4
+  %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %0, <vscale x 2 x i64> %1)
+  ret <vscale x 2 x i64> %3
 }
 
 ; Negative test - ensure we don't combine non-undef, no-all-active predicates.
 
-define <vscale x 2 x i64> @uxtb_m_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) #0 {
+define <vscale x 2 x i64> @uxtb_m_64_no_ptrue(<vscale x 2 x i1> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @uxtb_m_64_no_ptrue(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]], <vscale x 2 x i64> [[TMP2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> [[TMP2]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
+; CHECK-SAME: <vscale x 2 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]], <vscale x 2 x i64> [[TMP2:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> [[TMP2]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[TMP1]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 ;
-  %4 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %5 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> %2, <vscale x 2 x i1> %4, <vscale x 2 x i64> %1)
-  ret <vscale x 2 x i64> %5
+  %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> %2, <vscale x 2 x i1> %0, <vscale x 2 x i64> %1)
+  ret <vscale x 2 x i64> %4
 }
 
 ; For the remaining uxt* intrinsics and types, test that we combine them to the
