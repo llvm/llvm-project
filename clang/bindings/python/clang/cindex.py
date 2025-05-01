@@ -2894,9 +2894,9 @@ class CompletionChunk:
     def string(self):
         res = conf.lib.clang_getCompletionChunkCompletionString(self.cs, self.key)
 
-        if res:
-            return CompletionString(res)
-        return None
+        if not res:
+            return None
+        return CompletionString(res)
 
     def isKindOptional(self):
         return self.__kindNumber == 0
@@ -2962,9 +2962,12 @@ class CompletionString(ClangObject):
             raise IndexError
         return CompletionChunk(self.obj, key)
 
-    def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
+    if TYPE_CHECKING:
+        # Defining __getitem__ and __len__ is enough to make an iterable
+        # but the typechecker doesn't understand that.
+        def __iter__(self):
+            for i in range(len(self)):
+                yield self[i]
 
     @property
     def priority(self):
@@ -3477,10 +3480,10 @@ class TranslationUnit(ClangObject):
         2-tuple of SourceLocation or as a SourceRange. If both are defined,
         behavior is undefined.
         """
+        if locations is None and extent is None:
+            raise TypeError("get_tokens() requires at least one argument")
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
-        if extent is None:
-            raise TypeError("get_tokens() requires at least one argument")
 
         return TokenGroup.get_tokens(self, extent)
 
