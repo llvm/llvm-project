@@ -1,5 +1,5 @@
 // Both of these should enable everything.
-// RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field,zero-init-var,zero-init-field -Wc++-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field,zero-init-var,zero-init-field -Wc++-compat -Wno-tentative-definition-compat %s
 // RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field,zero-init-var,zero-init-field -Wdefault-const-init %s
 
 // This should enable nothing.
