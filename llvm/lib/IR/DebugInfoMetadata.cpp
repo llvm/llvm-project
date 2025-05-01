@@ -351,40 +351,43 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     unsigned Line = SameLine ? L1->getLine() : 0;
     unsigned Col = SameLine && SameCol ? L1->getColumn() : 0;
     bool IsImplicitCode = L1->isImplicitCode() && L2->isImplicitCode();
+
+    // Discard source location atom if the line becomes 0. And there's nothing
+    // further to do if neither location has an atom number.
+    if (!SameLine || !(L1->getAtomGroup() || L2->getAtomGroup()))
+      return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
+                             /*AtomGroup*/ 0, /*AtomRank*/ 0);
+
     uint64_t Group = 0;
     uint64_t Rank = 0;
-    if (SameLine) {
-      if (L1->getAtomGroup() || L2->getAtomGroup()) {
-        // If we're preserving the same matching inlined-at field we can
-        // preserve the atom.
-        if (LocBIA == LocAIA && InlinedAt == LocBIA) {
-          // Deterministically keep the lowest non-zero ranking atom group
-          // number.
-          // FIXME: It would be nice if we could track that an instruction
-          // belongs to two source atoms.
-          bool UseL1Atom = [L1, L2]() {
-            if (L1->getAtomRank() == L2->getAtomRank()) {
-              // Arbitrarily choose the lowest non-zero group number.
-              if (!L1->getAtomGroup() || !L2->getAtomGroup())
-                return !L2->getAtomGroup();
-              return L1->getAtomGroup() < L2->getAtomGroup();
-            }
-            // Choose the lowest non-zero rank.
-            if (!L1->getAtomRank() || !L2->getAtomRank())
-              return !L2->getAtomRank();
-            return L1->getAtomRank() < L2->getAtomRank();
-          }();
-          Group = UseL1Atom ? L1->getAtomGroup() : L2->getAtomGroup();
-          Rank = UseL1Atom ? L1->getAtomRank() : L2->getAtomRank();
-        } else {
-          // If either instruction is part of a source atom, reassign it a new
-          // atom group. This essentially regresses to non-key-instructions
-          // behaviour (now that it's the only instruction in its group it'll
-          // probably get is_stmt applied).
-          Group = C.incNextAtomGroup();
-          Rank = 1;
+    // If we're preserving the same matching inlined-at field we can
+    // preserve the atom.
+    if (LocBIA == LocAIA && InlinedAt == LocBIA) {
+      // Deterministically keep the lowest non-zero ranking atom group
+      // number.
+      // FIXME: It would be nice if we could track that an instruction
+      // belongs to two source atoms.
+      bool UseL1Atom = [L1, L2]() {
+        if (L1->getAtomRank() == L2->getAtomRank()) {
+          // Arbitrarily choose the lowest non-zero group number.
+          if (!L1->getAtomGroup() || !L2->getAtomGroup())
+            return !L2->getAtomGroup();
+          return L1->getAtomGroup() < L2->getAtomGroup();
         }
-      }
+        // Choose the lowest non-zero rank.
+        if (!L1->getAtomRank() || !L2->getAtomRank())
+          return !L2->getAtomRank();
+        return L1->getAtomRank() < L2->getAtomRank();
+      }();
+      Group = UseL1Atom ? L1->getAtomGroup() : L2->getAtomGroup();
+      Rank = UseL1Atom ? L1->getAtomRank() : L2->getAtomRank();
+    } else {
+      // If either instruction is part of a source atom, reassign it a new
+      // atom group. This essentially regresses to non-key-instructions
+      // behaviour (now that it's the only instruction in its group it'll
+      // probably get is_stmt applied).
+      Group = C.incNextDILocationAtomGroup();
+      Rank = 1;
     }
     return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
                            Group, Rank);
@@ -416,7 +419,8 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   // way to handle this.
   // Key Instructions: it's fine to drop atom group and rank here, as line 0
   // is a nonsensical is_stmt location.
-  return DILocation::get(C, 0, 0, LocA->getScope(), nullptr, false, 0, 0);
+  return DILocation::get(C, 0, 0, LocA->getScope(), nullptr, false,
+                         /*AtomGroup*/ 0, /*AtomRank*/ 0);
 }
 
 std::optional<unsigned>

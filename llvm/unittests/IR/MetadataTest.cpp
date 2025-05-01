@@ -1482,10 +1482,12 @@ TEST_F(DILocationTest, Merge) {
 #endif
   // Identical, including source atom numbers.
   {
-    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 1);
-    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 1);
+    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 1);
+    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 1);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 1u, 1u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 1u, 1u);
     // DILocations are uniqued, so we can check equality by ptr.
     EXPECT_EQ(M, DILocation::getMergedLocation(A, B));
   }
@@ -1493,57 +1495,70 @@ TEST_F(DILocationTest, Merge) {
   // Identical but different atom ranks (same atom) - choose the lowest nonzero
   // rank.
   {
-    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 1);
-    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 2);
+    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 1);
+    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 2);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 1u, 1u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 1u, /*AtomRank*/ 1u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
 
-    A = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 0);
-    B = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 2);
+    A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                        /*AtomRank*/ 0);
+    B = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                        /*AtomRank*/ 2);
     M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 1u, 2u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 1u, /*AtomRank*/ 2u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
   }
 
   // Identical but different atom ranks (different atom) - choose the lowest
   // nonzero rank.
   {
-    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 1);
-    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, 2, 2);
+    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 1);
+    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 2,
+                              /*AtomRank*/ 2);
     auto *M = DILocation::getMergedLocation(A, B);
     EXPECT_ATOM(M, 1u, 1u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
 
-    A = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 0);
-    B = DILocation::get(Context, 2, 7, N, nullptr, false, 2, 2);
+    A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                        /*AtomRank*/ 0);
+    B = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 2,
+                        /*AtomRank*/ 2);
     M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 2u, 2u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 2u, /*AtomRank*/ 2u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
   }
 
   // Identical but equal atom rank (different atom) - choose the lowest non-zero
   // group (arbitrary choice for deterministic behaviour).
   {
-    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, 1, 1);
-    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, 2, 1);
+    auto *A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 1);
+    auto *B = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 2,
+                              /*AtomRank*/ 1);
     auto *M = DILocation::getMergedLocation(A, B);
     EXPECT_ATOM(M, 1u, 1u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
 
-    A = DILocation::get(Context, 2, 7, N, nullptr, false, 0, 1);
-    B = DILocation::get(Context, 2, 7, N, nullptr, false, 2, 1);
+    A = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 0,
+                        /*AtomRank*/ 1);
+    B = DILocation::get(Context, 2, 7, N, nullptr, false, /*AtomGroup*/ 2,
+                        /*AtomRank*/ 1);
     M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 2u, 1u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 2u, /*AtomRank*/ 1u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
   }
 
   // Completely different except same atom numbers. Zero out the atoms.
   {
     auto *I = DILocation::get(Context, 2, 7, N);
-    auto *A = DILocation::get(Context, 1, 6, S, I, false, 1, 1);
-    auto *B =
-        DILocation::get(Context, 2, 7, getSubprogram(), nullptr, false, 1, 1);
+    auto *A = DILocation::get(Context, 1, 6, S, I, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 1);
+    auto *B = DILocation::get(Context, 2, 7, getSubprogram(), nullptr, false,
+                              /*AtomGroup*/ 1, /*AtomRank*/ 1);
     auto *M = DILocation::getMergedLocation(A, B);
     EXPECT_EQ(0u, M->getLine());
     EXPECT_EQ(0u, M->getColumn());
@@ -1557,16 +1572,20 @@ TEST_F(DILocationTest, Merge) {
   {
     auto *I = DILocation::get(Context, 1, 7, N);
     auto *F = getSubprogram();
-    auto *A = DILocation::get(Context, 1, 1, F, I, false, 1, 2);
-    auto *B = DILocation::get(Context, 1, 1, F, I, false, 2, 1);
+    auto *A = DILocation::get(Context, 1, 1, F, I, false, /*AtomGroup*/ 1,
+                              /*AtomRank*/ 2);
+    auto *B = DILocation::get(Context, 1, 1, F, I, false, /*AtomGroup*/ 2,
+                              /*AtomRank*/ 1);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 2u, 1u);
+    EXPECT_ATOM(M, 2u, /*AtomRank*/ 1u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
 
-    A = DILocation::get(Context, 1, 1, F, I, false, 1, 2);
-    B = DILocation::get(Context, 1, 1, F, I, false, 2, 0);
+    A = DILocation::get(Context, 1, 1, F, I, false, /*AtomGroup*/ 1,
+                        /*AtomRank*/ 2);
+    B = DILocation::get(Context, 1, 1, F, I, false, /*AtomGroup*/ 2,
+                        /*AtomRank*/ 0);
     M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 1u, 2u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 1u, /*AtomRank*/ 2u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
   }
 
@@ -1582,24 +1601,25 @@ TEST_F(DILocationTest, Merge) {
     auto *FY = getSubprogram();
     auto *FZ = getSubprogram();
     auto *Z4 = DILocation::get(Context, 1, 4, FZ);
-    auto *Y3IntoZ4 = DILocation::get(Context, 1, 3, FY, Z4, false, 1, 1);
+    auto *Y3IntoZ4 = DILocation::get(Context, 1, 3, FY, Z4, false,
+                                     /*AtomGroup*/ 1, /*AtomRank*/ 1);
     auto *Y2IntoZ4 = DILocation::get(Context, 1, 2, FY, Z4);
     auto *X1IntoY2 = DILocation::get(Context, 1, 1, FX, Y2IntoZ4);
     auto *M = DILocation::getMergedLocation(X1IntoY2, Y3IntoZ4);
     EXPECT_EQ(M->getScope(), FY);
     EXPECT_EQ(M->getInlinedAt()->getScope(), FZ);
-    EXPECT_ATOM(M, 2u, 1u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 2u, /*AtomRank*/ 1u);
 
     // This swapped merge will produce a new atom group too.
     M = DILocation::getMergedLocation(Y3IntoZ4, X1IntoY2);
 
     // Same again, even if the atom numbers match.
-    auto *X1IntoY2SameAtom =
-        DILocation::get(Context, 1, 1, FX, Y2IntoZ4, false, 1, 1);
+    auto *X1IntoY2SameAtom = DILocation::get(Context, 1, 1, FX, Y2IntoZ4, false,
+                                             /*AtomGroup*/ 1, /*AtomRank*/ 1);
     M = DILocation::getMergedLocation(X1IntoY2SameAtom, Y3IntoZ4);
-    EXPECT_ATOM(M, 4u, 1u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 4u, /*AtomRank*/ 1u);
     M = DILocation::getMergedLocation(Y3IntoZ4, X1IntoY2SameAtom);
-    EXPECT_ATOM(M, 5u, 1u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 5u, /*AtomRank*/ 1u);
   }
 #undef EXPECT_ATOM
 }
