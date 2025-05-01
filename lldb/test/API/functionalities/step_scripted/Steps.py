@@ -50,7 +50,7 @@ class StepSingleInstruction(StepWithChild):
         super().__init__(thread_plan)
 
     def queue_child_thread_plan(self):
-        return self.thread_plan.QueueThreadPlanForStepSingleInstruction(False)
+        return self.thread_plan.QueueThreadPlanForStepSingleInstruction(False, lldb.SBError())
 
 
 class StepSingleInstructionWithStepOver(StepWithChild):
@@ -58,7 +58,7 @@ class StepSingleInstructionWithStepOver(StepWithChild):
         super().__init__(thread_plan)
 
     def queue_child_thread_plan(self):
-        return self.thread_plan.QueueThreadPlanForStepSingleInstruction(True)
+        return self.thread_plan.QueueThreadPlanForStepSingleInstruction(True, lldb.SBError())
 
 
 # This plan does a step-over until a variable changes value.

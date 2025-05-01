@@ -326,14 +326,6 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
 }
 
 SBThreadPlan
-SBThreadPlan::QueueThreadPlanForStepSingleInstruction(bool step_over) {
-  LLDB_INSTRUMENT_VA(this, step_over);
-
-  SBError error;
-  return QueueThreadPlanForStepSingleInstruction(step_over, error);
-}
-
-SBThreadPlan
 SBThreadPlan::QueueThreadPlanForStepSingleInstruction(bool step_over,
                                                       SBError &error) {
   LLDB_INSTRUMENT_VA(this, step_over, error);
