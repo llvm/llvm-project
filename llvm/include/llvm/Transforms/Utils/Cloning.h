@@ -119,12 +119,13 @@ struct ClonedCodeInfo {
 /// function, you can specify a ClonedCodeInfo object with the optional fifth
 /// parameter.
 ///
-/// Set \p MapAtoms to false to skip mapping source atoms for later remapping.
-/// Incorrectly setting false may harm the debugging experience. It's safe to
-/// set false if the cloned basic block is destined for a different function or
-/// if the original block is deleted. Setting true (default) is always safe
-/// (correct) but sometimes unecessary; this option reduces the compile-time
-/// impact of Key Instruction in such cases.
+/// \p MapAtoms indicates whether source location atoms should be mapped for
+/// later remapping. Must be true when you duplicate a code path and a source
+/// location is intended to appear twice in the generated instructions. Can be
+/// set to false if you are transplanting code from one place to another.
+/// Setting true (default) is always safe (won't produce incorrect debug info)
+/// but is sometimes unnecessary, causing extra work that could be avoided by
+/// setting the parameter to false.
 BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
                             ClonedCodeInfo *CodeInfo = nullptr,
