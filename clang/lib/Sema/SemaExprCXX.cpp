@@ -2452,8 +2452,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   SmallVector<Expr *, 8> AllPlaceArgs;
   if (OperatorNew) {
     auto *Proto = OperatorNew->getType()->castAs<FunctionProtoType>();
-    VariadicCallType CallType = Proto->isVariadic() ? VariadicFunction
-                                                    : VariadicDoesNotApply;
+    VariadicCallType CallType = Proto->isVariadic()
+                                    ? VariadicCallType::Function
+                                    : VariadicCallType::DoesNotApply;
 
     // We've already converted the placement args, just fill in any default
     // arguments. Skip the first parameter because we don't have a corresponding
