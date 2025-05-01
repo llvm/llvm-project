@@ -5883,7 +5883,7 @@ private:
   /// Helper to generate GlobalOps when the builder is not positioned in any
   /// region block. This is required because the FirOpBuilder assumes it is
   /// always positioned inside a region block when creating globals, the easiest
-  /// way to comply is to create a dummy function and to throw it away 
+  /// way to comply is to create a dummy function and to throw it away
   /// afterwards.
   void createGlobalOutsideOfFunctionLowering(
       const std::function<void()> &createGlobals) {
