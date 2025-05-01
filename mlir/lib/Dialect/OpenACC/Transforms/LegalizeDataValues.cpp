@@ -84,8 +84,7 @@ static void replaceAllUsesInUnstructuredComputeRegionWith(
         exitOps.push_back(declareExit);
     }
     if (exitOps.empty())
-      op.emitError(
-          "declare enter token must be used by at least one declare exit op");
+      return;
   }
 
   for (auto p : values) {
