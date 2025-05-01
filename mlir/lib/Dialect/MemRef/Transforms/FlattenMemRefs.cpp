@@ -16,6 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -38,141 +39,6 @@ namespace memref {
 
 using namespace mlir;
 
-static void setInsertionPointToStart(OpBuilder &builder, Value val) {
-  if (auto *parentOp = val.getDefiningOp()) {
-    builder.setInsertionPointAfter(parentOp);
-  } else {
-    builder.setInsertionPointToStart(val.getParentBlock());
-  }
-}
-
-OpFoldResult computeMemRefSpan(Value memref, OpBuilder &builder) {
-  Location loc = memref.getLoc();
-  MemRefType type = cast<MemRefType>(memref.getType());
-  ArrayRef<int64_t> shape = type.getShape();
-  
-  // Check for empty memref
-  if (type.hasStaticShape() && 
-      llvm::any_of(shape, [](int64_t dim) { return dim == 0; })) {
-    return builder.getIndexAttr(0);
-  }
-  
-  // Get strides of the memref
-  SmallVector<int64_t, 4> strides;
-  int64_t offset;
-  if (failed(type.getStridesAndOffset(strides, offset))) {
-    // Cannot extract strides, return a dynamic value
-    return Value();
-  }
-  
-  // Static case: compute at compile time if possible
-  if (type.hasStaticShape()) {
-    int64_t span = 0;
-    for (unsigned i = 0; i < type.getRank(); ++i) {
-      span += (shape[i] - 1) * strides[i];
-    }
-    return builder.getIndexAttr(span);
-  }
-  
-  // Dynamic case: emit IR to compute at runtime
-  Value result = builder.create<arith::ConstantIndexOp>(loc, 0);
-  
-  for (unsigned i = 0; i < type.getRank(); ++i) {
-    // Get dimension size
-    Value dimSize;
-    if (shape[i] == ShapedType::kDynamic) {
-      dimSize = builder.create<memref::DimOp>(loc, memref, i);
-    } else {
-      dimSize = builder.create<arith::ConstantIndexOp>(loc, shape[i]);
-    }
-    
-    // Compute (dim - 1)
-    Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
-    Value dimMinusOne = builder.create<arith::SubIOp>(loc, dimSize, one);
-    
-    // Get stride
-    Value stride;
-    if (strides[i] == ShapedType::kDynamicStrideOrOffset) {
-      // For dynamic strides, need to extract from memref descriptor
-      // This would require runtime support, possibly using extractStride
-      // As a placeholder, return a dynamic value
-      return Value();
-    } else {
-      stride = builder.create<arith::ConstantIndexOp>(loc, strides[i]);
-    }
-    
-    // Add (dim - 1) * stride to result
-    Value term = builder.create<arith::MulIOp>(loc, dimMinusOne, stride);
-    result = builder.create<arith::AddIOp>(loc, result, term);
-  }
-  
-  return result;
-}
-
-static std::tuple<Value, OpFoldResult, SmallVector<OpFoldResult>, OpFoldResult,
-                  OpFoldResult>
-getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
-                        ArrayRef<OpFoldResult> subOffsets,
-                        ArrayRef<OpFoldResult> subStrides = std::nullopt) {
-  auto sourceType = cast<MemRefType>(source.getType());
-  auto sourceRank = static_cast<unsigned>(sourceType.getRank());
-
-  memref::ExtractStridedMetadataOp newExtractStridedMetadata;
-  {
-    OpBuilder::InsertionGuard g(rewriter);
-    setInsertionPointToStart(rewriter, source);
-    newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
-  }
-
-  auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
-
-  auto getDim = [&](int64_t dim, Value dimVal) -> OpFoldResult {
-    return ShapedType::isDynamic(dim) ? getAsOpFoldResult(dimVal)
-                                      : rewriter.getIndexAttr(dim);
-  };
-
-  OpFoldResult origOffset =
-      getDim(sourceOffset, newExtractStridedMetadata.getOffset());
-  ValueRange sourceStridesVals = newExtractStridedMetadata.getStrides();
-  OpFoldResult outmostDim =
-      getDim(sourceType.getShape().front(),
-             newExtractStridedMetadata.getSizes().front());
-
-  SmallVector<OpFoldResult> origStrides;
-  origStrides.reserve(sourceRank);
-
-  SmallVector<OpFoldResult> strides;
-  strides.reserve(sourceRank);
-
-  AffineExpr s0 = rewriter.getAffineSymbolExpr(0);
-  AffineExpr s1 = rewriter.getAffineSymbolExpr(1);
-  for (auto i : llvm::seq(0u, sourceRank)) {
-    OpFoldResult origStride = getDim(sourceStrides[i], sourceStridesVals[i]);
-
-    if (!subStrides.empty()) {
-      strides.push_back(affine::makeComposedFoldedAffineApply(
-          rewriter, loc, s0 * s1, {subStrides[i], origStride}));
-    }
-
-    origStrides.emplace_back(origStride);
-  }
-
-  // Compute linearized index:
-  auto &&[expr, values] =
-      computeLinearIndex(rewriter.getIndexAttr(0), origStrides, subOffsets);
-  OpFoldResult linearizedIndex =
-      affine::makeComposedFoldedAffineApply(rewriter, loc, expr, values);
-
-  // Compute collapsed size: (the outmost stride * outmost dimension).
-  //SmallVector<OpFoldResult> ops{origStrides.front(), outmostDim};
-  //OpFoldResult collapsedSize = affine::computeProduct(loc, rewriter, ops);
-  OpFoldResult collapsedSize = computeMemRefSpan(source, rewriter);
-
-  return {newExtractStridedMetadata.getBaseBuffer(), linearizedIndex,
-          origStrides, origOffset, collapsedSize};
-}
-
 static Value getValueFromOpFoldResult(OpBuilder &rewriter, Location loc,
                                       OpFoldResult in) {
   if (Attribute offsetAttr = dyn_cast<Attribute>(in)) {
@@ -188,17 +54,36 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
                                                          Location loc,
                                                          Value source,
                                                          ValueRange indices) {
-  auto &&[base, index, strides, offset, collapsedShape] =
-      getFlatOffsetAndStrides(rewriter, loc, source,
-                              getAsOpFoldResult(indices));
+  int64_t sourceOffset;
+  SmallVector<int64_t, 4> sourceStrides;
+  auto sourceType = cast<MemRefType>(source.getType());
+  if (failed(sourceType.getStridesAndOffset(sourceStrides, sourceOffset))) {
+    assert(false);
+  }
+
+  memref::ExtractStridedMetadataOp stridedMetadata =
+      rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
+
+  auto typeBit = sourceType.getElementType().getIntOrFloatBitWidth();
+  OpFoldResult linearizedIndices;
+  memref::LinearizedMemRefInfo linearizedInfo;
+  std::tie(linearizedInfo, linearizedIndices) =
+      memref::getLinearizedMemRefOffsetAndSize(
+          rewriter, loc, typeBit, typeBit,
+          stridedMetadata.getConstifiedMixedOffset(),
+          stridedMetadata.getConstifiedMixedSizes(),
+          stridedMetadata.getConstifiedMixedStrides(),
+          getAsOpFoldResult(indices));
 
   return std::make_pair(
       rewriter.create<memref::ReinterpretCastOp>(
           loc, source,
-          /* offset = */ offset,
-          /* shapes = */ ArrayRef<OpFoldResult>{collapsedShape},
-          /* strides = */ ArrayRef<OpFoldResult>{strides.back()}),
-      getValueFromOpFoldResult(rewriter, loc, index));
+          /* offset = */ linearizedInfo.linearizedOffset,
+          /* shapes = */ ArrayRef<OpFoldResult>{linearizedInfo.linearizedSize},
+          /* strides = */
+          ArrayRef<OpFoldResult>{
+              stridedMetadata.getConstifiedMixedStrides().back()}),
+      getValueFromOpFoldResult(rewriter, loc, linearizedIndices));
 }
 
 static bool needFlattening(Value val) {
@@ -313,8 +198,23 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
     SmallVector<OpFoldResult> subOffsets = op.getMixedOffsets();
     SmallVector<OpFoldResult> subSizes = op.getMixedSizes();
     SmallVector<OpFoldResult> subStrides = op.getMixedStrides();
-    auto &&[base, finalOffset, strides, _, __] =
-        getFlatOffsetAndStrides(rewriter, loc, memref, subOffsets, subStrides);
+
+    // base, finalOffset, strides
+    memref::ExtractStridedMetadataOp stridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, memref);
+
+    auto sourceType = cast<MemRefType>(memref.getType());
+    auto typeBit = sourceType.getElementType().getIntOrFloatBitWidth();
+    OpFoldResult linearizedIndices;
+    memref::LinearizedMemRefInfo linearizedInfo;
+    std::tie(linearizedInfo, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, typeBit, typeBit,
+            stridedMetadata.getConstifiedMixedOffset(),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides(), op.getMixedOffsets());
+    auto finalOffset = linearizedInfo.linearizedOffset;
+    auto strides = stridedMetadata.getConstifiedMixedStrides();
 
     auto srcType = cast<MemRefType>(memref.getType());
     auto resultType = cast<MemRefType>(op.getType());
@@ -337,7 +237,7 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
     }
 
     rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        op, resultType, base, finalOffset, finalSizes, finalStrides);
+        op, resultType, memref, finalOffset, finalSizes, finalStrides);
     return success();
   }
 };
@@ -364,12 +264,13 @@ struct FlattenMemrefsPass
 } // namespace
 
 void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
-  patterns
-      .insert<MemRefRewritePattern<memref::LoadOp>,
-              MemRefRewritePattern<memref::StoreOp>,
-              MemRefRewritePattern<vector::LoadOp>,
-              MemRefRewritePattern<vector::StoreOp>,
-              MemRefRewritePattern<vector::TransferReadOp>,
-              MemRefRewritePattern<vector::TransferWriteOp>, FlattenSubview>(
-          patterns.getContext());
+  patterns.insert<MemRefRewritePattern<memref::LoadOp>,
+                  MemRefRewritePattern<memref::StoreOp>,
+                  MemRefRewritePattern<vector::LoadOp>,
+                  MemRefRewritePattern<vector::StoreOp>,
+                  MemRefRewritePattern<vector::TransferReadOp>,
+                  MemRefRewritePattern<vector::TransferWriteOp>,
+                  MemRefRewritePattern<vector::MaskedLoadOp>,
+                  MemRefRewritePattern<vector::MaskedStoreOp>, FlattenSubview>(
+      patterns.getContext());
 }
