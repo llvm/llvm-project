@@ -2967,10 +2967,11 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildBinaryOperator(SourceLocation OpLoc,
-                                         BinaryOperatorKind Opc,
-                                         Expr *LHS, Expr *RHS) {
-    return getSema().BuildBinOp(/*Scope=*/nullptr, OpLoc, Opc, LHS, RHS);
+  ExprResult RebuildBinaryOperator(SourceLocation OpLoc, BinaryOperatorKind Opc,
+                                   Expr *LHS, Expr *RHS,
+                                   bool ForFoldExpression = false) {
+    return getSema().BuildBinOp(/*Scope=*/nullptr, OpLoc, Opc, LHS, RHS,
+                                ForFoldExpression);
   }
 
   /// Build a new rewritten operator expression.
@@ -16408,6 +16409,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
+  bool WarnedOnComparison = false;
   for (unsigned I = 0; I != *NumExpansions; ++I) {
     Sema::ArgPackSubstIndexRAII SubstIndex(
         getSema(), LeftFold ? I : *NumExpansions - I - 1);
@@ -16435,7 +16437,17 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
             Functions, LHS, RHS);
       } else {
         Result = getDerived().RebuildBinaryOperator(E->getEllipsisLoc(),
-                                                    E->getOperator(), LHS, RHS);
+                                                    E->getOperator(), LHS, RHS,
+                                                    /*ForFoldExpresion=*/true);
+        if (!WarnedOnComparison && Result.isUsable()) {
+          if (auto *BO = dyn_cast<BinaryOperator>(Result.get());
+              BO && BO->isComparisonOp()) {
+            WarnedOnComparison = true;
+            SemaRef.Diag(BO->getBeginLoc(),
+                         diag::warn_comparison_in_fold_expression)
+                << BO->getOpcodeStr();
+          }
+        }
       }
     } else
       Result = Out;
