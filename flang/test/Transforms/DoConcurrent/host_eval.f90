@@ -32,11 +32,13 @@ end program do_concurrent_host_eval
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[I_LB_MAP:[^,]+]],
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[I_UB_MAP:[^,]+]],
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[I_ST_MAP:[^,]+]],
-! DEVICE-SAME:  %{{[^[:space:]]+}} -> %{{[^,]+}},
-! DEVICE-SAME:  %{{[^[:space:]]+}} -> %{{[^,]+}},
+
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[J_LB_MAP:[^,]+]],
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[J_UB_MAP:[^,]+]],
-! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[J_ST_MAP:[^,]+]] : {{.*}})
+! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[J_ST_MAP:[^,]+]],
+
+! DEVICE-SAME:  %{{[^[:space:]]+}} -> %{{[^,]+}},
+! DEVICE-SAME:  %{{[^[:space:]]+}} -> %{{[^,]+}} : {{.*}})
 
 ! DEVICE: %[[I_LB_DECL:.*]]:2 = hlfir.declare %[[I_LB_MAP]]
 ! DEVICE: %[[I_LB:.*]] = fir.load %[[I_LB_DECL]]#1 : !fir.ref<index>
