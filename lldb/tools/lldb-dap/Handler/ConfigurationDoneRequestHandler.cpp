@@ -47,11 +47,6 @@ namespace lldb_dap {
 
 void ConfigurationDoneRequestHandler::operator()(
     const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-  dap.configuration_done_sent = true;
-
   {
     // Temporary unlock the API mutex to avoid a deadlock between the API mutex
     // and the first stop mutex.
@@ -68,6 +63,11 @@ void ConfigurationDoneRequestHandler::operator()(
     // Relock the API mutex.
     lock.lock();
   }
+
+  llvm::json::Object response;
+  FillResponse(request, response);
+  dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.configuration_done_sent = true;
 
   if (dap.stop_at_entry)
     SendThreadStoppedEvent(dap);
