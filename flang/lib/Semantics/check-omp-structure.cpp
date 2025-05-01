@@ -3522,11 +3522,14 @@ bool OmpStructureChecker::CheckReductionOperator(
       }
     }
     // User-defined operators are OK if there has been a declared reduction
-    // for that. So check if it's a defined operator, and it has
-    // UserReductionDetails - then it's good.
+    // for that. We mangle those names to store the user details.
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
-      if (definedOp->v.symbol->detailsIf<UserReductionDetails>()) {
-        return true;
+      std::string mangled = MangleDefinedOperator(definedOp->v.symbol->name());
+      const Scope &scope = definedOp->v.symbol->owner();
+      if (const Symbol *symbol = scope.FindSymbol(mangled)) {
+        if (symbol->detailsIf<UserReductionDetails>()) {
+          return true;
+        }
       }
     }
     context_.Say(source, "Invalid reduction operator in %s clause."_err_en_US,
@@ -3627,7 +3630,7 @@ static bool CheckSymbolSupportsType(const Scope &scope,
   if (const auto &symbol{scope.FindSymbol(name)}) {
     if (const auto *reductionDetails{
             symbol->detailsIf<UserReductionDetails>()}) {
-      return reductionDetails->SupportsType(&type);
+      return reductionDetails->SupportsType(type);
     }
   }
   return false;
@@ -3679,8 +3682,8 @@ static bool IsReductionAllowedForType(
       return CheckSymbolSupportsType(scope, name, type);
     } else if (const auto *definedOp{
                    std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
-      // TODO: Figure out if it's valid.
-      return true;
+      return CheckSymbolSupportsType(
+          scope, MangleDefinedOperator(definedOp->v.symbol->name()), type);
     }
     DIE("Intrinsic Operator not found - parsing gone wrong?");
   }};
