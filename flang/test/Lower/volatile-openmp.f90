@@ -1,4 +1,4 @@
-! RUN: bbc -fopenmp %s -o - | FileCheck %s
+! RUN: bbc --strict-fir-volatile-verifier -fopenmp %s -o - | FileCheck %s
 type t
     integer, pointer :: array(:)
 end type
