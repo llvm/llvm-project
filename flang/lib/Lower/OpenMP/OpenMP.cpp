@@ -1731,8 +1731,8 @@ static void genTargetClauses(
   // for `target`.
 
   // `target private(..)` is only supported in delayed privatization mode.
-  if (!enableDelayedPrivatizationStaging)
-    cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
+  // if (!enableDelayedPrivatizationStaging)
+  //   cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
