@@ -88,6 +88,14 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
+Improvements to include-cleaner
+-------------------------------
+- Deprecated the ``-insert`` and ``-remove`` command line options, and added
+  the ``-disable-remove`` and ``-disable-insert`` command line options as
+  replacements. The previous command line options were confusing because they
+  did not imply the default state of the option (which is inserts and removes
+  being enabled). The new options are easier to understand the semantics of.
+
 Improvements to clang-tidy
 --------------------------
 
