@@ -219,6 +219,8 @@ public:
   /// Get the kind of extension that an instruction represents.
   static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction *I);
+  static PartialReductionExtendKind
+  getPartialReductionExtendKind(Instruction::CastOps ExtOpcode);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.

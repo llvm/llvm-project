@@ -2056,55 +2056,6 @@ public:
   }
 };
 
-/// A recipe for forming partial reductions. In the loop, an accumulator and
-/// vector operand are added together and passed to the next iteration as the
-/// next accumulator. After the loop body, the accumulator is reduced to a
-/// scalar value.
-class VPPartialReductionRecipe : public VPSingleDefRecipe {
-  unsigned Opcode;
-
-public:
-  VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1)
-      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
-                                 ReductionInst) {}
-  VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
-                           Instruction *ReductionInst = nullptr)
-      : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
-                          ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
-        Opcode(Opcode) {
-    [[maybe_unused]] auto *AccumulatorRecipe =
-        getOperand(1)->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
-            isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
-           "Unexpected operand order for partial reduction recipe");
-  }
-  ~VPPartialReductionRecipe() override = default;
-
-  VPPartialReductionRecipe *clone() override {
-    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getUnderlyingInstr());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
-
-  /// Generate the reduction in the loop.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPPartialReductionRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-  /// Get the binary op's opcode.
-  unsigned getOpcode() const { return Opcode; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
 class VPBlendRecipe : public VPSingleDefRecipe {
@@ -2339,7 +2290,8 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC;
+           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPPartialReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2374,6 +2326,59 @@ public:
   VPValue *getCondOp() const {
     return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
+};
+
+/// A recipe for forming partial reductions. In the loop, an accumulator and
+/// vector operand are added together and passed to the next iteration as the
+/// next accumulator. After the loop body, the accumulator is reduced to a
+/// scalar value.
+class VPPartialReductionRecipe : public VPReductionRecipe {
+  unsigned Opcode;
+
+public:
+  VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
+                           VPValue *Op1, VPValue *Cond)
+      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1, Cond,
+                                 ReductionInst) {}
+  VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
+                           VPValue *Cond, Instruction *ReductionInst = nullptr)
+      : VPReductionRecipe(VPDef::VPPartialReductionSC, RecurKind::Add,
+                          FastMathFlags(), ReductionInst,
+                          ArrayRef<VPValue *>({Op0, Op1}), Cond, false, {}),
+        Opcode(Opcode) {
+    [[maybe_unused]] auto *AccumulatorRecipe =
+        getChainOp()->getDefiningRecipe();
+    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
+            isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
+           "Unexpected operand order for partial reduction recipe");
+  }
+  ~VPPartialReductionRecipe() override = default;
+
+  VPPartialReductionRecipe *clone() override {
+    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
+                                        getCondOp(), getUnderlyingInstr());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
+
+  /// Generate the reduction in the loop.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPPartialReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Get the binary op's opcode.
+  unsigned getOpcode() const { return Opcode; }
+
+  /// Get the binary op this reduction is applied to.
+  VPValue *getBinOp() const { return getOperand(1); }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe to represent inloop reduction operations with vector-predication
@@ -2496,6 +2501,9 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
 
   Type *ResultTy;
 
+  /// If the reduction this is based on is a partial reduction.
+  bool IsPartialReduction = false;
+
   /// For cloning VPMulAccumulateReductionRecipe.
   VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
       : VPReductionRecipe(
@@ -2505,7 +2513,8 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
         ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
-        ResultTy(MulAcc->getResultType()) {}
+        ResultTy(MulAcc->getResultType()),
+        IsPartialReduction(MulAcc->isPartialReduction()) {}
 
 public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
@@ -2518,7 +2527,8 @@ public:
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
         ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()),
-        ResultTy(ResultTy) {
+        ResultTy(ResultTy),
+        IsPartialReduction(isa<VPPartialReductionRecipe>(R)) {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
@@ -2589,6 +2599,9 @@ public:
 
   /// Return the non negative flag of the ext recipe.
   bool isNonNeg() const { return IsNonNeg; }
+
+  /// Return if the underlying reduction recipe is a partial reduction.
+  bool isPartialReduction() const { return IsPartialReduction; }
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
