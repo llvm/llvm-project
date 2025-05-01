@@ -44,7 +44,7 @@ public:
   /// This method returns whether the initialization process failed.
   virtual LogicalResult initialize() = 0;
 
-  /// Transform `op` to the EMitC dialect with the conversions available in the
+  /// Transform `op` to the EmitC dialect with the conversions available in the
   /// pass. The analysis manager can be used to query analyzes like
   /// `DataLayoutAnalysis` to further configure the conversion process. This
   /// method is invoked by `ConvertToEmitC::runOnOperation`. This method returns
