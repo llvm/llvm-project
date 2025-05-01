@@ -4064,8 +4064,10 @@ void Parser::ParseConstructorInitializer(Decl *ConstructorDecl) {
     MemInitResult MemInit = ParseMemInitializer(ConstructorDecl);
     if (!MemInit.isInvalid())
       MemInitializers.push_back(MemInit.get());
-    else
+    else {
+      ConstructorDecl->setInvalidDecl();
       AnyErrors = true;
+    }
 
     if (Tok.is(tok::comma))
       ConsumeToken();

@@ -86,7 +86,7 @@ namespace test5 {
              decltype(Base(1))(2), // expected-error {{multiple initializations given for base 'decltype(Base(1))' (aka 'test5::Base')}}
              decltype(int())() { // expected-error {{constructor initializer 'decltype(int())' (aka 'int') does not name a class}}
     }
-    A(float) : decltype(A())(3) {
+    A(float) : decltype(A())(3) { // expected-error {{constructor for 'A' creates a delegation cycle}}
     }
   };
 }
