@@ -719,7 +719,14 @@ public:
   const TypeVector &GetTypeList() const { return typeList_; }
 
   bool SupportsType(const DeclTypeSpec &type) const {
-    return llvm::is_contained(typeList_, &type);
+    // We have to compare the actual type, not the pointer, as some
+    // types are not guaranteed to be the same object.
+    for (auto t : typeList_) {
+      if (*t == type) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void AddDecl(const DeclInfo &decl) { declList_.push_back(decl); }
