@@ -5809,27 +5809,27 @@ bool Sema::CheckInvalidBuiltinCountedByRef(const Expr *E,
     return false;
 
   switch (K) {
-  case AssignmentKind:
-  case InitializerKind:
+  case BuiltinCountedByRefKind::Assignment:
+  case BuiltinCountedByRefKind::Initializer:
     Diag(E->getExprLoc(),
          diag::err_builtin_counted_by_ref_cannot_leak_reference)
         << 0 << E->getSourceRange();
     break;
-  case FunctionArgKind:
+  case BuiltinCountedByRefKind::FunctionArg:
     Diag(E->getExprLoc(),
          diag::err_builtin_counted_by_ref_cannot_leak_reference)
         << 1 << E->getSourceRange();
     break;
-  case ReturnArgKind:
+  case BuiltinCountedByRefKind::ReturnArg:
     Diag(E->getExprLoc(),
          diag::err_builtin_counted_by_ref_cannot_leak_reference)
         << 2 << E->getSourceRange();
     break;
-  case ArraySubscriptKind:
+  case BuiltinCountedByRefKind::ArraySubscript:
     Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
         << 0 << E->getSourceRange();
     break;
-  case BinaryExprKind:
+  case BuiltinCountedByRefKind::BinaryExpr:
     Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
         << 1 << E->getSourceRange();
     break;

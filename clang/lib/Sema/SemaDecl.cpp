@@ -14904,7 +14904,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
-  CheckInvalidBuiltinCountedByRef(VD->getInit(), InitializerKind);
+  CheckInvalidBuiltinCountedByRef(VD->getInit(),
+                                  BuiltinCountedByRefKind::Initializer);
 
   checkAttributesAfterMerging(*this, *VD);
 
