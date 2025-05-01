@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../lib/IR/LLVMContextImpl.h"
 #include "llvm/IR/Metadata.h"
+#include "../lib/IR/LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
@@ -1596,7 +1596,8 @@ TEST_F(DILocationTest, KeyInstructions) {
   Context.pImpl->NextAtomGroup = 1;
 
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 1u);
-  DILocation *A1 = DILocation::get(Context, 1, 0, getSubprogram(), nullptr, false, 1, 2);
+  DILocation *A1 =
+      DILocation::get(Context, 1, 0, getSubprogram(), nullptr, false, 1, 2);
   // The group is only applied to the DILocation if the build has opted into
   // the additional DILocation fields needed for the feature.
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS

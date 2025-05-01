@@ -382,6 +382,4 @@ void LLVMContext::updateAtomGroupWaterline(uint64_t V) {
   pImpl->NextAtomGroup = std::max(pImpl->NextAtomGroup, V);
 }
 
-uint64_t LLVMContext::incNextAtomGroup() {
-  return pImpl->NextAtomGroup++;
-}
+uint64_t LLVMContext::incNextAtomGroup() { return pImpl->NextAtomGroup++; }
