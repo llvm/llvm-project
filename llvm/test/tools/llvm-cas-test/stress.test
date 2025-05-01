@@ -1,0 +1,5 @@
+REQUIRES: expensive_checks
+
+RUN: rm -rf %t.cas
+RUN: llvm-cas-test --cas %t.cas --timeout 60
+
