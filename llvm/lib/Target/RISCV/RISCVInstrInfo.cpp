@@ -3904,7 +3904,7 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
       MI.setDesc(get(RISCV::ADDI));
       return true;
     }
-    // xor rd, rs, rs => li rd, 0
+    // xor rd, rs, rs => addi rd, zero, 0
     if (MI.getOpcode() == RISCV::XOR &&
         MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
       MI.getOperand(1).setReg(RISCV::X0);
@@ -3970,7 +3970,7 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
     }
     break;
   case RISCV::ANDI:
-    // andi rd, zero, C => li rd, 0
+    // andi rd, zero, C => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0) {
       MI.getOperand(2).setImm(0);
       MI.setDesc(get(RISCV::ADDI));
@@ -3983,10 +3983,10 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::MULHSU:
   case RISCV::MULHU:
   case RISCV::MULW:
-    // and rd, rs, zero => li rd, 0
-    // and rd, zero, rs => li rd, 0
-    // mul* rd, rs, zero => li rd, 0
-    // mul* rd, zero, rs => li rd, 0
+    // and rd, rs, zero => addi rd, zero, 0
+    // and rd, zero, rs => addi rd, zero, 0
+    // mul* rd, rs, zero => addi rd, zero, 0
+    // mul* rd, zero, rs => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0) {
       MI.removeOperand(2);
       MI.addOperand(MachineOperand::CreateImm(0));
@@ -4007,7 +4007,7 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::SRLIW:
   case RISCV::SRAIW:
   case RISCV::SLLI_UW:
-    // shiftimm rd, zero, N => li rd, 0
+    // shiftimm rd, zero, N => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0) {
       MI.getOperand(2).setImm(0);
       MI.setDesc(get(RISCV::ADDI));
@@ -4016,14 +4016,14 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
     break;
   case RISCV::ORI:
   case RISCV::XORI:
-    // [x]ori rd, zero, N => li rd, N
+    // [x]ori rd, zero, N => addi rd, zero, N
     if (MI.getOperand(1).getReg() == RISCV::X0) {
       MI.setDesc(get(RISCV::ADDI));
       return true;
     }
     break;
   case RISCV::SLTIU:
-    // seqz rd, zero => li rd, 1
+    // sltiu rd, zero, 1 => addi rd, zero, 1
     if (MI.getOperand(1).getReg() == RISCV::X0 &&
         MI.getOperand(2).getImm() == 1) {
       MI.setDesc(get(RISCV::ADDI));
@@ -4032,8 +4032,8 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
     break;
   case RISCV::SLTU:
   case RISCV::ADD_UW:
-    // snez rd, zero => li rd, 0
-    // zext.w rd, zero => li rd, 0
+    // sltu rd, zero, zero => addi rd, zero, 0
+    // add.uw rd, zero, zero => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0 &&
         MI.getOperand(2).getReg() == RISCV::X0) {
       MI.getOperand(2).ChangeToImmediate(0);
@@ -4052,8 +4052,8 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::SEXT_B:
   case RISCV::ZEXT_H_RV32:
   case RISCV::ZEXT_H_RV64:
-    // sext.[hb] rd, zero => li rd, 0
-    // zext.h rd, zero => li rd, 0
+    // sext.[hb] rd, zero => addi rd, zero, 0
+    // zext.h rd, zero => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0) {
       MI.addOperand(MachineOperand::CreateImm(0));
       MI.setDesc(get(RISCV::ADDI));
@@ -4066,7 +4066,7 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::SLLW:
   case RISCV::SRLW:
   case RISCV::SRAW:
-    // shift rd, zero, rs => li rd, 0
+    // shift rd, zero, rs => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0) {
       MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(RISCV::ADDI));
