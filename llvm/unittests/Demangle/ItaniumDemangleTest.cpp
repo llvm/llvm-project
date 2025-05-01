@@ -221,7 +221,7 @@ TEST_P(DemangleInvalidTestFixture, Demangle_Invalid) {
 
   const auto *Root = Parser.parse();
 
-  EXPECT_EQ(nullptr, Root);
+  EXPECT_EQ(nullptr, Root) << "Unexpectedly succeeded demangling: " << mangled;
 }
 
 INSTANTIATE_TEST_SUITE_P(DemangleInvalidTests, DemangleInvalidTestFixture,
@@ -288,7 +288,7 @@ TEST_P(DemangleFPLiteralTestFixture, Demangle_FPLiteral) {
   Root->print(OB);
   auto demangled = std::string_view(OB);
 
-  EXPECT_TRUE(llvm::find(expected, demangled) != std::end(expected));
+  EXPECT_THAT(expected, testing::Contains(demangled));
   std::free(OB.getBuffer());
 }
 
