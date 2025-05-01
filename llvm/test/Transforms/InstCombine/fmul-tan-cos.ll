@@ -15,93 +15,93 @@ define double @fmul_tan_cos(double %a) {
   ret double %res
 }
 
-define double @fmul_strict_tan_strict_cos_reassoc(double %a) {
-; CHECK-LABEL: define double @fmul_strict_tan_strict_cos_reassoc(
+define double @fmul_strict_tan_strict_cos_contract(double %a) {
+; CHECK-LABEL: define double @fmul_strict_tan_strict_cos_contract(
 ; CHECK-SAME: double [[A:%.*]]) {
 ; CHECK-NEXT:    [[TAN:%.*]] = call double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call contract double @llvm.cos.f64(double [[A]])
 ; CHECK-NEXT:    [[RES:%.*]] = fmul double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call double @llvm.tan.f64(double %a)
-  %cos = call reassoc double @llvm.cos.f64(double %a)
+  %cos = call contract double @llvm.cos.f64(double %a)
   %res = fmul double %tan, %cos
   ret double %res
 }
 
-define double @fmul_reassoc_tan_strict_cos_strict(double %a) {
-; CHECK-LABEL: define double @fmul_reassoc_tan_strict_cos_strict(
+define double @fmul_contract_tan_strict_cos_strict(double %a) {
+; CHECK-LABEL: define double @fmul_contract_tan_strict_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call double @llvm.tan.f64(double %a)
   %cos = call double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %tan, %cos
+  %res = fmul contract double %tan, %cos
   ret double %res
 }
 
-define double @fmul_reassoc_tan_reassoc_cos_strict(double %a) {
-; CHECK-LABEL: define double @fmul_reassoc_tan_reassoc_cos_strict(
+define double @fmul_contract_tan_contract_cos_strict(double %a) {
+; CHECK-LABEL: define double @fmul_contract_tan_contract_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %tan = call contract double @llvm.tan.f64(double %a)
   %cos = call double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %tan, %cos
+  %res = fmul contract double %tan, %cos
   ret double %res
 }
 
-define double @fmul_tan_cos_reassoc_multiple_uses(double %a) {
-; CHECK-LABEL: define double @fmul_tan_cos_reassoc_multiple_uses(
+define double @fmul_tan_cos_contract_multiple_uses(double %a) {
+; CHECK-LABEL: define double @fmul_tan_cos_contract_multiple_uses(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TAN]], [[COS]]
+; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call contract double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]]
 ; CHECK-NEXT:    call void @use(double [[COS]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %tan = call reassoc double @llvm.tan.f64(double %a)
-  %cos = call reassoc double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %tan, %cos
+  %tan = call contract double @llvm.tan.f64(double %a)
+  %cos = call contract double @llvm.cos.f64(double %a)
+  %res = fmul contract double %tan, %cos
   call void @use(double %cos)
   ret double %res
 }
 
-define double @fmul_tan_cos_reassoc(double %a) {
-; CHECK-LABEL: define double @fmul_tan_cos_reassoc(
+define double @fmul_tan_cos_contract(double %a) {
+; CHECK-LABEL: define double @fmul_tan_cos_contract(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %tan = call reassoc double @llvm.tan.f64(double %a)
-  %cos = call reassoc double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %tan, %cos
+  %tan = call contract double @llvm.tan.f64(double %a)
+  %cos = call contract double @llvm.cos.f64(double %a)
+  %res = fmul contract double %tan, %cos
   ret double %res
 }
 
-define float @fmul_tanf_cosf_reassoc(float %a) {
-; CHECK-LABEL: define float @fmul_tanf_cosf_reassoc(
+define float @fmul_tanf_cosf_contract(float %a) {
+; CHECK-LABEL: define float @fmul_tanf_cosf_contract(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc float @llvm.sin.f32(float [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call contract float @llvm.sin.f32(float [[A]])
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %tan = call reassoc float @llvm.tan.f32(float %a)
-  %cos = call reassoc float @llvm.cos.f32(float %a)
-  %res = fmul reassoc float %tan, %cos
+  %tan = call contract float @llvm.tan.f32(float %a)
+  %cos = call contract float @llvm.cos.f32(float %a)
+  %res = fmul contract float %tan, %cos
   ret float %res
 }
 
-define fp128 @fmul_tanfp128_cosfp128_reassoc(fp128 %a) {
-; CHECK-LABEL: define fp128 @fmul_tanfp128_cosfp128_reassoc(
+define fp128 @fmul_tanfp128_cosfp128_contract(fp128 %a) {
+; CHECK-LABEL: define fp128 @fmul_tanfp128_cosfp128_contract(
 ; CHECK-SAME: fp128 [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc fp128 @llvm.sin.f128(fp128 [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call contract fp128 @llvm.sin.f128(fp128 [[A]])
 ; CHECK-NEXT:    ret fp128 [[RES]]
 ;
-  %tan = call reassoc fp128 @llvm.tan.fp128(fp128 %a)
-  %cos = call reassoc fp128 @llvm.cos.fp128(fp128 %a)
-  %res = fmul reassoc fp128 %tan, %cos
+  %tan = call contract fp128 @llvm.tan.fp128(fp128 %a)
+  %cos = call contract fp128 @llvm.cos.fp128(fp128 %a)
+  %res = fmul contract fp128 %tan, %cos
   ret fp128 %res
 }
 
@@ -109,12 +109,12 @@ define fp128 @fmul_tanfp128_cosfp128_reassoc(fp128 %a) {
 define double @commutativity_cos_tan(double %a) {
 ; CHECK-LABEL: define double @commutativity_cos_tan(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %cos = call reassoc double @llvm.cos.f64(double %a)
-  %tan = call reassoc double @llvm.tan.f64(double %a)
-  %res = fmul reassoc double %cos, %tan
+  %cos = call contract double @llvm.cos.f64(double %a)
+  %tan = call contract double @llvm.tan.f64(double %a)
+  %res = fmul contract double %cos, %tan
   ret double %res
 }
 
@@ -122,14 +122,14 @@ define double @commutativity_cos_tan(double %a) {
 define double @tan_cos_value_mismatch(double %a, double %b) {
 ; CHECK-LABEL: define double @tan_cos_value_mismatch(
 ; CHECK-SAME: double [[A:%.*]], double [[B:%.*]]) {
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[COS:%.*]] = call reassoc double @llvm.cos.f64(double [[B]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TAN]], [[COS]]
+; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call contract double @llvm.cos.f64(double [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %tan = call reassoc double @llvm.tan.f64(double %a)
-  %cos = call reassoc double @llvm.cos.f64(double %b)
-  %res = fmul reassoc double %tan, %cos
+  %tan = call contract double @llvm.tan.f64(double %a)
+  %cos = call contract double @llvm.cos.f64(double %b)
+  %res = fmul contract double %tan, %cos
   ret double %res
 }
 
@@ -137,12 +137,12 @@ define double @tan_cos_value_mismatch(double %a, double %b) {
 define <2 x double> @fmul_tan_cos_vector(<2 x double> %a) {
 ; CHECK-LABEL: define <2 x double> @fmul_tan_cos_vector(
 ; CHECK-SAME: <2 x double> [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc <2 x double> @llvm.sin.v2f64(<2 x double> [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call contract <2 x double> @llvm.sin.v2f64(<2 x double> [[A]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
-  %tan = call reassoc <2 x double> @llvm.tan.v2f64(<2 x double> %a)
-  %cos = call reassoc <2 x double> @llvm.cos.v2f64(<2 x double> %a)
-  %res = fmul reassoc <2 x double> %tan, %cos
+  %tan = call contract <2 x double> @llvm.tan.v2f64(<2 x double> %a)
+  %cos = call contract <2 x double> @llvm.cos.v2f64(<2 x double> %a)
+  %res = fmul contract <2 x double> %tan, %cos
   ret <2 x double> %res
 }
 
@@ -150,12 +150,12 @@ define <2 x double> @fmul_tan_cos_vector(<2 x double> %a) {
 define double @fmul_tan_cos_nnan_preservation(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_nnan_preservation(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc nnan double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = call nnan contract double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %tan = call reassoc double @llvm.tan.f64(double %a)
-  %cos = call reassoc double @llvm.cos.f64(double %a)
-  %res = fmul reassoc nnan double %tan, %cos
+  %tan = call contract double @llvm.tan.f64(double %a)
+  %cos = call contract double @llvm.cos.f64(double %a)
+  %res = fmul contract nnan double %tan, %cos
   ret double %res
 }
 
@@ -163,12 +163,12 @@ define double @fmul_tan_cos_nnan_preservation(double %a) {
 define double @fmul_tan_cos_fpmath_metadata_preservation(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_fpmath_metadata_preservation(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]]), !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %tan = call reassoc double @llvm.tan.f64(double %a)
-  %cos = call reassoc double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %tan, %cos, !fpmath !0
+  %tan = call contract double @llvm.tan.f64(double %a)
+  %cos = call contract double @llvm.cos.f64(double %a)
+  %res = fmul contract double %tan, %cos, !fpmath !0
   ret double %res
 }
 
