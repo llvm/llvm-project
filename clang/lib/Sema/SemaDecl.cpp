@@ -4034,13 +4034,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         } else {
           Diag(NewMethod->getLocation(),
                diag::err_definition_of_implicitly_declared_member)
-              << New << llvm::to_underlying(getSpecialMember(OldMethod));
+              << New << getSpecialMember(OldMethod);
           return true;
         }
       } else if (OldMethod->getFirstDecl()->isExplicitlyDefaulted() && !isFriend) {
         Diag(NewMethod->getLocation(),
              diag::err_definition_of_explicitly_defaulted_member)
-            << llvm::to_underlying(getSpecialMember(OldMethod));
+            << getSpecialMember(OldMethod);
         return true;
       }
     }
@@ -5249,7 +5249,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (DS.isModulePrivateSpecified() &&
       Tag && Tag->getDeclContext()->isFunctionOrMethod())
     Diag(DS.getModulePrivateSpecLoc(), diag::err_module_private_local_class)
-        << llvm::to_underlying(Tag->getTagKind())
+        << Tag->getTagKind()
         << FixItHint::CreateRemoval(DS.getModulePrivateSpecLoc());
 
   ActOnDocumentableDecl(TagD);
@@ -7722,15 +7722,14 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             // data members.
             Diag(D.getIdentifierLoc(),
                  diag::err_static_data_member_not_allowed_in_local_class)
-                << Name << RD->getDeclName()
-                << llvm::to_underlying(RD->getTagKind());
+                << Name << RD->getDeclName() << RD->getTagKind();
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
             // static data members.
             Diag(D.getIdentifierLoc(),
                  diag::err_static_data_member_not_allowed_in_anon_struct)
-                << Name << llvm::to_underlying(AnonStruct->getTagKind());
+                << Name << AnonStruct->getTagKind();
             Invalid = true;
           } else if (RD->isUnion()) {
             // C++98 [class.union]p1: If a union contains a static data member,
@@ -17661,7 +17660,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
       // A tag 'foo::bar' must already exist.
       Diag(NameLoc, diag::err_not_tag_in_scope)
-          << llvm::to_underlying(Kind) << Name << DC << SS.getRange();
+          << Kind << Name << DC << SS.getRange();
       Name = nullptr;
       Invalid = true;
       goto CreateNewDecl;
@@ -18119,7 +18118,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
           !Previous.isForRedeclaration()) {
         NonTagKind NTK = getNonTagTypeDeclKind(PrevDecl, Kind);
         Diag(NameLoc, diag::err_tag_reference_non_tag)
-            << PrevDecl << NTK << llvm::to_underlying(Kind);
+            << PrevDecl << NTK << Kind;
         Diag(PrevDecl->getLocation(), diag::note_declared_at);
         Invalid = true;
 
@@ -19018,8 +19017,7 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
             getLangOpts().CPlusPlus11
                 ? diag::warn_cxx98_compat_nontrivial_union_or_anon_struct_member
                 : diag::err_illegal_union_or_anon_struct_member)
-            << FD->getParent()->isUnion() << FD->getDeclName()
-            << llvm::to_underlying(member);
+            << FD->getParent()->isUnion() << FD->getDeclName() << member;
         DiagnoseNontrivial(RDecl, member);
         return !getLangOpts().CPlusPlus11;
       }
@@ -19359,8 +19357,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         unsigned DiagID = 0;
         if (!Record->isUnion() && !IsLastField) {
           Diag(FD->getLocation(), diag::err_flexible_array_not_at_end)
-              << FD->getDeclName() << FD->getType()
-              << llvm::to_underlying(Record->getTagKind());
+              << FD->getDeclName() << FD->getType() << Record->getTagKind();
           Diag((*(i + 1))->getLocation(), diag::note_next_field_declaration);
           FD->setInvalidDecl();
           EnclosingDecl->setInvalidDecl();
@@ -19376,7 +19373,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
         if (DiagID)
           Diag(FD->getLocation(), DiagID)
-              << FD->getDeclName() << llvm::to_underlying(Record->getTagKind());
+              << FD->getDeclName() << Record->getTagKind();
         // While the layout of types that contain virtual bases is not specified
         // by the C++ standard, both the Itanium and Microsoft C++ ABIs place
         // virtual bases after the derived members.  This would make a flexible
@@ -19384,10 +19381,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // of the type.
         if (CXXRecord && CXXRecord->getNumVBases() != 0)
           Diag(FD->getLocation(), diag::err_flexible_array_virtual_base)
-              << FD->getDeclName() << llvm::to_underlying(Record->getTagKind());
+              << FD->getDeclName() << Record->getTagKind();
         if (!getLangOpts().C99)
           Diag(FD->getLocation(), diag::ext_c99_flexible_array_member)
-              << FD->getDeclName() << llvm::to_underlying(Record->getTagKind());
+              << FD->getDeclName() << Record->getTagKind();
 
         // If the element type has a non-trivial destructor, we would not
         // implicitly destroy the elements, so disallow it for now.
