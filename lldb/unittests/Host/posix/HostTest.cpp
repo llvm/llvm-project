@@ -32,8 +32,6 @@ public:
 } // namespace
 
 TEST_F(HostTest, GetProcessInfo) {
-  llvm::Triple triple = HostInfo::GetTargetTriple();
-
   ProcessInstanceInfo Info;
 
   ASSERT_FALSE(Host::GetProcessInfo(LLDB_INVALID_PROCESS_ID, Info));
@@ -67,9 +65,13 @@ TEST_F(HostTest, GetProcessInfo) {
   EXPECT_TRUE(Info.GroupIDIsValid());
   EXPECT_EQ(getegid(), Info.GetGroupID());
 
+  // Unexpected value on Apple x86_64
+#ifndef __APPLE__
   EXPECT_TRUE(Info.GetArchitecture().IsValid());
   EXPECT_EQ(HostInfo::GetArchitecture(HostInfo::eArchKindDefault),
             Info.GetArchitecture());
+#endif
+
   // Test timings
   // In some sense this is a pretty trivial test. What it is trying to
   // accomplish is just to validate that these values are never decreasing

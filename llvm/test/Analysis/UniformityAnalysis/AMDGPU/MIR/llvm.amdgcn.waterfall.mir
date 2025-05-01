@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
 
-# CHECK-LABEL: MachineUniformityInfo for function: test_waterfall_readlane
+# CHECK-LABEL: MachineUniformityInfo for function: @test_waterfall_readlane
 # CHECK-NOT: DIVERGENT: %0: %0:_(s32) = COPY $sgpr0
 # CHECK-NOT: DIVERGENT: %1: %1:_(s32) = COPY $sgpr1
 # CHECK-NOT: DIVERGENT: %2: %2:_(p1) = G_MERGE_VALUES %0:_(s32), %1:_(s32)

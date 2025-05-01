@@ -2003,7 +2003,14 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // block inside the selection (`body.back()`). Values produced by block
   // arguments will be yielded by the selection region. We do not update uses or
   // erase original block arguments yet. It will be done later in the code.
-  if (!isLoop) {
+  //
+  // Code below is not executed for loops as it would interfere with the logic
+  // above. Currently block arguments in the merge block are not supported, but
+  // instead, the code above copies those arguments from the header block into
+  // the merge block. As such, running the code would yield those copied
+  // arguments that is most likely not a desired behaviour. This may need to be
+  // revisited in the future.
+  if (!isLoop)
     for (BlockArgument blockArg : mergeBlock->getArguments()) {
       // Create new block arguments in the last block ("merge block") of the
       // selection region. We create one argument for each argument in
@@ -2013,7 +2020,6 @@ LogicalResult ControlFlowStructurizer::structurize() {
       valuesToYield.push_back(body.back().getArguments().back());
       outsideUses.push_back(blockArg);
     }
-  }
 
   // All the blocks cloned into the SelectionOp/LoopOp's region can now be
   // cleaned up.
@@ -2025,32 +2031,30 @@ LogicalResult ControlFlowStructurizer::structurize() {
 
   // All internal uses should be removed from original blocks by now, so
   // whatever is left is an outside use and will need to be yielded from
-  // the newly created selection region.
-  if (!isLoop) {
-    for (Block *block : constructBlocks) {
-      for (Operation &op : *block) {
-        if (!op.use_empty())
-          for (Value result : op.getResults()) {
-            valuesToYield.push_back(mapper.lookupOrNull(result));
-            outsideUses.push_back(result);
-          }
-      }
-      for (BlockArgument &arg : block->getArguments()) {
-        if (!arg.use_empty()) {
-          valuesToYield.push_back(mapper.lookupOrNull(arg));
-          outsideUses.push_back(arg);
+  // the newly created selection / loop region.
+  for (Block *block : constructBlocks) {
+    for (Operation &op : *block) {
+      if (!op.use_empty())
+        for (Value result : op.getResults()) {
+          valuesToYield.push_back(mapper.lookupOrNull(result));
+          outsideUses.push_back(result);
         }
+    }
+    for (BlockArgument &arg : block->getArguments()) {
+      if (!arg.use_empty()) {
+        valuesToYield.push_back(mapper.lookupOrNull(arg));
+        outsideUses.push_back(arg);
       }
     }
   }
 
   assert(valuesToYield.size() == outsideUses.size());
 
-  // If we need to yield any values from the selection region we will take
-  // care of it here.
-  if (!isLoop && !valuesToYield.empty()) {
+  // If we need to yield any values from the selection / loop region we will
+  // take care of it here.
+  if (!valuesToYield.empty()) {
     LLVM_DEBUG(logger.startLine()
-               << "[cf] yielding values from the selection region\n");
+               << "[cf] yielding values from the selection / loop region\n");
 
     // Update `mlir.merge` with values to be yield.
     auto mergeOps = body.back().getOps<spirv::MergeOp>();
@@ -2059,25 +2063,40 @@ LogicalResult ControlFlowStructurizer::structurize() {
     merge->setOperands(valuesToYield);
 
     // MLIR does not allow changing the number of results of an operation, so
-    // we create a new SelectionOp with required list of results and move
-    // the region from the initial SelectionOp. The initial operation is then
-    // removed. Since we move the region to the new op all links between blocks
-    // and remapping we have previously done should be preserved.
+    // we create a new SelectionOp / LoopOp with required list of results and
+    // move the region from the initial SelectionOp / LoopOp. The initial
+    // operation is then removed. Since we move the region to the new op all
+    // links between blocks and remapping we have previously done should be
+    // preserved.
     builder.setInsertionPoint(&mergeBlock->front());
-    auto selectionOp = builder.create<spirv::SelectionOp>(
-        location, TypeRange(ValueRange(outsideUses)),
-        static_cast<spirv::SelectionControl>(control));
-    selectionOp->getRegion(0).takeBody(body);
+
+    Operation *newOp = nullptr;
+
+    if (isLoop)
+      newOp = builder.create<spirv::LoopOp>(
+          location, TypeRange(ValueRange(outsideUses)),
+          static_cast<spirv::LoopControl>(control));
+    else
+      newOp = builder.create<spirv::SelectionOp>(
+          location, TypeRange(ValueRange(outsideUses)),
+          static_cast<spirv::SelectionControl>(control));
+
+    newOp->getRegion(0).takeBody(body);
 
     // Remove initial op and swap the pointer to the newly created one.
     op->erase();
-    op = selectionOp;
+    op = newOp;
 
-    // Update all outside uses to use results of the SelectionOp and remove
-    // block arguments from the original merge block.
+    // Update all outside uses to use results of the SelectionOp / LoopOp and
+    // remove block arguments from the original merge block.
     for (unsigned i = 0, e = outsideUses.size(); i != e; ++i)
-      outsideUses[i].replaceAllUsesWith(selectionOp.getResult(i));
-    mergeBlock->eraseArguments(0, mergeBlock->getNumArguments());
+      outsideUses[i].replaceAllUsesWith(op->getResult(i));
+
+    // We do not support block arguments in loop merge block. Also running this
+    // function with loop would break some of the loop specific code above
+    // dealing with block arguments.
+    if (!isLoop)
+      mergeBlock->eraseArguments(0, mergeBlock->getNumArguments());
   }
 
   // Check that whether some op in the to-be-erased blocks still has uses. Those
@@ -2104,37 +2123,75 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // selection/loop. If so, they will be recorded within blockMergeInfo.
     // We need to update the pointers there to the newly remapped ones so we can
     // continue structurizing them later.
+    //
+    // We need to walk each block as constructBlocks do not include blocks
+    // internal to ops already structured within those blocks. It is not
+    // fully clear to me why the mergeInfo of blocks (yet to be structured)
+    // inside already structured selections/loops get invalidated and needs
+    // updating, however the following example code can cause a crash (depending
+    // on the structuring order), when the most inner selection is being
+    // structured after the outer selection and loop have been already
+    // structured:
+    //
+    //  spirv.mlir.for {
+    //    // ...
+    //    spirv.mlir.selection {
+    //      // ..
+    //      // A selection region that hasn't been yet structured!
+    //      // ..
+    //    }
+    //    // ...
+    //  }
+    //
+    // If the loop gets structured after the outer selection, but before the
+    // inner selection. Moving the already structured selection inside the loop
+    // will invalidate the mergeInfo of the region that is not yet structured.
+    // Just going over constructBlocks will not check and updated header blocks
+    // inside the already structured selection region. Walking block fixes that.
+    //
+    // TODO: If structuring was done in a fixed order starting with inner
+    // most constructs this most likely not be an issue and the whole code
+    // section could be removed. However, with the current non-deterministic
+    // order this is not possible.
+    //
     // TODO: The asserts in the following assumes input SPIR-V blob forms
     // correctly nested selection/loop constructs. We should relax this and
     // support error cases better.
-    auto it = blockMergeInfo.find(block);
-    if (it != blockMergeInfo.end()) {
-      // Use the original location for nested selection/loop ops.
-      Location loc = it->second.loc;
+    auto updateMergeInfo = [&](Block *block) -> WalkResult {
+      auto it = blockMergeInfo.find(block);
+      if (it != blockMergeInfo.end()) {
+        // Use the original location for nested selection/loop ops.
+        Location loc = it->second.loc;
 
-      Block *newHeader = mapper.lookupOrNull(block);
-      if (!newHeader)
-        return emitError(loc, "failed control flow structurization: nested "
-                              "loop header block should be remapped!");
-
-      Block *newContinue = it->second.continueBlock;
-      if (newContinue) {
-        newContinue = mapper.lookupOrNull(newContinue);
-        if (!newContinue)
+        Block *newHeader = mapper.lookupOrNull(block);
+        if (!newHeader)
           return emitError(loc, "failed control flow structurization: nested "
-                                "loop continue block should be remapped!");
+                                "loop header block should be remapped!");
+
+        Block *newContinue = it->second.continueBlock;
+        if (newContinue) {
+          newContinue = mapper.lookupOrNull(newContinue);
+          if (!newContinue)
+            return emitError(loc, "failed control flow structurization: nested "
+                                  "loop continue block should be remapped!");
+        }
+
+        Block *newMerge = it->second.mergeBlock;
+        if (Block *mappedTo = mapper.lookupOrNull(newMerge))
+          newMerge = mappedTo;
+
+        // The iterator should be erased before adding a new entry into
+        // blockMergeInfo to avoid iterator invalidation.
+        blockMergeInfo.erase(it);
+        blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
+                                   newContinue);
       }
 
-      Block *newMerge = it->second.mergeBlock;
-      if (Block *mappedTo = mapper.lookupOrNull(newMerge))
-        newMerge = mappedTo;
+      return WalkResult::advance();
+    };
 
-      // The iterator should be erased before adding a new entry into
-      // blockMergeInfo to avoid iterator invalidation.
-      blockMergeInfo.erase(it);
-      blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
-                                 newContinue);
-    }
+    if (block->walk(updateMergeInfo).wasInterrupted())
+      return failure();
 
     // The structured selection/loop's entry block does not have arguments.
     // If the function's header block is also part of the structured control
@@ -2262,22 +2319,21 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
     if (!isa<spirv::BranchConditionalOp>(terminator))
       continue;
 
-    // Do not split blocks that only contain a conditional branch, i.e., block
-    // size is <= 1.
-    if (block->begin() != block->end() &&
-        std::next(block->begin()) != block->end()) {
+    // Check if the current header block is a merge block of another construct.
+    bool splitHeaderMergeBlock = false;
+    for (const auto &[_, mergeInfo] : blockMergeInfo) {
+      if (mergeInfo.mergeBlock == block)
+        splitHeaderMergeBlock = true;
+    }
+
+    // Do not split a block that only contains a conditional branch, unless it
+    // is also a merge block of another construct - in that case we want to
+    // split the block. We do not want two constructs to share header / merge
+    // block.
+    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
       builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
-
-      // If the split block was a merge block of another region we need to
-      // update the map.
-      for (auto it = blockMergeInfo.begin(); it != blockMergeInfo.end(); ++it) {
-        auto &[ignore, mergeInfo] = *it;
-        if (mergeInfo.mergeBlock == block) {
-          mergeInfo.mergeBlock = newBlock;
-        }
-      }
 
       // After splitting we need to update the map to use the new block as a
       // header.

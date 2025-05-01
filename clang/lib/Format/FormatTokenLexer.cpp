@@ -32,7 +32,8 @@ FormatTokenLexer::FormatTokenLexer(
       LangOpts(getFormattingLangOpts(Style)), SourceMgr(SourceMgr), ID(ID),
       Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
-      FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
+      FormattingDisabled(false), FormatOffRegex(Style.OneLineFormatOffRegex),
+      MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
@@ -83,8 +84,42 @@ FormatTokenLexer::FormatTokenLexer(
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
   assert(Tokens.empty());
   assert(FirstInLineIndex == 0);
+  enum { FO_None, FO_CurrentLine, FO_NextLine } FormatOff = FO_None;
   do {
     Tokens.push_back(getNextToken());
+    auto &Tok = *Tokens.back();
+    const auto NewlinesBefore = Tok.NewlinesBefore;
+    switch (FormatOff) {
+    case FO_CurrentLine:
+      if (NewlinesBefore == 0)
+        Tok.Finalized = true;
+      else
+        FormatOff = FO_None;
+      break;
+    case FO_NextLine:
+      if (NewlinesBefore > 1) {
+        FormatOff = FO_None;
+      } else {
+        Tok.Finalized = true;
+        FormatOff = FO_CurrentLine;
+      }
+      break;
+    default:
+      if (!FormattingDisabled && FormatOffRegex.match(Tok.TokenText)) {
+        if (Tok.is(tok::comment) &&
+            (NewlinesBefore > 0 || Tokens.size() == 1)) {
+          Tok.Finalized = true;
+          FormatOff = FO_NextLine;
+        } else {
+          for (auto *Token : reverse(Tokens)) {
+            Token->Finalized = true;
+            if (Token->NewlinesBefore > 0)
+              break;
+          }
+          FormatOff = FO_CurrentLine;
+        }
+      }
+    }
     if (Style.isJavaScript()) {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
