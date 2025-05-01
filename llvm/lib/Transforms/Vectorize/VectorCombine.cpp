@@ -1025,13 +1025,14 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   Value *Ins0, *Ins1;
   if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))) &&
       !match(&I, m_Cmp(Pred, m_Value(Ins0), m_Value(Ins1)))) {
+    // TODO: Allow unary and ternary intrinsics
+    // TODO: Allow intrinsics with different arguments types
+    // TODO: Allow intrinsics with scalar arguments
     if (auto *II = dyn_cast<IntrinsicInst>(&I);
         II && II->arg_size() == 2 &&
         isTriviallyVectorizable(II->getIntrinsicID()) &&
-        none_of(index_range(0, II->arg_size()), [this, &II](size_t OpIdx) {
-          return isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), OpIdx,
-                                                    &TTI);
-        })) {
+        all_of(II->args(),
+               [&II](Value *Arg) { return Arg->getType() == II->getType(); })) {
       Ins0 = II->getArgOperand(0);
       Ins1 = II->getArgOperand(1);
     } else {

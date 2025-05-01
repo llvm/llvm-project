@@ -108,3 +108,15 @@ define <4 x float> @scalar_argument(float %x) {
   %v = call <4 x float> @llvm.powi(<4 x float> %x.insert, i32 42)
   ret <4 x float> %v
 }
+
+define <4 x i2> @scmp(i32 %x) {
+; CHECK-LABEL: define <4 x i2> @scmp(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[V:%.*]] = call <4 x i2> @llvm.scmp.v4i2.v4i32(<4 x i32> [[X_INSERT]], <4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <4 x i2> [[V]]
+;
+  %x.insert = insertelement <4 x i32> poison, i32 %x, i32 0
+  %v = call <4 x i2> @llvm.scmp(<4 x i32> %x.insert, <4 x i32> splat (i32 0))
+  ret <4 x i2> %v
+}
