@@ -141,12 +141,16 @@ C Language Changes
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
 - Clang now diagnoses ``const``-qualified object definitions without an
-  initializer. If the object is zero-initialized, it will be diagnosed under
-  the new warning ``-Wdefault-const-init`` (which is grouped under
-  ``-Wc++-compat`` because this construct is not compatible with C++). If the
-  object is left uninitialized, it will be diagnosed unsed the new warning
-  ``-Wdefault-const-init-unsafe`` (which is grouped under
-  ``-Wdefault-const-init``). #GH19297
+  initializer. If the object is a variable or field which is zero-initialized,
+  it will be diagnosed under the new warning ``-Wdefault-const-init-var`` or
+  ``-Wdefault-const-init-field``, respectively. Similarly, if the variable or
+  field is not zero-initialized, it will be diagnosed under the new diagnostic
+  ``-Wdefault-const-init-var-unsafe`` or ``-Wdefault-const-init-field-unsafe``,
+  respectively. The unsafe diagnostic variants are grouped under a new
+  diagnostic ``-Wdefault-const-init-unsafe``, which itself is grouped under the
+  new diagnostic ``-Wdefault-const-init``. Finally, ``-Wdefault-const-init`` is
+  grouped under ``-Wc++-compat`` because these constructs are not compatible
+  with C++. #GH19297
 - Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)
