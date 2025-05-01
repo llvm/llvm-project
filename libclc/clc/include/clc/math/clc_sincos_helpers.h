@@ -14,7 +14,6 @@
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_BODY
 #undef __FLOAT_ONLY
 
 #endif // __CLC_MATH_CLC_SINCOS_HELPERS_H__
