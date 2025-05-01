@@ -1622,12 +1622,12 @@ TEST_F(DILocationTest, KeyInstructions) {
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 6u);
 
   // Check the waterline gets incremented by 1.
-  EXPECT_EQ(Context.incNextAtomGroup(), 6u);
+  EXPECT_EQ(Context.incNextDILocationAtomGroup(), 6u);
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 7u);
 
-  Context.updateAtomGroupWaterline(8);
+  Context.updateDILocationAtomGroupWaterline(8);
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 8u);
-  Context.updateAtomGroupWaterline(7);
+  Context.updateDILocationAtomGroupWaterline(7);
   EXPECT_EQ(Context.pImpl->NextAtomGroup, 8u);
 }
 
