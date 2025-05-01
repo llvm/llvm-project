@@ -1116,8 +1116,9 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
     IntrinsicCostAttributes VectorICA(
         II->getIntrinsicID(), VecTy,
         SmallVector<Type *>(II->arg_size(), VecTy));
-    VectorOpCost = TTI.getIntrinsicInstrCost(ScalarICA, CostKind);
-  }
+    VectorOpCost = TTI.getIntrinsicInstrCost(VectorICA, CostKind);
+  } else
+    llvm_unreachable("Unexpected instrucion type");
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
