@@ -543,6 +543,10 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
     return &NewOp;
   };
 
+  // TODO(?): Should we do more with permlane64?
+  if (IID == Intrinsic::amdgcn_permlane64 && !isa<BitCastInst>(OpInst))
+    return nullptr;
+
   if (isa<UnaryOperator>(OpInst))
     return DoIt(0, II.getCalledFunction());
 
