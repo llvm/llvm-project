@@ -8218,14 +8218,20 @@ def err_address_space_qualified_delete : Error<
 
 def note_default_init_const_member : Note<
   "member %0 declared 'const' here">;
+def warn_default_init_const_field : Warning<
+  "default initialization of an object of type %0 with const member is "
+  "incompatible with C++">, InGroup<DefaultConstInitField>, DefaultIgnore;
 def warn_default_init_const : Warning<
-  "default initialization of an object of type %0%select{| with const member}1 "
-  "is incompatible with C++">,
-  InGroup<DefaultConstInit>, DefaultIgnore;
+  "default initialization of an object of type %0 is incompatible with C++">,
+  InGroup<DefaultConstInitVar>, DefaultIgnore;
+def warn_default_init_const_field_unsafe : Warning<
+  "default initialization of an object of type %0 with const member leaves the "
+  "object uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitFieldUnsafe>;
 def warn_default_init_const_unsafe : Warning<
-  "default initialization of an object of type %0%select{| with const member}1 "
-  "leaves the object uninitialized and is incompatible with C++">,
-  InGroup<DefaultConstInitUnsafe>;
+  "default initialization of an object of type %0 leaves the object "
+  "uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitVarUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"
   "%select{| without a user-provided default constructor}1">;

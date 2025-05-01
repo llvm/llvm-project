@@ -14348,7 +14348,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       if (Var->getStorageDuration() == SD_Static ||
           Var->getStorageDuration() == SD_Thread)
         DiagID = diag::warn_default_init_const;
-      Diag(Var->getLocation(), DiagID) << Type << /*not a field*/ 0;
+      Diag(Var->getLocation(), DiagID) << Type;
     }
 
     // Check for jumps past the implicit initializer.  C++0x
