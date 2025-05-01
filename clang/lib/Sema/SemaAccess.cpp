@@ -1670,21 +1670,24 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   case InitializedEntity::EK_Base:
     PD = PDiag(diag::err_access_base_ctor);
     PD << Entity.isInheritedVirtualBase()
-       << Entity.getBaseSpecifier()->getType() << getSpecialMember(Constructor);
+       << Entity.getBaseSpecifier()->getType()
+       << llvm::to_underlying(getSpecialMember(Constructor));
     break;
 
   case InitializedEntity::EK_Member:
   case InitializedEntity::EK_ParenAggInitMember: {
     const FieldDecl *Field = cast<FieldDecl>(Entity.getDecl());
     PD = PDiag(diag::err_access_field_ctor);
-    PD << Field->getType() << getSpecialMember(Constructor);
+    PD << Field->getType()
+       << llvm::to_underlying(getSpecialMember(Constructor));
     break;
   }
 
   case InitializedEntity::EK_LambdaCapture: {
     StringRef VarName = Entity.getCapturedVarName();
     PD = PDiag(diag::err_access_lambda_capture);
-    PD << VarName << Entity.getType() << getSpecialMember(Constructor);
+    PD << VarName << Entity.getType()
+       << llvm::to_underlying(getSpecialMember(Constructor));
     break;
   }
 
