@@ -73,6 +73,10 @@ struct from_range_t {
 };
 inline constexpr from_range_t from_range{};
 
+template <typename T, typename UnderlyingT = std::underlying_type_t<T>>
+constexpr bool is_scoped_enum_v =
+    std::is_enum_v<T> && !std::is_convertible_v<T, UnderlyingT>;
+
 } // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H

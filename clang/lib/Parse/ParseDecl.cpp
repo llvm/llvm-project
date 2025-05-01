@@ -2578,7 +2578,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
         D.isFirstDeclarator()) {
       Diag(CommaLoc, diag::err_multiple_template_declarators)
-          << llvm::to_underlying(TemplateInfo.Kind);
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.

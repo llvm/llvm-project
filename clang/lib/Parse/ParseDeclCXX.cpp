@@ -3472,7 +3472,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
     if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
         DeclaratorInfo.isFirstDeclarator()) {
       Diag(CommaLoc, diag::err_multiple_template_declarators)
-          << llvm::to_underlying(TemplateInfo.Kind);
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.
