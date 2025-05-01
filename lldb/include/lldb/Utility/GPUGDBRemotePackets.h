@@ -117,13 +117,17 @@ bool fromJSON(const llvm::json::Value &value,
 llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data);
 
 struct GPUSectionInfo {
-  std::string name;
+  /// Name of the section to load. If there are multiple sections, each section
+  /// will be looked up and then a child section within the previous section
+  /// will be looked up. This allows plug-ins to specify a hiearchy of sections
+  /// in the case where section names are not unique. A valid example looks 
+  /// like: ["PT_LOAD[0]", ".text"]. If there is only one section name, LLDB
+  /// will find the first section that matches that name.
+  std::vector<std::string> names;
   /// The load address of this section only. If this value is valid, then this
   /// section is loaded at this address, else child sections can be loaded 
   /// individually.
-  std::optional<lldb::addr_t> load_address;
-  /// Child sections that have individual load addresses can be specified.
-  std::vector<GPUSectionInfo> children;
+  lldb::addr_t load_address;
 };
 
 bool fromJSON(const llvm::json::Value &value, GPUSectionInfo &data,
@@ -147,6 +151,11 @@ struct GPUDynamicLoaderLibraryInfo {
   /// \a loaded_Section doesn't have a value, this library will be unloaded.
   std::optional<lldb::addr_t> load_address;
 
+  /// If the object file specified by this structure has sections that get 
+  /// loaded at different times then this will not be empty. If it is empty
+  /// the \a load_address must be specified if \a load is true.
+  std::vector<GPUSectionInfo> loaded_sections;
+
   /// If this library is only available as an in memory image of an object file
   /// in the native process, then this address holds the address from which the 
   /// image can be read.
@@ -162,10 +171,6 @@ struct GPUDynamicLoaderLibraryInfo {
   /// If the library exists inside of a file at an offset, \a file_size will 
   /// have a value that indicates the size in bytes of the object file.
   std::optional<uint64_t> file_size;
-  /// If the object file specified by this structure has sections that get 
-  /// loaded at different times then this will not be empty. If it is empty
-  /// the \a load_address must be specified if \a load is true.
-  std::vector<GPUSectionInfo> loaded_sections;
 };
 
 bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderLibraryInfo &data,

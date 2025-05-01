@@ -140,16 +140,14 @@ bool fromJSON(const llvm::json::Value &value, GPUSectionInfo &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
   return o && 
-         o.map("name", data.name) &&
-         o.mapOptional("load_address", data.load_address) &&
-         o.map("children", data.children);
+         o.map("names", data.names) &&
+         o.map("load_address", data.load_address);
 }
 
 llvm::json::Value toJSON(const GPUSectionInfo &data) {
   return json::Value(
-    Object{{"name", data.name}, 
-           {"load_address", data.load_address},
-           {"children", data.children}
+    Object{{"names", data.names}, 
+           {"load_address", data.load_address}
           });
 }
 

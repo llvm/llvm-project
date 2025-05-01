@@ -63,79 +63,75 @@ void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
   ModuleList loaded_module_list;
   GPUDynamicLoaderArgs args;
   args.full = full;
+  Target &target = m_process->GetTarget();
   std::optional<GPUDynamicLoaderResponse> response =
       gdb_process->GetGDBRemote().GetGPUDynamicLoaderLibraryInfos(args);
-  if (response) {
-    for (const GPUDynamicLoaderLibraryInfo &info : response->library_infos) {
-      UUID uuid;
-      std::shared_ptr<DataBufferHeap> data_sp;
-      if (info.native_memory_address && info.native_memory_size) {
-        data_sp = std::make_shared<DataBufferHeap>(*info.native_memory_size, 0);
-        Status error;
-        // TODO: we are assuming we can read the memory from the GPU process
-        // since the memory is shared with the host process.
-        const size_t bytes_read = m_process->ReadMemory(
-            *info.native_memory_address, data_sp->GetBytes(), 
-            data_sp->GetByteSize(), error);
-        if (bytes_read != *info.native_memory_size)
-          data_sp.reset();
-      }
-        
-      if (info.uuid_str)
-        uuid.SetFromStringRef(*info.uuid_str);
-      ModuleSpec module_spec(FileSpec(info.pathname), uuid, data_sp);
-      if (info.file_offset)
-        module_spec.SetObjectOffset(*info.file_offset);
-      if (info.file_size)
-        module_spec.SetObjectSize(*info.file_size);
-
-      ModuleSP module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, 
-                                                    /*notify=*/true);
-      if (module_sp) {
-      }
+  if (!response)
+    return;
+  for (const GPUDynamicLoaderLibraryInfo &info : response->library_infos) {
+    std::shared_ptr<DataBufferHeap> data_sp;
+    // Read the object file from memory if requested.
+    if (info.native_memory_address && info.native_memory_size) {
+      data_sp = std::make_shared<DataBufferHeap>(*info.native_memory_size, 0);
+      Status error;
+      // TODO: we are assuming we can read the memory from the GPU process
+      // since the memory is shared with the host process.
+      const size_t bytes_read = m_process->ReadMemory(
+          *info.native_memory_address, data_sp->GetBytes(), 
+          data_sp->GetByteSize(), error);
+      if (bytes_read != *info.native_memory_size)
+        data_sp.reset();
     }
-  }
-#if 0
-  ModuleList loaded_module_list;
-
-  Target &target = m_process->GetTarget();
-  for (ModuleSP module_sp : module_list.Modules()) {
+    // Extract the UUID if available.
+    UUID uuid;
+    if (info.uuid_str)
+      uuid.SetFromStringRef(*info.uuid_str);
+    // Create a module specification from the info we got.
+    ModuleSpec module_spec(FileSpec(info.pathname), uuid, data_sp);
+    if (info.file_offset)
+      module_spec.SetObjectOffset(*info.file_offset);
+    if (info.file_size)
+      module_spec.SetObjectSize(*info.file_size);
+    // Get or create the module from the module spec.
+    ModuleSP module_sp = target.GetOrCreateModule(module_spec, 
+                                                  /*notify=*/true);
     if (module_sp) {
       bool changed = false;
-      bool no_load_addresses = true;
-      // If this module has a section with a load address set in
-      // the target, assume all necessary work is already done. There
-      // may be sections without a load address set intentionally
-      // and we don't want to mutate that.
-      // For a module with no load addresses set, set the load addresses
-      // to slide == 0, the same as the file addresses, in the target.
-      ObjectFile *image_object_file = module_sp->GetObjectFile();
-      if (image_object_file) {
-        SectionList *section_list = image_object_file->GetSectionList();
-        if (section_list) {
-          const size_t num_sections = section_list->GetSize();
-          for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
-            SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-            if (section_sp) {
-              if (target.GetSectionLoadAddress(section_sp) !=
-                  LLDB_INVALID_ADDRESS) {
-                no_load_addresses = false;
-                break;
-              }
-            }
+      if (info.load_address)
+        module_sp->SetLoadAddress(target, *info.load_address, 
+                                  /*value_is_offset=*/true , changed);
+      else if (!info.loaded_sections.empty()) {    
+        
+        // Set the load address of the module to the first loaded section.
+        bool warn_multiple = true;
+        for (const GPUSectionInfo &sect : info.loaded_sections) {
+          if (sect.names.empty())
+            continue;
+          // Find the section by name using the names specified. If there is 
+          // only on name, them find it. If there are multiple names, the top
+          // most section names comes first and then we find child sections
+          // by name within the previous section.
+          SectionSP section_sp;
+          for (uint32_t i=0; i<sect.names.size(); ++i) {
+            ConstString name(sect.names[i]);
+            if (section_sp)
+              section_sp = section_sp->GetChildren().FindSectionByName(name);
+            else
+              section_sp = module_sp->GetSectionList()->FindSectionByName(name);
+            if (!section_sp)
+              break;
           }
+          if (section_sp)
+            changed = target.SetSectionLoadAddress(section_sp, 
+                                                   sect.load_address, 
+                                                   warn_multiple);
         }
       }
-      if (no_load_addresses)
-        module_sp->SetLoadAddress(target, 0, true /*value_is_offset*/, changed);
-
       if (changed)
-        loaded_module_list.AppendIfNeeded(module_sp);
+        loaded_module_list.AppendIfNeeded(module_sp);            
     }
   }
-
   target.ModulesDidLoad(loaded_module_list);
-  #endif
 }
 
 ThreadPlanSP
