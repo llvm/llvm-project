@@ -1575,9 +1575,9 @@ TEST_F(DILocationTest, Merge) {
     auto *A = DILocation::get(Context, 1, 1, F, I, false, /*AtomGroup*/ 1,
                               /*AtomRank*/ 2);
     auto *B = DILocation::get(Context, 1, 1, F, I, false, /*AtomGroup*/ 2,
-                              /*AtomRank*/ 1);
+                              /*AtomRank*/ 2);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_ATOM(M, 2u, /*AtomRank*/ 1u);
+    EXPECT_ATOM(M, /*AtomGroup*/ 1u, /*AtomRank*/ 2u);
     EXPECT_EQ(M, DILocation::getMergedLocation(B, A));
 
     A = DILocation::get(Context, 1, 1, F, I, false, /*AtomGroup*/ 1,
