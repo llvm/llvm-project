@@ -291,7 +291,10 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
       .remapInstruction(*I);
 }
 
-/// Remap source atom. Called by RemapInstruction.
+/// Remap source location atom. Called by RemapInstruction. This updates the
+/// instruction's atom group number if it has been mapped (e.g. with
+/// llvm::mapAtomInstance), which is necessary to distinguish source code
+/// atoms on duplicated code paths.
 void RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM);
 
 /// Remap the Values used in the DbgRecord \a DR using the value map \a
