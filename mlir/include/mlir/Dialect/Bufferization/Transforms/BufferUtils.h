@@ -122,6 +122,7 @@ protected:
 // Globals are created lazily at the top of the enclosing ModuleOp with pretty
 // names. Duplicates are avoided.
 FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp constantOp,
+                                         SymbolTableCollection &symbolTables,
                                          uint64_t alignment,
                                          Attribute memorySpace = {});
 
