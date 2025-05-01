@@ -52,7 +52,7 @@ declare { <vscale x 1 x i8>, iXLen } @llvm.riscv.vleff(
   ptr,
   iXLen);
 
-define <vscale x 1 x i8> @intrinsic_vleff_v_tu(<vscale x 1 x i8> %0, ptr %1, iXLen %2, iXLen* %3) nounwind {
+define <vscale x 1 x i8> @intrinsic_vleff_v_tu(<vscale x 1 x i8> %0, ptr %1, iXLen %2, ptr %3) nounwind {
 ; RV32-LABEL: intrinsic_vleff_v_tu:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
@@ -75,7 +75,7 @@ entry:
     iXLen %2)
   %b = extractvalue { <vscale x 1 x i8>, iXLen } %a, 0
   %c = extractvalue { <vscale x 1 x i8>, iXLen } %a, 1
-  store iXLen %c, iXLen* %3
+  store iXLen %c, ptr %3
   ret <vscale x 1 x i8> %b
 }
 

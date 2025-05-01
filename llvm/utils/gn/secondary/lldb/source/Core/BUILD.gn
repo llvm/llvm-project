@@ -33,6 +33,7 @@ static_library("Core") {
     "//llvm/lib/Demangle",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
+    "//llvm/lib/Telemetry",
 
     #"//lldb/source/Plugins/Language/CPlusPlus", # 3-hop dependency cycle.
     #"//lldb/source/Plugins/Language/ObjC",  # Many-hop dependency cycle.
@@ -54,6 +55,7 @@ static_library("Core") {
     "Debugger.cpp",
     "DebuggerEvents.cpp",
     "Declaration.cpp",
+    "DemangledNameInfo.cpp",
     "Disassembler.cpp",
     "DumpDataExtractor.cpp",
     "DumpRegisterInfo.cpp",
@@ -77,6 +79,7 @@ static_library("Core") {
     "Section.cpp",
     "SourceLocationSpec.cpp",
     "SourceManager.cpp",
+    "Statusline.cpp",
     "StreamAsynchronousIO.cpp",
     "Telemetry.cpp",
     "ThreadedCommunication.cpp",

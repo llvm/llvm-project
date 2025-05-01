@@ -119,9 +119,8 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   std::shared_ptr<CompilerInvocation> Invocation =
       createInvocationAndEnableFree(Args, CIOpts);
   ASSERT_TRUE(Invocation);
-  CompilerInstance Instance;
+  CompilerInstance Instance(std::move(Invocation));
   Instance.setDiagnostics(Diags.get());
-  Instance.setInvocation(Invocation);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
@@ -142,10 +141,10 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   std::shared_ptr<CompilerInvocation> Invocation2 =
       createInvocationAndEnableFree(Args2, CIOpts);
   ASSERT_TRUE(Invocation2);
-  CompilerInstance Instance2(Instance.getPCHContainerOperations(),
+  CompilerInstance Instance2(std::move(Invocation2),
+                             Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
   Instance2.setDiagnostics(Diags.get());
-  Instance2.setInvocation(Invocation2);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());
@@ -169,9 +168,8 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   std::shared_ptr<CompilerInvocation> Invocation =
       createInvocationAndEnableFree(Args, CIOpts);
   ASSERT_TRUE(Invocation);
-  CompilerInstance Instance;
+  CompilerInstance Instance(std::move(Invocation));
   Instance.setDiagnostics(Diags.get());
-  Instance.setInvocation(Invocation);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
@@ -186,10 +184,10 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   std::shared_ptr<CompilerInvocation> Invocation2 =
       createInvocationAndEnableFree(Args2, CIOpts);
   ASSERT_TRUE(Invocation2);
-  CompilerInstance Instance2(Instance.getPCHContainerOperations(),
+  CompilerInstance Instance2(std::move(Invocation2),
+                             Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
   Instance2.setDiagnostics(Diags.get());
-  Instance2.setInvocation(Invocation2);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());

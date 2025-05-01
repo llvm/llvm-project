@@ -723,6 +723,22 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @invalid_subview(%arg0: memref<10xf32>) {
+  // expected-error@+1 {{offset 0 is out-of-bounds: 10 >= 10}}
+  %0 = memref.subview %arg0 [10][1][1] : memref<10xf32> to memref<1xf32, strided<[1], offset: 10>>
+  return
+}
+
+// -----
+
+func.func @invalid_subview(%arg0: memref<9xf32>) {
+  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds: 9 >= 9}}
+  %0 = memref.subview %arg0 [3][4][2] : memref<9xf32> to memref<4xf32, strided<[2], offset: 3>>
+  return
+}
+
+// -----
+
 func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
   // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, strided<[64, 4, 1]>>' or a rank-reduced version. (mismatch of result sizes)}}

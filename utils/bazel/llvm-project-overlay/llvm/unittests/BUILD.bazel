@@ -174,7 +174,6 @@ cc_test(
         "//llvm:Target",
         "//llvm:TestingSupport",
         "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -203,7 +202,6 @@ cc_test(
         "//llvm:Support",
         "//llvm:Target",
         "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -224,8 +222,6 @@ cc_test(
         # Skip a test that relies on reading files in a way that doesn't easily
         # work with Bazel.
         "--gtest_filter=-NativeSymbolReuseTest.*",
-        # TODO: this test is failing on some configs, investigate and re-enable it.
-        "--gtest_filter=-DebugLineBasicFixture.LookupAddressRangeWithStmtSequenceOffset",
     ],
     features = ["-layering_check"],  # #include "../lib/CodeGen/AsmPrinter/DwarfStringPool.h"
     deps = [
@@ -503,7 +499,6 @@ cc_test(
         "//llvm:Support",
         "//llvm:Target",
         "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -565,10 +560,7 @@ cc_test(
 gentbl_cc_library(
     name = "option_tests_gen",
     strip_include_prefix = "Option",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "Option/Opts.inc",
-    )],
+    tbl_outs = {"Option/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "Option/Opts.td",
     deps = ["//llvm:OptParserTdFiles"],
@@ -577,16 +569,10 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "automata_gen",
     strip_include_prefix = "TableGen",
-    tbl_outs = [
-        (
-            ["-gen-automata"],
-            "TableGen/AutomataAutomata.inc",
-        ),
-        (
-            ["-gen-searchable-tables"],
-            "TableGen/AutomataTables.inc",
-        ),
-    ],
+    tbl_outs = {
+        "TableGen/AutomataAutomata.inc": ["-gen-automata"],
+        "TableGen/AutomataTables.inc": ["-gen-searchable-tables"],
+    },
     tblgen = "//llvm:llvm-tblgen",
     td_file = "TableGen/Automata.td",
     deps = ["//llvm:CommonTargetTdFiles"],

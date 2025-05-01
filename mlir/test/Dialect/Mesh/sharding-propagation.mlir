@@ -77,7 +77,7 @@ func.func @element_wise_on_graph_input(%arg0: tensor<8x16xf32>) -> tensor<8x16xf
 
 // CHECK-LABEL: func.func @arrow_structure
 // CHECK-SAME:    %[[ARG:.*]]: tensor<8x16xf32>
-func.func @arrow_structure(%arg0: tensor<8x16xf32>) -> (tensor<8x16xf32>, tensor<8x16xf32>) {
+func.func @arrow_structure(%arg0: tensor<8x16xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> (tensor<8x16xf32>, tensor<8x16xf32>) {
   // CHECK-NEXT:  %[[S1:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}0], [1]] : !mesh.sharding
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[ARG]] to %[[S1]] annotate_for_users  : tensor<8x16xf32>
   // CHECK-NEXT:  %[[V2:.*]] = tosa.tanh %[[V1]]
@@ -85,12 +85,15 @@ func.func @arrow_structure(%arg0: tensor<8x16xf32>) -> (tensor<8x16xf32>, tensor
   %0 = tosa.tanh %arg0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
   // CHECK-NEXT:  %[[V4:.*]] = mesh.shard %[[V3]] to %[[S1]] annotate_for_users  : tensor<8x16xf32>
   // CHECK-NEXT:  %[[V5:.*]] = tosa.abs %[[V4]]
- // CHECK-NEXT:   %[[V6:.*]] = mesh.shard %[[V5]] to %[[S1]]  : tensor<8x16xf32>
-  %1 = tosa.abs %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
-  // CHECK-NEXT:  %[[V7:.*]] = tosa.negate %[[V4]]
+  // CHECK-NEXT:  %[[V6:.*]] = mesh.shard %[[V5]] to %[[S1]]  : tensor<8x16xf32>
+  %1 = tosa.abs %0: (tensor<8x16xf32>) -> tensor<8x16xf32>
+  // CHECK-NEXT:  %[[S3:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-NEXT:  %[[ZP1:.*]] = mesh.shard %arg1 to %[[S3]] annotate_for_users : tensor<1xf32>
+  // CHECK-NEXT:  %[[ZP2:.*]] = mesh.shard %arg2 to %[[S3]] annotate_for_users : tensor<1xf32>
+  // CHECK-NEXT:  %[[V7:.*]] = tosa.negate %[[V4]], %[[ZP1]], %[[ZP2]]
   // CHECK-NEXT:  %[[S8:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}0], [1]] : !mesh.sharding
   // CHECK-NEXT:  %[[V8:.*]] = mesh.shard %[[V7]] to %[[S8]]  : tensor<8x16xf32>
-  %2 = tosa.negate %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
+  %2 = tosa.negate %0, %arg1, %arg2 : (tensor<8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<8x16xf32>
   %s3 = mesh.sharding @mesh_2d split_axes = [[0], [1]] : !mesh.sharding
   %3 = mesh.shard %2 to %s3  : tensor<8x16xf32>
   // CHECK-NEXT: return %[[V6]], %[[V8]]
@@ -98,14 +101,16 @@ func.func @arrow_structure(%arg0: tensor<8x16xf32>) -> (tensor<8x16xf32>, tensor
 }
 
 // CHECK-LABEL: func.func @matmul_on_def_shard_batch_and_m
-// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>
-func.func @matmul_on_def_shard_batch_and_m(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>) -> tensor<2x16x32xf32> {
+// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<1xf32>
+func.func @matmul_on_def_shard_batch_and_m(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<1xf32>) -> tensor<2x16x32xf32> {
   // CHECK-NEXT:  %[[S0:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}0], [1]] : !mesh.sharding
   // CHECK-NEXT:  %[[V0:.*]] = mesh.shard %[[ARG0]] to %[[S0]] annotate_for_users  : tensor<2x16x8xf32>
   // CHECK-NEXT:  %[[S1:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[ARG1]] to %[[S1]] annotate_for_users  : tensor<2x8x32xf32>
-  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]]
-  %0 = tosa.matmul %arg0, %arg1 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>) -> tensor<2x16x32xf32>
+  // CHECK-NEXT:  %[[S2:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-NEXT:  %[[ZP:.*]] = mesh.shard %[[ARG2]] to %[[S2]] annotate_for_users  : tensor<1xf32>
+  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]], %[[ZP]], %[[ZP]]
+  %0 = tosa.matmul %arg0, %arg1, %arg2, %arg2 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x16x32xf32>
   // CHECK-NEXT:  %[[S3:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}0], [1]] : !mesh.sharding
   // CHECK-NEXT:  %[[V3:.*]] = mesh.shard %[[V2]] to %[[S3]]  : tensor<2x16x32xf32>
   %s1 = mesh.sharding @mesh_2d split_axes = [[0], [1]] : !mesh.sharding
@@ -115,14 +120,16 @@ func.func @matmul_on_def_shard_batch_and_m(%arg0: tensor<2x16x8xf32>, %arg1: ten
 }
 
 // CHECK-LABEL: func.func @matmul_on_def_shard_m_and_k
-// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>
-func.func @matmul_on_def_shard_m_and_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>) -> tensor<2x16x32xf32> {
+// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<1xf32>
+func.func @matmul_on_def_shard_m_and_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<1xf32>) -> tensor<2x16x32xf32> {
   // CHECK-NEXT:  %[[S0:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [1], [0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V0:.*]] = mesh.shard %[[ARG0]] to %[[S0]] annotate_for_users  : tensor<2x16x8xf32>
   // CHECK-NEXT:  %[[S1:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[ARG1]] to %[[S1]] annotate_for_users  : tensor<2x8x32xf32>
-  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]]
-  %0 = tosa.matmul %arg0, %arg1 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>) -> tensor<2x16x32xf32>
+  // CHECK-NEXT:  %[[S2:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-NEXT:  %[[ZP:.*]] = mesh.shard %[[ARG2]] to %[[S2]] annotate_for_users  : tensor<1xf32>
+  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]], %[[ZP]], %[[ZP]]
+  %0 = tosa.matmul %arg0, %arg1, %arg2, %arg2 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x16x32xf32>
   // CHECK-NEXT:  %[[S3:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [1]] partial = sum [0] : !mesh.sharding
   // CHECK-NEXT:  %[[V3:.*]] = mesh.shard %[[V2]] to %[[S3]]  : tensor<2x16x32xf32>
   %s1 = mesh.sharding @mesh_2d split_axes = [[], [1]] partial = sum [0] : !mesh.sharding
@@ -132,16 +139,18 @@ func.func @matmul_on_def_shard_m_and_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<
 }
 
 // CHECK-LABEL: func.func @matmul_on_use_shard_m_and_k
-// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>
-func.func @matmul_on_use_shard_m_and_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>) -> tensor<2x16x32xf32> {
+// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<1xf32>
+func.func @matmul_on_use_shard_m_and_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<1xf32>) -> tensor<2x16x32xf32> {
   // CHECK-NEXT:  %[[S0:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [1], [0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V0:.*]] = mesh.shard %[[ARG0]] to %[[S0]] annotate_for_users  : tensor<2x16x8xf32>
   %s0 = mesh.sharding @mesh_2d split_axes = [[], [1], [0]] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s0 annotate_for_users  : tensor<2x16x8xf32>
   // CHECK-NEXT:  %[[S1:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[ARG1]] to %[[S1]] annotate_for_users  : tensor<2x8x32xf32>
-  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]]
-  %1 = tosa.matmul %0, %arg1 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>) -> tensor<2x16x32xf32>
+  // CHECK-NEXT:  %[[S2:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-NEXT:  %[[ZP:.*]] = mesh.shard %[[ARG2]] to %[[S2]] annotate_for_users  : tensor<1xf32>
+  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]], %[[ZP]], %[[ZP]]
+  %1 = tosa.matmul %0, %arg1, %arg2, %arg2 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x16x32xf32>
   // CHECK-NEXT:  %[[S3:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [1]] partial = sum [0] : !mesh.sharding
   // CHECK-NEXT:  %[[V3:.*]] = mesh.shard %[[V2]] to %[[S3]]  : tensor<2x16x32xf32>
   // CHECK-NEXT:  return %[[V3]]
@@ -149,8 +158,8 @@ func.func @matmul_on_use_shard_m_and_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<
 }
 
 // CHECK-LABEL: func.func @matmul_on_use_shard_m_and_duplicted_k
-// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>
-func.func @matmul_on_use_shard_m_and_duplicted_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>) -> tensor<2x16x32xf32> {
+// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x16x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<1xf32>
+func.func @matmul_on_use_shard_m_and_duplicted_k(%arg0: tensor<2x16x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<1xf32>) -> tensor<2x16x32xf32> {
   // CHECK-NEXT:  %[[S0:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [1], [0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V0:.*]] = mesh.shard %[[ARG0]] to %[[S0]] annotate_for_users  : tensor<2x16x8xf32>
   %s0 = mesh.sharding @mesh_2d split_axes = [[], [1], [0]] : !mesh.sharding
@@ -159,8 +168,10 @@ func.func @matmul_on_use_shard_m_and_duplicted_k(%arg0: tensor<2x16x8xf32>, %arg
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[ARG1]] to %[[S1]] annotate_for_users  : tensor<2x8x32xf32>
   %s1 = mesh.sharding @mesh_2d split_axes = [[], [0]] : !mesh.sharding
   %1 = mesh.shard %arg1 to %s1 annotate_for_users  : tensor<2x8x32xf32>
-  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]]
-  %2 = tosa.matmul %0, %1 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>) -> tensor<2x16x32xf32>
+  // CHECK-NEXT:  %[[S2:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-NEXT:  %[[ZP:.*]] = mesh.shard %[[ARG2]] to %[[S2]] annotate_for_users  : tensor<1xf32>
+  // CHECK-NEXT:  %[[V2:.*]] = tosa.matmul %[[V0]], %[[V1]], %[[ZP]], %[[ZP]]
+  %2 = tosa.matmul %0, %1, %arg2, %arg2 : (tensor<2x16x8xf32>, tensor<2x8x32xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x16x32xf32>
   // CHECK-NEXT:  %[[S3:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}], [1]] partial = sum [0] : !mesh.sharding
   // CHECK-NEXT:  %[[V3:.*]] = mesh.shard %[[V2]] to %[[S3]]  : tensor<2x16x32xf32>
   // CHECK-NEXT:  return %[[V3]]
@@ -199,14 +210,16 @@ func.func @resolve_conflicting_annotations(
 
 // https://arxiv.org/abs/2211.05102 Figure 2(a)
 // CHECK-LABEL: func.func @mlp_1d_weight_stationary
-// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x4x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<2x32x8xf32>
-func.func @mlp_1d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<2x32x8xf32>) -> tensor<2x4x8xf32> {
+// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x4x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<2x32x8xf32>, %[[ARG3:.*]]: tensor<1xf32>
+func.func @mlp_1d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<2x32x8xf32>, %arg3: tensor<1xf32>) -> tensor<2x4x8xf32> {
   %s0 = mesh.sharding @mesh_1d split_axes = [[], [], [0]] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s0  : tensor<2x4x8xf32>
   // CHECK-DAG: %[[S1:.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}], [], [0]] : !mesh.sharding
   // CHECK-DAG: %[[S2:.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}], [], [0]] : !mesh.sharding
+  // CHECK-DAG: %[[S3:.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-DAG:  %[[ZP:.*]] = mesh.shard %[[ARG3]] to %[[S3]] annotate_for_users  : tensor<1xf32>
   // CHECK: %[[V0:.*]] = tosa.matmul
-  %1 = tosa.matmul %0, %arg1 : (tensor<2x4x8xf32>, tensor<2x8x32xf32>) -> tensor<2x4x32xf32>
+  %1 = tosa.matmul %0, %arg1, %arg3, %arg3 : (tensor<2x4x8xf32>, tensor<2x8x32xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x4x32xf32>
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[V0]] to %[[S2]]  : tensor<2x4x32xf32>
   // CHECK-NEXT:  %[[V2:.*]] = mesh.shard %[[V1]] to %[[S2]] annotate_for_users  : tensor<2x4x32xf32>
   // CHECK-DAG: %[[V3:.*]] = tosa.sigmoid %[[V2]]
@@ -215,8 +228,8 @@ func.func @mlp_1d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x
   // CHECK-NEXT:  %[[V5:.*]] = mesh.shard %[[V4]] to %[[S2]] annotate_for_users  : tensor<2x4x32xf32>
   // CHECK-DAG: %[[S6:.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}], [0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V6:.*]] = mesh.shard %[[ARG2]] to %[[S6]] annotate_for_users  : tensor<2x32x8xf32>
-  // CHECK-DAG: %[[V7:.*]] = tosa.matmul %[[V5]], %[[V6]]
-  %3 = tosa.matmul %2, %arg2 : (tensor<2x4x32xf32>, tensor<2x32x8xf32>) -> tensor<2x4x8xf32>
+  // CHECK-DAG: %[[V7:.*]] = tosa.matmul %[[V5]], %[[V6]], %[[ZP]], %[[ZP]]
+  %3 = tosa.matmul %2, %arg2, %arg3, %arg3 : (tensor<2x4x32xf32>, tensor<2x32x8xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x4x8xf32>
   %s4 = mesh.sharding @mesh_1d split_axes = [[], [], []] partial = sum [0] : !mesh.sharding
   %4 = mesh.shard %3 to %s4  : tensor<2x4x8xf32>
   // CHECK: %[[S8:.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}], [], []] partial =  sum [0] : !mesh.sharding
@@ -230,8 +243,8 @@ func.func @mlp_1d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x
 
 // https://arxiv.org/abs/2211.05102 Figure 2(b)
 // CHECK-LABEL: func.func @mlp_2d_weight_stationary
-// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x4x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<2x32x8xf32>
-func.func @mlp_2d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<2x32x8xf32>) -> tensor<2x4x8xf32> {
+// CHECK-SAME:     %[[ARG0:.*]]: tensor<2x4x8xf32>, %[[ARG1:.*]]: tensor<2x8x32xf32>, %[[ARG2:.*]]: tensor<2x32x8xf32>, %[[ARG3:.*]]: tensor<1xf32>
+func.func @mlp_2d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x32xf32>, %arg2: tensor<2x32x8xf32>, %arg3: tensor<1xf32>) -> tensor<2x4x8xf32> {
   // CHECK-DAG: %[[S0:.*]] = mesh.sharding @mesh_3d split_axes = {{\[\[}}], [], [0, 1, 2]] : !mesh.sharding
   // CHECK-NEXT:  %[[V0:.*]] = mesh.shard %[[ARG0]] to %[[S0]]  : tensor<2x4x8xf32>
   %s0 = mesh.sharding @mesh_3d split_axes = [[], [], [0, 1, 2]] : !mesh.sharding
@@ -240,8 +253,10 @@ func.func @mlp_2d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[V0]] to %[[S1]] annotate_for_users  : tensor<2x4x8xf32>
   // CHECK-DAG: %[[S2:.*]] = mesh.sharding @mesh_3d split_axes = {{\[\[}}], [0], [1, 2]] : !mesh.sharding
   // CHECK-NEXT:  %[[V2:.*]] = mesh.shard %[[ARG1]] to %[[S2]] annotate_for_users  : tensor<2x8x32xf32>
-  // CHECK-DAG: %[[V3:.*]] = tosa.matmul %[[V1]], %[[V2]]
-  %1 = tosa.matmul %0, %arg1 : (tensor<2x4x8xf32>, tensor<2x8x32xf32>) -> tensor<2x4x32xf32>
+  // CHECK-DAG: %[[S3:.*]] = mesh.sharding @mesh_3d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-DAG:  %[[ZP:.*]] = mesh.shard %[[ARG3]] to %[[S3]] annotate_for_users  : tensor<1xf32>
+  // CHECK-DAG: %[[V3:.*]] = tosa.matmul %[[V1]], %[[V2]], %[[ZP]], %[[ZP]]
+  %1 = tosa.matmul %0, %arg1, %arg3, %arg3 : (tensor<2x4x8xf32>, tensor<2x8x32xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x4x32xf32>
   // CHECK-DAG: %[[S4:.*]] = mesh.sharding @mesh_3d split_axes = {{\[\[}}], [], [1, 2]] partial = sum [0] : !mesh.sharding
   // CHECK-NEXT:  %[[V4:.*]] = mesh.shard %[[V3]] to %[[S4]]  : tensor<2x4x32xf32>
   %s2 = mesh.sharding @mesh_3d split_axes = [[], [], [1, 2]] partial = sum [0] : !mesh.sharding
@@ -254,8 +269,8 @@ func.func @mlp_2d_weight_stationary(%arg0: tensor<2x4x8xf32>, %arg1: tensor<2x8x
   // CHECK-NEXT:  %[[V8:.*]] = mesh.shard %[[V7]] to %[[S5]] annotate_for_users  : tensor<2x4x32xf32>
   // CHECK-DAG: %[[S9:.*]] = mesh.sharding @mesh_3d split_axes = {{\[\[}}], [1, 2], [0]] : !mesh.sharding
   // CHECK-NEXT:  %[[V9:.*]] = mesh.shard %[[ARG2]] to %[[S9]] annotate_for_users  : tensor<2x32x8xf32>
-  // CHECK-DAG: %[[V10:.*]] = tosa.matmul %[[V8]], %[[V9]]
-  %4 = tosa.matmul %3, %arg2 : (tensor<2x4x32xf32>, tensor<2x32x8xf32>) -> tensor<2x4x8xf32>
+  // CHECK-DAG: %[[V10:.*]] = tosa.matmul %[[V8]], %[[V9]], %[[ZP]], %[[ZP]]
+  %4 = tosa.matmul %3, %arg2, %arg3, %arg3 : (tensor<2x4x32xf32>, tensor<2x32x8xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x4x8xf32>
   // CHECK-DAG: %[[S11:.*]] = mesh.sharding @mesh_3d split_axes = {{\[\[}}], [], [0]] partial = sum [1, 2] : !mesh.sharding
   // CHECK-NEXT:  %[[V11:.*]] = mesh.shard %[[V10]] to %[[S11]]  : tensor<2x4x8xf32>
   %s5 = mesh.sharding @mesh_3d split_axes = [[], [], [0]] partial = sum[1, 2] : !mesh.sharding

@@ -177,7 +177,8 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
   // functions
   for (auto &N : Nodes)
     llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
-      return UtilityNodeIndex[UN] == 1 || UtilityNodeIndex[UN] == NumNodes;
+      unsigned UNI = UtilityNodeIndex[UN];
+      return UNI == 1 || UNI == NumNodes;
     });
 
   // Renumber utility nodes so they can be used to index into Signatures
