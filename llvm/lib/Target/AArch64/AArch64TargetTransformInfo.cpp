@@ -2651,9 +2651,7 @@ static std::optional<Instruction *> instCombineSVEUxt(InstCombiner &IC,
   if (isa<UndefValue>(Passthru) || isAllActivePredicate(Pg)) {
     auto *Ty = cast<VectorType>(II.getType());
     auto MaskValue = APInt::getLowBitsSet(Ty->getScalarSizeInBits(), NumBits);
-    auto *Mask = ConstantVector::getSplat(
-        Ty->getElementCount(),
-        ConstantInt::get(Ty->getElementType(), MaskValue));
+    auto *Mask = ConstantInt::get(Ty, MaskValue);
     auto *And = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_and_u, {Ty},
                                            {Pg, Op, Mask});
     return IC.replaceInstUsesWith(II, And);
