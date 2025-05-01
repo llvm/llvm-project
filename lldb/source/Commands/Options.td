@@ -1240,6 +1240,10 @@ let Command = "type summary add" in {
     Desc<"Don't show the value, just show the summary, for this type.">;
   def type_summary_add_skip_pointers : Option<"skip-pointers", "p">,
     Desc<"Don't use this format for pointers-to-type objects.">;
+  def type_summary_add_pointer_match_depth : Option<"pointer-match-depth", "d">,
+    Arg<"UnsignedInteger">,
+    Desc<"Specify the maximum pointer depth that this format can be apply to "
+    "(default to 1). It's only effective when --skip-pointers is not set.">;
   def type_summary_add_skip_references : Option<"skip-references", "r">,
     Desc<"Don't use this format for references-to-type objects.">;
   def type_summary_add_regex : Option<"regex", "x">,
