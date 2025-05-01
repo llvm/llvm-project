@@ -446,9 +446,6 @@ struct LinearizeVectorSplat final
                                                  dstTy);
     return success();
   }
-
-private:
-  unsigned targetVectorBitWidth;
 };
 
 } // namespace
