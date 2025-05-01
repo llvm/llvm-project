@@ -815,19 +815,18 @@ void mlir::configureImitateUnsupportedTypesLegality(
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 struct GpuImitateUnsupportedTypesPass
     : public impl::GpuImitateUnsupportedTypesBase<
           GpuImitateUnsupportedTypesPass> {
   using Base::Base;
 
-  void runOnOperation() override {
-    MLIRContext *ctx = &getContext();
-    Operation *op = getOperation();
+  SmallVector<Type> sourceTypes;
+  SmallVector<Type> targetTypes;
+  TypeConverter typeConverter;
 
-    SmallVector<Type> sourceTypes;
-    SmallVector<Type> targetTypes;
-
-    // Parse source types
+  LogicalResult initialize(MLIRContext *ctx) override {
+    // Parse source types.
     for (StringRef sourceTypeStr : sourceTypeStrs) {
       std::optional<Type> maybeSourceType =
           arith::parseIntOrFloatType(ctx, sourceTypeStr);
@@ -836,7 +835,7 @@ struct GpuImitateUnsupportedTypesPass
         emitError(UnknownLoc::get(ctx),
                   "could not map source type '" + sourceTypeStr +
                       "' to a known integer or floating-point type.");
-        return signalPassFailure();
+        return failure();
       }
       sourceTypes.push_back(*maybeSourceType);
     }
@@ -847,7 +846,7 @@ struct GpuImitateUnsupportedTypesPass
                                               "nothing");
     }
 
-    // Parse target types
+    // Parse target types.
     for (StringRef targetTypeStr : targetTypeStrs) {
       std::optional<Type> maybeTargetType =
           arith::parseIntOrFloatType(ctx, targetTypeStr);
@@ -856,14 +855,14 @@ struct GpuImitateUnsupportedTypesPass
         emitError(UnknownLoc::get(ctx),
                   "could not map target type '" + targetTypeStr +
                       "' to a known integer or floating-point type");
-        return signalPassFailure();
+        return failure();
       }
       targetTypes.push_back(*maybeTargetType);
 
       if (llvm::is_contained(sourceTypes, *maybeTargetType)) {
         emitError(UnknownLoc::get(ctx),
                   "target type cannot be an unsupported source type");
-        return signalPassFailure();
+        return failure();
       }
     }
     if (targetTypes.empty()) {
@@ -872,44 +871,50 @@ struct GpuImitateUnsupportedTypesPass
           "no target types specified, type imitation will do nothing");
     }
 
-    // Set up the type converter
-    TypeConverter typeConverter;
+    if (sourceTypes.size() != targetTypes.size()) {
+      emitError(UnknownLoc::get(ctx),
+                "source and target types must have the same size");
+      return failure();
+    }
+    // Set up the type converter.
     populateImitateUnsupportedTypesTypeConverter(typeConverter, sourceTypes,
                                                  targetTypes);
+    return success();
+  }
 
-    // Populate the conversion patterns
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    Operation *op = getOperation();
+
+    // Populate the conversion patterns.
     RewritePatternSet patterns(ctx);
     DenseMap<StringAttr, FunctionType> convertedFuncTypes;
     populateImitateUnsupportedTypesConversionPatterns(
         patterns, typeConverter, sourceTypes, targetTypes, convertedFuncTypes);
 
-    // Set up conversion target and configure the legality of the conversion
+    // Set up conversion target and configure the legality of the conversion.
     ConversionTarget target(*ctx);
     configureImitateUnsupportedTypesLegality(target, typeConverter);
 
-    // Apply the conversion
+    // Apply the conversion.
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
-      signalPassFailure();
+      return signalPassFailure();
 
     // Post-conversion validation: check for any remaining
-    // unrealized_conversion_cast
-    bool hasUnresolvedCast = false;
+    // unrealized_conversion_cast.
     op->walk([&](UnrealizedConversionCastOp op) {
-      // Check if the cast is from a source type to a target type
+      // Check if the cast is from a source type to a target type.
       for (auto [sourceType, targetType] :
            llvm::zip_equal(sourceTypes, targetTypes)) {
         if (getElementTypeOrSelf(op.getOperand(0).getType()) == sourceType &&
             getElementTypeOrSelf(op.getResult(0).getType()) == targetType) {
           op->emitError("unresolved unrealized_conversion_cast left in IR "
                         "after conversion");
-          hasUnresolvedCast = true;
+          return signalPassFailure();
         }
       }
     });
-
-    if (hasUnresolvedCast) {
-      signalPassFailure();
-    }
   }
 };
+
 } // namespace
