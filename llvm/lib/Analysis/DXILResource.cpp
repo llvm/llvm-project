@@ -1036,7 +1036,9 @@ bool DXILResourceBindingInfo::RegisterSpace::findAvailableBinding(
 
   // single resource or fixed-size array
   for (BindingRange &R : FreeRanges) {
-    if (R.UpperBound - R.LowerBound + 1 < (uint32_t)Size)
+    // compare the size as uint64_t to prevent overflow for range (0,
+    // UINT32_MAX)
+    if ((uint64_t)R.UpperBound - R.LowerBound + 1 < (uint64_t)Size)
       continue;
     *RegSlot = R.LowerBound;
     // This might create a range where (LowerBound == UpperBound + 1), but

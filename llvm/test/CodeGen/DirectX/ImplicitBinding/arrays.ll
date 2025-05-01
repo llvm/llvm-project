@@ -35,6 +35,12 @@ define void @test_arrays() {
 ; CHECK: %{{.*}} = call target("dx.TypedBuffer", i32, 1, 0, 0)
 ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_0t(i32 0, i32 0, i32 2, i32 1, i1 false)
 
+; another access to resource array B to make sure it gets the same binding
+  %bufB2 = call target("dx.TypedBuffer", float, 1, 0, 0)
+      @llvm.dx.resource.handlefromimplicitbinding(i32 10, i32 0, i32 4, i32 0, i1 false)
+; CHECK: %{{.*}} = call target("dx.TypedBuffer", float, 1, 0, 0)
+; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 3, i32 4, i32 0, i1 false)
+
 ; CHECK-NOT: @llvm.dx.resource.handlefromimplicitbinding
   ret void
 }
