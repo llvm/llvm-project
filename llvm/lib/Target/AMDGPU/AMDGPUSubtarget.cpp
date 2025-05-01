@@ -81,7 +81,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
   // workgroups, maximum number of waves, and minimum occupancy. The opposite is
   // generally true for the minimum group size. LDS or barrier ressource
   // limitations can flip those minimums/maximums.
-  const auto &[MinWGSize, MaxWGSize] = FlatWorkGroupSizes;
+  const auto [MinWGSize, MaxWGSize] = FlatWorkGroupSizes;
   auto [MinWavesPerWG, MaxWGsPerCU, MaxWavesPerCU] = PropsFromWGSize(MinWGSize);
   auto [MaxWavesPerWG, MinWGsPerCU, MinWavesPerCU] = PropsFromWGSize(MaxWGSize);
 
