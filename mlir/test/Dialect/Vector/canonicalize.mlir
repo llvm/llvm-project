@@ -8,6 +8,7 @@ func.func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
   %0 = vector.create_mask %c3, %c2 : vector<4x3xi1>
   return %0 : vector<4x3xi1>
 }
+
 // -----
 
 // CHECK-LABEL: create_scalable_vector_mask_to_constant_mask
@@ -3060,7 +3061,6 @@ func.func @insert_vector_poison(%a: vector<4x8xf32>)
   %1 = vector.insert %0, %a[2] : vector<8xf32> into vector<4x8xf32>
   return %1 : vector<4x8xf32>
 }
-
 
 // -----
 
