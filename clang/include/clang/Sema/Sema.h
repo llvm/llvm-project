@@ -220,11 +220,6 @@ enum class AssignmentAction {
   Casting,
   Passing_CFAudited
 };
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const AssignmentAction &AA) {
-  DB << llvm::to_underlying(AA);
-  return DB;
-}
 
 namespace threadSafety {
 class BeforeSet;
@@ -15470,12 +15465,6 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
-
-inline const StreamingDiagnostic &
-operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
-  DB << llvm::to_underlying(Ctx);
-  return DB;
-}
 
 } // end namespace clang
 
