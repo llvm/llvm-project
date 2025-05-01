@@ -5738,26 +5738,8 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, Type *ScalarTy,
     }
     return Cost;
   }
-  APInt NewDemandedElts = DemandedElts;
-  InstructionCost Cost = 0;
-  if (!ForPoisonSrc && Insert) {
-    // Handle insert into non-poison vector.
-    // TODO: Need to teach getScalarizationOverhead about insert elements into
-    // non-poison input vector to better handle such cases. Currently, it is
-    // very conservative and may "pessimize" the vectorization.
-    for (unsigned I : seq(DemandedElts.getBitWidth())) {
-      if (!DemandedElts[I])
-        continue;
-      Cost += TTI.getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
-                                     I, Constant::getNullValue(Ty),
-                                     VL.empty() ? nullptr : VL[I]);
-    }
-    NewDemandedElts.clearAllBits();
-  } else if (!NewDemandedElts.isZero()) {
-    Cost += TTI.getScalarizationOverhead(Ty, NewDemandedElts, Insert, Extract,
-                                         CostKind, VL);
-  }
-  return Cost;
+  return TTI.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                      CostKind, ForPoisonSrc, VL);
 }
 
 /// This is similar to TargetTransformInfo::getVectorInstrCost, but if ScalarTy

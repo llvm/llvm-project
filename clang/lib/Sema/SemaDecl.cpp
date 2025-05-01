@@ -4752,6 +4752,9 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       if (Def && checkVarDeclRedefinition(Def, New))
         return;
     }
+  } else {
+    Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition) << New;
+    Diag(Old->getLocation(), diag::note_previous_declaration);
   }
 
   if (haveIncompatibleLanguageLinkages(Old, New)) {
@@ -14359,7 +14362,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       if (Var->getStorageDuration() == SD_Static ||
           Var->getStorageDuration() == SD_Thread)
         DiagID = diag::warn_default_init_const;
-      Diag(Var->getLocation(), DiagID) << Type << /*not a field*/ 0;
+      Diag(Var->getLocation(), DiagID) << Type;
     }
 
     // Check for jumps past the implicit initializer.  C++0x
@@ -14915,7 +14918,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
-  CheckInvalidBuiltinCountedByRef(VD->getInit(), InitializerKind);
+  CheckInvalidBuiltinCountedByRef(VD->getInit(),
+                                  BuiltinCountedByRefKind::Initializer);
 
   checkAttributesAfterMerging(*this, *VD);
 
