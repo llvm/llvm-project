@@ -103,9 +103,7 @@ define <vscale x 2 x i64> @nbsl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 define <vscale x 16 x i8> @codegen_bsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
 ; CHECK-LABEL: codegen_bsl_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 16 x i8> %2, %0
   %5 = xor <vscale x 16 x i8> %2, splat (i8 -1)
@@ -117,11 +115,7 @@ define <vscale x 16 x i8> @codegen_bsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x 
 define <vscale x 16 x i8> @codegen_nbsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
 ; CHECK-LABEL: codegen_nbsl_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 16 x i8> %2, %0
   %5 = xor <vscale x 16 x i8> %2, splat (i8 -1)
@@ -134,9 +128,7 @@ define <vscale x 16 x i8> @codegen_nbsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x
 define <vscale x 16 x i8> @codegen_bsl1n_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
 ; CHECK-LABEL: codegen_bsl1n_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = xor <vscale x 16 x i8> %0, splat (i8 -1)
   %5 = and <vscale x 16 x i8> %2, %4
@@ -149,11 +141,7 @@ define <vscale x 16 x i8> @codegen_bsl1n_i8(<vscale x 16 x i8> %0, <vscale x 16 
 define <vscale x 16 x i8> @codegen_bsl2n_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
 ; CHECK-LABEL: codegen_bsl2n_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
-; CHECK-NEXT:    mov z3.b, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 16 x i8> %2, %0
   %5 = or <vscale x 16 x i8> %2, %1
@@ -165,9 +153,7 @@ define <vscale x 16 x i8> @codegen_bsl2n_i8(<vscale x 16 x i8> %0, <vscale x 16 
 define <vscale x 8 x i16> @codegen_bsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
 ; CHECK-LABEL: codegen_bsl_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 8 x i16> %2, %0
   %5 = xor <vscale x 8 x i16> %2, splat (i16 -1)
@@ -179,11 +165,7 @@ define <vscale x 8 x i16> @codegen_bsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x 
 define <vscale x 8 x i16> @codegen_nbsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
 ; CHECK-LABEL: codegen_nbsl_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 8 x i16> %2, %0
   %5 = xor <vscale x 8 x i16> %2, splat (i16 -1)
@@ -196,9 +178,7 @@ define <vscale x 8 x i16> @codegen_nbsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x
 define <vscale x 8 x i16> @codegen_bsl1n_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
 ; CHECK-LABEL: codegen_bsl1n_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = xor <vscale x 8 x i16> %0, splat (i16 -1)
   %5 = and <vscale x 8 x i16> %2, %4
@@ -211,11 +191,7 @@ define <vscale x 8 x i16> @codegen_bsl1n_i16(<vscale x 8 x i16> %0, <vscale x 8 
 define <vscale x 8 x i16> @codegen_bsl2n_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
 ; CHECK-LABEL: codegen_bsl2n_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
-; CHECK-NEXT:    mov z3.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 8 x i16> %2, %0
   %5 = or <vscale x 8 x i16> %2, %1
@@ -227,9 +203,7 @@ define <vscale x 8 x i16> @codegen_bsl2n_i16(<vscale x 8 x i16> %0, <vscale x 8 
 define <vscale x 4 x i32> @codegen_bsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
 ; CHECK-LABEL: codegen_bsl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 4 x i32> %2, %0
   %5 = xor <vscale x 4 x i32> %2, splat (i32 -1)
@@ -241,11 +215,7 @@ define <vscale x 4 x i32> @codegen_bsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x 
 define <vscale x 4 x i32> @codegen_nbsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
 ; CHECK-LABEL: codegen_nbsl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 4 x i32> %2, %0
   %5 = xor <vscale x 4 x i32> %2, splat (i32 -1)
@@ -258,9 +228,7 @@ define <vscale x 4 x i32> @codegen_nbsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x
 define <vscale x 4 x i32> @codegen_bsl1n_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
 ; CHECK-LABEL: codegen_bsl1n_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = xor <vscale x 4 x i32> %0, splat (i32 -1)
   %5 = and <vscale x 4 x i32> %2, %4
@@ -273,11 +241,7 @@ define <vscale x 4 x i32> @codegen_bsl1n_i32(<vscale x 4 x i32> %0, <vscale x 4 
 define <vscale x 4 x i32> @codegen_bsl2n_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
 ; CHECK-LABEL: codegen_bsl2n_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
-; CHECK-NEXT:    mov z3.s, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 4 x i32> %2, %0
   %5 = or <vscale x 4 x i32> %2, %1
@@ -289,9 +253,7 @@ define <vscale x 4 x i32> @codegen_bsl2n_i32(<vscale x 4 x i32> %0, <vscale x 4 
 define <vscale x 2 x i64> @codegen_bsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
 ; CHECK-LABEL: codegen_bsl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 2 x i64> %2, %0
   %5 = xor <vscale x 2 x i64> %2, splat (i64 -1)
@@ -303,11 +265,7 @@ define <vscale x 2 x i64> @codegen_bsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x 
 define <vscale x 2 x i64> @codegen_nbsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
 ; CHECK-LABEL: codegen_nbsl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 2 x i64> %2, %0
   %5 = xor <vscale x 2 x i64> %2, splat (i64 -1)
@@ -320,9 +278,7 @@ define <vscale x 2 x i64> @codegen_nbsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x
 define <vscale x 2 x i64> @codegen_bsl1n_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
 ; CHECK-LABEL: codegen_bsl1n_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z0.d, z2.d, z0.d
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = xor <vscale x 2 x i64> %0, splat (i64 -1)
   %5 = and <vscale x 2 x i64> %2, %4
@@ -335,11 +291,7 @@ define <vscale x 2 x i64> @codegen_bsl1n_i64(<vscale x 2 x i64> %0, <vscale x 2 
 define <vscale x 2 x i64> @codegen_bsl2n_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
 ; CHECK-LABEL: codegen_bsl2n_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
-; CHECK-NEXT:    mov z3.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 2 x i64> %2, %0
   %5 = or <vscale x 2 x i64> %2, %1
