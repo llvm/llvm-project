@@ -74,7 +74,7 @@ DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
 #endif
-  if (AtomRank)
+  if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
   assert((MDs.size() == 1 || MDs.size() == 2) &&
