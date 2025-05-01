@@ -147,13 +147,13 @@ public:
             decodeDeviceType(clause.getArchitectures()[0].getIdentifierInfo()));
     } else if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
                                       mlir::acc::SerialOp, mlir::acc::KernelsOp,
-                                      mlir::acc::DataOp>) {
+                                      mlir::acc::DataOp, mlir::acc::LoopOp>) {
       // Nothing to do here, these constructs don't have any IR for these, as
       // they just modify the other clauses IR.  So setting of
       // `lastDeviceTypeValues` (done above) is all we need.
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. update, data, loop, routine, combined constructs remain.
+      // unreachable. update, data, routine, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -304,6 +304,36 @@ public:
           createIntExpr(clause.getIntExpr()));
     } else {
       llvm_unreachable("set, is only valid device_num constructs");
+    }
+  }
+
+  void VisitSeqClause(const OpenACCSeqClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      operation.addSeq(builder.getContext(), lastDeviceTypeValues);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Routine, Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitAutoClause(const OpenACCAutoClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      operation.addAuto(builder.getContext(), lastDeviceTypeValues);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Routine, Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitIndependentClause(const OpenACCIndependentClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      operation.addIndependent(builder.getContext(), lastDeviceTypeValues);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Routine, Combined constructs remain.
+      return clauseNotImplemented(clause);
     }
   }
 };
