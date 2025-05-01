@@ -360,14 +360,12 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; GFNIAVX512BW-LABEL: testv64i8:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
+; GFNIAVX512BW-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; GFNIAVX512BW-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512BW-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; GFNIAVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm3
-; GFNIAVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0
-; GFNIAVX512BW-NEXT:    vptestnmb %zmm1, %zmm1, %k0
-; GFNIAVX512BW-NEXT:    vpmovm2b %k0, %zmm1
-; GFNIAVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
-; GFNIAVX512BW-NEXT:    vpaddb %zmm3, %zmm0, %zmm0
+; GFNIAVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0 {%k1} {z}
+; GFNIAVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm1
+; GFNIAVX512BW-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    retq
   %out = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %in, i1 0)
   ret <64 x i8> %out
@@ -494,14 +492,12 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; GFNIAVX512BW-LABEL: testv64i8u:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
+; GFNIAVX512BW-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; GFNIAVX512BW-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512BW-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; GFNIAVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm3
-; GFNIAVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0
-; GFNIAVX512BW-NEXT:    vptestnmb %zmm1, %zmm1, %k0
-; GFNIAVX512BW-NEXT:    vpmovm2b %k0, %zmm1
-; GFNIAVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
-; GFNIAVX512BW-NEXT:    vpaddb %zmm3, %zmm0, %zmm0
+; GFNIAVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0 {%k1} {z}
+; GFNIAVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm1
+; GFNIAVX512BW-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    retq
   %out = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %in, i1 -1)
   ret <64 x i8> %out

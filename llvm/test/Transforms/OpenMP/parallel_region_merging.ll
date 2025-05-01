@@ -4683,9 +4683,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -4715,7 +4713,7 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -4831,9 +4829,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
@@ -4886,7 +4882,7 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -4925,9 +4921,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[P]], ptr [[GEP_P]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_float..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -4982,7 +4976,7 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5020,9 +5014,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_CASTED_SROA_0_0_INSERT_EXT_SEQ_OUTPUT_ALLOC]], ptr [[GEP_A_CASTED_SROA_0_0_INSERT_EXT_SEQ_OUTPUT_ALLOC]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_firstprivate..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
@@ -5080,7 +5072,7 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5113,9 +5105,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_sink_lt..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5169,7 +5159,7 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5210,9 +5200,7 @@ entry:
 ; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_par_use..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
@@ -5268,7 +5256,7 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5307,9 +5295,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[CANCEL2_ADDR]], ptr [[GEP_CANCEL2_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_cancellable_regions..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5341,7 +5327,7 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5394,9 +5380,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[CANCEL2_ADDR]], ptr [[GEP_CANCEL2_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_cancellable_regions_seq..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5452,7 +5436,7 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5497,9 +5481,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_3..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    ret void
@@ -5532,7 +5514,7 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5583,9 +5565,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[ADD1_SEQ_OUTPUT_ALLOC]], ptr [[GEP_ADD1_SEQ_OUTPUT_ALLOC]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_3_seq..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    [[ADD1_SEQ_OUTPUT_LOAD:%.*]] = load i32, ptr [[ADD1_SEQ_OUTPUT_ALLOC]], align 4
@@ -5668,7 +5648,7 @@ entry:
 ; CHECK2:       omp_region.body.split:
 ; CHECK2-NEXT:    call void @__kmpc_end_master(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 ; CHECK2-NEXT:    br label [[OMP_REGION_END]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5820,9 +5800,7 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_2_unmergable_1..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-; CHECK2:       omp.par.outlined.exit:
-; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-; CHECK2:       omp.par.exit.split:
+; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    call void (...) @foo()
@@ -5854,7 +5832,7 @@ entry:
 ; CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-; CHECK2:       omp.par.outlined.exit.exitStub:
+; CHECK2:       omp.par.exit.exitStub:
 ; CHECK2-NEXT:    ret void
 ;
 ;

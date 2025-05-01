@@ -1,5 +1,4 @@
 ; RUN: llc %s -stop-after=codegenprepare -o - | FileCheck %s
-; RUN: llc %s -stop-after=codegenprepare -o - --try-experimental-debuginfo-iterators | FileCheck %s
 ; REQUIRES: x86-registered-target
 ;
 ; Test that when we skip over multiple selects in CGP, that the debug-info

@@ -331,6 +331,14 @@ def i64x8     : ValueType<512,  231>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
               : ValueType<16,  232>;  // AArch64 predicate-as-counter
 def spirvbuiltin : ValueType<0, 233>; // SPIR-V's builtin type
+// AMDGPU buffer fat pointer, buffer rsrc + offset, rewritten before MIR translation.
+// FIXME: Remove this and the getPointerType() override if MVT::i160 is added.
+def amdgpuBufferFatPointer : ValueType<160, 234>;
+// AMDGPU buffer strided pointer, buffer rsrc + index + offset, doesn't reach MIR.
+// FIXME: Remove this and the getPointerType() override if MVT::i82 is added.
+def amdgpuBufferStridedPointer : ValueType<192, 235>;
+
+def aarch64mfp8 : ValueType<8,  236>;  // 8-bit value in FPR (AArch64)
 
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy

@@ -5,14 +5,12 @@ define void @test() {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i2> @llvm.smin.v2i2(<2 x i2> zeroinitializer, <2 x i2> zeroinitializer)
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> zeroinitializer, <2 x i2> zeroinitializer, <2 x i2> [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i2> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i2> [[TMP2]], i32 1
-; CHECK-NEXT:    [[ADD:%.*]] = zext i2 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> zeroinitializer, <2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> zeroinitializer, <2 x i32> zeroinitializer, <2 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[ADD:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[ADD]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i2> [[TMP2]], i32 0
-; CHECK-NEXT:    [[ADD45:%.*]] = zext i2 [[TMP5]] to i32
+; CHECK-NEXT:    [[ADD45:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[ADD152:%.*]] = or i32 [[ADD45]], [[ADD]]
 ; CHECK-NEXT:    [[IDXPROM153:%.*]] = sext i32 [[ADD152]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX154:%.*]] = getelementptr i8, ptr null, i64 [[IDXPROM153]]

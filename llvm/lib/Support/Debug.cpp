@@ -73,8 +73,7 @@ void setCurrentDebugType(const char *Type) {
 
 void setCurrentDebugTypes(const char **Types, unsigned Count) {
   CurrentDebugType->clear();
-  for (size_t T = 0; T < Count; ++T)
-    CurrentDebugType->push_back(Types[T]);
+  llvm::append_range(*CurrentDebugType, ArrayRef(Types, Count));
 }
 } // namespace llvm
 

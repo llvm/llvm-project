@@ -9,6 +9,7 @@
 !RUN: %if x86-registered-target %{ %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fopenmp %s -o - | FileCheck --check-prefixes=CHECK,X86 %s %}
 !RUN: %if aarch64-registerd-target %{ %flang_fc1 -triple aarch64-unknown-linux-gnu -emit-llvm -fopenmp %s -o - | FileCheck --check-prefixes=CHECK,AARCH64 %s %}
 
+!CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 !CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
 !CHECK: %[[VAL_1:.*]] = alloca { float, float }, i64 1, align 8
 !CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
@@ -16,7 +17,6 @@
 !CHECK: br label %entry
 
 !CHECK: entry:
-!CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 !CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 !CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
 !CHECK: br label %.atomic.cont
