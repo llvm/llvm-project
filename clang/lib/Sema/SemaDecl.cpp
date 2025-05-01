@@ -2376,9 +2376,14 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
     return nullptr;
   }
 
+  // Warn for implicit uses of header dependent libraries,
+  // except in system headers.
   if (!ForRedeclaration &&
       (Context.BuiltinInfo.isPredefinedLibFunction(ID) ||
-       Context.BuiltinInfo.isHeaderDependentFunction(ID))) {
+       Context.BuiltinInfo.isHeaderDependentFunction(ID)) &&
+      (!getDiagnostics().getSuppressSystemWarnings() ||
+       !Context.getSourceManager().isInSystemHeader(
+           Context.getSourceManager().getSpellingLoc(Loc)))) {
     Diag(Loc, LangOpts.C99 ? diag::ext_implicit_lib_function_decl_c99
                            : diag::ext_implicit_lib_function_decl)
         << Context.BuiltinInfo.getName(ID) << R;
