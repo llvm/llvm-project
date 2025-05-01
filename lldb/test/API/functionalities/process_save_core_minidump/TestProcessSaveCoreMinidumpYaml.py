@@ -8,135 +8,135 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
-       def process_from_yaml(self, yaml_file):
-              minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
-              self.yaml2obj(yaml_file, minidump_path)
-              self.target = self.dbg.CreateTarget(None)
-              self.process = self.target.LoadCore(minidump_path)
-              return self.process
+    def process_from_yaml(self, yaml_file):
+        minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
+        self.yaml2obj(yaml_file, minidump_path)
+        self.target = self.dbg.CreateTarget(None)
+        self.process = self.target.LoadCore(minidump_path)
+        return self.process
 
-       def test_saving_sub_memory_range(self):
-              """
-              Validate we can save a Minidump for a subsection of a memory range.
-              I.E.
-              If our memory range is 0x1000-0x2000 nd the user specifies 0x1200-0x1800 
-              we should still capture 0x1200 to 0x1800
-              """
-              yaml = "minidump_mem64.yaml"
-              proc = self.process_from_yaml(yaml)
-              new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
-              options = lldb.SBSaveCoreOptions()
-              options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
-              options.SetPluginName("minidump")
-              options.SetStyle(lldb.eSaveCoreCustomOnly)
+    def test_saving_sub_memory_range(self):
+        """
+        Validate we can save a Minidump for a subsection of a memory range.
+        I.E.
+        If our memory range is 0x1000-0x2000 nd the user specifies 0x1200-0x1800
+        we should still capture 0x1200 to 0x1800
+        """
+        yaml = "minidump_mem64.yaml"
+        proc = self.process_from_yaml(yaml)
+        new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
+        options = lldb.SBSaveCoreOptions()
+        options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
+        options.SetPluginName("minidump")
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
 
-              size = 8
-              begin = 0x7FFF12A84030
-              end = begin + size
-              custom_range = lldb.SBMemoryRegionInfo("", begin, end, 3, True, False)
-              options.AddMemoryRegionToSave(custom_range)
-              
-              error = proc.SaveCore(options)
-              self.assertTrue(error.Success(), error.GetCString())
-              core_target = self.dbg.CreateTarget(None)
-              core_process = core_target.LoadCore(new_minidump_path)
+        size = 8
+        begin = 0x7FFF12A84030
+        end = begin + size
+        custom_range = lldb.SBMemoryRegionInfo("", begin, end, 3, True, False)
+        options.AddMemoryRegionToSave(custom_range)
 
-              error = lldb.SBError()
-              core_process.ReadMemory(begin, size, error)
-              self.assertTrue(error.Success(), error.GetCString())
+        error = proc.SaveCore(options)
+        self.assertTrue(error.Success(), error.GetCString())
+        core_target = self.dbg.CreateTarget(None)
+        core_process = core_target.LoadCore(new_minidump_path)
 
-              # Try to read 1 byte past the end
-              core_process.ReadMemory(end + 1, 1, error)
-              self.assertTrue(error.Fail(), error.GetCString())
+        error = lldb.SBError()
+        core_process.ReadMemory(begin, size, error)
+        self.assertTrue(error.Success(), error.GetCString())
 
-       def test_saving_super_memory_range(self):
-              """
-              Validate we can save a Minidump for a subsection of a memory range.
-              I.E.
-              If our memory range is 0x1000-0x2000 nd the user specifies 0x0800-0x2800 
-              we should still capture 0x1000-0x2000
-              """
-              yaml = "minidump_mem64.yaml"
-              proc = self.process_from_yaml(yaml)
-              new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
-              options = lldb.SBSaveCoreOptions()
-              options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
-              options.SetPluginName("minidump")
-              options.SetStyle(lldb.eSaveCoreCustomOnly)
+        # Try to read 1 byte past the end
+        core_process.ReadMemory(end + 1, 1, error)
+        self.assertTrue(error.Fail(), error.GetCString())
 
-              size = 0x2FD0
-              begin = 0x7FFF12A84030
-              end = begin + size
-              custom_range = lldb.SBMemoryRegionInfo("", begin - 16, end + 16, 3, True, False)
-              options.AddMemoryRegionToSave(custom_range)
-              
-              error = proc.SaveCore(options)
-              self.assertTrue(error.Success(), error.GetCString())
-              core_target = self.dbg.CreateTarget(None)
-              core_process = core_target.LoadCore(new_minidump_path)
+    def test_saving_super_memory_range(self):
+        """
+        Validate we can save a Minidump for a subsection of a memory range.
+        I.E.
+        If our memory range is 0x1000-0x2000 nd the user specifies 0x0800-0x2800
+        we should still capture 0x1000-0x2000
+        """
+        yaml = "minidump_mem64.yaml"
+        proc = self.process_from_yaml(yaml)
+        new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
+        options = lldb.SBSaveCoreOptions()
+        options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
+        options.SetPluginName("minidump")
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
 
-              error = lldb.SBError()
-              core_process.ReadMemory(begin, size, error)
-              self.assertTrue(error.Success(), error.GetCString())
+        size = 0x2FD0
+        begin = 0x7FFF12A84030
+        end = begin + size
+        custom_range = lldb.SBMemoryRegionInfo("", begin - 16, end + 16, 3, True, False)
+        options.AddMemoryRegionToSave(custom_range)
 
+        error = proc.SaveCore(options)
+        self.assertTrue(error.Success(), error.GetCString())
+        core_target = self.dbg.CreateTarget(None)
+        core_process = core_target.LoadCore(new_minidump_path)
 
-       def test_region_that_goes_out_of_bounds(self):
-              """
-              Validate we can save a Minidump for a custom region
-              that includes an end that enters an invalid (---) page.
-              """
-              yaml = "minidump_mem64.yaml"
-              proc = self.process_from_yaml(yaml)
-              new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
-              options = lldb.SBSaveCoreOptions()
-              options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
-              options.SetPluginName("minidump")
-              options.SetStyle(lldb.eSaveCoreCustomOnly)
+        error = lldb.SBError()
+        core_process.ReadMemory(begin, size, error)
+        self.assertTrue(error.Success(), error.GetCString())
 
-              size = 1024
-              begin = 0x00007fff12a8ffff
-              end = begin + size
-              custom_range = lldb.SBMemoryRegionInfo("", begin, end, 3, True, False)
-              options.AddMemoryRegionToSave(custom_range)
-              
-              error = proc.SaveCore(options)
-              self.assertTrue(error.Success(), error.GetCString())
-              core_target = self.dbg.CreateTarget(None)
-              core_process = core_target.LoadCore(new_minidump_path)
+    def test_region_that_goes_out_of_bounds(self):
+        """
+        Validate we can save a Minidump for a custom region
+        that includes an end that enters an invalid (---) page.
+        """
+        yaml = "minidump_mem64.yaml"
+        proc = self.process_from_yaml(yaml)
+        new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
+        options = lldb.SBSaveCoreOptions()
+        options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
+        options.SetPluginName("minidump")
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
 
-              error = lldb.SBError()
-              core_process.ReadMemory(begin, 0x00000020, error)
-              self.assertTrue(error.Success(), error.GetCString())
+        size = 1024
+        begin = 0x00007FFF12A8FFFF
+        end = begin + size
+        custom_range = lldb.SBMemoryRegionInfo("", begin, end, 3, True, False)
+        options.AddMemoryRegionToSave(custom_range)
 
-              # Whole region should be unavailable
-              core_process.ReadMemory(end, 1, error)
-              self.assertTrue(error.Fail(), error.GetCString())
+        error = proc.SaveCore(options)
+        self.assertTrue(error.Success(), error.GetCString())
+        core_target = self.dbg.CreateTarget(None)
+        core_process = core_target.LoadCore(new_minidump_path)
 
-       def test_region_that_starts_out_of_bounds(self):
-              """
-              Validate we can save a Minidump for a custom region
-              that includes a start in a (---) page but ends in a valid page.
-              """
-              yaml = "minidump_mem64.yaml"
-              proc = self.process_from_yaml(yaml)
-              new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
-              options = lldb.SBSaveCoreOptions()
-              options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
-              options.SetPluginName("minidump")
-              options.SetStyle(lldb.eSaveCoreCustomOnly)
+        error = lldb.SBError()
+        core_process.ReadMemory(begin, 0x00000020, error)
+        self.assertTrue(error.Success(), error.GetCString())
 
-              size = 0x00000020
-              begin = 0x00007fff12a8ffff
-              end = begin + size
-              custom_range = lldb.SBMemoryRegionInfo("", begin - 16, end, 3, True, False)
-              options.AddMemoryRegionToSave(custom_range)
-              
-              error = proc.SaveCore(options)
-              self.assertTrue(error.Success(), error.GetCString())
-              core_target = self.dbg.CreateTarget(None)
-              core_process = core_target.LoadCore(new_minidump_path)
+        # Whole region should be unavailable
+        core_process.ReadMemory(end, 1, error)
+        self.assertTrue(error.Fail(), error.GetCString())
 
-              error = lldb.SBError()
-              core_process.ReadMemory(begin, 0x00000020, error)
-              self.assertTrue(error.Success(), error.GetCString())
+    def test_region_that_starts_out_of_bounds(self):
+        """
+        Validate we can save a Minidump for a custom region
+        that includes a start in a (---) page but ends in a valid page.
+        """
+        yaml = "minidump_mem64.yaml"
+        proc = self.process_from_yaml(yaml)
+        new_minidump_path = self.getBuildArtifact(__name__ + ".dmp")
+        options = lldb.SBSaveCoreOptions()
+        options.SetOutputFile(lldb.SBFileSpec(new_minidump_path))
+        options.SetPluginName("minidump")
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+
+        size = 0x00000020
+        begin = 0x00007FFF12A8FFFF
+        end = begin + size
+        custom_range = lldb.SBMemoryRegionInfo("", begin - 16, end, 3, True, False)
+        options.AddMemoryRegionToSave(custom_range)
+
+        error = proc.SaveCore(options)
+        self.assertTrue(error.Success(), error.GetCString())
+        core_target = self.dbg.CreateTarget(None)
+        core_process = core_target.LoadCore(new_minidump_path)
+
+        error = lldb.SBError()
+        core_process.ReadMemory(begin, 0x00000020, error)
+        self.assertTrue(error.Success(), error.GetCString())
