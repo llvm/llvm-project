@@ -4,3 +4,4 @@
 
 // CHECK: error: failed to get dependencies
 // CHECK-NEXT: 'missing.h' file not found
+// CHECK-NEXT: number of invalid negatively stat cached paths: 0

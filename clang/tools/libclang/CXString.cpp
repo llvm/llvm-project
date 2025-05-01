@@ -118,13 +118,13 @@ CXStringSet *createSet(const std::vector<std::string> &Strings) {
 
 CXStringSet *createSet(const llvm::StringSet<> &StringsUnordered) {
   std::vector<StringRef> Strings;
-  
-  for (auto SI = StringsUnordered.begin(),
-            SE = StringsUnordered.end(); SI != SE; ++SI)
+
+  for (auto SI = StringsUnordered.begin(), SE = StringsUnordered.end();
+       SI != SE; ++SI)
     Strings.push_back(SI->getKey());
-  
+
   llvm::sort(Strings);
-  
+
   CXStringSet *Set = new CXStringSet;
   Set->Count = Strings.size();
   Set->Strings = new CXString[Set->Count];

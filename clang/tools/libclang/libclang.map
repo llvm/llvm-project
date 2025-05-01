@@ -577,6 +577,7 @@ LLVM_21 {
     clang_experimental_DepGraphModule_isCWDIgnored;
     clang_experimental_DepGraphModule_isInStableDirs; 
     clang_getFullyQualifiedName;
+    clang_experimental_DependencyScannerService_getInvalidNegStatCachedPaths;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

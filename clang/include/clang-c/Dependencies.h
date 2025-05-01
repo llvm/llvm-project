@@ -585,6 +585,11 @@ const char *clang_experimental_DepGraph_getTUContextHash(CXDepGraph);
 CINDEX_LINKAGE
 CXDiagnosticSet clang_experimental_DepGraph_getDiagnostics(CXDepGraph);
 
+CINDEX_LINKAGE
+CXCStringArray
+    clang_experimental_DependencyScannerService_getInvalidNegStatCachedPaths(
+        CXDependencyScannerService);
+
 /**
  * @}
  */
