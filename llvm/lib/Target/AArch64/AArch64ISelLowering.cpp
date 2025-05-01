@@ -843,11 +843,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationPromotedToType(ISD::FRINT,      V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FNEARBYINT, V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FCANONICALIZE, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::SETCC,         V4Narrow, MVT::v4f32);
 
     setOperationAction(ISD::FABS,        V4Narrow, Legal);
-    setOperationAction(ISD::FNEG, 	 V4Narrow, Legal);
+    setOperationAction(ISD::FNEG,        V4Narrow, Legal);
     setOperationAction(ISD::FMA,         V4Narrow, Expand);
-    setOperationAction(ISD::SETCC,       V4Narrow, Custom);
     setOperationAction(ISD::BR_CC,       V4Narrow, Expand);
     setOperationAction(ISD::SELECT,      V4Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V4Narrow, Expand);
@@ -855,6 +855,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT,       V4Narrow, Expand);
 
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
+    setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::SETCC,         V8Narrow, MVT::v8f32);
+
     setOperationAction(ISD::FABS,        V8Narrow, Legal);
     setOperationAction(ISD::FADD,        V8Narrow, Legal);
     setOperationAction(ISD::FCEIL,       V8Narrow, Legal);
@@ -864,19 +867,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
     setOperationAction(ISD::FMUL,        V8Narrow, Legal);
     setOperationAction(ISD::FNEARBYINT,  V8Narrow, Legal);
-    setOperationAction(ISD::FNEG, 	 V8Narrow, Legal);
+    setOperationAction(ISD::FNEG,        V8Narrow, Legal);
     setOperationAction(ISD::FROUND,      V8Narrow, Legal);
     setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Legal);
     setOperationAction(ISD::FRINT,       V8Narrow, Legal);
     setOperationAction(ISD::FSQRT,       V8Narrow, Expand);
     setOperationAction(ISD::FSUB,        V8Narrow, Legal);
     setOperationAction(ISD::FTRUNC,      V8Narrow, Legal);
-    setOperationAction(ISD::SETCC,       V8Narrow, Expand);
     setOperationAction(ISD::BR_CC,       V8Narrow, Expand);
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V8Narrow, Expand);
     setOperationAction(ISD::FP_EXTEND,   V8Narrow, Expand);
-    setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
   };
 
   if (!Subtarget->hasFullFP16()) {
@@ -15892,6 +15893,12 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   if (LHS.getValueType().getVectorElementType().isInteger())
     return Op;
 
+  assert(((!Subtarget->hasFullFP16() &&
+           LHS.getValueType().getVectorElementType() != MVT::f16) ||
+          LHS.getValueType().getVectorElementType() != MVT::bf16 ||
+          LHS.getValueType().getVectorElementType() != MVT::f128) &&
+         "Unexpected type!");
+
   // Lower isnan(x) | isnan(never-nan) to x != x.
   // Lower !isnan(x) & !isnan(never-nan) to x == x.
   if (CC == ISD::SETUO || CC == ISD::SETO) {
@@ -15909,26 +15916,6 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
       CC = CC == ISD::SETUO ? ISD::SETUNE : ISD::SETOEQ;
     }
   }
-
-  const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
-
-  // Make v4f16 (only) fcmp operations utilise vector instructions
-  // v8f16 support will be a litle more complicated
-  if ((!FullFP16 && LHS.getValueType().getVectorElementType() == MVT::f16) ||
-      LHS.getValueType().getVectorElementType() == MVT::bf16) {
-    if (LHS.getValueType().getVectorNumElements() == 4) {
-      LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, LHS);
-      RHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, RHS);
-      SDValue NewSetcc = DAG.getSetCC(dl, MVT::v4i16, LHS, RHS, CC);
-      DAG.ReplaceAllUsesWith(Op, NewSetcc);
-      CmpVT = MVT::v4i32;
-    } else
-      return SDValue();
-  }
-
-  assert((!FullFP16 && LHS.getValueType().getVectorElementType() != MVT::f16) ||
-         LHS.getValueType().getVectorElementType() != MVT::bf16 ||
-         LHS.getValueType().getVectorElementType() != MVT::f128);
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two branches to implement.
