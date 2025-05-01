@@ -219,6 +219,7 @@ static void checkValueTerminatedInit(Sema &S, SourceLocation Loc,
       CharacterLiteralKind Kind;
       switch (GotSL->getKind()) {
       case StringLiteralKind::Ordinary:
+      case StringLiteralKind::Binary:
       case StringLiteralKind::Unevaluated:
         Kind = CharacterLiteralKind::Ascii;
         break;
