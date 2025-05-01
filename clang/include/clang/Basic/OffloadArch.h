@@ -101,9 +101,6 @@ enum class OffloadArch {
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
-  // Note: this is an initial list of Intel GPU and GPU offloading
-  // architectures. The list will be expanded later as support for more
-  // architectures is added.
   // Intel CPUs
   GRANITERAPIDS,
   // Intel GPUs
