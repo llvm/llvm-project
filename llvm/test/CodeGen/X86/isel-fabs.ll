@@ -7,10 +7,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -global-isel=1 -mattr=+x87,+sse,+sse2 -o - | FileCheck %s -check-prefixes=GISEL
 
 define float @test_float_abs(float %arg) {
-; X64-LABEL: test_float_abs:
-; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_float_abs:
+; SDAG-X64:       # %bb.0:
+; SDAG-X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SDAG-X64-NEXT:    retq
 ;
 ; X86-LABEL: test_float_abs:
 ; X86:       # %bb.0:
@@ -34,10 +34,10 @@ define float @test_float_abs(float %arg) {
 }
 
 define double @test_double_abs(double %arg) {
-; X64-LABEL: test_double_abs:
-; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_double_abs:
+; SDAG-X64:       # %bb.0:
+; SDAG-X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SDAG-X64-NEXT:    retq
 ;
 ; X86-LABEL: test_double_abs:
 ; X86:       # %bb.0:
