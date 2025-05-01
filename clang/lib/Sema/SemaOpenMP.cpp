@@ -6846,7 +6846,8 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
               It != UniformedArgs.end()) {
             Diag(E->getExprLoc(), diag::err_omp_wrong_dsa)
                 << getOpenMPClauseNameForDiag(OMPC_linear)
-                << getOpenMPClauseNameForDiag(OMPC_uniform) << E->getSourceRange();
+                << getOpenMPClauseNameForDiag(OMPC_uniform)
+                << E->getSourceRange();
             Diag(It->second->getExprLoc(), diag::note_omp_explicit_dsa)
                 << getOpenMPClauseNameForDiag(OMPC_uniform);
             continue;
@@ -6866,11 +6867,12 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
       if (UniformedLinearThis) {
         Diag(E->getExprLoc(), diag::err_omp_wrong_dsa)
             << getOpenMPClauseNameForDiag(OMPC_linear)
-            << getOpenMPClauseNameForDiag(IsUniformedThis ? OMPC_uniform : OMPC_linear)
+            << getOpenMPClauseNameForDiag(IsUniformedThis ? OMPC_uniform
+                                                          : OMPC_linear)
             << E->getSourceRange();
         Diag(UniformedLinearThis->getExprLoc(), diag::note_omp_explicit_dsa)
             << getOpenMPClauseNameForDiag(IsUniformedThis ? OMPC_uniform
-                                                   : OMPC_linear);
+                                                          : OMPC_linear);
         continue;
       }
       UniformedLinearThis = E;
@@ -9138,7 +9140,8 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
             DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
           (DVar.CKind != OMPC_private || DVar.RefExpr)) {
         Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
-            << getOpenMPClauseNameForDiag(DVar.CKind) << getOpenMPDirectiveName(DKind)
+            << getOpenMPClauseNameForDiag(DVar.CKind)
+            << getOpenMPDirectiveName(DKind)
             << getOpenMPClauseNameForDiag(PredeterminedCKind);
         if (DVar.RefExpr == nullptr)
           DVar.CKind = PredeterminedCKind;
@@ -11218,7 +11221,8 @@ SemaOpenMP::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
         if ((DC && DependSourceClause) || (DOC && DoacrossSourceClause)) {
           Diag(C->getBeginLoc(), diag::err_omp_more_one_clause)
               << getOpenMPDirectiveName(OMPD_ordered)
-              << getOpenMPClauseNameForDiag(DC ? OMPC_depend : OMPC_doacross) << 2;
+              << getOpenMPClauseNameForDiag(DC ? OMPC_depend : OMPC_doacross)
+              << 2;
           ErrorFound = true;
         } else {
           if (DC)
@@ -11262,14 +11266,16 @@ SemaOpenMP::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
         DependFound ? DependFound->getBeginLoc() : DoacrossFound->getBeginLoc();
     Diag(Loc, diag::err_omp_depend_clause_thread_simd)
         << getOpenMPClauseNameForDiag(DependFound ? OMPC_depend : OMPC_doacross)
-        << getOpenMPClauseNameForDiag(TC ? TC->getClauseKind() : SC->getClauseKind());
+        << getOpenMPClauseNameForDiag(TC ? TC->getClauseKind()
+                                         : SC->getClauseKind());
     ErrorFound = true;
   } else if ((DependFound || DoacrossFound) &&
              !DSAStack->getParentOrderedRegionParam().first) {
     SourceLocation Loc =
         DependFound ? DependFound->getBeginLoc() : DoacrossFound->getBeginLoc();
     Diag(Loc, diag::err_omp_ordered_directive_without_param)
-        << getOpenMPClauseNameForDiag(DependFound ? OMPC_depend : OMPC_doacross);
+        << getOpenMPClauseNameForDiag(DependFound ? OMPC_depend
+                                                  : OMPC_doacross);
     ErrorFound = true;
   } else if (TC || Clauses.empty()) {
     if (const Expr *Param = DSAStack->getParentOrderedRegionParam().first) {
@@ -17656,8 +17662,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     //  the variable's predetermined data-sharing attributes.
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_private) {
-      Diag(ELoc, diag::err_omp_wrong_dsa) << getOpenMPClauseNameForDiag(DVar.CKind)
-                                          << getOpenMPClauseNameForDiag(OMPC_private);
+      Diag(ELoc, diag::err_omp_wrong_dsa)
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_private);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -18253,8 +18260,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_shared &&
         DVar.RefExpr) {
-      Diag(ELoc, diag::err_omp_wrong_dsa) << getOpenMPClauseNameForDiag(DVar.CKind)
-                                          << getOpenMPClauseNameForDiag(OMPC_shared);
+      Diag(ELoc, diag::err_omp_wrong_dsa)
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_shared);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -19044,7 +19052,8 @@ static bool actOnOMPReductionKindClause(
           !(Type->isScalarType() ||
             (S.getLangOpts().CPlusPlus && Type->isArithmeticType()))) {
         S.Diag(ELoc, diag::err_omp_clause_not_arithmetic_type_arg)
-            << getOpenMPClauseNameForDiag(ClauseKind) << S.getLangOpts().CPlusPlus;
+            << getOpenMPClauseNameForDiag(ClauseKind)
+            << S.getLangOpts().CPlusPlus;
         if (!ASE && !OASE) {
           bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
                                    VarDecl::DeclarationOnly;
@@ -19668,8 +19677,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     //  other data-sharing attribute clause.
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (DVar.RefExpr) {
-      Diag(ELoc, diag::err_omp_wrong_dsa) << getOpenMPClauseNameForDiag(DVar.CKind)
-                                          << getOpenMPClauseNameForDiag(OMPC_linear);
+      Diag(ELoc, diag::err_omp_wrong_dsa)
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_linear);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
