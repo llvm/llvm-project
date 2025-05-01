@@ -388,9 +388,26 @@ public:
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
         value = emitUnaryOp(e, kind, input, /*nsw=*/false);
       }
-    } else if (isa<PointerType>(type)) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec pointer");
-      return {};
+    } else if (const PointerType *ptr = type->getAs<PointerType>()) {
+      QualType type = ptr->getPointeeType();
+      if (cgf.getContext().getAsVariableArrayType(type)) {
+        // VLA types don't have constant size.
+        cgf.cgm.errorNYI(e->getSourceRange(), "Pointer arithmetic on VLA");
+        return {};
+      } else if (type->isFunctionType()) {
+        // Arithmetic on function pointers (!) is just +-1.
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "Pointer arithmetic on function pointer");
+        return {};
+      } else {
+        // For everything else, we can just do a simple increment.
+        mlir::Location loc = cgf.getLoc(e->getSourceRange());
+        CIRGenBuilderTy &builder = cgf.getBuilder();
+        int amount = (isInc ? 1 : -1);
+        mlir::Value amt = builder.getSInt32(amount, loc);
+        assert(!cir::MissingFeatures::sanitizers());
+        value = builder.createPtrStride(loc, value, amt);
+      }
     } else if (type->isVectorType()) {
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec vector");
       return {};
@@ -1152,8 +1169,78 @@ getUnwidenedIntegerType(const ASTContext &astContext, const Expr *e) {
 static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
                                          const BinOpInfo &op,
                                          bool isSubtraction) {
-  cgf.cgm.errorNYI(op.loc, "pointer arithmetic");
-  return {};
+  // Must have binary (not unary) expr here.  Unary pointer
+  // increment/decrement doesn't use this path.
+  const BinaryOperator *expr = cast<BinaryOperator>(op.e);
+
+  mlir::Value pointer = op.lhs;
+  Expr *pointerOperand = expr->getLHS();
+  mlir::Value index = op.rhs;
+  Expr *indexOperand = expr->getRHS();
+
+  // In the case of subtraction, the FE has ensured that the LHS is always the
+  // pointer. However, addition can have the pointer on either side. We will
+  // always have a pointer operand and an integer operand, so if the LHS wasn't
+  // a pointer, we need to swap our values.
+  if (!isSubtraction && !mlir::isa<cir::PointerType>(pointer.getType())) {
+    std::swap(pointer, index);
+    std::swap(pointerOperand, indexOperand);
+  }
+  assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+         "Need a pointer operand");
+  assert(mlir::isa<cir::IntType>(index.getType()) && "Need an integer operand");
+
+  // Some versions of glibc and gcc use idioms (particularly in their malloc
+  // routines) that add a pointer-sized integer (known to be a pointer value)
+  // to a null pointer in order to cast the value back to an integer or as
+  // part of a pointer alignment algorithm.  This is undefined behavior, but
+  // we'd like to be able to compile programs that use it.
+  //
+  // Normally, we'd generate a GEP with a null-pointer base here in response
+  // to that code, but it's also UB to dereference a pointer created that
+  // way.  Instead (as an acknowledged hack to tolerate the idiom) we will
+  // generate a direct cast of the integer value to a pointer.
+  //
+  // The idiom (p = nullptr + N) is not met if any of the following are true:
+  //
+  //   The operation is subtraction.
+  //   The index is not pointer-sized.
+  //   The pointer type is not byte-sized.
+  //
+  if (BinaryOperator::isNullPointerArithmeticExtension(
+          cgf.getContext(), op.opcode, expr->getLHS(), expr->getRHS()))
+    return cgf.getBuilder().createIntToPtr(index, pointer.getType());
+
+  // Differently from LLVM codegen, ABI bits for index sizes is handled during
+  // LLVM lowering.
+
+  // If this is subtraction, negate the index.
+  if (isSubtraction)
+    index = cgf.getBuilder().createNeg(index);
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  const PointerType *pointerType =
+      pointerOperand->getType()->getAs<PointerType>();
+  if (!pointerType) {
+    cgf.cgm.errorNYI("Objective-C:pointer arithmetic with non-pointer type");
+    return nullptr;
+  }
+
+  QualType elementType = pointerType->getPointeeType();
+  if (cgf.getContext().getAsVariableArrayType(elementType)) {
+    cgf.cgm.errorNYI("variable array type");
+    return nullptr;
+  }
+
+  if (elementType->isVoidType() || elementType->isFunctionType()) {
+    cgf.cgm.errorNYI("void* or function pointer arithmetic");
+    return nullptr;
+  }
+
+  assert(!cir::MissingFeatures::sanitizers());
+  return cgf.getBuilder().create<cir::PtrStrideOp>(
+      cgf.getLoc(op.e->getExprLoc()), pointer.getType(), pointer, index);
 }
 
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
