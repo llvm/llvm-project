@@ -1469,7 +1469,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  for (const auto &[Trace, Info]: Traces) {
+  for (const auto &[Trace, Info] : Traces) {
     if (Trace.From != Trace.To)
       doBranch(Trace.From, Trace.To, Info.TakenCount, Info.MispredCount);
     if (Trace.FallthroughEnd)
