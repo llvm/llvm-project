@@ -3681,12 +3681,13 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   helper.yieldOutputs(yields);
 }
 
-/// Returns true if the given broadcast map \p bcastMap is valid for this op.
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
 bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
   assert(bcastMap.getNumResults() == 1 && "Expected single result dim expr.");
-  AffineExpr exp = bcastMap.getResult(0);
+  AffineExpr expr = bcastMap.getResult(0);
   // Invalid map if the common dimension of matmul not found.
-  return exp.isFunctionOfDim(bcastMap.getNumDims() - 1);
+  return expr.isFunctionOfDim(bcastMap.getNumDims() - 1);
 }
 
 FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
@@ -3984,24 +3985,26 @@ bool BatchMatmulOp::hasUserDefinedMaps() {
   return defaultMaps != explicitMaps;
 }
 
-/// Returns true if the given broadcast map bcastMap is valid for this op.
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
 bool BatchMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS) {
   assert(bcastMap.getNumResults() < 3 &&
          "Expected less than 3 result dim expr.");
   bool isValid = false;
   enum Indices { batchPos, mPos, nPos, kPos };
   if (bcastMap.getNumResults() == 1) {
-    AffineExpr exp = bcastMap.getResult(0);
-    isValid = exp.isFunctionOfDim(kPos);
+    AffineExpr expr = bcastMap.getResult(0);
+    isValid = expr.isFunctionOfDim(kPos);
   } else if (bcastMap.getNumResults() == 2) {
-    AffineExpr exp0 = bcastMap.getResult(0);
-    AffineExpr exp1 = bcastMap.getResult(1);
+    AffineExpr expr0 = bcastMap.getResult(0);
+    AffineExpr expr1 = bcastMap.getResult(1);
     isValid =
-        isLHS
-            ? ((exp0.isFunctionOfDim(batchPos) || exp0.isFunctionOfDim(mPos)) &&
-               exp1.isFunctionOfDim(kPos))
-            : ((exp0.isFunctionOfDim(batchPos) && exp1.isFunctionOfDim(kPos)) ||
-               (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos)));
+        isLHS ? ((expr0.isFunctionOfDim(batchPos) ||
+                  expr0.isFunctionOfDim(mPos)) &&
+                 expr1.isFunctionOfDim(kPos))
+              : ((expr0.isFunctionOfDim(batchPos) &&
+                  expr1.isFunctionOfDim(kPos)) ||
+                 (expr0.isFunctionOfDim(kPos) && expr1.isFunctionOfDim(nPos)));
   }
   return isValid;
 }
@@ -5449,7 +5452,8 @@ bool BatchReduceMatmulOp::hasUserDefinedMaps() {
   return defaultMaps != explicitMaps;
 }
 
-/// Returns true if the given broadcast map bcastMap is valid for this op.
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
 bool BatchReduceMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap,
                                                     bool isLHS) {
   assert(bcastMap.getNumResults() < 3 &&
@@ -5457,17 +5461,18 @@ bool BatchReduceMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap,
   bool isValid = false;
   enum Indices { batchPos, mPos, nPos, kPos };
   if (bcastMap.getNumResults() == 1) {
-    AffineExpr exp = bcastMap.getResult(0);
-    isValid = exp.isFunctionOfDim(kPos);
+    AffineExpr expr = bcastMap.getResult(0);
+    isValid = expr.isFunctionOfDim(kPos);
   } else if (bcastMap.getNumResults() == 2) {
-    AffineExpr exp0 = bcastMap.getResult(0);
-    AffineExpr exp1 = bcastMap.getResult(1);
+    AffineExpr expr0 = bcastMap.getResult(0);
+    AffineExpr expr1 = bcastMap.getResult(1);
     isValid =
-        isLHS
-            ? ((exp0.isFunctionOfDim(batchPos) || exp0.isFunctionOfDim(mPos)) &&
-               exp1.isFunctionOfDim(kPos))
-            : ((exp0.isFunctionOfDim(batchPos) && exp1.isFunctionOfDim(kPos)) ||
-               (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos)));
+        isLHS ? ((expr0.isFunctionOfDim(batchPos) ||
+                  expr0.isFunctionOfDim(mPos)) &&
+                 expr1.isFunctionOfDim(kPos))
+              : ((expr0.isFunctionOfDim(batchPos) &&
+                  expr1.isFunctionOfDim(kPos)) ||
+                 (expr0.isFunctionOfDim(kPos) && expr1.isFunctionOfDim(nPos)));
   }
   return isValid;
 }

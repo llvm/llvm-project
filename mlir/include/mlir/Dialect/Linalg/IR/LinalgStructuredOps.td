@@ -1068,13 +1068,13 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
                           AttrSizedOperandSegments,
                           LinalgContractionOpInterface]> {
     
-  let summary = [{Performs a batch-reduce matrix multiplication of two 3D inputs.
+  let summary = [{Performs a batch-reduce matrix multiplication on two inputs.
     The partial multiplication results are reduced into a 2D output.}];
   let description = [{
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
+    Numeric casting is performed on the operands to the inner multiply,
+    promoting them to the same data type as the accumulator/output.
 
-    Broadcast and Transpose semantics can be appiled by specifying the explicit attribute
+    Broadcast and Transpose semantics can be applied by specifying the explicit attribute
     'indexing_maps' as shown below. This is a list attribute, so must include maps for all
     arguments if specified.
 
