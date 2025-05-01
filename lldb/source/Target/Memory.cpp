@@ -435,7 +435,7 @@ bool AllocatedMemoryCache::DeallocateMemory(lldb::addr_t addr) {
 }
 
 bool AllocatedMemoryCache::IsInCache(lldb::addr_t addr) const {
-  std::lock_guard guard(m_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   return llvm::any_of(m_memory_map, [addr](const auto &block) {
     return block.second->Contains(addr);
