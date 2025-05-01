@@ -5054,9 +5054,15 @@ void CGOpenMPRuntime::emitPrivateReduction(
             CGF.CreateMemTemp(PrivateType, "reduction.temp.result");
         ReturnValueSlot RVS(TempResult, /*IsVolatile=*/false);
         RValue ResultRV = CGF.EmitCallExpr(OpCall, RVS, nullptr);
-        CGF.Builder.CreateMemCpy(SharedResult, ResultRV.getAggregateAddress(),
-                                 llvm::ConstantInt::get(CGF.IntPtrTy, 4),
-                                 Alignment.getQuantity());
+        if (ResultRV.isAggregate()) {
+          CGF.Builder.CreateMemCpy(SharedResult, ResultRV.getAggregateAddress(),
+                                   llvm::ConstantInt::get(CGF.IntPtrTy, 4),
+                                   Alignment.getQuantity());
+        } else {
+          CGF.Builder.CreateStore(ResultRV.getScalarVal(),
+                                  SharedLV.getAddress(),
+                                  /*IsVolatile=*/false);
+        }
       };
       std::string CriticalName = getName({"reduction_critical"});
       emitCriticalRegion(CGF, CriticalName, ReductionGen, Loc);
