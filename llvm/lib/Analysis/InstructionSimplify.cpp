@@ -6541,6 +6541,10 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op0, m_ImmConstant()))
       std::swap(Op0, Op1);
 
+    // Propagate poison.
+    if (isa<PoisonValue>(Op1))
+      return Op1;
+
     // Assume undef is the limit value.
     if (Q.isUndefValue(Op1))
       return ConstantInt::get(
