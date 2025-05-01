@@ -1180,42 +1180,13 @@ public:
     return getAsRecipe()->getOperand(Idx);
   }
 
-  /// Returns an interator range over the incoming values
-  VPUser::const_operand_range incoming_values() const {
-    return getAsRecipe()->operands();
-  }
-
   /// Returns the incoming block with index \p Idx.
-  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
-
-  using const_incoming_block_iterator =
-      mapped_iterator<detail::index_iterator,
-                      std::function<const VPBasicBlock *(size_t)>>;
-  using const_incoming_blocks_range =
-      iterator_range<const_incoming_block_iterator>;
-
-  const_incoming_block_iterator incoming_block_begin() const {
-    return const_incoming_block_iterator(
-        detail::index_iterator(0),
-        [this](size_t Idx) { return getIncomingBlock(Idx); });
-  }
-  const_incoming_block_iterator incoming_block_end() const {
-    return const_incoming_block_iterator(
-        detail::index_iterator(getAsRecipe()->getNumOperands()),
-        [this](size_t Idx) { return getIncomingBlock(Idx); });
+  const VPBasicBlock *getIncomingBlock(unsigned Idx) const {
+    return getAsRecipe()->getParent()->getCFGPredecessor(Idx);
   }
 
-  /// Returns an iterator range over the incoming blocks.
-  const_incoming_blocks_range incoming_blocks() const {
-    return make_range(incoming_block_begin(), incoming_block_end());
-  }
-
-  /// Returns an iterator range over pairs of incoming values and corresponding
-  /// incoming blocks.
-  detail::zippy<llvm::detail::zip_shortest, VPUser::const_operand_range,
-                const_incoming_blocks_range>
-  incoming_values_and_blocks() const {
-    return zip(incoming_values(), incoming_blocks());
+  unsigned getNumIncomingValues() const {
+    return getAsRecipe()->getNumOperands();
   }
 };
 
@@ -3371,6 +3342,12 @@ public:
   /// Clone the current block and it's recipes, without updating the operands of
   /// the cloned recipes.
   VPBasicBlock *clone() override;
+
+  /// Returns the predecessor block at index \p Idx with the predecessors as per
+  /// the corresponding plain CFG. If the block is an entry block to a region,
+  /// the first predecessor is the single predecessor of a region, and the
+  /// second predecessor is the exiting block of the region.
+  const VPBasicBlock *getCFGPredecessor(unsigned Idx) const;
 
 protected:
   /// Execute the recipes in the IR basic block \p BB.
