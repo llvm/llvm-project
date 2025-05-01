@@ -20,6 +20,7 @@ class Triple;
 class TargetLibraryInfoImpl;
 } // namespace llvm
 
+
 namespace llvm::driver {
 
 /// Vector library option used with -fveclib=
@@ -42,6 +43,7 @@ enum ProfileInstrKind {
   ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
   ProfileCSIRInstr,  // IR level PGO context sensitive instrumentation in LLVM.
 };
+
 TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                   VectorLibrary Veclib);
 
