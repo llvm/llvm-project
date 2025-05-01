@@ -389,16 +389,19 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromTypeMetadataNode(
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   // Make up a decl context for non-nested types.
-  decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
   decl_context.push_back({CompilerContextKind::AnyType, ConstString(name_ref)});
-  return LookupClangType(name_ref, decl_context);
+  return LookupClangType(name_ref, decl_context, /*ignore_modules=*/true);
 }
 
 /// Look up one Clang type in a module.
 static TypeSP LookupClangType(Module &m,
-                              llvm::ArrayRef<CompilerContext> decl_context) {
-  TypeQuery query(decl_context, TypeQueryOptions::e_find_one |
-                                    TypeQueryOptions::e_module_search);
+                              llvm::ArrayRef<CompilerContext> decl_context,
+                              bool ignore_modules) {
+  auto opts = TypeQueryOptions::e_find_one | TypeQueryOptions::e_module_search;
+  if (ignore_modules) {
+    opts |= TypeQueryOptions::e_ignore_modules;
+  }
+  TypeQuery query(decl_context, opts);
   query.SetLanguages(TypeSystemClang::GetSupportedLanguagesForTypes());
   TypeResults results;
   m.FindTypes(query, results);
@@ -407,16 +410,17 @@ static TypeSP LookupClangType(Module &m,
 
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(
     StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
-    ExecutionContext *exe_ctx) {
+    bool ignore_modules, ExecutionContext *exe_ctx) {
   Module *m = GetModule();
   if (!m)
     return {};
-  return ::LookupClangType(const_cast<Module &>(*m), decl_context);
+  return ::LookupClangType(const_cast<Module &>(*m), decl_context,
+                           ignore_modules);
 }
 
 TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
     StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
-    ExecutionContext *exe_ctx) {
+    bool ignore_modules, ExecutionContext *exe_ctx) {
   // Check the cache first. Negative results are also cached.
   TypeSP result;
   ConstString name(name_ref);
@@ -440,7 +444,8 @@ TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
 
     // Don't recursively call into LookupClangTypes() to avoid filling
     // hundreds of image caches with negative results.
-    result = ::LookupClangType(const_cast<Module &>(*m), decl_context);
+    result = ::LookupClangType(const_cast<Module &>(*m), decl_context,
+                               ignore_modules);
     // Cache it in the expression context.
     if (result)
       m_clang_type_cache.Insert(name.AsCString(), result);
@@ -458,8 +463,9 @@ TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
 
 /// Find a Clang type by name in module \p M.
 CompilerType TypeSystemSwiftTypeRef::LookupClangForwardType(
-    StringRef name, llvm::ArrayRef<CompilerContext> decl_context) {
-  if (TypeSP type = LookupClangType(name, decl_context))
+    StringRef name, llvm::ArrayRef<CompilerContext> decl_context,
+    bool ignore_modules) {
+  if (TypeSP type = LookupClangType(name, decl_context, ignore_modules))
     return type->GetForwardCompilerType();
   return {};
 }
@@ -939,10 +945,11 @@ GetBuiltinAnyObjectNode(swift::Demangle::Demangler &dem) {
 /// Builds the decl context to look up clang types with.
 static bool
 IsClangImportedType(NodePointer node,
-                 llvm::SmallVectorImpl<CompilerContext> &decl_context) {
+                    llvm::SmallVectorImpl<CompilerContext> &decl_context,
+                    bool &ignore_modules) {
   if (node->getKind() == Node::Kind::Module && node->hasText() &&
       node->getText() == swift::MANGLING_MODULE_OBJC) {
-    decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
+    ignore_modules = true;
     return true;
   }
 
@@ -954,7 +961,8 @@ IsClangImportedType(NodePointer node,
   case Node::Kind::Class:
   case Node::Kind::Enum:
   case Node::Kind::TypeAlias:
-    if (!IsClangImportedType(node->getFirstChild(), decl_context))
+    if (!IsClangImportedType(node->getFirstChild(), decl_context,
+                             ignore_modules))
       return false;
 
     // When C++ interop is enabled, Swift enums represent Swift namespaces.
@@ -996,12 +1004,13 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   auto resolve_clang_type = [&]() -> CompilerType {
     // This is an imported Objective-C type; look it up in the debug info.
     llvm::SmallVector<CompilerContext, 2> decl_context;
-    if (!IsClangImportedType(node, decl_context))
+    bool ignore_modules = false;
+    if (!IsClangImportedType(node, decl_context, ignore_modules))
       return {};
 
     // Resolve the typedef within the Clang debug info.
-    auto clang_type =
-        LookupClangForwardType(mangled.GetStringRef(), decl_context);
+    auto clang_type = LookupClangForwardType(mangled.GetStringRef(),
+                                             decl_context, ignore_modules);
     if (!clang_type)
       return {};
 
@@ -1467,12 +1476,14 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetSwiftified(
   }
 
   llvm::SmallVector<CompilerContext, 2> decl_context;
-  if (!IsClangImportedType(node, decl_context))
+  bool ignore_modules = false;
+  if (!IsClangImportedType(node, decl_context, ignore_modules))
     return node;
 
   // This is an imported Objective-C type; look it up in the
   // debug info.
-  TypeSP clang_type = LookupClangType(mangling.result(), decl_context);
+  TypeSP clang_type =
+      LookupClangType(mangling.result(), decl_context, ignore_modules);
   if (!clang_type)
     return node;
 
@@ -1831,7 +1842,8 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
 
     // Clang-imported types.
     llvm::SmallVector<CompilerContext, 2> decl_context;
-    if (!IsClangImportedType(node, decl_context))
+    bool ignore_modules = false;
+    if (!IsClangImportedType(node, decl_context, ignore_modules))
       break;
 
     auto mangling = GetMangledName(dem, node, flavor);
@@ -1843,7 +1855,8 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
       return {};
     }
     // Resolve the typedef within the Clang debug info.
-    auto clang_type = LookupClangForwardType(mangling.result(), decl_context);
+    auto clang_type =
+        LookupClangForwardType(mangling.result(), decl_context, ignore_modules);
     collect_clang_type(clang_type.GetCanonicalType());
     return swift_flags;
     }
@@ -4393,10 +4406,12 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
 
     // This is an imported Objective-C type; look it up in the debug info.
     llvm::SmallVector<CompilerContext, 2> decl_context;
-    if (!IsClangImportedType(node, decl_context))
+    bool ignore_modules = false;
+    if (!IsClangImportedType(node, decl_context, ignore_modules))
       return false;
     if (original_type)
-      if (TypeSP clang_type = LookupClangType(AsMangledName(type), decl_context))
+      if (TypeSP clang_type = LookupClangType(AsMangledName(type), decl_context,
+                                              ignore_modules))
         *original_type = clang_type->GetForwardCompilerType();
     return true;
   };

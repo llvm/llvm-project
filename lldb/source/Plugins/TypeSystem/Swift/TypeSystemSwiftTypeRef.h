@@ -428,7 +428,7 @@ public:
   virtual lldb::TypeSP
   LookupClangType(llvm::StringRef name_ref,
                   llvm::ArrayRef<CompilerContext> decl_context,
-                  ExecutionContext *exe_ctx = nullptr);
+                  bool ignore_modules, ExecutionContext *exe_ctx = nullptr);
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.
@@ -527,8 +527,10 @@ protected:
   clang::api_notes::APINotesManager *
   GetAPINotesManager(ClangExternalASTSourceCallbacks *source, unsigned id);
 
-  CompilerType LookupClangForwardType(llvm::StringRef name, 
-                  llvm::ArrayRef<CompilerContext> decl_context);
+  CompilerType
+  LookupClangForwardType(llvm::StringRef name,
+                         llvm::ArrayRef<CompilerContext> decl_context,
+                         bool ignore_modules);
 
   /// Resolve a type alias node and return a demangle tree for the
   /// resolved type. If the type alias resolves to a Clang type, return
@@ -650,11 +652,10 @@ public:
   unsigned GetGeneration() const { return m_generation; }
   /// Performs a target-wide search.
   /// \param exe_ctx is a hint for where to look first.
-  lldb::TypeSP
-  LookupClangType(llvm::StringRef name_ref,
-                  llvm::ArrayRef<CompilerContext> decl_context,
-                  ExecutionContext *exe_ctx) override;
-
+  lldb::TypeSP LookupClangType(llvm::StringRef name_ref,
+                               llvm::ArrayRef<CompilerContext> decl_context,
+                               bool ignore_modules,
+                               ExecutionContext *exe_ctx) override;
 
   friend class SwiftASTContextForExpressions;
 protected:
