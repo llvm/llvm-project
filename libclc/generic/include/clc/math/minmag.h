@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/math/binary_decl_tt.inc>
+#define __CLC_BODY <clc/shared/binary_decl.inc>
 #define __CLC_FUNCTION minmag
 
 #include <clc/math/gentype.inc>

@@ -84,7 +84,7 @@ write_cmake_config("config") {
   values = [
     "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
     "ENABLE_BACKTRACES=1",
-    "ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
+    "LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
     "HAVE_BUILTIN_THREAD_POINTER=",

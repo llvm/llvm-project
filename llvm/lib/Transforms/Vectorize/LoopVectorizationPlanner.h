@@ -177,8 +177,11 @@ public:
                               Type *ResultTy,
                               std::optional<FastMathFlags> FMFs = {},
                               DebugLoc DL = {}, const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Operands, ResultTy, FMFs.value_or(FastMathFlags()), DL, Name));
+    if (FMFs)
+      return tryInsertInstruction(new VPInstructionWithType(
+          Opcode, Operands, ResultTy, *FMFs, DL, Name));
+    return tryInsertInstruction(
+        new VPInstructionWithType(Opcode, Operands, ResultTy, DL, Name));
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
