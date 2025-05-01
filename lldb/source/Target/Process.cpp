@@ -6689,6 +6689,23 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
   }
 }
 
+// TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and then
+// add an intersect method on it, or MemoryRegionInfo.
+static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs, const Range<lldb::addr_t, lldb::addr_t> &rhs) {
+  const lldb::addr_t lhs_base = lhs.GetRange().GetRangeBase();
+  const lldb::addr_t rhs_base = rhs.GetRangeBase();
+  const lldb::addr_t lhs_end = lhs.GetRange().GetRangeEnd();
+  const lldb::addr_t rhs_end = rhs.GetRangeEnd();
+
+  MemoryRegionInfo region_info;
+  region_info.SetLLDBPermissions(lhs.GetLLDBPermissions());
+  auto &range = region_info.GetRange();
+  range.SetRangeBase(std::max(lhs_base, rhs_base));
+  range.SetRangeEnd(std::min(lhs_end, rhs_end));
+
+  return region_info;
+}
+
 static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
                                                const MemoryRegionInfos &regions,
                                                const SaveCoreOptions &options,
@@ -6698,9 +6715,16 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
     return;
 
   for (const auto &range : regions) {
-    auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry)
-      AddRegion(range, true, ranges);
+    auto *entry = option_ranges.FindEntryThatIntersects(range.GetRange());
+    if (entry) {
+      if (entry->GetRangeBase() != range.GetRange().GetRangeBase() 
+      || entry->GetRangeEnd() != range.GetRange().GetRangeEnd()) {
+        AddRegion(Intersect(range, *entry), true, ranges);
+      } else {
+        // If they match, add the range directly.
+        AddRegion(range, true, ranges);
+      }
+    }
   }
 }
 
