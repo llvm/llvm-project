@@ -5058,7 +5058,7 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
       S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
-          << S.CUDA().CurrentTarget())
+          << llvm::to_underlying(S.CUDA().CurrentTarget()))
     return;
   D->addAttr(::new (S.Context) CUDASharedAttr(S.Context, AL));
 }

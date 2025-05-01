@@ -1124,7 +1124,7 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       DiagFunc(Active->PointOfInstantiation,
                PDiag(diag::note_in_declaration_of_implicit_special_member)
                    << cast<CXXRecordDecl>(Active->Entity)
-                   << Active->SpecialMember);
+                   << llvm::to_underlying(Active->SpecialMember));
       break;
 
     case CodeSynthesisContext::DeclaringImplicitEqualityComparison:
@@ -1143,7 +1143,8 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         auto *MD = cast<CXXMethodDecl>(FD);
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_member_synthesized_at)
-                     << MD->isExplicitlyDefaulted() << DFK.asSpecialMember()
+                     << MD->isExplicitlyDefaulted()
+                     << llvm::to_underlying(DFK.asSpecialMember())
                      << Context.getTagDeclType(MD->getParent()));
       } else if (DFK.isComparison()) {
         QualType RecordType = FD->getParamDecl(0)

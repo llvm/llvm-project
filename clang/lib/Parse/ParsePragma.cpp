@@ -2341,8 +2341,7 @@ void PragmaClangSectionHandler::HandlePragma(Preprocessor &PP,
     SourceLocation PragmaLocation = Tok.getLocation();
     PP.Lex(Tok); // eat ['bss'|'data'|'rodata'|'text']
     if (Tok.isNot(tok::equal)) {
-      PP.Diag(Tok.getLocation(), diag::err_pragma_clang_section_expected_equal)
-          << SecKind;
+      PP.Diag(Tok.getLocation(), diag::err_pragma_clang_section_expected_equal) << llvm::to_underlying(SecKind);
       return;
     }
 
