@@ -251,6 +251,10 @@ Non-comprehensive list of changes in this release
 - Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
 - No longer crashing on invalid Objective-C categories and extensions when
   dumping the AST as JSON. (#GH137320)
+- Clang itself now uses split stacks instead of threads for allocating more
+  stack space when running on Apple AArch64 based platforms. This means that
+  stack traces of Clang from debuggers, crashes, and profilers may look
+  different than before.
 
 New Compiler Flags
 ------------------
