@@ -137,6 +137,7 @@ void g(bool = (f<T>() || ...));
 namespace comparison_warning {
   struct S {
     bool operator<(const S&) const;
+    bool operator<(int) const;
     bool operator==(const S&) const;
   };
 
@@ -145,6 +146,8 @@ namespace comparison_warning {
     (void)(ts == ...);
     // expected-error@-1 2{{comparison in fold expression would evaluate to '(X == Y) == Z'}}
     (void)(ts < ...);
+    // expected-error@-1 2{{comparison in fold expression would evaluate to '(X < Y) < Z'}}
+    (void)(... < ts);
     // expected-error@-1 2{{comparison in fold expression would evaluate to '(X < Y) < Z'}}
   }
 
