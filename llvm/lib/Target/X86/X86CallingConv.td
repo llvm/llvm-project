@@ -283,10 +283,10 @@ def RetCC_X86Common : CallingConv<[
             CCAssignToReg<[ZMM0,ZMM1,ZMM2,ZMM3]>>,
 
   // Long double types are always returned in FP0 (even with SSE),
-  // except on Win64.
-  CCIfNotSubtarget<"isTargetWinOrUEFI64()",
-                    CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>
-]>;
+  // except on Win64 and UEFI64.
+  CCIfNotSubtarget<"isTargetWin64()",
+                    CCIfNotSubtarget<"isTargetUEFI64()",
+                    CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>>]>;
 
 // X86-32 C return-value convention.
 def RetCC_X86_32_C : CallingConv<[

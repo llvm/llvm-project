@@ -337,10 +337,6 @@ public:
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
-  bool isTargetWinOrUEFI64() const {
-    return isTargetWin64() || isTargetUEFI64();
-  }
-
   bool isTargetWin32() const { return !Is64Bit && isOSWindows(); }
 
   bool isPICStyleGOT() const { return PICStyle == PICStyles::Style::GOT; }
