@@ -567,8 +567,7 @@ define <8 x i1> @test_signed_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbl %ebp, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmoval %ebx, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpl %ebx, %eax
@@ -582,8 +581,7 @@ define <8 x i1> @test_signed_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbl %ebp, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmoval %ebx, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpl %ebx, %eax
@@ -595,8 +593,7 @@ define <8 x i1> @test_signed_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbl %ebp, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmoval %ebx, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpl %ebx, %eax
@@ -612,8 +609,7 @@ define <8 x i1> @test_signed_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbl %ebp, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmoval %ebx, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpl %ebx, %eax
@@ -625,8 +621,7 @@ define <8 x i1> @test_signed_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbl %ebp, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmoval %ebx, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpl %ebx, %eax
@@ -639,8 +634,7 @@ define <8 x i1> @test_signed_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbl %ebp, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmoval %ebx, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpl %ebx, %eax
@@ -652,8 +646,7 @@ define <8 x i1> @test_signed_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbl %ebp, %eax
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmoval %ebx, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpl %ebx, %eax
