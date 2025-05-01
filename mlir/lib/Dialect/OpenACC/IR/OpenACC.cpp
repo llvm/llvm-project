@@ -1686,25 +1686,19 @@ static void printDeviceTypeOperandsWithKeywordOnly(
 static ParseResult
 parseCombinedConstructsLoop(mlir::OpAsmParser &parser,
                             mlir::acc::CombinedConstructsTypeAttr &attr) {
-  if (succeeded(parser.parseOptionalKeyword("combined"))) {
-    if (parser.parseLParen())
-      return failure();
-    if (succeeded(parser.parseOptionalKeyword("kernels"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
-    } else {
-      parser.emitError(parser.getCurrentLocation(),
-                       "expected compute construct name");
-      return failure();
-    }
-    if (parser.parseRParen())
-      return failure();
+  if (succeeded(parser.parseOptionalKeyword("kernels"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
+  } else {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected compute construct name");
+    return failure();
   }
   return success();
 }
@@ -1715,13 +1709,13 @@ printCombinedConstructsLoop(mlir::OpAsmPrinter &p, mlir::Operation *op,
   if (attr) {
     switch (attr.getValue()) {
     case mlir::acc::CombinedConstructsType::KernelsLoop:
-      p << "combined(kernels)";
+      p << "kernels";
       break;
     case mlir::acc::CombinedConstructsType::ParallelLoop:
-      p << "combined(parallel)";
+      p << "parallel";
       break;
     case mlir::acc::CombinedConstructsType::SerialLoop:
-      p << "combined(serial)";
+      p << "serial";
       break;
     };
   }
@@ -2304,6 +2298,14 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
 }
 
 LogicalResult acc::LoopOp::verify() {
+  if (getUpperbound().size() != getStep().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of steps";
+
+  if (getUpperbound().size() != getLowerbound().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of lowerbounds";
+
   if (!getUpperbound().empty() && getInclusiveUpperbound() &&
       (getUpperbound().size() != getInclusiveUpperbound()->size()))
     return emitError() << "inclusiveUpperbound size is expected to be the same"
@@ -2420,6 +2422,49 @@ LogicalResult acc::LoopOp::verify() {
   // Check non-empty body().
   if (getRegion().empty())
     return emitError("expected non-empty body.");
+
+  // When it is container-like - it is expected to hold a loop-like operation.
+  if (isContainerLike()) {
+    // Obtain the maximum collapse count - we use this to check that there
+    // are enough loops contained.
+    uint64_t collapseCount = getCollapseValue().value_or(1);
+    if (getCollapseAttr()) {
+      for (auto collapseEntry : getCollapseAttr()) {
+        auto intAttr = mlir::dyn_cast<IntegerAttr>(collapseEntry);
+        if (intAttr.getValue().getZExtValue() > collapseCount)
+          collapseCount = intAttr.getValue().getZExtValue();
+      }
+    }
+
+    // We want to check that we find enough loop-like operations inside.
+    // PreOrder walk allows us to walk in a breadth-first manner at each nesting
+    // level.
+    mlir::Operation *expectedParent = this->getOperation();
+    bool foundSibling = false;
+    getRegion().walk<WalkOrder::PreOrder>([&](mlir::Operation *op) {
+      if (mlir::isa<mlir::LoopLikeOpInterface>(op)) {
+        // This effectively checks that we are not looking at a sibling loop.
+        if (op->getParentOfType<mlir::LoopLikeOpInterface>() !=
+            expectedParent) {
+          foundSibling = true;
+          return mlir::WalkResult::interrupt();
+        }
+
+        collapseCount--;
+        expectedParent = op;
+      }
+      // We found enough contained loops.
+      if (collapseCount == 0)
+        return mlir::WalkResult::interrupt();
+      return mlir::WalkResult::advance();
+    });
+
+    if (foundSibling)
+      return emitError("found sibling loops inside container-like acc.loop");
+    if (collapseCount != 0)
+      return emitError("failed to find enough loop-like operations inside "
+                       "container-like acc.loop");
+  }
 
   return success();
 }
@@ -2905,37 +2950,13 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
     mlir::Value var{getVar(operand.getDefiningOp())};
     assert(var && "declare operands can only be data entry operations which "
                   "must have var");
+    (void)var;
     std::optional<mlir::acc::DataClause> dataClauseOptional{
         getDataClause(operand.getDefiningOp())};
     assert(dataClauseOptional.has_value() &&
            "declare operands can only be data entry operations which must have "
            "dataClause");
-
-    // If varPtr has no defining op - there is nothing to check further.
-    if (!var.getDefiningOp())
-      continue;
-
-    // Check that the varPtr has a declare attribute.
-    auto declareAttribute{
-        var.getDefiningOp()->getAttr(mlir::acc::getDeclareAttrName())};
-    if (!declareAttribute)
-      return op.emitError(
-          "expect declare attribute on variable in declare operation");
-
-    auto declAttr = mlir::cast<mlir::acc::DeclareAttr>(declareAttribute);
-    if (declAttr.getDataClause().getValue() != dataClauseOptional.value())
-      return op.emitError(
-          "expect matching declare attribute on variable in declare operation");
-
-    // If the variable is marked with implicit attribute, the matching declare
-    // data action must also be marked implicit. The reverse is not checked
-    // since implicit data action may be inserted to do actions like updating
-    // device copy, in which case the variable is not necessarily implicitly
-    // declare'd.
-    if (declAttr.getImplicit() &&
-        declAttr.getImplicit() != acc::getImplicitFlag(operand.getDefiningOp()))
-      return op.emitError(
-          "implicitness must match between declare op and flag on variable");
+    (void)dataClauseOptional;
   }
 
   return success();

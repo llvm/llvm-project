@@ -170,8 +170,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
   bool isReadRegisterSourceOfDivergence(const IntrinsicInst *ReadReg) const;
   bool isSourceOfDivergence(const Value *V) const override;
@@ -182,20 +182,8 @@ public:
     if (FromAS == ToAS)
       return false;
 
-    if (FromAS == AMDGPUAS::FLAT_ADDRESS)
-      return AMDGPU::isExtendedGlobalAddrSpace(ToAS) ||
-             ToAS == AMDGPUAS::LOCAL_ADDRESS ||
-             ToAS == AMDGPUAS::PRIVATE_ADDRESS;
-
-    if (AMDGPU::isExtendedGlobalAddrSpace(FromAS))
-      return AMDGPU::isFlatGlobalAddrSpace(ToAS) ||
-             ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
-
-    if (FromAS == AMDGPUAS::LOCAL_ADDRESS ||
-        FromAS == AMDGPUAS::PRIVATE_ADDRESS)
-      return ToAS == AMDGPUAS::FLAT_ADDRESS;
-
-    return false;
+    // Casts between any aliasing address spaces are valid.
+    return AMDGPU::addrspacesMayAlias(FromAS, ToAS);
   }
 
   bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const override {

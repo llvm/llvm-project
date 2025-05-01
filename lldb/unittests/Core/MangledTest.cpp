@@ -522,6 +522,34 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
      /*.scope=*/"",
      /*.qualifiers=*/"",
      /*.valid_basename=*/false
+   },
+   { "___ZNK5dyld313MachOAnalyzer18forEachInitializerER11DiagnosticsRKNS0_15VMAddrConverterEU13block_pointerFvjEPKv_block_invoke.204",
+     { /*.BasenameRange=*/{55, 73}, /*.ScopeRange=*/{33, 55}, /*.ArgumentsRange=*/{ 73, 181 },
+       /*.QualifiersRange=*/{181, 187} },
+     /*.basename=*/"forEachInitializer",
+     /*.scope=*/"dyld3::MachOAnalyzer::",
+     /*.qualifiers=*/" const",
+   },
+   { "_ZZN5dyld45startEPNS_10KernelArgsEPvS2_ENK3$_1clEv",
+     { /*.BasenameRange=*/{53, 63}, /*.ScopeRange=*/{0, 53}, /*.ArgumentsRange=*/{ 63, 65 },
+       /*.QualifiersRange=*/{65, 71} },
+     /*.basename=*/"operator()",
+     /*.scope=*/"dyld4::start(dyld4::KernelArgs*, void*, void*)::$_1::",
+     /*.qualifiers=*/" const",
+   },
+   { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv",
+     { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
+       /*.QualifiersRange=*/{100, 106} },
+     /*.basename=*/"operator()",
+     /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
+     /*.qualifiers=*/" const",
+   },
+   { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv.cold",
+     { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
+       /*.QualifiersRange=*/{100, 106} },
+     /*.basename=*/"operator()",
+     /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
+     /*.qualifiers=*/" const",
    }
     // clang-format on
 };
@@ -577,6 +605,7 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
   EXPECT_EQ(get_part(OB.NameInfo.BasenameRange), basename);
   EXPECT_EQ(get_part(OB.NameInfo.ScopeRange), scope);
   EXPECT_EQ(get_part(OB.NameInfo.QualifiersRange), qualifiers);
+  std::free(OB.getBuffer());
 }
 
 INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
