@@ -62,6 +62,51 @@ TEST(ClangTidyOptionsProvider, InMemoryFileSystems) {
   EXPECT_EQ(File2Options->Checks, File3Options->Checks);
 }
 
+TEST(ClangTidyOptionsProvider, InvalidConfigurationFiles) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  StringRef BaseClangTidy = R"(
+    Checks: -*,clang-diagnostic-*
+    Unexpected
+  )";
+  StringRef Sub1ClangTidy = R"(
+    Checks: readability-*
+    InheritParentConfig: true
+  )";
+  StringRef Sub2ClangTidy = R"(
+    Checks: bugprone-*,misc-*,clang-diagnostic-*
+    InheritParentConfig: false
+    )";
+  FileSystem->addFile("ProjectRoot/.clang-tidy", 0,
+                      llvm::MemoryBuffer::getMemBuffer(BaseClangTidy));
+  FileSystem->addFile("ProjectRoot/File.cpp", 0,
+                      llvm::MemoryBuffer::getMemBuffer(""));
+  FileSystem->addFile("ProjectRoot/SubDir1/.clang-tidy", 0,
+                      llvm::MemoryBuffer::getMemBuffer(Sub1ClangTidy));
+  FileSystem->addFile("ProjectRoot/SubDir1/File.cpp", 0,
+                      llvm::MemoryBuffer::getMemBuffer(""));
+  FileSystem->addFile("ProjectRoot/SubDir1/SubDir2/.clang-tidy", 0,
+                      llvm::MemoryBuffer::getMemBuffer(Sub2ClangTidy));
+  FileSystem->addFile("ProjectRoot/SubDir1/SubDir2/File.cpp", 0,
+                      llvm::MemoryBuffer::getMemBuffer(""));
+
+  FileOptionsProvider FileOpt({}, {}, {}, FileSystem);
+
+  llvm::ErrorOr<ClangTidyOptions> File1Options =
+      FileOpt.getOptions("ProjectRoot/File.cpp");
+  llvm::ErrorOr<ClangTidyOptions> File2Options =
+      FileOpt.getOptions("ProjectRoot/SubDir1/File.cpp");
+  llvm::ErrorOr<ClangTidyOptions> File3Options =
+      FileOpt.getOptions("ProjectRoot/SubDir1/SubDir2/File.cpp");
+
+  ASSERT_TRUE(!File1Options);
+  ASSERT_TRUE(!File2Options);
+  ASSERT_TRUE(!!File3Options);
+  ASSERT_TRUE(File3Options->Checks.has_value());
+  EXPECT_EQ(*File3Options->Checks, "bugprone-*,misc-*,clang-diagnostic-*");
+}
+
 } // namespace test
 } // namespace tidy
 } // namespace clang
