@@ -1146,8 +1146,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
 
     if (!F->isVarArg() && Name == "coro.id.retcon.once") {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::coro_id_retcon_once);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                Intrinsic::coro_id_retcon_once);
       return true;
     }
 
