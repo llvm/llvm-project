@@ -1309,6 +1309,9 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
         .setMatchingIROpcode(Instruction::Mul);
   case Intrinsic::aarch64_sve_sabd:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sabd_u);
+  case Intrinsic::aarch64_sve_sdiv:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sdiv_u)
+        .setMatchingIROpcode(Instruction::SDiv);
   case Intrinsic::aarch64_sve_smax:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_smax_u);
   case Intrinsic::aarch64_sve_smin:
@@ -1320,6 +1323,9 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
         .setMatchingIROpcode(Instruction::Sub);
   case Intrinsic::aarch64_sve_uabd:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uabd_u);
+  case Intrinsic::aarch64_sve_udiv:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_udiv_u)
+        .setMatchingIROpcode(Instruction::UDiv);
   case Intrinsic::aarch64_sve_umax:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_umax_u);
   case Intrinsic::aarch64_sve_umin:
@@ -1327,11 +1333,14 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_umulh:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_umulh_u);
   case Intrinsic::aarch64_sve_asr:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_asr_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_asr_u)
+        .setMatchingIROpcode(Instruction::AShr);
   case Intrinsic::aarch64_sve_lsl:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsl_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsl_u)
+        .setMatchingIROpcode(Instruction::Shl);
   case Intrinsic::aarch64_sve_lsr:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsr_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsr_u)
+        .setMatchingIROpcode(Instruction::LShr);
   case Intrinsic::aarch64_sve_and:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_and_u)
         .setMatchingIROpcode(Instruction::And);
@@ -1354,6 +1363,9 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_and_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::And);
+  case Intrinsic::aarch64_sve_asr_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::AShr);
   case Intrinsic::aarch64_sve_eor_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::Xor);
@@ -1369,15 +1381,27 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fsub_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::FSub);
+  case Intrinsic::aarch64_sve_lsl_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::Shl);
+  case Intrinsic::aarch64_sve_lsr_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::LShr);
   case Intrinsic::aarch64_sve_mul_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::Mul);
   case Intrinsic::aarch64_sve_orr_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::Or);
+  case Intrinsic::aarch64_sve_sdiv_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::SDiv);
   case Intrinsic::aarch64_sve_sub_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::Sub);
+  case Intrinsic::aarch64_sve_udiv_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::UDiv);
 
   case Intrinsic::aarch64_sve_addqv:
   case Intrinsic::aarch64_sve_and_z:
@@ -1571,7 +1595,11 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
   else
     SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
 
-  if (!SimpleII)
+  // An SVE intrinsic's result is always defined. However, this is not the case
+  // for its equivalent IR instruction (e.g. when shifting by an amount more
+  // than the data's bitwidth). Simplifications to an undefined result must be
+  // ignored to preserve the intrinsic's expected behaviour.
+  if (!SimpleII || isa<UndefValue>(SimpleII))
     return std::nullopt;
 
   if (IInfo.inactiveLanesAreNotDefined())
@@ -3854,7 +3882,8 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
   if (Ty->getElementType()->isFloatingPointTy())
@@ -4267,11 +4296,6 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     if ((ValScalarTy->isHalfTy() && !ST->hasFullFP16()) ||
         ValScalarTy->isBFloatTy()) {
       auto *ValVTy = cast<FixedVectorType>(ValTy);
-
-      // FIXME: We currently scalarise these.
-      if (ValVTy->getNumElements() > 4)
-        return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred,
-                                         CostKind, Op1Info, Op2Info, I);
 
       // Without dedicated instructions we promote [b]f16 compares to f32.
       auto *PromotedTy =

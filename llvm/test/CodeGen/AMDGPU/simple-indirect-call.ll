@@ -3,8 +3,6 @@
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 
-target datalayout = "A5"
-
 define internal void @indirect() {
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@indirect
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR0:[0-9]+]] {

@@ -168,7 +168,8 @@ public:
 
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override;
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override;
 
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,

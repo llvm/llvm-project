@@ -261,7 +261,7 @@ __DO_LANE_SUM(double, f64);   // double __gpu_lane_sum_f64(m, x)
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __match_mask = 0;
+  uint64_t __match_mask = 0;
 
   bool __done = 0;
   while (__gpu_ballot(__lane_mask, !__done)) {
