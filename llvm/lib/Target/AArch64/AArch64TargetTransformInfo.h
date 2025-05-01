@@ -205,8 +205,8 @@ public:
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
   /// \param ScalarUserAndIdx encodes the information about extracts from a
   /// vector with 'Scalar' being the value being extracted,'User' being the user
