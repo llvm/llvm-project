@@ -898,14 +898,14 @@ static Value resolveDistributedTy(Value orig, T expected,
   if (orig.getType() == expected)
     return orig;
   // If orig is a vector type, create a shape cast op to reconcile the types.
-  if (auto origVecType = isa<VectorType>(orig.getType())) {
+  if (isa<VectorType>(orig.getType())) {
     auto castOp =
         rewriter.create<vector::ShapeCastOp>(orig.getLoc(), expected, orig);
     return castOp.getResult();
   }
   // If orig is a tensor descriptor type, create an unrealized conversion cast
   // op to reconcile the types.
-  if (auto origTensorDescTy = isa<xegpu::TensorDescType>(orig.getType())) {
+  if (isa<xegpu::TensorDescType>(orig.getType())) {
     auto castOp = rewriter.create<UnrealizedConversionCastOp>(orig.getLoc(),
                                                               expected, orig);
     return castOp.getResult(0);
