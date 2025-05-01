@@ -80,8 +80,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
     ScopeSyncMode scope_sync_mode(dap.debugger);
-    
-    dap.debugger.SetAsync(false);
+
     if (args.coreFile.empty()) {
       if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
         lldb::SBListener listener = dap.debugger.GetListener();
@@ -112,6 +111,9 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     dap.target = dap.debugger.GetSelectedTarget();
+    if (!dap.target.IsValid())
+      return make_error<DAPError>(
+          "attachCommands failed to create a valid target");
 
     // Make sure the process is attached and stopped before proceeding as the
     // the launch commands are not run using the synchronous mode.
