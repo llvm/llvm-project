@@ -3435,6 +3435,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   case AtomicRMWInst::FMin:
     Opcode = TargetOpcode::G_ATOMICRMW_FMIN;
     break;
+  case AtomicRMWInst::FMaximum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMAXIMUM;
+    break;
+  case AtomicRMWInst::FMinimum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMINIMUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UINC_WRAP;
     break;
@@ -3645,11 +3651,17 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   if (auto CurrInstDL = CurBuilder->getDL())
     EntryBuilder->setDebugLoc(DebugLoc());
 
-  if (auto CI = dyn_cast<ConstantInt>(&C))
+  if (auto CI = dyn_cast<ConstantInt>(&C)) {
+    // buildConstant expects a to-be-splatted scalar ConstantInt.
+    if (isa<VectorType>(CI->getType()))
+      CI = ConstantInt::get(CI->getContext(), CI->getValue());
     EntryBuilder->buildConstant(Reg, *CI);
-  else if (auto CF = dyn_cast<ConstantFP>(&C))
+  } else if (auto CF = dyn_cast<ConstantFP>(&C)) {
+    // buildFConstant expects a to-be-splatted scalar ConstantFP.
+    if (isa<VectorType>(CF->getType()))
+      CF = ConstantFP::get(CF->getContext(), CF->getValue());
     EntryBuilder->buildFConstant(Reg, *CF);
-  else if (isa<UndefValue>(C))
+  } else if (isa<UndefValue>(C))
     EntryBuilder->buildUndef(Reg);
   else if (isa<ConstantPointerNull>(C))
     EntryBuilder->buildConstant(Reg, 0);
