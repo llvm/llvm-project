@@ -290,7 +290,7 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
         "This HLSL entry point is not supported by this backend.");
   }
 
-  assert(STI.getEnv() == Unknown);
+  assert(STI.getEnv() == SPIRVSubtarget::Unknown);
   // Can we rely on "hlsl.shader" attribute? Is it mandatory for Vulkan env? If
   // so, we can set Env to Vulkan whenever we find it, and to OpenCL otherwise.
 
