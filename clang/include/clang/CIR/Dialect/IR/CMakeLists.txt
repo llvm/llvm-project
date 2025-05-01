@@ -16,4 +16,6 @@ add_dependencies(mlir-headers MLIRCIROpsIncGen)
 
 mlir_tablegen(CIROpsAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(CIROpsAttributes.cpp.inc -gen-attrdef-defs)
-add_public_tablegen_target(MLIRCIRAttrsEnumsGen)
+mlir_tablegen(CIROpsEnums.h.inc -gen-enum-decls)
+mlir_tablegen(CIROpsEnums.cpp.inc -gen-enum-defs)
+add_public_tablegen_target(MLIRCIREnumsGen)

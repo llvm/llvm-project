@@ -949,6 +949,9 @@ public:
 
   SourceLocation PotentialThisCaptureLocation;
 
+  /// Variables that are potentially ODR-used in CUDA/HIP.
+  llvm::SmallPtrSet<VarDecl *, 4> CUDAPotentialODRUsedVars;
+
   LambdaScopeInfo(DiagnosticsEngine &Diag)
       : CapturingScopeInfo(Diag, ImpCap_None) {
     Kind = SK_Lambda;

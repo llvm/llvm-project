@@ -101,20 +101,18 @@ class TargetRegisterInfo;
     SDep() : Dep(nullptr, Data) {}
 
     /// Constructs an SDep with the specified values.
-    SDep(SUnit *S, Kind kind, unsigned Reg)
-      : Dep(S, kind), Contents() {
+    SDep(SUnit *S, Kind kind, Register Reg) : Dep(S, kind), Contents() {
       switch (kind) {
       default:
         llvm_unreachable("Reg given for non-register dependence!");
       case Anti:
       case Output:
-        assert(Reg != 0 &&
-               "SDep::Anti and SDep::Output must use a non-zero Reg!");
-        Contents.Reg = Reg;
+        assert(Reg && "SDep::Anti and SDep::Output must use a non-zero Reg!");
+        Contents.Reg = Reg.id();
         Latency = 0;
         break;
       case Data:
-        Contents.Reg = Reg;
+        Contents.Reg = Reg.id();
         Latency = 1;
         break;
       }
@@ -208,14 +206,12 @@ class TargetRegisterInfo;
     }
 
     /// Tests if this is a Data dependence that is associated with a register.
-    bool isAssignedRegDep() const {
-      return getKind() == Data && Contents.Reg != 0;
-    }
+    bool isAssignedRegDep() const { return getKind() == Data && Contents.Reg; }
 
     /// Returns the register associated with this edge. This is only valid on
     /// Data, Anti, and Output edges. On Data edges, this value may be zero,
     /// meaning there is no associated register.
-    unsigned getReg() const {
+    Register getReg() const {
       assert((getKind() == Data || getKind() == Anti || getKind() == Output) &&
              "getReg called on non-register dependence edge!");
       return Contents.Reg;
@@ -225,14 +221,14 @@ class TargetRegisterInfo;
     /// Data, Anti, and Output edges. On Anti and Output edges, this value must
     /// not be zero. On Data edges, the value may be zero, which would mean that
     /// no specific register is associated with this edge.
-    void setReg(unsigned Reg) {
+    void setReg(Register Reg) {
       assert((getKind() == Data || getKind() == Anti || getKind() == Output) &&
              "setReg called on non-register dependence edge!");
-      assert((getKind() != Anti || Reg != 0) &&
+      assert((getKind() != Anti || Reg) &&
              "SDep::Anti edge cannot use the zero register!");
-      assert((getKind() != Output || Reg != 0) &&
+      assert((getKind() != Output || Reg) &&
              "SDep::Output edge cannot use the zero register!");
-      Contents.Reg = Reg;
+      Contents.Reg = Reg.id();
     }
 
     void dump(const TargetRegisterInfo *TRI = nullptr) const;

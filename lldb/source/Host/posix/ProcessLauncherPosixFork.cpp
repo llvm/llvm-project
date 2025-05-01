@@ -94,6 +94,7 @@ struct ForkLaunchInfo {
   bool debug;
   bool disable_aslr;
   std::string wd;
+  std::string executable;
   const char **argv;
   Environment::Envp envp;
   std::vector<ForkFileAction> actions;
@@ -194,7 +195,8 @@ struct ForkLaunchInfo {
   }
 
   // Execute.  We should never return...
-  execve(info.argv[0], const_cast<char *const *>(info.argv), info.envp);
+  execve(info.executable.c_str(), const_cast<char *const *>(info.argv),
+         info.envp);
 
 #if defined(__linux__)
   if (errno == ETXTBSY) {
@@ -207,7 +209,8 @@ struct ForkLaunchInfo {
     // Since this state should clear up quickly, wait a while and then give it
     // one more go.
     usleep(50000);
-    execve(info.argv[0], const_cast<char *const *>(info.argv), info.envp);
+    execve(info.executable.c_str(), const_cast<char *const *>(info.argv),
+           info.envp);
   }
 #endif
 
@@ -236,6 +239,7 @@ ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info)
       debug(info.GetFlags().Test(eLaunchFlagDebug)),
       disable_aslr(info.GetFlags().Test(eLaunchFlagDisableASLR)),
       wd(info.GetWorkingDirectory().GetPath()),
+      executable(info.GetExecutableFile().GetPath()),
       argv(info.GetArguments().GetConstArgumentVector()),
       envp(info.GetEnvironment().getEnvp()), actions(MakeForkActions(info)) {}
 

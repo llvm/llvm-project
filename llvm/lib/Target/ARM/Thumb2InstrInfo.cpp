@@ -149,8 +149,8 @@ Thumb2InstrInfo::optimizeSelect(MachineInstr &MI,
 
 void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc,
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
                                   bool RenamableDest, bool RenamableSrc) const {
   // Handle SPR, DPR, and QPR copies.
   if (!ARM::GPRRegClass.contains(DestReg, SrcReg))

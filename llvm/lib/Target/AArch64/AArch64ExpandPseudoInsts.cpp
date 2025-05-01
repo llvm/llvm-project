@@ -50,9 +50,7 @@ public:
 
   static char ID;
 
-  AArch64ExpandPseudo() : MachineFunctionPass(ID) {
-    initializeAArch64ExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64ExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -1382,6 +1380,11 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                       AArch64II::MO_NC);
       }
 
+      // If the LOADgot instruction has a debug-instr-number, annotate the
+      // LDRWui instruction that it is expanded to with the same
+      // debug-instr-number to preserve debug information.
+      if (MI.peekDebugInstrNum() != 0)
+        MIB2->setDebugInstrNum(MI.peekDebugInstrNum());
       transferImpOps(MI, MIB1, MIB2);
     }
     MI.eraseFromParent();

@@ -161,7 +161,7 @@ Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
 Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     if (Register::isVirtualRegister(Unit)) {
-      OS << '%' << Register::virtReg2Index(Unit);
+      OS << '%' << Register(Unit).virtRegIndex();
     } else {
       OS << printRegUnit(Unit, TRI);
     }
@@ -456,6 +456,11 @@ bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
   return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg);
 }
 
+float TargetRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return 1.0;
+}
+
 // Compute target-independent register allocator hints to help eliminate copies.
 bool TargetRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
@@ -498,7 +503,7 @@ bool TargetRegisterInfo::getRegAllocationHints(
       continue;
 
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys);
+    Hints.push_back(Phys.id());
   }
   return false;
 }

@@ -44,8 +44,8 @@ extern const char *MemoryWriteUInt64sWrapperName;
 extern const char *MemoryWriteBuffersWrapperName;
 extern const char *MemoryWritePointersWrapperName;
 
-extern const char *RegisterEHFrameSectionWrapperName;
-extern const char *DeregisterEHFrameSectionWrapperName;
+extern const char *RegisterEHFrameSectionAllocActionName;
+extern const char *DeregisterEHFrameSectionAllocActionName;
 
 extern const char *RunAsMainWrapperName;
 extern const char *RunAsVoidFunctionWrapperName;
@@ -90,10 +90,6 @@ using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 
 namespace rt_alt {
-extern const char *UnwindInfoManagerInstanceName;
-extern const char *UnwindInfoManagerFindSectionsHelperName;
-extern const char *UnwindInfoManagerEnableWrapperName;
-extern const char *UnwindInfoManagerDisableWrapperName;
 extern const char *UnwindInfoManagerRegisterActionName;
 extern const char *UnwindInfoManagerDeregisterActionName;
 } // end namespace rt_alt

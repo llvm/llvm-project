@@ -55,11 +55,8 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_vcc_clobber:
+; GCN: s_cbranch_vccnz
 ; GCN: ; clobber vcc
-; GCN: v_cmp_neq_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc
-; GCN: s_mov_b64 vcc, [[CMP]]
-; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle_vcc_clobber(ptr addrspace(1) %out, ptr addrspace(1) %in, float %k) #0 {
 entry:
   %v = load i32, ptr addrspace(1) %in
@@ -334,7 +331,7 @@ if:
 
 endif:
   %r = phi <3 x i32> [ %v, %entry ], [ %u, %if ]
-  %r.ext = shufflevector <3 x i32> %r, <3 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %r.ext = shufflevector <3 x i32> %r, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void asm sideeffect "; reg use $0", "s"(<4 x i32> %r.ext) #0
   ret void
 }
@@ -389,7 +386,7 @@ done:
 ; GCN-NEXT: s_cselect_b32 s{{[0-9]+}}, 0, 1{{$}}
 define amdgpu_kernel void @ifcvt_undef_scc(i32 %cond, ptr addrspace(1) %out) {
 entry:
-  br i1 undef, label %else, label %if
+  br i1 poison, label %else, label %if
 
 if:
   br label %done

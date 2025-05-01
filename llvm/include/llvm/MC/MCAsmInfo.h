@@ -15,6 +15,8 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -62,6 +64,14 @@ public:
     ACLS_SingleQuotePrefix, /// The desired character is prefixed by a single
                             /// quote, e.g., `'A`.
   };
+
+  // This describes a @ style relocation specifier (expr@specifier) supported by
+  // AsmParser::parsePrimaryExpr.
+  struct AtSpecifier {
+    uint32_t Kind;
+    StringRef Name;
+  };
+  using VariantKindDesc = AtSpecifier;
 
 protected:
   //===------------------------------------------------------------------===//
@@ -241,24 +251,6 @@ protected:
   /// True if data directives support signed values
   bool SupportsSignedData = true;
 
-  /// If non-null, a directive that is used to emit a word which should be
-  /// relocated as a 64-bit GP-relative offset, e.g. .gpdword on Mips.  Defaults
-  /// to nullptr.
-  const char *GPRel64Directive = nullptr;
-
-  /// If non-null, a directive that is used to emit a word which should be
-  /// relocated as a 32-bit GP-relative offset, e.g. .gpword on Mips or .gprel32
-  /// on Alpha.  Defaults to nullptr.
-  const char *GPRel32Directive = nullptr;
-
-  /// If non-null, directives that are used to emit a word/dword which should
-  /// be relocated as a 32/64-bit DTP/TP-relative offset, e.g. .dtprelword/
-  /// .dtpreldword/.tprelword/.tpreldword on Mips.
-  const char *DTPRel32Directive = nullptr;
-  const char *DTPRel64Directive = nullptr;
-  const char *TPRel32Directive = nullptr;
-  const char *TPRel64Directive = nullptr;
-
   /// This is true if this target uses "Sun Style" syntax for section switching
   /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
   /// .section directives.  Defaults to false.
@@ -356,8 +348,6 @@ protected:
   /// protected visibility.  Defaults to MCSA_Protected
   MCSymbolAttr ProtectedVisibilityAttr = MCSA_Protected;
 
-  MCSymbolAttr MemtagAttr = MCSA_Memtag;
-
   //===--- Dwarf Emission Directives -----------------------------------===//
 
   /// True if target supports emission of debugging information.  Defaults to
@@ -390,13 +380,12 @@ protected:
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
 
-  /// True if target uses parens to indicate the symbol variant instead of @.
-  /// For example, foo(plt) instead of foo@plt.  Defaults to false.
-  bool UseParensForSymbolVariant = false;
+  /// True if target uses @ (expr@specifier) for relocation specifiers.
+  bool UseAtForSpecifier = true;
 
-  /// True if the target uses parens for symbol names starting with
-  /// '$' character to distinguish them from absolute names.
-  bool UseParensForDollarSignNames = true;
+  /// (ARM-specific) Uses parens for relocation specifier in data
+  /// directives, e.g. .word foo(got).
+  bool UseParensForSpecifier = false;
 
   /// True if the target supports flags in ".loc" directive, false if only
   /// location is allowed.
@@ -434,12 +423,12 @@ protected:
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr = true;
 
-  // If true, then the lexer and expression parser will support %neg(),
-  // %hi(), and similar unary operators.
-  bool HasMipsExpressions = false;
-
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
+
+  llvm::DenseMap<uint32_t, StringRef> SpecifierToName;
+  llvm::StringMap<uint32_t> NameToSpecifier;
+  void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
 
 public:
   explicit MCAsmInfo();
@@ -469,12 +458,6 @@ public:
   const char *getData32bitsDirective() const { return Data32bitsDirective; }
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
-  const char *getGPRel64Directive() const { return GPRel64Directive; }
-  const char *getGPRel32Directive() const { return GPRel32Directive; }
-  const char *getDTPRel64Directive() const { return DTPRel64Directive; }
-  const char *getDTPRel32Directive() const { return DTPRel32Directive; }
-  const char *getTPRel64Directive() const { return TPRel64Directive; }
-  const char *getTPRel32Directive() const { return TPRel32Directive; }
 
   /// Targets can implement this method to specify a section to switch to if the
   /// translation unit doesn't have any trampolines that require an executable
@@ -635,8 +618,6 @@ public:
     return ProtectedVisibilityAttr;
   }
 
-  MCSymbolAttr getMemtagAttr() const { return MemtagAttr; }
-
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
   ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
@@ -670,10 +651,8 @@ public:
 
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
-  bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
-  bool useParensForDollarSignNames() const {
-    return UseParensForDollarSignNames;
-  }
+  bool useAtForSpecifier() const { return UseAtForSpecifier; }
+  bool useParensForSpecifier() const { return UseParensForSpecifier; }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
   }
@@ -727,8 +706,10 @@ public:
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
-  bool hasMipsExpressions() const { return HasMipsExpressions; }
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
+
+  StringRef getSpecifierName(uint32_t S) const;
+  std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 };
 
 } // end namespace llvm

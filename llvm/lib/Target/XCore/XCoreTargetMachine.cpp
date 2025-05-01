@@ -106,11 +106,12 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeXCoreDAGToDAGISelLegacyPass(PR);
+  initializeXCoreLowerThreadLocalPass(PR);
 }
 
 TargetTransformInfo
 XCoreTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(XCoreTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<XCoreTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *XCoreTargetMachine::createMachineFunctionInfo(

@@ -24,7 +24,7 @@ using namespace dxil;
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
-  Triple TT(Triple(M.getTargetTriple()));
+  const Triple &TT = M.getTargetTriple();
   MMDAI.DXILVersion = TT.getDXILVersion();
   MMDAI.ShaderModelVersion = TT.getOSVersion();
   MMDAI.ShaderProfile = TT.getEnvironment();
@@ -109,10 +109,7 @@ DXILMetadataAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
 // DXILMetadataAnalysisWrapperPass
 
 DXILMetadataAnalysisWrapperPass::DXILMetadataAnalysisWrapperPass()
-    : ModulePass(ID) {
-  initializeDXILMetadataAnalysisWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 DXILMetadataAnalysisWrapperPass::~DXILMetadataAnalysisWrapperPass() = default;
 
