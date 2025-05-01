@@ -630,6 +630,17 @@ int clangTidyMain(int argc, const char **argv) {
   if (!EffectiveOptions)
     return 1;
 
+  // Validate the configuration files associated with all input files so we can
+  // return an error up front.
+  if (PathList.size() > 1) {
+    for (auto iter = PathList.begin() + 1; iter != PathList.end(); ++iter) {
+      llvm::ErrorOr<ClangTidyOptions> Options =
+          OptionsProvider->getOptions(*iter);
+      if (!Options)
+        return 1;
+    }
+  }
+
   std::vector<std::string> EnabledChecks =
       getCheckNames(*EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
 

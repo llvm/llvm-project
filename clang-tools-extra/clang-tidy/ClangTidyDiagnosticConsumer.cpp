@@ -265,8 +265,16 @@ const ClangTidyOptions &ClangTidyContext::getOptions() const {
 ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
   // Merge options on top of getDefaults() as a safeguard against options with
   // unset values.
-  return ClangTidyOptions::getDefaults().merge(
-      *OptionsProvider->getOptions(File), 0);
+  ClangTidyOptions defaultOptions = ClangTidyOptions::getDefaults();
+  llvm::ErrorOr<ClangTidyOptions> fileOptions =
+      OptionsProvider->getOptions(File);
+
+  // If there was an error parsing the options, just use the default options.
+  // Ideally, the options for each file should be validated before this point.
+  if (!fileOptions)
+    return defaultOptions;
+
+  return defaultOptions.merge(*fileOptions, 0);
 }
 
 void ClangTidyContext::setEnableProfiling(bool P) { Profile = P; }
