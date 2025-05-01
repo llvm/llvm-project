@@ -7204,6 +7204,11 @@ def warn_consecutive_comparison : Warning<
   "chained comparison 'X %0 Y %1 Z' does not behave the same as a mathematical expression">,
   InGroup<Parentheses>, DefaultError;
 
+def warn_comparison_in_fold_expression : Warning<
+  "comparison in fold expression would evaluate to '(X %0 Y) %0 Z' "
+  "which does not behave the same as a mathematical expression">,
+  InGroup<Parentheses>, DefaultError;
+
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
   InGroup<IntInBoolContext>, DefaultIgnore;
