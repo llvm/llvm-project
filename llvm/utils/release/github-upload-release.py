@@ -42,17 +42,28 @@ def create_release(repo, release, tag=None, name=None, message=None):
         name = "LLVM {}".format(release)
 
     if not message:
-        message = dedent(
-            """\
-            LLVM {} Release
+        # Note that these lines are not length limited because if we do so, GitHub
+        # assumes that should be how it is laid out on the page. We want GitHub to
+        # do the reflowing for us instead.
+        message = dedent("""\
+LLVM {} Release
 
-            # A note on binaries
+# Package Types
 
-            Volunteers make binaries for the LLVM project, which will be uploaded
-            when they have had time to test and build these binaries. They might
-            not be available directly or not at all for each release. We suggest
-            you use the binaries from your distribution or build your own if you
-            rely on a specific platform or configuration."""
+* If the file name starts with `LLVM-` then it is a binary release of all of LLVM for the platform at the end of the file name. For example, `LLVM-20.1.1-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
+* If the file name starts with `clang+llvm-` then it is a binary release for the platform at the end of the filename. For example, `clang+llvm-20.1.1-armv7a-linux-gnueabihf.tar.gz` contains LLVM binaries for Armv7-a Linux.
+
+Most of the time, you will want one of the files described above.
+
+Each platform will have either an `LLVM-` package or a `clang+llvm-` package. Except for Windows which has both. For Windows, the `LLVM-` file is an installer intended for using LLVM as a toolchain. The `clang+llvm-` file contains the contents of the installer, plus libraries and tools not normally used in a toolchain.
+
+If you do not find a release package for your platform, you may be able to find a community built package on the LLVM Discourse forum thread for this release. Remember that these are built by volunteers and may not always be available.
+
+If you rely on a platform or configuration that is not one of the defaults, we suggest you use the binaries that your platform provides, or build your own release packages.
+
+* `<sub-project>*.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (aside from `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
+
+* To get all the `llvm-project` sources for this release, choose the one of the `Source Code`archives."""
         ).format(release)
 
     prerelease = True if "rc" in release else False
