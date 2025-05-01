@@ -27,6 +27,32 @@
 
 using namespace llvm;
 
+static bool isInvariantLoad(const LoadInst *LI, const bool IsKernelFn) {
+  // Don't bother with non-global loads
+  if (LI->getPointerAddressSpace() != NVPTXAS::ADDRESS_SPACE_GLOBAL)
+    return false;
+
+  // If the load is already marked as invariant, we don't need to do anything
+  if (LI->getMetadata(LLVMContext::MD_invariant_load))
+    return false;
+
+  // We use getUnderlyingObjects() here instead of getUnderlyingObject()
+  // mainly because the former looks through phi nodes while the latter does
+  // not. We need to look through phi nodes to handle pointer induction
+  // variables.
+  SmallVector<const Value *, 8> Objs;
+  getUnderlyingObjects(LI->getPointerOperand(), Objs);
+
+  return all_of(Objs, [&](const Value *V) {
+    if (const auto *A = dyn_cast<const Argument>(V))
+      return IsKernelFn && ((A->onlyReadsMemory() && A->hasNoAliasAttr()) ||
+                            isParamGridConstant(*A));
+    if (const auto *GV = dyn_cast<const GlobalVariable>(V))
+      return GV->isConstant();
+    return false;
+  });
+}
+
 static void markLoadsAsInvariant(LoadInst *LI) {
   LI->setMetadata(LLVMContext::MD_invariant_load,
                   MDNode::get(LI->getContext(), {}));
@@ -38,38 +64,12 @@ static bool tagInvariantLoads(Function &F) {
   bool Changed = false;
   for (auto &I : instructions(F)) {
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
-
-      // Don't bother with non-global loads
-      if (LI->getPointerAddressSpace() != NVPTXAS::ADDRESS_SPACE_GLOBAL)
-        continue;
-
-      if (LI->getMetadata(LLVMContext::MD_invariant_load))
-        continue;
-
-      SmallVector<const Value *, 8> Objs;
-
-      // We use getUnderlyingObjects() here instead of getUnderlyingObject()
-      // mainly because the former looks through phi nodes while the latter does
-      // not. We need to look through phi nodes to handle pointer induction
-      // variables.
-
-      getUnderlyingObjects(LI->getPointerOperand(), Objs);
-
-      const bool IsInvariant = all_of(Objs, [&](const Value *V) {
-        if (const auto *A = dyn_cast<const Argument>(V))
-          return IsKernelFn && A->onlyReadsMemory() && A->hasNoAliasAttr();
-        if (const auto *GV = dyn_cast<const GlobalVariable>(V))
-          return GV->isConstant();
-        return false;
-      });
-
-      if (IsInvariant) {
+      if (isInvariantLoad(LI, IsKernelFn)) {
         markLoadsAsInvariant(LI);
         Changed = true;
       }
     }
   }
-
   return Changed;
 }
 

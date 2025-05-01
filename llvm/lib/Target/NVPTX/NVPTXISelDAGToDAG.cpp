@@ -766,12 +766,12 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
   llvm_unreachable("unhandled ordering");
 }
 
-static bool canLowerToLDG(const MemSDNode *N, const NVPTXSubtarget &Subtarget,
+static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
                           unsigned CodeAddrSpace) {
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
   // space.
   return Subtarget.hasLDG() && CodeAddrSpace == NVPTX::AddressSpace::Global &&
-         N->isInvariant();
+         N.isInvariant();
 }
 
 static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
@@ -1073,7 +1073,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
 
   // Address Space Setting
   const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
-  if (canLowerToLDG(LD, *Subtarget, CodeAddrSpace))
+  if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDGLDU(N);
 
   SDLoc DL(N);
@@ -1158,7 +1158,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   // Address Space Setting
   const unsigned CodeAddrSpace = getCodeAddrSpace(MemSD);
-  if (canLowerToLDG(MemSD, *Subtarget, CodeAddrSpace))
+  if (canLowerToLDG(*MemSD, *Subtarget, CodeAddrSpace))
     return tryLDGLDU(N);
 
   EVT EltVT = N->getValueType(0);
