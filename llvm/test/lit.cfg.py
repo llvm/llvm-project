@@ -228,7 +228,6 @@ tools.extend(
         "llvm-strings",
         "llvm-strip",
         "llvm-tblgen",
-        "llvm-tgt-verify",
         "llvm-readtapi",
         "llvm-undname",
         "llvm-windres",
