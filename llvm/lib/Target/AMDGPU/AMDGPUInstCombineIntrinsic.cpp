@@ -21,7 +21,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
-#include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include <optional>
 
 using namespace llvm;
@@ -483,6 +482,16 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   return false;
 }
 
+static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
+                             Function &NewCallee, ArrayRef<Value *> Ops) {
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  Old.getOperandBundlesAsDefs(OpBundles);
+
+  CallInst *NewCall = B.CreateCall(&NewCallee, Ops, OpBundles);
+  NewCall->takeName(&Old);
+  return NewCall;
+}
+
 Instruction *
 GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                              IntrinsicInst &II) const {
@@ -491,53 +500,54 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
          IID == Intrinsic::amdgcn_readfirstlane ||
          IID == Intrinsic::amdgcn_permlane64);
 
-  Instruction *Op = dyn_cast<Instruction>(II.getOperand(0));
+  Instruction *OpInst = dyn_cast<Instruction>(II.getOperand(0));
 
   // Only do this if both instructions are in the same block
   // (so the exec mask won't change) and the readlane is the only user of its
   // operand.
-  if (!Op || !Op->hasOneUser() || Op->getParent() != II.getParent())
+  if (!OpInst || !OpInst->hasOneUser() || OpInst->getParent() != II.getParent())
     return nullptr;
 
   const bool IsReadLane = (IID == Intrinsic::amdgcn_readlane);
 
   // If this is a readlane, check that the second operand is a constant, or is
-  // defined before Op so we know it's safe to move this intrinsic higher.
+  // defined before OpInst so we know it's safe to move this intrinsic higher.
   Value *LaneID = nullptr;
   if (IsReadLane) {
     LaneID = II.getOperand(1);
-    // Check LaneID is available at Op, otherwise we can't move the readlane
-    // higher.
+
+    // readlane take an extra operand for the lane ID, so we must check if that
+    // LaneID value can be used at the point where we want to move the
+    // intrinsic.
     if (auto *LaneIDInst = dyn_cast<Instruction>(LaneID)) {
-      if (!isSafeToMoveBefore(*LaneIDInst, *Op, IC.getDominatorTree()))
+      if (!IC.getDominatorTree().dominates(LaneIDInst, OpInst))
         return nullptr;
     }
   }
 
+  // Hoist the intrinsic (II) through OpInst.
+  //
+  // (II (OpInst x)) -> (OpInst (II x))
   const auto DoIt = [&](unsigned OpIdx,
                         Function *NewIntrinsic) -> Instruction * {
-    SmallVector<Value *, 2> Ops{Op->getOperand(OpIdx)};
+    SmallVector<Value *, 2> Ops{OpInst->getOperand(OpIdx)};
     if (IsReadLane)
       Ops.push_back(LaneID);
 
-    // Make sure convergence tokens are preserved.
-    // TODO: CreateIntrinsic should allow directly copying bundles
-    SmallVector<OperandBundleDef, 2> OpBundles;
-    II.getOperandBundlesAsDefs(OpBundles);
+    // Rewrite the intrinsic call.
+    CallInst *NewII = rewriteCall(IC.Builder, II, *NewIntrinsic, Ops);
 
-    CallInst *NewII = IC.Builder.CreateCall(NewIntrinsic, Ops, OpBundles);
-    NewII->takeName(&II);
-
-    Instruction &NewOp = *Op->clone();
+    // Rewrite OpInst so it takes the result of the intrinsic now.
+    Instruction &NewOp = *OpInst->clone();
     NewOp.setOperand(OpIdx, NewII);
     return &NewOp;
   };
 
-  if (isa<UnaryOperator>(Op))
+  if (isa<UnaryOperator>(OpInst))
     return DoIt(0, II.getCalledFunction());
 
-  if (isa<CastInst>(Op)) {
-    Value *Src = Op->getOperand(0);
+  if (isa<CastInst>(OpInst)) {
+    Value *Src = OpInst->getOperand(0);
     Type *SrcTy = Src->getType();
     if (!isTypeLegal(SrcTy))
       return nullptr;
@@ -548,12 +558,12 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
   }
 
   // We can also hoist through binary operators if the other operand is uniform.
-  if (isa<BinaryOperator>(Op)) {
+  if (isa<BinaryOperator>(OpInst)) {
     // FIXME: If we had access to UniformityInfo here we could just check
     // if the operand is uniform.
-    if (isTriviallyUniform(Op->getOperandUse(0)))
+    if (isTriviallyUniform(OpInst->getOperandUse(0)))
       return DoIt(1, II.getCalledFunction());
-    if (isTriviallyUniform(Op->getOperandUse(1)))
+    if (isTriviallyUniform(OpInst->getOperandUse(1)))
       return DoIt(0, II.getCalledFunction());
   }
 
