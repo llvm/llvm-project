@@ -1576,11 +1576,11 @@ struct GpuIndexOpDistribution final : public gpu::WarpDistributionPattern {
     if (!operand)
       return rewriter.notifyMatchFailure(subgroupOp,
                                          "warp result is not a gpu index op");
-    auto indexOp = operand->get().getDefiningOp<IndexOp>();
+    Operation *indexOp = operand->get().getDefiningOp<IndexOp>();
     unsigned operandIdx = operand->getOperandNumber();
     SmallVector<Value, 3> newYieldValues;
     SmallVector<Type, 3> newYieldTypes;
-    for (auto operand : indexOp->template getOperands()) {
+    for (Value operand : indexOp->getOperands()) {
       newYieldValues.push_back(operand);
       newYieldTypes.push_back(operand.getType());
     }
@@ -1594,7 +1594,7 @@ struct GpuIndexOpDistribution final : public gpu::WarpDistributionPattern {
     }
     auto newIndexOp = rewriter.create<IndexOp>(
         newWarpOp.getLoc(), newIndexOperands,
-        removeTemporaryLayoutAttributes(indexOp->template getAttrs()));
+        removeTemporaryLayoutAttributes(indexOp->getAttrs()));
     Value distributedVal = newWarpOp.getResult(operandIdx);
     rewriter.replaceAllUsesWith(distributedVal, newIndexOp);
     return success();
