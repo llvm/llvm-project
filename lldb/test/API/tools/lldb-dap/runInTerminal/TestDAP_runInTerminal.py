@@ -43,7 +43,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         except:
             return False
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
         if not self.isTestSupported():
@@ -113,7 +112,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("FOO", request_envs)
         self.assertEqual("BAR", request_envs["FOO"])
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
         if not self.isTestSupported():
@@ -132,7 +130,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             response["message"],
         )
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_missingArgInRunInTerminalLauncher(self):
         if not self.isTestSupported():

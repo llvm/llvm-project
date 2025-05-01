@@ -9,7 +9,9 @@
 #include "RunInTerminal.h"
 #include "JSONUtils.h"
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include "lldb/Host/windows/windows.h"
+#else
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -96,7 +98,7 @@ static Error ToError(const RunInTerminalMessage &message) {
 }
 
 RunInTerminalLauncherCommChannel::RunInTerminalLauncherCommChannel(
-    StringRef comm_file)
+    std::shared_ptr<FifoFile> comm_file)
     : m_io(comm_file, "debug adapter") {}
 
 Error RunInTerminalLauncherCommChannel::WaitUntilDebugAdapterAttaches(
@@ -111,8 +113,8 @@ Error RunInTerminalLauncherCommChannel::WaitUntilDebugAdapterAttaches(
     return message.takeError();
 }
 
-Error RunInTerminalLauncherCommChannel::NotifyPid() {
-  return m_io.SendJSON(RunInTerminalMessagePid(getpid()).ToJSON());
+Error RunInTerminalLauncherCommChannel::NotifyPid(lldb::pid_t pid) {
+  return m_io.SendJSON(RunInTerminalMessagePid(pid).ToJSON());
 }
 
 void RunInTerminalLauncherCommChannel::NotifyError(StringRef error) {
@@ -121,8 +123,12 @@ void RunInTerminalLauncherCommChannel::NotifyError(StringRef error) {
     llvm::errs() << llvm::toString(std::move(err)) << "\n";
 }
 
+#if defined(_WIN32)
+bool RunInTerminalLauncherCommChannel::Connect() { return m_io.Connect(); }
+#endif
+
 RunInTerminalDebugAdapterCommChannel::RunInTerminalDebugAdapterCommChannel(
-    StringRef comm_file)
+    std::shared_ptr<FifoFile> comm_file)
     : m_io(comm_file, "runInTerminal launcher") {}
 
 // Can't use \a std::future<llvm::Error> because it doesn't compile on Windows
@@ -148,6 +154,10 @@ Expected<lldb::pid_t> RunInTerminalDebugAdapterCommChannel::GetLauncherPid() {
   }
 }
 
+#if defined(_WIN32)
+bool RunInTerminalDebugAdapterCommChannel::Connect() { return m_io.Connect(); }
+#endif
+
 std::string RunInTerminalDebugAdapterCommChannel::GetLauncherError() {
   // We know there's been an error, so a small timeout is enough.
   if (Expected<RunInTerminalMessageUP> message =
@@ -158,13 +168,25 @@ std::string RunInTerminalDebugAdapterCommChannel::GetLauncherError() {
 }
 
 Expected<std::shared_ptr<FifoFile>> CreateRunInTerminalCommFile() {
+#if defined(_WIN32)
+  static constexpr llvm::StringLiteral g_pipe_name_prefix = "\\\\.\\Pipe\\";
+  SmallString<256> comm_file;
+  sys::fs::createUniquePath("lldb-dap-run-in-terminal-comm-%%%%%%", comm_file,
+                            +false);
+  return CreateFifoFile((g_pipe_name_prefix + comm_file.str()).str(), true);
+#else
   SmallString<256> comm_file;
   if (std::error_code EC = sys::fs::getPotentiallyUniqueTempFileName(
           "lldb-dap-run-in-terminal-comm", "", comm_file))
     return createStringError(EC, "Error making unique file name for "
                                  "runInTerminal communication files");
+  return CreateFifoFile(comm_file.str(), true);
+#endif
+}
 
-  return CreateFifoFile(comm_file.str());
+Expected<std::shared_ptr<FifoFile>>
+OpenRunInTerminalCommFile(llvm::StringRef fifo_file) {
+  return CreateFifoFile(fifo_file, false);
 }
 
 } // namespace lldb_dap

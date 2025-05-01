@@ -44,9 +44,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -204,14 +206,73 @@ static void PrintVersion() {
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adapter.
 static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                             llvm::StringRef comm_file,
+                                             llvm::StringRef fifo_file,
                                              lldb::pid_t debugger_pid,
                                              char *argv[]) {
-#if defined(_WIN32)
-  return llvm::createStringError(
-      "runInTerminal is only supported on POSIX systems");
-#else
+  llvm::Expected<std::shared_ptr<FifoFile>> comm_file_or_err =
+      OpenRunInTerminalCommFile(fifo_file);
+  if (!comm_file_or_err) {
+    llvm::errs() << llvm::toString(comm_file_or_err.takeError()) << "\n";
+    exit(EXIT_FAILURE);
+  }
+  std::shared_ptr<FifoFile> comm_file = *comm_file_or_err;
+  RunInTerminalLauncherCommChannel comm_channel(comm_file);
 
+#if defined(_WIN32)
+  if (!comm_channel.Connect()) {
+    llvm::errs() << "Failed to connect to the named pipe.\n";
+    exit(EXIT_FAILURE);
+  }
+
+  STARTUPINFOA si;
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  ZeroMemory(&pi, sizeof(pi));
+
+  std::string cmd;
+  while (*argv != nullptr) {
+    std::stringstream ss;
+    ss << std::quoted(*(argv++));
+    cmd += ss.str();
+    cmd += " ";
+  }
+  cmd.pop_back();
+
+  if (!CreateProcessA(NULL, cmd.data(), NULL, NULL, FALSE, CREATE_SUSPENDED,
+                      NULL, NULL, &si, &pi)) {
+    llvm::errs() << "Create process failed: " << GetLastError() << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  if (llvm::Error err = comm_channel.NotifyPid(pi.dwProcessId)) {
+    llvm::errs() << llvm::toString(std::move(err)) << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  // We will wait to be attached with a timeout. We don't wait indefinitely
+  // using a signal to prevent being paused forever.
+
+  // This env var should be used only for tests.
+  const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
+  int timeout_in_ms =
+      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
+          std::chrono::milliseconds(timeout_in_ms))) {
+    llvm::errs() << llvm::toString(std::move(err)) << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  if (ResumeThread(pi.hThread) == (DWORD)-1) {
+    llvm::errs() << "Resume process failed: " << GetLastError() << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  WaitForSingleObject(pi.hProcess, INFINITE);
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+  exit(EXIT_SUCCESS);
+#else
   // On Linux with the Yama security module enabled, a process can only attach
   // to its descendants by default. In the runInTerminal case the target
   // process is launched by the client so we need to allow tracing explicitly.
@@ -220,8 +281,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
 #endif
 
-  RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid())
+  if (llvm::Error err = comm_channel.NotifyPid(getpid()))
     return err;
 
   // We will wait to be attached with a timeout. We don't wait indefinitely
