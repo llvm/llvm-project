@@ -86,14 +86,24 @@ static FuncOp getCalledFunction(CallOpInterface callOp,
       symbolTable.lookupNearestSymbolFrom(callOp, sym));
 }
 
-/// Get FuncAnalysisState.
+/// Get or create FuncAnalysisState.
 static const FuncAnalysisState &
-getFuncAnalysisState(const AnalysisState &state) {
+getOrCreateFuncAnalysisState(const AnalysisState &state) {
   assert(isa<OneShotAnalysisState>(state) && "expected OneShotAnalysisState");
-  auto *result = static_cast<const OneShotAnalysisState &>(state)
-                     .getExtension<FuncAnalysisState>();
-  assert(result && "FuncAnalysisState does not exist");
-  return *result;
+
+  // Unfortunately, at the moment the BufferizableOpInterface methods do provide
+  // a const reference to the AnalysisState class, and the only way to
+  // dynamically add an extension is to const_cast it to a non-const reference.
+  // Should the const qualifier be dropped from the interface?
+  auto &oneShotAnalysisState =
+      static_cast<OneShotAnalysisState &>(const_cast<AnalysisState &>(state));
+
+  auto *result = oneShotAnalysisState.getExtension<FuncAnalysisState>();
+
+  if (result)
+    return *result;
+
+  return oneShotAnalysisState.addExtension<FuncAnalysisState>();
 }
 
 /// Return the state (phase) of analysis of the FuncOp.
@@ -136,7 +146,7 @@ struct CallOpInterface
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
+    const FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
     FuncOp funcOp = getCalledFunction(callOp, funcState.symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
 
@@ -151,7 +161,7 @@ struct CallOpInterface
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
+    const FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
     FuncOp funcOp = getCalledFunction(callOp, funcState.symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
 
@@ -166,7 +176,7 @@ struct CallOpInterface
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
+    const FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
     FuncOp funcOp = getCalledFunction(callOp, funcState.symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
