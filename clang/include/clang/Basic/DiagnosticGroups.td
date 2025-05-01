@@ -156,6 +156,8 @@ def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
+
+def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def InitStringTooLongMissingNonString :
   DiagGroup<"unterminated-string-initialization">;
 def InitStringTooLongForCpp :
@@ -170,7 +172,8 @@ def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
                                         ImplicitIntToEnumCast, HiddenCppDecl,
                                         InitStringTooLongForCpp,
-                                        TentativeDefnCompat]>;
+                                        TentativeDefnCompat,
+                                        DuplicateDeclSpecifier]>;
 
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
@@ -816,7 +819,6 @@ def TautologicalCompare : DiagGroup<"tautological-compare",
                                      TautologicalObjCBoolCompare,
                                      TautologicalNegationCompare]>;
 def HeaderHygiene : DiagGroup<"header-hygiene">;
-def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
 def GNUUnionCast : DiagGroup<"gnu-union-cast">;
 def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end">;
