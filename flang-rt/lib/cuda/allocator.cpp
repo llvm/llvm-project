@@ -98,7 +98,7 @@ static unsigned findAllocation(void *ptr) {
   return allocNotFound;
 }
 
-static void insertAllocation(void *ptr, std::size_t size, std::int64_t stream) {
+static void insertAllocation(void *ptr, std::size_t size, cudaStream_t stream) {
   CriticalSection critical{lock};
   initAllocations();
   if (numDeviceAllocations >= maxDeviceAllocations) {
@@ -106,7 +106,7 @@ static void insertAllocation(void *ptr, std::size_t size, std::int64_t stream) {
   }
   deviceAllocations[numDeviceAllocations].ptr = ptr;
   deviceAllocations[numDeviceAllocations].size = size;
-  deviceAllocations[numDeviceAllocations].stream = (cudaStream_t)stream;
+  deviceAllocations[numDeviceAllocations].stream = stream;
   ++numDeviceAllocations;
   qsort(deviceAllocations, numDeviceAllocations, sizeof(DeviceAllocation),
       compareDeviceAlloc);
