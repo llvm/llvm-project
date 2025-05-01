@@ -107,7 +107,7 @@ class SBSaveCoreOptionsAPICase(TestBase):
 
     def test_get_total_in_bytes(self):
         """
-        Tests that get total in bytes properly returns an error without a process, 
+        Tests that get total in bytes properly returns an error without a process,
         and the readable regions with a process.
         """
 
