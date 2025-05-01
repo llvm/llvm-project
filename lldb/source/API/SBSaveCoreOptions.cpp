@@ -114,6 +114,11 @@ void SBSaveCoreOptions::Clear() {
   m_opaque_up->Clear();
 }
 
+uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
+  LLDB_INSTRUMENT_VA(this, error);
+  return m_opaque_up->GetCurrentSizeInBytes(error.ref());
+}
+
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
   return *m_opaque_up.get();
 }

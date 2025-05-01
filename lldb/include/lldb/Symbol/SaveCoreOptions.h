@@ -49,6 +49,8 @@ public:
 
   lldb_private::ThreadCollection::collection GetThreadsToSave() const;
 
+  uint64_t GetCurrentSizeInBytes(Status &error);
+
   void Clear();
 
 private:

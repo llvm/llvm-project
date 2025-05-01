@@ -104,3 +104,24 @@ class SBSaveCoreOptionsAPICase(TestBase):
         thread_collection = options.GetThreadsToSave()
         self.assertEqual(thread_collection.GetSize(), 3)
         self.assertIn(middle_thread, thread_collection)
+
+    def test_get_total_in_bytes(self):
+        """
+        Tests that get total in bytes properly returns an error without a process, 
+        and the readable regions with a process.
+        """
+
+        options = lldb.SBSaveCoreOptions()
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        process = self.get_basic_process()
+        memory_range = lldb.SBMemoryRegionInfo()
+        process.GetMemoryRegionInfo(0x7FFF12A84030, memory_range)
+        options.AddMemoryRegionToSave(memory_range)
+        error = lldb.SBError()
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Fail(), error.GetCString())
+        options.SetProcess(process)
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Success(), error.GetCString())
+        expected_size = memory_range.GetRegionEnd() - memory_range.GetRegionBase()
+        self.assertEqual(total, expected_size)
