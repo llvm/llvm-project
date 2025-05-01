@@ -62,10 +62,10 @@ entry:
 define <vscale x 8 x i32> @partial_reduce_add_half_8(<vscale x 8 x i32> %accumulator, <vscale x 16 x i32> %0) #0 {
 ; CHECK-LABEL: partial_reduce_add_half_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add z3.s, z3.s, z4.s
 ; CHECK-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEXT:    add z1.s, z1.s, z4.s
 ; CHECK-NEXT:    add z0.s, z0.s, z3.s
-; CHECK-NEXT:    add z0.s, z0.s, z5.s
+; CHECK-NEXT:    add z1.s, z1.s, z5.s
 ; CHECK-NEXT:    ret
 entry:
   %partial.reduce = call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add.nxv8i32.nxv8i32.nxv16i32(<vscale x 8 x i32> %accumulator, <vscale x 16 x i32> %0)
