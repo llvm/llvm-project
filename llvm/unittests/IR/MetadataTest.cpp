@@ -26,7 +26,7 @@
 using namespace llvm;
 
 namespace llvm {
-  extern cl::opt<bool> PickMergedSourceLocations;
+extern cl::opt<bool> PickMergedSourceLocations;
 } // namespace llvm
 
 namespace {
@@ -1458,13 +1458,13 @@ TEST_F(DILocationTest, Merge) {
     ASSERT_NE(nullptr, M1);
     EXPECT_EQ(2u, M1->getLine());
     EXPECT_EQ(7u, M1->getColumn());
-    EXPECT_EQ(N,  M1->getScope());
+    EXPECT_EQ(N, M1->getScope());
 
     auto *M2 = DILocation::getMergedLocation(nullptr, A);
     ASSERT_NE(nullptr, M2);
     EXPECT_EQ(2u, M2->getLine());
     EXPECT_EQ(7u, M2->getColumn());
-    EXPECT_EQ(N,  M2->getScope());
+    EXPECT_EQ(N, M2->getScope());
     PickMergedSourceLocations = false;
   }
 }
