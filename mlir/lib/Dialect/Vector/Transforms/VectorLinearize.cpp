@@ -425,9 +425,6 @@ struct LinearizeVectorBitCast final
 /// is converted to:
 ///   %out_1d = vector.splat %value : vector<16xf32>
 ///   %out_nd = vector.shape_cast %out_1d : vector<16xf32> to vector<4x4xf32>
-/// It ensures that the operation is compatible with the target vector
-/// bit width and replaces the original operation with a new SplatOp
-/// that operates on the converted type.
 struct LinearizeVectorSplat final
     : public OpConversionPattern<vector::SplatOp> {
   using OpConversionPattern::OpConversionPattern;
