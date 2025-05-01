@@ -788,6 +788,8 @@ let Command = "process handle" in {
 let Command = "process status" in {
   def process_status_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose process status including extended crash information.">;
+  def process_status_dump : Option<"dump-modification-id", "d">, Group<1>,
+    Desc<"Dump the state of the ProcessModID of the stopped process.">;
 }
 
 let Command = "process save_core" in {
