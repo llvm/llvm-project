@@ -76,16 +76,15 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 
   if (args.attachCommands.empty()) {
     // No "attachCommands", just attach normally.
+
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
+    ScopeSyncMode scope_sync_mode(dap.debugger);
+    
     dap.debugger.SetAsync(false);
     if (args.coreFile.empty()) {
       if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
-        // If port is specified and pid is not.
         lldb::SBListener listener = dap.debugger.GetListener();
-
-        // If the user hasn't provided the hostname property, default localhost
-        // being used.
         std::string connect_url =
             llvm::formatv("connect://{0}:", args.gdbRemoteHostname);
         connect_url += std::to_string(args.gdbRemotePort);
@@ -103,8 +102,6 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       }
     } else
       dap.target.LoadCore(args.coreFile.data(), error);
-    // Reenable async events
-    dap.debugger.SetAsync(true);
   } else {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there

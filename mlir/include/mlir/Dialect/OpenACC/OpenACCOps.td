@@ -2127,6 +2127,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// Used to retrieve the block inside the op's region.
     Block &getBody() { return getLoopRegions().front()->front(); }
 
+    /// Used to determine if this operation is merely a container for a loop
+    /// operation instead of being loop-like itself.
+    bool isLoopLike() { return !getLowerbound().empty(); }
+    bool isContainerLike() { return !isLoopLike(); }
+
     /// Return true if the op has the auto attribute for the
     /// mlir::acc::DeviceType::None device_type.
     bool hasAuto();
@@ -2197,7 +2202,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
-    custom<CombinedConstructsLoop>($combined)
+    ( `combined` `(` custom<CombinedConstructsLoop>($combined)^ `)` )?
     oilist(
         `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
             $gangOperandsArgType, $gangOperandsDeviceType,

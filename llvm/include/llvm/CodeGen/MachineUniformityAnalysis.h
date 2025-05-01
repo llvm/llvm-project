@@ -17,6 +17,7 @@
 #include "llvm/ADT/GenericUniformityInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
 
 namespace llvm {
@@ -49,6 +50,27 @@ public:
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 
   // TODO: verify analysis
+};
+
+class MachineUniformityAnalysis
+    : public AnalysisInfoMixin<MachineUniformityAnalysis> {
+  friend AnalysisInfoMixin<MachineUniformityAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineUniformityInfo;
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+class MachineUniformityPrinterPass
+    : public PassInfoMixin<MachineUniformityAnalysis> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineUniformityPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

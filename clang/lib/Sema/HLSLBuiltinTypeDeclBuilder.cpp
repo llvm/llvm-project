@@ -400,6 +400,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
 
   // create params & set them to the function prototype
   SmallVector<ParmVarDecl *> ParmDecls;
+  unsigned CurScopeDepth = DeclBuilder.SemaRef.getCurScope()->getDepth();
   auto FnProtoLoc =
       Method->getTypeSourceInfo()->getTypeLoc().getAs<FunctionProtoTypeLoc>();
   for (int I = 0, E = Params.size(); I != E; I++) {
@@ -414,6 +415,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
           HLSLParamModifierAttr::Create(AST, SourceRange(), MP.Modifier);
       Parm->addAttr(Mod);
     }
+    Parm->setScopeInfo(CurScopeDepth, I);
     ParmDecls.push_back(Parm);
     FnProtoLoc.setParam(I, Parm);
   }
@@ -447,10 +449,14 @@ BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
       AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
       FD->getNameInfo(), AST.BuiltinFnTy, VK_PRValue);
 
+  auto *ImpCast = ImplicitCastExpr::Create(
+      AST, AST.getPointerType(FD->getType()), CK_BuiltinFnToFnPtr, DRE, nullptr,
+      VK_PRValue, FPOptionsOverride());
+
   if (ReturnType.isNull())
     ReturnType = FD->getReturnType();
 
-  Expr *Call = CallExpr::Create(AST, DRE, Args, ReturnType, VK_PRValue,
+  Expr *Call = CallExpr::Create(AST, ImpCast, Args, ReturnType, VK_PRValue,
                                 SourceLocation(), FPOptionsOverride());
   StmtsList.push_back(Call);
   return *this;
@@ -632,11 +638,33 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
   if (Record->isCompleteDefinition())
     return *this;
 
-  // FIXME: initialize handle to poison value; this can be added after
-  // resource constructor from binding is implemented, otherwise the handle
-  // value will get overwritten.
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  QualType HandleType = getResourceHandleField()->getType();
   return BuiltinTypeMethodBuilder(*this, "", SemaRef.getASTContext().VoidTy,
                                   false, true)
+      .callBuiltin("__builtin_hlsl_resource_uninitializedhandle", HandleType,
+                   PH::Handle)
+      .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
+      .addParam("registerNo", AST.UnsignedIntTy)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
+                   PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3)
+      .assign(PH::Handle, PH::LastStmt)
       .finalize();
 }
 

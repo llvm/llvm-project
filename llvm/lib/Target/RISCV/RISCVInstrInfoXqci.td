@@ -1323,3 +1323,36 @@ def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
+
+
+//===----------------------------------------------------------------------===/i
+// Compress Instruction tablegen backend.
+//===----------------------------------------------------------------------===//
+
+let isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32] in {
+def : CompressPat<(QC_E_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+def : CompressPat<(QC_E_LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
+                  (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
+def : CompressPat<(QC_E_LB GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LB GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LH GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LH GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LW GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LW GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+
+def : CompressPat<(QC_E_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
+                  (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
+def : CompressPat<(QC_E_SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32]
