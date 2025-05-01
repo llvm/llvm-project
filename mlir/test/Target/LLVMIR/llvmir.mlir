@@ -2894,19 +2894,23 @@ llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
                            <cut_off = 100000, min_count = 86427, num_counts = 1>
                   >>]
 
-// CHECK: !llvm.module.flags = !{!0, !15}
+// CHECK: !llvm.module.flags = !{![[#PSUM:]], {{.*}}}
 
-// CHECK: !0 = !{i32 1, !"ProfileSummary", !1}
-// CHECK: !1 = !{!2, !3, !4, !5, !6, !7, !8, !9, !10, !11}
-// CHECK: !2 = !{!"ProfileFormat", !"InstrProf"}
-// CHECK: !3 = !{!"TotalCount", i64 263646}
-// CHECK: !4 = !{!"MaxCount", i64 86427}
-// CHECK: !5 = !{!"MaxInternalCount", i64 86427}
-// CHECK: !6 = !{!"MaxFunctionCount", i64 4691}
-// CHECK: !7 = !{!"NumCounts", i64 3712}
-// CHECK: !8 = !{!"NumFunctions", i64 796}
-// CHECK: !9 = !{!"IsPartialProfile", i64 0}
-// CHECK: !10 = !{!"PartialProfileRatio", double 0.000000e+00}
+// CHECK: ![[#PSUM]] = !{i32 1, !"ProfileSummary", ![[#SUMLIST:]]}
+// CHECK: ![[#SUMLIST]] = !{![[#FMT:]], ![[#TC:]], ![[#MC:]], ![[#MIC:]], ![[#MFC:]], ![[#NC:]], ![[#NF:]], ![[#IPP:]], ![[#PPR:]], ![[#DS:]]}
+// CHECK: ![[#FMT]] = !{!"ProfileFormat", !"InstrProf"}
+// CHECK: ![[#TC]] = !{!"TotalCount", i64 263646}
+// CHECK: ![[#MC]] = !{!"MaxCount", i64 86427}
+// CHECK: ![[#MIC]] = !{!"MaxInternalCount", i64 86427}
+// CHECK: ![[#MFC]] = !{!"MaxFunctionCount", i64 4691}
+// CHECK: ![[#NC]] = !{!"NumCounts", i64 3712}
+// CHECK: ![[#NF]] = !{!"NumFunctions", i64 796}
+// CHECK: ![[#IPP]] = !{!"IsPartialProfile", i64 0}
+// CHECK: ![[#PPR]] = !{!"PartialProfileRatio", double 0.000000e+00}
+// CHECK: ![[#DS]] = !{!"DetailedSummary", ![[#DETAILED:]]}
+// CHECK: ![[#DETAILED]] = !{![[#DS0:]], ![[#DS1:]]}
+// CHECK: ![[#DS0:]] = !{i64 10000, i64 86427, i64 1}
+// CHECK: ![[#DS1:]] = !{i64 100000, i64 86427, i64 1}
 
 // -----
 

@@ -607,7 +607,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   auto getConstantMD = [&](const llvm::MDOperand &md, StringRef matchKey,
                            bool optional =
                                false) -> llvm::ConstantAsMetadata * {
-    auto *tupleEntry = getMDTuple(md);
+    llvm::MDTuple *tupleEntry = getMDTuple(md);
     if (!tupleEntry)
       return nullptr;
     llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
