@@ -13,6 +13,23 @@ include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 
 //===----------------------------------------------------------------------===//
+// ToEmitC
+//===----------------------------------------------------------------------===//
+
+def ConvertToEmitC : Pass<"convert-to-emitc"> {
+  let summary = "Convert to EmitC dialect via dialect interfaces";
+  let description = [{
+    This is a generic pass to convert to the EmitC dialect, it uses the
+    `ConvertToEmitCPatternInterface` dialect interface to delegate to dialects
+    the injection of conversion patterns.
+  }];
+  let options = [
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "Test conversion patterns of only the specified dialects">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // ToLLVM
 //===----------------------------------------------------------------------===//
 

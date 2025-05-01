@@ -1022,8 +1022,7 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_ValidInCXX11:
     DiagRuntimeBehavior(
         E->getBeginLoc(), nullptr,
-        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg)
-            << Ty << llvm::to_underlying(CT));
+        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg) << Ty << CT);
     [[fallthrough]];
   case VAK_Valid:
     if (Ty->isRecordType()) {
@@ -1031,8 +1030,7 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
       // 'c_str' member function, the user probably meant to call that.
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::warn_pass_class_arg_to_vararg)
-                              << Ty << llvm::to_underlying(CT)
-                              << hasCStrMethod(E) << ".c_str()");
+                              << Ty << CT << hasCStrMethod(E) << ".c_str()");
     }
     break;
 
@@ -1040,22 +1038,21 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_MSVCUndefined:
     DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                         PDiag(diag::warn_cannot_pass_non_pod_arg_to_vararg)
-                            << getLangOpts().CPlusPlus11 << Ty
-                            << llvm::to_underlying(CT));
+                            << getLangOpts().CPlusPlus11 << Ty << CT);
     break;
 
   case VAK_Invalid:
     if (Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
       Diag(E->getBeginLoc(),
            diag::err_cannot_pass_non_trivial_c_struct_to_vararg)
-          << Ty << llvm::to_underlying(CT);
+          << Ty << CT;
     else if (Ty->isObjCObjectType())
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::err_cannot_pass_objc_interface_to_vararg)
-                              << Ty << llvm::to_underlying(CT));
+                              << Ty << CT);
     else
       Diag(E->getBeginLoc(), diag::err_cannot_pass_to_vararg)
-          << isa<InitListExpr>(E) << Ty << llvm::to_underlying(CT);
+          << isa<InitListExpr>(E) << Ty << CT;
     break;
   }
 }
@@ -14983,8 +14980,8 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 }
 
 ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
-                                    BinaryOperatorKind Opc,
-                                    Expr *LHSExpr, Expr *RHSExpr) {
+                                    BinaryOperatorKind Opc, Expr *LHSExpr,
+                                    Expr *RHSExpr, bool ForFoldExpression) {
   if (getLangOpts().CPlusPlus11 && isa<InitListExpr>(RHSExpr)) {
     // The syntax only allows initializer lists on the RHS of assignment,
     // so we don't need to worry about accepting invalid code for
@@ -15115,7 +15112,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
 
     if (const auto *BI = dyn_cast<BinaryOperator>(LHSExpr);
-        BI && BI->isComparisonOp())
+        !ForFoldExpression && BI && BI->isComparisonOp())
       Diag(OpLoc, diag::warn_consecutive_comparison)
           << BI->getOpcodeStr() << BinaryOperator::getOpcodeStr(Opc);
 
@@ -15526,8 +15523,8 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
 }
 
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
-                            BinaryOperatorKind Opc,
-                            Expr *LHSExpr, Expr *RHSExpr) {
+                            BinaryOperatorKind Opc, Expr *LHSExpr,
+                            Expr *RHSExpr, bool ForFoldExpression) {
   ExprResult LHS, RHS;
   std::tie(LHS, RHS) = CorrectDelayedTyposInBinOp(*this, Opc, LHSExpr, RHSExpr);
   if (!LHS.isUsable() || !RHS.isUsable())
@@ -15601,7 +15598,8 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
            LHSExpr->getType()->isOverloadableType()))
         return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 
-      return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+      return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr,
+                                ForFoldExpression);
     }
 
     // Don't resolve overloads if the other type is overloadable.
@@ -15665,7 +15663,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   // Build a built-in binary operation.
-  return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+  return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr, ForFoldExpression);
 }
 
 static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
@@ -18624,8 +18622,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
       // through shadow variables therefore it is not diagnosed.
       if (SemaRef.LangOpts.CUDAIsDevice && !SemaRef.LangOpts.HIPStdPar) {
         SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
-            << /*host*/ 2 << /*variable*/ 1 << Var
-            << llvm::to_underlying(UserTarget);
+            << /*host*/ 2 << /*variable*/ 1 << Var << UserTarget;
         SemaRef.targetDiag(Var->getLocation(),
                            Var->getType().isConstQualified()
                                ? diag::note_cuda_const_var_unpromoted

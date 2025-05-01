@@ -8339,8 +8339,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       } else {
         EmitFormatDiagnostic(
             S.PDiag(diag::warn_non_pod_vararg_with_format_string)
-                << S.getLangOpts().CPlusPlus11 << ExprTy
-                << llvm::to_underlying(CallType)
+                << S.getLangOpts().CPlusPlus11 << ExprTy << CallType
                 << AT.getRepresentativeTypeName(S.Context) << CSR
                 << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
@@ -8354,8 +8353,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       else if (ExprTy->isObjCObjectType())
         EmitFormatDiagnostic(
             S.PDiag(diag::err_cannot_pass_objc_interface_to_vararg_format)
-                << S.getLangOpts().CPlusPlus11 << ExprTy
-                << llvm::to_underlying(CallType)
+                << S.getLangOpts().CPlusPlus11 << ExprTy << CallType
                 << AT.getRepresentativeTypeName(S.Context) << CSR
                 << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
@@ -8363,7 +8361,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         // FIXME: If this is an initializer list, suggest removing the braces
         // or inserting a cast to the target type.
         S.Diag(E->getBeginLoc(), diag::err_cannot_pass_to_vararg_format)
-            << isa<InitListExpr>(E) << ExprTy << llvm::to_underlying(CallType)
+            << isa<InitListExpr>(E) << ExprTy << CallType
             << AT.getRepresentativeTypeName(S.Context) << E->getSourceRange();
       break;
     }
