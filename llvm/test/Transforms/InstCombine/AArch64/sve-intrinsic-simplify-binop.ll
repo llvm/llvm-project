@@ -107,7 +107,8 @@ define <vscale x 4 x i32> @constant_mul_u_after_striping_inactive_lanes(<vscale 
 define <vscale x 4 x i32> @dont_propagate_poison(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @dont_propagate_poison(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> poison
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> poison, <vscale x 4 x i32> splat (i32 1))
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> poison, <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 4 x i32> %r

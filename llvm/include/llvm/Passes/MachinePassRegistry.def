@@ -192,6 +192,7 @@ MACHINE_FUNCTION_PASS("remove-loads-into-fake-uses", RemoveLoadsIntoFakeUsesPass
 MACHINE_FUNCTION_PASS("remove-redundant-debug-values", RemoveRedundantDebugValuesPass())
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
                       RequireAllMachineFunctionPropertiesPass())
+MACHINE_FUNCTION_PASS("shrink-wrap", ShrinkWrapPass())
 MACHINE_FUNCTION_PASS("stack-coloring", StackColoringPass())
 MACHINE_FUNCTION_PASS("stack-frame-layout", StackFrameLayoutAnalysisPass())
 MACHINE_FUNCTION_PASS("stack-slot-coloring", StackSlotColoringPass())
@@ -261,6 +262,12 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
       return parseRegAllocGreedyFilterFunc(*PB, Params);
     }, "reg-filter"
 )
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "virt-reg-rewriter", "VirtRegRewriterPass",
+    [](bool ClearVirtRegs) { return VirtRegRewriterPass(ClearVirtRegs); },
+    parseVirtRegRewriterPassOptions, "no-clear-vregs;clear-vregs")
+
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
 
 // After a pass is converted to new pass manager, its entry should be moved from
@@ -317,8 +324,6 @@ DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)
 DUMMY_MACHINE_FUNCTION_PASS("regbankselect", RegBankSelectPass)
 DUMMY_MACHINE_FUNCTION_PASS("reset-machine-function", ResetMachineFunctionPass)
-DUMMY_MACHINE_FUNCTION_PASS("shrink-wrap", ShrinkWrapPass)
 DUMMY_MACHINE_FUNCTION_PASS("stackmap-liveness", StackMapLivenessPass)
 DUMMY_MACHINE_FUNCTION_PASS("unpack-mi-bundles", UnpackMachineBundlesPass)
-DUMMY_MACHINE_FUNCTION_PASS("virtregrewriter", VirtRegRewriterPass)
 #undef DUMMY_MACHINE_FUNCTION_PASS

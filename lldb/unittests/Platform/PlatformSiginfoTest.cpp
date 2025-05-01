@@ -61,9 +61,10 @@ public:
     for (auto field_name : llvm::split(path, '.')) {
       uint64_t bit_offset;
       std::string name;
-      field_type = field_type.GetFieldAtIndex(
-          field_type.GetIndexOfChildWithName(field_name, false), name,
-          &bit_offset, nullptr, nullptr);
+      auto index_or_err = field_type.GetIndexOfChildWithName(field_name, false);
+      ASSERT_FALSE(!index_or_err);
+      field_type = field_type.GetFieldAtIndex(*index_or_err, name, &bit_offset,
+                                              nullptr, nullptr);
       ASSERT_TRUE(field_type);
       total_offset += bit_offset;
     }

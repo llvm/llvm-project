@@ -788,8 +788,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         Instruction &I = *It;
         It++;
 
-        if (I.isTerminator())
+        if (I.isTerminator()) {
+          // Absorb any debug value that terminator may have
+          if (OI.EntryBB->getTerminator())
+            OI.EntryBB->getTerminator()->adoptDbgRecords(
+                &ArtificialEntry, I.getIterator(), false);
           continue;
+        }
 
         I.moveBeforePreserving(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
       }
@@ -8783,6 +8788,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:

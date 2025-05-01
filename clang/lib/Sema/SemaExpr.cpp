@@ -1022,7 +1022,8 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_ValidInCXX11:
     DiagRuntimeBehavior(
         E->getBeginLoc(), nullptr,
-        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg) << Ty << CT);
+        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg)
+            << Ty << llvm::to_underlying(CT));
     [[fallthrough]];
   case VAK_Valid:
     if (Ty->isRecordType()) {
@@ -1030,7 +1031,8 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
       // 'c_str' member function, the user probably meant to call that.
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::warn_pass_class_arg_to_vararg)
-                              << Ty << CT << hasCStrMethod(E) << ".c_str()");
+                              << Ty << llvm::to_underlying(CT)
+                              << hasCStrMethod(E) << ".c_str()");
     }
     break;
 
@@ -1038,21 +1040,22 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_MSVCUndefined:
     DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                         PDiag(diag::warn_cannot_pass_non_pod_arg_to_vararg)
-                            << getLangOpts().CPlusPlus11 << Ty << CT);
+                            << getLangOpts().CPlusPlus11 << Ty
+                            << llvm::to_underlying(CT));
     break;
 
   case VAK_Invalid:
     if (Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
       Diag(E->getBeginLoc(),
            diag::err_cannot_pass_non_trivial_c_struct_to_vararg)
-          << Ty << CT;
+          << Ty << llvm::to_underlying(CT);
     else if (Ty->isObjCObjectType())
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::err_cannot_pass_objc_interface_to_vararg)
-                              << Ty << CT);
+                              << Ty << llvm::to_underlying(CT));
     else
       Diag(E->getBeginLoc(), diag::err_cannot_pass_to_vararg)
-          << isa<InitListExpr>(E) << Ty << CT;
+          << isa<InitListExpr>(E) << Ty << llvm::to_underlying(CT);
     break;
   }
 }
@@ -1062,7 +1065,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
   if (const BuiltinType *PlaceholderTy = E->getType()->getAsPlaceholderType()) {
     // Strip the unbridged-cast placeholder expression off, if applicable.
     if (PlaceholderTy->getKind() == BuiltinType::ARCUnbridgedCast &&
-        (CT == VariadicMethod ||
+        (CT == VariadicCallType::Method ||
          (FDecl && FDecl->hasAttr<CFAuditedTransferAttr>()))) {
       E = ObjC().stripARCUnbridgedCast(E);
 
@@ -4960,7 +4963,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return ExprError();
   }
 
-  CheckInvalidBuiltinCountedByRef(base, ArraySubscriptKind);
+  CheckInvalidBuiltinCountedByRef(base,
+                                  BuiltinCountedByRefKind::ArraySubscript);
 
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
@@ -5772,23 +5776,23 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   return ExprError();
 }
 
-Sema::VariadicCallType
-Sema::getVariadicCallType(FunctionDecl *FDecl, const FunctionProtoType *Proto,
-                          Expr *Fn) {
+VariadicCallType Sema::getVariadicCallType(FunctionDecl *FDecl,
+                                           const FunctionProtoType *Proto,
+                                           Expr *Fn) {
   if (Proto && Proto->isVariadic()) {
     if (isa_and_nonnull<CXXConstructorDecl>(FDecl))
-      return VariadicConstructor;
+      return VariadicCallType::Constructor;
     else if (Fn && Fn->getType()->isBlockPointerType())
-      return VariadicBlock;
+      return VariadicCallType::Block;
     else if (FDecl) {
       if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(FDecl))
         if (Method->isInstance())
-          return VariadicMethod;
+          return VariadicCallType::Method;
     } else if (Fn && Fn->getType() == Context.BoundMemberTy)
-      return VariadicMethod;
-    return VariadicFunction;
+      return VariadicCallType::Method;
+    return VariadicCallType::Function;
   }
-  return VariadicDoesNotApply;
+  return VariadicCallType::DoesNotApply;
 }
 
 namespace {
@@ -6099,7 +6103,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
   }
 
   // If this is a variadic call, handle args passed through "...".
-  if (CallType != VariadicDoesNotApply) {
+  if (CallType != VariadicCallType::DoesNotApply) {
     // Assume that extern "C" functions with variadic arguments that
     // return __unknown_anytype aren't *really* variadic.
     if (Proto->getReturnType() == Context.UnknownAnyTy && FDecl &&
@@ -6551,7 +6555,8 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // The result of __builtin_counted_by_ref cannot be used as a function
   // argument. It allows leaking and modification of bounds safety information.
   for (const Expr *Arg : ArgExprs)
-    if (CheckInvalidBuiltinCountedByRef(Arg, FunctionArgKind))
+    if (CheckInvalidBuiltinCountedByRef(Arg,
+                                        BuiltinCountedByRefKind::FunctionArg))
       return ExprError();
 
   if (getLangOpts().CPlusPlus) {
@@ -15427,8 +15432,9 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // Emit warnings for tricky precedence issues, e.g. "bitfield & 0x4 == 0"
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
 
-  BuiltinCountedByRefKind K =
-      BinaryOperator::isAssignmentOp(Opc) ? AssignmentKind : BinaryExprKind;
+  BuiltinCountedByRefKind K = BinaryOperator::isAssignmentOp(Opc)
+                                  ? BuiltinCountedByRefKind::Assignment
+                                  : BuiltinCountedByRefKind::BinaryExpr;
 
   CheckInvalidBuiltinCountedByRef(LHSExpr, K);
   CheckInvalidBuiltinCountedByRef(RHSExpr, K);

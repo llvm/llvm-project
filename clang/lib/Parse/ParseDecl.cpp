@@ -1879,15 +1879,15 @@ bool Parser::DiagnoseProhibitedCXX11Attribute() {
   assert(Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 
   switch (isCXX11AttributeSpecifier(/*Disambiguate*/true)) {
-  case CAK_NotAttributeSpecifier:
+  case CXX11AttributeKind::NotAttributeSpecifier:
     // No diagnostic: we're in Obj-C++11 and this is not actually an attribute.
     return false;
 
-  case CAK_InvalidAttributeSpecifier:
+  case CXX11AttributeKind::InvalidAttributeSpecifier:
     Diag(Tok.getLocation(), diag::err_l_square_l_square_not_attribute);
     return false;
 
-  case CAK_AttributeSpecifier:
+  case CXX11AttributeKind::AttributeSpecifier:
     // Parse and discard the attributes.
     SourceLocation BeginLoc = ConsumeBracket();
     ConsumeBracket();
@@ -3570,28 +3570,28 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
           getCurScope(), SS, Name, AfterScope.getLocation(), Next,
           /*CCC=*/nullptr);
       switch (Classification.getKind()) {
-      case Sema::NC_Error:
+      case NameClassificationKind::Error:
         SkipMalformedDecl();
         return true;
 
-      case Sema::NC_Keyword:
+      case NameClassificationKind::Keyword:
         llvm_unreachable("typo correction is not possible here");
 
-      case Sema::NC_Type:
-      case Sema::NC_TypeTemplate:
-      case Sema::NC_UndeclaredNonType:
-      case Sema::NC_UndeclaredTemplate:
+      case NameClassificationKind::Type:
+      case NameClassificationKind::TypeTemplate:
+      case NameClassificationKind::UndeclaredNonType:
+      case NameClassificationKind::UndeclaredTemplate:
         // Not a previously-declared non-type entity.
         MightBeDeclarator = false;
         break;
 
-      case Sema::NC_Unknown:
-      case Sema::NC_NonType:
-      case Sema::NC_DependentNonType:
-      case Sema::NC_OverloadSet:
-      case Sema::NC_VarTemplate:
-      case Sema::NC_FunctionTemplate:
-      case Sema::NC_Concept:
+      case NameClassificationKind::Unknown:
+      case NameClassificationKind::NonType:
+      case NameClassificationKind::DependentNonType:
+      case NameClassificationKind::OverloadSet:
+      case NameClassificationKind::VarTemplate:
+      case NameClassificationKind::FunctionTemplate:
+      case NameClassificationKind::Concept:
         // Might be a redeclaration of a prior entity.
         break;
       }
@@ -6393,7 +6393,8 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   // attribute on the first constructor parameter.
   if (getLangOpts().CPlusPlus11 &&
       isCXX11AttributeSpecifier(/*Disambiguate*/ false,
-                                /*OuterMightBeMessageSend*/ true)) {
+                                /*OuterMightBeMessageSend*/ true) !=
+          CXX11AttributeKind::NotAttributeSpecifier) {
     return true;
   }
 
@@ -7365,7 +7366,7 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
   BalancedDelimiterTracker T(*this, tok::l_square);
   T.consumeOpen();
 
-  if (isCXX11AttributeSpecifier())
+  if (isCXX11AttributeSpecifier() != CXX11AttributeKind::NotAttributeSpecifier)
     DiagnoseAndSkipCXX11Attributes();
 
   // If this doesn't look like a structured binding, maybe it's a misplaced
@@ -7403,7 +7404,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
       }
     }
 
-    if (isCXX11AttributeSpecifier())
+    if (isCXX11AttributeSpecifier() !=
+        CXX11AttributeKind::NotAttributeSpecifier)
       DiagnoseAndSkipCXX11Attributes();
 
     SourceLocation EllipsisLoc;
@@ -7438,7 +7440,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
     }
 
     ParsedAttributes Attrs(AttrFactory);
-    if (isCXX11AttributeSpecifier()) {
+    if (isCXX11AttributeSpecifier() !=
+        CXX11AttributeKind::NotAttributeSpecifier) {
       Diag(Tok, getLangOpts().CPlusPlus26
                     ? diag::warn_cxx23_compat_decl_attrs_on_binding
                     : diag::ext_decl_attrs_on_binding);
@@ -7527,7 +7530,9 @@ void Parser::ParseParenDeclarator(Declarator &D) {
               NextToken().is(tok::r_paren)) || // C++ int(...)
              isDeclarationSpecifier(
                  ImplicitTypenameContext::No) || // 'int(int)' is a function.
-             isCXX11AttributeSpecifier()) { // 'int([[]]int)' is a function.
+             isCXX11AttributeSpecifier() !=
+                 CXX11AttributeKind::NotAttributeSpecifier) { // 'int([[]]int)'
+                                                              // is a function.
     // This handles C99 6.7.5.3p11: in "typedef int X; void foo(X)", X is
     // considered to be a type, not a K&R identifier-list.
     isGrouping = false;
