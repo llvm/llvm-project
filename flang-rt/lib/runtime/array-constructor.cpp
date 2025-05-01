@@ -50,7 +50,7 @@ static RT_API_ATTRS void AllocateOrReallocateVectorIfNeeded(
           initialAllocationSize(fromElements, to.ElementBytes())};
       to.GetDimension(0).SetBounds(1, allocationSize);
       RTNAME(AllocatableAllocate)
-      (to, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr,
+      (to, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr,
           vector.sourceFile, vector.sourceLine);
       to.GetDimension(0).SetBounds(1, fromElements);
       vector.actualAllocationSize = allocationSize;
@@ -59,7 +59,7 @@ static RT_API_ATTRS void AllocateOrReallocateVectorIfNeeded(
       // first value: there should be no reallocation.
       RUNTIME_CHECK(terminator, previousToElements >= fromElements);
       RTNAME(AllocatableAllocate)
-      (to, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr,
+      (to, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr,
           vector.sourceFile, vector.sourceLine);
       vector.actualAllocationSize = previousToElements;
     }

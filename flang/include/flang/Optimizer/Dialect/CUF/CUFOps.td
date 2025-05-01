@@ -95,11 +95,12 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
   }];
 
   let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-      Optional<fir_ReferenceType>:$stream,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       Optional<AnyIntegerType>:$stream,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+                       cuf_DataAttributeAttr:$data_attr,
+                       UnitAttr:$hasStat);
 
   let results = (outs AnyIntegerType:$stat);
 
