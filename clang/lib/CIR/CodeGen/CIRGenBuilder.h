@@ -190,8 +190,7 @@ public:
   // -------------------------
   //
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
-    auto sInt32Ty = getSInt32Ty();
-    return create<cir::ConstantOp>(loc, cir::IntAttr::get(sInt32Ty, c));
+    return getConstantInt(loc, getSInt32Ty(), c);
   }
 
   // Creates constant nullptr for pointer type ty.
