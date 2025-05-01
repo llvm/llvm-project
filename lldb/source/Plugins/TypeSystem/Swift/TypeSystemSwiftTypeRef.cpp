@@ -1269,7 +1269,7 @@ TypeSystemSwiftTypeRef::Canonicalize(swift::Demangle::Demangler &dem,
       if (node->getKind() != Node::Kind::BoundGenericTypeAlias &&
           node->getKind() != Node::Kind::TypeAlias)
         // Resolve any type aliases in the resolved type.
-        return GetCanonicalNode(dem, node);
+        return GetCanonicalNode(dem, node, flavor);
       // This type alias resolved to another type alias.
     }
     // Hit the safeguard limit.
