@@ -2906,13 +2906,13 @@ static void genAtomicRead(lower::AbstractConverter &converter,
     // implicit cast.
 
     // An atomic read of form `v = x` would (without implicit casting)
-    // lower to `omp.atomic.read %v = %x : !fir.ref<type1>, !fir.ref<typ2>,
+    // lower to `omp.atomic.read %v = %x : !fir.ref<type1>, !fir.ref<type2>,
     // type2`. This implicit casting will rather generate the following FIR:
     //
     // 	 %alloca = fir.alloca type2
     //	 omp.atomic.read %alloca = %x : !fir.ref<type2>, !fir.ref<type2>, type2
     //	 %load = fir.load %alloca : !fir.ref<type2>
-    //	 %cvt = fir.convert %load: (type2) -> type1
+    //	 %cvt = fir.convert %load : (type2) -> type1
     //	 fir.store %cvt to %v : !fir.ref<type1>
 
     // These sequence of operations is thread-safe since each thread allocates
