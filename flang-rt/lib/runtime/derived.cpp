@@ -52,7 +52,7 @@ RT_API_ATTRS int Initialize(const Descriptor &instance,
         allocDesc.raw().attribute = CFI_attribute_allocatable;
         if (comp.genre() == typeInfo::Component::Genre::Automatic) {
           stat = ReturnError(
-              terminator, allocDesc.Allocate(kNoAsyncId), errMsg, hasStat);
+              terminator, allocDesc.Allocate(kNoAsyncObject), errMsg, hasStat);
           if (stat == StatOk) {
             if (const DescriptorAddendum * addendum{allocDesc.Addendum()}) {
               if (const auto *derived{addendum->derivedType()}) {
@@ -153,7 +153,7 @@ RT_API_ATTRS int InitializeClone(const Descriptor &clone,
         if (origDesc.IsAllocated()) {
           cloneDesc.ApplyMold(origDesc, origDesc.rank());
           stat = ReturnError(
-              terminator, cloneDesc.Allocate(kNoAsyncId), errMsg, hasStat);
+              terminator, cloneDesc.Allocate(kNoAsyncObject), errMsg, hasStat);
           if (stat == StatOk) {
             if (const DescriptorAddendum * addendum{cloneDesc.Addendum()}) {
               if (const typeInfo::DerivedType *
@@ -260,7 +260,7 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
         copy.raw().attribute = CFI_attribute_allocatable;
         Terminator stubTerminator{"CallFinalProcedure() in Fortran runtime", 0};
         RUNTIME_CHECK(terminator ? *terminator : stubTerminator,
-            copy.Allocate(kNoAsyncId) == CFI_SUCCESS);
+            copy.Allocate(kNoAsyncObject) == CFI_SUCCESS);
         ShallowCopyDiscontiguousToContiguous(copy, descriptor);
         argDescriptor = &copy;
       }
