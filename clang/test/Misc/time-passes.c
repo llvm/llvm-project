@@ -8,6 +8,9 @@
 // RUN: %clang_cc1 -emit-obj -O1 \
 // RUN:     -ftime-report=per-pass-run %s -o /dev/null 2>&1 | \
 // RUN:     FileCheck %s --check-prefixes=TIME,NPM-PER-INVOKE
+// RUN: %clang_cc1 -emit-obj -O1 \
+// RUN:     -ftime-report-json %s -o /dev/null 2>&1 | \
+// RUN:     FileCheck %s --check-prefixes=JSON
 
 // TIME: Pass execution timing report
 // TIME: Total Execution Time:
@@ -19,5 +22,10 @@
 // NPM:       InstCombinePass{{$}}
 // NPM-NOT:   InstCombinePass #
 // TIME: Total{{$}}
+// JSON:{
+// JSON: "time.pass.InstCombinePass.wall": {{.*}},
+// JSON: "time.pass.InstCombinePass.user": {{.*}},
+// JSON: "time.pass.InstCombinePass.sys": {{.*}},
+// JSON:}
 
 int foo(int x, int y) { return x + y; }
