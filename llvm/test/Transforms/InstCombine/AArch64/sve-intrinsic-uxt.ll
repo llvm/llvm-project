@@ -3,16 +3,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define <vscale x 2 x i64> @uxtb_z_64(<vscale x 2 x i64> %0) #0 {
-; CHECK-LABEL: define <vscale x 2 x i64> @uxtb_z_64(
-; CHECK-SAME: <vscale x 2 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> splat (i64 255))
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
-;
-  %2 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %0)
-  ret <vscale x 2 x i64> %2
-}
-
 define <vscale x 2 x i64> @uxtb_m_64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @uxtb_m_64(
 ; CHECK-SAME: <vscale x 2 x i64> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0]] {
@@ -35,18 +25,6 @@ define <vscale x 2 x i64> @uxtb_x_64(<vscale x 16 x i1> %0, <vscale x 2 x i64> %
   ret <vscale x 2 x i64> %4
 }
 
-define <vscale x 2 x i64> @uxtb_z_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2 x i64> %1) #0 {
-; CHECK-LABEL: define <vscale x 2 x i64> @uxtb_z_64_no_ptrue(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
-;
-  %3 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> %3, <vscale x 2 x i64> %1)
-  ret <vscale x 2 x i64> %4
-}
-
 define <vscale x 2 x i64> @uxtb_m_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @uxtb_m_64_no_ptrue(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]], <vscale x 2 x i64> [[TMP2:%.*]]) #[[ATTR0]] {
@@ -57,16 +35,6 @@ define <vscale x 2 x i64> @uxtb_m_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2
   %4 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
   %5 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtb.nxv2i64(<vscale x 2 x i64> %2, <vscale x 2 x i1> %4, <vscale x 2 x i64> %1)
   ret <vscale x 2 x i64> %5
-}
-
-define <vscale x 4 x i32> @uxtb_z_32(<vscale x 4 x i32> %0) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @uxtb_z_32(
-; CHECK-SAME: <vscale x 4 x i32> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> splat (i32 255))
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
-;
-  %2 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxtb.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %0)
-  ret <vscale x 4 x i32> %2
 }
 
 define <vscale x 4 x i32> @uxtb_m_32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1) #0 {
@@ -91,18 +59,6 @@ define <vscale x 4 x i32> @uxtb_x_32(<vscale x 16 x i1> %0, <vscale x 4 x i32> %
   ret <vscale x 4 x i32> %4
 }
 
-define <vscale x 4 x i32> @uxtb_z_32_no_ptrue(<vscale x 16 x i1> %0, <vscale x 4 x i32> %1) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @uxtb_z_32_no_ptrue(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 4 x i32> [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxtb.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
-;
-  %3 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %0)
-  %4 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxtb.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> %3, <vscale x 4 x i32> %1)
-  ret <vscale x 4 x i32> %4
-}
-
 define <vscale x 4 x i32> @uxtb_m_32_no_ptrue(<vscale x 16 x i1> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @uxtb_m_32_no_ptrue(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 4 x i32> [[TMP1:%.*]], <vscale x 4 x i32> [[TMP2:%.*]]) #[[ATTR0]] {
@@ -113,16 +69,6 @@ define <vscale x 4 x i32> @uxtb_m_32_no_ptrue(<vscale x 16 x i1> %0, <vscale x 4
   %4 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %0)
   %5 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxtb.nxv4i32(<vscale x 4 x i32> %2, <vscale x 4 x i1> %4, <vscale x 4 x i32> %1)
   ret <vscale x 4 x i32> %5
-}
-
-define <vscale x 8 x i16> @uxtb_z_16(<vscale x 8 x i16> %0) #0 {
-; CHECK-LABEL: define <vscale x 8 x i16> @uxtb_z_16(
-; CHECK-SAME: <vscale x 8 x i16> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.and.u.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> splat (i16 255))
-; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
-;
-  %2 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uxtb.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %0)
-  ret <vscale x 8 x i16> %2
 }
 
 define <vscale x 8 x i16> @uxtb_m_16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1) #0 {
@@ -147,18 +93,6 @@ define <vscale x 8 x i16> @uxtb_x_16(<vscale x 16 x i1> %0, <vscale x 8 x i16> %
   ret <vscale x 8 x i16> %4
 }
 
-define <vscale x 8 x i16> @uxtb_z_16_no_ptrue(<vscale x 16 x i1> %0, <vscale x 8 x i16> %1) #0 {
-; CHECK-LABEL: define <vscale x 8 x i16> @uxtb_z_16_no_ptrue(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 8 x i16> [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uxtb.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
-;
-  %3 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %0)
-  %4 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uxtb.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> %3, <vscale x 8 x i16> %1)
-  ret <vscale x 8 x i16> %4
-}
-
 define <vscale x 8 x i16> @uxtb_m_16_no_ptrue(<vscale x 16 x i1> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @uxtb_m_16_no_ptrue(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 8 x i16> [[TMP1:%.*]], <vscale x 8 x i16> [[TMP2:%.*]]) #[[ATTR0]] {
@@ -169,16 +103,6 @@ define <vscale x 8 x i16> @uxtb_m_16_no_ptrue(<vscale x 16 x i1> %0, <vscale x 8
   %4 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %0)
   %5 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uxtb.nxv8i16(<vscale x 8 x i16> %2, <vscale x 8 x i1> %4, <vscale x 8 x i16> %1)
   ret <vscale x 8 x i16> %5
-}
-
-define <vscale x 2 x i64> @uxth_z_64(<vscale x 2 x i64> %0) #0 {
-; CHECK-LABEL: define <vscale x 2 x i64> @uxth_z_64(
-; CHECK-SAME: <vscale x 2 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> splat (i64 65535))
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
-;
-  %2 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxth.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %0)
-  ret <vscale x 2 x i64> %2
 }
 
 define <vscale x 2 x i64> @uxth_m_64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
@@ -203,18 +127,6 @@ define <vscale x 2 x i64> @uxth_x_64(<vscale x 16 x i1> %0, <vscale x 2 x i64> %
   ret <vscale x 2 x i64> %4
 }
 
-define <vscale x 2 x i64> @uxth_z_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2 x i64> %1) #0 {
-; CHECK-LABEL: define <vscale x 2 x i64> @uxth_z_64_no_ptrue(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxth.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
-;
-  %3 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxth.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> %3, <vscale x 2 x i64> %1)
-  ret <vscale x 2 x i64> %4
-}
-
 define <vscale x 2 x i64> @uxth_m_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @uxth_m_64_no_ptrue(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]], <vscale x 2 x i64> [[TMP2:%.*]]) #[[ATTR0]] {
@@ -225,16 +137,6 @@ define <vscale x 2 x i64> @uxth_m_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2
   %4 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
   %5 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxth.nxv2i64(<vscale x 2 x i64> %2, <vscale x 2 x i1> %4, <vscale x 2 x i64> %1)
   ret <vscale x 2 x i64> %5
-}
-
-define <vscale x 4 x i32> @uxth_z_32(<vscale x 4 x i32> %0) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @uxth_z_32(
-; CHECK-SAME: <vscale x 4 x i32> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> splat (i32 65535))
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
-;
-  %2 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxth.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %0)
-  ret <vscale x 4 x i32> %2
 }
 
 define <vscale x 4 x i32> @uxth_m_32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1) #0 {
@@ -259,18 +161,6 @@ define <vscale x 4 x i32> @uxth_x_32(<vscale x 16 x i1> %0, <vscale x 4 x i32> %
   ret <vscale x 4 x i32> %4
 }
 
-define <vscale x 4 x i32> @uxth_z_32_no_ptrue(<vscale x 16 x i1> %0, <vscale x 4 x i32> %1) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @uxth_z_32_no_ptrue(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 4 x i32> [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxth.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
-;
-  %3 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %0)
-  %4 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxth.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> %3, <vscale x 4 x i32> %1)
-  ret <vscale x 4 x i32> %4
-}
-
 define <vscale x 4 x i32> @uxth_m_32_no_ptrue(<vscale x 16 x i1> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @uxth_m_32_no_ptrue(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 4 x i32> [[TMP1:%.*]], <vscale x 4 x i32> [[TMP2:%.*]]) #[[ATTR0]] {
@@ -281,16 +171,6 @@ define <vscale x 4 x i32> @uxth_m_32_no_ptrue(<vscale x 16 x i1> %0, <vscale x 4
   %4 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %0)
   %5 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uxth.nxv4i32(<vscale x 4 x i32> %2, <vscale x 4 x i1> %4, <vscale x 4 x i32> %1)
   ret <vscale x 4 x i32> %5
-}
-
-define <vscale x 2 x i64> @uxtw_z_64(<vscale x 2 x i64> %0) #0 {
-; CHECK-LABEL: define <vscale x 2 x i64> @uxtw_z_64(
-; CHECK-SAME: <vscale x 2 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP0]], <vscale x 2 x i64> splat (i64 4294967295))
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
-;
-  %2 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %0)
-  ret <vscale x 2 x i64> %2
 }
 
 define <vscale x 2 x i64> @uxtw_m_64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
@@ -312,18 +192,6 @@ define <vscale x 2 x i64> @uxtw_x_64(<vscale x 16 x i1> %0, <vscale x 2 x i64> %
 ;
   %3 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %3, <vscale x 2 x i64> %1)
-  ret <vscale x 2 x i64> %4
-}
-
-define <vscale x 2 x i64> @uxtw_z_64_no_ptrue(<vscale x 16 x i1> %0, <vscale x 2 x i64> %1) #0 {
-; CHECK-LABEL: define <vscale x 2 x i64> @uxtw_z_64_no_ptrue(
-; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]], <vscale x 2 x i64> [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
-;
-  %3 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> %3, <vscale x 2 x i64> %1)
   ret <vscale x 2 x i64> %4
 }
 
