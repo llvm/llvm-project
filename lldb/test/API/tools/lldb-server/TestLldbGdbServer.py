@@ -83,6 +83,10 @@ class LldbGdbServerTestCase(
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
+    # Sometimes fails:
+    # regex '^\$QC([0-9a-fA-F]+)#' failed to match against content '$E45#ae'
+    # See https://github.com/llvm/llvm-project/issues/138085.
+    @skipIfWindows
     def test_first_launch_stop_reply_thread_matches_first_qC(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
