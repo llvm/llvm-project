@@ -924,6 +924,7 @@ supported for the ``amdgcn`` target.
      Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Lane-shared                           10              *TODO*      Shared VGPR      32      0xFFFFFFFF
+     Distributed                           11              *TODO*      DDS              32      0xFFFFFFFF
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -1890,6 +1891,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-wavegroup-enable"                        GFX13+ only. Indicate that a kernel uses wavegroup launch. Requires
                                                      `!reqd_work_group_size` metadata on the kernel function.
 
+     "amdgpu-wavegroup-rank-function"                 GFX13+ only. Indicate it is a rank-specialized function for wavegroup.
      ================================================ ==========================================================
 
 Calling Conventions

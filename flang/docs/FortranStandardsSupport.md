@@ -104,7 +104,6 @@ All features except those listed in the following table are supported.
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | Parameterized Derived Types                                | P      | PDT with length type parameters is not supported. See [Proposal](ParameterizedDerivedTypes.md) |
 | Assignment to allocatable                                  | P      | Assignment to whole allocatable in FORALL is not implemented       |
-| The VOLATILE attribute                                     | P      | VOLATILE in procedure interfaces is not implemented     |
 | Asynchronous input/output                                  | P      | IO will happen synchronously                            |
 | MIN/MAX extensions for CHARACTER                           | P      | Some variants are not supported                         |
 

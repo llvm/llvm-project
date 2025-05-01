@@ -995,7 +995,7 @@ def MFMALdScaleXForm : SDNodeXForm<timm, [{
 def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
   const SITargetLowering &Lowering =
       *static_cast<const SITargetLowering *>(getTargetLowering());
-  return Lowering.isCanonicalized(*CurDAG, SDValue(N, 0));
+  return Lowering.isCanonicalized(*CurDAG, Op);
 }]> {
   let GISelPredicateCode = [{
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
@@ -2866,6 +2866,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
+  field bit HasMatrixFMT = 0;
   field bit HasMatrixScale = 0;
   field bit HasMatrixReuse = 0;
 

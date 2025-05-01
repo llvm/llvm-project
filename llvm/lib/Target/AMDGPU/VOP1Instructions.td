@@ -273,6 +273,10 @@ foreach vt = Reg32Types.types in {
   >;
 }
 
+let HasOpSel = 1, EmitDstSel = 0, HasOMod = 0 in {
+def VOP_F32_BF16_OP_SEL : VOPProfile <[f32, bf16, untyped, untyped]>;
+}
+
 let isReMaterializable = 1 in {
 let SchedRW = [WriteDoubleCvt] in {
 // OMod clears exceptions when set in this instruction
@@ -326,8 +330,12 @@ let OtherPredicates = [UseRealTrue16Insts] in
 let OtherPredicates = [UseFakeTrue16Insts] in
   defm V_CVT_F32_F16_fake16 : VOP1Inst <"v_cvt_f32_f16_fake16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
 
-let SubtargetPredicate = HasBF16ConversionInsts in
-defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
+let SubtargetPredicate = HasGFX950Insts, OtherPredicates = [HasBF16ConversionInsts] in {
+  defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
+}
+let SubtargetPredicate = isGFX1250Plus, OtherPredicates = [HasBF16ConversionInsts] in {
+  defm V_CVT_F32_BF16_OP_SEL : VOP1Inst_t16 <"v_cvt_f32_bf16_op_sel", VOP_F32_BF16_OP_SEL>;
+}
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
@@ -1224,7 +1232,7 @@ defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1250_gfx13<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250_gfx13<0x049>;
 defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1250_gfx13<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL_gfx1250_gfx13<0x04b>;
-defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_t16_gfx1250_gfx13<0x072>;
+defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_with_name_gfx1250_gfx13<0x072, "V_CVT_F32_BF16_OP_SEL", "v_cvt_f32_bf16">;
 defm V_SAT_PK4_I4_I8_fake16  : VOP1_Real_FULL_t16_gfx1250_gfx13<0x073>;
 defm V_SAT_PK4_U4_U8_fake16  : VOP1_Real_FULL_t16_gfx1250_gfx13<0x074>;
 defm V_CVT_PK_F16_FP8_fake16 : VOP1_Real_NO_DPP_OP_SEL_gfx1250_gfx13<0x075>;

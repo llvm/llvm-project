@@ -19,7 +19,7 @@ import sys
 import socket
 
 
-@skipIf
+@skip
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
 
@@ -41,8 +41,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         args = []
         if lldbplatformutil.getPlatform() == "linux":
             args = ["gdbserver"]
-        elif lldbplatformutil.getPlatform() == "macosx":
-            args = ["--listen"]
         if lldb.remote_platform:
             args += ["*:0"]
         else:
