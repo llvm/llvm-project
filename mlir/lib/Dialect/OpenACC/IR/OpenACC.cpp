@@ -2651,6 +2651,24 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
+void acc::LoopOp::addSeq(MLIRContext *context,
+                         llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setSeqAttr(addDeviceTypeAffectedOperandHelper(context, getSeqAttr(),
+                                                effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addIndependent(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setIndependentAttr(addDeviceTypeAffectedOperandHelper(
+      context, getIndependentAttr(), effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addAuto(MLIRContext *context,
+                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAuto_Attr(addDeviceTypeAffectedOperandHelper(context, getAuto_Attr(),
+                                                  effectiveDeviceTypes));
+}
+
 //===----------------------------------------------------------------------===//
 // DataOp
 //===----------------------------------------------------------------------===//

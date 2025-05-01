@@ -30,4 +30,83 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   // CHECK-NEXT: } loc
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
+
+
+#pragma acc loop seq
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<none>]} loc
+#pragma acc loop device_type(nvidia, radeon) seq
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+#pragma acc loop device_type(radeon) seq
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<radeon>]} loc
+#pragma acc loop seq device_type(nvidia, radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<none>]} loc
+#pragma acc loop seq device_type(radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<none>]} loc
+
+#pragma acc loop independent
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+#pragma acc loop device_type(nvidia, radeon) independent
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+#pragma acc loop device_type(radeon) independent
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<radeon>]} loc
+#pragma acc loop independent device_type(nvidia, radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+#pragma acc loop independent device_type(radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+
+#pragma acc loop auto
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+#pragma acc loop device_type(nvidia, radeon) auto
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+#pragma acc loop device_type(radeon) auto
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<radeon>]} loc
+#pragma acc loop auto device_type(nvidia, radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+#pragma acc loop auto device_type(radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.loop {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
 }
