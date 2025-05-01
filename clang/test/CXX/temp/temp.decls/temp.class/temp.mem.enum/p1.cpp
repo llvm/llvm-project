@@ -12,7 +12,7 @@ A<int> a;
 A<int>::E a0 = A<int>().v;
 int n = A<int>::E::e1; // expected-error {{implicit instantiation of undefined member}}
 
-template<typename T> enum A<T>::E : T { e1, e2 }; // expected-note 2 {{declared here}}
+template<typename T> enum A<T>::E : T { e1, e2 };
 
 // FIXME: Now that A<T>::E is defined, we are supposed to inject its enumerators
 // into the already-instantiated class A<T>. This seems like a really bad idea,
@@ -20,7 +20,7 @@ template<typename T> enum A<T>::E : T { e1, e2 }; // expected-note 2 {{declared 
 //
 // Either do as the standard says, or only include enumerators lexically defined
 // within the class in its scope.
-A<int>::E a1 = A<int>::e1; // expected-error {{no member named 'e1' in 'A<int>'; did you mean simply 'e1'?}}
+A<int>::E a1 = A<int>::e1; // expected-error {{no member named 'e1' in 'A<int>'}}
 
 A<char>::E a2 = A<char>::e2;
 
@@ -43,7 +43,7 @@ B<int>::E b1 = B<int>::E::e1;
 
 B<char>::E b2 = B<char>::E::e2;
 
-template<typename T> typename B<T>::E B<T>::g() { return e2; }
+template<typename T> typename B<T>::E B<T>::g() { return e2; } // expected-error {{use of undeclared identifier 'e2'}}
 B<short>::E b3 = B<short>().g();
 
 
@@ -94,7 +94,7 @@ D<int>::E d1 = D<int>::E::e1; // expected-error {{incomplete type 'D<int>::E'}}
 template<> enum class D<int>::E { e2 };
 D<int>::E d2 = D<int>::E::e2;
 D<char>::E d3 = D<char>::E::e1; // expected-note {{first required here}}
-D<char>::E d4 = D<char>::E::e2; // expected-error {{no member named 'e2' in 'D<char>::E'; did you mean simply 'e2'?}}
+D<char>::E d4 = D<char>::E::e2; // expected-error {{no member named 'e2' in 'D<char>::E'}}
 template<> enum class D<char>::E { e3 }; // expected-error {{explicit specialization of 'E' after instantiation}}
 
 template<> enum class D<short>::E;

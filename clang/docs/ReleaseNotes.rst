@@ -620,6 +620,11 @@ Bug Fixes to C++ Support
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
+- No longer add enumerators to the scope chain when the enumeration is declared
+  within a class context but is defined out of line. Previously, the
+  enumerators were being added both to the class context and to the namespace
+  scope. (#GH23317)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

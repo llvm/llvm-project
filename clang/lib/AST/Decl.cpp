@@ -5627,6 +5627,18 @@ SourceRange EnumConstantDecl::getSourceRange() const {
   return SourceRange(getLocation(), End);
 }
 
+bool EnumConstantDecl::isOutOfLine() const {
+  if (Decl::isOutOfLine())
+    return true;
+
+  // In C++, if the enumeration is out of line, the enumeration constants are
+  // also out of line.
+  if (getLangOpts().CPlusPlus)
+    return cast<Decl>(getDeclContext())->isOutOfLine();
+
+  return false;
+}
+
 void TypeDecl::anchor() {}
 
 TypedefDecl *TypedefDecl::Create(ASTContext &C, DeclContext *DC,
