@@ -120,7 +120,7 @@ private:
   void forEachClassRange(size_t begin, size_t end,
                          llvm::function_ref<void(size_t, size_t)> fn);
 
-  void forEachClass(llvm::function_ref<void(size_t, size_t)> fn);
+  void parallelForEachClass(llvm::function_ref<void(size_t, size_t)> fn);
 
   Ctx &ctx;
   SmallVector<InputSection *, 0> sections;
@@ -432,8 +432,10 @@ void ICF<ELFT>::forEachClassRange(size_t begin, size_t end,
 }
 
 // Call Fn on each equivalence class.
+
 template <class ELFT>
-void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> fn) {
+void ICF<ELFT>::parallelForEachClass(
+    llvm::function_ref<void(size_t, size_t)> fn) {
   // If threading is disabled or the number of sections are
   // too small to use threading, call Fn sequentially.
   if (parallel::strategy.ThreadsRequested == 1 || sections.size() < 1024) {
@@ -541,14 +543,14 @@ template <class ELFT> void ICF<ELFT>::run() {
   // static content. Use a base offset for these IDs to ensure no overlap with
   // the unique IDs already assigned.
   uint32_t eqClassBase = ++uniqueId;
-  forEachClass([&](size_t begin, size_t end) {
+  parallelForEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, eqClassBase, true);
   });
 
   // Split groups by comparing relocations until convergence is obtained.
   do {
     repeat = false;
-    forEachClass([&](size_t begin, size_t end) {
+    parallelForEachClass([&](size_t begin, size_t end) {
       segregate(begin, end, eqClassBase, false);
     });
   } while (repeat);
