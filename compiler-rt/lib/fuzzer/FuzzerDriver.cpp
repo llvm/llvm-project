@@ -239,6 +239,7 @@ static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
     Cmd.combineOutAndErr();
     if (Flags.verbosity) {
       std::string CommandLine = Cmd.toString();
+      std::lock_guard<std::mutex> Lock(Mu);
       Printf("%s\n", CommandLine.c_str());
     }
     int ExitCode = ExecuteCommand(Cmd);
