@@ -106,6 +106,11 @@ Changes to the AMDGPU Backend
 
 * Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
 
+* Turn on strict buffer OOB checking on non-AMDHSA OSs. This improves the correctness
+  of buffer accesses in some cases at the cost of performance for programs that do not
+  contain unaligned out-of-bounds accesses. The old behavior may be restored with the
+  `relaxed-buffer-oob-mode` feature.
+
 Changes to the ARM Backend
 --------------------------
 

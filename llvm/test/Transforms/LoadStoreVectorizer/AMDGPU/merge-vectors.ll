@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -mattr=+relaxed-buffer-oob-mode -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-RELAXED %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-STRICT %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-RELAXED %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -mattr=-relaxed-buffer-oob-mode -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-STRICT %s
 
 ; CHECK-LABEL: @merge_v2i32_v2i32(
 ; CHECK: load <4 x i32>
