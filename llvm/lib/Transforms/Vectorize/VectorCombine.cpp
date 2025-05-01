@@ -1026,7 +1026,7 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))) &&
       !match(&I, m_Cmp(Pred, m_Value(Ins0), m_Value(Ins1)))) {
     // TODO: Allow unary and ternary intrinsics
-    // TODO: Allow intrinsics with different arguments types
+    // TODO: Allow intrinsics with different argument types
     // TODO: Allow intrinsics with scalar arguments
     if (auto *II = dyn_cast<IntrinsicInst>(&I);
         II && II->arg_size() == 2 &&
