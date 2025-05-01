@@ -2205,11 +2205,12 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
 
-  auto BMI = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-                 .addDef(ResVReg)
-                 .addUse(GR.getSPIRVTypeID(ResType))
-                 .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I,
-                                                IntTy, TII, !STI.isLogicalSPIRV()));
+  auto BMI =
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
+                                         !STI.isLogicalSPIRV()));
 
   for (unsigned J = 2; J < I.getNumOperands(); J++) {
     BMI.addUse(I.getOperand(J).getReg());
