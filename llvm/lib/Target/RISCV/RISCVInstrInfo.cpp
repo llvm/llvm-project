@@ -3865,6 +3865,28 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
 }
 
+#undef CASE_RVV_OPCODE_UNMASK_LMUL
+#undef CASE_RVV_OPCODE_MASK_LMUL
+#undef CASE_RVV_OPCODE_LMUL
+#undef CASE_RVV_OPCODE_UNMASK_WIDEN
+#undef CASE_RVV_OPCODE_UNMASK
+#undef CASE_RVV_OPCODE_MASK_WIDEN
+#undef CASE_RVV_OPCODE_MASK
+#undef CASE_RVV_OPCODE_WIDEN
+#undef CASE_RVV_OPCODE
+
+#undef CASE_VMA_OPCODE_COMMON
+#undef CASE_VMA_OPCODE_LMULS_M1
+#undef CASE_VMA_OPCODE_LMULS_MF2
+#undef CASE_VMA_OPCODE_LMULS_MF4
+#undef CASE_VMA_OPCODE_LMULS
+#undef CASE_VFMA_OPCODE_COMMON
+#undef CASE_VFMA_OPCODE_LMULS_M1
+#undef CASE_VFMA_OPCODE_LMULS_MF2
+#undef CASE_VFMA_OPCODE_LMULS_MF4
+#undef CASE_VFMA_OPCODE_VV
+#undef CASE_VFMA_SPLATS
+
 bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
@@ -4059,28 +4081,6 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   }
   return false;
 }
-
-#undef CASE_RVV_OPCODE_UNMASK_LMUL
-#undef CASE_RVV_OPCODE_MASK_LMUL
-#undef CASE_RVV_OPCODE_LMUL
-#undef CASE_RVV_OPCODE_UNMASK_WIDEN
-#undef CASE_RVV_OPCODE_UNMASK
-#undef CASE_RVV_OPCODE_MASK_WIDEN
-#undef CASE_RVV_OPCODE_MASK
-#undef CASE_RVV_OPCODE_WIDEN
-#undef CASE_RVV_OPCODE
-
-#undef CASE_VMA_OPCODE_COMMON
-#undef CASE_VMA_OPCODE_LMULS_M1
-#undef CASE_VMA_OPCODE_LMULS_MF2
-#undef CASE_VMA_OPCODE_LMULS_MF4
-#undef CASE_VMA_OPCODE_LMULS
-#undef CASE_VFMA_OPCODE_COMMON
-#undef CASE_VFMA_OPCODE_LMULS_M1
-#undef CASE_VFMA_OPCODE_LMULS_MF2
-#undef CASE_VFMA_OPCODE_LMULS_MF4
-#undef CASE_VFMA_OPCODE_VV
-#undef CASE_VFMA_SPLATS
 
 // clang-format off
 #define CASE_WIDEOP_OPCODE_COMMON(OP, LMUL)                                    \
