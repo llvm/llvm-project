@@ -229,13 +229,13 @@ public:
   SchedGroup(SchedGroupMask SGMask, std::optional<unsigned> MaxSize,
              ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : SGMask(SGMask), MaxSize(MaxSize), DAG(DAG), TII(TII) {
-    SGID = __atomic_fetch_add(&NumSchedGroups, 1, __ATOMIC_SEQ_CST);
+    SGID = NumSchedGroups++;
   }
 
   SchedGroup(SchedGroupMask SGMask, std::optional<unsigned> MaxSize, int SyncID,
              ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : SGMask(SGMask), MaxSize(MaxSize), SyncID(SyncID), DAG(DAG), TII(TII) {
-    SGID = __atomic_fetch_add(&NumSchedGroups, 1, __ATOMIC_SEQ_CST);
+    SGID = NumSchedGroups++;
   }
 };
 
