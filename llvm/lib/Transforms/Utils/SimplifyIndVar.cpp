@@ -2085,7 +2085,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
     // if the cast node is an inserted instruction without any user, we should
     // remove it to make sure the pass don't touch the function as we can not
     // wide the phi.
-    if (ExpandInst->hasNUses(0) &&
+    if (ExpandInst->use_empty() &&
         Rewriter.isInsertedInstruction(cast<Instruction>(ExpandInst)))
       DeadInsts.emplace_back(ExpandInst);
     return nullptr;

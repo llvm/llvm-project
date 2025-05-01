@@ -463,6 +463,112 @@ enum class FunctionEffectMode : uint8_t {
   Dependent // effect(expr) where expr is dependent.
 };
 
+/// pragma clang section kind
+enum class PragmaClangSectionKind {
+  Invalid = 0,
+  BSS = 1,
+  Data = 2,
+  Rodata = 3,
+  Text = 4,
+  Relro = 5
+};
+
+enum class PragmaClangSectionAction { Set = 0, Clear = 1 };
+
+enum class PragmaOptionsAlignKind {
+  Native,  // #pragma options align=native
+  Natural, // #pragma options align=natural
+  Packed,  // #pragma options align=packed
+  Power,   // #pragma options align=power
+  Mac68k,  // #pragma options align=mac68k
+  Reset    // #pragma options align=reset
+};
+
+enum class TUFragmentKind {
+  /// The global module fragment, between 'module;' and a module-declaration.
+  Global,
+  /// A normal translation unit fragment. For a non-module unit, this is the
+  /// entire translation unit. Otherwise, it runs from the module-declaration
+  /// to the private-module-fragment (if any) or the end of the TU (if not).
+  Normal,
+  /// The private module fragment, between 'module :private;' and the end of
+  /// the translation unit.
+  Private
+};
+
+enum class FormatStringType {
+  Scanf,
+  Printf,
+  NSString,
+  Strftime,
+  Strfmon,
+  Kprintf,
+  FreeBSDKPrintf,
+  OSTrace,
+  OSLog,
+  Syslog,
+  Unknown
+};
+
+// Used for emitting the right warning by DefaultVariadicArgumentPromotion
+enum class VariadicCallType {
+  Function,
+  Block,
+  Method,
+  Constructor,
+  DoesNotApply
+};
+
+enum class BuiltinCountedByRefKind {
+  Assignment,
+  Initializer,
+  FunctionArg,
+  ReturnArg,
+  ArraySubscript,
+  BinaryExpr,
+};
+
+/// Describes the result of the name lookup and resolution performed
+/// by \c Sema::ClassifyName().
+enum class NameClassificationKind {
+  /// This name is not a type or template in this context, but might be
+  /// something else.
+  Unknown,
+  /// Classification failed; an error has been produced.
+  Error,
+  /// The name has been typo-corrected to a keyword.
+  Keyword,
+  /// The name was classified as a type.
+  Type,
+  /// The name was classified as a specific non-type, non-template
+  /// declaration. ActOnNameClassifiedAsNonType should be called to
+  /// convert the declaration to an expression.
+  NonType,
+  /// The name was classified as an ADL-only function name.
+  /// ActOnNameClassifiedAsUndeclaredNonType should be called to convert the
+  /// result to an expression.
+  UndeclaredNonType,
+  /// The name denotes a member of a dependent type that could not be
+  /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
+  /// convert the result to an expression.
+  DependentNonType,
+  /// The name was classified as an overload set, and an expression
+  /// representing that overload set has been formed.
+  /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
+  /// expression referencing the overload set.
+  OverloadSet,
+  /// The name was classified as a template whose specializations are types.
+  TypeTemplate,
+  /// The name was classified as a variable template name.
+  VarTemplate,
+  /// The name was classified as a function template name.
+  FunctionTemplate,
+  /// The name was classified as an ADL-only function template name.
+  UndeclaredTemplate,
+  /// The name was classified as a concept name.
+  Concept,
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -614,18 +720,6 @@ public:
   // Emit all deferred diagnostics.
   void emitDeferredDiags();
 
-  enum TUFragmentKind {
-    /// The global module fragment, between 'module;' and a module-declaration.
-    Global,
-    /// A normal translation unit fragment. For a non-module unit, this is the
-    /// entire translation unit. Otherwise, it runs from the module-declaration
-    /// to the private-module-fragment (if any) or the end of the TU (if not).
-    Normal,
-    /// The private module fragment, between 'module :private;' and the end of
-    /// the translation unit.
-    Private
-  };
-
   /// This is called before the very first declaration in the translation unit
   /// is parsed. Note that the ASTContext may have already injected some
   /// declarations.
@@ -752,20 +846,6 @@ public:
   /// Check if the type is allowed to be used for the current target.
   void checkTypeSupport(QualType Ty, SourceLocation Loc,
                         ValueDecl *D = nullptr);
-
-  // /// The kind of conversion being performed.
-  // enum CheckedConversionKind {
-  //   /// An implicit conversion.
-  //   CCK_ImplicitConversion,
-  //   /// A C-style cast.
-  //   CCK_CStyleCast,
-  //   /// A functional-style cast.
-  //   CCK_FunctionalCast,
-  //   /// A cast other than a C-style cast.
-  //   CCK_OtherCast,
-  //   /// A conversion for an operand of a builtin overloaded operator.
-  //   CCK_ForBuiltinOverloadedOp
-  // };
 
   /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit
   /// cast.  If there is already an implicit cast, merge into the existing one.
@@ -1426,18 +1506,6 @@ public:
   /// Source location for newly created implicit MSInheritanceAttrs
   SourceLocation ImplicitMSInheritanceAttrLoc;
 
-  /// pragma clang section kind
-  enum PragmaClangSectionKind {
-    PCSK_Invalid = 0,
-    PCSK_BSS = 1,
-    PCSK_Data = 2,
-    PCSK_Rodata = 3,
-    PCSK_Text = 4,
-    PCSK_Relro = 5
-  };
-
-  enum PragmaClangSectionAction { PCSA_Set = 0, PCSA_Clear = 1 };
-
   struct PragmaClangSection {
     std::string SectionName;
     bool Valid = false;
@@ -1796,15 +1864,6 @@ public:
 
   /// Add _Nullable attributes for std:: types.
   void inferNullableClassAttribute(CXXRecordDecl *CRD);
-
-  enum PragmaOptionsAlignKind {
-    POAK_Native,  // #pragma options align=native
-    POAK_Natural, // #pragma options align=natural
-    POAK_Packed,  // #pragma options align=packed
-    POAK_Power,   // #pragma options align=power
-    POAK_Mac68k,  // #pragma options align=mac68k
-    POAK_Reset    // #pragma options align=reset
-  };
 
   /// ActOnPragmaClangSection - Called on well formed \#pragma clang section
   void ActOnPragmaClangSection(SourceLocation PragmaLoc,
@@ -2265,19 +2324,6 @@ public:
                                SourceLocation BuiltinLoc,
                                SourceLocation RParenLoc);
 
-  enum FormatStringType {
-    FST_Scanf,
-    FST_Printf,
-    FST_NSString,
-    FST_Strftime,
-    FST_Strfmon,
-    FST_Kprintf,
-    FST_FreeBSDKPrintf,
-    FST_OSTrace,
-    FST_OSLog,
-    FST_Syslog,
-    FST_Unknown
-  };
   static StringRef GetFormatStringTypeName(FormatStringType FST);
   static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
@@ -2393,15 +2439,6 @@ public:
   /// DiagnoseSelfMove - Emits a warning if a value is moved to itself.
   void DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
                         SourceLocation OpLoc);
-
-  // Used for emitting the right warning by DefaultVariadicArgumentPromotion
-  enum VariadicCallType {
-    VariadicFunction,
-    VariadicBlock,
-    VariadicMethod,
-    VariadicConstructor,
-    VariadicDoesNotApply
-  };
 
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
   bool IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
@@ -2648,15 +2685,6 @@ private:
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
-
-  enum BuiltinCountedByRefKind {
-    AssignmentKind,
-    InitializerKind,
-    FunctionArgKind,
-    ReturnArgKind,
-    ArraySubscriptKind,
-    BinaryExprKind,
-  };
 
   bool CheckInvalidBuiltinCountedByRef(const Expr *E,
                                        BuiltinCountedByRefKind K);
@@ -3303,47 +3331,6 @@ public:
                                       SourceLocation NameLoc,
                                       bool IsTemplateTypeArg);
 
-  /// Describes the result of the name lookup and resolution performed
-  /// by \c ClassifyName().
-  enum NameClassificationKind {
-    /// This name is not a type or template in this context, but might be
-    /// something else.
-    NC_Unknown,
-    /// Classification failed; an error has been produced.
-    NC_Error,
-    /// The name has been typo-corrected to a keyword.
-    NC_Keyword,
-    /// The name was classified as a type.
-    NC_Type,
-    /// The name was classified as a specific non-type, non-template
-    /// declaration. ActOnNameClassifiedAsNonType should be called to
-    /// convert the declaration to an expression.
-    NC_NonType,
-    /// The name was classified as an ADL-only function name.
-    /// ActOnNameClassifiedAsUndeclaredNonType should be called to convert the
-    /// result to an expression.
-    NC_UndeclaredNonType,
-    /// The name denotes a member of a dependent type that could not be
-    /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
-    /// convert the result to an expression.
-    NC_DependentNonType,
-    /// The name was classified as an overload set, and an expression
-    /// representing that overload set has been formed.
-    /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
-    /// expression referencing the overload set.
-    NC_OverloadSet,
-    /// The name was classified as a template whose specializations are types.
-    NC_TypeTemplate,
-    /// The name was classified as a variable template name.
-    NC_VarTemplate,
-    /// The name was classified as a function template name.
-    NC_FunctionTemplate,
-    /// The name was classified as an ADL-only function template name.
-    NC_UndeclaredTemplate,
-    /// The name was classified as a concept name.
-    NC_Concept,
-  };
-
   class NameClassification {
     NameClassificationKind Kind;
     union {
@@ -3356,62 +3343,66 @@ public:
     explicit NameClassification(NameClassificationKind Kind) : Kind(Kind) {}
 
   public:
-    NameClassification(ParsedType Type) : Kind(NC_Type), Type(Type) {}
+    NameClassification(ParsedType Type)
+        : Kind(NameClassificationKind::Type), Type(Type) {}
 
-    NameClassification(const IdentifierInfo *Keyword) : Kind(NC_Keyword) {}
+    NameClassification(const IdentifierInfo *Keyword)
+        : Kind(NameClassificationKind::Keyword) {}
 
-    static NameClassification Error() { return NameClassification(NC_Error); }
+    static NameClassification Error() {
+      return NameClassification(NameClassificationKind::Error);
+    }
 
     static NameClassification Unknown() {
-      return NameClassification(NC_Unknown);
+      return NameClassification(NameClassificationKind::Unknown);
     }
 
     static NameClassification OverloadSet(ExprResult E) {
-      NameClassification Result(NC_OverloadSet);
+      NameClassification Result(NameClassificationKind::OverloadSet);
       Result.Expr = E;
       return Result;
     }
 
     static NameClassification NonType(NamedDecl *D) {
-      NameClassification Result(NC_NonType);
+      NameClassification Result(NameClassificationKind::NonType);
       Result.NonTypeDecl = D;
       return Result;
     }
 
     static NameClassification UndeclaredNonType() {
-      return NameClassification(NC_UndeclaredNonType);
+      return NameClassification(NameClassificationKind::UndeclaredNonType);
     }
 
     static NameClassification DependentNonType() {
-      return NameClassification(NC_DependentNonType);
+      return NameClassification(NameClassificationKind::DependentNonType);
     }
 
     static NameClassification TypeTemplate(TemplateName Name) {
-      NameClassification Result(NC_TypeTemplate);
+      NameClassification Result(NameClassificationKind::TypeTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification VarTemplate(TemplateName Name) {
-      NameClassification Result(NC_VarTemplate);
+      NameClassification Result(NameClassificationKind::VarTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification FunctionTemplate(TemplateName Name) {
-      NameClassification Result(NC_FunctionTemplate);
+      NameClassification Result(NameClassificationKind::FunctionTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification Concept(TemplateName Name) {
-      NameClassification Result(NC_Concept);
+      NameClassification Result(NameClassificationKind::Concept);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification UndeclaredTemplate(TemplateName Name) {
-      NameClassification Result(NC_UndeclaredTemplate);
+      NameClassification Result(NameClassificationKind::UndeclaredTemplate);
       Result.Template = Name;
       return Result;
     }
@@ -3419,38 +3410,40 @@ public:
     NameClassificationKind getKind() const { return Kind; }
 
     ExprResult getExpression() const {
-      assert(Kind == NC_OverloadSet);
+      assert(Kind == NameClassificationKind::OverloadSet);
       return Expr;
     }
 
     ParsedType getType() const {
-      assert(Kind == NC_Type);
+      assert(Kind == NameClassificationKind::Type);
       return Type;
     }
 
     NamedDecl *getNonTypeDecl() const {
-      assert(Kind == NC_NonType);
+      assert(Kind == NameClassificationKind::NonType);
       return NonTypeDecl;
     }
 
     TemplateName getTemplateName() const {
-      assert(Kind == NC_TypeTemplate || Kind == NC_FunctionTemplate ||
-             Kind == NC_VarTemplate || Kind == NC_Concept ||
-             Kind == NC_UndeclaredTemplate);
+      assert(Kind == NameClassificationKind::TypeTemplate ||
+             Kind == NameClassificationKind::FunctionTemplate ||
+             Kind == NameClassificationKind::VarTemplate ||
+             Kind == NameClassificationKind::Concept ||
+             Kind == NameClassificationKind::UndeclaredTemplate);
       return Template;
     }
 
     TemplateNameKind getTemplateNameKind() const {
       switch (Kind) {
-      case NC_TypeTemplate:
+      case NameClassificationKind::TypeTemplate:
         return TNK_Type_template;
-      case NC_FunctionTemplate:
+      case NameClassificationKind::FunctionTemplate:
         return TNK_Function_template;
-      case NC_VarTemplate:
+      case NameClassificationKind::VarTemplate:
         return TNK_Var_template;
-      case NC_Concept:
+      case NameClassificationKind::Concept:
         return TNK_Concept_template;
-      case NC_UndeclaredTemplate:
+      case NameClassificationKind::UndeclaredTemplate:
         return TNK_Undeclared_template;
       default:
         llvm_unreachable("unsupported name classification.");
@@ -3536,6 +3529,7 @@ public:
   }
 
   void warnOnReservedIdentifier(const NamedDecl *D);
+  void warnOnCTypeHiddenInCPlusPlus(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
@@ -7751,13 +7745,12 @@ public:
 
   /// GatherArgumentsForCall - Collector argument expressions for various
   /// form of call prototypes.
-  bool GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
-                              const FunctionProtoType *Proto,
-                              unsigned FirstParam, ArrayRef<Expr *> Args,
-                              SmallVectorImpl<Expr *> &AllArgs,
-                              VariadicCallType CallType = VariadicDoesNotApply,
-                              bool AllowExplicit = false,
-                              bool IsListInitialization = false);
+  bool GatherArgumentsForCall(
+      SourceLocation CallLoc, FunctionDecl *FDecl,
+      const FunctionProtoType *Proto, unsigned FirstParam,
+      ArrayRef<Expr *> Args, SmallVectorImpl<Expr *> &AllArgs,
+      VariadicCallType CallType = VariadicCallType::DoesNotApply,
+      bool AllowExplicit = false, bool IsListInitialization = false);
 
   // DefaultVariadicArgumentPromotion - Like DefaultArgumentPromotion, but
   // will create a runtime trap if the resulting type is not a POD type.
@@ -7785,6 +7778,11 @@ public:
   enum AssignConvertType {
     /// Compatible - the types are compatible according to the standard.
     Compatible,
+
+    /// CompatibleVoidPtrToNonVoidPtr - The types are compatible in C because
+    /// a void * can implicitly convert to another pointer type, which we
+    /// differentiate for better diagnostic behavior.
+    CompatibleVoidPtrToNonVoidPtr,
 
     /// PointerToInt - The assignment converts a pointer to an int, which we
     /// accept as an extension.
@@ -7865,6 +7863,18 @@ public:
     /// represent it in the AST.
     Incompatible
   };
+
+  bool IsAssignConvertCompatible(AssignConvertType ConvTy) {
+    switch (ConvTy) {
+    default:
+      return false;
+    case Compatible:
+    case CompatiblePointerDiscardsQualifiers:
+    case CompatibleVoidPtrToNonVoidPtr:
+      return true;
+    }
+    llvm_unreachable("impossible");
+  }
 
   /// DiagnoseAssignmentResult - Emit a diagnostic, if required, for the
   /// assignment conversion type specified by ConvTy.  This returns true if the

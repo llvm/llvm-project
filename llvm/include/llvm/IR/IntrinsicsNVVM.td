@@ -116,10 +116,12 @@
 //   * llvm.nvvm.ptr.gen.to.shared   --> ibid.
 //   * llvm.nvvm.ptr.gen.to.constant --> ibid.
 //   * llvm.nvvm.ptr.gen.to.local    --> ibid.
+//   * llvm.nvvm.ptr.gen.to.param    --> ibid.
 //   * llvm.nvvm.ptr.global.to.gen   --> ibid.
 //   * llvm.nvvm.ptr.shared.to.gen   --> ibid.
 //   * llvm.nvvm.ptr.constant.to.gen --> ibid.
 //   * llvm.nvvm.ptr.local.to.gen    --> ibid.
+//   * llvm.nvvm.ptr.param.to.gen    --> ibid.
 //   * llvm.nvvm.ldg.global.i        --> load addrspace(1) !load.invariant
 //   * llvm.nvvm.ldg.global.f        --> ibid.
 //   * llvm.nvvm.ldg.global.p        --> ibid.
@@ -1896,19 +1898,6 @@ def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
-
-// Used in nvvm internally to help address space opt and ptx code generation
-// This is for params that are passed to kernel functions by pointer by-val.
-def int_nvvm_ptr_gen_to_param: Intrinsic<[llvm_anyptr_ty],
-                                     [llvm_anyptr_ty],
-                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
-                                   "llvm.nvvm.ptr.gen.to.param">;
-
-// sm70+, PTX7.7+
-def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                                     [llvm_anyptr_ty],
-                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
-                                   "llvm.nvvm.ptr.param.to.gen">;
 
 // Represents an explicit hole in the LLVM IR type system. It may be inserted by
 // the compiler in cases where a pointer is of the wrong type. In the backend

@@ -185,8 +185,8 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
   // Cleanup PHI nodes.
   for (MachineBasicBlock &BB : F) {
     // Prune unneeded PHI entries.
-    SmallPtrSet<MachineBasicBlock*, 8> preds(BB.pred_begin(),
-                                             BB.pred_end());
+    SmallPtrSet<MachineBasicBlock *, 8> preds(llvm::from_range,
+                                              BB.predecessors());
     for (MachineInstr &Phi : make_early_inc_range(BB.phis())) {
       for (unsigned i = Phi.getNumOperands() - 1; i >= 2; i -= 2) {
         if (!preds.count(Phi.getOperand(i).getMBB())) {

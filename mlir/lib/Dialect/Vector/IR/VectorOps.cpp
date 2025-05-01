@@ -151,29 +151,32 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
-/// Returns the number of dimensions of the `shapedType` that participate in the
-/// vector transfer, effectively the rank of the vector dimensions within the
-/// `shapedType`. This is calculated by taking the rank of the `vectorType`
-/// being transferred and subtracting the rank of the `shapedType`'s element
-/// type if it's also a vector.
+///  Returns the effective rank of the vector to read/write for Xfer Ops
 ///
-/// This is used to determine the number of minor dimensions for identity maps
-/// in vector transfers.
+///  When the element type of the shaped type is _a scalar_, this will simply
+///  return the rank of the vector ( the result for xfer_read or the value to
+///  store for xfer_write).
 ///
-/// For example, given a transfer operation involving `shapedType` and
-/// `vectorType`:
+///  When the element type of the base shaped type is _a vector_, returns the
+///  difference between the original vector type and the element type of the
+///  shaped type.
 ///
+///  EXAMPLE 1 (element type is _a scalar_):
 ///   - shapedType = tensor<10x20xf32>, vectorType = vector<2x4xf32>
 ///     - shapedType.getElementType() = f32 (rank 0)
 ///     - vectorType.getRank() = 2
 ///     - Result = 2 - 0 = 2
 ///
+/// EXAMPLE 2 (element type is _a vector_):
 ///   - shapedType = tensor<10xvector<20xf32>>, vectorType = vector<20xf32>
 ///     - shapedType.getElementType() = vector<20xf32> (rank 1)
 ///     - vectorType.getRank() = 1
 ///     - Result = 1 - 1 = 0
-static unsigned getRealVectorRank(ShapedType shapedType,
-                                  VectorType vectorType) {
+///
+/// This is used to determine the number of minor dimensions for identity maps
+/// in vector transfer Ops.
+static unsigned getEffectiveVectorRankForXferOp(ShapedType shapedType,
+                                                VectorType vectorType) {
   unsigned elementVectorRank = 0;
   VectorType elementVectorType =
       llvm::dyn_cast<VectorType>(shapedType.getElementType());
@@ -192,7 +195,8 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
   return AffineMap::getMinorIdentityMap(
-      shapedType.getRank(), getRealVectorRank(shapedType, vectorType),
+      shapedType.getRank(),
+      getEffectiveVectorRankForXferOp(shapedType, vectorType),
       shapedType.getContext());
 }
 
@@ -4261,7 +4265,8 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");
@@ -4680,7 +4685,8 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");

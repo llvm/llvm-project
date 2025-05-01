@@ -829,7 +829,7 @@ class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
     DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 

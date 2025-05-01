@@ -1885,11 +1885,11 @@ public:
     FusedInsts.insert(MatMul);
     eraseFromParentAndRemoveFromShapeMap(Store);
     eraseFromParentAndRemoveFromShapeMap(MatMul);
-    if (LoadOp0->hasNUses(0)) {
+    if (LoadOp0->use_empty()) {
       FusedInsts.insert(LoadOp0);
       eraseFromParentAndRemoveFromShapeMap(LoadOp0);
     }
-    if (LoadOp1 != LoadOp0 && LoadOp1->hasNUses(0)) {
+    if (LoadOp1 != LoadOp0 && LoadOp1->use_empty()) {
       FusedInsts.insert(LoadOp1);
       eraseFromParentAndRemoveFromShapeMap(LoadOp1);
     }

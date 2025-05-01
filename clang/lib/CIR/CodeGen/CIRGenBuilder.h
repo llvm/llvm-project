@@ -83,6 +83,9 @@ public:
                   cir::IntType>(ty))
       return true;
 
+    if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
+      return isSized(vt.getElementType());
+
     assert(!cir::MissingFeatures::unsizedTypes());
     return false;
   }

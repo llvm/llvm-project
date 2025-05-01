@@ -213,9 +213,7 @@ def CallVirt : Opcode {
   let Args = [ArgFunction, ArgUint32];
 }
 
-def CallBI : Opcode {
-  let Args = [ArgFunction, ArgCallExpr, ArgUint32];
-}
+def CallBI : Opcode { let Args = [ArgCallExpr, ArgUint32]; }
 
 def CallPtr : Opcode {
   let Args = [ArgUint32, ArgCallExpr];
@@ -415,6 +413,8 @@ def CheckEnumValue : Opcode {
 def CheckLiteralType : Opcode {
   let Args = [ArgTypePtr];
 }
+
+def CheckArraySize : Opcode { let Args = [ArgUint64]; }
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
@@ -783,6 +783,7 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
+def CheckPseudoDtor : Opcode {}
 
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef, ArgBool];

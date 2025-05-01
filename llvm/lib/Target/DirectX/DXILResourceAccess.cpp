@@ -143,6 +143,13 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
   if (Offset)
     V = Builder.CreateExtractElement(V, Offset);
 
+  // If we loaded a <1 x ...> instead of a scalar (presumably to feed a
+  // shufflevector), then make sure we're maintaining the resulting type.
+  if (auto *VT = dyn_cast<FixedVectorType>(LI->getType()))
+    if (VT->getNumElements() == 1 && !isa<FixedVectorType>(V->getType()))
+      V = Builder.CreateInsertElement(PoisonValue::get(VT), V,
+                                      Builder.getInt32(0));
+
   LI->replaceAllUsesWith(V);
 }
 

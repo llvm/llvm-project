@@ -57,6 +57,10 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
 };
 } // namespace
 
+TargetTransformInfo::TargetTransformInfo(
+    std::unique_ptr<const TargetTransformInfoImplBase> Impl)
+    : TTIImpl(std::move(Impl)) {}
+
 bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
   // If the loop has irreducible control flow, it can not be converted to
   // Hardware loop.
@@ -199,7 +203,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
 }
 
 TargetTransformInfo::TargetTransformInfo(const DataLayout &DL)
-    : TTIImpl(new Model<NoTTIImpl>(NoTTIImpl(DL))) {}
+    : TTIImpl(std::make_unique<NoTTIImpl>(DL)) {}
 
 TargetTransformInfo::~TargetTransformInfo() = default;
 
@@ -626,9 +630,10 @@ bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   return TTIImpl->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind, VL);
+                                           CostKind, ForPoisonSrc, VL);
 }
 
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
@@ -1472,7 +1477,7 @@ void TargetTransformInfo::collectKernelLaunchBounds(
   return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
-TargetTransformInfo::Concept::~Concept() = default;
+TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
 

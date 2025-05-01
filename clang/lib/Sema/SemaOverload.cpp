@@ -2518,6 +2518,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   ImplicitConversionKind SecondConv;
   switch (Conv) {
   case Sema::Compatible:
+  case Sema::CompatibleVoidPtrToNonVoidPtr: // __attribute__((overloadable))
     SecondConv = ICK_C_Only_Conversion;
     break;
   // For our purposes, discarding qualifiers is just as bad as using an
@@ -7312,8 +7313,8 @@ Sema::SelectBestMethod(Selector Sel, MultiExprArg Args, bool IsInstance,
           Match = false;
           break;
         }
-        ExprResult Arg = DefaultVariadicArgumentPromotion(Args[i], VariadicMethod,
-                                                          nullptr);
+        ExprResult Arg = DefaultVariadicArgumentPromotion(
+            Args[i], VariadicCallType::Method, nullptr);
         if (Arg.isInvalid()) {
           Match = false;
           break;
@@ -15386,7 +15387,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
 
         checkCall(FnDecl, nullptr, ImplicitThis, ArgsArray,
                   isa<CXXMethodDecl>(FnDecl), OpLoc, TheCall->getSourceRange(),
-                  VariadicDoesNotApply);
+                  VariadicCallType::DoesNotApply);
 
         ExprResult R = MaybeBindToTemporary(TheCall);
         if (R.isInvalid())
@@ -16450,8 +16451,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   if (Proto->isVariadic()) {
     // Promote the arguments (C99 6.5.2.2p7).
     for (unsigned i = NumParams, e = Args.size(); i < e; i++) {
-      ExprResult Arg = DefaultVariadicArgumentPromotion(Args[i], VariadicMethod,
-                                                        nullptr);
+      ExprResult Arg = DefaultVariadicArgumentPromotion(
+          Args[i], VariadicCallType::Method, nullptr);
       IsError |= Arg.isInvalid();
       MethodArgs.push_back(Arg.get());
     }

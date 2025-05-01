@@ -151,7 +151,6 @@ struct MissingFeatures {
   static bool weakRefReference() { return false; }
   static bool hip() { return false; }
   static bool setObjCGCLValueClass() { return false; }
-  static bool mangledNames() { return false; }
   static bool setDLLStorageClass() { return false; }
   static bool openMP() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
@@ -159,6 +158,11 @@ struct MissingFeatures {
   static bool bitfields() { return false; }
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
+  static bool targetSpecificCXXABI() { return false; }
+  static bool moduleNameHash() { return false; }
+  static bool setDSOLocal() { return false; }
+  static bool foldCaseStmt() { return false; }
+  static bool constantFoldSwitchStatement() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

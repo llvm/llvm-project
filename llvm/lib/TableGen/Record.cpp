@@ -336,7 +336,7 @@ static const RecordRecTy *resolveRecordTypes(const RecordRecTy *T1,
     if (T2->isSubClassOf(R)) {
       CommonSuperClasses.push_back(R);
     } else {
-      R->getDirectSuperClasses(Stack);
+      append_range(Stack, make_first_range(R->getDirectSuperClasses()));
     }
   }
 
@@ -2482,11 +2482,8 @@ const DefInit *VarDefInit::instantiate() {
 
   NewRec->resolveReferences(R);
 
-  // Add superclasses.
-  for (const auto &[SC, Loc] : Class->getSuperClasses())
-    NewRec->addSuperClass(SC, Loc);
-
-  NewRec->addSuperClass(
+  // Add superclass.
+  NewRec->addDirectSuperClass(
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
 
   // Resolve internal references and store in record keeper
@@ -2962,7 +2959,7 @@ void Record::checkName() {
 
 const RecordRecTy *Record::getType() const {
   SmallVector<const Record *, 4> DirectSCs;
-  getDirectSuperClasses(DirectSCs);
+  append_range(DirectSCs, make_first_range(getDirectSuperClasses()));
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
@@ -2992,35 +2989,6 @@ void Record::setName(const Init *NewName) {
   // record name be an Init is to provide this flexibility.  The extra
   // resolve steps after completely instantiating defs takes care of
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
-}
-
-// NOTE for the next two functions:
-// Superclasses are in post-order, so the final one is a direct
-// superclass. All of its transitive superclases immediately precede it,
-// so we can step through the direct superclasses in reverse order.
-
-bool Record::hasDirectSuperClass(const Record *Superclass) const {
-  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
-
-  for (int I = SCs.size() - 1; I >= 0; --I) {
-    const Record *SC = SCs[I].first;
-    if (SC == Superclass)
-      return true;
-    I -= SC->getSuperClasses().size();
-  }
-
-  return false;
-}
-
-void Record::getDirectSuperClasses(
-    SmallVectorImpl<const Record *> &Classes) const {
-  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
-
-  while (!SCs.empty()) {
-    const Record *SC = SCs.back().first;
-    SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
-    Classes.push_back(SC);
-  }
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
@@ -3096,10 +3064,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  ArrayRef<std::pair<const Record *, SMRange>> SC = R.getSuperClasses();
-  if (!SC.empty()) {
+  std::vector<const Record *> SCs = R.getSuperClasses();
+  if (!SCs.empty()) {
     OS << "\t//";
-    for (const auto &[SC, _] : SC)
+    for (const Record *SC : SCs)
       OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";
