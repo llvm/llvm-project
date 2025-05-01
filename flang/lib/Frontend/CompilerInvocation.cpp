@@ -311,7 +311,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.OffloadObjects.push_back(a->getValue());
 
   if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
-    opts.InstrumentFunctions = true;
+    opts.InstrumentFunctions = 1;
 
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =
