@@ -411,8 +411,9 @@ class EventAPITestCase(TestBase):
         self.runCmd(f"command script import {stop_hook_path}")
         import stop_hook
 
+        # Add our stop hook here, don't report on the initial attach:
         self.runCmd(
-            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance}"
+            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance} -F false"
         )
         self.stop_counter = 0
 
