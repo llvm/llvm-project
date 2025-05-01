@@ -524,7 +524,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   std::unique_ptr<SwiftUnsafeType> m_unsafe_ptr;
@@ -592,11 +592,12 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
   return m_unsafe_ptr && m_unsafe_ptr->GetCount();
 }
 
-size_t lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t> lldb_private::formatters::swift::
+    UnsafeTypeSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (m_unsafe_ptr && m_unsafe_ptr->HasPointee() && name == "pointee")
     return 0;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

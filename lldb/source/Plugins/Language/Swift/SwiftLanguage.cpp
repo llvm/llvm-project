@@ -920,8 +920,12 @@ class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
       return idx == 0 ? m_backend.GetSP() : nullptr;
     }
 
-    size_t GetIndexOfChildWithName(ConstString name) override {
-      return m_backend.GetName() == name ? 0 : UINT32_MAX;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+      if (m_backend.GetName() == name) {
+        return 0;
+      }
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
     }
 
     lldb::ChildCacheState Update() override {

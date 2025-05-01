@@ -54,7 +54,7 @@ public:
       return lldb::ChildCacheState::eRefetch;
     }
     bool MightHaveChildren() override { return true; }
-    size_t GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 

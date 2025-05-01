@@ -749,7 +749,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -959,11 +959,12 @@ public:
 
   bool MightHaveChildren() override { return true; }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     ArrayRef children = TaskChildren;
     const auto *it = llvm::find(children, name);
     if (it == children.end())
-      return UINT32_MAX;
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
     return std::distance(children.begin(), it);
   }
 
@@ -1027,14 +1028,15 @@ public:
     return {};
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_task_sp)
       return m_backend.GetIndexOfChildWithName(name);
 
     if (name == "task")
       return 0;
 
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
   lldb::ChildCacheState Update() override {
@@ -1107,14 +1109,15 @@ public:
     return {};
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_task_sp)
       return m_backend.GetIndexOfChildWithName(name);
 
     if (name == "task")
       return 0;
 
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
   lldb::ChildCacheState Update() override {
@@ -1187,7 +1190,7 @@ public:
     return task_sp;
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_is_supported_target)
       return m_backend.GetIndexOfChildWithName(name);
 
@@ -1195,7 +1198,8 @@ public:
     size_t idx = UINT32_MAX;
     if (buf.consume_front("[") && !buf.consumeInteger(10, idx) && buf == "]")
       return idx;
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
   lldb::ChildCacheState Update() override {
@@ -1394,10 +1398,11 @@ public:
     return m_unprioritised_jobs_sp;
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (m_is_supported_target && name == "unprioritised_jobs")
       return 0;
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
   lldb::ChildCacheState Update() override {
@@ -1530,7 +1535,11 @@ lldb_private::formatters::swift::EnumSyntheticFrontEnd::Update() {
   m_child_index = UINT32_MAX;
   m_exe_ctx_ref = m_backend.GetExecutionContextRef();
   m_element_name.SetCString(m_backend.GetValueAsCString());
-  m_child_index = m_backend.GetIndexOfChildWithName(m_element_name);
+  auto index_or_err = m_backend.GetIndexOfChildWithName(m_element_name);
+  if (!index_or_err)
+    llvm::consumeError(index_or_err.takeError());
+  else
+    m_child_index = *index_or_err;
   return ChildCacheState::eRefetch;
 }
 
@@ -1539,12 +1548,13 @@ bool lldb_private::formatters::swift::EnumSyntheticFrontEnd::
   return m_child_index != UINT32_MAX;
 }
 
-size_t
+llvm::Expected<size_t>
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   if (name == m_element_name)
     return 0;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

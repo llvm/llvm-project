@@ -271,12 +271,13 @@ bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::
   return IsEmpty() ? false : true;
 }
 
-size_t lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t> lldb_private::formatters::swift::
+    SwiftOptionalSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   static ConstString g_Some("some");
 
   if (IsEmpty())
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
 
   return m_some->GetIndexOfChildWithName(name);
 }
