@@ -576,34 +576,32 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     return tupleEntry;
   };
 
-  auto getFormat = [&](const llvm::MDOperand &formatMD) -> StringAttr {
+  auto getFormat = [&](const llvm::MDOperand &formatMD)
+      -> std::optional<ProfileSummaryFormatKind> {
     auto *tupleEntry = getMDTuple(formatMD);
     if (!tupleEntry)
-      return nullptr;
+      return std::nullopt;
 
     llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
     if (!keyMD || keyMD->getString() != "ProfileFormat") {
       emitWarning(mlirModule.getLoc())
           << "expected 'ProfileFormat' key: "
           << diagMD(tupleEntry->getOperand(0), llvmModule);
-      return nullptr;
+      return std::nullopt;
     }
 
     llvm::MDString *valMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(1));
-    auto formatAttr = llvm::StringSwitch<std::string>(valMD->getString())
-                          .Case("SampleProfile", "SampleProfile")
-                          .Case("InstrProf", "InstrProf")
-                          .Case("CSInstrProf", "CSInstrProf")
-                          .Default("");
-    if (formatAttr.empty()) {
+    std::optional<ProfileSummaryFormatKind> fmtKind =
+        symbolizeProfileSummaryFormatKind(valMD->getString());
+    if (!fmtKind) {
       emitWarning(mlirModule.getLoc())
           << "expected 'SampleProfile', 'InstrProf' or 'CSInstrProf' values, "
              "but found: "
           << diagMD(valMD, llvmModule);
-      return nullptr;
+      return std::nullopt;
     }
 
-    return StringAttr::get(mlirModule->getContext(), formatAttr);
+    return fmtKind;
   };
 
   auto getConstantMD = [&](const llvm::MDOperand &md, StringRef matchKey,
@@ -746,8 +744,9 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
   // a fixed order: format, total count, etc.
   SmallVector<Attribute> profileSummary;
-  StringAttr format = getFormat(mdTuple->getOperand(summayIdx++));
-  if (!format)
+  std::optional<ProfileSummaryFormatKind> format =
+      getFormat(mdTuple->getOperand(summayIdx++));
+  if (!format.has_value())
     return nullptr;
 
   uint64_t totalCount = 0, maxCount = 0, maxInternalCount = 0,
@@ -793,7 +792,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
 
   // Build the final profile summary attribute.
   return ModuleFlagProfileSummaryAttr::get(
-      mlirModule->getContext(), format, totalCount, maxCount, maxInternalCount,
+      mlirModule->getContext(), *format, totalCount, maxCount, maxInternalCount,
       maxFunctionCount, numCounts, numFunctions, isPartialProfile,
       partialProfileRatio ? partialProfileRatio : nullptr, detailedSummary);
 }

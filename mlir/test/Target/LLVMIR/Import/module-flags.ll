@@ -58,7 +58,7 @@ declare void @to()
 !31887 = !{i32 100000, i64 86427, i32 1}
 
 ; CHECK: llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
-; CHECK-SAME: #llvm.profile_summary<format = "InstrProf", total_count = 263646,
+; CHECK-SAME: #llvm.profile_summary<format = InstrProf, total_count = 263646,
 ; CHECK-SAME: max_count = 86427, max_internal_count = 86427, max_function_count = 4691,
 ; CHECK-SAME: num_counts = 3712, num_functions = 796, is_partial_profile = 0,
 ; CHECK-SAME: partial_profile_ratio = 0.000000e+00 : f64,
@@ -88,7 +88,7 @@ declare void @to()
 !41887 = !{i32 100000, i64 86427, i32 1}
 
 ; CHECK: llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
-; CHECK-SAME: #llvm.profile_summary<format = "InstrProf", total_count = 263646,
+; CHECK-SAME: #llvm.profile_summary<format = InstrProf, total_count = 263646,
 ; CHECK-SAME: max_count = 86427, max_internal_count = 86427, max_function_count = 4691,
 ; CHECK-SAME: num_counts = 3712, num_functions = 796,
 ; CHECK-SAME: detailed_summary =

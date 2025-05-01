@@ -391,15 +391,9 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   }
 
   if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName()) {
-    if (auto summaryAttr = dyn_cast<ModuleFlagProfileSummaryAttr>(value)) {
-      StringRef fmt = summaryAttr.getFormat().getValue();
-      if (fmt != "SampleProfile" && fmt != "InstrProf" && fmt != "CSInstrProf")
-        return emitError() << "'ProfileFormat' must be 'SampleProfile', "
-                              "'InstrProf' or 'CSInstrProf'";
-    } else {
+    if (!isa<ModuleFlagProfileSummaryAttr>(value))
       return emitError() << "'ProfileSummary' key expects a "
                             "'#llvm.profile_summary' attribute";
-    }
     return success();
   }
 

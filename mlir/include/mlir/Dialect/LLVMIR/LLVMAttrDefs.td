@@ -1404,7 +1404,7 @@ def ModuleFlagProfileSummaryAttr
     Describes ProfileSummary gathered data in a module. Example:
     ```mlir
     llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
-      #llvm.profile_summary<format = "InstrProf", total_count = 263646, max_count = 86427,
+      #llvm.profile_summary<format = InstrProf, total_count = 263646, max_count = 86427,
         max_internal_count = 86427, max_function_count = 4691,
         num_counts = 3712, num_functions = 796,
         is_partial_profile = 0,
@@ -1415,13 +1415,13 @@ def ModuleFlagProfileSummaryAttr
     >>]
     ```
   }];
-  let parameters = (
-    ins "StringAttr":$format, "uint64_t":$total_count, "uint64_t":$max_count,
-        "uint64_t":$max_internal_count, "uint64_t":$max_function_count,
-        "uint64_t":$num_counts, "uint64_t":$num_functions,
-        OptionalParameter<"std::optional<uint64_t>">:$is_partial_profile,
-        OptionalParameter<"FloatAttr">:$partial_profile_ratio,
-        ArrayRefParameter<"ModuleFlagProfileSummaryDetailedAttr">:$detailed_summary);
+  let parameters = (ins "ProfileSummaryFormatKind":$format,
+    "uint64_t":$total_count, "uint64_t":$max_count,
+    "uint64_t":$max_internal_count, "uint64_t":$max_function_count,
+    "uint64_t":$num_counts, "uint64_t":$num_functions,
+    OptionalParameter<"std::optional<uint64_t>">:$is_partial_profile,
+    OptionalParameter<"FloatAttr">:$partial_profile_ratio,
+    ArrayRefParameter<"ModuleFlagProfileSummaryDetailedAttr">:$detailed_summary);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }

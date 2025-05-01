@@ -320,7 +320,8 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
 
   SmallVector<llvm::Metadata *> fmtNode{
       mdb.createString("ProfileFormat"),
-      mdb.createString(summaryAttr.getFormat().getValue())};
+      mdb.createString(
+          stringifyProfileSummaryFormatKind(summaryAttr.getFormat()))};
 
   SmallVector<llvm::Metadata *> vals = {
       llvm::MDTuple::get(context, fmtNode),

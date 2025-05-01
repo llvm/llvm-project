@@ -1807,9 +1807,10 @@ module {
 
 // -----
 
-// expected-error@below {{'ProfileFormat' must be 'SampleProfile', 'InstrProf' or 'CSInstrProf'}}
 llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+     // expected-error@below {{expected one of [SampleProfile, InstrProf, CSInstrProf] for LLVM ProfileSummary format kinds, got: YoloFmt}}
      #llvm.profile_summary<format = "YoloFmt", total_count = 263646, max_count = 86427,
+     // expected-error@above {{failed to parse ModuleFlagProfileSummaryAttr parameter 'format' which is to be a `ProfileSummaryFormatKind`}}
        max_internal_count = 86427, max_function_count = 4691,
        num_counts = 3712, num_functions = 796,
        is_partial_profile = 0,
@@ -1817,6 +1818,7 @@ llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
        detailed_summary =
          <cut_off = 10000, min_count = 86427, num_counts = 1>,
          <cut_off = 100000, min_count = 86427, num_counts = 1>
+      // expected-error@below {{failed to parse ModuleFlagAttr parameter}}
 >>]
 
 // -----

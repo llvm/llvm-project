@@ -13,7 +13,7 @@ module {
                        #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
                     ]>,
                     #llvm.mlir.module_flag<error, "ProfileSummary",
-                       #llvm.profile_summary<format = "InstrProf", total_count = 263646, max_count = 86427,
+                       #llvm.profile_summary<format = InstrProf, total_count = 263646, max_count = 86427,
                          max_internal_count = 86427, max_function_count = 4691,
                          num_counts = 3712, num_functions = 796,
                          is_partial_profile = 0,
@@ -37,7 +37,7 @@ module {
 // CHECK-SAME: #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
 // CHECK-SAME: ]>,
 // CHECK-SAME: #llvm.mlir.module_flag<error, "ProfileSummary",
-// CHECK-SAME:    #llvm.profile_summary<format = "InstrProf", total_count = 263646, max_count = 86427,
+// CHECK-SAME:    #llvm.profile_summary<format = InstrProf, total_count = 263646, max_count = 86427,
 // CHECK-SAME:      max_internal_count = 86427, max_function_count = 4691,
 // CHECK-SAME:      num_counts = 3712, num_functions = 796,
 // CHECK-SAME:      is_partial_profile = 0,

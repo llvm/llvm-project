@@ -2884,7 +2884,7 @@ llvm.func @to()
 // -----
 
 llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
-                       #llvm.profile_summary<format = "InstrProf", total_count = 263646, max_count = 86427,
+                       #llvm.profile_summary<format = InstrProf, total_count = 263646, max_count = 86427,
                          max_internal_count = 86427, max_function_count = 4691,
                          num_counts = 3712, num_functions = 796,
                          is_partial_profile = 0,
