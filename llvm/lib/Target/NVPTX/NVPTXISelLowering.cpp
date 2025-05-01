@@ -3196,6 +3196,9 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(N);
   const EVT ValVT = Val.getValueType();
   const EVT MemVT = N->getMemoryVT();
+
+  // If we're truncating as part of the store, avoid lowering to a StoreV node.
+  // TODO: consider relaxing this restriction.
   if (ValVT != MemVT)
     return SDValue();
 
@@ -5767,6 +5770,9 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   LoadSDNode *LD = cast<LoadSDNode>(N);
   const EVT ResVT = LD->getValueType(0);
   const EVT MemVT = LD->getMemoryVT();
+
+  // If we're doing sign/zero extension as part of the load, avoid lowering to
+  // a LoadV node. TODO: consider relaxing this restriction.
   if (ResVT != MemVT)
     return;
 

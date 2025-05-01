@@ -4,25 +4,21 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-define i128 @foo() {
+define i128 @foo(ptr %p, ptr %o) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    bra.uni $L__BB0_1;
-; CHECK-NEXT:  $L__BB0_1: // %while.cond
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov.b64 %rd1, 0;
-; CHECK-NEXT:    ld.u8 %rd2, [%rd1];
-; CHECK-NEXT:    st.v2.u64 [%rd1], {%rd2, %rd1};
-; CHECK-NEXT:    bra.uni $L__BB0_1;
-entry:
-  br label %while.cond
-
-while.cond:                                       ; preds = %while.cond, %entry
-  %0 = load i8, ptr null, align 1
-  %conv = zext i8 %0 to i128
-  store i128 %conv, ptr null, align 16
-  br label %while.cond
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd2, [foo_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [foo_param_0];
+; CHECK-NEXT:    ld.u8 %rd3, [%rd1];
+; CHECK-NEXT:    mov.b64 %rd4, 0;
+; CHECK-NEXT:    st.v2.u64 [%rd2], {%rd3, %rd4};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    ret;
+  %c = load i8, ptr %p, align 1
+  %i = zext i8 %c to i128
+  store i128 %i, ptr %o, align 16
+  ret i128 %i
 }
