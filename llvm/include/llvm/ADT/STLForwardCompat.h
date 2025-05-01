@@ -73,7 +73,8 @@ struct from_range_t {
 };
 inline constexpr from_range_t from_range{};
 
-template <typename T, typename UnderlyingT = std::underlying_type_t<T>>
+template <typename T, typename UnderlyingT = typename std::enable_if_t<
+                          std::is_enum_v<T>, std::underlying_type<T>>::type>
 constexpr bool is_scoped_enum_v =
     std::is_enum_v<T> && !std::is_convertible_v<T, UnderlyingT>;
 
