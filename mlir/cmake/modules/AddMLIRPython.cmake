@@ -661,6 +661,7 @@ function(add_mlir_python_extension libname extname)
   # sources that must be compiled in accordance with pybind11 needs (RTTI and
   # exceptions).
   if(NOT DEFINED ARG_PYTHON_BINDINGS_LIBRARY OR ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "pybind11")
+    find_package(pybind11 REQUIRED)
     pybind11_add_module(${libname}
       ${ARG_SOURCES}
     )

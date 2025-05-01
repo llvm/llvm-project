@@ -294,9 +294,11 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
 
   auto empty = linalg::PackOp::createDestinationTensor(
       b, loc, opOperand->get(), innerTileSizes, innerDimsPos, outerDimsPerm);
+  llvm::errs() << "created empty tensor: " << *empty.getDefiningOp() << "\n";
   auto packedOperand = b.create<linalg::PackOp>(
       loc, opOperand->get(), empty, innerDimsPos, innerTileSizes,
       /*padding=*/std::nullopt, outerDimsPerm);
+  llvm::errs() << "created packed operand: " << *packedOperand << "\n";
   return std::make_tuple(packedOperand, indexingMap);
 }
 
@@ -309,7 +311,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   SmallVector<AffineMap> indexingMaps;
 
   bool isGenericUnary = isaElemwiseSingleUnaryOpInterface(genericOp);
-  bool usePackedOperand = false;
+  bool allOperandFromUnpack = true;
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
@@ -323,7 +325,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
       inputOperands.push_back(unpackOp.getSource());
     } else {
       inputOperands.push_back(packedOperand);
-      usePackedOperand = true;
+      allOperandFromUnpack = false;
     }
     indexingMaps.push_back(packedIndexingMap);
   }
@@ -335,11 +337,11 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   // If the dps init operand of the generic is a tensor.empty, or if The
   // original operand of the generic op is used, then do not pack the result.
   // Forward the new tensor.empty as a destination.
-  if (!usePackedOperand) {
-  //if (initTensor) {
-    auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
-    dest = destPack.getDest();
-  } 
+  //if (allOperandFromUnpack) {
+  ////if (initTensor) {
+  //  auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
+  //  dest = destPack.getDest();
+  //} 
   // What if the generic is sandwich by:
   // linalg.unpack -> linalg.generic -> linalg.pack	
   // Should just cancel out each other when it is generic unary
@@ -486,7 +488,9 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
                             ->get()
                             .getDefiningOp<tensor::EmptyOp>()) {
     dest = packOpDest;
+    llvm::errs() << "packOpDest: " << packOpDest << "\n";
   }
+  llvm::errs() << "dest: " << dest << "\n";
   return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
                        *packInfo);
 }
