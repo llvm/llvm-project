@@ -32,6 +32,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+
 #include "clang/AST/DeclObjC.h"
 
 using namespace lldb;
@@ -255,7 +257,7 @@ DWARFASTParserSwift::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
     lldb_private::CompileUnit &comp_unit, const DWARFDIE &die,
     lldb_private::AddressRanges ranges) {
-  DWARFRangeList unused_ranges;
+  llvm::DWARFAddressRangesVector unused_ranges;
   const char *name = NULL;
   const char *mangled = NULL;
   std::optional<int> decl_file = 0;
