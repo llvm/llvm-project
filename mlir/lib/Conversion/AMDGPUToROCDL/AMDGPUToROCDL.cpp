@@ -539,8 +539,8 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
 /// Note that the type of `input` has already been LLVM type converted:
 /// therefore 8-bit and smaller floats are represented as their corresponding
 /// `iN` integers.
-static Value castScaledMFMAVectorOperand(ConversionPatternRewriter &rewriter,
-                                         Location loc, Value input) {
+static Value castMFMAScaleOperand(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value input) {
   Type inputType = input.getType();
   Type outputType = rewriter.getI32Type();
   if (auto intType = dyn_cast<IntegerType>(inputType))
@@ -1018,10 +1018,10 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
          createI32Constant(rewriter, loc, bTypeCode),
          /*scales idx A=*/scalesIdxA,
          /*scales A*/
-         castScaledMFMAVectorOperand(rewriter, loc, adaptor.getScalesA()),
+         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesA()),
          /*scales idx B=*/scalesIdxB,
          /*scales B*/
-         castScaledMFMAVectorOperand(rewriter, loc, adaptor.getScalesB())});
+         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesB())});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
