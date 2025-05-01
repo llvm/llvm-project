@@ -286,7 +286,8 @@ def RetCC_X86Common : CallingConv<[
   // except on Win64 and UEFI64.
   CCIfNotSubtarget<"isTargetWin64()",
                     CCIfNotSubtarget<"isTargetUEFI64()",
-                    CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>>]>;
+                    CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>>
+]>;
 
 // X86-32 C return-value convention.
 def RetCC_X86_32_C : CallingConv<[
