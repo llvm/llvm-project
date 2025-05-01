@@ -163,7 +163,8 @@ def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 
 def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
-  [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16, foldable_fneg]> {
+  [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
+   foldable_fneg, combine_shuffle_vector_to_build_vector]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -180,5 +181,6 @@ def AMDGPURegBankCombiner : GICombiner<
   [unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
-   redundant_and]> {
+   identity_combines, redundant_and, constant_fold_cast_op,
+   cast_of_cast_combines, sext_trunc]> {
 }

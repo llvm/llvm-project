@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -232,17 +233,8 @@ static void emitHelpTextsForVariants(
     assert(Visibilities.size() <= MaxVisibilityPerHelp &&
            "Too many visibilities to store in an "
            "OptTable::HelpTextsForVariants entry");
-    OS << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{";
-
-    auto VisibilityEnd = Visibilities.cend();
-    for (auto Visibility = Visibilities.cbegin(); Visibility != VisibilityEnd;
-         ++Visibility) {
-      OS << *Visibility;
-      if (std::next(Visibility) != VisibilityEnd)
-        OS << ", ";
-    }
-
-    OS << "}}, ";
+    OS << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{"
+       << llvm::interleaved(Visibilities) << "}}, ";
 
     if (Help.size())
       writeCstring(OS, Help);
@@ -281,7 +273,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   DenseSet<StringRef> PrefixesUnionSet;
   for (const auto &[Prefix, _] : Prefixes)
-    PrefixesUnionSet.insert(Prefix.begin(), Prefix.end());
+    PrefixesUnionSet.insert_range(Prefix);
   SmallVector<StringRef> PrefixesUnion(PrefixesUnionSet.begin(),
                                        PrefixesUnionSet.end());
   array_pod_sort(PrefixesUnion.begin(), PrefixesUnion.end());

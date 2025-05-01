@@ -1,4 +1,6 @@
 // RUN: %check_clang_tidy %s performance-noexcept-move-constructor %t -- -- -fexceptions
+// RUN: %check_clang_tidy -std=c++17 -check-suffixes=,ERR %s performance-noexcept-move-constructor %t \
+// RUN:                   -- --fix-errors -- -fexceptions -DENABLE_ERROR
 
 namespace std
 {
@@ -397,3 +399,18 @@ namespace gh68101
       Container(Container&&) noexcept(std::is_nothrow_move_constructible<T>::value);
   };
 } // namespace gh68101
+
+namespace gh111436
+{
+
+template <typename value_type> class set {
+  set(set &&) = default;
+
+#ifdef ENABLE_ERROR
+  set(initializer_list<value_type> __l) {};
+  // CHECK-MESSAGES-ERR: :[[@LINE-1]]:7: error: member 'initializer_list' cannot have template arguments [clang-diagnostic-error]
+  // CHECK-MESSAGES-ERR: :[[@LINE-2]]:36: error: expected ')' [clang-diagnostic-error]
+#endif
+};
+
+} // namespace gh111436

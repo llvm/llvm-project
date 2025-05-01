@@ -158,7 +158,7 @@ unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
 }
 
 ArrayAttr mlir::getReassociationIndicesAttribute(
-    OpBuilder &b, ArrayRef<ReassociationIndices> reassociation) {
+    Builder &b, ArrayRef<ReassociationIndices> reassociation) {
   SmallVector<Attribute, 4> reassociationAttr =
       llvm::to_vector<4>(llvm::map_range(
           reassociation, [&](const ReassociationIndices &indices) -> Attribute {
@@ -482,4 +482,14 @@ PackingMetadata mlir::computePackingMetadata(int64_t packedRank,
     ++i;
   }
   return res;
+}
+
+OpFoldResult mlir::reshapeConstantSource(DenseElementsAttr source,
+                                         TensorType result,
+                                         std::optional<Attribute> cst) {
+  if (source && source.isSplat() && result.hasStaticShape() &&
+      (!cst.has_value() || source.getSplatValue<Attribute>() == cst.value()))
+    return source.resizeSplat(result);
+
+  return {};
 }

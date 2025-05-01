@@ -5,21 +5,21 @@ define void @test(i32 %0, ptr %p) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 1, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[OP_RDX:%.*]] = extractelement <8 x i32> [[TMP8]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[PH:%.*]]
 ; CHECK:       ph:
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0>, i32 [[TMP0]], i32 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <8 x i32> [ [[TMP8]], [[ENTRY:%.*]] ], [ [[TMP6]], [[PH]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ [[TMP5]], [[ENTRY]] ], [ zeroinitializer, [[PH]] ]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP9]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = or i32 [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> [[TMP9]], i64 0)
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i32> [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP9]], <4 x i32> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP11]])
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX5]], [[OP_RDX]]
 ; CHECK-NEXT:    store i32 [[OP_RDX2]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void

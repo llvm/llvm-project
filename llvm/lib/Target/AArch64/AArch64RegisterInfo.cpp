@@ -49,8 +49,8 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT, unsigned HwMode)
 /// callee-saves required by the base ABI. For the SVE registers z8-z15 only the
 /// lower 64-bits (d8-d15) need to be saved. The lower 64-bits subreg is
 /// returned in \p RegToUseForCFI.
-bool AArch64RegisterInfo::regNeedsCFI(unsigned Reg,
-                                      unsigned &RegToUseForCFI) const {
+bool AArch64RegisterInfo::regNeedsCFI(MCRegister Reg,
+                                      MCRegister &RegToUseForCFI) const {
   if (AArch64::PPRRegClass.contains(Reg))
     return false;
 

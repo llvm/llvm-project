@@ -377,6 +377,13 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     but not checked for consistency). When the source language's arrays are
     not zero-based, the `startIdx` must specify the zero-position index.
 
+    The `stride` represents the distance between consecutive elements. For
+    multi-dimensional arrays, the `stride` for each outer dimension must account
+    for the complete size of all inner dimensions.
+
+    The `strideInBytes` flag indicates that the `stride` is specified in bytes
+    rather than the number of elements.
+
     Examples below show copying a slice of 10-element array except first element.
     Note that the examples use extent in data clause for C++ and upperbound
     for Fortran (as per 2.7.1). To simplify examples, the constants are used
@@ -389,7 +396,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     ```
     =>
     ```mlir
-    acc.bounds lb(1) ub(9) extent(9) startIdx(0)
+    acc.bounds lb(1) ub(9) extent(9) startIdx(0) stride(1)
     ```
 
     Fortran:
@@ -399,7 +406,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     ```
     =>
     ```mlir
-    acc.bounds lb(1) ub(9) extent(9) startIdx(1)
+    acc.bounds lb(1) ub(9) extent(9) startIdx(1) stride(1)
     ```
   }];
 
@@ -562,53 +569,33 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, varPtr.getType(), varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
-          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
-          /*asyncOperandsDeviceType=*/nullptr,
-          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
-          /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
-      }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
-                   "bool":$structured, "bool":$implicit,
-                   "const ::llvm::Twine &":$name,
-                   CArg<"::mlir::ValueRange", "{}">:$bounds),
-      [{
-        build($_builder, $_state, varPtr.getType(), varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
-          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
-          /*asyncOperandsDeviceType=*/nullptr,
-          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
-          /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
-          /*name=*/$_builder.getStringAttr(name));
-      }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
-                   "bool":$structured, "bool":$implicit,
-                   CArg<"::mlir::ValueRange", "{}">:$bounds),
-      [{
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
         build($_builder, $_state, var.getType(), var,
-          /*varType=*/::mlir::TypeAttr::get(var.getType()),
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
+    OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                   CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
         build($_builder, $_state, var.getType(), var,
-          /*varType=*/::mlir::TypeAttr::get(var.getType()),
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
@@ -942,28 +929,34 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
-                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
+                   "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr, varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
+        build($_builder, $_state, accVar, var,
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
-                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
+                   "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr, varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
+        build($_builder, $_state, accVar, var,
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
@@ -996,22 +989,22 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr,
+        build($_builder, $_state, accVar,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr,
+        build($_builder, $_state, accVar,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
@@ -1415,6 +1408,31 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     static mlir::acc::Construct getConstructId() {
       return mlir::acc::Construct::acc_construct_parallel;
     }
+    /// Add a value to 'num_workers' with the current list of device types.
+    void addNumWorkersOperand(MLIRContext *, mlir::Value,
+                              llvm::ArrayRef<DeviceType>);
+    /// Add a value to 'vector_length' with the current list of device types.
+    void addVectorLengthOperand(MLIRContext *, mlir::Value,
+                                llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry to the 'num_gangs' with the current list of
+    /// device types.
+    void addNumGangsOperands(MLIRContext *, mlir::ValueRange,
+                             llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
@@ -1542,6 +1560,21 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     static mlir::acc::Construct getConstructId() {
       return mlir::acc::Construct::acc_construct_serial;
     }
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
@@ -1686,6 +1719,31 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     static mlir::acc::Construct getConstructId() {
       return mlir::acc::Construct::acc_construct_kernels;
     }
+    /// Add a value to 'num_workers' with the current list of device types.
+    void addNumWorkersOperand(MLIRContext *, mlir::Value,
+                              llvm::ArrayRef<DeviceType>);
+    /// Add a value to 'vector_length' with the current list of device types.
+    void addVectorLengthOperand(MLIRContext *, mlir::Value,
+                                llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry to the 'num_gangs' with the current list of
+    /// device types.
+    void addNumGangsOperands(MLIRContext *, mlir::ValueRange,
+                             llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
@@ -1792,6 +1850,21 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     /// Return the wait devnum value clause for the given device_type if
     /// present.
     mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
@@ -2054,6 +2127,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// Used to retrieve the block inside the op's region.
     Block &getBody() { return getLoopRegions().front()->front(); }
 
+    /// Used to determine if this operation is merely a container for a loop
+    /// operation instead of being loop-like itself.
+    bool isLoopLike() { return !getLowerbound().empty(); }
+    bool isContainerLike() { return !isLoopLike(); }
+
     /// Return true if the op has the auto attribute for the
     /// mlir::acc::DeviceType::None device_type.
     bool hasAuto();
@@ -2124,7 +2202,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
-    custom<CombinedConstructsLoop>($combined)
+    ( `combined` `(` custom<CombinedConstructsLoop>($combined)^ `)` )?
     oilist(
         `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
             $gangOperandsArgType, $gangOperandsDeviceType,
@@ -2618,11 +2696,16 @@ def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
-                       Optional<IntOrIndex>:$deviceNumOperand,
+                       Optional<IntOrIndex>:$deviceNum,
                        Optional<I1>:$ifCond);
 
+  let extraClassDeclaration = [{
+    /// Adds a device type to the list of device types for this directive.
+    void addDeviceType(MLIRContext *, mlir::acc::DeviceType);
+  }];
+
   let assemblyFormat = [{
-    oilist(`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    oilist(`device_num` `(` $deviceNum `:` type($deviceNum) `)`
       | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
@@ -2649,11 +2732,16 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
-                       Optional<IntOrIndex>:$deviceNumOperand,
+                       Optional<IntOrIndex>:$deviceNum,
                        Optional<I1>:$ifCond);
 
+  let extraClassDeclaration = [{
+    /// Adds a device type to the list of device types for this directive.
+    void addDeviceType(MLIRContext *, mlir::acc::DeviceType);
+  }];
+
   let assemblyFormat = [{
-    oilist(`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    oilist(`device_num` `(` $deviceNum `:` type($deviceNum) `)`
     |`if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];

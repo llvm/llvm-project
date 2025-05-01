@@ -894,10 +894,10 @@ def : MipsPat<(brcond (i32 (setne (and i32:$lhs, PowerOf2LO_i32:$mask), 0)), bb:
       ASE_MIPS64_CNMIPS;
 
 // Atomic load patterns.
-def : MipsPat<(atomic_load_8 addr:$a), (LB64 addr:$a)>, ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_load_16 addr:$a), (LH64 addr:$a)>, ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_load_32 addr:$a), (LW64 addr:$a)>, ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_load_64 addr:$a), (LD addr:$a)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_asext_8 addr:$a), (LB64 addr:$a)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_asext_16 addr:$a), (LH64 addr:$a)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_asext_32 addr:$a), (LW64 addr:$a)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_nonext_64 addr:$a), (LD addr:$a)>, ISA_MIPS3, GPR_64;
 
 // Atomic store patterns.
 def : MipsPat<(atomic_store_8 GPR64:$v, addr:$a), (SB64 GPR64:$v, addr:$a)>,

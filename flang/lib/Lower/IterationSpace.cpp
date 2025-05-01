@@ -165,10 +165,6 @@ private:
   RT find(const Fortran::evaluate::Designator<T> &x) {
     return find(x.u);
   }
-  template <typename T>
-  RT find(const Fortran::evaluate::Variable<T> &x) {
-    return find(x.u);
-  }
   RT find(const Fortran::evaluate::DescriptorInquiry &) { return {}; }
   RT find(const Fortran::evaluate::SpecificIntrinsic &) { return {}; }
   RT find(const Fortran::evaluate::ProcedureDesignator &x) { return {}; }

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
@@ -85,6 +87,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
     s_long.append(s_long.data(), s_long.size());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
+  }
+
+  { // check that growing to max_size() works
+    using string_type = std::basic_string<char, std::char_traits<char>, tiny_size_allocator<29, char> >;
+    string_type str;
+    auto max_size = str.max_size();
+    str.resize(max_size / 2 + max_size % 2);
+    str.append(str.c_str(), max_size / 2);
+    assert(str.capacity() >= str.size());
+    assert(str.size() == str.max_size());
   }
 
   return true;

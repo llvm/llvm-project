@@ -1,7 +1,7 @@
 // Verify the ELF packaging of OpenMP SPIR-V device images.
 // REQUIRES: system-linux
 // REQUIRES: spirv-tools
-// REQUIRES: llvm-spirv
+// REQUIRES: spirv-registered-target
 // RUN: mkdir -p %t_tmp
 // RUN: cd %t_tmp
 // RUN: %clangxx -fopenmp -fopenmp-targets=spirv64-intel -nogpulib -c -o %t_clang-linker-wrapper-spirv-elf.o %s

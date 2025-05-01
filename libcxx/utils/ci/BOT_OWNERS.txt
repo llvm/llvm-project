@@ -5,12 +5,13 @@ cannot be figured out by the community alone.
 The list is sorted by surname and formatted to allow easy grepping and
 beautification by scripts. The fields are: name (N), email (E), web-address
 (W), PGP key ID and fingerprint (P), description (D), snail-mail address
-(S), Phabricator handle (H) and IRC handle (I). Each entry should contain at
-least the (N), (E) and (D) fields.
+(S), Phabricator handle (H), IRC handle (I) and GitHub username(s) (G).
+Each entry should contain at least the (N), (E) and (D) fields.
 
 N: Linaro Toolchain Working Group
 E: linaro-toolchain@lists.linaro.org
-D: Arm platforms
+D: Arm platforms and picolibc
+G: DavidSpickett, omjavaid, ceseo
 
 N: LLVM on Power
 E: powerllvm@ca.ibm.com

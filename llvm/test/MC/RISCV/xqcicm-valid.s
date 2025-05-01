@@ -1,5 +1,5 @@
 # Xqcicm - Qualcomm uC Conditional Move Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcicm -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcicm -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcicm < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcicm -M no-aliases --no-print-imm-hex -d - \

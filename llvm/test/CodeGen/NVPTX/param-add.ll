@@ -15,7 +15,7 @@ define i32 @test(%struct.1float alignstack(32) %data) {
 ; CHECK-LABEL: test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<18>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %r1, [test_param_0+1];

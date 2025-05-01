@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir -split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: define void @tma_store_reduce_1d(
 llvm.func @tma_store_reduce_1d(%src : !llvm.ptr<3>, %tma_desc : !llvm.ptr, %d0 : i32, %ch : i64) {

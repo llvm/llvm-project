@@ -279,7 +279,7 @@ define internal void @internal2() {
 }
 
 ; Check interrupt function does not need landing pad.
-define void @interrupt() "interrupt"="user" {
+define void @interrupt() "interrupt"="machine" {
 ; CHECK-LABEL: interrupt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mret
