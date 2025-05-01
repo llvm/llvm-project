@@ -69,6 +69,9 @@ protected:
   /// Since expressions can only jump forward, predicated execution is
   /// used to deal with if-else statements.
   bool isActive() const { return CurrentLabel == ActiveLabel; }
+  bool checkingForUndefinedBehavior() const {
+    return S.checkingForUndefinedBehavior();
+  }
 
   /// Callback for registering a local.
   Local createLocal(Descriptor *D);
