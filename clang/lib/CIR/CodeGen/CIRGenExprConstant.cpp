@@ -373,8 +373,27 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
                              elements, typedFiller);
   }
   case APValue::Vector: {
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate vector");
-    return {};
+    const QualType elementType =
+        destType->castAs<VectorType>()->getElementType();
+    const unsigned numElements = value.getVectorLength();
+
+    SmallVector<mlir::Attribute, 16> elements;
+    elements.reserve(numElements);
+
+    for (unsigned i = 0; i < numElements; ++i) {
+      const mlir::Attribute element =
+          tryEmitPrivateForMemory(value.getVectorElt(i), elementType);
+      if (!element)
+        return {};
+      elements.push_back(element);
+    }
+
+    const auto desiredVecTy =
+        mlir::cast<cir::VectorType>(cgm.convertType(destType));
+
+    return cir::ConstVectorAttr::get(
+        desiredVecTy,
+        mlir::ArrayAttr::get(cgm.getBuilder().getContext(), elements));
   }
   case APValue::MemberPointer: {
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
