@@ -3056,7 +3056,8 @@ bool Target::RunStopHooks(bool at_initial_stop) {
 
   bool no_active_hooks =
       llvm::none_of(m_stop_hooks, [at_initial_stop](auto &p) {
-        bool should_run_now = !at_initial_stop || p.second->GetRunAtInitialStop();
+        bool should_run_now =
+            !at_initial_stop || p.second->GetRunAtInitialStop();
         return p.second->IsActive() && should_run_now;
       });
   if (no_active_hooks)
