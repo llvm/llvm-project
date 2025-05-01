@@ -528,6 +528,47 @@ enum class BuiltinCountedByRefKind {
   BinaryExpr,
 };
 
+/// Describes the result of the name lookup and resolution performed
+/// by \c Sema::ClassifyName().
+enum class NameClassificationKind {
+  /// This name is not a type or template in this context, but might be
+  /// something else.
+  Unknown,
+  /// Classification failed; an error has been produced.
+  Error,
+  /// The name has been typo-corrected to a keyword.
+  Keyword,
+  /// The name was classified as a type.
+  Type,
+  /// The name was classified as a specific non-type, non-template
+  /// declaration. ActOnNameClassifiedAsNonType should be called to
+  /// convert the declaration to an expression.
+  NonType,
+  /// The name was classified as an ADL-only function name.
+  /// ActOnNameClassifiedAsUndeclaredNonType should be called to convert the
+  /// result to an expression.
+  UndeclaredNonType,
+  /// The name denotes a member of a dependent type that could not be
+  /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
+  /// convert the result to an expression.
+  DependentNonType,
+  /// The name was classified as an overload set, and an expression
+  /// representing that overload set has been formed.
+  /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
+  /// expression referencing the overload set.
+  OverloadSet,
+  /// The name was classified as a template whose specializations are types.
+  TypeTemplate,
+  /// The name was classified as a variable template name.
+  VarTemplate,
+  /// The name was classified as a function template name.
+  FunctionTemplate,
+  /// The name was classified as an ADL-only function template name.
+  UndeclaredTemplate,
+  /// The name was classified as a concept name.
+  Concept,
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -3290,47 +3331,6 @@ public:
                                       SourceLocation NameLoc,
                                       bool IsTemplateTypeArg);
 
-  /// Describes the result of the name lookup and resolution performed
-  /// by \c ClassifyName().
-  enum NameClassificationKind {
-    /// This name is not a type or template in this context, but might be
-    /// something else.
-    NC_Unknown,
-    /// Classification failed; an error has been produced.
-    NC_Error,
-    /// The name has been typo-corrected to a keyword.
-    NC_Keyword,
-    /// The name was classified as a type.
-    NC_Type,
-    /// The name was classified as a specific non-type, non-template
-    /// declaration. ActOnNameClassifiedAsNonType should be called to
-    /// convert the declaration to an expression.
-    NC_NonType,
-    /// The name was classified as an ADL-only function name.
-    /// ActOnNameClassifiedAsUndeclaredNonType should be called to convert the
-    /// result to an expression.
-    NC_UndeclaredNonType,
-    /// The name denotes a member of a dependent type that could not be
-    /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
-    /// convert the result to an expression.
-    NC_DependentNonType,
-    /// The name was classified as an overload set, and an expression
-    /// representing that overload set has been formed.
-    /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
-    /// expression referencing the overload set.
-    NC_OverloadSet,
-    /// The name was classified as a template whose specializations are types.
-    NC_TypeTemplate,
-    /// The name was classified as a variable template name.
-    NC_VarTemplate,
-    /// The name was classified as a function template name.
-    NC_FunctionTemplate,
-    /// The name was classified as an ADL-only function template name.
-    NC_UndeclaredTemplate,
-    /// The name was classified as a concept name.
-    NC_Concept,
-  };
-
   class NameClassification {
     NameClassificationKind Kind;
     union {
@@ -3343,62 +3343,66 @@ public:
     explicit NameClassification(NameClassificationKind Kind) : Kind(Kind) {}
 
   public:
-    NameClassification(ParsedType Type) : Kind(NC_Type), Type(Type) {}
+    NameClassification(ParsedType Type)
+        : Kind(NameClassificationKind::Type), Type(Type) {}
 
-    NameClassification(const IdentifierInfo *Keyword) : Kind(NC_Keyword) {}
+    NameClassification(const IdentifierInfo *Keyword)
+        : Kind(NameClassificationKind::Keyword) {}
 
-    static NameClassification Error() { return NameClassification(NC_Error); }
+    static NameClassification Error() {
+      return NameClassification(NameClassificationKind::Error);
+    }
 
     static NameClassification Unknown() {
-      return NameClassification(NC_Unknown);
+      return NameClassification(NameClassificationKind::Unknown);
     }
 
     static NameClassification OverloadSet(ExprResult E) {
-      NameClassification Result(NC_OverloadSet);
+      NameClassification Result(NameClassificationKind::OverloadSet);
       Result.Expr = E;
       return Result;
     }
 
     static NameClassification NonType(NamedDecl *D) {
-      NameClassification Result(NC_NonType);
+      NameClassification Result(NameClassificationKind::NonType);
       Result.NonTypeDecl = D;
       return Result;
     }
 
     static NameClassification UndeclaredNonType() {
-      return NameClassification(NC_UndeclaredNonType);
+      return NameClassification(NameClassificationKind::UndeclaredNonType);
     }
 
     static NameClassification DependentNonType() {
-      return NameClassification(NC_DependentNonType);
+      return NameClassification(NameClassificationKind::DependentNonType);
     }
 
     static NameClassification TypeTemplate(TemplateName Name) {
-      NameClassification Result(NC_TypeTemplate);
+      NameClassification Result(NameClassificationKind::TypeTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification VarTemplate(TemplateName Name) {
-      NameClassification Result(NC_VarTemplate);
+      NameClassification Result(NameClassificationKind::VarTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification FunctionTemplate(TemplateName Name) {
-      NameClassification Result(NC_FunctionTemplate);
+      NameClassification Result(NameClassificationKind::FunctionTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification Concept(TemplateName Name) {
-      NameClassification Result(NC_Concept);
+      NameClassification Result(NameClassificationKind::Concept);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification UndeclaredTemplate(TemplateName Name) {
-      NameClassification Result(NC_UndeclaredTemplate);
+      NameClassification Result(NameClassificationKind::UndeclaredTemplate);
       Result.Template = Name;
       return Result;
     }
@@ -3406,38 +3410,40 @@ public:
     NameClassificationKind getKind() const { return Kind; }
 
     ExprResult getExpression() const {
-      assert(Kind == NC_OverloadSet);
+      assert(Kind == NameClassificationKind::OverloadSet);
       return Expr;
     }
 
     ParsedType getType() const {
-      assert(Kind == NC_Type);
+      assert(Kind == NameClassificationKind::Type);
       return Type;
     }
 
     NamedDecl *getNonTypeDecl() const {
-      assert(Kind == NC_NonType);
+      assert(Kind == NameClassificationKind::NonType);
       return NonTypeDecl;
     }
 
     TemplateName getTemplateName() const {
-      assert(Kind == NC_TypeTemplate || Kind == NC_FunctionTemplate ||
-             Kind == NC_VarTemplate || Kind == NC_Concept ||
-             Kind == NC_UndeclaredTemplate);
+      assert(Kind == NameClassificationKind::TypeTemplate ||
+             Kind == NameClassificationKind::FunctionTemplate ||
+             Kind == NameClassificationKind::VarTemplate ||
+             Kind == NameClassificationKind::Concept ||
+             Kind == NameClassificationKind::UndeclaredTemplate);
       return Template;
     }
 
     TemplateNameKind getTemplateNameKind() const {
       switch (Kind) {
-      case NC_TypeTemplate:
+      case NameClassificationKind::TypeTemplate:
         return TNK_Type_template;
-      case NC_FunctionTemplate:
+      case NameClassificationKind::FunctionTemplate:
         return TNK_Function_template;
-      case NC_VarTemplate:
+      case NameClassificationKind::VarTemplate:
         return TNK_Var_template;
-      case NC_Concept:
+      case NameClassificationKind::Concept:
         return TNK_Concept_template;
-      case NC_UndeclaredTemplate:
+      case NameClassificationKind::UndeclaredTemplate:
         return TNK_Undeclared_template;
       default:
         llvm_unreachable("unsupported name classification.");
