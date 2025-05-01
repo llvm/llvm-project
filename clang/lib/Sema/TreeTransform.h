@@ -1223,14 +1223,13 @@ public:
         NamedDecl *SomeDecl = Result.getRepresentativeDecl();
         Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
         SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag)
-            << SomeDecl << NTK << llvm::to_underlying(Kind);
+            << SomeDecl << NTK << Kind;
         SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
         break;
       }
         default:
           SemaRef.Diag(IdLoc, diag::err_not_tag_in_scope)
-              << llvm::to_underlying(Kind) << Id << DC
-              << QualifierLoc.getSourceRange();
+              << Kind << Id << DC << QualifierLoc.getSourceRange();
           break;
       }
       return QualType();
@@ -7510,8 +7509,7 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
         SemaRef.Diag(TL.getNamedTypeLoc().getBeginLoc(),
                      diag::err_tag_reference_non_tag)
             << TAT << Sema::NTK_TypeAliasTemplate
-            << llvm::to_underlying(
-                   ElaboratedType::getTagTypeKindForKeyword(T->getKeyword()));
+            << ElaboratedType::getTagTypeKindForKeyword(T->getKeyword());
         SemaRef.Diag(TAT->getLocation(), diag::note_declared_at);
       }
     }
