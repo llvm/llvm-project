@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetVerifier.h - LLVM IR Target Verifier ---*- C++ -*-===//
+//===-- llvm/Target/TargetVerifier.h - LLVM IR Target Verifier --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,8 +20,8 @@
 #ifndef LLVM_TARGET_VERIFIER_H
 #define LLVM_TARGET_VERIFIER_H
 
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -59,10 +59,11 @@ protected:
   /// This calls the Message-only version so that the above is easier to set
   /// a breakpoint on.
   template <typename T1, typename... Ts>
-  void CheckFailed(const Twine &Message, const T1 &V1, const Ts &... Vs) {
+  void CheckFailed(const Twine &Message, const T1 &V1, const Ts &...Vs) {
     CheckFailed(Message);
     WriteValues({V1, Vs...});
   }
+
 public:
   Module *Mod;
   Triple TT;
@@ -73,8 +74,7 @@ public:
   bool IsValid = true;
 
   TargetVerify(Module *Mod)
-      : Mod(Mod), TT(Mod->getTargetTriple()),
-        MessagesStr(Messages) {}
+      : Mod(Mod), TT(Mod->getTargetTriple()), MessagesStr(Messages) {}
 
   virtual bool run(Function &F) = 0;
 };
