@@ -165,10 +165,10 @@ ProcessMockGPU::GetGPUDynamicLoaderLibraryInfos(const GPUDynamicLoaderArgs &args
   /// sections of an object file at different addresses. 
   GPUDynamicLoaderLibraryInfo lib4;
   lib4.pathname = "/usr/lib/lib4.so";
-  lib4.loaded_sections.push_back({"PT_LOAD[0]", 0x0e0000, {}});
-  lib4.loaded_sections.push_back({"PT_LOAD[1]", 0x100000, {}});
-  lib4.loaded_sections.push_back({"PT_LOAD[2]", 0x0f0000, {}});
-  lib4.loaded_sections.push_back({"PT_LOAD[3]", 0x020000, {}});
+  lib4.loaded_sections.push_back({{"PT_LOAD[0]"}, 0x0e0000});
+  lib4.loaded_sections.push_back({{"PT_LOAD[1]"}, 0x100000});
+  lib4.loaded_sections.push_back({{"PT_LOAD[2]"}, 0x0f0000});
+  lib4.loaded_sections.push_back({{"PT_LOAD[3]"}, 0x020000});
   response.library_infos.push_back(lib4);
 
   /// Fifth example of a shared library. This is for cases where there the 
@@ -184,26 +184,8 @@ ProcessMockGPU::GetGPUDynamicLoaderLibraryInfos(const GPUDynamicLoaderArgs &args
   /// Here we are going to assume that the .text section has functions that 
   /// create sections for each function in the object file. Then each function 
   /// can be loaded at a different address as the driver loads them.
-
-  /// Create the same section hierarchy as found in the ELF file by creating
-  /// a "PT_LOAD[0]" section that contains a ".text" section. We don't give
-  /// either a load address. We will add sections for each function and set the
-  /// load addresses for each function section in the text.children array.
-  GPUSectionInfo PT_LOAD1;
-  PT_LOAD1.name = "PT_LOAD[1]";
-  GPUSectionInfo text_section;
-  text_section.name = ".text";
-  GPUSectionInfo func_foo_section;
-  func_foo_section.name = "foo";
-  func_foo_section.load_address = 0x80000;
-  text_section.children.push_back(func_foo_section); 
-
-  GPUSectionInfo func_bar_section;
-  func_bar_section.name = "bar";
-  func_bar_section.load_address = 0x80200;
-  text_section.children.push_back(func_bar_section); 
-  PT_LOAD1.children.push_back(text_section);
-  lib5.loaded_sections.push_back(PT_LOAD1);
+  lib5.loaded_sections.push_back({{"PT_LOAD[1]", ".text", "foo"}, 0x80000}); 
+  lib5.loaded_sections.push_back({{"PT_LOAD[1]", ".text", "bar"}, 0x80200}); 
   response.library_infos.push_back(lib5);
   return response;
 }
