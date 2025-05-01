@@ -258,7 +258,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   ArrayRef<const Record *> getClasses() const {
-    return ArrayRef(getTrailingObjects<const Record *>(), NumClasses);
+    return getTrailingObjects(NumClasses);
   }
 
   using const_record_iterator = const Record *const *;
@@ -632,9 +632,7 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  ArrayRef<const Init *> getBits() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumBits);
-  }
+  ArrayRef<const Init *> getBits() const { return getTrailingObjects(NumBits); }
 
   const Init *getBit(unsigned Bit) const override { return getBits()[Bit]; }
 };
@@ -783,7 +781,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   ArrayRef<const Init *> getValues() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumValues);
+    return ArrayRef(getTrailingObjects(), NumValues);
   }
 
   const Init *getElement(unsigned Index) const { return getValues()[Index]; }
@@ -1026,10 +1024,6 @@ class CondOpInit final : public TypedInit,
   CondOpInit(ArrayRef<const Init *> Conds, ArrayRef<const Init *> Values,
              const RecTy *Type);
 
-  size_t numTrailingObjects(OverloadToken<Init *>) const {
-    return 2*NumConds;
-  }
-
 public:
   CondOpInit(const CondOpInit &) = delete;
   CondOpInit &operator=(const CondOpInit &) = delete;
@@ -1053,11 +1047,11 @@ public:
   const Init *getVal(unsigned Num) const { return getVals()[Num]; }
 
   ArrayRef<const Init *> getConds() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumConds);
+    return getTrailingObjects(NumConds);
   }
 
   ArrayRef<const Init *> getVals() const {
-    return ArrayRef(getTrailingObjects<const Init *>() + NumConds, NumConds);
+    return ArrayRef(getTrailingObjects() + NumConds, NumConds);
   }
 
   const Init *Fold(const Record *CurRec) const;
@@ -1375,7 +1369,7 @@ public:
   bool           args_empty() const { return NumArgs == 0; }
 
   ArrayRef<const ArgumentInit *> args() const {
-    return ArrayRef(getTrailingObjects<const ArgumentInit *>(), NumArgs);
+    return getTrailingObjects(NumArgs);
   }
 
   const Init *getBit(unsigned Bit) const override {
@@ -1488,11 +1482,11 @@ public:
   }
 
   ArrayRef<const Init *> getArgs() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumArgs);
+    return getTrailingObjects<const Init *>(NumArgs);
   }
 
   ArrayRef<const StringInit *> getArgNames() const {
-    return ArrayRef(getTrailingObjects<const StringInit *>(), NumArgs);
+    return getTrailingObjects<const StringInit *>(NumArgs);
   }
 
   const Init *resolveReferences(Resolver &R) const override;

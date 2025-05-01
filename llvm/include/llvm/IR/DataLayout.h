@@ -564,7 +564,9 @@ inline LLVMTargetDataRef wrap(const DataLayout *P) {
 
 /// Used to lazily calculate structure layout information for a target machine,
 /// based on the DataLayout structure.
-class StructLayout final : public TrailingObjects<StructLayout, TypeSize> {
+class StructLayout final : private TrailingObjects<StructLayout, TypeSize> {
+  friend TrailingObjects;
+
   TypeSize StructSize;
   Align StructAlignment;
   unsigned IsPadded : 1;
@@ -586,11 +588,11 @@ public:
   unsigned getElementContainingOffset(uint64_t FixedOffset) const;
 
   MutableArrayRef<TypeSize> getMemberOffsets() {
-    return llvm::MutableArrayRef(getTrailingObjects<TypeSize>(), NumElements);
+    return getTrailingObjects(NumElements);
   }
 
   ArrayRef<TypeSize> getMemberOffsets() const {
-    return llvm::ArrayRef(getTrailingObjects<TypeSize>(), NumElements);
+    return getTrailingObjects(NumElements);
   }
 
   TypeSize getElementOffset(unsigned Idx) const {
@@ -606,10 +608,6 @@ private:
   friend class DataLayout; // Only DataLayout can create this class
 
   StructLayout(StructType *ST, const DataLayout &DL);
-
-  size_t numTrailingObjects(OverloadToken<TypeSize>) const {
-    return NumElements;
-  }
 };
 
 // The implementation of this method is provided inline as it is particularly
