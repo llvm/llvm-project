@@ -3,7 +3,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-
 class TestCase(TestBase):
     def test(self):
         self.build()
@@ -48,3 +47,14 @@ class TestCase(TestBase):
                 "info -- Dump information on a tagged pointer.",
             ],
         )
+
+        # To ensure compatability with existing scripts, a language specific
+        # command must not be invoked if another command (such as a python
+        # command) has the language specific command name as its prefix.
+        #
+        # For example, this test loads a `tagged-pointer-collision` command. A
+        # script could exist that invokes this command using its prefix
+        # `tagged-pointer`, under the assumption that "tagged-pointer" uniquely
+        # identifies the python command `tagged-pointer-collision`.
+        self.runCmd("command script import commands.py")
+        self.expect("tagged-pointer", startstr="ran tagged-pointer-collision")
