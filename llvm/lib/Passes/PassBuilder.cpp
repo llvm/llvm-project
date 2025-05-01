@@ -39,6 +39,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomPrinter.h"
 #include "llvm/Analysis/DominanceFrontier.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
@@ -80,17 +81,21 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
+#include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
+#include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
+#include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
-#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -101,6 +106,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -110,6 +116,7 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
@@ -126,10 +133,14 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
+#include "llvm/CodeGen/PEI.h"
 #include "llvm/CodeGen/PHIElimination.h"
+#include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
@@ -140,24 +151,30 @@
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
+#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/StackColoring.h"
+#include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -226,7 +243,6 @@
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
-#include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
@@ -675,6 +691,12 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
   return HardwareLoopOpts;
 }
 
+/// Parser of parameters for Lint pass.
+Expected<bool> parseLintOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
+                                            "LintPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -780,6 +802,31 @@ Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
                                             "LowerMatrixIntrinsics");
 }
 
+Expected<IRNormalizerOptions> parseIRNormalizerPassOptions(StringRef Params) {
+  IRNormalizerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "preserve-order")
+      Result.PreserveOrder = Enable;
+    else if (ParamName == "rename-all")
+      Result.RenameAll = Enable;
+    else if (ParamName == "fold-all") // FIXME: Name mismatch
+      Result.FoldPreOutputs = Enable;
+    else if (ParamName == "reorder-operands")
+      Result.ReorderOperands = Enable;
+    else {
+      return make_error<StringError>(
+          formatv("invalid normalize pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Result;
+}
+
 Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
   AddressSanitizerOptions Result;
   while (!Params.empty()) {
@@ -788,6 +835,8 @@ Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
 
     if (ParamName == "kernel") {
       Result.CompileKernel = true;
+    } else if (ParamName == "use-after-scope") {
+      Result.UseAfterScope = true;
     } else {
       return make_error<StringError>(
           formatv("invalid AddressSanitizer pass parameter '{0}' ", ParamName)
@@ -1307,7 +1356,9 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
     else if (ParamName == "ignore-single-use")
       Result.IgnoreSingleUse = Enable;
     else if (ParamName == "merge-const")
-      Result.MergeConst = Enable;
+      Result.MergeConstantGlobals = Enable;
+    else if (ParamName == "merge-const-aggressive")
+      Result.MergeConstAggressive = Enable;
     else if (ParamName == "merge-external")
       Result.MergeExternal = Enable;
     else if (ParamName.consume_front("max-offset=")) {
@@ -1316,6 +1367,10 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
             formatv("invalid GlobalMergePass parameter '{0}' ", ParamName)
                 .str(),
             inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid global-merge pass parameter '{0}' ", Params).str(),
+          inconvertibleErrorCode());
     }
   }
   return Result;
@@ -1437,6 +1492,32 @@ parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
 Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",
                                             "MachineSinkingPass");
+}
+
+Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
+  bool AllowTailMerge = true;
+  if (!Params.empty()) {
+    AllowTailMerge = !Params.consume_front("no-");
+    if (Params != "tail-merge")
+      return make_error<StringError>(
+          formatv("invalid MachineBlockPlacementPass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return AllowTailMerge;
+}
+
+Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
+  bool ClearVirtRegs = true;
+  if (!Params.empty()) {
+    ClearVirtRegs = !Params.consume_front("no-");
+    if (Params != "clear-vregs")
+      return make_error<StringError>(
+          formatv("invalid VirtRegRewriter pass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return ClearVirtRegs;
 }
 
 } // namespace

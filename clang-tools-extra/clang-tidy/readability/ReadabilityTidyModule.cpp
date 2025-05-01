@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AmbiguousSmartptrResetCallCheck.h"
 #include "AvoidConstParamsInDecls.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
@@ -68,6 +69,8 @@ namespace readability {
 class ReadabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AmbiguousSmartptrResetCallCheck>(
+        "readability-ambiguous-smartptr-reset-call");
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
     CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(

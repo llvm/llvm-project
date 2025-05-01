@@ -1064,6 +1064,7 @@ gpu.module @test_module_54 {
   // CHECK: llvm.func @__nv_isinfd(f64) -> i32
   // CHECK: llvm.func @__nv_isnanf(f32) -> i32
   // CHECK: llvm.func @__nv_isnand(f64) -> i32
+  // CHECK: llvm.func @__nv_finitef(f32) -> i32
   // CHECK: llvm.func @__nv_isfinited(f64) -> i32
   // CHECK-LABEL: @fpclassify
   func.func @fpclassify(%f32: f32, %f64: f64) -> (i1, i1, i1, i1, i1, i1) {
@@ -1083,9 +1084,9 @@ gpu.module @test_module_54 {
     // CHECK: llvm.mlir.constant(0
     // CHECK: llvm.icmp "ne"
     %3 = math.isnan %f64 : f64
-    // Note: for some reason, libdevice does not provide isfinite for f32, so
-    // this should fail to convert.
-    // CHECK: math.isfinite {{.*}} : f32
+    // CHECK: llvm.call @__nv_finitef(%{{.*}}) : (f32) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
     %4 = math.isfinite %f32 : f32
     // CHECK: llvm.call @__nv_isfinited(%{{.*}}) : (f64) -> i32
     // CHECK: llvm.mlir.constant(0

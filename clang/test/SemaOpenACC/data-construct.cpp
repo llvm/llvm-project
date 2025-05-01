@@ -43,22 +43,22 @@ void AtLeastOneOf() {
 #pragma acc data default(none)
   ;
 
-    // expected-error@+1{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
 #pragma acc data if(Var)
   ;
 
-    // expected-error@+1{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
 #pragma acc data async
   ;
 
-    // expected-error@+1{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
 #pragma acc data wait
   ;
 
-    // expected-error@+1{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
 #pragma acc data device_type(*)
   ;
-    // expected-error@+1{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
 #pragma acc data
   ;
 
@@ -67,13 +67,13 @@ void AtLeastOneOf() {
 #pragma acc enter data create(Var)
 #pragma acc enter data attach(VarPtr)
 
-  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
 #pragma acc enter data if(Var)
-  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
 #pragma acc enter data async
-  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
 #pragma acc enter data wait
-  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+1{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
 #pragma acc enter data
 
   // Exit Data
@@ -81,15 +81,15 @@ void AtLeastOneOf() {
 #pragma acc exit data delete(Var)
 #pragma acc exit data detach(VarPtr)
 
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data if(Var)
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data async
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data wait
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data finalize
-  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+1{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
 #pragma acc exit data
 
   // Host Data

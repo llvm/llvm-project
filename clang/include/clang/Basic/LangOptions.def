@@ -161,7 +161,6 @@ LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P2014 Option 2")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
-LANGOPT(RetainSubstTemplateTypeParmTypeAstNodes, 1, 0, "retain SubstTemplateTypeParmType nodes in the AST's representation of alias template specializations")
 
 LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
 LANGOPT(PointerAuthCalls  , 1, 0, "function pointer authentication")
@@ -348,7 +347,21 @@ BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contracti
 COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")
 BENIGN_LANGOPT(RoundingMath, 1, false, "Do not assume default floating-point rounding behavior")
 BENIGN_ENUM_LANGOPT(FPExceptionMode, FPExceptionModeKind, 2, FPE_Default, "FP Exception Behavior Mode type")
-BENIGN_ENUM_LANGOPT(FPEvalMethod, FPEvalMethodKind, 2, FEM_UnsetOnCommandLine, "FP type used for floating point arithmetic")
+
+#if defined(__clang__) && defined(__has_warning)
+#if __has_warning("-Wpreferred-type-bitfield-enum-conversion")
+// FIXME: Remove this once the warning is fixed, https://llvm.org/PR137600
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpreferred-type-bitfield-enum-conversion"
+#endif
+#endif
+BENIGN_ENUM_LANGOPT(FPEvalMethod, FPEvalMethodKind, 3, FEM_UnsetOnCommandLine, "FP type used for floating point arithmetic")
+#if defined(__clang__) && defined(__has_warning)
+#if __has_warning("-Wpreferred-type-bitfield-enum-conversion")
+#pragma clang diagnostic pop
+#endif
+#endif
+
 ENUM_LANGOPT(Float16ExcessPrecision, ExcessPrecisionKind, 2, FPP_Standard, "Intermediate truncation behavior for Float16 arithmetic")
 ENUM_LANGOPT(BFloat16ExcessPrecision, ExcessPrecisionKind, 2, FPP_Standard, "Intermediate truncation behavior for BFloat16 arithmetic")
 LANGOPT(NoBitFieldTypeAlign , 1, 0, "bit-field type alignment")
@@ -515,7 +528,7 @@ VALUE_LANGOPT(FuchsiaAPILevel, 32, 0, "Fuchsia API level")
 // on large _BitInts.
 BENIGN_VALUE_LANGOPT(MaxBitIntWidth, 32, 128, "Maximum width of a _BitInt")
 
-COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
+COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, "True if we want to process statements "
         "on the global scope, ignore EOF token and continue later on (thus "
         "avoid tearing the Lexer and etc. down). Controlled by "
         "-fincremental-extensions.")

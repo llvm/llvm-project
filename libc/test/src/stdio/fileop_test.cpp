@@ -87,7 +87,7 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
 
   LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::fwrite("nothing", 1, 1, file),
-              returns(EQ(0)).with_errno(NE(0)));
+              returns(EQ(size_t(0))).with_errno(NE(0)));
   LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);

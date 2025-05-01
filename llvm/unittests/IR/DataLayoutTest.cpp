@@ -157,7 +157,7 @@ public:
 
   std::string format(StringRef Str) const {
     std::string Res = Str.str();
-    std::replace(Res.begin(), Res.end(), '!', Specifier);
+    llvm::replace(Res, '!', Specifier);
     return Res;
   }
 };
@@ -312,12 +312,12 @@ TEST(DataLayout, ParsePointerSpec) {
         "p16777215:32:32:64:8", "p16777215:16777215:32768:32768:16777215"})
     EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
 
-  for (StringRef Str : {"p", "p0", "p:32", "p0:32", "p:32:32:32:32:32:32",
-                        "p0:32:32:32:32:32:32"})
+  for (StringRef Str :
+       {"p", "p0", "p:32", "p0:32", "p:32:32:32:32:32", "p0:32:32:32:32:32"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("malformed specification, must be of the form "
-                          "\"p[<n>]:<size>:<abi>[:<pref>[:<idx>[:<addr>]]]\""));
+                          "\"p[<n>]:<size>:<abi>[:<pref>[:<idx>]]\""));
 
   // address space
   for (StringRef Str : {"p0x0:32:32", "px:32:32:32", "p16777216:32:32:32:32"})
@@ -401,27 +401,6 @@ TEST(DataLayout, ParsePointerSpec) {
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("index size cannot be larger than the pointer size"));
-
-  // address size
-  for (StringRef Str : {"p:64:32:32:64:", "p0:64:32:32:64:"})
-    EXPECT_THAT_EXPECTED(
-        DataLayout::parse(Str),
-        FailedWithMessage("address size component cannot be empty"));
-
-  // Note: in the future we might allow 0 for address size to indicate pointers
-  // that do not have a meaning full address (e.g. relocatable GC pointers).
-  for (StringRef Str :
-       {"p:32:32:32:32:0", "p0:32:32:32:32:0x20", "p42:32:32:32:32:16777216"})
-    EXPECT_THAT_EXPECTED(
-        DataLayout::parse(Str),
-        FailedWithMessage("address size must be a non-zero 24-bit integer"));
-
-  for (StringRef Str :
-       {"p:16:16:16:16:17", "p0:32:64:64:32:64", "p42:16:64:64:16:32"})
-    EXPECT_THAT_EXPECTED(
-        DataLayout::parse(Str),
-        FailedWithMessage(
-            "address size cannot be larger than the pointer size"));
 }
 
 TEST(DataLayoutTest, ParseNativeIntegersSpec) {
@@ -541,40 +520,6 @@ TEST(DataLayout, GetIndexSize) {
     EXPECT_EQ(DL.getIndexSize(0), V0) << Layout;
     EXPECT_EQ(DL.getIndexSize(1), V1) << Layout;
     EXPECT_EQ(DL.getIndexSize(2), V2) << Layout;
-  }
-}
-
-TEST(DataLayout, GetAddressSizeInBits) {
-  // Address size defaults to index size
-  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
-      {"", 64, 64, 64},
-      {"p:16:32", 16, 16, 16},
-      {"p0:32:64", 32, 32, 32},
-      {"p1:16:32:32:10", 64, 10, 64},
-      {"p1:31:32:64:10:20-p2:17:16:16:16:15", 64, 20, 15},
-  };
-  for (auto [Layout, V0, V1, V2] : Cases) {
-    DataLayout DL = cantFail(DataLayout::parse(Layout));
-    EXPECT_EQ(DL.getPointerAddressSizeInBits(0), V0) << Layout;
-    EXPECT_EQ(DL.getPointerAddressSizeInBits(1), V1) << Layout;
-    EXPECT_EQ(DL.getPointerAddressSizeInBits(2), V2) << Layout;
-  }
-}
-
-TEST(DataLayout, GetAddressSize) {
-  // Address size defaults to index size
-  std::tuple<StringRef, unsigned, unsigned, unsigned> Cases[] = {
-      {"", 8, 8, 8},
-      {"p:16:32", 2, 2, 2},
-      {"p0:27:64", 4, 4, 4},
-      {"p1:19:32:64:19:5", 8, 1, 8},
-      {"p1:33:32:64:33:23-p2:21:8:16:21:13", 8, 3, 2},
-  };
-  for (auto [Layout, V0, V1, V2] : Cases) {
-    DataLayout DL = cantFail(DataLayout::parse(Layout));
-    EXPECT_EQ(DL.getPointerAddressSize(0), V0) << Layout;
-    EXPECT_EQ(DL.getPointerAddressSize(1), V1) << Layout;
-    EXPECT_EQ(DL.getPointerAddressSize(2), V2) << Layout;
   }
 }
 

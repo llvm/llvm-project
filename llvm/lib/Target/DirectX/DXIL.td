@@ -56,6 +56,7 @@ def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
 def SplitDoubleTy : DXILOpParamType;
+def BinaryWithCarryTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -287,17 +288,6 @@ def ReadOnly : DXILAttribute;
 def NoDuplicate : DXILAttribute;
 def NoReturn : DXILAttribute;
 
-// A property is simply used to mark that a DXIL op belongs to a sub-group of
-// DXIL ops, and it is used to query if a particular op holds this property.
-// This is used for the static analysis of DXIL ops.
-class DXILProperty;
-
-def IsBarrier : DXILProperty;
-def IsGradient : DXILProperty;
-def IsFeedback : DXILProperty;
-def IsWave : DXILProperty;
-def RequiresUniformInputs : DXILProperty;
-
 class Overloads<Version ver, list<DXILOpParamType> ols> {
   Version dxil_version = ver;
   list<DXILOpParamType> overload_types = ols;
@@ -405,9 +395,6 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
   // Versioned attributes of operation
   list<Attributes> attributes = [];
-
-  // List of properties. Default to no properties.
-  list<DXILProperty> properties = [];
 }
 
 // Concrete definitions of DXIL Operations
@@ -744,6 +731,16 @@ def UMin : DXILOp<40, binary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def UAddc : DXILOp<44, binaryWithCarryOrBorrow > {
+  let Doc = "unsigned add of 32-bit operand with the carry";
+  let intrinsics = [IntrinSelect<int_uadd_with_overflow>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = BinaryWithCarryTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def FMad : DXILOp<46, tertiary> {
   let Doc = "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m "
             "* a + b.";
@@ -887,7 +884,6 @@ def Barrier : DXILOp<80, barrier> {
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [compute, library]>];
   let attributes = [Attributes<DXIL1_0, []>];
-  let properties = [IsBarrier];
 }
 
 def Discard : DXILOp<82, discard> {
@@ -963,7 +959,6 @@ def WaveIsFirstLane : DXILOp<110, waveIsFirstLane> {
   let arguments = [];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
 }
 
 def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
@@ -973,7 +968,6 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
-  let properties = [IsWave];
 }
 
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
@@ -983,7 +977,6 @@ def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let arguments = [Int1Ty];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
 }
 
 def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
@@ -993,7 +986,6 @@ def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
   let arguments = [Int1Ty];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
 }
 
 def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
@@ -1004,7 +996,6 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let overloads = [Overloads<
       DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
 }
 
 def WaveActiveOp : DXILOp<119, waveActiveOp> {
@@ -1047,7 +1038,6 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
 }
 
 def RawBufferLoad : DXILOp<139, rawBufferLoad> {
@@ -1085,6 +1075,16 @@ def RawBufferStore : DXILOp<140, rawBufferStore> {
               ]>
   ];
   let stages = [Stages<DXIL1_2, [all_stages]>];
+}
+
+def Dot2AddHalf : DXILOp<162, dot2AddHalf> {
+  let Doc = "2D half dot product with accumulate to float";
+  let intrinsics = [IntrinSelect<int_dx_dot2add>];
+  let arguments = [FloatTy, HalfTy, HalfTy, HalfTy, HalfTy];
+  let result = FloatTy;
+  let overloads = [Overloads<DXIL1_0, []>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {

@@ -6,11 +6,9 @@ define i1 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[H_PROMOTED118_I_FR:%.*]] = freeze i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[H_PROMOTED118_I_FR]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP3]], <4 x i32> <i32 2, i32 2, i32 7, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> zeroinitializer, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP1]], <4 x i32> <i32 2, i32 2, i32 7, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP5]], <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[TMP6]], <i32 1, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])

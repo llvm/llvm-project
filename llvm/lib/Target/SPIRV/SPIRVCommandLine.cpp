@@ -53,6 +53,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_INTEL_subgroups},
         {"SPV_INTEL_media_block_io",
          SPIRV::Extension::Extension::SPV_INTEL_media_block_io},
+        {"SPV_INTEL_memory_access_aliasing",
+         SPIRV::Extension::Extension::SPV_INTEL_memory_access_aliasing},
         {"SPV_INTEL_joint_matrix",
          SPIRV::Extension::Extension::SPV_INTEL_joint_matrix},
         {"SPV_KHR_uniform_group_instructions",
@@ -88,12 +90,19 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_non_semantic_info",
          SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
         {"SPV_INTEL_long_composites",
-         SPIRV::Extension::Extension::SPV_INTEL_long_composites}};
+         SPIRV::Extension::Extension::SPV_INTEL_long_composites},
+        {"SPV_INTEL_fp_max_error",
+         SPIRV::Extension::Extension::SPV_INTEL_fp_max_error},
+        {"SPV_INTEL_subgroup_matrix_multiply_accumulate",
+         SPIRV::Extension::Extension::
+             SPV_INTEL_subgroup_matrix_multiply_accumulate},
+        {"SPV_INTEL_ternary_bitwise_function",
+         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function}};
 
-bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
-                                  llvm::StringRef ArgValue,
+bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
+                                  StringRef ArgValue,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
-  llvm::SmallVector<llvm::StringRef, 10> Tokens;
+  SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
   std::sort(Tokens.begin(), Tokens.end());
 
@@ -110,7 +119,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
     if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
       return O.error("Invalid extension list format: " + Token.str());
 
-    llvm::StringRef ExtensionName = Token.substr(1);
+    StringRef ExtensionName = Token.substr(1);
     auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
@@ -119,8 +128,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
     if (Token.starts_with("+")) {
       EnabledExtensions.insert(NameValuePair->second);
     } else if (EnabledExtensions.count(NameValuePair->second)) {
-      if (std::find(Tokens.begin(), Tokens.end(), "+" + ExtensionName.str()) !=
-          Tokens.end())
+      if (llvm::is_contained(Tokens, "+" + ExtensionName.str()))
         return O.error(
             "Extension cannot be allowed and disallowed at the same time: " +
             ExtensionName.str());
@@ -133,7 +141,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
   return false;
 }
 
-llvm::StringRef SPIRVExtensionsParser::checkExtensions(
+StringRef SPIRVExtensionsParser::checkExtensions(
     const std::vector<std::string> &ExtNames,
     std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
   for (const auto &Ext : ExtNames) {

@@ -2,11 +2,12 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=CI %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-FAKE16 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-@lds.obj = addrspace(3) global [256 x i32] undef, align 4
+@lds.obj = addrspace(3) global [256 x i32] poison, align 4
 
 define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {
 ; CI-LABEL: write_ds_sub0_offset0_global:
@@ -227,13 +228,22 @@ define amdgpu_kernel void @add_x_shl_max_offset() #1 {
 ; GFX10-NEXT:    ds_write_b8 v0, v1 offset:65535
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: add_x_shl_max_offset:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1 offset:65535
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: add_x_shl_max_offset:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 4, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-TRUE16-NEXT:    ds_store_b8 v1, v0 offset:65535
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: add_x_shl_max_offset:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX11-FAKE16-NEXT:    ds_store_b8 v0, v1 offset:65535
+; GFX11-FAKE16-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x()
   %shl = shl i32 %x.i, 4
   %add = add i32 %shl, 65535
@@ -248,37 +258,42 @@ define amdgpu_kernel void @add_x_shl_max_offset() #1 {
 define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
 ; CI-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; CI:       ; %bb.0:
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CI-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
+; CI-NEXT:    v_mul_i32_i24_e32 v0, -4, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 13
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write_b8 v0, v1
+; CI-NEXT:    ds_write_b8 v0, v1 offset:65535
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    v_mul_i32_i24_e32 v0, -4, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 13
-; GFX9-NEXT:    ds_write_b8 v0, v1
+; GFX9-NEXT:    ds_write_b8 v0, v1 offset:65535
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-NEXT:    v_mul_i32_i24_e32 v0, -4, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 13
-; GFX10-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    ds_write_b8 v0, v1
+; GFX10-NEXT:    ds_write_b8 v0, v1 offset:65535
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_i32_i24_e32 v1, -4, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-TRUE16-NEXT:    ds_store_b8 v1, v0 offset:65535
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_mul_i32_i24_e32 v0, -4, v0
+; GFX11-FAKE16-NEXT:    ds_store_b8 v0, v1 offset:65535
+; GFX11-FAKE16-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x()
   %.neg = mul i32 %x.i, -4
   %add = add i32 %.neg, 65535
@@ -316,14 +331,24 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
 ; GFX10-NEXT:    ds_write_b8 v0, v1
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v1, 0xffff, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-TRUE16-NEXT:    ds_store_b8 v1, v0
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-FAKE16-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    ds_store_b8 v0, v1
+; GFX11-FAKE16-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
@@ -359,14 +384,24 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
 ; GFX10-NEXT:    ds_write_b8 v0, v1
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_p1:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x10000, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: add_x_shl_neg_to_sub_max_offset_p1:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-TRUE16-NEXT:    v_sub_nc_u32_e32 v1, 0x10000, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-TRUE16-NEXT:    ds_store_b8 v1, v0
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: add_x_shl_neg_to_sub_max_offset_p1:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-FAKE16-NEXT:    v_sub_nc_u32_e32 v0, 0x10000, v0
+; GFX11-FAKE16-NEXT:    ds_store_b8 v0, v1
+; GFX11-FAKE16-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
@@ -407,9 +442,9 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() #1 {
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_multi_use:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffc, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:456

@@ -86,6 +86,7 @@
 // CHECK-SAME: {{^}}, neoverse-v2
 // CHECK-SAME: {{^}}, neoverse-v3
 // CHECK-SAME: {{^}}, neoverse-v3ae
+// CHECK-SAME: {{^}}, olympus
 // CHECK-SAME: {{^}}, oryon-1
 // CHECK-SAME: {{^}}, saphira
 // CHECK-SAME: {{^}}, thunderx

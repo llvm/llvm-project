@@ -214,10 +214,8 @@ static void validateLifetimeStart(const SPIRVSubtarget &STI,
           PtrType->getOperand(1).getImm());
   MachineIRBuilder MIB(I);
   LLVMContext &Context = MF->getFunction().getContext();
-  SPIRVType *ElemType =
-      GR.getOrCreateSPIRVType(IntegerType::getInt8Ty(Context), MIB,
-                              SPIRV::AccessQualifier::ReadWrite, false);
-  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ElemType, MIB, SC);
+  SPIRVType *NewPtrType =
+      GR.getOrCreateSPIRVPointerType(IntegerType::getInt8Ty(Context), MIB, SC);
   doInsertBitcast(STI, MRI, GR, I, PtrReg, 0, NewPtrType);
 }
 
@@ -392,6 +390,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         break;
       case SPIRV::OpPtrCastToGeneric:
       case SPIRV::OpGenericCastToPtr:
+      case SPIRV::OpGenericCastToPtrExplicit:
         validateAccessChain(STI, MRI, GR, MI);
         break;
       case SPIRV::OpPtrAccessChain:

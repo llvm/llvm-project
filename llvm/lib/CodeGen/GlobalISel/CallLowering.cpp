@@ -354,7 +354,7 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
-  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
+  llvm::copy(DstRegs, PadDstRegs.begin());
 
   // Create the excess dead defs for the unmerge.
   for (int I = DstRegs.size(); I != NumDst; ++I)

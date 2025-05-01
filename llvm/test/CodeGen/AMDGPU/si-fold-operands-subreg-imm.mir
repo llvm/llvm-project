@@ -17,7 +17,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[COPY]].sub1, %subreg.sub1
     ; CHECK-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[REG_SEQUENCE]].sub0, 8, implicit-def $scc
-    ; CHECK-NEXT: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[REG_SEQUENCE]].sub1, 8, implicit-def $scc, implicit $scc
+    ; CHECK-NEXT: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[REG_SEQUENCE]].sub1, 0, implicit-def $scc, implicit $scc
     ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_ADD_U32_]], %subreg.sub0, [[S_ADDC_U32_]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE1]]
     %0:sgpr_64 = COPY $sgpr8_sgpr9
@@ -42,8 +42,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr8_vgpr9
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[COPY]].sub1, %subreg.sub1
-    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[REG_SEQUENCE]].sub0, 30064771075, 0, implicit $exec
-    ; CHECK-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[REG_SEQUENCE]].sub1, 30064771075, [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[REG_SEQUENCE]].sub0, 3, 0, implicit $exec
+    ; CHECK-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[REG_SEQUENCE]].sub1, 7, [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE1]]
     %0:vreg_64 = COPY $vgpr8_vgpr9
@@ -116,7 +116,7 @@ body:             |
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 8
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B64_]].sub1, %subreg.sub0, [[S_MOV_B64_]].sub0, %subreg.sub1
     ; CHECK-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, 8, implicit-def $scc
-    ; CHECK-NEXT: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[COPY]].sub1, 8, implicit-def $scc, implicit $scc
+    ; CHECK-NEXT: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[COPY]].sub1, 0, implicit-def $scc, implicit $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADDC_U32_]]
     %0:sgpr_64 = COPY $sgpr8_sgpr9
     %1:sreg_64 = S_MOV_B64 8

@@ -130,7 +130,7 @@ void SetBreakpointsRequestHandler::operator()(
   FillResponse(request, response);
   const auto *arguments = request.getObject("arguments");
   const auto *source = arguments->getObject("source");
-  const auto path = GetString(source, "path");
+  const auto path = GetString(source, "path").value_or("");
   const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
 
@@ -143,7 +143,8 @@ void SetBreakpointsRequestHandler::operator()(
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
         SourceBreakpoint src_bp(dap, *bp_obj);
-        std::pair<uint32_t, uint32_t> bp_pos(src_bp.line, src_bp.column);
+        std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(),
+                                             src_bp.GetColumn());
         request_bps.try_emplace(bp_pos, src_bp);
         const auto [iv, inserted] =
             dap.source_breakpoints[path].try_emplace(bp_pos, src_bp);
@@ -153,7 +154,7 @@ void SetBreakpointsRequestHandler::operator()(
         else
           iv->getSecond().UpdateBreakpoint(src_bp);
         AppendBreakpoint(&iv->getSecond(), response_breakpoints, path,
-                         src_bp.line);
+                         src_bp.GetLine());
       }
     }
   }
@@ -167,7 +168,7 @@ void SetBreakpointsRequestHandler::operator()(
       auto request_pos = request_bps.find(old_bp.first);
       if (request_pos == request_bps.end()) {
         // This breakpoint no longer exists in this source file, delete it
-        dap.target.BreakpointDelete(old_bp.second.bp.GetID());
+        dap.target.BreakpointDelete(old_bp.second.GetID());
         old_src_bp_pos->second.erase(old_bp.first);
       }
     }

@@ -136,6 +136,9 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };
 
+// For some options that resemble -z bti-report={none,warning,error}
+enum class ReportPolicy { None, Warning, Error };
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -223,13 +226,15 @@ struct Config {
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
   llvm::StringRef whyExtract;
+  llvm::SmallVector<llvm::GlobPattern, 0> whyLive;
   llvm::StringRef cmseInputLib;
   llvm::StringRef cmseOutputLib;
-  StringRef zBtiReport = "none";
-  StringRef zCetReport = "none";
-  StringRef zPauthReport = "none";
-  StringRef zGcsReport = "none";
-  StringRef zExecuteOnlyReport = "none";
+  ReportPolicy zBtiReport = ReportPolicy::None;
+  ReportPolicy zCetReport = ReportPolicy::None;
+  ReportPolicy zPauthReport = ReportPolicy::None;
+  ReportPolicy zGcsReport = ReportPolicy::None;
+  ReportPolicy zGcsReportDynamic = ReportPolicy::None;
+  ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -336,6 +341,7 @@ struct Config {
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;
+  bool singleXoRx;
   bool shared;
   bool symbolic;
   bool isStatic = false;
@@ -747,6 +753,14 @@ uint64_t errCount(Ctx &ctx);
 ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
 
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
+
+inline DiagLevel toDiagLevel(ReportPolicy policy) {
+  if (policy == ReportPolicy::Error)
+    return DiagLevel::Err;
+  else if (policy == ReportPolicy::Warning)
+    return DiagLevel::Warn;
+  return DiagLevel::None;
+}
 
 } // namespace lld::elf
 
