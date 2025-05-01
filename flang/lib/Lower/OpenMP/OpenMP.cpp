@@ -2889,9 +2889,82 @@ static void genAtomicRead(lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  genAtomicCaptureStatement(converter, fromAddress, toAddress,
-                            leftHandClauseList, rightHandClauseList,
-                            elementType, loc);
+
+  if (fromAddress.getType() != toAddress.getType()) {
+    // Emit an implicit cast. Different yet compatible types on
+    // omp.atomic.read constitute valid Fortran. The OMPIRBuilder will
+    // emit atomic instructions (on primitive types) and `__atomic_load`
+    // libcall (on complex type) without explicitly converting
+    // between such compatible types. The OMPIRBuilder relies on the
+    // frontend to resolve such inconsistencies between `omp.atomic.read `
+    // operand types. Similar inconsistencies between operand types in
+    // `omp.atomic.write` are resolved through implicit casting by use of typed
+    // assignment (i.e. `evaluate::Assignment`). However, use of typed
+    // assignment in `omp.atomic.read` (of form `v = x`) leads to an unsafe,
+    // non-atomic load of `x` into a temporary `alloca`, followed by an atomic
+    // read of form `v = alloca`. Hence, it is needed to perform a custom
+    // implicit cast.
+
+    // An atomic read of form `v = x` would (without implicit casting)
+    // lower to `omp.atomic.read %v = %x : !fir.ref<type1>, !fir.ref<type2>,
+    // type2`. This implicit casting will rather generate the following FIR:
+    //
+    // 	 %alloca = fir.alloca type2
+    //	 omp.atomic.read %alloca = %x : !fir.ref<type2>, !fir.ref<type2>, type2
+    //	 %load = fir.load %alloca : !fir.ref<type2>
+    //	 %cvt = fir.convert %load : (type2) -> type1
+    //	 fir.store %cvt to %v : !fir.ref<type1>
+
+    // These sequence of operations is thread-safe since each thread allocates
+    // the `alloca` in its stack, and performs `%alloca = %x` atomically. Once
+    // safely read, each thread performs the implicit cast on the local
+    // `alloca`, and writes the final result to `%v`.
+    mlir::Type toType = fir::unwrapRefType(toAddress.getType());
+    mlir::Type fromType = fir::unwrapRefType(fromAddress.getType());
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    auto oldIP = builder.saveInsertionPoint();
+    builder.setInsertionPointToStart(builder.getAllocaBlock());
+    mlir::Value alloca = builder.create<fir::AllocaOp>(
+        loc, fromType); // Thread scope `alloca` to atomically read `%x`.
+    builder.restoreInsertionPoint(oldIP);
+    genAtomicCaptureStatement(converter, fromAddress, alloca,
+                              leftHandClauseList, rightHandClauseList,
+                              elementType, loc);
+    auto load = builder.create<fir::LoadOp>(loc, alloca);
+    if (fir::isa_complex(fromType) && !fir::isa_complex(toType)) {
+      // Emit an additional `ExtractValueOp` if `fromAddress` is of complex
+      // type, but `toAddress` is not.
+      auto extract = builder.create<fir::ExtractValueOp>(
+          loc, mlir::cast<mlir::ComplexType>(fromType).getElementType(), load,
+          builder.getArrayAttr(
+              builder.getIntegerAttr(builder.getIndexType(), 0)));
+      auto cvt = builder.create<fir::ConvertOp>(loc, toType, extract);
+      builder.create<fir::StoreOp>(loc, cvt, toAddress);
+    } else if (!fir::isa_complex(fromType) && fir::isa_complex(toType)) {
+      // Emit an additional `InsertValueOp` if `toAddress` is of complex
+      // type, but `fromAddress` is not.
+      mlir::Value undef = builder.create<fir::UndefOp>(loc, toType);
+      mlir::Type complexEleTy =
+          mlir::cast<mlir::ComplexType>(toType).getElementType();
+      mlir::Value cvt = builder.create<fir::ConvertOp>(loc, complexEleTy, load);
+      mlir::Value zero = builder.createRealZeroConstant(loc, complexEleTy);
+      mlir::Value idx0 = builder.create<fir::InsertValueOp>(
+          loc, toType, undef, cvt,
+          builder.getArrayAttr(
+              builder.getIntegerAttr(builder.getIndexType(), 0)));
+      mlir::Value idx1 = builder.create<fir::InsertValueOp>(
+          loc, toType, idx0, zero,
+          builder.getArrayAttr(
+              builder.getIntegerAttr(builder.getIndexType(), 1)));
+      builder.create<fir::StoreOp>(loc, idx1, toAddress);
+    } else {
+      auto cvt = builder.create<fir::ConvertOp>(loc, toType, load);
+      builder.create<fir::StoreOp>(loc, cvt, toAddress);
+    }
+  } else
+    genAtomicCaptureStatement(converter, fromAddress, toAddress,
+                              leftHandClauseList, rightHandClauseList,
+                              elementType, loc);
 }
 
 /// Processes an atomic construct with update clause.
@@ -2975,6 +3048,10 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
       fir::getBase(converter.genExprValue(assign1.lhs, stmtCtx)).getType();
   mlir::Type stmt2VarType =
       fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
+
+  // Check if implicit type is needed
+  if (stmt1VarType != stmt2VarType)
+    TODO(loc, "atomic capture requiring implicit type casts");
 
   mlir::Operation *atomicCaptureOp = nullptr;
   mlir::IntegerAttr hint = nullptr;

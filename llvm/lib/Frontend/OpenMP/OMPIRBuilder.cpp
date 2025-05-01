@@ -268,33 +268,6 @@ computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
   return Result;
 }
 
-/// Emit an implicit cast to convert \p XRead to type of variable \p V
-static llvm::Value *emitImplicitCast(IRBuilder<> &Builder, llvm::Value *XRead,
-                                     llvm::Value *V) {
-  // TODO: Add this functionality to the `AtomicInfo` interface
-  llvm::Type *XReadType = XRead->getType();
-  llvm::Type *VType = V->getType();
-  if (llvm::AllocaInst *vAlloca = dyn_cast<llvm::AllocaInst>(V))
-    VType = vAlloca->getAllocatedType();
-
-  if (XReadType->isStructTy() && VType->isStructTy())
-    // No need to extract or convert. A direct
-    // `store` will suffice.
-    return XRead;
-
-  if (XReadType->isStructTy())
-    XRead = Builder.CreateExtractValue(XRead, /*Idxs=*/0);
-  if (VType->isIntegerTy() && XReadType->isFloatingPointTy())
-    XRead = Builder.CreateFPToSI(XRead, VType);
-  else if (VType->isFloatingPointTy() && XReadType->isIntegerTy())
-    XRead = Builder.CreateSIToFP(XRead, VType);
-  else if (VType->isIntegerTy() && XReadType->isIntegerTy())
-    XRead = Builder.CreateIntCast(XRead, VType, true);
-  else if (VType->isFloatingPointTy() && XReadType->isFloatingPointTy())
-    XRead = Builder.CreateFPCast(XRead, VType);
-  return XRead;
-}
-
 /// Make \p Source branch to \p Target.
 ///
 /// Handles two situations:
@@ -8685,8 +8658,6 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     }
   }
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Read);
-  if (XRead->getType() != V.Var->getType())
-    XRead = emitImplicitCast(Builder, XRead, V.Var);
   Builder.CreateStore(XRead, V.Var, V.IsVolatile);
   return Builder.saveIP();
 }
@@ -8983,8 +8954,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     return AtomicResult.takeError();
   Value *CapturedVal =
       (IsPostfixUpdate ? AtomicResult->first : AtomicResult->second);
-  if (CapturedVal->getType() != V.Var->getType())
-    CapturedVal = emitImplicitCast(Builder, CapturedVal, V.Var);
   Builder.CreateStore(CapturedVal, V.Var, V.IsVolatile);
 
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Capture);
