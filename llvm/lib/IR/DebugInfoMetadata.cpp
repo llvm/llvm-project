@@ -63,12 +63,19 @@ DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
                     DVI->getDebugLoc()->getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
-                       unsigned Column, ArrayRef<Metadata *> MDs,
-                       bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs) {
+                       unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
+                       ArrayRef<Metadata *> MDs, bool ImplicitCode)
+    : MDNode(C, DILocationKind, Storage, MDs)
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+      ,
+      AtomGroup(AtomGroup), AtomRank(AtomRank)
+#endif
+{
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+  assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
+#endif
   assert((MDs.size() == 1 || MDs.size() == 2) &&
          "Expected a scope and optional inlined-at");
-
   // Set line and column.
   assert(Column < (1u << 16) && "Expected 16-bit column");
 
@@ -87,6 +94,7 @@ static void adjustColumn(unsigned &Column) {
 DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                                 unsigned Column, Metadata *Scope,
                                 Metadata *InlinedAt, bool ImplicitCode,
+                                uint64_t AtomGroup, uint8_t AtomRank,
                                 StorageType Storage, bool ShouldCreate) {
   // Fixup column.
   adjustColumn(Column);
@@ -94,7 +102,8 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   if (Storage == Uniqued) {
     if (auto *N = getUniqued(Context.pImpl->DILocations,
                              DILocationInfo::KeyTy(Line, Column, Scope,
-                                                   InlinedAt, ImplicitCode)))
+                                                   InlinedAt, ImplicitCode,
+                                                   AtomGroup, AtomRank)))
       return N;
     if (!ShouldCreate)
       return nullptr;
@@ -106,8 +115,9 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   Ops.push_back(Scope);
   if (InlinedAt)
     Ops.push_back(InlinedAt);
-  return storeImpl(new (Ops.size(), Storage) DILocation(
-                       Context, Storage, Line, Column, Ops, ImplicitCode),
+  return storeImpl(new (Ops.size(), Storage)
+                       DILocation(Context, Storage, Line, Column, AtomGroup,
+                                  AtomRank, Ops, ImplicitCode),
                    Storage, Context.pImpl->DILocations);
 }
 
