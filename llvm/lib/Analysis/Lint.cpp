@@ -735,11 +735,9 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
-  if (AbortOnError && !L.MessagesStr.str().empty()) {
+  if (AbortOnError && !L.MessagesStr.str().empty())
     report_fatal_error(
         "linter found errors, aborting. (enabled by abort-on-error)", false);
-    return PreservedAnalyses::none();
-  }
   return PreservedAnalyses::all();
 }
 
