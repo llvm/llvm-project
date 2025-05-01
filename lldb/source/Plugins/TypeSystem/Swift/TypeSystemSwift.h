@@ -197,7 +197,8 @@ public:
   virtual std::string GetSwiftName(const clang::Decl *clang_decl,
                                    TypeSystemClang &clang_typesystem) = 0;
 
-  virtual CompilerType GetBuiltinRawPointerType() = 0;
+  CompilerType GetBuiltinRawPointerType();
+  CompilerType GetBuiltinUnknownObjectType();
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.

@@ -98,6 +98,14 @@ bool TypeSystemSwift::IsScalarType(opaque_compiler_type_t type) {
   return (GetTypeInfo(type, nullptr) & eTypeIsScalar) != 0;
 }
 
+CompilerType TypeSystemSwift::GetBuiltinRawPointerType() {
+  return GetTypeFromMangledTypename(ConstString("$sBpD"));
+}
+
+CompilerType TypeSystemSwift::GetBuiltinUnknownObjectType() {
+  return GetTypeFromMangledTypename(ConstString("$sBOD"));
+}
+
 bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(
     opaque_compiler_type_t type) {
   return Flags(GetTypeInfo(type, nullptr))
