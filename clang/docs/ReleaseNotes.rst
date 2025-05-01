@@ -261,6 +261,8 @@ New Compiler Flags
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
 
+- New option ``-ftime-report-json`` added which outputs the same timing data as `-ftime-report` but formatted as JSON.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -527,6 +529,9 @@ Bug Fixes in This Version
   evaluation. The crashes were happening during diagnostics emission due to
   unimplemented statement printer. (#GH132641)
 - Fixed visibility calculation for template functions. (#GH103477)
+- Fixed a bug where an attribute before a ``pragma clang attribute`` or
+  ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
+  the invalid attribute location appropriately.  (#GH137861)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
