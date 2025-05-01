@@ -105,6 +105,7 @@ public:
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
+  bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
@@ -151,8 +152,9 @@ public:
 
   QualType getInoutParameterType(QualType Ty);
 
-  bool TransformInitList(const InitializedEntity &Entity,
-                         const InitializationKind &Kind, InitListExpr *Init);
+  bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
+
+  void deduceAddressSpace(VarDecl *Decl);
 
 private:
   // HLSL resource type attributes need to be processed all at once.

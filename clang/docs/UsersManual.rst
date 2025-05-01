@@ -1073,6 +1073,35 @@ inputs. Here is some example of ``$``-prefixed options:
 Language and Target-Independent Features
 ========================================
 
+Freestanding Builds
+-------------------
+Passing the ``-ffreestanding`` flag causes Clang to build for a freestanding
+(rather than a hosted) environment. The flag has the following effects:
+
+* the ``__STDC_HOSTED__`` predefined macro will expand to ``0``,
+* builtin functions are disabled by default (``-fno-builtins``),
+* unwind tables are disabled by default 
+  (``fno-asynchronous-unwind-tables -fno-unwind-tables``), and
+* does not treat the global ``main`` function as a special function.
+
+An implementation of the following runtime library functions must always be
+provided with the usual semantics, as Clang will generate calls to them:
+
+* ``memcpy``,
+* ``memmove``, and
+* ``memset``.
+
+Clang does not, by itself, provide a full "conforming freestanding
+implementation". If you wish to have a conforming freestanding implementation,
+you must provide a freestanding C library. While Clang provides some of the
+required header files, it does not provide all of them, nor any library
+implementations.
+
+Conversely, when ``-ffreestanding`` is specified, Clang does not require you to
+provide a conforming freestanding implementation library. Clang will not make
+any assumptions as to the availability or semantics of standard-library
+functions other than those mentioned above.
+
 Controlling Errors and Warnings
 -------------------------------
 
@@ -2267,6 +2296,36 @@ are listed below.
    However, this can increase the LTO link time and memory requirements over
    pure ThinLTO, as all split regular LTO modules are merged and LTO linked
    with regular LTO.
+
+.. option:: -f[no-]unique-source-file-names
+
+   When enabled, allows the compiler to assume that each object file
+   passed to the linker has been compiled using a unique source file
+   path. This is useful for reducing link times when doing ThinLTO
+   in combination with whole-program devirtualization or CFI.
+
+   The full source path passed to the compiler must be unique. This
+   means that, for example, the following is a usage error:
+
+   .. code-block:: console
+
+     $ cd foo
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ../bar
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ..
+     $ clang foo/foo.o bar/foo.o
+    
+   but this is not:
+
+   .. code-block:: console
+
+     $ clang -funique-source-file-names -c foo/foo.c
+     $ clang -funique-source-file-names -c bar/foo.c
+     $ clang foo/foo.o bar/foo.o
+
+   A misuse of this flag may result in a duplicate symbol error at
+   link time.
 
 .. option:: -fforce-emit-vtables
 
@@ -5087,6 +5146,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -v                      Show commands to run and use verbose output
       -W<warning>             Enable the specified warning
       -Xclang <arg>           Pass <arg> to the clang compiler
+      -Xclangas <arg>         Pass <arg> to the clang assembler
 
 The /clang: Option
 ^^^^^^^^^^^^^^^^^^

@@ -110,15 +110,15 @@ void SetFunctionBreakpointsRequestHandler::operator()(
     if (!bp_obj)
       continue;
     FunctionBreakpoint fn_bp(dap, *bp_obj);
-    const auto [it, inserted] =
-        dap.function_breakpoints.try_emplace(fn_bp.functionName, dap, *bp_obj);
+    const auto [it, inserted] = dap.function_breakpoints.try_emplace(
+        fn_bp.GetFunctionName(), dap, *bp_obj);
     if (inserted)
       it->second.SetBreakpoint();
     else
       it->second.UpdateBreakpoint(fn_bp);
 
     AppendBreakpoint(&it->second, response_breakpoints);
-    seen.erase(fn_bp.functionName);
+    seen.erase(fn_bp.GetFunctionName());
   }
 
   // Remove any breakpoints that are no longer in our list
@@ -126,7 +126,7 @@ void SetFunctionBreakpointsRequestHandler::operator()(
     auto fn_bp = dap.function_breakpoints.find(name);
     if (fn_bp == dap.function_breakpoints.end())
       continue;
-    dap.target.BreakpointDelete(fn_bp->second.bp.GetID());
+    dap.target.BreakpointDelete(fn_bp->second.GetID());
     dap.function_breakpoints.erase(name);
   }
 

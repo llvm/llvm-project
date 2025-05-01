@@ -430,6 +430,7 @@ private:
   void mangleRefQualifier(RefQualifierKind RefQualifier);
   void manglePointerCVQualifiers(Qualifiers Quals);
   void manglePointerExtQualifiers(Qualifiers Quals, QualType PointeeType);
+  void manglePointerAuthQualifier(Qualifiers Quals);
 
   void mangleUnscopedTemplateName(GlobalDecl GD);
   void
@@ -1162,9 +1163,15 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
                   ->getTemplatedDecl()
                   ->hasAttr<CUDAGlobalAttr>())) &&
             GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+        bool IsOCLDeviceStub =
+            ND && isa<FunctionDecl>(ND) && ND->hasAttr<OpenCLKernelAttr>() &&
+            GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
         if (IsDeviceStub)
           mangleSourceName(
               (llvm::Twine("__device_stub__") + II->getName()).str());
+        else if (IsOCLDeviceStub)
+          mangleSourceName(
+              (llvm::Twine("__clang_ocl_kern_imp_") + II->getName()).str());
         else
           mangleSourceName(II->getName());
         break;
@@ -2334,6 +2341,17 @@ void MicrosoftCXXNameMangler::manglePointerExtQualifiers(Qualifiers Quals,
     Out << 'F';
 }
 
+void MicrosoftCXXNameMangler::manglePointerAuthQualifier(Qualifiers Quals) {
+  PointerAuthQualifier PointerAuth = Quals.getPointerAuth();
+  if (!PointerAuth)
+    return;
+
+  Out << "__ptrauth";
+  mangleNumber(PointerAuth.getKey());
+  mangleNumber(PointerAuth.isAddressDiscriminated());
+  mangleNumber(PointerAuth.getExtraDiscriminator());
+}
+
 void MicrosoftCXXNameMangler::manglePointerCVQualifiers(Qualifiers Quals) {
   // <pointer-cv-qualifiers> ::= P  # no qualifiers
   //                         ::= Q  # const
@@ -3302,7 +3320,7 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
       const DependentSizedArrayType *DSAT =
         getASTContext().getAsDependentSizedArrayType(ElementTy);
       Error(DSAT->getSizeExpr()->getExprLoc(), "dependent-length")
-          << DSAT->getBracketsRange();
+          << DSAT->getSizeExpr()->getSourceRange();
       return;
     } else {
       break;
@@ -3366,6 +3384,7 @@ void MicrosoftCXXNameMangler::mangleType(const PointerType *T, Qualifiers Quals,
   QualType PointeeType = T->getPointeeType();
   manglePointerCVQualifiers(Quals);
   manglePointerExtQualifiers(Quals, PointeeType);
+  manglePointerAuthQualifier(Quals);
 
   // For pointer size address spaces, go down the same type mangling path as
   // non address space types.
@@ -3516,7 +3535,21 @@ void MicrosoftCXXNameMangler::mangleType(const DependentSizedExtVectorType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
                                          Qualifiers quals, SourceRange Range) {
-  Error(Range.getBegin(), "matrix type") << Range;
+  QualType EltTy = T->getElementType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+
+  Stream << "?$";
+
+  Extra.mangleSourceName("__matrix");
+  Extra.mangleType(EltTy, Range, QMM_Escape);
+
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumRows()));
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumColumns()));
+
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
 }
 
 void MicrosoftCXXNameMangler::mangleType(const DependentSizedMatrixType *T,

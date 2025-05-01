@@ -170,8 +170,8 @@ module {
       // Fuse the consumer operation into the tiled loop.
       %slice_op = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %forall_op
           : (!transform.any_op) -> !transform.op<"tensor.parallel_insert_slice">
-      transform.test.fuse_consumer %slice_op
-        : (!transform.op<"tensor.parallel_insert_slice">) -> (!transform.any_op, !transform.any_op)
+      transform.test.fuse_consumer %slice_op in (%forall_op)
+        : (!transform.op<"tensor.parallel_insert_slice">, !transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
     }
   }

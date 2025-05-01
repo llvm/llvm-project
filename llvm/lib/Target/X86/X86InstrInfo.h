@@ -174,6 +174,19 @@ inline static bool isMem(const MachineInstr &MI, unsigned Op) {
          MI.getOperand(Op + X86::AddrSegmentReg).isReg() && isLeaMem(MI, Op);
 }
 
+inline static bool isAddMemInstrWithRelocation(const MachineInstr &MI) {
+  unsigned Op = MI.getOpcode();
+  if (Op == X86::ADD64rm || Op == X86::ADD64mr_ND || Op == X86::ADD64rm_ND) {
+    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                  X86II::getOperandBias(MI.getDesc());
+    const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+    if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
+      return true;
+  }
+
+  return false;
+}
+
 class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
@@ -276,7 +289,7 @@ public:
                                int &FrameIndex) const override;
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex,
-                               unsigned &MemBytes) const override;
+                               TypeSize &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
@@ -287,7 +300,7 @@ public:
                               int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex,
-                              unsigned &MemBytes) const override;
+                              TypeSize &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
@@ -570,11 +583,6 @@ public:
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
-
-  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
-                                  const MachineRegisterInfo *MRI,
-                                  Register &FoldAsLoadDefReg,
-                                  MachineInstr *&DefMI) const override;
 
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;

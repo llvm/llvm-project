@@ -467,10 +467,7 @@ public:
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
-    for (MCRegUnit Unit : regunits(Reg))
-      if (Unit == RegUnit)
-        return true;
-    return false;
+    return llvm::is_contained(regunits(Reg), RegUnit);
   }
 
   /// Returns the original SrcReg unless it is the target of a copy-like
@@ -1245,6 +1242,11 @@ public:
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
   }
+
+  /// Some targets delay assigning the frame until late and use a placeholder
+  /// to represent it earlier. This method can be used to identify the frame
+  /// register placeholder.
+  virtual bool isVirtualFrameRegister(MCRegister Reg) const { return false; }
 
   virtual std::optional<uint8_t> getVRegFlagValue(StringRef Name) const {
     return {};

@@ -719,6 +719,7 @@ protected:
   void NotePossibleBadForwardRef(const parser::Name &);
   std::optional<SourceName> HadForwardRef(const Symbol &) const;
   bool CheckPossibleBadForwardRef(const Symbol &);
+  bool ConvertToUseError(Symbol &, const SourceName &, const Symbol &used);
 
   bool inSpecificationPart_{false};
   bool deferImplicitTyping_{false};
@@ -1383,6 +1384,20 @@ public:
   void Post(const parser::AccEndBlockDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::AccBeginCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccBeginCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::AccEndCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccEndCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
   bool Pre(const parser::AccBeginLoopDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1814,13 +1829,13 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
   // METADIRECTIVE, some semantic checks may not be applicable.
   // Disable the semantic analysis for it in such cases to allow the compiler
   // to parse METADIRECTIVE without flagging errors.
-  auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
+  auto &maybeArgs{std::get<std::optional<parser::OmpArgumentList>>(x.t)};
   auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
 
   switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
         ProcessMapperSpecifier(*spec, *maybeClauses);
       }
@@ -1828,7 +1843,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     break;
   case llvm::omp::Directive::OMPD_declare_reduction:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
         ProcessReductionSpecifier(*spec, maybeClauses);
       }
@@ -3324,9 +3339,19 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
     // Privacy is not enforced in module files so that generic interfaces
     // can be resolved to private specific procedures in specification
     // expressions.
-    Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
-        useModuleScope_->GetName().value());
-    return {};
+    // Local names that contain currency symbols ('$') are created by the
+    // module file writer when a private name in another module is needed to
+    // process a local declaration.  These can show up in the output of
+    // -fdebug-unparse-with-modules, too, so go easy on them.
+    if (currScope().IsModule() &&
+        localName.ToString().find("$") != std::string::npos) {
+      Say(useName, "'%s' is PRIVATE in '%s'"_warn_en_US, MakeOpName(useName),
+          useModuleScope_->GetName().value());
+    } else {
+      Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
+          useModuleScope_->GetName().value());
+      return {};
+    }
   }
   auto &localSymbol{MakeSymbol(localName)};
   DoAddUse(useName, localName, localSymbol, *useSymbol);
@@ -3335,7 +3360,7 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
 
 // symbol must be either a Use or a Generic formed by merging two uses.
 // Convert it to a UseError with this additional location.
-static bool ConvertToUseError(
+bool ScopeHandler::ConvertToUseError(
     Symbol &symbol, const SourceName &location, const Symbol &used) {
   if (auto *ued{symbol.detailsIf<UseErrorDetails>()}) {
     ued->add_occurrence(location, used);
@@ -3353,9 +3378,25 @@ static bool ConvertToUseError(
     symbol.set_details(
         UseErrorDetails{*useDetails}.add_occurrence(location, used));
     return true;
-  } else {
-    return false;
   }
+  if (const auto *hostAssocDetails{symbol.detailsIf<HostAssocDetails>()};
+      hostAssocDetails && hostAssocDetails->symbol().has<SubprogramDetails>() &&
+      &symbol.owner() == &currScope() &&
+      &hostAssocDetails->symbol() == currScope().symbol()) {
+    // Handle USE-association of procedure FOO into function/subroutine FOO,
+    // replacing its place-holding HostAssocDetails symbol.
+    context().Warn(common::UsageWarning::UseAssociationIntoSameNameSubprogram,
+        location,
+        "'%s' is use-associated into a subprogram of the same name"_port_en_US,
+        used.name());
+    SourceName created{context().GetTempName(currScope())};
+    Symbol &tmpUse{MakeSymbol(created, Attrs(), UseDetails{location, used})};
+    UseErrorDetails useError{tmpUse.get<UseDetails>()};
+    useError.add_occurrence(location, hostAssocDetails->symbol());
+    symbol.set_details(std::move(useError));
+    return true;
+  }
+  return false;
 }
 
 // Two ultimate symbols are distinct, but they have the same name and come
@@ -4326,7 +4367,9 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
     }
     if (auto attrs{subp->cudaSubprogramAttrs()}) {
       if (*attrs == common::CUDASubprogramAttrs::Global ||
-          *attrs == common::CUDASubprogramAttrs::Device) {
+          *attrs == common::CUDASubprogramAttrs::Grid_Global ||
+          *attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::HostDevice) {
         const Scope &scope{currScope()};
         const Scope *mod{FindModuleContaining(scope)};
         if (mod &&
@@ -9573,7 +9616,10 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
     return;
   }
   if (const auto *tkr{

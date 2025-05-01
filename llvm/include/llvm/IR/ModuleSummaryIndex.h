@@ -28,6 +28,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/StringSaver.h"
@@ -300,7 +301,7 @@ template <> struct DenseMapInfo<ValueInfo> {
     assert(isSpecialKey(L) || isSpecialKey(R) || (L.haveGVs() == R.haveGVs()));
     return L.getRef() == R.getRef();
   }
-  static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
+  static unsigned getHashValue(ValueInfo I) { return hash_value(I.getRef()); }
 };
 
 // For optional hinted size reporting, holds a pair of the full stack id
@@ -342,22 +343,8 @@ struct CallsiteInfo {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
   OS << "Callee: " << SNI.Callee;
-  bool First = true;
-  OS << " Clones: ";
-  for (auto V : SNI.Clones) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << V;
-  }
-  First = true;
-  OS << " StackIds: ";
-  for (auto Id : SNI.StackIdIndices) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << Id;
-  }
+  OS << " Clones: " << llvm::interleaved(SNI.Clones);
+  OS << " StackIds: " << llvm::interleaved(SNI.StackIdIndices);
   return OS;
 }
 
@@ -391,14 +378,7 @@ struct MIBInfo {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MIBInfo &MIB) {
   OS << "AllocType " << (unsigned)MIB.AllocType;
-  bool First = true;
-  OS << " StackIds: ";
-  for (auto Id : MIB.StackIdIndices) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << Id;
-  }
+  OS << " StackIds: " << llvm::interleaved(MIB.StackIdIndices);
   return OS;
 }
 
@@ -1319,8 +1299,10 @@ public:
 
   std::vector<StringRef> symbols() const {
     std::vector<StringRef> Symbols;
-    for (auto &[GUID, Syms] : Index)
-      Symbols.insert(Symbols.end(), Syms.begin(), Syms.end());
+    for (auto &[GUID, Syms] : Index) {
+      (void)GUID;
+      llvm::append_range(Symbols, Syms);
+    }
     return Symbols;
   }
 
@@ -1339,14 +1321,14 @@ public:
 
   template <typename... Args> void emplace(Args &&...A) {
     StringRef S(std::forward<Args>(A)...);
-    GlobalValue::GUID GUID =
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(S));
     Index[GUID].emplace(S);
   }
 
   size_t count(StringRef S) const {
-    GlobalValue::GUID GUID =
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(S));
     auto I = Index.find(GUID);
     if (I == Index.end())
       return 0;
@@ -1749,8 +1731,10 @@ public:
   /// Add a global value summary for a value of the given name.
   void addGlobalValueSummary(StringRef ValueName,
                              std::unique_ptr<GlobalValueSummary> Summary) {
-    addGlobalValueSummary(getOrInsertValueInfo(GlobalValue::getGUID(ValueName)),
-                          std::move(Summary));
+    addGlobalValueSummary(
+        getOrInsertValueInfo(
+            GlobalValue::getGUIDAssumingExternalLinkage(ValueName)),
+        std::move(Summary));
   }
 
   /// Add a global value summary for the given ValueInfo.
@@ -1887,19 +1871,22 @@ public:
   /// This accessor can mutate the map and therefore should not be used in
   /// the ThinLTO backends.
   TypeIdSummary &getOrInsertTypeIdSummary(StringRef TypeId) {
-    auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
+    auto TidIter = TypeIdMap.equal_range(
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId));
     for (auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return TypeIdPair.second;
-    auto It = TypeIdMap.insert({GlobalValue::getGUID(TypeId),
-                                {TypeIdSaver.save(TypeId), TypeIdSummary()}});
+    auto It =
+        TypeIdMap.insert({GlobalValue::getGUIDAssumingExternalLinkage(TypeId),
+                          {TypeIdSaver.save(TypeId), TypeIdSummary()}});
     return It->second.second;
   }
 
   /// This returns either a pointer to the type id summary (if present in the
   /// summary map) or null (if not present). This may be used when importing.
   const TypeIdSummary *getTypeIdSummary(StringRef TypeId) const {
-    auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
+    auto TidIter = TypeIdMap.equal_range(
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId));
     for (const auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return &TypeIdPair.second;

@@ -17,7 +17,6 @@
 #include <__cxx03/__bit/invert_if.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__fwd/bit_reference.h>
 #include <__cxx03/__iterator/segmented_iterator.h>
 #include <__cxx03/__string/constexpr_c_functions.h>

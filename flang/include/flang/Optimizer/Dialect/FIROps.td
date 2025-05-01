@@ -23,6 +23,7 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
 include "flang/Optimizer/Dialect/FirAliasTagOpInterface.td"
+include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
@@ -286,7 +287,8 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
+def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
+                                          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -302,8 +304,8 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
     or null.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref,
-                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+  let arguments = (ins AnyReferenceLike:$memref,
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
                   OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
@@ -315,7 +317,8 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
+def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
+                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -334,9 +337,8 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
     `%p`, is undefined or null.
   }];
 
-  let arguments = (ins AnyType:$value,
-                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
-                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+  let arguments = (ins AnyType:$value, AnyReferenceLike:$memref,
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
 
@@ -348,7 +350,7 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   }];
 }
 
-def fir_CopyOp : fir_Op<"copy", []> {
+def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "copy constant size memory";
 
   let description = [{
@@ -369,8 +371,8 @@ def fir_CopyOp : fir_Op<"copy", []> {
     TODO: add FirAliasTagOpInterface to carry TBAA.
   }];
 
-  let arguments = (ins Arg<AnyRefOfConstantSizeAggregateType, "", [MemRead]>:$source,
-                       Arg<AnyRefOfConstantSizeAggregateType, "", [MemWrite]>:$destination,
+  let arguments = (ins AnyRefOfConstantSizeAggregateType:$source,
+                       AnyRefOfConstantSizeAggregateType:$destination,
                        OptionalAttr<UnitAttr>:$no_overlap);
 
   let builders = [OpBuilder<(ins "mlir::Value":$source,
@@ -1373,7 +1375,8 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoMemoryEffect]> {
 //   !- Merge the new and old values into the memory for "A"
 //   array_merge_store <updated A> to <A's address>
 
-def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
+def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments,
+                                            DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
 
   let summary = "Load an array as a value.";
 
@@ -1412,7 +1415,7 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins
-    Arg<AnyRefOrBox, "", [MemRead]>:$memref,
+    AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
@@ -1624,7 +1627,7 @@ def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
 
     It is only possible to use `array_access` on an `array_load` result value or
     a value that can be trace back transitively to an `array_load` as the
-    dominating source. Other array operation such as `array_amend` can be in
+    dominating source. Other array operations such as `array_amend` can be in
     between.
 
     TODO: The above restriction is not enforced. The design of the operation
@@ -1685,7 +1688,7 @@ def fir_ArrayAmendOp : fir_Op<"array_amend", [NoMemoryEffect]> {
 }
 
 def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
-    [AttrSizedOperandSegments]> {
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
 
   let summary = "Store merged array value to memory.";
 
@@ -1714,7 +1717,7 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
   let arguments = (ins
     fir_SequenceType:$original,
     fir_SequenceType:$sequence,
-    Arg<AnyRefOrBox, "", [MemWrite]>:$memref,
+    AnyRefOrBox:$memref,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
   );
@@ -2752,6 +2755,22 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
+def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
+  let summary = "cast between volatile and non-volatile types";
+  let description = [{
+    Cast between volatile and non-volatile types. The types must be otherwise
+    identical. A value's volatility cannot be changed by a fir.convert operation.
+    Reinterpreting a value as volatile must be done explicitly using this operation.
+  }];
+  let arguments = (ins AnyRefOrBox:$value);
+  let results = (outs AnyRefOrBox:$res);
+  let assemblyFormat = [{
+    $value attr-dict `:` functional-type($value, results)
+  }];
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
 def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
@@ -3359,6 +3378,14 @@ def fir_PackArrayOp
           that is eligible for repacking.
       - heuristics attribute specifies conditions when the array repacking
         may be optimized.
+      - is_safe is an optional non-empty array of SafeTempArrayCopyAttr
+        attributes. Each attribute implements SafeTempArrayCopyAttrInterface
+        that is used to generate a dynamic predicate value identifying
+        whether the creation of the temporary array copy is safe.
+        For example, if omp.fortran_safe_temp_array_copy attribute
+        is attached, its implementation may generate special code
+        to check if fir.pack_array may be executed by multiple
+        threads, and disallow repacking in this case.
   }];
 
   let arguments = (ins AnyBoxedArray:$array, UnitAttr:$stack,
@@ -3367,7 +3394,8 @@ def fir_PackArrayOp
       OptionalAttr<UI64Attr>:$min_stride,
       DefaultValuedAttr<fir_PackArrayHeuristicsAttr,
                         "::fir::PackArrayHeuristics::None">:$heuristics,
-      Variadic<AnyIntegerType>:$typeparams);
+      Variadic<AnyIntegerType>:$typeparams,
+      OptionalAttr<NonEmptySafeTempArrayCopyArrayAttr>:$is_safe);
 
   let results = (outs AnyBoxedArray:$result);
   let assemblyFormat = [{
@@ -3376,7 +3404,7 @@ def fir_PackArrayOp
     (`no_copy` $no_copy^)?
     (`constraints` custom<PackArrayConstraints>($max_size, $max_element_size, $min_stride)^)?
     (`heuristics` $heuristics^)?
-    (`typeparams` $typeparams^)?
+    (`typeparams` $typeparams^)? (`is_safe` $is_safe^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -3401,15 +3429,26 @@ def fir_UnpackArrayOp
         was allocated.
       - no_copy attribute indicates that the temporary array
         is not copied into the original temporary array.
+      - is_safe is an optional non-empty array of SafeTempArrayCopyAttr
+        attributes. Each attribute implements SafeTempArrayCopyAttrInterface
+        that is used to generate extra code before any copy-out or
+        deallocation of the temporary happens.
+        For example, if acc.fortran_safe_temp_array_copy attribute
+        is attached, its implementation may generate special code
+        to check if the temporary has been transferred to OpenACC device
+        data environment, and issue a runtime error that the temporary
+        is present on the device while it is about to be deallocated
+        on the host.
   }];
 
   let arguments = (ins AnyBoxedArray:$temp, AnyBoxedArray:$original,
-      UnitAttr:$stack, UnitAttr:$no_copy);
+      UnitAttr:$stack, UnitAttr:$no_copy,
+      OptionalAttr<NonEmptySafeTempArrayCopyArrayAttr>:$is_safe);
 
   let assemblyFormat = [{
     $temp `to` $original
     (`stack` $stack^):(`heap`)?
-    (`no_copy` $no_copy^)?
+    (`no_copy` $no_copy^)? (`is_safe` $is_safe^)?
     attr-dict `:` type($original)
   }];
 
@@ -3478,7 +3517,8 @@ def fir_DoConcurrentOp : fir_Op<"do_concurrent",
 }
 
 def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
+                                                         ["getLoopInductionVars"]>,
      Terminator, NoTerminator, SingleBlock, ParentOneOf<["DoConcurrentOp"]>]> {
   let summary = "do concurrent loop";
 

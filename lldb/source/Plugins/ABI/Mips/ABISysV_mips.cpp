@@ -956,16 +956,16 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
 }
 
 UnwindPlanSP ABISysV_mips::CreateFunctionEntryUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
   // The previous PC is in the RA, all other registers are the same.
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("mips at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetReturnAddressRegister(dwarf_r31);
@@ -973,15 +973,15 @@ UnwindPlanSP ABISysV_mips::CreateFunctionEntryUnwindPlan() {
 }
 
 UnwindPlanSP ABISysV_mips::CreateDefaultUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
-  row->SetUnspecifiedRegistersAreUndefined(true);
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("mips default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

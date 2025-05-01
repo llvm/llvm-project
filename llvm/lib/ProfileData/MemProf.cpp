@@ -190,12 +190,13 @@ static IndexedMemProfRecord deserializeV3(const MemProfSchema &Schema,
   const uint64_t NumNodes =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   Record.AllocSites.reserve(NumNodes);
+  const size_t SerializedSize = PortableMemInfoBlock::serializedSize(Schema);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
     Node.CSId =
         endian::readNext<LinearCallStackId, llvm::endianness::little>(Ptr);
     Node.Info.deserialize(Schema, Ptr);
-    Ptr += PortableMemInfoBlock::serializedSize(Schema);
+    Ptr += SerializedSize;
     Record.AllocSites.push_back(Node);
   }
 
@@ -263,7 +264,7 @@ GlobalValue::GUID IndexedMemProfRecord::getGUID(const StringRef FunctionName) {
   // We use the function guid which we expect to be a uint64_t. At
   // this time, it is the lower 64 bits of the md5 of the canonical
   // function name.
-  return Function::getGUID(CanonicalName);
+  return Function::getGUIDAssumingExternalLinkage(CanonicalName);
 }
 
 Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {

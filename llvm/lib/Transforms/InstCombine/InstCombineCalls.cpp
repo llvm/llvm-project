@@ -62,6 +62,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -1922,6 +1923,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
     }
+
+    // smax(smin(X, MinC), MaxC) -> smin(smax(X, MaxC), MinC) if MinC s>= MaxC
+    // umax(umin(X, MinC), MaxC) -> umin(umax(X, MaxC), MinC) if MinC u>= MaxC
+    const APInt *MinC, *MaxC;
+    auto CreateCanonicalClampForm = [&](bool IsSigned) {
+      auto MaxIID = IsSigned ? Intrinsic::smax : Intrinsic::umax;
+      auto MinIID = IsSigned ? Intrinsic::smin : Intrinsic::umin;
+      Value *NewMax = Builder.CreateBinaryIntrinsic(
+          MaxIID, X, ConstantInt::get(X->getType(), *MaxC));
+      return replaceInstUsesWith(
+          *II, Builder.CreateBinaryIntrinsic(
+                   MinIID, NewMax, ConstantInt::get(X->getType(), *MinC)));
+    };
+    if (IID == Intrinsic::smax &&
+        match(I0, m_OneUse(m_Intrinsic<Intrinsic::smin>(m_Value(X),
+                                                        m_APInt(MinC)))) &&
+        match(I1, m_APInt(MaxC)) && MinC->sgt(*MaxC))
+      return CreateCanonicalClampForm(true);
+    if (IID == Intrinsic::umax &&
+        match(I0, m_OneUse(m_Intrinsic<Intrinsic::umin>(m_Value(X),
+                                                        m_APInt(MinC)))) &&
+        match(I1, m_APInt(MaxC)) && MinC->ugt(*MaxC))
+      return CreateCanonicalClampForm(false);
 
     // umin(i1 X, i1 Y) -> and i1 X, Y
     // smax(i1 X, i1 Y) -> and i1 X, Y

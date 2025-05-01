@@ -805,6 +805,14 @@ static Value getPHISourceValue(Block *current, Block *pred,
         return switchOp.getCaseOperands(i.index())[index];
   }
 
+  if (auto indBrOp = dyn_cast<LLVM::IndirectBrOp>(terminator)) {
+    // For indirect branches we take operands for each successor.
+    for (const auto &i : llvm::enumerate(indBrOp->getSuccessors())) {
+      if (indBrOp->getSuccessor(i.index()) == current)
+        return indBrOp.getSuccessorOperands(i.index())[index];
+    }
+  }
+
   if (auto invokeOp = dyn_cast<LLVM::InvokeOp>(terminator)) {
     return invokeOp.getNormalDest() == current
                ? invokeOp.getNormalDestOperands()[index]
@@ -1525,6 +1533,12 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto fpContract = func.getFpContract())
     llvmFunc->addFnAttr("fp-contract", *fpContract);
 
+  if (auto instrumentFunctionEntry = func.getInstrumentFunctionEntry())
+    llvmFunc->addFnAttr("instrument-function-entry", *instrumentFunctionEntry);
+
+  if (auto instrumentFunctionExit = func.getInstrumentFunctionExit())
+    llvmFunc->addFnAttr("instrument-function-exit", *instrumentFunctionExit);
+
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {
@@ -1602,6 +1616,9 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   if (FramePointerKindAttr fpAttr = func.getFramePointerAttr())
     llvmFunc->addFnAttr("frame-pointer", stringifyFramePointerKind(
                                              fpAttr.getFramePointerKind()));
+  if (UWTableKindAttr uwTableKindAttr = func.getUwtableKindAttr())
+    llvmFunc->setUWTableKind(
+        convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
@@ -1824,6 +1841,27 @@ LogicalResult ModuleTranslation::convertComdats() {
   return success();
 }
 
+LogicalResult ModuleTranslation::convertUnresolvedBlockAddress() {
+  for (auto &[blockAddressOp, llvmCst] : unresolvedBlockAddressMapping) {
+    BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
+    BlockTagOp blockTagOp = lookupBlockTag(blockAddressAttr);
+    assert(blockTagOp && "expected all block tags to be already seen");
+
+    llvm::BasicBlock *llvmBlock = lookupBlock(blockTagOp->getBlock());
+    assert(llvmBlock && "expected LLVM blocks to be already translated");
+
+    // Update mapping with new block address constant.
+    auto *llvmBlockAddr = llvm::BlockAddress::get(
+        lookupFunction(blockAddressAttr.getFunction().getValue()), llvmBlock);
+    llvmCst->replaceAllUsesWith(llvmBlockAddr);
+    mapValue(blockAddressOp.getResult(), llvmBlockAddr);
+    assert(llvmCst->use_empty() && "expected all uses to be replaced");
+    cast<llvm::GlobalVariable>(llvmCst)->eraseFromParent();
+  }
+  unresolvedBlockAddressMapping.clear();
+  return success();
+}
+
 void ModuleTranslation::setAccessGroupsMetadata(AccessGroupOpInterface op,
                                                 llvm::Instruction *inst) {
   if (llvm::MDNode *node = loopAnnotationTranslation->getAccessGroups(op))
@@ -2036,6 +2074,22 @@ LogicalResult ModuleTranslation::createCommandlineMetadata() {
   return success();
 }
 
+LogicalResult ModuleTranslation::createDependentLibrariesMetadata() {
+  if (auto dependentLibrariesAttr = mlirModule->getDiscardableAttr(
+          LLVM::LLVMDialect::getDependentLibrariesAttrName())) {
+    auto *nmd =
+        llvmModule->getOrInsertNamedMetadata("llvm.dependent-libraries");
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    for (auto libAttr :
+         cast<ArrayAttr>(dependentLibrariesAttr).getAsRange<StringAttr>()) {
+      auto *md =
+          llvm::MDNode::get(ctx, llvm::MDString::get(ctx, libAttr.getValue()));
+      nmd->addOperand(md);
+    }
+  }
+  return success();
+}
+
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -2201,6 +2255,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
   if (failed(translator.createCommandlineMetadata()))
     return nullptr;
+  if (failed(translator.createDependentLibrariesMetadata()))
+    return nullptr;
 
   // Convert other top-level operations if possible.
   for (Operation &o : getModuleBody(module).getOperations()) {
@@ -2216,6 +2272,11 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // after the top-level operations they refer to are declared, so we do it
   // last.
   if (failed(translator.convertFunctions()))
+    return nullptr;
+
+  // Now that all MLIR blocks are resolved into LLVM ones, patch block address
+  // constants to point to the correct blocks.
+  if (failed(translator.convertUnresolvedBlockAddress()))
     return nullptr;
 
   // Once we've finished constructing elements in the module, we should convert

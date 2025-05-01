@@ -47,6 +47,7 @@ executable("llvm-reduce") {
     "deltas/ReduceRegisterDefs.cpp",
     "deltas/ReduceRegisterMasks.cpp",
     "deltas/ReduceRegisterUses.cpp",
+    "deltas/ReduceTargetFeaturesAttr.cpp",
     "deltas/ReduceSpecialGlobals.cpp",
     "deltas/ReduceUsingSimplifyCFG.cpp",
     "deltas/ReduceVirtualRegisters.cpp",

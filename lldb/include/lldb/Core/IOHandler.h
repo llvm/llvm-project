@@ -99,6 +99,12 @@ public:
     // Prompt support isn't mandatory
     return false;
   }
+
+  virtual bool SetUseColor(bool use_color) {
+    // Color support isn't mandatory.
+    return false;
+  };
+
   bool SetPrompt(const char *) = delete;
 
   virtual llvm::StringRef GetControlSequence(char ch) { return {}; }
@@ -375,6 +381,8 @@ public:
   bool SetPrompt(llvm::StringRef prompt) override;
   bool SetPrompt(const char *prompt) = delete;
 
+  bool SetUseColor(bool use_color) override;
+
   const char *GetContinuationPrompt();
 
   void SetContinuationPrompt(llvm::StringRef prompt);
@@ -406,6 +414,8 @@ private:
   std::optional<std::string> SuggestionCallback(llvm::StringRef line);
 
   void AutoCompleteCallback(CompletionRequest &request);
+
+  void RedrawCallback();
 #endif
 
 protected:

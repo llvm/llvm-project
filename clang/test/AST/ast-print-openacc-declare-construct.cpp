@@ -5,8 +5,8 @@ int GlobalArray[5];
 int GlobalArray2[5];
 // CHECK: #pragma acc declare deviceptr(Global) copyin(GlobalArray)
 #pragma acc declare deviceptr(Global), copyin(GlobalArray)
-// CHECK: #pragma acc declare create(Global2, GlobalArray2)
-#pragma acc declare create(Global2, GlobalArray2)
+// CHECK: #pragma acc declare create(zero: Global2, GlobalArray2)
+#pragma acc declare create(zero: Global2, GlobalArray2)
 
 namespace NS {
 int NSVar;
@@ -18,8 +18,8 @@ int NSArray[5];
 struct Struct {
   static const int StaticMem = 5;
   static const int StaticMemArray[5];
-// CHECK: #pragma acc declare copyin(StaticMem, StaticMemArray)
-#pragma acc declare copyin(StaticMem, StaticMemArray)
+// CHECK: #pragma acc declare copyin(always, alwaysin: StaticMem, StaticMemArray)
+#pragma acc declare copyin(always, alwaysin: StaticMem, StaticMemArray)
 
   void MemFunc1(int Arg) {
     int Local;

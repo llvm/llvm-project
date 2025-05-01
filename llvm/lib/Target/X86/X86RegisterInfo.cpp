@@ -1213,8 +1213,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       Hints.push_back(PhysReg);
   };
 
-  SmallSet<MCPhysReg, 4> CopyHints;
-  CopyHints.insert(Hints.begin(), Hints.end());
+  SmallSet<MCPhysReg, 4> CopyHints(llvm::from_range, Hints);
   Hints.clear();
   for (auto Hint : CopyHints) {
     if (RC.contains(Hint) && !MRI->isReserved(Hint))
@@ -1237,4 +1236,24 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 #undef DEBUG_TYPE
 
   return true;
+}
+
+const TargetRegisterClass *X86RegisterInfo::constrainRegClassToNonRex2(
+    const TargetRegisterClass *RC) const {
+  switch (RC->getID()) {
+  default:
+    return RC;
+  case X86::GR8RegClassID:
+    return &X86::GR8_NOREX2RegClass;
+  case X86::GR16RegClassID:
+    return &X86::GR16_NOREX2RegClass;
+  case X86::GR32RegClassID:
+    return &X86::GR32_NOREX2RegClass;
+  case X86::GR64RegClassID:
+    return &X86::GR64_NOREX2RegClass;
+  case X86::GR32_NOSPRegClassID:
+    return &X86::GR32_NOREX2_NOSPRegClass;
+  case X86::GR64_NOSPRegClassID:
+    return &X86::GR64_NOREX2_NOSPRegClass;
+  }
 }

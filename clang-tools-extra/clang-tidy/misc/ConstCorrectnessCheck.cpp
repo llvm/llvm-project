@@ -81,10 +81,10 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ConstType = hasType(
-      qualType(isConstQualified(),
-               // pointee check will check the const pointer and const array
-               unless(pointerType()), unless(arrayType())));
+  const auto ConstType =
+      hasType(qualType(isConstQualified(),
+                       // pointee check will check the constness of pointer
+                       unless(pointerType())));
 
   const auto ConstReference = hasType(references(isConstQualified()));
   const auto RValueReference = hasType(

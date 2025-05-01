@@ -1505,6 +1505,14 @@ struct CounterCoverageMappingBuilder
     handleFileExit(getEnd(S));
   }
 
+  void VisitStmtExpr(const StmtExpr *E) {
+    Visit(E->getSubStmt());
+    // Any region termination (such as a noreturn CallExpr) within the statement
+    // expression has been handled by visiting the sub-statement. The visitor
+    // cannot be at a terminate statement leaving the statement expression.
+    HasTerminateStmt = false;
+  }
+
   void VisitDecl(const Decl *D) {
     Stmt *Body = D->getBody();
 

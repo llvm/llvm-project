@@ -91,6 +91,7 @@ public:
     Dtor,
     LambdaStaticInvoker,
     LambdaCallOperator,
+    CopyOrMoveOperator,
   };
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
 
@@ -159,6 +160,10 @@ public:
   bool isConstructor() const { return Kind == FunctionKind::Ctor; }
   /// Checks if the function is a destructor.
   bool isDestructor() const { return Kind == FunctionKind::Dtor; }
+  /// Checks if the function is copy or move operator.
+  bool isCopyOrMoveOperator() const {
+    return Kind == FunctionKind::CopyOrMoveOperator;
+  }
 
   /// Returns whether this function is a lambda static invoker,
   /// which we generate custom byte code for.
@@ -192,12 +197,6 @@ public:
   bool isDefined() const { return Defined; }
 
   bool isVariadic() const { return Variadic; }
-
-  unsigned getBuiltinID() const { return BuiltinID; }
-
-  bool isBuiltin() const { return getBuiltinID() != 0; }
-
-  bool isUnevaluatedBuiltin() const;
 
   unsigned getNumParams() const { return ParamTypes.size(); }
 
@@ -293,7 +292,6 @@ private:
   bool Defined = false;
   bool Variadic = false;
   bool Virtual = false;
-  unsigned BuiltinID = 0;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

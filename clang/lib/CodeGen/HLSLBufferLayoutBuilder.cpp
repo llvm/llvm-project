@@ -52,11 +52,11 @@ static unsigned getScalarOrVectorSizeInBytes(llvm::Type *Ty) {
 namespace clang {
 namespace CodeGen {
 
-// Creates a layout type for given struct with HLSL constant buffer layout
-// taking into account PackOffsets, if provided.
+// Creates a layout type for given struct or class with HLSL constant buffer
+// layout taking into account PackOffsets, if provided.
 // Previously created layout types are cached by CGHLSLRuntime.
 //
-// The function iterates over all fields of the StructType (including base
+// The function iterates over all fields of the record type (including base
 // classes) and calls layoutField to converts each field to its corresponding
 // LLVM type and to calculate its HLSL constant buffer layout. Any embedded
 // structs (or arrays of structs) are converted to target layout types as well.
@@ -67,12 +67,11 @@ namespace CodeGen {
 // -1 value instead. These elements must be placed at the end of the layout
 // after all of the elements with specific offset.
 llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
-    const RecordType *StructType,
-    const llvm::SmallVector<int32_t> *PackOffsets) {
+    const RecordType *RT, const llvm::SmallVector<int32_t> *PackOffsets) {
 
   // check if we already have the layout type for this struct
   if (llvm::TargetExtType *Ty =
-          CGM.getHLSLRuntime().getHLSLBufferLayoutType(StructType))
+          CGM.getHLSLRuntime().getHLSLBufferLayoutType(RT))
     return Ty;
 
   SmallVector<unsigned> Layout;
@@ -87,7 +86,7 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
 
   // iterate over all fields of the record, including fields on base classes
   llvm::SmallVector<const RecordType *> RecordTypes;
-  RecordTypes.push_back(StructType);
+  RecordTypes.push_back(RT);
   while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
     CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
     assert(D->getNumBases() == 1 &&
@@ -148,7 +147,7 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
 
   // create the layout struct type; anonymous struct have empty name but
   // non-empty qualified name
-  const CXXRecordDecl *Decl = StructType->getAsCXXRecordDecl();
+  const CXXRecordDecl *Decl = RT->getAsCXXRecordDecl();
   std::string Name =
       Decl->getName().empty() ? "anon" : Decl->getQualifiedNameAsString();
   llvm::StructType *StructTy =
@@ -158,7 +157,7 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
   llvm::TargetExtType *NewLayoutTy = llvm::TargetExtType::get(
       CGM.getLLVMContext(), LayoutTypeName, {StructTy}, Layout);
   if (NewLayoutTy)
-    CGM.getHLSLRuntime().addHLSLBufferLayoutType(StructType, NewLayoutTy);
+    CGM.getHLSLRuntime().addHLSLBufferLayoutType(RT, NewLayoutTy);
   return NewLayoutTy;
 }
 
@@ -196,15 +195,15 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     // Unwrap array to find the element type and get combined array size.
     QualType Ty = FieldTy;
     while (Ty->isConstantArrayType()) {
-      const ConstantArrayType *ArrayTy = cast<ConstantArrayType>(Ty);
+      auto *ArrayTy = CGM.getContext().getAsConstantArrayType(Ty);
       ArrayCount *= ArrayTy->getSExtSize();
       Ty = ArrayTy->getElementType();
     }
     // For array of structures, create a new array with a layout type
     // instead of the structure type.
-    if (Ty->isStructureType()) {
+    if (Ty->isStructureOrClassType()) {
       llvm::Type *NewTy =
-          cast<llvm::TargetExtType>(createLayoutType(Ty->getAsStructureType()));
+          cast<llvm::TargetExtType>(createLayoutType(Ty->getAs<RecordType>()));
       if (!NewTy)
         return false;
       assert(isa<llvm::TargetExtType>(NewTy) && "expected target type");
@@ -220,9 +219,10 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     ArrayStride = llvm::alignTo(ElemSize, CBufferRowSizeInBytes);
     ElemOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
 
-  } else if (FieldTy->isStructureType()) {
+  } else if (FieldTy->isStructureOrClassType()) {
     // Create a layout type for the structure
-    ElemLayoutTy = createLayoutType(FieldTy->getAsStructureType());
+    ElemLayoutTy =
+        createLayoutType(cast<RecordType>(FieldTy->getAs<RecordType>()));
     if (!ElemLayoutTy)
       return false;
     assert(isa<llvm::TargetExtType>(ElemLayoutTy) && "expected target type");

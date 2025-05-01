@@ -40,9 +40,7 @@ namespace llvm {
   /// specialization (and as a base class for X86_64, which does).
   class X86ELFTargetObjectFile : public TargetLoweringObjectFileELF {
   public:
-    X86ELFTargetObjectFile() {
-      PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
-    }
+    X86ELFTargetObjectFile();
     /// Describe a TLS variable address within debug info.
     const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
   };

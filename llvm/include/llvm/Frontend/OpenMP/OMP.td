@@ -106,6 +106,7 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_None
   ];
   let flangClass = "OmpCancellationConstructTypeClause";
+  let skipFlangUnparser = true;
 }
 def OMPC_Contains : Clause<"contains"> {
   let clangClass = "OMPContainsClause";
@@ -224,7 +225,7 @@ def OMPC_HasDeviceAddr : Clause<"has_device_addr"> {
 }
 def OMPC_Hint : Clause<"hint"> {
   let clangClass = "OMPHintClause";
-  let flangClass = "ConstantExpr";
+  let flangClass = "OmpHintClause";
 }
 def OMPC_Holds : Clause<"holds"> {
   let clangClass = "OMPHoldsClause";
@@ -244,6 +245,7 @@ def OMPC_Indirect : Clause<"indirect"> {
 }
 def OMPC_Init : Clause<"init"> {
   let clangClass = "OMPInitClause";
+  let flangClass = "OmpInitClause";
 }
 def OMPC_Initializer : Clause<"initializer"> {
   let flangClass = "OmpInitializerClause";
@@ -526,6 +528,7 @@ def OMPC_Update : Clause<"update"> {
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";
+  let flangClass = "OmpUseClause";
 }
 def OMPC_UsesAllocators : Clause<"uses_allocators"> {
   let clangClass = "OMPUsesAllocatorsClause";
@@ -599,22 +602,20 @@ def OMP_Assume : Directive<"assume"> {
   ];
 }
 def OMP_Atomic : Directive<"atomic"> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Capture>,
-    VersionedClause<OMPC_Compare, 51>,
-    VersionedClause<OMPC_Read>,
-    VersionedClause<OMPC_Update>,
-    VersionedClause<OMPC_Write>,
-  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_AcqRel, 50>,
     VersionedClause<OMPC_Acquire, 50>,
+    VersionedClause<OMPC_Capture>,
+    VersionedClause<OMPC_Compare, 51>,
     VersionedClause<OMPC_Fail, 51>,
     VersionedClause<OMPC_Hint, 50>,
+    VersionedClause<OMPC_Read>,
     VersionedClause<OMPC_Relaxed, 50>,
     VersionedClause<OMPC_Release, 50>,
     VersionedClause<OMPC_SeqCst>,
+    VersionedClause<OMPC_Update>,
     VersionedClause<OMPC_Weak, 51>,
+    VersionedClause<OMPC_Write>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
@@ -665,7 +666,7 @@ def OMP_CancellationPoint : Directive<"cancellation point"> {
   let category = CA_Executable;
 }
 def OMP_Critical : Directive<"critical"> {
-  let allowedClauses = [
+  let allowedOnceClauses = [
     VersionedClause<OMPC_Hint>,
   ];
   let association = AS_Block;

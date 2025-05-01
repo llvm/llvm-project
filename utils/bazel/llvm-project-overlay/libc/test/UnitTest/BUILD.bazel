@@ -80,6 +80,7 @@ libc_test_library(
     ],
     deps = [
         ":LibcUnitTest",
+        "//libc:__support_macros_config",
         "//libc:errno",
     ],
 )

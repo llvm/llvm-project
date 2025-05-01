@@ -209,3 +209,18 @@ struct S15{
   S15(S14& d):d{d}{}
   S14& d;
 };
+
+//Issue #133715
+namespace std {
+  template<typename T, unsigned int N>
+  struct array {
+    T __elems[N];
+  };
+    template<typename T, typename... U>
+    array(T, U...) -> array<T, 1 + sizeof...(U)>;
+}
+
+std::array a{1,2,3};
+std::array<int,2> b{10, 11};
+using array = std::array<int, 2>;
+array c{10, 11};

@@ -84,8 +84,12 @@ static cl::opt<bool> EnableLegacyPassManager(
 static cl::opt<std::string> PassPipeline(
     "passes",
     cl::desc(
-        "A textual description of the pass pipeline. To have analysis passes "
-        "available before a certain pass, add \"require<foo-analysis>\"."));
+        "A textual (comma separated) description of the pass pipeline e.g.,"
+        "-passes=\"foo,bar\", to have analysis passes available before a pass, "
+        "add \"require<foo-analysis>\". See "
+        "https://llvm.org/docs/NewPassManager.html#invoking-opt "
+        "for more details on the pass pipeline syntax. "));
+
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 

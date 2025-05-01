@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86MCExpr.h"
 #include "X86.h"
 #include "X86CallingConv.h"
 #include "X86FrameLowering.h"
@@ -471,8 +472,7 @@ X86TargetLowering::LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
   assert(isPositionIndependent() && Subtarget.isPICStyleGOT());
   // In 32-bit ELF systems, our jump table entries are formed with @GOTOFF
   // entries.
-  return MCSymbolRefExpr::create(MBB->getSymbol(),
-                                 MCSymbolRefExpr::VK_GOTOFF, Ctx);
+  return MCSymbolRefExpr::create(MBB->getSymbol(), X86MCExpr::VK_GOTOFF, Ctx);
 }
 
 /// Returns relocation base for the given PIC jumptable.

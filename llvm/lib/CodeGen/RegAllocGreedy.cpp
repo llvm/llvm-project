@@ -179,7 +179,7 @@ public:
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(F) {
+    : MachineFunctionPass(ID), F(std::move(F)) {
   initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
 }
 
@@ -2195,8 +2195,7 @@ MCRegister RAGreedy::tryLastChanceRecoloring(
     if (tryRecoloringCandidates(RecoloringQueue, CurrentNewVRegs,
                                 FixedRegisters, RecolorStack, Depth)) {
       // Push the queued vregs into the main queue.
-      for (Register NewVReg : CurrentNewVRegs)
-        NewVRegs.push_back(NewVReg);
+      llvm::append_range(NewVRegs, CurrentNewVRegs);
       // Do not mess up with the global assignment process.
       // I.e., VirtReg must be unassigned.
       if (VRM->hasPhys(ThisVirtReg)) {
@@ -2375,10 +2374,12 @@ void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
 }
 
 void RAGreedy::initializeCSRCost() {
-  // We use the larger one out of the command-line option and the value report
-  // by TRI.
+  // We use the command-line option if it is explicitly set, otherwise use the
+  // larger one out of the command-line option and the value reported by TRI.
   CSRCost = BlockFrequency(
-      std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
+      CSRFirstTimeCost.getNumOccurrences()
+          ? CSRFirstTimeCost
+          : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
   if (!CSRCost.getFrequency())
     return;
 
@@ -2663,7 +2664,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                        TimerGroupDescription, TimePassesIsEnabled);
     LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-    spiller().spill(LRE);
+    spiller().spill(LRE, &Order);
     ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
     // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
@@ -2907,8 +2908,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
-  SpillerInstance.reset(
-      createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI));
+  SpillerInstance.reset(createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF,
+                                            *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
 
