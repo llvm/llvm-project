@@ -4,9 +4,9 @@
 define <4 x i32> @umax_fixed(i32 %x, i32 %y) {
 ; CHECK-LABEL: define <4 x i32> @umax_fixed(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[Y_INSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[X_INSERT]], <4 x i32> [[Y_INSERT]])
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> poison, <4 x i32> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i32> [[V]]
 ;
   %x.insert = insertelement <4 x i32> poison, i32 %x, i32 0
@@ -18,9 +18,9 @@ define <4 x i32> @umax_fixed(i32 %x, i32 %y) {
 define <vscale x 4 x i32> @umax_scalable(i32 %x, i32 %y) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @umax_scalable(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[Y_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[Y]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> [[X_INSERT]], <vscale x 4 x i32> [[Y_INSERT]])
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <vscale x 4 x i32> [[TMP1]], i32 [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[V]]
 ;
   %x.insert = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
@@ -32,8 +32,9 @@ define <vscale x 4 x i32> @umax_scalable(i32 %x, i32 %y) {
 define <4 x i32> @umax_fixed_lhs_const(i32 %x) {
 ; CHECK-LABEL: define <4 x i32> @umax_fixed_lhs_const(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> [[X_INSERT]])
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call i32 @llvm.umax.i32(i32 1, i32 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i32> [[V]]
 ;
   %x.insert = insertelement <4 x i32> poison, i32 %x, i32 0
@@ -44,8 +45,9 @@ define <4 x i32> @umax_fixed_lhs_const(i32 %x) {
 define <4 x i32> @umax_fixed_rhs_const(i32 %x) {
 ; CHECK-LABEL: define <4 x i32> @umax_fixed_rhs_const(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[X_INSERT]], <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i32> [[V]]
 ;
   %x.insert = insertelement <4 x i32> poison, i32 %x, i32 0
@@ -56,8 +58,9 @@ define <4 x i32> @umax_fixed_rhs_const(i32 %x) {
 define <vscale x 4 x i32> @umax_scalable_lhs_const(i32 %x) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @umax_scalable_lhs_const(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> splat (i32 42), <vscale x 4 x i32> [[X_INSERT]])
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call i32 @llvm.umax.i32(i32 42, i32 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> splat (i32 42), <vscale x 4 x i32> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <vscale x 4 x i32> [[TMP1]], i32 [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[V]]
 ;
   %x.insert = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
@@ -68,8 +71,9 @@ define <vscale x 4 x i32> @umax_scalable_lhs_const(i32 %x) {
 define <vscale x 4 x i32> @umax_scalable_rhs_const(i32 %x) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @umax_scalable_rhs_const(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> [[X_INSERT]], <vscale x 4 x i32> splat (i32 42))
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> splat (i32 42))
+; CHECK-NEXT:    [[V:%.*]] = insertelement <vscale x 4 x i32> [[TMP1]], i32 [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[V]]
 ;
   %x.insert = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
