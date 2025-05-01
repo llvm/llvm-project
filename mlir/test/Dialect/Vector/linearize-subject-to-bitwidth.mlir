@@ -5,7 +5,7 @@
 
 // A vector<2x2xf32> has inner-most dimension with 64-bits. Check that at
 // bitwidth threshold 128 (>= 64), operations are linearized, and at
-// bitwidth threshold 0 (< 64), operations are linearized.
+// bitwidth threshold 0 (< 64), operations are not linearized.
 
 // ALL-LABEL: test_result_bitwidth_64
 func.func @test_result_bitwidth_64(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
@@ -22,6 +22,8 @@ func.func @test_result_bitwidth_64(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 }
 
 // -----
+
+// Test that operations with vectors of index type are not linearized.
 
 // ALL-LABEL: test_index_no_linearize
 func.func @test_index_no_linearize(%arg0: vector<2x2xindex>, %arg1: vector<2x2xindex>) -> vector<2x2xindex> {
