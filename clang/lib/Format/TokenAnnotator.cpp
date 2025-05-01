@@ -3095,10 +3095,14 @@ private:
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
+    // Or expressions like:
+    //   width * height * length
     if (NextToken->Tok.isAnyIdentifier()) {
       const FormatToken *NextNextToken = NextToken->getNextNonComment();
-      if (NextNextToken && NextNextToken->is(tok::arrow))
+      if (NextNextToken && (NextNextToken->is(tok::arrow) ||
+                            NextNextToken->isPointerOrReference())) {
         return TT_BinaryOperator;
+      }
     }
 
     // It is very unlikely that we are going to find a pointer or reference type

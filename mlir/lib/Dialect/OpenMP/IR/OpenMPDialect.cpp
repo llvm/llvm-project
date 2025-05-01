@@ -3216,7 +3216,11 @@ LogicalResult CancelOp::verify() {
                          << "must not have a nowait clause";
     }
   }
-  // TODO : Add more when we support taskgroup.
+  if ((cct == ClauseCancellationConstructType::Taskgroup) &&
+      !mlir::isa<omp::TaskOp>(structuralParent)) {
+    return emitOpError() << "cancel taskgroup must appear "
+                         << "inside a task region";
+  }
   return success();
 }
 
@@ -3253,7 +3257,11 @@ LogicalResult CancellationPointOp::verify() {
     return emitOpError() << "cancellation point sections must appear "
                          << "inside a sections region";
   }
-  // TODO : Add more when we support taskgroup.
+  if ((cct == ClauseCancellationConstructType::Taskgroup) &&
+      !mlir::isa<omp::TaskOp>(structuralParent)) {
+    return emitOpError() << "cancellation point taskgroup must appear "
+                         << "inside a task region";
+  }
   return success();
 }
 

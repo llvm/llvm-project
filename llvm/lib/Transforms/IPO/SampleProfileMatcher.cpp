@@ -737,14 +737,16 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
     auto FunctionName = FName.str();
     if (Demangler.partialDemangle(FunctionName.c_str()))
       return std::string();
-    constexpr size_t MaxBaseNameSize = 65536;
-    std::vector<char> BaseNameBuf(MaxBaseNameSize, 0);
-    size_t BaseNameSize = MaxBaseNameSize;
-    char *BaseNamePtr =
-        Demangler.getFunctionBaseName(BaseNameBuf.data(), &BaseNameSize);
-    return (BaseNamePtr && BaseNameSize)
-               ? std::string(BaseNamePtr, BaseNameSize)
-               : std::string();
+    size_t BaseNameSize = 0;
+    // The demangler API follows the __cxa_demangle one, and thus needs a
+    // pointer that originates from malloc (or nullptr) and the caller is
+    // responsible for free()-ing the buffer.
+    char *BaseNamePtr = Demangler.getFunctionBaseName(nullptr, &BaseNameSize);
+    std::string Result = (BaseNamePtr && BaseNameSize)
+                             ? std::string(BaseNamePtr, BaseNameSize)
+                             : std::string();
+    free(BaseNamePtr);
+    return Result;
   };
   auto IRBaseName = GetBaseName(IRFunc.getName());
   auto ProfBaseName = GetBaseName(ProfFunc.stringRef());

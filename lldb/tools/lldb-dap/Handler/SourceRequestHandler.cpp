@@ -16,6 +16,7 @@
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBSymbol.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "llvm/Support/Error.h"
@@ -42,10 +43,19 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
   if (!frame.IsValid())
     return llvm::make_error<DAPError>("source not found");
 
-  lldb::SBInstructionList insts = frame.GetSymbol().GetInstructions(dap.target);
   lldb::SBStream stream;
   lldb::SBExecutionContext exe_ctx(frame);
-  insts.GetDescription(stream, exe_ctx);
+  lldb::SBSymbol symbol = frame.GetSymbol();
+
+  if (symbol.IsValid()) {
+    lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
+    insts.GetDescription(stream, exe_ctx);
+  } else {
+    // No valid symbol, just return the disassembly.
+    lldb::SBInstructionList insts =
+        dap.target.ReadInstructions(frame.GetPCAddress(), 32);
+    insts.GetDescription(stream, exe_ctx);
+  }
 
   return protocol::SourceResponseBody{/*content=*/stream.GetData(),
                                       /*mimeType=*/"text/x-lldb.disassembly"};

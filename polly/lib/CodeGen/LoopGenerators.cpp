@@ -128,7 +128,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
     Annotator->pushLoop(NewLoop, Parallel);
 
   // ExitBB
-  ExitBB = SplitBlock(BeforeBB, &*Builder.GetInsertPoint(), &DT, &LI);
+  ExitBB = SplitBlock(BeforeBB, Builder.GetInsertPoint(), &DT, &LI);
   ExitBB->setName("polly.loop_exit");
 
   // BeforeBB
@@ -200,7 +200,7 @@ Value *ParallelLoopGenerator::createParallelLoop(
   Function *SubFn;
   std::tie(IV, SubFn) = createSubFn(Stride, Struct, UsedValues, Map);
   *LoopBody = Builder.GetInsertPoint();
-  Builder.SetInsertPoint(&*BeforeLoop);
+  Builder.SetInsertPoint(BeforeLoop);
 
   // Add one as the upper bound provided by OpenMP is a < comparison
   // whereas the codegenForSequential function creates a <= comparison.

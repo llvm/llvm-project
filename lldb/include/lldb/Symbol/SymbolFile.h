@@ -144,7 +144,7 @@ public:
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) = 0;
 
-  virtual Symtab *GetSymtab() = 0;
+  virtual Symtab *GetSymtab(bool can_create = true) = 0;
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
@@ -533,7 +533,7 @@ public:
     return m_abilities;
   }
 
-  Symtab *GetSymtab() override;
+  Symtab *GetSymtab(bool can_create = true) override;
 
   ObjectFile *GetObjectFile() override { return m_objfile_sp.get(); }
   const ObjectFile *GetObjectFile() const override {

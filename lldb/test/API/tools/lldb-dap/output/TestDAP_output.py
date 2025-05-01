@@ -40,7 +40,12 @@ class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
         output += self.get_stdout(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
         self.assertTrue(output and len(output) > 0, "expect program stdout")
         self.assertIn(
-            "abcdefghi\r\nhello world\r\nfinally\0\0out\0\0\r\nerr\0\0",
+            "abcdefghi\r\nhello world\r\nfinally\0\0",
             output,
             "full stdout not found in: " + repr(output),
+        )
+        console = self.get_console(timeout=self.timeoutval)
+        self.assertTrue(console and len(console) > 0, "expect dap messages")
+        self.assertIn(
+            "out\0\0\r\nerr\0\0\r\n", console, f"full console message not found"
         )

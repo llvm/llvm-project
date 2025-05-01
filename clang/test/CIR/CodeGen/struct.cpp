@@ -16,11 +16,11 @@ void f(void) {
   IncompleteS *p;
 }
 
-// CIR:      cir.func @f()
+// CIR:      cir.func @_Z1fv()
 // CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"]
 // CIR-NEXT:   cir.return
 
-// LLVM:      define void @f()
+// LLVM:      define void @_Z1fv()
 // LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   ret void
 

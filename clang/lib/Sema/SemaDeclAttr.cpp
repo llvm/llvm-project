@@ -1483,7 +1483,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   case OwnershipAttr::Returns:
     if (AL.getNumArgs() > 2) {
-      S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 1;
+      S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 2;
       return;
     }
     break;
@@ -3589,8 +3589,8 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // If this ever proves to be a problem it should be easy to fix.
   QualType Ty = S.Context.getPointerType(cast<VarDecl>(D)->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
-  if (S.CheckAssignmentConstraints(FD->getParamDecl(0)->getLocation(),
-                                   ParamTy, Ty) != Sema::Compatible) {
+  if (!S.IsAssignConvertCompatible(S.CheckAssignmentConstraints(
+          FD->getParamDecl(0)->getLocation(), ParamTy, Ty))) {
     S.Diag(Loc, diag::err_attribute_cleanup_func_arg_incompatible_type)
       << NI.getName() << ParamTy << Ty;
     return;
@@ -3972,8 +3972,7 @@ static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   Expr *FormatStrExpr = AL.getArgAsExpr(2)->IgnoreParenImpCasts();
   if (auto *SL = dyn_cast<StringLiteral>(FormatStrExpr)) {
-    Sema::FormatStringType FST =
-        S.GetFormatStringType(Info.Identifier->getName());
+    FormatStringType FST = S.GetFormatStringType(Info.Identifier->getName());
     if (S.ValidateFormatString(FST, SL))
       if (auto *NewAttr = S.mergeFormatMatchesAttr(D, AL, Info.Identifier,
                                                    Info.FormatStringIdx, SL))
@@ -4906,6 +4905,20 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     cast<ValueDecl>(D)->setType(NewTy);
 
   D->addAttr(::new (Context) ModeAttr(Context, CI, Name));
+}
+
+static void handleNonStringAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // This only applies to fields and variable declarations which have an array
+  // type.
+  QualType QT = cast<ValueDecl>(D)->getType();
+  if (!QT->isArrayType() ||
+      !QT->getBaseElementTypeUnsafe()->isAnyCharacterType()) {
+    S.Diag(D->getBeginLoc(), diag::warn_attribute_non_character_array)
+        << AL << AL.isRegularKeywordAttribute() << QT << AL.getRange();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NonStringAttr(S.Context, AL));
 }
 
 static void handleNoDebugAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7144,6 +7157,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Mode:
     handleModeAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NonString:
+    handleNonStringAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NonNull:
     if (auto *PVD = dyn_cast<ParmVarDecl>(D))

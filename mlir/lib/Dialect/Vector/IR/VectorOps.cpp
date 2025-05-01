@@ -151,13 +151,42 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
-AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
-                                                    VectorType vectorType) {
-  int64_t elementVectorRank = 0;
+///  Returns the effective rank of the vector to read/write for Xfer Ops
+///
+///  When the element type of the shaped type is _a scalar_, this will simply
+///  return the rank of the vector ( the result for xfer_read or the value to
+///  store for xfer_write).
+///
+///  When the element type of the base shaped type is _a vector_, returns the
+///  difference between the original vector type and the element type of the
+///  shaped type.
+///
+///  EXAMPLE 1 (element type is _a scalar_):
+///   - shapedType = tensor<10x20xf32>, vectorType = vector<2x4xf32>
+///     - shapedType.getElementType() = f32 (rank 0)
+///     - vectorType.getRank() = 2
+///     - Result = 2 - 0 = 2
+///
+/// EXAMPLE 2 (element type is _a vector_):
+///   - shapedType = tensor<10xvector<20xf32>>, vectorType = vector<20xf32>
+///     - shapedType.getElementType() = vector<20xf32> (rank 1)
+///     - vectorType.getRank() = 1
+///     - Result = 1 - 1 = 0
+///
+/// This is used to determine the number of minor dimensions for identity maps
+/// in vector transfer Ops.
+static unsigned getEffectiveVectorRankForXferOp(ShapedType shapedType,
+                                                VectorType vectorType) {
+  unsigned elementVectorRank = 0;
   VectorType elementVectorType =
       llvm::dyn_cast<VectorType>(shapedType.getElementType());
   if (elementVectorType)
     elementVectorRank += elementVectorType.getRank();
+  return vectorType.getRank() - elementVectorRank;
+}
+
+AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
+                                                    VectorType vectorType) {
   // 0-d transfers are to/from tensor<t>/memref<t> and vector<1xt>.
   // TODO: replace once we have 0-d vectors.
   if (shapedType.getRank() == 0 &&
@@ -166,7 +195,8 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
   return AffineMap::getMinorIdentityMap(
-      shapedType.getRank(), vectorType.getRank() - elementVectorRank,
+      shapedType.getRank(),
+      getEffectiveVectorRankForXferOp(shapedType, vectorType),
       shapedType.getContext());
 }
 
@@ -2019,8 +2049,9 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
     Value position = dynamicPosition[index++];
     if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
       int64_t value = attr.getInt();
-      // Do not fold if the value is out of bounds.
-      if (value >= 0 && value < vectorShape[i]) {
+      // Do not fold if the value is out of bounds (-1 signifies a poison
+      // value rather than OOB index).
+      if (value >= -1 && value < vectorShape[i]) {
         staticPosition[i] = attr.getInt();
         opChange = true;
         continue;
@@ -4234,6 +4265,11 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
+      return parser.emitError(typesLoc,
+                              "expected a custom permutation_map when "
+                              "rank(source) != rank(destination)");
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
@@ -4649,6 +4685,11 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
+      return parser.emitError(typesLoc,
+                              "expected a custom permutation_map when "
+                              "rank(source) != rank(destination)");
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {

@@ -220,7 +220,7 @@ exit:
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
-; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
+; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph

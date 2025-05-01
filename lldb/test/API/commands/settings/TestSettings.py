@@ -1041,6 +1041,13 @@ class SettingsCommandTestCase(TestBase):
         # Test OptionValueLanguage
         self.verify_setting_value_json("repl-lang", "c++")
 
+        # Test OptionValueEnumeration
+        self.verify_setting_value_json("target.x86-disassembly-flavor", "intel")
+
+        # Test OptionValueArch
+        self.verify_setting_value_json("target.default-arch", "x86_64")
+        self.runCmd("settings clear target.default-arch")
+
     def test_global_option(self):
         # This command used to crash the settings because -g was signaled by a
         # NULL execution context (not one with an empty Target...) and in the

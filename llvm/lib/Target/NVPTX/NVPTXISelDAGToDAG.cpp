@@ -1868,7 +1868,7 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
     case 1: {
       MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
       SDValue Imm = Ops[0];
-      if (MemTy != MVT::f16 && MemTy != MVT::v2f16 &&
+      if (MemTy != MVT::f16 && MemTy != MVT::bf16 &&
           (isa<ConstantSDNode>(Imm) || isa<ConstantFPSDNode>(Imm))) {
         // Convert immediate to target constant
         if (MemTy == MVT::f32 || MemTy == MVT::f64) {

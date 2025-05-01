@@ -2931,9 +2931,9 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return true;
   }
 
-  // All other pointers are unique.
+  // All other pointers (except __ptrauth pointers) are unique.
   if (Ty->isPointerType())
-    return true;
+    return !Ty.hasAddressDiscriminatedPointerAuth();
 
   if (const auto *MPT = Ty->getAs<MemberPointerType>())
     return !ABI->getMemberPointerInfo(MPT).HasPadding;
@@ -8371,6 +8371,9 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
 
     return true;
   }
+
+  if (Ty.hasAddressDiscriminatedPointerAuth())
+    return true;
 
   // The block needs copy/destroy helpers if Ty is non-trivial to destructively
   // move or destroy.

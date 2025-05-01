@@ -64,6 +64,7 @@ Changes to the LLVM IR
 
 * Updated semantics of `llvm.type.checked.load.relative` to match that of
   `llvm.load.relative`.
+* Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -72,6 +73,9 @@ Changes to LLVM infrastructure
   themselves (i.e., the `TargetIntrinsicInfo` class).
 * Fix Microsoft demangling of string literals to be stricter
   (#GH129970))
+* Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
+  comparison is expected to match the behavior of ``llvm.maximum.*`` and
+  ``llvm.minimum.*`` respectively.
 
 Changes to building LLVM
 ------------------------
@@ -169,6 +173,13 @@ Changes to the RISC-V Backend
   which is also the default.
 * `-mcpu=xiangshan-kunminghu` was added.
 * `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
+* `-mcpu=andes-a45` and `-mcpu=andes-ax45` were added.
+* Adds support for the 'Ziccamoc` (Main Memory Supports Atomics in Zacas) extension, which was introduced as an optional extension of the RISC-V Profiles specification.
+* Adds experimental assembler support for SiFive CLIC CSRs, under the names
+  `Zsfmclic` for the M-mode registers and `Zsfsclic` for the S-mode registers.
+* Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
+  interrupt handlers without using inline assembly.
+* Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -199,6 +210,13 @@ Changes to the C API
   * `LLVMConstMul`
   * `LLVMConstNUWMul`
   * `LLVMConstNSWMul`
+
+* Added `LLVMConstDataArray` and `LLVMGetRawDataValues` to allow creating and
+  reading `ConstantDataArray` values without needing extra `LLVMValueRef`s for
+  individual elements.
+
+* Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
+  debugging metadata of enumerators larger than 64 bits.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -235,6 +253,10 @@ Changes to LLDB
 * The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
   from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
   handling in LLDB 20, these options have had no effect.
+* LLDB now supports `process continue --reverse` when used with debug servers
+  supporting reverse execution, such as [rr](https://rr-project.org).
+  When using reverse execution, `process continue --forward` returns to the
+  forward execution.
 
 ### Changes to lldb-dap
 

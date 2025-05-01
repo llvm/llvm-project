@@ -9062,8 +9062,12 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
   }
 
   if (rhptee->isVoidType()) {
+    // In C, void * to another pointer type is compatible, but we want to note
+    // that there will be an implicit conversion happening here.
     if (lhptee->isIncompleteOrObjectType())
-      return ConvTy;
+      return ConvTy == Sema::Compatible && !S.getLangOpts().CPlusPlus
+                 ? Sema::CompatibleVoidPtrToNonVoidPtr
+                 : ConvTy;
 
     // As an extension, we allow cast to/from void* to function pointer.
     assert(lhptee->isFunctionType());
@@ -9098,7 +9102,7 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
       // Types are compatible ignoring the sign. Qualifier incompatibility
       // takes priority over sign incompatibility because the sign
       // warning can be disabled.
-      if (ConvTy != Sema::Compatible)
+      if (!S.IsAssignConvertCompatible(ConvTy))
         return ConvTy;
 
       return Sema::IncompatiblePointerSign;
@@ -16980,7 +16984,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case Compatible:
       DiagnoseAssignmentEnum(DstType, SrcType, SrcExpr);
       return false;
-
+  case CompatibleVoidPtrToNonVoidPtr:
+    // Still a valid conversion, but we may want to diagnose for C++
+    // compatibility reasons.
+    DiagKind = diag::warn_compatible_implicit_pointer_conv;
+    break;
   case PointerToInt:
     if (getLangOpts().CPlusPlus) {
       DiagKind = diag::err_typecheck_convert_pointer_int;

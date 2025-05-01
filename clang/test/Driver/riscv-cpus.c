@@ -251,6 +251,7 @@
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl256b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl32b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl64b"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+sscofpmf"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svinval"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svnapot"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svpbmt"
@@ -726,3 +727,37 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-nx45 | FileCheck -check-prefix=MTUNE-ANDES-NX45 %s
 // MTUNE-ANDES-NX45: "-tune-cpu" "andes-nx45"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=andes-a45 | FileCheck -check-prefix=MCPU-ANDES-A45 %s
+// MCPU-ANDES-A45: "-target-cpu" "andes-a45"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+m"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+a"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+f"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+d"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+c"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zicsr"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zifencei"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zba"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zbb"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zbs"
+// MCPU-ANDES-A45-SAME: "-target-abi" "ilp32d"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=andes-a45 | FileCheck -check-prefix=MTUNE-ANDES-A45 %s
+// MTUNE-ANDES-A45: "-tune-cpu" "andes-a45"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-ax45 | FileCheck -check-prefix=MCPU-ANDES-AX45 %s
+// MCPU-ANDES-AX45: "-target-cpu" "andes-ax45"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+m"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+a"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+f"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+d"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+c"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zicsr"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zifencei"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zba"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zbb"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zbs"
+// MCPU-ANDES-AX45-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45 | FileCheck -check-prefix=MTUNE-ANDES-AX45 %s
+// MTUNE-ANDES-AX45: "-tune-cpu" "andes-ax45"

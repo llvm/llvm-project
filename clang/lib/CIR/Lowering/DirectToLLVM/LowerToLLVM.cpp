@@ -19,6 +19,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -1389,8 +1390,12 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
     mlir::Type ty =
-        convertTypeForMemory(converter, dataLayout, type.getEltType());
+        convertTypeForMemory(converter, dataLayout, type.getElementType());
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
+  });
+  converter.addConversion([&](cir::VectorType type) -> mlir::Type {
+    const mlir::Type ty = converter.convertType(type.getElementType());
+    return mlir::VectorType::get(type.getSize(), ty);
   });
   converter.addConversion([&](cir::BoolType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 1,
@@ -1431,7 +1436,14 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       break;
     // Unions are lowered as only the largest member.
     case cir::RecordType::Union:
-      llvm_unreachable("Lowering of unions is NYI");
+      if (auto largestMember = type.getLargestMember(dataLayout))
+        llvmMembers.push_back(
+            convertTypeForMemory(converter, dataLayout, largestMember));
+      if (type.getPadded()) {
+        auto last = *type.getMembers().rbegin();
+        llvmMembers.push_back(
+            convertTypeForMemory(converter, dataLayout, last));
+      }
       break;
     }
 
@@ -1604,7 +1616,11 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
     return mlir::success();
   }
   case cir::RecordType::Union:
-    return op.emitError() << "NYI: union get_member lowering";
+    // Union members share the address space, so we just need a bitcast to
+    // conform to type-checking.
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(op, llResTy,
+                                                       adaptor.getAddr());
+    return mlir::success();
   }
 }
 
