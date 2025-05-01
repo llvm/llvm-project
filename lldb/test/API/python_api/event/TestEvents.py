@@ -413,7 +413,7 @@ class EventAPITestCase(TestBase):
 
         # Add our stop hook here, don't report on the initial attach:
         self.runCmd(
-            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance} -F false"
+            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance} -I false"
         )
         self.stop_counter = 0
 
