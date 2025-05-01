@@ -59,7 +59,7 @@ __clc_remainder_piby2_large(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
                             private __CLC_INTN *regn) {
 
   __CLC_LONGN ux = __CLC_AS_LONGN(x);
-  __CLC_INTN e = __CLC_CONVERT_INTN(ux >> 52) - 1023;
+  __CLC_INTN e = __CLC_CONVERT_INTN(ux >> EXPSHIFTBITS_DP64) - EXPBIAS_DP64;
   __CLC_INTN i = __clc_max(23, (e >> 3) + 17);
   __CLC_INTN j = 150 - i;
   __CLC_INTN j16 = j & ~0xf;
@@ -68,18 +68,10 @@ __clc_remainder_piby2_large(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
   // The following extracts 192 consecutive bits of 2/pi aligned on an arbitrary
   // byte boundary
   __CLC_ULONGN q0 = USE_TABLE(pibits_tbl, j16);
-  __CLC_ULONGN q3 = USE_TABLE(pibits_tbl, (j16 + 8));
-  __CLC_ULONGN q1 = USE_TABLE(pibits_tbl, (j16 + 16));
-  __CLC_ULONGN q4 = USE_TABLE(pibits_tbl, (j16 + 24));
-  __CLC_ULONGN q2 = USE_TABLE(pibits_tbl, (j16 + 32));
-
-  __CLC_INTN k = (j >> 2) & 0x3;
-  __CLC_INTN c0 = k == 0;
-  __CLC_INTN c1 = k == 1;
-  __CLC_INTN c2 = k == 2;
-  __CLC_INTN c3 = k == 3;
-
-  __CLC_UINTN u0, u1, u2, u3, u4, u5, u6;
+  __CLC_ULONGN q1 = USE_TABLE(pibits_tbl, (j16 + 8));
+  __CLC_ULONGN q2 = USE_TABLE(pibits_tbl, (j16 + 16));
+  __CLC_ULONGN q3 = USE_TABLE(pibits_tbl, (j16 + 24));
+  __CLC_ULONGN q4 = USE_TABLE(pibits_tbl, (j16 + 32));
 
   __CLC_UINTN q0s0 = __CLC_CONVERT_UINTN(q0);
   __CLC_UINTN q0s1 = __CLC_CONVERT_UINTN(q0 >> 32);
@@ -96,33 +88,41 @@ __clc_remainder_piby2_large(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
   __CLC_UINTN q4s0 = __CLC_CONVERT_UINTN(q4);
   __CLC_UINTN q4s1 = __CLC_CONVERT_UINTN(q4 >> 32);
 
+  __CLC_INTN k = (j >> 2) & 0x3;
+  __CLC_INTN c0 = k == 0;
+  __CLC_INTN c1 = k == 1;
+  __CLC_INTN c2 = k == 2;
+  __CLC_INTN c3 = k == 3;
+
+  __CLC_UINTN u0, u1, u2, u3, u4, u5, u6;
+
   u0 = c1 ? q0s1 : q0s0;
-  u0 = c2 ? q3s0 : u0;
-  u0 = c3 ? q3s1 : u0;
+  u0 = c2 ? q1s0 : u0;
+  u0 = c3 ? q1s1 : u0;
 
-  u1 = c1 ? q3s0 : q0s1;
-  u1 = c2 ? q3s1 : u1;
-  u1 = c3 ? q1s0 : u1;
+  u1 = c1 ? q1s0 : q0s1;
+  u1 = c2 ? q1s1 : u1;
+  u1 = c3 ? q2s0 : u1;
 
-  u2 = c1 ? q3s1 : q3s0;
-  u2 = c2 ? q1s0 : u2;
-  u2 = c3 ? q1s1 : u2;
+  u2 = c1 ? q1s1 : q1s0;
+  u2 = c2 ? q2s0 : u2;
+  u2 = c3 ? q2s1 : u2;
 
-  u3 = c1 ? q1s0 : q3s1;
-  u3 = c2 ? q1s1 : u3;
-  u3 = c3 ? q4s0 : u3;
+  u3 = c1 ? q2s0 : q1s1;
+  u3 = c2 ? q2s1 : u3;
+  u3 = c3 ? q3s0 : u3;
 
-  u4 = c1 ? q1s1 : q1s0;
-  u4 = c2 ? q4s0 : u4;
-  u4 = c3 ? q4s1 : u4;
+  u4 = c1 ? q2s1 : q2s0;
+  u4 = c2 ? q3s0 : u4;
+  u4 = c3 ? q3s1 : u4;
 
-  u5 = c1 ? q4s0 : q1s1;
-  u5 = c2 ? q4s1 : u5;
-  u5 = c3 ? q2s0 : u5;
+  u5 = c1 ? q3s0 : q2s1;
+  u5 = c2 ? q3s1 : u5;
+  u5 = c3 ? q4s0 : u5;
 
-  u6 = c1 ? q4s1 : q4s0;
-  u6 = c2 ? q2s0 : u6;
-  u6 = c3 ? q2s1 : u6;
+  u6 = c1 ? q3s1 : q3s0;
+  u6 = c2 ? q4s0 : u6;
+  u6 = c3 ? q4s1 : u6;
 
   __CLC_UINTN v0 = bytealign(u1, u0, j);
   __CLC_UINTN v1 = bytealign(u2, u1, j);
@@ -142,7 +142,8 @@ __clc_remainder_piby2_large(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
   __CLC_AS_DOUBLEN(__CLC_CONVERT_ULONGN((x)) & 0xFFFFFFFF |                    \
                    __CLC_CONVERT_ULONGN((y)) << 32)
 
-  __CLC_UINTN ua = __CLC_CONVERT_UINTN(1023 + 52 - i) << 20;
+  __CLC_UINTN ua = __CLC_CONVERT_UINTN(EXPBIAS_DP64 + EXPSHIFTBITS_DP64 - i)
+                   << 20;
   __CLC_DOUBLEN a = doublen_lohi((__CLC_ULONGN)0, ua);
   __CLC_DOUBLEN p0 = doublen_lohi(v0, ua | (v1 & 0xffffU)) - a;
   ua += 0x03000000U;
