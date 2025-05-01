@@ -76,8 +76,7 @@ void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc, builder)};
   mlir::FunctionType fTy{func.getFunctionType()};
-  mlir::Value asyncId =
-      builder.createIntegerConstant(loc, builder.getI64Type(), -1);
+  mlir::Value asyncObject = builder.createNullConstant(loc);
   mlir::Value sourceFile{fir::factory::locationToFilename(builder, loc)};
   mlir::Value sourceLine{
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(5))};
@@ -88,7 +87,7 @@ void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
     errMsg = builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
   }
   llvm::SmallVector<mlir::Value> args{
-      fir::runtime::createArguments(builder, loc, fTy, desc, asyncId, hasStat,
-                                    errMsg, sourceFile, sourceLine)};
+      fir::runtime::createArguments(builder, loc, fTy, desc, asyncObject,
+                                    hasStat, errMsg, sourceFile, sourceLine)};
   builder.create<fir::CallOp>(loc, func, args);
 }
