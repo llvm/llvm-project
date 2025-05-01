@@ -15,7 +15,7 @@ define i32 @test() {
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[INDVAR3]], 0
 ; CHECK-NEXT:    br i1 [[COND1]], label %[[FOR_INC]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[INDVAR2]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[INDVAR2]], 0
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    br label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
