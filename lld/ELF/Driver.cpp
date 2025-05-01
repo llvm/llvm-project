@@ -86,7 +86,9 @@ ELFSyncStream elf::Log(Ctx &ctx) { return {ctx, DiagLevel::Log}; }
 ELFSyncStream elf::Msg(Ctx &ctx) { return {ctx, DiagLevel::Msg}; }
 ELFSyncStream elf::Warn(Ctx &ctx) { return {ctx, DiagLevel::Warn}; }
 ELFSyncStream elf::Err(Ctx &ctx) {
-  return {ctx, ctx.arg.noinhibitExec ? DiagLevel::Warn : DiagLevel::Err};
+  if (ctx.arg.noinhibitExec)
+    return {ctx, ctx.e.suppressWarnings ? DiagLevel::None : DiagLevel::Warn};
+  return {ctx, DiagLevel::Err};
 }
 ELFSyncStream elf::ErrAlways(Ctx &ctx) { return {ctx, DiagLevel::Err}; }
 ELFSyncStream elf::Fatal(Ctx &ctx) { return {ctx, DiagLevel::Fatal}; }
