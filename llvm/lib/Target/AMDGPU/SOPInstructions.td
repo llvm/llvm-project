@@ -94,9 +94,13 @@ class SOP1_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
 
 #ifdef LLPC_BUILD_NPI
 // only IDX_REG output allowed
-class SOP1_IDX_32 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs IDX_REG_32:$sdst), (ins SSrc_b32:$src0),
-  "$sdst, $src0", pattern>;
+class SOP1_IDX_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseudo <
+  opName, (outs IDX_REG_32:$sdst),
+  !if(tied_in, (ins SSrc_b32:$src0, IDX_REG_32:$sdst_in),
+               (ins SSrc_b32:$src0)),
+  "$sdst, $src0", pattern> {
+  let Constraints = !if(tied_in, "$sdst = $sdst_in", "");
+}
 
 #endif /* LLPC_BUILD_NPI */
 // 32-bit input, no output.
@@ -569,8 +573,8 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 #ifdef LLPC_BUILD_NPI
 let SubtargetPredicate = isGFX13Plus in {
   let hasSideEffects = 1 in {
-    def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32">;
-    def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32">;
+    def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32", [], 0>;
+    def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32", [], 1>;
   }
 } // End SubtargetPredicate = isGFX13Plus
 
@@ -2509,15 +2513,15 @@ multiclass SOP1_Real_gfx10<bits<8> op> {
 #ifdef LLPC_BUILD_NPI
 multiclass SOP1_Real_gfx10_gfx13<bits<8> op> :
   SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op>;
-
-multiclass SOP1_Real_gfx10_Renamed_gfx13<bits<8> op, string gfx13_name> :
-  SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op, gfx13_name>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOP1_Real_gfx10_gfx11_gfx12<bits<8> op> :
   SOP1_Real_gfx10<op>, SOP1_Real_gfx11_gfx12<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+multiclass SOP1_Real_gfx10_Renamed_gfx13<bits<8> op, string gfx13_name> :
+  SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op, gfx13_name>;
+
 defm S_ANDN1_SAVEEXEC_B64   : SOP1_Real_gfx10_Renamed_gfx13<0x37, "s_and_not0_saveexec_b64">;
 defm S_ORN1_SAVEEXEC_B64    : SOP1_Real_gfx10_Renamed_gfx13<0x38, "s_or_not0_saveexec_b64">;
 defm S_ANDN1_WREXEC_B64     : SOP1_Real_gfx10_Renamed_gfx13<0x39, "s_and_not0_wrexec_b64">;
@@ -2653,6 +2657,20 @@ defm S_MOVRELS_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x02f>;
 defm S_MOVRELD_B32        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x030>;
 defm S_MOVRELD_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x031>;
 defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x034>;
+
+//===----------------------------------------------------------------------===//
+// SOP2 - GFX13.
+//===----------------------------------------------------------------------===//
+
+multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP2_Pseudo>(NAME);
+  def _gfx13 : SOP2_Real32<op, ps, name>,
+               Select<GFX13Gen, ps.Mnemonic>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+}
+
+defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
 #else /* LLPC_BUILD_NPI */
 defm S_FF1_I32_B32        : SOP1_Real_gfx6_gfx7_gfx10<0x013>;
 defm S_FF1_I32_B64        : SOP1_Real_gfx6_gfx7_gfx10<0x014>;
@@ -2689,20 +2707,6 @@ defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10<0x034>;
 
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
-// SOP2 - GFX13.
-//===----------------------------------------------------------------------===//
-
-multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<SOP2_Pseudo>(NAME);
-  def _gfx13 : SOP2_Real32<op, ps, name>,
-               Select<GFX13Gen, ps.Mnemonic>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
-}
-
-defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
-
-//===----------------------------------------------------------------------===//
 // SOP2 - GFX12.
 #else /* LLPC_BUILD_NPI */
 // SOP2 - GFX12
@@ -2946,15 +2950,15 @@ multiclass SOP2_Real_gfx6_gfx7<bits<7> op> {
 #ifdef LLPC_BUILD_NPI
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx13<bits<7> op> :
   SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op>;
+
+multiclass SOP2_Real_gfx6_gfx7_gfx10_Renamed_gfx13<bits<7> op, string gfx13_name> :
+  SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op, gfx13_name>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOP2_Real_gfx6_gfx7_gfx10<bits<7> op> :
   SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOP2_Real_gfx6_gfx7_gfx10_Renamed_gfx13<bits<7> op, string gfx13_name> :
-  SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op, gfx13_name>;
-
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<7> op, string gfx12_gfx13_name> :
 #else /* LLPC_BUILD_NPI */
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<bits<7> op, string gfx12_name> :
@@ -3151,24 +3155,24 @@ multiclass SOPK_Real32_gfx13<bits<5> op, string name = !tolower(NAME)> {
   if !ne(ps.Mnemonic, name) then
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
+
+multiclass SOPK_Real32_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
+  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>, SOPK_Real32_gfx12<op>,
+  SOPK_Real32_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx10_gfx11<bits<5> op> :
   SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOPK_Real32_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
-  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>, SOPK_Real32_gfx12<op>,
-  SOPK_Real32_gfx13<op>;
+multiclass SOPK_Real32_gfx10_Renamed_gfx13<bits<5> op, string gfx13_name> :
+  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op, gfx13_name>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx10_gfx11_gfx12<bits<5> op> :
   SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11_gfx12<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOPK_Real32_gfx10_Renamed_gfx13<bits<5> op, string gfx13_name> :
-  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op, gfx13_name>;
-
 defm S_VERSION              : SOPK_Real32_gfx10_gfx11_gfx12_gfx13<0x001>;
 defm S_CALL_B64             : SOPK_Real32_gfx10_Renamed_gfx13<0x016, "s_call_i64">;
 #else /* LLPC_BUILD_NPI */
@@ -3215,29 +3219,29 @@ multiclass SOPK_Real64_gfx6_gfx7_gfx10<bits<5> op> :
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11<bits<5> op> :
 #ifdef LLPC_BUILD_NPI
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>;
-
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx13<bits<5> op> :
-  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
-  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
-  SOPK_Real32_gfx12<op>, SOPK_Real32_gfx13<op>;
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx13<bits<5> op> :
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<bits<5> op> :
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11_gfx12<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<5> op, string gfx12_gfx13_name> :
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<bits<5> op, string gfx12_name> :
 #endif /* LLPC_BUILD_NPI */
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
 #ifdef LLPC_BUILD_NPI
+  SOPK_Real32_gfx12<op>, SOPK_Real32_gfx13<op>;
+
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<5> op, string gfx12_gfx13_name> :
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
   SOPK_Real32_gfx12<op, gfx12_gfx13_name>, SOPK_Real32_gfx13<op, gfx12_gfx13_name>;
 
 multiclass SOPK_Real64_gfx6_gfx7_gfx10_gfx13<bits<5> op> :

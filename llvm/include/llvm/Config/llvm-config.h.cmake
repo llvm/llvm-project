@@ -16,7 +16,7 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 535727
+#define LLVM_MAIN_REVISION 536012
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
@@ -132,5 +132,9 @@
 
 /* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
 #cmakedefine01 LLVM_ENABLE_TELEMETRY
+
+/* Define to 1 to enable expensive checks for debug location coverage checking,
+   and to 0 otherwise. */
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
 #endif

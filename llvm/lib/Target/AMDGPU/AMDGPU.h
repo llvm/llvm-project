@@ -604,6 +604,14 @@ enum TargetIndex {
 #if LLPC_BUILD_NPI
   TI_SCRATCH_RSRC_DWORD3,
   TI_NUM_VGPRS,
+  TI_NUM_VGPRS_RANK0,
+  TI_NUM_VGPRS_RANK1,
+  TI_NUM_VGPRS_RANK2,
+  TI_NUM_VGPRS_RANK3,
+  TI_NUM_VGPRS_RANK4,
+  TI_NUM_VGPRS_RANK5,
+  TI_NUM_VGPRS_RANK6,
+  TI_NUM_VGPRS_RANK7,
 #else /* LLPC_BUILD_NPI */
   TI_SCRATCH_RSRC_DWORD3
 #endif /* LLPC_BUILD_NPI */
@@ -611,23 +619,14 @@ enum TargetIndex {
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
 #if LLPC_BUILD_NPI
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= AMDGPUAS::MAX_AMDGPU_ADDRESS,
-                "Addr space out of range");
-#else /* LLPC_BUILD_NPI */
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 9, "Addr space out of range");
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return true;
 
-#if LLPC_BUILD_NPI
-  // This array is indexed by address space value enum elements 0 ... to 11
-#else /* LLPC_BUILD_NPI */
-  // This array is indexed by address space value enum elements 0 ... to 9
-#endif /* LLPC_BUILD_NPI */
   // clang-format off
+  static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
 #if LLPC_BUILD_NPI
-  static const bool ASAliasRules[12][12] = {
     /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr LaneShared Distributed*/
     /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true,  true,  true},
     /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true,  false, false},
@@ -642,7 +641,6 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
     /* Lane Shared */         {true,  false, false, false, false, false, false, false, false, false, true,  false},
     /* Distributed */         {true,  false, false, true,  false, false, false, false, false, false, false, true},
 #else /* LLPC_BUILD_NPI */
-  static const bool ASAliasRules[10][10] = {
     /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
     /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
     /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true},
@@ -657,6 +655,7 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
 #endif /* LLPC_BUILD_NPI */
   };
   // clang-format on
+  static_assert(std::size(ASAliasRules) == AMDGPUAS::MAX_AMDGPU_ADDRESS + 1);
 
   return ASAliasRules[AS1][AS2];
 }

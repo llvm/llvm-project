@@ -291,6 +291,12 @@ foreach vt = Reg32Types.types in {
   >;
 }
 
+#ifdef LLPC_BUILD_NPI
+let HasOpSel = 1, EmitDstSel = 0, HasOMod = 0 in {
+def VOP_F32_BF16_OP_SEL : VOPProfile <[f32, bf16, untyped, untyped]>;
+}
+
+#endif /* LLPC_BUILD_NPI */
 let isReMaterializable = 1 in {
 let SchedRW = [WriteDoubleCvt] in {
 // OMod clears exceptions when set in this instruction
@@ -344,8 +350,17 @@ let OtherPredicates = [UseRealTrue16Insts] in
 let OtherPredicates = [UseFakeTrue16Insts] in
   defm V_CVT_F32_F16_fake16 : VOP1Inst <"v_cvt_f32_f16_fake16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = HasGFX950Insts, OtherPredicates = [HasBF16ConversionInsts] in {
+  defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
+}
+let SubtargetPredicate = isGFX1250Plus, OtherPredicates = [HasBF16ConversionInsts] in {
+  defm V_CVT_F32_BF16_OP_SEL : VOP1Inst_t16 <"v_cvt_f32_bf16_op_sel", VOP_F32_BF16_OP_SEL>;
+}
+#else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasBF16ConversionInsts in
 defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
+#endif /* LLPC_BUILD_NPI */
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
@@ -1394,7 +1409,7 @@ defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1250_gfx13<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250_gfx13<0x049>;
 defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1250_gfx13<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL_gfx1250_gfx13<0x04b>;
-defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_t16_gfx1250_gfx13<0x072>;
+defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_with_name_gfx1250_gfx13<0x072, "V_CVT_F32_BF16_OP_SEL", "v_cvt_f32_bf16">;
 defm V_SAT_PK4_I4_I8_fake16  : VOP1_Real_FULL_t16_gfx1250_gfx13<0x073>;
 defm V_SAT_PK4_U4_U8_fake16  : VOP1_Real_FULL_t16_gfx1250_gfx13<0x074>;
 defm V_CVT_PK_F16_FP8_fake16 : VOP1_Real_NO_DPP_OP_SEL_gfx1250_gfx13<0x075>;
@@ -1642,21 +1657,21 @@ multiclass VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1_Real_FULL<GFX13Gen, op>;
 
 multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx12_gfx13<bits<9> op> :
+  VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_NO_DPP<GFX11Gen, op>,
+  VOP1_Real_NO_DPP<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
+
+multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12<bits<9> op> :
 #else /* LLPC_BUILD_NPI */
 multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx12<bits<9> op> :
 #endif /* LLPC_BUILD_NPI */
   VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_NO_DPP<GFX11Gen, op>,
 #ifdef LLPC_BUILD_NPI
-  VOP1_Real_NO_DPP<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
+  VOP1_Real_with_DPP16<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
 #else /* LLPC_BUILD_NPI */
   VOP1_Real_NO_DPP<GFX12Gen, op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12<bits<9> op> :
-  VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_NO_DPP<GFX11Gen, op>,
-  VOP1_Real_with_DPP16<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
-
 multiclass VOP1Only_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1Only_Real_gfx6_gfx7<op>, VOP1Only_Real_gfx10_gfx11_gfx12_gfx13<op>;
 #else /* LLPC_BUILD_NPI */

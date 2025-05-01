@@ -69,7 +69,6 @@ struct ol_queue_impl_t {
 struct ol_event_impl_t {
   ol_event_impl_t(void *EventInfo, ol_queue_handle_t Queue)
       : EventInfo(EventInfo), Queue(Queue) {}
-  ~ol_event_impl_t() { (void)Queue->Device->Device->destroyEvent(EventInfo); }
   void *EventInfo;
   ol_queue_handle_t Queue;
 };
@@ -142,6 +141,9 @@ void initPlugins() {
 
   // Preemptively initialize all devices in the plugin
   for (auto &Platform : Platforms()) {
+    // Do not use the host plugin - it isn't supported.
+    if (Platform.BackendType == OL_PLATFORM_BACKEND_UNKNOWN)
+      continue;
     auto Err = Platform.Plugin->init();
     [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
@@ -378,6 +380,10 @@ ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event) {
 }
 
 ol_impl_result_t olDestroyEvent_impl(ol_event_handle_t Event) {
+  auto Res = Event->Queue->Device->Device->destroyEvent(Event->EventInfo);
+  if (Res)
+    return {OL_ERRC_INVALID_EVENT, "The event could not be destroyed"};
+
   return olDestroy(Event);
 }
 
