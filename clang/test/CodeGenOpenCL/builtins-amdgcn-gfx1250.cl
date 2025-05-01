@@ -1680,3 +1680,41 @@ void test_cvt_sr_fp8_f32_e5m3(global int* out, int old, float a, int b)
 {
   *out = __builtin_amdgcn_cvt_sr_fp8_f32_e5m3(a, b, old, 3);
 }
+
+// CHECK-LABEL: @test_cvt_f32_fp8_e5m3(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 [[TMP0]], i32 0)
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP1]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[CONV]], ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 [[TMP3]], i32 1)
+// CHECK-NEXT:    [[CONV1:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[CONV1]], ptr addrspace(1) [[TMP5]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 [[TMP6]], i32 2)
+// CHECK-NEXT:    [[CONV2:%.*]] = fptosi float [[TMP7]] to i32
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[CONV2]], ptr addrspace(1) [[TMP8]], align 4
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 [[TMP9]], i32 3)
+// CHECK-NEXT:    [[CONV3:%.*]] = fptosi float [[TMP10]] to i32
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[CONV3]], ptr addrspace(1) [[TMP11]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_f32_fp8_e5m3(global int* out, int a)
+{
+  *out = __builtin_amdgcn_cvt_f32_fp8_e5m3(a, 0);
+  *out = __builtin_amdgcn_cvt_f32_fp8_e5m3(a, 1);
+  *out = __builtin_amdgcn_cvt_f32_fp8_e5m3(a, 2);
+  *out = __builtin_amdgcn_cvt_f32_fp8_e5m3(a, 3);
+}
