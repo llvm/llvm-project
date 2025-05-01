@@ -1045,6 +1045,24 @@ def err_ptrauth_extra_discriminator_invalid : Error<
   "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
   "'0' and '%1'">;
 
+// __ptrauth qualifier options string
+def note_ptrauth_evaluating_options
+    : Note<"options parameter evaluated to '%0'">;
+def err_ptrauth_invalid_option : Error<"'%0' options parameter %1">;
+def err_ptrauth_unknown_authentication_option
+    : Error<"unknown '%0' authentication option '%1'">;
+def err_ptrauth_repeated_authentication_option
+    : Error<"repeated '%0' authentication %select{mode|option}1%select{, prior "
+            "mode was '%3'| '%2'}1">;
+def note_ptrauth_previous_authentication_option
+    : Note<"previous '%0' authentication %select{mode|option}1">;
+def err_ptrauth_unexpected_option_end
+    : Error<"unexpected end of options parameter for %0">;
+def err_ptrauth_option_unexpected_token
+    : Error<"unexpected character '%0' in '%1' options">;
+def err_ptrauth_option_missing_comma
+    : Error<"missing comma after '%1' option in '%0' qualifier">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -1734,7 +1752,6 @@ def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
 def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
-
 
 def subst_user_defined_msg : TextSubstitution<
   "%select{the message|the expression}0 in "
