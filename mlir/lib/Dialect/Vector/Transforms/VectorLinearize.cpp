@@ -134,9 +134,6 @@ struct LinearizeVectorExtractStridedSlice final
     VectorType dstType =
         getTypeConverter()->convertType<VectorType>(extractOp.getType());
     assert(dstType && "vector type destination expected.");
-    if (extractOp.getVector().getType().isScalable() || dstType.isScalable())
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "scalable vectors are not supported.");
 
     ArrayAttr offsets = extractOp.getOffsets();
     ArrayAttr sizes = extractOp.getSizes();
@@ -447,18 +444,21 @@ struct LinearizeVectorSplat final
 
 } // namespace
 
-/// Return true if the operation `op` does not support scalable vectors and
-/// has at least 1 scalable vector result. These ops should all eventually
-/// support scalable vectors, and this function should be removed.
+/// Some operations currently cannot be linearized if they have scalable vector
+/// results. This function returns true if `op` is such an operation.
 static bool isNotLinearizableBecauseScalable(Operation *op) {
 
   bool unsupported =
       isa<vector::ExtractStridedSliceOp, vector::ExtractOp, vector::InsertOp>(
           op);
+
+  // Case where linearization is possible even when there are scalable vector
+  // results.
   if (!unsupported)
     return false;
 
-  // Check if any of the results is a scalable vector type.
+  // Check if any of the results is a scalable vector type, and if there are
+  // return true (not linearizable).
   auto types = op->getResultTypes();
   bool containsScalableResult =
       std::any_of(types.begin(), types.end(), [](Type type) {
@@ -469,10 +469,17 @@ static bool isNotLinearizableBecauseScalable(Operation *op) {
   return containsScalableResult;
 }
 
+/// This method defines a set of operations that are not linearizable,
+/// and hence considered legal for the conversion target. These ops are
+/// currently
+///
+/// 1) Ops that are not in the vector dialect, are not ConstantLike, and are not
+///    Vectorizable.
+///
+/// 2) Certain ops with scalable vector results, for which support has not yet
+///    been added.
 static bool isNotLinearizable(Operation *op) {
 
-  // Only ops that are in the vector dialect, are ConstantLike, or
-  // are Vectorizable might be linearized currently.
   StringLiteral vectorDialect = vector::VectorDialect::getDialectNamespace();
   StringRef opDialect = op->getDialect()->getNamespace();
   bool unsupported = (opDialect != vectorDialect) &&

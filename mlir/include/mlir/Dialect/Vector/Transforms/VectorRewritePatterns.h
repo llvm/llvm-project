@@ -407,8 +407,13 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
 /// Initialize `typeConverter` and `conversionTarget` for vector linearization.
-/// This registers (1) which operations are legal and hence should not be
-/// linearized, (2) what converted types are (rank-1 vectors) and how to
+///
+/// Definition: here 'linearization' means converting a single operation with
+/// 1+ vector operands and results of rank>1, into a single operation whose
+/// vector operands are all of rank<=1.
+///
+/// This function registers (1) which operations are legal, and hence should not
+/// be linearized, (2) what the converted types are (rank-1 vectors) and how to
 /// materialze the conversion (with shape_cast)
 ///
 /// Note: the set of legal operations can be extended by a user if for example

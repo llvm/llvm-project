@@ -99,7 +99,7 @@ public:
     // PR47938 tracks this issue, but it seems hard to fix. Instead, we need
     // to clone the op.
     //
-    // 2. We need to resue the original region instead of cloning it, otherwise
+    // 2. We need to reuse the original region instead of cloning it, otherwise
     // the dialect conversion framework thinks that we just inserted all the
     // cloned child ops. But what we want is to "take" the child regions and let
     // the dialect conversion framework continue recursively into ops inside
