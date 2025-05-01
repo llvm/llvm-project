@@ -973,8 +973,7 @@ struct TestVectorLinearize final
     return "Linearizes ND vectors for N >= 2 into 1D vectors";
   }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<vector::VectorDialect, memref::MemRefDialect,
-                    arith::ArithDialect>();
+    registry.insert<vector::VectorDialect, arith::ArithDialect>();
   }
 
   void runOnOperation() override {
