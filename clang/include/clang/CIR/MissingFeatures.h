@@ -163,6 +163,8 @@ struct MissingFeatures {
   static bool setDSOLocal() { return false; }
   static bool foldCaseStmt() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
+  static bool peepholeProtection() { return false; }
+  static bool instrumenation() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -188,8 +190,9 @@ struct MissingFeatures {
   static bool ptrStrideOp() { return false; }
   static bool selectOp() { return false; }
   static bool switchOp() { return false; }
-  static bool ternaryOp() { return false; }
+  static bool throwOp() { return false; }
   static bool tryOp() { return false; }
+  static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
 
   // Future CIR attributes
