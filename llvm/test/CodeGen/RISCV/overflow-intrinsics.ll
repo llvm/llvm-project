@@ -551,7 +551,7 @@ define i1 @uaddo_i8_increment_noncanonical_1(i8 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i8_increment_noncanonical_1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a2, a0, 1
-; RV32-NEXT:    andi a0, a2, 255
+; RV32-NEXT:    zext.b a0, a2
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    sb a2, 0(a1)
 ; RV32-NEXT:    ret
@@ -559,7 +559,7 @@ define i1 @uaddo_i8_increment_noncanonical_1(i8 %x, ptr %p) {
 ; RV64-LABEL: uaddo_i8_increment_noncanonical_1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a2, a0, 1
-; RV64-NEXT:    andi a0, a2, 255
+; RV64-NEXT:    zext.b a0, a2
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    sb a2, 0(a1)
 ; RV64-NEXT:    ret
@@ -851,7 +851,7 @@ define i1 @usubo_ugt_i32(i32 %x, i32 %y, ptr %p) {
 define i1 @usubo_ugt_constant_op0_i8(i8 %x, ptr %p) {
 ; RV32-LABEL: usubo_ugt_constant_op0_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a2, a0, 255
+; RV32-NEXT:    zext.b a2, a0
 ; RV32-NEXT:    li a3, 42
 ; RV32-NEXT:    sub a3, a3, a0
 ; RV32-NEXT:    sltiu a0, a2, 43
@@ -861,7 +861,7 @@ define i1 @usubo_ugt_constant_op0_i8(i8 %x, ptr %p) {
 ;
 ; RV64-LABEL: usubo_ugt_constant_op0_i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a2, a0, 255
+; RV64-NEXT:    zext.b a2, a0
 ; RV64-NEXT:    li a3, 42
 ; RV64-NEXT:    subw a3, a3, a0
 ; RV64-NEXT:    sltiu a0, a2, 43
@@ -933,7 +933,7 @@ define i1 @usubo_ult_constant_op1_i16(i16 %x, ptr %p) {
 define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) {
 ; RV32-LABEL: usubo_ugt_constant_op1_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a2, a0, 255
+; RV32-NEXT:    zext.b a2, a0
 ; RV32-NEXT:    sltiu a2, a2, 45
 ; RV32-NEXT:    addi a0, a0, -45
 ; RV32-NEXT:    sb a0, 0(a1)
@@ -942,7 +942,7 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) {
 ;
 ; RV64-LABEL: usubo_ugt_constant_op1_i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a2, a0, 255
+; RV64-NEXT:    zext.b a2, a0
 ; RV64-NEXT:    sltiu a2, a2, 45
 ; RV64-NEXT:    addi a0, a0, -45
 ; RV64-NEXT:    sb a0, 0(a1)

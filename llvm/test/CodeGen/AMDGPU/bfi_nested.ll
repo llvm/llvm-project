@@ -297,7 +297,7 @@ define amdgpu_kernel void @v_bfi_dont_applied_for_scalar_ops(ptr addrspace(1) %o
 ; GCN-NEXT:    s_endpgm
   %shift = lshr i32 %b, 16
   %tr = trunc i32 %shift to i16
-  %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %tr, i32 1
   %val = bitcast <2 x i16> %vec to i32
   store i32 %val, ptr addrspace(1) %out, align 4

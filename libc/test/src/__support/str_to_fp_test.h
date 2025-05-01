@@ -31,7 +31,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
     ASSERT_TRUE(result.has_value());
 
     actual_output_mantissa = result->mantissa;
-    actual_output_exp2 = result->exponent;
+    actual_output_exp2 = static_cast<uint32_t>(result->exponent);
 
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
@@ -55,7 +55,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
     ASSERT_TRUE(result.has_value());
 
     actual_output_mantissa = result->mantissa;
-    actual_output_exp2 = result->exponent;
+    actual_output_exp2 = static_cast<uint32_t>(result->exponent);
 
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
@@ -72,7 +72,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
     auto result = internal::simple_decimal_conversion<T>(numStart);
 
     actual_output_mantissa = result.num.mantissa;
-    actual_output_exp2 = result.num.exponent;
+    actual_output_exp2 = static_cast<uint32_t>(result.num.exponent);
 
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);

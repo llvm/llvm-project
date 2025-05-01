@@ -362,6 +362,26 @@ inline static unsigned getNZCVToSatisfyCondCode(CondCode Code) {
   }
 }
 
+/// True, if a given condition code can be used in a fused compare-and-branch
+/// instructions, false otherwise.
+inline static bool isValidCBCond(AArch64CC::CondCode Code) {
+  switch (Code) {
+  default:
+    return false;
+  case AArch64CC::EQ:
+  case AArch64CC::NE:
+  case AArch64CC::HS:
+  case AArch64CC::LO:
+  case AArch64CC::HI:
+  case AArch64CC::LS:
+  case AArch64CC::GE:
+  case AArch64CC::LT:
+  case AArch64CC::GT:
+  case AArch64CC::LE:
+    return true;
+  }
+}
+
 } // end namespace AArch64CC
 
 struct SysAlias {

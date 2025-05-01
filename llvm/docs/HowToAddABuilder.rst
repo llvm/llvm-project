@@ -223,7 +223,7 @@ In order to use this "local testing" mode:
          bbenv/lib/python3.13/site-packages/buildbot_worker/runprocess.py
 
 * Initialise the necessary buildmaster files, link to the configuration in a
-  local checkout out of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_`, and
+  local checkout out of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_, and
   ask ``buildbot`` to check the configuration. This step can be run from any
   directory.
 

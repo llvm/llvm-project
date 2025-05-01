@@ -14,8 +14,8 @@ void f2(int a, int b, ...)
 {
     __builtin_va_list ap;
 
-    __builtin_va_start(ap, 10); // expected-warning {{second argument to 'va_start' is not the last named parameter}}
-    __builtin_va_start(ap, a); // expected-warning {{second argument to 'va_start' is not the last named parameter}}
+    __builtin_va_start(ap, 10); // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
+    __builtin_va_start(ap, a); // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
     __builtin_va_start(ap, b);
 }
 

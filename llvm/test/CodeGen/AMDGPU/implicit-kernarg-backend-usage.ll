@@ -7,7 +7,7 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 | FileCheck --check-prefixes=GFX9V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 | FileCheck --check-prefixes=GFX9V5 %s
 
-define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) {
+define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) #0 {
 ; GFX8V4-LABEL: addrspacecast:
 ; GFX8V4:       ; %bb.0:
 ; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -109,7 +109,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
   ret void
 }
 
-define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
+define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) #0 {
 ; GFX8V4-LABEL: llvm_amdgcn_is_shared:
 ; GFX8V4:       ; %bb.0:
 ; GFX8V4-NEXT:    s_load_dword s0, s[6:7], 0x40
@@ -159,11 +159,11 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ; GFX9V5-NEXT:    s_endpgm
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
-define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
+define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) #0 {
 ; GFX8V4-LABEL: llvm_amdgcn_is_private:
 ; GFX8V4:       ; %bb.0:
 ; GFX8V4-NEXT:    s_load_dword s0, s[6:7], 0x44
@@ -213,7 +213,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ; GFX9V5-NEXT:    s_endpgm
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -260,7 +260,30 @@ define amdgpu_kernel void @llvm_debugtrap() {
   unreachable
 }
 
-define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  {
+define amdgpu_kernel void @llvm_ubsantrap() {
+; GFX8V4-LABEL: llvm_ubsantrap:
+; GFX8V4:       ; %bb.0:
+; GFX8V4-NEXT:    s_mov_b64 s[0:1], s[6:7]
+; GFX8V4-NEXT:    s_trap 2
+;
+; GFX8V5-LABEL: llvm_ubsantrap:
+; GFX8V5:       ; %bb.0:
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0xc8
+; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8V5-NEXT:    s_trap 2
+;
+; GFX9V4-LABEL: llvm_ubsantrap:
+; GFX9V4:       ; %bb.0:
+; GFX9V4-NEXT:    s_trap 2
+;
+; GFX9V5-LABEL: llvm_ubsantrap:
+; GFX9V5:       ; %bb.0:
+; GFX9V5-NEXT:    s_trap 2
+  call void @llvm.ubsantrap(i8 0)
+  unreachable
+}
+
+define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX8V4-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX8V4:       ; %bb.0:
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s6
@@ -366,3 +389,5 @@ declare void @llvm.debugtrap()
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}
+
+attributes #0 = { "amdgpu-no-flat-scratch-init" }

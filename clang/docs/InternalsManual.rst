@@ -416,6 +416,17 @@ Description:
   and the modifier indexes in the substitution are re-numbered accordingly. The
   substituted text must itself be a valid format string before substitution.
 
+**"quoted" format**
+
+Example:
+  ``"expression %quoted0 evaluates to 0"``
+Class:
+  ``String``
+Description:
+  This is a simple formatter which adds quotes around the given string.
+  This is useful when the argument could be a string in some cases, but
+  another class in other cases, and it needs to be quoted consistently.
+
 .. _internals-producing-diag:
 
 Producing the Diagnostic

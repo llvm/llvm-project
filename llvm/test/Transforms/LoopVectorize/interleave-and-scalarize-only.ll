@@ -5,6 +5,7 @@
 
 ; DBG-LABEL: 'test_scalarize_call'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; DBG-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; DBG-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -21,7 +22,7 @@
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
-; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
+; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>, vp<[[VF]]>
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
 ; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
 ; DBG-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
@@ -35,11 +36,10 @@ define void @test_scalarize_call(i32 %start, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %start, [[INDEX]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[INDUCTION]], i32 65535)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[OFFSET_IDX]], i32 65535)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[INDUCTION1]], i32 65535)
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDUCTION]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDUCTION1]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 8
@@ -142,10 +142,9 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i1 [[OFFSET_IDX]], true
 ; CHECK-NEXT:    br i1 [[INDUCTION]], label %pred.store.if, label %pred.store.continue
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
@@ -193,6 +192,7 @@ exit:
 
 ; DBG-LABEL: 'first_order_recurrence_using_induction'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; DBG-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; DBG-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -202,15 +202,15 @@ exit:
 ; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
-; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
+; DBG-NEXT:   EMIT vp<[[CAST:%.+]]> = trunc ir<1> to i32
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     SCALAR-CAST vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
-; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, vp<[[CAST]]>
+; DBG-NEXT:     EMIT vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
+; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, vp<[[CAST]]>, vp<[[VF]]
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
 ; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -220,7 +220,7 @@ exit:
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
-; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
+; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -343,9 +343,8 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-LABEL: define void @pr76986_trunc_sext_interleaving_only(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
@@ -355,7 +354,7 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
 ; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], %arg
 ; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], %arg
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr [[TMP13]], align 2
