@@ -31,13 +31,22 @@ vi2 vec_c;
 
 // OGCG: @[[VEC_C:.*]] = global <2 x i32> zeroinitializer
 
-vd2 d;
+vd2 vec_d;
 
 // CIR: cir.global external @[[VEC_D:.*]] = #cir.zero : !cir.vector<2 x !cir.double>
 
 // LLVM: @[[VEC_D:.*]] = dso_local global <2 x double> zeroinitialize
 
 // OGCG: @[[VEC_D:.*]] = global <2 x double> zeroinitializer
+
+vi4 vec_e = { 1, 2, 3, 4 };
+
+// CIR: cir.global external @[[VEC_E:.*]] = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
+// CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+
+// LLVM: @[[VEC_E:.*]] = dso_local global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+
+// OGCG: @[[VEC_E:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
 void foo() {
   vi4 a;

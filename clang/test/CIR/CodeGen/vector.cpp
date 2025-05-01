@@ -30,6 +30,15 @@ vll2 c;
 
 // OGCG: @[[VEC_C:.*]] = global <2 x i64> zeroinitializer
 
+vi4 d = { 1, 2, 3, 4 };
+
+// CIR: cir.global external @[[VEC_D:.*]] = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
+// CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+
+// LLVM: @[[VEC_D:.*]] = dso_local global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+
+// OGCG: @[[VEC_D:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+
 void vec_int_test() {
   vi4 a;
   vd2 b;
