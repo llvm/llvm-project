@@ -1364,7 +1364,7 @@ void Instruction::swapProfMetadata() {
 void Instruction::copyMetadata(const Instruction &SrcInst,
                                ArrayRef<unsigned> WL) {
   if (WL.empty() || is_contained(WL, LLVMContext::MD_dbg))
-    setDebugLoc(getDebugLoc().orElse(SrcInst.getDebugLoc()));
+    setDebugLoc(SrcInst.getDebugLoc().orElse(getDebugLoc()));
 
   if (!SrcInst.hasMetadata())
     return;
