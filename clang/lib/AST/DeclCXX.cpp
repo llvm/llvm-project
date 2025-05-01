@@ -1754,6 +1754,7 @@ CXXMethodDecl *CXXRecordDecl::getLambdaCallOperator() const {
 
 CXXMethodDecl* CXXRecordDecl::getLambdaStaticInvoker() const {
   CXXMethodDecl *CallOp = getLambdaCallOperator();
+  assert(CallOp && "null call operator");
   CallingConv CC = CallOp->getType()->castAs<FunctionType>()->getCallConv();
   return getLambdaStaticInvoker(CC);
 }
