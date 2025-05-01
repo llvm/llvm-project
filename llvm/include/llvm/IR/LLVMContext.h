@@ -337,11 +337,11 @@ public:
 
   /// Key Instructions: update the highest number atom group emitted for any
   /// function.
-  void updateAtomGroupWaterline(uint64_t G);
+  void updateDILocationAtomGroupWaterline(uint64_t G);
 
   /// Key Instructions: get the next free atom group number and increment
   /// the global tracker.
-  uint64_t incNextAtomGroup();
+  uint64_t incNextDILocationAtomGroup();
 
 private:
   // Module needs access to the add/removeModule methods.
