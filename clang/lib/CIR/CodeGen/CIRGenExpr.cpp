@@ -948,6 +948,41 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   emitLValue(e);
 }
 
+Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
+  assert(e->getType()->isArrayType() &&
+         "Array to pointer decay must have array source type!");
+
+  // Expressions of array type can't be bitfields or vector elements.
+  LValue lv = emitLValue(e);
+  Address addr = lv.getAddress();
+
+  // If the array type was an incomplete type, we need to make sure
+  // the decay ends up being the right type.
+  auto lvalueAddrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+
+  if (e->getType()->isVariableArrayType())
+    return addr;
+
+  auto pointeeTy = mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
+
+  mlir::Type arrayTy = convertType(e->getType());
+  assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
+  assert(pointeeTy == arrayTy);
+
+  // The result of this decay conversion points to an array element within the
+  // base lvalue. However, since TBAA currently does not support representing
+  // accesses to elements of member arrays, we conservatively represent accesses
+  // to the pointee object as if it had no any base lvalue specified.
+  // TODO: Support TBAA for member arrays.
+  QualType eltType = e->getType()->castAsArrayTypeUnsafe()->getElementType();
+  assert(!cir::MissingFeatures::opTBAA());
+
+  mlir::Value ptr = builder.maybeBuildArrayDecay(
+      cgm.getLoc(e->getSourceRange()), addr.getPointer(),
+      convertTypeForMem(eltType));
+  return Address(ptr, addr.getAlignment());
+}
+
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
 /// appropriated regions.
 mlir::LogicalResult CIRGenFunction::emitIfOnBoolExpr(const Expr *cond,
