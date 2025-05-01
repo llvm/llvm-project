@@ -5196,8 +5196,19 @@ convertVectorLoad(SDNode *N, SelectionDAG &DAG, bool BuildVector,
   return {{NewLD, LoadChain}};
 }
 
+static MachineMemOperand *
+getMachineMemOperandForType(const SelectionDAG &DAG,
+                            const MachineMemOperand *MMO,
+                            const MachinePointerInfo &PointerInfo, MVT VT) {
+  return DAG.getMachineFunction().getMachineMemOperand(MMO, PointerInfo,
+                                                       LLT(VT));
+}
+
 static SDValue PerformLoadCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI) {
+  if (DCI.DAG.getOptLevel() == CodeGenOptLevel::None)
+    return {};
+
   auto *MemN = cast<MemSDNode>(N);
   // only operate on vectors of f32s / i64s
   if (EVT MemVT = MemN->getMemoryVT();
@@ -5278,9 +5289,13 @@ static SDValue PerformLoadCombine(SDNode *N,
   // Do we have to tweak the opcode for an NVPTXISD::Load* or do we have to
   // rewrite an ISD::LOAD?
   std::optional<NVPTXISD::NodeType> NewOpcode;
+
+  // LoadV's are handled slightly different in ISelDAGToDAG.
+  bool IsLoadV = false;
   switch (N->getOpcode()) {
   case NVPTXISD::LoadV2:
     NewOpcode = NVPTXISD::LoadV4;
+    IsLoadV = true;
     break;
   case NVPTXISD::LoadParam:
     NewOpcode = NVPTXISD::LoadParamV2;
@@ -5321,9 +5336,22 @@ static SDValue PerformLoadCombine(SDNode *N,
       }
     }
 
+    MVT LoadVT = MVT::f32;
+    MachineMemOperand *MMO = MemN->getMemOperand();
+
+    if (IsLoadV) {
+      // Some loads must have an operand type that matches the number of results
+      // and the type of each result. Because we changed a vNi64 to v(N*2)f32 we
+      // have to update it here. Note that LoadParam is not handled the same way
+      // in NVPXISelDAGToDAG so we only do this for LoadV*.
+      LoadVT = MVT::getVectorVT(MVT::f32, NumElts);
+      MMO = getMachineMemOperandForType(DCI.DAG, MMO, MemN->getPointerInfo(),
+                                        LoadVT);
+    }
+
     NewLoad = DCI.DAG.getMemIntrinsicNode(
         *NewOpcode, SDLoc(N), DCI.DAG.getVTList(VTs),
-        SmallVector<SDValue>(N->ops()), MVT::f32, MemN->getMemOperand());
+        SmallVector<SDValue>(N->ops()), LoadVT, MMO);
     NewChain = NewLoad.getValue(*NewChainIdx);
     if (NewGlueIdx)
       NewGlue = NewLoad.getValue(*NewGlueIdx);
@@ -5422,6 +5450,9 @@ static SDValue PerformStoreCombineHelper(SDNode *N,
     // as the previous value will become unused and eliminated later.
     return N->getOperand(0);
 
+  if (DCI.DAG.getOptLevel() == CodeGenOptLevel::None)
+    return {};
+
   auto *MemN = cast<MemSDNode>(N);
   if (MemN->getMemoryVT() == MVT::v2f32) {
     // try to fold, and expand:
@@ -5453,6 +5484,7 @@ static SDValue PerformStoreCombineHelper(SDNode *N,
     if (NewOpcode) {
       // copy chain, offset from existing store
       SmallVector<SDValue> NewOps = {N->getOperand(0), N->getOperand(1)};
+      unsigned NumElts = 0;
       // gather all operands to expand
       for (unsigned I = 2, E = N->getNumOperands(); I < E; ++I) {
         SDValue CurrentOp = N->getOperand(I);
@@ -5460,6 +5492,7 @@ static SDValue PerformStoreCombineHelper(SDNode *N,
           assert(CurrentOp.getValueType() == MVT::v2f32);
           NewOps.push_back(CurrentOp.getOperand(0));
           NewOps.push_back(CurrentOp.getOperand(1));
+          NumElts += 2;
         } else {
           NewOps.clear();
           break;
