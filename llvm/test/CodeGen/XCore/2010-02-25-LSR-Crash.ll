@@ -7,9 +7,9 @@ target triple = "xcore-xmos-elf"
 %struct.object = type { ptr, ptr, ptr, %union.anon, %0, ptr }
 %union.anon = type { ptr }
 
-define ptr @search_object(ptr %ob, ptr %pc) {
+define ptr @search_object(ptr %ob, ptr %pc, i1 %arg) {
 entry:
-  br i1 undef, label %bb3.i15.i.i, label %bb2
+  br i1 %arg, label %bb3.i15.i.i, label %bb2
 
 bb3.i15.i.i:                                      ; preds = %bb3.i15.i.i, %entry
   %indvar.i.i.i = phi i32 [ %indvar.next.i.i.i, %bb3.i15.i.i ], [ 0, %entry ] ; <i32> [#uses=2]

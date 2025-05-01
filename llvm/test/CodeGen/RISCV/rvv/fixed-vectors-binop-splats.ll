@@ -187,7 +187,7 @@ define <2 x i8> @v2i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -203,7 +203,7 @@ define <4 x i8> @v4i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -219,7 +219,7 @@ define <8 x i8> @v8i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -235,7 +235,7 @@ define <16 x i8> @v16i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -252,7 +252,7 @@ define <32 x i8> @v32i8(i8 %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v10, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v10, 0
 ; CHECK-NEXT:    ret
@@ -269,7 +269,7 @@ define <64 x i8> @v64i8(i8 %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v12, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v12, 0
 ; CHECK-NEXT:    ret
@@ -300,7 +300,7 @@ define <2 x i16> @v2i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -316,7 +316,7 @@ define <4 x i16> @v4i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -332,7 +332,7 @@ define <8 x i16> @v8i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -348,7 +348,7 @@ define <16 x i16> @v16i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v10, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v10, 0
 ; CHECK-NEXT:    ret
@@ -365,7 +365,7 @@ define <32 x i16> @v32i16(i16 %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v12, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v12, 0
 ; CHECK-NEXT:    ret
@@ -396,7 +396,7 @@ define <2 x i32> @v2i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -412,7 +412,7 @@ define <4 x i32> @v4i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v9, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -428,7 +428,7 @@ define <8 x i32> @v8i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v10, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v10, 0
 ; CHECK-NEXT:    ret
@@ -444,7 +444,7 @@ define <16 x i32> @v16i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vadd.vx v12, v8, a1
 ; CHECK-NEXT:    vrgather.vi v8, v12, 0
 ; CHECK-NEXT:    ret
@@ -509,7 +509,7 @@ define <2 x i64> @v2i64(i64 %x, i64 %y) {
 ; RV64-LABEL: v2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    vadd.vx v9, v8, a1
 ; RV64-NEXT:    vrgather.vi v8, v9, 0
 ; RV64-NEXT:    ret
@@ -542,7 +542,7 @@ define <4 x i64> @v4i64(i64 %x, i64 %y) {
 ; RV64-LABEL: v4i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    vadd.vx v10, v8, a1
 ; RV64-NEXT:    vrgather.vi v8, v10, 0
 ; RV64-NEXT:    ret
@@ -575,7 +575,7 @@ define <8 x i64> @v8i64(i64 %x, i64 %y) {
 ; RV64-LABEL: v8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    vadd.vx v12, v8, a1
 ; RV64-NEXT:    vrgather.vi v8, v12, 0
 ; RV64-NEXT:    ret
@@ -591,7 +591,7 @@ define <4 x half> @v4f16(half %x, half %y) {
 ; CHECK-LABEL: v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    vfadd.vf v9, v8, fa1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret
@@ -607,7 +607,7 @@ define <2 x float> @v2f32(float %x, float %y) {
 ; CHECK-LABEL: v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    vfadd.vf v9, v8, fa1
 ; CHECK-NEXT:    vrgather.vi v8, v9, 0
 ; CHECK-NEXT:    ret

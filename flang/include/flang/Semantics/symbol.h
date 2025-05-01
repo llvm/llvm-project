@@ -48,7 +48,7 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
-  using OmpAtomicOrderType = common::OmpAtomicDefaultMemOrderType;
+  using OmpAtomicOrderType = common::OmpMemoryOrderType;
 
 public:
   ENUM_CLASS(RequiresFlag, ReverseOffload, UnifiedAddress, UnifiedSharedMemory,
@@ -329,9 +329,11 @@ public:
   }
   bool IsAssumedSize() const { return rank_.value_or(0) == isAssumedSize; }
   bool IsAssumedRank() const { return rank_.value_or(0) == isAssumedRank; }
+  bool isTypeGuard() const { return isTypeGuard_; }
   void set_rank(int rank);
   void set_IsAssumedSize();
   void set_IsAssumedRank();
+  void set_isTypeGuard(bool yes = true);
 
 private:
   MaybeExpr expr_;
@@ -340,6 +342,7 @@ private:
   static constexpr int isAssumedSize{-1}; // RANK(*)
   static constexpr int isAssumedRank{-2}; // RANK DEFAULT
   std::optional<int> rank_;
+  bool isTypeGuard_{false}; // TYPE IS or CLASS IS, but not CLASS(DEFAULT)
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 

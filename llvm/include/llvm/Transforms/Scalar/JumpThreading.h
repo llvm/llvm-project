@@ -94,6 +94,10 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #endif
 
+  // JumpThreading must not processes blocks unreachable from entry. It's a
+  // waste of compute time and can potentially lead to hangs.
+  SmallPtrSet<BasicBlock *, 16> Unreachable;
+
   unsigned BBDupThreshold;
   unsigned DefaultBBDupThreshold;
 
@@ -204,6 +208,11 @@ private:
   ///   if 'HasProfile' is true creates new instance through
   ///   FunctionAnalysisManager, otherwise nullptr.
   BlockFrequencyInfo *getOrCreateBFI(bool Force = false);
+
+  // Internal overload of evaluateOnPredecessorEdge().
+  Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,
+                                      Value *cond, const DataLayout &DL,
+                                      SmallPtrSet<Value *, 8> &Visited);
 };
 
 } // end namespace llvm

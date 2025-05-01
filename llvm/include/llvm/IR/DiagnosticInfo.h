@@ -30,6 +30,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -612,82 +613,47 @@ protected:
 /// common base class.  This allows returning the result of the insertion
 /// directly by value, e.g. return OptimizationRemarkAnalysis(...) << "blah".
 template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               StringRef>
+decltype(auto)
+operator<<(RemarkT &&R,
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            StringRef>
                S) {
   R.insert(S);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
-/// Also allow r-value for the remark to allow insertion into a
-/// temporarily-constructed remark.
 template <class RemarkT>
-RemarkT &
+decltype(auto)
 operator<<(RemarkT &&R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               StringRef>
-               S) {
-  R.insert(S);
-  return R;
-}
-
-template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::Argument>
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::Argument>
                A) {
   R.insert(A);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
 template <class RemarkT>
-RemarkT &
+decltype(auto)
 operator<<(RemarkT &&R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::Argument>
-               A) {
-  R.insert(A);
-  return R;
-}
-
-template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::setIsVerbose>
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::setIsVerbose>
                V) {
   R.insert(V);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
 template <class RemarkT>
-RemarkT &
+decltype(auto)
 operator<<(RemarkT &&R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::setIsVerbose>
-               V) {
-  R.insert(V);
-  return R;
-}
-
-template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::setExtraArgs>
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::setExtraArgs>
                EA) {
   R.insert(EA);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
 /// Common features for diagnostics dealing with optimization remarks
@@ -727,7 +693,7 @@ public:
             Orig.RemarkName, Orig.getFunction(), Orig.getLocation()),
         CodeRegion(Orig.getCodeRegion()) {
     *this << Prepend;
-    std::copy(Orig.Args.begin(), Orig.Args.end(), std::back_inserter(Args));
+    llvm::append_range(Args, Orig.Args);
   }
 
   /// Legacy interface.
@@ -1124,7 +1090,7 @@ public:
 /// Diagnostic information for MisExpect analysis.
 class DiagnosticInfoMisExpect : public DiagnosticInfoWithLocationBase {
 public:
-  DiagnosticInfoMisExpect(const Instruction *Inst, Twine &Msg);
+  DiagnosticInfoMisExpect(const Instruction *Inst, const Twine &Msg);
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;

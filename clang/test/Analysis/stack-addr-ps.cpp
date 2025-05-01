@@ -118,7 +118,7 @@ struct TS {
 };
 
 int* f5() {
-  int& i = i; // expected-warning {{Assigned value is garbage or undefined}} expected-warning{{reference 'i' is not yet bound to a value when used within its own initialization}}
+  int& i = i; // expected-warning {{Assigned value is uninitialized}} expected-warning{{reference 'i' is not yet bound to a value when used within its own initialization}}
   return &i;
 }
 
@@ -981,6 +981,51 @@ int& ret_local_field_ref() {
   return a.x; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}} expected-warning {{reference to stack memory associated with local variable 'a' returned}}
 }
 } //namespace return_address_of_true_positives
+
+namespace return_from_child_block_scope {
+struct S {
+  int *p;
+};
+
+S return_child_stack_context() {
+  S s;
+  {
+    int a = 1;
+    s = (S){ &a };
+  }
+  return s; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+S return_child_stack_context_field() {
+  S s;
+  {
+    int a = 1;
+    s.p = &a;
+  }
+  return s; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+// The below are reproducers from Issue #123459
+template <typename V>
+struct T {
+    V* q{};
+    T() = default;
+    T(T&& rhs) { q = rhs.q; rhs.q = nullptr;}
+    T& operator=(T&& rhs) { q = rhs.q; rhs.q = nullptr;}
+    void push_back(const V& v) { if (q == nullptr) q = new V(v); }
+    ~T() { delete q; }
+};
+
+T<S> f() {
+    T<S> t;
+    {
+        int a = 1;
+        t.push_back({ &a });
+    }
+    return t; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+} // namespace return_from_child_block_scope
 
 namespace true_negatives_return_expressions {
 struct Container { int *x; };

@@ -23,7 +23,7 @@
 #include <vector>
 
 namespace mlir {
-#define GEN_PASS_DEF_OUTLINESHAPECOMPUTATION
+#define GEN_PASS_DEF_OUTLINESHAPECOMPUTATIONPASS
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -163,7 +163,8 @@ void constructShapeFunc(
 }
 
 struct OutlineShapeComputationPass
-    : public impl::OutlineShapeComputationBase<OutlineShapeComputationPass> {
+    : public impl::OutlineShapeComputationPassBase<
+          OutlineShapeComputationPass> {
 
   void runOnOperation() override;
 
@@ -324,8 +325,3 @@ bool OutlineShapeComputationPass::calOnlyUsedByWithShapesRecursively(
 }
 
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createOutlineShapeComputationPass() {
-  return std::make_unique<OutlineShapeComputationPass>();
-}

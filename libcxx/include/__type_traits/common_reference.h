@@ -121,7 +121,7 @@ struct common_reference<> {};
 // bullet 2 - sizeof...(T) == 1
 template <class _Tp>
 struct common_reference<_Tp> {
-  using type = _Tp;
+  using type _LIBCPP_NODEBUG = _Tp;
 };
 
 // bullet 3 - sizeof...(T) == 2
@@ -140,7 +140,7 @@ struct common_reference<_Tp, _Up> : __common_reference_sub_bullet1<_Tp, _Up> {};
 template <class _Tp, class _Up>
   requires is_reference_v<_Tp> && is_reference_v<_Up> && requires { typename __common_ref_t<_Tp, _Up>; }
 struct __common_reference_sub_bullet1<_Tp, _Up> {
-  using type = __common_ref_t<_Tp, _Up>;
+  using type _LIBCPP_NODEBUG = __common_ref_t<_Tp, _Up>;
 };
 
 // sub-bullet 2 - Otherwise, if basic_common_reference<remove_cvref_t<T1>, remove_cvref_t<T2>, XREF(T1), XREF(T2)>::type
@@ -158,7 +158,7 @@ using __basic_common_reference_t _LIBCPP_NODEBUG =
 template <class _Tp, class _Up>
   requires requires { typename __basic_common_reference_t<_Tp, _Up>; }
 struct __common_reference_sub_bullet2<_Tp, _Up> {
-  using type = __basic_common_reference_t<_Tp, _Up>;
+  using type _LIBCPP_NODEBUG = __basic_common_reference_t<_Tp, _Up>;
 };
 
 // sub-bullet 3 - Otherwise, if COND-RES(T1, T2) is well-formed,
@@ -166,7 +166,7 @@ struct __common_reference_sub_bullet2<_Tp, _Up> {
 template <class _Tp, class _Up>
   requires requires { typename __cond_res<_Tp, _Up>; }
 struct __common_reference_sub_bullet3<_Tp, _Up> {
-  using type = __cond_res<_Tp, _Up>;
+  using type _LIBCPP_NODEBUG = __cond_res<_Tp, _Up>;
 };
 
 // sub-bullet 4 & 5 - Otherwise, if common_type_t<T1, T2> is well-formed,

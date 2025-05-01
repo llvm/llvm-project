@@ -22,10 +22,7 @@ void foo() {
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
 // CHECK-NOT: BindingDecl
 // CHECK-LABEL: BindingDecl {{.*}} binding_rest
-// CHECK-NEXT: ResolvedUnexpandedPackExpr
-// CHECK-NEXT: DeclRefExpr {{.*}} lvalue Binding {{.*}} 'binding_rest'
-// CHECK-NEXT: DeclRefExpr {{.*}} lvalue Binding {{.*}} 'binding_rest'
-// CHECK-NOT: BindingDecl
+// CHECK-NEXT: FunctionParmPackExpr
 // CHECK-LABEL: BindingDecl {{.*}} binding_4
 // CHECK-NEXT: ArraySubscriptExpr
 // CHECK-NEXT: ImplicitCastExpr {{.*}}
@@ -47,9 +44,7 @@ void bar() {
 // CHECK-LABEL: FunctionTemplateDecl {{.*}} bar
 // CHECK-NOT: BindingDecl
 // CHECK-LABEL: BindingDecl {{.*}} empty_binding_pack
-// CHECK-NEXT: ResolvedUnexpandedPackExpr
-// CHECK-NOT: DeclRefExpr {{.*}} 'empty_binding_pack'
-// CHECK-NOT: BindingDecl
+// CHECK-NEXT: FunctionParmPackExpr
 // CHECK: DeclStmt
 
 struct int_pair { int x; int y; };
@@ -67,8 +62,6 @@ void(*f)() = baz<int_pair>;
 // CHECK: BindingDecl {{.*}} binding_2
 // CHECK-NOT: BindingDecl
 // CHECK-LABEL: BindingDecl {{.*}} empty_binding_pack
-// CHECK-NEXT: ResolvedUnexpandedPackExpr
-// CHECK-NOT: DeclRefExpr {{.*}} 'empty_binding_pack'
-// CHECK-NOT: BindingDecl
+// CHECK-NEXT: FunctionParmPackExpr
 // CHECK: DeclStmt
 #endif

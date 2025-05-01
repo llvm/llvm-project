@@ -501,7 +501,7 @@ define amdgpu_kernel void @test_class_0_f64(ptr addrspace(1) %out, double %a) #0
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define amdgpu_kernel void @test_class_undef_f32(ptr addrspace(1) %out, float %a, i32 %b) #0 {
-  %result = call i1 @llvm.amdgcn.class.f32(float undef, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float poison, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, ptr addrspace(1) %out, align 4
   ret void
@@ -538,7 +538,7 @@ define i1 @test_fold_and_unord(float %a) {
 ; SI: s_and_b64
 define i1 @test_fold_and_ord_multi_use(float %a) {
   %class = call i1 @llvm.amdgcn.class.f32(float %a, i32 35) #1
-  store volatile i1 %class, ptr addrspace(1) undef
+  store volatile i1 %class, ptr addrspace(1) poison
   %ord = fcmp ord float %a, %a
   %and = and i1 %ord, %class
   ret i1 %and

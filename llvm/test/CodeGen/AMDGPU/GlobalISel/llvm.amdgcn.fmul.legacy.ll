@@ -82,7 +82,7 @@ define float @v_mul_legacy_undef0_f32(float %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_dx9_zero_f32_e32 v0, s0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %result = call float @llvm.amdgcn.fmul.legacy(float undef, float %a)
+  %result = call float @llvm.amdgcn.fmul.legacy(float poison, float %a)
   ret float %result
 }
 
@@ -122,7 +122,7 @@ define float @v_mul_legacy_undef1_f32(float %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_dx9_zero_f32_e32 v0, s0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %result = call float @llvm.amdgcn.fmul.legacy(float %a, float undef)
+  %result = call float @llvm.amdgcn.fmul.legacy(float %a, float poison)
   ret float %result
 }
 
@@ -162,7 +162,7 @@ define float @v_mul_legacy_undef_f32() {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_dx9_zero_f32_e64 v0, s0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %result = call float @llvm.amdgcn.fmul.legacy(float undef, float undef)
+  %result = call float @llvm.amdgcn.fmul.legacy(float poison, float poison)
   ret float %result
 }
 

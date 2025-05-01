@@ -90,7 +90,7 @@ cl::opt<MISched::Direction> PreRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional pre reg-alloc list scheduling")));
 
-cl::opt<MISched::Direction> PostRADirection(
+static cl::opt<MISched::Direction> PostRADirection(
     "misched-postra-direction", cl::Hidden,
     cl::desc("Post reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
@@ -102,9 +102,9 @@ cl::opt<MISched::Direction> PostRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional post reg-alloc list scheduling")));
 
-cl::opt<bool>
-DumpCriticalPathLength("misched-dcpl", cl::Hidden,
-                       cl::desc("Print critical path length to stdout"));
+static cl::opt<bool>
+    DumpCriticalPathLength("misched-dcpl", cl::Hidden,
+                           cl::desc("Print critical path length to stdout"));
 
 cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
@@ -214,69 +214,119 @@ MachineSchedContext::~MachineSchedContext() {
   delete RegClassInfo;
 }
 
-namespace {
+namespace llvm {
+namespace impl_detail {
 
-/// Base class for a machine scheduler class that can run at any point.
-class MachineSchedulerBase : public MachineSchedContext,
-                             public MachineFunctionPass {
-public:
-  MachineSchedulerBase(char &ID) : MachineFunctionPass(ID) {}
-
+/// Base class for the machine scheduler classes.
+class MachineSchedulerBase : public MachineSchedContext {
 protected:
   void scheduleRegions(ScheduleDAGInstrs &Scheduler, bool FixKillFlags);
 };
 
-/// MachineScheduler runs after coalescing and before register allocation.
-class MachineScheduler : public MachineSchedulerBase {
+/// Impl class for MachineScheduler.
+class MachineSchedulerImpl : public MachineSchedulerBase {
+  // These are only for using MF.verify()
+  // remove when verify supports passing in all analyses
+  MachineFunctionPass *P = nullptr;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
+
 public:
-  MachineScheduler();
+  struct RequiredAnalyses {
+    MachineLoopInfo &MLI;
+    MachineDominatorTree &MDT;
+    AAResults &AA;
+    LiveIntervals &LIS;
+  };
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  MachineSchedulerImpl() {}
+  // Migration only
+  void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
+  void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
 
-  bool runOnMachineFunction(MachineFunction&) override;
-
-  static char ID; // Class identification, replacement for typeinfo
+  bool run(MachineFunction &MF, const TargetMachine &TM,
+           const RequiredAnalyses &Analyses);
 
 protected:
   ScheduleDAGInstrs *createMachineScheduler();
 };
 
-/// PostMachineScheduler runs after shortly before code emission.
-class PostMachineScheduler : public MachineSchedulerBase {
+/// Impl class for PostMachineScheduler.
+class PostMachineSchedulerImpl : public MachineSchedulerBase {
+  // These are only for using MF.verify()
+  // remove when verify supports passing in all analyses
+  MachineFunctionPass *P = nullptr;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
+
 public:
-  PostMachineScheduler();
+  struct RequiredAnalyses {
+    MachineLoopInfo &MLI;
+    AAResults &AA;
+  };
+  PostMachineSchedulerImpl() {}
+  // Migration only
+  void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
+  void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  bool runOnMachineFunction(MachineFunction&) override;
-
-  static char ID; // Class identification, replacement for typeinfo
+  bool run(MachineFunction &Func, const TargetMachine &TM,
+           const RequiredAnalyses &Analyses);
 
 protected:
   ScheduleDAGInstrs *createPostMachineScheduler();
 };
 
+} // namespace impl_detail
+} // namespace llvm
+
+using impl_detail::MachineSchedulerBase;
+using impl_detail::MachineSchedulerImpl;
+using impl_detail::PostMachineSchedulerImpl;
+
+namespace {
+/// MachineScheduler runs after coalescing and before register allocation.
+class MachineSchedulerLegacy : public MachineFunctionPass {
+  MachineSchedulerImpl Impl;
+
+public:
+  MachineSchedulerLegacy();
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction&) override;
+
+  static char ID; // Class identification, replacement for typeinfo
+};
+
+/// PostMachineScheduler runs after shortly before code emission.
+class PostMachineSchedulerLegacy : public MachineFunctionPass {
+  PostMachineSchedulerImpl Impl;
+
+public:
+  PostMachineSchedulerLegacy();
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &) override;
+
+  static char ID; // Class identification, replacement for typeinfo
+};
+
 } // end anonymous namespace
 
-char MachineScheduler::ID = 0;
+char MachineSchedulerLegacy::ID = 0;
 
-char &llvm::MachineSchedulerID = MachineScheduler::ID;
+char &llvm::MachineSchedulerID = MachineSchedulerLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(MachineScheduler, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachineSchedulerLegacy, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(MachineScheduler, DEBUG_TYPE,
+INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineScheduler::MachineScheduler() : MachineSchedulerBase(ID) {
-  initializeMachineSchedulerPass(*PassRegistry::getPassRegistry());
+MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
+  initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
 }
 
-void MachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -289,23 +339,24 @@ void MachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-char PostMachineScheduler::ID = 0;
+char PostMachineSchedulerLegacy::ID = 0;
 
-char &llvm::PostMachineSchedulerID = PostMachineScheduler::ID;
+char &llvm::PostMachineSchedulerID = PostMachineSchedulerLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(PostMachineScheduler, "postmisched",
+INITIALIZE_PASS_BEGIN(PostMachineSchedulerLegacy, "postmisched",
                       "PostRA Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(PostMachineScheduler, "postmisched",
+INITIALIZE_PASS_END(PostMachineSchedulerLegacy, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
 
-PostMachineScheduler::PostMachineScheduler() : MachineSchedulerBase(ID) {
-  initializePostMachineSchedulerPass(*PassRegistry::getPassRegistry());
+PostMachineSchedulerLegacy::PostMachineSchedulerLegacy()
+    : MachineFunctionPass(ID) {
+  initializePostMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
 }
 
-void PostMachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
+void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -385,17 +436,14 @@ nextIfDebug(MachineBasicBlock::iterator I,
 }
 
 /// Instantiate a ScheduleDAGInstrs that will be owned by the caller.
-ScheduleDAGInstrs *MachineScheduler::createMachineScheduler() {
+ScheduleDAGInstrs *MachineSchedulerImpl::createMachineScheduler() {
   // Select the scheduler, or set the default.
   MachineSchedRegistry::ScheduleDAGCtor Ctor = MachineSchedOpt;
   if (Ctor != useDefaultMachineSched)
     return Ctor(this);
 
-  const TargetMachine &TM =
-      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-
   // Get the default scheduler set by the target for this function.
-  ScheduleDAGInstrs *Scheduler = TM.createMachineScheduler(this);
+  ScheduleDAGInstrs *Scheduler = TM->createMachineScheduler(this);
   if (Scheduler)
     return Scheduler;
 
@@ -403,19 +451,83 @@ ScheduleDAGInstrs *MachineScheduler::createMachineScheduler() {
   return createGenericSchedLive(this);
 }
 
+bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
+                               const RequiredAnalyses &Analyses) {
+  MF = &Func;
+  MLI = &Analyses.MLI;
+  MDT = &Analyses.MDT;
+  this->TM = &TM;
+  AA = &Analyses.AA;
+  LIS = &Analyses.LIS;
+
+  if (VerifyScheduling) {
+    LLVM_DEBUG(LIS->dump());
+    const char *MSchedBanner = "Before machine scheduling.";
+    if (P)
+      MF->verify(P, MSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, MSchedBanner, &errs());
+  }
+  RegClassInfo->runOnMachineFunction(*MF);
+
+  // Instantiate the selected scheduler for this target, function, and
+  // optimization level.
+  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
+  scheduleRegions(*Scheduler, false);
+
+  LLVM_DEBUG(LIS->dump());
+  if (VerifyScheduling) {
+    const char *MSchedBanner = "After machine scheduling.";
+    if (P)
+      MF->verify(P, MSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, MSchedBanner, &errs());
+  }
+  return true;
+}
+
 /// Instantiate a ScheduleDAGInstrs for PostRA scheduling that will be owned by
 /// the caller. We don't have a command line option to override the postRA
 /// scheduler. The Target must configure it.
-ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
-  const TargetMachine &TM =
-      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+ScheduleDAGInstrs *PostMachineSchedulerImpl::createPostMachineScheduler() {
   // Get the postRA scheduler set by the target for this function.
-  ScheduleDAGInstrs *Scheduler = TM.createPostMachineScheduler(this);
+  ScheduleDAGInstrs *Scheduler = TM->createPostMachineScheduler(this);
   if (Scheduler)
     return Scheduler;
 
   // Default to GenericScheduler.
   return createGenericSchedPostRA(this);
+}
+
+bool PostMachineSchedulerImpl::run(MachineFunction &Func,
+                                   const TargetMachine &TM,
+                                   const RequiredAnalyses &Analyses) {
+  MF = &Func;
+  MLI = &Analyses.MLI;
+  this->TM = &TM;
+  AA = &Analyses.AA;
+
+  if (VerifyScheduling) {
+    const char *PostMSchedBanner = "Before post machine scheduling.";
+    if (P)
+      MF->verify(P, PostMSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, PostMSchedBanner, &errs());
+  }
+
+  // Instantiate the selected scheduler for this target, function, and
+  // optimization level.
+  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
+  scheduleRegions(*Scheduler, true);
+
+  if (VerifyScheduling) {
+    const char *PostMSchedBanner = "After post machine scheduling.";
+    if (P)
+      MF->verify(P, PostMSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, PostMSchedBanner, &errs());
+  }
+  return true;
 }
 
 /// Top-level MachineScheduler pass driver.
@@ -434,72 +546,111 @@ ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
 /// ScheduleDAGInstrs whenever adding or removing instructions. A much simpler
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
-bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
+bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
     return false;
 
   if (EnableMachineSched.getNumOccurrences()) {
     if (!EnableMachineSched)
       return false;
-  } else if (!mf.getSubtarget().enableMachineScheduler())
+  } else if (!MF.getSubtarget().enableMachineScheduler()) {
     return false;
-
-  LLVM_DEBUG(dbgs() << "Before MISched:\n"; mf.print(dbgs()));
-
-  // Initialize the context of the pass.
-  MF = &mf;
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-
-  if (VerifyScheduling) {
-    LLVM_DEBUG(LIS->dump());
-    MF->verify(this, "Before machine scheduling.", &errs());
   }
-  RegClassInfo->runOnMachineFunction(*MF);
 
-  // Instantiate the selected scheduler for this target, function, and
-  // optimization level.
-  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
-  scheduleRegions(*Scheduler, false);
+  LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
 
-  LLVM_DEBUG(LIS->dump());
-  if (VerifyScheduling)
-    MF->verify(this, "After machine scheduling.", &errs());
-  return true;
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  Impl.setLegacyPass(this);
+  return Impl.run(MF, TM, {MLI, MDT, AA, LIS});
 }
 
-bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
+MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
+    : Impl(std::make_unique<MachineSchedulerImpl>()), TM(TM) {}
+MachineSchedulerPass::~MachineSchedulerPass() = default;
+MachineSchedulerPass::MachineSchedulerPass(MachineSchedulerPass &&Other) =
+    default;
+
+PostMachineSchedulerPass::PostMachineSchedulerPass(const TargetMachine *TM)
+    : Impl(std::make_unique<PostMachineSchedulerImpl>()), TM(TM) {}
+PostMachineSchedulerPass::PostMachineSchedulerPass(
+    PostMachineSchedulerPass &&Other) = default;
+PostMachineSchedulerPass::~PostMachineSchedulerPass() = default;
+
+PreservedAnalyses
+MachineSchedulerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  if (EnableMachineSched.getNumOccurrences()) {
+    if (!EnableMachineSched)
+      return PreservedAnalyses::all();
+  } else if (!MF.getSubtarget().enableMachineScheduler()) {
+    return PreservedAnalyses::all();
+  }
+
+  LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &AA = FAM.getResult<AAManager>(MF.getFunction());
+  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  Impl->setMFAM(&MFAM);
+  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS});
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveIntervalsAnalysis>();
+}
+
+bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
     return false;
 
   if (EnablePostRAMachineSched.getNumOccurrences()) {
     if (!EnablePostRAMachineSched)
       return false;
-  } else if (!mf.getSubtarget().enablePostRAMachineScheduler()) {
+  } else if (!MF.getSubtarget().enablePostRAMachineScheduler()) {
     LLVM_DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
     return false;
   }
-  LLVM_DEBUG(dbgs() << "Before post-MI-sched:\n"; mf.print(dbgs()));
+  LLVM_DEBUG(dbgs() << "Before post-MI-sched:\n"; MF.print(dbgs()));
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  Impl.setLegacyPass(this);
+  return Impl.run(MF, TM, {MLI, AA});
+}
 
-  // Initialize the context of the pass.
-  MF = &mf;
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+PreservedAnalyses
+PostMachineSchedulerPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  if (EnablePostRAMachineSched.getNumOccurrences()) {
+    if (!EnablePostRAMachineSched)
+      return PreservedAnalyses::all();
+  } else if (!MF.getSubtarget().enablePostRAMachineScheduler()) {
+    LLVM_DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
+    return PreservedAnalyses::all();
+  }
+  LLVM_DEBUG(dbgs() << "Before post-MI-sched:\n"; MF.print(dbgs()));
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &AA = FAM.getResult<AAManager>(MF.getFunction());
 
-  if (VerifyScheduling)
-    MF->verify(this, "Before post machine scheduling.", &errs());
+  Impl->setMFAM(&MFAM);
+  bool Changed = Impl->run(MF, *TM, {MLI, AA});
+  if (!Changed)
+    return PreservedAnalyses::all();
 
-  // Instantiate the selected scheduler for this target, function, and
-  // optimization level.
-  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
-  scheduleRegions(*Scheduler, true);
-
-  if (VerifyScheduling)
-    MF->verify(this, "After post machine scheduling.", &errs());
-  return true;
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 /// Return true of the given instruction should not be included in a scheduling
@@ -618,6 +769,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
 
     MBBRegionsVector MBBRegions;
     getSchedRegions(&*MBB, MBBRegions, Scheduler.doMBBSchedRegionsTopDown());
+    bool ScheduleSingleMI = Scheduler.shouldScheduleSingleMIRegions();
     for (const SchedRegion &R : MBBRegions) {
       MachineBasicBlock::iterator I = R.RegionBegin;
       MachineBasicBlock::iterator RegionEnd = R.RegionEnd;
@@ -627,8 +779,9 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       // it. Perhaps it still needs to be bundled.
       Scheduler.enterRegion(&*MBB, I, RegionEnd, NumRegionInstrs);
 
-      // Skip empty scheduling regions (0 or 1 schedulable instructions).
-      if (I == RegionEnd || I == std::prev(RegionEnd)) {
+      // Skip empty scheduling regions and, conditionally, regions with a single
+      // MI.
+      if (I == RegionEnd || (!ScheduleSingleMI && I == std::prev(RegionEnd))) {
         // Close the current region. Bundle the terminator if needed.
         // This invalidates 'RegionEnd' and 'I'.
         Scheduler.exitRegion();
@@ -1879,10 +2032,11 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     unsigned ClusterLength = 2;
     unsigned CurrentClusterBytes = MemOpa.Width.getValue().getKnownMinValue() +
                                    MemOpb.Width.getValue().getKnownMinValue();
-    if (SUnit2ClusterInfo.count(MemOpa.SU->NodeNum)) {
-      ClusterLength = SUnit2ClusterInfo[MemOpa.SU->NodeNum].first + 1;
-      CurrentClusterBytes = SUnit2ClusterInfo[MemOpa.SU->NodeNum].second +
-                            MemOpb.Width.getValue().getKnownMinValue();
+    auto It = SUnit2ClusterInfo.find(MemOpa.SU->NodeNum);
+    if (It != SUnit2ClusterInfo.end()) {
+      const auto &[Len, Bytes] = It->second;
+      ClusterLength = Len + 1;
+      CurrentClusterBytes = Bytes + MemOpb.Width.getValue().getKnownMinValue();
     }
 
     if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,
@@ -1952,7 +2106,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     bool OffsetIsScalable;
-    LocationSize Width = 0;
+    LocationSize Width = LocationSize::precise(0);
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
       if (!Width.hasValue())
@@ -2463,21 +2617,25 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
 bool SchedBoundary::checkHazard(SUnit *SU) {
   if (HazardRec->isEnabled()
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
+    LLVM_DEBUG(dbgs().indent(2)
+               << "hazard: SU(" << SU->NodeNum << ") reported by HazardRec\n");
     return true;
   }
 
   unsigned uops = SchedModel->getNumMicroOps(SU->getInstr());
   if ((CurrMOps > 0) && (CurrMOps + uops > SchedModel->getIssueWidth())) {
-    LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") uops="
-                      << SchedModel->getNumMicroOps(SU->getInstr()) << '\n');
+    LLVM_DEBUG(dbgs().indent(2) << "hazard:  SU(" << SU->NodeNum << ") uops="
+                                << uops << ", CurrMOps = " << CurrMOps << ", "
+                                << "CurrMOps + uops > issue width of "
+                                << SchedModel->getIssueWidth() << "\n");
     return true;
   }
 
   if (CurrMOps > 0 &&
       ((isTop() && SchedModel->mustBeginGroup(SU->getInstr())) ||
        (!isTop() && SchedModel->mustEndGroup(SU->getInstr())))) {
-    LLVM_DEBUG(dbgs() << "  hazard: SU(" << SU->NodeNum << ") must "
-                      << (isTop() ? "begin" : "end") << " group\n");
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: SU(" << SU->NodeNum << ") must "
+                                << (isTop() ? "begin" : "end") << " group\n");
     return true;
   }
 
@@ -2496,10 +2654,12 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         MaxObservedStall = std::max(ReleaseAtCycle, MaxObservedStall);
 #endif
-        LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") "
-                          << SchedModel->getResourceName(ResIdx)
-                          << '[' << InstanceIdx - ReservedCyclesIndex[ResIdx]  << ']'
-                          << "=" << NRCycle << "c\n");
+        LLVM_DEBUG(dbgs().indent(2)
+                   << "hazard:  SU(" << SU->NodeNum << ") "
+                   << SchedModel->getResourceName(ResIdx) << '['
+                   << InstanceIdx - ReservedCyclesIndex[ResIdx] << ']' << "="
+                   << NRCycle << "c, is later than "
+                   << "CurrCycle = " << CurrCycle << "c\n");
         return true;
       }
     }
@@ -2574,11 +2734,25 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
   // Check for interlocks first. For the purpose of other heuristics, an
   // instruction that cannot issue appears as if it's not in the ReadyQueue.
   bool IsBuffered = SchedModel->getMicroOpBufferSize() != 0;
-  bool HazardDetected = (!IsBuffered && ReadyCycle > CurrCycle) ||
-                        checkHazard(SU) || (Available.size() >= ReadyListLimit);
+  bool HazardDetected = !IsBuffered && ReadyCycle > CurrCycle;
+  if (HazardDetected)
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: SU(" << SU->NodeNum
+                                << ") ReadyCycle = " << ReadyCycle
+                                << " is later than CurrCycle = " << CurrCycle
+                                << " on an unbuffered resource" << "\n");
+  else
+    HazardDetected = checkHazard(SU);
+
+  if (!HazardDetected && Available.size() >= ReadyListLimit) {
+    HazardDetected = true;
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: Available Q is full (size: "
+                                << Available.size() << ")\n");
+  }
 
   if (!HazardDetected) {
     Available.push(SU);
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Move SU(" << SU->NodeNum << ") into Available Q\n");
 
     if (InPQueue)
       Pending.remove(Pending.begin() + Idx);
@@ -2857,6 +3031,8 @@ void SchedBoundary::releasePending() {
     SUnit *SU = *(Pending.begin() + I);
     unsigned ReadyCycle = isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
 
+    LLVM_DEBUG(dbgs() << "Checking pending node SU(" << SU->NodeNum << ")\n");
+
     if (ReadyCycle < MinReadyCycle)
       MinReadyCycle = ReadyCycle;
 
@@ -3097,6 +3273,7 @@ void GenericSchedulerBase::setPolicy(CandPolicy &Policy, bool IsPostRA,
 #ifndef NDEBUG
 const char *GenericSchedulerBase::getReasonStr(
   GenericSchedulerBase::CandReason Reason) {
+  // clang-format off
   switch (Reason) {
   case NoCand:         return "NOCAND    ";
   case Only1:          return "ONLY1     ";
@@ -3113,9 +3290,10 @@ const char *GenericSchedulerBase::getReasonStr(
   case TopPathReduce:  return "TOP-PATH  ";
   case BotHeightReduce:return "BOT-HEIGHT";
   case BotPathReduce:  return "BOT-PATH  ";
-  case NextDefUse:     return "DEF-USE   ";
   case NodeOrder:      return "ORDER     ";
+  case FirstValid:     return "FIRST     ";
   };
+  // clang-format on
   llvm_unreachable("Unknown reason!");
 }
 
@@ -3535,7 +3713,7 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
                                     SchedBoundary *Zone) const {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
-    TryCand.Reason = NodeOrder;
+    TryCand.Reason = FirstValid;
     return true;
   }
 
@@ -3813,8 +3991,7 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
   // Find already scheduled copies with a single physreg dependence and move
   // them just above the scheduled instruction.
   for (SDep &Dep : Deps) {
-    if (Dep.getKind() != SDep::Data ||
-        !Register::isPhysicalRegister(Dep.getReg()))
+    if (Dep.getKind() != SDep::Data || !Dep.getReg().isPhysical())
       continue;
     SUnit *DepSU = Dep.getSUnit();
     if (isTop ? DepSU->Succs.size() > 1 : DepSU->Preds.size() > 1)
@@ -3950,7 +4127,7 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
                                         SchedCandidate &TryCand) {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
-    TryCand.Reason = NodeOrder;
+    TryCand.Reason = FirstValid;
     return true;
   }
 

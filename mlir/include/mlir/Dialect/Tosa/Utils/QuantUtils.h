@@ -28,8 +28,28 @@ namespace tosa {
 
 /// From a scale value, computes multiplier and shift values
 /// for 16 or 32-bit scale widths.
-void computeMultiplierAndShift(double scale, int32_t &multiplier,
+bool computeMultiplierAndShift(double scale, int32_t &multiplier,
                                int32_t &shift, int32_t scaleWidth);
+
+// Return a const value for array of IntType vec
+template <typename IntType>
+Value getConstTensorInt(OpBuilder &builder, Location loc,
+                        ArrayRef<IntType> vec) {
+  static_assert(
+      std::is_same<IntType, int8_t>::value ||
+          std::is_same<IntType, int16_t>::value ||
+          std::is_same<IntType, int32_t>::value,
+      "getConstTensorInt only supports int8_t, int16_t, and int32_t types.");
+
+  int64_t count = vec.size();
+  assert(count > 0 && "Vector must not be empty");
+  auto element_type = builder.getIntegerType(sizeof(IntType) * 8);
+  mlir::RankedTensorType const_type =
+      RankedTensorType::get({count}, element_type);
+  mlir::DenseElementsAttr const_attr = DenseElementsAttr::get(const_type, vec);
+  auto const_op = builder.create<tosa::ConstOp>(loc, const_type, const_attr);
+  return const_op.getResult();
+}
 
 //// Builds ConvOpQuantizationAttr from input and weight.
 ConvOpQuantizationAttr buildConvOpQuantizationAttr(OpBuilder &builder,
