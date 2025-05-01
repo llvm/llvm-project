@@ -166,7 +166,7 @@ contains
 !CHECK: omp_orig size=8 offset=8: ObjectEntity type: TYPE(two)
 !CHECK: omp_out size=8 offset=16: ObjectEntity type: TYPE(two)
 !CHECK: omp_priv size=8 offset=24: ObjectEntity type: TYPE(two)
-!CHECK OtherConstruct scope
+!CHECK: OtherConstruct scope
 !CHECK: omp_in size=24 offset=0: ObjectEntity type: TYPE(three)
 !CHECK: omp_orig size=24 offset=24: ObjectEntity type: TYPE(three)
 !CHECK: omp_out size=24 offset=48: ObjectEntity type: TYPE(three)
@@ -184,5 +184,20 @@ contains
     res%t2 = res2
     res%t3 = res3
   end function funcBtwothree
+
+  !! This is checking a special case, where a reduction is declared inside a
+  !! pure function
+
+  pure logical function reduction()
+!CHECK: reduction size=4 offset=0: ObjectEntity funcResult type: LOGICAL(4)
+!CHECK: rr: UserReductionDetails INTEGER(4)
+!CHECK: OtherConstruct scope: size=16 alignment=4 sourceRange=0 bytes
+!CHECK: omp_in size=4 offset=0: ObjectEntity type: INTEGER(4)
+!CHECK: omp_orig size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: omp_out size=4 offset=8: ObjectEntity type: INTEGER(4)
+!CHECK: omp_priv size=4 offset=12: ObjectEntity type: INTEGER(4)
+    !$omp declare reduction (rr : integer : omp_out = omp_out + omp_in) initializer (omp_priv = 0)
+    reduction = .false.
+  end function reduction
   
 end module mm
