@@ -5243,38 +5243,65 @@ struct AccEndBlockDirective {
 };
 
 // ACC END ATOMIC
-EMPTY_CLASS(AccEndAtomic);
+struct AccEndAtomic {
+  WRAPPER_CLASS_BOILERPLATE(AccEndAtomic, Verbatim);
+  CharBlock source;
+};
 
 // ACC ATOMIC READ
+struct AccAtomicReadDirective {
+  TUPLE_CLASS_BOILERPLATE(AccAtomicReadDirective);
+  std::tuple<Verbatim, AccClauseList> t;
+  CharBlock source;
+};
+
 struct AccAtomicRead {
   TUPLE_CLASS_BOILERPLATE(AccAtomicRead);
-  std::tuple<Verbatim, AccClauseList, Statement<AssignmentStmt>,
+  std::tuple<AccAtomicReadDirective, Statement<AssignmentStmt>,
       std::optional<AccEndAtomic>>
       t;
 };
 
 // ACC ATOMIC WRITE
+struct AccAtomicWriteDirective {
+  TUPLE_CLASS_BOILERPLATE(AccAtomicWriteDirective);
+  std::tuple<Verbatim, AccClauseList> t;
+  CharBlock source;
+};
+
 struct AccAtomicWrite {
   TUPLE_CLASS_BOILERPLATE(AccAtomicWrite);
-  std::tuple<Verbatim, AccClauseList, Statement<AssignmentStmt>,
+  std::tuple<AccAtomicWriteDirective, Statement<AssignmentStmt>,
       std::optional<AccEndAtomic>>
       t;
 };
 
 // ACC ATOMIC UPDATE
+struct AccAtomicUpdateDirective {
+  TUPLE_CLASS_BOILERPLATE(AccAtomicUpdateDirective);
+  std::tuple<std::optional<Verbatim>, AccClauseList> t;
+  CharBlock source;
+};
+
 struct AccAtomicUpdate {
   TUPLE_CLASS_BOILERPLATE(AccAtomicUpdate);
-  std::tuple<std::optional<Verbatim>, AccClauseList, Statement<AssignmentStmt>,
+  std::tuple<AccAtomicUpdateDirective, Statement<AssignmentStmt>,
       std::optional<AccEndAtomic>>
       t;
 };
 
 // ACC ATOMIC CAPTURE
+struct AccAtomicCaptureDirective {
+  TUPLE_CLASS_BOILERPLATE(AccAtomicCaptureDirective);
+  std::tuple<Verbatim, AccClauseList> t;
+  CharBlock source;
+};
+
 struct AccAtomicCapture {
   TUPLE_CLASS_BOILERPLATE(AccAtomicCapture);
   WRAPPER_CLASS(Stmt1, Statement<AssignmentStmt>);
   WRAPPER_CLASS(Stmt2, Statement<AssignmentStmt>);
-  std::tuple<Verbatim, AccClauseList, Stmt1, Stmt2, AccEndAtomic> t;
+  std::tuple<AccAtomicCaptureDirective, Stmt1, Stmt2, AccEndAtomic> t;
 };
 
 struct OpenACCAtomicConstruct {
@@ -5287,6 +5314,7 @@ struct OpenACCAtomicConstruct {
 struct OpenACCBlockConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCBlockConstruct);
   std::tuple<AccBeginBlockDirective, Block, AccEndBlockDirective> t;
+  CharBlock source;
 };
 
 struct OpenACCStandaloneDeclarativeConstruct {
@@ -5324,7 +5352,11 @@ struct OpenACCDeclarativeConstruct {
 };
 
 // OpenACC directives enclosing do loop
-EMPTY_CLASS(AccEndLoop);
+struct AccEndLoop {
+  WRAPPER_CLASS_BOILERPLATE(AccEndLoop, Verbatim);
+  CharBlock source;
+};
+
 struct OpenACCLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCLoopConstruct);
   OpenACCLoopConstruct(AccBeginLoopDirective &&a)
@@ -5332,6 +5364,7 @@ struct OpenACCLoopConstruct {
   std::tuple<AccBeginLoopDirective, std::optional<DoConstruct>,
       std::optional<AccEndLoop>>
       t;
+  CharBlock source;
 };
 
 struct OpenACCEndConstruct {

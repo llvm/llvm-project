@@ -169,12 +169,12 @@ TYPE_PARSER(sourced(construct<AccLoopDirective>(
 TYPE_PARSER(construct<AccBeginLoopDirective>(
     sourced(Parser<AccLoopDirective>{}), Parser<AccClauseList>{}))
 
-TYPE_PARSER(construct<AccEndLoop>("END LOOP"_tok))
+TYPE_PARSER(
+    sourced(construct<AccEndLoop>(startAccLine >> verbatim("END LOOP"_tok))))
 
-TYPE_PARSER(construct<OpenACCLoopConstruct>(
+TYPE_PARSER(sourced(construct<OpenACCLoopConstruct>(
     sourced(Parser<AccBeginLoopDirective>{} / endAccLine),
-    maybe(Parser<DoConstruct>{}),
-    maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
+    maybe(Parser<DoConstruct>{}), maybe(Parser<AccEndLoop>{} / endAccLine))))
 
 // 2.15.1 Routine directive
 TYPE_PARSER(sourced(construct<OpenACCRoutineConstruct>(verbatim("ROUTINE"_tok),
@@ -190,27 +190,32 @@ TYPE_PARSER(construct<AccBeginCombinedDirective>(
     sourced(Parser<AccCombinedDirective>{}), Parser<AccClauseList>{}))
 
 // 2.12 Atomic constructs
-TYPE_PARSER(construct<AccEndAtomic>(startAccLine >> "END ATOMIC"_tok))
+TYPE_PARSER(sourced(
+    construct<AccEndAtomic>(startAccLine >> verbatim("END ATOMIC"_tok))))
 
-TYPE_PARSER("ATOMIC" >> construct<AccAtomicRead>(verbatim("READ"_tok),
-                            Parser<AccClauseList>{} / endAccLine,
-                            statement(assignmentStmt),
-                            maybe(Parser<AccEndAtomic>{} / endAccLine)))
+TYPE_PARSER(sourced(construct<AccAtomicReadDirective>(
+    "ATOMIC" >> verbatim("READ"_tok), Parser<AccClauseList>{})))
+TYPE_PARSER(
+    construct<AccAtomicRead>(Parser<AccAtomicReadDirective>{} / endAccLine,
+        statement(assignmentStmt), maybe(Parser<AccEndAtomic>{} / endAccLine)))
 
-TYPE_PARSER("ATOMIC" >> construct<AccAtomicWrite>(verbatim("WRITE"_tok),
-                            Parser<AccClauseList>{} / endAccLine,
-                            statement(assignmentStmt),
-                            maybe(Parser<AccEndAtomic>{} / endAccLine)))
+TYPE_PARSER(sourced(construct<AccAtomicWriteDirective>(
+    "ATOMIC" >> verbatim("WRITE"_tok), Parser<AccClauseList>{})))
+TYPE_PARSER(
+    construct<AccAtomicWrite>(Parser<AccAtomicWriteDirective>{} / endAccLine,
+        statement(assignmentStmt), maybe(Parser<AccEndAtomic>{} / endAccLine)))
 
-TYPE_PARSER("ATOMIC" >>
-    construct<AccAtomicUpdate>(maybe(verbatim("UPDATE"_tok)),
-        Parser<AccClauseList>{} / endAccLine, statement(assignmentStmt),
-        maybe(Parser<AccEndAtomic>{} / endAccLine)))
+TYPE_PARSER(sourced(construct<AccAtomicUpdateDirective>(
+    "ATOMIC" >> maybe(verbatim("UPDATE"_tok)), Parser<AccClauseList>{})))
+TYPE_PARSER(
+    construct<AccAtomicUpdate>(Parser<AccAtomicUpdateDirective>{} / endAccLine,
+        statement(assignmentStmt), maybe(Parser<AccEndAtomic>{} / endAccLine)))
 
-TYPE_PARSER("ATOMIC" >>
-    construct<AccAtomicCapture>(verbatim("CAPTURE"_tok),
-        Parser<AccClauseList>{} / endAccLine, statement(assignmentStmt),
-        statement(assignmentStmt), Parser<AccEndAtomic>{} / endAccLine))
+TYPE_PARSER(sourced(construct<AccAtomicCaptureDirective>(
+    "ATOMIC" >> verbatim("CAPTURE"_tok), Parser<AccClauseList>{})))
+TYPE_PARSER(construct<AccAtomicCapture>(
+    Parser<AccAtomicCaptureDirective>{} / endAccLine, statement(assignmentStmt),
+    statement(assignmentStmt), Parser<AccEndAtomic>{} / endAccLine))
 
 TYPE_PARSER(
     sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{})) ||
@@ -240,14 +245,14 @@ TYPE_PARSER(startAccLine >> sourced(construct<AccEndBlockDirective>("END"_tok >>
                                     construct<AccBlockDirective>(pure(
                                         llvm::acc::Directive::ACCD_data))))))
 
-TYPE_PARSER(construct<OpenACCBlockConstruct>(
+TYPE_PARSER(sourced(construct<OpenACCBlockConstruct>(
     Parser<AccBeginBlockDirective>{} / endAccLine, block,
     // NB, This allows mismatched directives, but semantics checks that they
     // match.
     recovery(withMessage("expected OpenACC end block directive"_err_en_US,
                  attempt(Parser<AccEndBlockDirective>{} / endAccLine)),
         construct<AccEndBlockDirective>(construct<AccBlockDirective>(
-            pure(llvm::acc::Directive::ACCD_data))))))
+            pure(llvm::acc::Directive::ACCD_data)))))))
 
 // Standalone constructs
 TYPE_PARSER(construct<OpenACCStandaloneConstruct>(
