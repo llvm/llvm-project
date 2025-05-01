@@ -70,17 +70,17 @@ class CFIInstrInserter : public MachineFunctionPass {
 #define INVALID_OFFSET INT_MAX
    /// contains the location where CSR register is saved.
    struct CSRSavedLocation {
-     enum Kind { INVALID, REGISTER, CFA_OFFSET };
+     enum Kind { INVALID, REGISTER, CFA_OFFSET, REG_OFFSET };
      CSRSavedLocation() {
        K = Kind::INVALID;
        Reg = 0;
-       Offset = 0;
+       Offset = StackOffset::get(0, 0);
      }
      Kind K;
      // Dwarf register number
      unsigned Reg;
-     // CFA offset
-     int64_t Offset;
+     // Offset from CFA or Reg
+     StackOffset Offset;
      bool isValid() const { return K != Kind::INVALID; }
      bool operator==(const CSRSavedLocation &RHS) const {
        if (K != RHS.K)
@@ -92,6 +92,8 @@ class CFIInstrInserter : public MachineFunctionPass {
          return Reg == RHS.Reg;
        case Kind::CFA_OFFSET:
          return Offset == RHS.Offset;
+       case Kind::REG_OFFSET:
+         return (Reg == RHS.Reg) && (Offset == RHS.Offset);
        }
        llvm_unreachable("Unknown CSRSavedLocation Kind!");
      }
@@ -104,7 +106,12 @@ class CFIInstrInserter : public MachineFunctionPass {
          OS << "In Dwarf register: " << Reg;
          break;
        case Kind::CFA_OFFSET:
-         OS << "At CFA offset: " << Offset;
+         OS << "At CFA offset: (fixed: " << Offset.getFixed()
+            << ", scalable: " << Offset.getScalable() << ")";
+         break;
+       case Kind::REG_OFFSET:
+         OS << "At offset " << Offset.getFixed() << " from Dwarf register "
+            << Reg;
          break;
        }
      }
@@ -113,9 +120,9 @@ class CFIInstrInserter : public MachineFunctionPass {
    struct MBBCFAInfo {
      MachineBasicBlock *MBB;
      /// Value of cfa offset valid at basic block entry.
-     int64_t IncomingCFAOffset = -1;
+     StackOffset IncomingCFAOffset = StackOffset::getFixed(-1);
      /// Value of cfa offset valid at basic block exit.
-     int64_t OutgoingCFAOffset = -1;
+     StackOffset OutgoingCFAOffset = StackOffset::getFixed(-1);
      /// Value of cfa register valid at basic block entry.
      unsigned IncomingCFARegister = 0;
      /// Value of cfa register valid at basic block exit.
@@ -154,7 +161,7 @@ class CFIInstrInserter : public MachineFunctionPass {
    /// Return the cfa offset value that should be set at the beginning of a MBB
    /// if needed. The negated value is needed when creating CFI instructions
    /// that set absolute offset.
-   int64_t getCorrectCFAOffset(MachineBasicBlock *MBB) {
+   StackOffset getCorrectCFAOffset(MachineBasicBlock *MBB) {
      return MBBVector[MBB->getNumber()].IncomingCFAOffset;
    }
 
@@ -191,8 +198,8 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     MBBCFAInfo &MBBInfo = MBBVector[MBB.getNumber()];
     MBBInfo.MBB = &MBB;
-    MBBInfo.IncomingCFAOffset = InitialOffset;
-    MBBInfo.OutgoingCFAOffset = InitialOffset;
+    MBBInfo.IncomingCFAOffset = StackOffset::getFixed(InitialOffset);
+    MBBInfo.OutgoingCFAOffset = StackOffset::getFixed(InitialOffset);
     MBBInfo.IncomingCFARegister = DwarfInitialRegister;
     MBBInfo.OutgoingCFARegister = DwarfInitialRegister;
     MBBInfo.IncomingCSRLocations.resize(NumRegs);
@@ -217,7 +224,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
 
 void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   // Outgoing cfa offset set by the block.
-  int64_t &OutgoingCFAOffset = MBBInfo.OutgoingCFAOffset;
+  StackOffset &OutgoingCFAOffset = MBBInfo.OutgoingCFAOffset;
   OutgoingCFAOffset = MBBInfo.IncomingCFAOffset;
   // Outgoing cfa register set by the block.
   unsigned &OutgoingCFARegister = MBBInfo.OutgoingCFARegister;
@@ -245,22 +252,28 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         break;
       }
       case MCCFIInstruction::OpDefCfaOffset: {
-        OutgoingCFAOffset = CFI.getOffset();
+        OutgoingCFAOffset = StackOffset::getFixed(CFI.getOffset());
         break;
       }
       case MCCFIInstruction::OpAdjustCfaOffset: {
-        OutgoingCFAOffset += CFI.getOffset();
+        OutgoingCFAOffset += StackOffset::getFixed(CFI.getOffset());
         break;
       }
       case MCCFIInstruction::OpDefCfa: {
         OutgoingCFARegister = CFI.getRegister();
-        OutgoingCFAOffset = CFI.getOffset();
+        OutgoingCFAOffset = StackOffset::getFixed(CFI.getOffset());
+        break;
+      }
+      case MCCFIInstruction::OpLLVMDefCfaRegScalableOffset: {
+        OutgoingCFARegister = CFI.getRegister2();
+        OutgoingCFAOffset =
+            StackOffset::get(CFI.getFixedOffset(), CFI.getScalableOffset());
         break;
       }
       case MCCFIInstruction::OpOffset: {
         CSRSavedLocation &CSRLocation = OutgoingCSRLocations[CFI.getRegister()];
         CSRLocation.K = CSRSavedLocation::Kind::CFA_OFFSET;
-        CSRLocation.Offset = CFI.getOffset();
+        CSRLocation.Offset = StackOffset::getFixed(CFI.getOffset());
         break;
       }
       case MCCFIInstruction::OpRegister: {
@@ -272,7 +285,23 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpRelOffset: {
         CSRSavedLocation &CSRLocation = OutgoingCSRLocations[CFI.getRegister()];
         CSRLocation.K = CSRSavedLocation::Kind::CFA_OFFSET;
-        CSRLocation.Offset = CFI.getOffset() - OutgoingCFAOffset;
+        CSRLocation.Offset =
+            StackOffset::getFixed(CFI.getOffset()) - OutgoingCFAOffset;
+        break;
+      }
+      case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromCfa: {
+        CSRSavedLocation &CSRLocation = OutgoingCSRLocations[CFI.getRegister()];
+        CSRLocation.K = CSRSavedLocation::Kind::CFA_OFFSET;
+        CSRLocation.Offset =
+            StackOffset::get(CFI.getFixedOffset(), CFI.getScalableOffset());
+        break;
+      }
+      case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromReg: {
+        CSRSavedLocation &CSRLocation = OutgoingCSRLocations[CFI.getRegister()];
+        CSRLocation.K = CSRSavedLocation::Kind::REG_OFFSET;
+        CSRLocation.Reg = CFI.getRegister2();
+        CSRLocation.Offset =
+            StackOffset::get(CFI.getFixedOffset(), CFI.getScalableOffset());
         break;
       }
       case MCCFIInstruction::OpRestore: {
@@ -325,10 +354,6 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpLabel:
       case MCCFIInstruction::OpValOffset:
         break;
-      case MCCFIInstruction::OpLLVMDefCfaRegScalableOffset:
-      case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromCfa:
-      case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromReg:
-        llvm_unreachable("not implemented");
       }
     }
   }
@@ -386,10 +411,19 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
         ForceFullCFA) {
       // If both outgoing offset and register of a previous block don't match
       // incoming offset and register of this block, or if this block begins a
-      // section, add a def_cfa instruction with the correct offset and
-      // register for this block.
-      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
-          nullptr, MBBInfo.IncomingCFARegister, getCorrectCFAOffset(&MBB)));
+      // section, add a def_cfa (or llvm_def_cfa_reg_scalable_offset)
+      // instruction with the correct offset and register for this block.
+      StackOffset CorrectOffset = getCorrectCFAOffset(&MBB);
+      unsigned CFIIndex = (unsigned)(-1);
+      if (CorrectOffset.getScalable() == 0) {
+        CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+            nullptr, MBBInfo.IncomingCFARegister, CorrectOffset.getFixed()));
+      } else {
+        CFIIndex =
+            MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaRegScalableOffset(
+                nullptr, MBBInfo.IncomingCFARegister,
+                CorrectOffset.getScalable(), CorrectOffset.getFixed()));
+      }
       BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
       InsertedCFIInstr = true;
@@ -397,8 +431,18 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
       // If outgoing offset of a previous block doesn't match incoming offset
       // of this block, add a def_cfa_offset instruction with the correct
       // offset for this block.
-      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(
-          nullptr, getCorrectCFAOffset(&MBB)));
+      // If offset is scalable, add cfi_llvm_def_cfa_reg_scalable_offset
+      StackOffset CorrectOffset = getCorrectCFAOffset(&MBB);
+      unsigned CFIIndex = (unsigned)(-1);
+      if (CorrectOffset.getScalable() == 0) {
+        CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(
+            nullptr, CorrectOffset.getFixed()));
+      } else {
+        CFIIndex =
+            MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaRegScalableOffset(
+                nullptr, MBBInfo.IncomingCFARegister,
+                CorrectOffset.getScalable(), CorrectOffset.getFixed()));
+      }
       BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
       InsertedCFIInstr = true;
@@ -431,12 +475,21 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
         continue;
 
       unsigned CFIIndex = (unsigned)(-1);
-      if (HasToBeCSRLoc.K == CSRSavedLocation::Kind::CFA_OFFSET &&
-          HasToBeCSRLoc.Offset != PrevOutgoingCSRLoc.Offset) {
-        CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createOffset(nullptr, i, HasToBeCSRLoc.Offset));
-      } else if (HasToBeCSRLoc.K == CSRSavedLocation::Kind::REGISTER &&
-                 (HasToBeCSRLoc.Reg != PrevOutgoingCSRLoc.Reg)) {
+      switch (HasToBeCSRLoc.K) {
+      case CSRSavedLocation::Kind::CFA_OFFSET: {
+        StackOffset CorrectOffset = HasToBeCSRLoc.Offset;
+        if (CorrectOffset.getScalable() == 0) {
+          CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+              nullptr, i, CorrectOffset.getFixed()));
+        } else {
+          CFIIndex = MF.addFrameInst(
+              MCCFIInstruction::createLLVMRegAtScalableOffsetFromCfa(
+                  nullptr, i, CorrectOffset.getScalable(),
+                  CorrectOffset.getFixed()));
+        }
+        break;
+      }
+      case CSRSavedLocation::Kind::REGISTER: {
         unsigned NewReg = HasToBeCSRLoc.Reg;
         unsigned DwarfEHReg = i;
         if (NewReg == DwarfEHReg) {
@@ -446,8 +499,20 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
           CFIIndex = MF.addFrameInst(
               MCCFIInstruction::createRegister(nullptr, i, HasToBeCSRLoc.Reg));
         }
-      } else
+        break;
+      }
+      case CSRSavedLocation::Kind::REG_OFFSET: {
+        StackOffset CorrectOffset = HasToBeCSRLoc.Offset;
+        unsigned CorrectReg = HasToBeCSRLoc.Reg;
+        CFIIndex = MF.addFrameInst(
+            MCCFIInstruction::createLLVMRegAtScalableOffsetFromReg(
+                nullptr, i, CorrectReg, CorrectOffset.getScalable(),
+                CorrectOffset.getFixed()));
+        break;
+      }
+      default:
         llvm_unreachable("Unexpected CSR location.");
+      }
       BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
       InsertedCFIInstr = true;
@@ -467,11 +532,15 @@ void CFIInstrInserter::reportCFAError(const MBBCFAInfo &Pred,
          << " outgoing CFA Reg:" << Pred.OutgoingCFARegister << "\n";
   errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
          << " in " << Pred.MBB->getParent()->getName()
-         << " outgoing CFA Offset:" << Pred.OutgoingCFAOffset << "\n";
+         << " outgoing CFA Offset: (fixed: "
+         << Pred.OutgoingCFAOffset.getFixed()
+         << ", scalable: " << Pred.OutgoingCFAOffset.getScalable() << ")\n";
   errs() << "Succ: " << Succ.MBB->getName() << " #" << Succ.MBB->getNumber()
          << " incoming CFA Reg:" << Succ.IncomingCFARegister << "\n";
   errs() << "Succ: " << Succ.MBB->getName() << " #" << Succ.MBB->getNumber()
-         << " incoming CFA Offset:" << Succ.IncomingCFAOffset << "\n";
+         << " incoming CFA Offset: (fixed: "
+         << Succ.IncomingCFAOffset.getFixed()
+         << ", scalable: " << Succ.IncomingCFAOffset.getFixed() << ")\n";
 }
 
 void CFIInstrInserter::reportCSRError(const MBBCFAInfo &Pred,
