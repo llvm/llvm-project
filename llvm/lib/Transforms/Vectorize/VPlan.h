@@ -386,10 +386,6 @@ public:
                DebugLoc DL = {})
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
-  template <typename IterT>
-  VPRecipeBase(const unsigned char SC, iterator_range<IterT> Operands,
-               DebugLoc DL = {})
-      : VPDef(SC), VPUser(Operands), DL(DL) {}
   virtual ~VPRecipeBase() = default;
 
   /// Clone the current recipe.
@@ -504,17 +500,12 @@ protected:
 /// Note that VPRecipeBase must be inherited from before VPValue.
 class VPSingleDefRecipe : public VPRecipeBase, public VPValue {
 public:
-  template <typename IterT>
-  VPSingleDefRecipe(const unsigned char SC, IterT Operands, DebugLoc DL = {})
-      : VPRecipeBase(SC, Operands, DL), VPValue(this) {}
-
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = {})
       : VPRecipeBase(SC, Operands, DL), VPValue(this) {}
 
-  template <typename IterT>
-  VPSingleDefRecipe(const unsigned char SC, IterT Operands, Value *UV,
-                    DebugLoc DL = {})
+  VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
+                    Value *UV, DebugLoc DL = {})
       : VPRecipeBase(SC, Operands, DL), VPValue(this, UV) {}
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -648,15 +639,15 @@ protected:
   }
 
 public:
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, DebugLoc DL = {})
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
+                      DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL) {
     OpType = OperationType::Other;
     AllFlags = 0;
   }
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, Instruction &I)
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
+                      Instruction &I)
       : VPSingleDefRecipe(SC, Operands, &I, I.getDebugLoc()) {
     if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
@@ -685,33 +676,28 @@ public:
     }
   }
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       CmpInst::Predicate Pred, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::Cmp),
         CmpPredicate(Pred) {}
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       WrapFlagsTy WrapFlags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL),
         OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       FastMathFlags FMFs, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::FPMathOp),
         FMFs(FMFs) {}
 
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       DisjointFlagsTy DisjointFlags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
         DisjointFlags(DisjointFlags) {}
 
 protected:
-  template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       GEPNoWrapFlags GEPFlags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::GEPOp),
         GEPFlags(GEPFlags) {}
@@ -1225,15 +1211,13 @@ class VPWidenRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   unsigned Opcode;
 
 protected:
-  template <typename IterT>
   VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
-                iterator_range<IterT> Operands)
+                ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(I),
         Opcode(I.getOpcode()) {}
 
 public:
-  template <typename IterT>
-  VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
+  VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
       : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
 
   ~VPWidenRecipe() override = default;
@@ -1466,8 +1450,7 @@ class VPHistogramRecipe : public VPRecipeBase {
   unsigned Opcode;
 
 public:
-  template <typename IterT>
-  VPHistogramRecipe(unsigned Opcode, iterator_range<IterT> Operands,
+  VPHistogramRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = {})
       : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Opcode(Opcode) {}
 
@@ -1503,8 +1486,7 @@ public:
 
 /// A recipe for widening select instructions.
 struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
-  template <typename IterT>
-  VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
+  VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I),
         VPIRMetadata(I) {}
 
@@ -1563,8 +1545,7 @@ class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   }
 
 public:
-  template <typename IterT>
-  VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
+  VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
@@ -2489,8 +2470,7 @@ class VPReplicateRecipe : public VPRecipeWithIRFlags {
   bool IsPredicated;
 
 public:
-  template <typename IterT>
-  VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
+  VPReplicateRecipe(Instruction *I, ArrayRef<VPValue *> Operands,
                     bool IsUniform, VPValue *Mask = nullptr)
       : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
         IsUniform(IsUniform), IsPredicated(Mask) {
