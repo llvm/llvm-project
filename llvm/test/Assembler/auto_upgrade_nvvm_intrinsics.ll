@@ -44,10 +44,12 @@ declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
 declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
 declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
 declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
+declare ptr addrspace(101) @llvm.nvvm.ptr.gen.to.param.p101.p0(ptr)
 declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
 declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
 declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
 declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
+declare ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101))
 
 declare i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1), i32)
 declare ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1), i32)
@@ -219,6 +221,8 @@ define void @addrspacecast(ptr %p0) {
 ; CHECK: %6 = addrspacecast ptr addrspace(4) %5 to ptr
 ; CHECK: %7 = addrspacecast ptr %6 to ptr addrspace(5)
 ; CHECK: %8 = addrspacecast ptr addrspace(5) %7 to ptr
+; CHECK: %9 = addrspacecast ptr %8 to ptr addrspace(101)
+; CHECK: %10 = addrspacecast ptr addrspace(101) %9 to ptr
 ;
   %p1 = call ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr %p0)
   %p2 = call ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1) %p1)
@@ -231,6 +235,9 @@ define void @addrspacecast(ptr %p0) {
 
   %p7 = call ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr %p6)
   %p8 = call ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5) %p7)
+
+  %p9 = call ptr addrspace(101) @llvm.nvvm.ptr.gen.to.param.p101.p0(ptr %p8)
+  %p10 = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) %p9)
 
   ret void
 }

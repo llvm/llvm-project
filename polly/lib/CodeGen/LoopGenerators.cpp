@@ -128,7 +128,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
     Annotator->pushLoop(NewLoop, Parallel);
 
   // ExitBB
-  ExitBB = SplitBlock(BeforeBB, &*Builder.GetInsertPoint(), &DT, &LI);
+  ExitBB = SplitBlock(BeforeBB, Builder.GetInsertPoint(), &DT, &LI);
   ExitBB->setName("polly.loop_exit");
 
   // BeforeBB

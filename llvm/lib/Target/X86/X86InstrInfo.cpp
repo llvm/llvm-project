@@ -53,6 +53,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 static cl::opt<bool>
     NoFusing("disable-spill-fusing",
              cl::desc("Disable fusing of spill code into instructions"),
@@ -102,22 +104,8 @@ X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (X86II::canUseApxExtendedReg(MCID))
     return RC;
 
-  switch (RC->getID()) {
-  default:
-    return RC;
-  case X86::GR8RegClassID:
-    return &X86::GR8_NOREX2RegClass;
-  case X86::GR16RegClassID:
-    return &X86::GR16_NOREX2RegClass;
-  case X86::GR32RegClassID:
-    return &X86::GR32_NOREX2RegClass;
-  case X86::GR64RegClassID:
-    return &X86::GR64_NOREX2RegClass;
-  case X86::GR32_NOSPRegClassID:
-    return &X86::GR32_NOREX2_NOSPRegClass;
-  case X86::GR64_NOSPRegClassID:
-    return &X86::GR64_NOREX2_NOSPRegClass;
-  }
+  const X86RegisterInfo *RI = Subtarget.getRegisterInfo();
+  return RI->constrainRegClassToNonRex2(RC);
 }
 
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
@@ -4875,10 +4863,6 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(1).isImm()) {
@@ -4975,18 +4959,6 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
       return true;
     }
     return false;
-  }
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri: {
-    // The CCMP instruction should not be optimized if the scc/dfv in it is not
-    // same as the one in previous CCMP instruction.
-    if ((FlagI.getOpcode() != OI.getOpcode()) ||
-        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
-        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
-      return false;
-    [[fallthrough]];
   }
   case X86::CMP64ri32:
   case X86::CMP32ri:
@@ -5480,8 +5452,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
+        // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+        // optimization for replacing non-NF with NF. This is to keep backward
+        // compatiblity with old version of linkers without APX relocation type
+        // support on Linux OS.
+        bool IsWithReloc = X86EnableAPXForRelocation
+                               ? false
+                               : isAddMemInstrWithRelocation(Inst);
+
         // Try to replace non-NF with NF instructions.
-        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI) && !IsWithReloc) {
           unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
           if (!NewOp)
             return false;

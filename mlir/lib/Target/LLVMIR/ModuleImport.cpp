@@ -519,6 +519,51 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
+                                                 llvm::MDTuple *mdTuple) {
+  auto getLLVMFunction =
+      [&](const llvm::MDOperand &funcMDO) -> llvm::Function * {
+    auto *f = cast_or_null<llvm::ValueAsMetadata>(funcMDO);
+    // nullptr is a valid value for the function pointer.
+    if (!f)
+      return nullptr;
+    auto *llvmFn = cast<llvm::Function>(f->getValue()->stripPointerCasts());
+    return llvmFn;
+  };
+
+  // Each tuple element becomes one ModuleFlagCGProfileEntryAttr.
+  SmallVector<Attribute> cgProfile;
+  for (unsigned i = 0; i < mdTuple->getNumOperands(); i++) {
+    const llvm::MDOperand &mdo = mdTuple->getOperand(i);
+    auto *cgEntry = cast<llvm::MDNode>(mdo);
+    llvm::Constant *llvmConstant =
+        cast<llvm::ConstantAsMetadata>(cgEntry->getOperand(2))->getValue();
+    uint64_t count = cast<llvm::ConstantInt>(llvmConstant)->getZExtValue();
+    auto *fromFn = getLLVMFunction(cgEntry->getOperand(0));
+    auto *toFn = getLLVMFunction(cgEntry->getOperand(1));
+    // FlatSymbolRefAttr::get(mlirModule->getContext(), llvmFn->getName());
+    cgProfile.push_back(ModuleFlagCGProfileEntryAttr::get(
+        mlirModule->getContext(),
+        fromFn ? FlatSymbolRefAttr::get(mlirModule->getContext(),
+                                        fromFn->getName())
+               : nullptr,
+        toFn ? FlatSymbolRefAttr::get(mlirModule->getContext(), toFn->getName())
+             : nullptr,
+        count));
+  }
+  return ArrayAttr::get(mlirModule->getContext(), cgProfile);
+}
+
+/// Invoke specific handlers for each known module flag value, returns nullptr
+/// if the key is unknown or unimplemented.
+static Attribute convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
+                                                   StringRef key,
+                                                   llvm::MDTuple *mdTuple) {
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName())
+    return convertCGProfileModuleFlagValue(mlirModule, mdTuple);
+  return nullptr;
+}
+
 LogicalResult ModuleImport::convertModuleFlagsMetadata() {
   SmallVector<llvm::Module::ModuleFlagEntry> llvmModuleFlags;
   llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
@@ -530,9 +575,15 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
       valAttr = builder.getI32IntegerAttr(constInt->getZExtValue());
     } else if (auto *mdString = dyn_cast<llvm::MDString>(val)) {
       valAttr = builder.getStringAttr(mdString->getString());
-    } else {
+    } else if (auto *mdTuple = dyn_cast<llvm::MDTuple>(val)) {
+      valAttr = convertModuleFlagValueFromMDTuple(mlirModule, key->getString(),
+                                                  mdTuple);
+    }
+
+    if (!valAttr) {
       emitWarning(mlirModule.getLoc())
-          << "unsupported module flag value: " << diagMD(val, llvmModule.get());
+          << "unsupported module flag value for key '" << key->getString()
+          << "' : " << diagMD(val, llvmModule.get());
       continue;
     }
 
@@ -1984,8 +2035,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     }
 
     Type type = convertType(inst->getType());
-    auto gepOp = builder.create<GEPOp>(loc, type, sourceElementType, *basePtr,
-                                       indices, gepInst->isInBounds());
+    auto gepOp = builder.create<GEPOp>(
+        loc, type, sourceElementType, *basePtr, indices,
+        static_cast<GEPNoWrapFlags>(gepInst->getNoWrapFlags().getRaw()));
     mapValue(inst, gepOp);
     return success();
   }
@@ -2095,6 +2147,8 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("instrument-function-entry"),
+    StringLiteral("instrument-function-exit"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
@@ -2249,6 +2303,16 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
       attr.isStringAttribute())
     funcOp.setApproxFuncFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
+      attr.isStringAttribute())
+    funcOp.setInstrumentFunctionEntry(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("instrument-function-exit");
+      attr.isStringAttribute())
+    funcOp.setInstrumentFunctionExit(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())

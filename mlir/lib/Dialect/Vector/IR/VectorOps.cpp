@@ -151,29 +151,32 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
-/// Returns the number of dimensions of the `shapedType` that participate in the
-/// vector transfer, effectively the rank of the vector dimensions within the
-/// `shapedType`. This is calculated by taking the rank of the `vectorType`
-/// being transferred and subtracting the rank of the `shapedType`'s element
-/// type if it's also a vector.
+///  Returns the effective rank of the vector to read/write for Xfer Ops
 ///
-/// This is used to determine the number of minor dimensions for identity maps
-/// in vector transfers.
+///  When the element type of the shaped type is _a scalar_, this will simply
+///  return the rank of the vector ( the result for xfer_read or the value to
+///  store for xfer_write).
 ///
-/// For example, given a transfer operation involving `shapedType` and
-/// `vectorType`:
+///  When the element type of the base shaped type is _a vector_, returns the
+///  difference between the original vector type and the element type of the
+///  shaped type.
 ///
+///  EXAMPLE 1 (element type is _a scalar_):
 ///   - shapedType = tensor<10x20xf32>, vectorType = vector<2x4xf32>
 ///     - shapedType.getElementType() = f32 (rank 0)
 ///     - vectorType.getRank() = 2
 ///     - Result = 2 - 0 = 2
 ///
+/// EXAMPLE 2 (element type is _a vector_):
 ///   - shapedType = tensor<10xvector<20xf32>>, vectorType = vector<20xf32>
 ///     - shapedType.getElementType() = vector<20xf32> (rank 1)
 ///     - vectorType.getRank() = 1
 ///     - Result = 1 - 1 = 0
-static unsigned getRealVectorRank(ShapedType shapedType,
-                                  VectorType vectorType) {
+///
+/// This is used to determine the number of minor dimensions for identity maps
+/// in vector transfer Ops.
+static unsigned getEffectiveVectorRankForXferOp(ShapedType shapedType,
+                                                VectorType vectorType) {
   unsigned elementVectorRank = 0;
   VectorType elementVectorType =
       llvm::dyn_cast<VectorType>(shapedType.getElementType());
@@ -192,7 +195,8 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
   return AffineMap::getMinorIdentityMap(
-      shapedType.getRank(), getRealVectorRank(shapedType, vectorType),
+      shapedType.getRank(),
+      getEffectiveVectorRankForXferOp(shapedType, vectorType),
       shapedType.getContext());
 }
 
@@ -4261,7 +4265,8 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");
@@ -4680,7 +4685,8 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
+    if (shapedType.getRank() <
+        getEffectiveVectorRankForXferOp(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");
@@ -5540,124 +5546,56 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-/// Returns true if each element of 'a' is equal to the product of a contiguous
-/// sequence of the elements of 'b'. Returns false otherwise.
-static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
-  unsigned rankA = a.size();
-  unsigned rankB = b.size();
-  assert(rankA < rankB);
+LogicalResult ShapeCastOp::verify() {
 
-  auto isOne = [](int64_t v) { return v == 1; };
+  VectorType sourceType = getSourceVectorType();
+  VectorType resultType = getResultVectorType();
 
-  // Special-case for n-D to 0-d shape cast. 'b' must be all ones to be shape
-  // casted to a 0-d vector.
-  if (rankA == 0 && llvm::all_of(b, isOne))
-    return true;
+  // Check that element type is preserved
+  if (sourceType.getElementType() != resultType.getElementType())
+    return emitOpError("has different source and result element types");
 
-  unsigned i = 0;
-  unsigned j = 0;
-  while (i < rankA && j < rankB) {
-    int64_t dimA = a[i];
-    int64_t dimB = 1;
-    while (dimB < dimA && j < rankB)
-      dimB *= b[j++];
-    if (dimA != dimB)
-      break;
-    ++i;
-
-    // Handle the case when trailing dimensions are of size 1.
-    // Include them into the contiguous sequence.
-    if (i < rankA && llvm::all_of(a.slice(i), isOne))
-      i = rankA;
-    if (j < rankB && llvm::all_of(b.slice(j), isOne))
-      j = rankB;
-  }
-
-  return i == rankA && j == rankB;
-}
-
-static LogicalResult verifyVectorShapeCast(Operation *op,
-                                           VectorType sourceVectorType,
-                                           VectorType resultVectorType) {
-  // Check that element type is the same.
-  if (sourceVectorType.getElementType() != resultVectorType.getElementType())
-    return op->emitOpError("source/result vectors must have same element type");
-  auto sourceShape = sourceVectorType.getShape();
-  auto resultShape = resultVectorType.getShape();
-
-  // Check that product of source dim sizes matches product of result dim sizes.
-  int64_t sourceDimProduct = std::accumulate(
-      sourceShape.begin(), sourceShape.end(), 1LL, std::multiplies<int64_t>{});
-  int64_t resultDimProduct = std::accumulate(
-      resultShape.begin(), resultShape.end(), 1LL, std::multiplies<int64_t>{});
-  if (sourceDimProduct != resultDimProduct)
-    return op->emitOpError("source/result number of elements must match");
-
-  // Check that expanding/contracting rank cases.
-  unsigned sourceRank = sourceVectorType.getRank();
-  unsigned resultRank = resultVectorType.getRank();
-  if (sourceRank < resultRank) {
-    if (!isValidShapeCast(sourceShape, resultShape))
-      return op->emitOpError("invalid shape cast");
-  } else if (sourceRank > resultRank) {
-    if (!isValidShapeCast(resultShape, sourceShape))
-      return op->emitOpError("invalid shape cast");
+  // Check that number of elements is preserved
+  int64_t sourceNElms = sourceType.getNumElements();
+  int64_t resultNElms = resultType.getNumElements();
+  if (sourceNElms != resultNElms) {
+    return emitOpError() << "has different number of elements at source ("
+                         << sourceNElms << ") and result (" << resultNElms
+                         << ")";
   }
 
   // Check that (non-)scalability is preserved
-  int64_t sourceNScalableDims = sourceVectorType.getNumScalableDims();
-  int64_t resultNScalableDims = resultVectorType.getNumScalableDims();
+  int64_t sourceNScalableDims = sourceType.getNumScalableDims();
+  int64_t resultNScalableDims = resultType.getNumScalableDims();
   if (sourceNScalableDims != resultNScalableDims)
-    return op->emitOpError("different number of scalable dims at source (")
-           << sourceNScalableDims << ") and result (" << resultNScalableDims
-           << ")";
-  sourceVectorType.getNumDynamicDims();
-
-  return success();
-}
-
-LogicalResult ShapeCastOp::verify() {
-  auto sourceVectorType =
-      llvm::dyn_cast_or_null<VectorType>(getSource().getType());
-  auto resultVectorType =
-      llvm::dyn_cast_or_null<VectorType>(getResult().getType());
-
-  // Check if source/result are of vector type.
-  if (sourceVectorType && resultVectorType)
-    return verifyVectorShapeCast(*this, sourceVectorType, resultVectorType);
+    return emitOpError() << "has different number of scalable dims at source ("
+                         << sourceNScalableDims << ") and result ("
+                         << resultNScalableDims << ")";
 
   return success();
 }
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
-  // No-op shape cast.
-  if (getSource().getType() == getType())
-    return getSource();
-
   VectorType resultType = getType();
 
-  // Canceling shape casts.
-  if (auto otherOp = getSource().getDefiningOp<ShapeCastOp>()) {
+  // No-op shape cast.
+  if (getSource().getType() == resultType)
+    return getSource();
 
-    // Only allows valid transitive folding (expand/collapse dimensions).
+  // Y = shape_cast(shape_cast(X)))
+  //      -> X, if X and Y have same type
+  //      -> shape_cast(X) otherwise.
+  if (auto otherOp = getSource().getDefiningOp<ShapeCastOp>()) {
     VectorType srcType = otherOp.getSource().getType();
     if (resultType == srcType)
       return otherOp.getSource();
-    if (srcType.getRank() < resultType.getRank()) {
-      if (!isValidShapeCast(srcType.getShape(), resultType.getShape()))
-        return {};
-    } else if (srcType.getRank() > resultType.getRank()) {
-      if (!isValidShapeCast(resultType.getShape(), srcType.getShape()))
-        return {};
-    } else {
-      return {};
-    }
     setOperand(otherOp.getSource());
     return getResult();
   }
 
-  // Cancelling broadcast and shape cast ops.
+  // Y = shape_cast(broadcast(X))
+  //      -> X, if X and Y have same type
   if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
     if (bcastOp.getSourceType() == resultType)
       return bcastOp.getSource();

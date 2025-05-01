@@ -134,14 +134,13 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    if (GV->isDeclaration())
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
-      return;
-    auto *Fn = cast<llvm::Function>(GV);
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
@@ -174,10 +173,10 @@ public:
       setBranchProtectionFnAttributes(BPI, (*Fn));
     }
 
-    const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
-    if (!Attr)
+    if (!FD || !FD->hasAttr<ARMInterruptAttr>())
       return;
 
+    const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
     const char *Kind;
     switch (Attr->getInterrupt()) {
     case ARMInterruptAttr::Generic: Kind = ""; break;

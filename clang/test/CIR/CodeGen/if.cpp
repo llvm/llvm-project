@@ -14,7 +14,7 @@ int if0(bool a) {
 
 }
 
-// CIR: cir.func @if0(%arg0: !cir.bool loc({{.*}})) -> !s32i
+// CIR: cir.func @_Z3if0b(%arg0: !cir.bool loc({{.*}})) -> !s32i
 // CIR: cir.scope {
 // CIR:   %4 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.if %4 {
@@ -26,7 +26,7 @@ int if0(bool a) {
 // CIR-NEXT:  }
 
 
-// LLVM: define i32 @if0(i1 %0)
+// LLVM: define i32 @_Z3if0b(i1 %0)
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %6 = load i8, ptr %2, align 1
@@ -71,7 +71,7 @@ void if1(int a) {
   }
 }
 
-// CIR: cir.func @if1(%arg0: !s32i loc({{.*}}))
+// CIR: cir.func @_Z3if1i(%arg0: !s32i loc({{.*}}))
 // CIR: cir.scope {
 // CIR:   %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CIR:   %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
@@ -84,7 +84,7 @@ void if1(int a) {
 // CIR-NEXT:   }
 // CIR: }
 
-// LLVM: define void @if1(i32 %0)
+// LLVM: define void @_Z3if1i(i32 %0)
 // LLVM: %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
 // LLVM: store i32 %0, ptr %[[A]], align 4
@@ -138,7 +138,7 @@ void if2(int a, bool b, bool c) {
   }
 }
 
-// CIR: cir.func @if2(%arg0: !s32i loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
+// CIR: cir.func @_Z3if2ibb(%arg0: !s32i loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
 // CIR: cir.scope {
 // CIR:   %5 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CIR:   %6 = cir.cast(int_to_bool, %5 : !s32i), !cir.bool
@@ -165,7 +165,7 @@ void if2(int a, bool b, bool c) {
 // CIR:   }
 // CIR: }
 
-// LLVM: define void @if2(i32 %[[A:.*]], i1 %[[B:.*]], i1 %[[C:.*]])
+// LLVM: define void @_Z3if2ibb(i32 %[[A:.*]], i1 %[[B:.*]], i1 %[[C:.*]])
 // LLVM:   %[[VARA:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[VARB:.*]] = alloca i8, i64 1, align 1
 // LLVM:   %[[VARC:.*]] = alloca i8, i64 1, align 1
@@ -260,7 +260,7 @@ int if_init() {
   }
 }
 
-// CIR: cir.func @if_init() -> !s32i
+// CIR: cir.func @_Z7if_initv() -> !s32i
 // CIR: %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
 // CIR:   %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>,
@@ -285,7 +285,7 @@ int if_init() {
 // CIR:   }
 // CIR: }
 
-// LLVM: define i32 @if_init()
+// LLVM: define i32 @_Z7if_initv()
 // LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
 // LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
 // LLVM: store i32 42, ptr %[[X]], align 4

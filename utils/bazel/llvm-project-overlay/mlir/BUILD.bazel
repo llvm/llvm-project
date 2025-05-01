@@ -505,6 +505,19 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPICF",
+    srcs = ["lib/CAPI/Dialect/ControlFlow.cpp"],
+    hdrs = ["include/mlir-c/Dialect/ControlFlow.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ControlFlowDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIEmitC",
     srcs = [
         "lib/CAPI/Dialect/EmitC.cpp",
@@ -3408,14 +3421,29 @@ cc_library(
         ":Analysis",
         ":FunctionInterfaces",
         ":GPUDialect",
+        ":GPUUtils",
         ":IR",
+        ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
+        ":XeGPUUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "XeGPUUtils",
+    srcs = glob(["lib/Dialect/XeGPU/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/XeGPU/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":XeGPUDialect",
     ],
 )
 

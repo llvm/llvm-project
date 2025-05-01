@@ -52,6 +52,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
     return std::nullopt;
 
   DescriptorTable Table;
+  std::optional<ShaderVisibility> Visibility;
 
   // Iterate as many Clauses as possible
   do {
@@ -63,7 +64,26 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       Elements.push_back(*Clause);
       Table.NumClauses++;
     }
+
+    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      if (Visibility.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      Visibility = parseShaderVisibility();
+      if (!Visibility.has_value())
+        return std::nullopt;
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  // Fill in optional visibility
+  if (Visibility.has_value())
+    Table.Visibility = Visibility.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -109,6 +129,7 @@ RootSignatureParser::parseDescriptorTableClause() {
     ExpectedReg = TokenKind::sReg;
     break;
   }
+  Clause.setDefaultFlags();
 
   auto Params = parseDescriptorTableClauseParams(ExpectedReg);
   if (!Params.has_value())
@@ -124,8 +145,17 @@ RootSignatureParser::parseDescriptorTableClause() {
   Clause.Reg = Params->Reg.value();
 
   // Fill in optional values
+  if (Params->NumDescriptors.has_value())
+    Clause.NumDescriptors = Params->NumDescriptors.value();
+
   if (Params->Space.has_value())
     Clause.Space = Params->Space.value();
+
+  if (Params->Offset.has_value())
+    Clause.Offset = Params->Offset.value();
+
+  if (Params->Flags.has_value())
+    Clause.Flags = Params->Flags.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -158,6 +188,29 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       Params.Reg = Reg;
     }
 
+    // `numDescriptors` `=` POS_INT | unbounded
+    if (tryConsumeExpectedToken(TokenKind::kw_numDescriptors)) {
+      if (Params.NumDescriptors.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      std::optional<uint32_t> NumDescriptors;
+      if (tryConsumeExpectedToken(TokenKind::en_unbounded))
+        NumDescriptors = NumDescriptorsUnbounded;
+      else {
+        NumDescriptors = parseUIntParam();
+        if (!NumDescriptors.has_value())
+          return std::nullopt;
+      }
+
+      Params.NumDescriptors = NumDescriptors;
+    }
+
     // `space` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_space)) {
       if (Params.Space.has_value()) {
@@ -174,6 +227,47 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
         return std::nullopt;
       Params.Space = Space;
     }
+
+    // `offset` `=` POS_INT | DESCRIPTOR_RANGE_OFFSET_APPEND
+    if (tryConsumeExpectedToken(TokenKind::kw_offset)) {
+      if (Params.Offset.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      std::optional<uint32_t> Offset;
+      if (tryConsumeExpectedToken(TokenKind::en_DescriptorRangeOffsetAppend))
+        Offset = DescriptorTableOffsetAppend;
+      else {
+        Offset = parseUIntParam();
+        if (!Offset.has_value())
+          return std::nullopt;
+      }
+
+      Params.Offset = Offset;
+    }
+
+    // `flags` `=` DESCRIPTOR_RANGE_FLAGS
+    if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+      if (Params.Flags.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Flags = parseDescriptorRangeFlags();
+      if (!Flags.has_value())
+        return std::nullopt;
+      Params.Flags = Flags;
+    }
+
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return Params;
@@ -222,6 +316,80 @@ std::optional<Register> RootSignatureParser::parseRegister() {
   return Reg;
 }
 
+std::optional<llvm::hlsl::rootsig::ShaderVisibility>
+RootSignatureParser::parseShaderVisibility() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define SHADER_VISIBILITY_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
+  case TokenKind::en_##NAME:                                                   \
+    return ShaderVisibility::NAME;                                             \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+template <typename FlagType>
+static FlagType maybeOrFlag(std::optional<FlagType> Flags, FlagType Flag) {
+  if (!Flags.has_value())
+    return Flag;
+
+  return static_cast<FlagType>(llvm::to_underlying(Flags.value()) |
+                               llvm::to_underlying(Flag));
+}
+
+std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
+RootSignatureParser::parseDescriptorRangeFlags() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  // Handle the edge-case of '0' to specify no flags set
+  if (tryConsumeExpectedToken(TokenKind::int_literal)) {
+    if (!verifyZeroFlag()) {
+      getDiags().Report(CurToken.TokLoc, diag::err_expected) << "'0'";
+      return std::nullopt;
+    }
+    return DescriptorRangeFlags::None;
+  }
+
+  TokenKind Expected[] = {
+#define DESCRIPTOR_RANGE_FLAG_ENUM(NAME, LIT, ON) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  std::optional<DescriptorRangeFlags> Flags;
+
+  do {
+    if (tryConsumeExpectedToken(Expected)) {
+      switch (CurToken.TokKind) {
+#define DESCRIPTOR_RANGE_FLAG_ENUM(NAME, LIT, ON)                              \
+  case TokenKind::en_##NAME:                                                   \
+    Flags =                                                                    \
+        maybeOrFlag<DescriptorRangeFlags>(Flags, DescriptorRangeFlags::NAME);  \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+      default:
+        llvm_unreachable("Switch for consumed enum token was not provided");
+      }
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_or));
+
+  return Flags;
+}
+
 std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   // Parse the numeric value and do semantic checks on its specification
   clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
@@ -242,6 +410,12 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   }
 
   return Val.getExtValue();
+}
+
+bool RootSignatureParser::verifyZeroFlag() {
+  assert(CurToken.TokKind == TokenKind::int_literal);
+  auto X = handleUIntLiteral();
+  return X.has_value() && X.value() == 0;
 }
 
 bool RootSignatureParser::peekExpectedToken(TokenKind Expected) {
