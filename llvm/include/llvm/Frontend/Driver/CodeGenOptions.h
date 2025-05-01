@@ -20,7 +20,6 @@ class Triple;
 class TargetLibraryInfoImpl;
 } // namespace llvm
 
-
 namespace llvm::driver {
 
 /// Vector library option used with -fveclib=

@@ -16,6 +16,7 @@ extern llvm::cl::opt<bool> DebugInfoCorrelate;
 extern llvm::cl::opt<llvm::InstrProfCorrelator::ProfCorrelatorKind>
     ProfileCorrelate;
 } // namespace llvm
+
 namespace llvm::driver {
 
 TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
