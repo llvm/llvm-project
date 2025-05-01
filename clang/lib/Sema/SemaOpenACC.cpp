@@ -1560,7 +1560,7 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc, const Stmt *First,
 void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
                                          const Stmt *OldRangeFor,
                                          const Stmt *RangeFor) {
-  if (!getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || OldRangeFor == nullptr || RangeFor == nullptr)
     return;
 
   ForStmtBeginChecker FSBC{*this, ForLoc,
@@ -1576,7 +1576,7 @@ void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
 
 void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
                                          const Stmt *RangeFor) {
-  if (!getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || RangeFor == nullptr)
     return;
 
   ForStmtBeginChecker FSBC = {*this, ForLoc,
