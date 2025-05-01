@@ -4345,8 +4345,9 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
     using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
 
-    auto FiniCB = [this](InsertPointTy IP) {
-      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    auto FiniCB = [](InsertPointTy IP) {
+      // Don't FinalizeOMPRegion because this is done inside of OMPIRBuilder for
+      // sections.
       return llvm::Error::success();
     };
 

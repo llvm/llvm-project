@@ -73,10 +73,6 @@ jobs:
           START_REV: ${{ github.event.pull_request.base.sha }}
           END_REV: ${{ github.event.pull_request.head.sha }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        # TODO(boomanaiden154): Once clang v18 is released, we should be able
-        # to take advantage of the new --diff_from_common_commit option
-        # explicitly in code-format-helper.py and not have to diff starting at
-        # the merge base.
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |
           echo "[]" > comments &&

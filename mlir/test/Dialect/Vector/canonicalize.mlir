@@ -977,10 +977,9 @@ func.func @insert_no_fold_scalar_to_0d(%v: vector<f32>) -> vector<f32> {
 
 // -----
 
-// CHECK-LABEL: dont_fold_expand_collapse
-//       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<1x1x8x8xf32>
-//       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<1x1x8x8xf32> to vector<8x8xf32>
-//       CHECK:   return %[[B]] : vector<8x8xf32>
+// CHECK-LABEL: fold_expand_collapse
+//       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<8x8xf32>
+//       CHECK:   return %[[A]] : vector<8x8xf32>
 func.func @dont_fold_expand_collapse(%arg0: vector<1x1x64xf32>) -> vector<8x8xf32> {
     %0 = vector.shape_cast %arg0 : vector<1x1x64xf32> to vector<1x1x8x8xf32>
     %1 = vector.shape_cast %0 : vector<1x1x8x8xf32> to vector<8x8xf32>
