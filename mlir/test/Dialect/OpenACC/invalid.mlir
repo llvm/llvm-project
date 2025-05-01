@@ -752,7 +752,6 @@ func.func @acc_combined() {
   // expected-error @below {{expected 'loop'}}
   acc.parallel combined() {
   }
-
   return
 }
 
@@ -762,7 +761,6 @@ func.func @acc_combined() {
   // expected-error @below {{expected compute construct name}}
   acc.loop combined(loop) {
   }
-
   return
 }
 
@@ -772,7 +770,6 @@ func.func @acc_combined() {
   // expected-error @below {{expected 'loop'}}
   acc.parallel combined(parallel loop) {
   }
-
   return
 }
 
@@ -782,6 +779,43 @@ func.func @acc_combined() {
   // expected-error @below {{expected ')'}}
   acc.loop combined(parallel loop) {
   }
+  return
+}
 
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  // expected-error @below {{found sibling loops inside container-like acc.loop}}
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.yield
+    }
+    scf.for %arg5 = %c0 to %c10 step %c1 {
+        scf.yield
+    }
+    acc.yield
+  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>] }
+  return
+}
+
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  // expected-error @below {{failed to find enough loop-like operations inside container-like acc.loop}}
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.for %arg5 = %c0 to %c10 step %c1 {
+          scf.yield
+      }
+      scf.yield
+    }
+    acc.yield
+  } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>] }
   return
 }

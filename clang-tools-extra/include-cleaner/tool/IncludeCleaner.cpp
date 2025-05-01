@@ -90,17 +90,29 @@ cl::opt<bool> Edit{
     cl::desc("Apply edits to analyzed source files"),
     cl::cat(IncludeCleaner),
 };
-
 cl::opt<bool> Insert{
     "insert",
-    cl::desc("Allow header insertions"),
+    cl::desc(
+        "Allow header insertions (deprecated. Use -disable-insert instead)"),
     cl::init(true),
     cl::cat(IncludeCleaner),
 };
 cl::opt<bool> Remove{
     "remove",
-    cl::desc("Allow header removals"),
+    cl::desc("Allow header removals (deprecated. Use -disable-remove instead)"),
     cl::init(true),
+    cl::cat(IncludeCleaner),
+};
+cl::opt<bool> DisableInsert{
+    "disable-insert",
+    cl::desc("Disable header insertions"),
+    cl::init(false),
+    cl::cat(IncludeCleaner),
+};
+cl::opt<bool> DisableRemove{
+    "disable-remove",
+    cl::desc("Disable header removals"),
+    cl::init(false),
     cl::cat(IncludeCleaner),
 };
 
@@ -183,9 +195,26 @@ private:
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), HeaderFilter);
-    if (!Insert)
+
+    if (!Insert) {
+      llvm::errs()
+          << "warning: '-insert=0' is deprecated in favor of "
+             "'-disable-insert'. "
+             "The old flag was confusing since it suggested that inserts "
+             "were disabled by default, when they were actually enabled.\n";
+    }
+
+    if (!Remove) {
+      llvm::errs()
+          << "warning: '-remove=0' is deprecated in favor of "
+             "'-disable-remove'. "
+             "The old flag was confusing since it suggested that removes "
+             "were disabled by default, when they were actually enabled.\n";
+    }
+
+    if (!Insert || DisableInsert)
       Results.Missing.clear();
-    if (!Remove)
+    if (!Remove || DisableRemove)
       Results.Unused.clear();
     std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
 

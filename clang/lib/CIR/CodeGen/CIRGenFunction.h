@@ -449,6 +449,8 @@ public:
 
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
+  Address emitArrayToPointerDecay(const Expr *array);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -485,6 +487,10 @@ public:
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
+                                          llvm::ArrayRef<const Attr *> attrs);
+
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -560,6 +566,11 @@ public:
   /// returning the rvalue.
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
+  Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
+                              LValueBaseInfo *pointeeBaseInfo);
+  LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
+                                   QualType refTy, AlignmentSource source);
+
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.  The l-value must be a simple
@@ -586,6 +597,9 @@ public:
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
                                    LValueBaseInfo *baseInfo);
+
+  /// Emits a reference binding to the passed in expression.
+  RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
