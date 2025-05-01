@@ -18,10 +18,10 @@ module {
                          num_counts = 3712, num_functions = 796,
                          is_partial_profile = 0 : i64,
                          partial_profile_ratio = 0.000000e+00 : f64,
-                         detailed_summary = [
-                           #llvm.profile_summary_detailed<cut_off = 10000, min_count = 86427, num_counts = 1>,
-                           #llvm.profile_summary_detailed<cut_off = 100000, min_count = 86427, num_counts = 1>
-                    ]>>]
+                         detailed_summary =
+                           <cut_off = 10000, min_count = 86427, num_counts = 1>,
+                           <cut_off = 100000, min_count = 86427, num_counts = 1>
+                    >>]
 }
 
 // CHECK: llvm.module_flags [
@@ -42,9 +42,9 @@ module {
 // CHECK-SAME:      num_counts = 3712, num_functions = 796,
 // CHECK-SAME:      is_partial_profile = 0 : i64,
 // CHECK-SAME:      partial_profile_ratio = 0.000000e+00 : f64,
-// CHECK-SAME:      detailed_summary = [
-// CHECK-SAME:        #llvm.profile_summary_detailed<cut_off = 10000, min_count = 86427, num_counts = 1>,
-// CHECK-SAME:        #llvm.profile_summary_detailed<cut_off = 100000, min_count = 86427, num_counts = 1>
-// CHECK-SAME: ]>>]
+// CHECK-SAME:      detailed_summary =
+// CHECK-SAME:        <cut_off = 10000, min_count = 86427, num_counts = 1>,
+// CHECK-SAME:        <cut_off = 100000, min_count = 86427, num_counts = 1>
+// CHECK-SAME: >>]
 
 llvm.module_flags []

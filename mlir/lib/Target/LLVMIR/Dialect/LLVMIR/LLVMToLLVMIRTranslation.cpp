@@ -346,9 +346,7 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
   }
 
   SmallVector<llvm::Metadata *> detailedEntries;
-  for (auto detailedEntry :
-       summaryAttr.getDetailedSummary()
-           .getAsRange<ModuleFlagProfileSummaryDetailedAttr>()) {
+  for (auto detailedEntry : summaryAttr.getDetailedSummary()) {
     SmallVector<llvm::Metadata *> tupleNodes{
         mdb.createConstant(llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(context), detailedEntry.getCutOff())),

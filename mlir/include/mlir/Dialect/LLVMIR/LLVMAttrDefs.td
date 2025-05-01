@@ -1386,9 +1386,9 @@ def ModuleFlagProfileSummaryDetailedAttr
     A `#llvm.profile_summary` may contain several of it.
     ```mlir
     llvm.module_flags [ ...
-        detailed_summary = [
-        #llvm.profile_summary_detailed<cut_off = 10000, min_count = 86427, num_counts = 1>,
-        #llvm.profile_summary_detailed<cut_off = 100000, min_count = 86427, num_counts = 1>
+        detailed_summary =
+        <cut_off = 10000, min_count = 86427, num_counts = 1>,
+        <cut_off = 100000, min_count = 86427, num_counts = 1>
     ```
   }];
   let parameters = (ins "uint32_t":$cut_off,
@@ -1409,10 +1409,10 @@ def ModuleFlagProfileSummaryAttr
         num_counts = 3712, num_functions = 796,
         is_partial_profile = 0 : i64,
         partial_profile_ratio = 0.000000e+00 : f64,
-        detailed_summary = [
-        #llvm.profile_summary_detailed<cut_off = 10000, min_count = 86427, num_counts = 1>,
-        #llvm.profile_summary_detailed<cut_off = 100000, min_count = 86427, num_counts = 1>
-    ]>>]
+        detailed_summary =
+          <cut_off = 10000, min_count = 86427, num_counts = 1>,
+          <cut_off = 100000, min_count = 86427, num_counts = 1>
+    >>]
     ```
   }];
   let parameters = (
@@ -1421,7 +1421,7 @@ def ModuleFlagProfileSummaryAttr
         "uint64_t":$num_counts, "uint64_t":$num_functions,
         OptionalParameter<"IntegerAttr">:$is_partial_profile,
         OptionalParameter<"FloatAttr">:$partial_profile_ratio,
-        "ArrayAttr":$detailed_summary);
+        ArrayRefParameter<"ModuleFlagProfileSummaryDetailedAttr">:$detailed_summary);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }

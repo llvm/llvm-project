@@ -688,17 +688,19 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     return failure();
   };
 
-  auto getSummary = [&](const llvm::MDOperand &summaryMD) -> ArrayAttr {
+  auto getSummary = [&](const llvm::MDOperand &summaryMD,
+                        SmallVectorImpl<ModuleFlagProfileSummaryDetailedAttr>
+                            &detailedSummary) {
     auto *tupleEntry = getMDTuple(summaryMD);
     if (!tupleEntry)
-      return nullptr;
+      return false;
 
     llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
     if (!keyMD || keyMD->getString() != "DetailedSummary") {
       emitWarning(mlirModule.getLoc())
           << "expected 'DetailedSummary' key: "
           << diagMD(tupleEntry->getOperand(0), llvmModule);
-      return nullptr;
+      return false;
     }
 
     llvm::MDTuple *entriesMD =
@@ -707,17 +709,16 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
       emitWarning(mlirModule.getLoc())
           << "expected tuple value for 'DetailedSummary' key: "
           << diagMD(tupleEntry->getOperand(1), llvmModule);
-      return nullptr;
+      return false;
     }
 
-    SmallVector<Attribute> detailedSummary;
     for (auto &&entry : entriesMD->operands()) {
       llvm::MDTuple *entryMD = dyn_cast<llvm::MDTuple>(entry);
       if (!entryMD || entryMD->getNumOperands() != 3) {
         emitWarning(mlirModule.getLoc())
             << "'DetailedSummary' entry expects 3 operands: "
             << diagMD(entry, llvmModule);
-        return nullptr;
+        return false;
       }
       llvm::ConstantAsMetadata *op0 =
           dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(0));
@@ -730,7 +731,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
         emitWarning(mlirModule.getLoc())
             << "expected only integer entries in 'DetailedSummary': "
             << diagMD(entry, llvmModule);
-        return nullptr;
+        return false;
       }
 
       auto detaildSummaryEntry = ModuleFlagProfileSummaryDetailedAttr::get(
@@ -740,7 +741,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
           cast<llvm::ConstantInt>(op2->getValue())->getZExtValue());
       detailedSummary.push_back(detaildSummaryEntry);
     }
-    return ArrayAttr::get(mlirModule->getContext(), detailedSummary);
+    return true;
   };
 
   // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
@@ -787,8 +788,8 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     summayIdx++;
 
   // Handle detailed summary.
-  ArrayAttr detailedSummary = getSummary(mdTuple->getOperand(summayIdx));
-  if (!detailedSummary)
+  SmallVector<ModuleFlagProfileSummaryDetailedAttr> detailedSummary;
+  if (!getSummary(mdTuple->getOperand(summayIdx), detailedSummary))
     return nullptr;
 
   // Build the final profile summary attribute.
