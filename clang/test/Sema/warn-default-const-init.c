@@ -1,4 +1,27 @@
+// Both of these should enable everything.
+// RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field,zero-init-var,zero-init-field -Wc++-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field,zero-init-var,zero-init-field -Wdefault-const-init %s
+
+// This should enable nothing.
+// RUN: %clang_cc1 -fsyntax-only -verify=good -Wno-default-const-init-unsafe %s
+
+// Only unsafe field and variable diagnostics
+// RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field %s
 // RUN: %clang_cc1 -fsyntax-only -verify=unsafe-var,unsafe-field -Wdefault-const-init-unsafe %s
+
+// Only zero init field and variable diagnostics
+// RUN: %clang_cc1 -fsyntax-only -verify=zero-init-var,zero-init-field -Wdefault-const-init -Wno-default-const-init-unsafe %s
+
+// Only zero init and unsafe field diagnostics
+// RUN: %clang_cc1 -fsyntax-only -verify=zero-init-field,unsafe-field -Wno-default-const-init-var-unsafe -Wdefault-const-init-field %s
+
+// Only zero init and unsafe variable diagnostics
+// RUN: %clang_cc1 -fsyntax-only -verify=zero-init-var,unsafe-var -Wno-default-const-init-field-unsafe -Wdefault-const-init-var %s
+
+// C++ tests
+// RUN: %clang_cc1 -fsyntax-only -verify=cxx -x c++ %s
+
+// good-no-diagnostics
 
 struct A { int i; };
 struct S{ const int i; };              // unsafe-field-note 2 {{member 'i' declared 'const' here}} \
@@ -45,7 +68,7 @@ static const int j; // zero-init-var-warning {{default initialization of an obje
                        cxx-error {{default initialization of an object of const type 'const int'}}
 const int k;        // zero-init-var-warning {{default initialization of an object of type 'const int' is incompatible with C++}} \
                        cxx-error {{default initialization of an object of const type 'const int'}}
-const struct S s;   // zero-init-field-warning {{default initialization of an object of type 'const struct S' is incompatible with C++}} \
+const struct S s;   // zero-init-var-warning {{default initialization of an object of type 'const struct S' is incompatible with C++}} \
                        cxx-error {{call to implicitly-deleted default constructor of 'const struct S'}}
 
 void func() {
