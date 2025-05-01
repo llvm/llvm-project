@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_minmag.h>
+#ifndef __CLC_MATH_CLC_MINMAG_H__
+#define __CLC_MATH_CLC_MINMAG_H__
 
-#define FUNCTION minmag
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY <clc/shared/binary_decl.inc>
+#define __CLC_FUNCTION __clc_minmag
+
 #include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
+
+#endif // __CLC_MATH_CLC_MINMAG_H__
