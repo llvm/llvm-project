@@ -26,6 +26,7 @@
 namespace llvm {
 class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
+using StructOffsetDecorator = std::function<void(Register)>;
 
 class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Registers holding values which have types associated with them.
@@ -451,7 +452,7 @@ private:
 
   SPIRVType *getOpTypeStruct(const StructType *Ty, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AccQual,
-                             bool ExplicitLayoutRequired, bool EmitIR);
+                             StructOffsetDecorator Decorator, bool EmitIR);
 
   SPIRVType *getOpTypePointer(SPIRV::StorageClass::StorageClass SC,
                               SPIRVType *ElemType, MachineIRBuilder &MIRBuilder,
@@ -600,6 +601,9 @@ public:
                                          Type *ElemType,
                                          SPIRV::StorageClass::StorageClass SC,
                                          bool IsWritable, bool EmitIr = false);
+
+  SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
+                                   const TargetExtType *T, bool EmitIr = false);
 
   SPIRVType *
   getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
