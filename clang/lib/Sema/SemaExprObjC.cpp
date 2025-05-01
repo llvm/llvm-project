@@ -1894,7 +1894,7 @@ bool SemaObjC::CheckMessageArgumentTypes(
         continue;
 
       ExprResult Arg = SemaRef.DefaultVariadicArgumentPromotion(
-          Args[i], Sema::VariadicMethod, nullptr);
+          Args[i], VariadicCallType::Method, nullptr);
       IsError |= Arg.isInvalid();
       Args[i] = Arg.get();
     }

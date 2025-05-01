@@ -510,6 +510,15 @@ enum class FormatStringType {
   Unknown
 };
 
+// Used for emitting the right warning by DefaultVariadicArgumentPromotion
+enum class VariadicCallType {
+  Function,
+  Block,
+  Method,
+  Constructor,
+  DoesNotApply
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -2380,15 +2389,6 @@ public:
   /// DiagnoseSelfMove - Emits a warning if a value is moved to itself.
   void DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
                         SourceLocation OpLoc);
-
-  // Used for emitting the right warning by DefaultVariadicArgumentPromotion
-  enum VariadicCallType {
-    VariadicFunction,
-    VariadicBlock,
-    VariadicMethod,
-    VariadicConstructor,
-    VariadicDoesNotApply
-  };
 
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
   bool IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
@@ -7739,13 +7739,12 @@ public:
 
   /// GatherArgumentsForCall - Collector argument expressions for various
   /// form of call prototypes.
-  bool GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
-                              const FunctionProtoType *Proto,
-                              unsigned FirstParam, ArrayRef<Expr *> Args,
-                              SmallVectorImpl<Expr *> &AllArgs,
-                              VariadicCallType CallType = VariadicDoesNotApply,
-                              bool AllowExplicit = false,
-                              bool IsListInitialization = false);
+  bool GatherArgumentsForCall(
+      SourceLocation CallLoc, FunctionDecl *FDecl,
+      const FunctionProtoType *Proto, unsigned FirstParam,
+      ArrayRef<Expr *> Args, SmallVectorImpl<Expr *> &AllArgs,
+      VariadicCallType CallType = VariadicCallType::DoesNotApply,
+      bool AllowExplicit = false, bool IsListInitialization = false);
 
   // DefaultVariadicArgumentPromotion - Like DefaultArgumentPromotion, but
   // will create a runtime trap if the resulting type is not a POD type.
