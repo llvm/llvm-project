@@ -1337,7 +1337,7 @@ def ext_oneuse    : unop_oneuse<ext>;
 def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
 def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
+  return CurDAG->ComputeNumSignBits(Op) > 32;
 }]>;
 
 class immop_oneuse<ImmLeaf leaf> : PatLeaf<(leaf), [{
@@ -1977,7 +1977,7 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
 class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
-  return hasAllHUsers(Node);
+  return hasAllHUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
 }
@@ -1987,14 +1987,14 @@ class binop_allhusers<SDPatternOperator operator>
 class binop_allwusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
               [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
 }
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]>;
 
 def ImmSExt32 : SDNodeXForm<imm, [{
