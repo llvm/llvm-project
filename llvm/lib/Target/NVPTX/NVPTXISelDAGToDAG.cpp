@@ -1184,11 +1184,25 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     return false;
   }
 
+  LLVM_DEBUG({
+    dbgs() << "tryLoadVector on " << TLI->getTargetNodeName(N->getOpcode())
+           << ":\n";
+    dbgs() << "  load type: " << MemVT << "\n";
+    dbgs() << "  total load width: " << TotalWidth << " bits\n";
+    dbgs() << "  from type width: " << FromTypeWidth << " bits\n";
+    dbgs() << "  element type: " << EltVT << "\n";
+  });
+
   if (isSubVectorPackedInInteger(EltVT)) {
     assert(ExtensionType == ISD::NON_EXTLOAD);
     FromTypeWidth = EltVT.getSizeInBits();
     EltVT = MVT::getIntegerVT(FromTypeWidth);
     FromType = NVPTX::PTXLdStInstCode::Untyped;
+    LLVM_DEBUG({
+      dbgs() << "  packed integers detected:\n";
+      dbgs() << "    from type width: " << FromTypeWidth << " (new)\n";
+      dbgs() << "    element type: " << EltVT << " (new)\n";
+    });
   }
 
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
@@ -1501,9 +1515,23 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     return false;
   }
 
+  LLVM_DEBUG({
+    dbgs() << "tryStoreVector on " << TLI->getTargetNodeName(N->getOpcode())
+           << ":\n";
+    dbgs() << "  store type: " << StoreVT << "\n";
+    dbgs() << "  total store width: " << TotalWidth << " bits\n";
+    dbgs() << "  to type width: " << ToTypeWidth << " bits\n";
+    dbgs() << "  element type: " << EltVT << "\n";
+  });
+
   if (isSubVectorPackedInInteger(EltVT)) {
     ToTypeWidth = EltVT.getSizeInBits();
     EltVT = MVT::getIntegerVT(ToTypeWidth);
+    LLVM_DEBUG({
+      dbgs() << "  packed integers detected:\n";
+      dbgs() << "    to type width: " << ToTypeWidth << " (new)\n";
+      dbgs() << "    element type: " << EltVT << " (new)\n";
+    });
   }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
