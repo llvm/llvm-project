@@ -232,7 +232,17 @@ protected:
   /// by the reduction loop. In general, there is a single
   /// loop-carried reduction value (e.g. for SUM), but, for example,
   /// MAXLOC/MINLOC implementation uses multiple reductions.
-  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() = 0;
+  /// \p oneBasedIndices contains any array indices predefined
+  /// before the reduction loop, i.e. it is empty for total
+  /// reductions, and contains the one-based indices of the wrapping
+  /// hlfir.elemental.
+  /// \p extents are the pre-computed extents of the input array.
+  /// For total reductions, \p extents holds extents of all dimensions.
+  /// For partial reductions, \p extents holds a single extent
+  /// of the DIM dimension.
+  virtual llvm::SmallVector<mlir::Value>
+  genReductionInitValues(mlir::ValueRange oneBasedIndices,
+                         const llvm::SmallVectorImpl<mlir::Value> &extents) = 0;
 
   /// Perform reduction(s) update given a single input array's element
   /// identified by \p array and \p oneBasedIndices coordinates.
@@ -396,6 +406,54 @@ genMinMaxComparison(mlir::Location loc, fir::FirOpBuilder &builder,
   llvm_unreachable("unsupported type");
 }
 
+// Generate a predicate value indicating that an array with the given
+// extents is not empty.
+static mlir::Value
+genIsNotEmptyArrayExtents(mlir::Location loc, fir::FirOpBuilder &builder,
+                          const llvm::SmallVectorImpl<mlir::Value> &extents) {
+  mlir::Value isNotEmpty = builder.createBool(loc, true);
+  for (auto extent : extents) {
+    mlir::Value zero =
+        fir::factory::createZeroValue(builder, loc, extent.getType());
+    mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::ne, extent, zero);
+    isNotEmpty = builder.create<mlir::arith::AndIOp>(loc, isNotEmpty, cmp);
+  }
+  return isNotEmpty;
+}
+
+// Helper method for MIN/MAX LOC/VAL reductions.
+// It returns a vector of indices such that they address
+// the first element of an array (in case of total reduction)
+// or its section (in case of partial reduction).
+//
+// If case of total reduction oneBasedIndices must be empty,
+// otherwise, they contain the one based indices of the wrapping
+// hlfir.elemental.
+// Basically, the method adds the necessary number of constant-one
+// indices into oneBasedIndices.
+static llvm::SmallVector<mlir::Value> genFirstElementIndicesForReduction(
+    mlir::Location loc, fir::FirOpBuilder &builder, bool isTotalReduction,
+    mlir::FailureOr<int64_t> dim, unsigned rank,
+    mlir::ValueRange oneBasedIndices) {
+  llvm::SmallVector<mlir::Value> indices{oneBasedIndices};
+  mlir::Value one =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  if (isTotalReduction) {
+    assert(oneBasedIndices.size() == 0 &&
+           "wrong number of indices for total reduction");
+    // Set indices to all-ones.
+    indices.append(rank, one);
+  } else {
+    assert(oneBasedIndices.size() == rank - 1 &&
+           "there must be RANK-1 indices for partial reduction");
+    assert(mlir::succeeded(dim) && "partial reduction with invalid DIM");
+    // Insert constant-one index at DIM dimension.
+    indices.insert(indices.begin() + *dim - 1, one);
+  }
+  return indices;
+}
+
 /// Implementation of ReductionAsElementalConverter interface
 /// for MAXLOC/MINLOC.
 template <typename T>
@@ -410,6 +468,9 @@ class MinMaxlocAsElementalConverter : public ReductionAsElementalConverter {
   //   * 1 reduction value holding the current MIN/MAX.
   //   * 1 boolean indicating whether it is the first time
   //     the mask is true.
+  //
+  // If useIsFirst() returns false, then the boolean loop-carried
+  // value is not used.
   static constexpr unsigned maxNumReductions = Fortran::common::maxRank + 2;
   static constexpr bool isMax = std::is_same_v<T, hlfir::MaxlocOp>;
   using Base = ReductionAsElementalConverter;
@@ -444,7 +505,9 @@ private:
     return getResultRank() == 0 || !getDim();
   }
 
-  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final;
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
+      mlir::ValueRange oneBasedIndices,
+      const llvm::SmallVectorImpl<mlir::Value> &extents) final;
   virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
                    hlfir::Entity array, mlir::ValueRange oneBasedIndices) final;
@@ -460,8 +523,12 @@ private:
 
   void
   checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
-    assert(reductions.size() == getNumCoors() + 2 &&
-           "invalid number of reductions for MINLOC/MAXLOC");
+    if (!useIsFirst())
+      assert(reductions.size() == getNumCoors() + 1 &&
+             "invalid number of reductions for MINLOC/MAXLOC");
+    else
+      assert(reductions.size() == getNumCoors() + 2 &&
+             "invalid number of reductions for MINLOC/MAXLOC");
   }
 
   mlir::Value
@@ -473,13 +540,62 @@ private:
   mlir::Value
   getIsFirst(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
     checkReductions(reductions);
+    assert(useIsFirst() && "IsFirst predicate must not be used");
     return reductions[getNumCoors() + 1];
   }
+
+  // Return true iff the input can contain NaNs, and they should be
+  // honored, such that all-NaNs input must produce the location
+  // of the first unmasked NaN.
+  bool honorNans() const {
+    return !static_cast<bool>(getFastMath() & mlir::arith::FastMathFlags::nnan);
+  }
+
+  // Return true iff we have to use the loop-carried IsFirst predicate.
+  // If there is no mask, we can initialize the reductions using
+  // the first elements of the input.
+  // If NaNs are not honored, we can initialize the starting MIN/MAX
+  // value to +/-LARGEST; the coordinates are guaranteed to be updated
+  // properly for non-empty input without NaNs.
+  bool useIsFirst() const { return getMask() && honorNans(); }
 };
 
 template <typename T>
 llvm::SmallVector<mlir::Value>
-MinMaxlocAsElementalConverter<T>::genReductionInitValues() {
+MinMaxlocAsElementalConverter<T>::genReductionInitValues(
+    mlir::ValueRange oneBasedIndices,
+    const llvm::SmallVectorImpl<mlir::Value> &extents) {
+  fir::IfOp ifOp;
+  if (!useIsFirst() && honorNans()) {
+    // Check if we can load the value of the first element in the array
+    // or its section (for partial reduction).
+    assert(!getMask() && "cannot fetch first element when mask is present");
+    assert(extents.size() == getNumCoors() &&
+           "wrong number of extents for MINLOC/MAXLOC reduction");
+    mlir::Value isNotEmpty = genIsNotEmptyArrayExtents(loc, builder, extents);
+
+    llvm::SmallVector<mlir::Value> indices = genFirstElementIndicesForReduction(
+        loc, builder, isTotalReduction(), getConstDim(), getSourceRank(),
+        oneBasedIndices);
+
+    llvm::SmallVector<mlir::Type> ifTypes(getNumCoors(),
+                                          getResultElementType());
+    ifTypes.push_back(getSourceElementType());
+    ifOp = builder.create<fir::IfOp>(loc, ifTypes, isNotEmpty,
+                                     /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    mlir::Value one =
+        builder.createIntegerConstant(loc, getResultElementType(), 1);
+    llvm::SmallVector<mlir::Value> results(getNumCoors(), one);
+    mlir::Value minMaxFirst =
+        hlfir::loadElementAt(loc, builder, hlfir::Entity{getSource()}, indices);
+    results.push_back(minMaxFirst);
+    builder.create<fir::ResultOp>(loc, results);
+
+    // In the 'else' block use default init values.
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  }
+
   // Initial value for the coordinate(s) is zero.
   mlir::Value zeroCoor =
       fir::factory::createZeroValue(builder, loc, getResultElementType());
@@ -490,11 +606,17 @@ MinMaxlocAsElementalConverter<T>::genReductionInitValues() {
       genMinMaxInitValue<isMax>(loc, builder, getSourceElementType());
   result.push_back(minMaxInit);
 
-  // Initial value for isFirst predicate. It is switched to false,
-  // when the reduction update dynamically happens inside the reduction
-  // loop.
-  mlir::Value trueVal = builder.createBool(loc, true);
-  result.push_back(trueVal);
+  if (ifOp) {
+    builder.create<fir::ResultOp>(loc, result);
+    builder.setInsertionPointAfter(ifOp);
+    result = ifOp.getResults();
+  } else if (useIsFirst()) {
+    // Initial value for isFirst predicate. It is switched to false,
+    // when the reduction update dynamically happens inside the reduction
+    // loop.
+    mlir::Value trueVal = builder.createBool(loc, true);
+    result.push_back(trueVal);
+  }
 
   return result;
 }
@@ -509,9 +631,12 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
       hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
   mlir::Value cmp = genMinMaxComparison<isMax>(loc, builder, elementValue,
                                                getCurrentMinMax(currentValue));
-  // If isFirst is true, then do the reduction update regardless
-  // of the FP comparison.
-  cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, getIsFirst(currentValue));
+  if (useIsFirst()) {
+    // If isFirst is true, then do the reduction update regardless
+    // of the FP comparison.
+    cmp =
+        builder.create<mlir::arith::OrIOp>(loc, cmp, getIsFirst(currentValue));
+  }
 
   llvm::SmallVector<mlir::Value> newIndices;
   int64_t dim = 1;
@@ -537,8 +662,10 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
       loc, cmp, elementValue, getCurrentMinMax(currentValue));
   newIndices.push_back(newMinMax);
 
-  mlir::Value newIsFirst = builder.createBool(loc, false);
-  newIndices.push_back(newIsFirst);
+  if (useIsFirst()) {
+    mlir::Value newIsFirst = builder.createBool(loc, false);
+    newIndices.push_back(newIsFirst);
+  }
 
   assert(currentValue.size() == newIndices.size() &&
          "invalid number of updated reductions");
@@ -629,7 +756,8 @@ class MinMaxvalAsElementalConverter
   //
   // The boolean flag is used to replace the initial value
   // with the first input element even if it is NaN.
-  static constexpr unsigned numReductions = 2;
+  // If useIsFirst() returns false, then the boolean loop-carried
+  // value is not used.
   static constexpr bool isMax = std::is_same_v<T, hlfir::MaxvalOp>;
   using Base = NumericReductionAsElementalConverterBase<T>;
 
@@ -646,19 +774,9 @@ private:
     return mlir::success();
   }
 
-  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
-    llvm::SmallVector<mlir::Value> result;
-    fir::FirOpBuilder &builder = this->builder;
-    mlir::Location loc = this->loc;
-    mlir::Value init =
-        genMinMaxInitValue<isMax>(loc, builder, this->getResultElementType());
-    result.push_back(init);
-    // Initial value for isFirst predicate. It is switched to false,
-    // when the reduction update dynamically happens inside the reduction
-    // loop.
-    result.push_back(builder.createBool(loc, true));
-    return result;
-  }
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
+      mlir::ValueRange oneBasedIndices,
+      const llvm::SmallVectorImpl<mlir::Value> &extents) final;
 
   virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
@@ -673,12 +791,14 @@ private:
     mlir::Value currentMinMax = getCurrentMinMax(currentValue);
     mlir::Value cmp =
         genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
-    cmp =
-        builder.create<mlir::arith::OrIOp>(loc, cmp, getIsFirst(currentValue));
+    if (useIsFirst())
+      cmp = builder.create<mlir::arith::OrIOp>(loc, cmp,
+                                               getIsFirst(currentValue));
     mlir::Value newMinMax = builder.create<mlir::arith::SelectOp>(
         loc, cmp, elementValue, currentMinMax);
     result.push_back(newMinMax);
-    result.push_back(builder.createBool(loc, false));
+    if (useIsFirst())
+      result.push_back(builder.createBool(loc, false));
     return result;
   }
 
@@ -690,7 +810,7 @@ private:
 
   void
   checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
-    assert(reductions.size() == numReductions &&
+    assert(reductions.size() == getNumReductions() &&
            "invalid number of reductions for MINVAL/MAXVAL");
   }
 
@@ -703,9 +823,79 @@ private:
   mlir::Value
   getIsFirst(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
     this->checkReductions(reductions);
+    assert(useIsFirst() && "IsFirst predicate must not be used");
     return reductions[1];
   }
+
+  // Return true iff the input can contain NaNs, and they should be
+  // honored, such that all-NaNs input must produce NaN result.
+  bool honorNans() const {
+    return !static_cast<bool>(this->getFastMath() &
+                              mlir::arith::FastMathFlags::nnan);
+  }
+
+  // Return true iff we have to use the loop-carried IsFirst predicate.
+  // If there is no mask, we can initialize the reductions using
+  // the first elements of the input.
+  // If NaNs are not honored, we can initialize the starting MIN/MAX
+  // value to +/-LARGEST.
+  bool useIsFirst() const { return this->getMask() && honorNans(); }
+
+  std::size_t getNumReductions() const { return useIsFirst() ? 2 : 1; }
 };
+
+template <typename T>
+llvm::SmallVector<mlir::Value>
+MinMaxvalAsElementalConverter<T>::genReductionInitValues(
+    mlir::ValueRange oneBasedIndices,
+    const llvm::SmallVectorImpl<mlir::Value> &extents) {
+  llvm::SmallVector<mlir::Value> result;
+  fir::FirOpBuilder &builder = this->builder;
+  mlir::Location loc = this->loc;
+
+  fir::IfOp ifOp;
+  if (!useIsFirst() && honorNans()) {
+    // Check if we can load the value of the first element in the array
+    // or its section (for partial reduction).
+    assert(!this->getMask() &&
+           "cannot fetch first element when mask is present");
+    assert(extents.size() ==
+               (this->isTotalReduction() ? this->getSourceRank() : 1u) &&
+           "wrong number of extents for MINVAL/MAXVAL reduction");
+    mlir::Value isNotEmpty = genIsNotEmptyArrayExtents(loc, builder, extents);
+    llvm::SmallVector<mlir::Value> indices = genFirstElementIndicesForReduction(
+        loc, builder, this->isTotalReduction(), this->getConstDim(),
+        this->getSourceRank(), oneBasedIndices);
+
+    ifOp =
+        builder.create<fir::IfOp>(loc, this->getResultElementType(), isNotEmpty,
+                                  /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    mlir::Value minMaxFirst = hlfir::loadElementAt(
+        loc, builder, hlfir::Entity{this->getSource()}, indices);
+    builder.create<fir::ResultOp>(loc, minMaxFirst);
+
+    // In the 'else' block use default init values.
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  }
+
+  mlir::Value init =
+      genMinMaxInitValue<isMax>(loc, builder, this->getResultElementType());
+  result.push_back(init);
+
+  if (ifOp) {
+    builder.create<fir::ResultOp>(loc, result);
+    builder.setInsertionPointAfter(ifOp);
+    result = ifOp.getResults();
+  } else if (useIsFirst()) {
+    // Initial value for isFirst predicate. It is switched to false,
+    // when the reduction update dynamically happens inside the reduction
+    // loop.
+    result.push_back(builder.createBool(loc, true));
+  }
+
+  return result;
+}
 
 /// Reduction converter for SUM.
 class SumAsElementalConverter
@@ -717,7 +907,10 @@ public:
       : Base{op, rewriter} {}
 
 private:
-  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
+      [[maybe_unused]] mlir::ValueRange oneBasedIndices,
+      [[maybe_unused]] const llvm::SmallVectorImpl<mlir::Value> &extents)
+      final {
     return {
         fir::factory::createZeroValue(builder, loc, getResultElementType())};
   }
@@ -781,7 +974,10 @@ public:
       : Base{op, rewriter} {}
 
 private:
-  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
+      [[maybe_unused]] mlir::ValueRange oneBasedIndices,
+      [[maybe_unused]] const llvm::SmallVectorImpl<mlir::Value> &extents)
+      final {
     return {this->builder.createBool(this->loc, isAll ? true : false)};
   }
   virtual llvm::SmallVector<mlir::Value>
@@ -819,7 +1015,10 @@ public:
       : Base{op, rewriter} {}
 
 private:
-  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues(
+      [[maybe_unused]] mlir::ValueRange oneBasedIndices,
+      [[maybe_unused]] const llvm::SmallVectorImpl<mlir::Value> &extents)
+      final {
     return {
         fir::factory::createZeroValue(builder, loc, getResultElementType())};
   }
@@ -881,16 +1080,16 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
     // Loop over all indices in the DIM dimension, and reduce all values.
     // If DIM is not present, do total reduction.
 
-    // Initial value for the reduction.
-    llvm::SmallVector<mlir::Value, 1> reductionInitValues =
-        genReductionInitValues();
-
     llvm::SmallVector<mlir::Value> extents;
     if (isTotalReduce)
       extents = arrayExtents;
     else
       extents.push_back(
           builder.createConvert(loc, builder.getIndexType(), dimExtent));
+
+    // Initial value for the reduction.
+    llvm::SmallVector<mlir::Value, 1> reductionInitValues =
+        genReductionInitValues(inputIndices, extents);
 
     auto genBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                        mlir::ValueRange oneBasedIndices,
