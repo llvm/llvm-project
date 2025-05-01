@@ -836,23 +836,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
 
   // If this identifier would be a keyword in C++, diagnose as a compatibility
   // issue.
-  if (II.IsKeywordInCPlusPlus() && !DisableMacroExpansion) {
-    // Objective-C is special in that something like @class is two tokens,
-    // where 'class' is an identifier. We don't want to diagnose @class as
-    // using an identifier reserved in C++, but we do still want to diagnose
-    // something like 'int class;'. In Objective-C, @ basically introduces an
-    // entirely new grammar, so no identier should be flagged as reserved.
-    bool Diagnose = true;
-    if (getLangOpts().ObjC) {
-      std::optional<Token> PrevTok =
-          Lexer::findPreviousToken(Identifier.getLocation(), getSourceManager(),
-                                   getLangOpts(), /*IncludeComments=*/false);
-      Diagnose = !PrevTok || !PrevTok->is(tok::at);
-    }
-
-    if (Diagnose)
-      Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
-  }
+  if (II.IsKeywordInCPlusPlus() && !DisableMacroExpansion)
+    Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
 
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.

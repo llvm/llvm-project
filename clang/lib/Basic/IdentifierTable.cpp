@@ -287,7 +287,12 @@ static void AddKeyword(StringRef Keyword,
   // Don't add this keyword if disabled in this language and isn't otherwise
   // special.
   if (AddResult == KS_Disabled) {
-    if (IsKeywordInCpp(Flags))
+    // We do not consider any identifiers to be C++ keywords when in
+    // Objective-C because @ effectively introduces a custom grammar where C++
+    // keywords can be used (and similar for selectors). We could enable this
+    // for Objective-C, but it would require more logic to ensure we do not
+    // issue compatibility diagnostics in these cases.
+    if (!LangOpts.ObjC && IsKeywordInCpp(Flags))
       MarkIdentifierAsKeywordInCpp(Table, Keyword);
     return;
   }

@@ -155,7 +155,7 @@ C Language Changes
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)
 - Added ``-Wc++-keyword``, grouped under ``-Wc++-compat``, which diagnoses when
-  a C++ keyword is used as an identifier in C. Partially addresses #GH21898.
+  a C++ keyword is used as an identifier in C. (#GH21898)
 - Added ``-Wc++-hidden-decl``, grouped under ``-Wc++-compat``, which diagnoses
   use of tag types which are visible in C but not visible in C++ due to scoping
   rules. e.g.,
