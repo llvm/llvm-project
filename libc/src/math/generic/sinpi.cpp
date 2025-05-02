@@ -10,7 +10,7 @@
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/math/pow.h"
-//#include "range_reduction_double_nofma.h"
+#include "range_reduction_double_nofma.h"
 //#include "src/__support/FPUtil/multiply_add.h"
 //#include "src/math/generic/range_reduction_double_common.h"
 #include <iostream>
@@ -41,10 +41,13 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   uint64_t abs_u = xbits.uintval();
 
   uint64_t x_abs = abs_u & 0xFFFFFFFFFFFFFFFF;
-
+  
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
-  if (x_abs >= 0x4330000000000000) {
+ // When |x| > 2^51, x is an Integer or Nan
+ if (x_abs >= 0x59000000) {
+   // |x| >= 2^52
+   if (x_abs >= 0x4330000000000000) { 
     if (xbits.is_nan())
       return x;
     if (xbits.is_inf()) {
@@ -52,8 +55,10 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
-    return FPBits::zero(xbits.sign()).get_val();
+   }
+   return FPBits::zero(xbits.sign()).get_val();
   }
+  
 
   DoubleDouble sin_y, cos_y;
 

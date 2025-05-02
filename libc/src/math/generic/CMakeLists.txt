@@ -1,5 +1,3 @@
-
-
 add_entrypoint_object(
   canonicalize
   SRCS
@@ -492,6 +490,27 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
+  sinpi
+  SRCS
+    sinpi.cpp
+  HDRS
+    ../sinpi.h
+    range_reduction_double_fma.h
+  DEPENDS
+    .range_reduction_double
+    .sincos_eval
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
 )
 

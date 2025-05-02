@@ -108,6 +108,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpi_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinpi_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinpi
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.math.generic.range_reduction_double_nofma
+)
+
+add_fp_unittest(
   sinpif_test
   NEED_MPFR
   SUITE
