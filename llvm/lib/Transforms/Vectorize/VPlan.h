@@ -1185,7 +1185,10 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   unsigned getNumIncomingValues() const {
-    return getAsRecipe()->getNumOperands();
+    auto *R = getAsRecipe();
+    return R->getVPDefID() == VPDef::VPWidenIntOrFpInductionSC
+               ? 1
+               : R->getNumOperands();
   }
 };
 
@@ -1193,7 +1196,7 @@ public:
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction {
+struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {
@@ -1210,6 +1213,9 @@ struct VPIRPhi : public VPIRInstruction {
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+protected:
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1735,12 +1741,14 @@ public:
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
-class VPHeaderPHIRecipe : public VPSingleDefRecipe {
+class VPHeaderPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
                     VPValue *Start, DebugLoc DL = {})
       : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
+
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 
 public:
   ~VPHeaderPHIRecipe() override = default;
@@ -3215,6 +3223,46 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
+  }
+};
+
+/// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
+/// types implementing VPPhiAccessors.
+template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+  static inline bool isPossible(const VPRecipeBase *f) {
+    return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe>(f);
+  }
+};
+/// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
+/// recipe types implementing VPPhiAccessors.
+template <>
+struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
+    : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+
+  using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
+
+  using CastReturnType =
+      typename cast_retty<VPPhiAccessors, VPRecipeBase *>::ret_type;
+
+  static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
+    return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
+      switch (R->getVPDefID()) {
+      case VPDef::VPIRInstructionSC:
+        return cast<VPIRPhi>(R);
+      case VPDef::VPWidenPHISC:
+        return cast<VPWidenPHIRecipe>(R);
+      default:
+        return cast<VPHeaderPHIRecipe>(R);
+      }
+    }());
+  }
+
+  static inline VPPhiAccessors *castFailed() { return nullptr; }
+
+  static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
+    if (!Self::isPossible(f))
+      return castFailed();
+    return doCast(f);
   }
 };
 

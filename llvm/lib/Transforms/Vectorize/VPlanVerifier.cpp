@@ -179,8 +179,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
-  // Verify that defs in VPBB dominate all their uses. The current
-  // implementation is still incomplete.
+  // Verify that defs in VPBB dominate all their uses.
   DenseMap<const VPRecipeBase *, unsigned> RecipeNumbering;
   unsigned Cnt = 0;
   for (const VPRecipeBase &R : *VPBB)
@@ -207,25 +206,37 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
 
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
-        // TODO: check dominance of incoming values for phis properly.
-        if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
-                VPIRPhi>(UI) ||
-            (isa<VPInstruction>(UI) &&
-             cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
+        const VPBlockBase *UserVPBB = UI->getParent();
+        if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
+          for (unsigned Idx = 0; Idx != Phi->getNumIncomingValues(); ++Idx) {
+            VPValue *IncVPV = Phi->getIncomingValue(Idx);
+            const VPBasicBlock *IncVPBB = Phi->getIncomingBlock(Idx);
+            if (IncVPV != V)
+              continue;
+            if (IncVPBB != VPBB && !VPDT.dominates(VPBB, IncVPBB)) {
+              errs() << "Use before def!\n";
+              return false;
+            }
+          }
+          continue;
+        }
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
-        // If the user is in the same block, check it comes after R in the
-        // block.
-        if (UI->getParent() == VPBB) {
+        if (auto *VPI = dyn_cast<VPInstruction>(UI)) {
+          if (VPI->getOpcode() == Instruction::PHI)
+            continue;
+        }
+        // If the user is in the same block, check it comes after R in
+        // the block.
+        if (UserVPBB == VPBB) {
           if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
             errs() << "Use before def!\n";
             return false;
           }
-          continue;
         }
 
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
+        if (!VPDT.dominates(VPBB, UserVPBB)) {
           errs() << "Use before def!\n";
           return false;
         }
