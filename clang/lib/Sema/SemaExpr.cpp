@@ -5443,7 +5443,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return ExprError();
   }
 
-  CheckInvalidBuiltinCountedByRef(base, ArraySubscriptKind);
+  CheckInvalidBuiltinCountedByRef(base,
+                                  BuiltinCountedByRefKind::ArraySubscript);
 
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
@@ -7150,7 +7151,8 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // The result of __builtin_counted_by_ref cannot be used as a function
   // argument. It allows leaking and modification of bounds safety information.
   for (const Expr *Arg : ArgExprs)
-    if (CheckInvalidBuiltinCountedByRef(Arg, FunctionArgKind))
+    if (CheckInvalidBuiltinCountedByRef(Arg,
+                                        BuiltinCountedByRefKind::FunctionArg))
       return ExprError();
 
   if (getLangOpts().CPlusPlus) {
@@ -18580,8 +18582,9 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // Emit warnings for tricky precedence issues, e.g. "bitfield & 0x4 == 0"
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
 
-  BuiltinCountedByRefKind K =
-      BinaryOperator::isAssignmentOp(Opc) ? AssignmentKind : BinaryExprKind;
+  BuiltinCountedByRefKind K = BinaryOperator::isAssignmentOp(Opc)
+                                  ? BuiltinCountedByRefKind::Assignment
+                                  : BuiltinCountedByRefKind::BinaryExpr;
 
   CheckInvalidBuiltinCountedByRef(LHSExpr, K);
   CheckInvalidBuiltinCountedByRef(RHSExpr, K);
