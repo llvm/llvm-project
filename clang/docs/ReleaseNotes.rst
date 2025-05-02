@@ -281,7 +281,7 @@ New Compiler Flags
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
 
-- New option ``-ftime-report-json`` added which outputs the same timing data as `-ftime-report` but formatted as JSON.
+- New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
 Deprecated Compiler Flags
 -------------------------
@@ -621,6 +621,8 @@ Bug Fixes to C++ Support
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
+- Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
+  (#GH136432), (#GH137014), (#GH138018)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

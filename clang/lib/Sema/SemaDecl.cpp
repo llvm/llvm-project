@@ -2800,7 +2800,7 @@ static bool mergeAlignedAttrs(Sema &S, NamedDecl *New, Decl *Old) {
 
 static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
                                const InheritableAttr *Attr,
-                               Sema::AvailabilityMergeKind AMK) {
+                               AvailabilityMergeKind AMK) {
   // Diagnose any mutual exclusions between the attribute that we want to add
   // and attributes that already exist on the declaration.
   if (!DiagnoseMutualExclusions(S, D, Attr))
@@ -2865,9 +2865,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     // such attributes on a declaration at the same time.
     NewAttr = nullptr;
   else if ((isa<DeprecatedAttr>(Attr) || isa<UnavailableAttr>(Attr)) &&
-           (AMK == Sema::AMK_Override ||
-            AMK == Sema::AMK_ProtocolImplementation ||
-            AMK == Sema::AMK_OptionalProtocolImplementation))
+           (AMK == AvailabilityMergeKind::Override ||
+            AMK == AvailabilityMergeKind::ProtocolImplementation ||
+            AMK == AvailabilityMergeKind::OptionalProtocolImplementation))
     NewAttr = nullptr;
   else if (const auto *UA = dyn_cast<UuidAttr>(Attr))
     NewAttr = S.mergeUuidAttr(D, *UA, UA->getGuid(), UA->getGuidDecl());
@@ -3243,18 +3243,18 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
 
   for (auto *I : Old->specific_attrs<InheritableAttr>()) {
     // Ignore deprecated/unavailable/availability attributes if requested.
-    AvailabilityMergeKind LocalAMK = AMK_None;
+    AvailabilityMergeKind LocalAMK = AvailabilityMergeKind::None;
     if (isa<DeprecatedAttr>(I) ||
         isa<UnavailableAttr>(I) ||
         isa<AvailabilityAttr>(I)) {
       switch (AMK) {
-      case AMK_None:
+      case AvailabilityMergeKind::None:
         continue;
 
-      case AMK_Redeclaration:
-      case AMK_Override:
-      case AMK_ProtocolImplementation:
-      case AMK_OptionalProtocolImplementation:
+      case AvailabilityMergeKind::Redeclaration:
+      case AvailabilityMergeKind::Override:
+      case AvailabilityMergeKind::ProtocolImplementation:
+      case AvailabilityMergeKind::OptionalProtocolImplementation:
         LocalAMK = AMK;
         break;
       }
@@ -4387,10 +4387,12 @@ void Sema::mergeObjCMethodDecls(ObjCMethodDecl *newMethod,
   // Merge the attributes, including deprecated/unavailable
   AvailabilityMergeKind MergeKind =
       isa<ObjCProtocolDecl>(oldMethod->getDeclContext())
-          ? (oldMethod->isOptional() ? AMK_OptionalProtocolImplementation
-                                     : AMK_ProtocolImplementation)
-          : isa<ObjCImplDecl>(newMethod->getDeclContext()) ? AMK_Redeclaration
-                                                           : AMK_Override;
+          ? (oldMethod->isOptional()
+                 ? AvailabilityMergeKind::OptionalProtocolImplementation
+                 : AvailabilityMergeKind::ProtocolImplementation)
+      : isa<ObjCImplDecl>(newMethod->getDeclContext())
+          ? AvailabilityMergeKind::Redeclaration
+          : AvailabilityMergeKind::Override;
 
   mergeDeclAttributes(newMethod, oldMethod, MergeKind);
 
@@ -7624,7 +7626,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (NewVD->getType().hasNonTrivialToPrimitiveDestructCUnion() &&
         NewVD->hasLocalStorage())
       checkNonTrivialCUnion(NewVD->getType(), NewVD->getLocation(),
-                            NTCUC_AutoVar, NTCUK_Destruct);
+                            NonTrivialCUnionContext::AutoVar, NTCUK_Destruct);
   } else {
     bool Invalid = false;
     // Match up the template parameter lists with the scope specifier, then
@@ -10529,9 +10531,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
    if (NewFD->getReturnType().hasNonTrivialToPrimitiveDestructCUnion() ||
        NewFD->getReturnType().hasNonTrivialToPrimitiveCopyCUnion())
-     checkNonTrivialCUnion(NewFD->getReturnType(),
-                           NewFD->getReturnTypeSourceRange().getBegin(),
-                           NTCUC_FunctionReturn, NTCUK_Destruct|NTCUK_Copy);
+     checkNonTrivialCUnion(
+         NewFD->getReturnType(), NewFD->getReturnTypeSourceRange().getBegin(),
+         NonTrivialCUnionContext::FunctionReturn, NTCUK_Destruct | NTCUK_Copy);
   } else {
     // C++11 [replacement.functions]p3:
     //  The program's definitions shall not be specified as inline.
@@ -13188,7 +13190,8 @@ void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init,
 
   if (isa<ImplicitValueInitExpr>(Init)) {
     if (InitType.hasNonTrivialToPrimitiveDefaultInitializeCUnion())
-      checkNonTrivialCUnion(InitType, Loc, NTCUC_DefaultInitializedObject,
+      checkNonTrivialCUnion(InitType, Loc,
+                            NonTrivialCUnionContext::DefaultInitializedObject,
                             NTCUK_Init);
   } else {
     // Assume all other explicit initializers involving copying some existing
@@ -13196,7 +13199,8 @@ void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init,
     // TODO: ignore any explicit initializers where we can guarantee
     // copy-elision.
     if (InitType.hasNonTrivialToPrimitiveCopyCUnion())
-      checkNonTrivialCUnion(InitType, Loc, NTCUC_CopyInit, NTCUK_Copy);
+      checkNonTrivialCUnion(InitType, Loc, NonTrivialCUnionContext::CopyInit,
+                            NTCUK_Copy);
   }
 }
 
@@ -13220,7 +13224,7 @@ struct DiagNonTrivalCUnionDefaultInitializeVisitor
 
   DiagNonTrivalCUnionDefaultInitializeVisitor(
       QualType OrigTy, SourceLocation OrigLoc,
-      Sema::NonTrivialCUnionContext UseContext, Sema &S)
+      NonTrivialCUnionContext UseContext, Sema &S)
       : OrigTy(OrigTy), OrigLoc(OrigLoc), UseContext(UseContext), S(S) {}
 
   void visitWithKind(QualType::PrimitiveDefaultInitializeKind PDIK, QualType QT,
@@ -13274,7 +13278,7 @@ struct DiagNonTrivalCUnionDefaultInitializeVisitor
   // non-trivial C union.
   QualType OrigTy;
   SourceLocation OrigLoc;
-  Sema::NonTrivialCUnionContext UseContext;
+  NonTrivialCUnionContext UseContext;
   Sema &S;
 };
 
@@ -13283,9 +13287,10 @@ struct DiagNonTrivalCUnionDestructedTypeVisitor
   using Super =
       DestructedTypeVisitor<DiagNonTrivalCUnionDestructedTypeVisitor, void>;
 
-  DiagNonTrivalCUnionDestructedTypeVisitor(
-      QualType OrigTy, SourceLocation OrigLoc,
-      Sema::NonTrivialCUnionContext UseContext, Sema &S)
+  DiagNonTrivalCUnionDestructedTypeVisitor(QualType OrigTy,
+                                           SourceLocation OrigLoc,
+                                           NonTrivialCUnionContext UseContext,
+                                           Sema &S)
       : OrigTy(OrigTy), OrigLoc(OrigLoc), UseContext(UseContext), S(S) {}
 
   void visitWithKind(QualType::DestructionKind DK, QualType QT,
@@ -13341,7 +13346,7 @@ struct DiagNonTrivalCUnionDestructedTypeVisitor
   // non-trivial C union.
   QualType OrigTy;
   SourceLocation OrigLoc;
-  Sema::NonTrivialCUnionContext UseContext;
+  NonTrivialCUnionContext UseContext;
   Sema &S;
 };
 
@@ -13350,8 +13355,7 @@ struct DiagNonTrivalCUnionCopyVisitor
   using Super = CopiedTypeVisitor<DiagNonTrivalCUnionCopyVisitor, false, void>;
 
   DiagNonTrivalCUnionCopyVisitor(QualType OrigTy, SourceLocation OrigLoc,
-                                 Sema::NonTrivialCUnionContext UseContext,
-                                 Sema &S)
+                                 NonTrivialCUnionContext UseContext, Sema &S)
       : OrigTy(OrigTy), OrigLoc(OrigLoc), UseContext(UseContext), S(S) {}
 
   void visitWithKind(QualType::PrimitiveCopyKind PCK, QualType QT,
@@ -13415,7 +13419,7 @@ struct DiagNonTrivalCUnionCopyVisitor
   // non-trivial C union.
   QualType OrigTy;
   SourceLocation OrigLoc;
-  Sema::NonTrivialCUnionContext UseContext;
+  NonTrivialCUnionContext UseContext;
   Sema &S;
 };
 
@@ -14214,8 +14218,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (!Var->isInvalidDecl() && DefKind != VarDecl::DeclarationOnly &&
         Var->getType().hasNonTrivialToPrimitiveDefaultInitializeCUnion())
       checkNonTrivialCUnion(Var->getType(), Var->getLocation(),
-                            NTCUC_DefaultInitializedObject, NTCUK_Init);
-
+                            NonTrivialCUnionContext::DefaultInitializedObject,
+                            NTCUK_Init);
 
     switch (DefKind) {
     case VarDecl::Definition:
@@ -15487,7 +15491,8 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   if (New->getType().hasNonTrivialToPrimitiveDestructCUnion() ||
       New->getType().hasNonTrivialToPrimitiveCopyCUnion())
     checkNonTrivialCUnion(New->getType(), New->getLocation(),
-                          NTCUC_FunctionParam, NTCUK_Destruct|NTCUK_Copy);
+                          NonTrivialCUnionContext::FunctionParam,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   // Parameter declarators cannot be interface types. All ObjC objects are
   // passed by reference.
@@ -17195,27 +17200,27 @@ static bool isClassCompatTagKind(TagTypeKind Tag)
          Tag == TagTypeKind::Interface;
 }
 
-Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
-                                             TagTypeKind TTK) {
+NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl, TagTypeKind TTK) {
   if (isa<TypedefDecl>(PrevDecl))
-    return NTK_Typedef;
+    return NonTagKind::Typedef;
   else if (isa<TypeAliasDecl>(PrevDecl))
-    return NTK_TypeAlias;
+    return NonTagKind::TypeAlias;
   else if (isa<ClassTemplateDecl>(PrevDecl))
-    return NTK_Template;
+    return NonTagKind::Template;
   else if (isa<TypeAliasTemplateDecl>(PrevDecl))
-    return NTK_TypeAliasTemplate;
+    return NonTagKind::TypeAliasTemplate;
   else if (isa<TemplateTemplateParmDecl>(PrevDecl))
-    return NTK_TemplateTemplateArgument;
+    return NonTagKind::TemplateTemplateArgument;
   switch (TTK) {
   case TagTypeKind::Struct:
   case TagTypeKind::Interface:
   case TagTypeKind::Class:
-    return getLangOpts().CPlusPlus ? NTK_NonClass : NTK_NonStruct;
+    return getLangOpts().CPlusPlus ? NonTagKind::NonClass
+                                   : NonTagKind::NonStruct;
   case TagTypeKind::Union:
-    return NTK_NonUnion;
+    return NonTagKind::NonUnion;
   case TagTypeKind::Enum:
-    return NTK_NonEnum;
+    return NonTagKind::NonEnum;
   }
   llvm_unreachable("invalid TTK");
 }
@@ -18237,10 +18242,10 @@ CreateNewDecl:
   }
 
   // Only C23 and later allow defining new types in 'offsetof()'.
-  if (OOK != OOK_Outside && TUK == TagUseKind::Definition &&
+  if (OOK != OffsetOfKind::Outside && TUK == TagUseKind::Definition &&
       !getLangOpts().CPlusPlus && !getLangOpts().C23)
     Diag(New->getLocation(), diag::ext_type_defined_in_offsetof)
-        << (OOK == OOK_Macro) << New->getSourceRange();
+        << (OOK == OffsetOfKind::Macro) << New->getSourceRange();
 
   // C++11 [dcl.type]p3:
   //   A type-specifier-seq shall not define a class or enumeration [...].
@@ -18601,7 +18606,8 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     return BitWidth;
 
   llvm::APSInt Value;
-  ExprResult ICE = VerifyIntegerConstantExpression(BitWidth, &Value, AllowFold);
+  ExprResult ICE =
+      VerifyIntegerConstantExpression(BitWidth, &Value, AllowFoldKind::Allow);
   if (ICE.isInvalid())
     return ICE;
   BitWidth = ICE.get();
@@ -19844,9 +19850,9 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         else
           Val = Converted.get();
       } else if (!Val->isValueDependent() &&
-                 !(Val =
-                       VerifyIntegerConstantExpression(Val, &EnumVal, AllowFold)
-                           .get())) {
+                 !(Val = VerifyIntegerConstantExpression(Val, &EnumVal,
+                                                         AllowFoldKind::Allow)
+                             .get())) {
         // C99 6.7.2.2p2: Make sure we have an integer constant expression.
       } else {
         if (Enum->isComplete()) {

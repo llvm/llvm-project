@@ -2060,10 +2060,10 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                                                 CCEK_ArrayBound)
                  .get();
           } else {
-            Array.NumElts =
-                VerifyIntegerConstantExpression(
-                    NumElts, nullptr, diag::err_new_array_nonconst, AllowFold)
-                    .get();
+            Array.NumElts = VerifyIntegerConstantExpression(
+                                NumElts, nullptr, diag::err_new_array_nonconst,
+                                AllowFoldKind::Allow)
+                                .get();
           }
           if (!Array.NumElts)
             return ExprError();
@@ -7191,7 +7191,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
         Context.hasSameType(LHSType, RHSType)
             ? Context.getCommonSugaredType(LHSType, RHSType)
             : UsualArithmeticConversions(LHS, RHS, QuestionLoc,
-                                         ACK_Conditional);
+                                         ArithConvKind::Conditional);
 
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
@@ -7263,8 +7263,9 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     }
     ResultType = LHSType;
   } else if (LHSBT || RHSBT) {
-    ResultType = CheckSizelessVectorOperands(
-        LHS, RHS, QuestionLoc, /*IsCompAssign*/ false, ACK_Conditional);
+    ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
+                                             /*IsCompAssign*/ false,
+                                             ArithConvKind::Conditional);
     if (ResultType.isNull())
       return QualType();
   } else {
@@ -7276,8 +7277,8 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     if (Context.hasSameType(LHSType, RHSType))
       ResultElementTy = LHSType;
     else
-      ResultElementTy =
-          UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
+      ResultElementTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
+                                                   ArithConvKind::Conditional);
 
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
@@ -7565,8 +7566,8 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   //      the usual arithmetic conversions are performed to bring them to a
   //      common type, and the result is of that type.
   if (LTy->isArithmeticType() && RTy->isArithmeticType()) {
-    QualType ResTy =
-        UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
+    QualType ResTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
+                                                ArithConvKind::Conditional);
     if (LHS.isInvalid() || RHS.isInvalid())
       return QualType();
     if (ResTy.isNull()) {
@@ -9119,16 +9120,16 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
       // error would get diagnosed when the lambda becomes capture ready.
       QualType CaptureType, DeclRefType;
       SourceLocation ExprLoc = VarExpr->getExprLoc();
-      if (S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/false, CaptureType,
-                          DeclRefType, nullptr)) {
+      if (S.tryCaptureVariable(Var, ExprLoc, TryCaptureKind::Implicit,
+                               /*EllipsisLoc*/ SourceLocation(),
+                               /*BuildAndDiagnose*/ false, CaptureType,
+                               DeclRefType, nullptr)) {
         // We will never be able to capture this variable, and we need
         // to be able to in any and all instantiations, so diagnose it.
-        S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/true, CaptureType,
-                          DeclRefType, nullptr);
+        S.tryCaptureVariable(Var, ExprLoc, TryCaptureKind::Implicit,
+                             /*EllipsisLoc*/ SourceLocation(),
+                             /*BuildAndDiagnose*/ true, CaptureType,
+                             DeclRefType, nullptr);
       }
     }
   });
