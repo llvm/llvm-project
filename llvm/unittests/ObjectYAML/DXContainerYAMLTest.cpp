@@ -435,7 +435,7 @@ TEST(RootSignature, ParseDescriptorTableV11) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 60
       Parameters:         
-      - ParameterType: 0 # SRV
+      - ParameterType: 0 # Descriptor Table
         ShaderVisibility: 3 # Domain
         Table:
           NumRanges: 1
