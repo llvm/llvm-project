@@ -13724,14 +13724,16 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       return;
     }
 
-    if (VDecl->hasLocalStorage())
-      setFunctionHasBranchProtectedScope();
-
     if (DiagnoseUnexpandedParameterPack(Init, UPPC_Initializer)) {
       VDecl->setInvalidDecl();
       return;
     }
   }
+
+  // If the variable has an initializer and local storage, check whether
+  // anything jumps over the initialization.
+  if (VDecl->hasLocalStorage())
+    setFunctionHasBranchProtectedScope();
 
   // OpenCL 1.1 6.5.2: "Variables allocated in the __local address space inside
   // a kernel function cannot be initialized."
