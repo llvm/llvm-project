@@ -1052,7 +1052,7 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
   // the module list is held is asking for A/B locking problems.
   const ModuleList tmp_module_list(*this);
   m_modules_mutex.unlock();
-  
+
   for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
