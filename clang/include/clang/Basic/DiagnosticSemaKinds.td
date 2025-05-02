@@ -13000,6 +13000,13 @@ def err_acc_duplicate_clause_disallowed
     : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
             "directive">;
 def note_acc_previous_clause_here : Note<"previous clause is here">;
+// TODO(OpenACC): Combine these with the one above, and decide between a
+// 'select' to split between showing the clause name, or just always printing
+// the name.
+def note_acc_previous_named_clause_here : Note<"previous '%0' clause is here">;
+def note_acc_device_type_here
+    : Note<"%enum_select<ACCDeviceTypeApp>{%Active{active}|%Applies{which "
+           "applies to}}0 'device_type' clause here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
 def note_acc_previous_reference : Note<"previous reference is here">;
 def err_acc_branch_in_out_compute_construct
@@ -13085,6 +13092,9 @@ def err_acc_clause_routine_one_of_in_region
 def err_acc_clause_since_last_device_type
     : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
             "'device_type' region}2 on a '%1' directive">;
+def err_acc_clause_conflicts_prev_dev_type
+    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
+            "conflicts with previous '%0' clause">;
 
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
