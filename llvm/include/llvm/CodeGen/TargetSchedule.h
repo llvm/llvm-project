@@ -45,6 +45,13 @@ class TargetSchedModel {
 
   unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
+  // EnableSchedModel and EnableSchedItins are used to control whether or not to
+  // use the Target's {SchedMachineModel, InstrItins} for hardware infor based
+  // Scheduling decisions. If both are enabled, as is the default, preference
+  // will be given to one based on the API implementation. By disabling one, we
+  // can force preference of the other. By disabling both, we will throw away
+  // any target specific hardware details for scheduling decisions, and fall
+  // into things that provide generic info such as defaultDefLatency.
   bool EnableSchedModel = true;
   bool EnableSchedItins = true;
 
