@@ -28,6 +28,33 @@ body:             |
     SI_RETURN implicit $vgpr0
 ...
 
+---
+name: change-compare-class-to-vopc # check that non-compare instr V_CMP_CLASS is also handled
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: change-compare-class-to-vopc
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: $vcc_lo = V_CMP_CLASS_F32_e64 2, undef [[DEF]], 1, implicit $exec
+    ; CHECK-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, undef [[DEF1]], implicit $exec
+    ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: [[V_CNDMASK_B32_sdwa:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_sdwa 0, [[V_MOV_B32_e32_]], 0, undef [[DEF1]], 0, 6, 0, 6, 5, implicit $vcc_lo, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_CNDMASK_B32_sdwa]]
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0
+    %0:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32_xm0_xexec = V_CMP_CLASS_F32_e64 2, undef %0, 1, implicit $exec
+    %3:vgpr_32 = V_LSHRREV_B32_e64 16, undef %1, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %3, killed %2, implicit $exec
+    $vgpr0 = COPY %4
+    SI_RETURN implicit $vgpr0
+...
+
 ...
 ---
 name: carry-copy-non-compare # copy of carry-in necessary because def. instr. cannot be changed to write to VCC

@@ -1101,7 +1101,8 @@ void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
 
   // Change destination of compare instruction to VCC
   // or copy to VCC if carry-in is not a compare inst.
-  if (CarryDef->isCompare() && TII->isVOP3(*CarryDef) &&
+  if (TII->isVOP3(*CarryDef) &&
+      TII->isVOPC(AMDGPU::getVOPe32(CarryDef->getOpcode())) &&
       MRI->hasOneUse(CarryIn.getReg()))
     CarryDef->substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
   else {
