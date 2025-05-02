@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -verify-diagnostics -split-input-file
 
-irdl.dialect @test_region_op_negative_number {
+irdl.dialect @testRegionOpNegativeNumber {
     irdl.operation @op {
         // expected-error @below {{'irdl.region' op the number of blocks is expected to be >= 1 but got -42}}
         %r1 = irdl.region with size -42
@@ -9,7 +9,7 @@ irdl.dialect @test_region_op_negative_number {
 
 // -----
 
-irdl.dialect @test_regions_op_missing_name {
+irdl.dialect @testRegionsOpMissingName {
     irdl.operation @op {
         %r1 = irdl.region
         // expected-error @below {{expected valid keyword}}
@@ -19,17 +19,17 @@ irdl.dialect @test_regions_op_missing_name {
 
 // -----
 
-irdl.dialect @test_regions_op_wrong_name {
+irdl.dialect @testRegionsOpWrongName {
     irdl.operation @op {
         %r1 = irdl.region
-        // expected-error @below {{name of region #0 must contain only lowercase letters, digits and underscores}}
+        // expected-error @below {{name of region #0 must contain only letters, digits and underscores}}
         irdl.regions(test$test: %r1)
     }
 }
 
 // -----
 
-irdl.dialect @test_regions_duplicate_name {
+irdl.dialect @testRegionsDuplicateName {
     irdl.operation @op {
         %r1 = irdl.region
         // expected-error @below {{name of region #2 is a duplicate of the name of region #0}}
@@ -39,7 +39,7 @@ irdl.dialect @test_regions_duplicate_name {
 
 // -----
 
-irdl.dialect @test_regions_op_wrong_operation {
+irdl.dialect @testRegionsOpWrongOperation {
     irdl.operation @op {
         // expected-note @below {{prior use here}}
         %r1 = irdl.any
