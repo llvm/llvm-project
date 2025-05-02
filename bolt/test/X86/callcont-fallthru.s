@@ -1,6 +1,7 @@
 ## Ensures that a call continuation fallthrough count is set when using
 ## pre-aggregated perf data.
 
+# TODO: Remove once llvm-nm supports --synthetic (#138232)
 # REQUIRES: x86_64-linux
 
 # RUN: %clang %cflags -fpic -shared -xc /dev/null -o %t.so
