@@ -78,21 +78,6 @@ public:
 
   LangOptionsBase() = default;
 
-#if defined(__clang__) && defined( __has_warning)
-#if __has_warning("-Wpreferred-type-bitfield-enum-conversion")
-// FIXME: Remove this once the warning is fixed, https://llvm.org/PR137600
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpreferred-type-bitfield-enum-conversion"
-#endif
-#endif
-  LangOptionsBase(const LangOptionsBase&) = default;
-  LangOptionsBase& operator=(const LangOptionsBase&) = default;
-#if defined(__clang__) && defined( __has_warning)
-#if __has_warning("-Wpreferred-type-bitfield-enum-conversion")
-#pragma clang diagnostic pop
-#endif
-#endif
-
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
 
@@ -321,10 +306,7 @@ public:
   };
 
   /// Possible float expression evaluation method choices.
-  enum FPEvalMethodKind {
-    /// The evaluation method cannot be determined or is inconsistent for this
-    /// target.
-    FEM_Indeterminable = -1,
+  enum FPEvalMethodKind : unsigned {
     /// Use the declared type for fp arithmetic.
     FEM_Source = 0,
     /// Use the type double for fp arithmetic.
