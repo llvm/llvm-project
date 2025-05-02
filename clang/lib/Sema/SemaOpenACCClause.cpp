@@ -335,29 +335,106 @@ class SemaOpenACCClauseVisitor {
 
   // For 'tile' and 'collapse', only allow 1 per 'device_type'.
   // Also applies to num_worker, num_gangs, vector_length, and async.
+  // This does introspection into the actual device-types to prevent duplicates
+  // across device types as well.
   template <typename TheClauseTy>
   bool DisallowSinceLastDeviceType(SemaOpenACC::OpenACCParsedClause &Clause) {
     auto LastDeviceTypeItr =
         std::find_if(ExistingClauses.rbegin(), ExistingClauses.rend(),
                      llvm::IsaPred<OpenACCDeviceTypeClause>);
 
-    auto Last = std::find_if(ExistingClauses.rbegin(), LastDeviceTypeItr,
-                             llvm::IsaPred<TheClauseTy>);
+    auto LastSinceDevTy =
+        std::find_if(ExistingClauses.rbegin(), LastDeviceTypeItr,
+                     llvm::IsaPred<TheClauseTy>);
 
-    if (Last == LastDeviceTypeItr)
-      return false;
-
-    SemaRef.Diag(Clause.getBeginLoc(),
-                 diag::err_acc_clause_since_last_device_type)
-        << Clause.getClauseKind() << Clause.getDirectiveKind()
-        << (LastDeviceTypeItr != ExistingClauses.rend());
-    SemaRef.Diag((*Last)->getBeginLoc(), diag::note_acc_previous_clause_here);
-
-    if (LastDeviceTypeItr != ExistingClauses.rend())
-      SemaRef.Diag((*LastDeviceTypeItr)->getBeginLoc(),
+    // In this case there is a duplicate since the last device_type/lack of a
+    // device_type.  Diagnose these as duplicates.
+    if (LastSinceDevTy != LastDeviceTypeItr) {
+      SemaRef.Diag(Clause.getBeginLoc(),
+                   diag::err_acc_clause_since_last_device_type)
+          << Clause.getClauseKind() << Clause.getDirectiveKind()
+          << (LastDeviceTypeItr != ExistingClauses.rend());
+      SemaRef.Diag((*LastSinceDevTy)->getBeginLoc(),
                    diag::note_acc_previous_clause_here);
 
-    return true;
+      // Mention the last device_type as well.
+      if (LastDeviceTypeItr != ExistingClauses.rend())
+        SemaRef.Diag((*LastDeviceTypeItr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+      return true;
+    }
+
+    // If this isn't in a device_type, and we didn't diagnose that there are
+    // dupes above, just give up, no sense in searching for previous device_type
+    // regions as they don't exist.
+    if (LastDeviceTypeItr == ExistingClauses.rend())
+      return false;
+
+    // The device-type that is active for us, so we can compare to the previous
+    // ones.
+    const auto &ActiveDeviceTypeClause =
+        cast<OpenACCDeviceTypeClause>(**LastDeviceTypeItr);
+
+    auto PrevDeviceTypeItr = LastDeviceTypeItr;
+    auto CurDevTypeItr = LastDeviceTypeItr;
+
+    while ((CurDevTypeItr = std::find_if(
+                std::next(PrevDeviceTypeItr), ExistingClauses.rend(),
+                llvm::IsaPred<OpenACCDeviceTypeClause>)) !=
+           ExistingClauses.rend()) {
+      // At this point, we know that we have a region between two device_types,
+      // as specified by CurDevTypeItr and PrevDeviceTypeItr.
+
+      auto CurClauseKindItr = std::find_if(PrevDeviceTypeItr, CurDevTypeItr,
+                                           llvm::IsaPred<TheClauseTy>);
+
+      // There are no clauses of the current kind between these device_types, so
+      // continue.
+      if (CurClauseKindItr == CurDevTypeItr)
+        continue;
+
+      // At this point, we know that this device_type region has a collapse.  So
+      // diagnose if the two device_types have any overlap in their
+      // architectures.
+      const auto &CurDeviceTypeClause =
+          cast<OpenACCDeviceTypeClause>(**CurDevTypeItr);
+
+      for (const DeviceTypeArgument &arg :
+           ActiveDeviceTypeClause.getArchitectures()) {
+        for (const DeviceTypeArgument &prevArg :
+             CurDeviceTypeClause.getArchitectures()) {
+
+          // This should catch duplicates * regions, duplicate same-text (thanks
+          // to identifier equiv.) and case insensitive dupes.
+          if (arg.getIdentifierInfo() == prevArg.getIdentifierInfo() ||
+              (arg.getIdentifierInfo() && prevArg.getIdentifierInfo() &&
+               StringRef{arg.getIdentifierInfo()->getName()}.equals_insensitive(
+                   prevArg.getIdentifierInfo()->getName()))) {
+            SemaRef.Diag(Clause.getBeginLoc(),
+                         diag::err_acc_clause_conflicts_prev_dev_type)
+                << Clause.getClauseKind()
+                << (arg.getIdentifierInfo() ? arg.getIdentifierInfo()->getName()
+                                            : "*");
+            // mention the active device type.
+            SemaRef.Diag(ActiveDeviceTypeClause.getBeginLoc(),
+                         diag::note_acc_device_type_here)
+                << diag::ACCDeviceTypeApp::Active;
+            // mention the previous clause.
+            SemaRef.Diag((*CurClauseKindItr)->getBeginLoc(),
+                         diag::note_acc_previous_named_clause_here)
+                << (*CurClauseKindItr)->getClauseKind();
+            // mention the previous device type.
+            SemaRef.Diag(CurDeviceTypeClause.getBeginLoc(),
+                         diag::note_acc_device_type_here)
+                << diag::ACCDeviceTypeApp::Applies;
+            return true;
+          }
+        }
+      }
+
+      PrevDeviceTypeItr = CurDevTypeItr;
+    }
+    return false;
   }
 
 public:

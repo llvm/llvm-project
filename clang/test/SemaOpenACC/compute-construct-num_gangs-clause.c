@@ -71,3 +71,18 @@ void Test() {
 #pragma acc loop num_gangs(1)
   for(int i = 5; i < 10;++i);
 }
+
+void no_dupes_since_last_device_type() {
+  // expected-error@+4{{OpenACC 'num_gangs' clause applies to 'device_type' 'radeon', which conflicts with previous 'num_gangs' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'num_gangs' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc parallel device_type(nvidia, radeon) num_gangs(getS()) device_type(radeon) num_gangs(getS())
+  ;
+  // expected-error@+4{{OpenACC 'num_gangs' clause applies to 'device_type' 'nvidia', which conflicts with previous 'num_gangs' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'num_gangs' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc parallel device_type(nvidia) num_gangs(getS()) device_type(nvidia, radeon) num_gangs(getS())
+  ;
+}
