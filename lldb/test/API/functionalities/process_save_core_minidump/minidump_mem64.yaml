@@ -27,7 +27,7 @@ Streams:
         Data Size:       0x20
         Content :        ''
       - Start of Memory Range: 0x3000
-        Data Size:       0x4000
+        Data Size:       0x400
         Content :        ''
       - Start of Memory Range: 0x5000
         Data Size:       0x2000

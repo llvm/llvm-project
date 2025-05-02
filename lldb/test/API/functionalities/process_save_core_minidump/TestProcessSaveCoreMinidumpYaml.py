@@ -7,6 +7,15 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from dataclass import dataclass
+
+class AddressRange:
+    begin: int
+    end: int
+
+    def __init__(self, begin, end):
+        self.begin = begin
+        self.end = end
 
 
 class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
@@ -17,12 +26,34 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         self.process = self.target.LoadCore(minidump_path)
         return self.process
 
+    def validate_regions_saved_correctly(self, core_process, expected_region, expected_invalid_region=None):
+       """ Validate that the expected_region is saved in the core_proc, and that the expected invalid region is not saved, if not not none. """
+
+       # Validate we can read the entire expected_region
+       error = lldb.SBError()
+       core_process.ReadMemory(expected_region.begin, expected_region.end - expected_region.begin, error)
+       self.assertTrue(error.Success(), error.GetCString())
+
+       # Validate we can't read before and after the expected_region
+       core_process.ReadMemory(expected_region.begin - 1, 1, error)
+       self.assertTrue(error.Fail(), error.GetCString())
+
+       core_process.ReadMemory(expected_region.end + 1, 1, error)
+       self.assertTrue(error.Fail(), error.GetCString())
+
+       if expected_invalid_region is None:
+              return
+
+       # Validate we can't read the original_region
+       core_process.ReadMemory(expected_invalid_region.begin, expected_invalid_region.end - expected_invalid_region.end, error)
+       self.assertTrue(error.Success(), error.GetCString())
+
     def test_saving_sub_memory_range(self):
         """
         Validate we can save a Minidump for a subsection of a memory range.
         I.E.
-        If our memory range is 0x1000-0x2000 nd the user specifies 0x1200-0x1800
-        we should still capture 0x1200 to 0x1800
+        If our memory range is 0x2000-0x2020 and the user specifies 0x2000-0x2008
+        we should still capture 0x2000-0x2008
         """
         yaml = "minidump_mem64.yaml"
         proc = self.process_from_yaml(yaml)
@@ -43,20 +74,16 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         core_target = self.dbg.CreateTarget(None)
         core_process = core_target.LoadCore(new_minidump_path)
 
-        error = lldb.SBError()
-        core_process.ReadMemory(begin, size, error)
-        self.assertTrue(error.Success(), error.GetCString())
-
-        # Try to read 1 byte past the end
-        core_process.ReadMemory(end + 1, 1, error)
-        self.assertTrue(error.Fail(), error.GetCString())
+        expected_address_range = AddressRange(begin, end)
+        expected_invalid_range = AddressRange(begin, 0x2020)
+        self.validate_regions_saved_correctly(core_process, expected_address_range, expected_invalid_range)
 
     def test_saving_super_memory_range(self):
         """
         Validate we can save a Minidump for a subsection of a memory range.
         I.E.
-        If our memory range is 0x1000-0x2000 nd the user specifies 0x0800-0x2800
-        we should still capture 0x1000-0x2000
+        If our memory range is 0x1000-0x1100 and the user specifies 0x900-x1200
+        we should still capture 0x1000-0x1100
         """
         yaml = "minidump_mem64.yaml"
         proc = self.process_from_yaml(yaml)
@@ -77,9 +104,9 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         core_target = self.dbg.CreateTarget(None)
         core_process = core_target.LoadCore(new_minidump_path)
 
-        error = lldb.SBError()
-        core_process.ReadMemory(begin, size, error)
-        self.assertTrue(error.Success(), error.GetCString())
+        expected_address_range = AddressRange(begin, end)
+        expected_invalid_range = AddressRange(begin - 16, end + 16)
+        self.validate_regions_saved_correctly(core_process, expected_address_range, expected_invalid_range)
 
     def test_region_that_goes_out_of_bounds(self):
         """
@@ -105,13 +132,9 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         core_target = self.dbg.CreateTarget(None)
         core_process = core_target.LoadCore(new_minidump_path)
 
-        error = lldb.SBError()
-        core_process.ReadMemory(begin, 0x00000020, error)
-        self.assertTrue(error.Success(), error.GetCString())
-
-        # Whole region should be unavailable
-        core_process.ReadMemory(end, 1, error)
-        self.assertTrue(error.Fail(), error.GetCString())
+        expected_address_range = AddressRange(begin, end)
+        expected_invalid_range = AddressRange(begin - 16, end + 16)
+        self.validate_regions_saved_correctly(core_process, expected_address_range, expected_invalid_range)
 
     def test_region_that_starts_out_of_bounds(self):
         """
@@ -137,6 +160,6 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         core_target = self.dbg.CreateTarget(None)
         core_process = core_target.LoadCore(new_minidump_path)
 
-        error = lldb.SBError()
-        core_process.ReadMemory(begin, 0x00000020, error)
-        self.assertTrue(error.Success(), error.GetCString())
+        expected_address_range = AddressRange(begin, end)
+        expected_invalid_range = AddressRange(begin - 16, end)
+        self.validate_regions_saved_correctly(core_process, expected_address_range, expected_invalid_range)
