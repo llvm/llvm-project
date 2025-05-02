@@ -33,13 +33,13 @@ namespace llvm {
 cl::opt<bool> EnableFSDiscriminator(
     "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
-} // namespace llvm
 
 // When true, preserves line and column number by picking one of the merged
 // location info in a deterministic manner to assist sample based PGO.
-static cl::opt<bool> PickMergedSourceLocations(
+cl::opt<bool> PickMergedSourceLocations(
     "pick-merged-source-locations", cl::init(false), cl::Hidden,
     cl::desc("Preserve line and column number when merging locations."));
+} // namespace llvm
 
 uint32_t DIType::getAlignInBits() const {
   return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
@@ -228,17 +228,18 @@ struct ScopeLocationsMatcher {
 };
 
 DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
-  if (!LocA || !LocB)
-    return nullptr;
-
   if (LocA == LocB)
     return LocA;
 
   // For some use cases (SamplePGO), it is important to retain distinct source
   // locations. When this flag is set, we choose arbitrarily between A and B,
   // rather than computing a merged location using line 0, which is typically
-  // not useful for PGO.
+  // not useful for PGO. If one of them is null, then try to return one which is
+  // valid.
   if (PickMergedSourceLocations) {
+    if (!LocA || !LocB)
+      return LocA ? LocA : LocB;
+
     auto A = std::make_tuple(LocA->getLine(), LocA->getColumn(),
                              LocA->getDiscriminator(), LocA->getFilename(),
                              LocA->getDirectory());
@@ -247,6 +248,9 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
                              LocB->getDirectory());
     return A < B ? LocA : LocB;
   }
+
+  if (!LocA || !LocB)
+    return nullptr;
 
   LLVMContext &C = LocA->getContext();
 
