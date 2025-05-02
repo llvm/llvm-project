@@ -26,7 +26,7 @@ int main() {
   for (int j{0}; j < 3; ++j) {
     source->GetDimension(j).SetBounds(1, sourceExtent[j]);
   }
-  TEST(source->Allocate(kNoAsyncObject) == CFI_SUCCESS);
+  TEST(source->Allocate(kNoAsyncId) == CFI_SUCCESS);
   TEST(source->IsAllocated());
   MATCH(2, source->GetDimension(0).Extent());
   MATCH(3, source->GetDimension(1).Extent());

@@ -258,9 +258,20 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isInit, bool isNontemporal) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
-  if (ty->getAs<clang::VectorType>()) {
-    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar vector type");
-    return;
+  if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    // Boolean vectors use `iN` as storage type.
+    if (clangVecTy->isExtVectorBoolType())
+      cgm.errorNYI(addr.getPointer().getLoc(),
+                   "emitStoreOfScalar ExtVectorBoolType");
+
+    // Handle vectors of size 3 like size 4 for better performance.
+    const mlir::Type elementType = addr.getElementType();
+    const auto vecTy = cast<cir::VectorType>(elementType);
+
+    // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
+    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+      cgm.errorNYI(addr.getPointer().getLoc(),
+                   "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
   }
 
   value = emitToMemory(value, ty);
@@ -862,10 +873,15 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   const auto *fnType = cast<FunctionType>(pointeeTy);
 
   assert(!cir::MissingFeatures::sanitizers());
-  assert(!cir::MissingFeatures::opCallArgs());
+
+  CallArgList args;
+  assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
+
+  emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), e->arguments(),
+               e->getDirectCallee());
 
   const CIRGenFunctionInfo &funcInfo =
-      cgm.getTypes().arrangeFreeFunctionCall(fnType);
+      cgm.getTypes().arrangeFreeFunctionCall(args, fnType);
 
   assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
   assert(!cir::MissingFeatures::opCallChainCall());
@@ -873,8 +889,8 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   assert(!cir::MissingFeatures::opCallMustTail());
 
   cir::CIRCallOpInterface callOp;
-  RValue callResult =
-      emitCall(funcInfo, callee, returnValue, &callOp, getLoc(e->getExprLoc()));
+  RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
+                               getLoc(e->getExprLoc()));
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 
