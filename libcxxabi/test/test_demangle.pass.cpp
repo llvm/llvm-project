@@ -15,8 +15,6 @@
 // dd8b266ef.
 // UNSUPPORTED: using-built-library-before-llvm-20
 
-// XFAIL: win32-broken-printf-a-precision
-
 #include "support/timer.h"
 #include <algorithm>
 #include <cassert>
