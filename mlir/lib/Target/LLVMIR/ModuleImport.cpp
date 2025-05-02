@@ -740,18 +740,17 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     return val;
   };
 
-  auto getOptDoubleValue = [&](const llvm::MDOperand &md, StringRef matchKey,
-                               FloatAttr &attr) -> LogicalResult {
+  auto getOptDoubleValue = [&](const llvm::MDOperand &md,
+                               StringRef matchKey) -> FailureOr<FloatAttr> {
     auto *valMD = getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md,
                                                  matchKey, /*optional=*/true);
     if (!valMD)
-      return success();
+      return FloatAttr{};
     if (auto *cstFP = dyn_cast<llvm::ConstantFP>(valMD->getValue())) {
       if (checkOptionalPosition(md, matchKey).failed())
         return failure();
-      attr = FloatAttr::get(Float64Type::get(mlirModule.getContext()),
+      return FloatAttr::get(Float64Type::get(mlirModule.getContext()),
                             cstFP->getValueAPF());
-      return success();
     }
     emitWarning(mlirModule.getLoc())
         << "expected double metadata value for key '" << matchKey
@@ -807,12 +806,11 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   if (isPartialProfile->has_value())
     summayIdx++;
 
-  FloatAttr partialProfileRatio;
-  if (getOptDoubleValue(mdTuple->getOperand(summayIdx), "PartialProfileRatio",
-                        partialProfileRatio)
-          .failed())
+  FailureOr<FloatAttr> partialProfileRatio =
+      getOptDoubleValue(mdTuple->getOperand(summayIdx), "PartialProfileRatio");
+  if (failed(partialProfileRatio))
     return nullptr;
-  if (partialProfileRatio)
+  if (*partialProfileRatio)
     summayIdx++;
 
   // Handle detailed summary.
@@ -826,7 +824,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   return ModuleFlagProfileSummaryAttr::get(
       mlirModule->getContext(), *format, *totalCount, *maxCount,
       *maxInternalCount, *maxFunctionCount, *numCounts, *numFunctions,
-      *isPartialProfile, partialProfileRatio, *detailed);
+      *isPartialProfile, *partialProfileRatio, *detailed);
 }
 
 /// Invoke specific handlers for each known module flag value, returns nullptr
