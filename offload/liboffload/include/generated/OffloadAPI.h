@@ -24,32 +24,47 @@ typedef enum ol_errc_t {
   OL_ERRC_SUCCESS = 0,
   /// Unknown or internal error
   OL_ERRC_UNKNOWN = 1,
+  /// I/O error on host
+  OL_ERRC_HOST_IO = 2,
+  /// A provided binary image is malformed
+  OL_ERRC_INVALID_BINARY = 3,
   /// A pointer argument is null when it should not be
-  OL_ERRC_INVALID_NULL_POINTER = 2,
+  OL_ERRC_INVALID_NULL_POINTER = 4,
   /// An argument is invalid
-  OL_ERRC_INVALID_ARGUMENT = 3,
+  OL_ERRC_INVALID_ARGUMENT = 5,
+  /// Requested object was not found in the binary image
+  OL_ERRC_NOT_FOUND = 6,
   /// Out of resources
-  OL_ERRC_OUT_OF_RESOURCES = 4,
-  /// generic error code for unsupported features and enums
-  OL_ERRC_UNSUPPORTED = 5,
+  OL_ERRC_OUT_OF_RESOURCES = 7,
   /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
-  OL_ERRC_INVALID_SIZE = 6,
+  OL_ERRC_INVALID_SIZE = 8,
   /// enumerator argument is not valid
-  OL_ERRC_INVALID_ENUMERATION = 7,
-  /// Named kernel not found in the program binary
-  OL_ERRC_INVALID_KERNEL_NAME = 8,
+  OL_ERRC_INVALID_ENUMERATION = 9,
+  /// A required binary (linker, etc.) was not found on the host
+  OL_ERRC_HOST_TOOL_NOT_FOUND = 10,
   /// Invalid Value
-  OL_ERRC_INVALID_VALUE = 9,
+  OL_ERRC_INVALID_VALUE = 11,
+  /// Generic error code for features currently unimplemented by the
+  /// device/backend
+  OL_ERRC_UNIMPLEMENTED = 12,
+  /// Generic error code for features unsupported by the device/backend
+  OL_ERRC_UNSUPPORTED = 13,
+  /// Assembler failure while processing binary image
+  OL_ERRC_ASSEMBLE_FAILURE = 14,
+  /// Linker failure while processing binary image
+  OL_ERRC_LINK_FAILURE = 15,
+  /// The plugin backend is in an invalid or unsupported state
+  OL_ERRC_BACKEND_FAILURE = 16,
+  /// A handle argument is null when it should not be
+  OL_ERRC_INVALID_NULL_HANDLE = 17,
   /// Invalid platform
-  OL_ERRC_INVALID_PLATFORM = 10,
+  OL_ERRC_INVALID_PLATFORM = 18,
   /// Invalid device
-  OL_ERRC_INVALID_DEVICE = 11,
+  OL_ERRC_INVALID_DEVICE = 19,
   /// Invalid queue
-  OL_ERRC_INVALID_QUEUE = 12,
+  OL_ERRC_INVALID_QUEUE = 20,
   /// Invalid event
-  OL_ERRC_INVALID_EVENT = 13,
-  /// handle argument is not valid
-  OL_ERRC_INVALID_NULL_HANDLE = 14,
+  OL_ERRC_INVALID_EVENT = 21,
   /// @cond
   OL_ERRC_FORCE_UINT32 = 0x7fffffff
   /// @endcond
