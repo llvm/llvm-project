@@ -419,4 +419,20 @@ void no_dupes_since_last_device_type() {
 #pragma acc loop tile(1) device_type(*) tile(1) device_type(nvidia) tile(2)
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
+
+  // expected-error@+4{{OpenACC 'tile' clause applies to 'device_type' 'nvidiA', which conflicts with previous 'tile' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'tile' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc loop device_type(nvidia, radeon) tile(1) device_type(nvidiA) tile(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+
+  // expected-error@+4{{OpenACC 'tile' clause applies to 'device_type' 'radeon', which conflicts with previous 'tile' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'tile' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc loop device_type(radeon) tile(1) device_type(nvidia, radeon) tile(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
 }
