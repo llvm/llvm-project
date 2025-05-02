@@ -10553,10 +10553,10 @@ static SDValue foldBitOrderCrossLogicOp(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  if (ISD::isBitwiseLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
-    SDValue OldLHS = N0.getOperand(0);
-    SDValue OldRHS = N0.getOperand(1);
 
+  SDValue OldLHS, OldRHS;
+  if (sd_match(N0,
+               m_OneUse(m_BitwiseLogic(m_Value(OldLHS), m_Value(OldRHS))))) {
     // If both operands are bswap/bitreverse, ignore the multiuse
     // Otherwise need to ensure logic_op and bswap/bitreverse(x) have one use.
     if (OldLHS.getOpcode() == Opcode && OldRHS.getOpcode() == Opcode) {
