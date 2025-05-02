@@ -889,13 +889,20 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       } else if (evaluate::IsArrayElement(*object.ref())) {
         // Array Section
         SomeExpr expr = *object.ref();
-        if (isVectorSubscript(expr))
-          TODO(converter.getCurrentLocation(),
-               "Vector subscripted array section for task dependency");
 
-        hlfir::EntityWithAttributes entity = convertExprToHLFIR(
-            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
-        dependVar = entity.getBase();
+        if (isVectorSubscript(expr)) {
+          // OpenMP needs the address of the first indexed element (required by
+          // the standard to be the lowest index) to identify the dependency. We
+          // don't need an accurate length for the array section because the
+          // OpenMP standard forbids overlapping array sections.
+          dependVar = genVectorSubscriptedDesignatorFirstElementAddress(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+        } else {
+          // Ordinary array section e.g. A(1:512:2)
+          hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+          dependVar = entity.getBase();
+        }
       } else {
         semantics::Symbol *sym = object.sym();
         dependVar = converter.getSymbolAddress(*sym);

@@ -619,23 +619,16 @@ public:
 namespace mdconst {
 
 namespace detail {
+template <typename U, typename V>
+using check_has_dereference = decltype(static_cast<V>(*std::declval<U &>()));
 
-template <class T> T &make();
-template <class T, class Result> struct HasDereference {
-  using Yes = char[1];
-  using No = char[2];
-  template <size_t N> struct SFINAE {};
+template <typename U, typename V>
+static constexpr bool HasDereference =
+    is_detected<check_has_dereference, U, V>::value;
 
-  template <class U, class V>
-  static Yes &hasDereference(SFINAE<sizeof(static_cast<V>(*make<U>()))> * = 0);
-  template <class U, class V> static No &hasDereference(...);
-
-  static const bool value =
-      sizeof(hasDereference<T, Result>(nullptr)) == sizeof(Yes);
-};
 template <class V, class M> struct IsValidPointer {
   static const bool value = std::is_base_of<Constant, V>::value &&
-                            HasDereference<M, const Metadata &>::value;
+                            HasDereference<M, const Metadata &>;
 };
 template <class V, class M> struct IsValidReference {
   static const bool value = std::is_base_of<Constant, V>::value &&

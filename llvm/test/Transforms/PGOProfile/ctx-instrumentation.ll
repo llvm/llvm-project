@@ -18,7 +18,7 @@ declare void @bar()
 ; LOWERING: @[[GLOB4:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @[[GLOB5:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @[[GLOB6:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB7:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB7:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } { ptr null, ptr null, ptr inttoptr (i64 1 to ptr), ptr null, i8 0 }
 ;.
 define void @foo(i32 %a, ptr %fct) {
 ; INSTRUMENT-LABEL: define void @foo(
@@ -310,11 +310,38 @@ define void @has_musttail_calls() {
   musttail call void @bar()
   ret void
 }
+
+define void @does_not_return() noreturn {
+; INSTRUMENT-LABEL: define void @does_not_return(
+; INSTRUMENT-SAME: ) #[[ATTR0:[0-9]+]] {
+; INSTRUMENT-NEXT:    call void @llvm.instrprof.increment(ptr @does_not_return, i64 742261418966908927, i32 1, i32 0)
+; INSTRUMENT-NEXT:    unreachable
+;
+; LOWERING-LABEL: define void @does_not_return(
+; LOWERING-SAME: ) #[[ATTR0:[0-9]+]] !guid [[META8:![0-9]+]] {
+; LOWERING-NEXT:    unreachable
+;
+  unreachable
+}
+
+define void @unreachable() {
+; INSTRUMENT-LABEL: define void @unreachable() {
+; INSTRUMENT-NEXT:    call void @llvm.instrprof.increment(ptr @unreachable, i64 742261418966908927, i32 1, i32 0)
+; INSTRUMENT-NEXT:    unreachable
+;
+; LOWERING-LABEL: define void @unreachable(
+; LOWERING-SAME: ) !guid [[META9:![0-9]+]] {
+; LOWERING-NEXT:    unreachable
+;
+  unreachable
+}
 ;.
-; LOWERING: attributes #[[ATTR0:[0-9]+]] = { nounwind }
-; LOWERING: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; LOWERING: attributes #[[ATTR0]] = { noreturn }
+; LOWERING: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; LOWERING: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; INSTRUMENT: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+; INSTRUMENT: attributes #[[ATTR0]] = { noreturn }
+; INSTRUMENT: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ;.
 ; LOWERING: [[META0]] = !{i64 6699318081062747564}
 ; LOWERING: [[META1]] = !{i64 4909520559318251808}
@@ -324,4 +351,6 @@ define void @has_musttail_calls() {
 ; LOWERING: [[META5]] = !{i64 5458232184388660970}
 ; LOWERING: [[META6]] = !{i64 -3771893999295659109}
 ; LOWERING: [[META7]] = !{i64 -4680624981836544329}
+; LOWERING: [[META8]] = !{i64 5519225910966780583}
+; LOWERING: [[META9]] = !{i64 -565652589829076809}
 ;.

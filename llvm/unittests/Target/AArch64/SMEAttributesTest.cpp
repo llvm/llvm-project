@@ -1,6 +1,7 @@
 #include "Utils/AArch64SMEAttributes.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -69,6 +70,15 @@ TEST(SMEAttributes, Constructors) {
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_new_zt0\"")
                       ->getFunction("foo"))
                   .isNewZT0());
+  ASSERT_TRUE(
+      SA(cast<CallBase>((parseIR("declare void @callee()\n"
+                                 "define void @foo() {"
+                                 "call void @callee() \"aarch64_zt0_undef\"\n"
+                                 "ret void\n}")
+                             ->getFunction("foo")
+                             ->begin()
+                             ->front())))
+          .isUndefZT0());
 
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
@@ -215,6 +225,18 @@ TEST(SMEAttributes, Basics) {
   ASSERT_FALSE(ZT0_New.hasSharedZAInterface());
   ASSERT_TRUE(ZT0_New.hasPrivateZAInterface());
 
+  SA ZT0_Undef = SA(SA::ZT0_Undef | SA::encodeZT0State(SA::StateValue::New));
+  ASSERT_TRUE(ZT0_Undef.isNewZT0());
+  ASSERT_FALSE(ZT0_Undef.isInZT0());
+  ASSERT_FALSE(ZT0_Undef.isOutZT0());
+  ASSERT_FALSE(ZT0_Undef.isInOutZT0());
+  ASSERT_FALSE(ZT0_Undef.isPreservesZT0());
+  ASSERT_FALSE(ZT0_Undef.sharesZT0());
+  ASSERT_TRUE(ZT0_Undef.hasZT0State());
+  ASSERT_FALSE(ZT0_Undef.hasSharedZAInterface());
+  ASSERT_TRUE(ZT0_Undef.hasPrivateZAInterface());
+  ASSERT_TRUE(ZT0_Undef.isUndefZT0());
+
   ASSERT_FALSE(SA(SA::Normal).isInZT0());
   ASSERT_FALSE(SA(SA::Normal).isOutZT0());
   ASSERT_FALSE(SA(SA::Normal).isInOutZT0());
@@ -285,6 +307,7 @@ TEST(SMEAttributes, Transitions) {
   SA ZT0_Shared = SA(SA::encodeZT0State(SA::StateValue::In));
   SA ZA_ZT0_Shared = SA(SA::encodeZAState(SA::StateValue::In) |
                         SA::encodeZT0State(SA::StateValue::In));
+  SA Undef_ZT0 = SA(SA::ZT0_Undef);
 
   // Shared ZA -> Private ZA Interface
   ASSERT_FALSE(ZA_Shared.requiresDisablingZABeforeCall(Private_ZA));
@@ -294,6 +317,13 @@ TEST(SMEAttributes, Transitions) {
   ASSERT_TRUE(ZT0_Shared.requiresDisablingZABeforeCall(Private_ZA));
   ASSERT_TRUE(ZT0_Shared.requiresPreservingZT0(Private_ZA));
   ASSERT_TRUE(ZT0_Shared.requiresEnablingZAAfterCall(Private_ZA));
+
+  // Shared Undef ZT0 -> Private ZA Interface
+  // Note: "Undef ZT0" is a callsite attribute that means ZT0 is undefined at
+  // point the of the call.
+  ASSERT_TRUE(ZT0_Shared.requiresDisablingZABeforeCall(Undef_ZT0));
+  ASSERT_FALSE(ZT0_Shared.requiresPreservingZT0(Undef_ZT0));
+  ASSERT_TRUE(ZT0_Shared.requiresEnablingZAAfterCall(Undef_ZT0));
 
   // Shared ZA & ZT0 -> Private ZA Interface
   ASSERT_FALSE(ZA_ZT0_Shared.requiresDisablingZABeforeCall(Private_ZA));

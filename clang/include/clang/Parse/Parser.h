@@ -21,6 +21,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -50,6 +51,103 @@ namespace clang {
   struct OMPTraitSelector;
   struct OMPTraitSet;
   class OMPTraitInfo;
+
+enum class AnnotatedNameKind {
+  /// Annotation has failed and emitted an error.
+  Error,
+  /// The identifier is a tentatively-declared name.
+  TentativeDecl,
+  /// The identifier is a template name. FIXME: Add an annotation for that.
+  TemplateName,
+  /// The identifier can't be resolved.
+  Unresolved,
+  /// Annotation was successful.
+  Success
+};
+
+/// The kind of extra semi diagnostic to emit.
+enum class ExtraSemiKind {
+  OutsideFunction = 0,
+  InsideStruct = 1,
+  InstanceVariableList = 2,
+  AfterMemberFunctionDefinition = 3
+};
+
+/// The kind of template we are parsing.
+enum class ParsedTemplateKind {
+  /// We are not parsing a template at all.
+  NonTemplate = 0,
+  /// We are parsing a template declaration.
+  Template,
+  /// We are parsing an explicit specialization.
+  ExplicitSpecialization,
+  /// We are parsing an explicit instantiation.
+  ExplicitInstantiation
+};
+
+enum class CachedInitKind { DefaultArgument, DefaultInitializer };
+
+// Definitions for Objective-c context sensitive keywords recognition.
+enum class ObjCTypeQual {
+  in = 0,
+  out,
+  inout,
+  oneway,
+  bycopy,
+  byref,
+  nonnull,
+  nullable,
+  null_unspecified,
+  NumQuals
+};
+
+/// TypeCastState - State whether an expression is or may be a type cast.
+enum class TypeCastState { NotTypeCast = 0, MaybeTypeCast, IsTypeCast };
+
+/// Control what ParseCastExpression will parse.
+enum class CastParseKind { AnyCastExpr = 0, UnaryExprOnly, PrimaryExprOnly };
+
+/// ParenParseOption - Control what ParseParenExpression will parse.
+enum class ParenParseOption {
+  SimpleExpr,      // Only parse '(' expression ')'
+  FoldExpr,        // Also allow fold-expression <anything>
+  CompoundStmt,    // Also allow '(' compound-statement ')'
+  CompoundLiteral, // Also allow '(' type-name ')' '{' ... '}'
+  CastExpr         // Also allow '(' type-name ')' <anything>
+};
+
+/// Describes the behavior that should be taken for an __if_exists
+/// block.
+enum class IfExistsBehavior {
+  /// Parse the block; this code is always used.
+  Parse,
+  /// Skip the block entirely; this code is never used.
+  Skip,
+  /// Parse the block as a dependent block, which may be used in
+  /// some template instantiations but not others.
+  Dependent
+};
+
+/// Specifies the context in which type-id/expression
+/// disambiguation will occur.
+enum class TentativeCXXTypeIdContext {
+  InParens,
+  Unambiguous,
+  AsTemplateArgument,
+  InTrailingReturnType,
+  AsGenericSelectionArgument,
+};
+
+/// The kind of attribute specifier we have found.
+enum class CXX11AttributeKind {
+  /// This is not an attribute specifier.
+  NotAttributeSpecifier,
+  /// This should be treated as an attribute-specifier.
+  AttributeSpecifier,
+  /// The next tokens are '[[', but this is not an attribute-specifier. This
+  /// is ill-formed by C++11 [dcl.attr.grammar]p6.
+  InvalidAttributeSpecifier
+};
 
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
@@ -94,7 +192,7 @@ class Parser : public CodeCompletionHandler {
   StackExhaustionHandler StackHandler;
 
   /// ScopeCache - Cache scopes to reduce malloc traffic.
-  enum { ScopeCacheSize = 16 };
+  static constexpr int ScopeCacheSize = 16;
   unsigned NumCachedScopes;
   Scope *ScopeCache[ScopeCacheSize];
 
@@ -277,7 +375,7 @@ class Parser : public CodeCompletionHandler {
   /// function call.
   bool CalledSignatureHelp = false;
 
-  Sema::OffsetOfKind OffsetOfState = Sema::OffsetOfKind::OOK_Outside;
+  OffsetOfKind OffsetOfState = OffsetOfKind::Outside;
 
   /// The "depth" of the template parameters currently being parsed.
   unsigned TemplateParameterDepth;
@@ -953,19 +1051,6 @@ public:
   }
 
 private:
-  enum AnnotatedNameKind {
-    /// Annotation has failed and emitted an error.
-    ANK_Error,
-    /// The identifier is a tentatively-declared name.
-    ANK_TentativeDecl,
-    /// The identifier is a template name. FIXME: Add an annotation for that.
-    ANK_TemplateName,
-    /// The identifier can't be resolved.
-    ANK_Unresolved,
-    /// Annotation was successful.
-    ANK_Success
-  };
-
   AnnotatedNameKind
   TryAnnotateName(CorrectionCandidateCallback *CCC = nullptr,
                   ImplicitTypenameContext AllowImplicitTypename =
@@ -1132,14 +1217,6 @@ private:
   /// or, if there's just some closing-delimiter noise (e.g., ')' or ']') prior
   /// to the semicolon, consumes that extra token.
   bool ExpectAndConsumeSemi(unsigned DiagID , StringRef TokenUsed = "");
-
-  /// The kind of extra semi diagnostic to emit.
-  enum ExtraSemiKind {
-    OutsideFunction = 0,
-    InsideStruct = 1,
-    InstanceVariableList = 2,
-    AfterMemberFunctionDefinition = 3
-  };
 
   /// Consume any extra semi-colons until the end of the line.
   void ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST T = TST_unspecified);
@@ -1598,32 +1675,22 @@ private:
   /// information that has been parsed prior to parsing declaration
   /// specifiers.
   struct ParsedTemplateInfo {
-    ParsedTemplateInfo() : Kind(NonTemplate), TemplateParams(nullptr) {}
+    ParsedTemplateInfo() : Kind(ParsedTemplateKind::NonTemplate), TemplateParams(nullptr) {}
 
     ParsedTemplateInfo(TemplateParameterLists *TemplateParams,
                        bool isSpecialization,
                        bool lastParameterListWasEmpty = false)
-      : Kind(isSpecialization? ExplicitSpecialization : Template),
+      : Kind(isSpecialization? ParsedTemplateKind::ExplicitSpecialization : ParsedTemplateKind::Template),
         TemplateParams(TemplateParams),
         LastParameterListWasEmpty(lastParameterListWasEmpty) { }
 
     explicit ParsedTemplateInfo(SourceLocation ExternLoc,
                                 SourceLocation TemplateLoc)
-      : Kind(ExplicitInstantiation), TemplateParams(nullptr),
+      : Kind(ParsedTemplateKind::ExplicitInstantiation), TemplateParams(nullptr),
         ExternLoc(ExternLoc), TemplateLoc(TemplateLoc),
         LastParameterListWasEmpty(false){ }
 
-    /// The kind of template we are parsing.
-    enum {
-      /// We are not parsing a template at all.
-      NonTemplate = 0,
-      /// We are parsing a template declaration.
-      Template,
-      /// We are parsing an explicit specialization.
-      ExplicitSpecialization,
-      /// We are parsing an explicit instantiation.
-      ExplicitInstantiation
-    } Kind;
+    ParsedTemplateKind Kind;
 
     /// The template parameter lists, for template declarations
     /// and explicit specializations.
@@ -1656,11 +1723,6 @@ private:
   PushParsingClass(Decl *TagOrTemplate, bool TopLevelClass, bool IsInterface);
   void DeallocateParsedClasses(ParsingClass *Class);
   void PopParsingClass(Sema::ParsingClassState);
-
-  enum CachedInitKind {
-    CIK_DefaultArgument,
-    CIK_DefaultInitializer
-  };
 
   NamedDecl *ParseCXXInlineMethodDef(AccessSpecifier AS,
                                      const ParsedAttributesView &AccessAttrs,
@@ -1738,8 +1800,8 @@ private:
   ObjCTypeParamList *parseObjCTypeParamList();
   ObjCTypeParamList *parseObjCTypeParamListOrProtocolRefs(
       ObjCTypeParamListScope &Scope, SourceLocation &lAngleLoc,
-      SmallVectorImpl<IdentifierLocPair> &protocolIdents,
-      SourceLocation &rAngleLoc, bool mayBeProtocolList = true);
+      SmallVectorImpl<IdentifierLoc> &protocolIdents, SourceLocation &rAngleLoc,
+      bool mayBeProtocolList = true);
 
   void HelperActionsForIvarDeclarations(ObjCContainerDecl *interfaceDecl,
                                         SourceLocation atLoc,
@@ -1832,13 +1894,8 @@ private:
   Decl *ParseObjCPropertyDynamic(SourceLocation atLoc);
 
   IdentifierInfo *ParseObjCSelectorPiece(SourceLocation &MethodLocation);
-  // Definitions for Objective-c context sensitive keywords recognition.
-  enum ObjCTypeQual {
-    objc_in=0, objc_out, objc_inout, objc_oneway, objc_bycopy, objc_byref,
-    objc_nonnull, objc_nullable, objc_null_unspecified,
-    objc_NumQuals
-  };
-  IdentifierInfo *ObjCTypeQuals[objc_NumQuals];
+
+  IdentifierInfo *ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::NumQuals)];
 
   bool isTokIdentifier_in() const;
 
@@ -1858,16 +1915,10 @@ public:
   //===--------------------------------------------------------------------===//
   // C99 6.5: Expressions.
 
-  /// TypeCastState - State whether an expression is or may be a type cast.
-  enum TypeCastState {
-    NotTypeCast = 0,
-    MaybeTypeCast,
-    IsTypeCast
-  };
-
-  ExprResult ParseExpression(TypeCastState isTypeCast = NotTypeCast);
+  ExprResult
+  ParseExpression(TypeCastState isTypeCast = TypeCastState::NotTypeCast);
   ExprResult ParseConstantExpressionInExprEvalContext(
-      TypeCastState isTypeCast = NotTypeCast);
+      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
   ExprResult ParseConstantExpression();
   ExprResult ParseArrayBoundExpression();
   ExprResult ParseCaseExpression(SourceLocation CaseLoc);
@@ -1876,7 +1927,8 @@ public:
   ParseConstraintLogicalAndExpression(bool IsTrailingRequiresClause);
   ExprResult ParseConstraintLogicalOrExpression(bool IsTrailingRequiresClause);
   // Expr that doesn't include commas.
-  ExprResult ParseAssignmentExpression(TypeCastState isTypeCast = NotTypeCast);
+  ExprResult ParseAssignmentExpression(
+      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
   ExprResult ParseConditionalExpression();
 
   ExprResult ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
@@ -1894,14 +1946,7 @@ private:
 
   ExprResult ParseExpressionWithLeadingExtension(SourceLocation ExtLoc);
 
-  ExprResult ParseRHSOfBinaryExpression(ExprResult LHS,
-                                        prec::Level MinPrec);
-  /// Control what ParseCastExpression will parse.
-  enum CastParseKind {
-    AnyCastExpr = 0,
-    UnaryExprOnly,
-    PrimaryExprOnly
-  };
+  ExprResult ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec);
 
   bool isRevertibleTypeTrait(const IdentifierInfo *Id,
                              clang::tok::TokenKind *Kind = nullptr);
@@ -1912,11 +1957,11 @@ private:
                                  TypeCastState isTypeCast,
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr);
-  ExprResult ParseCastExpression(CastParseKind ParseKind,
-                                 bool isAddressOfOperand = false,
-                                 TypeCastState isTypeCast = NotTypeCast,
-                                 bool isVectorLiteral = false,
-                                 bool *NotPrimaryExpression = nullptr);
+  ExprResult
+  ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand = false,
+                      TypeCastState isTypeCast = TypeCastState::NotTypeCast,
+                      bool isVectorLiteral = false,
+                      bool *NotPrimaryExpression = nullptr);
 
   /// Returns true if the next token cannot start an expression.
   bool isNotExpressionStart();
@@ -1955,21 +2000,12 @@ private:
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false,
-                           bool *HasTrailingComma = nullptr);
+                           bool EarlyTypoCorrection = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
   bool ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs);
 
-  /// ParenParseOption - Control what ParseParenExpression will parse.
-  enum ParenParseOption {
-    SimpleExpr,      // Only parse '(' expression ')'
-    FoldExpr,        // Also allow fold-expression <anything>
-    CompoundStmt,    // Also allow '(' compound-statement ')'
-    CompoundLiteral, // Also allow '(' type-name ')' '{' ... '}'
-    CastExpr         // Also allow '(' type-name ')' <anything>
-  };
   ExprResult ParseParenExpression(ParenParseOption &ExprType,
                                         bool stopIfCastExpr,
                                         bool isTypeCast,
@@ -2234,18 +2270,6 @@ private:
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs);
-
-  /// Describes the behavior that should be taken for an __if_exists
-  /// block.
-  enum IfExistsBehavior {
-    /// Parse the block; this code is always used.
-    IEB_Parse,
-    /// Skip the block entirely; this code is never used.
-    IEB_Skip,
-    /// Parse the block as a dependent block, which may be used in
-    /// some template instantiations but not others.
-    IEB_Dependent
-  };
 
   /// Describes the condition of a Microsoft __if_exists or
   /// __if_not_exists block.
@@ -2568,7 +2592,8 @@ private:
   void ParseEnumSpecifier(SourceLocation TagLoc, DeclSpec &DS,
                           const ParsedTemplateInfo &TemplateInfo,
                           AccessSpecifier AS, DeclSpecContext DSC);
-  void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl);
+  void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl,
+                     SkipBodyInfo *SkipBody = nullptr);
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
 
@@ -2638,22 +2663,12 @@ private:
       DeclSpec::FriendSpecified IsFriend = DeclSpec::FriendSpecified::No,
       const ParsedTemplateInfo *TemplateInfo = nullptr);
 
-  /// Specifies the context in which type-id/expression
-  /// disambiguation will occur.
-  enum TentativeCXXTypeIdContext {
-    TypeIdInParens,
-    TypeIdUnambiguous,
-    TypeIdAsTemplateArgument,
-    TypeIdInTrailingReturnType,
-    TypeIdAsGenericSelectionArgument,
-  };
-
   /// isTypeIdInParens - Assumes that a '(' was parsed and now we want to know
   /// whether the parens contain an expression or a type-id.
   /// Returns true for a type-id and false for an expression.
   bool isTypeIdInParens(bool &isAmbiguous) {
     if (getLangOpts().CPlusPlus)
-      return isCXXTypeId(TypeIdInParens, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::InParens, isAmbiguous);
     isAmbiguous = false;
     return isTypeSpecifierQualifier();
   }
@@ -2672,7 +2687,8 @@ private:
   bool isTypeIdForGenericSelection() {
     if (getLangOpts().CPlusPlus) {
       bool isAmbiguous;
-      return isCXXTypeId(TypeIdAsGenericSelectionArgument, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::AsGenericSelectionArgument,
+                         isAmbiguous);
     }
     return isTypeSpecifierQualifier();
   }
@@ -2683,7 +2699,7 @@ private:
   bool isTypeIdUnambiguously() {
     if (getLangOpts().CPlusPlus) {
       bool isAmbiguous;
-      return isCXXTypeId(TypeIdUnambiguous, isAmbiguous);
+      return isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous, isAmbiguous);
     }
     return isTypeSpecifierQualifier();
   }
@@ -2830,7 +2846,8 @@ private:
   bool isAllowedCXX11AttributeSpecifier(bool Disambiguate = false,
                                         bool OuterMightBeMessageSend = false) {
     return (Tok.isRegularKeywordAttribute() ||
-            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend));
+            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend) !=
+                CXX11AttributeKind::NotAttributeSpecifier);
   }
 
   // Check for the start of an attribute-specifier-seq in a context where an
@@ -3182,6 +3199,8 @@ private:
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();
 
+  void ParsePtrauthQualifier(ParsedAttributes &Attrs);
+
   VirtSpecifiers::Specifier isCXX11VirtSpecifier(const Token &Tok) const;
   VirtSpecifiers::Specifier isCXX11VirtSpecifier() const {
     return isCXX11VirtSpecifier(Tok);
@@ -3287,16 +3306,6 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ 7: Declarations [dcl.dcl]
 
-  /// The kind of attribute specifier we have found.
-  enum CXX11AttributeKind {
-    /// This is not an attribute specifier.
-    CAK_NotAttributeSpecifier,
-    /// This should be treated as an attribute-specifier.
-    CAK_AttributeSpecifier,
-    /// The next tokens are '[[', but this is not an attribute-specifier. This
-    /// is ill-formed by C++11 [dcl.attr.grammar]p6.
-    CAK_InvalidAttributeSpecifier
-  };
   CXX11AttributeKind
   isCXX11AttributeSpecifier(bool Disambiguate = false,
                             bool OuterMightBeMessageSend = false);
@@ -3750,7 +3759,7 @@ private:
     SmallVector<Expr *> getAllExprs() {
       SmallVector<Expr *> Out;
       Out.push_back(DevNumExpr);
-      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+      llvm::append_range(Out, QueueIdExprs);
       return Out;
     }
   };
@@ -3829,8 +3838,7 @@ private:
                                SourceLocation Loc,
                                llvm::SmallVectorImpl<Expr *> &IntExprs);
   /// Parses the 'device-type-list', which is a list of identifiers.
-  bool ParseOpenACCDeviceTypeList(
-      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs);
+  bool ParseOpenACCDeviceTypeList(llvm::SmallVector<IdentifierLoc> &Archs);
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
@@ -3962,10 +3970,8 @@ private:
     return false;
   }
 
-  bool ParseModuleName(
-      SourceLocation UseLoc,
-      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
-      bool IsImport);
+  bool ParseModuleName(SourceLocation UseLoc,
+                       SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]

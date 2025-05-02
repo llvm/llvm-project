@@ -419,10 +419,10 @@ inline _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... 
 
 #    if _LIBCPP_STD_VER >= 17
 template <class... _Mutexes>
-class _LIBCPP_TEMPLATE_VIS scoped_lock;
+class scoped_lock;
 
 template <>
-class _LIBCPP_TEMPLATE_VIS scoped_lock<> {
+class scoped_lock<> {
 public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock() {}
   ~scoped_lock() = default;
@@ -434,7 +434,7 @@ public:
 };
 
 template <class _Mutex>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) scoped_lock<_Mutex> {
+class _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) scoped_lock<_Mutex> {
 public:
   typedef _Mutex mutex_type;
 
@@ -459,7 +459,7 @@ public:
 };
 
 template <class... _MArgs>
-class _LIBCPP_TEMPLATE_VIS scoped_lock {
+class scoped_lock {
   static_assert(sizeof...(_MArgs) > 1, "At least 2 lock types required");
   typedef tuple<_MArgs&...> _MutexTuple;
 

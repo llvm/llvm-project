@@ -21,24 +21,6 @@
 #include "rtsan/rtsan.h"
 
 #if SANITIZER_APPLE
-
-#if TARGET_OS_MAC
-// On MacOS OSSpinLockLock is deprecated and no longer present in the headers,
-// but the symbol still exists on the system. Forward declare here so we
-// don't get compilation errors.
-#include <stdint.h>
-extern "C" {
-typedef int32_t OSSpinLock;
-void OSSpinLockLock(volatile OSSpinLock *__lock);
-// A pointer to this type is in the interface for `_os_nospin_lock_lock`, but
-// it's an internal implementation detail of `os/lock.c` on Darwin, and
-// therefore not available in any headers. As a workaround, we forward declare
-// it here, which is enough to facilitate interception of _os_nospin_lock_lock.
-struct _os_nospin_lock_s;
-using _os_nospin_lock_t = _os_nospin_lock_s *;
-}
-#endif // TARGET_OS_MAC
-
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
 #endif // SANITIZER_APPLE
@@ -717,15 +699,28 @@ INTERCEPTOR(mode_t, umask, mode_t cmask) {
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#undef OSSpinLockLock
+
 INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
   __rtsan_notify_intercepted_call("OSSpinLockLock");
   return REAL(OSSpinLockLock)(lock);
 }
-#pragma clang diagnostic pop
+
 #define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK INTERCEPT_FUNCTION(OSSpinLockLock)
 #else
 #define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK
 #endif // SANITIZER_APPLE
+
+#if SANITIZER_APPLE
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
+typedef volatile OSSpinLock *_os_nospin_lock_t;
+
+INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
+  __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
+  return REAL(_os_nospin_lock_lock)(lock);
+}
+#pragma clang diagnostic pop // "-Wdeprecated-declarations"
+#endif                       // SANITIZER_APPLE
 
 #if SANITIZER_APPLE
 INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
@@ -733,10 +728,6 @@ INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   return REAL(os_unfair_lock_lock)(lock);
 }
 
-INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
-  __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
-  return REAL(_os_nospin_lock_lock)(lock);
-}
 #define RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK                              \
   INTERCEPT_FUNCTION(os_unfair_lock_lock)
 #else

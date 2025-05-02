@@ -4483,12 +4483,16 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
     if (getParser().parseAtSpecifier(ImmVal, EndLoc))
       return true;
     const MCExpr *Term;
-    if (parseOptionalToken(AsmToken::Plus)) {
-      if (getParser().parseExpression(Term, EndLoc))
-        return true;
-      ImmVal =
-          MCBinaryExpr::create(MCBinaryExpr::Add, ImmVal, Term, getContext());
-    }
+    MCBinaryExpr::Opcode Opcode;
+    if (parseOptionalToken(AsmToken::Plus))
+      Opcode = MCBinaryExpr::Add;
+    else if (parseOptionalToken(AsmToken::Minus))
+      Opcode = MCBinaryExpr::Sub;
+    else
+      return false;
+    if (getParser().parsePrimaryExpr(Term, EndLoc))
+      return true;
+    ImmVal = MCBinaryExpr::create(Opcode, ImmVal, Term, getContext());
   }
 
   return false;
@@ -5026,11 +5030,15 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
       return true;
     if (getParser().parseAtSpecifier(IdVal, E))
       return true;
-    if (parseOptionalToken(AsmToken::Plus)) {
-      if (getParser().parseExpression(Term, E))
+    std::optional<MCBinaryExpr::Opcode> Opcode;
+    if (parseOptionalToken(AsmToken::Plus))
+      Opcode = MCBinaryExpr::Add;
+    else if (parseOptionalToken(AsmToken::Minus))
+      Opcode = MCBinaryExpr::Sub;
+    if (Opcode) {
+      if (getParser().parsePrimaryExpr(Term, E))
         return true;
-      IdVal =
-          MCBinaryExpr::create(MCBinaryExpr::Add, IdVal, Term, getContext());
+      IdVal = MCBinaryExpr::create(*Opcode, IdVal, Term, getContext());
     }
     Operands.push_back(AArch64Operand::CreateImm(IdVal, S, E, getContext()));
 

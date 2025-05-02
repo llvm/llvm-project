@@ -121,7 +121,7 @@ func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
 // -----
 
 func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.function, but found '!llvm.ptr'}}
   llvm.getelementptr %base[%pos] : !llvm.ptr
 }
 
@@ -515,21 +515,21 @@ func.func @extractvalue_wrong_nesting() {
 // -----
 
 func.func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+2 {{expected an LLVM compatible vector type}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.shufflevector %arg2, %arg2 [0, 0, 0, 0, 7] : f32
 }
 
@@ -1776,9 +1776,26 @@ llvm.mlir.alias external @y5 : i32 {
 // -----
 
 module {
-  // expected-error@+2 {{expected integer value}}
-  // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `uint32_t`}}
-  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", "yolo">]
+  llvm.func @foo()
+
+  // expected-error@below {{only integer and string values are currently supported}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+    "yo"
+  ]>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", 3 : i64>]
 }
 
 // -----
@@ -1801,4 +1818,12 @@ llvm.func @t1() -> !llvm.ptr {
   llvm.br ^bb1
 ^bb1:
   llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
+  // expected-error@+1 {{'inbounds_flag' cannot be used directly}}
+  llvm.getelementptr inbounds_flag %ptr[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.return
 }

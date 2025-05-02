@@ -9,11 +9,14 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBTarget.h"
+#include <cstdint>
 
 using namespace lldb;
 using namespace lldb_dap::protocol;
@@ -107,6 +110,16 @@ void ProgressEventThreadFunction(DAP &dap) {
   }
 }
 
+static llvm::StringRef GetModuleEventReason(uint32_t event_mask) {
+  if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded)
+    return "new";
+  if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded)
+    return "removed";
+  assert(event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
+         event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged);
+  return "changed";
+}
+
 // All events from the debugger, target, process, thread and frames are
 // received in this function that runs in its own thread. We are using a
 // "FILE *" to output packets back to VS Code and they have mutexes in them
@@ -117,6 +130,8 @@ static void EventThreadFunction(DAP &dap) {
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
   dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
+  dap.debugger.GetBroadcaster().AddListener(listener, eBroadcastBitError |
+                                                          eBroadcastBitWarning);
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -190,6 +205,27 @@ static void EventThreadFunction(DAP &dap) {
                    (event_mask & lldb::SBProcess::eBroadcastBitSTDERR)) {
           SendStdOutStdErr(dap, process);
         }
+      } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
+        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
+          llvm::StringRef reason = GetModuleEventReason(event_mask);
+          const uint32_t num_modules = SBTarget::GetNumModulesFromEvent(event);
+          for (uint32_t i = 0; i < num_modules; ++i) {
+            lldb::SBModule module =
+                SBTarget::GetModuleAtIndexFromEvent(i, event);
+            if (!module.IsValid())
+              continue;
+
+            llvm::json::Object body;
+            body.try_emplace("reason", reason);
+            body.try_emplace("module", CreateModule(dap.target, module));
+            llvm::json::Object module_event = CreateEventObject("module");
+            module_event.try_emplace("body", std::move(body));
+            dap.SendJSON(llvm::json::Value(std::move(module_event)));
+          }
+        }
       } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =
@@ -222,6 +258,15 @@ static void EventThreadFunction(DAP &dap) {
             dap.SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
+      } else if (event_mask & eBroadcastBitError ||
+                 event_mask & eBroadcastBitWarning) {
+        SBStructuredData data = SBDebugger::GetDiagnosticFromEvent(event);
+        if (!data.IsValid())
+          continue;
+        std::string type = GetStringValue(data.GetValueForKey("type"));
+        std::string message = GetStringValue(data.GetValueForKey("message"));
+        dap.SendOutput(OutputType::Important,
+                       llvm::formatv("{0}: {1}", type, message).str());
       } else if (event.BroadcasterMatchesRef(dap.broadcaster)) {
         if (event_mask & eBroadcastBitStopEventThread) {
           done = true;

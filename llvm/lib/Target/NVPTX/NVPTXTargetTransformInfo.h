@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file a TargetTransformInfo::Concept conforming object specific to the
+/// This file a TargetTransformInfoImplBase conforming object specific to the
 /// NVPTX target machine. It uses the target's detailed information to
 /// provide more precise answers to certain TTI queries, while letting the
 /// target independent and default TTI implementations handle the rest.
@@ -42,30 +42,33 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
-  bool hasBranchDivergence(const Function *F = nullptr) { return true; }
+  bool hasBranchDivergence(const Function *F = nullptr) const override {
+    return true;
+  }
 
-  bool isSourceOfDivergence(const Value *V);
+  bool isSourceOfDivergence(const Value *V) const override;
 
-  unsigned getFlatAddressSpace() const {
+  unsigned getFlatAddressSpace() const override {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
-  bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
+  bool
+  canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
            AS != AddressSpace::ADDRESS_SPACE_LOCAL && AS != ADDRESS_SPACE_PARAM;
   }
 
-  std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
-                                                    IntrinsicInst &II) const;
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
 
   // Loads and stores can be vectorized if the alignment is at least as big as
   // the load/store we want to vectorize.
   bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,
-                                   unsigned AddrSpace) const {
+                                   unsigned AddrSpace) const override {
     return Alignment >= ChainSizeInBytes;
   }
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
-                                    unsigned AddrSpace) const {
+                                    unsigned AddrSpace) const override {
     return isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment, AddrSpace);
   }
 
@@ -74,42 +77,43 @@ public:
   // vectorizers but disables heuristics based on the number of registers.
   // FIXME: Return a more reasonable number, while keeping an eye on
   // LoopVectorizer's unrolling heuristics.
-  unsigned getNumberOfRegisters(bool Vector) const { return 1; }
+  unsigned getNumberOfRegisters(unsigned ClassID) const override { return 1; }
 
   // Only <2 x half> should be vectorized, so always return 32 for the vector
   // register size.
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override {
     return TypeSize::getFixed(32);
   }
-  unsigned getMinVectorRegisterBitWidth() const { return 32; }
+  unsigned getMinVectorRegisterBitWidth() const override { return 32; }
 
   // We don't want to prevent inlining because of target-cpu and -features
   // attributes that were added to newer versions of LLVM/Clang: There are
   // no incompatible functions in PTX, ptxas will throw errors in such cases.
   bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const {
+                           const Function *Callee) const override {
     return true;
   }
 
   // Increase the inlining cost threshold by a factor of 11, reflecting that
   // calls are particularly expensive in NVPTX.
-  unsigned getInliningThresholdMultiplier() const { return 11; }
+  unsigned getInliningThresholdMultiplier() const override { return 11; }
 
-  InstructionCost getInstructionCost(const User *U,
-                                     ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind);
+  InstructionCost
+  getInstructionCost(const User *U, ArrayRef<const Value *> Operands,
+                     TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getScalarizationOverhead(VectorType *InTy,
-                                           const APInt &DemandedElts,
-                                           bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<Value *> VL = {}) {
+  InstructionCost getScalarizationOverhead(
+      VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override {
     if (!InTy->getElementCount().isFixed())
       return InstructionCost::getInvalid();
 
@@ -138,17 +142,18 @@ public:
       Insert = false;
     }
     return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
-                                                  Extract, CostKind, VL);
+                                                  Extract, CostKind,
+                                                  ForPoisonSrc, VL);
   }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const override;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const override;
 
-  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) {
+  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) const override {
     // Volatile loads/stores are only supported for shared and global address
     // spaces, or for generic AS that maps to them.
     if (!(AddrSpace == llvm::ADDRESS_SPACE_GENERIC ||
@@ -166,15 +171,15 @@ public:
   }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
-                                  Intrinsic::ID IID) const;
+                                  Intrinsic::ID IID) const override;
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
-                                          Value *NewV) const;
-  unsigned getAssumedAddrSpace(const Value *V) const;
+                                          Value *NewV) const override;
+  unsigned getAssumedAddrSpace(const Value *V) const override;
 
   void collectKernelLaunchBounds(
       const Function &F,
-      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override;
 };
 
 } // end namespace llvm

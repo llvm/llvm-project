@@ -171,7 +171,7 @@ private:
   // but we want to try to keep the size of m_data small
   // and we will only exceed a 128 mb buffer if we get a memory region
   // that is larger than 128 mb.
-  static constexpr size_t MAX_WRITE_CHUNK_SIZE = (1024 * 1024 * 128);
+  static constexpr uint64_t MAX_WRITE_CHUNK_SIZE = (1024 * 1024 * 128);
 
   static constexpr size_t HEADER_SIZE = sizeof(llvm::minidump::Header);
   static constexpr size_t DIRECTORY_SIZE = sizeof(llvm::minidump::Directory);

@@ -41,14 +41,9 @@
 
 #include <algorithm>
 #include <cinttypes>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <iostream>
-#include <set>
 #include <utility>
-#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -879,8 +874,8 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // We apply a generous padding here so that the Directory, MemoryList and
   // Memory64List sections all begin in 32b addressable space.
   // Then anything overflow extends into 64b addressable space.
-  // All core memeroy ranges will either container nothing on stacks only
-  // or all the memory ranges including stacks
+  // all_core_memory_vec will either contain all stack regions at this point,
+  // or be empty if it's a stack only minidump.
   if (!all_core_memory_vec.empty())
     total_size += 256 + (all_core_memory_vec.size() *
                          sizeof(llvm::minidump::MemoryDescriptor_64));
@@ -924,9 +919,9 @@ Status MinidumpFileBuilder::DumpHeader() const {
   header.StreamDirectoryRVA =
       static_cast<llvm::support::ulittle32_t>(HEADER_SIZE);
   header.Checksum = static_cast<llvm::support::ulittle32_t>(
-      0u), // not used in most of the writers
-      header.TimeDateStamp =
-          static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
+      0u); // not used in most of the writers
+  header.TimeDateStamp =
+      static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
   header.Flags =
       static_cast<llvm::support::ulittle64_t>(0u); // minidump normal flag
 
@@ -987,10 +982,10 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
                 current_addr, bytes_read, error.AsCString());
 
       // If we failed in a memory read, we would normally want to skip
-      // this entire region, if we had already written to the minidump
+      // this entire region. If we had already written to the minidump
       // file, we can't easily rewind that state.
       //
-      // So if we do encounter an error while reading, we just return
+      // So if we do encounter an error while reading, we return
       // immediately, any prior bytes read will still be included but
       // any bytes partially read before the error are ignored.
       return lldb_private::IterationAction::Stop;
@@ -1069,7 +1064,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
       return error;
 
     // If we completely failed to read this range
-    // we can just omit any of the book keeping.
+    // we can drop the memory range
     if (bytes_read == 0)
       continue;
 
@@ -1209,12 +1204,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
 }
 
 Status MinidumpFileBuilder::AddData(const void *data, uint64_t size) {
-  // This should also get chunked, because worst case we copy over a big
-  // object / memory range, say 5gb. In that case, we'd have to allocate 10gb
-  // 5 gb for the buffer we're copying from, and then 5gb for the buffer we're
-  // copying to. Which will be short lived and immedaitely go to disk, the goal
-  // here is to limit the number of bytes we need to host in memory at any given
-  // time.
+  // Append the data to the buffer, if the buffer spills over, flush it to disk
   m_data.AppendData(data, size);
   if (m_data.GetByteSize() > MAX_WRITE_CHUNK_SIZE)
     return FlushBufferToDisk();
