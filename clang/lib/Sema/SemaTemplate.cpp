@@ -3911,7 +3911,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     //   resolves to an alias template specialization, the
     //   elaborated-type-specifier is ill-formed.
     Diag(TemplateLoc, diag::err_tag_reference_non_tag)
-        << TAT << NTK_TypeAliasTemplate << TagKind;
+        << TAT << NonTagKind::TypeAliasTemplate << TagKind;
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
 
@@ -10070,7 +10070,7 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                Attr, AS_none, /*ModulePrivateLoc=*/SourceLocation(),
                MultiTemplateParamsArg(), Owned, IsDependent, SourceLocation(),
                false, TypeResult(), /*IsTypeSpecifier*/ false,
-               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside)
+               /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
   assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 

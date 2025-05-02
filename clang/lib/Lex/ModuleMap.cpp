@@ -2010,7 +2010,8 @@ void ModuleMapLoader::handleConflict(const modulemap::ConflictDecl &CD) {
   Conflict.Id = CD.Id;
   Conflict.Message = CD.Message;
 
-  ActiveModule->UnresolvedConflicts.push_back(Conflict);
+  // FIXME: when we move to C++20 we should consider using emplace_back
+  ActiveModule->UnresolvedConflicts.push_back(std::move(Conflict));
 }
 
 void ModuleMapLoader::handleInferredModuleDecl(
