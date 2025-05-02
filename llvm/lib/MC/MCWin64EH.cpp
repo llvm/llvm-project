@@ -1040,9 +1040,6 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     case Win64EH::UOP_SaveAnyRegDPX:
     case Win64EH::UOP_SaveAnyRegQX:
     case Win64EH::UOP_SaveAnyRegQPX:
-    case Win64EH::UOP_AllocZ:
-    case Win64EH::UOP_SaveZReg:
-    case Win64EH::UOP_SavePReg:
       // These are never canonical; they don't show up with the usual Arm64
       // calling convention.
       return false;
@@ -1054,6 +1051,11 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     case Win64EH::UOP_AddFP:
       // "add x29, sp, #N" doesn't show up in the canonical pattern (except for
       // N=0, which is UOP_SetFP).
+      return false;
+    case Win64EH::UOP_AllocZ:
+    case Win64EH::UOP_SaveZReg:
+    case Win64EH::UOP_SavePReg:
+      // Canonical prologues don't support spilling SVE registers.
       return false;
     case Win64EH::UOP_TrapFrame:
     case Win64EH::UOP_Context:
