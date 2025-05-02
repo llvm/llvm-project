@@ -10359,7 +10359,7 @@ void ASTReader::finishPendingActions() {
           PendingObjCExtensionIvarRedeclarations.back().second;
       StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
       StructuralEquivalenceContext Ctx(
-          ExtensionsPair.first->getASTContext(),
+          ContextObj->getLangOpts(), ExtensionsPair.first->getASTContext(),
           ExtensionsPair.second->getASTContext(), NonEquivalentDecls,
           StructuralEquivalenceKind::Default, /*StrictTypeSpelling =*/false,
           /*Complain =*/false,
