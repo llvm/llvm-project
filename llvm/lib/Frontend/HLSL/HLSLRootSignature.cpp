@@ -160,13 +160,9 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
     OS << " ";
     First = false;
     std::visit(OverloadMethods{
-      [&OS](DescriptorTable Table) {
-        Table.dump(OS);
-      },
-      [&OS](DescriptorTableClause Clause) {
-        Clause.dump(OS);
-      }
-    }, Element);
+                   [&OS](DescriptorTable Table) { Table.dump(OS); },
+                   [&OS](DescriptorTableClause Clause) { Clause.dump(OS); }},
+               Element);
   }
   OS << "}";
 }
