@@ -119,7 +119,7 @@ LIBC_INLINE tm *localtime(const time_t *t_ptr) {
   return time_utils::gmtime_internal(t_ptr, &result);
 }
 
-LIBC_INLINE struct tm *localtime_internal(const time_t& timer, struct tm& buf) {
+LIBC_INLINE struct tm *localtime_internal(const time_t &timer, struct tm &buf) {
   if (timer == nullptr) {
     invalid_value();
     return nullptr;

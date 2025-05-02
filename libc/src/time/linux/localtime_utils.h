@@ -19,7 +19,7 @@ LIBC_INLINE volatile int file_usage;
 namespace LIBC_NAMESPACE_DECL {
 namespace localtime_utils {
 
-timezone::tzset& get_localtime(struct tm& tm);
+timezone::tzset &get_localtime(struct tm &tm);
 
 } // namespace localtime_utils
 } // namespace LIBC_NAMESPACE_DECL
