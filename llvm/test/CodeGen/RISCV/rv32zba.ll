@@ -22,7 +22,7 @@ define signext i16 @sh1add(i64 %0, ptr %1) {
 ;
 ; RV32XANDESPERF-LABEL: sh1add:
 ; RV32XANDESPERF:       # %bb.0:
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a2
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a2, a0
 ; RV32XANDESPERF-NEXT:    lh a0, 0(a0)
 ; RV32XANDESPERF-NEXT:    ret
   %3 = getelementptr inbounds i16, ptr %1, i64 %0
@@ -46,7 +46,7 @@ define i32 @sh2add(i64 %0, ptr %1) {
 ;
 ; RV32XANDESPERF-LABEL: sh2add:
 ; RV32XANDESPERF:       # %bb.0:
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a2
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a2, a0
 ; RV32XANDESPERF-NEXT:    lw a0, 0(a0)
 ; RV32XANDESPERF-NEXT:    ret
   %3 = getelementptr inbounds i32, ptr %1, i64 %0
@@ -72,7 +72,7 @@ define i64 @sh3add(i64 %0, ptr %1) {
 ;
 ; RV32XANDESPERF-LABEL: sh3add:
 ; RV32XANDESPERF:       # %bb.0:
-; RV32XANDESPERF-NEXT:    nds.lea.d a1, a0, a2
+; RV32XANDESPERF-NEXT:    nds.lea.d a1, a2, a0
 ; RV32XANDESPERF-NEXT:    lw a0, 0(a1)
 ; RV32XANDESPERF-NEXT:    lw a1, 4(a1)
 ; RV32XANDESPERF-NEXT:    ret
@@ -99,7 +99,7 @@ define i32 @addmul6(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul6:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 6
   %d = add i32 %c, %b
@@ -123,7 +123,7 @@ define i32 @addmul10(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul10:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 10
   %d = add i32 %c, %b
@@ -148,7 +148,7 @@ define i32 @addmul12(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul12:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 12
   %d = add i32 %c, %b
@@ -172,7 +172,7 @@ define i32 @addmul18(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul18:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 18
   %d = add i32 %c, %b
@@ -196,7 +196,7 @@ define i32 @addmul20(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul20:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 20
   %d = add i32 %c, %b
@@ -221,7 +221,7 @@ define i32 @addmul24(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul24:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 24
   %d = add i32 %c, %b
@@ -245,7 +245,7 @@ define i32 @addmul36(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul36:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 36
   %d = add i32 %c, %b
@@ -269,7 +269,7 @@ define i32 @addmul40(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul40:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 40
   %d = add i32 %c, %b
@@ -293,7 +293,7 @@ define i32 @addmul72(i32 %a, i32 %b) {
 ; RV32XANDESPERF-LABEL: addmul72:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 72
   %d = add i32 %c, %b
@@ -383,7 +383,7 @@ define i32 @mul258(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul258:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    slli a1, a0, 8
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 258
   ret i32 %c
@@ -405,7 +405,7 @@ define i32 @mul260(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul260:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    slli a1, a0, 8
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 260
   ret i32 %c
@@ -427,7 +427,7 @@ define i32 @mul264(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul264:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    slli a1, a0, 8
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 264
   ret i32 %c
@@ -449,7 +449,7 @@ define i32 @mul11(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul11:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.w a1, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 11
   ret i32 %c
@@ -471,7 +471,7 @@ define i32 @mul19(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul19:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.d a1, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 19
   ret i32 %c
@@ -493,7 +493,7 @@ define i32 @mul13(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul13:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.h a1, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 13
   ret i32 %c
@@ -515,7 +515,7 @@ define i32 @mul21(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul21:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.w a1, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 21
   ret i32 %c
@@ -537,7 +537,7 @@ define i32 @mul37(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul37:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.d a1, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 37
   ret i32 %c
@@ -581,7 +581,7 @@ define i32 @mul41(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul41:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.w a1, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 41
   ret i32 %c
@@ -603,7 +603,7 @@ define i32 @mul73(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul73:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.lea.d a1, a0, a0
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 73
   ret i32 %c
@@ -692,7 +692,7 @@ define i32 @mul4098(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul4098:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    slli a1, a0, 12
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 4098
   ret i32 %c
@@ -715,7 +715,7 @@ define i32 @mul4100(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul4100:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    slli a1, a0, 12
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 4100
   ret i32 %c
@@ -738,7 +738,7 @@ define i32 @mul4104(i32 %a) {
 ; RV32XANDESPERF-LABEL: mul4104:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    slli a1, a0, 12
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
 ; RV32XANDESPERF-NEXT:    ret
   %c = mul i32 %a, 4104
   ret i32 %c
@@ -761,7 +761,7 @@ define i32 @add4104(i32 %a) {
 ; RV32XANDESPERF-LABEL: add4104:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    li a1, 1026
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = add i32 %a, 4104
   ret i32 %c
@@ -784,7 +784,7 @@ define i32 @add8208(i32 %a) {
 ; RV32XANDESPERF-LABEL: add8208:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    li a1, 1026
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %c = add i32 %a, 8208
   ret i32 %c
@@ -816,7 +816,7 @@ define i32 @addshl_5_6(i32 %a, i32 %b) {
 ;
 ; RV32XANDESPERF-LABEL: addshl_5_6:
 ; RV32XANDESPERF:       # %bb.0:
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
 ; RV32XANDESPERF-NEXT:    slli a0, a0, 5
 ; RV32XANDESPERF-NEXT:    ret
   %c = shl i32 %a, 5
@@ -841,7 +841,7 @@ define i32 @addshl_5_7(i32 %a, i32 %b) {
 ;
 ; RV32XANDESPERF-LABEL: addshl_5_7:
 ; RV32XANDESPERF:       # %bb.0:
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV32XANDESPERF-NEXT:    slli a0, a0, 5
 ; RV32XANDESPERF-NEXT:    ret
   %c = shl i32 %a, 5
@@ -866,7 +866,7 @@ define i32 @addshl_5_8(i32 %a, i32 %b) {
 ;
 ; RV32XANDESPERF-LABEL: addshl_5_8:
 ; RV32XANDESPERF:       # %bb.0:
-; RV32XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a1
 ; RV32XANDESPERF-NEXT:    slli a0, a0, 5
 ; RV32XANDESPERF-NEXT:    ret
   %c = shl i32 %a, 5
@@ -894,7 +894,7 @@ define i32 @srli_1_sh2add(ptr %0, i32 %1) {
 ; RV32XANDESPERF-LABEL: srli_1_sh2add:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    srli a1, a1, 1
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV32XANDESPERF-NEXT:    lw a0, 0(a0)
 ; RV32XANDESPERF-NEXT:    ret
   %3 = lshr i32 %1, 1
@@ -924,7 +924,7 @@ define i64 @srli_2_sh3add(ptr %0, i32 %1) {
 ; RV32XANDESPERF-LABEL: srli_2_sh3add:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    srli a1, a1, 2
-; RV32XANDESPERF-NEXT:    nds.lea.d a1, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.d a1, a0, a1
 ; RV32XANDESPERF-NEXT:    lw a0, 0(a1)
 ; RV32XANDESPERF-NEXT:    lw a1, 4(a1)
 ; RV32XANDESPERF-NEXT:    ret
@@ -953,7 +953,7 @@ define signext i16 @srli_2_sh1add(ptr %0, i32 %1) {
 ; RV32XANDESPERF-LABEL: srli_2_sh1add:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    srli a1, a1, 2
-; RV32XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
 ; RV32XANDESPERF-NEXT:    lh a0, 0(a0)
 ; RV32XANDESPERF-NEXT:    ret
   %3 = lshr i32 %1, 2
@@ -981,7 +981,7 @@ define i32 @srli_3_sh2add(ptr %0, i32 %1) {
 ; RV32XANDESPERF-LABEL: srli_3_sh2add:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    srli a1, a1, 3
-; RV32XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a1
 ; RV32XANDESPERF-NEXT:    lw a0, 0(a0)
 ; RV32XANDESPERF-NEXT:    ret
   %3 = lshr i32 %1, 3
@@ -1011,7 +1011,7 @@ define i64 @srli_4_sh3add(ptr %0, i32 %1) {
 ; RV32XANDESPERF-LABEL: srli_4_sh3add:
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    srli a1, a1, 4
-; RV32XANDESPERF-NEXT:    nds.lea.d a1, a1, a0
+; RV32XANDESPERF-NEXT:    nds.lea.d a1, a0, a1
 ; RV32XANDESPERF-NEXT:    lw a0, 0(a1)
 ; RV32XANDESPERF-NEXT:    lw a1, 4(a1)
 ; RV32XANDESPERF-NEXT:    ret

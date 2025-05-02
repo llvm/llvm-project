@@ -125,15 +125,19 @@ class NDSRVInstBFO<bits<3> funct3, string opcodestr>
   let mayStore = 0;
 }
 
-class NDSRVInstRR<bits<7> funct7, string opcodestr>
+class NDSRVInstRR<bits<7> funct7, string opcodestr,
+                  string argstr = "$rd, $rs1, $rs2">
     : RVInstR<funct7, 0b000, OPC_CUSTOM_2,
               (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-              opcodestr, "$rd, $rs1, $rs2">,
+              opcodestr, argstr>,
       Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
 }
+
+class NDSRVInstLEA<bits<7> funct7, string opcodestr>
+    : NDSRVInstRR<funct7, opcodestr, "$rd, $rs2, $rs1">;
 
 // GP: ADDI, LB, LBU
 class NDSRVInstLBGP<bits<2> funct2, string opcodestr>
@@ -321,9 +325,9 @@ def NDS_BNEC : NDSRVInstBC<0b110, "nds.bnec">;
 def NDS_BFOS : NDSRVInstBFO<0b011, "nds.bfos">;
 def NDS_BFOZ : NDSRVInstBFO<0b010, "nds.bfoz">;
 
-def NDS_LEA_H : NDSRVInstRR<0b0000101, "nds.lea.h">;
-def NDS_LEA_W : NDSRVInstRR<0b0000110, "nds.lea.w">;
-def NDS_LEA_D : NDSRVInstRR<0b0000111, "nds.lea.d">;
+def NDS_LEA_H : NDSRVInstLEA<0b0000101, "nds.lea.h">;
+def NDS_LEA_W : NDSRVInstLEA<0b0000110, "nds.lea.w">;
+def NDS_LEA_D : NDSRVInstLEA<0b0000111, "nds.lea.d">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def NDS_ADDIGP : NDSRVInstLBGP<0b01, "nds.addigp">;
@@ -345,10 +349,10 @@ def NDS_FLMISM  : NDSRVInstRR<0b0010011, "nds.flmism">;
 } // Predicates = [HasVendorXAndesPerf]
 
 let Predicates = [HasVendorXAndesPerf, IsRV64] in {
-def NDS_LEA_B_ZE : NDSRVInstRR<0b0001000, "nds.lea.b.ze">;
-def NDS_LEA_H_ZE : NDSRVInstRR<0b0001001, "nds.lea.h.ze">;
-def NDS_LEA_W_ZE : NDSRVInstRR<0b0001010, "nds.lea.w.ze">;
-def NDS_LEA_D_ZE : NDSRVInstRR<0b0001011, "nds.lea.d.ze">;
+def NDS_LEA_B_ZE : NDSRVInstLEA<0b0001000, "nds.lea.b.ze">;
+def NDS_LEA_H_ZE : NDSRVInstLEA<0b0001001, "nds.lea.h.ze">;
+def NDS_LEA_W_ZE : NDSRVInstLEA<0b0001010, "nds.lea.w.ze">;
+def NDS_LEA_D_ZE : NDSRVInstLEA<0b0001011, "nds.lea.d.ze">;
 
 def NDS_LWUGP : NDSRVInstLWGP<0b110, "nds.lwugp">;
 def NDS_LDGP  : NDSRVInstLDGP<0b011, "nds.ldgp">;
