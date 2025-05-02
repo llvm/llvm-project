@@ -50,10 +50,6 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out);
 // "total_seconds" is the number of seconds since January 1st, 1970.
 int64_t update_from_seconds(time_t total_seconds, tm *tm);
 
-#ifdef LIBC_TARGET_OS_IS_LINUX
-extern char *get_env_var(const char *var_name);
-#endif
-
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
 // variable.
