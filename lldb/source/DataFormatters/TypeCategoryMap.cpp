@@ -189,7 +189,7 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
           match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
           match.DidStripReference() ? "strip-reference" : "no-strip-reference",
           match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",
-          match.GetPtrStrippingDepth());
+          match.GetPtrStrippedDepth());
     }
   }
 
