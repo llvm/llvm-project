@@ -308,7 +308,7 @@ fmod(__detail::HLSL_FIXED_VECTOR<float, N> X,
 //===----------------------------------------------------------------------===//
 
 /// \fn T ldexp(T X, T Exp)
-/// \brief Returns the result of multiplying the specified value by two, raised
+/// \brief Returns the result of multiplying the specified value by two raised
 /// to the power of the specified exponent.
 /// \param X [in] The specified value.
 /// \param Exp [in] The specified exponent.
