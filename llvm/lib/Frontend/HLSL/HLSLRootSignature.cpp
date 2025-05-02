@@ -140,7 +140,7 @@ void DescriptorTableClause::dump(raw_ostream &OS) const {
   OS << ", space = " << Space;
   OS << ", offset = ";
   if (Offset == DescriptorTableOffsetAppend)
-    OS << "DESCRIPTOR_TABLE_OFFSET_APPEND";
+    OS << "DescriptorTableOffsetAppend";
   else
     OS << Offset;
   OS << ", flags = ";
