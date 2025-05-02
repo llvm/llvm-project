@@ -40,11 +40,6 @@ std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
   value.swapBytes();
 }
 
-struct TypeIdGenerator {
-  static inline size_t nextId = 0;
-
-  static size_t getNextId() { return nextId++; }
-};
 } // namespace detail
 
 // This class provides a view into the underlying resource array. The Resource
@@ -288,7 +283,6 @@ public:
       else
         DataSize = sizeof(dxbc::RST0::v1::DescriptorRange) * NumRanges +
                    2 * sizeof(uint32_t);
-      break;
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0
