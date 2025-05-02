@@ -148,7 +148,7 @@ void DescriptorStorage<COPY_VALUES>::push(const Descriptor &source) {
   if constexpr (COPY_VALUES) {
     // copy the data pointed to by the box
     box.set_base_addr(nullptr);
-    box.Allocate(kNoAsyncObject);
+    box.Allocate(kNoAsyncId);
     RTNAME(AssignTemporary)
     (box, source, terminator_.sourceFileName(), terminator_.sourceLine());
   }
