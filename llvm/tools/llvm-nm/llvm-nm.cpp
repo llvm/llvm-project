@@ -23,6 +23,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -110,6 +111,7 @@ static bool PrintSize;
 static bool Quiet;
 static bool ReverseSort;
 static bool SpecialSyms;
+static bool SyntheticSyms;
 static bool SizeSort;
 static bool UndefinedOnly;
 static bool WithoutAliases;
@@ -1784,6 +1786,55 @@ getDynamicSyms(SymbolicFile &Obj) {
 }
 
 // Returns false if there is error found or true otherwise.
+static bool getPltSyms(SymbolicFile &Obj, std::vector<NMSymbol> &SymbolList) {
+  const auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+  if (!ELFObj)
+    return true;
+
+  std::string Err;
+  Triple TT;
+  TT.setArch(ELFObj->getArch());
+  TT.setOS(ELFObj->getOS());
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Err);
+  if (!TheTarget) {
+    error("unable to find target for " + Obj.getFileName() + ": " + Err);
+    return false;
+  }
+
+  MCSubtargetInfo *STI = TheTarget->createMCSubtargetInfo(
+      TT.getTriple(), ELFObj->tryGetCPUName().value_or("").str(), "");
+  if (!STI) {
+    error("unable to create subtarget info for " + Obj.getFileName() + ": " +
+          Err);
+    return false;
+  }
+
+  for (auto Plt : ELFObj->getPltEntries(*STI)) {
+    if (Plt.Symbol) {
+      SymbolRef Symbol(*Plt.Symbol, ELFObj);
+      if (Expected<StringRef> NameOrErr = Symbol.getName()) {
+        if (!NameOrErr->empty()) {
+          NMSymbol S = {};
+          S.Address = Plt.Address;
+          S.Name = NameOrErr->str() + "@plt";
+          S.TypeChar = 'T';
+          S.SectionName = Plt.Section;
+          SymbolList.push_back(S);
+        }
+      } else {
+        consumeError(NameOrErr.takeError());
+      }
+    } else {
+      WithColor::warning(errs(), ToolName)
+          << "PLT entry at 0x" + Twine::utohexstr(Plt.Address)
+          << " references an invalid symbol";
+    }
+  }
+
+  return true;
+}
+
+// Returns false if there is error found or true otherwise.
 static bool getSymbolNamesFromObject(SymbolicFile &Obj,
                                      std::vector<NMSymbol> &SymbolList) {
   auto Symbols = Obj.symbols();
@@ -1807,6 +1858,12 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
             << toString(VersionsOrErr.takeError()) << "\n";
     }
   }
+
+  if (SyntheticSyms) {
+    if (!getPltSyms(Obj, SymbolList))
+      return false;
+  }
+
   // If a "-s segname sectname" option was specified and this is a Mach-O
   // file get the section number for that section in this object file.
   unsigned int Nsect = 0;
@@ -2474,6 +2531,7 @@ int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
           "(hexadecimal)");
   SizeSort = Args.hasArg(OPT_size_sort);
   SpecialSyms = Args.hasArg(OPT_special_syms);
+  SyntheticSyms = Args.hasArg(OPT_synthetic_syms);
   UndefinedOnly = Args.hasArg(OPT_undefined_only);
   WithoutAliases = Args.hasArg(OPT_without_aliases);
 
