@@ -17,7 +17,7 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-static void dumpRegType(raw_ostream& OS, RegisterType Type) {
+static void dumpRegType(raw_ostream &OS, RegisterType Type) {
   switch (Type) {
   case RegisterType::BReg:
     OS << "b";
@@ -41,30 +41,30 @@ void Register::dump(raw_ostream &OS) const {
 
 static void dumpVisibility(raw_ostream &OS, ShaderVisibility Visibility) {
   switch (Visibility) {
-    case ShaderVisibility::All:
-      OS << "All";
-      break;
-    case ShaderVisibility::Vertex:
-      OS << "Vertex";
-      break;
-    case ShaderVisibility::Hull:
-      OS << "Hull";
-      break;
-    case ShaderVisibility::Domain:
-      OS << "Domain";
-      break;
-    case ShaderVisibility::Geometry:
-      OS << "Geometry";
-      break;
-    case ShaderVisibility::Pixel:
-      OS << "Pixel";
-      break;
-    case ShaderVisibility::Amplification:
-      OS << "Amplification";
-      break;
-    case ShaderVisibility::Mesh:
-      OS << "Mesh";
-      break;
+  case ShaderVisibility::All:
+    OS << "All";
+    break;
+  case ShaderVisibility::Vertex:
+    OS << "Vertex";
+    break;
+  case ShaderVisibility::Hull:
+    OS << "Hull";
+    break;
+  case ShaderVisibility::Domain:
+    OS << "Domain";
+    break;
+  case ShaderVisibility::Geometry:
+    OS << "Geometry";
+    break;
+  case ShaderVisibility::Pixel:
+    OS << "Pixel";
+    break;
+  case ShaderVisibility::Amplification:
+    OS << "Amplification";
+    break;
+  case ShaderVisibility::Mesh:
+    OS << "Mesh";
+    break;
   }
 }
 
@@ -75,7 +75,7 @@ void DescriptorTable::dump(raw_ostream &OS) const {
   OS << ")";
 }
 
-static void dumpClauseType(raw_ostream& OS, ClauseType Type) {
+static void dumpClauseType(raw_ostream &OS, ClauseType Type) {
   switch (Type) {
   case ClauseType::CBuffer:
     OS << "CBV";
@@ -94,28 +94,29 @@ static void dumpClauseType(raw_ostream& OS, ClauseType Type) {
 
 static void dumpDescriptorRangeFlag(raw_ostream &OS, unsigned Bit) {
   switch (static_cast<DescriptorRangeFlags>(Bit)) {
-    case DescriptorRangeFlags::DescriptorsVolatile:
-      OS << "DescriptorsVolatile";
-      break;
-    case DescriptorRangeFlags::DataVolatile:
-      OS << "DataVolatile";
-      break;
-    case DescriptorRangeFlags::DataStaticWhileSetAtExecute:
-      OS << "DataStaticWhileSetAtExecute";
-      break;
-    case DescriptorRangeFlags::DataStatic:
-      OS << "DataStatic";
-      break;
-    case DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
-      OS << "DescriptorsStaticKeepingBufferBoundsChecks";
-      break;
-    default:
-      OS << "invalid: " << Bit;
-      break;
+  case DescriptorRangeFlags::DescriptorsVolatile:
+    OS << "DescriptorsVolatile";
+    break;
+  case DescriptorRangeFlags::DataVolatile:
+    OS << "DataVolatile";
+    break;
+  case DescriptorRangeFlags::DataStaticWhileSetAtExecute:
+    OS << "DataStaticWhileSetAtExecute";
+    break;
+  case DescriptorRangeFlags::DataStatic:
+    OS << "DataStatic";
+    break;
+  case DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
+    OS << "DescriptorsStaticKeepingBufferBoundsChecks";
+    break;
+  default:
+    OS << "invalid: " << Bit;
+    break;
   }
 }
 
-static void dumpDescriptorRangeFlags(raw_ostream &OS, DescriptorRangeFlags Flags) {
+static void dumpDescriptorRangeFlags(raw_ostream &OS,
+                                     DescriptorRangeFlags Flags) {
   bool FlagSet = false;
   unsigned Remaining = llvm::to_underlying(Flags);
   while (Remaining) {

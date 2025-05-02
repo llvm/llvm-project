@@ -16,7 +16,7 @@ namespace {
 TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::CBuffer;
-  Clause.Reg = { RegisterType::BReg, 0 };
+  Clause.Reg = {RegisterType::BReg, 0};
   Clause.setDefaultFlags();
 
   std::string Out;
@@ -24,17 +24,16 @@ TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
   Clause.dump(OS);
   OS.flush();
 
-  std::string Expected =
-    "CBV(b0, numDescriptors = 1, space = 0, "
-    "offset = DescriptorTableOffsetAppend, "
-    "flags = DataStaticWhileSetAtExecute)";
+  std::string Expected = "CBV(b0, numDescriptors = 1, space = 0, "
+                         "offset = DescriptorTableOffsetAppend, "
+                         "flags = DataStaticWhileSetAtExecute)";
   EXPECT_EQ(Out, Expected);
 }
 
 TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::SRV;
-  Clause.Reg = { RegisterType::TReg, 0 };
+  Clause.Reg = {RegisterType::TReg, 0};
   Clause.NumDescriptors = 2;
   Clause.Space = 42;
   Clause.Offset = 3;
@@ -46,15 +45,14 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
   OS.flush();
 
   std::string Expected =
-    "SRV(t0, numDescriptors = 2, space = 42, offset = 3, flags = None)";
+      "SRV(t0, numDescriptors = 2, space = 42, offset = 3, flags = None)";
   EXPECT_EQ(Out, Expected);
 }
-
 
 TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::UAV;
-  Clause.Reg = { RegisterType::UReg, 92374 };
+  Clause.Reg = {RegisterType::UReg, 92374};
   Clause.NumDescriptors = 3298;
   Clause.Space = 932847;
   Clause.Offset = 1;
@@ -66,19 +64,19 @@ TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
   OS.flush();
 
   std::string Expected =
-    "UAV(u92374, numDescriptors = 3298, space = 932847, offset = 1, flags = "
-    "DescriptorsVolatile | "
-    "DataVolatile | "
-    "DataStaticWhileSetAtExecute | "
-    "DataStatic | "
-    "DescriptorsStaticKeepingBufferBoundsChecks)";
+      "UAV(u92374, numDescriptors = 3298, space = 932847, offset = 1, flags = "
+      "DescriptorsVolatile | "
+      "DataVolatile | "
+      "DataStaticWhileSetAtExecute | "
+      "DataStatic | "
+      "DescriptorsStaticKeepingBufferBoundsChecks)";
   EXPECT_EQ(Out, Expected);
 }
 
 TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::Sampler;
-  Clause.Reg = { RegisterType::SReg, 0 };
+  Clause.Reg = {RegisterType::SReg, 0};
   Clause.NumDescriptors = 2;
   Clause.Space = 42;
   Clause.Offset = DescriptorTableOffsetAppend;
@@ -89,9 +87,9 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   Clause.dump(OS);
   OS.flush();
 
-  std::string Expected =
-    "Sampler(s0, numDescriptors = 2, space = 42, offset = DescriptorTableOffsetAppend, "
-    "flags = DescriptorsVolatile)";
+  std::string Expected = "Sampler(s0, numDescriptors = 2, space = 42, offset = "
+                         "DescriptorTableOffsetAppend, "
+                         "flags = DescriptorsVolatile)";
   EXPECT_EQ(Out, Expected);
 }
 
@@ -106,7 +104,7 @@ TEST(HLSLRootSignatureTest, DescriptorTableDump) {
   OS.flush();
 
   std::string Expected =
-    "DescriptorTable(numClauses = 4, visibility = Geometry)";
+      "DescriptorTable(numClauses = 4, visibility = Geometry)";
   EXPECT_EQ(Out, Expected);
 }
 
