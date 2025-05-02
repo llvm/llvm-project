@@ -251,6 +251,7 @@
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl256b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl32b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl64b"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+sscofpmf"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svinval"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svnapot"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svpbmt"

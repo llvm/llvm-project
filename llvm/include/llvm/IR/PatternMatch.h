@@ -2742,15 +2742,39 @@ inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FCanonicalize(const Opnd0 &Op0) {
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMin(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinNum(const Opnd0 &Op0,
+                                                           const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMax(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinimum(const Opnd0 &Op0,
+                                                            const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::minimum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
+m_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::minimumnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaxNum(const Opnd0 &Op0,
+                                                           const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maxnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaximum(const Opnd0 &Op0,
+                                                            const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::maximum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
+m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>

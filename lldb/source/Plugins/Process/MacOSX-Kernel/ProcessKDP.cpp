@@ -403,8 +403,7 @@ Status ProcessKDP::DoResume(RunDirection direction) {
 
   if (direction == RunDirection::eRunReverse)
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
 
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())

@@ -5081,6 +5081,12 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
   case AtomicRMWInst::FMax: NT = ISD::ATOMIC_LOAD_FMAX; break;
   case AtomicRMWInst::FMin: NT = ISD::ATOMIC_LOAD_FMIN; break;
+  case AtomicRMWInst::FMaximum:
+    NT = ISD::ATOMIC_LOAD_FMAXIMUM;
+    break;
+  case AtomicRMWInst::FMinimum:
+    NT = ISD::ATOMIC_LOAD_FMINIMUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     NT = ISD::ATOMIC_LOAD_UINC_WRAP;
     break;
@@ -11829,18 +11835,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        SDValue OutVal =
-            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
-                             NewRoot, F.getCallingConv(), AssertOp);
-
-        FPClassTest NoFPClass = Arg.getNoFPClass();
-        if (NoFPClass != fcNone) {
-          SDValue SDNoFPClass = DAG.getTargetConstant(
-              static_cast<uint64_t>(NoFPClass), dl, MVT::i32);
-          OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
-                               OutVal, SDNoFPClass);
-        }
-        ArgValues.push_back(OutVal);
+        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
+                                             PartVT, VT, nullptr, NewRoot,
+                                             F.getCallingConv(), AssertOp));
       }
 
       i += NumParts;

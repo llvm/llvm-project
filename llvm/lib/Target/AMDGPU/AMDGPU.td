@@ -1534,8 +1534,7 @@ def FeatureISAVersion9_Generic : FeatureSet<
 
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureAddressableLocalMemorySize65536,
-     FeatureFmaMixInsts,
+    [FeatureFmaMixInsts,
      FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
@@ -1585,8 +1584,7 @@ def FeatureISAVersion9_0_8 : FeatureSet<
 
 def FeatureISAVersion9_0_9 : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
-    [FeatureMadMixInsts,
-     FeatureImageInsts])>;
+    [FeatureMadMixInsts])>;
 
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,

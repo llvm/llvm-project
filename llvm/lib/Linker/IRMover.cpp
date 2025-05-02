@@ -1640,6 +1640,8 @@ Error IRLinker::run() {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
+    if (FoundError)
+      return std::move(*FoundError);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
       if (NewGV) {

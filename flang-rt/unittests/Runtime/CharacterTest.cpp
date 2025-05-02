@@ -354,6 +354,7 @@ TYPED_TEST(SearchTests, IndexTests) {
       {"", "a", true, 0},
       {"aa", "a", false, 1},
       {"aa", "a", true, 2},
+      {"aAA", "A", false, 2},
       {"Fortran that I ran", "that I ran", false, 9},
       {"Fortran that I ran", "that I ran", true, 9},
       {"Fortran that you ran", "that I ran", false, 0},

@@ -217,11 +217,10 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
-  std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
-  auto PCHOps = Clang->getPCHContainerOperations();
+  auto PCHOps = std::make_shared<PCHContainerOperations>();
   PCHOps->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
   PCHOps->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
 
@@ -242,8 +241,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     Diags.setSeverity(diag::remark_cc1_round_trip_generated,
                       diag::Severity::Remark, {});
 
-  bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
-                                                    Argv, Diags, Argv0);
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  bool Success =
+      CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags, Argv0);
+
+  auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation),
+                                                  std::move(PCHOps));
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
@@ -296,7 +299,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  llvm::TimerGroup::printAll(llvm::errs());
+  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+  if (Clang->getCodeGenOpts().TimePassesJson) {
+    *IOFile << "{\n";
+    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+    *IOFile << "\n}\n";
+  } else {
+    llvm::TimerGroup::printAll(*IOFile);
+  }
   llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {

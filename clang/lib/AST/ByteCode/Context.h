@@ -63,8 +63,6 @@ public:
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
   const LangOptions &getLangOpts() const;
-  /// Returns the interpreter stack.
-  InterpStack &getStack() { return Stk; }
   /// Returns CHAR_BIT.
   unsigned getCharBit() const;
   /// Return the floating-point semantics for T.

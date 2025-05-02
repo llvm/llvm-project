@@ -15,7 +15,7 @@ define <vscale x 2 x i64> @signed_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <vsc
 ; CHECK-SVE-NEXT:    sunpklo z2.d, z1.s
 ; CHECK-SVE-NEXT:    sunpkhi z1.d, z1.s
 ; CHECK-SVE-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-SVE-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-SVE-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv4i32:
@@ -23,7 +23,7 @@ define <vscale x 2 x i64> @signed_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <vsc
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z2.d, z1.s
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.d, z1.s
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i32> %input to <vscale x 4 x i64>
@@ -43,7 +43,7 @@ define <vscale x 2 x i64> @unsigned_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <v
 ; CHECK-SVE-NEXT:    uunpklo z2.d, z1.s
 ; CHECK-SVE-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-SVE-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-SVE-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-SVE-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv4i32:
@@ -51,7 +51,7 @@ define <vscale x 2 x i64> @unsigned_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <v
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z2.d, z1.s
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i32> %input to <vscale x 4 x i64>
@@ -71,7 +71,7 @@ define <vscale x 4 x i32> @signed_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <vsc
 ; CHECK-SVE-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-SVE-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-SVE-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-SVE-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-SVE-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv8i16:
@@ -79,7 +79,7 @@ define <vscale x 4 x i32> @signed_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <vsc
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -99,7 +99,7 @@ define <vscale x 4 x i32> @unsigned_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <v
 ; CHECK-SVE-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-SVE-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-SVE-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-SVE-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-SVE-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv8i16:
@@ -107,7 +107,7 @@ define <vscale x 4 x i32> @unsigned_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <v
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -127,7 +127,7 @@ define <vscale x 8 x i16> @signed_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <vsc
 ; CHECK-SVE-NEXT:    sunpklo z2.h, z1.b
 ; CHECK-SVE-NEXT:    sunpkhi z1.h, z1.b
 ; CHECK-SVE-NEXT:    add z0.h, z0.h, z2.h
-; CHECK-SVE-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-SVE-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv16i8:
@@ -135,7 +135,7 @@ define <vscale x 8 x i16> @signed_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <vsc
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z2.h, z1.b
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.h, z1.b
 ; CHECK-NEWLOWERING-NEXT:    add z0.h, z0.h, z2.h
-; CHECK-NEWLOWERING-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-NEWLOWERING-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 16 x i8> %input to <vscale x 16 x i16>
@@ -155,7 +155,7 @@ define <vscale x 8 x i16> @unsigned_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <v
 ; CHECK-SVE-NEXT:    uunpklo z2.h, z1.b
 ; CHECK-SVE-NEXT:    uunpkhi z1.h, z1.b
 ; CHECK-SVE-NEXT:    add z0.h, z0.h, z2.h
-; CHECK-SVE-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-SVE-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv16i8:
@@ -163,7 +163,7 @@ define <vscale x 8 x i16> @unsigned_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <v
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z2.h, z1.b
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.h, z1.b
 ; CHECK-NEWLOWERING-NEXT:    add z0.h, z0.h, z2.h
-; CHECK-NEWLOWERING-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-NEWLOWERING-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 16 x i8> %input to <vscale x 16 x i16>
@@ -205,14 +205,14 @@ entry:
 define <vscale x 4 x i64> @signed_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vscale x 8 x i32> %input){
 ; CHECK-LABEL: signed_wide_add_nxv8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sunpkhi z4.d, z2.s
-; CHECK-NEXT:    sunpklo z2.d, z2.s
-; CHECK-NEXT:    sunpkhi z5.d, z3.s
-; CHECK-NEXT:    sunpklo z3.d, z3.s
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    sunpklo z4.d, z3.s
+; CHECK-NEXT:    sunpklo z5.d, z2.s
+; CHECK-NEXT:    sunpkhi z3.d, z3.s
+; CHECK-NEXT:    sunpkhi z2.d, z2.s
+; CHECK-NEXT:    add z0.d, z0.d, z5.d
 ; CHECK-NEXT:    add z1.d, z1.d, z4.d
-; CHECK-NEXT:    add z0.d, z3.d, z0.d
-; CHECK-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    add z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i32> %input to <vscale x 8 x i64>
@@ -223,14 +223,14 @@ entry:
 define <vscale x 4 x i64> @unsigned_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vscale x 8 x i32> %input){
 ; CHECK-LABEL: unsigned_wide_add_nxv8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uunpkhi z4.d, z2.s
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uunpkhi z5.d, z3.s
-; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    uunpklo z4.d, z3.s
+; CHECK-NEXT:    uunpklo z5.d, z2.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    add z0.d, z0.d, z5.d
 ; CHECK-NEXT:    add z1.d, z1.d, z4.d
-; CHECK-NEXT:    add z0.d, z3.d, z0.d
-; CHECK-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    add z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i32> %input to <vscale x 8 x i64>

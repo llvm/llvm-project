@@ -1533,6 +1533,9 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  if (!CheckArraySize(S, OpPC, NumElems.getZExtValue()))
+    return false;
+
   bool IsArray = NumElems.ugt(1);
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
@@ -1851,8 +1854,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 
   // Check for overlapping memory regions.
   if (!Move && Pointer::pointToSameBlock(SrcPtr, DestPtr)) {
-    unsigned SrcIndex = SrcPtr.getIndex() * SrcPtr.elemSize();
-    unsigned DstIndex = DestPtr.getIndex() * DestPtr.elemSize();
+    // Remove base casts.
+    Pointer SrcP = SrcPtr;
+    while (SrcP.isBaseClass())
+      SrcP = SrcP.getBase();
+
+    Pointer DestP = DestPtr;
+    while (DestP.isBaseClass())
+      DestP = DestP.getBase();
+
+    unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
+    unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
     unsigned N = Size.getZExtValue();
 
     if ((SrcIndex <= DstIndex && (SrcIndex + N) > DstIndex) ||
@@ -2183,6 +2195,50 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
 
   pushInteger(S, FullSize - ByteOffset, Call->getType());
 
+  return true;
+}
+
+static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call) {
+
+  if (!S.inConstantContext())
+    return false;
+
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  auto Error = [&](int Diag) {
+    bool CalledFromStd = false;
+    const auto *Callee = S.Current->getCallee();
+    if (Callee && Callee->isInStdNamespace()) {
+      const IdentifierInfo *Identifier = Callee->getIdentifier();
+      CalledFromStd = Identifier && Identifier->isStr("is_within_lifetime");
+    }
+    S.CCEDiag(CalledFromStd
+                  ? S.Current->Caller->getSource(S.Current->getRetPC())
+                  : S.Current->getSource(OpPC),
+              diag::err_invalid_is_within_lifetime)
+        << (CalledFromStd ? "std::is_within_lifetime"
+                          : "__builtin_is_within_lifetime")
+        << Diag;
+    return false;
+  };
+
+  if (Ptr.isZero())
+    return Error(0);
+  if (Ptr.isOnePastEnd())
+    return Error(1);
+
+  bool Result = true;
+  if (!Ptr.isActive()) {
+    Result = false;
+  } else {
+    if (!CheckLive(S, OpPC, Ptr, AK_Read))
+      return false;
+    if (!CheckMutable(S, OpPC, Ptr))
+      return false;
+  }
+
+  pushInteger(S, Result, Call->getType());
   return true;
 }
 
@@ -2692,6 +2748,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_object_size:
   case Builtin::BI__builtin_dynamic_object_size:
     if (!interp__builtin_object_size(S, OpPC, Frame, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_is_within_lifetime:
+    if (!interp__builtin_is_within_lifetime(S, OpPC, Call))
       return false;
     break;
 

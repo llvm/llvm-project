@@ -453,7 +453,8 @@ public:
 
   virtual InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const {
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const {
     return 0;
   }
 
@@ -780,8 +781,8 @@ public:
 
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              TTI::TargetCostKind CostKind,
-                                             unsigned Index, Value *Op0,
-                                             Value *Op1) const {
+                                             unsigned Index, const Value *Op0,
+                                             const Value *Op1) const {
     return 1;
   }
 

@@ -381,6 +381,30 @@ GetDemangledScope(const SymbolContext &sc) {
   return demangled_name.slice(info->ScopeRange.first, info->ScopeRange.second);
 }
 
+/// Handles anything printed after the FunctionEncoding ItaniumDemangle
+/// node. Most notably the DotSUffix node.
+static std::optional<llvm::StringRef>
+GetDemangledFunctionSuffix(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  return demangled_name.slice(info->QualifiersRange.second,
+                              llvm::StringRef::npos);
+}
+
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
   assert(sc.symbol);
 
@@ -1997,6 +2021,15 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
       return false;
 
     s << *quals;
+
+    return true;
+  }
+  case FormatEntity::Entry::Type::FunctionSuffix: {
+    std::optional<llvm::StringRef> suffix = GetDemangledFunctionSuffix(sc);
+    if (!suffix)
+      return false;
+
+    s << *suffix;
 
     return true;
   }

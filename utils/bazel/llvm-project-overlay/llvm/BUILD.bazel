@@ -1173,12 +1173,41 @@ cc_library(
     ],
 )
 
+AnalysisFpExcSrcs = [
+    "lib/Analysis/ConstantFolding.cpp",
+]
+
+cc_library(
+    name = "AnalysisFpExc",
+    srcs = AnalysisFpExcSrcs,
+    hdrs = glob(
+        [
+            "include/llvm/Analysis/*.h",
+            "include/llvm/Analysis/Utils/*.h",
+        ],
+    ),
+    copts = llvm_copts + ["-ftrapping-math"],
+    textual_hdrs = glob([
+        "include/llvm/Analysis/*.def",
+    ]),
+    deps = [
+        ":BinaryFormat",
+        ":Core",
+        ":Object",
+        ":ProfileData",
+        ":Support",
+        ":TargetParser",
+        ":config",
+    ],
+)
+
 cc_library(
     name = "Analysis",
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
         ],
+        exclude = AnalysisFpExcSrcs,
     ),
     hdrs = glob(
         [
@@ -1193,6 +1222,7 @@ cc_library(
         "include/llvm/Analysis/*.def",
     ]),
     deps = [
+        ":AnalysisFpExc",
         ":BinaryFormat",
         ":Core",
         ":Object",

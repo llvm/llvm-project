@@ -90,8 +90,7 @@ TEST(ASTFrontendAction, Sanity) {
       FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance compiler;
-  compiler.setInvocation(std::move(invocation));
+  CompilerInstance compiler(std::move(invocation));
   compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestASTFrontendAction test_action;
@@ -110,8 +109,7 @@ TEST(ASTFrontendAction, IncrementalParsing) {
       FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance compiler;
-  compiler.setInvocation(std::move(invocation));
+  CompilerInstance compiler(std::move(invocation));
   compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true);
@@ -137,8 +135,7 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
       FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance compiler;
-  compiler.setInvocation(std::move(invocation));
+  CompilerInstance compiler(std::move(invocation));
   compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true,
@@ -183,8 +180,7 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
-  Compiler.setInvocation(std::move(Invocation));
+  CompilerInstance Compiler(std::move(Invocation));
   Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestPPCallbacks *Callbacks = new TestPPCallbacks;
@@ -244,8 +240,7 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
-  Compiler.setInvocation(std::move(Invocation));
+  CompilerInstance Compiler(std::move(Invocation));
   auto *TDC = new TypoDiagnosticConsumer;
   Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem(), TDC,
                              /*ShouldOwnClient=*/true);
@@ -278,8 +273,7 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
     Invocation->getFrontendOpts().OutputFile = PCHFilename.str().str();
     Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
-    CompilerInstance Compiler;
-    Compiler.setInvocation(std::move(Invocation));
+    CompilerInstance Compiler(std::move(Invocation));
     Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
     GeneratePCHAction TestAction;

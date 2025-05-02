@@ -13,6 +13,12 @@ cir.global external @vec_b = #cir.zero : !cir.vector<3 x !s32i>
 cir.global external @vec_c = #cir.zero : !cir.vector<2 x !s32i>
 // CHECK: cir.global external @vec_c = #cir.zero : !cir.vector<2 x !s32i>
 
+cir.global external @vec_d = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2>
+: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+
+// CIR: cir.global external @vec_d = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
+// CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+
 cir.func @vec_int_test() {
   %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
   %1 = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]

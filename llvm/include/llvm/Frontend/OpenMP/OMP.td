@@ -525,6 +525,7 @@ def OMPC_Untied : Clause<"untied"> {
 def OMPC_Update : Clause<"update"> {
   let clangClass = "OMPUpdateClause";
   let flangClass = "OmpUpdateClause";
+  let isValueOptional = true;
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";

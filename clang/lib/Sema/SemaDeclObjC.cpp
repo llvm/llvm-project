@@ -3890,7 +3890,7 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
     if (IvarTy->isIncompleteArrayType()) {
       S.Diag(ivar->getLocation(), diag::err_flexible_array_not_at_end)
           << ivar->getDeclName() << IvarTy
-          << llvm::to_underlying(TagTypeKind::Class); // Use "class" for Obj-C.
+          << TagTypeKind::Class; // Use "class" for Obj-C.
       IsInvalidIvar = true;
     } else if (const RecordType *RecordTy = IvarTy->getAs<RecordType>()) {
       if (RecordTy->getDecl()->hasFlexibleArrayMember()) {

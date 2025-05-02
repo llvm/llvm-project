@@ -1301,6 +1301,23 @@ AliasResult BasicAAResult::aliasGEP(
   if (Range1.intersectWith(Range2).isEmptySet())
     return AliasResult::NoAlias;
 
+  // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
+  // potentially wrapping math.
+  auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
+    if (Var.IsNSW)
+      return true;
+
+    int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
+    // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
+    // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
+    // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
+    int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+    if (MaxScaleValueBW <= 0)
+      return false;
+    return Var.Scale.ule(
+        APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
+  };
+
   // Try to determine the range of values for VarIndex such that
   // VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex.
   std::optional<APInt> MinAbsVarIndex;
@@ -1309,22 +1326,6 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
         isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
-      // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
-      // potentially wrapping math.
-      auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
-        if (Var.IsNSW)
-          return true;
-
-        int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
-        // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
-        // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
-        // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
-        int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
-        if (MaxScaleValueBW <= 0)
-          return false;
-        return Var.Scale.ule(
-            APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
-      };
       // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
       // presence of potentially wrapping math.
       if (MultiplyByScaleNoWrap(Var)) {
@@ -1341,6 +1342,7 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
     if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
         Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
+        MultiplyByScaleNoWrap(Var0) && MultiplyByScaleNoWrap(Var1) &&
         isKnownNonEqual(Var0.Val.V, Var1.Val.V,
                         SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
                                                        ? Var0.CxtI

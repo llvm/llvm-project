@@ -757,7 +757,7 @@ class Base(unittest.TestCase):
     def setUpCommands(cls):
         commands = [
             # First of all, clear all settings to have clean state of global properties.
-            "settings clear -all",
+            "settings clear --all",
             # Disable Spotlight lookup. The testsuite creates
             # different binaries with the same UUID, because they only
             # differ in the debug info, which is not being hashed.

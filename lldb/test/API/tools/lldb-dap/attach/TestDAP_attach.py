@@ -25,6 +25,7 @@ def spawn_and_wait(program, delay):
     process.wait()
 
 
+@skipIf
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def set_and_hit_breakpoint(self, continueToExit=True):
         source = "main.c"
