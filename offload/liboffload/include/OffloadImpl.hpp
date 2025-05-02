@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Error.h"
 
 struct OffloadConfig {
   bool TracingEnabled = false;
@@ -86,6 +87,19 @@ struct ol_impl_result_t {
     auto Err = std::unique_ptr<ol_error_struct_t>(
         new ol_error_struct_t{Code, DetailsStr});
     Result = errors().emplace(std::move(Err)).first->get();
+  }
+
+  static ol_impl_result_t fromError(llvm::Error &&Error) {
+    ol_errc_t ErrCode;
+    llvm::StringRef Details;
+    llvm::handleAllErrors(std::move(Error), [&](llvm::StringError &Err) {
+      // TODO: PluginInterface doesn't yet have a way to communicate offload
+      // error codes
+      ErrCode = OL_ERRC_UNKNOWN;
+      Details = errorStrs().insert(Err.getMessage()).first->getKeyData();
+    });
+
+    return ol_impl_result_t{ErrCode, Details};
   }
 
   operator ol_result_t() { return Result; }
