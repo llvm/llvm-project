@@ -35,6 +35,9 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
 
   double yk = x - k / 128;
 
+  // using Veltkamp splitting, we can use sollya to split pi:
+  //    > x_h = round(pi, D, RN);
+  //    > x_l = round(pi-x_h, D, RN);
   DoubleDouble yy = fputil::exact_mult(
       yk, 3.141592653589793115997963468544185161590576171875);
   yy.lo = fputil::multiply_add(
