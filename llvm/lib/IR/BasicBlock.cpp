@@ -732,9 +732,7 @@ void BasicBlock::renumberInstructions() {
     I.Order = Order++;
 
   // Set the bit to indicate that the instruction order valid and cached.
-  BasicBlockBits Bits = getBasicBlockBits();
-  Bits.InstrOrderValid = true;
-  setBasicBlockBits(Bits);
+  SubclassOptionalData |= InstrOrderValid;
 
   NumInstrRenumberings++;
 }
