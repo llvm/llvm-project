@@ -15,11 +15,13 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <variant>
 
 using namespace llvm;
 
@@ -278,33 +280,35 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         auto Header = dxbc::RootParameterHeader{Param.Type, Param.Visibility,
                                                 Param.Offset};
 
-        switch (Param.Type) {
-        case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+        if(std::holds_alternative<DXContainerYAML::RootConstantsYaml>(Param.Data)){
+          auto ConstantYaml = std::get<DXContainerYAML::RootConstantsYaml>(Param.Data);
+
           dxbc::RootConstants Constants;
-          Constants.Num32BitValues = Param.Constants.Num32BitValues;
-          Constants.RegisterSpace = Param.Constants.RegisterSpace;
-          Constants.ShaderRegister = Param.Constants.ShaderRegister;
+          Constants.Num32BitValues = ConstantYaml.Num32BitValues;
+          Constants.RegisterSpace = ConstantYaml.RegisterSpace;
+          Constants.ShaderRegister = ConstantYaml.ShaderRegister;
           RS.ParametersContainer.addParameter(Header, Constants);
-          break;
-        case llvm::to_underlying(dxbc::RootParameterType::SRV):
-        case llvm::to_underlying(dxbc::RootParameterType::UAV):
-        case llvm::to_underlying(dxbc::RootParameterType::CBV):
+        } else if (std::holds_alternative<DXContainerYAML::RootDescriptorYaml>(Param.Data)){
+          auto DescriptorYaml = std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
+
           if (RS.Version == 1) {
             dxbc::RST0::v0::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
-            Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+            auto DescriptorYaml = std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
+            Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
+            Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
             RS.ParametersContainer.addParameter(Header, Descriptor);
           } else {
             dxbc::RST0::v1::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
-            Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
-            Descriptor.Flags = Param.Descriptor.getEncodedFlags();
+            Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
+            Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
+            Descriptor.Flags = DescriptorYaml.getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
           }
-          break;
-        case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+        }else if (std::holds_alternative<DXContainerYAML::DescriptorTableYaml>(Param.Data)) {
           mcdxbc::DescriptorTable Table;
-          for (const auto &R : Param.Table.Ranges) {
+          auto TableYaml = std::get<DXContainerYAML::DescriptorTableYaml>(Param.Data);
+
+          for (const auto &R : TableYaml.Ranges) {
             if (RS.Version == 1) {
               dxbc::RST0::v0::DescriptorRange Range;
               Range.RangeType = R.RangeType;
@@ -327,8 +331,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             }
           }
           RS.ParametersContainer.addParameter(Header, Table);
-        } break;
-        default:
+        } else {
           // Handling invalid parameter type edge case
           RS.ParametersContainer.addInfo(Header, -1);
         }

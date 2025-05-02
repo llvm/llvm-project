@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -112,98 +113,23 @@ struct DescriptorTableYaml {
   SmallVector<DescriptorRangeYaml> Ranges;
 };
 
+
+using ParameterData = std::variant<
+RootConstantsYaml,
+RootDescriptorYaml,
+DescriptorTableYaml
+>;
+
 struct RootParameterYamlDesc {
   uint32_t Type;
   uint32_t Visibility;
   uint32_t Offset;
+  ParameterData Data;
+
   RootParameterYamlDesc(){};
   RootParameterYamlDesc(uint32_t T) : Type(T) {
-    switch (T) {
-
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      Constants = RootConstantsYaml();
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      Descriptor = RootDescriptorYaml();
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
-      Table = DescriptorTableYaml();
-      break;
-    }
+   
   }
-
-  ~RootParameterYamlDesc() {
-    switch (Type) {
-
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      Constants.~RootConstantsYaml();
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      Descriptor.~RootDescriptorYaml();
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
-      Table.~DescriptorTableYaml();
-      break;
-    }
-  }
-
-  RootParameterYamlDesc(const RootParameterYamlDesc &Other)
-      : Type(Other.Type), Visibility(Other.Visibility), Offset(Other.Offset) {
-    // Initialize the appropriate union member based on Type
-    switch (Type) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      // Placement new to construct the union member
-      new (&Constants) RootConstantsYaml(Other.Constants);
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      new (&Descriptor) RootDescriptorYaml(Other.Descriptor);
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
-      new (&Table) DescriptorTableYaml(Other.Table);
-      break;
-    }
-  }
-
-  RootParameterYamlDesc &operator=(const RootParameterYamlDesc &Other) {
-    if (this != &Other) {
-      // First, destroy the current union member
-      this->~RootParameterYamlDesc();
-
-      // Copy the basic members
-      Type = Other.Type;
-      Visibility = Other.Visibility;
-      Offset = Other.Offset;
-
-      // Initialize the new union member based on the Type from 'other'
-      switch (Type) {
-      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-        new (&Constants) RootConstantsYaml(Other.Constants);
-        break;
-      case llvm::to_underlying(dxbc::RootParameterType::CBV):
-      case llvm::to_underlying(dxbc::RootParameterType::SRV):
-      case llvm::to_underlying(dxbc::RootParameterType::UAV):
-        new (&Descriptor) RootDescriptorYaml(Other.Descriptor);
-        break;
-      case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
-        new (&Table) DescriptorTableYaml(Other.Table);
-        break;
-      }
-    }
-    return *this;
-  }
-
-  // ToDo: Fix this (Already have a follow up PR with it)
-  union {
-    RootConstantsYaml Constants;
-    RootDescriptorYaml Descriptor;
-  };
-  DescriptorTableYaml Table;
 };
 
 struct RootSignatureYamlDesc {

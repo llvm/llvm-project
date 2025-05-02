@@ -76,10 +76,11 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         return std::move(E);
 
       auto Constants = *ConstantsOrErr;
-
-      NewP.Constants.Num32BitValues = Constants.Num32BitValues;
-      NewP.Constants.ShaderRegister = Constants.ShaderRegister;
-      NewP.Constants.RegisterSpace = Constants.RegisterSpace;
+      RootConstantsYaml ConstantYaml;
+      ConstantYaml.Num32BitValues = Constants.Num32BitValues;
+      ConstantYaml.ShaderRegister = Constants.ShaderRegister;
+      ConstantYaml.RegisterSpace = Constants.RegisterSpace;
+      NewP.Data = ConstantYaml;
     } else if (auto *RDV =
                    dyn_cast<object::DirectX::RootDescriptorView>(&ParamView)) {
       llvm::Expected<dxbc::RST0::v1::RootDescriptor> DescriptorOrErr =
@@ -87,15 +88,42 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);
       auto Descriptor = *DescriptorOrErr;
-      NewP.Descriptor.ShaderRegister = Descriptor.ShaderRegister;
-      NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
+      RootDescriptorYaml YamlDescriptor;
+      YamlDescriptor.ShaderRegister = Descriptor.ShaderRegister;
+      YamlDescriptor.RegisterSpace = Descriptor.RegisterSpace;
       if (Version > 1) {
 #define ROOT_DESCRIPTOR_FLAG(Num, Val)                                         \
-  NewP.Descriptor.Val =                                                        \
+  YamlDescriptor.Val =                                                        \
       (Descriptor.Flags &                                                      \
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
+      NewP.Data = YamlDescriptor;
+    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
+                   dxbc::RST0::v0::DescriptorRange>>(&ParamView)) {
+      llvm::Expected<
+          object::DirectX::DescriptorTable<dxbc::RST0::v0::DescriptorRange>>
+          TableOrErr = TDV->read();
+      if (Error E = TableOrErr.takeError())
+        return std::move(E);
+      auto Table = *TableOrErr;
+      DescriptorTableYaml YamlTable;
+      YamlTable.NumRanges = Table.NumRanges;
+      YamlTable.RangesOffset = Table.RangesOffset;
+
+      for (const auto &R : Table) {
+        DescriptorRangeYaml NewR;
+
+        NewR.OffsetInDescriptorsFromTableStart =
+            R.OffsetInDescriptorsFromTableStart;
+        NewR.NumDescriptors = R.NumDescriptors;
+        NewR.BaseShaderRegister = R.BaseShaderRegister;
+        NewR.RegisterSpace = R.RegisterSpace;
+        NewR.RangeType = R.RangeType;
+
+        YamlTable.Ranges.push_back(NewR);
+      }
+      NewP.Data = YamlTable;
     } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
                    dxbc::RST0::v1::DescriptorRange>>(&ParamView)) {
       llvm::Expected<
@@ -104,8 +132,9 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       if (Error E = TableOrErr.takeError())
         return std::move(E);
       auto Table = *TableOrErr;
-      NewP.Table.NumRanges = Table.NumRanges;
-      NewP.Table.RangesOffset = Table.RangesOffset;
+      DescriptorTableYaml YamlTable;
+      YamlTable.NumRanges = Table.NumRanges;
+      YamlTable.RangesOffset = Table.RangesOffset;
 
       for (const auto &R : Table) {
         DescriptorRangeYaml NewR;
@@ -120,31 +149,9 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   NewR.Val =                                                                   \
       (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-        NewP.Table.Ranges.push_back(NewR);
+        YamlTable.Ranges.push_back(NewR);
       }
-    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
-                   dxbc::RST0::v0::DescriptorRange>>(&ParamView)) {
-      llvm::Expected<
-          object::DirectX::DescriptorTable<dxbc::RST0::v0::DescriptorRange>>
-          TableOrErr = TDV->read();
-      if (Error E = TableOrErr.takeError())
-        return std::move(E);
-      auto Table = *TableOrErr;
-      NewP.Table.NumRanges = Table.NumRanges;
-      NewP.Table.RangesOffset = Table.RangesOffset;
-
-      for (const auto &R : Table) {
-        DescriptorRangeYaml NewR;
-
-        NewR.OffsetInDescriptorsFromTableStart =
-            R.OffsetInDescriptorsFromTableStart;
-        NewR.NumDescriptors = R.NumDescriptors;
-        NewR.BaseShaderRegister = R.BaseShaderRegister;
-        NewR.RegisterSpace = R.RegisterSpace;
-        NewR.RangeType = R.RangeType;
-
-        NewP.Table.Ranges.push_back(NewR);
-      }
+      NewP.Data = YamlTable;
     }
 
     RootSigDesc.Parameters.push_back(NewP);
@@ -394,18 +401,29 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
   IO.mapRequired("ShaderVisibility", P.Visibility);
 
   switch (P.Type) {
-  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-    IO.mapRequired("Constants", P.Constants);
-    break;
+  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+    DXContainerYAML::RootConstantsYaml Constants;
+    if(IO.outputting())
+      Constants = std::get<DXContainerYAML::RootConstantsYaml>(P.Data);
+    IO.mapRequired("Constants", Constants);
+    P.Data = Constants;
+  } break;
   case llvm::to_underlying(dxbc::RootParameterType::CBV):
   case llvm::to_underlying(dxbc::RootParameterType::SRV):
-  case llvm::to_underlying(dxbc::RootParameterType::UAV):
-    IO.mapRequired("Descriptor", P.Descriptor);
-    break;
-  case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
-    IO.mapRequired("Table", P.Table);
-    break;
-    break;
+  case llvm::to_underlying(dxbc::RootParameterType::UAV):{
+    DXContainerYAML::RootDescriptorYaml Descriptor;
+    if(IO.outputting())
+      Descriptor = std::get<DXContainerYAML::RootDescriptorYaml>(P.Data);
+    IO.mapRequired("Descriptor", Descriptor);
+    P.Data = Descriptor;
+  } break;
+  case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+    DXContainerYAML::DescriptorTableYaml Table;
+    if(IO.outputting())
+    Table = std::get<DXContainerYAML::DescriptorTableYaml>(P.Data);
+    IO.mapRequired("Table", Table);
+    P.Data = Table;
+  } break;
   }
 }
 
