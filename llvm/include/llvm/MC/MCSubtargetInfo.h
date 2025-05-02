@@ -78,7 +78,7 @@ struct BasicSubtargetSubTypeKV {
 };
 
 struct SubtargetSubTypeKV : BasicSubtargetSubTypeKV {
-  FeatureBitArray TuneImplies;	       ///< K-V bit mask
+  FeatureBitArray TuneImplies; ///< K-V bit mask
   const MCSchedModel *SchedModel;
 };
 
