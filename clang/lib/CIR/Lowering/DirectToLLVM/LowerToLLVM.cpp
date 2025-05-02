@@ -1436,7 +1436,14 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       break;
     // Unions are lowered as only the largest member.
     case cir::RecordType::Union:
-      llvm_unreachable("Lowering of unions is NYI");
+      if (auto largestMember = type.getLargestMember(dataLayout))
+        llvmMembers.push_back(
+            convertTypeForMemory(converter, dataLayout, largestMember));
+      if (type.getPadded()) {
+        auto last = *type.getMembers().rbegin();
+        llvmMembers.push_back(
+            convertTypeForMemory(converter, dataLayout, last));
+      }
       break;
     }
 
@@ -1609,7 +1616,11 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
     return mlir::success();
   }
   case cir::RecordType::Union:
-    return op.emitError() << "NYI: union get_member lowering";
+    // Union members share the address space, so we just need a bitcast to
+    // conform to type-checking.
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(op, llResTy,
+                                                       adaptor.getAddr());
+    return mlir::success();
   }
 }
 
