@@ -83,9 +83,10 @@ namespace llvm {
 /// where a more sophisticated error reporting mechanism (such as Error/Expected
 /// or DiagnosticInfo) is not supported.
 ///
-/// Examples where this function should be used include invalid inputs or
-/// options, but also environment error conditions outside LLVM's control.
-/// It should also be used for known unsupported/unimplemented functionality.
+/// Examples where this function should be used instead of
+/// reportFatalInternalError() include invalid inputs or options, but also
+/// environment error conditions outside LLVM's control. It should also be used
+/// for known unsupported/unimplemented functionality.
 ///
 /// This will call installed error handlers (or print the message by default)
 /// and then exit with code 1. It will not produce a crash trace and will
