@@ -1003,6 +1003,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
 
+  /// Returns true if the device has unified memory capabilities
+  bool supportsUnifiedMemory();
+  virtual bool supportsUnifiedMemoryImpl() { return false; }
+
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
@@ -1401,6 +1405,9 @@ public:
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
+
+  /// Returns if the the device supports unified memory.
+  int32_t supports_unified_memory(int32_t DeviceId);
 
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
