@@ -58,11 +58,13 @@ class PtrMatchingDataFormatterTestCase(TestBase):
                 r".* bp = 0x[0-9a-f]+ MyInt\n",
                 r".* bp_p = 0x[0-9a-f]+\n",
                 r".* bp_pp = 0x[0-9a-f]+\n",
-        ])
+            ],
+        )
 
         self.runCmd('type summary delete "Int"')
         self.runCmd(
-            'type summary add --cascade true --pointer-match-depth 2 -s "MyInt" "Int"')
+            'type summary add --cascade true --pointer-match-depth 2 -s "MyInt" "Int"'
+        )
         self.expect(
             "frame variable",
             patterns=[
@@ -83,7 +85,8 @@ class PtrMatchingDataFormatterTestCase(TestBase):
                 r".* bp = 0x[0-9a-f]+ MyInt\n",
                 r".* bp_p = 0x[0-9a-f]+ MyInt\n",
                 r".* bp_pp = 0x[0-9a-f]+\n",
-        ])
+            ],
+        )
 
         self.runCmd('type summary delete "Int"')
         self.runCmd(
@@ -105,4 +108,5 @@ class PtrMatchingDataFormatterTestCase(TestBase):
                 r".* bp = 0x[0-9a-f]+ MyFoo\n",
                 r".* bp_p = 0x[0-9a-f]+ MyFoo\n",
                 r".* bp_pp = 0x[0-9a-f]+\n",
-        ])
+            ],
+        )
