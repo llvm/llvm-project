@@ -367,3 +367,7 @@ bool DeviceTy::useAutoZeroCopy() {
     return false;
   return RTL->use_auto_zero_copy(RTLDeviceID);
 }
+
+bool DeviceTy::supportsUnifiedMemory() {
+  return RTL->supports_unified_memory(RTLDeviceID);
+}
