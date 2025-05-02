@@ -24,7 +24,7 @@
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL, LIBC_COMPILER_HAS_FIXED_POINT
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include "fx_rep.h" // FXRep for type info (FRACTION_LEN, StorageType, IS_SIGNED)
+#include "fx_rep.h" // FXRep for type info (FRACTION_LEN, StorageType)
 
 // Only define contents if the compiler supports fixed-point types
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
