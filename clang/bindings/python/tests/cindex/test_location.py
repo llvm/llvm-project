@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from clang.cindex import (
     Config,
@@ -16,7 +17,7 @@ import unittest
 
 from .util import get_cursor, get_tu
 
-INPUTS_DIR = os.path.join(os.path.dirname(__file__), "INPUTS")
+INPUTS_DIR = Path(__file__).parent / "INPUTS"
 
 BASE_INPUT = "int one;\nint two;\n"
 
@@ -155,8 +156,8 @@ int one;
         assert not l_t1_14 < l_t2_13
 
     def test_equality(self):
-        path = os.path.join(INPUTS_DIR, "testfile.c")
-        path_a = os.path.join(INPUTS_DIR, "a.inc")
+        path = INPUTS_DIR / "testfile.c"
+        path_a = INPUTS_DIR / "a.inc"
         tu = TranslationUnit.from_source(path)
         main_file = File.from_name(tu, path)
         a_file = File.from_name(tu, path_a)

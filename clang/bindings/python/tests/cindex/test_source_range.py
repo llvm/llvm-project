@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from clang.cindex import Config, SourceLocation, SourceRange, TranslationUnit
 
@@ -9,7 +10,7 @@ import unittest
 
 from .util import get_tu
 
-INPUTS_DIR = os.path.join(os.path.dirname(__file__), "INPUTS")
+INPUTS_DIR = Path(__file__).parent / "INPUTS"
 
 
 def create_range(tu, line1, column1, line2, column2):
@@ -87,7 +88,7 @@ aaaaa"""
         assert l_f2 in r_curly
 
     def test_equality(self):
-        path = os.path.join(INPUTS_DIR, "testfile.c")
+        path = INPUTS_DIR / "testfile.c"
         tu = TranslationUnit.from_source(path)
 
         r1 = create_range(tu, 1, 1, 2, 2)
