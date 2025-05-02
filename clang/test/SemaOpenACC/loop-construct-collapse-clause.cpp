@@ -545,6 +545,18 @@ void no_dupes_since_last_device_type() {
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
 
+#pragma acc loop device_type(nvidia) collapse(1) device_type(*) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+
+  // expected-error@+4{{OpenACC 'collapse' clause applies to 'device_type' '*', which conflicts with previous clause}}
+  // expected-note@+3{{previous clause is here}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop device_type(*) collapse(1) device_type(*) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+
   // expected-error@+4{{OpenACC 'collapse' clause applies to 'device_type' 'nvidia', which conflicts with previous clause}}
   // expected-note@+3{{previous clause is here}}
   // expected-note@+2{{previous clause is here}}
