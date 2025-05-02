@@ -18093,8 +18093,8 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 }
 
 ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
-                                    BinaryOperatorKind Opc,
-                                    Expr *LHSExpr, Expr *RHSExpr) {
+                                    BinaryOperatorKind Opc, Expr *LHSExpr,
+                                    Expr *RHSExpr, bool ForFoldExpression) {
   if (getLangOpts().CPlusPlus11 && isa<InitListExpr>(RHSExpr)) {
     // The syntax only allows initializer lists on the RHS of assignment,
     // so we don't need to worry about accepting invalid code for
@@ -18227,7 +18227,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
 
     if (const auto *BI = dyn_cast<BinaryOperator>(LHSExpr);
-        BI && BI->isComparisonOp())
+        !ForFoldExpression && BI && BI->isComparisonOp())
       Diag(OpLoc, diag::warn_consecutive_comparison)
           << BI->getOpcodeStr() << BinaryOperator::getOpcodeStr(Opc);
 
@@ -18640,8 +18640,8 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
 }
 
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
-                            BinaryOperatorKind Opc,
-                            Expr *LHSExpr, Expr *RHSExpr) {
+                            BinaryOperatorKind Opc, Expr *LHSExpr,
+                            Expr *RHSExpr, bool ForFoldExpression) {
   ExprResult LHS, RHS;
   std::tie(LHS, RHS) = CorrectDelayedTyposInBinOp(*this, Opc, LHSExpr, RHSExpr);
   if (!LHS.isUsable() || !RHS.isUsable())
@@ -18715,7 +18715,8 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
            LHSExpr->getType()->isOverloadableType()))
         return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 
-      return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+      return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr,
+                                ForFoldExpression);
     }
 
     // Don't resolve overloads if the other type is overloadable.
@@ -18779,7 +18780,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   // Build a built-in binary operation.
-  return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+  return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr, ForFoldExpression);
 }
 
 static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
