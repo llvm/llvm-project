@@ -9671,17 +9671,16 @@ StmtResult Sema::ActOnFinishFullStmt(Stmt *FullStmt) {
   return MaybeCreateStmtWithCleanups(FullStmt);
 }
 
-Sema::IfExistsResult
-Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
-                                   CXXScopeSpec &SS,
+IfExistsResult
+Sema::CheckMicrosoftIfExistsSymbol(Scope *S, CXXScopeSpec &SS,
                                    const DeclarationNameInfo &TargetNameInfo) {
   DeclarationName TargetName = TargetNameInfo.getName();
   if (!TargetName)
-    return IER_DoesNotExist;
+    return IfExistsResult::DoesNotExist;
 
   // If the name itself is dependent, then the result is dependent.
   if (TargetName.isDependentName())
-    return IER_Dependent;
+    return IfExistsResult::Dependent;
 
   // Do the redeclaration lookup in the current scope.
   LookupResult R(*this, TargetNameInfo, Sema::LookupAnyName,
@@ -9694,29 +9693,30 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
   case LookupResultKind::FoundOverloaded:
   case LookupResultKind::FoundUnresolvedValue:
   case LookupResultKind::Ambiguous:
-    return IER_Exists;
+    return IfExistsResult::Exists;
 
   case LookupResultKind::NotFound:
-    return IER_DoesNotExist;
+    return IfExistsResult::DoesNotExist;
 
   case LookupResultKind::NotFoundInCurrentInstantiation:
-    return IER_Dependent;
+    return IfExistsResult::Dependent;
   }
 
   llvm_unreachable("Invalid LookupResult Kind!");
 }
 
-Sema::IfExistsResult
-Sema::CheckMicrosoftIfExistsSymbol(Scope *S, SourceLocation KeywordLoc,
-                                   bool IsIfExists, CXXScopeSpec &SS,
-                                   UnqualifiedId &Name) {
+IfExistsResult Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
+                                                  SourceLocation KeywordLoc,
+                                                  bool IsIfExists,
+                                                  CXXScopeSpec &SS,
+                                                  UnqualifiedId &Name) {
   DeclarationNameInfo TargetNameInfo = GetNameFromUnqualifiedId(Name);
 
   // Check for an unexpanded parameter pack.
   auto UPPC = IsIfExists ? UPPC_IfExists : UPPC_IfNotExists;
   if (DiagnoseUnexpandedParameterPack(SS, UPPC) ||
       DiagnoseUnexpandedParameterPack(TargetNameInfo, UPPC))
-    return IER_Error;
+    return IfExistsResult::Error;
 
   return CheckMicrosoftIfExistsSymbol(S, SS, TargetNameInfo);
 }
