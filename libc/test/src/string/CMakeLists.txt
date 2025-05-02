@@ -383,7 +383,7 @@ add_libc_test(
     libc.src.string.memset_explicit
 )
 
-add_libc_multi_impl_test(memcmp UNIT_TEST_ONLY libc-string-tests SRCS memcmp_test.cpp)
-add_libc_multi_impl_test(memcpy UNIT_TEST_ONLY libc-string-tests SRCS memcpy_test.cpp)
-add_libc_multi_impl_test(memmove UNIT_TEST_ONLY libc-string-tests SRCS memmove_test.cpp)
-add_libc_multi_impl_test(memset UNIT_TEST_ONLY libc-string-tests SRCS memset_test.cpp)
+add_libc_multi_impl_test(memcmp libc-string-tests SRCS UNIT_TEST_ONLY memcmp_test.cpp)
+add_libc_multi_impl_test(memcpy libc-string-tests SRCS UNIT_TEST_ONLY memcpy_test.cpp)
+add_libc_multi_impl_test(memmove libc-string-tests SRCS UNIT_TEST_ONLY memmove_test.cpp)
+add_libc_multi_impl_test(memset libc-string-tests SRCS UNIT_TEST_ONLY memset_test.cpp)
