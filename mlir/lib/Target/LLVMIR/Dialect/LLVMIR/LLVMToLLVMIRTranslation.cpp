@@ -347,15 +347,16 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
   }
 
   SmallVector<llvm::Metadata *> detailedEntries;
+  llvm::Type *llvmInt64Type = llvm::Type::getInt64Ty(context);
   for (ModuleFlagProfileSummaryDetailedAttr detailedEntry :
        summaryAttr.getDetailedSummary()) {
     SmallVector<llvm::Metadata *> tupleNodes{
+        mdb.createConstant(
+            llvm::ConstantInt::get(llvmInt64Type, detailedEntry.getCutOff())),
+        mdb.createConstant(
+            llvm::ConstantInt::get(llvmInt64Type, detailedEntry.getMinCount())),
         mdb.createConstant(llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(context), detailedEntry.getCutOff())),
-        mdb.createConstant(llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(context), detailedEntry.getMinCount())),
-        mdb.createConstant(llvm::ConstantInt::get(
-            llvm::Type::getInt64Ty(context), detailedEntry.getNumCounts()))};
+            llvmInt64Type, detailedEntry.getNumCounts()))};
     detailedEntries.push_back(llvm::MDTuple::get(context, tupleNodes));
   }
   SmallVector<llvm::Metadata *> detailedSummary{
