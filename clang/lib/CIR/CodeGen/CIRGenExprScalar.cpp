@@ -170,6 +170,8 @@ public:
 
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
+  mlir::Value VisitInitListExpr(InitListExpr *e);
+
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
   }
@@ -1672,6 +1674,43 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
     // Fall through to emit this as a non-constant access.
   }
   return emitLoadOfLValue(e);
+}
+
+mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
+  const unsigned numInitElements = e->getNumInits();
+
+  if (e->hadArrayRangeDesignator()) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ArrayRangeDesignator");
+    return {};
+  }
+
+  if (numInitElements == 0) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "InitListExpr with 0 init elements");
+    return {};
+  }
+
+  if (e->getType()->isVectorType()) {
+    const auto vectorType =
+        mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+
+    SmallVector<mlir::Value, 16> elements;
+    for (Expr *init : e->inits()) {
+      elements.push_back(Visit(init));
+    }
+
+    // Zero-initialize any remaining values.
+    if (numInitElements < vectorType.getSize()) {
+      const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
+          vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
+      std::fill_n(std::back_inserter(elements),
+                  vectorType.getSize() - numInitElements, zeroValue);
+    }
+
+    return cgf.getBuilder().create<cir::VecCreateOp>(
+        cgf.getLoc(e->getSourceRange()), vectorType, elements);
+  }
+
+  return Visit(e->getInit(0));
 }
 
 mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,
