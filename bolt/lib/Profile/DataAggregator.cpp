@@ -503,7 +503,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     errs() << "PERF2BOLT: failed to parse samples\n";
 
   if (opts::HeatmapMode) {
-    if (std::error_code EC = printHeatMap())
+    if (std::error_code EC = printLBRHeatMap())
       return errorCodeToError(EC);
     exit(0);
   }
@@ -1327,7 +1327,7 @@ bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
          (LBR.From >= KernelBaseAddr || LBR.To >= KernelBaseAddr);
 }
 
-std::error_code DataAggregator::printHeatMap() {
+std::error_code DataAggregator::printLBRHeatMap() {
   outs() << "PERF2BOLT: parse branch events...\n";
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
@@ -1342,7 +1342,7 @@ std::error_code DataAggregator::printHeatMap() {
   if (!NumTotalSamples) {
     if (opts::BasicAggregation) {
       errs() << "HEATMAP-ERROR: no basic event samples detected in profile. "
-                "Cannot build heatmap.";
+                "Cannot build heatmap.\n";
     } else {
       errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
                 "Cannot build heatmap. Use -nl for building heatmap from "
@@ -1353,13 +1353,10 @@ std::error_code DataAggregator::printHeatMap() {
 
   outs() << "HEATMAP: building heat map...\n";
 
-  if (opts::BasicAggregation) {
-    for (const auto &[PC, Hits] : BasicSamples)
-      HM.registerAddress(PC, Hits);
-  } else {
-    for (const auto &[Trace, Info] : FallthroughLBRs)
-      HM.registerAddressRange(Trace.From, Trace.To, Info.InternCount);
-  }
+  for (const auto &[PC, Hits] : BasicSamples)
+    HM.registerAddress(PC, Hits);
+  for (const auto &[Trace, Info] : FallthroughLBRs)
+    HM.registerAddressRange(Trace.From, Trace.To, Info.InternCount);
 
   if (HM.getNumInvalidRanges())
     outs() << "HEATMAP: invalid traces: " << HM.getNumInvalidRanges() << '\n';
@@ -1404,7 +1401,10 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const uint64_t TraceTo = NextLBR->From;
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
-      if (TraceBF && TraceBF->containsAddress(TraceTo)) {
+      if (opts::HeatmapMode) {
+        FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
+        ++Info.InternCount;
+      } else if (TraceBF && TraceBF->containsAddress(TraceTo)) {
         FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
         if (TraceBF->containsAddress(LBR.From))
           ++Info.InternCount;
@@ -1438,6 +1438,11 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     }
     NextLBR = &LBR;
 
+    if (opts::HeatmapMode) {
+      TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
+      ++Info.TakenCount;
+      continue;
+    }
     uint64_t From = getBinaryFunctionContainingAddress(LBR.From) ? LBR.From : 0;
     uint64_t To = getBinaryFunctionContainingAddress(LBR.To) ? LBR.To : 0;
     if (!From && !To)
@@ -1445,6 +1450,10 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     TakenBranchInfo &Info = BranchLBRs[Trace(From, To)];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
+  }
+  if (opts::HeatmapMode && !Sample.LBR.empty()) {
+    ++BasicSamples[Sample.LBR.front().To];
+    ++BasicSamples[Sample.LBR.back().From];
   }
 }
 
@@ -1622,6 +1631,7 @@ std::error_code DataAggregator::parseBasicEvents() {
 
     if (!Sample->PC)
       continue;
+    ++NumTotalSamples;
 
     if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
       BF->setHasProfileAvailable();
@@ -1629,6 +1639,7 @@ std::error_code DataAggregator::parseBasicEvents() {
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
   }
+  outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
 
   return std::error_code();
 }
@@ -1638,19 +1649,11 @@ void DataAggregator::processBasicEvents() {
   NamedRegionTimer T("processBasic", "Processing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   uint64_t OutOfRangeSamples = 0;
-  for (auto &Sample : BasicSamples) {
-    const uint64_t PC = Sample.first;
-    const uint64_t HitCount = Sample.second;
-    NumTotalSamples += HitCount;
-    BinaryFunction *Func = getBinaryFunctionContainingAddress(PC);
-    if (!Func) {
+  for (const auto [PC, HitCount]: BasicSamples)
+    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(PC))
+      doSample(*Func, PC, HitCount);
+    else
       OutOfRangeSamples += HitCount;
-      continue;
-    }
-
-    doSample(*Func, PC, HitCount);
-  }
-  outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
 
   printBasicSamplesDiagnostics(OutOfRangeSamples);
 }
