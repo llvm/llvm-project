@@ -3662,17 +3662,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
       if (LHSDecompose && RHSDecompose && LHSDecompose->X == RHSDecompose->X &&
           (ICmpInst::isEquality(LHSDecompose->Pred)) &&
-         RHSDecompose->Mask.isPowerOf2() &&
-          LHSDecompose->Mask.isPowerOf2() &&
+          RHSDecompose->Mask.isPowerOf2() && LHSDecompose->Mask.isPowerOf2() &&
           LHSDecompose->Mask != RHSDecompose->Mask) {
         if (LHSDecompose->Pred == ICmpInst::ICMP_NE)
           std::swap(Op0Eq, Op0Ne);
         if (RHSDecompose->Pred == ICmpInst::ICMP_NE)
           std::swap(Op1Eq, Op1Ne);
 
-        if (!Op0Ne->isZero() && !Op1Ne->isZero() &&
-            Op0Eq->isZero() && Op1Eq->isZero() &&
-            Op0Ne->urem(LHSDecompose->Mask).isZero() &&
+        if (!Op0Ne->isZero() && !Op1Ne->isZero() && Op0Eq->isZero() &&
+            Op1Eq->isZero() && Op0Ne->urem(LHSDecompose->Mask).isZero() &&
             Op1Ne->urem(RHSDecompose->Mask).isZero() &&
             Op0Ne->udiv(LHSDecompose->Mask) ==
                 Op1Ne->udiv(RHSDecompose->Mask)) {
