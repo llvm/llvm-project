@@ -1342,7 +1342,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
   if (!NumTotalSamples) {
     if (opts::BasicAggregation) {
       errs() << "HEATMAP-ERROR: no basic event samples detected in profile. "
-                "Cannot build heatmap.\n";
+                "Cannot build heatmap.";
     } else {
       errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
                 "Cannot build heatmap. Use -nl for building heatmap from "
@@ -1355,8 +1355,11 @@ std::error_code DataAggregator::printLBRHeatMap() {
 
   for (const auto &[PC, Hits] : BasicSamples)
     HM.registerAddress(PC, Hits);
-  for (const auto &[Trace, Info] : FallthroughLBRs)
+  for (const auto &LBR : FallthroughLBRs) {
+    const Trace &Trace = LBR.first;
+    const FTInfo &Info = LBR.second;
     HM.registerAddressRange(Trace.From, Trace.To, Info.InternCount);
+  }
 
   if (HM.getNumInvalidRanges())
     outs() << "HEATMAP: invalid traces: " << HM.getNumInvalidRanges() << '\n';
@@ -1639,7 +1642,7 @@ std::error_code DataAggregator::parseBasicEvents() {
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
   }
-  outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
+  outs() << "PERF2BOLT: read " << NumTotalSamples << " basic samples\n";
 
   return std::error_code();
 }
@@ -1649,11 +1652,17 @@ void DataAggregator::processBasicEvents() {
   NamedRegionTimer T("processBasic", "Processing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   uint64_t OutOfRangeSamples = 0;
-  for (const auto [PC, HitCount] : BasicSamples)
-    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(PC))
-      doSample(*Func, PC, HitCount);
-    else
+  for (auto &Sample : BasicSamples) {
+    const uint64_t PC = Sample.first;
+    const uint64_t HitCount = Sample.second;
+    BinaryFunction *Func = getBinaryFunctionContainingAddress(PC);
+    if (!Func) {
       OutOfRangeSamples += HitCount;
+      continue;
+    }
+
+    doSample(*Func, PC, HitCount);
+  }
 
   printBasicSamplesDiagnostics(OutOfRangeSamples);
 }
