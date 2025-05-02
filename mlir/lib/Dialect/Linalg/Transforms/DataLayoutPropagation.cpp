@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -15,6 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SetOperations.h"
@@ -298,18 +300,76 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   return std::make_tuple(packedOperand, indexingMap);
 }
 
+static bool isGenericOutsNotUsed(linalg::GenericOp genericOp) {
+  int numDpsOuts = genericOp.getNumDpsInits();
+  for (int i = 0; i < numDpsOuts; ++i) {
+    for (Block& block : genericOp.getRegion().getBlocks()) {
+      int numBlockArgs = block.getNumArguments();
+      int matchingInitArgIndex = numBlockArgs - numDpsOuts + i;
+      llvm::errs() << "matchingInitArgIndex = " << matchingInitArgIndex
+                   << "\n";
+      llvm::errs() << "Use empty? " << block.getArgument(matchingInitArgIndex).use_empty()
+                   << "\n";
+      return block.getArgument(matchingInitArgIndex).use_empty();
+    }
+  }
+  return true;
+}
+
+static bool hasIndexOperand(Operation *op) {
+  return std::any_of(
+      op->getOperands().begin(), op->getOperands().end(),
+      [](Value operand) { return isa<IndexType>(operand.getType()); });
+}
+
+static bool genericPayloadHasIndexOperand(linalg::GenericOp genericOp) {
+  Region &region = genericOp.getRegion();
+  for (Block &block : region.getBlocks()) {
+    for (Operation &op : block.getOperations()) {
+      if (hasIndexOperand(&op)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Pack a genericOp and return it.
 static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                                Value dest, AffineMap packedOutIndexingMap,
                                const PackInfo &packInfo) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
+  SmallVector<Value> inputOperandsFromUnpackedSource;
   SmallVector<AffineMap> indexingMaps;
+
+  bool canUnpackPackFold = !genericPayloadHasIndexOperand(genericOp) &&
+                           isGenericOutsNotUsed(genericOp);
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
+
+    // If the GenericOp fits the elementwise unary op interface then we can skip
+    // using a redundant pack op as the operand and instead just use the source
+    // of the unpack op.
+    if (auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>()) {
+      inputOperandsFromUnpackedSource.push_back(unpackOp.getSource());
+    } else {
+      inputOperandsFromUnpackedSource.push_back(packedOperand);
+    }
+
     inputOperands.push_back(packedOperand);
     indexingMaps.push_back(packedIndexingMap);
+  }
+
+  // If The pack and unpack op can be folded:
+  // 1) use unpack op source op for operand to fold unpack -> pack sequence
+  // 2) init tensor of the generic op can be replaced by the new tensor.empty
+  // as the generic out.
+  if (canUnpackPackFold) {
+    inputOperands = inputOperandsFromUnpackedSource;
+    if (auto destPack = dest.getDefiningOp<linalg::PackOp>())
+      dest = destPack.getDest();
   }
 
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
