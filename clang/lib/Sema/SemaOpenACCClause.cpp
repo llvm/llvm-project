@@ -417,13 +417,16 @@ class SemaOpenACCClauseVisitor {
                                             : "*");
             // mention the active device type.
             SemaRef.Diag(ActiveDeviceTypeClause.getBeginLoc(),
-                         diag::note_acc_previous_clause_here);
+                         diag::note_acc_device_type_here)
+                << diag::ACCDeviceTypeApp::Active;
             // mention the previous clause.
             SemaRef.Diag((*CurClauseKindItr)->getBeginLoc(),
-                         diag::note_acc_previous_clause_here);
+                         diag::note_acc_previous_named_clause_here)
+                << (*CurClauseKindItr)->getClauseKind();
             // mention the previous device type.
             SemaRef.Diag(CurDeviceTypeClause.getBeginLoc(),
-                         diag::note_acc_previous_clause_here);
+                         diag::note_acc_device_type_here)
+                << diag::ACCDeviceTypeApp::Applies;
             return true;
           }
         }

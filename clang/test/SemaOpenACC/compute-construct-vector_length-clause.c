@@ -62,16 +62,16 @@ void Test() {
 }
 
 void no_dupes_since_last_device_type() {
-  // expected-error@+4{{OpenACC 'vector_length' clause applies to 'device_type' 'radeon', which conflicts with previous clause}}
-  // expected-note@+3{{previous clause is here}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+4{{OpenACC 'vector_length' clause applies to 'device_type' 'radeon', which conflicts with previous 'vector_length' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'vector_length' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
 #pragma acc parallel device_type(nvidia, radeon) vector_length(getS()) device_type(radeon) vector_length(getS())
   ;
-  // expected-error@+4{{OpenACC 'vector_length' clause applies to 'device_type' 'nvidia', which conflicts with previous clause}}
-  // expected-note@+3{{previous clause is here}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+4{{OpenACC 'vector_length' clause applies to 'device_type' 'nvidia', which conflicts with previous 'vector_length' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'vector_length' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
 #pragma acc parallel device_type(nvidia) vector_length(getS()) device_type(nvidia, radeon) vector_length(getS())
   ;
 }

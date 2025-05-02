@@ -62,16 +62,16 @@ void Test() {
 }
 
 void no_dupes_since_last_device_type() {
-  // expected-error@+4{{OpenACC 'num_workers' clause applies to 'device_type' 'radEon', which conflicts with previous clause}}
-  // expected-note@+3{{previous clause is here}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+4{{OpenACC 'num_workers' clause applies to 'device_type' 'radEon', which conflicts with previous 'num_workers' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'num_workers' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
 #pragma acc parallel device_type(nvidia, radeon) num_workers(getS()) device_type(radEon) num_workers(getS())
   ;
-  // expected-error@+4{{OpenACC 'num_workers' clause applies to 'device_type' 'nvidia', which conflicts with previous clause}}
-  // expected-note@+3{{previous clause is here}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+4{{OpenACC 'num_workers' clause applies to 'device_type' 'nvidia', which conflicts with previous 'num_workers' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'num_workers' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
 #pragma acc parallel device_type(nvidia) num_workers(getS()) device_type(nvidia, radeon) num_workers(getS())
   ;
 }
