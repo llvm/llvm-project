@@ -1901,14 +1901,6 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   return GV;
 }
 
-void CGDebugInfo::CollectRecordEnumType(
-    const EnumDecl *ED, SmallVectorImpl<llvm::Metadata *> &elements) {
-  QualType Ty = CGM.getContext().getTypeDeclType(ED);
-  SourceLocation Loc = ED->getLocation();
-  if (llvm::DIType *enumType = getOrCreateType(Ty, getOrCreateFile(Loc)))
-    elements.push_back(enumType);
-}
-
 void CGDebugInfo::CollectRecordNormalField(
     const FieldDecl *field, uint64_t OffsetInBits, llvm::DIFile *tunit,
     SmallVectorImpl<llvm::Metadata *> &elements, llvm::DIType *RecordTy,
@@ -1995,9 +1987,7 @@ void CGDebugInfo::CollectRecordFields(
 
         // Bump field number for next field.
         ++fieldNo;
-      } else if (const auto *enumType = dyn_cast<EnumDecl>(I)) {
-        CollectRecordEnumType(enumType, elements);
-      } else if (CGM.getCodeGenOpts().EmitCodeView) {
+      } else if (CGM.getCodeGenOpts().hasMaybeUnusedDebugInfo() || CGM.getCodeGenOpts().EmitCodeView) {
         // Debug info for nested types is included in the member list only for
         // CodeView.
         if (const auto *nestedType = dyn_cast<TypeDecl>(I)) {

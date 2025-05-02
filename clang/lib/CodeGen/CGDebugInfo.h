@@ -370,8 +370,6 @@ class CGDebugInfo {
   llvm::DIDerivedType *CreateRecordStaticField(const VarDecl *Var,
                                                llvm::DIType *RecordTy,
                                                const RecordDecl *RD);
-  void CollectRecordEnumType(const EnumDecl *ED,
-                             SmallVectorImpl<llvm::Metadata *> &elements);
   void CollectRecordNormalField(const FieldDecl *Field, uint64_t OffsetInBits,
                                 llvm::DIFile *F,
                                 SmallVectorImpl<llvm::Metadata *> &E,

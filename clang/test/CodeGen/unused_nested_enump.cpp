@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -debug-info-kind=unused-types  -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=limited -emit-llvm -o - %s | FileCheck --check-prefix=NOUNUSEDTYPE %s
 
 struct Type {
     enum { Unused };
@@ -9,7 +10,7 @@ int main() {
     return t.value;
 }
 
-// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type
+// CHECK: ![[ENUM_MEMBER:[0-9]+]] = !DICompositeType(tag: DW_TAG_enumeration_type
 // CHECK-SAME: scope: ![[STRUCT:[0-9]+]]
 // CHECK-SAME: elements: ![[ELEMENTS:[0-9]+]]
 
@@ -24,3 +25,6 @@ int main() {
 
 // CHECK: ![[ELEMENTS]] = !{![[ENUMERATOR:[0-9]+]]}
 // CHECK: ![[ENUMERATOR]] = !DIEnumerator(name: "Unused", value: 0
+
+
+// NOUNUSEDTYPE-NOT: !DIEnumerator(name: "Unused"
