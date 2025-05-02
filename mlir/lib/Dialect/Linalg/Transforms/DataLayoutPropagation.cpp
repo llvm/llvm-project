@@ -298,18 +298,54 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   return std::make_tuple(packedOperand, indexingMap);
 }
 
+static bool isGenericOutsNotUsed(linalg::GenericOp genericOp) {
+  int numDpsOuts = genericOp.getNumDpsInits();
+  for (int i = 0; i < numDpsOuts; ++i) {
+    Block *block = genericOp.getBody();
+    int numBlockArgs = block->getNumArguments();
+    int matchingInitArgIndex = numBlockArgs - numDpsOuts + i;
+    return block->getArgument(matchingInitArgIndex).use_empty();
+  }
+  return true;
+}
+
 /// Pack a genericOp and return it.
 static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                                Value dest, AffineMap packedOutIndexingMap,
                                const PackInfo &packInfo) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
+  SmallVector<Value> inputOperandsFromUnpackedSource;
   SmallVector<AffineMap> indexingMaps;
+
+  // Note: canUnpackPackFold needs to also guarantee the generic body
+  // doesn't have gather semantics. Since such scenarios has been
+  // rejected by both BubbleUpPackOpThroughGenericOp and
+  // PushDownUnPackOpThroughGenericOp, we can safely assume
+  // canUnpackPackFold is as long as init is not used.
+  bool canUnpackPackFold = isGenericOutsNotUsed(genericOp);
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
+
+    if (auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>()) {
+      inputOperandsFromUnpackedSource.push_back(unpackOp.getSource());
+    } else {
+      inputOperandsFromUnpackedSource.push_back(packedOperand);
+    }
+
     inputOperands.push_back(packedOperand);
     indexingMaps.push_back(packedIndexingMap);
+  }
+
+  // If The pack and unpack op can be folded:
+  // 1) use unpack op source op for operand to fold unpack -> pack sequence
+  // 2) init tensor of the generic op can be replaced by the new tensor.empty
+  // as the generic out.
+  if (canUnpackPackFold) {
+    inputOperands = inputOperandsFromUnpackedSource;
+    if (auto destPack = dest.getDefiningOp<linalg::PackOp>())
+      dest = destPack.getDest();
   }
 
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
