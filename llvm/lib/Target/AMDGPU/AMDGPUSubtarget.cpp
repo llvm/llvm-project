@@ -201,8 +201,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
       return Default;
   }
   // Requested maximum must not violate subtarget's specifications.
-  if (RequestedWavesPerEU.second &&
-      RequestedWavesPerEU.second > Default.second)
+  if (RequestedWavesPerEU.second && RequestedWavesPerEU.second > Default.second)
     return Default;
 
   // Replace unspecified bounds in the request with the default bounds.
