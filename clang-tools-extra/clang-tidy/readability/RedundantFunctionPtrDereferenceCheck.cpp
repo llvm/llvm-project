@@ -25,6 +25,7 @@ void RedundantFunctionPtrDereferenceCheck::registerMatchers(MatchFinder *Finder)
 
 void RedundantFunctionPtrDereferenceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Operator = Result.Nodes.getNodeAs<UnaryOperator>("op");
+  assert(Operator && "Operator is null");
   diag(Operator->getOperatorLoc(),
        "redundant repeated dereference of function pointer")
       << FixItHint::CreateRemoval(Operator->getOperatorLoc());
