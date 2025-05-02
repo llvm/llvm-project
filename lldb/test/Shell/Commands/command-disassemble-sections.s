@@ -1,3 +1,7 @@
+## Test disassembling of functions which are spread over multiple sections (ELF
+## segments are modelled as LLDB sections).
+
+
 # REQUIRES: x86, lld
 
 # RUN: split-file %s %t
@@ -13,6 +17,8 @@
 
 
 #--- file.lds
+## Linker script placing the parts of the section into different segments
+## (typically one of these would be for the "hot" code).
 PHDRS {
   text1 PT_LOAD;
   text2 PT_LOAD;
@@ -24,6 +30,8 @@ SECTIONS {
 }
 
 #--- file.s
+## A very simple function consisting of two parts and DWARF describing the
+## function.
         .section        .text.part1,"ax",@progbits
         .p2align 12
 func1:
