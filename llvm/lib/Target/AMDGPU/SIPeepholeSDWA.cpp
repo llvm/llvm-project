@@ -1106,7 +1106,7 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
   else {
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), Vcc)
         .add(CarryIn);
-     }
+  }
 
   auto Converted = BuildMI(MBB, MI, MI.getDebugLoc(),
                            TII->get(AMDGPU::getVOPe32(MI.getOpcode())))
