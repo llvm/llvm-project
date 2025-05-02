@@ -766,7 +766,10 @@ public:
         OpCode = dxil::OpCode::IsFinite;
         break;
       default:
-        llvm_unreachable("Unsupported FPClassTest for DXILOpLowering");
+        SmallString<128> Msg =
+            formatv("Unsupported FPClassTest {0} for DXIL Op Lowering",
+                    TCI->getZExtValue());
+        return make_error<StringError>(Msg, inconvertibleErrorCode());
       }
 
       Expected<CallInst *> OpCall =

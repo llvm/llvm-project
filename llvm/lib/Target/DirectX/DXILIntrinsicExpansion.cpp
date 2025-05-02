@@ -322,10 +322,9 @@ static Value *expandIsFPClass(CallInst *Orig) {
     return RetVal;
   }
   default:
-    // Deliberately falling through to the unreachable below.
-    break;
+    report_fatal_error(Twine("Unsupported FPClassTest"),
+                       /* gen_crash_diag=*/false);
   }
-  llvm_unreachable("Unsupported FPClassTest");
 }
 
 static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
