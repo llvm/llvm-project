@@ -196,11 +196,23 @@ define i32 @callsite_already_new_return_type(ptr %arg) {
 ; INTERESTING: ret
 
 ; RESULT-LABEL: define ptr @non_void_no_op(
-; RESULT: ret ptr null
+; RESULT-NEXT: %load = load i32, ptr %arg
+; RESULT-NEXT: store i32 %load, ptr @gv
+; RESULT-NEXT: ret ptr null
 define ptr @non_void_no_op(ptr %arg) {
   %load = load i32, ptr %arg
   store i32 %load, ptr @gv
   ret ptr null
+}
+
+; INTERESTING-LABEL: @non_void_no_op_caller(
+
+; RESULT-LABEL: define ptr @non_void_no_op_caller(ptr %arg) {
+; RESULT-NEXT: %call = call ptr @non_void_no_op(ptr %arg)
+; RESULT-NEXT: ret ptr %call
+define ptr @non_void_no_op_caller(ptr %arg) {
+  %call = call ptr @non_void_no_op(ptr %arg)
+  ret ptr %call
 }
 
 ; INTERESTING-LABEL: @non_void_same_type_use(
@@ -228,6 +240,12 @@ define i32 @non_void_bitcastable_type_use(ptr %arg) {
   %load = load float, ptr %arg
   store float %load, ptr @gv
   ret i32 0
+}
+
+; INTERESTING-LABEL: @non_void_bitcastable_type_use_caller(
+define i32 @non_void_bitcastable_type_use_caller(ptr %arg) {
+  %ret = call i32 @non_void_bitcastable_type_use(ptr %arg)
+  ret i32 %ret
 }
 
 ; INTERESTING-LABEL: @form_return_struct(
