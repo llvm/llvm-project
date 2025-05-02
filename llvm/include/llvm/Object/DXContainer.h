@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -38,6 +39,12 @@ template <typename T>
 std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
   value.swapBytes();
 }
+
+struct TypeIdGenerator {
+  static inline size_t nextId = 0;
+
+  static size_t getNextId() { return nextId++; }
+};
 } // namespace detail
 
 // This class provides a view into the underlying resource array. The Resource
@@ -120,8 +127,10 @@ namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
+  uint32_t Version;
+
   RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), ParamData(P) {}
+      : Header(H), ParamData(P), Version(V) {}
 
   template <typename T, typename VersionT = T> Expected<T> readParameter() {
     assert(sizeof(VersionT) <= sizeof(T) &&
@@ -169,14 +178,25 @@ struct RootDescriptorView : RootParameterView {
   }
 };
 template <typename T> struct DescriptorTable {
-  uint32_t Version;
   uint32_t NumRanges;
   uint32_t RangesOffset;
   ViewArray<T> Ranges;
 
   typename ViewArray<T>::iterator begin() const { return Ranges.begin(); }
 
-typename ViewArray<T>::iterator end() const { return Ranges.end(); }
+  typename ViewArray<T>::iterator end() const { return Ranges.end(); }
+};
+template <typename T> struct TemplateTypeToVersion {
+  // Default version
+  static constexpr uint32_t Value = -1;
+};
+
+template <> struct TemplateTypeToVersion<dxbc::RST0::v0::DescriptorRange> {
+  static constexpr uint32_t Value = 1;
+};
+
+template <> struct TemplateTypeToVersion<dxbc::RST0::v1::DescriptorRange> {
+  static constexpr uint32_t Value = 2;
 };
 
 template <typename T> struct DescriptorTableView : RootParameterView {
@@ -184,7 +204,8 @@ template <typename T> struct DescriptorTableView : RootParameterView {
 
   static bool classof(const RootParameterView *V) {
     return (V->Header.ParameterType ==
-            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable));
+            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable)) &&
+           (V->Version == TemplateTypeToVersion<T>::Value);
   }
 
   // Define a type alias to access the template parameter from inside classof

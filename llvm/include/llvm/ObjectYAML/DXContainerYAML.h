@@ -170,39 +170,40 @@ struct RootParameterYamlDesc {
     }
   }
 
-  RootParameterYamlDesc &operator=(const RootParameterYamlDesc &other) {
-    if (this != &other) {
+  RootParameterYamlDesc &operator=(const RootParameterYamlDesc &Other) {
+    if (this != &Other) {
       // First, destroy the current union member
       this->~RootParameterYamlDesc();
 
       // Copy the basic members
-      Type = other.Type;
-      Visibility = other.Visibility;
-      Offset = other.Offset;
+      Type = Other.Type;
+      Visibility = Other.Visibility;
+      Offset = Other.Offset;
 
       // Initialize the new union member based on the Type from 'other'
       switch (Type) {
       case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-        new (&Constants) RootConstantsYaml(other.Constants);
+        new (&Constants) RootConstantsYaml(Other.Constants);
         break;
       case llvm::to_underlying(dxbc::RootParameterType::CBV):
       case llvm::to_underlying(dxbc::RootParameterType::SRV):
       case llvm::to_underlying(dxbc::RootParameterType::UAV):
-        new (&Descriptor) RootDescriptorYaml(other.Descriptor);
+        new (&Descriptor) RootDescriptorYaml(Other.Descriptor);
         break;
       case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
-        new (&Table) DescriptorTableYaml(other.Table);
+        new (&Table) DescriptorTableYaml(Other.Table);
         break;
       }
     }
     return *this;
   }
 
+  // ToDo: Fix this (Already have a follow up PR with it)
   union {
     RootConstantsYaml Constants;
     RootDescriptorYaml Descriptor;
-    DescriptorTableYaml Table;
   };
+  DescriptorTableYaml Table;
 };
 
 struct RootSignatureYamlDesc {
