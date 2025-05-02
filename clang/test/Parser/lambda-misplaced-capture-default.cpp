@@ -30,8 +30,8 @@ template <typename... Args> void Test(Args... args) {
   [args..., &] {};         // expected-error {{capture default must be first}}
   [=, &args...] {};        // ok
   [&, ... xs = &args] {};  // ok
-  [&, ... xs = &] {};      // expected-error {{expected expression}}
-  [... xs = &] {};         // expected-error {{expected expression}}
+  [&, ... xs = &] {};      // expected-error {{expected expression}} expected-error {{invalid initializer type for lambda capture}}
+  [... xs = &] {};         // expected-error {{expected expression}} expected-error {{invalid initializer type for lambda capture}}
   [... xs = &args, = ] {}; // expected-error {{capture default must be first}}
   [... xs = &args, &] {};  // expected-error {{capture default must be first}}
 }
