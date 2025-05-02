@@ -1911,7 +1911,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
     : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
   setOperand(0, BB);
-  BB->AdjustBlockAddressRefCount(1);
+  BB->setHasAddressTaken(true);
 }
 
 BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {
@@ -1926,7 +1926,7 @@ BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {
 /// Remove the constant from the constant table.
 void BlockAddress::destroyConstantImpl() {
   getType()->getContext().pImpl->BlockAddresses.erase(getBasicBlock());
-  getBasicBlock()->AdjustBlockAddressRefCount(-1);
+  getBasicBlock()->setHasAddressTaken(false);
 }
 
 Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
@@ -1939,14 +1939,14 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
   if (NewBA)
     return NewBA;
 
-  getBasicBlock()->AdjustBlockAddressRefCount(-1);
+  getBasicBlock()->setHasAddressTaken(false);
 
   // Remove the old entry, this can't cause the map to rehash (just a
   // tombstone will get added).
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   NewBA = this;
   setOperand(0, NewBB);
-  getBasicBlock()->AdjustBlockAddressRefCount(1);
+  getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.
   // Callers know that this means we shouldn't delete this value.
