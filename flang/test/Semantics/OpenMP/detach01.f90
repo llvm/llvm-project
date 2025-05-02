@@ -31,6 +31,16 @@ program detach01
         x = x + 1
     !$omp end task
 
+    !ERROR: A variable: `event_01` that appears in a DETACH clause cannot appear on FIRSTPRIVATE clause on the same construct
+    !$omp task detach(event_01) firstprivate(event_01)
+        x = x + 1
+    !$omp end task
+
+    !ERROR: A variable: `event_01` that appears in a DETACH clause cannot appear on SHARED clause on the same construct
+    !$omp task detach(event_01) shared(event_01)
+        x = x + 1
+    !$omp end task
+
     !ERROR: A variable: `event_01` that appears in a DETACH clause cannot appear on IN_REDUCTION clause on the same construct
     !$omp task detach(event_01) in_reduction(+:event_01)
         x = x + 1
