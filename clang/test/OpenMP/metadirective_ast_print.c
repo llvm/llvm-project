@@ -27,16 +27,16 @@ void foo1(void) {
                                : parallel) otherwise()
   bar();
 #pragma omp metadirective when(implementation = {vendor(score(0)  \
-                                                        : llvm)}, \
+                                                        : amd)}, \
                                device = {kind(cpu)}               \
                                : parallel) otherwise(target teams)
   bar();
 #pragma omp metadirective when(device = {kind(gpu)}                                 \
-                               : target teams) when(implementation = {vendor(llvm)} \
+                               : target teams) when(implementation = {vendor(amd)} \
                                                     : parallel) otherwise()
   bar();
 #pragma omp metadirective otherwise(target) when(implementation = {vendor(score(5)  \
-                                                                        : llvm)}, \
+                                                                        : amd)}, \
                                                device = {kind(cpu, host)}         \
                                                : parallel)
   bar();
