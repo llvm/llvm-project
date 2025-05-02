@@ -1389,7 +1389,6 @@ void DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
     }
     NextUncovered = std::max(NextUncovered, Idx);
   }
-  return;
 }
 
 void DWARFVerifier::verifyNameIndexAttribute(
@@ -1469,7 +1468,6 @@ void DWARFVerifier::verifyNameIndexAttribute(
     });
     return;
   }
-  return;
 }
 
 void DWARFVerifier::verifyNameIndexAbbrevs(
@@ -2068,7 +2066,6 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
       }
     }
   }
-  return;
 }
 
 bool DWARFVerifier::handleAccelTables() {
