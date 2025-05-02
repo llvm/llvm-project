@@ -487,8 +487,8 @@ reflect(__detail::HLSL_FIXED_VECTOR<float, L> I,
 /// \param eta The refraction index.
 ///
 /// The return value is a floating-point vector that represents the refraction
-/// using the refraction index, \a eta, for the direction of the entering ray, \a I,
-/// off a surface with the normal \a N.
+/// using the refraction index, \a eta, for the direction of the entering ray,
+/// \a I, off a surface with the normal \a N.
 ///
 /// This function calculates the refraction vector using the following formulas:
 /// k = 1.0 - eta * eta * (1.0 - dot(N, I) * dot(N, I))
@@ -515,7 +515,7 @@ const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
 template <typename T>
 const inline __detail::enable_if_t<
     __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
-    refract(T I, T N, T eta) {
+refract(T I, T N, T eta) {
   return __detail::refract_impl(I, N, eta);
 }
 

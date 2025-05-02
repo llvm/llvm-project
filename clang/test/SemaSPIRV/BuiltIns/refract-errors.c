@@ -7,7 +7,7 @@ float2 test_no_second_arg(float2 p0) {
   // expected-error@-1 {{too few arguments to function call, expected 3, have 1}}
 }
 
-float2 test_too_few_arg(float2 p0) {
+float2 test_no_third_arg(float2 p0) {
   return __builtin_spirv_refract(p0, p0);
   // expected-error@-1 {{too few arguments to function call, expected 3, have 2}}
 }

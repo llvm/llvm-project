@@ -10,7 +10,7 @@
 #define _HLSL_HLSL_INTRINSIC_HELPERS_H_
 
 namespace hlsl {
-namespace __detail {
+namespace __dETAil {
 
 constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
   // Use the same scaling factor used by FXC, and DXC for DXIL
@@ -71,24 +71,24 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #endif
 }
 
-template <typename T> constexpr T refract_impl(T I, T N, T eta) {
-  T k = 1 - eta * eta * (1 - (N * I * N *I));
-  if(k < 0)
+template <typename T> constexpr T refract_impl(T I, T N, T Eta) {
+  T K = 1 - Eta * Eta * (1 - (N * I * N * I));
+  if (K < 0)
     return 0;
   else
-    return (eta * I - (eta * N * I + sqrt(k)) * N);
+    return (Eta * I - (Eta * N * I + sqrt(K)) * N);
 }
 
 template <typename T, int L>
-constexpr vector<T, L> refract_vec_impl(vector<T, L> I, vector<T, L> N, T eta) {
+constexpr vector<T, L> refract_vec_impl(vector<T, L> I, vector<T, L> N, T Eta) {
 #if (__has_builtin(__builtin_spirv_refract))
-  return __builtin_spirv_refract(I, N, eta);
+  return __builtin_spirv_refract(I, N, Eta);
 #else
-  vector<T, L> k = 1 - eta * eta * (1 - dot(N, I) * dot(N, I));
-  if(k < 0)
+  vector<T, L> K = 1 - Eta * Eta * (1 - dot(N, I) * dot(N, I));
+  if (K < 0)
     return 0;
   else
-    return (eta * I - (eta * dot(N, I) + sqrt(k)) * N);
+    return (Eta * I - (Eta * dot(N, I) + sqrt(K)) * N);
 #endif
 }
 

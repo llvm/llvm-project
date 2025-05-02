@@ -173,7 +173,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     QualType ArgTyB = B.get()->getType();
     auto *VTyB = ArgTyB->getAs<VectorType>();
     if (VTyB == nullptr) {
-      SemaRef.Diag(A.get()->getBeginLoc(),
+      SemaRef.Diag(B.get()->getBeginLoc(),
                    diag::err_typecheck_convert_incompatible)
           << ArgTyB
           << SemaRef.Context.getVectorType(ArgTyB, 2, VectorKind::Generic) << 1
@@ -234,8 +234,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     ExprResult C = TheCall->getArg(2);
     QualType ArgTyC = C.get()->getType();
     if (!ArgTyC->hasFloatingRepresentation()) {
-      SemaRef.Diag(C.get()->getBeginLoc(),
-                   diag::err_builtin_invalid_arg_type)
+      SemaRef.Diag(C.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << 3 << /* scalar or vector */ 5 << /* no int */ 0 << /* fp */ 1
           << ArgTyC;
       return true;
@@ -243,7 +242,6 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
 
     QualType RetTy = ArgTyA;
     TheCall->setType(RetTy);
-    assert(RetTy == ArgTyA);
     break;
   }
   case SPIRV::BI__builtin_spirv_reflect: {
