@@ -565,9 +565,9 @@ public:
 
     // Create a compiler instance to handle the actual work.
     auto ModCache = makeInProcessModuleCache(Service.getModuleCacheMutexes());
-    ScanInstanceStorage.emplace(std::move(PCHContainerOps), ModCache.get());
+    ScanInstanceStorage.emplace(std::move(Invocation),
+                                std::move(PCHContainerOps), ModCache.get());
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
-    ScanInstance.setInvocation(std::move(Invocation));
     ScanInstance.getInvocation().getCASOpts() = CASOpts;
     ScanInstance.setBuildingModule(false);
 
