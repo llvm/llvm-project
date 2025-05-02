@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   // Given x * pi = y - (k * (pi/128))
   // find y and k such that
-  // y = x * pi - (k * pi/128) = x * pi - kpi/128
+  // y = x * pi - kpi/128
   // k = round(x, 128)
 
   using FPBits = typename fputil::FPBits<double>;
@@ -46,7 +46,7 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
 
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
-  // When |x| > 2^51, x is an Integer or Nan
+  // When |x| > 2^51, x is an Integer or Nan/Inf
   if (x_abs >= 0x4320000000000000) {
     if (x_abs < 0x4330000000000000)
       return (x_abs & 0x1) ? -1.0 : 1.0;
