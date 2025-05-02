@@ -1195,6 +1195,41 @@ public:
                ? 1
                : R->getNumOperands();
   }
+
+  /// Returns an interator range over the incoming values
+  VPUser::const_operand_range incoming_values() const {
+    return getAsRecipe()->operands();
+  }
+
+  using const_incoming_block_iterator =
+      mapped_iterator<detail::index_iterator,
+                      std::function<const VPBasicBlock *(size_t)>>;
+  using const_incoming_blocks_range =
+      iterator_range<const_incoming_block_iterator>;
+
+  const_incoming_block_iterator incoming_block_begin() const {
+    return const_incoming_block_iterator(
+        detail::index_iterator(0),
+        [this](size_t Idx) { return getIncomingBlock(Idx); });
+  }
+  const_incoming_block_iterator incoming_block_end() const {
+    return const_incoming_block_iterator(
+        detail::index_iterator(getNumIncoming()),
+        [this](size_t Idx) { return getIncomingBlock(Idx); });
+  }
+
+  /// Returns an iterator range over the incoming blocks.
+  const_incoming_blocks_range incoming_blocks() const {
+    return make_range(incoming_block_begin(), incoming_block_end());
+  }
+
+  /// Returns an iterator range over pairs of incoming values and corresponding
+  /// incoming blocks.
+  detail::zippy<llvm::detail::zip_shortest, VPUser::const_operand_range,
+                const_incoming_blocks_range>
+  incoming_values_and_blocks() const {
+    return zip(incoming_values(), incoming_blocks());
+  }
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use

@@ -208,9 +208,8 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         auto *UI = cast<VPRecipeBase>(U);
         const VPBlockBase *UserVPBB = UI->getParent();
         if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
-          for (unsigned Idx = 0; Idx != Phi->getNumIncoming(); ++Idx) {
-            VPValue *IncVPV = Phi->getIncomingValue(Idx);
-            const VPBasicBlock *IncVPBB = Phi->getIncomingBlock(Idx);
+          for (const auto &[IncVPV, IncVPBB] :
+               Phi->incoming_values_and_blocks()) {
             if (IncVPV != V)
               continue;
             if (IncVPBB != VPBB && !VPDT.dominates(VPBB, IncVPBB)) {
