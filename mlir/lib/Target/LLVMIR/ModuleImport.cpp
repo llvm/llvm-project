@@ -41,6 +41,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/ModRef.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -722,11 +723,13 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     return success();
   };
 
-  auto getOptIntValue = [&](const llvm::MDOperand &md, StringRef matchKey,
-                            std::optional<uint64_t> &val) -> LogicalResult {
+  auto getOptIntValue =
+      [&](const llvm::MDOperand &md,
+          StringRef matchKey) -> FailureOr<std::optional<uint64_t>> {
+    std::optional<uint64_t> val = std::nullopt;
     if (!getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey,
                                         /*optional=*/true))
-      return success();
+      return val;
     if (checkOptionalPosition(md, matchKey).failed())
       return failure();
     FailureOr<uint64_t> tmpVal =
@@ -734,7 +737,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     if (failed(tmpVal))
       return failure();
     val = tmpVal;
-    return success();
+    return val;
   };
 
   auto getOptDoubleValue = [&](const llvm::MDOperand &md, StringRef matchKey,
@@ -797,12 +800,11 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     return nullptr;
 
   // Handle optional keys.
-  std::optional<uint64_t> isPartialProfile;
-  if (getOptIntValue(mdTuple->getOperand(summayIdx), "IsPartialProfile",
-                     isPartialProfile)
-          .failed())
+  FailureOr<std::optional<uint64_t>> isPartialProfile =
+      getOptIntValue(mdTuple->getOperand(summayIdx), "IsPartialProfile");
+  if (failed(isPartialProfile))
     return nullptr;
-  if (isPartialProfile.has_value())
+  if (isPartialProfile->has_value())
     summayIdx++;
 
   FloatAttr partialProfileRatio;
@@ -824,7 +826,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   return ModuleFlagProfileSummaryAttr::get(
       mlirModule->getContext(), *format, *totalCount, *maxCount,
       *maxInternalCount, *maxFunctionCount, *numCounts, *numFunctions,
-      isPartialProfile, partialProfileRatio, *detailed);
+      *isPartialProfile, partialProfileRatio, *detailed);
 }
 
 /// Invoke specific handlers for each known module flag value, returns nullptr
