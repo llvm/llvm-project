@@ -564,6 +564,14 @@ enum class NameClassificationKind {
   Concept,
 };
 
+enum class PointerAuthDiscArgKind {
+  // Address discrimination argument of __ptrauth.
+  Addr,
+
+  // Extra discriminator argument of __ptrauth.
+  Extra,
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -3579,14 +3587,6 @@ public:
   bool checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range);
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
-
-  enum PointerAuthDiscArgKind {
-    // Address discrimination argument of __ptrauth.
-    PADAK_AddrDiscPtrAuth,
-
-    // Extra discriminator argument of __ptrauth.
-    PADAK_ExtraDiscPtrAuth,
-  };
 
   bool checkPointerAuthDiscriminatorArg(Expr *Arg, PointerAuthDiscArgKind Kind,
                                         unsigned &IntVal);
