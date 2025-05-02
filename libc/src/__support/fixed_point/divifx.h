@@ -23,18 +23,12 @@
 #include "src/__support/macros/attributes.h"        // LIBC_INLINE
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL, LIBC_COMPILER_HAS_FIXED_POINT
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/uint128.h" // UInt128, Int128 (optional)
 
 #include "fx_rep.h" // FXRep for type info (FRACTION_LEN, StorageType)
 
 // Only define contents if the compiler supports fixed-point types
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
-
-// Check for 128-bit integer support needed for high precision intermediates
-#if defined(__SIZEOF_INT128__)
-#define LIBC_INTERNAL_HAS_INT128
-using int128_t = __int128_t;
-using uint128_t = __uint128_t;
-#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fixed_point {
@@ -48,7 +42,7 @@ using SelectDivIntermediateSigned =
         (sizeof(IntType) * 8 - 1 + FractionalBits <= 64), int64_t,
 #ifdef LIBC_INTERNAL_HAS_INT128
         cpp::conditional_t<(sizeof(IntType) * 8 - 1 + FractionalBits <= 128),
-                           int128_t,
+                           Int128,
                            void>
 #else
         void
@@ -60,7 +54,7 @@ using SelectDivIntermediateUnsigned = cpp::conditional_t<
     (sizeof(IntType) * 8 - 1 + FractionalBits <= 64), uint64_t,
 #ifdef LIBC_INTERNAL_HAS_INT128
     cpp::conditional_t<(sizeof(IntType) * 8 - 1 + FractionalBits <= 128),
-                       uint128_t, void>
+                       UInt128, void>
 #else
     void
 #endif
