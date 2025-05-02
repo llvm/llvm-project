@@ -1749,8 +1749,8 @@ checkFunctionTypeCompatibility(LLVMFunctionType callType,
 
 FailureOr<LLVMFunctionType>
 ModuleImport::convertFunctionType(llvm::CallBase *callInst,
-                                  Value &indirectCallVal) {
-  indirectCallVal = nullptr;
+                                  bool &isIncompatibleCall) {
+  isIncompatibleCall = false;
   auto castOrFailure = [](Type convertedType) -> FailureOr<LLVMFunctionType> {
     auto funcTy = dyn_cast_or_null<LLVMFunctionType>(convertedType);
     if (!funcTy)
@@ -1773,14 +1773,11 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst,
   if (failed(calleeType))
     return failure();
 
-  // Compare the types, if they are not compatible, avoid illegal call/invoke
-  // operations by issuing an indirect call. Note that LLVM IR currently
-  // supports this usage.
+  // Compare the types and notify users via `isIncompatibleCall` if they are not
+  // compatible.
   if (failed(checkFunctionTypeCompatibility(*callType, *calleeType))) {
+    isIncompatibleCall = true;
     Location loc = translateLoc(callInst->getDebugLoc());
-    FlatSymbolRefAttr calleeSym = convertCalleeName(callInst);
-    indirectCallVal = builder.create<LLVM::AddressOfOp>(
-        loc, LLVM::LLVMPointerType::get(context), calleeSym);
     emitWarning(loc) << "incompatible call and callee types: " << *callType
                      << " and " << *calleeType;
     return callType;
@@ -1900,27 +1897,34 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 /*operand_attrs=*/nullptr)
             .getOperation();
       }
-      Value indirectCallVal;
+      bool isIncompatibleCall;
       FailureOr<LLVMFunctionType> funcTy =
-          convertFunctionType(callInst, indirectCallVal);
+          convertFunctionType(callInst, isIncompatibleCall);
       if (failed(funcTy))
         return failure();
 
       FlatSymbolRefAttr callee = nullptr;
-      // If `indirectCallVal` is available emit an indirect call, otherwise use
-      // the callee name. Build an indirect call by passing an empty `callee`
-      // operand and insert into `operands` to include the indirect call target.
-      if (indirectCallVal)
+      if (isIncompatibleCall) {
+        // Use an indirect call (in order to represent valid and verifiable LLVM
+        // IR). Build the indirect call by passing an empty `callee` operand and
+        // insert into `operands` to include the indirect call target.
+        FlatSymbolRefAttr calleeSym = convertCalleeName(callInst);
+        Value indirectCallVal = builder.create<LLVM::AddressOfOp>(
+            translateLoc(callInst->getDebugLoc()),
+            LLVM::LLVMPointerType::get(context), calleeSym);
         operands->insert(operands->begin(), indirectCallVal);
-      else
+      } else {
+        // Regular direct call using callee name.
         callee = convertCalleeName(callInst);
+      }
       CallOp callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
 
       if (failed(convertCallAttributes(callInst, callOp)))
         return failure();
 
-      // Handle parameter and result attributes unless it's an indirect call.
-      if (!indirectCallVal)
+      // Handle parameter and result attributes unless it's an incompatible
+      // call.
+      if (!isIncompatibleCall)
         convertParameterAttributes(callInst, callOp, builder);
       return callOp.getOperation();
     }();
@@ -1986,21 +1990,26 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
-    Value indirectCallVal;
+    bool isIncompatibleInvoke;
     FailureOr<LLVMFunctionType> funcTy =
-        convertFunctionType(invokeInst, indirectCallVal);
+        convertFunctionType(invokeInst, isIncompatibleInvoke);
     if (failed(funcTy))
       return failure();
 
     FlatSymbolRefAttr calleeName = nullptr;
-    // If `indirectCallVal` is available emit an indirect call, otherwise use
-    // the callee name. Build an indirect call by passing an empty `callee`
-    // operand and insert into `operands` to include the indirect call target.
-    if (!indirectCallVal)
+    if (isIncompatibleInvoke) {
+      // Use an indirect invoke (in order to represent valid and verifiable LLVM
+      // IR). Build the indirect invoke by passing an empty `callee` operand and
+      // insert into `operands` to include the indirect invoke target.
+      FlatSymbolRefAttr calleeSym = convertCalleeName(invokeInst);
+      Value indirectInvokeVal = builder.create<LLVM::AddressOfOp>(
+          translateLoc(invokeInst->getDebugLoc()),
+          LLVM::LLVMPointerType::get(context), calleeSym);
+      operands->insert(operands->begin(), indirectInvokeVal);
+    } else {
+      // Regular direct invoke using callee name.
       calleeName = convertCalleeName(invokeInst);
-    else
-      operands->insert(operands->begin(), indirectCallVal);
-
+    }
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
@@ -2011,8 +2020,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
 
-    // Handle parameter and result attributes unless it's an indirect call.
-    if (!indirectCallVal)
+    // Handle parameter and result attributes unless it's an incompatible
+    // invoke.
+    if (!isIncompatibleInvoke)
       convertParameterAttributes(invokeInst, invokeOp, builder);
 
     if (!invokeInst->getType()->isVoidTy())
