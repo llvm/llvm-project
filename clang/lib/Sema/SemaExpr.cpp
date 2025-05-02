@@ -13979,11 +13979,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
           LHSType->isObjCObjectPointerType())))
       ConvTy = AssignConvertType::Compatible;
 
-<<<<<<< HEAD
     if (IsAssignConvertCompatible(ConvTy) && LHSType->isObjCObjectType())
-=======
-    if (ConvTy == AssignConvertType::Compatible && LHSType->isObjCObjectType())
->>>>>>> origin/main
       Diag(Loc, diag::err_objc_object_assignment) << LHSType;
 
     // If the RHS is a unary plus or minus, check to see if they = and + are
@@ -14006,11 +14002,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       }
     }
 
-<<<<<<< HEAD
     if (IsAssignConvertCompatible(ConvTy)) {
-=======
-    if (ConvTy == AssignConvertType::Compatible) {
->>>>>>> origin/main
       if (LHSType.getObjCLifetime() == Qualifiers::OCL_Strong) {
         // Warn about retain cycles where a block captures the LHS, but
         // not if the LHS is a simple variable into which the block is
