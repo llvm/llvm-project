@@ -3285,7 +3285,9 @@ void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult AtomicRMWOp::verify() {
   auto valType = getVal().getType();
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
-      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax) {
+      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
+      getBinOp() == AtomicBinOp::fminimum ||
+      getBinOp() == AtomicBinOp::fmaximum) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
