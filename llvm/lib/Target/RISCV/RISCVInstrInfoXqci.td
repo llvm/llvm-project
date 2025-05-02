@@ -1329,8 +1329,7 @@ def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
 
-let isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32] in {
-let Predicates = [HasStdExtZcb] in {
+let isCompressOnly = true, Predicates = [HasVendorXqcilo, HasStdExtZcb, IsRV32] in {
 def : CompressPat<(QC_E_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm),
                   (C_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm)>;
 def : CompressPat<(QC_E_LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
@@ -1341,8 +1340,9 @@ def : CompressPat<(QC_E_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
                   (C_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm)>;
 def : CompressPat<(QC_E_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
                   (C_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
-} // Predicates = [HasStdExtZcb]
+} // isCompressOnly = true, Predicates = [HasVendorXqcilo, HasStdExtZcb, IsRV32]
 
+let isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32] in {
 def : CompressPat<(QC_E_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 def : CompressPat<(QC_E_LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
