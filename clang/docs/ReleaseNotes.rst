@@ -141,12 +141,16 @@ C Language Changes
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
 - Clang now diagnoses ``const``-qualified object definitions without an
-  initializer. If the object is zero-initialized, it will be diagnosed under
-  the new warning ``-Wdefault-const-init`` (which is grouped under
-  ``-Wc++-compat`` because this construct is not compatible with C++). If the
-  object is left uninitialized, it will be diagnosed unsed the new warning
-  ``-Wdefault-const-init-unsafe`` (which is grouped under
-  ``-Wdefault-const-init``). #GH19297
+  initializer. If the object is a variable or field which is zero-initialized,
+  it will be diagnosed under the new warning ``-Wdefault-const-init-var`` or
+  ``-Wdefault-const-init-field``, respectively. Similarly, if the variable or
+  field is not zero-initialized, it will be diagnosed under the new diagnostic
+  ``-Wdefault-const-init-var-unsafe`` or ``-Wdefault-const-init-field-unsafe``,
+  respectively. The unsafe diagnostic variants are grouped under a new
+  diagnostic ``-Wdefault-const-init-unsafe``, which itself is grouped under the
+  new diagnostic ``-Wdefault-const-init``. Finally, ``-Wdefault-const-init`` is
+  grouped under ``-Wc++-compat`` because these constructs are not compatible
+  with C++. #GH19297
 - Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)
@@ -171,6 +175,15 @@ C Language Changes
   ``-Wenum-conversion`` and ``-Wimplicit-int-enum-cast``. This conversion is an
   int-to-enum conversion because the enumeration on the right-hand side is
   promoted to ``int`` before the assignment.
+- Added ``-Wtentative-definition-compat``, grouped under ``-Wc++-compat``,
+  which diagnoses tentative definitions in C with multiple declarations as
+  being incompatible with C++. e.g.,
+
+  .. code-block:: c
+
+    // File scope
+    int i;
+    int i; // Vaild C, invalid C++, now diagnosed
 - Added ``-Wunterminated-string-initialization``, grouped under ``-Wextra``,
   which diagnoses an initialization from a string literal where only the null
   terminator cannot be stored. e.g.,
@@ -188,6 +201,9 @@ C Language Changes
   ``-Wunterminated-string-initialization``. However, this diagnostic is not
   silenced by the ``nonstring`` attribute as these initializations are always
   incompatible with C++.
+- Added the existing ``-Wduplicate-decl-specifier`` diagnostic, which is on by
+  default, to ``-Wc++-compat`` because duplicated declaration specifiers are
+  not valid in C++.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -265,7 +281,7 @@ New Compiler Flags
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
 
-- New option ``-ftime-report-json`` added which outputs the same timing data as `-ftime-report` but formatted as JSON.
+- New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
 Deprecated Compiler Flags
 -------------------------
@@ -373,6 +389,7 @@ Improvements to Clang's diagnostics
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
+- Similarly, fold expressions over a comparison operator are now an error by default.
 - Clang now better preserves the sugared types of pointers to member.
 - Clang now better preserves the presence of the template keyword with dependent
   prefixes.
