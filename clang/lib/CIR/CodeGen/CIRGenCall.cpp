@@ -304,7 +304,7 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
 
   if (e->isGLValue()) {
     assert(e->getObjectKind() == OK_Ordinary);
-    args.add(emitReferenceBindingToExpr(e), argType);
+    return args.add(emitReferenceBindingToExpr(e), argType);
   }
 
   bool hasAggregateEvalKind = hasAggregateEvaluationKind(argType);
