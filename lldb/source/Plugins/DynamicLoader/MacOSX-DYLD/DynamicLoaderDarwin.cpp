@@ -26,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -923,15 +924,15 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   if (current_symbol != nullptr) {
     std::vector<Address> addresses;
 
-    if (current_symbol->IsTrampoline()) {
-      ConstString trampoline_name =
+    ConstString current_name =
           current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
+    if (current_symbol->IsTrampoline()) {
 
-      if (trampoline_name) {
+      if (current_name) {
         const ModuleList &images = target_sp->GetImages();
 
         SymbolContextList code_symbols;
-        images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeCode,
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeCode,
                                           code_symbols);
         for (const SymbolContext &context : code_symbols) {
           Address addr = context.GetFunctionOrSymbolAddress();
@@ -946,7 +947,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 
         SymbolContextList reexported_symbols;
         images.FindSymbolsWithNameAndType(
-            trampoline_name, eSymbolTypeReExported, reexported_symbols);
+            current_name, eSymbolTypeReExported, reexported_symbols);
         for (const SymbolContext &context : reexported_symbols) {
           if (context.symbol) {
             Symbol *actual_symbol =
@@ -968,7 +969,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
 
         SymbolContextList indirect_symbols;
-        images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeResolver,
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeResolver,
                                           indirect_symbols);
 
         for (const SymbolContext &context : indirect_symbols) {
@@ -1002,7 +1003,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
       }
     }
-
+    
     if (addresses.size() > 0) {
       // First check whether any of the addresses point to Indirect symbols,
       // and if they do, resolve them:
@@ -1027,6 +1028,18 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       }
       thread_plan_sp = std::make_shared<ThreadPlanRunToAddress>(
           thread, load_addrs, stop_others);
+    }
+    // One more case we have to consider is "branch islands".  These are regular
+    // TEXT symbols but their names end in .island.  They are to allow arm64
+    // code to branch further than the size of the address slot allows.  We 
+    // just need to single-instruction step in that case.
+    if (!thread_plan_sp && current_name.GetStringRef().ends_with(".island")) {
+      thread_plan_sp = std::make_shared<ThreadPlanStepInstruction>(thread,
+          /* step_over= */ false, /* stop_others */ false, eVoteNoOpinion, 
+          eVoteNoOpinion);
+      LLDB_LOG(log,
+                      "Stepping one instruction over branch island: '{0}'.",
+                      current_name);
     }
   } else {
     LLDB_LOGF(log, "Could not find symbol for step through.");
