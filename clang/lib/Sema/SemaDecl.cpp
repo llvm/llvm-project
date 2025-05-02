@@ -7542,16 +7542,20 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   DeclSpec::SCS SCSpec = D.getDeclSpec().getStorageClassSpec();
   StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
-
   if (LangOpts.CPlusPlus && (DC->isClosure() || DC->isFunctionOrMethod()) &&
       SC != SC_Static && SC != SC_Extern && II && II->isPlaceholder()) {
+
     IsPlaceholderVariable = true;
+
     if (!Previous.empty()) {
       NamedDecl *PrevDecl = *Previous.begin();
       bool SameDC = PrevDecl->getDeclContext()->getRedeclContext()->Equals(
           DC->getRedeclContext());
-      if (SameDC && isDeclInScope(PrevDecl, CurContext, S, false))
-        DiagPlaceholderVariableDefinition(D.getIdentifierLoc());
+      if (SameDC && isDeclInScope(PrevDecl, CurContext, S, false)) {
+        IsPlaceholderVariable = !isa<ParmVarDecl>(PrevDecl);
+        if (IsPlaceholderVariable)
+          DiagPlaceholderVariableDefinition(D.getIdentifierLoc());
+      }
     }
   }
 
