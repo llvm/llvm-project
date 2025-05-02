@@ -366,7 +366,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       CIRGenModule::createGlobalOp(*this, loc, mangledName, ty,
                                    /*insertPoint=*/entry.getOperation());
 
-  //  errorNYI(d->getSourceRange(), "reference of undeclared global");
   return gv;
 }
 
