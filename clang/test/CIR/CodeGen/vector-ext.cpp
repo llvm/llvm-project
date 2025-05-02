@@ -61,6 +61,8 @@ void foo() {
   vi4 f = { x, 5, 6, x + 1 };
 
   vi4 g = { 5 };
+
+  vi4 h = {};
 }
 
 // CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
@@ -70,12 +72,15 @@ void foo() {
 // CIR: %[[VEC_E:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["e", init]
 // CIR: %[[VEC_F:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["f", init]
 // CIR: %[[VEC_G:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["g", init]
+// CIR: %[[VEC_H:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["h", init]
 // CIR: %[[VEC_E_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 // CIR: cir.store %[[VEC_E_VAL]], %[[VEC_E]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[VEC_F_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 // CIR: cir.store %[[VEC_F_VAL]], %[[VEC_F]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[VEC_G_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 // CIR: cir.store %[[VEC_G_VAL]], %[[VEC_G]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_H_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_H_VAL]], %[[VEC_H]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: %[[VEC_B:.*]] = alloca <3 x i32>, i64 1, align 16
@@ -84,9 +89,11 @@ void foo() {
 // LLVM: %[[VEC_E:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: %[[VEC_F:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: %[[VEC_G:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_H:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_E]], align 16
 // LLVM: store <4 x i32> {{.*}}, ptr %[[VEC_F]], align 16
 // LLVM: store <4 x i32> <i32 5, i32 0, i32 0, i32 0>, ptr %[[VEC_G]], align 16
+// LLVM: store <4 x i32> zeroinitializer, ptr %[[VEC_H]], align 16
 
 // OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
 // OGCG: %[[VEC_B:.*]] = alloca <3 x i32>, align 16
@@ -95,9 +102,11 @@ void foo() {
 // OGCG: %[[VEC_E:.*]] = alloca <4 x i32>, align 16
 // OGCG: %[[VEC_F:.*]] = alloca <4 x i32>, align 16
 // OGCG: %[[VEC_G:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_H:.*]] = alloca <4 x i32>, align 16
 // OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_E]], align 16
 // OGCG: store <4 x i32> {{.*}}, ptr %[[VEC_F]], align 16
 // OGCG: store <4 x i32> <i32 5, i32 0, i32 0, i32 0>, ptr %[[VEC_G]], align 16
+// OGCG: store <4 x i32> zeroinitializer, ptr %[[VEC_H]], align 16
 
 void foo2(vi4 p) {}
 
