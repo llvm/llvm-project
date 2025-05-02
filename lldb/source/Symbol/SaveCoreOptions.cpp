@@ -150,7 +150,6 @@ llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
   if (!m_process_sp)
     return Status::FromErrorString("Requires a process to be set.").takeError();
 
-
   error = EnsureValidConfiguration(m_process_sp);
   if (error.Fail())
     return error.takeError();
