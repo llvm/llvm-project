@@ -2103,6 +2103,8 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
   Printer.printBool("isImplicitCode", DL->isImplicitCode(),
                     /* Default */ false);
+  Printer.printInt("atomGroup", DL->getAtomGroup());
+  Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
   Out << ")";
 }
 
@@ -3226,7 +3228,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // Print the TypeIdCompatibleVtableMap entries.
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
-    auto GUID = GlobalValue::getGUID(TId.first);
+    auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(TId.first);
     Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
         << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);

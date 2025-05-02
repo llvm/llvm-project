@@ -107,10 +107,6 @@ public:
 
   StringRef getName() const { return Def->getValueAsString("name"); }
 
-  StringRef getAlternativeName() const {
-    return Def->getValueAsString("alternativeName");
-  }
-
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
   std::string getFormattedName() const {
@@ -211,7 +207,7 @@ public:
     StringRef Name = Def->getValueAsString("name");
     std::string N = Name.str();
     bool Cap = true;
-    std::transform(N.begin(), N.end(), N.begin(), [&Cap](unsigned char C) {
+    llvm::transform(N, N.begin(), [&Cap](unsigned char C) {
       if (Cap == true) {
         C = toUpper(C);
         Cap = false;

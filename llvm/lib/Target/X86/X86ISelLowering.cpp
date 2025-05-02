@@ -2024,13 +2024,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSHL,      MVT::v16i32, Custom);
     setOperationAction(ISD::FSHR,      MVT::v16i32, Custom);
 
-    if (Subtarget.hasDQI()) {
+    if (Subtarget.hasDQI() || Subtarget.hasFP16())
       for (auto Opc : {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::STRICT_SINT_TO_FP,
                        ISD::STRICT_UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                        ISD::STRICT_FP_TO_SINT, ISD::STRICT_FP_TO_UINT})
         setOperationAction(Opc,           MVT::v8i64, Custom);
+
+    if (Subtarget.hasDQI())
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
-    }
 
     if (Subtarget.hasCDI()) {
       // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
@@ -3263,6 +3264,12 @@ bool X86TargetLowering::shouldReduceLoadWidth(
     std::optional<unsigned> ByteOffset) const {
   assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
 
+  auto PeekThroughOneUserBitcasts = [](const SDNode *N) {
+    while (N->getOpcode() == ISD::BITCAST && N->hasOneUse())
+      N = *N->user_begin();
+    return N;
+  };
+
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF
   // relocation target a movq or addq instruction: don't let the load shrink.
   SDValue BasePtr = cast<LoadSDNode>(Load)->getBasePtr();
@@ -3272,24 +3279,46 @@ bool X86TargetLowering::shouldReduceLoadWidth(
 
   // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
   // those uses are extracted directly into a store, then the extract + store
-  // can be store-folded. Therefore, it's probably not worth splitting the load.
+  // can be store-folded, or (4) any use will be used by legal full width
+  // instruction. Then, it's probably not worth splitting the load.
   EVT VT = Load->getValueType(0);
   if ((VT.is256BitVector() || VT.is512BitVector()) &&
       !SDValue(Load, 0).hasOneUse()) {
+    bool FullWidthUse = false;
+    bool AllExtractStores = true;
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
         continue;
 
-      SDNode *User = Use.getUser();
+      const SDNode *User = PeekThroughOneUserBitcasts(Use.getUser());
 
-      // If this use is not an extract + store, it's probably worth splitting.
-      if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR || !User->hasOneUse() ||
-          User->user_begin()->getOpcode() != ISD::STORE)
-        return true;
+      // If this use is an extract + store, it's probably not worth splitting.
+      if (User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          all_of(User->uses(), [&](const SDUse &U) {
+            const SDNode *Inner = PeekThroughOneUserBitcasts(U.getUser());
+            return Inner->getOpcode() == ISD::STORE;
+          }))
+        continue;
+
+      AllExtractStores = false;
+
+      // If any use is a full width legal/target bin op, then assume its legal
+      // and won't split.
+      if (isBinOp(User->getOpcode()) &&
+          (isOperationLegal(User->getOpcode(), User->getValueType(0)) ||
+           User->getOpcode() > ISD::BUILTIN_OP_END))
+        FullWidthUse = true;
     }
-    // All non-chain uses are extract + store.
-    return false;
+
+    if (AllExtractStores)
+      return false;
+
+    // If we have an user that uses the full vector width, then this use is
+    // only worth splitting if the offset isn't 0 (to avoid an
+    // EXTRACT_SUBVECTOR) or we're loading a scalar integer.
+    if (FullWidthUse)
+      return (ByteOffset.value_or(0) > 0) || NewVT.isScalarInteger();
   }
 
   return true;
@@ -19860,7 +19889,7 @@ static SDValue promoteXINT_TO_FP(SDValue Op, const SDLoc &dl,
                      DAG.getNode(Op.getOpcode(), dl, NVT, Src), Rnd);
 }
 
-static bool isLegalConversion(MVT VT, bool IsSigned,
+static bool isLegalConversion(MVT VT, MVT FloatVT, bool IsSigned,
                               const X86Subtarget &Subtarget) {
   if (VT == MVT::v4i32 && Subtarget.hasSSE2() && IsSigned)
     return true;
@@ -19870,6 +19899,8 @@ static bool isLegalConversion(MVT VT, bool IsSigned,
     return true;
   if (Subtarget.useAVX512Regs()) {
     if (VT == MVT::v16i32)
+      return true;
+    if (VT == MVT::v8i64 && FloatVT == MVT::v8f16 && Subtarget.hasFP16())
       return true;
     if (VT == MVT::v8i64 && Subtarget.hasDQI())
       return true;
@@ -19892,7 +19923,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
 
   if (isSoftF16(VT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
-  else if (isLegalConversion(SrcVT, true, Subtarget))
+  else if (isLegalConversion(SrcVT, VT, true, Subtarget))
     return Op;
 
   if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
@@ -20396,7 +20427,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
   if (isSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
-  else if (isLegalConversion(SrcVT, false, Subtarget))
+  else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
 
   if (DstVT.isVector())
@@ -21419,7 +21450,8 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
                                              {NVT, MVT::Other}, {Chain, Src})});
     return DAG.getNode(Op.getOpcode(), dl, VT,
                        DAG.getNode(ISD::FP_EXTEND, dl, NVT, Src));
-  } else if (isTypeLegal(SrcVT) && isLegalConversion(VT, IsSigned, Subtarget)) {
+  } else if (isTypeLegal(SrcVT) &&
+             isLegalConversion(VT, SrcVT, IsSigned, Subtarget)) {
     return Op;
   }
 
@@ -59149,6 +59181,14 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
   }
+
+  // Match insertion of subvector load that perfectly aliases a base load.
+  if ((IdxVal % SubVecNumElts) == 0 && ISD::isNormalLoad(Vec.getNode()) &&
+      ISD::isNormalLoad(SubVec.getNode()) &&
+      DAG.areNonVolatileConsecutiveLoads(
+          cast<LoadSDNode>(SubVec), cast<LoadSDNode>(Vec),
+          SubVec.getValueSizeInBits() / 8, IdxVal / SubVecNumElts))
+    return Vec;
 
   return SDValue();
 }
