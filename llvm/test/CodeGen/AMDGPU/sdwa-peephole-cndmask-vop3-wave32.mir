@@ -52,7 +52,7 @@ body:             |
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = V_PK_MAX_F16 8, undef %1, 8, undef %1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %3:vgpr_32 = V_LSHRREV_B32_e64 16, %2, implicit $exec
-    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, undef %3, killed undef %0, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %3, killed undef %0, implicit $exec
     $vgpr0 = COPY %4
     SI_RETURN implicit $vgpr0
 ...
@@ -150,6 +150,8 @@ body:             |
 ---
 name: missing-carry-def
 tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32_xm0_xexec }
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -157,14 +159,14 @@ body:             |
     ; CHECK-LABEL: name: missing-carry-def
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; CHECK-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, undef [[DEF]], implicit $exec
     ; CHECK-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, [[V_LSHRREV_B32_e64_]], undef %0:sreg_32_xm0_xexec, implicit $exec
     ; CHECK-NEXT: $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
-    %1:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32_xm0_xexec = IMPLICIT_DEF
     %2:vgpr_32 = V_LSHRREV_B32_e64 16, undef %1:sreg_32_xm0_xexec, implicit $exec
-    %3:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %2, undef %0, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %2, undef %0:sreg_32_xm0_xexec, implicit $exec
     $vgpr0 = COPY %3
     SI_RETURN implicit $vgpr0
 ...
