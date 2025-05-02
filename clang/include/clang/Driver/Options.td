@@ -9217,7 +9217,7 @@ def fspv_extension_EQ
     : Joined<["-"], "fspv-extension=">,
       Group<dxc_Group>,
       HelpText<"Specify the available SPIR-V extensions. If this option is not "
-               "specificed, then all extensions are available.">;
+               "specified, then all extensions are available.">;
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,
