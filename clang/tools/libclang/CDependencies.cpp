@@ -441,8 +441,8 @@ clang_experimental_DepGraphModule_getModuleDeps(CXDepGraphModule CXDepMod) {
   const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   std::vector<std::string> Modules;
   Modules.reserve(ModDeps.ClangModuleDeps.size());
-  for (const ModuleID &MID : ModDeps.ClangModuleDeps)
-    Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
+  for (const auto &Info : ModDeps.ClangModuleDeps)
+    Modules.push_back(Info.ID.ModuleName + ":" + Info.ID.ContextHash);
   return unwrap(CXDepMod)->StrMgr.createCStringsOwned(std::move(Modules));
 }
 
