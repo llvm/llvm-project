@@ -12,6 +12,9 @@
 // template <class T, class... Args>
 //   constexpr optional<T> make_optional(Args&&... args);
 
+// GCC crashes on this file
+// XFAIL: gcc-15
+
 #include <optional>
 #include <string>
 #include <memory>
