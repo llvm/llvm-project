@@ -2560,8 +2560,8 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
 
   if (T.hasNonTrivialToPrimitiveDestructCUnion() ||
       T.hasNonTrivialToPrimitiveCopyCUnion())
-    checkNonTrivialCUnion(T, Loc, NTCUC_FunctionReturn,
-                          NTCUK_Destruct|NTCUK_Copy);
+    checkNonTrivialCUnion(T, Loc, NonTrivialCUnionContext::FunctionReturn,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   // C++2a [dcl.fct]p12:
   //   A volatile-qualified return type is deprecated

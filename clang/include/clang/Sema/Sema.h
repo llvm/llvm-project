@@ -523,6 +523,29 @@ enum class BuiltinCountedByRefKind {
   BinaryExpr,
 };
 
+// Contexts where using non-trivial C union types can be disallowed. This is
+// passed to err_non_trivial_c_union_in_invalid_context.
+enum class NonTrivialCUnionContext {
+  // Function parameter.
+  FunctionParam,
+  // Function return.
+  FunctionReturn,
+  // Default-initialized object.
+  DefaultInitializedObject,
+  // Variable with automatic storage duration.
+  AutoVar,
+  // Initializer expression that might copy from another object.
+  CopyInit,
+  // Assignment.
+  Assignment,
+  // Compound literal.
+  CompoundLiteral,
+  // Block capture.
+  BlockCapture,
+  // lvalue-to-rvalue conversion of volatile type.
+  LValueToRValueVolatile,
+};
+
 /// Describes the result of the name lookup and resolution performed
 /// by \c Sema::ClassifyName().
 enum class NameClassificationKind {
@@ -3749,29 +3772,6 @@ public:
                               SourceLocation NameLoc,
                               const IdentifierInfo *Name, QualType T,
                               TypeSourceInfo *TSInfo, StorageClass SC);
-
-  // Contexts where using non-trivial C union types can be disallowed. This is
-  // passed to err_non_trivial_c_union_in_invalid_context.
-  enum NonTrivialCUnionContext {
-    // Function parameter.
-    NTCUC_FunctionParam,
-    // Function return.
-    NTCUC_FunctionReturn,
-    // Default-initialized object.
-    NTCUC_DefaultInitializedObject,
-    // Variable with automatic storage duration.
-    NTCUC_AutoVar,
-    // Initializer expression that might copy from another object.
-    NTCUC_CopyInit,
-    // Assignment.
-    NTCUC_Assignment,
-    // Compound literal.
-    NTCUC_CompoundLiteral,
-    // Block capture.
-    NTCUC_BlockCapture,
-    // lvalue-to-rvalue conversion of volatile type.
-    NTCUC_LValueToRValueVolatile,
-  };
 
   /// Emit diagnostics if the initializer or any of its explicit or
   /// implicitly-generated subexpressions require copying or
