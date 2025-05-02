@@ -1192,12 +1192,12 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
   // pred's terminator already has atom info do nothing as merging would drop
   // one atom group anyway. If it doesn't, propagte the remapped atom group
   // from BB's terminator.
-  if (auto &PredDL = PredBlock->getTerminator()->getDebugLoc()) {
+  if (auto &PredDL = PTI->getDebugLoc()) {
     auto &DL = BB->getTerminator()->getDebugLoc();
     if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
         PredDL.isSameSourceLocation(DL)) {
-      PredBlock->getTerminator()->setDebugLoc(DL);
-      RemapSourceAtom(PredBlock->getTerminator(), VMap);
+      PTI->setDebugLoc(DL);
+      RemapSourceAtom(PTI, VMap);
     }
   }
 }
