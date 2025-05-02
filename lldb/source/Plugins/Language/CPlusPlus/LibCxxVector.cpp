@@ -170,12 +170,13 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
   if (!m_start || !m_finish)
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
-  size_t index = formatters::ExtractIndexFromString(name.GetCString());
-  if (index == UINT32_MAX) {
+  auto idx_or_err = formatters::ExtractIndexFromString(name.GetCString());
+  if (!idx_or_err) {
+    llvm::consumeError(idx_or_err.takeError());
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  return index;
+  return *idx_or_err;
 }
 
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
@@ -273,10 +274,14 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
   if (!m_count || !m_base_data_address)
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx == UINT32_MAX ||
-      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+  auto idx_or_err = ExtractIndexFromString(name.AsCString());
+  if (!idx_or_err) {
+    llvm::consumeError(idx_or_err.takeError());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  uint32_t idx = *idx_or_err;
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;

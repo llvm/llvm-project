@@ -127,10 +127,14 @@ public:
   bool MightHaveChildren() override { return m_impl.m_mode != Mode::Invalid; }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    const char *item_name = name.GetCString();
-    uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx == UINT32_MAX ||
-        (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+    auto idx_or_err = ExtractIndexFromString(name.AsCString());
+    if (!idx_or_err) {
+      llvm::consumeError(idx_or_err.takeError());
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
+    }
+    uint32_t idx = *idx_or_err;
+    if (idx >= CalculateNumChildrenIgnoringErrors())
       return llvm::createStringError("Type has no child named '%s'",
                                      name.AsCString());
     return idx;
