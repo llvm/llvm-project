@@ -60,11 +60,11 @@ TEST(LlvmLibcMemsetTest, CheckAccess) {
 
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
-#ifdef LIBC_TARGET_OS_IS_LINUX
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 
 TEST(LlvmLibcMemsetTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memset(nullptr, 0, 1); },
-               WITH_SIGNAL(SIGILL));
+               WITH_SIGNAL(SIGTRAP));
 }
 
 #endif // defined(LIBC_TARGET_OS_IS_LINUX)
