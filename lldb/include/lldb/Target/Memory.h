@@ -125,8 +125,6 @@ public:
 
   bool DeallocateMemory(lldb::addr_t ptr);
 
-  bool IsInCache(lldb::addr_t addr) const;
-
 protected:
   typedef std::shared_ptr<AllocatedBlock> AllocatedBlockSP;
 
@@ -135,7 +133,7 @@ protected:
 
   // Classes that inherit from MemoryCache can see and modify these
   Process &m_process;
-  mutable std::recursive_mutex m_mutex;
+  std::recursive_mutex m_mutex;
   typedef std::multimap<uint32_t, AllocatedBlockSP> PermissionsToBlockMap;
   PermissionsToBlockMap m_memory_map;
 
