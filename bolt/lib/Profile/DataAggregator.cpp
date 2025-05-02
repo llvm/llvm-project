@@ -1649,7 +1649,7 @@ void DataAggregator::processBasicEvents() {
   NamedRegionTimer T("processBasic", "Processing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   uint64_t OutOfRangeSamples = 0;
-  for (const auto [PC, HitCount]: BasicSamples)
+  for (const auto [PC, HitCount] : BasicSamples)
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(PC))
       doSample(*Func, PC, HitCount);
     else
