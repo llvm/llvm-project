@@ -7624,7 +7624,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (NewVD->getType().hasNonTrivialToPrimitiveDestructCUnion() &&
         NewVD->hasLocalStorage())
       checkNonTrivialCUnion(NewVD->getType(), NewVD->getLocation(),
-                            NTCUC_AutoVar, NTCUK_Destruct);
+                            NonTrivialCUnionContext::AutoVar, NTCUK_Destruct);
   } else {
     bool Invalid = false;
     // Match up the template parameter lists with the scope specifier, then
@@ -10529,9 +10529,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
    if (NewFD->getReturnType().hasNonTrivialToPrimitiveDestructCUnion() ||
        NewFD->getReturnType().hasNonTrivialToPrimitiveCopyCUnion())
-     checkNonTrivialCUnion(NewFD->getReturnType(),
-                           NewFD->getReturnTypeSourceRange().getBegin(),
-                           NTCUC_FunctionReturn, NTCUK_Destruct|NTCUK_Copy);
+     checkNonTrivialCUnion(
+         NewFD->getReturnType(), NewFD->getReturnTypeSourceRange().getBegin(),
+         NonTrivialCUnionContext::FunctionReturn, NTCUK_Destruct | NTCUK_Copy);
   } else {
     // C++11 [replacement.functions]p3:
     //  The program's definitions shall not be specified as inline.
@@ -13188,7 +13188,8 @@ void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init,
 
   if (isa<ImplicitValueInitExpr>(Init)) {
     if (InitType.hasNonTrivialToPrimitiveDefaultInitializeCUnion())
-      checkNonTrivialCUnion(InitType, Loc, NTCUC_DefaultInitializedObject,
+      checkNonTrivialCUnion(InitType, Loc,
+                            NonTrivialCUnionContext::DefaultInitializedObject,
                             NTCUK_Init);
   } else {
     // Assume all other explicit initializers involving copying some existing
@@ -13196,7 +13197,8 @@ void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init,
     // TODO: ignore any explicit initializers where we can guarantee
     // copy-elision.
     if (InitType.hasNonTrivialToPrimitiveCopyCUnion())
-      checkNonTrivialCUnion(InitType, Loc, NTCUC_CopyInit, NTCUK_Copy);
+      checkNonTrivialCUnion(InitType, Loc, NonTrivialCUnionContext::CopyInit,
+                            NTCUK_Copy);
   }
 }
 
@@ -13220,7 +13222,7 @@ struct DiagNonTrivalCUnionDefaultInitializeVisitor
 
   DiagNonTrivalCUnionDefaultInitializeVisitor(
       QualType OrigTy, SourceLocation OrigLoc,
-      Sema::NonTrivialCUnionContext UseContext, Sema &S)
+      NonTrivialCUnionContext UseContext, Sema &S)
       : OrigTy(OrigTy), OrigLoc(OrigLoc), UseContext(UseContext), S(S) {}
 
   void visitWithKind(QualType::PrimitiveDefaultInitializeKind PDIK, QualType QT,
@@ -13274,7 +13276,7 @@ struct DiagNonTrivalCUnionDefaultInitializeVisitor
   // non-trivial C union.
   QualType OrigTy;
   SourceLocation OrigLoc;
-  Sema::NonTrivialCUnionContext UseContext;
+  NonTrivialCUnionContext UseContext;
   Sema &S;
 };
 
@@ -13283,9 +13285,10 @@ struct DiagNonTrivalCUnionDestructedTypeVisitor
   using Super =
       DestructedTypeVisitor<DiagNonTrivalCUnionDestructedTypeVisitor, void>;
 
-  DiagNonTrivalCUnionDestructedTypeVisitor(
-      QualType OrigTy, SourceLocation OrigLoc,
-      Sema::NonTrivialCUnionContext UseContext, Sema &S)
+  DiagNonTrivalCUnionDestructedTypeVisitor(QualType OrigTy,
+                                           SourceLocation OrigLoc,
+                                           NonTrivialCUnionContext UseContext,
+                                           Sema &S)
       : OrigTy(OrigTy), OrigLoc(OrigLoc), UseContext(UseContext), S(S) {}
 
   void visitWithKind(QualType::DestructionKind DK, QualType QT,
@@ -13341,7 +13344,7 @@ struct DiagNonTrivalCUnionDestructedTypeVisitor
   // non-trivial C union.
   QualType OrigTy;
   SourceLocation OrigLoc;
-  Sema::NonTrivialCUnionContext UseContext;
+  NonTrivialCUnionContext UseContext;
   Sema &S;
 };
 
@@ -13350,8 +13353,7 @@ struct DiagNonTrivalCUnionCopyVisitor
   using Super = CopiedTypeVisitor<DiagNonTrivalCUnionCopyVisitor, false, void>;
 
   DiagNonTrivalCUnionCopyVisitor(QualType OrigTy, SourceLocation OrigLoc,
-                                 Sema::NonTrivialCUnionContext UseContext,
-                                 Sema &S)
+                                 NonTrivialCUnionContext UseContext, Sema &S)
       : OrigTy(OrigTy), OrigLoc(OrigLoc), UseContext(UseContext), S(S) {}
 
   void visitWithKind(QualType::PrimitiveCopyKind PCK, QualType QT,
@@ -13415,7 +13417,7 @@ struct DiagNonTrivalCUnionCopyVisitor
   // non-trivial C union.
   QualType OrigTy;
   SourceLocation OrigLoc;
-  Sema::NonTrivialCUnionContext UseContext;
+  NonTrivialCUnionContext UseContext;
   Sema &S;
 };
 
@@ -14214,8 +14216,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (!Var->isInvalidDecl() && DefKind != VarDecl::DeclarationOnly &&
         Var->getType().hasNonTrivialToPrimitiveDefaultInitializeCUnion())
       checkNonTrivialCUnion(Var->getType(), Var->getLocation(),
-                            NTCUC_DefaultInitializedObject, NTCUK_Init);
-
+                            NonTrivialCUnionContext::DefaultInitializedObject,
+                            NTCUK_Init);
 
     switch (DefKind) {
     case VarDecl::Definition:
@@ -15487,7 +15489,8 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   if (New->getType().hasNonTrivialToPrimitiveDestructCUnion() ||
       New->getType().hasNonTrivialToPrimitiveCopyCUnion())
     checkNonTrivialCUnion(New->getType(), New->getLocation(),
-                          NTCUC_FunctionParam, NTCUK_Destruct|NTCUK_Copy);
+                          NonTrivialCUnionContext::FunctionParam,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   // Parameter declarators cannot be interface types. All ObjC objects are
   // passed by reference.
