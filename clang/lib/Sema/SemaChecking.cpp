@@ -8306,8 +8306,8 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     // arguments here.
     bool EmitTypeMismatch = false;
     switch (S.isValidVarArgType(ExprTy)) {
-    case Sema::VAK_Valid:
-    case Sema::VAK_ValidInCXX11: {
+    case VarArgKind::Valid:
+    case VarArgKind::ValidInCXX11: {
       unsigned Diag;
       switch (Match) {
       case ArgType::Match:
@@ -8332,8 +8332,8 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
       break;
     }
-    case Sema::VAK_Undefined:
-    case Sema::VAK_MSVCUndefined:
+    case VarArgKind::Undefined:
+    case VarArgKind::MSVCUndefined:
       if (CallType == VariadicCallType::DoesNotApply) {
         EmitTypeMismatch = true;
       } else {
@@ -8347,7 +8347,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       }
       break;
 
-    case Sema::VAK_Invalid:
+    case VarArgKind::Invalid:
       if (CallType == VariadicCallType::DoesNotApply)
         EmitTypeMismatch = true;
       else if (ExprTy->isObjCObjectType())

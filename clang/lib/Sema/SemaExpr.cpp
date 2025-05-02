@@ -951,7 +951,7 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
   return E;
 }
 
-Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
+VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
   if (Ty->isIncompleteType()) {
     // C++11 [expr.call]p7:
     //   After these conversions, if the argument does not have arithmetic,
@@ -962,23 +962,23 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
     // decay and function-to-pointer decay, the only such type in C++ is cv
     // void. This also handles initializer lists as variadic arguments.
     if (Ty->isVoidType())
-      return VAK_Invalid;
+      return VarArgKind::Invalid;
 
     if (Ty->isObjCObjectType())
-      return VAK_Invalid;
-    return VAK_Valid;
+      return VarArgKind::Invalid;
+    return VarArgKind::Valid;
   }
 
   if (Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
-    return VAK_Invalid;
+    return VarArgKind::Invalid;
 
   if (Context.getTargetInfo().getTriple().isWasm() &&
       Ty.isWebAssemblyReferenceType()) {
-    return VAK_Invalid;
+    return VarArgKind::Invalid;
   }
 
   if (Ty.isCXX98PODType(Context))
-    return VAK_Valid;
+    return VarArgKind::Valid;
 
   // C++11 [expr.call]p7:
   //   Passing a potentially-evaluated argument of class type (Clause 9)
@@ -990,26 +990,26 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
       if (!Record->hasNonTrivialCopyConstructor() &&
           !Record->hasNonTrivialMoveConstructor() &&
           !Record->hasNonTrivialDestructor())
-        return VAK_ValidInCXX11;
+        return VarArgKind::ValidInCXX11;
 
   if (getLangOpts().ObjCAutoRefCount && Ty->isObjCLifetimeType())
-    return VAK_Valid;
+    return VarArgKind::Valid;
 
   if (Ty->isObjCObjectType())
-    return VAK_Invalid;
+    return VarArgKind::Invalid;
 
   if (getLangOpts().HLSL && Ty->getAs<HLSLAttributedResourceType>())
-    return VAK_Valid;
+    return VarArgKind::Valid;
 
   if (getLangOpts().MSVCCompat)
-    return VAK_MSVCUndefined;
+    return VarArgKind::MSVCUndefined;
 
   if (getLangOpts().HLSL && Ty->getAs<HLSLAttributedResourceType>())
-    return VAK_Valid;
+    return VarArgKind::Valid;
 
   // FIXME: In C++11, these cases are conditionally-supported, meaning we're
   // permitted to reject them. We should consider doing so.
-  return VAK_Undefined;
+  return VarArgKind::Undefined;
 }
 
 void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
@@ -1019,12 +1019,12 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
 
   // Complain about passing non-POD types through varargs.
   switch (VAK) {
-  case VAK_ValidInCXX11:
+  case VarArgKind::ValidInCXX11:
     DiagRuntimeBehavior(
         E->getBeginLoc(), nullptr,
         PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg) << Ty << CT);
     [[fallthrough]];
-  case VAK_Valid:
+  case VarArgKind::Valid:
     if (Ty->isRecordType()) {
       // This is unlikely to be what the user intended. If the class has a
       // 'c_str' member function, the user probably meant to call that.
@@ -1034,14 +1034,14 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
     }
     break;
 
-  case VAK_Undefined:
-  case VAK_MSVCUndefined:
+  case VarArgKind::Undefined:
+  case VarArgKind::MSVCUndefined:
     DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                         PDiag(diag::warn_cannot_pass_non_pod_arg_to_vararg)
                             << getLangOpts().CPlusPlus11 << Ty << CT);
     break;
 
-  case VAK_Invalid:
+  case VarArgKind::Invalid:
     if (Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
       Diag(E->getBeginLoc(),
            diag::err_cannot_pass_non_trivial_c_struct_to_vararg)
@@ -1087,7 +1087,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
 
   // Diagnostics regarding non-POD argument types are
   // emitted along with format string checking in Sema::CheckFunctionCall().
-  if (isValidVarArgType(E->getType()) == VAK_Undefined) {
+  if (isValidVarArgType(E->getType()) == VarArgKind::Undefined) {
     // Turn this into a trap.
     CXXScopeSpec SS;
     SourceLocation TemplateKWLoc;
