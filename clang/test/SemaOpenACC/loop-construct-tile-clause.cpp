@@ -145,7 +145,7 @@ void only_for_loops() {
 
 void only_one_on_loop() {
   // expected-error@+2{{OpenACC 'tile' clause cannot appear more than once on a 'loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'tile' clause is here}}
 #pragma acc loop tile(1) tile(1)
   for(int i = 0; i < 5; ++i);
 }
@@ -410,8 +410,8 @@ void collapse_tile_depth() {
 }
 void no_dupes_since_last_device_type() {
   // expected-error@+3{{OpenACC 'tile' clause cannot appear more than once in a 'device_type' region on a 'loop' directive}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'tile' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc loop tile(1) device_type(*) tile(1) tile(2)
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
