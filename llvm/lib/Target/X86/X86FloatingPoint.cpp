@@ -126,7 +126,7 @@ namespace {
       unsigned Mask = 0;
       for (MachineBasicBlock::livein_iterator I = MBB->livein_begin();
            I != MBB->livein_end(); ) {
-        MCPhysReg Reg = I->PhysReg;
+        MCPhysReg Reg = *I;
         static_assert(X86::FP6 - X86::FP0 == 6, "sequential regnums");
         if (Reg >= X86::FP0 && Reg <= X86::FP6) {
           Mask |= 1 << (Reg - X86::FP0);

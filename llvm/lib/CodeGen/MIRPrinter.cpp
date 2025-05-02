@@ -769,13 +769,11 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
     OS.indent(2) << "liveins: ";
     bool First = true;
-    for (const auto &LI : MBB.liveins_dbg()) {
+    for (const Register Reg : MBB.liveins_dbg()) {
       if (!First)
         OS << ", ";
       First = false;
-      OS << printReg(LI.PhysReg, &TRI);
-      if (!LI.LaneMask.all())
-        OS << ":0x" << PrintLaneMask(LI.LaneMask);
+      OS << printReg(Reg, &TRI);
     }
     OS << "\n";
     HasLineAttributes = true;

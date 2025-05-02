@@ -207,13 +207,12 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
               // Correct live-in information. Is used by post-RA scheduler
               // The live-in to LayoutSucc is now all values live-in to
               // JumpAroundTarget.
-              std::vector<MachineBasicBlock::RegisterMaskPair> OrigLiveIn(
-                  LayoutSucc->livein_begin(), LayoutSucc->livein_end());
-              std::vector<MachineBasicBlock::RegisterMaskPair> NewLiveIn(
-                  JumpAroundTarget->livein_begin(),
-                  JumpAroundTarget->livein_end());
+              DenseSet<MCRegister> OrigLiveIn(LayoutSucc->livein_begin(),
+                                              LayoutSucc->livein_end());
+              DenseSet<MCRegister> NewLiveIn(JumpAroundTarget->livein_begin(),
+                                             JumpAroundTarget->livein_end());
               for (const auto &OrigLI : OrigLiveIn)
-                LayoutSucc->removeLiveIn(OrigLI.PhysReg);
+                LayoutSucc->removeLiveIn(OrigLI);
               for (const auto &NewLI : NewLiveIn)
                 LayoutSucc->addLiveIn(NewLI);
             }

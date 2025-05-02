@@ -1040,8 +1040,6 @@ void SIFrameLowering::emitCSRSpillStores(
     for (MachineBasicBlock &MBB : MF) {
       for (MCPhysReg Reg : ScratchSGPRs)
         MBB.addLiveIn(Reg);
-
-      MBB.sortUniqueLiveIns();
     }
     if (!LiveUnits.empty()) {
       for (MCPhysReg Reg : ScratchSGPRs)
@@ -1444,8 +1442,6 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
       for (MCPhysReg Reg : FuncInfo->getAGPRSpillVGPRs())
         MBB.addLiveIn(Reg);
-
-      MBB.sortUniqueLiveIns();
 
       if (!SpillFIs.empty() && SeenDbgInstr) {
         // FIXME: The dead frame indices are replaced with a null register from
