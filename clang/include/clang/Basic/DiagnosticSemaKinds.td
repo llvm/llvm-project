@@ -13009,14 +13009,10 @@ def err_acc_clause_appertainment
 def err_acc_duplicate_clause_disallowed
     : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
             "directive">;
-def note_acc_previous_clause_here : Note<"previous clause is here">;
-// TODO(OpenACC): Combine these with the one above, and decide between a
-// 'select' to split between showing the clause name, or just always printing
-// the name.
-def note_acc_previous_named_clause_here : Note<"previous '%0' clause is here">;
-def note_acc_device_type_here
+def note_acc_previous_clause_here : Note<"previous '%0' clause is here">;
+def note_acc_active_applies_clause_here
     : Note<"%enum_select<ACCDeviceTypeApp>{%Active{active}|%Applies{which "
-           "applies to}}0 'device_type' clause here">;
+           "applies to}}0 '%1' clause here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
 def note_acc_previous_reference : Note<"previous reference is here">;
 def err_acc_branch_in_out_compute_construct
@@ -13267,7 +13263,7 @@ def err_acc_duplicate_bind
             "permitted to refer to the same function">;
 def err_acc_duplicate_unnamed_bind
     : Error<"OpenACC 'bind' clause on a declaration must bind to the same name "
-            "as previous bind clauses">;
+            "as previous 'bind' clauses">;
 def warn_acc_confusing_routine_name
     : Warning<"OpenACC 'routine' directive with a name refers to a function "
               "with the same name as the function on the following line; this "
