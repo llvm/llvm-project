@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNIterativeScheduler.h"
+#include "AMDGPUIGroupLP.h"
 #include "GCNSchedStrategy.h"
 #include "SIMachineFunctionInfo.h"
 
@@ -118,6 +119,26 @@ void GCNIterativeScheduler::printSchedRP(raw_ostream &OS,
 }
 #endif
 
+void GCNIterativeScheduler::swapIGLPMutations(const Region &R, bool IsReentry) {
+  bool HasIGLPInstrs = false;
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(TII);
+  for (MachineBasicBlock::iterator I = R.Begin; I != R.End; I++) {
+    if (SII->isIGLPMutationOnly(I->getOpcode())) {
+      HasIGLPInstrs = true;
+      break;
+    }
+  }
+
+  if (HasIGLPInstrs) {
+    SavedMutations.clear();
+    SavedMutations.swap(Mutations);
+    auto SchedPhase = IsReentry ? AMDGPU::SchedulingPhase::PreRAReentry
+                                : AMDGPU::SchedulingPhase::Initial;
+
+    addMutation(createIGroupLPDAGMutation(SchedPhase));
+  }
+}
+
 // DAG builder helper
 class GCNIterativeScheduler::BuildDAG {
   GCNIterativeScheduler &Sch;
@@ -125,14 +146,15 @@ class GCNIterativeScheduler::BuildDAG {
 
   SmallVector<SUnit*, 8> BotRoots;
 public:
-  BuildDAG(const Region &R, GCNIterativeScheduler &_Sch)
-    : Sch(_Sch) {
+  BuildDAG(const Region &R, GCNIterativeScheduler &_Sch, bool IsReentry = false)
+      : Sch(_Sch) {
     auto *BB = R.Begin->getParent();
     Sch.BaseClass::startBlock(BB);
     Sch.BaseClass::enterRegion(BB, R.Begin, R.End, R.NumRegionInstrs);
-
+    Sch.swapIGLPMutations(R, IsReentry);
     Sch.buildSchedGraph(Sch.AA, nullptr, nullptr, nullptr,
                         /*TrackLaneMask*/true);
+    Sch.postProcessDAG();
     Sch.Topo.InitDAGTopologicalSorting();
     Sch.findRootsAndBiasEdges(TopRoots, BotRoots);
   }
@@ -432,13 +454,15 @@ unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
 
   auto NewOcc = TargetOcc;
   for (auto *R : Regions) {
+    // Always build the DAG to add mutations
+    BuildDAG DAG(*R, *this);
+
     if (R->MaxPressure.getOccupancy(ST) >= NewOcc)
-      break;
+      continue;
 
     LLVM_DEBUG(printRegion(dbgs(), R->Begin, R->End, LIS, 3);
                printLivenessInfo(dbgs(), R->Begin, R->End, LIS));
 
-    BuildDAG DAG(*R, *this);
     const auto MinSchedule = makeMinRegSchedule(DAG.getTopRoots(), *this);
     const auto MaxRP = getSchedulePressure(*R, MinSchedule);
     LLVM_DEBUG(dbgs() << "Occupancy improvement attempt:\n";
@@ -469,8 +493,11 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
   sortRegionsByPressure(TgtOcc);
   auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);
 
-  if (TryMaximizeOccupancy && Occ < TgtOcc)
+  bool IsReentry = false;
+  if (TryMaximizeOccupancy && Occ < TgtOcc) {
     Occ = tryMaximizeOccupancy(TgtOcc);
+    IsReentry = true;
+  }
 
   // This is really weird but for some magic scheduling regions twice
   // gives performance improvement
@@ -489,7 +516,8 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
     LStrgy.setTargetOccupancy(I == 0 ? 0 : TgtOcc);
     for (auto *R : Regions) {
       OverrideLegacyStrategy Ovr(*R, LStrgy, *this);
-
+      IsReentry |= I > 0;
+      swapIGLPMutations(*R, IsReentry);
       Ovr.schedule();
       const auto RP = getRegionPressure(*R);
       LLVM_DEBUG(printSchedRP(dbgs(), R->MaxPressure, RP));
@@ -556,8 +584,11 @@ void GCNIterativeScheduler::scheduleILP(
   sortRegionsByPressure(TgtOcc);
   auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);
 
-  if (TryMaximizeOccupancy && Occ < TgtOcc)
+  bool IsReentry = false;
+  if (TryMaximizeOccupancy && Occ < TgtOcc) {
     Occ = tryMaximizeOccupancy(TgtOcc);
+    IsReentry = true;
+  }
 
   TgtOcc = std::min(Occ, TgtOcc);
   LLVM_DEBUG(dbgs() << "Scheduling using default scheduler, "
@@ -566,7 +597,7 @@ void GCNIterativeScheduler::scheduleILP(
 
   unsigned FinalOccupancy = std::min(Occ, MFI->getOccupancy());
   for (auto *R : Regions) {
-    BuildDAG DAG(*R, *this);
+    BuildDAG DAG(*R, *this, IsReentry);
     const auto ILPSchedule = makeGCNILPScheduler(DAG.getBottomRoots(), *this);
 
     const auto RP = getSchedulePressure(*R, ILPSchedule);

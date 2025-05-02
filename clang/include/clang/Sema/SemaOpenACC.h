@@ -78,7 +78,7 @@ private:
   /// Collapse has an 'N' count that makes it apply to a number of loops 'below'
   /// it.
   struct CollapseCheckingInfo {
-    OpenACCCollapseClause *ActiveCollapse = nullptr;
+    const OpenACCCollapseClause *ActiveCollapse = nullptr;
 
     /// This is a value that maintains the current value of the 'N' on the
     /// current collapse, minus the depth that has already been traversed. When
@@ -105,9 +105,9 @@ private:
     /// This is the number of expressions on a 'tile' clause.  This doesn't have
     /// to be an APSInt because it isn't the result of a constexpr, just by our
     /// own counting of elements.
-    std::optional<unsigned> CurTileCount;
+    UnsignedOrNone CurTileCount = std::nullopt;
 
-    /// Records whether we've hit a 'CurTileCount' of '0' on the wya down,
+    /// Records whether we've hit a 'CurTileCount' of '0' on the way down,
     /// which allows us to diagnose if the number of arguments is too large for
     /// the current number of 'for' loops.
     bool TileDepthSatisfied = true;
@@ -125,38 +125,78 @@ private:
   /// 'loop' clause enforcement, where this is 'blocked' by a compute construct.
   llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
 
-  // Type to check the info about the 'for stmt'.
-  struct ForStmtBeginChecker {
+  // Type to check the 'for' (or range-for) statement for compatibility with the
+  // 'loop' directive.
+  class ForStmtBeginChecker {
     SemaOpenACC &SemaRef;
     SourceLocation ForLoc;
-    bool IsRangeFor = false;
-    std::optional<const CXXForRangeStmt *> RangeFor = nullptr;
-    const Stmt *Init = nullptr;
-    bool InitChanged = false;
-    std::optional<const Stmt *> Cond = nullptr;
-    std::optional<const Stmt *> Inc = nullptr;
+    bool IsInstantiation = false;
+
+    struct RangeForInfo {
+      const CXXForRangeStmt *Uninstantiated = nullptr;
+      const CXXForRangeStmt *CurrentVersion = nullptr;
+      // GCC 7.x requires this constructor, else the construction of variant
+      // doesn't work correctly.
+      RangeForInfo() : Uninstantiated{nullptr}, CurrentVersion{nullptr} {}
+      RangeForInfo(const CXXForRangeStmt *Uninst, const CXXForRangeStmt *Cur)
+          : Uninstantiated{Uninst}, CurrentVersion{Cur} {}
+    };
+
+    struct ForInfo {
+      const Stmt *Init = nullptr;
+      const Stmt *Condition = nullptr;
+      const Stmt *Increment = nullptr;
+    };
+
+    struct CheckForInfo {
+      ForInfo Uninst;
+      ForInfo Current;
+    };
+
+    std::variant<RangeForInfo, CheckForInfo> Info;
     // Prevent us from checking 2x, which can happen with collapse & tile.
     bool AlreadyChecked = false;
 
-    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
-                        std::optional<const CXXForRangeStmt *> S)
-        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(true), RangeFor(S) {}
+    void checkRangeFor();
 
+    bool checkForInit(const Stmt *InitStmt, const ValueDecl *&InitVar,
+                      bool Diag);
+    bool checkForCond(const Stmt *CondStmt, const ValueDecl *InitVar,
+                      bool Diag);
+    bool checkForInc(const Stmt *IncStmt, const ValueDecl *InitVar, bool Diag);
+
+    void checkFor();
+
+    //  void checkRangeFor(); ?? ERICH
+    //  const ValueDecl *checkInit();
+    //  void checkCond(const ValueDecl *Init);
+    //  void checkInc(const ValueDecl *Init);
+  public:
+    // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
-                        const Stmt *I, bool InitChanged,
-                        std::optional<const Stmt *> C,
-                        std::optional<const Stmt *> Inc)
-        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(false), Init(I),
-          InitChanged(InitChanged), Cond(C), Inc(Inc) {}
-    // Do the checking for the For/Range-For. Currently this implements the 'not
-    // seq' restrictions only, and should be called either if we know we are a
-    // top-level 'for' (the one associated via associated-stmt), or extended via
-    // 'collapse'.
+                        const CXXForRangeStmt *RangeFor)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(false),
+          Info(RangeForInfo{nullptr, RangeFor}) {}
+    // Checking for an instantiation of the range-for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const CXXForRangeStmt *OldRangeFor,
+                        const CXXForRangeStmt *RangeFor)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(true),
+          Info(RangeForInfo{OldRangeFor, RangeFor}) {}
+    // Checking for a non-instantiation version of a traditional for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const Stmt *Init, const Stmt *Cond, const Stmt *Inc)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(false),
+          Info(CheckForInfo{{}, {Init, Cond, Inc}}) {}
+    // Checking for an instantiation version of a traditional for.
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const Stmt *OldInit, const Stmt *OldCond,
+                        const Stmt *OldInc, const Stmt *Init, const Stmt *Cond,
+                        const Stmt *Inc)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsInstantiation(true),
+          Info(CheckForInfo{{OldInit, OldCond, OldInc}, {Init, Cond, Inc}}) {}
+
     void check();
-
-    const ValueDecl *checkInit();
-    void checkCond();
-    void checkInc(const ValueDecl *Init);
   };
 
   /// Helper function for checking the 'for' and 'range for' stmts.
@@ -176,6 +216,21 @@ private:
   OpenACCRoutineDecl *LastRoutineDecl = nullptr;
 
   void CheckLastRoutineDeclNameConflict(const NamedDecl *ND);
+
+  bool DiagnoseRequiredClauses(OpenACCDirectiveKind DK, SourceLocation DirLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
+
+  bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                              SourceLocation ClauseLoc);
+
+public:
+  // Needed from the visitor, so should be public.
+  bool DiagnoseAllowedOnceClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                  SourceLocation ClauseLoc,
+                                  ArrayRef<const OpenACCClause *> Clauses);
+  bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                SourceLocation ClauseLoc,
+                                ArrayRef<const OpenACCClause *> Clauses);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -212,7 +267,7 @@ public:
   } LoopWithoutSeqInfo;
 
   // Redeclaration of the version in OpenACCClause.h.
-  using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
+  using DeviceTypeArgument = IdentifierLoc;
 
   /// A type to represent all the data for an OpenACC Clause that has been
   /// parsed, but not yet created/semantically analyzed. This is effectively a
@@ -238,8 +293,7 @@ public:
 
     struct VarListDetails {
       SmallVector<Expr *> VarList;
-      bool IsReadOnly;
-      bool IsZero;
+      OpenACCModifierKind ModifierKind;
     };
 
     struct WaitDetails {
@@ -451,11 +505,9 @@ public:
       return const_cast<OpenACCParsedClause *>(this)->getVarList();
     }
 
-    bool isReadOnly() const {
-      return std::get<VarListDetails>(Details).IsReadOnly;
+    OpenACCModifierKind getModifierList() const {
+      return std::get<VarListDetails>(Details).ModifierKind;
     }
-
-    bool isZero() const { return std::get<VarListDetails>(Details).IsZero; }
 
     bool isForce() const {
       assert(ClauseKind == OpenACCClauseKind::Collapse &&
@@ -552,8 +604,8 @@ public:
       Details = GangDetails{std::move(GKs), std::move(IntExprs)};
     }
 
-    void setVarListDetails(ArrayRef<Expr *> VarList, bool IsReadOnly,
-                           bool IsZero) {
+    void setVarListDetails(ArrayRef<Expr *> VarList,
+                           OpenACCModifierKind ModKind) {
       assert((ClauseKind == OpenACCClauseKind::Private ||
               ClauseKind == OpenACCClauseKind::NoCreate ||
               ClauseKind == OpenACCClauseKind::Present ||
@@ -582,23 +634,25 @@ public:
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+      assert((ModKind == OpenACCModifierKind::Invalid ||
+              ClauseKind == OpenACCClauseKind::Copy ||
+              ClauseKind == OpenACCClauseKind::PCopy ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
               ClauseKind == OpenACCClauseKind::PCopyIn ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
-             "readonly: tag only valid on copyin");
-      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
               ClauseKind == OpenACCClauseKind::PCopyOut ||
               ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
               ClauseKind == OpenACCClauseKind::Create ||
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
-             "zero: tag only valid on copyout/create");
-      Details =
-          VarListDetails{{VarList.begin(), VarList.end()}, IsReadOnly, IsZero};
+             "Modifier Kind only valid on copy, copyin, copyout, create");
+      Details = VarListDetails{{VarList.begin(), VarList.end()}, ModKind};
     }
 
-    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList, bool IsReadOnly,
-                           bool IsZero) {
+    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList,
+                           OpenACCModifierKind ModKind) {
       assert((ClauseKind == OpenACCClauseKind::Private ||
               ClauseKind == OpenACCClauseKind::NoCreate ||
               ClauseKind == OpenACCClauseKind::Present ||
@@ -627,18 +681,21 @@ public:
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+      assert((ModKind == OpenACCModifierKind::Invalid ||
+              ClauseKind == OpenACCClauseKind::Copy ||
+              ClauseKind == OpenACCClauseKind::PCopy ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
               ClauseKind == OpenACCClauseKind::PCopyIn ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
-             "readonly: tag only valid on copyin");
-      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
               ClauseKind == OpenACCClauseKind::PCopyOut ||
               ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
               ClauseKind == OpenACCClauseKind::Create ||
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
-             "zero: tag only valid on copyout/create");
-      Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
+             "Modifier Kind only valid on copy, copyin, copyout, create");
+      Details = VarListDetails{std::move(VarList), ModKind};
     }
 
     void setReductionDetails(OpenACCReductionOperator Op,
@@ -826,7 +883,8 @@ public:
 
   // Checking for the arguments specific to the declare-clause that need to be
   // checked during both phases of template translation.
-  bool CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause);
+  bool CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause,
+                          OpenACCModifierKind Mods);
 
   ExprResult ActOnRoutineName(Expr *RoutineName);
 

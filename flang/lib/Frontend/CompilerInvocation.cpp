@@ -310,6 +310,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
 
+  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
+    opts.InstrumentFunctions = 1;
+
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
@@ -1475,6 +1478,19 @@ bool CompilerInvocation::createFromArgs(
   if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
                     clang::driver::options::OPT_fno_realloc_lhs, true))
     invoc.loweringOpts.setReallocateLHS(false);
+
+  invoc.loweringOpts.setRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_frepack_arrays,
+                   clang::driver::options::OPT_fno_repack_arrays,
+                   /*default=*/false));
+  invoc.loweringOpts.setStackRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_fstack_repack_arrays,
+                   clang::driver::options::OPT_fno_stack_repack_arrays,
+                   /*default=*/false));
+  if (auto *arg = args.getLastArg(
+          clang::driver::options::OPT_frepack_arrays_contiguity_EQ))
+    invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
+                                            llvm::StringRef{"whole"});
 
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);

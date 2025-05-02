@@ -9,7 +9,11 @@
 #ifndef LLVM_CLANG_BASIC_CUDA_H
 #define LLVM_CLANG_BASIC_CUDA_H
 
+<<<<<<< HEAD
 #include "clang/Basic/Offloading.h"
+=======
+#include "clang/Basic/OffloadArch.h"
+>>>>>>> llvm/main
 
 namespace llvm {
 class StringRef;

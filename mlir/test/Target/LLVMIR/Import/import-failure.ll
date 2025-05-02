@@ -1,43 +1,5 @@
 ; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 -o /dev/null | FileCheck %s
 
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
-define i32 @unhandled_instruction(ptr %dst) {
-  indirectbr ptr %dst, [label %bb1, label %bb2]
-bb1:
-  ret i32 0
-bb2:
-  ret i32 1
-}
-
-; // -----
-
-; CHECK:      <unknown>
-; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1) since blockaddress(...) is unsupported
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)
-define ptr @unhandled_constant() {
-  br label %bb1
-bb1:
-  ret ptr blockaddress(@unhandled_constant, %bb1)
-}
-
-; // -----
-
-; CHECK:      <unknown>
-; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_global, %bb1) since blockaddress(...) is unsupported
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled global variable: @private = private global ptr blockaddress(@unhandled_global, %bb1)
-@private = private global ptr blockaddress(@unhandled_global, %bb1)
-
-define void @unhandled_global() {
-  br label %bb1
-bb1:
-  ret void
-}
-
-; // -----
-
 ; Check that debug intrinsics with an unsupported argument are dropped.
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -376,3 +338,13 @@ bb2:
 declare i32 @g()
 
 declare i32 @__gxx_personality_v0(...)
+
+; // -----
+
+@g = private global ptr blockaddress(@fn, %bb1)
+define void @fn() {
+  ret void
+; CHECK: unreachable block 'bb1' with address taken
+bb1:
+  ret void
+}

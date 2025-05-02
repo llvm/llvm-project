@@ -920,7 +920,7 @@ def FrameAddress : Builtin {
 def ClearCache : Builtin {
   let Spellings = ["__builtin___clear_cache"];
   let Attributes = [NoThrow];
-  let Prototype = "void(char*, char*)";
+  let Prototype = "void(void*, void*)";
 }
 
 def BuiltinSetjmp : Builtin {
@@ -1300,6 +1300,18 @@ def ElementwiseMax : Builtin {
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMaxNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maxnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minnum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4785,6 +4797,18 @@ def HLSLAddUint64: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getpointer"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }

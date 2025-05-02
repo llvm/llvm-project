@@ -400,7 +400,7 @@ public:
   virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
-
+  virtual void setOCLKernelStubCallingConvention(const FunctionType *&FT) const;
   /// Return the device-side type for the CUDA device builtin surface type.
   virtual llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const {
     // By default, no change from the original one.

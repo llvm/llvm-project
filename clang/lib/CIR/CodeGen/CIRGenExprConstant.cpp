@@ -183,7 +183,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   }
 
   if (nonzeroLength == 0)
-    return cir::ZeroAttr::get(builder.getContext(), desiredType);
+    return cir::ZeroAttr::get(desiredType);
 
   const unsigned trailingZeroes = arrayBound - nonzeroLength;
 
@@ -206,8 +206,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
       eles.push_back(element);
 
     return cir::ConstArrayAttr::get(
-        cir::ArrayType::get(builder.getContext(), commonElementType,
-                            arrayBound),
+        cir::ArrayType::get(commonElementType, arrayBound),
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 
@@ -374,8 +373,27 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
                              elements, typedFiller);
   }
   case APValue::Vector: {
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate vector");
-    return {};
+    const QualType elementType =
+        destType->castAs<VectorType>()->getElementType();
+    const unsigned numElements = value.getVectorLength();
+
+    SmallVector<mlir::Attribute, 16> elements;
+    elements.reserve(numElements);
+
+    for (unsigned i = 0; i < numElements; ++i) {
+      const mlir::Attribute element =
+          tryEmitPrivateForMemory(value.getVectorElt(i), elementType);
+      if (!element)
+        return {};
+      elements.push_back(element);
+    }
+
+    const auto desiredVecTy =
+        mlir::cast<cir::VectorType>(cgm.convertType(destType));
+
+    return cir::ConstVectorAttr::get(
+        desiredVecTy,
+        mlir::ArrayAttr::get(cgm.getBuilder().getContext(), elements));
   }
   case APValue::MemberPointer: {
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
@@ -411,4 +429,26 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     return {};
   }
   llvm_unreachable("Unknown APValue kind");
+}
+
+mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
+  if (t->getAs<PointerType>()) {
+    return builder.getNullPtr(getTypes().convertTypeForMem(t), loc);
+  }
+
+  if (getTypes().isZeroInitializable(t))
+    return builder.getNullValue(getTypes().convertTypeForMem(t), loc);
+
+  if (getASTContext().getAsConstantArrayType(t)) {
+    errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
+  }
+
+  if (t->getAs<RecordType>())
+    errorNYI("CIRGenModule::emitNullConstant RecordType");
+
+  assert(t->isMemberDataPointerType() &&
+         "Should only see pointers to data members here!");
+
+  errorNYI("CIRGenModule::emitNullConstant unsupported type");
+  return {};
 }

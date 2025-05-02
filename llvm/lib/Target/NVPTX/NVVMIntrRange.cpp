@@ -25,16 +25,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvvm-intr-range"
 
-namespace llvm { void initializeNVVMIntrRangePass(PassRegistry &); }
-
 namespace {
 class NVVMIntrRange : public FunctionPass {
 public:
   static char ID;
-  NVVMIntrRange() : FunctionPass(ID) {
-
-    initializeNVVMIntrRangePass(*PassRegistry::getPassRegistry());
-  }
+  NVVMIntrRange() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &) override;
 };

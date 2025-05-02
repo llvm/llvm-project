@@ -33,6 +33,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -61,9 +62,11 @@ enum RegisterKind {
   GRH32Reg,
   GR64Reg,
   GR128Reg,
+  FP16Reg,
   FP32Reg,
   FP64Reg,
   FP128Reg,
+  VR16Reg,
   VR32Reg,
   VR64Reg,
   VR128Reg,
@@ -365,9 +368,11 @@ public:
   bool isADDR32() const { return isReg(GR32Reg); }
   bool isADDR64() const { return isReg(GR64Reg); }
   bool isADDR128() const { return false; }
+  bool isFP16() const { return isReg(FP16Reg); }
   bool isFP32() const { return isReg(FP32Reg); }
   bool isFP64() const { return isReg(FP64Reg); }
   bool isFP128() const { return isReg(FP128Reg); }
+  bool isVR16() const { return isReg(VR16Reg); }
   bool isVR32() const { return isReg(VR32Reg); }
   bool isVR64() const { return isReg(VR64Reg); }
   bool isVF128() const { return false; }
@@ -406,6 +411,12 @@ class SystemZAsmParser : public MCTargetAsmParser {
 
 private:
   MCAsmParser &Parser;
+
+  // A vector to contain the stack of FeatureBitsets created by `.machine push`.
+  // `.machine pop` pops the top of the stack and uses `setAvailableFeatures` to
+  // apply the result.
+  SmallVector<FeatureBitset> MachineStack;
+
   enum RegisterGroup {
     RegGR,
     RegFP,
@@ -490,9 +501,8 @@ private:
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                   const MCInstrInfo &MII,
-                   const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
+                   const MCInstrInfo &MII, const MCTargetOptions &Options)
+      : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Alias the .word directive to .short.
@@ -544,6 +554,9 @@ public:
   ParseStatus parseADDR128(OperandVector &Operands) {
     llvm_unreachable("Shouldn't be used as an operand");
   }
+  ParseStatus parseFP16(OperandVector &Operands) {
+    return parseRegister(Operands, FP16Reg);
+  }
   ParseStatus parseFP32(OperandVector &Operands) {
     return parseRegister(Operands, FP32Reg);
   }
@@ -552,6 +565,9 @@ public:
   }
   ParseStatus parseFP128(OperandVector &Operands) {
     return parseRegister(Operands, FP128Reg);
+  }
+  ParseStatus parseVR16(OperandVector &Operands) {
+    return parseRegister(Operands, VR16Reg);
   }
   ParseStatus parseVR32(OperandVector &Operands) {
     return parseRegister(Operands, VR32Reg);
@@ -842,11 +858,13 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
   case GR128Reg:
     Group = RegGR;
     break;
+  case FP16Reg:
   case FP32Reg:
   case FP64Reg:
   case FP128Reg:
     Group = RegFP;
     break;
+  case VR16Reg:
   case VR32Reg:
   case VR64Reg:
   case VR128Reg:
@@ -889,21 +907,25 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
     return ParseStatus::NoMatch;
 
   // Determine the LLVM register number according to Kind.
+  // clang-format off
   const unsigned *Regs;
   switch (Kind) {
   case GR32Reg:  Regs = SystemZMC::GR32Regs;  break;
   case GRH32Reg: Regs = SystemZMC::GRH32Regs; break;
   case GR64Reg:  Regs = SystemZMC::GR64Regs;  break;
   case GR128Reg: Regs = SystemZMC::GR128Regs; break;
+  case FP16Reg:  Regs = SystemZMC::FP16Regs;  break;
   case FP32Reg:  Regs = SystemZMC::FP32Regs;  break;
   case FP64Reg:  Regs = SystemZMC::FP64Regs;  break;
   case FP128Reg: Regs = SystemZMC::FP128Regs; break;
+  case VR16Reg:  Regs = SystemZMC::VR16Regs;  break;
   case VR32Reg:  Regs = SystemZMC::VR32Regs;  break;
   case VR64Reg:  Regs = SystemZMC::VR64Regs;  break;
   case VR128Reg: Regs = SystemZMC::VR128Regs; break;
   case AR32Reg:  Regs = SystemZMC::AR32Regs;  break;
   case CR64Reg:  Regs = SystemZMC::CR64Regs;  break;
   }
+  // clang-format on
   if (Regs[Reg.Num] == 0)
     return Error(Reg.StartLoc, "invalid register pair");
 
@@ -1366,16 +1388,32 @@ bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
       Parser.getTok().isNot(AsmToken::String))
     return TokError("unexpected token in '.machine' directive");
 
-  StringRef CPU = Parser.getTok().getIdentifier();
+  StringRef Id = Parser.getTok().getIdentifier();
+  SMLoc IdLoc = Parser.getTok().getLoc();
+
   Parser.Lex();
   if (parseEOL())
     return true;
 
-  MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
-  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
-
-  getTargetStreamer().emitMachine(CPU);
+  // Parse push and pop directives first
+  if (Id == "push") {
+    // Push the Current FeatureBitSet onto the stack.
+    MachineStack.push_back(getAvailableFeatures());
+  } else if (Id == "pop") {
+    // If the stack is not empty pop the topmost FeatureBitset and use it.
+    if (MachineStack.empty())
+      return Error(IdLoc,
+                   "pop without corresponding push in '.machine' directive");
+    setAvailableFeatures(MachineStack.back());
+    MachineStack.pop_back();
+  } else {
+    // Try to interpret the Identifier as a CPU spec and derive the
+    // FeatureBitset from that.
+    MCSubtargetInfo &STI = copySTI();
+    STI.setDefaultFeatures(Id, /*TuneCPU*/ Id, "");
+    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  }
+  getTargetStreamer().emitMachine(Id);
 
   return false;
 }

@@ -1,6 +1,6 @@
-// FIR ops diagnotic tests
 
-// RUN: fir-opt -split-input-file -verify-diagnostics %s
+
+// RUN: fir-opt -split-input-file -verify-diagnostics --strict-fir-volatile-verifier %s
 
 // expected-error@+1{{custom op 'fir.string_lit' must have character type}}
 %0 = fir.string_lit "Hello, World!"(13) : !fir.int<32>
@@ -1256,4 +1256,58 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
     }) : (index, index, index, !fir.ref<i32>) -> ()
   }
   return
+}
+
+// -----
+
+// Should fail when volatility changes from a fir.convert
+func.func @bad_convert_volatile(%arg0: !fir.ref<i32>) -> !fir.ref<i32, volatile> {
+  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
+  return %0 : !fir.ref<i32, volatile>
+}
+
+// -----
+
+// Should fail when volatility changes from a fir.convert
+func.func @bad_convert_volatile2(%arg0: !fir.ref<i32, volatile>) -> !fir.ref<i32> {
+  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  %0 = fir.convert %arg0 : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
+  return %0 : !fir.ref<i32>
+}
+
+// -----
+
+// Should fail when the element type and the containing type change
+func.func @bad_convert_volatile3(%arg0: !fir.ref<i32>) -> !fir.box<i64> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.box<i64>
+  return %0 : !fir.box<i64>
+}
+
+// -----
+
+// Should fail when the containing type changes
+func.func @bad_convert_volatile4(%arg0: !fir.ref<i32>) -> !fir.box<i32> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.box<i32>
+  return %0 : !fir.box<i32>
+}
+
+// -----
+
+// Should fail when the containing type changes
+func.func @bad_convert_volatile5(%arg0: !fir.ref<i32>) -> !fir.box<i32, volatile> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.box<i32, volatile>
+  return %0 : !fir.box<i32, volatile>
+}
+
+// -----
+
+// Should fail when the element type changes
+func.func @bad_convert_volatile6(%arg0: !fir.ref<i32>) -> !fir.ref<i64> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.ref<i64>
+  return %0 : !fir.ref<i64>
 }

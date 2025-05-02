@@ -280,6 +280,22 @@ multiclass PowerPC_MMA_ACC_PP_Intrinsic<list<LLVMType> args> {
                                  [IntrNoMem]>;
 }
 
+multiclass PowerPC_MMA_DMR_Intrinsic<list<LLVMType> args> {
+  def NAME: DefaultAttrsIntrinsic<[llvm_v1024i1_ty], args, [IntrNoMem]>;
+  def pp : DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
+                                 !listconcat([llvm_v1024i1_ty], args),
+                                 [IntrNoMem]>;
+  def pn : DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
+                                 !listconcat([llvm_v1024i1_ty], args),
+                                 [IntrNoMem]>;
+  def np : DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
+                                 !listconcat([llvm_v1024i1_ty], args),
+                                 [IntrNoMem]>;
+  def nn : DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
+                                 !listconcat([llvm_v1024i1_ty], args),
+                                 [IntrNoMem]>;
+}
+
 multiclass PowerPC_MMA_DMR_PP_Intrinsic<list<LLVMType> args> {
   def NAME: DefaultAttrsIntrinsic<[llvm_v1024i1_ty], args, [IntrNoMem]>;
   def pp : DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
@@ -1661,6 +1677,22 @@ let TargetPrefix = "ppc" in {
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
                              llvm_v1024i1_ty], [IntrNoMem]>;
 
+  def int_ppc_mma_dmxxextfdmr512 :
+      DefaultAttrsIntrinsic<[llvm_v256i1_ty, llvm_v256i1_ty], [llvm_v1024i1_ty,
+                             llvm_i32_ty], [IntrNoMem]>;
+
+  def int_ppc_mma_dmxxinstdmr512 :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty, llvm_v256i1_ty,
+                             llvm_v256i1_ty, llvm_i32_ty], [IntrNoMem]>;
+
+  def int_ppc_mma_dmxxextfdmr256 :
+      DefaultAttrsIntrinsic<[llvm_v256i1_ty], [llvm_v1024i1_ty, llvm_i32_ty],
+                            [IntrNoMem]>;
+
+  def int_ppc_mma_dmxxinstdmr256 :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty, llvm_v256i1_ty,
+                             llvm_i32_ty], [IntrNoMem]>;
+
   // MMA Reduced-Precision: Outer Product Intrinsic Definitions.
   defm int_ppc_mma_xvi4ger8 :
         PowerPC_MMA_ACC_PP_Intrinsic<[llvm_v16i8_ty, llvm_v16i8_ty]>;
@@ -1732,6 +1764,20 @@ let TargetPrefix = "ppc" in {
                             [llvm_v1024i1_ty, llvm_v256i1_ty, llvm_v16i8_ty,
                              llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem]>;
+
+  // MMA+ Reduced-Precision: bfloat16 Outer Product Intrinsic Definitions.
+  defm int_ppc_mma_dmxvbf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty]>;
+  defm int_ppc_mma_pmdmxvbf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
+                                     llvm_i32_ty, llvm_i32_ty]>;
+
+  // MMA+ Half-precision Outer Product Intrinsic Definitions.
+  defm int_ppc_mma_dmxvf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty]>;
+  defm int_ppc_mma_pmdmxvf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
+                                     llvm_i32_ty, llvm_i32_ty]>;
 }
 
 // XL Compat intrinsics.

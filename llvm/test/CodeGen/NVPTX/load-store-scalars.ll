@@ -91,7 +91,7 @@ define void @generic_i64(ptr %a) {
 define void @generic_float(ptr %a) {
 ; CHECK-LABEL: generic_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -110,7 +110,7 @@ define void @generic_double(ptr %a) {
 ; CHECK-LABEL: generic_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [generic_double_param_0];
@@ -200,7 +200,7 @@ define void @generic_volatile_i64(ptr %a) {
 define void @generic_volatile_float(ptr %a) {
 ; CHECK-LABEL: generic_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -219,7 +219,7 @@ define void @generic_volatile_double(ptr %a) {
 ; CHECK-LABEL: generic_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_double_param_0];
@@ -356,7 +356,7 @@ define void @generic_unordered_sys_i64(ptr %a) {
 define void @generic_unordered_sys_float(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -368,7 +368,7 @@ define void @generic_unordered_sys_float(ptr %a) {
 ;
 ; SM70-LABEL: generic_unordered_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -387,7 +387,7 @@ define void @generic_unordered_sys_double(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_double_param_0];
@@ -399,7 +399,7 @@ define void @generic_unordered_sys_double(ptr %a) {
 ; SM70-LABEL: generic_unordered_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_double_param_0];
@@ -489,7 +489,7 @@ define void @generic_unordered_volatile_sys_i64(ptr %a) {
 define void @generic_unordered_volatile_sys_float(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -508,7 +508,7 @@ define void @generic_unordered_volatile_sys_double(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_double_param_0];
@@ -645,7 +645,7 @@ define void @generic_monotonic_sys_i64(ptr %a) {
 define void @generic_monotonic_sys_float(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -657,7 +657,7 @@ define void @generic_monotonic_sys_float(ptr %a) {
 ;
 ; SM70-LABEL: generic_monotonic_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -676,7 +676,7 @@ define void @generic_monotonic_sys_double(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_double_param_0];
@@ -688,7 +688,7 @@ define void @generic_monotonic_sys_double(ptr %a) {
 ; SM70-LABEL: generic_monotonic_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_double_param_0];
@@ -778,7 +778,7 @@ define void @generic_monotonic_volatile_sys_i64(ptr %a) {
 define void @generic_monotonic_volatile_sys_float(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -797,7 +797,7 @@ define void @generic_monotonic_volatile_sys_double(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_double_param_0];
@@ -889,7 +889,7 @@ define void @global_i64(ptr addrspace(1) %a) {
 define void @global_float(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -908,7 +908,7 @@ define void @global_double(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [global_double_param_0];
@@ -998,7 +998,7 @@ define void @global_volatile_i64(ptr addrspace(1) %a) {
 define void @global_volatile_float(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1017,7 +1017,7 @@ define void @global_volatile_double(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_double_param_0];
@@ -1154,7 +1154,7 @@ define void @global_unordered_sys_i64(ptr addrspace(1) %a) {
 define void @global_unordered_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -1166,7 +1166,7 @@ define void @global_unordered_sys_float(ptr addrspace(1) %a) {
 ;
 ; SM70-LABEL: global_unordered_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -1185,7 +1185,7 @@ define void @global_unordered_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_double_param_0];
@@ -1197,7 +1197,7 @@ define void @global_unordered_sys_double(ptr addrspace(1) %a) {
 ; SM70-LABEL: global_unordered_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_double_param_0];
@@ -1334,7 +1334,7 @@ define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) {
 define void @global_unordered_volatile_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -1346,7 +1346,7 @@ define void @global_unordered_volatile_sys_float(ptr addrspace(1) %a) {
 ;
 ; SM70-LABEL: global_unordered_volatile_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -1365,7 +1365,7 @@ define void @global_unordered_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_double_param_0];
@@ -1377,7 +1377,7 @@ define void @global_unordered_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM70-LABEL: global_unordered_volatile_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_double_param_0];
@@ -1514,7 +1514,7 @@ define void @global_monotonic_sys_i64(ptr addrspace(1) %a) {
 define void @global_monotonic_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -1526,7 +1526,7 @@ define void @global_monotonic_sys_float(ptr addrspace(1) %a) {
 ;
 ; SM70-LABEL: global_monotonic_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -1545,7 +1545,7 @@ define void @global_monotonic_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_double_param_0];
@@ -1557,7 +1557,7 @@ define void @global_monotonic_sys_double(ptr addrspace(1) %a) {
 ; SM70-LABEL: global_monotonic_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_double_param_0];
@@ -1694,7 +1694,7 @@ define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) {
 define void @global_monotonic_volatile_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -1706,7 +1706,7 @@ define void @global_monotonic_volatile_sys_float(ptr addrspace(1) %a) {
 ;
 ; SM70-LABEL: global_monotonic_volatile_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -1725,7 +1725,7 @@ define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_double_param_0];
@@ -1737,7 +1737,7 @@ define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM70-LABEL: global_monotonic_volatile_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_double_param_0];
@@ -1829,7 +1829,7 @@ define void @shared_i64(ptr addrspace(3) %a) {
 define void @shared_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1848,7 +1848,7 @@ define void @shared_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [shared_double_param_0];
@@ -1938,7 +1938,7 @@ define void @shared_volatile_i64(ptr addrspace(3) %a) {
 define void @shared_volatile_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1957,7 +1957,7 @@ define void @shared_volatile_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_double_param_0];
@@ -2094,7 +2094,7 @@ define void @shared_unordered_sys_i64(ptr addrspace(3) %a) {
 define void @shared_unordered_sys_float(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -2106,7 +2106,7 @@ define void @shared_unordered_sys_float(ptr addrspace(3) %a) {
 ;
 ; SM70-LABEL: shared_unordered_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -2125,7 +2125,7 @@ define void @shared_unordered_sys_double(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_double_param_0];
@@ -2137,7 +2137,7 @@ define void @shared_unordered_sys_double(ptr addrspace(3) %a) {
 ; SM70-LABEL: shared_unordered_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_double_param_0];
@@ -2227,7 +2227,7 @@ define void @shared_unordered_volatile_sys_i64(ptr addrspace(3) %a) {
 define void @shared_unordered_volatile_sys_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2246,7 +2246,7 @@ define void @shared_unordered_volatile_sys_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_double_param_0];
@@ -2383,7 +2383,7 @@ define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) {
 define void @shared_monotonic_sys_float(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -2395,7 +2395,7 @@ define void @shared_monotonic_sys_float(ptr addrspace(3) %a) {
 ;
 ; SM70-LABEL: shared_monotonic_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -2414,7 +2414,7 @@ define void @shared_monotonic_sys_double(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_double_param_0];
@@ -2426,7 +2426,7 @@ define void @shared_monotonic_sys_double(ptr addrspace(3) %a) {
 ; SM70-LABEL: shared_monotonic_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_double_param_0];
@@ -2516,7 +2516,7 @@ define void @shared_monotonic_volatile_sys_i64(ptr addrspace(3) %a) {
 define void @shared_monotonic_volatile_sys_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2535,7 +2535,7 @@ define void @shared_monotonic_volatile_sys_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_double_param_0];
@@ -2627,7 +2627,7 @@ define void @local_i64(ptr addrspace(5) %a) {
 define void @local_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2646,7 +2646,7 @@ define void @local_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_double_param_0];
@@ -2736,7 +2736,7 @@ define void @local_volatile_i64(ptr addrspace(5) %a) {
 define void @local_volatile_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2755,7 +2755,7 @@ define void @local_volatile_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_double_param_0];
@@ -2845,7 +2845,7 @@ define void @local_unordered_sys_i64(ptr addrspace(5) %a) {
 define void @local_unordered_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2864,7 +2864,7 @@ define void @local_unordered_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_double_param_0];
@@ -2954,7 +2954,7 @@ define void @local_unordered_volatile_sys_i64(ptr addrspace(5) %a) {
 define void @local_unordered_volatile_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2973,7 +2973,7 @@ define void @local_unordered_volatile_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_double_param_0];
@@ -3063,7 +3063,7 @@ define void @local_monotonic_sys_i64(ptr addrspace(5) %a) {
 define void @local_monotonic_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -3082,7 +3082,7 @@ define void @local_monotonic_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_double_param_0];
@@ -3172,7 +3172,7 @@ define void @local_monotonic_volatile_sys_i64(ptr addrspace(5) %a) {
 define void @local_monotonic_volatile_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -3191,7 +3191,7 @@ define void @local_monotonic_volatile_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_double_param_0];

@@ -159,7 +159,7 @@ There are two kinds of escapes.
 * ``\\`` represents a single ``\`` character.
 
 * ``\`` followed by two hexadecimal characters (0-9, a-f, or A-F)
-  represents the byte with the given value (e.g. \x00 represents a
+  represents the byte with the given value (e.g. ``\00`` represents a
   null byte).
 
 To represent a ``"`` character, use ``\22``. (``\"`` will end the string
@@ -465,11 +465,11 @@ added in the future:
     Non-general purpose registers still follow the standard c calling
     convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
-    Clang generates an access function to access C++-style TLS. The access
-    function generally has an entry block, an exit block and an initialization
-    block that is run at the first time. The entry and exit blocks can access
-    a few TLS IR variables, each access will be lowered to a platform-specific
-    sequence.
+    Clang generates an access function to access C++-style Thread Local Storage
+    (TLS). The access function generally has an entry block, an exit block and an
+    initialization block that is run at the first time. The entry and exit blocks
+    can access a few TLS IR variables, each access will be lowered to a
+    platform-specific sequence.
 
     This calling convention aims to minimize overhead in the caller by
     preserving as many registers as possible (all the registers that are
@@ -700,7 +700,7 @@ Global Variables
 Global variables define regions of memory allocated at compilation time
 instead of run-time.
 
-Global variable definitions must be initialized.
+Global variable definitions must be initialized with a sized value.
 
 Global variables in other translation units can also be declared, in which
 case they don't have an initializer.
@@ -727,7 +727,7 @@ optimizations based on the 'constantness' are valid for the translation
 units that do not include the definition.
 
 As SSA values, global variables define pointer values that are in scope
-(i.e. they dominate) all basic blocks in the program. Global variables
+for (i.e. they dominate) all basic blocks in the program. Global variables
 always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
@@ -1690,10 +1690,24 @@ Currently, only the following parameter attributes are defined:
 
 ``initializes((Lo1, Hi1), ...)``
     This attribute indicates that the function initializes the ranges of the
-    pointer parameter's memory, ``[%p+LoN, %p+HiN)``. Initialization of memory
-    means the first memory access is a non-volatile, non-atomic write. The
-    write must happen before the function returns. If the function unwinds,
-    the write may not happen.
+    pointer parameter's memory ``[%p+LoN, %p+HiN)``. Colloquially, this means
+    that all bytes in the specified range are written before the function
+    returns, and not read prior to the initializing write. If the function
+    unwinds, the write may not happen.
+
+    Formally, this is specified in terms of an "initialized" shadow state for
+    all bytes in the range, which is set to "not initialized" at function entry.
+    If a memory access is performed through a pointer based on the argument,
+    and an accessed byte has not been marked as "initialized" yet, then:
+
+     * If the byte is stored with a non-volatile, non-atomic write, mark it as
+       "initialized".
+     * If the byte is stored with a volatile or atomic write, the behavior is
+       undefined.
+     * If the byte is loaded, return a poison value.
+
+    Additionally, if the function returns normally, write an undef value to all
+    bytes that are part of the range and have not been marked as "initialized".
 
     This attribute only holds for the memory accessed via this pointer
     parameter. Other arbitrary accesses to the same memory via other pointers
@@ -3109,8 +3123,7 @@ as follows:
 ``S<size>``
     Specifies the natural alignment of the stack in bits. Alignment
     promotion of stack variables is limited to the natural stack
-    alignment to avoid dynamic stack realignment. The stack alignment
-    must be a multiple of 8-bits. If omitted, the natural stack
+    alignment to avoid dynamic stack realignment. If omitted, the natural stack
     alignment defaults to "unspecified", which does not prevent any
     alignment promotions.
 ``P<address space>``
@@ -3136,8 +3149,8 @@ as follows:
     Defaults to the default address space of 0.
 ``p[n]:<size>:<abi>[:<pref>][:<idx>]``
     This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
-    and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
+    ``<pref>``\erred alignments for address space ``n``.
+    The fourth parameter ``<idx>`` is the size of the
     index that used for address calculation, which must be less than or equal
     to the pointer size. If not
     specified, the default index size is equal to the pointer size. All sizes
@@ -3147,23 +3160,21 @@ as follows:
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
     For ``i8``, the ``<abi>`` value must equal 8,
     that is, ``i8`` must be naturally aligned.
 ``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
 ``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
     will work. 32 (float) and 64 (double) are supported on all targets; 80
     or 128 (different flavors of long double) are also supported on some
     targets. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
 ``a:<abi>[:<pref>]``
     This specifies the alignment for an object of aggregate type.
-    ``<pref>`` is optional and defaults to ``<abi>``.
+    In addition to the usual requirements for alignment values,
+    the value of ``<abi>`` can also be zero, which means one byte alignment.
 ``F<type><abi>``
     This specifies the alignment for function pointers.
     The options for ``<type>`` are:
@@ -3202,6 +3213,9 @@ as follows:
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
     address space cannot be specified as non-integral.
 
+Unless explicitly stated otherwise, on every specification that specifies
+an alignment, the value of the alignment must be in the range [1,2^16)
+and must be a power of two times the width of a byte.
 On every specification that takes a ``<abi>:<pref>``, specifying the
 ``<pref>`` alignment is optional. If omitted, the preceding ``:``
 should be omitted too and ``<pref>`` will be equal to ``<abi>``.
@@ -3971,8 +3985,9 @@ output, given the original flags.
    for places where this can apply to LLVM's intrinsic math functions.
 
 ``reassoc``
-   Allow reassociation transformations for floating-point instructions.
-   This may dramatically change results in floating-point.
+   Allow algebraically equivalent transformations for floating-point
+   instructions such as reassociation transformations. This may dramatically
+   change results in floating-point.
 
 .. _uselistorder:
 
@@ -4106,6 +4121,30 @@ except :ref:`label <t_label>` and :ref:`metadata <t_metadata>`.
 +---------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``{i32, i32} (i32)``            | A function taking an ``i32``, returning a :ref:`structure <t_struct>` containing two ``i32`` values                                                                 |
 +---------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+.. _t_opaque:
+
+Opaque Structure Types
+----------------------
+
+:Overview:
+
+Opaque structure types are used to represent structure types that
+do not have a body specified. This corresponds (for example) to the C
+notion of a forward declared structure. They can be named (``%X``) or
+unnamed (``%52``).
+
+It is not possible to create SSA values with an opaque structure type. In
+practice, this largely limits their use to the value type of external globals.
+
+:Syntax:
+
+::
+
+      %X = type opaque
+      %52 = type opaque
+
+      @g = external global %X
 
 .. _t_firstclass:
 
@@ -4546,31 +4585,6 @@ opaqued and are never uniqued. Identified types must not be recursive.
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``<{ i8, i32 }>``            | A packed struct known to be 5 bytes in size.                                                                                                                                          |
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-.. _t_opaque:
-
-Opaque Structure Types
-""""""""""""""""""""""
-
-:Overview:
-
-Opaque structure types are used to represent structure types that
-do not have a body specified. This corresponds (for example) to the C
-notion of a forward declared structure. They can be named (``%X``) or
-unnamed (``%52``).
-
-:Syntax:
-
-::
-
-      %X = type opaque
-      %52 = type opaque
-
-:Examples:
-
-+--------------+-------------------+
-| ``opaque``   | An opaque type.   |
-+--------------+-------------------+
 
 .. _constants:
 
@@ -5695,7 +5709,7 @@ SystemZ:
   address context evaluates as zero).
 - ``h``: A 32-bit value in the high part of a 64bit data register
   (LLVM-specific)
-- ``f``: A 32, 64, or 128-bit floating-point register.
+- ``f``: A 16, 32, 64, or 128-bit floating-point register.
 
 X86:
 
@@ -9460,10 +9474,11 @@ This instruction requires several arguments:
    from the :ref:`datalayout string<langref_datalayout>` will be used.
 #. '``ty``': the type of the call instruction itself which is also the
    type of the return value. Functions that return no value are marked
-   ``void``.
+   ``void``. The signature is computed based on the return type and argument
+   types.
 #. '``fnty``': shall be the signature of the function being invoked. The
    argument types must match the types implied by this signature. This
-   type can be omitted if the function is not varargs.
+   is only required if the signature specifies a varargs type.
 #. '``fnptrval``': An LLVM value containing a pointer to a function to
    be invoked. In most cases, this is a direct function invocation, but
    indirect ``invoke``'s are just as possible, calling an arbitrary pointer
@@ -9556,10 +9571,11 @@ This instruction requires several arguments:
    from the :ref:`datalayout string<langref_datalayout>` will be used.
 #. '``ty``': the type of the call instruction itself which is also the
    type of the return value. Functions that return no value are marked
-   ``void``.
+   ``void``.  The signature is computed based on the return type and argument
+   types.
 #. '``fnty``': shall be the signature of the function being called. The
    argument types must match the types implied by this signature. This
-   type can be omitted if the function is not varargs.
+   is only required if the signature specifies a varargs type.
 #. '``fnptrval``': An LLVM value containing a pointer to a function to
    be called. In most cases, this is a direct function call, but
    other ``callbr``'s are just as possible, calling an arbitrary pointer
@@ -11087,9 +11103,8 @@ Overview:
 
 The '``alloca``' instruction allocates memory on the stack frame of the
 currently executing function, to be automatically released when this
-function returns to its caller.  If the address space is not explicitly
-specified, the object is allocated in the alloca address space from the
-:ref:`datalayout string<langref_datalayout>`.
+function returns to its caller. If the address space is not explicitly
+specified, the default address space 0 is used.
 
 Arguments:
 """"""""""
@@ -11131,7 +11146,10 @@ which way the stack grows) is not specified.
 
 Note that '``alloca``' outside of the alloca address space from the
 :ref:`datalayout string<langref_datalayout>` is meaningful only if the
-target has assigned it a semantics.
+target has assigned it a semantics. For targets that specify a non-zero alloca
+address space in the :ref:`datalayout string<langref_datalayout>`, the alloca
+address space needs to be explicitly specified in the instruction if it is to be
+used.
 
 If the returned pointer is used by :ref:`llvm.lifetime.start <int_lifestart>`,
 the returned object is initially dead.
@@ -11579,6 +11597,8 @@ operation. The operation must be one of the following keywords:
 -  fsub
 -  fmax
 -  fmin
+-  fmaximum
+-  fminimum
 -  uinc_wrap
 -  udec_wrap
 -  usub_cond
@@ -11588,7 +11608,7 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin, this must be a floating-point
+as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
@@ -11629,8 +11649,10 @@ operation argument:
 -  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned comparison)
 - fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
 - fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
--  fmax: ``*ptr = maxnum(*ptr, val)`` (match the `llvm.maxnum.*`` intrinsic)
--  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*`` intrinsic)
+-  fmax: ``*ptr = maxnum(*ptr, val)`` (match the `llvm.maxnum.*` intrinsic)
+-  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*` intrinsic)
+-  fmaximum: ``*ptr = maximum(*ptr, val)`` (match the `llvm.maximum.*` intrinsic)
+-  fminimum: ``*ptr = minimum(*ptr, val)`` (match the `llvm.minimum.*` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
 -  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
@@ -12861,7 +12883,10 @@ class <t_firstclass>` type.
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
    for selects that return :ref:`supported floating-point types
-   <fastmath_return_types>`.
+   <fastmath_return_types>`. Note that the presence of value which would otherwise result
+   in poison does not cause the result to be poison if the value is on the non-selected arm.
+   If :ref:`fast-math flags <fastmath>` are present, they are only applied to the result,
+   not both arms.
 
 Semantics:
 """"""""""
@@ -12881,7 +12906,9 @@ Example:
 
 .. code-block:: llvm
 
-      %X = select i1 true, i8 17, i8 42          ; yields i8:17
+      %X = select i1 true, i8 17, i8 42                   ; yields i8:17
+      %Y = select nnan i1 true, float 0.0, float NaN      ; yields float:0.0
+      %Z = select nnan i1 false, float 0.0, float NaN     ; yields float:poison
 
 
 .. _i_freeze:
@@ -13112,10 +13139,11 @@ This instruction requires several arguments:
    from the :ref:`datalayout string<langref_datalayout>` will be used.
 #. '``ty``': the type of the call instruction itself which is also the
    type of the return value. Functions that return no value are marked
-   ``void``.
+   ``void``. The signature is computed based on the return type and argument
+   types.
 #. '``fnty``': shall be the signature of the function being called. The
    argument types must match the types implied by this signature. This
-   type can be omitted if the function is not varargs.
+   is only required if the signature specifies a varargs type.
 #. '``fnptrval``': An LLVM value containing a pointer to a function to
    be called. In most cases, this is a direct function call, but
    indirect ``call``'s are just as possible, calling an arbitrary pointer
@@ -13136,6 +13164,16 @@ a specified function, with its incoming arguments bound to the specified
 values. Upon a '``ret``' instruction in the called function, control
 flow continues with the instruction after the function call, and the
 return value of the function is bound to the result argument.
+
+If the callee refers to an intrinsic function, the signature of the call must
+match the signature of the callee.  Otherwise, if the signature of the call
+does not match the signature of the called function, the behavior is
+target-specific.  For a significant mismatch, this likely results in undefined
+behavior. LLVM interprocedural optimizations generally only optimize calls
+where the signature of the caller matches the signature of the callee.
+
+Note that it is possible for the signatures to mismatch even if a call appears
+to be a "direct" call, like ``call void @f()``.
 
 Example:
 """"""""

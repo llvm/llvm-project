@@ -427,8 +427,6 @@ void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  initializeAMDGPURegBankCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -473,8 +471,6 @@ INITIALIZE_PASS_END(AMDGPURegBankCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,
                     false)
 
-namespace llvm {
-FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone) {
+FunctionPass *llvm::createAMDGPURegBankCombiner(bool IsOptNone) {
   return new AMDGPURegBankCombiner(IsOptNone);
 }
-} // end namespace llvm

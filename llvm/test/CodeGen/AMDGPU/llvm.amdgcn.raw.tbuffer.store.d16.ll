@@ -39,55 +39,25 @@ define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 ; GFX10-PACKED-NEXT:    tbuffer_store_format_d16_x v0, off, s[0:3], 0 format:[BUF_FMT_10_11_11_SSCALED]
 ; GFX10-PACKED-NEXT:    s_endpgm
 ;
-; GFX11-PACKED-TRUE16-LABEL: tbuffer_store_d16_x:
-; GFX11-PACKED-TRUE16:       ; %bb.0: ; %main_body
-; GFX11-PACKED-TRUE16-NEXT:    s_clause 0x1
-; GFX11-PACKED-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX11-PACKED-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-PACKED-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PACKED-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s6
-; GFX11-PACKED-TRUE16-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX11-PACKED-TRUE16-NEXT:    s_endpgm
+; GFX11-PACKED-LABEL: tbuffer_store_d16_x:
+; GFX11-PACKED:       ; %bb.0: ; %main_body
+; GFX11-PACKED-NEXT:    s_clause 0x1
+; GFX11-PACKED-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX11-PACKED-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-PACKED-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s6
+; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX11-PACKED-NEXT:    s_endpgm
 ;
-; GFX11-PACKED-FAKE16-LABEL: tbuffer_store_d16_x:
-; GFX11-PACKED-FAKE16:       ; %bb.0: ; %main_body
-; GFX11-PACKED-FAKE16-NEXT:    s_clause 0x1
-; GFX11-PACKED-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX11-PACKED-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-PACKED-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PACKED-FAKE16-NEXT:    v_mov_b32_e32 v0, s6
-; GFX11-PACKED-FAKE16-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX11-PACKED-FAKE16-NEXT:    s_endpgm
-;
-; GFX12-PACKED-SDAG-TRUE16-LABEL: tbuffer_store_d16_x:
-; GFX12-PACKED-SDAG-TRUE16:       ; %bb.0: ; %main_body
-; GFX12-PACKED-SDAG-TRUE16-NEXT:    s_clause 0x1
-; GFX12-PACKED-SDAG-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX12-PACKED-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-PACKED-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s6
-; GFX12-PACKED-SDAG-TRUE16-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-PACKED-SDAG-FAKE16-LABEL: tbuffer_store_d16_x:
-; GFX12-PACKED-SDAG-FAKE16:       ; %bb.0: ; %main_body
-; GFX12-PACKED-SDAG-FAKE16-NEXT:    s_clause 0x1
-; GFX12-PACKED-SDAG-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX12-PACKED-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-PACKED-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s6
-; GFX12-PACKED-SDAG-FAKE16-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX12-PACKED-GISEL-LABEL: tbuffer_store_d16_x:
-; GFX12-PACKED-GISEL:       ; %bb.0: ; %main_body
-; GFX12-PACKED-GISEL-NEXT:    s_clause 0x1
-; GFX12-PACKED-GISEL-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX12-PACKED-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s6
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-GISEL-NEXT:    s_endpgm
+; GFX12-PACKED-LABEL: tbuffer_store_d16_x:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    s_clause 0x1
+; GFX12-PACKED-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX12-PACKED-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-PACKED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s6
+; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
@@ -217,11 +187,9 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
 ; GFX12-PACKED-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-GISEL-NEXT:    s_pack_lh_b32_b16 s6, s6, s6
-; GFX12-PACKED-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s7
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-PACKED-GISEL-NEXT:    s_endpgm
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -298,5 +266,9 @@ declare void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half>, <4 x i32>, i32, i3
 declare void @llvm.amdgcn.raw.tbuffer.store.v3f16(<3 x half>, <4 x i32>, i32, i32, i32, i32)
 declare void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half>, <4 x i32>, i32, i32, i32, i32)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11-PACKED-FAKE16: {{.*}}
+; GFX11-PACKED-TRUE16: {{.*}}
 ; GFX12-PACKED-GISEL-FAKE16: {{.*}}
 ; GFX12-PACKED-GISEL-TRUE16: {{.*}}
+; GFX12-PACKED-SDAG-FAKE16: {{.*}}
+; GFX12-PACKED-SDAG-TRUE16: {{.*}}

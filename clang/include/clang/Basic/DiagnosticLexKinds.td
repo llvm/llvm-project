@@ -421,6 +421,9 @@ def warn_pp_macro_is_reserved_attribute_id : Warning<
 def warn_pp_objc_macro_redef_ignored : Warning<
   "ignoring redefinition of Objective-C qualifier macro">,
   InGroup<DiagGroup<"objc-macro-redefinition">>;
+def warn_pp_identifier_is_cpp_keyword : Warning<
+  "identifier %0 conflicts with a C++ keyword">,
+  InGroup<CppKeywordInC>, DefaultIgnore;
 
 def pp_invalid_string_literal : Warning<
   "invalid string literal, ignoring final '\\'">;
@@ -458,6 +461,8 @@ def warn_compat_pp_embed_directive : Warning<
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
+def err_pp_embed_device_file : Error<
+  "device files are not yet supported by '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;

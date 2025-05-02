@@ -39,13 +39,13 @@ Having these results it seems reasonable to provide support for arrays repacking
 
 #### Facts and guesses about the implementation
 
-The dynamic checks for continuity and the array copy code is located completely in the [runtime](https://github.com/gcc-mirror/gcc/blob/3e08a4ecea27c54fda90e8f58641b1986ad957e1/libgfortran/generated/in_pack_r8.c#L35), so the compiler inserts unconditional calls in the subprogram prologue/epilogue.
+The dynamic checks for contiguity and the array copy code is located completely in the [runtime](https://github.com/gcc-mirror/gcc/blob/3e08a4ecea27c54fda90e8f58641b1986ad957e1/libgfortran/generated/in_pack_r8.c#L35), so the compiler inserts unconditional calls in the subprogram prologue/epilogue.
 
 It looks like `gfortran` ignores `intent(out)/intent(in)` which could have helped to avoid some of the `pack/unpack` overhead.
 
 It looks like the `pack`/`unpack` actions are inserted early in the compilation pipeline, and these extra calls affect behavior of the later optimization passes. For example, `Polyhedron/fatigue2` slows down by about 2x with `-frepack-arrays`: this slowdown is not caused by the `pack`/`unpack` overhead, but is a consequence of worse function inlining decisions made after the calls insertion. The benchmarks becomes even faster than the original version with `-frepack-arrays` and proper `-finline-limit=` settings, but it does not look like the benchmark contains code that would benefit from the array repacking.
 
-It does not look like `gfortran` is able to eliminate the `pack`/`unpack` code after the function inlining, if the actual argument is statically known to be contiguous. So the overhead from the dynamic continuity checks is inevitable when `-frepack-arrays` is specified.
+It does not look like `gfortran` is able to eliminate the `pack`/`unpack` code after the function inlining, if the actual argument is statically known to be contiguous. So the overhead from the dynamic contiguity checks is inevitable when `-frepack-arrays` is specified.
 
 It does not look like `gfortran` tries to optimize the insertion of `pack`/`unpack` code. For example, if a dummy array is only used under a condition within the subprogram, the repacking code might be inserted under the same condition to minimize the overhead on the unconditional path through the subprogram.
 
@@ -59,7 +59,7 @@ It does not look like `gfortran` tries to optimize the insertion of `pack`/`unpa
 
 #### Facts and guesses about the implementation
 
-The `pack` code is only generated if the actual argument may be non-contiguous in the innermost dimension, as determined statically, i.e. the compiler does not generate any dynamic continuity checks. For example:
+The `pack` code is only generated if the actual argument may be non-contiguous in the innermost dimension, as determined statically, i.e. the compiler does not generate any dynamic contiguity checks. For example:
 
 ```Fortran
 interface
@@ -132,8 +132,8 @@ So it does not seem practical/reasonable to enable the array repacking by defaul
 ### Performance
 
 1. Minimize the overhead of array repacking, e.g. avoid copy-in/out whenever possible, execute copy-in/out only on the execution paths where the array is accessed.
-2. Provide different modes of repacking depending on the "continuity" meaning, i.e. one - array is contiguous in the innermost dimension, two - array is contiguous in all dimensions.
-3. Avoid generating repacking code, when the "continuity" can be statically proven (including after optimization passes like constant propagation, function inlining, etc.).
+2. Provide different modes of repacking depending on the "contiguity" meaning, i.e. one - array is contiguous in the innermost dimension, two - array is contiguous in all dimensions.
+3. Avoid generating repacking code, when the "contiguity" can be statically proven (including after optimization passes like constant propagation, function inlining, etc.).
 4. Use a set of heuristics to avoid generating repacking code based on the array usage pattern, e.g. if an array is proven not to be used in an array expression or a loop, etc.
 5. Use a set of heuristics to avoid repacking actions dynamically, e.g. based on the array size, element size, byte stride(s) of the [innermost] dimension(s), etc.
 6. Minimize the impact of the IR changes, introduced by repacking, on the later optimization passes.
@@ -156,7 +156,7 @@ Controlled by cli options, Lowering will generate a `fir.pack_array` operation i
 The new operations will hold all the information that customizes further handling of the `pack`/`unpack` actions, such as:
 
 * Optional array of attributes supporting an interface to generate a predicate that says if the repacking is safe in the current context.
-* The continuity mode: `innermost` vs `whole`.
+* The contiguity mode: `innermost` vs `whole`.
 * Attributes selecting the heuristics (both compiler and runtime ones) that may be applied to avoid `pack`/`unpack` actions.
 * Other attributes, like `stack` vs `heap` to manage the temporary allocation according to `-fstack-arrays`, etc.
 
@@ -195,7 +195,7 @@ The operation creates a new `!fir.box/class<!fir.array<>>` value to represent ei
 Arguments:
 
 * `stack` - indicates if `-fstack-arrays` is in effect for compiling this function.
-* `innermost` - tells that the repacking has to be done iff the array is not contiguous in the innermost dimension. This also describes what type of continuity can be expected from `%new_var`, i.e. `innermost` means that the resulting array is definitely contiguous in the innermost dimension, but may be non-contiguous in other dimensions (unless additional analysis proves otherwise). For 1-D arrays, `innermost` attribute is not valid.
+* `innermost` - tells that the repacking has to be done iff the array is not contiguous in the innermost dimension. This also describes what type of contiguity can be expected from `%new_var`, i.e. `innermost` means that the resulting array is definitely contiguous in the innermost dimension, but may be non-contiguous in other dimensions (unless additional analysis proves otherwise). For 1-D arrays, `innermost` attribute is not valid.
 * `no_copy` - indicates that, in case a temporary array is created, `%var` to `%new_var` copy is not required (`intent(out)` dummy argument case).
 * `heuristics`
   * `loop-only` - `fir.pack_array` can be optimized away, if the array is not used in a loop.
@@ -205,7 +205,7 @@ Arguments:
   * `max-element-size` - constant integer attribute specifying the maximum byte element-size of an array that is eligible for repacking.
   * `min-stride` - constant integer attribute specifying the minimum byte stride of the innermost dimension of an array that is eligible for repacking.
 * `typeparams` - type parameters of the element type.
-* `*.temp_copy_is_safe`: a list of attributes implementing `TempCopyIsSafe` attribute interface for generating a boolean value indicating whether using a temporary copy instead of the original array is safe in the current context.
+* `is-safe`: a list of attributes implementing `fir::SafeTempArrayCopyAttrInterface` attribute interface for generating a boolean value indicating whether using a temporary copy instead of the original array is safe in the current context.
 
 Memory effects are conservative, assuming that an allocation and copy may happen:
 
@@ -243,7 +243,7 @@ Memory effects are conservative, assuming that a copy and deallocation may happe
 
 ### New attribute interface
 
-The `TempCopyIsSafe` attribute interface provides means to generate programming model specific predicates saying whether repacking is safe or not at the point where it needs to be done. For example the OpenMP MLIR dialect may provide an attribute implementing this interface to generate a runtime check at the point of packing array `x` inside subroutine `repacking`. A conservative implementation might look like this:
+The `fir::SafeTempArrayCopyAttrInterface` attribute interface provides means to generate programming model specific predicates saying whether repacking is safe or not at the point where it needs to be done. For example the OpenMP MLIR dialect may provide an attribute implementing this interface to generate a runtime check at the point of packing array `x` inside subroutine `repacking`. A conservative implementation might look like this:
 
 ```C
   repacking_is_safe = omp_get_num_team() == 1 && omp_get_num_threads() == 1;
@@ -297,7 +297,7 @@ end program main
 
 So the most conservative implementation of the predicate generator may be to always produce `false` value. Flang lowering may attach any number of such attributes to `fir.pack_array` depending on the compilation context and options.
 
-[TBD] define `TempCopyIsSafe` attribute interface so that OpenACC/OpenMP dialects can provide their specific attributes, which can be used to generate static/runtime checks for safety of the temporary copy in particular context.
+`fir::SafeTempArrayCopyAttrInterface` is defined in `flang/include/flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.td`. The OpenACC-specific implementation is defined in `lib/Optimizer/OpenACC/FIROpenACCAttributes.cpp`. The OpenMP-specific implementation is defined in `lib/Optimizer/OpenMP/Support/FIROpenMPAttributes.cpp`
 
 #### Alternatives/additions to the attribute interface
 
@@ -305,7 +305,7 @@ The following ideas were expressed during the review, and they are worth conside
 
 | |
 | - |
-| For OpenACC/OpenMP runtime to be able to detect/handle the presence of the original array and the temporary copy in the device data environment, descriptor flags/properties might be used to mark the copy's descriptor as such and provide a link to the original array (or its descriptor). It may be problematic to maintain such flags/properties, in general, because of the repacking that may happen, especially, in C code, where the flags/properties might be dropped. Moreover, a copy array might be repacked into another copy array multiple times, so a descriptor might need to keep a chain of associated arrays and it will have to be maintained as well.<br>An alternative to tracking the original-copy "association" might be compiler generated code notifying the OpenACC/OpenMP offload runtime about the copy being created/deleted for the original array, so that the offload runtime can disallow repacking or report an error when the repacking is definitely causing the program to behave incorrectly. The compiler may report the "association" to the runtime through callbacks provided by `TempCopyIsSafe` attribute interface, and this will require proper bookkeeping in the runtime specific to the array repacking. |
+| For OpenACC/OpenMP runtime to be able to detect/handle the presence of the original array and the temporary copy in the device data environment, descriptor flags/properties might be used to mark the copy's descriptor as such and provide a link to the original array (or its descriptor). It may be problematic to maintain such flags/properties, in general, because of the repacking that may happen, especially, in C code, where the flags/properties might be dropped. Moreover, a copy array might be repacked into another copy array multiple times, so a descriptor might need to keep a chain of associated arrays and it will have to be maintained as well.<br>An alternative to tracking the original-copy "association" might be compiler generated code notifying the OpenACC/OpenMP offload runtime about the copy being created/deleted for the original array, so that the offload runtime can disallow repacking or report an error when the repacking is definitely causing the program to behave incorrectly. The compiler may report the "association" to the runtime through callbacks provided by `fir::SafeTempArrayCopyAttrInterface` attribute interface, and this will require proper bookkeeping in the runtime specific to the array repacking. |
 | There may be some uses for an API allowing to statically determine whether a given descriptor (SSA value) represent the repacked copy of the original array. For example, it may be in the form of an API in the OpenACC `MappableType` interface. This can be done with some limitations for the values produced by `fir.pack_array` that are dynamic (i.e. the copy is created conditionally based on the runtime checks). |
 | The compiler can also try to statically determine the conditions where the array repacking might be unsafe, e.g. a presence of memory barriers or operations carrying implicit memory barriers, presence of atomic operations between the `pack/unpack` operations may indicate non-trivial handling of the array memory. Such checks may result in the removal of `pack/unpack` operations, and they can probably be done in a mandatory pass (not an optimization pass). At the same time, the result of the checks may depend on other optimization passes (e.g. inlining), so the behavior may be inconsistent between different optimization levels. |
 
@@ -351,7 +351,7 @@ The `fir.pack_array`'s copy-in action cannot be skipped for `INTENT(OUT)` dummy 
 
 #### Optional behavior
 
-In case of the `whole` continuity mode or with 1-D array, Flang can propagate this information to `hlfir.declare` - this may improve optimizations down the road. This can be done iff the repacking has no dynamic constraints and/or heuristics. For example:
+In case of the `whole` contiguity mode or with 1-D array, Flang can propagate this information to `hlfir.declare` - this may improve optimizations down the road. This can be done iff the repacking has no dynamic constraints and/or heuristics. For example:
 
 ```
     %c0 = arith.constant 0 : index
@@ -373,7 +373,7 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 `fir.pack_array` lowering might be done in the following steps:
 
 * If there are dynamic constraints, generate a boolean `p1` that is set to true if repacking has to be done (depending on the constraints values and the original array descriptor). The IR might be cleaner if we generate a Fortran runtime call here.
-* If there are attributes implementing `TempCopyIsSafe` attribute interface, then use the interface method to generate boolean predicates for each such attribute: `p2`, ..., `pn`.
+* If there are attributes implementing `fir::SafeTempArrayCopyAttrInterface` attribute interface, then use the interface method to generate boolean predicates for each such attribute: `p2`, ..., `pn`.
   * [TBD] it seems that the runtime checks for the target offload programs will require a pure `PointerLike` value for the array start and the total byte size of the array (e.g. as `index` value).
 * Compute `p = p1 && p2 && ... && pn`.
 * Compute the total size of the temporary `required_size` (in elements).
@@ -441,10 +441,11 @@ In cases where `fir.pack_array` is statically known to produce a copy that is co
 The following user options are proposed:
 
 * `-frepack-arrays` - the option forces Flang to repack a non-contiguous assumed-shape dummy array into a temporary contiguous memory, which may result in faster accesses of the array. The compiler will insert special code in subprogram prologue to allocate a temporary array and copy the original array into the temporary; in subprogram epilogue, it will insert a copy from the temporary array into the original array and deallocate the temporary. The overhead of the allocation/deallocation and the copies may be significant depending on the array size. The compiler will try to optimize the unnecessary/unprofitable repacking.
+* `-fstack-repack-arrays` - attempt allocating the temporary arrays in stack memory. By default, they are allocated in heap memory (note that `-fstack-arrays` does not affect the allocation of the temporaries created for the arrays repacking).
 * `-frepack-arrays-opts=[none|loop-only]` - the option enables optimizations that may eliminate the array repacking code depending on the array usage pattern:
   * `none` - no optimizations.
   * `loop-only` - the array repacking code will be removed in any subprogram where the array is not used inside a loop or an array expression.
-* `-frepack-arrays-continuity=[whole|innermost]`:
+* `-frepack-arrays-contiguity=[whole|innermost]`:
   * `whole` - the option will repack arrays that are non-contiguous in any dimension (default).
   * `innermost` - the option will repack arrays that are non-contiguous in the innermost dimension.
 * `-frepack-arrays-max-size=<int>` - arrays bigger than the specified size will not be repacked.

@@ -735,7 +735,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     llvm::raw_string_ostream POut(Proto);
     DeclPrinter TArgPrinter(POut, SubPolicy, Context, Indentation);
     const auto *TArgAsWritten = D->getTemplateSpecializationArgsAsWritten();
-    if (TArgAsWritten && !Policy.PrintCanonicalTypes)
+    if (TArgAsWritten && !Policy.PrintAsCanonical)
       TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
     else if (const TemplateArgumentList *TArgs =
                  D->getTemplateSpecializationArgs())
@@ -842,10 +842,14 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     }
     Out << Proto;
 
-    if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
+    if (const AssociatedConstraint &TrailingRequiresClause =
+            D->getTrailingRequiresClause()) {
       Out << " requires ";
-      TrailingRequiresClause->printPretty(Out, nullptr, SubPolicy, Indentation,
-                                          "\n", &Context);
+      // FIXME: The printer could support printing expressions and types as if
+      // expanded by an index. Pass in the ArgumentPackSubstitutionIndex when
+      // that's supported.
+      TrailingRequiresClause.ConstraintExpr->printPretty(
+          Out, nullptr, SubPolicy, Indentation, "\n", &Context);
     }
   } else {
     Ty.print(Out, Policy, Proto);
@@ -1120,7 +1124,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
           S->getSpecializedTemplate()->getTemplateParameters();
       const ASTTemplateArgumentListInfo *TArgAsWritten =
           S->getTemplateArgsAsWritten();
-      if (TArgAsWritten && !Policy.PrintCanonicalTypes)
+      if (TArgAsWritten && !Policy.PrintAsCanonical)
         printTemplateArguments(TArgAsWritten->arguments(), TParams);
       else
         printTemplateArguments(S->getTemplateArgs().asArray(), TParams);

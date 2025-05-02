@@ -473,14 +473,10 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <8 x i64> [[STEP_ADD]], splat (i64 8)
 ; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i64> [[STEP_ADD1]], splat (i64 8)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <8 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <8 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule <8 x i64> [[STEP_ADD2]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <8 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <8 x i1> [[TMP5]], splat (i1 true)
-; CHECK-NEXT:    [[TMP10:%.*]] = xor <8 x i1> [[TMP6]], splat (i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <8 x i1> [[TMP7]], splat (i1 true)
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <8 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt <8 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt <8 x i64> [[STEP_ADD2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[STEP_ADD1]]
@@ -519,8 +515,7 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[VEC_IND5:%.*]] = phi <4 x i64> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp ule <4 x i64> [[VEC_IND5]], [[BROADCAST_SPLAT8]]
-; CHECK-NEXT:    [[TMP33:%.*]] = xor <4 x i1> [[TMP32]], splat (i1 true)
+; CHECK-NEXT:    [[TMP33:%.*]] = icmp ugt <4 x i64> [[VEC_IND5]], [[BROADCAST_SPLAT8]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = or <4 x i64> [[BROADCAST_SPLAT10]], [[VEC_IND5]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX4]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = trunc <4 x i64> [[TMP34]] to <4 x i32>
@@ -631,9 +626,9 @@ define void @wide_iv_trunc(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

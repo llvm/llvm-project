@@ -38,10 +38,7 @@ public:
   RawPtrRefMemberChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
-  virtual std::optional<bool>
-  isPtrCompatible(const clang::QualType,
-                  const clang::CXXRecordDecl *R) const = 0;
-  virtual bool isPtrCls(const clang::CXXRecordDecl *) const = 0;
+  virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
   virtual const char *typeName() const = 0;
   virtual const char *invariant() const = 0;
 
@@ -94,20 +91,28 @@ public:
       if (!MemberType)
         continue;
 
-      if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
-        std::optional<bool> IsCompatible = isPtrCompatible(QT, MemberCXXRD);
-        if (IsCompatible && *IsCompatible)
-          reportBug(Member, MemberType, MemberCXXRD, RD);
-      } else {
-        std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
-        auto *PointeeType = MemberType->getPointeeType().getTypePtrOrNull();
-        if (IsCompatible && *IsCompatible) {
-          auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-          if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
-            reportBug(Member, MemberType, ObjCType->getDecl(), RD);
-        }
-      }
+      auto IsUnsafePtr = isUnsafePtr(QT);
+      if (!IsUnsafePtr || !*IsUnsafePtr)
+        continue;
+
+      if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
+        reportBug(Member, MemberType, MemberCXXRD, RD);
+      else if (auto *ObjCDecl = getObjCDecl(MemberType))
+        reportBug(Member, MemberType, ObjCDecl, RD);
     }
+  }
+
+  ObjCInterfaceDecl *getObjCDecl(const Type *TypePtr) const {
+    auto *PointeeType = TypePtr->getPointeeType().getTypePtrOrNull();
+    if (!PointeeType)
+      return nullptr;
+    auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
+    if (!Desugared)
+      return nullptr;
+    auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared);
+    if (!ObjCType)
+      return nullptr;
+    return ObjCType->getDecl();
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
@@ -139,19 +144,15 @@ public:
     const Type *IvarType = QT.getTypePtrOrNull();
     if (!IvarType)
       return;
-    if (auto *IvarCXXRD = IvarType->getPointeeCXXRecordDecl()) {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, IvarCXXRD);
-      if (IsCompatible && *IsCompatible)
-        reportBug(Ivar, IvarType, IvarCXXRD, CD);
-    } else {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
-      auto *PointeeType = IvarType->getPointeeType().getTypePtrOrNull();
-      if (IsCompatible && *IsCompatible) {
-        auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-        if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
-          reportBug(Ivar, IvarType, ObjCType->getDecl(), CD);
-      }
-    }
+
+    auto IsUnsafePtr = isUnsafePtr(QT);
+    if (!IsUnsafePtr || !*IsUnsafePtr)
+      return;
+
+    if (auto *MemberCXXRD = IvarType->getPointeeCXXRecordDecl())
+      reportBug(Ivar, IvarType, MemberCXXRD, CD);
+    else if (auto *ObjCDecl = getObjCDecl(IvarType))
+      reportBug(Ivar, IvarType, ObjCDecl, CD);
   }
 
   void visitObjCPropertyDecl(const ObjCContainerDecl *CD,
@@ -162,19 +163,15 @@ public:
     const Type *PropType = QT.getTypePtrOrNull();
     if (!PropType)
       return;
-    if (auto *PropCXXRD = PropType->getPointeeCXXRecordDecl()) {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, PropCXXRD);
-      if (IsCompatible && *IsCompatible)
-        reportBug(PD, PropType, PropCXXRD, CD);
-    } else {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
-      auto *PointeeType = PropType->getPointeeType().getTypePtrOrNull();
-      if (IsCompatible && *IsCompatible) {
-        auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-        if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
-          reportBug(PD, PropType, ObjCType->getDecl(), CD);
-      }
-    }
+
+    auto IsUnsafePtr = isUnsafePtr(QT);
+    if (!IsUnsafePtr || !*IsUnsafePtr)
+      return;
+
+    if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
+      reportBug(PD, PropType, MemberCXXRD, CD);
+    else if (auto *ObjCDecl = getObjCDecl(PropType))
+      reportBug(PD, PropType, ObjCDecl, CD);
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -205,8 +202,8 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto CXXRD = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (CXXRD)
-      return isPtrCls(CXXRD);
+    if (CXXRD && isSmartPtr(CXXRD))
+      return true;
 
     return false;
   }
@@ -264,14 +261,8 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "reference-countable type") {}
 
-  std::optional<bool>
-  isPtrCompatible(const clang::QualType,
-                  const clang::CXXRecordDecl *R) const final {
-    return R ? isRefCountable(R) : std::nullopt;
-  }
-
-  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
-    return isRefCounted(R);
+  std::optional<bool> isUnsafePtr(QualType QT) const final {
+    return isUncountedPtr(QT.getCanonicalType());
   }
 
   const char *typeName() const final { return "ref-countable type"; }
@@ -287,14 +278,8 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "checked-pointer capable type") {}
 
-  std::optional<bool>
-  isPtrCompatible(const clang::QualType,
-                  const clang::CXXRecordDecl *R) const final {
-    return R ? isCheckedPtrCapable(R) : std::nullopt;
-  }
-
-  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
-    return isCheckedPtr(R);
+  std::optional<bool> isUnsafePtr(QualType QT) const final {
+    return isUncheckedPtr(QT.getCanonicalType());
   }
 
   const char *typeName() const final { return "CheckedPtr capable type"; }
@@ -313,14 +298,8 @@ public:
     RTC = RetainTypeChecker();
   }
 
-  std::optional<bool>
-  isPtrCompatible(const clang::QualType QT,
-                  const clang::CXXRecordDecl *) const final {
+  std::optional<bool> isUnsafePtr(QualType QT) const final {
     return RTC->isUnretained(QT);
-  }
-
-  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
-    return isRetainPtr(R);
   }
 
   const char *typeName() const final { return "retainable type"; }

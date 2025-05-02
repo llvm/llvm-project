@@ -765,6 +765,19 @@ private:
   std::optional<std::string> evaluateBuiltinTextMacro(BuiltinSymbol Symbol,
                                                       SMLoc StartLoc);
 
+  // Generic (target and platform independent) directive parsing.
+  enum BuiltinFunction {
+    BI_NO_FUNCTION, // Placeholder
+    BI_CATSTR,
+  };
+
+  /// Maps builtin name --> BuiltinFunction enum, for builtins handled by this
+  /// class.
+  StringMap<BuiltinFunction> BuiltinFunctionMap;
+
+  bool evaluateBuiltinMacroFunction(BuiltinFunction Function, StringRef Name,
+                                    std::string &Res);
+
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
 
@@ -946,7 +959,7 @@ private:
   bool parseDirectiveEcho(SMLoc DirectiveLoc);
 
   void initializeDirectiveKindMap();
-  void initializeBuiltinSymbolMap();
+  void initializeBuiltinSymbolMaps();
 };
 
 } // end anonymous namespace
@@ -986,7 +999,7 @@ MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 
   initializeDirectiveKindMap();
   PlatformParser->Initialize(*this);
-  initializeBuiltinSymbolMap();
+  initializeBuiltinSymbolMaps();
 
   NumOfMacroInstantiations = 0;
 }
@@ -1071,15 +1084,25 @@ bool MasmParser::expandMacros() {
   }
 
   std::optional<std::string> ExpandedValue;
-  auto BuiltinIt = BuiltinSymbolMap.find(IDLower);
-  if (BuiltinIt != BuiltinSymbolMap.end()) {
+
+  if (auto BuiltinIt = BuiltinSymbolMap.find(IDLower);
+      BuiltinIt != BuiltinSymbolMap.end()) {
     ExpandedValue =
         evaluateBuiltinTextMacro(BuiltinIt->getValue(), Tok.getLoc());
-  } else {
-    auto VarIt = Variables.find(IDLower);
-    if (VarIt != Variables.end() && VarIt->getValue().IsText) {
-      ExpandedValue = VarIt->getValue().TextValue;
+  } else if (auto BuiltinFuncIt = BuiltinFunctionMap.find(IDLower);
+             BuiltinFuncIt != BuiltinFunctionMap.end()) {
+    StringRef Name;
+    if (parseIdentifier(Name)) {
+      return true;
     }
+    std::string Res;
+    if (evaluateBuiltinMacroFunction(BuiltinFuncIt->getValue(), Name, Res)) {
+      return true;
+    }
+    ExpandedValue = Res;
+  } else if (auto VarIt = Variables.find(IDLower);
+             VarIt != Variables.end() && VarIt->getValue().IsText) {
+    ExpandedValue = VarIt->getValue().TextValue;
   }
 
   if (!ExpandedValue)
@@ -1100,6 +1123,7 @@ bool MasmParser::expandMacros() {
 const AsmToken &MasmParser::Lex(ExpandKind ExpandNextToken) {
   if (Lexer.getTok().is(AsmToken::Error))
     Error(Lexer.getErrLoc(), Lexer.getErr());
+  bool StartOfStatement = false;
 
   // if it's a end of statement with a comment in it
   if (getTok().is(AsmToken::EndOfStatement)) {
@@ -1107,10 +1131,10 @@ const AsmToken &MasmParser::Lex(ExpandKind ExpandNextToken) {
     if (!getTok().getString().empty() && getTok().getString().front() != '\n' &&
         getTok().getString().front() != '\r' && MAI.preserveAsmComments())
       Out.addExplicitComment(Twine(getTok().getString()));
+    StartOfStatement = true;
   }
 
   const AsmToken *tok = &Lexer.Lex();
-  bool StartOfStatement = Lexer.isAtStartOfStatement();
 
   while (ExpandNextToken == ExpandMacros && tok->is(AsmToken::Identifier)) {
     if (StartOfStatement) {
@@ -1203,20 +1227,19 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
       Lex();
 
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 
@@ -2802,9 +2825,9 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
   SmallVector<AsmRewrite, 4> AsmStrRewrites;
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
-    if (!Parsed && Info.ExitValue) {
+    if (!HasError && Info.ExitValue) {
       ExitValue = std::move(*Info.ExitValue);
       break;
     }
@@ -2812,15 +2835,14 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 
@@ -3100,6 +3122,18 @@ bool MasmParser::parseTextItem(std::string &Data) {
           break;
         }
         Data = std::move(*BuiltinText);
+        ID = StringRef(Data);
+        Expanded = true;
+        continue;
+      }
+
+      // Try to resolve as a built-in macro function
+      auto BuiltinFuncIt = BuiltinFunctionMap.find(ID.lower());
+      if (BuiltinFuncIt != BuiltinFunctionMap.end()) {
+        Data.clear();
+        if (evaluateBuiltinMacroFunction(BuiltinFuncIt->getValue(), ID, Data)) {
+          return true;
+        }
         ID = StringRef(Data);
         Expanded = true;
         continue;
@@ -3648,9 +3682,8 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
                           std::to_string(Initializers.size()));
   }
   // Default-initialize all remaining values.
-  Initializers.insert(Initializers.end(),
-                      Contents.Initializers.begin() + Initializers.size(),
-                      Contents.Initializers.end());
+  llvm::append_range(Initializers, llvm::drop_begin(Contents.Initializers,
+                                                    Initializers.size()));
 
   Initializer = FieldInitializer(std::move(Initializers), Contents.Structure);
   return false;
@@ -4762,7 +4795,7 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name.lower());
-        is_defined = (Sym && !Sym->isUndefined(false));
+        is_defined = (Sym && !Sym->isUndefined());
       }
     }
 
@@ -4883,7 +4916,7 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name);
-        is_defined = (Sym && !Sym->isUndefined(false));
+        is_defined = (Sym && !Sym->isUndefined());
       }
     }
 
@@ -5053,7 +5086,7 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
       IsDefined = true;
     } else {
       MCSymbol *Sym = getContext().lookupSymbol(Name);
-      IsDefined = (Sym && !Sym->isUndefined(false));
+      IsDefined = (Sym && !Sym->isUndefined());
     }
   }
 
@@ -6112,7 +6145,7 @@ bool MasmParser::parseMSInlineAsm(
   return false;
 }
 
-void MasmParser::initializeBuiltinSymbolMap() {
+void MasmParser::initializeBuiltinSymbolMaps() {
   // Numeric built-ins (supported in all versions)
   BuiltinSymbolMap["@version"] = BI_VERSION;
   BuiltinSymbolMap["@line"] = BI_LINE;
@@ -6123,6 +6156,9 @@ void MasmParser::initializeBuiltinSymbolMap() {
   BuiltinSymbolMap["@filecur"] = BI_FILECUR;
   BuiltinSymbolMap["@filename"] = BI_FILENAME;
   BuiltinSymbolMap["@curseg"] = BI_CURSEG;
+
+  // Function built-ins (supported in all versions)
+  BuiltinFunctionMap["@catstr"] = BI_CATSTR;
 
   // Some built-ins exist only for MASM32 (32-bit x86)
   if (getContext().getSubtargetInfo()->getTargetTriple().getArch() ==
@@ -6195,6 +6231,48 @@ MasmParser::evaluateBuiltinTextMacro(BuiltinSymbol Symbol, SMLoc StartLoc) {
     return getStreamer().getCurrentSectionOnly()->getName().str();
   }
   llvm_unreachable("unhandled built-in symbol");
+}
+
+bool MasmParser::evaluateBuiltinMacroFunction(BuiltinFunction Function,
+                                              StringRef Name,
+                                              std::string &Res) {
+  if (parseToken(AsmToken::LParen, "invoking macro function '" + Name +
+                                       "' requires arguments in parentheses")) {
+    return true;
+  }
+
+  MCAsmMacroParameters P;
+  switch (Function) {
+  default:
+    return true;
+  case BI_CATSTR:
+    break;
+  }
+  MCAsmMacro M(Name, "", P, {}, true);
+
+  MCAsmMacroArguments A;
+  if (parseMacroArguments(&M, A, AsmToken::RParen) || parseRParen()) {
+    return true;
+  }
+
+  switch (Function) {
+  default:
+    llvm_unreachable("unhandled built-in function");
+  case BI_CATSTR: {
+    for (const MCAsmMacroArgument &Arg : A) {
+      for (const AsmToken &Tok : Arg) {
+        if (Tok.is(AsmToken::String)) {
+          Res.append(Tok.getStringContents());
+        } else {
+          Res.append(Tok.getString());
+        }
+      }
+    }
+    return false;
+  }
+  }
+  llvm_unreachable("unhandled built-in function");
+  return true;
 }
 
 /// Create an MCAsmParser instance.

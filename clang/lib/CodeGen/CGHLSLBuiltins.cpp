@@ -280,12 +280,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
-    // TODO: Map to an hlsl_device address space.
-    llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
-
+    llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    return llvm::PoisonValue::get(HandleTy);
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *RegisterOp = EmitScalarExpr(E->getArg(1));
+    Value *SpaceOp = EmitScalarExpr(E->getArg(2));
+    Value *RangeOp = EmitScalarExpr(E->getArg(3));
+    Value *IndexOp = EmitScalarExpr(E->getArg(4));
+    // FIXME: NonUniformResourceIndex bit is not yet implemented
+    // (llvm/llvm-project#135452)
+    Value *NonUniform =
+        llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
+    return Builder.CreateIntrinsic(
+        HandleTy, CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(),
+        ArrayRef<Value *>{SpaceOp, RegisterOp, RangeOp, IndexOp, NonUniform});
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -368,20 +384,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
           "Scalar dot product is only supported on ints and floats.");
     }
     // For vectors, validate types and emit the appropriate intrinsic
-
-    // A VectorSplat should have happened
-    assert(T0->isVectorTy() && T1->isVectorTy() &&
-           "Dot product of vector and scalar is not supported.");
+    assert(CGM.getContext().hasSameUnqualifiedType(E->getArg(0)->getType(),
+                                                   E->getArg(1)->getType()) &&
+           "Dot product operands must have the same type.");
 
     auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
-    [[maybe_unused]] auto *VecTy1 =
-        E->getArg(1)->getType()->castAs<VectorType>();
-
-    assert(VecTy0->getElementType() == VecTy1->getElementType() &&
-           "Dot product of vectors need the same element types.");
-
-    assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
-           "Dot product requires vectors to be of the same size.");
+    assert(VecTy0 && "Dot product argument must be a vector.");
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),

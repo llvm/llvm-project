@@ -248,7 +248,7 @@ def InsnDirectiveOpcode : AsmOperandClass {
 
 def uimm1 : RISCVUImmLeafOp<1>;
 def uimm2 : RISCVUImmLeafOp<2>;
-def uimm3 : RISCVUImmOp<3>;
+def uimm3 : RISCVUImmLeafOp<3>;
 def uimm4 : RISCVUImmLeafOp<4>;
 def uimm5 : RISCVUImmLeafOp<5>;
 def uimm6 : RISCVUImmLeafOp<6>;
@@ -279,8 +279,8 @@ def simm12_no6 : ImmLeaf<XLenVT, [{
 def bare_simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -316,8 +316,8 @@ def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
 def simm21_lsb0_jal : Operand<OtherVT> {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<21, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -1147,6 +1147,33 @@ def AnyReg : Operand<XLenVT> {
 // isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
 let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
     hasNoSchedulingInfo = 1 in {
+def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
+  bits<16> value;
+
+  let Inst{15-0} = value;
+  let AsmString = ".insn 0x2, $value";
+}
+def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
+  bits<32> value;
+
+  let Inst{31-0} = value;
+  let AsmString = ".insn 0x4, $value";
+}
+def Insn48 : RVInst48<(outs), (ins uimm48:$value), "", "", [], InstFormatOther> {
+  bits<48> value;
+  let Inst{47-0} = value;
+  let AsmString = ".insn 0x6, $value";
+}
+def Insn64 : RVInst64<(outs), (ins uimm64:$value), "", "", [], InstFormatOther> {
+  bits<64> value;
+  let Inst{63-0} = value;
+  let AsmString = ".insn 0x8, $value";
+}
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
+
+// isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
+let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
+    hasNoSchedulingInfo = 1 in {
 def InsnR : DirectiveInsnR<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                                    uimm7:$funct7, AnyReg:$rs1,
                                                    AnyReg:$rs2),
@@ -1179,23 +1206,7 @@ def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
                                         simm12:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
-def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
-  bits<32> value;
-
-  let Inst{31-0} = value;
-  let AsmString = ".insn 0x4, $value";
-}
-def Insn48 : RVInst48<(outs), (ins uimm48:$value), "", "", [], InstFormatOther> {
-  bits<48> value;
-  let Inst{47-0} = value;
-  let AsmString = ".insn 0x6, $value";
-}
-def Insn64 : RVInst64<(outs), (ins uimm64:$value), "", "", [], InstFormatOther> {
-  bits<64> value;
-  let Inst{63-0} = value;
-  let AsmString = ".insn 0x8, $value";
-}
-}
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
 
 // Use InstAliases to match these so that we can combine the insn and format
 // into a mnemonic to use as the key for the tablegened asm matcher table. The
@@ -1326,7 +1337,7 @@ def ext_oneuse    : unop_oneuse<ext>;
 def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
 def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
+  return CurDAG->ComputeNumSignBits(Op) > 32;
 }]>;
 
 class immop_oneuse<ImmLeaf leaf> : PatLeaf<(leaf), [{
@@ -1930,9 +1941,11 @@ class SwapSysRegImm<SysReg SR, list<Register> Regs>
 }
 
 def ReadFRM : ReadSysReg<SysRegFRM, [FRM]>;
+let hasPostISelHook = 1 in {
 def WriteFRM : WriteSysReg<SysRegFRM, [FRM]>;
 def WriteFRMImm : WriteSysRegImm<SysRegFRM, [FRM]>;
 def SwapFRMImm : SwapSysRegImm<SysRegFRM, [FRM]>;
+}
 
 def WriteVXRMImm : WriteSysRegImm<SysRegVXRM, [VXRM]>;
 
@@ -1964,7 +1977,7 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
 class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
-  return hasAllHUsers(Node);
+  return hasAllHUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
 }
@@ -1974,14 +1987,14 @@ class binop_allhusers<SDPatternOperator operator>
 class binop_allwusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
               [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
 }
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]>;
 
 def ImmSExt32 : SDNodeXForm<imm, [{
@@ -2107,11 +2120,16 @@ def : Pat<(XLenVT (add GPR:$rs1, immop_oneuse<AddiPair>:$rs2)),
           (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                 (AddiPairImmSmall imm:$rs2))>;
 
+def negImm : ComplexPattern<i64, 1, "selectNegImm", [], [], 0>;
+
 let Predicates = [IsRV64] in {
 // Select W instructions if only the lower 32-bits of the result are used.
 def : Pat<(binop_allwusers<add> GPR:$rs1, immop_oneuse<AddiPair>:$rs2),
           (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                  (AddiPairImmSmall imm:$rs2))>;
+
+// Select SUB if the negated constant is cheaper to materialize.
+def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2171,6 +2189,7 @@ include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
+include "RISCVInstrInfoXAndes.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

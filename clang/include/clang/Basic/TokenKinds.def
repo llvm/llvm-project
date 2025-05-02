@@ -348,6 +348,7 @@ KEYWORD(_Thread_local               , KEYALL)
 KEYWORD(__func__                    , KEYALL)
 KEYWORD(__objc_yes                  , KEYALL)
 KEYWORD(__objc_no                   , KEYALL)
+KEYWORD(__ptrauth                   , KEYALL)
 
 // C2y
 UNARY_EXPR_OR_TYPE_TRAIT(_Countof, CountOf, KEYNOCXX)
@@ -1041,6 +1042,7 @@ ANNOTATION(embed)
 #undef TYPE_TRAIT_2
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
+#undef MODULES_KEYWORD
 #undef CXX20_KEYWORD
 #undef CXX11_KEYWORD
 #undef KEYWORD

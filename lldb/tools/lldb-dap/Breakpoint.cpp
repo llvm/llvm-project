@@ -7,14 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Breakpoint.h"
+#include "DAP.h"
 #include "JSONUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBMutex.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/JSON.h"
 #include <cstddef>
 #include <cstdint>
+#include <mutex>
 #include <string>
 
 using namespace lldb_dap;
@@ -74,6 +77,9 @@ bool Breakpoint::MatchesName(const char *name) {
 }
 
 void Breakpoint::SetBreakpoint() {
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
   m_bp.AddName(kDAPBreakpointLabel);
   if (!m_condition.empty())
     SetCondition();
