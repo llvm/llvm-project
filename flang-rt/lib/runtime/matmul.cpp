@@ -255,7 +255,7 @@ static inline RT_API_ATTRS void DoMatmul(
     for (int j{0}; j < resRank; ++j) {
       result.GetDimension(j).SetBounds(1, extent[j]);
     }
-    if (int stat{result.Allocate(kNoAsyncObject)}) {
+    if (int stat{result.Allocate(kNoAsyncId)}) {
       terminator.Crash(
           "MATMUL: could not allocate memory for result; STAT=%d", stat);
     }
