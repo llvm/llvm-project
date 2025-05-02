@@ -2593,8 +2593,6 @@ uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
     return 32;
   if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
     return 64;
-  if (X86MCRegisterClasses[X86::RFP80RegClassID].contains(RegNo))
-    return 80;
   // Unknown register size
   return 0;
 }
