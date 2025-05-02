@@ -33,8 +33,6 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
       llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs);
 
-  llvm::Expected<TranslationUnitDecl *> Parse(llvm::StringRef Input) override;
-
   // Generate PTX for the last PTU.
   llvm::Expected<llvm::StringRef> GeneratePTX();
 

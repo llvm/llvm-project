@@ -1784,6 +1784,22 @@ module {
 
 // -----
 
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+    "yo"
+  ]>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", 3 : i64>]
+}
+
+// -----
+
 llvm.func @t0() -> !llvm.ptr {
   %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
   llvm.blocktag <id = 1>
@@ -1802,4 +1818,12 @@ llvm.func @t1() -> !llvm.ptr {
   llvm.br ^bb1
 ^bb1:
   llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
+  // expected-error@+1 {{'inbounds_flag' cannot be used directly}}
+  llvm.getelementptr inbounds_flag %ptr[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.return
 }

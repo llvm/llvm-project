@@ -1410,7 +1410,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
           LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
                          "support reverse-continue");
           return Status::FromErrorString(
-              "target does not support reverse-continue");
+              "target does not support reverse execution of processes");
         }
 
         if (num_continue_C_tids > 0) {
