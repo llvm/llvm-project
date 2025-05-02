@@ -49,7 +49,7 @@ protected:
 public:
   ~CIRGenAction() override;
 
-  OutputType Action;
+  OutputType action;
 };
 
 class EmitCIRAction : public CIRGenAction {

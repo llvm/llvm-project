@@ -29,6 +29,20 @@ def CIRCanonicalize : Pass<"cir-canonicalize"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def CIRSimplify : Pass<"cir-simplify"> {
+  let summary = "Performs CIR simplification and code optimization";
+  let description = [{
+    The pass performs code simplification and optimization on CIR.
+
+    Unlike the `cir-canonicalize` pass, this pass contains more aggresive code
+    transformations that could significantly affect CIR-to-source fidelity.
+    Example transformations performed in this pass include ternary folding,
+    code hoisting, etc.
+  }];
+  let constructor = "mlir::createCIRSimplifyPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def HoistAllocas : Pass<"cir-hoist-allocas"> {
   let summary = "Hoist allocas to the entry of the function";
   let description = [{

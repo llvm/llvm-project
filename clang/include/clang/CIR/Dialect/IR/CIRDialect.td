@@ -27,6 +27,8 @@ def CIR_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;
 
+  let hasConstantMaterializer = 1;
+
   let extraClassDeclaration = [{
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
 
