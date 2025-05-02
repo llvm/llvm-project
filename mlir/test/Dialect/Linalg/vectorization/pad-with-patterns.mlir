@@ -5,16 +5,23 @@
 ///----------------------------------------------------------------------------------------
 
 // CHECK-LABEL: func @pad_static(
-//  CHECK-SAME:                  %[[ARG0:.*]]: tensor<2x?x2xf32>, %[[PAD:.*]]: f32
-//   CHECK-NOT:   tensor.pad
-//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//   CHECK-DAG:   %[[INIT:.*]] = tensor.empty() : tensor<2x3x4xf32>
-//   CHECK-DAG:   %[[VEC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<2x3x4xf32>
-//       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]]{{.*}} : vector<2x3x4xf32>, tensor<2x3x4xf32>
-//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, false, true]} : tensor<2x?x2xf32>, vector<2x3x2xf32>
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = [true, true, true]} : vector<2x3x2xf32>, tensor<2x3x4xf32>
-//       CHECK:   return %[[RESULT]]
+// CHECK-SAME:    %[[ARG0:.*]]: tensor<2x?x2xf32>,
+// CHECK-SAME:    %[[ARG1:.*]]: f32) -> tensor<2x3x4xf32> {
+//  CHECK-DAG:    %[[C2:.*]] = arith.constant 2 : index
+//  CHECK-DAG:    %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-DAG:    %[[C0:.*]] = arith.constant 0 : index
+//      CHECK:    %[[EMPTY:.*]] = tensor.empty() : tensor<2x3x4xf32>
+//      CHECK:    %[[INIT:.*]] = vector.broadcast %[[ARG1]] : f32 to vector<2x3x4xf32>
+//      CHECK:    %[[OUT_TENSOR:.*]] = vector.transfer_write %[[INIT]], %[[EMPTY]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<2x3x4xf32>, tensor<2x3x4xf32>
+//      CHECK:    %[[DIM_1:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<2x?x2xf32>
+//      CHECK:    %[[MASK_READ:.*]] = vector.create_mask %[[C2]], %[[DIM_1]], %[[C2]] : vector<2x3x2xi1>
+//      CHECK:    %[[READ:.*]] = vector.mask %[[MASK_READ]] {
+// CHECK-SAME:      vector.transfer_read %[[ARG0]]{{\[}}%[[C0]], %[[C0]], %[[C0]]], %[[ARG1]]
+// CHECK-SAME:      {in_bounds = [true, true, true]} : tensor<2x?x2xf32>, vector<2x3x2xf32>
+// CHECK-SAME:    } : vector<2x3x2xi1> -> vector<2x3x2xf32>
+//      CHECK:    %[[RESULT:.*]] = vector.transfer_write %[[READ]], %[[OUT_TENSOR]]{{\[}}%[[C0]], %[[C0]], %[[C2]]]
+// CHECK-SAME:      {in_bounds = [true, true, true]} : vector<2x3x2xf32>, tensor<2x3x4xf32> 
+//      CHECK:    return %[[RESULT]] : tensor<2x3x4xf32>
 func.func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
   %0 = tensor.pad %arg0 low[0, 0, 2] high[0, 1, 0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):

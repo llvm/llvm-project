@@ -6,7 +6,11 @@ func.func @matmul_tensors(
     -> tensor<8x32xf32> {
 // CHECK-NOT: linalg
 // CHECK: vector.extract {{.*}} : vector<4xf32> from vector<8x4xf32>
-// CHECK: vector.store {{.*}} : memref<8x32xf32>, vector<4xf32>
+// TODO: `vector.maskedstore` below could safely be replaced with
+// `vector.store`. It's present due to the vectorization logic for
+// `tensor.insert_slice` conservatively applying masks. However, it this case,
+// we should be able to remove it via value-bounds checks.
+// CHECK: vector.maskedstore {{.*}} : memref<8x32xf32>, vector<4xi1>, vector<4xf32>
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<8x16xf32>, tensor<16x32xf32>)
                      outs(%arg2: tensor<8x32xf32>)
     -> tensor<8x32xf32>
@@ -20,16 +24,16 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     %2 = transform.get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
-    %b = transform.bufferization.one_shot_bufferize
-        layout{IdentityLayoutMap} %module_op
-        {bufferize_function_boundaries = true, allow_return_allocs = true}
-        : (!transform.any_op) -> !transform.any_op
 
-    %f = transform.structured.match ops{["func.func"]} in %b
+    %f = transform.structured.match ops{["func.func"]} in %module_op
       : (!transform.any_op) -> !transform.any_op
 
     // TODO: group these lower-level controls into various properly named vector
     // lowering TD macros.
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_masked_transfers
+    } : !transform.any_op
+
     transform.apply_patterns to %f {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
     } : !transform.any_op
@@ -46,21 +50,37 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
     } : !transform.any_op
 
-    transform.apply_patterns to %f {
+    // By default, UnrollTransferWriteConversion (applied below via
+    // `transfer_to_scf`) will only work on MemRef(s). While there's an option
+    // to relax that, it's currently not wired-up with the TD logic. Bufferize
+    // here as otherwise unrolling will not work.
+    // TODO: Extend `transform.apply_patterns.vector.transfer_to_scf` to allow
+    // unrolling xfer Ops on tensors and move bufferization all the way down.
+    %b = transform.bufferization.one_shot_bufferize
+        layout{IdentityLayoutMap} %module_op
+        {bufferize_function_boundaries = true, allow_return_allocs = true}
+        : (!transform.any_op) -> !transform.any_op
+
+    %fb = transform.structured.match ops{["func.func"]} in %b
+      : (!transform.any_op) -> !transform.any_op
+
+    transform.apply_patterns to %fb {
       transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
     } : !transform.any_op
 
-    transform.apply_patterns to %f {
+    transform.apply_patterns to %fb {
       transform.apply_patterns.vector.lower_transfer max_transfer_rank = 1
     } : !transform.any_op
 
-    transform.apply_patterns to %f {
+    transform.apply_patterns to %fb {
       transform.apply_patterns.vector.lower_shape_cast
     } : !transform.any_op
 
-    transform.apply_patterns to %f {
+    transform.apply_patterns to %fb {
       transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
     } : !transform.any_op
+
+
     transform.yield
   }
 }

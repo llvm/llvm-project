@@ -67,10 +67,19 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x?x3xf32>,
 // CHECK-SAME:      %[[PAD:.*]]: f32,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<9x8x7x1x2x3xf32> {
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<9x8x7x1x2x3xf32>
 // CHECK:           %[[BC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<9x8x7x1x2x3xf32>
 // CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[BC]], %[[EMPTY]]{{.*}} {in_bounds = [true, true, true, true, true, true]} : vector<9x8x7x1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] {in_bounds = [true, false, true]} : tensor<1x?x3xf32>, vector<1x2x3xf32>
+
+// CHECK:           %[[D1:.*]] = tensor.dim %[[ARG_0]], %[[C1]] : tensor<1x?x3xf32>
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[C1]], %[[D1]], %[[C3]] : vector<1x2x3xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { 
+// CHECK-SAME:        vector.transfer_read %[[ARG_0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true, true]} : tensor<1x?x3xf32>, vector<1x2x3xf32>
+// CHECK-SAME:      } : vector<1x2x3xi1> -> vector<1x2x3xf32>
+
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[WRITE]]{{.*}} {in_bounds = [true, true, true]} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
 // CHECK:           return %[[RES]] : tensor<9x8x7x1x2x3xf32>
 func.func @insert_dynamic_slice_non_zero_pad(%arg0: tensor<1x?x3xf32>, %pad : f32, %size: index) -> tensor<9x8x7x1x2x3xf32> {
