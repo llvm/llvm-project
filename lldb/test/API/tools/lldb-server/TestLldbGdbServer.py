@@ -83,6 +83,10 @@ class LldbGdbServerTestCase(
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
+    # Sometimes fails:
+    # regex '^\$QC([0-9a-fA-F]+)#' failed to match against content '$E45#ae'
+    # See https://github.com/llvm/llvm-project/issues/138085.
+    @skipIfWindows
     def test_first_launch_stop_reply_thread_matches_first_qC(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -106,6 +110,8 @@ class LldbGdbServerTestCase(
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
+    # This test is flaky on Windows. Sometimes returns 'Exception 0x80000003'.
+    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/138085")
     def test_attach_commandline_continue_app_exits(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -299,6 +305,8 @@ class LldbGdbServerTestCase(
             self.assertIsNotNone(context.get("thread_id"))
             self.assertEqual(int(context.get("thread_id"), 16), thread)
 
+    # This test is flaky on Windows. Sometimes returns '$E37#af'.
+    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/138085")
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_Hg_switches_to_3_threads_launch(self):
         self.build()
