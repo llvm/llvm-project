@@ -5102,7 +5102,7 @@ bool Sema::BuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID) {
   // Do standard promotions between the two arguments, returning their common
   // type.
   QualType Res = UsualArithmeticConversions(
-      OrigArg0, OrigArg1, TheCall->getExprLoc(), ACK_Comparison);
+      OrigArg0, OrigArg1, TheCall->getExprLoc(), ArithConvKind::Comparison);
   if (OrigArg0.isInvalid() || OrigArg1.isInvalid())
     return true;
 
