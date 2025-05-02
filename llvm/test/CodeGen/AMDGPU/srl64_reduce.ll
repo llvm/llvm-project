@@ -7,7 +7,7 @@
 ;;
 ;;   DST = [srl i32 X, (Y & 0x1F), 0]
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Test range with metadata
@@ -27,7 +27,21 @@ define i64 @srl_metadata(i64 %arg0, ptr %arg1.ptr) {
   ret i64 %srl
 }
 
-; Shifted bits matter for exact shift.  Reduction must not be done.
+define amdgpu_ps i64 @srl_metadata_sgpr_return(i64 inreg %arg0, ptr %arg1.ptr) {
+; CHECK-LABEL: srl_metadata_sgpr_return:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    flat_load_dword v0, v[0:1]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v0, s[0:1]
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %shift.amt = load i64, ptr %arg1.ptr, !range !0, !noundef !{}
+  %srl = lshr i64 %arg0, %shift.amt
+  ret i64 %srl
+}
+
+; Exact attribute does not inhibit reduction
 define i64 @srl_exact_metadata(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: srl_exact_metadata:
 ; CHECK:       ; %bb.0:
@@ -238,6 +252,17 @@ define i64 @srl_or16_sgpr(i64 inreg %arg0, i64 inreg %shift_amt) {
   ret i64 %srl
 }
 
+define amdgpu_ps i64 @srl_or16_sgpr_return(i64 inreg %arg0, i64 inreg %shift_amt) {
+; CHECK-LABEL: srl_or16_sgpr_return:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_or_b32 s2, s2, 16
+; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; CHECK-NEXT:    ; return to shader part epilog
+  %or = or i64 %shift_amt, 16
+  %srl = lshr i64 %arg0, %or
+  ret i64 %srl
+}
+
 define <2 x i64> @srl_v2_or16_sgpr(<2 x i64> inreg %arg0, <2 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: srl_v2_or16_sgpr:
 ; CHECK:       ; %bb.0:
@@ -381,6 +406,18 @@ define i64 @srl_or32_sgpr(i64 inreg %arg0, i64 inreg %shift_amt) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %or = or i64 %shift_amt, 32
+  %srl = lshr i64 %arg0, %or
+  ret i64 %srl
+}
+
+define amdgpu_ps i64 @srl_or32_sgpr_return(i64 inreg %arg0, i64 inreg %shift_amt) {
+; CHECK-LABEL: srl_or32_sgpr_return:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_or_b32 s2, s2, 32
+; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    ; return to shader part epilog
   %or = or i64 %shift_amt, 32
   %srl = lshr i64 %arg0, %or
   ret i64 %srl
