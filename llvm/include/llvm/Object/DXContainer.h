@@ -19,11 +19,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
-#include <array>
-#include <cstddef>
 #include <variant>
 
 namespace llvm {
@@ -39,6 +39,7 @@ template <typename T>
 std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
   value.swapBytes();
 }
+
 } // namespace detail
 
 // This class provides a view into the underlying resource array. The Resource
@@ -121,8 +122,10 @@ namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
+  uint32_t Version;
+
   RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), ParamData(P) {}
+      : Header(H), ParamData(P), Version(V) {}
 
   template <typename T, typename VersionT = T> Expected<T> readParameter() {
     assert(sizeof(VersionT) <= sizeof(T) &&
@@ -167,6 +170,55 @@ struct RootDescriptorView : RootParameterView {
       return readParameter<dxbc::RST0::v1::RootDescriptor,
                            dxbc::RST0::v0::RootDescriptor>();
     return readParameter<dxbc::RST0::v1::RootDescriptor>();
+  }
+};
+template <typename T> struct DescriptorTable {
+  uint32_t NumRanges;
+  uint32_t RangesOffset;
+  ViewArray<T> Ranges;
+
+  typename ViewArray<T>::iterator begin() const { return Ranges.begin(); }
+
+  typename ViewArray<T>::iterator end() const { return Ranges.end(); }
+};
+template <typename T> struct TemplateTypeToVersion {
+  // Default version
+  static constexpr uint32_t Value = -1;
+};
+
+template <> struct TemplateTypeToVersion<dxbc::RST0::v0::DescriptorRange> {
+  static constexpr uint32_t Value = 1;
+};
+
+template <> struct TemplateTypeToVersion<dxbc::RST0::v1::DescriptorRange> {
+  static constexpr uint32_t Value = 2;
+};
+
+template <typename T> struct DescriptorTableView : RootParameterView {
+  using TemplateType = T;
+
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable)) &&
+           (V->Version == TemplateTypeToVersion<T>::Value);
+  }
+
+  // Define a type alias to access the template parameter from inside classof
+  llvm::Expected<DescriptorTable<T>> read() {
+    const char *Current = ParamData.begin();
+    DescriptorTable<T> Table;
+
+    Table.NumRanges =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    Table.RangesOffset =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    Table.Ranges.Data =
+        ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * sizeof(T));
+    return Table;
   }
 };
 
@@ -220,6 +272,17 @@ public:
         DataSize = sizeof(dxbc::RST0::v0::RootDescriptor);
       else
         DataSize = sizeof(dxbc::RST0::v1::RootDescriptor);
+      break;
+    case dxbc::RootParameterType::DescriptorTable:
+      uint32_t NumRanges =
+          support::endian::read<uint32_t, llvm::endianness::little>(
+              PartData.begin() + Header.ParameterOffset);
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RST0::v0::DescriptorRange) * NumRanges +
+                   2 * sizeof(uint32_t);
+      else
+        DataSize = sizeof(dxbc::RST0::v1::DescriptorRange) * NumRanges +
+                   2 * sizeof(uint32_t);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0

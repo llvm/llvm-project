@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
@@ -301,6 +302,32 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           RS.ParametersContainer.addParameter(Header, Descriptor);
           }
           break;
+        case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+          mcdxbc::DescriptorTable Table;
+          for (const auto &R : Param.Table.Ranges) {
+            if (RS.Version == 1) {
+              dxbc::RST0::v0::DescriptorRange Range;
+              Range.RangeType = R.RangeType;
+              Range.NumDescriptors = R.NumDescriptors;
+              Range.BaseShaderRegister = R.BaseShaderRegister;
+              Range.RegisterSpace = R.RegisterSpace;
+              Range.OffsetInDescriptorsFromTableStart =
+                  R.OffsetInDescriptorsFromTableStart;
+              Table.Ranges.push_back(Range);
+            } else {
+              dxbc::RST0::v1::DescriptorRange Range;
+              Range.RangeType = R.RangeType;
+              Range.NumDescriptors = R.NumDescriptors;
+              Range.BaseShaderRegister = R.BaseShaderRegister;
+              Range.RegisterSpace = R.RegisterSpace;
+              Range.OffsetInDescriptorsFromTableStart =
+                  R.OffsetInDescriptorsFromTableStart;
+              Range.Flags = R.getEncodedFlags();
+              Table.Ranges.push_back(Range);
+            }
+          }
+          RS.ParametersContainer.addParameter(Header, Table);
+        } break;
         default:
           // Handling invalid parameter type edge case
           RS.ParametersContainer.addInfo(Header, -1);
