@@ -49,10 +49,6 @@ static bool isPossibleIndirectCallTarget(const Function *F) {
     const Value *FnOrCast = Users.pop_back_val();
     for (const Use &U : FnOrCast->uses()) {
       const User *FnUser = U.getUser();
-      if (isa<BlockAddress>(FnUser)) {
-        // Block addresses are illegal to call.
-        continue;
-      }
       if (const auto *Call = dyn_cast<CallBase>(FnUser)) {
         if ((!Call->isCallee(&U) || U.get() != F) &&
             !Call->getFunction()->getName().ends_with("$exit_thunk")) {
