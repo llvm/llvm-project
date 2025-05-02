@@ -25,7 +25,6 @@ class MCSymbolCOFF : public MCSymbol {
     SF_ClassShift = 0,
 
     SF_SafeSEH = 0x0100,
-    SF_FarProc = 0x0200,
     SF_WeakExternalCharacteristicsMask = 0x0E00,
     SF_WeakExternalCharacteristicsShift = 9,
   };
@@ -66,9 +65,6 @@ public:
   void setIsSafeSEH() const {
     modifyFlags(SF_SafeSEH, SF_SafeSEH);
   }
-
-  bool isFarProc() const { return getFlags() & SF_FarProc; }
-  void setIsFarProc() const { modifyFlags(SF_FarProc, SF_FarProc); }
 
   static bool classof(const MCSymbol *S) { return S->isCOFF(); }
 };
