@@ -1731,7 +1731,7 @@ struct ExcessRP {
   /// Returns whether there is any excess register pressure.
   operator bool() const { return ArchVGPRs != 0 || AGPRs != 0 || VGPRs != 0; }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const ExcessRP &Excess) {
     OS << Excess.ArchVGPRs << " ArchVGPRs, " << Excess.AGPRs << " AGPRs, and "
        << Excess.VGPRs << " VGPRs (next ArchVGPR aligment in "
@@ -1910,14 +1910,15 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   if (OptRegions.empty())
     return false;
 
-#ifndef DEBUG
+#ifndef NDEBUG
   if (IncreaseOccupancy)
     REMAT_DEBUG(dbgs() << "Occupancy minimal in regions:\n");
   else
     REMAT_DEBUG(dbgs() << "Spilling in regions:\n");
-  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I)
+  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     if (auto OptIt = OptRegions.find(I); OptIt != OptRegions.end())
       REMAT_DEBUG(dbgs() << "  " << I << ": " << OptIt->getSecond() << '\n');
+  }
 #endif
 
   // When we are reducing spilling, the target is the minimum target number of
