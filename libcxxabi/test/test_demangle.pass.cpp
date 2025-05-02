@@ -8,9 +8,6 @@
 
 // Tests for ItaniumDemangle live in llvm/unittests/Demangle
 
-// This test is too big for most embedded devices.
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-
 // This test exercises support for char array initializer lists added in
 // dd8b266ef.
 // UNSUPPORTED: using-built-library-before-llvm-20
