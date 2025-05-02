@@ -12682,10 +12682,10 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
                      RHSExtOp);
 }
 
-// Makes PARTIAL_REDUCE_*MLA(Acc, ZEXT(UnextOp1), Splat(1)) into
-// PARTIAL_REDUCE_UMLA(Acc, Op, TRUNC(Splat(1)))
-// Makes PARTIAL_REDUCE_*MLA(Acc, SEXT(UnextOp1), Splat(1)) into
-// PARTIAL_REDUCE_SMLA(Acc, Op, TRUNC(Splat(1)))
+// Makes partial.reduce.umla(acc, zext(op1), splat(1)) into
+// partial.reduce.umla(acc, op, splat(trunc(1)))
+// Makes partial.reduce.smla(acc, sext(op1), splat(1)) into
+// partial.reduce.smla(acc, op, splat(trunc(1)))
 SDValue DAGCombiner::foldPartialReduceMLANoMulOp(SDNode *N) {
   SDLoc DL(N);
   SDValue Acc = N->getOperand(0);
